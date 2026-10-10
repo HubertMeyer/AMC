@@ -518,13 +518,30 @@ własnej normalizacji diakrytyków.
 
 ## Polityka zaniku wybranego urządzenia audio
 
-Jeżeli podczas odtwarzania wybrane wyjście znika, host zachowuje ten wybór dla
-sesji, lecz bieżący tor przełącza na urządzenie domyślne. Materiał gra dalej od
-bieżącego miejsca. Jeżeli użytkownik wcześniej wstrzymał odtwarzanie, wymiana
-wyjścia nie wznawia go samodzielnie. Radio zachowuje przy tym dekoder, bufor
-timeshift i aktywne nagrywanie. Powrót zapamiętanego urządzenia nie przenosi
-dźwięku samoczynnie w trakcie bieżącego materiału; wybór zostanie użyty przy
-następnym uruchomieniu albo po świadomej zmianie przez `Shift+A`.
+Wcześniejsza stała decyzja o automatycznej kontynuacji zostaje zastąpiona
+ustawieniem użytkownika. Jeżeli podczas odtwarzania wybrane wyjście znika,
+host zachowuje ten wybór dla sesji i przełącza bieżący tor na urządzenie
+domyślne. Następnie, zależnie od ustawienia, materiał albo gra dalej od
+bieżącego miejsca, albo odsłuch przechodzi w pauzę. W żadnym wariancie wymiana
+wyjścia nie może wznowić materiału wstrzymanego wcześniej przez użytkownika.
+Radio zachowuje dekoder, bufor timeshift i aktywne nagrywanie także wtedy, gdy
+odsłuch zostaje wstrzymany.
+
+Powrót zapamiętanego urządzenia nie przenosi dźwięku samoczynnie w trakcie
+bieżącego materiału; wybór zostanie użyty przy następnym uruchomieniu albo po
+świadomej zmianie przez `Shift+A`. Nowy `Ctrl+]` przechodzi cyklicznie do
+następnego dostępnego wyjścia dla aktywnej sesji podczas odtwarzania. Podaje
+użytkową nazwę, zapamiętuje wybór dla tej sesji i nie zmienia urządzeń innych
+równolegle grających sesji.
+
+## Niezależne tory sesji — regresja otwarta
+
+Główne AMC pozwalało jednocześnie odtwarzać radio i plik lokalny, w tym na
+różnych urządzeniach. W bieżącym porcie uruchomienie pliku z Multimedia
+zatrzymuje radio. To regresja architektury, nie oczekiwane ograniczenie.
+Każda sesja ma utrzymywać własny transport, wyjście, pauzę i wyciszenie.
+Przełączenie sesji ustala wyłącznie cel `Spacji`, `Ctrl+M` i pozostałych
+poleceń; nie może zatrzymywać ani przejmować innego aktywnego toru.
 
 Nie policzono rzetelnie procentu zgodności całego programu. Dawne237pozycji/196skrótów to historyczny spisWPF z421, nie aktualny mianownik pokrycia i nie dowód dostępności każdej funkcji.
 

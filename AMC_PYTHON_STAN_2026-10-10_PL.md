@@ -42,6 +42,38 @@ Istniejący `AMC-Python-Updater.exe` pozostaje osobnym wykonawcą bezpiecznej
 podmiany i wycofania plików. Docelowe `AMC.exe` ma być stałym punktem wejścia,
 a aktualizator działać za nim, bez ręcznego wybierania skryptu lub interpretera.
 
+### Niezależne odtwarzanie sesji i urządzenia audio
+
+Wykryto poważną regresję względem głównego AMC: gdy gra radio internetowe,
+uruchomienie pliku w sesji Multimedia zatrzymuje radio. Docelowo każda sesja
+ma własny tor, urządzenie wyjściowe, stan pauzy i wyciszenia. Radio i plik mają
+móc grać równolegle, także na dwóch różnych urządzeniach. Przejście do sesji
+zmienia tylko cel sterowania; `Spacja` i `Ctrl+M` działają wyłącznie na
+aktywnej sesji i nie wpływają na pozostałe.
+
+Polityka zaniku urządzenia ma stać się ustawieniem. Użytkownik wybiera, czy po
+utracie wybranego wyjścia odsłuch ma automatycznie trwać na urządzeniu
+domyślnym, czy przejść w pauzę po bezpiecznym przełączeniu na urządzenie
+domyślne. Pauza odsłuchu nie zatrzymuje nagrywania radia ani bufora timeshift.
+Do odtwarzacza należy też dodać `Ctrl+]`, które cyklicznie wybiera następne
+dostępne urządzenie audio dla bieżącej sesji i podaje wyłącznie jego użytkową
+nazwę. Wybór pozostaje zapamiętany osobno dla sesji.
+
+### Pełny audyt interfejsu i ustawień
+
+`Ctrl+,` nie otwiera obecnie pełnych Ustawień ogólnych. Działające opcje
+odtwarzania sesji lub elementu są innymi dialogami i nie zastępują ustawień
+programu. Trzeba przenieść całe okno ustawień głównego AMC, w tym sekcje
+ogólne, Podcasty i Radio, oraz odebrać `Ctrl+Tab` i `Ctrl+Shift+Tab` pomiędzy
+kartami z prawidłowym fokusem i odczytem NVDA.
+
+Cały interfejs wymaga porównania z głównym AMC: wszystkie menu i skróty,
+organizacja Biblioteki, wejścia i powroty z podlist oraz właściwe warianty
+sortowania `Alt+cyfra` dla każdej sesji i każdego widoku. Częściowe działanie
+jednego widoku nie jest dowodem kompletnego portu. Audyt ma zakończyć się
+jawną macierzą widok–skrót–działanie–powrót, bez technicznych identyfikatorów
+w etykietach dostępności.
+
 ### Wiersz poleceń, agenci AI i wiele systemów
 
 Obecny protokół JSON-lines jest dobrym punktem wyjścia dla przyszłego AMC CLI
@@ -244,25 +276,29 @@ lewą strzałką.
    dołączony runtime bez konsoli, sprawdza manifest i wersje, pilnuje jednej
    instancji oraz współpracuje z `AMC-Python-Updater.exe` przy aktualizacji,
    wycofaniu i ponownym uruchomieniu.
-2. Przeniesienie pełnego wyszukiwania z głównego AMC: `Ctrl+F` w bieżącej
+2. Przywrócenie niezależnych torów sesji: równoczesne radio i Multimedia,
+   osobne urządzenia, pauza i wyciszenie sterowane po wejściu do danej sesji.
+3. Przeniesienie pełnego wyszukiwania z głównego AMC: `Ctrl+F` w bieżącej
    sesji, `Ctrl+Shift+F` globalnie, dostępna lista wyników, wszystkie działania
    na wynikach i prawidłowy powrót do wcześniejszego widoku. Przy tym usunąć
    powtarzany prefiks „Nagrane” z ukończonych wierszy `Alt+Shift+R`.
-3. Uzupełnienie WiiM i Sonos o pełną warstwę interfejsu z głównego AMC:
+4. Przywrócenie Ustawień ogólnych pod `Ctrl+,`, kart Podcastów i Radia oraz
+   `Ctrl+Tab`; dodanie wyboru pauzy po utracie wyjścia i `Ctrl+]` do następnego
+   urządzenia bieżącej sesji. W tym samym etapie pełny audyt Biblioteki,
+   menu, skrótów i sortowań `Alt+cyfra` względem głównego AMC.
+5. Uzupełnienie WiiM i Sonos o pełną warstwę interfejsu z głównego AMC:
    Bibliotekę, Ulubione, wybór materiałów, presety, wszystkie skróty oraz
    prawidłowe wykonanie transportu po zakończeniu odczytu stanu. Następnie
    ponowny odbiór na obudzonych urządzeniach.
-4. Przywrócenie w TIDAL sortowania albumów (alfabetycznego, własnego i według
+6. Przywrócenie w TIDAL sortowania albumów (alfabetycznego, własnego i według
    dodania z najnowszymi u góry) oraz kontekstowej prawej strzałki na albumach
    i wykonawcach, po porównaniu z głównym AMC.
-5. Podłączenie gotowego dodatku AMC do NVDA bezpośrednio do LiteHosta i
+7. Podłączenie gotowego dodatku AMC do NVDA bezpośrednio do LiteHosta i
    wxPython, bez uruchamiania starego AMC, oraz żywy odbiór mowy i brajla.
-6. Sprawdzenie zaniku wybranego urządzenia audio: automatyczny powrót na
-   urządzenie domyślne i dalsze odtwarzanie tej samej stacji bez przełączania.
-7. Uzupełnienie wykrytych braków w istniejących sesjach, bez regresji radia,
+8. Uzupełnienie wykrytych braków w istniejących sesjach, bez regresji radia,
    nagrywania, harmonogramów i timeshiftu.
-8. Odzyskanie źródła lub ticketu „Sygnalisty”, analiza i wdrożenie aktualizacji.
-9. Dopiero później decyzja o Spotify; wtedy osobno przenieść właściwe dla
+9. Odzyskanie źródła lub ticketu „Sygnalisty”, analiza i wdrożenie aktualizacji.
+10. Dopiero później decyzja o Spotify; wtedy osobno przenieść właściwe dla
    Spotify sortowanie i kontekstową nawigację, bez kopiowania założeń TIDAL.
 
 Publikacja AMC Python na GitHubie jest końcowym krokiem, nie częścią bieżącego

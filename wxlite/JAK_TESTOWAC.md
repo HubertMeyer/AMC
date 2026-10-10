@@ -635,12 +635,41 @@ Pełne dowody robocze: `amc_pomoc/wx-full-profile-after421/library-gui-after422/
 
 ## Zanik wybranego urządzenia audio
 
-Podczas grającego radia odłącz urządzenie wybrane przez `Shift+A`. Oczekiwane:
-jednorazowy komunikat o urządzeniu domyślnym i dalsze odtwarzanie tej samej
-stacji bez wybierania innej. Powtórz próbę w pauzie: po odłączeniu wyjścia
-materiał ma pozostać wstrzymany. Aktywne nagrywanie i timeshift nie mogą zostać
-zatrzymane. Nie odłączaj urządzenia używanego do pracy z czytnikiem ekranu bez
-zapewnionego innego słyszalnego wyjścia.
+Podczas grającego radia odłącz urządzenie wybrane przez `Shift+A`. Sprawdź oba
+warianty nowego ustawienia. W trybie kontynuacji program ma raz podać przejście
+na urządzenie domyślne i dalej odtwarzać tę samą stację. W trybie pauzy ma
+przejść na urządzenie domyślne, lecz wstrzymać odsłuch do świadomego naciśnięcia
+`Spacji`. W obu trybach aktywne nagrywanie i timeshift mają działać dalej.
+Materiał wstrzymany przed odłączeniem nie może sam się wznowić.
+
+Podczas odtwarzania naciskaj `Ctrl+]`. Każde naciśnięcie ma wybrać następne
+dostępne wyjście bieżącej sesji, zawinąć listę, podać jedną użytkową nazwę i
+zapamiętać wybór. Nie może zmienić urządzenia ani stanu innej sesji. Nie
+odłączaj urządzenia używanego do pracy z czytnikiem ekranu bez zapewnionego
+innego słyszalnego wyjścia.
+
+## Niezależne odtwarzanie sesji
+
+1. Uruchom radio na jednym urządzeniu audio.
+2. Przejdź do Multimedia, wybierz inne wyjście i uruchom plik. Radio i plik
+   mają nadal grać równolegle.
+3. W Multimedia użyj `Spacji` i `Ctrl+M`. Zmienia się wyłącznie plik.
+4. Wróć do Radia i użyj tych samych skrótów. Zmienia się wyłącznie radio.
+5. Zmień sesję kilka razy bez polecenia transportu. Samo przejście nie może
+   zatrzymać, wznowić, wyciszyć ani przełączyć urządzenia żadnego toru.
+
+## Ustawienia i pełny audyt interfejsu
+
+`Ctrl+,` ma otworzyć Ustawienia ogólne, a nie opcje pojedynczego materiału lub
+sesji. Sprawdź co najmniej sekcje Ogólne, Podcasty i Radio. `Ctrl+Tab` oraz
+`Ctrl+Shift+Tab` mają przechodzić między kartami; po zapisaniu, anulowaniu i
+ponownym otwarciu fokus oraz celowe etykiety muszą pozostać prawidłowe.
+
+Porównaj z głównym AMC każdą sesję i każdy widok: menu, skróty, strukturę
+Biblioteki, Enter, Escape/Backspace, lewą i prawą strzałkę oraz wszystkie
+sortowania `Alt+cyfra`. Wynik audytu zapisz jako macierz widok–skrót–działanie–
+powrót. Nie uznawaj jednego działającego sortowania ani jednej listy za dowód
+zgodności całego interfejsu.
 
 ### Zwykła natywna lista: jak sprawdzać aktualizacje (po migracji z `LC_VIRTUAL`)
 
