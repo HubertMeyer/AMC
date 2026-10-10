@@ -228,6 +228,15 @@ NVDA powtarza więc to słowo przy każdym pliku. Przy poprawce zwykły ukończo
 wiersz ma zaczynać się od nazwy stacji lub pliku; znaczące stany wyjątkowe,
 takie jak „Przerwane”, „Nieudane” albo brak pliku, muszą pozostać czytelne.
 
+Na liście harmonogramów otwieranej przez `Ctrl+Shift+H` Spacja nie włącza ani
+nie wyłącza zaznaczonego planu. Kod ma już metodę zmiany pola `enabled` i
+gałąź `WXK_SPACE`, ale wymaga ona, aby `FindFocus()` zwrócił dokładnie obiekt
+listy; obecne testy nie odtwarzają rzeczywistej drogi fokusu wx/NVDA. Nie jest
+to więc brak samej operacji, lecz otwarta regresja podłączenia klawisza lub
+rozpoznawania fokusu. Poprawka ma zachować wiersz, podać nazwę planu i nowy
+stan dokładnie raz, zapisać zmianę w hoście i pokazać ten sam stan po ponownym
+otwarciu okna oraz restarcie programu.
+
 Odbiór użytkownika w paczce
 `.test-output\AMC-Python-next-status-20261010` wykazał również, że po
 `Ctrl+C` NVDA nadal mówi angielskie „Copy”. Paczka zawiera bieżącą próbę
@@ -290,7 +299,8 @@ lewą strzałką.
    kartami, polami, zależnościami i zapisem oraz nawigacją `Ctrl+Tab`; dodanie
    wyboru pauzy po utracie wyjścia, `Ctrl+[` do poprzedniego i `Ctrl+]` do
    następnego urządzenia bieżącej sesji. W tym samym etapie pełny audyt
-   Biblioteki, menu, skrótów i sortowań `Alt+cyfra` względem głównego AMC.
+   Biblioteki, menu, skrótów i sortowań `Alt+cyfra` względem głównego AMC oraz
+   naprawa przełączania harmonogramu Spacją w żywym oknie.
 5. Uzupełnienie WiiM i Sonos o pełną warstwę interfejsu z głównego AMC:
    Bibliotekę, Ulubione, wybór materiałów, presety, wszystkie skróty oraz
    prawidłowe wykonanie transportu po zakończeniu odczytu stanu. Następnie

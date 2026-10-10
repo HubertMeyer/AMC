@@ -147,6 +147,15 @@ komunikat aplikacji.
 
 ## Nagrywanie radia — potwierdzenie po Ctrl+R
 
+Na liście `Ctrl+Shift+H` ustaw fokus na włączonym planie i naciśnij Spację.
+Plan ma stać się wyłączony, NVDA ma raz podać jego nazwę i nowy stan, a fokus
+ma zostać na tym samym wierszu. Ponowna Spacja ma go włączyć. Zamknij i otwórz
+okno, następnie uruchom AMC ponownie: stan musi pozostać zapisany. Powtórz dla
+planu jednorazowego i cyklicznego oraz podczas aktywnego nagrania, zgodnie z
+zasadami głównego AMC. Przycisk „Włącz lub wyłącz” i Spacja muszą wywoływać tę
+samą operację. Test wywołujący bezpośrednio metodę `_toggle` nie jest dowodem,
+że fizyczna Spacja dochodzi z natywnej listy wx przy działającym NVDA.
+
 `Ctrl+R` na stacji od razu mówi jedno krótkie zdanie:
 „Rozpoczynam nagrywanie w tle: nazwa stacji”. Ponowne zdarzenie faktycznego
 otwarcia pliku nie czyta już nazwy pliku i nie zagłusza nawigacji NVDA.
