@@ -21,8 +21,11 @@ Paperback używa WSOLA; to punkt do późniejszego porównania odsłuchowego, ni
 powód do usuwania obecnego podziału bez pomiaru.
 
 Sonos pozostaje do odbioru na obudzonych urządzeniach. Moduł zgłaszania błędów
-Michała Dziwisza nazywa się **Sygnalista**; jego integracja jest osobnym,
-późniejszym etapem po odbiorze bieżących sesji.
+Michała Dziwisza nazywa się **Sygnalista**:
+`https://github.com/michaldziwisz/sygnalista`. Jego integracja jest osobnym,
+późniejszym etapem po odbiorze bieżących sesji. Repozytorium zawiera klienta
+Python oraz Cloudflare Workera tworzącego GitHub Issues; dane diagnostyczne i
+logi wymagają osobnego potraktowania pod kątem prywatności.
 
 ## 10.10 — TIDAL, WiiM i Sonos; stan przed odbiorem urządzeń
 

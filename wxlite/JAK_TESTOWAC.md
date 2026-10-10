@@ -57,7 +57,8 @@ Sonos:
 
 Brak urządzeń lub uśpione urządzenia nie jest zaliczeniem ani błędem kodu.
 Zapisz wtedy wynik jako „nieprzetestowane na żywo”. Spotify nie należy do tego
-etapu. Moduł aktualizacji będzie sprawdzany osobno po weryfikacji „Sygnalisty”.
+etapu. Moduł aktualizacji będzie sprawdzany osobno po weryfikacji „Sygnalisty”:
+`https://github.com/michaldziwisz/sygnalista`.
 
 ## Nagrywanie radia — potwierdzenie po Ctrl+R
 
