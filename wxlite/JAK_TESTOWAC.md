@@ -4,8 +4,15 @@ To rozwijany równoległy interfejs pełnegoAMC. Nie jest jeszcze zamiennikiem w
 
 ## Start aplikacji i jedna instancja
 
-1. Uruchom `AMC-wx-Lite.cmd`. Okno ma od razu być zmaksymalizowane, aktywne
-   i znajdować się na pierwszym planie.
+`AMC-wx-Lite.cmd` jest wyłącznie tymczasowym uruchamiaczem deweloperskim.
+Nie jest docelowym sposobem startu ani aktualizacji programu. Przed następnym
+etapem normalnych testów trzeba zbudować `AMC.exe`, które zawsze korzysta z
+runtime'u i LiteHosta dołączonych do tej samej, zweryfikowanej paczki.
+
+Odbiór docelowego launchera:
+
+1. Uruchom `AMC.exe` bez otwierania terminala i bez wybierania interpretera.
+   Okno ma od razu być zmaksymalizowane, aktywne i na pierwszym planie.
 2. Bez trwającego nagrywania uruchom ten sam plik ponownie. Poprzednia
    instancja ma się zwyczajnie zamknąć, a po niej ma zostać uruchomiona jedna
    nowa instancja, także zmaksymalizowana i aktywna.
@@ -13,6 +20,14 @@ To rozwijany równoległy interfejs pełnegoAMC. Nie jest jeszcze zamiennikiem w
    może zostać zamknięta ani ubita; ma wrócić na pierwszy plan, a druga ma
    zakończyć start. Tak samo program ma postąpić, gdy nie potrafi potwierdzić
    stanu nagrywania.
+4. Usuń z procesu testowego systemowy Python i zmienne `PYTHONPATH` oraz
+   `AMC_WX_LITE_PYTHON`. `AMC.exe` nadal ma uruchomić dołączony runtime.
+5. Podstaw celowo niezgodne wersje interfejsu i LiteHosta albo uszkodzony
+   manifest. Program ma odmówić startu z krótkim, dostępnym komunikatem, bez
+   uruchamiania przypadkowej starszej kopii.
+6. Zastosuj poprawną aktualizację przez `AMC-Python-Updater.exe`. Po
+   weryfikacji i podmianie `AMC.exe` ma uruchomić nową wersję; błąd podmiany
+   ma przywrócić poprzednią, działającą całość.
 
 Plik `AMC-Python-Updater.exe` służy obecnie do bezpiecznego zastosowania
 przygotowanej paczki z pełnym manifestem SHA-256. Nie uruchamiaj go ręcznie na

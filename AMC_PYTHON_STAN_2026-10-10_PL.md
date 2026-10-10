@@ -28,6 +28,20 @@ sprzężenie i pozostawiło dwa interfejsy, nie rozwiązując problemów cyklu �
 procesów. Docelowo jeden uruchamiacz EXE ma nadzorować start, jedną instancję,
 zgodność wersji i bezpieczne zamknięcie całego pakietu.
 
+Odbiór użytkownika potwierdził, że obecny start przez `AMC-wx-Lite.cmd` jest
+zbyt niejednoznaczny: można trafić na niewłaściwy runtime lub widoczny proces
+interpretera i nie mieć pewności, która kopia programu faktycznie ruszyła.
+Przed dalszym normalnym używaniem trzeba dostarczyć jeden użytkowy `AMC.exe`.
+Ma on uruchamiać dołączony prywatny runtime i właściwy LiteHost bez konsoli,
+bez systemowego Pythona, `PYTHONPATH` i skryptów wsadowych; sprawdzać zgodność
+wersji oraz manifest; pilnować jednej instancji i bezpiecznej odmowy zamknięcia
+podczas nagrywania; pokazywać dostępny komunikat przy błędzie i uruchamiać
+program ponownie po udanej aktualizacji.
+
+Istniejący `AMC-Python-Updater.exe` pozostaje osobnym wykonawcą bezpiecznej
+podmiany i wycofania plików. Docelowe `AMC.exe` ma być stałym punktem wejścia,
+a aktualizator działać za nim, bez ręcznego wybierania skryptu lub interpretera.
+
 ### Wiersz poleceń, agenci AI i wiele systemów
 
 Obecny protokół JSON-lines jest dobrym punktem wyjścia dla przyszłego AMC CLI
@@ -226,25 +240,29 @@ lewą strzałką.
 
 ## Najbliższa kolejność prac
 
-1. Przeniesienie pełnego wyszukiwania z głównego AMC: `Ctrl+F` w bieżącej
+1. Zastąpienie testowego startu przez `.cmd` jednym `AMC.exe`, który uruchamia
+   dołączony runtime bez konsoli, sprawdza manifest i wersje, pilnuje jednej
+   instancji oraz współpracuje z `AMC-Python-Updater.exe` przy aktualizacji,
+   wycofaniu i ponownym uruchomieniu.
+2. Przeniesienie pełnego wyszukiwania z głównego AMC: `Ctrl+F` w bieżącej
    sesji, `Ctrl+Shift+F` globalnie, dostępna lista wyników, wszystkie działania
    na wynikach i prawidłowy powrót do wcześniejszego widoku. Przy tym usunąć
    powtarzany prefiks „Nagrane” z ukończonych wierszy `Alt+Shift+R`.
-2. Uzupełnienie WiiM i Sonos o pełną warstwę interfejsu z głównego AMC:
+3. Uzupełnienie WiiM i Sonos o pełną warstwę interfejsu z głównego AMC:
    Bibliotekę, Ulubione, wybór materiałów, presety, wszystkie skróty oraz
    prawidłowe wykonanie transportu po zakończeniu odczytu stanu. Następnie
    ponowny odbiór na obudzonych urządzeniach.
-3. Przywrócenie w TIDAL sortowania albumów (alfabetycznego, własnego i według
+4. Przywrócenie w TIDAL sortowania albumów (alfabetycznego, własnego i według
    dodania z najnowszymi u góry) oraz kontekstowej prawej strzałki na albumach
    i wykonawcach, po porównaniu z głównym AMC.
-4. Podłączenie gotowego dodatku AMC do NVDA bezpośrednio do LiteHosta i
+5. Podłączenie gotowego dodatku AMC do NVDA bezpośrednio do LiteHosta i
    wxPython, bez uruchamiania starego AMC, oraz żywy odbiór mowy i brajla.
-5. Sprawdzenie zaniku wybranego urządzenia audio: automatyczny powrót na
+6. Sprawdzenie zaniku wybranego urządzenia audio: automatyczny powrót na
    urządzenie domyślne i dalsze odtwarzanie tej samej stacji bez przełączania.
-6. Uzupełnienie wykrytych braków w istniejących sesjach, bez regresji radia,
+7. Uzupełnienie wykrytych braków w istniejących sesjach, bez regresji radia,
    nagrywania, harmonogramów i timeshiftu.
-7. Odzyskanie źródła lub ticketu „Sygnalisty”, analiza i wdrożenie aktualizacji.
-8. Dopiero później decyzja o Spotify; wtedy osobno przenieść właściwe dla
+8. Odzyskanie źródła lub ticketu „Sygnalisty”, analiza i wdrożenie aktualizacji.
+9. Dopiero później decyzja o Spotify; wtedy osobno przenieść właściwe dla
    Spotify sortowanie i kontekstową nawigację, bez kopiowania założeń TIDAL.
 
 Publikacja AMC Python na GitHubie jest końcowym krokiem, nie częścią bieżącego
