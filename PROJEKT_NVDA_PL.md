@@ -6,6 +6,27 @@ NVDA jest cienkim klientem AMC, nie osobnym odtwarzaczem Free Radio. Prefiks AMC
 
 Wymagane AMC alpha 342 i NVDA 2026.1. Stary podzbiór 14 poleceń zachowuje zgodność z AMC 339–340. Nowe polecenia nie zmieniają wersji protokołu: stary serwer bezpiecznie odmawia nieznanej komendy. Użytkownik zaakceptował wersję do publikacji 11 września 2026 r. Dalsze audyty innych modeli powinny uwzględniać poniższe granice testów; publikacja nie oznacza kompletnej weryfikacji mowy, urządzeń i usług.
 
+## Docelowa zgodność z AMC Python
+
+Istniejący dodatek ma współpracować również z AMC Python. Nie tworzymy drugiej
+wtyczki ani drugiego zestawu gestów. Zachowujemy nazwę lokalnego potoku
+`AMC.NVDA.v1.<sesja Windows>`, wersję JSON, allow-listę i dotychczasowe zasady
+bezpieczeństwa, aby gotowy dodatek mógł połączyć się bez migracji ustawień.
+
+Serwer dodatku powinien należeć do LiteHosta, ponieważ tam znajduje się wspólny
+rdzeń odtwarzania, nagrywania i usług. W danej sesji może działać tylko jeden
+serwer tego potoku. Polecenia transportu, szybkich informacji, presetów,
+Ulubionych i Kolejki mają korzystać z tych samych komend i tego samego stanu co
+interfejs wxPython. Polecenia jawnie otwierające AMC lub jego widok LiteHost
+przekazuje do działającego frontendu wxPython; nie wolno w tym celu uruchamiać
+starego okna WPF.
+
+Odpowiedź ma wracać raz przez dodatek NVDA jako tekst użytkowy do mowy i
+brajla. Nazwy klas, identyfikatory poleceń, dane kont i reprezentacje obiektów
+nie mogą trafić do odpowiedzi. Jeżeli frontend nie działa albo nie może
+bezpiecznie otworzyć widoku, dodatek otrzymuje krótką odmowę zamiast
+uruchamiania drugiej instancji lub wykonywania działania na innym elemencie.
+
 ## Semantyka
 
 - Następny/poprzedni rozpoczyna sąsiedni element również po pauzie. To nie przesunięcie zaznaczenia. Lista odtwarzania została ustalona przy rozpoczęciu odtwarzania i nie zmienia się od samego oglądania innej listy.
@@ -45,7 +66,7 @@ Dotychczasowe Ctrl+Windows+lewo/prawo świadomie zajmują skróty pulpitów, zgo
 
 Testy obejmują protokół, całą allow-listę Python/.NET, Unicode, brak ponownego wykonania, przeciążenie kolejki, brak serwera, timeout, kontrolę foreground PID, odłożone/zdublowane/przeterminowane otwarcie interfejsu, przepływ AsyncLocal, bezpieczny cel działań na ukrytej liście, pauzę i zakres następny/poprzedni. Test właściwości MainWindow omija konstruktor aplikacji; używa oddzielnych modeli i kontrolki na STA, bez kont, prawdziwego pipe AMC, odtwarzania czy stanu użytkownika.
 
-To nie są ręczne testy NVDA. Przed publikacją sprawdzić pierwszą pozycję, mowę/brajl, Tab/strzałki, powrót po dialogu, globalne sterowanie z edytora, minimalizację, blokadę Windows, szybkie zmiany sesji, rzeczywiste WiiM, opóźnioną usługę, nagrywanie i niedostępne urządzenie. Szczególnie obserwować odziedziczone ścieżki fokusa, które uruchamiają się później z osobnych timerów/zdarzeń silnika. Nie traktować transportowego OK jako gwarancji pełnego odtwarzania lub zapisu nagrania.
+To nie są ręczne testy NVDA. Przed publikacją sprawdzić pierwszą pozycję, mowę/brajl, Tab/strzałki, powrót po dialogu, globalne sterowanie z edytora, minimalizację, blokadę Windows, szybkie zmiany sesji, rzeczywiste WiiM, opóźnioną usługę, nagrywanie i niedostępne urządzenie. Ten sam odbiór trzeba wykonać z uruchomionym AMC Python: połączenie gotowego dodatku, transport, szybkie informacje, sesje, Ulubione, Kolejkę, presety oraz każde polecenie otwierające widok wxPython. Należy potwierdzić, że stary AMC nie jest do tego potrzebny i że nie działa drugi serwer potoku. Szczególnie obserwować odziedziczone ścieżki fokusa, które uruchamiają się później z osobnych timerów/zdarzeń silnika. Nie traktować transportowego OK jako gwarancji pełnego odtwarzania lub zapisu nagrania.
 
 Dla dalszego audytu innymi modelami/Hermesem: sprawdzić spójność głównego routera i warstwy globalnej, zakres odtwarzania po presetach i przy usunięciu elementu, odziedziczone asynchroniczne przywracanie fokusa, ukryte wielozaznaczenia, uprawnienia foreground i konflikty z innymi dodatkami. Nie dostarczać modeli do testów z prywatnymi tokenami, logami konta lub rzeczywistymi nagraniami bez osobnej decyzji użytkownika.
 

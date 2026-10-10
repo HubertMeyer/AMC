@@ -142,6 +142,14 @@ nie mogą być czytane przez NVDA. Po zmianie listy należy sprawdzić pierwszy
 element, ruch strzałkami, zaznaczenia Shift i Ctrl+Spacja, powrót fokusu,
 ponowne otwarcie widoku oraz mowę po Escape.
 
+Do domknięcia pozostaje połączenie AMC Python z gotowym dodatkiem AMC do NVDA.
+Docelowo LiteHost ma wystawiać ten sam bezpieczny, lokalny protokół
+`AMC.NVDA.v1`, z którego korzysta główne AMC. Dzięki temu pozostają jedna
+wtyczka, jedna mapa gestów i dotychczasowe ustawienia użytkownika. Polecenia
+silnika mają trafiać do wspólnego rdzenia, a polecenia otwierające widoki do
+frontendu wxPython. Stary proces AMC nie może być wymaganym pośrednikiem.
+Szczegółowy kontrakt i testy są opisane w `PROJEKT_NVDA_PL.md`.
+
 ## Aktualizacje i zgłaszanie błędów
 
 Pakiet zawiera już wykonywalny `AMC-Python-Updater.exe`. Aktualizator sprawdza
@@ -178,10 +186,18 @@ lewą strzałką.
    Bibliotekę, Ulubione, wybór materiałów, presety, wszystkie skróty oraz
    prawidłowe wykonanie transportu po zakończeniu odczytu stanu. Następnie
    ponowny odbiór na obudzonych urządzeniach.
-2. Sprawdzenie zaniku wybranego urządzenia audio: automatyczny powrót na
+2. Podłączenie gotowego dodatku AMC do NVDA bezpośrednio do LiteHosta i
+   wxPython, bez uruchamiania starego AMC, oraz żywy odbiór mowy i brajla.
+3. Sprawdzenie zaniku wybranego urządzenia audio: automatyczny powrót na
    urządzenie domyślne i dalsze odtwarzanie tej samej stacji bez przełączania.
-3. Uzupełnienie wykrytych braków w istniejących sesjach, bez regresji radia,
+4. Uzupełnienie wykrytych braków w istniejących sesjach, bez regresji radia,
    nagrywania, harmonogramów i timeshiftu.
-4. Odzyskanie źródła lub ticketu „Sygnalisty”, analiza i wdrożenie aktualizacji.
-5. Dopiero później decyzja o Spotify.
+5. Odzyskanie źródła lub ticketu „Sygnalisty”, analiza i wdrożenie aktualizacji.
+6. Dopiero później decyzja o Spotify.
+
+Publikacja AMC Python na GitHubie jest końcowym krokiem, nie częścią bieżącego
+zapisu planu. Przed nią trzeba odebrać działanie samodzielnego pakietu, radia,
+nagrywania i harmonogramów, WiiM, Sonosa oraz gotowego dodatku NVDA, sprawdzić
+pakiet pod kątem prywatnych danych i uzyskać aktualną decyzję użytkownika o
+publikacji konkretnego stanu. Do tego czasu zmiany pozostają lokalne.
 
