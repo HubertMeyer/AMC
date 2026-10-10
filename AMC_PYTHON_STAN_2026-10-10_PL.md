@@ -55,17 +55,21 @@ Polityka zaniku urządzenia ma stać się ustawieniem. Użytkownik wybiera, czy 
 utracie wybranego wyjścia odsłuch ma automatycznie trwać na urządzeniu
 domyślnym, czy przejść w pauzę po bezpiecznym przełączeniu na urządzenie
 domyślne. Pauza odsłuchu nie zatrzymuje nagrywania radia ani bufora timeshift.
-Do odtwarzacza należy też dodać `Ctrl+]`, które cyklicznie wybiera następne
-dostępne urządzenie audio dla bieżącej sesji i podaje wyłącznie jego użytkową
-nazwę. Wybór pozostaje zapamiętany osobno dla sesji.
+Do odtwarzacza należy też dodać `Ctrl+[` i `Ctrl+]`, które cyklicznie wybierają
+odpowiednio poprzednie i następne dostępne urządzenie audio dla bieżącej sesji
+i podają wyłącznie jego użytkową nazwę. Wybór pozostaje zapamiętany osobno dla
+sesji.
 
 ### Pełny audyt interfejsu i ustawień
 
-`Ctrl+,` nie otwiera obecnie pełnych Ustawień ogólnych. Działające opcje
-odtwarzania sesji lub elementu są innymi dialogami i nie zastępują ustawień
-programu. Trzeba przenieść całe okno ustawień głównego AMC, w tym sekcje
-ogólne, Podcasty i Radio, oraz odebrać `Ctrl+Tab` i `Ctrl+Shift+Tab` pomiędzy
-kartami z prawidłowym fokusem i odczytem NVDA.
+`Ctrl+,` nie otwiera obecnie pełnych Ustawień. Działające opcje odtwarzania
+sesji lub elementu są innymi dialogami i nie zastępują ustawień programu.
+Nie wystarczy dopisać kart Ogólne, Podcasty i Radio: trzeba przepisać całe
+Ustawienia dokładnie z głównego AMC, po uprzednim spisie wszystkich kart, pól,
+wartości domyślnych, zależności, walidacji i miejsc zapisu. `Ctrl+Tab` i
+`Ctrl+Shift+Tab` mają przechodzić pomiędzy wszystkimi kartami z prawidłowym
+fokusem i odczytem NVDA; Zapisz, Anuluj i ponowne otwarcie muszą zachowywać
+semantykę głównego AMC.
 
 Cały interfejs wymaga porównania z głównym AMC: wszystkie menu i skróty,
 organizacja Biblioteki, wejścia i powroty z podlist oraz właściwe warianty
@@ -282,10 +286,11 @@ lewą strzałką.
    sesji, `Ctrl+Shift+F` globalnie, dostępna lista wyników, wszystkie działania
    na wynikach i prawidłowy powrót do wcześniejszego widoku. Przy tym usunąć
    powtarzany prefiks „Nagrane” z ukończonych wierszy `Alt+Shift+R`.
-4. Przywrócenie Ustawień ogólnych pod `Ctrl+,`, kart Podcastów i Radia oraz
-   `Ctrl+Tab`; dodanie wyboru pauzy po utracie wyjścia i `Ctrl+]` do następnego
-   urządzenia bieżącej sesji. W tym samym etapie pełny audyt Biblioteki,
-   menu, skrótów i sortowań `Alt+cyfra` względem głównego AMC.
+4. Przepisanie całych Ustawień głównego AMC pod `Ctrl+,`, ze wszystkimi
+   kartami, polami, zależnościami i zapisem oraz nawigacją `Ctrl+Tab`; dodanie
+   wyboru pauzy po utracie wyjścia, `Ctrl+[` do poprzedniego i `Ctrl+]` do
+   następnego urządzenia bieżącej sesji. W tym samym etapie pełny audyt
+   Biblioteki, menu, skrótów i sortowań `Alt+cyfra` względem głównego AMC.
 5. Uzupełnienie WiiM i Sonos o pełną warstwę interfejsu z głównego AMC:
    Bibliotekę, Ulubione, wybór materiałów, presety, wszystkie skróty oraz
    prawidłowe wykonanie transportu po zakończeniu odczytu stanu. Następnie

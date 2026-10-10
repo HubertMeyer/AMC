@@ -529,10 +529,10 @@ odsłuch zostaje wstrzymany.
 
 Powrót zapamiętanego urządzenia nie przenosi dźwięku samoczynnie w trakcie
 bieżącego materiału; wybór zostanie użyty przy następnym uruchomieniu albo po
-świadomej zmianie przez `Shift+A`. Nowy `Ctrl+]` przechodzi cyklicznie do
-następnego dostępnego wyjścia dla aktywnej sesji podczas odtwarzania. Podaje
-użytkową nazwę, zapamiętuje wybór dla tej sesji i nie zmienia urządzeń innych
-równolegle grających sesji.
+świadomej zmianie przez `Shift+A`. Nowe `Ctrl+[` i `Ctrl+]` przechodzą
+cyklicznie odpowiednio do poprzedniego i następnego dostępnego wyjścia dla
+aktywnej sesji podczas odtwarzania. Podają użytkową nazwę, zapamiętują wybór
+dla tej sesji i nie zmieniają urządzeń innych równolegle grających sesji.
 
 ## Niezależne tory sesji — regresja otwarta
 

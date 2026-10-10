@@ -642,11 +642,11 @@ przejść na urządzenie domyślne, lecz wstrzymać odsłuch do świadomego naci
 `Spacji`. W obu trybach aktywne nagrywanie i timeshift mają działać dalej.
 Materiał wstrzymany przed odłączeniem nie może sam się wznowić.
 
-Podczas odtwarzania naciskaj `Ctrl+]`. Każde naciśnięcie ma wybrać następne
-dostępne wyjście bieżącej sesji, zawinąć listę, podać jedną użytkową nazwę i
-zapamiętać wybór. Nie może zmienić urządzenia ani stanu innej sesji. Nie
-odłączaj urządzenia używanego do pracy z czytnikiem ekranu bez zapewnionego
-innego słyszalnego wyjścia.
+Podczas odtwarzania naciskaj `Ctrl+]` oraz `Ctrl+[`. Pierwszy skrót ma wybierać
+następne, a drugi poprzednie dostępne wyjście bieżącej sesji. Oba zawijają
+listę, podają jedną użytkową nazwę i zapamiętują wybór. Nie mogą zmienić
+urządzenia ani stanu innej sesji. Nie odłączaj urządzenia używanego do pracy z
+czytnikiem ekranu bez zapewnionego innego słyszalnego wyjścia.
 
 ## Niezależne odtwarzanie sesji
 
@@ -660,10 +660,13 @@ innego słyszalnego wyjścia.
 
 ## Ustawienia i pełny audyt interfejsu
 
-`Ctrl+,` ma otworzyć Ustawienia ogólne, a nie opcje pojedynczego materiału lub
-sesji. Sprawdź co najmniej sekcje Ogólne, Podcasty i Radio. `Ctrl+Tab` oraz
-`Ctrl+Shift+Tab` mają przechodzić między kartami; po zapisaniu, anulowaniu i
-ponownym otwarciu fokus oraz celowe etykiety muszą pozostać prawidłowe.
+`Ctrl+,` ma otworzyć pełne Ustawienia programu, a nie opcje pojedynczego
+materiału lub sesji. Najpierw sporządź z głównego AMC kompletny spis wszystkich
+kart, pól, wartości domyślnych, zależności, walidacji i miejsc zapisu; nie
+ograniczaj odbioru do kart Ogólne, Podcasty i Radio. `Ctrl+Tab` oraz
+`Ctrl+Shift+Tab` mają przechodzić między wszystkimi kartami. Każde pole trzeba
+sprawdzić z NVDA przy pierwszym wejściu, zmianie wartości, zapisie, anulowaniu
+i ponownym otwarciu; fokus i celowe etykiety muszą pozostać prawidłowe.
 
 Porównaj z głównym AMC każdą sesję i każdy widok: menu, skróty, strukturę
 Biblioteki, Enter, Escape/Backspace, lewą i prawą strzałkę oraz wszystkie
