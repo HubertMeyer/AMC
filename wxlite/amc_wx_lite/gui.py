@@ -187,6 +187,66 @@ from .tidal_source import (
 APP_NAME = "AMC-wx-Lite"
 TEMPO_LABELS = {1: "Mowa – Speedy", 2: "Muzyka – Signalsmith", 0: "Dotychczasowy – SoundTouch"}
 
+
+def _windows_main_window() -> int:
+    """Uchwyt poprzedniego głównego okna, bez szukania po procesach Pythona."""
+    if os.name != "nt":
+        return 0
+    try:
+        import ctypes
+
+        return int(ctypes.windll.user32.FindWindowW(None, APP_NAME))  # type: ignore[attr-defined]
+    except Exception:
+        return 0
+
+
+def _activate_window_handle(handle: int) -> bool:
+    """Przywróć, zmaksymalizuj i wysuń wskazane okno na pierwszy plan."""
+    if os.name != "nt" or not handle:
+        return False
+    try:
+        import ctypes
+
+        user32 = ctypes.windll.user32  # type: ignore[attr-defined]
+        user32.ShowWindow(handle, 3)  # SW_MAXIMIZE
+        user32.SetForegroundWindow(handle)
+        return True
+    except Exception:
+        return False
+
+
+def _request_previous_instance_close() -> bool:
+    """Wyślij poprzedniej wersji zwykłe WM_CLOSE; nigdy nie zabijaj procesu."""
+    handle = _windows_main_window()
+    if not handle or os.name != "nt":
+        return False
+    try:
+        import ctypes
+
+        return bool(ctypes.windll.user32.PostMessageW(handle, 0x0010, 0, 0))  # type: ignore[attr-defined]
+    except Exception:
+        return False
+
+
+def _wait_for_previous_instance(checker, *, timeout_seconds: float = 8.0) -> bool:
+    """True oznacza, że poprzednia instancja zwolniła blokadę."""
+    deadline = time.monotonic() + max(0.0, timeout_seconds)
+    while checker.IsAnotherRunning() and time.monotonic() < deadline:
+        time.sleep(0.1)
+    return not checker.IsAnotherRunning()
+
+
+def _present_main_window(frame: wx.Frame) -> None:
+    """Jedna droga startu i ponownego przywołania głównego okna."""
+    frame.Maximize(True)
+    frame.Show(True)
+    frame.Raise()
+    frame.SetFocus()
+    try:
+        _activate_window_handle(int(frame.GetHandle()))
+    except Exception:
+        pass
+
 YOUTUBE_EXPORT_CSV_FILTER = 0
 YOUTUBE_EXPORT_OPML_FILTER = 1
 YOUTUBE_EXPORT_WILDCARD = (
@@ -10317,6 +10377,31 @@ class LiteFrame(wx.Frame):
         return True
 
     def _on_close(self, event: wx.CloseEvent) -> None:
+        # Zamknięcie przez nową wersję, instalator albo użytkownika jest tą
+        # samą operacją. Nigdy nie kończymy hosta, dopóki trwa nagrywanie.
+        # Odpowiedź pobieramy bezpośrednio z właściciela toru, a nie tylko z
+        # okresowej migawki interfejsu. Brak odpowiedzi również oznacza odmowę:
+        # bezpieczeństwo nagrania ma pierwszeństwo przed automatyczną wymianą.
+        can_veto = bool(getattr(event, "CanVeto", lambda: True)())
+        if can_veto and self.client is not None and self.client.alive:
+            try:
+                recording_status = self.client.radio_recording_status()
+                self._last_recording_status = recording_status
+            except Exception:
+                event.Veto()
+                self.announcer.say(
+                    "Nie zamykam AMC Python, ponieważ nie można potwierdzić "
+                    "stanu nagrywania"
+                )
+                _present_main_window(self)
+                return
+            if int((recording_status or {}).get("count") or 0) > 0:
+                event.Veto()
+                self.announcer.say(
+                    "Nie zamykam AMC Python, ponieważ trwa nagrywanie"
+                )
+                _present_main_window(self)
+                return
         self.timer.Stop()
         # Dlugie operacje fragmentu sa jawnie anulowane przed EOF hosta.
         # Edytory C# usuwaja swoje pliki techniczne i nie dotykaja oryginalu
@@ -10356,17 +10441,36 @@ class LiteApp(wx.App):
             f"{APP_NAME}-{wx.GetUserId()}"
         )
         if self._instance_checker.IsAnotherRunning():
-            wx.MessageBox(
-                "AMC Python jest już uruchomione. Zamknij poprzednie okno "
-                "przed uruchomieniem nowej wersji.",
-                "AMC Python",
-                wx.OK | wx.ICON_INFORMATION,
+            requested = _request_previous_instance_close()
+            released = requested and _wait_for_previous_instance(
+                self._instance_checker
             )
-            return False
+            if not released:
+                _activate_window_handle(_windows_main_window())
+                wx.MessageBox(
+                    "Poprzednia instancja AMC Python pozostała uruchomiona. "
+                    "Może trwać nagrywanie albo program nie potwierdził "
+                    "bezpiecznego zamknięcia.",
+                    "AMC Python",
+                    wx.OK | wx.ICON_INFORMATION,
+                )
+                return False
+
+            # Checker utworzony, gdy blokada należała do poprzednika, nie musi
+            # automatycznie stać się jej właścicielem. Tworzymy go ponownie;
+            # drugie sprawdzenie zamyka krótkie okno wyścigu dwóch uruchomień.
+            self._instance_checker = wx.SingleInstanceChecker(
+                f"{APP_NAME}-{wx.GetUserId()}"
+            )
+            if self._instance_checker.IsAnotherRunning():
+                _activate_window_handle(_windows_main_window())
+                return False
         store = StateStore()
         frame = LiteFrame(store, store.load())
-        frame.Show()
-        frame.Centre()
+        if hasattr(self, "SetTopWindow"):
+            self.SetTopWindow(frame)
+        _present_main_window(frame)
+        wx.CallAfter(_present_main_window, frame)
         return True
 
 

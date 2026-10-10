@@ -1,5 +1,23 @@
 # AMC Python — zakres względem pełnego AMC
 
+## 10.10 — bezpieczny start, jedna instancja i aktualizator EXE
+
+AMC Python uruchamia się zmaksymalizowany i jest przenoszony na pierwszy plan.
+Jeżeli działa wcześniejsza instancja, nowa wysyła jej zwykłą prośbę o
+zamknięcie, czeka na zwolnienie blokady i dopiero potem otwiera własne okno.
+Nie używa wymuszonego zakończenia procesu. Gdy trwa nagrywanie albo nie można
+wiarygodnie potwierdzić jego stanu, starsza instancja odmawia zamknięcia,
+wraca na pierwszy plan, a druga nie uruchamia się równolegle.
+
+Do paczki trafia teraz `AMC-Python-Updater.exe`. Aktualizator przyjmuje
+wcześniej przygotowaną paczkę, sprawdza obecność i sumę SHA-256 każdego pliku,
+odrzuca ścieżki wychodzące poza katalog aplikacji, wykonuje kopię zastępowanych
+plików i cofa zmianę po błędzie. Czeka na bezpieczne zakończenie starego
+procesu i nie zabija go po przekroczeniu limitu czasu. Automatyczne
+sprawdzanie i pobieranie wydania z Internetu wymaga jeszcze podłączenia
+docelowego kanału wydań AMC Python; obecny plik EXE jest gotowym, działającym
+etapem weryfikacji i instalacji przygotowanej aktualizacji.
+
 ## 10.10 — podcasty, lewa strzałka i planowanie nagrania
 
 Pakiet wxPython jest docelowym samodzielnym interfejsem. Użytkownik nie

@@ -2,6 +2,24 @@
 
 To rozwijany równoległy interfejs pełnegoAMC. Nie jest jeszcze zamiennikiem wszystkich funkcji programu. Katalog i nazwa uruchamiacza `wxlite` są historyczne; nie oznaczają decyzji o ograniczeniu docelowego zakresu do dwóch sesji.
 
+## Start aplikacji i jedna instancja
+
+1. Uruchom `AMC-wx-Lite.cmd`. Okno ma od razu być zmaksymalizowane, aktywne
+   i znajdować się na pierwszym planie.
+2. Bez trwającego nagrywania uruchom ten sam plik ponownie. Poprzednia
+   instancja ma się zwyczajnie zamknąć, a po niej ma zostać uruchomiona jedna
+   nowa instancja, także zmaksymalizowana i aktywna.
+3. Podczas rzeczywistego nagrywania uruchom plik ponownie. Stara instancja nie
+   może zostać zamknięta ani ubita; ma wrócić na pierwszy plan, a druga ma
+   zakończyć start. Tak samo program ma postąpić, gdy nie potrafi potwierdzić
+   stanu nagrywania.
+
+Plik `AMC-Python-Updater.exe` służy obecnie do bezpiecznego zastosowania
+przygotowanej paczki z pełnym manifestem SHA-256. Nie uruchamiaj go ręcznie na
+produkcyjnym katalogu bez przygotowanej paczki aktualizacji. Automatyczne
+sprawdzanie i pobieranie nowych wersji zostanie podłączone do docelowego
+kanału wydań AMC Python w kolejnym etapie.
+
 ## Bieżący pakiet — Podcasty i Shift+R
 
 Uruchamiaj dokładnie:

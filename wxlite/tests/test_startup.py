@@ -10,7 +10,7 @@ from amc_wx_lite.state_store import LiteState, Options
 from amc_wx_lite.host_client import LiteHostClient, HostUnavailable
 
 
-def test_second_instance_is_refused_before_opening_an_engine_less_window():
+def test_second_instance_is_kept_when_safe_close_cannot_be_confirmed():
     calls = []
 
     class Checker:
@@ -28,6 +28,9 @@ def test_second_instance_is_refused_before_opening_an_engine_less_window():
     old_icon = gui.wx.ICON_INFORMATION
     old_message = gui.wx.MessageBox
     old_store = gui.StateStore
+    old_request = gui._request_previous_instance_close
+    old_activate = gui._activate_window_handle
+    old_window = gui._windows_main_window
     try:
         gui.wx.SingleInstanceChecker = Checker
         gui.wx.GetUserId = lambda: "test-user"
@@ -35,6 +38,11 @@ def test_second_instance_is_refused_before_opening_an_engine_less_window():
         gui.wx.MessageBox = lambda message, title, flags: calls.append(
             ("message", message, title, flags)
         )
+        gui._request_previous_instance_close = lambda: False
+        gui._activate_window_handle = lambda handle: calls.append(
+            ("activate", handle)
+        ) or True
+        gui._windows_main_window = lambda: 123
         gui.StateStore = lambda: (_ for _ in ()).throw(
             AssertionError("Stan ani host nie mogą być otwierane w drugim oknie")
         )
@@ -43,7 +51,8 @@ def test_second_instance_is_refused_before_opening_an_engine_less_window():
         assert app._instance_checker is not None
         assert any(call[0] == "checker" for call in calls)
         message = next(call for call in calls if call[0] == "message")
-        assert "już uruchomione" in message[1]
+        assert "pozostała uruchomiona" in message[1]
+        assert "nagrywanie" in message[1]
         assert "AMC-wx-Lite" not in message[1]
     finally:
         if old_checker is None:
@@ -57,6 +66,161 @@ def test_second_instance_is_refused_before_opening_an_engine_less_window():
         gui.wx.ICON_INFORMATION = old_icon
         gui.wx.MessageBox = old_message
         gui.StateStore = old_store
+        gui._request_previous_instance_close = old_request
+        gui._activate_window_handle = old_activate
+        gui._windows_main_window = old_window
+
+
+def test_main_window_starts_maximized_visible_and_in_foreground():
+    calls = []
+
+    frame = SimpleNamespace(
+        Maximize=lambda value: calls.append(("maximize", value)),
+        Show=lambda value: calls.append(("show", value)),
+        Raise=lambda: calls.append(("raise",)),
+        SetFocus=lambda: calls.append(("focus",)),
+        GetHandle=lambda: 456,
+    )
+    old_activate = gui._activate_window_handle
+    try:
+        gui._activate_window_handle = lambda handle: calls.append(
+            ("foreground", handle)
+        ) or True
+        gui._present_main_window(frame)
+    finally:
+        gui._activate_window_handle = old_activate
+
+    assert calls == [
+        ("maximize", True),
+        ("show", True),
+        ("raise",),
+        ("focus",),
+        ("foreground", 456),
+    ]
+
+
+def test_safe_previous_instance_is_replaced_before_new_window_opens():
+    calls = []
+    checker_results = iter((True, False))
+
+    class Checker:
+        def __init__(self, name):
+            self.running = next(checker_results)
+            calls.append(("checker", name, self.running))
+
+        def IsAnotherRunning(self):  # noqa: N802 - wx API
+            return self.running
+
+    frame = SimpleNamespace()
+    app = SimpleNamespace(
+        SetAppName=lambda name: calls.append(("app-name", name)),
+        SetTopWindow=lambda value: calls.append(("top", value)),
+    )
+    originals = (
+        getattr(gui.wx, "SingleInstanceChecker", None),
+        getattr(gui.wx, "GetUserId", None),
+        gui.wx.CallAfter,
+        gui.StateStore,
+        gui.LiteFrame,
+        gui._request_previous_instance_close,
+        gui._wait_for_previous_instance,
+        gui._present_main_window,
+    )
+    try:
+        gui.wx.SingleInstanceChecker = Checker
+        gui.wx.GetUserId = lambda: "test-user"
+        gui.wx.CallAfter = lambda function, *args: function(*args)
+        gui.StateStore = lambda: SimpleNamespace(load=lambda: "state")
+        gui.LiteFrame = lambda store, state: calls.append(
+            ("frame", store, state)
+        ) or frame
+        gui._request_previous_instance_close = lambda: calls.append(
+            ("close-request",)
+        ) or True
+        gui._wait_for_previous_instance = lambda checker: calls.append(
+            ("wait", checker.running)
+        ) or True
+        gui._present_main_window = lambda value: calls.append(
+            ("present", value)
+        )
+
+        assert gui.LiteApp.OnInit(app) is True
+    finally:
+        (
+            old_checker,
+            old_user,
+            gui.wx.CallAfter,
+            gui.StateStore,
+            gui.LiteFrame,
+            gui._request_previous_instance_close,
+            gui._wait_for_previous_instance,
+            gui._present_main_window,
+        ) = originals
+        if old_checker is None:
+            delattr(gui.wx, "SingleInstanceChecker")
+        else:
+            gui.wx.SingleInstanceChecker = old_checker
+        if old_user is None:
+            delattr(gui.wx, "GetUserId")
+        else:
+            gui.wx.GetUserId = old_user
+
+    assert ("close-request",) in calls
+    assert len([entry for entry in calls if entry[0] == "checker"]) == 2
+    assert ("top", frame) in calls
+    assert calls.count(("present", frame)) == 2
+
+
+def test_close_is_refused_while_recording_is_active():
+    calls = []
+    frame = SimpleNamespace(
+        client=SimpleNamespace(
+            alive=True,
+            radio_recording_status=lambda: {"count": 1},
+        ),
+        _last_recording_status={},
+        announcer=SimpleNamespace(say=lambda text: calls.append(("say", text))),
+    )
+    event = SimpleNamespace(
+        CanVeto=lambda: True,
+        Veto=lambda: calls.append(("veto",)),
+    )
+    old_present = gui._present_main_window
+    try:
+        gui._present_main_window = lambda _frame: calls.append(("present",))
+        gui.LiteFrame._on_close(frame, event)
+    finally:
+        gui._present_main_window = old_present
+
+    assert ("veto",) in calls
+    assert ("present",) in calls
+    assert any("trwa nagrywanie" in entry[1] for entry in calls if entry[0] == "say")
+
+
+def test_close_is_refused_when_recording_state_cannot_be_confirmed():
+    calls = []
+
+    def unavailable():
+        raise RuntimeError("host nie odpowiada")
+
+    frame = SimpleNamespace(
+        client=SimpleNamespace(alive=True, radio_recording_status=unavailable),
+        _last_recording_status={},
+        announcer=SimpleNamespace(say=lambda text: calls.append(("say", text))),
+    )
+    event = SimpleNamespace(
+        CanVeto=lambda: True,
+        Veto=lambda: calls.append(("veto",)),
+    )
+    old_present = gui._present_main_window
+    try:
+        gui._present_main_window = lambda _frame: calls.append(("present",))
+        gui.LiteFrame._on_close(frame, event)
+    finally:
+        gui._present_main_window = old_present
+
+    assert ("veto",) in calls
+    assert any("nie można potwierdzić" in entry[1] for entry in calls if entry[0] == "say")
 
 
 def test_engine_handshake_is_deferred_to_background():

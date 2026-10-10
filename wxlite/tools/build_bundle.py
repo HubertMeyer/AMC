@@ -38,6 +38,16 @@ HOST_PUBLISH = (
     / "win-x64"
     / "publish"
 )
+UPDATER_PUBLISH = (
+    REPO
+    / "src"
+    / "AccessibleMediaController.PythonUpdater"
+    / "bin"
+    / "Release"
+    / "net8.0-windows"
+    / "win-x64"
+    / "publish"
+)
 
 
 def sha256(path: Path) -> str:
@@ -129,6 +139,19 @@ def copy_runtime(target: Path, runtime: Path) -> list[str]:
     return [p.relative_to(target).as_posix() for p in sorted(destination.rglob("*")) if p.is_file()]
 
 
+def copy_updater(target: Path, updater_dir: Path) -> list[str]:
+    executable = updater_dir / "AMC-Python-Updater.exe"
+    if not executable.is_file():
+        raise SystemExit(
+            f"Nie ma zbudowanego aktualizatora w {executable}.\n"
+            "Zbuduj go: dotnet publish "
+            "src/AccessibleMediaController.PythonUpdater -c Release "
+            "-r win-x64 --self-contained false"
+        )
+    shutil.copy2(executable, target / executable.name)
+    return [executable.name]
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Zloz pakiet AMC-wx-Lite")
     parser.add_argument("--out", required=True, type=Path, help="folder docelowy")
@@ -142,15 +165,56 @@ def main() -> int:
         ),
     )
     parser.add_argument(
+        "--updater",
+        type=Path,
+        default=UPDATER_PUBLISH,
+        help="folder publish wykonywalnego aktualizatora AMC Python",
+    )
+    parser.add_argument(
         "--runtime",
         type=Path,
         default=None,
         help="opcjonalny prywatny runtime Pythona do dolozenia (nie trafia do Git)",
     )
     parser.add_argument("--clean", action="store_true", help="wyczysc folder docelowy")
+    parser.add_argument(
+        "--refresh-python-only",
+        action="store_true",
+        help=(
+            "odswiez tylko interfejs, dokumentacje i aktualizator w istniejacej "
+            "paczce; nie dotykaj uruchomionego hosta ani runtime"
+        ),
+    )
     args = parser.parse_args()
 
     target: Path = args.out
+    if args.refresh_python_only:
+        manifest_path = target / "bundle-manifest.json"
+        if not manifest_path.is_file():
+            raise SystemExit(
+                "Tryb --refresh-python-only wymaga istniejacej kompletnej paczki"
+            )
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        files = list(manifest.get("files") or [])
+        files += copy_python_code(target)
+        files += copy_updater(target, args.updater)
+        manifest["created"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
+        manifest["files"] = [
+            relative
+            for relative in dict.fromkeys(files)
+            if (target / Path(relative)).is_file()
+        ]
+        manifest["fileHashes"] = {
+            relative: sha256(target / Path(relative))
+            for relative in manifest["files"]
+        }
+        manifest_path.write_text(
+            json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+        print(f"Odswiezono interfejs i aktualizator: {target}")
+        print(f"  plikow: {len(manifest['files'])}")
+        return 0
+
     if args.clean and target.exists():
         shutil.rmtree(target)
     target.mkdir(parents=True, exist_ok=True)
@@ -162,6 +226,7 @@ def main() -> int:
     }
 
     manifest["files"] += copy_python_code(target)
+    manifest["files"] += copy_updater(target, args.updater)
     host_files, host_hashes = copy_host(target, args.host, args.host_subdir)
     manifest["files"] += host_files
     manifest["hostHashes"] = host_hashes
@@ -175,6 +240,14 @@ def main() -> int:
             "NIE DOLOZONY - wskaz --runtime albo utworz .venv i zainstaluj "
             "requirements-win64.txt"
         )
+
+    # Aktualizator akceptuje wyłącznie kompletne paczki. Sumy obejmują każdy
+    # plik wymieniony w manifeście, nie tylko binaria hosta.
+    manifest["files"] = list(dict.fromkeys(manifest["files"]))
+    manifest["fileHashes"] = {
+        relative: sha256(target / Path(relative))
+        for relative in manifest["files"]
+    }
 
     (target / "bundle-manifest.json").write_text(
         json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8"
