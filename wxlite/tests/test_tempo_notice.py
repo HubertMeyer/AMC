@@ -29,11 +29,14 @@ def test_successful_algorithm_does_not_add_a_message():
 
 def test_radio_title_uses_the_host_event_field():
     messages, labels = [], []
+    refreshes = []
     frame = cast(LiteFrame, SimpleNamespace(_window_alive=lambda: True,
         announcer=SimpleNamespace(say=messages.append),
-        now_playing=SimpleNamespace(SetLabel=labels.append)))
+        now_playing=SimpleNamespace(SetLabel=labels.append),
+        _refresh_status=lambda: refreshes.append(True)))
     LiteFrame._handle_engine_event(frame, "radio.nowPlaying", {
         "streamTitle": "Wykonawca — Utwór", "station": "Stacja"
     })
     assert labels == ["Wykonawca — Utwór"]
     assert messages == labels
+    assert refreshes == [True], "pełny pasek NVDA+End ma zostać odświeżony"

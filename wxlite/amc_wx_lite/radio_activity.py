@@ -47,39 +47,50 @@ def join_spoken_prefix(labels: list[str]) -> str:
 def activity_cue_wav(*, playback: bool, recording: bool) -> bytes:
     """Zbuduj delikatny sygnal PCM dla stanu odtwarzania/nagrywania.
 
-    Odtwarzanie ma wyzszy ton, nagrywanie nizszy, a oba stany jednoczesnie
-    tworza krotki dwudzwiek. Amplituda to tylko okolo osiem procent zakresu.
+    Odtwarzanie ma wyraznie wyzszy i krotszy ton, a nagrywanie nizszy i nieco
+    dluzszy. Gdy oba stany sa aktywne, slychac DOKLADNIE te dwa sygnaly jeden
+    po drugim, rozdzielone bardzo krotka cisza. To jest czytelniejsze niz
+    dotychczasowy akord, w ktorym oba podobne tony zlewaly sie w jeden.
+
+    Amplituda pozostaje mala -- najwyzej okolo osiem procent zakresu PCM.
     """
     if not playback and not recording:
         return b""
 
     sample_rate = 22_050
-    duration = 0.040 if playback and recording else 0.035
-    sample_count = max(1, int(sample_rate * duration))
-    frequencies = (
-        (1046.5, 659.25)
-        if playback and recording
-        else ((1046.5,) if playback else (659.25,))
-    )
     peak = 2_500
     fade_samples = max(1, int(sample_rate * 0.006))
-    samples: list[bytes] = []
-    for index in range(sample_count):
-        envelope = min(
-            1.0,
-            index / fade_samples,
-            (sample_count - 1 - index) / fade_samples,
-        )
-        value = sum(
-            math.sin(2.0 * math.pi * frequency * index / sample_rate)
-            for frequency in frequencies
-        ) / len(frequencies)
-        samples.append(struct.pack("<h", int(peak * envelope * value)))
+
+    def tone(frequency: float, duration: float) -> bytes:
+        sample_count = max(1, int(sample_rate * duration))
+        samples: list[bytes] = []
+        for index in range(sample_count):
+            envelope = min(
+                1.0,
+                index / fade_samples,
+                (sample_count - 1 - index) / fade_samples,
+            )
+            value = math.sin(2.0 * math.pi * frequency * index / sample_rate)
+            samples.append(struct.pack("<h", int(peak * envelope * value)))
+        return b"".join(samples)
+
+    # Wysoki, krotki sygnal = odtwarzanie. Niski, odrobine dluzszy =
+    # nagrywanie. Roznica ponad oktawy jest celowa: oba maja byc rozpoznawalne
+    # nawet przy cichym odsluchu i przez niewielkie glosniki.
+    playback_tone = tone(1_320.0, 0.030)
+    recording_tone = tone(440.0, 0.044)
+    if playback and recording:
+        gap = b"\0\0" * max(1, int(sample_rate * 0.018))
+        frames = playback_tone + gap + recording_tone
+    elif playback:
+        frames = playback_tone
+    else:
+        frames = recording_tone
 
     buffer = io.BytesIO()
     with wave.open(buffer, "wb") as output:
         output.setnchannels(1)
         output.setsampwidth(2)
         output.setframerate(sample_rate)
-        output.writeframes(b"".join(samples))
+        output.writeframes(frames)
     return buffer.getvalue()

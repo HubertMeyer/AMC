@@ -66,6 +66,15 @@ def test_only_intentional_labels_are_exposed() -> None:
     assert normalize_state_position("wartosc-techniczna") == "after"
 
 
+def _pcm(data: bytes) -> tuple[int, bytes]:
+    with wave.open(io.BytesIO(data), "rb") as source:
+        assert source.getnchannels() == 1
+        assert source.getsampwidth() == 2
+        rate = source.getframerate()
+        samples = source.readframes(source.getnframes())
+    return rate, samples
+
+
 def test_three_delicate_cues_are_valid_and_distinct() -> None:
     waves = {
         "playback": activity_cue_wav(playback=True, recording=False),
@@ -78,7 +87,24 @@ def test_three_delicate_cues_are_valid_and_distinct() -> None:
         with wave.open(io.BytesIO(data), "rb") as source:
             assert source.getnchannels() == 1
             assert source.getsampwidth() == 2
-            assert source.getnframes() / source.getframerate() <= 0.05
+            assert source.getnframes() / source.getframerate() <= 0.10
             samples = source.readframes(source.getnframes())
         values = struct.unpack(f"<{len(samples) // 2}h", samples)
         assert max(abs(value) for value in values) <= 2_500
+
+
+def test_both_states_are_the_two_individual_cues_separated_by_a_short_gap() -> None:
+    playback_rate, playback = _pcm(
+        activity_cue_wav(playback=True, recording=False)
+    )
+    recording_rate, recording = _pcm(
+        activity_cue_wav(playback=False, recording=True)
+    )
+    both_rate, both = _pcm(activity_cue_wav(playback=True, recording=True))
+
+    assert playback_rate == recording_rate == both_rate
+    assert both.startswith(playback)
+    assert both.endswith(recording)
+    gap = both[len(playback) : -len(recording)]
+    assert gap and set(gap) == {0}
+    assert len(gap) / 2 / both_rate < 0.025, "odstep ma byc bardzo krotki"

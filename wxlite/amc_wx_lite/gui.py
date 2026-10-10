@@ -623,11 +623,10 @@ class Announcer:
             return
         if self._status.GetLabel() != text:
             self._status.SetLabel(text)
-        # Ta sama tresc ma tez byc DO ODCZYTANIA na zadanie (``NVDA+End``).
-        # Pasek stanu tylko ja przechowuje -- nie mowi, wiec nie dubluje
-        # zapowiedzi i nie przestawia nawigatora czytnika.
-        if self._status_bar is not None:
-            self._status_bar.show(text)
+        # Kanal zapowiedzi i natywny pasek odtwarzania sa rozdzielne, tak jak
+        # w glownym AMC. Kopiowanie tutaj ostatniego komunikatu nadpisywalo
+        # wiarygodny status i dlatego NVDA+End czytal np. tylko
+        # "Odtwarzacz, Radio Poznan" zamiast stacji, parametrow i utworu.
         # Nazwe ustawiamy ZAWSZE, nawet gdy tekst sie nie zmienil: wlasnie ja
         # czyta ``event_liveRegionChange``, a powtorzone pytanie ma odpowiedziec.
         self._status.SetName(text)
@@ -3549,6 +3548,9 @@ class LiteFrame(wx.Frame):
             if title:
                 self.now_playing.SetLabel(title)
                 self.announcer.say(title)
+                # Zdarzenie niesie tylko tytul. Pelny tekst paska (stacja,
+                # parametry audio, tytul) pobierze najblizszy status hosta.
+                self._refresh_status()
         elif name == "radio.recordingScheduled":
             # To zdarzenie przychodzi DOKLADNIE wtedy, gdy termin staje sie
             # wymagalny i host zaklada aktywne nagranie. Bez tej galezi plan
@@ -4709,6 +4711,10 @@ class LiteFrame(wx.Frame):
                 self.now_playing.SetLabel(
                     session.now_playing_title or "Nic nie jest odtwarzane"
                 )
+            if self.navigator.active is SessionId.RADIO:
+                # F6 najpierw oglasza wejscie do odtwarzacza. Natychmiast potem
+                # przywracamy z ostatniej migawki wlasciwa tresc NVDA+End.
+                self._update_native_playback_status(self._last_status)
             if changed:
                 self.play_button.SetFocus()
         elif changed:
@@ -9752,6 +9758,19 @@ class LiteFrame(wx.Frame):
 
     # ------------------------------------------------------------- status
 
+    def _update_native_playback_status(self, payload: dict | None = None) -> None:
+        """Wpisz do NVDA+End gotowy tekst hosta, bez wywolywania mowy.
+
+        Host C# sklada stacje, parametry audio i metadane strumienia tym samym
+        formatterem co Alt+D. Python nie pokazuje surowych identyfikatorow ani
+        nie zgaduje bitrate'u.
+        """
+        status = payload if isinstance(payload, dict) else self._last_status
+        text = str(status.get("currentBroadcastText") or "").strip()
+        bar = getattr(self, "status_bar", None)
+        if text and bar is not None:
+            bar.show(text)
+
     def _on_timer(self, _event: wx.TimerEvent) -> None:
         # Stan transportu i nagran odswiezamy takze na liscie: dzieki temu
         # wiersz stacji uczciwie mowi, czy jest odtwarzany albo nagrywany.
@@ -9810,6 +9829,7 @@ class LiteFrame(wx.Frame):
             if not payload:
                 return
             self._last_status = payload
+            self._update_native_playback_status(payload)
             remote_player = (
                 self.navigator.active is SessionId.WIIM
                 or self.navigator.active is SessionId.SONOS

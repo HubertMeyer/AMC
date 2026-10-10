@@ -17,7 +17,7 @@ z rola ``ROLE_SYSTEM_STATICTEXT`` -- nie jest paskiem stanu, wiec NVDA
 spadal na tytul okna. Komunikat byl widoczny i mowiony przy zmianie
 (live region), ale NIE BYL do odczytania NA ZADANIE.
 
-ORYGINAL C# MA DWA KANALY -- I MY TEZ MAMY MIEC DWA
+ORYGINAL C# MA DWA ROZNE KANALY -- I MY TEZ MAMY MIEC DWA
 ---------------------------------------------------
 Zwykle AMC trzyma je rozdzielnie, nie zamiast siebie:
 
@@ -30,7 +30,7 @@ Zwykle AMC trzyma je rozdzielnie, nie zamiast siebie:
       ``DockPanel.Dock="Bottom"``, ``Focusable="False"``,
       ``KeyboardNavigation.IsTabStop="False"``, ``TabStop = false``,
       ``SetStyle(ControlStyles.Selectable, false)``.
-      To kanal ODCZYTU NA ZADANIE -- wprost "It must remain available to
+      To kanal STANU ODTWARZANIA NA ZADANIE -- wprost "It must remain available to
       NVDA+End, but it must never become the keyboard target".
 
 Stad zakres tej poprawki: DOKLADAMY natywny pasek stanu obok istniejacego
@@ -183,12 +183,14 @@ def test_missing_native_bar_does_not_break_announcements() -> None:
 # ------------------------------------- 2. podlaczenie do istniejacej bramy
 
 
-def test_announced_message_also_lands_in_the_native_status_bar() -> None:
-    """Tresc z dolu okna musi byc do ODCZYTANIA, nie tylko do uslyszenia."""
+def test_announcement_does_not_overwrite_the_native_playback_status() -> None:
+    """Ostatni komunikat nie moze zastapic stacji, bitrate'u i utworu."""
     announcer, field, bar, events = make_announcer()
+    native = announcer._status_bar
+    native.show("Program Trzeci, 192 kb/s, Serwis informacyjny")
     announcer.say("Skopiowano plik i pełną ścieżkę")
     assert field.label == "Skopiowano plik i pełną ścieżkę"
-    assert bar.GetStatusText(0) == "Skopiowano plik i pełną ścieżkę"
+    assert bar.GetStatusText(0) == "Program Trzeci, 192 kb/s, Serwis informacyjny"
 
 
 def test_announcer_still_speaks_exactly_once_per_message() -> None:
@@ -205,7 +207,7 @@ def test_repeated_question_is_answered_again_in_speech() -> None:
     announcer.say("3:51")
     announcer.say("3:51")
     assert len(events) == 2, "powtorzone pytanie ma dostac odpowiedz dwa razy"
-    assert bar.writes == [("3:51", 0)], "ale pasek stanu nie zmienil tresci"
+    assert bar.writes == [], "zapowiedz nie jest stanem odtwarzania"
 
 
 def test_empty_message_changes_nothing() -> None:
@@ -216,12 +218,12 @@ def test_empty_message_changes_nothing() -> None:
     assert events == []
 
 
-def test_background_window_updates_the_bar_but_stays_silent() -> None:
-    """Okno w tle nie wchodzi w slowo obcej aplikacji -- regula bez zmian."""
+def test_background_window_updates_message_field_but_not_playback_bar() -> None:
+    """Okno w tle nie wchodzi w slowo ani nie nadpisuje stanu odtwarzania."""
     announcer, field, bar, events = make_announcer(active=False)
     announcer.say("Nic nie jest odtwarzane")
     assert field.label == "Nic nie jest odtwarzane"
-    assert bar.GetStatusText(0) == "Nic nie jest odtwarzane"
+    assert bar.GetStatusText(0) == ""
     assert events == [], "w tle nie mowimy"
 
 
@@ -254,7 +256,7 @@ def test_window_creates_a_real_frame_status_bar_not_another_label() -> None:
         "bez natywnego paska stanu NVDA+End dalej sieka tytul okna"
     )
     assert "NativeStatusBar(" in build
-    assert "status_bar=" in build, "Announcer musi dostac pasek, inaczej nic go nie pisze"
+    assert "status_bar=" in build, "oba kanaly maja byc jawnie polaczone z oknem"
 
 
 def test_status_bar_is_not_a_keyboard_target() -> None:

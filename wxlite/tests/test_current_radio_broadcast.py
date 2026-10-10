@@ -71,6 +71,21 @@ def test_gui_speaks_only_the_host_user_facing_text() -> None:
     assert spoken == ["Program Trzeci, 192 kb/s, Serwis informacyjny"]
 
 
+def test_nvda_end_receives_the_same_user_facing_broadcast_text() -> None:
+    shown: list[str] = []
+    frame = gui.LiteFrame.__new__(gui.LiteFrame)
+    frame._last_status = {}
+    frame.status_bar = SimpleNamespace(show=shown.append)
+
+    frame._update_native_playback_status({
+        "currentBroadcastText": "Program Trzeci, 192 kb/s, Serwis informacyjny",
+        "id": "radio:{nie-czytaj}",
+        "loadedId": "techniczny-identyfikator",
+    })
+
+    assert shown == ["Program Trzeci, 192 kb/s, Serwis informacyjny"]
+
+
 def test_host_uses_shared_audio_formatter_and_no_technical_id_in_text() -> None:
     root = Path(__file__).resolve().parents[2]
     host = (
@@ -80,10 +95,23 @@ def test_host_uses_shared_audio_formatter_and_no_technical_id_in_text() -> None:
         / "LiteEngineHandlers.cs"
     ).read_text(encoding="utf-8")
     method = host[
-        host.index("private object CurrentRadioBroadcastInformation()") :
+        host.index("private string BuildCurrentRadioBroadcastText(MediaItem item)") :
         host.index("private object StopAll()")
     ]
     assert "AudioParametersFormatter.FormatCompact(item)" in method
     assert "NowPlayingParts.SameValue(item.Title, streamTitle)" in method
     assert "item.Id" not in method
+
+
+def test_transport_status_reuses_the_alt_d_formatter_for_nvda_end() -> None:
+    root = Path(__file__).resolve().parents[2]
+    host = (
+        root
+        / "src"
+        / "AccessibleMediaController.LiteHost"
+        / "LiteEngineHandlers.cs"
+    ).read_text(encoding="utf-8")
+    status = host[host.index("private object Status()") :]
+    assert "BuildCurrentRadioBroadcastText(item)" in status
+    assert "currentBroadcastText" in status
 

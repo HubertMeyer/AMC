@@ -1601,18 +1601,8 @@ internal sealed class LiteEngineHandlers : IDisposable
     /// pelne AMC. Frontend dostaje gotowa, celowa etykiete dla uzytkownika,
     /// nigdy reprezentacje obiektu ani identyfikator urzadzenia lub stacji.
     /// </summary>
-    private object CurrentRadioBroadcastInformation()
+    private string BuildCurrentRadioBroadcastText(MediaItem item)
     {
-        MediaItem? item;
-        lock (_gate)
-        {
-            item = _activeEngine == "radio" ? _radioItem : null;
-        }
-        if (item is null)
-        {
-            throw new LiteRequestException("Najpierw uruchom stację radiową.");
-        }
-
         var parts = new List<string> { item.Title };
         var audio = AudioParametersFormatter.FormatCompact(item);
         if (!string.IsNullOrWhiteSpace(audio)) parts.Add(audio);
@@ -1627,7 +1617,21 @@ internal sealed class LiteEngineHandlers : IDisposable
         {
             parts.Add("brak nazwy bieżącej audycji lub utworu");
         }
-        return new { text = string.Join(", ", parts) };
+        return string.Join(", ", parts);
+    }
+
+    private object CurrentRadioBroadcastInformation()
+    {
+        MediaItem? item;
+        lock (_gate)
+        {
+            item = _activeEngine == "radio" ? _radioItem : null;
+        }
+        if (item is null)
+        {
+            throw new LiteRequestException("Najpierw uruchom stację radiową.");
+        }
+        return new { text = BuildCurrentRadioBroadcastText(item) };
     }
 
     private object StopAll()
@@ -1845,6 +1849,12 @@ internal sealed class LiteEngineHandlers : IDisposable
         var duration = engine == "radio"
             ? item?.Duration ?? TimeSpan.Zero
             : filesDuration != TimeSpan.Zero ? filesDuration : item?.Duration ?? TimeSpan.Zero;
+        // Gotowy, uzytkowy tekst dla natywnego paska stanu. Frontend nie
+        // rekonstruuje bitrate'u ani metadanych z technicznych pol protokolu.
+        // Ta sama funkcja obsluguje Alt+D, wiec oba odczyty pozostaja zgodne.
+        var currentBroadcastText = engine == "radio" && item is not null
+            ? BuildCurrentRadioBroadcastText(item)
+            : null;
         return new
         {
             engine,
@@ -1862,7 +1872,8 @@ internal sealed class LiteEngineHandlers : IDisposable
             // Czas transmisji istnieje tylko dla radia; dla plikow jest zerem.
             bufferedSeconds = engine == "radio" ? _radio.BufferedDuration.TotalSeconds : 0d,
             behindLiveSeconds = engine == "radio" ? _radio.BehindLive.TotalSeconds : 0d,
-            loadedId = engine == "radio" ? _radio.LoadedItemId : _files.LoadedItemId
+            loadedId = engine == "radio" ? _radio.LoadedItemId : _files.LoadedItemId,
+            currentBroadcastText
         };
     }
 
