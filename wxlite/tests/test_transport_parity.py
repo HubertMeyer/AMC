@@ -637,6 +637,21 @@ def test_shift_r_planuje_nagranie_w_radiu_z_listy_i_odtwarzacza() -> None:
     assert dict(describe())["Shift+R"] == "Zaplanuj nagranie wybranej stacji"
 
 
+def test_shift_r_nie_jest_polykany_przez_wylaczony_akcelerator_menu() -> None:
+    """Kontekstowy Shift+R ma trafić do hooka także po zmianie zaznaczenia."""
+    from amc_wx_lite import menu_model
+
+    item = next(
+        entry
+        for menu in menu_model.build_menus()
+        for entry in menu.items
+        if entry.action is Action.ADD_RADIO_SCHEDULE
+    )
+    assert item.shortcut == "Shift+R"
+    assert item.needs_radio_session and item.needs_selection
+    assert item.accelerator is False
+
+
 def test_menu_shortcut_labels_still_tell_the_truth() -> None:
     """Menu nie moze obiecywac starego ``Ctrl+E``, gdy dziala Ctrl+Shift+E.
 

@@ -312,9 +312,14 @@ def build_menus() -> tuple[Menu, ...]:
                      shortcut="Alt+R"),
             MenuItem("&Historia nagrywania", Action.VIEW_RECORDED_RADIO_FILES,
                      shortcut="Alt+Shift+R"),
-            MenuItem("Zaplanuj nagranie wybranej &stacji…",
+            MenuItem("Za&planuj nagranie wybranej stacji…",
                      Action.ADD_RADIO_SCHEDULE, shortcut="Shift+R",
-                     needs_radio_session=True, needs_selection=True),
+                     # To polecenie jest kontekstowe i wymaga zaznaczenia.
+                     # Wyłączony akcelerator wx potrafi połknąć Shift+R,
+                     # zanim zdarzenie dotrze do resolvera listy. Sam podpis
+                     # zostaje w menu, a klawisz obsługuje jawnie hook okna.
+                     accelerator=False, needs_radio_session=True,
+                     needs_selection=True),
             MenuItem("Harmonogra&m nagrywania", Action.MANAGE_RADIO_SCHEDULES,
                      shortcut="Ctrl+Shift+H"),
             SEPARATOR,
