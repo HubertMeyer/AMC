@@ -47,12 +47,22 @@ from amc_wx_lite.radio_views import (  # noqa: E402
     VIEW_FAVORITES,
     VIEW_HISTORY,
     VIEW_LIBRARY,
+    VIEW_PLAYLIST_CONTENTS,
+    VIEW_PLAYLISTS,
     load_view,
 )
 from amc_wx_lite.state_store import Station, StateStore  # noqa: E402
 
 SCHEMA = """
 CREATE TABLE playback_history (session_id TEXT, ordinal INTEGER, item_id TEXT);
+CREATE TABLE playlists (
+    id TEXT PRIMARY KEY, session_id TEXT NOT NULL, ordinal INTEGER NOT NULL,
+    name TEXT NOT NULL, created_utc_ticks INTEGER NOT NULL
+);
+CREATE TABLE playlist_items (
+    playlist_id TEXT NOT NULL, ordinal INTEGER NOT NULL, item_id TEXT NOT NULL,
+    PRIMARY KEY(playlist_id, ordinal), UNIQUE(playlist_id, item_id)
+);
 """
 
 #: Cache radia z ROZBIEZNYMI flagami -- to on rozdziela widoki.
@@ -112,6 +122,20 @@ class RadioViewDataBase(unittest.TestCase):
         con.execute(
             "INSERT INTO playback_history(session_id, ordinal, item_id) "
             "VALUES ('local', 0, '1')"
+        )
+        con.execute(
+            "INSERT INTO playlists(id, session_id, ordinal, name, created_utc_ticks) "
+            "VALUES ('radio-morning', 'radio', 0, 'Poranne radio', 0)"
+        )
+        for ordinal, item_id in enumerate(["3", "missing-station", "1"]):
+            con.execute(
+                "INSERT INTO playlist_items(playlist_id, ordinal, item_id) "
+                "VALUES ('radio-morning', ?, ?)",
+                (ordinal, item_id),
+            )
+        con.execute(
+            "INSERT INTO playlists(id, session_id, ordinal, name, created_utc_ticks) "
+            "VALUES ('local-private', 'local', 0, 'Nie dla radia', 0)"
         )
         con.commit()
         con.close()
@@ -195,6 +219,44 @@ class TestLibraryAndFavorites(RadioViewDataBase):
     def test_unknown_view_is_refused(self) -> None:
         with self.assertRaises(ValueError):
             load_view(self.source, "podcasts")
+
+
+class TestRadioPlaylists(RadioViewDataBase):
+    def test_catalog_has_user_facing_name_and_honest_availability(self) -> None:
+        result = load_view(self.source, VIEW_PLAYLISTS)
+
+        self.assertEqual(len(result.rows), 1)
+        row = result.rows[0]
+        self.assertEqual(row.item_id, "playlist:radio-morning")
+        self.assertEqual(row.title, "Poranne radio")
+        self.assertEqual(row.kind, "playlist")
+        self.assertEqual(row.detail, "dostępne 2 z 3, transmisje na żywo")
+        spoken = " ".join((row.title, row.kind_label, row.detail))
+        self.assertNotIn("radio-morning", spoken)
+        self.assertNotIn("missing-station", spoken)
+        self.assert_nothing_written()
+
+    def test_contents_keep_playlist_order_and_include_station_outside_library(self) -> None:
+        result = load_view(
+            self.source,
+            VIEW_PLAYLIST_CONTENTS,
+            playlist_id="radio-morning",
+        )
+
+        self.assertEqual(_ids(result), ["3", "1"])
+        self.assertEqual(result.heading, "Playlista — Poranne radio")
+        self.assertFalse(result.fallback_to_playlists)
+        self.assert_nothing_written()
+
+    def test_missing_or_other_session_playlist_returns_to_radio_playlists(self) -> None:
+        for playlist_id in ("does-not-exist", "local-private"):
+            result = load_view(
+                self.source,
+                VIEW_PLAYLIST_CONTENTS,
+                playlist_id=playlist_id,
+            )
+            self.assertEqual(result.rows, [])
+            self.assertTrue(result.fallback_to_playlists)
 
 
 class TestHistory(RadioViewDataBase):

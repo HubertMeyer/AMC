@@ -324,8 +324,10 @@ class TestGuiCallerPassesSavedOrder(RadioOrderBase):
         ).read_text(encoding="utf-8")
 
     def test_gui_passes_collation_to_radio_loader(self) -> None:
-        self.assertIn("load_view(source, scope, collation=collation)",
-                      self._source("gui.py"))
+        source = self._source("gui.py")
+        self.assertIn("return load_view(", source)
+        self.assertIn("collation=collation", source)
+        self.assertIn("playlist_id=intent.playlist_id", source)
 
     def test_gui_keeps_collation_after_engine_start(self) -> None:
         self.assertIn("self._collation = collation", self._source("gui.py"))

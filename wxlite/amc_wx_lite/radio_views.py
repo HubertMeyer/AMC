@@ -47,7 +47,7 @@ from .library_activity import (
     _stored_ids,
 )
 from .library_db import LibraryDatabase
-from .library_views import _stored_order
+from .library_views import _format_item_count, _playlists, _stored_order
 from .list_model import Row, rows_from_stations
 from .radio_source import (
     SCOPE_ALL,
@@ -69,7 +69,15 @@ RADIO_SESSION = "radio"
 VIEW_LIBRARY = "library"
 VIEW_FAVORITES = "favorites"
 VIEW_HISTORY = "history"
-RADIO_VIEWS = (VIEW_LIBRARY, VIEW_FAVORITES, VIEW_HISTORY)
+VIEW_PLAYLISTS = "playlists"
+VIEW_PLAYLIST_CONTENTS = "playlist_contents"
+RADIO_VIEWS = (
+    VIEW_LIBRARY,
+    VIEW_FAVORITES,
+    VIEW_HISTORY,
+    VIEW_PLAYLISTS,
+    VIEW_PLAYLIST_CONTENTS,
+)
 
 #: Nazwy widokow po stronie AMC. ``CollectionSortModes`` jest kluczowane
 #: NAZWA WIDOKU C# (``MainWindow.xaml.cs:13196``: ``_currentView``), nie naszym
@@ -95,6 +103,7 @@ _HEADINGS = {
     VIEW_LIBRARY: "Radio — Biblioteka",
     VIEW_FAVORITES: "Radio — Ulubione",
     VIEW_HISTORY: "Radio — Historia odtwarzania",
+    VIEW_PLAYLISTS: "Radio — Playlisty",
 }
 
 
@@ -127,6 +136,9 @@ class RadioViewResult:
     #: Nazwa trybu, w ktorym kolejnosc zostala policzona. Tryb jest CZYTANY z
     #: profilu AMC, nie wybierany tutaj.
     sort_mode: str = SORT_ADDED_NEWEST
+    #: Otwarta playlista zniknęła albo należy do innej sesji. GUI ma wrócić
+    #: do katalogu playlist zamiast udawać poprawną pustą zawartość.
+    fallback_to_playlists: bool = False
 
     @property
     def is_empty(self) -> bool:
@@ -139,6 +151,7 @@ def load_view(
     *,
     db: LibraryDatabase | None = None,
     collation=None,
+    playlist_id: str | None = None,
 ) -> RadioViewResult:
     """Wczytaj jeden widok radia.
 
@@ -159,8 +172,122 @@ def load_view(
         raise ValueError(f"Nieznany widok radia: {view}")
     if view == VIEW_HISTORY:
         return _history_view(source, db=db)
+    if view in (VIEW_PLAYLISTS, VIEW_PLAYLIST_CONTENTS):
+        return _playlist_view(
+            source,
+            view=view,
+            playlist_id=playlist_id,
+            db=db,
+        )
     scope = SCOPE_FAVORITES if view == VIEW_FAVORITES else SCOPE_LIBRARY
     return _station_view(source, view=view, scope=scope, db=db, collation=collation)
+
+
+def _playlist_view(
+    source: RadioSource,
+    *,
+    view: str,
+    playlist_id: str | None,
+    db: LibraryDatabase | None,
+) -> RadioViewResult:
+    """Playlisty Radia z bazy i stacje z pełnego cache'u sesji.
+
+    Adresy pozostają w ``Row.url``; etykieta listy zawiera wyłącznie nazwę,
+    dostępność i informację o transmisjach na żywo. Techniczne Id służą tylko
+    dopasowaniu rekordu i nawigacji.
+    """
+    heading = _HEADINGS[VIEW_PLAYLISTS]
+    snapshot = source.load(scope=SCOPE_ALL)
+    if snapshot.load_error and not snapshot.stations:
+        return RadioViewResult(
+            rows=[], heading=heading, unavailable_reason=snapshot.load_error
+        )
+    if snapshot.unavailable_reason:
+        return RadioViewResult(
+            rows=[], heading=heading,
+            unavailable_reason=snapshot.unavailable_reason,
+        )
+    catalog = {
+        station.id: row
+        for station, row in zip(
+            snapshot.stations,
+            rows_from_stations(snapshot.as_payload()),
+            strict=True,
+        )
+    }
+
+    owns_db = db is None
+    try:
+        if db is None:
+            path = Path(source.layout.library_db)
+            try:
+                db = LibraryDatabase(path)
+            except FileNotFoundError:
+                return RadioViewResult(
+                    rows=[], heading=heading,
+                    unavailable_reason=(
+                        f"Nie znalazłem bazy Biblioteki ({path.name}), "
+                        "więc playlisty radia są nieznane."
+                    ),
+                )
+            except Exception as error:
+                return RadioViewResult(
+                    rows=[], heading=heading,
+                    unavailable_reason=f"Nie mogę odczytać playlist radia: {error}",
+                )
+        try:
+            entries = _playlists(db, RADIO_SESSION)
+        except Exception as error:
+            return RadioViewResult(
+                rows=[], heading=heading,
+                unavailable_reason=f"Nie mogę odczytać playlist radia: {error}",
+            )
+        sees_live = bool(getattr(db, "sees_live_writes", True))
+    finally:
+        if owns_db and db is not None:
+            db.close()
+
+    if view == VIEW_PLAYLISTS:
+        rows: list[Row] = []
+        for entry in entries:
+            available = sum(1 for item_id in entry.item_ids if item_id in catalog)
+            stored = len(entry.item_ids)
+            availability = (
+                _format_item_count(stored)
+                if available == stored
+                else f"dostępne {available} z {stored}"
+            )
+            detail = availability
+            if available:
+                detail = f"{detail}, transmisje na żywo"
+            rows.append(Row(
+                item_id=f"playlist:{entry.playlist_id}",
+                title=entry.name,
+                kind="playlist",
+                detail=detail,
+            ))
+        return RadioViewResult(
+            rows=rows,
+            heading=heading,
+            sees_live_writes=sees_live,
+        )
+
+    match = next(
+        (entry for entry in entries if entry.playlist_id == (playlist_id or "")),
+        None,
+    )
+    if match is None:
+        return RadioViewResult(
+            rows=[],
+            heading=heading,
+            sees_live_writes=sees_live,
+            fallback_to_playlists=True,
+        )
+    return RadioViewResult(
+        rows=[catalog[item_id] for item_id in match.item_ids if item_id in catalog],
+        heading=f"Playlista — {match.name}",
+        sees_live_writes=sees_live,
+    )
 
 
 # ------------------------------------------------ 1-2. Biblioteka i Ulubione

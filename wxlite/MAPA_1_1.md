@@ -18,6 +18,17 @@ sprawdzanie i pobieranie wydania z Internetu wymaga jeszcze podłączenia
 docelowego kanału wydań AMC Python; obecny plik EXE jest gotowym, działającym
 etapem weryfikacji i instalacji przygotowanej aktualizacji.
 
+## 10.10 — playlisty Radia i ich ręczna kolejność
+
+`Ctrl+P` w sesji Radia pokazuje playlisty zapisane dla Radia, Enter otwiera
+stacje w kolejności playlisty, a Backspace wraca na wcześniej wybrany wiersz.
+Wiersz podaje nazwę oraz uczciwą liczbę dostępnych stacji; identyfikatory bazy
+i brakujących wpisów nie trafiają do tekstu NVDA. W otwartej radiowej
+playliście `Alt+Up`/`Alt+Down` przesuwa ciągły blok, a `Ctrl+X` i `Ctrl+V`
+przenosi również zaznaczenie nieprzylegające. Zapis pozostaje pojedynczą
+operacją hosta C#, po czym fokus i całe zaznaczenie wracają według stabilnych
+identyfikatorów niewidocznych dla użytkownika.
+
 ## 10.10 — podcasty, lewa strzałka i planowanie nagrania
 
 Pakiet wxPython jest docelowym samodzielnym interfejsem. Użytkownik nie
@@ -62,7 +73,7 @@ Obie sesje wymagają jeszcze odbioru na obudzonych urządzeniach; testy kodu nie
 są takim odbiorem. Spotify jest odłożone. Aktualizacje na wzór „Sygnalisty”
 zostaną podjęte po odzyskaniu i sprawdzeniu właściwego źródła lub ticketu.
 
-Pełny runner Python: **1192 PASS / 0 FAIL / 138 historycznych SKIP**. Testy
+Pełny runner Python: **1236 PASS / 0 FAIL / 138 historycznych SKIP**. Testy
 protokołu C#: **14 zestawów OK**. Szczegółowy, bieżący stan i kolejność prac:
 `AMC_PYTHON_STAN_2026-10-10_PL.md` w katalogu głównym repozytorium.
 
@@ -407,14 +418,18 @@ własnej normalizacji diakrytyków.
   całego wielokrotnego zaznaczenia. Insert lub Ctrl+N tworzy playlistę, F2
   zmienia nazwę, a Delete usuwa ją bez usuwania multimediów. Wszystkie zmiany
   pozostają robocze do przycisku Zapisz i trafiają atomowo przez jednego
-  właściciela C#; Anuluj nie zapisuje częściowej operacji. W otwartej lokalnej
-  playliście działa też ręczna kolejność głównego AMC: `Alt+Up`/`Alt+Down`
+  właściciela C#; Anuluj nie zapisuje częściowej operacji. `Ctrl+P` w Radiu
+  pokazuje wyłącznie playlisty sesji radiowej; Enter otwiera ich stacje w
+  zapisanej kolejności, a Backspace wraca na tę samą playlistę. Nazwy i
+  liczniki są użytkowe, bez identyfikatorów profilu, a brakująca stacja jest
+  uczciwie uwzględniona w liczniku dostępności. W otwartej lokalnej albo
+  radiowej playliście działa też ręczna kolejność głównego AMC: `Alt+Up`/`Alt+Down`
   przesuwa ciągły blok o jedno miejsce, a `Ctrl+X`, wybór celu i `Ctrl+V`
   przenosi także elementy nieprzylegające przed bieżący wiersz. Filtr musi być
   pusty, zapis jest jedną transakcją C#, niedostępne pozycje zachowują swoje
   miejsca, a po odświeżeniu fokus i całe zaznaczenie wracają według ID. Do
-  dalszego portu pozostają widoki zawartości playlist Radia i Podcastów oraz
-  ich ręczna kolejność; samo członkostwo tych sesji jest już zapisywane.
+  dalszego portu pozostaje widok zawartości playlist Podcastów i jego ręczna
+  kolejność; samo członkostwo Podcastów jest już zapisywane.
 - Podcasty i YouTube mają już wąski zapis postępu przez jednego właściciela C#:
   checkpoint co 15 sekund, stan „w trakcie” po minucie i „odtworzony” po
   naturalnym końcu. Python pozostaje czytelnikiem `podcasts.db`; blokada drugiego

@@ -1533,7 +1533,9 @@ class Navigator:
         state.library_return_id = row.item_id
         return [
             OpenLibraryView(
-                view=LibraryView.PLAYLIST_CONTENTS, playlist_id=playlist_id
+                view=LibraryView.PLAYLIST_CONTENTS,
+                playlist_id=playlist_id,
+                target_session_id=state.session_id,
             )
         ]
 
@@ -1551,6 +1553,14 @@ class Navigator:
                 return [OpenPodcastView(preferred_id=state.library_return_id)]
             return []
         if state.session_id is SessionId.RADIO:
+            if state.library_view is LibraryView.PLAYLIST_CONTENTS:
+                return [
+                    OpenLibraryView(
+                        view=LibraryView.PLAYLISTS,
+                        preferred_id=state.library_return_id,
+                        target_session_id=SessionId.RADIO,
+                    )
+                ]
             return [OpenLibraryView(view=None, target_session_id=SessionId.RADIO)]
         if state.library_view is LibraryView.PLAYLIST_CONTENTS:
             return [
@@ -1614,22 +1624,47 @@ class Navigator:
         self, view: LibraryView | None, heading: str, rows: list[Row],
         *, preferred_id: str | None = None,
         order_matches_amc: bool = True,
+        playlist_id: str | None = None,
+        fallback_to_playlists: bool = False,
     ) -> list[object]:
         """Odpowiedz loadera Radia nie rusza listy ani wyboru Plikow."""
         if view not in (
             None,
             LibraryView.FAVORITES,
             LibraryView.HISTORY,
+            LibraryView.PLAYLISTS,
+            LibraryView.PLAYLIST_CONTENTS,
             LibraryView.ACTIVE_RADIO_RECORDINGS,
             LibraryView.RADIO_RECORDING_SCHEDULES,
         ):
             raise ValueError("Nieobslugiwany widok Radia")
         state = self.sessions[SessionId.RADIO]
-        old_key = state.library_view.value if state.library_view else "library"
+        if fallback_to_playlists:
+            state.library_playlist_id = None
+            return [
+                Announce("Tej playlisty już nie ma, wracam do playlist"),
+                OpenLibraryView(
+                    view=LibraryView.PLAYLISTS,
+                    target_session_id=SessionId.RADIO,
+                ),
+            ]
+        old_key = (
+            state.library_playlist_id
+            if state.library_view is LibraryView.PLAYLIST_CONTENTS
+            and state.library_playlist_id
+            else state.library_view.value if state.library_view else "library"
+        )
         if state.model.selected_id is not None:
             state.view_selected_ids[old_key] = state.model.selected_id
-        key = view.value if view else "library"
+        key = (
+            playlist_id
+            if view is LibraryView.PLAYLIST_CONTENTS and playlist_id
+            else view.value if view else "library"
+        )
         state.library_view = view
+        state.library_playlist_id = (
+            playlist_id if view is LibraryView.PLAYLIST_CONTENTS else None
+        )
         state.model.replace(rows, preferred_id=preferred_id or state.view_selected_ids.get(key))
         state.view = View.LIST
         # Nazwe wiersza czyta natywna lista, nie powtarzamy jej w komunikacie.

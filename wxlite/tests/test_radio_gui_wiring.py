@@ -84,7 +84,8 @@ def test_menu_help_and_keyboard_share_radio_actions():
     help_rows = dict(describe())
     for key, action, view in [("Ctrl+L", Action.VIEW_LIBRARY, None),
                               ("Ctrl+U", Action.VIEW_FAVORITES, LibraryView.FAVORITES),
-                              ("Ctrl+H", Action.VIEW_HISTORY, LibraryView.HISTORY)]:
+                              ("Ctrl+H", Action.VIEW_HISTORY, LibraryView.HISTORY),
+                              ("Ctrl+P", Action.VIEW_PLAYLISTS, LibraryView.PLAYLISTS)]:
         assert LIST_VIEW[key] is action and menu[action].shortcut == key
         assert key in help_rows
         frame, requests, _ = radio_shell()
@@ -201,6 +202,20 @@ def test_real_radio_data_flows_through_gui_dispatch_without_profile_writes():
         state = open_view(Action.VIEW_FAVORITES)
         assert state.model.selected_id == "3"
         assert filters.text_for_view(view_context(state)) == "nowy"
+
+        state = open_view(Action.VIEW_PLAYLISTS)
+        assert [row.title for row in state.model.rows] == ["Poranne radio"]
+        request = next(
+            item for item in frame.navigator.activate_selected()
+            if isinstance(item, OpenLibraryView)
+        )
+        assert request.target_session_id is SessionId.RADIO
+        LiteFrame._open_library_view(frame, request)
+        frame.runner.done(frame.runner.work())
+        state = frame.navigator.session
+        assert [row.item_id for row in state.model.rows] == ["3", "1"]
+        assert state.library_playlist_id == "radio-morning"
+
         assert frame.navigator.sessions[SessionId.FILES].model.rows == []
         fixture.assert_nothing_written()
     finally:

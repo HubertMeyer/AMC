@@ -65,8 +65,12 @@ def _frame(rows: list[Row], selected: list[Row]):
         _playlist_order_pending=False,
         pending_external_moves={},
     )
-    frame._open_local_playlist_id = lambda: gui.LiteFrame._open_local_playlist_id(frame)
-    frame._playlist_order_rows = lambda: gui.LiteFrame._playlist_order_rows(frame)
+    frame._open_profile_playlist_context = (
+        lambda: gui.LiteFrame._open_profile_playlist_context(frame)
+    )
+    frame._playlist_order_rows = (
+        lambda item_kind: gui.LiteFrame._playlist_order_rows(frame, item_kind)
+    )
     frame._clear_pending_external_moves = frame.pending_external_moves.clear
 
     def refresh(preferred_id=None, **kwargs):
@@ -116,7 +120,7 @@ def test_ctrl_x_then_ctrl_v_places_nonadjacent_selection_before_focus() -> None:
 
     gui.LiteFrame._cut_or_start_internal_playlist_move(frame)
     assert frame._pending_internal_playlist_move == (
-        "playlist-private-id", ("private-a", "private-c")
+        "local", "playlist-private-id", ("private-a", "private-c")
     )
     assert frame.pending_external_moves == {}
 
@@ -152,4 +156,32 @@ def test_filter_blocks_order_change_before_calling_host() -> None:
     assert spoken == [
         "Wyczyść filtr klawiszem Escape przed zmianą kolejności"
     ]
+
+
+def test_radio_playlist_order_uses_radio_session_and_station_rows() -> None:
+    rows = [
+        Row("private-radio-a", "Radio Alfa", "station"),
+        Row("private-radio-b", "Radio Beta", "station"),
+        Row("private-radio-c", "Radio Gamma", "station"),
+    ]
+    frame, spoken, calls, refreshed = _frame(rows, rows[1:])
+    frame.navigator.active = SessionId.RADIO
+
+    gui.LiteFrame._move_playlist_selection(frame, -1)
+
+    assert calls == [(
+        "move",
+        (
+            "radio",
+            "playlist-private-id",
+            ["private-radio-b", "private-radio-c"],
+            ["private-radio-a", "private-radio-b", "private-radio-c"],
+            -1,
+        ),
+    )]
+    assert refreshed[0]["selected_ids"] == [
+        "private-radio-b", "private-radio-c"
+    ]
+    assert spoken == ["Przeniesiono 2 elementy w górę, nad Radio Alfa"]
+    assert all("private" not in message for message in spoken)
 

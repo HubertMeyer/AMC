@@ -424,8 +424,11 @@ Bez przekierowania `APPDATA`/`LOCALAPPDATA` aplikacja domyślnie czyta profil w�
    Ctrl+N tworzą playlistę, F2 zmienia jej nazwę, Delete usuwa tylko playlistę,
    Enter zapisuje, a Escape anuluje wszystkie zmiany robocze. Po Zapisz i po
    Anuluj fokus wraca na właściwą listę albo przycisk odtwarzacza. Ctrl+P
-   pokazuje playlisty; Enter otwiera zawartość, Backspace wraca na tę samą
-   playlistę. W otwartej lokalnej playliście zaznacz ciągły blok Shiftem:
+   pokazuje playlisty bieżącej sesji; Enter otwiera zawartość, Backspace wraca
+   na tę samą playlistę. Powtórz cały odczyt i powrót osobno w Plikach oraz
+   w Radiu. Wiersz radiowej playlisty ma podawać nazwę i liczbę dostępnych
+   stacji, nigdy identyfikator profilu. W otwartej lokalnej albo radiowej
+   playliście zaznacz ciągły blok Shiftem:
    `Alt+Up` i `Alt+Down` przesuwają go o jedno miejsce, zachowując wszystkie
    zaznaczenia i fokus według elementu, nie numeru wiersza. Następnie zaznacz
    nieprzylegające pozycje przez `Ctrl+Spację`, naciśnij `Ctrl+X`, ustaw fokus

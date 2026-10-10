@@ -195,6 +195,57 @@ def test_vanished_playlist_falls_back_to_the_list_of_playlists() -> None:
     assert opens and opens[0].view is LibraryView.PLAYLISTS
 
 
+def test_radio_playlist_enter_and_backspace_stay_in_radio_session() -> None:
+    nav = Navigator()
+    nav.switch_session(SessionId.RADIO)
+    nav.apply_radio_view(
+        LibraryView.PLAYLISTS,
+        "Radio — Playlisty",
+        [playlist("77", "Poranek"), playlist("88", "Wieczór")],
+    )
+    nav.session.model.select_id("playlist:88")
+
+    opened = nav.activate_selected()
+    request = next(item for item in opened if isinstance(item, OpenLibraryView))
+    assert request.view is LibraryView.PLAYLIST_CONTENTS
+    assert request.playlist_id == "88"
+    assert request.target_session_id is SessionId.RADIO
+
+    nav.apply_radio_view(
+        LibraryView.PLAYLIST_CONTENTS,
+        "Playlista — Wieczór",
+        [Row("station-1", "Radio Test", "station", url="https://example.invalid")],
+        playlist_id="88",
+    )
+    returned = nav.go_to_parent()
+    request = next(item for item in returned if isinstance(item, OpenLibraryView))
+    assert request.view is LibraryView.PLAYLISTS
+    assert request.preferred_id == "playlist:88"
+    assert request.target_session_id is SessionId.RADIO
+
+
+def test_vanished_radio_playlist_falls_back_inside_radio() -> None:
+    nav = Navigator()
+    nav.switch_session(SessionId.RADIO)
+
+    tasks = nav.apply_radio_view(
+        LibraryView.PLAYLIST_CONTENTS,
+        "Radio — Playlisty",
+        [],
+        playlist_id="private-radio-id",
+        fallback_to_playlists=True,
+    )
+
+    request = next(item for item in tasks if isinstance(item, OpenLibraryView))
+    assert request.view is LibraryView.PLAYLISTS
+    assert request.target_session_id is SessionId.RADIO
+    assert all(
+        "private-radio-id" not in item.text
+        for item in tasks
+        if isinstance(item, Announce)
+    )
+
+
 def test_backspace_in_a_flat_view_leaves_it_instead_of_saying_top_level() -> None:
     """W "Wszystkie pliki" nie ma rodzica-folderu, ale Backspace ma wyjsc."""
     nav = Navigator()
