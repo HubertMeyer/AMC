@@ -735,6 +735,24 @@ class LiteHostClient:
             timeout=30.0,
         )
 
+    def profile_playlists(self, session_id: str) -> Any:
+        """Pobierz pełną roboczą migawkę playlist jednej sesji."""
+        return self.call(
+            "library.playlists",
+            {"sessionId": session_id},
+            timeout=30.0,
+        )
+
+    def replace_profile_playlists(
+        self, session_id: str, playlists: list[dict[str, Any]]
+    ) -> Any:
+        """Atomowo zapisz wynik okna playlist przez jedynego pisarza C#."""
+        return self.call(
+            "library.playlists.replace",
+            {"sessionId": session_id, "playlists": playlists},
+            timeout=60.0,
+        )
+
     def recycle_local_files(self, item_ids: list[str]) -> Any:
         return self.call(
             "library.recycle", {"itemIds": item_ids}, timeout=120.0

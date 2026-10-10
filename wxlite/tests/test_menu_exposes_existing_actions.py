@@ -288,6 +288,17 @@ def test_favorite_menu_is_contextual_and_does_not_steal_shortcut() -> None:
     assert "ulubion" in item.label.replace("&", "").casefold()
 
 
+def test_playlist_membership_menu_is_contextual_and_does_not_steal_shortcut() -> None:
+    item = next(
+        entry for entry in all_items()
+        if entry.action is Action.MANAGE_PLAYLIST_MEMBERSHIP
+    )
+    assert item.shortcut == "Ctrl+Shift+P"
+    assert item.needs_playlist_item
+    assert not item.accelerator
+    assert "playlist" in item.label.replace("&", "").casefold()
+
+
 def test_podcast_add_menu_is_contextual_and_does_not_steal_ctrl_n() -> None:
     item = next(
         entry for entry in all_items()

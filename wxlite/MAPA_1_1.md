@@ -401,8 +401,14 @@ własnej normalizacji diakrytyków.
   Ulubionych pozostawia też w Bibliotece. Ta sama pozycja menu prowadzi do
   właściwej implementacji w Plikach, Radiu, Podcastach i TIDAL-u; nie jest
   oferowana na rodzajach elementów, których dana usługa nie może polubić.
-  Nadal brakuje zapisu członkostwa lokalnych playlist oraz ręcznej zmiany
-  kolejności wewnątrz list.
+  `Ctrl+Shift+P` otwiera teraz natywne okno przynależności do playlist dla
+  plików, stacji i odcinków podcastów. Stan każdego wiersza jest jawnie nazwany
+  „zaznaczona”, „niezaznaczona” albo „stan mieszany”; Spacja zmienia stan
+  całego wielokrotnego zaznaczenia. Insert lub Ctrl+N tworzy playlistę, F2
+  zmienia nazwę, a Delete usuwa ją bez usuwania multimediów. Wszystkie zmiany
+  pozostają robocze do przycisku Zapisz i trafiają atomowo przez jednego
+  właściciela C#; Anuluj nie zapisuje częściowej operacji. Nadal brakuje
+  ręcznej zmiany kolejności wewnątrz list.
 - Podcasty i YouTube mają już wąski zapis postępu przez jednego właściciela C#:
   checkpoint co 15 sekund, stan „w trakcie” po minucie i „odtworzony” po
   naturalnym końcu. Python pozostaje czytelnikiem `podcasts.db`; blokada drugiego

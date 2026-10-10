@@ -318,6 +318,8 @@ internal sealed class LiteEngineHandlers : IDisposable
             ["library.renameTitle"] = (request, _) => RenameLibraryTitle(request.Args),
             ["library.renameFile"] = (request, _) => RenameLocalFile(request.Args),
             ["library.toggleFavorite"] = (request, _) => ToggleProfileFavorites(request.Args),
+            ["library.playlists"] = (request, _) => GetProfilePlaylists(request.Args),
+            ["library.playlists.replace"] = (request, _) => ReplaceProfilePlaylists(request.Args),
             ["library.remove"] = (request, _) => RemoveProfileItems(request.Args),
             ["library.recycle"] = (request, _) => RecycleLocalFiles(request.Args),
             ["podcast.renameSubscription"] = (request, _) => RenamePodcastSubscription(request.Args),
@@ -383,6 +385,67 @@ internal sealed class LiteEngineHandlers : IDisposable
         RequireProfileMutations().RenamePodcastSubscription(
             LiteArgs.RequireText(args, "subscriptionId"),
             LiteArgs.RequireText(args, "title"));
+
+    private object GetProfilePlaylists(JsonElement args) =>
+        RequireProfileMutations().GetPlaylists(
+            LiteArgs.RequireText(args, "sessionId"));
+
+    private object ReplaceProfilePlaylists(JsonElement args)
+    {
+        if (args.ValueKind != JsonValueKind.Object
+            || !args.TryGetProperty("playlists", out var source)
+            || source.ValueKind != JsonValueKind.Array)
+        {
+            throw new LiteRequestException("Brak listy playlist do zapisania.");
+        }
+        if (source.GetArrayLength() > 500)
+            throw new LiteRequestException("Jedna sesja może zawierać najwyżej 500 playlist.");
+
+        var playlists = new List<LiteProfileMutationStore.LitePlaylistMutation>(
+            source.GetArrayLength());
+        foreach (var raw in source.EnumerateArray())
+        {
+            if (raw.ValueKind != JsonValueKind.Object)
+                throw new LiteRequestException("Każda playlista musi być obiektem.");
+            var itemIds = ReadPlaylistItemIds(raw);
+            var created = raw.TryGetProperty("createdUtcTicks", out var createdSource)
+                && createdSource.ValueKind == JsonValueKind.Number
+                && createdSource.TryGetInt64(out var parsedCreated)
+                ? parsedCreated
+                : 0L;
+            playlists.Add(new LiteProfileMutationStore.LitePlaylistMutation(
+                LiteArgs.RequireText(raw, "playlistId"),
+                LiteArgs.RequireText(raw, "name"),
+                created,
+                itemIds));
+        }
+        return RequireProfileMutations().ReplacePlaylists(
+            LiteArgs.RequireText(args, "sessionId"),
+            playlists);
+    }
+
+    private static string[] ReadPlaylistItemIds(JsonElement playlist)
+    {
+        if (!playlist.TryGetProperty("itemIds", out var source)
+            || source.ValueKind != JsonValueKind.Array)
+        {
+            throw new LiteRequestException("Playlista nie zawiera listy elementów.");
+        }
+        if (source.GetArrayLength() > 10_000)
+            throw new LiteRequestException("Jedna playlista może zawierać najwyżej 10000 elementów.");
+        var ids = new List<string>(source.GetArrayLength());
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var value in source.EnumerateArray())
+        {
+            if (value.ValueKind != JsonValueKind.String)
+                throw new LiteRequestException("Identyfikator elementu playlisty musi być napisem.");
+            var id = value.GetString()?.Trim() ?? string.Empty;
+            if (id.Length == 0 || id.Length > LiteArgs.MaximumTextLength)
+                throw new LiteRequestException("Playlista zawiera nieprawidłowy identyfikator elementu.");
+            if (seen.Add(id)) ids.Add(id);
+        }
+        return ids.ToArray();
+    }
 
     private object TogglePodcastFavorites(JsonElement args)
     {

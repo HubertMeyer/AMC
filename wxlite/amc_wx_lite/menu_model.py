@@ -75,6 +75,9 @@ class MenuItem:
     #: Rozdzielenie tej bramki od samego ``needs_selection`` zapobiega
     #: oferowaniu polecenia m.in. na folderze, albumie TIDAL albo w WiiM.
     needs_favorite_item: bool = False
+    #: Wymaga utworu, stacji albo odcinka obsługiwanego przez lokalne playlisty
+    #: AMC. Podcast nagłówkowy, kontener TIDAL i urządzenie sieciowe odpadają.
+    needs_playlist_item: bool = False
     #: Wymaga zaznaczonego odcinka; wykonanie sprawdza jeszcze członkostwo
     #: podcastu w Bibliotece na świeżym, tylko do odczytu odczycie SQLite.
     needs_podcast_episode: bool = False
@@ -250,6 +253,13 @@ def build_menus() -> tuple[Menu, ...]:
                 shortcut="Ctrl+Shift+U",
                 accelerator=False,
                 needs_favorite_item=True,
+            ),
+            MenuItem(
+                "Przynależ&ność do playlist…",
+                Action.MANAGE_PLAYLIST_MEMBERSHIP,
+                shortcut="Ctrl+Shift+P",
+                accelerator=False,
+                needs_playlist_item=True,
             ),
             SEPARATOR,
             # Ctrl+C obsluguje wspolna droga klawiatury. Oddanie go dodatkowo

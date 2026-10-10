@@ -108,6 +108,7 @@ class Action(Enum):
     ADD_TO_QUEUE = "action.queue.add"
     TOGGLE_PLAY_NEXT = "action.queue.playNextToggle"
     TOGGLE_FAVORITE = "action.favorite.toggle"
+    MANAGE_PLAYLIST_MEMBERSHIP = "action.playlists.membership"
     TIDAL_TOGGLE_LIBRARY = "tidal.library.toggle"
     TIDAL_TOGGLE_FAVORITE = "tidal.favorite.toggle"
     SEEK_BACK_10 = "seek.back10"
@@ -536,6 +537,7 @@ LIST_VIEW: dict[str, Action] = {
     "Ctrl+Shift+Q": Action.ADD_TO_QUEUE,
     "Ctrl+Shift+Return": Action.TOGGLE_PLAY_NEXT,
     "Ctrl+Shift+U": Action.TOGGLE_FAVORITE,
+    "Ctrl+Shift+P": Action.MANAGE_PLAYLIST_MEMBERSHIP,
     "Ctrl+H": Action.VIEW_HISTORY,
     # Ctrl+B to ViewBookmarks oryginalu (MainWindow.xaml:489): WSZYSTKIE
     # zakladki. Teraz mamy ten zbior naprawde (GetForDisplay), wiec skrot
@@ -656,6 +658,7 @@ PLAYER_VIEW: dict[str, Action] = {
     "Ctrl+Shift+Q": Action.ADD_TO_QUEUE,
     "Ctrl+Shift+Return": Action.TOGGLE_PLAY_NEXT,
     "Ctrl+Shift+U": Action.TOGGLE_FAVORITE,
+    "Ctrl+Shift+P": Action.MANAGE_PLAYLIST_MEMBERSHIP,
     "Left": Action.SEEK_BACK_10,
     "Right": Action.SEEK_FORWARD_10,
     # Cztery pary krokow z oryginalu (MainWindow.xaml.cs:21583-21590,
@@ -824,6 +827,7 @@ def describe() -> list[tuple[str, str]]:
         Action.ADD_TO_QUEUE: "Dodaj zaznaczenie do kolejki albo je usun",
         Action.TOGGLE_PLAY_NEXT: "Ustaw albo usun odtwarzanie jako nastepne",
         Action.TOGGLE_FAVORITE: "Dodaj lub usuń z Ulubionych",
+        Action.MANAGE_PLAYLIST_MEMBERSHIP: "Zmień przynależność do playlist",
         Action.TIDAL_TOGGLE_LIBRARY: "Dodaj lub usuń z Biblioteki TIDAL",
         Action.TIDAL_TOGGLE_FAVORITE: "Dodaj lub usuń z Ulubionych TIDAL",
         Action.SEEK_BACK_10: "Przewin 10 sekund wstecz",

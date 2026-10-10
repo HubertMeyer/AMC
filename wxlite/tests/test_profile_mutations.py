@@ -54,7 +54,18 @@ def _library(path: Path, media: Path) -> None:
             CREATE TABLE queue_order(session_id TEXT, ordinal INTEGER, item_id TEXT);
             CREATE TABLE queue_play_next_order(session_id TEXT, ordinal INTEGER, item_id TEXT);
             CREATE TABLE queue_regular_order(session_id TEXT, ordinal INTEGER, item_id TEXT);
-            CREATE TABLE playlist_items(playlist_id TEXT, ordinal INTEGER, item_id TEXT);
+            CREATE TABLE playlists(
+                id TEXT PRIMARY KEY, session_id TEXT NOT NULL,
+                ordinal INTEGER NOT NULL, name TEXT NOT NULL COLLATE AMC_PL,
+                created_utc_ticks INTEGER NOT NULL);
+            CREATE UNIQUE INDEX ix_playlists_session_name
+                ON playlists(session_id, name COLLATE AMC_PL);
+            CREATE TABLE playlist_items(
+                playlist_id TEXT NOT NULL, ordinal INTEGER NOT NULL,
+                item_id TEXT NOT NULL,
+                PRIMARY KEY(playlist_id, ordinal),
+                UNIQUE(playlist_id, item_id),
+                FOREIGN KEY(playlist_id) REFERENCES playlists(id) ON DELETE CASCADE);
             """
         )
         db.execute(
@@ -80,6 +91,14 @@ def _library(path: Path, media: Path) -> None:
             db.execute(
                 f"INSERT INTO {table} VALUES('podcasts',0,'episode-queue')"
             )
+        db.execute(
+            "INSERT INTO playlists VALUES('p-local','local',0,'Stara lista',638000000000000000)"
+        )
+        db.execute("INSERT INTO playlist_items VALUES('p-local',0,'local-1')")
+        db.execute(
+            "INSERT INTO playlists VALUES('p-radio','radio',0,'Stacje',638000000000000001)"
+        )
+        db.execute("INSERT INTO playlist_items VALUES('p-radio',0,'radio-1')")
         db.commit()
 
 
@@ -198,6 +217,40 @@ def test_profile_edits_go_through_the_real_host() -> None:
             radio_favorite = client.toggle_profile_favorites("radio", ["radio-1"])
             assert radio_favorite["favorite"] is True
             assert radio_favorite["changed"] == 1
+            playlist_snapshot = client.profile_playlists("files")
+            assert playlist_snapshot == {
+                "sessionId": "local",
+                "playlists": [
+                    {
+                        "playlistId": "p-local",
+                        "name": "Stara lista",
+                        "createdUtcTicks": 638000000000000000,
+                        "itemIds": ["local-1"],
+                    }
+                ],
+            }
+            saved_playlists = client.replace_profile_playlists(
+                "files",
+                [
+                    {
+                        "playlistId": "p-local",
+                        "name": "Nowa nazwa listy",
+                        "createdUtcTicks": 638000000000000000,
+                        "itemIds": ["local-2"],
+                    },
+                    {
+                        "playlistId": "p-new",
+                        "name": "Druga lista",
+                        "createdUtcTicks": 638000000000000002,
+                        "itemIds": ["local-1", "local-2"],
+                    },
+                ],
+            )
+            assert saved_playlists == {
+                "sessionId": "local",
+                "saved": 2,
+                "items": 3,
+            }
             client.remove_profile_items("files", "library", ["local-1"])
             client.remove_profile_items(
                 "podcasts", "podcastLibrary", ["podcast-1"]
@@ -250,6 +303,23 @@ def test_profile_edits_go_through_the_real_host() -> None:
                 assert db.execute(
                     f"SELECT item_id FROM {table} WHERE session_id='podcasts'"
                 ).fetchall() == []
+            assert db.execute(
+                "SELECT id,name FROM playlists WHERE session_id='local' ORDER BY ordinal"
+            ).fetchall() == [
+                ("p-local", "Nowa nazwa listy"),
+                ("p-new", "Druga lista"),
+            ]
+            assert db.execute(
+                "SELECT playlist_id,item_id FROM playlist_items "
+                "WHERE playlist_id IN ('p-local','p-new') ORDER BY playlist_id,ordinal"
+            ).fetchall() == [
+                ("p-local", "local-2"),
+                ("p-new", "local-1"),
+                ("p-new", "local-2"),
+            ]
+            assert db.execute(
+                "SELECT name FROM playlists WHERE id='p-radio'"
+            ).fetchone() == ("Stacje",), "Zapis sesji lokalnej nie może ruszyć Radia"
         with closing(sqlite3.connect(podcasts)) as db:
             title, in_library, payload = db.execute(
                 "SELECT title,is_in_library,payload_json FROM podcast_subscriptions WHERE id='podcast-1'"

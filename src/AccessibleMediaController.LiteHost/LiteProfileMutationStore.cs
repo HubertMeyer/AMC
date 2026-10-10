@@ -446,6 +446,160 @@ internal sealed class LiteProfileMutationStore
         };
     }
 
+    /// <summary>
+    /// Migawka playlist jednej sesji dla natywnego okna wxPython. Id oraz
+    /// członkostwo pozostają danymi wewnętrznymi; frontend buduje dla NVDA
+    /// wyłącznie nazwę, jawny stan i liczbę elementów.
+    /// </summary>
+    public object GetPlaylists(string sessionId)
+    {
+        var normalizedSession = NormalizePlaylistSession(sessionId);
+        lock (_gate)
+        {
+            using var connection = OpenDatabase(_libraryDatabasePath);
+            var entries = new List<LitePlaylistMutation>();
+            using (var read = connection.CreateCommand())
+            {
+                read.CommandText =
+                    "SELECT id, name, created_utc_ticks FROM playlists "
+                    + "WHERE session_id = $session COLLATE NOCASE ORDER BY ordinal;";
+                read.Parameters.AddWithValue("$session", normalizedSession);
+                using var reader = read.ExecuteReader();
+                while (reader.Read())
+                {
+                    entries.Add(new LitePlaylistMutation(
+                        reader.GetString(0),
+                        reader.GetString(1),
+                        reader.GetInt64(2),
+                        []));
+                }
+            }
+
+            for (var index = 0; index < entries.Count; index++)
+            {
+                var entry = entries[index];
+                var itemIds = new List<string>();
+                using var items = connection.CreateCommand();
+                items.CommandText =
+                    "SELECT item_id FROM playlist_items WHERE playlist_id = $playlist ORDER BY ordinal;";
+                items.Parameters.AddWithValue("$playlist", entry.Id);
+                using var reader = items.ExecuteReader();
+                while (reader.Read()) itemIds.Add(reader.GetString(0));
+                entries[index] = entry with { ItemIds = itemIds };
+            }
+
+            return new
+            {
+                sessionId = normalizedSession,
+                playlists = entries.Select(entry => new
+                {
+                    playlistId = entry.Id,
+                    name = entry.Name,
+                    createdUtcTicks = entry.CreatedUtcTicks,
+                    itemIds = entry.ItemIds
+                }).ToArray()
+            };
+        }
+    }
+
+    /// <summary>
+    /// Atomowo zastępuje playlisty tylko jednej sesji, dokładnie jak
+    /// <c>PlaylistIndex.ReplaceSession</c> w głównym AMC. Dzięki temu Nowa,
+    /// F2, Delete i zmiany członkostwa pozostają lokalne w dialogu aż do
+    /// przycisku Zapisz; Anuluj nie wykonuje żadnej częściowej zmiany.
+    /// </summary>
+    public object ReplacePlaylists(
+        string sessionId,
+        IReadOnlyList<LitePlaylistMutation> replacements)
+    {
+        var normalizedSession = NormalizePlaylistSession(sessionId);
+        if (replacements.Count > 500)
+            throw new LiteRequestException("Jedna sesja może zawierać najwyżej 500 playlist.");
+        EnsureMayWrite();
+        lock (_gate)
+        {
+            var normalized = new List<LitePlaylistMutation>(replacements.Count);
+            var ids = new HashSet<string>(StringComparer.Ordinal);
+            var compare = CultureInfo.GetCultureInfo("pl-PL").CompareInfo;
+            foreach (var source in replacements)
+            {
+                var id = CleanRequiredText(source.Id, "Playlista nie ma identyfikatora.");
+                if (id.Length > 200 || !ids.Add(id))
+                    throw new LiteRequestException("Lista playlist zawiera nieprawidłowy albo powtórzony wpis.");
+                var name = CleanRequiredText(source.Name, "Nazwa playlisty jest pusta.");
+                if (name.Length > 200)
+                    throw new LiteRequestException("Nazwa playlisty może mieć najwyżej 200 znaków.");
+                if (normalized.Any(entry => compare.Compare(
+                        entry.Name,
+                        name,
+                        CompareOptions.IgnoreCase | CompareOptions.IgnoreNonSpace) == 0))
+                {
+                    throw new LiteRequestException($"Playlista „{name}” już istnieje w tej sesji.");
+                }
+                if (source.ItemIds.Count > 10_000)
+                    throw new LiteRequestException("Jedna playlista może zawierać najwyżej 10000 elementów.");
+                // Pusta playlista jest prawidłowa. Dla niepustej listy ten sam
+                // normalizator usuwa białe i powtórzone identyfikatory.
+                var itemIds = source.ItemIds.Count == 0
+                    ? []
+                    : CleanDistinctIds(source.ItemIds, "Playlista może być pusta.");
+                normalized.Add(new LitePlaylistMutation(
+                    id,
+                    name,
+                    source.CreatedUtcTicks > 0 ? source.CreatedUtcTicks : DateTime.UtcNow.Ticks,
+                    itemIds));
+            }
+
+            using var connection = OpenDatabase(_libraryDatabasePath);
+            using var transaction = connection.BeginTransaction();
+            foreach (var entry in normalized)
+            {
+                using var collision = connection.CreateCommand();
+                collision.Transaction = transaction;
+                collision.CommandText =
+                    "SELECT session_id FROM playlists WHERE id = $id AND session_id != $session COLLATE NOCASE LIMIT 1;";
+                collision.Parameters.AddWithValue("$id", entry.Id);
+                collision.Parameters.AddWithValue("$session", normalizedSession);
+                if (collision.ExecuteScalar() is not null)
+                    throw new LiteRequestException("Identyfikator nowej playlisty koliduje z inną sesją.");
+            }
+
+            Execute(connection, transaction,
+                "DELETE FROM playlist_items WHERE playlist_id IN "
+                + "(SELECT id FROM playlists WHERE session_id = $session COLLATE NOCASE);",
+                ("$session", normalizedSession));
+            Execute(connection, transaction,
+                "DELETE FROM playlists WHERE session_id = $session COLLATE NOCASE;",
+                ("$session", normalizedSession));
+            for (var ordinal = 0; ordinal < normalized.Count; ordinal++)
+            {
+                var entry = normalized[ordinal];
+                Execute(connection, transaction,
+                    "INSERT INTO playlists(id, session_id, ordinal, name, created_utc_ticks) "
+                    + "VALUES($id, $session, $ordinal, $name, $created);",
+                    ("$id", entry.Id), ("$session", normalizedSession),
+                    ("$ordinal", ordinal), ("$name", entry.Name),
+                    ("$created", entry.CreatedUtcTicks));
+                for (var itemOrdinal = 0; itemOrdinal < entry.ItemIds.Count; itemOrdinal++)
+                {
+                    Execute(connection, transaction,
+                        "INSERT INTO playlist_items(playlist_id, ordinal, item_id) "
+                        + "VALUES($playlist, $ordinal, $item);",
+                        ("$playlist", entry.Id), ("$ordinal", itemOrdinal),
+                        ("$item", entry.ItemIds[itemOrdinal]));
+                }
+            }
+            TouchMetadata(connection, transaction);
+            transaction.Commit();
+            return new
+            {
+                sessionId = normalizedSession,
+                saved = normalized.Count,
+                items = normalized.Sum(entry => entry.ItemIds.Count)
+            };
+        }
+    }
+
     public object Remove(string sessionId, string view, IReadOnlyList<string> itemIds)
     {
         var ids = itemIds.Where(id => !string.IsNullOrWhiteSpace(id))
@@ -805,6 +959,15 @@ internal sealed class LiteProfileMutationStore
         return cleaned;
     }
 
+    private static string NormalizePlaylistSession(string value) =>
+        value.Trim().ToLowerInvariant() switch
+        {
+            "files" or "local" => "local",
+            "radio" => "radio",
+            "podcasts" => "podcasts",
+            _ => throw new LiteRequestException("Playlisty nie są dostępne w tej sesji.")
+        };
+
     private static string[] CleanDistinctIds(
         IReadOnlyList<string> values,
         string emptyError)
@@ -994,6 +1157,12 @@ internal sealed class LiteProfileMutationStore
             or NotSupportedException or PathTooLongException;
 
     private sealed record LocalItem(string Id, string Title, bool HasCustomTitle, string Path);
+
+    internal sealed record LitePlaylistMutation(
+        string Id,
+        string Name,
+        long CreatedUtcTicks,
+        IReadOnlyList<string> ItemIds);
 
     internal sealed record RadioStationEditResult(
         [property: JsonPropertyName("stationId")] string StationId,

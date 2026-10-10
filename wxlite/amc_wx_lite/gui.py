@@ -70,6 +70,11 @@ from .list_model import (
     rows_from_stations,
 )
 from . import menu_model
+from .playlist_dialog import (
+    PlaylistMembershipDialog,
+    PlaylistPayloadError,
+    choices_from_payload as playlist_choices_from_payload,
+)
 from . import profile_presets
 from .navigation import (
     ActivateWiiMDevice,
@@ -2534,6 +2539,7 @@ class LiteFrame(wx.Frame):
         self._podcast_favorite_pending = False
         self._podcast_add_pending = False
         self._podcast_opml_pending = False
+        self._playlist_membership_pending = False
         self._last_podcast_progress_error: str | None = None
         self._recording_history_persist_error = False
         self._audio_clip_export_in_progress = False
@@ -2866,6 +2872,11 @@ class LiteFrame(wx.Frame):
             SessionId.PODCASTS: {"podcast", "episode"},
             SessionId.TIDAL: {"track", "video"},
         }
+        playlist_kinds = {
+            SessionId.FILES: {"track"},
+            SessionId.RADIO: {"station"},
+            SessionId.PODCASTS: {"episode"},
+        }
         podcast_sort_actions = {
             Action.SORT_PODCAST_INBOX_ADDED: SORT_ADDED_NEWEST,
             Action.SORT_PODCAST_INBOX_ALPHABETICAL: SORT_ALPHABETICAL,
@@ -2888,6 +2899,10 @@ class LiteFrame(wx.Frame):
             ):
                 enabled = False
             if entry.needs_favorite_item and selected_kind not in favorite_kinds.get(
+                self.navigator.active, set()
+            ):
+                enabled = False
+            if entry.needs_playlist_item and selected_kind not in playlist_kinds.get(
                 self.navigator.active, set()
             ):
                 enabled = False
@@ -3995,6 +4010,7 @@ class LiteFrame(wx.Frame):
                 # dotrą do EVT_KEY_DOWN kontrolki. Przechwytujemy wyłącznie
                 # gesty z modyfikatorami; gołe litery nadal należą do listy.
                 "Ctrl+Shift+U",
+                "Ctrl+Shift+P",
                 "Ctrl+Shift+L",
                 "Ctrl+Shift+Q",
                 "Ctrl+Shift+Return",
@@ -4190,6 +4206,8 @@ class LiteFrame(wx.Frame):
                 self._toggle_tidal_membership(favorite=True)
             else:
                 self._toggle_profile_favorite()
+        elif action is Action.MANAGE_PLAYLIST_MEMBERSHIP:
+            self._manage_playlist_membership()
         elif action in (
             Action.TIDAL_TOGGLE_LIBRARY,
             Action.TIDAL_TOGGLE_FAVORITE,
@@ -8253,6 +8271,101 @@ class LiteFrame(wx.Frame):
             self.announcer.say(f"Nie mogę zmienić kolejki: {error}")
 
         self.runner.submit("queue-membership", lambda: call(items), done, failed)
+
+    def _manage_playlist_membership(self) -> None:
+        """Ctrl+Shift+P: pełne, atomowe okno playlist głównego AMC."""
+        active = self.navigator.active
+        supported = {
+            SessionId.FILES: ("local", "track", "Wybierz plik"),
+            SessionId.RADIO: ("radio", "station", "Wybierz stację radiową"),
+            SessionId.PODCASTS: ("podcasts", "episode", "Wybierz odcinek podcastu"),
+        }
+        contract = supported.get(active)
+        if contract is None:
+            self.announcer.say("Playlisty AMC nie są dostępne w tej sesji")
+            return
+        if self._playlist_membership_pending:
+            self.announcer.say("Zmiana playlist już trwa")
+            return
+        client = self.client
+        if client is None:
+            self.announcer.say("Silnik nie działa, nie mogę otworzyć playlist")
+            return
+        session_id, expected_kind, empty_message = contract
+        rows = [
+            row for row in self._selected_action_rows()
+            if row.kind == expected_kind and row.item_id
+        ]
+        if not rows:
+            self.announcer.say(empty_message)
+            return
+        item_ids = list(dict.fromkeys(row.item_id for row in rows))
+        preferred_id = item_ids[0]
+        target_label = (
+            rows[0].title
+            if len(item_ids) == 1
+            else format_item_count(len(item_ids))
+        )
+        origin_session = active
+        self._playlist_membership_pending = True
+
+        def load() -> dict:
+            result = client.profile_playlists(session_id)
+            return result if isinstance(result, dict) else {}
+
+        def loaded(payload: dict) -> None:
+            if self.navigator.active is not origin_session:
+                self._playlist_membership_pending = False
+                return
+            try:
+                choices = playlist_choices_from_payload(payload, item_ids)
+            except PlaylistPayloadError as error:
+                self._playlist_membership_pending = False
+                self.announcer.say(str(error))
+                return
+            original = [choice.payload() for choice in choices]
+            with PlaylistMembershipDialog(
+                self,
+                choices=choices,
+                selected_item_ids=item_ids,
+                target_label=target_label,
+            ) as dialog:
+                if dialog.ShowModal() != wx.ID_OK:
+                    self._playlist_membership_pending = False
+                    self._restore_focus_after_dialog()
+                    return
+                replacements = dialog.result_playlists
+            self._restore_focus_after_dialog()
+            if replacements == original:
+                self._playlist_membership_pending = False
+                self.announcer.say(f"Playlisty bez zmian dla: {target_label}")
+                return
+
+            def save() -> dict:
+                result = client.replace_profile_playlists(session_id, replacements)
+                return result if isinstance(result, dict) else {}
+
+            def saved(_result: dict) -> None:
+                self._playlist_membership_pending = False
+                message = f"Zapisano zmiany playlist dla: {target_label}"
+                if (
+                    self.navigator.active is origin_session
+                    and self.navigator.session.view is View.LIST
+                ):
+                    self._refresh_profile_view(preferred_id=preferred_id)
+                self.announcer.say(message)
+
+            def save_failed(error: Exception) -> None:
+                self._playlist_membership_pending = False
+                self.announcer.say(f"Nie zapisano zmian playlist: {error}")
+
+            self.runner.submit("playlist-membership-save", save, saved, save_failed)
+
+        def load_failed(error: Exception) -> None:
+            self._playlist_membership_pending = False
+            self.announcer.say(f"Nie mogę odczytać playlist: {error}")
+
+        self.runner.submit("playlist-membership-load", load, loaded, load_failed)
 
     def _toggle_profile_favorite(self) -> None:
         """Ctrl+Shift+U dla lokalnych plików i stacji radiowych."""

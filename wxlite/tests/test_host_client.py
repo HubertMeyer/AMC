@@ -339,6 +339,31 @@ def test_profile_mutations_use_narrow_named_operations() -> None:
         client.close()
 
 
+def test_profile_playlists_use_one_read_and_one_atomic_replace_operation() -> None:
+    client = make_client()
+    try:
+        loaded = client.profile_playlists("local")
+        saved = client.replace_profile_playlists(
+            "local",
+            [
+                {
+                    "playlistId": "p1",
+                    "name": "Poranek",
+                    "createdUtcTicks": 638000000000000000,
+                    "itemIds": ["a", "b"],
+                }
+            ],
+        )
+        assert loaded["op"] == "library.playlists"
+        assert loaded["args"] == {"sessionId": "local"}
+        assert saved["op"] == "library.playlists.replace"
+        assert saved["args"]["sessionId"] == "local"
+        assert saved["args"]["playlists"][0]["name"] == "Poranek"
+        assert saved["args"]["playlists"][0]["itemIds"] == ["a", "b"]
+    finally:
+        client.close()
+
+
 def test_current_radio_information_uses_a_narrow_read_only_operation() -> None:
     client = make_client()
     try:

@@ -417,7 +417,15 @@ Bez przekierowania `APPDATA`/`LOCALAPPDATA` aplikacja domyślnie czyta profil w�
    go wszystkim. W odtwarzaczu polecenie nie może przerywać dźwięku ani wracać
    samoczynnie na listę. Ctrl+U pokazuje zgodny stan, kolejność i wybór także
    po ponownym uruchomieniu.
-4. Ctrl+P: playlisty; Enter do zawartości; Backspace na tę samą playlistę.
+4. Ctrl+Shift+P na pliku, stacji albo odcinku otwiera „Przynależność do
+   playlist”. Strzałki mają czytać wyłącznie nazwę, stan „zaznaczona”,
+   „niezaznaczona” lub „stan mieszany” oraz liczbę elementów — nigdy nazwę
+   klasy ani identyfikator. Spacja zmienia stan całego zaznaczenia. Insert i
+   Ctrl+N tworzą playlistę, F2 zmienia jej nazwę, Delete usuwa tylko playlistę,
+   Enter zapisuje, a Escape anuluje wszystkie zmiany robocze. Po Zapisz i po
+   Anuluj fokus wraca na właściwą listę albo przycisk odtwarzacza. Ctrl+P
+   pokazuje playlisty; Enter otwiera zawartość, Backspace wraca na tę samą
+   playlistę.
 5. Ctrl+C: nazwa lub nazwy zaznaczonych pozycji, każda w osobnym wierszu.
    Ctrl+Shift+C na istniejących plikach ustawia jednocześnie tekst pełnych
    ścieżek oraz Windows `CF_HDROP`, więc pliki można wkleić do folderu. Dla
