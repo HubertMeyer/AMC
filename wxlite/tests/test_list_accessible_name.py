@@ -33,6 +33,15 @@ def test_native_list_still_has_an_intentional_user_label() -> None:
 
     assert "self.SetLabel(label)" in source
     assert "self.SetName(label)" in source
+    assert "self._base_accessible_label = label" in source
+
+
+def test_leaving_a_named_view_restores_the_session_list_label() -> None:
+    import amc_wx_lite.gui as gui
+
+    source = inspect.getsource(gui.LiteFrame._sync_views)
+    assert 'LibraryView.PLAYLIST_CONTENTS: "Playlista"' in source
+    assert 'getattr(active_list, "_base_accessible_label", None)' in source
 
 
 def test_gui_does_not_mark_lists_for_an_nvda_overlay() -> None:

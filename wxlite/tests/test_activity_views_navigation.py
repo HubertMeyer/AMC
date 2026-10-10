@@ -163,11 +163,11 @@ def test_history_view_announces_heading_and_size() -> None:
     assert "2 pozycje" in out[0].text
 
 
-def test_empty_activity_view_says_pusto_instead_of_silence() -> None:
+def test_empty_activity_view_says_zero_elements_instead_of_silence() -> None:
     """Pusta lista nie ma czego wymowic sama -- komunikat jest konieczny."""
     nav = Navigator()
     out = nav.apply_library_view(LibraryView.SAVED_QUEUE, "Biblioteka — Kolejka", [])
-    assert "pusto" in out[0].text
+    assert out[0].text == "zero elementów"
 
 
 def test_saved_queue_heading_does_not_claim_a_running_queue() -> None:

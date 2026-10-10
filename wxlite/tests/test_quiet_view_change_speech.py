@@ -78,7 +78,7 @@ def test_empty_view_still_says_it_is_empty() -> None:
     nav = Navigator()
     tasks = nav.apply_library_view(LibraryView.FAVORITES, "Ulubione", [])
     said = [t.text for t in tasks if isinstance(t, Announce)][0]
-    assert "Ulubione" in said and "pusto" in said.lower()
+    assert said == "zero elementów"
 
 
 def test_folder_announcement_does_not_repeat_the_row_either() -> None:

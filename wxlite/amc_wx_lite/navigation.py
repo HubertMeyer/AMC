@@ -1466,7 +1466,10 @@ class Navigator:
         # drugim odczytem tego samego elementu, ktory zglosil uzytkownik.
         # Puste widoki to wyjatek: tam kontrolka nie ma czego wymowic.
         if row is None:
-            parts = [f"{heading}, pusto"]
+            # Jednoznaczny wynik wspólny dla pustych widoków. Nazwę widoku ma
+            # natywna lista, a dokładnie ten krótki komunikat idzie po jej
+            # aktualizacji, więc NVDA nie składa go z systemowym „nieznane”.
+            parts = ["zero elementów"]
         else:
             parts = [f"{heading}, {len(rows)} {_items_word(len(rows))}"]
         if not order_matches_amc:
@@ -1670,13 +1673,10 @@ class Navigator:
         # Nazwe wiersza czyta natywna lista, nie powtarzamy jej w komunikacie.
         if rows:
             message = heading
-        elif view is LibraryView.ACTIVE_RADIO_RECORDINGS:
-            # Konkretna liczba jest szybsza i jednoznaczna. To rowniez
-            # komunikat koncowy po aktualizacji pustej natywnej listy, dzieki
-            # czemu NVDA nie zostawia uzytkownika ze slowem "nieznane".
-            message = f"{heading}, zero elementów"
         else:
-            message = f"{heading}, pusto"
+            # Nazwę widoku („Playlista”, „Nagrywane” itd.) ma sama kontrolka.
+            # Pusty wynik ma być dokładnie tak krótki, jak zgłosił użytkownik.
+            message = "zero elementów"
         if not order_matches_amc:
             # Ta sama formula, co w ``apply_library_view``: zastepcza kolejnosc
             # jest NAZWANA, a nie przemilczana.

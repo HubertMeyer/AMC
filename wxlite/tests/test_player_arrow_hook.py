@@ -72,6 +72,12 @@ def test_modyfikowane_polecenia_listy_nie_gina_w_wyszukiwaniu_windows():
         assert _call(player=False, list_chord=chord) == ["key"]
 
 
+def test_ctrl_c_is_stopped_by_the_top_level_hook_before_native_copy() -> None:
+    """CHAR_HOOK okna musi zatrzymać gest przed SysListView32."""
+    for chord in ("Ctrl+C", "Ctrl+Shift+C"):
+        assert _call(player=False, list_chord=chord) == ["key"]
+
+
 def test_lista_ma_wlasny_wczesny_hook_dla_copy_shift_r_i_ustawien():
     tree = ast.parse(SOURCE.read_text(encoding="utf-8"))
     bind = next(

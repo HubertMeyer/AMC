@@ -783,6 +783,23 @@ class MediaListCtrl(wx.ListCtrl):
         # jawna nazwe po stronie wx; nie podmieniamy providera MSAA/UIA.
         self.SetLabel(label)
         self.SetName(label)
+        self._base_accessible_label = label
+        self._accessible_label = label
+
+    def set_accessible_label(self, label: str) -> None:
+        """Ustaw nazwę bieżącego widoku bez wymiany natywnej listy.
+
+        Nazwa opisuje to, co użytkownik rzeczywiście ogląda (np. „Playlista”
+        albo „Nagrywane”), a nie tylko sesję „Stacje radiowe”.  Nie dokładamy
+        własnego providera dostępności: dzieci i pozycję „1 z N” nadal podaje
+        natywny SysListView32.
+        """
+        label = (label or "").strip()
+        if not label or label == self._accessible_label:
+            return
+        self.SetLabel(label)
+        self.SetName(label)
+        self._accessible_label = label
 
     # ------------------------------------------------------------ aktualizacja
 
@@ -923,6 +940,14 @@ class MediaListCtrl(wx.ListCtrl):
         wiersza pod kursorem BEZ zmiany widoku to nadal jedno ``DeleteItem``,
         a zmiana tekstu to jedno ``SetItem``.
         """
+        # PUSTY WYNIK: jedno natywne ``DeleteAllItems`` zamiast kasowania
+        # sfokusowanego dziecka przez ``DeleteItem``. To drugie generuje w
+        # Windows przejściowy obiekt bez nazwy, który NVDA czyta jako
+        # „nieznane”. ``DeleteAllItems`` zachowuje zwykłą kontrolkę i jej
+        # obsługę klawiatury, ale nie wystawia nieistniejącego wiersza.
+        if desired == [] and self._shown:
+            self.DeleteAllItems()
+            return
         if desired is not None and self._wymienia_caly_widok(ops, context):
             self.DeleteAllItems()
             for index, row in enumerate(desired):
@@ -4120,6 +4145,17 @@ class LiteFrame(wx.Frame):
                 "Ctrl+R",
                 "Shift+R",
                 "Ctrl+,",
+                # To jest NAJWCZEŚNIEJSZA bramka wx: CHAR_HOOK głównego okna
+                # przychodzi przed zdarzeniem listy. Przechwyt dopiero na
+                # ``MediaListCtrl`` pozwalał SysListView32 wykonać jeszcze
+                # własne angielskie „Copy”, zanim AMC powiedziało
+                # „Skopiowano nazwę”.
+                "Ctrl+C",
+                "Ctrl+Shift+C",
+                "Ctrl+X",
+                "Ctrl+V",
+                "Alt+Up",
+                "Alt+Down",
             }:
                 self._on_key(event)
                 return
@@ -4491,9 +4527,21 @@ class LiteFrame(wx.Frame):
     def _run(self, intents: list[object]) -> None:
         """Wykonaj zamiary zwrocone przez Navigator. To JEDYNE miejsce, w
         ktorym logika nawigacji spotyka wx."""
+        announcements_after_empty_update: list[str] = []
         for intent in intents:
             if isinstance(intent, Announce):
-                self.announcer.say(intent.text)
+                # Pusta natywna lista nie ma wiersza do przeczytania. Najpierw
+                # kończymy jej aktualizację, dopiero potem mówimy wynik. Dzięki
+                # temu systemowy stan usuwanego dziecka nie dopisuje na końcu
+                # słowa „nieznane”.
+                if (
+                    intent.text.strip().casefold() == "zero elementów"
+                    and self.navigator.session.view is View.LIST
+                    and self.navigator.session.model.selected_row is None
+                ):
+                    announcements_after_empty_update.append(intent.text)
+                else:
+                    self.announcer.say(intent.text)
             elif isinstance(intent, OpenFolder):
                 # Gdy Biblioteka jest dostepna, wchodzenie w foldery czyta
                 # SQLite, a nie dysk -- sciezki profilu moga tu nie istniec.
@@ -4532,6 +4580,8 @@ class LiteFrame(wx.Frame):
             elif isinstance(intent, ActivateSonosGroup):
                 self._activate_sonos_group(intent)
         self._sync_views()
+        for text in announcements_after_empty_update:
+            self._announce_after_native_list_update(text)
 
     def _sync_views(self) -> None:
         """Odwzoruj stan nawigatora. Fokus ruszamy TYLKO przy zmianie widoku."""
@@ -4548,6 +4598,28 @@ class LiteFrame(wx.Frame):
         }[self.navigator.active])
 
         active_list = self._active_list()
+        # Jawna, użytkowa nazwa BIEŻĄCEGO widoku. Model nadal przechowuje enum,
+        # lecz NVDA nigdy go nie zobaczy; pozycję i licznik czyta natywna lista.
+        view_label = {
+            LibraryView.ALL_FILES: "Wszystkie pliki",
+            LibraryView.FAVORITES: "Ulubione",
+            LibraryView.PLAYLISTS: "Playlisty",
+            LibraryView.PLAYLIST_CONTENTS: "Playlista",
+            LibraryView.HISTORY: "Historia odtwarzania",
+            LibraryView.SAVED_QUEUE: "Zapisana kolejka",
+            LibraryView.LIVE_QUEUE: "Kolejka odtwarzania",
+            LibraryView.ITEM_BOOKMARKS: "Zakładki",
+            LibraryView.ACTIVE_RADIO_RECORDINGS: "Nagrywane",
+            LibraryView.RECORDED_RADIO_FILES: "Nagrane",
+            LibraryView.RADIO_RECORDING_SCHEDULES: "Harmonogramy nagrywania",
+        }.get(
+            session.library_view,
+            getattr(active_list, "_base_accessible_label", None),
+        )
+        if view_label is not None:
+            set_accessible_label = getattr(active_list, "set_accessible_label", None)
+            if callable(set_accessible_label):
+                set_accessible_label(view_label)
         all_lists = tuple(
             candidate for candidate in (
                 getattr(self, "files_list", None),
@@ -6750,7 +6822,7 @@ class LiteFrame(wx.Frame):
         dostepnosciowe. Samo ``CallAfter`` bywa za wczesne: NVDA potrafi wtedy
         dopisac PO naszym komunikacie systemowe ``pusto, nieznane``. Krotki
         jednorazowy timer nie blokuje GUI i sprawia, ze koncowa, pozostajaca
-        informacja jest jednoznaczna: ``Nagrywane, zero elementow``.
+        informacja jest jednoznaczna: ``zero elementów``.
         """
         call_later = getattr(wx, "CallLater", None)
         if callable(call_later):

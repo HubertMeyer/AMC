@@ -125,7 +125,7 @@ def test_empty_view_says_so_plainly() -> None:
     nav = Navigator()
     tasks = nav.apply_library_view(LibraryView.FAVORITES, "Ulubione", [])
     said = [t.text for t in tasks if isinstance(t, Announce)][0]
-    assert "Ulubione" in said and "pusto" in said.lower()
+    assert said == "zero elementów"
 
 
 def test_substitute_order_is_admitted_not_hidden() -> None:

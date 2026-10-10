@@ -582,7 +582,7 @@ def test_empty_active_recordings_have_an_exact_user_facing_count() -> None:
     )
 
     assert len(events) == 1
-    assert events[0].text == "Nagrywane, zero elementów"
+    assert events[0].text == "zero elementów"
 
 
 def test_escape_and_backspace_share_the_recording_preview_exit_action() -> None:

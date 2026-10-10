@@ -815,11 +815,8 @@ def test_bez_wiedzy_o_widoku_nigdy_nie_ma_pelnej_podmiany() -> None:
     assert "DeleteAllItems" not in [c[0] for c in ctrl.list_ops()]
 
 
-def test_pusty_widok_po_zmianie_kontekstu_nie_laduje_w_pelnej_podmianie() -> None:
-    """Przejscie do PUSTEGO widoku: nie ma czego wstawiac, zapowiedz pustki dziala.
-
-    Naprawa pustej listy ma zostac nietknieta.
-    """
+def test_pusty_widok_czysci_liste_bez_usuwania_sfokusowanego_dziecka() -> None:
+    """Pusty wynik używa DeleteAllItems, więc NVDA nie dostaje „nieznane”."""
     model = ListModel()
     state = FakeState()
     ctrl = make_ctrl_ze_stanem(model, state)
@@ -834,7 +831,10 @@ def test_pusty_widok_po_zmianie_kontekstu_nie_laduje_w_pelnej_podmianie() -> Non
     ctrl.sync_rows()
 
     assert ctrl.GetItemCount() == 0
-    # Bez wstawien: pelna podmiana wymaga czegos do wstawienia.
+    assert [c for c in ctrl.calls if c[0] == "DeleteAllItems"] == [
+        ("DeleteAllItems",)
+    ]
+    assert not [c for c in ctrl.calls if c[0] == "DeleteItem"]
     assert not [c for c in ctrl.calls if c[0] == "InsertItem"]
 
 def test_sync_przed_oddaniem_danych_nie_zuzywa_zmiany_widoku() -> None:
