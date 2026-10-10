@@ -407,8 +407,14 @@ własnej normalizacji diakrytyków.
   całego wielokrotnego zaznaczenia. Insert lub Ctrl+N tworzy playlistę, F2
   zmienia nazwę, a Delete usuwa ją bez usuwania multimediów. Wszystkie zmiany
   pozostają robocze do przycisku Zapisz i trafiają atomowo przez jednego
-  właściciela C#; Anuluj nie zapisuje częściowej operacji. Nadal brakuje
-  ręcznej zmiany kolejności wewnątrz list.
+  właściciela C#; Anuluj nie zapisuje częściowej operacji. W otwartej lokalnej
+  playliście działa też ręczna kolejność głównego AMC: `Alt+Up`/`Alt+Down`
+  przesuwa ciągły blok o jedno miejsce, a `Ctrl+X`, wybór celu i `Ctrl+V`
+  przenosi także elementy nieprzylegające przed bieżący wiersz. Filtr musi być
+  pusty, zapis jest jedną transakcją C#, niedostępne pozycje zachowują swoje
+  miejsca, a po odświeżeniu fokus i całe zaznaczenie wracają według ID. Do
+  dalszego portu pozostają widoki zawartości playlist Radia i Podcastów oraz
+  ich ręczna kolejność; samo członkostwo tych sesji jest już zapisywane.
 - Podcasty i YouTube mają już wąski zapis postępu przez jednego właściciela C#:
   checkpoint co 15 sekund, stan „w trakcie” po minucie i „odtworzony” po
   naturalnym końcu. Python pozostaje czytelnikiem `podcasts.db`; blokada drugiego

@@ -328,6 +328,26 @@ def test_ctrl_shift_p_opens_playlist_membership_in_list_and_player() -> None:
         ) is Action.MANAGE_PLAYLIST_MEMBERSHIP
 
 
+def test_playlist_manual_order_shortcuts_stay_on_the_list() -> None:
+    expected = {
+        Chord("X", ctrl=True): Action.CUT_FILE,
+        Chord("V", ctrl=True): Action.PASTE_OR_MOVE,
+        Chord("Up", alt=True): Action.MOVE_LIST_ITEM_UP,
+        Chord("Down", alt=True): Action.MOVE_LIST_ITEM_DOWN,
+    }
+    for chord, action in expected.items():
+        assert resolve(
+            chord,
+            player_view=False,
+            radio_session=False,
+        ) is action
+    assert resolve(
+        Chord("V", ctrl=True),
+        player_view=True,
+        radio_session=False,
+    ) is None
+
+
 def test_ctrl_u_opens_podcast_favorites_from_list_and_player() -> None:
     for player in (False, True):
         assert resolve(

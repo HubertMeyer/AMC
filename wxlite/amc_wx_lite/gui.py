@@ -1107,6 +1107,29 @@ class MediaListCtrl(wx.ListCtrl):
         rows_by_id = {row.item_id: row for row in self.model.rows}
         return [rows_by_id[item_id] for item_id in item_ids if item_id in rows_by_id]
 
+    def select_item_ids(self, item_ids: list[str]) -> None:
+        """Przywróć wielokrotne zaznaczenie po zmianie kolejności według ID.
+
+        Nie wolno zachować samych indeksów: po przeniesieniu wskazywałyby inne
+        pliki. Fokus pozostaje na ``model.selected_id`` ustawionym przez
+        zwykły ``sync_rows``; tutaj zmieniamy wyłącznie bity zaznaczenia.
+        """
+        wanted = set(item_ids)
+        self.updating = True
+        try:
+            for index, shown in enumerate(self._shown):
+                selected = self._is_index_selected(index)
+                should_select = shown.item_id in wanted
+                if selected == should_select:
+                    continue
+                self.SetItemState(
+                    index,
+                    wx.LIST_STATE_SELECTED if should_select else 0,
+                    wx.LIST_STATE_SELECTED,
+                )
+        finally:
+            self.updating = False
+
     def visible_count(self) -> int:
         """Liczba wierszy POKAZANYCH teraz. Zrodlo liczby do statusu filtra."""
         return len(self._shown)
@@ -2722,6 +2745,11 @@ class LiteFrame(wx.Frame):
         #: otwieramy tylko do czytania i oczekujace przeniesienie nie jest
         #: stanem, ktory ma przetrwac zamkniecie programu.
         self.pending_external_moves: dict[str, str] = {}
+        #: (Id playlisty, Id elementów) rozpoczęte przez Ctrl+X. To stan
+        #: chwilowy okna; nie trafia do profilu i znika dopiero po udanym
+        #: Ctrl+V albo po zastąpieniu kolejnym wyborem.
+        self._pending_internal_playlist_move: tuple[str, tuple[str, ...]] | None = None
+        self._playlist_order_pending = False
 
         outer = wx.BoxSizer(wx.VERTICAL)
         outer.Add(self.session_label, 0, wx.ALL, 8)
@@ -2877,6 +2905,12 @@ class LiteFrame(wx.Frame):
             SessionId.RADIO: {"station"},
             SessionId.PODCASTS: {"episode"},
         }
+        playlist_contents = (
+            self.navigator.active is SessionId.FILES
+            and session.view is View.LIST
+            and session.library_view is LibraryView.PLAYLIST_CONTENTS
+            and bool(session.library_playlist_id)
+        )
         podcast_sort_actions = {
             Action.SORT_PODCAST_INBOX_ADDED: SORT_ADDED_NEWEST,
             Action.SORT_PODCAST_INBOX_ALPHABETICAL: SORT_ALPHABETICAL,
@@ -2905,6 +2939,8 @@ class LiteFrame(wx.Frame):
             if entry.needs_playlist_item and selected_kind not in playlist_kinds.get(
                 self.navigator.active, set()
             ):
+                enabled = False
+            if entry.needs_playlist_contents and not playlist_contents:
                 enabled = False
             if entry.needs_podcast_episode and (
                 not podcasts or selected_kind != "episode"
@@ -2956,7 +2992,15 @@ class LiteFrame(wx.Frame):
 
     def _on_list_shortcut_hook(self, event: wx.KeyEvent) -> None:
         """Polecenia, ktorych natywna lista nie moze zabrac jako liter."""
-        if chord_from_event(event).canonical in {"Ctrl+C", "Shift+R", "Ctrl+,"}:
+        if chord_from_event(event).canonical in {
+            "Ctrl+C",
+            "Ctrl+X",
+            "Ctrl+V",
+            "Alt+Up",
+            "Alt+Down",
+            "Shift+R",
+            "Ctrl+,",
+        }:
             # Ctrl+C musi zostac zatrzymane PRZED natywnym SysListView32.
             # Samo usuniecie akceleratora menu nie wystarcza: w szczegolnosci
             # na liscie Podcastow NVDA oglaszal jeszcze systemowe angielskie
@@ -3914,7 +3958,13 @@ class LiteFrame(wx.Frame):
 
         self.runner.submit("tidal-navigation", work, done, failed)
 
-    def _open_library_view(self, intent: OpenLibraryView) -> None:
+    def _open_library_view(
+        self,
+        intent: OpenLibraryView,
+        *,
+        restore_selected_ids: list[str] | None = None,
+        after_refresh: Callable[[], None] | None = None,
+    ) -> None:
         """Wczytanie nazwanego widoku Biblioteki -- tak samo POZA watkiem GUI.
 
         "Wszystkie pliki" to kilka tysiecy wierszy plus klucze kolacji z hosta,
@@ -3952,6 +4002,8 @@ class LiteFrame(wx.Frame):
             if result.fallback_view is not None:
                 self._run(self.navigator.apply_library_view(
                     view, result.heading, [], fallback_to_playlists=True))
+                if after_refresh is not None:
+                    after_refresh()
                 return
             # ``sees_live_writes`` dotyczy calego odczytu, nie jednego widoku,
             # wiec mowimy o nim ta sama droga co w Folderach.
@@ -3969,8 +4021,20 @@ class LiteFrame(wx.Frame):
                 bookmark_contexts=result.bookmark_contexts,
                 queue_flags=result.queue_flags,
             ))
+            if (
+                restore_selected_ids
+                and self.navigator.active is SessionId.FILES
+                and self.navigator.session.view is View.LIST
+                and self.navigator.session.library_view is LibraryView.PLAYLIST_CONTENTS
+                and self.navigator.session.library_playlist_id == playlist_id
+            ):
+                self._active_list().select_item_ids(restore_selected_ids)
+            if after_refresh is not None:
+                after_refresh()
 
         def failed(error: Exception) -> None:
+            if after_refresh is not None:
+                after_refresh()
             self.announcer.say(f"Nie moge wczytac widoku: {error}")
 
         self.runner.submit("folder", work, done, failed)
@@ -4255,7 +4319,13 @@ class LiteFrame(wx.Frame):
         elif action is Action.COPY_ADDRESS:
             self._copy_address()
         elif action is Action.CUT_FILE:
-            self._cut_file()
+            self._cut_or_start_internal_playlist_move()
+        elif action is Action.PASTE_OR_MOVE:
+            self._paste_internal_playlist_move()
+        elif action is Action.MOVE_LIST_ITEM_UP:
+            self._move_playlist_selection(-1)
+        elif action is Action.MOVE_LIST_ITEM_DOWN:
+            self._move_playlist_selection(1)
         elif action is Action.RENAME_LIBRARY_ITEM:
             self._rename_library_item()
         elif action is Action.RENAME_LOCAL_FILE:
@@ -6951,6 +7021,228 @@ class LiteFrame(wx.Frame):
         path = local_path_from_source(address)
         return path if os.path.exists(path) else None
 
+    def _open_local_playlist_id(self) -> str | None:
+        """Id otwartej playlisty lokalnej albo ``None`` poza jej zawartością.
+
+        Wartość służy wyłącznie do wąskiego wywołania hosta. Nie jest
+        dołączana do etykiet, statusu ani komunikatów NVDA.
+        """
+        state = self.navigator.session
+        if (
+            self.navigator.active is SessionId.FILES
+            and state.view is View.LIST
+            and state.library_view is LibraryView.PLAYLIST_CONTENTS
+            and state.library_playlist_id
+        ):
+            return state.library_playlist_id
+        return None
+
+    def _cut_or_start_internal_playlist_move(self) -> None:
+        """Ctrl+X: najpierw wewnętrzna kolejność, poza playlistą pliki."""
+        playlist_id = self._open_local_playlist_id()
+        if playlist_id is None:
+            self._cut_file()
+            return
+        if self.filter_box.GetValue().strip():
+            self.announcer.say(
+                "Wyczyść filtr klawiszem Escape przed przenoszeniem elementów"
+            )
+            return
+        rows = [
+            row for row in self._selected_action_rows()
+            if row.kind == "track" and row.item_id
+        ]
+        item_ids = list(dict.fromkeys(row.item_id for row in rows))
+        if not item_ids:
+            self.announcer.say("Wybierz element do przeniesienia")
+            return
+        self._pending_internal_playlist_move = (playlist_id, tuple(item_ids))
+        self._clear_pending_external_moves()
+        self.announcer.say(
+            "Zaznaczono element do przeniesienia. "
+            "Wybierz miejsce i naciśnij Ctrl+V"
+            if len(item_ids) == 1
+            else f"Zaznaczono do przeniesienia: {format_item_count(len(item_ids))}. "
+                 "Wybierz miejsce i naciśnij Ctrl+V"
+        )
+
+    def _playlist_order_rows(self) -> tuple[list[Row], list[str]] | None:
+        """Zaznaczenie i pełna widoczna kolejność bez filtra."""
+        if self.filter_box.GetValue().strip():
+            self.announcer.say(
+                "Wyczyść filtr klawiszem Escape przed zmianą kolejności"
+            )
+            return None
+        rows = [
+            row for row in self._selected_action_rows()
+            if row.kind == "track" and row.item_id
+        ]
+        if not rows:
+            self.announcer.say("Wybierz plik do przeniesienia")
+            return None
+        visible_ids = [
+            row.item_id for row in self.navigator.session.model.rows
+            if row.kind == "track" and row.item_id
+        ]
+        return rows, visible_ids
+
+    def _move_playlist_selection(self, direction: int) -> None:
+        """Alt+Up/Down: ciągły blok o jedną pozycję jak w głównym AMC."""
+        playlist_id = self._open_local_playlist_id()
+        if playlist_id is None:
+            self.announcer.say(
+                "Ręczne przenoszenie działa w otwartej playliście"
+            )
+            return
+        if self._playlist_order_pending:
+            self.announcer.say("Zmiana kolejności playlisty już trwa")
+            return
+        prepared = self._playlist_order_rows()
+        if prepared is None:
+            return
+        rows, visible_ids = prepared
+        selected_ids = list(dict.fromkeys(row.item_id for row in rows))
+        client = self.client
+        if client is None:
+            self.announcer.say("Silnik nie działa. Kolejność nie została zmieniona")
+            return
+
+        selected_set = set(selected_ids)
+        positions = [
+            index for index, item_id in enumerate(visible_ids)
+            if item_id in selected_set
+        ]
+        adjacent_title = "sąsiedni element"
+        if positions and positions[-1] - positions[0] + 1 == len(positions):
+            adjacent_index = positions[0] - 1 if direction < 0 else positions[-1] + 1
+            if 0 <= adjacent_index < len(self.navigator.session.model.rows):
+                adjacent_title = self.navigator.session.model.rows[adjacent_index].title
+        self._playlist_order_pending = True
+
+        def work() -> dict:
+            result = client.move_profile_playlist_items(
+                "local",
+                playlist_id,
+                selected_ids,
+                visible_ids,
+                direction,
+            )
+            return result if isinstance(result, dict) else {}
+
+        def done(result: dict) -> None:
+            self._playlist_order_pending = False
+            status = str(result.get("status") or "invalid")
+            if status != "moved":
+                self.announcer.say({
+                    "boundary": (
+                        "To początek tej listy" if direction < 0
+                        else "To koniec tej listy"
+                    ),
+                    "nonContiguous": (
+                        "Do wspólnego przeniesienia zaznacz ciągły blok elementów"
+                    ),
+                }.get(status, "Nie można zmienić kolejności zaznaczenia"))
+                return
+            self._pending_internal_playlist_move = None
+            moved = (
+                "Przeniesiono" if len(selected_ids) == 1
+                else f"Przeniesiono {format_item_count(len(selected_ids))}"
+            )
+            message = (
+                f"{moved} w górę, nad {adjacent_title}"
+                if direction < 0
+                else f"{moved} w dół, pod {adjacent_title}"
+            )
+            if self._open_local_playlist_id() == playlist_id:
+                self._refresh_profile_view(
+                    preferred_id=selected_ids[0],
+                    selected_ids=selected_ids,
+                    after_refresh=lambda: self.announcer.say(message),
+                )
+            else:
+                self.announcer.say(message)
+
+        def failed(error: Exception) -> None:
+            self._playlist_order_pending = False
+            self.announcer.say(f"Nie zmieniono kolejności playlisty: {error}")
+
+        self.runner.submit("playlist-order-move", work, done, failed)
+
+    def _paste_internal_playlist_move(self) -> None:
+        """Ctrl+V: wstaw wcześniej wycięty blok przed bieżącym wierszem."""
+        playlist_id = self._open_local_playlist_id()
+        if playlist_id is None:
+            self.announcer.say(
+                "Przenoszenie przed wybrany element działa w otwartej playliście"
+            )
+            return
+        if self.filter_box.GetValue().strip():
+            self.announcer.say(
+                "Wyczyść filtr klawiszem Escape przed przenoszeniem elementów"
+            )
+            return
+        pending = self._pending_internal_playlist_move
+        if pending is None or pending[0] != playlist_id:
+            self.announcer.say(
+                "Najpierw zaznacz element lub grupę skrótem Ctrl+X"
+            )
+            return
+        if self._playlist_order_pending:
+            self.announcer.say("Zmiana kolejności playlisty już trwa")
+            return
+        target = self.navigator.session.model.selected_row
+        if target is None or target.kind != "track" or not target.item_id:
+            self.announcer.say(
+                "Wybierz element, przed którym chcesz przenieść zaznaczenie"
+            )
+            return
+        client = self.client
+        if client is None:
+            self.announcer.say("Silnik nie działa. Kolejność nie została zmieniona")
+            return
+        selected_ids = list(pending[1])
+        target_id = target.item_id
+        target_title = target.title
+        self._playlist_order_pending = True
+
+        def work() -> dict:
+            result = client.place_profile_playlist_items_before(
+                "local", playlist_id, selected_ids, target_id
+            )
+            return result if isinstance(result, dict) else {}
+
+        def done(result: dict) -> None:
+            self._playlist_order_pending = False
+            status = str(result.get("status") or "invalid")
+            if status != "moved":
+                self.announcer.say({
+                    "targetInSelection": "Wybierz inny element jako miejsce docelowe",
+                    "targetMissing": "Nie znaleziono wskazanego miejsca docelowego",
+                    "unchanged": "Elementy są już w tym miejscu",
+                }.get(status, "Nie można przenieść zaznaczonych elementów"))
+                return
+            self._pending_internal_playlist_move = None
+            message = (
+                f"Przeniesiono przed {target_title}"
+                if len(selected_ids) == 1
+                else f"Przeniesiono {format_item_count(len(selected_ids))} "
+                     f"przed {target_title}"
+            )
+            if self._open_local_playlist_id() == playlist_id:
+                self._refresh_profile_view(
+                    preferred_id=selected_ids[0],
+                    selected_ids=selected_ids,
+                    after_refresh=lambda: self.announcer.say(message),
+                )
+            else:
+                self.announcer.say(message)
+
+        def failed(error: Exception) -> None:
+            self._playlist_order_pending = False
+            self.announcer.say(f"Nie przeniesiono elementów playlisty: {error}")
+
+        self.runner.submit("playlist-order-place", work, done, failed)
+
     def _cut_file(self) -> None:
         """Ctrl+X: zaznaczone pliki GOTOWE DO PRZENIESIENIA poza AMC.
 
@@ -9575,7 +9867,13 @@ class LiteFrame(wx.Frame):
         view = self.navigator.session.library_view
         return "library" if view is None else view.value
 
-    def _refresh_profile_view(self, preferred_id: str | None = None) -> None:
+    def _refresh_profile_view(
+        self,
+        preferred_id: str | None = None,
+        *,
+        selected_ids: list[str] | None = None,
+        after_refresh: Callable[[], None] | None = None,
+    ) -> None:
         """Wczytaj ponownie TEN SAM widok po wąskiej zmianie hosta."""
         state = self.navigator.session
         if self.navigator.active is SessionId.RADIO:
@@ -9628,13 +9926,17 @@ class LiteFrame(wx.Frame):
         if state.library_view not in self._VIEW_KEYS:
             self.announcer.say("Zmiana została zapisana. Odśwież bieżący widok")
             return
-        self._open_library_view(OpenLibraryView(
-            view=state.library_view,
-            playlist_id=state.library_playlist_id,
-            preferred_id=preferred_id,
-            item_id=state.library_item_id,
-            target_session_id=SessionId.FILES,
-        ))
+        self._open_library_view(
+            OpenLibraryView(
+                view=state.library_view,
+                playlist_id=state.library_playlist_id,
+                preferred_id=preferred_id,
+                item_id=state.library_item_id,
+                target_session_id=SessionId.FILES,
+            ),
+            restore_selected_ids=selected_ids,
+            after_refresh=after_refresh,
+        )
 
     def _rename_library_item(self) -> None:
         if self.navigator.active is SessionId.RADIO:

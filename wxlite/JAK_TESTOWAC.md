@@ -425,7 +425,14 @@ Bez przekierowania `APPDATA`/`LOCALAPPDATA` aplikacja domyślnie czyta profil w�
    Enter zapisuje, a Escape anuluje wszystkie zmiany robocze. Po Zapisz i po
    Anuluj fokus wraca na właściwą listę albo przycisk odtwarzacza. Ctrl+P
    pokazuje playlisty; Enter otwiera zawartość, Backspace wraca na tę samą
-   playlistę.
+   playlistę. W otwartej lokalnej playliście zaznacz ciągły blok Shiftem:
+   `Alt+Up` i `Alt+Down` przesuwają go o jedno miejsce, zachowując wszystkie
+   zaznaczenia i fokus według elementu, nie numeru wiersza. Następnie zaznacz
+   nieprzylegające pozycje przez `Ctrl+Spację`, naciśnij `Ctrl+X`, ustaw fokus
+   na niezaznaczonym celu i naciśnij `Ctrl+V`: cały blok ma znaleźć się przed
+   celem w swojej wcześniejszej kolejności. Cel należący do zaznaczenia ma
+   dać krótką odmowę. Przy niepustym filtrze obie drogi mają zażądać Escape i
+   niczego nie zapisać. Po ponownym uruchomieniu sprawdź tę samą kolejność.
 5. Ctrl+C: nazwa lub nazwy zaznaczonych pozycji, każda w osobnym wierszu.
    Ctrl+Shift+C na istniejących plikach ustawia jednocześnie tekst pełnych
    ścieżek oraz Windows `CF_HDROP`, więc pliki można wkleić do folderu. Dla

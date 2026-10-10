@@ -320,6 +320,8 @@ internal sealed class LiteEngineHandlers : IDisposable
             ["library.toggleFavorite"] = (request, _) => ToggleProfileFavorites(request.Args),
             ["library.playlists"] = (request, _) => GetProfilePlaylists(request.Args),
             ["library.playlists.replace"] = (request, _) => ReplaceProfilePlaylists(request.Args),
+            ["library.playlist.move"] = (request, _) => MoveProfilePlaylistItems(request.Args),
+            ["library.playlist.placeBefore"] = (request, _) => PlaceProfilePlaylistItems(request.Args),
             ["library.remove"] = (request, _) => RemoveProfileItems(request.Args),
             ["library.recycle"] = (request, _) => RecycleLocalFiles(request.Args),
             ["podcast.renameSubscription"] = (request, _) => RenamePodcastSubscription(request.Args),
@@ -425,21 +427,68 @@ internal sealed class LiteEngineHandlers : IDisposable
     }
 
     private static string[] ReadPlaylistItemIds(JsonElement playlist)
+        => ReadRequiredIdArray(
+            playlist,
+            "itemIds",
+            "Playlista nie zawiera listy elementów.");
+
+    private object MoveProfilePlaylistItems(JsonElement args) =>
+        RequireProfileMutations().MovePlaylistItems(
+            LiteArgs.RequireText(args, "sessionId"),
+            LiteArgs.RequireText(args, "playlistId"),
+            ReadRequiredIdArray(
+                args,
+                "selectedItemIds",
+                "Nie wskazano elementów do przeniesienia."),
+            ReadRequiredIdArray(
+                args,
+                "visibleItemIds",
+                "Nie przekazano widocznej kolejności playlisty."),
+            ReadMoveDirection(args));
+
+    private object PlaceProfilePlaylistItems(JsonElement args) =>
+        RequireProfileMutations().PlacePlaylistItemsBefore(
+            LiteArgs.RequireText(args, "sessionId"),
+            LiteArgs.RequireText(args, "playlistId"),
+            ReadRequiredIdArray(
+                args,
+                "selectedItemIds",
+                "Nie wskazano elementów do przeniesienia."),
+            LiteArgs.RequireText(args, "targetItemId"));
+
+    private static int ReadMoveDirection(JsonElement args)
     {
-        if (!playlist.TryGetProperty("itemIds", out var source)
+        if (args.ValueKind != JsonValueKind.Object
+            || !args.TryGetProperty("direction", out var source)
+            || source.ValueKind != JsonValueKind.Number
+            || !source.TryGetInt32(out var direction)
+            || direction is not (-1 or 1))
+        {
+            throw new LiteRequestException("Kierunek zmiany kolejności musi wynosić minus jeden albo jeden.");
+        }
+        return direction;
+    }
+
+    private static string[] ReadRequiredIdArray(
+        JsonElement value,
+        string propertyName,
+        string missingMessage)
+    {
+        if (value.ValueKind != JsonValueKind.Object
+            || !value.TryGetProperty(propertyName, out var source)
             || source.ValueKind != JsonValueKind.Array)
         {
-            throw new LiteRequestException("Playlista nie zawiera listy elementów.");
+            throw new LiteRequestException(missingMessage);
         }
         if (source.GetArrayLength() > 10_000)
             throw new LiteRequestException("Jedna playlista może zawierać najwyżej 10000 elementów.");
         var ids = new List<string>(source.GetArrayLength());
         var seen = new HashSet<string>(StringComparer.Ordinal);
-        foreach (var value in source.EnumerateArray())
+        foreach (var entry in source.EnumerateArray())
         {
-            if (value.ValueKind != JsonValueKind.String)
+            if (entry.ValueKind != JsonValueKind.String)
                 throw new LiteRequestException("Identyfikator elementu playlisty musi być napisem.");
-            var id = value.GetString()?.Trim() ?? string.Empty;
+            var id = entry.GetString()?.Trim() ?? string.Empty;
             if (id.Length == 0 || id.Length > LiteArgs.MaximumTextLength)
                 throw new LiteRequestException("Playlista zawiera nieprawidłowy identyfikator elementu.");
             if (seen.Add(id)) ids.Add(id);

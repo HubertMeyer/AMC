@@ -78,6 +78,9 @@ class MenuItem:
     #: Wymaga utworu, stacji albo odcinka obsługiwanego przez lokalne playlisty
     #: AMC. Podcast nagłówkowy, kontener TIDAL i urządzenie sieciowe odpadają.
     needs_playlist_item: bool = False
+    #: Wymaga otwartej zawartości lokalnej playlisty. To węższy warunek niż
+    #: zwykły element mogący należeć do playlisty: dotyczy ręcznej kolejności.
+    needs_playlist_contents: bool = False
     #: Wymaga zaznaczonego odcinka; wykonanie sprawdza jeszcze członkostwo
     #: podcastu w Bibliotece na świeżym, tylko do odczytu odczycie SQLite.
     needs_podcast_episode: bool = False
@@ -270,10 +273,31 @@ def build_menus() -> tuple[Menu, ...]:
             # do SysListView32. Skrot pozostaje widoczny w nazwie pozycji.
             MenuItem("&Skopiuj nazwę", Action.COPY_NAME, shortcut="Ctrl+C",
                      accelerator=False, needs_selection=True),
-            MenuItem("W&ytnij plik", Action.CUT_FILE, shortcut="Ctrl+X",
-                     accelerator=False),
+            MenuItem("W&ytnij lub zaznacz do przeniesienia", Action.CUT_FILE,
+                     shortcut="Ctrl+X", accelerator=False),
             MenuItem("Skopiuj &adres", Action.COPY_ADDRESS, shortcut="Ctrl+Shift+C",
                      needs_selection=True),
+            MenuItem(
+                "Przenieś wyżej, Alt+strzałka w g&órę",
+                Action.MOVE_LIST_ITEM_UP,
+                accelerator=False,
+                needs_selection=True,
+                needs_playlist_contents=True,
+            ),
+            MenuItem(
+                "Przenieś niżej, Alt+strzałka w dó&ł",
+                Action.MOVE_LIST_ITEM_DOWN,
+                accelerator=False,
+                needs_selection=True,
+                needs_playlist_contents=True,
+            ),
+            MenuItem(
+                "Wstaw przenoszone przed bieżącym, Ctrl+&V",
+                Action.PASTE_OR_MOVE,
+                accelerator=False,
+                needs_selection=True,
+                needs_playlist_contents=True,
+            ),
             SEPARATOR,
             MenuItem("Zmień nazwę w Bibliote&ce", Action.RENAME_LIBRARY_ITEM,
                      shortcut="F2", accelerator=False, needs_selection=True),

@@ -753,6 +753,46 @@ class LiteHostClient:
             timeout=60.0,
         )
 
+    def move_profile_playlist_items(
+        self,
+        session_id: str,
+        playlist_id: str,
+        selected_item_ids: list[str],
+        visible_item_ids: list[str],
+        direction: int,
+    ) -> Any:
+        """Atomowo przesuń widoczny, ciągły blok o jedną pozycję."""
+        return self.call(
+            "library.playlist.move",
+            {
+                "sessionId": session_id,
+                "playlistId": playlist_id,
+                "selectedItemIds": selected_item_ids,
+                "visibleItemIds": visible_item_ids,
+                "direction": direction,
+            },
+            timeout=30.0,
+        )
+
+    def place_profile_playlist_items_before(
+        self,
+        session_id: str,
+        playlist_id: str,
+        selected_item_ids: list[str],
+        target_item_id: str,
+    ) -> Any:
+        """Atomowo wstaw wcześniej wybrane pozycje przed wskazanym celem."""
+        return self.call(
+            "library.playlist.placeBefore",
+            {
+                "sessionId": session_id,
+                "playlistId": playlist_id,
+                "selectedItemIds": selected_item_ids,
+                "targetItemId": target_item_id,
+            },
+            timeout=30.0,
+        )
+
     def recycle_local_files(self, item_ids: list[str]) -> Any:
         return self.call(
             "library.recycle", {"itemIds": item_ids}, timeout=120.0

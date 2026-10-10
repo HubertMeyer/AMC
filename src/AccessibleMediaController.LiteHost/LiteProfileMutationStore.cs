@@ -600,6 +600,128 @@ internal sealed class LiteProfileMutationStore
         }
     }
 
+    /// <summary>
+    /// Przesuwa widoczny, ciągły blok o jedną pozycję. Frontend przekazuje
+    /// kolejność widoczną, ponieważ zapis playlisty może zawierać także
+    /// chwilowo niedostępne elementy. Algorytm Core zachowuje ich miejsca.
+    /// </summary>
+    public object MovePlaylistItems(
+        string sessionId,
+        string playlistId,
+        IReadOnlyList<string> selectedItemIds,
+        IReadOnlyList<string> visibleItemIds,
+        int direction)
+    {
+        var normalizedSession = NormalizePlaylistSession(sessionId);
+        var normalizedPlaylistId = CleanRequiredText(
+            playlistId,
+            "Nie wskazano playlisty do zmiany kolejności.");
+        var selected = CleanDistinctIds(
+            selectedItemIds,
+            "Wybierz element do przeniesienia.");
+        var visible = CleanDistinctIds(
+            visibleItemIds,
+            "Otwarta playlista nie zawiera widocznych elementów.");
+        if (selected.Length > 10_000 || visible.Length > 10_000)
+            throw new LiteRequestException("Playlista może zawierać najwyżej 10000 elementów.");
+        if (direction is not (-1 or 1))
+            throw new LiteRequestException("Nieprawidłowy kierunek zmiany kolejności.");
+
+        EnsureMayWrite();
+        lock (_gate)
+        {
+            using var connection = OpenDatabase(_libraryDatabasePath);
+            using var transaction = connection.BeginTransaction();
+            var order = ReadPlaylistOrder(
+                connection,
+                transaction,
+                normalizedSession,
+                normalizedPlaylistId);
+            var result = LocalLibraryManualOrder.MoveVisibleBlock(
+                order,
+                visible,
+                selected,
+                direction);
+            if (result == ManualOrderMoveResult.Moved)
+            {
+                RewritePlaylistOrder(connection, transaction, normalizedPlaylistId, order);
+                TouchMetadata(connection, transaction);
+            }
+            transaction.Commit();
+            return new
+            {
+                sessionId = normalizedSession,
+                status = result switch
+                {
+                    ManualOrderMoveResult.Moved => "moved",
+                    ManualOrderMoveResult.Boundary => "boundary",
+                    ManualOrderMoveResult.NonContiguousSelection => "nonContiguous",
+                    _ => "invalid"
+                },
+                moved = result == ManualOrderMoveResult.Moved,
+                count = selected.Length
+            };
+        }
+    }
+
+    /// <summary>
+    /// Kończy przenoszenie rozpoczęte przez Ctrl+X i umieszcza zaznaczone
+    /// elementy bezpośrednio przed wskazanym celem, zachowując ich kolejność
+    /// z playlisty. Cała operacja jest jedną transakcją SQLite.
+    /// </summary>
+    public object PlacePlaylistItemsBefore(
+        string sessionId,
+        string playlistId,
+        IReadOnlyList<string> selectedItemIds,
+        string targetItemId)
+    {
+        var normalizedSession = NormalizePlaylistSession(sessionId);
+        var normalizedPlaylistId = CleanRequiredText(
+            playlistId,
+            "Nie wskazano playlisty do zmiany kolejności.");
+        var selected = CleanDistinctIds(
+            selectedItemIds,
+            "Wybierz element do przeniesienia.");
+        var target = CleanRequiredText(
+            targetItemId,
+            "Wybierz element, przed którym chcesz przenieść zaznaczenie.");
+        if (selected.Length > 10_000)
+            throw new LiteRequestException("Playlista może zawierać najwyżej 10000 elementów.");
+
+        EnsureMayWrite();
+        lock (_gate)
+        {
+            using var connection = OpenDatabase(_libraryDatabasePath);
+            using var transaction = connection.BeginTransaction();
+            var order = ReadPlaylistOrder(
+                connection,
+                transaction,
+                normalizedSession,
+                normalizedPlaylistId);
+            var result = LocalLibraryManualOrder.PlaceItemsBefore(order, selected, target);
+            if (result == ManualOrderPlacementResult.Moved)
+            {
+                RewritePlaylistOrder(connection, transaction, normalizedPlaylistId, order);
+                TouchMetadata(connection, transaction);
+            }
+            transaction.Commit();
+            return new
+            {
+                sessionId = normalizedSession,
+                status = result switch
+                {
+                    ManualOrderPlacementResult.Moved => "moved",
+                    ManualOrderPlacementResult.TargetInSelection => "targetInSelection",
+                    ManualOrderPlacementResult.TargetMissing => "targetMissing",
+                    ManualOrderPlacementResult.Unchanged => "unchanged",
+                    _ => "invalid"
+                },
+                moved = result == ManualOrderPlacementResult.Moved,
+                count = selected.Length
+            };
+        }
+    }
+
     public object Remove(string sessionId, string view, IReadOnlyList<string> itemIds)
     {
         var ids = itemIds.Where(id => !string.IsNullOrWhiteSpace(id))
@@ -1021,6 +1143,60 @@ internal sealed class LiteProfileMutationStore
             if (seen.Add(id)) result.Add(id);
         }
         return result;
+    }
+
+    private static List<string> ReadPlaylistOrder(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        string sessionId,
+        string playlistId)
+    {
+        using (var exists = connection.CreateCommand())
+        {
+            exists.Transaction = transaction;
+            exists.CommandText =
+                "SELECT 1 FROM playlists WHERE id = $playlist "
+                + "AND session_id = $session COLLATE NOCASE LIMIT 1;";
+            exists.Parameters.AddWithValue("$playlist", playlistId);
+            exists.Parameters.AddWithValue("$session", sessionId);
+            if (exists.ExecuteScalar() is null)
+                throw new LiteRequestException("Nie znaleziono otwartej playlisty.");
+        }
+
+        using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText =
+            "SELECT item_id FROM playlist_items "
+            + "WHERE playlist_id = $playlist ORDER BY ordinal;";
+        command.Parameters.AddWithValue("$playlist", playlistId);
+        using var reader = command.ExecuteReader();
+        var result = new List<string>();
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        while (reader.Read())
+        {
+            var id = reader.GetString(0);
+            if (seen.Add(id)) result.Add(id);
+        }
+        return result;
+    }
+
+    private static void RewritePlaylistOrder(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        string playlistId,
+        IReadOnlyList<string> itemIds)
+    {
+        Execute(connection, transaction,
+            "DELETE FROM playlist_items WHERE playlist_id = $playlist;",
+            ("$playlist", playlistId));
+        for (var ordinal = 0; ordinal < itemIds.Count; ordinal++)
+        {
+            Execute(connection, transaction,
+                "INSERT INTO playlist_items(playlist_id, ordinal, item_id) "
+                + "VALUES($playlist, $ordinal, $id);",
+                ("$playlist", playlistId), ("$ordinal", ordinal),
+                ("$id", itemIds[ordinal]));
+        }
     }
 
     private static void RewriteOrder(

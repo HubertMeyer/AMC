@@ -186,11 +186,13 @@ class Action(Enum):
     OPEN_FILE_DIALOG = "files.openFile"
     COPY_NAME = "clipboard.copyName"
     COPY_ADDRESS = "clipboard.copyAddress"
-    #: Ctrl+X: plik GOTOWY DO PRZENIESIENIA poza AMC. Osobna akcja od
-    #: kopiowania, bo rozni sie formatem schowka (``Preferred DropEffect``
-    #: MOVE), warunkiem (tylko istniejacy PLIK, nie folder) i komunikatem --
-    #: ``CutLocalFilesForExternalMove`` (MainWindow.xaml.cs:25277).
+    #: Ctrl+X jest kontekstowe jak w głównym AMC: w otwartej playliście
+    #: rozpoczyna wewnętrzne przenoszenie, a w pozostałych lokalnych widokach
+    #: przygotowuje rzeczywiste pliki do przeniesienia poza AMC.
     CUT_FILE = "clipboard.cutFile"
+    PASTE_OR_MOVE = "clipboard.pasteOrMove"
+    MOVE_LIST_ITEM_UP = "library.moveItemUp"
+    MOVE_LIST_ITEM_DOWN = "library.moveItemDown"
     RENAME_LIBRARY_ITEM = "library.renameItem"
     RENAME_LOCAL_FILE = "library.renameFile"
     REMOVE_SELECTED = "library.removeSelected"
@@ -506,12 +508,12 @@ LIST_VIEW: dict[str, Action] = {
     # dostepny jednym skrotem -- nie zabieramy funkcji, przenosimy ja.
     "Ctrl+C": Action.COPY_NAME,
     "Ctrl+Shift+C": Action.COPY_ADDRESS,
-    # Ctrl+X na liscie: wyciecie PLIKU do przeniesienia poza AMC
-    # (MainWindow.xaml.cs:21022-21026). W oryginale ten sam klawisz obsluguje
-    # tez WEWNETRZNE przestawianie elementow listy
-    # (``TryStartInternalListMove``) -- tego portu jeszcze nie ma, wiec
-    # mapujemy wylacznie galaz zewnetrzna, ktora Michal uzywa.
+    # Ctrl+X/Ctrl+V najpierw próbują wewnętrznego przenoszenia w otwartej
+    # playliście; poza nią Ctrl+X zachowuje dotychczasowe wycięcie pliku.
     "Ctrl+X": Action.CUT_FILE,
+    "Ctrl+V": Action.PASTE_OR_MOVE,
+    "Alt+Up": Action.MOVE_LIST_ITEM_UP,
+    "Alt+Down": Action.MOVE_LIST_ITEM_DOWN,
     # Nazwane widoki Biblioteki. Skroty WPROST ze wzorca, nie wymyslone:
     #   MainWindow.xaml:458  "_Wszystkie pliki alfabetycznie"  Alt+2
     #   MainWindow.xaml:426  "_Ulubione"                       Ctrl+U
@@ -903,7 +905,10 @@ def describe() -> list[tuple[str, str]]:
         Action.TRACK_END: "Koniec utworu, dziesiec sekund przed koncem",
         Action.COPY_NAME: "Skopiuj nazwe",
         Action.COPY_ADDRESS: "Skopiuj adres",
-        Action.CUT_FILE: "Wytnij plik",
+        Action.CUT_FILE: "Wytnij plik albo zaznacz pozycje playlisty do przeniesienia",
+        Action.PASTE_OR_MOVE: "Wstaw przenoszone pozycje przed bieżącym elementem",
+        Action.MOVE_LIST_ITEM_UP: "Przenieś zaznaczenie wyżej na liście",
+        Action.MOVE_LIST_ITEM_DOWN: "Przenieś zaznaczenie niżej na liście",
         Action.RENAME_LIBRARY_ITEM: "Zmień nazwę w Bibliotece lub nazwę źródła",
         Action.RENAME_LOCAL_FILE: "Zmień nazwę pliku na dysku",
         Action.REMOVE_SELECTED: "Usuń z bieżącego widoku bez kasowania pliku",

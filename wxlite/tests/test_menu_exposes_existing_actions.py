@@ -299,6 +299,19 @@ def test_playlist_membership_menu_is_contextual_and_does_not_steal_shortcut() ->
     assert "playlist" in item.label.replace("&", "").casefold()
 
 
+def test_playlist_order_menu_is_limited_to_open_playlist_contents() -> None:
+    expected = {
+        Action.MOVE_LIST_ITEM_UP,
+        Action.MOVE_LIST_ITEM_DOWN,
+        Action.PASTE_OR_MOVE,
+    }
+    items = [entry for entry in all_items() if entry.action in expected]
+    assert {entry.action for entry in items} == expected
+    assert all(entry.needs_playlist_contents for entry in items)
+    assert all(entry.needs_selection for entry in items)
+    assert all(not entry.accelerator for entry in items)
+
+
 def test_podcast_add_menu_is_contextual_and_does_not_steal_ctrl_n() -> None:
     item = next(
         entry for entry in all_items()

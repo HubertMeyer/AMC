@@ -354,12 +354,37 @@ def test_profile_playlists_use_one_read_and_one_atomic_replace_operation() -> No
                 }
             ],
         )
+        moved = client.move_profile_playlist_items(
+            "local", "p1", ["b", "c"], ["a", "b", "c"], -1
+        )
+        placed = client.place_profile_playlist_items_before(
+            "local", "p1", ["a", "c"], "b"
+        )
         assert loaded["op"] == "library.playlists"
         assert loaded["args"] == {"sessionId": "local"}
         assert saved["op"] == "library.playlists.replace"
         assert saved["args"]["sessionId"] == "local"
         assert saved["args"]["playlists"][0]["name"] == "Poranek"
         assert saved["args"]["playlists"][0]["itemIds"] == ["a", "b"]
+        assert moved == {
+            "op": "library.playlist.move",
+            "args": {
+                "sessionId": "local",
+                "playlistId": "p1",
+                "selectedItemIds": ["b", "c"],
+                "visibleItemIds": ["a", "b", "c"],
+                "direction": -1,
+            },
+        }
+        assert placed == {
+            "op": "library.playlist.placeBefore",
+            "args": {
+                "sessionId": "local",
+                "playlistId": "p1",
+                "selectedItemIds": ["a", "c"],
+                "targetItemId": "b",
+            },
+        }
     finally:
         client.close()
 

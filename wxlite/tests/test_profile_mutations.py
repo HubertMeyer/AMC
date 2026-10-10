@@ -251,6 +251,37 @@ def test_profile_edits_go_through_the_real_host() -> None:
                 "saved": 2,
                 "items": 3,
             }
+            moved_playlist = client.move_profile_playlist_items(
+                "local",
+                "p-new",
+                ["local-2"],
+                ["local-1", "local-2"],
+                -1,
+            )
+            assert moved_playlist == {
+                "sessionId": "local",
+                "status": "moved",
+                "moved": True,
+                "count": 1,
+            }
+            placed_playlist = client.place_profile_playlist_items_before(
+                "local", "p-new", ["local-1"], "local-2"
+            )
+            assert placed_playlist == {
+                "sessionId": "local",
+                "status": "moved",
+                "moved": True,
+                "count": 1,
+            }
+            playlist_boundary = client.move_profile_playlist_items(
+                "local",
+                "p-new",
+                ["local-1"],
+                ["local-1", "local-2"],
+                -1,
+            )
+            assert playlist_boundary["status"] == "boundary"
+            assert playlist_boundary["moved"] is False
             client.remove_profile_items("files", "library", ["local-1"])
             client.remove_profile_items(
                 "podcasts", "podcastLibrary", ["podcast-1"]
