@@ -86,9 +86,15 @@ prywatne uchwyty odtwarzania nie przechodzą do Pythona ani do tekstu list.
 
 ### WiiM
 
-Sesja WiiM jest podłączona do istniejących usług AMC. Wymaga jeszcze odbioru
-na obudzonym urządzeniu: wykrywanie, aktywacja, odtwarzanie, pauza, zmiana
-utworu, głośność, seek, powrót fokusu i komunikaty NVDA.
+Sesja WiiM jest podłączona do istniejących usług AMC. Odbiór 10 października
+potwierdził prawidłowe wykrycie urządzenia i odczyt jego stanu. Udało się także
+uruchomić i zatrzymać stację. Obecny interfejs jest jednak tylko częściowy:
+`F6` przełącza pomiędzy otwartym odtwarzaczem a listą urządzeń/odtwarzaczy,
+natomiast nie udostępnia pełnej Biblioteki, Ulubionych, presetów i pozostałych
+widoków znanych z głównego AMC. Brakuje również kompletnego podłączenia ich
+skrótów, między innymi rodziny `Ctrl+L`, `Ctrl+Shift+U` i skrótów presetów.
+Przed implementacją trzeba porównać pełną mapę funkcji z głównym AMC, aby nie
+zgubić pozostałych poleceń ani nie tworzyć drugiej, niezgodnej semantyki.
 
 ### Sonos
 
@@ -96,10 +102,6 @@ Dodano sesję Sonos korzystającą z tego samego magazynu poświadczeń Windows 
 istniejącego klienta C# co główne AMC. Python otrzymuje wyłącznie celowe nazwy
 grup i bezpieczny stan odtwarzania. Dostępne są wybór grupy, odtwarzanie,
 pauza, następny/poprzedni, seek i głośność. Tokeny Sonos nie opuszczają C#.
-
-Urządzenia były uśpione, dlatego nie ma jeszcze podstaw do stwierdzenia, że
-sterowanie zostało odebrane na żywym systemie. Taki odbiór jest następnym
-krokiem, a nie częścią obecnego dowodu automatycznego.
 
 Odbiór użytkownika 10 października ujawnił błąd wymagający poprawy: AMC widzi
 grupę Sonos i odczytuje jej stan (np. „Radio Opole, myTuner Radio, Zatrzymane,
@@ -110,6 +112,21 @@ sterowania. Do sprawdzenia jest zatrzymany lub stale ponawiany odczyt stanu,
 brak zwolnienia blokady po odświeżeniu oraz wykonywanie kliknięć i skrótów po
 ukończeniu odczytu. Poprawkę i test na żywej grupie odłożono orientacyjnie na
 piątek; nie jest to automatycznie zaplanowane zadanie.
+
+Podobnie jak w WiiM, brakuje pełnego interfejsu Biblioteki, Ulubionych,
+wyboru materiałów, presetów i odpowiadających im skrótów z głównego AMC.
+Obecny widok pokazuje głównie grupę oraz ostatni stan lub ostatnio aktywny
+materiał. Próba uruchomienia widocznego Radia Opole została przyjęta przez
+interfejs, ale radio faktycznie nie zaczęło grać. W piątek prace mają zacząć
+się od uporządkowania i przeniesienia kompletnej warstwy WiiM i Sonos z
+głównego AMC, a nie tylko od poprawienia pojedynczego komunikatu odświeżania.
+
+Obecna konfiguracja rozpoznaje zapisane konta i urządzenia, więc do tej
+naprawy nie potrzeba ponownej autoryzacji. Przed przekazaniem programu innym
+testerom trzeba osobno zaprojektować zrozumiałe, dostępne logowanie i zapis
+poświadczeń. Użytkownik nie powinien być pozostawiany z niewyjaśnionymi
+kodami aplikacji ani technicznymi identyfikatorami; ten etap pozostaje na
+koniec, po ustabilizowaniu funkcji streamerów.
 
 ### Spotify
 
@@ -157,7 +174,10 @@ lewą strzałką.
 
 ## Najbliższa kolejność prac
 
-1. Odbiór WiiM i Sonos na obudzonych urządzeniach.
+1. Uzupełnienie WiiM i Sonos o pełną warstwę interfejsu z głównego AMC:
+   Bibliotekę, Ulubione, wybór materiałów, presety, wszystkie skróty oraz
+   prawidłowe wykonanie transportu po zakończeniu odczytu stanu. Następnie
+   ponowny odbiór na obudzonych urządzeniach.
 2. Sprawdzenie zaniku wybranego urządzenia audio: automatyczny powrót na
    urządzenie domyślne i dalsze odtwarzanie tej samej stacji bez przełączania.
 3. Uzupełnienie wykrytych braków w istniejących sesjach, bez regresji radia,

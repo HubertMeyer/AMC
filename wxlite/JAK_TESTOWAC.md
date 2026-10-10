@@ -66,6 +66,16 @@ WiiM:
 1. Obudź urządzenie i naciśnij `Ctrl+5`.
 2. Sprawdź wykrycie, aktywację, Enter, Spację, następny/poprzedni, głośność,
    przewijanie, szybkie informacje i powrót fokusu po zmianie sesji.
+3. Sprawdź dotychczasowe przełączanie `F6` między odtwarzaczem i listą
+   urządzeń. Niezależnie od tego skrótu odbierz wszystkie pozostałe widoki z
+   głównego AMC: Bibliotekę, Ulubione, presety i wybór materiałów.
+4. Porównaj pełną mapę skrótów z głównym AMC, w tym `Ctrl+L`,
+   `Ctrl+Shift+U` i skróty presetów. Każdy skrót ma otwierać właściwy widok
+   albo wykonywać właściwą operację, a nie tylko odczytywać stan urządzenia.
+
+Wynik odbioru 10 października: urządzenie i stan są prawidłowo widziane,
+stację można uruchomić i zatrzymać, lecz warstwa Biblioteki, Ulubionych,
+materiałów i presetów nie jest dostępna z obecnego interfejsu wxPython.
 
 Sonos:
 
@@ -81,7 +91,9 @@ sterowanie jest zablokowane komunikatem „Trwa odczyt informacji. Powtórz skr�
 za chwilę”. Ponowienie po chwili również nie wykonuje polecenia. Po poprawce
 trzeba sprawdzić co najmniej Enter lub przycisk działania, Spację,
 następny/poprzedni, zmianę głośności i wyciszenie oraz upewnić się, że odczyt
-stanu kończy się i zwalnia blokadę poleceń.
+stanu kończy się i zwalnia blokadę poleceń. Trzeba też odebrać pełną Bibliotekę,
+Ulubione, wybór materiałów i presety wraz ze skrótami z głównego AMC. Widoczne
+Radio Opole nie zaczęło faktycznie grać mimo próby jego uruchomienia.
 
 Brak urządzeń lub uśpione urządzenia nie jest zaliczeniem ani błędem kodu.
 Zapisz wtedy wynik jako „nieprzetestowane na żywo”. Spotify nie należy do tego
