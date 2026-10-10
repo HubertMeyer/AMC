@@ -115,6 +115,14 @@ W `Alt+Shift+R` zwykły ukończony plik nie powinien zaczynać się od słowa
 nazwy stacji lub pliku. Osobno sprawdź wpisy przerwane, nieudane, zatrzymane i
 z brakującym plikiem — ich istotny stan nie może zniknąć.
 
+Regresja do ponownego odbioru: w paczce
+`AMC-Python-next-status-20261010` żywy NVDA nadal mówi „Copy” po `Ctrl+C`,
+mimo że kod przechwytuje ten gest w `EVT_CHAR_HOOK`. Test samego mapowania
+skrótu nie jest dowodem naprawy mowy. Następna próba musi rejestrować
+rzeczywistą kolejność zdarzeń klawiatury i UI Automation na listach Plików,
+Radia, Podcastów oraz usług, a wynikiem ma być wyłącznie celowy polski
+komunikat aplikacji.
+
 ## Nagrywanie radia — potwierdzenie po Ctrl+R
 
 `Ctrl+R` na stacji od razu mówi jedno krótkie zdanie:

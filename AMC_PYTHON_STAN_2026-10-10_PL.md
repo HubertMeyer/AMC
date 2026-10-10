@@ -164,6 +164,14 @@ NVDA powtarza więc to słowo przy każdym pliku. Przy poprawce zwykły ukończo
 wiersz ma zaczynać się od nazwy stacji lub pliku; znaczące stany wyjątkowe,
 takie jak „Przerwane”, „Nieudane” albo brak pliku, muszą pozostać czytelne.
 
+Odbiór użytkownika w paczce
+`.test-output\AMC-Python-next-status-20261010` wykazał również, że po
+`Ctrl+C` NVDA nadal mówi angielskie „Copy”. Paczka zawiera bieżącą próbę
+przechwycenia skrótu, a jej `gui.py` ma ten sam SHA-256 co źródło, więc nie
+jest to pomylenie wersji. Dotychczasowa poprawka i test bezokienny są
+niewystarczające; błąd pozostaje otwarty i wymaga pomiaru kolejności zdarzeń
+klawiatury/UI Automation z żywym NVDA.
+
 Do domknięcia pozostaje połączenie AMC Python z gotowym dodatkiem AMC do NVDA.
 Docelowo LiteHost ma wystawiać ten sam bezpieczny, lokalny protokół
 `AMC.NVDA.v1`, z którego korzysta główne AMC. Dzięki temu pozostają jedna
