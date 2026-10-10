@@ -418,6 +418,20 @@ def test_transport_and_clipboard_reached_the_menu_too() -> None:
         assert action in actions, action
 
 
+def test_ctrl_c_is_not_a_second_native_menu_accelerator() -> None:
+    """NVDA ma uslyszec jedno potwierdzenie, bez angielskiego ``copy``.
+
+    Kopiowanie obsluguje ``shortcuts.resolve`` i ``LiteFrame._on_key``.
+    Akcelerator wx byl druga, zbedna droga tego samego gestu i wywolywal
+    dodatkowa systemowa zapowiedz przed polskim komunikatem aplikacji.
+    """
+    copy_name = next(
+        item for item in all_items() if item.action is Action.COPY_NAME
+    )
+    assert copy_name.shortcut == "Ctrl+C"
+    assert not copy_name.accelerator
+
+
 def test_existing_menus_are_preserved() -> None:
     """Dzwiek, tempo i ustawienia juz byly -- nie wolno ich zgubic."""
     titles = [m.title for m in menu_model.build_menus()]

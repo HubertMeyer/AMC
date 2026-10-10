@@ -249,8 +249,13 @@ def build_menus() -> tuple[Menu, ...]:
                 needs_podcast_item=True,
             ),
             SEPARATOR,
+            # Ctrl+C obsluguje wspolna droga klawiatury. Oddanie go dodatkowo
+            # wx jako systemowego akceleratora menu powodowalo, ze NVDA mowil
+            # najpierw angielskie "copy", a dopiero potem nasze celowe
+            # "Skopiowano nazwe". Skrot nadal jest widoczny w nazwie pozycji,
+            # ale wykonuje sie tylko raz i ma tylko jeden komunikat.
             MenuItem("&Skopiuj nazwę", Action.COPY_NAME, shortcut="Ctrl+C",
-                     needs_selection=True),
+                     accelerator=False, needs_selection=True),
             MenuItem("W&ytnij plik", Action.CUT_FILE, shortcut="Ctrl+X",
                      accelerator=False),
             MenuItem("Skopiuj &adres", Action.COPY_ADDRESS, shortcut="Ctrl+Shift+C",
