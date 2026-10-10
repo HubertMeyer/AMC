@@ -299,7 +299,17 @@ def test_ctrl_shift_u_toggles_podcast_favorites_in_list_and_player() -> None:
         player_view=False,
         radio_session=False,
         podcast_session=False,
-    ) is None
+    ) is Action.TOGGLE_FAVORITE
+
+
+def test_ctrl_shift_u_toggles_local_and_radio_favorites_in_list_and_player() -> None:
+    for player in (False, True):
+        for radio in (False, True):
+            assert resolve(
+                Chord("U", ctrl=True, shift=True),
+                player_view=player,
+                radio_session=radio,
+            ) is Action.TOGGLE_FAVORITE
 
 
 def test_ctrl_u_opens_podcast_favorites_from_list_and_player() -> None:

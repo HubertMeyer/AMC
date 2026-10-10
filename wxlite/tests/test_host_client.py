@@ -322,6 +322,7 @@ def test_profile_mutations_use_narrow_named_operations() -> None:
             client.edit_radio_station(
                 "radio-1", "Nowe radio", "https://example.invalid/radio"
             ),
+            client.toggle_profile_favorites("files", ["local-1"]),
             client.remove_profile_items("files", "favorites", ["local-1"]),
             client.recycle_local_files(["local-1"]),
         ]
@@ -330,6 +331,7 @@ def test_profile_mutations_use_narrow_named_operations() -> None:
             "library.renameFile",
             "podcast.renameSubscription",
             "radio.editStation",
+            "library.toggleFavorite",
             "library.remove",
             "library.recycle",
         ]

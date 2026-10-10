@@ -71,6 +71,10 @@ class MenuItem:
     needs_selection: bool = False
     #: Wymaga zaznaczonego podcastu albo odcinka, nie np. „Załaduj więcej”.
     needs_podcast_item: bool = False
+    #: Wymaga elementu, ktory w aktywnej sesji moze nalezec do Ulubionych.
+    #: Rozdzielenie tej bramki od samego ``needs_selection`` zapobiega
+    #: oferowaniu polecenia m.in. na folderze, albumie TIDAL albo w WiiM.
+    needs_favorite_item: bool = False
     #: Wymaga zaznaczonego odcinka; wykonanie sprawdza jeszcze członkostwo
     #: podcastu w Bibliotece na świeżym, tylko do odczytu odczycie SQLite.
     needs_podcast_episode: bool = False
@@ -242,11 +246,10 @@ def build_menus() -> tuple[Menu, ...]:
             ),
             MenuItem(
                 "Z&mień stan ulubionych",
-                Action.TOGGLE_PODCAST_FAVORITE,
+                Action.TOGGLE_FAVORITE,
                 shortcut="Ctrl+Shift+U",
                 accelerator=False,
-                needs_podcast_session=True,
-                needs_podcast_item=True,
+                needs_favorite_item=True,
             ),
             SEPARATOR,
             # Ctrl+C obsluguje wspolna droga klawiatury. Oddanie go dodatkowo

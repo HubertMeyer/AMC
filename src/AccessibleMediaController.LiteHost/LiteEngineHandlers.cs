@@ -317,6 +317,7 @@ internal sealed class LiteEngineHandlers : IDisposable
                 SetPodcastPlaybackOptions(request.Args),
             ["library.renameTitle"] = (request, _) => RenameLibraryTitle(request.Args),
             ["library.renameFile"] = (request, _) => RenameLocalFile(request.Args),
+            ["library.toggleFavorite"] = (request, _) => ToggleProfileFavorites(request.Args),
             ["library.remove"] = (request, _) => RemoveProfileItems(request.Args),
             ["library.recycle"] = (request, _) => RecycleLocalFiles(request.Args),
             ["podcast.renameSubscription"] = (request, _) => RenamePodcastSubscription(request.Args),
@@ -591,6 +592,11 @@ internal sealed class LiteEngineHandlers : IDisposable
         RequireProfileMutations().Remove(
             LiteArgs.RequireText(args, "sessionId"),
             LiteArgs.RequireText(args, "view"),
+            ReadIds(args));
+
+    private object ToggleProfileFavorites(JsonElement args) =>
+        RequireProfileMutations().ToggleFavorites(
+            LiteArgs.RequireText(args, "sessionId"),
             ReadIds(args));
 
     private object RecycleLocalFiles(JsonElement args)

@@ -275,13 +275,15 @@ def test_podcast_description_and_go_to_parent_have_precise_gates() -> None:
     assert "podcast" in go_to.label.replace("&", "").casefold()
 
 
-def test_podcast_favorite_menu_is_contextual_and_does_not_steal_shortcut() -> None:
+def test_favorite_menu_is_contextual_and_does_not_steal_shortcut() -> None:
     item = next(
         entry for entry in all_items()
-        if entry.action is Action.TOGGLE_PODCAST_FAVORITE
+        if entry.action is Action.TOGGLE_FAVORITE
     )
     assert item.shortcut == "Ctrl+Shift+U"
-    assert item.needs_podcast_session and item.needs_podcast_item
+    assert item.needs_favorite_item
+    assert not item.needs_podcast_session
+    assert not item.needs_podcast_item
     assert not item.accelerator
     assert "ulubion" in item.label.replace("&", "").casefold()
 

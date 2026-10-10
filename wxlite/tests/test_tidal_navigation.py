@@ -340,7 +340,7 @@ def test_tidal_collection_shortcuts_are_contextual() -> None:
         Chord("U", ctrl=True, shift=True),
         player_view=False,
         radio_session=False,
-    ) is None
+    ) is Action.TOGGLE_FAVORITE
 
 
 def test_tidal_queue_is_its_own_accessible_view() -> None:

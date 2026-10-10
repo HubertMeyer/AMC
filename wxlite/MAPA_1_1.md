@@ -395,7 +395,14 @@ własnej normalizacji diakrytyków.
   odtwarzania wszystkie wiersze naprawdę zniknęły.
 - Dalsze widoki Biblioteki i wyszukiwanie. Filtr listy `Ctrl+K` jest odebrany (sekcja wyżej). Historia i oba zakresy zakładek są odczytem. `B` dodaje szybką zakładkę przez jedynego pisarza C#, a `Delete` usuwa całe wielokrotne zaznaczenie w obu widokach bez usuwania plików; wspólny wpis zakładki i rozdziału zachowuje bit rozdziału. Żywa kolejka jest odebrana na pełnej kopii przez rodzica (`parent-speech-full-profile/`): naturalne B→A→C, C wybrane PRZED przejściem i zachowane, samoaktualizacja otwartej listy, prawdziwa mowa NVDA oraz 0 po wyczerpaniu i ponownym Ctrl+Q. Trwała kolejność jest odebrana na prywatnej kopii (sekcja niżej); czas wznowienia jest już odebrany. Zapis pozostaje blokowany, gdy działa starsze WPF nieznające wspólnej blokady.
 - Radio: oddzielenie Biblioteki według `isInLibrary` oraz krótki odczyt pozycji i jego wyłącznik są **odebrane** (sekcja „Scalone Radio i lewa strzałka” niżej). Historia nagrywania scala teraz wpisy prób z dostępnymi plikami oznaczonymi w `library.db`, także spoza zwykłego członkostwa Biblioteki; nie dubluje tej samej ścieżki i nie zmienia profilu.
-- Zapis Ulubionych, playlist, kolejności i pozostałego stanu przez jednego właścicielaC#.
+- Zapis Ulubionych plików lokalnych i stacji radiowych jest przeniesiony przez
+  jednego właściciela C#. `Ctrl+Shift+U` stosuje jeden wspólny stan do całego
+  zaznaczenia, zachowuje oba zapisane porządki Ulubionych, a stację dodawaną do
+  Ulubionych pozostawia też w Bibliotece. Ta sama pozycja menu prowadzi do
+  właściwej implementacji w Plikach, Radiu, Podcastach i TIDAL-u; nie jest
+  oferowana na rodzajach elementów, których dana usługa nie może polubić.
+  Nadal brakuje zapisu członkostwa lokalnych playlist oraz ręcznej zmiany
+  kolejności wewnątrz list.
 - Podcasty i YouTube mają już wąski zapis postępu przez jednego właściciela C#:
   checkpoint co 15 sekund, stan „w trakcie” po minucie i „odtworzony” po
   naturalnym końcu. Python pozostaje czytelnikiem `podcasts.db`; blokada drugiego

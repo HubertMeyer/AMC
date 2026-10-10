@@ -2860,6 +2860,12 @@ class LiteFrame(wx.Frame):
             if session.model.selected_row is not None
             else ""
         )
+        favorite_kinds = {
+            SessionId.FILES: {"track"},
+            SessionId.RADIO: {"station"},
+            SessionId.PODCASTS: {"podcast", "episode"},
+            SessionId.TIDAL: {"track", "video"},
+        }
         podcast_sort_actions = {
             Action.SORT_PODCAST_INBOX_ADDED: SORT_ADDED_NEWEST,
             Action.SORT_PODCAST_INBOX_ALPHABETICAL: SORT_ALPHABETICAL,
@@ -2879,6 +2885,10 @@ class LiteFrame(wx.Frame):
                 enabled = False
             if entry.needs_podcast_item and (
                 not podcasts or selected_kind not in ("podcast", "episode")
+            ):
+                enabled = False
+            if entry.needs_favorite_item and selected_kind not in favorite_kinds.get(
+                self.navigator.active, set()
             ):
                 enabled = False
             if entry.needs_podcast_episode and (
@@ -4173,6 +4183,13 @@ class LiteFrame(wx.Frame):
             self._queue_step(action is Action.QUEUE_NEXT)
         elif action in (Action.ADD_TO_QUEUE, Action.TOGGLE_PLAY_NEXT):
             self._toggle_queue_membership(action is Action.TOGGLE_PLAY_NEXT)
+        elif action is Action.TOGGLE_FAVORITE:
+            if self.navigator.active is SessionId.PODCASTS:
+                self._toggle_podcast_favorite()
+            elif self.navigator.active is SessionId.TIDAL:
+                self._toggle_tidal_membership(favorite=True)
+            else:
+                self._toggle_profile_favorite()
         elif action in (
             Action.TIDAL_TOGGLE_LIBRARY,
             Action.TIDAL_TOGGLE_FAVORITE,
@@ -8236,6 +8253,59 @@ class LiteFrame(wx.Frame):
             self.announcer.say(f"Nie mogę zmienić kolejki: {error}")
 
         self.runner.submit("queue-membership", lambda: call(items), done, failed)
+
+    def _toggle_profile_favorite(self) -> None:
+        """Ctrl+Shift+U dla lokalnych plików i stacji radiowych."""
+        active = self.navigator.active
+        if active not in (SessionId.FILES, SessionId.RADIO):
+            self.announcer.say("Ulubione nie są dostępne w tej sesji")
+            return
+        client = self.client
+        if client is None:
+            self.announcer.say("Silnik nie działa, nie mogę zmienić Ulubionych")
+            return
+        expected_kind = "track" if active is SessionId.FILES else "station"
+        rows = [
+            row for row in self._selected_action_rows()
+            if row.kind == expected_kind and row.item_id
+        ]
+        if not rows:
+            self.announcer.say(
+                "Wybierz plik" if active is SessionId.FILES else "Wybierz stację radiową"
+            )
+            return
+        session_id = "files" if active is SessionId.FILES else "radio"
+        item_ids = list(dict.fromkeys(row.item_id for row in rows))
+        preferred_id = item_ids[0]
+
+        def done(payload: dict) -> None:
+            payload = payload or {}
+            changed = int(payload.get("changed") or 0)
+            favorite = bool(payload.get("favorite"))
+            label = rows[0].title if len(item_ids) == 1 else format_item_count(len(item_ids))
+            if changed <= 0:
+                message = "Ulubione bez zmian"
+            else:
+                message = (
+                    f"Dodano do ulubionych: {label}"
+                    if favorite
+                    else f"Usunięto z ulubionych: {label}"
+                )
+            if self.navigator.session.view is View.PLAYER:
+                self.announcer.say(message)
+                return
+            self._refresh_profile_view(preferred_id=preferred_id)
+            self.announcer.say(message)
+
+        def failed(error: Exception) -> None:
+            self.announcer.say(f"Nie mogę zmienić Ulubionych: {error}")
+
+        self.runner.submit(
+            "profile-favorite",
+            lambda: client.toggle_profile_favorites(session_id, item_ids),
+            done,
+            failed,
+        )
 
     def _open_tidal_queue(self, preferred_id: str | None = None) -> None:
         self._transient_preview_return = None

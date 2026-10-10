@@ -333,6 +333,119 @@ internal sealed class LiteProfileMutationStore
         }
     }
 
+    /// <summary>
+    /// Ctrl+Shift+U dla plików lokalnych i radia. Całe zaznaczenie otrzymuje
+    /// jeden stan, tak jak w CommandRouter pełnego AMC: jeśli choć jeden
+    /// element nie jest ulubiony, dodajemy wszystkie; dopiero gdy wszystkie
+    /// są ulubione, usuwamy wszystkie. Oba trwałe porządki są aktualizowane
+    /// razem z członkostwem, żeby widoki „według dodania” i „własna” nie
+    /// rozjechały się po ponownym uruchomieniu.
+    /// </summary>
+    public object ToggleFavorites(string sessionId, IReadOnlyList<string> itemIds)
+    {
+        var ids = CleanDistinctIds(itemIds, "Wybierz plik albo stację radiową.");
+        EnsureMayWrite();
+        lock (_gate)
+        {
+            if (string.Equals(sessionId, "files", StringComparison.Ordinal))
+                return ToggleLocalFavorites(ids);
+            if (string.Equals(sessionId, "radio", StringComparison.Ordinal))
+                return ToggleRadioFavorites(ids);
+            throw new LiteRequestException("Ulubione nie są dostępne w tej sesji.");
+        }
+    }
+
+    private object ToggleLocalFavorites(IReadOnlyList<string> itemIds)
+    {
+        using var connection = OpenDatabase(_libraryDatabasePath);
+        using var transaction = connection.BeginTransaction();
+        var rows = new List<(string Id, string Title, bool Favorite)>();
+        foreach (var id in itemIds)
+        {
+            using var read = connection.CreateCommand();
+            read.Transaction = transaction;
+            read.CommandText = "SELECT id, title, is_favorite FROM local_items WHERE id = $id;";
+            read.Parameters.AddWithValue("$id", id);
+            using var reader = read.ExecuteReader();
+            if (!reader.Read())
+                throw new LiteRequestException("Niektórych wybranych plików nie ma już w Bibliotece.");
+            rows.Add((reader.GetString(0), reader.GetString(1), reader.GetInt64(2) != 0));
+        }
+
+        var favorite = rows.Any(row => !row.Favorite);
+        var changed = 0;
+        var customOrder = ReadOrder(connection, transaction, "favorite_order", "local");
+        var addedOrder = ReadOrder(connection, transaction, "favorite_added_order", "local");
+        foreach (var row in rows)
+        {
+            if (row.Favorite != favorite)
+            {
+                Execute(connection, transaction,
+                    "UPDATE local_items SET is_favorite = $favorite WHERE id = $id;",
+                    ("$favorite", favorite), ("$id", row.Id));
+                changed++;
+            }
+            SetOrderedMembership(customOrder, row.Id, favorite);
+            SetOrderedMembership(addedOrder, row.Id, favorite);
+        }
+        RewriteOrder(connection, transaction, "favorite_order", "local", customOrder);
+        RewriteOrder(connection, transaction, "favorite_added_order", "local", addedOrder);
+        TouchMetadata(connection, transaction);
+        transaction.Commit();
+        return new
+        {
+            favorite,
+            requested = rows.Count,
+            changed,
+            titles = rows.Select(row => row.Title).ToArray()
+        };
+    }
+
+    private object ToggleRadioFavorites(IReadOnlyList<string> itemIds)
+    {
+        var root = ReadState();
+        var rows = itemIds.Select(id =>
+        {
+            var station = FindRadioStation(root, id);
+            return (
+                Id: id,
+                Title: ReadJsonText(station, "name", "Name"),
+                Favorite: ReadJsonBoolean(station, "isFavorite", "IsFavorite"),
+                Station: station);
+        }).ToArray();
+        var favorite = rows.Any(row => !row.Favorite);
+        var changed = 0;
+        foreach (var row in rows)
+        {
+            if (row.Favorite == favorite) continue;
+            row.Station["isFavorite"] = favorite;
+            if (favorite) row.Station["isInLibrary"] = true;
+            changed++;
+        }
+        WriteState(root);
+
+        using var connection = OpenDatabase(_libraryDatabasePath);
+        using var transaction = connection.BeginTransaction();
+        var customOrder = ReadOrder(connection, transaction, "favorite_order", "radio");
+        var addedOrder = ReadOrder(connection, transaction, "favorite_added_order", "radio");
+        foreach (var row in rows)
+        {
+            SetOrderedMembership(customOrder, row.Id, favorite);
+            SetOrderedMembership(addedOrder, row.Id, favorite);
+        }
+        RewriteOrder(connection, transaction, "favorite_order", "radio", customOrder);
+        RewriteOrder(connection, transaction, "favorite_added_order", "radio", addedOrder);
+        TouchMetadata(connection, transaction);
+        transaction.Commit();
+        return new
+        {
+            favorite,
+            requested = rows.Length,
+            changed,
+            titles = rows.Select(row => row.Title).ToArray()
+        };
+    }
+
     public object Remove(string sessionId, string view, IReadOnlyList<string> itemIds)
     {
         var ids = itemIds.Where(id => !string.IsNullOrWhiteSpace(id))
@@ -675,6 +788,16 @@ internal sealed class LiteProfileMutationStore
         ?? value[second]?.GetValue<string?>()?.Trim()
         ?? string.Empty;
 
+    private static bool ReadJsonBoolean(JsonObject value, string first, string second)
+    {
+        foreach (var name in new[] { first, second })
+        {
+            if (value[name] is JsonValue json && json.TryGetValue<bool>(out var result))
+                return result;
+        }
+        return false;
+    }
+
     private static string CleanRequiredText(string value, string error)
     {
         var cleaned = value.Trim();
@@ -713,6 +836,46 @@ internal sealed class LiteProfileMutationStore
             if (seen.Add(id)) result.Add(id);
         }
         return result;
+    }
+
+    private static List<string> ReadOrder(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        string table,
+        string sessionId)
+    {
+        using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText =
+            $"SELECT item_id FROM {table} WHERE session_id = $session COLLATE NOCASE ORDER BY ordinal;";
+        command.Parameters.AddWithValue("$session", sessionId);
+        using var reader = command.ExecuteReader();
+        var result = new List<string>();
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        while (reader.Read())
+        {
+            var id = reader.GetString(0);
+            if (seen.Add(id)) result.Add(id);
+        }
+        return result;
+    }
+
+    private static void RewriteOrder(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        string table,
+        string sessionId,
+        IReadOnlyList<string> itemIds)
+    {
+        Execute(connection, transaction,
+            $"DELETE FROM {table} WHERE session_id = $session COLLATE NOCASE;",
+            ("$session", sessionId));
+        for (var ordinal = 0; ordinal < itemIds.Count; ordinal++)
+        {
+            Execute(connection, transaction,
+                $"INSERT INTO {table}(session_id, ordinal, item_id) VALUES($session, $ordinal, $id);",
+                ("$session", sessionId), ("$ordinal", ordinal), ("$id", itemIds[ordinal]));
+        }
     }
 
     private static void RewriteAttachedOrder(

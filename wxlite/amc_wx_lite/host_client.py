@@ -726,6 +726,15 @@ class LiteHostClient:
             timeout=30.0,
         )
 
+    def toggle_profile_favorites(
+        self, session_id: str, item_ids: list[str]
+    ) -> Any:
+        return self.call(
+            "library.toggleFavorite",
+            {"sessionId": session_id, "itemIds": item_ids},
+            timeout=30.0,
+        )
+
     def recycle_local_files(self, item_ids: list[str]) -> Any:
         return self.call(
             "library.recycle", {"itemIds": item_ids}, timeout=120.0

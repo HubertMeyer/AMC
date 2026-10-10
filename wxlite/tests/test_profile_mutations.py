@@ -39,6 +39,7 @@ def _library(path: Path, media: Path) -> None:
                 is_in_library INTEGER NOT NULL DEFAULT 1,
                 is_in_queue INTEGER NOT NULL DEFAULT 0,
                 is_play_next INTEGER NOT NULL DEFAULT 0);
+            CREATE TABLE metadata(key TEXT PRIMARY KEY, value TEXT NOT NULL);
             CREATE INDEX ix_local_items_title ON local_items(title COLLATE AMC_PL);
             CREATE TABLE bookmarks(
                 id TEXT PRIMARY KEY, session_id TEXT, item_id TEXT,
@@ -59,6 +60,10 @@ def _library(path: Path, media: Path) -> None:
         db.execute(
             "INSERT INTO local_items(id,title,has_custom_title,path) VALUES(?,?,0,?)",
             ("local-1", "Stara nazwa", str(media)),
+        )
+        db.execute(
+            "INSERT INTO local_items(id,title,has_custom_title,path) VALUES(?,?,0,?)",
+            ("local-2", "Drugi plik", str(media)),
         )
         db.execute(
             "INSERT INTO bookmarks(id,session_id,item_id,item_title) VALUES('b','local','local-1','Stara nazwa')"
@@ -178,6 +183,21 @@ def test_profile_edits_go_through_the_real_host() -> None:
                 "radio-1", "Nowe radio", "https://example.invalid/new"
             )
             assert radio_edit["streamChanged"] is True
+            local_favorite = client.toggle_profile_favorites(
+                "files", ["local-1", "local-2"]
+            )
+            assert local_favorite == {
+                "favorite": True,
+                "requested": 2,
+                "changed": 2,
+                "titles": ["Nazwa biblioteczna", "Drugi plik"],
+            }
+            radio_favorite = client.toggle_profile_favorites("radio", ["radio-1"])
+            assert radio_favorite["favorite"] is False
+            assert radio_favorite["changed"] == 1
+            radio_favorite = client.toggle_profile_favorites("radio", ["radio-1"])
+            assert radio_favorite["favorite"] is True
+            assert radio_favorite["changed"] == 1
             client.remove_profile_items("files", "library", ["local-1"])
             client.remove_profile_items(
                 "podcasts", "podcastLibrary", ["podcast-1"]
@@ -194,13 +214,20 @@ def test_profile_edits_go_through_the_real_host() -> None:
 
         with closing(sqlite3.connect(library)) as db:
             row = db.execute(
-                "SELECT title,path,is_in_library FROM local_items WHERE id='local-1'"
+                "SELECT title,path,is_favorite,is_in_library FROM local_items WHERE id='local-1'"
             ).fetchone()
             assert row == (
                 "Nazwa biblioteczna",
                 str(root / "nowy plik.mp3"),
+                1,
                 0,
             )
+            assert db.execute(
+                "SELECT item_id FROM favorite_order WHERE session_id='local' ORDER BY ordinal"
+            ).fetchall() == [("local-1",), ("local-2",)]
+            assert db.execute(
+                "SELECT item_id FROM favorite_added_order WHERE session_id='local' ORDER BY ordinal"
+            ).fetchall() == [("local-1",), ("local-2",)]
             assert (root / "nowy plik.mp3").exists(), (
                 "Delete ma usunąć rekord z Biblioteki, ale zostawić plik na dysku"
             )

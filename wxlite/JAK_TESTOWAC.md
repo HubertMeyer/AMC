@@ -410,7 +410,13 @@ Bez przekierowania `APPDATA`/`LOCALAPPDATA` aplikacja domyślnie czyta profil w�
 
 1. Ctrl+1: Biblioteka. Foldery mają pochodzić z bazy, nawet gdy zapisane dyski nie istnieją na stanowisku. Enter i Backspace zachowują logiczny powrót.
 2. Alt+2: wszystkie lokalne pliki alfabetycznie. Porównaj liczność ze źródłem, nie z wpisaną na stałe liczbą.
-3. Ctrl+U: Ulubione. Zachowaj właściwą kolejność i wybór.
+3. Ctrl+Shift+U na pliku albo stacji radiowej dodaje zaznaczenie do Ulubionych
+   lub je usuwa. Zaznacz kilka sąsiednich pozycji Shiftem i kilka rozłącznych
+   przez Ctrl+Spację: jeżeli choć jedna nie była ulubiona, stan ma zostać
+   włączony wszystkim; dopiero ponowienie na zbiorze samych Ulubionych usuwa
+   go wszystkim. W odtwarzaczu polecenie nie może przerywać dźwięku ani wracać
+   samoczynnie na listę. Ctrl+U pokazuje zgodny stan, kolejność i wybór także
+   po ponownym uruchomieniu.
 4. Ctrl+P: playlisty; Enter do zawartości; Backspace na tę samą playlistę.
 5. Ctrl+C: nazwa lub nazwy zaznaczonych pozycji, każda w osobnym wierszu.
    Ctrl+Shift+C na istniejących plikach ustawia jednocześnie tekst pełnych

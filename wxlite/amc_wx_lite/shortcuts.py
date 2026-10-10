@@ -107,6 +107,7 @@ class Action(Enum):
     QUEUE_PREVIOUS = "queue.previous"
     ADD_TO_QUEUE = "action.queue.add"
     TOGGLE_PLAY_NEXT = "action.queue.playNextToggle"
+    TOGGLE_FAVORITE = "action.favorite.toggle"
     TIDAL_TOGGLE_LIBRARY = "tidal.library.toggle"
     TIDAL_TOGGLE_FAVORITE = "tidal.favorite.toggle"
     SEEK_BACK_10 = "seek.back10"
@@ -299,6 +300,7 @@ TIDAL_SUPPORTED_ACTIONS = frozenset({
     Action.QUEUE_NEXT,
     Action.QUEUE_PREVIOUS,
     Action.ADD_TO_QUEUE,
+    Action.TOGGLE_FAVORITE,
     Action.TIDAL_TOGGLE_LIBRARY,
     Action.TIDAL_TOGGLE_FAVORITE,
     Action.TIME_ELAPSED,
@@ -533,6 +535,7 @@ LIST_VIEW: dict[str, Action] = {
     # „odtworz nastepne”. Sam Shift+Enter zostaje wolny na przyszla funkcje.
     "Ctrl+Shift+Q": Action.ADD_TO_QUEUE,
     "Ctrl+Shift+Return": Action.TOGGLE_PLAY_NEXT,
+    "Ctrl+Shift+U": Action.TOGGLE_FAVORITE,
     "Ctrl+H": Action.VIEW_HISTORY,
     # Ctrl+B to ViewBookmarks oryginalu (MainWindow.xaml:489): WSZYSTKIE
     # zakladki. Teraz mamy ten zbior naprawde (GetForDisplay), wiec skrot
@@ -652,6 +655,7 @@ PLAYER_VIEW: dict[str, Action] = {
     "Next": Action.QUEUE_NEXT,
     "Ctrl+Shift+Q": Action.ADD_TO_QUEUE,
     "Ctrl+Shift+Return": Action.TOGGLE_PLAY_NEXT,
+    "Ctrl+Shift+U": Action.TOGGLE_FAVORITE,
     "Left": Action.SEEK_BACK_10,
     "Right": Action.SEEK_FORWARD_10,
     # Cztery pary krokow z oryginalu (MainWindow.xaml.cs:21583-21590,
@@ -819,6 +823,7 @@ def describe() -> list[tuple[str, str]]:
         Action.QUEUE_PREVIOUS: "Poprzedni utwor kolejki",
         Action.ADD_TO_QUEUE: "Dodaj zaznaczenie do kolejki albo je usun",
         Action.TOGGLE_PLAY_NEXT: "Ustaw albo usun odtwarzanie jako nastepne",
+        Action.TOGGLE_FAVORITE: "Dodaj lub usuń z Ulubionych",
         Action.TIDAL_TOGGLE_LIBRARY: "Dodaj lub usuń z Biblioteki TIDAL",
         Action.TIDAL_TOGGLE_FAVORITE: "Dodaj lub usuń z Ulubionych TIDAL",
         Action.SEEK_BACK_10: "Przewin 10 sekund wstecz",
