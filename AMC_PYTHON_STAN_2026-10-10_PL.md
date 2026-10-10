@@ -84,6 +84,20 @@ Kolejka TIDAL jest na tym etapie prywatna dla interfejsu wxPython i nie jest
 współdzielona z kolejką głównego AMC ani oficjalnej aplikacji TIDAL. Tokeny i
 prywatne uchwyty odtwarzania nie przechodzą do Pythona ani do tekstu list.
 
+Do poprawy w następnym etapie pozostaje porządek albumów. Obecnie albumy są
+pokazywane według czasu dodania od najstarszych u góry i nie można zmienić
+sortowania. Główne AMC udostępniało co najmniej porządek alfabetyczny,
+własny/ręczny oraz według dodania, przy czym w tym ostatnim najnowsze pozycje
+były u góry. Należy przenieść ten sam model, zapamiętanie wyboru i dostępne
+etykiety opcji, po uprzednim porównaniu z kodem głównego AMC.
+
+Trzeba też przywrócić kontekstową prawą strzałkę. Na albumie prowadziła do
+wykonawcy; na wykonawcy otwierała właściwe zbiory wykonawcy, między innymi
+albumy, utwory i podobnych wykonawców zgodnie z dokładnym zachowaniem głównego
+AMC. Powrót, fokus i wszystkie działania na otwartych listach muszą zachować
+się tak samo. Dla przyszłej sesji Spotify należy później przeprowadzić osobne
+porównanie, ponieważ podobny cel nie oznacza identycznego API ani układu.
+
 ### Wyszukiwanie
 
 `Ctrl+F` (wyszukiwanie w bieżącej sesji/usłudze) i `Ctrl+Shift+F`
@@ -220,14 +234,18 @@ lewą strzałką.
    Bibliotekę, Ulubione, wybór materiałów, presety, wszystkie skróty oraz
    prawidłowe wykonanie transportu po zakończeniu odczytu stanu. Następnie
    ponowny odbiór na obudzonych urządzeniach.
-3. Podłączenie gotowego dodatku AMC do NVDA bezpośrednio do LiteHosta i
+3. Przywrócenie w TIDAL sortowania albumów (alfabetycznego, własnego i według
+   dodania z najnowszymi u góry) oraz kontekstowej prawej strzałki na albumach
+   i wykonawcach, po porównaniu z głównym AMC.
+4. Podłączenie gotowego dodatku AMC do NVDA bezpośrednio do LiteHosta i
    wxPython, bez uruchamiania starego AMC, oraz żywy odbiór mowy i brajla.
-4. Sprawdzenie zaniku wybranego urządzenia audio: automatyczny powrót na
+5. Sprawdzenie zaniku wybranego urządzenia audio: automatyczny powrót na
    urządzenie domyślne i dalsze odtwarzanie tej samej stacji bez przełączania.
-5. Uzupełnienie wykrytych braków w istniejących sesjach, bez regresji radia,
+6. Uzupełnienie wykrytych braków w istniejących sesjach, bez regresji radia,
    nagrywania, harmonogramów i timeshiftu.
-6. Odzyskanie źródła lub ticketu „Sygnalisty”, analiza i wdrożenie aktualizacji.
-7. Dopiero później decyzja o Spotify.
+7. Odzyskanie źródła lub ticketu „Sygnalisty”, analiza i wdrożenie aktualizacji.
+8. Dopiero później decyzja o Spotify; wtedy osobno przenieść właściwe dla
+   Spotify sortowanie i kontekstową nawigację, bez kopiowania założeń TIDAL.
 
 Publikacja AMC Python na GitHubie jest końcowym krokiem, nie częścią bieżącego
 zapisu planu. Przed nią trzeba odebrać działanie samodzielnego pakietu, radia,

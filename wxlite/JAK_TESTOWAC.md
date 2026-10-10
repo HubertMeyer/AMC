@@ -60,6 +60,13 @@ TIDAL:
    `Ctrl+Q` ma pokazać tę samą kolejność także po ponownym uruchomieniu.
 5. Enter na utworze lub albumie ma przekazać odtwarzanie do oficjalnej
    aplikacji TIDAL. Nie oczekuj od tej drogi własnego pełnego odtwarzacza AMC.
+6. Otwórz albumy dodane w różnych terminach. Sprawdź sortowanie alfabetyczne,
+   własne/ręczne oraz według dodania. W porządku według dodania najnowszy
+   album ma być pierwszy. Wybór ma pozostać po wyjściu i ponownym otwarciu.
+7. Na albumie naciśnij prawą strzałkę: ma prowadzić do jego wykonawcy. Na
+   wykonawcy sprawdź dokładne gałęzie przeniesione z głównego AMC, w tym
+   albumy, utwory i podobnych wykonawców. Escape/Backspace ma wrócić we
+   właściwe miejsce, a NVDA nie może czytać identyfikatorów TIDAL.
 
 WiiM:
 
