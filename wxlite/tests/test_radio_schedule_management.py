@@ -23,6 +23,9 @@ from amc_wx_lite.radio_schedule_settings import (
 from amc_wx_lite.state_store import LiteState, StateStore
 
 
+TEMPORARY_ROOT = Path(__file__).resolve().parents[2] / ".tmp-tests"
+
+
 def sample_schedule(**changes) -> dict:
     value = {
         "id": "plan-1",
@@ -126,7 +129,10 @@ def test_file_name_tokens_are_validated_without_accepting_unknown_names() -> Non
 
 
 def test_private_schedule_state_distinguishes_inheritance_from_empty_list() -> None:
-    with tempfile.TemporaryDirectory(prefix="amc-wx-schedules-") as directory:
+    TEMPORARY_ROOT.mkdir(exist_ok=True)
+    with tempfile.TemporaryDirectory(
+        prefix="amc-wx-schedules-", dir=TEMPORARY_ROOT
+    ) as directory:
         store = StateStore(directory)
         store.save(LiteState())
         raw = json.loads(
@@ -147,7 +153,10 @@ def test_private_schedule_state_distinguishes_inheritance_from_empty_list() -> N
 
 
 def test_private_schedule_round_trip_sanitizes_data() -> None:
-    with tempfile.TemporaryDirectory(prefix="amc-wx-schedules-") as directory:
+    TEMPORARY_ROOT.mkdir(exist_ok=True)
+    with tempfile.TemporaryDirectory(
+        prefix="amc-wx-schedules-", dir=TEMPORARY_ROOT
+    ) as directory:
         store = StateStore(directory)
         store.save(
             LiteState(

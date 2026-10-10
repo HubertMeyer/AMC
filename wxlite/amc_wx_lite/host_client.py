@@ -665,6 +665,30 @@ class LiteHostClient:
             timeout=30.0,
         )
 
+    def toggle_podcast_library(self, subscription_ids: list[str]) -> Any:
+        """Zmień Bibliotekę dla podcastów wskazanych wprost albo przez odcinki."""
+        return self.call(
+            "podcast.toggleLibrary",
+            {"subscriptionIds": list(dict.fromkeys(subscription_ids))},
+            timeout=30.0,
+        )
+
+    def toggle_podcast_queue(
+        self,
+        episode_ids: list[str],
+        *,
+        play_next: bool = False,
+    ) -> Any:
+        """Zmień trwałą kolejkę odcinków bez mieszania jej z kolejką plików."""
+        return self.call(
+            "podcast.toggleQueue",
+            {
+                "episodeIds": list(dict.fromkeys(episode_ids)),
+                "playNext": bool(play_next),
+            },
+            timeout=30.0,
+        )
+
     def podcast_playback_options(self, item_id: str, target: str) -> Any:
         """Odczytaj opcje podcastu albo odcinka bez ujawniania ich w UI."""
         return self.call(

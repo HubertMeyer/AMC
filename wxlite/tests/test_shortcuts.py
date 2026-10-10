@@ -355,6 +355,22 @@ def test_queue_shortcuts_are_distinct_and_shift_enter_stays_free() -> None:
         ) is None
 
 
+def test_podcast_library_and_queue_shortcuts_keep_their_full_amc_meaning() -> None:
+    for player in (False, True):
+        assert resolve(
+            Chord("L", ctrl=True, shift=True),
+            player_view=player,
+            radio_session=False,
+            podcast_session=True,
+        ) is Action.TOGGLE_PODCAST_LIBRARY
+        assert resolve(
+            Chord("Q", ctrl=True, shift=True),
+            player_view=player,
+            radio_session=False,
+            podcast_session=True,
+        ) is Action.ADD_TO_QUEUE
+
+
 def test_help_listing_is_not_empty_and_has_no_duplicates() -> None:
     entries = describe()
     assert len(entries) > 15

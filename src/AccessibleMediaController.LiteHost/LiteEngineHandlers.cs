@@ -307,6 +307,10 @@ internal sealed class LiteEngineHandlers : IDisposable
                 RequireSonos().Transport(request.Args),
             ["podcast.toggleFavorite"] = (request, _) =>
                 TogglePodcastFavorites(request.Args),
+            ["podcast.toggleLibrary"] = (request, _) =>
+                TogglePodcastLibrary(request.Args),
+            ["podcast.toggleQueue"] = (request, _) =>
+                TogglePodcastQueue(request.Args),
             ["podcast.playbackOptions"] = (request, _) =>
                 GetPodcastPlaybackOptions(request.Args),
             ["podcast.playbackOptions.set"] = (request, _) =>
@@ -395,6 +399,24 @@ internal sealed class LiteEngineHandlers : IDisposable
             requested = result.RequestedCount,
             changed = result.ChangedCount
         };
+    }
+
+    private object TogglePodcastLibrary(JsonElement args)
+    {
+        var subscriptions = ReadOptionalIds(args, "subscriptionIds");
+        if (subscriptions.Length == 0)
+            throw new LiteRequestException("Wybierz podcast albo odcinek.");
+        return RequireProfileMutations().TogglePodcastLibrary(subscriptions);
+    }
+
+    private object TogglePodcastQueue(JsonElement args)
+    {
+        var episodes = ReadOptionalIds(args, "episodeIds");
+        if (episodes.Length == 0)
+            throw new LiteRequestException("Wybierz odcinek podcastu.");
+        return RequireProfileMutations().TogglePodcastQueue(
+            episodes,
+            LiteArgs.ReadBool(args, "playNext", false));
     }
 
     private object GetPodcastPlaybackOptions(JsonElement args)

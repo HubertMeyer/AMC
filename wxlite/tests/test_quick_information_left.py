@@ -182,6 +182,33 @@ def test_kontrakt_podcastu_niesie_dlugosc_i_typ_mime() -> None:
     assert request["durationTicks"] == 18_000_000_000
 
 
+def test_podcast_przekazuje_autora_jako_jawna_etykiete() -> None:
+    row = Row(
+        item_id="ep1",
+        title="Odcinek 12",
+        kind="episode",
+        url="https://feed.example.invalid/ep12.mp3",
+        artist_name="Autor audycji",
+    )
+    request = quick_info_request(row, session="podcasts")
+    assert request is not None
+    assert request["artist"] == "Autor audycji"
+
+
+def test_wiersz_podcastu_ma_zrodlo_do_informacji_uzupelniajacej() -> None:
+    row = Row(
+        item_id="pod1",
+        title="Audycja tygodnia",
+        kind="podcast",
+        url="https://example.invalid/feed",
+        artist_name="Autor audycji",
+    )
+    plan = quick_info_plan(row, session="podcasts", view="list")
+    assert plan.request is not None
+    assert plan.request["source"] == "https://example.invalid/feed"
+    assert plan.request["artist"] == "Autor audycji"
+
+
 def test_tablica_mime_podcastu_nalezy_do_hosta_a_nie_do_pythona() -> None:
     """Typ MIME idzie do hosta SUROWY -- bez tablicy w Pythonie.
 

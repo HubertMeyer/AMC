@@ -48,15 +48,16 @@ def _database(base: Path) -> Path:
         """
     )
     subscriptions = [
-        ("rss-id", 0, "  Audycja\n tygodnia  ", 0),
-        ("yt-id", 1, "Kanał dostępny", 2),
-        ("hidden-id", 2, "Ukryty", 0),
+        ("rss-id", 0, "  Audycja\n tygodnia  ", 0, "https://example.invalid/feed", "© Autor audycji"),
+        ("yt-id", 1, "Kanał dostępny", 2, "https://youtube.invalid/channel", "Kanał autora"),
+        ("hidden-id", 2, "Ukryty", 0, "https://example.invalid/hidden", ""),
     ]
-    for item_id, ordinal, title, kind in subscriptions:
+    for item_id, ordinal, title, kind, feed_url, author in subscriptions:
         connection.execute(
-            "INSERT INTO podcast_subscriptions VALUES (?, ?, ?, '', ?, 0, '', ?)",
-            (item_id, ordinal, title, 0 if item_id == "hidden-id" else 1,
-             json.dumps({"SourceKind": kind})),
+            "INSERT INTO podcast_subscriptions VALUES (?, ?, ?, ?, ?, 0, '', ?)",
+            (item_id, ordinal, title, feed_url,
+             0 if item_id == "hidden-id" else 1,
+             json.dumps({"SourceKind": kind, "Author": author})),
         )
     connection.commit()
     connection.close()
@@ -73,6 +74,9 @@ def _episode_payload(
         "MediaUrl": url,
         "DurationTicks": 3_900 * 10_000_000,
         "ResumePositionTicks": resume_seconds * 10_000_000,
+        "MediaLength": 62_400_000,
+        "MediaType": "audio/mpeg",
+        "Author": "© Autor odcinka",
     }
     if feed_ordinal is not None:
         payload["FeedOrdinal"] = feed_ordinal
@@ -225,6 +229,9 @@ def test_subscription_rows_use_only_intentional_labels_and_hide_non_members() ->
         spoken = " ".join(row.title + " " + row.detail for row in rows)
         assert "rss-id" not in spoken and "yt-id" not in spoken
         assert all(row.kind == "podcast" for row in rows)
+        assert rows[0].url == "https://example.invalid/feed"
+        assert rows[0].artist_name == "Autor audycji"
+        assert rows[1].url == "https://youtube.invalid/channel"
 
 
 def test_rss_episodes_follow_date_order_and_expose_resume_state() -> None:
@@ -245,6 +252,10 @@ def test_rss_episodes_follow_date_order_and_expose_resume_state() -> None:
         assert first.path == "https://example.invalid/newer"
         assert first.address == "https://example.invalid/newer"
         assert first.parent_id == "rss-id"
+        assert first.artist_name == "Autor odcinka"
+        assert first.duration_ticks == 3_900 * 10_000_000
+        assert first.podcast_media_length == 62_400_000
+        assert first.podcast_media_type == "audio/mpeg"
         assert "newer" not in first.title and "newer" not in first.detail
 
 

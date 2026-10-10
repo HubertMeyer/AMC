@@ -1,5 +1,29 @@
 # AMC Python — zakres względem pełnego AMC
 
+## 10.10 — podcasty, lewa strzałka i planowanie nagrania
+
+Pakiet wxPython jest docelowym samodzielnym interfejsem. Użytkownik nie
+uruchamia starego okna WPF; wewnątrz pakietu pozostaje sprawdzony LiteHost C#
+dla dźwięku, nagrywania, harmonogramów i zapisu profilu.
+
+Lewa strzałka w Podcastach przekazuje teraz do wspólnego formatera autora,
+adres źródła, czas, rozmiar i typ medium, jeżeli te dane są znane. Nie dopisuje
+ich do zwykłej nazwy dostępnej wiersza. `Ctrl+Shift+U` dociera do istniejącej
+operacji Ulubionych, `Ctrl+Shift+L` zmienia Bibliotekę podcastu także wtedy,
+gdy zaznaczony jest jego odcinek, a `Ctrl+Shift+Q` i `Ctrl+Shift+Enter`
+zmieniają trwałą kolejkę odcinków. Kolejka podcastów nie jest mieszana z
+kolejką plików lokalnych. `Shift+R` na stacji otwiera nowy plan nagrania z tą
+stacją już wybraną; `Ctrl+Shift+H` nadal zarządza wszystkimi planami.
+
+AMC ma już trzy rzeczywiste silniki tempa: Google Speedy dla mowy,
+Signalsmith Stretch dla muzyki oraz SoundTouch jako wariant dotychczasowy.
+Paperback używa WSOLA; to punkt do późniejszego porównania odsłuchowego, nie
+powód do usuwania obecnego podziału bez pomiaru.
+
+Sonos pozostaje do odbioru na obudzonych urządzeniach. Moduł zgłaszania błędów
+Michała Dziwisza nazywa się **Sygnalista**; jego integracja jest osobnym,
+późniejszym etapem po odbiorze bieżących sesji.
+
 ## 10.10 — TIDAL, WiiM i Sonos; stan przed odbiorem urządzeń
 
 Strategia pozostaje bez zmian: wxPython zastępuje interfejs, a LiteHost używa

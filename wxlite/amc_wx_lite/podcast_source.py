@@ -47,6 +47,8 @@ class PodcastSubscription:
     subscription_id: str
     title: str
     source_kind: int
+    feed_url: str = ""
+    author: str = ""
 
     @property
     def kind_label(self) -> str:
@@ -62,8 +64,13 @@ class PodcastSubscription:
             item_id=self.subscription_id,
             title=self.title,
             kind="podcast",
+            # Pełne AMC udostępnia źródło tylko dla źródeł, które można
+            # odświeżać. Publiczne medium internetowe (rodzaj 1) jest
+            # rozwiązywane ponownie przy odtwarzaniu i nie udaje kanału.
+            url=self.feed_url if self.source_kind in (0, 2, 3) else None,
             detail=self.kind_label,
             show_kind=False,
+            artist_name=self.author,
         )
 
 
@@ -294,6 +301,10 @@ def _episode_row(record: _EpisodeRecord, *, aggregate: bool) -> Row:
         detail_parts.insert(0, record.parent_title)
     if aggregate and record.source_kind in (2, 3):
         detail_parts.append("materiał YouTube")
+    duration_ticks = max(0, _as_int(_get(record.payload, "DurationTicks", 0)))
+    media_length = _as_int(_get(record.payload, "MediaLength", 0))
+    media_type = str(_get(record.payload, "MediaType", "") or "").strip()
+    author = _author_label(_get(record.payload, "Author", "")) or record.parent_title
     return Row(
         item_id=record.item_id,
         title=record.title,
@@ -310,6 +321,10 @@ def _episode_row(record: _EpisodeRecord, *, aggregate: bool) -> Row:
             _as_int(_get(record.payload, "ResumePositionTicks", 0)) / 10_000_000,
         ),
         parent_id=record.subscription_id,
+        artist_name=author,
+        duration_ticks=duration_ticks,
+        podcast_media_length=media_length if media_length > 0 else None,
+        podcast_media_type=media_type or None,
     )
 
 
@@ -383,7 +398,7 @@ class PodcastSource:
             with closing(self._open()) as connection:
                 records = connection.execute(
                     """
-                    SELECT id, title, payload_json
+                    SELECT id, title, feed_url, payload_json
                     FROM podcast_subscriptions
                     WHERE is_in_library = 1
                     ORDER BY ordinal
@@ -404,6 +419,8 @@ class PodcastSource:
                 subscription_id=subscription_id,
                 title=_clean_text(record["title"], "Podcast bez nazwy"),
                 source_kind=_source_kind(data),
+                feed_url=str(record["feed_url"] or "").strip(),
+                author=_author_label(_get(data, "Author", "")),
             ))
         return result
 
@@ -412,7 +429,7 @@ class PodcastSource:
             with closing(self._open()) as connection:
                 record = connection.execute(
                     """
-                    SELECT id, title, payload_json
+                    SELECT id, title, feed_url, payload_json
                     FROM podcast_subscriptions
                     WHERE id = ? AND is_in_library = 1
                     """,
@@ -429,6 +446,8 @@ class PodcastSource:
             subscription_id=str(record["id"]),
             title=_clean_text(record["title"], "Podcast bez nazwy"),
             source_kind=_source_kind(data),
+            feed_url=str(record["feed_url"] or "").strip(),
+            author=_author_label(_get(data, "Author", "")),
         )
 
     def description(self, item_id: str, item_kind: str) -> PodcastDescription | None:
@@ -445,7 +464,7 @@ class PodcastSource:
             with closing(self._open()) as connection:
                 record = connection.execute(
                     """
-                    SELECT s.id, s.title, s.payload_json
+                    SELECT s.id, s.title, s.feed_url, s.payload_json
                     FROM podcast_episodes AS e
                     JOIN podcast_subscriptions AS s
                       ON s.id = e.subscription_id
@@ -464,6 +483,8 @@ class PodcastSource:
             subscription_id=str(record["id"]),
             title=_clean_text(record["title"], "Podcast bez nazwy"),
             source_kind=_source_kind(payload),
+            feed_url=str(record["feed_url"] or "").strip(),
+            author=_author_label(_get(payload, "Author", "")),
         )
 
     def _subscription_description(self, item_id: str) -> PodcastDescription | None:
@@ -679,6 +700,9 @@ class PodcastSource:
                     is_played=_as_bool(record["is_played"]),
                 ),
             ))
+            duration_ticks = max(0, _as_int(_get(data, "DurationTicks", 0)))
+            media_length = _as_int(_get(data, "MediaLength", 0))
+            media_type = str(_get(data, "MediaType", "") or "").strip()
             rows.append(Row(
                 item_id=str(record["id"]),
                 title=_clean_text(record["title"], "Odcinek bez nazwy"),
@@ -690,6 +714,13 @@ class PodcastSource:
                 activation_message=None if playable else "Ten odcinek nie ma adresu do odtworzenia",
                 position_seconds=max(0.0, _as_int(_get(data, "ResumePositionTicks", 0)) / 10_000_000),
                 parent_id=subscription_id,
+                artist_name=(
+                    _author_label(_get(data, "Author", ""))
+                    or subscription.title
+                ),
+                duration_ticks=duration_ticks,
+                podcast_media_length=media_length if media_length > 0 else None,
+                podcast_media_type=media_type or None,
             ))
 
         if has_more:
@@ -730,7 +761,7 @@ class PodcastSource:
             with closing(self._open()) as connection:
                 records = connection.execute(
                     """
-                    SELECT id, title, payload_json
+                    SELECT id, title, feed_url, payload_json
                     FROM podcast_subscriptions
                     ORDER BY ordinal
                     """
@@ -752,6 +783,8 @@ class PodcastSource:
                 subscription_id=item_id,
                 title=_clean_text(record["title"], "Podcast bez nazwy"),
                 source_kind=_source_kind(payload),
+                feed_url=str(record["feed_url"] or "").strip(),
+                author=_author_label(_get(payload, "Author", "")),
             )
             result.append(_FavoriteRecord(
                 row=subscription.as_row(),

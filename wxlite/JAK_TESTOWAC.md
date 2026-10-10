@@ -2,6 +2,30 @@
 
 To rozwijany równoległy interfejs pełnegoAMC. Nie jest jeszcze zamiennikiem wszystkich funkcji programu. Katalog i nazwa uruchamiacza `wxlite` są historyczne; nie oznaczają decyzji o ograniczeniu docelowego zakresu do dwóch sesji.
 
+## Bieżący pakiet — Podcasty i Shift+R
+
+Uruchamiaj dokładnie:
+
+`D:\Projekty Codex\AMC Python - test opcje podcastow 2026-10-09\AMC-wx-Lite.cmd`
+
+Po ponownym uruchomieniu skrypt wybiera `host-next-3`. Sprawdź kolejno:
+
+1. W Podcastach lewa strzałka czyta krótką informację o zaznaczonym źródle
+   albo odcinku; nie może czytać nazwy klasy, rekordu ani identyfikatora.
+2. `Ctrl+Shift+U` przełącza Ulubione podcastu lub odcinka.
+3. `Ctrl+Shift+L` na podcaście zmienia jego Bibliotekę. Na odcinku ma zmienić
+   podcast nadrzędny; po usunięciu otwartego podcastu program wraca do głównej
+   listy zamiast zostawiać odłączony widok.
+4. `Ctrl+Shift+Q` na odcinku dodaje go do kolejki podcastów albo usuwa.
+   `Ctrl+Q` ma pokazać zgodny stan także po ponownym uruchomieniu.
+   `Ctrl+Shift+Enter` osobno przełącza „Odtwarzaj jako następne”.
+5. W Radiu zaznacz stację i naciśnij `Shift+R`. Powinien od razu otworzyć się
+   formularz nowego planu z wybraną tą stacją. `Ctrl+Shift+H` nadal otwiera
+   listę wszystkich harmonogramów.
+
+Nie uruchamiaj równolegle starego głównego AMC podczas testu zapisów profilu.
+Sonos zostaje do osobnego odbioru na obudzonych urządzeniach.
+
 ## TIDAL, WiiM i Sonos — odbiór 10 października
 
 TIDAL:

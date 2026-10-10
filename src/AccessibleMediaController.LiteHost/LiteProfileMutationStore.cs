@@ -177,6 +177,126 @@ internal sealed class LiteProfileMutationStore
         }
     }
 
+    /// <summary>
+    /// Ctrl+Shift+L w sesji Podcasty. Odcinek jest wcześniej rozwiązany przez
+    /// frontend do identyfikatora źródła nadrzędnego, więc zapis dotyka tylko
+    /// członkostwa subskrypcji. Decyzja jest grupowa jak w pełnym AMC: jeżeli
+    /// choć jednego źródła nie ma w Bibliotece, dodajemy wszystkie; dopiero
+    /// gdy wszystkie już należą, usuwamy wszystkie.
+    /// </summary>
+    public object TogglePodcastLibrary(IReadOnlyList<string> subscriptionIds)
+    {
+        var ids = CleanDistinctIds(subscriptionIds, "Wybierz podcast albo odcinek.");
+        EnsureMayWrite();
+        lock (_gate)
+        {
+            using var connection = OpenDatabase(_podcastsDatabasePath);
+            using var transaction = connection.BeginTransaction();
+            var rows = new List<(string Id, bool InLibrary, JsonObject Payload)>();
+            foreach (var id in ids)
+            {
+                using var read = connection.CreateCommand();
+                read.Transaction = transaction;
+                read.CommandText = "SELECT is_in_library, payload_json FROM podcast_subscriptions WHERE id = $id;";
+                read.Parameters.AddWithValue("$id", id);
+                using var reader = read.ExecuteReader();
+                if (!reader.Read())
+                    throw new LiteRequestException("Nie można odnaleźć podcastu nadrzędnego.");
+                rows.Add((id, reader.GetInt64(0) != 0,
+                    ParseObject(reader.GetString(1), "Dane podcastu są uszkodzone.")));
+            }
+
+            var added = rows.Any(row => !row.InLibrary);
+            var changed = 0;
+            foreach (var row in rows)
+            {
+                if (row.InLibrary == added) continue;
+                row.Payload["IsInLibrary"] = added;
+                if (!added) row.Payload["IsFavorite"] = false;
+                Execute(connection, transaction,
+                    "UPDATE podcast_subscriptions SET is_in_library = $library, payload_json = $payload WHERE id = $id;",
+                    ("$library", added), ("$payload", row.Payload.ToJsonString()), ("$id", row.Id));
+                changed++;
+            }
+            TouchMetadata(connection, transaction);
+            transaction.Commit();
+            return new { added, requested = rows.Count, changed };
+        }
+    }
+
+    /// <summary>
+    /// Trwała kolejka podcastów. Flagi odcinka w podcasts.db i trzy porządki
+    /// sesji w library.db zmieniają się w jednej transakcji na bazie z
+    /// dołączonym magazynem. Dzięki temu Ctrl+Shift+Q i Ctrl+Shift+Enter nie
+    /// tworzą stanu, którego pełne AMC nie potrafiłoby potem odtworzyć.
+    /// </summary>
+    public object TogglePodcastQueue(IReadOnlyList<string> episodeIds, bool playNext)
+    {
+        var ids = CleanDistinctIds(episodeIds, "Wybierz odcinek podcastu.");
+        EnsureMayWrite();
+        lock (_gate)
+        {
+            using var connection = OpenDatabase(_podcastsDatabasePath);
+            using (var attach = connection.CreateCommand())
+            {
+                attach.CommandText = "ATTACH DATABASE $path AS library;";
+                attach.Parameters.AddWithValue("$path", _libraryDatabasePath);
+                attach.ExecuteNonQuery();
+            }
+            using var transaction = connection.BeginTransaction();
+            var rows = new List<(string Id, bool InQueue, bool PlayNext, JsonObject Payload)>();
+            foreach (var id in ids)
+            {
+                using var read = connection.CreateCommand();
+                read.Transaction = transaction;
+                read.CommandText = "SELECT is_in_queue, is_play_next, payload_json FROM podcast_episodes WHERE id = $id;";
+                read.Parameters.AddWithValue("$id", id);
+                using var reader = read.ExecuteReader();
+                if (!reader.Read())
+                    throw new LiteRequestException("Niektórych wybranych odcinków nie ma już w Bibliotece.");
+                rows.Add((id, reader.GetInt64(0) != 0, reader.GetInt64(1) != 0,
+                    ParseObject(reader.GetString(2), "Dane odcinka są uszkodzone.")));
+            }
+
+            var added = playNext
+                ? rows.Any(row => !row.PlayNext)
+                : rows.Any(row => !row.InQueue && !row.PlayNext);
+            var final = new Dictionary<string, (bool InQueue, bool PlayNext)>(StringComparer.Ordinal);
+            var changed = 0;
+            foreach (var row in rows)
+            {
+                var inQueue = playNext ? row.InQueue : added;
+                var isPlayNext = playNext ? added : added ? row.PlayNext : false;
+                final[row.Id] = (inQueue, isPlayNext);
+                if (row.InQueue == inQueue && row.PlayNext == isPlayNext) continue;
+                row.Payload["IsInQueue"] = inQueue;
+                row.Payload["IsPlayNext"] = isPlayNext;
+                Execute(connection, transaction,
+                    "UPDATE podcast_episodes SET is_in_queue = $queue, is_play_next = $next, payload_json = $payload WHERE id = $id;",
+                    ("$queue", inQueue), ("$next", isPlayNext),
+                    ("$payload", row.Payload.ToJsonString()), ("$id", row.Id));
+                changed++;
+            }
+
+            var order = ReadAttachedOrder(connection, transaction, "queue_order");
+            var regular = ReadAttachedOrder(connection, transaction, "queue_regular_order");
+            var next = ReadAttachedOrder(connection, transaction, "queue_play_next_order");
+            foreach (var id in ids)
+            {
+                var state = final[id];
+                SetOrderedMembership(order, id, state.InQueue || state.PlayNext);
+                SetOrderedMembership(regular, id, state.InQueue);
+                SetOrderedMembership(next, id, state.PlayNext);
+            }
+            RewriteAttachedOrder(connection, transaction, "queue_order", order);
+            RewriteAttachedOrder(connection, transaction, "queue_regular_order", regular);
+            RewriteAttachedOrder(connection, transaction, "queue_play_next_order", next);
+            TouchMetadata(connection, transaction);
+            transaction.Commit();
+            return new { added, requested = rows.Count, changed, playNext };
+        }
+    }
+
     public RadioStationEditResult EditRadioStation(
         string stationId,
         string requestedName,
@@ -561,6 +681,79 @@ internal sealed class LiteProfileMutationStore
         if (cleaned.Length == 0) throw new LiteRequestException(error);
         return cleaned;
     }
+
+    private static string[] CleanDistinctIds(
+        IReadOnlyList<string> values,
+        string emptyError)
+    {
+        var ids = values
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .Select(value => value.Trim())
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+        if (ids.Length == 0) throw new LiteRequestException(emptyError);
+        return ids;
+    }
+
+    private static List<string> ReadAttachedOrder(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        string table)
+    {
+        using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText =
+            $"SELECT item_id FROM library.{table} WHERE session_id = 'podcasts' COLLATE NOCASE ORDER BY ordinal;";
+        using var reader = command.ExecuteReader();
+        var result = new List<string>();
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        while (reader.Read())
+        {
+            var id = reader.GetString(0);
+            if (seen.Add(id)) result.Add(id);
+        }
+        return result;
+    }
+
+    private static void RewriteAttachedOrder(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        string table,
+        IReadOnlyList<string> itemIds)
+    {
+        Execute(connection, transaction,
+            $"DELETE FROM library.{table} WHERE session_id = 'podcasts' COLLATE NOCASE;");
+        for (var ordinal = 0; ordinal < itemIds.Count; ordinal++)
+        {
+            Execute(connection, transaction,
+                $"INSERT INTO library.{table}(session_id, ordinal, item_id) VALUES('podcasts', $ordinal, $id);",
+                ("$ordinal", ordinal), ("$id", itemIds[ordinal]));
+        }
+    }
+
+    private static void SetOrderedMembership(List<string> order, string itemId, bool member)
+    {
+        var present = order.Any(candidate =>
+            string.Equals(candidate, itemId, StringComparison.Ordinal));
+        if (member)
+        {
+            if (!present) order.Add(itemId);
+            return;
+        }
+        if (present)
+            order.RemoveAll(candidate =>
+                string.Equals(candidate, itemId, StringComparison.Ordinal));
+    }
+
+    private static void TouchMetadata(
+        SqliteConnection connection,
+        SqliteTransaction transaction) =>
+        Execute(connection, transaction,
+            """
+            INSERT INTO metadata(key, value) VALUES('last_saved_utc', $value)
+            ON CONFLICT(key) DO UPDATE SET value = excluded.value;
+            """,
+            ("$value", DateTime.UtcNow.ToString("O", CultureInfo.InvariantCulture)));
 
     private void EnsureMayWrite()
     {

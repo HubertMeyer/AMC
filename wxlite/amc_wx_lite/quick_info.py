@@ -184,6 +184,8 @@ def quick_info_request(
         "kind": row.kind,
         "source": source,
     }
+    if row.artist_name.strip():
+        request["artist"] = row.artist_name.strip()
     # ``item.Duration > TimeSpan.Zero`` jest warunkiem wzorca (cs:5451, 5489
     # i Formatter:37). Niedodatni czas to BRAK pomiaru, nie utwor dlugosci
     # zero -- nie wysylamy go, zeby host nie policzyl z niego bitrate.

@@ -198,6 +198,29 @@ def test_podcast_favorite_uses_one_narrow_operation_and_separates_item_kinds() -
         client.close()
 
 
+def test_podcast_library_and_queue_use_separate_narrow_operations() -> None:
+    client = make_client()
+    try:
+        library = client.toggle_podcast_library(
+            ["podcast-1", "podcast-1", "podcast-2"]
+        )
+        queue = client.toggle_podcast_queue(
+            ["episode-1", "episode-1", "episode-2"],
+            play_next=True,
+        )
+        assert library["op"] == "podcast.toggleLibrary"
+        assert library["args"] == {
+            "subscriptionIds": ["podcast-1", "podcast-2"]
+        }
+        assert queue["op"] == "podcast.toggleQueue"
+        assert queue["args"] == {
+            "episodeIds": ["episode-1", "episode-2"],
+            "playNext": True,
+        }
+    finally:
+        client.close()
+
+
 def test_podcast_playback_options_use_named_read_and_write_operations() -> None:
     client = make_client()
     try:

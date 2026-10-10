@@ -3902,6 +3902,16 @@ class LiteFrame(wx.Frame):
                 "Shift+F2",
                 "Delete",
                 "Shift+Delete",
+                # Jawne polecenia AMC. Zwykła lista Windows potrafi połknąć
+                # kombinacje literowe jako wyszukiwanie przyrostowe, zanim
+                # dotrą do EVT_KEY_DOWN kontrolki. Przechwytujemy wyłącznie
+                # gesty z modyfikatorami; gołe litery nadal należą do listy.
+                "Ctrl+Shift+U",
+                "Ctrl+Shift+L",
+                "Ctrl+Shift+Q",
+                "Ctrl+Shift+Return",
+                "Ctrl+Shift+H",
+                "Shift+R",
             }:
                 self._on_key(event)
                 return
@@ -4161,6 +4171,8 @@ class LiteFrame(wx.Frame):
             self._show_active_radio_recordings()
         elif action is Action.VIEW_RECORDED_RADIO_FILES:
             self._show_radio_recording_history()
+        elif action is Action.ADD_RADIO_SCHEDULE:
+            self._show_radio_schedules(create_for_selected=True)
         elif action is Action.MANAGE_RADIO_SCHEDULES:
             self._show_radio_schedules()
         elif action is Action.ADD_PODCAST_SOURCE:
@@ -4197,6 +4209,8 @@ class LiteFrame(wx.Frame):
             self._go_to_related_podcast()
         elif action is Action.TOGGLE_PODCAST_FAVORITE:
             self._toggle_podcast_favorite()
+        elif action is Action.TOGGLE_PODCAST_LIBRARY:
+            self._toggle_podcast_library()
         elif action is Action.PODCAST_PLAYBACK_OPTIONS:
             self._show_podcast_playback_options()
         elif action is Action.VIEW_ALL_FILES:
@@ -6207,6 +6221,149 @@ class LiteFrame(wx.Frame):
 
         self.runner.submit("podcast-favorite", work, done, failed)
 
+    def _toggle_podcast_library(self) -> None:
+        """Ctrl+Shift+L: podcast albo źródło nadrzędne wybranego odcinka."""
+        if self.navigator.active is not SessionId.PODCASTS:
+            return
+        if getattr(self, "_podcast_library_pending", False):
+            self.announcer.say("Zmiana Biblioteki już trwa")
+            return
+        client = self.client
+        if client is None:
+            self.announcer.say("Silnik nie działa, nie mogę zmienić Biblioteki")
+            return
+
+        rows = [
+            row for row in self._selected_action_rows()
+            if row.kind in ("podcast", "episode")
+        ]
+        subscription_ids = list(dict.fromkeys(
+            row.item_id if row.kind == "podcast" else (row.parent_id or "")
+            for row in rows
+            if row.item_id and (row.kind == "podcast" or row.parent_id)
+        ))
+        if not subscription_ids:
+            self.announcer.say("Zaznacz podcast albo odcinek")
+            return
+        label = rows[0].title if len(rows) == 1 else format_item_count(len(rows))
+        self._podcast_library_pending = True
+
+        def done(payload: dict) -> None:
+            self._podcast_library_pending = False
+            added = bool((payload or {}).get("added"))
+            message = (
+                f"Dodano do Biblioteki: {label}"
+                if added else f"Usunięto z Biblioteki: {label}"
+            )
+            if self.navigator.active is not SessionId.PODCASTS:
+                self.announcer.say(message)
+                return
+            state = self.navigator.sessions[SessionId.PODCASTS]
+            if state.view is not View.LIST:
+                self.announcer.say(message)
+                return
+            if (
+                not added
+                and state.library_view is LibraryView.PODCAST_EPISODES
+                and state.library_playlist_id in subscription_ids
+            ):
+                # Pełne AMC wraca wtedy do głównej Biblioteki, zamiast
+                # zostawiać odłączoną listę odcinków usuniętego źródła.
+                state.library_view = LibraryView.PODCAST_LIBRARY
+                state.library_playlist_id = None
+                self._open_podcast_library(completion_message=message)
+                return
+            if state.library_view is LibraryView.PODCAST_LIBRARY:
+                self._open_podcast_library(
+                    preferred_id=subscription_ids[0] if added else None,
+                    completion_message=message,
+                )
+                return
+            if not self._reload_podcast_list_after_download(
+                rows[0].item_id,
+                message,
+            ):
+                self.announcer.say(message)
+
+        def failed(error: Exception) -> None:
+            self._podcast_library_pending = False
+            self.announcer.say(f"Nie udało się zmienić Biblioteki: {error}")
+
+        self.runner.submit(
+            "podcast-library",
+            lambda: client.toggle_podcast_library(subscription_ids),
+            done,
+            failed,
+        )
+
+    def _toggle_podcast_queue(self, play_next: bool) -> None:
+        """Zmień trwałą kolejkę wybranych odcinków podcastów."""
+        if getattr(self, "_podcast_queue_pending", False):
+            self.announcer.say("Zmiana kolejki podcastów już trwa")
+            return
+        client = self.client
+        if client is None:
+            self.announcer.say("Silnik nie działa, nie mogę zmienić kolejki")
+            return
+        rows = [
+            row for row in self._selected_action_rows()
+            if row.kind == "episode" and row.item_id
+        ]
+        if not rows:
+            self.announcer.say("Do kolejki podcastów wybierz odcinek")
+            return
+        episode_ids = list(dict.fromkeys(row.item_id for row in rows))
+        self._podcast_queue_pending = True
+
+        def done(payload: dict) -> None:
+            self._podcast_queue_pending = False
+            payload = payload or {}
+            changed = int(payload.get("changed") or 0)
+            if changed <= 0:
+                self.announcer.say("Kolejka podcastów bez zmian")
+                return
+            added = bool(payload.get("added"))
+            label = rows[0].title if changed == 1 else format_item_count(changed)
+            if play_next:
+                message = (
+                    f"Ustawiono jako następne: {label}"
+                    if added else f"Usunięto z odtwarzania jako następne: {label}"
+                )
+            else:
+                message = (
+                    f"Dodano do kolejki podcastów: {label}"
+                    if added else f"Usunięto z kolejki podcastów: {label}"
+                )
+            state = self.navigator.sessions[SessionId.PODCASTS]
+            if (
+                self.navigator.active is SessionId.PODCASTS
+                and state.view is View.LIST
+                and state.library_view is LibraryView.PODCAST_QUEUE
+            ):
+                self._open_podcast_aggregate(
+                    OpenPodcastAggregateView(
+                        LibraryView.PODCAST_QUEUE,
+                        preferred_id=episode_ids[0] if added else None,
+                    ),
+                    completion_message=message,
+                )
+            else:
+                self.announcer.say(message)
+
+        def failed(error: Exception) -> None:
+            self._podcast_queue_pending = False
+            self.announcer.say(f"Nie udało się zmienić kolejki podcastów: {error}")
+
+        self.runner.submit(
+            "podcast-queue",
+            lambda: client.toggle_podcast_queue(
+                episode_ids,
+                play_next=play_next,
+            ),
+            done,
+            failed,
+        )
+
     def _show_podcast_playback_options(self) -> None:
         """Alt+Shift+Enter: opcje zaznaczonego podcastu albo odcinka."""
         if self.navigator.active is not SessionId.PODCASTS:
@@ -6515,6 +6672,13 @@ class LiteFrame(wx.Frame):
             row,
             session=self.navigator.active.value,
             view=self.navigator.view.value,
+            duration_ticks=row.duration_ticks if row is not None else 0,
+            podcast_media_length=(
+                row.podcast_media_length if row is not None else None
+            ),
+            podcast_media_type=(
+                row.podcast_media_type if row is not None else None
+            ),
             alive=self._window_alive,
         )
         if plan.message is not None:
@@ -7932,6 +8096,9 @@ class LiteFrame(wx.Frame):
         etapu portu. Nie składamy aktywnej kolejki ponownie, więc grający plik,
         pozycja, pauza i wyjście audio pozostają nietknięte.
         """
+        if self.navigator.active is SessionId.PODCASTS:
+            self._toggle_podcast_queue(play_next)
+            return
         if self.navigator.active is SessionId.TIDAL and not play_next:
             self._toggle_tidal_queue()
             return
@@ -9852,13 +10019,17 @@ class LiteFrame(wx.Frame):
 
         self.runner.submit("radio-recording-history", work, done, failed)
 
-    def _show_radio_schedules(self) -> None:
+    def _show_radio_schedules(self, *, create_for_selected: bool = False) -> None:
         """Ctrl+Shift+H: natywne zarzadzanie planami wykonywanymi przez host."""
         client = self.client
         if client is None:
             self.announcer.say("Silnik odtwarzania jest niedostępny")
             return
         previous = self._radio_snapshot
+        selected_station = self._selected_station() if create_for_selected else None
+        if create_for_selected and selected_station is None:
+            self.announcer.say("Zaznacz stację, dla której chcesz zaplanować nagranie")
+            return
 
         def work():
             snapshot = self.radio.load(previous=previous)
@@ -9944,6 +10115,9 @@ class LiteFrame(wx.Frame):
                 wake_scheduled_recordings=wake,
                 labels_payload=payload,
                 commit=commit,
+                initial_station_id=(
+                    selected_station.id if selected_station is not None else None
+                ),
             ) as dialog:
                 dialog.ShowModal()
             if self.navigator.view is View.LIST:

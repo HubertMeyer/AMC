@@ -203,6 +203,7 @@ class Action(Enum):
     RECORD_STOP_ALL = "radio.recording.stopAll"
     VIEW_ACTIVE_RECORDINGS = "radio.recording.activeView"
     VIEW_RECORDED_RADIO_FILES = "radio.recording.completedView"
+    ADD_RADIO_SCHEDULE = "radio.recording.schedule.add"
     MANAGE_RADIO_SCHEDULES = "radio.recording.schedules"
     VIEW_PODCAST_INBOX = "podcasts.inbox"
     VIEW_PODCAST_DOWNLOADS = "podcasts.downloads"
@@ -221,6 +222,7 @@ class Action(Enum):
     CURRENT_RADIO_BROADCAST_INFORMATION = "radio.currentBroadcastInformation"
     GO_TO_RELATED_PODCAST = "podcasts.goToRelated"
     TOGGLE_PODCAST_FAVORITE = "podcasts.favorite.toggle"
+    TOGGLE_PODCAST_LIBRARY = "podcasts.library.toggle"
     PODCAST_PLAYBACK_OPTIONS = "podcasts.playbackOptions"
     VIEW_ALL_FILES = "library.allFiles"
     VIEW_FAVORITES = "library.favorites"
@@ -592,6 +594,7 @@ RADIO_LIST_VIEW: dict[str, Action] = {
     # Ctrl+R dziala na liscie i w odtwarzaczu; Shift+Spacja steruje pauza.
     "Ctrl+R": Action.RECORD_TOGGLE,
     "Shift+Space": Action.RECORD_PAUSE,
+    "Shift+R": Action.ADD_RADIO_SCHEDULE,
     "Alt+D": Action.CURRENT_RADIO_BROADCAST_INFORMATION,
 }
 
@@ -602,6 +605,7 @@ RADIO_PLAYER_VIEW: dict[str, Action] = {
     "R": Action.RECORD_TOGGLE,
     "Ctrl+R": Action.RECORD_TOGGLE,
     "Shift+Space": Action.RECORD_PAUSE,
+    "Shift+R": Action.ADD_RADIO_SCHEDULE,
     "T": Action.RECORD_SPLIT,
     "Alt+D": Action.CURRENT_RADIO_BROADCAST_INFORMATION,
 }
@@ -744,6 +748,9 @@ PODCAST_SESSION_VIEW: dict[str, Action] = {
     # Pelny AMC zmienia wspolnie cale zaznaczenie: gdy wszystkie elementy sa
     # ulubione, usuwa stan; w przeciwnym razie dodaje go wszystkim.
     "Ctrl+Shift+U": Action.TOGGLE_PODCAST_FAVORITE,
+    # Odcinek nie ma osobnego członkostwa w Bibliotece: skrót zmienia jego
+    # podcast nadrzędny, zgodnie z pełnym AMC.
+    "Ctrl+Shift+L": Action.TOGGLE_PODCAST_LIBRARY,
 }
 
 
@@ -856,6 +863,9 @@ def describe() -> list[tuple[str, str]]:
         Action.TOGGLE_PODCAST_FAVORITE: (
             "Dodaj zaznaczone podcasty lub odcinki do ulubionych albo je usuń"
         ),
+        Action.TOGGLE_PODCAST_LIBRARY: (
+            "Dodaj lub usuń podcast nadrzędny z Biblioteki"
+        ),
         Action.PODCAST_PLAYBACK_OPTIONS: (
             "Opcje odtwarzania podcastu albo odcinka"
         ),
@@ -894,6 +904,7 @@ def describe() -> list[tuple[str, str]]:
         Action.RECORD_STOP_ALL: "Zatrzymaj wszystkie nagrania radia",
         Action.VIEW_ACTIVE_RECORDINGS: "Pokaz trwajace nagrania radia",
         Action.VIEW_RECORDED_RADIO_FILES: "Pokaz historie nagrywania radia",
+        Action.ADD_RADIO_SCHEDULE: "Zaplanuj nagranie wybranej stacji",
         Action.MANAGE_RADIO_SCHEDULES: "Pokaz harmonogram nagrywania radia",
         Action.VIEW_PODCAST_INBOX: "Nowe odcinki i materiały",
         Action.VIEW_PODCAST_DOWNLOADS: "Pobrane odcinki podcastów",

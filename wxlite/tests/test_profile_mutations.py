@@ -96,6 +96,7 @@ def _podcasts(path: Path) -> None:
                 id TEXT PRIMARY KEY, subscription_id TEXT,
                 is_in_queue INTEGER, is_play_next INTEGER,
                 payload_json TEXT);
+            CREATE TABLE metadata(key TEXT PRIMARY KEY, value TEXT NOT NULL);
             """
         )
         db.execute(
@@ -158,6 +159,21 @@ def test_profile_edits_go_through_the_real_host() -> None:
             assert Path(renamed["path"]).name == "nowy plik.mp3"
             assert Path(renamed["path"]).exists()
             client.rename_podcast_subscription("podcast-1", "Nowy podcast")
+            removed_library = client.toggle_podcast_library(["podcast-1"])
+            assert removed_library == {"added": False, "requested": 1, "changed": 1}
+            restored_library = client.toggle_podcast_library(["podcast-1"])
+            assert restored_library == {"added": True, "requested": 1, "changed": 1}
+            removed_queue = client.toggle_podcast_queue(["episode-queue"])
+            assert removed_queue["added"] is False
+            assert removed_queue["changed"] == 1
+            restored_queue = client.toggle_podcast_queue(["episode-queue"])
+            assert restored_queue["added"] is True
+            assert restored_queue["changed"] == 1
+            made_next = client.toggle_podcast_queue(
+                ["episode-queue"], play_next=True
+            )
+            assert made_next["added"] is True
+            assert made_next["changed"] == 1
             radio_edit = client.edit_radio_station(
                 "radio-1", "Nowe radio", "https://example.invalid/new"
             )

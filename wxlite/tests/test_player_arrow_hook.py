@@ -57,6 +57,18 @@ def test_f2_i_delete_listy_docieraja_do_amc_przed_natywna_kontrolka():
     for chord in ("F2", "Shift+F2", "Delete", "Shift+Delete"):
         assert _call(player=False, list_chord=chord) == ["key"]
 
+
+def test_modyfikowane_polecenia_listy_nie_gina_w_wyszukiwaniu_windows():
+    for chord in (
+        "Ctrl+Shift+U",
+        "Ctrl+Shift+L",
+        "Ctrl+Shift+Q",
+        "Ctrl+Shift+Return",
+        "Ctrl+Shift+H",
+        "Shift+R",
+    ):
+        assert _call(player=False, list_chord=chord) == ["key"]
+
 def test_strzalka_w_modalnym_dialogu_nie_steruje_odtwarzaczem():
     assert _call(foreign=True) == ["skip"]
 

@@ -26,6 +26,9 @@ if not defined RUNTIME (
 rem Kolejny bezpieczny slot wydania. Nie nadpisujemy plikow hosta uzywanych
 rem przez dzialajace okno; nowe uruchomienie wybiera najnowszy slot.
 if not defined AMC_LITE_HOST (
+  if exist "%HERE%host-next-3\amc_lite_host.exe" set "AMC_LITE_HOST=%HERE%host-next-3\amc_lite_host.exe"
+)
+if not defined AMC_LITE_HOST (
   if exist "%HERE%host-next-2\amc_lite_host.exe" set "AMC_LITE_HOST=%HERE%host-next-2\amc_lite_host.exe"
 )
 if not defined AMC_LITE_HOST (

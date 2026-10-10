@@ -629,6 +629,14 @@ def test_help_lists_every_new_transport_gesture() -> None:
         assert labels[chord].strip(), f"{chord} bez opisu"
 
 
+def test_shift_r_planuje_nagranie_w_radiu_z_listy_i_odtwarzacza() -> None:
+    chord = Chord("R", shift=True)
+    assert resolve(chord, player_view=False, radio_session=True) is Action.ADD_RADIO_SCHEDULE
+    assert resolve(chord, player_view=True, radio_session=True) is Action.ADD_RADIO_SCHEDULE
+    assert resolve(chord, player_view=False, radio_session=False) is None
+    assert dict(describe())["Shift+R"] == "Zaplanuj nagranie wybranej stacji"
+
+
 def test_menu_shortcut_labels_still_tell_the_truth() -> None:
     """Menu nie moze obiecywac starego ``Ctrl+E``, gdy dziala Ctrl+Shift+E.
 

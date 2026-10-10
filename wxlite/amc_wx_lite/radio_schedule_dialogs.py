@@ -76,6 +76,7 @@ class RadioScheduleEditorDialog(wx.Dialog):
         recording,
         global_wake: bool,
         existing: Mapping | None = None,
+        preferred_station_id: str | None = None,
     ) -> None:
         title = (
             "Edytuj plan nagrywania" if existing is not None else "Nowy plan nagrywania"
@@ -100,6 +101,7 @@ class RadioScheduleEditorDialog(wx.Dialog):
             )
         self._recording = recording
         self._global_wake = bool(global_wake)
+        self._preferred_station_id = preferred_station_id
         self.result_schedule: dict | None = None
         self._folder_values: list[str] = []
 
@@ -368,7 +370,7 @@ class RadioScheduleEditorDialog(wx.Dialog):
         return self._stations[index] if 0 <= index < len(self._stations) else None
 
     def _select_initial_station(self) -> None:
-        wanted = (self._existing or {}).get("stationId")
+        wanted = (self._existing or {}).get("stationId") or self._preferred_station_id
         index = next(
             (
                 index
@@ -599,6 +601,7 @@ class RadioSchedulesDialog(wx.Dialog):
         wake_scheduled_recordings: bool,
         labels_payload: object,
         commit: Callable[[list[dict], bool], object],
+        initial_station_id: str | None = None,
     ) -> None:
         super().__init__(
             parent,
@@ -681,6 +684,8 @@ class RadioSchedulesDialog(wx.Dialog):
         self.global_wake.Bind(wx.EVT_CHECKBOX, self._change_global_wake)
         self._refresh(labels_payload)
         self.schedule_list.SetFocus()
+        if initial_station_id:
+            wx.CallAfter(self._new_for_station, initial_station_id)
 
     def _announce(self, message: str) -> None:
         self.status.SetLabel(message)
@@ -772,11 +777,15 @@ class RadioSchedulesDialog(wx.Dialog):
         return True
 
     def _new(self, _event) -> None:
+        self._new_for_station(None)
+
+    def _new_for_station(self, station_id: str | None) -> None:
         with RadioScheduleEditorDialog(
             self,
             stations=self._stations,
             recording=self._recording,
             global_wake=self._wake,
+            preferred_station_id=station_id,
         ) as dialog:
             if dialog.ShowModal() != wx.ID_OK or dialog.result_schedule is None:
                 self.schedule_list.SetFocus()
