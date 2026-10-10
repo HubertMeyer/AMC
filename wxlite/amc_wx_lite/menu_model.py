@@ -295,7 +295,10 @@ def build_menus() -> tuple[Menu, ...]:
             SEPARATOR,
             MenuItem("&Nagrywaj albo zatrzymaj wybraną stację",
                      Action.RECORD_TOGGLE, shortcut="Ctrl+R",
-                     needs_radio_session=True),
+                     # Kontekstowy akcelerator wx potrafi pozostać wyłączony
+                     # po zmianie sesji i połknąć Ctrl+R przed hookiem okna.
+                     # Podpis zostaje w menu; polecenie obsługuje jawnie GUI.
+                     accelerator=False, needs_radio_session=True),
             # Shift+Spacja i gola litera T nie moga zostac akceleratorami
             # okna: w polu filtra sa zwyklymi klawiszami edycji. Obsluguje je
             # resolver tylko wtedy, gdy fokus nie jest w polu tekstowym.

@@ -65,6 +65,7 @@ def test_modyfikowane_polecenia_listy_nie_gina_w_wyszukiwaniu_windows():
         "Ctrl+Shift+Q",
         "Ctrl+Shift+Return",
         "Ctrl+Shift+H",
+        "Ctrl+R",
         "Shift+R",
     ):
         assert _call(player=False, list_chord=chord) == ["key"]

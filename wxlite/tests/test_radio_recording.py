@@ -175,6 +175,21 @@ def test_recording_shortcuts_have_the_scope_of_full_amc() -> None:
     assert resolve(Chord("T"), player_view=True, radio_session=False) is None
 
 
+def test_ctrl_r_nie_jest_polykany_przez_kontekstowy_akcelerator_menu() -> None:
+    """Ctrl+R obsługuje hook okna, nie stan pozycji menu wxWidgets."""
+    from amc_wx_lite import menu_model
+
+    item = next(
+        entry
+        for menu in menu_model.build_menus()
+        for entry in menu.items
+        if entry.action is Action.RECORD_TOGGLE
+    )
+    assert item.shortcut == "Ctrl+R"
+    assert item.needs_radio_session
+    assert item.accelerator is False
+
+
 def test_host_client_methods_send_only_documented_recording_operations() -> None:
     client = LiteHostClient("unused")
     calls: list[tuple[str, dict | None, float]] = []

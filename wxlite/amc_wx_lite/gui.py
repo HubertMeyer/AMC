@@ -3911,6 +3911,7 @@ class LiteFrame(wx.Frame):
                 "Ctrl+Shift+Q",
                 "Ctrl+Shift+Return",
                 "Ctrl+Shift+H",
+                "Ctrl+R",
                 "Shift+R",
             }:
                 self._on_key(event)
