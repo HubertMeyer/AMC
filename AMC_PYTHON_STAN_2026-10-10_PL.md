@@ -84,6 +84,22 @@ Kolejka TIDAL jest na tym etapie prywatna dla interfejsu wxPython i nie jest
 współdzielona z kolejką głównego AMC ani oficjalnej aplikacji TIDAL. Tokeny i
 prywatne uchwyty odtwarzania nie przechodzą do Pythona ani do tekstu list.
 
+### Wyszukiwanie
+
+`Ctrl+F` (wyszukiwanie w bieżącej sesji/usłudze) i `Ctrl+Shift+F`
+(wyszukiwanie globalne) obecnie nie działają. Sprawdzenie kodu potwierdziło,
+że nie jest to tylko brak wpisu w tablicy skrótów: pełna wyszukiwarka oraz
+osobny widok wyników z głównego AMC nie zostały jeszcze przeniesione. Obecne
+`Ctrl+K` jedynie filtruje elementy już widoczne na bieżącej liście i nie może
+zastępować żadnego z tych poleceń.
+
+Port musi zachować dwa zakresy wyszukiwania, osobną dostępną listę wyników,
+powrót do poprzedniego widoku i komplet działań na wyniku zgodny z głównym
+AMC: otwieranie i odtwarzanie, szybkie informacje, kopiowanie, zaznaczenie
+wielokrotne oraz właściwe dla sesji operacje Biblioteki, Ulubionych, Kolejki,
+playlist i pobierania. Przed kodowaniem należy odczytać z głównego AMC pełny
+kontrakt wyników i skrótów, zamiast odtwarzać go z pamięci.
+
 ### WiiM
 
 Sesja WiiM jest podłączona do istniejących usług AMC. Odbiór 10 października
@@ -142,6 +158,12 @@ nie mogą być czytane przez NVDA. Po zmianie listy należy sprawdzić pierwszy
 element, ruch strzałkami, zaznaczenia Shift i Ctrl+Spacja, powrót fokusu,
 ponowne otwarcie widoku oraz mowę po Escape.
 
+W widoku nagranych plików `Alt+Shift+R` każdy ukończony wpis ma obecnie
+wbudowany prefiks „Nagrane”, mimo że sama lista już nazywa się „Nagrane”.
+NVDA powtarza więc to słowo przy każdym pliku. Przy poprawce zwykły ukończony
+wiersz ma zaczynać się od nazwy stacji lub pliku; znaczące stany wyjątkowe,
+takie jak „Przerwane”, „Nieudane” albo brak pliku, muszą pozostać czytelne.
+
 Do domknięcia pozostaje połączenie AMC Python z gotowym dodatkiem AMC do NVDA.
 Docelowo LiteHost ma wystawiać ten sam bezpieczny, lokalny protokół
 `AMC.NVDA.v1`, z którego korzysta główne AMC. Dzięki temu pozostają jedna
@@ -182,18 +204,22 @@ lewą strzałką.
 
 ## Najbliższa kolejność prac
 
-1. Uzupełnienie WiiM i Sonos o pełną warstwę interfejsu z głównego AMC:
+1. Przeniesienie pełnego wyszukiwania z głównego AMC: `Ctrl+F` w bieżącej
+   sesji, `Ctrl+Shift+F` globalnie, dostępna lista wyników, wszystkie działania
+   na wynikach i prawidłowy powrót do wcześniejszego widoku. Przy tym usunąć
+   powtarzany prefiks „Nagrane” z ukończonych wierszy `Alt+Shift+R`.
+2. Uzupełnienie WiiM i Sonos o pełną warstwę interfejsu z głównego AMC:
    Bibliotekę, Ulubione, wybór materiałów, presety, wszystkie skróty oraz
    prawidłowe wykonanie transportu po zakończeniu odczytu stanu. Następnie
    ponowny odbiór na obudzonych urządzeniach.
-2. Podłączenie gotowego dodatku AMC do NVDA bezpośrednio do LiteHosta i
+3. Podłączenie gotowego dodatku AMC do NVDA bezpośrednio do LiteHosta i
    wxPython, bez uruchamiania starego AMC, oraz żywy odbiór mowy i brajla.
-3. Sprawdzenie zaniku wybranego urządzenia audio: automatyczny powrót na
+4. Sprawdzenie zaniku wybranego urządzenia audio: automatyczny powrót na
    urządzenie domyślne i dalsze odtwarzanie tej samej stacji bez przełączania.
-4. Uzupełnienie wykrytych braków w istniejących sesjach, bez regresji radia,
+5. Uzupełnienie wykrytych braków w istniejących sesjach, bez regresji radia,
    nagrywania, harmonogramów i timeshiftu.
-5. Odzyskanie źródła lub ticketu „Sygnalisty”, analiza i wdrożenie aktualizacji.
-6. Dopiero później decyzja o Spotify.
+6. Odzyskanie źródła lub ticketu „Sygnalisty”, analiza i wdrożenie aktualizacji.
+7. Dopiero później decyzja o Spotify.
 
 Publikacja AMC Python na GitHubie jest końcowym krokiem, nie częścią bieżącego
 zapisu planu. Przed nią trzeba odebrać działanie samodzielnego pakietu, radia,

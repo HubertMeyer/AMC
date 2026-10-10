@@ -100,6 +100,21 @@ Zapisz wtedy wynik jako „nieprzetestowane na żywo”. Spotify nie należy do 
 etapu. Moduł aktualizacji będzie sprawdzany osobno po weryfikacji „Sygnalisty”:
 `https://github.com/michaldziwisz/sygnalista`.
 
+## Wyszukiwanie i odczyt nagranych plików — kolejny etap
+
+Przed kolejnym wydaniem trzeba przenieść wyszukiwanie z głównego AMC. To nie
+jest obecny filtr `Ctrl+K`: `Ctrl+F` pyta bieżącą sesję lub usługę, a
+`Ctrl+Shift+F` przeszukuje wszystkie obsługiwane zakresy. Oba polecenia mają
+otwierać osobną, natywną listę wyników. Sprawdź na niej strzałki, Enter, lewą
+strzałkę, kopiowanie, Shift i `Ctrl+Spacja`, właściwe operacje kolekcji dla
+każdej sesji, Escape/Backspace oraz powrót fokusu i zaznaczenia. Brak wyniku
+ma dawać celowy komunikat, bez „nieznane” i bez technicznych identyfikatorów.
+
+W `Alt+Shift+R` zwykły ukończony plik nie powinien zaczynać się od słowa
+„Nagrane”, ponieważ taki jest już kontekst listy. Odczyt ma zaczynać się od
+nazwy stacji lub pliku. Osobno sprawdź wpisy przerwane, nieudane, zatrzymane i
+z brakującym plikiem — ich istotny stan nie może zniknąć.
+
 ## Nagrywanie radia — potwierdzenie po Ctrl+R
 
 `Ctrl+R` na stacji od razu mówi jedno krótkie zdanie:
