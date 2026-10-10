@@ -555,6 +555,10 @@ LIST_VIEW: dict[str, Action] = {
     # Opcje sesji: TEN SAM gest co w odtwarzaczu, bo zakres (sesja) jest ten
     # sam niezaleznie od widoku.
     "Ctrl+Alt+Return": Action.SESSION_OPTIONS,
+    # Ustawienia ogolne: gest z pelnego AMC (MainWindow.xaml:162 oraz
+    # MainWindow.xaml.cs:21126). Przecinek jest zwyklym kodem ASCII, wiec
+    # ``chord_from_event`` sklada z niego dokladnie "Ctrl+,".
+    "Ctrl+,": Action.GENERAL_SETTINGS,
     # Pelne AMC: Shift+A wybiera wyjscie audio osobno dla biezacej sesji.
     "Shift+A": Action.SELECT_AUDIO_OUTPUT,
     # Zarzadzanie presetami z pelnego AMC (MainWindow.xaml:428-435).
@@ -693,6 +697,7 @@ PLAYER_VIEW: dict[str, Action] = {
     "End": Action.TRACK_END,
     # Opcje sesji dzialaja takze z odtwarzacza: zakres to SESJA, nie widok.
     "Ctrl+Alt+Return": Action.SESSION_OPTIONS,
+    "Ctrl+,": Action.GENERAL_SETTINGS,
     "Shift+A": Action.SELECT_AUDIO_OUTPUT,
     "Ctrl+Alt+P": Action.VIEW_PRESETS,
     "Ctrl+Alt+Shift+P": Action.ASSIGN_PRESET,
@@ -952,6 +957,7 @@ def describe() -> list[tuple[str, str]]:
         Action.SELECT_AUDIO_OUTPUT: (
             "Wybierz urządzenie audio dla bieżącej sesji"
         ),
+        Action.GENERAL_SETTINGS: "Ustawienia interfejsu i odtwarzania",
     }
     labels.update({
         action: f"Uruchom preset {slot} bieżącej sesji"

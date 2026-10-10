@@ -161,7 +161,7 @@ from .transport_parity import (
 )
 from . import session_options
 from .radio_source import RadioSource
-from .radio_schedule_dialogs import RadioSchedulesDialog
+from .radio_schedule_dialogs import RadioScheduleEditorDialog, RadioSchedulesDialog
 from . import radio_schedule_settings
 from .radio_recording import (
     active_recording_rows,
@@ -2894,6 +2894,11 @@ class LiteFrame(wx.Frame):
                 )
     def _bind_list(self, control: MediaListCtrl) -> None:
         """Wspolne powiazania klawiatury i wyboru dla list plikow i radia."""
+        # Druga, bezposrednia bramka na samej kontrolce. SysListView32 potrafi
+        # przejac drukowalny Shift+R jako wyszukiwanie po literze, zanim
+        # zdarzenie dotrze do EVT_KEY_DOWN. Ctrl+, ma te sama pewna droge do
+        # ustawien. Pozostale znaki nadal oddajemy natywnej liscie.
+        control.Bind(wx.EVT_CHAR_HOOK, self._on_list_shortcut_hook)
         control.Bind(wx.EVT_KEY_DOWN, self._on_key)
         control.Bind(wx.EVT_LIST_ITEM_ACTIVATED, lambda _e: self._activate())
         control.Bind(wx.EVT_LIST_ITEM_FOCUSED, self._on_item_focused)
@@ -2923,6 +2928,13 @@ class LiteFrame(wx.Frame):
         self.play_button.Bind(wx.EVT_BUTTON, lambda _e: self._play_pause())
         self.volume_slider.Bind(wx.EVT_SLIDER, self._on_volume_slider)
         self.rate_slider.Bind(wx.EVT_SLIDER, self._on_rate_slider)
+
+    def _on_list_shortcut_hook(self, event: wx.KeyEvent) -> None:
+        """Polecenia, ktorych natywna lista nie moze zabrac jako liter."""
+        if chord_from_event(event).canonical in {"Shift+R", "Ctrl+,"}:
+            self._on_key(event)
+            return
+        event.Skip()
 
     # -------------------------------------------------------------- filtr
 
@@ -3973,6 +3985,7 @@ class LiteFrame(wx.Frame):
                 "Ctrl+Shift+H",
                 "Ctrl+R",
                 "Shift+R",
+                "Ctrl+,",
             }:
                 self._on_key(event)
                 return
@@ -10168,6 +10181,16 @@ class LiteFrame(wx.Frame):
                         pass
                     raise
 
+            if create_for_selected and selected_station is not None:
+                self._open_new_radio_schedule(
+                    snapshot=snapshot,
+                    schedules=schedules,
+                    wake=wake,
+                    selected_station=selected_station,
+                    commit=commit,
+                )
+                return
+
             with RadioSchedulesDialog(
                 self,
                 stations=snapshot.stations,
@@ -10192,6 +10215,48 @@ class LiteFrame(wx.Frame):
             self.announcer.say(f"Nie można wczytać harmonogramu nagrywania: {error}")
 
         self.runner.submit("radio-schedules", work, done, failed)
+
+    def _open_new_radio_schedule(
+        self,
+        *,
+        snapshot,
+        schedules: list[dict],
+        wake: bool,
+        selected_station: Station,
+        commit,
+    ) -> None:
+        """Shift+R: od razu formularz nowego planu dla wskazanej stacji.
+
+        Wczesniejsza droga najpierw otwierala okno zarzadzania, a dopiero z
+        ``wx.CallAfter`` probowala nalozyc na nie drugi modalny dialog. Na
+        zywym Windows ten posredni krok potrafil nie pokazac formularza.
+        """
+        stations = list(snapshot.stations)
+        if all(station.id != selected_station.id for station in stations):
+            stations.append(selected_station)
+        schedule = None
+        with RadioScheduleEditorDialog(
+            self,
+            stations=stations,
+            recording=snapshot.recording,
+            global_wake=wake,
+            preferred_station_id=selected_station.id,
+        ) as dialog:
+            if dialog.ShowModal() == wx.ID_OK:
+                schedule = dialog.result_schedule
+        if schedule is None:
+            self._restore_focus_after_dialog()
+            return
+        try:
+            commit([*schedules, schedule], wake)
+        except Exception:
+            self.announcer.say(
+                "Nie udało się zapisać harmonogramu. Niczego nie zmieniono"
+            )
+        else:
+            name = str(schedule.get("name") or schedule.get("stationName") or "plan")
+            self.announcer.say(f"Dodano plan {name}")
+        self._restore_focus_after_dialog()
 
     @staticmethod
     def _radio_schedule_sync_payload(snapshot, state: LiteState | None = None) -> dict:

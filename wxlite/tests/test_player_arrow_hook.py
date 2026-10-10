@@ -67,8 +67,25 @@ def test_modyfikowane_polecenia_listy_nie_gina_w_wyszukiwaniu_windows():
         "Ctrl+Shift+H",
         "Ctrl+R",
         "Shift+R",
+        "Ctrl+,",
     ):
         assert _call(player=False, list_chord=chord) == ["key"]
+
+
+def test_lista_ma_wlasny_wczesny_hook_dla_shift_r_i_ustawien():
+    tree = ast.parse(SOURCE.read_text(encoding="utf-8"))
+    bind = next(
+        node for node in ast.walk(tree)
+        if isinstance(node, ast.FunctionDef) and node.name == "_bind_list"
+    )
+    calls = [
+        node for node in ast.walk(bind)
+        if isinstance(node, ast.Call)
+        and ast.unparse(node.func) == "control.Bind"
+        and [ast.unparse(arg) for arg in node.args]
+        == ["wx.EVT_CHAR_HOOK", "self._on_list_shortcut_hook"]
+    ]
+    assert len(calls) == 1
 
 def test_strzalka_w_modalnym_dialogu_nie_steruje_odtwarzaczem():
     assert _call(foreign=True) == ["skip"]

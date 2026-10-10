@@ -94,6 +94,65 @@ def test_menu_help_and_keyboard_share_radio_actions():
         assert requests[0].view is view
 
 
+def test_shift_r_dispatches_direct_new_schedule_request():
+    from amc_wx_lite.shortcuts import Action
+
+    frame, _, _ = radio_shell()
+    calls = []
+    frame._show_radio_schedules = lambda **kwargs: calls.append(kwargs)
+    LiteFrame._dispatch(frame, Action.ADD_RADIO_SCHEDULE)
+    assert calls == [{"create_for_selected": True}]
+
+
+def test_direct_new_schedule_editor_uses_selected_station_and_commits():
+    import amc_wx_lite.gui as gui
+    from amc_wx_lite.state_store import Station
+
+    selected = Station(id="radio-1", name="Radio Test", url="https://example.invalid/")
+    snapshot = SimpleNamespace(stations=(selected,), recording=object())
+    schedule = {"id": "plan-1", "name": "Poranny plan", "stationId": selected.id}
+    received, committed, messages, focus = {}, [], [], []
+
+    class FakeDialog:
+        result_schedule = schedule
+
+        def __init__(self, _parent, **kwargs):
+            received.update(kwargs)
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return False
+
+        def ShowModal(self):
+            return gui.wx.ID_OK
+
+    frame = SimpleNamespace(
+        announcer=SimpleNamespace(say=messages.append),
+        _restore_focus_after_dialog=lambda: focus.append(True),
+    )
+    original = gui.RadioScheduleEditorDialog
+    gui.RadioScheduleEditorDialog = FakeDialog
+    try:
+        LiteFrame._open_new_radio_schedule(
+            frame,
+            snapshot=snapshot,
+            schedules=[],
+            wake=False,
+            selected_station=selected,
+            commit=lambda schedules, wake: committed.append((schedules, wake)),
+        )
+    finally:
+        gui.RadioScheduleEditorDialog = original
+
+    assert received["preferred_station_id"] == selected.id
+    assert received["stations"] == [selected]
+    assert committed == [([schedule], False)]
+    assert messages == ["Dodano plan Poranny plan"]
+    assert focus == [True]
+
+
 def test_real_radio_data_flows_through_gui_dispatch_without_profile_writes():
     from test_radio_view_data import RadioViewDataBase
     from amc_wx_lite.list_model import rows_from_stations

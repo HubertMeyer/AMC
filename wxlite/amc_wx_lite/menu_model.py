@@ -567,6 +567,8 @@ def build_menus() -> tuple[Menu, ...]:
             MenuItem(
                 "&Interfejs i zachowanie odtwarzania…",
                 Action.GENERAL_SETTINGS,
+                shortcut="Ctrl+,",
+                accelerator=False,
             ),
         ),
     )

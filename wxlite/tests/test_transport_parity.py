@@ -637,6 +637,13 @@ def test_shift_r_planuje_nagranie_w_radiu_z_listy_i_odtwarzacza() -> None:
     assert dict(describe())["Shift+R"] == "Zaplanuj nagranie wybranej stacji"
 
 
+def test_ctrl_comma_otwiera_ustawienia_z_listy_i_odtwarzacza() -> None:
+    chord = Chord(",", ctrl=True)
+    assert resolve(chord, player_view=False, radio_session=False) is Action.GENERAL_SETTINGS
+    assert resolve(chord, player_view=True, radio_session=False) is Action.GENERAL_SETTINGS
+    assert dict(describe())["Ctrl+,"] == "Ustawienia interfejsu i odtwarzania"
+
+
 def test_shift_r_nie_jest_polykany_przez_wylaczony_akcelerator_menu() -> None:
     """Kontekstowy Shift+R ma trafić do hooka także po zmianie zaznaczenia."""
     from amc_wx_lite import menu_model
