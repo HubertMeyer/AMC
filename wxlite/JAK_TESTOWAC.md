@@ -76,6 +76,13 @@ Sonos:
 4. Nazwy klas, identyfikatory i dane uwierzytelniające nie mogą pojawić się w
    mowie NVDA, schowku ani komunikatach.
 
+Wynik odbioru 10 października: wykrywanie grupy i odczyt stanu działają, ale
+sterowanie jest zablokowane komunikatem „Trwa odczyt informacji. Powtórz skrót
+za chwilę”. Ponowienie po chwili również nie wykonuje polecenia. Po poprawce
+trzeba sprawdzić co najmniej Enter lub przycisk działania, Spację,
+następny/poprzedni, zmianę głośności i wyciszenie oraz upewnić się, że odczyt
+stanu kończy się i zwalnia blokadę poleceń.
+
 Brak urządzeń lub uśpione urządzenia nie jest zaliczeniem ani błędem kodu.
 Zapisz wtedy wynik jako „nieprzetestowane na żywo”. Spotify nie należy do tego
 etapu. Moduł aktualizacji będzie sprawdzany osobno po weryfikacji „Sygnalisty”:

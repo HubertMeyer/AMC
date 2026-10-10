@@ -101,6 +101,16 @@ Urządzenia były uśpione, dlatego nie ma jeszcze podstaw do stwierdzenia, że
 sterowanie zostało odebrane na żywym systemie. Taki odbiór jest następnym
 krokiem, a nie częścią obecnego dowodu automatycznego.
 
+Odbiór użytkownika 10 października ujawnił błąd wymagający poprawy: AMC widzi
+grupę Sonos i odczytuje jej stan (np. „Radio Opole, myTuner Radio, Zatrzymane,
+5 procent, bez wyciszenia”), ale polecenia sterowania nie są wykonywane.
+Program najpierw mówi: „Nie udało się sterować grupą Sonos: Trwa odczyt
+informacji. Powtórz skrót za chwilę”, a ponowienie po chwili nie odblokowuje
+sterowania. Do sprawdzenia jest zatrzymany lub stale ponawiany odczyt stanu,
+brak zwolnienia blokady po odświeżeniu oraz wykonywanie kliknięć i skrótów po
+ukończeniu odczytu. Poprawkę i test na żywej grupie odłożono orientacyjnie na
+piątek; nie jest to automatycznie zaplanowane zadanie.
+
 ### Spotify
 
 Nowa sesja Spotify jest świadomie odłożona. Nie należy jej wdrażać w obecnym
