@@ -1,5 +1,6 @@
 using System.Text;
 using AccessibleMediaController.LiteHost.Protocol;
+using AccessibleMediaController.Windows.Services;
 
 namespace AccessibleMediaController.LiteHost;
 
@@ -40,6 +41,21 @@ internal static class Program
         };
         Console.SetError(diagnosticOutput);
         Console.SetOut(diagnosticOutput);
+
+        // LiteHost jest silnikiem tej samej aplikacji, ale nie uruchamia WPF,
+        // wiec App.xaml.cs nie inicjalizuje dla niego dziennika. Bez tego
+        // stderr znikal po zakonczeniu procesu i pojedynczej awarii nagrania
+        // nie dalo sie rzetelnie odtworzyc. Osobny katalog nie miesza logow
+        // AMC Python z logiem starego interfejsu.
+        var localDataDirectory =
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        if (string.IsNullOrWhiteSpace(localDataDirectory))
+            localDataDirectory = Environment.GetEnvironmentVariable("LOCALAPPDATA")
+                ?? AppContext.BaseDirectory;
+        var logDirectory = Path.Combine(localDataDirectory, "AMC-wx-Lite", "logs");
+        DiagnosticLog.Initialize(logDirectory);
+        Console.Error.WriteLine("[amc-lite-host] dziennik: " + DiagnosticLog.CurrentLogPath);
+        AppDomain.CurrentDomain.ProcessExit += (_, _) => DiagnosticLog.Shutdown();
         var protocolInput = new StreamReader(
             Console.OpenStandardInput(), utf8, detectEncodingFromByteOrderMarks: false);
         var protocolOutput = new StreamWriter(Console.OpenStandardOutput(), utf8)
@@ -162,6 +178,7 @@ internal static class Program
         }
         catch (Exception exception)
         {
+            DiagnosticLog.Error("lite-host", "Awaria petli polecen.", exception);
             Console.Error.WriteLine("[amc-lite-host] awaria petli: " + exception);
             return 1;
         }
@@ -172,6 +189,8 @@ internal static class Program
         }
 
         Console.Error.WriteLine("[amc-lite-host] koniec wejscia, zamykam sie");
+        DiagnosticLog.Info("application", "Zamykanie silnika AMC Python.");
+        DiagnosticLog.Shutdown();
         return 0;
     }
 

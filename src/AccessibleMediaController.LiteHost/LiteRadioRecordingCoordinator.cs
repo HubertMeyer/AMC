@@ -66,6 +66,9 @@ internal sealed partial class LiteRadioRecordingCoordinator : IDisposable
             ThrowIfDisposed();
             _active.Add(id, recording);
         }
+        DiagnosticLog.Info(
+            "radio-recording",
+            $"Zlecono reczne nagrywanie stacji {request.StationName}; identyfikator {id}.");
 
         var station = new MediaItem
         {
@@ -247,6 +250,9 @@ internal sealed partial class LiteRadioRecordingCoordinator : IDisposable
             active.StartedUtc = DateTime.UtcNow;
             active.StartAnnounced = true;
         }
+        DiagnosticLog.Info(
+            "radio-recording",
+            $"Rozpoczeto zapis stacji {active.StationName}; plik {Path.GetFileName(path)}.");
         events.Publish("radio.recordingStarted", Payload(active));
     }
 
@@ -297,6 +303,20 @@ internal sealed partial class LiteRadioRecordingCoordinator : IDisposable
                 _history.RemoveRange(1_000, _history.Count - 1_000);
         }
         active.Cancellation.Dispose();
+        var duration = TimeSpan.FromTicks(Math.Max(
+            0,
+            completed.FinishedUtcTicks - completed.StartedUtcTicks));
+        var summary =
+            $"Zakonczono nagrywanie stacji {active.StationName}; wynik {outcome}; " +
+            $"czas {duration.TotalSeconds:F1} s; zapisane pliki {paths.Count}.";
+        if (outcome is "Completed" or "Stopped")
+            DiagnosticLog.Info("radio-recording", summary);
+        else
+            DiagnosticLog.Warning(
+                "radio-recording",
+                string.IsNullOrWhiteSpace(result.Error)
+                    ? summary
+                    : summary + " Powod: " + result.Error.Trim());
         var payload = new
         {
             recordingId = active.Id,

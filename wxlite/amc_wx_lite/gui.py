@@ -2931,7 +2931,13 @@ class LiteFrame(wx.Frame):
 
     def _on_list_shortcut_hook(self, event: wx.KeyEvent) -> None:
         """Polecenia, ktorych natywna lista nie moze zabrac jako liter."""
-        if chord_from_event(event).canonical in {"Shift+R", "Ctrl+,"}:
+        if chord_from_event(event).canonical in {"Ctrl+C", "Shift+R", "Ctrl+,"}:
+            # Ctrl+C musi zostac zatrzymane PRZED natywnym SysListView32.
+            # Samo usuniecie akceleratora menu nie wystarcza: w szczegolnosci
+            # na liscie Podcastow NVDA oglaszal jeszcze systemowe angielskie
+            # "copy", a dopiero potem nasze "Skopiowano nazwe". Obsluga na
+            # CHAR_HOOK nie oddaje gestu kontrolce, wiec pozostaje dokladnie
+            # jeden celowy komunikat aplikacji.
             self._on_key(event)
             return
         event.Skip()

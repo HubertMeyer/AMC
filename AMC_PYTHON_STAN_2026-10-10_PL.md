@@ -15,6 +15,34 @@ Takie rozdzielenie zachowuje sprawdzony tor multimediów i zmienia przede
 wszystkim interfejs. Python nie uruchamia drugiego harmonogramu ani drugiego
 silnika nagrywania.
 
+Proces `amc_lite_host.exe` jest wewnętrznym modułem tego samego programu, a
+nie osobnym starym AMC wymaganym od użytkownika. Granica procesu jest celowa:
+awaria lub wymiana interfejsu nie wymaga przepisywania sprawdzonego toru audio,
+a protokół może być później użyty także przez wiersz poleceń. Pakiet
+produkcyjny zawiera jedną kanoniczną kopię interfejsu i jedną kopię silnika w
+folderze `host`; historyczne sloty `host-next*` zostały usunięte, ponieważ
+utrudniały jednoznaczne ustalenie wersji uruchomionej po restarcie.
+
+Nie należy osadzać Pythona z powrotem w starym oknie WPF. Zwiększyłoby to
+sprzężenie i pozostawiło dwa interfejsy, nie rozwiązując problemów cyklu życia
+procesów. Docelowo jeden uruchamiacz EXE ma nadzorować start, jedną instancję,
+zgodność wersji i bezpieczne zamknięcie całego pakietu.
+
+### Wiersz poleceń, agenci AI i wiele systemów
+
+Obecny protokół JSON-lines jest dobrym punktem wyjścia dla przyszłego AMC CLI
+i sterowania przez agentów AI. CLI oraz agent powinny wywoływać tę samą,
+ograniczoną listę poleceń silnika co interfejs, a nie automatyzować klawisze i
+okna. Operacje usuwające, zapisujące lub rozpoczynające nagranie muszą mieć
+jawne granice i potwierdzenia.
+
+Wieloplatformowość wymaga dalszego podziału: modele, kolejki i reguły mogą
+pozostać we wspólnym rdzeniu .NET, natomiast Media Foundation, urządzenia
+Windows i część toru audio potrzebują adapterów dla Linuxa i macOS. Sam
+wxPython ułatwia przeniesienie widoku, ale nie gwarantuje identycznej
+dostępności; osobno trzeba testować NVDA, VoiceOver i Orcę. CLI bez interfejsu
+graficznego może stać się wieloplatformowe wcześniej niż pełny odtwarzacz.
+
 ## Stan funkcjonalny
 
 ### Radio i multimedia
@@ -87,15 +115,19 @@ nie mogą być czytane przez NVDA. Po zmianie listy należy sprawdzić pierwszy
 element, ruch strzałkami, zaznaczenia Shift i Ctrl+Spacja, powrót fokusu,
 ponowne otwarcie widoku oraz mowę po Escape.
 
-## Aktualizacje programu
+## Aktualizacje i zgłaszanie błędów
 
-Moduł aktualizacji pozostaje do wdrożenia na końcu obecnego etapu. Ma działać
-na wzór rozwiązania „Sygnalista” używanego w programach Michała Dziwisza,
-jednak przed implementacją trzeba odzyskać właściwe repozytorium lub ticket z
-Hermesa i sprawdzić licencję oraz rzeczywisty kontrakt biblioteki. Nie wolno
-zgadywać nazwy pakietu ani kopiować niesprawdzonego kodu. EdSharp NG może być
-punktem odniesienia dla zachowania aktualizacji, ale nie został jeszcze
-pobrany do tego repozytorium.
+Pakiet zawiera już wykonywalny `AMC-Python-Updater.exe`. Aktualizator sprawdza
+kompletny manifest i sumy SHA-256, przygotowuje kopię zapasową oraz potrafi
+wycofać nieudaną podmianę. Nie ma jeszcze opublikowanego kanału wydań AMC
+Python ani automatycznego pobierania paczki, więc nie należy przedstawiać go
+jako ukończonej aktualizacji internetowej. EdSharp NG pozostaje punktem
+odniesienia dla zachowania pełnego mechanizmu aktualizacji.
+
+„Sygnalista” (`michaldziwisz/sygnalista`) jest osobnym modułem zgłaszania
+błędów, a nie nazwą aktualizatora. Przed jego integracją trzeba sprawdzić
+licencję i rzeczywisty kontrakt biblioteki; nie wolno kopiować niesprawdzonego
+kodu ani wysyłać logów bez wiedzy użytkownika.
 
 ## Dowody automatyczne tego przyrostu
 

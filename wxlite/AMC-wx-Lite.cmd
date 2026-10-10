@@ -23,17 +23,10 @@ if not defined RUNTIME (
   exit /b 2
 )
 
-rem Kolejny bezpieczny slot wydania. Nie nadpisujemy plikow hosta uzywanych
-rem przez dzialajace okno; nowe uruchomienie wybiera najnowszy slot.
-if not defined AMC_LITE_HOST (
-  if exist "%HERE%host-next-3\amc_lite_host.exe" set "AMC_LITE_HOST=%HERE%host-next-3\amc_lite_host.exe"
-)
-if not defined AMC_LITE_HOST (
-  if exist "%HERE%host-next-2\amc_lite_host.exe" set "AMC_LITE_HOST=%HERE%host-next-2\amc_lite_host.exe"
-)
-if not defined AMC_LITE_HOST (
-  if exist "%HERE%host-next\amc_lite_host.exe" set "AMC_LITE_HOST=%HERE%host-next\amc_lite_host.exe"
-)
+rem Jedna kanoniczna kopia silnika. Historyczne sloty host-next prowadzily do
+rem niejednoznacznych restartow: po aktualizacji mozna bylo uruchomic inny zestaw
+rem plikow niz ten, ktory byl wlasnie testowany. Aktualizator podmienia host
+rem dopiero po bezpiecznym zamknieciu aplikacji.
 if not defined AMC_LITE_HOST (
   if exist "%HERE%host\amc_lite_host.exe" set "AMC_LITE_HOST=%HERE%host\amc_lite_host.exe"
 )

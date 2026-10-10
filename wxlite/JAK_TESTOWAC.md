@@ -26,7 +26,10 @@ Uruchamiaj dokładnie:
 
 `D:\Projekty Codex\AMC Python - test opcje podcastow 2026-10-09\AMC-wx-Lite.cmd`
 
-Po ponownym uruchomieniu skrypt wybiera `host-next-3`. Sprawdź kolejno:
+Po ponownym uruchomieniu skrypt wybiera jedyną kanoniczną kopię silnika z
+folderu `host`. Foldery `host-next*` nie są częścią bieżącego pakietu, żeby
+restart nie mógł przypadkowo połączyć nowego interfejsu ze starym silnikiem.
+Sprawdź kolejno:
 
 1. W Podcastach lewa strzałka czyta krótką informację o zaznaczonym źródle
    albo odcinku; nie może czytać nazwy klasy, rekordu ani identyfikatora.

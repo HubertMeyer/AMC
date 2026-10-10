@@ -247,6 +247,13 @@ internal sealed class RadioMp3Recorder : IRadioRecorder
             or System.Runtime.InteropServices.COMException
             or AggregateException)
         {
+            // Zachowaj przyczyne techniczna w lokalnym logu. Komunikat dla
+            // uzytkownika pozostaje krotki i bezpieczny, ale kolejna rzadka
+            // awaria finalizacji nie bedzie juz niewytlumaczalna po fakcie.
+            DiagnosticLog.Error(
+                "radio-recording",
+                $"Nie zakonczono pliku {Path.GetFileName(_finalPath)}.",
+                exception);
             // Preserve a successfully encoded local staging file when only
             // publication to a cloud folder failed.  Its path is included in
             // the inner exception and can be recovered without re-recording.
