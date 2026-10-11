@@ -208,6 +208,17 @@ poświadczeń. Użytkownik nie powinien być pozostawiany z niewyjaśnionymi
 kodami aplikacji ani technicznymi identyfikatorami; ten etap pozostaje na
 koniec, po ustabilizowaniu funkcji streamerów.
 
+Do przeglądu Sonosa i współpracy z NVDA dodano materiał z Hermesa:
+`D:\Projekty Codex\Hermes\AMC-Python-proba-list-20261005\SONOS-REDUX-2026-10-11-DLA-AMC.md`.
+Nie jest to gotowa implementacja Sonosa ani zgoda na kopiowanie kodu. Przy
+poprawkach trzeba porównać opisane tam wzorce: jedną bramkę skrótów zależną od
+kontekstu, przepuszczanie klawiszy kontrolek edycyjnych i dialogów, anulowanie
+spóźnionego powrotu fokusu po zmianie okna oraz ograniczanie tylko
+udowodnionych duplikatów komunikatów. Sonos Redux steruje aplikacją Sonos
+Desktop przez UI Automation i jest objęty GPL-2.0-only, dlatego AMC może
+niezależnie odtworzyć sam wzorzec i scenariusze testowe, ale nie kopiować
+implementacji. Szczegółowy wpis jest także w `PROJEKT_SONOS_PL.md`.
+
 ### Spotify
 
 Nowa sesja Spotify jest świadomie odłożona. Nie należy jej wdrażać w obecnym
@@ -304,7 +315,10 @@ lewą strzałką.
 5. Uzupełnienie WiiM i Sonos o pełną warstwę interfejsu z głównego AMC:
    Bibliotekę, Ulubione, wybór materiałów, presety, wszystkie skróty oraz
    prawidłowe wykonanie transportu po zakończeniu odczytu stanu. Następnie
-   ponowny odbiór na obudzonych urządzeniach.
+   ponowny odbiór na obudzonych urządzeniach. W tym etapie porównać też
+   materiał Sonos Redux z Hermesa pod kątem centralnej bramki skrótów,
+   anulowania spóźnionego powrotu fokusu i ostrożnego usuwania duplikatów
+   komunikatów, bez kopiowania kodu GPL.
 6. Przywrócenie w TIDAL sortowania albumów (alfabetycznego, własnego i według
    dodania z najnowszymi u góry) oraz kontekstowej prawej strzałki na albumach
    i wykonawcach, po porównaniu z głównym AMC.

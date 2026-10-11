@@ -200,6 +200,32 @@ sterowania rzeczywistym sprzętem. Ten etap jest już wydany w alfa414; pełną
 budowę, publikację oraz instalację potwierdzono osobno, zgodnie z opisem na
 początku dokumentu. Ulubione/presety Sonosa pozostają kolejnym przyrostem.
 
+## Materiał Sonos Redux do oceny przy AMC Python
+
+Do następnego przeglądu Sonosa i dodatku NVDA zapisano notatkę z Hermesa:
+`D:\Projekty Codex\Hermes\AMC-Python-proba-list-20261005\SONOS-REDUX-2026-10-11-DLA-AMC.md`.
+Jest to materiał porównawczy, nie gotowe rozwiązanie integracji Sonosa.
+
+Przy wdrażaniu pełnej warstwy Sonosa w wxPython należy niezależnie sprawdzić:
+
+- jedną centralną bramkę skrótów, która uwzględnia aktualny widok i kontrolkę;
+- pozostawianie natywnej obsługi klawiszy polom edycji, dialogom i menu;
+- przywracanie fokusu tylko wtedy, gdy użytkownik nadal pozostaje w tym samym
+  oknie i kontekście;
+- anulowanie zaplanowanego powrotu fokusu po przejściu do innego okna lub
+  miejsca;
+- ograniczanie wyłącznie udowodnionych powtórzeń komunikatów, bez wyciszania
+  całych klas informacji potrzebnych użytkownikowi NVDA.
+
+Sonos Redux steruje Sonos Desktop przez UI Automation; nie dostarcza API,
+Biblioteki, Ulubionych ani presetów dla AMC. Jego kod ma licencję
+GPL-2.0-only. Można wykorzystać opis wzorca oraz przygotować własne scenariusze
+testowe, lecz nie kopiować implementacji do AMC. Notatka opiera się na analizie
+statycznej i nie potwierdza działania dodatku z żywym NVDA ani prawdziwym
+Sonosem. Wskazane w niej źródła obejmują wydanie Sonos Redux 2026.10.1 oraz
+raport monitoringu na Hermesie w
+`amc_pomoc/sonos-redux-research/MONITORING-2026-10-11.md`.
+
 ## Warunki przed publikacją kolejnego przyrostu
 
 - Zakończony odbiór klawiaturą i NVDA: pierwsze wczytanie, odświeżanie, wybór domu, Escape w czasie oczekiwania, powrót do okna konta i ponowne otwarcie.
