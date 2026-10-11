@@ -71,6 +71,13 @@ wartości domyślnych, zależności, walidacji i miejsc zapisu. `Ctrl+Tab` i
 fokusem i odczytem NVDA; Zapisz, Anuluj i ponowne otwarcie muszą zachowywać
 semantykę głównego AMC.
 
+Odbiór użytkownika 11 października ujawnił dodatkową niepewność: Enter w
+oknie Ustawień najprawdopodobniej zapisuje zmiany, ale program nie podaje
+potwierdzenia. Trzeba najpierw sprawdzić rzeczywisty zapis i ponowne wczytanie
+wartości. Po udanym zapisie NVDA powinno otrzymać jeden krótki komunikat
+„Zapisano ustawienia”; komunikatu nie wolno podawać przed potwierdzeniem zapisu
+ani dublować przez nazwę przycisku lub zmianę fokusu.
+
 Cały interfejs wymaga porównania z głównym AMC: wszystkie menu i skróty,
 organizacja Biblioteki, wejścia i powroty z podlist oraz właściwe warianty
 sortowania `Alt+cyfra` dla każdej sesji i każdego widoku. Częściowe działanie
@@ -117,6 +124,15 @@ AMC przekazuje utwór, album albo widoczną listę do oficjalnej aplikacji TIDAL
 Nie udajemy własnego pełnego odtwarzacza TIDAL ani możliwości, których nie daje
 obecna integracja. Pauza i wznowienie zależą od sterowania sesją systemową;
 następny i poprzedni utwór mogą zależeć od oficjalnej aplikacji.
+
+Odbiór użytkownika 11 października pozostawił odtwarzanie do weryfikacji.
+Oficjalna aplikacja TIDAL była uruchomiona i znajdowała się w pauzie. AMC
+przekazało utwór, a interfejs sprawiał wrażenie, że materiał jest odtwarzany,
+jednak nie było słyszalnego dźwięku. Nie należy uznawać tej drogi za odebraną
+wyłącznie na podstawie widocznego stanu. Trzeba sprawdzić rzeczywisty start w
+oficjalnym TIDAL, stan sesji systemowej, wyciszenie, głośność i wybrane
+urządzenie wyjściowe oraz potwierdzić słyszalny odsłuch. Przyczyna nie została
+jeszcze ustalona.
 
 Interfejs wxPython obsługuje teraz:
 
@@ -314,7 +330,8 @@ lewą strzałką.
    wyboru pauzy po utracie wyjścia, `Ctrl+[` do poprzedniego i `Ctrl+]` do
    następnego urządzenia bieżącej sesji. W tym samym etapie pełny audyt
    Biblioteki, menu, skrótów i sortowań `Alt+cyfra` względem głównego AMC oraz
-   naprawa przełączania harmonogramu Spacją w żywym oknie.
+   naprawa przełączania harmonogramu Spacją w żywym oknie. Potwierdzić zapis
+   Ustawień Enterem i po sukcesie podawać raz komunikat „Zapisano ustawienia”.
 5. Uzupełnienie WiiM i Sonos o pełną warstwę interfejsu z głównego AMC:
    Bibliotekę, Ulubione, wybór materiałów, presety, wszystkie skróty oraz
    prawidłowe wykonanie transportu po zakończeniu odczytu stanu. Następnie
@@ -322,7 +339,9 @@ lewą strzałką.
    traktować tylko jako krótką wskazówkę projektową, gdy analogiczny problem
    wystąpi w AMC; nie przeznaczać przebiegów na analizę, uruchamianie ani testy
    tego obcego dodatku NVDA i nie kopiować kodu GPL.
-6. Przywrócenie w TIDAL sortowania albumów (alfabetycznego, własnego i według
+6. Zweryfikowanie słyszalnego odtwarzania przekazanego utworu w oficjalnej
+   aplikacji TIDAL, łącznie z sesją systemową i urządzeniem wyjściowym; dopiero
+   potem przywrócenie sortowania albumów (alfabetycznego, własnego i według
    dodania z najnowszymi u góry) oraz kontekstowej prawej strzałki na albumach
    i wykonawcach, po porównaniu z głównym AMC.
 7. Podłączenie gotowego dodatku AMC do NVDA bezpośrednio do LiteHosta i
