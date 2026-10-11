@@ -208,16 +208,19 @@ poświadczeń. Użytkownik nie powinien być pozostawiany z niewyjaśnionymi
 kodami aplikacji ani technicznymi identyfikatorami; ten etap pozostaje na
 koniec, po ustabilizowaniu funkcji streamerów.
 
-Do przeglądu Sonosa i współpracy z NVDA dodano materiał z Hermesa:
+Do projektowania sesji Sonos w AMC dodano pomocniczy materiał z Hermesa:
 `D:\Projekty Codex\Hermes\AMC-Python-proba-list-20261005\SONOS-REDUX-2026-10-11-DLA-AMC.md`.
-Nie jest to gotowa implementacja Sonosa ani zgoda na kopiowanie kodu. Przy
-poprawkach trzeba porównać opisane tam wzorce: jedną bramkę skrótów zależną od
-kontekstu, przepuszczanie klawiszy kontrolek edycyjnych i dialogów, anulowanie
-spóźnionego powrotu fokusu po zmianie okna oraz ograniczanie tylko
-udowodnionych duplikatów komunikatów. Sonos Redux steruje aplikacją Sonos
-Desktop przez UI Automation i jest objęty GPL-2.0-only, dlatego AMC może
-niezależnie odtworzyć sam wzorzec i scenariusze testowe, ale nie kopiować
-implementacji. Szczegółowy wpis jest także w `PROJEKT_SONOS_PL.md`.
+Nie jest to gotowa implementacja Sonosa ani zadanie testowania dodatku Sonos
+Redux. Przy poprawkach AMC można wziąć pod uwagę wyłącznie ogólne wskazówki,
+jeżeli ten sam przypadek rzeczywiście występuje w naszym interfejsie: skróty
+zależne od kontekstu, nieprzejmowanie klawiszy własnych kontrolek oraz brak
+spóźnionego powrotu fokusu po opuszczeniu widoku. Nie należy analizować ani
+naprawiać zachowania fokusu w obcym dodatku, uruchamiać go z NVDA ani tworzyć
+dla niego osobnych testów. Funkcje Sonosa w AMC nadal przenosimy z głównego
+AMC i jego klienta C#, a nie z Sonos Redux. Sonos Redux steruje aplikacją
+Sonos Desktop przez UI Automation i jest objęty GPL-2.0-only, dlatego nie
+kopiujemy jego implementacji. Szczegółowy podział zakresu jest także w
+`PROJEKT_SONOS_PL.md`.
 
 ### Spotify
 
@@ -315,10 +318,10 @@ lewą strzałką.
 5. Uzupełnienie WiiM i Sonos o pełną warstwę interfejsu z głównego AMC:
    Bibliotekę, Ulubione, wybór materiałów, presety, wszystkie skróty oraz
    prawidłowe wykonanie transportu po zakończeniu odczytu stanu. Następnie
-   ponowny odbiór na obudzonych urządzeniach. W tym etapie porównać też
-   materiał Sonos Redux z Hermesa pod kątem centralnej bramki skrótów,
-   anulowania spóźnionego powrotu fokusu i ostrożnego usuwania duplikatów
-   komunikatów, bez kopiowania kodu GPL.
+   ponowny odbiór na obudzonych urządzeniach. Materiał Sonos Redux z Hermesa
+   traktować tylko jako krótką wskazówkę projektową, gdy analogiczny problem
+   wystąpi w AMC; nie przeznaczać przebiegów na analizę, uruchamianie ani testy
+   tego obcego dodatku NVDA i nie kopiować kodu GPL.
 6. Przywrócenie w TIDAL sortowania albumów (alfabetycznego, własnego i według
    dodania z najnowszymi u góry) oraz kontekstowej prawej strzałki na albumach
    i wykonawcach, po porównaniu z głównym AMC.

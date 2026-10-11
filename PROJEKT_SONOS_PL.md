@@ -200,13 +200,16 @@ sterowania rzeczywistym sprzętem. Ten etap jest już wydany w alfa414; pełną
 budowę, publikację oraz instalację potwierdzono osobno, zgodnie z opisem na
 początku dokumentu. Ulubione/presety Sonosa pozostają kolejnym przyrostem.
 
-## Materiał Sonos Redux do oceny przy AMC Python
+## Ograniczony materiał Sonos Redux do projektowania AMC Python
 
-Do następnego przeglądu Sonosa i dodatku NVDA zapisano notatkę z Hermesa:
+Do następnego przeglądu sesji Sonos w AMC zapisano notatkę z Hermesa:
 `D:\Projekty Codex\Hermes\AMC-Python-proba-list-20261005\SONOS-REDUX-2026-10-11-DLA-AMC.md`.
 Jest to materiał porównawczy, nie gotowe rozwiązanie integracji Sonosa.
 
-Przy wdrażaniu pełnej warstwy Sonosa w wxPython należy niezależnie sprawdzić:
+### Co można wykorzystać
+
+Przy wdrażaniu pełnej warstwy Sonosa w wxPython można uwzględnić wyłącznie
+ogólne zasady, jeśli analogiczny przypadek rzeczywiście występuje w AMC:
 
 - jedną centralną bramkę skrótów, która uwzględnia aktualny widok i kontrolkę;
 - pozostawianie natywnej obsługi klawiszy polom edycji, dialogom i menu;
@@ -217,11 +220,25 @@ Przy wdrażaniu pełnej warstwy Sonosa w wxPython należy niezależnie sprawdzi�
 - ograniczanie wyłącznie udowodnionych powtórzeń komunikatów, bez wyciszania
   całych klas informacji potrzebnych użytkownikowi NVDA.
 
+Nie są to osobne zadania do wykonania. Mają jedynie zapobiec powtórzeniu
+podobnego błędu podczas projektowania własnego interfejsu AMC.
+
+### Czego nie sprawdzamy
+
+- Nie analizujemy szczegółowo, nie uruchamiamy i nie testujemy dodatku Sonos
+  Redux z NVDA.
+- Nie odtwarzamy ani nie naprawiamy jego problemów z fokusem, skrótami lub UI
+  Automation.
+- Nie tworzymy testów zgodności AMC z tym dodatkiem i nie przeznaczamy na to
+  osobnych przebiegów modelu.
+- Nie traktujemy Sonos Redux jako źródła Biblioteki, Ulubionych, presetów ani
+  sterowania Sonosem w AMC. Te funkcje pochodzą z głównego AMC i klienta C#.
+
 Sonos Redux steruje Sonos Desktop przez UI Automation; nie dostarcza API,
 Biblioteki, Ulubionych ani presetów dla AMC. Jego kod ma licencję
-GPL-2.0-only. Można wykorzystać opis wzorca oraz przygotować własne scenariusze
-testowe, lecz nie kopiować implementacji do AMC. Notatka opiera się na analizie
-statycznej i nie potwierdza działania dodatku z żywym NVDA ani prawdziwym
+GPL-2.0-only. Można wykorzystać opis ogólnego wzorca, lecz nie kopiować
+implementacji do AMC. Notatka opiera się na analizie statycznej i nie stanowi
+powodu do wykonania dodatkowych prób dodatku z żywym NVDA ani prawdziwym
 Sonosem. Wskazane w niej źródła obejmują wydanie Sonos Redux 2026.10.1 oraz
 raport monitoringu na Hermesie w
 `amc_pomoc/sonos-redux-research/MONITORING-2026-10-11.md`.
