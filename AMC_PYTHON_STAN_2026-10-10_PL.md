@@ -133,6 +133,14 @@ jednego widoku nie jest dowodem kompletnego portu. Audyt ma zakończyć się
 jawną macierzą widok–skrót–działanie–powrót, bez technicznych identyfikatorów
 w etykietach dostępności.
 
+Ustalona reguła głównych widoków: Biblioteka, Ulubione, Playlisty i Kolejka
+są równorzędne. `Escape` ani `Backspace` nie przełącza między nimi i na ich
+najwyższym poziomie pozostaje cichy. Widoki zmieniają wyłącznie jawne skróty:
+`Ctrl+L`, `Ctrl+U`, `Ctrl+P` oraz `Ctrl+Q`. Powrót działa tylko z rzeczywiście
+zagnieżdżonej zawartości, na przykład z otwartej playlisty do listy playlist,
+z zachowaniem poprzedniego zaznaczenia. Harmonogramy, bieżące nagrania,
+zakładki i inne osobne podglądy zachowują własne reguły zamykania.
+
 ### Wiersz poleceń, agenci AI i wiele systemów
 
 Obecny protokół JSON-lines jest dobrym punktem wyjścia dla przyszłego AMC CLI
@@ -356,7 +364,7 @@ kodu ani wysyłać logów bez wiedzy użytkownika.
 
 ## Dowody automatyczne tego przyrostu
 
-- pełny runner Python: 1334 zaliczone, 0 błędów, 138 historycznych pominięć;
+- pełny runner Python: 1336 zaliczonych, 0 błędów, 138 historycznych pominięć;
 - testy protokołu C#: 15 zestawów zaliczonych;
 - całe rozwiązanie .NET zbudowane sekwencyjnie: 0 ostrzeżeń, 0 błędów;
 - sześć celowanych testów Windows rozpoznawania, ustawień, historii, podpisu

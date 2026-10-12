@@ -184,6 +184,23 @@ def test_backspace_returns_to_playlists_and_restores_the_selection() -> None:
     assert opens[0].preferred_id == "playlist:88", "wracamy na WYBRANA playliste"
 
 
+def test_escape_does_not_switch_between_peer_library_views() -> None:
+    """Biblioteka, Ulubione, Playlisty i Kolejka zmieniaja tylko Ctrl+L/U/P/Q."""
+    for view in (
+        LibraryView.ALL_FILES,
+        LibraryView.FAVORITES,
+        LibraryView.PLAYLISTS,
+        LibraryView.SAVED_QUEUE,
+        LibraryView.LIVE_QUEUE,
+    ):
+        nav = Navigator()
+        nav.apply_library_view(view, view.value, [track("1", "Alfa")])
+
+        assert nav.go_to_parent() == []
+        assert nav.session.library_view is view
+        assert nav.session.model.selected_id == "1"
+
+
 def test_vanished_playlist_falls_back_to_the_list_of_playlists() -> None:
     """Dane oddaja fallback_view; GUI ma go uszanowac, nie pokazac pustki."""
     nav = Navigator()
@@ -246,14 +263,14 @@ def test_vanished_radio_playlist_falls_back_inside_radio() -> None:
     )
 
 
-def test_backspace_in_a_flat_view_leaves_it_instead_of_saying_top_level() -> None:
-    """W "Wszystkie pliki" nie ma rodzica-folderu, ale Backspace ma wyjsc."""
+def test_backspace_in_a_peer_view_stays_silent_and_does_not_leave_it() -> None:
+    """Wszystkie pliki to widok obok Ulubionych, Playlist i Kolejki."""
     nav = Navigator()
     nav.apply_library_view(LibraryView.ALL_FILES, "Wszystkie pliki", [track("1", "Alfa")])
     tasks = nav.go_to_parent()
-    assert not any(
-        "najwyzszego poziomu" in t.text for t in tasks if isinstance(t, Announce)
-    )
+    assert tasks == []
+    assert nav.session.library_view is LibraryView.ALL_FILES
+    assert nav.session.model.selected_id == "1"
 
 
 # ------------------------------------------------------- wspolistnienie z folderami

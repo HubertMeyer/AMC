@@ -45,7 +45,6 @@ from amc_wx_lite.navigation import (  # noqa: E402
     LIBRARY_VIEW_FOLDERS,
     LibraryView,
     Navigator,
-    OpenFolder,
     OpenLibraryView,
     SessionId,
 )
@@ -254,10 +253,11 @@ def test_blad_odczytu_zapamietanego_widoku_nie_odcina_biblioteki() -> None:
     assert len(powiedziane) == 1 and "baza zajeta" in powiedziane[0]
 
 
-def test_ctrl_l_nie_psuje_backspace_z_widoku() -> None:
-    """Czwarte punkty i Backspace zostaja jak byly: wyjscie z Ulubionych nadal
-    idzie przez ``_leave_library_view``, a nie przez nowa droge Ctrl+L."""
+def test_ctrl_l_remains_the_only_way_from_favorites_to_library() -> None:
+    """Ulubione i Biblioteka sa rownorzedne; Escape nie zastepuje Ctrl+L."""
     nav = _navigator_w_folderze("plik:2")
     nav.apply_library_view(LibraryView.FAVORITES, "Biblioteka — Ulubione", _rows("ulub", 3))
     plan = nav.go_to_parent()
-    assert [type(i) for i in plan] == [OpenFolder]
+    assert plan == []
+    assert nav.session.library_view is LibraryView.FAVORITES
+    assert nav.session.model.selected_id == "ulub:1"

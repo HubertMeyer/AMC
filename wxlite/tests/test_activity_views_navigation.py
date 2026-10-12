@@ -181,13 +181,14 @@ def test_saved_queue_heading_does_not_claim_a_running_queue() -> None:
     assert "odtwarzam" not in text and "uruchomiona" not in text
 
 
-def test_backspace_leaves_activity_view_back_to_folders() -> None:
-    """Widok plaski -> Foldery, jak MainWindow.xaml.cs:20832."""
+def test_backspace_keeps_queue_as_a_peer_view() -> None:
+    """Kolejka jest obok Biblioteki; zmienia ja dopiero Ctrl+L."""
     nav = Navigator()
-    nav.apply_library_view(LibraryView.HISTORY, "h", [track("1", "A")])
+    nav.apply_library_view(LibraryView.SAVED_QUEUE, "Kolejka", [track("1", "A")])
     out = nav.go_to_parent()
-    assert nav.session.library_view is None
-    assert out and out[0].__class__.__name__ == "OpenFolder"
+    assert out == []
+    assert nav.session.library_view is LibraryView.SAVED_QUEUE
+    assert nav.session.model.selected_id == "1"
 
 
 def test_backspace_from_bookmarks_returns_to_the_file_it_came_from() -> None:

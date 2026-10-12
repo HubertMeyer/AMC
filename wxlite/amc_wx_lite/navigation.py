@@ -1171,9 +1171,12 @@ class Navigator:
         if state.session_id in (SessionId.WIIM, SessionId.SONOS):
             # Lista urządzeń lub grup jest korzeniem sesji, nie folderem dysku.
             return []
-        # W nazwanym widoku Biblioteki nie ma wiersza rodzica, ale Backspace
-        # nadal ma WYJSC: z zawartosci playlisty na liste playlist, a z
-        # widoku plaskiego z powrotem do Folderow (MainWindow.xaml.cs:20832).
+        # W nazwanym widoku Biblioteki nie ma wiersza rodzica. Widoki glowne
+        # (Biblioteka/Wszystkie pliki, Ulubione, Playlisty i Kolejka) sa
+        # ROWNORZEDNE: Escape ani Backspace nie moze przelaczac jednego z nich
+        # na drugi. Zmieniaja je wylacznie ich jawne skroty Ctrl+L/U/P/Q.
+        # Poziom nadrzedny istnieje dopiero wewnatrz playlisty, zakladek albo
+        # jednego z osobnych podgladow aktywnosci.
         if state.library_view is not None:
             return self._leave_library_view()
         if state.session_id is SessionId.RADIO:
@@ -1546,17 +1549,27 @@ class Navigator:
         ]
 
     def _leave_library_view(self) -> list[object]:
-        """Backspace w nazwanym widoku. Wyjscie, nie "najwyzszy poziom".
+        """Backspace/Escape w nazwanym widoku Biblioteki.
 
         Z zawartosci playlisty wracamy na liste playlist i stajemy na TEJ
         playliscie, z ktorej weszlismy (po Id wiersza, nie po numerze).
-        Z widoku plaskiego wracamy do Folderow -- tam Backspace znow znaczy
-        "folder nadrzedny", jak dotad.
+        Rownorzedne widoki glowne pozostaja bez zmian i bez komunikatu.
+        Osobne podglady aktywnosci nadal zamykaja sie do swojej listy bazowej.
         """
         state = self.session
         if state.session_id is SessionId.PODCASTS:
             if state.library_view is LibraryView.PODCAST_EPISODES:
                 return [OpenPodcastView(preferred_id=state.library_return_id)]
+            return []
+        if state.library_view in (
+            LibraryView.ALL_FILES,
+            LibraryView.FAVORITES,
+            LibraryView.PLAYLISTS,
+            LibraryView.SAVED_QUEUE,
+            LibraryView.LIVE_QUEUE,
+        ):
+            # To nie sa poziomy zagniezdzone. Escape/Backspace nie oznacza tu
+            # "wroc do Biblioteki", bo sama Biblioteka jest widokiem obok.
             return []
         if state.session_id is SessionId.RADIO:
             if state.library_view is LibraryView.PLAYLIST_CONTENTS:

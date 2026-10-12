@@ -12,14 +12,21 @@ def test_radio_favorites_request_targets_radio_not_local_files():
     )
 
 
-def test_radio_backspace_returns_to_radio_library_not_local_folder():
+def test_radio_backspace_keeps_favorites_as_a_peer_view():
     nav = Navigator()
     nav.switch_session(SessionId.RADIO)
     nav.session.library_view = LibraryView.FAVORITES
-    request = nav.go_to_parent()[0]
-    assert isinstance(request, OpenLibraryView), "Backspace Radia otwiera lokalny folder"
-    assert request.target_session_id is SessionId.RADIO
-    assert request.view is None
+    assert nav.go_to_parent() == []
+    assert nav.session.library_view is LibraryView.FAVORITES
+
+
+def test_radio_backspace_keeps_playlist_and_queue_roots():
+    for view in (LibraryView.PLAYLISTS, LibraryView.SAVED_QUEUE, LibraryView.LIVE_QUEUE):
+        nav = Navigator()
+        nav.switch_session(SessionId.RADIO)
+        nav.session.library_view = view
+        assert nav.go_to_parent() == []
+        assert nav.session.library_view is view
 
 
 def test_radio_ctrl_l_targets_radio_without_reading_local_preferences():
