@@ -112,6 +112,11 @@ class Action(Enum):
     MANAGE_PLAYLIST_MEMBERSHIP = "action.playlists.membership"
     TIDAL_TOGGLE_LIBRARY = "tidal.library.toggle"
     TIDAL_TOGGLE_FAVORITE = "tidal.favorite.toggle"
+    # Prawa strzalka na liscie TIDAL. To polecenie jest kontekstowe: zależnie
+    # od wiersza pokazuje przejście do albumu, wykonawcy albo oba kierunki.
+    # Osobna akcja jest potrzebna przede wszystkim Pomocy klawiatury -- bez
+    # niej działający gest był opisywany jako brak polecenia.
+    TIDAL_RELATIONS = "tidal.relations"
     SEEK_BACK_10 = "seek.back10"
     SEEK_FORWARD_10 = "seek.forward10"
     # Shift to 30 s (MainWindow.xaml.cs:21585-21586). Dostarczona wersja
@@ -319,6 +324,7 @@ TIDAL_SUPPORTED_ACTIONS = frozenset({
     Action.TOGGLE_FAVORITE,
     Action.TIDAL_TOGGLE_LIBRARY,
     Action.TIDAL_TOGGLE_FAVORITE,
+    Action.TIDAL_RELATIONS,
     Action.SORT_TIDAL_COLLECTION_ADDED,
     Action.SORT_TIDAL_COLLECTION_ALPHABETICAL,
     Action.SORT_TIDAL_COLLECTION_CUSTOM,
@@ -832,6 +838,13 @@ TIDAL_SESSION_VIEW: dict[str, Action] = {
 }
 
 
+TIDAL_LIST_VIEW: dict[str, Action] = {
+    # MainWindow.xaml.cs:21808-21810: kontekstowe menu relacji zaznaczonego
+    # elementu. Pionowe strzalki nadal pozostaja natywnej liscie.
+    "Right": Action.TIDAL_RELATIONS,
+}
+
+
 TIDAL_COLLECTION_LIST_VIEW: dict[str, Action] = {
     "Alt+1": Action.SORT_TIDAL_COLLECTION_ADDED,
     "Alt+2": Action.SORT_TIDAL_COLLECTION_ALPHABETICAL,
@@ -874,6 +887,8 @@ def resolve(
         )
     if tidal_session and canonical in TIDAL_SESSION_VIEW:
         return TIDAL_SESSION_VIEW[canonical]
+    if tidal_session and not player_view and canonical in TIDAL_LIST_VIEW:
+        return TIDAL_LIST_VIEW[canonical]
     # Widoki Radia sa dostepne takze z odtwarzacza, bez wychodzenia Escape.
     # Ta sama akcja co na liscie/menu; nie przenosimy edycji stacji do PLAYER.
     if radio_session and canonical in ("Ctrl+L", "Ctrl+U", "Ctrl+H"):
@@ -908,6 +923,9 @@ def _help_entries() -> list[tuple[str, str, Action]]:
         Action.MANAGE_PLAYLIST_MEMBERSHIP: "Zmień przynależność do playlist",
         Action.TIDAL_TOGGLE_LIBRARY: "Dodaj lub usuń z Biblioteki TIDAL",
         Action.TIDAL_TOGGLE_FAVORITE: "Dodaj lub usuń z Ulubionych TIDAL",
+        Action.TIDAL_RELATIONS: (
+            "Pokaż menu przejścia do albumu lub wykonawcy TIDAL"
+        ),
         Action.SEEK_BACK_10: "Przewin 10 sekund wstecz",
         Action.SEEK_FORWARD_10: "Przewin 10 sekund w przod",
         Action.SEEK_BACK_30: "Przewin 30 sekund wstecz",
@@ -1087,6 +1105,7 @@ def _help_entries() -> list[tuple[str, str, Action]]:
     for table in (
         PODCAST_INBOX_LIST_VIEW,
         PODCAST_SESSION_VIEW,
+        TIDAL_LIST_VIEW,
         LIST_VIEW,
         RADIO_LIST_VIEW,
         RADIO_PLAYER_VIEW,

@@ -479,6 +479,19 @@ def test_ctrl_f1_opens_keyboard_help_in_list_and_player() -> None:
         ) is Action.KEYBOARD_HELP
 
 
+def test_tidal_right_arrow_has_a_precise_keyboard_help_action() -> None:
+    action = resolve(
+        Chord("Right"),
+        player_view=False,
+        radio_session=False,
+        tidal_session=True,
+    )
+    assert action is Action.TIDAL_RELATIONS
+    announcement = keyboard_help_announcement(Chord("Right"), action, "TIDAL")
+    assert "albumu lub wykonawcy TIDAL" in announcement
+    assert "Brak polecenia" not in announcement
+
+
 def test_keyboard_help_uses_only_user_facing_labels() -> None:
     message = keyboard_help_announcement(
         Chord("F", ctrl=True),

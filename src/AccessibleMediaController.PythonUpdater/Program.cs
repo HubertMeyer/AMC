@@ -7,6 +7,12 @@ namespace AccessibleMediaController.PythonUpdater;
 
 internal static class Program
 {
+    // Proces, skaner antywirusowy albo indeksator potrafi jeszcze przez ulamek
+    // sekundy trzymac zamkniety plik EXE. Jedna natychmiastowa proba powodowala
+    // poprawne wycofanie calej aktualizacji dokladnie na pliku aktualizatora.
+    private static readonly TimeSpan FileReplacementTimeout = TimeSpan.FromSeconds(10);
+    private static readonly TimeSpan FileReplacementRetryDelay = TimeSpan.FromMilliseconds(200);
+
     private const int SupportedBundleFormat = 1;
     private const int SupportedInterfaceVersion = 1;
     private const int SupportedHostProtocolVersion = 1;
@@ -19,14 +25,19 @@ internal static class Program
     [STAThread]
     private static int Main(string[] args)
     {
+        var silentRequested = args.Any(argument =>
+            string.Equals(argument, "--silent", StringComparison.OrdinalIgnoreCase));
         try
         {
             var options = Options.Parse(args);
             if (options is null)
             {
-                Show("Podaj folder przygotowanej aktualizacji i folder AMC Python.\n\n"
-                     + "AMC-Python-Updater.exe --source KATALOG --target KATALOG "
-                     + "[--wait-pid NUMER] [--launch PLIK] [--silent]", true);
+                if (!silentRequested)
+                {
+                    Show("Podaj folder przygotowanej aktualizacji i folder AMC Python.\n\n"
+                         + "AMC-Python-Updater.exe --source KATALOG --target KATALOG "
+                         + "[--wait-pid NUMER] [--launch PLIK] [--silent]", true);
+                }
                 return BadArguments;
             }
 
@@ -44,15 +55,21 @@ internal static class Program
             // rodzica, a następnie cała transakcja poprawnie się wycofywała.
             if (!WaitForApplication(options.WaitUpdaterPid))
             {
-                Show("Aktualizacja nie została rozpoczęta, ponieważ poprzedni "
-                     + "proces aktualizatora nie zakończył się.", true);
+                if (!options.Silent)
+                {
+                    Show("Aktualizacja nie została rozpoczęta, ponieważ poprzedni "
+                         + "proces aktualizatora nie zakończył się.", true);
+                }
                 return AppStillRunning;
             }
 
             if (!WaitForApplication(options.WaitPid))
             {
-                Show("Aktualizacja nie została rozpoczęta, ponieważ AMC Python nadal działa. "
-                     + "Może trwać nagrywanie. Zatrzymaj je i spróbuj ponownie.", true);
+                if (!options.Silent)
+                {
+                    Show("Aktualizacja nie została rozpoczęta, ponieważ AMC Python nadal działa. "
+                         + "Może trwać nagrywanie. Zatrzymaj je i spróbuj ponownie.", true);
+                }
                 return AppStillRunning;
             }
 
@@ -79,13 +96,15 @@ internal static class Program
         catch (InvalidDataException exception)
         {
             Console.Error.WriteLine("Pakiet aktualizacji został odrzucony: " + exception);
-            Show("Pakiet aktualizacji został odrzucony: " + exception.Message, true);
+            if (!silentRequested)
+                Show("Pakiet aktualizacji został odrzucony: " + exception.Message, true);
             return InvalidPackage;
         }
         catch (Exception exception)
         {
             Console.Error.WriteLine("Nie udało się zainstalować aktualizacji AMC Python: " + exception);
-            Show("Nie udało się zainstalować aktualizacji AMC Python: " + exception.Message, true);
+            if (!silentRequested)
+                Show("Nie udało się zainstalować aktualizacji AMC Python: " + exception.Message, true);
             return InstallFailed;
         }
     }
@@ -101,7 +120,28 @@ internal static class Program
             "AMC-Python",
             "Updater");
         Directory.CreateDirectory(helperDirectory);
-        var helper = Path.Combine(helperDirectory, "AMC-Python-Updater.exe");
+        // Stala nazwa pomocnika byla druga blokada: poprzedni alert albo
+        // skaner mogl nadal trzymac ten jeden plik i kolejna proba konczyla
+        // sie jeszcze przed transakcja. Stare kopie sprzatamy best effort, a
+        // kazde uruchomienie dostaje wlasna nazwe.
+        foreach (var oldHelper in Directory.EnumerateFiles(
+                     helperDirectory,
+                     "AMC-Python-Updater*.exe"))
+        {
+            try
+            {
+                File.Delete(oldHelper);
+            }
+            catch (Exception exception) when (
+                exception is IOException or UnauthorizedAccessException)
+            {
+                // Dzialajacy stary pomocnik moze jeszcze konczyc poprzednia
+                // probe. Unikalna nazwa ponizej nie musi na niego czekac.
+            }
+        }
+        var helper = Path.Combine(
+            helperDirectory,
+            $"AMC-Python-Updater-{Guid.NewGuid():N}.exe");
         File.Copy(current, helper, overwrite: true);
 
         var start = new ProcessStartInfo
@@ -209,24 +249,7 @@ internal static class Program
                     File.Copy(destination, saved, overwrite: true);
                 }
                 replaced.Add((destination, saved));
-                try
-                {
-                    // File.Move(..., overwrite: true) na Windows potrafi
-                    // odmówić zastąpienia nieuruchomionego pliku EXE, mimo że
-                    // zwykłe przemianowanie tego samego pliku jest dozwolone.
-                    // Kopia poprzedniej wersji już istnieje, więc usunięcie i
-                    // przeniesienie jest bezpieczne: każdy wyjątek trafia do
-                    // istniejącego wycofania całej transakcji.
-                    if (File.Exists(destination)) File.Delete(destination);
-                    File.Move(prepared, destination);
-                }
-                catch (Exception exception) when (
-                    exception is IOException or UnauthorizedAccessException)
-                {
-                    throw new IOException(
-                        $"nie można podmienić pliku {relative}: {exception.Message}",
-                        exception);
-                }
+                ReplacePreparedFile(prepared, destination, relative);
             }
 
             File.Copy(
@@ -237,6 +260,7 @@ internal static class Program
         }
         catch
         {
+            var rollbackComplete = true;
             for (var index = replaced.Count - 1; index >= 0; index--)
             {
                 var (destination, saved) = replaced[index];
@@ -249,11 +273,58 @@ internal static class Program
                 }
                 catch
                 {
+                    rollbackComplete = false;
                     // Pierwotny błąd jest ważniejszy; zachowana kopia zostaje
                     // w folderze .aktualizacja-* do ręcznego odzyskania.
                 }
             }
+            // Gdy kazdy plik wrocil na miejsce, katalog transakcji nie jest
+            // juz kopia ratunkowa. Dotad pojedyncza chwilowa blokada zostawiala
+            // ponad sto megabajtow po kazdej probie aktualizacji.
+            if (rollbackComplete)
+            {
+                try
+                {
+                    Directory.Delete(transaction, recursive: true);
+                }
+                catch
+                {
+                    // Nie zaslaniamy pierwotnego bledu aktualizacji tylko tym,
+                    // ze system jeszcze nie pozwolil posprzatac katalogu.
+                }
+            }
             throw;
+        }
+    }
+
+    private static void ReplacePreparedFile(
+        string prepared,
+        string destination,
+        string relative)
+    {
+        var deadline = DateTime.UtcNow + FileReplacementTimeout;
+        while (true)
+        {
+            try
+            {
+                // File.Move(..., overwrite: true) na Windows potrafi odmowic
+                // zastapienia pliku EXE. Kopia poprzedniej wersji juz istnieje,
+                // wiec usuniecie i przeniesienie pozostaja transakcyjne.
+                if (File.Exists(destination)) File.Delete(destination);
+                File.Move(prepared, destination);
+                return;
+            }
+            catch (Exception exception) when (
+                exception is IOException or UnauthorizedAccessException)
+            {
+                if (DateTime.UtcNow >= deadline)
+                {
+                    throw new IOException(
+                        $"nie można podmienić pliku {relative}: {exception.Message}",
+                        exception);
+                }
+                Thread.Sleep(FileReplacementRetryDelay);
+            }
         }
     }
 
