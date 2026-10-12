@@ -14,5 +14,7 @@
              Link="BundleContract.cs" />
     <Compile Include="..\..\src\AccessibleMediaController.PythonLauncher\PythonLaunchPlan.cs"
              Link="PythonLaunchPlan.cs" />
+    <Compile Include="..\..\src\AccessibleMediaController.PythonLauncher\LauncherInstanceLease.cs"
+             Link="LauncherInstanceLease.cs" />
   </ItemGroup>
 </Project>

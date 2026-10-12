@@ -14,6 +14,7 @@ internal static class Program
         ("wyjście poza katalog", TraversalIsRejected),
         ("prywatny runtime bez PYTHONPATH i bez alertów pythonw", LaunchPlanUsesOnlyPrivateRuntime),
         ("diagnostyka przez python.exe", DiagnosticUsesConsoleRuntime),
+        ("jedna instancja launchera", OnlyOneLauncherOwnsTheLease),
     ];
 
     public static int Main()
@@ -106,6 +107,28 @@ internal static class Program
         Equal(true, plan.StartInfo.RedirectStandardOutput);
         Equal(true, plan.StartInfo.RedirectStandardError);
         Equal("--sprawdz", plan.StartInfo.ArgumentList[2]);
+    }
+
+    private static void OnlyOneLauncherOwnsTheLease()
+    {
+        var name = @"Local\AMC-Python-Launcher-Test-" + Guid.NewGuid().ToString("N");
+        using var first = LauncherInstanceLease.TryAcquire(name);
+        Equal(true, first.IsOwner);
+
+        var secondOwns = Task.Run(() =>
+        {
+            using var second = LauncherInstanceLease.TryAcquire(name);
+            return second.IsOwner;
+        }).GetAwaiter().GetResult();
+        Equal(false, secondOwns);
+
+        first.Dispose();
+        var thirdOwns = Task.Run(() =>
+        {
+            using var third = LauncherInstanceLease.TryAcquire(name);
+            return third.IsOwner;
+        }).GetAwaiter().GetResult();
+        Equal(true, thirdOwns);
     }
 
     private static void Throws(string expected, Action action)

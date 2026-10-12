@@ -7,6 +7,7 @@ internal static class Program
 {
     private const int InvalidBundle = 2;
     private const int StartFailed = 3;
+    private const string MainWindowTitle = "AMC Python";
 
     [STAThread]
     private static int Main(string[] args)
@@ -26,6 +27,13 @@ internal static class Program
                 StringComparison.OrdinalIgnoreCase)))
             {
                 Show("Pakiet AMC Python jest kompletny i zgodny.", false);
+                return 0;
+            }
+
+            using var instance = LauncherInstanceLease.TryAcquire();
+            if (!instance.IsOwner)
+            {
+                ActivateExistingWindow();
                 return 0;
             }
 
@@ -136,10 +144,41 @@ internal static class Program
             error ? 0x10u : 0x40u);
     }
 
+    private static void ActivateExistingWindow()
+    {
+        // Drugie uruchomienie jest bezpiecznym poleceniem "pokaż AMC".
+        // Okno może dopiero powstawać, dlatego czekamy krótko zamiast
+        // uruchamiać drugi interpreter i drugi silnik audio.
+        for (var attempt = 0; attempt < 50; attempt++)
+        {
+            var handle = FindWindow(null, MainWindowTitle);
+            if (handle != IntPtr.Zero)
+            {
+                ShowWindow(handle, 3); // SW_MAXIMIZE
+                BringWindowToTop(handle);
+                SetForegroundWindow(handle);
+                return;
+            }
+            Thread.Sleep(100);
+        }
+    }
+
     [DllImport("user32.dll", CharSet = CharSet.Unicode)]
     private static extern int MessageBox(
         IntPtr owner,
         string text,
         string caption,
         uint type);
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    private static extern IntPtr FindWindow(string? className, string windowName);
+
+    [DllImport("user32.dll")]
+    private static extern bool ShowWindow(IntPtr windowHandle, int command);
+
+    [DllImport("user32.dll")]
+    private static extern bool BringWindowToTop(IntPtr windowHandle);
+
+    [DllImport("user32.dll")]
+    private static extern bool SetForegroundWindow(IntPtr windowHandle);
 }
