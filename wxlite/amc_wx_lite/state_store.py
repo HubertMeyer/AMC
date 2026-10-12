@@ -142,6 +142,13 @@ class Options:
     #: przełącznik decyduje, czy nowy tor ma pozostać w pauzie. Domyślne False
     #: zachowuje dotychczasowe zachowanie AMC do świadomej zmiany ustawienia.
     pause_on_audio_output_fallback: bool = False
+    #: Prywatne nadpisania ustawien nagrywania. ``None`` oznacza dalsze
+    #: dziedziczenie wartosci z profilu glownego AMC; pusty folder oznacza
+    #: swiadomy wybor systemowego folderu domyslnego hosta.
+    radio_recording_format: str | None = None
+    radio_recording_bitrate_kbps: int | None = None
+    radio_recordings_folder: str | None = None
+    radio_prefer_station_folder_in_new_schedules: bool | None = None
 
     def audio_payload(self) -> dict:
         return {
@@ -185,6 +192,38 @@ class Options:
             self.radio_recording_state_sound = False
         if type(self.pause_on_audio_output_fallback) is not bool:
             self.pause_on_audio_output_fallback = False
+        if self.radio_recording_format is not None:
+            formats = ("Mp3", "Aac", "Flac", "Original", "Wav")
+            value = str(self.radio_recording_format).strip().casefold()
+            self.radio_recording_format = next(
+                (item for item in formats if item.casefold() == value), None
+            )
+        if self.radio_recording_bitrate_kbps is not None:
+            bitrates = (96, 128, 160, 192, 256, 320)
+            if isinstance(self.radio_recording_bitrate_kbps, bool):
+                self.radio_recording_bitrate_kbps = None
+            else:
+                try:
+                    requested_bitrate = int(
+                        self.radio_recording_bitrate_kbps
+                    )
+                except (TypeError, ValueError, OverflowError):
+                    self.radio_recording_bitrate_kbps = None
+                else:
+                    self.radio_recording_bitrate_kbps = min(
+                        bitrates, key=lambda item: abs(item - requested_bitrate)
+                    )
+        if self.radio_recordings_folder is not None:
+            self.radio_recordings_folder = str(
+                self.radio_recordings_folder
+            ).strip()
+        if (
+            self.radio_prefer_station_folder_in_new_schedules is not None
+            and type(
+                self.radio_prefer_station_folder_in_new_schedules
+            ) is not bool
+        ):
+            self.radio_prefer_station_folder_in_new_schedules = None
         return self
 
 

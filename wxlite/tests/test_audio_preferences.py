@@ -45,3 +45,30 @@ def test_options_payload_contains_the_selected_real_algorithm():
         "smoothTrackTransitions": False, "interTrackSilenceMs": 0,
         "pauseOnOutputFallback": False,
     }
+
+
+def test_radio_recording_overrides_round_trip_and_are_clamped():
+    with tempfile.TemporaryDirectory() as folder:
+        state = LiteState()
+        state.options.radio_recording_format = "aac"
+        state.options.radio_recording_bitrate_kbps = 255
+        state.options.radio_recordings_folder = r"D:\Nagrania"
+        state.options.radio_prefer_station_folder_in_new_schedules = False
+        store = StateStore(folder)
+        store.save(state)
+        loaded = store.load().options
+    assert loaded.radio_recording_format == "Aac"
+    assert loaded.radio_recording_bitrate_kbps == 256
+    assert loaded.radio_recordings_folder == r"D:\Nagrania"
+    assert loaded.radio_prefer_station_folder_in_new_schedules is False
+
+
+def test_invalid_radio_recording_overrides_return_to_profile_inheritance():
+    options = Options()
+    options.radio_recording_format = "TechnicalEnumValue"
+    options.radio_recording_bitrate_kbps = True
+    options.radio_prefer_station_folder_in_new_schedules = "false"
+    options.clamp()
+    assert options.radio_recording_format is None
+    assert options.radio_recording_bitrate_kbps is None
+    assert options.radio_prefer_station_folder_in_new_schedules is None

@@ -43,7 +43,7 @@ podmiany i wycofania plików. Docelowe `AMC.exe` ma być stałym punktem wejści
 a aktualizator działać za nim, bez ręcznego wybierania skryptu lub interpretera.
 
 Aktualny kompletny pakiet EXE jest w:
-`D:\Projekty Codex\AMC - integracja wxPython\.test-output\AMC-Python-ustawienia-audio-20261012`.
+`D:\Projekty Codex\AMC - integracja wxPython\.test-output\AMC-Python-radio-ustawienia-20261012`.
 Nie zawiera `AMC-wx-Lite.cmd`. `AMC.exe` sprawdza wersję formatu pakietu,
 interfejsu i protokołu hosta oraz sumy krytycznych plików przed uruchomieniem.
 Automatyczna weryfikacja paczki i próbna aktualizacja do osobnego katalogu
@@ -82,13 +82,19 @@ sesji, a odłączone pozycje są pomijane. Oba zachowania wymagają jeszcze
 
 ### Pełny audyt interfejsu i ustawień
 
-`Ctrl+,` otwiera teraz natywne Ustawienia z dwiema działającymi kartami:
-Ogólne i Komunikaty. Ogólne obejmują zachowanie odtwarzacza i wyjścia audio,
-normalizację, przejścia, ciszę oraz jawnie nazwane algorytmy tempa; Komunikaty
-obejmują stany odtwarzania i nagrywania Radia. Enter uruchamia Zapisz, po
-powodzeniu pada dokładnie jeden komunikat „Zapisano ustawienia”, a zmiany
-silnika są stosowane bez restartu. To nadal nie są pełne Ustawienia głównego
-AMC: brakuje pięciu kart i ich funkcji.
+`Ctrl+,` otwiera teraz natywne Ustawienia z trzema działającymi kartami:
+Ogólne, Radio i nagrywanie oraz Komunikaty. Ogólne obejmują zachowanie
+odtwarzacza i wyjścia audio, normalizację, przejścia, ciszę oraz jawnie
+nazwane algorytmy tempa; Komunikaty obejmują stany odtwarzania i nagrywania
+Radia. Karta Radio i nagrywanie zapisuje długość TimeShift do 12 godzin,
+domyślny folder, format, bitrate, preferowanie folderu stacji w nowym planie
+oraz domyślne wybudzanie. Folder, format i bitrate trafiają do następnego
+ręcznego nagrania i harmonogramów, a wybudzanie jest ponownie synchronizowane
+z wykonawcą planów. Nowa długość TimeShift obowiązuje po ponownym uruchomieniu
+hosta. Enter uruchamia Zapisz, po powodzeniu pada dokładnie jeden komunikat
+„Zapisano ustawienia”. To nadal nie są pełne Ustawienia głównego AMC: brakuje
+czterech całych kart, automatycznego rozpoznawania utworów oraz wspólnego
+folderu Radia i Podcastów.
 Nie wystarczy dopisać kart Ogólne, Podcasty i Radio: trzeba przepisać całe
 Ustawienia dokładnie z głównego AMC, po uprzednim spisie wszystkich kart, pól,
 wartości domyślnych, zależności, walidacji i miejsc zapisu. `Ctrl+Tab` i
@@ -331,7 +337,7 @@ kodu ani wysyłać logów bez wiedzy użytkownika.
 
 ## Dowody automatyczne tego przyrostu
 
-- pełny runner Python: 1272 zaliczone, 0 błędów, 138 historycznych pominięć;
+- pełny runner Python: 1278 zaliczonych, 0 błędów, 138 historycznych pominięć;
 - testy protokołu C#: 15 zestawów zaliczonych;
 - całe rozwiązanie .NET zbudowane sekwencyjnie: 0 ostrzeżeń, 0 błędów;
 - LiteHost zbudowany i opublikowany dla Windows x64 bez błędów i ostrzeżeń;
@@ -366,12 +372,15 @@ lewą strzałką.
    listy. Domknąć zdalne katalogi, prawą strzałkę TIDAL i żywy odbiór NVDA.
    Powtarzany prefiks „Nagrane” usunięto z ukończonych wierszy `Alt+Shift+R`;
    stany nieudane, przerwane, zatrzymane i brak pliku pozostają w etykiecie.
-4. W toku: `Ctrl+,` ma już natywne karty Ogólne i Komunikaty, zapis Enterem i
-   jedno potwierdzenie. Działają też wybór pauzy po utracie wyjścia oraz
-   `Ctrl+[` i `Ctrl+]`; Spację harmonogramu podłączono bezpośrednio do listy.
-   Przepisać pozostałe pięć kart głównego AMC ze wszystkimi polami,
-   zależnościami i zapisem, następnie wykonać żywy odbiór tych zmian oraz pełny
-   audyt Biblioteki, menu, skrótów i sortowań `Alt+cyfra`.
+4. W toku: `Ctrl+,` ma już natywne karty Ogólne, Radio i nagrywanie oraz
+   Komunikaty, zapis Enterem i jedno potwierdzenie. Karta Radia wykonuje
+   ustawienia TimeShift, folderu, formatu, bitrate'u i wybudzania. Działają też
+   wybór pauzy po utracie wyjścia oraz `Ctrl+[` i `Ctrl+]`; Spację harmonogramu
+   podłączono bezpośrednio do listy. Domknąć w Radiu rozpoznawanie utworów i
+   wspólny folder z Podcastami, następnie przepisać pozostałe cztery karty
+   głównego AMC ze wszystkimi polami, zależnościami i zapisem. Potem wykonać
+   żywy odbiór tych zmian oraz pełny audyt Biblioteki, menu, skrótów i
+   sortowań `Alt+cyfra`.
 5. Uzupełnienie WiiM i Sonos o pełną warstwę interfejsu z głównego AMC:
    Bibliotekę, Ulubione, wybór materiałów, presety, wszystkie skróty oraz
    prawidłowe wykonanie transportu po zakończeniu odczytu stanu. Następnie

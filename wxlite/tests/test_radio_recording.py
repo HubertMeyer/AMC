@@ -15,7 +15,7 @@ from test_gui_logic import install_wx_stub
 
 install_wx_stub()
 
-from amc_wx_lite.gui import LiteFrame
+from amc_wx_lite.gui import LiteFrame, radio_timeshift_label
 from amc_wx_lite.host_client import LiteHostClient
 from amc_wx_lite.library_db import LibraryDatabase, LibraryItem
 from amc_wx_lite.navigation import LibraryView, Navigator, SessionId
@@ -26,6 +26,7 @@ from amc_wx_lite.radio_recording import (
     active_recording_rows,
     format_duration,
     preferences_from_amc_state,
+    preferences_with_overrides,
     recording_history_from_amc_state,
     recording_history_payload_from_event,
     recording_history_rows,
@@ -128,6 +129,47 @@ def test_empty_podcast_folder_is_resolved_by_windows_host_not_python_guess() -> 
     assert payload["folderPreset"] == "podcasts"
     assert payload["format"] == "Wav"
     assert "folder" not in payload
+
+
+def test_private_recording_preferences_override_profile_without_losing_station_folders() -> None:
+    base = RadioRecordingPreferences(
+        format="Mp3",
+        bitrate_kbps=192,
+        default_folder=r"D:\Profil",
+        folder_preset="podcasts",
+        station_folders={"one": r"D:\Stacja"},
+        prefer_station_folder_in_new_schedules=True,
+    )
+    effective = preferences_with_overrides(
+        base,
+        recording_format="Flac",
+        bitrate_kbps=255,
+        default_folder=r"D:\AMC Python",
+        override_default_folder=True,
+        prefer_station_folder=False,
+    )
+    assert effective.format == "Flac"
+    assert effective.bitrate_kbps == 256
+    assert effective.default_folder == r"D:\AMC Python"
+    assert effective.folder_preset == "radio"
+    assert effective.station_folders == {"one": r"D:\Stacja"}
+    assert effective.prefer_station_folder_in_new_schedules is False
+
+
+def test_empty_private_recording_folder_means_hosts_system_default() -> None:
+    effective = preferences_with_overrides(
+        RadioRecordingPreferences(default_folder=r"D:\Profil"),
+        default_folder="",
+        override_default_folder=True,
+    )
+    assert effective.default_folder is None
+
+
+def test_timeshift_choices_explain_duration_and_storage_in_polish() -> None:
+    assert radio_timeshift_label(10) == "10 minut, w pamięci"
+    assert radio_timeshift_label(60) == "1 godzina, na dysku"
+    assert radio_timeshift_label(120) == "2 godziny, na dysku"
+    assert radio_timeshift_label(720) == "12 godzin, na dysku"
 
 
 def test_radio_source_keeps_recording_preferences_from_the_same_profile_read() -> None:

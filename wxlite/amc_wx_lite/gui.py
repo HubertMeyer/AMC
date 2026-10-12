@@ -180,6 +180,7 @@ from . import radio_schedule_settings
 from .radio_recording import (
     active_recording_rows,
     format_duration,
+    preferences_with_overrides,
     recording_history_from_amc_state,
     recording_history_payload_from_event,
     recording_history_rows,
@@ -200,6 +201,29 @@ from .tidal_source import (
 
 APP_NAME = "AMC-wx-Lite"
 TEMPO_LABELS = {1: "Mowa – Speedy", 2: "Muzyka – Signalsmith", 0: "Dotychczasowy – SoundTouch"}
+RADIO_FORMAT_CHOICES = (
+    ("MP3", "Mp3"),
+    ("M4A, dźwięk AAC", "Aac"),
+    ("FLAC, bezstratny", "Flac"),
+    ("Oryginalny strumień, bez konwersji", "Original"),
+    ("WAV, bez kompresji", "Wav"),
+)
+RADIO_BITRATE_CHOICES = (96, 128, 160, 192, 256, 320)
+RADIO_TIMESHIFT_CHOICES = (10, 20, 30, 60, 120, 180, 360, 720)
+
+
+def radio_timeshift_label(minutes: int) -> str:
+    """Pelna, jednoznaczna etykieta bufora dla kontrolki i NVDA."""
+    storage = "w pamięci" if minutes <= 24 else "na dysku"
+    if minutes == 60:
+        duration = "1 godzina"
+    elif minutes > 60 and minutes % 60 == 0:
+        hours = minutes // 60
+        unit = "godziny" if hours in (2, 3, 4) else "godzin"
+        duration = f"{hours} {unit}"
+    else:
+        duration = f"{minutes} minut"
+    return f"{duration}, {storage}"
 
 
 def _windows_main_window() -> int:
@@ -2799,7 +2823,13 @@ class AudioOutputDeviceDialog(wx.Dialog):
 class GeneralPlaybackOptionsDialog(wx.Dialog):
     """Functional settings pages; every exposed value has a real effect."""
 
-    def __init__(self, parent: wx.Window, options) -> None:
+    def __init__(
+        self,
+        parent: wx.Window,
+        options,
+        recording,
+        wake_scheduled_recordings: bool,
+    ) -> None:
         super().__init__(parent, title="Ustawienia", size=(720, 620))
         self.notebook = wx.Notebook(self)
         self.notebook.SetName("Kategorie ustawień")
@@ -2917,6 +2947,137 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
         general_layout.Add(self.tempo, 0, wx.BOTTOM | wx.EXPAND, 10)
         general.SetSizer(general_layout)
 
+        radio = wx.ScrolledWindow(self.notebook)
+        radio.SetScrollRate(0, 12)
+        radio_layout = wx.BoxSizer(wx.VERTICAL)
+
+        timeshift_label = wx.StaticText(
+            radio, label="&Długość bufora transmisji:"
+        )
+        self._timeshift_values = list(RADIO_TIMESHIFT_CHOICES)
+        if options.timeshift_minutes not in self._timeshift_values:
+            self._timeshift_values.append(options.timeshift_minutes)
+            self._timeshift_values.sort()
+        self.timeshift = wx.Choice(
+            radio,
+            choices=[
+                radio_timeshift_label(value)
+                for value in self._timeshift_values
+            ],
+        )
+        self.timeshift.SetName("Długość bufora transmisji")
+        self.timeshift.SetSelection(
+            self._timeshift_values.index(options.timeshift_minutes)
+        )
+        radio_layout.Add(timeshift_label, 0, wx.BOTTOM, 4)
+        radio_layout.Add(self.timeshift, 0, wx.BOTTOM | wx.EXPAND, 10)
+
+        folder_label = wx.StaticText(
+            radio, label="Domyślny &folder nagrywania radia:"
+        )
+        configured_folder = options.radio_recordings_folder
+        if configured_folder is None:
+            configured_folder = recording.default_folder or ""
+        self._recording_folder_value = str(configured_folder).strip()
+        self.recording_folder = wx.TextCtrl(
+            radio,
+            value=(
+                self._recording_folder_value
+                or "Domyślny folder nagrywania AMC"
+            ),
+            style=wx.TE_READONLY,
+        )
+        self.recording_folder.SetName("Domyślny folder nagrywania radia")
+        folder_buttons = wx.BoxSizer(wx.HORIZONTAL)
+        self.browse_recording_folder = wx.Button(radio, label="&Wybierz…")
+        self.browse_recording_folder.SetName(
+            "Wybierz domyślny folder nagrywania radia"
+        )
+        self.default_recording_folder = wx.Button(
+            radio, label="Użyj folderu &domyślnego AMC"
+        )
+        self.default_recording_folder.SetName(
+            "Użyj domyślnego folderu nagrywania AMC"
+        )
+        self.browse_recording_folder.Bind(
+            wx.EVT_BUTTON, self._on_browse_recording_folder
+        )
+        self.default_recording_folder.Bind(
+            wx.EVT_BUTTON, self._on_default_recording_folder
+        )
+        folder_buttons.Add(self.browse_recording_folder, 0, wx.RIGHT, 8)
+        folder_buttons.Add(self.default_recording_folder, 0)
+        radio_layout.Add(folder_label, 0, wx.BOTTOM, 4)
+        radio_layout.Add(self.recording_folder, 0, wx.BOTTOM | wx.EXPAND, 8)
+        radio_layout.Add(folder_buttons, 0, wx.BOTTOM | wx.EXPAND, 12)
+
+        format_label = wx.StaticText(radio, label="&Format pliku:")
+        self._recording_format_values = [
+            value for _label, value in RADIO_FORMAT_CHOICES
+        ]
+        self.recording_format = wx.Choice(
+            radio, choices=[label for label, _value in RADIO_FORMAT_CHOICES]
+        )
+        self.recording_format.SetName("Format nagrania radia")
+        self.recording_format.SetSelection(
+            self._recording_format_values.index(recording.format)
+            if recording.format in self._recording_format_values
+            else 0
+        )
+        bitrate_label = wx.StaticText(
+            radio, label="&Bitrate nagrania MP3 lub AAC:"
+        )
+        self.recording_bitrate = wx.Choice(
+            radio,
+            choices=[f"{value} kilobitów na sekundę" for value in RADIO_BITRATE_CHOICES],
+        )
+        self.recording_bitrate.SetName("Bitrate nagrania MP3 lub AAC")
+        self.recording_bitrate.SetSelection(
+            min(
+                range(len(RADIO_BITRATE_CHOICES)),
+                key=lambda index: abs(
+                    RADIO_BITRATE_CHOICES[index] - recording.bitrate_kbps
+                ),
+            )
+        )
+        self.recording_format.Bind(wx.EVT_CHOICE, self._on_recording_format)
+        radio_layout.Add(format_label, 0, wx.BOTTOM, 4)
+        radio_layout.Add(self.recording_format, 0, wx.BOTTOM | wx.EXPAND, 10)
+        radio_layout.Add(bitrate_label, 0, wx.BOTTOM, 4)
+        radio_layout.Add(self.recording_bitrate, 0, wx.BOTTOM | wx.EXPAND, 10)
+
+        self.prefer_station_folder = wx.CheckBox(
+            radio,
+            label=(
+                "W nowym harmonogramie podpowiadaj &folder stacji, "
+                "gdy stacja go ma"
+            ),
+        )
+        self.prefer_station_folder.SetName(
+            "W nowym harmonogramie podpowiadaj folder stacji, gdy stacja go ma"
+        )
+        self.prefer_station_folder.SetValue(
+            recording.prefer_station_folder_in_new_schedules
+        )
+        self.wake_scheduled_recordings = wx.CheckBox(
+            radio,
+            label=(
+                "Domyślnie &wybudzaj komputer przed zaplanowanym nagraniem"
+            ),
+        )
+        self.wake_scheduled_recordings.SetName(
+            "Domyślnie wybudzaj komputer przed zaplanowanym nagraniem"
+        )
+        self.wake_scheduled_recordings.SetValue(wake_scheduled_recordings)
+        radio_layout.Add(
+            self.prefer_station_folder, 0, wx.BOTTOM | wx.EXPAND, 10
+        )
+        radio_layout.Add(
+            self.wake_scheduled_recordings, 0, wx.BOTTOM | wx.EXPAND, 10
+        )
+        radio.SetSizer(radio_layout)
+        self._update_recording_bitrate_state()
+
         messages = wx.ScrolledWindow(self.notebook)
         messages.SetScrollRate(0, 12)
         messages_layout = wx.BoxSizer(wx.VERTICAL)
@@ -2968,6 +3129,7 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
         messages.SetSizer(messages_layout)
 
         self.notebook.AddPage(general, "Ogólne", select=True)
+        self.notebook.AddPage(radio, "Radio i nagrywanie")
         self.notebook.AddPage(messages, "Komunikaty")
 
         buttons = self.CreateStdDialogButtonSizer(wx.OK | wx.CANCEL)
@@ -2983,6 +3145,34 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
         self.SetMinSize((560, 450))
         self.CentreOnParent()
         self.pause.SetFocus()
+
+    def _on_browse_recording_folder(self, _event: wx.CommandEvent) -> None:
+        dialog = wx.DirDialog(
+            self,
+            message="Wybierz domyślny folder nagrywania radia",
+            defaultPath=self._recording_folder_value,
+        )
+        try:
+            if dialog.ShowModal() != wx.ID_OK:
+                return
+            self._recording_folder_value = dialog.GetPath().strip()
+            self.recording_folder.SetValue(self._recording_folder_value)
+        finally:
+            dialog.Destroy()
+        self.recording_folder.SetFocus()
+
+    def _on_default_recording_folder(self, _event: wx.CommandEvent) -> None:
+        self._recording_folder_value = ""
+        self.recording_folder.SetValue("Domyślny folder nagrywania AMC")
+        self.recording_folder.SetFocus()
+
+    def _on_recording_format(self, _event: wx.CommandEvent) -> None:
+        self._update_recording_bitrate_state()
+
+    def _update_recording_bitrate_state(self) -> None:
+        index = max(0, self.recording_format.GetSelection())
+        selected = self._recording_format_values[index]
+        self.recording_bitrate.Enable(selected in ("Mp3", "Aac"))
 
     @property
     def values(self) -> dict[str, object]:
@@ -3010,6 +3200,22 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
             ),
             "radio_playback_state_sound": self.playback_sound.GetValue(),
             "radio_recording_state_sound": self.recording_sound.GetValue(),
+            "timeshift_minutes": self._timeshift_values[
+                max(0, self.timeshift.GetSelection())
+            ],
+            "radio_recordings_folder": self._recording_folder_value,
+            "radio_recording_format": self._recording_format_values[
+                max(0, self.recording_format.GetSelection())
+            ],
+            "radio_recording_bitrate_kbps": RADIO_BITRATE_CHOICES[
+                max(0, self.recording_bitrate.GetSelection())
+            ],
+            "radio_prefer_station_folder_in_new_schedules": (
+                self.prefer_station_folder.GetValue()
+            ),
+            "radio_schedule_wake_override": (
+                self.wake_scheduled_recordings.GetValue()
+            ),
         }
 
 
@@ -3032,7 +3238,9 @@ class LiteFrame(wx.Frame):
         # Tylko odczyt: wlascicielem state.json zostaje host C#.
         self.messages: MessagePolicy = load_message_policy(self.layout)
         self.radio = RadioSource(self.layout)
-        self._radio_snapshot = self.radio.load()
+        self._radio_snapshot = LiteFrame._with_radio_recording_options(
+            self, self.radio.load()
+        )
         self.stations = self._radio_snapshot.list
         self.navigator = Navigator()
         self._transient_preview_return: TransientNavigationSnapshot | None = None
@@ -10106,7 +10314,16 @@ class LiteFrame(wx.Frame):
 
     def _show_general_playback_options(self) -> None:
         """Ustawienia ogolne wxPython z natychmiastowym, atomowym zapisem."""
-        dialog = GeneralPlaybackOptionsDialog(self, self.options)
+        effective_wake = radio_schedule_settings.effective_wake(
+            self._radio_snapshot.wake_scheduled_recordings,
+            self.state.radio_schedule_wake_override,
+        )
+        dialog = GeneralPlaybackOptionsDialog(
+            self,
+            self.options,
+            self._radio_snapshot.recording,
+            effective_wake,
+        )
         chosen: dict[str, object] | None = None
         try:
             if dialog.ShowModal() == wx.ID_OK:
@@ -10116,32 +10333,85 @@ class LiteFrame(wx.Frame):
         if chosen is None:
             return
 
+        chosen_wake = bool(chosen.pop("radio_schedule_wake_override"))
         previous = {name: getattr(self.options, name) for name in chosen}
+        previous_wake = self.state.radio_schedule_wake_override
         for name, value in chosen.items():
             setattr(self.options, name, value)
+        self.state.radio_schedule_wake_override = chosen_wake
         if not self._save_state():
             for name, value in previous.items():
                 setattr(self.options, name, value)
+            self.state.radio_schedule_wake_override = previous_wake
             self.state.options = self.options
             return
-        # Zmiana dotyczy tylko tekstu/sygnalu wierszy. Odtwarzanie,
-        # nagrywanie, harmonogramy i timeshift pozostaja nietkniete.
+        self._radio_snapshot = LiteFrame._with_radio_recording_options(
+            self, self._radio_snapshot
+        )
+        # Komunikaty wierszy zmieniaja sie od razu. Nowe preferencje
+        # nagrywania trafia do kolejnego Ctrl+R i nastepnej synchronizacji
+        # harmonogramow; dlugosc timeshiftu obowiazuje po restarcie hosta.
         self._apply_radio_activity_status()
         client = self.client
         if client is None:
             self.announcer.say("Zapisano ustawienia")
             return
+
+        def apply_to_host() -> list[str]:
+            warnings: list[str] = []
+            try:
+                client.configure_audio(
+                    **session_options.engine_audio_payload(self.state)
+                )
+            except Exception:
+                warnings.append("ustawienia dźwięku")
+            try:
+                client.sync_radio_schedules(
+                    self._radio_schedule_sync_payload(
+                        self._radio_snapshot, self.state
+                    )
+                )
+            except Exception:
+                warnings.append("ustawienia harmonogramów")
+            return warnings
+
+        def applied_to_host(warnings: list[str]) -> None:
+            if warnings:
+                self.announcer.say(
+                    "Zapisano ustawienia. Po ponownym uruchomieniu programu "
+                    "zostaną zastosowane: " + ", ".join(warnings)
+                )
+            else:
+                self.announcer.say("Zapisano ustawienia")
+
         self.runner.submit(
-            "general-settings-audio",
-            lambda: client.configure_audio(
-                **session_options.engine_audio_payload(self.state)
-            ),
-            lambda _payload: self.announcer.say("Zapisano ustawienia"),
+            "general-settings-apply",
+            apply_to_host,
+            applied_to_host,
             lambda _error: self.announcer.say(
-                "Zapisano ustawienia. Ustawienie utraty urządzenia zacznie "
-                "działać po ponownym uruchomieniu programu"
+                "Zapisano ustawienia. Zostaną zastosowane po ponownym "
+                "uruchomieniu programu"
             ),
         )
+
+    def _with_radio_recording_options(self, snapshot):
+        """Naloz zapisane opcje wxPython na odczytany profil glownego AMC."""
+        options = getattr(self, "options", None)
+        if options is None:
+            return snapshot
+        snapshot.recording = preferences_with_overrides(
+            snapshot.recording,
+            recording_format=options.radio_recording_format,
+            bitrate_kbps=options.radio_recording_bitrate_kbps,
+            default_folder=options.radio_recordings_folder,
+            override_default_folder=(
+                options.radio_recordings_folder is not None
+            ),
+            prefer_station_folder=(
+                options.radio_prefer_station_folder_in_new_schedules
+            ),
+        )
+        return snapshot
 
     def _show_session_options(self) -> None:
         """Opcje sesji: dialog, wybor sesji, Zapisz/Anuluj, zapis i SKUTEK.
@@ -11409,7 +11679,9 @@ class LiteFrame(wx.Frame):
 
         # Ustawienia mogly zostac zmienione w glownym AMC juz po starcie wx.
         # Czytamy je ponownie bez zapisu i nie podmieniamy widoku listy.
-        snapshot = self.radio.load(previous=self._radio_snapshot)
+        snapshot = LiteFrame._with_radio_recording_options(
+            self, self.radio.load(previous=self._radio_snapshot)
+        )
         payload = snapshot.recording.payload_for(station)
 
         def done(result: dict) -> None:
@@ -11619,7 +11891,9 @@ class LiteFrame(wx.Frame):
         )
 
         def work():
-            snapshot = self.radio.load(previous=previous)
+            snapshot = LiteFrame._with_radio_recording_options(
+                self, self.radio.load(previous=previous)
+            )
             current_entries = ()
             current_error = ""
             recorded_files = ()
@@ -11720,7 +11994,9 @@ class LiteFrame(wx.Frame):
             return
 
         def work():
-            snapshot = self.radio.load(previous=previous)
+            snapshot = LiteFrame._with_radio_recording_options(
+                self, self.radio.load(previous=previous)
+            )
             schedules = radio_schedule_settings.effective_schedules(
                 snapshot.recording_schedules,
                 self.state.radio_schedule_overrides,

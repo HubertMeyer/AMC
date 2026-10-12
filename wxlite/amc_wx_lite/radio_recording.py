@@ -130,6 +130,56 @@ def preferences_from_amc_state(raw: dict) -> RadioRecordingPreferences:
     )
 
 
+def preferences_with_overrides(
+    base: RadioRecordingPreferences,
+    *,
+    recording_format: str | None = None,
+    bitrate_kbps: int | None = None,
+    default_folder: str | None = None,
+    override_default_folder: bool = False,
+    prefer_station_folder: bool | None = None,
+) -> RadioRecordingPreferences:
+    """Naloz prywatne ustawienia wxPython na migawke profilu AMC.
+
+    ``override_default_folder`` jest osobne, bo ``None`` ma dwa znaczenia:
+    brak prywatnej decyzji albo swiadomy powrot do systemowego folderu hosta.
+    Model stanu rozroznia je jako ``None`` i pusty napis; tutaj pusta wartosc
+    staje sie ``None`` dopiero w gotowych preferencjach wykonawcy.
+    """
+    formats = ("Mp3", "Aac", "Flac", "Original", "Wav")
+    chosen_format = next(
+        (
+            item
+            for item in formats
+            if isinstance(recording_format, str)
+            and item.casefold() == recording_format.strip().casefold()
+        ),
+        base.format,
+    )
+    bitrates = (96, 128, 160, 192, 256, 320)
+    chosen_bitrate = base.bitrate_kbps
+    if isinstance(bitrate_kbps, int) and not isinstance(bitrate_kbps, bool):
+        chosen_bitrate = min(
+            bitrates, key=lambda item: abs(item - bitrate_kbps)
+        )
+    chosen_folder = base.default_folder
+    if override_default_folder:
+        chosen_folder = (default_folder or "").strip() or None
+    chosen_preference = (
+        prefer_station_folder
+        if type(prefer_station_folder) is bool
+        else base.prefer_station_folder_in_new_schedules
+    )
+    return replace(
+        base,
+        format=chosen_format,
+        bitrate_kbps=chosen_bitrate,
+        default_folder=chosen_folder,
+        folder_preset="radio",
+        prefer_station_folder_in_new_schedules=chosen_preference,
+    )
+
+
 def format_duration(seconds: object) -> str:
     """Krotki czas nagrania bez technicznych wartosci w komunikacie NVDA."""
     try:
