@@ -15,7 +15,7 @@ Odbiór docelowego launchera:
 
 Aktualna, automatycznie zweryfikowana paczka znajduje się w:
 
-`D:\Projekty Codex\AMC - integracja wxPython\.test-output\AMC-Python-wiim-presets-20261012\AMC.exe`
+`D:\Projekty Codex\AMC - integracja wxPython\.test-output\AMC-Python-radio-library-20261013\AMC.exe`
 
 Nie przełączaj na nią programu w czasie trwającego nagrywania. Pierwszy żywy
 odbiór wykonaj kolejno według punktów poniżej.
@@ -98,6 +98,25 @@ Sprawdź kolejno:
 
 Nie uruchamiaj równolegle starego głównego AMC podczas testu zapisów profilu.
 Sonos zostaje do osobnego odbioru na obudzonych urządzeniach.
+
+## Dodawanie i import stacji radiowych — odbiór 13 października
+
+Na czas sprawdzania zapisu zamknij stare główne AMC; jego równoległe działanie
+ma celowo zablokować zmianę wspólnego profilu.
+
+1. W sesji Radio naciśnij `Ctrl+N`, wpisz nazwę oraz pełny adres `http://` lub
+   `https://` i zatwierdź. Program ma otworzyć Bibliotekę, ustawić fokus na
+   nowej stacji i powiedzieć „Dodano stację do Biblioteki” z jej nazwą.
+2. Powtórz `Ctrl+N` z tym samym adresem, ale inną nazwą. Nie może powstać
+   duplikat; istniejący wiersz ma otrzymać nową nazwę, a NVDA ma powiedzieć
+   „Zaktualizowano stację”.
+3. W Radiu naciśnij `Ctrl+O` i wybierz playlistę M3U, M3U8, PLS, XSPF albo
+   JSON. Nowe stacje mają zostać dopisane, istniejąca stacja katalogowa spoza
+   Biblioteki ma wrócić bez utraty dotychczasowej nazwy, a duplikaty mają być
+   policzone jako pominięte.
+4. Po ponownym uruchomieniu sprawdź Bibliotekę w kolejności własnej oraz według
+   dodania. Nowe i przywrócone stacje muszą pozostać na listach, bez nazw klas,
+   rekordów i identyfikatorów technicznych w mowie NVDA.
 
 ## TIDAL, WiiM i Sonos — odbiór 10 października
 

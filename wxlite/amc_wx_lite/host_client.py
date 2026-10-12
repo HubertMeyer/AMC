@@ -805,6 +805,12 @@ class LiteHostClient:
             timeout=20.0,
         )
 
+    def add_radio_station(self, name: str, url: str) -> Any:
+        """Dodaj albo zaktualizuj stację przez jedynego właściciela profilu."""
+        return self.call(
+            "radio.addStation", {"name": name, "url": url}, timeout=20.0
+        )
+
     def remove_profile_items(
         self, session_id: str, view: str, item_ids: list[str]
     ) -> Any:
@@ -1099,6 +1105,12 @@ class LiteHostClient:
 
     def import_playlist(self, path: str) -> Any:
         return self.call("radio.importPlaylist", {"path": path}, timeout=60.0)
+
+    def import_playlist_to_library(self, path: str) -> Any:
+        """Scal playlistę ze wspólną Biblioteką radia i zapisz profil."""
+        return self.call(
+            "radio.importPlaylistToLibrary", {"path": path}, timeout=60.0
+        )
 
     # ------------------------------------------------------ nagrywanie radia
 

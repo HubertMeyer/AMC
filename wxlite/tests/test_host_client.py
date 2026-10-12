@@ -406,6 +406,8 @@ def test_profile_mutations_use_narrow_named_operations() -> None:
             client.edit_radio_station(
                 "radio-1", "Nowe radio", "https://example.invalid/radio"
             ),
+            client.add_radio_station("Nowa stacja", "https://example.invalid/new"),
+            client.import_playlist_to_library("D:/wymiana/stacje.m3u"),
             client.toggle_profile_favorites("files", ["local-1"]),
             client.remove_profile_items("files", "favorites", ["local-1"]),
             client.recycle_local_files(["local-1"]),
@@ -415,10 +417,17 @@ def test_profile_mutations_use_narrow_named_operations() -> None:
             "library.renameFile",
             "podcast.renameSubscription",
             "radio.editStation",
+            "radio.addStation",
+            "radio.importPlaylistToLibrary",
             "library.toggleFavorite",
             "library.remove",
             "library.recycle",
         ]
+        assert calls[4]["args"] == {
+            "name": "Nowa stacja",
+            "url": "https://example.invalid/new",
+        }
+        assert calls[5]["args"] == {"path": "D:/wymiana/stacje.m3u"}
     finally:
         client.close()
 

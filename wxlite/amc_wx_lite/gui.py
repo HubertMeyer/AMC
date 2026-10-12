@@ -14290,18 +14290,6 @@ class LiteFrame(wx.Frame):
             "wakeScheduledRecordings": wake,
         }
 
-    def _refuse_station_edit(self) -> bool:
-        """Odmowa edycji stacji we wspolnym profilu. ``True`` = nie kontynuuj.
-
-        Wlascicielem ``state.json`` jest host C#. Zamiast cichego "zapisalem"
-        mowimy wprost, gdzie zmieniac stacje.
-        """
-        if self.radio.may_edit:
-            return False
-        self._switch_session(SessionId.RADIO)
-        self.announcer.say(self.radio.edit_refusal_reason())
-        return True
-
     def _reload_stations(self, preferred_id: str | None = None) -> None:
         rows = rows_from_stations(self.stations.as_payload())
         if self.radio.may_edit:
@@ -14310,13 +14298,42 @@ class LiteFrame(wx.Frame):
         self._run(self.navigator.apply_stations(rows, preferred_id=preferred_id))
 
     def _station_add(self) -> None:
-        if self._refuse_station_edit():
-            return
         self._switch_session(SessionId.RADIO)
         with StationDialog(self, "Dodaj stacje") as dialog:
             if dialog.ShowModal() != wx.ID_OK:
                 return
             name, url = dialog.values
+        if not self.radio.may_edit:
+            client = self._profile_edit_client()
+            if client is None:
+                return
+
+            def done(payload: dict) -> None:
+                result = payload or {}
+                station_id = str(result.get("preferredStationId") or "") or None
+                station_name = str(result.get("preferredStationName") or name)
+                updated = int(result.get("updatedCount") or 0)
+                message = (
+                    f"Zaktualizowano stację: {station_name}"
+                    if updated
+                    else f"Dodano stację do Biblioteki: {station_name}"
+                )
+                self._open_radio_view(
+                    OpenLibraryView(
+                        view=None,
+                        preferred_id=station_id,
+                        target_session_id=SessionId.RADIO,
+                    ),
+                    after_refresh=lambda: self.announcer.say(message),
+                )
+
+            self.runner.submit(
+                "profile-edit",
+                lambda: client.add_radio_station(name, url),
+                done,
+                lambda error: self.announcer.say(f"Nie dodano stacji: {error}"),
+            )
+            return
         try:
             station = self.stations.add(name, url)
         except ValueError as error:
@@ -14395,8 +14412,6 @@ class LiteFrame(wx.Frame):
         Plik uzytkownika czytamy TYLKO po jego wskazaniu - nic nie jest
         przenoszone ani kopiowane automatycznie.
         """
-        if self._refuse_station_edit():
-            return
         client = self.client
         if client is None:
             self.announcer.say("Silnik nie dziala, import niedostepny")
@@ -14412,13 +14427,45 @@ class LiteFrame(wx.Frame):
         self._switch_session(SessionId.RADIO)
 
         def work() -> dict:
-            return client.import_playlist(path)
+            if self.radio.may_edit:
+                return client.import_playlist(path)
+            return client.import_playlist_to_library(path)
 
         def done(payload: dict) -> None:
-            entries = (payload or {}).get("stations") or []
-            added, skipped = self.stations.merge_imported(entries)
-            self._reload_stations()
-            self.announcer.say(f"Zaimportowano {added}, pominieto {skipped}")
+            result = payload or {}
+            if self.radio.may_edit:
+                entries = result.get("stations") or []
+                added, skipped = self.stations.merge_imported(entries)
+                self._reload_stations()
+                self.announcer.say(f"Zaimportowano {added}, pominięto {skipped}")
+                return
+
+            added = int(result.get("addedCount") or 0)
+            promoted = int(result.get("promotedCount") or 0)
+            skipped = int(result.get("skippedCount") or 0)
+            if added == 0 and promoted == 0:
+                self.announcer.say(
+                    "Playlista nie zawiera nowych prawidłowych stacji"
+                    if skipped
+                    else "Playlista nie zawiera stacji radiowych"
+                )
+                return
+            station_id = str(result.get("preferredStationId") or "") or None
+            message = (
+                f"Dodano nowe stacje: {added}. "
+                f"Włączono istniejące w Bibliotece: {promoted}. "
+                "Zachowano dotychczasowe nazwy"
+            )
+            if skipped:
+                message += f". Pominięto: {skipped}"
+            self._open_radio_view(
+                OpenLibraryView(
+                    view=None,
+                    preferred_id=station_id,
+                    target_session_id=SessionId.RADIO,
+                ),
+                after_refresh=lambda: self.announcer.say(message),
+            )
 
         self.runner.submit(
             "import", work, done, lambda error: self.announcer.say(f"Import nieudany: {error}")

@@ -20,5 +20,7 @@
              Link="LiteBookmarkStore.cs" />
     <Compile Include="..\..\src\AccessibleMediaController.LiteHost\LitePodcastProgressStore.cs"
              Link="LitePodcastProgressStore.cs" />
+    <Compile Include="..\..\src\AccessibleMediaController.LiteHost\LiteRadioLibraryMutation.cs"
+             Link="LiteRadioLibraryMutation.cs" />
   </ItemGroup>
 </Project>

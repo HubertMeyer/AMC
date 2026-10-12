@@ -1,4 +1,4 @@
-# AMC Python — stan prac 12 października 2026
+# AMC Python — stan prac 13 października 2026
 
 ## Decyzja architektoniczna
 
@@ -43,7 +43,7 @@ podmiany i wycofania plików. Docelowe `AMC.exe` ma być stałym punktem wejści
 a aktualizator działać za nim, bez ręcznego wybierania skryptu lub interpretera.
 
 Aktualny kompletny pakiet EXE jest w:
-`D:\Projekty Codex\AMC - integracja wxPython\.test-output\AMC-Python-wiim-presets-20261012`.
+`D:\Projekty Codex\AMC - integracja wxPython\.test-output\AMC-Python-radio-library-20261013`.
 Nie zawiera `AMC-wx-Lite.cmd`. `AMC.exe` sprawdza wersję formatu pakietu,
 interfejsu i protokołu hosta oraz sumy krytycznych plików przed uruchomieniem.
 Automatyczna weryfikacja paczki i próbna aktualizacja do osobnego katalogu
@@ -183,6 +183,22 @@ historii nagrań, harmonogramów, timeshiftu oraz edycji nagrań. Tych mechanizm
 nie należy zastępować odpowiednikami napisanymi w Pythonie bez osobnej,
 udowodnionej potrzeby. Zmiany mają dotyczyć przede wszystkim dostępności,
 kompletności skrótów i zgodności zachowania z głównym AMC.
+
+13 października domknięto zapis Biblioteki stacji w samodzielnym AMC Python.
+`Ctrl+N` nie jest już martwe we wspólnym profilu: dodaje nową stację przez
+wąską bramę hosta C#, a ponowne podanie tego samego adresu aktualizuje nazwę
+i przywraca istniejący wpis do Biblioteki dokładnie jak główne AMC. `Ctrl+O`
+w sesji Radio korzysta ze wspólnego parsera M3U/PLS/XSPF/JSON, dopisuje nowe
+stacje, przywraca znalezione wpisy katalogowe bez niszczenia ich bogatszych
+nazw i metadanych oraz pomija rzeczywiste duplikaty. Identyfikatory powstają
+wyłącznie w hoście i służą tylko do zapisu oraz przywrócenia fokusu; NVDA
+otrzymuje nazwę stacji i krótkie podsumowanie importu.
+
+Host pozostaje jedynym właścicielem `state.json` i trwałych kolejności w
+`library.db`. Dodanie oraz import aktualizują jednocześnie kolejność własną i
+według dodania, a zapis jest blokowany, jeśli działa stare główne AMC, aby dwa
+procesy nie mogły nadpisać sobie profilu. Prywatny tryb demonstracyjny nadal
+korzysta z własnego magazynu i z importera jedynie odczytującego plik.
 
 ### Podcasty i YouTube
 

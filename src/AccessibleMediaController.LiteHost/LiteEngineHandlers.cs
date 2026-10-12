@@ -415,11 +415,13 @@ internal sealed class LiteEngineHandlers : IDisposable
             ["library.remove"] = (request, _) => RemoveProfileItems(request.Args),
             ["library.recycle"] = (request, _) => RecycleLocalFiles(request.Args),
             ["podcast.renameSubscription"] = (request, _) => RenamePodcastSubscription(request.Args),
+            ["radio.addStation"] = (request, _) => AddRadioStation(request.Args),
             ["radio.editStation"] = (request, _) => EditRadioStation(request.Args),
             ["bookmark.add"] = (request, _) => AddBookmark(request.Args),
             ["bookmark.remove"] = (request, _) => RemoveBookmarks(request.Args),
             ["bookmark.navigate"] = (request, _) => NavigateBookmark(request.Args),
             ["radio.importPlaylist"] = (request, _) => ImportPlaylist(request.Args),
+            ["radio.importPlaylistToLibrary"] = (request, _) => ImportPlaylistToLibrary(request.Args),
             ["audio.configure"] = (request, _) => ConfigureAudio(request.Args),
             ["audio.outputs"] = (request, _) => ListOutputs(request.Args),
             ["audio.selectOutput"] = (request, _) => SelectOutput(request.Args),
@@ -789,6 +791,11 @@ internal sealed class LiteEngineHandlers : IDisposable
         if (result.StreamChanged && IsCurrentRadioItem(stationId)) StopRadioPlayback();
         return result;
     }
+
+    private object AddRadioStation(JsonElement args) =>
+        RequireProfileMutations().AddRadioStation(
+            LiteArgs.RequireText(args, "name"),
+            LiteArgs.RequireText(args, "url"));
 
     private object RemoveProfileItems(JsonElement args) =>
         RequireProfileMutations().Remove(
@@ -2405,6 +2412,18 @@ internal sealed class LiteEngineHandlers : IDisposable
                 .Select(station => new { name = station.Name, url = station.StreamUrl })
                 .ToArray()
         };
+    }
+
+    private object ImportPlaylistToLibrary(JsonElement args)
+    {
+        var path = LiteArgs.RequirePath(args, "path");
+        if (!File.Exists(path)) throw new LiteRequestException($"Nie znaleziono pliku listy: {path}");
+        var imported = RadioPlaylistImporter.Import(path);
+        return RequireProfileMutations().ImportRadioStations(
+            imported.Stations
+                .Select(station => new LiteRadioStationDraft(station.Name, station.StreamUrl))
+                .ToArray(),
+            imported.SkippedEntries);
     }
 
     private object PodcastOpmlInspect(JsonElement args) =>

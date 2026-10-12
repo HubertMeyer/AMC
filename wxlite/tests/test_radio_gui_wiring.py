@@ -105,6 +105,131 @@ def test_shift_r_dispatches_direct_new_schedule_request():
     assert calls == [{"create_for_selected": True}]
 
 
+def test_shared_profile_add_station_uses_host_writer_and_opens_library():
+    import amc_wx_lite.gui as gui
+
+    calls, opened, messages = [], [], []
+
+    class FakeDialog:
+        values = ("Radio Test", "https://radio.invalid/live")
+
+        def __init__(self, *_args, **_kwargs):
+            pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return False
+
+        def ShowModal(self):
+            return gui.wx.ID_OK
+
+    client = SimpleNamespace(
+        add_radio_station=lambda name, url: calls.append((name, url)) or {
+            "addedCount": 1,
+            "updatedCount": 0,
+            "preferredStationId": "radio:custom:1",
+            "preferredStationName": name,
+        }
+    )
+    frame = SimpleNamespace(
+        radio=SimpleNamespace(may_edit=False),
+        runner=DeferredRunner(),
+        announcer=SimpleNamespace(say=messages.append),
+        _switch_session=lambda session: calls.append(("session", session)),
+        _profile_edit_client=lambda: client,
+    )
+
+    def open_view(intent, *, after_refresh=None):
+        opened.append(intent)
+        if after_refresh is not None:
+            after_refresh()
+
+    frame._open_radio_view = open_view
+    original = gui.StationDialog
+    gui.StationDialog = FakeDialog
+    try:
+        LiteFrame._station_add(frame)
+        assert frame.runner.key == "profile-edit"
+        frame.runner.done(frame.runner.work())
+    finally:
+        gui.StationDialog = original
+
+    assert calls[-1] == ("Radio Test", "https://radio.invalid/live")
+    assert len(opened) == 1
+    assert opened[0].view is None
+    assert opened[0].preferred_id == "radio:custom:1"
+    assert messages == ["Dodano stację do Biblioteki: Radio Test"]
+
+
+def test_shared_profile_import_persists_and_preserves_existing_names():
+    import amc_wx_lite.gui as gui
+
+    calls, opened, messages = [], [], []
+
+    class FakeFileDialog:
+        def __init__(self, *_args, **_kwargs):
+            pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return False
+
+        def ShowModal(self):
+            return gui.wx.ID_OK
+
+        def GetPath(self):
+            return "D:/wymiana/stacje.m3u"
+
+    client = SimpleNamespace(
+        import_playlist_to_library=lambda path: calls.append(path) or {
+            "addedCount": 2,
+            "promotedCount": 1,
+            "skippedCount": 3,
+            "preferredStationId": "radio:catalog:1",
+        }
+    )
+    frame = SimpleNamespace(
+        client=client,
+        radio=SimpleNamespace(may_edit=False),
+        runner=DeferredRunner(),
+        announcer=SimpleNamespace(say=messages.append),
+        _switch_session=lambda _session: None,
+    )
+
+    def open_view(intent, *, after_refresh=None):
+        opened.append(intent)
+        if after_refresh is not None:
+            after_refresh()
+
+    frame._open_radio_view = open_view
+    original_dialog = gui.wx.FileDialog
+    original_open = gui.wx.FD_OPEN
+    original_existing = gui.wx.FD_FILE_MUST_EXIST
+    gui.wx.FileDialog = FakeFileDialog
+    gui.wx.FD_OPEN = 1
+    gui.wx.FD_FILE_MUST_EXIST = 2
+    try:
+        LiteFrame._station_import(frame)
+        assert frame.runner.key == "import"
+        frame.runner.done(frame.runner.work())
+    finally:
+        gui.wx.FileDialog = original_dialog
+        gui.wx.FD_OPEN = original_open
+        gui.wx.FD_FILE_MUST_EXIST = original_existing
+
+    assert calls == ["D:/wymiana/stacje.m3u"]
+    assert len(opened) == 1 and opened[0].view is None
+    assert opened[0].preferred_id == "radio:catalog:1"
+    assert messages == [
+        "Dodano nowe stacje: 2. Włączono istniejące w Bibliotece: 1. "
+        "Zachowano dotychczasowe nazwy. Pominięto: 3"
+    ]
+
+
 def test_direct_new_schedule_editor_uses_selected_station_and_commits():
     import amc_wx_lite.gui as gui
     from amc_wx_lite.state_store import Station

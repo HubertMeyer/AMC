@@ -333,6 +333,82 @@ internal sealed class LiteProfileMutationStore
         }
     }
 
+    public LiteRadioLibraryMutationResult AddRadioStation(
+        string requestedName,
+        string requestedUrl) =>
+        MutateRadioLibrary(
+            [NormalizeRadioStation(requestedName, requestedUrl)],
+            parserSkipped: 0,
+            updateExistingTitles: true);
+
+    public LiteRadioLibraryMutationResult ImportRadioStations(
+        IReadOnlyList<LiteRadioStationDraft> requestedStations,
+        int parserSkipped)
+    {
+        if (requestedStations.Count > 10_000)
+            throw new LiteRequestException("Playlista może zawierać najwyżej 10000 stacji.");
+        var stations = requestedStations
+            .Select(station => NormalizeRadioStation(station.Name, station.Url))
+            .ToArray();
+        return MutateRadioLibrary(
+            stations,
+            parserSkipped,
+            updateExistingTitles: false);
+    }
+
+    private LiteRadioLibraryMutationResult MutateRadioLibrary(
+        IReadOnlyList<LiteRadioStationDraft> stations,
+        int parserSkipped,
+        bool updateExistingTitles)
+    {
+        EnsureMayWrite();
+        lock (_gate)
+        {
+            var root = ReadState();
+            LiteRadioLibraryMutationResult result;
+            try
+            {
+                result = LiteRadioLibraryMutation.Apply(
+                    root,
+                    stations,
+                    parserSkipped,
+                    updateExistingTitles);
+            }
+            catch (InvalidDataException exception)
+            {
+                throw new LiteRequestException(exception.Message);
+            }
+            if (!result.Changed) return result;
+
+            WriteState(root);
+            using var connection = OpenDatabase(_libraryDatabasePath);
+            using var transaction = connection.BeginTransaction();
+            var customOrder = ReadOrder(connection, transaction, "library_custom_order", "radio");
+            var addedOrder = ReadOrder(connection, transaction, "library_added_order", "radio");
+            foreach (var id in result.ChangedStationIds)
+            {
+                SetOrderedMembership(customOrder, id, true);
+                SetOrderedMembership(addedOrder, id, true);
+            }
+            RewriteOrder(connection, transaction, "library_custom_order", "radio", customOrder);
+            RewriteOrder(connection, transaction, "library_added_order", "radio", addedOrder);
+            TouchMetadata(connection, transaction);
+            transaction.Commit();
+            return result;
+        }
+    }
+
+    private static LiteRadioStationDraft NormalizeRadioStation(string requestedName, string requestedUrl)
+    {
+        var name = CleanRequiredText(requestedName, "Nazwa stacji nie może być pusta.");
+        var url = CleanRequiredText(requestedUrl, "Adres stacji nie może być pusty.");
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri)
+            || uri.Scheme is not ("http" or "https"))
+            throw new LiteRequestException(
+                "Wpisz pełny adres strumienia rozpoczynający się od http:// lub https://.");
+        return new LiteRadioStationDraft(name, url);
+    }
+
     /// <summary>
     /// Ctrl+Shift+U dla plików lokalnych i radia. Całe zaznaczenie otrzymuje
     /// jeden stan, tak jak w CommandRouter pełnego AMC: jeśli choć jeden
