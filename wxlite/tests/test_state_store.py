@@ -107,6 +107,13 @@ def test_local_resume_override_round_trips_and_invalid_value_inherits() -> None:
     )
 
 
+def test_detailed_hints_override_round_trips_and_invalid_value_inherits() -> None:
+    store, _ = temp_store()
+    store.save(LiteState(options=Options(detailed_hints=True)))
+    assert store.load().options.detailed_hints is True
+    assert Options(detailed_hints="tak").clamp().detailed_hints is None  # type: ignore[arg-type]
+
+
 def test_round_trip_keeps_radio_activity_presentation_options() -> None:
     store, _ = temp_store()
     state = LiteState(options=Options(

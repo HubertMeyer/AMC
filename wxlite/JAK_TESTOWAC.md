@@ -723,6 +723,16 @@ zapisać ją i podać raz „Zapisano ustawienia”; ponowne otwarcie ma pokaza�
 samą wartość bez technicznych nazw. Szczególnie sprawdź etykiety SoundTouch,
 Speedy i Signalsmith, wartości ciszy oraz oba warianty utraty urządzenia.
 
+Na karcie Komunikaty przełącz „Pokazuj szczegółowe podpowiedzi klawiatury
+przy polach i listach”. Po wyłączeniu `Ctrl+K` ma powiedzieć tylko „Filtr
+listy”. Po włączeniu ma podać także instrukcję Enter/strzałka w dół/Escape.
+Otwórz `Ctrl+F` i `Ctrl+Shift+F`: nazwa pola pozostaje krótka („Szukaj w…”),
+a jego opis ma wyjaśniać Enter, historię pod strzałką w dół i Escape. Lista
+„Wyniki wyszukiwania” zachowuje tę krótką nazwę, a osobny opis wyjaśnia
+strzałki, Enter i Escape. Po Zapisz zmiana ma działać od razu i wrócić po
+ponownym otwarciu Ustawień oraz restarcie programu. Wyłączona opcja nie może
+pozostawić starych tekstów pomocy.
+
 Na karcie Radio i nagrywanie sprawdź kolejno:
 
 1. Długość TimeShift od 10 minut do 12 godzin; NVDA ma czytać czas i miejsce

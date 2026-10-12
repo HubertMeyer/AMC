@@ -96,12 +96,30 @@ def results_status_text(query: str | None, visible_count: int) -> str:
     return f"Wyniki filtrowania: {visible_count}"
 
 
-#: Komunikat wejscia w pole filtra. Tresc ze ``FocusFilter``
-#: (``MainWindow.xaml.cs:22214-22216``). Wariant szczegolowy zalezy w
-#: oryginale od ``Settings.Messages.DetailedHints``; ten port nie ma jeszcze
-#: tego przelacznika, wiec mowimy KROTKO -- tak jak AMC z wylaczonymi
-#: podpowiedziami (``AppSettings.cs:542``: ``DetailedHints`` domyslnie false).
+#: Komunikaty wejscia w pole filtra. Oba sa doslownie z ``FocusFilter``
+#: pelnego AMC; modelowy przelacznik nie trafia do nazwy kontrolki.
 FILTER_ENTERED_MESSAGE = "Filtr listy"
+FILTER_ENTERED_DETAILED_MESSAGE = (
+    "Filtr listy. Wpisz tekst. Enter lub strzałka w dół przechodzi do "
+    "wyników. Escape czyści filtr i wraca do listy"
+)
+
+#: ``ApplyDetailedHints`` ustawia ten tekst jako pomoc kontrolki, a nie jako
+#: stale dopisywana nazwe. NVDA moze go odczytac, nie zaslaniajac zwyklej
+#: etykiety ``Filtruj liste``.
+FILTER_HELP_TEXT = (
+    "Wpisz tekst. Enter lub strzałka w dół przechodzi do wyników. "
+    "Escape czyści filtr i wraca do listy."
+)
+
+
+def filter_entered_message(detailed_hints: bool) -> str:
+    """Krotka albo szczegolowa zapowiedz zgodna z ustawieniem AMC."""
+    return (
+        FILTER_ENTERED_DETAILED_MESSAGE
+        if detailed_hints
+        else FILTER_ENTERED_MESSAGE
+    )
 
 #: Pusty wynik: fokus ZOSTAJE w polu filtra, a komunikat mowi, co robic
 #: (``FocusFilterResults``, ``MainWindow.xaml.cs:22202-22206``). Slowa z

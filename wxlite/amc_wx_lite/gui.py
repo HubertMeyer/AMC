@@ -178,6 +178,7 @@ from .transport_parity import (
     next_playback_rate,
     parse_custom_seek_length,
     resolve_custom_seek_seconds,
+    resolve_detailed_hints,
     seek_percent_value,
     seek_step_seconds,
     time_announcement,
@@ -1250,6 +1251,7 @@ class SearchDialog(wx.Dialog):
         copy_text: Callable[[str], bool],
         history: list[str],
         record_query: Callable[[str], list[str]],
+        detailed_hints: bool = False,
     ) -> None:
         mode = (
             "Szukaj we wszystkich usługach"
@@ -1277,6 +1279,13 @@ class SearchDialog(wx.Dialog):
         query_label = wx.StaticText(self, label="&Tekst do wyszukania:")
         self.query = wx.TextCtrl(self)
         self.query.SetName(mode)
+        self.query.SetHelpText(
+            "Wpisz tekst i naciśnij Enter, aby rozpocząć wyszukiwanie. "
+            "Przy pustym polu strzałka w dół wybiera historię. "
+            "Escape zamyka okno."
+            if detailed_hints
+            else ""
+        )
         self.search_button = wx.Button(self, label="&Szukaj")
         self.search_button.SetName("Szukaj")
         self.results = wx.ListCtrl(
@@ -1288,6 +1297,12 @@ class SearchDialog(wx.Dialog):
         self.results.InsertColumn(2, "Szczegóły", width=270)
         self.results.SetLabel("Wyniki wyszukiwania")
         self.results.SetName("Wyniki wyszukiwania")
+        self.results.SetHelpText(
+            "Strzałki wybierają wynik. Enter przechodzi do wyniku na "
+            "właściwej liście. Escape zamyka okno."
+            if detailed_hints
+            else ""
+        )
         self.status = wx.StaticText(self, label="Wpisz tekst do wyszukania")
         self.status.SetName("Stan wyszukiwania")
         self.announcer = Announcer(self.status)
@@ -3148,6 +3163,7 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
         custom_seek_seconds: int,
         global_transient_previews: bool,
         remember_local_playback_positions: bool,
+        detailed_hints: bool,
     ) -> None:
         super().__init__(parent, title="Ustawienia", size=(720, 620))
         self.notebook = wx.Notebook(self)
@@ -3624,6 +3640,21 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
         messages.SetScrollRate(0, 12)
         messages_layout = wx.BoxSizer(wx.VERTICAL)
 
+        self.detailed_hints = wx.CheckBox(
+            messages,
+            label=(
+                "Pokazuj &szczegółowe podpowiedzi klawiatury przy polach "
+                "i listach"
+            ),
+        )
+        self.detailed_hints.SetName(
+            "Pokazuj szczegółowe podpowiedzi klawiatury przy polach i listach"
+        )
+        self.detailed_hints.SetValue(detailed_hints)
+        messages_layout.Add(
+            self.detailed_hints, 0, wx.TOP | wx.BOTTOM | wx.EXPAND, 10
+        )
+
         activity_heading = wx.StaticText(
             messages, label="Komunikaty stanu stacji radiowej"
         )
@@ -3792,6 +3823,7 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
             "remember_local_playback_positions": (
                 self.remember_local_playback_positions.GetValue()
             ),
+            "detailed_hints": self.detailed_hints.GetValue(),
             "loudness_normalization": self.loudness.GetValue(),
             "smooth_track_transitions": self.smooth.GetValue(),
             "inter_track_silence_ms": self._silence_values[
@@ -3870,6 +3902,10 @@ class LiteFrame(wx.Frame):
         self.messages.custom_seek_seconds = resolve_custom_seek_seconds(
             self.options.custom_seek_seconds,
             self.messages.custom_seek_seconds,
+        )
+        self._detailed_hints = resolve_detailed_hints(
+            self.options.detailed_hints,
+            self.messages.detailed_hints,
         )
         self._global_transient_previews = resolve_global_transient_previews(
             self.options.global_transient_previews,
@@ -4019,6 +4055,7 @@ class LiteFrame(wx.Frame):
         self.filter_label = wx.StaticText(self.list_panel, label="&Filtruj liste:")
         self.filter_box = wx.TextCtrl(self.list_panel)
         self.filter_box.SetName("Filtruj liste")
+        self._apply_detailed_hints()
         #: Tekst filtra PER WIDOK (odpowiednik ``navigation.Filters``).
         self.filter_state = list_filter.FilterState()
         #: Kontekst widoku, dla ktorego pole JUZ pokazuje swoj tekst. Chroni od
@@ -4467,6 +4504,7 @@ class LiteFrame(wx.Frame):
                 "global" if all_services else session_before.value,
                 query,
             ),
+            detailed_hints=self._detailed_hints,
         )
         try:
             result = dialog.ShowModal()
@@ -4660,9 +4698,8 @@ class LiteFrame(wx.Frame):
         zastepuje, a nie dokleja sie do niego po omacku.
 
         Komunikat idzie przez ``announcer``, czyli te sama droga, ktora caly
-        port ma zmierzona na zywym NVDA. Mowimy KROTKO (\"Filtr listy\") -- tak
-        jak AMC z ``DetailedHints`` wylaczonymi; dluga podpowiedz oryginalu
-        wymaga przelacznika ustawien, ktorego port jeszcze nie ma.
+        port ma zmierzona na zywym NVDA. Tresc wybiera ten sam przelacznik
+        ``DetailedHints`` co w glownym AMC.
         """
         if self.navigator.view is View.PLAYER:
             # W odtwarzaczu nie ma listy do filtrowania. Mowimy o tym, zamiast
@@ -4671,7 +4708,15 @@ class LiteFrame(wx.Frame):
             return
         self.filter_box.SetFocus()
         self.filter_box.SelectAll()
-        self.announcer.say(list_filter.FILTER_ENTERED_MESSAGE)
+        self.announcer.say(
+            list_filter.filter_entered_message(self._detailed_hints)
+        )
+
+    def _apply_detailed_hints(self) -> None:
+        """Ustaw pomoc UI Automation bez rozdmuchiwania nazwy kontrolki."""
+        self.filter_box.SetHelpText(
+            list_filter.FILTER_HELP_TEXT if self._detailed_hints else ""
+        )
 
     def _on_filter_text(self, event) -> None:
         """Zmiana tekstu filtra. Port ``FilterBox_TextChanged`` (cs:23650).
@@ -11158,6 +11203,10 @@ class LiteFrame(wx.Frame):
                 self._remember_local_playback_positions,
             )
         )
+        detailed_hints = resolve_detailed_hints(
+            self.options.detailed_hints,
+            self._detailed_hints,
+        )
         dialog = GeneralPlaybackOptionsDialog(
             self,
             self.options,
@@ -11168,6 +11217,7 @@ class LiteFrame(wx.Frame):
             custom_seek_seconds,
             global_transient_previews,
             remember_local_playback_positions,
+            detailed_hints,
         )
         chosen: dict[str, object] | None = None
         try:
@@ -11208,6 +11258,12 @@ class LiteFrame(wx.Frame):
                 self._remember_local_playback_positions,
             )
         )
+        self._detailed_hints = resolve_detailed_hints(
+            self.options.detailed_hints,
+            self._detailed_hints,
+        )
+        self.messages.detailed_hints = self._detailed_hints
+        self._apply_detailed_hints()
         # Komunikaty wierszy zmieniaja sie od razu. Nowe preferencje
         # nagrywania trafia do kolejnego Ctrl+R i nastepnej synchronizacji
         # harmonogramow; dlugosc timeshiftu obowiazuje po restarcie hosta.
@@ -13635,6 +13691,13 @@ class LiteApp(wx.App):
             if self._instance_checker.IsAnotherRunning():
                 _activate_window_handle(_windows_main_window())
                 return False
+        # ``Window.SetHelpText`` zapisuje tekst dopiero przez aktywnego
+        # HelpProvidera. Bez niego metoda przyjmowala podpowiedz, lecz natywna
+        # kontrolka oddawala pusty ``GetHelpText`` i NVDA nie mial czego
+        # odczytac. Provider powstaje przed ramka i zyje razem z aplikacja.
+        if hasattr(wx, "SimpleHelpProvider") and hasattr(wx, "HelpProvider"):
+            self._help_provider = wx.SimpleHelpProvider()
+            wx.HelpProvider.Set(self._help_provider)
         store = StateStore()
         frame = LiteFrame(store, store.load())
         if hasattr(self, "SetTopWindow"):

@@ -86,7 +86,13 @@ sesji, a odłączone pozycje są pomijane. Oba zachowania wymagają jeszcze
 Ogólne, Radio i nagrywanie, Podcasty i YouTube oraz Komunikaty. Ogólne obejmują zachowanie
 odtwarzacza i wyjścia audio, normalizację, przejścia, ciszę oraz jawnie
 nazwane algorytmy tempa; Komunikaty obejmują stany odtwarzania i nagrywania
-Radia oraz oznajmianie automatycznie rozpoznanych utworów. Karta Radio i
+Radia, oznajmianie automatycznie rozpoznanych utworów oraz przełącznik
+„Pokazuj szczegółowe podpowiedzi klawiatury przy polach i listach”. Do
+pierwszego zapisu przełącznik dziedziczy `DetailedHints` z głównego AMC.
+Po włączeniu `Ctrl+K` podaje pełną instrukcję filtra, a pole zapytania i lista
+wyników `Ctrl+F`/`Ctrl+Shift+F` udostępniają osobne teksty pomocy. Nazwy
+kontrolek pozostają krótkie i nie zawierają podpowiedzi ani wartości modelu.
+Karta Radio i
 nagrywanie zapisuje długość TimeShift do 12 godzin,
 domyślny folder, format, bitrate, preferowanie folderu stacji w nowym planie
 oraz domyślne wybudzanie. Folder, format i bitrate trafiają do następnego
@@ -111,12 +117,14 @@ wartości domyślnych, zależności, walidacji i miejsc zapisu. `Ctrl+Tab` i
 fokusem i odczytem NVDA; Zapisz, Anuluj i ponowne otwarcie muszą zachowywać
 semantykę głównego AMC.
 
-Odbiór użytkownika 11 października ujawnił dodatkową niepewność: Enter w
-oknie Ustawień najprawdopodobniej zapisuje zmiany, ale program nie podaje
-potwierdzenia. Trzeba najpierw sprawdzić rzeczywisty zapis i ponowne wczytanie
-wartości. Po udanym zapisie NVDA powinno otrzymać jeden krótki komunikat
-„Zapisano ustawienia”; komunikatu nie wolno podawać przed potwierdzeniem zapisu
-ani dublować przez nazwę przycisku lub zmianę fokusu.
+Odbiór użytkownika 12 października potwierdził, że Enter zapisuje i NVDA mówi
+„Zapisano ustawienia”, choć komunikat dotarł z opóźnieniem po dwóch modalnych
+alertach interpretera. Pomiar zapisu prawie 1 MB stanu wyniósł średnio 32 ms,
+więc zapis nie był źródłem zauważalnego opóźnienia. Launcher używa teraz
+bezokiennego `python.exe` z przechwyconym wyjściem zamiast `pythonw.exe`;
+techniczny komunikat interpretera trafia do prywatnego `launcher.log`, nie do
+okna z przyciskiem OK. Potwierdzenie ustawień nadal pada dopiero po atomowym
+zapisie i dokładnie raz.
 
 Cały interfejs wymaga porównania z głównym AMC: wszystkie menu i skróty,
 organizacja Biblioteki, wejścia i powroty z podlist oraz właściwe warianty
@@ -348,7 +356,7 @@ kodu ani wysyłać logów bez wiedzy użytkownika.
 
 ## Dowody automatyczne tego przyrostu
 
-- pełny runner Python: 1296 zaliczonych, 0 błędów, 138 historycznych pominięć;
+- pełny runner Python: 1334 zaliczone, 0 błędów, 138 historycznych pominięć;
 - testy protokołu C#: 15 zestawów zaliczonych;
 - całe rozwiązanie .NET zbudowane sekwencyjnie: 0 ostrzeżeń, 0 błędów;
 - sześć celowanych testów Windows rozpoznawania, ustawień, historii, podpisu

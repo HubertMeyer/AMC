@@ -170,6 +170,7 @@ class FakeFrame:
         self.filter_state = list_filter.FilterState()
         self._filter_context = gui._BRAK_KONTEKSTU
         self._restoring_filter = False
+        self._detailed_hints = False
         self._view = view
         self._context: tuple = ("files", "/muzyka")
 
@@ -421,6 +422,13 @@ def test_ctrl_k_daje_fokus_polu_zaznacza_tekst_i_mowi():
     # tekst, zamiast dokladac do niego po omacku.
     assert frame.filter_box.select_all_calls == 1
     assert frame.announcer.said == [list_filter.FILTER_ENTERED_MESSAGE]
+
+
+def test_ctrl_k_uses_the_full_amc_detailed_hint_when_enabled():
+    frame = FakeFrame(ROWS)
+    frame._detailed_hints = True
+    frame._focus_filter()
+    assert frame.announcer.said == [list_filter.FILTER_ENTERED_DETAILED_MESSAGE]
 
 
 def test_ctrl_k_w_odtwarzaczu_mowi_a_nie_przenosi_fokusu_pod_panel():

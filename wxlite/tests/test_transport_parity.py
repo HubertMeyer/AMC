@@ -123,6 +123,7 @@ from amc_wx_lite.transport_parity import (
     describe_custom_seek_length,
     parse_custom_seek_length,
     resolve_custom_seek_seconds,
+    resolve_detailed_hints,
     seek_percent_value,
     seek_step_seconds,
     time_announcement,
@@ -398,6 +399,7 @@ def test_message_policy_is_read_from_the_shared_amc_profile() -> None:
                         "customSeekSeconds": 90,
                         "messages": {
                             "enabled": True,
+                            "detailedHints": True,
                             "seekMessages": True,
                             "arrowSeekMessages": False,
                             "percentageSeekMessages": True,
@@ -415,6 +417,7 @@ def test_message_policy_is_read_from_the_shared_amc_profile() -> None:
         policy = load_message_policy(layout)
 
         assert policy.announces_arrow_seek is False, "wylaczone w profilu AMC"
+        assert policy.detailed_hints is True
         assert policy.announces_percent_seek is True
         assert policy.announces_volume is False
         assert policy.percent_announcement is PercentAnnouncement.PERCENT_AND_TIME
@@ -436,6 +439,7 @@ def test_missing_or_broken_profile_falls_back_to_original_defaults() -> None:
         layout = read_only_mirror(local_dir=base / "l", profile_dir=base / "p")
         policy = load_message_policy(layout)
         assert policy.announces_arrow_seek is True
+        assert policy.detailed_hints is False
         assert policy.custom_seek_seconds == CUSTOM_SEEK_DEFAULT_SECONDS
 
         broken = base / "broken"
@@ -443,6 +447,13 @@ def test_missing_or_broken_profile_falls_back_to_original_defaults() -> None:
         (broken / "state.json").write_text("{ to nie jest json", encoding="utf-8")
         policy = load_message_policy(read_only_mirror(local_dir=base / "l", profile_dir=broken))
         assert policy.announces_arrow_seek is True
+
+
+def test_private_detailed_hints_override_wins_and_invalid_values_are_false() -> None:
+    assert resolve_detailed_hints(None, True) is True
+    assert resolve_detailed_hints(False, True) is False
+    assert resolve_detailed_hints(True, False) is True
+    assert resolve_detailed_hints(None, "tak") is False  # type: ignore[arg-type]
 
 
 def test_out_of_range_custom_seek_from_the_profile_is_clamped() -> None:

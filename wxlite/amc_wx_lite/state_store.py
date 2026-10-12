@@ -163,6 +163,10 @@ class Options:
     #: Czy lokalne pliki wracaja do zapamietanej pozycji. ``None`` dziedziczy
     #: wybor z profilu glownego AMC do pierwszego zapisu Ustawien wxPython.
     remember_local_playback_positions: bool | None = None
+    #: Czy pola i listy maja udostepniac dluzsze podpowiedzi klawiatury.
+    #: ``None`` dziedziczy ``settings.messages.detailedHints`` z profilu
+    #: glownego AMC do pierwszego jawnego zapisu Ustawien wxPython.
+    detailed_hints: bool | None = None
     #: Prywatne nadpisania ustawien nagrywania. ``None`` oznacza dalsze
     #: dziedziczenie wartosci z profilu glownego AMC; pusty folder oznacza
     #: swiadomy wybor systemowego folderu domyslnego hosta.
@@ -250,6 +254,8 @@ class Options:
             and type(self.remember_local_playback_positions) is not bool
         ):
             self.remember_local_playback_positions = None
+        if self.detailed_hints is not None and type(self.detailed_hints) is not bool:
+            self.detailed_hints = None
         if self.radio_recording_format is not None:
             formats = ("Mp3", "Aac", "Flac", "Original", "Wav")
             value = str(self.radio_recording_format).strip().casefold()

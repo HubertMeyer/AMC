@@ -121,6 +121,16 @@ def resolve_custom_seek_seconds(
     )
 
 
+def resolve_detailed_hints(
+    override: bool | None,
+    inherited: bool | None,
+) -> bool:
+    """Prywatny wybor wxPython albo ``MessageSettings.DetailedHints`` AMC."""
+    if type(override) is bool:
+        return override
+    return inherited if type(inherited) is bool else False
+
+
 def parse_custom_seek_length(text: str | None) -> int | None:
     """Czytaj długość tak samo jak ``PlaybackSeekRules.TryParseSeekLength``.
 
@@ -377,6 +387,7 @@ class MessagePolicy:
     volume_messages: bool = True
     playback_messages: bool = True
     bookmark_navigation_messages: bool = True
+    detailed_hints: bool = False
     percent_announcement: PercentAnnouncement = PercentAnnouncement.PERCENT
     templates: Mapping[str, str] = field(default_factory=dict)
     custom_seek_seconds: int = CUSTOM_SEEK_DEFAULT_SECONDS
@@ -592,6 +603,7 @@ def load_message_policy(layout: ProfileLayout) -> MessagePolicy:
 
     return MessagePolicy(
         enabled=flag("enabled"),
+        detailed_hints=flag("detailedHints", False),
         seek_messages=flag("seekMessages"),
         arrow_seek_messages=flag("arrowSeekMessages"),
         percentage_seek_messages=flag("percentageSeekMessages"),
