@@ -315,11 +315,26 @@ def build_menus() -> tuple[Menu, ...]:
             # nic nie jest zaznaczone, a wylaczona pozycja menu polykalaby
             # akcelerator (czytnik mowilby wtedy "niedostepne" bez powodu).
             #
-            # Sasiednich pozycji oryginalu "Szukaj w bieżącej usłudze" (Ctrl+F)
-            # i "Szukaj globalnie" (Ctrl+Shift+F) tu NIE MA: to zapytania do
-            # ZDALNEJ uslugi, ktorych ten port jeszcze nie ma. Martwa pozycja
-            # menu byla by obietnica bez pokrycia.
             MenuItem("Fi&ltruj listę", Action.FOCUS_FILTER, shortcut="Ctrl+K"),
+        ),
+    )
+
+    # Osobne, krótkie menu zapobiega kolizjom klawiszy dostępu w rozbudowanym
+    # menu Biblioteka. Funkcyjnie pozostaje tym samym osobnym oknem, które w
+    # pełnym AMC jest obok filtra i ma te same skróty Ctrl+F/Ctrl+Shift+F.
+    search = Menu(
+        "S&zukaj",
+        (
+            MenuItem(
+                "W &bieżącej usłudze",
+                Action.SEARCH_CURRENT,
+                shortcut="Ctrl+F",
+            ),
+            MenuItem(
+                "&Globalnie",
+                Action.SEARCH_ALL,
+                shortcut="Ctrl+Shift+F",
+            ),
         ),
     )
 
@@ -613,4 +628,4 @@ def build_menus() -> tuple[Menu, ...]:
 
     help_menu = Menu("Pomo&c", (MenuItem("&Skróty klawiszowe", Action.HELP, shortcut="F1"),))
 
-    return (files, library, radio, playback, view, audio, settings, help_menu)
+    return (files, library, search, radio, playback, view, audio, settings, help_menu)

@@ -549,7 +549,15 @@ def recording_history_rows(
                 else f"{outcome}, plik nagrania niedostępny"
             )
 
-        parts = [outcome, station_name]
+        # Nazwa widoku i kontrolki brzmi już „Nagrane”. Powtarzanie tego
+        # samego słowa na początku każdego poprawnego wpisu spowalnia
+        # nawigację NVDA. Stany odbiegające od normy nadal muszą być
+        # wypowiadane przy konkretnym pliku.
+        parts = (
+            [station_name]
+            if entry.outcome == "completed" and state == "available"
+            else [outcome, station_name]
+        )
         file_name = _file_name(entry.path)
         if file_name and file_name.casefold() not in ", ".join(parts).casefold():
             parts.append(file_name)

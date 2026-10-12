@@ -384,13 +384,14 @@ def test_po_starcie_fokus_jest_NA_LISCIE_a_nie_w_polu_filtra():
 
 
 def test_ctrl_k_jest_gestem_filtra_a_nie_ctrl_f():
-    """Gest ODCZYTANY z MainWindow.xaml:491, nie zgadniety.
+    """Filtr i wyszukiwanie zachowują dwa różne kontrakty AMC.
 
-    Ctrl+F w oryginale otwiera OSOBNE okno szukania w zdalnej usludze, ktorego
-    ten port nie ma. Zamapowanie filtra na Ctrl+F byloby cicha zmiana kontraktu
-    wobec uzytkownika, ktory zna AMC.
+    Ctrl+K zawęża bieżącą listę, Ctrl+F otwiera osobne okno bieżącej usługi,
+    a Ctrl+Shift+F osobne okno globalne.
     """
     assert resolved("Ctrl+K") is Action.FOCUS_FILTER
+    assert resolved("Ctrl+F") is Action.SEARCH_CURRENT
+    assert resolved("Ctrl+Shift+F") is Action.SEARCH_ALL
     assert resolved("Ctrl+F") is not Action.FOCUS_FILTER
 
 

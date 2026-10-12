@@ -733,6 +733,23 @@ class PodcastSource:
             ))
         return PodcastEpisodePage(rows, len(visible), has_more)
 
+    def search_rows(self) -> list[Row]:
+        """All locally cached sources and episodes, without paging markers.
+
+        Search is run in the background by the GUI.  Loading the complete
+        cached catalogue here prevents ``Ctrl+F`` from silently searching
+        only the first 150 visible episodes of a podcast.  The database stays
+        read-only and technical identifiers remain in :class:`Row` fields;
+        only intentional titles, authors and details are later presented.
+        """
+
+        sources = subscription_rows(self.subscriptions())
+        episodes = [
+            _episode_row(record, aggregate=True)
+            for record in self._aggregate_records("1 = 1")
+        ]
+        return [*sources, *episodes]
+
     def inbox_sort_mode(self) -> str:
         """Saved ordering of ``Nowe odcinki``; missing data means newest."""
         try:

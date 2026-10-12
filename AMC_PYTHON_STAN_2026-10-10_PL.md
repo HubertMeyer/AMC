@@ -43,7 +43,7 @@ podmiany i wycofania plików. Docelowe `AMC.exe` ma być stałym punktem wejści
 a aktualizator działać za nim, bez ręcznego wybierania skryptu lub interpretera.
 
 Aktualny kompletny pakiet EXE jest w:
-`D:\Projekty Codex\AMC - integracja wxPython\.test-output\AMC-Python-EXE-sesje-20261012`.
+`D:\Projekty Codex\AMC - integracja wxPython\.test-output\AMC-Python-wyszukiwanie-20261012`.
 Nie zawiera `AMC-wx-Lite.cmd`. `AMC.exe` sprawdza wersję formatu pakietu,
 interfejsu i protokołu hosta oraz sumy krytycznych plików przed uruchomieniem.
 Automatyczna weryfikacja paczki i próbna aktualizacja do osobnego katalogu
@@ -185,19 +185,30 @@ porównanie, ponieważ podobny cel nie oznacza identycznego API ani układu.
 
 ### Wyszukiwanie
 
-`Ctrl+F` (wyszukiwanie w bieżącej sesji/usłudze) i `Ctrl+Shift+F`
-(wyszukiwanie globalne) obecnie nie działają. Sprawdzenie kodu potwierdziło,
-że nie jest to tylko brak wpisu w tablicy skrótów: pełna wyszukiwarka oraz
-osobny widok wyników z głównego AMC nie zostały jeszcze przeniesione. Obecne
-`Ctrl+K` jedynie filtruje elementy już widoczne na bieżącej liście i nie może
-zastępować żadnego z tych poleceń.
+12 października przeniesiono pierwszą działającą całość `Ctrl+F`
+(bieżąca sesja/usługa) i `Ctrl+Shift+F` (wyszukiwanie globalne). To osobne,
+natywne okno z polem zapytania i zwykłą listą Windows; `Ctrl+K` nadal jedynie
+filtruje elementy już widoczne i nie zmienił znaczenia. Wyszukiwanie lokalne
+ignoruje wielkość liter oraz znaki diakrytyczne, wymaga wszystkich słów i
+obejmuje komplet zapisanych Plików, Bibliotekę Radia, wszystkie zapisane
+podcasty wraz ze wszystkimi odcinkami (bez ograniczenia do pierwszych 150)
+oraz zapisany katalog TIDAL. Awaria jednego źródła nie usuwa wyników z innych.
 
-Port musi zachować dwa zakresy wyszukiwania, osobną dostępną listę wyników,
-powrót do poprzedniego widoku i komplet działań na wyniku zgodny z głównym
-AMC: otwieranie i odtwarzanie, szybkie informacje, kopiowanie, zaznaczenie
-wielokrotne oraz właściwe dla sesji operacje Biblioteki, Ulubionych, Kolejki,
-playlist i pobierania. Przed kodowaniem należy odczytać z głównego AMC pełny
-kontrakt wyników i skrótów, zamiast odtwarzać go z pamięci.
+Enter wraca do właściwej sesji, listy i stabilnego elementu. Lista obsługuje
+lewą strzałkę, wielokrotne zaznaczenie Shift/Ctrl+Spacja, `Ctrl+C`,
+`Ctrl+Shift+C` oraz skróty działań znane z głównego AMC: odtwarzanie,
+Kolejkę/„jako następne”, Ulubione, Bibliotekę, playlistę, preset, informacje i
+pobieranie podcastu. Wartości techniczne, identyfikatory i reprezentacje
+obiektów nie trafiają do nazw dostępnościowych.
+
+Historia zapytań jest zapisywana osobno dla bieżących sesji i zakresu
+globalnego; przy pustym polu strzałki w dół/w górę przeglądają ją jak w
+głównym AMC. Do domknięcia parytetu pozostają wyniki pobierane na żywo z
+internetowych katalogów (Radio Browser, Apple/Spreaker/YouTube i wyszukiwanie
+TIDAL) oraz relacje TIDAL pod prawą strzałką. Obecne wyniki są prawdziwe, ale
+pochodzą wyłącznie z kompletnego lokalnego cache'u. Potrzebny jest też żywy
+odbiór NVDA okna, skrótów i powrotu fokusu; testy automatyczne nie zastępują
+tego pomiaru.
 
 ### WiiM
 
@@ -318,7 +329,7 @@ kodu ani wysyłać logów bez wiedzy użytkownika.
 
 ## Dowody automatyczne tego przyrostu
 
-- pełny runner Python: 1248 zaliczonych, 0 błędów, 138 historycznych pominięć;
+- pełny runner Python: 1264 zaliczone, 0 błędów, 138 historycznych pominięć;
 - testy protokołu C#: 15 zestawów zaliczonych;
 - całe rozwiązanie .NET zbudowane sekwencyjnie: 0 ostrzeżeń, 0 błędów;
 - LiteHost zbudowany i opublikowany dla Windows x64 bez błędów i ostrzeżeń;
@@ -348,10 +359,11 @@ lewą strzałką.
 2. W toku: technicznie rozdzielono Radio i Multimedia, ich stan, pauzę,
    głośność, tempo i urządzenie. Pozostaje żywy odbiór równoczesnego dźwięku,
    przełączania wyjść oraz wyciszenia `Ctrl+M` dla aktywnej sesji.
-3. Przeniesienie pełnego wyszukiwania z głównego AMC: `Ctrl+F` w bieżącej
-   sesji, `Ctrl+Shift+F` globalnie, dostępna lista wyników, wszystkie działania
-   na wynikach i prawidłowy powrót do wcześniejszego widoku. Przy tym usunąć
-   powtarzany prefiks „Nagrane” z ukończonych wierszy `Alt+Shift+R`.
+3. W toku: `Ctrl+F` i `Ctrl+Shift+F` mają już osobne natywne okno, pełny
+   lokalny cache, historię zapytań, skróty działań oraz powrót do właściwej
+   listy. Domknąć zdalne katalogi, prawą strzałkę TIDAL i żywy odbiór NVDA.
+   Powtarzany prefiks „Nagrane” usunięto z ukończonych wierszy `Alt+Shift+R`;
+   stany nieudane, przerwane, zatrzymane i brak pliku pozostają w etykiecie.
 4. Przepisanie całych Ustawień głównego AMC pod `Ctrl+,`, ze wszystkimi
    kartami, polami, zależnościami i zapisem oraz nawigacją `Ctrl+Tab`; dodanie
    wyboru pauzy po utracie wyjścia, `Ctrl+[` do poprzedniego i `Ctrl+]` do

@@ -144,6 +144,14 @@ from .quick_info import (
     quick_info_reply,
     read_cached_information,
 )
+from .search_catalog import (
+    SESSION_LABELS,
+    SearchEntry,
+    SearchResultAction,
+    record_query as add_search_history,
+    search as search_entries,
+)
+from .search_sources import SearchCollection, SearchSources
 from .radio_activity import (
     STATE_POSITION_LABELS,
     activity_cue_wav,
@@ -1157,6 +1165,381 @@ class MediaListCtrl(wx.ListCtrl):
     def visible_count(self) -> int:
         """Liczba wierszy POKAZANYCH teraz. Zrodlo liczby do statusu filtra."""
         return len(self._shown)
+
+
+class SearchDialog(wx.Dialog):
+    """Native, screen-reader-friendly search window.
+
+    It is deliberately a separate window, as in full AMC.  ``Ctrl+K`` keeps
+    filtering the already visible list; ``Ctrl+F`` searches the complete
+    cached catalogue and puts the results in this ordinary SysListView32.
+    """
+
+    def __init__(
+        self,
+        parent: wx.Window,
+        *,
+        all_services: bool,
+        current_session_label: str,
+        run_search: Callable[[str, "SearchDialog"], None],
+        copy_text: Callable[[str], bool],
+        history: list[str],
+        record_query: Callable[[str], list[str]],
+    ) -> None:
+        mode = (
+            "Szukaj we wszystkich usługach"
+            if all_services
+            else f"Szukaj w {current_session_label}"
+        )
+        super().__init__(parent, title=f"{mode} — AMC", size=(840, 570))
+        self.SetName(f"{mode} — AMC")
+        self._all_services = all_services
+        self._run_search = run_search
+        self._copy_text = copy_text
+        self._history = list(history)
+        self._record_query = record_query
+        self._history_index = -1
+        self._browsing_history = False
+        self._applying_history = False
+        self._entries: list[SearchEntry] = []
+        self.catalog: SearchCollection | None = None
+        self.selected_result: SearchEntry | None = None
+        self.selected_results: list[SearchEntry] = []
+        self.selected_action = SearchResultAction.OPEN
+
+        heading = wx.StaticText(self, label=mode)
+        heading.SetName(mode)
+        query_label = wx.StaticText(self, label="&Tekst do wyszukania:")
+        self.query = wx.TextCtrl(self)
+        self.query.SetName(mode)
+        self.search_button = wx.Button(self, label="&Szukaj")
+        self.search_button.SetName("Szukaj")
+        self.results = wx.ListCtrl(
+            self,
+            style=wx.LC_REPORT | wx.BORDER_SUNKEN,
+        )
+        self.results.InsertColumn(0, "Nazwa", width=390)
+        self.results.InsertColumn(1, "Rodzaj", width=130)
+        self.results.InsertColumn(2, "Szczegóły", width=270)
+        self.results.SetLabel("Wyniki wyszukiwania")
+        self.results.SetName("Wyniki wyszukiwania")
+        self.status = wx.StaticText(self, label="Wpisz tekst do wyszukania")
+        self.status.SetName("Stan wyszukiwania")
+        self.announcer = Announcer(self.status)
+        self.open_button = wx.Button(self, wx.ID_OK, "&Otwórz")
+        self.close_button = wx.Button(self, wx.ID_CANCEL, "&Zamknij")
+
+        query_row = wx.BoxSizer(wx.HORIZONTAL)
+        query_row.Add(self.query, 1, wx.RIGHT | wx.EXPAND, 8)
+        query_row.Add(self.search_button, 0)
+        buttons = wx.BoxSizer(wx.HORIZONTAL)
+        buttons.AddStretchSpacer()
+        buttons.Add(self.open_button, 0, wx.RIGHT, 8)
+        buttons.Add(self.close_button, 0)
+        layout = wx.BoxSizer(wx.VERTICAL)
+        layout.Add(heading, 0, wx.ALL, 10)
+        layout.Add(query_label, 0, wx.LEFT | wx.RIGHT, 10)
+        layout.Add(query_row, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM | wx.EXPAND, 10)
+        layout.Add(self.results, 1, wx.LEFT | wx.RIGHT | wx.EXPAND, 10)
+        layout.Add(self.status, 0, wx.ALL | wx.EXPAND, 10)
+        layout.Add(buttons, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM | wx.EXPAND, 10)
+        self.SetSizer(layout)
+        self.SetEscapeId(wx.ID_CANCEL)
+
+        self.query.Bind(wx.EVT_KEY_DOWN, self._on_query_key)
+        self.query.Bind(wx.EVT_TEXT, self._on_query_text)
+        self.results.Bind(wx.EVT_KEY_DOWN, self._on_results_key)
+        self.results.Bind(wx.EVT_LIST_ITEM_ACTIVATED, self._on_result_activated)
+        self.search_button.Bind(wx.EVT_BUTTON, lambda _event: self.start_search())
+        self.open_button.Bind(wx.EVT_BUTTON, lambda _event: self._open_selected())
+        self.close_button.Bind(wx.EVT_BUTTON, lambda _event: self.EndModal(wx.ID_CANCEL))
+        self.Bind(wx.EVT_SHOW, self._on_show)
+        self.Bind(wx.EVT_CLOSE, lambda event: event.Skip())
+        self.CentreOnParent()
+        self.query.SetFocus()
+
+    def _on_show(self, event: wx.ShowEvent) -> None:
+        event.Skip()
+        if event.IsShown():
+            wx.CallAfter(self.query.SetFocus)
+
+    def start_search(self) -> None:
+        if not self.search_button.IsEnabled():
+            return
+        query = self.query.GetValue().strip()
+        if not query:
+            self.announcer.say("Wpisz tekst do wyszukania")
+            self.query.SetFocus()
+            return
+        self.search_button.Enable(False)
+        self.announcer.say("Wyszukiwanie")
+        self._history = self._record_query(query)
+        self._reset_history_browsing()
+        self._run_search(query, self)
+
+    def show_results(
+        self,
+        entries: list[SearchEntry],
+        warnings: tuple[str, ...] = (),
+    ) -> None:
+        self.search_button.Enable(True)
+        self._entries = entries
+        self.results.Freeze()
+        try:
+            self.results.DeleteAllItems()
+            for index, entry in enumerate(entries):
+                row = entry.row
+                self.results.InsertItem(index, row.title)
+                if row.kind_label:
+                    self.results.SetItem(index, 1, row.kind_label)
+                details = [row.detail] if row.detail else []
+                if self._all_services:
+                    details.append(entry.session_label)
+                if details:
+                    self.results.SetItem(index, 2, ", ".join(dict.fromkeys(details)))
+        finally:
+            self.results.Thaw()
+
+        if not entries:
+            message = "Brak wyników. Zmień wyszukiwany tekst"
+            if warnings:
+                message = f"{message}. {'; '.join(warnings)}"
+            self.announcer.say(message)
+            self.query.SetFocus()
+            self.query.SelectAll()
+            return
+
+        count = len(entries)
+        message = "1 wynik" if count == 1 else f"{count} wyników"
+        if warnings:
+            message = f"{message}. {'; '.join(warnings)}"
+        # The focused native row already speaks its label and position.  Keep
+        # the count as readable status without a second live announcement,
+        # exactly like the full AMC search window.
+        self.status.SetLabel(message)
+        self.status.SetName(message)
+        self.results.SetItemState(
+            0,
+            wx.LIST_STATE_SELECTED | wx.LIST_STATE_FOCUSED,
+            wx.LIST_STATE_SELECTED | wx.LIST_STATE_FOCUSED,
+        )
+        self.results.EnsureVisible(0)
+        self.results.SetFocus()
+
+    def search_failed(self) -> None:
+        self.search_button.Enable(True)
+        self.announcer.say("Nie udało się wykonać wyszukiwania")
+        self.query.SetFocus()
+
+    def _selected_entries(self) -> list[SearchEntry]:
+        result: list[SearchEntry] = []
+        index = self.results.GetFirstSelected()
+        while index != -1:
+            if 0 <= index < len(self._entries):
+                result.append(self._entries[index])
+            next_index = self.results.GetNextSelected(index)
+            if next_index != -1 and next_index <= index:
+                break
+            index = next_index
+        if result:
+            return result
+        focused = self.results.GetFocusedItem()
+        return [self._entries[focused]] if 0 <= focused < len(self._entries) else []
+
+    def _lead_entry(self) -> SearchEntry | None:
+        focused = self.results.GetFocusedItem()
+        if 0 <= focused < len(self._entries):
+            return self._entries[focused]
+        selected = self._selected_entries()
+        return selected[0] if selected else None
+
+    def _complete_selected(self, action: SearchResultAction) -> None:
+        entry = self._lead_entry()
+        if entry is None:
+            self.announcer.say("Najpierw wykonaj wyszukiwanie i wybierz wynik")
+            self.query.SetFocus()
+            return
+        selected = self._selected_entries()
+        if action in (
+            SearchResultAction.QUEUE,
+            SearchResultAction.PLAY_NEXT,
+            SearchResultAction.FAVORITE,
+            SearchResultAction.LIBRARY,
+            SearchResultAction.PLAYLIST,
+        ):
+            sessions = {candidate.session_id for candidate in selected}
+            locations = {
+                (candidate.source_view, candidate.parent_id)
+                for candidate in selected
+            }
+            if len(sessions) > 1:
+                self.announcer.say(
+                    "Dla jednego działania wybierz wyniki z tej samej usługi"
+                )
+                return
+            if len(locations) > 1:
+                self.announcer.say(
+                    "Dla jednego działania wybierz wyniki z tej samej listy"
+                )
+                return
+        self.selected_result = entry
+        self.selected_results = selected or [entry]
+        self.selected_action = action
+        self.EndModal(wx.ID_OK)
+
+    def _open_selected(self) -> None:
+        self._complete_selected(SearchResultAction.OPEN)
+
+    def _copy(self, *, addresses: bool) -> None:
+        values = []
+        for entry in self._selected_entries():
+            value = entry.row.address if addresses else entry.row.title
+            if value:
+                values.append(value)
+        if not values:
+            self.announcer.say(
+                "Wybrane wyniki nie mają adresu" if addresses else "Nie ma czego skopiować"
+            )
+            return
+        if self._copy_text(os.linesep.join(values)):
+            if addresses:
+                self.announcer.say(
+                    "Skopiowano adres" if len(values) == 1
+                    else f"Skopiowano adresy: {len(values)} elementów"
+                )
+            else:
+                self.announcer.say(
+                    COPIED_NAME_MESSAGE if len(values) == 1
+                    else f"Skopiowano nazwy: {len(values)} elementów"
+                )
+
+    def _announce_quick_information(self) -> None:
+        entry = self._lead_entry()
+        if entry is None:
+            self.announcer.say("Brak wybranego wyniku")
+            return
+        row = entry.row
+        parts = [row.title, row.artist_name, row.kind_label, row.detail]
+        if self._all_services:
+            parts.append(entry.session_label)
+        self.announcer.say(", ".join(dict.fromkeys(part for part in parts if part)))
+
+    def _on_query_key(self, event: wx.KeyEvent) -> None:
+        code = event.GetKeyCode()
+        if code in (wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER):
+            self.start_search()
+            return
+        if (
+            code == wx.WXK_DOWN
+            and (not self.query.GetValue() or self._browsing_history)
+            and self._browse_history(1)
+        ):
+            return
+        if code == wx.WXK_UP and self._browsing_history and self._browse_history(-1):
+            return
+        if code == wx.WXK_DOWN and self._entries:
+            self.results.SetFocus()
+            return
+        if code == wx.WXK_ESCAPE:
+            self.EndModal(wx.ID_CANCEL)
+            return
+        event.Skip()
+
+    def _on_query_text(self, event: wx.CommandEvent) -> None:
+        event.Skip()
+        if not self._applying_history:
+            self._reset_history_browsing()
+
+    def _reset_history_browsing(self) -> None:
+        self._browsing_history = False
+        self._history_index = -1
+
+    def _apply_history_text(self, value: str) -> None:
+        self._applying_history = True
+        try:
+            self.query.SetValue(value)
+            self.query.SetInsertionPointEnd()
+            self.query.SelectAll()
+        finally:
+            self._applying_history = False
+
+    def _browse_history(self, direction: int) -> bool:
+        if not self._history:
+            if not self.query.GetValue():
+                self.announcer.say("Historia wyszukiwania jest pusta")
+                return True
+            return False
+        if not self._browsing_history:
+            if self.query.GetValue() or direction < 0:
+                return False
+            self._browsing_history = True
+            self._history_index = 0
+        else:
+            self._history_index += direction
+            if self._history_index < 0:
+                self._apply_history_text("")
+                self._reset_history_browsing()
+                self.status.SetLabel("Puste pole wyszukiwania")
+                self.status.SetName("Puste pole wyszukiwania")
+                return True
+            self._history_index = min(self._history_index, len(self._history) - 1)
+        self._apply_history_text(self._history[self._history_index])
+        text = f"{self._history_index + 1} z {len(self._history)} w historii"
+        self.status.SetLabel(text)
+        self.status.SetName(text)
+        return True
+
+    def _on_results_key(self, event: wx.KeyEvent) -> None:
+        code = event.GetKeyCode()
+        ctrl = event.ControlDown()
+        shift = event.ShiftDown()
+        alt = event.AltDown()
+        if code == wx.WXK_ESCAPE:
+            self.EndModal(wx.ID_CANCEL)
+            return
+        if code in (wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER) and not (ctrl or shift or alt):
+            self._open_selected()
+            return
+        if code in (wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER) and ctrl and not (shift or alt):
+            self._complete_selected(SearchResultAction.TOGGLE_PLAYBACK)
+            return
+        if code in (wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER) and shift and not (ctrl or alt):
+            self._complete_selected(SearchResultAction.QUEUE)
+            return
+        if code in (wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER) and ctrl and shift and not alt:
+            self._complete_selected(SearchResultAction.PLAY_NEXT)
+            return
+        if ctrl and shift and code in (ord("U"), ord("u")):
+            self._complete_selected(SearchResultAction.FAVORITE)
+            return
+        if ctrl and shift and code in (ord("L"), ord("l")):
+            self._complete_selected(SearchResultAction.LIBRARY)
+            return
+        if ctrl and shift and code in (ord("P"), ord("p")) and not alt:
+            self._complete_selected(SearchResultAction.PLAYLIST)
+            return
+        if ctrl and shift and alt and code in (ord("P"), ord("p")):
+            self._complete_selected(SearchResultAction.PRESET)
+            return
+        if alt and code in (wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER) and not (ctrl or shift):
+            self._complete_selected(SearchResultAction.INFORMATION)
+            return
+        if ctrl and code in (ord("D"), ord("d")) and not (shift or alt):
+            self._complete_selected(SearchResultAction.DOWNLOAD)
+            return
+        if ctrl and code in (ord("S"), ord("s")) and not (shift or alt):
+            self._complete_selected(SearchResultAction.SAVE_AS)
+            return
+        if code == wx.WXK_LEFT and not (ctrl or shift or alt):
+            self._announce_quick_information()
+            return
+        if ctrl and code in (ord("C"), ord("c")):
+            self._copy(addresses=shift)
+            return
+        event.Skip()
+
+    def _on_result_activated(self, _event: wx.ListEvent) -> None:
+        self._open_selected()
 
 
 class StationDialog(wx.Dialog):
@@ -2554,6 +2937,9 @@ class LiteFrame(wx.Frame):
         self.library = LibrarySource()
         self.podcasts = PodcastSource(self.layout)
         self.tidal = TidalSource(self.layout)
+        self.search_sources = SearchSources(
+            self.library, self.radio, self.podcasts, self.tidal
+        )
         self._tidal_queue_rows = list(tidal_queue_rows(state.tidal_queue_items))
         # Kazde otwarcie katalogu ma numer. Odpowiedz rozpoczęta przed
         # opuszczeniem sesji nie moze po powrocie podmienic nowszej listy.
@@ -3023,6 +3409,8 @@ class LiteFrame(wx.Frame):
         """Polecenia, ktorych natywna lista nie moze zabrac jako liter."""
         if chord_from_event(event).canonical in {
             "Ctrl+C",
+            "Ctrl+F",
+            "Ctrl+Shift+F",
             "Ctrl+X",
             "Ctrl+V",
             "Alt+Up",
@@ -3039,6 +3427,227 @@ class LiteFrame(wx.Frame):
             self._on_key(event)
             return
         event.Skip()
+
+    # -------------------------------------------------------- wyszukiwanie
+
+    def _show_search(self, *, all_services: bool) -> None:
+        """Ctrl+F/Ctrl+Shift+F: a separate catalogue window, as in AMC."""
+
+        if self.navigator.view is View.PLAYER:
+            self.announcer.say("Wyszukiwanie jest dostępne na listach")
+            return
+        session_before = self.navigator.active
+        if (
+            not all_services
+            and session_before in (SessionId.WIIM, SessionId.SONOS)
+        ):
+            self.announcer.say(
+                f"Wyszukiwanie katalogu nie jest jeszcze dostępne w sesji "
+                f"{SESSION_LABELS[session_before]}"
+            )
+            return
+
+        dialog = SearchDialog(
+            self,
+            all_services=all_services,
+            current_session_label=SESSION_LABELS[session_before],
+            run_search=lambda query, target: self._run_search_query(
+                query,
+                target,
+                all_services=all_services,
+                session_before=session_before,
+            ),
+            copy_text=self._to_clipboard,
+            history=list(self.state.search_history.get(
+                "global" if all_services else session_before.value,
+                [],
+            )),
+            record_query=lambda query: self._record_search_query(
+                "global" if all_services else session_before.value,
+                query,
+            ),
+        )
+        try:
+            result = dialog.ShowModal()
+            selected = dialog.selected_result
+            selected_results = list(dialog.selected_results)
+            selected_action = dialog.selected_action
+        finally:
+            dialog.Destroy()
+        if result == wx.ID_OK and selected is not None:
+            self._complete_search_result_action(
+                selected,
+                selected_results or [selected],
+                selected_action,
+            )
+
+    def _record_search_query(self, scope: str, query: str) -> list[str]:
+        history = add_search_history(
+            list(self.state.search_history.get(scope, [])),
+            query,
+        )
+        self.state.search_history[scope] = history
+        try:
+            self.store.save(self.state)
+        except OSError:
+            # Search must remain usable when the private history cannot be
+            # persisted.  The in-memory list still works for this process.
+            pass
+        return list(history)
+
+    @staticmethod
+    def _search_dialog_alive(dialog: SearchDialog) -> bool:
+        try:
+            return dialog.IsShown()
+        except RuntimeError:
+            return False
+
+    def _run_search_query(
+        self,
+        query: str,
+        dialog: SearchDialog,
+        *,
+        all_services: bool,
+        session_before: SessionId,
+    ) -> None:
+        sessions = (
+            (
+                SessionId.FILES,
+                SessionId.RADIO,
+                SessionId.PODCASTS,
+                SessionId.TIDAL,
+            )
+            if all_services
+            else (session_before,)
+        )
+        cached = dialog.catalog
+
+        def work() -> tuple[SearchCollection, list[SearchEntry]]:
+            collected = cached or self.search_sources.collect(sessions)
+            return collected, search_entries(list(collected.entries), query)
+
+        def done(result: tuple[SearchCollection, list[SearchEntry]]) -> None:
+            if self._search_dialog_alive(dialog):
+                dialog.catalog = result[0]
+                dialog.show_results(result[1], result[0].warnings)
+
+        def failed(_error: Exception) -> None:
+            if self._search_dialog_alive(dialog):
+                dialog.search_failed()
+
+        # One stream means a second Enter invalidates the older result.  The
+        # work remains read-only; only the newest query may update the dialog.
+        self.runner.submit("catalog-search", work, done, failed)
+
+    def _complete_search_result_action(
+        self,
+        entry: SearchEntry,
+        selected: list[SearchEntry],
+        action: SearchResultAction,
+    ) -> None:
+        """Open the real list, then run the same command as that list uses."""
+
+        if action is SearchResultAction.OPEN:
+            self._open_search_result(entry)
+            return
+
+        selected_ids = [candidate.row.item_id for candidate in selected]
+
+        def after_open() -> None:
+            if action is SearchResultAction.TOGGLE_PLAYBACK:
+                self._dispatch(Action.ACTIVATE)
+            elif action is SearchResultAction.QUEUE:
+                self._dispatch(Action.ADD_TO_QUEUE)
+            elif action is SearchResultAction.PLAY_NEXT:
+                self._dispatch(Action.TOGGLE_PLAY_NEXT)
+            elif action is SearchResultAction.FAVORITE:
+                self._dispatch(Action.TOGGLE_FAVORITE)
+            elif action is SearchResultAction.LIBRARY:
+                if entry.session_id is SessionId.PODCASTS:
+                    self._toggle_podcast_library()
+                elif entry.session_id is SessionId.TIDAL:
+                    self._toggle_tidal_membership(favorite=False)
+                else:
+                    self.announcer.say(
+                        "Ten zapisany wynik jest już w Bibliotece"
+                    )
+            elif action is SearchResultAction.PLAYLIST:
+                self._dispatch(Action.MANAGE_PLAYLIST_MEMBERSHIP)
+            elif action is SearchResultAction.PRESET:
+                self._dispatch(Action.ASSIGN_PRESET)
+            elif action is SearchResultAction.INFORMATION:
+                if entry.session_id is SessionId.PODCASTS:
+                    self._show_podcast_description()
+                else:
+                    self._announce_quick_information()
+            elif action is SearchResultAction.DOWNLOAD:
+                self._dispatch(Action.DOWNLOAD_PODCAST_EPISODES)
+            elif action is SearchResultAction.SAVE_AS:
+                self._dispatch(Action.SAVE_PODCAST_EPISODE_AS)
+
+        self._open_search_result(
+            entry,
+            selected_ids=selected_ids,
+            after_open=after_open,
+        )
+
+    def _open_search_result(
+        self,
+        entry: SearchEntry,
+        *,
+        selected_ids: list[str] | None = None,
+        after_open: Callable[[], None] | None = None,
+    ) -> None:
+        """Return to the result's real list and select its stable item ID."""
+
+        self._transient_preview_return = None
+        self._switch_session(entry.session_id)
+        item_id = entry.row.item_id
+
+        def complete() -> None:
+            if selected_ids:
+                self._active_list().select_item_ids(selected_ids)
+            if after_open is not None:
+                after_open()
+
+        if entry.session_id is SessionId.FILES:
+            self._open_library_view(OpenLibraryView(
+                LibraryView.ALL_FILES,
+                preferred_id=item_id,
+                target_session_id=SessionId.FILES,
+            ), after_refresh=complete)
+            return
+        if entry.session_id is SessionId.RADIO:
+            self._open_radio_view(OpenLibraryView(
+                None,
+                preferred_id=item_id,
+                target_session_id=SessionId.RADIO,
+            ), after_refresh=complete)
+            return
+        if entry.session_id is SessionId.PODCASTS:
+            if entry.row.kind == "episode" and entry.parent_id:
+                self._open_podcast_view(OpenPodcastView(
+                    subscription_id=entry.parent_id,
+                    preferred_id=item_id,
+                ), after_refresh=complete)
+            else:
+                self._open_podcast_library(
+                    preferred_id=item_id,
+                    after_refresh=complete,
+                )
+            return
+        if entry.session_id is SessionId.TIDAL:
+            target = entry.source_view
+            if target not in (
+                LibraryView.TIDAL_LIBRARY,
+                LibraryView.TIDAL_FAVORITES,
+                LibraryView.TIDAL_PLAYLISTS,
+            ):
+                target = LibraryView.TIDAL_LIBRARY
+            self._open_tidal_view(
+                OpenTidalView(target, preferred_id=item_id),
+                after_refresh=complete,
+            )
 
     # -------------------------------------------------------------- filtr
 
@@ -3930,7 +4539,12 @@ class LiteFrame(wx.Frame):
 
         self.runner.submit("radio-view", work, done, failed)
 
-    def _open_tidal_view(self, intent: OpenTidalView) -> None:
+    def _open_tidal_view(
+        self,
+        intent: OpenTidalView,
+        *,
+        after_refresh: Callable[[], None] | None = None,
+    ) -> None:
         """Read one account collection view, with the saved cache as fallback."""
         scopes = {
             LibraryView.TIDAL_LIBRARY: TIDAL_VIEW_LIBRARY,
@@ -3994,6 +4608,8 @@ class LiteFrame(wx.Frame):
             self._run(events)
             if result[3]:
                 self.announcer.say(result[3])
+            if after_refresh is not None:
+                after_refresh()
 
         def failed(error: Exception) -> None:
             if (
@@ -4444,6 +5060,8 @@ class LiteFrame(wx.Frame):
             self._remove_selected_items()
         elif action is Action.RECYCLE_SELECTED:
             self._recycle_selected_files()
+        elif action in (Action.SEARCH_CURRENT, Action.SEARCH_ALL):
+            self._show_search(all_services=action is Action.SEARCH_ALL)
         elif action is Action.FOCUS_FILTER:
             self._focus_filter()
         elif action is Action.STATION_ADD:
@@ -5470,6 +6088,7 @@ class LiteFrame(wx.Frame):
         preferred_id: str | None = None,
         *,
         completion_message: str = "",
+        after_refresh: Callable[[], None] | None = None,
     ) -> None:
         """Load the shared AMC podcast/channel library outside the GUI thread."""
         if not self.podcasts.is_available:
@@ -5497,6 +6116,8 @@ class LiteFrame(wx.Frame):
                 self.announcer.say(completion_message)
             else:
                 self._apply_podcast_result(events)
+            if after_refresh is not None:
+                after_refresh()
 
         def failed(error: Exception) -> None:
             if self.navigator.active is SessionId.PODCASTS:
@@ -5510,11 +6131,13 @@ class LiteFrame(wx.Frame):
         intent: OpenPodcastView,
         *,
         completion_message: str = "",
+        after_refresh: Callable[[], None] | None = None,
     ) -> None:
         if not intent.subscription_id:
             self._open_podcast_library(
                 preferred_id=intent.preferred_id,
                 completion_message=completion_message,
+                after_refresh=after_refresh,
             )
             return
 
@@ -5561,6 +6184,8 @@ class LiteFrame(wx.Frame):
                 self.announcer.say(completion_message)
             else:
                 self._apply_podcast_result(events)
+            if after_refresh is not None:
+                after_refresh()
 
         def failed(error: Exception) -> None:
             if self.navigator.active is SessionId.PODCASTS:

@@ -258,11 +258,11 @@ class Action(Enum):
     # Port ``Filter_Click`` -> ``ShowFilter``/``FocusFilter``
     # (MainWindow.xaml:491 "_Filtruj listę" Ctrl+K; MainWindow.xaml.cs:25455
     # i :22210). NIE jest to ``CommandIds.SearchCurrent``/``SearchAll``
-    # (Ctrl+F / Ctrl+Shift+F, MainWindow.xaml:492-493): tamte PYTAJA USLUGE o
-    # nowe dane i oddaja je w osobnym oknie wynikow, a tu zwezamy liste, ktora
-    # juz jest na ekranie. Port nie ma zdalnych uslug, wiec Ctrl+F zostaje
-    # NIEOBSADZONY -- lepiej nie mieć gestu niż dać mu ciche, inne znaczenie.
+    # (Ctrl+F / Ctrl+Shift+F, MainWindow.xaml:501-502): tamte otwieraja osobne
+    # okno wynikow, a tu zwezamy liste, ktora juz jest na ekranie.
     FOCUS_FILTER = "list.filter"
+    SEARCH_CURRENT = "view.search.current"
+    SEARCH_ALL = "view.search.all"
     # LEWA STRZALKA NA LISCIE: krotka informacja uzupelniajaca o ZAZNACZONYM
     # wierszu (bitrate, czestotliwosc, rozmiar, czas...). Gest ODCZYTANY, nie
     # wymyslony: ``MainWindow.xaml.cs:23206-23216`` w
@@ -332,6 +332,8 @@ TIDAL_SUPPORTED_ACTIONS = frozenset({
     Action.COPY_NAME,
     Action.COPY_ADDRESS,
     Action.FOCUS_FILTER,
+    Action.SEARCH_CURRENT,
+    Action.SEARCH_ALL,
     Action.VIEW_LIBRARY,
     Action.VIEW_FAVORITES,
     Action.VIEW_PLAYLISTS,
@@ -373,6 +375,8 @@ WIIM_SUPPORTED_ACTIONS = frozenset({
     Action.QUICK_INFORMATION,
     Action.COPY_NAME,
     Action.FOCUS_FILTER,
+    Action.SEARCH_CURRENT,
+    Action.SEARCH_ALL,
     Action.VIEW_ACTIVE_RECORDINGS,
     Action.VIEW_RECORDED_RADIO_FILES,
     Action.MANAGE_RADIO_SCHEDULES,
@@ -428,6 +432,8 @@ SONOS_SUPPORTED_ACTIONS = frozenset({
     Action.QUICK_INFORMATION,
     Action.COPY_NAME,
     Action.FOCUS_FILTER,
+    Action.SEARCH_CURRENT,
+    Action.SEARCH_ALL,
     Action.VIEW_ACTIVE_RECORDINGS,
     Action.VIEW_RECORDED_RADIO_FILES,
     Action.MANAGE_RADIO_SCHEDULES,
@@ -552,10 +558,11 @@ LIST_VIEW: dict[str, Action] = {
     "Ctrl+Shift+B": Action.VIEW_ITEM_BOOKMARKS,
     # Filtr listy. Gest ODCZYTANY, nie zgadniety: MainWindow.xaml:491
     # ``<MenuItem Header="_Filtruj listę" InputGestureText="Ctrl+K" ...>``.
-    # Ctrl+F i Ctrl+Shift+F NALEZA w oryginale do zdalnego SZUKANIA w usludze
-    # (xaml:492-493) i dlatego ich tu NIE MA -- wziecie Ctrl+F na filtr
-    # nauczyloby uzytkownika gestu, ktory w pelnym AMC robi co innego.
+    # Osobne okno wyszukiwania, nie filtr bieżącej listy. Gesty wprost z
+    # MainWindow.xaml:501-502 i obu tablic skrótów MainWindow.xaml.cs.
     "Ctrl+K": Action.FOCUS_FILTER,
+    "Ctrl+F": Action.SEARCH_CURRENT,
+    "Ctrl+Shift+F": Action.SEARCH_ALL,
     # LEWA STRZALKA bez modyfikatora. Jedyny wpis ze strzalka w tablicy listy:
     # oryginal wymaga ``Keyboard.Modifiers == ModifierKeys.None``
     # (cs:23206), wiec Shift/Ctrl/Alt+Left NIE sa tu wpisane i zostaja
@@ -637,6 +644,10 @@ PLAYER_VIEW: dict[str, Action] = {
     "F6": Action.SHOW_LIST,
     "Space": Action.PLAY_PAUSE,
     "Ctrl+M": Action.TOGGLE_MUTE,
+    # Skróty istnieją także w tablicy odtwarzacza pełnego AMC, lecz sama
+    # komenda odpowiada wtedy jasno: wyszukiwanie jest dostępne na listach.
+    "Ctrl+F": Action.SEARCH_CURRENT,
+    "Ctrl+Shift+F": Action.SEARCH_ALL,
     # Pelne AMC: gola litera B w otwartym odtwarzaczu dodaje szybka zakladke.
     # Ctrl+B pozostaje zbiorcza lista zakladek i nie jest aliasem tej akcji.
     "B": Action.ADD_BOOKMARK,
@@ -958,6 +969,8 @@ def describe() -> list[tuple[str, str]]:
             "Filtruj liste: Enter albo strzalka w dol przechodzi do wynikow, "
             "Escape czysci filtr"
         ),
+        Action.SEARCH_CURRENT: "Szukaj w bieżącej usłudze",
+        Action.SEARCH_ALL: "Szukaj we wszystkich usługach",
         # Nazwa mowi, CO klawisz daje, a nie jak dziala. "Uzupelniajace", bo
         # sama nazwa wiersza jest juz przeczytana przy nawigacji -- oryginal
         # celowo jej nie powtarza (QuickMediaInformationFormatter:8-10).

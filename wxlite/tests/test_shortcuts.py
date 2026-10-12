@@ -73,6 +73,18 @@ def test_ctrl_space_belongs_to_native_multiselect_list() -> None:
         ) is None
 
 
+def test_search_shortcuts_match_full_amc_in_both_views() -> None:
+    current = Chord("F", ctrl=True)
+    global_search = Chord("F", ctrl=True, shift=True)
+    for player in (False, True):
+        assert resolve(
+            current, player_view=player, radio_session=False
+        ) is Action.SEARCH_CURRENT
+        assert resolve(
+            global_search, player_view=player, radio_session=False
+        ) is Action.SEARCH_ALL
+
+
 def test_f6_and_escape_match_the_full_amc_behaviour() -> None:
     # MainWindow.xaml.cs:20773-20792
     assert resolve(Chord("F6"), player_view=False, radio_session=False) is Action.SHOW_PLAYER

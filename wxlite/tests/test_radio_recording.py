@@ -461,7 +461,8 @@ def test_recording_history_keeps_success_failure_and_accessible_labels() -> None
         }
     })
     rows = recording_history_rows(entries, now=now, path_probe=lambda path: "available")
-    assert rows[0].title.startswith("Nagrane, Radio Test, audycja, dziś")
+    assert rows[0].title.startswith("Radio Test, audycja, dziś")
+    assert not rows[0].title.startswith("Nagrane")
     assert rows[0].title.endswith("folder Nagrania")
     assert rows[0].path == r"D:\Nagrania\audycja.mp3"
     assert "techniczne-udane" not in rows[0].title

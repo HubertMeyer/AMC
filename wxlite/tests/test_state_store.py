@@ -87,6 +87,22 @@ def test_round_trip_keeps_private_podcast_inbox_sort_override() -> None:
     assert store.load().podcast_inbox_sort_mode == "Custom"
 
 
+def test_search_history_is_sanitized_bounded_and_kept_per_scope() -> None:
+    store, _ = temp_store()
+    values = [" Radio ", "radio", *(str(index) for index in range(60)), 7]
+    store.save(LiteState(search_history={
+        "files": values,
+        "global": ["Podcast"],
+        "broken": "not a list",
+    }))
+
+    loaded = store.load().search_history
+    assert loaded["files"][0] == "Radio"
+    assert len(loaded["files"]) == 50
+    assert loaded["global"] == ["Podcast"]
+    assert "broken" not in loaded
+
+
 def test_round_trip_keeps_only_safe_private_tidal_queue_fields() -> None:
     store, _ = temp_store()
     store.save(LiteState(tidal_queue_items=[{

@@ -1,0 +1,116 @@
+"""Read-only source aggregation for the wxPython search window."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+
+from .library_source import LibrarySource
+from .list_model import rows_from_stations
+from .navigation import LibraryView, SessionId
+from .podcast_source import PodcastSource
+from .radio_source import RadioSource, SCOPE_LIBRARY
+from .search_catalog import SearchEntry
+from .tidal_source import (
+    TidalSource,
+    VIEW_FAVORITES,
+    VIEW_LIBRARY,
+    VIEW_PLAYLISTS,
+)
+
+
+@dataclass(frozen=True, slots=True)
+class SearchCollection:
+    entries: tuple[SearchEntry, ...]
+    warnings: tuple[str, ...] = ()
+
+
+class SearchSources:
+    """Build the searchable cached catalogue without modifying the profile."""
+
+    def __init__(
+        self,
+        library: LibrarySource,
+        radio: RadioSource,
+        podcasts: PodcastSource,
+        tidal: TidalSource,
+    ) -> None:
+        self.library = library
+        self.radio = radio
+        self.podcasts = podcasts
+        self.tidal = tidal
+
+    def collect(self, session_ids: tuple[SessionId, ...]) -> SearchCollection:
+        entries: list[SearchEntry] = []
+        warnings: list[str] = []
+        for session_id in session_ids:
+            try:
+                entries.extend(self._session_entries(session_id))
+            except Exception:
+                # One unavailable profile/service must not erase valid global
+                # results from the other sessions.  The dialog receives only
+                # a short, intentional label, never the exception repr.
+                warnings.append(
+                    f"Nie udało się odczytać zapisanych danych: "
+                    f"{self._session_label(session_id)}"
+                )
+        return SearchCollection(tuple(entries), tuple(warnings))
+
+    def _session_entries(self, session_id: SessionId) -> list[SearchEntry]:
+        if session_id is SessionId.FILES:
+            view = self.library.load_view("all_files")
+            return [
+                SearchEntry(SessionId.FILES, row, LibraryView.ALL_FILES)
+                for row in view.rows
+            ]
+        if session_id is SessionId.RADIO:
+            # Only durable Library entries can currently be selected again in
+            # the wx browser.  Online Radio Browser results will be added by
+            # the remote-search endpoint; cached one-off residue must not be
+            # presented as an Enter target that immediately disappears.
+            snapshot = self.radio.load(scope=SCOPE_LIBRARY)
+            if snapshot.load_error:
+                raise RuntimeError(snapshot.load_error)
+            return [
+                SearchEntry(SessionId.RADIO, row, None)
+                for row in rows_from_stations(snapshot.as_payload())
+            ]
+        if session_id is SessionId.PODCASTS:
+            return [
+                SearchEntry(
+                    SessionId.PODCASTS,
+                    row,
+                    LibraryView.PODCAST_LIBRARY
+                    if row.kind == "podcast"
+                    else LibraryView.PODCAST_EPISODES,
+                    parent_id=row.parent_id,
+                )
+                for row in self.podcasts.search_rows()
+            ]
+        if session_id is SessionId.TIDAL:
+            results: list[SearchEntry] = []
+            for source, target in (
+                (VIEW_LIBRARY, LibraryView.TIDAL_LIBRARY),
+                (VIEW_FAVORITES, LibraryView.TIDAL_FAVORITES),
+                (VIEW_PLAYLISTS, LibraryView.TIDAL_PLAYLISTS),
+            ):
+                result = self.tidal.load_view(source)
+                results.extend(
+                    SearchEntry(SessionId.TIDAL, row, target)
+                    for row in result.rows
+                )
+            return results
+        # WiiM and Sonos currently expose devices/groups, not a media
+        # catalogue.  Searching their one visible device row would pretend to
+        # search music which the integration cannot enumerate.
+        return []
+
+    @staticmethod
+    def _session_label(session_id: SessionId) -> str:
+        return {
+            SessionId.FILES: "Pliki lokalne",
+            SessionId.RADIO: "Radio internetowe",
+            SessionId.PODCASTS: "Podcasty i YouTube",
+            SessionId.TIDAL: "TIDAL",
+            SessionId.WIIM: "WiiM",
+            SessionId.SONOS: "Sonos",
+        }[session_id]

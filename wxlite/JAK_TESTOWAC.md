@@ -15,7 +15,7 @@ Odbiór docelowego launchera:
 
 Aktualna, automatycznie zweryfikowana paczka znajduje się w:
 
-`D:\Projekty Codex\AMC - integracja wxPython\.test-output\AMC-Python-EXE-sesje-20261012\AMC.exe`
+`D:\Projekty Codex\AMC - integracja wxPython\.test-output\AMC-Python-wyszukiwanie-20261012\AMC.exe`
 
 Nie przełączaj na nią programu w czasie trwającego nagrywania. Pierwszy żywy
 odbiór wykonaj kolejno według punktów poniżej.
@@ -142,15 +142,41 @@ Zapisz wtedy wynik jako „nieprzetestowane na żywo”. Spotify nie należy do 
 etapu. Moduł aktualizacji będzie sprawdzany osobno po weryfikacji „Sygnalisty”:
 `https://github.com/michaldziwisz/sygnalista`.
 
-## Wyszukiwanie i odczyt nagranych plików — kolejny etap
+## Wyszukiwanie i odczyt nagranych plików
 
-Przed kolejnym wydaniem trzeba przenieść wyszukiwanie z głównego AMC. To nie
-jest obecny filtr `Ctrl+K`: `Ctrl+F` pyta bieżącą sesję lub usługę, a
-`Ctrl+Shift+F` przeszukuje wszystkie obsługiwane zakresy. Oba polecenia mają
-otwierać osobną, natywną listę wyników. Sprawdź na niej strzałki, Enter, lewą
-strzałkę, kopiowanie, Shift i `Ctrl+Spacja`, właściwe operacje kolekcji dla
-każdej sesji, Escape/Backspace oraz powrót fokusu i zaznaczenia. Brak wyniku
-ma dawać celowy komunikat, bez „nieznane” i bez technicznych identyfikatorów.
+`Ctrl+F` pyta bieżącą sesję lub usługę, a `Ctrl+Shift+F` przeszukuje wszystkie
+obsługiwane zapisane katalogi. Oba polecenia otwierają osobne natywne okno;
+`Ctrl+K` nadal filtruje tylko bieżącą listę.
+
+Odbiór wyszukiwania z NVDA:
+
+1. Na liście Plików naciśnij `Ctrl+F`. Fokus ma stanąć w polu „Szukaj w Pliki
+   lokalne”. Wpisz fragment nazwy bez polskich znaków odpowiadający nazwie z
+   ogonkiem i naciśnij Enter. Lista ma znaleźć wynik niezależnie od wielkości
+   liter i znaków diakrytycznych.
+   Po ponownym otwarciu pustego pola strzałka w dół ma wybrać najnowsze
+   zapytanie z historii, kolejne naciśnięcia — starsze, a strzałka w górę ma
+   wracać aż do pustego pola. Historia zakresu globalnego jest osobna.
+2. Strzałki mają czytać nazwę, rodzaj i szczegóły bez nazw klas, identyfikatorów
+   i `nieznane`. Lewa strzałka czyta krótkie informacje. `Ctrl+C` kopiuje same
+   nazwy, a `Ctrl+Shift+C` adresy; nie może pojawić się angielskie „Copy”.
+3. Zaznacz zakres Shiftem i nieprzylegające wiersze przez `Ctrl+Spacja`.
+   Sprawdź `Ctrl+Shift+Q`, `Ctrl+Shift+Enter`, `Ctrl+Shift+U`, `Ctrl+Shift+L`,
+   `Ctrl+Shift+P`, `Ctrl+Alt+Shift+P`, `Alt+Enter`, `Ctrl+D` i `Ctrl+S` w
+   pasujących sesjach. Wyniki z różnych usług nie mogą zostać potraktowane
+   jako jedna operacja.
+4. Enter ma zamknąć okno i ustawić fokus na dokładnie tym elemencie w jego
+   prawdziwej liście. Escape ma wrócić bez zmiany bieżącej sesji i zaznaczenia.
+   Puste zapytanie mówi „Wpisz tekst do wyszukania”; brak wyniku mówi „Brak
+   wyników. Zmień wyszukiwany tekst” i zostawia fokus w zaznaczonym polu.
+5. `Ctrl+Shift+F` ma w szczegółach podawać użytkową nazwę sesji. Sprawdź wynik
+   z Plików, Radia, Podcastów i TIDAL. WiiM i Sonos nie udają katalogu muzyki:
+   wyszukiwanie globalne je pomija, a bieżące podaje jasną informację o braku
+   katalogu.
+
+Na tym etapie przeszukiwany jest kompletny lokalny cache. Zdalne katalogi na
+żywo i relacje TIDAL pod prawą strzałką pozostają do
+domknięcia i nie mogą być zaliczone samym testem lokalnym.
 
 W `Alt+Shift+R` zwykły ukończony plik nie powinien zaczynać się od słowa
 „Nagrane”, ponieważ taki jest już kontekst listy. Odczyt ma zaczynać się od

@@ -33,6 +33,33 @@ def _read_podcast_inbox_sort_mode(raw: object) -> str | None:
     return raw if isinstance(raw, str) and raw in _PODCAST_INBOX_SORT_MODES else None
 
 
+def _read_search_history(raw: object) -> dict[str, list[str]]:
+    """Sanitize per-scope queries; never retain arbitrary objects."""
+
+    if not isinstance(raw, dict):
+        return {}
+    result: dict[str, list[str]] = {}
+    for scope, values in raw.items():
+        if not isinstance(scope, str) or not scope.strip() or not isinstance(values, list):
+            continue
+        entries: list[str] = []
+        seen: set[str] = set()
+        for value in values:
+            if not isinstance(value, str):
+                continue
+            query = value.strip()
+            key = query.casefold()
+            if not query or key in seen:
+                continue
+            seen.add(key)
+            entries.append(query)
+            if len(entries) >= 50:
+                break
+        if entries:
+            result[scope.strip()] = entries
+    return result
+
+
 def _read_tidal_queue(raw: object) -> list[dict]:
     """Wczytaj tylko pola potrzebne do kolejki TIDAL, bez dowolnych rekordów."""
     if not isinstance(raw, list):
@@ -194,6 +221,9 @@ class LiteState:
     #: Nie zapisujemy jej do wspólnego state.json, aby dwa programy nie
     #: ścigały się o profil. Pola techniczne pozostają wyłącznie modelem.
     tidal_queue_items: list[dict] = field(default_factory=list)
+    #: Historia zapytań osobno dla każdej sesji oraz zakresu globalnego.
+    #: Zawiera wyłącznie tekst użytkownika, bez wyników i identyfikatorów.
+    search_history: dict[str, list[str]] = field(default_factory=dict)
 
 
 def _read_session_overrides(raw: object) -> dict:
@@ -351,6 +381,7 @@ class StateStore:
                 raw.get("podcast_inbox_sort_mode")
             ),
             tidal_queue_items=_read_tidal_queue(raw.get("tidal_queue_items")),
+            search_history=_read_search_history(raw.get("search_history")),
         )
 
     # -------------------------------------------------------------- zapis
@@ -395,6 +426,7 @@ class StateStore:
         if podcast_sort_mode is not None:
             payload["podcast_inbox_sort_mode"] = podcast_sort_mode
         payload["tidal_queue_items"] = _read_tidal_queue(state.tidal_queue_items)
+        payload["search_history"] = _read_search_history(state.search_history)
         text = json.dumps(payload, ensure_ascii=False, indent=2)
 
         # Plik tymczasowy MUSI lezec w tym samym folderze: os.replace jest
