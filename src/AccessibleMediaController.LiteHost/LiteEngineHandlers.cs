@@ -23,6 +23,7 @@ internal sealed class LiteEngineHandlers : IDisposable
     private readonly WindowsMediaOutput _files = new();
     private readonly RadioMediaOutput _radio;
     private readonly LiteRadioRecordingCoordinator _recordings = new();
+    private readonly LiteRadioRecognitionCoordinator _recognition;
     private LiteEventSink? _events;
 
     /// <summary>
@@ -140,6 +141,13 @@ internal sealed class LiteEngineHandlers : IDisposable
             ? null
             : new LitePodcastOpmlCoordinator(podcastProgressStore, bookmarkStore);
         _queue = new LiteQueueCoordinator(_files, queueStore);
+        _recognition = new LiteRadioRecognitionCoordinator(
+            _radio,
+            () =>
+            {
+                lock (_gate) return _radioPlaying ? _radioItem : null;
+            },
+            _recordings);
 
         _files.PlaybackFailed += (_, e) =>
         {
@@ -303,6 +311,8 @@ internal sealed class LiteEngineHandlers : IDisposable
                 _recordings.SyncSchedules(request.Args, events),
             ["radio.scheduleStatus"] = (_, _) => _recordings.ScheduleStatus(),
             ["radio.scheduleLabels"] = (request, _) => RadioScheduleLabels(request.Args),
+            [LiteRadioRecognitionCoordinator.Operation] = (request, _) =>
+                _recognition.Run(request.Args),
             ["transport.pauseResume"] = (request, _) => PauseResume(request.Args),
             ["transport.toggleMute"] = (request, _) => ToggleMute(request.Args),
             ["transport.stop"] = (request, _) => StopTransport(request.Args),

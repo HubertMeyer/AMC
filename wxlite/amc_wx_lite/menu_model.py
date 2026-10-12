@@ -391,6 +391,37 @@ def build_menus() -> tuple[Menu, ...]:
                 accelerator=False,
                 needs_radio_session=True,
             ),
+            MenuItem(
+                "Rozpozna&j utwór",
+                Action.RECOGNIZE_RADIO_TRACK,
+                shortcut="S",
+                accelerator=False,
+                needs_radio_session=True,
+                needs_playback=True,
+            ),
+            MenuItem(
+                "&Obserwuj rozpoznawanie",
+                Action.TOGGLE_RADIO_RECOGNITION_MONITORING,
+                shortcut="Shift+S",
+                accelerator=False,
+                needs_radio_session=True,
+                checkable=True,
+            ),
+            MenuItem(
+                "Oznajmiaj rozpoznane utwor&y",
+                Action.TOGGLE_RADIO_RECOGNITION_ANNOUNCEMENTS,
+                shortcut="Ctrl+Alt+Shift+S",
+                accelerator=False,
+                needs_radio_session=True,
+                checkable=True,
+            ),
+            MenuItem(
+                "Rozpoznan&e utwory…",
+                Action.VIEW_RADIO_RECOGNITION_HISTORY,
+                shortcut="Ctrl+Alt+S",
+                accelerator=False,
+                needs_radio_session=True,
+            ),
         ),
     )
 

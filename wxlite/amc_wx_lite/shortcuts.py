@@ -227,6 +227,10 @@ class Action(Enum):
     SAVE_PODCAST_EPISODE_AS = "podcasts.download.saveAs"
     SHOW_PODCAST_DESCRIPTION = "podcasts.description"
     CURRENT_RADIO_BROADCAST_INFORMATION = "radio.currentBroadcastInformation"
+    RECOGNIZE_RADIO_TRACK = "radio.recognition.now"
+    TOGGLE_RADIO_RECOGNITION_MONITORING = "radio.recognition.monitor.toggle"
+    TOGGLE_RADIO_RECOGNITION_ANNOUNCEMENTS = "radio.recognition.announcements.toggle"
+    VIEW_RADIO_RECOGNITION_HISTORY = "radio.recognition.history"
     GO_TO_RELATED_PODCAST = "podcasts.goToRelated"
     TOGGLE_PODCAST_FAVORITE = "podcasts.favorite.toggle"
     TOGGLE_PODCAST_LIBRARY = "podcasts.library.toggle"
@@ -628,6 +632,8 @@ RADIO_LIST_VIEW: dict[str, Action] = {
     "Shift+Space": Action.RECORD_PAUSE,
     "Shift+R": Action.ADD_RADIO_SCHEDULE,
     "Alt+D": Action.CURRENT_RADIO_BROADCAST_INFORMATION,
+    "Ctrl+Alt+S": Action.VIEW_RADIO_RECOGNITION_HISTORY,
+    "Ctrl+Alt+Shift+S": Action.TOGGLE_RADIO_RECOGNITION_ANNOUNCEMENTS,
 }
 
 # Litery bez modyfikatora sa bezpieczne tylko w odtwarzaczu Radia. Na liscie
@@ -640,6 +646,10 @@ RADIO_PLAYER_VIEW: dict[str, Action] = {
     "Shift+R": Action.ADD_RADIO_SCHEDULE,
     "T": Action.RECORD_SPLIT,
     "Alt+D": Action.CURRENT_RADIO_BROADCAST_INFORMATION,
+    "S": Action.RECOGNIZE_RADIO_TRACK,
+    "Shift+S": Action.TOGGLE_RADIO_RECOGNITION_MONITORING,
+    "Ctrl+Alt+S": Action.VIEW_RADIO_RECOGNITION_HISTORY,
+    "Ctrl+Alt+Shift+S": Action.TOGGLE_RADIO_RECOGNITION_ANNOUNCEMENTS,
 }
 
 # Skroty W WIDOKU ODTWARZACZA. Tu strzalki sa wolne, wiec przejmuja role
@@ -904,6 +914,14 @@ def describe() -> list[tuple[str, str]]:
         Action.CURRENT_RADIO_BROADCAST_INFORMATION: (
             "Odczytaj bieżącą audycję lub utwór w Radiu"
         ),
+        Action.RECOGNIZE_RADIO_TRACK: "Rozpoznaj utwór z odtwarzanej stacji",
+        Action.TOGGLE_RADIO_RECOGNITION_MONITORING: (
+            "Włącz lub wyłącz obserwowanie rozpoznawania utworów"
+        ),
+        Action.TOGGLE_RADIO_RECOGNITION_ANNOUNCEMENTS: (
+            "Włącz lub wyłącz oznajmianie rozpoznanych utworów"
+        ),
+        Action.VIEW_RADIO_RECOGNITION_HISTORY: "Pokaż rozpoznane utwory",
         Action.GO_TO_RELATED_PODCAST: "Przejdź do podcastu wybranego odcinka",
         Action.TOGGLE_PODCAST_FAVORITE: (
             "Dodaj zaznaczone podcasty lub odcinki do ulubionych albo je usuń"

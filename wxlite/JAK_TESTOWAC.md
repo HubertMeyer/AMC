@@ -15,7 +15,7 @@ Odbiór docelowego launchera:
 
 Aktualna, automatycznie zweryfikowana paczka znajduje się w:
 
-`D:\Projekty Codex\AMC - integracja wxPython\.test-output\AMC-Python-podcast-ustawienia-20261012\AMC.exe`
+`D:\Projekty Codex\AMC - integracja wxPython\.test-output\AMC-Python-rozpoznawanie-20261012\AMC.exe`
 
 Nie przełączaj na nią programu w czasie trwającego nagrywania. Pierwszy żywy
 odbiór wykonaj kolejno według punktów poniżej.
@@ -741,6 +741,20 @@ Na karcie Radio i nagrywanie sprawdź kolejno:
    folderu, formatu i bitrate'u. Nie przerywaj istniejącego nagrania tylko na
    potrzeby tego odbioru. Zmiana długości TimeShift działa od kolejnego startu
    programu.
+6. W odtwarzaczu Radia odczekaj co najmniej 12 sekund od uruchomienia stacji
+   i naciśnij `S`. Ma paść „Rozpoznaję utwór”, a potem wynik albo uczciwa
+   odmowa. `Shift+S` przełącza automatyczne obserwowanie. W Ustawieniach
+   sprawdź trzy jawnie nazwane zakresy: odtwarzana stacja, nagrywane stacje
+   oraz oba rodzaje źródeł. Brak odpowiedniego źródła ma uśpić automat, nie
+   powodować prób sieciowych co kilkanaście sekund.
+7. `Ctrl+Alt+S` otwiera trwałą historię. Strzałki mają czytać tytuł,
+   wykonawcę, stację i czas bez nazw klas ani identyfikatorów. `Ctrl+C` kopiuje
+   opis, `Ctrl+Shift+C` opis i łącza, Delete usuwa zaznaczone wpisy, a filtr
+   stacji pozostaje zwykłym, dostępnym wyborem. Usunięty wpis przejęty kiedyś
+   z pełnego AMC nie może wrócić po restarcie.
+8. `Ctrl+Alt+Shift+S` przełącza samo oznajmianie. Po wyłączeniu automat nadal
+   zapisuje wyniki do historii. Do Shazam wychodzi wyłącznie lokalnie
+   obliczony podpis akustyczny; adres stacji i próbka PCM nie opuszczają hosta.
 
 Na karcie Podcasty i YouTube sprawdź domyślny folder pobierania, odstęp
 sprawdzania podcastów, osobny odstęp dla kanałów YouTube oraz liczbę źródeł
@@ -749,8 +763,7 @@ automatycznego sprawdzania. Zapisane wartości mają wrócić po ponownym
 otwarciu i restarcie. Automat sprawdza tylko należne źródła, w partiach o
 wybranym rozmiarze; brak nowości nie powinien przerywać NVDA komunikatem.
 
-Pełny odbiór Ustawień pozostaje otwarty: w karcie Radia brakuje jeszcze
-automatycznego rozpoznawania utworów. Trzeba także przepisać całe karty
+Pełny odbiór Ustawień pozostaje otwarty. Trzeba jeszcze przepisać całe karty
 Profile klawiatury, Import i eksport oraz Aktualizacje, a następnie porównać
 wszystkie pola, wartości domyślne, zależności, walidację i miejsca zapisu z
 głównym AMC.

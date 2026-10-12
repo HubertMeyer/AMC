@@ -160,6 +160,7 @@ from .radio_activity import (
     state_position_index,
     state_position_value,
 )
+from . import radio_recognition
 from .transport_parity import (
     PLAYBACK_RATE_MAX,
     PLAYBACK_RATE_MIN,
@@ -2821,6 +2822,260 @@ class AudioOutputDeviceDialog(wx.Dialog):
         return self._choices[index] if 0 <= index < len(self._choices) else None
 
 
+class RadioRecognitionHistoryDialog(wx.Dialog):
+    """Natywna, trwala historia wynikow rozpoznawania Radia."""
+
+    def __init__(
+        self,
+        parent: wx.Window,
+        entries: list[dict],
+        *,
+        copy_to_clipboard: Callable[[str], bool],
+        announce: Callable[[str], None],
+    ) -> None:
+        super().__init__(parent, title="Rozpoznane utwory", size=(760, 540))
+        self._entries = entries
+        self._copy_to_clipboard = copy_to_clipboard
+        self._announce = announce
+        self._visible: list[dict] = []
+        self._filter_keys: list[str | None] = []
+        self.changed = False
+
+        panel = wx.Panel(self)
+        layout = wx.BoxSizer(wx.VERTICAL)
+        help_text = (
+            "Rozpoznane utwory, od najnowszego. Ctrl+C kopiuje opis, "
+            "Ctrl+Shift+C kopiuje opis i łącza. Enter otwiera wynik "
+            "dostawcy, Delete usuwa wybrane wpisy."
+        )
+        help_label = wx.StaticText(panel, label=help_text)
+        help_label.SetName(help_text)
+        help_label.Wrap(700)
+        layout.Add(help_label, 0, wx.ALL | wx.EXPAND, 10)
+
+        filter_label = wx.StaticText(panel, label="&Pokaż wpisy:")
+        self.station_filter = wx.Choice(panel)
+        self.station_filter.SetName("Filtr historii według stacji")
+        layout.Add(filter_label, 0, wx.LEFT | wx.RIGHT | wx.TOP, 10)
+        layout.Add(self.station_filter, 0, wx.ALL | wx.EXPAND, 10)
+
+        self.history = wx.ListBox(panel, style=wx.LB_EXTENDED)
+        self.history.SetName("Rozpoznane utwory")
+        self.history.SetToolTip(help_text)
+        layout.Add(self.history, 1, wx.LEFT | wx.RIGHT | wx.BOTTOM | wx.EXPAND, 10)
+
+        self.status = wx.StaticText(panel, label="")
+        self.status.SetName("Stan historii rozpoznawania")
+        layout.Add(self.status, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM | wx.EXPAND, 10)
+        panel.SetSizer(layout)
+
+        buttons = wx.StdDialogButtonSizer()
+        copy_button = wx.Button(self, label="&Kopiuj")
+        copy_button.SetName("Kopiuj opis")
+        export_button = wx.Button(self, label="&Eksportuj…")
+        export_button.SetName("Eksportuj historię")
+        delete_button = wx.Button(self, label="&Usuń")
+        delete_button.SetName("Usuń z historii")
+        close_button = wx.Button(self, wx.ID_CANCEL, label="&Zamknij")
+        close_button.SetName("Zamknij historię")
+        for button in (copy_button, export_button, delete_button, close_button):
+            buttons.AddButton(button)
+        buttons.Realize()
+
+        outer = wx.BoxSizer(wx.VERTICAL)
+        outer.Add(panel, 1, wx.EXPAND)
+        outer.Add(buttons, 0, wx.ALL | wx.ALIGN_RIGHT, 10)
+        self.SetSizer(outer)
+        self.SetMinSize((620, 420))
+
+        self.station_filter.Bind(wx.EVT_CHOICE, self._on_filter)
+        self.history.Bind(wx.EVT_CHAR_HOOK, self._on_key)
+        self.history.Bind(wx.EVT_LISTBOX_DCLICK, self._on_open)
+        copy_button.Bind(wx.EVT_BUTTON, self._on_copy)
+        export_button.Bind(wx.EVT_BUTTON, self._on_export)
+        delete_button.Bind(wx.EVT_BUTTON, self._on_delete)
+        self._refresh_filters()
+        self._refresh_rows()
+        wx.CallAfter(self.history.SetFocus)
+
+    @staticmethod
+    def _station_key(entry: dict) -> str:
+        station_id = str(entry.get("stationId") or "").strip()
+        if station_id:
+            return "id:" + station_id
+        return "name:" + str(entry.get("stationName") or "").strip().casefold()
+
+    def _refresh_filters(self, preferred: str | None = None) -> None:
+        if preferred is None and self._filter_keys:
+            index = self.station_filter.GetSelection()
+            if 0 <= index < len(self._filter_keys):
+                preferred = self._filter_keys[index]
+        stations: dict[str, tuple[str, int]] = {}
+        for entry in self._entries:
+            key = self._station_key(entry)
+            label = str(entry.get("stationName") or "Nieznana stacja").strip()
+            ticks = int(entry.get("recognizedUtcTicks") or 0)
+            previous = stations.get(key)
+            if previous is None or ticks > previous[1]:
+                stations[key] = (label or "Nieznana stacja", ticks)
+        ordered = sorted(stations.items(), key=lambda item: item[1][0].casefold())
+        self._filter_keys = [None, *(key for key, _value in ordered)]
+        labels = ["Wszystkie stacje", *(value[0] for _key, value in ordered)]
+        self.station_filter.Set(labels)
+        try:
+            selection = self._filter_keys.index(preferred)
+        except ValueError:
+            selection = 0
+        self.station_filter.SetSelection(selection)
+
+    def _refresh_rows(self, fallback_index: int = 0) -> None:
+        filter_index = self.station_filter.GetSelection()
+        filter_key = (
+            self._filter_keys[filter_index]
+            if 0 <= filter_index < len(self._filter_keys)
+            else None
+        )
+        self._visible = [
+            entry for entry in sorted(
+                self._entries,
+                key=lambda item: int(item.get("recognizedUtcTicks") or 0),
+                reverse=True,
+            )
+            if filter_key is None or self._station_key(entry) == filter_key
+        ]
+        self.history.Set([
+            radio_recognition.track_label(entry) for entry in self._visible
+        ])
+        if self._visible:
+            self.history.SetSelection(
+                max(0, min(fallback_index, len(self._visible) - 1))
+            )
+            filter_label = self.station_filter.GetStringSelection()
+            text = f"Wpisów: {len(self._visible)}, {filter_label}"
+        else:
+            text = (
+                "Historia jest pusta"
+                if filter_key is None
+                else "Brak wpisów dla wybranej stacji"
+            )
+        self.status.SetLabel(text)
+        self.status.SetName(text)
+
+    def _selected_entries(self) -> list[dict]:
+        return [
+            self._visible[index]
+            for index in self.history.GetSelections()
+            if 0 <= index < len(self._visible)
+        ]
+
+    def _set_status(self, text: str) -> None:
+        self.status.SetLabel(text)
+        self.status.SetName(text)
+        self._announce(text)
+
+    def _copy(self, *, links: bool) -> None:
+        selected = self._selected_entries()
+        if not selected:
+            self._set_status("Brak wybranego wpisu")
+            return
+        formatter = radio_recognition.rich_text if links else radio_recognition.copy_text
+        if not self._copy_to_clipboard(
+            "\n\n".join(formatter(entry) for entry in selected)
+        ):
+            return
+        if len(selected) == 1:
+            self._set_status("Skopiowano opis i łącza" if links else "Skopiowano opis")
+        else:
+            subject = "opisy i łącza" if links else "opisy"
+            self._set_status(f"Skopiowano {subject}: {len(selected)}")
+
+    def _delete(self) -> None:
+        selected = self._selected_entries()
+        if not selected:
+            self._set_status("Brak wpisu do usunięcia")
+            return
+        fallback = self.history.GetSelection()
+        ids = {str(entry.get("id") or "") for entry in selected}
+        self._entries[:] = [
+            entry for entry in self._entries
+            if str(entry.get("id") or "") not in ids
+        ]
+        self.changed = True
+        self._refresh_filters()
+        self._refresh_rows(max(0, fallback))
+        self.history.SetFocus()
+        self._set_status(
+            "Usunięto wpis z historii rozpoznawania"
+            if len(selected) == 1
+            else f"Usunięto wpisy z historii rozpoznawania: {len(selected)}"
+        )
+
+    def _open_provider(self) -> None:
+        selected = self._selected_entries()
+        uri = str(selected[0].get("providerUri") or "") if selected else ""
+        if not uri:
+            self._set_status("Ten wynik nie zawiera łącza dostawcy rozpoznawania")
+            return
+        if not wx.LaunchDefaultBrowser(uri):
+            self._set_status("Nie udało się otworzyć łącza")
+
+    def _on_filter(self, _event: wx.CommandEvent) -> None:
+        self._refresh_rows()
+        self.history.SetFocus()
+
+    def _on_key(self, event: wx.KeyEvent) -> None:
+        chord = chord_from_event(event).canonical
+        if chord == "Ctrl+Shift+C":
+            self._copy(links=True)
+            return
+        if chord == "Ctrl+C":
+            self._copy(links=False)
+            return
+        if chord == "Delete":
+            self._delete()
+            return
+        if chord == "Return":
+            self._open_provider()
+            return
+        if chord == "Escape":
+            self.EndModal(wx.ID_CANCEL)
+            return
+        event.Skip()
+
+    def _on_open(self, _event: wx.CommandEvent) -> None:
+        self._open_provider()
+
+    def _on_copy(self, _event: wx.CommandEvent) -> None:
+        self._copy(links=False)
+
+    def _on_delete(self, _event: wx.CommandEvent) -> None:
+        self._delete()
+
+    def _on_export(self, _event: wx.CommandEvent) -> None:
+        if not self._entries:
+            self._set_status("Historia jest pusta")
+            return
+        default_name = f"AMC - rozpoznane utwory - {time.strftime('%Y-%m-%d')}.json"
+        with wx.FileDialog(
+            self,
+            "Eksportuj rozpoznane utwory",
+            defaultFile=default_name,
+            wildcard="Plik JSON (*.json)|*.json|Plik CSV (*.csv)|*.csv",
+            style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT,
+        ) as dialog:
+            if dialog.ShowModal() != wx.ID_OK:
+                self.history.SetFocus()
+                return
+            path = dialog.GetPath()
+        try:
+            radio_recognition.export_history(path, self._entries)
+        except OSError as error:
+            self._set_status(f"Nie udało się zapisać pliku: {error}")
+        else:
+            self._set_status(f"Wyeksportowano historię: {Path(path).name}")
+        self.history.SetFocus()
+
+
 class GeneralPlaybackOptionsDialog(wx.Dialog):
     """Functional settings pages; every exposed value has a real effect."""
 
@@ -2973,6 +3228,44 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
         )
         radio_layout.Add(timeshift_label, 0, wx.BOTTOM, 4)
         radio_layout.Add(self.timeshift, 0, wx.BOTTOM | wx.EXPAND, 10)
+
+        self.recognition_monitoring = wx.CheckBox(
+            radio, label="&Obserwuj i automatycznie rozpoznawaj utwory"
+        )
+        self.recognition_monitoring.SetName(
+            "Obserwuj i automatycznie rozpoznawaj utwory"
+        )
+        self.recognition_monitoring.SetValue(
+            options.radio_recognition_monitoring
+        )
+        recognition_scope_label = wx.StaticText(
+            radio, label="&Zakres automatycznego rozpoznawania:"
+        )
+        self._recognition_scope_values = list(radio_recognition.SCOPES)
+        self.recognition_scope = wx.Choice(
+            radio,
+            choices=[
+                radio_recognition.scope_label(value)
+                for value in self._recognition_scope_values
+            ],
+        )
+        self.recognition_scope.SetName(
+            "Zakres automatycznego rozpoznawania utworów"
+        )
+        self.recognition_scope.SetSelection(
+            self._recognition_scope_values.index(
+                radio_recognition.normalize_scope(
+                    options.radio_recognition_scope
+                )
+            )
+        )
+        radio_layout.Add(
+            self.recognition_monitoring, 0, wx.BOTTOM | wx.EXPAND, 10
+        )
+        radio_layout.Add(recognition_scope_label, 0, wx.BOTTOM, 4)
+        radio_layout.Add(
+            self.recognition_scope, 0, wx.BOTTOM | wx.EXPAND, 10
+        )
 
         folder_mode_label = wx.StaticText(
             radio, label="&Położenie nagrań Radia:"
@@ -3254,6 +3547,18 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
         self.recording_sound.SetValue(options.radio_recording_state_sound)
         messages_layout.Add(self.playback_sound, 0, wx.BOTTOM | wx.EXPAND, 10)
         messages_layout.Add(self.recording_sound, 0, wx.BOTTOM | wx.EXPAND, 10)
+        self.recognition_announcements = wx.CheckBox(
+            messages, label="&Oznajmiaj automatycznie rozpoznane utwory"
+        )
+        self.recognition_announcements.SetName(
+            "Oznajmiaj automatycznie rozpoznane utwory"
+        )
+        self.recognition_announcements.SetValue(
+            options.radio_recognition_announcements
+        )
+        messages_layout.Add(
+            self.recognition_announcements, 0, wx.BOTTOM | wx.EXPAND, 10
+        )
         messages.SetSizer(messages_layout)
 
         self.notebook.AddPage(general, "Ogólne", select=True)
@@ -3358,6 +3663,15 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
             ),
             "radio_playback_state_sound": self.playback_sound.GetValue(),
             "radio_recording_state_sound": self.recording_sound.GetValue(),
+            "radio_recognition_monitoring": (
+                self.recognition_monitoring.GetValue()
+            ),
+            "radio_recognition_scope": self._recognition_scope_values[
+                max(0, self.recognition_scope.GetSelection())
+            ],
+            "radio_recognition_announcements": (
+                self.recognition_announcements.GetValue()
+            ),
             "timeshift_minutes": self._timeshift_values[
                 max(0, self.timeshift.GetSelection())
             ],
@@ -3412,6 +3726,22 @@ class LiteFrame(wx.Frame):
         self._radio_snapshot = LiteFrame._with_radio_recording_options(
             self, self.radio.load()
         )
+        # Jednorazowa, bezpieczna kontynuacja historii z głównego AMC. Profil
+        # źródłowy pozostaje tylko do odczytu; dalsze wyniki zapisuje prywatny
+        # stan wxPython. Po Id nie dublujemy wpisów już przejętych wcześniej.
+        if not self.state.recognized_tracks_imported_from_amc:
+            known_recognition_ids = {
+                str(entry.get("id") or "")
+                for entry in self.state.recognized_tracks
+            }
+            self.state.recognized_tracks = radio_recognition.read_tracks([
+                *self.state.recognized_tracks,
+                *(
+                    entry for entry in self._radio_snapshot.recognized_tracks
+                    if str(entry.get("id") or "") not in known_recognition_ids
+                ),
+            ])
+            self.state.recognized_tracks_imported_from_amc = True
         self.stations = self._radio_snapshot.list
         self.navigator = Navigator()
         self._transient_preview_return: TransientNavigationSnapshot | None = None
@@ -3458,6 +3788,13 @@ class LiteFrame(wx.Frame):
         self._podcast_automatic_refresh_pending = False
         self._podcast_automatic_refresh_due = time.monotonic() + 60.0
         self._last_automatic_podcast_error: str | None = None
+        self._radio_recognition_pending = False
+        self._radio_recognition_due = (
+            time.monotonic() + 6.0
+            if self.options.radio_recognition_monitoring
+            else float("inf")
+        )
+        self._last_radio_recognition_error: str | None = None
         self._podcast_download_pending = False
         self._podcast_favorite_pending = False
         self._podcast_add_pending = False
@@ -3856,6 +4193,10 @@ class LiteFrame(wx.Frame):
                     podcast_sort_actions[entry.action]
                     == self._podcast_inbox_sort_mode
                 )
+            elif entry.checkable and entry.action is Action.TOGGLE_RADIO_RECOGNITION_MONITORING:
+                item.Check(self.options.radio_recognition_monitoring)
+            elif entry.checkable and entry.action is Action.TOGGLE_RADIO_RECOGNITION_ANNOUNCEMENTS:
+                item.Check(self.options.radio_recognition_announcements)
     def _bind_list(self, control: MediaListCtrl) -> None:
         """Wspolne powiazania klawiatury i wyboru dla list plikow i radia."""
         # Druga, bezposrednia bramka na samej kontrolce. SysListView32 potrafi
@@ -3904,6 +4245,8 @@ class LiteFrame(wx.Frame):
             "Alt+Up",
             "Alt+Down",
             "Shift+R",
+            "Ctrl+Alt+S",
+            "Ctrl+Alt+Shift+S",
             "Ctrl+,",
         }:
             # Ctrl+C musi zostac zatrzymane PRZED natywnym SysListView32.
@@ -4650,6 +4993,7 @@ class LiteFrame(wx.Frame):
             elif data.get("engine") == "radio":
                 self._playing_session = SessionId.RADIO
                 self._playing_sessions.add(SessionId.RADIO)
+                self._schedule_radio_recognition_after_source_change()
             if data.get("tempoFallbackReason"):
                 self.announcer.say(
                     "Wybrany algorytm tempa jest niedostępny. Używany SoundTouch."
@@ -5314,6 +5658,8 @@ class LiteFrame(wx.Frame):
                 "Ctrl+Shift+H",
                 "Ctrl+R",
                 "Shift+R",
+                "Ctrl+Alt+S",
+                "Ctrl+Alt+Shift+S",
                 "Ctrl+,",
                 # To jest NAJWCZEŚNIEJSZA bramka wx: CHAR_HOOK głównego okna
                 # przychodzi przed zdarzeniem listy. Przechwyt dopiero na
@@ -5642,6 +5988,14 @@ class LiteFrame(wx.Frame):
             self._show_podcast_description()
         elif action is Action.CURRENT_RADIO_BROADCAST_INFORMATION:
             self._announce_current_radio_broadcast_information()
+        elif action is Action.RECOGNIZE_RADIO_TRACK:
+            self._recognize_radio_track(automatic=False)
+        elif action is Action.TOGGLE_RADIO_RECOGNITION_MONITORING:
+            self._toggle_radio_recognition_monitoring()
+        elif action is Action.TOGGLE_RADIO_RECOGNITION_ANNOUNCEMENTS:
+            self._toggle_radio_recognition_announcements()
+        elif action is Action.VIEW_RADIO_RECOGNITION_HISTORY:
+            self._show_radio_recognition_history()
         elif action is Action.GO_TO_RELATED_PODCAST:
             self._go_to_related_podcast()
         elif action is Action.TOGGLE_PODCAST_FAVORITE:
@@ -10549,6 +10903,12 @@ class LiteFrame(wx.Frame):
         # nagrywania trafia do kolejnego Ctrl+R i nastepnej synchronizacji
         # harmonogramow; dlugosc timeshiftu obowiazuje po restarcie hosta.
         self._apply_radio_activity_status()
+        self._radio_recognition_due = (
+            time.monotonic() + 6.0
+            if self.options.radio_recognition_monitoring
+            else float("inf")
+        )
+        self._refresh_menu_state()
         client = self.client
         if client is None:
             self.announcer.say("Zapisano ustawienia")
@@ -11210,6 +11570,22 @@ class LiteFrame(wx.Frame):
         self._refresh_recording_status()
         self._checkpoint_podcast_if_due()
         self._refresh_due_podcasts_automatically()
+        self._recognize_radio_if_due()
+
+    def _recognize_radio_if_due(self) -> None:
+        if (
+            not self.options.radio_recognition_monitoring
+            or self._radio_recognition_pending
+            or time.monotonic() < self._radio_recognition_due
+        ):
+            return
+        # Tak jak pełne AMC nie odpytujemy usługi, gdy nie ma właściwego
+        # źródła. Zegar obudzi potwierdzony start Radia albo nagrywania.
+        if not self._recognition_source_available():
+            self._radio_recognition_due = float("inf")
+            return
+        self._radio_recognition_due = time.monotonic() + 60.0
+        self._recognize_radio_track(automatic=True)
 
     def _refresh_due_podcasts_automatically(self) -> None:
         """Co minute zlec hostowi tylko nalezne zrodla, bez rutynowej mowy."""
@@ -11467,6 +11843,10 @@ class LiteFrame(wx.Frame):
         def done(payload: dict) -> None:
             self._recording_status_poll_pending = False
             self._last_recording_status = payload or {}
+            # Zdarzenie rozpoczęcia nagrania dociera przed tą pełną migawką.
+            # Dopiero tutaj znamy pewnie nową liczbę aktywnych torów, więc
+            # ponownie wyznaczamy termin automatycznego rozpoznawania.
+            self._schedule_radio_recognition_after_source_change()
             state = self.navigator.sessions[SessionId.RADIO]
             if state.library_view is LibraryView.ACTIVE_RADIO_RECORDINGS:
                 preferred_id = state.model.selected_id
@@ -11945,6 +12325,218 @@ class LiteFrame(wx.Frame):
             done,
             lambda error: self.announcer.say(str(error)),
         )
+
+    def _recognition_source_available(self) -> bool:
+        scope = radio_recognition.normalize_scope(
+            self.options.radio_recognition_scope
+        )
+        radio_status = getattr(self, "_transport_status_by_session", {}).get(
+            SessionId.RADIO,
+            {},
+        )
+        current = (
+            scope in (
+                radio_recognition.CURRENT_STATION,
+                radio_recognition.CURRENT_AND_RECORDING_STATIONS,
+            )
+            and SessionId.RADIO in self._playing_sessions
+            and not bool(radio_status.get("paused"))
+        )
+        recording_status = self._last_recording_status or {}
+        recording_rows = recording_status.get("recordings")
+        if isinstance(recording_rows, list):
+            has_unpaused_recording = any(
+                isinstance(row, dict)
+                and not bool(row.get("paused"))
+                and str(row.get("state") or "") != "stopping"
+                for row in recording_rows
+            )
+        else:
+            # Zgodność ze starszym hostem, który podawał tylko licznik.
+            has_unpaused_recording = int(recording_status.get("count") or 0) > 0
+        recordings = (
+            scope in (
+                radio_recognition.RECORDING_STATIONS,
+                radio_recognition.CURRENT_AND_RECORDING_STATIONS,
+            )
+            and has_unpaused_recording
+        )
+        return current or recordings
+
+    def _schedule_radio_recognition_after_source_change(self) -> None:
+        if not self.options.radio_recognition_monitoring:
+            self._radio_recognition_due = float("inf")
+            return
+        if not self._recognition_source_available():
+            return
+        self._radio_recognition_due = min(
+            self._radio_recognition_due,
+            time.monotonic() + 6.0,
+        )
+
+    def _recognize_radio_track(self, *, automatic: bool) -> None:
+        """S albo zegar: gotowy wynik wraca, audio pozostaje w hoscie C#."""
+        client = self.client
+        if client is None:
+            if not automatic:
+                self.announcer.say("Silnik odtwarzania jest niedostępny")
+            return
+        if self._radio_recognition_pending:
+            if not automatic:
+                self.announcer.say("Rozpoznawanie już trwa")
+            return
+        if not automatic and SessionId.RADIO not in self._playing_sessions:
+            self.announcer.say("Najpierw uruchom stację radiową")
+            return
+
+        scope = (
+            radio_recognition.normalize_scope(
+                self.options.radio_recognition_scope
+            )
+            if automatic
+            else radio_recognition.CURRENT_STATION
+        )
+        self._radio_recognition_pending = True
+        if not automatic:
+            self.announcer.say("Rozpoznaję utwór")
+
+        def done(payload: object) -> None:
+            self._radio_recognition_pending = False
+            merged = radio_recognition.merge_host_result(
+                self.state.recognized_tracks,
+                payload,
+            )
+            recognized_any = bool(merged.added or merged.duplicates)
+            self._radio_recognition_due = time.monotonic() + (
+                60.0 if recognized_any else 15.0
+            ) if self.options.radio_recognition_monitoring else float("inf")
+            self._last_radio_recognition_error = None
+
+            if merged.added:
+                self._save_state()
+                if automatic:
+                    if (
+                        self.options.radio_recognition_announcements
+                        and self.messages.speaks_routine
+                    ):
+                        for entry in merged.added:
+                            self.announcer.say(
+                                "Rozpoznano w stacji "
+                                f"{entry['stationName']}: "
+                                f"{radio_recognition.recognition_label(entry)}"
+                            )
+                else:
+                    for entry in merged.added:
+                        self.announcer.say(
+                            "Rozpoznano: "
+                            + radio_recognition.recognition_label(entry)
+                        )
+                return
+
+            if automatic:
+                return
+            if merged.duplicates:
+                self.announcer.say(
+                    "Rozpoznano: "
+                    + radio_recognition.recognition_label(merged.duplicates[0])
+                    + ". Ten utwór jest już w najnowszej historii"
+                )
+                return
+            message = (
+                merged.failures[0]
+                if merged.failures
+                else merged.message
+                or "Nie rozpoznano utworu"
+            )
+            self.announcer.say(message)
+
+        def failed(error: Exception) -> None:
+            self._radio_recognition_pending = False
+            self._radio_recognition_due = (
+                time.monotonic() + 15.0
+                if self.options.radio_recognition_monitoring
+                else float("inf")
+            )
+            message = str(error).strip() or "Nie udało się rozpoznać utworu"
+            if automatic:
+                if message != self._last_radio_recognition_error:
+                    self._last_radio_recognition_error = message
+                    self.status_bar.show(message)
+            else:
+                self.announcer.say(message)
+
+        self.runner.submit(
+            "radio-recognition",
+            lambda: client.recognize_radio_tracks(scope),
+            done,
+            failed,
+        )
+
+    def _toggle_radio_recognition_monitoring(self) -> None:
+        previous = self.options.radio_recognition_monitoring
+        self.options.radio_recognition_monitoring = not previous
+        if not self._save_state():
+            self.options.radio_recognition_monitoring = previous
+            return
+        enabled = self.options.radio_recognition_monitoring
+        self._radio_recognition_due = (
+            time.monotonic() + 6.0 if enabled else float("inf")
+        )
+        self._refresh_menu_state()
+        if enabled:
+            message = (
+                "Włączono i zapamiętano obserwowanie rozpoznawania: "
+                + radio_recognition.scope_label(
+                    self.options.radio_recognition_scope
+                ).casefold()
+            )
+            if not self._recognition_source_available():
+                message += (
+                    ". Rozpoznawanie rozpocznie się, gdy pojawi się "
+                    "odpowiednie źródło"
+                )
+            self.announcer.say(message)
+        else:
+            self.announcer.say(
+                "Wyłączono i zapamiętano obserwowanie rozpoznawania utworów"
+            )
+
+    def _toggle_radio_recognition_announcements(self) -> None:
+        previous = self.options.radio_recognition_announcements
+        self.options.radio_recognition_announcements = not previous
+        if not self._save_state():
+            self.options.radio_recognition_announcements = previous
+            return
+        self._refresh_menu_state()
+        if self.options.radio_recognition_announcements:
+            self.announcer.say("Włączono oznajmianie rozpoznanych utworów")
+        elif self.options.radio_recognition_monitoring:
+            self.announcer.say(
+                "Wyłączono oznajmianie rozpoznanych utworów. "
+                "Obserwowanie nadal działa, a wyniki trafiają do historii"
+            )
+        else:
+            self.announcer.say(
+                "Wyłączono oznajmianie rozpoznanych utworów. "
+                "Obserwowanie pozostaje wyłączone"
+            )
+
+    def _show_radio_recognition_history(self) -> None:
+        dialog = RadioRecognitionHistoryDialog(
+            self,
+            self.state.recognized_tracks,
+            copy_to_clipboard=self._to_clipboard,
+            announce=self.announcer.say,
+        )
+        changed = False
+        try:
+            dialog.ShowModal()
+            changed = dialog.changed
+        finally:
+            dialog.Destroy()
+        if changed:
+            self._save_state()
+        self._restore_focus_after_dialog()
 
     def _toggle_radio_recording(self) -> None:
         client = self.client

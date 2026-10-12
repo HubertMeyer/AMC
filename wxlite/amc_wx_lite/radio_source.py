@@ -38,6 +38,7 @@ from .radio_recording import (
     preferences_from_amc_state,
     recording_history_from_amc_state,
 )
+from .radio_recognition import tracks_from_amc_state
 from .state_store import LiteState, Station, StationList, StateStore
 
 
@@ -81,6 +82,9 @@ class RadioSnapshot:
     #: Utrwalona historia wszystkich prob nagrywania z tego samego odczytu
     #: profilu. Obejmuje takze proby nieudane, ktore nie maja pliku.
     recording_history: tuple[RadioRecordingHistoryEntry, ...] = ()
+    #: Gotowe wyniki ze starego interfejsu. Próbki audio i podpisy nie są
+    #: częścią profilu; nowy interfejs może bezpiecznie przejąć samą historię.
+    recognized_tracks: tuple[dict, ...] = ()
     #: Surowe plany nagrywania z profilu. Python ich nie interpretuje: wysyla
     #: je do hosta C#, ktory zna strefy czasu, wykonuje plany i buduje etykiety.
     recording_schedules: tuple[dict, ...] = ()
@@ -372,6 +376,7 @@ class RadioSource:
             collection_sort_modes=collection_sort_modes_from_amc_state(raw),
             recording=preferences_from_amc_state(raw),
             recording_history=recording_history_from_amc_state(raw),
+            recognized_tracks=tracks_from_amc_state(raw),
             recording_schedules=recording_schedules_from_amc_state(raw),
             wake_scheduled_recordings=wake_scheduled_recordings_from_amc_state(raw),
         )
@@ -397,6 +402,7 @@ class RadioSource:
                 scope=scope,
                 recording=previous.recording,
                 recording_history=previous.recording_history,
+                recognized_tracks=previous.recognized_tracks,
                 recording_schedules=previous.recording_schedules,
                 wake_scheduled_recordings=previous.wake_scheduled_recordings,
             )

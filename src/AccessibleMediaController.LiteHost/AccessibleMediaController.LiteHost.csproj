@@ -112,6 +112,10 @@
          nieslyszalnego toru i sterowania czesciami co pelne AMC. -->
     <Compile Include="..\AccessibleMediaController.Windows\Services\RadioRecordingControl.cs"
              Link="Engine\RadioRecordingControl.cs" />
+    <!-- Rozpoznawanie korzysta z tego samego podpisu akustycznego co główne
+         AMC. Do usługi wychodzi wyłącznie podpis, nie nagranie ani URL. -->
+    <Compile Include="..\AccessibleMediaController.Windows\Services\ShazamTrackRecognitionService.cs"
+             Link="Engine\ShazamTrackRecognitionService.cs" />
     <Compile Include="..\AccessibleMediaController.Windows\Services\RadioRecordingFolderResolver.cs"
              Link="Engine\RadioRecordingFolderResolver.cs" />
     <Compile Include="..\AccessibleMediaController.Windows\Services\ManualRadioRecorder.cs"
@@ -168,7 +172,7 @@
           Link="bass.dll" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <None Include="..\..\licenses\tempo-engines\**\*"
           Link="licenses\tempo-engines\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
-    <None Include="..\..\licenses\NAudio-MIT.txt;..\..\licenses\NLayer-MIT.txt;..\..\licenses\Vorbis-components-MIT.txt;..\..\licenses\BASS-2.4.txt;..\..\licenses\Microsoft.Data.Sqlite-MIT.txt;..\..\licenses\SQLitePCLRaw-Apache-2.0.txt;..\..\licenses\SQLite-public-domain.txt"
+    <None Include="..\..\licenses\NAudio-MIT.txt;..\..\licenses\NLayer-MIT.txt;..\..\licenses\Vorbis-components-MIT.txt;..\..\licenses\BASS-2.4.txt;..\..\licenses\Microsoft.Data.Sqlite-MIT.txt;..\..\licenses\SQLitePCLRaw-Apache-2.0.txt;..\..\licenses\SQLite-public-domain.txt;..\..\licenses\ShazamIO-MIT.txt"
           Link="licenses\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
   <PropertyGroup>

@@ -86,7 +86,8 @@ sesji, a odłączone pozycje są pomijane. Oba zachowania wymagają jeszcze
 Ogólne, Radio i nagrywanie, Podcasty i YouTube oraz Komunikaty. Ogólne obejmują zachowanie
 odtwarzacza i wyjścia audio, normalizację, przejścia, ciszę oraz jawnie
 nazwane algorytmy tempa; Komunikaty obejmują stany odtwarzania i nagrywania
-Radia. Karta Radio i nagrywanie zapisuje długość TimeShift do 12 godzin,
+Radia oraz oznajmianie automatycznie rozpoznanych utworów. Karta Radio i
+nagrywanie zapisuje długość TimeShift do 12 godzin,
 domyślny folder, format, bitrate, preferowanie folderu stacji w nowym planie
 oraz domyślne wybudzanie. Folder, format i bitrate trafiają do następnego
 ręcznego nagrania i harmonogramów, a wybudzanie jest ponownie synchronizowane
@@ -95,10 +96,14 @@ folderu co Podcasty bez utraty zapamiętanego osobnego folderu. Nowa długość
 TimeShift obowiązuje po ponownym uruchomieniu hosta. Karta Podcasty i YouTube
 ustawia folder pobierania, osobne odstępy odświeżania RSS i YouTube oraz limit
 źródeł w jednym automatycznym przebiegu. Host wybiera tylko należne źródła;
-brak nowości nie powoduje rutynowej mowy. Enter uruchamia Zapisz, po powodzeniu
-pada dokładnie jeden komunikat „Zapisano ustawienia”. To nadal nie są pełne
-Ustawienia głównego AMC: brakuje trzech całych kart oraz automatycznego
-rozpoznawania utworów.
+brak nowości nie powoduje rutynowej mowy. Działa też ręczne rozpoznawanie
+utworu (`S` w odtwarzaczu Radia), automatyczna obserwacja (`Shift+S`), trwała
+historia (`Ctrl+Alt+S`) i osobny przełącznik jej oznajmiania
+(`Ctrl+Alt+Shift+S`). Zakres automatu może obejmować odtwarzaną stację,
+nagrywane stacje albo oba rodzaje źródeł. Do usługi wychodzi podpis
+akustyczny, nie adres stacji ani nagrany dźwięk. Enter uruchamia Zapisz, po
+powodzeniu pada dokładnie jeden komunikat „Zapisano ustawienia”. To nadal nie
+są pełne Ustawienia głównego AMC: brakuje trzech całych kart.
 Nie wystarczy dopisać kart Ogólne, Podcasty i Radio: trzeba przepisać całe
 Ustawienia dokładnie z głównego AMC, po uprzednim spisie wszystkich kart, pól,
 wartości domyślnych, zależności, walidacji i miejsc zapisu. `Ctrl+Tab` i
@@ -343,9 +348,11 @@ kodu ani wysyłać logów bez wiedzy użytkownika.
 
 ## Dowody automatyczne tego przyrostu
 
-- pełny runner Python: 1287 zaliczonych, 0 błędów, 138 historycznych pominięć;
+- pełny runner Python: 1296 zaliczonych, 0 błędów, 138 historycznych pominięć;
 - testy protokołu C#: 15 zestawów zaliczonych;
 - całe rozwiązanie .NET zbudowane sekwencyjnie: 0 ostrzeżeń, 0 błędów;
+- sześć celowanych testów Windows rozpoznawania, ustawień, historii, podpisu
+  Shazam i łączy wyszukiwania: wszystkie zaliczone;
 - LiteHost zbudowany i opublikowany dla Windows x64 bez błędów i ostrzeżeń;
 - pakiet uruchomieniowy przeszedł sprawdzenie środowiska z Pythonem 3.14.7,
   wxPython 4.3.1 i nowym hostem.
@@ -382,11 +389,11 @@ lewą strzałką.
    Komunikaty, zapis Enterem i jedno potwierdzenie. Karta Radia wykonuje
    ustawienia TimeShift, folderu, formatu, bitrate'u i wybudzania. Działają też
    wybór pauzy po utracie wyjścia oraz `Ctrl+[` i `Ctrl+]`; Spację harmonogramu
-   podłączono bezpośrednio do listy. Domknąć w Radiu rozpoznawanie utworów i
-   wspólny folder z Podcastami, następnie przepisać pozostałe cztery karty
-   głównego AMC ze wszystkimi polami, zależnościami i zapisem. Potem wykonać
-   żywy odbiór tych zmian oraz pełny audyt Biblioteki, menu, skrótów i
-   sortowań `Alt+cyfra`.
+   podłączono bezpośrednio do listy. Rozpoznawanie utworów i wspólny folder z
+   Podcastami są już przeniesione technicznie; pozostaje żywy odbiór wyniku,
+   historii i komunikatów z NVDA. Następnie przepisać pozostałe trzy karty
+   głównego AMC ze wszystkimi polami, zależnościami i zapisem oraz wykonać
+   pełny audyt Biblioteki, menu, skrótów i sortowań `Alt+cyfra`.
 5. Uzupełnienie WiiM i Sonos o pełną warstwę interfejsu z głównego AMC:
    Bibliotekę, Ulubione, wybór materiałów, presety, wszystkie skróty oraz
    prawidłowe wykonanie transportu po zakończeniu odczytu stanu. Następnie

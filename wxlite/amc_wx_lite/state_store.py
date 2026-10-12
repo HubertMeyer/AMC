@@ -22,6 +22,7 @@ from .audio_clip import read_clip_selections
 from .audio_output import read_output_overrides
 from .profile_presets import read_preset_overrides
 from .radio_activity import normalize_state_position
+from .radio_recognition import normalize_scope, read_tracks
 from .radio_schedule_settings import read_schedule_overrides
 
 
@@ -138,6 +139,11 @@ class Options:
     #: Delikatne sygnaly przy przejsciu fokusu na aktywna stacje.
     radio_playback_state_sound: bool = False
     radio_recording_state_sound: bool = False
+    #: Rozpoznawanie korzysta z bufora AMC; do uslugi wychodzi wylacznie
+    #: podpis akustyczny tworzony przez wspolny silnik C#.
+    radio_recognition_monitoring: bool = False
+    radio_recognition_scope: str = "CurrentStation"
+    radio_recognition_announcements: bool = True
     #: Po odłączeniu wybranego wyjścia Radio przechodzi na domyślne. Ten
     #: przełącznik decyduje, czy nowy tor ma pozostać w pauzie. Domyślne False
     #: zachowuje dotychczasowe zachowanie AMC do świadomej zmiany ustawienia.
@@ -198,6 +204,13 @@ class Options:
             self.radio_playback_state_sound = False
         if type(self.radio_recording_state_sound) is not bool:
             self.radio_recording_state_sound = False
+        if type(self.radio_recognition_monitoring) is not bool:
+            self.radio_recognition_monitoring = False
+        self.radio_recognition_scope = normalize_scope(
+            self.radio_recognition_scope
+        )
+        if type(self.radio_recognition_announcements) is not bool:
+            self.radio_recognition_announcements = True
         if type(self.pause_on_audio_output_fallback) is not bool:
             self.pause_on_audio_output_fallback = False
         if self.radio_recording_format is not None:
@@ -286,6 +299,12 @@ class LiteState:
     #: Wartosci sa zwyklymi danymi protokolu; etykiety NVDA powstaja dopiero
     #: w ``radio_recording.py``.
     recording_history: list[dict] = field(default_factory=list)
+    #: Prywatna historia gotowych wynikow. Probki audio i podpisy akustyczne
+    #: nie opuszczaja hosta i nie sa tu nigdy zapisywane.
+    recognized_tracks: list[dict] = field(default_factory=list)
+    #: Historia pełnego AMC jest przejmowana tylko raz. Dzięki temu świadomie
+    #: usunięty wpis nie wraca przy następnym uruchomieniu nowego interfejsu.
+    recognized_tracks_imported_from_amc: bool = False
     #: Niedestrukcyjne znaczniki I/O dla lokalnych plikow. Tak jak historia
     #: nagran sa prywatne dla wxPython i nie zapisuja sie do profilu WPF.
     #: Magazyn przechowuje jedynie wartosci modelu; tekst dla NVDA powstaje w
@@ -457,6 +476,10 @@ class StateStore:
                 raw.get("audio_output_device_ids_by_session")
             ),
             recording_history=_read_recording_history(raw.get("recording_history")),
+            recognized_tracks=read_tracks(raw.get("recognized_tracks")),
+            recognized_tracks_imported_from_amc=(
+                raw.get("recognized_tracks_imported_from_amc") is True
+            ),
             clip_selections=read_clip_selections(raw.get("clip_selections")),
             preset_overrides=read_preset_overrides(raw.get("preset_overrides")),
             radio_schedule_overrides=(
@@ -493,6 +516,10 @@ class StateStore:
                 state.audio_output_device_ids_by_session
             ),
             "recording_history": _read_recording_history(state.recording_history),
+            "recognized_tracks": read_tracks(state.recognized_tracks),
+            "recognized_tracks_imported_from_amc": bool(
+                state.recognized_tracks_imported_from_amc
+            ),
             "clip_selections": read_clip_selections(state.clip_selections),
             # NIE usuwamy pustych list. Dla presetow pusty wpis sesji jest
             # swiadoma decyzja i rozni sie od braku prywatnego nadpisania.

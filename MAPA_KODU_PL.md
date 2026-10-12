@@ -1735,6 +1735,12 @@ i 21000–22000). Serwisy:
   `RadioRecordingFileNameTemplate.cs`.
 - Rozpoznawanie utworu: `ShazamTrackRecognitionService.cs`,
   `Core/Presentation/RecognizedTrackLookup.cs`.
+- Port wxPython używa tego samego silnika przez
+  `LiteRadioRecognitionCoordinator.cs`; PCM zostaje w hoście, a protokół
+  zwraca wyłącznie nazwę stacji i gotowe pola wyniku. Warstwa użytkowa,
+  trwała historia, bezpieczne łącza i eksport są w
+  `wxlite/amc_wx_lite/radio_recognition.py`, a natywne okno i zegar w
+  `wxlite/amc_wx_lite/gui.py`.
 - Okna: `RadioStationWindow`, `RadioPresetsWindow`, `RadioPresetAssignmentWindow`,
   `RadioSchedulesWindow`, `RadioScheduleEditorWindow` (38 KB),
   `RadioRecognitionHistoryWindow`.

@@ -19,6 +19,31 @@ internal sealed partial class LiteRadioRecordingCoordinator : IDisposable
     private readonly List<CompletedRecording> _history = [];
     private bool _disposed;
 
+    internal IReadOnlyList<LiteRadioRecognitionInput> CaptureRecognitionInputs(
+        TimeSpan duration)
+    {
+        lock (_gate)
+        {
+            ThrowIfDisposed();
+            var result = new List<LiteRadioRecognitionInput>();
+            foreach (var active in _active.Values.OrderBy(item => item.RequestedUtc))
+            {
+                if (active.Control.IsPaused
+                    || !active.Control.TryGetRecentAudio(duration, out var snapshot)
+                    || snapshot is null)
+                {
+                    continue;
+                }
+                result.Add(new LiteRadioRecognitionInput(
+                    active.StationId,
+                    active.StationName,
+                    active.StreamUrl,
+                    snapshot));
+            }
+            return result;
+        }
+    }
+
     public object Toggle(JsonElement args, LiteEventSink events)
     {
         var request = ReadRequest(args);
@@ -522,3 +547,9 @@ internal sealed partial class LiteRadioRecordingCoordinator : IDisposable
         public Task? Task { get; set; }
     }
 }
+
+internal sealed record LiteRadioRecognitionInput(
+    string StationId,
+    string StationName,
+    string StreamUrl,
+    RadioAudioSnapshot Snapshot);

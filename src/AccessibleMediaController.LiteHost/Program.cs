@@ -143,6 +143,10 @@ internal static class Program
                 // Import pobiera maksymalnie cztery RSS równolegle. Nie może
                 // zatrzymać transportu ani komunikatów o nagrywaniu.
                 LitePodcastOpmlCoordinator.ImportOperation,
+                // Podpis akustyczny i odpowiedź usługi mogą zająć kilkanaście
+                // sekund. Radio, nagrywanie i klawiatura pozostają w tym
+                // czasie na zwykłej, responsywnej ścieżce protokołu.
+                LiteRadioRecognitionCoordinator.Operation,
                 // Oficjalny katalog TIDAL wykonuje siec i odswiezenie tokenu,
                 // ale nie moze blokowac transportu ani nagrywania radia.
                 LiteTidalCatalogContract.ContainerItemsOperation,
