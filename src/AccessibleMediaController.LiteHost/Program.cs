@@ -161,7 +161,9 @@ internal static class Program
                 // w tym czasie blokowac lokalnego radia ani nagrywania.
                 LiteWiiMContract.SnapshotOperation,
                 LiteWiiMContract.TransportOperation,
-                // Sonos korzysta z chmury i odnowienia konta. Wszystkie trzy
+                LiteWiiMContract.PresetsOperation,
+                LiteWiiMContract.ActivatePresetOperation,
+                // Sonos korzysta z chmury i odnowienia konta. Wszystkie jego
                 // operacje muszą pozostawić radio i nagrywanie responsywne.
                 LiteSonosContract.TargetsOperation,
                 LiteSonosContract.SnapshotOperation,

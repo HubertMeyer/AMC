@@ -18,7 +18,12 @@ from amc_wx_lite.shortcuts import (
     WIIM_SUPPORTED_ACTIONS,
     resolve,
 )
-from amc_wx_lite.wiim_source import device_rows, now_playing_label, snapshot
+from amc_wx_lite.wiim_source import (
+    device_rows,
+    now_playing_label,
+    preset_choices,
+    snapshot,
+)
 
 
 def test_ctrl_5_and_menu_open_the_wiim_session() -> None:
@@ -91,6 +96,7 @@ def test_wiim_command_gate_blocks_local_audio_features() -> None:
         Action.VOLUME_DOWN_1,
         Action.TIME_ELAPSED,
         Action.SELECT_AUDIO_OUTPUT,
+        Action.VIEW_PRESETS,
         Action.COPY_NAME,
         Action.FOCUS_FILTER,
         Action.VIEW_ACTIVE_RECORDINGS,
@@ -115,6 +121,8 @@ def test_wiim_host_client_sends_only_device_id_command_and_volume() -> None:
     client.wiim_devices()
     client.wiim_snapshot("device-1")
     client.wiim_transport("device-1", "setVolume", volume=37)
+    client.wiim_presets("device-1")
+    client.wiim_activate_preset("device-1", 5)
 
     assert calls == [
         ("wiim.devices", None, 15.0),
@@ -122,6 +130,12 @@ def test_wiim_host_client_sends_only_device_id_command_and_volume() -> None:
         (
             "wiim.transport",
             {"deviceId": "device-1", "command": "setVolume", "volume": 37},
+            30.0,
+        ),
+        ("wiim.presets", {"deviceId": "device-1"}, 30.0),
+        (
+            "wiim.presetActivate",
+            {"deviceId": "device-1", "presetNumber": 5},
             30.0,
         ),
     ]
@@ -145,3 +159,71 @@ def test_wiim_dispatch_reaches_remote_volume_and_blocks_local_rate() -> None:
     LiteFrame._dispatch(frame, Action.RATE_UP)
     assert volume_steps == [5]
     assert spoken == ["To polecenie nie jest dostępne w sesji WiiM"]
+
+
+def test_wiim_preset_list_has_only_twelve_intentional_labels() -> None:
+    items = [
+        {
+            "itemId": f"wiim-preset:{number}",
+            "presetNumber": number,
+            "label": (
+                "Preset 2, Radio Test, radio internetowe"
+                if number == 2
+                else f"Preset {number}, pusty"
+            ),
+            "occupied": number == 2,
+            "current": number == 2,
+            "activationError": "",
+            "uri": "https://secret.example/stream",
+            "runtimeObject": "WiiMPresetInformation { Number = 2 }",
+        }
+        for number in range(1, 13)
+    ]
+
+    title, choices = preset_choices({
+        "deviceId": "device-1",
+        "deviceTitle": "Salon",
+        "items": items,
+    })
+
+    assert title == "Salon"
+    assert len(choices) == 12
+    assert choices[1].label == "Preset 2, Radio Test, radio internetowe"
+    assert choices[1].occupied is True
+    assert choices[1].current is True
+    assert "secret" not in repr(choices)
+    assert "WiiMPresetInformation" not in repr(choices)
+
+
+def test_wiim_preset_connect_reason_stays_user_facing() -> None:
+    items = [
+        {
+            "presetNumber": number,
+            "label": "Preset 5, TIDAL, TIDAL Connect"
+            if number == 5 else f"Preset {number}, pusty",
+            "occupied": number == 5,
+            "current": False,
+            "activationError": (
+                "Preset 5 to TIDAL Connect. Urządzenie samo tego nie uruchomi, "
+                "bo odbiera dźwięk z aplikacji."
+                if number == 5 else ""
+            ),
+        }
+        for number in range(1, 13)
+    ]
+
+    _title, choices = preset_choices({"deviceTitle": "Salon", "items": items})
+
+    assert choices[4].activation_error.startswith("Preset 5 to TIDAL Connect")
+
+
+def test_ctrl_alt_p_routes_to_native_wiim_presets() -> None:
+    calls: list[str] = []
+    frame = SimpleNamespace(
+        navigator=SimpleNamespace(active=SessionId.WIIM),
+        _show_wiim_presets=lambda: calls.append("wiim"),
+    )
+
+    LiteFrame._show_presets(frame)
+
+    assert calls == ["wiim"]

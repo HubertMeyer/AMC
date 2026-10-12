@@ -583,6 +583,23 @@ class LiteHostClient:
             timeout=30.0,
         )
 
+    def wiim_presets(self, device_id: str) -> Any:
+        """Read twelve native preset slots without exposing stream URLs."""
+        return self.call(
+            "wiim.presets", {"deviceId": device_id}, timeout=30.0
+        )
+
+    def wiim_activate_preset(self, device_id: str, preset_number: int) -> Any:
+        """Activate one validated native device preset."""
+        return self.call(
+            "wiim.presetActivate",
+            {
+                "deviceId": device_id,
+                "presetNumber": max(1, min(12, int(preset_number))),
+            },
+            timeout=30.0,
+        )
+
     def sonos_targets(self) -> Any:
         """List Sonos groups; account tokens never leave the C# host."""
         return self.call("sonos.targets", timeout=60.0)

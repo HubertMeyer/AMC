@@ -12,6 +12,8 @@ internal static class WiiMContractTests
         DeviceListDoesNotExposeAddressesOrRuntimeObjects();
         SnapshotContainsOnlyUserFacingPlaybackData();
         TransportAcceptsOnlyKnownCommands();
+        PresetListUsesOnlyIntentionalLabels();
+        PresetActivationAcceptsOnlyTwelveSlots();
     }
 
     private static void DeviceListDoesNotExposeAddressesOrRuntimeObjects()
@@ -115,6 +117,83 @@ internal static class WiiMContractTests
         }
         catch (LiteRequestException)
         {
+        }
+    }
+
+    private static void PresetListUsesOnlyIntentionalLabels()
+    {
+        var device = new WiiMDeviceSettings
+        {
+            Id = "device-1",
+            Address = "192.168.1.40",
+            DisplayName = "Salon",
+            LastActivatedPresetNumber = 2
+        };
+        var playback = new WiiMPlaybackInformation(
+            "odtwarzanie", "radio internetowe", 35, false,
+            TimeSpan.Zero, TimeSpan.Zero)
+        {
+            ContentUri = "https://radio.example/live"
+        };
+        var snapshot = new WiiMDeviceSnapshot(
+            new WiiMDeviceInformation(
+                "192.168.1.40", "device-1", "Salon", "Pro", "4.8", 12),
+            playback,
+            new WiiMTrackInformation("Radio Test", "", "", 0, 0),
+            [
+                new WiiMPresetInformation(
+                    2, "Radio Test", "radio internetowe", "https://radio.example/live"),
+                new WiiMPresetInformation(5, "TIDAL", "TIDAL Connect", null),
+                new WiiMPresetInformation(8, "", "", null)
+            ]);
+
+        var json = JsonSerializer.Serialize(
+            LiteWiiMContract.CreatePresetsResult(device, snapshot));
+        using var document = JsonDocument.Parse(json);
+        var root = document.RootElement;
+        var items = root.GetProperty("items");
+        Check(items.GetArrayLength() == 12, "lista nie zawiera dwunastu miejsc");
+        Check(root.GetProperty("currentPresetNumber").GetInt32() == 2,
+            "nie rozpoznano bieżącego presetu");
+        Check(items[0].GetProperty("label").GetString() == "Preset 1, pusty",
+            "puste miejsce nie ma celowej etykiety");
+        Check(items[1].GetProperty("label").GetString()
+            == "Preset 2, Radio Test, radio internetowe",
+            "zajęty preset nie ma celowej etykiety");
+        Check(items[4].GetProperty("activationError").GetString()!
+            .StartsWith("Preset 5 to TIDAL Connect", StringComparison.Ordinal),
+            "nie zachowano uczciwej odmowy dla presetu Connect");
+        Check(items[7].GetProperty("label").GetString() == "Preset 8, bez nazwy",
+            "zajęty preset bez nazwy nie ma celowej etykiety");
+        Check(!json.Contains("192.168.1.40", StringComparison.Ordinal),
+            "adres urządzenia wyciekł z listy presetów");
+        Check(!json.Contains("https://radio.example/live", StringComparison.Ordinal),
+            "adres strumienia wyciekł z listy presetów");
+        Check(!json.Contains("WiiMPresetInformation", StringComparison.Ordinal),
+            "techniczny typ presetu wyciekł do odpowiedzi");
+    }
+
+    private static void PresetActivationAcceptsOnlyTwelveSlots()
+    {
+        using var accepted = JsonDocument.Parse(
+            """{"deviceId":"device-1","presetNumber":12}""");
+        var request = LiteWiiMContract.ReadPresetRequest(accepted.RootElement);
+        Check(request.DeviceId == "device-1" && request.PresetNumber == 12,
+            "nie przyjęto prawidłowego numeru presetu");
+
+        foreach (var rejectedNumber in new[] { 0, 13 })
+        {
+            using var rejected = JsonDocument.Parse(
+                $$"""{"deviceId":"device-1","presetNumber":{{rejectedNumber}}}""");
+            try
+            {
+                LiteWiiMContract.ReadPresetRequest(rejected.RootElement);
+                throw new InvalidOperationException(
+                    $"przyjęto numer presetu {rejectedNumber} poza zakresem");
+            }
+            catch (LiteRequestException)
+            {
+            }
         }
     }
 

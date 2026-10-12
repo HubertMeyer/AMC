@@ -36,6 +36,64 @@ internal sealed class LiteWiiMCoordinator(string statePath) : IDisposable
         }
     }
 
+    public object Presets(JsonElement args)
+    {
+        var settings = ReadSettings();
+        var device = ResolveDevice(settings, LiteWiiMContract.ReadDeviceId(args));
+        lock (gate)
+        {
+            var snapshot = ReadSnapshot(device);
+            return LiteWiiMContract.CreatePresetsResult(device, snapshot);
+        }
+    }
+
+    public object ActivatePreset(JsonElement args)
+    {
+        var request = LiteWiiMContract.ReadPresetRequest(args);
+        var settings = ReadSettings();
+        var device = ResolveDevice(settings, request.DeviceId);
+        lock (gate)
+        {
+            try
+            {
+                var before = ReadSnapshot(device);
+                var preset = before.Presets.FirstOrDefault(candidate =>
+                    candidate.Number == request.PresetNumber);
+                if (preset is null)
+                    throw new LiteRequestException(
+                        $"Preset {request.PresetNumber} jest pusty.");
+                if (WiiMPresetPlayability.DescribeUnplayableReason(preset)
+                    is { } unavailableReason)
+                {
+                    throw new LiteRequestException(unavailableReason);
+                }
+
+                client.ActivatePresetAsync(device.Address, request.PresetNumber)
+                    .GetAwaiter().GetResult();
+                Thread.Sleep(TimeSpan.FromMilliseconds(180));
+                var refreshed = ReadSnapshot(device);
+                var title = string.IsNullOrWhiteSpace(preset.Name)
+                    ? $"preset {request.PresetNumber}"
+                    : preset.Name.Trim();
+                return LiteWiiMContract.CreateSnapshotResult(
+                    device,
+                    refreshed,
+                    $"Uruchomiono preset {request.PresetNumber}, {title}");
+            }
+            catch (LiteRequestException)
+            {
+                throw;
+            }
+            catch (Exception exception) when (exception is HttpRequestException
+                or TaskCanceledException or IOException or FormatException
+                or ArgumentException)
+            {
+                throw new LiteRequestException(
+                    $"Nie udało się uruchomić presetu urządzenia {UserTitle(device)}.");
+            }
+        }
+    }
+
     public object Transport(JsonElement args)
     {
         var request = LiteWiiMContract.ReadTransportRequest(args);

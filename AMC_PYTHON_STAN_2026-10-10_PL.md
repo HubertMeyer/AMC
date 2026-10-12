@@ -43,7 +43,7 @@ podmiany i wycofania plików. Docelowe `AMC.exe` ma być stałym punktem wejści
 a aktualizator działać za nim, bez ręcznego wybierania skryptu lub interpretera.
 
 Aktualny kompletny pakiet EXE jest w:
-`D:\Projekty Codex\AMC - integracja wxPython\.test-output\AMC-Python-tidal-sort-escape-20261012`.
+`D:\Projekty Codex\AMC - integracja wxPython\.test-output\AMC-Python-wiim-presets-20261012`.
 Nie zawiera `AMC-wx-Lite.cmd`. `AMC.exe` sprawdza wersję formatu pakietu,
 interfejsu i protokołu hosta oraz sumy krytycznych plików przed uruchomieniem.
 Automatyczna weryfikacja paczki i próbna aktualizacja do osobnego katalogu
@@ -275,11 +275,21 @@ Sesja WiiM jest podłączona do istniejących usług AMC. Odbiór 10 październi
 potwierdził prawidłowe wykrycie urządzenia i odczyt jego stanu. Udało się także
 uruchomić i zatrzymać stację. Obecny interfejs jest jednak tylko częściowy:
 `F6` przełącza pomiędzy otwartym odtwarzaczem a listą urządzeń/odtwarzaczy,
-natomiast nie udostępnia pełnej Biblioteki, Ulubionych, presetów i pozostałych
-widoków znanych z głównego AMC. Brakuje również kompletnego podłączenia ich
-skrótów, między innymi rodziny `Ctrl+L`, `Ctrl+Shift+U` i skrótów presetów.
-Przed implementacją trzeba porównać pełną mapę funkcji z głównym AMC, aby nie
-zgubić pozostałych poleceń ani nie tworzyć drugiej, niezgodnej semantyki.
+natomiast nie udostępnia jeszcze własnych Strumieni sieciowych i pozostałych
+opcji znanych z głównego AMC. Pełne AMC celowo nie pokazuje w WiiM Biblioteki
+ani Ulubionych: lokalne API urządzenia nie udostępnia katalogów WiiM Home,
+dlatego `Ctrl+L` pozostaje nieaktywny, a materiały AMC są osobnym widokiem
+Strumieni sieciowych pod `Ctrl+O`.
+
+Natywne presety urządzenia są już podłączone technicznie pod `Ctrl+Alt+P`.
+Host zwraca dokładnie 12 miejsc bez adresów urządzenia i strumieni, wskazuje
+bieżące miejsce, blokuje puste pozycje oraz zachowuje wyjaśnienie z głównego
+AMC dla presetów TIDAL/Spotify Connect, których urządzenie nie potrafi samo
+uruchomić. Dialog obsługuje cyfry, Page Up/Page Down, Enter i Spację, a po
+powodzeniu przechodzi do odtwarzacza WiiM. Pozostaje odbiór z żywym
+urządzeniem oraz przeniesienie Strumieni sieciowych, mapowań
+`Ctrl+Shift+1–0/-/=` i opcji wejścia, wyjścia, korektora, powtarzania,
+losowania i timera.
 
 ### Sonos
 
@@ -384,7 +394,7 @@ kodu ani wysyłać logów bez wiedzy użytkownika.
 
 ## Dowody automatyczne tego przyrostu
 
-- pełny runner Python: 1357 zaliczonych, 0 błędów, 138 historycznych pominięć;
+- pełny runner Python: 1360 zaliczonych, 0 błędów, 138 historycznych pominięć;
 - testy protokołu C#: 15 zestawów zaliczonych;
 - całe rozwiązanie .NET zbudowane sekwencyjnie: 0 ostrzeżeń, 0 błędów;
 - sześć celowanych testów Windows rozpoznawania, ustawień, historii, podpisu
@@ -434,9 +444,12 @@ lewą strzałką.
    przepisać pozostałe trzy karty
    głównego AMC ze wszystkimi polami, zależnościami i zapisem oraz wykonać
    pełny audyt Biblioteki, menu, skrótów i sortowań `Alt+cyfra`.
-5. Uzupełnienie WiiM i Sonos o pełną warstwę interfejsu z głównego AMC:
-   Bibliotekę, Ulubione, wybór materiałów, presety, wszystkie skróty oraz
-   prawidłowe wykonanie transportu po zakończeniu odczytu stanu. Następnie
+5. Uzupełnienie WiiM i Sonos o pełną, właściwą dla każdej usługi warstwę
+   interfejsu z głównego AMC: w WiiM Strumienie sieciowe, natywne presety,
+   opcje urządzenia i wszystkie ich skróty; w Sonos Bibliotekę, Ulubione,
+   playlisty, własne strumienie, presety i wybór materiałów. Natywna lista
+   presetów WiiM jest już podłączona technicznie. Następnie zapewnić
+   prawidłowe wykonanie transportu po zakończeniu odczytu stanu i wykonać
    ponowny odbiór na obudzonych urządzeniach. Materiał Sonos Redux z Hermesa
    traktować tylko jako krótką wskazówkę projektową, gdy analogiczny problem
    wystąpi w AMC; nie przeznaczać przebiegów na analizę, uruchamianie ani testy

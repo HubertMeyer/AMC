@@ -13,6 +13,8 @@ public static class LiteWiiMContract
     public const string DevicesOperation = "wiim.devices";
     public const string SnapshotOperation = "wiim.snapshot";
     public const string TransportOperation = "wiim.transport";
+    public const string PresetsOperation = "wiim.presets";
+    public const string ActivatePresetOperation = "wiim.presetActivate";
 
     public static string ReadDeviceId(JsonElement args) =>
         LiteArgs.RequireText(args, "deviceId").Trim();
@@ -43,6 +45,20 @@ public static class LiteWiiMContract
             volume = requestedVolume;
         }
         return new LiteWiiMTransportRequest(deviceId, command, volume);
+    }
+
+    public static LiteWiiMPresetRequest ReadPresetRequest(JsonElement args)
+    {
+        var deviceId = ReadDeviceId(args);
+        if (!args.TryGetProperty("presetNumber", out var rawNumber)
+            || rawNumber.ValueKind != JsonValueKind.Number
+            || !rawNumber.TryGetInt32(out var presetNumber)
+            || presetNumber is < 1 or > 12)
+        {
+            throw new LiteRequestException(
+                "Numer presetu WiiM musi należeć do zakresu od 1 do 12.");
+        }
+        return new LiteWiiMPresetRequest(deviceId, presetNumber);
     }
 
     public static object CreateDevicesResult(WiiMSettings settings)
@@ -91,6 +107,50 @@ public static class LiteWiiMContract
             message = string.IsNullOrWhiteSpace(message)
                 ? SnapshotAnnouncement(device, snapshot)
                 : message.Trim()
+        };
+    }
+
+    public static object CreatePresetsResult(
+        WiiMDeviceSettings device,
+        WiiMDeviceSnapshot snapshot)
+    {
+        var occupied = snapshot.Presets
+            .Where(preset => preset.Number is >= 1 and <= 12)
+            .GroupBy(preset => preset.Number)
+            .ToDictionary(group => group.Key, group => group.First());
+        var currentPresetNumber = WiiMPresetStateResolver.ResolveCurrentPreset(
+            snapshot,
+            device.LastActivatedPresetNumber);
+        var items = Enumerable.Range(1, 12)
+            .Select(number =>
+            {
+                occupied.TryGetValue(number, out var preset);
+                var name = Useful(preset?.Name);
+                if (preset is not null && name.Length == 0) name = "bez nazwy";
+                var source = Useful(preset?.Source);
+                var label = preset is null
+                    ? $"Preset {number}, pusty"
+                    : source.Length == 0
+                        ? $"Preset {number}, {name}"
+                        : $"Preset {number}, {name}, {source}";
+                return new
+                {
+                    itemId = $"wiim-preset:{number}",
+                    presetNumber = number,
+                    label,
+                    occupied = preset is not null,
+                    current = currentPresetNumber == number,
+                    activationError = WiiMPresetPlayability.DescribeUnplayableReason(preset)
+                        ?? string.Empty
+                };
+            })
+            .ToArray();
+        return new
+        {
+            deviceId = device.Id.Trim(),
+            deviceTitle = UserTitle(device),
+            currentPresetNumber,
+            items
         };
     }
 
@@ -154,3 +214,7 @@ public sealed record LiteWiiMTransportRequest(
     string DeviceId,
     string Command,
     int? Volume);
+
+public sealed record LiteWiiMPresetRequest(
+    string DeviceId,
+    int PresetNumber);

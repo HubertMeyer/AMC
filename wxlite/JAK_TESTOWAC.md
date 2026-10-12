@@ -15,7 +15,7 @@ Odbiór docelowego launchera:
 
 Aktualna, automatycznie zweryfikowana paczka znajduje się w:
 
-`D:\Projekty Codex\AMC - integracja wxPython\.test-output\AMC-Python-tidal-sort-escape-20261012\AMC.exe`
+`D:\Projekty Codex\AMC - integracja wxPython\.test-output\AMC-Python-wiim-presets-20261012\AMC.exe`
 
 Nie przełączaj na nią programu w czasie trwającego nagrywania. Pierwszy żywy
 odbiór wykonaj kolejno według punktów poniżej.
@@ -122,15 +122,26 @@ WiiM:
 2. Sprawdź wykrycie, aktywację, Enter, Spację, następny/poprzedni, głośność,
    przewijanie, szybkie informacje i powrót fokusu po zmianie sesji.
 3. Sprawdź dotychczasowe przełączanie `F6` między odtwarzaczem i listą
-   urządzeń. Niezależnie od tego skrótu odbierz wszystkie pozostałe widoki z
-   głównego AMC: Bibliotekę, Ulubione, presety i wybór materiałów.
-4. Porównaj pełną mapę skrótów z głównym AMC, w tym `Ctrl+L`,
-   `Ctrl+Shift+U` i skróty presetów. Każdy skrót ma otwierać właściwy widok
-   albo wykonywać właściwą operację, a nie tylko odczytywać stan urządzenia.
+   urządzeń. `Ctrl+Alt+P` ma otworzyć 12 natywnych miejsc urządzenia. Cyfry
+   wybierają konkretne miejsce, Page Up i Page Down przechodzą wyłącznie po
+   zajętych miejscach, a Enter lub Spacja uruchamia zajęty preset. Puste
+   miejsce nie zamyka okna. Preset TIDAL/Spotify Connect bez adresu ma
+   wyjaśnić, że dźwięk trzeba wysłać z aplikacji, zamiast udawać sukces.
+4. Po udanym uruchomieniu presetu ma pojawić się odtwarzacz WiiM, krótki
+   komunikat z numerem i nazwą presetu oraz aktualny stan urządzenia. Po
+   anulowaniu listy fokus ma wrócić do listy urządzeń albo odtwarzacza.
+5. Pełne AMC nie udaje Biblioteki ani Ulubionych WiiM: lokalne API urządzenia
+   ich nie udostępnia, dlatego `Ctrl+L` pozostaje w tej sesji nieaktywny.
+   Brakującym widokiem materiałów są **Strumienie sieciowe AMC** pod `Ctrl+O`,
+   z dodawaniem `Ctrl+N`, importem `Ctrl+Shift+O`, eksportem `Ctrl+E`, edycją
+   `F2`, usuwaniem Delete i sortowaniem `Alt+1/2/3`. Ten zakres oraz skróty
+   `Ctrl+Shift+1–0/-/=` do mapowanych presetów pozostają do przeniesienia.
 
 Wynik odbioru 10 października: urządzenie i stan są prawidłowo widziane,
-stację można uruchomić i zatrzymać, lecz warstwa Biblioteki, Ulubionych,
-materiałów i presetów nie jest dostępna z obecnego interfejsu wxPython.
+stację można uruchomić i zatrzymać. Natywne presety pod `Ctrl+Alt+P` są już
+podłączone technicznie i czekają na powyższy odbiór na obudzonym urządzeniu.
+Do przeniesienia pozostają Strumienie sieciowe, mapowania skrótów presetów i
+pozostałe opcje sprzętowe WiiM.
 
 Sonos:
 

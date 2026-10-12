@@ -2,11 +2,24 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 from .list_model import Row
 
 
 class WiiMPayloadError(ValueError):
     """Host zwrocil odpowiedz, ktorej nie wolno pokazac jako listy."""
+
+
+@dataclass(frozen=True, slots=True)
+class WiiMPresetChoice:
+    """Jedno miejsce urządzenia; do kontrolki trafia wyłącznie ``label``."""
+
+    number: int
+    label: str
+    occupied: bool
+    current: bool
+    activation_error: str
 
 
 def device_rows(payload: object) -> tuple[Row, ...]:
@@ -65,6 +78,40 @@ def snapshot(payload: object) -> dict:
             else None
         )
     return result
+
+
+def preset_choices(payload: object) -> tuple[str, tuple[WiiMPresetChoice, ...]]:
+    """Przyjmij dokładnie 12 celowo opisanych miejsc, bez adresów i repr."""
+    if not isinstance(payload, dict):
+        raise WiiMPayloadError("Host WiiM zwrócił nieprawidłową listę presetów")
+    device_title = _text(payload.get("deviceTitle")) or "WiiM"
+    raw_items = payload.get("items")
+    if not isinstance(raw_items, list):
+        raise WiiMPayloadError("Host WiiM nie zwrócił listy presetów")
+
+    choices: dict[int, WiiMPresetChoice] = {}
+    for raw in raw_items:
+        if not isinstance(raw, dict):
+            continue
+        number = raw.get("presetNumber")
+        label = _text(raw.get("label"))
+        if (
+            type(number) is not int
+            or not 1 <= number <= 12
+            or not label
+            or number in choices
+        ):
+            continue
+        choices[number] = WiiMPresetChoice(
+            number=number,
+            label=label,
+            occupied=raw.get("occupied") is True,
+            current=raw.get("current") is True,
+            activation_error=_text(raw.get("activationError")),
+        )
+    if set(choices) != set(range(1, 13)):
+        raise WiiMPayloadError("Host WiiM zwrócił niepełną listę presetów")
+    return device_title, tuple(choices[number] for number in range(1, 13))
 
 
 def now_playing_label(state: dict) -> str:

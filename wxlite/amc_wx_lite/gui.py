@@ -118,9 +118,11 @@ from .shortcuts import (
     resolve,
 )
 from .wiim_source import (
+    WiiMPresetChoice,
     WiiMPayloadError,
     device_rows as wiim_device_rows,
     now_playing_label as wiim_now_playing_label,
+    preset_choices as wiim_preset_choices,
     snapshot as wiim_snapshot,
 )
 from .sonos_source import (
@@ -2073,6 +2075,123 @@ class PresetListDialog(wx.Dialog):
                 f"Preset {choice.spoken_shortcut_label} pusty. "
                 "Ctrl+Alt+Shift+P przypisuje bieżący element"
             )
+            return
+        self.EndModal(wx.ID_OK)
+
+
+class WiiMPresetListDialog(wx.Dialog):
+    """Natywne presety urządzenia, z tymi samymi 12 miejscami co pełne AMC."""
+
+    def __init__(
+        self,
+        parent: wx.Window,
+        *,
+        choices: tuple[WiiMPresetChoice, ...],
+        device_title: str,
+    ) -> None:
+        super().__init__(parent, title=f"Presety urządzenia — {device_title}")
+        self._choices = choices
+        panel = wx.Panel(self)
+        layout = wx.BoxSizer(wx.VERTICAL)
+
+        description_text = (
+            f"Presety zapisane w urządzeniu {device_title}. "
+            "Cyfra wybiera miejsce. Page Up i Page Down przechodzą po "
+            "zajętych miejscach. Enter lub Spacja uruchamia zajęty preset."
+        )
+        description = wx.StaticText(panel, label=description_text)
+        description.SetName(description_text)
+        layout.Add(description, 0, wx.ALL | wx.EXPAND, 12)
+
+        self.preset_list = wx.ListBox(
+            panel,
+            choices=[choice.label for choice in choices],
+            style=wx.LB_SINGLE,
+        )
+        self.preset_list.SetName(f"Presety urządzenia, {device_title}")
+        self.preset_list.SetToolTip(
+            "Cyfra wybiera miejsce. Page Up i Page Down przechodzą po "
+            "zajętych presetach. Enter albo Spacja uruchamia."
+        )
+        selected = next(
+            (index for index, choice in enumerate(choices) if choice.current),
+            -1,
+        )
+        if selected < 0:
+            selected = next(
+                (index for index, choice in enumerate(choices) if choice.occupied),
+                0,
+            )
+        self.preset_list.SetSelection(selected)
+        layout.Add(self.preset_list, 1, wx.LEFT | wx.RIGHT | wx.EXPAND, 12)
+
+        self.status = wx.StaticText(panel, label="Gotowe")
+        self.status.SetName("Gotowe")
+        self._announcer = Announcer(self.status)
+        layout.Add(self.status, 0, wx.ALL | wx.EXPAND, 12)
+        panel.SetSizer(layout)
+
+        buttons = wx.StdDialogButtonSizer()
+        self.activate_button = wx.Button(self, wx.ID_OK, label="&Uruchom")
+        self.activate_button.SetName("Uruchom preset urządzenia")
+        self.activate_button.SetDefault()
+        close = wx.Button(self, wx.ID_CANCEL, label="&Zamknij")
+        close.SetName("Zamknij listę presetów urządzenia")
+        buttons.AddButton(self.activate_button)
+        buttons.AddButton(close)
+        buttons.Realize()
+
+        shell = wx.BoxSizer(wx.VERTICAL)
+        shell.Add(panel, 1, wx.EXPAND)
+        shell.Add(buttons, 0, wx.ALL | wx.ALIGN_RIGHT, 12)
+        self.SetSizer(shell)
+        self.SetMinSize((620, 430))
+        self.Fit()
+        self.Bind(wx.EVT_CHAR_HOOK, self._on_key)
+        self.activate_button.Bind(wx.EVT_BUTTON, self._activate)
+        self.preset_list.Bind(wx.EVT_LISTBOX_DCLICK, self._activate)
+        self.preset_list.SetFocus()
+
+    @property
+    def selected_choice(self) -> WiiMPresetChoice | None:
+        index = self.preset_list.GetSelection()
+        return self._choices[index] if 0 <= index < len(self._choices) else None
+
+    def _on_key(self, event: wx.KeyEvent) -> None:
+        slot = _preset_slot_from_event(event)
+        if slot is not None:
+            self.preset_list.SetSelection(slot - 1)
+            return
+        code = event.GetKeyCode()
+        if not event.ControlDown() and not event.AltDown() and not event.ShiftDown():
+            if code in (wx.WXK_PAGEUP, wx.WXK_PAGEDOWN):
+                self._move_to_occupied(1 if code == wx.WXK_PAGEDOWN else -1)
+                return
+            if code in (wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER, wx.WXK_SPACE):
+                self._activate(event)
+                return
+        event.Skip()
+
+    def _move_to_occupied(self, direction: int) -> None:
+        if not any(choice.occupied for choice in self._choices):
+            self._announcer.say("Brak zajętych presetów urządzenia")
+            return
+        current = max(0, self.preset_list.GetSelection())
+        for offset in range(1, len(self._choices) + 1):
+            index = (current + direction * offset) % len(self._choices)
+            if self._choices[index].occupied:
+                self.preset_list.SetSelection(index)
+                return
+
+    def _activate(self, _event) -> None:
+        choice = self.selected_choice
+        if choice is None:
+            return
+        if not choice.occupied:
+            self._announcer.say(f"Preset {choice.number} jest pusty")
+            return
+        if choice.activation_error:
+            self._announcer.say(choice.activation_error)
             return
         self.EndModal(wx.ID_OK)
 
@@ -6904,6 +7023,9 @@ class LiteFrame(wx.Frame):
     def _show_presets(self) -> None:
         """Ctrl+Alt+P: jawna lista 12 miejsc, bez zapisu i bez technicznych ID."""
         session = self.navigator.active
+        if session is SessionId.WIIM:
+            self._show_wiim_presets()
+            return
         target = self._current_preset_target()
         current_target_id = target.target_id if target is not None else None
         overrides, _stations = self._preset_inputs(session)
@@ -6937,6 +7059,125 @@ class LiteFrame(wx.Frame):
                 self.announcer.say("Nie udało się odczytać presetów")
 
         self.runner.submit("preset", work, done, failed)
+
+    def _wiim_device_context(self) -> tuple[str, str, str] | None:
+        """Zwróć wybrane urządzenie bez umieszczania jego Id w interfejsie."""
+        state = self.navigator.sessions[SessionId.WIIM]
+        row = state.model.selected_row
+        if (
+            row is not None
+            and row.kind == "device"
+            and row.service_kind == "device"
+            and row.service_id
+        ):
+            return row.item_id, row.service_id, row.title
+        device_id = self._wiim_active_device_id
+        if not device_id:
+            return None
+        row = next(
+            (
+                candidate for candidate in state.model.rows
+                if candidate.kind == "device"
+                and candidate.service_kind == "device"
+                and candidate.service_id == device_id
+            ),
+            None,
+        )
+        if row is None:
+            return None
+        return row.item_id, device_id, row.title
+
+    def _show_wiim_presets(self) -> None:
+        """Ctrl+Alt+P w WiiM: 12 natywnych miejsc urządzenia."""
+        client = self.client
+        context = self._wiim_device_context()
+        if client is None:
+            self.announcer.say("Silnik nie jest gotowy")
+            return
+        if context is None:
+            self.announcer.say("Wybierz urządzenie WiiM")
+            return
+        item_id, device_id, device_title = context
+
+        def done(payload: object) -> None:
+            if self.navigator.active is not SessionId.WIIM:
+                return
+            try:
+                returned_title, choices = wiim_preset_choices(payload)
+            except WiiMPayloadError as error:
+                self.announcer.say(str(error))
+                return
+            with WiiMPresetListDialog(
+                self,
+                choices=choices,
+                device_title=returned_title or device_title,
+            ) as dialog:
+                if dialog.ShowModal() != wx.ID_OK:
+                    if self.navigator.view is View.LIST:
+                        self._active_list().SetFocus()
+                    else:
+                        self.play_button.SetFocus()
+                    return
+                choice = dialog.selected_choice
+            if choice is not None:
+                self._activate_wiim_preset(
+                    item_id,
+                    device_id,
+                    returned_title or device_title,
+                    choice,
+                )
+
+        self.runner.submit(
+            "wiim-presets",
+            lambda: client.wiim_presets(device_id),
+            done,
+            lambda error: self.announcer.say(
+                f"Nie udało się odczytać presetów urządzenia {device_title}: {error}"
+            ),
+        )
+
+    def _activate_wiim_preset(
+        self,
+        item_id: str,
+        device_id: str,
+        device_title: str,
+        choice: WiiMPresetChoice,
+    ) -> None:
+        """Uruchom zajęty preset i dopiero po sukcesie pokaż odtwarzacz."""
+        client = self.client
+        if client is None:
+            self.announcer.say("Silnik nie jest gotowy")
+            return
+
+        def done(payload: object) -> None:
+            try:
+                state = wiim_snapshot(payload)
+            except WiiMPayloadError as error:
+                self.announcer.say(str(error))
+                return
+            if state.get("deviceId") != device_id:
+                return
+            session = self.navigator.sessions[SessionId.WIIM]
+            session.player_entry_anchor_id = item_id
+            session.list_anchor_id = item_id
+            session.now_playing_id = item_id
+            session.now_playing_title = device_title
+            session.current_material_id = item_id
+            session.view = View.PLAYER
+            self._wiim_active_device_id = device_id
+            self._wiim_snapshot = state
+            if self.navigator.active is SessionId.WIIM:
+                self._sync_views()
+                self._apply_wiim_snapshot(state, announce=True)
+
+        self.runner.submit(
+            "wiim-preset-activate",
+            lambda: client.wiim_activate_preset(device_id, choice.number),
+            done,
+            lambda error: self.announcer.say(
+                f"Nie udało się uruchomić presetu urządzenia {device_title}: {error}"
+            ),
+        )
 
     def _assign_preset(self) -> None:
         """Ctrl+Alt+Shift+P: trwale zapisz tylko prywatne nadpisanie wxPython."""
