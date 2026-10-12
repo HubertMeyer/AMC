@@ -201,7 +201,7 @@ from .tidal_source import (
     queue_rows as tidal_queue_rows,
 )
 
-APP_NAME = "AMC-wx-Lite"
+APP_NAME = "AMC Python"
 TEMPO_LABELS = {1: "Mowa – Speedy", 2: "Muzyka – Signalsmith", 0: "Dotychczasowy – SoundTouch"}
 RADIO_FORMAT_CHOICES = (
     ("MP3", "Mp3"),
