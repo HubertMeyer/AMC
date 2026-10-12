@@ -115,6 +115,7 @@ from amc_wx_lite.transport_parity import (
     SUGGESTED_CUSTOM_SEEK_SECONDS,
     MessagePolicy,
     PercentAnnouncement,
+    apply_message_overrides,
     format_clock,
     format_playback_rate,
     load_message_policy,
@@ -454,6 +455,54 @@ def test_private_detailed_hints_override_wins_and_invalid_values_are_false() -> 
     assert resolve_detailed_hints(False, True) is False
     assert resolve_detailed_hints(True, False) is True
     assert resolve_detailed_hints(None, "tak") is False  # type: ignore[arg-type]
+
+
+def test_private_message_overrides_win_without_touching_inherited_values() -> None:
+    policy = MessagePolicy(
+        enabled=True,
+        seek_messages=True,
+        arrow_seek_messages=False,
+        percentage_seek_messages=True,
+        volume_messages=False,
+        playback_messages=True,
+        percent_announcement=PercentAnnouncement.TIME,
+        may_persist=False,
+    )
+
+    result = apply_message_overrides(
+        policy,
+        seek_messages=False,
+        arrow_seek_messages=None,
+        percentage_seek_messages=False,
+        volume_messages=True,
+        playback_messages=False,
+        percent_announcement="PercentAndTime",
+    )
+
+    assert result is policy
+    assert policy.enabled is True
+    assert policy.seek_messages is False
+    assert policy.arrow_seek_messages is False
+    assert policy.percentage_seek_messages is False
+    assert policy.volume_messages is True
+    assert policy.playback_messages is False
+    assert policy.percent_announcement is PercentAnnouncement.PERCENT_AND_TIME
+    assert policy.may_persist is True
+
+
+def test_invalid_private_message_values_do_not_replace_inherited_policy() -> None:
+    policy = MessagePolicy(
+        enabled=False,
+        percent_announcement=PercentAnnouncement.TIME,
+    )
+
+    apply_message_overrides(
+        policy,
+        percent_announcement="TechnicalEnum.Value",
+    )
+
+    assert policy.enabled is False
+    assert policy.percent_announcement is PercentAnnouncement.TIME
 
 
 def test_out_of_range_custom_seek_from_the_profile_is_clamped() -> None:

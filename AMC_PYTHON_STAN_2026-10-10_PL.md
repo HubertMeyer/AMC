@@ -86,9 +86,15 @@ sesji, a odłączone pozycje są pomijane. Oba zachowania wymagają jeszcze
 Ogólne, Radio i nagrywanie, Podcasty i YouTube oraz Komunikaty. Ogólne obejmują zachowanie
 odtwarzacza i wyjścia audio, normalizację, przejścia, ciszę oraz jawnie
 nazwane algorytmy tempa; Komunikaty obejmują stany odtwarzania i nagrywania
-Radia, oznajmianie automatycznie rozpoznanych utworów oraz przełącznik
-„Pokazuj szczegółowe podpowiedzi klawiatury przy polach i listach”. Do
-pierwszego zapisu przełącznik dziedziczy `DetailedHints` z głównego AMC.
+Radia, oznajmianie automatycznie rozpoznanych utworów, szczegółowe podpowiedzi
+oraz działające przełączniki komunikatów transportu: komunikaty odtwarzacza,
+strzałki/Home/End, skoki cyframi, głośność i
+odtwarzanie/pauzę. Dla skoku cyfrą można wybrać procent, czas albo oba. Do
+pierwszego zapisu ustawienia dziedziczą odpowiednie wartości z głównego AMC;
+potem AMC Python zapisuje własne wybory bez modyfikowania profilu starego
+interfejsu. `Ctrl+Shift+G` również zapisuje swój przełącznik bezpośrednio w
+AMC Python. Wyłączony komunikat odtwarzania/pauzy nadal aktualizuje dostępne
+pole stanu, ale nie wymusza wypowiedzi NVDA.
 Po włączeniu `Ctrl+K` podaje pełną instrukcję filtra, a pole zapytania i lista
 wyników `Ctrl+F`/`Ctrl+Shift+F` udostępniają osobne teksty pomocy. Nazwy
 kontrolek pozostają krótkie i nie zawierają podpowiedzi ani wartości modelu.
@@ -364,7 +370,7 @@ kodu ani wysyłać logów bez wiedzy użytkownika.
 
 ## Dowody automatyczne tego przyrostu
 
-- pełny runner Python: 1336 zaliczonych, 0 błędów, 138 historycznych pominięć;
+- pełny runner Python: 1345 zaliczonych, 0 błędów, 138 historycznych pominięć;
 - testy protokołu C#: 15 zestawów zaliczonych;
 - całe rozwiązanie .NET zbudowane sekwencyjnie: 0 ostrzeżeń, 0 błędów;
 - sześć celowanych testów Windows rozpoznawania, ustawień, historii, podpisu
@@ -405,9 +411,12 @@ lewą strzałką.
    Komunikaty, zapis Enterem i jedno potwierdzenie. Karta Radia wykonuje
    ustawienia TimeShift, folderu, formatu, bitrate'u i wybudzania. Działają też
    wybór pauzy po utracie wyjścia oraz `Ctrl+[` i `Ctrl+]`; Spację harmonogramu
-   podłączono bezpośrednio do listy. Rozpoznawanie utworów i wspólny folder z
-   Podcastami są już przeniesione technicznie; pozostaje żywy odbiór wyniku,
-   historii i komunikatów z NVDA. Następnie przepisać pozostałe trzy karty
+   podłączono bezpośrednio do listy. Karta Komunikaty zapisuje już rzeczywiste
+   przełączniki przewijania, głośności i odtwarzania/pauzy, a
+   `Ctrl+Shift+G` korzysta z tego samego prywatnego stanu. Rozpoznawanie
+   utworów i wspólny folder z Podcastami są już przeniesione technicznie;
+   pozostaje żywy odbiór wyniku, historii i komunikatów z NVDA. Następnie
+   przepisać pozostałe trzy karty
    głównego AMC ze wszystkimi polami, zależnościami i zapisem oraz wykonać
    pełny audyt Biblioteki, menu, skrótów i sortowań `Alt+cyfra`.
 5. Uzupełnienie WiiM i Sonos o pełną warstwę interfejsu z głównego AMC:

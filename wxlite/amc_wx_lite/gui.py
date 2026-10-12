@@ -170,6 +170,8 @@ from .transport_parity import (
     SUGGESTED_CUSTOM_SEEK_SECONDS,
     TRACK_END_MARGIN_SECONDS,
     MessagePolicy,
+    PercentAnnouncement,
+    apply_message_overrides,
     clamp_playback_rate,
     describe_custom_seek_length,
     format_clock,
@@ -691,19 +693,26 @@ class Announcer:
         # maja dzialac, a sama zapowiedz nie moze zalezec od dodatku.
         self._status_bar = status_bar
 
-    def say(self, text: str) -> None:
+    def show(self, text: str) -> str:
+        """Zaktualizuj dostepny tekst bez wymuszania wypowiedzi NVDA."""
         text = (text or "").strip()
         if not text:
-            return
+            return ""
         if self._status.GetLabel() != text:
             self._status.SetLabel(text)
+        self._status.SetName(text)
+        return text
+
+    def say(self, text: str) -> None:
+        text = self.show(text)
+        if not text:
+            return
         # Kanal zapowiedzi i natywny pasek odtwarzania sa rozdzielne, tak jak
         # w glownym AMC. Kopiowanie tutaj ostatniego komunikatu nadpisywalo
         # wiarygodny status i dlatego NVDA+End czytal np. tylko
         # "Odtwarzacz, Radio Poznan" zamiast stacji, parametrow i utworu.
         # Nazwe ustawiamy ZAWSZE, nawet gdy tekst sie nie zmienil: wlasnie ja
         # czyta ``event_liveRegionChange``, a powtorzone pytanie ma odpowiedziec.
-        self._status.SetName(text)
         owner = wx.GetTopLevelParent(self._status)
         if owner is not None and not owner.IsActive():
             return
@@ -3164,6 +3173,7 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
         global_transient_previews: bool,
         remember_local_playback_positions: bool,
         detailed_hints: bool,
+        message_policy: MessagePolicy,
     ) -> None:
         super().__init__(parent, title="Ustawienia", size=(720, 620))
         self.notebook = wx.Notebook(self)
@@ -3640,6 +3650,91 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
         messages.SetScrollRate(0, 12)
         messages_layout = wx.BoxSizer(wx.VERTICAL)
 
+        self.message_seek_messages = wx.CheckBox(
+            messages, label="Włącz automatyczne komunikaty &odtwarzacza"
+        )
+        self.message_seek_messages.SetName(
+            "Włącz automatyczne komunikaty odtwarzacza"
+        )
+        self.message_seek_messages.SetValue(message_policy.seek_messages)
+
+        self.message_arrow_seek_messages = wx.CheckBox(
+            messages,
+            label="Oznajmiaj przewijanie &strzałkami oraz klawiszami Home i End",
+        )
+        self.message_arrow_seek_messages.SetName(
+            "Oznajmiaj przewijanie strzałkami oraz klawiszami Home i End"
+        )
+        self.message_arrow_seek_messages.SetValue(
+            message_policy.arrow_seek_messages
+        )
+
+        self.message_percentage_seek_messages = wx.CheckBox(
+            messages, label="Oznajmiaj skoki klawiszami &cyfr"
+        )
+        self.message_percentage_seek_messages.SetName(
+            "Oznajmiaj skoki klawiszami cyfr"
+        )
+        self.message_percentage_seek_messages.SetValue(
+            message_policy.percentage_seek_messages
+        )
+
+        percentage_label = wx.StaticText(
+            messages, label="Przy skoku cyfrą &podawaj:"
+        )
+        self._message_percent_values = [
+            PercentAnnouncement.PERCENT,
+            PercentAnnouncement.TIME,
+            PercentAnnouncement.PERCENT_AND_TIME,
+        ]
+        self.message_percent_announcement = wx.Choice(
+            messages,
+            choices=["Tylko procent", "Tylko czas", "Procent i czas"],
+        )
+        self.message_percent_announcement.SetName(
+            "Treść komunikatu po skoku klawiszem cyfry"
+        )
+        self.message_percent_announcement.SetSelection(
+            self._message_percent_values.index(
+                message_policy.percent_announcement
+            )
+        )
+
+        self.message_volume_messages = wx.CheckBox(
+            messages, label="Oznajmiaj zmiany &głośności"
+        )
+        self.message_volume_messages.SetName("Oznajmiaj zmiany głośności")
+        self.message_volume_messages.SetValue(message_policy.volume_messages)
+
+        self.message_playback_messages = wx.CheckBox(
+            messages, label="Oznajmiaj odtwarzanie i pau&zę"
+        )
+        self.message_playback_messages.SetName(
+            "Oznajmiaj odtwarzanie i pauzę"
+        )
+        self.message_playback_messages.SetValue(
+            message_policy.playback_messages
+        )
+
+        for control in (
+            self.message_seek_messages,
+            self.message_arrow_seek_messages,
+            self.message_percentage_seek_messages,
+        ):
+            messages_layout.Add(control, 0, wx.BOTTOM | wx.EXPAND, 10)
+        messages_layout.Add(percentage_label, 0, wx.BOTTOM, 4)
+        messages_layout.Add(
+            self.message_percent_announcement,
+            0,
+            wx.BOTTOM | wx.EXPAND,
+            10,
+        )
+        for control in (
+            self.message_volume_messages,
+            self.message_playback_messages,
+        ):
+            messages_layout.Add(control, 0, wx.BOTTOM | wx.EXPAND, 10)
+
         self.detailed_hints = wx.CheckBox(
             messages,
             label=(
@@ -3824,6 +3919,20 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
                 self.remember_local_playback_positions.GetValue()
             ),
             "detailed_hints": self.detailed_hints.GetValue(),
+            "message_seek_messages": self.message_seek_messages.GetValue(),
+            "message_arrow_seek_messages": (
+                self.message_arrow_seek_messages.GetValue()
+            ),
+            "message_percentage_seek_messages": (
+                self.message_percentage_seek_messages.GetValue()
+            ),
+            "message_volume_messages": self.message_volume_messages.GetValue(),
+            "message_playback_messages": (
+                self.message_playback_messages.GetValue()
+            ),
+            "message_percent_announcement": self._message_percent_values[
+                max(0, self.message_percent_announcement.GetSelection())
+            ].value,
             "loudness_normalization": self.loudness.GetValue(),
             "smooth_track_transitions": self.smooth.GetValue(),
             "inter_track_silence_ms": self._silence_values[
@@ -3896,9 +4005,21 @@ class LiteFrame(wx.Frame):
         # dostanie zgode na zapis kolejki (patrz _queue_persistence_arguments).
         self.layout = resolve_layout()
         self._profile_audio_outputs = read_profile_outputs(self.layout.state_json)
-        # Przelaczniki komunikatow i czas wlasny z PRAWDZIWEGO profilu AMC.
-        # Tylko odczyt: wlascicielem state.json zostaje host C#.
+        # Punkt startowy komunikatow i czas wlasny z PRAWDZIWEGO profilu AMC.
+        # Profil C# pozostaje tylko do odczytu; prywatne nadpisania sa
+        # nakladane nizej i zapisywane w magazynie AMC Python.
         self.messages: MessagePolicy = load_message_policy(self.layout)
+        apply_message_overrides(
+            self.messages,
+            seek_messages=self.options.message_seek_messages,
+            arrow_seek_messages=self.options.message_arrow_seek_messages,
+            percentage_seek_messages=(
+                self.options.message_percentage_seek_messages
+            ),
+            volume_messages=self.options.message_volume_messages,
+            playback_messages=self.options.message_playback_messages,
+            percent_announcement=self.options.message_percent_announcement,
+        )
         self.messages.custom_seek_seconds = resolve_custom_seek_seconds(
             self.options.custom_seek_seconds,
             self.messages.custom_seek_seconds,
@@ -11218,6 +11339,7 @@ class LiteFrame(wx.Frame):
             global_transient_previews,
             remember_local_playback_positions,
             detailed_hints,
+            self.messages,
         )
         chosen: dict[str, object] | None = None
         try:
@@ -11263,6 +11385,17 @@ class LiteFrame(wx.Frame):
             self._detailed_hints,
         )
         self.messages.detailed_hints = self._detailed_hints
+        apply_message_overrides(
+            self.messages,
+            seek_messages=self.options.message_seek_messages,
+            arrow_seek_messages=self.options.message_arrow_seek_messages,
+            percentage_seek_messages=(
+                self.options.message_percentage_seek_messages
+            ),
+            volume_messages=self.options.message_volume_messages,
+            playback_messages=self.options.message_playback_messages,
+            percent_announcement=self.options.message_percent_announcement,
+        )
         self._apply_detailed_hints()
         # Komunikaty wierszy zmieniaja sie od razu. Nowe preferencje
         # nagrywania trafia do kolejnego Ctrl+R i nastepnej synchronizacji
@@ -11546,7 +11679,14 @@ class LiteFrame(wx.Frame):
             # Etykieta zawsze zgodna ze stanem: po wstrzymaniu przycisk ma juz
             # proponowac odtwarzanie (MainWindow.xaml.cs:2560).
             self._set_transport_label(playing=not paused)
-            self.announcer.say(transport_confirmation(paused=paused))
+            message = transport_confirmation(paused=paused)
+            if (
+                self.messages.announces_playback
+                and self.messages.speaks_routine
+            ):
+                self.announcer.say(message)
+            else:
+                self.announcer.show(message)
 
         self.runner.submit(
             "transport",
@@ -11909,11 +12049,19 @@ class LiteFrame(wx.Frame):
     def _toggle_seek_messages(self) -> None:
         """Ctrl+Shift+G -- przelacznik komunikatow przewijania.
 
-        We wspolnym profilu wlascicielem state.json jest host C#, wiec gest
-        nie zapisuje nic po cichu: mowi, gdzie te opcje zmienic. Martwe pole
-        byloby gorsze od braku pola.
+        AMC Python zapisuje wybor we wlasnym stanie i nie dotyka profilu
+        starego interfejsu. Potwierdzenie samego przelaczenia jest jawna
+        odpowiedzia na gest, wiec zostaje wypowiedziane takze przy wylaczaniu.
         """
+        previous = self.messages.seek_messages
         result = self.messages.toggle_seek_messages()
+        if result.changed:
+            previous_override = self.options.message_seek_messages
+            self.options.message_seek_messages = self.messages.seek_messages
+            if not self._save_state():
+                self.options.message_seek_messages = previous_override
+                self.messages.seek_messages = previous
+                return
         self.announcer.say(result.message)
 
     # ------------------------------------------------------------- status

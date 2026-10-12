@@ -167,6 +167,16 @@ class Options:
     #: ``None`` dziedziczy ``settings.messages.detailedHints`` z profilu
     #: glownego AMC do pierwszego jawnego zapisu Ustawien wxPython.
     detailed_hints: bool | None = None
+    #: Prywatne nadpisania komunikatow odtwarzacza. ``None`` oznacza dalsze
+    #: dziedziczenie dotychczasowego wyboru z profilu glownego AMC. Po zapisie
+    #: karty Komunikaty wlascicielem tych wartosci staje sie AMC Python, bez
+    #: modyfikowania wspolnego ``state.json`` starego interfejsu.
+    message_seek_messages: bool | None = None
+    message_arrow_seek_messages: bool | None = None
+    message_percentage_seek_messages: bool | None = None
+    message_volume_messages: bool | None = None
+    message_playback_messages: bool | None = None
+    message_percent_announcement: str | None = None
     #: Prywatne nadpisania ustawien nagrywania. ``None`` oznacza dalsze
     #: dziedziczenie wartosci z profilu glownego AMC; pusty folder oznacza
     #: swiadomy wybor systemowego folderu domyslnego hosta.
@@ -256,6 +266,29 @@ class Options:
             self.remember_local_playback_positions = None
         if self.detailed_hints is not None and type(self.detailed_hints) is not bool:
             self.detailed_hints = None
+        for name in (
+            "message_seek_messages",
+            "message_arrow_seek_messages",
+            "message_percentage_seek_messages",
+            "message_volume_messages",
+            "message_playback_messages",
+        ):
+            value = getattr(self, name)
+            if value is not None and type(value) is not bool:
+                setattr(self, name, None)
+        if self.message_percent_announcement is not None:
+            allowed_message_modes = ("Percent", "Time", "PercentAndTime")
+            normalized_message_mode = str(
+                self.message_percent_announcement
+            ).strip().casefold()
+            self.message_percent_announcement = next(
+                (
+                    value
+                    for value in allowed_message_modes
+                    if value.casefold() == normalized_message_mode
+                ),
+                None,
+            )
         if self.radio_recording_format is not None:
             formats = ("Mp3", "Aac", "Flac", "Original", "Wav")
             value = str(self.radio_recording_format).strip().casefold()

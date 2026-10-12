@@ -51,7 +51,9 @@ def make_frame(
     """Atrapa okna: tylko pola, ktorych dotyka badana sciezka transportu."""
     frame = gui.LiteFrame.__new__(gui.LiteFrame)
     spoken: list[str] = []
-    frame.announcer = SimpleNamespace(say=spoken.append)
+    shown: list[str] = []
+    frame.announcer = SimpleNamespace(say=spoken.append, show=shown.append)
+    frame._shown_status = shown
     frame.messages = policy if policy is not None else MessagePolicy()
     frame._last_status = status if status is not None else {
         "positionSeconds": 231.0,
@@ -65,7 +67,12 @@ def make_frame(
         set_rate=lambda rate, _session_id=None: seeks.append({"rate": rate}),
         set_volume=lambda value, _session_id=None: seeks.append({"volume": value}),
     )
-    frame.options = SimpleNamespace(rate=1.0, volume=70)
+    frame.options = SimpleNamespace(
+        rate=1.0,
+        volume=70,
+        message_seek_messages=None,
+    )
+    frame._save_state = lambda: True
     frame.rate_slider = SimpleNamespace(SetValue=lambda value: seeks.append({"slider": value}))
     frame.volume_slider = SimpleNamespace(SetValue=lambda value: None)
     return frame, spoken, seeks
@@ -303,3 +310,63 @@ def test_ctrl_shift_g_przelacza_we_wlasnej_piaskownicy() -> None:
     # Po wylaczeniu strzalka naprawde milczy -- przelacznik jest WYKONYWANY.
     frame._dispatch(Action.SEEK_FORWARD_10)
     assert spoken[-1] == "Automatyczne komunikaty odtwarzacza wyłączone"
+
+
+def test_ctrl_shift_g_saves_the_private_override() -> None:
+    frame, spoken, _ = make_frame(MessagePolicy(may_persist=True))
+    saves: list[bool] = []
+    frame._save_state = lambda: saves.append(True) or True
+
+    frame._dispatch(Action.TOGGLE_SEEK_MESSAGES)
+
+    assert saves == [True]
+    assert frame.options.message_seek_messages is False
+    assert spoken == ["Automatyczne komunikaty odtwarzacza wyłączone"]
+
+
+def test_playback_confirmation_respects_policy_but_remains_in_status() -> None:
+    frame, spoken, _ = make_frame(
+        MessagePolicy(playback_messages=False),
+        payload={"paused": True},
+    )
+    frame.navigator = SimpleNamespace(active=SessionId.FILES)
+    frame._transport_status_by_session = {}
+    frame._set_transport_label = lambda **_values: None
+    frame.client.pause_resume = lambda _session_id=None: {"paused": True}
+
+    frame._play_pause()
+
+    assert spoken == []
+    assert frame._shown_status == ["Wstrzymano"]
+
+
+def test_playback_confirmation_also_respects_the_player_messages_family() -> None:
+    frame, spoken, _ = make_frame(
+        MessagePolicy(seek_messages=False, playback_messages=True),
+        payload={"paused": True},
+    )
+    frame.navigator = SimpleNamespace(active=SessionId.FILES)
+    frame._transport_status_by_session = {}
+    frame._set_transport_label = lambda **_values: None
+    frame.client.pause_resume = lambda _session_id=None: {"paused": True}
+
+    frame._play_pause()
+
+    assert spoken == []
+    assert frame._shown_status == ["Wstrzymano"]
+
+
+def test_playback_confirmation_is_spoken_when_enabled() -> None:
+    frame, spoken, _ = make_frame(
+        MessagePolicy(playback_messages=True),
+        payload={"paused": False},
+    )
+    frame.navigator = SimpleNamespace(active=SessionId.FILES)
+    frame._transport_status_by_session = {}
+    frame._set_transport_label = lambda **_values: None
+    frame.client.pause_resume = lambda _session_id=None: {"paused": False}
+
+    frame._play_pause()
+
+    assert spoken == ["Odtwarzanie"]
+    assert frame._shown_status == []

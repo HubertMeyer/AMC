@@ -114,6 +114,37 @@ def test_detailed_hints_override_round_trips_and_invalid_value_inherits() -> Non
     assert Options(detailed_hints="tak").clamp().detailed_hints is None  # type: ignore[arg-type]
 
 
+def test_message_overrides_round_trip_and_keep_user_facing_mode() -> None:
+    store, _ = temp_store()
+    store.save(LiteState(options=Options(
+        message_seek_messages=False,
+        message_arrow_seek_messages=True,
+        message_percentage_seek_messages=False,
+        message_volume_messages=True,
+        message_playback_messages=False,
+        message_percent_announcement="PercentAndTime",
+    )))
+
+    loaded = store.load().options
+
+    assert loaded.message_seek_messages is False
+    assert loaded.message_arrow_seek_messages is True
+    assert loaded.message_percentage_seek_messages is False
+    assert loaded.message_volume_messages is True
+    assert loaded.message_playback_messages is False
+    assert loaded.message_percent_announcement == "PercentAndTime"
+
+
+def test_invalid_message_overrides_return_to_inherited_values() -> None:
+    options = Options(
+        message_seek_messages=1,  # type: ignore[arg-type]
+        message_percent_announcement="TechnicalEnum.Value",
+    ).clamp()
+
+    assert options.message_seek_messages is None
+    assert options.message_percent_announcement is None
+
+
 def test_round_trip_keeps_radio_activity_presentation_options() -> None:
     store, _ = temp_store()
     state = LiteState(options=Options(

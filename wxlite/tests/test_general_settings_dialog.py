@@ -26,6 +26,17 @@ def test_settings_have_real_native_pages_and_explicit_accessible_names() -> None
     assert '"Pamiętaj pozycję odtwarzania lokalnych plików"' in source
     assert 'self.detailed_hints.SetName(' in source
     assert '"Pokazuj szczegółowe podpowiedzi klawiatury przy polach i listach"' in source
+    assert 'self.message_seek_messages.SetName(' in source
+    assert '"Włącz automatyczne komunikaty odtwarzacza"' in source
+    assert 'self.message_arrow_seek_messages.SetName(' in source
+    assert '"Oznajmiaj przewijanie strzałkami oraz klawiszami Home i End"' in source
+    assert 'self.message_percentage_seek_messages.SetName(' in source
+    assert '"Oznajmiaj skoki klawiszami cyfr"' in source
+    assert 'self.message_volume_messages.SetName("Oznajmiaj zmiany głośności")' in source
+    assert 'self.message_playback_messages.SetName(' in source
+    assert '"Oznajmiaj odtwarzanie i pauzę"' in source
+    assert 'self.message_percent_announcement.SetName(' in source
+    assert 'choices=["Tylko procent", "Tylko czas", "Procent i czas"]' in source
 
 
 def test_enter_save_has_one_short_confirmation_and_reconfigures_the_host() -> None:
@@ -54,6 +65,12 @@ def test_all_exposed_choices_use_intentional_user_facing_labels() -> None:
     assert '"global_transient_previews": self.global_transient_previews.GetValue()' in source
     assert '"remember_local_playback_positions": (' in source
     assert '"detailed_hints": self.detailed_hints.GetValue()' in source
+    assert '"message_seek_messages": self.message_seek_messages.GetValue()' in source
+    assert '"message_arrow_seek_messages": (' in source
+    assert '"message_percentage_seek_messages": (' in source
+    assert '"message_volume_messages": self.message_volume_messages.GetValue()' in source
+    assert '"message_playback_messages": (' in source
+    assert '"message_percent_announcement": self._message_percent_values[' in source
     assert 'self.recording_folder.SetName("Domyślny folder nagrywania radia")' in source
     assert 'self.recording_folder_mode.SetName("Położenie nagrań Radia")' in source
     assert '"Ten sam folder co pobieranie Podcastów"' in source
@@ -121,3 +138,12 @@ def test_detailed_hints_setting_updates_filter_and_search_accessible_help() -> N
     assert "self.results.SetHelpText(" in source
     assert "self._help_provider = wx.SimpleHelpProvider()" in source
     assert "wx.HelpProvider.Set(self._help_provider)" in source
+
+
+def test_message_settings_override_the_inherited_policy_and_toggle_persists() -> None:
+    source = SOURCE.read_text(encoding="utf-8")
+    assert source.count("apply_message_overrides(") == 2
+    assert "self.options.message_seek_messages = self.messages.seek_messages" in source
+    assert "if not self._save_state():" in source
+    assert "self.messages.announces_playback" in source
+    assert "self.announcer.show(message)" in source

@@ -421,6 +421,11 @@ class MessagePolicy:
         """``CommandRouter.cs:570``."""
         return self.seek_messages and self.volume_messages
 
+    @property
+    def announces_playback(self) -> bool:
+        """``CommandRouter.cs:239`` -- odtwarzanie tez zalezy od rodziny."""
+        return self.seek_messages and self.playback_messages
+
     # ------------------------------------------------------------- tresci
 
     def template(self, key: str) -> str | None:
@@ -512,6 +517,47 @@ class MessagePolicy:
                 else "Automatyczne komunikaty odtwarzacza wyłączone"
             ),
         )
+
+
+def apply_message_overrides(
+    policy: MessagePolicy,
+    *,
+    seek_messages: bool | None = None,
+    arrow_seek_messages: bool | None = None,
+    percentage_seek_messages: bool | None = None,
+    volume_messages: bool | None = None,
+    playback_messages: bool | None = None,
+    percent_announcement: str | PercentAnnouncement | None = None,
+) -> MessagePolicy:
+    """Naloz prywatne ustawienia AMC Python na odziedziczona polityke.
+
+    ``None`` zachowuje wartosc z profilu glownego AMC. Typy sa sprawdzane
+    scisle, aby reczna literowka w JSON nie wlaczyla komunikatu przez
+    ``bool("false")``. Wynik wolno juz zapisywac, bo kolejne zmiany trafiaja
+    wylacznie do prywatnego magazynu wxPython.
+    """
+    boolean_overrides = {
+        "seek_messages": seek_messages,
+        "arrow_seek_messages": arrow_seek_messages,
+        "percentage_seek_messages": percentage_seek_messages,
+        "volume_messages": volume_messages,
+        "playback_messages": playback_messages,
+    }
+    for name, value in boolean_overrides.items():
+        if type(value) is bool:
+            setattr(policy, name, value)
+
+    if isinstance(percent_announcement, PercentAnnouncement):
+        policy.percent_announcement = percent_announcement
+    elif isinstance(percent_announcement, str):
+        requested = percent_announcement.strip().casefold()
+        for value in PercentAnnouncement:
+            if value.value.casefold() == requested:
+                policy.percent_announcement = value
+                break
+
+    policy.may_persist = True
+    return policy
 
 
 def time_announcement(
