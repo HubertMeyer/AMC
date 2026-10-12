@@ -43,7 +43,7 @@ podmiany i wycofania plików. Docelowe `AMC.exe` ma być stałym punktem wejści
 a aktualizator działać za nim, bez ręcznego wybierania skryptu lub interpretera.
 
 Aktualny kompletny pakiet EXE jest w:
-`D:\Projekty Codex\AMC - integracja wxPython\.test-output\AMC-Python-radio-ustawienia-20261012`.
+`D:\Projekty Codex\AMC - integracja wxPython\.test-output\AMC-Python-podcast-ustawienia-20261012`.
 Nie zawiera `AMC-wx-Lite.cmd`. `AMC.exe` sprawdza wersję formatu pakietu,
 interfejsu i protokołu hosta oraz sumy krytycznych plików przed uruchomieniem.
 Automatyczna weryfikacja paczki i próbna aktualizacja do osobnego katalogu
@@ -82,19 +82,23 @@ sesji, a odłączone pozycje są pomijane. Oba zachowania wymagają jeszcze
 
 ### Pełny audyt interfejsu i ustawień
 
-`Ctrl+,` otwiera teraz natywne Ustawienia z trzema działającymi kartami:
-Ogólne, Radio i nagrywanie oraz Komunikaty. Ogólne obejmują zachowanie
+`Ctrl+,` otwiera teraz natywne Ustawienia z czterema działającymi kartami:
+Ogólne, Radio i nagrywanie, Podcasty i YouTube oraz Komunikaty. Ogólne obejmują zachowanie
 odtwarzacza i wyjścia audio, normalizację, przejścia, ciszę oraz jawnie
 nazwane algorytmy tempa; Komunikaty obejmują stany odtwarzania i nagrywania
 Radia. Karta Radio i nagrywanie zapisuje długość TimeShift do 12 godzin,
 domyślny folder, format, bitrate, preferowanie folderu stacji w nowym planie
 oraz domyślne wybudzanie. Folder, format i bitrate trafiają do następnego
 ręcznego nagrania i harmonogramów, a wybudzanie jest ponownie synchronizowane
-z wykonawcą planów. Nowa długość TimeShift obowiązuje po ponownym uruchomieniu
-hosta. Enter uruchamia Zapisz, po powodzeniu pada dokładnie jeden komunikat
-„Zapisano ustawienia”. To nadal nie są pełne Ustawienia głównego AMC: brakuje
-czterech całych kart, automatycznego rozpoznawania utworów oraz wspólnego
-folderu Radia i Podcastów.
+z wykonawcą planów. Radio może zachować osobny folder albo użyć tego samego
+folderu co Podcasty bez utraty zapamiętanego osobnego folderu. Nowa długość
+TimeShift obowiązuje po ponownym uruchomieniu hosta. Karta Podcasty i YouTube
+ustawia folder pobierania, osobne odstępy odświeżania RSS i YouTube oraz limit
+źródeł w jednym automatycznym przebiegu. Host wybiera tylko należne źródła;
+brak nowości nie powoduje rutynowej mowy. Enter uruchamia Zapisz, po powodzeniu
+pada dokładnie jeden komunikat „Zapisano ustawienia”. To nadal nie są pełne
+Ustawienia głównego AMC: brakuje trzech całych kart oraz automatycznego
+rozpoznawania utworów.
 Nie wystarczy dopisać kart Ogólne, Podcasty i Radio: trzeba przepisać całe
 Ustawienia dokładnie z głównego AMC, po uprzednim spisie wszystkich kart, pól,
 wartości domyślnych, zależności, walidacji i miejsc zapisu. `Ctrl+Tab` i
@@ -145,7 +149,9 @@ kompletności skrótów i zgodności zachowania z głównym AMC.
 
 Działa przeglądanie źródeł i odcinków, odtwarzanie przez wspólny silnik,
 zapisywanie postępu, kolejka, historia, pobrane materiały, import i eksport
-OPML oraz obsługa źródeł YouTube. Eksport subskrypcji YouTube do przenośnego
+OPML oraz obsługa źródeł YouTube. Działa również automatyczne odświeżanie
+według indywidualnego terminu źródła i globalnego limitu partii; zapis wykonuje
+wyłącznie właściciel bazy po stronie C#. Eksport subskrypcji YouTube do przenośnego
 formatu zgodnego z innymi aplikacjami pozostaje osobnym zadaniem.
 
 ### TIDAL
@@ -337,7 +343,7 @@ kodu ani wysyłać logów bez wiedzy użytkownika.
 
 ## Dowody automatyczne tego przyrostu
 
-- pełny runner Python: 1278 zaliczonych, 0 błędów, 138 historycznych pominięć;
+- pełny runner Python: 1287 zaliczonych, 0 błędów, 138 historycznych pominięć;
 - testy protokołu C#: 15 zestawów zaliczonych;
 - całe rozwiązanie .NET zbudowane sekwencyjnie: 0 ostrzeżeń, 0 błędów;
 - LiteHost zbudowany i opublikowany dla Windows x64 bez błędów i ostrzeżeń;

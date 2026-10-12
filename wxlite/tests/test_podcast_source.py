@@ -234,6 +234,32 @@ def test_subscription_rows_use_only_intentional_labels_and_hide_non_members() ->
         assert rows[1].url == "https://youtube.invalid/channel"
 
 
+def test_global_settings_are_read_as_plain_values_not_database_records() -> None:
+    with _temporary_folder() as folder:
+        base = Path(folder)
+        path = _database(base)
+        connection = sqlite3.connect(path)
+        connection.executescript(
+            """
+            CREATE TABLE podcast_state (
+                singleton INTEGER PRIMARY KEY,
+                downloads_folder TEXT NULL,
+                rss_refresh_interval_minutes INTEGER NOT NULL,
+                youtube_refresh_interval_minutes INTEGER NOT NULL,
+                automatic_refresh_batch_size INTEGER NOT NULL
+            );
+            INSERT INTO podcast_state VALUES (1, 'D:\\Podcasty', 30, 180, 7);
+            """
+        )
+        connection.commit()
+        connection.close()
+        settings = PodcastSource(private_sandbox(base)).global_settings()
+        assert settings.downloads_folder == r"D:\Podcasty"
+        assert settings.rss_refresh_interval_minutes == 30
+        assert settings.youtube_refresh_interval_minutes == 180
+        assert settings.automatic_refresh_batch_size == 7
+
+
 def test_rss_episodes_follow_date_order_and_expose_resume_state() -> None:
     with _temporary_folder() as folder:
         base = Path(folder)

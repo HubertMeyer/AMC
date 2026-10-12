@@ -15,7 +15,7 @@ Odbiór docelowego launchera:
 
 Aktualna, automatycznie zweryfikowana paczka znajduje się w:
 
-`D:\Projekty Codex\AMC - integracja wxPython\.test-output\AMC-Python-radio-ustawienia-20261012\AMC.exe`
+`D:\Projekty Codex\AMC - integracja wxPython\.test-output\AMC-Python-podcast-ustawienia-20261012\AMC.exe`
 
 Nie przełączaj na nią programu w czasie trwającego nagrywania. Pierwszy żywy
 odbiór wykonaj kolejno według punktów poniżej.
@@ -715,8 +715,8 @@ czytnikiem ekranu bez zapewnionego innego słyszalnego wyjścia.
 
 ## Ustawienia i pełny audyt interfejsu
 
-`Ctrl+,` otwiera obecnie trzy działające karty: Ogólne, Radio i nagrywanie
-oraz Komunikaty. Odbierz
+`Ctrl+,` otwiera obecnie cztery działające karty: Ogólne, Radio i nagrywanie,
+Podcasty i YouTube oraz Komunikaty. Odbierz
 `Ctrl+Tab` oraz `Ctrl+Shift+Tab`, pierwsze pole każdej karty, wszystkie listy
 wyboru oraz powrót fokusu po Zapisz i Anuluj. Enter na zmienionej wartości ma
 zapisać ją i podać raz „Zapisano ustawienia”; ponowne otwarcie ma pokazać tę
@@ -727,8 +727,11 @@ Na karcie Radio i nagrywanie sprawdź kolejno:
 
 1. Długość TimeShift od 10 minut do 12 godzin; NVDA ma czytać czas i miejsce
    buforowania, a nie samą liczbę ani wartość modelu.
-2. Wybór folderu oraz przycisk przywracający domyślny folder AMC. Pole ma
-   podawać ścieżkę albo tekst „Domyślny folder nagrywania AMC”.
+2. Wybór osobnego folderu oraz przycisk przywracający domyślny folder AMC.
+   Pole ma podawać ścieżkę albo tekst „Domyślny folder nagrywania AMC”.
+   Wybierz też „Ten sam folder co pobieranie Podcastów”, zapisz, ponownie
+   otwórz Ustawienia i sprawdź, że pole osobnego folderu jest nieaktywne.
+   Powrót do osobnego folderu ma przywrócić poprzednią ścieżkę Radia.
 3. Format MP3, AAC, FLAC, oryginalny i WAV. Bitrate ma być dostępny tylko dla
    MP3 i AAC, a każda wartość ma zawierać jednostkę „kilobitów na sekundę”.
 4. Preferowanie folderu stacji w nowym harmonogramie i domyślne wybudzanie.
@@ -739,11 +742,18 @@ Na karcie Radio i nagrywanie sprawdź kolejno:
    potrzeby tego odbioru. Zmiana długości TimeShift działa od kolejnego startu
    programu.
 
+Na karcie Podcasty i YouTube sprawdź domyślny folder pobierania, odstęp
+sprawdzania podcastów, osobny odstęp dla kanałów YouTube oraz liczbę źródeł
+w jednym przebiegu. Zero przy odstępie ma być czytane jako wyłączenie
+automatycznego sprawdzania. Zapisane wartości mają wrócić po ponownym
+otwarciu i restarcie. Automat sprawdza tylko należne źródła, w partiach o
+wybranym rozmiarze; brak nowości nie powinien przerywać NVDA komunikatem.
+
 Pełny odbiór Ustawień pozostaje otwarty: w karcie Radia brakuje jeszcze
-automatycznego rozpoznawania utworów i wspólnego folderu pobierania Podcastów.
-Trzeba także przepisać całe karty Podcasty i YouTube, Profile klawiatury,
-Import i eksport oraz Aktualizacje, a następnie porównać wszystkie pola,
-wartości domyślne, zależności, walidację i miejsca zapisu z głównym AMC.
+automatycznego rozpoznawania utworów. Trzeba także przepisać całe karty
+Profile klawiatury, Import i eksport oraz Aktualizacje, a następnie porównać
+wszystkie pola, wartości domyślne, zależności, walidację i miejsca zapisu z
+głównym AMC.
 
 Porównaj z głównym AMC każdą sesję i każdy widok: menu, skróty, strukturę
 Biblioteki, Enter, Escape/Backspace, lewą i prawą strzałkę oraz wszystkie

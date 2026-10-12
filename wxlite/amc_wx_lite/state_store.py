@@ -148,7 +148,15 @@ class Options:
     radio_recording_format: str | None = None
     radio_recording_bitrate_kbps: int | None = None
     radio_recordings_folder: str | None = None
+    radio_use_podcast_downloads_folder: bool | None = None
     radio_prefer_station_folder_in_new_schedules: bool | None = None
+    #: Globalne ustawienia Podcastow. ``None`` dziedziczy dotychczasowa
+    #: wartosc z podcasts.db; po pierwszym zapisie karta staje sie ich
+    #: jawnym wlascicielem i host stosuje je takze przy kolejnym starcie.
+    podcast_downloads_folder: str | None = None
+    podcast_rss_refresh_interval_minutes: int | None = None
+    podcast_youtube_refresh_interval_minutes: int | None = None
+    podcast_automatic_refresh_batch_size: int | None = None
 
     def audio_payload(self) -> dict:
         return {
@@ -218,12 +226,46 @@ class Options:
                 self.radio_recordings_folder
             ).strip()
         if (
+            self.radio_use_podcast_downloads_folder is not None
+            and type(self.radio_use_podcast_downloads_folder) is not bool
+        ):
+            self.radio_use_podcast_downloads_folder = None
+        if (
             self.radio_prefer_station_folder_in_new_schedules is not None
             and type(
                 self.radio_prefer_station_folder_in_new_schedules
             ) is not bool
         ):
             self.radio_prefer_station_folder_in_new_schedules = None
+        if self.podcast_downloads_folder is not None:
+            self.podcast_downloads_folder = str(
+                self.podcast_downloads_folder
+            ).strip()
+        for name in (
+            "podcast_rss_refresh_interval_minutes",
+            "podcast_youtube_refresh_interval_minutes",
+        ):
+            value = getattr(self, name)
+            if value is None:
+                continue
+            if isinstance(value, bool):
+                setattr(self, name, None)
+                continue
+            try:
+                setattr(self, name, max(0, min(10_080, int(value))))
+            except (TypeError, ValueError, OverflowError):
+                setattr(self, name, None)
+        if self.podcast_automatic_refresh_batch_size is not None:
+            value = self.podcast_automatic_refresh_batch_size
+            if isinstance(value, bool):
+                self.podcast_automatic_refresh_batch_size = None
+            else:
+                try:
+                    self.podcast_automatic_refresh_batch_size = max(
+                        1, min(50, int(value))
+                    )
+                except (TypeError, ValueError, OverflowError):
+                    self.podcast_automatic_refresh_batch_size = None
         return self
 
 

@@ -126,6 +126,61 @@ internal sealed class LitePodcastProgressStore : IDisposable
         }
     }
 
+    public IReadOnlyList<PodcastRefreshTarget> GetDueRefreshTargets()
+    {
+        EnsureFullAmcIsClosed(
+            "Zamknij najpierw główne AMC. Równoczesne odświeżanie z dwóch wersji mogłoby utracić dane.");
+        try
+        {
+            return _store.GetDueRefreshTargets(DateTime.UtcNow);
+        }
+        catch (Exception exception) when (IsDatabaseFailure(exception))
+        {
+            Console.Error.WriteLine("[lite-host] wybór źródeł do automatycznego odświeżenia: " + exception);
+            throw new LiteRequestException("Baza Podcastów jest chwilowo niedostępna.");
+        }
+    }
+
+    public PodcastGlobalSettingsSnapshot GetGlobalSettings()
+    {
+        try
+        {
+            return _store.GetGlobalSettings();
+        }
+        catch (Exception exception) when (IsDatabaseFailure(exception))
+        {
+            Console.Error.WriteLine("[lite-host] odczyt ustawień podcastów: " + exception);
+            throw new LiteRequestException("Baza Podcastów jest chwilowo niedostępna.");
+        }
+    }
+
+    public PodcastGlobalSettingsSnapshot ConfigureGlobalSettings(
+        string? downloadsFolder,
+        int rssRefreshIntervalMinutes,
+        int youTubeRefreshIntervalMinutes,
+        int automaticRefreshBatchSize)
+    {
+        EnsureFullAmcIsClosed(
+            "Zamknij najpierw główne AMC. Równoczesna zmiana ustawień Podcastów z dwóch wersji mogłaby utracić dane.");
+        try
+        {
+            return _store.ConfigureGlobalSettings(
+                downloadsFolder,
+                rssRefreshIntervalMinutes,
+                youTubeRefreshIntervalMinutes,
+                automaticRefreshBatchSize);
+        }
+        catch (Exception exception) when (exception is ArgumentException)
+        {
+            throw new LiteRequestException(exception.Message);
+        }
+        catch (Exception exception) when (IsDatabaseFailure(exception))
+        {
+            Console.Error.WriteLine("[lite-host] zapis ustawień podcastów: " + exception);
+            throw new LiteRequestException("Baza Podcastów jest chwilowo niedostępna.");
+        }
+    }
+
     public int GetInboxCount()
     {
         EnsureFullAmcIsClosed(

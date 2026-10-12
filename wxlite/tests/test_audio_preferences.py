@@ -53,6 +53,7 @@ def test_radio_recording_overrides_round_trip_and_are_clamped():
         state.options.radio_recording_format = "aac"
         state.options.radio_recording_bitrate_kbps = 255
         state.options.radio_recordings_folder = r"D:\Nagrania"
+        state.options.radio_use_podcast_downloads_folder = True
         state.options.radio_prefer_station_folder_in_new_schedules = False
         store = StateStore(folder)
         store.save(state)
@@ -60,6 +61,7 @@ def test_radio_recording_overrides_round_trip_and_are_clamped():
     assert loaded.radio_recording_format == "Aac"
     assert loaded.radio_recording_bitrate_kbps == 256
     assert loaded.radio_recordings_folder == r"D:\Nagrania"
+    assert loaded.radio_use_podcast_downloads_folder is True
     assert loaded.radio_prefer_station_folder_in_new_schedules is False
 
 
@@ -68,7 +70,46 @@ def test_invalid_radio_recording_overrides_return_to_profile_inheritance():
     options.radio_recording_format = "TechnicalEnumValue"
     options.radio_recording_bitrate_kbps = True
     options.radio_prefer_station_folder_in_new_schedules = "false"
+    options.radio_use_podcast_downloads_folder = "false"
     options.clamp()
     assert options.radio_recording_format is None
     assert options.radio_recording_bitrate_kbps is None
+    assert options.radio_use_podcast_downloads_folder is None
     assert options.radio_prefer_station_folder_in_new_schedules is None
+
+
+def test_podcast_global_settings_round_trip_without_technical_labels():
+    with tempfile.TemporaryDirectory() as folder:
+        state = LiteState()
+        state.options.podcast_downloads_folder = r"D:\Podcasty"
+        state.options.podcast_rss_refresh_interval_minutes = 45
+        state.options.podcast_youtube_refresh_interval_minutes = 180
+        state.options.podcast_automatic_refresh_batch_size = 7
+        store = StateStore(folder)
+        store.save(state)
+        loaded = store.load().options
+    assert loaded.podcast_downloads_folder == r"D:\Podcasty"
+    assert loaded.podcast_rss_refresh_interval_minutes == 45
+    assert loaded.podcast_youtube_refresh_interval_minutes == 180
+    assert loaded.podcast_automatic_refresh_batch_size == 7
+
+
+def test_podcast_global_settings_are_clamped_or_return_to_inheritance():
+    options = Options()
+    options.podcast_downloads_folder = "  D:/Podcasty  "
+    options.podcast_rss_refresh_interval_minutes = -10
+    options.podcast_youtube_refresh_interval_minutes = 20_000
+    options.podcast_automatic_refresh_batch_size = 500
+    options.clamp()
+    assert options.podcast_downloads_folder == "D:/Podcasty"
+    assert options.podcast_rss_refresh_interval_minutes == 0
+    assert options.podcast_youtube_refresh_interval_minutes == 10_080
+    assert options.podcast_automatic_refresh_batch_size == 50
+
+    options.podcast_rss_refresh_interval_minutes = True
+    options.podcast_youtube_refresh_interval_minutes = "nie liczba"
+    options.podcast_automatic_refresh_batch_size = False
+    options.clamp()
+    assert options.podcast_rss_refresh_interval_minutes is None
+    assert options.podcast_youtube_refresh_interval_minutes is None
+    assert options.podcast_automatic_refresh_batch_size is None

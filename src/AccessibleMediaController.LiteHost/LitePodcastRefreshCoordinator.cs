@@ -14,6 +14,7 @@ namespace AccessibleMediaController.LiteHost;
 internal sealed class LitePodcastRefreshCoordinator : IDisposable
 {
     public const string Operation = "podcast.refresh";
+    public const string AutomaticOperation = "podcast.refreshAutomatic";
 
     private readonly LitePodcastProgressStore _podcasts;
     private readonly LiteBookmarkStore? _bookmarks;
@@ -43,19 +44,41 @@ internal sealed class LitePodcastRefreshCoordinator : IDisposable
         _fetch = fetch ?? throw new ArgumentNullException(nameof(fetch));
     }
 
-    public object Refresh(JsonElement args)
+    public object Refresh(JsonElement args) => RefreshCore(
+        () => _podcasts.GetRefreshTargets(
+            LiteArgs.ReadText(args, "subscriptionId")),
+        emptyIsError: true);
+
+    public object RefreshAutomatic() => RefreshCore(
+        _podcasts.GetDueRefreshTargets,
+        emptyIsError: false);
+
+    private object RefreshCore(
+        Func<IReadOnlyList<PodcastRefreshTarget>> readTargets,
+        bool emptyIsError)
     {
         if (Interlocked.CompareExchange(ref _refreshInProgress, 1, 0) != 0)
             throw new LiteRequestException("Odświeżanie źródeł już trwa.");
 
         try
         {
-            var requestedSubscriptionId = LiteArgs.ReadText(args, "subscriptionId");
-            var targets = _podcasts.GetRefreshTargets(requestedSubscriptionId);
+            var targets = readTargets();
             if (targets.Count == 0)
             {
-                throw new LiteRequestException(
-                    "Brak podcastów, kanałów lub playlist do odświeżenia.");
+                if (emptyIsError)
+                {
+                    throw new LiteRequestException(
+                        "Brak podcastów, kanałów lub playlist do odświeżenia.");
+                }
+                return new
+                {
+                    requested = 0,
+                    succeeded = 0,
+                    failed = 0,
+                    addedEpisodes = 0,
+                    retainedArchivedEpisodes = 0,
+                    inboxCount = _podcasts.GetInboxCount()
+                };
             }
 
             var succeeded = 0;

@@ -22,6 +22,8 @@ def _frame(*, library_view=LibraryView.PODCAST_EPISODES):
     spoken: list[str] = []
     statuses: list[str] = []
     reopened: list[tuple[object, str]] = []
+    automatic_calls: list[bool] = []
+    refreshed_views: list[bool] = []
     model = ListModel()
     model.replace([
         Row(
@@ -58,17 +60,36 @@ def _frame(*, library_view=LibraryView.PODCAST_EPISODES):
             "inboxCount": 7,
         }
 
+    def refresh_automatically():
+        automatic_calls.append(True)
+        return {
+            "requested": 1,
+            "succeeded": 1,
+            "failed": 0,
+            "addedEpisodes": 2,
+            "inboxCount": 7,
+        }
+
     frame = SimpleNamespace(
         navigator=SimpleNamespace(
             active=SessionId.PODCASTS,
             sessions={SessionId.PODCASTS: state},
         ),
-        client=SimpleNamespace(refresh_podcasts=refresh),
+        client=SimpleNamespace(
+            refresh_podcasts=refresh,
+            refresh_podcasts_automatically=refresh_automatically,
+        ),
+        podcasts=SimpleNamespace(is_available=True),
         runner=SimpleNamespace(submit=submit),
         announcer=SimpleNamespace(say=spoken.append),
         status_bar=SimpleNamespace(show=statuses.append),
         _podcast_refresh_pending=False,
+        _podcast_automatic_refresh_pending=False,
+        _podcast_automatic_refresh_due=100.0,
+        _last_automatic_podcast_error=None,
         calls=calls,
+        automatic_calls=automatic_calls,
+        refreshed_views=refreshed_views,
         spoken=spoken,
         statuses=statuses,
         reopened=reopened,
@@ -91,6 +112,7 @@ def _frame(*, library_view=LibraryView.PODCAST_EPISODES):
             (intent, completion_message)
         )
     )
+    frame._refresh_profile_view = lambda: refreshed_views.append(True)
     return frame
 
 
@@ -127,3 +149,54 @@ def test_second_refresh_is_refused_while_the_first_is_running() -> None:
 
     assert frame.calls == []
     assert frame.spoken == ["Odświeżanie źródeł już trwa"]
+
+
+def test_automatic_refresh_waits_until_due_and_stays_silent() -> None:
+    frame = _frame()
+    original = gui.time.monotonic
+    try:
+        gui.time.monotonic = lambda: 99.0
+        gui.LiteFrame._refresh_due_podcasts_automatically(frame)
+        assert frame.automatic_calls == []
+
+        gui.time.monotonic = lambda: 100.0
+        gui.LiteFrame._refresh_due_podcasts_automatically(frame)
+    finally:
+        gui.time.monotonic = original
+    assert frame.automatic_calls == [True]
+    assert frame._podcast_refresh_pending is False
+    assert frame._podcast_automatic_refresh_pending is False
+    assert frame._podcast_automatic_refresh_due == 160.0
+    assert frame.spoken == []
+    assert frame.statuses == ["Automatycznie dodano nowe odcinki: 2"]
+    assert frame.refreshed_views == [True]
+
+
+def test_automatic_refresh_with_no_due_sources_does_not_change_the_view() -> None:
+    frame = _frame()
+    frame.client.refresh_podcasts_automatically = lambda: {
+        "requested": 0,
+        "succeeded": 0,
+        "failed": 0,
+        "addedEpisodes": 0,
+        "inboxCount": 7,
+    }
+    original = gui.time.monotonic
+    try:
+        gui.time.monotonic = lambda: 100.0
+        gui.LiteFrame._refresh_due_podcasts_automatically(frame)
+    finally:
+        gui.time.monotonic = original
+    assert frame.statuses == []
+    assert frame.spoken == []
+    assert frame.refreshed_views == []
+
+
+def test_automatic_refresh_does_not_report_an_error_without_a_podcast_database() -> None:
+    frame = _frame()
+    frame.podcasts.is_available = False
+    frame._podcast_automatic_refresh_due = 0.0
+    gui.LiteFrame._refresh_due_podcasts_automatically(frame)
+    assert frame.automatic_calls == []
+    assert frame.statuses == []
+    assert frame.spoken == []

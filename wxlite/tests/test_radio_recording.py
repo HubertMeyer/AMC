@@ -152,6 +152,7 @@ def test_private_recording_preferences_override_profile_without_losing_station_f
     assert effective.bitrate_kbps == 256
     assert effective.default_folder == r"D:\AMC Python"
     assert effective.folder_preset == "radio"
+    assert effective.radio_default_folder == r"D:\AMC Python"
     assert effective.station_folders == {"one": r"D:\Stacja"}
     assert effective.prefer_station_folder_in_new_schedules is False
 
@@ -163,6 +164,29 @@ def test_empty_private_recording_folder_means_hosts_system_default() -> None:
         override_default_folder=True,
     )
     assert effective.default_folder is None
+
+
+def test_shared_podcast_folder_keeps_the_separate_radio_folder_for_return() -> None:
+    base = RadioRecordingPreferences(
+        default_folder=r"D:\Nagrania radia",
+        folder_preset="radio",
+        radio_default_folder=r"D:\Nagrania radia",
+    )
+    shared = preferences_with_overrides(
+        base,
+        use_podcast_downloads_folder=True,
+        podcast_downloads_folder=r"D:\Podcasty",
+        override_podcast_downloads_folder=True,
+    )
+    assert shared.folder_preset == "podcasts"
+    assert shared.default_folder == r"D:\Podcasty"
+    assert shared.radio_default_folder == r"D:\Nagrania radia"
+    returned = preferences_with_overrides(
+        shared,
+        use_podcast_downloads_folder=False,
+    )
+    assert returned.folder_preset == "radio"
+    assert returned.default_folder == r"D:\Nagrania radia"
 
 
 def test_timeshift_choices_explain_duration_and_storage_in_polish() -> None:

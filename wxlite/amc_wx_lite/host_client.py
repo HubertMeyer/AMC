@@ -610,6 +610,34 @@ class LiteHostClient:
         # znacznie dłużej niż zwykłe polecenie odtwarzania.
         return self.call("podcast.refresh", args, timeout=3600.0)
 
+    def refresh_podcasts_automatically(self) -> Any:
+        """Odśwież tylko należne źródła, z limitem zapisanym w ustawieniach."""
+        return self.call("podcast.refreshAutomatic", timeout=3600.0)
+
+    def podcast_global_settings(self) -> Any:
+        """Odczytaj cztery globalne ustawienia bez surowych rekordów bazy."""
+        return self.call("podcast.settingsGet", timeout=10.0)
+
+    def configure_podcast_global_settings(
+        self,
+        *,
+        downloads_folder: str,
+        rss_refresh_interval_minutes: int,
+        youtube_refresh_interval_minutes: int,
+        automatic_refresh_batch_size: int,
+    ) -> Any:
+        """Zapisz ustawienia przez jedynego właściciela ``podcasts.db``."""
+        return self.call(
+            "podcast.settingsSet",
+            {
+                "downloadsFolder": downloads_folder,
+                "rssRefreshIntervalMinutes": rss_refresh_interval_minutes,
+                "youTubeRefreshIntervalMinutes": youtube_refresh_interval_minutes,
+                "automaticRefreshBatchSize": automatic_refresh_batch_size,
+            },
+            timeout=10.0,
+        )
+
     def download_podcast_episodes(self, episode_ids: list[str]) -> Any:
         """Pobierz zaznaczone odcinki przez wspólny downloader AMC."""
         return self.call(

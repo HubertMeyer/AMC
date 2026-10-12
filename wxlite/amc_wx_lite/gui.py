@@ -129,6 +129,7 @@ from .profile_layout import resolve_layout
 from .podcast_source import (
     PAGE_SIZE as PODCAST_PAGE_SIZE,
     PodcastDescription,
+    PodcastGlobalSettings,
     PodcastProfileError,
     PodcastSource,
     SORT_ADDED_NEWEST,
@@ -2829,6 +2830,7 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
         options,
         recording,
         wake_scheduled_recordings: bool,
+        podcast_settings: PodcastGlobalSettings,
     ) -> None:
         super().__init__(parent, title="Ustawienia", size=(720, 620))
         self.notebook = wx.Notebook(self)
@@ -2972,12 +2974,39 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
         radio_layout.Add(timeshift_label, 0, wx.BOTTOM, 4)
         radio_layout.Add(self.timeshift, 0, wx.BOTTOM | wx.EXPAND, 10)
 
+        folder_mode_label = wx.StaticText(
+            radio, label="&Położenie nagrań Radia:"
+        )
+        self._recording_folder_mode_values = ["radio", "podcasts"]
+        self.recording_folder_mode = wx.Choice(
+            radio,
+            choices=[
+                "Osobny folder nagrywania Radia",
+                "Ten sam folder co pobieranie Podcastów",
+            ],
+        )
+        self.recording_folder_mode.SetName("Położenie nagrań Radia")
+        use_podcast_folder = options.radio_use_podcast_downloads_folder
+        if use_podcast_folder is None:
+            use_podcast_folder = recording.folder_preset == "podcasts"
+        self.recording_folder_mode.SetSelection(1 if use_podcast_folder else 0)
+        self.recording_folder_mode.Bind(
+            wx.EVT_CHOICE, self._on_recording_folder_mode
+        )
+        radio_layout.Add(folder_mode_label, 0, wx.BOTTOM, 4)
+        radio_layout.Add(
+            self.recording_folder_mode, 0, wx.BOTTOM | wx.EXPAND, 10
+        )
+
         folder_label = wx.StaticText(
-            radio, label="Domyślny &folder nagrywania radia:"
+            radio, label="Osobny &folder nagrywania radia:"
         )
         configured_folder = options.radio_recordings_folder
         if configured_folder is None:
-            configured_folder = recording.default_folder or ""
+            configured_folder = recording.radio_default_folder
+        if configured_folder is None and recording.folder_preset == "radio":
+            configured_folder = recording.default_folder
+        configured_folder = configured_folder or ""
         self._recording_folder_value = str(configured_folder).strip()
         self.recording_folder = wx.TextCtrl(
             radio,
@@ -3077,6 +3106,105 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
         )
         radio.SetSizer(radio_layout)
         self._update_recording_bitrate_state()
+        self._update_recording_folder_state()
+
+        podcasts = wx.ScrolledWindow(self.notebook)
+        podcasts.SetScrollRate(0, 12)
+        podcasts_layout = wx.BoxSizer(wx.VERTICAL)
+
+        podcast_folder_label = wx.StaticText(
+            podcasts, label="Domyślny &folder pobierania podcastów:"
+        )
+        configured_podcast_folder = options.podcast_downloads_folder
+        if configured_podcast_folder is None:
+            configured_podcast_folder = podcast_settings.downloads_folder
+        self._podcast_folder_value = str(configured_podcast_folder).strip()
+        self.podcast_folder = wx.TextCtrl(
+            podcasts,
+            value=(
+                self._podcast_folder_value
+                or "Domyślny folder pobierania AMC"
+            ),
+            style=wx.TE_READONLY,
+        )
+        self.podcast_folder.SetName(
+            "Domyślny folder pobierania podcastów"
+        )
+        podcast_folder_buttons = wx.BoxSizer(wx.HORIZONTAL)
+        self.browse_podcast_folder = wx.Button(podcasts, label="&Wybierz…")
+        self.browse_podcast_folder.SetName(
+            "Wybierz domyślny folder pobierania podcastów"
+        )
+        self.default_podcast_folder = wx.Button(
+            podcasts, label="Użyj folderu &domyślnego AMC"
+        )
+        self.default_podcast_folder.SetName(
+            "Użyj domyślnego folderu pobierania AMC"
+        )
+        self.browse_podcast_folder.Bind(
+            wx.EVT_BUTTON, self._on_browse_podcast_folder
+        )
+        self.default_podcast_folder.Bind(
+            wx.EVT_BUTTON, self._on_default_podcast_folder
+        )
+        podcast_folder_buttons.Add(self.browse_podcast_folder, 0, wx.RIGHT, 8)
+        podcast_folder_buttons.Add(self.default_podcast_folder, 0)
+        podcasts_layout.Add(podcast_folder_label, 0, wx.BOTTOM, 4)
+        podcasts_layout.Add(self.podcast_folder, 0, wx.BOTTOM | wx.EXPAND, 8)
+        podcasts_layout.Add(
+            podcast_folder_buttons, 0, wx.BOTTOM | wx.EXPAND, 12
+        )
+
+        rss_label = wx.StaticText(
+            podcasts, label="Odstęp dla &podcastów w minutach:"
+        )
+        self.podcast_rss_interval = wx.SpinCtrl(
+            podcasts, min=0, max=10_080,
+            initial=(
+                options.podcast_rss_refresh_interval_minutes
+                if options.podcast_rss_refresh_interval_minutes is not None
+                else podcast_settings.rss_refresh_interval_minutes
+            ),
+        )
+        self.podcast_rss_interval.SetName(
+            "Odstęp automatycznego sprawdzania podcastów w minutach; zero wyłącza"
+        )
+        youtube_label = wx.StaticText(
+            podcasts, label="Odstęp dla kanałów &YouTube w minutach:"
+        )
+        self.podcast_youtube_interval = wx.SpinCtrl(
+            podcasts, min=0, max=10_080,
+            initial=(
+                options.podcast_youtube_refresh_interval_minutes
+                if options.podcast_youtube_refresh_interval_minutes is not None
+                else podcast_settings.youtube_refresh_interval_minutes
+            ),
+        )
+        self.podcast_youtube_interval.SetName(
+            "Odstęp automatycznego sprawdzania kanałów YouTube w minutach; zero wyłącza"
+        )
+        batch_label = wx.StaticText(
+            podcasts, label="Liczba źródeł sprawdzanych &jednocześnie:"
+        )
+        self.podcast_refresh_batch = wx.SpinCtrl(
+            podcasts, min=1, max=50,
+            initial=(
+                options.podcast_automatic_refresh_batch_size
+                if options.podcast_automatic_refresh_batch_size is not None
+                else podcast_settings.automatic_refresh_batch_size
+            ),
+        )
+        self.podcast_refresh_batch.SetName(
+            "Liczba źródeł sprawdzanych w jednym przebiegu"
+        )
+        for label, control in (
+            (rss_label, self.podcast_rss_interval),
+            (youtube_label, self.podcast_youtube_interval),
+            (batch_label, self.podcast_refresh_batch),
+        ):
+            podcasts_layout.Add(label, 0, wx.BOTTOM, 4)
+            podcasts_layout.Add(control, 0, wx.BOTTOM | wx.EXPAND, 10)
+        podcasts.SetSizer(podcasts_layout)
 
         messages = wx.ScrolledWindow(self.notebook)
         messages.SetScrollRate(0, 12)
@@ -3130,6 +3258,7 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
 
         self.notebook.AddPage(general, "Ogólne", select=True)
         self.notebook.AddPage(radio, "Radio i nagrywanie")
+        self.notebook.AddPage(podcasts, "Podcasty i YouTube")
         self.notebook.AddPage(messages, "Komunikaty")
 
         buttons = self.CreateStdDialogButtonSizer(wx.OK | wx.CANCEL)
@@ -3166,6 +3295,15 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
         self.recording_folder.SetValue("Domyślny folder nagrywania AMC")
         self.recording_folder.SetFocus()
 
+    def _on_recording_folder_mode(self, _event: wx.CommandEvent) -> None:
+        self._update_recording_folder_state()
+
+    def _update_recording_folder_state(self) -> None:
+        own_folder = self.recording_folder_mode.GetSelection() == 0
+        self.recording_folder.Enable(own_folder)
+        self.browse_recording_folder.Enable(own_folder)
+        self.default_recording_folder.Enable(own_folder)
+
     def _on_recording_format(self, _event: wx.CommandEvent) -> None:
         self._update_recording_bitrate_state()
 
@@ -3173,6 +3311,26 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
         index = max(0, self.recording_format.GetSelection())
         selected = self._recording_format_values[index]
         self.recording_bitrate.Enable(selected in ("Mp3", "Aac"))
+
+    def _on_browse_podcast_folder(self, _event: wx.CommandEvent) -> None:
+        dialog = wx.DirDialog(
+            self,
+            message="Wybierz domyślny folder pobierania podcastów",
+            defaultPath=self._podcast_folder_value,
+        )
+        try:
+            if dialog.ShowModal() != wx.ID_OK:
+                return
+            self._podcast_folder_value = dialog.GetPath().strip()
+            self.podcast_folder.SetValue(self._podcast_folder_value)
+        finally:
+            dialog.Destroy()
+        self.podcast_folder.SetFocus()
+
+    def _on_default_podcast_folder(self, _event: wx.CommandEvent) -> None:
+        self._podcast_folder_value = ""
+        self.podcast_folder.SetValue("Domyślny folder pobierania AMC")
+        self.podcast_folder.SetFocus()
 
     @property
     def values(self) -> dict[str, object]:
@@ -3204,6 +3362,9 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
                 max(0, self.timeshift.GetSelection())
             ],
             "radio_recordings_folder": self._recording_folder_value,
+            "radio_use_podcast_downloads_folder": (
+                self.recording_folder_mode.GetSelection() == 1
+            ),
             "radio_recording_format": self._recording_format_values[
                 max(0, self.recording_format.GetSelection())
             ],
@@ -3215,6 +3376,16 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
             ),
             "radio_schedule_wake_override": (
                 self.wake_scheduled_recordings.GetValue()
+            ),
+            "podcast_downloads_folder": self._podcast_folder_value,
+            "podcast_rss_refresh_interval_minutes": (
+                self.podcast_rss_interval.GetValue()
+            ),
+            "podcast_youtube_refresh_interval_minutes": (
+                self.podcast_youtube_interval.GetValue()
+            ),
+            "podcast_automatic_refresh_batch_size": (
+                self.podcast_refresh_batch.GetValue()
             ),
         }
 
@@ -3284,6 +3455,9 @@ class LiteFrame(wx.Frame):
         self._podcast_checkpoint_due = 0.0
         self._podcast_checkpoint_active = False
         self._podcast_refresh_pending = False
+        self._podcast_automatic_refresh_pending = False
+        self._podcast_automatic_refresh_due = time.monotonic() + 60.0
+        self._last_automatic_podcast_error: str | None = None
         self._podcast_download_pending = False
         self._podcast_favorite_pending = False
         self._podcast_add_pending = False
@@ -4280,6 +4454,20 @@ class LiteFrame(wx.Frame):
             if radio_snapshot is not None
             else None
         )
+        podcast_values = (
+            self.options.podcast_downloads_folder,
+            self.options.podcast_rss_refresh_interval_minutes,
+            self.options.podcast_youtube_refresh_interval_minutes,
+            self.options.podcast_automatic_refresh_batch_size,
+        )
+        podcast_settings_payload = None
+        if not any(value is None for value in podcast_values):
+            podcast_settings_payload = {
+                "downloads_folder": str(podcast_values[0] or ""),
+                "rss_refresh_interval_minutes": int(podcast_values[1]),
+                "youtube_refresh_interval_minutes": int(podcast_values[2]),
+                "automatic_refresh_batch_size": int(podcast_values[3]),
+            }
 
         def work() -> dict:
             try:
@@ -4297,6 +4485,10 @@ class LiteFrame(wx.Frame):
                     )
                 if schedule_payload is not None:
                     client.sync_radio_schedules(schedule_payload)
+                if podcast_settings_payload is not None:
+                    client.configure_podcast_global_settings(
+                        **podcast_settings_payload
+                    )
                 return result
             except Exception:
                 client.close()
@@ -10318,11 +10510,16 @@ class LiteFrame(wx.Frame):
             self._radio_snapshot.wake_scheduled_recordings,
             self.state.radio_schedule_wake_override,
         )
+        try:
+            podcast_settings = self.podcasts.global_settings()
+        except PodcastProfileError:
+            podcast_settings = PodcastGlobalSettings()
         dialog = GeneralPlaybackOptionsDialog(
             self,
             self.options,
             self._radio_snapshot.recording,
             effective_wake,
+            podcast_settings,
         )
         chosen: dict[str, object] | None = None
         try:
@@ -10373,6 +10570,12 @@ class LiteFrame(wx.Frame):
                 )
             except Exception:
                 warnings.append("ustawienia harmonogramów")
+            podcast_payload = self._podcast_settings_payload()
+            if podcast_payload is not None:
+                try:
+                    client.configure_podcast_global_settings(**podcast_payload)
+                except Exception:
+                    warnings.append("ustawienia Podcastów i YouTube")
             return warnings
 
         def applied_to_host(warnings: list[str]) -> None:
@@ -10407,11 +10610,36 @@ class LiteFrame(wx.Frame):
             override_default_folder=(
                 options.radio_recordings_folder is not None
             ),
+            use_podcast_downloads_folder=(
+                options.radio_use_podcast_downloads_folder
+            ),
+            podcast_downloads_folder=options.podcast_downloads_folder,
+            override_podcast_downloads_folder=(
+                options.podcast_downloads_folder is not None
+            ),
             prefer_station_folder=(
                 options.radio_prefer_station_folder_in_new_schedules
             ),
         )
         return snapshot
+
+    def _podcast_settings_payload(self) -> dict[str, object] | None:
+        """Komplet albo brak: host nigdy nie dostaje polowicznej konfiguracji."""
+        options = self.options
+        values = (
+            options.podcast_downloads_folder,
+            options.podcast_rss_refresh_interval_minutes,
+            options.podcast_youtube_refresh_interval_minutes,
+            options.podcast_automatic_refresh_batch_size,
+        )
+        if any(value is None for value in values):
+            return None
+        return {
+            "downloads_folder": str(values[0] or ""),
+            "rss_refresh_interval_minutes": int(values[1]),
+            "youtube_refresh_interval_minutes": int(values[2]),
+            "automatic_refresh_batch_size": int(values[3]),
+        }
 
     def _show_session_options(self) -> None:
         """Opcje sesji: dialog, wybor sesji, Zapisz/Anuluj, zapis i SKUTEK.
@@ -10981,6 +11209,53 @@ class LiteFrame(wx.Frame):
         self._refresh_sonos_status()
         self._refresh_recording_status()
         self._checkpoint_podcast_if_due()
+        self._refresh_due_podcasts_automatically()
+
+    def _refresh_due_podcasts_automatically(self) -> None:
+        """Co minute zlec hostowi tylko nalezne zrodla, bez rutynowej mowy."""
+        client = self.client
+        now = time.monotonic()
+        if (
+            client is None
+            or not self.podcasts.is_available
+            or self._podcast_refresh_pending
+            or self._podcast_automatic_refresh_pending
+            or now < self._podcast_automatic_refresh_due
+        ):
+            return
+        self._podcast_automatic_refresh_due = now + 60.0
+        self._podcast_automatic_refresh_pending = True
+        self._podcast_refresh_pending = True
+
+        def done(payload: dict) -> None:
+            self._podcast_automatic_refresh_pending = False
+            self._podcast_refresh_pending = False
+            self._last_automatic_podcast_error = None
+            requested = max(0, int((payload or {}).get("requested") or 0))
+            if requested <= 0:
+                return
+            added = max(0, int((payload or {}).get("addedEpisodes") or 0))
+            if added:
+                self.status_bar.show(
+                    f"Automatycznie dodano nowe odcinki: {added}"
+                )
+            if self.navigator.active is SessionId.PODCASTS:
+                self._refresh_profile_view()
+
+        def failed(error: Exception) -> None:
+            self._podcast_automatic_refresh_pending = False
+            self._podcast_refresh_pending = False
+            message = str(error).strip() or "Automatyczne sprawdzanie nie powiodło się"
+            if message != self._last_automatic_podcast_error:
+                self._last_automatic_podcast_error = message
+                self.status_bar.show(message)
+
+        self.runner.submit(
+            "podcast-auto-refresh",
+            client.refresh_podcasts_automatically,
+            done,
+            failed,
+        )
 
     def _checkpoint_podcast_if_due(self) -> None:
         """Co 15 sekund zlec zapis jak w pelnym AMC, bez dodatkowej mowy."""

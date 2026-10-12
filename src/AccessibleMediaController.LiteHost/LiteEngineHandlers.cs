@@ -313,6 +313,11 @@ internal sealed class LiteEngineHandlers : IDisposable
             ["podcast.checkpoint"] = (_, _) => SaveCurrentPodcastProgress(),
             [LitePodcastRefreshCoordinator.Operation] = (request, _) =>
                 RefreshPodcasts(request.Args),
+            [LitePodcastRefreshCoordinator.AutomaticOperation] = (_, _) =>
+                RefreshPodcastsAutomatically(),
+            ["podcast.settingsGet"] = (_, _) => PodcastGlobalSettings(),
+            ["podcast.settingsSet"] = (request, _) =>
+                ConfigurePodcastGlobalSettings(request.Args),
             [LitePodcastDownloadCoordinator.Operation] = (request, events) =>
                 DownloadPodcastEpisodes(request.Args, events),
             [LitePodcastDownloadCoordinator.SaveAsInfoOperation] = (request, _) =>
@@ -2035,6 +2040,38 @@ internal sealed class LiteEngineHandlers : IDisposable
         }
         return _podcastRefresh.Refresh(args);
     }
+
+    private object RefreshPodcastsAutomatically()
+    {
+        if (_podcastRefresh is null)
+        {
+            throw new LiteRequestException(
+                "Host nie dostał bazy Podcastów i YouTube. Automatyczne odświeżanie jest niedostępne.");
+        }
+        return _podcastRefresh.RefreshAutomatic();
+    }
+
+    private object PodcastGlobalSettings() =>
+        PodcastGlobalSettingsPayload(RequirePodcastStore().GetGlobalSettings());
+
+    private object ConfigurePodcastGlobalSettings(JsonElement args)
+    {
+        var snapshot = RequirePodcastStore().ConfigureGlobalSettings(
+            LiteArgs.ReadText(args, "downloadsFolder"),
+            ReadRequiredInt(args, "rssRefreshIntervalMinutes"),
+            ReadRequiredInt(args, "youTubeRefreshIntervalMinutes"),
+            ReadRequiredInt(args, "automaticRefreshBatchSize"));
+        return PodcastGlobalSettingsPayload(snapshot);
+    }
+
+    private static object PodcastGlobalSettingsPayload(
+        PodcastGlobalSettingsSnapshot snapshot) => new
+        {
+            downloadsFolder = snapshot.DownloadsFolder,
+            rssRefreshIntervalMinutes = snapshot.RssRefreshIntervalMinutes,
+            youTubeRefreshIntervalMinutes = snapshot.YouTubeRefreshIntervalMinutes,
+            automaticRefreshBatchSize = snapshot.AutomaticRefreshBatchSize
+        };
 
     private object DownloadPodcastEpisodes(JsonElement args, LiteEventSink events)
     {

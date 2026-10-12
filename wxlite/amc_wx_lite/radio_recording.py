@@ -53,6 +53,7 @@ class RadioRecordingPreferences:
     bitrate_kbps: int = 192
     default_folder: str | None = None
     folder_preset: str = "radio"
+    radio_default_folder: str | None = None
     station_folders: dict[str, str] = field(default_factory=dict)
     prefer_station_folder_in_new_schedules: bool = True
 
@@ -96,6 +97,12 @@ def preferences_from_amc_state(raw: dict) -> RadioRecordingPreferences:
 
     use_podcasts = radio.get("usePodcastDownloadsFolderForRecordings") is True
     folder_preset = "podcasts" if use_podcasts else "radio"
+    raw_radio_folder = radio.get("recordingsFolder")
+    radio_folder = (
+        raw_radio_folder.strip()
+        if isinstance(raw_radio_folder, str) and raw_radio_folder.strip()
+        else None
+    )
     configured: str | None = None
     if use_podcasts:
         podcasts = raw.get("podcasts")
@@ -104,9 +111,7 @@ def preferences_from_amc_state(raw: dict) -> RadioRecordingPreferences:
             if isinstance(value, str) and value.strip():
                 configured = value.strip()
     else:
-        value = radio.get("recordingsFolder")
-        if isinstance(value, str) and value.strip():
-            configured = value.strip()
+        configured = radio_folder
 
     station_folders: dict[str, str] = {}
     for entry in radio.get("stations") or []:
@@ -123,6 +128,7 @@ def preferences_from_amc_state(raw: dict) -> RadioRecordingPreferences:
         bitrate_kbps=bitrate,
         default_folder=configured,
         folder_preset=folder_preset,
+        radio_default_folder=radio_folder,
         station_folders=station_folders,
         prefer_station_folder_in_new_schedules=(
             radio.get("preferStationFolderInNewSchedules") is not False
@@ -137,6 +143,9 @@ def preferences_with_overrides(
     bitrate_kbps: int | None = None,
     default_folder: str | None = None,
     override_default_folder: bool = False,
+    use_podcast_downloads_folder: bool | None = None,
+    podcast_downloads_folder: str | None = None,
+    override_podcast_downloads_folder: bool = False,
     prefer_station_folder: bool | None = None,
 ) -> RadioRecordingPreferences:
     """Naloz prywatne ustawienia wxPython na migawke profilu AMC.
@@ -162,9 +171,29 @@ def preferences_with_overrides(
         chosen_bitrate = min(
             bitrates, key=lambda item: abs(item - bitrate_kbps)
         )
-    chosen_folder = base.default_folder
+    own_radio_folder = base.radio_default_folder
+    if own_radio_folder is None and base.folder_preset == "radio":
+        own_radio_folder = base.default_folder
     if override_default_folder:
-        chosen_folder = (default_folder or "").strip() or None
+        own_radio_folder = (default_folder or "").strip() or None
+    chosen_preset = base.folder_preset
+    if type(use_podcast_downloads_folder) is bool:
+        chosen_preset = (
+            "podcasts" if use_podcast_downloads_folder else "radio"
+        )
+    elif override_default_folder:
+        # Zgodnosc ze stanem zapisanym przez poprzedni przyrost wxPython:
+        # jawny prywatny folder oznaczal wtedy automatycznie osobny folder Radia.
+        chosen_preset = "radio"
+    if chosen_preset == "podcasts":
+        if override_podcast_downloads_folder:
+            chosen_folder = (podcast_downloads_folder or "").strip() or None
+        elif base.folder_preset == "podcasts":
+            chosen_folder = base.default_folder
+        else:
+            chosen_folder = None
+    else:
+        chosen_folder = own_radio_folder
     chosen_preference = (
         prefer_station_folder
         if type(prefer_station_folder) is bool
@@ -175,7 +204,8 @@ def preferences_with_overrides(
         format=chosen_format,
         bitrate_kbps=chosen_bitrate,
         default_folder=chosen_folder,
-        folder_preset="radio",
+        folder_preset=chosen_preset,
+        radio_default_folder=own_radio_folder,
         prefer_station_folder_in_new_schedules=chosen_preference,
     )
 

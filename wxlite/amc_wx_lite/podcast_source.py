@@ -97,6 +97,16 @@ class PodcastDescription:
 
 
 @dataclass(frozen=True, slots=True)
+class PodcastGlobalSettings:
+    """Cztery ustawienia przeznaczone do kontrolek, bez rekordow modelu."""
+
+    downloads_folder: str = ""
+    rss_refresh_interval_minutes: int = 60
+    youtube_refresh_interval_minutes: int = 60
+    automatic_refresh_batch_size: int = 4
+
+
+@dataclass(frozen=True, slots=True)
 class _EpisodeRecord:
     item_id: str
     subscription_id: str
@@ -392,6 +402,31 @@ class PodcastSource:
             raise PodcastProfileError(
                 f"Nie można odczytać biblioteki podcastów AMC: {error}"
             ) from error
+
+    def global_settings(self) -> PodcastGlobalSettings:
+        """Odczytaj ustawienia z tej samej bazy, z ktorej korzysta downloader."""
+        try:
+            with closing(self._open()) as connection:
+                record = connection.execute(
+                    """
+                    SELECT downloads_folder, rss_refresh_interval_minutes,
+                           youtube_refresh_interval_minutes,
+                           automatic_refresh_batch_size
+                    FROM podcast_state WHERE singleton = 1
+                    """
+                ).fetchone()
+        except sqlite3.Error as error:
+            raise PodcastProfileError(
+                f"Nie można odczytać ustawień Podcastów i YouTube: {error}"
+            ) from error
+        if record is None:
+            return PodcastGlobalSettings()
+        return PodcastGlobalSettings(
+            downloads_folder=str(record["downloads_folder"] or "").strip(),
+            rss_refresh_interval_minutes=max(0, min(10_080, int(record[1]))),
+            youtube_refresh_interval_minutes=max(0, min(10_080, int(record[2]))),
+            automatic_refresh_batch_size=max(1, min(50, int(record[3]))),
+        )
 
     def subscriptions(self) -> list[PodcastSubscription]:
         try:

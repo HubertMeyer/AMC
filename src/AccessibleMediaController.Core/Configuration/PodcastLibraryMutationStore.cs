@@ -21,6 +21,23 @@ public sealed class PodcastLibraryMutationStore(string databasePath)
     public IReadOnlyList<PodcastRefreshTarget> GetRefreshTargets(string? subscriptionId = null) =>
         _database.GetRefreshTargets(subscriptionId);
 
+    public IReadOnlyList<PodcastRefreshTarget> GetDueRefreshTargets(DateTime utcNow) =>
+        _database.GetDueRefreshTargets(utcNow);
+
+    public PodcastGlobalSettingsSnapshot GetGlobalSettings() =>
+        _database.GetGlobalSettings();
+
+    public PodcastGlobalSettingsSnapshot ConfigureGlobalSettings(
+        string? downloadsFolder,
+        int rssRefreshIntervalMinutes,
+        int youTubeRefreshIntervalMinutes,
+        int automaticRefreshBatchSize) =>
+        _database.ConfigureGlobalSettings(
+            downloadsFolder,
+            rssRefreshIntervalMinutes,
+            youTubeRefreshIntervalMinutes,
+            automaticRefreshBatchSize);
+
     public int GetInboxCount() => _database.GetInboxCount();
 
     public PodcastFavoriteToggleResult ToggleFavorites(
@@ -92,6 +109,12 @@ public sealed record PodcastRefreshResult(
     int UpdatedEpisodes,
     int RetainedEpisodesAbsentFromFeed,
     int InboxCount);
+
+public sealed record PodcastGlobalSettingsSnapshot(
+    string? DownloadsFolder,
+    int RssRefreshIntervalMinutes,
+    int YouTubeRefreshIntervalMinutes,
+    int AutomaticRefreshBatchSize);
 
 /// <summary>
 /// Minimalny, niemutowalny opis odcinka potrzebny do pobrania. Nie przenosi

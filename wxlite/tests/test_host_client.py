@@ -189,6 +189,32 @@ def test_podcast_refresh_uses_one_narrow_host_operation() -> None:
         client.close()
 
 
+def test_podcast_automatic_refresh_and_global_settings_use_named_operations() -> None:
+    client = make_client()
+    try:
+        automatic = client.refresh_podcasts_automatically()
+        loaded = client.podcast_global_settings()
+        saved = client.configure_podcast_global_settings(
+            downloads_folder="D:/Podcasty",
+            rss_refresh_interval_minutes=45,
+            youtube_refresh_interval_minutes=180,
+            automatic_refresh_batch_size=7,
+        )
+        assert automatic["op"] == "podcast.refreshAutomatic"
+        assert automatic["args"] == {}
+        assert loaded["op"] == "podcast.settingsGet"
+        assert loaded["args"] == {}
+        assert saved["op"] == "podcast.settingsSet"
+        assert saved["args"] == {
+            "downloadsFolder": "D:/Podcasty",
+            "rssRefreshIntervalMinutes": 45,
+            "youTubeRefreshIntervalMinutes": 180,
+            "automaticRefreshBatchSize": 7,
+        }
+    finally:
+        client.close()
+
+
 def test_podcast_download_uses_one_narrow_host_operation_and_deduplicates_ids() -> None:
     client = make_client()
     try:

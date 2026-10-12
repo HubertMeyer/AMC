@@ -402,6 +402,101 @@ internal sealed class PodcastLibraryDatabase(string databasePath)
         }
     }
 
+    public PodcastGlobalSettingsSnapshot GetGlobalSettings()
+    {
+        lock (_gate)
+        {
+            var settings = new PodcastSettings();
+            LoadInto(settings);
+            return ToGlobalSettings(settings);
+        }
+    }
+
+    public PodcastGlobalSettingsSnapshot ConfigureGlobalSettings(
+        string? downloadsFolder,
+        int rssRefreshIntervalMinutes,
+        int youTubeRefreshIntervalMinutes,
+        int automaticRefreshBatchSize)
+    {
+        if (rssRefreshIntervalMinutes is < 0 or > 10_080)
+            throw new ArgumentOutOfRangeException(
+                nameof(rssRefreshIntervalMinutes),
+                "Odstęp sprawdzania podcastów musi mieścić się między 0 a 10080 minut.");
+        if (youTubeRefreshIntervalMinutes is < 0 or > 10_080)
+            throw new ArgumentOutOfRangeException(
+                nameof(youTubeRefreshIntervalMinutes),
+                "Odstęp sprawdzania YouTube musi mieścić się między 0 a 10080 minut.");
+        if (automaticRefreshBatchSize is < 1 or > 50)
+            throw new ArgumentOutOfRangeException(
+                nameof(automaticRefreshBatchSize),
+                "Liczba źródeł w jednym przebiegu musi mieścić się między 1 a 50.");
+
+        var normalizedFolder = string.IsNullOrWhiteSpace(downloadsFolder)
+            ? null
+            : System.IO.Path.GetFullPath(downloadsFolder.Trim());
+        lock (_gate)
+        {
+            using var connection = OpenConnection();
+            EnsureSchema(connection);
+            using var transaction = connection.BeginTransaction();
+            Execute(
+                connection,
+                transaction,
+                """
+                UPDATE podcast_state
+                SET downloads_folder = $downloads,
+                    rss_refresh_interval_minutes = $rssInterval,
+                    youtube_refresh_interval_minutes = $youTubeInterval,
+                    automatic_refresh_batch_size = $batch
+                WHERE singleton = 1;
+                """,
+                ("$downloads", normalizedFolder),
+                ("$rssInterval", rssRefreshIntervalMinutes),
+                ("$youTubeInterval", youTubeRefreshIntervalMinutes),
+                ("$batch", automaticRefreshBatchSize));
+            transaction.Commit();
+        }
+        return new PodcastGlobalSettingsSnapshot(
+            normalizedFolder,
+            rssRefreshIntervalMinutes,
+            youTubeRefreshIntervalMinutes,
+            automaticRefreshBatchSize);
+    }
+
+    public IReadOnlyList<PodcastRefreshTarget> GetDueRefreshTargets(DateTime utcNow)
+    {
+        var now = utcNow.Kind == DateTimeKind.Utc
+            ? utcNow
+            : utcNow.ToUniversalTime();
+        lock (_gate)
+        {
+            var settings = new PodcastSettings();
+            LoadInto(settings);
+            return settings.Subscriptions
+                .Where(subscription =>
+                    subscription.IsInLibrary
+                    && IsRefreshable(subscription.SourceKind)
+                    && subscription.RefreshIntervalMinutes > 0)
+                .Where(subscription =>
+                    subscription.LastRefreshUtcTicks <= 0
+                    || subscription.LastRefreshUtcTicks > now.Ticks
+                    || now.Ticks - subscription.LastRefreshUtcTicks
+                        >= TimeSpan.FromMinutes(
+                            subscription.RefreshIntervalMinutes).Ticks)
+                .OrderBy(subscription => subscription.LastRefreshUtcTicks)
+                .Take(Math.Max(1, settings.AutomaticRefreshBatchSize))
+                .Select(ToRefreshTarget)
+                .ToArray();
+        }
+    }
+
+    private static PodcastGlobalSettingsSnapshot ToGlobalSettings(
+        PodcastSettings settings) => new(
+            settings.DownloadsFolder,
+            settings.RssRefreshIntervalMinutes,
+            settings.YouTubeRefreshIntervalMinutes,
+            settings.AutomaticRefreshBatchSize);
+
     public int GetInboxCount()
     {
         lock (_gate)

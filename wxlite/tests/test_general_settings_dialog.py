@@ -14,6 +14,7 @@ def test_settings_have_real_native_pages_and_explicit_accessible_names() -> None
     assert 'self.notebook.SetName("Kategorie ustawień")' in source
     assert 'self.notebook.AddPage(general, "Ogólne", select=True)' in source
     assert 'self.notebook.AddPage(radio, "Radio i nagrywanie")' in source
+    assert 'self.notebook.AddPage(podcasts, "Podcasty i YouTube")' in source
     assert 'self.notebook.AddPage(messages, "Komunikaty")' in source
     assert 'self.silence.SetName("Dodatkowa cisza po naturalnym końcu utworu")' in source
     assert 'self.tempo.SetName("Sposób przeliczania zmienionego tempa")' in source
@@ -34,8 +35,22 @@ def test_all_exposed_choices_use_intentional_user_facing_labels() -> None:
     assert "STATE_POSITION_LABELS" in source
     assert 'self.timeshift.SetName("Długość bufora transmisji")' in source
     assert 'self.recording_folder.SetName("Domyślny folder nagrywania radia")' in source
+    assert 'self.recording_folder_mode.SetName("Położenie nagrań Radia")' in source
+    assert '"Ten sam folder co pobieranie Podcastów"' in source
     assert 'self.recording_format.SetName("Format nagrania radia")' in source
     assert 'self.recording_bitrate.SetName("Bitrate nagrania MP3 lub AAC")' in source
+    assert 'self.podcast_folder.SetName(' in source
+    assert '"Domyślny folder pobierania podcastów"' in source
+    assert 'self.podcast_rss_interval.SetName(' in source
+    assert 'self.podcast_youtube_interval.SetName(' in source
+    assert 'self.podcast_refresh_batch.SetName(' in source
+
+
+def test_podcast_settings_reach_the_database_owner_and_automatic_refresh() -> None:
+    source = SOURCE.read_text(encoding="utf-8")
+    assert "client.configure_podcast_global_settings(" in source
+    assert "client.refresh_podcasts_automatically" in source
+    assert 'self.runner.submit(\n            "podcast-auto-refresh"' in source
 
 
 def test_radio_settings_reach_recording_and_schedule_payloads() -> None:

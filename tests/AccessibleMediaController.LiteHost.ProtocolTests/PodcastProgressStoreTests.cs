@@ -133,6 +133,24 @@ internal static class PodcastProgressStoreTests
                 var targets = store.GetRefreshTargets(null);
                 Assert.True(targets.Count == 1 && targets[0].SubscriptionId == "sub-1",
                     "odswiezenie calej biblioteki wybiera tylko zapisane zrodla");
+                var configuredPodcastFolder = Path.Combine(root, "pobrane-globalne");
+                var configured = store.ConfigureGlobalSettings(
+                    configuredPodcastFolder,
+                    rssRefreshIntervalMinutes: 45,
+                    youTubeRefreshIntervalMinutes: 180,
+                    automaticRefreshBatchSize: 2);
+                Assert.True(
+                    configured.DownloadsFolder == Path.GetFullPath(configuredPodcastFolder)
+                    && configured.RssRefreshIntervalMinutes == 45
+                    && configured.YouTubeRefreshIntervalMinutes == 180
+                    && configured.AutomaticRefreshBatchSize == 2,
+                    "globalne ustawienia wracaja jako celowe wartosci uzytkownika");
+                Assert.True(store.GetGlobalSettings() == configured,
+                    "zapis globalnych ustawien przezywa ponowny odczyt bazy");
+                var dueTargets = store.GetDueRefreshTargets();
+                Assert.True(dueTargets.Count == 1
+                    && dueTargets[0].SubscriptionId == "sub-1",
+                    "automat wybiera zrodlo bez poprzedniego odswiezenia");
                 var feed = new PodcastFeedDocument(
                     "sub-1",
                     "Podcast po odswiezeniu",
@@ -214,8 +232,8 @@ internal static class PodcastProgressStoreTests
                 Assert.Equal("Moja nazwa podcastu", addedSource.Title,
                     "wlasna nazwa jest tekstem uzytkownika, nie identyfikatorem");
                 var savedSource = ReadSubscription(database, "sub-new");
-                Assert.True(savedSource.IsInLibrary && savedSource.RefreshIntervalMinutes == 60,
-                    "nowy RSS dostaje czlonkostwo i domyslny odstep odswiezania");
+                Assert.True(savedSource.IsInLibrary && savedSource.RefreshIntervalMinutes == 45,
+                    "nowy RSS dostaje czlonkostwo i aktualny domyslny odstep odswiezania");
 
                 var youTubeFeed = new PodcastFeedDocument(
                     "youtube-channel:UCabc_DEF-123",
@@ -240,6 +258,10 @@ internal static class PodcastProgressStoreTests
                     youTubeFeed,
                     null,
                     PodcastSourceKind.YouTubeChannel);
+                Assert.True(
+                    ReadSubscription(database, "youtube-channel:UCabc_DEF-123")
+                        .RefreshIntervalMinutes == 180,
+                    "nowy kanal YouTube dostaje osobny aktualny odstep odswiezania");
 
                 var internet = store.AddInternetMedia(
                     new PodcastInternetMediaSource(
@@ -309,6 +331,17 @@ internal static class PodcastProgressStoreTests
                 refused = true;
             }
             Assert.True(refused, "dzialajace glowne AMC musi zablokowac odswiezenie");
+            var configureRefused = false;
+            try
+            {
+                blocked.ConfigureGlobalSettings(null, 60, 60, 4);
+            }
+            catch (LiteRequestException)
+            {
+                configureRefused = true;
+            }
+            Assert.True(configureRefused,
+                "dzialajace glowne AMC musi zablokowac zmiane ustawien podcastow");
         }
         finally
         {
