@@ -979,7 +979,10 @@ class Navigator:
             return [Announce(
                 "Ten element nie ma dostępnego albumu ani wykonawcy nadrzędnego"
             )]
-        return [ShowTidalRelations("Powiązania TIDAL", choices)]
+        return [ShowTidalRelations(
+            "Przejdź do albumu lub wykonawcy TIDAL",
+            choices,
+        )]
 
     def activate_tidal_relation(
         self,

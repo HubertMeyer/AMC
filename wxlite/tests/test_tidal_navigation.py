@@ -209,7 +209,7 @@ def test_right_arrow_relations_match_the_full_tidal_menu_without_ids() -> None:
     event = nav.tidal_relations()[0]
 
     assert isinstance(event, ShowTidalRelations)
-    assert event.title == "Powiązania TIDAL"
+    assert event.title == "Przejdź do albumu lub wykonawcy TIDAL"
     assert [choice.label for choice in event.choices] == [
         "Przejdź do albumu",
         "Przejdź do wykonawcy",
