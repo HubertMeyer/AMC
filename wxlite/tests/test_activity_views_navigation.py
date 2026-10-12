@@ -134,7 +134,7 @@ def test_menu_regains_the_return_to_list_and_the_folders_entry() -> None:
 
 def test_audio_menu_and_old_entries_survive() -> None:
     titles = [m.title for m in menu_model.build_menus()]
-    assert "&Dźwięk" in titles
+    assert "Dźwię&k" in titles
     library = {i.action for i in _menu("&Biblioteka").items if not i.is_separator}
     for kept in (Action.VIEW_ALL_FILES, Action.VIEW_FAVORITES, Action.VIEW_PLAYLISTS):
         assert kept in library

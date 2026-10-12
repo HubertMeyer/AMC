@@ -94,7 +94,7 @@ internal static class Program
         MessageBox(
             IntPtr.Zero,
             text,
-            "AMC Python",
+            "Diagnostyka AMC Python",
             error ? 0x10u : 0x40u);
     }
 

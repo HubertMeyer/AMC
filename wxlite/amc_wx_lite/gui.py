@@ -30,6 +30,7 @@ import os
 import sqlite3
 import time
 import uuid
+from datetime import datetime
 from pathlib import Path
 from typing import Callable
 
@@ -54,6 +55,7 @@ from .audio_clip import (
 from .audio_output import (
     AudioOutputChoice,
     adjacent_available_choice,
+    audio_output_selection_message,
     choices_from_payload,
     effective_output_device_id,
     read_profile_outputs,
@@ -181,6 +183,7 @@ from .radio_schedule_dialogs import RadioScheduleEditorDialog, RadioSchedulesDia
 from . import radio_schedule_settings
 from .radio_recording import (
     active_recording_rows,
+    available_recorded_files,
     format_duration,
     preferences_with_overrides,
     recording_history_from_amc_state,
@@ -212,6 +215,25 @@ RADIO_FORMAT_CHOICES = (
 )
 RADIO_BITRATE_CHOICES = (96, 128, 160, 192, 256, 320)
 RADIO_TIMESHIFT_CHOICES = (10, 20, 30, 60, 120, 180, 360, 720)
+
+
+def _append_frontend_log(store: StateStore, message: str) -> None:
+    """Zapisz techniczny blad startu bez pokazywania go jako nazwy kontrolki.
+
+    ``pythonw.exe`` nie ma konsoli, dlatego sam komunikat na pasku stanu nie
+    wystarcza do rozpoznania regresji po ponownym uruchomieniu. Dziennik jest
+    prywatny dla AMC Python i nigdy nie trafia do etykiet ani list NVDA.
+    """
+
+    try:
+        log_dir = store.directory / "logs"
+        log_dir.mkdir(parents=True, exist_ok=True)
+        timestamp = datetime.now().astimezone().isoformat(timespec="seconds")
+        with (log_dir / "frontend.log").open("a", encoding="utf-8") as stream:
+            stream.write(f"{timestamp} {message.strip()}\n")
+    except OSError:
+        # Dziennik diagnostyczny nie moze sam zablokowac startu interfejsu.
+        pass
 
 
 def radio_timeshift_label(minutes: int) -> str:
@@ -1280,6 +1302,11 @@ class SearchDialog(wx.Dialog):
         self.search_button.Bind(wx.EVT_BUTTON, lambda _event: self.start_search())
         self.open_button.Bind(wx.EVT_BUTTON, lambda _event: self._open_selected())
         self.close_button.Bind(wx.EVT_BUTTON, lambda _event: self.EndModal(wx.ID_CANCEL))
+        # Standardowa obsluga dialogu wx potrafi potraktowac Enter jako
+        # aktywacje domyslnego ID_OK ZANIM TextCtrl dostanie EVT_KEY_DOWN.
+        # Przechwyt na poziomie okna przekazuje gest do kontrolki z fokusem:
+        # Enter uruchamia wyszukiwanie, a strzalki przegladaja historie.
+        self.Bind(wx.EVT_CHAR_HOOK, self._on_dialog_shortcut_hook)
         self.Bind(wx.EVT_SHOW, self._on_show)
         self.Bind(wx.EVT_CLOSE, lambda event: event.Skip())
         self.CentreOnParent()
@@ -1289,6 +1316,21 @@ class SearchDialog(wx.Dialog):
         event.Skip()
         if event.IsShown():
             wx.CallAfter(self.query.SetFocus)
+
+    def _on_dialog_shortcut_hook(self, event: wx.KeyEvent) -> None:
+        """Oddaj klawisz wlasciwej kontrolce przed domyslami dialogu wx."""
+
+        focus = wx.Window.FindFocus()
+        if focus is self.query:
+            self._on_query_key(event)
+            return
+        if focus is self.results:
+            self._on_results_key(event)
+            return
+        if event.GetKeyCode() == wx.WXK_ESCAPE:
+            self.EndModal(wx.ID_CANCEL)
+            return
+        event.Skip()
 
     def start_search(self) -> None:
         if not self.search_button.IsEnabled():
@@ -3983,6 +4025,11 @@ class LiteFrame(wx.Frame):
         #: otwieramy tylko do czytania i oczekujace przeniesienie nie jest
         #: stanem, ktory ma przetrwac zamkniecie programu.
         self.pending_external_moves: dict[str, str] = {}
+        #: Pliki, ktore po Ctrl+X rzeczywiscie zniknely ze starej sciezki.
+        #: To tylko filtr biezacego procesu: wspolna baza pelnego AMC pozostaje
+        #: do odczytu, ale odswiezenie widoku nie moze przywrocic martwego
+        #: wiersza, ktory wlasnie przeniosl shell Windows.
+        self._completed_external_move_ids: set[str] = set()
         #: (Id playlisty, Id elementów) rozpoczęte przez Ctrl+X. To stan
         #: chwilowy okna; nie trafia do profilu i znika dopiero po udanym
         #: Ctrl+V albo po zastąpieniu kolejnym wyborem.
@@ -4003,6 +4050,7 @@ class LiteFrame(wx.Frame):
         self.timer = wx.Timer(self)
         self.Bind(wx.EVT_TIMER, self._on_timer, self.timer)
         self.Bind(wx.EVT_CLOSE, self._on_close)
+        self.Bind(wx.EVT_ACTIVATE, self._on_window_activate)
 
         self._focus_active_list_initially()
 
@@ -4242,6 +4290,7 @@ class LiteFrame(wx.Frame):
             "Ctrl+Shift+F",
             "Ctrl+X",
             "Ctrl+V",
+            "Alt+D",
             "Alt+Up",
             "Alt+Down",
             "Shift+R",
@@ -4853,6 +4902,10 @@ class LiteFrame(wx.Frame):
 
         def failed(error: Exception) -> None:
             self.client = None
+            _append_frontend_log(
+                self.store,
+                f"Silnik nie wystartował: {type(error).__name__}: {error}",
+            )
             self.announcer.say(f"Silnik nie wystartował: {error}. Odtwarzanie niedostępne.")
 
         self.runner.submit("startup", work, done, failed)
@@ -5670,6 +5723,7 @@ class LiteFrame(wx.Frame):
                 "Ctrl+Shift+C",
                 "Ctrl+X",
                 "Ctrl+V",
+                "Alt+D",
                 "Alt+Up",
                 "Alt+Down",
             }:
@@ -6188,6 +6242,11 @@ class LiteFrame(wx.Frame):
         # Problem "stara nazwa z nowym licznikiem" rozwiazuje teraz sama zmiana
         # na zwykla liste: tekst siedzi w kontrolce, a nie w cache wirtualnym,
         # wiec stara nazwa nie ma skad wrocic.
+        # Po powrocie z Total Commandera/Explorera shell mogl juz wykonac
+        # przeniesienie przygotowane przez Ctrl+X. Baza pelnego AMC jest dla
+        # tego interfejsu tylko do odczytu, wiec filtr procesu zapobiega
+        # ponownemu pokazaniu wiersza do czasu nastepnego uruchomienia/skanu.
+        self._hide_completed_external_moves_from_files_model()
         active_list.sync_rows()
 
         want_player = session.view is View.PLAYER
@@ -8440,6 +8499,70 @@ class LiteFrame(wx.Frame):
         pending = getattr(self, "pending_external_moves", None)
         if pending is not None:
             pending.clear()
+
+    def _on_window_activate(self, event: wx.ActivateEvent) -> None:
+        """Po powrocie do AMC rozpoznaj przeniesienie wykonane przez shell."""
+
+        event.Skip()
+        if event.GetActive():
+            wx.CallAfter(self._reconcile_completed_external_moves)
+
+    def _hide_completed_external_moves_from_files_model(self) -> bool:
+        """Ukryj przeniesione wiersze bez zapisu do wspoldzielonej bazy AMC."""
+
+        completed = getattr(self, "_completed_external_move_ids", set())
+        if not completed:
+            return False
+        navigator = getattr(self, "navigator", None)
+        sessions = getattr(navigator, "sessions", None)
+        if not sessions or SessionId.FILES not in sessions:
+            return False
+        model = sessions[SessionId.FILES].model
+        rows = [row for row in model.rows if row.item_id not in completed]
+        if len(rows) == len(model.rows):
+            return False
+        model.replace(rows, keep_selection=True)
+        return True
+
+    def _reconcile_completed_external_moves(self) -> None:
+        """Usun z listy pliki dopiero po faktycznym przeniesieniu przez shell.
+
+        Ctrl+X sam nie usuwa zrodla. Dopiero brak dawnej sciezki po powrocie
+        do AMC potwierdza, ze Total Commander albo Explorer zakonczyl ruch.
+        """
+
+        pending = getattr(self, "pending_external_moves", None)
+        if not pending:
+            return
+        moved = [
+            (item_id, path)
+            for item_id, path in tuple(pending.items())
+            if not os.path.exists(path)
+        ]
+        if not moved:
+            return
+
+        model = self.navigator.sessions[SessionId.FILES].model
+        titles = {row.item_id: row.title for row in model.rows}
+        completed = getattr(self, "_completed_external_move_ids", None)
+        if completed is None:
+            completed = set()
+            self._completed_external_move_ids = completed
+        for item_id, _path in moved:
+            completed.add(item_id)
+            pending.pop(item_id, None)
+        changed = self._hide_completed_external_moves_from_files_model()
+        if changed and self.navigator.active is SessionId.FILES:
+            self._sync_views()
+
+        if len(moved) == 1:
+            item_id, path = moved[0]
+            title = titles.get(item_id) or Path(path).name
+            self.announcer.say(f"Plik przeniesiono poza AMC: {title}")
+        else:
+            self.announcer.say(
+                f"Przeniesiono pliki poza AMC: {format_file_count(len(moved))}"
+            )
 
     def _announce_quick_information(self) -> None:
         """Parametry zaznaczonego elementu, nie aktualnie odtwarzanego.
@@ -10832,18 +10955,13 @@ class LiteFrame(wx.Frame):
                     lambda _error: None,
                 )
                 return
-            if selected.device_id is not None and bool(
-                (result or {}).get("usingDefault")
-            ):
-                self.announcer.say(
-                    f"Zapamiętano dla sesji {session_name}: {selected.label}. "
-                    "Urządzenie jest teraz niedostępne, dlatego używane jest "
-                    "urządzenie domyślne"
-                )
-            else:
-                self.announcer.say(
-                    f"Dla sesji {session_name} wybrano: {selected.label}"
-                )
+            self.announcer.say(audio_output_selection_message(
+                selected.label,
+                using_default=(
+                    selected.device_id is not None
+                    and bool((result or {}).get("usingDefault"))
+                ),
+            ))
 
         self.runner.submit(
             "audio-output-select",
@@ -10881,6 +10999,7 @@ class LiteFrame(wx.Frame):
                 chosen = dialog.values
         finally:
             dialog.Destroy()
+        self._restore_focus_after_dialog()
         if chosen is None:
             return
 
@@ -12746,16 +12865,12 @@ class LiteFrame(wx.Frame):
         return True
 
     def _show_radio_recording_history(self, *, announce: bool = True) -> None:
-        """Alt+Shift+R: utrwalone wyniki prob, razem z nieudanymi."""
+        """Alt+Shift+R: biezaca sesja hosta i nagrania nadal na dysku."""
         if announce:
             self._begin_transient_preview()
             self.navigator.active = SessionId.FILES
         previous = self._radio_snapshot
         client = self.client
-        private_history = list(getattr(self.state, "recording_history", []))
-        persistence_error = bool(
-            getattr(self, "_recording_history_persist_error", False)
-        )
 
         def work():
             snapshot = LiteFrame._with_radio_recording_options(
@@ -12776,28 +12891,25 @@ class LiteFrame(wx.Frame):
                     })
                 except (HostError, HostUnavailable, OSError) as error:
                     current_error = str(error)
-            private_entries = recording_history_from_amc_state({
-                "radio": {"recordingHistory": private_history}
-            })
             library = getattr(self, "library", None)
             if library is not None and library.is_available:
                 try:
-                    recorded_files = tuple(library.recorded_radio_items())
+                    recorded_files = available_recorded_files(
+                        library.recorded_radio_items()
+                    )
                 except (OSError, sqlite3.Error) as error:
                     library_error = str(error)
-            combined = list(current_entries)
-            known_ids = {entry.id for entry in combined}
-            for entry in (*private_entries, *snapshot.recording_history):
-                if entry.id in known_ids:
-                    continue
-                known_ids.add(entry.id)
-                combined.append(entry)
             return (
                 snapshot,
-                recording_history_rows(combined, recorded_files=recorded_files),
+                # Nie laczymy bez konca archiwalnych migawek pelnego AMC i
+                # prywatnych uruchomien. Widok pokazuje wynik BIEZACEGO hosta
+                # oraz nagrania, ktore nadal faktycznie istnieja w Bibliotece.
+                recording_history_rows(
+                    current_entries,
+                    recorded_files=recorded_files,
+                ),
                 current_error,
                 library_error,
-                persistence_error,
             )
 
         def done(result) -> None:
@@ -12809,7 +12921,7 @@ class LiteFrame(wx.Frame):
                 is not LibraryView.RECORDED_RADIO_FILES
             ):
                 return
-            snapshot, rows, current_error, library_error, history_save_error = result
+            snapshot, rows, current_error, library_error = result
             self._radio_snapshot = snapshot
             self.stations = snapshot.list
             if announce and snapshot.load_error and not rows:
@@ -12835,10 +12947,6 @@ class LiteFrame(wx.Frame):
                 if announce and library_error:
                     self.announcer.say(
                         "Lista zapisanych plików nagrań jest chwilowo niedostępna"
-                    )
-                if announce and history_save_error:
-                    self.announcer.say(
-                        "Nie udało się zapisać prywatnej historii nagrywania"
                     )
 
         def failed(error: Exception) -> None:

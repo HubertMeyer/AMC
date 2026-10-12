@@ -461,7 +461,7 @@ def test_ctrl_c_is_not_a_second_native_menu_accelerator() -> None:
 def test_existing_menus_are_preserved() -> None:
     """Dzwiek, tempo i ustawienia juz byly -- nie wolno ich zgubic."""
     titles = [m.title for m in menu_model.build_menus()]
-    for expected in ("&Pliki", "&Radio", "&Widok", "&Dźwięk", "Pomo&c"):
+    for expected in ("&Pliki", "&Radio", "&Widok", "Dźwię&k", "Pomo&c"):
         assert expected in titles, f"zgubione menu {expected}"
 
 
@@ -476,7 +476,10 @@ def test_podcast_aggregate_views_are_discoverable_and_contextual() -> None:
 
 def test_audio_menu_keeps_its_tempo_submenu_marker() -> None:
     """Podmenu algorytmow buduje GUI (radio-itemy) -- model ma je zapowiedziec."""
-    audio = next(m for m in menu_model.build_menus() if "Dźwięk" in m.title)
+    audio = next(
+        m for m in menu_model.build_menus()
+        if m.title.replace("&", "") == "Dźwięk"
+    )
     assert any(item.builtin == "tempo-submenu" for item in audio.items)
 
 

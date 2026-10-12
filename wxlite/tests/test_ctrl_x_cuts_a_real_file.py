@@ -34,6 +34,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -43,8 +44,8 @@ from test_gui_logic import install_wx_stub  # noqa: E402
 install_wx_stub()
 
 from amc_wx_lite import gui  # noqa: E402
-from amc_wx_lite.list_model import Row  # noqa: E402
-from amc_wx_lite.navigation import LibraryView  # noqa: E402
+from amc_wx_lite.list_model import ListModel, Row  # noqa: E402
+from amc_wx_lite.navigation import LibraryView, SessionId  # noqa: E402
 
 DROPEFFECT_COPY = 1
 DROPEFFECT_MOVE = 2
@@ -193,6 +194,55 @@ class CutContract(unittest.TestCase):
         frame._to_clipboard = lambda *a, **k: True
         frame._cut_file()
         self.assertEqual(frame.pending_external_moves, {"i1": self.path})
+
+    def test_wiersz_zostaje_dopoki_shell_nie_przeniesie_pliku(self) -> None:
+        frame, spoken = make_frame(self.row)
+        model = ListModel([self.row])
+        frame.navigator = SimpleNamespace(
+            sessions={SessionId.FILES: SimpleNamespace(model=model)},
+            active=SessionId.FILES,
+        )
+        frame.pending_external_moves = {"i1": self.path}
+        frame._completed_external_move_ids = set()
+        frame._sync_views = lambda: None
+
+        frame._reconcile_completed_external_moves()
+
+        self.assertEqual([row.item_id for row in model.rows], ["i1"])
+        self.assertEqual(frame.pending_external_moves, {"i1": self.path})
+        self.assertEqual(spoken, [])
+
+    def test_po_faktycznym_przeniesieniu_wiersz_znika_z_listy(self) -> None:
+        frame, spoken = make_frame(self.row)
+        model = ListModel([self.row])
+        syncs: list[bool] = []
+        frame.navigator = SimpleNamespace(
+            sessions={SessionId.FILES: SimpleNamespace(model=model)},
+            active=SessionId.FILES,
+        )
+        frame.pending_external_moves = {"i1": self.path}
+        frame._completed_external_move_ids = set()
+        frame._sync_views = lambda: syncs.append(True)
+        Path(self.path).unlink()
+
+        frame._reconcile_completed_external_moves()
+
+        self.assertEqual(model.rows, [])
+        self.assertEqual(frame.pending_external_moves, {})
+        self.assertEqual(frame._completed_external_move_ids, {"i1"})
+        self.assertEqual(syncs, [True])
+        self.assertEqual(spoken, ["Plik przeniesiono poza AMC: utwor.mp3"])
+
+    def test_odswiezenie_bazy_nie_przywraca_przeniesionego_wiersza(self) -> None:
+        frame, _ = make_frame(self.row)
+        model = ListModel([self.row])
+        frame.navigator = SimpleNamespace(
+            sessions={SessionId.FILES: SimpleNamespace(model=model)},
+        )
+        frame._completed_external_move_ids = {"i1"}
+
+        self.assertTrue(frame._hide_completed_external_moves_from_files_model())
+        self.assertEqual(model.rows, [])
 
     def test_skrot_ctrl_x_jest_w_tablicy_listy(self) -> None:
         from amc_wx_lite import shortcuts

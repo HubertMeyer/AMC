@@ -153,3 +153,22 @@ def adjacent_available_choice(
         if choice.available or choice.device_id is None:
             return choice
     return None
+
+
+def audio_output_selection_message(
+    label: str,
+    *,
+    using_default: bool = False,
+) -> str:
+    """Krotkie potwierdzenie wyboru, wspolne dla kazdej sesji audio.
+
+    Nazwa sesji jest juz znana z miejsca, w ktorym uzytkownik pracuje. Jej
+    powtarzanie przed nazwa urzadzenia wydluza komunikat i opoznia najwazniejsza
+    informacje. ``label`` jest przygotowana, uzytkowa nazwa z listy urzadzen;
+    identyfikator punktu koncowego nigdy tu nie trafia.
+    """
+
+    message = f"Urządzenie audio: {label.strip()}"
+    if using_default:
+        message += ". Niedostępne, używane domyślne"
+    return message

@@ -24,6 +24,7 @@ from amc_wx_lite.radio_recording import (
     RadioRecordingHistoryEntry,
     RadioRecordingPreferences,
     active_recording_rows,
+    available_recorded_files,
     format_duration,
     preferences_from_amc_state,
     preferences_with_overrides,
@@ -593,6 +594,32 @@ def test_recorded_files_merge_without_duplicates_and_include_outside_library() -
     interrupted = next(row for row in rows if row.title.startswith("Zatrzymane"))
     assert interrupted.path == r"D:\Nagrania\czesc.mp3"
     assert all("plik-" not in row.title for row in rows)
+
+
+def test_recorded_view_drops_stale_database_rows_whose_files_are_gone() -> None:
+    files = [
+        LibraryItem("jest", "Jest", r"D:\Nagrania\jest.mp3", 0, False, True, True, True, 2),
+        LibraryItem("brak", "Brak", r"D:\Nagrania\brak.mp3", 0, False, True, True, True, 1),
+    ]
+    states = {
+        r"D:\Nagrania\jest.mp3": "available",
+        r"D:\Nagrania\brak.mp3": "missing",
+    }
+
+    result = available_recorded_files(files, path_probe=states.__getitem__)
+
+    assert [item.id for item in result] == ["jest"]
+
+
+def test_visible_recording_history_does_not_merge_stale_archives_forever() -> None:
+    source = (
+        Path(__file__).parents[1] / "amc_wx_lite" / "gui.py"
+    ).read_text(encoding="utf-8")
+    method = source[source.index("def _show_radio_recording_history") :]
+    method = method[:method.index("def _show_radio_schedules")]
+    assert "recording_history_rows(\n                    current_entries" in method
+    assert "snapshot.recording_history" not in method
+    assert "private_entries" not in method
 
 
 def test_database_reads_recordings_outside_library_and_old_schema() -> None:

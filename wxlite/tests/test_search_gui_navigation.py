@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from pathlib import Path
 from types import SimpleNamespace
 
 from amc_wx_lite.gui import LiteFrame
@@ -141,3 +142,16 @@ def test_search_open_does_not_invent_a_second_action() -> None:
         SearchResultAction.OPEN,
     )
     assert opened == [result]
+
+
+def test_search_dialog_intercepts_enter_before_default_ok_processing() -> None:
+    source = Path(__file__).parents[1] / "amc_wx_lite" / "gui.py"
+    text = source.read_text(encoding="utf-8")
+    dialog = text[
+        text.index("class SearchDialog") :
+        text.index("class GeneralPlaybackOptionsDialog")
+    ]
+    assert "self.Bind(wx.EVT_CHAR_HOOK, self._on_dialog_shortcut_hook)" in dialog
+    assert "if focus is self.query:" in dialog
+    assert "self._on_query_key(event)" in dialog
+    assert "if focus is self.results:" in dialog

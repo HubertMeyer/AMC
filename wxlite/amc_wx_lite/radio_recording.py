@@ -593,6 +593,25 @@ def _path_state(path: str) -> str:
         return "unavailable"
 
 
+def available_recorded_files(
+    recorded_files: Sequence["LibraryItem"],
+    *,
+    path_probe: Callable[[str], str] = _path_state,
+) -> tuple["LibraryItem", ...]:
+    """Pliki do widoku „Nagrane”: tylko nadal obecne na dysku.
+
+    Pole ``is_available`` w bazie moze pozostac nieaktualne do nastepnego
+    pelnego skanu Biblioteki. Nie moze ono przywracac setek usunietych nagran
+    do listy. Niepewnosc odczytu takze nie udaje istniejacego pliku.
+    """
+
+    return tuple(
+        item
+        for item in recorded_files
+        if item.path and path_probe(item.path) == "available"
+    )
+
+
 def recording_history_rows(
     entries: tuple[RadioRecordingHistoryEntry, ...] | list[RadioRecordingHistoryEntry],
     *,

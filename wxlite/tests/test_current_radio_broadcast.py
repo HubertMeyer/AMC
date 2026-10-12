@@ -48,6 +48,12 @@ def test_radio_menu_exposes_alt_d_without_a_window_accelerator() -> None:
     assert not item.accelerator
 
 
+def test_alt_d_is_not_also_a_top_level_menu_mnemonic() -> None:
+    titles = [menu.title for menu in menu_model.build_menus()]
+    assert all("&d" not in title.casefold() for title in titles)
+    assert "Dźwię&k" in titles
+
+
 def test_gui_speaks_only_the_host_user_facing_text() -> None:
     spoken: list[str] = []
 

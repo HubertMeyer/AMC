@@ -9,6 +9,7 @@ from amc_wx_lite import menu_model
 from amc_wx_lite.audio_output import (
     AudioOutputChoice,
     adjacent_available_choice,
+    audio_output_selection_message,
     choices_from_payload,
     effective_output_device_id,
     read_profile_outputs,
@@ -34,7 +35,10 @@ def test_brackets_cycle_outputs_in_the_native_list_and_player() -> None:
 
 
 def test_audio_menu_exposes_shift_a_without_window_accelerator() -> None:
-    audio = next(menu for menu in menu_model.build_menus() if "Dźwięk" in menu.title)
+    audio = next(
+        menu for menu in menu_model.build_menus()
+        if menu.title.replace("&", "") == "Dźwięk"
+    )
     item = next(entry for entry in audio.items if entry.action is Action.SELECT_AUDIO_OUTPUT)
     assert item.shortcut == "Shift+A"
     assert item.accelerator is False
@@ -57,6 +61,15 @@ def test_output_cycle_wraps_and_skips_disconnected_devices() -> None:
     assert adjacent_available_choice(choices, None, 1).label == "Słuchawki"
     assert adjacent_available_choice(choices, "headphones", 1).device_id is None
     assert adjacent_available_choice(choices, None, -1).label == "Słuchawki"
+
+
+def test_output_confirmation_is_short_and_does_not_repeat_the_session() -> None:
+    assert audio_output_selection_message("Denon USB") == (
+        "Urządzenie audio: Denon USB"
+    )
+    assert audio_output_selection_message(
+        "Denon USB", using_default=True
+    ) == "Urządzenie audio: Denon USB. Niedostępne, używane domyślne"
 
 
 def test_profile_local_device_is_mapped_to_the_files_session(tmp_path: Path) -> None:

@@ -26,6 +26,9 @@ def test_enter_save_has_one_short_confirmation_and_reconfigures_the_host() -> No
     assert 'save.SetDefault()' in source
     assert 'self.announcer.say("Zapisano ustawienia")' in source
     assert 'client.configure_audio(' in source
+    method = source[source.index("def _show_general_playback_options") :]
+    method = method[:method.index("def _with_radio_recording_options")]
+    assert "dialog.Destroy()\n        self._restore_focus_after_dialog()" in method
 
 
 def test_all_exposed_choices_use_intentional_user_facing_labels() -> None:

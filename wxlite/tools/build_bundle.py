@@ -246,6 +246,7 @@ def main() -> int:
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
         files = list(manifest.get("files") or [])
         files += copy_python_code(target)
+        files += copy_launcher(target, args.launcher)
         files += copy_updater(target, args.updater)
         manifest["created"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
         manifest["files"] = [

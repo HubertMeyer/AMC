@@ -614,7 +614,10 @@ def build_menus() -> tuple[Menu, ...]:
     # Menu Dzwiek juz istnialo i dziala -- model tylko oznacza miejsce, w
     # ktorym GUI dokleja swoje radio-itemy algorytmow (stan Check per pozycja).
     audio = Menu(
-        "&Dźwięk",
+        # Alt+D jest poleceniem tresci: opis Podcastu albo informacja o
+        # biezacej audycji Radia. Mnemonik menu nie moze przejmowac tego
+        # samego gestu przed lista, dlatego menu otwieramy przez Alt+K.
+        "Dźwię&k",
         (
             MenuItem("&Algorytm przyspieszania", builtin="tempo-submenu"),
             SEPARATOR,
