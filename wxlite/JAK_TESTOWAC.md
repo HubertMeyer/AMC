@@ -154,12 +154,25 @@ Sonos:
 
 Wynik odbioru 10 października: wykrywanie grupy i odczyt stanu działają, ale
 sterowanie jest zablokowane komunikatem „Trwa odczyt informacji. Powtórz skrót
-za chwilę”. Ponowienie po chwili również nie wykonuje polecenia. Po poprawce
-trzeba sprawdzić co najmniej Enter lub przycisk działania, Spację,
-następny/poprzedni, zmianę głośności i wyciszenie oraz upewnić się, że odczyt
-stanu kończy się i zwalnia blokadę poleceń. Trzeba też odebrać pełną Bibliotekę,
-Ulubione, wybór materiałów i presety wraz ze skrótami z głównego AMC. Widoczne
-Radio Opole nie zaczęło faktycznie grać mimo próby jego uruchomienia.
+za chwilę”. Ponowienie po chwili również nie wykonywało polecenia. Poprawka
+techniczna jest już w paczce: odczyt i transport nie nakładają się, a polecenie
+naciśnięte podczas odczytu czeka w kolejce. Chwilowe przeciążenie hosta jest
+ponawiane w tle bez tego komunikatu.
+
+Odbiór poprawki na żywo:
+
+1. Naciśnij Enter na grupie i od razu, jeszcze podczas pierwszego odczytu,
+   naciśnij Spację. Po zakończeniu odczytu Spacja ma się wykonać bez ponownego
+   naciskania i bez komunikatu „Trwa odczyt informacji”.
+2. Powtórz próbę z następnym/poprzednim, zmianą głośności i wyciszeniem.
+3. Pozostaw odtwarzacz otwarty co najmniej kilka cykli odświeżania. Polecenia
+   nadal mają działać, a automatyczny odczyt nie może ich blokować.
+4. Wróć do listy i szybko wybierz inną grupę. Ma obowiązywać ostatni świadomy
+   wybór, bez spóźnionego powrotu do poprzedniej grupy.
+
+Trzeba też odebrać pełną Bibliotekę, Ulubione, wybór materiałów i presety wraz
+ze skrótami z głównego AMC. Widoczne Radio Opole nie zaczęło faktycznie grać
+mimo wcześniejszej próby jego uruchomienia.
 
 Brak urządzeń lub uśpione urządzenia nie jest zaliczeniem ani błędem kodu.
 Zapisz wtedy wynik jako „nieprzetestowane na żywo”. Spotify nie należy do tego

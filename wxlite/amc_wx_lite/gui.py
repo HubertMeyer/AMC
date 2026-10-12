@@ -4275,6 +4275,15 @@ class LiteFrame(wx.Frame):
         self._sonos_active_household_id = ""
         self._sonos_active_group_id = ""
         self._sonos_status_poll_pending = False
+        # Jeden tor żądań Sonos. Odczyt początkowy, timer i polecenia nie mogą
+        # zajmować równocześnie miejsc współbieżnych LiteHosta. Polecenie
+        # naciśnięte podczas odczytu czeka tutaj i wykonuje się po nim.
+        self._sonos_request_pending = False
+        self._sonos_retry_pending = False
+        self._sonos_pending_activation: ActivateSonosGroup | None = None
+        self._sonos_command_queue: list[
+            tuple[str, str, str, int | None, float | None, int]
+        ] = []
         self._radio_activity_cues: dict[tuple[bool, bool], object] = {}
 
         self._build_ui()
@@ -7546,7 +7555,9 @@ class LiteFrame(wx.Frame):
             ),
         )
 
-    def _activate_sonos_group(self, intent: ActivateSonosGroup) -> None:
+    def _activate_sonos_group(
+        self, intent: ActivateSonosGroup, *, attempt: int = 0
+    ) -> None:
         client = self.client
         if client is None:
             self._run(self.navigator.back_to_list())
@@ -7557,6 +7568,16 @@ class LiteFrame(wx.Frame):
         self._sonos_snapshot = {}
         self.now_playing.SetLabel(intent.title)
         self._set_transport_label(playing=False, preparing=True)
+        if (
+            getattr(self, "_sonos_request_pending", False)
+            or getattr(self, "_sonos_retry_pending", False)
+        ):
+            # Użytkownik może wrócić na listę i wybrać inną grupę, gdy stary
+            # odczyt jeszcze kończy się w chmurze. Nie uruchamiamy drugiego
+            # równolegle; ostatni świadomy wybór wykona się zaraz po pierwszym.
+            self._sonos_pending_activation = intent
+            return
+        self._sonos_request_pending = True
 
         def done(payload: object) -> None:
             try:
@@ -7568,6 +7589,7 @@ class LiteFrame(wx.Frame):
                 state.get("householdId") != self._sonos_active_household_id
                 or state.get("groupId") != self._sonos_active_group_id
             ):
+                self._finish_sonos_request()
                 return
             self._sonos_snapshot = state
             if (
@@ -7575,13 +7597,53 @@ class LiteFrame(wx.Frame):
                 and self.navigator.view is View.PLAYER
             ):
                 self._apply_sonos_snapshot(state, announce=True)
+            self._finish_sonos_request()
 
         def failed(error: Exception) -> None:
-            state = self.navigator.sessions[SessionId.SONOS]
-            state.view = View.LIST
-            if self.navigator.active is SessionId.SONOS:
-                self._sync_views()
-                self.announcer.say(str(error))
+            if (
+                isinstance(error, HostError)
+                and error.code == "operation_busy"
+                and attempt < 20
+                and intent.household_id == self._sonos_active_household_id
+                and intent.group_id == self._sonos_active_group_id
+                and self.navigator.active is SessionId.SONOS
+                and self.navigator.view is View.PLAYER
+            ):
+                self._sonos_request_pending = False
+                self._sonos_retry_pending = True
+
+                def retry() -> None:
+                    self._sonos_retry_pending = False
+                    pending_activation = self._sonos_pending_activation
+                    self._sonos_pending_activation = None
+                    if pending_activation is not None:
+                        self._activate_sonos_group(pending_activation)
+                    elif (
+                        intent.household_id == self._sonos_active_household_id
+                        and intent.group_id == self._sonos_active_group_id
+                        and self.navigator.active is SessionId.SONOS
+                        and self.navigator.view is View.PLAYER
+                    ):
+                        self._activate_sonos_group(intent, attempt=attempt + 1)
+                    else:
+                        self._start_next_sonos_command()
+
+                call_later = getattr(wx, "CallLater", None)
+                if callable(call_later):
+                    call_later(250, retry)
+                else:
+                    retry()
+                return
+            if (
+                intent.household_id == self._sonos_active_household_id
+                and intent.group_id == self._sonos_active_group_id
+            ):
+                state = self.navigator.sessions[SessionId.SONOS]
+                state.view = View.LIST
+                if self.navigator.active is SessionId.SONOS:
+                    self._sync_views()
+                    self.announcer.say(str(error))
+            self._finish_sonos_request()
 
         self.runner.submit(
             "sonos-snapshot",
@@ -7633,20 +7695,100 @@ class LiteFrame(wx.Frame):
             )
             return
 
+        self._sonos_command_queue.append((
+            household_id,
+            group_id,
+            command,
+            volume,
+            seconds,
+            0,
+        ))
+        self._start_next_sonos_command()
+
+    def _start_next_sonos_command(self) -> None:
+        """Uruchom pierwsze aktualne polecenie, nigdy równolegle z odczytem."""
+        if (
+            getattr(self, "_sonos_request_pending", False)
+            or getattr(self, "_sonos_retry_pending", False)
+        ):
+            return
+        client = self.client
+        if client is None:
+            self._sonos_command_queue.clear()
+            return
+        request = None
+        while self._sonos_command_queue:
+            candidate = self._sonos_command_queue.pop(0)
+            household_id, group_id, _command, _volume, _seconds, _attempt = candidate
+            if (
+                self.navigator.active is SessionId.SONOS
+                and self.navigator.view is View.PLAYER
+                and household_id == self._sonos_active_household_id
+                and group_id == self._sonos_active_group_id
+            ):
+                request = candidate
+                break
+        if request is None:
+            return
+        household_id, group_id, command, volume, seconds, attempt = request
+        self._sonos_request_pending = True
+
         def done(payload: object) -> None:
             try:
                 state = sonos_snapshot(payload)
             except SonosPayloadError as error:
                 self.announcer.say(str(error))
+                self._finish_sonos_request()
                 return
             if (
                 state.get("householdId") != self._sonos_active_household_id
                 or state.get("groupId") != self._sonos_active_group_id
             ):
+                self._finish_sonos_request()
                 return
             self._sonos_snapshot = state
             if self.navigator.active is SessionId.SONOS:
                 self._apply_sonos_snapshot(state, announce=True)
+            self._finish_sonos_request()
+
+        def failed(error: Exception) -> None:
+            if (
+                isinstance(error, HostError)
+                and error.code == "operation_busy"
+                and attempt < 20
+                and household_id == self._sonos_active_household_id
+                and group_id == self._sonos_active_group_id
+                and self.navigator.active is SessionId.SONOS
+                and self.navigator.view is View.PLAYER
+            ):
+                self._sonos_request_pending = False
+                self._sonos_retry_pending = True
+                self._sonos_command_queue.insert(0, (
+                    household_id,
+                    group_id,
+                    command,
+                    volume,
+                    seconds,
+                    attempt + 1,
+                ))
+
+                def retry() -> None:
+                    self._sonos_retry_pending = False
+                    # W czasie oczekiwania użytkownik mógł świadomie wybrać
+                    # inną grupę. Ostatni wybór ma pierwszeństwo przed
+                    # ponowieniem starego polecenia.
+                    self._finish_sonos_request()
+
+                call_later = getattr(wx, "CallLater", None)
+                if callable(call_later):
+                    call_later(250, retry)
+                else:
+                    retry()
+                return
+            self.announcer.say(
+                f"Nie udało się sterować grupą Sonos: {error}"
+            )
+            self._finish_sonos_request()
 
         self.runner.submit(
             "sonos-transport",
@@ -7658,10 +7800,18 @@ class LiteFrame(wx.Frame):
                 seconds=seconds,
             ),
             done,
-            lambda error: self.announcer.say(
-                f"Nie udało się sterować grupą Sonos: {error}"
-            ),
+            failed,
         )
+
+    def _finish_sonos_request(self) -> None:
+        """Zwolnij tor Sonosa i wykonaj ostatni wybór albo czekające polecenie."""
+        self._sonos_request_pending = False
+        pending_activation = self._sonos_pending_activation
+        self._sonos_pending_activation = None
+        if pending_activation is not None:
+            self._activate_sonos_group(pending_activation)
+            return
+        self._start_next_sonos_command()
 
     # ------------------------------------------------ Podcasty i YouTube
 
@@ -12769,15 +12919,21 @@ class LiteFrame(wx.Frame):
             or self.navigator.active is not SessionId.SONOS
             or self.navigator.view is not View.PLAYER
             or getattr(self, "_sonos_status_poll_pending", False)
+            or getattr(self, "_sonos_request_pending", False)
+            or getattr(self, "_sonos_retry_pending", False)
+            or getattr(self, "_sonos_pending_activation", None) is not None
+            or bool(getattr(self, "_sonos_command_queue", ()))
         ):
             return
         self._sonos_status_poll_pending = True
+        self._sonos_request_pending = True
 
         def done(payload: object) -> None:
             self._sonos_status_poll_pending = False
             try:
                 state = sonos_snapshot(payload)
             except SonosPayloadError:
+                self._finish_sonos_request()
                 return
             if (
                 self.navigator.active is not SessionId.SONOS
@@ -12785,12 +12941,15 @@ class LiteFrame(wx.Frame):
                 or state.get("householdId") != self._sonos_active_household_id
                 or state.get("groupId") != self._sonos_active_group_id
             ):
+                self._finish_sonos_request()
                 return
             self._sonos_snapshot = state
             self._apply_sonos_snapshot(state, announce=False)
+            self._finish_sonos_request()
 
         def failed(_error: Exception) -> None:
             self._sonos_status_poll_pending = False
+            self._finish_sonos_request()
 
         self.runner.submit(
             "sonos-status",

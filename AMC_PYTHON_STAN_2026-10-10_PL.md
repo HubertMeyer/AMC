@@ -298,15 +298,21 @@ istniejącego klienta C# co główne AMC. Python otrzymuje wyłącznie celowe na
 grup i bezpieczny stan odtwarzania. Dostępne są wybór grupy, odtwarzanie,
 pauza, następny/poprzedni, seek i głośność. Tokeny Sonos nie opuszczają C#.
 
-Odbiór użytkownika 10 października ujawnił błąd wymagający poprawy: AMC widzi
-grupę Sonos i odczytuje jej stan (np. „Radio Opole, myTuner Radio, Zatrzymane,
-5 procent, bez wyciszenia”), ale polecenia sterowania nie są wykonywane.
-Program najpierw mówi: „Nie udało się sterować grupą Sonos: Trwa odczyt
-informacji. Powtórz skrót za chwilę”, a ponowienie po chwili nie odblokowuje
-sterowania. Do sprawdzenia jest zatrzymany lub stale ponawiany odczyt stanu,
-brak zwolnienia blokady po odświeżeniu oraz wykonywanie kliknięć i skrótów po
-ukończeniu odczytu. Poprawkę i test na żywej grupie odłożono orientacyjnie na
-piątek; nie jest to automatycznie zaplanowane zadanie.
+Odbiór użytkownika 10 października ujawnił błąd: AMC widział grupę Sonos i
+odczytywał jej stan (np. „Radio Opole, myTuner Radio, Zatrzymane, 5 procent,
+bez wyciszenia”), ale polecenia sterowania nie były wykonywane. Program mówił:
+„Nie udało się sterować grupą Sonos: Trwa odczyt informacji. Powtórz skrót za
+chwilę”, a ponowienie po chwili nie odblokowywało sterowania.
+
+Poprawka techniczna jest już wprowadzona. Odczyt początkowy, ciche
+odświeżanie z timera i polecenia transportu korzystają z jednego kolejnego
+toru. Polecenie naciśnięte podczas odczytu czeka i wykonuje się po nim, zamiast
+zajmować następne miejsce współbieżne hosta. Chwilowa odmowa
+`operation_busy` jest ponawiana w tle do pięciu sekund bez odczytywania tego
+technicznego stanu użytkownikowi. Nowy wybór grupy zastępuje oczekujący stary
+wybór, a nie uruchamia drugiego odczytu równolegle. Testy automatyczne obejmują
+blokadę timera, kolejkę poleceń oraz ponowienie odczytu i transportu. Pozostaje
+odbiór na żywej, obudzonej grupie Sonos.
 
 Podobnie jak w WiiM, brakuje pełnego interfejsu Biblioteki, Ulubionych,
 wyboru materiałów, presetów i odpowiadających im skrótów z głównego AMC.
@@ -449,8 +455,9 @@ lewą strzałką.
    opcje urządzenia i wszystkie ich skróty; w Sonos Bibliotekę, Ulubione,
    playlisty, własne strumienie, presety i wybór materiałów. Natywna lista
    presetów WiiM jest już podłączona technicznie. Następnie zapewnić
-   prawidłowe wykonanie transportu po zakończeniu odczytu stanu i wykonać
-   ponowny odbiór na obudzonych urządzeniach. Materiał Sonos Redux z Hermesa
+   ponowny odbiór transportu po zakończeniu odczytu stanu na obudzonych
+   urządzeniach; techniczna kolejka tych operacji jest już podłączona. Materiał
+   Sonos Redux z Hermesa
    traktować tylko jako krótką wskazówkę projektową, gdy analogiczny problem
    wystąpi w AMC; nie przeznaczać przebiegów na analizę, uruchamianie ani testy
    tego obcego dodatku NVDA i nie kopiować kodu GPL.
