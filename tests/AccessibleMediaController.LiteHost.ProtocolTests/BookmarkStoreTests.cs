@@ -21,6 +21,16 @@ internal static class BookmarkStoreTests
 
             store.Add("plik-1", "Nagranie", TimeSpan.FromSeconds(12.4), DateTime.UtcNow);
             store.Add("plik-1", "Nagranie", TimeSpan.FromSeconds(12.8), DateTime.UtcNow);
+            var named = JsonSerializer.SerializeToElement(store.Add(
+                "plik-1",
+                "Nagranie",
+                TimeSpan.FromSeconds(12.6),
+                DateTime.UtcNow,
+                "  Ważny   fragment  "));
+            Assert.True(!named.GetProperty("added").GetBoolean()
+                && named.GetProperty("nameChanged").GetBoolean()
+                && named.GetProperty("name").GetString() == "Ważny fragment",
+                "nazwana zakladka nadaje nazwe istniejacej szybkiej zakladce");
             store.MutateBookmarks(settings =>
             {
                 settings.Entries.Add(new BookmarkEntry
@@ -79,6 +89,13 @@ internal static class BookmarkStoreTests
                     ORDER BY ordinal LIMIT 1;
                     """;
                 quickBookmarkId = Convert.ToString(quick.ExecuteScalar())!;
+                using var quickName = connection.CreateCommand();
+                quickName.CommandText = "SELECT name FROM bookmarks WHERE id = $id;";
+                quickName.Parameters.AddWithValue("$id", quickBookmarkId);
+                Assert.Equal(
+                    "Ważny fragment",
+                    Convert.ToString(quickName.ExecuteScalar()),
+                    "znormalizowana nazwa zostaje zapisana w bazie");
             }
             var removal = JsonSerializer.SerializeToElement(store.Remove(
                 [quickBookmarkId, "bookmark-and-chapter", "missing"]));

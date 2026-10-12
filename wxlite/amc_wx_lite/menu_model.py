@@ -235,7 +235,8 @@ def build_menus() -> tuple[Menu, ...]:
             # Etykieta i gest musza ten wezszy zakres pokazac, a nie udawac
             # szerszej komendy oryginalu.
             MenuItem("&Zakładki zaznaczonego", Action.VIEW_ITEM_BOOKMARKS,
-                     shortcut="Ctrl+Shift+B", needs_selection=True),
+                     shortcut="Ctrl+Shift+B", accelerator=False,
+                     needs_selection=True),
             # Pozycja oryginalu (MainWindow.xaml:489, Ctrl+B). Bez
             # ``needs_selection``: zbiorczy widok nie zalezy od zaznaczenia --
             # kontekst bierze z SESJI, a sesja moze nic nie odtwarzac.
@@ -440,6 +441,14 @@ def build_menus() -> tuple[Menu, ...]:
             MenuItem("Dodaj &zakładkę", Action.ADD_BOOKMARK, shortcut="B",
                      accelerator=False, needs_playback=True,
                      needs_files_session=True),
+            MenuItem(
+                "Dodaj nazwaną zakładk&ę…",
+                Action.ADD_NAMED_BOOKMARK,
+                shortcut="Ctrl+Shift+B",
+                accelerator=False,
+                needs_playback=True,
+                needs_files_session=True,
+            ),
             MenuItem(
                 "&2. Poprzednia zakładka, Shift+Page Up",
                 Action.PREVIOUS_BOOKMARK,

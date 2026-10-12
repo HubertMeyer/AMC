@@ -155,6 +155,7 @@ class Action(Enum):
     TIME_REMAINING = "time.remaining"
     TIME_TOTAL = "time.total"
     ADD_BOOKMARK = "action.bookmark.add"
+    ADD_NAMED_BOOKMARK = "action.bookmark.addNamed"
     PREVIOUS_BOOKMARK = "transport.bookmark.previous"
     NEXT_BOOKMARK = "transport.bookmark.next"
     CLIP_MARK_START = "audio.clip.markStart"
@@ -696,6 +697,9 @@ PLAYER_VIEW: dict[str, Action] = {
     # Pelne AMC: gola litera B w otwartym odtwarzaczu dodaje szybka zakladke.
     # Ctrl+B pozostaje zbiorcza lista zakladek i nie jest aliasem tej akcji.
     "B": Action.ADD_BOOKMARK,
+    # Na LISCIE Ctrl+Shift+B pozostaje widokiem zakladek zaznaczonego pliku.
+    # W ODTWARZACZU ten sam gest ma znaczenie z glownego AMC: dialog nazwy.
+    "Ctrl+Shift+B": Action.ADD_NAMED_BOOKMARK,
     # Nawigacja po zakładkach bieżącego materiału. Gesty wprost z głównego
     # AMC (MainWindow.xaml.cs:21646-21647 i 22457-22458). Nie mylić z
     # Alt+Page Up/Down, które poruszają granicami zaznaczonego fragmentu.
@@ -950,6 +954,7 @@ def _help_entries() -> list[tuple[str, str, Action]]:
         Action.TIME_REMAINING: "Czas pozostaly",
         Action.TIME_TOTAL: "Czas calkowity",
         Action.ADD_BOOKMARK: "Dodaj zakladke w biezacym miejscu",
+        Action.ADD_NAMED_BOOKMARK: "Dodaj nazwana zakladke w biezacym miejscu",
         Action.PREVIOUS_BOOKMARK: "Poprzednia zakładka",
         Action.NEXT_BOOKMARK: "Następna zakładka",
         Action.CLIP_MARK_START: "Ustaw poczatek fragmentu",

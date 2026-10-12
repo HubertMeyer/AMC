@@ -892,10 +892,19 @@ class LiteHostClient:
             "library.recycle", {"itemIds": item_ids}, timeout=120.0
         )
 
-    def add_bookmark(self, *, item_id: str, item_title: str) -> Any:
+    def add_bookmark(
+        self,
+        *,
+        item_id: str,
+        item_title: str,
+        name: str | None = None,
+    ) -> Any:
+        args = {"itemId": item_id, "itemTitle": item_title}
+        if name is not None:
+            args["name"] = name
         return self.call(
             "bookmark.add",
-            {"itemId": item_id, "itemTitle": item_title},
+            args,
             timeout=15.0,
         )
 

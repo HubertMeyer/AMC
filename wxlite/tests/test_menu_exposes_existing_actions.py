@@ -179,7 +179,7 @@ def test_no_duplicate_labels_or_shortcuts() -> None:
     # kontekstowe: w Radiu czyta bieżącą audycję, a w Podcastach pełny opis.
     assert set(duplicates) <= {
         "Ctrl+O", "Ctrl+N", "Ctrl+D", "Ctrl+S", "Alt+1", "Alt+2", "Alt+3", "Alt+D",
-        "F2", "Delete"
+        "Ctrl+Shift+B", "F2", "Delete"
     }, duplicates
     for item in duplicates.get("Ctrl+O", []):
         assert not item.accelerator, (
@@ -203,6 +203,10 @@ def test_no_duplicate_labels_or_shortcuts() -> None:
     for item in duplicates.get("Ctrl+N", []):
         assert not item.accelerator, (
             "kontekstowe Ctrl+N musi rozstrzygnąć sesja podcastów albo radia"
+        )
+    for item in duplicates.get("Ctrl+Shift+B", []):
+        assert not item.accelerator, (
+            "Ctrl+Shift+B musi rozstrzygnąć lista albo odtwarzacz"
         )
 
 

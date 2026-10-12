@@ -982,6 +982,7 @@ internal sealed class LiteEngineHandlers : IDisposable
 
         var itemId = LiteArgs.RequireText(args, "itemId");
         var itemTitle = LiteArgs.RequireText(args, "itemTitle");
+        var name = LiteArgs.ReadText(args, "name");
         TimeSpan position;
         TimeSpan duration;
         lock (_gate)
@@ -995,7 +996,7 @@ internal sealed class LiteEngineHandlers : IDisposable
         }
         if (duration <= TimeSpan.Zero)
             throw new LiteRequestException("Nie można dodać zakładki: czas trwania materiału jest nieznany.");
-        return _bookmarkStore.Add(itemId, itemTitle, position, DateTime.UtcNow);
+        return _bookmarkStore.Add(itemId, itemTitle, position, DateTime.UtcNow, name);
     }
 
     private object RemoveBookmarks(JsonElement args)

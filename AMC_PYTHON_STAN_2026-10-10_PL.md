@@ -43,7 +43,7 @@ podmiany i wycofania plików. Docelowe `AMC.exe` ma być stałym punktem wejści
 a aktualizator działać za nim, bez ręcznego wybierania skryptu lub interpretera.
 
 Aktualny kompletny pakiet EXE jest w:
-`D:\Projekty Codex\AMC - integracja wxPython\.test-output\AMC-Python-radio-export-20261013`.
+`D:\Projekty Codex\AMC - integracja wxPython\.test-output\AMC-Python-named-bookmarks-20261013`.
 Nie zawiera `AMC-wx-Lite.cmd`. `AMC.exe` sprawdza wersję formatu pakietu,
 interfejsu i protokołu hosta oraz sumy krytycznych plików przed uruchomieniem.
 Automatyczna weryfikacja paczki i próbna aktualizacja do osobnego katalogu
@@ -107,6 +107,13 @@ to z `Alt+Page Up` i `Alt+Page Down`, które pozostają nawigacją po granicach
 zaznaczonego fragmentu. Karta Komunikaty ma rzeczywisty przełącznik
 oznajmiania udanej nawigacji po zakładkach; brak poprzedniej lub następnej
 zakładki nadal jest podawany jako potrzebna informacja graniczna.
+`Ctrl+Shift+B` jest teraz prawidłowo kontekstowe: na liście otwiera zakładki
+zaznaczonego pliku, natomiast w odtwarzaczu otwiera natywne, dostępne pole
+nazwy i dodaje nazwaną zakładkę w bieżącym miejscu. `B` nadal dodaje szybką
+zakładkę, a `Ctrl+B` pokazuje zbiorczą listę wszystkich zakładek. Nazwa jest
+normalizowana i zapisywana w tym samym wierszu bazy co zakładka głównego AMC;
+ponowne nazwanie zakładki w tej samej sekundzie aktualizuje nazwę zamiast
+tworzyć duplikat. Techniczny identyfikator nie trafia do dialogu ani mowy.
 Po włączeniu `Ctrl+K` podaje pełną instrukcję filtra, a pole zapytania i lista
 wyników `Ctrl+F`/`Ctrl+Shift+F` udostępniają osobne teksty pomocy. Nazwy
 kontrolek pozostają krótkie i nie zawierają podpowiedzi ani wartości modelu.

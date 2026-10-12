@@ -30,7 +30,8 @@ internal sealed class LiteBookmarkStore
         string itemId,
         string itemTitle,
         TimeSpan position,
-        DateTime utcNow)
+        DateTime utcNow,
+        string? name = null)
     {
         if (string.IsNullOrWhiteSpace(itemId))
             throw new LiteRequestException("Bieżący plik nie ma identyfikatora Biblioteki.");
@@ -49,6 +50,7 @@ internal sealed class LiteBookmarkStore
         var roundedTicks = TimeSpan.FromSeconds(
             Math.Round(Math.Max(0d, position.TotalSeconds))).Ticks;
         var createdTicks = utcNow.ToUniversalTime().Ticks;
+        var normalizedName = NormalizeName(name);
         lock (_gate)
         {
             using var connection = new SqliteConnection(new SqliteConnectionStringBuilder
@@ -67,7 +69,7 @@ internal sealed class LiteBookmarkStore
             using var existing = connection.CreateCommand();
             existing.Transaction = transaction;
             existing.CommandText = """
-                SELECT id, position_ticks
+                SELECT id, position_ticks, name
                 FROM bookmarks
                 WHERE session_id = 'local' COLLATE NOCASE
                   AND item_id = $item_id
@@ -81,22 +83,41 @@ internal sealed class LiteBookmarkStore
             existing.Parameters.AddWithValue("$tolerance", TicksPerSecond);
             string? existingId = null;
             long existingTicks = 0;
+            var existingName = string.Empty;
             using (var reader = existing.ExecuteReader())
             {
                 if (reader.Read())
                 {
                     existingId = reader.GetString(0);
                     existingTicks = reader.GetInt64(1);
+                    existingName = reader.GetString(2);
                 }
             }
             if (existingId is not null)
             {
+                var nameChanged = normalizedName.Length > 0
+                    && !string.Equals(
+                        existingName,
+                        normalizedName,
+                        StringComparison.CurrentCulture);
+                if (nameChanged)
+                {
+                    using var rename = connection.CreateCommand();
+                    rename.Transaction = transaction;
+                    rename.CommandText = "UPDATE bookmarks SET name = $name WHERE id = $id;";
+                    rename.Parameters.AddWithValue("$name", normalizedName);
+                    rename.Parameters.AddWithValue("$id", existingId);
+                    rename.ExecuteNonQuery();
+                    existingName = normalizedName;
+                }
                 transaction.Commit();
                 return new
                 {
                     added = false,
+                    nameChanged,
                     bookmarkId = existingId,
-                    positionSeconds = TimeSpan.FromTicks(existingTicks).TotalSeconds
+                    positionSeconds = TimeSpan.FromTicks(existingTicks).TotalSeconds,
+                    name = existingName
                 };
             }
 
@@ -118,12 +139,13 @@ internal sealed class LiteBookmarkStore
                     chapter_origin, chapter_source_id)
                 VALUES(
                     $id, $ordinal, 'local', 'Pliki lokalne', $item_id, $item_title,
-                    '', $position_ticks, $created_ticks, 1, 0, NULL);
+                    $name, $position_ticks, $created_ticks, 1, 0, NULL);
                 """;
             insert.Parameters.AddWithValue("$id", bookmarkId);
             insert.Parameters.AddWithValue("$ordinal", ordinal);
             insert.Parameters.AddWithValue("$item_id", itemId);
             insert.Parameters.AddWithValue("$item_title", itemTitle);
+            insert.Parameters.AddWithValue("$name", normalizedName);
             insert.Parameters.AddWithValue("$position_ticks", roundedTicks);
             insert.Parameters.AddWithValue("$created_ticks", createdTicks);
             insert.ExecuteNonQuery();
@@ -131,10 +153,23 @@ internal sealed class LiteBookmarkStore
             return new
             {
                 added = true,
+                nameChanged = false,
                 bookmarkId,
-                positionSeconds = TimeSpan.FromTicks(roundedTicks).TotalSeconds
+                positionSeconds = TimeSpan.FromTicks(roundedTicks).TotalSeconds,
+                name = normalizedName
             };
         }
+    }
+
+    private static string NormalizeName(string? name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return string.Empty;
+        var normalized = string.Join(
+            ' ',
+            name.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+        return normalized.Length <= 200
+            ? normalized
+            : normalized[..200].TrimEnd();
     }
 
     /// <summary>

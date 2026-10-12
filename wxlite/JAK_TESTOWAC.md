@@ -15,7 +15,7 @@ Odbiór docelowego launchera:
 
 Aktualna, automatycznie zweryfikowana paczka znajduje się w:
 
-`D:\Projekty Codex\AMC - integracja wxPython\.test-output\AMC-Python-radio-export-20261013\AMC.exe`
+`D:\Projekty Codex\AMC - integracja wxPython\.test-output\AMC-Python-named-bookmarks-20261013\AMC.exe`
 
 Nie przełączaj na nią programu w czasie trwającego nagrywania. Pierwszy żywy
 odbiór wykonaj kolejno według punktów poniżej.
@@ -62,8 +62,13 @@ odpytywanego stanu Radia. Plik iCloud lub OneDrive oznaczony „zawsze zachowuj
 na tym urządzeniu” ma dać się zaznaczyć i edytować bez fałszywego żądania
 pobrania. `Alt+Page Up` i `Alt+Page Down` przechodzą po granicach fragmentu,
 natomiast `Shift+Page Up` i `Shift+Page Down` przechodzą po zapisanych
-zakładkach. `B` dodaje szybką zakładkę, `Ctrl+B` otwiera zakładki bieżącego
-pliku, a `Ctrl+Shift+B` wszystkie zakładki.
+zakładkach. `B` dodaje szybką zakładkę, a `Ctrl+B` otwiera zbiorczą listę
+wszystkich zakładek. `Ctrl+Shift+B` jest zależne od miejsca: na liście otwiera
+zakładki zaznaczonego pliku, a w odtwarzaczu otwiera pole „Nazwa zakładki”.
+Wpisz nazwę, zatwierdź Enterem i sprawdź trzy komunikaty: dodanie nowej,
+nadanie nazwy istniejącej szybkiej zakładce oraz informację o istniejącej już
+nazwanej zakładce. Anuluj dialog klawiszem Escape i potwierdź powrót fokusu do
+odtwarzacza bez zapisu.
 
 Plik `AMC-Python-Updater.exe` służy obecnie do bezpiecznego zastosowania
 przygotowanej paczki z pełnym manifestem SHA-256. Nie uruchamiaj go ręcznie na

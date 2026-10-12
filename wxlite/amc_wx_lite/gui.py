@@ -6474,6 +6474,8 @@ class LiteFrame(wx.Frame):
             self._toggle_mute()
         elif action is Action.ADD_BOOKMARK:
             self._add_bookmark()
+        elif action is Action.ADD_NAMED_BOOKMARK:
+            self._add_bookmark(named=True)
         elif action in (Action.PREVIOUS_BOOKMARK, Action.NEXT_BOOKMARK):
             self._navigate_bookmark(action is Action.NEXT_BOOKMARK)
         elif action is Action.CLIP_MARK_START:
@@ -10386,8 +10388,8 @@ class LiteFrame(wx.Frame):
 
         submit(False)
 
-    def _add_bookmark(self) -> None:
-        """B w odtwarzaczu: szybka zakladka przez waski zapis hosta C#."""
+    def _add_bookmark(self, *, named: bool = False) -> None:
+        """Dodaj szybka albo nazwana zakladke przez waski zapis hosta C#."""
         if self.navigator.active is not SessionId.FILES:
             self.announcer.say(
                 "Zakładki w tej sesji nie są jeszcze dostępne w tej wersji"
@@ -10403,10 +10405,42 @@ class LiteFrame(wx.Frame):
             self.announcer.say("Silnik nie działa, nie mogę dodać zakładki")
             return
 
+        name: str | None = None
+        if named:
+            with RenameItemDialog(
+                self,
+                title="Dodaj nazwaną zakładkę",
+                prompt="&Nazwa zakładki:",
+                field_name="Nazwa zakładki",
+                value="",
+                help_text=(
+                    "Nazwa opisuje bieżące miejsce w odtwarzanym pliku."
+                ),
+            ) as dialog:
+                if dialog.ShowModal() != wx.ID_OK:
+                    return
+                name = dialog.value
+            if not name:
+                self.announcer.say("Nazwa zakładki nie może być pusta")
+                return
+
         def done(payload: dict) -> None:
             seconds = float((payload or {}).get("positionSeconds") or 0.0)
             position = format_duration(seconds)
-            if (payload or {}).get("added"):
+            stored_name = str((payload or {}).get("name") or name or "").strip()
+            if named and (payload or {}).get("added"):
+                self.announcer.say(
+                    f"Dodano zakładkę {stored_name}: {position}"
+                )
+            elif named and (payload or {}).get("nameChanged"):
+                self.announcer.say(
+                    f"Nadano nazwę zakładce {stored_name}: {position}"
+                )
+            elif named:
+                self.announcer.say(
+                    f"Zakładka {stored_name} już istnieje: {position}"
+                )
+            elif (payload or {}).get("added"):
                 self.announcer.say(f"Dodano zakładkę: {position}")
             else:
                 self.announcer.say(f"Zakładka już istnieje: {position}")
@@ -10416,6 +10450,7 @@ class LiteFrame(wx.Frame):
             lambda: client.add_bookmark(
                 item_id=item_id,
                 item_title=state.now_playing_title or item_id,
+                name=name,
             ),
             done,
             lambda error: self.announcer.say(f"Nie można dodać zakładki: {error}"),
