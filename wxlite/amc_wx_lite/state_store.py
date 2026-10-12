@@ -24,6 +24,7 @@ from .profile_presets import read_preset_overrides
 from .radio_activity import normalize_state_position
 from .radio_recognition import normalize_scope, read_tracks
 from .radio_schedule_settings import read_schedule_overrides
+from .transport_parity import normalize_custom_seek_seconds
 
 
 _PODCAST_INBOX_SORT_MODES = {"AddedNewest", "Alphabetical", "Custom"}
@@ -153,6 +154,9 @@ class Options:
     #: z profilu głównego AMC; zapis okna ustawień tworzy już jawny wybór
     #: należący do samodzielnej wersji wxPython.
     keep_audio_edit_backups: bool | None = None
+    #: Dłuższy przeskok Ctrl+Alt+strzałką. ``None`` dziedziczy dotychczasową
+    #: wartość z profilu głównego AMC do pierwszego zapisu nowych ustawień.
+    custom_seek_seconds: int | None = None
     #: Prywatne nadpisania ustawien nagrywania. ``None`` oznacza dalsze
     #: dziedziczenie wartosci z profilu glownego AMC; pusty folder oznacza
     #: swiadomy wybor systemowego folderu domyslnego hosta.
@@ -223,6 +227,13 @@ class Options:
             and type(self.keep_audio_edit_backups) is not bool
         ):
             self.keep_audio_edit_backups = None
+        if self.custom_seek_seconds is not None:
+            if type(self.custom_seek_seconds) is int:
+                self.custom_seek_seconds = normalize_custom_seek_seconds(
+                    self.custom_seek_seconds
+                )
+            else:
+                self.custom_seek_seconds = None
         if self.radio_recording_format is not None:
             formats = ("Mp3", "Aac", "Flac", "Original", "Wav")
             value = str(self.radio_recording_format).strip().casefold()

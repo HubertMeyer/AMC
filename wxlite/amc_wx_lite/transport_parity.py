@@ -57,6 +57,7 @@ Czego tu NIE ma, swiadomie
 from __future__ import annotations
 
 import json
+import math
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Mapping
@@ -78,7 +79,7 @@ CUSTOM_SEEK_MAX_SECONDS = 1800
 TRACK_END_MARGIN_SECONDS = 10
 
 #: ``AppSettings.cs:291`` -- gotowe propozycje w oknie ustawien.
-SUGGESTED_CUSTOM_SEEK_SECONDS = (15, 30, 60, 120, 300, 600)
+SUGGESTED_CUSTOM_SEEK_SECONDS = (15, 30, 60, 120, 180, 300, 600, 900, 1800)
 
 #: Krok w sekundach dla kazdej komendy przewijania oryginalu.
 #: ``MainWindow.xaml.cs:21583-21590`` / ``22387-22394`` wiaza z nimi klawisze,
@@ -108,6 +109,79 @@ def normalize_custom_seek_seconds(seconds: int | None) -> int:
     except (TypeError, ValueError):
         return CUSTOM_SEEK_DEFAULT_SECONDS
     return max(CUSTOM_SEEK_MIN_SECONDS, min(CUSTOM_SEEK_MAX_SECONDS, value))
+
+
+def resolve_custom_seek_seconds(
+    override: int | None,
+    inherited: int | None,
+) -> int:
+    """Prywatny wybór wxPython albo dotychczasowa wartość profilu AMC."""
+    return normalize_custom_seek_seconds(
+        override if type(override) is int else inherited
+    )
+
+
+def parse_custom_seek_length(text: str | None) -> int | None:
+    """Czytaj długość tak samo jak ``PlaybackSeekRules.TryParseSeekLength``.
+
+    Sama liczba oznacza minuty. Akceptowane są też sekundy z jednostką oraz
+    zapis ``minuty:sekundy``. ``None`` oznacza błąd, nigdy ciche wyzerowanie.
+    """
+    if not isinstance(text, str) or not text.strip():
+        return None
+    value = text.strip().casefold().replace(",", ".")
+    colon = value.find(":")
+    if colon > 0:
+        minute_part = value[:colon].strip()
+        second_part = value[colon + 1 :].strip()
+        try:
+            minutes = int(minute_part)
+            seconds = int(second_part)
+        except ValueError:
+            return None
+        if minutes < 0 or seconds < 0 or seconds > 59:
+            return None
+        return normalize_custom_seek_seconds(minutes * 60 + seconds)
+
+    digit_count = 0
+    for character in value:
+        if character.isdigit() or character == ".":
+            digit_count += 1
+        else:
+            break
+    if digit_count == 0:
+        return None
+    try:
+        number = float(value[:digit_count])
+    except ValueError:
+        return None
+    unit = value[digit_count:].strip()
+    if unit.startswith("s"):
+        in_seconds = number
+    elif not unit or unit.startswith("m"):
+        in_seconds = number * 60
+    else:
+        return None
+    if not math.isfinite(in_seconds) or in_seconds <= 0:
+        return None
+    return normalize_custom_seek_seconds(int(round(in_seconds)))
+
+
+def describe_custom_seek_length(seconds: int) -> str:
+    """Celowa polska etykieta czasu do pola ustawień i listy wyboru."""
+    value = normalize_custom_seek_seconds(seconds)
+    if value % 60:
+        return f"{value} {_polish_time_unit(value, 'sekundę', 'sekundy', 'sekund')}"
+    minutes = value // 60
+    return f"{minutes} {_polish_time_unit(minutes, 'minutę', 'minuty', 'minut')}"
+
+
+def _polish_time_unit(value: int, one: str, few: str, many: str) -> str:
+    if value == 1:
+        return one
+    last_two = value % 100
+    last = value % 10
+    return few if not 12 <= last_two <= 14 and 2 <= last <= 4 else many
 
 
 def seek_step_seconds(action: Action | None, *, custom_seconds: int) -> int | None:

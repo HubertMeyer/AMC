@@ -167,13 +167,17 @@ from . import radio_recognition
 from .transport_parity import (
     PLAYBACK_RATE_MAX,
     PLAYBACK_RATE_MIN,
+    SUGGESTED_CUSTOM_SEEK_SECONDS,
     TRACK_END_MARGIN_SECONDS,
     MessagePolicy,
     clamp_playback_rate,
+    describe_custom_seek_length,
     format_clock,
     format_playback_rate,
     load_message_policy,
     next_playback_rate,
+    parse_custom_seek_length,
+    resolve_custom_seek_seconds,
     seek_percent_value,
     seek_step_seconds,
     time_announcement,
@@ -3130,6 +3134,7 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
         wake_scheduled_recordings: bool,
         podcast_settings: PodcastGlobalSettings,
         keep_audio_edit_backups: bool,
+        custom_seek_seconds: int,
     ) -> None:
         super().__init__(parent, title="Ustawienia", size=(720, 620))
         self.notebook = wx.Notebook(self)
@@ -3197,6 +3202,33 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
             self.keep_audio_edit_backups,
         ):
             general_layout.Add(control, 0, wx.BOTTOM | wx.EXPAND, 10)
+
+        custom_seek_label = wx.StaticText(
+            general,
+            label="Dłuższy przeskok pod Ctrl+Alt+strzałką w &lewo i w prawo:",
+        )
+        self._custom_seek_seconds = custom_seek_seconds
+        self.custom_seek = wx.ComboBox(
+            general,
+            choices=[
+                describe_custom_seek_length(value)
+                for value in SUGGESTED_CUSTOM_SEEK_SECONDS
+            ],
+            style=wx.CB_DROPDOWN,
+        )
+        self.custom_seek.SetName(
+            "Długość przeskoku pod Ctrl+Alt+strzałką w lewo i w prawo"
+        )
+        if custom_seek_seconds in SUGGESTED_CUSTOM_SEEK_SECONDS:
+            self.custom_seek.SetSelection(
+                SUGGESTED_CUSTOM_SEEK_SECONDS.index(custom_seek_seconds)
+            )
+        else:
+            self.custom_seek.SetValue(
+                describe_custom_seek_length(custom_seek_seconds)
+            )
+        general_layout.Add(custom_seek_label, 0, wx.BOTTOM, 4)
+        general_layout.Add(self.custom_seek, 0, wx.BOTTOM | wx.EXPAND, 10)
 
         audio_heading = wx.StaticText(
             general, label="Przetwarzanie dźwięku"
@@ -3623,6 +3655,7 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
             save.SetLabel("&Zapisz")
             save.SetName("Zapisz ustawienia")
             save.SetDefault()
+        self.Bind(wx.EVT_BUTTON, self._on_save, id=wx.ID_OK)
         outer = wx.BoxSizer(wx.VERTICAL)
         outer.Add(self.notebook, 1, wx.ALL | wx.EXPAND, 12)
         outer.Add(buttons, 0, wx.ALL | wx.ALIGN_RIGHT, 12)
@@ -3645,6 +3678,23 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
         finally:
             dialog.Destroy()
         self.recording_folder.SetFocus()
+
+    def _on_save(self, event: wx.CommandEvent) -> None:
+        parsed = parse_custom_seek_length(self.custom_seek.GetValue())
+        if parsed is None:
+            wx.MessageBox(
+                "Długość przeskoku musi być podana w minutach albo sekundach, "
+                "na przykład: 5 minut, 90 sekund lub 1:30. "
+                "Dopuszczalny zakres to od 5 sekund do 30 minut.",
+                "Nie zapisano ustawień",
+                wx.OK | wx.ICON_WARNING,
+                parent=self,
+            )
+            self.custom_seek.SetFocus()
+            self.custom_seek.SetSelection(-1, -1)
+            return
+        self._custom_seek_seconds = parsed
+        event.Skip()
 
     def _on_default_recording_folder(self, _event: wx.CommandEvent) -> None:
         self._recording_folder_value = ""
@@ -3699,6 +3749,7 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
                 self.pause_output_fallback.GetValue()
             ),
             "keep_audio_edit_backups": self.keep_audio_edit_backups.GetValue(),
+            "custom_seek_seconds": self._custom_seek_seconds,
             "loudness_normalization": self.loudness.GetValue(),
             "smooth_track_transitions": self.smooth.GetValue(),
             "inter_track_silence_ms": self._silence_values[
@@ -3774,6 +3825,10 @@ class LiteFrame(wx.Frame):
         # Przelaczniki komunikatow i czas wlasny z PRAWDZIWEGO profilu AMC.
         # Tylko odczyt: wlascicielem state.json zostaje host C#.
         self.messages: MessagePolicy = load_message_policy(self.layout)
+        self.messages.custom_seek_seconds = resolve_custom_seek_seconds(
+            self.options.custom_seek_seconds,
+            self.messages.custom_seek_seconds,
+        )
         self.radio = RadioSource(self.layout)
         self._radio_snapshot = LiteFrame._with_radio_recording_options(
             self, self.radio.load()
@@ -11012,6 +11067,10 @@ class LiteFrame(wx.Frame):
                 "Nie można odczytać poprzedniego ustawienia kopii po edycji. "
                 "Wybrano zachowywanie kopii"
             )
+        custom_seek_seconds = resolve_custom_seek_seconds(
+            self.options.custom_seek_seconds,
+            self.messages.custom_seek_seconds,
+        )
         dialog = GeneralPlaybackOptionsDialog(
             self,
             self.options,
@@ -11019,6 +11078,7 @@ class LiteFrame(wx.Frame):
             effective_wake,
             podcast_settings,
             keep_audio_edit_backups,
+            custom_seek_seconds,
         )
         chosen: dict[str, object] | None = None
         try:
@@ -11044,6 +11104,10 @@ class LiteFrame(wx.Frame):
             return
         self._radio_snapshot = LiteFrame._with_radio_recording_options(
             self, self._radio_snapshot
+        )
+        self.messages.custom_seek_seconds = resolve_custom_seek_seconds(
+            self.options.custom_seek_seconds,
+            self.messages.custom_seek_seconds,
         )
         # Komunikaty wierszy zmieniaja sie od razu. Nowe preferencje
         # nagrywania trafia do kolejnego Ctrl+R i nastepnej synchronizacji

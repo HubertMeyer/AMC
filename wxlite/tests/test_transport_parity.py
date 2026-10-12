@@ -112,6 +112,7 @@ from amc_wx_lite.transport_parity import (
     CUSTOM_SEEK_MAX_SECONDS,
     CUSTOM_SEEK_MIN_SECONDS,
     PLAYBACK_RATES,
+    SUGGESTED_CUSTOM_SEEK_SECONDS,
     MessagePolicy,
     PercentAnnouncement,
     format_clock,
@@ -119,6 +120,9 @@ from amc_wx_lite.transport_parity import (
     load_message_policy,
     next_playback_rate,
     normalize_custom_seek_seconds,
+    describe_custom_seek_length,
+    parse_custom_seek_length,
+    resolve_custom_seek_seconds,
     seek_percent_value,
     seek_step_seconds,
     time_announcement,
@@ -220,6 +224,31 @@ def test_custom_seek_seconds_respect_the_original_range() -> None:
     assert normalize_custom_seek_seconds(4) == 5
     assert normalize_custom_seek_seconds(300) == 300
     assert normalize_custom_seek_seconds(9999) == 1800
+
+
+def test_custom_seek_suggestions_and_labels_match_full_amc() -> None:
+    assert SUGGESTED_CUSTOM_SEEK_SECONDS == (
+        15, 30, 60, 120, 180, 300, 600, 900, 1800
+    )
+    assert describe_custom_seek_length(15) == "15 sekund"
+    assert describe_custom_seek_length(60) == "1 minutę"
+    assert describe_custom_seek_length(120) == "2 minuty"
+    assert describe_custom_seek_length(300) == "5 minut"
+
+
+def test_custom_seek_parser_accepts_minutes_seconds_and_clock_notation() -> None:
+    assert parse_custom_seek_length("5") == 300
+    assert parse_custom_seek_length("5 minut") == 300
+    assert parse_custom_seek_length("90 sekund") == 90
+    assert parse_custom_seek_length("1:30") == 90
+    assert parse_custom_seek_length("0,5 min") == 30
+    assert parse_custom_seek_length("nie wiem") is None
+    assert parse_custom_seek_length("1:70") is None
+
+
+def test_private_custom_seek_override_wins_over_inherited_profile_value() -> None:
+    assert resolve_custom_seek_seconds(None, 600) == 600
+    assert resolve_custom_seek_seconds(120, 600) == 120
 
 
 def test_arrows_on_the_list_still_belong_to_the_native_control() -> None:

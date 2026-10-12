@@ -73,6 +73,17 @@ def test_invalid_audio_edit_backup_choice_returns_to_inherited_value() -> None:
     assert Options(keep_audio_edit_backups="tak").clamp().keep_audio_edit_backups is None  # type: ignore[arg-type]
 
 
+def test_round_trip_keeps_and_clamps_private_custom_seek_length() -> None:
+    store, _ = temp_store()
+    store.save(LiteState(options=Options(custom_seek_seconds=9999)))
+
+    assert store.load().options.custom_seek_seconds == 1800
+
+
+def test_invalid_custom_seek_type_returns_to_inherited_value() -> None:
+    assert Options(custom_seek_seconds="pięć").clamp().custom_seek_seconds is None  # type: ignore[arg-type]
+
+
 def test_round_trip_keeps_radio_activity_presentation_options() -> None:
     store, _ = temp_store()
     state = LiteState(options=Options(
