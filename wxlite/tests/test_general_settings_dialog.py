@@ -22,6 +22,8 @@ def test_settings_have_real_native_pages_and_explicit_accessible_names() -> None
     assert '"Długość przeskoku pod Ctrl+Alt+strzałką w lewo i w prawo"' in source
     assert 'self.global_transient_previews.SetName(' in source
     assert '"Wspólne podglądy nagrywania i nowych odcinków we wszystkich sesjach"' in source
+    assert 'self.remember_local_playback_positions.SetName(' in source
+    assert '"Pamiętaj pozycję odtwarzania lokalnych plików"' in source
 
 
 def test_enter_save_has_one_short_confirmation_and_reconfigures_the_host() -> None:
@@ -48,6 +50,7 @@ def test_all_exposed_choices_use_intentional_user_facing_labels() -> None:
     assert '"keep_audio_edit_backups": self.keep_audio_edit_backups.GetValue()' in source
     assert '"custom_seek_seconds": self._custom_seek_seconds' in source
     assert '"global_transient_previews": self.global_transient_previews.GetValue()' in source
+    assert '"remember_local_playback_positions": (' in source
     assert 'self.recording_folder.SetName("Domyślny folder nagrywania radia")' in source
     assert 'self.recording_folder_mode.SetName("Położenie nagrań Radia")' in source
     assert '"Ten sam folder co pobieranie Podcastów"' in source
@@ -96,3 +99,11 @@ def test_global_preview_setting_gates_shortcuts_before_session_specific_code() -
     tidal = dispatch.index("self.navigator.active is SessionId.TIDAL")
     assert gate < tidal
     assert source.count("self._global_transient_previews = resolve_global_transient_previews(") == 2
+
+
+def test_local_resume_setting_reaches_start_save_and_background_checkpoint() -> None:
+    source = SOURCE.read_text(encoding="utf-8")
+    assert source.count("self._remember_local_playback_positions = (") == 2
+    assert source.count("client.configure_local_resume(") == 2
+    assert "self._checkpoint_local_if_due()" in source
+    assert '"local-checkpoint"' in source

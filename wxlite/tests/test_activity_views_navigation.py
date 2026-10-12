@@ -226,7 +226,9 @@ def test_history_row_plays_through_the_normal_path() -> None:
     out = nav.activate_selected()
     play = next(i for i in out if isinstance(i, PlayTrack))
     assert play.path == "C:\\m\\Alfa.mp3"
-    assert play.position_seconds == 0.0
+    # Brak jawnej pozycji pozwala hostowi wznowić plik z profilu. To nie jest
+    # to samo co zakładka na 0, która wysyła świadome ``0.0``.
+    assert play.position_seconds is None
     assert nav.session.view is View.PLAYER
 
 

@@ -114,6 +114,11 @@ internal static class QueuePersistenceTests
             JAWNYtrybPOZYCJInadpisujeWYLACZONEtlo();
             NajblizszeZrodloInheritSchodziDoSesjiJakOryginal();
             STATUSpodajeCzasWznowieniaDlaOkna();
+            BezposredniPlikZapisujeIWznawiaPoSciezce();
+            BezposredniNaturalnyKoniecZerujePozycje();
+            NadpisanieGlobalneWxPythonWylaczaBezposrednieWznowienie();
+            JawnyTrybPozycjiWygrywaZNadpisaniemWxPython();
+            NadpisanieWxPythonPrzeliczaJuzWczytanaKolejke();
             CheckpointPozycjiNIEruszaPOZOSTALYCHtabel();
             OdmowaZapisuPozycjiNIEudajePowodzenia();
             Console.WriteLine("QueuePersistenceTests: OK");
@@ -1277,6 +1282,100 @@ internal static class QueuePersistenceTests
             $"status oddaje czas wznowienia 11,25 s; dostal {status.ResumeSeconds}");
         Assert.True(!status.Playing && !status.Paused,
             "sam odczyt statusu NIE zaczyna grac");
+    }
+
+    private static void BezposredniPlikZapisujeIWznawiaPoSciezce()
+    {
+        var profile = NewProfile("bezposredni-wznowienie");
+        var path = MediaPath(profile, "A");
+        var position = TimeSpan.FromSeconds(13.75);
+
+        using (var first = LiteQueueStore.Open(profile, writable: true))
+        {
+            var queue = new LiteQueueCoordinator(new SilentOutput(), first);
+            Assert.True(queue.SaveDirectResume("file:" + path, path, position),
+                "bezposredni plik zapisuje pozycje po dopasowaniu sciezki");
+        }
+
+        using var second = LiteQueueStore.Open(profile, writable: true);
+        var restored = new LiteQueueCoordinator(new SilentOutput(), second);
+        var target = restored.PrepareDirectResume("file:" + path, path, restorePosition: true);
+        Assert.Equal("file:A", target.ItemId,
+            "techniczne file:path zostalo zastapione stabilnym Id Biblioteki");
+        Assert.True(Math.Abs((target.Position - position).TotalMilliseconds) < 1d,
+            $"bezposredni plik wraca do zapisanej pozycji; dostal {target.Position}");
+    }
+
+    private static void BezposredniNaturalnyKoniecZerujePozycje()
+    {
+        var profile = NewProfile("bezposredni-koniec");
+        var path = MediaPath(profile, "B");
+
+        using var store = LiteQueueStore.Open(profile, writable: true);
+        var queue = new LiteQueueCoordinator(new SilentOutput(), store);
+        queue.SaveDirectResume("file:B", path, TimeSpan.FromSeconds(18));
+        queue.SaveDirectResume("file:B", path, TimeSpan.Zero, completed: true);
+
+        var target = queue.PrepareDirectResume("file:B", path, restorePosition: true);
+        Assert.True(target.Position == TimeSpan.Zero,
+            "naturalny koniec usuwa stary punkt wznowienia");
+        using var verify = Connect(Path.Combine(profile, LiteQueueStore.LibraryFileName));
+        Assert.True(
+            Scalar(verify, "SELECT resume_position_ticks FROM local_items WHERE id = 'file:B';") == 0,
+            "naturalny koniec zapisuje ZERO w prawdziwej kolumnie profilu");
+    }
+
+    private static void NadpisanieGlobalneWxPythonWylaczaBezposrednieWznowienie()
+    {
+        var profile = NewProfile("bezposredni-globalnie-wylaczony");
+        var path = MediaPath(profile, "C");
+
+        using var store = LiteQueueStore.Open(profile, writable: true);
+        var queue = new LiteQueueCoordinator(new SilentOutput(), store);
+        queue.ConfigureRememberGlobally(false);
+        queue.SaveDirectResume("file:C", path, TimeSpan.FromSeconds(21));
+
+        var target = queue.PrepareDirectResume("file:C", path, restorePosition: true);
+        Assert.True(target.Position == TimeSpan.Zero,
+            "jawne ustawienie wxPython wylacza dziedziczaca pozycje");
+    }
+
+    private static void JawnyTrybPozycjiWygrywaZNadpisaniemWxPython()
+    {
+        var profile = NewProfile("bezposredni-jawny-tryb");
+        var path = MediaPath(profile, "A");
+        using (var seed = Connect(Path.Combine(profile, LiteQueueStore.LibraryFileName)))
+        {
+            Execute(seed, "UPDATE local_items SET resume_mode = 1 WHERE id = 'file:A';");
+        }
+
+        using var store = LiteQueueStore.Open(profile, writable: true);
+        var queue = new LiteQueueCoordinator(new SilentOutput(), store);
+        queue.ConfigureRememberGlobally(false);
+        queue.SaveDirectResume("file:A", path, TimeSpan.FromSeconds(8.5));
+
+        var target = queue.PrepareDirectResume("file:A", path, restorePosition: true);
+        Assert.True(Math.Abs(target.Position.TotalSeconds - 8.5) < 0.01,
+            "jawny Remember na pozycji nadal wygrywa z globalnym wylaczeniem");
+    }
+
+    private static void NadpisanieWxPythonPrzeliczaJuzWczytanaKolejke()
+    {
+        var profile = NewProfile("kolejka-przeliczona-po-konfiguracji");
+        SeedQueueAndPosition(profile, "file:A", TimeSpan.FromSeconds(6.25));
+
+        using var store = LiteQueueStore.Open(profile, writable: true);
+        var output = new SilentOutput();
+        var queue = new LiteQueueCoordinator(output, store);
+        Assert.True(queue.Status().ResumeSeconds > 6d,
+            "profilowy czas jest znany przed konfiguracja wxPython");
+
+        queue.ConfigureRememberGlobally(false);
+        Assert.True(queue.Status().ResumeSeconds == 0d,
+            "zmiana ustawienia przelicza juz wczytana kolejke");
+        queue.PlayAt(Args("""{"itemId":"file:A","volume":0}"""));
+        Assert.True(output.Plays[0].Position == TimeSpan.Zero,
+            "pierwszy Enter po konfiguracji gra od poczatku");
     }
 
     // ------------------------------------------------------------- narzedzia

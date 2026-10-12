@@ -181,6 +181,19 @@ internal sealed class LiteEngineHandlers : IDisposable
                 }
                 TrySavePodcastProgress(e.Item.Id, TimeSpan.Zero, duration, completed: true);
             }
+            else if (!_queue.OwnsCurrent(e.Item.Id))
+            {
+                // Bezposredni lokalny plik zakonczony naturalnie nie moze
+                // wrocic przy kolejnym Enterze na stary, koncowy czas.
+                if (!string.IsNullOrWhiteSpace(e.Item.Source))
+                {
+                    _queue.SaveDirectResume(
+                        e.Item.Id,
+                        e.Item.Source,
+                        TimeSpan.Zero,
+                        completed: true);
+                }
+            }
             // Czy kolejka poprowadzi dalej? Pytamy PRZED ogloszeniem konca, zeby
             // okno nie mowilo "Koniec utworu" w chwili, gdy zaraz zacznie grac
             // nastepna pozycja. Samo pytanie nic nie zmienia w kolejce.
@@ -321,6 +334,9 @@ internal sealed class LiteEngineHandlers : IDisposable
             ["transport.setRate"] = (request, _) => SetRate(request.Args),
             ["transport.status"] = (request, _) => Status(request.Args),
             ["podcast.checkpoint"] = (_, _) => SaveCurrentPodcastProgress(),
+            ["local.checkpoint"] = (_, _) => SaveCurrentLocalResume(),
+            ["local.resumeConfigure"] = (request, _) =>
+                ConfigureLocalResume(request.Args),
             [LitePodcastRefreshCoordinator.Operation] = (request, _) =>
                 RefreshPodcasts(request.Args),
             [LitePodcastRefreshCoordinator.AutomaticOperation] = (_, _) =>
@@ -992,6 +1008,7 @@ internal sealed class LiteEngineHandlers : IDisposable
     private object QueuePlayAt(JsonElement args, LiteEventSink events)
     {
         _events = events;
+        TrySaveCurrentLocalResume();
         ConfigureOutputForSession("files");
         lock (_gate)
         {
@@ -1019,6 +1036,7 @@ internal sealed class LiteEngineHandlers : IDisposable
     private object QueueRelative(int direction, LiteEventSink events)
     {
         _events = events;
+        TrySaveCurrentLocalResume();
         ConfigureOutputForSession("files");
         if (!_queue.PlayRelative(direction))
         {
@@ -1452,13 +1470,23 @@ internal sealed class LiteEngineHandlers : IDisposable
         var path = LiteArgs.RequirePath(args, "path");
         if (!File.Exists(path)) throw new LiteRequestException($"Nie znaleziono pliku: {path}");
         TrySaveCurrentPodcastProgress();
+        TrySaveCurrentLocalResume();
 
-        var position = TimeSpan.FromSeconds(LiteArgs.ReadDouble(args, "positionSeconds", 0d, 0d, 86_400d));
+        var requestedId = LiteArgs.ReadText(args, "id") ?? "file:" + path;
+        var hasExplicitPosition = args.TryGetProperty("positionSeconds", out _);
+        var prepared = _queue.PrepareDirectResume(
+            requestedId,
+            path,
+            restorePosition: !hasExplicitPosition);
+        var position = hasExplicitPosition
+            ? TimeSpan.FromSeconds(LiteArgs.ReadDouble(
+                args, "positionSeconds", 0d, 0d, 86_400d))
+            : prepared.Position;
         var volume = LiteArgs.ReadInt(args, "volume", _filesVolume, 0, 100);
         var rate = LiteArgs.ReadDouble(args, "rate", _filesRate, 0.5d, 2.0d);
         var item = new MediaItem
         {
-            Id = "file:" + path,
+            Id = prepared.ItemId,
             Title = LiteArgs.ReadText(args, "title") ?? Path.GetFileNameWithoutExtension(path),
             Kind = MediaItemKind.Track,
             Source = path
@@ -1512,6 +1540,7 @@ internal sealed class LiteEngineHandlers : IDisposable
                 throw new LiteRequestException("Nie znaleziono pliku materiału.");
         }
         TrySaveCurrentPodcastProgress();
+        TrySaveCurrentLocalResume();
 
         var position = TimeSpan.FromSeconds(LiteArgs.ReadDouble(
             args, "positionSeconds", 0d, 0d, 604_800d));
@@ -1661,6 +1690,8 @@ internal sealed class LiteEngineHandlers : IDisposable
             };
         }
 
+        object result;
+        var saveLocalResume = false;
         lock (_gate)
         {
             if (target.Engine == "radio")
@@ -1707,7 +1738,8 @@ internal sealed class LiteEngineHandlers : IDisposable
                 _filesPaused = true;
                 _files.Pause();
             }
-            return new
+            saveLocalResume = track.Kind == MediaItemKind.Track;
+            result = new
             {
                 paused = _filesPaused,
                 engine = "files",
@@ -1715,6 +1747,8 @@ internal sealed class LiteEngineHandlers : IDisposable
                 queue = false
             };
         }
+        if (saveLocalResume) TrySaveCurrentLocalResume();
+        return result;
     }
 
     /// <summary>
@@ -1830,6 +1864,7 @@ internal sealed class LiteEngineHandlers : IDisposable
 
         // Bezposrednie odtwarzanie: zatrzymanie konczy tez prowadzenie przez
         // kolejke, zeby stary koniec utworu jej nie przesunal.
+        TrySaveCurrentLocalResume();
         _queue.DetachFromDirectPlay();
         _files.Stop();
         lock (_gate)
@@ -1889,7 +1924,10 @@ internal sealed class LiteEngineHandlers : IDisposable
         // Przesuniecie czasu to ZDARZENIE WLASCICIELA: jesli transport prowadzi
         // kolejka, nowa pozycja ma trafic do punktu wznowienia. Koordynator sam
         // odrzuci czas, gdy material nie nalezy do kolejki.
-        if (engine == "files") _queue.NotePosition(target);
+        if (engine == "files")
+        {
+            if (!_queue.NotePosition(target)) TrySaveCurrentLocalResume();
+        }
         return new
         {
             engine,
@@ -2122,6 +2160,42 @@ internal sealed class LiteEngineHandlers : IDisposable
             episodeId,
             completed ? TimeSpan.Zero : _files.Position,
             duration,
+            completed);
+    }
+
+    private object ConfigureLocalResume(JsonElement args)
+    {
+        var remember = LiteArgs.ReadBool(args, "remember", true);
+        _queue.ConfigureRememberGlobally(remember);
+        return new { remember };
+    }
+
+    private object SaveCurrentLocalResume() => new
+    {
+        saved = TrySaveCurrentLocalResume(),
+        persistError = _queue.LastPersistError
+    };
+
+    /// <summary>
+    /// Zapis pozycji pliku granego WPROST, poza kolejka i poza Podcastami.
+    /// Pozycje kolejki i odcinkow maja wlasnych wlascicieli i nie wolno ich
+    /// zapisac drugi raz ta droga.
+    /// </summary>
+    private bool TrySaveCurrentLocalResume(bool completed = false)
+    {
+        MediaItem? item;
+        lock (_gate) item = _filesItem;
+        if (item is null
+            || item.Kind != MediaItemKind.Track
+            || _queue.OwnsCurrent(item.Id)
+            || string.IsNullOrWhiteSpace(item.Source))
+        {
+            return false;
+        }
+        return _queue.SaveDirectResume(
+            item.Id,
+            item.Source,
+            completed ? TimeSpan.Zero : _files.Position,
             completed);
     }
 
@@ -2465,6 +2539,7 @@ internal sealed class LiteEngineHandlers : IDisposable
         {
             if (_queue.OwnsCurrent(_filesItem?.Id)) _queue.NotePosition(_files.Position);
             _queue.SaveResumeCheckpoint();
+            TrySaveCurrentLocalResume();
             TrySaveCurrentPodcastProgress();
         }
         catch (Exception exception)

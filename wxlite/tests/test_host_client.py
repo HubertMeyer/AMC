@@ -149,6 +149,47 @@ def test_play_media_sends_stable_identity_source_and_resume_in_one_request() -> 
         client.close()
 
 
+def test_play_file_distinguishes_missing_position_from_explicit_zero() -> None:
+    client = make_client()
+    try:
+        inherited = client.play_file(
+            "C:/Muzyka/a.mp3",
+            item_id="local-a",
+            volume=35,
+            rate=1.0,
+        )
+        from_start = client.play_file(
+            "C:/Muzyka/a.mp3",
+            item_id="local-a",
+            volume=35,
+            rate=1.0,
+            position_seconds=0.0,
+        )
+        assert inherited["args"] == {
+            "path": "C:/Muzyka/a.mp3",
+            "id": "local-a",
+            "volume": 35,
+            "rate": 1.0,
+        }
+        assert from_start["args"]["positionSeconds"] == 0.0
+    finally:
+        client.close()
+
+
+def test_local_resume_uses_named_configuration_and_checkpoint_operations() -> None:
+    client = make_client()
+    try:
+        configured = client.configure_local_resume(False)
+        checkpoint = client.checkpoint_local()
+        assert configured == {
+            "op": "local.resumeConfigure",
+            "args": {"remember": False},
+        }
+        assert checkpoint == {"op": "local.checkpoint", "args": {}}
+    finally:
+        client.close()
+
+
 def test_local_transport_commands_name_the_session_explicitly() -> None:
     client = make_client()
     try:

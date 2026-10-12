@@ -326,21 +326,35 @@ class LiteHostClient:
         self,
         path: str,
         *,
+        item_id: str | None = None,
         volume: int,
         rate: float,
         title: str | None = None,
         position_seconds: float | None = None,
     ) -> Any:
-        args: dict[str, Any] = {"path": path, "volume": volume, "rate": rate}
+        args: dict[str, Any] = {
+            "path": path,
+            "id": item_id or f"file:{path}",
+            "volume": volume,
+            "rate": rate,
+        }
         if title:
             args["title"] = title
-        if position_seconds:
+        if position_seconds is not None:
             # Pozycja idzie TYM SAMYM wywolaniem. ``LiteEngineHandlers.cs:290``
             # czyta ``positionSeconds`` i podaje je do ``_files.Play``, a
             # rozruch strumienia zeruje czas (cs:309) -- osobny
             # ``transport.seek`` puszczony rownolegle zgubilby skok.
             args["positionSeconds"] = float(position_seconds)
         return self.call("files.play", args, timeout=60.0)
+
+    def configure_local_resume(self, remember: bool) -> Any:
+        """Ustaw globalna warstwe polityki wznowienia lokalnych plikow."""
+        return self.call("local.resumeConfigure", {"remember": bool(remember)})
+
+    def checkpoint_local(self) -> Any:
+        """Utrwal pozycje bezposrednio granego lokalnego pliku."""
+        return self.call("local.checkpoint", timeout=10.0)
 
     def play_media(
         self,

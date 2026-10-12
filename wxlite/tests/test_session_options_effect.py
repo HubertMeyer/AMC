@@ -80,6 +80,10 @@ class FakeClient:
             raise RuntimeError("Nieobsługiwana długość ciszy między utworami.")
         return {"appliesOnNextPlayback": True}
 
+    def configure_local_resume(self, remember: bool):
+        self.calls.append(("local.resumeConfigure", {"remember": remember}))
+        return {"remember": remember}
+
     def pause_resume(self, session_id=None):
         args = {"sessionId": session_id} if session_id else {}
         self.calls.append(("transport.pauseResume", args))
@@ -383,6 +387,7 @@ def test_nowy_proces_dostaje_wybory_sesji_a_nie_sam_global():
         _queue_persistence_arguments=lambda: {},
         _on_engine_event=lambda *a: None,
         _load_initial_content=lambda: None,
+        _remember_local_playback_positions=True,
     )
     real_method(
         "_start_engine",

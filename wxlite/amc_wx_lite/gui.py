@@ -189,6 +189,10 @@ from .transient_preview_policy import (
     resolve_global_transient_previews,
     transient_preview_unavailable_message,
 )
+from .local_resume_policy import (
+    load_remember_local_playback_positions,
+    resolve_remember_local_playback_positions,
+)
 from . import session_options
 from .radio_source import RadioSource
 from .radio_schedule_dialogs import RadioScheduleEditorDialog, RadioSchedulesDialog
@@ -3143,6 +3147,7 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
         keep_audio_edit_backups: bool,
         custom_seek_seconds: int,
         global_transient_previews: bool,
+        remember_local_playback_positions: bool,
     ) -> None:
         super().__init__(parent, title="Ustawienia", size=(720, 620))
         self.notebook = wx.Notebook(self)
@@ -3213,6 +3218,17 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
         )
         self.global_transient_previews.SetValue(global_transient_previews)
 
+        self.remember_local_playback_positions = wx.CheckBox(
+            general,
+            label="Pamiętaj pozycję odtwarzania lokalnych &plików",
+        )
+        self.remember_local_playback_positions.SetName(
+            "Pamiętaj pozycję odtwarzania lokalnych plików"
+        )
+        self.remember_local_playback_positions.SetValue(
+            remember_local_playback_positions
+        )
+
         for control in (
             self.pause,
             self.follow,
@@ -3221,6 +3237,7 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
             self.pause_output_fallback,
             self.keep_audio_edit_backups,
             self.global_transient_previews,
+            self.remember_local_playback_positions,
         ):
             general_layout.Add(control, 0, wx.BOTTOM | wx.EXPAND, 10)
 
@@ -3772,6 +3789,9 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
             "keep_audio_edit_backups": self.keep_audio_edit_backups.GetValue(),
             "custom_seek_seconds": self._custom_seek_seconds,
             "global_transient_previews": self.global_transient_previews.GetValue(),
+            "remember_local_playback_positions": (
+                self.remember_local_playback_positions.GetValue()
+            ),
             "loudness_normalization": self.loudness.GetValue(),
             "smooth_track_transitions": self.smooth.GetValue(),
             "inter_track_silence_ms": self._silence_values[
@@ -3855,6 +3875,12 @@ class LiteFrame(wx.Frame):
             self.options.global_transient_previews,
             load_global_transient_previews(self.layout.state_json),
         )
+        self._remember_local_playback_positions = (
+            resolve_remember_local_playback_positions(
+                self.options.remember_local_playback_positions,
+                load_remember_local_playback_positions(self.layout.state_json),
+            )
+        )
         self.radio = RadioSource(self.layout)
         self._radio_snapshot = LiteFrame._with_radio_recording_options(
             self, self.radio.load()
@@ -3917,6 +3943,10 @@ class LiteFrame(wx.Frame):
         self._podcast_checkpoint_pending = False
         self._podcast_checkpoint_due = 0.0
         self._podcast_checkpoint_active = False
+        self._local_checkpoint_pending = False
+        self._local_checkpoint_due = 0.0
+        self._local_checkpoint_active = False
+        self._last_local_resume_error: str | None = None
         self._podcast_refresh_pending = False
         self._podcast_automatic_refresh_pending = False
         self._podcast_automatic_refresh_due = time.monotonic() + 60.0
@@ -4957,6 +4987,9 @@ class LiteFrame(wx.Frame):
                 client.start()
                 client.hello()
                 result = client.configure_audio(**settings)
+                client.configure_local_resume(
+                    self._remember_local_playback_positions
+                )
                 for session_id, device_id in output_devices.items():
                     client.call(
                         "audio.selectOutput",
@@ -5133,6 +5166,9 @@ class LiteFrame(wx.Frame):
                 self._podcast_checkpoint_active = target is SessionId.PODCASTS
                 if self._podcast_checkpoint_active:
                     self._podcast_checkpoint_due = 0.0
+                self._local_checkpoint_active = target is SessionId.FILES
+                if self._local_checkpoint_active:
+                    self._local_checkpoint_due = 0.0
                 self._pending_playback_session = None
             elif data.get("engine") == "radio":
                 self._playing_session = SessionId.RADIO
@@ -5158,6 +5194,8 @@ class LiteFrame(wx.Frame):
                 self._playing_sessions = playing_sessions
             if ended_podcast:
                 self._podcast_checkpoint_active = False
+            if data.get("engine") == "files" and not data.get("queueContinues"):
+                self._local_checkpoint_active = False
         elif name == "queue.advanced":
             # NATURALNE przejscie policzone przez sesje Core po stronie hosta.
             # GUI tylko odwzorowuje to, co host NAPRAWDE zaczal grac.
@@ -5184,6 +5222,8 @@ class LiteFrame(wx.Frame):
                 self._playing_sessions.discard(failed_session)
             if failed_session is SessionId.PODCASTS:
                 self._podcast_checkpoint_active = False
+            if failed_session is SessionId.FILES:
+                self._local_checkpoint_active = False
             self._run(self.navigator.note_playback_failed(
                 f"Nie udalo sie odtworzyc: {data.get('message', 'blad')}",
                 failed_session,
@@ -9317,6 +9357,7 @@ class LiteFrame(wx.Frame):
             )
             return client.play_file(
                 intent.path,
+                item_id=intent.item_id,
                 volume=self.options.volume,
                 rate=self.options.rate,
                 title=intent.title,
@@ -11111,6 +11152,12 @@ class LiteFrame(wx.Frame):
             self.options.global_transient_previews,
             self._global_transient_previews,
         )
+        remember_local_playback_positions = (
+            resolve_remember_local_playback_positions(
+                self.options.remember_local_playback_positions,
+                self._remember_local_playback_positions,
+            )
+        )
         dialog = GeneralPlaybackOptionsDialog(
             self,
             self.options,
@@ -11120,6 +11167,7 @@ class LiteFrame(wx.Frame):
             keep_audio_edit_backups,
             custom_seek_seconds,
             global_transient_previews,
+            remember_local_playback_positions,
         )
         chosen: dict[str, object] | None = None
         try:
@@ -11154,6 +11202,12 @@ class LiteFrame(wx.Frame):
             self.options.global_transient_previews,
             self._global_transient_previews,
         )
+        self._remember_local_playback_positions = (
+            resolve_remember_local_playback_positions(
+                self.options.remember_local_playback_positions,
+                self._remember_local_playback_positions,
+            )
+        )
         # Komunikaty wierszy zmieniaja sie od razu. Nowe preferencje
         # nagrywania trafia do kolejnego Ctrl+R i nastepnej synchronizacji
         # harmonogramow; dlugosc timeshiftu obowiazuje po restarcie hosta.
@@ -11180,6 +11234,12 @@ class LiteFrame(wx.Frame):
                 )
             except Exception:
                 warnings.append("ustawienia dźwięku")
+            try:
+                client.configure_local_resume(
+                    self._remember_local_playback_positions
+                )
+            except Exception:
+                warnings.append("zapamiętywanie pozycji lokalnych plików")
             try:
                 client.sync_radio_schedules(
                     self._radio_schedule_sync_payload(
@@ -11824,6 +11884,7 @@ class LiteFrame(wx.Frame):
         self._refresh_sonos_status()
         self._refresh_recording_status()
         self._checkpoint_podcast_if_due()
+        self._checkpoint_local_if_due()
         self._refresh_due_podcasts_automatically()
         self._recognize_radio_if_due()
 
@@ -11914,6 +11975,49 @@ class LiteFrame(wx.Frame):
         self.runner.submit(
             "podcast-checkpoint",
             client.checkpoint_podcast,
+            done,
+            failed,
+        )
+
+    def _checkpoint_local_if_due(self) -> None:
+        """Co 15 sekund zapisz pozycję lokalnego pliku bez dodatkowej mowy."""
+        client = self.client
+        if (
+            client is None
+            or not self._local_checkpoint_active
+            or self._local_checkpoint_pending
+            or time.monotonic() < self._local_checkpoint_due
+        ):
+            return
+        self._local_checkpoint_pending = True
+        self._local_checkpoint_due = time.monotonic() + 15.0
+
+        def done(payload: dict) -> None:
+            self._local_checkpoint_pending = False
+            error = str((payload or {}).get("persistError") or "").strip()
+            if not error:
+                self._last_local_resume_error = None
+                return
+            if error == self._last_local_resume_error:
+                return
+            self._last_local_resume_error = error
+            self.announcer.say(
+                f"Nie zapisano pozycji lokalnego pliku: {error}"
+            )
+
+        def failed(error: Exception) -> None:
+            self._local_checkpoint_pending = False
+            message = str(error).strip() or "Nie udało się zapisać pozycji"
+            if message == self._last_local_resume_error:
+                return
+            self._last_local_resume_error = message
+            self.announcer.say(
+                f"Nie zapisano pozycji lokalnego pliku: {message}"
+            )
+
+        self.runner.submit(
+            "local-checkpoint",
+            client.checkpoint_local,
             done,
             failed,
         )

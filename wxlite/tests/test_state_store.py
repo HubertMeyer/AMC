@@ -95,6 +95,18 @@ def test_invalid_global_transient_preview_choice_returns_to_inherited_value() ->
     assert Options(global_transient_previews="nie").clamp().global_transient_previews is None  # type: ignore[arg-type]
 
 
+def test_local_resume_override_round_trips_and_invalid_value_inherits() -> None:
+    store, _ = temp_store()
+    store.save(LiteState(options=Options(remember_local_playback_positions=False)))
+    assert store.load().options.remember_local_playback_positions is False
+    assert (
+        Options(remember_local_playback_positions="tak")
+        .clamp()
+        .remember_local_playback_positions
+        is None
+    )
+
+
 def test_round_trip_keeps_radio_activity_presentation_options() -> None:
     store, _ = temp_store()
     state = LiteState(options=Options(

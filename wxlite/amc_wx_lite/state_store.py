@@ -160,6 +160,9 @@ class Options:
     #: Czy trzy szybkie podglądy mają działać ze wszystkich sesji. ``None``
     #: dziedziczy wybór z profilu głównego AMC do pierwszego zapisu.
     global_transient_previews: bool | None = None
+    #: Czy lokalne pliki wracaja do zapamietanej pozycji. ``None`` dziedziczy
+    #: wybor z profilu glownego AMC do pierwszego zapisu Ustawien wxPython.
+    remember_local_playback_positions: bool | None = None
     #: Prywatne nadpisania ustawien nagrywania. ``None`` oznacza dalsze
     #: dziedziczenie wartosci z profilu glownego AMC; pusty folder oznacza
     #: swiadomy wybor systemowego folderu domyslnego hosta.
@@ -242,6 +245,11 @@ class Options:
             and type(self.global_transient_previews) is not bool
         ):
             self.global_transient_previews = None
+        if (
+            self.remember_local_playback_positions is not None
+            and type(self.remember_local_playback_positions) is not bool
+        ):
+            self.remember_local_playback_positions = None
         if self.radio_recording_format is not None:
             formats = ("Mp3", "Aac", "Flac", "Original", "Wav")
             value = str(self.radio_recording_format).strip().casefold()

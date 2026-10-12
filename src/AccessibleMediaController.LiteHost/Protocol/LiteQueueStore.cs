@@ -41,6 +41,7 @@ public sealed record LiteQueueStoredRow(
 /// </summary>
 public sealed record LiteResumeEntry(
     string ItemId,
+    string? Path,
     long ResumePositionTicks,
     int ResumeMode,
     long? FileLength,
@@ -438,7 +439,7 @@ public sealed class LiteQueueStore : IDisposable
             using (var command = connection.CreateCommand())
             {
                 command.CommandText = """
-                    SELECT id, resume_position_ticks, resume_mode, file_length, last_write_utc_ticks
+                    SELECT id, path, resume_position_ticks, resume_mode, file_length, last_write_utc_ticks
                     FROM local_items;
                     """;
                 using var reader = command.ExecuteReader();
@@ -447,10 +448,11 @@ public sealed class LiteQueueStore : IDisposable
                     var id = reader.GetString(0);
                     entries[id] = new LiteResumeEntry(
                         id,
-                        reader.GetInt64(1),
-                        reader.GetInt32(2),
-                        reader.IsDBNull(3) ? null : reader.GetInt64(3),
-                        reader.IsDBNull(4) ? null : reader.GetInt64(4));
+                        reader.IsDBNull(1) ? null : reader.GetString(1),
+                        reader.GetInt64(2),
+                        reader.GetInt32(3),
+                        reader.IsDBNull(4) ? null : reader.GetInt64(4),
+                        reader.IsDBNull(5) ? null : reader.GetInt64(5));
                 }
             }
 

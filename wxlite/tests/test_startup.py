@@ -237,6 +237,9 @@ def test_engine_handshake_is_deferred_to_background():
         def configure_audio(self, **options):
             calls.append(options)
             return options
+        def configure_local_resume(self, remember):
+            calls.append(("local-resume", remember))
+            return {"remember": remember}
         def close(self):
             calls.append("close")
         def call(self, op, args=None, timeout=None):
@@ -260,7 +263,8 @@ def test_engine_handshake_is_deferred_to_background():
         # miec Biblioteke, inaczej test mierzy brak pola, a nie odroczenie I/O.
         library=SimpleNamespace(
             use_collation=lambda collation: calls.append("collation")),
-        _load_initial_content=lambda: calls.append("content"))
+        _load_initial_content=lambda: calls.append("content"),
+        _remember_local_playback_positions=True)
     # Tryb trwalosci kolejki wyprowadza sie z UKLADU PROFILU; ten test mierzy
     # odroczenie I/O, a nie wybor trybu, wiec deklarujemy zwykly start bez
     # zapisu (tak jak domyslny, wspolny profil tylko do odczytu).
@@ -274,6 +278,7 @@ def test_engine_handshake_is_deferred_to_background():
         done(result)
         assert calls[:2] == ["start", "hello"]
         assert calls[2]["tempoAlgorithm"] == 1
+        assert ("local-resume", True) in calls
         assert "timer" in calls and "content" in calls
         # Kolejnosc listy ma byc podpieta ZANIM wczytamy tresc.
         assert calls.index("collation") < calls.index("content")

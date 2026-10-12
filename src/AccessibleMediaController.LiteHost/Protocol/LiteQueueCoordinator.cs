@@ -38,6 +38,13 @@ internal sealed class LiteQueueCoordinator
         bool IsPlayNext,
         bool IsCurrent);
 
+    /// <summary>
+    /// Stabilna tozsamosc lokalnego pliku i pozycja, z ktorej wolno go
+    /// uruchomic. Id pochodzi z <c>local_items</c>, nigdy z technicznego
+    /// prefiksu <c>file:</c> tworzonego przy zwyklym przegladaniu folderu.
+    /// </summary>
+    internal sealed record DirectResumeTarget(string ItemId, TimeSpan Position);
+
     /// <summary>Stan kolejki oddawany na <c>queue.status</c>.</summary>
     internal sealed record QueueStatus(
         IReadOnlyList<QueueRow> Rows,
@@ -179,6 +186,14 @@ internal sealed class LiteQueueCoordinator
     /// </summary>
     private (bool RememberGlobally, ResumePositionMode SessionMode)? _profileResumeSettings;
 
+    /// <summary>
+    /// Jawny wybor z ustawien samodzielnego interfejsu wxPython. <c>null</c>
+    /// zachowuje migracyjne dziedziczenie z profilu glownego AMC. Nadpisujemy
+    /// tylko warstwe GLOBALNA; jawny tryb pozycji, folderu albo sesji nadal ma
+    /// pierwszenstwo zgodnie z <see cref="ResumePositionPolicy"/>.
+    /// </summary>
+    private bool? _rememberGloballyOverride;
+
     public LiteQueueCoordinator(IMediaOutput output, LiteQueueStore? store = null)
     {
         _output = output ?? throw new ArgumentNullException(nameof(output));
@@ -300,6 +315,181 @@ internal sealed class LiteQueueCoordinator
 
     /// <summary>Czy ten host jest WLASCICIELEM zapisu kolejki.</summary>
     public bool CanPersist => _store?.IsWritable == true && _store.OwnsWriteLock;
+
+    /// <summary>Ustaw globalna warstwe polityki wznowienia dla wxPython.</summary>
+    public void ConfigureRememberGlobally(bool remember)
+    {
+        lock (_gate)
+        {
+            _rememberGloballyOverride = remember;
+            var session = _session;
+            var resume = _restoredResume;
+            if (session is null || resume is null) return;
+
+            // Kolejka mogla zostac odtworzona w konstruktorze, ZANIM Python
+            // przeslal swoje prywatne ustawienie. Przeliczamy wiec pozycje
+            // sesji od razu; sama zmiana flagi wplynelaby tylko na przyszly
+            // zapis, a pierwszy Enter nadal zagralby wedlug starego profilu.
+            foreach (var item in session.Items)
+            {
+                session.SetRememberedPosition(
+                    item.Id,
+                    ResolveRestorablePosition(resume, item));
+            }
+        }
+    }
+
+    /// <summary>
+    /// Znajdz profilowy wpis lokalnego pliku i oblicz dozwolona pozycje
+    /// wznowienia. Najpierw ufamy stabilnemu Id przekazanemu przez frontend,
+    /// a dla wierszy z przegladania folderu i zakladek dopasowujemy sciezke.
+    /// </summary>
+    public DirectResumeTarget PrepareDirectResume(
+        string requestedItemId,
+        string path,
+        bool restorePosition)
+    {
+        lock (_gate)
+        {
+            var entry = FindResumeEntry(_restoredResume, requestedItemId, path);
+            if (entry is null)
+            {
+                return new DirectResumeTarget(requestedItemId, TimeSpan.Zero);
+            }
+
+            var item = new MediaItem
+            {
+                Id = entry.ItemId,
+                Title = Path.GetFileNameWithoutExtension(path),
+                Kind = MediaItemKind.Track,
+                Source = string.IsNullOrWhiteSpace(entry.Path) ? path : entry.Path
+            };
+            var position = restorePosition && _restoredResume is not null
+                ? ResolveRestorablePosition(_restoredResume, item)
+                : TimeSpan.Zero;
+            return new DirectResumeTarget(entry.ItemId, position);
+        }
+    }
+
+    /// <summary>
+    /// Zapisz pozycje pliku granego poza kolejka. Uzywa tej samej polityki,
+    /// odcisku i waskiego zapisu SQLite co kolejka. Naturalny koniec przekazuje
+    /// <paramref name="completed"/> i jawnie zeruje stary czas.
+    /// </summary>
+    public bool SaveDirectResume(
+        string requestedItemId,
+        string path,
+        TimeSpan position,
+        bool completed = false)
+    {
+        lock (_gate)
+        {
+            var store = _store;
+            var resume = _restoredResume;
+            if (store is null || resume is null) return false;
+
+            var entry = FindResumeEntry(resume, requestedItemId, path);
+            if (entry is null) return false;
+
+            var item = new MediaItem
+            {
+                Id = entry.ItemId,
+                Title = Path.GetFileNameWithoutExtension(path),
+                Kind = MediaItemKind.Track,
+                Source = string.IsNullOrWhiteSpace(entry.Path) ? path : entry.Path
+            };
+            var savedPosition = completed || !ShouldRememberPosition(resume, item)
+                ? TimeSpan.Zero
+                : position < TimeSpan.Zero ? TimeSpan.Zero : position;
+
+            try
+            {
+                var written = store.WriteResume(
+                    LiteQueueStore.LocalSessionId,
+                    new LiteResumeCheckpoint(
+                        entry.ItemId,
+                        new Dictionary<string, TimeSpan>(StringComparer.Ordinal)
+                        {
+                            [entry.ItemId] = savedPosition
+                        }));
+                if (written)
+                {
+                    _persistedWrites++;
+                    _lastPersistError = null;
+                }
+                else
+                {
+                    _persistSkipped++;
+                }
+
+                // Kolejny start w TYM procesie ma widziec zapisany czas bez
+                // ponownego otwierania bazy.
+                var entries = new Dictionary<string, LiteResumeEntry>(
+                    resume.Entries, StringComparer.Ordinal)
+                {
+                    [entry.ItemId] = entry with
+                    {
+                        ResumePositionTicks = savedPosition.Ticks
+                    }
+                };
+                _restoredResume = resume with
+                {
+                    CurrentItemId = entry.ItemId,
+                    Entries = entries
+                };
+                return written;
+            }
+            catch (Exception exception) when (exception is LiteQueueStoreDenied or IOException or SqliteException)
+            {
+                _lastPersistError = exception.Message;
+                return false;
+            }
+        }
+    }
+
+    private static LiteResumeEntry? FindResumeEntry(
+        LiteResumeState? resume,
+        string requestedItemId,
+        string path)
+    {
+        if (resume is null) return null;
+        if (!string.IsNullOrWhiteSpace(requestedItemId)
+            && resume.Entries.TryGetValue(requestedItemId, out var byId))
+        {
+            return byId;
+        }
+
+        string normalized;
+        try
+        {
+            normalized = Path.GetFullPath(path);
+        }
+        catch (Exception exception) when (exception is ArgumentException
+                                          or NotSupportedException
+                                          or PathTooLongException)
+        {
+            normalized = path;
+        }
+
+        foreach (var candidate in resume.Entries.Values)
+        {
+            if (string.IsNullOrWhiteSpace(candidate.Path)) continue;
+            string candidatePath;
+            try
+            {
+                candidatePath = Path.GetFullPath(candidate.Path);
+            }
+            catch (Exception exception) when (exception is ArgumentException
+                                              or NotSupportedException
+                                              or PathTooLongException)
+            {
+                candidatePath = candidate.Path;
+            }
+            if (string.Equals(candidatePath, normalized, StringComparison.OrdinalIgnoreCase))
+                return candidate;
+        }
+        return null;
+    }
 
     /// <summary>
     /// Notuje POZYCJE biezacego utworu kolejki. Host wola to z czasem z
@@ -425,7 +615,7 @@ internal sealed class LiteQueueCoordinator
             resume?.FolderPlaybackOptions,
             resume?.FolderSources,
             profile.SessionMode,
-            profile.RememberGlobally);
+            _rememberGloballyOverride ?? profile.RememberGlobally);
     }
 
     private static ResumePositionMode ToResumeMode(int value) =>

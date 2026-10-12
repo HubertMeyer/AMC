@@ -318,7 +318,10 @@ class PlayTrack:
     #: idzie JEDNYM wywolaniem. Osobne ``seek`` po ``play`` scigaloby sie z
     #: rozruchem nowego strumienia -- ten wlasnie zeruje czas
     #: (``LiteEngineHandlers.cs:309``), wiec pozycja mogla by zginac.
-    position_seconds: float = 0.0
+    #: ``None`` oznacza zwykly start i pozwala hostowi wznowic pozycje z
+    #: profilu. Jawne ``0.0`` nadal znaczy „od poczatku” (np. zakladka na
+    #: zerze) i musi trafic do protokolu, zamiast zostac pomylone z brakiem.
+    position_seconds: float | None = None
 
 
 @dataclass(slots=True)
