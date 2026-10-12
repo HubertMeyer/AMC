@@ -2,7 +2,14 @@
 
 from __future__ import annotations
 
-from amc_wx_lite.shortcuts import Action, Chord, describe, resolve
+from amc_wx_lite.shortcuts import (
+    Action,
+    Chord,
+    describe,
+    describe_action,
+    keyboard_help_announcement,
+    resolve,
+)
 
 
 def test_arrows_on_the_list_belong_to_the_native_control() -> None:
@@ -461,3 +468,31 @@ def test_help_listing_is_not_empty_and_has_no_duplicates() -> None:
     assert len(entries) > 15
     actions = [label for _, label in entries]
     assert len(actions) == len(set(actions)), "kazda akcja opisana raz"
+
+
+def test_ctrl_f1_opens_keyboard_help_in_list_and_player() -> None:
+    for player in (False, True):
+        assert resolve(
+            Chord("F1", ctrl=True),
+            player_view=player,
+            radio_session=False,
+        ) is Action.KEYBOARD_HELP
+
+
+def test_keyboard_help_uses_only_user_facing_labels() -> None:
+    message = keyboard_help_announcement(
+        Chord("F", ctrl=True),
+        Action.SEARCH_CURRENT,
+        "Pliki lokalne",
+    )
+    assert message == "Ctrl+F. Szukaj w bieżącej usłudze. Pliki lokalne"
+    assert Action.SEARCH_CURRENT.value not in message
+    assert describe_action(Action.KEYBOARD_HELP) == (
+        "Włącz lub wyłącz Pomoc klawiatury"
+    )
+
+
+def test_keyboard_help_says_when_a_key_has_no_command() -> None:
+    assert keyboard_help_announcement(
+        Chord("G"), None, "Radio internetowe"
+    ) == "G. Brak polecenia w sesji Radio internetowe"

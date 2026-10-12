@@ -119,12 +119,14 @@ def install_wx_stub() -> None:
 install_wx_stub()
 
 from amc_wx_lite.gui import (  # noqa: E402
+    LiteFrame,
     YOUTUBE_EXPORT_WILDCARD,
     chord_from_event,
     format_time,
     youtube_export_path_for_filter,
 )
 from amc_wx_lite.shortcuts import Action, resolve  # noqa: E402
+from amc_wx_lite.navigation import LibraryView, SessionId, View  # noqa: E402
 
 
 class FakeKeyEvent:
@@ -198,6 +200,44 @@ def test_shift_f6_returns_to_the_list() -> None:
     chord = chord_from_event(FakeKeyEvent(wx.WXK_F6, shift=True))
     assert chord.canonical == "Shift+F6"
     assert resolve(chord, player_view=True, radio_session=False) is Action.SHOW_LIST
+
+
+def test_ctrl_f1_describes_keys_without_executing_them() -> None:
+    import wx
+
+    calls: list[str] = []
+    frame = object.__new__(LiteFrame)
+    frame._keyboard_help_active = False
+    frame._refresh_menu_state = lambda: calls.append("menu")
+    frame.announcer = types.SimpleNamespace(say=lambda text: calls.append(text))
+    session = types.SimpleNamespace(library_view=LibraryView.ALL_FILES)
+    frame.navigator = types.SimpleNamespace(
+        view=View.LIST,
+        active=SessionId.FILES,
+        sessions={SessionId.FILES: session},
+    )
+
+    assert frame._handle_keyboard_help_event(
+        FakeKeyEvent(wx.WXK_F1, ctrl=True)
+    ) is True
+    assert frame._keyboard_help_active is True
+    assert "Pomoc klawiatury włączona" in calls[-1]
+
+    # Ctrl+F zostaje tylko opisane: nie wywołujemy dispatchera ani okna
+    # wyszukiwania. Jedynym skutkiem jest użytkowy komunikat w Announcerze.
+    assert frame._handle_keyboard_help_event(
+        FakeKeyEvent(ord("F"), ctrl=True)
+    ) is True
+    assert calls[-1] == (
+        "Ctrl+F. Szukaj w bieżącej usłudze. Pliki lokalne"
+    )
+    assert frame._keyboard_help_active is True
+
+    assert frame._handle_keyboard_help_event(
+        FakeKeyEvent(wx.WXK_ESCAPE)
+    ) is True
+    assert frame._keyboard_help_active is False
+    assert calls[-1] == "Pomoc klawiatury wyłączona"
 
 
 def test_arrow_keys_on_the_list_are_left_to_the_control() -> None:

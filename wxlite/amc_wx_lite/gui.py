@@ -114,6 +114,7 @@ from .shortcuts import (
     SONOS_SUPPORTED_ACTIONS,
     WIIM_SUPPORTED_ACTIONS,
     describe,
+    keyboard_help_announcement,
     preset_slot,
     resolve,
 )
@@ -4451,6 +4452,7 @@ class LiteFrame(wx.Frame):
         # Kanal mowy zostaje bez zmian; pasek stanu jest DODATKIEM obok niego,
         # a nie zamiast -- ``Announcer`` sam nic nie traci.
         self.announcer = Announcer(self.status_field, status_bar=self.status_bar)
+        self._keyboard_help_active = False
 
         #: Sciezki WYCIETE przez Ctrl+X i jeszcze nie wklejone, po ``item_id``.
         #: Odpowiednik ``_pendingExternalMoves`` (``MainWindow.xaml.cs:25306``).
@@ -4707,6 +4709,9 @@ class LiteFrame(wx.Frame):
                 item.Check(self.options.radio_recognition_monitoring)
             elif entry.checkable and entry.action is Action.TOGGLE_RADIO_RECOGNITION_ANNOUNCEMENTS:
                 item.Check(self.options.radio_recognition_announcements)
+            elif entry.checkable and entry.action is Action.KEYBOARD_HELP:
+                item.Check(self._keyboard_help_active)
+
     def _bind_list(self, control: MediaListCtrl) -> None:
         """Wspolne powiazania klawiatury i wyboru dla list plikow i radia."""
         # Druga, bezposrednia bramka na samej kontrolce. SysListView32 potrafi
@@ -6196,6 +6201,13 @@ class LiteFrame(wx.Frame):
     # ------------------------------------------------------------- klawisze
 
     def _on_player_shortcut_hook(self, event: wx.KeyEvent) -> None:
+        # Pomoc klawiatury musi być pierwszą bramką. W przeciwnym razie
+        # pole filtra albo natywna lista wykonałyby opisywany skrót, zanim
+        # AMC zdążyłby go tylko nazwać.
+        keyboard_help_handler = getattr(self, "_handle_keyboard_help_event", None)
+        if keyboard_help_handler is not None and keyboard_help_handler(event):
+            return
+
         # POLE FILTRA JEST SZCZELNE. ``EVT_CHAR_HOOK`` widzi klawisze przed
         # kontrolka, wiec bez tej bramki Enter i Backspace z pola wpadaly do
         # globalnej nawigacji: zmierzone na zywym GUI (Enter otwieral folder,
@@ -6238,6 +6250,7 @@ class LiteFrame(wx.Frame):
                 "Ctrl+Alt+S",
                 "Ctrl+Alt+Shift+S",
                 "Ctrl+,",
+                "Ctrl+F1",
                 # To jest NAJWCZEŚNIEJSZA bramka wx: CHAR_HOOK głównego okna
                 # przychodzi przed zdarzeniem listy. Przechwyt dopiero na
                 # ``MediaListCtrl`` pozwalał SysListView32 wykonać jeszcze
@@ -6261,6 +6274,9 @@ class LiteFrame(wx.Frame):
         self._on_key(event)
 
     def _on_key(self, event: wx.KeyEvent) -> None:
+        keyboard_help_handler = getattr(self, "_handle_keyboard_help_event", None)
+        if keyboard_help_handler is not None and keyboard_help_handler(event):
+            return
         chord = chord_from_event(event)
         player = self.navigator.view is View.PLAYER
         radio = self.navigator.active is SessionId.RADIO
@@ -6666,6 +6682,8 @@ class LiteFrame(wx.Frame):
             self._run(self.navigator.open_all_bookmarks())
         elif action is Action.HELP:
             self._show_help()
+        elif action is Action.KEYBOARD_HELP:
+            self._toggle_keyboard_help()
 
     # ---------------------------------------------------- wykonanie zamiarow
 
@@ -14407,6 +14425,87 @@ class LiteFrame(wx.Frame):
         )
 
     # --------------------------------------------------------------- pomoc
+
+    def _toggle_keyboard_help(self) -> None:
+        self._keyboard_help_active = not bool(getattr(self, "_keyboard_help_active", False))
+        self._refresh_menu_state()
+        self.announcer.say(
+            "Pomoc klawiatury włączona. Naciśnij skrót, aby poznać jego "
+            "działanie. Ctrl+F1 lub Escape wyłącza pomoc"
+            if self._keyboard_help_active
+            else "Pomoc klawiatury wyłączona"
+        )
+
+    @staticmethod
+    def _is_modifier_only_event(event: wx.KeyEvent) -> bool:
+        code = event.GetKeyCode()
+        return code in {
+            getattr(wx, "WXK_CONTROL", -1),
+            getattr(wx, "WXK_SHIFT", -2),
+            getattr(wx, "WXK_ALT", -3),
+            getattr(wx, "WXK_RAW_CONTROL", -4),
+        }
+
+    def _shortcut_action_for_help(self, chord: Chord) -> Action | None:
+        player = self.navigator.view is View.PLAYER
+        session = self.navigator.sessions[self.navigator.active]
+        return resolve(
+            chord,
+            player_view=player,
+            radio_session=self.navigator.active is SessionId.RADIO,
+            podcast_inbox=(
+                not player
+                and self.navigator.active is SessionId.PODCASTS
+                and session.library_view is LibraryView.PODCAST_INBOX
+            ),
+            podcast_session=self.navigator.active is SessionId.PODCASTS,
+            tidal_session=self.navigator.active is SessionId.TIDAL,
+            tidal_collection=(
+                not player
+                and self.navigator.active is SessionId.TIDAL
+                and session.library_view in (
+                    LibraryView.TIDAL_LIBRARY,
+                    LibraryView.TIDAL_FAVORITES,
+                    LibraryView.TIDAL_PLAYLISTS,
+                )
+            ),
+        )
+
+    def _action_available_in_active_session(self, action: Action) -> bool:
+        supported = {
+            SessionId.TIDAL: TIDAL_SUPPORTED_ACTIONS,
+            SessionId.WIIM: WIIM_SUPPORTED_ACTIONS,
+            SessionId.SONOS: SONOS_SUPPORTED_ACTIONS,
+        }.get(self.navigator.active)
+        return supported is None or action in supported
+
+    def _handle_keyboard_help_event(self, event: wx.KeyEvent) -> bool:
+        chord = chord_from_event(event)
+        if not bool(getattr(self, "_keyboard_help_active", False)):
+            if chord.canonical != "Ctrl+F1":
+                return False
+            self._toggle_keyboard_help()
+            return True
+
+        if self._is_modifier_only_event(event):
+            return True
+        if chord.canonical in ("Ctrl+F1", "Escape"):
+            self._toggle_keyboard_help()
+            return True
+
+        action = self._shortcut_action_for_help(chord)
+        self.announcer.say(
+            keyboard_help_announcement(
+                chord,
+                action,
+                SESSION_LABELS[self.navigator.active],
+                available=(
+                    action is None
+                    or self._action_available_in_active_session(action)
+                ),
+            )
+        )
+        return True
 
     def _show_help(self) -> None:
         lines = [f"{chord}\t{label}" for chord, label in describe()]

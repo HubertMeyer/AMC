@@ -296,6 +296,7 @@ class Action(Enum):
     #: Enter), ani z para Ctrl+Alt+Left/Right (przewijanie wlasnym krokiem).
     SESSION_OPTIONS = "session.options"
     HELP = "help"
+    KEYBOARD_HELP = "keyboard.help"
 
 
 # TIDAL ma osobny tor: katalog czyta oficjalne API, a dzwiek odtwarza oryginalna
@@ -359,6 +360,7 @@ TIDAL_SUPPORTED_ACTIONS = frozenset({
     Action.MANAGE_RADIO_SCHEDULES,
     Action.VIEW_PODCAST_INBOX,
     Action.HELP,
+    Action.KEYBOARD_HELP,
 })
 
 
@@ -401,6 +403,7 @@ WIIM_SUPPORTED_ACTIONS = frozenset({
     Action.MANAGE_RADIO_SCHEDULES,
     Action.VIEW_PODCAST_INBOX,
     Action.HELP,
+    Action.KEYBOARD_HELP,
 })
 
 
@@ -460,6 +463,7 @@ SONOS_SUPPORTED_ACTIONS = frozenset({
     Action.MANAGE_RADIO_SCHEDULES,
     Action.VIEW_PODCAST_INBOX,
     Action.HELP,
+    Action.KEYBOARD_HELP,
 })
 
 
@@ -606,6 +610,7 @@ LIST_VIEW: dict[str, Action] = {
     "Ctrl+Alt+P": Action.VIEW_PRESETS,
     "Ctrl+Alt+Shift+P": Action.ASSIGN_PRESET,
     "F1": Action.HELP,
+    "Ctrl+F1": Action.KEYBOARD_HELP,
 }
 
 PRESET_ACTIONS: dict[int, Action] = {
@@ -763,6 +768,7 @@ PLAYER_VIEW: dict[str, Action] = {
     "Ctrl+Alt+P": Action.VIEW_PRESETS,
     "Ctrl+Alt+Shift+P": Action.ASSIGN_PRESET,
     "F1": Action.HELP,
+    "Ctrl+F1": Action.KEYBOARD_HELP,
     # Globalne zatrzymanie dziala niezaleznie od aktualnej sesji, jak w WPF.
     "Ctrl+Alt+Shift+R": Action.RECORD_STOP_ALL,
 }
@@ -879,7 +885,7 @@ def resolve(
     return table.get(canonical)
 
 
-def describe() -> list[tuple[str, str]]:
+def _help_entries() -> list[tuple[str, str, Action]]:
     """Tekst pomocy (F1). Po polsku, krotko, bez zaleznosci od wx."""
     labels = {
         Action.SESSION_FILES: "Pliki lokalne",
@@ -1049,6 +1055,7 @@ def describe() -> list[tuple[str, str]]:
             "(folder: sciezka)"
         ),
         Action.HELP: "Ta pomoc",
+        Action.KEYBOARD_HELP: "Włącz lub wyłącz Pomoc klawiatury",
         # Pomoc mowi WPROST, ze zakres to sesja, a nie zaznaczony plik -- bez
         # tego uzytkownik nie wie, czego dotkna zmiany.
         Action.SESSION_OPTIONS: (
@@ -1076,7 +1083,7 @@ def describe() -> list[tuple[str, str]]:
     readable_keys = {"Prior": "Page Up", "Next": "Page Down"}
 
     seen: set[Action] = set()
-    out: list[tuple[str, str]] = []
+    out: list[tuple[str, str, Action]] = []
     for table in (
         PODCAST_INBOX_LIST_VIEW,
         PODCAST_SESSION_VIEW,
@@ -1100,5 +1107,52 @@ def describe() -> list[tuple[str, str]]:
                 label = f"{label} (Radio internetowe)"
             elif action is Action.IMPORT_PODCAST_OPML:
                 label = f"{label} (Podcasty i YouTube)"
-            out.append((label, labels.get(action, action.value)))
+            # Nigdy nie wystawiamy technicznego identyfikatora Enum do mowy
+            # czytnika. Brak etykiety jest defektem katalogu, ale bezpieczny
+            # tekst użytkowy nadal nie ujawnia ``action.value``.
+            out.append((label, labels.get(action, "Polecenie AMC"), action))
     return out
+
+
+def describe() -> list[tuple[str, str]]:
+    """Tekst spisu F1 bez technicznych identyfikatorów poleceń."""
+    return [(chord, label) for chord, label, _action in _help_entries()]
+
+
+def describe_action(action: Action) -> str:
+    """Jedna użytkowa nazwa polecenia dla Pomocy klawiatury Ctrl+F1."""
+    for _chord, label, candidate in _help_entries():
+        if candidate is action:
+            return label
+    return "Polecenie AMC"
+
+
+def readable_chord(chord: Chord) -> str:
+    """Nazwa klawisza przeznaczona do mowy, nie zapis wewnętrzny wx."""
+    text = chord.canonical
+    for internal, spoken in {
+        "Prior": "Page Up",
+        "Next": "Page Down",
+        "Return": "Enter",
+        "Back": "Backspace",
+        "Space": "Spacja",
+    }.items():
+        text = text.replace(internal, spoken)
+    return text
+
+
+def keyboard_help_announcement(
+    chord: Chord,
+    action: Action | None,
+    session_label: str,
+    *,
+    available: bool = True,
+) -> str:
+    """Zwięzły opis Ctrl+F1: skrót, polecenie i kontekst sesji."""
+    shortcut = readable_chord(chord)
+    if action is None:
+        return f"{shortcut}. Brak polecenia w sesji {session_label}"
+    label = describe_action(action)
+    if not available:
+        return f"{shortcut}. {label}. Niedostępne w sesji {session_label}"
+    return f"{shortcut}. {label}. {session_label}"

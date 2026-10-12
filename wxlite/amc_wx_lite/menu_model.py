@@ -704,6 +704,18 @@ def build_menus() -> tuple[Menu, ...]:
         ),
     )
 
-    help_menu = Menu("Pomo&c", (MenuItem("&Skróty klawiszowe", Action.HELP, shortcut="F1"),))
+    help_menu = Menu(
+        "Pomo&c",
+        (
+            MenuItem("&Skróty klawiszowe", Action.HELP, shortcut="F1"),
+            MenuItem(
+                "Pomoc &klawiatury",
+                Action.KEYBOARD_HELP,
+                shortcut="Ctrl+F1",
+                accelerator=False,
+                checkable=True,
+            ),
+        ),
+    )
 
     return (files, library, search, radio, playback, view, audio, settings, help_menu)
