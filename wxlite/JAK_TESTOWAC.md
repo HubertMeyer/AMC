@@ -15,7 +15,7 @@ Odbiór docelowego launchera:
 
 Aktualna, automatycznie zweryfikowana paczka znajduje się w:
 
-`D:\Projekty Codex\AMC - integracja wxPython\.test-output\AMC-Python-wyszukiwanie-20261012\AMC.exe`
+`D:\Projekty Codex\AMC - integracja wxPython\.test-output\AMC-Python-ustawienia-audio-20261012\AMC.exe`
 
 Nie przełączaj na nią programu w czasie trwającego nagrywania. Pierwszy żywy
 odbiór wykonaj kolejno według punktów poniżej.
@@ -715,13 +715,17 @@ czytnikiem ekranu bez zapewnionego innego słyszalnego wyjścia.
 
 ## Ustawienia i pełny audyt interfejsu
 
-`Ctrl+,` ma otworzyć pełne Ustawienia programu, a nie opcje pojedynczego
-materiału lub sesji. Najpierw sporządź z głównego AMC kompletny spis wszystkich
-kart, pól, wartości domyślnych, zależności, walidacji i miejsc zapisu; nie
-ograniczaj odbioru do kart Ogólne, Podcasty i Radio. `Ctrl+Tab` oraz
-`Ctrl+Shift+Tab` mają przechodzić między wszystkimi kartami. Każde pole trzeba
-sprawdzić z NVDA przy pierwszym wejściu, zmianie wartości, zapisie, anulowaniu
-i ponownym otwarciu; fokus i celowe etykiety muszą pozostać prawidłowe.
+`Ctrl+,` otwiera obecnie dwie działające karty: Ogólne i Komunikaty. Odbierz
+`Ctrl+Tab` oraz `Ctrl+Shift+Tab`, pierwsze pole każdej karty, wszystkie listy
+wyboru oraz powrót fokusu po Zapisz i Anuluj. Enter na zmienionej wartości ma
+zapisać ją i podać raz „Zapisano ustawienia”; ponowne otwarcie ma pokazać tę
+samą wartość bez technicznych nazw. Szczególnie sprawdź etykiety SoundTouch,
+Speedy i Signalsmith, wartości ciszy oraz oba warianty utraty urządzenia.
+
+Pełny odbiór Ustawień pozostaje otwarty: trzeba jeszcze przepisać karty Radio i
+nagrywanie, Podcasty i YouTube, Profile klawiatury, Import i eksport oraz
+Aktualizacje, a następnie porównać wszystkie pola, wartości domyślne,
+zależności, walidację i miejsca zapisu z głównym AMC.
 
 Porównaj z głównym AMC każdą sesję i każdy widok: menu, skróty, strukturę
 Biblioteki, Enter, Escape/Backspace, lewą i prawą strzałkę oraz wszystkie

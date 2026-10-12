@@ -43,4 +43,5 @@ def test_options_payload_contains_the_selected_real_algorithm():
     assert options.audio_payload() == {
         "tempoAlgorithm": 2, "loudnessNormalization": True,
         "smoothTrackTransitions": False, "interTrackSilenceMs": 0,
+        "pauseOnOutputFallback": False,
     }

@@ -138,6 +138,10 @@ class Options:
     #: Delikatne sygnaly przy przejsciu fokusu na aktywna stacje.
     radio_playback_state_sound: bool = False
     radio_recording_state_sound: bool = False
+    #: Po odłączeniu wybranego wyjścia Radio przechodzi na domyślne. Ten
+    #: przełącznik decyduje, czy nowy tor ma pozostać w pauzie. Domyślne False
+    #: zachowuje dotychczasowe zachowanie AMC do świadomej zmiany ustawienia.
+    pause_on_audio_output_fallback: bool = False
 
     def audio_payload(self) -> dict:
         return {
@@ -145,6 +149,7 @@ class Options:
             "loudnessNormalization": self.loudness_normalization,
             "smoothTrackTransitions": self.smooth_track_transitions,
             "interTrackSilenceMs": self.inter_track_silence_ms,
+            "pauseOnOutputFallback": self.pause_on_audio_output_fallback,
         }
 
     def clamp(self) -> "Options":
@@ -178,6 +183,8 @@ class Options:
             self.radio_playback_state_sound = False
         if type(self.radio_recording_state_sound) is not bool:
             self.radio_recording_state_sound = False
+        if type(self.pause_on_audio_output_fallback) is not bool:
+            self.pause_on_audio_output_fallback = False
         return self
 
 

@@ -120,3 +120,36 @@ def choices_from_payload(payload: object) -> tuple[AudioOutputChoice, ...]:
             available=item.get("available") is not False,
         ))
     return tuple(result)
+
+
+def adjacent_available_choice(
+    choices: tuple[AudioOutputChoice, ...] | list[AudioOutputChoice],
+    selected_device_id: str | None,
+    direction: int,
+) -> AudioOutputChoice | None:
+    """Return the previous or next usable output, wrapping at both ends.
+
+    The catalogue may retain a disconnected selected endpoint so the user can
+    identify it in the explicit Shift+A dialog.  Keyboard cycling must skip
+    such entries instead of selecting another unavailable endpoint.  The
+    default Windows output has ``device_id is None`` and is always usable.
+    """
+
+    if direction not in (-1, 1):
+        raise ValueError("direction must be -1 or 1")
+    values = tuple(choices)
+    if not values:
+        return None
+    selected_index = next(
+        (
+            index
+            for index, choice in enumerate(values)
+            if choice.device_id == selected_device_id
+        ),
+        -1 if direction > 0 else 0,
+    )
+    for distance in range(1, len(values) + 1):
+        choice = values[(selected_index + direction * distance) % len(values)]
+        if choice.available or choice.device_id is None:
+            return choice
+    return None

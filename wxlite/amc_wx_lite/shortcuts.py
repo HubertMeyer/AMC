@@ -169,6 +169,8 @@ class Action(Enum):
     TOGGLE_SEEK_MESSAGES = "settings.toggleSeekMessages"
     GENERAL_SETTINGS = "settings.general"
     SELECT_AUDIO_OUTPUT = "audio.selectOutput"
+    PREVIOUS_AUDIO_OUTPUT = "audio.previousOutput"
+    NEXT_AUDIO_OUTPUT = "audio.nextOutput"
     PRESET_1 = "preset.1"
     PRESET_2 = "preset.2"
     PRESET_3 = "preset.3"
@@ -312,6 +314,8 @@ TIDAL_SUPPORTED_ACTIONS = frozenset({
     Action.TIME_TOTAL,
     Action.SESSION_OPTIONS,
     Action.SELECT_AUDIO_OUTPUT,
+    Action.PREVIOUS_AUDIO_OUTPUT,
+    Action.NEXT_AUDIO_OUTPUT,
     Action.GENERAL_SETTINGS,
     Action.TOGGLE_SEEK_MESSAGES,
     Action.VIEW_PRESETS,
@@ -370,6 +374,8 @@ WIIM_SUPPORTED_ACTIONS = frozenset({
     Action.TIME_REMAINING,
     Action.TIME_TOTAL,
     Action.SELECT_AUDIO_OUTPUT,
+    Action.PREVIOUS_AUDIO_OUTPUT,
+    Action.NEXT_AUDIO_OUTPUT,
     Action.GENERAL_SETTINGS,
     Action.TOGGLE_SEEK_MESSAGES,
     Action.QUICK_INFORMATION,
@@ -427,6 +433,8 @@ SONOS_SUPPORTED_ACTIONS = frozenset({
     Action.TIME_REMAINING,
     Action.TIME_TOTAL,
     Action.SELECT_AUDIO_OUTPUT,
+    Action.PREVIOUS_AUDIO_OUTPUT,
+    Action.NEXT_AUDIO_OUTPUT,
     Action.GENERAL_SETTINGS,
     Action.TOGGLE_SEEK_MESSAGES,
     Action.QUICK_INFORMATION,
@@ -577,6 +585,10 @@ LIST_VIEW: dict[str, Action] = {
     "Ctrl+,": Action.GENERAL_SETTINGS,
     # Pelne AMC: Shift+A wybiera wyjscie audio osobno dla biezacej sesji.
     "Shift+A": Action.SELECT_AUDIO_OUTPUT,
+    # Szybka zmiana podczas odtwarzania, bez otwierania dialogu. Nawiasy sa
+    # para kierunkowa i nie koliduja z istniejacymi skrótami transportu.
+    "Ctrl+[": Action.PREVIOUS_AUDIO_OUTPUT,
+    "Ctrl+]": Action.NEXT_AUDIO_OUTPUT,
     # Zarzadzanie presetami z pelnego AMC (MainWindow.xaml:428-435).
     "Ctrl+Alt+P": Action.VIEW_PRESETS,
     "Ctrl+Alt+Shift+P": Action.ASSIGN_PRESET,
@@ -722,6 +734,8 @@ PLAYER_VIEW: dict[str, Action] = {
     "Ctrl+Alt+Return": Action.SESSION_OPTIONS,
     "Ctrl+,": Action.GENERAL_SETTINGS,
     "Shift+A": Action.SELECT_AUDIO_OUTPUT,
+    "Ctrl+[": Action.PREVIOUS_AUDIO_OUTPUT,
+    "Ctrl+]": Action.NEXT_AUDIO_OUTPUT,
     "Ctrl+Alt+P": Action.VIEW_PRESETS,
     "Ctrl+Alt+Shift+P": Action.ASSIGN_PRESET,
     "F1": Action.HELP,
@@ -987,6 +1001,12 @@ def describe() -> list[tuple[str, str]]:
         ),
         Action.SELECT_AUDIO_OUTPUT: (
             "Wybierz urządzenie audio dla bieżącej sesji"
+        ),
+        Action.PREVIOUS_AUDIO_OUTPUT: (
+            "Poprzednie dostępne urządzenie audio bieżącej sesji"
+        ),
+        Action.NEXT_AUDIO_OUTPUT: (
+            "Następne dostępne urządzenie audio bieżącej sesji"
         ),
         Action.GENERAL_SETTINGS: "Ustawienia interfejsu i odtwarzania",
     }

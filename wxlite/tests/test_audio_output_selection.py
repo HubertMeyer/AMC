@@ -7,13 +7,15 @@ from pathlib import Path
 
 from amc_wx_lite import menu_model
 from amc_wx_lite.audio_output import (
+    AudioOutputChoice,
+    adjacent_available_choice,
     choices_from_payload,
     effective_output_device_id,
     read_profile_outputs,
 )
 from amc_wx_lite.navigation import SessionId
 from amc_wx_lite.shortcuts import Action, Chord, resolve
-from amc_wx_lite.state_store import LiteState, StateStore
+from amc_wx_lite.state_store import LiteState, Options, StateStore
 
 
 def test_shift_a_works_in_the_native_list_and_player() -> None:
@@ -22,11 +24,39 @@ def test_shift_a_works_in_the_native_list_and_player() -> None:
     assert resolve(chord, player_view=True, radio_session=False) is Action.SELECT_AUDIO_OUTPUT
 
 
+def test_brackets_cycle_outputs_in_the_native_list_and_player() -> None:
+    assert resolve(
+        Chord("[", ctrl=True), player_view=False, radio_session=False
+    ) is Action.PREVIOUS_AUDIO_OUTPUT
+    assert resolve(
+        Chord("]", ctrl=True), player_view=True, radio_session=True
+    ) is Action.NEXT_AUDIO_OUTPUT
+
+
 def test_audio_menu_exposes_shift_a_without_window_accelerator() -> None:
     audio = next(menu for menu in menu_model.build_menus() if "Dźwięk" in menu.title)
     item = next(entry for entry in audio.items if entry.action is Action.SELECT_AUDIO_OUTPUT)
     assert item.shortcut == "Shift+A"
     assert item.accelerator is False
+    previous = next(
+        entry for entry in audio.items if entry.action is Action.PREVIOUS_AUDIO_OUTPUT
+    )
+    following = next(
+        entry for entry in audio.items if entry.action is Action.NEXT_AUDIO_OUTPUT
+    )
+    assert (previous.shortcut, previous.accelerator) == ("Ctrl+[", False)
+    assert (following.shortcut, following.accelerator) == ("Ctrl+]", False)
+
+
+def test_output_cycle_wraps_and_skips_disconnected_devices() -> None:
+    choices = (
+        AudioOutputChoice(None, "Domyślne urządzenie systemowe"),
+        AudioOutputChoice("denon", "Denon USB", available=False),
+        AudioOutputChoice("headphones", "Słuchawki"),
+    )
+    assert adjacent_available_choice(choices, None, 1).label == "Słuchawki"
+    assert adjacent_available_choice(choices, "headphones", 1).device_id is None
+    assert adjacent_available_choice(choices, None, -1).label == "Słuchawki"
 
 
 def test_profile_local_device_is_mapped_to_the_files_session(tmp_path: Path) -> None:
@@ -91,6 +121,16 @@ def test_private_device_choices_survive_restart(tmp_path: Path) -> None:
     }
 
 
+def test_pause_after_output_loss_is_private_and_reaches_the_host_payload(
+    tmp_path: Path,
+) -> None:
+    options = Options(pause_on_audio_output_fallback=True)
+    assert options.audio_payload()["pauseOnOutputFallback"] is True
+    store = StateStore(tmp_path)
+    store.save(LiteState(options=options))
+    assert store.load().options.pause_on_audio_output_fallback is True
+
+
 def test_host_contract_contains_selection_and_runtime_radio_recovery() -> None:
     root = Path(__file__).resolve().parents[2]
     host = (root / "src" / "AccessibleMediaController.LiteHost" / "LiteEngineHandlers.cs").read_text(
@@ -101,6 +141,9 @@ def test_host_contract_contains_selection_and_runtime_radio_recovery() -> None:
     )
 
     assert '["audio.selectOutput"]' in host
+    assert '"pauseOnOutputFallback"' in host
+    assert "ConfigureOutputFallbackBehavior" in radio
+    assert "failedDevice && _pauseAfterOutputDeviceFallback" in radio
     assert 'ConfigureOutputForSession("radio")' in host
     assert "OutputDevicePlaybackStopped" in radio
     assert "RestartPlaybackOutput" in radio

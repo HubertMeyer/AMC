@@ -43,7 +43,7 @@ podmiany i wycofania plików. Docelowe `AMC.exe` ma być stałym punktem wejści
 a aktualizator działać za nim, bez ręcznego wybierania skryptu lub interpretera.
 
 Aktualny kompletny pakiet EXE jest w:
-`D:\Projekty Codex\AMC - integracja wxPython\.test-output\AMC-Python-wyszukiwanie-20261012`.
+`D:\Projekty Codex\AMC - integracja wxPython\.test-output\AMC-Python-ustawienia-audio-20261012`.
 Nie zawiera `AMC-wx-Lite.cmd`. `AMC.exe` sprawdza wersję formatu pakietu,
 interfejsu i protokołu hosta oraz sumy krytycznych plików przed uruchomieniem.
 Automatyczna weryfikacja paczki i próbna aktualizacja do osobnego katalogu
@@ -70,19 +70,25 @@ urządzeń. `Ctrl+M` ma już osobny stan dla obu torów i przywraca wcześniejsz
 głośność, ale także wymaga żywego odbioru; całego punktu nie uznaje się jeszcze
 za zakończony.
 
-Polityka zaniku urządzenia ma stać się ustawieniem. Użytkownik wybiera, czy po
+Polityka zaniku urządzenia jest już ustawieniem. Użytkownik wybiera, czy po
 utracie wybranego wyjścia odsłuch ma automatycznie trwać na urządzeniu
 domyślnym, czy przejść w pauzę po bezpiecznym przełączeniu na urządzenie
 domyślne. Pauza odsłuchu nie zatrzymuje nagrywania radia ani bufora timeshift.
-Do odtwarzacza należy też dodać `Ctrl+[` i `Ctrl+]`, które cyklicznie wybierają
+`Ctrl+[` i `Ctrl+]` cyklicznie wybierają
 odpowiednio poprzednie i następne dostępne urządzenie audio dla bieżącej sesji
 i podają wyłącznie jego użytkową nazwę. Wybór pozostaje zapamiętany osobno dla
-sesji.
+sesji, a odłączone pozycje są pomijane. Oba zachowania wymagają jeszcze
+żywego odbioru z rzeczywistym urządzeniem.
 
 ### Pełny audyt interfejsu i ustawień
 
-`Ctrl+,` nie otwiera obecnie pełnych Ustawień. Działające opcje odtwarzania
-sesji lub elementu są innymi dialogami i nie zastępują ustawień programu.
+`Ctrl+,` otwiera teraz natywne Ustawienia z dwiema działającymi kartami:
+Ogólne i Komunikaty. Ogólne obejmują zachowanie odtwarzacza i wyjścia audio,
+normalizację, przejścia, ciszę oraz jawnie nazwane algorytmy tempa; Komunikaty
+obejmują stany odtwarzania i nagrywania Radia. Enter uruchamia Zapisz, po
+powodzeniu pada dokładnie jeden komunikat „Zapisano ustawienia”, a zmiany
+silnika są stosowane bez restartu. To nadal nie są pełne Ustawienia głównego
+AMC: brakuje pięciu kart i ich funkcji.
 Nie wystarczy dopisać kart Ogólne, Podcasty i Radio: trzeba przepisać całe
 Ustawienia dokładnie z głównego AMC, po uprzednim spisie wszystkich kart, pól,
 wartości domyślnych, zależności, walidacji i miejsc zapisu. `Ctrl+Tab` i
@@ -282,20 +288,16 @@ nie mogą być czytane przez NVDA. Po zmianie listy należy sprawdzić pierwszy
 element, ruch strzałkami, zaznaczenia Shift i Ctrl+Spacja, powrót fokusu,
 ponowne otwarcie widoku oraz mowę po Escape.
 
-W widoku nagranych plików `Alt+Shift+R` każdy ukończony wpis ma obecnie
-wbudowany prefiks „Nagrane”, mimo że sama lista już nazywa się „Nagrane”.
-NVDA powtarza więc to słowo przy każdym pliku. Przy poprawce zwykły ukończony
-wiersz ma zaczynać się od nazwy stacji lub pliku; znaczące stany wyjątkowe,
-takie jak „Przerwane”, „Nieudane” albo brak pliku, muszą pozostać czytelne.
+W widoku nagranych plików `Alt+Shift+R` usunięto powtarzany prefiks „Nagrane”
+ze zwykłych ukończonych wpisów. Wiersz zaczyna się od nazwy stacji lub pliku;
+znaczące stany wyjątkowe, takie jak „Przerwane”, „Nieudane” albo brak pliku,
+pozostają czytelne.
 
-Na liście harmonogramów otwieranej przez `Ctrl+Shift+H` Spacja nie włącza ani
-nie wyłącza zaznaczonego planu. Kod ma już metodę zmiany pola `enabled` i
-gałąź `WXK_SPACE`, ale wymaga ona, aby `FindFocus()` zwrócił dokładnie obiekt
-listy; obecne testy nie odtwarzają rzeczywistej drogi fokusu wx/NVDA. Nie jest
-to więc brak samej operacji, lecz otwarta regresja podłączenia klawisza lub
-rozpoznawania fokusu. Poprawka ma zachować wiersz, podać nazwę planu i nowy
-stan dokładnie raz, zapisać zmianę w hoście i pokazać ten sam stan po ponownym
-otwarciu okna oraz restarcie programu.
+Na liście harmonogramów `Ctrl+Shift+H` Spację podłączono bezpośrednio do
+natywnej listy, oprócz dotychczasowego haka całego okna. Rozpoznanie celu
+uwzględnia obiekt zdarzenia i rzeczywisty fokus; zmiana zachowuje wiersz, podaje
+nazwę planu i nowy stan oraz zapisuje ją w hoście. Pozostaje żywy odbiór z
+NVDA, ponowne otwarcie okna i restart programu.
 
 Odbiór użytkownika w paczce
 `.test-output\AMC-Python-next-status-20261010` wykazał również, że po
@@ -329,7 +331,7 @@ kodu ani wysyłać logów bez wiedzy użytkownika.
 
 ## Dowody automatyczne tego przyrostu
 
-- pełny runner Python: 1264 zaliczone, 0 błędów, 138 historycznych pominięć;
+- pełny runner Python: 1272 zaliczone, 0 błędów, 138 historycznych pominięć;
 - testy protokołu C#: 15 zestawów zaliczonych;
 - całe rozwiązanie .NET zbudowane sekwencyjnie: 0 ostrzeżeń, 0 błędów;
 - LiteHost zbudowany i opublikowany dla Windows x64 bez błędów i ostrzeżeń;
@@ -364,13 +366,12 @@ lewą strzałką.
    listy. Domknąć zdalne katalogi, prawą strzałkę TIDAL i żywy odbiór NVDA.
    Powtarzany prefiks „Nagrane” usunięto z ukończonych wierszy `Alt+Shift+R`;
    stany nieudane, przerwane, zatrzymane i brak pliku pozostają w etykiecie.
-4. Przepisanie całych Ustawień głównego AMC pod `Ctrl+,`, ze wszystkimi
-   kartami, polami, zależnościami i zapisem oraz nawigacją `Ctrl+Tab`; dodanie
-   wyboru pauzy po utracie wyjścia, `Ctrl+[` do poprzedniego i `Ctrl+]` do
-   następnego urządzenia bieżącej sesji. W tym samym etapie pełny audyt
-   Biblioteki, menu, skrótów i sortowań `Alt+cyfra` względem głównego AMC oraz
-   naprawa przełączania harmonogramu Spacją w żywym oknie. Potwierdzić zapis
-   Ustawień Enterem i po sukcesie podawać raz komunikat „Zapisano ustawienia”.
+4. W toku: `Ctrl+,` ma już natywne karty Ogólne i Komunikaty, zapis Enterem i
+   jedno potwierdzenie. Działają też wybór pauzy po utracie wyjścia oraz
+   `Ctrl+[` i `Ctrl+]`; Spację harmonogramu podłączono bezpośrednio do listy.
+   Przepisać pozostałe pięć kart głównego AMC ze wszystkimi polami,
+   zależnościami i zapisem, następnie wykonać żywy odbiór tych zmian oraz pełny
+   audyt Biblioteki, menu, skrótów i sortowań `Alt+cyfra`.
 5. Uzupełnienie WiiM i Sonos o pełną warstwę interfejsu z głównego AMC:
    Bibliotekę, Ulubione, wybór materiałów, presety, wszystkie skróty oraz
    prawidłowe wykonanie transportu po zakończeniu odczytu stanu. Następnie

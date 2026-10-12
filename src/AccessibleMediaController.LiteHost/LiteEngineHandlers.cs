@@ -95,6 +95,7 @@ internal sealed class LiteEngineHandlers : IDisposable
     private bool _radioMuted;
     private bool _filesPlaying;
     private bool _radioPlaying;
+    private bool _pauseRadioAfterOutputFallback;
     private PlaybackAudioSettings _configuredAudioSettings = new();
 
     public LiteEngineHandlers(int timeshiftMinutes)
@@ -253,8 +254,17 @@ internal sealed class LiteEngineHandlers : IDisposable
         };
         _radio.NowPlayingChanged += (_, e) => Publish("radio.nowPlaying",
             new { id = e.Item.Id, station = e.Item.Title, streamTitle = e.StreamTitle });
-        _radio.OutputDeviceFallback += (_, e) => Publish("audio.outputFallback",
-            new { engine = "radio", id = e.Item.Id, title = e.Item.Title });
+        _radio.OutputDeviceFallback += (_, e) =>
+        {
+            bool paused;
+            lock (_gate)
+            {
+                paused = _pauseRadioAfterOutputFallback;
+                if (paused) _radioPaused = true;
+            }
+            Publish("audio.outputFallback",
+                new { engine = "radio", id = e.Item.Id, title = e.Item.Title, paused });
+        };
     }
 
     private void Publish(string name, object data) => _events?.Publish(name, data);
@@ -2243,10 +2253,19 @@ internal sealed class LiteEngineHandlers : IDisposable
     private object ConfigureAudio(JsonElement args)
     {
         var settings = LiteAudioSettings.Read(args);
+        var pauseAfterOutputFallback = LiteArgs.ReadBool(
+            args,
+            "pauseOnOutputFallback",
+            false);
         EnsureTempoAlgorithmAvailable(settings.TempoAlgorithm);
-        lock (_gate) _configuredAudioSettings = CloneAudioSettings(settings);
+        lock (_gate)
+        {
+            _configuredAudioSettings = CloneAudioSettings(settings);
+            _pauseRadioAfterOutputFallback = pauseAfterOutputFallback;
+        }
         _files.ConfigureAudioProcessing(settings);
         _radio.ConfigureTempoAlgorithm(settings.TempoAlgorithm);
+        _radio.ConfigureOutputFallbackBehavior(pauseAfterOutputFallback);
         return new
         {
             loudnessNormalization = settings.LoudnessNormalizationEnabled,
@@ -2254,6 +2273,7 @@ internal sealed class LiteEngineHandlers : IDisposable
             interTrackSilenceMs = settings.InterTrackSilenceMilliseconds,
             tempoAlgorithm = (int)settings.TempoAlgorithm,
             tempoAlgorithmAvailable = true,
+            pauseOnOutputFallback = pauseAfterOutputFallback,
             appliesOnNextPlayback = true
         };
     }

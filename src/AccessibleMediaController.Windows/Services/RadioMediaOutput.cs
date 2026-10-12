@@ -61,6 +61,7 @@ public sealed class RadioMediaOutput(int timeshiftMinutes, bool audible = true)
     private long _requestVersion;
     private bool _preparing;
     private bool _pauseRequested;
+    private bool _pauseAfterOutputDeviceFallback;
     private bool _disposed;
 
     public event EventHandler<MediaOutputFailedEventArgs>? PlaybackFailed;
@@ -121,6 +122,20 @@ public sealed class RadioMediaOutput(int timeshiftMinutes, bool audible = true)
             _outputDeviceId = string.IsNullOrWhiteSpace(deviceId)
                 ? null
                 : deviceId.Trim();
+        }
+    }
+
+    /// <summary>
+    /// Controls whether recovery from a disconnected selected endpoint starts
+    /// the default output immediately or leaves the stream deliberately paused.
+    /// The decoder, time-shift buffer and recording continue in both modes.
+    /// </summary>
+    public void ConfigureOutputFallbackBehavior(bool pauseAfterFallback)
+    {
+        lock (_gate)
+        {
+            ObjectDisposedException.ThrowIf(_disposed, this);
+            _pauseAfterOutputDeviceFallback = pauseAfterFallback;
         }
     }
 
@@ -1392,7 +1407,9 @@ public sealed class RadioMediaOutput(int timeshiftMinutes, bool audible = true)
             lock (_gate)
             {
                 if (_disposed || !ReferenceEquals(_pipeline, pipeline)) return false;
-                remainPaused = _pauseRequested;
+                remainPaused = _pauseRequested
+                    || (failedDevice && _pauseAfterOutputDeviceFallback);
+                if (remainPaused) _pauseRequested = true;
             }
             if (!remainPaused)
             {

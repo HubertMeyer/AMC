@@ -595,6 +595,18 @@ def build_menus() -> tuple[Menu, ...]:
                 shortcut="Shift+A",
                 accelerator=False,
             ),
+            MenuItem(
+                "&Poprzednie urządzenie audio",
+                Action.PREVIOUS_AUDIO_OUTPUT,
+                shortcut="Ctrl+[",
+                accelerator=False,
+            ),
+            MenuItem(
+                "&Następne urządzenie audio",
+                Action.NEXT_AUDIO_OUTPUT,
+                shortcut="Ctrl+]",
+                accelerator=False,
+            ),
             # Opcje dotyczą sesji, także na pustej liście. Ctrl+Alt+Enter
             # jest skrótem okna, więc rejestrujemy natywny akcelerator;
             # sama obsługa KEY_DOWN listy nie uruchamiała dialogu w próbie wx.

@@ -53,6 +53,7 @@ from .audio_clip import (
 )
 from .audio_output import (
     AudioOutputChoice,
+    adjacent_available_choice,
     choices_from_payload,
     effective_output_device_id,
     read_profile_outputs,
@@ -2796,21 +2797,25 @@ class AudioOutputDeviceDialog(wx.Dialog):
 
 
 class GeneralPlaybackOptionsDialog(wx.Dialog):
-    """Najwazniejsze opcje interfejsu przeniesione z Ustawien pelnego AMC."""
+    """Functional settings pages; every exposed value has a real effect."""
 
     def __init__(self, parent: wx.Window, options) -> None:
-        super().__init__(parent, title="Ustawienia — interfejs i odtwarzanie")
-        panel = wx.Panel(self)
-        layout = wx.BoxSizer(wx.VERTICAL)
+        super().__init__(parent, title="Ustawienia", size=(720, 620))
+        self.notebook = wx.Notebook(self)
+        self.notebook.SetName("Kategorie ustawień")
+
+        general = wx.ScrolledWindow(self.notebook)
+        general.SetScrollRate(0, 12)
+        general_layout = wx.BoxSizer(wx.VERTICAL)
 
         self.pause = wx.CheckBox(
-            panel, label="&Wstrzymuj odtwarzanie po wyjściu z odtwarzacza"
+            general, label="&Wstrzymuj odtwarzanie po wyjściu z odtwarzacza"
         )
         self.pause.SetName("Wstrzymuj odtwarzanie po wyjściu z odtwarzacza")
         self.pause.SetValue(options.pause_on_player_exit)
 
         self.follow = wx.CheckBox(
-            panel,
+            general,
             label="Po wyjściu ustaw &fokus na aktualnie odtwarzanym elemencie",
         )
         self.follow.SetName(
@@ -2819,74 +2824,164 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
         self.follow.SetValue(options.follow_playback_on_player_exit)
 
         self.open_preset = wx.CheckBox(
-            panel, label="Po uruchomieniu presetu &otwieraj odtwarzacz"
+            general, label="Po uruchomieniu presetu &otwieraj odtwarzacz"
         )
         self.open_preset.SetName("Po uruchomieniu presetu otwieraj odtwarzacz")
         self.open_preset.SetValue(options.open_player_when_activating_preset)
 
         self.radio_enter = wx.CheckBox(
-            panel, label="Pozostawaj na li&ście po uruchomieniu stacji Enterem"
+            general, label="Pozostawaj na li&ście po uruchomieniu stacji Enterem"
         )
         self.radio_enter.SetName(
             "Pozostawaj na liście po uruchomieniu stacji Enterem"
         )
         self.radio_enter.SetValue(options.stay_on_list_after_radio_enter)
 
-        for control in (self.pause, self.follow, self.open_preset, self.radio_enter):
-            layout.Add(control, 0, wx.BOTTOM | wx.EXPAND, 10)
+        self.pause_output_fallback = wx.CheckBox(
+            general,
+            label=(
+                "Po odłączeniu wybranego urządzenia przejdź na domyślne, "
+                "ale &wstrzymaj dźwięk"
+            ),
+        )
+        self.pause_output_fallback.SetName(
+            "Po odłączeniu wybranego urządzenia przejdź na domyślne, ale wstrzymaj dźwięk"
+        )
+        self.pause_output_fallback.SetValue(
+            options.pause_on_audio_output_fallback
+        )
+
+        for control in (
+            self.pause,
+            self.follow,
+            self.open_preset,
+            self.radio_enter,
+            self.pause_output_fallback,
+        ):
+            general_layout.Add(control, 0, wx.BOTTOM | wx.EXPAND, 10)
+
+        audio_heading = wx.StaticText(
+            general, label="Przetwarzanie dźwięku"
+        )
+        audio_heading.SetName("Przetwarzanie dźwięku")
+        general_layout.Add(audio_heading, 0, wx.TOP | wx.BOTTOM | wx.EXPAND, 8)
+
+        self.loudness = wx.CheckBox(
+            general, label="&Normalizuj odczuwaną głośność utworów"
+        )
+        self.loudness.SetName("Normalizuj odczuwaną głośność utworów")
+        self.loudness.SetValue(options.loudness_normalization)
+        self.smooth = wx.CheckBox(
+            general, label="&Łagodnie przechodź między utworami"
+        )
+        self.smooth.SetName("Łagodnie przechodź między utworami")
+        self.smooth.SetValue(options.smooth_track_transitions)
+        general_layout.Add(self.loudness, 0, wx.BOTTOM | wx.EXPAND, 10)
+        general_layout.Add(self.smooth, 0, wx.BOTTOM | wx.EXPAND, 10)
+
+        silence_label = wx.StaticText(
+            general, label="Dodatkowa &cisza po naturalnym końcu utworu:"
+        )
+        self._silence_values = list(session_options.INTER_TRACK_SILENCE_CHOICES)
+        self.silence = wx.Choice(
+            general,
+            choices=[
+                session_options.inter_track_silence_label(value)
+                for value in self._silence_values
+            ],
+        )
+        self.silence.SetName("Dodatkowa cisza po naturalnym końcu utworu")
+        try:
+            silence_index = self._silence_values.index(options.inter_track_silence_ms)
+        except ValueError:
+            silence_index = 0
+        self.silence.SetSelection(silence_index)
+        general_layout.Add(silence_label, 0, wx.BOTTOM, 4)
+        general_layout.Add(self.silence, 0, wx.BOTTOM | wx.EXPAND, 10)
+
+        tempo_label = wx.StaticText(
+            general, label="Sposób przeliczania zmienionego &tempa:"
+        )
+        self._tempo_values = [0, 1, 2]
+        self.tempo = wx.Choice(
+            general,
+            choices=[TEMPO_LABELS[value] for value in self._tempo_values],
+        )
+        self.tempo.SetName("Sposób przeliczania zmienionego tempa")
+        self.tempo.SetSelection(
+            self._tempo_values.index(options.tempo_algorithm)
+            if options.tempo_algorithm in self._tempo_values
+            else 1
+        )
+        general_layout.Add(tempo_label, 0, wx.BOTTOM, 4)
+        general_layout.Add(self.tempo, 0, wx.BOTTOM | wx.EXPAND, 10)
+        general.SetSizer(general_layout)
+
+        messages = wx.ScrolledWindow(self.notebook)
+        messages.SetScrollRate(0, 12)
+        messages_layout = wx.BoxSizer(wx.VERTICAL)
 
         activity_heading = wx.StaticText(
-            panel, label="Komunikaty stanu stacji radiowej"
+            messages, label="Komunikaty stanu stacji radiowej"
         )
         activity_heading.SetName("Komunikaty stanu stacji radiowej")
-        layout.Add(activity_heading, 0, wx.TOP | wx.BOTTOM | wx.EXPAND, 8)
+        messages_layout.Add(activity_heading, 0, wx.TOP | wx.BOTTOM | wx.EXPAND, 8)
 
         playback_label = wx.StaticText(
-            panel, label="Stan &odtwarzania przy nazwie stacji:"
+            messages, label="Stan &odtwarzania przy nazwie stacji:"
         )
         self.playback_position = wx.Choice(
-            panel, choices=list(STATE_POSITION_LABELS)
+            messages, choices=list(STATE_POSITION_LABELS)
         )
         self.playback_position.SetName("Stan odtwarzania przy nazwie stacji")
         self.playback_position.SetSelection(
             state_position_index(options.radio_playback_state_position)
         )
-        layout.Add(playback_label, 0, wx.BOTTOM, 4)
-        layout.Add(self.playback_position, 0, wx.BOTTOM | wx.EXPAND, 10)
+        messages_layout.Add(playback_label, 0, wx.BOTTOM, 4)
+        messages_layout.Add(self.playback_position, 0, wx.BOTTOM | wx.EXPAND, 10)
 
         recording_label = wx.StaticText(
-            panel, label="Stan &nagrywania przy nazwie stacji:"
+            messages, label="Stan &nagrywania przy nazwie stacji:"
         )
         self.recording_position = wx.Choice(
-            panel, choices=list(STATE_POSITION_LABELS)
+            messages, choices=list(STATE_POSITION_LABELS)
         )
         self.recording_position.SetName("Stan nagrywania przy nazwie stacji")
         self.recording_position.SetSelection(
             state_position_index(options.radio_recording_state_position)
         )
-        layout.Add(recording_label, 0, wx.BOTTOM, 4)
-        layout.Add(self.recording_position, 0, wx.BOTTOM | wx.EXPAND, 10)
+        messages_layout.Add(recording_label, 0, wx.BOTTOM, 4)
+        messages_layout.Add(self.recording_position, 0, wx.BOTTOM | wx.EXPAND, 10)
 
         self.playback_sound = wx.CheckBox(
-            panel, label="Krótki &dźwięk dla odtwarzanej stacji"
+            messages, label="Krótki &dźwięk dla odtwarzanej stacji"
         )
         self.playback_sound.SetName("Krótki dźwięk dla odtwarzanej stacji")
         self.playback_sound.SetValue(options.radio_playback_state_sound)
         self.recording_sound = wx.CheckBox(
-            panel, label="Krótki dźwięk dla nagrywanej stacji"
+            messages, label="Krótki dźwięk dla nagrywanej stacji"
         )
         self.recording_sound.SetName("Krótki dźwięk dla nagrywanej stacji")
         self.recording_sound.SetValue(options.radio_recording_state_sound)
-        layout.Add(self.playback_sound, 0, wx.BOTTOM | wx.EXPAND, 10)
-        layout.Add(self.recording_sound, 0, wx.BOTTOM | wx.EXPAND, 10)
-        panel.SetSizer(layout)
+        messages_layout.Add(self.playback_sound, 0, wx.BOTTOM | wx.EXPAND, 10)
+        messages_layout.Add(self.recording_sound, 0, wx.BOTTOM | wx.EXPAND, 10)
+        messages.SetSizer(messages_layout)
+
+        self.notebook.AddPage(general, "Ogólne", select=True)
+        self.notebook.AddPage(messages, "Komunikaty")
 
         buttons = self.CreateStdDialogButtonSizer(wx.OK | wx.CANCEL)
+        save = self.FindWindowById(wx.ID_OK)
+        if save is not None:
+            save.SetLabel("&Zapisz")
+            save.SetName("Zapisz ustawienia")
+            save.SetDefault()
         outer = wx.BoxSizer(wx.VERTICAL)
-        outer.Add(panel, 1, wx.ALL | wx.EXPAND, 12)
+        outer.Add(self.notebook, 1, wx.ALL | wx.EXPAND, 12)
         outer.Add(buttons, 0, wx.ALL | wx.ALIGN_RIGHT, 12)
         self.SetSizer(outer)
-        self.Fit()
+        self.SetMinSize((560, 450))
+        self.CentreOnParent()
         self.pause.SetFocus()
 
     @property
@@ -2896,6 +2991,17 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
             "follow_playback_on_player_exit": self.follow.GetValue(),
             "open_player_when_activating_preset": self.open_preset.GetValue(),
             "stay_on_list_after_radio_enter": self.radio_enter.GetValue(),
+            "pause_on_audio_output_fallback": (
+                self.pause_output_fallback.GetValue()
+            ),
+            "loudness_normalization": self.loudness.GetValue(),
+            "smooth_track_transitions": self.smooth.GetValue(),
+            "inter_track_silence_ms": self._silence_values[
+                max(0, self.silence.GetSelection())
+            ],
+            "tempo_algorithm": self._tempo_values[
+                max(0, self.tempo.GetSelection())
+            ],
             "radio_playback_state_position": state_position_value(
                 self.playback_position.GetSelection()
             ),
@@ -4016,9 +4122,23 @@ class LiteFrame(wx.Frame):
         if not self._window_alive():
             return
         if name == "audio.outputFallback":
+            paused = bool(data.get("paused"))
+            previous = self._transport_status_by_session.get(SessionId.RADIO, {})
+            self._transport_status_by_session[SessionId.RADIO] = {
+                **previous,
+                "paused": paused,
+                "playing": True,
+                "sessionId": SessionId.RADIO.value,
+            }
+            if self.navigator.active is SessionId.RADIO:
+                self._set_transport_label(playing=not paused)
             self.announcer.say(
                 "Wybrane urządzenie audio jest niedostępne. "
-                "Radio gra na urządzeniu domyślnym"
+                + (
+                    "Radio jest wstrzymane na urządzeniu domyślnym"
+                    if paused
+                    else "Radio gra na urządzeniu domyślnym"
+                )
             )
         elif name == "audio.clipExportProgress":
             # Postep ma byc dostepny przez pole i NVDA+End, ale NIE moze
@@ -4951,6 +5071,10 @@ class LiteFrame(wx.Frame):
             self._show_session_options()
         elif action is Action.SELECT_AUDIO_OUTPUT:
             self._choose_audio_output()
+        elif action is Action.PREVIOUS_AUDIO_OUTPUT:
+            self._cycle_audio_output(-1)
+        elif action is Action.NEXT_AUDIO_OUTPUT:
+            self._cycle_audio_output(1)
         elif action is Action.GENERAL_SETTINGS:
             self._show_general_playback_options()
         elif action is Action.VIEW_PRESETS:
@@ -9845,53 +9969,12 @@ class LiteFrame(wx.Frame):
             self._restore_focus_after_dialog()
             if selected is None:
                 return
-
-            def applied(result: dict) -> None:
-                previous_private = dict(
-                    self.state.audio_output_device_ids_by_session
-                )
-                next_private = dict(previous_private)
-                next_private[session.value] = selected.device_id or ""
-                self.state.audio_output_device_ids_by_session = next_private
-                if not self._save_state():
-                    self.state.audio_output_device_ids_by_session = previous_private
-                    # Silnik zdazyl zastosowac wybor. Przywracamy poprzedni w
-                    # tle, zeby RAM, dzwiek i stan na dysku znow byly zgodne.
-                    self.runner.submit(
-                        "audio-output-rollback",
-                        lambda: client.select_audio_output(
-                            session.value,
-                            previous_device_id,
-                            restart=True,
-                        ),
-                        lambda _payload: None,
-                        lambda _error: None,
-                    )
-                    return
-                if selected.device_id is not None and bool(
-                    (result or {}).get("usingDefault")
-                ):
-                    self.announcer.say(
-                        f"Zapamiętano dla sesji {session_name}: {selected.label}. "
-                        "Urządzenie jest teraz niedostępne, dlatego używane jest "
-                        "urządzenie domyślne"
-                    )
-                else:
-                    self.announcer.say(
-                        f"Dla sesji {session_name} wybrano: {selected.label}"
-                    )
-
-            self.runner.submit(
-                "audio-output-select",
-                lambda: client.select_audio_output(
-                    session.value,
-                    selected.device_id,
-                    restart=True,
-                ),
-                applied,
-                lambda error: self.announcer.say(
-                    f"Nie zmieniono urządzenia audio: {error}"
-                ),
+            self._apply_audio_output_choice(
+                client,
+                session,
+                session_name,
+                previous_device_id,
+                selected,
             )
 
         self.runner.submit(
@@ -9900,6 +9983,124 @@ class LiteFrame(wx.Frame):
             prepared,
             lambda error: self.announcer.say(
                 f"Nie udało się odczytać urządzeń audio: {error}"
+            ),
+        )
+
+    def _cycle_audio_output(self, direction: int) -> None:
+        """Ctrl+[ / Ctrl+]: switch one local session without a dialog."""
+
+        session = self.navigator.active
+        if session is SessionId.WIIM:
+            self.announcer.say(
+                "WiiM odtwarza na własnym urządzeniu sieciowym. "
+                "Wybierz urządzenie z listy sesji WiiM"
+            )
+            return
+        if session is SessionId.SONOS:
+            self.announcer.say(
+                "Sonos odtwarza na własnej grupie głośników. "
+                "Wybierz grupę z listy sesji Sonos"
+            )
+            return
+        if session is SessionId.TIDAL:
+            self.announcer.say(
+                "TIDAL korzysta z urządzenia wybranego w oryginalnym odtwarzaczu"
+            )
+            return
+        client = self.client
+        if client is None:
+            self.announcer.say("Silnik nie jest gotowy")
+            return
+        session_name = session_options.session_display_name(session)
+        previous_device_id = effective_output_device_id(
+            session,
+            self.state.audio_output_device_ids_by_session,
+            self._profile_audio_outputs,
+        )
+
+        def prepared(payload: dict) -> None:
+            choices = choices_from_payload(payload)
+            selected = adjacent_available_choice(
+                choices,
+                previous_device_id,
+                direction,
+            )
+            if selected is None or selected.device_id == previous_device_id:
+                self.announcer.say(
+                    f"Brak innego dostępnego urządzenia audio dla sesji {session_name}"
+                )
+                return
+            self._apply_audio_output_choice(
+                client,
+                session,
+                session_name,
+                previous_device_id,
+                selected,
+            )
+
+        self.runner.submit(
+            "audio-output-list",
+            lambda: client.audio_outputs(previous_device_id),
+            prepared,
+            lambda error: self.announcer.say(
+                f"Nie udało się odczytać urządzeń audio: {error}"
+            ),
+        )
+
+    def _apply_audio_output_choice(
+        self,
+        client: LiteHostClient,
+        session: SessionId,
+        session_name: str,
+        previous_device_id: str | None,
+        selected: AudioOutputChoice,
+    ) -> None:
+        """Apply, persist and if necessary roll back one output selection."""
+
+        previous_private = dict(self.state.audio_output_device_ids_by_session)
+
+        def applied(result: dict) -> None:
+            next_private = dict(previous_private)
+            next_private[session.value] = selected.device_id or ""
+            self.state.audio_output_device_ids_by_session = next_private
+            if not self._save_state():
+                self.state.audio_output_device_ids_by_session = previous_private
+                # The engine already applied the choice. Restore the exact
+                # previous effective endpoint so memory, sound and disk agree.
+                self.runner.submit(
+                    "audio-output-rollback",
+                    lambda: client.select_audio_output(
+                        session.value,
+                        previous_device_id,
+                        restart=True,
+                    ),
+                    lambda _payload: None,
+                    lambda _error: None,
+                )
+                return
+            if selected.device_id is not None and bool(
+                (result or {}).get("usingDefault")
+            ):
+                self.announcer.say(
+                    f"Zapamiętano dla sesji {session_name}: {selected.label}. "
+                    "Urządzenie jest teraz niedostępne, dlatego używane jest "
+                    "urządzenie domyślne"
+                )
+            else:
+                self.announcer.say(
+                    f"Dla sesji {session_name} wybrano: {selected.label}"
+                )
+
+        self.runner.submit(
+            "audio-output-select",
+            lambda: client.select_audio_output(
+                session.value,
+                selected.device_id,
+                restart=True,
+            ),
+            applied,
+            lambda error: self.announcer.say(
+                f"Nie zmieniono urządzenia audio: {error}"
             ),
         )
 
@@ -9926,7 +10127,21 @@ class LiteFrame(wx.Frame):
         # Zmiana dotyczy tylko tekstu/sygnalu wierszy. Odtwarzanie,
         # nagrywanie, harmonogramy i timeshift pozostaja nietkniete.
         self._apply_radio_activity_status()
-        self.announcer.say("Zapisano ustawienia interfejsu i odtwarzania")
+        client = self.client
+        if client is None:
+            self.announcer.say("Zapisano ustawienia")
+            return
+        self.runner.submit(
+            "general-settings-audio",
+            lambda: client.configure_audio(
+                **session_options.engine_audio_payload(self.state)
+            ),
+            lambda _payload: self.announcer.say("Zapisano ustawienia"),
+            lambda _error: self.announcer.say(
+                "Zapisano ustawienia. Ustawienie utraty urządzenia zacznie "
+                "działać po ponownym uruchomieniu programu"
+            ),
+        )
 
     def _show_session_options(self) -> None:
         """Opcje sesji: dialog, wybor sesji, Zapisz/Anuluj, zapis i SKUTEK.

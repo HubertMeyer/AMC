@@ -675,6 +675,11 @@ class RadioSchedulesDialog(wx.Dialog):
         self.SetSize((850, 580))
 
         self.Bind(wx.EVT_CHAR_HOOK, self._on_key)
+        # Some Windows/NVDA combinations deliver Space to the native list box
+        # without first bubbling EVT_CHAR_HOOK through the dialog.  Bind the
+        # list directly as well; the hook consumes handled keys, so one press
+        # still performs exactly one change.
+        self.schedule_list.Bind(wx.EVT_KEY_DOWN, self._on_key)
         self.schedule_list.Bind(wx.EVT_LISTBOX_DCLICK, self._edit)
         self.new_button.Bind(wx.EVT_BUTTON, self._new)
         self.edit_button.Bind(wx.EVT_BUTTON, self._edit)
@@ -911,7 +916,15 @@ class RadioSchedulesDialog(wx.Dialog):
 
     def _on_key(self, event: wx.KeyEvent) -> None:
         code = event.GetKeyCode()
-        focus_on_list = wx.Window.FindFocus() is self.schedule_list
+        event_object = (
+            event.GetEventObject()
+            if hasattr(event, "GetEventObject")
+            else None
+        )
+        focus_on_list = (
+            event_object is self.schedule_list
+            or wx.Window.FindFocus() is self.schedule_list
+        )
         if (
             focus_on_list
             and event.ControlDown()
