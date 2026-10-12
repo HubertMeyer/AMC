@@ -10373,8 +10373,25 @@ class LiteFrame(wx.Frame):
             self.announcer.say("Silnik nie działa, wycinanie fragmentu jest niedostępne")
             return
 
+        # Host obsluguje Radio oraz wspolny silnik Plikow/Podcastow rownolegle.
+        # ``status()`` bez sessionId pyta o ostatnio dotkniety tor. Okresowy
+        # odczyt stanu Radia moze wiec odbyc sie pomiedzy uruchomieniem
+        # nagrania z widoku "Nagrane" a nacisnieciem I/O. Dostawalismy wtedy
+        # poprawny status RADIA i bledny komunikat, ze odtwarzane nagranie nie
+        # jest plikiem multimedialnym. Kontekst wycinania zawsze nalezy do
+        # widocznego odtwarzacza Plikow albo Podcastow, wiec wskazujemy sesje
+        # jawnie i nigdy nie korzystamy tu z historycznego routingu hosta.
+        requested_session = self.navigator.active
+        if requested_session not in (SessionId.FILES, SessionId.PODCASTS):
+            self.announcer.say(
+                "Wycinanie fragmentu jest dostępne dla plików lokalnych "
+                "i pobranych odcinków podcastów"
+            )
+            return
+        player_view_active = self.navigator.view is View.PLAYER
+
         def work() -> tuple[dict, bool]:
-            payload = client.status() or {}
+            payload = client.status(requested_session.value) or {}
             source = payload.get("source")
             # File.Exists dla dysku sieciowego/chmury moze czekac. Nie robimy
             # tego na watku GUI, bo podczas czekania NVDA stracilby cale okno.
@@ -10390,8 +10407,8 @@ class LiteFrame(wx.Frame):
             self._last_status = payload or {}
             context, error = clip_context_from_status(
                 payload,
-                files_session_active=self.navigator.active is SessionId.FILES,
-                player_view_active=self.navigator.view is View.PLAYER,
+                files_session_active=True,
+                player_view_active=player_view_active,
                 path_exists=lambda _path: source_exists,
             )
             if context is None:
