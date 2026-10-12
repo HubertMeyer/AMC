@@ -77,6 +77,8 @@ class TidalCachedItem:
     public_uri: str | None
     related_album_service_id: str | None
     related_album_title: str
+    related_artist_service_id: str | None
+    related_artist_name: str
     added_ticks: int | None
     is_favorite: bool
     is_in_library: bool
@@ -157,6 +159,10 @@ def items_from_amc_state(raw: object) -> tuple[TidalCachedItem, ...]:
                 _text(entry.get("relatedAlbumExternalId")) or None
             ),
             related_album_title=_text(entry.get("relatedAlbumTitle")),
+            related_artist_service_id=(
+                _text(entry.get("relatedArtistExternalId")) or None
+            ),
+            related_artist_name=_text(entry.get("relatedArtistName")),
             added_ticks=_optional_ticks(entry.get("collectionAddedUtcTicks")),
             is_favorite=entry.get("isFavorite") is True,
             is_in_library=entry.get("isInLibrary") is True,
@@ -428,6 +434,8 @@ def _row(item: TidalCachedItem) -> Row:
         artist_name=item.artist,
         related_album_service_id=item.related_album_service_id,
         related_album_title=item.related_album_title,
+        related_artist_service_id=item.related_artist_service_id,
+        related_artist_name=item.related_artist_name,
         collection_added_ticks=item.added_ticks,
     )
 
@@ -452,6 +460,10 @@ def _host_item_row(entry: object) -> Row | None:
         _text(entry.get("relatedAlbumExternalId")) or None
     )
     related_album_title = _text(entry.get("relatedAlbumTitle"))
+    related_artist_service_id = (
+        _text(entry.get("relatedArtistExternalId")) or None
+    )
+    related_artist_name = _text(entry.get("relatedArtistName"))
     activation_message = None if (
         kind in _CONTAINER_KINDS
         or (kind == "track" and related_album_service_id)
@@ -468,6 +480,8 @@ def _host_item_row(entry: object) -> Row | None:
         artist_name=artist,
         related_album_service_id=related_album_service_id,
         related_album_title=related_album_title,
+        related_artist_service_id=related_artist_service_id,
+        related_artist_name=related_artist_name,
         collection_added_ticks=_optional_ticks(
             entry.get("collectionAddedUtcTicks")
         ),
@@ -549,6 +563,10 @@ def queue_rows(payload: object) -> tuple[Row, ...]:
             artist_name=artist,
             related_album_service_id=album_id,
             related_album_title=_text(entry.get("relatedAlbumTitle")),
+            related_artist_service_id=(
+                _text(entry.get("relatedArtistExternalId")) or None
+            ),
+            related_artist_name=_text(entry.get("relatedArtistName")),
         ))
     return tuple(rows)
 
@@ -573,6 +591,8 @@ def queue_payload(rows: Sequence[Row]) -> list[dict[str, str]]:
             "publicUri": row.url or "",
             "relatedAlbumExternalId": row.related_album_service_id,
             "relatedAlbumTitle": row.related_album_title,
+            "relatedArtistExternalId": row.related_artist_service_id or "",
+            "relatedArtistName": row.related_artist_name,
         })
     return result
 

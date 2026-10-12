@@ -211,6 +211,8 @@ def test_round_trip_keeps_only_safe_private_tidal_queue_fields() -> None:
         "artist": "Wykonawca",
         "relatedAlbumExternalId": "albums:44",
         "relatedAlbumTitle": "Album",
+        "relatedArtistExternalId": "artists:7",
+        "relatedArtistName": "Wykonawca",
         "token": "nie zapisuj",
     }]))
 
@@ -218,6 +220,8 @@ def test_round_trip_keeps_only_safe_private_tidal_queue_fields() -> None:
 
     assert len(loaded) == 1
     assert loaded[0]["title"] == "Utwór"
+    assert loaded[0]["relatedArtistExternalId"] == "artists:7"
+    assert loaded[0]["relatedArtistName"] == "Wykonawca"
     assert "token" not in loaded[0]
 
 

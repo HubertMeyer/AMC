@@ -108,10 +108,13 @@ TIDAL:
    restarcie. Powtórz dla Biblioteki, Ulubionych i Playlist; każdy widok ma
    pamiętać swój tryb osobno. W albumie, wykonawcy i Kolejce te skróty nie mogą
    przełączyć widoku Plików ani udawać sortowania kolekcji.
-7. Na albumie naciśnij prawą strzałkę: ma prowadzić do jego wykonawcy. Na
-   wykonawcy sprawdź dokładne gałęzie przeniesione z głównego AMC, w tym
-   albumy, utwory i podobnych wykonawców. Escape/Backspace ma wrócić we
-   właściwe miejsce, a NVDA nie może czytać identyfikatorów TIDAL.
+7. Na albumie naciśnij prawą strzałkę: natywne menu „Powiązania TIDAL” ma
+   zawierać „Przejdź do wykonawcy”. Na utworze z kompletnymi relacjami ma
+   zawierać kolejno „Przejdź do albumu” i „Przejdź do wykonawcy”. Na
+   wykonawcy ma zawierać „Pokaż albumy wykonawcy”. Enter na samym wykonawcy
+   nadal otwiera trzy kategorie: Albumy, Utwory i Podobni wykonawcy. Po
+   anulowaniu menu fokus wraca na ten sam wiersz; Backspace z otwartej relacji
+   wraca we właściwe miejsce. NVDA nie może czytać identyfikatorów TIDAL.
 
 WiiM:
 
@@ -185,8 +188,8 @@ Odbiór wyszukiwania z NVDA:
    katalogu.
 
 Na tym etapie przeszukiwany jest kompletny lokalny cache. Zdalne katalogi na
-żywo i relacje TIDAL pod prawą strzałką pozostają do
-domknięcia i nie mogą być zaliczone samym testem lokalnym.
+żywo pozostają do domknięcia. Relacje TIDAL pod prawą strzałką są podłączone,
+ale ich odbiór z kontem i NVDA nie może być zaliczony samym testem lokalnym.
 
 W `Alt+Shift+R` zwykły ukończony plik nie powinien zaczynać się od słowa
 „Nagrane”, ponieważ taki jest już kontekst listy. Odczyt ma zaczynać się od
@@ -683,6 +686,9 @@ Pełne dowody robocze: `amc_pomoc/wx-full-profile-after421/library-gui-after422/
   wyłącznie celowe nazwy, rodzaje oraz szczegóły — nigdy ID usługi, prywatnego
   uchwytu odtwarzania ani reprezentacji obiektu.
 - `Ctrl+C` kopiuje nazwę, a `Ctrl+Shift+C` publiczny adres, jeżeli był zapisany.
+- Prawa strzałka otwiera natywne menu „Powiązania TIDAL” z wyłącznie
+  dostępnymi działaniami: album, wykonawca albo albumy wykonawcy. Anulowanie
+  przywraca fokus listy i nie zmienia zaznaczenia.
 - Lewa strzałka czyta tylko dostępne informacje katalogowe i uczciwie mówi, że
   format audio nie jest znany z zapisanej migawki.
 - Enter na albumie i playliście otwiera ich zawartość przez tę samą oficjalną

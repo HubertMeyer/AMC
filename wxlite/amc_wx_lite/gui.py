@@ -102,6 +102,7 @@ from .navigation import (
     PlayTidalTrack,
     PlayTrack,
     SessionId,
+    ShowTidalRelations,
     TransientNavigationSnapshot,
     View,
     view_context,
@@ -5937,6 +5938,32 @@ class LiteFrame(wx.Frame):
 
         self.runner.submit("tidal-navigation", work, done, failed)
 
+    def _show_tidal_relations(self, intent: ShowTidalRelations) -> None:
+        """Show the same native, keyboard-driven relation menu as full AMC."""
+        if not intent.choices:
+            return
+        menu = wx.Menu(intent.title)
+        identifiers: list[int] = []
+        for choice in intent.choices:
+            item = menu.Append(wx.ID_ANY, choice.label)
+            identifier = item.GetId()
+            identifiers.append(identifier)
+            self.Bind(
+                wx.EVT_MENU,
+                lambda _event, selected=choice: self._run(
+                    self.navigator.activate_tidal_relation(selected)
+                ),
+                id=identifier,
+            )
+        active_list = self._active_list()
+        try:
+            active_list.PopupMenu(menu)
+        finally:
+            for identifier in identifiers:
+                self.Unbind(wx.EVT_MENU, id=identifier)
+            menu.Destroy()
+            wx.CallAfter(active_list.SetFocus)
+
     def _open_library_view(
         self,
         intent: OpenLibraryView,
@@ -6113,6 +6140,13 @@ class LiteFrame(wx.Frame):
             and chord.canonical == "Ctrl+Return"
         ):
             self._run(self.navigator.play_selected_tidal_container())
+            return
+        if (
+            not player
+            and self.navigator.active is SessionId.TIDAL
+            and chord.canonical == "Right"
+        ):
+            self._run(self.navigator.tidal_relations())
             return
         # Pelne AMC przechwytuje Page Up/Page Down w sesji TIDAL takze na
         # liscie, bo zewnetrzny TIDAL nie ma widoku odtwarzacza AMC. Bez tej
@@ -6522,6 +6556,8 @@ class LiteFrame(wx.Frame):
                 self._open_tidal_view(intent)
             elif isinstance(intent, OpenTidalContainer):
                 self._open_tidal_container(intent)
+            elif isinstance(intent, ShowTidalRelations):
+                self._show_tidal_relations(intent)
             elif isinstance(intent, PlayTrack):
                 self._play_track(intent)
             elif isinstance(intent, PlayFromQueue):

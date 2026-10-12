@@ -220,6 +220,29 @@ def test_tidal_sort_is_private_preserves_selection_and_orders_fresh_rows() -> No
     assert "self.announcer.say(intent.announcement)" in loader_source
 
 
+def test_tidal_right_arrow_uses_a_native_menu_and_restores_list_focus() -> None:
+    key_handler = next(
+        node for node in ast.walk(TREE)
+        if isinstance(node, ast.FunctionDef)
+        and node.name == "_on_key"
+        and "tidal_relations" in (ast.get_source_segment(SOURCE, node) or "")
+    )
+    key_source = ast.get_source_segment(SOURCE, key_handler) or ""
+    assert 'chord.canonical == "Right"' in key_source
+    assert "self.navigator.tidal_relations()" in key_source
+
+    presenter = next(
+        node for node in ast.walk(TREE)
+        if isinstance(node, ast.FunctionDef)
+        and node.name == "_show_tidal_relations"
+    )
+    presenter_source = ast.get_source_segment(SOURCE, presenter) or ""
+    assert "wx.Menu(intent.title)" in presenter_source
+    assert "choice.label" in presenter_source
+    assert "active_list.PopupMenu(menu)" in presenter_source
+    assert "wx.CallAfter(active_list.SetFocus)" in presenter_source
+
+
 def test_play_track_forwards_the_bookmark_position() -> None:
     """Bez ``position_seconds`` zakladka odtworzylaby plik od zera."""
     assert "position_seconds=intent.position_seconds" in SOURCE, (

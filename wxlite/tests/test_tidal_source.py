@@ -55,7 +55,9 @@ def _state() -> dict:
     return {
         "tidal": {"cachedCollectionItems": [
             _entry("album-1", "Album pierwszy", "Album", isInLibrary=True,
-                   collectionAddedUtcTicks=100),
+                   collectionAddedUtcTicks=100,
+                   relatedArtistExternalId="artists:7",
+                   relatedArtistName="Wykonawca"),
             _entry("playlist-1", "Playlista", "Playlist", isInLibrary=True,
                    collectionAddedUtcTicks=200),
             _entry("artist-1", "Artysta", "Artist", isInLibrary=True,
@@ -107,6 +109,15 @@ def test_tidal_items_keep_model_ids_out_of_spoken_data() -> None:
     assert "track-1" not in spoken
     assert "tracks:track-1" not in spoken
     assert "private-playback-handle" not in spoken
+    album = next(
+        item for item in build_view(_state(), VIEW_LIBRARY).rows
+        if item.item_id == "album-1"
+    )
+    assert album.related_artist_service_id == "artists:7"
+    assert album.related_artist_name == "Wykonawca"
+    assert "artists:7" not in " ".join(
+        (album.title, album.kind_label, album.detail)
+    )
 
 
 def test_tidal_library_and_favorites_follow_full_amc_membership_semantics() -> None:
@@ -146,6 +157,8 @@ def test_online_container_payload_is_sanitized_before_becoming_rows() -> None:
                 "publicUri": "https://tidal.com/browse/track/1",
                 "relatedAlbumExternalId": "albums:44",
                 "relatedAlbumTitle": "Album próby",
+                "relatedArtistExternalId": "artists:7",
+                "relatedArtistName": "Wykonawca",
                 "source": "private-handle",
                 "token": "secret",
             },
@@ -160,6 +173,8 @@ def test_online_container_payload_is_sanitized_before_becoming_rows() -> None:
     assert row.activation_message is None
     assert row.related_album_service_id == "albums:44"
     assert row.related_album_title == "Album próby"
+    assert row.related_artist_service_id == "artists:7"
+    assert row.related_artist_name == "Wykonawca"
     assert "tracks:1" not in " ".join((row.title, row.kind_label, row.detail))
 
 
@@ -285,6 +300,8 @@ def test_private_tidal_queue_round_trip_keeps_ids_out_of_labels() -> None:
         artist_name="Wykonawca",
         related_album_service_id="albums:44",
         related_album_title="Album",
+        related_artist_service_id="artists:7",
+        related_artist_name="Wykonawca",
     )
 
     restored = queue_rows(queue_payload([row]))
@@ -292,6 +309,8 @@ def test_private_tidal_queue_round_trip_keeps_ids_out_of_labels() -> None:
     assert len(restored) == 1
     assert restored[0].title == "Utwór próby"
     assert restored[0].detail == "Wykonawca"
+    assert restored[0].related_artist_service_id == "artists:7"
+    assert restored[0].related_artist_name == "Wykonawca"
     assert "secret" not in restored[0].title
     assert "secret" not in restored[0].detail
 

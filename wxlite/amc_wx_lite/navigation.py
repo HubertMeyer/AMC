@@ -288,6 +288,23 @@ class OpenTidalContainer:
 
 
 @dataclass(frozen=True, slots=True)
+class TidalRelationChoice:
+    """One deliberate user-facing command in the TIDAL relations menu."""
+
+    label: str
+    target: OpenTidalContainer
+    open_artist_overview: bool = False
+
+
+@dataclass(frozen=True, slots=True)
+class ShowTidalRelations:
+    """Native menu requested by Right Arrow in the TIDAL list."""
+
+    title: str
+    choices: tuple[TidalRelationChoice, ...]
+
+
+@dataclass(frozen=True, slots=True)
 class TidalNavigationSnapshot:
     """Exact accessible list state restored by Backspace in TIDAL."""
 
@@ -897,6 +914,97 @@ class Navigator:
             public_uri=row.url,
             artist_section=row.service_section,
         )
+
+    @staticmethod
+    def _tidal_relation_choices(row: Row) -> tuple[TidalRelationChoice, ...]:
+        """Mirror the relation menu of the full AMC without speaking IDs."""
+        choices: list[TidalRelationChoice] = []
+        if (
+            row.kind in ("track", "video")
+            and row.related_album_service_id
+        ):
+            album_title = row.related_album_title or "Powiązany album"
+            choices.append(TidalRelationChoice(
+                "Przejdź do albumu",
+                OpenTidalContainer(
+                    item_id=f"{row.item_id}:related-album",
+                    service_id=row.related_album_service_id,
+                    title=album_title,
+                    kind="album",
+                    artist=row.artist_name,
+                ),
+            ))
+        if row.kind == "artist" and row.service_id:
+            choices.append(TidalRelationChoice(
+                "Pokaż albumy wykonawcy",
+                OpenTidalContainer(
+                    item_id=row.item_id,
+                    service_id=row.service_id,
+                    title=row.title,
+                    kind="artist",
+                    artist_section="albums",
+                ),
+            ))
+        if (
+            row.kind in ("track", "video", "album")
+            and row.related_artist_service_id
+        ):
+            artist_title = (
+                row.related_artist_name
+                or row.artist_name
+                or "Powiązany wykonawca"
+            )
+            choices.append(TidalRelationChoice(
+                "Przejdź do wykonawcy",
+                OpenTidalContainer(
+                    item_id=f"{row.item_id}:related-artist",
+                    service_id=row.related_artist_service_id,
+                    title=artist_title,
+                    kind="artist",
+                ),
+                open_artist_overview=True,
+            ))
+        return tuple(choices)
+
+    def tidal_relations(self) -> list[object]:
+        """Right Arrow: show only relationships proved by the row model."""
+        state = self.session
+        if state.session_id is not SessionId.TIDAL:
+            return [Announce("Powiązania TIDAL są dostępne tylko w TIDAL")]
+        row = state.model.selected_row
+        if row is None:
+            return [Announce("Lista TIDAL jest pusta")]
+        choices = self._tidal_relation_choices(row)
+        if not choices:
+            return [Announce(
+                "Ten element nie ma dostępnego albumu ani wykonawcy nadrzędnego"
+            )]
+        return [ShowTidalRelations("Powiązania TIDAL", choices)]
+
+    def activate_tidal_relation(
+        self,
+        choice: TidalRelationChoice,
+    ) -> list[object]:
+        """Execute one still-valid relation selected from the native menu."""
+        state = self.session
+        row = state.model.selected_row
+        if (
+            state.session_id is not SessionId.TIDAL
+            or row is None
+            or choice not in self._tidal_relation_choices(row)
+        ):
+            return [Announce("Wybrane powiązanie TIDAL nie jest już dostępne")]
+        if choice.open_artist_overview:
+            target = choice.target
+            artist = Row(
+                item_id=target.item_id,
+                title=target.title,
+                kind="artist",
+                service_id=target.service_id,
+                service_kind="artist",
+            )
+            return self._open_tidal_artist_overview(artist, target)
+        return [choice.target]
 
     def play_selected_tidal_container(self) -> list[object]:
         """Ctrl+Enter: oddaj album lub playliste oryginalnemu TIDALowi."""

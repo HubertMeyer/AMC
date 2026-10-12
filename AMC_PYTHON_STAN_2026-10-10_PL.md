@@ -231,11 +231,14 @@ Brak prywatnego wyboru dziedziczy ustawienie z profilu głównego AMC, ale zapis
 AMC Python nie modyfikuje tego profilu. Pozostaje żywy odbiór kolejności na
 rzeczywistym koncie TIDAL i mowy po każdej zmianie.
 
-Trzeba też przywrócić kontekstową prawą strzałkę. Na albumie prowadziła do
-wykonawcy; na wykonawcy otwierała właściwe zbiory wykonawcy, między innymi
-albumy, utwory i podobnych wykonawców zgodnie z dokładnym zachowaniem głównego
-AMC. Powrót, fokus i wszystkie działania na otwartych listach muszą zachować
-się tak samo. Dla przyszłej sesji Spotify należy później przeprowadzić osobne
+Kontekstowa prawa strzałka jest przywrócona zgodnie z głównym AMC. Otwiera
+natywne menu „Powiązania TIDAL”: na utworze może zawierać przejście do albumu
+i wykonawcy, na albumie przejście do wykonawcy, a na wykonawcy pokazanie jego
+albumów. Enter na wykonawcy nadal otwiera osobny przegląd trzech kategorii:
+Albumy, Utwory i Podobni wykonawcy. Po zamknięciu menu fokus wraca na listę,
+Backspace z otwartej relacji przywraca wcześniejszy element, a techniczne ID
+albumu i wykonawcy pozostają wyłącznie w modelu. Pozostaje odbiór z żywym
+kontem i NVDA. Dla przyszłej sesji Spotify należy później przeprowadzić osobne
 porównanie, ponieważ podobny cel nie oznacza identycznego API ani układu.
 
 ### Wyszukiwanie
@@ -260,7 +263,8 @@ Historia zapytań jest zapisywana osobno dla bieżących sesji i zakresu
 globalnego; przy pustym polu strzałki w dół/w górę przeglądają ją jak w
 głównym AMC. Do domknięcia parytetu pozostają wyniki pobierane na żywo z
 internetowych katalogów (Radio Browser, Apple/Spreaker/YouTube i wyszukiwanie
-TIDAL) oraz relacje TIDAL pod prawą strzałką. Obecne wyniki są prawdziwe, ale
+TIDAL). Relacje katalogowe TIDAL pod prawą strzałką są podłączone osobno.
+Obecne wyniki wyszukiwania są prawdziwe, ale
 pochodzą wyłącznie z kompletnego lokalnego cache'u. Potrzebny jest też żywy
 odbiór NVDA okna, skrótów i powrotu fokusu; testy automatyczne nie zastępują
 tego pomiaru.
@@ -380,7 +384,7 @@ kodu ani wysyłać logów bez wiedzy użytkownika.
 
 ## Dowody automatyczne tego przyrostu
 
-- pełny runner Python: 1352 zaliczone, 0 błędów, 138 historycznych pominięć;
+- pełny runner Python: 1357 zaliczonych, 0 błędów, 138 historycznych pominięć;
 - testy protokołu C#: 15 zestawów zaliczonych;
 - całe rozwiązanie .NET zbudowane sekwencyjnie: 0 ostrzeżeń, 0 błędów;
 - sześć celowanych testów Windows rozpoznawania, ustawień, historii, podpisu
@@ -414,7 +418,8 @@ lewą strzałką.
    przełączania wyjść oraz wyciszenia `Ctrl+M` dla aktywnej sesji.
 3. W toku: `Ctrl+F` i `Ctrl+Shift+F` mają już osobne natywne okno, pełny
    lokalny cache, historię zapytań, skróty działań oraz powrót do właściwej
-   listy. Domknąć zdalne katalogi, prawą strzałkę TIDAL i żywy odbiór NVDA.
+   listy. Domknąć zdalne katalogi i żywy odbiór NVDA. Prawa strzałka TIDAL ma
+   już natywne menu relacji zgodne z głównym AMC.
    Powtarzany prefiks „Nagrane” usunięto z ukończonych wierszy `Alt+Shift+R`;
    stany nieudane, przerwane, zatrzymane i brak pliku pozostają w etykiecie.
 4. W toku: `Ctrl+,` ma już natywne karty Ogólne, Radio i nagrywanie oraz
@@ -437,11 +442,10 @@ lewą strzałką.
    wystąpi w AMC; nie przeznaczać przebiegów na analizę, uruchamianie ani testy
    tego obcego dodatku NVDA i nie kopiować kodu GPL.
 6. Sortowanie Biblioteki, Ulubionych i Playlist TIDAL jest przywrócone
-   technicznie pod `Alt+1`, `Alt+2` i `Alt+3`, z osobną pamięcią każdego
-   widoku; pozostaje odbiór na żywym koncie. Następnie zweryfikować słyszalne
-   odtwarzanie przekazanego utworu w oficjalnej aplikacji TIDAL, łącznie z
-   sesją systemową i urządzeniem wyjściowym, oraz domknąć kontekstową prawą
-   strzałkę na albumach i wykonawcach po porównaniu z głównym AMC.
+   technicznie pod `Alt+1`, `Alt+2` i `Alt+3`, a prawa strzałka ma natywne menu
+   relacji; pozostaje odbiór obu funkcji na żywym koncie. Następnie
+   zweryfikować słyszalne odtwarzanie przekazanego utworu w oficjalnej
+   aplikacji TIDAL, łącznie z sesją systemową i urządzeniem wyjściowym.
 7. Podłączenie gotowego dodatku AMC do NVDA bezpośrednio do LiteHosta i
    wxPython, bez uruchamiania starego AMC, oraz żywy odbiór mowy i brajla.
 8. Uzupełnienie wykrytych braków w istniejących sesjach, bez regresji radia,

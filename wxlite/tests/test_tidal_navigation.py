@@ -15,6 +15,7 @@ from amc_wx_lite.navigation import (
     PlayTidalContainer,
     PlayTidalTrack,
     SessionId,
+    ShowTidalRelations,
 )
 from amc_wx_lite.shortcuts import Action, Chord, TIDAL_SUPPORTED_ACTIONS, resolve
 
@@ -186,6 +187,114 @@ def test_tidal_artist_categories_and_backspace_restore_exact_focus() -> None:
     assert nav.go_to_parent() == []
     assert nav.session.model.selected_id == "tidal:artists:7"
     assert nav.session.model.selected_row == artist
+
+
+def test_right_arrow_relations_match_the_full_tidal_menu_without_ids() -> None:
+    nav = Navigator()
+    nav.active = SessionId.TIDAL
+    track = Row(
+        "tidal:tracks:secret",
+        "Utwór",
+        "track",
+        service_id="tracks:secret",
+        service_kind="track",
+        artist_name="Wykonawca",
+        related_album_service_id="albums:44",
+        related_album_title="Album",
+        related_artist_service_id="artists:7",
+        related_artist_name="Wykonawca",
+    )
+    nav.apply_tidal_view(LibraryView.TIDAL_FAVORITES, "Ulubione TIDAL", [track])
+
+    event = nav.tidal_relations()[0]
+
+    assert isinstance(event, ShowTidalRelations)
+    assert event.title == "Powiązania TIDAL"
+    assert [choice.label for choice in event.choices] == [
+        "Przejdź do albumu",
+        "Przejdź do wykonawcy",
+    ]
+    spoken = " ".join([event.title, *(choice.label for choice in event.choices)])
+    assert "secret" not in spoken
+    assert "albums:44" not in spoken
+    assert "artists:7" not in spoken
+
+
+def test_right_arrow_on_artist_offers_albums_and_opens_that_section() -> None:
+    nav = Navigator()
+    nav.active = SessionId.TIDAL
+    artist = Row(
+        "tidal:artists:7",
+        "Artysta",
+        "artist",
+        service_id="artists:7",
+        service_kind="artist",
+    )
+    nav.apply_tidal_view(LibraryView.TIDAL_LIBRARY, "Biblioteka TIDAL", [artist])
+    menu = nav.tidal_relations()[0]
+    assert isinstance(menu, ShowTidalRelations)
+    assert [choice.label for choice in menu.choices] == [
+        "Pokaż albumy wykonawcy"
+    ]
+
+    events = nav.activate_tidal_relation(menu.choices[0])
+
+    assert events == [OpenTidalContainer(
+        item_id="tidal:artists:7",
+        service_id="artists:7",
+        title="Artysta",
+        kind="artist",
+        artist_section="albums",
+    )]
+
+
+def test_right_arrow_on_album_can_open_related_artist_overview_and_return() -> None:
+    nav = Navigator()
+    nav.active = SessionId.TIDAL
+    album = Row(
+        "tidal:albums:44",
+        "Album",
+        "album",
+        service_id="albums:44",
+        service_kind="album",
+        artist_name="Wykonawca",
+        related_artist_service_id="artists:7",
+        related_artist_name="Wykonawca",
+    )
+    nav.apply_tidal_view(LibraryView.TIDAL_LIBRARY, "Biblioteka TIDAL", [album])
+    menu = nav.tidal_relations()[0]
+    assert isinstance(menu, ShowTidalRelations)
+
+    events = nav.activate_tidal_relation(menu.choices[0])
+
+    assert events == [Announce("Wykonawca, Wykonawca, 3 pozycje")]
+    assert [row.title for row in nav.session.model.rows] == [
+        "Albumy", "Utwory", "Podobni wykonawcy"
+    ]
+    assert nav.go_to_parent() == []
+    assert nav.session.model.selected_row == album
+
+
+def test_right_arrow_without_relation_has_one_user_facing_answer() -> None:
+    nav = Navigator()
+    nav.active = SessionId.TIDAL
+    playlist = Row(
+        "tidal:playlists:secret",
+        "Playlista",
+        "playlist",
+        service_id="playlists:secret",
+        service_kind="playlist",
+    )
+    nav.apply_tidal_view(
+        LibraryView.TIDAL_PLAYLISTS, "Playlisty TIDAL", [playlist]
+    )
+
+    events = nav.tidal_relations()
+
+    assert events == [Announce(
+        "Ten element nie ma dostępnego albumu ani wykonawcy nadrzędnego"
+    )]
+    assert "secret" not in events[0].text
 
 
 def test_tidal_container_survives_session_switch_and_backspace() -> None:

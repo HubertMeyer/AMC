@@ -92,6 +92,7 @@ def _read_tidal_queue(raw: object) -> list[dict]:
     text_fields = (
         "itemId", "externalId", "title", "kind", "artist", "publicUri",
         "relatedAlbumExternalId", "relatedAlbumTitle",
+        "relatedArtistExternalId", "relatedArtistName",
     )
     for raw_item in raw:
         if len(result) >= 2_000 or not isinstance(raw_item, dict):
