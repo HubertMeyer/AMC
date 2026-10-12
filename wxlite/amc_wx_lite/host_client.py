@@ -1112,6 +1112,10 @@ class LiteHostClient:
             "radio.importPlaylistToLibrary", {"path": path}, timeout=60.0
         )
 
+    def export_radio_favorites(self, path: str) -> Any:
+        """Eksportuj Ulubione wspólnego profilu bez kopiowania danych do Pythona."""
+        return self.call("radio.exportFavorites", {"path": path}, timeout=60.0)
+
     # ------------------------------------------------------ nagrywanie radia
 
     def toggle_radio_recording(self, payload: dict[str, Any]) -> Any:

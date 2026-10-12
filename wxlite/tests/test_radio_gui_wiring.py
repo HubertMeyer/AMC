@@ -230,6 +230,64 @@ def test_shared_profile_import_persists_and_preserves_existing_names():
     ]
 
 
+def test_radio_favorites_export_uses_selected_format_and_short_message():
+    import amc_wx_lite.gui as gui
+
+    calls, messages = [], []
+
+    class FakeFileDialog:
+        def __init__(self, *_args, **_kwargs):
+            pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return False
+
+        def ShowModal(self):
+            return gui.wx.ID_OK
+
+        def GetPath(self):
+            return "D:/wymiana/ulubione.m3u"
+
+        def GetFilterIndex(self):
+            return gui.RADIO_EXPORT_JSON_FILTER
+
+    client = SimpleNamespace(
+        export_radio_favorites=lambda path: calls.append(path) or {"exportedCount": 4}
+    )
+    frame = SimpleNamespace(
+        client=client,
+        runner=DeferredRunner(),
+        announcer=SimpleNamespace(say=messages.append),
+        _restore_focus_after_dialog=lambda: None,
+    )
+    original_dialog = gui.wx.FileDialog
+    original_save = getattr(gui.wx, "FD_SAVE", None)
+    original_overwrite = getattr(gui.wx, "FD_OVERWRITE_PROMPT", None)
+    gui.wx.FileDialog = FakeFileDialog
+    gui.wx.FD_SAVE = 1
+    gui.wx.FD_OVERWRITE_PROMPT = 2
+    try:
+        LiteFrame._station_export_favorites(frame)
+        assert frame.runner.key == "radio-export"
+        frame.runner.done(frame.runner.work())
+    finally:
+        gui.wx.FileDialog = original_dialog
+        if original_save is None:
+            delattr(gui.wx, "FD_SAVE")
+        else:
+            gui.wx.FD_SAVE = original_save
+        if original_overwrite is None:
+            delattr(gui.wx, "FD_OVERWRITE_PROMPT")
+        else:
+            gui.wx.FD_OVERWRITE_PROMPT = original_overwrite
+
+    assert calls == [str(Path("D:/wymiana/ulubione.m3u").with_suffix(".json"))]
+    assert messages == ["Wyeksportowano ulubione stacje: 4"]
+
+
 def test_direct_new_schedule_editor_uses_selected_station_and_commits():
     import amc_wx_lite.gui as gui
     from amc_wx_lite.state_store import Station

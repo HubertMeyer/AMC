@@ -22,5 +22,7 @@
              Link="LitePodcastProgressStore.cs" />
     <Compile Include="..\..\src\AccessibleMediaController.LiteHost\LiteRadioLibraryMutation.cs"
              Link="LiteRadioLibraryMutation.cs" />
+    <Compile Include="..\..\src\AccessibleMediaController.LiteHost\LiteRadioFavoritesExport.cs"
+             Link="LiteRadioFavoritesExport.cs" />
   </ItemGroup>
 </Project>

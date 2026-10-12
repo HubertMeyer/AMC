@@ -15,7 +15,7 @@ Odbiór docelowego launchera:
 
 Aktualna, automatycznie zweryfikowana paczka znajduje się w:
 
-`D:\Projekty Codex\AMC - integracja wxPython\.test-output\AMC-Python-radio-library-20261013\AMC.exe`
+`D:\Projekty Codex\AMC - integracja wxPython\.test-output\AMC-Python-radio-export-20261013\AMC.exe`
 
 Nie przełączaj na nią programu w czasie trwającego nagrywania. Pierwszy żywy
 odbiór wykonaj kolejno według punktów poniżej.
@@ -117,6 +117,15 @@ ma celowo zablokować zmianę wspólnego profilu.
 4. Po ponownym uruchomieniu sprawdź Bibliotekę w kolejności własnej oraz według
    dodania. Nowe i przywrócone stacje muszą pozostać na listach, bez nazw klas,
    rekordów i identyfikatorów technicznych w mowie NVDA.
+5. Dodaj co najmniej dwie stacje do Ulubionych i ustaw ich kolejność przez
+   `Alt+1`, `Alt+2` oraz `Alt+3`. Naciśnij `Ctrl+E` najpierw na liście, a potem
+   w odtwarzaczu. Zapisz osobno M3U oraz „Ulubione VRadio” JSON. Po każdym
+   zapisie NVDA ma powiedzieć wyłącznie „Wyeksportowano ulubione stacje” i
+   liczbę. Pliki mają zachować wybraną kolejność, dać się ponownie zaimportować
+   przez `Ctrl+O` i nie mogą zawierać identyfikatorów technicznych AMC.
+6. Usuń wszystkie stacje z Ulubionych i ponów `Ctrl+E`. Program ma powiedzieć:
+   „Ulubione nie zawierają stacji, które można wyeksportować” i nie tworzyć
+   pustego pliku.
 
 ## TIDAL, WiiM i Sonos — odbiór 10 października
 

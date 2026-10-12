@@ -9,6 +9,7 @@ internal static class RadioLibraryMutationTests
     {
         ManualAddUpdatesDuplicateAndCreatesNewStation();
         ImportPromotesCatalogStationAndPreservesItsName();
+        FavoritesExportUsesSelectedSortAndPortableFields();
         Console.WriteLine("RadioLibraryMutationTests: OK");
     }
 
@@ -80,6 +81,63 @@ internal static class RadioLibraryMutationTests
             "istniejąca stacja katalogowa zostaje włączona do Biblioteki");
     }
 
+    private static void FavoritesExportUsesSelectedSortAndPortableFields()
+    {
+        var root = Profile(
+            Favorite("radio:older", "Żuraw", "https://radio.invalid/older"),
+            Favorite("radio:newer", "Alfa", "https://radio.invalid/newer"),
+            Favorite("radio:private", "Prywatne", "https://login:haslo@radio.invalid/live"),
+            Station("radio:ordinary", "Zwykłe", "https://radio.invalid/ordinary", inLibrary: true));
+        root["sessionNavigation"] = new JsonObject
+        {
+            ["sessions"] = new JsonObject
+            {
+                ["radio"] = new JsonObject
+                {
+                    ["collectionSortModes"] = new JsonObject { ["Ulubione"] = "AddedNewest" }
+                }
+            }
+        };
+
+        var entries = LiteRadioFavoritesExport.SelectEntries(
+            root,
+            customOrder: ["radio:newer", "radio:older"],
+            addedOrder: ["radio:older", "radio:newer"]);
+
+        Assert.True(entries.Count == 2, "eksport pomija wpisy nieulubione i adresy z logowaniem");
+        Assert.Equal("Alfa", entries[0].Name,
+            "kolejność według dodania pokazuje najnowszą stację u góry");
+        var playlist = System.Text.Encoding.UTF8.GetString(
+            AccessibleMediaController.Core.Radio.RadioFavoritesPlaylistWriter.Write(entries));
+        Assert.True(!playlist.Contains("radio:newer", StringComparison.Ordinal)
+                    && playlist.Contains("https://radio.invalid/newer", StringComparison.Ordinal),
+            "przenośny plik zawiera adres, ale nie techniczny identyfikator AMC");
+
+        root["sessionNavigation"]!["sessions"]!["radio"]!["collectionSortModes"]!["Ulubione"] =
+            "Alphabetical";
+        entries = LiteRadioFavoritesExport.SelectEntries(root, [], []);
+        Assert.Equal("Alfa", entries[0].Name, "sortowanie alfabetyczne profilu jest zachowane");
+
+        var directory = Path.Combine(
+            Path.GetTempPath(),
+            "amc-radio-export-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        try
+        {
+            var destination = Path.Combine(directory, "ulubione.json");
+            var result = LiteRadioFavoritesExport.Write(root, [], [], destination);
+            var json = File.ReadAllText(destination);
+            Assert.True(result.ExportedCount == 2
+                        && json.Contains("\"stations\"", StringComparison.Ordinal)
+                        && !json.Contains("radio:newer", StringComparison.Ordinal),
+                "atomowy eksport JSON zapisuje wyłącznie przenośne pola dwóch stacji");
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+        }
+    }
+
     private static JsonObject Profile(params JsonObject[] stations) => new()
     {
         ["radio"] = new JsonObject
@@ -96,6 +154,13 @@ internal static class RadioLibraryMutationTests
         ["hasCustomTitle"] = false,
         ["isInLibrary"] = inLibrary
     };
+
+    private static JsonObject Favorite(string id, string name, string url)
+    {
+        var station = Station(id, name, url, inLibrary: true);
+        station["isFavorite"] = true;
+        return station;
+    }
 
     private static IEnumerable<JsonObject> Stations(JsonObject root) =>
         ((JsonArray)root["radio"]!["stations"]!).OfType<JsonObject>();

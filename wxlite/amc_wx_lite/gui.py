@@ -339,6 +339,14 @@ YOUTUBE_EXPORT_WILDCARD = (
     "OPML dla kanałów i playlist, do czytników RSS (*.opml)|*.opml"
 )
 
+RADIO_EXPORT_M3U_FILTER = 0
+RADIO_EXPORT_JSON_FILTER = 1
+RADIO_EXPORT_WILDCARD = (
+    "Playlisty M3U (*.m3u)|*.m3u|"
+    "Ulubione VRadio (*.json)|*.json|"
+    "Wszystkie pliki (*.*)|*.*"
+)
+
 
 def youtube_export_path_for_filter(path: str, filter_index: int) -> str:
     """Nadaj rozszerzenie odpowiadające formatowi wybranemu w dialogu.
@@ -349,6 +357,16 @@ def youtube_export_path_for_filter(path: str, filter_index: int) -> str:
     """
     suffix = ".opml" if filter_index == YOUTUBE_EXPORT_OPML_FILTER else ".csv"
     return str(Path(path).with_suffix(suffix))
+
+
+def radio_export_path_for_filter(path: str, filter_index: int) -> str:
+    """Uzgodnij rozszerzenie z formatem wybranym w natywnym dialogu."""
+    candidate = Path(path)
+    if filter_index == RADIO_EXPORT_JSON_FILTER:
+        return str(candidate.with_suffix(".json"))
+    if filter_index == RADIO_EXPORT_M3U_FILTER:
+        return str(candidate.with_suffix(".m3u"))
+    return str(candidate if candidate.suffix else candidate.with_suffix(".m3u"))
 
 # Mapowanie klawiszy wx -> wlasne nazwy z shortcuts.py. Trzymamy to w JEDNYM
 # miejscu, zeby tablica skrotow nie zalezala od wx (da sie ja testowac w WSL).
@@ -6565,6 +6583,8 @@ class LiteFrame(wx.Frame):
             self._station_delete()
         elif action is Action.STATION_IMPORT:
             self._station_import()
+        elif action is Action.STATION_EXPORT_FAVORITES:
+            self._station_export_favorites()
         elif action is Action.RECORD_TOGGLE:
             self._toggle_radio_recording()
         elif action is Action.RECORD_PAUSE:
@@ -14469,6 +14489,38 @@ class LiteFrame(wx.Frame):
 
         self.runner.submit(
             "import", work, done, lambda error: self.announcer.say(f"Import nieudany: {error}")
+        )
+
+    def _station_export_favorites(self) -> None:
+        """Eksport Ulubionych przez wspólny, bezpieczny eksporter AMC."""
+        client = self.client
+        if client is None:
+            self.announcer.say("Silnik nie działa, eksport niedostępny")
+            return
+        with wx.FileDialog(
+            self,
+            message="Eksportuj ulubione stacje do playlisty",
+            defaultFile="Ulubione stacje AMC.m3u",
+            wildcard=RADIO_EXPORT_WILDCARD,
+            style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT,
+        ) as dialog:
+            if dialog.ShowModal() != wx.ID_OK:
+                self._restore_focus_after_dialog()
+                return
+            path = radio_export_path_for_filter(
+                dialog.GetPath(),
+                dialog.GetFilterIndex(),
+            )
+
+        def done(payload: dict) -> None:
+            count = int((payload or {}).get("exportedCount") or 0)
+            self.announcer.say(f"Wyeksportowano ulubione stacje: {count}")
+
+        self.runner.submit(
+            "radio-export",
+            lambda: client.export_radio_favorites(path),
+            done,
+            lambda error: self.announcer.say(str(error)),
         )
 
     # --------------------------------------------------------------- pomoc

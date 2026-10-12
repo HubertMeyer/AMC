@@ -211,6 +211,7 @@ class Action(Enum):
     STATION_EDIT = "radio.edit"
     STATION_DELETE = "radio.delete"
     STATION_IMPORT = "radio.import"
+    STATION_EXPORT_FAVORITES = "radio.exportFavorites"
     RECORD_TOGGLE = "radio.recording.toggle"
     RECORD_PAUSE = "radio.recording.pause"
     RECORD_SPLIT = "radio.recording.split"
@@ -646,6 +647,7 @@ RADIO_LIST_VIEW: dict[str, Action] = {
     # W pelnym AMC import jest kontekstowym Ctrl+O w sesji Radia. Ctrl+I
     # nalezy globalnie do widoku nowych odcinkow i materialow.
     "Ctrl+O": Action.STATION_IMPORT,
+    "Ctrl+E": Action.STATION_EXPORT_FAVORITES,
     # Skroty nagrywania z pelnego AMC (MainWindow.xaml.cs:21396-21446).
     # Ctrl+R dziala na liscie i w odtwarzaczu; Shift+Spacja steruje pauza.
     "Ctrl+R": Action.RECORD_TOGGLE,
@@ -660,6 +662,7 @@ RADIO_LIST_VIEW: dict[str, Action] = {
 # T i R musza pozostac natywnej kontroli (wyszukiwanie przyrostowe).
 RADIO_PLAYER_VIEW: dict[str, Action] = {
     "Ctrl+O": Action.STATION_IMPORT,
+    "Ctrl+E": Action.STATION_EXPORT_FAVORITES,
     "R": Action.RECORD_TOGGLE,
     "Ctrl+R": Action.RECORD_TOGGLE,
     "Shift+Space": Action.RECORD_PAUSE,
@@ -1021,6 +1024,7 @@ def _help_entries() -> list[tuple[str, str, Action]]:
         Action.STATION_EDIT: "Zmien stacje",
         Action.STATION_DELETE: "Usun stacje",
         Action.STATION_IMPORT: "Importuj liste stacji",
+        Action.STATION_EXPORT_FAVORITES: "Eksportuj ulubione stacje do playlisty",
         Action.RECORD_TOGGLE: "Rozpocznij albo zatrzymaj nagrywanie wybranej stacji",
         Action.RECORD_PAUSE: "Wstrzymaj albo wznow nagrywanie wybranej stacji",
         Action.RECORD_SPLIT: "Zapisz biezaca czesc i rozpocznij nowa",

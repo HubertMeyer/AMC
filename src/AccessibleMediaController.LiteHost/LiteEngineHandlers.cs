@@ -422,6 +422,7 @@ internal sealed class LiteEngineHandlers : IDisposable
             ["bookmark.navigate"] = (request, _) => NavigateBookmark(request.Args),
             ["radio.importPlaylist"] = (request, _) => ImportPlaylist(request.Args),
             ["radio.importPlaylistToLibrary"] = (request, _) => ImportPlaylistToLibrary(request.Args),
+            ["radio.exportFavorites"] = (request, _) => ExportRadioFavorites(request.Args),
             ["audio.configure"] = (request, _) => ConfigureAudio(request.Args),
             ["audio.outputs"] = (request, _) => ListOutputs(request.Args),
             ["audio.selectOutput"] = (request, _) => SelectOutput(request.Args),
@@ -2425,6 +2426,10 @@ internal sealed class LiteEngineHandlers : IDisposable
                 .ToArray(),
             imported.SkippedEntries);
     }
+
+    private object ExportRadioFavorites(JsonElement args) =>
+        RequireProfileMutations().ExportRadioFavorites(
+            LiteArgs.RequirePath(args, "path"));
 
     private object PodcastOpmlInspect(JsonElement args) =>
         (_podcastOpml ?? throw new LiteRequestException(

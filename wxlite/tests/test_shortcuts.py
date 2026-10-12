@@ -142,6 +142,16 @@ def test_ctrl_i_is_global_ctrl_shift_i_is_free_and_radio_import_uses_ctrl_o() ->
     ) is Action.STATION_IMPORT
 
 
+def test_ctrl_e_exports_radio_favorites_in_both_radio_views_only() -> None:
+    for player in (False, True):
+        assert resolve(
+            Chord("E", ctrl=True), player_view=player, radio_session=True
+        ) is Action.STATION_EXPORT_FAVORITES
+        assert resolve(
+            Chord("E", ctrl=True), player_view=player, radio_session=False
+        ) is not Action.STATION_EXPORT_FAVORITES
+
+
 def test_alt_digits_sort_only_inside_the_podcast_inbox() -> None:
     expected = {
         "1": Action.SORT_PODCAST_INBOX_ADDED,

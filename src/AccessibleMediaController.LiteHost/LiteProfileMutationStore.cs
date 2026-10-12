@@ -356,6 +356,37 @@ internal sealed class LiteProfileMutationStore
             updateExistingTitles: false);
     }
 
+    public LiteRadioFavoritesExportResult ExportRadioFavorites(string destinationPath)
+    {
+        lock (_gate)
+        {
+            var root = ReadState();
+            using var connection = OpenDatabase(_libraryDatabasePath);
+            using var transaction = connection.BeginTransaction();
+            var customOrder = ReadOrder(connection, transaction, "favorite_order", "radio");
+            var addedOrder = ReadOrder(connection, transaction, "favorite_added_order", "radio");
+            try
+            {
+                return LiteRadioFavoritesExport.Write(
+                    root,
+                    customOrder,
+                    addedOrder,
+                    destinationPath);
+            }
+            catch (InvalidDataException exception)
+            {
+                throw new LiteRequestException(exception.Message);
+            }
+            catch (Exception exception) when (exception is IOException
+                or UnauthorizedAccessException
+                or ArgumentException
+                or NotSupportedException)
+            {
+                throw new LiteRequestException("Nie można zapisać playlisty: " + exception.Message);
+            }
+        }
+    }
+
     private LiteRadioLibraryMutationResult MutateRadioLibrary(
         IReadOnlyList<LiteRadioStationDraft> stations,
         int parserSkipped,

@@ -401,6 +401,7 @@ def test_radio_station_management_stays_in_the_radio_menu() -> None:
         Action.STATION_EDIT,
         Action.STATION_DELETE,
         Action.STATION_IMPORT,
+        Action.STATION_EXPORT_FAVORITES,
     }
     for menu in menu_model.build_menus():
         if "Radio" in menu.title:

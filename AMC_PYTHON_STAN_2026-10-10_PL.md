@@ -43,7 +43,7 @@ podmiany i wycofania plików. Docelowe `AMC.exe` ma być stałym punktem wejści
 a aktualizator działać za nim, bez ręcznego wybierania skryptu lub interpretera.
 
 Aktualny kompletny pakiet EXE jest w:
-`D:\Projekty Codex\AMC - integracja wxPython\.test-output\AMC-Python-radio-library-20261013`.
+`D:\Projekty Codex\AMC - integracja wxPython\.test-output\AMC-Python-radio-export-20261013`.
 Nie zawiera `AMC-wx-Lite.cmd`. `AMC.exe` sprawdza wersję formatu pakietu,
 interfejsu i protokołu hosta oraz sumy krytycznych plików przed uruchomieniem.
 Automatyczna weryfikacja paczki i próbna aktualizacja do osobnego katalogu
@@ -193,6 +193,14 @@ stacje, przywraca znalezione wpisy katalogowe bez niszczenia ich bogatszych
 nazw i metadanych oraz pomija rzeczywiste duplikaty. Identyfikatory powstają
 wyłącznie w hoście i służą tylko do zapisu oraz przywrócenia fokusu; NVDA
 otrzymuje nazwę stacji i krótkie podsumowanie importu.
+
+`Ctrl+E` eksportuje Ulubione radia również z listy i z odtwarzacza. Natywne
+okno zapisu udostępnia przenośny M3U oraz JSON zgodny z VRadio i ponownym
+importem AMC. Eksporter C# zachowuje aktualny porządek Ulubionych: według
+dodania z najnowszymi u góry, alfabetyczny albo własny. Do pliku trafiają
+wyłącznie użytkowa nazwa oraz stabilny adres HTTP(S); nie trafiają
+identyfikatory AMC, chwilowe adresy odtwarzania ani adresy zawierające dane
+logowania. Zapis jest atomowy i kończy się krótkim komunikatem z liczbą stacji.
 
 Host pozostaje jedynym właścicielem `state.json` i trwałych kolejności w
 `library.db`. Dodanie oraz import aktualizują jednocześnie kolejność własną i
