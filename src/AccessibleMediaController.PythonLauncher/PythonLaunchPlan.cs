@@ -2,7 +2,7 @@ using System.Diagnostics;
 
 namespace AccessibleMediaController.PythonLauncher;
 
-internal sealed record PythonLaunchPlan(ProcessStartInfo StartInfo, bool CaptureOutput)
+internal sealed record PythonLaunchPlan(ProcessStartInfo StartInfo, bool ShowCapturedOutput)
 {
     internal static PythonLaunchPlan Create(
         VerifiedBundle bundle,
@@ -11,10 +11,13 @@ internal sealed record PythonLaunchPlan(ProcessStartInfo StartInfo, bool Capture
         var diagnostic = arguments.Any(argument =>
             string.Equals(argument, "--sprawdz", StringComparison.OrdinalIgnoreCase)
             || string.Equals(argument, "--check", StringComparison.OrdinalIgnoreCase));
-        var runtime = Path.Combine(
-            bundle.Root,
-            "runtime",
-            diagnostic ? "python.exe" : "pythonw.exe");
+        // Zawsze używamy wariantu konsolowego, ale chowamy jego okno i
+        // przechwytujemy oba strumienie. pythonw.exe potrafi zamienić zapis
+        // wykonany bardzo wcześnie przez interpreter w modalny alert „Python”.
+        // Taki alert nie ma sensownej etykiety dla NVDA i blokuje interfejs.
+        // python.exe z przekierowaniem zachowuje ten sam brak konsoli, a
+        // diagnostyka trafia do kontrolowanego dziennika launchera.
+        var runtime = Path.Combine(bundle.Root, "runtime", "python.exe");
         if (!File.Exists(runtime))
             throw new InvalidDataException("w pakiecie brakuje prywatnego środowiska Pythona");
 
@@ -24,8 +27,8 @@ internal sealed record PythonLaunchPlan(ProcessStartInfo StartInfo, bool Capture
             WorkingDirectory = bundle.Root,
             UseShellExecute = false,
             CreateNoWindow = true,
-            RedirectStandardOutput = diagnostic,
-            RedirectStandardError = diagnostic,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
         };
         start.ArgumentList.Add("-m");
         start.ArgumentList.Add(bundle.Manifest.PythonModule);

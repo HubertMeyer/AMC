@@ -33,21 +33,23 @@ internal static class Program
             using var process = Process.Start(plan.StartInfo)
                 ?? throw new InvalidOperationException("nie uruchomiono procesu interfejsu");
 
-            Task<string>? output = null;
-            Task<string>? error = null;
-            if (plan.CaptureOutput)
-            {
-                output = process.StandardOutput.ReadToEndAsync();
-                error = process.StandardError.ReadToEndAsync();
-            }
+            // Strumienie czytamy od razu także podczas zwykłej pracy. Bez
+            // tego dłuższy komunikat mógłby zapełnić bufor i zatrzymać proces.
+            // Przechwycenie stderr zapobiega modalnym alertom pythonw.
+            var output = process.StandardOutput.ReadToEndAsync();
+            var error = process.StandardError.ReadToEndAsync();
             process.WaitForExit();
+            Task.WaitAll(output, error);
 
-            if (plan.CaptureOutput)
+            var outputText = output.Result.Trim();
+            var errorText = error.Result.Trim();
+            AppendProcessLog(outputText, errorText, process.ExitCode);
+
+            if (plan.ShowCapturedOutput)
             {
-                Task.WaitAll(output!, error!);
                 var details = string.Join(
                     Environment.NewLine,
-                    new[] { output!.Result.Trim(), error!.Result.Trim() }
+                    new[] { outputText, errorText }
                         .Where(text => !string.IsNullOrWhiteSpace(text)));
                 Show(
                     string.IsNullOrWhiteSpace(details)
@@ -87,6 +89,42 @@ internal static class Program
             }
             return StartFailed;
         }
+    }
+
+    private static void AppendProcessLog(string output, string error, int exitCode)
+    {
+        if (string.IsNullOrWhiteSpace(output)
+            && string.IsNullOrWhiteSpace(error)
+            && exitCode == 0)
+            return;
+        try
+        {
+            var root = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                "AMC-wx-Lite",
+                "logs");
+            Directory.CreateDirectory(root);
+            var text = string.Join(
+                Environment.NewLine,
+                new[]
+                {
+                    $"{DateTimeOffset.Now:O} Kod zakończenia interfejsu: {exitCode}",
+                    string.IsNullOrWhiteSpace(output) ? null : "Wyjście:\n" + Limit(output),
+                    string.IsNullOrWhiteSpace(error) ? null : "Błędy:\n" + Limit(error),
+                    "",
+                }.Where(value => value is not null));
+            File.AppendAllText(Path.Combine(root, "launcher.log"), text);
+        }
+        catch
+        {
+            // Dziennik nie może przeszkodzić w uruchomieniu ani zamknięciu AMC.
+        }
+    }
+
+    private static string Limit(string text)
+    {
+        const int maximum = 16_384;
+        return text.Length <= maximum ? text : text[^maximum..];
     }
 
     private static void Show(string text, bool error)

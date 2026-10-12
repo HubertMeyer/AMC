@@ -12,7 +12,7 @@ internal static class Program
         ("uszkodzony plik", CorruptStartupFileIsRejected),
         ("niezgodny protokół", WrongProtocolIsRejected),
         ("wyjście poza katalog", TraversalIsRejected),
-        ("prywatny runtime bez PYTHONPATH", LaunchPlanUsesOnlyPrivateRuntime),
+        ("prywatny runtime bez PYTHONPATH i bez alertów pythonw", LaunchPlanUsesOnlyPrivateRuntime),
         ("diagnostyka przez python.exe", DiagnosticUsesConsoleRuntime),
     ];
 
@@ -76,9 +76,12 @@ internal static class Program
             Environment.SetEnvironmentVariable("PYTHONPATH", "C:\\obcy-python");
             Environment.SetEnvironmentVariable("AMC_WX_LITE_PYTHON", "C:\\obcy.exe");
             var plan = PythonLaunchPlan.Create(verified, []);
-            Equal(Path.Combine(fixture.Root, "runtime", "pythonw.exe"), plan.StartInfo.FileName);
+            Equal(Path.Combine(fixture.Root, "runtime", "python.exe"), plan.StartInfo.FileName);
             Equal(false, plan.StartInfo.UseShellExecute);
             Equal(true, plan.StartInfo.CreateNoWindow);
+            Equal(true, plan.StartInfo.RedirectStandardOutput);
+            Equal(true, plan.StartInfo.RedirectStandardError);
+            Equal(false, plan.ShowCapturedOutput);
             Equal(false, plan.StartInfo.Environment.ContainsKey("PYTHONPATH"));
             Equal(false, plan.StartInfo.Environment.ContainsKey("AMC_WX_LITE_PYTHON"));
             Equal(verified.HostExecutable, plan.StartInfo.Environment["AMC_LITE_HOST"]);
@@ -99,8 +102,9 @@ internal static class Program
             BundleVerifier.Verify(fixture.Root),
             ["--sprawdz"]);
         Equal(Path.Combine(fixture.Root, "runtime", "python.exe"), plan.StartInfo.FileName);
-        Equal(true, plan.CaptureOutput);
+        Equal(true, plan.ShowCapturedOutput);
         Equal(true, plan.StartInfo.RedirectStandardOutput);
+        Equal(true, plan.StartInfo.RedirectStandardError);
         Equal("--sprawdz", plan.StartInfo.ArgumentList[2]);
     }
 
