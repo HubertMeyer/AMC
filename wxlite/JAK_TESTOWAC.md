@@ -15,7 +15,7 @@ Odbiór docelowego launchera:
 
 Aktualna, automatycznie zweryfikowana paczka znajduje się w:
 
-`D:\Projekty Codex\AMC - integracja wxPython\.test-output\AMC-Python-rozpoznawanie-20261012\AMC.exe`
+`D:\Projekty Codex\AMC - integracja wxPython\.test-output\AMC-Python-tidal-sort-escape-20261012\AMC.exe`
 
 Nie przełączaj na nią programu w czasie trwającego nagrywania. Pierwszy żywy
 odbiór wykonaj kolejno według punktów poniżej.
@@ -47,6 +47,13 @@ może zatrzymać drugiego. Na końcu zatrzymaj Pliki i potwierdź, że Radio nad
 gra, po czym zatrzymaj Radio. Powtórz `Ctrl+M` w każdej sesji: pierwsze
 naciśnięcie ma wyciszyć tylko jej odsłuch, a drugie przywrócić poprzednią
 głośność bez zatrzymania drugiego toru ani nagrywania.
+
+Biblioteka, Ulubione, Playlisty i Kolejka są równorzędnymi widokami sesji.
+Przełącza się je odpowiednio przez `Ctrl+L`, `Ctrl+U`, `Ctrl+P` i `Ctrl+Q`.
+Na każdym z tych głównych widoków `Escape` nie może samoczynnie przenosić do
+Biblioteki ani niczego ogłaszać. `Escape` i `Backspace` służą do powrotu dopiero
+z wnętrza kontenera albo widoku podrzędnego. Sprawdź tę zasadę osobno w każdej
+sesji, która udostępnia dany widok.
 
 Plik `AMC-Python-Updater.exe` służy obecnie do bezpiecznego zastosowania
 przygotowanej paczki z pełnym manifestem SHA-256. Nie uruchamiaj go ręcznie na
@@ -95,9 +102,12 @@ TIDAL:
    `Ctrl+Q` ma pokazać tę samą kolejność także po ponownym uruchomieniu.
 5. Enter na utworze lub albumie ma przekazać odtwarzanie do oficjalnej
    aplikacji TIDAL. Nie oczekuj od tej drogi własnego pełnego odtwarzacza AMC.
-6. Otwórz albumy dodane w różnych terminach. Sprawdź sortowanie alfabetyczne,
-   własne/ręczne oraz według dodania. W porządku według dodania najnowszy
-   album ma być pierwszy. Wybór ma pozostać po wyjściu i ponownym otwarciu.
+6. Otwórz albumy dodane w różnych terminach. `Alt+1` ustawia porządek według
+   dodania z najnowszym albumem na początku, `Alt+2` porządek alfabetyczny, a
+   `Alt+3` kolejność własną. Wybór ma pozostać po wyjściu, ponownym otwarciu i
+   restarcie. Powtórz dla Biblioteki, Ulubionych i Playlist; każdy widok ma
+   pamiętać swój tryb osobno. W albumie, wykonawcy i Kolejce te skróty nie mogą
+   przełączyć widoku Plików ani udawać sortowania kolekcji.
 7. Na albumie naciśnij prawą strzałkę: ma prowadzić do jego wykonawcy. Na
    wykonawcy sprawdź dokładne gałęzie przeniesione z głównego AMC, w tym
    albumy, utwory i podobnych wykonawców. Escape/Backspace ma wrócić we

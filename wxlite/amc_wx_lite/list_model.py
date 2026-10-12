@@ -92,6 +92,9 @@ class Row:
     # pozostaje wylacznie w modelu; nazwa dostepna wiersza go nie zawiera.
     related_album_service_id: str | None = None
     related_album_title: str = ""
+    # Czas dodania do kolekcji TIDAL. To wyłącznie liczba modelu potrzebna do
+    # porządku „najnowsze najpierw”; nie trafia do kolumn ani nazwy dostępnej.
+    collection_added_ticks: int | None = None
     # Metadane używane wyłącznie przez krótką informację pod lewą strzałką.
     # Nie trafiają automatycznie do kolumn ani nazwy dostępnej wiersza. Dzięki
     # temu NVDA dostaje je dopiero na żądanie, tak jak w pełnym AMC.

@@ -15,8 +15,13 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable, Sequence
+from typing import Callable, Iterable, Sequence, TypeVar
 
+from .collation import (
+    COLLATION_TITLE_IGNORE_CASE,
+    HostCollation,
+    HostCollationUnavailable,
+)
 from .list_model import Row
 from .profile_layout import ProfileLayout
 from .radio_recording import format_duration
@@ -32,6 +37,7 @@ VIEW_LIBRARY = "library"
 VIEW_FAVORITES = "favorites"
 VIEW_PLAYLISTS = "playlists"
 TIDAL_VIEWS = (VIEW_LIBRARY, VIEW_FAVORITES, VIEW_PLAYLISTS)
+TIDAL_SORT_MODES = (SORT_ADDED_NEWEST, SORT_ALPHABETICAL, SORT_CUSTOM)
 
 _CONTAINER_KINDS = {"album", "artist", "playlist"}
 _PLAYABLE_KINDS = {"track", "video"}
@@ -83,6 +89,7 @@ class TidalViewResult:
     heading: str
     rows: tuple[Row, ...]
     order_matches_amc: bool
+    sort_mode: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -199,18 +206,24 @@ def _collection_orders(raw: object, view: str, *, custom: bool) -> tuple[str, ..
     )
 
 
+_Orderable = TypeVar("_Orderable")
+
+
 def _manual_order(
-    items: Sequence[TidalCachedItem], stored: Sequence[str]
-) -> list[TidalCachedItem]:
+    items: Sequence[_Orderable],
+    stored: Sequence[str],
+    *,
+    id_of: Callable[[_Orderable], str] = lambda item: item.item_id,  # type: ignore[attr-defined]
+) -> list[_Orderable]:
     first: dict[str, int] = {}
-    for index, item_id in enumerate(stored):
-        first.setdefault(item_id, index)
+    for index, stored_id in enumerate(stored):
+        first.setdefault(stored_id, index)
     sentinel = len(stored) + 1
     return [
         item
         for _, _, item in sorted(
             (
-                (first.get(item.item_id, sentinel), original, item)
+                (first.get(id_of(item), sentinel), original, item)
                 for original, item in enumerate(items)
             ),
             key=lambda triple: (triple[0], triple[1]),
@@ -218,40 +231,111 @@ def _manual_order(
     ]
 
 
-def _order_items(
-    raw: object,
-    items: Sequence[TidalCachedItem],
-    view: str,
-) -> tuple[list[TidalCachedItem], bool]:
+def _effective_sort_mode(raw: object, view: str, override: str | None) -> str:
+    if override in TIDAL_SORT_MODES:
+        return override
     modes = collection_sort_modes_from_amc_state(
         raw if isinstance(raw, dict) else {}, session="tidal"
     )
     profile_view = _PROFILE_VIEW_NAMES[view]
     mode = modes.get(profile_view.casefold(), SORT_ADDED_NEWEST)
+    return mode if mode in TIDAL_SORT_MODES else SORT_ADDED_NEWEST
+
+
+def _alphabetical_items(
+    items: Sequence[TidalCachedItem],
+    collation: HostCollation | None,
+) -> tuple[list[TidalCachedItem], bool]:
+    fallback = sorted(
+        items,
+        key=lambda item: (
+            item.artist.casefold() if item.artist else item.title.casefold(),
+            item.title.casefold(),
+            item.artist.casefold(),
+            item.item_id,
+        ),
+    )
+    if collation is None:
+        return fallback, False
+    try:
+        ordered = sorted(items, key=lambda item: item.item_id)
+        ordered = collation.sort_rows(
+            ordered,
+            key=lambda item: item.artist,
+            mode=COLLATION_TITLE_IGNORE_CASE,
+        )
+        ordered = collation.sort_rows(
+            ordered,
+            key=lambda item: item.title,
+            mode=COLLATION_TITLE_IGNORE_CASE,
+        )
+        ordered = collation.sort_rows(
+            ordered,
+            key=lambda item: item.artist or item.title,
+            mode=COLLATION_TITLE_IGNORE_CASE,
+        )
+        return ordered, True
+    except HostCollationUnavailable:
+        return fallback, False
+
+
+def _alphabetical_rows(
+    rows: Sequence[Row],
+    collation: HostCollation | None,
+) -> tuple[list[Row], bool]:
+    fallback = sorted(
+        rows,
+        key=lambda row: (
+            row.artist_name.casefold() if row.artist_name else row.title.casefold(),
+            row.title.casefold(),
+            row.artist_name.casefold(),
+            row.item_id,
+        ),
+    )
+    if collation is None:
+        return fallback, False
+    try:
+        ordered = sorted(rows, key=lambda row: row.item_id)
+        ordered = collation.sort_rows(
+            ordered,
+            key=lambda row: row.artist_name,
+            mode=COLLATION_TITLE_IGNORE_CASE,
+        )
+        ordered = collation.sort_rows(
+            ordered,
+            key=lambda row: row.title,
+            mode=COLLATION_TITLE_IGNORE_CASE,
+        )
+        ordered = collation.sort_rows(
+            ordered,
+            key=lambda row: row.artist_name or row.title,
+            mode=COLLATION_TITLE_IGNORE_CASE,
+        )
+        return ordered, True
+    except HostCollationUnavailable:
+        return fallback, False
+
+
+def _order_items(
+    raw: object,
+    items: Sequence[TidalCachedItem],
+    view: str,
+    *,
+    sort_mode: str | None = None,
+    collation: HostCollation | None = None,
+) -> tuple[list[TidalCachedItem], bool, str]:
+    mode = _effective_sort_mode(raw, view, sort_mode)
 
     if mode == SORT_ALPHABETICAL:
-        # The exact full-AMC comparator is CurrentCultureIgnoreCase.  Python's
-        # casefold is a usable fallback, but it is named as such instead of
-        # being presented as byte-for-byte parity for all Unicode text.
-        return (
-            sorted(
-                items,
-                key=lambda item: (
-                    item.artist.casefold() if item.artist else item.title.casefold(),
-                    item.title.casefold(),
-                    item.artist.casefold(),
-                    item.item_id,
-                ),
-            ),
-            False,
-        )
+        ordered, exact = _alphabetical_items(items, collation)
+        return ordered, exact, mode
 
     stored = _collection_orders(raw, view, custom=mode == SORT_CUSTOM)
     if stored:
         ordered = _manual_order(items, stored)
         if mode == SORT_ADDED_NEWEST:
             ordered.reverse()
-        return ordered, True
+        return ordered, True, mode
 
     if mode == SORT_ADDED_NEWEST and items and all(
         item.added_ticks is not None for item in items
@@ -263,12 +347,55 @@ def _order_items(
             key=lambda item: (item.added_ticks or 0, item.item_id),
             reverse=True,
         )
-        return ordered, True
+        return ordered, True, mode
 
     # No durable order and no complete service timestamps.  Keep the snapshot
     # order and say that it is a fallback; silently reversing it would invent
     # chronology that the data does not prove.
-    return list(items), False
+    return list(items), False, mode
+
+
+def _order_rows(
+    raw: object,
+    rows: Sequence[Row],
+    view: str,
+    *,
+    sort_mode: str | None = None,
+    collation: HostCollation | None = None,
+) -> tuple[list[Row], bool, str]:
+    """Order freshly synchronized host rows with the same durable policy."""
+    mode = _effective_sort_mode(raw, view, sort_mode)
+    if mode == SORT_ALPHABETICAL:
+        ordered, exact = _alphabetical_rows(rows, collation)
+        return ordered, exact, mode
+
+    # Świeża odpowiedź hosta niesie czas z usługi. Jest silniejszym dowodem
+    # chronologii niż starsza lista Id z profilu, która może jeszcze nie znać
+    # albumu dodanego podczas bieżącej synchronizacji.
+    if mode == SORT_ADDED_NEWEST and rows and all(
+        row.collection_added_ticks is not None for row in rows
+    ):
+        return (
+            sorted(
+                rows,
+                key=lambda row: (row.collection_added_ticks or 0, row.item_id),
+                reverse=True,
+            ),
+            True,
+            mode,
+        )
+
+    stored = _collection_orders(raw, view, custom=mode == SORT_CUSTOM)
+    if stored:
+        ordered = _manual_order(rows, stored, id_of=lambda row: row.item_id)
+        # Freshly synchronized items missing from the saved order are retained,
+        # but the order can no longer be claimed byte-for-byte exact.
+        exact = all(row.item_id in stored for row in rows)
+        if mode == SORT_ADDED_NEWEST:
+            ordered.reverse()
+        return ordered, exact, mode
+
+    return list(rows), False, mode
 
 
 def _row(item: TidalCachedItem) -> Row:
@@ -301,6 +428,7 @@ def _row(item: TidalCachedItem) -> Row:
         artist_name=item.artist,
         related_album_service_id=item.related_album_service_id,
         related_album_title=item.related_album_title,
+        collection_added_ticks=item.added_ticks,
     )
 
 
@@ -340,6 +468,9 @@ def _host_item_row(entry: object) -> Row | None:
         artist_name=artist,
         related_album_service_id=related_album_service_id,
         related_album_title=related_album_title,
+        collection_added_ticks=_optional_ticks(
+            entry.get("collectionAddedUtcTicks")
+        ),
     )
 
 
@@ -446,16 +577,29 @@ def queue_payload(rows: Sequence[Row]) -> list[dict[str, str]]:
     return result
 
 
-def build_view(raw: object, view: str) -> TidalViewResult:
+def build_view(
+    raw: object,
+    view: str,
+    *,
+    sort_mode: str | None = None,
+    collation: HostCollation | None = None,
+) -> TidalViewResult:
     if view not in TIDAL_VIEWS:
         raise ValueError("Nieznany widok TIDAL")
     members = _membership(items_from_amc_state(raw), view)
-    ordered, exact = _order_items(raw, members, view)
+    ordered, exact, effective_mode = _order_items(
+        raw,
+        members,
+        view,
+        sort_mode=sort_mode,
+        collation=collation,
+    )
     return TidalViewResult(
         view=view,
         heading=_VIEW_HEADINGS[view],
         rows=tuple(_row(item) for item in ordered),
         order_matches_amc=exact,
+        sort_mode=effective_mode,
     )
 
 
@@ -469,7 +613,7 @@ class TidalSource:
     def is_available(self) -> bool:
         return Path(self.layout.state_json).is_file()
 
-    def load_view(self, view: str) -> TidalViewResult:
+    def _read_state(self) -> dict:
         path = Path(self.layout.state_json)
         try:
             raw = json.loads(path.read_text(encoding="utf-8-sig"))
@@ -483,4 +627,45 @@ class TidalSource:
             raise TidalProfileError("Nie można teraz odczytać biblioteki TIDAL") from error
         if not isinstance(raw, dict):
             raise TidalProfileError("Profil AMC ma nieoczekiwaną zawartość")
-        return build_view(raw, view)
+        return raw
+
+    def load_view(
+        self,
+        view: str,
+        *,
+        sort_mode: str | None = None,
+        collation: HostCollation | None = None,
+    ) -> TidalViewResult:
+        return build_view(
+            self._read_state(),
+            view,
+            sort_mode=sort_mode,
+            collation=collation,
+        )
+
+    def order_rows(
+        self,
+        view: str,
+        heading: str,
+        rows: Sequence[Row],
+        *,
+        sort_mode: str | None = None,
+        collation: HostCollation | None = None,
+    ) -> TidalViewResult:
+        """Order a fresh host snapshot without writing either AMC profile."""
+        if view not in TIDAL_VIEWS:
+            raise ValueError("Nieznany widok TIDAL")
+        ordered, exact, effective_mode = _order_rows(
+            self._read_state(),
+            rows,
+            view,
+            sort_mode=sort_mode,
+            collation=collation,
+        )
+        return TidalViewResult(
+            view=view,
+            heading=heading,
+            rows=tuple(ordered),
+            order_matches_amc=exact,
+            sort_mode=effective_mode,
+        )

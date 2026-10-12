@@ -170,6 +170,21 @@ def test_round_trip_keeps_private_podcast_inbox_sort_override() -> None:
     assert store.load().podcast_inbox_sort_mode == "Custom"
 
 
+def test_round_trip_keeps_private_tidal_sort_per_collection_view() -> None:
+    store, _ = temp_store()
+    store.save(LiteState(tidal_sort_modes={
+        "library": "Alphabetical",
+        "favorites": "AddedNewest",
+        "playlists": "Custom",
+    }))
+
+    assert store.load().tidal_sort_modes == {
+        "library": "Alphabetical",
+        "favorites": "AddedNewest",
+        "playlists": "Custom",
+    }
+
+
 def test_search_history_is_sanitized_bounded_and_kept_per_scope() -> None:
     store, _ = temp_store()
     values = [" Radio ", "radio", *(str(index) for index in range(60)), 7]
@@ -217,6 +232,24 @@ def test_unknown_podcast_sort_value_is_not_restored_or_rewritten() -> None:
     store.save(loaded)
     payload = json.loads(store.path.read_text(encoding="utf-8"))
     assert "podcast_inbox_sort_mode" not in payload
+
+
+def test_unknown_tidal_sort_views_and_values_are_not_restored_or_rewritten() -> None:
+    store, directory = temp_store()
+    store.path.write_text(json.dumps({
+        "tidal_sort_modes": {
+            "library": "Alphabetical",
+            "favorites": "CollectionSortMode.Custom { technical = 1 }",
+            "secretView": "Custom",
+        }
+    }), encoding="utf-8")
+
+    loaded = store.load()
+    assert loaded.tidal_sort_modes == {"library": "Alphabetical"}
+    store.save(loaded)
+    payload = json.loads(store.path.read_text(encoding="utf-8"))
+    assert payload["tidal_sort_modes"] == {"library": "Alphabetical"}
+    assert "technical" not in json.dumps(payload, ensure_ascii=False)
 
 
 def test_invalid_radio_activity_options_return_to_safe_defaults() -> None:

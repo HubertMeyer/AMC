@@ -27,12 +27,33 @@ from .radio_schedule_settings import read_schedule_overrides
 from .transport_parity import normalize_custom_seek_seconds
 
 
-_PODCAST_INBOX_SORT_MODES = {"AddedNewest", "Alphabetical", "Custom"}
+_COLLECTION_SORT_MODES = {"AddedNewest", "Alphabetical", "Custom"}
+_TIDAL_SORT_VIEWS = {"library", "favorites", "playlists"}
 
 
 def _read_podcast_inbox_sort_mode(raw: object) -> str | None:
     """Only a known model value may survive in the private state file."""
-    return raw if isinstance(raw, str) and raw in _PODCAST_INBOX_SORT_MODES else None
+    return raw if isinstance(raw, str) and raw in _COLLECTION_SORT_MODES else None
+
+
+def _read_tidal_sort_modes(raw: object) -> dict[str, str]:
+    """Keep only supported TIDAL views and model values.
+
+    The values remain internal.  Accessible labels are produced by the GUI,
+    never from this dictionary or from an enum representation.
+    """
+    if not isinstance(raw, dict):
+        return {}
+    return {
+        view: mode
+        for view, mode in raw.items()
+        if (
+            isinstance(view, str)
+            and view in _TIDAL_SORT_VIEWS
+            and isinstance(mode, str)
+            and mode in _COLLECTION_SORT_MODES
+        )
+    }
 
 
 def _read_search_history(raw: object) -> dict[str, list[str]]:
@@ -404,6 +425,9 @@ class LiteState:
     #: Nie zapisujemy jej do wspólnego state.json, aby dwa programy nie
     #: ścigały się o profil. Pola techniczne pozostają wyłącznie modelem.
     tidal_queue_items: list[dict] = field(default_factory=list)
+    #: Prywatny tryb kolejności osobno dla trzech głównych widoków TIDAL.
+    #: Brak klucza oznacza dalsze dziedziczenie z profilu pełnego AMC.
+    tidal_sort_modes: dict[str, str] = field(default_factory=dict)
     #: Historia zapytań osobno dla każdej sesji oraz zakresu globalnego.
     #: Zawiera wyłącznie tekst użytkownika, bez wyników i identyfikatorów.
     search_history: dict[str, list[str]] = field(default_factory=dict)
@@ -568,6 +592,7 @@ class StateStore:
                 raw.get("podcast_inbox_sort_mode")
             ),
             tidal_queue_items=_read_tidal_queue(raw.get("tidal_queue_items")),
+            tidal_sort_modes=_read_tidal_sort_modes(raw.get("tidal_sort_modes")),
             search_history=_read_search_history(raw.get("search_history")),
         )
 
@@ -617,6 +642,9 @@ class StateStore:
         if podcast_sort_mode is not None:
             payload["podcast_inbox_sort_mode"] = podcast_sort_mode
         payload["tidal_queue_items"] = _read_tidal_queue(state.tidal_queue_items)
+        tidal_sort_modes = _read_tidal_sort_modes(state.tidal_sort_modes)
+        if tidal_sort_modes:
+            payload["tidal_sort_modes"] = tidal_sort_modes
         payload["search_history"] = _read_search_history(state.search_history)
         text = json.dumps(payload, ensure_ascii=False, indent=2)
 

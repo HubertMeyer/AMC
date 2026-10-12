@@ -217,6 +217,9 @@ class Action(Enum):
     SORT_PODCAST_INBOX_ADDED = "podcasts.inbox.sort.added"
     SORT_PODCAST_INBOX_ALPHABETICAL = "podcasts.inbox.sort.alphabetical"
     SORT_PODCAST_INBOX_BY_PODCAST = "podcasts.inbox.sort.byPodcast"
+    SORT_TIDAL_COLLECTION_ADDED = "tidal.collection.sort.added"
+    SORT_TIDAL_COLLECTION_ALPHABETICAL = "tidal.collection.sort.alphabetical"
+    SORT_TIDAL_COLLECTION_CUSTOM = "tidal.collection.sort.custom"
     ADD_PODCAST_SOURCE = "podcasts.source.add"
     IMPORT_PODCAST_OPML = "podcasts.opml.import"
     EXPORT_PODCAST_OPML = "podcasts.opml.export"
@@ -313,6 +316,9 @@ TIDAL_SUPPORTED_ACTIONS = frozenset({
     Action.TOGGLE_FAVORITE,
     Action.TIDAL_TOGGLE_LIBRARY,
     Action.TIDAL_TOGGLE_FAVORITE,
+    Action.SORT_TIDAL_COLLECTION_ADDED,
+    Action.SORT_TIDAL_COLLECTION_ALPHABETICAL,
+    Action.SORT_TIDAL_COLLECTION_CUSTOM,
     Action.TIME_ELAPSED,
     Action.TIME_REMAINING,
     Action.TIME_TOTAL,
@@ -812,6 +818,13 @@ TIDAL_SESSION_VIEW: dict[str, Action] = {
 }
 
 
+TIDAL_COLLECTION_LIST_VIEW: dict[str, Action] = {
+    "Alt+1": Action.SORT_TIDAL_COLLECTION_ADDED,
+    "Alt+2": Action.SORT_TIDAL_COLLECTION_ALPHABETICAL,
+    "Alt+3": Action.SORT_TIDAL_COLLECTION_CUSTOM,
+}
+
+
 def resolve(
     chord: Chord,
     *,
@@ -820,6 +833,7 @@ def resolve(
     podcast_inbox: bool = False,
     podcast_session: bool = False,
     tidal_session: bool = False,
+    tidal_collection: bool = False,
 ) -> Action | None:
     """Znajdz akcje dla klawisza w DANYM widoku. Brak wpisu = klawisz zostaje
     dla kontrolki (natywna nawigacja ma pierwszenstwo)."""
@@ -835,6 +849,15 @@ def resolve(
     # bieżącego podcastu lub odcinka.
     if podcast_session and canonical in PODCAST_SESSION_VIEW:
         return PODCAST_SESSION_VIEW[canonical]
+    # Alt+1/2/3 w TIDAL sortuja tylko trzy rownorzedne korzenie kolekcji.
+    # W albumie, wykonawcy ani kolejce klawisze nie moga wpasc w lokalne
+    # znaczenie „Foldery/Wszystkie pliki”.
+    if tidal_session and canonical in TIDAL_COLLECTION_LIST_VIEW:
+        return (
+            TIDAL_COLLECTION_LIST_VIEW[canonical]
+            if not player_view and tidal_collection
+            else None
+        )
     if tidal_session and canonical in TIDAL_SESSION_VIEW:
         return TIDAL_SESSION_VIEW[canonical]
     # Widoki Radia sa dostepne takze z odtwarzacza, bez wychodzenia Escape.
@@ -979,6 +1002,11 @@ def describe() -> list[tuple[str, str]]:
         ),
         Action.SORT_PODCAST_INBOX_ALPHABETICAL: "Nowe odcinki: alfabetycznie",
         Action.SORT_PODCAST_INBOX_BY_PODCAST: "Nowe odcinki: według podcastu",
+        Action.SORT_TIDAL_COLLECTION_ADDED: (
+            "TIDAL: według dodania, najnowsze na początku"
+        ),
+        Action.SORT_TIDAL_COLLECTION_ALPHABETICAL: "TIDAL: alfabetycznie",
+        Action.SORT_TIDAL_COLLECTION_CUSTOM: "TIDAL: kolejność własna",
         Action.VIEW_PRESETS: "Pokaż presety aktywnej sesji",
         Action.ASSIGN_PRESET: "Utwórz preset lub przypisz bieżący element",
         Action.VIEW_ALL_FILES: "Wszystkie pliki alfabetycznie",

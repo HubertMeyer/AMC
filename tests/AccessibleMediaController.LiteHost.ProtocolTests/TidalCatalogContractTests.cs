@@ -245,6 +245,7 @@ internal static class TidalCatalogContractTests
             Kind = MediaItemKind.Track,
             IsFavorite = true,
             IsAvailable = true,
+            CollectionAddedUtcTicks = 123456,
             Source = "private-token"
         };
         var result = LiteTidalCatalogContract.CreateCollectionViewResult(
@@ -256,6 +257,8 @@ internal static class TidalCatalogContractTests
             "źródło odtwarzania wyciekło do widoku");
         Check(!json.Contains("\"source\"", StringComparison.OrdinalIgnoreCase),
             "widok zawiera pole źródła");
+        Check(json.Contains("\"collectionAddedUtcTicks\":123456", StringComparison.Ordinal),
+            "widok nie przekazuje czasu dodania potrzebnego do sortowania");
     }
 
     private static void Check(bool condition, string message)

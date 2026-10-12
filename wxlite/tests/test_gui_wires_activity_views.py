@@ -199,6 +199,27 @@ def test_podcast_inbox_sort_reuses_the_source_and_preserves_selection() -> None:
     assert "self.announcer.say(intent.announcement)" in loader_source
 
 
+def test_tidal_sort_is_private_preserves_selection_and_orders_fresh_rows() -> None:
+    setter = next(
+        node for node in ast.walk(TREE)
+        if isinstance(node, ast.FunctionDef)
+        and node.name == "_set_tidal_collection_sort"
+    )
+    setter_source = ast.get_source_segment(SOURCE, setter) or ""
+    assert "self.state.tidal_sort_modes[scope] = mode" in setter_source
+    assert "preferred_id=state.model.selected_id" in setter_source
+    assert "announcement=label" in setter_source
+
+    loader = next(
+        node for node in ast.walk(TREE)
+        if isinstance(node, ast.FunctionDef) and node.name == "_open_tidal_view"
+    )
+    loader_source = ast.get_source_segment(SOURCE, loader) or ""
+    assert "self.tidal.order_rows" in loader_source
+    assert "sort_mode=sort_override" in loader_source
+    assert "self.announcer.say(intent.announcement)" in loader_source
+
+
 def test_play_track_forwards_the_bookmark_position() -> None:
     """Bez ``position_seconds`` zakladka odtworzylaby plik od zera."""
     assert "position_seconds=intent.position_seconds" in SOURCE, (

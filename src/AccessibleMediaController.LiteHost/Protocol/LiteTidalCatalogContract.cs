@@ -261,6 +261,7 @@ public sealed record LiteTidalCatalogItem(
     [property: JsonPropertyName("relatedAlbumTitle")] string? RelatedAlbumTitle,
     [property: JsonPropertyName("relatedArtistExternalId")] string? RelatedArtistExternalId,
     [property: JsonPropertyName("relatedArtistName")] string? RelatedArtistName,
+    [property: JsonPropertyName("collectionAddedUtcTicks")] long? CollectionAddedUtcTicks,
     [property: JsonPropertyName("isFavorite")] bool IsFavorite,
     [property: JsonPropertyName("isInLibrary")] bool IsInLibrary)
 {
@@ -276,6 +277,7 @@ public sealed record LiteTidalCatalogItem(
         item.RelatedAlbumTitle,
         item.RelatedArtistExternalId,
         item.RelatedArtistName,
+        item.CollectionAddedUtcTicks,
         item.IsFavorite,
         item.IsInLibrary);
 }

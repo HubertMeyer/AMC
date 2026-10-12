@@ -4072,6 +4072,14 @@ class LiteFrame(wx.Frame):
             self.library, self.radio, self.podcasts, self.tidal
         )
         self._tidal_queue_rows = list(tidal_queue_rows(state.tidal_queue_items))
+        self._tidal_effective_sort_modes = {
+            scope: state.tidal_sort_modes.get(scope, SORT_ADDED_NEWEST)
+            for scope in (
+                TIDAL_VIEW_LIBRARY,
+                TIDAL_VIEW_FAVORITES,
+                TIDAL_VIEW_PLAYLISTS,
+            )
+        }
         # Kazde otwarcie katalogu ma numer. Odpowiedz rozpoczęta przed
         # opuszczeniem sesji nie moze po powrocie podmienic nowszej listy.
         self._tidal_navigation_version = 0
@@ -4455,6 +4463,17 @@ class LiteFrame(wx.Frame):
             and session.view is View.LIST
             and session.library_view is LibraryView.PODCAST_INBOX
         )
+        tidal_view_scopes = {
+            LibraryView.TIDAL_LIBRARY: TIDAL_VIEW_LIBRARY,
+            LibraryView.TIDAL_FAVORITES: TIDAL_VIEW_FAVORITES,
+            LibraryView.TIDAL_PLAYLISTS: TIDAL_VIEW_PLAYLISTS,
+        }
+        tidal_scope = tidal_view_scopes.get(session.library_view)
+        tidal_collection = (
+            self.navigator.active is SessionId.TIDAL
+            and session.view is View.LIST
+            and tidal_scope is not None
+        )
         has_row = session.model.selected_row is not None
         selected_kind = (
             session.model.selected_row.kind
@@ -4483,6 +4502,11 @@ class LiteFrame(wx.Frame):
             Action.SORT_PODCAST_INBOX_ALPHABETICAL: SORT_ALPHABETICAL,
             Action.SORT_PODCAST_INBOX_BY_PODCAST: SORT_CUSTOM,
         }
+        tidal_sort_actions = {
+            Action.SORT_TIDAL_COLLECTION_ADDED: SORT_ADDED_NEWEST,
+            Action.SORT_TIDAL_COLLECTION_ALPHABETICAL: SORT_ALPHABETICAL,
+            Action.SORT_TIDAL_COLLECTION_CUSTOM: SORT_CUSTOM,
+        }
         for item, entry in self._menu_items:
             enabled = True
             if entry.needs_radio_session and not radio:
@@ -4490,6 +4514,8 @@ class LiteFrame(wx.Frame):
             if entry.needs_podcast_session and not podcasts:
                 enabled = False
             if entry.needs_podcast_inbox and not podcast_inbox:
+                enabled = False
+            if entry.needs_tidal_collection and not tidal_collection:
                 enabled = False
             if entry.needs_playback and not playing:
                 enabled = False
@@ -4519,6 +4545,14 @@ class LiteFrame(wx.Frame):
                 item.Check(
                     podcast_sort_actions[entry.action]
                     == self._podcast_inbox_sort_mode
+                )
+            elif entry.checkable and entry.action in tidal_sort_actions:
+                item.Check(
+                    tidal_scope is not None
+                    and tidal_sort_actions[entry.action]
+                    == self._tidal_effective_sort_modes.get(
+                        tidal_scope, SORT_ADDED_NEWEST
+                    )
                 )
             elif entry.checkable and entry.action is Action.TOGGLE_RADIO_RECOGNITION_MONITORING:
                 item.Check(self.options.radio_recognition_monitoring)
@@ -5772,37 +5806,41 @@ class LiteFrame(wx.Frame):
         self._tidal_navigation_version += 1
         version = self._tidal_navigation_version
         client = self.client
+        sort_override = self.state.tidal_sort_modes.get(scope)
+        collation = getattr(self, "_collation", None)
 
         def work():
             if client is not None:
                 try:
                     payload = client.tidal_collection_view(scope)
-                    result = container_result_from_host(payload)
+                    fresh = container_result_from_host(payload)
+                    result = self.tidal.order_rows(
+                        scope,
+                        fresh.heading,
+                        fresh.rows,
+                        sort_mode=sort_override,
+                        collation=collation,
+                    )
                     warning = (
                         str(payload.get("warning") or "").strip()
                         if isinstance(payload, dict) else ""
                     )
-                    return (
-                        result.heading,
-                        list(result.rows),
-                        True,
-                        warning,
-                    )
+                    return result, warning
                 except Exception as error:
-                    cached = self.tidal.load_view(scope)
-                    return (
-                        cached.heading,
-                        list(cached.rows),
-                        cached.order_matches_amc,
-                        f"Nie udało się odświeżyć TIDAL; pokazano ostatni zapis: {error}",
+                    cached = self.tidal.load_view(
+                        scope,
+                        sort_mode=sort_override,
+                        collation=collation,
                     )
-            cached = self.tidal.load_view(scope)
-            return (
-                cached.heading,
-                list(cached.rows),
-                cached.order_matches_amc,
-                "",
-            )
+                    return cached, (
+                        "Nie udało się odświeżyć TIDAL; pokazano ostatni "
+                        f"zapis: {error}"
+                    )
+            return self.tidal.load_view(
+                scope,
+                sort_mode=sort_override,
+                collation=collation,
+            ), ""
 
         def done(result) -> None:
             if (
@@ -5810,18 +5848,32 @@ class LiteFrame(wx.Frame):
                 or self.navigator.active is not SessionId.TIDAL
             ):
                 return
+            view_result, warning = result
+            self._tidal_effective_sort_modes[scope] = view_result.sort_mode
             events = self.navigator.apply_tidal_view(
                 intent.view,
-                result[0],
-                result[1],
+                view_result.heading,
+                list(view_result.rows),
                 preferred_id=intent.preferred_id,
-                order_matches_amc=result[2],
+                order_matches_amc=view_result.order_matches_amc,
             )
             # Wynik aktualizuje tylko stan TIDAL. Jeśli użytkownik zdążył
             # przejść do innej sesji, nie przenosimy tam fokusu ani mowy.
-            self._run(events)
-            if result[3]:
-                self.announcer.say(result[3])
+            if intent.announcement:
+                self._sync_views()
+                if view_result.rows:
+                    self.announcer.say(intent.announcement)
+                else:
+                    empty = next(
+                        (event.text for event in events if isinstance(event, Announce)),
+                        view_result.heading,
+                    )
+                    self.announcer.say(f"{intent.announcement}, {empty}")
+            else:
+                self._run(events)
+            self._refresh_menu_state()
+            if warning:
+                self.announcer.say(warning)
             if after_refresh is not None:
                 after_refresh()
 
@@ -6042,6 +6094,15 @@ class LiteFrame(wx.Frame):
             and self.navigator.active is SessionId.PODCASTS
             and self.navigator.session.library_view is LibraryView.PODCAST_INBOX
         )
+        tidal_collection = (
+            not player
+            and self.navigator.active is SessionId.TIDAL
+            and self.navigator.session.library_view in (
+                LibraryView.TIDAL_LIBRARY,
+                LibraryView.TIDAL_FAVORITES,
+                LibraryView.TIDAL_PLAYLISTS,
+            )
+        )
         # WPF czyści aktywny filtr także wtedy, gdy fokus jest już na wynikach.
         if not player and chord.canonical == "Escape" and self.filter_box.GetValue():
             self._clear_filter_and_return()
@@ -6078,6 +6139,7 @@ class LiteFrame(wx.Frame):
             podcast_inbox=podcast_inbox,
             podcast_session=self.navigator.active is SessionId.PODCASTS,
             tidal_session=self.navigator.active is SessionId.TIDAL,
+            tidal_collection=tidal_collection,
         )
         if action is None:
             # Klawisz NIE jest nasz: oddajemy go kontrolce, zeby natywna
@@ -6337,6 +6399,12 @@ class LiteFrame(wx.Frame):
             Action.SORT_PODCAST_INBOX_BY_PODCAST,
         ):
             self._set_podcast_inbox_sort(action)
+        elif action in (
+            Action.SORT_TIDAL_COLLECTION_ADDED,
+            Action.SORT_TIDAL_COLLECTION_ALPHABETICAL,
+            Action.SORT_TIDAL_COLLECTION_CUSTOM,
+        ):
+            self._set_tidal_collection_sort(action)
         elif action is Action.REFRESH_PODCAST:
             self._refresh_podcasts(refresh_all=False)
         elif action is Action.REFRESH_PODCAST_LIBRARY:
@@ -7507,6 +7575,64 @@ class LiteFrame(wx.Frame):
         self._refresh_menu_state()
         self._open_podcast_aggregate(OpenPodcastAggregateView(
             LibraryView.PODCAST_INBOX,
+            preferred_id=state.model.selected_id,
+            announcement=label,
+        ))
+
+    def _set_tidal_collection_sort(self, action: Action) -> None:
+        """Alt+1/2/3 for one TIDAL root, stored outside the shared profile."""
+        state = self.navigator.sessions[SessionId.TIDAL]
+        scopes = {
+            LibraryView.TIDAL_LIBRARY: TIDAL_VIEW_LIBRARY,
+            LibraryView.TIDAL_FAVORITES: TIDAL_VIEW_FAVORITES,
+            LibraryView.TIDAL_PLAYLISTS: TIDAL_VIEW_PLAYLISTS,
+        }
+        scope = scopes.get(state.library_view)
+        if (
+            self.navigator.active is not SessionId.TIDAL
+            or state.view is not View.LIST
+            or scope is None
+        ):
+            self.announcer.say(
+                "Sortowanie Alt+1, Alt+2 i Alt+3 działa w Bibliotece, "
+                "Ulubionych i Playlistach TIDAL"
+            )
+            return
+
+        choices = {
+            Action.SORT_TIDAL_COLLECTION_ADDED: (
+                SORT_ADDED_NEWEST,
+                "Według dodania, najnowsze na początku",
+            ),
+            Action.SORT_TIDAL_COLLECTION_ALPHABETICAL: (
+                SORT_ALPHABETICAL,
+                "Alfabetycznie",
+            ),
+            Action.SORT_TIDAL_COLLECTION_CUSTOM: (
+                SORT_CUSTOM,
+                "Kolejność własna",
+            ),
+        }
+        choice = choices.get(action)
+        if choice is None:
+            return
+        mode, label = choice
+        previous_modes = dict(self.state.tidal_sort_modes)
+        previous_effective = self._tidal_effective_sort_modes.get(scope)
+        self.state.tidal_sort_modes[scope] = mode
+        self._tidal_effective_sort_modes[scope] = mode
+        if not self._save_state():
+            self.state.tidal_sort_modes = previous_modes
+            if previous_effective is None:
+                self._tidal_effective_sort_modes.pop(scope, None)
+            else:
+                self._tidal_effective_sort_modes[scope] = previous_effective
+            self._refresh_menu_state()
+            return
+
+        self._refresh_menu_state()
+        self._open_tidal_view(OpenTidalView(
+            state.library_view,
             preferred_id=state.model.selected_id,
             announcement=label,
         ))

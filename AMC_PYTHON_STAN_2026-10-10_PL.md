@@ -43,13 +43,18 @@ podmiany i wycofania plików. Docelowe `AMC.exe` ma być stałym punktem wejści
 a aktualizator działać za nim, bez ręcznego wybierania skryptu lub interpretera.
 
 Aktualny kompletny pakiet EXE jest w:
-`D:\Projekty Codex\AMC - integracja wxPython\.test-output\AMC-Python-podcast-ustawienia-20261012`.
+`D:\Projekty Codex\AMC - integracja wxPython\.test-output\AMC-Python-tidal-sort-escape-20261012`.
 Nie zawiera `AMC-wx-Lite.cmd`. `AMC.exe` sprawdza wersję formatu pakietu,
 interfejsu i protokołu hosta oraz sumy krytycznych plików przed uruchomieniem.
 Automatyczna weryfikacja paczki i próbna aktualizacja do osobnego katalogu
 zakończyły się kodem 0. Pozostaje żywy odbiór z NVDA: pierwsze uruchomienie,
 ponowne uruchomienie bez nagrywania oraz bezpieczna odmowa wymiany podczas
 rzeczywistego nagrywania. Do tego odbioru nie zamykano działającej instancji.
+
+Kanoniczne `D:\Projekty Codex\AMC Python` nie zostało nadpisane podczas tego
+przyrostu, ponieważ jego interfejs i host były uruchomione. Kandydat jest
+zbudowany osobno; przełączenie można wykonać dopiero po bezpiecznym zakończeniu
+bieżącego odsłuchu i nagrywania.
 
 ### Niezależne odtwarzanie sesji i urządzenia audio
 
@@ -207,6 +212,9 @@ Interfejs wxPython obsługuje teraz:
 - `Ctrl+Shift+Q` — dodanie lub usunięcie zaznaczonych utworów z prywatnej,
   trwałej Kolejki interfejsu wxPython;
 - `Ctrl+Q` — otwarcie tej Kolejki;
+- `Alt+1` — porządek według dodania, z najnowszymi pozycjami na początku;
+- `Alt+2` — porządek alfabetyczny zgodny z porównywaniem hosta AMC;
+- `Alt+3` — kolejność własna zapisana przez TIDAL;
 - Enter na utworze lub albumie — przekazanie odtwarzania do oficjalnego TIDAL.
 
 Biblioteka i Ulubione są zmieniane przez istniejącą oficjalną integrację C#.
@@ -214,12 +222,14 @@ Kolejka TIDAL jest na tym etapie prywatna dla interfejsu wxPython i nie jest
 współdzielona z kolejką głównego AMC ani oficjalnej aplikacji TIDAL. Tokeny i
 prywatne uchwyty odtwarzania nie przechodzą do Pythona ani do tekstu list.
 
-Do poprawy w następnym etapie pozostaje porządek albumów. Obecnie albumy są
-pokazywane według czasu dodania od najstarszych u góry i nie można zmienić
-sortowania. Główne AMC udostępniało co najmniej porządek alfabetyczny,
-własny/ręczny oraz według dodania, przy czym w tym ostatnim najnowsze pozycje
-były u góry. Należy przenieść ten sam model, zapamiętanie wyboru i dostępne
-etykiety opcji, po uprzednim porównaniu z kodem głównego AMC.
+Sortowanie jest podłączone w trzech równorzędnych korzeniach kolekcji TIDAL:
+Bibliotece, Ulubionych i Playlistach. Wybrany tryb jest pamiętany osobno dla
+każdego widoku, zachowuje bieżący element według jego stabilnego ID i nie
+przechodzi na album, wykonawcę ani Kolejkę. Znacznik czasu dodania pozostaje
+wewnętrzną wartością modelu i nie trafia do nazwy dostępnej ani mowy NVDA.
+Brak prywatnego wyboru dziedziczy ustawienie z profilu głównego AMC, ale zapis
+AMC Python nie modyfikuje tego profilu. Pozostaje żywy odbiór kolejności na
+rzeczywistym koncie TIDAL i mowy po każdej zmianie.
 
 Trzeba też przywrócić kontekstową prawą strzałkę. Na albumie prowadziła do
 wykonawcy; na wykonawcy otwierała właściwe zbiory wykonawcy, między innymi
@@ -370,7 +380,7 @@ kodu ani wysyłać logów bez wiedzy użytkownika.
 
 ## Dowody automatyczne tego przyrostu
 
-- pełny runner Python: 1345 zaliczonych, 0 błędów, 138 historycznych pominięć;
+- pełny runner Python: 1352 zaliczone, 0 błędów, 138 historycznych pominięć;
 - testy protokołu C#: 15 zestawów zaliczonych;
 - całe rozwiązanie .NET zbudowane sekwencyjnie: 0 ostrzeżeń, 0 błędów;
 - sześć celowanych testów Windows rozpoznawania, ustawień, historii, podpisu
@@ -426,11 +436,12 @@ lewą strzałką.
    traktować tylko jako krótką wskazówkę projektową, gdy analogiczny problem
    wystąpi w AMC; nie przeznaczać przebiegów na analizę, uruchamianie ani testy
    tego obcego dodatku NVDA i nie kopiować kodu GPL.
-6. Zweryfikowanie słyszalnego odtwarzania przekazanego utworu w oficjalnej
-   aplikacji TIDAL, łącznie z sesją systemową i urządzeniem wyjściowym; dopiero
-   potem przywrócenie sortowania albumów (alfabetycznego, własnego i według
-   dodania z najnowszymi u góry) oraz kontekstowej prawej strzałki na albumach
-   i wykonawcach, po porównaniu z głównym AMC.
+6. Sortowanie Biblioteki, Ulubionych i Playlist TIDAL jest przywrócone
+   technicznie pod `Alt+1`, `Alt+2` i `Alt+3`, z osobną pamięcią każdego
+   widoku; pozostaje odbiór na żywym koncie. Następnie zweryfikować słyszalne
+   odtwarzanie przekazanego utworu w oficjalnej aplikacji TIDAL, łącznie z
+   sesją systemową i urządzeniem wyjściowym, oraz domknąć kontekstową prawą
+   strzałkę na albumach i wykonawcach po porównaniu z głównym AMC.
 7. Podłączenie gotowego dodatku AMC do NVDA bezpośrednio do LiteHosta i
    wxPython, bez uruchamiania starego AMC, oraz żywy odbiór mowy i brajla.
 8. Uzupełnienie wykrytych braków w istniejących sesjach, bez regresji radia,

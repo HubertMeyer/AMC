@@ -57,6 +57,8 @@ class MenuItem:
     needs_podcast_session: bool = False
     #: Te trzy pozycje sa aktywne tylko w zbiorczym widoku Nowych odcinkow.
     needs_podcast_inbox: bool = False
+    #: Aktywna wyłącznie w jednym z trzech głównych widoków kolekcji TIDAL.
+    needs_tidal_collection: bool = False
     #: Pozycja PRZELACZNIKA: wx ma ja wstawic jako ``AppendCheckItem``.
     #:
     #: Nie jest to kosmetyka. Zwykla pozycja menu nie niesie stanu, wiec
@@ -584,6 +586,19 @@ def build_menus() -> tuple[Menu, ...]:
                      Action.SORT_PODCAST_INBOX_BY_PODCAST, shortcut="Alt+3",
                      accelerator=False, checkable=True,
                      needs_podcast_inbox=True),
+            SEPARATOR,
+            MenuItem("TIDAL: według dodania — na&jnowsze najpierw",
+                     Action.SORT_TIDAL_COLLECTION_ADDED, shortcut="Alt+1",
+                     accelerator=False, checkable=True,
+                     needs_tidal_collection=True),
+            MenuItem("TIDAL: alfabetyczni&e",
+                     Action.SORT_TIDAL_COLLECTION_ALPHABETICAL, shortcut="Alt+2",
+                     accelerator=False, checkable=True,
+                     needs_tidal_collection=True),
+            MenuItem("TIDAL: &kolejność własna",
+                     Action.SORT_TIDAL_COLLECTION_CUSTOM, shortcut="Alt+3",
+                     accelerator=False, checkable=True,
+                     needs_tidal_collection=True),
             SEPARATOR,
             # ``accelerator=False``: ZMIERZONE na zywym GUI (statusclip-1).
             # Z akceleratorem pozycja byla WYLACZONA na liscie (nic nie gralo),

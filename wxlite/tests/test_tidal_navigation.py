@@ -304,6 +304,9 @@ def test_tidal_supported_actions_cannot_trigger_another_sessions_operations() ->
         Action.ADD_TO_QUEUE,
         Action.TIDAL_TOGGLE_LIBRARY,
         Action.TIDAL_TOGGLE_FAVORITE,
+        Action.SORT_TIDAL_COLLECTION_ADDED,
+        Action.SORT_TIDAL_COLLECTION_ALPHABETICAL,
+        Action.SORT_TIDAL_COLLECTION_CUSTOM,
         Action.VIEW_ACTIVE_RECORDINGS,
         Action.VIEW_RECORDED_RADIO_FILES,
         Action.MANAGE_RADIO_SCHEDULES,
@@ -341,6 +344,20 @@ def test_tidal_collection_shortcuts_are_contextual() -> None:
         player_view=False,
         radio_session=False,
     ) is Action.TOGGLE_FAVORITE
+    assert resolve(
+        Chord("2", alt=True),
+        player_view=False,
+        radio_session=False,
+        tidal_session=True,
+        tidal_collection=True,
+    ) is Action.SORT_TIDAL_COLLECTION_ALPHABETICAL
+    assert resolve(
+        Chord("2", alt=True),
+        player_view=False,
+        radio_session=False,
+        tidal_session=True,
+        tidal_collection=False,
+    ) is None
 
 
 def test_tidal_queue_is_its_own_accessible_view() -> None:

@@ -29,6 +29,7 @@ from amc_wx_lite.shortcuts import (
     PODCAST_SESSION_VIEW,
     RADIO_LIST_VIEW,
     RADIO_PLAYER_VIEW,
+    TIDAL_COLLECTION_LIST_VIEW,
     Action,
 )
 
@@ -146,6 +147,7 @@ def test_shortcut_shown_in_menu_is_the_shortcut_that_really_works() -> None:
         LIST_VIEW,
         RADIO_LIST_VIEW,
         RADIO_PLAYER_VIEW,
+        TIDAL_COLLECTION_LIST_VIEW,
         PLAYER_VIEW,
     ):
         for chord, action in table.items():
@@ -176,7 +178,7 @@ def test_no_duplicate_labels_or_shortcuts() -> None:
     # szczegółową nazwę tej samej intencji dla stacji. Alt+D również jest
     # kontekstowe: w Radiu czyta bieżącą audycję, a w Podcastach pełny opis.
     assert set(duplicates) <= {
-        "Ctrl+O", "Ctrl+N", "Ctrl+D", "Ctrl+S", "Alt+1", "Alt+2", "Alt+D",
+        "Ctrl+O", "Ctrl+N", "Ctrl+D", "Ctrl+S", "Alt+1", "Alt+2", "Alt+3", "Alt+D",
         "F2", "Delete"
     }, duplicates
     for item in duplicates.get("Ctrl+O", []):
@@ -184,9 +186,9 @@ def test_no_duplicate_labels_or_shortcuts() -> None:
             "kontekstowe Ctrl+O musi dojsc do resolvera sesji, a nie do "
             f"pierwszego akceleratora menu: {item.label}"
         )
-    for chord in ("Alt+1", "Alt+2"):
+    for chord in ("Alt+1", "Alt+2", "Alt+3"):
         contextual = duplicates.get(chord, [])
-        assert len(contextual) == 2
+        assert len(contextual) == (3 if chord in ("Alt+1", "Alt+2") else 2)
         assert all(not item.accelerator for item in contextual), (
             f"kontekstowe {chord} nie moze byc akceleratorem okna"
         )
@@ -217,7 +219,23 @@ def test_podcast_inbox_sort_menu_is_contextual_checkable_and_user_facing() -> No
         assert item.shortcut == shortcut
         assert item.needs_podcast_inbox and item.checkable
         assert not item.accelerator
-        assert label_part.casefold() in item.label.casefold()
+        assert label_part.casefold() in item.label.replace("&", "").casefold()
+
+
+def test_tidal_sort_menu_is_contextual_checkable_and_user_facing() -> None:
+    expected = {
+        Action.SORT_TIDAL_COLLECTION_ADDED: ("Alt+1", "najnowsze"),
+        Action.SORT_TIDAL_COLLECTION_ALPHABETICAL: ("Alt+2", "alfabetycznie"),
+        Action.SORT_TIDAL_COLLECTION_CUSTOM: ("Alt+3", "własna"),
+    }
+    found = {item.action: item for item in all_items() if item.action in expected}
+    assert set(found) == set(expected)
+    for action, (shortcut, label_part) in expected.items():
+        item = found[action]
+        assert item.shortcut == shortcut
+        assert item.needs_tidal_collection and item.checkable
+        assert not item.accelerator
+        assert label_part.casefold() in item.label.replace("&", "").casefold()
 
 
 def test_podcast_refresh_menu_is_contextual_and_does_not_steal_f5() -> None:

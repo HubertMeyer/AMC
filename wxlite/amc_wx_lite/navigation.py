@@ -269,6 +269,9 @@ class OpenTidalView:
 
     view: LibraryView
     preferred_id: str | None = None
+    #: Jednorazowy, gotowy komunikat po zmianie sortowania. Nie zawiera
+    #: wartości modelu ani identyfikatora polecenia.
+    announcement: str = ""
 
 
 @dataclass(frozen=True, slots=True)

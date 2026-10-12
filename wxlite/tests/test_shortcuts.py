@@ -170,6 +170,31 @@ def test_alt_digits_sort_only_inside_the_podcast_inbox() -> None:
     ) is Action.OPEN_FILE_DIALOG
 
 
+def test_alt_digits_sort_tidal_only_at_collection_roots() -> None:
+    expected = {
+        "1": Action.SORT_TIDAL_COLLECTION_ADDED,
+        "2": Action.SORT_TIDAL_COLLECTION_ALPHABETICAL,
+        "3": Action.SORT_TIDAL_COLLECTION_CUSTOM,
+    }
+    for key, action in expected.items():
+        assert resolve(
+            Chord(key, alt=True),
+            player_view=False,
+            radio_session=False,
+            tidal_session=True,
+            tidal_collection=True,
+        ) is action
+        # W albumie/wykonawcy/kolejce nie wolno uruchomić ani sortowania,
+        # ani lokalnego znaczenia „Foldery/Wszystkie pliki”.
+        assert resolve(
+            Chord(key, alt=True),
+            player_view=False,
+            radio_session=False,
+            tidal_session=True,
+            tidal_collection=False,
+        ) is None
+
+
 def test_podcast_refresh_matches_the_full_amc_context() -> None:
     # Ctrl+F5 zawsze odswieza cala Biblioteke podcastow. F5 odswieza biezace
     # zrodlo, z jednym swiadomym wyjatkiem: w globalnej skrzynce odswieza

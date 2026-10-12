@@ -7,6 +7,9 @@ import json
 from amc_wx_lite.list_model import Row
 from amc_wx_lite.profile_layout import private_sandbox
 from amc_wx_lite.tidal_source import (
+    SORT_ADDED_NEWEST,
+    SORT_ALPHABETICAL,
+    SORT_CUSTOM,
     TidalContainerPayloadError,
     TidalProfileError,
     TidalSource,
@@ -193,6 +196,61 @@ def test_tidal_alphabetical_mode_is_explicitly_marked_as_fallback() -> None:
     assert [row.title for row in result.rows] == sorted(
         [row.title for row in result.rows], key=str.casefold
     )
+
+
+def test_private_tidal_sort_override_wins_without_writing_shared_profile() -> None:
+    raw = _state()
+    before = json.dumps(raw, ensure_ascii=False, sort_keys=True)
+
+    alphabetical = build_view(
+        raw, VIEW_LIBRARY, sort_mode=SORT_ALPHABETICAL
+    )
+    custom = build_view(raw, VIEW_LIBRARY, sort_mode=SORT_CUSTOM)
+
+    assert alphabetical.sort_mode == SORT_ALPHABETICAL
+    assert [row.title for row in alphabetical.rows] == [
+        "Album pierwszy", "Artysta", "Playlista"
+    ]
+    assert alphabetical.order_matches_amc is False
+    assert custom.sort_mode == SORT_CUSTOM
+    assert [row.item_id for row in custom.rows] == [
+        "album-1", "playlist-1", "artist-1"
+    ]
+    assert json.dumps(raw, ensure_ascii=False, sort_keys=True) == before
+
+
+def test_fresh_host_rows_sort_by_added_timestamp_newest_first(tmp_path) -> None:
+    raw = _state()
+    raw["collectionOrders"] = {}
+    layout = private_sandbox(tmp_path)
+    layout.state_json.write_text(json.dumps(raw), encoding="utf-8")
+    fresh = container_result_from_host({
+        "heading": "Biblioteka TIDAL",
+        "items": [
+            {
+                "id": "old", "externalId": "albums:old", "title": "Stary",
+                "artist": "Wykonawca", "kind": "album",
+                "collectionAddedUtcTicks": 100,
+            },
+            {
+                "id": "new", "externalId": "albums:new", "title": "Nowy",
+                "artist": "Wykonawca", "kind": "album",
+                "collectionAddedUtcTicks": 300,
+            },
+        ],
+    })
+
+    result = TidalSource(layout).order_rows(
+        VIEW_LIBRARY,
+        fresh.heading,
+        fresh.rows,
+        sort_mode=SORT_ADDED_NEWEST,
+    )
+
+    assert [row.item_id for row in result.rows] == ["new", "old"]
+    assert result.sort_mode == SORT_ADDED_NEWEST
+    assert result.order_matches_amc is True
+    assert all("100" not in row.detail and "300" not in row.detail for row in result.rows)
 
 
 def test_tidal_source_reads_profile_without_modifying_it(tmp_path) -> None:
