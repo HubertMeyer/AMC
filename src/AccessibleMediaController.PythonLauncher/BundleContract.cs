@@ -1,0 +1,131 @@
+using System.Security.Cryptography;
+using System.Text.Json;
+
+namespace AccessibleMediaController.PythonLauncher;
+
+internal sealed class BundleManifest
+{
+    public int BundleFormatVersion { get; set; }
+    public int InterfaceVersion { get; set; }
+    public int HostProtocolVersion { get; set; }
+    public string Application { get; set; } = "";
+    public string EntryPoint { get; set; } = "";
+    public string PythonModule { get; set; } = "";
+    public string HostFolder { get; set; } = "";
+    public List<string> Files { get; set; } = [];
+    public List<string> StartupFiles { get; set; } = [];
+    public Dictionary<string, string> FileHashes { get; set; } =
+        new(StringComparer.OrdinalIgnoreCase);
+}
+
+internal sealed record VerifiedBundle(
+    string Root,
+    string HostExecutable,
+    BundleManifest Manifest);
+
+internal static class BundleVerifier
+{
+    internal const int SupportedBundleFormat = 1;
+    internal const int SupportedInterfaceVersion = 1;
+    internal const int SupportedHostProtocolVersion = 1;
+    private const int MaxManifestBytes = 8 * 1024 * 1024;
+
+    internal static VerifiedBundle Verify(string packageRoot)
+    {
+        var root = Path.GetFullPath(packageRoot);
+        var manifestPath = Path.Combine(root, "bundle-manifest.json");
+        if (!File.Exists(manifestPath))
+            throw new InvalidDataException("brakuje manifestu pakietu");
+        if (new FileInfo(manifestPath).Length > MaxManifestBytes)
+            throw new InvalidDataException("manifest pakietu jest zbyt duży");
+
+        BundleManifest manifest;
+        try
+        {
+            manifest = JsonSerializer.Deserialize<BundleManifest>(
+                File.ReadAllText(manifestPath),
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true })
+                ?? throw new InvalidDataException("manifest pakietu jest pusty");
+        }
+        catch (JsonException)
+        {
+            throw new InvalidDataException("manifest pakietu ma nieprawidłowy format");
+        }
+
+        if (manifest.BundleFormatVersion != SupportedBundleFormat)
+            throw new InvalidDataException("wersja formatu pakietu nie jest obsługiwana");
+        if (manifest.InterfaceVersion != SupportedInterfaceVersion)
+            throw new InvalidDataException("wersja interfejsu nie pasuje do uruchamiacza");
+        if (manifest.HostProtocolVersion != SupportedHostProtocolVersion)
+            throw new InvalidDataException("wersja silnika nie pasuje do interfejsu");
+        if (!string.Equals(manifest.Application, "AMC Python", StringComparison.Ordinal))
+            throw new InvalidDataException("manifest dotyczy innego programu");
+        if (!string.Equals(manifest.EntryPoint, "AMC.exe", StringComparison.OrdinalIgnoreCase))
+            throw new InvalidDataException("manifest wskazuje inny plik uruchamiający");
+        if (!string.Equals(manifest.PythonModule, "amc_wx_lite", StringComparison.Ordinal))
+            throw new InvalidDataException("manifest wskazuje inny moduł interfejsu");
+        if (!IsSingleFolderName(manifest.HostFolder))
+            throw new InvalidDataException("manifest wskazuje nieprawidłowy folder silnika");
+        if (manifest.Files.Count == 0 || manifest.StartupFiles.Count == 0)
+            throw new InvalidDataException("manifest nie zawiera kompletnej listy startowej");
+
+        var files = new HashSet<string>(manifest.Files, StringComparer.OrdinalIgnoreCase);
+        if (files.Count != manifest.Files.Count)
+            throw new InvalidDataException("manifest zawiera powtórzone pliki");
+
+        var required = new[]
+        {
+            "AMC.exe",
+            "runtime/python.exe",
+            "runtime/pythonw.exe",
+            "app/amc_wx_lite/__main__.py",
+            $"{manifest.HostFolder}/amc_lite_host.exe",
+        };
+        var startup = new HashSet<string>(manifest.StartupFiles, StringComparer.OrdinalIgnoreCase);
+        foreach (var relative in required)
+        {
+            if (!startup.Contains(relative))
+                throw new InvalidDataException($"manifest nie obejmuje pliku startowego {relative}");
+        }
+
+        foreach (var relative in manifest.StartupFiles)
+        {
+            if (!files.Contains(relative))
+                throw new InvalidDataException($"plik startowy {relative} nie należy do pakietu");
+            if (!manifest.FileHashes.TryGetValue(relative, out var expected)
+                || expected.Length != 64)
+                throw new InvalidDataException($"brakuje sumy pliku startowego {relative}");
+            var path = ResolveInside(root, relative, mustExist: true);
+            var actual = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(path)));
+            if (!string.Equals(actual, expected, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidDataException($"plik startowy {relative} jest uszkodzony");
+        }
+
+        var hostExecutable = ResolveInside(
+            root,
+            $"{manifest.HostFolder}/amc_lite_host.exe",
+            mustExist: true);
+        return new VerifiedBundle(root, hostExecutable, manifest);
+    }
+
+    private static bool IsSingleFolderName(string value) =>
+        !string.IsNullOrWhiteSpace(value)
+        && !Path.IsPathRooted(value)
+        && Path.GetFileName(value) == value
+        && value is not "." and not "..";
+
+    private static string ResolveInside(string root, string relative, bool mustExist)
+    {
+        if (string.IsNullOrWhiteSpace(relative) || Path.IsPathRooted(relative))
+            throw new InvalidDataException("manifest zawiera nieprawidłową ścieżkę");
+        var fullRoot = Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar)
+                       + Path.DirectorySeparatorChar;
+        var normalized = relative.Replace('/', Path.DirectorySeparatorChar);
+        var full = Path.GetFullPath(Path.Combine(fullRoot, normalized));
+        if (!full.StartsWith(fullRoot, StringComparison.OrdinalIgnoreCase))
+            throw new InvalidDataException("manifest próbuje wyjść poza folder programu");
+        if (mustExist && !File.Exists(full))
+            throw new InvalidDataException($"brakuje pliku startowego {relative}");
+        return full;
+    }
+}

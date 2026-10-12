@@ -15,6 +15,41 @@ def test_python_package_matches_isolated_runtime_app_path():
         target = Path(folder)
         bundle.copy_python_code(target)
         assert (target / "app" / "amc_wx_lite" / "__main__.py").is_file()
+        assert not (target / "AMC-wx-Lite.cmd").exists()
+
+
+def test_production_launcher_is_copied_as_canonical_entry_point():
+    with tempfile.TemporaryDirectory() as folder:
+        root = Path(folder)
+        source, target = root / "publish", root / "bundle"
+        source.mkdir()
+        (source / "AMC.exe").write_bytes(b"SYNTHETIC_LAUNCHER")
+        copied = bundle.copy_launcher(target, source)
+        assert copied == ["AMC.exe"]
+        assert (target / "AMC.exe").read_bytes() == b"SYNTHETIC_LAUNCHER"
+
+
+def test_startup_file_selection_covers_interface_launcher_and_host():
+    files = [
+        "AMC.exe",
+        "AMC-Python-Updater.exe",
+        "app/amc_wx_lite/__main__.py",
+        "runtime/python.exe",
+        "runtime/pythonw.exe",
+        "runtime/LICENSE.txt",
+        "host/amc_lite_host.exe",
+        "host/AccessibleMediaController.Core.dll",
+        "host/readme.md",
+    ]
+    selected = bundle.select_startup_files(files, "host")
+    assert "AMC.exe" in selected
+    assert "app/amc_wx_lite/__main__.py" in selected
+    assert "runtime/python.exe" in selected
+    assert "runtime/pythonw.exe" in selected
+    assert "host/amc_lite_host.exe" in selected
+    assert "host/AccessibleMediaController.Core.dll" in selected
+    assert "AMC-Python-Updater.exe" not in selected
+    assert "host/readme.md" not in selected
 
 
 def test_dependency_licenses_are_not_dropped_from_host_package():

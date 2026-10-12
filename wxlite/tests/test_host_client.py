@@ -149,6 +149,23 @@ def test_play_media_sends_stable_identity_source_and_resume_in_one_request() -> 
         client.close()
 
 
+def test_local_transport_commands_name_the_session_explicitly() -> None:
+    client = make_client()
+    try:
+        pause = client.pause_resume("radio")
+        mute = client.toggle_mute("radio")
+        seek = client.seek_by(-15.0, "files")
+        volume = client.set_volume(48, "podcasts")
+        status = client.status("radio")
+        assert pause["args"] == {"sessionId": "radio"}
+        assert mute["args"] == {"sessionId": "radio"}
+        assert seek["args"] == {"deltaSeconds": -15.0, "sessionId": "files"}
+        assert volume["args"] == {"volume": 48, "sessionId": "podcasts"}
+        assert status["args"] == {"sessionId": "radio"}
+    finally:
+        client.close()
+
+
 def test_podcast_checkpoint_is_a_narrow_host_operation() -> None:
     client = make_client()
     try:

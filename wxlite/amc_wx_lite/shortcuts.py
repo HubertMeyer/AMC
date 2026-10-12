@@ -101,6 +101,7 @@ class Action(Enum):
     SHOW_PLAYER = "view.player"
     SHOW_LIST = "view.list"
     PLAY_PAUSE = "transport.playPause"
+    TOGGLE_MUTE = "transport.toggleMute"
     # Zmiana utworu W KOLEJCE. Nastepstwo liczy zywa kolejka hosta, wiec te
     # akcje maja sens tylko wtedy, gdy kolejka naprawde prowadzi odtwarzanie.
     QUEUE_NEXT = "queue.next"
@@ -489,6 +490,7 @@ LIST_VIEW: dict[str, Action] = {
     # pierwszy czlon jest falszem, wiec wykonuje sie galaz ShowPlayerView.
     "Shift+F6": Action.SHOW_PLAYER,
     "Space": Action.PLAY_PAUSE,
+    "Ctrl+M": Action.TOGGLE_MUTE,
     # Czas: Ctrl+SHIFT+E/R/T (MainWindow.xaml.cs:21674-21676, 22190-22192).
     # Samo Ctrl+E/R/T nalezy do profilu PO PREFIKSIE, a w oknie Ctrl+E to
     # eksport ulubionych stacji (cs:21662) -- stad brak aliasow.
@@ -634,6 +636,7 @@ PLAYER_VIEW: dict[str, Action] = {
     "Shift+F6": Action.SHOW_LIST,
     "F6": Action.SHOW_LIST,
     "Space": Action.PLAY_PAUSE,
+    "Ctrl+M": Action.TOGGLE_MUTE,
     # Pelne AMC: gola litera B w otwartym odtwarzaczu dodaje szybka zakladke.
     # Ctrl+B pozostaje zbiorcza lista zakladek i nie jest aliasem tej akcji.
     "B": Action.ADD_BOOKMARK,
@@ -824,6 +827,7 @@ def describe() -> list[tuple[str, str]]:
         Action.SHOW_PLAYER: "Widok odtwarzacza",
         Action.SHOW_LIST: "Powrot na liste",
         Action.PLAY_PAUSE: "Pauza albo wznowienie",
+        Action.TOGGLE_MUTE: "Wycisz albo włącz dźwięk bieżącej sesji",
         Action.QUEUE_NEXT: "Nastepny utwor kolejki",
         Action.QUEUE_PREVIOUS: "Poprzedni utwor kolejki",
         Action.ADD_TO_QUEUE: "Dodaj zaznaczenie do kolejki albo je usun",

@@ -11,6 +11,7 @@ internal static class Program
         ("--session-options", SessionOptionsPayloadTests.Run),
         ("--queue", QueueCoordinatorTests.Run),
         ("--transport", QueueTransportTests.Run),
+        ("--transport-routing", TransportRoutingTests.Run),
         ("--persistence", QueuePersistenceTests.Run),
         ("--quickinfo", QuickInformationTests.Run),
         ("--bookmarks", BookmarkStoreTests.Run),

@@ -2575,6 +2575,8 @@ class LiteFrame(wx.Frame):
 
         self.client: LiteHostClient | None = None
         self._last_status: dict = {}
+        self._transport_status_by_session: dict[SessionId, dict] = {}
+        self._radio_transport_status_poll_pending = False
         self._last_recording_status: dict = {}
         self._status_poll_pending = False
         self._recording_status_poll_pending = False
@@ -2596,10 +2598,11 @@ class LiteFrame(wx.Frame):
         self._audio_clip_edit_percent = -1
         self._audio_clip_edit_operation_id: str | None = None
         self._audio_clip_edit_kind: str | None = None
-        #: Ktora sesja NAPRAWDE gra na hoscie. Host ma jedno wyjscie, wiec
-        #: wyjscie z odtwarzacza PLIKOW nie moze wstrzymac grajacego radia --
-        #: ``transport.pauseResume`` nie zna zakresu sesji.
+        #: Ostatnia lokalna sesja, która zaczęła grać, zachowana dla zgodności
+        #: ze starszymi ścieżkami błędów. Faktyczny stan jest wielosesyjny:
+        #: Radio może grać równolegle z Plikami albo Podcastami.
         self._playing_session: SessionId | None = None
+        self._playing_sessions: set[SessionId] = set()
         self._pending_playback_session: SessionId | None = None
         # Oryginalny TIDAL jest osobnym odtwarzaczem. Ta flaga wlacza tylko
         # jego transport; nie udaje stanu lokalnego WindowsMediaOutput.
@@ -3508,10 +3511,16 @@ class LiteFrame(wx.Frame):
                     target = SessionId.FILES
                 self.navigator.note_playback_started(target)
                 self._playing_session = target
+                self._playing_sessions.discard(SessionId.FILES)
+                self._playing_sessions.discard(SessionId.PODCASTS)
+                self._playing_sessions.add(target)
                 self._podcast_checkpoint_active = target is SessionId.PODCASTS
                 if self._podcast_checkpoint_active:
                     self._podcast_checkpoint_due = 0.0
                 self._pending_playback_session = None
+            elif data.get("engine") == "radio":
+                self._playing_session = SessionId.RADIO
+                self._playing_sessions.add(SessionId.RADIO)
             if data.get("tempoFallbackReason"):
                 self.announcer.say(
                     "Wybrany algorytm tempa jest niedostępny. Używany SoundTouch."
@@ -3522,7 +3531,15 @@ class LiteFrame(wx.Frame):
             # nazwa nastepnego byloby tylko halasem, dlatego milczymy i czekamy.
             if not data.get("queueContinues"):
                 self.announcer.say("Koniec utworu")
-            if getattr(self, "_playing_session", None) is SessionId.PODCASTS:
+            playing_sessions = getattr(self, "_playing_sessions", set())
+            if not isinstance(playing_sessions, set):
+                playing_sessions = set()
+            ended_podcast = SessionId.PODCASTS in playing_sessions
+            if data.get("engine") == "files" and not data.get("queueContinues"):
+                playing_sessions.discard(SessionId.FILES)
+                playing_sessions.discard(SessionId.PODCASTS)
+                self._playing_sessions = playing_sessions
+            if ended_podcast:
                 self._podcast_checkpoint_active = False
         elif name == "queue.advanced":
             # NATURALNE przejscie policzone przez sesje Core po stronie hosta.
@@ -3531,8 +3548,23 @@ class LiteFrame(wx.Frame):
                 str(data.get("id") or ""), str(data.get("title") or "")
             ))
         elif name == "playback.failed":
-            failed_session = self._pending_playback_session or self._playing_session
+            failed_session = self._pending_playback_session
+            if failed_session is None and data.get("engine") == "radio":
+                failed_session = SessionId.RADIO
+            if failed_session is None and data.get("engine") == "files":
+                failed_session = next(
+                    (
+                        session
+                        for session in (SessionId.PODCASTS, SessionId.FILES)
+                        if session in self._playing_sessions
+                    ),
+                    None,
+                )
+            if failed_session is None:
+                failed_session = self._playing_session
             self._pending_playback_session = None
+            if failed_session is not None:
+                self._playing_sessions.discard(failed_session)
             if failed_session is SessionId.PODCASTS:
                 self._podcast_checkpoint_active = False
             self._run(self.navigator.note_playback_failed(
@@ -4313,6 +4345,8 @@ class LiteFrame(wx.Frame):
             self._activate_preset(slot)
         elif action is Action.PLAY_PAUSE:
             self._play_pause()
+        elif action is Action.TOGGLE_MUTE:
+            self._toggle_mute()
         elif action is Action.ADD_BOOKMARK:
             self._add_bookmark()
         elif action is Action.CLIP_MARK_START:
@@ -7543,7 +7577,6 @@ class LiteFrame(wx.Frame):
         if client is None:
             self.announcer.say("Silnik nie dziala, nie moge odtworzyc")
             return
-
         self._pending_playback_session = SessionId.FILES
 
         def work() -> dict:
@@ -7565,9 +7598,9 @@ class LiteFrame(wx.Frame):
             )
 
         def done(_payload: dict) -> None:
-            # Host ma JEDNO wyjscie: zapamietujemy, czyje granie wlasnie
-            # zaczal, zeby pauza po wyjsciu nie ruszyla cudzej sesji.
             self._playing_session = SessionId.FILES
+            self._playing_sessions.discard(SessionId.PODCASTS)
+            self._playing_sessions.add(SessionId.FILES)
             self._refresh_status()
 
         def failed(error: Exception) -> None:
@@ -7611,6 +7644,8 @@ class LiteFrame(wx.Frame):
 
         def done(_payload: dict) -> None:
             self._playing_session = SessionId.PODCASTS
+            self._playing_sessions.discard(SessionId.FILES)
+            self._playing_sessions.add(SessionId.PODCASTS)
             self._refresh_status()
 
         def failed(error: Exception) -> None:
@@ -9043,6 +9078,7 @@ class LiteFrame(wx.Frame):
         if client is None:
             self.announcer.say("Silnik nie dziala, nie moge odtworzyc")
             return
+        self._pending_playback_session = SessionId.RADIO
 
         def work() -> dict:
             return client.play_station(
@@ -9050,11 +9086,13 @@ class LiteFrame(wx.Frame):
             )
 
         def done(_payload: dict) -> None:
-            # Jak w ``_play_track``: host gra teraz RADIO.
             self._playing_session = SessionId.RADIO
+            self._playing_sessions.add(SessionId.RADIO)
             self._refresh_status()
 
         def failed(error: Exception) -> None:
+            if self._pending_playback_session is SessionId.RADIO:
+                self._pending_playback_session = None
             self._run(self.navigator.note_playback_failed(f"Nie moge polaczyc ze stacja: {error}"))
 
         self.runner.submit("playback", work, done, failed)
@@ -9071,9 +9109,8 @@ class LiteFrame(wx.Frame):
 
         Trzy warunki odmowy, kazdy z powodem:
 
-        * ``_playing_session`` inne niz wychodzaca sesja -- lokalny host ma
-          JEDNO wyjscie, a ``transport.pauseResume`` nie zna zakresu;
-          autonomiczny WiiM ma osobny tor i nigdy nie trafia do tej metody,
+        * wychodząca sesja nie ma własnego aktywnego toru; Radio i
+          Pliki/Podcasty są pamiętane niezależnie, a polecenie niesie sessionId,
         * nic nie gra w tej sesji (odpowiednik ``session.HasCurrentItem``),
         * host juz jest wstrzymany -- ``pauseResume`` to przelacznik, wiec
           drugie wywolanie WZNOWILO by odtwarzanie, czyli dokladnie odwrotnie
@@ -9085,7 +9122,8 @@ class LiteFrame(wx.Frame):
         client = self.client
         if client is None:
             return
-        if self._playing_session is not session:
+        playing_sessions = getattr(self, "_playing_sessions", set())
+        if session not in playing_sessions and self._playing_session is not session:
             return
         state = self.navigator.sessions.get(session)
         if state is None or state.now_playing_id is None:
@@ -9094,17 +9132,28 @@ class LiteFrame(wx.Frame):
             self.options, session_options.effective_overrides(self.state, session)
         ):
             return
-        if bool(self._last_status.get("paused")):
+        statuses = getattr(self, "_transport_status_by_session", {})
+        status = statuses.get(session, self._last_status)
+        if bool(status.get("paused")):
             return
 
         def done(payload: dict) -> None:
             paused = bool((payload or {}).get("paused"))
-            self._last_status = {**self._last_status, "paused": paused}
+            updated = {**status, **(payload or {}), "paused": paused}
+            statuses[session] = updated
+            self._transport_status_by_session = statuses
+            if self.navigator.active is session:
+                self._last_status = updated
             self._set_transport_label(playing=not paused)
 
         # Przez istniejacy TaskRunner z bramka zywego kontekstu: synchroniczne
         # wywolanie hosta na watku GUI zawiesilo by okno na czas call timeout.
-        self.runner.submit("playback", client.pause_resume, done, lambda _error: None)
+        self.runner.submit(
+            "playback",
+            lambda: client.pause_resume(session.value),
+            done,
+            lambda _error: None,
+        )
 
     def _leave_player_to_list(self) -> None:
         """Wyjscie z odtwarzacza na liste: najpierw polityka, potem nawigacja.
@@ -9415,8 +9464,16 @@ class LiteFrame(wx.Frame):
             self._sonos_transport("toggle")
             return
 
+        session = self.navigator.active
+
         def done(payload: dict) -> None:
             paused = bool((payload or {}).get("paused"))
+            updated = {
+                **self._transport_status_by_session.get(session, {}),
+                **(payload or {}),
+            }
+            self._transport_status_by_session[session] = updated
+            self._last_status = updated
             # Etykieta zawsze zgodna ze stanem: po wstrzymaniu przycisk ma juz
             # proponowac odtwarzanie (MainWindow.xaml.cs:2560).
             self._set_transport_label(playing=not paused)
@@ -9424,9 +9481,33 @@ class LiteFrame(wx.Frame):
 
         self.runner.submit(
             "transport",
-            client.pause_resume,
+            lambda session_id=session.value: client.pause_resume(session_id),
             done,
             lambda error: self.announcer.say(f"Blad: {error}"),
+        )
+
+    def _toggle_mute(self) -> None:
+        client = self.client
+        if client is None:
+            self.announcer.say("Silnik nie działa")
+            return
+        session = self.navigator.active
+
+        def done(payload: dict) -> None:
+            muted = bool((payload or {}).get("muted"))
+            updated = {
+                **self._transport_status_by_session.get(session, {}),
+                **(payload or {}),
+            }
+            self._transport_status_by_session[session] = updated
+            self._last_status = updated
+            self.announcer.say("Wyciszono" if muted else "Włączono dźwięk")
+
+        self.runner.submit(
+            "transport-mute",
+            lambda session_id=session.value: client.toggle_mute(session_id),
+            done,
+            lambda error: self.announcer.say(f"Błąd: {error}"),
         )
 
     def _set_transport_label(self, *, playing: bool, preparing: bool = False) -> None:
@@ -9452,7 +9533,7 @@ class LiteFrame(wx.Frame):
             return
         self.runner.submit(
             "transport",
-            lambda: client.seek_by(delta),
+            lambda session_id=self.navigator.active.value: client.seek_by(delta, session_id),
             # Oryginal pyta najpierw o przelaczniki: CommandRouter.cs:534-539
             # sprawdza Messages.SeekMessages, a dla strzalek dodatkowo
             # ArrowSeekMessages -- i DOPIERO wtedy formatuje czas. Dostarczona
@@ -9484,7 +9565,7 @@ class LiteFrame(wx.Frame):
         if not to_end:
             self.runner.submit(
                 "transport",
-                lambda: client.seek_to_position(0.0),
+                lambda session_id=self.navigator.active.value: client.seek_to_position(0.0, session_id),
                 # cs:318 -- staly napis, nie odczyt pozycji z odpowiedzi.
                 lambda _payload: self._announce_track_edge("0:00"),
                 lambda error: self.announcer.say(f"Nie moge przewinac: {error}"),
@@ -9501,7 +9582,7 @@ class LiteFrame(wx.Frame):
         target = max(0.0, float(duration) - TRACK_END_MARGIN_SECONDS)
         self.runner.submit(
             "transport",
-            lambda: client.seek_to_position(target),
+            lambda session_id=self.navigator.active.value: client.seek_to_position(target, session_id),
             lambda _payload: self._announce_track_edge(format_clock(target)),
             lambda error: self.announcer.say(f"Nie moge przewinac: {error}"),
         )
@@ -9554,7 +9635,7 @@ class LiteFrame(wx.Frame):
         target = float(duration) * percent / 100.0
         self.runner.submit(
             "transport",
-            lambda: client.seek_to_position(target),
+            lambda session_id=self.navigator.active.value: client.seek_to_position(target, session_id),
             lambda payload: self._announce_seek_percent(percent, payload, float(duration)),
             lambda error: self.announcer.say(f"Nie moge przewinac: {error}"),
         )
@@ -9610,7 +9691,12 @@ class LiteFrame(wx.Frame):
             self.announcer.say(text)
         client = self.client
         if client is not None:
-            self.runner.submit("volume", lambda: client.set_volume(value), lambda _p: None, lambda _e: None)
+            self.runner.submit(
+                "volume",
+                lambda session_id=self.navigator.active.value: client.set_volume(value, session_id),
+                lambda _p: None,
+                lambda _e: None,
+            )
 
     def _set_rate(self, value: float) -> None:
         # Przyciecie jak SetPlaybackRate (DemoMediaSession.cs:381): do
@@ -9623,7 +9709,12 @@ class LiteFrame(wx.Frame):
         self.announcer.say(format_playback_rate(value))
         client = self.client
         if client is not None:
-            self.runner.submit("rate", lambda: client.set_rate(value), lambda _p: None, lambda _e: None)
+            self.runner.submit(
+                "rate",
+                lambda session_id=self.navigator.active.value: client.set_rate(value, session_id),
+                lambda _p: None,
+                lambda _e: None,
+            )
 
     def _on_volume_slider(self, event: wx.CommandEvent) -> None:
         self._set_volume(self.volume_slider.GetValue())
@@ -9823,11 +9914,22 @@ class LiteFrame(wx.Frame):
         client = self.client
         if client is None or getattr(self, "_status_poll_pending", False):
             return
+        local_sessions = (SessionId.FILES, SessionId.RADIO, SessionId.PODCASTS)
+        active = self.navigator.active
+        if active in local_sessions:
+            requested_session = active
+        elif SessionId.RADIO in self._playing_sessions:
+            requested_session = SessionId.RADIO
+        elif SessionId.PODCASTS in self._playing_sessions:
+            requested_session = SessionId.PODCASTS
+        else:
+            requested_session = SessionId.FILES
         self._status_poll_pending = True
         def done(payload: dict) -> None:
             self._status_poll_pending = False
             if not payload:
                 return
+            self._transport_status_by_session[requested_session] = payload
             self._last_status = payload
             self._update_native_playback_status(payload)
             remote_player = (
@@ -9857,7 +9959,37 @@ class LiteFrame(wx.Frame):
         def failed(_error: Exception) -> None:
             self._status_poll_pending = False
 
-        self.runner.submit("status", client.status, done, failed)
+        self.runner.submit(
+            "status",
+            lambda: client.status(requested_session.value),
+            done,
+            failed,
+        )
+        if requested_session is not SessionId.RADIO:
+            self._refresh_radio_transport_status()
+
+    def _refresh_radio_transport_status(self) -> None:
+        """Odczytaj Radio osobno, nawet gdy użytkownik steruje Plikami."""
+        client = self.client
+        if client is None or self._radio_transport_status_poll_pending:
+            return
+        self._radio_transport_status_poll_pending = True
+
+        def done(payload: dict) -> None:
+            self._radio_transport_status_poll_pending = False
+            if payload:
+                self._transport_status_by_session[SessionId.RADIO] = payload
+                self._apply_radio_activity_status()
+
+        def failed(_error: Exception) -> None:
+            self._radio_transport_status_poll_pending = False
+
+        self.runner.submit(
+            "radio-transport-status",
+            lambda: client.status(SessionId.RADIO.value),
+            done,
+            failed,
+        )
 
     def _refresh_wiim_status(self) -> None:
         """Cichy odczyt aktywnego WiiM, tak jak okresowy odczyt w AMC."""
@@ -9979,7 +10111,10 @@ class LiteFrame(wx.Frame):
             return
         rows = station_activity_rows(
             state.model.rows,
-            transport_status=self._last_status,
+            transport_status=getattr(self, "_transport_status_by_session", {}).get(
+                SessionId.RADIO,
+                self._last_status if self._last_status.get("engine") == "radio" else {},
+            ),
             recording_status=self._last_recording_status,
             playback_position=self.options.radio_playback_state_position,
             recording_position=self.options.radio_recording_state_position,

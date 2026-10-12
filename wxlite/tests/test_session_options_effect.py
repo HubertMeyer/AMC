@@ -80,13 +80,15 @@ class FakeClient:
             raise RuntimeError("Nieobsługiwana długość ciszy między utworami.")
         return {"appliesOnNextPlayback": True}
 
-    def pause_resume(self):
-        self.calls.append(("transport.pauseResume", {}))
+    def pause_resume(self, session_id=None):
+        args = {"sessionId": session_id} if session_id else {}
+        self.calls.append(("transport.pauseResume", args))
         self._paused = not self._paused
         return {"paused": self._paused}
 
-    def status(self):
-        self.calls.append(("transport.status", {}))
+    def status(self, session_id=None):
+        args = {"sessionId": session_id} if session_id else {}
+        self.calls.append(("transport.status", args))
         return {"paused": self._paused}
 
     def start(self) -> None:
@@ -484,7 +486,9 @@ def _pause_frame(*, overrides=None, global_pause=True, playing_session=SessionId
         client=client,
         runner=ImmediateRunner(),
         _playing_session=playing_session,
+        _playing_sessions={playing_session} if playing_session is not None else set(),
         _last_status={"paused": paused},
+        _transport_status_by_session={active: {"paused": paused}},
         navigator=SimpleNamespace(
             active=active,
             session=session_state,
@@ -502,7 +506,7 @@ def test_wyjscie_z_odtwarzacza_wstrzymuje_gdy_tak_ustawiono():
         global_pause=False,
     )
     real_method("_pause_on_player_exit_if_needed")(frame, SessionId.FILES)
-    assert ("transport.pauseResume", {}) in client.calls, (
+    assert ("transport.pauseResume", {"sessionId": "files"}) in client.calls, (
         f"wybor sesji 'wstrzymuj' musi naprawde wstrzymac: {client.calls}"
     )
 
@@ -516,7 +520,7 @@ def test_wyjscie_z_odtwarzacza_nie_wstrzymuje_gdy_sesja_tak_wybrala():
         active=SessionId.RADIO,
     )
     real_method("_pause_on_player_exit_if_needed")(frame, SessionId.RADIO)
-    assert ("transport.pauseResume", {}) not in client.calls, (
+    assert not any(name == "transport.pauseResume" for name, _ in client.calls), (
         f"wybor 'odtwarzaj dalej' musi byc respektowany: {client.calls}"
     )
 
@@ -530,7 +534,7 @@ def test_domyslnie_wstrzymuje_jak_oryginal():
     assert Options().pause_on_player_exit is True
     frame, client = _pause_frame(overrides=None, global_pause=True)
     real_method("_pause_on_player_exit_if_needed")(frame, SessionId.FILES)
-    assert ("transport.pauseResume", {}) in client.calls
+    assert ("transport.pauseResume", {"sessionId": "files"}) in client.calls
 
 
 def test_nie_rusza_cudzej_grajacej_sesji():
@@ -541,7 +545,7 @@ def test_nie_rusza_cudzej_grajacej_sesji():
         active=SessionId.FILES,
     )
     real_method("_pause_on_player_exit_if_needed")(frame, SessionId.FILES)
-    assert ("transport.pauseResume", {}) not in client.calls, (
+    assert not any(name == "transport.pauseResume" for name, _ in client.calls), (
         f"host gra RADIO -- pauza plikow ruszylaby cudza sesje: {client.calls}"
     )
 
@@ -588,7 +592,7 @@ def test_nie_wstrzymuje_gdy_juz_wstrzymane():
         paused=True,
     )
     real_method("_pause_on_player_exit_if_needed")(frame, SessionId.FILES)
-    assert ("transport.pauseResume", {}) not in client.calls, (
+    assert not any(name == "transport.pauseResume" for name, _ in client.calls), (
         f"wstrzymane zostaje wstrzymane: {client.calls}"
     )
 
@@ -599,7 +603,7 @@ def test_nie_wstrzymuje_gdy_sesja_nic_nie_odtwarza():
         now_playing=None,
     )
     real_method("_pause_on_player_exit_if_needed")(frame, SessionId.FILES)
-    assert ("transport.pauseResume", {}) not in client.calls
+    assert not any(name == "transport.pauseResume" for name, _ in client.calls)
 
 
 def test_pauza_idzie_przez_runner_nie_na_watku_gui():

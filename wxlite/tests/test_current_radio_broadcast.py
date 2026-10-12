@@ -96,7 +96,7 @@ def test_host_uses_shared_audio_formatter_and_no_technical_id_in_text() -> None:
     ).read_text(encoding="utf-8")
     method = host[
         host.index("private string BuildCurrentRadioBroadcastText(MediaItem item)") :
-        host.index("private object StopAll()")
+        host.index("private object StopTransport(JsonElement args)")
     ]
     assert "AudioParametersFormatter.FormatCompact(item)" in method
     assert "NowPlayingParts.SameValue(item.Title, streamTitle)" in method
@@ -111,7 +111,7 @@ def test_transport_status_reuses_the_alt_d_formatter_for_nvda_end() -> None:
         / "AccessibleMediaController.LiteHost"
         / "LiteEngineHandlers.cs"
     ).read_text(encoding="utf-8")
-    status = host[host.index("private object Status()") :]
+    status = host[host.index("private object Status(JsonElement args)") :]
     assert "BuildCurrentRadioBroadcastText(item)" in status
     assert "currentBroadcastText" in status
 

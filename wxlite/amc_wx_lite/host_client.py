@@ -373,32 +373,61 @@ class LiteHostClient:
             timeout=90.0,
         )
 
-    def pause_resume(self) -> Any:
-        return self.call("transport.pauseResume")
+    @staticmethod
+    def _transport_args(session_id: str | None, **values: Any) -> dict[str, Any]:
+        args = dict(values)
+        if session_id:
+            args["sessionId"] = session_id
+        return args
 
-    def stop(self) -> Any:
-        return self.call("transport.stop")
+    def pause_resume(self, session_id: str | None = None) -> Any:
+        return self.call("transport.pauseResume", self._transport_args(session_id))
 
-    def seek_by(self, seconds: float) -> Any:
-        return self.call("transport.seek", {"deltaSeconds": seconds})
+    def toggle_mute(self, session_id: str | None = None) -> Any:
+        return self.call("transport.toggleMute", self._transport_args(session_id))
 
-    def seek_to_position(self, seconds: float) -> Any:
+    def stop(self, session_id: str | None = None) -> Any:
+        return self.call("transport.stop", self._transport_args(session_id))
+
+    def seek_by(self, seconds: float, session_id: str | None = None) -> Any:
+        return self.call(
+            "transport.seek",
+            self._transport_args(session_id, deltaSeconds=seconds),
+        )
+
+    def seek_to_position(self, seconds: float, session_id: str | None = None) -> Any:
         """Skok na BEZWZGLEDNA pozycje.
 
         Host juz to umie: LiteEngineHandlers.cs:655 czyta ``positionSeconds``
         obok ``deltaSeconds``, wiec skok procentowy nie wymaga nowej komendy
         protokolu -- procent przeliczamy na sekundy po stronie klienta.
         """
-        return self.call("transport.seek", {"positionSeconds": max(0.0, float(seconds))})
+        return self.call(
+            "transport.seek",
+            self._transport_args(
+                session_id,
+                positionSeconds=max(0.0, float(seconds)),
+            ),
+        )
 
-    def set_volume(self, volume: int) -> Any:
-        return self.call("transport.setVolume", {"volume": volume})
+    def set_volume(self, volume: int, session_id: str | None = None) -> Any:
+        return self.call(
+            "transport.setVolume",
+            self._transport_args(session_id, volume=volume),
+        )
 
-    def set_rate(self, rate: float) -> Any:
-        return self.call("transport.setRate", {"rate": rate})
+    def set_rate(self, rate: float, session_id: str | None = None) -> Any:
+        return self.call(
+            "transport.setRate",
+            self._transport_args(session_id, rate=rate),
+        )
 
-    def status(self) -> Any:
-        return self.call("transport.status", timeout=5.0)
+    def status(self, session_id: str | None = None) -> Any:
+        return self.call(
+            "transport.status",
+            self._transport_args(session_id),
+            timeout=5.0,
+        )
 
     def checkpoint_podcast(self) -> Any:
         """Zapisz żywą pozycję odcinka przez wąską operację hosta C#."""

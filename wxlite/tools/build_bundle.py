@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
 """Zloz prywatny pakiet AMC-wx-Lite do uruchomienia na Windows.
 
-Co robi: kopiuje kod Pythona, zbudowany bezokienny silnik i launcher do jednego
-folderu, ktory wystarczy przeniesc na dysk NTFS i uruchomic.
+Co robi: kopiuje kod Pythona, prywatny runtime, zbudowany bezokienny silnik,
+aktualizator i AMC.exe do jednego folderu, ktory wystarczy przeniesc na dysk
+NTFS i uruchomic.
 
 Czego NIE robi swiadomie:
   * nie instaluje niczego globalnie,
-  * nie kopiuje runtime ani MSVCP140.dll (prawa redystrybucji VC++ sa bramka
-    publikacji - runtime dokladasz osobno, wskazujac --runtime),
+  * nie pobiera runtime ani MSVCP140.dll (prawa redystrybucji VC++ sa bramka
+    publikacji - istniejacy runtime wskazujesz przez --runtime),
   * nie dotyka danych, ustawien, stacji ani nagran pelnego AMC.
 
 Uzycie (w WSL albo na Windows):
-    python3 tools/build_bundle.py --out /tmp/AMC-wx-Lite
     python3 tools/build_bundle.py --out /tmp/AMC-wx-Lite --runtime /mnt/c/.../runtime
     python3 tools/build_bundle.py --out /tmp/AMC-wx-Lite --host-subdir host-next
 """
@@ -48,6 +48,16 @@ UPDATER_PUBLISH = (
     / "win-x64"
     / "publish"
 )
+LAUNCHER_PUBLISH = (
+    REPO
+    / "src"
+    / "AccessibleMediaController.PythonLauncher"
+    / "bin"
+    / "Release"
+    / "net8.0-windows"
+    / "win-x64"
+    / "publish"
+)
 
 
 def sha256(path: Path) -> str:
@@ -65,12 +75,28 @@ def copy_python_code(target: Path) -> list[str]:
     for source in sorted((WXLITE / "amc_wx_lite").glob("*.py")):
         shutil.copy2(source, package / source.name)
         copied.append(f"app/amc_wx_lite/{source.name}")
-    for name in ("AMC-wx-Lite.cmd", "requirements-win64.txt", "JAK_TESTOWAC.md"):
+    # AMC-wx-Lite.cmd zostaje w repo jako narzedzie deweloperskie. Nie wolno
+    # go dokladac do paczki uzytkownika, bo moglby wybrac obcy interpreter.
+    for name in ("requirements-win64.txt", "JAK_TESTOWAC.md"):
         source = WXLITE / name
         if source.exists():
             shutil.copy2(source, target / name)
             copied.append(name)
     return copied
+
+
+def copy_launcher(target: Path, launcher_dir: Path) -> list[str]:
+    executable = launcher_dir / "AMC.exe"
+    if not executable.is_file():
+        raise SystemExit(
+            f"Nie ma zbudowanego uruchamiacza w {executable}.\n"
+            "Zbuduj go: dotnet publish "
+            "src/AccessibleMediaController.PythonLauncher -c Release "
+            "-r win-x64 --self-contained false"
+        )
+    target.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(executable, target / executable.name)
+    return [executable.name]
 
 
 def copy_host(
@@ -152,6 +178,23 @@ def copy_updater(target: Path, updater_dir: Path) -> list[str]:
     return [executable.name]
 
 
+def select_startup_files(files: list[str], host_subdir: str) -> list[str]:
+    """Wybierz pliki sprawdzane przed kazdym startem AMC.exe."""
+    return [
+        relative
+        for relative in files
+        if (
+            relative == "AMC.exe"
+            or relative.startswith("app/amc_wx_lite/")
+            or relative in {"runtime/python.exe", "runtime/pythonw.exe"}
+            or (
+                relative.startswith(f"{host_subdir}/")
+                and Path(relative).suffix.lower() in {".exe", ".dll", ".json"}
+            )
+        )
+    ]
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Zloz pakiet AMC-wx-Lite")
     parser.add_argument("--out", required=True, type=Path, help="folder docelowy")
@@ -165,6 +208,12 @@ def main() -> int:
         ),
     )
     parser.add_argument(
+        "--launcher",
+        type=Path,
+        default=LAUNCHER_PUBLISH,
+        help="folder publish produkcyjnego AMC.exe",
+    )
+    parser.add_argument(
         "--updater",
         type=Path,
         default=UPDATER_PUBLISH,
@@ -174,7 +223,7 @@ def main() -> int:
         "--runtime",
         type=Path,
         default=None,
-        help="opcjonalny prywatny runtime Pythona do dolozenia (nie trafia do Git)",
+        help="prywatny runtime Pythona do dolozenia (nie trafia do Git)",
     )
     parser.add_argument("--clean", action="store_true", help="wyczysc folder docelowy")
     parser.add_argument(
@@ -208,6 +257,10 @@ def main() -> int:
             relative: sha256(target / Path(relative))
             for relative in manifest["files"]
         }
+        manifest["startupFiles"] = select_startup_files(
+            manifest["files"],
+            manifest.get("hostFolder", "host"),
+        )
         manifest_path.write_text(
             json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8"
         )
@@ -215,31 +268,38 @@ def main() -> int:
         print(f"  plikow: {len(manifest['files'])}")
         return 0
 
+    if args.runtime is None:
+        raise SystemExit(
+            "Pelna paczka AMC Python wymaga prywatnego runtime. "
+            "Wskaz jego folder przez --runtime."
+        )
+
     if args.clean and target.exists():
         shutil.rmtree(target)
     target.mkdir(parents=True, exist_ok=True)
 
     manifest: dict = {
+        "bundleFormatVersion": 1,
+        "interfaceVersion": 1,
+        "hostProtocolVersion": 1,
+        "application": "AMC Python",
+        "entryPoint": "AMC.exe",
+        "pythonModule": "amc_wx_lite",
         "created": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "note": "Prywatny pakiet AMC-wx-Lite bez danych pełnego AMC. Zawartość runtime zależy od wskazanego źródła; publikacja wymaga sprawdzenia licencji.",
         "files": [],
     }
 
     manifest["files"] += copy_python_code(target)
+    manifest["files"] += copy_launcher(target, args.launcher)
     manifest["files"] += copy_updater(target, args.updater)
     host_files, host_hashes = copy_host(target, args.host, args.host_subdir)
     manifest["files"] += host_files
     manifest["hostHashes"] = host_hashes
     manifest["hostFolder"] = args.host_subdir
 
-    if args.runtime is not None:
-        manifest["files"] += copy_runtime(target, args.runtime)
-        manifest["runtime"] = str(args.runtime)
-    else:
-        manifest["runtime"] = (
-            "NIE DOLOZONY - wskaz --runtime albo utworz .venv i zainstaluj "
-            "requirements-win64.txt"
-        )
+    manifest["files"] += copy_runtime(target, args.runtime)
+    manifest["runtime"] = "embedded"
 
     # Aktualizator akceptuje wyłącznie kompletne paczki. Sumy obejmują każdy
     # plik wymieniony w manifeście, nie tylko binaria hosta.
@@ -248,6 +308,10 @@ def main() -> int:
         relative: sha256(target / Path(relative))
         for relative in manifest["files"]
     }
+    manifest["startupFiles"] = select_startup_files(
+        manifest["files"],
+        args.host_subdir,
+    )
 
     (target / "bundle-manifest.json").write_text(
         json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8"
@@ -258,8 +322,9 @@ def main() -> int:
     for name, digest in host_hashes.items():
         print(f"  {name} sha256={digest}")
     print("\nUruchomienie na Windows:")
-    print(r"  AMC-wx-Lite.cmd --sprawdz   (diagnostyka, bez okna)")
-    print(r"  AMC-wx-Lite.cmd             (okno)")
+    print(r"  AMC.exe --sprawdz-pakiet   (sprawdzenie integralnosci)")
+    print(r"  AMC.exe --sprawdz          (diagnostyka interfejsu)")
+    print(r"  AMC.exe                    (okno)")
     return 0
 
 

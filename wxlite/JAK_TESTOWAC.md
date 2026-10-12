@@ -4,12 +4,21 @@ To rozwijany równoległy interfejs pełnegoAMC. Nie jest jeszcze zamiennikiem w
 
 ## Start aplikacji i jedna instancja
 
-`AMC-wx-Lite.cmd` jest wyłącznie tymczasowym uruchamiaczem deweloperskim.
-Nie jest docelowym sposobem startu ani aktualizacji programu. Przed następnym
-etapem normalnych testów trzeba zbudować `AMC.exe`, które zawsze korzysta z
-runtime'u i LiteHosta dołączonych do tej samej, zweryfikowanej paczki.
+`AMC-wx-Lite.cmd` jest wyłącznie uruchamiaczem deweloperskim w repozytorium.
+Nie trafia do paczki użytkownika i nie jest sposobem startu ani aktualizacji
+programu. Gotowy pakiet uruchamia się wyłącznie przez `AMC.exe`, które zawsze
+korzysta z runtime'u i LiteHosta dołączonych do tej samej, zweryfikowanej
+paczki. `AMC.exe --sprawdz-pakiet` sprawdza zgodność wersji oraz sumy plików
+potrzebnych przy starcie; `AMC.exe --sprawdz` uruchamia diagnostykę interfejsu.
 
 Odbiór docelowego launchera:
+
+Aktualna, automatycznie zweryfikowana paczka znajduje się w:
+
+`D:\Projekty Codex\AMC - integracja wxPython\.test-output\AMC-Python-EXE-sesje-20261012\AMC.exe`
+
+Nie przełączaj na nią programu w czasie trwającego nagrywania. Pierwszy żywy
+odbiór wykonaj kolejno według punktów poniżej.
 
 1. Uruchom `AMC.exe` bez otwierania terminala i bez wybierania interpretera.
    Okno ma od razu być zmaksymalizowane, aktywne i na pierwszym planie.
@@ -29,15 +38,26 @@ Odbiór docelowego launchera:
    weryfikacji i podmianie `AMC.exe` ma uruchomić nową wersję; błąd podmiany
    ma przywrócić poprzednią, działającą całość.
 
+Odbiór równoległego Radia i Multimediów wykonaj dopiero wtedy, gdy można
+bezpiecznie przerwać bieżący odsłuch. Uruchom Radio, przejdź do Plików i
+uruchom plik. Oba źródła mają nadal być słyszalne. Przełączaj się między tymi
+sesjami: Spacja ma wstrzymywać i wznawiać wyłącznie aktywną sesję. W każdej
+sesji wybierz przez `Shift+A` inne urządzenie; zmiana wyjścia jednego toru nie
+może zatrzymać drugiego. Na końcu zatrzymaj Pliki i potwierdź, że Radio nadal
+gra, po czym zatrzymaj Radio. Powtórz `Ctrl+M` w każdej sesji: pierwsze
+naciśnięcie ma wyciszyć tylko jej odsłuch, a drugie przywrócić poprzednią
+głośność bez zatrzymania drugiego toru ani nagrywania.
+
 Plik `AMC-Python-Updater.exe` służy obecnie do bezpiecznego zastosowania
 przygotowanej paczki z pełnym manifestem SHA-256. Nie uruchamiaj go ręcznie na
 produkcyjnym katalogu bez przygotowanej paczki aktualizacji. Automatyczne
 sprawdzanie i pobieranie nowych wersji zostanie podłączone do docelowego
 kanału wydań AMC Python w kolejnym etapie.
 
-## Bieżący pakiet — Podcasty i Shift+R
+## Starszy pakiet testowy — Podcasty i Shift+R
 
-Uruchamiaj dokładnie:
+Do czasu podania nowej ścieżki pakietu z `AMC.exe` starszy przyrost uruchamiał
+się dokładnie tak:
 
 `D:\Projekty Codex\AMC Python - test opcje podcastow 2026-10-09\AMC-wx-Lite.cmd`
 

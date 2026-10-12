@@ -60,10 +60,10 @@ def make_frame(
     frame.runner = FakeRunner(payload)
     seeks: list[dict] = []
     frame.client = SimpleNamespace(
-        seek_by=lambda seconds: seeks.append({"delta": seconds}),
-        seek_to_position=lambda seconds: seeks.append({"position": seconds}),
-        set_rate=lambda rate: seeks.append({"rate": rate}),
-        set_volume=lambda value: seeks.append({"volume": value}),
+        seek_by=lambda seconds, _session_id=None: seeks.append({"delta": seconds}),
+        seek_to_position=lambda seconds, _session_id=None: seeks.append({"position": seconds}),
+        set_rate=lambda rate, _session_id=None: seeks.append({"rate": rate}),
+        set_volume=lambda value, _session_id=None: seeks.append({"volume": value}),
     )
     frame.options = SimpleNamespace(rate=1.0, volume=70)
     frame.rate_slider = SimpleNamespace(SetValue=lambda value: seeks.append({"slider": value}))

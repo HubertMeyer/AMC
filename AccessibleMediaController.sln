@@ -1,4 +1,4 @@
-Microsoft Visual Studio Solution File, Format Version 12.00
+﻿Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
@@ -9,6 +9,20 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AccessibleMediaController.Core.SmokeTests", "tests\AccessibleMediaController.Core.SmokeTests\AccessibleMediaController.Core.SmokeTests.csproj", "{B5C76118-5C90-4808-B3B4-56CBE3CE9003}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AccessibleMediaController.Windows.SmokeTests", "tests\AccessibleMediaController.Windows.SmokeTests\AccessibleMediaController.Windows.SmokeTests.csproj", "{C6D87229-6D01-4A19-A4C5-67DCF4CE9004}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{5836ECA2-50E4-4F18-9200-6C440FF222E5}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AccessibleMediaController.LiteHost", "src\AccessibleMediaController.LiteHost\AccessibleMediaController.LiteHost.csproj", "{C480E793-27D1-460F-8E5C-CD8DB69A44F2}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AccessibleMediaController.PythonLauncher", "src\AccessibleMediaController.PythonLauncher\AccessibleMediaController.PythonLauncher.csproj", "{AEC6C33B-4D03-469B-B0C5-5E3E268CE21E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AccessibleMediaController.PythonUpdater", "src\AccessibleMediaController.PythonUpdater\AccessibleMediaController.PythonUpdater.csproj", "{DF5A40F5-4C87-4C5E-B047-C4048B70A2E8}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{B2776155-F355-4864-A77C-48EFE163685A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AccessibleMediaController.PythonLauncher.Tests", "tests\AccessibleMediaController.PythonLauncher.Tests\AccessibleMediaController.PythonLauncher.Tests.csproj", "{50C7DF3E-1E9E-4729-997C-1A56663F2D6C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AccessibleMediaController.LiteHost.ProtocolTests", "tests\AccessibleMediaController.LiteHost.ProtocolTests\AccessibleMediaController.LiteHost.ProtocolTests.csproj", "{3A9872C6-1F09-47F1-B3EB-876706C346FE}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -32,5 +46,32 @@ Global
 		{C6D87229-6D01-4A19-A4C5-67DCF4CE9004}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C6D87229-6D01-4A19-A4C5-67DCF4CE9004}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C6D87229-6D01-4A19-A4C5-67DCF4CE9004}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C480E793-27D1-460F-8E5C-CD8DB69A44F2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C480E793-27D1-460F-8E5C-CD8DB69A44F2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C480E793-27D1-460F-8E5C-CD8DB69A44F2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C480E793-27D1-460F-8E5C-CD8DB69A44F2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AEC6C33B-4D03-469B-B0C5-5E3E268CE21E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AEC6C33B-4D03-469B-B0C5-5E3E268CE21E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AEC6C33B-4D03-469B-B0C5-5E3E268CE21E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AEC6C33B-4D03-469B-B0C5-5E3E268CE21E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DF5A40F5-4C87-4C5E-B047-C4048B70A2E8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DF5A40F5-4C87-4C5E-B047-C4048B70A2E8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DF5A40F5-4C87-4C5E-B047-C4048B70A2E8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DF5A40F5-4C87-4C5E-B047-C4048B70A2E8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{50C7DF3E-1E9E-4729-997C-1A56663F2D6C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{50C7DF3E-1E9E-4729-997C-1A56663F2D6C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{50C7DF3E-1E9E-4729-997C-1A56663F2D6C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{50C7DF3E-1E9E-4729-997C-1A56663F2D6C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3A9872C6-1F09-47F1-B3EB-876706C346FE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3A9872C6-1F09-47F1-B3EB-876706C346FE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3A9872C6-1F09-47F1-B3EB-876706C346FE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3A9872C6-1F09-47F1-B3EB-876706C346FE}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{C480E793-27D1-460F-8E5C-CD8DB69A44F2} = {5836ECA2-50E4-4F18-9200-6C440FF222E5}
+		{AEC6C33B-4D03-469B-B0C5-5E3E268CE21E} = {5836ECA2-50E4-4F18-9200-6C440FF222E5}
+		{DF5A40F5-4C87-4C5E-B047-C4048B70A2E8} = {5836ECA2-50E4-4F18-9200-6C440FF222E5}
+		{50C7DF3E-1E9E-4729-997C-1A56663F2D6C} = {B2776155-F355-4864-A77C-48EFE163685A}
+		{3A9872C6-1F09-47F1-B3EB-876706C346FE} = {B2776155-F355-4864-A77C-48EFE163685A}
 	EndGlobalSection
 EndGlobal

@@ -60,6 +60,8 @@ def test_space_is_play_pause_in_both_views() -> None:
     # MainWindow.xaml.cs:21687 (ModifierKeys.None, Key.Space) => PlayPause
     assert resolve(Chord("Space"), player_view=False, radio_session=False) is Action.PLAY_PAUSE
     assert resolve(Chord("Space"), player_view=True, radio_session=False) is Action.PLAY_PAUSE
+    assert resolve(Chord("M", ctrl=True), player_view=False, radio_session=False) is Action.TOGGLE_MUTE
+    assert resolve(Chord("M", ctrl=True), player_view=True, radio_session=True) is Action.TOGGLE_MUTE
 
 
 def test_ctrl_space_belongs_to_native_multiselect_list() -> None:

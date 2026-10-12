@@ -1,4 +1,4 @@
-# AMC Python — stan prac 10 października 2026
+# AMC Python — stan prac 12 października 2026
 
 ## Decyzja architektoniczna
 
@@ -25,22 +25,31 @@ utrudniały jednoznaczne ustalenie wersji uruchomionej po restarcie.
 
 Nie należy osadzać Pythona z powrotem w starym oknie WPF. Zwiększyłoby to
 sprzężenie i pozostawiło dwa interfejsy, nie rozwiązując problemów cyklu życia
-procesów. Docelowo jeden uruchamiacz EXE ma nadzorować start, jedną instancję,
+procesów. Jeden uruchamiacz EXE nadzoruje start, jedną instancję,
 zgodność wersji i bezpieczne zamknięcie całego pakietu.
 
 Odbiór użytkownika potwierdził, że obecny start przez `AMC-wx-Lite.cmd` jest
 zbyt niejednoznaczny: można trafić na niewłaściwy runtime lub widoczny proces
 interpretera i nie mieć pewności, która kopia programu faktycznie ruszyła.
-Przed dalszym normalnym używaniem trzeba dostarczyć jeden użytkowy `AMC.exe`.
-Ma on uruchamiać dołączony prywatny runtime i właściwy LiteHost bez konsoli,
-bez systemowego Pythona, `PYTHONPATH` i skryptów wsadowych; sprawdzać zgodność
-wersji oraz manifest; pilnować jednej instancji i bezpiecznej odmowy zamknięcia
-podczas nagrywania; pokazywać dostępny komunikat przy błędzie i uruchamiać
-program ponownie po udanej aktualizacji.
+Od 12 października istnieje jeden użytkowy `AMC.exe`. Uruchamia dołączony
+prywatny runtime i właściwy LiteHost bez konsoli oraz bez systemowego Pythona,
+`PYTHONPATH` i skryptów wsadowych. Sprawdza zgodność wersji i manifest, pilnuje
+jednej instancji i bezpiecznej odmowy zamknięcia podczas nagrywania, pokazuje
+dostępny komunikat przy błędzie i uruchamia program ponownie po udanej
+aktualizacji.
 
 Istniejący `AMC-Python-Updater.exe` pozostaje osobnym wykonawcą bezpiecznej
 podmiany i wycofania plików. Docelowe `AMC.exe` ma być stałym punktem wejścia,
 a aktualizator działać za nim, bez ręcznego wybierania skryptu lub interpretera.
+
+Aktualny kompletny pakiet EXE jest w:
+`D:\Projekty Codex\AMC - integracja wxPython\.test-output\AMC-Python-EXE-sesje-20261012`.
+Nie zawiera `AMC-wx-Lite.cmd`. `AMC.exe` sprawdza wersję formatu pakietu,
+interfejsu i protokołu hosta oraz sumy krytycznych plików przed uruchomieniem.
+Automatyczna weryfikacja paczki i próbna aktualizacja do osobnego katalogu
+zakończyły się kodem 0. Pozostaje żywy odbiór z NVDA: pierwsze uruchomienie,
+ponowne uruchomienie bez nagrywania oraz bezpieczna odmowa wymiany podczas
+rzeczywistego nagrywania. Do tego odbioru nie zamykano działającej instancji.
 
 ### Niezależne odtwarzanie sesji i urządzenia audio
 
@@ -50,6 +59,16 @@ ma własny tor, urządzenie wyjściowe, stan pauzy i wyciszenia. Radio i plik ma
 móc grać równolegle, także na dwóch różnych urządzeniach. Przejście do sesji
 zmienia tylko cel sterowania; `Spacja` i `Ctrl+M` działają wyłącznie na
 aktywnej sesji i nie wpływają na pozostałe.
+
+12 października rozdzielono w LiteHost stan odtwarzania, pauzy, głośności,
+tempa i urządzenia dla Radia oraz toru Plików/Podcastów. Wszystkie polecenia
+transportu niosą teraz jawną nazwę sesji. Uruchomienie pliku nie zatrzymuje
+Radia, a uruchomienie Radia nie odłącza kolejki plików. Pliki i Podcasty nadal
+współdzielą jeden dekoder, tak jak przed tą zmianą, więc nie są jeszcze dwoma
+równoległymi torami. Pozostaje odbiór dwóch rzeczywistych strumieni i osobnych
+urządzeń. `Ctrl+M` ma już osobny stan dla obu torów i przywraca wcześniejszą
+głośność, ale także wymaga żywego odbioru; całego punktu nie uznaje się jeszcze
+za zakończony.
 
 Polityka zaniku urządzenia ma stać się ustawieniem. Użytkownik wybiera, czy po
 utracie wybranego wyjścia odsłuch ma automatycznie trwać na urządzeniu
@@ -299,11 +318,18 @@ kodu ani wysyłać logów bez wiedzy użytkownika.
 
 ## Dowody automatyczne tego przyrostu
 
-- pełny runner Python: 1192 zaliczone, 0 błędów, 138 historycznych pominięć;
-- testy protokołu C#: 14 zestawów zaliczonych;
+- pełny runner Python: 1248 zaliczonych, 0 błędów, 138 historycznych pominięć;
+- testy protokołu C#: 15 zestawów zaliczonych;
+- całe rozwiązanie .NET zbudowane sekwencyjnie: 0 ostrzeżeń, 0 błędów;
 - LiteHost zbudowany i opublikowany dla Windows x64 bez błędów i ostrzeżeń;
 - pakiet uruchomieniowy przeszedł sprawdzenie środowiska z Pythonem 3.14.7,
   wxPython 4.3.1 i nowym hostem.
+- 6 testów kontraktu `AMC.exe`: poprawna paczka, uszkodzenie, niezgodny
+  protokół, wyjście ścieżką poza katalog, prywatny runtime i diagnostyka;
+- 21 celowanych testów układu paczki, startu i komunikatów: 21 zaliczonych,
+  0 błędów;
+- rzeczywisty `AMC.exe --sprawdz-pakiet-cicho`: kod 0; próbna pełna podmiana
+  przez `AMC-Python-Updater.exe`: kod 0; ponowna weryfikacja celu: kod 0.
 
 Testy protokołu dowodzą granic danych i obsługi poleceń. Nie zastępują odbioru
 żywego konta TIDAL, urządzeń WiiM/Sonos ani mowy NVDA.
@@ -315,12 +341,13 @@ lewą strzałką.
 
 ## Najbliższa kolejność prac
 
-1. Zastąpienie testowego startu przez `.cmd` jednym `AMC.exe`, który uruchamia
-   dołączony runtime bez konsoli, sprawdza manifest i wersje, pilnuje jednej
-   instancji oraz współpracuje z `AMC-Python-Updater.exe` przy aktualizacji,
-   wycofaniu i ponownym uruchomieniu.
-2. Przywrócenie niezależnych torów sesji: równoczesne radio i Multimedia,
-   osobne urządzenia, pauza i wyciszenie sterowane po wejściu do danej sesji.
+1. Wykonane technicznie 12 października: zastąpienie wydaniowego startu przez
+   `.cmd` jednym `AMC.exe`, który uruchamia dołączony runtime bez konsoli,
+   sprawdza manifest i wersje oraz współpracuje z `AMC-Python-Updater.exe`.
+   Pozostaje trzyczęściowy żywy odbiór jednej instancji z NVDA i nagrywaniem.
+2. W toku: technicznie rozdzielono Radio i Multimedia, ich stan, pauzę,
+   głośność, tempo i urządzenie. Pozostaje żywy odbiór równoczesnego dźwięku,
+   przełączania wyjść oraz wyciszenia `Ctrl+M` dla aktywnej sesji.
 3. Przeniesienie pełnego wyszukiwania z głównego AMC: `Ctrl+F` w bieżącej
    sesji, `Ctrl+Shift+F` globalnie, dostępna lista wyników, wszystkie działania
    na wynikach i prawidłowy powrót do wcześniejszego widoku. Przy tym usunąć

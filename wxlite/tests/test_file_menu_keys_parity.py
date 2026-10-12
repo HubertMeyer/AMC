@@ -238,7 +238,7 @@ def test_end_skacze_dziesiec_sekund_przed_koniec_nie_na_sam_koniec() -> None:
     frame.messages = MessagePolicy()
     frame._last_status = {"positionSeconds": 10.0, "durationSeconds": 600.0}
     skoki: list[float] = []
-    frame.client = SimpleNamespace(seek_to_position=lambda s: skoki.append(s))
+    frame.client = SimpleNamespace(seek_to_position=lambda s, _session_id=None: skoki.append(s))
     frame.runner = FakeRunner({"positionSeconds": 590.0})
 
     frame._dispatch(Action.TRACK_END)
@@ -254,7 +254,7 @@ def test_end_w_krotkim_utworze_nie_schodzi_pod_zero() -> None:
     frame.messages = MessagePolicy(enabled=False)
     frame._last_status = {"durationSeconds": 4.0}
     skoki: list[float] = []
-    frame.client = SimpleNamespace(seek_to_position=lambda s: skoki.append(s))
+    frame.client = SimpleNamespace(seek_to_position=lambda s, _session_id=None: skoki.append(s))
     frame.runner = FakeRunner({})
     frame._dispatch(Action.TRACK_END)
     assert skoki == [0.0]
@@ -267,7 +267,7 @@ def test_home_w_odtwarzaczu_idzie_na_zero() -> None:
     frame.messages = MessagePolicy()
     frame._last_status = {"durationSeconds": 600.0}
     skoki: list[float] = []
-    frame.client = SimpleNamespace(seek_to_position=lambda s: skoki.append(s))
+    frame.client = SimpleNamespace(seek_to_position=lambda s, _session_id=None: skoki.append(s))
     frame.runner = FakeRunner({"positionSeconds": 0.0})
     frame._dispatch(Action.TRACK_START)
     assert skoki == [0.0]
@@ -282,7 +282,7 @@ def test_track_end_milczy_przy_wylaczonych_komunikatach() -> None:
     frame.announcer = SimpleNamespace(say=powiedziane.append)
     frame.messages = MessagePolicy(arrow_seek_messages=False)
     frame._last_status = {"durationSeconds": 600.0}
-    frame.client = SimpleNamespace(seek_to_position=lambda s: None)
+    frame.client = SimpleNamespace(seek_to_position=lambda s, _session_id=None: None)
     frame.runner = FakeRunner({"positionSeconds": 590.0})
     frame._dispatch(Action.TRACK_END)
     assert powiedziane == []
@@ -296,7 +296,7 @@ def test_brak_czasu_trwania_mowi_zamiast_milczec() -> None:
     frame.announcer = SimpleNamespace(say=powiedziane.append)
     frame.messages = MessagePolicy()
     frame._last_status = {}
-    frame.client = SimpleNamespace(seek_to_position=lambda s: None)
+    frame.client = SimpleNamespace(seek_to_position=lambda s, _session_id=None: None)
     frame.runner = FakeRunner({})
     frame._dispatch(Action.TRACK_END)
     assert powiedziane == ["Nie znam czasu trwania, nie moge skoczyc na koniec"]

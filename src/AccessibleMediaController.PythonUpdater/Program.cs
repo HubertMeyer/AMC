@@ -7,6 +7,9 @@ namespace AccessibleMediaController.PythonUpdater;
 
 internal static class Program
 {
+    private const int SupportedBundleFormat = 1;
+    private const int SupportedInterfaceVersion = 1;
+    private const int SupportedHostProtocolVersion = 1;
     private const int Success = 0;
     private const int BadArguments = 2;
     private const int AppStillRunning = 3;
@@ -121,7 +124,7 @@ internal static class Program
         if (!Directory.Exists(target)) throw new InvalidDataException("nie ma folderu programu");
         if (string.Equals(source.TrimEnd('\\'), target.TrimEnd('\\'), StringComparison.OrdinalIgnoreCase))
             throw new InvalidDataException("źródło i folder programu są tym samym miejscem");
-        if (!File.Exists(Path.Combine(target, "AMC-wx-Lite.cmd")))
+        if (!File.Exists(Path.Combine(target, "AMC.exe")))
             throw new InvalidDataException("folder docelowy nie zawiera AMC Python");
 
         var manifestPath = Path.Combine(source, "bundle-manifest.json");
@@ -132,6 +135,15 @@ internal static class Program
             ?? throw new InvalidDataException("pusty manifest");
         if (manifest.Files is null || manifest.Files.Count == 0)
             throw new InvalidDataException("manifest nie zawiera plików");
+        if (manifest.BundleFormatVersion != SupportedBundleFormat
+            || manifest.InterfaceVersion != SupportedInterfaceVersion
+            || manifest.HostProtocolVersion != SupportedHostProtocolVersion)
+            throw new InvalidDataException("wersje składników aktualizacji nie są zgodne");
+        if (!string.Equals(manifest.Application, "AMC Python", StringComparison.Ordinal)
+            || !string.Equals(manifest.EntryPoint, "AMC.exe", StringComparison.OrdinalIgnoreCase))
+            throw new InvalidDataException("manifest dotyczy innego programu");
+        if (!manifest.Files.Contains("AMC.exe", StringComparer.OrdinalIgnoreCase))
+            throw new InvalidDataException("aktualizacja nie zawiera AMC.exe");
         if (manifest.FileHashes is null || manifest.FileHashes.Count != manifest.Files.Count)
             throw new InvalidDataException("manifest nie zawiera sum wszystkich plików");
 
@@ -242,6 +254,11 @@ internal static class Program
 
     private sealed class Manifest
     {
+        public int BundleFormatVersion { get; set; }
+        public int InterfaceVersion { get; set; }
+        public int HostProtocolVersion { get; set; }
+        public string Application { get; set; } = "";
+        public string EntryPoint { get; set; } = "";
         public List<string> Files { get; set; } = [];
         public Dictionary<string, string> FileHashes { get; set; } =
             new(StringComparer.OrdinalIgnoreCase);
