@@ -18,6 +18,7 @@ def test_settings_have_real_native_pages_and_explicit_accessible_names() -> None
     assert 'self.notebook.AddPage(messages, "Komunikaty")' in source
     assert 'self.silence.SetName("Dodatkowa cisza po naturalnym końcu utworu")' in source
     assert 'self.tempo.SetName("Sposób przeliczania zmienionego tempa")' in source
+    assert 'self.keep_audio_edit_backups.SetName("Zachowuj kopie po edycji")' in source
 
 
 def test_enter_save_has_one_short_confirmation_and_reconfigures_the_host() -> None:
@@ -41,6 +42,7 @@ def test_all_exposed_choices_use_intentional_user_facing_labels() -> None:
     assert "session_options.inter_track_silence_label(value)" in source
     assert "STATE_POSITION_LABELS" in source
     assert 'self.timeshift.SetName("Długość bufora transmisji")' in source
+    assert '"keep_audio_edit_backups": self.keep_audio_edit_backups.GetValue()' in source
     assert 'self.recording_folder.SetName("Domyślny folder nagrywania radia")' in source
     assert 'self.recording_folder_mode.SetName("Położenie nagrań Radia")' in source
     assert '"Ten sam folder co pobieranie Podcastów"' in source
@@ -66,3 +68,9 @@ def test_radio_settings_reach_recording_and_schedule_payloads() -> None:
     assert 'chosen.pop("radio_schedule_wake_override")' in source
     assert "client.sync_radio_schedules(" in source
     assert "options.timeshift_minutes" in source
+
+
+def test_audio_edit_backup_setting_reaches_both_destructive_edit_paths() -> None:
+    source = SOURCE.read_text(encoding="utf-8")
+    assert source.count("resolve_keep_audio_edit_backups(") == 3
+    assert source.count("self.options.keep_audio_edit_backups") == 3

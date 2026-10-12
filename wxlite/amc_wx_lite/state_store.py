@@ -148,6 +148,11 @@ class Options:
     #: przełącznik decyduje, czy nowy tor ma pozostać w pauzie. Domyślne False
     #: zachowuje dotychczasowe zachowanie AMC do świadomej zmiany ustawienia.
     pause_on_audio_output_fallback: bool = False
+    #: Zachowanie kopii poprzedniej wersji po udanej edycji istniejącego
+    #: nagrania. ``None`` zachowuje zgodność przejściową i dziedziczy wartość
+    #: z profilu głównego AMC; zapis okna ustawień tworzy już jawny wybór
+    #: należący do samodzielnej wersji wxPython.
+    keep_audio_edit_backups: bool | None = None
     #: Prywatne nadpisania ustawien nagrywania. ``None`` oznacza dalsze
     #: dziedziczenie wartosci z profilu glownego AMC; pusty folder oznacza
     #: swiadomy wybor systemowego folderu domyslnego hosta.
@@ -213,6 +218,11 @@ class Options:
             self.radio_recognition_announcements = True
         if type(self.pause_on_audio_output_fallback) is not bool:
             self.pause_on_audio_output_fallback = False
+        if (
+            self.keep_audio_edit_backups is not None
+            and type(self.keep_audio_edit_backups) is not bool
+        ):
+            self.keep_audio_edit_backups = None
         if self.radio_recording_format is not None:
             formats = ("Mp3", "Aac", "Flac", "Original", "Wav")
             value = str(self.radio_recording_format).strip().casefold()

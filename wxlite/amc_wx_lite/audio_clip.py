@@ -50,6 +50,21 @@ def load_keep_audio_edit_backups(state_path: Path) -> bool:
     return settings.get("keepAudioEditBackups") is True
 
 
+def resolve_keep_audio_edit_backups(
+    override: bool | None,
+    state_path: Path,
+) -> bool:
+    """Rozstrzygnij prywatny wybór wxPython albo odziedzicz profil AMC.
+
+    Jawny boolean należy do nowego interfejsu i nie wymaga już odczytu starego
+    profilu. ``None`` jest wyłącznie stanem migracyjnym: zachowuje dotychczasowe
+    ustawienie użytkownika do pierwszego świadomego zapisu w oknie ustawień.
+    """
+    if type(override) is bool:
+        return override
+    return load_keep_audio_edit_backups(state_path)
+
+
 def remove_clip_confirmation_text(
     start_seconds: float,
     end_seconds: float,

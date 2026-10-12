@@ -12,6 +12,7 @@ from amc_wx_lite.audio_clip import (
     format_choices_from_payload,
     format_clip_time,
     load_keep_audio_edit_backups,
+    resolve_keep_audio_edit_backups,
     read_clip_selections,
     remove_clip_confirmation_text,
     restore_clip_selection,
@@ -240,6 +241,22 @@ def test_audio_edit_backup_setting_is_strict_and_read_only(tmp_path: Path) -> No
         assert "Oryginalny plik nie został zmieniony" in str(error)
     else:
         raise AssertionError("Uszkodzony profil nie zatrzymał destrukcyjnej edycji")
+
+
+def test_private_audio_edit_backup_choice_overrides_inherited_profile(
+    tmp_path: Path,
+) -> None:
+    state = tmp_path / "state.json"
+    state.write_text(
+        '{"settings":{"keepAudioEditBackups":true}}',
+        encoding="utf-8",
+    )
+
+    assert resolve_keep_audio_edit_backups(None, state) is True
+    assert resolve_keep_audio_edit_backups(False, state) is False
+
+    state.write_text("uszkodzony profil", encoding="utf-8")
+    assert resolve_keep_audio_edit_backups(True, state) is True
 
 
 def test_remove_confirmation_and_backup_result_use_user_facing_text() -> None:

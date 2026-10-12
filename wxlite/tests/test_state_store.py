@@ -62,6 +62,17 @@ def test_round_trip_keeps_options_and_stations() -> None:
     assert [s.url for s in loaded.stations] == ["http://a/1"]
 
 
+def test_round_trip_keeps_private_audio_edit_backup_choice() -> None:
+    store, _ = temp_store()
+    store.save(LiteState(options=Options(keep_audio_edit_backups=True)))
+
+    assert store.load().options.keep_audio_edit_backups is True
+
+
+def test_invalid_audio_edit_backup_choice_returns_to_inherited_value() -> None:
+    assert Options(keep_audio_edit_backups="tak").clamp().keep_audio_edit_backups is None  # type: ignore[arg-type]
+
+
 def test_round_trip_keeps_radio_activity_presentation_options() -> None:
     store, _ = temp_store()
     state = LiteState(options=Options(

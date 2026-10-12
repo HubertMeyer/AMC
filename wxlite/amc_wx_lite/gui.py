@@ -38,6 +38,7 @@ import wx
 
 from .async_gate import BackgroundRunner, StaleResultGate
 from .audio_clip import (
+    AudioEditSettingsReadError,
     AudioClipContext,
     AudioClipFormatChoice,
     AudioClipSelection,
@@ -46,7 +47,7 @@ from .audio_clip import (
     describe_backup_outcome,
     format_choices_from_payload,
     format_clip_time,
-    load_keep_audio_edit_backups,
+    resolve_keep_audio_edit_backups,
     remove_clip_confirmation_text,
     restore_clip_selection,
     suggested_clip_file_name,
@@ -3128,6 +3129,7 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
         recording,
         wake_scheduled_recordings: bool,
         podcast_settings: PodcastGlobalSettings,
+        keep_audio_edit_backups: bool,
     ) -> None:
         super().__init__(parent, title="Ustawienia", size=(720, 620))
         self.notebook = wx.Notebook(self)
@@ -3180,12 +3182,19 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
             options.pause_on_audio_output_fallback
         )
 
+        self.keep_audio_edit_backups = wx.CheckBox(
+            general, label="Zachowuj &kopie po edycji"
+        )
+        self.keep_audio_edit_backups.SetName("Zachowuj kopie po edycji")
+        self.keep_audio_edit_backups.SetValue(keep_audio_edit_backups)
+
         for control in (
             self.pause,
             self.follow,
             self.open_preset,
             self.radio_enter,
             self.pause_output_fallback,
+            self.keep_audio_edit_backups,
         ):
             general_layout.Add(control, 0, wx.BOTTOM | wx.EXPAND, 10)
 
@@ -3689,6 +3698,7 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
             "pause_on_audio_output_fallback": (
                 self.pause_output_fallback.GetValue()
             ),
+            "keep_audio_edit_backups": self.keep_audio_edit_backups.GetValue(),
             "loudness_normalization": self.loudness.GetValue(),
             "smooth_track_transitions": self.smooth.GetValue(),
             "inter_track_silence_ms": self._silence_values[
@@ -9874,7 +9884,8 @@ class LiteFrame(wx.Frame):
                     context.source_path,
                     target_path,
                 )
-                keep_backup = load_keep_audio_edit_backups(
+                keep_backup = resolve_keep_audio_edit_backups(
+                    self.options.keep_audio_edit_backups,
                     self.layout.state_json
                 )
                 return capabilities, keep_backup
@@ -10035,7 +10046,8 @@ class LiteFrame(wx.Frame):
                 capabilities = client.audio_clip_removal_capabilities(
                     context.source_path
                 )
-                keep_backup = load_keep_audio_edit_backups(
+                keep_backup = resolve_keep_audio_edit_backups(
+                    self.options.keep_audio_edit_backups,
                     self.layout.state_json
                 )
                 return capabilities, keep_backup
@@ -10986,12 +10998,27 @@ class LiteFrame(wx.Frame):
             podcast_settings = self.podcasts.global_settings()
         except PodcastProfileError:
             podcast_settings = PodcastGlobalSettings()
+        try:
+            keep_audio_edit_backups = resolve_keep_audio_edit_backups(
+                self.options.keep_audio_edit_backups,
+                self.layout.state_json,
+            )
+        except AudioEditSettingsReadError:
+            # Nie blokuj pozostałych ustawień przez uszkodzony stary profil.
+            # Włączenie kopii jest tu bezpiecznym wyborem: niczego nie usuwa,
+            # a zapis okna ustanowi od tej chwili jawną politykę wxPython.
+            keep_audio_edit_backups = True
+            self.announcer.say(
+                "Nie można odczytać poprzedniego ustawienia kopii po edycji. "
+                "Wybrano zachowywanie kopii"
+            )
         dialog = GeneralPlaybackOptionsDialog(
             self,
             self.options,
             self._radio_snapshot.recording,
             effective_wake,
             podcast_settings,
+            keep_audio_edit_backups,
         )
         chosen: dict[str, object] | None = None
         try:
