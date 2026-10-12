@@ -527,6 +527,7 @@ def apply_message_overrides(
     percentage_seek_messages: bool | None = None,
     volume_messages: bool | None = None,
     playback_messages: bool | None = None,
+    bookmark_navigation_messages: bool | None = None,
     percent_announcement: str | PercentAnnouncement | None = None,
 ) -> MessagePolicy:
     """Naloz prywatne ustawienia AMC Python na odziedziczona polityke.
@@ -542,6 +543,7 @@ def apply_message_overrides(
         "percentage_seek_messages": percentage_seek_messages,
         "volume_messages": volume_messages,
         "playback_messages": playback_messages,
+        "bookmark_navigation_messages": bookmark_navigation_messages,
     }
     for name, value in boolean_overrides.items():
         if type(value) is bool:

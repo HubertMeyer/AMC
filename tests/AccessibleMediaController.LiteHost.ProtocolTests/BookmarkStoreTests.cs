@@ -53,6 +53,21 @@ internal static class BookmarkStoreTests
                 return true;
             });
 
+            var first = store.FindRelative(
+                "local", "plik-1", TimeSpan.Zero, direction: 1);
+            Assert.True(first is not null
+                && first.PositionTicks == TimeSpan.FromSeconds(12).Ticks,
+                "nastepna zakladka korzysta z tych samych regul co pelny AMC");
+            var second = store.FindAdjacent(
+                "local", "plik-1", first!.Id, direction: 1);
+            Assert.True(second is not null
+                && second.Id == "bookmark-and-chapter",
+                "kontynuacja od kotwicy znajduje kolejna zakladke");
+            var beforeFirst = store.FindAdjacent(
+                "local", "plik-1", first.Id, direction: -1);
+            Assert.True(beforeFirst is null,
+                "przed pierwsza zakladka nie ma sztucznego wyniku");
+
             string quickBookmarkId;
             using (var connection = new SqliteConnection($"Data Source={database};Pooling=False"))
             {
@@ -91,6 +106,9 @@ internal static class BookmarkStoreTests
             }
 
             var blocked = new LiteBookmarkStore(database, () => true);
+            Assert.True(blocked.FindRelative(
+                    "local", "plik-1", TimeSpan.Zero, direction: 1) is null,
+                "odczyt zakladek pozostaje dozwolony przy dzialajacym starym AMC");
             var refused = false;
             try
             {

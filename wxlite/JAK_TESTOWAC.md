@@ -55,6 +55,16 @@ Biblioteki ani niczego ogłaszać. `Escape` i `Backspace` służą do powrotu do
 z wnętrza kontenera albo widoku podrzędnego. Sprawdź tę zasadę osobno w każdej
 sesji, która udostępnia dany widok.
 
+W odtwarzaczu Plików `I` ustawia początek, a `O` koniec zaznaczonego
+fragmentu. Sprawdź także nagranie otwarte z `Alt+Shift+R`, gdy Radio nadal
+działa w tle: oba klawisze muszą korzystać z toru Plików, nie z ostatniego
+odpytywanego stanu Radia. Plik iCloud lub OneDrive oznaczony „zawsze zachowuj
+na tym urządzeniu” ma dać się zaznaczyć i edytować bez fałszywego żądania
+pobrania. `Alt+Page Up` i `Alt+Page Down` przechodzą po granicach fragmentu,
+natomiast `Shift+Page Up` i `Shift+Page Down` przechodzą po zapisanych
+zakładkach. `B` dodaje szybką zakładkę, `Ctrl+B` otwiera zakładki bieżącego
+pliku, a `Ctrl+Shift+B` wszystkie zakładki.
+
 Plik `AMC-Python-Updater.exe` służy obecnie do bezpiecznego zastosowania
 przygotowanej paczki z pełnym manifestem SHA-256. Nie uruchamiaj go ręcznie na
 produkcyjnym katalogu bez przygotowanej paczki aktualizacji. Automatyczne

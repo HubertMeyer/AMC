@@ -53,6 +53,8 @@ class MenuItem:
     accelerator: bool = True
     #: Wylaczana poza sesja radiowa, zamiast udawac, ze zadziala.
     needs_radio_session: bool = False
+    #: Dostępna wyłącznie dla lokalnych plików, np. zakładki materiału.
+    needs_files_session: bool = False
     #: Widok dostepny wylacznie wewnatrz sesji Podcasty i YouTube.
     needs_podcast_session: bool = False
     #: Te trzy pozycje sa aktywne tylko w zbiorczym widoku Nowych odcinkow.
@@ -433,7 +435,22 @@ def build_menus() -> tuple[Menu, ...]:
             MenuItem("&Pauza albo wznowienie", Action.PLAY_PAUSE, shortcut="Space",
                      accelerator=False, needs_playback=True),
             MenuItem("Dodaj &zakładkę", Action.ADD_BOOKMARK, shortcut="B",
-                     accelerator=False, needs_playback=True),
+                     accelerator=False, needs_playback=True,
+                     needs_files_session=True),
+            MenuItem(
+                "&2. Poprzednia zakładka, Shift+Page Up",
+                Action.PREVIOUS_BOOKMARK,
+                accelerator=False,
+                needs_playback=True,
+                needs_files_session=True,
+            ),
+            MenuItem(
+                "&4. Następna zakładka, Shift+Page Down",
+                Action.NEXT_BOOKMARK,
+                accelerator=False,
+                needs_playback=True,
+                needs_files_session=True,
+            ),
             SEPARATOR,
             # Zaznaczanie i edycja fragmentu. Kazda pozycja prowadzi do tej
             # samej akcji co klawisz w PLAYER_VIEW; brak akceleratora okna jest

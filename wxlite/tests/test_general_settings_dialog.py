@@ -35,6 +35,8 @@ def test_settings_have_real_native_pages_and_explicit_accessible_names() -> None
     assert 'self.message_volume_messages.SetName("Oznajmiaj zmiany głośności")' in source
     assert 'self.message_playback_messages.SetName(' in source
     assert '"Oznajmiaj odtwarzanie i pauzę"' in source
+    assert 'self.message_bookmark_navigation_messages.SetName(' in source
+    assert '"Oznajmiaj nawigację po zakładkach"' in source
     assert 'self.message_percent_announcement.SetName(' in source
     assert 'choices=["Tylko procent", "Tylko czas", "Procent i czas"]' in source
 
@@ -70,6 +72,7 @@ def test_all_exposed_choices_use_intentional_user_facing_labels() -> None:
     assert '"message_percentage_seek_messages": (' in source
     assert '"message_volume_messages": self.message_volume_messages.GetValue()' in source
     assert '"message_playback_messages": (' in source
+    assert '"message_bookmark_navigation_messages": (' in source
     assert '"message_percent_announcement": self._message_percent_values[' in source
     assert 'self.recording_folder.SetName("Domyślny folder nagrywania radia")' in source
     assert 'self.recording_folder_mode.SetName("Położenie nagrań Radia")' in source

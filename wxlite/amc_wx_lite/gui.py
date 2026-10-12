@@ -3836,6 +3836,16 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
             message_policy.playback_messages
         )
 
+        self.message_bookmark_navigation_messages = wx.CheckBox(
+            messages, label="Oznajmiaj nawigację po &zakładkach"
+        )
+        self.message_bookmark_navigation_messages.SetName(
+            "Oznajmiaj nawigację po zakładkach"
+        )
+        self.message_bookmark_navigation_messages.SetValue(
+            message_policy.bookmark_navigation_messages
+        )
+
         for control in (
             self.message_seek_messages,
             self.message_arrow_seek_messages,
@@ -3852,6 +3862,7 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
         for control in (
             self.message_volume_messages,
             self.message_playback_messages,
+            self.message_bookmark_navigation_messages,
         ):
             messages_layout.Add(control, 0, wx.BOTTOM | wx.EXPAND, 10)
 
@@ -4050,6 +4061,9 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
             "message_playback_messages": (
                 self.message_playback_messages.GetValue()
             ),
+            "message_bookmark_navigation_messages": (
+                self.message_bookmark_navigation_messages.GetValue()
+            ),
             "message_percent_announcement": self._message_percent_values[
                 max(0, self.message_percent_announcement.GetSelection())
             ].value,
@@ -4138,6 +4152,9 @@ class LiteFrame(wx.Frame):
             ),
             volume_messages=self.options.message_volume_messages,
             playback_messages=self.options.message_playback_messages,
+            bookmark_navigation_messages=(
+                self.options.message_bookmark_navigation_messages
+            ),
             percent_announcement=self.options.message_percent_announcement,
         )
         self.messages.custom_seek_seconds = resolve_custom_seek_seconds(
@@ -4582,6 +4599,7 @@ class LiteFrame(wx.Frame):
         if not hasattr(self, "_menu_items"):
             return
         radio = self.navigator.active is SessionId.RADIO
+        files = self.navigator.active is SessionId.FILES
         podcasts = self.navigator.active is SessionId.PODCASTS
         # "Cos gra" rozpoznajemy po TYM SAMYM statusie z hosta, z ktorego
         # korzysta ``_announce_time`` -- nie po wlasnym liczniku.
@@ -4639,6 +4657,8 @@ class LiteFrame(wx.Frame):
         for item, entry in self._menu_items:
             enabled = True
             if entry.needs_radio_session and not radio:
+                enabled = False
+            if entry.needs_files_session and not files:
                 enabled = False
             if entry.needs_podcast_session and not podcasts:
                 enabled = False
@@ -6420,6 +6440,8 @@ class LiteFrame(wx.Frame):
             self._toggle_mute()
         elif action is Action.ADD_BOOKMARK:
             self._add_bookmark()
+        elif action in (Action.PREVIOUS_BOOKMARK, Action.NEXT_BOOKMARK):
+            self._navigate_bookmark(action is Action.NEXT_BOOKMARK)
         elif action is Action.CLIP_MARK_START:
             self._mark_audio_clip(start=True)
         elif action is Action.CLIP_MARK_END:
@@ -10361,6 +10383,66 @@ class LiteFrame(wx.Frame):
             lambda error: self.announcer.say(f"Nie można dodać zakładki: {error}"),
         )
 
+    def _navigate_bookmark(self, forward: bool) -> None:
+        """Shift+Page Up/Down: nawigacja po zakładkach bieżącego pliku."""
+        if self.navigator.active is not SessionId.FILES:
+            self.announcer.say(
+                "Nawigacja po zakładkach jest dostępna dla plików lokalnych"
+            )
+            return
+        client = self.client
+        if client is None:
+            self.announcer.say(
+                "Silnik nie działa, nawigacja po zakładkach jest niedostępna"
+            )
+            return
+
+        direction = 1 if forward else -1
+
+        def done(payload: dict) -> None:
+            result = payload or {}
+            if not result.get("found"):
+                self.announcer.say(
+                    "Brak następnej zakładki w tym materiale"
+                    if forward
+                    else "Brak poprzedniej zakładki w tym materiale"
+                )
+                return
+            raw_position = result.get("positionSeconds")
+            position = (
+                float(raw_position)
+                if isinstance(raw_position, (int, float))
+                and not isinstance(raw_position, bool)
+                else 0.0
+            )
+            self._last_status = {
+                **self._last_status,
+                "positionSeconds": position,
+            }
+            name = result.get("name")
+            text = (
+                f"{name.strip()}, {format_duration(position)}"
+                if isinstance(name, str) and name.strip()
+                else format_duration(position)
+            )
+            if (
+                self.messages.seek_messages
+                and self.messages.bookmark_navigation_messages
+                and self.messages.speaks_routine
+            ):
+                self.announcer.say(text)
+            else:
+                self.announcer.show(text)
+
+        self.runner.submit(
+            "bookmark-navigation",
+            lambda: client.navigate_bookmark(direction),
+            done,
+            lambda error: self.announcer.say(
+                f"Nie można przejść do zakładki: {error}"
+            ),
+        )
+
     # ------------------------------------------------------ fragmenty audio
 
     def _request_audio_clip_context(
@@ -10412,6 +10494,25 @@ class LiteFrame(wx.Frame):
                 path_exists=lambda _path: source_exists,
             )
             if context is None:
+                # Mowa pozostaje krotka i uzytkowa, ale prywatny dziennik ma
+                # zachowac dowod, DLACZEGO host odrzucil I/O. Bez tego po
+                # ponownym uruchomieniu widzielismy tylko efekt w NVDA, a nie
+                # to, czy zniknelo Id, sciezka, czas czy wlasciwa sesja.
+                store = getattr(self, "store", None)
+                if store is not None:
+                    _append_frontend_log(
+                        store,
+                        "Kontekst fragmentu odrzucony: "
+                        f"żądana sesja={requested_session.value}; "
+                        f"silnik={payload.get('engine')!r}; "
+                        f"sesja hosta={payload.get('sessionId')!r}; "
+                        f"id obecne={bool(payload.get('id'))}; "
+                        f"źródło={payload.get('source')!r}; "
+                        f"plik istnieje={source_exists}; "
+                        f"pozycja={payload.get('positionSeconds')!r}; "
+                        f"czas={payload.get('durationSeconds')!r}; "
+                        f"powód={error or 'brak kontekstu'}",
+                    )
                 self.announcer.say(error or "Bieżący element nie jest lokalnym plikiem multimedialnym")
                 return
             selection = restore_clip_selection(
@@ -11964,6 +12065,9 @@ class LiteFrame(wx.Frame):
             ),
             volume_messages=self.options.message_volume_messages,
             playback_messages=self.options.message_playback_messages,
+            bookmark_navigation_messages=(
+                self.options.message_bookmark_navigation_messages
+            ),
             percent_announcement=self.options.message_percent_announcement,
         )
         self._apply_detailed_hints()

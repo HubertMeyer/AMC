@@ -100,6 +100,13 @@ potem AMC Python zapisuje własne wybory bez modyfikowania profilu starego
 interfejsu. `Ctrl+Shift+G` również zapisuje swój przełącznik bezpośrednio w
 AMC Python. Wyłączony komunikat odtwarzania/pauzy nadal aktualizuje dostępne
 pole stanu, ale nie wymusza wypowiedzi NVDA.
+`Shift+Page Up` i `Shift+Page Down` przechodzą odpowiednio do poprzedniej i
+następnej zakładki bieżącego pliku. Powtarzanie skrótu w ciągu pięciu sekund
+kontynuuje nawigację po kolejnych zakładkach, jak w głównym AMC. Nie koliduje
+to z `Alt+Page Up` i `Alt+Page Down`, które pozostają nawigacją po granicach
+zaznaczonego fragmentu. Karta Komunikaty ma rzeczywisty przełącznik
+oznajmiania udanej nawigacji po zakładkach; brak poprzedniej lub następnej
+zakładki nadal jest podawany jako potrzebna informacja graniczna.
 Po włączeniu `Ctrl+K` podaje pełną instrukcję filtra, a pole zapytania i lista
 wyników `Ctrl+F`/`Ctrl+Shift+F` udostępniają osobne teksty pomocy. Nazwy
 kontrolek pozostają krótkie i nie zawierają podpowiedzi ani wartości modelu.
@@ -362,6 +369,16 @@ ze zwykłych ukończonych wpisów. Wiersz zaczyna się od nazwy stacji lub pliku
 znaczące stany wyjątkowe, takie jak „Przerwane”, „Nieudane” albo brak pliku,
 pozostają czytelne.
 
+Przy zaznaczaniu fragmentu `I`/`O` interfejs pyta host jawnie o tor Plików
+albo Podcastów. Okresowy odczyt Radia nie może już podmienić kontekstu i
+wywołać fałszywego komunikatu, że nagranie nie jest plikiem multimedialnym.
+Prywatny dziennik interfejsu zapisuje przy odmowie techniczny stan sesji,
+tożsamości, ścieżki, czasu i dostępności pliku, ale NVDA otrzymuje wyłącznie
+krótki komunikat użytkowy. Na rzeczywistym pliku
+`2 - 2026-10-12 22-02-19.mp3` potwierdzono metadanymi Windows stan lokalny i
+zgodę wspólnej polityki Core na edycję; sama ścieżka iCloud nie jest podstawą
+do żądania ponownego pobrania.
+
 Na liście harmonogramów `Ctrl+Shift+H` Spację podłączono bezpośrednio do
 natywnej listy, oprócz dotychczasowego haka całego okna. Rozpoznanie celu
 uwzględnia obiekt zdarzenia i rzeczywisty fokus; zmiana zachowuje wiersz, podaje
@@ -393,6 +410,20 @@ Python ani automatycznego pobierania paczki, więc nie należy przedstawiać go
 jako ukończonej aktualizacji internetowej. EdSharp NG pozostaje punktem
 odniesienia dla zachowania pełnego mechanizmu aktualizacji.
 
+13 października rzeczywista próba ujawniła dwa problemy samowymiany. Kopia
+robocza mogła rozpocząć podmianę, zanim proces uruchomiony z katalogu programu
+faktycznie zwolnił swój plik, a `File.Move` z zastąpieniem istniejącego EXE
+zwracał odmowę dostępu mimo braku działającego procesu. Pomocnik dostaje teraz
+osobny identyfikator procesu-rodzica i czeka na jego zakończenie; po wykonaniu
+kopii bezpieczeństwa usuwa stary plik i przenosi nowy, nadal korzystając z
+pełnego wycofania całej transakcji przy dowolnym błędzie. Błędy trafiają także
+na standardowe wyjście diagnostyczne, a nie tylko do okna komunikatu. Pełną
+samowymianę sprawdzono na osobnej kopii 597-plikowej paczki: aktualizator i
+LiteHost miały po operacji właściwe sumy, a katalog transakcji nie pozostał.
+Katalog `D:\Projekty Codex\AMC Python` nie został podmieniony, ponieważ nadal
+działały z niego `AMC.exe`, Python i historyczny `host-next`; nie zamykano ich
+bez potwierdzenia stanu odsłuchu i nagrywania.
+
 „Sygnalista” (`michaldziwisz/sygnalista`) jest osobnym modułem zgłaszania
 błędów, a nie nazwą aktualizatora. Przed jego integracją trzeba sprawdzić
 licencję i rzeczywisty kontrakt biblioteki; nie wolno kopiować niesprawdzonego
@@ -400,7 +431,7 @@ kodu ani wysyłać logów bez wiedzy użytkownika.
 
 ## Dowody automatyczne tego przyrostu
 
-- pełny runner Python: 1360 zaliczonych, 0 błędów, 138 historycznych pominięć;
+- pełny runner Python: 1372 zaliczone, 0 błędów, 138 historycznych pominięć;
 - testy protokołu C#: 15 zestawów zaliczonych;
 - całe rozwiązanie .NET zbudowane sekwencyjnie: 0 ostrzeżeń, 0 błędów;
 - sześć celowanych testów Windows rozpoznawania, ustawień, historii, podpisu

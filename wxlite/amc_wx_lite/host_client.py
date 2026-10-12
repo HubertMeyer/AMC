@@ -901,6 +901,17 @@ class LiteHostClient:
             timeout=20.0,
         )
 
+    def navigate_bookmark(self, direction: int) -> Any:
+        """Przejdź do poprzedniej albo następnej zakładki bieżącego pliku."""
+        return self.call(
+            "bookmark.navigate",
+            {
+                "sessionId": "files",
+                "direction": -1 if int(direction) < 0 else 1,
+            },
+            timeout=15.0,
+        )
+
     def audio_clip_capabilities(self, source_path: str) -> Any:
         """Dostepne sposoby zapisu i rozszerzenia liczone przez silnik AMC."""
         return self.call(

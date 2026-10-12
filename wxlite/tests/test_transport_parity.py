@@ -466,6 +466,7 @@ def test_private_message_overrides_win_without_touching_inherited_values() -> No
         percentage_seek_messages=True,
         volume_messages=False,
         playback_messages=True,
+        bookmark_navigation_messages=True,
         percent_announcement=PercentAnnouncement.TIME,
         may_persist=False,
     )
@@ -477,6 +478,7 @@ def test_private_message_overrides_win_without_touching_inherited_values() -> No
         percentage_seek_messages=False,
         volume_messages=True,
         playback_messages=False,
+        bookmark_navigation_messages=False,
         percent_announcement="PercentAndTime",
     )
 
@@ -487,6 +489,7 @@ def test_private_message_overrides_win_without_touching_inherited_values() -> No
     assert policy.percentage_seek_messages is False
     assert policy.volume_messages is True
     assert policy.playback_messages is False
+    assert policy.bookmark_navigation_messages is False
     assert policy.percent_announcement is PercentAnnouncement.PERCENT_AND_TIME
     assert policy.may_persist is True
 

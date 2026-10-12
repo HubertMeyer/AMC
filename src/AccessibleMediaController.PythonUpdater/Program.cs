@@ -37,6 +37,18 @@ internal static class Program
             if (RelaunchOutsideInstallation(options, args))
                 return Success;
 
+            // Kopia robocza nie może dotknąć pliku starego aktualizatora,
+            // dopóki proces-rodzic nadal go wykonuje. Samo Process.Start i
+            // natychmiastowy return powodowały na Windows wyścig: pomocnik
+            // dochodził do AMC-Python-Updater.exe przed faktycznym wyjściem
+            // rodzica, a następnie cała transakcja poprawnie się wycofywała.
+            if (!WaitForApplication(options.WaitUpdaterPid))
+            {
+                Show("Aktualizacja nie została rozpoczęta, ponieważ poprzedni "
+                     + "proces aktualizatora nie zakończył się.", true);
+                return AppStillRunning;
+            }
+
             if (!WaitForApplication(options.WaitPid))
             {
                 Show("Aktualizacja nie została rozpoczęta, ponieważ AMC Python nadal działa. "
@@ -66,11 +78,13 @@ internal static class Program
         }
         catch (InvalidDataException exception)
         {
+            Console.Error.WriteLine("Pakiet aktualizacji został odrzucony: " + exception);
             Show("Pakiet aktualizacji został odrzucony: " + exception.Message, true);
             return InvalidPackage;
         }
         catch (Exception exception)
         {
+            Console.Error.WriteLine("Nie udało się zainstalować aktualizacji AMC Python: " + exception);
             Show("Nie udało się zainstalować aktualizacji AMC Python: " + exception.Message, true);
             return InstallFailed;
         }
@@ -98,6 +112,10 @@ internal static class Program
         };
         foreach (var argument in args)
             start.ArgumentList.Add(argument);
+        // Ten wewnętrzny identyfikator jest niezależny od --wait-pid
+        // właściwej aplikacji. Pomocnik musi zaczekać na oba procesy.
+        start.ArgumentList.Add("--wait-updater-pid");
+        start.ArgumentList.Add(Environment.ProcessId.ToString());
         Process.Start(start);
         return true;
     }
@@ -191,7 +209,24 @@ internal static class Program
                     File.Copy(destination, saved, overwrite: true);
                 }
                 replaced.Add((destination, saved));
-                File.Move(prepared, destination, overwrite: true);
+                try
+                {
+                    // File.Move(..., overwrite: true) na Windows potrafi
+                    // odmówić zastąpienia nieuruchomionego pliku EXE, mimo że
+                    // zwykłe przemianowanie tego samego pliku jest dozwolone.
+                    // Kopia poprzedniej wersji już istnieje, więc usunięcie i
+                    // przeniesienie jest bezpieczne: każdy wyjątek trafia do
+                    // istniejącego wycofania całej transakcji.
+                    if (File.Exists(destination)) File.Delete(destination);
+                    File.Move(prepared, destination);
+                }
+                catch (Exception exception) when (
+                    exception is IOException or UnauthorizedAccessException)
+                {
+                    throw new IOException(
+                        $"nie można podmienić pliku {relative}: {exception.Message}",
+                        exception);
+                }
             }
 
             File.Copy(
@@ -268,6 +303,7 @@ internal static class Program
         string Source,
         string Target,
         int? WaitPid,
+        int? WaitUpdaterPid,
         string? Launch,
         bool Silent)
     {
@@ -277,6 +313,7 @@ internal static class Program
             string? target = null;
             string? launch = null;
             int? waitPid = null;
+            int? waitUpdaterPid = null;
             var silent = false;
             for (var index = 0; index < args.Length; index++)
             {
@@ -292,6 +329,10 @@ internal static class Program
                         && int.TryParse(args[++index], out var parsed):
                         waitPid = parsed;
                         break;
+                    case "--wait-updater-pid" when index + 1 < args.Length
+                        && int.TryParse(args[++index], out var parsedUpdater):
+                        waitUpdaterPid = parsedUpdater;
+                        break;
                     case "--launch" when index + 1 < args.Length:
                         launch = args[++index];
                         break;
@@ -303,7 +344,13 @@ internal static class Program
                 }
             }
             return source is not null && target is not null
-                ? new Options(Path.GetFullPath(source), Path.GetFullPath(target), waitPid, launch, silent)
+                ? new Options(
+                    Path.GetFullPath(source),
+                    Path.GetFullPath(target),
+                    waitPid,
+                    waitUpdaterPid,
+                    launch,
+                    silent)
                 : null;
         }
     }

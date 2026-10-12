@@ -198,6 +198,7 @@ class Options:
     message_percentage_seek_messages: bool | None = None
     message_volume_messages: bool | None = None
     message_playback_messages: bool | None = None
+    message_bookmark_navigation_messages: bool | None = None
     message_percent_announcement: str | None = None
     #: Prywatne nadpisania ustawien nagrywania. ``None`` oznacza dalsze
     #: dziedziczenie wartosci z profilu glownego AMC; pusty folder oznacza
@@ -294,6 +295,7 @@ class Options:
             "message_percentage_seek_messages",
             "message_volume_messages",
             "message_playback_messages",
+            "message_bookmark_navigation_messages",
         ):
             value = getattr(self, name)
             if value is not None and type(value) is not bool:

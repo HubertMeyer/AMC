@@ -19,6 +19,11 @@ namespace AccessibleMediaController.LiteHost;
 /// </summary>
 internal sealed class LiteEngineHandlers : IDisposable
 {
+    private sealed record BookmarkNavigationCursor(
+        string ItemId,
+        string BookmarkId,
+        DateTime LastNavigationUtc);
+
     private readonly object _gate = new();
     private readonly WindowsMediaOutput _files = new();
     private readonly RadioMediaOutput _radio;
@@ -41,6 +46,9 @@ internal sealed class LiteEngineHandlers : IDisposable
     /// </summary>
     private readonly LiteQueueStore? _queueStore;
     private readonly LiteBookmarkStore? _bookmarkStore;
+    private static readonly TimeSpan BookmarkNavigationContinuationWindow =
+        TimeSpan.FromSeconds(5);
+    private BookmarkNavigationCursor? _bookmarkNavigationCursor;
     private readonly LitePodcastProgressStore? _podcastProgressStore;
     private readonly LitePodcastRefreshCoordinator? _podcastRefresh;
     private readonly LitePodcastDownloadCoordinator? _podcastDownloads;
@@ -226,6 +234,7 @@ internal sealed class LiteEngineHandlers : IDisposable
             {
                 _activeEngine = "files";
                 _filesItem = next;
+                _bookmarkNavigationCursor = null;
                 // Nowy strumien: dlugosc POPRZEDNIEGO przestaje obowiazywac.
                 // Zerujemy tylko wtedy, gdy zapamietany czas nie dotyczy JUZ
                 // nowego utworu -- inaczej skasowalibysmy wartosc, ktora dekoder
@@ -409,6 +418,7 @@ internal sealed class LiteEngineHandlers : IDisposable
             ["radio.editStation"] = (request, _) => EditRadioStation(request.Args),
             ["bookmark.add"] = (request, _) => AddBookmark(request.Args),
             ["bookmark.remove"] = (request, _) => RemoveBookmarks(request.Args),
+            ["bookmark.navigate"] = (request, _) => NavigateBookmark(request.Args),
             ["radio.importPlaylist"] = (request, _) => ImportPlaylist(request.Args),
             ["audio.configure"] = (request, _) => ConfigureAudio(request.Args),
             ["audio.outputs"] = (request, _) => ListOutputs(request.Args),
@@ -987,6 +997,72 @@ internal sealed class LiteEngineHandlers : IDisposable
         return _bookmarkStore.Remove(ReadIds(args));
     }
 
+    private object NavigateBookmark(JsonElement args)
+    {
+        if (_bookmarkStore is null)
+            throw new LiteRequestException("Nawigacja po zakładkach nie ma dostępu do Biblioteki AMC.");
+
+        var target = ResolveTransportTarget(args);
+        if (!string.Equals(target.SessionId, "files", StringComparison.Ordinal))
+            throw new LiteRequestException(
+                "Nawigacja po zakładkach jest dostępna dla plików lokalnych.");
+        var direction = Math.Sign(LiteArgs.ReadInt(args, "direction", 0, -1, 1));
+        if (direction == 0)
+            throw new LiteRequestException("Nie podano kierunku nawigacji po zakładkach.");
+
+        MediaItem item;
+        TimeSpan currentPosition;
+        BookmarkNavigationCursor? cursor;
+        lock (_gate)
+        {
+            RequireTargetOwnsFilesItemLocked(target);
+            item = _filesItem
+                ?? throw new LiteRequestException("Najpierw otwórz plik multimedialny.");
+            currentPosition = _files.Position;
+            cursor = _bookmarkNavigationCursor;
+        }
+
+        var now = DateTime.UtcNow;
+        var bookmark = cursor is not null
+            && string.Equals(cursor.ItemId, item.Id, StringComparison.Ordinal)
+            && now - cursor.LastNavigationUtc <= BookmarkNavigationContinuationWindow
+                ? _bookmarkStore.FindAdjacent(
+                    "local", item.Id, cursor.BookmarkId, direction)
+                : _bookmarkStore.FindRelative(
+                    "local", item.Id, currentPosition, direction);
+        if (bookmark is null)
+        {
+            return new
+            {
+                found = false,
+                direction
+            };
+        }
+
+        lock (_gate)
+        {
+            if (_filesItem is null
+                || !string.Equals(_filesItem.Id, item.Id, StringComparison.Ordinal))
+                throw new LiteRequestException(
+                    "W trakcie nawigacji zmienił się odtwarzany plik. Powtórz skrót.");
+            _bookmarkNavigationCursor = new BookmarkNavigationCursor(
+                item.Id,
+                bookmark.Id,
+                now);
+        }
+
+        var position = TimeSpan.FromTicks(Math.Max(0L, bookmark.PositionTicks));
+        _files.Seek(position);
+        if (!_queue.NotePosition(position)) TrySaveCurrentLocalResume();
+        return new
+        {
+            found = true,
+            direction,
+            name = bookmark.Name,
+            positionSeconds = position.TotalSeconds
+        };
+    }
+
     /// <summary>
     /// Wczytanie zywej kolejki. Celowo NIE startuje odtwarzania: sam odczyt
     /// zapisanego stanu nie ma prawa niczego zagrac.
@@ -1500,6 +1576,7 @@ internal sealed class LiteEngineHandlers : IDisposable
         {
             _activeEngine = "files";
             _filesItem = item;
+            _bookmarkNavigationCursor = null;
             // Nowy strumien: stary czas przestaje obowiazywac, zanim dekoder
             // zdazy podac nowy. Inaczej okno pokazywalo dlugosc POPRZEDNIEGO pliku.
             ForgetStaleFilesDurationLocked(item.Id);
@@ -1585,6 +1662,7 @@ internal sealed class LiteEngineHandlers : IDisposable
         {
             _activeEngine = "files";
             _filesItem = item;
+            _bookmarkNavigationCursor = null;
             _currentPodcastCompleted = false;
             ForgetStaleFilesDurationLocked(item.Id);
             _filesVolume = volume;
@@ -1915,6 +1993,7 @@ internal sealed class LiteEngineHandlers : IDisposable
         {
             _activeEngine = engine;
             RequireTargetOwnsFilesItemLocked(targetSession);
+            if (engine == "files") _bookmarkNavigationCursor = null;
         }
 
         var current = engine == "radio" ? _radio.Position : _files.Position;

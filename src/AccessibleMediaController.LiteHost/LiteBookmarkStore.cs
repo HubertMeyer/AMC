@@ -203,6 +203,51 @@ internal sealed class LiteBookmarkStore
     }
 
     /// <summary>
+    /// Odczytuje zakladke wzgledem rzeczywistej pozycji odtwarzania. To jest
+    /// operacja tylko do odczytu, wiec pozostaje bezpieczna takze wtedy, gdy
+    /// starszy interfejs AMC jest uruchomiony. Reguly wyboru (w tym
+    /// dwusekundowa tolerancja) pozostaja wspolne z pelnym AMC.
+    /// </summary>
+    public BookmarkEntry? FindRelative(
+        string sessionId,
+        string itemId,
+        TimeSpan currentPosition,
+        int direction)
+    {
+        if (!File.Exists(_databasePath))
+            throw new LiteRequestException("Nie znajduję bazy Biblioteki AMC.");
+        lock (_gate)
+        {
+            using var connection = OpenReadOnlyConnection();
+            using var transaction = connection.BeginTransaction();
+            var index = new BookmarkIndex(ReadBookmarks(connection, transaction));
+            return index.FindRelative(sessionId, itemId, currentPosition, direction);
+        }
+    }
+
+    /// <summary>
+    /// Kontynuuje nawigacje od konkretnej zakladki. Pelny AMC uzywa tej
+    /// sciezki przez piec sekund, aby dwie bardzo bliskie zakladki nadal byly
+    /// osiagalne kolejnymi nacisnieciami Shift+Page Up lub Shift+Page Down.
+    /// </summary>
+    public BookmarkEntry? FindAdjacent(
+        string sessionId,
+        string itemId,
+        string anchorBookmarkId,
+        int direction)
+    {
+        if (!File.Exists(_databasePath))
+            throw new LiteRequestException("Nie znajduję bazy Biblioteki AMC.");
+        lock (_gate)
+        {
+            using var connection = OpenReadOnlyConnection();
+            using var transaction = connection.BeginTransaction();
+            var index = new BookmarkIndex(ReadBookmarks(connection, transaction));
+            return index.FindAdjacent(sessionId, itemId, anchorBookmarkId, direction);
+        }
+    }
+
+    /// <summary>
     /// Wczytuje i zapisuje wyłącznie tabelę zakładek w jednej sekcji
     /// krytycznej. Odświeżanie kanału może dzięki temu użyć wspólnego
     /// ChapterIndex bez nadpisywania Biblioteki, historii ani kolejki.
@@ -282,6 +327,22 @@ internal sealed class LiteBookmarkStore
         {
             DataSource = _databasePath,
             Mode = SqliteOpenMode.ReadWrite,
+            Cache = SqliteCacheMode.Shared,
+            Pooling = false
+        }.ToString());
+        connection.Open();
+        using var setup = connection.CreateCommand();
+        setup.CommandText = "PRAGMA busy_timeout=5000;";
+        setup.ExecuteNonQuery();
+        return connection;
+    }
+
+    private SqliteConnection OpenReadOnlyConnection()
+    {
+        var connection = new SqliteConnection(new SqliteConnectionStringBuilder
+        {
+            DataSource = _databasePath,
+            Mode = SqliteOpenMode.ReadOnly,
             Cache = SqliteCacheMode.Shared,
             Pooling = false
         }.ToString());
