@@ -20,6 +20,8 @@ def test_settings_have_real_native_pages_and_explicit_accessible_names() -> None
     assert 'self.tempo.SetName("Sposób przeliczania zmienionego tempa")' in source
     assert 'self.keep_audio_edit_backups.SetName("Zachowuj kopie po edycji")' in source
     assert '"Długość przeskoku pod Ctrl+Alt+strzałką w lewo i w prawo"' in source
+    assert 'self.global_transient_previews.SetName(' in source
+    assert '"Wspólne podglądy nagrywania i nowych odcinków we wszystkich sesjach"' in source
 
 
 def test_enter_save_has_one_short_confirmation_and_reconfigures_the_host() -> None:
@@ -45,6 +47,7 @@ def test_all_exposed_choices_use_intentional_user_facing_labels() -> None:
     assert 'self.timeshift.SetName("Długość bufora transmisji")' in source
     assert '"keep_audio_edit_backups": self.keep_audio_edit_backups.GetValue()' in source
     assert '"custom_seek_seconds": self._custom_seek_seconds' in source
+    assert '"global_transient_previews": self.global_transient_previews.GetValue()' in source
     assert 'self.recording_folder.SetName("Domyślny folder nagrywania radia")' in source
     assert 'self.recording_folder_mode.SetName("Położenie nagrań Radia")' in source
     assert '"Ten sam folder co pobieranie Podcastów"' in source
@@ -83,3 +86,13 @@ def test_custom_seek_setting_is_applied_on_start_and_immediately_after_save() ->
     assert source.count("self.messages.custom_seek_seconds = resolve_custom_seek_seconds(") == 2
     assert "parse_custom_seek_length(self.custom_seek.GetValue())" in source
     assert '"Nie zapisano ustawień"' in source
+
+
+def test_global_preview_setting_gates_shortcuts_before_session_specific_code() -> None:
+    source = SOURCE.read_text(encoding="utf-8")
+    dispatch = source[source.index("    def _dispatch(self, action: Action)") :]
+    dispatch = dispatch[:dispatch.index("    def ", 5)]
+    gate = dispatch.index("action in TRANSIENT_PREVIEW_ACTIONS")
+    tidal = dispatch.index("self.navigator.active is SessionId.TIDAL")
+    assert gate < tidal
+    assert source.count("self._global_transient_previews = resolve_global_transient_previews(") == 2

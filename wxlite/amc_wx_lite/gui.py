@@ -182,6 +182,13 @@ from .transport_parity import (
     seek_step_seconds,
     time_announcement,
 )
+from .transient_preview_policy import (
+    TRANSIENT_PREVIEW_ACTIONS,
+    is_transient_preview_available,
+    load_global_transient_previews,
+    resolve_global_transient_previews,
+    transient_preview_unavailable_message,
+)
 from . import session_options
 from .radio_source import RadioSource
 from .radio_schedule_dialogs import RadioScheduleEditorDialog, RadioSchedulesDialog
@@ -3135,6 +3142,7 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
         podcast_settings: PodcastGlobalSettings,
         keep_audio_edit_backups: bool,
         custom_seek_seconds: int,
+        global_transient_previews: bool,
     ) -> None:
         super().__init__(parent, title="Ustawienia", size=(720, 620))
         self.notebook = wx.Notebook(self)
@@ -3193,6 +3201,18 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
         self.keep_audio_edit_backups.SetName("Zachowuj kopie po edycji")
         self.keep_audio_edit_backups.SetValue(keep_audio_edit_backups)
 
+        self.global_transient_previews = wx.CheckBox(
+            general,
+            label=(
+                "Wspólne podglądy &nagrywania i nowych odcinków "
+                "we wszystkich sesjach"
+            ),
+        )
+        self.global_transient_previews.SetName(
+            "Wspólne podglądy nagrywania i nowych odcinków we wszystkich sesjach"
+        )
+        self.global_transient_previews.SetValue(global_transient_previews)
+
         for control in (
             self.pause,
             self.follow,
@@ -3200,6 +3220,7 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
             self.radio_enter,
             self.pause_output_fallback,
             self.keep_audio_edit_backups,
+            self.global_transient_previews,
         ):
             general_layout.Add(control, 0, wx.BOTTOM | wx.EXPAND, 10)
 
@@ -3750,6 +3771,7 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
             ),
             "keep_audio_edit_backups": self.keep_audio_edit_backups.GetValue(),
             "custom_seek_seconds": self._custom_seek_seconds,
+            "global_transient_previews": self.global_transient_previews.GetValue(),
             "loudness_normalization": self.loudness.GetValue(),
             "smooth_track_transitions": self.smooth.GetValue(),
             "inter_track_silence_ms": self._silence_values[
@@ -3828,6 +3850,10 @@ class LiteFrame(wx.Frame):
         self.messages.custom_seek_seconds = resolve_custom_seek_seconds(
             self.options.custom_seek_seconds,
             self.messages.custom_seek_seconds,
+        )
+        self._global_transient_previews = resolve_global_transient_previews(
+            self.options.global_transient_previews,
+            load_global_transient_previews(self.layout.state_json),
         )
         self.radio = RadioSource(self.layout)
         self._radio_snapshot = LiteFrame._with_radio_recording_options(
@@ -5855,6 +5881,16 @@ class LiteFrame(wx.Frame):
         self._dispatch(action)
 
     def _dispatch(self, action: Action) -> None:
+        if (
+            action in TRANSIENT_PREVIEW_ACTIONS
+            and not is_transient_preview_available(
+                action,
+                self.navigator.active,
+                global_previews=self._global_transient_previews,
+            )
+        ):
+            self.announcer.say(transient_preview_unavailable_message(action))
+            return
         if (
             self.navigator.active is SessionId.PODCASTS
             and action in {
@@ -11071,6 +11107,10 @@ class LiteFrame(wx.Frame):
             self.options.custom_seek_seconds,
             self.messages.custom_seek_seconds,
         )
+        global_transient_previews = resolve_global_transient_previews(
+            self.options.global_transient_previews,
+            self._global_transient_previews,
+        )
         dialog = GeneralPlaybackOptionsDialog(
             self,
             self.options,
@@ -11079,6 +11119,7 @@ class LiteFrame(wx.Frame):
             podcast_settings,
             keep_audio_edit_backups,
             custom_seek_seconds,
+            global_transient_previews,
         )
         chosen: dict[str, object] | None = None
         try:
@@ -11108,6 +11149,10 @@ class LiteFrame(wx.Frame):
         self.messages.custom_seek_seconds = resolve_custom_seek_seconds(
             self.options.custom_seek_seconds,
             self.messages.custom_seek_seconds,
+        )
+        self._global_transient_previews = resolve_global_transient_previews(
+            self.options.global_transient_previews,
+            self._global_transient_previews,
         )
         # Komunikaty wierszy zmieniaja sie od razu. Nowe preferencje
         # nagrywania trafia do kolejnego Ctrl+R i nastepnej synchronizacji

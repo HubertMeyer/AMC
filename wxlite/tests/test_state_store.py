@@ -84,6 +84,17 @@ def test_invalid_custom_seek_type_returns_to_inherited_value() -> None:
     assert Options(custom_seek_seconds="pięć").clamp().custom_seek_seconds is None  # type: ignore[arg-type]
 
 
+def test_round_trip_keeps_global_transient_preview_choice() -> None:
+    store, _ = temp_store()
+    store.save(LiteState(options=Options(global_transient_previews=False)))
+
+    assert store.load().options.global_transient_previews is False
+
+
+def test_invalid_global_transient_preview_choice_returns_to_inherited_value() -> None:
+    assert Options(global_transient_previews="nie").clamp().global_transient_previews is None  # type: ignore[arg-type]
+
+
 def test_round_trip_keeps_radio_activity_presentation_options() -> None:
     store, _ = temp_store()
     state = LiteState(options=Options(

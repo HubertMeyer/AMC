@@ -157,6 +157,9 @@ class Options:
     #: Dłuższy przeskok Ctrl+Alt+strzałką. ``None`` dziedziczy dotychczasową
     #: wartość z profilu głównego AMC do pierwszego zapisu nowych ustawień.
     custom_seek_seconds: int | None = None
+    #: Czy trzy szybkie podglądy mają działać ze wszystkich sesji. ``None``
+    #: dziedziczy wybór z profilu głównego AMC do pierwszego zapisu.
+    global_transient_previews: bool | None = None
     #: Prywatne nadpisania ustawien nagrywania. ``None`` oznacza dalsze
     #: dziedziczenie wartosci z profilu glownego AMC; pusty folder oznacza
     #: swiadomy wybor systemowego folderu domyslnego hosta.
@@ -234,6 +237,11 @@ class Options:
                 )
             else:
                 self.custom_seek_seconds = None
+        if (
+            self.global_transient_previews is not None
+            and type(self.global_transient_previews) is not bool
+        ):
+            self.global_transient_previews = None
         if self.radio_recording_format is not None:
             formats = ("Mp3", "Aac", "Flac", "Original", "Wav")
             value = str(self.radio_recording_format).strip().casefold()
