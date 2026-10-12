@@ -29,6 +29,10 @@ def test_enter_save_has_one_short_confirmation_and_reconfigures_the_host() -> No
     method = source[source.index("def _show_general_playback_options") :]
     method = method[:method.index("def _with_radio_recording_options")]
     assert "dialog.Destroy()\n        self._restore_focus_after_dialog()" in method
+    assert method.index('self.announcer.say("Zapisano ustawienia")') < method.index(
+        "client = self.client"
+    )
+    assert method.count('self.announcer.say("Zapisano ustawienia")') == 1
 
 
 def test_all_exposed_choices_use_intentional_user_facing_labels() -> None:

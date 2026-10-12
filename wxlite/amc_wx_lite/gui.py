@@ -11028,9 +11028,12 @@ class LiteFrame(wx.Frame):
             else float("inf")
         )
         self._refresh_menu_state()
+        # Zapis na dysku jest juz zakonczony i to jest wlasciwy moment na
+        # krotkie potwierdzenie. Konfiguracja hosta idzie dalej w tle i nie
+        # moze opozniac komunikatu NVDA o kilka wywolan miedzyprocesowych.
+        self.announcer.say("Zapisano ustawienia")
         client = self.client
         if client is None:
-            self.announcer.say("Zapisano ustawienia")
             return
 
         def apply_to_host() -> list[str]:
@@ -11060,19 +11063,16 @@ class LiteFrame(wx.Frame):
         def applied_to_host(warnings: list[str]) -> None:
             if warnings:
                 self.announcer.say(
-                    "Zapisano ustawienia. Po ponownym uruchomieniu programu "
-                    "zostaną zastosowane: " + ", ".join(warnings)
+                    "Po ponownym uruchomieniu programu zostaną zastosowane: "
+                    + ", ".join(warnings)
                 )
-            else:
-                self.announcer.say("Zapisano ustawienia")
 
         self.runner.submit(
             "general-settings-apply",
             apply_to_host,
             applied_to_host,
             lambda _error: self.announcer.say(
-                "Zapisano ustawienia. Zostaną zastosowane po ponownym "
-                "uruchomieniu programu"
+                "Zastosowanie ustawień wymaga ponownego uruchomienia programu"
             ),
         )
 
