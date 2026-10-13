@@ -612,6 +612,37 @@ class LiteHostClient:
             timeout=30.0,
         )
 
+    def wiim_add_network_stream(self, name: str, url: str) -> Any:
+        return self.call(
+            "wiim.networkStreamAdd",
+            {"name": name, "url": url},
+            timeout=30.0,
+        )
+
+    def wiim_network_stream_edit_info(self, stream_id: str) -> Any:
+        """Read an address only for the explicit F2 edit dialog."""
+        return self.call(
+            "wiim.networkStreamEditInfo",
+            {"streamId": stream_id},
+            timeout=15.0,
+        )
+
+    def wiim_edit_network_stream(
+        self, stream_id: str, name: str, url: str
+    ) -> Any:
+        return self.call(
+            "wiim.networkStreamEdit",
+            {"streamId": stream_id, "name": name, "url": url},
+            timeout=30.0,
+        )
+
+    def wiim_remove_network_streams(self, stream_ids: list[str]) -> Any:
+        return self.call(
+            "wiim.networkStreamRemove",
+            {"itemIds": list(stream_ids)},
+            timeout=30.0,
+        )
+
     def sonos_targets(self) -> Any:
         """List Sonos groups; account tokens never leave the C# host."""
         return self.call("sonos.targets", timeout=60.0)

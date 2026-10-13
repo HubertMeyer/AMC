@@ -64,6 +64,8 @@ class MenuItem:
     needs_podcast_inbox: bool = False
     #: Aktywna wyłącznie w jednym z trzech głównych widoków kolekcji TIDAL.
     needs_tidal_collection: bool = False
+    #: Aktywna tylko na liście zapisanych strumieni, nie na urządzeniu WiiM.
+    needs_wiim_stream: bool = False
     #: Pozycja PRZELACZNIKA: wx ma ja wstawic jako ``AppendCheckItem``.
     #:
     #: Nie jest to kosmetyka. Zwykla pozycja menu nie niesie stanu, wiec
@@ -162,6 +164,13 @@ def build_menus() -> tuple[Menu, ...]:
                 "Zapisane &strumienie WiiM",
                 Action.VIEW_WIIM_NETWORK_STREAMS,
                 shortcut="Ctrl+O",
+                accelerator=False,
+                visible_sessions=WIIM_ONLY,
+            ),
+            MenuItem(
+                "Nowy str&umień WiiM…",
+                Action.ADD_WIIM_NETWORK_STREAM,
+                shortcut="Ctrl+N",
                 accelerator=False,
                 visible_sessions=WIIM_ONLY,
             ),
@@ -366,13 +375,35 @@ def build_menus() -> tuple[Menu, ...]:
             ),
             SEPARATOR,
             MenuItem("Zmień nazwę w Bibliote&ce", Action.RENAME_LIBRARY_ITEM,
-                     shortcut="F2", accelerator=False, needs_selection=True),
+                     shortcut="F2", accelerator=False, needs_selection=True,
+                     visible_sessions=LOCAL_MEDIA),
             MenuItem("Zmień nazwę pliku na dysku, plik ory&ginalny", Action.RENAME_LOCAL_FILE,
-                     shortcut="Shift+F2", accelerator=False, needs_selection=True),
+                     shortcut="Shift+F2", accelerator=False, needs_selection=True,
+                     visible_sessions=FILES_ONLY),
             MenuItem("Usuń z bieżącego widoku, plik pozos&taje", Action.REMOVE_SELECTED,
-                     shortcut="Delete", accelerator=False, needs_selection=True),
+                     shortcut="Delete", accelerator=False, needs_selection=True,
+                     visible_sessions=LOCAL_MEDIA),
             MenuItem("Przenieś do Kosza, operac&ja plikowa", Action.RECYCLE_SELECTED,
-                     shortcut="Shift+Delete", accelerator=False, needs_selection=True),
+                     shortcut="Shift+Delete", accelerator=False, needs_selection=True,
+                     visible_sessions=FILES_ONLY),
+            MenuItem(
+                "Edytuj strumień WiiM (&X)…",
+                Action.EDIT_WIIM_NETWORK_STREAM,
+                shortcut="F2",
+                accelerator=False,
+                needs_selection=True,
+                needs_wiim_stream=True,
+                visible_sessions=WIIM_ONLY,
+            ),
+            MenuItem(
+                "Usuń strumień WiiM z AMC (&Q)",
+                Action.REMOVE_WIIM_NETWORK_STREAMS,
+                shortcut="Delete",
+                accelerator=False,
+                needs_selection=True,
+                needs_wiim_stream=True,
+                visible_sessions=WIIM_ONLY,
+            ),
             SEPARATOR,
             # Oryginal ma te pozycje w TYM SAMYM menu co widoki Kolejka/
             # Historia/Zakladki, po separatorze (MainWindow.xaml:490-491):

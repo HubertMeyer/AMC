@@ -22,6 +22,7 @@ from amc_wx_lite.shortcuts import (
 )
 from amc_wx_lite.wiim_source import (
     device_rows,
+    network_stream_edit_info,
     network_stream_rows,
     now_playing_label,
     preset_choices,
@@ -128,6 +129,12 @@ def test_wiim_host_client_sends_only_device_id_command_and_volume() -> None:
     client.wiim_activate_preset("device-1", 5)
     client.wiim_network_streams()
     client.wiim_play_network_stream("device-1", "stream-7")
+    client.wiim_network_stream_edit_info("stream-7")
+    client.wiim_add_network_stream("Radio Poznań", "https://radio.example/live")
+    client.wiim_edit_network_stream(
+        "stream-7", "Radio Poznań 2", "https://radio.example/live2"
+    )
+    client.wiim_remove_network_streams(["stream-7", "stream-8"])
 
     assert calls == [
         ("wiim.devices", None, 15.0),
@@ -147,6 +154,30 @@ def test_wiim_host_client_sends_only_device_id_command_and_volume() -> None:
         (
             "wiim.networkStreamPlay",
             {"deviceId": "device-1", "streamId": "stream-7"},
+            30.0,
+        ),
+        (
+            "wiim.networkStreamEditInfo",
+            {"streamId": "stream-7"},
+            15.0,
+        ),
+        (
+            "wiim.networkStreamAdd",
+            {"name": "Radio Poznań", "url": "https://radio.example/live"},
+            30.0,
+        ),
+        (
+            "wiim.networkStreamEdit",
+            {
+                "streamId": "stream-7",
+                "name": "Radio Poznań 2",
+                "url": "https://radio.example/live2",
+            },
+            30.0,
+        ),
+        (
+            "wiim.networkStreamRemove",
+            {"itemIds": ["stream-7", "stream-8"]},
             30.0,
         ),
     ]
@@ -259,6 +290,59 @@ def test_ctrl_o_is_wiim_streams_only_in_wiim_context() -> None:
         player_view=False,
         radio_session=False,
     ) is Action.OPEN_FILE_DIALOG
+
+
+def test_wiim_stream_edit_shortcuts_are_active_only_inside_stream_list() -> None:
+    for key, action in (
+        ("N", Action.ADD_WIIM_NETWORK_STREAM),
+        ("O", Action.VIEW_WIIM_NETWORK_STREAMS),
+    ):
+        assert resolve(
+            Chord(key, ctrl=True),
+            player_view=False,
+            radio_session=False,
+            wiim_session=True,
+        ) is action
+
+    assert resolve(
+        Chord("F2"),
+        player_view=False,
+        radio_session=False,
+        wiim_session=True,
+    ) is None
+    assert resolve(
+        Chord("Delete"),
+        player_view=False,
+        radio_session=False,
+        wiim_session=True,
+    ) is None
+    assert resolve(
+        Chord("F2"),
+        player_view=False,
+        radio_session=False,
+        wiim_session=True,
+        wiim_streams=True,
+    ) is Action.EDIT_WIIM_NETWORK_STREAM
+    assert resolve(
+        Chord("Delete"),
+        player_view=False,
+        radio_session=False,
+        wiim_session=True,
+        wiim_streams=True,
+    ) is Action.REMOVE_WIIM_NETWORK_STREAMS
+
+
+def test_wiim_stream_edit_info_is_explicit_and_user_facing() -> None:
+    assert network_stream_edit_info({
+        "streamId": "stream-7",
+        "name": "Radio Poznań",
+        "url": "https://radio.example/live",
+        "runtimeObject": "NetworkStreamSettings { Id = stream-7 }",
+    }) == (
+        "stream-7",
+        "Radio Poznań",
+        "https://radio.example/live",
+    )
 
 
 def test_wiim_network_stream_view_uses_only_user_labels_and_returns_to_device() -> None:

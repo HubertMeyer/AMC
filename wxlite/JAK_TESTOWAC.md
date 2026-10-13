@@ -185,16 +185,21 @@ WiiM:
    identyfikator. Enter uruchamia strumień na tym urządzeniu i pokazuje jego
    odtwarzacz. Backspace wraca dokładnie na wcześniejsze urządzenie.
 7. Jeżeli lista Strumieni WiiM jest pusta, program mówi „Strumienie WiiM,
-   zero elementów”. Dodawanie `Ctrl+N`, import `Ctrl+Shift+O`, eksport
-   `Ctrl+E`, edycja `F2`, usuwanie Delete i sortowanie `Alt+1/2/3` pozostają
-   do przeniesienia. Skróty `Ctrl+Shift+1–0/-/=` nadal uruchamiają mapowane
-   presety AMC.
+   zero elementów”. `Ctrl+N` dodaje nazwę i adres, `F2` edytuje jeden wybrany
+   wpis, a Delete usuwa zaznaczone wpisy wyłącznie z profilu AMC. Usuwanie ma
+   jawnie powiedzieć, że WiiM Home pozostaje bez zmian. Po każdej operacji
+   lista wraca na zmieniony wpis; adres wolno pokazać tylko w jawnym oknie
+   edycji F2, nigdy w zwykłej nazwie dostępnościowej. Na liście urządzeń F2
+   i Delete nie są przejmowane przez obsługę strumieni. Import `Ctrl+Shift+O`,
+   eksport `Ctrl+E` i sortowanie `Alt+1/2/3` pozostają do przeniesienia.
+   Skróty `Ctrl+Shift+1–0/-/=` nadal uruchamiają mapowane presety AMC.
 
 Wynik odbioru 10 października: urządzenie i stan są prawidłowo widziane,
 stację można uruchomić i zatrzymać. Natywne presety pod `Ctrl+Alt+P` i
 odtwarzanie zapisanych Strumieni WiiM pod `Ctrl+O` są podłączone technicznie
 i czekają na powyższy odbiór na obudzonym urządzeniu. Do przeniesienia
-pozostaje zarządzanie listą Strumieni oraz pozostałe opcje sprzętowe WiiM.
+pozostaje odbiór zarządzania listą Strumieni na żywym urządzeniu, następnie
+import, eksport, sortowanie oraz pozostałe opcje sprzętowe WiiM.
 
 Sonos:
 

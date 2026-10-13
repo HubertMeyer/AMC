@@ -396,6 +396,14 @@ internal sealed class LiteEngineHandlers : IDisposable
                 RequireWiiM().ListNetworkStreams(),
             [LiteWiiMContract.PlayNetworkStreamOperation] = (request, _) =>
                 RequireWiiM().PlayNetworkStream(request.Args),
+            [LiteWiiMContract.NetworkStreamEditInfoOperation] = (request, _) =>
+                RequireWiiM().NetworkStreamEditInfo(request.Args),
+            [LiteWiiMContract.AddNetworkStreamOperation] = (request, _) =>
+                AddWiiMNetworkStream(request.Args),
+            [LiteWiiMContract.EditNetworkStreamOperation] = (request, _) =>
+                EditWiiMNetworkStream(request.Args),
+            [LiteWiiMContract.RemoveNetworkStreamsOperation] = (request, _) =>
+                RemoveWiiMNetworkStreams(request.Args),
             [LiteSonosContract.TargetsOperation] = (_, _) =>
                 RequireSonos().ListTargets(),
             [LiteSonosContract.SnapshotOperation] = (request, _) =>
@@ -804,6 +812,20 @@ internal sealed class LiteEngineHandlers : IDisposable
         RequireProfileMutations().AddRadioStation(
             LiteArgs.RequireText(args, "name"),
             LiteArgs.RequireText(args, "url"));
+
+    private object AddWiiMNetworkStream(JsonElement args) =>
+        RequireProfileMutations().AddWiiMNetworkStream(
+            LiteArgs.RequireText(args, "name"),
+            LiteArgs.RequireText(args, "url"));
+
+    private object EditWiiMNetworkStream(JsonElement args) =>
+        RequireProfileMutations().EditWiiMNetworkStream(
+            LiteArgs.RequireText(args, "streamId"),
+            LiteArgs.RequireText(args, "name"),
+            LiteArgs.RequireText(args, "url"));
+
+    private object RemoveWiiMNetworkStreams(JsonElement args) =>
+        RequireProfileMutations().RemoveWiiMNetworkStreams(ReadIds(args));
 
     private object RemoveProfileItems(JsonElement args) =>
         RequireProfileMutations().Remove(

@@ -516,11 +516,16 @@ własnej normalizacji diakrytyków.
   właściwy URL nie opuszcza C# i nie trafia do nazwy, komunikatu ani NVDA.
   Backspace wraca na dokładnie to urządzenie. Odtwarzacz pokazuje zapisaną
   nazwę także wtedy, gdy firmware podaje jako metadane tylko adres manifestu.
+  `Ctrl+N`, `F2` i Delete zarządzają tą samą listą profilu przez serializowane
+  operacje hosta. Zwykły widok otrzymuje wyłącznie nazwę; adres wraca do
+  Pythona tylko po jawnym F2, do oznaczonego pola edycji. Delete czyści też
+  zapamiętany wybór urządzenia i kolejności AMC, ale nie zmienia WiiM Home.
+  F2/Delete są kontekstowe i nie przechwytują listy urządzeń.
   Próba na dwóch urządzeniach zapisanych w bieżącym profilu potwierdziła listę
   i bezpieczny komunikat braku odpowiedzi; oba urządzenia były w czasie próby
   niedostępne, więc żywy transport wymaga jeszcze odbioru na włączonym WiiM.
-- Do dalszego portu pozostaje zarządzanie Strumieniami WiiM (dodawanie,
-  import, eksport, edycja, usuwanie i sortowanie), wejścia, wyjścia, korektor,
+- Do dalszego portu pozostaje import, eksport i sortowanie Strumieni WiiM,
+  wejścia, wyjścia, korektor,
   powtarzanie i timer, a następnie Sonos i Spotify, dalsze ustawienia oraz
   pozostała redakcja materiałów.
 

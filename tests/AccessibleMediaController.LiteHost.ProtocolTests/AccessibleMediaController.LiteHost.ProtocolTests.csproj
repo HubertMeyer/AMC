@@ -24,5 +24,7 @@
              Link="LiteRadioLibraryMutation.cs" />
     <Compile Include="..\..\src\AccessibleMediaController.LiteHost\LiteRadioFavoritesExport.cs"
              Link="LiteRadioFavoritesExport.cs" />
+    <Compile Include="..\..\src\AccessibleMediaController.LiteHost\LiteWiiMProfileMutation.cs"
+             Link="LiteWiiMProfileMutation.cs" />
   </ItemGroup>
 </Project>

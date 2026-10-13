@@ -619,15 +619,21 @@ class Navigator:
         *,
         device_id: str,
         return_id: str | None,
+        preferred_id: str | None = None,
     ) -> list[object]:
         """Pokaż zapisane strumienie jako podwidok wybranego urządzenia."""
         state = self.sessions[SessionId.WIIM]
+        remembered = (
+            state.model.selected_id
+            if state.library_view is LibraryView.WIIM_NETWORK_STREAMS
+            else None
+        )
         if state.library_view is not LibraryView.WIIM_NETWORK_STREAMS:
             state.wiim_device_rows = tuple(state.model.rows)
         state.wiim_device_return_id = return_id
         state.library_item_id = device_id
         state.library_view = LibraryView.WIIM_NETWORK_STREAMS
-        state.model.replace(rows)
+        state.model.replace(rows, preferred_id=preferred_id or remembered)
         state.view = View.LIST
         count = len(rows)
         return [Announce(

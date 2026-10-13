@@ -124,6 +124,7 @@ from .wiim_source import (
     WiiMPresetChoice,
     WiiMPayloadError,
     device_rows as wiim_device_rows,
+    network_stream_edit_info as wiim_network_stream_edit_info,
     network_stream_rows as wiim_network_stream_rows,
     now_playing_label as wiim_now_playing_label,
     preset_choices as wiim_preset_choices,
@@ -1698,17 +1699,26 @@ class SearchDialog(wx.Dialog):
 class StationDialog(wx.Dialog):
     """Dodanie/zmiana stacji. Zwykle pola z etykietami - czytnik je nazwie."""
 
-    def __init__(self, parent: wx.Window, title: str, name: str = "", url: str = "") -> None:
+    def __init__(
+        self,
+        parent: wx.Window,
+        title: str,
+        name: str = "",
+        url: str = "",
+        *,
+        network_stream: bool = False,
+    ) -> None:
         super().__init__(parent, title=title)
         panel = wx.Panel(self)
         grid = wx.FlexGridSizer(2, 2, 8, 8)
 
-        name_label = wx.StaticText(panel, label="&Nazwa stacji:")
+        item_name = "strumienia" if network_stream else "stacji"
+        name_label = wx.StaticText(panel, label=f"&Nazwa {item_name}:")
         self.name_field = wx.TextCtrl(panel, value=name, size=(320, -1))
-        self.name_field.SetName("Nazwa stacji")
+        self.name_field.SetName(f"Nazwa {item_name}")
         url_label = wx.StaticText(panel, label="&Adres (http/https):")
         self.url_field = wx.TextCtrl(panel, value=url, size=(320, -1))
-        self.url_field.SetName("Adres stacji")
+        self.url_field.SetName(f"Adres {item_name}")
 
         grid.AddMany(
             [
@@ -4788,6 +4798,12 @@ class LiteFrame(wx.Frame):
                 enabled = False
             if entry.needs_tidal_collection and not tidal_collection:
                 enabled = False
+            if entry.needs_wiim_stream and (
+                self.navigator.active is not SessionId.WIIM
+                or session.library_view is not LibraryView.WIIM_NETWORK_STREAMS
+                or selected_kind != "wiimNetworkStream"
+            ):
+                enabled = False
             if entry.needs_playback and not playing:
                 enabled = False
             if entry.needs_selection and not has_row:
@@ -6506,6 +6522,12 @@ class LiteFrame(wx.Frame):
             tidal_session=self.navigator.active is SessionId.TIDAL,
             tidal_collection=tidal_collection,
             wiim_session=self.navigator.active is SessionId.WIIM,
+            wiim_streams=(
+                not player
+                and self.navigator.active is SessionId.WIIM
+                and self.navigator.session.library_view
+                is LibraryView.WIIM_NETWORK_STREAMS
+            ),
         )
         if action is None:
             # Klawisz NIE jest nasz: oddajemy go kontrolce, zeby natywna
@@ -6626,6 +6648,12 @@ class LiteFrame(wx.Frame):
             self._show_presets()
         elif action is Action.VIEW_WIIM_NETWORK_STREAMS:
             self._show_wiim_network_streams()
+        elif action is Action.ADD_WIIM_NETWORK_STREAM:
+            self._add_wiim_network_stream()
+        elif action is Action.EDIT_WIIM_NETWORK_STREAM:
+            self._edit_wiim_network_stream()
+        elif action is Action.REMOVE_WIIM_NETWORK_STREAMS:
+            self._remove_wiim_network_streams()
         elif action is Action.ASSIGN_PRESET:
             self._assign_preset()
         elif (slot := preset_slot(action)) is not None:
@@ -7317,7 +7345,11 @@ class LiteFrame(wx.Frame):
             and row.service_id
         ):
             return row.item_id, row.service_id, row.title
-        device_id = self._wiim_active_device_id
+        device_id = (
+            state.library_item_id
+            if state.library_view is LibraryView.WIIM_NETWORK_STREAMS
+            else None
+        ) or self._wiim_active_device_id
         if not device_id:
             return None
         rows = (
@@ -7338,7 +7370,12 @@ class LiteFrame(wx.Frame):
             return None
         return row.item_id, device_id, row.title
 
-    def _show_wiim_network_streams(self) -> None:
+    def _show_wiim_network_streams(
+        self,
+        *,
+        preferred_stream_id: str | None = None,
+        announcement: str | None = None,
+    ) -> None:
         """Ctrl+O w WiiM: zapisane strumienie dla wybranego urządzenia."""
         client = self.client
         context = self._wiim_device_context()
@@ -7349,6 +7386,7 @@ class LiteFrame(wx.Frame):
             self.announcer.say("Wybierz urządzenie WiiM")
             return
         item_id, device_id, _device_title = context
+        self._wiim_active_device_id = device_id
 
         def done(payload: object) -> None:
             if self.navigator.active is not SessionId.WIIM:
@@ -7365,7 +7403,13 @@ class LiteFrame(wx.Frame):
                 rows,
                 device_id=device_id,
                 return_id=item_id,
+                preferred_id=(
+                    f"wiim-stream:{preferred_stream_id}"
+                    if preferred_stream_id else None
+                ),
             ))
+            if announcement:
+                self.announcer.say(announcement)
 
         self.runner.submit(
             "wiim-network-streams",
@@ -7373,6 +7417,149 @@ class LiteFrame(wx.Frame):
             done,
             lambda error: self.announcer.say(
                 f"Nie udało się odczytać strumieni WiiM: {error}"
+            ),
+        )
+
+    def _selected_wiim_stream_rows(self) -> list[Row]:
+        """Zwróć tylko zapisane strumienie, nigdy urządzenie ani techniczny wpis."""
+        return [
+            row for row in self._selected_action_rows()
+            if row.kind == "wiimNetworkStream"
+            and row.service_kind == "wiimNetworkStream"
+            and bool(row.service_id)
+        ]
+
+    def _add_wiim_network_stream(self) -> None:
+        client = self._profile_edit_client()
+        if client is None:
+            return
+        context = self._wiim_device_context()
+        if context is None:
+            self.announcer.say("Wybierz urządzenie WiiM")
+            return
+        with StationDialog(
+            self,
+            "Dodaj strumień WiiM",
+            network_stream=True,
+        ) as dialog:
+            if dialog.ShowModal() != wx.ID_OK:
+                self._restore_focus_after_dialog()
+                return
+            name, url = dialog.values
+
+        def done(payload: object) -> None:
+            result = payload if isinstance(payload, dict) else {}
+            preferred = str(result.get("preferredStreamId") or "") or None
+            message = str(result.get("message") or f"Dodano strumień WiiM: {name}")
+            self._show_wiim_network_streams(
+                preferred_stream_id=preferred,
+                announcement=message,
+            )
+
+        self.runner.submit(
+            "wiim-stream-edit",
+            lambda: client.wiim_add_network_stream(name, url),
+            done,
+            lambda error: self.announcer.say(f"Nie dodano strumienia WiiM: {error}"),
+        )
+
+    def _edit_wiim_network_stream(self) -> None:
+        rows = self._selected_wiim_stream_rows()
+        if len(rows) != 1:
+            self.announcer.say("Do edycji wybierz jeden strumień WiiM")
+            return
+        client = self._profile_edit_client()
+        if client is None:
+            return
+        selected = rows[0]
+        stream_id = selected.service_id or ""
+
+        def loaded(payload: object) -> None:
+            try:
+                loaded_id, current_name, current_url = wiim_network_stream_edit_info(payload)
+            except WiiMPayloadError as error:
+                self.announcer.say(str(error))
+                return
+            with StationDialog(
+                self,
+                "Edytuj strumień WiiM",
+                current_name,
+                current_url,
+                network_stream=True,
+            ) as dialog:
+                if dialog.ShowModal() != wx.ID_OK:
+                    self._restore_focus_after_dialog()
+                    return
+                name, url = dialog.values
+
+            def saved(result_payload: object) -> None:
+                result = result_payload if isinstance(result_payload, dict) else {}
+                preferred = str(result.get("preferredStreamId") or loaded_id)
+                message = str(
+                    result.get("message") or f"Zapisano strumień WiiM: {name}"
+                )
+                self._show_wiim_network_streams(
+                    preferred_stream_id=preferred,
+                    announcement=message,
+                )
+
+            self.runner.submit(
+                "wiim-stream-edit",
+                lambda: client.wiim_edit_network_stream(loaded_id, name, url),
+                saved,
+                lambda error: self.announcer.say(
+                    f"Nie zapisano strumienia WiiM: {error}"
+                ),
+            )
+
+        self.runner.submit(
+            "wiim-stream-edit-info",
+            lambda: client.wiim_network_stream_edit_info(stream_id),
+            loaded,
+            lambda error: self.announcer.say(
+                f"Nie odczytano strumienia WiiM: {error}"
+            ),
+        )
+
+    def _remove_wiim_network_streams(self) -> None:
+        rows = self._selected_wiim_stream_rows()
+        if not rows:
+            self.announcer.say("Wybierz strumień WiiM do usunięcia")
+            return
+        client = self._profile_edit_client()
+        if client is None:
+            return
+        prompt = (
+            f"Usunąć strumień {rows[0].title} z AMC? "
+            "Lista w aplikacji WiiM Home pozostanie bez zmian."
+            if len(rows) == 1 else
+            f"Usunąć wybrane strumienie z AMC: {len(rows)}? "
+            "Lista w aplikacji WiiM Home pozostanie bez zmian."
+        )
+        if wx.MessageBox(
+            prompt,
+            "Potwierdzenie",
+            wx.YES_NO | wx.NO_DEFAULT | wx.ICON_QUESTION,
+            self,
+        ) != wx.YES:
+            self._restore_focus_after_dialog()
+            return
+        stream_ids = [row.service_id for row in rows if row.service_id]
+
+        def done(payload: object) -> None:
+            result = payload if isinstance(payload, dict) else {}
+            message = str(
+                result.get("message")
+                or f"Usunięto strumienie WiiM: {len(stream_ids)}"
+            )
+            self._show_wiim_network_streams(announcement=message)
+
+        self.runner.submit(
+            "wiim-stream-edit",
+            lambda: client.wiim_remove_network_streams(stream_ids),
+            done,
+            lambda error: self.announcer.say(
+                f"Nie usunięto strumieni WiiM: {error}"
             ),
         )
 
@@ -15063,6 +15250,12 @@ class LiteFrame(wx.Frame):
                     LibraryView.TIDAL_FAVORITES,
                     LibraryView.TIDAL_PLAYLISTS,
                 )
+            ),
+            wiim_session=self.navigator.active is SessionId.WIIM,
+            wiim_streams=(
+                not player
+                and self.navigator.active is SessionId.WIIM
+                and session.library_view is LibraryView.WIIM_NETWORK_STREAMS
             ),
         )
 

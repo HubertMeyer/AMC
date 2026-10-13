@@ -90,6 +90,18 @@ def network_stream_rows(payload: object, *, device_id: str) -> tuple[Row, ...]:
     return tuple(rows)
 
 
+def network_stream_edit_info(payload: object) -> tuple[str, str, str]:
+    """Dane do jawnie otwartego okna F2, nie do zwykłej nazwy dostępnej."""
+    if not isinstance(payload, dict):
+        raise WiiMPayloadError("Host WiiM zwrócił nieprawidłowe dane strumienia")
+    stream_id = _text(payload.get("streamId"))
+    name = _text(payload.get("name"))
+    url = _text(payload.get("url"))
+    if not stream_id or not name or not url:
+        raise WiiMPayloadError("Nie można odczytać danych wybranego strumienia WiiM")
+    return stream_id, name, url
+
+
 def snapshot(payload: object) -> dict:
     """Odetnij nieznane pola przed użyciem danych do nazw kontrolek."""
     if not isinstance(payload, dict):

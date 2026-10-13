@@ -1,0 +1,199 @@
+using System.Text.Json.Nodes;
+using AccessibleMediaController.Core.Devices.WiiM;
+using AccessibleMediaController.LiteHost.Protocol;
+
+namespace AccessibleMediaController.LiteHost;
+
+internal sealed record LiteWiiMNetworkStreamMutationResult(
+    string PreferredStreamId,
+    string Title,
+    int AddedCount,
+    int UpdatedCount);
+
+internal static class LiteWiiMProfileMutation
+{
+    public static LiteWiiMNetworkStreamMutationResult Add(
+        JsonObject root,
+        string requestedName,
+        string requestedUrl)
+    {
+        var name = CleanRequiredText(
+            requestedName,
+            "Nazwa strumienia nie może być pusta.");
+        var url = NormalizeUrl(requestedUrl);
+        var streams = EnsureNetworkStreams(root);
+        var duplicate = streams.OfType<JsonObject>().FirstOrDefault(stream =>
+            WiiMPlaybackUriPolicy.TryNormalize(
+                ReadText(stream, "streamUrl", "StreamUrl"),
+                out var candidate)
+            && string.Equals(candidate, url, StringComparison.OrdinalIgnoreCase));
+        if (duplicate is not null)
+        {
+            duplicate["name"] = name;
+            return new(
+                ReadText(duplicate, "id", "Id"),
+                name,
+                AddedCount: 0,
+                UpdatedCount: 1);
+        }
+
+        var id = $"wiim:stream:{Guid.NewGuid():N}";
+        streams.Add(new JsonObject
+        {
+            ["id"] = id,
+            ["name"] = name,
+            ["streamUrl"] = url,
+            ["addedUtcTicks"] = DateTime.UtcNow.Ticks
+        });
+        return new(id, name, AddedCount: 1, UpdatedCount: 0);
+    }
+
+    public static LiteWiiMNetworkStreamMutationResult Edit(
+        JsonObject root,
+        string streamId,
+        string requestedName,
+        string requestedUrl)
+    {
+        var id = CleanRequiredText(
+            streamId,
+            "Nie wskazano strumienia WiiM do zmiany.");
+        var name = CleanRequiredText(
+            requestedName,
+            "Nazwa strumienia nie może być pusta.");
+        var url = NormalizeUrl(requestedUrl);
+        var streams = EnsureNetworkStreams(root);
+        var saved = streams.OfType<JsonObject>().FirstOrDefault(stream =>
+            string.Equals(ReadText(stream, "id", "Id"), id, StringComparison.Ordinal))
+            ?? throw new LiteRequestException(
+                "Nie można odnaleźć tego strumienia na zapisanej liście AMC.");
+        var duplicate = streams.OfType<JsonObject>().FirstOrDefault(stream =>
+            !ReferenceEquals(stream, saved)
+            && WiiMPlaybackUriPolicy.TryNormalize(
+                ReadText(stream, "streamUrl", "StreamUrl"),
+                out var candidate)
+            && string.Equals(candidate, url, StringComparison.OrdinalIgnoreCase));
+        if (duplicate is not null)
+            throw new LiteRequestException(
+                "Ten adres jest już zapisany jako: "
+                + ReadText(duplicate, "name", "Name"));
+
+        saved["name"] = name;
+        saved["streamUrl"] = url;
+        return new(id, name, AddedCount: 0, UpdatedCount: 1);
+    }
+
+    public static string[] Remove(JsonObject root, IReadOnlyCollection<string> streamIds)
+    {
+        var ids = streamIds
+            .Select(value => value?.Trim() ?? "")
+            .Where(value => value.Length > 0)
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+        if (ids.Length == 0)
+            throw new LiteRequestException(
+                "Wybierz zapisany strumień WiiM do usunięcia.");
+
+        var wiiM = EnsureWiiM(root);
+        var streams = EnsureNetworkStreams(root);
+        var titles = streams.OfType<JsonObject>()
+            .Where(stream => ids.Contains(
+                ReadText(stream, "id", "Id"),
+                StringComparer.Ordinal))
+            .Select(stream => ReadText(stream, "name", "Name"))
+            .Where(title => title.Length > 0)
+            .ToArray();
+        if (titles.Length == 0)
+            throw new LiteRequestException(
+                "Nie można odnaleźć wybranych strumieni na zapisanej liście AMC.");
+
+        for (var index = streams.Count - 1; index >= 0; index--)
+        {
+            if (streams[index] is JsonObject stream
+                && ids.Contains(ReadText(stream, "id", "Id"), StringComparer.Ordinal))
+                streams.RemoveAt(index);
+        }
+        if (wiiM["devices"] is JsonArray devices)
+        {
+            foreach (var device in devices.OfType<JsonObject>())
+            {
+                var remembered = ReadText(
+                    device,
+                    "lastActivatedNetworkStreamId",
+                    "LastActivatedNetworkStreamId");
+                if (ids.Contains(remembered, StringComparer.Ordinal))
+                    device["lastActivatedNetworkStreamId"] = null;
+            }
+        }
+        RemoveOrderIds(root, ids);
+        return titles;
+    }
+
+    private static string NormalizeUrl(string requestedUrl)
+    {
+        if (WiiMPlaybackUriPolicy.TryNormalize(requestedUrl, out var url))
+            return url;
+        throw new LiteRequestException(
+            "Nie można zapisać tego adresu strumienia WiiM.");
+    }
+
+    private static string CleanRequiredText(string? value, string message)
+    {
+        var cleaned = value?.Trim() ?? "";
+        return cleaned.Length > 0 ? cleaned : throw new LiteRequestException(message);
+    }
+
+    private static JsonObject EnsureWiiM(JsonObject root)
+    {
+        if (root["wiiM"] is JsonObject current) return current;
+        if (root["WiiM"] is JsonObject legacy) return legacy;
+        var created = new JsonObject();
+        root["wiiM"] = created;
+        return created;
+    }
+
+    private static JsonArray EnsureNetworkStreams(JsonObject root)
+    {
+        var wiiM = EnsureWiiM(root);
+        if (wiiM["networkStreams"] is JsonArray current) return current;
+        if (wiiM["NetworkStreams"] is JsonArray legacy) return legacy;
+        var created = new JsonArray();
+        wiiM["networkStreams"] = created;
+        return created;
+    }
+
+    private static void RemoveOrderIds(
+        JsonObject root,
+        IReadOnlyCollection<string> removedIds)
+    {
+        if (root["collectionOrders"] is not JsonObject orders) return;
+        foreach (var propertyName in new[]
+                 {
+                     "libraryAddedItemIdsBySession",
+                     "libraryItemIdsBySession"
+                 })
+        {
+            if (orders[propertyName] is not JsonObject bySession
+                || bySession["wiim"] is not JsonArray values)
+                continue;
+            for (var index = values.Count - 1; index >= 0; index--)
+            {
+                var value = values[index]?.GetValue<string?>()?.Trim();
+                if (value is not null
+                    && removedIds.Contains(value, StringComparer.Ordinal))
+                    values.RemoveAt(index);
+            }
+        }
+    }
+
+    private static string ReadText(JsonObject source, params string[] names)
+    {
+        foreach (var name in names)
+        {
+            if (source[name] is not JsonValue value) continue;
+            if (value.TryGetValue<string>(out var text)
+                && !string.IsNullOrWhiteSpace(text))
+                return text.Trim();
+        }
+        return "";
+    }
+}

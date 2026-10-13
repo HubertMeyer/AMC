@@ -17,6 +17,10 @@ public static class LiteWiiMContract
     public const string ActivatePresetOperation = "wiim.presetActivate";
     public const string NetworkStreamsOperation = "wiim.networkStreams";
     public const string PlayNetworkStreamOperation = "wiim.networkStreamPlay";
+    public const string NetworkStreamEditInfoOperation = "wiim.networkStreamEditInfo";
+    public const string AddNetworkStreamOperation = "wiim.networkStreamAdd";
+    public const string EditNetworkStreamOperation = "wiim.networkStreamEdit";
+    public const string RemoveNetworkStreamsOperation = "wiim.networkStreamRemove";
 
     public static string ReadDeviceId(JsonElement args) =>
         LiteArgs.RequireText(args, "deviceId").Trim();
@@ -67,6 +71,9 @@ public static class LiteWiiMContract
         JsonElement args) => new(
             ReadDeviceId(args),
             LiteArgs.RequireText(args, "streamId").Trim());
+
+    public static string ReadNetworkStreamId(JsonElement args) =>
+        LiteArgs.RequireText(args, "streamId").Trim();
 
     public static object CreateDevicesResult(WiiMSettings settings)
     {

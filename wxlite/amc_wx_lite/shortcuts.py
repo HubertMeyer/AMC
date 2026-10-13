@@ -199,6 +199,9 @@ class Action(Enum):
     VIEW_PRESETS = "presets.view"
     ASSIGN_PRESET = "presets.assign"
     VIEW_WIIM_NETWORK_STREAMS = "wiim.networkStreams.view"
+    ADD_WIIM_NETWORK_STREAM = "wiim.networkStreams.add"
+    EDIT_WIIM_NETWORK_STREAM = "wiim.networkStreams.edit"
+    REMOVE_WIIM_NETWORK_STREAMS = "wiim.networkStreams.remove"
     OPEN_FOLDER_DIALOG = "files.openFolder"
     OPEN_FILE_DIALOG = "files.openFile"
     COPY_NAME = "clipboard.copyName"
@@ -408,6 +411,9 @@ WIIM_SUPPORTED_ACTIONS = frozenset({
     Action.NEXT_AUDIO_OUTPUT,
     Action.VIEW_PRESETS,
     Action.VIEW_WIIM_NETWORK_STREAMS,
+    Action.ADD_WIIM_NETWORK_STREAM,
+    Action.EDIT_WIIM_NETWORK_STREAM,
+    Action.REMOVE_WIIM_NETWORK_STREAMS,
     Action.GENERAL_SETTINGS,
     Action.TOGGLE_SEEK_MESSAGES,
     Action.QUICK_INFORMATION,
@@ -873,6 +879,9 @@ TIDAL_COLLECTION_LIST_VIEW: dict[str, Action] = {
 # Kontekst rozstrzygamy przed ogólną tablicą LIST_VIEW/PLAYER_VIEW.
 WIIM_SESSION_VIEW: dict[str, Action] = {
     "Ctrl+O": Action.VIEW_WIIM_NETWORK_STREAMS,
+    "Ctrl+N": Action.ADD_WIIM_NETWORK_STREAM,
+    "F2": Action.EDIT_WIIM_NETWORK_STREAM,
+    "Delete": Action.REMOVE_WIIM_NETWORK_STREAMS,
 }
 
 
@@ -887,6 +896,7 @@ def resolve(
     tidal_session: bool = False,
     tidal_collection: bool = False,
     wiim_session: bool = False,
+    wiim_streams: bool = False,
 ) -> Action | None:
     """Znajdz akcje dla klawisza w DANYM widoku. Brak wpisu = klawisz zostaje
     dla kontrolki (natywna nawigacja ma pierwszenstwo)."""
@@ -916,7 +926,13 @@ def resolve(
     if tidal_session and not player_view and canonical in TIDAL_LIST_VIEW:
         return TIDAL_LIST_VIEW[canonical]
     if wiim_session and canonical in WIIM_SESSION_VIEW:
-        return WIIM_SESSION_VIEW[canonical]
+        action = WIIM_SESSION_VIEW[canonical]
+        if action in {
+            Action.EDIT_WIIM_NETWORK_STREAM,
+            Action.REMOVE_WIIM_NETWORK_STREAMS,
+        } and not wiim_streams:
+            return None
+        return action
     # Widoki Radia sa dostepne takze z odtwarzacza, bez wychodzenia Escape.
     # Ta sama akcja co na liscie/menu; nie przenosimy edycji stacji do PLAYER.
     if radio_session and canonical in ("Ctrl+L", "Ctrl+U", "Ctrl+H"):
@@ -1087,6 +1103,9 @@ def _help_entries() -> list[tuple[str, str, Action]]:
         Action.SORT_TIDAL_COLLECTION_CUSTOM: "TIDAL: kolejność własna",
         Action.VIEW_PRESETS: "Pokaż presety aktywnej sesji",
         Action.VIEW_WIIM_NETWORK_STREAMS: "Otwórz zapisane strumienie WiiM",
+        Action.ADD_WIIM_NETWORK_STREAM: "Dodaj strumień sieciowy WiiM",
+        Action.EDIT_WIIM_NETWORK_STREAM: "Edytuj wybrany strumień WiiM",
+        Action.REMOVE_WIIM_NETWORK_STREAMS: "Usuń wybrane strumienie WiiM z AMC",
         Action.ASSIGN_PRESET: "Utwórz preset lub przypisz bieżący element",
         Action.VIEW_ALL_FILES: "Wszystkie pliki alfabetycznie",
         Action.VIEW_FAVORITES: "Ulubione",
@@ -1174,6 +1193,12 @@ def _help_entries() -> list[tuple[str, str, Action]]:
                 label = f"{label} (Podcasty i YouTube)"
             elif action is Action.VIEW_WIIM_NETWORK_STREAMS:
                 label = f"{label} (WiiM)"
+            elif action in {
+                Action.ADD_WIIM_NETWORK_STREAM,
+                Action.EDIT_WIIM_NETWORK_STREAM,
+                Action.REMOVE_WIIM_NETWORK_STREAMS,
+            }:
+                label = f"{label} (Strumienie WiiM)"
             # Nigdy nie wystawiamy technicznego identyfikatora Enum do mowy
             # czytnika. Brak etykiety jest defektem katalogu, ale bezpieczny
             # tekst użytkowy nadal nie ujawnia ``action.value``.

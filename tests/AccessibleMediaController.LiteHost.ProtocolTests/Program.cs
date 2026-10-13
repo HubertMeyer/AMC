@@ -19,6 +19,7 @@ internal static class Program
         ("--podcast-progress", PodcastProgressStoreTests.Run),
         ("--tidal-catalog", TidalCatalogContractTests.Run),
         ("--wiim", WiiMContractTests.Run),
+        ("--wiim-profile", WiiMProfileMutationTests.Run),
         ("--sonos", SonosContractTests.Run),
     ];
 

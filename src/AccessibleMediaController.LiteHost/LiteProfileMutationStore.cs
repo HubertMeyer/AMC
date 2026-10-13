@@ -387,6 +387,73 @@ internal sealed class LiteProfileMutationStore
         }
     }
 
+    public object AddWiiMNetworkStream(string requestedName, string requestedUrl)
+    {
+        EnsureMayWrite();
+        lock (_gate)
+        {
+            var root = ReadState();
+            var result = LiteWiiMProfileMutation.Add(
+                root,
+                requestedName,
+                requestedUrl);
+            WriteState(root);
+            return new
+            {
+                preferredStreamId = result.PreferredStreamId,
+                title = result.Title,
+                addedCount = result.AddedCount,
+                updatedCount = result.UpdatedCount,
+                message = result.UpdatedCount > 0
+                    ? $"Zaktualizowano strumień: {result.Title}"
+                    : $"Dodano strumień WiiM: {result.Title}"
+            };
+        }
+    }
+
+    public object EditWiiMNetworkStream(
+        string streamId,
+        string requestedName,
+        string requestedUrl)
+    {
+        EnsureMayWrite();
+        lock (_gate)
+        {
+            var root = ReadState();
+            var result = LiteWiiMProfileMutation.Edit(
+                root,
+                streamId,
+                requestedName,
+                requestedUrl);
+            WriteState(root);
+            return new
+            {
+                preferredStreamId = result.PreferredStreamId,
+                title = result.Title,
+                message = $"Zapisano strumień WiiM: {result.Title}"
+            };
+        }
+    }
+
+    public object RemoveWiiMNetworkStreams(IReadOnlyList<string> streamIds)
+    {
+        EnsureMayWrite();
+        lock (_gate)
+        {
+            var root = ReadState();
+            var titles = LiteWiiMProfileMutation.Remove(root, streamIds);
+            WriteState(root);
+            return new
+            {
+                removedCount = titles.Length,
+                titles,
+                message = titles.Length == 1
+                    ? $"Usunięto z AMC strumień WiiM: {titles[0]}. WiiM Home pozostał bez zmian"
+                    : $"Usunięto z AMC strumienie WiiM: {titles.Length}. WiiM Home pozostał bez zmian"
+            };
+        }
+    }
+
     private LiteRadioLibraryMutationResult MutateRadioLibrary(
         IReadOnlyList<LiteRadioStationDraft> stations,
         int parserSkipped,

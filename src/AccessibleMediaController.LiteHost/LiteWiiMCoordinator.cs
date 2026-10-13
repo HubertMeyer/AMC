@@ -28,6 +28,23 @@ internal sealed class LiteWiiMCoordinator(string statePath) : IDisposable
     public object ListNetworkStreams() =>
         LiteWiiMContract.CreateNetworkStreamsResult(ReadSettings());
 
+    public object NetworkStreamEditInfo(JsonElement args)
+    {
+        var streamId = LiteWiiMContract.ReadNetworkStreamId(args);
+        var stream = (ReadSettings().NetworkStreams ?? []).FirstOrDefault(candidate =>
+            string.Equals(candidate.Id, streamId, StringComparison.Ordinal));
+        if (stream is null
+            || string.IsNullOrWhiteSpace(stream.Name)
+            || !WiiMPlaybackUriPolicy.TryNormalize(stream.StreamUrl, out var url))
+        {
+            throw new LiteRequestException(
+                "Nie można odnaleźć tego strumienia na zapisanej liście AMC.");
+        }
+        // Adres wychodzi z hosta wyłącznie po jawnym F2 i trafia do pola
+        // edycji. Zwykła lista, fokus i komunikaty nadal go nie otrzymują.
+        return new { streamId, name = stream.Name.Trim(), url };
+    }
+
     public object Snapshot(JsonElement args)
     {
         var settings = ReadSettings();
