@@ -555,10 +555,11 @@ własnej normalizacji diakrytyków.
   tylko przy jednym dokładnym dopasowaniu logicznych identyfikatorów
   odtwarzaczy; nie przegrupowuje sprzętu i uczciwie odmawia przy braku albo
   niejednoznaczności. Identyfikatory domu, grupy i odtwarzaczy są polami
-  modelu, nigdy etykietą kontrolki. Nowe przypisanie korzysta obecnie z
-  bieżącej grupy (bez opcji tworzenia nowego stałego zestawu) i, jak pozostałe
-  presety wxPython, zapisuje prywatne nadpisanie portu zamiast ścigać się ze
-  starszym AMC o `state.json`. Enter na ulubionym lub
+  modelu, nigdy etykietą kontrolki. Przy przypisywaniu dostępne jest jawne
+  pole „Zawsze na tym zestawie głośników: nazwa grupy”; niezaznaczone oznacza
+  bieżącą grupę, zaznaczone zapisuje dokładny logiczny skład. Jak pozostałe
+  presety wxPython, przypisanie zapisuje prywatne nadpisanie portu zamiast
+  ścigać się ze starszym AMC o `state.json`. Enter na ulubionym lub
   playliście wysyła jedno polecenie `INSERT` z odtwarzaniem do
   wcześniej wybranej grupy, bez ponawiania zapisu i bez przepuszczania tokenu,
   adresu ani identyfikatora do etykiety NVDA. Backspace wraca z podlisty na
@@ -569,8 +570,7 @@ własnej normalizacji diakrytyków.
   grupie pozostaje do wykonania przez użytkownika; testy automatyczne nie są
   dowodem, że fizyczny głośnik rozpoczął odtwarzanie.
 - Do dalszego portu pozostają wejścia, wyjścia, korektor,
-  powtarzanie i timer, opcja tworzenia stałego celu presetu Sonosa, Spotify,
-  dalsze ustawienia oraz
+  powtarzanie i timer, Spotify, dalsze ustawienia oraz
   pozostała redakcja materiałów.
 
 ## Polityka zaniku wybranego urządzenia audio

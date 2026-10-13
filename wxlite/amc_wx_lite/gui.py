@@ -2266,6 +2266,9 @@ class PresetAssignmentDialog(wx.Dialog):
         first_free_slot: int | None,
         initial_slot: int,
         session_name: str,
+        fixed_target_title: str = "",
+        fixed_target_available: bool = False,
+        fixed_target_initially_selected: bool = False,
     ) -> None:
         super().__init__(parent, title=f"Przypisz preset — {session_name}")
         self._target = target
@@ -2275,6 +2278,7 @@ class PresetAssignmentDialog(wx.Dialog):
         self._remove_pending = False
         self._last_requested_slot: int | None = None
         self._replacement_armed_slot: int | None = None
+        self.fixed_target_checkbox: wx.CheckBox | None = None
 
         panel = wx.Panel(self)
         layout = wx.BoxSizer(wx.VERTICAL)
@@ -2309,6 +2313,23 @@ class PresetAssignmentDialog(wx.Dialog):
         self.preset_list.SetSelection(max(0, min(len(choices) - 1, initial_slot - 1)))
         layout.Add(self.preset_list, 1, wx.LEFT | wx.RIGHT | wx.EXPAND, 12)
 
+        if fixed_target_available and fixed_target_title.strip():
+            fixed_label = (
+                "Zawsze na tym zestawie głośników: "
+                f"{fixed_target_title.strip()}"
+            )
+            self.fixed_target_checkbox = wx.CheckBox(panel, label=fixed_label)
+            self.fixed_target_checkbox.SetName(fixed_label)
+            self.fixed_target_checkbox.SetValue(
+                bool(fixed_target_initially_selected)
+            )
+            layout.Add(
+                self.fixed_target_checkbox,
+                0,
+                wx.LEFT | wx.RIGHT | wx.TOP | wx.EXPAND,
+                12,
+            )
+
         self.status = wx.StaticText(panel, label="Gotowe")
         self.status.SetName("Gotowe")
         self._announcer = Announcer(self.status)
@@ -2340,6 +2361,13 @@ class PresetAssignmentDialog(wx.Dialog):
     def selected_choice(self) -> profile_presets.PresetChoice | None:
         index = self.preset_list.GetSelection()
         return self._choices[index] if 0 <= index < len(self._choices) else None
+
+    @property
+    def fixed_target_selected(self) -> bool:
+        return bool(
+            self.fixed_target_checkbox is not None
+            and self.fixed_target_checkbox.GetValue()
+        )
 
     def _on_key(self, event: wx.KeyEvent) -> None:
         slot = _preset_slot_from_event(event)
@@ -7398,6 +7426,18 @@ class LiteFrame(wx.Frame):
                     )
         return profile_presets.target_from_row(session, row)
 
+    def _active_sonos_target_row(self) -> Row | None:
+        """Bieżąca grupa z ostatniej topologii; identyfikatory nie są tekstem UI."""
+        if not self._sonos_active_household_id or not self._sonos_active_group_id:
+            return None
+        return next((
+            row
+            for row in self.navigator.sessions[SessionId.SONOS].sonos_target_rows
+            if row.parent_id == self._sonos_active_household_id
+            and row.service_id == self._sonos_active_group_id
+            and row.service_kind == "sonosGroup"
+        ), None)
+
     def _preset_inputs(self, session: SessionId) -> tuple[dict, list[dict]]:
         """Niezmienne migawki dla watku odczytujacego duzy profil AMC."""
         overrides = {
@@ -7950,7 +7990,24 @@ class LiteFrame(wx.Frame):
             if self.navigator.active is not session:
                 return
             free = profile_presets.first_free_slot(entries)
-            initial = profile_presets.existing_target_slot(entries, target) or free or 1
+            existing_slot = profile_presets.existing_target_slot(entries, target)
+            initial = existing_slot or free or 1
+            existing = next(
+                (entry for entry in entries if entry.slot == existing_slot),
+                None,
+            )
+            fixed_row = (
+                self._active_sonos_target_row()
+                if session is SessionId.SONOS else None
+            )
+            fixed_available = bool(
+                fixed_row is not None
+                and fixed_row.service_members
+                and (
+                    target.sonos_household_id is None
+                    or target.sonos_household_id == fixed_row.parent_id
+                )
+            )
             with PresetAssignmentDialog(
                 self,
                 target=target,
@@ -7958,17 +8015,37 @@ class LiteFrame(wx.Frame):
                 first_free_slot=free,
                 initial_slot=initial,
                 session_name=session_options.session_display_name(session),
+                fixed_target_title=(fixed_row.title if fixed_row else ""),
+                fixed_target_available=fixed_available,
+                fixed_target_initially_selected=bool(
+                    existing is not None
+                    and existing.sonos_fixed_player_ids
+                ),
             ) as dialog:
                 if dialog.ShowModal() != wx.ID_OK:
                     self._active_list().SetFocus() if self.navigator.view is View.LIST else self.play_button.SetFocus()
                     return
                 slot = dialog.selected_slot
                 action = dialog.selected_action
+                fixed_selected = dialog.fixed_target_selected
+
+            assigned_target = target
+            if action != "remove" and fixed_selected and fixed_row is not None:
+                assigned_target = profile_presets.PresetTarget(
+                    target.target_id,
+                    target.target_kind,
+                    target.title,
+                    target.location,
+                    sonos_household_id=(
+                        target.sonos_household_id or fixed_row.parent_id
+                    ),
+                    sonos_fixed_player_ids=fixed_row.service_members,
+                )
 
             updated = (
                 profile_presets.remove_entry(entries, slot)
                 if action == "remove"
-                else profile_presets.replace_entry(entries, target, slot)
+                else profile_presets.replace_entry(entries, assigned_target, slot)
             )
             previous = {
                 key: [dict(item) for item in value]

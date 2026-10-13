@@ -64,6 +64,15 @@ def test_schedule_and_preset_lists_use_only_native_wx_controls() -> None:
     assert "wx.ListBox" in inspect.getsource(PresetAssignmentDialog)
 
 
+def test_sonos_fixed_target_is_a_native_named_checkbox() -> None:
+    source = inspect.getsource(PresetAssignmentDialog)
+
+    assert "wx.CheckBox" in source
+    assert '"Zawsze na tym zestawie głośników: "' in source
+    assert "self.fixed_target_checkbox.SetName(fixed_label)" in source
+    assert "service_members" not in source
+
+
 def test_nvda_addon_does_not_install_list_object_overlays() -> None:
     plugin = (
         Path(__file__).resolve().parents[2]
