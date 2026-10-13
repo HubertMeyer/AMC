@@ -600,6 +600,18 @@ class LiteHostClient:
             timeout=30.0,
         )
 
+    def wiim_network_streams(self) -> Any:
+        """List saved WiiM streams without returning their network URLs."""
+        return self.call("wiim.networkStreams", timeout=15.0)
+
+    def wiim_play_network_stream(self, device_id: str, stream_id: str) -> Any:
+        """Open one saved stream on a selected WiiM by stable identifiers."""
+        return self.call(
+            "wiim.networkStreamPlay",
+            {"deviceId": device_id, "streamId": stream_id},
+            timeout=30.0,
+        )
+
     def sonos_targets(self) -> Any:
         """List Sonos groups; account tokens never leave the C# host."""
         return self.call("sonos.targets", timeout=60.0)

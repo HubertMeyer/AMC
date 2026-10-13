@@ -102,6 +102,7 @@ from .navigation import (
     PlayTidalContainer,
     PlayTidalTrack,
     PlayTrack,
+    PlayWiiMNetworkStream,
     SessionId,
     ShowTidalRelations,
     TransientNavigationSnapshot,
@@ -123,6 +124,7 @@ from .wiim_source import (
     WiiMPresetChoice,
     WiiMPayloadError,
     device_rows as wiim_device_rows,
+    network_stream_rows as wiim_network_stream_rows,
     now_playing_label as wiim_now_playing_label,
     preset_choices as wiim_preset_choices,
     snapshot as wiim_snapshot,
@@ -6503,6 +6505,7 @@ class LiteFrame(wx.Frame):
             podcast_session=self.navigator.active is SessionId.PODCASTS,
             tidal_session=self.navigator.active is SessionId.TIDAL,
             tidal_collection=tidal_collection,
+            wiim_session=self.navigator.active is SessionId.WIIM,
         )
         if action is None:
             # Klawisz NIE jest nasz: oddajemy go kontrolce, zeby natywna
@@ -6621,6 +6624,8 @@ class LiteFrame(wx.Frame):
             self._show_general_playback_options()
         elif action is Action.VIEW_PRESETS:
             self._show_presets()
+        elif action is Action.VIEW_WIIM_NETWORK_STREAMS:
+            self._show_wiim_network_streams()
         elif action is Action.ASSIGN_PRESET:
             self._assign_preset()
         elif (slot := preset_slot(action)) is not None:
@@ -6925,6 +6930,8 @@ class LiteFrame(wx.Frame):
                 self._play_tidal_container(intent)
             elif isinstance(intent, ActivateWiiMDevice):
                 self._activate_wiim_device(intent)
+            elif isinstance(intent, PlayWiiMNetworkStream):
+                self._activate_wiim_network_stream(intent)
             elif isinstance(intent, ActivateSonosGroup):
                 self._activate_sonos_group(intent)
         self._sync_views()
@@ -7313,9 +7320,14 @@ class LiteFrame(wx.Frame):
         device_id = self._wiim_active_device_id
         if not device_id:
             return None
+        rows = (
+            state.wiim_device_rows
+            if state.wiim_device_rows
+            else tuple(state.model.rows)
+        )
         row = next(
             (
-                candidate for candidate in state.model.rows
+                candidate for candidate in rows
                 if candidate.kind == "device"
                 and candidate.service_kind == "device"
                 and candidate.service_id == device_id
@@ -7325,6 +7337,95 @@ class LiteFrame(wx.Frame):
         if row is None:
             return None
         return row.item_id, device_id, row.title
+
+    def _show_wiim_network_streams(self) -> None:
+        """Ctrl+O w WiiM: zapisane strumienie dla wybranego urządzenia."""
+        client = self.client
+        context = self._wiim_device_context()
+        if client is None:
+            self.announcer.say("Silnik nie jest gotowy")
+            return
+        if context is None:
+            self.announcer.say("Wybierz urządzenie WiiM")
+            return
+        item_id, device_id, _device_title = context
+
+        def done(payload: object) -> None:
+            if self.navigator.active is not SessionId.WIIM:
+                return
+            try:
+                rows = list(wiim_network_stream_rows(
+                    payload,
+                    device_id=device_id,
+                ))
+            except WiiMPayloadError as error:
+                self.announcer.say(str(error))
+                return
+            self._run(self.navigator.apply_wiim_network_streams(
+                rows,
+                device_id=device_id,
+                return_id=item_id,
+            ))
+
+        self.runner.submit(
+            "wiim-network-streams",
+            client.wiim_network_streams,
+            done,
+            lambda error: self.announcer.say(
+                f"Nie udało się odczytać strumieni WiiM: {error}"
+            ),
+        )
+
+    def _activate_wiim_network_stream(
+        self, intent: PlayWiiMNetworkStream
+    ) -> None:
+        """Uruchom strumień po Id; adres nigdy nie przechodzi do wx/NVDA."""
+        client = self.client
+        if client is None:
+            self._run(self.navigator.back_to_list())
+            self.announcer.say("Silnik nie jest gotowy")
+            return
+        self._wiim_active_device_id = intent.device_id
+        self._wiim_snapshot = {}
+        self.now_playing.SetLabel(intent.title)
+        self._set_transport_label(playing=False, preparing=True)
+
+        def done(payload: object) -> None:
+            try:
+                state = wiim_snapshot(payload)
+            except WiiMPayloadError as error:
+                failed(error)
+                return
+            if state.get("deviceId") != self._wiim_active_device_id:
+                return
+            session = self.navigator.sessions[SessionId.WIIM]
+            session.player_entry_anchor_id = intent.item_id
+            session.list_anchor_id = intent.item_id
+            session.now_playing_id = intent.item_id
+            session.now_playing_title = intent.title
+            session.current_material_id = intent.item_id
+            session.view = View.PLAYER
+            self._wiim_snapshot = state
+            if self.navigator.active is SessionId.WIIM:
+                self._sync_views()
+                self._apply_wiim_snapshot(state, announce=True)
+
+        def failed(error: Exception) -> None:
+            session = self.navigator.sessions[SessionId.WIIM]
+            session.view = View.LIST
+            if self.navigator.active is SessionId.WIIM:
+                self._sync_views()
+                self.announcer.say(str(error))
+
+        self.runner.submit(
+            "wiim-network-stream-play",
+            lambda: client.wiim_play_network_stream(
+                intent.device_id,
+                intent.stream_id,
+            ),
+            done,
+            failed,
+        )
 
     def _show_wiim_presets(self) -> None:
         """Ctrl+Alt+P w WiiM: 12 natywnych miejsc urządzenia."""

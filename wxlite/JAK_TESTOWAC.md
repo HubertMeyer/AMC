@@ -179,16 +179,22 @@ WiiM:
    anulowaniu listy fokus ma wrócić do listy urządzeń albo odtwarzacza.
 5. Pełne AMC nie udaje Biblioteki ani Ulubionych WiiM: lokalne API urządzenia
    ich nie udostępnia, dlatego `Ctrl+L` pozostaje w tej sesji nieaktywny.
-   Brakującym widokiem materiałów są **Strumienie sieciowe AMC** pod `Ctrl+O`,
-   z dodawaniem `Ctrl+N`, importem `Ctrl+Shift+O`, eksportem `Ctrl+E`, edycją
-   `F2`, usuwaniem Delete i sortowaniem `Alt+1/2/3`. Ten zakres oraz skróty
-   `Ctrl+Shift+1–0/-/=` do mapowanych presetów pozostają do przeniesienia.
+6. Na liście urządzeń albo w odtwarzaczu naciśnij `Ctrl+O`. Ma otworzyć
+   **Strumienie WiiM** zapisane w profilu AMC dla wybranego urządzenia. NVDA
+   ma czytać nazwę i rodzaj „strumień sieciowy”, nigdy adres URL ani
+   identyfikator. Enter uruchamia strumień na tym urządzeniu i pokazuje jego
+   odtwarzacz. Backspace wraca dokładnie na wcześniejsze urządzenie.
+7. Jeżeli lista Strumieni WiiM jest pusta, program mówi „Strumienie WiiM,
+   zero elementów”. Dodawanie `Ctrl+N`, import `Ctrl+Shift+O`, eksport
+   `Ctrl+E`, edycja `F2`, usuwanie Delete i sortowanie `Alt+1/2/3` pozostają
+   do przeniesienia. Skróty `Ctrl+Shift+1–0/-/=` nadal uruchamiają mapowane
+   presety AMC.
 
 Wynik odbioru 10 października: urządzenie i stan są prawidłowo widziane,
-stację można uruchomić i zatrzymać. Natywne presety pod `Ctrl+Alt+P` są już
-podłączone technicznie i czekają na powyższy odbiór na obudzonym urządzeniu.
-Do przeniesienia pozostają Strumienie sieciowe, mapowania skrótów presetów i
-pozostałe opcje sprzętowe WiiM.
+stację można uruchomić i zatrzymać. Natywne presety pod `Ctrl+Alt+P` i
+odtwarzanie zapisanych Strumieni WiiM pod `Ctrl+O` są podłączone technicznie
+i czekają na powyższy odbiór na obudzonym urządzeniu. Do przeniesienia
+pozostaje zarządzanie listą Strumieni oraz pozostałe opcje sprzętowe WiiM.
 
 Sonos:
 

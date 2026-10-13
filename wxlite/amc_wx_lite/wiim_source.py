@@ -52,6 +52,44 @@ def device_rows(payload: object) -> tuple[Row, ...]:
     return tuple(rows)
 
 
+def network_stream_rows(payload: object, *, device_id: str) -> tuple[Row, ...]:
+    """Zapisane strumienie WiiM bez adresów w tekście dostępnym.
+
+    ``device_id`` pozostaje polem modelu potrzebnym do wykonania Entera.
+    Nazwa, rodzaj i licznik wiersza są jedynymi wartościami przekazywanymi
+    natywnej liście oraz NVDA.
+    """
+    if not isinstance(payload, dict):
+        raise WiiMPayloadError("Host WiiM zwrócił nieprawidłową odpowiedź")
+    raw_items = payload.get("items")
+    if not isinstance(raw_items, list):
+        raise WiiMPayloadError("Host WiiM nie zwrócił listy strumieni")
+    if not isinstance(device_id, str) or not device_id.strip():
+        raise WiiMPayloadError("Nie wybrano urządzenia WiiM")
+
+    rows: list[Row] = []
+    seen: set[str] = set()
+    for raw in raw_items:
+        if not isinstance(raw, dict):
+            continue
+        item_id = _text(raw.get("itemId"))
+        stream_id = _text(raw.get("streamId"))
+        title = _text(raw.get("title"))
+        if not item_id or not stream_id or not title or item_id in seen:
+            continue
+        seen.add(item_id)
+        rows.append(Row(
+            item_id=item_id,
+            title=title,
+            kind="wiimNetworkStream",
+            detail=_text(raw.get("detail")) or "Strumień sieciowy",
+            parent_id=device_id.strip(),
+            service_id=stream_id,
+            service_kind="wiimNetworkStream",
+        ))
+    return tuple(rows)
+
+
 def snapshot(payload: object) -> dict:
     """Odetnij nieznane pola przed użyciem danych do nazw kontrolek."""
     if not isinstance(payload, dict):

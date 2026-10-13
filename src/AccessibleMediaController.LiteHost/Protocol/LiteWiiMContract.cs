@@ -15,6 +15,8 @@ public static class LiteWiiMContract
     public const string TransportOperation = "wiim.transport";
     public const string PresetsOperation = "wiim.presets";
     public const string ActivatePresetOperation = "wiim.presetActivate";
+    public const string NetworkStreamsOperation = "wiim.networkStreams";
+    public const string PlayNetworkStreamOperation = "wiim.networkStreamPlay";
 
     public static string ReadDeviceId(JsonElement args) =>
         LiteArgs.RequireText(args, "deviceId").Trim();
@@ -61,6 +63,11 @@ public static class LiteWiiMContract
         return new LiteWiiMPresetRequest(deviceId, presetNumber);
     }
 
+    public static LiteWiiMNetworkStreamRequest ReadNetworkStreamRequest(
+        JsonElement args) => new(
+            ReadDeviceId(args),
+            LiteArgs.RequireText(args, "streamId").Trim());
+
     public static object CreateDevicesResult(WiiMSettings settings)
     {
         var selected = settings.SelectedDeviceId;
@@ -80,23 +87,49 @@ public static class LiteWiiMContract
         return new { items };
     }
 
+    public static object CreateNetworkStreamsResult(WiiMSettings settings)
+    {
+        var items = (settings.NetworkStreams ?? [])
+            .Where(stream => !string.IsNullOrWhiteSpace(stream.Id)
+                && !string.IsNullOrWhiteSpace(stream.Name)
+                && WiiMPlaybackUriPolicy.TryNormalize(stream.StreamUrl, out _))
+            .DistinctBy(stream => stream.Id.Trim(), StringComparer.OrdinalIgnoreCase)
+            .OrderByDescending(stream => stream.AddedUtcTicks)
+            .ThenBy(stream => stream.Name, StringComparer.CurrentCultureIgnoreCase)
+            .Select(stream => new
+            {
+                itemId = "wiim-stream:" + stream.Id.Trim(),
+                streamId = stream.Id.Trim(),
+                title = stream.Name.Trim(),
+                detail = "Strumień sieciowy"
+            })
+            .ToArray();
+        return new { items };
+    }
+
     public static object CreateSnapshotResult(
         WiiMDeviceSettings device,
         WiiMDeviceSnapshot snapshot,
-        string? message = null)
+        string? message = null,
+        string? networkStreamTitle = null)
     {
         var track = snapshot.Track;
         var playback = snapshot.Playback;
+        var selectedStreamTitle = Useful(networkStreamTitle);
         return new
         {
             itemId = "wiim:" + device.Id.Trim(),
             deviceId = device.Id.Trim(),
             deviceTitle = UserTitle(device),
-            title = Useful(track.Title),
-            subtitle = Useful(track.Subtitle),
-            artist = Useful(track.Artist),
-            album = Useful(track.Album),
-            source = Useful(playback.Source),
+            // Część firmware wkłada tutaj adres URL. Zwykły odczyt NVDA ma
+            // dostać nazwę treści, nigdy techniczny adres manifestu.
+            title = selectedStreamTitle.Length > 0
+                ? selectedStreamTitle
+                : UsefulMetadata(track.Title),
+            subtitle = UsefulMetadata(track.Subtitle),
+            artist = UsefulMetadata(track.Artist),
+            album = UsefulMetadata(track.Album),
+            source = UsefulMetadata(playback.Source),
             playbackState = Useful(playback.State),
             volume = Math.Clamp(playback.Volume, 0, 100),
             muted = playback.Muted,
@@ -105,7 +138,7 @@ public static class LiteWiiMContract
                 ? playback.Duration.TotalSeconds
                 : (double?)null,
             message = string.IsNullOrWhiteSpace(message)
-                ? SnapshotAnnouncement(device, snapshot)
+                ? SnapshotAnnouncement(device, snapshot, selectedStreamTitle)
                 : message.Trim()
         };
     }
@@ -156,13 +189,15 @@ public static class LiteWiiMContract
 
     private static string SnapshotAnnouncement(
         WiiMDeviceSettings device,
-        WiiMDeviceSnapshot snapshot)
+        WiiMDeviceSnapshot snapshot,
+        string? preferredTitle = null)
     {
         var parts = new List<string>();
-        AddDistinct(parts, Useful(snapshot.Track.Title));
-        AddDistinct(parts, Useful(snapshot.Track.Subtitle));
-        AddDistinct(parts, Useful(snapshot.Track.Artist));
-        AddDistinct(parts, Useful(snapshot.Track.Album));
+        AddDistinct(parts, UsefulMetadata(preferredTitle));
+        AddDistinct(parts, UsefulMetadata(snapshot.Track.Title));
+        AddDistinct(parts, UsefulMetadata(snapshot.Track.Subtitle));
+        AddDistinct(parts, UsefulMetadata(snapshot.Track.Artist));
+        AddDistinct(parts, UsefulMetadata(snapshot.Track.Album));
         if (parts.Count == 0) AddDistinct(parts, UserTitle(device));
         AddDistinct(parts, Useful(snapshot.Playback.State));
         if (snapshot.Playback.Muted) parts.Add("wyciszone");
@@ -208,6 +243,9 @@ public static class LiteWiiMContract
             ? string.Empty
             : text;
     }
+
+    private static string UsefulMetadata(string? value) =>
+        WiiMNetworkStreamPresentation.UsefulMetadataText(value) ?? string.Empty;
 }
 
 public sealed record LiteWiiMTransportRequest(
@@ -218,3 +256,7 @@ public sealed record LiteWiiMTransportRequest(
 public sealed record LiteWiiMPresetRequest(
     string DeviceId,
     int PresetNumber);
+
+public sealed record LiteWiiMNetworkStreamRequest(
+    string DeviceId,
+    string StreamId);

@@ -95,6 +95,9 @@ class LibraryView(Enum):
     #: Zawartosc albumu, playlisty albo jednej kategorii wykonawcy. To nadal
     #: sesja TIDAL, lecz Backspace ma tu odtworzyc dokladna poprzednia liste.
     TIDAL_CONTAINER = "tidalContainer"
+    #: Własne strumienie zapisane w profilu WiiM. To podwidok wybranego
+    #: urządzenia, a nie lokalna Biblioteka ani lista sprzętowych presetów.
+    WIIM_NETWORK_STREAMS = "wiimNetworkStreams"
 
 
 #: Wartosci ``_state.LocalMedia.LibraryView`` (``AppSettings.cs:1236``, domyslnie
@@ -211,6 +214,10 @@ class SessionState:
     tidal_heading: str = "Biblioteka TIDAL"
     tidal_context: "OpenTidalContainer | None" = None
     tidal_history: list["TidalNavigationSnapshot"] = field(default_factory=list)
+    #: Korzeń sesji WiiM i miejsce powrotu ze Strumieni sieciowych. Adresy
+    #: urządzeń ani strumieni nie należą do tych wierszy.
+    wiim_device_rows: tuple[Row, ...] = ()
+    wiim_device_return_id: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -412,6 +419,16 @@ class ActivateWiiMDevice:
 
 
 @dataclass(slots=True)
+class PlayWiiMNetworkStream:
+    """Otwórz zapisany strumień na wybranym urządzeniu WiiM."""
+
+    item_id: str
+    title: str
+    device_id: str
+    stream_id: str
+
+
+@dataclass(slots=True)
 class ActivateSonosGroup:
     """Wybierz grupę Sonos; identyfikatory nie są tekstem dostępnym."""
 
@@ -585,13 +602,37 @@ class Navigator:
     ) -> list[object]:
         """Wstaw liste urzadzen bez zmiany stanu innych sesji."""
         state = self.sessions[SessionId.WIIM]
+        state.wiim_device_rows = tuple(rows)
         state.model.replace(rows, preferred_id=preferred_id or state.list_anchor_id)
         state.view = View.LIST
+        state.library_view = None
         count = len(rows)
         return [Announce(
             f"WiiM, {count} {_items_word(count)}"
             if count
             else "WiiM, brak zapisanych urządzeń"
+        )]
+
+    def apply_wiim_network_streams(
+        self,
+        rows: list[Row],
+        *,
+        device_id: str,
+        return_id: str | None,
+    ) -> list[object]:
+        """Pokaż zapisane strumienie jako podwidok wybranego urządzenia."""
+        state = self.sessions[SessionId.WIIM]
+        if state.library_view is not LibraryView.WIIM_NETWORK_STREAMS:
+            state.wiim_device_rows = tuple(state.model.rows)
+        state.wiim_device_return_id = return_id
+        state.library_item_id = device_id
+        state.library_view = LibraryView.WIIM_NETWORK_STREAMS
+        state.model.replace(rows)
+        state.view = View.LIST
+        count = len(rows)
+        return [Announce(
+            f"Strumienie WiiM, {count} {_items_word(count)}"
+            if count else "Strumienie WiiM, zero elementów"
         )]
 
     def apply_sonos_targets(
@@ -734,6 +775,24 @@ class Navigator:
             return self.go_to_parent()
 
         if state.session_id is SessionId.WIIM:
+            if (
+                row.kind == "wiimNetworkStream"
+                and row.service_kind == "wiimNetworkStream"
+                and row.service_id
+                and row.parent_id
+            ):
+                state.player_entry_anchor_id = row.item_id
+                state.list_anchor_id = row.item_id
+                state.now_playing_id = row.item_id
+                state.now_playing_title = row.title
+                state.current_material_id = row.item_id
+                state.view = View.PLAYER
+                return [PlayWiiMNetworkStream(
+                    item_id=row.item_id,
+                    title=row.title,
+                    device_id=row.parent_id,
+                    stream_id=row.service_id,
+                )]
             if (
                 row.kind != "device"
                 or row.service_kind != "device"
@@ -1305,8 +1364,18 @@ class Navigator:
                 state.view = View.LIST
             # Na korzeniu kolekcji Backspace jest celowo cichy.
             return []
-        if state.session_id in (SessionId.WIIM, SessionId.SONOS):
-            # Lista urządzeń lub grup jest korzeniem sesji, nie folderem dysku.
+        if state.session_id is SessionId.WIIM:
+            if state.library_view is LibraryView.WIIM_NETWORK_STREAMS:
+                state.library_view = None
+                state.library_item_id = None
+                state.model.replace(
+                    list(state.wiim_device_rows),
+                    preferred_id=state.wiim_device_return_id,
+                )
+                state.view = View.LIST
+            return []
+        if state.session_id is SessionId.SONOS:
+            # Lista grup jest korzeniem sesji, nie folderem dysku.
             return []
         # W nazwanym widoku Biblioteki nie ma wiersza rodzica. Widoki glowne
         # (Biblioteka/Wszystkie pliki, Ulubione, Playlisty i Kolejka) sa

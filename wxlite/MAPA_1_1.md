@@ -511,12 +511,18 @@ własnej normalizacji diakrytyków.
   prawdziwy stan urządzenia i otwiera odtwarzacz; Spacja, Page Up/Page Down,
   strzałki głośności, suwak oraz odczyt czasu prowadzą przez wąskie operacje
   `wiim.*`, nigdy przez lokalny silnik audio. Stan jest odświeżany okresowo.
+  `Ctrl+O` otwiera zapisane w profilu **Strumienie WiiM** dla wybranego albo
+  aktywnego urządzenia. Enter przekazuje do hosta wyłącznie stabilne ID;
+  właściwy URL nie opuszcza C# i nie trafia do nazwy, komunikatu ani NVDA.
+  Backspace wraca na dokładnie to urządzenie. Odtwarzacz pokazuje zapisaną
+  nazwę także wtedy, gdy firmware podaje jako metadane tylko adres manifestu.
   Próba na dwóch urządzeniach zapisanych w bieżącym profilu potwierdziła listę
   i bezpieczny komunikat braku odpowiedzi; oba urządzenia były w czasie próby
   niedostępne, więc żywy transport wymaga jeszcze odbioru na włączonym WiiM.
-- Do dalszego portu pozostają zaawansowane funkcje WiiM (presety, wejścia,
-  wyjścia, korektor, powtarzanie i timer), a następnie Sonos i Spotify, dalsze
-  ustawienia oraz pozostała redakcja materiałów.
+- Do dalszego portu pozostaje zarządzanie Strumieniami WiiM (dodawanie,
+  import, eksport, edycja, usuwanie i sortowanie), wejścia, wyjścia, korektor,
+  powtarzanie i timer, a następnie Sonos i Spotify, dalsze ustawienia oraz
+  pozostała redakcja materiałów.
 
 ## Polityka zaniku wybranego urządzenia audio
 

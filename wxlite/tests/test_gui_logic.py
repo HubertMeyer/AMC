@@ -342,3 +342,92 @@ def test_zaznaczenie_wiersza_odswieza_bramki_menu() -> None:
     assert ("refresh", None) in calls, (
         "zaznaczenie wiersza nie przeliczylo stanu menu; wylaczony akcelerator "
         f"nadal polykalby Ctrl+Shift+C (wywolania: {calls})")
+
+
+def test_shift_space_menu_names_and_marks_the_actual_recording_state() -> None:
+    """Shift+Spacja ma byc jednym stanowym poleceniem, nie trzema wpisami.
+
+    NVDA musi uslyszec aktualna czynnosc: przy trwajacym nagraniu
+    ``Wstrzymaj``, przy wstrzymanym ``Wznow``. Zaznaczenie pozycji oznacza
+    stan wstrzymany. Bez nagrania polecenie pozostaje niedostepne i nie
+    sugeruje, ze cos aktualnie nagrywamy.
+    """
+    from amc_wx_lite import menu_model
+
+    entry = next(
+        item
+        for menu in menu_model.build_menus()
+        for item in menu.items
+        if item.action is Action.RECORD_PAUSE
+    )
+
+    class FakeMenuItem:
+        def __init__(self) -> None:
+            self.enabled = True
+            self.checked = False
+            self.label = ""
+
+        def IsEnabled(self):  # noqa: N802 - API wx
+            return self.enabled
+
+        def Enable(self, value):  # noqa: N802 - API wx
+            self.enabled = value
+
+        def Check(self, value):  # noqa: N802 - API wx
+            self.checked = value
+
+        def GetItemLabel(self):  # noqa: N802 - API wx
+            return self.label
+
+        def SetItemLabel(self, value):  # noqa: N802 - API wx
+            self.label = value
+
+    selected = types.SimpleNamespace(
+        kind="station",
+        item_id="radio-poznan",
+        url="https://example.test/radio",
+    )
+    session = types.SimpleNamespace(
+        view=View.LIST,
+        library_view=LibraryView.ALL_FILES,
+        library_playlist_id=None,
+        model=types.SimpleNamespace(selected_row=selected),
+    )
+    frame = object.__new__(LiteFrame)
+    frame.navigator = types.SimpleNamespace(
+        active=SessionId.RADIO,
+        sessions={SessionId.RADIO: session},
+    )
+    frame._last_status = {}
+    frame._podcast_inbox_sort_mode = ""
+    frame._tidal_effective_sort_modes = {}
+    frame.options = types.SimpleNamespace(
+        radio_recognition_monitoring=False,
+        radio_recognition_announcements=False,
+    )
+    frame._keyboard_help_active = False
+
+    menu_item = FakeMenuItem()
+    frame._menu_items = [(menu_item, entry)]
+
+    frame._last_recording_status = {
+        "recordings": [{"stationId": "radio-poznan", "paused": False}]
+    }
+    frame._refresh_menu_state()
+    assert menu_item.enabled is True
+    assert menu_item.checked is False
+    assert menu_item.label.startswith("&Wstrzymaj nagrywanie")
+
+    frame._last_recording_status = {
+        "recordings": [{"stationId": "radio-poznan", "state": "paused"}]
+    }
+    frame._refresh_menu_state()
+    assert menu_item.enabled is True
+    assert menu_item.checked is True
+    assert menu_item.label.startswith("&Wznów nagrywanie")
+
+    frame._last_recording_status = {"recordings": []}
+    frame._refresh_menu_state()
+    assert menu_item.enabled is False
+    assert menu_item.checked is False
+    assert menu_item.label.startswith("&Wstrzymaj albo wznów nagrywanie")

@@ -14,6 +14,8 @@ internal static class WiiMContractTests
         TransportAcceptsOnlyKnownCommands();
         PresetListUsesOnlyIntentionalLabels();
         PresetActivationAcceptsOnlyTwelveSlots();
+        NetworkStreamListDoesNotExposeUrls();
+        NetworkStreamSnapshotUsesTheSavedName();
     }
 
     private static void DeviceListDoesNotExposeAddressesOrRuntimeObjects()
@@ -195,6 +197,80 @@ internal static class WiiMContractTests
             {
             }
         }
+    }
+
+    private static void NetworkStreamListDoesNotExposeUrls()
+    {
+        var settings = new WiiMSettings
+        {
+            NetworkStreams =
+            [
+                new WiiMNetworkStreamSettings
+                {
+                    Id = "stream-1",
+                    Name = "Radio Poznań",
+                    StreamUrl = "https://secret.example/live.m3u8",
+                    AddedUtcTicks = 20
+                },
+                new WiiMNetworkStreamSettings
+                {
+                    Id = "stream-2",
+                    Name = "Radio Opole",
+                    StreamUrl = "https://secret.example/opole.mp3",
+                    AddedUtcTicks = 10
+                }
+            ]
+        };
+
+        var json = JsonSerializer.Serialize(
+            LiteWiiMContract.CreateNetworkStreamsResult(settings));
+        using var document = JsonDocument.Parse(json);
+        var items = document.RootElement.GetProperty("items");
+        Check(items.GetArrayLength() == 2, "brak zapisanych strumieni WiiM");
+        Check(items[0].GetProperty("title").GetString() == "Radio Poznań",
+            "nie zachowano kolejności dodania strumieni");
+        Check(items[0].GetProperty("detail").GetString() == "Strumień sieciowy",
+            "brak użytkowego rodzaju strumienia");
+        Check(!json.Contains("secret.example", StringComparison.Ordinal),
+            "adres strumienia wyciekł do interfejsu Python");
+
+        using var requestJson = JsonDocument.Parse(
+            """{"deviceId":"device-1","streamId":"stream-1"}""");
+        var request = LiteWiiMContract.ReadNetworkStreamRequest(
+            requestJson.RootElement);
+        Check(request.DeviceId == "device-1" && request.StreamId == "stream-1",
+            "nie odczytano bezpiecznych identyfikatorów strumienia");
+    }
+
+    private static void NetworkStreamSnapshotUsesTheSavedName()
+    {
+        var device = new WiiMDeviceSettings
+        {
+            Id = "device-1", Address = "192.168.1.40", DisplayName = "Salon"
+        };
+        var snapshot = new WiiMDeviceSnapshot(
+            new WiiMDeviceInformation(
+                "192.168.1.40", "device-1", "Salon", "Pro", "4.8", 12),
+            new WiiMPlaybackInformation(
+                "odtwarzanie", "https://secret.example/live.m3u8", 35, false,
+                TimeSpan.Zero, TimeSpan.Zero),
+            new WiiMTrackInformation(
+                "https://secret.example/live.m3u8", "", "", 0, 0),
+            []);
+
+        var json = JsonSerializer.Serialize(LiteWiiMContract.CreateSnapshotResult(
+            device,
+            snapshot,
+            networkStreamTitle: "Radio Poznań"));
+        using var document = JsonDocument.Parse(json);
+        var root = document.RootElement;
+        Check(root.GetProperty("title").GetString() == "Radio Poznań",
+            "migawka nie użyła zapisanej nazwy strumienia");
+        Check(root.GetProperty("message").GetString()!.StartsWith(
+                "Radio Poznań", StringComparison.Ordinal),
+            "komunikat migawki nie użył zapisanej nazwy strumienia");
+        Check(!json.Contains("secret.example", StringComparison.Ordinal),
+            "adres strumienia wyciekł z migawki lub komunikatu");
     }
 
     private static void Check(bool condition, string message)

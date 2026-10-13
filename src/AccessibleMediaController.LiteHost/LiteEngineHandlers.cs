@@ -392,6 +392,10 @@ internal sealed class LiteEngineHandlers : IDisposable
                 RequireWiiM().Presets(request.Args),
             [LiteWiiMContract.ActivatePresetOperation] = (request, _) =>
                 RequireWiiM().ActivatePreset(request.Args),
+            [LiteWiiMContract.NetworkStreamsOperation] = (_, _) =>
+                RequireWiiM().ListNetworkStreams(),
+            [LiteWiiMContract.PlayNetworkStreamOperation] = (request, _) =>
+                RequireWiiM().PlayNetworkStream(request.Args),
             [LiteSonosContract.TargetsOperation] = (_, _) =>
                 RequireSonos().ListTargets(),
             [LiteSonosContract.SnapshotOperation] = (request, _) =>

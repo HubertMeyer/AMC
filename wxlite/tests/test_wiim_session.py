@@ -8,7 +8,9 @@ from amc_wx_lite.host_client import LiteHostClient
 from amc_wx_lite.menu_model import build_menus
 from amc_wx_lite.navigation import (
     ActivateWiiMDevice,
+    LibraryView,
     Navigator,
+    PlayWiiMNetworkStream,
     SessionId,
     View,
 )
@@ -20,6 +22,7 @@ from amc_wx_lite.shortcuts import (
 )
 from amc_wx_lite.wiim_source import (
     device_rows,
+    network_stream_rows,
     now_playing_label,
     preset_choices,
     snapshot,
@@ -123,6 +126,8 @@ def test_wiim_host_client_sends_only_device_id_command_and_volume() -> None:
     client.wiim_transport("device-1", "setVolume", volume=37)
     client.wiim_presets("device-1")
     client.wiim_activate_preset("device-1", 5)
+    client.wiim_network_streams()
+    client.wiim_play_network_stream("device-1", "stream-7")
 
     assert calls == [
         ("wiim.devices", None, 15.0),
@@ -136,6 +141,12 @@ def test_wiim_host_client_sends_only_device_id_command_and_volume() -> None:
         (
             "wiim.presetActivate",
             {"deviceId": "device-1", "presetNumber": 5},
+            30.0,
+        ),
+        ("wiim.networkStreams", None, 15.0),
+        (
+            "wiim.networkStreamPlay",
+            {"deviceId": "device-1", "streamId": "stream-7"},
             30.0,
         ),
     ]
@@ -227,3 +238,69 @@ def test_ctrl_alt_p_routes_to_native_wiim_presets() -> None:
     LiteFrame._show_presets(frame)
 
     assert calls == ["wiim"]
+
+
+def test_ctrl_o_is_wiim_streams_only_in_wiim_context() -> None:
+    chord = Chord("O", ctrl=True)
+    assert resolve(
+        chord,
+        player_view=False,
+        radio_session=False,
+        wiim_session=True,
+    ) is Action.VIEW_WIIM_NETWORK_STREAMS
+    assert resolve(
+        chord,
+        player_view=True,
+        radio_session=False,
+        wiim_session=True,
+    ) is Action.VIEW_WIIM_NETWORK_STREAMS
+    assert resolve(
+        chord,
+        player_view=False,
+        radio_session=False,
+    ) is Action.OPEN_FILE_DIALOG
+
+
+def test_wiim_network_stream_view_uses_only_user_labels_and_returns_to_device() -> None:
+    nav = Navigator()
+    devices = list(device_rows({
+        "items": [{
+            "itemId": "wiim:device-1",
+            "deviceId": "device-1",
+            "title": "Salon",
+            "detail": "WiiM Pro",
+        }]
+    }))
+    nav.apply_wiim_devices(devices)
+    nav.switch_session(SessionId.WIIM)
+    streams = list(network_stream_rows({
+        "items": [{
+            "itemId": "wiim-stream:stream-7",
+            "streamId": "stream-7",
+            "title": "Radio Poznań",
+            "detail": "Strumień sieciowy",
+            "url": "https://secret.example/live.m3u8",
+            "runtimeObject": "NetworkStream { Id = stream-7 }",
+        }]
+    }, device_id="device-1"))
+
+    nav.apply_wiim_network_streams(
+        streams,
+        device_id="device-1",
+        return_id="wiim:device-1",
+    )
+    assert nav.session.library_view is LibraryView.WIIM_NETWORK_STREAMS
+    assert nav.session.model.selected_row.title == "Radio Poznań"
+    assert "secret.example" not in repr(nav.session.model.rows)
+    assert "Id = stream-7" not in repr(nav.session.model.rows)
+
+    intents = nav.activate_selected()
+    assert len(intents) == 1
+    assert isinstance(intents[0], PlayWiiMNetworkStream)
+    assert intents[0].device_id == "device-1"
+    assert intents[0].stream_id == "stream-7"
+
+    nav.session.view = View.LIST
+    nav.go_to_parent()
+    assert nav.session.library_view is None
+    assert nav.session.model.selected_id == "wiim:device-1"

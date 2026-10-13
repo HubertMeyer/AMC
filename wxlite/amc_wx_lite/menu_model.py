@@ -106,6 +106,8 @@ class Menu:
 
 SEPARATOR = MenuItem(is_separator=True)
 FILES_ONLY = (SessionId.FILES,)
+PODCASTS_ONLY = (SessionId.PODCASTS,)
+WIIM_ONLY = (SessionId.WIIM,)
 LOCAL_MEDIA = (SessionId.FILES, SessionId.PODCASTS)
 LOCAL_TIMELINE = (SessionId.FILES, SessionId.RADIO, SessionId.PODCASTS)
 PLAYER_SESSIONS = (
@@ -153,14 +155,23 @@ def build_menus() -> tuple[Menu, ...]:
             # Nie robimy z zadnej pozycji akceleratora okna, bo pierwsza
             # widoczna pozycja przejelaby gest przed resolverem sesji.
             MenuItem("Otwórz &plik", Action.OPEN_FILE_DIALOG, shortcut="Ctrl+O",
-                     accelerator=False),
-            MenuItem("Otwórz &folder", Action.OPEN_FOLDER_DIALOG, shortcut="Ctrl+Shift+O"),
+                     accelerator=False, visible_sessions=FILES_ONLY),
+            MenuItem("Otwórz &folder", Action.OPEN_FOLDER_DIALOG,
+                     shortcut="Ctrl+Shift+O", visible_sessions=FILES_ONLY),
+            MenuItem(
+                "Zapisane &strumienie WiiM",
+                Action.VIEW_WIIM_NETWORK_STREAMS,
+                shortcut="Ctrl+O",
+                accelerator=False,
+                visible_sessions=WIIM_ONLY,
+            ),
             MenuItem(
                 "Dodaj podcast, kanał YouTube lub medium &internetowe",
                 Action.ADD_PODCAST_SOURCE,
                 shortcut="Ctrl+N",
                 accelerator=False,
                 needs_podcast_session=True,
+                visible_sessions=PODCASTS_ONLY,
             ),
             MenuItem(
                 "Importuj podcasty z OP&ML",
@@ -168,16 +179,19 @@ def build_menus() -> tuple[Menu, ...]:
                 shortcut="Ctrl+O",
                 accelerator=False,
                 needs_podcast_session=True,
+                visible_sessions=PODCASTS_ONLY,
             ),
             MenuItem(
                 "&Eksportuj bibliotekę podcastów do OPML",
                 Action.EXPORT_PODCAST_OPML,
                 needs_podcast_session=True,
+                visible_sessions=PODCASTS_ONLY,
             ),
             MenuItem(
                 "Eksportuj subskrypcje &YouTube",
                 Action.EXPORT_YOUTUBE_SUBSCRIPTIONS,
                 needs_podcast_session=True,
+                visible_sessions=PODCASTS_ONLY,
             ),
             MenuItem(
                 "Odśwież wybrane źródło pod&castów",
@@ -185,6 +199,7 @@ def build_menus() -> tuple[Menu, ...]:
                 shortcut="F5",
                 accelerator=False,
                 needs_podcast_session=True,
+                visible_sessions=PODCASTS_ONLY,
             ),
             MenuItem(
                 "Odśwież &wszystkie źródła podcastów",
@@ -192,6 +207,7 @@ def build_menus() -> tuple[Menu, ...]:
                 shortcut="Ctrl+F5",
                 accelerator=False,
                 needs_podcast_session=True,
+                visible_sessions=PODCASTS_ONLY,
             ),
             MenuItem(
                 "Po&bierz zaznaczone odcinki",
@@ -200,6 +216,7 @@ def build_menus() -> tuple[Menu, ...]:
                 accelerator=False,
                 needs_podcast_session=True,
                 needs_selection=True,
+                visible_sessions=PODCASTS_ONLY,
             ),
             MenuItem(
                 "Zapisz odcinek &jako…",
@@ -208,6 +225,7 @@ def build_menus() -> tuple[Menu, ...]:
                 accelerator=False,
                 needs_podcast_session=True,
                 needs_selection=True,
+                visible_sessions=PODCASTS_ONLY,
             ),
             MenuItem(
                 "Pełny &opis podcastu lub odcinka…",
@@ -216,6 +234,7 @@ def build_menus() -> tuple[Menu, ...]:
                 accelerator=False,
                 needs_podcast_session=True,
                 needs_podcast_item=True,
+                visible_sessions=PODCASTS_ONLY,
             ),
             SEPARATOR,
             # Backspace dzialal od dawna, ale wylacznie z klawiatury.

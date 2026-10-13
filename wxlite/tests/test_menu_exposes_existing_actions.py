@@ -30,6 +30,7 @@ from amc_wx_lite.shortcuts import (
     RADIO_LIST_VIEW,
     RADIO_PLAYER_VIEW,
     TIDAL_COLLECTION_LIST_VIEW,
+    WIIM_SESSION_VIEW,
     Action,
 )
 
@@ -148,6 +149,7 @@ def test_shortcut_shown_in_menu_is_the_shortcut_that_really_works() -> None:
         RADIO_LIST_VIEW,
         RADIO_PLAYER_VIEW,
         TIDAL_COLLECTION_LIST_VIEW,
+        WIIM_SESSION_VIEW,
         PLAYER_VIEW,
     ):
         for chord, action in table.items():
@@ -554,6 +556,30 @@ def test_playback_and_view_menus_do_not_mix_foreign_sessions() -> None:
 
     remote_playback = actions(menu_model.SessionId.SONOS, "&Odtwarzanie")
     assert remote_playback == {Action.PLAY_PAUSE}
+
+
+def test_file_menu_uses_the_active_session_instead_of_mixing_sources() -> None:
+    def actions(session):
+        menu = next(
+            menu for menu in menu_model.menus_for_session(session)
+            if menu.title == "&Pliki"
+        )
+        return {item.action for item in menu.items if item.action is not None}
+
+    files = actions(menu_model.SessionId.FILES)
+    assert Action.OPEN_FILE_DIALOG in files
+    assert Action.IMPORT_PODCAST_OPML not in files
+    assert Action.VIEW_WIIM_NETWORK_STREAMS not in files
+
+    podcasts = actions(menu_model.SessionId.PODCASTS)
+    assert Action.IMPORT_PODCAST_OPML in podcasts
+    assert Action.OPEN_FILE_DIALOG not in podcasts
+    assert Action.VIEW_WIIM_NETWORK_STREAMS not in podcasts
+
+    wiim = actions(menu_model.SessionId.WIIM)
+    assert Action.VIEW_WIIM_NETWORK_STREAMS in wiim
+    assert Action.OPEN_FILE_DIALOG not in wiim
+    assert Action.IMPORT_PODCAST_OPML not in wiim
 
 
 def test_audio_menu_keeps_its_tempo_submenu_marker() -> None:
