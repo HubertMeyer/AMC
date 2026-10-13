@@ -22,6 +22,7 @@ internal static class Program
         ("kanoniczna instalacja wygrywa z nieznaną kopią", PreferredInstallationWins),
         ("aktualizator wykrywa wszystkie procesy instalacji", UpdaterRecognizesInstalledComponents),
         ("aktualizator wykrywa żywy proces z instalacji", UpdaterFindsRunningInstalledProcess),
+        ("aktualizator zamyka tylko właściwe okno AMC", UpdaterTargetsOnlyInstalledAmcWindow),
     ];
 
     public static int Main()
@@ -231,6 +232,25 @@ internal static class Program
             }
             Directory.Delete(root, recursive: true);
         }
+    }
+
+    private static void UpdaterTargetsOnlyInstalledAmcWindow()
+    {
+        var root = Path.Combine("D:\\", "Projekty Codex", "AMC Python");
+        var runtime = Path.Combine(root, "runtime", "python.exe");
+        Equal(true, SafeApplicationStop.IsCandidateWindow(
+            root,
+            runtime,
+            "AMC Python — wersja 0.1.0, kompilacja 2026.10.13-test"));
+        Equal(true, SafeApplicationStop.IsCandidateWindow(root, runtime, "AMC Python"));
+        Equal(false, SafeApplicationStop.IsCandidateWindow(
+            root,
+            Path.Combine("D:\\", "Projekty Codex", "inna kopia", "runtime", "python.exe"),
+            "AMC Python — wersja 0.1.0, kompilacja 2026.10.13-test"));
+        Equal(false, SafeApplicationStop.IsCandidateWindow(
+            root,
+            runtime,
+            "AMC Python - techniczne okno pomocnicze"));
     }
 
     private static void Throws(string expected, Action action)

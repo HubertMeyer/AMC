@@ -121,6 +121,13 @@ produkcyjnym katalogu bez przygotowanej paczki aktualizacji. Automatyczne
 sprawdzanie i pobieranie nowych wersji zostanie podłączone do docelowego
 kanału wydań AMC Python w kolejnym etapie.
 
+Aktualizator najpierw sprawdza cały manifest i sumy plików, a dopiero potem
+prosi właściwe okno AMC Python z aktualizowanego katalogu o zwykłe zamknięcie.
+Nie kończy procesu wymuszenie. Gdy trwa nagrywanie albo jego stanu nie da się
+potwierdzić, interfejs odmawia zamknięcia, aktualizacja nie dotyka żadnego
+pliku i zwraca kod 3. Po udanej podmianie parametr `--launch AMC.exe` uruchamia
+już nową wersję z tego samego, stałego katalogu.
+
 ## Starszy pakiet testowy — Podcasty i Shift+R
 
 Do czasu podania nowej ścieżki pakietu z `AMC.exe` starszy przyrost uruchamiał

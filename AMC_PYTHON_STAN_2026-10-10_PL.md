@@ -566,6 +566,14 @@ launcher. Pozostawiony `runtime\python.exe` albo `host\amc_lite_host.exe`
 powoduje bezpieczną odmowę z kodem 3, bez częściowej podmiany i bez nowego
 katalogu `.aktualizacja-*`. Osobny test uruchamia rzeczywisty proces z próbnej
 instalacji i potwierdza jego wykrycie.
+
+Przed bezpieczną podmianą aktualizator potrafi teraz sam poprosić właściwe
+okno AMC Python z aktualizowanego katalogu o zwykłe zamknięcie. Najpierw
+weryfikuje kompletną paczkę, więc błędne wydanie nie zamyka działającego
+programu. Żądanie przechodzi przez normalną obsługę zamykania wxPython:
+aktywne nagrywanie albo niepewny stan nagrywania blokują operację, a
+aktualizator po czasie odmawia z kodem 3. Nie używa wymuszonego zakończenia
+procesu i nie zamyka kopii AMC uruchomionej z innego folderu.
 Aktualizację kanonicznego katalogu wolno wykonać przy zamkniętym AMC Python.
 Działającego głównego AMC nie zamyka się w tym celu, jeżeli trwa w nim
 nagrywanie. Po podmianie nie uruchamia się AMC Python równolegle z głównym AMC,

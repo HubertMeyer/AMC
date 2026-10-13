@@ -63,7 +63,18 @@ internal static class Program
                 return AppStillRunning;
             }
 
-            if (!WaitForApplication(options.WaitPid))
+            // Najpierw sprawdzamy całą paczkę. Wadliwa albo niezgodna
+            // aktualizacja nie może bez potrzeby zamknąć działającego AMC.
+            var manifest = LoadAndVerify(options.Source, options.Target);
+
+            // Zwykłe WM_CLOSE uruchamia tę samą ścieżkę co Alt+F4. Interfejs
+            // sprawdza żywy stan nagrywania i może bezpiecznie odmówić. Nigdy
+            // nie zabijamy procesu i nie podmieniamy plików, dopóki choć jeden
+            // składnik z katalogu instalacji nadal działa.
+            if (!SafeApplicationStop.RequestAndWait(
+                    options.Target,
+                    options.WaitPid,
+                    TimeSpan.FromSeconds(30)))
             {
                 if (!options.Silent)
                 {
@@ -72,8 +83,6 @@ internal static class Program
                 }
                 return AppStillRunning;
             }
-
-            var manifest = LoadAndVerify(options.Source, options.Target);
             // --wait-pid pilnuje procesu, który uruchomił aktualizację, ale
             // nie obejmuje osieroconego runtime\python.exe ani hosta audio.
             // Sprawdzamy cały katalog PRZED utworzeniem .aktualizacja-*.
