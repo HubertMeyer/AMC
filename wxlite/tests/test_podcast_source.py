@@ -12,6 +12,7 @@ from amc_wx_lite.podcast_source import (
     SORT_ADDED_NEWEST,
     SORT_ALPHABETICAL,
     SORT_CUSTOM,
+    PodcastProfileError,
     PodcastSource,
     subscription_rows,
 )
@@ -210,6 +211,48 @@ def _queue_database(
         connection.executemany(
             f"INSERT INTO {table} VALUES ('PoDcAsTs', ?, ?)",
             enumerate(values),
+        )
+    connection.commit()
+    connection.close()
+
+
+def _playlist_database(
+    base: Path,
+    *,
+    first_items: list[str],
+    second_items: list[str],
+) -> None:
+    """Minimal shared-library fixture for Podcast Ctrl+P views."""
+    connection = sqlite3.connect(base / "library.db")
+    connection.executescript(
+        """
+        CREATE TABLE playlists (
+            id TEXT PRIMARY KEY, session_id TEXT NOT NULL,
+            ordinal INTEGER NOT NULL, name TEXT NOT NULL,
+            created_utc_ticks INTEGER NOT NULL
+        );
+        CREATE TABLE playlist_items (
+            playlist_id TEXT NOT NULL, ordinal INTEGER NOT NULL,
+            item_id TEXT NOT NULL
+        );
+        """
+    )
+    connection.executemany(
+        "INSERT INTO playlists VALUES (?, ?, ?, ?, ?)",
+        [
+            ("podcast-second", "PoDcAsTs", 1, "Do później", 2),
+            ("podcast-first", "podcasts", 0, "Poranek", 1),
+            ("files-private", "local", 0, "Pliki", 3),
+        ],
+    )
+    for playlist_id, values in (
+        ("podcast-first", first_items),
+        ("podcast-second", second_items),
+        ("files-private", ["episode-one"]),
+    ):
+        connection.executemany(
+            "INSERT INTO playlist_items VALUES (?, ?, ?)",
+            ((playlist_id, ordinal, item_id) for ordinal, item_id in enumerate(values)),
         )
     connection.commit()
     connection.close()
@@ -679,6 +722,73 @@ def test_queue_accepts_legacy_order_when_membership_tables_are_empty() -> None:
         page = PodcastSource(private_sandbox(base)).queue()
 
         assert [row.title for row in page.rows] == ["two", "one"]
+
+
+def test_podcast_playlists_preserve_names_order_and_hide_technical_ids() -> None:
+    with _temporary_folder() as folder:
+        base = Path(folder)
+        path = _database(base)
+        _insert_episode(
+            path,
+            item_id="episode-one",
+            subscription_id="rss-id",
+            title="Pierwszy odcinek",
+            ordinal=0,
+            published=100,
+        )
+        _insert_episode(
+            path,
+            item_id="episode-two",
+            subscription_id="yt-id",
+            title="Drugi materiał",
+            ordinal=1,
+            published=200,
+        )
+        _playlist_database(
+            base,
+            first_items=["episode-two", "missing-private-id", "episode-one"],
+            second_items=["episode-one"],
+        )
+        source = PodcastSource(private_sandbox(base))
+
+        catalogue = source.playlists()
+        contents = source.playlist("podcast-first")
+
+        assert [row.title for row in catalogue.rows] == ["Poranek", "Do później"]
+        assert [row.item_id for row in catalogue.rows] == [
+            "podcast-playlist:podcast-first",
+            "podcast-playlist:podcast-second",
+        ]
+        assert catalogue.rows[0].detail == "dostępne 2 z 3"
+        assert catalogue.rows[1].detail == "1 element"
+        assert [row.title for row in contents.rows] == [
+            "Drugi materiał",
+            "Pierwszy odcinek",
+        ]
+        assert contents.playlist_title == "Poranek"
+        spoken = " ".join(
+            row.title + " " + row.detail
+            for row in catalogue.rows + contents.rows
+        )
+        assert "podcast-first" not in spoken
+        assert "episode-one" not in spoken
+        assert "episode-two" not in spoken
+        assert "missing-private-id" not in spoken
+
+
+def test_missing_podcast_playlist_fails_with_user_facing_text() -> None:
+    with _temporary_folder() as folder:
+        base = Path(folder)
+        _database(base)
+        _playlist_database(base, first_items=[], second_items=[])
+
+        try:
+            PodcastSource(private_sandbox(base)).playlist("not-visible-id")
+        except PodcastProfileError as error:
+            assert str(error) == "Tej playlisty już nie ma."
+            assert "not-visible-id" not in str(error)
+        else:
+            raise AssertionError("Brakująca playlista powinna zakończyć odczyt")
 
 
 def test_full_description_starts_with_content_and_never_exposes_ids() -> None:

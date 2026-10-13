@@ -80,6 +80,8 @@ class LibraryView(Enum):
     PODCAST_FAVORITES = "podcastFavorites"
     PODCAST_HISTORY = "podcastHistory"
     PODCAST_QUEUE = "podcastQueue"
+    PODCAST_PLAYLISTS = "podcastPlaylists"
+    PODCAST_PLAYLIST_CONTENTS = "podcastPlaylistContents"
     #: Zbiorcze widoki z glownego AMC. ``PODCAST_INBOX`` jest globalnym,
     #: chwilowym podgladem pod Ctrl+I.
     PODCAST_INBOX = "podcastInbox"
@@ -325,6 +327,16 @@ class OpenPodcastAggregateView:
     #: Jednorazowy kontekst po zmianie sortowania; zawiera wylacznie jawna,
     #: polska etykiete, nigdy wartosc modelu ani identyfikator komendy.
     announcement: str = ""
+
+
+@dataclass(slots=True)
+class OpenPodcastPlaylistView:
+    """Open podcast playlists or the ordered contents of one playlist."""
+
+    playlist_id: str | None = None
+    playlist_title: str = ""
+    preferred_id: str | None = None
+    load_more: bool = False
 
 
 @dataclass(slots=True)
@@ -802,6 +814,14 @@ class Navigator:
             return [OpenPodcastView(row.item_id, row.title)]
 
         if row.kind == "loadMore":
+            if state.library_view is LibraryView.PODCAST_PLAYLIST_CONTENTS:
+                if not state.library_playlist_id:
+                    return [Announce("Nie wiadomo, dla której playlisty wczytać elementy")]
+                return [OpenPodcastPlaylistView(
+                    playlist_id=state.library_playlist_id,
+                    playlist_title=state.library_return_view or "Playlista",
+                    load_more=True,
+                )]
             if state.library_view in (
                 LibraryView.PODCAST_FAVORITES,
                 LibraryView.PODCAST_HISTORY,
@@ -1266,8 +1286,11 @@ class Navigator:
         """
         state = self.session
         if state.session_id is SessionId.PODCASTS:
-            if state.library_view is LibraryView.PODCAST_EPISODES:
-                return [OpenPodcastView(preferred_id=state.library_return_id)]
+            if state.library_view in (
+                LibraryView.PODCAST_EPISODES,
+                LibraryView.PODCAST_PLAYLIST_CONTENTS,
+            ):
+                return self._leave_library_view()
             return []
         if state.session_id is SessionId.TIDAL:
             if state.tidal_history:
@@ -1654,6 +1677,11 @@ class Navigator:
         # Zapamietujemy, na czym stanac po Backspace -- po Id wiersza, nie po
         # numerze pozycji, bo lista moze sie w miedzyczasie przeladowac.
         state.library_return_id = row.item_id
+        if state.session_id is SessionId.PODCASTS:
+            return [OpenPodcastPlaylistView(
+                playlist_id=playlist_id,
+                playlist_title=row.title,
+            )]
         return [
             OpenLibraryView(
                 view=LibraryView.PLAYLIST_CONTENTS,
@@ -1674,6 +1702,10 @@ class Navigator:
         if state.session_id is SessionId.PODCASTS:
             if state.library_view is LibraryView.PODCAST_EPISODES:
                 return [OpenPodcastView(preferred_id=state.library_return_id)]
+            if state.library_view is LibraryView.PODCAST_PLAYLIST_CONTENTS:
+                return [OpenPodcastPlaylistView(
+                    preferred_id=state.library_return_id,
+                )]
             return []
         if state.library_view in (
             LibraryView.ALL_FILES,
@@ -1908,6 +1940,56 @@ class Navigator:
         if not order_matches_amc:
             message = f"{message}, kolejność zastępcza"
         return [Announce(message)]
+
+    def apply_podcast_playlists(
+        self,
+        rows: list[Row],
+        *,
+        preferred_id: str | None = None,
+    ) -> list[object]:
+        """Apply the top-level, session-specific podcast playlist catalogue."""
+
+        state = self.sessions[SessionId.PODCASTS]
+        state.library_view = LibraryView.PODCAST_PLAYLISTS
+        state.library_playlist_id = None
+        state.library_return_view = "Playlisty"
+        state.model.replace(
+            rows,
+            preferred_id=preferred_id or state.library_return_id,
+        )
+        state.view = View.LIST
+        state.library_return_id = state.model.selected_id
+        return [Announce(
+            f"Playlisty, {len(rows)} {_items_word(len(rows))}"
+            if rows else "Playlisty, zero elementów"
+        )]
+
+    def apply_podcast_playlist_contents(
+        self,
+        playlist_id: str,
+        playlist_title: str,
+        rows: list[Row],
+        *,
+        preferred_id: str | None = None,
+    ) -> list[object]:
+        """Apply one playlist while preserving its manual order and parent."""
+
+        state = self.sessions[SessionId.PODCASTS]
+        if state.library_view is LibraryView.PODCAST_PLAYLISTS:
+            state.library_return_id = state.model.selected_id or (
+                f"podcast-playlist:{playlist_id}"
+            )
+        remembered = state.view_selected_ids.get(playlist_id)
+        state.library_view = LibraryView.PODCAST_PLAYLIST_CONTENTS
+        state.library_playlist_id = playlist_id
+        state.library_return_view = playlist_title
+        state.model.replace(rows, preferred_id=preferred_id or remembered)
+        state.view = View.LIST
+        count = sum(1 for row in rows if row.kind == "episode")
+        return [Announce(
+            f"Playlista — {playlist_title}, {count} {_items_word(count)}"
+            if count else f"Playlista — {playlist_title}, zero elementów"
+        )]
 
     # --------------------------------------------------------------- TIDAL
 

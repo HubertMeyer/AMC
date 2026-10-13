@@ -829,7 +829,11 @@ internal sealed class LiteProfileMutationStore
         }
     }
 
-    public object Remove(string sessionId, string view, IReadOnlyList<string> itemIds)
+    public object Remove(
+        string sessionId,
+        string view,
+        IReadOnlyList<string> itemIds,
+        string? playlistId = null)
     {
         var ids = itemIds.Where(id => !string.IsNullOrWhiteSpace(id))
             .Distinct(StringComparer.Ordinal).ToArray();
@@ -840,7 +844,7 @@ internal sealed class LiteProfileMutationStore
             if (string.Equals(sessionId, "radio", StringComparison.Ordinal))
                 return RemoveRadio(view, ids);
             if (string.Equals(sessionId, "podcasts", StringComparison.Ordinal))
-                return RemovePodcasts(view, ids);
+                return RemovePodcasts(view, ids, playlistId);
             if (!string.Equals(sessionId, "files", StringComparison.Ordinal))
                 throw new LiteRequestException("Usuwanie w tej sesji nie jest jeszcze dostępne.");
             return RemoveLocal(view, ids);
@@ -965,8 +969,36 @@ internal sealed class LiteProfileMutationStore
         return new { removedCount = itemIds.Count, titles };
     }
 
-    private object RemovePodcasts(string view, IReadOnlyList<string> itemIds)
+    private object RemovePodcasts(
+        string view,
+        IReadOnlyList<string> itemIds,
+        string? playlistId)
     {
+        if (string.Equals(view, "podcastPlaylistContents", StringComparison.Ordinal))
+        {
+            var normalizedPlaylistId = CleanRequiredText(
+                playlistId ?? string.Empty,
+                "Nie wskazano otwartej playlisty.");
+            using var playlistConnection = OpenDatabase(_libraryDatabasePath);
+            using var playlistTransaction = playlistConnection.BeginTransaction();
+            var order = ReadPlaylistOrder(
+                playlistConnection,
+                playlistTransaction,
+                "podcasts",
+                normalizedPlaylistId);
+            var removedFromPlaylist = order.RemoveAll(itemIds.Contains);
+            if (removedFromPlaylist > 0)
+            {
+                RewritePlaylistOrder(
+                    playlistConnection,
+                    playlistTransaction,
+                    normalizedPlaylistId,
+                    order);
+                TouchMetadata(playlistConnection, playlistTransaction);
+            }
+            playlistTransaction.Commit();
+            return new { removedCount = removedFromPlaylist };
+        }
         if (string.Equals(view, "podcastHistory", StringComparison.Ordinal))
         {
             using var historyConnection = OpenDatabase(_libraryDatabasePath);

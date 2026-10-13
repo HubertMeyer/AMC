@@ -435,6 +435,28 @@ def test_profile_mutations_use_narrow_named_operations() -> None:
         client.close()
 
 
+def test_removing_from_podcast_playlist_names_the_playlist_explicitly() -> None:
+    client = make_client()
+    try:
+        result = client.remove_profile_items(
+            "podcasts",
+            "podcastPlaylistContents",
+            ["episode-1"],
+            playlist_id="playlist-1",
+        )
+        assert result == {
+            "op": "library.remove",
+            "args": {
+                "sessionId": "podcasts",
+                "view": "podcastPlaylistContents",
+                "itemIds": ["episode-1"],
+                "playlistId": "playlist-1",
+            },
+        }
+    finally:
+        client.close()
+
+
 def test_profile_playlists_use_one_read_and_one_atomic_replace_operation() -> None:
     client = make_client()
     try:

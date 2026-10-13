@@ -419,17 +419,19 @@ własnej normalizacji diakrytyków.
   zmienia nazwę, a Delete usuwa ją bez usuwania multimediów. Wszystkie zmiany
   pozostają robocze do przycisku Zapisz i trafiają atomowo przez jednego
   właściciela C#; Anuluj nie zapisuje częściowej operacji. `Ctrl+P` w Radiu
-  pokazuje wyłącznie playlisty sesji radiowej; Enter otwiera ich stacje w
-  zapisanej kolejności, a Backspace wraca na tę samą playlistę. Nazwy i
-  liczniki są użytkowe, bez identyfikatorów profilu, a brakująca stacja jest
-  uczciwie uwzględniona w liczniku dostępności. W otwartej lokalnej albo
-  radiowej playliście działa też ręczna kolejność głównego AMC: `Alt+Up`/`Alt+Down`
+  i Podcastach pokazuje wyłącznie playlisty bieżącej sesji; Enter otwiera ich
+  stacje albo odcinki w zapisanej kolejności, a Backspace wraca na tę samą
+  playlistę. Nazwy i liczniki są użytkowe, bez identyfikatorów profilu, a
+  brakujący element jest uczciwie uwzględniony w liczniku dostępności. W
+  otwartej lokalnej, radiowej albo podcastowej playliście działa też ręczna
+  kolejność głównego AMC: `Alt+Up`/`Alt+Down`
   przesuwa ciągły blok o jedno miejsce, a `Ctrl+X`, wybór celu i `Ctrl+V`
   przenosi także elementy nieprzylegające przed bieżący wiersz. Filtr musi być
   pusty, zapis jest jedną transakcją C#, niedostępne pozycje zachowują swoje
-  miejsca, a po odświeżeniu fokus i całe zaznaczenie wracają według ID. Do
-  dalszego portu pozostaje widok zawartości playlist Podcastów i jego ręczna
-  kolejność; samo członkostwo Podcastów jest już zapisywane.
+  miejsca, a po odświeżeniu fokus i całe zaznaczenie wracają według ID.
+  `Delete` w zawartości playlisty podcastów usuwa odcinek wyłącznie z tej
+  playlisty. Członkostwo, widok zawartości i ręczna kolejność Podcastów są
+  obsługiwane przez ten sam magazyn playlist co główne AMC.
 - Podcasty i YouTube mają już wąski zapis postępu przez jednego właściciela C#:
   checkpoint co 15 sekund, stan „w trakcie” po minucie i „odtworzony” po
   naturalnym końcu. Python pozostaje czytelnikiem `podcasts.db`; blokada drugiego

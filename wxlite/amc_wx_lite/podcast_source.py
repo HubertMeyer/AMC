@@ -84,6 +84,21 @@ class PodcastEpisodePage:
 
 
 @dataclass(frozen=True, slots=True)
+class PodcastPlaylistPage:
+    """One playlist catalogue or one playlist's ordered episode page.
+
+    ``playlist_id`` is navigation state only.  It is never copied into a row
+    label, accessible name or announcement.
+    """
+
+    rows: list[Row]
+    loaded_count: int
+    has_more: bool
+    playlist_id: str | None = None
+    playlist_title: str = ""
+
+
+@dataclass(frozen=True, slots=True)
 class PodcastDescription:
     """Long-form user text for the native description dialog.
 
@@ -962,6 +977,126 @@ class PodcastSource:
             record.item_id: record
             for record in (_materialize_episode(row) for row in rows)
         }
+
+    def _podcast_playlists(self) -> list[tuple[str, str, list[str]]]:
+        """Read playlist names and stored order from the shared library DB."""
+
+        database: LibraryDatabase | None = None
+        try:
+            database = LibraryDatabase(self.layout.library_db)
+            entries = database.connection.execute(
+                """
+                SELECT id, name
+                FROM playlists
+                WHERE session_id = 'podcasts' COLLATE NOCASE
+                ORDER BY ordinal
+                """
+            ).fetchall()
+            result: list[tuple[str, str, list[str]]] = []
+            for entry in entries:
+                playlist_id = str(entry[0] or "").strip()
+                title = _clean_text(entry[1], "Playlista bez nazwy")
+                if not playlist_id:
+                    continue
+                item_rows = database.connection.execute(
+                    """
+                    SELECT item_id
+                    FROM playlist_items
+                    WHERE playlist_id = ?
+                    ORDER BY ordinal
+                    """,
+                    (playlist_id,),
+                ).fetchall()
+                item_ids = [
+                    str(row[0]) for row in item_rows
+                    if str(row[0] or "").strip()
+                ]
+                result.append((playlist_id, title, item_ids))
+            return result
+        except Exception as error:
+            raise PodcastProfileError(
+                f"Nie można odczytać playlist podcastów: {error}"
+            ) from error
+        finally:
+            if database is not None:
+                database.close()
+
+    @staticmethod
+    def _playlist_count_label(stored: int, available: int) -> str:
+        if stored == available:
+            if stored == 1:
+                return "1 element"
+            last_two = stored % 100
+            last = stored % 10
+            suffix = "elementy" if 2 <= last <= 4 and not 12 <= last_two <= 14 else "elementów"
+            return f"{stored} {suffix}"
+        return f"dostępne {available} z {stored}"
+
+    def playlists(self) -> PodcastPlaylistPage:
+        """Top-level Ctrl+P view for the Podcasts and YouTube session."""
+
+        entries = self._podcast_playlists()
+        requested_ids = list(dict.fromkeys(
+            item_id for _, _, item_ids in entries for item_id in item_ids
+        ))
+        by_id = self._episode_records_by_ids(requested_ids)
+        rows = [
+            Row(
+                item_id=f"podcast-playlist:{playlist_id}",
+                title=title,
+                kind="playlist",
+                detail=self._playlist_count_label(
+                    len(item_ids),
+                    sum(1 for item_id in item_ids if item_id in by_id),
+                ),
+            )
+            for playlist_id, title, item_ids in entries
+        ]
+        return PodcastPlaylistPage(
+            rows=rows,
+            loaded_count=len(rows),
+            has_more=False,
+        )
+
+    def playlist(
+        self,
+        playlist_id: str,
+        *,
+        loaded_count: int = PAGE_SIZE,
+    ) -> PodcastPlaylistPage:
+        """Episodes of one AMC playlist, preserving its exact manual order."""
+
+        entry = next(
+            (
+                candidate for candidate in self._podcast_playlists()
+                if candidate[0] == playlist_id
+            ),
+            None,
+        )
+        if entry is None:
+            raise PodcastProfileError("Tej playlisty już nie ma.")
+        _, title, item_ids = entry
+        by_id = self._episode_records_by_ids(item_ids)
+        ordered = [by_id[item_id] for item_id in item_ids if item_id in by_id]
+        requested = max(PAGE_SIZE, _as_int(loaded_count, PAGE_SIZE))
+        visible = ordered[:requested]
+        rows = [_episode_row(record, aggregate=True) for record in visible]
+        remaining = max(0, len(ordered) - len(visible))
+        if remaining:
+            rows.append(Row(
+                item_id=f"podcast-load-more:playlist:{playlist_id}:{requested}",
+                title="Załaduj więcej elementów playlisty",
+                kind="loadMore",
+                detail=f"pozostało {remaining}",
+                show_kind=False,
+            ))
+        return PodcastPlaylistPage(
+            rows=rows,
+            loaded_count=len(visible),
+            has_more=bool(remaining),
+            playlist_id=playlist_id,
+            playlist_title=title,
+        )
 
     @staticmethod
     def _manual_favorite_order(

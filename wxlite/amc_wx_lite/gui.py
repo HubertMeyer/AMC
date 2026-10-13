@@ -90,6 +90,7 @@ from .navigation import (
     OpenFolder,
     OpenLibraryView,
     OpenPodcastAggregateView,
+    OpenPodcastPlaylistView,
     OpenPodcastView,
     OpenQueueView,
     OpenTidalContainer,
@@ -4751,10 +4752,15 @@ class LiteFrame(wx.Frame):
             SessionId.PODCASTS: {"episode"},
         }
         playlist_contents = (
-            self.navigator.active in (SessionId.FILES, SessionId.RADIO)
-            and session.view is View.LIST
-            and session.library_view is LibraryView.PLAYLIST_CONTENTS
+            session.view is View.LIST
             and bool(session.library_playlist_id)
+            and (
+                self.navigator.active in (SessionId.FILES, SessionId.RADIO)
+                and session.library_view is LibraryView.PLAYLIST_CONTENTS
+                or self.navigator.active is SessionId.PODCASTS
+                and session.library_view
+                is LibraryView.PODCAST_PLAYLIST_CONTENTS
+            )
         )
         podcast_sort_actions = {
             Action.SORT_PODCAST_INBOX_ADDED: SORT_ADDED_NEWEST,
@@ -6520,7 +6526,6 @@ class LiteFrame(wx.Frame):
             self.navigator.active is SessionId.PODCASTS
             and action in {
                 Action.VIEW_ALL_FILES,
-                Action.VIEW_PLAYLISTS,
                 Action.VIEW_FOLDERS,
                 Action.VIEW_ITEM_BOOKMARKS,
                 Action.VIEW_ALL_BOOKMARKS,
@@ -6820,7 +6825,9 @@ class LiteFrame(wx.Frame):
             else:
                 self._run(self.navigator.open_library_view(LibraryView.FAVORITES))
         elif action is Action.VIEW_PLAYLISTS:
-            if self.navigator.active is SessionId.TIDAL:
+            if self.navigator.active is SessionId.PODCASTS:
+                self._open_podcast_playlist_view(OpenPodcastPlaylistView())
+            elif self.navigator.active is SessionId.TIDAL:
                 self._open_tidal_view(OpenTidalView(LibraryView.TIDAL_PLAYLISTS))
             else:
                 self._run(self.navigator.open_library_view(LibraryView.PLAYLISTS))
@@ -6894,6 +6901,8 @@ class LiteFrame(wx.Frame):
                 self._open_podcast_view(intent)
             elif isinstance(intent, OpenPodcastAggregateView):
                 self._open_podcast_aggregate(intent)
+            elif isinstance(intent, OpenPodcastPlaylistView):
+                self._open_podcast_playlist_view(intent)
             elif isinstance(intent, OpenTidalView):
                 self._open_tidal_view(intent)
             elif isinstance(intent, OpenTidalContainer):
@@ -8423,6 +8432,78 @@ class LiteFrame(wx.Frame):
 
         self.runner.submit("podcast-view", work, done, failed)
 
+    def _open_podcast_playlist_view(
+        self,
+        intent: OpenPodcastPlaylistView,
+        *,
+        restore_selected_ids: list[str] | None = None,
+        after_refresh: Callable[[], None] | None = None,
+    ) -> None:
+        """Ctrl+P and one playlist, backed by the shared AMC profile."""
+
+        if not self.podcasts.is_available:
+            self.announcer.say("Nie znaleziono biblioteki podcastów AMC")
+            return
+        playlist_id = intent.playlist_id
+        key = f"podcast-playlist:{playlist_id}" if playlist_id else "podcast-playlists"
+        previous_count = self._podcast_loaded_counts.get(key, 0)
+        requested = (
+            max(PODCAST_PAGE_SIZE, previous_count + PODCAST_PAGE_SIZE)
+            if playlist_id and intent.load_more
+            else max(PODCAST_PAGE_SIZE, previous_count)
+        )
+
+        def work():
+            if playlist_id:
+                return self.podcasts.playlist(
+                    playlist_id,
+                    loaded_count=requested,
+                )
+            return self.podcasts.playlists()
+
+        def done(page) -> None:
+            self._podcast_loaded_counts[key] = page.loaded_count
+            if playlist_id:
+                preferred = intent.preferred_id
+                if intent.load_more and previous_count < len(page.rows):
+                    candidate = page.rows[previous_count]
+                    if candidate.kind == "episode":
+                        preferred = candidate.item_id
+                events = self.navigator.apply_podcast_playlist_contents(
+                    playlist_id,
+                    page.playlist_title or intent.playlist_title or "Playlista",
+                    page.rows,
+                    preferred_id=preferred,
+                )
+            else:
+                events = self.navigator.apply_podcast_playlists(
+                    page.rows,
+                    preferred_id=intent.preferred_id,
+                )
+            if self.navigator.active is SessionId.PODCASTS:
+                self._apply_podcast_result(events)
+                if (
+                    restore_selected_ids
+                    and self.navigator.session.library_view
+                    is LibraryView.PODCAST_PLAYLIST_CONTENTS
+                    and self.navigator.session.library_playlist_id == playlist_id
+                ):
+                    self._active_list().select_item_ids(restore_selected_ids)
+                if after_refresh is not None:
+                    after_refresh()
+
+        def failed(error: Exception) -> None:
+            if self.navigator.active is not SessionId.PODCASTS:
+                return
+            if after_refresh is not None:
+                after_refresh()
+            self.announcer.say(
+                str(error) if isinstance(error, PodcastProfileError)
+                else "Nie udało się odczytać playlist podcastów"
+            )
+
+        self.runner.submit("podcast-playlists", work, done, failed)
+
     def _current_podcast_subscription_id(self) -> str | None:
         """Zrodlo dla F5 bez ujawniania technicznego identyfikatora w UI."""
         state = self.navigator.sessions[SessionId.PODCASTS]
@@ -9887,13 +9968,20 @@ class LiteFrame(wx.Frame):
         state = self.navigator.session
         if (
             state.view is View.LIST
-            and state.library_view is LibraryView.PLAYLIST_CONTENTS
             and state.library_playlist_id
         ):
-            contract = {
-                SessionId.FILES: ("local", "track"),
-                SessionId.RADIO: ("radio", "station"),
-            }.get(self.navigator.active)
+            contract = None
+            if state.library_view is LibraryView.PLAYLIST_CONTENTS:
+                contract = {
+                    SessionId.FILES: ("local", "track"),
+                    SessionId.RADIO: ("radio", "station"),
+                }.get(self.navigator.active)
+            elif (
+                self.navigator.active is SessionId.PODCASTS
+                and state.library_view
+                is LibraryView.PODCAST_PLAYLIST_CONTENTS
+            ):
+                contract = ("podcasts", "episode")
             if contract is not None:
                 return contract[0], state.library_playlist_id, contract[1]
         return None
@@ -13505,6 +13593,24 @@ class LiteFrame(wx.Frame):
                     state.library_view,
                     preferred_id=preferred_id,
                 ))
+            elif state.library_view is LibraryView.PODCAST_PLAYLISTS:
+                self._open_podcast_playlist_view(
+                    OpenPodcastPlaylistView(preferred_id=preferred_id),
+                    after_refresh=after_refresh,
+                )
+            elif (
+                state.library_view is LibraryView.PODCAST_PLAYLIST_CONTENTS
+                and state.library_playlist_id
+            ):
+                self._open_podcast_playlist_view(
+                    OpenPodcastPlaylistView(
+                        playlist_id=state.library_playlist_id,
+                        playlist_title=state.library_return_view or "Playlista",
+                        preferred_id=preferred_id,
+                    ),
+                    restore_selected_ids=selected_ids,
+                    after_refresh=after_refresh,
+                )
             return
         if self.navigator.active is SessionId.TIDAL:
             view = state.library_view
@@ -13696,6 +13802,8 @@ class LiteFrame(wx.Frame):
             is not LibraryView.PODCAST_HISTORY
             and self.navigator.session.library_view
             is not LibraryView.PODCAST_QUEUE
+            and self.navigator.session.library_view
+            is not LibraryView.PODCAST_PLAYLIST_CONTENTS
             and any(row.kind != "podcast" for row in rows)
         ):
             self.announcer.say("Usuń źródło z głównej listy Podcastów i YouTube")
@@ -13705,6 +13813,11 @@ class LiteFrame(wx.Frame):
             return
         session_id = self.navigator.active.value
         view = self._current_profile_view_name()
+        playlist_id = (
+            self.navigator.session.library_playlist_id
+            if view == LibraryView.PODCAST_PLAYLIST_CONTENTS.value
+            else None
+        )
         item_ids = [row.item_id for row in rows]
         titles = [row.title for row in rows]
 
@@ -13722,6 +13835,8 @@ class LiteFrame(wx.Frame):
                 message = f"Usunięto z Kolejki: {label}"
             elif view == LibraryView.PODCAST_QUEUE.value:
                 message = f"Usunięto z Kolejki podcastów: {label}"
+            elif view == LibraryView.PODCAST_PLAYLIST_CONTENTS.value:
+                message = f"Usunięto z playlisty: {label}"
             elif session_id == SessionId.FILES.value:
                 message = f"Usunięto z Biblioteki: {label}. Plik pozostał na dysku"
             elif session_id == SessionId.PODCASTS.value:
@@ -13732,7 +13847,12 @@ class LiteFrame(wx.Frame):
 
         self.runner.submit(
             "profile-edit",
-            lambda: client.remove_profile_items(session_id, view, item_ids),
+            lambda: client.remove_profile_items(
+                session_id,
+                view,
+                item_ids,
+                playlist_id=playlist_id,
+            ),
             done,
             lambda error: self.announcer.say(f"Nie usunięto: {error}"),
         )

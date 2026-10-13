@@ -638,10 +638,10 @@ Bez przekierowania `APPDATA`/`LOCALAPPDATA` aplikacja domyślnie czyta profil w�
    Enter zapisuje, a Escape anuluje wszystkie zmiany robocze. Po Zapisz i po
    Anuluj fokus wraca na właściwą listę albo przycisk odtwarzacza. Ctrl+P
    pokazuje playlisty bieżącej sesji; Enter otwiera zawartość, Backspace wraca
-   na tę samą playlistę. Powtórz cały odczyt i powrót osobno w Plikach oraz
-   w Radiu. Wiersz radiowej playlisty ma podawać nazwę i liczbę dostępnych
-   stacji, nigdy identyfikator profilu. W otwartej lokalnej albo radiowej
-   playliście zaznacz ciągły blok Shiftem:
+   na tę samą playlistę. Powtórz cały odczyt i powrót osobno w Plikach,
+   Radiu oraz Podcastach i YouTube. Wiersz playlisty ma podawać nazwę i liczbę
+   dostępnych elementów, nigdy identyfikator profilu. W otwartej lokalnej,
+   radiowej albo podcastowej playliście zaznacz ciągły blok Shiftem:
    `Alt+Up` i `Alt+Down` przesuwają go o jedno miejsce, zachowując wszystkie
    zaznaczenia i fokus według elementu, nie numeru wiersza. Następnie zaznacz
    nieprzylegające pozycje przez `Ctrl+Spację`, naciśnij `Ctrl+X`, ustaw fokus
@@ -649,6 +649,8 @@ Bez przekierowania `APPDATA`/`LOCALAPPDATA` aplikacja domyślnie czyta profil w�
    celem w swojej wcześniejszej kolejności. Cel należący do zaznaczenia ma
    dać krótką odmowę. Przy niepustym filtrze obie drogi mają zażądać Escape i
    niczego nie zapisać. Po ponownym uruchomieniu sprawdź tę samą kolejność.
+   W playliście podcastów `Delete` ma usunąć odcinek tylko z otwartej
+   playlisty, bez usuwania subskrypcji, pliku ani wpisu z innej playlisty.
 5. Ctrl+C: nazwa lub nazwy zaznaczonych pozycji, każda w osobnym wierszu.
    Ctrl+Shift+C na istniejących plikach ustawia jednocześnie tekst pełnych
    ścieżek oraz Windows `CF_HDROP`, więc pliki można wkleić do folderu. Dla

@@ -805,7 +805,8 @@ internal sealed class LiteEngineHandlers : IDisposable
         RequireProfileMutations().Remove(
             LiteArgs.RequireText(args, "sessionId"),
             LiteArgs.RequireText(args, "view"),
-            ReadIds(args));
+            ReadIds(args),
+            LiteArgs.ReadText(args, "playlistId"));
 
     private object ToggleProfileFavorites(JsonElement args) =>
         RequireProfileMutations().ToggleFavorites(

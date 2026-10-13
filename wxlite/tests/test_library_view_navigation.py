@@ -33,6 +33,7 @@ from amc_wx_lite.navigation import (  # noqa: E402
     LibraryView,
     Navigator,
     OpenLibraryView,
+    OpenPodcastPlaylistView,
     SessionId,
     View,
 )
@@ -258,6 +259,63 @@ def test_vanished_radio_playlist_falls_back_inside_radio() -> None:
     assert request.target_session_id is SessionId.RADIO
     assert all(
         "private-radio-id" not in item.text
+        for item in tasks
+        if isinstance(item, Announce)
+    )
+
+
+def test_podcast_playlist_enter_and_backspace_restore_the_parent_selection() -> None:
+    nav = Navigator()
+    nav.switch_session(SessionId.PODCASTS)
+    nav.apply_podcast_playlists([
+        Row("podcast-playlist:morning", "Poranek", "playlist", detail="2 elementy"),
+        Row("podcast-playlist:later", "Do później", "playlist", detail="1 element"),
+    ])
+    nav.session.model.select_id("podcast-playlist:later")
+
+    opened = nav.activate_selected()
+    request = next(item for item in opened if isinstance(item, OpenPodcastPlaylistView))
+    assert request.playlist_id == "later"
+    assert request.playlist_title == "Do później"
+
+    nav.apply_podcast_playlist_contents(
+        "later",
+        "Do później",
+        [Row("episode-one", "Odcinek", "episode", url="https://example.invalid/e")],
+    )
+    returned = nav.go_to_parent()
+    request = next(item for item in returned if isinstance(item, OpenPodcastPlaylistView))
+    assert request.playlist_id is None
+    assert request.preferred_id == "podcast-playlist:later"
+
+
+def test_podcast_playlist_catalogue_is_a_peer_view_and_escape_is_silent() -> None:
+    nav = Navigator()
+    nav.switch_session(SessionId.PODCASTS)
+    nav.apply_podcast_playlists([
+        Row("podcast-playlist:morning", "Poranek", "playlist", detail="1 element")
+    ])
+
+    assert nav.go_to_parent() == []
+    assert nav.session.library_view is LibraryView.PODCAST_PLAYLISTS
+    assert nav.session.model.selected_id == "podcast-playlist:morning"
+
+
+def test_load_more_in_podcast_playlist_keeps_its_identity_private() -> None:
+    nav = Navigator()
+    nav.switch_session(SessionId.PODCASTS)
+    nav.apply_podcast_playlist_contents(
+        "private-playlist-id",
+        "Poranek",
+        [Row("load", "Załaduj więcej elementów playlisty", "loadMore")],
+    )
+
+    tasks = nav.activate_selected()
+    request = next(item for item in tasks if isinstance(item, OpenPodcastPlaylistView))
+    assert request.playlist_id == "private-playlist-id"
+    assert request.load_more
+    assert all(
+        "private-playlist-id" not in item.text
         for item in tasks
         if isinstance(item, Announce)
     )

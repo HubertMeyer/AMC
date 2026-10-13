@@ -812,11 +812,23 @@ class LiteHostClient:
         )
 
     def remove_profile_items(
-        self, session_id: str, view: str, item_ids: list[str]
+        self,
+        session_id: str,
+        view: str,
+        item_ids: list[str],
+        *,
+        playlist_id: str | None = None,
     ) -> Any:
+        payload: dict[str, Any] = {
+            "sessionId": session_id,
+            "view": view,
+            "itemIds": item_ids,
+        }
+        if playlist_id:
+            payload["playlistId"] = playlist_id
         return self.call(
             "library.remove",
-            {"sessionId": session_id, "view": view, "itemIds": item_ids},
+            payload,
             timeout=30.0,
         )
 

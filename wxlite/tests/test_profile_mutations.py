@@ -99,6 +99,14 @@ def _library(path: Path, media: Path) -> None:
             "INSERT INTO playlists VALUES('p-radio','radio',0,'Stacje',638000000000000001)"
         )
         db.execute("INSERT INTO playlist_items VALUES('p-radio',0,'radio-1')")
+        db.execute(
+            "INSERT INTO playlists VALUES('p-podcast','podcasts',0,'Do słuchania',638000000000000002)"
+        )
+        db.execute("INSERT INTO playlist_items VALUES('p-podcast',0,'episode-queue')")
+        db.execute(
+            "INSERT INTO playlists VALUES('p-podcast-kept','podcasts',1,'Zostaje',638000000000000003)"
+        )
+        db.execute("INSERT INTO playlist_items VALUES('p-podcast-kept',0,'episode-queue')")
         db.commit()
 
 
@@ -282,6 +290,13 @@ def test_profile_edits_go_through_the_real_host() -> None:
             )
             assert playlist_boundary["status"] == "boundary"
             assert playlist_boundary["moved"] is False
+            removed_from_podcast_playlist = client.remove_profile_items(
+                "podcasts",
+                "podcastPlaylistContents",
+                ["episode-queue"],
+                playlist_id="p-podcast",
+            )
+            assert removed_from_podcast_playlist == {"removedCount": 1}
             client.remove_profile_items("files", "library", ["local-1"])
             client.remove_profile_items(
                 "podcasts", "podcastLibrary", ["podcast-1"]
@@ -351,6 +366,14 @@ def test_profile_edits_go_through_the_real_host() -> None:
             assert db.execute(
                 "SELECT name FROM playlists WHERE id='p-radio'"
             ).fetchone() == ("Stacje",), "Zapis sesji lokalnej nie może ruszyć Radia"
+            assert db.execute(
+                "SELECT item_id FROM playlist_items WHERE playlist_id='p-podcast'"
+            ).fetchall() == []
+            assert db.execute(
+                "SELECT item_id FROM playlist_items WHERE playlist_id='p-podcast-kept'"
+            ).fetchall() == [("episode-queue",)], (
+                "Usuwanie ma dotyczyć tylko otwartej playlisty podcastów"
+            )
         with closing(sqlite3.connect(podcasts)) as db:
             title, in_library, payload = db.execute(
                 "SELECT title,is_in_library,payload_json FROM podcast_subscriptions WHERE id='podcast-1'"

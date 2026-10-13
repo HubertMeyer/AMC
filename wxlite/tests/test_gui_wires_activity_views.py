@@ -77,6 +77,8 @@ _NON_SQLITE_VIEWS = (
     LibraryView.PODCAST_QUEUE,
     LibraryView.PODCAST_INBOX,
     LibraryView.PODCAST_DOWNLOADS,
+    LibraryView.PODCAST_PLAYLISTS,
+    LibraryView.PODCAST_PLAYLIST_CONTENTS,
     # Pierwsze widoki TIDAL czytaja state.json przez osobny TidalSource.
     # Nie wolno kierowac ich do lokalnego LibrarySource/library.db.
     LibraryView.TIDAL_LIBRARY,
@@ -197,6 +199,32 @@ def test_podcast_inbox_sort_reuses_the_source_and_preserves_selection() -> None:
     loader_source = ast.get_source_segment(SOURCE, loader) or ""
     assert "sort_mode=sort_mode_override" in loader_source
     assert "self.announcer.say(intent.announcement)" in loader_source
+
+
+def test_podcast_playlists_have_their_own_loader_and_are_not_local_files() -> None:
+    dispatch = next(
+        node for node in ast.walk(TREE)
+        if isinstance(node, ast.FunctionDef) and node.name == "_dispatch"
+    )
+    dispatch_source = ast.get_source_segment(SOURCE, dispatch) or ""
+    assert "self._open_podcast_playlist_view(OpenPodcastPlaylistView())" in dispatch_source
+
+    runner = next(
+        node for node in ast.walk(TREE)
+        if isinstance(node, ast.FunctionDef) and node.name == "_run"
+    )
+    runner_source = ast.get_source_segment(SOURCE, runner) or ""
+    assert "isinstance(intent, OpenPodcastPlaylistView)" in runner_source
+    assert "self._open_podcast_playlist_view(intent)" in runner_source
+
+    loader = next(
+        node for node in ast.walk(TREE)
+        if isinstance(node, ast.FunctionDef)
+        and node.name == "_open_podcast_playlist_view"
+    )
+    loader_source = ast.get_source_segment(SOURCE, loader) or ""
+    assert "self.podcasts.playlists()" in loader_source
+    assert "self.podcasts.playlist(" in loader_source
 
 
 def test_tidal_sort_is_private_preserves_selection_and_orders_fresh_rows() -> None:
