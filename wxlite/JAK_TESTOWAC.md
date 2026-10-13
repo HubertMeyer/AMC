@@ -325,7 +325,8 @@ Odbiór wyszukiwania z NVDA:
    wracać aż do pustego pola. Historia zakresu globalnego jest osobna.
 2. Strzałki mają czytać nazwę, rodzaj i szczegóły bez nazw klas, identyfikatorów
    i `nieznane`. Lewa strzałka czyta krótkie informacje. `Ctrl+C` kopiuje same
-   nazwy, a `Ctrl+Shift+C` adresy; nie może pojawić się angielskie „Copy”.
+   nazwy, a `Ctrl+Shift+C` adresy. Przy wyłączonym zewnętrznym ogłaszaniu
+   poleceń schowka pozostaje jeden celowy polski komunikat AMC.
 3. Zaznacz zakres Shiftem i nieprzylegające wiersze przez `Ctrl+Spacja`.
    Sprawdź `Ctrl+Shift+Q`, `Ctrl+Shift+Enter`, `Ctrl+Shift+U`, `Ctrl+Shift+L`,
    `Ctrl+Shift+P`, `Ctrl+Alt+Shift+P`, `Alt+Enter`, `Ctrl+D` i `Ctrl+S` w
@@ -349,13 +350,17 @@ W `Alt+Shift+R` zwykły ukończony plik nie powinien zaczynać się od słowa
 nazwy stacji lub pliku. Osobno sprawdź wpisy przerwane, nieudane, zatrzymane i
 z brakującym plikiem — ich istotny stan nie może zniknąć.
 
-Regresja do ponownego odbioru: w paczce
-`AMC-Python-next-status-20261010` żywy NVDA nadal mówi „Copy” po `Ctrl+C`,
-mimo że kod przechwytuje ten gest w `EVT_CHAR_HOOK`. Test samego mapowania
-skrótu nie jest dowodem naprawy mowy. Następna próba musi rejestrować
-rzeczywistą kolejność zdarzeń klawiatury i UI Automation na listach Plików,
-Radia, Podcastów oraz usług, a wynikiem ma być wyłącznie celowy polski
-komunikat aplikacji.
+Wyjaśnienie dodatkowego „Copy”: na komputerze testowym wypowiada je globalna
+funkcja **Clipboard command announcement** dodatku **NVDA Extension Global
+Plugin**, nie lista wxPython. W pliku `NVDAExtensionGlobalPluginAddon.ini`
+odpowiada jej włączone `FakeClipboardAnnouncement = 1`. Funkcja przechwytuje
+`Ctrl+C`, przekazuje je do AMC i po zmianie schowka sama mówi „Copy”, dlatego
+aplikacja nie może usunąć tego komunikatu własnym `EVT_CHAR_HOOK`. Do próby
+samej mowy AMC wyłącz tę funkcję w ustawieniach dodatku NVDA i uruchom NVDA
+ponownie. Nie wyłączaj całego dodatku i nie zmieniaj tego ustawienia wyłącznie
+na podstawie testu automatycznego. Przy funkcji włączonej sprawdzamy zawartość
+schowka oraz polski komunikat AMC, traktując dodatkowe „Copy” jako świadomie
+skonfigurowane zachowanie NVDA.
 
 ## Nagrywanie radia — potwierdzenie po Ctrl+R
 

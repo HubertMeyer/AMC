@@ -510,11 +510,18 @@ NVDA, ponowne otwarcie okna i restart programu.
 
 Odbiór użytkownika w paczce
 `.test-output\AMC-Python-next-status-20261010` wykazał również, że po
-`Ctrl+C` NVDA nadal mówi angielskie „Copy”. Paczka zawiera bieżącą próbę
-przechwycenia skrótu, a jej `gui.py` ma ten sam SHA-256 co źródło, więc nie
-jest to pomylenie wersji. Dotychczasowa poprawka i test bezokienny są
-niewystarczające; błąd pozostaje otwarty i wymaga pomiaru kolejności zdarzeń
-klawiatury/UI Automation z żywym NVDA.
+`Ctrl+C` NVDA mówi angielskie „Copy” przed celowym „Skopiowano nazwę”. Audyt
+14 października ustalił źródło poza AMC: zainstalowany dodatek
+**NVDA Extension Global Plugin** ma włączoną funkcję
+`Clipboard command announcement` (`FakeClipboardAnnouncement = 1`). Jej kod
+wiąże globalne `Ctrl+C`, wysyła gest do programu, sprawdza zmianę schowka i
+sam wypowiada przetłumaczony komunikat „Copy”. Wyłączenie tej funkcji w
+ustawieniach dodatku usuwa dodatkowy komunikat globalnie. AMC nadal celowo
+przechwytuje gest przed listą, kopiuje zaznaczone nazwy i potwierdza sukces po
+polsku. Nie dodajemy appModule ani przejęcia zwykłego `Ctrl+C` w dodatku AMC,
+bo naruszałoby to ustaloną granicę natywnych poleceń NVDA i zachowanie w
+innych programach. Ustawienia zewnętrznego dodatku użytkownika nie zostały
+zmienione.
 
 13 października podłączono AMC Python do gotowego dodatku AMC do NVDA.
 LiteHost wystawia ten sam zabezpieczony, lokalny protokół

@@ -5582,12 +5582,14 @@ class LiteFrame(wx.Frame):
             "Ctrl+Alt+Shift+S",
             "Ctrl+,",
         }:
-            # Ctrl+C musi zostac zatrzymane PRZED natywnym SysListView32.
-            # Samo usuniecie akceleratora menu nie wystarcza: w szczegolnosci
-            # na liscie Podcastow NVDA oglaszal jeszcze systemowe angielskie
-            # "copy", a dopiero potem nasze "Skopiowano nazwe". Obsluga na
-            # CHAR_HOOK nie oddaje gestu kontrolce, wiec pozostaje dokladnie
-            # jeden celowy komunikat aplikacji.
+            # Ctrl+C musi zostac zatrzymane PRZED natywnym SysListView32,
+            # zeby gest wykonal tylko polecenie AMC. Angielskie "Copy"
+            # zgloszone w odbiorze nie pochodzi jednak z kontrolki: na
+            # komputerze testowym wypowiada je globalna funkcja
+            # ``clipboardCommandAnnouncement`` dodatku NVDA Extension Global
+            # Plugin. Aplikacja nie moze jej wyciszyc bez przejmowania
+            # zwyklych gestow NVDA; zachowujemy wiec natywna droge i wlasny,
+            # prawdziwy komunikat sukcesu.
             self._on_key(event)
             return
         event.Skip()
@@ -7313,10 +7315,9 @@ class LiteFrame(wx.Frame):
                 "Ctrl+,",
                 "Ctrl+F1",
                 # To jest NAJWCZEŚNIEJSZA bramka wx: CHAR_HOOK głównego okna
-                # przychodzi przed zdarzeniem listy. Przechwyt dopiero na
-                # ``MediaListCtrl`` pozwalał SysListView32 wykonać jeszcze
-                # własne angielskie „Copy”, zanim AMC powiedziało
-                # „Skopiowano nazwę”.
+                # przychodzi przed zdarzeniem listy. Zatrzymuje natywne
+                # wykonanie gestu; nie zatrzymuje globalnego komunikatu
+                # schowka skonfigurowanego w zewnętrznym dodatku NVDA.
                 "Ctrl+C",
                 "Ctrl+Shift+C",
                 "Ctrl+X",
