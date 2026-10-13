@@ -333,8 +333,13 @@ wybranego urządzenia, a `Ctrl+Alt+Shift+P` przypisuje istniejący natywny
 preset bez zmiany ustawień samego WiiM. Brak prywatnej zmiany dziedziczy
 istniejące mapowanie głównego AMC, a gdy go nie ma — odpowiadające miejsce
 natywne. Identyfikator urządzenia i numer modelu nie trafiają do etykiet
-dostępnościowych. Pozostają opcje wejścia, wyjścia, korektora, powtarzania,
-losowania i timera oraz żywy odbiór wszystkich nowych dróg.
+dostępnościowych. W odtwarzaczu przeniesiono również klawisze pełnego AMC:
+`I` wybiera wejście, `O` wyjście, `E` ustawienie korektora, `R` tryb
+powtarzania, `S` przełącza losowanie, a `T` ustawia timer uśpienia. Każdy
+dialog otrzymuje od hosta osobne wartości modelu i jawne etykiety użytkowe;
+adres urządzenia, obiekt stanu i nazwy właściwości nie trafiają do NVDA.
+Pozycje menu są widoczne wyłącznie w sesji WiiM i aktywne dopiero w jej
+odtwarzaczu. Pozostaje żywy odbiór wszystkich nowych dróg.
 
 ### Sonos
 

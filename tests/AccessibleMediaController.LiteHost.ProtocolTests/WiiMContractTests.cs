@@ -14,6 +14,7 @@ internal static class WiiMContractTests
         TransportAcceptsOnlyKnownCommands();
         PresetListUsesOnlyIntentionalLabels();
         PresetActivationAcceptsOnlyTwelveSlots();
+        OptionsUseOnlyIntentionalLabelsAndStrictValues();
         NetworkStreamListDoesNotExposeUrls();
         NetworkStreamSnapshotUsesTheSavedName();
         NetworkStreamSortContractIsStrictAndPreservesStoredOrder();
@@ -201,6 +202,82 @@ internal static class WiiMContractTests
             {
             }
         }
+    }
+
+    private static void OptionsUseOnlyIntentionalLabelsAndStrictValues()
+    {
+        var device = new WiiMDeviceSettings
+        {
+            Id = "device-1", Address = "192.168.1.40", DisplayName = "Salon"
+        };
+        var playback = new WiiMPlaybackInformation(
+            "odtwarzanie", "Bluetooth", 35, false,
+            TimeSpan.Zero, TimeSpan.Zero)
+        {
+            EqualizerPresetNumber = 1,
+            LoopMode = 2
+        };
+        var snapshot = new WiiMDeviceSnapshot(
+            new WiiMDeviceInformation(
+                "192.168.1.40", "device-1", "Salon", "Pro", "4.8", 12),
+            playback,
+            new WiiMTrackInformation("Radio Test", "", "", 0, 0),
+            []);
+
+        var inputJson = JsonSerializer.Serialize(
+            LiteWiiMContract.CreateOptionsResult(device, snapshot, "input"));
+        using var inputDocument = JsonDocument.Parse(inputJson);
+        var input = inputDocument.RootElement;
+        Check(input.GetProperty("title").GetString() == "Wejście urządzenia WiiM",
+            "brak użytkowego tytułu wejścia WiiM");
+        Check(input.GetProperty("selectedValue").GetString() == "bluetooth",
+            "nie rozpoznano bieżącego wejścia");
+        Check(input.GetProperty("items")[0].GetProperty("label").GetString()
+              == "Odtwarzanie sieciowe",
+            "lista wejść nie ma jawnej etykiety");
+        Check(!inputJson.Contains("192.168.1.40", StringComparison.Ordinal),
+            "adres urządzenia wyciekł do dialogu opcji");
+        Check(!inputJson.Contains("WiiMPlaybackInformation", StringComparison.Ordinal),
+            "typ modelu wyciekł do dialogu opcji");
+
+        var equalizerJson = JsonSerializer.Serialize(
+            LiteWiiMContract.CreateOptionsResult(
+                device,
+                snapshot,
+                "equalizer",
+                equalizerEnabled: true,
+                equalizerPresets: ["Rock", "Klasyczny"]));
+        using var equalizerDocument = JsonDocument.Parse(equalizerJson);
+        var equalizer = equalizerDocument.RootElement;
+        Check(equalizer.GetProperty("selectedValue").GetString() == "Klasyczny",
+            "nie rozpoznano bieżącego ustawienia korektora");
+        Check(equalizer.GetProperty("items")[0].GetProperty("label").GetString()
+              == "Korektor wyłączony",
+            "brak jawnej etykiety wyłączenia korektora");
+
+        using var accepted = JsonDocument.Parse(
+            """{"deviceId":"device-1","option":"sleep","value":"1800"}""");
+        var request = LiteWiiMContract.ReadOptionRequest(
+            accepted.RootElement, requireValue: true);
+        Check(request.Option == "sleep" && request.Value == "1800",
+            "nie przyjęto prawidłowej opcji WiiM");
+
+        using var rejected = JsonDocument.Parse(
+            """{"deviceId":"device-1","option":"runtimeObject","value":"x"}""");
+        try
+        {
+            LiteWiiMContract.ReadOptionRequest(rejected.RootElement, requireValue: true);
+            throw new InvalidOperationException("przyjęto techniczną nieznaną opcję WiiM");
+        }
+        catch (LiteRequestException)
+        {
+        }
+
+        Check(LiteWiiMContract.OptionLabel("sleep", "1800")
+              == "Wyłącz odtwarzanie za 30 minut",
+            "ustawienie timera nie ma celowej zapowiedzi");
+        Check(LiteWiiMContract.OptionLabel("output", "99").Length == 0,
+            "nieznana wartość wyjścia dostała mylącą etykietę");
     }
 
     private static void NetworkStreamListDoesNotExposeUrls()

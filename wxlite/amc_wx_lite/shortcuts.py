@@ -200,6 +200,12 @@ class Action(Enum):
     VIEW_PRESETS = "presets.view"
     ASSIGN_PRESET = "presets.assign"
     VIEW_WIIM_NETWORK_STREAMS = "wiim.networkStreams.view"
+    WIIM_SELECT_INPUT = "wiim.input.select"
+    WIIM_SELECT_OUTPUT = "wiim.output.select"
+    WIIM_SELECT_EQUALIZER = "wiim.equalizer.select"
+    WIIM_SELECT_REPEAT = "wiim.repeat.select"
+    WIIM_TOGGLE_SHUFFLE = "wiim.shuffle.toggle"
+    WIIM_SET_SLEEP_TIMER = "wiim.sleepTimer.set"
     ADD_WIIM_NETWORK_STREAM = "wiim.networkStreams.add"
     EDIT_WIIM_NETWORK_STREAM = "wiim.networkStreams.edit"
     REMOVE_WIIM_NETWORK_STREAMS = "wiim.networkStreams.remove"
@@ -425,6 +431,12 @@ WIIM_SUPPORTED_ACTIONS = frozenset({
     Action.ASSIGN_PRESET,
     *(Action[f"PRESET_{slot}"] for slot in range(1, 13)),
     Action.VIEW_WIIM_NETWORK_STREAMS,
+    Action.WIIM_SELECT_INPUT,
+    Action.WIIM_SELECT_OUTPUT,
+    Action.WIIM_SELECT_EQUALIZER,
+    Action.WIIM_SELECT_REPEAT,
+    Action.WIIM_TOGGLE_SHUFFLE,
+    Action.WIIM_SET_SLEEP_TIMER,
     Action.ADD_WIIM_NETWORK_STREAM,
     Action.EDIT_WIIM_NETWORK_STREAM,
     Action.REMOVE_WIIM_NETWORK_STREAMS,
@@ -932,6 +944,18 @@ WIIM_SESSION_VIEW: dict[str, Action] = {
 }
 
 
+# Klawisze odtwarzacza WiiM z pełnego AMC. Muszą mieć pierwszeństwo przed
+# lokalnym zaznaczaniem fragmentu (I/O) i zwykłymi poleceniami plików.
+WIIM_PLAYER_VIEW: dict[str, Action] = {
+    "I": Action.WIIM_SELECT_INPUT,
+    "O": Action.WIIM_SELECT_OUTPUT,
+    "E": Action.WIIM_SELECT_EQUALIZER,
+    "R": Action.WIIM_SELECT_REPEAT,
+    "S": Action.WIIM_TOGGLE_SHUFFLE,
+    "T": Action.WIIM_SET_SLEEP_TIMER,
+}
+
+
 SONOS_SESSION_VIEW: dict[str, Action] = {
     # Jak w głównym AMC: grupy i głośniki są celem sterowania, nie Biblioteką.
     "Ctrl+F5": Action.SELECT_SONOS_TARGET,
@@ -1000,6 +1024,8 @@ def resolve(
         return TIDAL_SESSION_VIEW[canonical]
     if tidal_session and not player_view and canonical in TIDAL_LIST_VIEW:
         return TIDAL_LIST_VIEW[canonical]
+    if player_view and wiim_session and canonical in WIIM_PLAYER_VIEW:
+        return WIIM_PLAYER_VIEW[canonical]
     if wiim_session and canonical in WIIM_SESSION_VIEW:
         action = WIIM_SESSION_VIEW[canonical]
         if action in {
@@ -1190,6 +1216,12 @@ def _help_entries() -> list[tuple[str, str, Action]]:
         Action.SORT_TIDAL_COLLECTION_CUSTOM: "TIDAL: kolejność własna",
         Action.VIEW_PRESETS: "Pokaż presety aktywnej sesji",
         Action.VIEW_WIIM_NETWORK_STREAMS: "Otwórz zapisane strumienie WiiM",
+        Action.WIIM_SELECT_INPUT: "Wybierz wejście urządzenia WiiM",
+        Action.WIIM_SELECT_OUTPUT: "Wybierz wyjście urządzenia WiiM",
+        Action.WIIM_SELECT_EQUALIZER: "Wybierz ustawienie korektora WiiM",
+        Action.WIIM_SELECT_REPEAT: "Wybierz tryb powtarzania WiiM",
+        Action.WIIM_TOGGLE_SHUFFLE: "Włącz lub wyłącz losowanie WiiM",
+        Action.WIIM_SET_SLEEP_TIMER: "Ustaw timer uśpienia WiiM",
         Action.ADD_WIIM_NETWORK_STREAM: "Dodaj strumień sieciowy WiiM",
         Action.EDIT_WIIM_NETWORK_STREAM: "Edytuj wybrany strumień WiiM",
         Action.REMOVE_WIIM_NETWORK_STREAMS: "Usuń wybrane strumienie WiiM z AMC",
@@ -1269,6 +1301,7 @@ def _help_entries() -> list[tuple[str, str, Action]]:
         PODCAST_SESSION_VIEW,
         TIDAL_LIST_VIEW,
         WIIM_SESSION_VIEW,
+        WIIM_PLAYER_VIEW,
         SONOS_SESSION_VIEW,
         LIST_VIEW,
         RADIO_LIST_VIEW,

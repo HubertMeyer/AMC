@@ -25,6 +25,7 @@ from amc_wx_lite.wiim_source import (
     network_stream_edit_info,
     network_stream_rows,
     now_playing_label,
+    option_choices,
     preset_choices,
     snapshot,
 )
@@ -100,6 +101,12 @@ def test_wiim_command_gate_blocks_local_audio_features() -> None:
         Action.VOLUME_DOWN_1,
         Action.TIME_ELAPSED,
         Action.VIEW_PRESETS,
+        Action.WIIM_SELECT_INPUT,
+        Action.WIIM_SELECT_OUTPUT,
+        Action.WIIM_SELECT_EQUALIZER,
+        Action.WIIM_SELECT_REPEAT,
+        Action.WIIM_TOGGLE_SHUFFLE,
+        Action.WIIM_SET_SLEEP_TIMER,
         Action.ASSIGN_PRESET,
         Action.PRESET_1,
         Action.PRESET_12,
@@ -132,6 +139,9 @@ def test_wiim_host_client_sends_only_device_id_command_and_volume() -> None:
     client.wiim_transport("device-1", "setVolume", volume=37)
     client.wiim_presets("device-1")
     client.wiim_activate_preset("device-1", 5)
+    client.wiim_options("device-1", "equalizer")
+    client.wiim_set_option("device-1", "repeat", "-1")
+    client.wiim_toggle_shuffle("device-1")
     client.wiim_network_streams()
     client.wiim_play_network_stream("device-1", "stream-7")
     client.wiim_network_stream_edit_info("stream-7")
@@ -156,6 +166,21 @@ def test_wiim_host_client_sends_only_device_id_command_and_volume() -> None:
         (
             "wiim.presetActivate",
             {"deviceId": "device-1", "presetNumber": 5},
+            30.0,
+        ),
+        (
+            "wiim.options",
+            {"deviceId": "device-1", "option": "equalizer"},
+            30.0,
+        ),
+        (
+            "wiim.optionSet",
+            {"deviceId": "device-1", "option": "repeat", "value": "-1"},
+            30.0,
+        ),
+        (
+            "wiim.shuffleToggle",
+            {"deviceId": "device-1"},
             30.0,
         ),
         ("wiim.networkStreams", None, 15.0),
@@ -226,6 +251,31 @@ def test_wiim_dispatch_reaches_remote_volume_and_blocks_local_rate() -> None:
     assert spoken == ["To polecenie nie jest dostępne w sesji WiiM"]
 
 
+def test_wiim_option_actions_route_only_to_remote_option_handlers() -> None:
+    calls: list[object] = []
+    frame = SimpleNamespace(
+        navigator=SimpleNamespace(active=SessionId.WIIM),
+        _show_wiim_option=calls.append,
+        _toggle_wiim_shuffle=lambda: calls.append("shuffle"),
+    )
+
+    LiteFrame._dispatch(frame, Action.WIIM_SELECT_INPUT)
+    LiteFrame._dispatch(frame, Action.WIIM_SELECT_OUTPUT)
+    LiteFrame._dispatch(frame, Action.WIIM_SELECT_EQUALIZER)
+    LiteFrame._dispatch(frame, Action.WIIM_SELECT_REPEAT)
+    LiteFrame._dispatch(frame, Action.WIIM_SET_SLEEP_TIMER)
+    LiteFrame._dispatch(frame, Action.WIIM_TOGGLE_SHUFFLE)
+
+    assert calls == [
+        Action.WIIM_SELECT_INPUT,
+        Action.WIIM_SELECT_OUTPUT,
+        Action.WIIM_SELECT_EQUALIZER,
+        Action.WIIM_SELECT_REPEAT,
+        Action.WIIM_SET_SLEEP_TIMER,
+        "shuffle",
+    ]
+
+
 def test_wiim_preset_list_has_only_twelve_intentional_labels() -> None:
     items = [
         {
@@ -284,6 +334,66 @@ def test_wiim_preset_connect_reason_stays_user_facing() -> None:
     _title, choices = preset_choices({"deviceTitle": "Salon", "items": items})
 
     assert choices[4].activation_error.startswith("Preset 5 to TIDAL Connect")
+
+
+def test_wiim_option_list_separates_values_from_accessible_labels() -> None:
+    device, title, description, choices, selected = option_choices({
+        "deviceId": "device-1",
+        "deviceTitle": "Salon",
+        "option": "output",
+        "title": "Wyjście urządzenia WiiM",
+        "description": "Wybierz fizyczne wyjście audio.",
+        "selectedValue": "1",
+        "items": [
+            {"value": "2", "label": "Wyjście analogowe AUX"},
+            {"value": "1", "label": "Wyjście optyczne SPDIF"},
+            {"value": "3", "label": "Wyjście koncentryczne"},
+        ],
+        "address": "192.168.1.40",
+        "runtimeObject": "WiiMPlaybackInformation { LoopMode = 2 }",
+    })
+
+    assert device == "Salon"
+    assert title == "Wyjście urządzenia WiiM"
+    assert description == "Wybierz fizyczne wyjście audio."
+    assert [choice.label for choice in choices] == [
+        "Wyjście analogowe AUX",
+        "Wyjście optyczne SPDIF",
+        "Wyjście koncentryczne",
+    ]
+    assert choices[selected].value == "1"
+    assert "192.168.1.40" not in repr(choices)
+    assert "WiiMPlaybackInformation" not in repr(choices)
+
+
+def test_wiim_player_letters_override_local_clip_shortcuts_only_in_player() -> None:
+    expected = {
+        "I": Action.WIIM_SELECT_INPUT,
+        "O": Action.WIIM_SELECT_OUTPUT,
+        "E": Action.WIIM_SELECT_EQUALIZER,
+        "R": Action.WIIM_SELECT_REPEAT,
+        "S": Action.WIIM_TOGGLE_SHUFFLE,
+        "T": Action.WIIM_SET_SLEEP_TIMER,
+    }
+    for key, action in expected.items():
+        assert resolve(
+            Chord(key),
+            player_view=True,
+            radio_session=False,
+            wiim_session=True,
+        ) is action
+        assert resolve(
+            Chord(key),
+            player_view=False,
+            radio_session=False,
+            wiim_session=True,
+        ) is None
+
+    assert resolve(
+        Chord("I"),
+        player_view=True,
+        radio_session=False,
+    ) is Action.CLIP_MARK_START
 
 
 def test_ctrl_alt_p_routes_to_native_wiim_presets() -> None:

@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using AccessibleMediaController.Core.Configuration;
 using AccessibleMediaController.Core.Devices.WiiM;
 
@@ -15,6 +16,9 @@ public static class LiteWiiMContract
     public const string TransportOperation = "wiim.transport";
     public const string PresetsOperation = "wiim.presets";
     public const string ActivatePresetOperation = "wiim.presetActivate";
+    public const string OptionsOperation = "wiim.options";
+    public const string SetOptionOperation = "wiim.optionSet";
+    public const string ToggleShuffleOperation = "wiim.shuffleToggle";
     public const string NetworkStreamsOperation = "wiim.networkStreams";
     public const string PlayNetworkStreamOperation = "wiim.networkStreamPlay";
     public const string NetworkStreamEditInfoOperation = "wiim.networkStreamEditInfo";
@@ -68,6 +72,25 @@ public static class LiteWiiMContract
                 "Numer presetu WiiM musi należeć do zakresu od 1 do 12.");
         }
         return new LiteWiiMPresetRequest(deviceId, presetNumber);
+    }
+
+    public static LiteWiiMOptionRequest ReadOptionRequest(
+        JsonElement args,
+        bool requireValue = false)
+    {
+        var deviceId = ReadDeviceId(args);
+        var option = LiteArgs.RequireText(args, "option").Trim();
+        if (option is not ("input" or "output" or "equalizer" or "repeat" or "sleep"))
+            throw new LiteRequestException("Nieznane ustawienie urządzenia WiiM.");
+
+        string? value = null;
+        if (requireValue)
+        {
+            value = LiteArgs.RequireText(args, "value").Trim();
+            if (value.Length == 0 || value.Length > 128 || value.Any(char.IsControl))
+                throw new LiteRequestException("Nieprawidłowa wartość ustawienia WiiM.");
+        }
+        return new LiteWiiMOptionRequest(deviceId, option, value);
     }
 
     public static LiteWiiMNetworkStreamRequest ReadNetworkStreamRequest(
@@ -229,6 +252,162 @@ public static class LiteWiiMContract
         };
     }
 
+    public static object CreateOptionsResult(
+        WiiMDeviceSettings device,
+        WiiMDeviceSnapshot snapshot,
+        string option,
+        bool equalizerEnabled = false,
+        IEnumerable<string>? equalizerPresets = null,
+        int outputMode = 0)
+    {
+        LiteWiiMOptionChoice[] items;
+        string title;
+        string description;
+        string? selectedValue;
+
+        switch (option)
+        {
+            case "input":
+                title = "Wejście urządzenia WiiM";
+                description = "Wybierz źródło sygnału. Urządzenie może odrzucić wejście, którego dany model nie posiada.";
+                items =
+                [
+                    new("wifi", "Odtwarzanie sieciowe"),
+                    new("line-in", "Wejście liniowe lub AUX"),
+                    new("optical", "Wejście optyczne"),
+                    new("bluetooth", "Bluetooth"),
+                    new("udisk", "Pamięć USB")
+                ];
+                selectedValue = snapshot.Playback.Source switch
+                {
+                    "wejście liniowe" => "line-in",
+                    "wejście optyczne" => "optical",
+                    "Bluetooth" => "bluetooth",
+                    "pamięć zewnętrzna" => "udisk",
+                    _ => "wifi"
+                };
+                break;
+            case "output":
+                title = "Wyjście urządzenia WiiM";
+                description = "Wybierz fizyczne wyjście audio. Dostępność zależy od modelu urządzenia.";
+                items =
+                [
+                    new("2", "Wyjście analogowe AUX"),
+                    new("1", "Wyjście optyczne SPDIF"),
+                    new("3", "Wyjście koncentryczne")
+                ];
+                selectedValue = outputMode.ToString();
+                break;
+            case "equalizer":
+                title = "Korektor urządzenia WiiM";
+                description = "Wybierz ustawienie korektora zapisane w urządzeniu albo wyłącz korektor.";
+                var rawPresets = (equalizerPresets ?? [])
+                    .Select(Useful)
+                    .ToArray();
+                var presets = rawPresets
+                    .Where(value => value.Length > 0)
+                    .Distinct(StringComparer.CurrentCultureIgnoreCase)
+                    .Select(value => new LiteWiiMOptionChoice(value, value))
+                    .ToArray();
+                items = [new("off", "Korektor wyłączony"), .. presets];
+                selectedValue = equalizerEnabled
+                    && snapshot.Playback.EqualizerPresetNumber >= 0
+                    && snapshot.Playback.EqualizerPresetNumber < rawPresets.Length
+                    && rawPresets[snapshot.Playback.EqualizerPresetNumber].Length > 0
+                        ? rawPresets[snapshot.Playback.EqualizerPresetNumber]
+                        : "off";
+                break;
+            case "repeat":
+                title = "Tryb powtarzania WiiM";
+                description = "Wybierz kolejność i sposób powtarzania bieżącej listy urządzenia.";
+                items =
+                [
+                    new("0", "Bez powtarzania"),
+                    new("-1", "Powtarzaj całą listę"),
+                    new("1", "Powtarzaj jeden element"),
+                    new("2", "Losowo z powtarzaniem")
+                ];
+                selectedValue = snapshot.Playback.LoopMode switch
+                {
+                    0 => "-1",
+                    1 => "1",
+                    2 => "2",
+                    4 => "0",
+                    _ => null
+                };
+                break;
+            case "sleep":
+                title = "Timer uśpienia WiiM";
+                description = "Wybierz czas do zatrzymania urządzenia albo anuluj wcześniej ustawiony timer.";
+                items =
+                [
+                    new("-1", "Timer uśpienia wyłączony"),
+                    new("900", "Wyłącz odtwarzanie za 15 minut"),
+                    new("1800", "Wyłącz odtwarzanie za 30 minut"),
+                    new("2700", "Wyłącz odtwarzanie za 45 minut"),
+                    new("3600", "Wyłącz odtwarzanie za godzinę"),
+                    new("5400", "Wyłącz odtwarzanie za 90 minut"),
+                    new("7200", "Wyłącz odtwarzanie za 2 godziny")
+                ];
+                selectedValue = null;
+                break;
+            default:
+                throw new LiteRequestException("Nieznane ustawienie urządzenia WiiM.");
+        }
+
+        return new
+        {
+            deviceId = device.Id.Trim(),
+            deviceTitle = UserTitle(device),
+            option,
+            title,
+            description,
+            selectedValue,
+            items
+        };
+    }
+
+    public static string OptionLabel(string option, string value) => option switch
+    {
+        "input" => value switch
+        {
+            "wifi" => "Odtwarzanie sieciowe",
+            "line-in" => "Wejście liniowe lub AUX",
+            "optical" => "Wejście optyczne",
+            "bluetooth" => "Bluetooth",
+            "udisk" => "Pamięć USB",
+            _ => string.Empty
+        },
+        "output" => value switch
+        {
+            "2" => "Wyjście analogowe AUX",
+            "1" => "Wyjście optyczne SPDIF",
+            "3" => "Wyjście koncentryczne",
+            _ => string.Empty
+        },
+        "equalizer" => value == "off" ? "Korektor wyłączony" : Useful(value),
+        "repeat" => value switch
+        {
+            "0" => "Bez powtarzania",
+            "-1" => "Powtarzaj całą listę",
+            "1" => "Powtarzaj jeden element",
+            "2" => "Losowo z powtarzaniem",
+            _ => string.Empty
+        },
+        "sleep" => value switch
+        {
+            "-1" => "Timer uśpienia wyłączony",
+            "900" => "Wyłącz odtwarzanie za 15 minut",
+            "1800" => "Wyłącz odtwarzanie za 30 minut",
+            "2700" => "Wyłącz odtwarzanie za 45 minut",
+            "3600" => "Wyłącz odtwarzanie za godzinę",
+            "5400" => "Wyłącz odtwarzanie za 90 minut",
+            "7200" => "Wyłącz odtwarzanie za 2 godziny",
+            _ => string.Empty
+        },
+        _ => string.Empty
+    };
+
     private static string SnapshotAnnouncement(
         WiiMDeviceSettings device,
         WiiMDeviceSnapshot snapshot,
@@ -298,6 +477,15 @@ public sealed record LiteWiiMTransportRequest(
 public sealed record LiteWiiMPresetRequest(
     string DeviceId,
     int PresetNumber);
+
+public sealed record LiteWiiMOptionRequest(
+    string DeviceId,
+    string Option,
+    string? Value);
+
+public sealed record LiteWiiMOptionChoice(
+    [property: JsonPropertyName("value")] string Value,
+    [property: JsonPropertyName("label")] string Label);
 
 public sealed record LiteWiiMNetworkStreamRequest(
     string DeviceId,

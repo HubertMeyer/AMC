@@ -600,6 +600,29 @@ class LiteHostClient:
             timeout=30.0,
         )
 
+    def wiim_options(self, device_id: str, option: str) -> Any:
+        """Read intentional labels for one option of the selected WiiM."""
+        return self.call(
+            "wiim.options",
+            {"deviceId": device_id, "option": option},
+            timeout=30.0,
+        )
+
+    def wiim_set_option(self, device_id: str, option: str, value: str) -> Any:
+        """Apply a value previously returned by :meth:`wiim_options`."""
+        return self.call(
+            "wiim.optionSet",
+            {"deviceId": device_id, "option": option, "value": value},
+            timeout=30.0,
+        )
+
+    def wiim_toggle_shuffle(self, device_id: str) -> Any:
+        return self.call(
+            "wiim.shuffleToggle",
+            {"deviceId": device_id},
+            timeout=30.0,
+        )
+
     def wiim_network_streams(self) -> Any:
         """List saved WiiM streams without returning their network URLs."""
         return self.call("wiim.networkStreams", timeout=15.0)

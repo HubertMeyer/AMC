@@ -83,6 +83,8 @@ class MenuItem:
     checkable: bool = False
     #: Wymaga czegos grajacego (transport, pytanie o czas).
     needs_playback: bool = False
+    #: Dostępna wyłącznie po otwarciu panelu odtwarzacza danej sesji.
+    needs_player_view: bool = False
     #: Wymaga zaznaczonego wiersza na liscie (kopiowanie, otwarcie).
     needs_selection: bool = False
     #: Wymaga zaznaczonego podcastu albo odcinka, nie np. „Załaduj więcej”.
@@ -651,6 +653,61 @@ def build_menus() -> tuple[Menu, ...]:
         (
             MenuItem("&Pauza albo wznowienie", Action.PLAY_PAUSE, shortcut="Space",
                      accelerator=False, needs_playback=True),
+            SEPARATOR,
+            MenuItem(
+                "Ustaw wejście WiiM (&5)…",
+                Action.WIIM_SELECT_INPUT,
+                shortcut="I",
+                accelerator=False,
+                needs_playback=True,
+                needs_player_view=True,
+                visible_sessions=WIIM_ONLY,
+            ),
+            MenuItem(
+                "Ustaw wyjście WiiM (&6)…",
+                Action.WIIM_SELECT_OUTPUT,
+                shortcut="O",
+                accelerator=False,
+                needs_playback=True,
+                needs_player_view=True,
+                visible_sessions=WIIM_ONLY,
+            ),
+            MenuItem(
+                "Korektor WiiM (&7)…",
+                Action.WIIM_SELECT_EQUALIZER,
+                shortcut="E",
+                accelerator=False,
+                needs_playback=True,
+                needs_player_view=True,
+                visible_sessions=WIIM_ONLY,
+            ),
+            MenuItem(
+                "Powtarzanie WiiM (&8)…",
+                Action.WIIM_SELECT_REPEAT,
+                shortcut="R",
+                accelerator=False,
+                needs_playback=True,
+                needs_player_view=True,
+                visible_sessions=WIIM_ONLY,
+            ),
+            MenuItem(
+                "Losowanie WiiM (&9)",
+                Action.WIIM_TOGGLE_SHUFFLE,
+                shortcut="S",
+                accelerator=False,
+                needs_playback=True,
+                needs_player_view=True,
+                visible_sessions=WIIM_ONLY,
+            ),
+            MenuItem(
+                "Timer uśpienia WiiM (&Q)…",
+                Action.WIIM_SET_SLEEP_TIMER,
+                shortcut="T",
+                accelerator=False,
+                needs_playback=True,
+                needs_player_view=True,
+                visible_sessions=WIIM_ONLY,
+            ),
             MenuItem("Dodaj &zakładkę", Action.ADD_BOOKMARK, shortcut="B",
                      accelerator=False, needs_playback=True,
                      needs_files_session=True, visible_sessions=FILES_ONLY),

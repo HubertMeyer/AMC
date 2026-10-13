@@ -392,6 +392,12 @@ internal sealed class LiteEngineHandlers : IDisposable
                 RequireWiiM().Presets(request.Args),
             [LiteWiiMContract.ActivatePresetOperation] = (request, _) =>
                 RequireWiiM().ActivatePreset(request.Args),
+            [LiteWiiMContract.OptionsOperation] = (request, _) =>
+                RequireWiiM().Options(request.Args),
+            [LiteWiiMContract.SetOptionOperation] = (request, _) =>
+                RequireWiiM().SetOption(request.Args),
+            [LiteWiiMContract.ToggleShuffleOperation] = (request, _) =>
+                RequireWiiM().ToggleShuffle(request.Args),
             [LiteWiiMContract.NetworkStreamsOperation] = (_, _) =>
                 RequireWiiM().ListNetworkStreams(),
             [LiteWiiMContract.PlayNetworkStreamOperation] = (request, _) =>

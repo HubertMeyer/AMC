@@ -123,6 +123,166 @@ internal sealed class LiteWiiMCoordinator(string statePath) : IDisposable
         }
     }
 
+    public object Options(JsonElement args)
+    {
+        var request = LiteWiiMContract.ReadOptionRequest(args);
+        var settings = ReadSettings();
+        var device = ResolveDevice(settings, request.DeviceId);
+        lock (gate)
+        {
+            try
+            {
+                var snapshot = ReadSnapshot(device);
+                var equalizerEnabled = false;
+                IReadOnlyList<string> equalizerPresets = [];
+                var outputMode = 0;
+                if (request.Option == "equalizer")
+                {
+                    equalizerEnabled = client.ReadEqualizerEnabledAsync(device.Address)
+                        .GetAwaiter().GetResult();
+                    equalizerPresets = client.ReadEqualizerPresetsAsync(device.Address)
+                        .GetAwaiter().GetResult();
+                }
+                else if (request.Option == "output")
+                {
+                    outputMode = client.ReadAudioOutputHardwareModeAsync(device.Address)
+                        .GetAwaiter().GetResult();
+                }
+                return LiteWiiMContract.CreateOptionsResult(
+                    device,
+                    snapshot,
+                    request.Option,
+                    equalizerEnabled,
+                    equalizerPresets,
+                    outputMode);
+            }
+            catch (LiteRequestException)
+            {
+                throw;
+            }
+            catch (Exception exception) when (IsConnectionFailure(exception))
+            {
+                throw new LiteRequestException(
+                    $"Urządzenie {UserTitle(device)} nie udostępniło tej opcji.");
+            }
+        }
+    }
+
+    public object SetOption(JsonElement args)
+    {
+        var request = LiteWiiMContract.ReadOptionRequest(args, requireValue: true);
+        var settings = ReadSettings();
+        var device = ResolveDevice(settings, request.DeviceId);
+        var value = request.Value!;
+        lock (gate)
+        {
+            try
+            {
+                var label = LiteWiiMContract.OptionLabel(request.Option, value);
+                if (request.Option == "equalizer")
+                {
+                    var available = client.ReadEqualizerPresetsAsync(device.Address)
+                        .GetAwaiter().GetResult();
+                    if (value != "off" && !available.Contains(
+                            value, StringComparer.CurrentCultureIgnoreCase))
+                    {
+                        throw new LiteRequestException(
+                            "Wybrane ustawienie korektora nie jest już dostępne w urządzeniu.");
+                    }
+                    if (value == "off")
+                    {
+                        client.SetEqualizerEnabledAsync(device.Address, false)
+                            .GetAwaiter().GetResult();
+                    }
+                    else
+                    {
+                        client.LoadEqualizerPresetAsync(device.Address, value)
+                            .GetAwaiter().GetResult();
+                        client.SetEqualizerEnabledAsync(device.Address, true)
+                            .GetAwaiter().GetResult();
+                    }
+                }
+                else
+                {
+                    if (label.Length == 0)
+                        throw new LiteRequestException(
+                            "Wybrana wartość ustawienia WiiM jest nieprawidłowa.");
+                    switch (request.Option)
+                    {
+                        case "input":
+                            client.SwitchInputAsync(device.Address, value)
+                                .GetAwaiter().GetResult();
+                            activeNetworkStreams.Remove(device.Id);
+                            break;
+                        case "output":
+                            client.SetAudioOutputHardwareModeAsync(
+                                    device.Address, int.Parse(value))
+                                .GetAwaiter().GetResult();
+                            break;
+                        case "repeat":
+                            client.SetLoopModeAsync(device.Address, int.Parse(value))
+                                .GetAwaiter().GetResult();
+                            break;
+                        case "sleep":
+                            client.SetSleepTimerAsync(device.Address, int.Parse(value))
+                                .GetAwaiter().GetResult();
+                            break;
+                    }
+                }
+
+                Thread.Sleep(TimeSpan.FromMilliseconds(120));
+                var refreshed = ReadSnapshot(device);
+                return CreateSnapshotResult(settings, device, refreshed, label);
+            }
+            catch (LiteRequestException)
+            {
+                throw;
+            }
+            catch (Exception exception) when (IsConnectionFailure(exception))
+            {
+                throw new LiteRequestException(
+                    $"Urządzenie {UserTitle(device)} nie przyjęło wybranej opcji.");
+            }
+        }
+    }
+
+    public object ToggleShuffle(JsonElement args)
+    {
+        var settings = ReadSettings();
+        var device = ResolveDevice(settings, LiteWiiMContract.ReadDeviceId(args));
+        lock (gate)
+        {
+            try
+            {
+                var before = ReadSnapshot(device);
+                var enabled = before.Playback.LoopMode is 2 or 3;
+                var target = enabled
+                    ? before.Playback.LoopMode == 2 ? -1 : 0
+                    : 2;
+                client.SetLoopModeAsync(device.Address, target)
+                    .GetAwaiter().GetResult();
+                Thread.Sleep(TimeSpan.FromMilliseconds(120));
+                var refreshed = ReadSnapshot(device);
+                return CreateSnapshotResult(
+                    settings,
+                    device,
+                    refreshed,
+                    enabled
+                        ? "Losowanie wyłączone"
+                        : "Losowanie z powtarzaniem włączone");
+            }
+            catch (LiteRequestException)
+            {
+                throw;
+            }
+            catch (Exception exception) when (IsConnectionFailure(exception))
+            {
+                throw new LiteRequestException(
+                    $"Nie udało się zmienić losowania urządzenia {UserTitle(device)}.");
+            }
+        }
+    }
+
     public object PlayNetworkStream(JsonElement args)
     {
         var request = LiteWiiMContract.ReadNetworkStreamRequest(args);
@@ -256,6 +416,10 @@ internal sealed class LiteWiiMCoordinator(string statePath) : IDisposable
     private void SetVolume(WiiMDeviceSettings device, int value) =>
         client.SetVolumeAsync(device.Address, Math.Clamp(value, 0, 100))
             .GetAwaiter().GetResult();
+
+    private static bool IsConnectionFailure(Exception exception) =>
+        exception is HttpRequestException or TaskCanceledException or IOException
+            or FormatException or ArgumentException;
 
     private WiiMDeviceSnapshot ReadSnapshot(WiiMDeviceSettings device)
     {

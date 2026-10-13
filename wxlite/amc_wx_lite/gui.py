@@ -123,12 +123,14 @@ from .shortcuts import (
     resolve,
 )
 from .wiim_source import (
+    WiiMOptionChoice,
     WiiMPresetChoice,
     WiiMPayloadError,
     device_rows as wiim_device_rows,
     network_stream_edit_info as wiim_network_stream_edit_info,
     network_stream_rows as wiim_network_stream_rows,
     now_playing_label as wiim_now_playing_label,
+    option_choices as wiim_option_choices,
     preset_choices as wiim_preset_choices,
     snapshot as wiim_snapshot,
 )
@@ -2135,6 +2137,71 @@ class PresetListDialog(wx.Dialog):
             )
             return
         self.EndModal(wx.ID_OK)
+
+
+class WiiMOptionDialog(wx.Dialog):
+    """Jedna opcja urządzenia; lista dostaje wyłącznie jawne etykiety."""
+
+    def __init__(
+        self,
+        parent: wx.Window,
+        *,
+        title: str,
+        description: str,
+        choices: tuple[WiiMOptionChoice, ...],
+        selected_index: int,
+    ) -> None:
+        super().__init__(parent, title=title)
+        self._choices = choices
+        panel = wx.Panel(self)
+        layout = wx.BoxSizer(wx.VERTICAL)
+
+        hint = wx.StaticText(panel, label=description)
+        hint.SetName(description)
+        layout.Add(hint, 0, wx.ALL | wx.EXPAND, 12)
+
+        self.choice_list = wx.ListBox(
+            panel,
+            choices=[choice.label for choice in choices],
+            style=wx.LB_SINGLE,
+        )
+        self.choice_list.SetName(title)
+        self.choice_list.SetSelection(
+            selected_index if 0 <= selected_index < len(choices) else 0
+        )
+        layout.Add(self.choice_list, 1, wx.LEFT | wx.RIGHT | wx.EXPAND, 12)
+        panel.SetSizer(layout)
+
+        buttons = self.CreateStdDialogButtonSizer(wx.OK | wx.CANCEL)
+        shell = wx.BoxSizer(wx.VERTICAL)
+        shell.Add(panel, 1, wx.EXPAND)
+        shell.Add(buttons, 0, wx.ALL | wx.ALIGN_RIGHT, 12)
+        self.SetSizer(shell)
+        self.SetMinSize((620, 390))
+        self.Fit()
+        self.choice_list.Bind(wx.EVT_LISTBOX_DCLICK, self._accept)
+        self.Bind(wx.EVT_CHAR_HOOK, self._on_key)
+        self.choice_list.SetFocus()
+
+    @property
+    def selected_choice(self) -> WiiMOptionChoice | None:
+        index = self.choice_list.GetSelection()
+        return self._choices[index] if 0 <= index < len(self._choices) else None
+
+    def _on_key(self, event: wx.KeyEvent) -> None:
+        if not event.ControlDown() and not event.AltDown() and not event.ShiftDown():
+            if event.GetKeyCode() in (
+                wx.WXK_RETURN,
+                wx.WXK_NUMPAD_ENTER,
+                wx.WXK_SPACE,
+            ):
+                self._accept(event)
+                return
+        event.Skip()
+
+    def _accept(self, _event) -> None:
+        if self.selected_choice is not None:
+            self.EndModal(wx.ID_OK)
 
 
 class WiiMPresetListDialog(wx.Dialog):
@@ -4926,6 +4993,8 @@ class LiteFrame(wx.Frame):
                 enabled = False
             if entry.needs_playback and not playing:
                 enabled = False
+            if entry.needs_player_view and session.view is not View.PLAYER:
+                enabled = False
             if entry.needs_selection and not has_row:
                 enabled = False
             if entry.needs_podcast_item and (
@@ -6789,6 +6858,16 @@ class LiteFrame(wx.Frame):
             self._show_presets()
         elif action is Action.VIEW_WIIM_NETWORK_STREAMS:
             self._show_wiim_network_streams()
+        elif action in {
+            Action.WIIM_SELECT_INPUT,
+            Action.WIIM_SELECT_OUTPUT,
+            Action.WIIM_SELECT_EQUALIZER,
+            Action.WIIM_SELECT_REPEAT,
+            Action.WIIM_SET_SLEEP_TIMER,
+        }:
+            self._show_wiim_option(action)
+        elif action is Action.WIIM_TOGGLE_SHUFFLE:
+            self._toggle_wiim_shuffle()
         elif action is Action.ADD_WIIM_NETWORK_STREAM:
             self._add_wiim_network_stream()
         elif action is Action.EDIT_WIIM_NETWORK_STREAM:
@@ -7933,6 +8012,138 @@ class LiteFrame(wx.Frame):
             ),
             done,
             failed,
+        )
+
+    def _show_wiim_option(self, action: Action) -> None:
+        """Otwórz jedną opcję odtwarzacza WiiM z etykietami hosta C#."""
+        option_by_action = {
+            Action.WIIM_SELECT_INPUT: "input",
+            Action.WIIM_SELECT_OUTPUT: "output",
+            Action.WIIM_SELECT_EQUALIZER: "equalizer",
+            Action.WIIM_SELECT_REPEAT: "repeat",
+            Action.WIIM_SET_SLEEP_TIMER: "sleep",
+        }
+        option = option_by_action.get(action)
+        client = self.client
+        context = self._wiim_device_context()
+        if option is None:
+            self.announcer.say("Nieznane ustawienie WiiM")
+            return
+        if client is None:
+            self.announcer.say("Silnik nie jest gotowy")
+            return
+        if self.navigator.view is not View.PLAYER or context is None:
+            self.announcer.say(
+                "To ustawienie WiiM jest dostępne po otwarciu sterowania urządzeniem"
+            )
+            return
+        _item_id, device_id, device_title = context
+
+        def done(payload: object) -> None:
+            if (
+                self.navigator.active is not SessionId.WIIM
+                or self.navigator.view is not View.PLAYER
+                or self._wiim_active_device_id != device_id
+            ):
+                return
+            try:
+                (
+                    _returned_device_title,
+                    title,
+                    description,
+                    choices,
+                    selected_index,
+                ) = wiim_option_choices(payload)
+            except WiiMPayloadError as error:
+                self.announcer.say(str(error))
+                return
+            with WiiMOptionDialog(
+                self,
+                title=title,
+                description=description,
+                choices=choices,
+                selected_index=selected_index,
+            ) as dialog:
+                if dialog.ShowModal() != wx.ID_OK:
+                    self._restore_focus_after_dialog()
+                    return
+                choice = dialog.selected_choice
+            if choice is None:
+                self._restore_focus_after_dialog()
+                return
+
+            def applied(result: object) -> None:
+                try:
+                    state = wiim_snapshot(result)
+                except WiiMPayloadError as error:
+                    self.announcer.say(str(error))
+                    return
+                if (
+                    self.navigator.active is not SessionId.WIIM
+                    or self.navigator.view is not View.PLAYER
+                    or self._wiim_active_device_id != device_id
+                ):
+                    return
+                self._wiim_snapshot = state
+                self._apply_wiim_snapshot(state, announce=True)
+                self.play_button.SetFocus()
+
+            self.runner.submit(
+                f"wiim-option-set-{option}",
+                lambda: client.wiim_set_option(device_id, option, choice.value),
+                applied,
+                lambda error: self.announcer.say(
+                    f"Nie udało się zastosować ustawienia urządzenia "
+                    f"{device_title}: {error}"
+                ),
+            )
+
+        self.runner.submit(
+            f"wiim-option-read-{option}",
+            lambda: client.wiim_options(device_id, option),
+            done,
+            lambda error: self.announcer.say(
+                f"Urządzenie {device_title} nie udostępniło tej opcji: {error}"
+            ),
+        )
+
+    def _toggle_wiim_shuffle(self) -> None:
+        client = self.client
+        context = self._wiim_device_context()
+        if client is None:
+            self.announcer.say("Silnik nie jest gotowy")
+            return
+        if self.navigator.view is not View.PLAYER or context is None:
+            self.announcer.say(
+                "Losowanie WiiM jest dostępne po otwarciu sterowania urządzeniem"
+            )
+            return
+        _item_id, device_id, device_title = context
+
+        def done(payload: object) -> None:
+            try:
+                state = wiim_snapshot(payload)
+            except WiiMPayloadError as error:
+                self.announcer.say(str(error))
+                return
+            if (
+                self.navigator.active is not SessionId.WIIM
+                or self.navigator.view is not View.PLAYER
+                or self._wiim_active_device_id != device_id
+            ):
+                return
+            self._wiim_snapshot = state
+            self._apply_wiim_snapshot(state, announce=True)
+            self.play_button.SetFocus()
+
+        self.runner.submit(
+            "wiim-shuffle-toggle",
+            lambda: client.wiim_toggle_shuffle(device_id),
+            done,
+            lambda error: self.announcer.say(
+                f"Nie udało się zmienić losowania urządzenia "
+                f"{device_title}: {error}"
+            ),
         )
 
     def _show_wiim_presets(self, *, select_for_shortcut: bool = False) -> None:

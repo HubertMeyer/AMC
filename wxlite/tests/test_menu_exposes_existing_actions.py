@@ -30,6 +30,7 @@ from amc_wx_lite.shortcuts import (
     RADIO_LIST_VIEW,
     RADIO_PLAYER_VIEW,
     TIDAL_COLLECTION_LIST_VIEW,
+    WIIM_PLAYER_VIEW,
     WIIM_SESSION_VIEW,
     SONOS_SESSION_VIEW,
     SONOS_OWN_STREAMS_VIEW,
@@ -152,6 +153,7 @@ def test_shortcut_shown_in_menu_is_the_shortcut_that_really_works() -> None:
         RADIO_PLAYER_VIEW,
         TIDAL_COLLECTION_LIST_VIEW,
         WIIM_SESSION_VIEW,
+        WIIM_PLAYER_VIEW,
         SONOS_SESSION_VIEW,
         SONOS_OWN_STREAMS_VIEW,
         PLAYER_VIEW,
@@ -186,7 +188,8 @@ def test_no_duplicate_labels_or_shortcuts() -> None:
     assert set(duplicates) <= {
         "Ctrl+O", "Ctrl+Shift+O", "Ctrl+N", "Ctrl+E", "Ctrl+D", "Ctrl+S",
         "Alt+1", "Alt+2", "Alt+3", "Alt+D", "Ctrl+F5",
-        "B", "Shift+B", "Ctrl+Shift+B", "Ctrl+X", "F2", "Delete"
+        "B", "Shift+B", "Ctrl+Shift+B", "Ctrl+X", "F2", "Delete",
+        "I", "O", "S", "T"
     }, duplicates
     for item in duplicates.get("Ctrl+O", []):
         assert not item.accelerator, (

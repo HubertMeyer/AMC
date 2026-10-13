@@ -24,6 +24,14 @@ class WiiMPresetChoice:
     activation_error: str
 
 
+@dataclass(frozen=True, slots=True)
+class WiiMOptionChoice:
+    """Wartość modelu i osobna, jawna etykieta dla natywnej kontrolki."""
+
+    value: str
+    label: str
+
+
 def device_rows(payload: object) -> tuple[Row, ...]:
     """Przyjmij tylko celowe etykiety; nigdy repr obiektu ani adres IP."""
     if not isinstance(payload, dict):
@@ -166,6 +174,41 @@ def preset_choices(payload: object) -> tuple[str, tuple[WiiMPresetChoice, ...]]:
     if set(choices) != set(range(1, 13)):
         raise WiiMPayloadError("Host WiiM zwrócił niepełną listę presetów")
     return device_title, tuple(choices[number] for number in range(1, 13))
+
+
+def option_choices(
+    payload: object,
+) -> tuple[str, str, str, tuple[WiiMOptionChoice, ...], int]:
+    """Odczytaj dialog opcji bez przekazywania obiektów ani ID do NVDA."""
+    if not isinstance(payload, dict):
+        raise WiiMPayloadError("Host WiiM zwrócił nieprawidłowe ustawienia")
+    device_title = _text(payload.get("deviceTitle")) or "WiiM"
+    title = _text(payload.get("title"))
+    description = _text(payload.get("description"))
+    selected_value = _text(payload.get("selectedValue"))
+    raw_items = payload.get("items")
+    if not title or not description or not isinstance(raw_items, list):
+        raise WiiMPayloadError("Host WiiM nie zwrócił pełnej listy ustawień")
+
+    result: list[WiiMOptionChoice] = []
+    seen: set[str] = set()
+    for raw in raw_items:
+        if not isinstance(raw, dict):
+            continue
+        value = _text(raw.get("value"))
+        label = _text(raw.get("label"))
+        if not value or not label or value in seen:
+            continue
+        seen.add(value)
+        result.append(WiiMOptionChoice(value, label))
+    if not result:
+        raise WiiMPayloadError("Urządzenie WiiM nie udostępniło tej opcji")
+    selected_index = next(
+        (index for index, choice in enumerate(result)
+         if choice.value == selected_value),
+        0,
+    )
+    return device_title, title, description, tuple(result), selected_index
 
 
 def now_playing_label(state: dict) -> str:

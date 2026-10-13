@@ -533,6 +533,12 @@ własnej normalizacji diakrytyków.
   obowiązuje mapowanie głównego AMC albo domyślna zgodność numerów. Do
   dostępnej listy trafiają wyłącznie jawna nazwa, źródło i czytelny opis;
   adres urządzenia, URI i techniczny identyfikator pozostają poza kontrolką.
+  Odtwarzacz ma też opcje z pełnego AMC: `I` — wejście, `O` — wyjście,
+  `E` — korektor, `R` — powtarzanie, `S` — losowanie, `T` — timer uśpienia.
+  Dialogi wx dostają wyłącznie jawne etykiety zwrócone przez wąski kontrakt
+  hosta, a zastosowanie opcji wraca jako zwykła, bezpieczna migawka
+  odtwarzacza. Te litery są kontekstowe tylko w odtwarzaczu WiiM, więc nie
+  uruchamiają lokalnego zaznaczania fragmentu ani obcych funkcji sesji.
   Próba na dwóch urządzeniach zapisanych w bieżącym profilu potwierdziła listę
   i bezpieczny komunikat braku odpowiedzi; oba urządzenia były w czasie próby
   niedostępne, więc żywy transport wymaga jeszcze odbioru na włączonym WiiM.
