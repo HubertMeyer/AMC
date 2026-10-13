@@ -216,6 +216,14 @@ nie należy zastępować odpowiednikami napisanymi w Pythonie bez osobnej,
 udowodnionej potrzeby. Zmiany mają dotyczyć przede wszystkim dostępności,
 kompletności skrótów i zgodności zachowania z głównym AMC.
 
+Niezależne ustawienia komunikatów „odtwarzane” i „nagrywane” mogą umieszczać
+każdy stan przed nazwą stacji, po niej albo całkiem wyłączyć jego odczyt.
+Opcjonalne krótkie sygnały pozostają od tych tekstów niezależne, a stan łączny
+odtwarza dwa rozróżnialne tony kolejno. Prezentacja obejmuje Bibliotekę,
+Ulubione, Historię oraz stacje wewnątrz playlist radiowych; surowa nazwa stacji
+w modelu nie jest modyfikowana i żaden identyfikator techniczny nie trafia do
+tekstu listy.
+
 13 października domknięto zapis Biblioteki stacji w samodzielnym AMC Python.
 `Ctrl+N` nie jest już martwe we wspólnym profilu: dodaje nową stację przez
 wąską bramę hosta C#, a ponowne podanie tego samego adresu aktualizuje nazwę

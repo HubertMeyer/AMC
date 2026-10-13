@@ -16257,7 +16257,12 @@ class LiteFrame(wx.Frame):
     def _apply_radio_activity_status(self) -> None:
         """Zmien tylko dynamiczny opis zwyklych list Radia."""
         state = self.navigator.sessions[SessionId.RADIO]
-        if state.library_view not in (None, LibraryView.FAVORITES, LibraryView.HISTORY):
+        if state.library_view not in (
+            None,
+            LibraryView.FAVORITES,
+            LibraryView.HISTORY,
+            LibraryView.PLAYLIST_CONTENTS,
+        ):
             return
         rows = station_activity_rows(
             state.model.rows,

@@ -566,6 +566,47 @@ def test_station_activity_refresh_replaces_old_state_instead_of_repeating_it() -
     assert second[0].state_detail == "odtwarzanie wstrzymane"
 
 
+def test_radio_playlist_contents_receive_live_playback_and_recording_state() -> None:
+    """Stan stacji musi być dostępny także wewnątrz playlisty radiowej."""
+    from amc_wx_lite.list_model import Row
+
+    navigator = Navigator()
+    navigator.switch_session(SessionId.RADIO)
+    navigator.apply_radio_view(
+        LibraryView.PLAYLIST_CONTENTS,
+        "Playlista — Poranek",
+        [Row("radio", "Radio Poznań", "station")],
+        playlist_id="poranek",
+    )
+    frame = LiteFrame.__new__(LiteFrame)
+    frame.navigator = navigator
+    frame.options = SimpleNamespace(
+        radio_playback_state_position="before",
+        radio_recording_state_position="after",
+    )
+    frame._transport_status_by_session = {
+        SessionId.RADIO: {
+            "engine": "radio",
+            "loadedId": "radio",
+            "paused": False,
+        }
+    }
+    frame._last_status = {}
+    frame._last_recording_status = {
+        "recordings": [{"stationId": "radio", "state": "recording"}]
+    }
+    synchronized: list[bool] = []
+    frame._sync_views = lambda: synchronized.append(True)
+
+    LiteFrame._apply_radio_activity_status(frame)
+
+    row = navigator.session.model.rows[0]
+    assert row.title == "Radio Poznań"
+    assert row.state_prefix == "odtwarzane"
+    assert row.state_detail == "nagrywane"
+    assert synchronized == [True]
+
+
 def test_recording_duration_label_is_neutral_and_readable() -> None:
     assert format_duration(0) == "0:00"
     assert format_duration(65) == "1:05"
