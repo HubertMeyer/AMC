@@ -88,6 +88,13 @@ _NON_SQLITE_VIEWS = (
     LibraryView.TIDAL_CONTAINER,
     # Prywatna kolejka TIDAL jest zapisana w state.json AMC-wx-Lite.
     LibraryView.TIDAL_QUEUE,
+    # Zapisane strumienie WiiM czyta osobny WiimSource ze wspolnego state.json.
+    LibraryView.WIIM_NETWORK_STREAMS,
+    # Biblioteka, ulubione i playlisty Sonos przychodza z hosta C# oraz
+    # oficjalnej warstwy konta Sonos. Nie sa widokami lokalnej bazy SQLite.
+    LibraryView.SONOS_LIBRARY,
+    LibraryView.SONOS_FAVORITES,
+    LibraryView.SONOS_PLAYLISTS,
 )
 
 

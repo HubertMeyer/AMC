@@ -102,7 +102,9 @@ from amc_wx_lite.shortcuts import (
     PODCAST_SESSION_VIEW,
     RADIO_LIST_VIEW,
     RADIO_PLAYER_VIEW,
+    SONOS_SESSION_VIEW,
     TIDAL_COLLECTION_LIST_VIEW,
+    WIIM_SESSION_VIEW,
     Action,
     Chord,
     describe,
@@ -765,6 +767,8 @@ def test_menu_shortcut_labels_still_tell_the_truth() -> None:
         LIST_VIEW,
         RADIO_LIST_VIEW,
         RADIO_PLAYER_VIEW,
+        WIIM_SESSION_VIEW,
+        SONOS_SESSION_VIEW,
         TIDAL_COLLECTION_LIST_VIEW,
         PLAYER_VIEW,
     ):

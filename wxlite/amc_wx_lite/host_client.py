@@ -697,6 +697,37 @@ class LiteHostClient:
             args["seconds"] = float(seconds)
         return self.call("sonos.transport", args, timeout=45.0)
 
+    def sonos_library(self) -> Any:
+        """List user-facing Sonos content categories."""
+        return self.call("sonos.library", timeout=10.0)
+
+    def sonos_materials(self, household_id: str, kind: str) -> Any:
+        """Read favorites or playlists for one validated Sonos household."""
+        return self.call(
+            "sonos.materials",
+            {"householdId": household_id, "kind": kind},
+            timeout=60.0,
+        )
+
+    def sonos_load_material(
+        self,
+        household_id: str,
+        group_id: str,
+        kind: str,
+        material_id: str,
+    ) -> Any:
+        """Start one selected favorite or playlist in the active group."""
+        return self.call(
+            "sonos.loadMaterial",
+            {
+                "householdId": household_id,
+                "groupId": group_id,
+                "kind": kind,
+                "materialId": material_id,
+            },
+            timeout=60.0,
+        )
+
     def refresh_podcasts(self, subscription_id: str | None = None) -> Any:
         """Odśwież jedno źródło lub całą bibliotekę przez właściciela C#."""
         args = {"subscriptionId": subscription_id} if subscription_id else {}

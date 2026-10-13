@@ -28,7 +28,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from .navigation import SessionId
-from .shortcuts import Action
+from .shortcuts import (
+    Action,
+    SONOS_SUPPORTED_ACTIONS,
+    TIDAL_SUPPORTED_ACTIONS,
+    WIIM_SUPPORTED_ACTIONS,
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -110,7 +115,9 @@ SEPARATOR = MenuItem(is_separator=True)
 FILES_ONLY = (SessionId.FILES,)
 PODCASTS_ONLY = (SessionId.PODCASTS,)
 WIIM_ONLY = (SessionId.WIIM,)
+SONOS_ONLY = (SessionId.SONOS,)
 LOCAL_MEDIA = (SessionId.FILES, SessionId.PODCASTS)
+LOCAL_AUDIO = (SessionId.FILES, SessionId.RADIO, SessionId.PODCASTS)
 LOCAL_TIMELINE = (SessionId.FILES, SessionId.RADIO, SessionId.PODCASTS)
 PLAYER_SESSIONS = (
     SessionId.FILES,
@@ -128,11 +135,22 @@ def menus_for_session(session_id: SessionId) -> tuple[Menu, ...]:
     grup na poczatku, koncu ani dwoch separatorow obok siebie.
     """
 
+    supported = {
+        SessionId.TIDAL: TIDAL_SUPPORTED_ACTIONS,
+        SessionId.WIIM: WIIM_SUPPORTED_ACTIONS,
+        SessionId.SONOS: SONOS_SUPPORTED_ACTIONS,
+    }.get(session_id)
     menus: list[Menu] = []
     for described in build_menus():
         items: list[MenuItem] = []
         for entry in described.items:
             if entry.visible_sessions and session_id not in entry.visible_sessions:
+                continue
+            if (
+                supported is not None
+                and entry.action is not None
+                and entry.action not in supported
+            ):
                 continue
             if entry.is_separator:
                 if items and not items[-1].is_separator:
@@ -731,6 +749,13 @@ def build_menus() -> tuple[Menu, ...]:
             MenuItem("Sesja: &TIDAL", Action.SESSION_TIDAL, shortcut="Ctrl+4"),
             MenuItem("Sesja: &WiiM", Action.SESSION_WIIM, shortcut="Ctrl+5"),
             MenuItem("Sesja: &Sonos", Action.SESSION_SONOS, shortcut="Ctrl+6"),
+            MenuItem(
+                "Wybierz &grupę Sonos",
+                Action.SELECT_SONOS_TARGET,
+                shortcut="Ctrl+F5",
+                accelerator=False,
+                visible_sessions=SONOS_ONLY,
+            ),
             SEPARATOR,
             MenuItem("&Nowe odcinki i materiały", Action.VIEW_PODCAST_INBOX,
                      shortcut="Ctrl+I",
@@ -825,7 +850,11 @@ def build_menus() -> tuple[Menu, ...]:
         # samego gestu przed lista, dlatego menu otwieramy przez Alt+K.
         "Dźwię&k",
         (
-            MenuItem("&Algorytm przyspieszania", builtin="tempo-submenu"),
+            MenuItem(
+                "&Algorytm przyspieszania",
+                builtin="tempo-submenu",
+                visible_sessions=LOCAL_AUDIO,
+            ),
             SEPARATOR,
             # Bez akceleratora okna: Shift+A ma dzialac w liscie i
             # odtwarzaczu, ale w polu tekstowym nadal musi wpisywac wielkie A.
@@ -834,18 +863,21 @@ def build_menus() -> tuple[Menu, ...]:
                 Action.SELECT_AUDIO_OUTPUT,
                 shortcut="Shift+A",
                 accelerator=False,
+                visible_sessions=LOCAL_AUDIO,
             ),
             MenuItem(
                 "&Poprzednie urządzenie audio",
                 Action.PREVIOUS_AUDIO_OUTPUT,
                 shortcut="Ctrl+[",
                 accelerator=False,
+                visible_sessions=LOCAL_AUDIO,
             ),
             MenuItem(
                 "&Następne urządzenie audio",
                 Action.NEXT_AUDIO_OUTPUT,
                 shortcut="Ctrl+]",
                 accelerator=False,
+                visible_sessions=LOCAL_AUDIO,
             ),
             # Opcje dotyczą sesji, także na pustej liście. Ctrl+Alt+Enter
             # jest skrótem okna, więc rejestrujemy natywny akcelerator;
@@ -862,6 +894,7 @@ def build_menus() -> tuple[Menu, ...]:
                 shortcut="Alt+Shift+Return",
                 accelerator=False,
                 needs_podcast_session=True,
+                visible_sessions=PODCASTS_ONLY,
             ),
         ),
     )

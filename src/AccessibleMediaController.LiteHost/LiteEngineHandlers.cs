@@ -416,6 +416,12 @@ internal sealed class LiteEngineHandlers : IDisposable
                 RequireSonos().Snapshot(request.Args),
             [LiteSonosContract.TransportOperation] = (request, _) =>
                 RequireSonos().Transport(request.Args),
+            [LiteSonosContract.LibraryOperation] = (_, _) =>
+                RequireSonos().Library(),
+            [LiteSonosContract.MaterialsOperation] = (request, _) =>
+                RequireSonos().Materials(request.Args),
+            [LiteSonosContract.LoadMaterialOperation] = (request, _) =>
+                RequireSonos().LoadMaterial(request.Args),
             ["podcast.toggleFavorite"] = (request, _) =>
                 TogglePodcastFavorites(request.Args),
             ["podcast.toggleLibrary"] = (request, _) =>

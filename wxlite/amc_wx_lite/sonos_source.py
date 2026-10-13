@@ -78,6 +78,82 @@ def snapshot(payload: object) -> dict:
     return result
 
 
+def library_rows(payload: object, household_id: str) -> tuple[Row, ...]:
+    """Kategorie Biblioteki z jawnymi etykietami; dom zostaje w modelu."""
+    raw_items = _items(payload, "Host Sonos nie zwrócił Biblioteki")
+    rows: list[Row] = []
+    seen: set[str] = set()
+    for raw in raw_items:
+        if not isinstance(raw, dict):
+            continue
+        item_id = _text(raw.get("itemId"))
+        title = _text(raw.get("title"))
+        kind = _text(raw.get("kind"))
+        if (
+            not item_id
+            or not title
+            or kind not in {"favorites", "playlists", "ownStreams"}
+            or item_id in seen
+        ):
+            continue
+        seen.add(item_id)
+        rows.append(Row(
+            item_id=item_id,
+            title=title,
+            kind="sonosCategory",
+            detail=_text(raw.get("detail")),
+            parent_id=household_id,
+            service_kind=kind,
+        ))
+    return tuple(rows)
+
+
+def material_rows(payload: object, household_id: str) -> tuple[Row, ...]:
+    """Ulubione i playlisty: techniczny identyfikator nigdy nie jest etykietą."""
+    raw_items = _items(payload, "Host Sonos nie zwrócił listy materiałów")
+    rows: list[Row] = []
+    seen: set[str] = set()
+    for raw in raw_items:
+        if not isinstance(raw, dict):
+            continue
+        item_id = _text(raw.get("itemId"))
+        material_id = _text(raw.get("materialId"))
+        title = _text(raw.get("title"))
+        kind = _text(raw.get("kind"))
+        if (
+            not item_id
+            or not material_id
+            or not title
+            or kind not in {"favorite", "playlist"}
+            or item_id in seen
+        ):
+            continue
+        seen.add(item_id)
+        rows.append(Row(
+            item_id=item_id,
+            title=title,
+            kind="sonosFavorite" if kind == "favorite" else "sonosPlaylist",
+            parent_id=household_id,
+            service_id=material_id,
+            service_kind=kind,
+        ))
+    return tuple(rows)
+
+
+def response_message(payload: object) -> str:
+    """Tylko celowy tekst użytkowy z odpowiedzi listy."""
+    return _text(payload.get("message")) if isinstance(payload, dict) else ""
+
+
+def _items(payload: object, error: str) -> list:
+    if not isinstance(payload, dict):
+        raise SonosPayloadError(error)
+    raw_items = payload.get("items")
+    if not isinstance(raw_items, list):
+        raise SonosPayloadError(error)
+    return raw_items
+
+
 def now_playing_label(state: dict) -> str:
     """Nazwa widoku odtwarzacza złożona wyłącznie z tekstów użytkowych."""
     parts: list[str] = []

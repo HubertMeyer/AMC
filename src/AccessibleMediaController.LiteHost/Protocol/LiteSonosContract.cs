@@ -13,6 +13,9 @@ public static class LiteSonosContract
     public const string TargetsOperation = "sonos.targets";
     public const string SnapshotOperation = "sonos.snapshot";
     public const string TransportOperation = "sonos.transport";
+    public const string LibraryOperation = "sonos.library";
+    public const string MaterialsOperation = "sonos.materials";
+    public const string LoadMaterialOperation = "sonos.loadMaterial";
 
     public static LiteSonosTargetRequest ReadTarget(JsonElement args) => new(
         LiteArgs.RequireText(args, "householdId").Trim(),
@@ -46,6 +49,79 @@ public static class LiteSonosContract
         }
         return new LiteSonosTransportRequest(
             target.HouseholdId, target.GroupId, command, volume, seconds);
+    }
+
+    public static LiteSonosMaterialsRequest ReadMaterialsRequest(JsonElement args)
+    {
+        var householdId = LiteArgs.RequireText(args, "householdId").Trim();
+        var kind = LiteArgs.RequireText(args, "kind").Trim();
+        if (kind is not ("favorite" or "playlist"))
+            throw new LiteRequestException("Nieznany rodzaj materiału Sonos.");
+        return new LiteSonosMaterialsRequest(householdId, kind);
+    }
+
+    public static LiteSonosMaterialLoadRequest ReadMaterialLoadRequest(JsonElement args)
+    {
+        var target = ReadTarget(args);
+        var material = ReadMaterialsRequest(args);
+        var materialId = LiteArgs.RequireText(args, "materialId").Trim();
+        return new LiteSonosMaterialLoadRequest(
+            target.HouseholdId, target.GroupId, material.Kind, materialId);
+    }
+
+    public static object CreateLibraryResult()
+    {
+        var items = SonosLibraryPresentation.DescribeCategories()
+            // Własne stacje dostaną osobny kontrakt zapisu/odtwarzania. Dopóki
+            // go nie ma, nie pokazujemy w wxPython martwej kategorii.
+            .Where(row =>
+                string.Equals(
+                    row.CategoryId,
+                    SonosLibraryPresentation.FavoritesCategoryId,
+                    StringComparison.Ordinal)
+                || string.Equals(
+                    row.CategoryId,
+                    SonosLibraryPresentation.PlaylistsCategoryId,
+                    StringComparison.Ordinal))
+            .Select(row => new
+            {
+                itemId = row.CategoryId,
+                title = row.Name,
+                detail = row.Hint,
+                kind = row.CategoryId switch
+                {
+                    SonosLibraryPresentation.FavoritesCategoryId => "favorites",
+                    SonosLibraryPresentation.PlaylistsCategoryId => "playlists",
+                    _ => throw new InvalidOperationException(
+                        "Nieznana kategoria Biblioteki Sonos.")
+                }
+            })
+            .ToArray();
+        return new { items, message = "Biblioteka Sonos" };
+    }
+
+    public static object CreateFavoritesResult(SonosFavoritesList favorites)
+    {
+        var items = favorites.Items.Select(item => new
+        {
+            itemId = "sonos-favorite:" + item.Id,
+            materialId = item.Id,
+            title = SonosFavoritesLabels.Describe(item),
+            kind = "favorite"
+        }).ToArray();
+        return new { items, message = SonosFavoritesLabels.SummarizeCount(items.Length) };
+    }
+
+    public static object CreatePlaylistsResult(SonosPlaylistsList playlists)
+    {
+        var items = playlists.Items.Select(item => new
+        {
+            itemId = "sonos-playlist:" + item.Id,
+            materialId = item.Id,
+            title = SonosPlaylistsLabels.Describe(item),
+            kind = "playlist"
+        }).ToArray();
+        return new { items, message = SonosPlaylistsLabels.SummarizeCount(items.Length) };
     }
 
     public static object CreateTargetsResult(
@@ -189,6 +265,14 @@ public sealed record LiteSonosTransportRequest(
     string Command,
     int? Volume,
     int? Seconds);
+
+public sealed record LiteSonosMaterialsRequest(string HouseholdId, string Kind);
+
+public sealed record LiteSonosMaterialLoadRequest(
+    string HouseholdId,
+    string GroupId,
+    string Kind,
+    string MaterialId);
 
 public sealed record LiteSonosHouseholdTargets(
     SonosHousehold Household,

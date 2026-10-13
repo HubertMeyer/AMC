@@ -96,6 +96,7 @@ class Action(Enum):
     SESSION_TIDAL = "session.tidal"
     SESSION_WIIM = "session.wiim"
     SESSION_SONOS = "session.sonos"
+    SELECT_SONOS_TARGET = "sonos.target.select"
     ACTIVATE = "activate"
     PARENT_FOLDER = "parent"
     # Escape na liscie nie jest aliasem Backspace. Zamyka podglad lub
@@ -349,9 +350,6 @@ TIDAL_SUPPORTED_ACTIONS = frozenset({
     Action.TIME_REMAINING,
     Action.TIME_TOTAL,
     Action.SESSION_OPTIONS,
-    Action.SELECT_AUDIO_OUTPUT,
-    Action.PREVIOUS_AUDIO_OUTPUT,
-    Action.NEXT_AUDIO_OUTPUT,
     Action.VIEW_PRESETS,
     Action.GENERAL_SETTINGS,
     Action.TOGGLE_SEEK_MESSAGES,
@@ -411,9 +409,6 @@ WIIM_SUPPORTED_ACTIONS = frozenset({
     Action.TIME_ELAPSED,
     Action.TIME_REMAINING,
     Action.TIME_TOTAL,
-    Action.SELECT_AUDIO_OUTPUT,
-    Action.PREVIOUS_AUDIO_OUTPUT,
-    Action.NEXT_AUDIO_OUTPUT,
     Action.VIEW_PRESETS,
     Action.VIEW_WIIM_NETWORK_STREAMS,
     Action.ADD_WIIM_NETWORK_STREAM,
@@ -429,8 +424,6 @@ WIIM_SUPPORTED_ACTIONS = frozenset({
     Action.QUICK_INFORMATION,
     Action.COPY_NAME,
     Action.FOCUS_FILTER,
-    Action.SEARCH_CURRENT,
-    Action.SEARCH_ALL,
     Action.VIEW_ACTIVE_RECORDINGS,
     Action.VIEW_RECORDED_RADIO_FILES,
     Action.MANAGE_RADIO_SCHEDULES,
@@ -449,6 +442,7 @@ SONOS_SUPPORTED_ACTIONS = frozenset({
     Action.SESSION_TIDAL,
     Action.SESSION_WIIM,
     Action.SESSION_SONOS,
+    Action.SELECT_SONOS_TARGET,
     Action.ACTIVATE,
     Action.PARENT_FOLDER,
     Action.CLOSE_LIST_PREVIEW,
@@ -482,16 +476,14 @@ SONOS_SUPPORTED_ACTIONS = frozenset({
     Action.TIME_ELAPSED,
     Action.TIME_REMAINING,
     Action.TIME_TOTAL,
-    Action.SELECT_AUDIO_OUTPUT,
-    Action.PREVIOUS_AUDIO_OUTPUT,
-    Action.NEXT_AUDIO_OUTPUT,
     Action.GENERAL_SETTINGS,
     Action.TOGGLE_SEEK_MESSAGES,
     Action.QUICK_INFORMATION,
     Action.COPY_NAME,
+    Action.VIEW_LIBRARY,
+    Action.VIEW_FAVORITES,
+    Action.VIEW_PLAYLISTS,
     Action.FOCUS_FILTER,
-    Action.SEARCH_CURRENT,
-    Action.SEARCH_ALL,
     Action.VIEW_ACTIVE_RECORDINGS,
     Action.VIEW_RECORDED_RADIO_FILES,
     Action.MANAGE_RADIO_SCHEDULES,
@@ -900,6 +892,15 @@ WIIM_SESSION_VIEW: dict[str, Action] = {
 }
 
 
+SONOS_SESSION_VIEW: dict[str, Action] = {
+    # Jak w głównym AMC: grupy i głośniki są celem sterowania, nie Biblioteką.
+    "Ctrl+F5": Action.SELECT_SONOS_TARGET,
+    "Ctrl+L": Action.VIEW_LIBRARY,
+    "Ctrl+U": Action.VIEW_FAVORITES,
+    "Ctrl+P": Action.VIEW_PLAYLISTS,
+}
+
+
 def resolve(
     chord: Chord,
     *,
@@ -912,6 +913,7 @@ def resolve(
     tidal_collection: bool = False,
     wiim_session: bool = False,
     wiim_streams: bool = False,
+    sonos_session: bool = False,
 ) -> Action | None:
     """Znajdz akcje dla klawisza w DANYM widoku. Brak wpisu = klawisz zostaje
     dla kontrolki (natywna nawigacja ma pierwszenstwo)."""
@@ -951,6 +953,12 @@ def resolve(
         } and not wiim_streams:
             return None
         return action
+    if sonos_session and canonical in SONOS_SESSION_VIEW:
+        return SONOS_SESSION_VIEW[canonical]
+    if sonos_session and canonical in {"Shift+A", "Ctrl+[", "Ctrl+]"}:
+        # Sonos nie używa lokalnych wyjść Windows. Jego celem jest grupa pod
+        # Ctrl+F5; nie wysyłamy tych gestów do dialogu urządzeń komputera.
+        return None
     # Widoki Radia sa dostepne takze z odtwarzacza, bez wychodzenia Escape.
     # Ta sama akcja co na liscie/menu; nie przenosimy edycji stacji do PLAYER.
     if radio_session and canonical in ("Ctrl+L", "Ctrl+U", "Ctrl+H"):
@@ -984,6 +992,7 @@ def _help_entries() -> list[tuple[str, str, Action]]:
         Action.SESSION_TIDAL: "TIDAL",
         Action.SESSION_WIIM: "WiiM",
         Action.SESSION_SONOS: "Sonos",
+        Action.SELECT_SONOS_TARGET: "Wybierz grupę Sonos",
         Action.ACTIVATE: "Otworz folder albo odtworz",
         Action.PARENT_FOLDER: "Folder nadrzedny",
         Action.CLOSE_LIST_PREVIEW: "Zamknij podglad lub podwidok",
@@ -1200,6 +1209,7 @@ def _help_entries() -> list[tuple[str, str, Action]]:
         PODCAST_SESSION_VIEW,
         TIDAL_LIST_VIEW,
         WIIM_SESSION_VIEW,
+        SONOS_SESSION_VIEW,
         LIST_VIEW,
         RADIO_LIST_VIEW,
         RADIO_PLAYER_VIEW,
@@ -1222,6 +1232,8 @@ def _help_entries() -> list[tuple[str, str, Action]]:
                 label = f"{label} (Podcasty i YouTube)"
             elif action is Action.VIEW_WIIM_NETWORK_STREAMS:
                 label = f"{label} (WiiM)"
+            elif action is Action.SELECT_SONOS_TARGET:
+                label = f"{label} (Sonos)"
             elif action in {
                 Action.ADD_WIIM_NETWORK_STREAM,
                 Action.EDIT_WIIM_NETWORK_STREAM,

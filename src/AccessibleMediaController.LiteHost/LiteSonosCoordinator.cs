@@ -13,6 +13,7 @@ internal sealed class LiteSonosCoordinator(
 {
     private readonly object gate = new();
     private readonly Dictionary<string, LiteSonosTarget> targets = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, SonosHousehold> households = new(StringComparer.Ordinal);
     private long? accountBindingGeneration;
 
     public object ListTargets()
@@ -146,20 +147,99 @@ internal sealed class LiteSonosCoordinator(
         }
     }
 
+    public object Library() => LiteSonosContract.CreateLibraryResult();
+
+    public object Materials(System.Text.Json.JsonElement args)
+    {
+        var request = LiteSonosContract.ReadMaterialsRequest(args);
+        lock (gate)
+        {
+            ResolveHousehold(request.HouseholdId);
+            if (request.Kind == "favorite")
+            {
+                if (backend is not ISonosFavoritesSessionBackend favoritesBackend)
+                    throw new LiteRequestException("Odczyt ulubionych Sonos nie jest dostępny.");
+                var result = favoritesBackend.ReadFavoritesAsync(
+                        request.HouseholdId, CancellationToken.None)
+                    .GetAwaiter().GetResult();
+                if (!result.Succeeded || result.Favorites is null)
+                    throw new LiteRequestException(result.Message);
+                return LiteSonosContract.CreateFavoritesResult(result.Favorites);
+            }
+
+            if (backend is not ISonosPlaylistsSessionBackend playlistsBackend)
+                throw new LiteRequestException("Odczyt playlist Sonos nie jest dostępny.");
+            var playlists = playlistsBackend.ReadPlaylistsAsync(
+                    request.HouseholdId, CancellationToken.None)
+                .GetAwaiter().GetResult();
+            if (!playlists.Succeeded || playlists.Playlists is null)
+                throw new LiteRequestException(playlists.Message);
+            return LiteSonosContract.CreatePlaylistsResult(playlists.Playlists);
+        }
+    }
+
+    public object LoadMaterial(System.Text.Json.JsonElement args)
+    {
+        var request = LiteSonosContract.ReadMaterialLoadRequest(args);
+        lock (gate)
+        {
+            var target = ResolveTarget(new LiteSonosTargetRequest(
+                request.HouseholdId, request.GroupId));
+            SonosGroupCommandResult result;
+            if (request.Kind == "favorite")
+            {
+                if (backend is not ISonosFavoriteLoadSessionBackend favoritesBackend)
+                    throw new LiteRequestException("Uruchamianie ulubionych Sonos nie jest dostępne.");
+                result = favoritesBackend.LoadFavoriteAsync(
+                        target.Group.Id, request.MaterialId,
+                        SonosFavoriteQueueAction.Insert, playOnCompletion: true,
+                        CancellationToken.None)
+                    .GetAwaiter().GetResult();
+            }
+            else
+            {
+                if (backend is not ISonosPlaylistLoadSessionBackend playlistsBackend)
+                    throw new LiteRequestException("Uruchamianie playlist Sonos nie jest dostępne.");
+                result = playlistsBackend.LoadPlaylistAsync(
+                        target.Group.Id, request.MaterialId,
+                        SonosFavoriteQueueAction.Insert, playOnCompletion: true,
+                        CancellationToken.None)
+                    .GetAwaiter().GetResult();
+            }
+
+            if (!result.Accepted)
+                throw new LiteRequestException(result.Message);
+            Thread.Sleep(TimeSpan.FromMilliseconds(220));
+            var after = ReadState(target.Group.Id);
+            return LiteSonosContract.CreateSnapshotResult(
+                target.Household.Id,
+                target.Group,
+                after.Playback,
+                after.Metadata,
+                after.Volume,
+                after.ReadUtc,
+                request.Kind == "favorite"
+                    ? "Przyjęto polecenie uruchomienia ulubionego Sonos."
+                    : "Przyjęto polecenie uruchomienia playlisty Sonos.");
+        }
+    }
+
     private object ReadTargets()
     {
-        var households = backend.ReadHouseholdsAsync(CancellationToken.None)
+        var householdResult = backend.ReadHouseholdsAsync(CancellationToken.None)
             .GetAwaiter().GetResult();
-        if (!households.Succeeded)
-            throw new LiteRequestException(households.Message);
+        if (!householdResult.Succeeded)
+            throw new LiteRequestException(householdResult.Message);
 
         targets.Clear();
-        accountBindingGeneration = households.Snapshot.AccountBindingGeneration;
+        households.Clear();
+        accountBindingGeneration = householdResult.Snapshot.AccountBindingGeneration;
         var sources = new List<LiteSonosHouseholdTargets>();
         var incomplete = false;
         string? failure = null;
-        foreach (var household in households.Households)
+        foreach (var household in householdResult.Households)
         {
+            this.households[household.Id] = household;
             var groups = backend.ReadGroupsAsync(household.Id, CancellationToken.None)
                 .GetAwaiter().GetResult();
             if (!groups.Succeeded || groups.Topology is null)
@@ -177,7 +257,7 @@ internal sealed class LiteSonosCoordinator(
         }
 
         var message = failure;
-        if (households.Households.Count == 0)
+        if (householdResult.Households.Count == 0)
         {
             message = SonosSessionListPresentation.DescribeEmptyState(
                 SonosSessionEmptyReason.NoHouseholds);
@@ -209,6 +289,18 @@ internal sealed class LiteSonosCoordinator(
         return target;
     }
 
+    private SonosHousehold ResolveHousehold(string householdId)
+    {
+        if (!SonosHouseholdIdPolicy.IsAcceptable(householdId))
+            throw new LiteRequestException("Nie można rozpoznać wybranego domu Sonos.");
+        InvalidateTargetsAfterAccountChange();
+        if (households.Count == 0) ReadTargets();
+        if (!households.TryGetValue(householdId, out var household))
+            throw new LiteRequestException(
+                "Wybrany dom Sonos nie jest już dostępny. Odśwież listę grup.");
+        return household;
+    }
+
     private void InvalidateTargetsAfterAccountChange()
     {
         if (backend is not ISonosAccountBoundBackend bound
@@ -216,6 +308,7 @@ internal sealed class LiteSonosCoordinator(
             || accountBindingGeneration is null
             || snapshot.AccountBindingGeneration == accountBindingGeneration) return;
         targets.Clear();
+        households.Clear();
         accountBindingGeneration = snapshot.AccountBindingGeneration;
     }
 

@@ -10,6 +10,10 @@ namespace AccessibleMediaController.LiteHost;
 /// </summary>
 internal sealed class LiteSonosAccountOwner :
     ISonosGroupSessionBackend,
+    ISonosFavoritesSessionBackend,
+    ISonosFavoriteLoadSessionBackend,
+    ISonosPlaylistsSessionBackend,
+    ISonosPlaylistLoadSessionBackend,
     ISonosAccountBoundBackend,
     IDisposable
 {
@@ -85,6 +89,38 @@ internal sealed class LiteSonosAccountOwner :
         CancellationToken cancellationToken) =>
         EnsureCoordinator().SetGroupMuteAsync(
             EnsureGroupApi(), groupId, muted, cancellationToken);
+
+    public Task<SonosFavoritesReadResult> ReadFavoritesAsync(
+        string? householdId,
+        CancellationToken cancellationToken) =>
+        EnsureCoordinator().ReadFavoritesAsync(
+            EnsureControlClient(), householdId, cancellationToken);
+
+    public Task<SonosGroupCommandResult> LoadFavoriteAsync(
+        string? groupId,
+        string? favoriteId,
+        SonosFavoriteQueueAction action,
+        bool playOnCompletion,
+        CancellationToken cancellationToken) =>
+        EnsureCoordinator().LoadFavoriteAsync(
+            EnsureControlClient(), groupId, favoriteId,
+            action, playOnCompletion, cancellationToken);
+
+    public Task<SonosPlaylistsReadResult> ReadPlaylistsAsync(
+        string? householdId,
+        CancellationToken cancellationToken) =>
+        EnsureCoordinator().ReadPlaylistsAsync(
+            EnsureControlClient(), householdId, cancellationToken);
+
+    public Task<SonosGroupCommandResult> LoadPlaylistAsync(
+        string? groupId,
+        string? playlistId,
+        SonosFavoriteQueueAction action,
+        bool playOnCompletion,
+        CancellationToken cancellationToken) =>
+        EnsureCoordinator().LoadPlaylistAsync(
+            EnsureControlClient(), groupId, playlistId,
+            action, playOnCompletion, cancellationToken);
 
     private SonosAccountCoordinator EnsureCoordinator()
     {

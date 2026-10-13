@@ -98,6 +98,11 @@ class LibraryView(Enum):
     #: Własne strumienie zapisane w profilu WiiM. To podwidok wybranego
     #: urządzenia, a nie lokalna Biblioteka ani lista sprzętowych presetów.
     WIIM_NETWORK_STREAMS = "wiimNetworkStreams"
+    #: Biblioteka treści Sonosa. Grupy są celem sterowania pod Ctrl+F5,
+    #: a nie materiałem i dlatego mają osobny widok poza tymi wartościami.
+    SONOS_LIBRARY = "sonosLibrary"
+    SONOS_FAVORITES = "sonosFavorites"
+    SONOS_PLAYLISTS = "sonosPlaylists"
 
 
 #: Wartosci ``_state.LocalMedia.LibraryView`` (``AppSettings.cs:1236``, domyslnie
@@ -439,6 +444,26 @@ class ActivateSonosGroup:
 
 
 @dataclass(slots=True)
+class OpenSonosView:
+    """Otwórz korzeń Biblioteki albo jedną listę materiałów Sonosa."""
+
+    view: LibraryView
+    household_id: str = ""
+    preferred_id: str | None = None
+
+
+@dataclass(slots=True)
+class PlaySonosMaterial:
+    """Uruchom konkretny ulubiony albo playlistę w aktywnej grupie."""
+
+    item_id: str
+    title: str
+    household_id: str
+    kind: str
+    material_id: str
+
+
+@dataclass(slots=True)
 class PlayFromQueue:
     """Zlecenie: uruchom ZYWA kolejke hosta od wskazanego wiersza.
 
@@ -646,6 +671,8 @@ class Navigator:
     ) -> list[object]:
         """Wstaw grupy Sonos bez zmiany stanu pozostałych sesji."""
         state = self.sessions[SessionId.SONOS]
+        state.library_view = None
+        state.library_item_id = None
         state.model.replace(rows, preferred_id=preferred_id or state.list_anchor_id)
         state.view = View.LIST
         count = len(rows)
@@ -654,6 +681,40 @@ class Navigator:
             if count
             else "Sonos, brak dostępnych grup"
         )]
+
+    def apply_sonos_library(
+        self,
+        rows: list[Row],
+        *,
+        household_id: str,
+        preferred_id: str | None = None,
+    ) -> list[object]:
+        state = self.sessions[SessionId.SONOS]
+        state.library_view = LibraryView.SONOS_LIBRARY
+        state.library_playlist_id = None
+        state.library_item_id = household_id
+        state.model.replace(rows, preferred_id=preferred_id)
+        state.view = View.LIST
+        return [Announce("Biblioteka Sonos" if rows else "Zero elementów")]
+
+    def apply_sonos_materials(
+        self,
+        view: LibraryView,
+        rows: list[Row],
+        *,
+        household_id: str,
+        preferred_id: str | None = None,
+        return_id: str | None = None,
+    ) -> list[object]:
+        if view not in (LibraryView.SONOS_FAVORITES, LibraryView.SONOS_PLAYLISTS):
+            raise ValueError("Nieznany widok materiałów Sonos")
+        state = self.sessions[SessionId.SONOS]
+        state.library_view = view
+        state.library_item_id = household_id
+        state.library_return_id = return_id or state.library_return_id
+        state.model.replace(rows, preferred_id=preferred_id)
+        state.view = View.LIST
+        return []
 
     @staticmethod
     def _session_name(session_id: SessionId) -> str:
@@ -818,6 +879,37 @@ class Navigator:
             )]
 
         if state.session_id is SessionId.SONOS:
+            if (
+                row.kind == "sonosCategory"
+                and row.parent_id
+                and row.service_kind in {"favorites", "playlists"}
+            ):
+                return [OpenSonosView(
+                    LibraryView.SONOS_FAVORITES
+                    if row.service_kind == "favorites"
+                    else LibraryView.SONOS_PLAYLISTS,
+                    household_id=row.parent_id,
+                    preferred_id=None,
+                )]
+            if (
+                row.kind in {"sonosFavorite", "sonosPlaylist"}
+                and row.parent_id
+                and row.service_id
+                and row.service_kind in {"favorite", "playlist"}
+            ):
+                state.player_entry_anchor_id = row.item_id
+                state.list_anchor_id = row.item_id
+                state.now_playing_id = row.item_id
+                state.now_playing_title = row.title
+                state.current_material_id = row.item_id
+                state.view = View.PLAYER
+                return [PlaySonosMaterial(
+                    item_id=row.item_id,
+                    title=row.title,
+                    household_id=row.parent_id,
+                    kind=row.service_kind,
+                    material_id=row.service_id,
+                )]
             if (
                 row.kind != "sonosGroup"
                 or row.service_kind != "sonosGroup"
@@ -1381,7 +1473,16 @@ class Navigator:
                 state.view = View.LIST
             return []
         if state.session_id is SessionId.SONOS:
-            # Lista grup jest korzeniem sesji, nie folderem dysku.
+            if state.library_view in (
+                LibraryView.SONOS_FAVORITES,
+                LibraryView.SONOS_PLAYLISTS,
+            ):
+                return [OpenSonosView(
+                    LibraryView.SONOS_LIBRARY,
+                    household_id=state.library_item_id or "",
+                    preferred_id=state.library_return_id,
+                )]
+            # Biblioteka i lista grup są równorzędnymi korzeniami sesji.
             return []
         # W nazwanym widoku Biblioteki nie ma wiersza rodzica. Widoki glowne
         # (Biblioteka/Wszystkie pliki, Ulubione, Playlisty i Kolejka) sa

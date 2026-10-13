@@ -170,7 +170,9 @@ internal static class Program
                 // operacje muszą pozostawić radio i nagrywanie responsywne.
                 LiteSonosContract.TargetsOperation,
                 LiteSonosContract.SnapshotOperation,
-                LiteSonosContract.TransportOperation
+                 LiteSonosContract.TransportOperation,
+                 LiteSonosContract.MaterialsOperation,
+                 LiteSonosContract.LoadMaterialOperation
             ]);
 
         Console.Error.WriteLine(

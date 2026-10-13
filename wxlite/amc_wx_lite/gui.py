@@ -95,6 +95,7 @@ from .navigation import (
     OpenQueueView,
     OpenTidalContainer,
     OpenTidalView,
+    OpenSonosView,
     PlayFromQueue,
     PlayQueueAt,
     PlayStation,
@@ -103,6 +104,7 @@ from .navigation import (
     PlayTidalTrack,
     PlayTrack,
     PlayWiiMNetworkStream,
+    PlaySonosMaterial,
     SessionId,
     ShowTidalRelations,
     TransientNavigationSnapshot,
@@ -132,6 +134,9 @@ from .wiim_source import (
 )
 from .sonos_source import (
     SonosPayloadError,
+    library_rows as sonos_library_rows,
+    material_rows as sonos_material_rows,
+    response_message as sonos_response_message,
     target_rows as sonos_target_rows,
     now_playing_label as sonos_now_playing_label,
     snapshot as sonos_snapshot,
@@ -4343,6 +4348,8 @@ class LiteFrame(wx.Frame):
         self._sonos_snapshot: dict = {}
         self._sonos_active_household_id = ""
         self._sonos_active_group_id = ""
+        self._sonos_browse_household_id = ""
+        self._sonos_content_version = 0
         self._sonos_status_poll_pending = False
         # Jeden tor żądań Sonos. Odczyt początkowy, timer i polecenia nie mogą
         # zajmować równocześnie miejsc współbieżnych LiteHosta. Polecenie
@@ -4350,6 +4357,7 @@ class LiteFrame(wx.Frame):
         self._sonos_request_pending = False
         self._sonos_retry_pending = False
         self._sonos_pending_activation: ActivateSonosGroup | None = None
+        self._sonos_pending_material: PlaySonosMaterial | None = None
         self._sonos_command_queue: list[
             tuple[str, str, str, int | None, float | None, int]
         ] = []
@@ -6539,6 +6547,7 @@ class LiteFrame(wx.Frame):
                 and self.navigator.session.library_view
                 is LibraryView.WIIM_NETWORK_STREAMS
             ),
+            sonos_session=self.navigator.active is SessionId.SONOS,
         )
         if action is None:
             # Klawisz NIE jest nasz: oddajemy go kontrolce, zeby natywna
@@ -6616,6 +6625,10 @@ class LiteFrame(wx.Frame):
         elif action is Action.SESSION_SONOS:
             self._transient_preview_return = None
             self._switch_session(SessionId.SONOS)
+        elif action is Action.SELECT_SONOS_TARGET:
+            self._load_sonos_targets(
+                preferred_id=self.navigator.sessions[SessionId.SONOS].list_anchor_id
+            )
         elif action is Action.ACTIVATE:
             self._activate()
         elif action is Action.PARENT_FOLDER:
@@ -6876,6 +6889,11 @@ class LiteFrame(wx.Frame):
                 )
             elif self.navigator.active is SessionId.TIDAL:
                 self._open_tidal_view(OpenTidalView(LibraryView.TIDAL_FAVORITES))
+            elif self.navigator.active is SessionId.SONOS:
+                self._open_sonos_view(OpenSonosView(
+                    LibraryView.SONOS_FAVORITES,
+                    household_id=self._sonos_content_household_id(),
+                ))
             else:
                 self._run(self.navigator.open_library_view(LibraryView.FAVORITES))
         elif action is Action.VIEW_PLAYLISTS:
@@ -6883,6 +6901,11 @@ class LiteFrame(wx.Frame):
                 self._open_podcast_playlist_view(OpenPodcastPlaylistView())
             elif self.navigator.active is SessionId.TIDAL:
                 self._open_tidal_view(OpenTidalView(LibraryView.TIDAL_PLAYLISTS))
+            elif self.navigator.active is SessionId.SONOS:
+                self._open_sonos_view(OpenSonosView(
+                    LibraryView.SONOS_PLAYLISTS,
+                    household_id=self._sonos_content_household_id(),
+                ))
             else:
                 self._run(self.navigator.open_library_view(LibraryView.PLAYLISTS))
         elif action is Action.VIEW_FOLDERS:
@@ -6890,7 +6913,13 @@ class LiteFrame(wx.Frame):
             # dostaja jawne wejscie (Alt+1, jak MainWindow.xaml:446).
             self._open_library(self.library.saved_folder())
         elif action is Action.VIEW_LIBRARY:
-            self._return_to_library()
+            if self.navigator.active is SessionId.SONOS:
+                self._open_sonos_view(OpenSonosView(
+                    LibraryView.SONOS_LIBRARY,
+                    household_id=self._sonos_content_household_id(),
+                ))
+            else:
+                self._return_to_library()
         elif action is Action.VIEW_HISTORY:
             if self.navigator.active is SessionId.PODCASTS:
                 self._transient_preview_return = None
@@ -6961,6 +6990,8 @@ class LiteFrame(wx.Frame):
                 self._open_tidal_view(intent)
             elif isinstance(intent, OpenTidalContainer):
                 self._open_tidal_container(intent)
+            elif isinstance(intent, OpenSonosView):
+                self._open_sonos_view(intent)
             elif isinstance(intent, ShowTidalRelations):
                 self._show_tidal_relations(intent)
             elif isinstance(intent, PlayTrack):
@@ -6983,6 +7014,8 @@ class LiteFrame(wx.Frame):
                 self._activate_wiim_network_stream(intent)
             elif isinstance(intent, ActivateSonosGroup):
                 self._activate_sonos_group(intent)
+            elif isinstance(intent, PlaySonosMaterial):
+                self._play_sonos_material(intent)
         self._sync_views()
         for text in announcements_after_empty_update:
             self._announce_after_native_list_update(text)
@@ -7023,6 +7056,9 @@ class LiteFrame(wx.Frame):
             LibraryView.ACTIVE_RADIO_RECORDINGS: "Nagrywane",
             LibraryView.RECORDED_RADIO_FILES: "Nagrane",
             LibraryView.RADIO_RECORDING_SCHEDULES: "Harmonogramy nagrywania",
+            LibraryView.SONOS_LIBRARY: "Biblioteka Sonos",
+            LibraryView.SONOS_FAVORITES: "Ulubione Sonos",
+            LibraryView.SONOS_PLAYLISTS: "Playlisty Sonos",
         }.get(
             session.library_view,
             getattr(active_list, "_base_accessible_label", None),
@@ -8190,7 +8226,18 @@ class LiteFrame(wx.Frame):
             except SonosPayloadError as error:
                 self.announcer.say(str(error))
                 return
-            events = self.navigator.apply_sonos_targets(rows, preferred_id)
+            selected_id = preferred_id
+            if self._sonos_active_group_id:
+                active = next((
+                    row.item_id for row in rows
+                    if row.service_id == self._sonos_active_group_id
+                    and row.parent_id == self._sonos_active_household_id
+                ), None)
+                selected_id = active or selected_id
+            events = self.navigator.apply_sonos_targets(rows, selected_id)
+            selected = self.navigator.sessions[SessionId.SONOS].model.selected_row
+            if selected is not None and selected.parent_id:
+                self._sonos_browse_household_id = selected.parent_id
             if self.navigator.active is SessionId.SONOS:
                 self._run(events)
             else:
@@ -8215,6 +8262,7 @@ class LiteFrame(wx.Frame):
             return
         self._sonos_active_household_id = intent.household_id
         self._sonos_active_group_id = intent.group_id
+        self._sonos_browse_household_id = intent.household_id
         self._sonos_snapshot = {}
         self.now_playing.SetLabel(intent.title)
         self._set_transport_label(playing=False, preparing=True)
@@ -8226,6 +8274,7 @@ class LiteFrame(wx.Frame):
             # odczyt jeszcze kończy się w chmurze. Nie uruchamiamy drugiego
             # równolegle; ostatni świadomy wybór wykona się zaraz po pierwszym.
             self._sonos_pending_activation = intent
+            self._sonos_pending_material = None
             return
         self._sonos_request_pending = True
 
@@ -8461,7 +8510,196 @@ class LiteFrame(wx.Frame):
         if pending_activation is not None:
             self._activate_sonos_group(pending_activation)
             return
+        pending_material = getattr(self, "_sonos_pending_material", None)
+        self._sonos_pending_material = None
+        if pending_material is not None:
+            self._play_sonos_material(pending_material)
+            return
         self._start_next_sonos_command()
+
+    def _sonos_content_household_id(self) -> str:
+        """Dom do odczytu treści, nigdy tekst pokazywany użytkownikowi."""
+        if self._sonos_active_household_id:
+            return self._sonos_active_household_id
+        state = self.navigator.sessions[SessionId.SONOS]
+        row = state.model.selected_row
+        if row is not None and row.parent_id:
+            return row.parent_id
+        if state.library_item_id:
+            return state.library_item_id
+        return self._sonos_browse_household_id
+
+    def _open_sonos_view(self, intent: OpenSonosView) -> None:
+        client = self.client
+        if client is None:
+            self.announcer.say("Silnik nie jest gotowy")
+            return
+        household_id = intent.household_id or self._sonos_content_household_id()
+        if not household_id:
+            self.announcer.say(
+                "Najpierw wybierz grupę Sonos skrótem Control F5"
+            )
+            self._load_sonos_targets()
+            return
+        self._sonos_browse_household_id = household_id
+        self._sonos_content_version += 1
+        version = self._sonos_content_version
+        state = self.navigator.sessions[SessionId.SONOS]
+        return_id = (
+            state.model.selected_id
+            if state.library_view is LibraryView.SONOS_LIBRARY
+            else state.library_return_id
+        )
+
+        if intent.view is LibraryView.SONOS_LIBRARY:
+            work = client.sonos_library
+        elif intent.view is LibraryView.SONOS_FAVORITES:
+            work = lambda: client.sonos_materials(household_id, "favorite")
+        elif intent.view is LibraryView.SONOS_PLAYLISTS:
+            work = lambda: client.sonos_materials(household_id, "playlist")
+        else:
+            self.announcer.say("Ten widok Sonosa nie jest jeszcze dostępny")
+            return
+
+        def done(payload: object) -> None:
+            if version != self._sonos_content_version:
+                return
+            try:
+                if intent.view is LibraryView.SONOS_LIBRARY:
+                    rows = list(sonos_library_rows(payload, household_id))
+                    events = self.navigator.apply_sonos_library(
+                        rows,
+                        household_id=household_id,
+                        preferred_id=intent.preferred_id or return_id,
+                    )
+                else:
+                    rows = list(sonos_material_rows(payload, household_id))
+                    events = self.navigator.apply_sonos_materials(
+                        intent.view,
+                        rows,
+                        household_id=household_id,
+                        preferred_id=intent.preferred_id,
+                        return_id=return_id,
+                    )
+            except SonosPayloadError as error:
+                self.announcer.say(str(error))
+                return
+            if self.navigator.active is SessionId.SONOS:
+                self._run(events)
+                if intent.view is not LibraryView.SONOS_LIBRARY:
+                    message = sonos_response_message(payload)
+                    self.announcer.say(message or (
+                        "Zero elementów" if not rows else "Lista Sonos"
+                    ))
+            else:
+                self._sync_views()
+
+        def failed(error: Exception) -> None:
+            if version == self._sonos_content_version:
+                self.announcer.say(
+                    f"Nie udało się odczytać Biblioteki Sonos: {error}"
+                )
+
+        self.runner.submit(
+            "sonos-library",
+            work,
+            done,
+            failed,
+        )
+
+    def _play_sonos_material(
+        self, intent: PlaySonosMaterial, *, attempt: int = 0
+    ) -> None:
+        client = self.client
+        if client is None:
+            self.announcer.say("Silnik nie jest gotowy")
+            return
+        if self.navigator.active is not SessionId.SONOS:
+            return
+        if (
+            not self._sonos_active_group_id
+            or self._sonos_active_household_id != intent.household_id
+        ):
+            self.announcer.say(
+                "Wybierz grupę Sonos skrótem Control F5, a potem uruchom materiał ponownie"
+            )
+            return
+        if self._sonos_request_pending or self._sonos_retry_pending:
+            self._sonos_pending_material = intent
+            return
+
+        household_id = self._sonos_active_household_id
+        group_id = self._sonos_active_group_id
+        self._sonos_request_pending = True
+
+        def done(payload: object) -> None:
+            try:
+                state = sonos_snapshot(payload)
+            except SonosPayloadError as error:
+                failed(error)
+                return
+            if (
+                household_id != self._sonos_active_household_id
+                or group_id != self._sonos_active_group_id
+            ):
+                self._finish_sonos_request()
+                return
+            session = self.navigator.sessions[SessionId.SONOS]
+            session.now_playing_id = intent.item_id
+            session.now_playing_title = intent.title
+            session.current_material_id = intent.item_id
+            self._sonos_snapshot = state
+            if (
+                self.navigator.active is SessionId.SONOS
+                and session.view is View.PLAYER
+            ):
+                state["message"] = intent.title
+                self._apply_sonos_snapshot(state, announce=True)
+            self._finish_sonos_request()
+
+        def failed(error: Exception) -> None:
+            if (
+                isinstance(error, HostError)
+                and error.code == "operation_busy"
+                and attempt < 20
+                and household_id == self._sonos_active_household_id
+                and group_id == self._sonos_active_group_id
+            ):
+                self._sonos_request_pending = False
+                self._sonos_retry_pending = True
+
+                def retry() -> None:
+                    self._sonos_retry_pending = False
+                    self._play_sonos_material(intent, attempt=attempt + 1)
+
+                call_later = getattr(wx, "CallLater", None)
+                if callable(call_later):
+                    call_later(250, retry)
+                else:
+                    retry()
+                return
+            self.announcer.say(f"Nie udało się uruchomić materiału Sonos: {error}")
+            session = self.navigator.sessions[SessionId.SONOS]
+            if (
+                self.navigator.active is SessionId.SONOS
+                and session.view is View.PLAYER
+                and session.now_playing_id == intent.item_id
+            ):
+                session.view = View.LIST
+                self._sync_views()
+            self._finish_sonos_request()
+
+        self.runner.submit(
+            "sonos-material",
+            lambda: client.sonos_load_material(
+                household_id,
+                group_id,
+                intent.kind,
+                intent.material_id,
+            ),
+            done,
+            failed,
+        )
 
     # ------------------------------------------------ Podcasty i YouTube
 
@@ -15389,6 +15627,7 @@ class LiteFrame(wx.Frame):
                 and self.navigator.active is SessionId.WIIM
                 and session.library_view is LibraryView.WIIM_NETWORK_STREAMS
             ),
+            sonos_session=self.navigator.active is SessionId.SONOS,
         )
 
     def _action_available_in_active_session(self, action: Action) -> bool:

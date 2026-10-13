@@ -99,7 +99,6 @@ def test_wiim_command_gate_blocks_local_audio_features() -> None:
         Action.VOLUME_UP_5,
         Action.VOLUME_DOWN_1,
         Action.TIME_ELAPSED,
-        Action.SELECT_AUDIO_OUTPUT,
         Action.VIEW_PRESETS,
         Action.COPY_NAME,
         Action.FOCUS_FILTER,
@@ -112,6 +111,9 @@ def test_wiim_command_gate_blocks_local_audio_features() -> None:
         Action.SEEK_FORWARD_10,
         Action.RECORD_TOGGLE,
         Action.ADD_TO_QUEUE,
+        Action.SELECT_AUDIO_OUTPUT,
+        Action.PREVIOUS_AUDIO_OUTPUT,
+        Action.NEXT_AUDIO_OUTPUT,
     }.isdisjoint(WIIM_SUPPORTED_ACTIONS)
 
 

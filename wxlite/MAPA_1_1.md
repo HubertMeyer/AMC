@@ -529,8 +529,21 @@ własnej normalizacji diakrytyków.
   Próba na dwóch urządzeniach zapisanych w bieżącym profilu potwierdziła listę
   i bezpieczny komunikat braku odpowiedzi; oba urządzenia były w czasie próby
   niedostępne, więc żywy transport wymaga jeszcze odbioru na włączonym WiiM.
+- Sonos ma autonomiczny tor pod `Ctrl+6`, oparty na tym samym właścicielu
+  konta, magazynie DPAPI i oficjalnym kliencie Control API co główne AMC.
+  `Ctrl+F5` pokazuje grupy jako cele sterowania. `Ctrl+L` otwiera Bibliotekę
+  materiałów, a `Ctrl+U` i `Ctrl+P` odpowiednio Ulubione Sonos i Playlisty
+  Sonos. Enter na materiale wysyła jedno polecenie `INSERT` z odtwarzaniem do
+  wcześniej wybranej grupy, bez ponawiania zapisu i bez przepuszczania tokenu,
+  adresu ani identyfikatora do etykiety NVDA. Backspace wraca z podlisty na
+  właściwą kategorię. Odczyt stanu, transport i uruchamianie materiału używają
+  jednego toru żądań; chwilowe zajęcie hosta jest ponawiane bez komunikatu
+  „trwa odczyt”. Menu sesji sieciowych filtruje polecenia innych usług i nie
+  pokazuje lokalnego wyboru urządzenia audio Windows. Żywy odbiór na włączonej
+  grupie pozostaje do wykonania przez użytkownika; testy automatyczne nie są
+  dowodem, że fizyczny głośnik rozpoczął odtwarzanie.
 - Do dalszego portu pozostają wejścia, wyjścia, korektor,
-  powtarzanie i timer, a następnie Sonos i Spotify, dalsze ustawienia oraz
+  powtarzanie i timer, własne stacje i presety Sonosa, Spotify, dalsze ustawienia oraz
   pozostała redakcja materiałów.
 
 ## Polityka zaniku wybranego urządzenia audio

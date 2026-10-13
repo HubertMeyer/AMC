@@ -11,6 +11,62 @@ internal static class SonosContractTests
         TargetLabelsNeverUseTechnicalIdentifiers();
         SnapshotUsesOnlyExplicitUserFacingFields();
         TransportAcceptsOnlyTheNarrowAllowlist();
+        LibraryAndMaterialLabelsNeverExposeIds();
+        MaterialRequestsAcceptOnlyKnownKinds();
+    }
+
+    private static void LibraryAndMaterialLabelsNeverExposeIds()
+    {
+        using var library = JsonDocument.Parse(JsonSerializer.Serialize(
+            LiteSonosContract.CreateLibraryResult()));
+        Check(library.RootElement.GetProperty("items").GetArrayLength() == 2,
+            "Biblioteka Sonos nie ma dwóch działających kategorii");
+
+        var favorite = new SonosFavorite(
+            "technical-favorite-id", "Radio Poznań", "Audycja",
+            new SonosFavoriteService("TuneIn", "7"));
+        var favorites = new SonosFavoritesList(
+            "technical-house-id", "version", [favorite]);
+        using var payload = JsonDocument.Parse(JsonSerializer.Serialize(
+            LiteSonosContract.CreateFavoritesResult(favorites)));
+        var item = payload.RootElement.GetProperty("items")[0];
+        var title = item.GetProperty("title").GetString() ?? string.Empty;
+        Check(title == "Radio Poznań, TuneIn, Audycja",
+            "etykieta ulubionego nie używa formatera Core");
+        Check(!title.Contains("technical", StringComparison.Ordinal),
+            "identyfikator ulubionego wyciekł do etykiety");
+
+        var playlist = new SonosPlaylist(
+            "technical-playlist-id", "Wieczór", trackCount: 3);
+        var playlists = new SonosPlaylistsList(
+            "technical-house-id", null, [playlist]);
+        using var playlistPayload = JsonDocument.Parse(JsonSerializer.Serialize(
+            LiteSonosContract.CreatePlaylistsResult(playlists)));
+        var playlistTitle = playlistPayload.RootElement
+            .GetProperty("items")[0].GetProperty("title").GetString() ?? string.Empty;
+        Check(playlistTitle == "Wieczór, 3 utwory",
+            "etykieta playlisty nie używa formatera Core");
+        Check(!playlistTitle.Contains("technical", StringComparison.Ordinal),
+            "identyfikator playlisty wyciekł do etykiety");
+    }
+
+    private static void MaterialRequestsAcceptOnlyKnownKinds()
+    {
+        using var accepted = JsonDocument.Parse(
+            """{"householdId":"home-1","kind":"favorite"}""");
+        Check(LiteSonosContract.ReadMaterialsRequest(accepted.RootElement).Kind == "favorite",
+            "nie przyjęto ulubionych Sonos");
+
+        using var rejected = JsonDocument.Parse(
+            """{"householdId":"home-1","kind":"runtimeObject"}""");
+        try
+        {
+            LiteSonosContract.ReadMaterialsRequest(rejected.RootElement);
+            throw new InvalidOperationException("przyjęto nieznany rodzaj materiału Sonos");
+        }
+        catch (LiteRequestException)
+        {
+        }
     }
 
     private static void TargetLabelsNeverUseTechnicalIdentifiers()

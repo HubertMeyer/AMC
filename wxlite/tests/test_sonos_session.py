@@ -7,9 +7,23 @@ from amc_wx_lite import gui as gui_module
 from amc_wx_lite.gui import LiteFrame
 from amc_wx_lite.host_client import HostError, LiteHostClient
 from amc_wx_lite.menu_model import build_menus
-from amc_wx_lite.navigation import ActivateSonosGroup, Navigator, SessionId, View
+from amc_wx_lite.navigation import (
+    ActivateSonosGroup,
+    LibraryView,
+    Navigator,
+    OpenSonosView,
+    PlaySonosMaterial,
+    SessionId,
+    View,
+)
 from amc_wx_lite.shortcuts import Action, Chord, SONOS_SUPPORTED_ACTIONS, resolve
-from amc_wx_lite.sonos_source import now_playing_label, snapshot, target_rows
+from amc_wx_lite.sonos_source import (
+    library_rows,
+    material_rows,
+    now_playing_label,
+    snapshot,
+    target_rows,
+)
 
 
 def test_ctrl_6_and_menu_open_the_sonos_session() -> None:
@@ -23,6 +37,116 @@ def test_ctrl_6_and_menu_open_the_sonos_session() -> None:
     item = next(entry for entry in view.items if entry.action is Action.SESSION_SONOS)
     assert item.label == "Sesja: &Sonos"
     assert item.shortcut == "Ctrl+6"
+
+
+def test_sonos_content_and_target_shortcuts_work_in_list_and_player() -> None:
+    expected = {
+        "Ctrl+L": Action.VIEW_LIBRARY,
+        "Ctrl+U": Action.VIEW_FAVORITES,
+        "Ctrl+P": Action.VIEW_PLAYLISTS,
+        "Ctrl+F5": Action.SELECT_SONOS_TARGET,
+    }
+    for player in (False, True):
+        for chord, action in expected.items():
+            parts = chord.split("+")
+            assert resolve(
+                Chord(
+                    parts[-1],
+                    ctrl="Ctrl" in parts,
+                    shift="Shift" in parts,
+                    alt="Alt" in parts,
+                ),
+                player_view=player,
+                radio_session=False,
+                sonos_session=True,
+            ) is action
+
+
+def test_sonos_library_categories_materials_and_back_are_typed() -> None:
+    nav = Navigator()
+    nav.switch_session(SessionId.SONOS)
+    categories = list(library_rows({
+        "items": [
+            {
+                "itemId": "sonos.library.favorites",
+                "title": "Ulubione Sonos",
+                "detail": "Enter otwiera listę",
+                "kind": "favorites",
+            },
+            {
+                "itemId": "sonos.library.playlists",
+                "title": "Playlisty Sonos",
+                "detail": "Enter otwiera listę",
+                "kind": "playlists",
+            },
+        ]
+    }, "house-1"))
+    nav.apply_sonos_library(categories, household_id="house-1")
+    opened = nav.activate_selected()
+    assert opened == [OpenSonosView(
+        LibraryView.SONOS_FAVORITES,
+        household_id="house-1",
+        preferred_id=None,
+    )]
+
+    favorites = list(material_rows({
+        "items": [{
+            "itemId": "sonos-favorite:item-1",
+            "materialId": "favorite-1",
+            "title": "Radio Poznań",
+            "kind": "favorite",
+        }]
+    }, "house-1"))
+    nav.apply_sonos_materials(
+        LibraryView.SONOS_FAVORITES,
+        favorites,
+        household_id="house-1",
+        return_id="sonos.library.favorites",
+    )
+    played = nav.activate_selected()
+    assert played == [PlaySonosMaterial(
+        item_id="sonos-favorite:item-1",
+        title="Radio Poznań",
+        household_id="house-1",
+        kind="favorite",
+        material_id="favorite-1",
+    )]
+    nav.back_to_list()
+    assert nav.go_to_parent() == [OpenSonosView(
+        LibraryView.SONOS_LIBRARY,
+        household_id="house-1",
+        preferred_id="sonos.library.favorites",
+    )]
+
+
+def test_sonos_material_uses_active_group_and_stays_on_one_request_lane() -> None:
+    submissions: list = []
+    calls: list = []
+    frame = SimpleNamespace(
+        client=SimpleNamespace(
+            sonos_load_material=lambda *args: calls.append(args) or {}
+        ),
+        announcer=SimpleNamespace(say=lambda _text: None),
+        runner=SimpleNamespace(submit=lambda *args: submissions.append(args)),
+        navigator=SimpleNamespace(active=SessionId.SONOS),
+        _sonos_active_household_id="house-1",
+        _sonos_active_group_id="group-1",
+        _sonos_request_pending=False,
+        _sonos_retry_pending=False,
+        _sonos_pending_material=None,
+    )
+    intent = PlaySonosMaterial(
+        "item-1", "Radio Poznań", "house-1", "favorite", "favorite-1"
+    )
+
+    LiteFrame._play_sonos_material(frame, intent)
+
+    assert len(submissions) == 1
+    stream, work, _done, _failed = submissions[0]
+    assert stream == "sonos-material"
+    assert frame._sonos_request_pending is True
+    work()
+    assert calls == [("house-1", "group-1", "favorite", "favorite-1")]
 
 
 def test_sonos_activation_separates_labels_from_internal_ids() -> None:
@@ -93,7 +217,6 @@ def test_sonos_command_gate_blocks_local_only_features() -> None:
         Action.SEEK_PERCENT_50,
         Action.VOLUME_UP_5,
         Action.TIME_ELAPSED,
-        Action.SELECT_AUDIO_OUTPUT,
         Action.COPY_NAME,
     } <= SONOS_SUPPORTED_ACTIONS
     assert {
@@ -101,6 +224,9 @@ def test_sonos_command_gate_blocks_local_only_features() -> None:
         Action.RATE_UP,
         Action.RECORD_TOGGLE,
         Action.ADD_TO_QUEUE,
+        Action.SELECT_AUDIO_OUTPUT,
+        Action.PREVIOUS_AUDIO_OUTPUT,
+        Action.NEXT_AUDIO_OUTPUT,
     }.isdisjoint(SONOS_SUPPORTED_ACTIONS)
 
 
@@ -115,6 +241,11 @@ def test_sonos_host_client_sends_only_ids_command_and_arguments() -> None:
     client.sonos_snapshot("house-1", "group-1")
     client.sonos_transport(
         "house-1", "group-1", "seekRelative", seconds=30
+    )
+    client.sonos_library()
+    client.sonos_materials("house-1", "favorite")
+    client.sonos_load_material(
+        "house-1", "group-1", "favorite", "favorite-1"
     )
 
     assert calls == [
@@ -134,7 +265,53 @@ def test_sonos_host_client_sends_only_ids_command_and_arguments() -> None:
             },
             45.0,
         ),
+        ("sonos.library", None, 10.0),
+        (
+            "sonos.materials",
+            {"householdId": "house-1", "kind": "favorite"},
+            60.0,
+        ),
+        (
+            "sonos.loadMaterial",
+            {
+                "householdId": "house-1",
+                "groupId": "group-1",
+                "kind": "favorite",
+                "materialId": "favorite-1",
+            },
+            60.0,
+        ),
     ]
+
+
+def test_sonos_library_and_material_rows_keep_ids_out_of_spoken_text() -> None:
+    categories = library_rows({
+        "items": [{
+            "itemId": "sonos.library.favorites",
+            "title": "Ulubione Sonos",
+            "detail": "Enter otwiera listę",
+            "kind": "favorites",
+        }]
+    }, "house-technical")
+    assert categories[0].title == "Ulubione Sonos"
+    assert categories[0].detail == "Enter otwiera listę"
+    assert categories[0].parent_id == "house-technical"
+    assert "technical" not in categories[0].title
+    assert "technical" not in categories[0].detail
+
+    materials = material_rows({
+        "items": [{
+            "itemId": "sonos-favorite:technical-item",
+            "materialId": "technical-material",
+            "title": "Radio Poznań, TuneIn",
+            "kind": "favorite",
+            "runtimeObject": "Favorite { Id = technical-material }",
+        }]
+    }, "house-technical")
+    assert materials[0].title == "Radio Poznań, TuneIn"
+    assert materials[0].service_id == "technical-material"
+    assert "technical" not in materials[0].title
+    assert "runtimeObject" not in materials[0].detail
 
 
 def test_sonos_dispatch_reaches_remote_volume_and_blocks_local_rate() -> None:

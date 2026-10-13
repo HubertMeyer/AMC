@@ -31,6 +31,7 @@ from amc_wx_lite.shortcuts import (
     RADIO_PLAYER_VIEW,
     TIDAL_COLLECTION_LIST_VIEW,
     WIIM_SESSION_VIEW,
+    SONOS_SESSION_VIEW,
     Action,
 )
 
@@ -150,6 +151,7 @@ def test_shortcut_shown_in_menu_is_the_shortcut_that_really_works() -> None:
         RADIO_PLAYER_VIEW,
         TIDAL_COLLECTION_LIST_VIEW,
         WIIM_SESSION_VIEW,
+        SONOS_SESSION_VIEW,
         PLAYER_VIEW,
     ):
         for chord, action in table.items():
@@ -181,7 +183,7 @@ def test_no_duplicate_labels_or_shortcuts() -> None:
     # kontekstowe: w Radiu czyta bieżącą audycję, a w Podcastach pełny opis.
     assert set(duplicates) <= {
         "Ctrl+O", "Ctrl+Shift+O", "Ctrl+N", "Ctrl+E", "Ctrl+D", "Ctrl+S",
-        "Alt+1", "Alt+2", "Alt+3", "Alt+D",
+        "Alt+1", "Alt+2", "Alt+3", "Alt+D", "Ctrl+F5",
         "B", "Shift+B", "Ctrl+Shift+B", "F2", "Delete"
     }, duplicates
     for item in duplicates.get("Ctrl+O", []):
@@ -566,6 +568,21 @@ def test_playback_and_view_menus_do_not_mix_foreign_sessions() -> None:
 
     remote_playback = actions(menu_model.SessionId.SONOS, "&Odtwarzanie")
     assert remote_playback == {Action.PLAY_PAUSE}
+
+    sonos_library = actions(menu_model.SessionId.SONOS, "&Biblioteka")
+    assert {Action.VIEW_LIBRARY, Action.VIEW_FAVORITES, Action.VIEW_PLAYLISTS} <= sonos_library
+    assert {
+        Action.VIEW_FOLDERS,
+        Action.VIEW_ALL_FILES,
+        Action.VIEW_HISTORY,
+        Action.VIEW_SAVED_QUEUE,
+        Action.MANAGE_PLAYLIST_MEMBERSHIP,
+    }.isdisjoint(sonos_library)
+
+    assert all(
+        menu.title != "Dźwię&k"
+        for menu in menu_model.menus_for_session(menu_model.SessionId.SONOS)
+    )
 
 
 def test_file_menu_uses_the_active_session_instead_of_mixing_sources() -> None:
