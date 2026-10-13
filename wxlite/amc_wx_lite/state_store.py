@@ -24,6 +24,7 @@ from .profile_presets import read_preset_overrides
 from .radio_activity import normalize_state_position
 from .radio_recognition import normalize_scope, read_tracks
 from .radio_schedule_settings import read_schedule_overrides
+from .session_order import values as normalized_session_order_values
 from .transport_parity import normalize_custom_seek_seconds
 
 
@@ -137,6 +138,12 @@ class Options:
     smooth_track_transitions: bool = False
     inter_track_silence_ms: int = 0
     tempo_algorithm: int = 1
+    #: Kolejność ustala Ctrl+1–9, listę sesji oraz Ctrl+Page Up/Down.
+    #: Zapis zawiera wyłącznie stabilne wartości modelu; GUI tworzy osobne,
+    #: celowe etykiety użytkowe.
+    session_order: list[str] = field(default_factory=lambda: [
+        "files", "radio", "podcasts", "tidal", "wiim", "sonos"
+    ])
     last_folder: str | None = None
     #: Czy wyjscie z odtwarzacza (Escape, F6) ma wstrzymac odtwarzanie.
     #:
@@ -237,6 +244,7 @@ class Options:
             self.inter_track_silence_ms = 0
         if type(self.tempo_algorithm) is not int or self.tempo_algorithm not in (0, 1, 2):
             self.tempo_algorithm = 1
+        self.session_order = normalized_session_order_values(self.session_order)
         # STRICT ``is not bool``, nie ``bool(...)``: napis z recznie
         # poprawionego pliku nie moze po cichu zmienic zachowania Escape.
         if type(self.pause_on_player_exit) is not bool:
@@ -542,6 +550,14 @@ class StateStore:
         if not isinstance(raw_options, dict):
             raw_options = {}
         for key, value in raw_options.items():
+            if key == "session_order":
+                # To jedyna lista w ``Options``. Nie przepuszczamy jej przez
+                # ogólną gałąź skalarną, ale też nie ignorujemy przy odczycie:
+                # ``clamp`` usunie duplikaty i obce identyfikatory.
+                options.session_order = (
+                    list(value) if isinstance(value, (list, tuple)) else []
+                )
+                continue
             if hasattr(options, key) and not isinstance(value, (dict, list)):
                 try:
                     setattr(options, key, value)
@@ -606,6 +622,7 @@ class StateStore:
     def save(self, state: LiteState) -> None:
         """Zapis ATOMOWY. Nie zostawia obcietego pliku przy przerwaniu."""
         self.directory.mkdir(parents=True, exist_ok=True)
+        state.options.clamp()
         payload = {
             "version": self.VERSION,
             "options": asdict(state.options),

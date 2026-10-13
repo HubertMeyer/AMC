@@ -527,7 +527,8 @@ internal sealed class LiteEngineHandlers : IDisposable
         if (IsCurrentFilesItem(itemId)) StopFilesPlayback();
         return RequireProfileMutations().RenameLocalFile(
             itemId,
-            LiteArgs.RequireText(args, "name"));
+            LiteArgs.RequireText(args, "name"),
+            LiteArgs.ReadText(args, "path"));
     }
 
     private object RenamePodcastSubscription(JsonElement args) =>

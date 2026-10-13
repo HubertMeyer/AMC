@@ -586,14 +586,10 @@ def test_playback_rate_keys_are_the_keys_of_the_original() -> None:
 
 
 def test_invented_rate_keys_are_gone() -> None:
-    """``Ctrl+Up/Down`` i ``Ctrl+0`` nie istnieja w oryginale.
-
-    ``Ctrl+0`` to w AMC lista sesji (``MainWindow.xaml.cs:21456``), wiec alias
-    nie tylko byl obcy -- zabieral cudzy gest.
-    """
+    """``Ctrl+Up/Down`` nie sterują tempem, a ``Ctrl+0`` jest wolne."""
     assert player("Up", ctrl=True) is None
     assert player("Down", ctrl=True) is None
-    assert player("0", ctrl=True) is not Action.RATE_RESET
+    assert player("0", ctrl=True) is None
 
 
 def test_playback_rate_is_the_seven_step_ladder_of_the_original() -> None:
@@ -706,8 +702,10 @@ def test_no_table_keeps_a_chord_that_the_original_gives_to_someone_else() -> Non
         for chord, why in forbidden.items():
             assert chord not in table, f"{table_name}: {chord} nalezy do {why}"
 
-    assert LIST_VIEW["Ctrl+0"] is Action.SESSION_LIST
-    assert PLAYER_VIEW["Ctrl+0"] is Action.SESSION_LIST
+    assert "Ctrl+0" not in LIST_VIEW
+    assert "Ctrl+0" not in PLAYER_VIEW
+    assert LIST_VIEW["Ctrl+Shift+S"] is Action.SESSION_LIST
+    assert PLAYER_VIEW["Ctrl+Shift+S"] is Action.SESSION_LIST
 
 
 def test_help_lists_every_new_transport_gesture() -> None:

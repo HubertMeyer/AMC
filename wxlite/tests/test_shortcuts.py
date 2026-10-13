@@ -105,10 +105,10 @@ def test_ctrl_digits_switch_sessions() -> None:
     # MainWindow.xaml.cs:21449 Ctrl + cyfra => SessionSlot
     assert resolve(Chord("1", ctrl=True), player_view=False, radio_session=False) is Action.SESSION_FILES
     assert resolve(Chord("2", ctrl=True), player_view=True, radio_session=False) is Action.SESSION_RADIO
-    assert resolve(Chord("0", ctrl=True), player_view=False, radio_session=False) is Action.SESSION_LIST
-    assert resolve(Chord("0", ctrl=True), player_view=True, radio_session=False) is Action.SESSION_LIST
+    assert resolve(Chord("0", ctrl=True), player_view=False, radio_session=False) is None
     assert resolve(Chord("S", ctrl=True, shift=True), player_view=False, radio_session=False) is Action.SESSION_LIST
     assert resolve(Chord("S", ctrl=True, shift=True), player_view=True, radio_session=False) is Action.SESSION_LIST
+    assert resolve(Chord("0", ctrl=True), player_view=True, radio_session=False) is None
 
 
 def test_backspace_goes_to_parent_folder_only_on_the_list() -> None:

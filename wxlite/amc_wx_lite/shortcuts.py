@@ -52,12 +52,14 @@ ktore ma. Warstwa okna to:
         Shift+OemComma  -> PlaybackRateDown
         Shift+OemPeriod -> PlaybackRateUp
         Ctrl+OemPeriod  -> PlaybackRateReset
-      => NIE ``Ctrl+Up/Down`` ani ``Ctrl+0``.
+      => NIE ``Ctrl+Up/Down``. ``Ctrl+0`` nie jest już używane; listę sesji
+         otwiera wyłącznie ``Ctrl+Shift+S``.
     21670 / 22188  Ctrl+Shift+G -> SettingsToggleSeekMessages
     21674-21676 / 22190-22192  Ctrl+Shift+E/R/T -> TimeElapsed/Remaining/Total
     21555-21557 / 22348-22350  cyfra BEZ modyfikatora -> SeekPercent(digit*10)
-    21454-21456  Ctrl+cyfra -> SessionSlot, a Ctrl+0 -> SessionList
-      => ``Ctrl+0`` NIE jest resetem tempa; to cudzy gest.
+    21454-21456  Ctrl+cyfra -> SessionSlot, a dawniej Ctrl+0 -> SessionList
+      => w interfejsie Python pozostają Ctrl+1–9, a listę sesji otwiera
+         jednoznaczne ``Ctrl+Shift+S``.
     21662  Ctrl+E -> ExportRadioFavorites
       => w oknie ``Ctrl+E`` nalezy do eksportu, wiec alias czasu byl bledem.
     20778-20785  F6 i Shift+F6: na LISCIE oba ida do ShowPlayerView, w
@@ -97,6 +99,8 @@ class Action(Enum):
     SESSION_WIIM = "session.wiim"
     SESSION_SONOS = "session.sonos"
     SESSION_LIST = "session.list"
+    PREVIOUS_SESSION = "session.previous"
+    NEXT_SESSION = "session.next"
     COMMAND_PALETTE = "view.commandPalette"
     SELECT_SONOS_TARGET = "sonos.target.select"
     ACTIVATE = "activate"
@@ -354,6 +358,8 @@ TIDAL_SUPPORTED_ACTIONS = frozenset({
     Action.SESSION_WIIM,
     Action.SESSION_SONOS,
     Action.SESSION_LIST,
+    Action.PREVIOUS_SESSION,
+    Action.NEXT_SESSION,
     Action.COMMAND_PALETTE,
     Action.ACTIVATE,
     Action.PARENT_FOLDER,
@@ -419,6 +425,8 @@ WIIM_SUPPORTED_ACTIONS = frozenset({
     Action.SESSION_WIIM,
     Action.SESSION_SONOS,
     Action.SESSION_LIST,
+    Action.PREVIOUS_SESSION,
+    Action.NEXT_SESSION,
     Action.COMMAND_PALETTE,
     Action.ACTIVATE,
     Action.PARENT_FOLDER,
@@ -479,6 +487,8 @@ SONOS_SUPPORTED_ACTIONS = frozenset({
     Action.SESSION_WIIM,
     Action.SESSION_SONOS,
     Action.SESSION_LIST,
+    Action.PREVIOUS_SESSION,
+    Action.NEXT_SESSION,
     Action.COMMAND_PALETTE,
     Action.SELECT_SONOS_TARGET,
     Action.ACTIVATE,
@@ -584,7 +594,8 @@ class Chord:
 LIST_VIEW: dict[str, Action] = {
     "Ctrl+Shift+K": Action.COMMAND_PALETTE,
     "Ctrl+Shift+S": Action.SESSION_LIST,
-    "Ctrl+0": Action.SESSION_LIST,
+    "Ctrl+Prior": Action.PREVIOUS_SESSION,
+    "Ctrl+Next": Action.NEXT_SESSION,
     "Ctrl+1": Action.SESSION_FILES,
     "Ctrl+2": Action.SESSION_RADIO,
     "Ctrl+3": Action.SESSION_PODCASTS,
@@ -765,7 +776,8 @@ RADIO_PLAYER_VIEW: dict[str, Action] = {
 PLAYER_VIEW: dict[str, Action] = {
     "Ctrl+Shift+K": Action.COMMAND_PALETTE,
     "Ctrl+Shift+S": Action.SESSION_LIST,
-    "Ctrl+0": Action.SESSION_LIST,
+    "Ctrl+Prior": Action.PREVIOUS_SESSION,
+    "Ctrl+Next": Action.NEXT_SESSION,
     "Ctrl+1": Action.SESSION_FILES,
     "Ctrl+2": Action.SESSION_RADIO,
     "Ctrl+3": Action.SESSION_PODCASTS,
@@ -831,8 +843,8 @@ PLAYER_VIEW: dict[str, Action] = {
     "Shift+Up": Action.VOLUME_UP_1,
     "Shift+Down": Action.VOLUME_DOWN_1,
     # Predkosc pod klawiszami ORYGINALU (cs:21595-21597, 22395-22397).
-    # Ctrl+Up/Down zostaly usuniete, bo oryginal ich nie ma. Ctrl+0 jest
-    # lista sesji i znajduje sie wyzej razem z Ctrl+1..6 (cs:21454-21456).
+    # Ctrl+Up/Down zostaly usuniete, bo oryginal ich nie ma. Ctrl+0 także nie
+    # jest używane; listę sesji otwiera Ctrl+Shift+S.
     "Shift+,": Action.RATE_DOWN,
     "Shift+.": Action.RATE_UP,
     "Ctrl+.": Action.RATE_RESET,
@@ -1102,6 +1114,8 @@ def _help_entries() -> list[tuple[str, str, Action]]:
         Action.SESSION_WIIM: "WiiM",
         Action.SESSION_SONOS: "Sonos",
         Action.SESSION_LIST: "Wybierz sesję z listy",
+        Action.PREVIOUS_SESSION: "Poprzednia sesja",
+        Action.NEXT_SESSION: "Następna sesja",
         Action.COMMAND_PALETTE: "Paleta poleceń",
         Action.SELECT_SONOS_TARGET: "Wybierz grupę Sonos",
         Action.ACTIVATE: "Otworz folder albo odtworz",

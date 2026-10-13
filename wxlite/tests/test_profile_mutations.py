@@ -156,10 +156,18 @@ def test_profile_edits_go_through_the_real_host() -> None:
         root = Path(raw)
         media = root / "nagranie.mp3"
         media.write_bytes(b"test")
+        history_media = root / "Zagadkowa niedziela-prawa dziecka.mp3"
+        history_media.write_bytes(b"history")
         library = root / "library.db"
         podcasts = root / "podcasts.db"
         state = root / "state.json"
         _library(library, media)
+        with closing(sqlite3.connect(library)) as database:
+            database.execute(
+                "UPDATE local_items SET path = ? WHERE id = 'local-2'",
+                (str(history_media),),
+            )
+            database.commit()
         _podcasts(podcasts)
         state.write_text(
             json.dumps(
@@ -175,6 +183,15 @@ def test_profile_edits_go_through_the_real_host() -> None:
                             }
                         ],
                         "recordingSchedules": [],
+                        "recordingHistory": [
+                            {
+                                "id": "history-1",
+                                "stationId": "radio-1",
+                                "stationName": "Stare radio",
+                                "path": str(history_media),
+                                "outcome": "Completed",
+                            }
+                        ],
                     }
                 }
             ),
@@ -190,6 +207,19 @@ def test_profile_edits_go_through_the_real_host() -> None:
             renamed = client.rename_local_file("local-1", "nowy plik")
             assert Path(renamed["path"]).name == "nowy plik.mp3"
             assert Path(renamed["path"]).exists()
+            renamed_history = client.rename_local_file(
+                "radio-recording-history:history-1",
+                "Zagadkowa niedziela - prawa dziecka",
+                path=str(history_media),
+            )
+            assert Path(renamed_history["path"]).name == (
+                "Zagadkowa niedziela - prawa dziecka.mp3"
+            )
+            assert Path(renamed_history["path"]).exists()
+            stored_history = json.loads(state.read_text(encoding="utf-8"))[
+                "radio"
+            ]["recordingHistory"][0]
+            assert stored_history["path"] == renamed_history["path"]
             client.rename_podcast_subscription("podcast-1", "Nowy podcast")
             removed_library = client.toggle_podcast_library(["podcast-1"])
             assert removed_library == {"added": False, "requested": 1, "changed": 1}
@@ -217,8 +247,11 @@ def test_profile_edits_go_through_the_real_host() -> None:
                 "favorite": True,
                 "requested": 2,
                 "changed": 2,
-                "titles": ["Nazwa biblioteczna", "Drugi plik"],
-            }
+                "titles": [
+                    "Nazwa biblioteczna",
+                    "Zagadkowa niedziela - prawa dziecka",
+                ],
+            }, local_favorite
             radio_favorite = client.toggle_profile_favorites("radio", ["radio-1"])
             assert radio_favorite["favorite"] is False
             assert radio_favorite["changed"] == 1

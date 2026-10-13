@@ -28,6 +28,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from .navigation import SessionId
+from . import session_order as session_order_model
 from .shortcuts import (
     Action,
     SONOS_SUPPORTED_ACTIONS,
@@ -132,7 +133,10 @@ PLAYER_SESSIONS = (
 )
 
 
-def menus_for_session(session_id: SessionId) -> tuple[Menu, ...]:
+def menus_for_session(
+    session_id: SessionId,
+    session_order: object = None,
+) -> tuple[Menu, ...]:
     """Menu bez polecen nalezacych do innej sesji.
 
     Separatory sa porzadkowane po filtrowaniu, zeby NVDA nie czytal pustych
@@ -145,7 +149,7 @@ def menus_for_session(session_id: SessionId) -> tuple[Menu, ...]:
         SessionId.SONOS: SONOS_SUPPORTED_ACTIONS,
     }.get(session_id)
     menus: list[Menu] = []
-    for described in build_menus():
+    for described in build_menus(session_order):
         items: list[MenuItem] = []
         for entry in described.items:
             if entry.visible_sessions and session_id not in entry.visible_sessions:
@@ -168,8 +172,17 @@ def menus_for_session(session_id: SessionId) -> tuple[Menu, ...]:
     return tuple(menus)
 
 
-def build_menus() -> tuple[Menu, ...]:
+def build_menus(session_order: object = None) -> tuple[Menu, ...]:
     """Pelny opis paska menu. Kolejnosc jak w pelnym AMC: Pliki, Radio, Widok."""
+    ordered_sessions = session_order_model.normalize(session_order)
+    session_items = tuple(
+        MenuItem(
+            session_order_model.SESSION_MENU_LABELS[session],
+            session_order_model.SESSION_ACTIONS[session],
+            shortcut=f"Ctrl+{slot}",
+        )
+        for slot, session in enumerate(ordered_sessions, start=1)
+    )
     files = Menu(
         "&Pliki",
         (
@@ -912,18 +925,22 @@ def build_menus() -> tuple[Menu, ...]:
     view = Menu(
         "&Widok",
         (
-            MenuItem("Sesja: &Pliki lokalne", Action.SESSION_FILES, shortcut="Ctrl+1"),
-            MenuItem("Sesja: &Radio", Action.SESSION_RADIO, shortcut="Ctrl+2"),
-            MenuItem("Sesja: Podcasty i &YouTube", Action.SESSION_PODCASTS,
-                     shortcut="Ctrl+3"),
-            MenuItem("Sesja: &TIDAL", Action.SESSION_TIDAL, shortcut="Ctrl+4"),
-            MenuItem("Sesja: &WiiM", Action.SESSION_WIIM, shortcut="Ctrl+5"),
-            MenuItem("Sesja: &Sonos", Action.SESSION_SONOS, shortcut="Ctrl+6"),
+            *session_items,
             MenuItem(
-                "Lista sesji… (&0)",
+                "Poka&ż listę sesji…",
                 Action.SESSION_LIST,
-                shortcut="Ctrl+0",
+                shortcut="Ctrl+Shift+S",
                 accelerator=False,
+            ),
+            MenuItem(
+                "Poprzednia sesja (&7)",
+                Action.PREVIOUS_SESSION,
+                shortcut="Ctrl+Prior",
+            ),
+            MenuItem(
+                "Następna sesja (&8)",
+                Action.NEXT_SESSION,
+                shortcut="Ctrl+Next",
             ),
             MenuItem(
                 "Wybierz &grupę Sonos",

@@ -45,19 +45,22 @@ Istniejący `AMC-Python-Updater.exe` pozostaje osobnym wykonawcą bezpiecznej
 podmiany i wycofania plików. Docelowe `AMC.exe` ma być stałym punktem wejścia,
 a aktualizator działać za nim, bez ręcznego wybierania skryptu lub interpretera.
 
-Aktualny kompletny kandydat EXE jest w:
-`D:\Projekty Codex\AMC - integracja wxPython\.test-output\AMC-Python-candidate-command-palette-20261013`.
-Nie zawiera `AMC-wx-Lite.cmd`. `AMC.exe` sprawdza wersję formatu pakietu,
-interfejsu i protokołu hosta oraz sumy krytycznych plików przed uruchomieniem.
-Automatyczna weryfikacja paczki i próbna aktualizacja do osobnego katalogu
-zakończyły się kodem 0. Pozostaje żywy odbiór z NVDA: pierwsze uruchomienie,
-ponowne uruchomienie bez nagrywania oraz bezpieczna odmowa wymiany podczas
-rzeczywistego nagrywania. Do tego odbioru nie zamykano działającej instancji.
+Jedynym użytkowym punktem wejścia jest
+`D:\Projekty Codex\AMC Python\AMC.exe`. Katalogi `.test-output` są wyłącznie
+technicznymi kandydatami do automatycznej weryfikacji i nie należy z nich
+uruchamiać programu ani podawać ich użytkownikowi jako bieżącej wersji.
+Pakiet nie zawiera `AMC-wx-Lite.cmd`. `AMC.exe` sprawdza wersję formatu
+pakietu, interfejsu i protokołu hosta oraz sumy krytycznych plików przed
+uruchomieniem.
 
-Kanoniczne `D:\Projekty Codex\AMC Python` nie zostało nadpisane podczas tego
-przyrostu, ponieważ jego interfejs i host były uruchomione. Kandydat jest
-zbudowany osobno; przełączenie można wykonać dopiero po bezpiecznym zakończeniu
-bieżącego odsłuchu i nagrywania.
+Gdy działa główne AMC, LiteHost świadomie odmawia przejęcia zapisywalnego
+profilu. Próby uruchomienia AMC Python 13 października o 21:05 i 21:26 nie były
+awarią `AMC.exe`: dziennik zawiera odmowę z prośbą o zamknięcie głównego AMC,
+aby dwie wersje nie zapisywały jednocześnie podcastów, harmonogramów i stanu.
+Podczas nagrywania w głównym AMC nie wolno obchodzić tej blokady ani uruchamiać
+drugiego harmonogramu. Aktualną paczkę można przygotować na dysku, ale żywy
+odbiór AMC Python zaczyna się dopiero po zakończeniu nagrań i zamknięciu
+głównego AMC.
 
 ### Niezależne odtwarzanie sesji i urządzenia audio
 
@@ -433,6 +436,22 @@ ze zwykłych ukończonych wpisów. Wiersz zaczyna się od nazwy stacji lub pliku
 znaczące stany wyjątkowe, takie jak „Przerwane”, „Nieudane” albo brak pliku,
 pozostają czytelne.
 
+Historia nagrywania `Alt+Shift+R` zachowuje teraz ostatnie wpisy także po
+restarcie AMC Python, scala je bez duplikatów z bieżącą sesją i nie zastępuje
+historii szerokim skanem całych folderów Biblioteki. Ukończony wpis jest
+pokazywany tylko wtedy, gdy jego dokładny plik nadal istnieje; wpisy nieudane
+pozostają jako diagnostyka. Lista jest ograniczona do 100 najnowszych pozycji.
+`Shift+F2` przekazuje hostowi rzeczywistą ścieżkę wiersza historii, więc zmiana
+nazwy nie zależy już od technicznego identyfikatora listy. Host odnajduje
+odpowiadający wpis Biblioteki, a gdy go nie ma, bezpiecznie zmienia nazwę
+istniejącego pliku i aktualizuje ścieżkę historii.
+
+Dziennik 13 października potwierdza uruchomienie harmonogramu o 18:13. Nagranie
+z Jarosławia zakończyło się powodzeniem, natomiast Tarnobrzeg i Dominikanie
+Rzeszów nie zostały nagrane, ponieważ nie udało się odtworzyć ich źródeł
+YouTube Live. Była to odmowa konkretnych strumieni, a nie brak uruchomienia
+harmonogramu.
+
 Przy zaznaczaniu fragmentu `I`/`O` interfejs pyta host jawnie o tor Plików
 albo Podcastów. Okresowy odczyt Radia nie może już podmienić kontekstu i
 wywołać fałszywego komunikatu, że nagranie nie jest plikiem multimedialnym.
@@ -478,9 +497,14 @@ stacji; nagranie innej stacji w tle nie jest błędnie przypisywane do odsłuchu
 
 Poprzedni i następny preset są już wykonywane bez otwierania okna: puste
 miejsca są pomijane, koniec listy zawija się na początek, a stan jest liczony
-osobno dla każdej sesji. `Ctrl+0` oraz polecenie dodatku „Lista sesji” otwierają
-natywną listę sześciu sesji z jednoznacznymi etykietami `Ctrl+1`–`Ctrl+6`;
-wybrana jest bieżąca sesja, Enter przełącza, a Escape wraca bez zmiany.
+osobno dla każdej sesji. `Ctrl+Shift+S` oraz polecenie dodatku „Lista sesji”
+otwierają natywną listę sześciu sesji z jednoznacznymi etykietami
+`Ctrl+1`–`Ctrl+6`; wybrana jest bieżąca sesja, Enter przełącza, a Escape wraca
+bez zmiany. `Ctrl+0` nie ma już przypisanej funkcji, ponieważ dublował tę samą
+listę. Kolejność sześciu sesji można zmienić w Ustawieniach; ta sama kolejność
+określa znaczenie `Ctrl+1`–`Ctrl+6`, menu, listę sesji i paletę poleceń.
+`Ctrl+Page Up` i `Ctrl+Page Down` przechodzą do poprzedniej lub następnej sesji
+w tej kolejności, z zawinięciem na końcach.
 Paleta poleceń jest dostępna pod `Ctrl+Shift+K` i przez gotowy dodatek NVDA.
 Pokazuje wyłącznie jawne nazwy i skróty poleceń widocznych dla bieżącej sesji,
 filtruje bez rozróżniania wielkości liter i polskich znaków, a Enter wykonuje
@@ -518,9 +542,10 @@ launcher. Pozostawiony `runtime\python.exe` albo `host\amc_lite_host.exe`
 powoduje bezpieczną odmowę z kodem 3, bez częściowej podmiany i bez nowego
 katalogu `.aktualizacja-*`. Osobny test uruchamia rzeczywisty proces z próbnej
 instalacji i potwierdza jego wykrycie.
-Katalog `D:\Projekty Codex\AMC Python` nie został podmieniony, ponieważ nadal
-działały z niego `AMC.exe`, Python i historyczny `host-next`; nie zamykano ich
-bez potwierdzenia stanu odsłuchu i nagrywania.
+Aktualizację kanonicznego katalogu wolno wykonać przy zamkniętym AMC Python.
+Działającego głównego AMC nie zamyka się w tym celu, jeżeli trwa w nim
+nagrywanie. Po podmianie nie uruchamia się AMC Python równolegle z głównym AMC,
+ponieważ host i tak bezpiecznie odmówi zapisu do wspólnego profilu.
 
 „Sygnalista” (`michaldziwisz/sygnalista`) jest osobnym modułem zgłaszania
 błędów, a nie nazwą aktualizatora. Przed jego integracją trzeba sprawdzić
@@ -529,7 +554,7 @@ kodu ani wysyłać logów bez wiedzy użytkownika.
 
 ## Dowody automatyczne tego przyrostu
 
-- pełny runner Python: 1457 zaliczonych, 0 błędów, 138 historycznych pominięć;
+- pełny runner Python: 1465 zaliczonych, 0 błędów, 138 historycznych pominięć;
 - testy protokołu C#: 15 zestawów zaliczonych;
 - całe rozwiązanie .NET zbudowane sekwencyjnie: 0 ostrzeżeń, 0 błędów;
 - sześć celowanych testów Windows rozpoznawania, ustawień, historii, podpisu

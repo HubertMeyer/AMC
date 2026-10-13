@@ -423,7 +423,9 @@ def test_profile_mutations_use_narrow_named_operations() -> None:
     try:
         calls = [
             client.rename_library_item("local-1", "Nowa nazwa"),
-            client.rename_local_file("local-1", "nowy plik"),
+            client.rename_local_file(
+                "local-1", "nowy plik", path="D:/nagrania/stary.mp3"
+            ),
             client.rename_podcast_subscription("podcast-1", "Nowy podcast"),
             client.edit_radio_station(
                 "radio-1", "Nowe radio", "https://example.invalid/radio"
@@ -450,6 +452,11 @@ def test_profile_mutations_use_narrow_named_operations() -> None:
         assert calls[4]["args"] == {
             "name": "Nowa stacja",
             "url": "https://example.invalid/new",
+        }
+        assert calls[1]["args"] == {
+            "itemId": "local-1",
+            "name": "nowy plik",
+            "path": "D:/nagrania/stary.mp3",
         }
         assert calls[5]["args"] == {"path": "D:/wymiana/stacje.m3u"}
         assert calls[6]["args"] == {"path": "D:/wymiana/ulubione.m3u"}

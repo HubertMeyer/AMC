@@ -657,6 +657,40 @@ def available_recorded_files(
     )
 
 
+def recent_recording_history(
+    current_entries: Sequence[RadioRecordingHistoryEntry],
+    stored_entries: Sequence[RadioRecordingHistoryEntry],
+    *,
+    limit: int = 100,
+    path_probe: Callable[[str], str] = _path_state,
+) -> tuple[RadioRecordingHistoryEntry, ...]:
+    """Połącz bieżący host z prywatną historią bez skanowania całych folderów.
+
+    Historia procesu LiteHost znika po restarcie. Prywatne wpisy pozwalają
+    nadal zobaczyć dzisiejsze nagrania, ale wcześniejsze poprawne nagranie
+    zostaje tylko wtedy, gdy jego konkretny plik nadal istnieje. Dzięki temu
+    widok nie odtwarza setek martwych wierszy z całej bazy Biblioteki.
+    """
+
+    current_ids = {entry.id for entry in current_entries}
+    merged: list[RadioRecordingHistoryEntry] = []
+    seen: set[str] = set()
+    for entry in (*current_entries, *stored_entries):
+        if entry.id in seen:
+            continue
+        seen.add(entry.id)
+        if entry.id not in current_ids:
+            if entry.outcome != "failed" and (
+                not entry.path or path_probe(entry.path) != "available"
+            ):
+                continue
+        merged.append(entry)
+    merged.sort(
+        key=lambda value: (-value.finished_utc_ticks, value.station_name.casefold())
+    )
+    return tuple(merged[:max(1, int(limit))])
+
+
 def recording_history_rows(
     entries: tuple[RadioRecordingHistoryEntry, ...] | list[RadioRecordingHistoryEntry],
     *,

@@ -59,7 +59,7 @@ czyści aktywny filtr oraz zamyka rzeczywisty podgląd lub widok podrzędny, na
 przykład listę trwających nagrań, historię nagrywania albo harmonogramy.
 Sprawdź tę zasadę osobno w każdej sesji, która udostępnia dany widok.
 
-W każdym z sześciu widoków naciśnij `Ctrl+0`. Powinna otworzyć się natywna
+W każdym z sześciu widoków naciśnij `Ctrl+Shift+S`. Powinna otworzyć się natywna
 lista „Sesje”, a NVDA ma czytać wyłącznie kolejno: „Ctrl+1, Pliki lokalne”,
 „Ctrl+2, Radio internetowe”, „Ctrl+3, Podcasty i YouTube”, „Ctrl+4, TIDAL”,
 „Ctrl+5, WiiM” i „Ctrl+6, Sonos”. Bieżąca sesja jest wybrana przy pierwszym
@@ -68,6 +68,13 @@ powrót fokusu po obu sposobach zamknięcia. Powtórz poleceniem „Lista sesji�
 dodatku NVDA; w mowie nie może pojawić się `SessionId`, nazwa klasy, rekord ani
 identyfikator. Poprzedni i następny preset z dodatku mają pomijać puste miejsca
 i zawijać listę, nie otwierając po drodze okna presetów.
+
+`Ctrl+0` nie ma już żadnej funkcji. W Ustawieniach, na karcie Ogólne, zmień
+„Kolejność sesji i skrótów Ctrl+1–9” przyciskami albo przez Alt+strzałkę w górę
+i w dół. Po zapisaniu menu Widok, lista sesji, paleta poleceń oraz bezpośrednie
+skróty Ctrl+1–6 muszą od razu pokazywać i wykonywać tę samą kolejność.
+`Ctrl+Page Up` i `Ctrl+Page Down` przechodzą odpowiednio do poprzedniej i
+następnej sesji według tej kolejności, z zawijaniem na końcach.
 
 Naciśnij `Ctrl+Shift+K` oraz osobno „Otwórz paletę poleceń” z dodatku NVDA.
 Fokus ma trafić do pola „Filtr poleceń”. Wpisz bez polskich znaków dwa słowa,

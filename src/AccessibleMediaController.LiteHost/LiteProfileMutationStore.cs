@@ -62,14 +62,19 @@ internal sealed class LiteProfileMutationStore
         }
     }
 
-    public object RenameLocalFile(string itemId, string requestedName)
+    public object RenameLocalFile(
+        string itemId,
+        string requestedName,
+        string? sourcePath = null)
     {
         EnsureMayWrite();
         lock (_gate)
         {
             using var connection = OpenDatabase(_libraryDatabasePath);
             using var transaction = connection.BeginTransaction();
-            var item = ReadLocalItem(connection, transaction, itemId);
+            var item = string.IsNullOrWhiteSpace(sourcePath)
+                ? ReadLocalItem(connection, transaction, itemId)
+                : ReadLocalItemByPath(connection, transaction, sourcePath);
             if (!File.Exists(item.Path))
                 throw new LiteRequestException("Nie można zmienić nazwy: plik jest obecnie niedostępny.");
             if (!LocalFileRenamePolicy.TryBuildTargetPath(
@@ -86,7 +91,7 @@ internal sealed class LiteProfileMutationStore
                     : Path.GetFileNameWithoutExtension(targetPath);
                 Execute(connection, transaction,
                     "UPDATE local_items SET path = $path, title = $title WHERE id = $id;",
-                    ("$path", targetPath), ("$title", title), ("$id", itemId));
+                    ("$path", targetPath), ("$title", title), ("$id", item.Id));
                 Execute(connection, transaction,
                     "UPDATE excluded_paths SET path = $path WHERE path = $old COLLATE NOCASE;",
                     ("$path", targetPath), ("$old", item.Path));
@@ -94,13 +99,13 @@ internal sealed class LiteProfileMutationStore
                 {
                     Execute(connection, transaction,
                         "UPDATE bookmarks SET item_title = $title WHERE session_id = 'local' COLLATE NOCASE AND item_id = $id;",
-                        ("$title", title), ("$id", itemId));
+                        ("$title", title), ("$id", item.Id));
                 }
                 RewriteRecordingHistoryPath(item.Path, targetPath);
                 transaction.Commit();
                 return new
                 {
-                    itemId,
+                    itemId = item.Id,
                     oldPath = item.Path,
                     path = targetPath,
                     title,
@@ -1461,10 +1466,12 @@ internal sealed class LiteProfileMutationStore
         var changed = false;
         foreach (var entry in history.OfType<JsonObject>())
         {
-            var path = ReadJsonText(entry, "outputPath", "OutputPath");
+            var path = ReadJsonText(entry, "path", "Path");
+            if (string.IsNullOrWhiteSpace(path))
+                path = ReadJsonText(entry, "outputPath", "OutputPath");
             if (!string.Equals(Path.GetFullPath(path), Path.GetFullPath(oldPath), StringComparison.OrdinalIgnoreCase))
                 continue;
-            entry["outputPath"] = newPath;
+            entry["path"] = newPath;
             changed = true;
         }
         if (changed) WriteState(root);
@@ -1777,6 +1784,40 @@ internal sealed class LiteProfileMutationStore
         using var reader = command.ExecuteReader();
         if (!reader.Read()) throw new LiteRequestException("Nie można odnaleźć tego pliku w Bibliotece AMC.");
         return new LocalItem(reader.GetString(0), reader.GetString(1), reader.GetInt64(2) != 0, reader.GetString(3));
+    }
+
+    private static LocalItem ReadLocalItemByPath(
+        SqliteConnection connection,
+        SqliteTransaction? transaction,
+        string sourcePath)
+    {
+        string fullPath;
+        try { fullPath = Path.GetFullPath(sourcePath); }
+        catch (Exception exception) when (exception is ArgumentException
+                                          or NotSupportedException
+                                          or PathTooLongException)
+        {
+            throw new LiteRequestException("Ścieżka nagrania jest nieprawidłowa.");
+        }
+        using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = "SELECT id, title, has_custom_title, path FROM local_items WHERE path = $path COLLATE NOCASE LIMIT 1;";
+        command.Parameters.AddWithValue("$path", fullPath);
+        using var reader = command.ExecuteReader();
+        if (reader.Read())
+            return new LocalItem(
+                reader.GetString(0),
+                reader.GetString(1),
+                reader.GetInt64(2) != 0,
+                reader.GetString(3));
+        // Świeże nagranie może jeszcze nie być w indeksie Biblioteki. Sam
+        // istniejący plik nadal da się bezpiecznie przemianować; kolejne
+        // skanowanie doda go już pod nową ścieżką.
+        return new LocalItem(
+            "",
+            Path.GetFileNameWithoutExtension(fullPath),
+            false,
+            fullPath);
     }
 
     private static void Execute(

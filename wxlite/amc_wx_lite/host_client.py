@@ -947,9 +947,14 @@ class LiteHostClient:
             "library.renameTitle", {"itemId": item_id, "title": title}, timeout=20.0
         )
 
-    def rename_local_file(self, item_id: str, name: str) -> Any:
+    def rename_local_file(
+        self, item_id: str, name: str, *, path: str | None = None
+    ) -> Any:
+        payload = {"itemId": item_id, "name": name}
+        if path:
+            payload["path"] = path
         return self.call(
-            "library.renameFile", {"itemId": item_id, "name": name}, timeout=30.0
+            "library.renameFile", payload, timeout=30.0
         )
 
     def rename_podcast_subscription(self, subscription_id: str, title: str) -> Any:

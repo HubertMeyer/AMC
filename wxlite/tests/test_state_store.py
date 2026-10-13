@@ -62,6 +62,22 @@ def test_round_trip_keeps_options_and_stations() -> None:
     assert [s.url for s in loaded.stations] == ["http://a/1"]
 
 
+def test_session_order_round_trip_is_normalized_without_exposing_labels() -> None:
+    store, directory = temp_store()
+    store.save(LiteState(options=Options(session_order=[
+        "sonos", "radio", "sonos", "obca-wartosc",
+    ])))
+
+    loaded = store.load()
+
+    assert loaded.options.session_order == [
+        "sonos", "radio", "files", "podcasts", "tidal", "wiim",
+    ]
+    raw = json.loads((directory / StateStore.FILE_NAME).read_text(encoding="utf-8"))
+    assert raw["options"]["session_order"] == loaded.options.session_order
+    assert "Sonos" not in raw["options"]["session_order"]
+
+
 def test_round_trip_keeps_private_audio_edit_backup_choice() -> None:
     store, _ = temp_store()
     store.save(LiteState(options=Options(keep_audio_edit_backups=True)))

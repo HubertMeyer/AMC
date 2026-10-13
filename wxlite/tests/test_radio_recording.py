@@ -32,6 +32,7 @@ from amc_wx_lite.radio_recording import (
     recording_history_from_amc_state,
     recording_history_payload_from_event,
     recording_history_rows,
+    recent_recording_history,
     station_activity_rows,
 )
 from amc_wx_lite.radio_source import RadioSource
@@ -732,9 +733,35 @@ def test_visible_recording_history_does_not_merge_stale_archives_forever() -> No
     ).read_text(encoding="utf-8")
     method = source[source.index("def _show_radio_recording_history") :]
     method = method[:method.index("def _show_radio_schedules")]
-    assert "recording_history_rows(\n                    current_entries" in method
+    assert "recent_recording_history(current_entries, stored_entries)" in method
+    assert "recorded_radio_items" not in method
     assert "snapshot.recording_history" not in method
-    assert "private_entries" not in method
+
+
+def test_recent_recording_history_survives_restart_without_dead_folder_rows() -> None:
+    def entry(identifier: str, path: str, outcome: str, ticks: int):
+        return RadioRecordingHistoryEntry(
+            identifier, "radio", identifier, path, outcome, "", "", 0, ticks, 1
+        )
+
+    current = [entry("bieżące", r"D:\Nagrania\bieżące.mp3", "completed", 50)]
+    stored = [
+        entry("bieżące", r"D:\Nagrania\bieżące.mp3", "completed", 50),
+        entry("dzisiejsze", r"D:\Nagrania\dzisiejsze.mp3", "completed", 40),
+        entry("usunięte", r"D:\Nagrania\usunięte.mp3", "completed", 30),
+        entry("nieudane", "", "failed", 20),
+    ]
+    states = {
+        r"D:\Nagrania\bieżące.mp3": "available",
+        r"D:\Nagrania\dzisiejsze.mp3": "available",
+        r"D:\Nagrania\usunięte.mp3": "missing",
+    }
+
+    merged = recent_recording_history(
+        current, stored, path_probe=lambda path: states[path]
+    )
+
+    assert [item.id for item in merged] == ["bieżące", "dzisiejsze", "nieudane"]
 
 
 def test_database_reads_recordings_outside_library_and_old_schema() -> None:

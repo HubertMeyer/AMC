@@ -27,7 +27,6 @@ zostaje nietkniety: wxPython zapisuje wlasne, kompletne nadpisanie planow.
 from __future__ import annotations
 
 import os
-import sqlite3
 import time
 import uuid
 from datetime import datetime
@@ -220,18 +219,19 @@ from .local_resume_policy import (
     resolve_remember_local_playback_positions,
 )
 from . import session_options
+from . import session_order
 from .radio_source import RadioSource
 from .radio_schedule_dialogs import RadioScheduleEditorDialog, RadioSchedulesDialog
 from . import radio_schedule_settings
 from .radio_recording import (
     active_recording_rows,
-    available_recorded_files,
     current_station_recording_label,
     format_duration,
     preferences_with_overrides,
     recording_history_from_amc_state,
     recording_history_payload_from_event,
     recording_history_rows,
+    recent_recording_history,
     station_activity_rows,
 )
 from .state_store import LiteState, Station, StationList, StateStore
@@ -3049,12 +3049,9 @@ class PodcastPlaybackOptionsDialog(wx.Dialog):
         }
 
 
-def session_selection_labels() -> tuple[str, ...]:
-    """Jawne teksty listy Ctrl+0; wartości modelu nigdy nie trafiają do UI."""
-    return tuple(
-        f"Ctrl+{index}, {SESSION_LABELS[session]}"
-        for index, session in enumerate(SessionId, start=1)
-    )
+def session_selection_labels(order: object = None) -> tuple[str, ...]:
+    """Jawne teksty listy sesji; wartości modelu nigdy nie trafiają do UI."""
+    return session_order.selection_labels(order)
 
 
 class SessionSelectionDialog(wx.Dialog):
@@ -3062,8 +3059,14 @@ class SessionSelectionDialog(wx.Dialog):
 
     SESSIONS: tuple[SessionId, ...] = tuple(SessionId)
 
-    def __init__(self, parent: wx.Window, current: SessionId) -> None:
+    def __init__(
+        self,
+        parent: wx.Window,
+        current: SessionId,
+        order: object = None,
+    ) -> None:
         super().__init__(parent, title="Wybór sesji")
+        self.sessions = session_order.normalize(order)
         panel = wx.Panel(self)
         layout = wx.BoxSizer(wx.VERTICAL)
 
@@ -3074,11 +3077,11 @@ class SessionSelectionDialog(wx.Dialog):
 
         self.session_list = wx.ListBox(
             panel,
-            choices=list(session_selection_labels()),
+            choices=list(session_selection_labels(self.sessions)),
             style=wx.LB_SINGLE,
         )
         self.session_list.SetName("Sesje")
-        selected = self.SESSIONS.index(current) if current in self.SESSIONS else 0
+        selected = self.sessions.index(current) if current in self.sessions else 0
         self.session_list.SetSelection(selected)
         layout.Add(self.session_list, 1, wx.LEFT | wx.RIGHT | wx.EXPAND, 12)
         panel.SetSizer(layout)
@@ -3106,7 +3109,7 @@ class SessionSelectionDialog(wx.Dialog):
     @property
     def selected_session(self) -> SessionId | None:
         index = self.session_list.GetSelection()
-        return self.SESSIONS[index] if 0 <= index < len(self.SESSIONS) else None
+        return self.sessions[index] if 0 <= index < len(self.sessions) else None
 
     def _accept(self, _event) -> None:
         if self.selected_session is not None:
@@ -3833,6 +3836,54 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
         ):
             general_layout.Add(control, 0, wx.BOTTOM | wx.EXPAND, 10)
 
+        session_order_label = wx.StaticText(
+            general, label="Kolejność sesji i skrótów &Ctrl+1–9:"
+        )
+        self._session_order = list(session_order.normalize(options.session_order))
+        self.session_order_list = wx.ListBox(
+            general,
+            choices=list(session_order.selection_labels(self._session_order)),
+            style=wx.LB_SINGLE,
+        )
+        self.session_order_list.SetName(
+            "Sesje: kolejność i skróty Control od 1 do 9"
+        )
+        self.session_order_list.SetHelpText(
+            "Alt+strzałka w górę lub w dół zmienia położenie zaznaczonej sesji"
+        )
+        if self._session_order:
+            self.session_order_list.SetSelection(0)
+        self.session_order_list.Bind(wx.EVT_CHAR_HOOK, self._on_session_order_key)
+
+        session_order_buttons = wx.BoxSizer(wx.HORIZONTAL)
+        self.session_up = wx.Button(general, label="Przenieś &wyżej")
+        self.session_up.SetName("Przenieś zaznaczoną sesję wyżej")
+        self.session_down = wx.Button(general, label="Przenieś &niżej")
+        self.session_down.SetName("Przenieś zaznaczoną sesję niżej")
+        self.session_default = wx.Button(
+            general, label="Przywróć &domyślną kolejność"
+        )
+        self.session_default.SetName("Przywróć domyślną kolejność sesji")
+        self.session_up.Bind(
+            wx.EVT_BUTTON, lambda _event: self._move_session_order(-1)
+        )
+        self.session_down.Bind(
+            wx.EVT_BUTTON, lambda _event: self._move_session_order(1)
+        )
+        self.session_default.Bind(
+            wx.EVT_BUTTON, self._restore_default_session_order
+        )
+        session_order_buttons.Add(self.session_up, 0, wx.RIGHT, 8)
+        session_order_buttons.Add(self.session_down, 0, wx.RIGHT, 8)
+        session_order_buttons.Add(self.session_default, 0)
+        general_layout.Add(session_order_label, 0, wx.TOP | wx.BOTTOM, 4)
+        general_layout.Add(
+            self.session_order_list, 0, wx.BOTTOM | wx.EXPAND, 8
+        )
+        general_layout.Add(
+            session_order_buttons, 0, wx.BOTTOM | wx.EXPAND, 12
+        )
+
         custom_seek_label = wx.StaticText(
             general,
             label="Dłuższy przeskok pod Ctrl+Alt+strzałką w &lewo i w prawo:",
@@ -4433,6 +4484,43 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
             dialog.Destroy()
         self.recording_folder.SetFocus()
 
+    def _refresh_session_order_list(self, selected: int) -> None:
+        self.session_order_list.Set(
+            list(session_order.selection_labels(self._session_order))
+        )
+        if self._session_order:
+            self.session_order_list.SetSelection(
+                max(0, min(selected, len(self._session_order) - 1))
+            )
+        self.session_order_list.SetFocus()
+
+    def _move_session_order(self, direction: int) -> None:
+        index = self.session_order_list.GetSelection()
+        target = index + (-1 if direction < 0 else 1)
+        if index < 0 or target < 0 or target >= len(self._session_order):
+            self.session_order_list.SetFocus()
+            return
+        self._session_order[index], self._session_order[target] = (
+            self._session_order[target],
+            self._session_order[index],
+        )
+        self._refresh_session_order_list(target)
+
+    def _restore_default_session_order(self, _event: wx.CommandEvent) -> None:
+        self._session_order = list(session_order.DEFAULT_SESSION_ORDER)
+        self._refresh_session_order_list(0)
+
+    def _on_session_order_key(self, event: wx.KeyEvent) -> None:
+        if event.AltDown() and not event.ControlDown() and not event.ShiftDown():
+            code = event.GetKeyCode()
+            if code == wx.WXK_UP:
+                self._move_session_order(-1)
+                return
+            if code == wx.WXK_DOWN:
+                self._move_session_order(1)
+                return
+        event.Skip()
+
     def _on_save(self, event: wx.CommandEvent) -> None:
         parsed = parse_custom_seek_length(self.custom_seek.GetValue())
         if parsed is None:
@@ -4496,6 +4584,7 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
     def values(self) -> dict[str, object]:
         return {
             "pause_on_player_exit": self.pause.GetValue(),
+            "session_order": [session.value for session in self._session_order],
             "follow_playback_on_player_exit": self.follow.GetValue(),
             "open_player_when_activating_preset": self.open_preset.GetValue(),
             "stay_on_list_after_radio_enter": self.radio_enter.GetValue(),
@@ -4997,7 +5086,10 @@ class LiteFrame(wx.Frame):
         self._menu_items: list[tuple[wx.MenuItem, menu_model.MenuItem]] = []
         self._menu_handler_ids: list[int] = []
 
-        for described in menu_model.menus_for_session(self.navigator.active):
+        for described in menu_model.menus_for_session(
+            self.navigator.active,
+            self.options.session_order,
+        ):
             native = wx.Menu()
             for entry in described.items:
                 if entry.is_separator:
@@ -7175,6 +7267,18 @@ class LiteFrame(wx.Frame):
             else:
                 self._queue_step(forward)
             return
+        if (
+            chord.ctrl
+            and not chord.alt
+            and not chord.shift
+            and chord.key in "123456789"
+        ):
+            action = session_order.action_for_slot(
+                int(chord.key), self.options.session_order
+            )
+            if action is not None:
+                self._dispatch(action)
+                return
         action = resolve(
             chord,
             player_view=player,
@@ -7282,6 +7386,14 @@ class LiteFrame(wx.Frame):
             self._switch_session(SessionId.SONOS)
         elif action is Action.SESSION_LIST:
             self._show_session_list()
+        elif action in (Action.PREVIOUS_SESSION, Action.NEXT_SESSION):
+            target = session_order.adjacent(
+                self.navigator.active,
+                -1 if action is Action.PREVIOUS_SESSION else 1,
+                self.options.session_order,
+            )
+            self._transient_preview_return = None
+            self._switch_session(target)
         elif action is Action.COMMAND_PALETTE:
             self._show_command_palette()
         elif action is Action.SELECT_SONOS_TARGET:
@@ -9379,8 +9491,12 @@ class LiteFrame(wx.Frame):
                 self._load_sonos_targets(preferred_id=state.list_anchor_id)
 
     def _show_session_list(self) -> None:
-        """Ctrl+0 i dodatek NVDA: wybór sesji bez ujawniania nazw modelu."""
-        with SessionSelectionDialog(self, self.navigator.active) as dialog:
+        """Ctrl+Shift+S i dodatek NVDA: wybór sesji bez nazw modelu."""
+        with SessionSelectionDialog(
+            self,
+            self.navigator.active,
+            self.options.session_order,
+        ) as dialog:
             if dialog.ShowModal() != wx.ID_OK:
                 self._restore_focus_after_dialog()
                 return
@@ -9394,7 +9510,10 @@ class LiteFrame(wx.Frame):
             wx.CallAfter(self._restore_focus_after_dialog)
 
     def _show_command_palette(self) -> None:
-        entries = command_entries_for_session(self.navigator.active)
+        entries = command_entries_for_session(
+            self.navigator.active,
+            self.options.session_order,
+        )
         with CommandPaletteDialog(self, entries) as dialog:
             if dialog.ShowModal() != wx.ID_OK:
                 self._restore_focus_after_dialog()
@@ -14918,7 +15037,9 @@ class LiteFrame(wx.Frame):
             if self.options.radio_recognition_monitoring
             else float("inf")
         )
-        self._refresh_menu_state()
+        # Kolejność sesji zmienia jednocześnie skróty, podpisy menu i paletę
+        # poleceń, więc samo odświeżenie stanów zaznaczeń nie wystarcza.
+        self._build_menu()
         # Zapis na dysku jest juz zakonczony i to jest wlasciwy moment na
         # krotkie potwierdzenie. Konfiguracja hosta idzie dalej w tle i nie
         # moze opozniac komunikatu NVDA o kilka wywolan miedzyprocesowych.
@@ -16202,12 +16323,32 @@ class LiteFrame(wx.Frame):
         def done(payload: object) -> None:
             data = payload if isinstance(payload, dict) else {}
             file_name = str(data.get("fileName") or new_name)
+            new_path = str(data.get("path") or "").strip()
+            if new_path:
+                old_key = os.path.normcase(os.path.normpath(row.path))
+                for item in getattr(self.state, "recording_history", []):
+                    if not isinstance(item, dict):
+                        continue
+                    candidate = item.get("path")
+                    if (
+                        isinstance(candidate, str)
+                        and os.path.normcase(os.path.normpath(candidate)) == old_key
+                    ):
+                        item["path"] = new_path
+                try:
+                    self.store.save(self.state)
+                except (OSError, TypeError, ValueError):
+                    self.announcer.say(
+                        "Zmieniono nazwę pliku, ale nie zapisano nowej ścieżki w historii"
+                    )
             self._refresh_profile_view(preferred_id=row.item_id)
             self.announcer.say(f"Zmieniono nazwę pliku na dysku: {file_name}")
 
         self.runner.submit(
             "profile-edit",
-            lambda: client.rename_local_file(row.item_id, new_name),
+            lambda: client.rename_local_file(
+                row.item_id, new_name, path=row.path
+            ),
             done,
             lambda error: self.announcer.say(f"Nie zmieniono nazwy pliku: {error}"),
         )
@@ -16875,8 +17016,6 @@ class LiteFrame(wx.Frame):
             )
             current_entries = ()
             current_error = ""
-            recorded_files = ()
-            library_error = ""
             if client is not None:
                 try:
                     payload = client.radio_recording_history()
@@ -16888,25 +17027,19 @@ class LiteFrame(wx.Frame):
                     })
                 except (HostError, HostUnavailable, OSError) as error:
                     current_error = str(error)
-            library = getattr(self, "library", None)
-            if library is not None and library.is_available:
-                try:
-                    recorded_files = available_recorded_files(
-                        library.recorded_radio_items()
+            stored_entries = recording_history_from_amc_state({
+                "radio": {
+                    "recordingHistory": getattr(
+                        self.state, "recording_history", []
                     )
-                except (OSError, sqlite3.Error) as error:
-                    library_error = str(error)
+                }
+            })
             return (
                 snapshot,
-                # Nie laczymy bez konca archiwalnych migawek pelnego AMC i
-                # prywatnych uruchomien. Widok pokazuje wynik BIEZACEGO hosta
-                # oraz nagrania, ktore nadal faktycznie istnieja w Bibliotece.
                 recording_history_rows(
-                    current_entries,
-                    recorded_files=recorded_files,
+                    recent_recording_history(current_entries, stored_entries),
                 ),
                 current_error,
-                library_error,
             )
 
         def done(result) -> None:
@@ -16918,7 +17051,7 @@ class LiteFrame(wx.Frame):
                 is not LibraryView.RECORDED_RADIO_FILES
             ):
                 return
-            snapshot, rows, current_error, library_error = result
+            snapshot, rows, current_error = result
             self._radio_snapshot = snapshot
             self.stations = snapshot.list
             if announce and snapshot.load_error and not rows:
@@ -16940,10 +17073,6 @@ class LiteFrame(wx.Frame):
                 if announce and current_error:
                     self.announcer.say(
                         "Historia bieżącej sesji nagrywania jest chwilowo niedostępna"
-                    )
-                if announce and library_error:
-                    self.announcer.say(
-                        "Lista zapisanych plików nagrań jest chwilowo niedostępna"
                     )
 
         def failed(error: Exception) -> None:

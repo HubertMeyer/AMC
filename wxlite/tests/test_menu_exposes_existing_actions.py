@@ -608,8 +608,8 @@ def test_every_session_has_the_accessible_session_list_command() -> None:
             if menu.title == "&Widok"
         )
         item = next(entry for entry in view.items if entry.action is Action.SESSION_LIST)
-        assert item.label == "Lista sesji… (&0)"
-        assert item.shortcut == "Ctrl+0"
+        assert item.label == "Poka&ż listę sesji…"
+        assert item.shortcut == "Ctrl+Shift+S"
         assert not item.accelerator
 
 

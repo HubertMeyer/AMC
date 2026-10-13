@@ -50,12 +50,15 @@ def _shortcut_label(value: str | None) -> str | None:
     return "+".join(parts)
 
 
-def entries_for_session(session: SessionId) -> tuple[CommandPaletteEntry, ...]:
+def entries_for_session(
+    session: SessionId,
+    session_order: object = None,
+) -> tuple[CommandPaletteEntry, ...]:
     """Zbuduj po jednym użytkowym wpisie na akcję widoczną w tej sesji."""
 
     result: list[CommandPaletteEntry] = []
     seen: set[Action] = set()
-    for menu in menu_model.menus_for_session(session):
+    for menu in menu_model.menus_for_session(session, session_order):
         for item in menu.items:
             if item.is_separator or item.action is None or item.action in seen:
                 continue
