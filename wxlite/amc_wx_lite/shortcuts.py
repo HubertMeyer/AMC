@@ -422,6 +422,8 @@ WIIM_SUPPORTED_ACTIONS = frozenset({
     Action.TIME_REMAINING,
     Action.TIME_TOTAL,
     Action.VIEW_PRESETS,
+    Action.ASSIGN_PRESET,
+    *(Action[f"PRESET_{slot}"] for slot in range(1, 13)),
     Action.VIEW_WIIM_NETWORK_STREAMS,
     Action.ADD_WIIM_NETWORK_STREAM,
     Action.EDIT_WIIM_NETWORK_STREAM,

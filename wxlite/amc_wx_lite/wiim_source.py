@@ -16,6 +16,8 @@ class WiiMPresetChoice:
     """Jedno miejsce urządzenia; do kontrolki trafia wyłącznie ``label``."""
 
     number: int
+    title: str
+    source: str
     label: str
     occupied: bool
     current: bool
@@ -154,6 +156,8 @@ def preset_choices(payload: object) -> tuple[str, tuple[WiiMPresetChoice, ...]]:
             continue
         choices[number] = WiiMPresetChoice(
             number=number,
+            title=_text(raw.get("name")) or f"Preset {number}",
+            source=_text(raw.get("source")),
             label=label,
             occupied=raw.get("occupied") is True,
             current=raw.get("current") is True,

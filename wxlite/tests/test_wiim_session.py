@@ -100,6 +100,9 @@ def test_wiim_command_gate_blocks_local_audio_features() -> None:
         Action.VOLUME_DOWN_1,
         Action.TIME_ELAPSED,
         Action.VIEW_PRESETS,
+        Action.ASSIGN_PRESET,
+        Action.PRESET_1,
+        Action.PRESET_12,
         Action.COPY_NAME,
         Action.FOCUS_FILTER,
         Action.VIEW_ACTIVE_RECORDINGS,
@@ -228,6 +231,8 @@ def test_wiim_preset_list_has_only_twelve_intentional_labels() -> None:
         {
             "itemId": f"wiim-preset:{number}",
             "presetNumber": number,
+            "name": "Radio Test" if number == 2 else "",
+            "source": "radio internetowe" if number == 2 else "",
             "label": (
                 "Preset 2, Radio Test, radio internetowe"
                 if number == 2
@@ -251,6 +256,8 @@ def test_wiim_preset_list_has_only_twelve_intentional_labels() -> None:
     assert title == "Salon"
     assert len(choices) == 12
     assert choices[1].label == "Preset 2, Radio Test, radio internetowe"
+    assert choices[1].title == "Radio Test"
+    assert choices[1].source == "radio internetowe"
     assert choices[1].occupied is True
     assert choices[1].current is True
     assert "secret" not in repr(choices)
@@ -289,6 +296,23 @@ def test_ctrl_alt_p_routes_to_native_wiim_presets() -> None:
     LiteFrame._show_presets(frame)
 
     assert calls == ["wiim"]
+
+
+def test_wiim_assignment_and_digit_activation_use_device_specific_paths() -> None:
+    calls: list[object] = []
+    frame = SimpleNamespace(
+        navigator=SimpleNamespace(active=SessionId.WIIM),
+        _show_wiim_presets=lambda **kwargs: calls.append(("assign", kwargs)),
+        _activate_wiim_shortcut_preset=lambda slot: calls.append(("play", slot)),
+    )
+
+    LiteFrame._assign_preset(frame)
+    LiteFrame._activate_preset(frame, 12)
+
+    assert calls == [
+        ("assign", {"select_for_shortcut": True}),
+        ("play", 12),
+    ]
 
 
 def test_ctrl_o_is_wiim_streams_only_in_wiim_context() -> None:

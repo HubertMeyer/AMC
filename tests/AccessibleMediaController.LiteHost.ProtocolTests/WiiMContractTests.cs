@@ -163,6 +163,9 @@ internal static class WiiMContractTests
         Check(items[1].GetProperty("label").GetString()
             == "Preset 2, Radio Test, radio internetowe",
             "zajęty preset nie ma celowej etykiety");
+        Check(items[1].GetProperty("name").GetString() == "Radio Test"
+            && items[1].GetProperty("source").GetString() == "radio internetowe",
+            "mapowanie skrótu nie dostało jawnych tekstów użytkowych");
         Check(items[4].GetProperty("activationError").GetString()!
             .StartsWith("Preset 5 to TIDAL Connect", StringComparison.Ordinal),
             "nie zachowano uczciwej odmowy dla presetu Connect");

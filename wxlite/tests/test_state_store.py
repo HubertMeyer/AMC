@@ -352,6 +352,12 @@ def test_round_trip_keeps_private_preset_override_including_empty_session() -> N
                 "targetLocation": "D:\\Muzyka",
             }],
             "radio": [],
+            "wiim-device:salon": [{
+                "slot": 2,
+                "targetId": "native-preset:5",
+                "targetKind": "wiimNativePreset",
+                "targetTitle": "Radio Poznań",
+            }],
         })
 
         store.save(state)
@@ -364,6 +370,12 @@ def test_round_trip_keeps_private_preset_override_including_empty_session() -> N
             "targetKind": "folder",
             "targetTitle": "Muzyka",
             "targetLocation": "D:\\Muzyka",
+        }]
+        assert loaded.preset_overrides["wiim-device:salon"] == [{
+            "slot": 2,
+            "targetId": "native-preset:5",
+            "targetKind": "wiimNativePreset",
+            "targetTitle": "Radio Poznań",
         }]
 
 

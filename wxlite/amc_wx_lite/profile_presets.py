@@ -16,9 +16,13 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from pathlib import Path
+from typing import TYPE_CHECKING, Iterable
 
 from .list_model import Row
 from .navigation import SessionId
+
+if TYPE_CHECKING:  # pragma: no cover - tylko typ, bez cyklu importow w runtime
+    from .wiim_source import WiiMPresetChoice
 
 
 PRESET_COUNT = 12
@@ -30,6 +34,8 @@ SESSION_PROFILE_KEYS = {
     SessionId.WIIM: "wiim",
     SessionId.SONOS: "sonos",
 }
+WIIM_DEVICE_PRESET_PREFIX = "wiim-device:"
+WIIM_NATIVE_PRESET_PREFIX = "native-preset:"
 
 
 def shortcut_label(slot: int, *, spoken: bool = False) -> str:
@@ -209,7 +215,12 @@ def read_preset_overrides(raw: object) -> dict[str, list[dict]]:
     known = {session.value for session in SESSION_PROFILE_KEYS}
     result: dict[str, list[dict]] = {}
     for key, value in raw.items():
-        if key not in known or not isinstance(value, list):
+        dynamic_wiim = (
+            isinstance(key, str)
+            and key.startswith(WIIM_DEVICE_PRESET_PREFIX)
+            and bool(key.removeprefix(WIIM_DEVICE_PRESET_PREFIX).strip())
+        )
+        if (key not in known and not dynamic_wiim) or not isinstance(value, list):
             continue
         result[key] = [entry.to_payload() for entry in _entry_list(value)]
     return result
@@ -358,6 +369,102 @@ def target_from_row(session: SessionId, row: Row | None) -> PresetTarget | None:
     if row.kind == "track" and row.path:
         return PresetTarget(row.item_id, "track", row.title, row.path)
     return None
+
+
+def wiim_device_preset_key(device_id: str) -> str:
+    """Prywatny klucz mapowania jednego urzadzenia; nigdy tekst kontrolki."""
+    normalized = device_id.strip() if isinstance(device_id, str) else ""
+    if not normalized:
+        raise ValueError("Brak identyfikatora urządzenia WiiM")
+    return WIIM_DEVICE_PRESET_PREFIX + normalized
+
+
+def wiim_native_preset_number(entry: PresetEntry | None) -> int | None:
+    if entry is None or entry.target_kind.casefold() != "wiimnativepreset":
+        return None
+    if not entry.target_id.casefold().startswith(WIIM_NATIVE_PRESET_PREFIX):
+        return None
+    try:
+        number = int(entry.target_id[len(WIIM_NATIVE_PRESET_PREFIX):])
+    except ValueError:
+        return None
+    return number if 1 <= number <= PRESET_COUNT else None
+
+
+def wiim_native_target(choice: "WiiMPresetChoice") -> PresetTarget:
+    """Zamien jawny wybor urzadzenia na prywatny cel skrotu AMC."""
+    if not choice.occupied or not 1 <= choice.number <= PRESET_COUNT:
+        raise ValueError("Można przypisać wyłącznie zajęty preset WiiM")
+    return PresetTarget(
+        target_id=f"{WIIM_NATIVE_PRESET_PREFIX}{choice.number}",
+        target_kind="wiimNativePreset",
+        title=choice.title or f"Preset {choice.number}",
+        location=None,
+    )
+
+
+def effective_wiim_entries(
+    path: Path | str,
+    device_id: str,
+    native_choices: Iterable["WiiMPresetChoice"],
+    overrides: object,
+) -> tuple[PresetEntry, ...]:
+    """Mapowanie Ctrl+Shift osobno dla urzadzenia, zgodne z glownym AMC.
+
+    Prywatna zmiana wxPython wygrywa. Potem czytamy istniejacy klucz
+    ``wiim-device:<id>`` pelnego AMC. Gdy nigdy nie powstal, zajete natywne
+    presety dostaja domyslnie odpowiadajace im miejsca 1-12.
+    """
+    choices_snapshot = tuple(native_choices)
+    key = wiim_device_preset_key(device_id)
+    cleaned = read_preset_overrides(overrides)
+    if key in cleaned:
+        source = _entry_list(cleaned[key])
+    else:
+        try:
+            raw = _read_profile(path)
+        except PresetProfileError:
+            raw = {}
+        session_presets = raw.get("sessionPresets")
+        by_session = (
+            session_presets.get("entriesBySession")
+            if isinstance(session_presets, dict)
+            else None
+        )
+        if isinstance(by_session, dict) and key in by_session:
+            source = _entry_list(by_session.get(key))
+        else:
+            source = tuple(
+                wiim_native_target(choice).as_entry(choice.number)
+                for choice in choices_snapshot
+                if getattr(choice, "occupied", False)
+                and type(getattr(choice, "number", None)) is int
+                and 1 <= choice.number <= PRESET_COUNT
+            )
+
+    current = {
+        choice.number: choice
+        for choice in choices_snapshot
+        if type(getattr(choice, "number", None)) is int
+    }
+    result: list[PresetEntry] = []
+    for entry in source:
+        number = wiim_native_preset_number(entry)
+        if number is None:
+            continue
+        choice = current.get(number)
+        result.append(PresetEntry(
+            slot=entry.slot,
+            target_id=entry.target_id,
+            target_kind=entry.target_kind,
+            title=(
+                choice.title
+                if choice is not None and getattr(choice, "occupied", False)
+                else entry.title
+            ),
+            location=None,
+        ))
+    return tuple(result)
 
 
 def _radio_targets(

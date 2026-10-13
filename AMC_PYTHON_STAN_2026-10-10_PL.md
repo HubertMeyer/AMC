@@ -311,13 +311,16 @@ tego pomiaru.
 
 Sesja WiiM jest podłączona do istniejących usług AMC. Odbiór 10 października
 potwierdził prawidłowe wykrycie urządzenia i odczyt jego stanu. Udało się także
-uruchomić i zatrzymać stację. Obecny interfejs jest jednak tylko częściowy:
-`F6` przełącza pomiędzy otwartym odtwarzaczem a listą urządzeń/odtwarzaczy,
-natomiast nie udostępnia jeszcze własnych Strumieni sieciowych i pozostałych
-opcji znanych z głównego AMC. Pełne AMC celowo nie pokazuje w WiiM Biblioteki
+uruchomić i zatrzymać stację. `F6` przełącza pomiędzy otwartym odtwarzaczem a
+listą urządzeń/odtwarzaczy. Pełne AMC celowo nie pokazuje w WiiM Biblioteki
 ani Ulubionych: lokalne API urządzenia nie udostępnia katalogów WiiM Home,
 dlatego `Ctrl+L` pozostaje nieaktywny, a materiały AMC są osobnym widokiem
 Strumieni sieciowych pod `Ctrl+O`.
+
+Strumienie sieciowe są już przeniesione: działają lista, odtwarzanie, dodanie,
+edycja i usunięcie, import M3U/PLS, eksport M3U, trzy sposoby sortowania oraz
+powrót do właściwego urządzenia. Do wxPython nie przechodzą adresy urządzeń;
+adres strumienia jest pobierany wyłącznie do jawnie otwartego okna edycji.
 
 Natywne presety urządzenia są już podłączone technicznie pod `Ctrl+Alt+P`.
 Host zwraca dokładnie 12 miejsc bez adresów urządzenia i strumieni, wskazuje
@@ -325,9 +328,13 @@ bieżące miejsce, blokuje puste pozycje oraz zachowuje wyjaśnienie z główneg
 AMC dla presetów TIDAL/Spotify Connect, których urządzenie nie potrafi samo
 uruchomić. Dialog obsługuje cyfry, Page Up/Page Down, Enter i Spację, a po
 powodzeniu przechodzi do odtwarzacza WiiM. Pozostaje odbiór z żywym
-urządzeniem oraz przeniesienie Strumieni sieciowych, mapowań
-`Ctrl+Shift+1–0/-/=` i opcji wejścia, wyjścia, korektora, powtarzania,
-losowania i timera.
+urządzeniem. `Ctrl+Shift+1–0/-/=` uruchamia teraz mapowanie właściwe dla
+wybranego urządzenia, a `Ctrl+Alt+Shift+P` przypisuje istniejący natywny
+preset bez zmiany ustawień samego WiiM. Brak prywatnej zmiany dziedziczy
+istniejące mapowanie głównego AMC, a gdy go nie ma — odpowiadające miejsce
+natywne. Identyfikator urządzenia i numer modelu nie trafiają do etykiet
+dostępnościowych. Pozostają opcje wejścia, wyjścia, korektora, powtarzania,
+losowania i timera oraz żywy odbiór wszystkich nowych dróg.
 
 ### Sonos
 
@@ -352,13 +359,20 @@ wybór, a nie uruchamia drugiego odczytu równolegle. Testy automatyczne obejmuj
 blokadę timera, kolejkę poleceń oraz ponowienie odczytu i transportu. Pozostaje
 odbiór na żywej, obudzonej grupie Sonos.
 
-Podobnie jak w WiiM, brakuje pełnego interfejsu Biblioteki, Ulubionych,
-wyboru materiałów, presetów i odpowiadających im skrótów z głównego AMC.
-Obecny widok pokazuje głównie grupę oraz ostatni stan lub ostatnio aktywny
-materiał. Próba uruchomienia widocznego Radia Opole została przyjęta przez
-interfejs, ale radio faktycznie nie zaczęło grać. W piątek prace mają zacząć
-się od uporządkowania i przeniesienia kompletnej warstwy WiiM i Sonos z
-głównego AMC, a nie tylko od poprawienia pojedynczego komunikatu odświeżania.
+Warstwa materiałów Sonos jest już przeniesiona: osobny korzeń Biblioteki,
+Ulubione Sonos, Playlisty Sonos i własne strumienie AMC, odczyt zawartości,
+uruchamianie na aktywnej grupie, edycja/import/sortowanie i ręczna kolejność
+własnych strumieni oraz ich eksport M3U. Materiał można przypisać do jednego z
+12 presetów sesji i uruchomić przez `Ctrl+Shift+1–0/-/=`. Opcjonalny cel stały
+zapisuje dokładny zestaw głośników i przed odtworzeniem wymaga jednej zgodnej
+grupy w tym samym domu; nie przegrupowuje urządzeń po cichu. Identyfikatory
+domu, grupy, odtwarzaczy i materiałów pozostają wyłącznie w modelu.
+
+Próba uruchomienia widocznego Radia Opole ze starego przyrostu została
+przyjęta przez interfejs, ale radio faktycznie nie zaczęło grać. Dlatego
+automatyczne testy nowej warstwy nie zastępują ponownego odbioru na obudzonej
+grupie. Pozostają wejścia/wyjścia, korektor, powtarzanie, timer i inne opcje
+urządzeń, których jeszcze nie przeniesiono.
 
 Obecna konfiguracja rozpoznaje zapisane konta i urządzenia, więc do tej
 naprawy nie potrzeba ponownej autoryzacji. Przed przekazaniem programu innym
@@ -512,13 +526,13 @@ lewą strzałką.
    przepisać pozostałe trzy karty
    głównego AMC ze wszystkimi polami, zależnościami i zapisem oraz wykonać
    pełny audyt Biblioteki, menu, skrótów i sortowań `Alt+cyfra`.
-5. Uzupełnienie WiiM i Sonos o pełną, właściwą dla każdej usługi warstwę
-   interfejsu z głównego AMC: w WiiM Strumienie sieciowe, natywne presety,
-   opcje urządzenia i wszystkie ich skróty; w Sonos Bibliotekę, Ulubione,
-   playlisty, własne strumienie, presety i wybór materiałów. Natywna lista
-   presetów WiiM jest już podłączona technicznie. Następnie zapewnić
-   ponowny odbiór transportu po zakończeniu odczytu stanu na obudzonych
-   urządzeniach; techniczna kolejka tych operacji jest już podłączona. Materiał
+5. W toku: WiiM ma Strumienie sieciowe, natywne presety i ich mapowania
+   `Ctrl+Shift+1–0/-/=` osobno dla urządzeń. Sonos ma Bibliotekę, Ulubione,
+   playlisty, własne strumienie, presety oraz cel bieżącej lub stałej grupy.
+   Uzupełnić właściwe dla obu usług opcje urządzeń: wejścia/wyjścia, korektor,
+   powtarzanie, losowanie i timer, a następnie wykonać ponowny odbiór transportu
+   i materiałów na obudzonych urządzeniach. Techniczna kolejka operacji jest
+   już podłączona. Materiał
    Sonos Redux z Hermesa
    traktować tylko jako krótką wskazówkę projektową, gdy analogiczny problem
    wystąpi w AMC; nie przeznaczać przebiegów na analizę, uruchamianie ani testy

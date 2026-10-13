@@ -208,6 +208,10 @@ public static class LiteWiiMContract
                 {
                     itemId = $"wiim-preset:{number}",
                     presetNumber = number,
+                    // Celowy tekst użytkowy dla mapowania skrótów. URI oraz
+                    // obiekt ustawień urządzenia nadal nie opuszczają hosta.
+                    name,
+                    source,
                     label,
                     occupied = preset is not null,
                     current = currentPresetNumber == number,

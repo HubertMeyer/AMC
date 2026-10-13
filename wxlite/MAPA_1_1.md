@@ -526,6 +526,13 @@ własnej normalizacji diakrytyków.
   WiiM i tego samego porządku co ekran. `Alt+1/2/3` zapisują w głównym profilu
   odpowiednio tryb najnowsze, alfabetyczny i własny; menu przekazuje stan jako
   natywne pole zaznaczone, nie jako dopowiedziany tekst.
+  `Ctrl+Alt+P` pokazuje 12 natywnych miejsc urządzenia. `Ctrl+Alt+Shift+P`
+  przypisuje zajęty preset do jednego z 12 skrótów AMC, a
+  `Ctrl+Shift+1…0/-/=` uruchamia mapowanie osobne dla bieżącego urządzenia.
+  Pierwsza prywatna zmiana wxPython nie modyfikuje wspólnego profilu; bez niej
+  obowiązuje mapowanie głównego AMC albo domyślna zgodność numerów. Do
+  dostępnej listy trafiają wyłącznie jawna nazwa, źródło i czytelny opis;
+  adres urządzenia, URI i techniczny identyfikator pozostają poza kontrolką.
   Próba na dwóch urządzeniach zapisanych w bieżącym profilu potwierdziła listę
   i bezpieczny komunikat braku odpowiedzi; oba urządzenia były w czasie próby
   niedostępne, więc żywy transport wymaga jeszcze odbioru na włączonym WiiM.

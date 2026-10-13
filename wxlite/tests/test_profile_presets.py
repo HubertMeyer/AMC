@@ -11,6 +11,7 @@ from amc_wx_lite.navigation import SessionId
 from amc_wx_lite.profile_presets import (
     PresetTarget,
     choices,
+    effective_wiim_entries,
     effective_entries,
     entries_payload,
     first_free_slot,
@@ -20,7 +21,11 @@ from amc_wx_lite.profile_presets import (
     resolve_preset,
     shortcut_label,
     target_from_row,
+    wiim_device_preset_key,
+    wiim_native_preset_number,
+    wiim_native_target,
 )
+from amc_wx_lite.wiim_source import WiiMPresetChoice
 from amc_wx_lite.shortcuts import (
     Action,
     LIST_VIEW,
@@ -203,6 +208,69 @@ def test_override_is_strictly_sanitized_without_runtime_representations() -> Non
             "targetTitle": "",
         }]
     }
+
+
+def test_wiim_preset_mapping_is_private_per_device_and_defaults_by_number() -> None:
+    native = tuple(
+        WiiMPresetChoice(
+            number=number,
+            title="Radio Poznań" if number == 2 else f"Preset {number}",
+            source="radio internetowe" if number == 2 else "",
+            label=(
+                "Preset 2, Radio Poznań, radio internetowe"
+                if number == 2 else f"Preset {number}, pusty"
+            ),
+            occupied=number == 2,
+            current=number == 2,
+            activation_error="",
+        )
+        for number in range(1, 13)
+    )
+    missing_profile = Path(tempfile.mkdtemp()) / "missing.json"
+
+    defaults = effective_wiim_entries(
+        missing_profile, "device-1", native, {}
+    )
+    assert [(entry.slot, wiim_native_preset_number(entry), entry.title)
+            for entry in defaults] == [(2, 2, "Radio Poznań")]
+
+    target = wiim_native_target(native[1])
+    overrides = {
+        wiim_device_preset_key("device-1"): entries_payload(
+            replace_entry(defaults, target, 5)
+        ),
+        wiim_device_preset_key("device-2"): [],
+    }
+    mapped = effective_wiim_entries(
+        missing_profile, "device-1", native, overrides
+    )
+    other = effective_wiim_entries(
+        missing_profile, "device-2", native, overrides
+    )
+
+    assert [(entry.slot, wiim_native_preset_number(entry)) for entry in mapped] == [
+        (5, 2)
+    ]
+    assert other == ()
+    assert read_preset_overrides(overrides) == overrides
+
+
+def test_wiim_mapping_rejects_obce_kinds_and_invalid_numbers() -> None:
+    native = (
+        WiiMPresetChoice(1, "Radio", "radio", "Preset 1, Radio", True, False, ""),
+    )
+    key = wiim_device_preset_key("device-1")
+    overrides = {key: [
+        {"slot": 1, "targetId": "native-preset:99", "targetKind": "wiimNativePreset", "targetTitle": "Zły"},
+        {"slot": 2, "targetId": "file:x", "targetKind": "track", "targetTitle": "Obcy"},
+    ]}
+
+    assert effective_wiim_entries(
+        Path(tempfile.mkdtemp()) / "missing.json",
+        "device-1",
+        native,
+        overrides,
+    ) == ()
 
 
 def test_replace_moves_same_target_and_remove_keeps_slot_order() -> None:
