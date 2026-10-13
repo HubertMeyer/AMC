@@ -609,7 +609,9 @@ alternatywnych sposobów uruchamiania.
   zaznaczania, schowka, ręcznego nagrywania, historii nagrań, przycinania,
   harmonogramów, lewej strzałki i informacji dla NVDA zaliczone bez błędów.
   Osobny test chroni `Ctrl+Spacja`: gest pozostaje w natywnej wielokrotnej
-  liście Windows i nie jest przejmowany przez skróty AMC;
+  liście Windows i nie jest przejmowany przez skróty AMC. Dodatkowy przebieg
+  na prawdziwym `wx.ListCtrl` z prywatnego runtime potwierdził dodanie oraz
+  ponowne usunięcie nieprzylegającego wiersza bez zmiany pierwszego wyboru;
 - resolver wygasłych transmisji YouTube: testy identyfikatora kanału i
   komunikatu zakończenia oraz dwa rzeczywiste, bezgłośne pomiary dawnych
   adresów Rzeszowa i Tarnobrzega zakończone odczytem audio;
