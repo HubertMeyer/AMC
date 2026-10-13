@@ -58,6 +58,18 @@ if (args.Length == 1 && args[0].StartsWith("--smoke-runner-failure=", StringComp
     SmokeTestRunnerTests.SimulateFailure(args[0]["--smoke-runner-failure=".Length..]);
     throw new InvalidOperationException("Symulowane niepowodzenie nie zostało zgłoszone.");
 }
+if (args.Contains("--youtube-source-resolver-only", StringComparer.Ordinal))
+{
+    TestYouTubeSourceResolver();
+    return 0;
+}
+if (args.FirstOrDefault(argument =>
+        argument.StartsWith("--youtube-live-only-url=", StringComparison.OrdinalIgnoreCase))
+    is { } youtubeLiveArgument)
+{
+    TestLiveYouTubeRadio(youtubeLiveArgument["--youtube-live-only-url=".Length..]);
+    return 0;
+}
 if (args.Contains("--spotify-account-routing-gui", StringComparer.Ordinal))
 {
     SpotifyAccountRoutingTests.ShowForNvda(); return 0;
@@ -2381,6 +2393,18 @@ static void TestYouTubeSourceResolver()
         !YouTubeSourceResolver.IsYouTubeUrl("https://youtube.com.example.org/watch?v=test")
         && !YouTubeSourceResolver.IsYouTubeUrl("https://example.org/?next=https://youtube.com/watch?v=test"),
         "Resolver uznaje podobną, obcą domenę za YouTube.");
+    Assert(
+        YouTubeSourceResolver.IsEndedLiveStreamError(
+            "ERROR: This live stream recording is not available."),
+        "Resolver nie rozpoznaje wygaslej transmisji, wiec harmonogram nie przejdzie do biezacego live kanalu.");
+    Assert(
+        YouTubeSourceResolver.TryBuildChannelLiveUrl("UCqajcrgA6-2ukdAl-ICqTKw\r\n")
+        == "https://www.youtube.com/channel/UCqajcrgA6-2ukdAl-ICqTKw/live",
+        "Resolver nie buduje stalego adresu live z bezpiecznego identyfikatora kanalu.");
+    Assert(
+        YouTubeSourceResolver.TryBuildChannelLiveUrl("UC../niebezpieczny") is null
+        && YouTubeSourceResolver.TryBuildChannelLiveUrl("NA") is null,
+        "Resolver przyjmuje nieprawidlowy identyfikator kanalu YouTube.");
 
     const string liveJson = """
         {

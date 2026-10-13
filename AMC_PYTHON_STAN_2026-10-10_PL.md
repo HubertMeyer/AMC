@@ -450,7 +450,19 @@ Dziennik 13 października potwierdza uruchomienie harmonogramu o 18:13. Nagranie
 z Jarosławia zakończyło się powodzeniem, natomiast Tarnobrzeg i Dominikanie
 Rzeszów nie zostały nagrane, ponieważ nie udało się odtworzyć ich źródeł
 YouTube Live. Była to odmowa konkretnych strumieni, a nie brak uruchomienia
-harmonogramu.
+harmonogramu. Dokładny log wykazał, że oba plany przechowywały adresy
+konkretnych, zakończonych już transmisji `watch?v=...`; przez całe dostępne
+okno AMC prawidłowo ponawiało połączenie, lecz YouTube zwracał
+`This live stream recording is not available`.
+
+Resolver radia rozpoznaje teraz taką odpowiedź, odczytuje bezpieczny
+identyfikator kanału z metadanych zakończonej transmisji i ponawia przez stały
+adres `youtube.com/channel/.../live`. Nie zmienia harmonogramu ani danych
+użytkownika i nie korzysta z cookies przeglądarki. Dzięki temu stare plany
+pozostają użyteczne, chociaż kanał tworzy nowy film dla kolejnego live.
+13 października sprawdzono tę drogę na obu dawnych adresach: Rzeszów i
+Tarnobrzeg zostały przekierowane do aktualnych transmisji, a FFmpeg odczytał
+z nich rzeczywiste próbki audio.
 
 Przy zaznaczaniu fragmentu `I`/`O` interfejs pyta host jawnie o tor Plików
 albo Podcastów. Okresowy odczyt Radia nie może już podmienić kontekstu i
@@ -555,6 +567,9 @@ kodu ani wysyłać logów bez wiedzy użytkownika.
 ## Dowody automatyczne tego przyrostu
 
 - pełny runner Python: 1465 zaliczonych, 0 błędów, 138 historycznych pominięć;
+- resolver wygasłych transmisji YouTube: testy identyfikatora kanału i
+  komunikatu zakończenia oraz dwa rzeczywiste, bezgłośne pomiary dawnych
+  adresów Rzeszowa i Tarnobrzega zakończone odczytem audio;
 - testy protokołu C#: 15 zestawów zaliczonych;
 - całe rozwiązanie .NET zbudowane sekwencyjnie: 0 ostrzeżeń, 0 błędów;
 - sześć celowanych testów Windows rozpoznawania, ustawień, historii, podpisu

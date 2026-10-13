@@ -59,7 +59,8 @@ internal static class YouTubeSourceResolver
     private static async Task<ResolvedYouTubeAudioSource> ResolveAudioCoreAsync(
         string pageUrl,
         bool requireLive,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        bool allowChannelLiveFallback = true)
     {
         if (!IsYouTubeUrl(pageUrl))
             throw new InvalidDataException("Adres nie prowadzi do YouTube.");
@@ -154,6 +155,29 @@ internal static class YouTubeSourceResolver
                 // idzie do logu w calosci i do komunikatu w wersji zrozumialej.
                 DiagnosticLog.Warning("youtube",
                     $"yt-dlp zakonczyl sie kodem {process.ExitCode} dla {pageUrl.Trim()}: {error.Trim()}");
+                if (requireLive
+                    && allowChannelLiveFallback
+                    && IsEndedLiveStreamError(error))
+                {
+                    var channelLiveUrl = await TryResolveChannelLiveUrlAsync(
+                            executable,
+                            pageUrl.Trim(),
+                            cancellationToken)
+                        .ConfigureAwait(false);
+                    if (channelLiveUrl is not null
+                        && !channelLiveUrl.Equals(pageUrl.Trim(), StringComparison.OrdinalIgnoreCase))
+                    {
+                        DiagnosticLog.Info(
+                            "youtube",
+                            $"Zapisany adres transmisji wygasl; ponawiam przez staly adres kanalu {channelLiveUrl}.");
+                        return await ResolveAudioCoreAsync(
+                                channelLiveUrl,
+                                requireLive: true,
+                                cancellationToken,
+                                allowChannelLiveFallback: false)
+                            .ConfigureAwait(false);
+                    }
+                }
                 throw new InvalidDataException(YouTubeErrorTranslator.Describe(error));
             }
             if (output.Length == 0 || output.Length > MaximumJsonCharacters)
@@ -172,6 +196,124 @@ internal static class YouTubeSourceResolver
         {
             process?.Dispose();
         }
+    }
+
+    private static async Task<string?> TryResolveChannelLiveUrlAsync(
+        string executable,
+        string expiredVideoUrl,
+        CancellationToken cancellationToken)
+    {
+        var start = new ProcessStartInfo
+        {
+            FileName = executable,
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            RedirectStandardInput = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            StandardOutputEncoding = Encoding.UTF8,
+            StandardErrorEncoding = Encoding.UTF8
+        };
+        ExternalToolProcess.ApplySafeEnvironment(start, executable);
+        foreach (var argument in new[]
+        {
+            "--ignore-config",
+            "--no-playlist",
+            "--no-warnings",
+            "--skip-download",
+            "--ignore-no-formats-error",
+            "--force-ipv4",
+            "--socket-timeout", "20",
+            "--retries", "2",
+            "--extractor-retries", "2",
+            "--extractor-args", "youtube:player_client=default,android",
+            "--print", "%(channel_id)s",
+            "--",
+            expiredVideoUrl
+        })
+        {
+            start.ArgumentList.Add(argument);
+        }
+
+        Process? process = null;
+        try
+        {
+            process = Process.Start(start);
+            if (process is null) return null;
+            process.StandardInput.Close();
+            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            timeout.CancelAfter(TimeSpan.FromSeconds(45));
+            using var termination = timeout.Token.Register(
+                static state =>
+                {
+                    try
+                    {
+                        var running = (Process)state!;
+                        if (!running.HasExited) running.Kill(entireProcessTree: true);
+                    }
+                    catch (Exception)
+                    {
+                    }
+                },
+                process);
+            var outputTask = process.StandardOutput.ReadToEndAsync(timeout.Token);
+            var errorTask = process.StandardError.ReadToEndAsync(timeout.Token);
+            await process.WaitForExitAsync(timeout.Token).ConfigureAwait(false);
+            var output = await outputTask.ConfigureAwait(false);
+            var error = await errorTask.ConfigureAwait(false);
+            if (process.ExitCode != 0)
+            {
+                DiagnosticLog.Warning(
+                    "youtube",
+                    $"Nie udalo sie odczytac kanalu wygaslej transmisji {expiredVideoUrl}: {error.Trim()}");
+                return null;
+            }
+
+            return TryBuildChannelLiveUrl(output);
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            DiagnosticLog.Warning(
+                "youtube",
+                $"Odczyt kanalu wygaslej transmisji przekroczyl bezpieczny czas: {expiredVideoUrl}.");
+            return null;
+        }
+        catch (Win32Exception exception)
+        {
+            DiagnosticLog.Warning(
+                "youtube",
+                $"Nie udalo sie uruchomic yt-dlp przy odczycie kanalu: {exception.Message}");
+            return null;
+        }
+        finally
+        {
+            process?.Dispose();
+        }
+    }
+
+    internal static bool IsEndedLiveStreamError(string? error)
+    {
+        if (string.IsNullOrWhiteSpace(error)) return false;
+        return error.Contains("live stream recording is not available", StringComparison.OrdinalIgnoreCase)
+               || error.Contains("live event has ended", StringComparison.OrdinalIgnoreCase)
+               || error.Contains("livestream has ended", StringComparison.OrdinalIgnoreCase);
+    }
+
+    internal static string? TryBuildChannelLiveUrl(string? channelIdOutput)
+    {
+        var channelId = channelIdOutput?
+            .Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .FirstOrDefault();
+        if (channelId is null
+            || channelId.Length != 24
+            || !channelId.StartsWith("UC", StringComparison.Ordinal)
+            || channelId.Any(character => !char.IsAsciiLetterOrDigit(character)
+                                          && character is not '-' and not '_'))
+        {
+            return null;
+        }
+
+        return $"https://www.youtube.com/channel/{channelId}/live";
     }
 
     internal static ResolvedYouTubeAudioSource ParseResult(
