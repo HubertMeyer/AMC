@@ -177,6 +177,49 @@ def test_ctrl_arrow_focus_is_kept_until_ctrl_space_toggles_it() -> None:
     assert control._cursor_target() is None
 
 
+def test_ctrl_space_is_left_to_the_native_windows_multiselect() -> None:
+    """Ctrl+Spacja nie może zostać zamienione na polecenie AMC.
+
+    ``wx.ListCtrl`` bez ``LC_SINGLE_SEL`` realizuje tym gestem standardowy
+    wybór nieprzylegających wierszy. Nasz ``EVT_CHAR_HOOK`` ma go przepuścić
+    do kontrolki; inaczej samo zachowanie kursora z sąsiedniego testu nie
+    wystarczyłoby i użytkownik nie mógłby faktycznie przełączyć zaznaczenia.
+    """
+
+    import wx
+
+    class Event:
+        skipped = False
+
+        def GetKeyCode(self) -> int:  # noqa: N802 - API wx
+            return wx.WXK_SPACE
+
+        def ControlDown(self) -> bool:  # noqa: N802 - API wx
+            return True
+
+        def ShiftDown(self) -> bool:  # noqa: N802 - API wx
+            return False
+
+        def AltDown(self) -> bool:  # noqa: N802 - API wx
+            return False
+
+        def MetaDown(self) -> bool:  # noqa: N802 - API wx
+            return False
+
+        def Skip(self) -> None:  # noqa: N802 - API wx
+            self.skipped = True
+
+    frame = gui.LiteFrame.__new__(gui.LiteFrame)
+    frame._on_key = lambda _event: (_ for _ in ()).throw(
+        AssertionError("Ctrl+Spacja nie może zostać obsłużone jako polecenie AMC")
+    )
+    event = Event()
+
+    frame._on_list_shortcut_hook(event)
+
+    assert event.skipped is True
+
+
 def test_deselecting_focused_row_keeps_it_as_ctrl_space_anchor() -> None:
     model = ListModel()
     rows = [

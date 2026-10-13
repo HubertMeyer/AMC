@@ -605,6 +605,11 @@ alternatywnych sposobów uruchamiania.
 - pełny runner Python: 1472 zaliczone, 0 błędów, 138 historycznych pominięć;
   cztery testy korzystające z lokalnego serwera próbnego zostały powtórzone
   po zezwoleniu na gniazda `127.0.0.1` i wszystkie przeszły;
+- dodatkowy audyt pierwszego etapu: 143 celowane testy wielokrotnego
+  zaznaczania, schowka, ręcznego nagrywania, historii nagrań, przycinania,
+  harmonogramów, lewej strzałki i informacji dla NVDA zaliczone bez błędów.
+  Osobny test chroni `Ctrl+Spacja`: gest pozostaje w natywnej wielokrotnej
+  liście Windows i nie jest przejmowany przez skróty AMC;
 - resolver wygasłych transmisji YouTube: testy identyfikatora kanału i
   komunikatu zakończenia oraz dwa rzeczywiste, bezgłośne pomiary dawnych
   adresów Rzeszowa i Tarnobrzega zakończone odczytem audio;
