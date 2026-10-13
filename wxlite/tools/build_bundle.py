@@ -270,6 +270,7 @@ def main() -> int:
         files += copy_launcher(target, args.launcher)
         files += copy_updater(target, args.updater)
         manifest["created"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
+        manifest["buildLabel"] = build_label()
         manifest["files"] = [
             relative
             for relative in dict.fromkeys(files)

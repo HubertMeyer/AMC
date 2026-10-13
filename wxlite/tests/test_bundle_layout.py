@@ -32,6 +32,11 @@ def test_build_label_is_user_facing_date_and_source_revision():
     assert label == "2026.10.13-7c246dba"
 
 
+def test_refresh_mode_updates_the_visible_build_identity():
+    source = path.read_text(encoding="utf-8")
+    assert 'manifest["buildLabel"] = build_label()' in source
+
+
 def test_production_launcher_is_copied_as_canonical_entry_point():
     with tempfile.TemporaryDirectory() as folder:
         root = Path(folder)
