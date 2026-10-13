@@ -62,6 +62,19 @@ def test_round_trip_keeps_options_and_stations() -> None:
     assert [s.url for s in loaded.stations] == ["http://a/1"]
 
 
+def test_startup_target_round_trips_and_rejects_technical_garbage() -> None:
+    store, _ = temp_store()
+    store.save(LiteState(options=Options(startup_target="SessionList")))
+
+    assert store.load().options.startup_target == "SessionList"
+    assert (
+        Options(startup_target="StartupTarget.SessionList")
+        .clamp()
+        .startup_target
+        == "MediaList"
+    )
+
+
 def test_session_order_round_trip_is_normalized_without_exposing_labels() -> None:
     store, directory = temp_store()
     store.save(LiteState(options=Options(session_order=[

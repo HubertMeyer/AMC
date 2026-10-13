@@ -76,6 +76,14 @@ skróty Ctrl+1–6 muszą od razu pokazywać i wykonywać tę samą kolejność.
 `Ctrl+Page Up` i `Ctrl+Page Down` przechodzą odpowiednio do poprzedniej i
 następnej sesji według tej kolejności, z zawijaniem na końcach.
 
+Na tej samej karcie zmień „Wyświetlaj po uruchomieniu” na „Lista sesji”,
+zapisz i uruchom AMC Python ponownie w bezpiecznym momencie. Po gotowości
+silnika ma otworzyć się zwykłe okno „Wybór sesji” z fokusem na ostatniej
+sesji. Enter przechodzi do zaznaczonej sesji, Escape lub Anuluj pozostawia
+ostatnią sesję. Wróć do wariantu „Ostatnia używana sesja” i sprawdź, że po
+następnym starcie nie pojawia się dodatkowy dialog. NVDA nie może odczytać
+`MediaList`, `SessionList`, nazwy klasy ani rekordu modelu.
+
 Naciśnij `Ctrl+Shift+K` oraz osobno „Otwórz paletę poleceń” z dodatku NVDA.
 Fokus ma trafić do pola „Filtr poleceń”. Wpisz bez polskich znaków dwa słowa,
 na przykład „paleta polecen”; liczba wyników ma się zmienić, a strzałka w dół

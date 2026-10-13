@@ -144,6 +144,14 @@ nagrywane stacje albo oba rodzaje źródeł. Do usługi wychodzi podpis
 akustyczny, nie adres stacji ani nagrany dźwięk. Enter uruchamia Zapisz, po
 powodzeniu pada dokładnie jeden komunikat „Zapisano ustawienia”. To nadal nie
 są pełne Ustawienia głównego AMC: brakuje trzech całych kart.
+
+Pierwsze brakujące ustawienie Ogólne zostało przeniesione bez tworzenia
+martwej kontrolki: „Wyświetlaj po uruchomieniu” ma warianty „Ostatnia używana
+sesja” oraz „Lista sesji”. Wybór jest prywatnie i atomowo zapisywany przez AMC
+Python. Drugi wariant otwiera po gotowości hosta tę samą natywną Listę sesji,
+która działa pod `Ctrl+Shift+S`; Enter od razu przechodzi do wybranej sesji,
+a Anuluj pozostawia ostatnią zapamiętaną sesję. Wartości techniczne
+`MediaList` i `SessionList` nie trafiają do nazw ani tekstu kontrolek NVDA.
 Nie wystarczy dopisać kart Ogólne, Podcasty i Radio: trzeba przepisać całe
 Ustawienia dokładnie z głównego AMC, po uprzednim spisie wszystkich kart, pól,
 wartości domyślnych, zależności, walidacji i miejsc zapisu. `Ctrl+Tab` i

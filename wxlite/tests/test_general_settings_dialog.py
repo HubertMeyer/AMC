@@ -16,6 +16,8 @@ def test_settings_have_real_native_pages_and_explicit_accessible_names() -> None
     assert 'self.notebook.AddPage(radio, "Radio i nagrywanie")' in source
     assert 'self.notebook.AddPage(podcasts, "Podcasty i YouTube")' in source
     assert 'self.notebook.AddPage(messages, "Komunikaty")' in source
+    assert 'self.startup_target.SetName("Wyświetlaj po uruchomieniu")' in source
+    assert 'choices=["Ostatnia używana sesja", "Lista sesji"]' in source
     assert 'self.silence.SetName("Dodatkowa cisza po naturalnym końcu utworu")' in source
     assert 'self.tempo.SetName("Sposób przeliczania zmienionego tempa")' in source
     assert 'self.keep_audio_edit_backups.SetName("Zachowuj kopie po edycji")' in source
@@ -64,6 +66,7 @@ def test_all_exposed_choices_use_intentional_user_facing_labels() -> None:
     assert "STATE_POSITION_LABELS" in source
     assert 'self.timeshift.SetName("Długość bufora transmisji")' in source
     assert '"keep_audio_edit_backups": self.keep_audio_edit_backups.GetValue()' in source
+    assert '"startup_target": self._startup_target_values[' in source
     assert '"custom_seek_seconds": self._custom_seek_seconds' in source
     assert '"global_transient_previews": self.global_transient_previews.GetValue()' in source
     assert '"remember_local_playback_positions": (' in source
@@ -153,3 +156,14 @@ def test_message_settings_override_the_inherited_policy_and_toggle_persists() ->
     assert "if not self._save_state():" in source
     assert "self.messages.announces_playback" in source
     assert "self.announcer.show(message)" in source
+
+
+def test_session_list_startup_target_opens_only_after_the_host_is_ready() -> None:
+    source = SOURCE.read_text(encoding="utf-8")
+    startup = source[source.index("    def _start_engine(self)") :]
+    startup = startup[:startup.index("    def _on_engine_event")]
+    assert 'if self.options.startup_target == "SessionList":' in startup
+    assert "wx.CallAfter(self._show_session_list)" in startup
+    assert startup.index("self._load_initial_content()") < startup.index(
+        "wx.CallAfter(self._show_session_list)"
+    )

@@ -134,6 +134,9 @@ class Options:
     volume: int = 35
     rate: float = 1.0
     timeshift_minutes: int = 30
+    #: Ekran po uruchomieniu. Wartość modelu pozostaje prywatna; dialog
+    #: ustawień pokazuje wyłącznie pełne polskie etykiety.
+    startup_target: str = "MediaList"
     loudness_normalization: bool = False
     smooth_track_transitions: bool = False
     inter_track_silence_ms: int = 0
@@ -244,6 +247,8 @@ class Options:
             self.inter_track_silence_ms = 0
         if type(self.tempo_algorithm) is not int or self.tempo_algorithm not in (0, 1, 2):
             self.tempo_algorithm = 1
+        if self.startup_target not in ("MediaList", "SessionList"):
+            self.startup_target = "MediaList"
         self.session_order = normalized_session_order_values(self.session_order)
         # STRICT ``is not bool``, nie ``bool(...)``: napis z recznie
         # poprawionego pliku nie moze po cichu zmienic zachowania Escape.

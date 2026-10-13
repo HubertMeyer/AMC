@@ -3752,6 +3752,27 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
         general.SetScrollRate(0, 12)
         general_layout = wx.BoxSizer(wx.VERTICAL)
 
+        startup_target_label = wx.StaticText(
+            general, label="&Wyświetlaj po uruchomieniu:"
+        )
+        self._startup_target_values = ["MediaList", "SessionList"]
+        self.startup_target = wx.Choice(
+            general,
+            choices=["Ostatnia używana sesja", "Lista sesji"],
+        )
+        self.startup_target.SetName("Wyświetlaj po uruchomieniu")
+        try:
+            startup_target_index = self._startup_target_values.index(
+                options.startup_target
+            )
+        except ValueError:
+            startup_target_index = 0
+        self.startup_target.SetSelection(startup_target_index)
+        general_layout.Add(startup_target_label, 0, wx.BOTTOM, 4)
+        general_layout.Add(
+            self.startup_target, 0, wx.BOTTOM | wx.EXPAND, 12
+        )
+
         self.pause = wx.CheckBox(
             general, label="&Wstrzymuj odtwarzanie po wyjściu z odtwarzacza"
         )
@@ -4583,6 +4604,9 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
     @property
     def values(self) -> dict[str, object]:
         return {
+            "startup_target": self._startup_target_values[
+                max(0, self.startup_target.GetSelection())
+            ],
             "pause_on_player_exit": self.pause.GetValue(),
             "session_order": [session.value for session in self._session_order],
             "follow_playback_on_player_exit": self.follow.GetValue(),
@@ -6093,6 +6117,11 @@ class LiteFrame(wx.Frame):
             # Jeden obiekt dla obu sesji: to ten sam host i ten sam cache.
             self._collation = collation
             self._load_initial_content()
+            if self.options.startup_target == "SessionList":
+                # Lista jest zwykłym, natywnym dialogiem i powstaje dopiero
+                # po gotowości hosta. Dzięki temu Enter może od razu przejść
+                # do wybranej sesji, a Cancel zostawia ostatnią sesję.
+                wx.CallAfter(self._show_session_list)
 
         def failed(error: Exception) -> None:
             self.client = None
