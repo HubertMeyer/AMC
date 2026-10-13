@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Text;
 
 namespace AccessibleMediaController.PythonLauncher;
 
@@ -151,7 +152,7 @@ internal static class Program
         // uruchamiać drugi interpreter i drugi silnik audio.
         for (var attempt = 0; attempt < 50; attempt++)
         {
-            var handle = FindWindow(null, MainWindowTitle);
+            var handle = FindMainWindow();
             if (handle != IntPtr.Zero)
             {
                 ShowWindow(handle, 3); // SW_MAXIMIZE
@@ -163,6 +164,28 @@ internal static class Program
         }
     }
 
+    private static IntPtr FindMainWindow()
+    {
+        IntPtr found = IntPtr.Zero;
+        EnumWindows((handle, _) =>
+        {
+            var length = GetWindowTextLength(handle);
+            if (length <= 0)
+                return true;
+            var text = new StringBuilder(length + 1);
+            GetWindowText(handle, text, text.Capacity);
+            if (!IsMainWindowTitle(text.ToString()))
+                return true;
+            found = handle;
+            return false;
+        }, IntPtr.Zero);
+        return found;
+    }
+
+    internal static bool IsMainWindowTitle(string title) =>
+        string.Equals(title, MainWindowTitle, StringComparison.Ordinal)
+        || title.StartsWith(MainWindowTitle + " — wersja ", StringComparison.Ordinal);
+
     [DllImport("user32.dll", CharSet = CharSet.Unicode)]
     private static extern int MessageBox(
         IntPtr owner,
@@ -170,8 +193,19 @@ internal static class Program
         string caption,
         uint type);
 
+    private delegate bool EnumWindowsProc(IntPtr windowHandle, IntPtr parameter);
+
+    [DllImport("user32.dll")]
+    private static extern bool EnumWindows(EnumWindowsProc callback, IntPtr parameter);
+
     [DllImport("user32.dll", CharSet = CharSet.Unicode)]
-    private static extern IntPtr FindWindow(string? className, string windowName);
+    private static extern int GetWindowTextLength(IntPtr windowHandle);
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    private static extern int GetWindowText(
+        IntPtr windowHandle,
+        StringBuilder text,
+        int maximumCount);
 
     [DllImport("user32.dll")]
     private static extern bool ShowWindow(IntPtr windowHandle, int command);

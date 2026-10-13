@@ -241,6 +241,17 @@ internal static class Program
                 var prepared = ResolveInside(staged, relative, mustExist: true);
                 var destination = ResolveInside(target, relative, mustExist: false);
                 Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
+                // Nie ruszaj pliku, ktory juz ma dokladnie oczekiwana tresc.
+                // W szczegolnosci niezmieniony AMC.exe moze byc chroniony
+                // przez Windows albo skaner, mimo ze aplikacja juz nie
+                // dziala. Dotychczas aktualizator bez potrzeby usuwal taki
+                // plik i wycofywal cala poprawna aktualizacje interfejsu.
+                if (File.Exists(destination)
+                    && FilesHaveSameContent(prepared, destination))
+                {
+                    File.Delete(prepared);
+                    continue;
+                }
                 string? saved = null;
                 if (File.Exists(destination))
                 {
@@ -295,6 +306,26 @@ internal static class Program
             }
             throw;
         }
+    }
+
+    private static bool FilesHaveSameContent(string first, string second)
+    {
+        if (new FileInfo(first).Length != new FileInfo(second).Length)
+            return false;
+
+        using var firstStream = new FileStream(
+            first,
+            FileMode.Open,
+            FileAccess.Read,
+            FileShare.ReadWrite | FileShare.Delete);
+        using var secondStream = new FileStream(
+            second,
+            FileMode.Open,
+            FileAccess.Read,
+            FileShare.ReadWrite | FileShare.Delete);
+        var firstHash = SHA256.HashData(firstStream);
+        var secondHash = SHA256.HashData(secondStream);
+        return CryptographicOperations.FixedTimeEquals(firstHash, secondHash);
     }
 
     private static void ReplacePreparedFile(

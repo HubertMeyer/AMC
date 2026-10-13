@@ -227,6 +227,16 @@ def test_radio_recording_bookmark_menu_is_precisely_gated() -> None:
     assert all(not item.accelerator for item in items)
 
 
+def test_recording_pause_is_a_checkable_state_not_an_ambiguous_command() -> None:
+    item = next(
+        item for item in all_items() if item.action is Action.RECORD_PAUSE
+    )
+    assert item.checkable
+    assert item.needs_radio_session
+    assert item.needs_radio_recording
+    assert item.shortcut == "Shift+Space"
+
+
 def test_podcast_inbox_sort_menu_is_contextual_checkable_and_user_facing() -> None:
     expected = {
         Action.SORT_PODCAST_INBOX_ADDED: ("Alt+1", "dodania"),
@@ -510,8 +520,40 @@ def test_podcast_aggregate_views_are_discoverable_and_contextual() -> None:
     by_action = {item.action: item for item in view.items if item.action is not None}
     assert Action.VIEW_PODCAST_INBOX in by_action
     assert Action.VIEW_PODCAST_DOWNLOADS in by_action
-    assert not by_action[Action.VIEW_PODCAST_INBOX].needs_podcast_session
+    assert by_action[Action.VIEW_PODCAST_INBOX].visible_sessions == (
+        menu_model.SessionId.PODCASTS,
+    )
     assert by_action[Action.VIEW_PODCAST_DOWNLOADS].needs_podcast_session
+
+
+def test_playback_and_view_menus_do_not_mix_foreign_sessions() -> None:
+    def actions(session, title):
+        menu = next(
+            menu for menu in menu_model.menus_for_session(session)
+            if menu.title == title
+        )
+        return {item.action for item in menu.items if item.action is not None}
+
+    podcast_view = actions(menu_model.SessionId.PODCASTS, "&Widok")
+    assert Action.VIEW_PODCAST_INBOX in podcast_view
+    assert Action.SORT_TIDAL_COLLECTION_ADDED not in podcast_view
+
+    tidal_view = actions(menu_model.SessionId.TIDAL, "&Widok")
+    assert Action.SORT_TIDAL_COLLECTION_ADDED in tidal_view
+    assert Action.VIEW_PODCAST_INBOX not in tidal_view
+    assert Action.SHOW_PLAYER not in tidal_view
+
+    radio_playback = actions(menu_model.SessionId.RADIO, "&Odtwarzanie")
+    assert Action.SEEK_BACK_10 in radio_playback
+    assert Action.CLIP_MARK_START not in radio_playback
+    assert Action.RATE_UP not in radio_playback
+
+    files_playback = actions(menu_model.SessionId.FILES, "&Odtwarzanie")
+    assert Action.CLIP_MARK_START in files_playback
+    assert Action.RATE_UP in files_playback
+
+    remote_playback = actions(menu_model.SessionId.SONOS, "&Odtwarzanie")
+    assert remote_playback == {Action.PLAY_PAUSE}
 
 
 def test_audio_menu_keeps_its_tempo_submenu_marker() -> None:

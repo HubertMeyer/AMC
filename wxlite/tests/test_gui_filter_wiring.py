@@ -354,7 +354,7 @@ def test_skroty_edycji_zostaja_WIDOCZNE_choc_nie_sa_akceleratorami():
 
     import amc_wx_lite.gui as gui
 
-    source = inspect.getsource(gui.LiteFrame._build_menu)
+    source = inspect.getsource(gui.LiteFrame._menu_native_label)
     assert "entry.accelerator" in source, (
         "budowa menu nie rozroznia podpisu skrotu od akceleratora"
     )

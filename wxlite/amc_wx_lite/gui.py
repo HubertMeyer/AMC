@@ -226,6 +226,7 @@ from .tidal_source import (
     queue_payload as tidal_queue_payload,
     queue_rows as tidal_queue_rows,
 )
+from .version_info import is_main_window_title, window_title
 
 APP_NAME = "AMC Python"
 TEMPO_LABELS = {1: "Mowa – Speedy", 2: "Muzyka – Signalsmith", 0: "Dotychczasowy – SoundTouch"}
@@ -279,8 +280,26 @@ def _windows_main_window() -> int:
         return 0
     try:
         import ctypes
+        from ctypes import wintypes
 
-        return int(ctypes.windll.user32.FindWindowW(None, APP_NAME))  # type: ignore[attr-defined]
+        user32 = ctypes.windll.user32  # type: ignore[attr-defined]
+        matches: list[int] = []
+        callback_type = ctypes.WINFUNCTYPE(ctypes.c_bool, wintypes.HWND, wintypes.LPARAM)
+
+        @callback_type
+        def visit(handle, _parameter):
+            length = int(user32.GetWindowTextLengthW(handle))
+            if length <= 0:
+                return True
+            buffer = ctypes.create_unicode_buffer(length + 1)
+            user32.GetWindowTextW(handle, buffer, len(buffer))
+            if is_main_window_title(buffer.value):
+                matches.append(int(handle))
+                return False
+            return True
+
+        user32.EnumWindows(visit, 0)
+        return matches[0] if matches else 0
     except Exception:
         return 0
 
@@ -4147,7 +4166,7 @@ class LiteFrame(wx.Frame):
     """Okno glowne: panel listy i panel odtwarzacza, przelaczane jak w AMC."""
 
     def __init__(self, store: StateStore, state: LiteState) -> None:
-        super().__init__(None, title=APP_NAME, size=(900, 600))
+        super().__init__(None, title=window_title(), size=(900, 600))
 
         self.store = store
         self.state = state
@@ -4532,11 +4551,21 @@ class LiteFrame(wx.Frame):
         obsluguje ``_on_key``, dlatego nie rejestrujemy tu akceleratorow
         (odebralyby strzalki i literowa nawigacje natywnej liscie).
         """
+        # Przy zmianie sesji budujemy nowy, krotki zestaw pozycji. Usuwamy
+        # stare powiazania identyfikatorow, zeby wielokrotne Ctrl+1..Ctrl+6
+        # nie dokladalo kolejnych wywolan tego samego polecenia.
+        for identifier in getattr(self, "_menu_handler_ids", ()):
+            self.Unbind(wx.EVT_MENU, id=identifier)
+        old_bar = self.GetMenuBar() if hasattr(self, "GetMenuBar") else None
+        if old_bar is not None:
+            self.SetMenuBar(None)
+
         bar = wx.MenuBar()
         #: Pozycje zalezne od kontekstu; stan ustawia ``_refresh_menu_state``.
         self._menu_items: list[tuple[wx.MenuItem, menu_model.MenuItem]] = []
+        self._menu_handler_ids: list[int] = []
 
-        for described in menu_model.build_menus():
+        for described in menu_model.menus_for_session(self.navigator.active):
             native = wx.Menu()
             for entry in described.items:
                 if entry.is_separator:
@@ -4545,18 +4574,7 @@ class LiteFrame(wx.Frame):
                 if entry.builtin == "tempo-submenu":
                     native.AppendSubMenu(self._build_tempo_menu(), entry.label)
                     continue
-                label = entry.label
-                if entry.shortcut:
-                    text = self._menu_shortcut_text(entry.shortcut)
-                    if entry.accelerator:
-                        label = f"{label}\t{text}"
-                    else:
-                        # BEZ tabulatora: wx zrobilby z tego akcelerator na
-                        # poziomie okna, ktory polyka klawisz w polu filtra
-                        # (zmierzone: Backspace nie kasowal znaku, tylko
-                        # wychodzil o poziom wyzej). Skrot ZOSTAJE widoczny i
-                        # czytany przez czytnik -- jako czesc nazwy pozycji.
-                        label = f"{label} ({text})"
+                label = self._menu_native_label(entry)
                 identifier = wx.ID_EXIT if entry.builtin == "quit" else wx.ID_ANY
                 if entry.checkable:
                     # ``AppendCheckItem``, nie ``Append``: tylko pozycja
@@ -4577,9 +4595,16 @@ class LiteFrame(wx.Frame):
                         lambda _e, chosen=action: self._dispatch(chosen),
                         id=item.GetId(),
                     )
+                self._menu_handler_ids.append(item.GetId())
             bar.Append(native, described.title)
 
         self.SetMenuBar(bar)
+        if old_bar is not None:
+            # Zmiana sesji moze przyjsc z pozycji wlasnie otwartego menu.
+            # Niszczenie jego obiektu wewnatrz biezacego zdarzenia jest
+            # ryzykowne; po powrocie do petli wx nie jest juz uzywany.
+            wx.CallAfter(old_bar.Destroy)
+        self._menu_session = self.navigator.active
         self._refresh_menu_state()
 
     def _build_tempo_menu(self) -> wx.Menu:
@@ -4595,7 +4620,26 @@ class LiteFrame(wx.Frame):
                 lambda _event, choice=value: self._set_tempo_algorithm(choice),
                 id=item.GetId(),
             )
+            if hasattr(self, "_menu_handler_ids"):
+                self._menu_handler_ids.append(item.GetId())
         return algorithms
+
+    def _menu_native_label(
+        self,
+        entry: menu_model.MenuItem,
+        label_override: str | None = None,
+    ) -> str:
+        """Etykieta menu z czytelnym podpisem skrotu, bez obcego akceleratora."""
+
+        label = label_override or entry.label
+        if not entry.shortcut:
+            return label
+        text = self._menu_shortcut_text(entry.shortcut)
+        if entry.accelerator:
+            return f"{label}\t{text}"
+        # Bez tabulatora: wx nie rejestruje akceleratora okna, ale NVDA nadal
+        # czyta skrot jako czesc celowej, uzytkowej nazwy pozycji.
+        return f"{label} ({text})"
 
     @staticmethod
     def _menu_shortcut_text(chord: str) -> str:
@@ -4623,7 +4667,14 @@ class LiteFrame(wx.Frame):
         podcasts = self.navigator.active is SessionId.PODCASTS
         # "Cos gra" rozpoznajemy po TYM SAMYM statusie z hosta, z ktorego
         # korzysta ``_announce_time`` -- nie po wlasnym liczniku.
-        playing = bool(self._last_status)
+        if self.navigator.active is SessionId.TIDAL:
+            playing = bool(getattr(self, "_tidal_desktop_has_playback", False))
+        elif self.navigator.active is SessionId.WIIM:
+            playing = bool(getattr(self, "_wiim_active_device_id", ""))
+        elif self.navigator.active is SessionId.SONOS:
+            playing = bool(getattr(self, "_sonos_active_group_id", ""))
+        else:
+            playing = bool(self._last_status)
         session = self.navigator.sessions[self.navigator.active]
         podcast_inbox = (
             podcasts
@@ -4665,6 +4716,27 @@ class LiteFrame(wx.Frame):
                 )
                 for recording in active_recordings
                 if isinstance(recording, dict)
+            )
+        )
+        selected_recording = next((
+            recording
+            for recording in active_recordings
+            if isinstance(recording, dict)
+            and selected_row is not None
+            and (
+                str(recording.get("stationId") or "") == selected_row.item_id
+                or (
+                    bool(selected_row.url)
+                    and str(recording.get("url") or "").casefold()
+                    == selected_row.url.casefold()
+                )
+            )
+        ), None)
+        recording_paused = bool(
+            isinstance(selected_recording, dict)
+            and (
+                selected_recording.get("paused") is True
+                or str(selected_recording.get("state") or "").casefold() == "paused"
             )
         )
         favorite_kinds = {
@@ -4749,6 +4821,17 @@ class LiteFrame(wx.Frame):
                 item.Check(self.options.radio_recognition_monitoring)
             elif entry.checkable and entry.action is Action.TOGGLE_RADIO_RECOGNITION_ANNOUNCEMENTS:
                 item.Check(self.options.radio_recognition_announcements)
+            elif entry.checkable and entry.action is Action.RECORD_PAUSE:
+                item.Check(recording_paused)
+                if recording_paused:
+                    label = "&Wznów nagrywanie"
+                elif radio_recording:
+                    label = "&Wstrzymaj nagrywanie"
+                else:
+                    label = "&Wstrzymaj albo wznów nagrywanie"
+                native_label = self._menu_native_label(entry, label)
+                if item.GetItemLabel() != native_label:
+                    item.SetItemLabel(native_label)
             elif entry.checkable and entry.action is Action.KEYBOARD_HELP:
                 item.Check(self._keyboard_help_active)
 
@@ -6140,6 +6223,13 @@ class LiteFrame(wx.Frame):
         """Show the same native, keyboard-driven relation menu as full AMC."""
         if not intent.choices:
             return
+        # Gdy istnieje tylko jeden jednoznaczny cel (np. album -> wykonawca
+        # albo wykonawca -> albumy), prawa strzalka wykonuje go od razu.
+        # Jednoelementowe menu powodowalo, ze NVDA czytal przede wszystkim
+        # „menu kontekstowe”, choc uzytkownik nie mial faktycznego wyboru.
+        if len(intent.choices) == 1:
+            self._run(self.navigator.activate_tidal_relation(intent.choices[0]))
+            return
         menu = wx.Menu(intent.title)
         identifiers: list[int] = []
         for choice in intent.choices:
@@ -6836,7 +6926,14 @@ class LiteFrame(wx.Frame):
         """Odwzoruj stan nawigatora. Fokus ruszamy TYLKO przy zmianie widoku."""
         session = self.navigator.session
         # Menu musi zgadzac sie z kontekstem, ktory wlasnie sie zmienil.
-        self._refresh_menu_state()
+        if (
+            hasattr(self, "_menu_items")
+            and getattr(self, "_menu_session", self.navigator.active)
+            is not self.navigator.active
+        ):
+            self._build_menu()
+        else:
+            self._refresh_menu_state()
         self.session_label.SetLabel({
             SessionId.FILES: "Pliki lokalne",
             SessionId.RADIO: "Radio internetowe",

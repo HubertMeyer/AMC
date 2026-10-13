@@ -22,6 +22,7 @@ import argparse
 import hashlib
 import json
 import shutil
+import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -66,6 +67,26 @@ def sha256(path: Path) -> str:
         for chunk in iter(lambda: stream.read(1 << 20), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def build_label(now: datetime | None = None) -> str:
+    """Czytelna data i rewizja zrodel dla tytulu uruchomionej paczki."""
+
+    moment = now or datetime.now(timezone.utc)
+    date = moment.strftime("%Y.%m.%d")
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "--short=8", "HEAD"],
+            cwd=REPO,
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        revision = result.stdout.strip().lower()
+    except (OSError, subprocess.SubprocessError):
+        revision = ""
+    return f"{date}-{revision}" if revision else date
 
 
 def copy_python_code(target: Path) -> list[str]:
@@ -284,6 +305,7 @@ def main() -> int:
         "interfaceVersion": 1,
         "hostProtocolVersion": 1,
         "application": "AMC Python",
+        "buildLabel": build_label(),
         "entryPoint": "AMC.exe",
         "pythonModule": "amc_wx_lite",
         "created": datetime.now(timezone.utc).isoformat(timespec="seconds"),

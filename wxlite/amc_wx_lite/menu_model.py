@@ -27,6 +27,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from .navigation import SessionId
 from .shortcuts import Action
 
 
@@ -90,6 +91,10 @@ class MenuItem:
     #: Wymaga zaznaczonego odcinka; wykonanie sprawdza jeszcze członkostwo
     #: podcastu w Bibliotece na świeżym, tylko do odczytu odczycie SQLite.
     needs_podcast_episode: bool = False
+    #: Pusta krotka oznacza pozycje wspolna. Wpisane sesje oznaczaja, ze
+    #: pozycji w ogole nie ma w innych sesjach -- nie zostaje tam jako
+    #: mylace, wyszarzone polecenie obcej uslugi.
+    visible_sessions: tuple[SessionId, ...] = ()
     is_separator: bool = False
 
 
@@ -100,6 +105,41 @@ class Menu:
 
 
 SEPARATOR = MenuItem(is_separator=True)
+FILES_ONLY = (SessionId.FILES,)
+LOCAL_MEDIA = (SessionId.FILES, SessionId.PODCASTS)
+LOCAL_TIMELINE = (SessionId.FILES, SessionId.RADIO, SessionId.PODCASTS)
+PLAYER_SESSIONS = (
+    SessionId.FILES,
+    SessionId.RADIO,
+    SessionId.PODCASTS,
+    SessionId.WIIM,
+    SessionId.SONOS,
+)
+
+
+def menus_for_session(session_id: SessionId) -> tuple[Menu, ...]:
+    """Menu bez polecen nalezacych do innej sesji.
+
+    Separatory sa porzadkowane po filtrowaniu, zeby NVDA nie czytal pustych
+    grup na poczatku, koncu ani dwoch separatorow obok siebie.
+    """
+
+    menus: list[Menu] = []
+    for described in build_menus():
+        items: list[MenuItem] = []
+        for entry in described.items:
+            if entry.visible_sessions and session_id not in entry.visible_sessions:
+                continue
+            if entry.is_separator:
+                if items and not items[-1].is_separator:
+                    items.append(entry)
+                continue
+            items.append(entry)
+        while items and items[-1].is_separator:
+            items.pop()
+        if items:
+            menus.append(Menu(described.title, tuple(items)))
+    return tuple(menus)
 
 
 def build_menus() -> tuple[Menu, ...]:
@@ -372,7 +412,8 @@ def build_menus() -> tuple[Menu, ...]:
             # resolver tylko wtedy, gdy fokus nie jest w polu tekstowym.
             MenuItem("&Wstrzymaj albo wznów nagrywanie",
                      Action.RECORD_PAUSE, shortcut="Shift+Space",
-                     accelerator=False, needs_radio_session=True),
+                     accelerator=False, needs_radio_session=True,
+                     needs_radio_recording=True, checkable=True),
             MenuItem("Dodaj szybką zakładkę nag&rania",
                      Action.ADD_BOOKMARK, shortcut="B",
                      accelerator=False, needs_radio_session=True,
@@ -450,7 +491,7 @@ def build_menus() -> tuple[Menu, ...]:
                      accelerator=False, needs_playback=True),
             MenuItem("Dodaj &zakładkę", Action.ADD_BOOKMARK, shortcut="B",
                      accelerator=False, needs_playback=True,
-                     needs_files_session=True),
+                     needs_files_session=True, visible_sessions=FILES_ONLY),
             MenuItem(
                 "Dodaj nazwaną zakładk&ę…",
                 Action.ADD_NAMED_BOOKMARK,
@@ -458,6 +499,7 @@ def build_menus() -> tuple[Menu, ...]:
                 accelerator=False,
                 needs_playback=True,
                 needs_files_session=True,
+                visible_sessions=FILES_ONLY,
             ),
             MenuItem(
                 "&2. Poprzednia zakładka, Shift+Page Up",
@@ -465,6 +507,7 @@ def build_menus() -> tuple[Menu, ...]:
                 accelerator=False,
                 needs_playback=True,
                 needs_files_session=True,
+                visible_sessions=FILES_ONLY,
             ),
             MenuItem(
                 "&4. Następna zakładka, Shift+Page Down",
@@ -472,6 +515,7 @@ def build_menus() -> tuple[Menu, ...]:
                 accelerator=False,
                 needs_playback=True,
                 needs_files_session=True,
+                visible_sessions=FILES_ONLY,
             ),
             SEPARATOR,
             # Zaznaczanie i edycja fragmentu. Kazda pozycja prowadzi do tej
@@ -479,30 +523,38 @@ def build_menus() -> tuple[Menu, ...]:
             # celowy, bo Ctrl+X na liscie oznacza wyciecie calego pliku do
             # przeniesienia, a I/O naleza tam do wyszukiwania przyrostowego.
             MenuItem("Ustaw początek &fragmentu", Action.CLIP_MARK_START,
-                     shortcut="I", accelerator=False, needs_playback=True),
+                     shortcut="I", accelerator=False, needs_playback=True,
+                     visible_sessions=FILES_ONLY),
             MenuItem("Ustaw koniec fra&gmentu", Action.CLIP_MARK_END,
-                     shortcut="O", accelerator=False, needs_playback=True),
+                     shortcut="O", accelerator=False, needs_playback=True,
+                     visible_sessions=FILES_ONLY),
             MenuItem("Prz&ejdź do początku fragmentu", Action.CLIP_JUMP_START,
-                     shortcut="Shift+I", accelerator=False, needs_playback=True),
+                     shortcut="Shift+I", accelerator=False, needs_playback=True,
+                     visible_sessions=FILES_ONLY),
             MenuItem("Przejdź do końca fragmen&tu", Action.CLIP_JUMP_END,
-                     shortcut="Shift+O", accelerator=False, needs_playback=True),
+                     shortcut="Shift+O", accelerator=False, needs_playback=True,
+                     visible_sessions=FILES_ONLY),
             # ``Prior`` / ``Next`` sa wewnetrznymi nazwami klawiszy w tablicy.
             # Do etykiety dla uzytkownika trafiaja prawdziwe nazwy Page Up /
             # Page Down, bez ujawniania identyfikatora modelu.
             MenuItem("Wróć do poprzedniej granicy odsłuc&hu, Alt+Page Up",
                      Action.CLIP_PREVIOUS_BOUNDARY,
-                     accelerator=False, needs_playback=True),
+                     accelerator=False, needs_playback=True,
+                     visible_sessions=FILES_ONLY),
             MenuItem("Prze&jdź do następnej granicy fragmentu, Alt+Page Down",
                      Action.CLIP_NEXT_BOUNDARY,
-                     accelerator=False, needs_playback=True),
+                     accelerator=False, needs_playback=True,
+                     visible_sessions=FILES_ONLY),
             MenuItem("Zapisz zaznaczony fragment jako nowy p&lik…", Action.CLIP_EXPORT,
-                     shortcut="Ctrl+S", accelerator=False, needs_playback=True),
+                     shortcut="Ctrl+S", accelerator=False, needs_playback=True,
+                     visible_sessions=FILES_ONLY),
             MenuItem(
                 "&Dopisz zaznaczony fragment na końcu istniejącego pliku…",
                 Action.CLIP_APPEND,
                 shortcut="Ctrl+D",
                 accelerator=False,
                 needs_playback=True,
+                visible_sessions=FILES_ONLY,
             ),
             # Ctrl+X wystepuje juz w menu Pliki dla calego pliku. Tu gest jest
             # wpisany w celowa etykiete wraz z kontekstem, ale nie jako drugi
@@ -513,9 +565,11 @@ def build_menus() -> tuple[Menu, ...]:
                 Action.CLIP_REMOVE,
                 accelerator=False,
                 needs_playback=True,
+                visible_sessions=FILES_ONLY,
             ),
             MenuItem("Wyczyść zaznaczenie fragmentu, Shift+&X", Action.CLIP_CLEAR,
-                     accelerator=False, needs_playback=True),
+                     accelerator=False, needs_playback=True,
+                     visible_sessions=FILES_ONLY),
             SEPARATOR,
             # Przewijanie. CZTERY kroki oryginalu (MainWindow.xaml.cs:21583-21590):
             # 10 s goly, 30 s z Shift, 60 s z Ctrl, czas z ustawien z Ctrl+Alt.
@@ -537,23 +591,29 @@ def build_menus() -> tuple[Menu, ...]:
             # KOL-POLE2 i KOL-POLE3) i one karetke/zaznaczenie przepuszczaja,
             # wiec nie ma powodu odbierac im podpisu-akceleratora.
             MenuItem("Przewiń &wstecz 10 sekund", Action.SEEK_BACK_10,
-                     shortcut="Left", accelerator=False, needs_playback=True),
+                     shortcut="Left", accelerator=False, needs_playback=True,
+                     visible_sessions=LOCAL_TIMELINE),
             MenuItem("Przewiń w przód &10 sekund", Action.SEEK_FORWARD_10,
-                     shortcut="Right", accelerator=False, needs_playback=True),
+                     shortcut="Right", accelerator=False, needs_playback=True,
+                     visible_sessions=LOCAL_TIMELINE),
             MenuItem("Przewiń wstecz &30 sekund", Action.SEEK_BACK_30,
-                     shortcut="Shift+Left", needs_playback=True),
+                     shortcut="Shift+Left", needs_playback=True,
+                     visible_sessions=LOCAL_TIMELINE),
             MenuItem("Przewiń w przód 3&0 sekund", Action.SEEK_FORWARD_30,
-                     shortcut="Shift+Right", needs_playback=True),
+                     shortcut="Shift+Right", needs_playback=True,
+                     visible_sessions=LOCAL_TIMELINE),
             MenuItem("Przewiń wstecz &minutę", Action.SEEK_BACK_60,
-                     shortcut="Ctrl+Left", needs_playback=True),
+                     shortcut="Ctrl+Left", needs_playback=True,
+                     visible_sessions=LOCAL_TIMELINE),
             MenuItem("Przewiń w przód m&inutę", Action.SEEK_FORWARD_60,
-                     shortcut="Ctrl+Right", needs_playback=True),
+                     shortcut="Ctrl+Right", needs_playback=True,
+                     visible_sessions=LOCAL_TIMELINE),
             MenuItem("Przewiń wstecz o czas z &ustawień AMC",
                      Action.SEEK_BACK_CUSTOM, shortcut="Ctrl+Alt+Left",
-                     needs_playback=True),
+                     needs_playback=True, visible_sessions=LOCAL_TIMELINE),
             MenuItem("Przewiń w przód o czas z ustawień &AMC",
                      Action.SEEK_FORWARD_CUSTOM, shortcut="Ctrl+Alt+Right",
-                     needs_playback=True),
+                     needs_playback=True, visible_sessions=LOCAL_TIMELINE),
             SEPARATOR,
             # Predkosc odtwarzania. Naglowki i akceleratory doslownie z
             # MainWindow.xaml:382-393 ("_Wolniej" Shift+, / "_Szybciej" Shift+.
@@ -570,27 +630,30 @@ def build_menus() -> tuple[Menu, ...]:
             # dziala dalej przez tablice w ``shortcuts`` i przez menu.
             # Ctrl+. zmierzone osobno jako nieszkodliwe i zostaje z podpisem.
             MenuItem("Wol&niej", Action.RATE_DOWN, shortcut="Shift+,",
-                     accelerator=False, needs_playback=True),
+                     accelerator=False, needs_playback=True,
+                     visible_sessions=LOCAL_MEDIA),
             MenuItem("&Szybciej", Action.RATE_UP, shortcut="Shift+.",
-                     accelerator=False, needs_playback=True),
+                     accelerator=False, needs_playback=True,
+                     visible_sessions=LOCAL_MEDIA),
             MenuItem("Prędkość no&rmalna", Action.RATE_RESET, shortcut="Ctrl+.",
-                     needs_playback=True),
+                     needs_playback=True, visible_sessions=LOCAL_MEDIA),
             SEPARATOR,
             # Skroty poprawione na te z oryginalu: Ctrl+SHIFT+E/R/T
             # (MainWindow.xaml.cs:21674-21676). Menu obiecywalo stare Ctrl+E/R/T,
             # czyli etykiete, ktora po poprawce tablicy byla by nieprawda.
             MenuItem("Czas minion&y", Action.TIME_ELAPSED, shortcut="Ctrl+Shift+E",
-                     needs_playback=True),
+                     needs_playback=True, visible_sessions=LOCAL_TIMELINE),
             MenuItem("Czas p&ozostały", Action.TIME_REMAINING, shortcut="Ctrl+Shift+R",
-                     needs_playback=True),
+                     needs_playback=True, visible_sessions=LOCAL_TIMELINE),
             MenuItem("Czas &całkowity", Action.TIME_TOTAL, shortcut="Ctrl+Shift+T",
-                     needs_playback=True),
+                     needs_playback=True, visible_sessions=LOCAL_TIMELINE),
             SEPARATOR,
             # Przelacznik automatycznych komunikatow (cs:21670). We wspolnym
             # profilu wlascicielem state.json jest host C#, wiec akcja mowi,
             # gdzie te opcje zmienic -- zamiast udawac zapis.
             MenuItem("Automatyczne &komunikaty odtwarzacza",
-                     Action.TOGGLE_SEEK_MESSAGES, shortcut="Ctrl+Shift+G"),
+                     Action.TOGGLE_SEEK_MESSAGES, shortcut="Ctrl+Shift+G",
+                     visible_sessions=LOCAL_TIMELINE),
         ),
     )
 
@@ -606,9 +669,11 @@ def build_menus() -> tuple[Menu, ...]:
             MenuItem("Sesja: &Sonos", Action.SESSION_SONOS, shortcut="Ctrl+6"),
             SEPARATOR,
             MenuItem("&Nowe odcinki i materiały", Action.VIEW_PODCAST_INBOX,
-                     shortcut="Ctrl+I"),
+                     shortcut="Ctrl+I",
+                     visible_sessions=(SessionId.PODCASTS,)),
             MenuItem("Po&brane", Action.VIEW_PODCAST_DOWNLOADS,
-                     needs_podcast_session=True),
+                     needs_podcast_session=True,
+                     visible_sessions=(SessionId.PODCASTS,)),
             SEPARATOR,
             # Skroty sa kontekstowe. Nie robimy z nich akceleratorow okna:
             # wyszarzone poza skrzynka podcastow Alt+1/Alt+2 polknelyby wtedy
@@ -616,28 +681,34 @@ def build_menus() -> tuple[Menu, ...]:
             MenuItem("Według &dodania — najnowsze najpierw",
                      Action.SORT_PODCAST_INBOX_ADDED, shortcut="Alt+1",
                      accelerator=False, checkable=True,
-                     needs_podcast_inbox=True),
+                     needs_podcast_inbox=True,
+                     visible_sessions=(SessionId.PODCASTS,)),
             MenuItem("&Alfabetycznie",
                      Action.SORT_PODCAST_INBOX_ALPHABETICAL, shortcut="Alt+2",
                      accelerator=False, checkable=True,
-                     needs_podcast_inbox=True),
+                     needs_podcast_inbox=True,
+                     visible_sessions=(SessionId.PODCASTS,)),
             MenuItem("Według podcast&u",
                      Action.SORT_PODCAST_INBOX_BY_PODCAST, shortcut="Alt+3",
                      accelerator=False, checkable=True,
-                     needs_podcast_inbox=True),
+                     needs_podcast_inbox=True,
+                     visible_sessions=(SessionId.PODCASTS,)),
             SEPARATOR,
             MenuItem("TIDAL: według dodania — na&jnowsze najpierw",
                      Action.SORT_TIDAL_COLLECTION_ADDED, shortcut="Alt+1",
                      accelerator=False, checkable=True,
-                     needs_tidal_collection=True),
+                     needs_tidal_collection=True,
+                     visible_sessions=(SessionId.TIDAL,)),
             MenuItem("TIDAL: alfabetyczni&e",
                      Action.SORT_TIDAL_COLLECTION_ALPHABETICAL, shortcut="Alt+2",
                      accelerator=False, checkable=True,
-                     needs_tidal_collection=True),
+                     needs_tidal_collection=True,
+                     visible_sessions=(SessionId.TIDAL,)),
             MenuItem("TIDAL: &kolejność własna",
                      Action.SORT_TIDAL_COLLECTION_CUSTOM, shortcut="Alt+3",
                      accelerator=False, checkable=True,
-                     needs_tidal_collection=True),
+                     needs_tidal_collection=True,
+                     visible_sessions=(SessionId.TIDAL,)),
             SEPARATOR,
             # ``accelerator=False``: ZMIERZONE na zywym GUI (statusclip-1).
             # Z akceleratorem pozycja byla WYLACZONA na liscie (nic nie gralo),
@@ -649,7 +720,8 @@ def build_menus() -> tuple[Menu, ...]:
             # ``needs_playback`` ZOSTAJE: pozycja ma byc wyszarzona, gdy nie ma
             # czego pokazywac. Zdejmujemy tylko akcelerator.
             MenuItem("Widok &odtwarzacza", Action.SHOW_PLAYER, shortcut="F6",
-                     accelerator=False, needs_playback=True),
+                     accelerator=False, needs_playback=True,
+                     visible_sessions=PLAYER_SESSIONS),
             # Powrot na liste istnial tylko z klawiatury (Escape/Shift+F6).
             # Akcja SHOW_LIST byla juz obslugiwana w _dispatch -- brakowalo
             # samego wejscia w menu, wiec nie jest to martwa pozycja.
@@ -661,7 +733,7 @@ def build_menus() -> tuple[Menu, ...]:
             # odtwarzacz wraca na liste) -- jeden akcelerator okna splaszczylby
             # je do jednego i polknal klawisz w polu filtra.
             MenuItem("Powrót na &listę", Action.SHOW_LIST, shortcut="Escape",
-                     accelerator=False),
+                     accelerator=False, visible_sessions=PLAYER_SESSIONS),
         ),
     )
 

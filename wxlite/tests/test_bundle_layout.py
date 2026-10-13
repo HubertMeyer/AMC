@@ -2,6 +2,7 @@
 import importlib.util
 from pathlib import Path
 import tempfile
+from datetime import datetime, timezone
 
 path = Path(__file__).resolve().parents[1] / "tools" / "build_bundle.py"
 spec = importlib.util.spec_from_file_location("lite_bundle_under_test", path)
@@ -16,6 +17,19 @@ def test_python_package_matches_isolated_runtime_app_path():
         bundle.copy_python_code(target)
         assert (target / "app" / "amc_wx_lite" / "__main__.py").is_file()
         assert not (target / "AMC-wx-Lite.cmd").exists()
+
+
+def test_build_label_is_user_facing_date_and_source_revision():
+    class Result:
+        stdout = "7C246DBA\n"
+
+    original = bundle.subprocess.run
+    try:
+        bundle.subprocess.run = lambda *args, **kwargs: Result()
+        label = bundle.build_label(datetime(2026, 10, 13, tzinfo=timezone.utc))
+    finally:
+        bundle.subprocess.run = original
+    assert label == "2026.10.13-7c246dba"
 
 
 def test_production_launcher_is_copied_as_canonical_entry_point():
