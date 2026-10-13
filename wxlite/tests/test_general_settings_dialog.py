@@ -26,6 +26,7 @@ def test_settings_have_real_native_pages_and_explicit_accessible_names() -> None
     assert '"Pamiętaj pozycję odtwarzania lokalnych plików"' in source
     assert 'self.detailed_hints.SetName(' in source
     assert '"Pokazuj szczegółowe podpowiedzi klawiatury przy polach i listach"' in source
+    assert 'self.message_enabled.SetName("Włącz komunikaty dostępności")' in source
     assert 'self.message_seek_messages.SetName(' in source
     assert '"Włącz automatyczne komunikaty odtwarzacza"' in source
     assert 'self.message_arrow_seek_messages.SetName(' in source
@@ -67,6 +68,7 @@ def test_all_exposed_choices_use_intentional_user_facing_labels() -> None:
     assert '"global_transient_previews": self.global_transient_previews.GetValue()' in source
     assert '"remember_local_playback_positions": (' in source
     assert '"detailed_hints": self.detailed_hints.GetValue()' in source
+    assert '"message_enabled": self.message_enabled.GetValue()' in source
     assert '"message_seek_messages": self.message_seek_messages.GetValue()' in source
     assert '"message_arrow_seek_messages": (' in source
     assert '"message_percentage_seek_messages": (' in source
@@ -146,6 +148,7 @@ def test_detailed_hints_setting_updates_filter_and_search_accessible_help() -> N
 def test_message_settings_override_the_inherited_policy_and_toggle_persists() -> None:
     source = SOURCE.read_text(encoding="utf-8")
     assert source.count("apply_message_overrides(") == 2
+    assert source.count("enabled=self.options.message_enabled") == 2
     assert "self.options.message_seek_messages = self.messages.seek_messages" in source
     assert "if not self._save_state():" in source
     assert "self.messages.announces_playback" in source

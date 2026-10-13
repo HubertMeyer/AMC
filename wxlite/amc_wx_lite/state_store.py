@@ -193,6 +193,7 @@ class Options:
     #: dziedziczenie dotychczasowego wyboru z profilu glownego AMC. Po zapisie
     #: karty Komunikaty wlascicielem tych wartosci staje sie AMC Python, bez
     #: modyfikowania wspolnego ``state.json`` starego interfejsu.
+    message_enabled: bool | None = None
     message_seek_messages: bool | None = None
     message_arrow_seek_messages: bool | None = None
     message_percentage_seek_messages: bool | None = None
@@ -290,6 +291,7 @@ class Options:
         if self.detailed_hints is not None and type(self.detailed_hints) is not bool:
             self.detailed_hints = None
         for name in (
+            "message_enabled",
             "message_seek_messages",
             "message_arrow_seek_messages",
             "message_percentage_seek_messages",

@@ -4216,6 +4216,19 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
         messages.SetScrollRate(0, 12)
         messages_layout = wx.BoxSizer(wx.VERTICAL)
 
+        self.message_enabled = wx.CheckBox(
+            messages, label="&Włącz komunikaty dostępności"
+        )
+        self.message_enabled.SetName("Włącz komunikaty dostępności")
+        self.message_enabled.SetHelpText(
+            "Wyłączenie zatrzymuje rutynową mowę AMC, ale nadal pozostawia "
+            "tekst w pasku stanu i nie ukrywa komunikatów o błędach."
+        )
+        self.message_enabled.SetValue(message_policy.enabled)
+        messages_layout.Add(
+            self.message_enabled, 0, wx.BOTTOM | wx.EXPAND, 10
+        )
+
         self.message_seek_messages = wx.CheckBox(
             messages, label="Włącz automatyczne komunikaty &odtwarzacza"
         )
@@ -4496,6 +4509,7 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
                 self.remember_local_playback_positions.GetValue()
             ),
             "detailed_hints": self.detailed_hints.GetValue(),
+            "message_enabled": self.message_enabled.GetValue(),
             "message_seek_messages": self.message_seek_messages.GetValue(),
             "message_arrow_seek_messages": (
                 self.message_arrow_seek_messages.GetValue()
@@ -4591,6 +4605,7 @@ class LiteFrame(wx.Frame):
         self.messages: MessagePolicy = load_message_policy(self.layout)
         apply_message_overrides(
             self.messages,
+            enabled=self.options.message_enabled,
             seek_messages=self.options.message_seek_messages,
             arrow_seek_messages=self.options.message_arrow_seek_messages,
             percentage_seek_messages=(
@@ -14880,6 +14895,7 @@ class LiteFrame(wx.Frame):
         self.messages.detailed_hints = self._detailed_hints
         apply_message_overrides(
             self.messages,
+            enabled=self.options.message_enabled,
             seek_messages=self.options.message_seek_messages,
             arrow_seek_messages=self.options.message_arrow_seek_messages,
             percentage_seek_messages=(

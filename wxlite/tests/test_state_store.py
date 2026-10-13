@@ -117,6 +117,7 @@ def test_detailed_hints_override_round_trips_and_invalid_value_inherits() -> Non
 def test_message_overrides_round_trip_and_keep_user_facing_mode() -> None:
     store, _ = temp_store()
     store.save(LiteState(options=Options(
+        message_enabled=False,
         message_seek_messages=False,
         message_arrow_seek_messages=True,
         message_percentage_seek_messages=False,
@@ -128,6 +129,7 @@ def test_message_overrides_round_trip_and_keep_user_facing_mode() -> None:
 
     loaded = store.load().options
 
+    assert loaded.message_enabled is False
     assert loaded.message_seek_messages is False
     assert loaded.message_arrow_seek_messages is True
     assert loaded.message_percentage_seek_messages is False
@@ -139,11 +141,13 @@ def test_message_overrides_round_trip_and_keep_user_facing_mode() -> None:
 
 def test_invalid_message_overrides_return_to_inherited_values() -> None:
     options = Options(
+        message_enabled="tak",  # type: ignore[arg-type]
         message_seek_messages=1,  # type: ignore[arg-type]
         message_bookmark_navigation_messages="tak",  # type: ignore[arg-type]
         message_percent_announcement="TechnicalEnum.Value",
     ).clamp()
 
+    assert options.message_enabled is None
     assert options.message_seek_messages is None
     assert options.message_bookmark_navigation_messages is None
     assert options.message_percent_announcement is None

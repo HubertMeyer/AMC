@@ -576,7 +576,10 @@ lewą strzałką.
    wybór pauzy po utracie wyjścia oraz `Ctrl+[` i `Ctrl+]`; Spację harmonogramu
    podłączono bezpośrednio do listy. Karta Komunikaty zapisuje już rzeczywiste
    przełączniki przewijania, głośności i odtwarzania/pauzy, a
-   `Ctrl+Shift+G` korzysta z tego samego prywatnego stanu. Rozpoznawanie
+   także nadrzędny przełącznik „Włącz komunikaty dostępności”. Ten ostatni
+   jest zapisywany prywatnie przez AMC Python, działa od razu po zatwierdzeniu
+   i nie modyfikuje profilu starego interfejsu. `Ctrl+Shift+G` korzysta z tego
+   samego prywatnego stanu. Rozpoznawanie
    utworów i wspólny folder z Podcastami są już przeniesione technicznie;
    pozostaje żywy odbiór wyniku, historii i komunikatów z NVDA. Następnie
    przepisać pozostałe trzy karty

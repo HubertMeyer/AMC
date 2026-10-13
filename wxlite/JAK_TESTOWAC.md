@@ -911,6 +911,15 @@ automatycznego sprawdzania. Zapisane wartości mają wrócić po ponownym
 otwarciu i restarcie. Automat sprawdza tylko należne źródła, w partiach o
 wybranym rozmiarze; brak nowości nie powinien przerywać NVDA komunikatem.
 
+Na karcie Komunikaty wyłącz „Włącz komunikaty dostępności”, zapisz Enterem i
+sprawdź, że rutynowe przewijanie, zmiana głośności oraz odtwarzanie/pauza nie
+przerywają bieżącej mowy NVDA. Tekst stanu ma nadal trafiać do paska, a błędy
+i odpowiedzi na wyraźne polecenia użytkownika nie mogą zostać ukryte. Otwórz
+Ustawienia ponownie: przełącznik ma zachować wartość, mieć tę samą celową nazwę
+i odzyskać zwykły fokus klawiatury. Po ponownym włączeniu komunikaty mają
+wrócić bez restartu programu. Wykonaj ten odbiór również po ponownym
+uruchomieniu AMC Python.
+
 Pełny odbiór Ustawień pozostaje otwarty. Trzeba jeszcze przepisać całe karty
 Profile klawiatury, Import i eksport oraz Aktualizacje, a następnie porównać
 wszystkie pola, wartości domyślne, zależności, walidację i miejsca zapisu z

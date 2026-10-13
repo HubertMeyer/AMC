@@ -477,6 +477,7 @@ def test_private_message_overrides_win_without_touching_inherited_values() -> No
 
     result = apply_message_overrides(
         policy,
+        enabled=False,
         seek_messages=False,
         arrow_seek_messages=None,
         percentage_seek_messages=False,
@@ -487,7 +488,7 @@ def test_private_message_overrides_win_without_touching_inherited_values() -> No
     )
 
     assert result is policy
-    assert policy.enabled is True
+    assert policy.enabled is False
     assert policy.seek_messages is False
     assert policy.arrow_seek_messages is False
     assert policy.percentage_seek_messages is False

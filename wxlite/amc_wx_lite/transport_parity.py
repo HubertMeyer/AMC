@@ -522,6 +522,7 @@ class MessagePolicy:
 def apply_message_overrides(
     policy: MessagePolicy,
     *,
+    enabled: bool | None = None,
     seek_messages: bool | None = None,
     arrow_seek_messages: bool | None = None,
     percentage_seek_messages: bool | None = None,
@@ -538,6 +539,7 @@ def apply_message_overrides(
     wylacznie do prywatnego magazynu wxPython.
     """
     boolean_overrides = {
+        "enabled": enabled,
         "seek_messages": seek_messages,
         "arrow_seek_messages": arrow_seek_messages,
         "percentage_seek_messages": percentage_seek_messages,
