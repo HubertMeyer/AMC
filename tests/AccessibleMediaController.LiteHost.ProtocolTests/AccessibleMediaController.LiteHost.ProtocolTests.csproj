@@ -28,5 +28,7 @@
              Link="LiteWiiMProfileMutation.cs" />
     <Compile Include="..\..\src\AccessibleMediaController.LiteHost\LiteWiiMNetworkStreamExport.cs"
              Link="LiteWiiMNetworkStreamExport.cs" />
+    <Compile Include="..\..\src\AccessibleMediaController.LiteHost\LiteSonosOwnStreamsMutation.cs"
+             Link="LiteSonosOwnStreamsMutation.cs" />
   </ItemGroup>
 </Project>

@@ -21,6 +21,7 @@ from amc_wx_lite.sonos_source import (
     library_rows,
     material_rows,
     now_playing_label,
+    own_stream_edit_info,
     snapshot,
     target_rows,
 )
@@ -60,6 +61,40 @@ def test_sonos_content_and_target_shortcuts_work_in_list_and_player() -> None:
                 radio_session=False,
                 sonos_session=True,
             ) is action
+
+
+def test_sonos_own_stream_edit_shortcuts_are_strictly_contextual() -> None:
+    expected = {
+        "Ctrl+N": Action.ADD_SONOS_OWN_STREAM,
+        "F2": Action.EDIT_SONOS_OWN_STREAM,
+        "Delete": Action.REMOVE_SONOS_OWN_STREAMS,
+        "Ctrl+O": Action.IMPORT_SONOS_OWN_STREAMS,
+        "Alt+1": Action.SORT_SONOS_OWN_STREAMS_ADDED,
+        "Alt+2": Action.SORT_SONOS_OWN_STREAMS_ALPHABETICAL,
+        "Alt+3": Action.SORT_SONOS_OWN_STREAMS_CUSTOM,
+    }
+    for chord, action in expected.items():
+        parts = chord.split("+")
+        parsed = Chord(
+            parts[-1],
+            ctrl="Ctrl" in parts,
+            shift="Shift" in parts,
+            alt="Alt" in parts,
+        )
+        assert resolve(
+            parsed,
+            player_view=False,
+            radio_session=False,
+            sonos_session=True,
+            sonos_own_streams=True,
+        ) is action
+        assert resolve(
+            parsed,
+            player_view=False,
+            radio_session=False,
+            sonos_session=True,
+            sonos_own_streams=False,
+        ) is None
 
 
 def test_sonos_library_categories_materials_and_back_are_typed() -> None:
@@ -166,6 +201,19 @@ def test_sonos_own_stream_is_a_typed_material_without_spoken_url() -> None:
     )]
 
 
+def test_sonos_own_stream_url_is_exposed_only_to_explicit_editor() -> None:
+    assert own_stream_edit_info({
+        "streamId": "stream-1",
+        "name": "Radio domowe",
+        "url": "https://radio.example/live",
+        "runtimeObject": "SonosOwnStreamSettings { StreamUrl = secret }",
+    }) == (
+        "stream-1",
+        "Radio domowe",
+        "https://radio.example/live",
+    )
+
+
 def test_sonos_material_uses_active_group_and_stays_on_one_request_lane() -> None:
     submissions: list = []
     calls: list = []
@@ -265,6 +313,11 @@ def test_sonos_command_gate_blocks_local_only_features() -> None:
         Action.VOLUME_UP_5,
         Action.TIME_ELAPSED,
         Action.COPY_NAME,
+        Action.ADD_SONOS_OWN_STREAM,
+        Action.EDIT_SONOS_OWN_STREAM,
+        Action.REMOVE_SONOS_OWN_STREAMS,
+        Action.IMPORT_SONOS_OWN_STREAMS,
+        Action.SORT_SONOS_OWN_STREAMS_ALPHABETICAL,
     } <= SONOS_SUPPORTED_ACTIONS
     assert {
         Action.ADD_BOOKMARK,
@@ -277,7 +330,7 @@ def test_sonos_command_gate_blocks_local_only_features() -> None:
     }.isdisjoint(SONOS_SUPPORTED_ACTIONS)
 
 
-def test_sonos_host_client_sends_only_ids_command_and_arguments() -> None:
+def test_sonos_host_client_uses_narrow_commands_and_arguments() -> None:
     calls: list[tuple[str, dict | None, float]] = []
     client = LiteHostClient(Path("host.exe"))
     client.call = lambda op, args=None, *, timeout=20.0: (
@@ -298,6 +351,14 @@ def test_sonos_host_client_sends_only_ids_command_and_arguments() -> None:
     client.sonos_load_material(
         "house-1", "group-1", "ownStream", "stream-1"
     )
+    client.sonos_own_stream_edit_info("stream-1")
+    client.sonos_add_own_stream("Radio domowe", "https://radio.example/live")
+    client.sonos_edit_own_stream(
+        "stream-1", "Radio nowe", "https://radio.example/new"
+    )
+    client.sonos_remove_own_streams(["stream-1", "stream-2"])
+    client.sonos_import_own_streams("C:/listy/sonos.m3u")
+    client.sonos_sort_own_streams("Alphabetical")
 
     assert calls == [
         ("sonos.targets", None, 60.0),
@@ -346,6 +407,40 @@ def test_sonos_host_client_sends_only_ids_command_and_arguments() -> None:
                 "materialId": "stream-1",
             },
             60.0,
+        ),
+        (
+            "sonos.ownStreamEditInfo",
+            {"streamId": "stream-1"},
+            15.0,
+        ),
+        (
+            "sonos.ownStreamAdd",
+            {"name": "Radio domowe", "url": "https://radio.example/live"},
+            30.0,
+        ),
+        (
+            "sonos.ownStreamEdit",
+            {
+                "streamId": "stream-1",
+                "name": "Radio nowe",
+                "url": "https://radio.example/new",
+            },
+            30.0,
+        ),
+        (
+            "sonos.ownStreamRemove",
+            {"itemIds": ["stream-1", "stream-2"]},
+            30.0,
+        ),
+        (
+            "sonos.ownStreamImport",
+            {"path": "C:/listy/sonos.m3u"},
+            60.0,
+        ),
+        (
+            "sonos.ownStreamSort",
+            {"mode": "Alphabetical"},
+            30.0,
         ),
     ]
 

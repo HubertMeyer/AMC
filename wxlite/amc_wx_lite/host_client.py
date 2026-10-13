@@ -728,6 +728,51 @@ class LiteHostClient:
             timeout=60.0,
         )
 
+    def sonos_add_own_stream(self, name: str, url: str) -> Any:
+        return self.call(
+            "sonos.ownStreamAdd",
+            {"name": name, "url": url},
+            timeout=30.0,
+        )
+
+    def sonos_own_stream_edit_info(self, stream_id: str) -> Any:
+        """Read the URL only for an explicit edit dialog."""
+        return self.call(
+            "sonos.ownStreamEditInfo",
+            {"streamId": stream_id},
+            timeout=15.0,
+        )
+
+    def sonos_edit_own_stream(
+        self, stream_id: str, name: str, url: str
+    ) -> Any:
+        return self.call(
+            "sonos.ownStreamEdit",
+            {"streamId": stream_id, "name": name, "url": url},
+            timeout=30.0,
+        )
+
+    def sonos_remove_own_streams(self, stream_ids: list[str]) -> Any:
+        return self.call(
+            "sonos.ownStreamRemove",
+            {"itemIds": list(stream_ids)},
+            timeout=30.0,
+        )
+
+    def sonos_import_own_streams(self, path: str) -> Any:
+        return self.call(
+            "sonos.ownStreamImport",
+            {"path": path},
+            timeout=60.0,
+        )
+
+    def sonos_sort_own_streams(self, mode: str) -> Any:
+        return self.call(
+            "sonos.ownStreamSort",
+            {"mode": mode},
+            timeout=30.0,
+        )
+
     def refresh_podcasts(self, subscription_id: str | None = None) -> Any:
         """Odśwież jedno źródło lub całą bibliotekę przez właściciela C#."""
         args = {"subscriptionId": subscription_id} if subscription_id else {}

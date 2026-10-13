@@ -150,6 +150,18 @@ def response_message(payload: object) -> str:
     return _text(payload.get("message")) if isinstance(payload, dict) else ""
 
 
+def own_stream_edit_info(payload: object) -> tuple[str, str, str]:
+    """Adres wolno odczytać wyłącznie do jawnie otwartego edytora F2."""
+    if not isinstance(payload, dict):
+        raise SonosPayloadError("Nie można odczytać danych wybranej stacji Sonos")
+    stream_id = _text(payload.get("streamId"))
+    name = _text(payload.get("name"))
+    url = _text(payload.get("url"))
+    if not stream_id or not name or not url:
+        raise SonosPayloadError("Nie można odczytać danych wybranej stacji Sonos")
+    return stream_id, name, url
+
+
 def _items(payload: object, error: str) -> list:
     if not isinstance(payload, dict):
         raise SonosPayloadError(error)

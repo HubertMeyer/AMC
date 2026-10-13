@@ -32,6 +32,7 @@ from amc_wx_lite.shortcuts import (
     TIDAL_COLLECTION_LIST_VIEW,
     WIIM_SESSION_VIEW,
     SONOS_SESSION_VIEW,
+    SONOS_OWN_STREAMS_VIEW,
     Action,
 )
 
@@ -152,6 +153,7 @@ def test_shortcut_shown_in_menu_is_the_shortcut_that_really_works() -> None:
         TIDAL_COLLECTION_LIST_VIEW,
         WIIM_SESSION_VIEW,
         SONOS_SESSION_VIEW,
+        SONOS_OWN_STREAMS_VIEW,
         PLAYER_VIEW,
     ):
         for chord, action in table.items():
@@ -193,7 +195,7 @@ def test_no_duplicate_labels_or_shortcuts() -> None:
         )
     for chord in ("Alt+1", "Alt+2", "Alt+3"):
         contextual = duplicates.get(chord, [])
-        assert len(contextual) == (4 if chord in ("Alt+1", "Alt+2") else 3)
+        assert len(contextual) == (5 if chord in ("Alt+1", "Alt+2") else 4)
         assert all(not item.accelerator for item in contextual), (
             f"kontekstowe {chord} nie moze byc akceleratorem okna"
         )

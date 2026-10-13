@@ -21,6 +21,7 @@ internal static class Program
         ("--wiim", WiiMContractTests.Run),
         ("--wiim-profile", WiiMProfileMutationTests.Run),
         ("--sonos", SonosContractTests.Run),
+        ("--sonos-profile", SonosOwnStreamsMutationTests.Run),
     ];
 
     public static int Main(string[] args)

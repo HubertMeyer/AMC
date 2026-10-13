@@ -536,8 +536,13 @@ własnej normalizacji diakrytyków.
   Sonos. Trzecią kategorią Biblioteki są **Moje stacje** odczytane z tego samego
   profilu AMC. Enter tworzy sesję Sonosa i uruchamia zapisany adres w wybranej
   grupie; adres pozostaje wyłącznie po stronie hosta C# i nie trafia do Pythona,
-  nazwy wiersza ani NVDA. Dodawanie, edycja, usuwanie, import oraz sortowanie
-  Moich stacji pozostają następnym, oddzielnym etapem. Enter na ulubionym lub
+  nazwy wiersza ani NVDA. W tej liście `Ctrl+N`, F2 i Delete dodają, edytują
+  i usuwają wpis przez jedynego pisarza profilu C#. `Ctrl+O` korzysta z tego
+  samego importera M3U/PLS co Radio i WiiM, a `Alt+1/2/3` zapisują odpowiednio
+  kolejność według dodania, alfabetyczną i własną pod tym samym kluczem co
+  pełne AMC. Adres wraca do Pythona tylko na czas jawnego dialogu F2. Ręczne
+  przestawianie kolejności własnej, eksport oraz presety pozostają dalszym
+  etapem. Enter na ulubionym lub
   playliście wysyła jedno polecenie `INSERT` z odtwarzaniem do
   wcześniej wybranej grupy, bez ponawiania zapisu i bez przepuszczania tokenu,
   adresu ani identyfikatora do etykiety NVDA. Backspace wraca z podlisty na
@@ -548,7 +553,7 @@ własnej normalizacji diakrytyków.
   grupie pozostaje do wykonania przez użytkownika; testy automatyczne nie są
   dowodem, że fizyczny głośnik rozpoczął odtwarzanie.
 - Do dalszego portu pozostają wejścia, wyjścia, korektor,
-  powtarzanie i timer, redakcja własnych stacji i presety Sonosa, Spotify, dalsze ustawienia oraz
+  powtarzanie i timer, ręczna kolejność, eksport i presety Sonosa, Spotify, dalsze ustawienia oraz
   pozostała redakcja materiałów.
 
 ## Polityka zaniku wybranego urządzenia audio

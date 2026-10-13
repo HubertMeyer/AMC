@@ -208,6 +208,13 @@ class Action(Enum):
     SORT_WIIM_NETWORK_STREAMS_ADDED = "wiim.networkStreams.sort.added"
     SORT_WIIM_NETWORK_STREAMS_ALPHABETICAL = "wiim.networkStreams.sort.alphabetical"
     SORT_WIIM_NETWORK_STREAMS_CUSTOM = "wiim.networkStreams.sort.custom"
+    ADD_SONOS_OWN_STREAM = "sonos.ownStreams.add"
+    EDIT_SONOS_OWN_STREAM = "sonos.ownStreams.edit"
+    REMOVE_SONOS_OWN_STREAMS = "sonos.ownStreams.remove"
+    IMPORT_SONOS_OWN_STREAMS = "sonos.ownStreams.import"
+    SORT_SONOS_OWN_STREAMS_ADDED = "sonos.ownStreams.sort.added"
+    SORT_SONOS_OWN_STREAMS_ALPHABETICAL = "sonos.ownStreams.sort.alphabetical"
+    SORT_SONOS_OWN_STREAMS_CUSTOM = "sonos.ownStreams.sort.custom"
     OPEN_FOLDER_DIALOG = "files.openFolder"
     OPEN_FILE_DIALOG = "files.openFile"
     COPY_NAME = "clipboard.copyName"
@@ -483,6 +490,13 @@ SONOS_SUPPORTED_ACTIONS = frozenset({
     Action.VIEW_LIBRARY,
     Action.VIEW_FAVORITES,
     Action.VIEW_PLAYLISTS,
+    Action.ADD_SONOS_OWN_STREAM,
+    Action.EDIT_SONOS_OWN_STREAM,
+    Action.REMOVE_SONOS_OWN_STREAMS,
+    Action.IMPORT_SONOS_OWN_STREAMS,
+    Action.SORT_SONOS_OWN_STREAMS_ADDED,
+    Action.SORT_SONOS_OWN_STREAMS_ALPHABETICAL,
+    Action.SORT_SONOS_OWN_STREAMS_CUSTOM,
     Action.FOCUS_FILTER,
     Action.VIEW_ACTIVE_RECORDINGS,
     Action.VIEW_RECORDED_RADIO_FILES,
@@ -901,6 +915,18 @@ SONOS_SESSION_VIEW: dict[str, Action] = {
 }
 
 
+SONOS_OWN_STREAMS_VIEW: dict[str, Action] = {
+    "Ctrl+N": Action.ADD_SONOS_OWN_STREAM,
+    "F2": Action.EDIT_SONOS_OWN_STREAM,
+    "Delete": Action.REMOVE_SONOS_OWN_STREAMS,
+    # Tak samo jak w oryginalnym oknie Moje stacje Sonosa.
+    "Ctrl+O": Action.IMPORT_SONOS_OWN_STREAMS,
+    "Alt+1": Action.SORT_SONOS_OWN_STREAMS_ADDED,
+    "Alt+2": Action.SORT_SONOS_OWN_STREAMS_ALPHABETICAL,
+    "Alt+3": Action.SORT_SONOS_OWN_STREAMS_CUSTOM,
+}
+
+
 def resolve(
     chord: Chord,
     *,
@@ -914,6 +940,7 @@ def resolve(
     wiim_session: bool = False,
     wiim_streams: bool = False,
     sonos_session: bool = False,
+    sonos_own_streams: bool = False,
 ) -> Action | None:
     """Znajdz akcje dla klawisza w DANYM widoku. Brak wpisu = klawisz zostaje
     dla kontrolki (natywna nawigacja ma pierwszenstwo)."""
@@ -953,6 +980,8 @@ def resolve(
         } and not wiim_streams:
             return None
         return action
+    if sonos_session and canonical in SONOS_OWN_STREAMS_VIEW:
+        return SONOS_OWN_STREAMS_VIEW[canonical] if sonos_own_streams else None
     if sonos_session and canonical in SONOS_SESSION_VIEW:
         return SONOS_SESSION_VIEW[canonical]
     if sonos_session and canonical in {"Shift+A", "Ctrl+[", "Ctrl+]"}:

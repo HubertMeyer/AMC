@@ -71,6 +71,8 @@ class MenuItem:
     needs_tidal_collection: bool = False
     #: Aktywna tylko na liście zapisanych strumieni, nie na urządzeniu WiiM.
     needs_wiim_stream: bool = False
+    #: Aktywna tylko w lokalnej kategorii „Moje stacje” sesji Sonos.
+    needs_sonos_own_stream: bool = False
     #: Pozycja PRZELACZNIKA: wx ma ja wstawic jako ``AppendCheckItem``.
     #:
     #: Nie jest to kosmetyka. Zwykla pozycja menu nie niesie stanu, wiec
@@ -205,6 +207,22 @@ def build_menus() -> tuple[Menu, ...]:
                 shortcut="Ctrl+E",
                 accelerator=False,
                 visible_sessions=WIIM_ONLY,
+            ),
+            MenuItem(
+                "Nowa stacj&a Sonos…",
+                Action.ADD_SONOS_OWN_STREAM,
+                shortcut="Ctrl+N",
+                accelerator=False,
+                needs_sonos_own_stream=True,
+                visible_sessions=SONOS_ONLY,
+            ),
+            MenuItem(
+                "Importuj &listę do Moich stacji Sonosa…",
+                Action.IMPORT_SONOS_OWN_STREAMS,
+                shortcut="Ctrl+O",
+                accelerator=False,
+                needs_sonos_own_stream=True,
+                visible_sessions=SONOS_ONLY,
             ),
             MenuItem(
                 "Dodaj podcast, kanał YouTube lub medium &internetowe",
@@ -435,6 +453,24 @@ def build_menus() -> tuple[Menu, ...]:
                 needs_selection=True,
                 needs_wiim_stream=True,
                 visible_sessions=WIIM_ONLY,
+            ),
+            MenuItem(
+                "Edytuj stację Sonos (&1)…",
+                Action.EDIT_SONOS_OWN_STREAM,
+                shortcut="F2",
+                accelerator=False,
+                needs_selection=True,
+                needs_sonos_own_stream=True,
+                visible_sessions=SONOS_ONLY,
+            ),
+            MenuItem(
+                "Usuń stację Sonos z AMC (&2)",
+                Action.REMOVE_SONOS_OWN_STREAMS,
+                shortcut="Delete",
+                accelerator=False,
+                needs_selection=True,
+                needs_sonos_own_stream=True,
+                visible_sessions=SONOS_ONLY,
             ),
             SEPARATOR,
             # Oryginal ma te pozycje w TYM SAMYM menu co widoki Kolejka/
@@ -814,6 +850,21 @@ def build_menus() -> tuple[Menu, ...]:
                      accelerator=False, checkable=True,
                      needs_wiim_stream=True,
                      visible_sessions=WIIM_ONLY),
+            MenuItem("Sonos: według dodania, najnows&ze najpierw",
+                     Action.SORT_SONOS_OWN_STREAMS_ADDED, shortcut="Alt+1",
+                     accelerator=False, checkable=True,
+                     needs_sonos_own_stream=True,
+                     visible_sessions=SONOS_ONLY),
+            MenuItem("Sonos: alfabetyczn&ie",
+                     Action.SORT_SONOS_OWN_STREAMS_ALPHABETICAL,
+                     shortcut="Alt+2", accelerator=False, checkable=True,
+                     needs_sonos_own_stream=True,
+                     visible_sessions=SONOS_ONLY),
+            MenuItem("Sonos: kolejność własna (&C)",
+                     Action.SORT_SONOS_OWN_STREAMS_CUSTOM, shortcut="Alt+3",
+                     accelerator=False, checkable=True,
+                     needs_sonos_own_stream=True,
+                     visible_sessions=SONOS_ONLY),
             SEPARATOR,
             # ``accelerator=False``: ZMIERZONE na zywym GUI (statusclip-1).
             # Z akceleratorem pozycja byla WYLACZONA na liscie (nic nie gralo),

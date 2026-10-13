@@ -422,6 +422,18 @@ internal sealed class LiteEngineHandlers : IDisposable
                 RequireSonos().Materials(request.Args),
             [LiteSonosContract.LoadMaterialOperation] = (request, _) =>
                 RequireSonos().LoadMaterial(request.Args),
+            [LiteSonosContract.OwnStreamEditInfoOperation] = (request, _) =>
+                SonosOwnStreamEditInfo(request.Args),
+            [LiteSonosContract.AddOwnStreamOperation] = (request, _) =>
+                AddSonosOwnStream(request.Args),
+            [LiteSonosContract.EditOwnStreamOperation] = (request, _) =>
+                EditSonosOwnStream(request.Args),
+            [LiteSonosContract.RemoveOwnStreamsOperation] = (request, _) =>
+                RemoveSonosOwnStreams(request.Args),
+            [LiteSonosContract.ImportOwnStreamsOperation] = (request, _) =>
+                ImportSonosOwnStreams(request.Args),
+            [LiteSonosContract.SortOwnStreamsOperation] = (request, _) =>
+                SetSonosOwnStreamSortMode(request.Args),
             ["podcast.toggleFavorite"] = (request, _) =>
                 TogglePodcastFavorites(request.Args),
             ["podcast.toggleLibrary"] = (request, _) =>
@@ -861,6 +873,43 @@ internal sealed class LiteEngineHandlers : IDisposable
     private object SetWiiMNetworkStreamSortMode(JsonElement args) =>
         RequireProfileMutations().SetWiiMNetworkStreamSortMode(
             LiteWiiMContract.ReadNetworkStreamSortMode(args));
+
+    private object SonosOwnStreamEditInfo(JsonElement args) =>
+        RequireProfileMutations().SonosOwnStreamEditInfo(
+            LiteSonosContract.ReadOwnStreamId(args));
+
+    private object AddSonosOwnStream(JsonElement args) =>
+        RequireProfileMutations().AddSonosOwnStream(
+            LiteArgs.RequireText(args, "name"),
+            LiteArgs.RequireText(args, "url"));
+
+    private object EditSonosOwnStream(JsonElement args) =>
+        RequireProfileMutations().EditSonosOwnStream(
+            LiteSonosContract.ReadOwnStreamId(args),
+            LiteArgs.RequireText(args, "name"),
+            LiteArgs.RequireText(args, "url"));
+
+    private object RemoveSonosOwnStreams(JsonElement args) =>
+        RequireProfileMutations().RemoveSonosOwnStreams(ReadIds(args));
+
+    private object ImportSonosOwnStreams(JsonElement args)
+    {
+        var path = LiteArgs.RequirePath(args, "path");
+        if (!File.Exists(path))
+            throw new LiteRequestException($"Nie znaleziono pliku listy: {path}");
+        var imported = RadioPlaylistImporter.Import(path);
+        return RequireProfileMutations().ImportSonosOwnStreams(
+            imported.Stations
+                .Select(station => new LiteSonosOwnStreamDraft(
+                    station.Name,
+                    station.StreamUrl))
+                .ToArray(),
+            imported.SkippedEntries);
+    }
+
+    private object SetSonosOwnStreamSortMode(JsonElement args) =>
+        RequireProfileMutations().SetSonosOwnStreamSortMode(
+            LiteSonosContract.ReadOwnStreamSortMode(args));
 
     private object RemoveProfileItems(JsonElement args) =>
         RequireProfileMutations().Remove(

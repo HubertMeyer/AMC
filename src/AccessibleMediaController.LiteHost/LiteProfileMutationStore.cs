@@ -5,6 +5,7 @@ using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using AccessibleMediaController.Core.Configuration;
 using AccessibleMediaController.Core.LocalMedia;
+using AccessibleMediaController.Core.Sonos;
 using AccessibleMediaController.LiteHost.Protocol;
 using AccessibleMediaController.Windows.Services;
 using Microsoft.Data.Sqlite;
@@ -527,6 +528,122 @@ internal sealed class LiteProfileMutationStore
                 throw new LiteRequestException(
                     "Nie można zapisać playlisty: " + exception.Message);
             }
+        }
+    }
+
+    public object AddSonosOwnStream(string requestedName, string requestedUrl)
+    {
+        EnsureMayWrite();
+        lock (_gate)
+        {
+            var root = ReadState();
+            var result = LiteSonosOwnStreamsMutation.Add(
+                root, requestedName, requestedUrl);
+            WriteState(root);
+            return new
+            {
+                preferredStreamId = result.PreferredStreamId,
+                title = result.Title,
+                message = result.UpdatedCount > 0
+                    ? $"Zaktualizowano stację Sonos: {result.Title}"
+                    : $"Dodano stację Sonos: {result.Title}"
+            };
+        }
+    }
+
+    public object SonosOwnStreamEditInfo(string streamId)
+    {
+        lock (_gate)
+        {
+            var stream = LiteSonosOwnStreamsMutation.ReadForEdit(
+                ReadState(), streamId);
+            return new
+            {
+                streamId = stream.Id,
+                name = stream.Name,
+                url = stream.StreamUrl
+            };
+        }
+    }
+
+    public object EditSonosOwnStream(
+        string streamId,
+        string requestedName,
+        string requestedUrl)
+    {
+        EnsureMayWrite();
+        lock (_gate)
+        {
+            var root = ReadState();
+            var result = LiteSonosOwnStreamsMutation.Edit(
+                root, streamId, requestedName, requestedUrl);
+            WriteState(root);
+            return new
+            {
+                preferredStreamId = result.PreferredStreamId,
+                title = result.Title,
+                message = $"Zapisano stację Sonos: {result.Title}"
+            };
+        }
+    }
+
+    public object RemoveSonosOwnStreams(IReadOnlyList<string> streamIds)
+    {
+        EnsureMayWrite();
+        lock (_gate)
+        {
+            var root = ReadState();
+            var titles = LiteSonosOwnStreamsMutation.Remove(root, streamIds);
+            WriteState(root);
+            return new
+            {
+                removedCount = titles.Length,
+                titles,
+                message = titles.Length == 1
+                    ? $"Usunięto z AMC stację Sonos: {titles[0]}"
+                    : $"Usunięto z AMC stacje Sonos: {titles.Length}"
+            };
+        }
+    }
+
+    public object ImportSonosOwnStreams(
+        IReadOnlyList<LiteSonosOwnStreamDraft> streams,
+        int parserSkipped)
+    {
+        EnsureMayWrite();
+        lock (_gate)
+        {
+            var root = ReadState();
+            var result = LiteSonosOwnStreamsMutation.Import(
+                root, streams, parserSkipped);
+            if (result.AddedCount > 0) WriteState(root);
+            return new
+            {
+                preferredStreamId = result.PreferredStreamId,
+                addedCount = result.AddedCount,
+                skippedCount = result.SkippedCount,
+                message = result.AddedCount > 0
+                    ? $"Zaimportowano stacje Sonos: {result.AddedCount}"
+                    : result.InvalidCount > 0
+                        ? "Playlista nie zawiera nowych prawidłowych stacji Sonos"
+                        : "Wszystkie stacje z tej playlisty są już zapisane"
+            };
+        }
+    }
+
+    public object SetSonosOwnStreamSortMode(CollectionSortMode mode)
+    {
+        EnsureMayWrite();
+        lock (_gate)
+        {
+            var root = ReadState();
+            LiteSonosOwnStreamsMutation.SetSortMode(root, mode);
+            WriteState(root);
+            return new
+            {
+                sortMode = mode.ToString(),
+                message = $"Moje stacje Sonos: {SonosOwnStreamsOrder.DescribeMode(mode)}"
+            };
         }
     }
 

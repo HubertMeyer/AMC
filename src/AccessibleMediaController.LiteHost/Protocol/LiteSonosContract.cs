@@ -17,6 +17,12 @@ public static class LiteSonosContract
     public const string LibraryOperation = "sonos.library";
     public const string MaterialsOperation = "sonos.materials";
     public const string LoadMaterialOperation = "sonos.loadMaterial";
+    public const string OwnStreamEditInfoOperation = "sonos.ownStreamEditInfo";
+    public const string AddOwnStreamOperation = "sonos.ownStreamAdd";
+    public const string EditOwnStreamOperation = "sonos.ownStreamEdit";
+    public const string RemoveOwnStreamsOperation = "sonos.ownStreamRemove";
+    public const string ImportOwnStreamsOperation = "sonos.ownStreamImport";
+    public const string SortOwnStreamsOperation = "sonos.ownStreamSort";
 
     public static LiteSonosTargetRequest ReadTarget(JsonElement args) => new(
         LiteArgs.RequireText(args, "householdId").Trim(),
@@ -59,6 +65,19 @@ public static class LiteSonosContract
         if (kind is not ("favorite" or "playlist" or "ownStream"))
             throw new LiteRequestException("Nieznany rodzaj materiału Sonos.");
         return new LiteSonosMaterialsRequest(householdId, kind);
+    }
+
+    public static string ReadOwnStreamId(JsonElement args) =>
+        LiteArgs.RequireText(args, "streamId").Trim();
+
+    public static CollectionSortMode ReadOwnStreamSortMode(JsonElement args)
+    {
+        var text = LiteArgs.RequireText(args, "mode").Trim();
+        if (Enum.TryParse<CollectionSortMode>(text, ignoreCase: true, out var mode)
+            && Enum.IsDefined(mode))
+            return mode;
+        throw new LiteRequestException(
+            "Nieznany sposób sortowania własnych stacji Sonos.");
     }
 
     public static LiteSonosMaterialLoadRequest ReadMaterialLoadRequest(JsonElement args)
