@@ -55,6 +55,7 @@ ACTION_BY_COMMAND: dict[str, Action] = {
     "showSchedules": Action.MANAGE_RADIO_SCHEDULES,
     "showRecognitions": Action.VIEW_RADIO_RECOGNITION_HISTORY,
     "showSessions": Action.SESSION_LIST,
+    "showCommands": Action.COMMAND_PALETTE,
     "refreshPodcastLibrary": Action.REFRESH_PODCAST_LIBRARY,
     **{f"preset{slot}": getattr(Action, f"PRESET_{slot}") for slot in range(1, 13)},
 }
@@ -74,7 +75,6 @@ KNOWN_NOT_IMPLEMENTED = frozenset({
     "previousChapter",
     "nextChapter",
     "showChapters",
-    "showCommands",
 })
 
 ALLOWED_COMMANDS = frozenset(

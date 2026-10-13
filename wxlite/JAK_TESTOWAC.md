@@ -69,6 +69,15 @@ dodatku NVDA; w mowie nie może pojawić się `SessionId`, nazwa klasy, rekord a
 identyfikator. Poprzedni i następny preset z dodatku mają pomijać puste miejsca
 i zawijać listę, nie otwierając po drodze okna presetów.
 
+Naciśnij `Ctrl+Shift+K` oraz osobno „Otwórz paletę poleceń” z dodatku NVDA.
+Fokus ma trafić do pola „Filtr poleceń”. Wpisz bez polskich znaków dwa słowa,
+na przykład „paleta polecen”; liczba wyników ma się zmienić, a strzałka w dół
+ma przejść do natywnej listy „Polecenia”. Lista może zawierać tylko nazwy i
+skróty użytkowe, nigdy `Action`, identyfikator polecenia ani rekord modelu.
+Enter wykonuje zaznaczoną czynność, Escape niczego nie wykonuje, a po obu
+wyjściach fokus wraca do listy albo odtwarzacza aktywnej sesji. Powtórz w
+Radiu i TIDAL-u: paleta TIDAL-u nie może oferować poleceń nagrywania Radia.
+
 W odtwarzaczu Plików `I` ustawia początek, a `O` koniec zaznaczonego
 fragmentu. Sprawdź także nagranie otwarte z `Alt+Shift+R`, gdy Radio nadal
 działa w tle: oba klawisze muszą korzystać z toru Plików, nie z ostatniego

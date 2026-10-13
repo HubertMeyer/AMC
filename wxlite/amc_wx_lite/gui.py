@@ -62,6 +62,12 @@ from .audio_output import (
     read_profile_outputs,
 )
 from .collation import HostCollation
+from .command_palette import (
+    CommandPaletteEntry,
+    count_label as command_count_label,
+    entries_for_session as command_entries_for_session,
+    filter_entries as filter_command_entries,
+)
 from .host_client import HostError, HostUnavailable, LiteHostClient, default_host_path
 from . import nvda_bridge
 from .library_source import LibrarySnapshot, LibrarySource, degradation_notice
@@ -1315,6 +1321,140 @@ class MediaListCtrl(wx.ListCtrl):
     def visible_count(self) -> int:
         """Liczba wierszy POKAZANYCH teraz. Zrodlo liczby do statusu filtra."""
         return len(self._shown)
+
+
+class CommandPaletteDialog(wx.Dialog):
+    """Natywna paleta: jawne etykiety, filtr i jedna istniejąca akcja."""
+
+    def __init__(
+        self,
+        parent: wx.Window,
+        entries: tuple[CommandPaletteEntry, ...],
+    ) -> None:
+        super().__init__(parent, title="Paleta poleceń — AMC", size=(700, 520))
+        self._all_entries = entries
+        self._shown_entries = entries
+
+        panel = wx.Panel(self)
+        layout = wx.BoxSizer(wx.VERTICAL)
+        label = wx.StaticText(panel, label="&Filtruj polecenia:")
+        self.query = wx.TextCtrl(panel)
+        self.query.SetName("Filtr poleceń")
+        self.query.SetHelpText(
+            "Wpisuj fragmenty nazwy. Strzałka w dół przechodzi do listy, "
+            "Enter wykonuje wybrane polecenie, Escape zamyka paletę."
+        )
+        self.status = wx.StaticText(panel, label=command_count_label(len(entries)))
+        self.status.SetName(command_count_label(len(entries)))
+        self.commands = wx.ListBox(
+            panel,
+            choices=[entry.label for entry in entries],
+            style=wx.LB_SINGLE,
+        )
+        self.commands.SetName("Polecenia")
+        self.commands.SetHelpText(
+            "Strzałki wybierają polecenie. Enter wykonuje, Escape zamyka paletę."
+        )
+        if entries:
+            self.commands.SetSelection(0)
+
+        layout.Add(label, 0, wx.ALL | wx.EXPAND, 12)
+        layout.Add(self.query, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM | wx.EXPAND, 12)
+        layout.Add(self.status, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM | wx.EXPAND, 12)
+        layout.Add(self.commands, 1, wx.LEFT | wx.RIGHT | wx.EXPAND, 12)
+        panel.SetSizer(layout)
+
+        buttons = wx.StdDialogButtonSizer()
+        execute = wx.Button(self, wx.ID_OK, label="&Wykonaj")
+        execute.SetName("Wykonaj polecenie")
+        execute.SetDefault()
+        cancel = wx.Button(self, wx.ID_CANCEL, label="&Anuluj")
+        cancel.SetName("Anuluj paletę poleceń")
+        buttons.AddButton(execute)
+        buttons.AddButton(cancel)
+        buttons.Realize()
+        shell = wx.BoxSizer(wx.VERTICAL)
+        shell.Add(panel, 1, wx.EXPAND)
+        shell.Add(buttons, 0, wx.ALL | wx.ALIGN_RIGHT, 12)
+        self.SetSizer(shell)
+        self.SetEscapeId(wx.ID_CANCEL)
+
+        self.query.Bind(wx.EVT_TEXT, self._on_query_changed)
+        self.query.Bind(wx.EVT_KEY_DOWN, self._on_query_key)
+        self.commands.Bind(wx.EVT_KEY_DOWN, self._on_list_key)
+        self.commands.Bind(wx.EVT_LISTBOX_DCLICK, self._accept)
+        execute.Bind(wx.EVT_BUTTON, self._accept)
+        self.Bind(wx.EVT_CHAR_HOOK, self._on_key_hook)
+        self.query.SetFocus()
+
+    @property
+    def selected_entry(self) -> CommandPaletteEntry | None:
+        index = self.commands.GetSelection()
+        return self._shown_entries[index] if 0 <= index < len(self._shown_entries) else None
+
+    def _refresh(self) -> None:
+        self._shown_entries = filter_command_entries(
+            self._all_entries, self.query.GetValue()
+        )
+        self.commands.Set([entry.label for entry in self._shown_entries])
+        if self._shown_entries:
+            self.commands.SetSelection(0)
+        label = command_count_label(len(self._shown_entries))
+        self.status.SetLabel(label)
+        self.status.SetName(label)
+
+    def _on_query_changed(self, event: wx.CommandEvent) -> None:
+        self._refresh()
+        event.Skip()
+
+    def _on_query_key(self, event: wx.KeyEvent) -> None:
+        code = event.GetKeyCode()
+        if code in (wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER):
+            self._accept(event)
+            return
+        if code == wx.WXK_DOWN and self._shown_entries:
+            self.commands.SetFocus()
+            return
+        if code == wx.WXK_ESCAPE:
+            self.EndModal(wx.ID_CANCEL)
+            return
+        event.Skip()
+
+    def _on_list_key(self, event: wx.KeyEvent) -> None:
+        code = event.GetKeyCode()
+        if code in (wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER):
+            self._accept(event)
+            return
+        if code == wx.WXK_UP and self.commands.GetSelection() == 0:
+            self.query.SetFocus()
+            self.query.SetInsertionPointEnd()
+            return
+        if code == wx.WXK_ESCAPE:
+            self.EndModal(wx.ID_CANCEL)
+            return
+        event.Skip()
+
+    def _on_key_hook(self, event: wx.KeyEvent) -> None:
+        focus = wx.Window.FindFocus()
+        if focus is self.query:
+            self._on_query_key(event)
+            return
+        if focus is self.commands:
+            self._on_list_key(event)
+            return
+        if event.GetKeyCode() == wx.WXK_ESCAPE:
+            self.EndModal(wx.ID_CANCEL)
+            return
+        event.Skip()
+
+    def _accept(self, _event) -> None:
+        if self.selected_entry is None:
+            label = "Brak polecenia do wykonania"
+            self.status.SetLabel(label)
+            self.status.SetName(label)
+            self.query.SetFocus()
+            return
+        self.EndModal(wx.ID_OK)
 
 
 class SearchDialog(wx.Dialog):
@@ -7127,6 +7267,8 @@ class LiteFrame(wx.Frame):
             self._switch_session(SessionId.SONOS)
         elif action is Action.SESSION_LIST:
             self._show_session_list()
+        elif action is Action.COMMAND_PALETTE:
+            self._show_command_palette()
         elif action is Action.SELECT_SONOS_TARGET:
             self._load_sonos_targets(
                 preferred_id=self.navigator.sessions[SessionId.SONOS].list_anchor_id
@@ -9235,6 +9377,17 @@ class LiteFrame(wx.Frame):
             # zmienia widoku i celowo nie ustawia fokusu ponownie. Po zamknięciu
             # dialogu lista albo odtwarzacz nadal muszą jednak odzyskać fokus.
             wx.CallAfter(self._restore_focus_after_dialog)
+
+    def _show_command_palette(self) -> None:
+        entries = command_entries_for_session(self.navigator.active)
+        with CommandPaletteDialog(self, entries) as dialog:
+            if dialog.ShowModal() != wx.ID_OK:
+                self._restore_focus_after_dialog()
+                return
+            selected = dialog.selected_entry
+        self._restore_focus_after_dialog()
+        if selected is not None:
+            self._dispatch(selected.action)
 
     # --------------------------------------------------------------- WiiM
 

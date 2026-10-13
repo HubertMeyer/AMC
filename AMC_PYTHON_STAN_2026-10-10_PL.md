@@ -46,7 +46,7 @@ podmiany i wycofania plików. Docelowe `AMC.exe` ma być stałym punktem wejści
 a aktualizator działać za nim, bez ręcznego wybierania skryptu lub interpretera.
 
 Aktualny kompletny kandydat EXE jest w:
-`D:\Projekty Codex\AMC - integracja wxPython\.test-output\AMC-Python-candidate-session-list-20261013`.
+`D:\Projekty Codex\AMC - integracja wxPython\.test-output\AMC-Python-candidate-command-palette-20261013`.
 Nie zawiera `AMC-wx-Lite.cmd`. `AMC.exe` sprawdza wersję formatu pakietu,
 interfejsu i protokołu hosta oraz sumy krytycznych plików przed uruchomieniem.
 Automatyczna weryfikacja paczki i próbna aktualizacja do osobnego katalogu
@@ -481,9 +481,13 @@ miejsca są pomijane, koniec listy zawija się na początek, a stan jest liczony
 osobno dla każdej sesji. `Ctrl+0` oraz polecenie dodatku „Lista sesji” otwierają
 natywną listę sześciu sesji z jednoznacznymi etykietami `Ctrl+1`–`Ctrl+6`;
 wybrana jest bieżąca sesja, Enter przełącza, a Escape wraca bez zmiany.
+Paleta poleceń jest dostępna pod `Ctrl+Shift+K` i przez gotowy dodatek NVDA.
+Pokazuje wyłącznie jawne nazwy i skróty poleceń widocznych dla bieżącej sesji,
+filtruje bez rozróżniania wielkości liter i polskich znaków, a Enter wykonuje
+wybraną istniejącą akcję tą samą drogą co menu lub skrót.
 Jawnie, bez podstawiania podobnej czynności, odmawiane są funkcje jeszcze
-nieobecne w AMC Python: wyciszenie wszystkich sesji, rozdziały oraz paleta
-poleceń. Dodatek może sterować tylko jednym właścicielem wspólnego potoku.
+nieobecne w AMC Python: wyciszenie wszystkich sesji oraz rozdziały. Dodatek
+może sterować tylko jednym właścicielem wspólnego potoku.
 Dlatego żywy odbiór AMC Python trzeba
 wykonać przy zamkniętym starym AMC; równoległe uruchomienie dwóch wersji nie
 daje wyboru celu w obecnym protokole. Szczegółowy kontrakt i kryteria odbioru
@@ -525,7 +529,7 @@ kodu ani wysyłać logów bez wiedzy użytkownika.
 
 ## Dowody automatyczne tego przyrostu
 
-- pełny runner Python: 1451 zaliczonych, 0 błędów, 138 historycznych pominięć;
+- pełny runner Python: 1457 zaliczonych, 0 błędów, 138 historycznych pominięć;
 - testy protokołu C#: 15 zestawów zaliczonych;
 - całe rozwiązanie .NET zbudowane sekwencyjnie: 0 ostrzeżeń, 0 błędów;
 - sześć celowanych testów Windows rozpoznawania, ustawień, historii, podpisu
@@ -597,8 +601,9 @@ lewą strzałką.
    aplikacji TIDAL, łącznie z sesją systemową i urządzeniem wyjściowym.
 7. Podłączenie gotowego dodatku AMC do NVDA bezpośrednio do LiteHosta i
    wxPython, bez uruchamiania starego AMC, jest wykonane technicznie. Działają
-   też poprzedni/następny preset oraz natywna Lista sesji. Pozostaje żywy
-   odbiór mowy, brajla, fokusu po Enter/Escape i ponownym otwarciu listy.
+   też poprzedni/następny preset, natywna Lista sesji oraz Paleta poleceń.
+   Pozostaje żywy odbiór mowy, brajla, filtrowania i fokusu po Enter/Escape
+   oraz po ponownym otwarciu obu list.
 8. Uzupełnienie wykrytych braków w istniejących sesjach, bez regresji radia,
    nagrywania, harmonogramów i timeshiftu.
 9. Odzyskanie źródła lub ticketu „Sygnalisty”, analiza i wdrożenie aktualizacji.

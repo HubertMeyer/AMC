@@ -74,6 +74,12 @@ def test_session_list_is_supported_by_the_existing_addon() -> None:
     assert "showSessions" in nvda_bridge.OPEN_WINDOW_COMMANDS
 
 
+def test_command_palette_is_supported_by_the_existing_addon() -> None:
+    assert nvda_bridge.action_for("showCommands") is Action.COMMAND_PALETTE
+    assert "showCommands" not in nvda_bridge.KNOWN_NOT_IMPLEMENTED
+    assert "showCommands" in nvda_bridge.OPEN_WINDOW_COMMANDS
+
+
 def test_only_explicit_view_commands_request_foreground() -> None:
     assert "showSearch" in nvda_bridge.OPEN_WINDOW_COMMANDS
     assert "showSchedules" in nvda_bridge.OPEN_WINDOW_COMMANDS

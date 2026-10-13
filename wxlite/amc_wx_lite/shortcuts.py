@@ -97,6 +97,7 @@ class Action(Enum):
     SESSION_WIIM = "session.wiim"
     SESSION_SONOS = "session.sonos"
     SESSION_LIST = "session.list"
+    COMMAND_PALETTE = "view.commandPalette"
     SELECT_SONOS_TARGET = "sonos.target.select"
     ACTIVATE = "activate"
     PARENT_FOLDER = "parent"
@@ -353,6 +354,7 @@ TIDAL_SUPPORTED_ACTIONS = frozenset({
     Action.SESSION_WIIM,
     Action.SESSION_SONOS,
     Action.SESSION_LIST,
+    Action.COMMAND_PALETTE,
     Action.ACTIVATE,
     Action.PARENT_FOLDER,
     Action.CLOSE_LIST_PREVIEW,
@@ -417,6 +419,7 @@ WIIM_SUPPORTED_ACTIONS = frozenset({
     Action.SESSION_WIIM,
     Action.SESSION_SONOS,
     Action.SESSION_LIST,
+    Action.COMMAND_PALETTE,
     Action.ACTIVATE,
     Action.PARENT_FOLDER,
     Action.CLOSE_LIST_PREVIEW,
@@ -476,6 +479,7 @@ SONOS_SUPPORTED_ACTIONS = frozenset({
     Action.SESSION_WIIM,
     Action.SESSION_SONOS,
     Action.SESSION_LIST,
+    Action.COMMAND_PALETTE,
     Action.SELECT_SONOS_TARGET,
     Action.ACTIVATE,
     Action.PARENT_FOLDER,
@@ -578,6 +582,8 @@ class Chord:
 # Skroty dzialajace W WIDOKU LISTY. Strzalki NIE sa tu wpisane - naleza do
 # natywnego ListCtrl, zeby czytnik ekranu i Narrator dzialaly bez dodatku.
 LIST_VIEW: dict[str, Action] = {
+    "Ctrl+Shift+K": Action.COMMAND_PALETTE,
+    "Ctrl+Shift+S": Action.SESSION_LIST,
     "Ctrl+0": Action.SESSION_LIST,
     "Ctrl+1": Action.SESSION_FILES,
     "Ctrl+2": Action.SESSION_RADIO,
@@ -757,6 +763,8 @@ RADIO_PLAYER_VIEW: dict[str, Action] = {
 # Skroty W WIDOKU ODTWARZACZA. Tu strzalki sa wolne, wiec przejmuja role
 # z profilu globalnego AMC (przewijanie i glosnosc).
 PLAYER_VIEW: dict[str, Action] = {
+    "Ctrl+Shift+K": Action.COMMAND_PALETTE,
+    "Ctrl+Shift+S": Action.SESSION_LIST,
     "Ctrl+0": Action.SESSION_LIST,
     "Ctrl+1": Action.SESSION_FILES,
     "Ctrl+2": Action.SESSION_RADIO,
@@ -1094,6 +1102,7 @@ def _help_entries() -> list[tuple[str, str, Action]]:
         Action.SESSION_WIIM: "WiiM",
         Action.SESSION_SONOS: "Sonos",
         Action.SESSION_LIST: "Wybierz sesję z listy",
+        Action.COMMAND_PALETTE: "Paleta poleceń",
         Action.SELECT_SONOS_TARGET: "Wybierz grupę Sonos",
         Action.ACTIVATE: "Otworz folder albo odtworz",
         Action.PARENT_FOLDER: "Folder nadrzedny",

@@ -546,6 +546,12 @@ def build_menus() -> tuple[Menu, ...]:
                 Action.SEARCH_ALL,
                 shortcut="Ctrl+Shift+F",
             ),
+            MenuItem(
+                "&Paleta poleceń…",
+                Action.COMMAND_PALETTE,
+                shortcut="Ctrl+Shift+K",
+                accelerator=False,
+            ),
         ),
     )
 
