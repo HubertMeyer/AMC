@@ -158,6 +158,8 @@ def test_profile_edits_go_through_the_real_host() -> None:
         media.write_bytes(b"test")
         history_media = root / "Zagadkowa niedziela-prawa dziecka.mp3"
         history_media.write_bytes(b"history")
+        fresh_history_media = root / "Swieze nagranie bez indeksu.mp3"
+        fresh_history_media.write_bytes(b"fresh history")
         library = root / "library.db"
         podcasts = root / "podcasts.db"
         state = root / "state.json"
@@ -190,6 +192,13 @@ def test_profile_edits_go_through_the_real_host() -> None:
                                 "stationName": "Stare radio",
                                 "path": str(history_media),
                                 "outcome": "Completed",
+                            },
+                            {
+                                "id": "history-fresh",
+                                "stationId": "radio-1",
+                                "stationName": "Stare radio",
+                                "path": str(fresh_history_media),
+                                "outcome": "Completed",
                             }
                         ],
                     }
@@ -220,6 +229,22 @@ def test_profile_edits_go_through_the_real_host() -> None:
                 "radio"
             ]["recordingHistory"][0]
             assert stored_history["path"] == renamed_history["path"]
+            renamed_fresh_history = client.rename_local_file(
+                "radio-recording-history:history-fresh",
+                "Swieze nagranie - poprawione",
+                path=str(fresh_history_media),
+            )
+            assert Path(renamed_fresh_history["path"]).name == (
+                "Swieze nagranie - poprawione.mp3"
+            )
+            assert renamed_fresh_history["itemId"] == (
+                "radio-recording-history:history-fresh"
+            )
+            assert Path(renamed_fresh_history["path"]).exists()
+            stored_fresh_history = json.loads(
+                state.read_text(encoding="utf-8")
+            )["radio"]["recordingHistory"][1]
+            assert stored_fresh_history["path"] == renamed_fresh_history["path"]
             client.rename_podcast_subscription("podcast-1", "Nowy podcast")
             removed_library = client.toggle_podcast_library(["podcast-1"])
             assert removed_library == {"added": False, "requested": 1, "changed": 1}

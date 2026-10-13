@@ -444,7 +444,11 @@ pozostają jako diagnostyka. Lista jest ograniczona do 100 najnowszych pozycji.
 `Shift+F2` przekazuje hostowi rzeczywistą ścieżkę wiersza historii, więc zmiana
 nazwy nie zależy już od technicznego identyfikatora listy. Host odnajduje
 odpowiadający wpis Biblioteki, a gdy go nie ma, bezpiecznie zmienia nazwę
-istniejącego pliku i aktualizuje ścieżkę historii.
+istniejącego pliku i aktualizuje ścieżkę historii. Przypadek świeżego nagrania,
+które jest już na dysku i w historii, ale nie trafiło jeszcze do indeksu
+Biblioteki, ma osobny test przez rzeczywisty LiteHost; odpowiedź zachowuje
+identyfikator wiersza historii i nie wykonuje pozornej aktualizacji pustego
+rekordu bazy.
 
 Dziennik 13 października potwierdza uruchomienie harmonogramu o 18:13. Nagranie
 z Jarosławia zakończyło się powodzeniem, natomiast Tarnobrzeg i Dominikanie

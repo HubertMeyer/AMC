@@ -89,13 +89,21 @@ internal sealed class LiteProfileMutationStore
                 var title = item.HasCustomTitle
                     ? item.Title
                     : Path.GetFileNameWithoutExtension(targetPath);
-                Execute(connection, transaction,
-                    "UPDATE local_items SET path = $path, title = $title WHERE id = $id;",
-                    ("$path", targetPath), ("$title", title), ("$id", item.Id));
+                // Wiersz Historii nagrywania może wskazywać świeży plik,
+                // którego skaner Biblioteki jeszcze nie zdążył zindeksować.
+                // Taki plik wolno przemianować po zweryfikowanej ścieżce,
+                // ale nie udajemy wtedy aktualizacji rekordu o pustym Id.
+                // Następny skan doda już plik pod nową nazwą.
+                if (!string.IsNullOrWhiteSpace(item.Id))
+                {
+                    Execute(connection, transaction,
+                        "UPDATE local_items SET path = $path, title = $title WHERE id = $id;",
+                        ("$path", targetPath), ("$title", title), ("$id", item.Id));
+                }
                 Execute(connection, transaction,
                     "UPDATE excluded_paths SET path = $path WHERE path = $old COLLATE NOCASE;",
                     ("$path", targetPath), ("$old", item.Path));
-                if (!item.HasCustomTitle)
+                if (!string.IsNullOrWhiteSpace(item.Id) && !item.HasCustomTitle)
                 {
                     Execute(connection, transaction,
                         "UPDATE bookmarks SET item_title = $title WHERE session_id = 'local' COLLATE NOCASE AND item_id = $id;",
@@ -105,7 +113,7 @@ internal sealed class LiteProfileMutationStore
                 transaction.Commit();
                 return new
                 {
-                    itemId = item.Id,
+                    itemId = string.IsNullOrWhiteSpace(item.Id) ? itemId : item.Id,
                     oldPath = item.Path,
                     path = targetPath,
                     title,
