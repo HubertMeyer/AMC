@@ -16,6 +16,7 @@ internal static class WiiMContractTests
         PresetActivationAcceptsOnlyTwelveSlots();
         NetworkStreamListDoesNotExposeUrls();
         NetworkStreamSnapshotUsesTheSavedName();
+        NetworkStreamSortContractIsStrictAndPreservesStoredOrder();
     }
 
     private static void DeviceListDoesNotExposeAddressesOrRuntimeObjects()
@@ -271,6 +272,51 @@ internal static class WiiMContractTests
             "komunikat migawki nie użył zapisanej nazwy strumienia");
         Check(!json.Contains("secret.example", StringComparison.Ordinal),
             "adres strumienia wyciekł z migawki lub komunikatu");
+    }
+
+    private static void NetworkStreamSortContractIsStrictAndPreservesStoredOrder()
+    {
+        var settings = new WiiMSettings
+        {
+            NetworkStreams =
+            [
+                new WiiMNetworkStreamSettings
+                {
+                    Id = "stream-1", Name = "Pierwszy",
+                    StreamUrl = "https://radio.invalid/1"
+                },
+                new WiiMNetworkStreamSettings
+                {
+                    Id = "stream-2", Name = "Drugi",
+                    StreamUrl = "https://radio.invalid/2"
+                }
+            ]
+        };
+        var json = JsonSerializer.Serialize(
+            LiteWiiMContract.CreateNetworkStreamsResult(
+                settings,
+                CollectionSortMode.Custom,
+                ["stream-2", "stream-1"]));
+        using var result = JsonDocument.Parse(json);
+        Check(result.RootElement.GetProperty("sortMode").GetString() == "Custom",
+            "lista nie podaje aktywnego użytkowego trybu sortowania");
+        Check(result.RootElement.GetProperty("items")[0]
+                .GetProperty("streamId").GetString() == "stream-2",
+            "kolejność własna nie została zachowana");
+
+        using var accepted = JsonDocument.Parse("""{"mode":"Alphabetical"}""");
+        Check(LiteWiiMContract.ReadNetworkStreamSortMode(accepted.RootElement)
+              == CollectionSortMode.Alphabetical,
+            "kontrakt odrzucił prawidłowy tryb sortowania");
+        using var rejected = JsonDocument.Parse("""{"mode":"RuntimeObject"}""");
+        try
+        {
+            LiteWiiMContract.ReadNetworkStreamSortMode(rejected.RootElement);
+            throw new InvalidOperationException("przyjęto techniczny nieznany tryb");
+        }
+        catch (LiteRequestException)
+        {
+        }
     }
 
     private static void Check(bool condition, string message)

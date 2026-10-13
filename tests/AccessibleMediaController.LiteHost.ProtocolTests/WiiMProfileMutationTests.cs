@@ -11,6 +11,8 @@ internal static class WiiMProfileMutationTests
         AddUpdatesDuplicateAndCreatesNewStream();
         EditRejectsDuplicateAddress();
         RemoveCleansDeviceMemoryAndOrders();
+        ImportPreservesPlaylistOrderAndSkipsDuplicates();
+        SortAndExportUseTheSameVisibleOrder();
         Console.WriteLine("WiiMProfileMutationTests: OK");
     }
 
@@ -91,6 +93,69 @@ internal static class WiiMProfileMutationTests
         Assert.True(
             orders.Count == 1 && orders[0]!.GetValue<string>() == "stream-2",
             "kolejność własna nie przechowuje usuniętego identyfikatora");
+    }
+
+    private static void ImportPreservesPlaylistOrderAndSkipsDuplicates()
+    {
+        var root = Profile();
+        var result = LiteWiiMProfileMutation.Import(
+            root,
+            [
+                new LiteWiiMNetworkStreamDraft(
+                    "Duplikat",
+                    "https://radio.invalid/poznan"),
+                new LiteWiiMNetworkStreamDraft(
+                    "Żuraw",
+                    "https://radio.invalid/zuraw"),
+                new LiteWiiMNetworkStreamDraft(
+                    "Alfa",
+                    "https://radio.invalid/alfa")
+            ],
+            parserSkipped: 1);
+        Assert.True(result.AddedCount == 2 && result.SkippedCount == 2,
+            "import liczy nowe wpisy, duplikaty i błędy parsera");
+        var visible = LiteWiiMProfileMutation.OrderForDisplay(root);
+        Assert.True(
+            visible.Streams.Take(2).Select(stream => stream.Name)
+                .SequenceEqual(["Żuraw", "Alfa"]),
+            "widok najnowszych zachowuje kolejność partii z playlisty");
+    }
+
+    private static void SortAndExportUseTheSameVisibleOrder()
+    {
+        var root = Profile();
+        var sorted = LiteWiiMProfileMutation.SetSortMode(
+            root,
+            AccessibleMediaController.Core.Configuration.CollectionSortMode.Alphabetical);
+        Assert.True(
+            sorted.Streams.Select(stream => stream.Name)
+                .SequenceEqual(["Radio Drugie", "Radio Poznań"]),
+            "sortowanie alfabetyczne używa nazw widocznych dla użytkownika");
+
+        var directory = Path.Combine(
+            Path.GetTempPath(),
+            "amc-wiim-export-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        try
+        {
+            var path = Path.Combine(directory, "strumienie.m3u");
+            var result = LiteWiiMNetworkStreamExport.Write(root, path);
+            var text = File.ReadAllText(path);
+            Assert.True(result.ExportedCount == 2,
+                "eksport podaje liczbę zapisanych strumieni");
+            Assert.True(
+                text.IndexOf("Radio Drugie", StringComparison.Ordinal)
+                < text.IndexOf("Radio Poznań", StringComparison.Ordinal),
+                "eksport zachowuje dokładnie porządek widoczny w AMC");
+            Assert.True(
+                !text.Contains("stream-1", StringComparison.Ordinal)
+                && text.Contains("https://radio.invalid/poznan", StringComparison.Ordinal),
+                "eksport zawiera adresy odtwarzania, ale nie identyfikatory AMC");
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+        }
     }
 
     private static JsonObject Profile() => new()

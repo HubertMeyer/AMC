@@ -4338,6 +4338,7 @@ class LiteFrame(wx.Frame):
         # WindowsMediaOutput i nie może zostać nadpisana przez jego timer.
         self._wiim_snapshot: dict = {}
         self._wiim_active_device_id = ""
+        self._wiim_network_stream_sort_mode = SORT_ADDED_NEWEST
         self._wiim_status_poll_pending = False
         self._sonos_snapshot: dict = {}
         self._sonos_active_household_id = ""
@@ -4784,6 +4785,11 @@ class LiteFrame(wx.Frame):
             Action.SORT_TIDAL_COLLECTION_ALPHABETICAL: SORT_ALPHABETICAL,
             Action.SORT_TIDAL_COLLECTION_CUSTOM: SORT_CUSTOM,
         }
+        wiim_sort_actions = {
+            Action.SORT_WIIM_NETWORK_STREAMS_ADDED: SORT_ADDED_NEWEST,
+            Action.SORT_WIIM_NETWORK_STREAMS_ALPHABETICAL: SORT_ALPHABETICAL,
+            Action.SORT_WIIM_NETWORK_STREAMS_CUSTOM: SORT_CUSTOM,
+        }
         for item, entry in self._menu_items:
             enabled = True
             if entry.needs_radio_session and not radio:
@@ -4840,6 +4846,11 @@ class LiteFrame(wx.Frame):
                     == self._tidal_effective_sort_modes.get(
                         tidal_scope, SORT_ADDED_NEWEST
                     )
+                )
+            elif entry.checkable and entry.action in wiim_sort_actions:
+                item.Check(
+                    wiim_sort_actions[entry.action]
+                    == self._wiim_network_stream_sort_mode
                 )
             elif entry.checkable and entry.action is Action.TOGGLE_RADIO_RECOGNITION_MONITORING:
                 item.Check(self.options.radio_recognition_monitoring)
@@ -6654,6 +6665,16 @@ class LiteFrame(wx.Frame):
             self._edit_wiim_network_stream()
         elif action is Action.REMOVE_WIIM_NETWORK_STREAMS:
             self._remove_wiim_network_streams()
+        elif action is Action.IMPORT_WIIM_NETWORK_STREAMS:
+            self._import_wiim_network_streams()
+        elif action is Action.EXPORT_WIIM_NETWORK_STREAMS:
+            self._export_wiim_network_streams()
+        elif action in {
+            Action.SORT_WIIM_NETWORK_STREAMS_ADDED,
+            Action.SORT_WIIM_NETWORK_STREAMS_ALPHABETICAL,
+            Action.SORT_WIIM_NETWORK_STREAMS_CUSTOM,
+        }:
+            self._set_wiim_network_stream_sort(action)
         elif action is Action.ASSIGN_PRESET:
             self._assign_preset()
         elif (slot := preset_slot(action)) is not None:
@@ -7391,6 +7412,14 @@ class LiteFrame(wx.Frame):
         def done(payload: object) -> None:
             if self.navigator.active is not SessionId.WIIM:
                 return
+            if isinstance(payload, dict):
+                sort_mode = str(payload.get("sortMode") or "")
+                if sort_mode in {
+                    SORT_ADDED_NEWEST,
+                    SORT_ALPHABETICAL,
+                    SORT_CUSTOM,
+                }:
+                    self._wiim_network_stream_sort_mode = sort_mode
             try:
                 rows = list(wiim_network_stream_rows(
                     payload,
@@ -7560,6 +7589,109 @@ class LiteFrame(wx.Frame):
             done,
             lambda error: self.announcer.say(
                 f"Nie usunięto strumieni WiiM: {error}"
+            ),
+        )
+
+    def _import_wiim_network_streams(self) -> None:
+        client = self._profile_edit_client()
+        if client is None:
+            return
+        if self._wiim_device_context() is None:
+            self.announcer.say("Wybierz urządzenie WiiM")
+            return
+        with wx.FileDialog(
+            self,
+            "Importuj strumienie z playlisty do WiiM",
+            wildcard=(
+                "Playlisty (*.m3u;*.m3u8;*.pls)|*.m3u;*.m3u8;*.pls|"
+                "Wszystkie pliki (*.*)|*.*"
+            ),
+            style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST,
+        ) as dialog:
+            if dialog.ShowModal() != wx.ID_OK:
+                self._restore_focus_after_dialog()
+                return
+            path = dialog.GetPath()
+
+        def done(payload: object) -> None:
+            result = payload if isinstance(payload, dict) else {}
+            preferred = str(result.get("preferredStreamId") or "") or None
+            message = str(
+                result.get("message") or "Zakończono import strumieni WiiM"
+            )
+            self._show_wiim_network_streams(
+                preferred_stream_id=preferred,
+                announcement=message,
+            )
+
+        self.runner.submit(
+            "wiim-stream-import",
+            lambda: client.wiim_import_network_streams(path),
+            done,
+            lambda error: self.announcer.say(
+                f"Nie można zaimportować playlisty: {error}"
+            ),
+        )
+
+    def _export_wiim_network_streams(self) -> None:
+        client = self._profile_edit_client()
+        if client is None:
+            return
+        with wx.FileDialog(
+            self,
+            "Eksportuj strumienie do WiiM Home",
+            defaultFile="Strumienie WiiM AMC.m3u",
+            wildcard="Playlisty M3U (*.m3u)|*.m3u|Wszystkie pliki (*.*)|*.*",
+            style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT,
+        ) as dialog:
+            if dialog.ShowModal() != wx.ID_OK:
+                self._restore_focus_after_dialog()
+                return
+            path = str(Path(dialog.GetPath()).with_suffix(".m3u"))
+
+        def done(payload: object) -> None:
+            result = payload if isinstance(payload, dict) else {}
+            count = int(result.get("exportedCount") or 0)
+            self.announcer.say(f"Wyeksportowano strumienie WiiM: {count}")
+            self._restore_focus_after_dialog()
+
+        self.runner.submit(
+            "wiim-stream-export",
+            lambda: client.wiim_export_network_streams(path),
+            done,
+            lambda error: self.announcer.say(
+                f"Nie można zapisać playlisty: {error}"
+            ),
+        )
+
+    def _set_wiim_network_stream_sort(self, action: Action) -> None:
+        modes = {
+            Action.SORT_WIIM_NETWORK_STREAMS_ADDED: SORT_ADDED_NEWEST,
+            Action.SORT_WIIM_NETWORK_STREAMS_ALPHABETICAL: SORT_ALPHABETICAL,
+            Action.SORT_WIIM_NETWORK_STREAMS_CUSTOM: SORT_CUSTOM,
+        }
+        mode = modes[action]
+        client = self._profile_edit_client()
+        if client is None:
+            return
+        selected = next(iter(self._selected_wiim_stream_rows()), None)
+        preferred = selected.service_id if selected is not None else None
+
+        def done(payload: object) -> None:
+            result = payload if isinstance(payload, dict) else {}
+            self._wiim_network_stream_sort_mode = mode
+            message = str(result.get("message") or "Zmieniono kolejność strumieni WiiM")
+            self._show_wiim_network_streams(
+                preferred_stream_id=preferred,
+                announcement=message,
+            )
+
+        self.runner.submit(
+            "wiim-stream-sort",
+            lambda: client.wiim_sort_network_streams(mode),
+            done,
+            lambda error: self.announcer.say(
+                f"Nie zapisano kolejności strumieni WiiM: {error}"
             ),
         )
 

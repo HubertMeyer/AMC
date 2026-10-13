@@ -25,8 +25,14 @@ internal sealed class LiteWiiMCoordinator(string statePath) : IDisposable
 
     public object ListDevices() => LiteWiiMContract.CreateDevicesResult(ReadSettings());
 
-    public object ListNetworkStreams() =>
-        LiteWiiMContract.CreateNetworkStreamsResult(ReadSettings());
+    public object ListNetworkStreams()
+    {
+        var profile = ReadProfile();
+        return LiteWiiMContract.CreateNetworkStreamsResult(
+            profile.Settings,
+            profile.SortMode,
+            profile.StoredItemIds);
+    }
 
     public object NetworkStreamEditInfo(JsonElement args)
     {
@@ -305,7 +311,9 @@ internal sealed class LiteWiiMCoordinator(string statePath) : IDisposable
         return device;
     }
 
-    private WiiMSettings ReadSettings()
+    private WiiMSettings ReadSettings() => ReadProfile().Settings;
+
+    private WiiMProfile ReadProfile()
     {
         try
         {
@@ -314,13 +322,24 @@ internal sealed class LiteWiiMCoordinator(string statePath) : IDisposable
                 FileShare.ReadWrite | FileShare.Delete);
             using var document = JsonDocument.Parse(stream);
             if (document.RootElement.ValueKind != JsonValueKind.Object
-                || !document.RootElement.TryGetProperty("wiiM", out var wiim)
+                || !TryGetProperty(document.RootElement, out var wiim, "wiiM", "WiiM")
                 || wiim.ValueKind != JsonValueKind.Object)
             {
-                return new WiiMSettings();
+                return new WiiMProfile(
+                    new WiiMSettings(),
+                    CollectionSortMode.AddedNewest,
+                    []);
             }
-            return JsonSerializer.Deserialize<WiiMSettings>(wiim.GetRawText(), JsonOptions)
-                ?? new WiiMSettings();
+            var settings = JsonSerializer.Deserialize<WiiMSettings>(
+                wiim.GetRawText(),
+                JsonOptions) ?? new WiiMSettings();
+            var mode = ReadSortMode(document.RootElement);
+            return new WiiMProfile(
+                settings,
+                mode,
+                ReadOrderIds(
+                    document.RootElement,
+                    custom: mode is CollectionSortMode.Custom));
         }
         catch (FileNotFoundException)
         {
@@ -337,6 +356,74 @@ internal sealed class LiteWiiMCoordinator(string statePath) : IDisposable
                 "Nie można teraz odczytać urządzeń WiiM z profilu AMC.");
         }
     }
+
+    private static CollectionSortMode ReadSortMode(JsonElement root)
+    {
+        if (TryGetProperty(root, out var navigation, "sessionNavigation", "SessionNavigation")
+            && TryGetProperty(navigation, out var sessions, "sessions", "Sessions")
+            && TryGetProperty(sessions, out var wiiM, "wiim", "WiiM")
+            && TryGetProperty(
+                wiiM,
+                out var modes,
+                "collectionSortModes",
+                "CollectionSortModes")
+            && TryGetProperty(modes, out var value, "Biblioteka"))
+        {
+            if (value.ValueKind == JsonValueKind.String
+                && Enum.TryParse<CollectionSortMode>(
+                    value.GetString(),
+                    ignoreCase: true,
+                    out var parsed))
+                return parsed;
+            if (value.ValueKind == JsonValueKind.Number
+                && value.TryGetInt32(out var number)
+                && Enum.IsDefined(typeof(CollectionSortMode), number))
+                return (CollectionSortMode)number;
+        }
+        return CollectionSortMode.AddedNewest;
+    }
+
+    private static string[] ReadOrderIds(JsonElement root, bool custom)
+    {
+        var property = custom
+            ? "libraryItemIdsBySession"
+            : "libraryAddedItemIdsBySession";
+        var legacy = custom
+            ? "LibraryItemIdsBySession"
+            : "LibraryAddedItemIdsBySession";
+        if (!TryGetProperty(root, out var orders, "collectionOrders", "CollectionOrders")
+            || !TryGetProperty(orders, out var bySession, property, legacy)
+            || !TryGetProperty(bySession, out var values, "wiim", "WiiM")
+            || values.ValueKind != JsonValueKind.Array)
+            return [];
+        return values.EnumerateArray()
+            .Where(value => value.ValueKind == JsonValueKind.String)
+            .Select(value => value.GetString()?.Trim() ?? "")
+            .Where(value => value.Length > 0)
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+    }
+
+    private static bool TryGetProperty(
+        JsonElement source,
+        out JsonElement value,
+        params string[] names)
+    {
+        if (source.ValueKind == JsonValueKind.Object)
+        {
+            foreach (var name in names)
+            {
+                if (source.TryGetProperty(name, out value)) return true;
+            }
+        }
+        value = default;
+        return false;
+    }
+
+    private sealed record WiiMProfile(
+        WiiMSettings Settings,
+        CollectionSortMode SortMode,
+        IReadOnlyList<string> StoredItemIds);
 
     private static string UserTitle(WiiMDeviceSettings device) =>
         string.IsNullOrWhiteSpace(device.DisplayName)

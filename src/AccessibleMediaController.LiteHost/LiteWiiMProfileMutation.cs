@@ -1,4 +1,5 @@
 using System.Text.Json.Nodes;
+using AccessibleMediaController.Core.Configuration;
 using AccessibleMediaController.Core.Devices.WiiM;
 using AccessibleMediaController.LiteHost.Protocol;
 
@@ -9,6 +10,18 @@ internal sealed record LiteWiiMNetworkStreamMutationResult(
     string Title,
     int AddedCount,
     int UpdatedCount);
+
+internal sealed record LiteWiiMNetworkStreamImportResult(
+    string? PreferredStreamId,
+    int AddedCount,
+    int SkippedCount,
+    int InvalidCount);
+
+internal sealed record LiteWiiMNetworkStreamDisplayOrder(
+    IReadOnlyList<WiiMNetworkStreamSettings> Streams,
+    CollectionSortMode SortMode);
+
+internal sealed record LiteWiiMNetworkStreamDraft(string Name, string Url);
 
 internal static class LiteWiiMProfileMutation
 {
@@ -128,6 +141,115 @@ internal static class LiteWiiMProfileMutation
         return titles;
     }
 
+    public static LiteWiiMNetworkStreamImportResult Import(
+        JsonObject root,
+        IReadOnlyList<LiteWiiMNetworkStreamDraft> requestedStreams,
+        int parserSkipped)
+    {
+        if (requestedStreams.Count > 10_000)
+            throw new LiteRequestException(
+                "Playlista może zawierać najwyżej 10000 strumieni.");
+        var streams = EnsureNetworkStreams(root);
+        var existingUrls = streams.OfType<JsonObject>()
+            .Select(stream => ReadText(stream, "streamUrl", "StreamUrl"))
+            .Select(url => WiiMPlaybackUriPolicy.TryNormalize(url, out var normalized)
+                ? normalized
+                : "")
+            .Where(url => url.Length > 0)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var added = new List<string>();
+        var invalid = Math.Max(0, parserSkipped);
+        var duplicates = 0;
+        foreach (var requested in requestedStreams)
+        {
+            if (!WiiMPlaybackUriPolicy.TryNormalize(requested.Url, out var url))
+            {
+                invalid++;
+                continue;
+            }
+            if (!existingUrls.Add(url))
+            {
+                duplicates++;
+                continue;
+            }
+            var name = string.IsNullOrWhiteSpace(requested.Name)
+                ? Uri.TryCreate(url, UriKind.Absolute, out var uri)
+                    ? uri.Host
+                    : "Strumień WiiM"
+                : requested.Name.Trim();
+            var id = $"wiim:stream:{Guid.NewGuid():N}";
+            streams.Add(new JsonObject
+            {
+                ["id"] = id,
+                ["name"] = name,
+                ["streamUrl"] = url,
+                ["addedUtcTicks"] = DateTime.UtcNow.Ticks
+            });
+            added.Add(id);
+        }
+
+        if (added.Count > 0)
+        {
+            var all = ReadStreams(root);
+            var remembered = ReadOrderIds(root, custom: false);
+            if (remembered.Count == 0)
+            {
+                remembered = all
+                    .OrderBy(stream => stream.AddedUtcTicks)
+                    .ThenBy(stream => stream.Id, StringComparer.Ordinal)
+                    .Select(stream => stream.Id)
+                    .ToArray();
+            }
+            WriteOrderIds(
+                root,
+                custom: false,
+                WiiMNetworkStreamOrdering.RememberImportedBatch(
+                    all,
+                    remembered,
+                    added));
+        }
+        return new(
+            added.FirstOrDefault(),
+            added.Count,
+            invalid + duplicates,
+            invalid);
+    }
+
+    public static LiteWiiMNetworkStreamDisplayOrder OrderForDisplay(JsonObject root)
+    {
+        var mode = ReadSortMode(root);
+        var streams = ReadStreams(root);
+        var result = WiiMNetworkStreamOrdering.OrderForDisplay(
+            streams,
+            mode,
+            EffectiveOrderIds(root, streams, mode));
+        return new(result.Streams, mode);
+    }
+
+    public static LiteWiiMNetworkStreamDisplayOrder SetSortMode(
+        JsonObject root,
+        CollectionSortMode mode)
+    {
+        var modes = EnsureObject(
+            EnsureObject(
+                EnsureObject(
+                    EnsureObject(root, "sessionNavigation"),
+                    "sessions"),
+                "wiim"),
+            "collectionSortModes");
+        modes["Biblioteka"] = mode.ToString();
+        var streams = ReadStreams(root);
+        var result = WiiMNetworkStreamOrdering.OrderForDisplay(
+            streams,
+            mode,
+            EffectiveOrderIds(root, streams, mode));
+        WriteOrderIds(
+            root,
+            custom: mode is CollectionSortMode.Custom,
+            result.NormalizedItemIds);
+        return new(result.Streams, mode);
+    }
+
     private static string NormalizeUrl(string requestedUrl)
     {
         if (WiiMPlaybackUriPolicy.TryNormalize(requestedUrl, out var url))
@@ -159,6 +281,95 @@ internal static class LiteWiiMProfileMutation
         var created = new JsonArray();
         wiiM["networkStreams"] = created;
         return created;
+    }
+
+    private static JsonObject EnsureObject(JsonObject parent, string name)
+    {
+        if (parent[name] is JsonObject current) return current;
+        var created = new JsonObject();
+        parent[name] = created;
+        return created;
+    }
+
+    private static IReadOnlyList<WiiMNetworkStreamSettings> ReadStreams(JsonObject root) =>
+        EnsureNetworkStreams(root)
+            .OfType<JsonObject>()
+            .Select(stream => new WiiMNetworkStreamSettings
+            {
+                Id = ReadText(stream, "id", "Id"),
+                Name = ReadText(stream, "name", "Name"),
+                StreamUrl = ReadText(stream, "streamUrl", "StreamUrl"),
+                AddedUtcTicks = ReadLong(stream, "addedUtcTicks", "AddedUtcTicks")
+            })
+            .Where(stream => stream.Id.Length > 0)
+            .ToArray();
+
+    private static CollectionSortMode ReadSortMode(JsonObject root)
+    {
+        var value = root["sessionNavigation"]?["sessions"]?["wiim"]?
+            ["collectionSortModes"]?["Biblioteka"];
+        if (value is JsonValue json)
+        {
+            if (json.TryGetValue<string>(out var text)
+                && Enum.TryParse<CollectionSortMode>(
+                    text,
+                    ignoreCase: true,
+                    out var parsed))
+                return parsed;
+            if (json.TryGetValue<int>(out var number)
+                && Enum.IsDefined(typeof(CollectionSortMode), number))
+                return (CollectionSortMode)number;
+        }
+        return CollectionSortMode.AddedNewest;
+    }
+
+    private static IReadOnlyList<string> ReadOrderIds(JsonObject root, bool custom)
+    {
+        var name = custom
+            ? "libraryItemIdsBySession"
+            : "libraryAddedItemIdsBySession";
+        if (root["collectionOrders"]?[name]?["wiim"] is not JsonArray values)
+            return [];
+        return values
+            .OfType<JsonValue>()
+            .Select(value => value.TryGetValue<string>(out var text) ? text.Trim() : "")
+            .Where(value => value.Length > 0)
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+    }
+
+    private static IReadOnlyList<string> EffectiveOrderIds(
+        JsonObject root,
+        IReadOnlyList<WiiMNetworkStreamSettings> streams,
+        CollectionSortMode mode)
+    {
+        var ids = ReadOrderIds(root, custom: mode is CollectionSortMode.Custom);
+        if (ids.Count > 0 || mode is not CollectionSortMode.AddedNewest)
+            return ids;
+        return streams
+            .OrderBy(stream => stream.AddedUtcTicks)
+            .ThenBy(stream => stream.Id, StringComparer.Ordinal)
+            .Select(stream => stream.Id)
+            .ToArray();
+    }
+
+    private static void WriteOrderIds(
+        JsonObject root,
+        bool custom,
+        IEnumerable<string> values)
+    {
+        var name = custom
+            ? "libraryItemIdsBySession"
+            : "libraryAddedItemIdsBySession";
+        var bySession = EnsureObject(
+            EnsureObject(root, "collectionOrders"),
+            name);
+        bySession["wiim"] = new JsonArray(
+            values
+                .Where(value => !string.IsNullOrWhiteSpace(value))
+                .Distinct(StringComparer.Ordinal)
+                .Select(value => (JsonNode?)JsonValue.Create(value.Trim()))
+                .ToArray());
     }
 
     private static void RemoveOrderIds(
@@ -195,5 +406,16 @@ internal static class LiteWiiMProfileMutation
                 return text.Trim();
         }
         return "";
+    }
+
+    private static long ReadLong(JsonObject source, params string[] names)
+    {
+        foreach (var name in names)
+        {
+            if (source[name] is JsonValue value
+                && value.TryGetValue<long>(out var number))
+                return number;
+        }
+        return 0;
     }
 }

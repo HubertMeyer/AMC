@@ -521,11 +521,15 @@ własnej normalizacji diakrytyków.
   Pythona tylko po jawnym F2, do oznaczonego pola edycji. Delete czyści też
   zapamiętany wybór urządzenia i kolejności AMC, ale nie zmienia WiiM Home.
   F2/Delete są kontekstowe i nie przechwytują listy urządzeń.
+  Import `Ctrl+Shift+O` korzysta z istniejącego parsera playlist AMC i
+  zachowuje kolejność partii. Eksport `Ctrl+E` używa istniejącego zapisu M3U
+  WiiM i tego samego porządku co ekran. `Alt+1/2/3` zapisują w głównym profilu
+  odpowiednio tryb najnowsze, alfabetyczny i własny; menu przekazuje stan jako
+  natywne pole zaznaczone, nie jako dopowiedziany tekst.
   Próba na dwóch urządzeniach zapisanych w bieżącym profilu potwierdziła listę
   i bezpieczny komunikat braku odpowiedzi; oba urządzenia były w czasie próby
   niedostępne, więc żywy transport wymaga jeszcze odbioru na włączonym WiiM.
-- Do dalszego portu pozostaje import, eksport i sortowanie Strumieni WiiM,
-  wejścia, wyjścia, korektor,
+- Do dalszego portu pozostają wejścia, wyjścia, korektor,
   powtarzanie i timer, a następnie Sonos i Spotify, dalsze ustawienia oraz
   pozostała redakcja materiałów.
 

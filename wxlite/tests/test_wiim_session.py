@@ -135,6 +135,9 @@ def test_wiim_host_client_sends_only_device_id_command_and_volume() -> None:
         "stream-7", "Radio Poznań 2", "https://radio.example/live2"
     )
     client.wiim_remove_network_streams(["stream-7", "stream-8"])
+    client.wiim_import_network_streams("C:/listy/wiim.m3u")
+    client.wiim_export_network_streams("C:/listy/eksport.m3u")
+    client.wiim_sort_network_streams("Alphabetical")
 
     assert calls == [
         ("wiim.devices", None, 15.0),
@@ -178,6 +181,21 @@ def test_wiim_host_client_sends_only_device_id_command_and_volume() -> None:
         (
             "wiim.networkStreamRemove",
             {"itemIds": ["stream-7", "stream-8"]},
+            30.0,
+        ),
+        (
+            "wiim.networkStreamImport",
+            {"path": "C:/listy/wiim.m3u"},
+            60.0,
+        ),
+        (
+            "wiim.networkStreamExport",
+            {"path": "C:/listy/eksport.m3u"},
+            60.0,
+        ),
+        (
+            "wiim.networkStreamSort",
+            {"mode": "Alphabetical"},
             30.0,
         ),
     ]
@@ -330,6 +348,37 @@ def test_wiim_stream_edit_shortcuts_are_active_only_inside_stream_list() -> None
         wiim_session=True,
         wiim_streams=True,
     ) is Action.REMOVE_WIIM_NETWORK_STREAMS
+
+    assert resolve(
+        Chord("O", ctrl=True, shift=True),
+        player_view=False,
+        radio_session=False,
+        wiim_session=True,
+    ) is Action.IMPORT_WIIM_NETWORK_STREAMS
+    assert resolve(
+        Chord("E", ctrl=True),
+        player_view=False,
+        radio_session=False,
+        wiim_session=True,
+    ) is Action.EXPORT_WIIM_NETWORK_STREAMS
+    for key, action in (
+        ("1", Action.SORT_WIIM_NETWORK_STREAMS_ADDED),
+        ("2", Action.SORT_WIIM_NETWORK_STREAMS_ALPHABETICAL),
+        ("3", Action.SORT_WIIM_NETWORK_STREAMS_CUSTOM),
+    ):
+        assert resolve(
+            Chord(key, alt=True),
+            player_view=False,
+            radio_session=False,
+            wiim_session=True,
+        ) is None
+        assert resolve(
+            Chord(key, alt=True),
+            player_view=False,
+            radio_session=False,
+            wiim_session=True,
+            wiim_streams=True,
+        ) is action
 
 
 def test_wiim_stream_edit_info_is_explicit_and_user_facing() -> None:

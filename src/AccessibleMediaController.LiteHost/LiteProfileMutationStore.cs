@@ -3,6 +3,7 @@ using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
+using AccessibleMediaController.Core.Configuration;
 using AccessibleMediaController.Core.LocalMedia;
 using AccessibleMediaController.LiteHost.Protocol;
 using AccessibleMediaController.Windows.Services;
@@ -451,6 +452,81 @@ internal sealed class LiteProfileMutationStore
                     ? $"Usunięto z AMC strumień WiiM: {titles[0]}. WiiM Home pozostał bez zmian"
                     : $"Usunięto z AMC strumienie WiiM: {titles.Length}. WiiM Home pozostał bez zmian"
             };
+        }
+    }
+
+    public object ImportWiiMNetworkStreams(
+        IReadOnlyList<LiteWiiMNetworkStreamDraft> streams,
+        int parserSkipped)
+    {
+        EnsureMayWrite();
+        lock (_gate)
+        {
+            var root = ReadState();
+            var result = LiteWiiMProfileMutation.Import(
+                root,
+                streams,
+                parserSkipped);
+            if (result.AddedCount > 0) WriteState(root);
+            return new
+            {
+                preferredStreamId = result.PreferredStreamId,
+                addedCount = result.AddedCount,
+                skippedCount = result.SkippedCount,
+                message = result.AddedCount > 0
+                    ? $"Zaimportowano strumienie do WiiM: {result.AddedCount}"
+                    : result.InvalidCount > 0
+                        ? "Playlista nie zawiera nowych prawidłowych strumieni WiiM"
+                        : "Wszystkie strumienie z tej playlisty są już zapisane"
+            };
+        }
+    }
+
+    public object SetWiiMNetworkStreamSortMode(CollectionSortMode mode)
+    {
+        EnsureMayWrite();
+        lock (_gate)
+        {
+            var root = ReadState();
+            LiteWiiMProfileMutation.SetSortMode(root, mode);
+            WriteState(root);
+            var label = mode switch
+            {
+                CollectionSortMode.Alphabetical => "alfabetycznie",
+                CollectionSortMode.Custom => "kolejność własna",
+                _ => "według dodania, najnowsze najpierw"
+            };
+            return new
+            {
+                sortMode = mode.ToString(),
+                message = $"Strumienie WiiM: {label}"
+            };
+        }
+    }
+
+    public LiteWiiMNetworkStreamExportResult ExportWiiMNetworkStreams(
+        string destinationPath)
+    {
+        lock (_gate)
+        {
+            try
+            {
+                return LiteWiiMNetworkStreamExport.Write(
+                    ReadState(),
+                    destinationPath);
+            }
+            catch (InvalidDataException exception)
+            {
+                throw new LiteRequestException(exception.Message);
+            }
+            catch (Exception exception) when (exception is IOException
+                or UnauthorizedAccessException
+                or ArgumentException
+                or NotSupportedException)
+            {
+                throw new LiteRequestException(
+                    "Nie można zapisać playlisty: " + exception.Message);
+            }
         }
     }
 

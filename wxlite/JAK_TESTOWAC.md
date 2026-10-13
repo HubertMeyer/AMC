@@ -190,16 +190,20 @@ WiiM:
    jawnie powiedzieć, że WiiM Home pozostaje bez zmian. Po każdej operacji
    lista wraca na zmieniony wpis; adres wolno pokazać tylko w jawnym oknie
    edycji F2, nigdy w zwykłej nazwie dostępnościowej. Na liście urządzeń F2
-   i Delete nie są przejmowane przez obsługę strumieni. Import `Ctrl+Shift+O`,
-   eksport `Ctrl+E` i sortowanie `Alt+1/2/3` pozostają do przeniesienia.
-   Skróty `Ctrl+Shift+1–0/-/=` nadal uruchamiają mapowane presety AMC.
+   i Delete nie są przejmowane przez obsługę strumieni. `Ctrl+Shift+O`
+   importuje M3U/M3U8/PLS istniejącym importerem AMC, bez dublowania adresów.
+   `Ctrl+E` zapisuje M3U do WiiM Home w dokładnie widocznej kolejności i bez
+   technicznych identyfikatorów. `Alt+1`, `Alt+2`, `Alt+3` wybierają kolejno:
+   najnowsze, alfabetycznie i kolejność własną; aktualny wybór jest polem
+   zaznaczonym w menu i przeżywa restart. Skróty `Ctrl+Shift+1–0/-/=` nadal
+   uruchamiają mapowane presety AMC.
 
 Wynik odbioru 10 października: urządzenie i stan są prawidłowo widziane,
 stację można uruchomić i zatrzymać. Natywne presety pod `Ctrl+Alt+P` i
 odtwarzanie zapisanych Strumieni WiiM pod `Ctrl+O` są podłączone technicznie
 i czekają na powyższy odbiór na obudzonym urządzeniu. Do przeniesienia
-pozostaje odbiór zarządzania listą Strumieni na żywym urządzeniu, następnie
-import, eksport, sortowanie oraz pozostałe opcje sprzętowe WiiM.
+pozostaje odbiór zarządzania listą Strumieni na żywym urządzeniu oraz
+pozostałe opcje sprzętowe WiiM.
 
 Sonos:
 

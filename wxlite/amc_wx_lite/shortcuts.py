@@ -202,6 +202,11 @@ class Action(Enum):
     ADD_WIIM_NETWORK_STREAM = "wiim.networkStreams.add"
     EDIT_WIIM_NETWORK_STREAM = "wiim.networkStreams.edit"
     REMOVE_WIIM_NETWORK_STREAMS = "wiim.networkStreams.remove"
+    IMPORT_WIIM_NETWORK_STREAMS = "wiim.networkStreams.import"
+    EXPORT_WIIM_NETWORK_STREAMS = "wiim.networkStreams.export"
+    SORT_WIIM_NETWORK_STREAMS_ADDED = "wiim.networkStreams.sort.added"
+    SORT_WIIM_NETWORK_STREAMS_ALPHABETICAL = "wiim.networkStreams.sort.alphabetical"
+    SORT_WIIM_NETWORK_STREAMS_CUSTOM = "wiim.networkStreams.sort.custom"
     OPEN_FOLDER_DIALOG = "files.openFolder"
     OPEN_FILE_DIALOG = "files.openFile"
     COPY_NAME = "clipboard.copyName"
@@ -414,6 +419,11 @@ WIIM_SUPPORTED_ACTIONS = frozenset({
     Action.ADD_WIIM_NETWORK_STREAM,
     Action.EDIT_WIIM_NETWORK_STREAM,
     Action.REMOVE_WIIM_NETWORK_STREAMS,
+    Action.IMPORT_WIIM_NETWORK_STREAMS,
+    Action.EXPORT_WIIM_NETWORK_STREAMS,
+    Action.SORT_WIIM_NETWORK_STREAMS_ADDED,
+    Action.SORT_WIIM_NETWORK_STREAMS_ALPHABETICAL,
+    Action.SORT_WIIM_NETWORK_STREAMS_CUSTOM,
     Action.GENERAL_SETTINGS,
     Action.TOGGLE_SEEK_MESSAGES,
     Action.QUICK_INFORMATION,
@@ -880,8 +890,13 @@ TIDAL_COLLECTION_LIST_VIEW: dict[str, Action] = {
 WIIM_SESSION_VIEW: dict[str, Action] = {
     "Ctrl+O": Action.VIEW_WIIM_NETWORK_STREAMS,
     "Ctrl+N": Action.ADD_WIIM_NETWORK_STREAM,
+    "Ctrl+Shift+O": Action.IMPORT_WIIM_NETWORK_STREAMS,
+    "Ctrl+E": Action.EXPORT_WIIM_NETWORK_STREAMS,
     "F2": Action.EDIT_WIIM_NETWORK_STREAM,
     "Delete": Action.REMOVE_WIIM_NETWORK_STREAMS,
+    "Alt+1": Action.SORT_WIIM_NETWORK_STREAMS_ADDED,
+    "Alt+2": Action.SORT_WIIM_NETWORK_STREAMS_ALPHABETICAL,
+    "Alt+3": Action.SORT_WIIM_NETWORK_STREAMS_CUSTOM,
 }
 
 
@@ -930,6 +945,9 @@ def resolve(
         if action in {
             Action.EDIT_WIIM_NETWORK_STREAM,
             Action.REMOVE_WIIM_NETWORK_STREAMS,
+            Action.SORT_WIIM_NETWORK_STREAMS_ADDED,
+            Action.SORT_WIIM_NETWORK_STREAMS_ALPHABETICAL,
+            Action.SORT_WIIM_NETWORK_STREAMS_CUSTOM,
         } and not wiim_streams:
             return None
         return action
@@ -1106,6 +1124,17 @@ def _help_entries() -> list[tuple[str, str, Action]]:
         Action.ADD_WIIM_NETWORK_STREAM: "Dodaj strumień sieciowy WiiM",
         Action.EDIT_WIIM_NETWORK_STREAM: "Edytuj wybrany strumień WiiM",
         Action.REMOVE_WIIM_NETWORK_STREAMS: "Usuń wybrane strumienie WiiM z AMC",
+        Action.IMPORT_WIIM_NETWORK_STREAMS: "Importuj playlistę strumieni WiiM",
+        Action.EXPORT_WIIM_NETWORK_STREAMS: "Eksportuj strumienie do WiiM Home",
+        Action.SORT_WIIM_NETWORK_STREAMS_ADDED: (
+            "Strumienie WiiM: według dodania, najnowsze najpierw"
+        ),
+        Action.SORT_WIIM_NETWORK_STREAMS_ALPHABETICAL: (
+            "Strumienie WiiM: alfabetycznie"
+        ),
+        Action.SORT_WIIM_NETWORK_STREAMS_CUSTOM: (
+            "Strumienie WiiM: kolejność własna"
+        ),
         Action.ASSIGN_PRESET: "Utwórz preset lub przypisz bieżący element",
         Action.VIEW_ALL_FILES: "Wszystkie pliki alfabetycznie",
         Action.VIEW_FAVORITES: "Ulubione",
@@ -1197,6 +1226,11 @@ def _help_entries() -> list[tuple[str, str, Action]]:
                 Action.ADD_WIIM_NETWORK_STREAM,
                 Action.EDIT_WIIM_NETWORK_STREAM,
                 Action.REMOVE_WIIM_NETWORK_STREAMS,
+                Action.IMPORT_WIIM_NETWORK_STREAMS,
+                Action.EXPORT_WIIM_NETWORK_STREAMS,
+                Action.SORT_WIIM_NETWORK_STREAMS_ADDED,
+                Action.SORT_WIIM_NETWORK_STREAMS_ALPHABETICAL,
+                Action.SORT_WIIM_NETWORK_STREAMS_CUSTOM,
             }:
                 label = f"{label} (Strumienie WiiM)"
             # Nigdy nie wystawiamy technicznego identyfikatora Enum do mowy

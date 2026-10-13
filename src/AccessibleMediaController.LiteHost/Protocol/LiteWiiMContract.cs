@@ -21,6 +21,9 @@ public static class LiteWiiMContract
     public const string AddNetworkStreamOperation = "wiim.networkStreamAdd";
     public const string EditNetworkStreamOperation = "wiim.networkStreamEdit";
     public const string RemoveNetworkStreamsOperation = "wiim.networkStreamRemove";
+    public const string ImportNetworkStreamsOperation = "wiim.networkStreamImport";
+    public const string ExportNetworkStreamsOperation = "wiim.networkStreamExport";
+    public const string SortNetworkStreamsOperation = "wiim.networkStreamSort";
 
     public static string ReadDeviceId(JsonElement args) =>
         LiteArgs.RequireText(args, "deviceId").Trim();
@@ -75,6 +78,15 @@ public static class LiteWiiMContract
     public static string ReadNetworkStreamId(JsonElement args) =>
         LiteArgs.RequireText(args, "streamId").Trim();
 
+    public static CollectionSortMode ReadNetworkStreamSortMode(JsonElement args)
+    {
+        var text = LiteArgs.RequireText(args, "mode").Trim();
+        if (Enum.TryParse<CollectionSortMode>(text, ignoreCase: true, out var mode)
+            && Enum.IsDefined(mode))
+            return mode;
+        throw new LiteRequestException("Nieznany sposób sortowania strumieni WiiM.");
+    }
+
     public static object CreateDevicesResult(WiiMSettings settings)
     {
         var selected = settings.SelectedDeviceId;
@@ -94,15 +106,34 @@ public static class LiteWiiMContract
         return new { items };
     }
 
-    public static object CreateNetworkStreamsResult(WiiMSettings settings)
+    public static object CreateNetworkStreamsResult(
+        WiiMSettings settings,
+        CollectionSortMode mode = CollectionSortMode.AddedNewest,
+        IEnumerable<string>? storedItemIds = null)
     {
-        var items = (settings.NetworkStreams ?? [])
+        var valid = (settings.NetworkStreams ?? [])
             .Where(stream => !string.IsNullOrWhiteSpace(stream.Id)
                 && !string.IsNullOrWhiteSpace(stream.Name)
                 && WiiMPlaybackUriPolicy.TryNormalize(stream.StreamUrl, out _))
             .DistinctBy(stream => stream.Id.Trim(), StringComparer.OrdinalIgnoreCase)
-            .OrderByDescending(stream => stream.AddedUtcTicks)
-            .ThenBy(stream => stream.Name, StringComparer.CurrentCultureIgnoreCase)
+            .ToArray();
+        var remembered = (storedItemIds ?? []).ToArray();
+        if (mode is CollectionSortMode.AddedNewest && remembered.Length == 0)
+        {
+            // Starsze profile nie miały osobnej tabeli kolejności. Zbuduj
+            // wtedy jej naturalny odpowiednik od najstarszego do najnowszego;
+            // OrderForDisplay odwróci go dokładnie raz.
+            remembered = valid
+                .OrderBy(stream => stream.AddedUtcTicks)
+                .ThenBy(stream => stream.Id, StringComparer.Ordinal)
+                .Select(stream => stream.Id)
+                .ToArray();
+        }
+        var items = WiiMNetworkStreamOrdering.OrderForDisplay(
+                valid,
+                mode,
+                remembered)
+            .Streams
             .Select(stream => new
             {
                 itemId = "wiim-stream:" + stream.Id.Trim(),
@@ -111,7 +142,7 @@ public static class LiteWiiMContract
                 detail = "Strumień sieciowy"
             })
             .ToArray();
-        return new { items };
+        return new { items, sortMode = mode.ToString() };
     }
 
     public static object CreateSnapshotResult(

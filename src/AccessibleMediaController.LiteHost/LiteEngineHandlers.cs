@@ -404,6 +404,12 @@ internal sealed class LiteEngineHandlers : IDisposable
                 EditWiiMNetworkStream(request.Args),
             [LiteWiiMContract.RemoveNetworkStreamsOperation] = (request, _) =>
                 RemoveWiiMNetworkStreams(request.Args),
+            [LiteWiiMContract.ImportNetworkStreamsOperation] = (request, _) =>
+                ImportWiiMNetworkStreams(request.Args),
+            [LiteWiiMContract.ExportNetworkStreamsOperation] = (request, _) =>
+                ExportWiiMNetworkStreams(request.Args),
+            [LiteWiiMContract.SortNetworkStreamsOperation] = (request, _) =>
+                SetWiiMNetworkStreamSortMode(request.Args),
             [LiteSonosContract.TargetsOperation] = (_, _) =>
                 RequireSonos().ListTargets(),
             [LiteSonosContract.SnapshotOperation] = (request, _) =>
@@ -826,6 +832,29 @@ internal sealed class LiteEngineHandlers : IDisposable
 
     private object RemoveWiiMNetworkStreams(JsonElement args) =>
         RequireProfileMutations().RemoveWiiMNetworkStreams(ReadIds(args));
+
+    private object ImportWiiMNetworkStreams(JsonElement args)
+    {
+        var path = LiteArgs.RequirePath(args, "path");
+        if (!File.Exists(path))
+            throw new LiteRequestException($"Nie znaleziono pliku listy: {path}");
+        var imported = RadioPlaylistImporter.Import(path);
+        return RequireProfileMutations().ImportWiiMNetworkStreams(
+            imported.Stations
+                .Select(station => new LiteWiiMNetworkStreamDraft(
+                    station.Name,
+                    station.StreamUrl))
+                .ToArray(),
+            imported.SkippedEntries);
+    }
+
+    private object ExportWiiMNetworkStreams(JsonElement args) =>
+        RequireProfileMutations().ExportWiiMNetworkStreams(
+            LiteArgs.RequirePath(args, "path"));
+
+    private object SetWiiMNetworkStreamSortMode(JsonElement args) =>
+        RequireProfileMutations().SetWiiMNetworkStreamSortMode(
+            LiteWiiMContract.ReadNetworkStreamSortMode(args));
 
     private object RemoveProfileItems(JsonElement args) =>
         RequireProfileMutations().Remove(

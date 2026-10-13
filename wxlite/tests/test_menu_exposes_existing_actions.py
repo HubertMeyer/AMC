@@ -180,7 +180,8 @@ def test_no_duplicate_labels_or_shortcuts() -> None:
     # szczegółową nazwę tej samej intencji dla stacji. Alt+D również jest
     # kontekstowe: w Radiu czyta bieżącą audycję, a w Podcastach pełny opis.
     assert set(duplicates) <= {
-        "Ctrl+O", "Ctrl+N", "Ctrl+D", "Ctrl+S", "Alt+1", "Alt+2", "Alt+3", "Alt+D",
+        "Ctrl+O", "Ctrl+Shift+O", "Ctrl+N", "Ctrl+E", "Ctrl+D", "Ctrl+S",
+        "Alt+1", "Alt+2", "Alt+3", "Alt+D",
         "B", "Shift+B", "Ctrl+Shift+B", "F2", "Delete"
     }, duplicates
     for item in duplicates.get("Ctrl+O", []):
@@ -190,7 +191,7 @@ def test_no_duplicate_labels_or_shortcuts() -> None:
         )
     for chord in ("Alt+1", "Alt+2", "Alt+3"):
         contextual = duplicates.get(chord, [])
-        assert len(contextual) == (3 if chord in ("Alt+1", "Alt+2") else 2)
+        assert len(contextual) == (4 if chord in ("Alt+1", "Alt+2") else 3)
         assert all(not item.accelerator for item in contextual), (
             f"kontekstowe {chord} nie moze byc akceleratorem okna"
         )
@@ -206,6 +207,15 @@ def test_no_duplicate_labels_or_shortcuts() -> None:
         assert not item.accelerator, (
             "kontekstowe Ctrl+N musi rozstrzygnąć sesja podcastów albo radia"
         )
+    for chord in ("Ctrl+Shift+O", "Ctrl+E"):
+        for item in duplicates.get(chord, []):
+            if item.action in {
+                Action.IMPORT_WIIM_NETWORK_STREAMS,
+                Action.EXPORT_WIIM_NETWORK_STREAMS,
+            }:
+                assert not item.accelerator, (
+                    f"WiiM {chord} musi rozstrzygnąć aktywna sesja"
+                )
     for item in duplicates.get("Ctrl+Shift+B", []):
         assert not item.accelerator, (
             "Ctrl+Shift+B musi rozstrzygnąć lista albo odtwarzacz"
