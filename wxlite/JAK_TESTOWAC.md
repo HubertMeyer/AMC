@@ -24,19 +24,26 @@ nagrywa. Nie przełączaj jej ręcznie w czasie trwającego nagrywania. Pierwszy
 
 1. Uruchom `AMC.exe` bez otwierania terminala i bez wybierania interpretera.
    Okno ma od razu być zmaksymalizowane, aktywne i na pierwszym planie.
-2. Bez trwającego nagrywania uruchom ten sam plik ponownie. Nie może powstać
-   drugi proces aplikacji ani zostać uruchomiony drugi interfejs. Istniejące
-   okno ma wrócić na pierwszy plan, pozostać zmaksymalizowane i zachować stan.
-3. Podczas rzeczywistego nagrywania uruchom plik ponownie. Obowiązuje ta sama
-   zasada jednej instancji: istniejące okno ma wrócić na pierwszy plan bez
-   przerywania nagrania, a drugi start ma się zakończyć. Aktualizator może
-   podmienić pakiet dopiero po bezpiecznym zamknięciu wszystkich jego procesów.
-4. Usuń z procesu testowego systemowy Python i zmienne `PYTHONPATH` oraz
+2. Bez trwającego nagrywania uruchom ten sam plik ponownie. Jeśli numer
+   kompilacji jest ten sam, nie może powstać drugi proces aplikacji ani drugi
+   interfejs. Istniejące okno ma wrócić na pierwszy plan, pozostać
+   zmaksymalizowane i zachować stan.
+3. Po podmianie plików tej samej stałej instalacji uruchom `AMC.exe` ponownie.
+   Inny numer kompilacji ma wysłać staremu oknu zwykłe żądanie zamknięcia,
+   zaczekać na pełne zwolnienie jednej instancji i dopiero wtedy uruchomić
+   nową kompilację. Nie wolno zabijać procesu. Przypadkowe uruchomienie starego
+   `AMC.exe` z `.test-output` nie może zamknąć ani zastąpić stałej instalacji.
+4. Podczas rzeczywistego nagrywania powtórz próbę podmiany kompilacji.
+   Stare okno ma odmówić zamknięcia na podstawie żywego stanu właściciela
+   nagrania, wrócić na pierwszy plan i zachować nagranie. To samo obowiązuje,
+   gdy stanu nagrywania nie da się potwierdzić. Aktualizator może podmienić
+   pakiet dopiero po bezpiecznym zamknięciu wszystkich jego procesów.
+5. Usuń z procesu testowego systemowy Python i zmienne `PYTHONPATH` oraz
    `AMC_WX_LITE_PYTHON`. `AMC.exe` nadal ma uruchomić dołączony runtime.
-5. Podstaw celowo niezgodne wersje interfejsu i LiteHosta albo uszkodzony
+6. Podstaw celowo niezgodne wersje interfejsu i LiteHosta albo uszkodzony
    manifest. Program ma odmówić startu z krótkim, dostępnym komunikatem, bez
    uruchamiania przypadkowej starszej kopii.
-6. Zastosuj poprawną aktualizację przez `AMC-Python-Updater.exe`. Po
+7. Zastosuj poprawną aktualizację przez `AMC-Python-Updater.exe`. Po
    weryfikacji i podmianie `AMC.exe` ma uruchomić nową wersję; błąd podmiany
    ma przywrócić poprzednią, działającą całość.
 

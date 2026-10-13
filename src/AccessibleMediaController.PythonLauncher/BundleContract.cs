@@ -9,6 +9,7 @@ internal sealed class BundleManifest
     public int InterfaceVersion { get; set; }
     public int HostProtocolVersion { get; set; }
     public string Application { get; set; } = "";
+    public string BuildLabel { get; set; } = "";
     public string EntryPoint { get; set; } = "";
     public string PythonModule { get; set; } = "";
     public string HostFolder { get; set; } = "";

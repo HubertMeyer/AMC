@@ -589,10 +589,10 @@ kodu ani wysyłać logów bez wiedzy użytkownika.
 - LiteHost zbudowany i opublikowany dla Windows x64 bez błędów i ostrzeżeń;
 - pakiet uruchomieniowy przeszedł sprawdzenie środowiska z Pythonem 3.14.7,
   wxPython 4.3.1 i nowym hostem.
-- 9 testów kontraktu `AMC.exe` i aktualizatora: poprawna paczka, uszkodzenie,
+- 12 testów kontraktu `AMC.exe` i aktualizatora: poprawna paczka, uszkodzenie,
   niezgodny protokół, wyjście ścieżką poza katalog, prywatny runtime,
-  diagnostyka, jedna instancja oraz rozpoznanie ścieżek i żywego procesu
-  instalacji;
+  diagnostyka, jedna instancja, rozróżnianie tej samej, nowszej i przypadkowej
+  kompilacji oraz rozpoznanie ścieżek i żywego procesu instalacji;
 - 21 celowanych testów układu paczki, startu i komunikatów: 21 zaliczonych,
   0 błędów;
 - rzeczywisty `AMC.exe --sprawdz-pakiet-cicho`: kod 0; próbna pełna podmiana
@@ -605,6 +605,14 @@ Drugie równoległe uruchomienie interfejsu jest blokowane przed otwarciem okna.
 Zapobiega to sytuacji, w której starszy host trzyma zapis postępu podcastów,
 a nowe okno pokazuje listy, lecz nie wykonuje Enter, Ctrl+R ani informacji pod
 lewą strzałką.
+
+Launcher rozróżnia teraz tę samą i inną kompilację. Ponowny start tej samej
+kompilacji tylko maksymalizuje i pokazuje istniejące okno. Gdy pliki stałej
+instalacji zostały zaktualizowane, inny numer kompilacji wysyła staremu oknu
+zwykłe `WM_CLOSE`, czeka na zwolnienie blokady i dopiero potem uruchamia nowy
+interfejs. Obsługa zamknięcia sprawdza żywy stan nagrywania i może odmówić;
+launcher nigdy nie zabija procesu. Paczka z `.test-output` nie może przez
+przypadkowe uruchomienie zastąpić stałej instalacji `AMC Python`.
 
 ## Najbliższa kolejność prac
 

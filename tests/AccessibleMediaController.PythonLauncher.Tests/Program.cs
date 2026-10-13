@@ -17,6 +17,9 @@ internal static class Program
         ("prywatny runtime bez PYTHONPATH i bez alertów pythonw", LaunchPlanUsesOnlyPrivateRuntime),
         ("diagnostyka przez python.exe", DiagnosticUsesConsoleRuntime),
         ("jedna instancja launchera", OnlyOneLauncherOwnsTheLease),
+        ("ta sama kompilacja tylko pokazuje okno", SameBuildOnlyActivates),
+        ("nowa kompilacja prosi o bezpieczną podmianę", NewBuildRequestsSafeReplacement),
+        ("kanoniczna instalacja wygrywa z nieznaną kopią", PreferredInstallationWins),
         ("aktualizator wykrywa wszystkie procesy instalacji", UpdaterRecognizesInstalledComponents),
         ("aktualizator wykrywa żywy proces z instalacji", UpdaterFindsRunningInstalledProcess),
     ];
@@ -133,6 +136,46 @@ internal static class Program
             return third.IsOwner;
         }).GetAwaiter().GetResult();
         Equal(true, thirdOwns);
+    }
+
+    private static void SameBuildOnlyActivates()
+    {
+        Equal(
+            ExistingInstanceAction.Activate,
+            ExistingInstancePolicy.Decide(
+                "2026.10.13-6c48ebf",
+                "AMC Python — wersja 0.1.0, kompilacja 2026.10.13-6c48ebf",
+                @"D:\Projekty Codex\AMC Python",
+                @"D:\Projekty Codex\AMC Python"));
+    }
+
+    private static void NewBuildRequestsSafeReplacement()
+    {
+        Equal(
+            ExistingInstanceAction.RequestSafeReplacement,
+            ExistingInstancePolicy.Decide(
+                "2026.10.13-6c48ebf",
+                "AMC Python — wersja 0.1.0, kompilacja 2026.10.13-4d5d26cf",
+                @"D:\Projekty Codex\AMC Python",
+                @"D:\Projekty Codex\AMC Python"));
+    }
+
+    private static void PreferredInstallationWins()
+    {
+        Equal(
+            ExistingInstanceAction.RequestSafeReplacement,
+            ExistingInstancePolicy.Decide(
+                "2026.10.13-6c48ebf",
+                "AMC Python — wersja 0.1.0",
+                @"D:\Projekty Codex\AMC Python",
+                @"D:\Projekty Codex\wydanie testowe"));
+        Equal(
+            ExistingInstanceAction.Activate,
+            ExistingInstancePolicy.Decide(
+                "RuntimeObject { Id = tajne }",
+                "AMC Python — wersja 0.1.0, kompilacja RuntimeObject { Id = tajne }",
+                @"D:\Projekty Codex\wydanie testowe",
+                @"D:\Projekty Codex\AMC Python"));
     }
 
     private static void UpdaterRecognizesInstalledComponents()
@@ -265,6 +308,7 @@ internal static class Program
                 interfaceVersion = 1,
                 hostProtocolVersion,
                 application = "AMC Python",
+                buildLabel = "2026.10.13-6c48ebf",
                 entryPoint = "AMC.exe",
                 pythonModule = "amc_wx_lite",
                 hostFolder = "host",

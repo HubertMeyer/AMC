@@ -9,6 +9,8 @@ internal static class Program
     private const int InvalidBundle = 2;
     private const int StartFailed = 3;
     private const string MainWindowTitle = "AMC Python";
+    private const int ExistingWindowWaitMilliseconds = 5_000;
+    private const int SafeReplacementWaitMilliseconds = 10_000;
 
     [STAThread]
     private static int Main(string[] args)
@@ -31,49 +33,49 @@ internal static class Program
                 return 0;
             }
 
-            using var instance = LauncherInstanceLease.TryAcquire();
-            if (!instance.IsOwner)
+            LauncherInstanceLease? instance = LauncherInstanceLease.TryAcquire();
+            try
             {
-                ActivateExistingWindow();
-                return 0;
+                if (!instance.IsOwner)
+                {
+                    var existing = WaitForMainWindow(ExistingWindowWaitMilliseconds);
+                    if (existing is null)
+                        return 0;
+
+                    if (ExistingInstancePolicy.Decide(
+                            bundle.Manifest.BuildLabel,
+                            existing.Value.Title,
+                            bundle.Root,
+                            existing.Value.PackageRoot)
+                        == ExistingInstanceAction.Activate)
+                    {
+                        ActivateWindow(existing.Value.Handle);
+                        return 0;
+                    }
+
+                    // A newer package asks the old GUI to close normally.  Its
+                    // EVT_CLOSE handler checks the live recording owner and
+                    // vetoes this request whenever recording is active or the
+                    // state cannot be confirmed.  We never kill either process.
+                    RequestSafeClose(existing.Value.Handle);
+                    instance.Dispose();
+                    instance = null;
+                    instance = WaitForInstanceLease(SafeReplacementWaitMilliseconds);
+                    if (instance is null)
+                    {
+                        var stillRunning = WaitForMainWindow(500);
+                        if (stillRunning is not null)
+                            ActivateWindow(stillRunning.Value.Handle);
+                        return 0;
+                    }
+                }
+
+                return RunFrontend(bundle, args);
             }
-
-            var plan = PythonLaunchPlan.Create(bundle, args);
-            using var process = Process.Start(plan.StartInfo)
-                ?? throw new InvalidOperationException("nie uruchomiono procesu interfejsu");
-
-            // Strumienie czytamy od razu także podczas zwykłej pracy. Bez
-            // tego dłuższy komunikat mógłby zapełnić bufor i zatrzymać proces.
-            // Przechwycenie stderr zapobiega modalnym alertom pythonw.
-            var output = process.StandardOutput.ReadToEndAsync();
-            var error = process.StandardError.ReadToEndAsync();
-            process.WaitForExit();
-            Task.WaitAll(output, error);
-
-            var outputText = output.Result.Trim();
-            var errorText = error.Result.Trim();
-            AppendProcessLog(outputText, errorText, process.ExitCode);
-
-            if (plan.ShowCapturedOutput)
+            finally
             {
-                var details = string.Join(
-                    Environment.NewLine,
-                    new[] { outputText, errorText }
-                        .Where(text => !string.IsNullOrWhiteSpace(text)));
-                Show(
-                    string.IsNullOrWhiteSpace(details)
-                        ? "Sprawdzenie AMC Python nie zwróciło informacji."
-                        : details,
-                    process.ExitCode != 0);
+                instance?.Dispose();
             }
-            else if (process.ExitCode != 0)
-            {
-                Show(
-                    "AMC Python zakończył uruchamianie z błędem. "
-                    + "Uruchom AMC.exe z parametrem --sprawdz, aby sprawdzić pakiet.",
-                    true);
-            }
-            return process.ExitCode;
         }
         catch (InvalidDataException exception)
         {
@@ -99,6 +101,145 @@ internal static class Program
             return StartFailed;
         }
     }
+
+    private static int RunFrontend(VerifiedBundle bundle, string[] args)
+    {
+        var plan = PythonLaunchPlan.Create(bundle, args);
+        using var process = Process.Start(plan.StartInfo)
+            ?? throw new InvalidOperationException("nie uruchomiono procesu interfejsu");
+
+        // Strumienie czytamy od razu także podczas zwykłej pracy. Bez
+        // tego dłuższy komunikat mógłby zapełnić bufor i zatrzymać proces.
+        // Przechwycenie stderr zapobiega modalnym alertom pythonw.
+        var output = process.StandardOutput.ReadToEndAsync();
+        var error = process.StandardError.ReadToEndAsync();
+        process.WaitForExit();
+        Task.WaitAll(output, error);
+
+        var outputText = output.Result.Trim();
+        var errorText = error.Result.Trim();
+        AppendProcessLog(outputText, errorText, process.ExitCode);
+
+        if (plan.ShowCapturedOutput)
+        {
+            var details = string.Join(
+                Environment.NewLine,
+                new[] { outputText, errorText }
+                    .Where(text => !string.IsNullOrWhiteSpace(text)));
+            Show(
+                string.IsNullOrWhiteSpace(details)
+                    ? "Sprawdzenie AMC Python nie zwróciło informacji."
+                    : details,
+                process.ExitCode != 0);
+        }
+        else if (process.ExitCode != 0)
+        {
+            Show(
+                "AMC Python zakończył uruchamianie z błędem. "
+                + "Uruchom AMC.exe z parametrem --sprawdz, aby sprawdzić pakiet.",
+                true);
+        }
+        return process.ExitCode;
+    }
+
+    private static LauncherInstanceLease? WaitForInstanceLease(int timeoutMilliseconds)
+    {
+        var deadline = Environment.TickCount64 + Math.Max(0, timeoutMilliseconds);
+        do
+        {
+            var candidate = LauncherInstanceLease.TryAcquire();
+            if (candidate.IsOwner)
+                return candidate;
+            candidate.Dispose();
+            if (Environment.TickCount64 >= deadline)
+                break;
+            Thread.Sleep(100);
+        } while (true);
+        return null;
+    }
+
+    private static ExistingWindow? WaitForMainWindow(int timeoutMilliseconds)
+    {
+        var deadline = Environment.TickCount64 + Math.Max(0, timeoutMilliseconds);
+        do
+        {
+            var window = FindMainWindow();
+            if (window is not null)
+                return window;
+            if (Environment.TickCount64 >= deadline)
+                break;
+            Thread.Sleep(100);
+        } while (true);
+        return null;
+    }
+
+    private static void RequestSafeClose(IntPtr handle)
+    {
+        if (handle != IntPtr.Zero)
+            PostMessage(handle, 0x0010u, IntPtr.Zero, IntPtr.Zero); // WM_CLOSE
+    }
+
+    private static void ActivateWindow(IntPtr handle)
+    {
+        if (handle == IntPtr.Zero)
+            return;
+        ShowWindow(handle, 3); // SW_MAXIMIZE
+        BringWindowToTop(handle);
+        SetForegroundWindow(handle);
+    }
+
+    private static ExistingWindow? FindMainWindow()
+    {
+        ExistingWindow? found = null;
+        EnumWindows((handle, _) =>
+        {
+            var length = GetWindowTextLength(handle);
+            if (length <= 0)
+                return true;
+            var text = new StringBuilder(length + 1);
+            GetWindowText(handle, text, text.Capacity);
+            var title = text.ToString();
+            if (!IsMainWindowTitle(title))
+                return true;
+            found = new ExistingWindow(handle, title, PackageRootForWindow(handle));
+            return false;
+        }, IntPtr.Zero);
+        return found;
+    }
+
+    private static string? PackageRootForWindow(IntPtr handle)
+    {
+        GetWindowThreadProcessId(handle, out var processId);
+        if (processId == 0)
+            return null;
+        try
+        {
+            using var process = Process.GetProcessById((int)processId);
+            var executable = process.MainModule?.FileName;
+            if (string.IsNullOrWhiteSpace(executable))
+                return null;
+            var executableFolder = Path.GetDirectoryName(executable);
+            if (string.IsNullOrWhiteSpace(executableFolder))
+                return null;
+            var folder = new DirectoryInfo(executableFolder);
+            return string.Equals(folder.Name, "runtime", StringComparison.OrdinalIgnoreCase)
+                ? folder.Parent?.FullName
+                : folder.FullName;
+        }
+        catch (Exception exception) when (
+            exception is ArgumentException
+                or InvalidOperationException
+                or NotSupportedException
+                or System.ComponentModel.Win32Exception)
+        {
+            return null;
+        }
+    }
+
+    private readonly record struct ExistingWindow(
+        IntPtr Handle,
+        string Title,
+        string? PackageRoot);
 
     private static void AppendProcessLog(string output, string error, int exitCode)
     {
@@ -145,43 +286,6 @@ internal static class Program
             error ? 0x10u : 0x40u);
     }
 
-    private static void ActivateExistingWindow()
-    {
-        // Drugie uruchomienie jest bezpiecznym poleceniem "pokaż AMC".
-        // Okno może dopiero powstawać, dlatego czekamy krótko zamiast
-        // uruchamiać drugi interpreter i drugi silnik audio.
-        for (var attempt = 0; attempt < 50; attempt++)
-        {
-            var handle = FindMainWindow();
-            if (handle != IntPtr.Zero)
-            {
-                ShowWindow(handle, 3); // SW_MAXIMIZE
-                BringWindowToTop(handle);
-                SetForegroundWindow(handle);
-                return;
-            }
-            Thread.Sleep(100);
-        }
-    }
-
-    private static IntPtr FindMainWindow()
-    {
-        IntPtr found = IntPtr.Zero;
-        EnumWindows((handle, _) =>
-        {
-            var length = GetWindowTextLength(handle);
-            if (length <= 0)
-                return true;
-            var text = new StringBuilder(length + 1);
-            GetWindowText(handle, text, text.Capacity);
-            if (!IsMainWindowTitle(text.ToString()))
-                return true;
-            found = handle;
-            return false;
-        }, IntPtr.Zero);
-        return found;
-    }
-
     internal static bool IsMainWindowTitle(string title) =>
         string.Equals(title, MainWindowTitle, StringComparison.Ordinal)
         || title.StartsWith(MainWindowTitle + " — wersja ", StringComparison.Ordinal);
@@ -215,4 +319,16 @@ internal static class Program
 
     [DllImport("user32.dll")]
     private static extern bool SetForegroundWindow(IntPtr windowHandle);
+
+    [DllImport("user32.dll")]
+    private static extern uint GetWindowThreadProcessId(
+        IntPtr windowHandle,
+        out uint processId);
+
+    [DllImport("user32.dll")]
+    private static extern bool PostMessage(
+        IntPtr windowHandle,
+        uint message,
+        IntPtr wordParameter,
+        IntPtr longParameter);
 }
