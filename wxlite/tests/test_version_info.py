@@ -8,14 +8,26 @@ from amc_wx_lite.version_info import (
 
 
 def test_window_title_identifies_the_exact_bundle(tmp_path) -> None:
+    revision = "591ea346a3c455ca3d71397e6f3f39240369280a"
+    label = f"2026.10.14-{revision}-a9a96007"
     (tmp_path / "bundle-manifest.json").write_text(
-        json.dumps({"buildLabel": "2026.10.13-7c246dba-a1b2c3d4"}),
+        json.dumps({"buildLabel": label}),
         encoding="utf-8",
     )
 
     assert window_title(tmp_path) == (
-        "AMC Python — wersja 0.1.0, kompilacja 2026.10.13-7c246dba-a1b2c3d4"
+        f"AMC Python — wersja 0.1.0, kompilacja {label}"
     )
+
+
+def test_legacy_short_build_label_remains_readable(tmp_path) -> None:
+    label = "2026.10.13-7c246dba-a1b2c3d4"
+    (tmp_path / "bundle-manifest.json").write_text(
+        json.dumps({"buildLabel": label}),
+        encoding="utf-8",
+    )
+
+    assert read_build_label(tmp_path) == label
 
 
 def test_invalid_manifest_never_leaks_technical_content(tmp_path) -> None:
