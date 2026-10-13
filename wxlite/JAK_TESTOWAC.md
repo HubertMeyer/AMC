@@ -954,6 +954,15 @@ Profile klawiatury, Import i eksport oraz Aktualizacje, a następnie porównać
 wszystkie pola, wartości domyślne, zależności, walidację i miejsca zapisu z
 głównym AMC.
 
+Na karcie Komunikaty sprawdź listę „Zdarzenia komunikatów”. NVDA ma czytać
+wyłącznie polskie nazwy zdarzeń, nigdy klucze z kropką ani reprezentację
+obiektu. Zmień „Dodanie do kolejki” na `W kolejce: {item}`, zapisz Enterem i
+dodaj plik do kolejki: ma paść nowy tekst. Następnie ustaw pusty tekst,
+zapisz, ponów operację i potwierdź brak tego jednego komunikatu. Ponowne
+otwarcie Ustawień ma zachować oba wybory. Po wyłączeniu „Włącz komunikaty
+dostępności” zwykły komunikat nie jest mówiony automatycznie, lecz jego tekst
+pozostaje dostępny w polu statusu; błąd wykonania nadal musi zostać oznajmiony.
+
 Porównaj z głównym AMC każdą sesję i każdy widok: menu, skróty, strukturę
 Biblioteki, Enter, Escape/Backspace, lewą i prawą strzałkę oraz wszystkie
 sortowania `Alt+cyfra`. Wynik audytu zapisz jako macierz widok–skrót–działanie–

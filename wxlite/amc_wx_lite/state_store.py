@@ -25,7 +25,10 @@ from .radio_activity import normalize_state_position
 from .radio_recognition import normalize_scope, read_tracks
 from .radio_schedule_settings import read_schedule_overrides
 from .session_order import values as normalized_session_order_values
-from .transport_parity import normalize_custom_seek_seconds
+from .transport_parity import (
+    normalize_custom_seek_seconds,
+    normalize_message_templates,
+)
 
 
 _COLLECTION_SORT_MODES = {"AddedNewest", "Alphabetical", "Custom"}
@@ -211,6 +214,9 @@ class Options:
     message_playback_messages: bool | None = None
     message_bookmark_navigation_messages: bool | None = None
     message_percent_announcement: str | None = None
+    #: Prywatne teksty komunikatow. Klucze sa filtrowane do zamknietego
+    #: katalogu, a pusty tekst pozostaje swiadomym wylaczeniem zdarzenia.
+    message_templates: dict[str, str] | None = None
     #: Prywatne nadpisania ustawien nagrywania. ``None`` oznacza dalsze
     #: dziedziczenie wartosci z profilu glownego AMC; pusty folder oznacza
     #: swiadomy wybor systemowego folderu domyslnego hosta.
@@ -327,6 +333,10 @@ class Options:
                     if value.casefold() == normalized_message_mode
                 ),
                 None,
+            )
+        if self.message_templates is not None:
+            self.message_templates = normalize_message_templates(
+                self.message_templates
             )
         if self.radio_recording_format is not None:
             formats = ("Mp3", "Aac", "Flac", "Original", "Wav")
@@ -561,6 +571,13 @@ class StateStore:
                 # ``clamp`` usunie duplikaty i obce identyfikatory.
                 options.session_order = (
                     list(value) if isinstance(value, (list, tuple)) else []
+                )
+                continue
+            if key == "message_templates":
+                options.message_templates = (
+                    normalize_message_templates(value)
+                    if isinstance(value, dict)
+                    else None
                 )
                 continue
             if hasattr(options, key) and not isinstance(value, (dict, list)):

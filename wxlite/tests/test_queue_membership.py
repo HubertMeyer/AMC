@@ -21,6 +21,7 @@ import amc_wx_lite.gui as gui  # noqa: E402
 from amc_wx_lite.host_client import LiteHostClient  # noqa: E402
 from amc_wx_lite.list_model import Row  # noqa: E402
 from amc_wx_lite.navigation import Navigator  # noqa: E402
+from amc_wx_lite.transport_parity import MessagePolicy  # noqa: E402
 
 
 class _SpyClient(LiteHostClient):
@@ -98,4 +99,35 @@ def test_gui_play_next_uses_the_separate_operation() -> None:
     gui.LiteFrame._toggle_queue_membership(frame, play_next=True)
 
     assert calls and calls[0][0]["id"] == "a"
-    assert said == ["Ustawiono jako następne: Pierwszy"]
+    assert said == ["Odtwarzaj jako następne: Pierwszy"]
+
+
+def test_queue_uses_private_template_and_empty_template_really_silences_it() -> None:
+    row = Row("a", "Pierwszy", "track", path=r"C:\muzyka\A.mp3")
+    client = SimpleNamespace(
+        queue_toggle_membership=lambda _items: {"added": True, "changed": 1}
+    )
+    frame, said = _frame([row], client)
+    frame.messages = MessagePolicy(templates={"queue.added": "Moja kolejka: {item}"})
+
+    gui.LiteFrame._toggle_queue_membership(frame, play_next=False)
+    assert said == ["Moja kolejka: Pierwszy"]
+
+    said.clear()
+    frame.messages = MessagePolicy(templates={"queue.added": ""})
+    gui.LiteFrame._toggle_queue_membership(frame, play_next=False)
+    assert said == []
+
+
+def test_master_message_switch_keeps_status_without_speaking_membership() -> None:
+    spoken: list[str] = []
+    status: list[str] = []
+    frame = SimpleNamespace(
+        messages=MessagePolicy(enabled=False),
+        announcer=SimpleNamespace(say=spoken.append, show=status.append),
+    )
+
+    gui.LiteFrame._announce_routine_text(frame, "Dodano do kolejki: Plik")
+
+    assert spoken == []
+    assert status == ["Dodano do kolejki: Plik"]

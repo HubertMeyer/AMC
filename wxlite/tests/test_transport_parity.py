@@ -126,6 +126,7 @@ from amc_wx_lite.transport_parity import (
     load_message_policy,
     next_playback_rate,
     normalize_custom_seek_seconds,
+    normalize_message_templates,
     describe_custom_seek_length,
     parse_custom_seek_length,
     resolve_custom_seek_seconds,
@@ -375,6 +376,26 @@ def test_empty_template_means_silence_not_a_fallback() -> None:
     """``CommandRouter.cs:681``: ``if (string.IsNullOrEmpty(template)) return;``"""
     policy = MessagePolicy(templates={"time.total": ""})
     assert time_announcement(Action.TIME_TOTAL, policy, position=231, duration=300) is None
+
+
+def test_private_templates_override_inherited_text_and_keep_intentional_silence() -> None:
+    policy = MessagePolicy(templates={
+        "favorite.added": "Z profilu: {item}",
+        "queue.removed": "Z profilu",
+    })
+
+    apply_message_overrides(policy, templates={
+        "favorite.added": "Moje ulubione: {item}",
+        "queue.removed": "",
+        "RuntimeObject { Id = private }": "nie przyjmuj",
+    })
+
+    assert policy.render("favorite.added", item="Radio") == "Moje ulubione: Radio"
+    assert policy.render("queue.removed", item="Radio") is None
+    assert "runtimeobject { id = private }" not in policy.templates
+    assert normalize_message_templates({"TIME.TOTAL": "Razem {total}"}) == {
+        "time.total": "Razem {total}"
+    }
 
 
 def test_unknown_duration_does_not_pretend_to_know_the_remainder() -> None:

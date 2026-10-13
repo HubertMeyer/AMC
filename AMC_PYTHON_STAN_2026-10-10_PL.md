@@ -145,6 +145,14 @@ akustyczny, nie adres stacji ani nagrany dźwięk. Enter uruchamia Zapisz, po
 powodzeniu pada dokładnie jeden komunikat „Zapisano ustawienia”. To nadal nie
 są pełne Ustawienia głównego AMC: brakuje trzech całych kart.
 
+Karta Komunikaty ma teraz również edytor szablonów przeniesiony z głównego
+AMC. Lista pokazuje wyłącznie polskie nazwy zdarzeń; wewnętrzne klucze nie są
+nazwami elementów dla NVDA. Zmiany dotyczą czasu, głośności, Ulubionych,
+Kolejki i „odtwarzaj jako następne”, są prywatnie i atomowo zapisywane przez
+AMC Python oraz zaczynają działać bez restartu. Pusty tekst naprawdę wycisza
+dane zdarzenie. Nadrzędne wyłączenie komunikatów zatrzymuje mowę rutynową,
+ale zachowuje treść w polu statusu, natomiast błędy nadal są oznajmiane.
+
 Pierwsze brakujące ustawienie Ogólne zostało przeniesione bez tworzenia
 martwej kontrolki: „Wyświetlaj po uruchomieniu” ma warianty „Ostatnia używana
 sesja” oraz „Lista sesji”. Wybór jest prywatnie i atomowo zapisywany przez AMC
@@ -647,7 +655,8 @@ przypadkowe uruchomienie zastąpić stałej instalacji `AMC Python`.
    także nadrzędny przełącznik „Włącz komunikaty dostępności”. Ten ostatni
    jest zapisywany prywatnie przez AMC Python, działa od razu po zatwierdzeniu
    i nie modyfikuje profilu starego interfejsu. `Ctrl+Shift+G` korzysta z tego
-   samego prywatnego stanu. Rozpoznawanie
+   samego prywatnego stanu. Działa również edycja szablonów komunikatów bez
+   ujawniania ich identyfikatorów technicznych w liście NVDA. Rozpoznawanie
    utworów i wspólny folder z Podcastami są już przeniesione technicznie;
    pozostaje żywy odbiór wyniku, historii i komunikatów z NVDA. Następnie
    przepisać pozostałe trzy karty

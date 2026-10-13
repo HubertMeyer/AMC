@@ -128,7 +128,7 @@ def test_podcast_queue_sends_only_episode_ids_and_keeps_local_queue_separate() -
     gui.LiteFrame._toggle_podcast_queue(frame, False)
 
     assert calls == [(["episode-1"], False)]
-    assert spoken == ["Dodano do kolejki podcastów: Pierwszy"]
+    assert spoken == ["Dodano do kolejki: Pierwszy"]
 
 
 def test_generic_queue_dispatches_podcasts_before_local_files() -> None:

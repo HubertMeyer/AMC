@@ -343,13 +343,59 @@ class PercentAnnouncement(str, Enum):
 
 
 #: Domyslne szablony oryginalu (``MessageSettings.CreateDefault``,
-#: ``AppSettings.cs:561-576``) -- tylko te, ktore dotycza transportu.
+#: ``AppSettings.cs:561-576``). Klucze pozostaja modelem i nigdy nie sa
+#: pokazywane jako nazwy elementow listy; GUI uzywa ``TEMPLATE_LABELS``.
 DEFAULT_TEMPLATES: dict[str, str] = {
+    "session.changed": "{slot}, {service}",
+    "session.unassigned": "Sesja {slot} nieprzypisana",
+    "favorite.added": "Dodano do ulubionych: {item}",
+    "favorite.removed": "Usunięto z ulubionych: {item}",
+    "queue.added": "Dodano do kolejki: {item}",
+    "queue.removed": "Usunięto z kolejki: {item}",
+    "playnext.added": "Odtwarzaj jako następne: {item}",
+    "playnext.removed": "Usunięto z następnych: {item}",
     "time.elapsed": "{elapsed}",
     "time.remaining": "{remaining}",
     "time.total": "{total}",
     "volume.changed": "{value}%",
+    "command.unavailable": "Polecenie niedostępne",
 }
+
+TEMPLATE_LABELS: dict[str, str] = {
+    "favorite.added": "Dodanie do ulubionych",
+    "favorite.removed": "Usunięcie z ulubionych",
+    "queue.added": "Dodanie do kolejki",
+    "queue.removed": "Usunięcie z kolejki",
+    "playnext.added": "Ustawienie odtwarzania jako następne",
+    "playnext.removed": "Usunięcie z odtwarzanych jako następne",
+    "volume.changed": "Zmiana głośności",
+    "time.elapsed": "Czas od początku",
+    "time.remaining": "Czas pozostały",
+    "time.total": "Czas całkowity",
+}
+
+TEMPLATE_KEYS: tuple[str, ...] = tuple(TEMPLATE_LABELS)
+MAX_TEMPLATE_LENGTH = 1_000
+
+
+def normalize_message_templates(raw: object) -> dict[str, str]:
+    """Zachowaj wyłącznie obsługiwane teksty, w tym celowy pusty szablon.
+
+    Ręcznie dopisany identyfikator, rekord albo bardzo długi tekst nie może
+    trafić do kontrolki dostępności ani nieograniczenie powiększać stanu.
+    """
+    if not isinstance(raw, Mapping):
+        return {}
+    allowed = set(TEMPLATE_KEYS)
+    result: dict[str, str] = {}
+    for key, value in raw.items():
+        if not isinstance(key, str) or not isinstance(value, str):
+            continue
+        normalized_key = key.strip().casefold()
+        if normalized_key in allowed:
+            result[normalized_key] = value[:MAX_TEMPLATE_LENGTH]
+    return result
+
 
 #: Komenda pytania o czas -> (klucz szablonu, nazwa pola).
 TIME_TEMPLATES: dict[Action, tuple[str, str]] = {
@@ -530,6 +576,7 @@ def apply_message_overrides(
     playback_messages: bool | None = None,
     bookmark_navigation_messages: bool | None = None,
     percent_announcement: str | PercentAnnouncement | None = None,
+    templates: Mapping[str, str] | None = None,
 ) -> MessagePolicy:
     """Naloz prywatne ustawienia AMC Python na odziedziczona polityke.
 
@@ -559,6 +606,12 @@ def apply_message_overrides(
             if value.value.casefold() == requested:
                 policy.percent_announcement = value
                 break
+
+    if templates is not None:
+        policy.templates = {
+            **normalize_message_templates(policy.templates),
+            **normalize_message_templates(templates),
+        }
 
     policy.may_persist = True
     return policy

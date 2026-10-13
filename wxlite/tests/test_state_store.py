@@ -182,6 +182,25 @@ def test_invalid_message_overrides_return_to_inherited_values() -> None:
     assert options.message_percent_announcement is None
 
 
+def test_message_templates_round_trip_empty_text_and_reject_unknown_values() -> None:
+    store, directory = temp_store()
+    store.save(LiteState(options=Options(message_templates={
+        "favorite.added": "Mam: {item}",
+        "queue.removed": "",
+        "RuntimeObject { Id = private }": "nie zapisuj",
+        "time.total": 123,  # type: ignore[dict-item]
+    })))
+
+    loaded = store.load().options.message_templates
+
+    assert loaded == {
+        "favorite.added": "Mam: {item}",
+        "queue.removed": "",
+    }
+    raw = json.loads((directory / StateStore.FILE_NAME).read_text(encoding="utf-8"))
+    assert "RuntimeObject" not in json.dumps(raw, ensure_ascii=False)
+
+
 def test_round_trip_keeps_radio_activity_presentation_options() -> None:
     store, _ = temp_store()
     state = LiteState(options=Options(

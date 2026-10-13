@@ -187,9 +187,12 @@ from .radio_activity import (
 )
 from . import radio_recognition
 from .transport_parity import (
+    DEFAULT_TEMPLATES,
     PLAYBACK_RATE_MAX,
     PLAYBACK_RATE_MIN,
     SUGGESTED_CUSTOM_SEEK_SECONDS,
+    TEMPLATE_KEYS,
+    TEMPLATE_LABELS,
     TRACK_END_MARGIN_SECONDS,
     MessagePolicy,
     PercentAnnouncement,
@@ -4412,6 +4415,61 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
             self.detailed_hints, 0, wx.TOP | wx.BOTTOM | wx.EXPAND, 10
         )
 
+        templates_explanation = wx.StaticText(
+            messages,
+            label=(
+                "Wybierz zdarzenie, a następnie zmień jego tekst. "
+                "Pusty tekst wyłącza dany komunikat."
+            ),
+        )
+        templates_explanation.SetName(
+            "Szablony komunikatów dostępności"
+        )
+        templates_label = wx.StaticText(messages, label="&Zdarzenie:")
+        self._message_template_keys = list(TEMPLATE_KEYS)
+        self._message_template_values = {
+            key: (
+                message_policy.templates[key]
+                if key in message_policy.templates
+                else DEFAULT_TEMPLATES[key]
+            )
+            for key in self._message_template_keys
+        }
+        self.message_templates = wx.ListBox(
+            messages,
+            choices=[TEMPLATE_LABELS[key] for key in self._message_template_keys],
+            style=wx.LB_SINGLE,
+        )
+        self.message_templates.SetName("Zdarzenia komunikatów")
+        self.message_templates.SetSelection(0)
+        self._message_template_index = 0
+        template_text_label = wx.StaticText(
+            messages, label="&Tekst wybranego komunikatu:"
+        )
+        self.message_template_text = wx.TextCtrl(
+            messages,
+            value=self._message_template_values[self._message_template_keys[0]],
+            style=wx.TE_MULTILINE,
+            size=(-1, 64),
+        )
+        self.message_template_text.SetName(
+            "Tekst szablonu wybranego komunikatu"
+        )
+        self.message_templates.Bind(
+            wx.EVT_LISTBOX, self._on_message_template_choice
+        )
+        messages_layout.Add(
+            templates_explanation, 0, wx.TOP | wx.BOTTOM | wx.EXPAND, 8
+        )
+        messages_layout.Add(templates_label, 0, wx.BOTTOM, 4)
+        messages_layout.Add(
+            self.message_templates, 0, wx.BOTTOM | wx.EXPAND, 8
+        )
+        messages_layout.Add(template_text_label, 0, wx.BOTTOM, 4)
+        messages_layout.Add(
+            self.message_template_text, 0, wx.BOTTOM | wx.EXPAND, 12
+        )
+
         activity_heading = wx.StaticText(
             messages, label="Komunikaty stanu stacji radiowej"
         )
@@ -4601,8 +4659,28 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
         self.podcast_folder.SetValue("Domyślny folder pobierania AMC")
         self.podcast_folder.SetFocus()
 
+    def _store_message_template_text(self) -> None:
+        index = self._message_template_index
+        if 0 <= index < len(self._message_template_keys):
+            self._message_template_values[
+                self._message_template_keys[index]
+            ] = self.message_template_text.GetValue()
+
+    def _on_message_template_choice(self, event: wx.CommandEvent) -> None:
+        self._store_message_template_text()
+        selected = self.message_templates.GetSelection()
+        if 0 <= selected < len(self._message_template_keys):
+            self._message_template_index = selected
+            self.message_template_text.ChangeValue(
+                self._message_template_values[
+                    self._message_template_keys[selected]
+                ]
+            )
+        event.Skip()
+
     @property
     def values(self) -> dict[str, object]:
+        self._store_message_template_text()
         return {
             "startup_target": self._startup_target_values[
                 max(0, self.startup_target.GetSelection())
@@ -4640,6 +4718,7 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
             "message_percent_announcement": self._message_percent_values[
                 max(0, self.message_percent_announcement.GetSelection())
             ].value,
+            "message_templates": dict(self._message_template_values),
             "loudness_normalization": self.loudness.GetValue(),
             "smooth_track_transitions": self.smooth.GetValue(),
             "inter_track_silence_ms": self._silence_values[
@@ -4730,6 +4809,7 @@ class LiteFrame(wx.Frame):
                 self.options.message_bookmark_navigation_messages
             ),
             percent_announcement=self.options.message_percent_announcement,
+            templates=self.options.message_templates,
         )
         self.messages.custom_seek_seconds = resolve_custom_seek_seconds(
             self.options.custom_seek_seconds,
@@ -11787,6 +11867,43 @@ class LiteFrame(wx.Frame):
 
         self.runner.submit("podcast-go-to-related", work, done, failed)
 
+    def _routine_template_text(self, key: str, **values: str) -> str | None:
+        """Utworz celowy tekst bez ujawniania identyfikatora zdarzenia."""
+        policy = getattr(self, "messages", None)
+        if not isinstance(policy, MessagePolicy):
+            policy = MessagePolicy()
+        return policy.render(key, **values)
+
+    def _announce_routine_text(self, text: str | None) -> None:
+        """Rutynowy komunikat respektuje nadrzedny wylacznik mowy.
+
+        Przy wylaczonej mowie tekst nadal trafia do pola statusu, tak jak w
+        glownym AMC. Pusty szablon nie tworzy ani mowy, ani statusu.
+        """
+        if not text:
+            return
+        policy = getattr(self, "messages", None)
+        if not isinstance(policy, MessagePolicy):
+            policy = MessagePolicy()
+        if policy.speaks_routine:
+            self.announcer.say(text)
+            return
+        show = getattr(self.announcer, "show", None)
+        if callable(show):
+            show(text)
+
+    def _routine_completion_text(self, text: str | None) -> str:
+        """Tekst do wypowiedzenia po asynchronicznym odswiezeniu listy."""
+        if not text:
+            return ""
+        policy = getattr(self, "messages", None)
+        if not isinstance(policy, MessagePolicy):
+            policy = MessagePolicy()
+        if policy.speaks_routine:
+            return text
+        LiteFrame._announce_routine_text(self, text)
+        return ""
+
     def _toggle_podcast_favorite(self) -> None:
         """Ctrl+Shift+U: jeden wspólny stan dla całego zaznaczenia."""
         if self.navigator.active is not SessionId.PODCASTS:
@@ -11832,29 +11949,30 @@ class LiteFrame(wx.Frame):
             self._podcast_favorite_pending = False
             favorite = bool(payload.get("favorite"))
             label = rows[0].title if len(rows) == 1 else format_item_count(len(rows))
-            message = (
-                f"Dodano do ulubionych: {label}"
-                if favorite
-                else f"Usunięto z ulubionych: {label}"
+            message = LiteFrame._routine_template_text(
+                self,
+                "favorite.added" if favorite else "favorite.removed",
+                item=label,
             )
-            self.status_field.SetLabel(message)
-            self.status_bar.show(message)
 
             if self.navigator.active is not SessionId.PODCASTS:
-                self.announcer.say(message)
+                LiteFrame._announce_routine_text(self, message)
                 return
             state = self.navigator.sessions[SessionId.PODCASTS]
             if state.view is not View.LIST:
-                self.announcer.say(message)
+                LiteFrame._announce_routine_text(self, message)
                 return
+            completion = LiteFrame._routine_completion_text(self, message)
             if state.library_view is LibraryView.PODCAST_LIBRARY:
                 self._open_podcast_library(
                     preferred_id=preferred_id,
-                    completion_message=message,
+                    completion_message=completion,
                 )
                 return
-            if not self._reload_podcast_list_after_download(preferred_id, message):
-                self.announcer.say(message)
+            if not self._reload_podcast_list_after_download(
+                preferred_id, completion
+            ):
+                LiteFrame._announce_routine_text(self, message)
 
         def failed(error: Exception) -> None:
             self._podcast_favorite_pending = False
@@ -11973,14 +12091,16 @@ class LiteFrame(wx.Frame):
             added = bool(payload.get("added"))
             label = rows[0].title if changed == 1 else format_item_count(changed)
             if play_next:
-                message = (
-                    f"Ustawiono jako następne: {label}"
-                    if added else f"Usunięto z odtwarzania jako następne: {label}"
+                message = LiteFrame._routine_template_text(
+                    self,
+                    "playnext.added" if added else "playnext.removed",
+                    item=label,
                 )
             else:
-                message = (
-                    f"Dodano do kolejki podcastów: {label}"
-                    if added else f"Usunięto z kolejki podcastów: {label}"
+                message = LiteFrame._routine_template_text(
+                    self,
+                    "queue.added" if added else "queue.removed",
+                    item=label,
                 )
             state = self.navigator.sessions[SessionId.PODCASTS]
             if (
@@ -11993,10 +12113,12 @@ class LiteFrame(wx.Frame):
                         LibraryView.PODCAST_QUEUE,
                         preferred_id=episode_ids[0] if added else None,
                     ),
-                    completion_message=message,
+                    completion_message=LiteFrame._routine_completion_text(
+                        self, message
+                    ),
                 )
             else:
-                self.announcer.say(message)
+                LiteFrame._announce_routine_text(self, message)
 
         def failed(error: Exception) -> None:
             self._podcast_queue_pending = False
@@ -14301,18 +14423,18 @@ class LiteFrame(wx.Frame):
             label = rows[0].title if changed == 1 else format_item_count(changed)
             added = bool(payload.get("added"))
             if play_next:
-                message = (
-                    f"Ustawiono jako następne: {label}"
-                    if added
-                    else f"Usunięto z odtwarzania jako następne: {label}"
+                message = LiteFrame._routine_template_text(
+                    self,
+                    "playnext.added" if added else "playnext.removed",
+                    item=label,
                 )
             else:
-                message = (
-                    f"Dodano do kolejki: {label}"
-                    if added
-                    else f"Usunięto z kolejki: {label}"
+                message = LiteFrame._routine_template_text(
+                    self,
+                    "queue.added" if added else "queue.removed",
+                    item=label,
                 )
-            self.announcer.say(message)
+            LiteFrame._announce_routine_text(self, message)
             self._refresh_live_queue()
 
         def failed(error: Exception) -> None:
@@ -14447,16 +14569,22 @@ class LiteFrame(wx.Frame):
             if changed <= 0:
                 message = "Ulubione bez zmian"
             else:
-                message = (
-                    f"Dodano do ulubionych: {label}"
-                    if favorite
-                    else f"Usunięto z ulubionych: {label}"
+                message = LiteFrame._routine_template_text(
+                    self,
+                    "favorite.added" if favorite else "favorite.removed",
+                    item=label,
                 )
             if self.navigator.session.view is View.PLAYER:
-                self.announcer.say(message)
+                if changed <= 0:
+                    self.announcer.say(message)
+                else:
+                    LiteFrame._announce_routine_text(self, message)
                 return
             self._refresh_profile_view(preferred_id=preferred_id)
-            self.announcer.say(message)
+            if changed <= 0:
+                self.announcer.say(message)
+            else:
+                LiteFrame._announce_routine_text(self, message)
 
         def failed(error: Exception) -> None:
             self.announcer.say(f"Nie mogę zmienić Ulubionych: {error}")
@@ -14511,9 +14639,13 @@ class LiteFrame(wx.Frame):
             selected[0].title if len(selected) == 1
             else format_item_count(len(selected))
         )
-        self.announcer.say(
-            f"Usunięto z kolejki TIDAL: {label}"
-            if remove else f"Dodano do kolejki TIDAL: {label}"
+        LiteFrame._announce_routine_text(
+            self,
+            LiteFrame._routine_template_text(
+                self,
+                "queue.removed" if remove else "queue.added",
+                item=label,
+            ),
         )
         state = self.navigator.sessions[SessionId.TIDAL]
         if state.library_view is LibraryView.TIDAL_QUEUE:
@@ -15055,6 +15187,7 @@ class LiteFrame(wx.Frame):
                 self.options.message_bookmark_navigation_messages
             ),
             percent_announcement=self.options.message_percent_announcement,
+            templates=self.options.message_templates,
         )
         self._apply_detailed_hints()
         # Komunikaty wierszy zmieniaja sie od razu. Nowe preferencje

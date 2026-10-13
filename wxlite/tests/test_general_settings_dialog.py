@@ -42,6 +42,10 @@ def test_settings_have_real_native_pages_and_explicit_accessible_names() -> None
     assert '"Oznajmiaj nawigację po zakładkach"' in source
     assert 'self.message_percent_announcement.SetName(' in source
     assert 'choices=["Tylko procent", "Tylko czas", "Procent i czas"]' in source
+    assert 'self.message_templates.SetName("Zdarzenia komunikatów")' in source
+    assert 'self.message_template_text.SetName(' in source
+    assert '"Tekst szablonu wybranego komunikatu"' in source
+    assert "choices=[TEMPLATE_LABELS[key]" in source
 
 
 def test_enter_save_has_one_short_confirmation_and_reconfigures_the_host() -> None:
@@ -79,6 +83,7 @@ def test_all_exposed_choices_use_intentional_user_facing_labels() -> None:
     assert '"message_playback_messages": (' in source
     assert '"message_bookmark_navigation_messages": (' in source
     assert '"message_percent_announcement": self._message_percent_values[' in source
+    assert '"message_templates": dict(self._message_template_values)' in source
     assert 'self.recording_folder.SetName("Domyślny folder nagrywania radia")' in source
     assert 'self.recording_folder_mode.SetName("Położenie nagrań Radia")' in source
     assert '"Ten sam folder co pobieranie Podcastów"' in source
@@ -152,6 +157,7 @@ def test_message_settings_override_the_inherited_policy_and_toggle_persists() ->
     source = SOURCE.read_text(encoding="utf-8")
     assert source.count("apply_message_overrides(") == 2
     assert source.count("enabled=self.options.message_enabled") == 2
+    assert source.count("templates=self.options.message_templates") == 2
     assert "self.options.message_seek_messages = self.messages.seek_messages" in source
     assert "if not self._save_state():" in source
     assert "self.messages.announces_playback" in source
