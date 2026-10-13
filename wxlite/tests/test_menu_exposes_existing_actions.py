@@ -721,7 +721,8 @@ def test_file_menu_uses_the_active_session_instead_of_mixing_sources() -> None:
     assert Action.VIEW_WIIM_NETWORK_STREAMS not in podcasts
 
     wiim = actions(menu_model.SessionId.WIIM)
-    assert Action.VIEW_WIIM_NETWORK_STREAMS in wiim
+    assert Action.IMPORT_WIIM_NETWORK_STREAMS in wiim
+    assert Action.VIEW_WIIM_NETWORK_STREAMS not in wiim
     assert Action.OPEN_FILE_DIALOG not in wiim
     assert Action.IMPORT_PODCAST_OPML not in wiim
 

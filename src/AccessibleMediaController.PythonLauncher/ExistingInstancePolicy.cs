@@ -19,7 +19,7 @@ internal static partial class ExistingInstancePolicy
     private const string BuildMarker = ", kompilacja ";
 
     [GeneratedRegex(
-        @"^\d{4}\.\d{2}\.\d{2}(?:-[0-9a-f]{7,12})?(?:-robocza)?$",
+        @"^\d{4}\.\d{2}\.\d{2}(?:-[0-9a-f]{7,12}){0,2}(?:-robocza)?$",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
     private static partial Regex BuildLabelPattern();
 

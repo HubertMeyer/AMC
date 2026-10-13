@@ -10,6 +10,8 @@ from amc_wx_lite.navigation import (
     ActivateWiiMDevice,
     LibraryView,
     Navigator,
+    OpenWiiMDevicePresets,
+    OpenWiiMNetworkStreams,
     PlayWiiMNetworkStream,
     SessionId,
     View,
@@ -473,20 +475,26 @@ def test_wiim_assignment_and_digit_activation_use_device_specific_paths() -> Non
     ]
 
 
-def test_ctrl_o_is_wiim_streams_only_in_wiim_context() -> None:
+def test_ctrl_l_opens_wiim_source_library_and_ctrl_o_opens_playlist() -> None:
+    assert resolve(
+        Chord("L", ctrl=True),
+        player_view=False,
+        radio_session=False,
+        wiim_session=True,
+    ) is Action.VIEW_LIBRARY
     chord = Chord("O", ctrl=True)
     assert resolve(
         chord,
         player_view=False,
         radio_session=False,
         wiim_session=True,
-    ) is Action.VIEW_WIIM_NETWORK_STREAMS
+    ) is Action.IMPORT_WIIM_NETWORK_STREAMS
     assert resolve(
         chord,
         player_view=True,
         radio_session=False,
         wiim_session=True,
-    ) is Action.VIEW_WIIM_NETWORK_STREAMS
+    ) is Action.IMPORT_WIIM_NETWORK_STREAMS
     assert resolve(
         chord,
         player_view=False,
@@ -495,16 +503,12 @@ def test_ctrl_o_is_wiim_streams_only_in_wiim_context() -> None:
 
 
 def test_wiim_stream_edit_shortcuts_are_active_only_inside_stream_list() -> None:
-    for key, action in (
-        ("N", Action.ADD_WIIM_NETWORK_STREAM),
-        ("O", Action.VIEW_WIIM_NETWORK_STREAMS),
-    ):
-        assert resolve(
-            Chord(key, ctrl=True),
-            player_view=False,
-            radio_session=False,
-            wiim_session=True,
-        ) is action
+    assert resolve(
+        Chord("N", ctrl=True),
+        player_view=False,
+        radio_session=False,
+        wiim_session=True,
+    ) is Action.ADD_WIIM_NETWORK_STREAM
 
     assert resolve(
         Chord("F2"),
@@ -563,6 +567,72 @@ def test_wiim_stream_edit_shortcuts_are_active_only_inside_stream_list() -> None
             wiim_session=True,
             wiim_streams=True,
         ) is action
+
+
+def test_wiim_source_library_has_two_intentional_labels_and_actions() -> None:
+    nav = Navigator()
+    devices = list(device_rows({
+        "items": [{
+            "itemId": "wiim:device-1",
+            "deviceId": "device-1",
+            "title": "Salon",
+            "detail": "WiiM Pro",
+        }]
+    }))
+    nav.apply_wiim_devices(devices)
+    nav.switch_session(SessionId.WIIM)
+
+    announcements = nav.open_wiim_source_library(
+        device_id="device-1",
+        return_id="wiim:device-1",
+    )
+
+    assert nav.session.library_view is LibraryView.WIIM_SOURCE_LIBRARY
+    assert [row.title for row in nav.session.model.rows] == [
+        "Presety urządzenia",
+        "Strumienie zapisane w AMC",
+    ]
+    assert [row.kind for row in nav.session.model.rows] == [
+        "wiimSource",
+        "wiimSource",
+    ]
+    assert announcements[0].text == "Biblioteka źródeł WiiM, 2 pozycje"
+    assert isinstance(nav.activate_selected()[0], OpenWiiMDevicePresets)
+
+    nav.session.model.select_id("wiim-source:amc-streams")
+    assert isinstance(nav.activate_selected()[0], OpenWiiMNetworkStreams)
+
+
+def test_wiim_streams_opened_from_source_library_return_to_that_library() -> None:
+    nav = Navigator()
+    devices = list(device_rows({
+        "items": [{
+            "itemId": "wiim:device-1",
+            "deviceId": "device-1",
+            "title": "Salon",
+            "detail": "WiiM Pro",
+        }]
+    }))
+    nav.apply_wiim_devices(devices)
+    nav.switch_session(SessionId.WIIM)
+    nav.open_wiim_source_library(
+        device_id="device-1",
+        return_id="wiim:device-1",
+    )
+    nav.apply_wiim_network_streams(
+        [],
+        device_id="device-1",
+        return_id="wiim:device-1",
+        return_to_sources=True,
+    )
+
+    nav.go_to_parent()
+
+    assert nav.session.library_view is LibraryView.WIIM_SOURCE_LIBRARY
+    assert [row.title for row in nav.session.model.rows] == [
+        "Presety urządzenia",
+        "Strumienie zapisane w AMC",
+    ]
 
 
 def test_wiim_stream_edit_info_is_explicit_and_user_facing() -> None:

@@ -95,8 +95,12 @@ class LibraryView(Enum):
     #: Zawartosc albumu, playlisty albo jednej kategorii wykonawcy. To nadal
     #: sesja TIDAL, lecz Backspace ma tu odtworzyc dokladna poprzednia liste.
     TIDAL_CONTAINER = "tidalContainer"
+    #: Uczciwy korzeń źródeł WiiM. Lokalny interfejs nie udaje katalogu
+    #: serwisów urządzenia: pokazuje wyłącznie sprzętowe presety i strumienie
+    #: zapisane przez użytkownika w profilu AMC.
+    WIIM_SOURCE_LIBRARY = "wiimSourceLibrary"
     #: Własne strumienie zapisane w profilu WiiM. To podwidok wybranego
-    #: urządzenia, a nie lokalna Biblioteka ani lista sprzętowych presetów.
+    #: urządzenia, a nie lokalna Biblioteka plików.
     WIIM_NETWORK_STREAMS = "wiimNetworkStreams"
     #: Biblioteka treści Sonosa. Grupy są celem sterowania pod Ctrl+F5,
     #: a nie materiałem i dlatego mają osobny widok poza tymi wartościami.
@@ -224,6 +228,7 @@ class SessionState:
     #: urządzeń ani strumieni nie należą do tych wierszy.
     wiim_device_rows: tuple[Row, ...] = ()
     wiim_device_return_id: str | None = None
+    wiim_streams_return_to_sources: bool = False
     #: Ostatnia pełna topologia grup Sonos. Zostaje poza aktualnym modelem
     #: listy, gdy użytkownik przegląda Bibliotekę, aby preset stałego zestawu
     #: można było rozwiązać po logicznych playerIds, a nie po kruchej nazwie.
@@ -439,6 +444,16 @@ class PlayWiiMNetworkStream:
 
 
 @dataclass(slots=True)
+class OpenWiiMDevicePresets:
+    """Otwórz listę presetów wybranego urządzenia WiiM."""
+
+
+@dataclass(slots=True)
+class OpenWiiMNetworkStreams:
+    """Otwórz strumienie zapisane w AMC dla wybranego urządzenia WiiM."""
+
+
+@dataclass(slots=True)
 class ActivateSonosGroup:
     """Wybierz grupę Sonos; identyfikatory nie są tekstem dostępnym."""
 
@@ -650,6 +665,7 @@ class Navigator:
         device_id: str,
         return_id: str | None,
         preferred_id: str | None = None,
+        return_to_sources: bool = False,
     ) -> list[object]:
         """Pokaż zapisane strumienie jako podwidok wybranego urządzenia."""
         state = self.sessions[SessionId.WIIM]
@@ -658,9 +674,13 @@ class Navigator:
             if state.library_view is LibraryView.WIIM_NETWORK_STREAMS
             else None
         )
-        if state.library_view is not LibraryView.WIIM_NETWORK_STREAMS:
+        if state.library_view not in (
+            LibraryView.WIIM_SOURCE_LIBRARY,
+            LibraryView.WIIM_NETWORK_STREAMS,
+        ):
             state.wiim_device_rows = tuple(state.model.rows)
         state.wiim_device_return_id = return_id
+        state.wiim_streams_return_to_sources = return_to_sources
         state.library_item_id = device_id
         state.library_view = LibraryView.WIIM_NETWORK_STREAMS
         state.model.replace(rows, preferred_id=preferred_id or remembered)
@@ -670,6 +690,40 @@ class Navigator:
             f"Strumienie WiiM, {count} {_items_word(count)}"
             if count else "Strumienie WiiM, zero elementów"
         )]
+
+    def open_wiim_source_library(
+        self,
+        *,
+        device_id: str | None = None,
+        return_id: str | None = None,
+    ) -> list[object]:
+        """Ctrl+L: pokaż dwa rzeczywiste źródła dostępne w sesji WiiM."""
+
+        state = self.sessions[SessionId.WIIM]
+        if state.library_view not in (
+            LibraryView.WIIM_SOURCE_LIBRARY,
+            LibraryView.WIIM_NETWORK_STREAMS,
+        ):
+            state.wiim_device_rows = tuple(state.model.rows)
+        state.wiim_device_return_id = return_id or state.wiim_device_return_id
+        state.library_item_id = device_id or state.library_item_id
+        state.library_view = LibraryView.WIIM_SOURCE_LIBRARY
+        state.model.replace([
+            Row(
+                "wiim-source:device-presets",
+                "Presety urządzenia",
+                "wiimSource",
+                service_kind="devicePresets",
+            ),
+            Row(
+                "wiim-source:amc-streams",
+                "Strumienie zapisane w AMC",
+                "wiimSource",
+                service_kind="networkStreams",
+            ),
+        ])
+        state.view = View.LIST
+        return [Announce("Biblioteka źródeł WiiM, 2 pozycje")]
 
     def apply_sonos_targets(
         self, rows: list[Row], preferred_id: str | None = None
@@ -858,6 +912,12 @@ class Navigator:
             return self.go_to_parent()
 
         if state.session_id is SessionId.WIIM:
+            if row.kind == "wiimSource":
+                if row.service_kind == "devicePresets":
+                    return [OpenWiiMDevicePresets()]
+                if row.service_kind == "networkStreams":
+                    return [OpenWiiMNetworkStreams()]
+                return [Announce("To źródło WiiM nie jest dostępne")]
             if (
                 row.kind == "wiimNetworkStream"
                 and row.service_kind == "wiimNetworkStream"
@@ -1484,6 +1544,19 @@ class Navigator:
             return []
         if state.session_id is SessionId.WIIM:
             if state.library_view is LibraryView.WIIM_NETWORK_STREAMS:
+                if state.wiim_streams_return_to_sources:
+                    return self.open_wiim_source_library(
+                        device_id=state.library_item_id,
+                        return_id=state.wiim_device_return_id,
+                    )
+                state.library_view = None
+                state.library_item_id = None
+                state.model.replace(
+                    list(state.wiim_device_rows),
+                    preferred_id=state.wiim_device_return_id,
+                )
+                state.view = View.LIST
+            elif state.library_view is LibraryView.WIIM_SOURCE_LIBRARY:
                 state.library_view = None
                 state.library_item_id = None
                 state.model.replace(

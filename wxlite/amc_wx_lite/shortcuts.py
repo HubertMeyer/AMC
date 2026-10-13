@@ -345,6 +345,7 @@ class Action(Enum):
     SESSION_OPTIONS = "session.options"
     HELP = "help"
     KEYBOARD_HELP = "keyboard.help"
+    VERSION_INFO = "help.version"
 
 
 # TIDAL ma osobny tor: katalog czyta oficjalne API, a dzwiek odtwarza oryginalna
@@ -412,6 +413,7 @@ TIDAL_SUPPORTED_ACTIONS = frozenset({
     Action.VIEW_PODCAST_INBOX,
     Action.HELP,
     Action.KEYBOARD_HELP,
+    Action.VERSION_INFO,
 })
 
 
@@ -474,6 +476,7 @@ WIIM_SUPPORTED_ACTIONS = frozenset({
     Action.VIEW_PODCAST_INBOX,
     Action.HELP,
     Action.KEYBOARD_HELP,
+    Action.VERSION_INFO,
 })
 
 
@@ -564,6 +567,7 @@ SONOS_SUPPORTED_ACTIONS = frozenset({
     Action.VIEW_PODCAST_INBOX,
     Action.HELP,
     Action.KEYBOARD_HELP,
+    Action.VERSION_INFO,
 })
 
 
@@ -958,13 +962,16 @@ TIDAL_COLLECTION_LIST_VIEW: dict[str, Action] = {
 }
 
 
-# W sesji WiiM Ctrl+O nie otwiera lokalnego pliku. Pokazuje zapisane w
-# profilu AMC strumienie sieciowe dla zaznaczonego albo aktywnego urządzenia.
-# Kontekst rozstrzygamy przed ogólną tablicą LIST_VIEW/PLAYER_VIEW.
+# W sesji WiiM Ctrl+L prowadzi do uczciwej Biblioteki źródeł, a Ctrl+O otwiera
+# plik playlisty i zapisuje znalezione strumienie w AMC. Zapisane strumienie
+# nie potrzebują już osobnego skrótu: są drugim elementem Biblioteki źródeł.
 WIIM_SESSION_VIEW: dict[str, Action] = {
-    "Ctrl+O": Action.VIEW_WIIM_NETWORK_STREAMS,
-    "Ctrl+N": Action.ADD_WIIM_NETWORK_STREAM,
+    "Ctrl+L": Action.VIEW_LIBRARY,
+    "Ctrl+O": Action.IMPORT_WIIM_NETWORK_STREAMS,
+    # Zachowany jako zgodny alias starszych kompilacji; menu pokazuje prostsze
+    # Ctrl+O i tylko ten skrót opisujemy użytkownikowi.
     "Ctrl+Shift+O": Action.IMPORT_WIIM_NETWORK_STREAMS,
+    "Ctrl+N": Action.ADD_WIIM_NETWORK_STREAM,
     "Ctrl+E": Action.EXPORT_WIIM_NETWORK_STREAMS,
     "F2": Action.EDIT_WIIM_NETWORK_STREAM,
     "Delete": Action.REMOVE_WIIM_NETWORK_STREAMS,
@@ -1313,6 +1320,7 @@ def _help_entries() -> list[tuple[str, str, Action]]:
         ),
         Action.HELP: "Ta pomoc",
         Action.KEYBOARD_HELP: "Włącz lub wyłącz Pomoc klawiatury",
+        Action.VERSION_INFO: "Wersja programu",
         # Pomoc mowi WPROST, ze zakres to sesja, a nie zaznaczony plik -- bez
         # tego uzytkownik nie wie, czego dotkna zmiany.
         Action.SESSION_OPTIONS: (

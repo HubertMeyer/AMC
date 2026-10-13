@@ -96,6 +96,8 @@ from .navigation import (
     OpenFolder,
     OpenLibraryView,
     OpenPodcastAggregateView,
+    OpenWiiMDevicePresets,
+    OpenWiiMNetworkStreams,
     OpenPodcastPlaylistView,
     OpenPodcastView,
     OpenQueueView,
@@ -7891,7 +7893,13 @@ class LiteFrame(wx.Frame):
             # dostaja jawne wejscie (Alt+1, jak MainWindow.xaml:446).
             self._open_library(self.library.saved_folder())
         elif action is Action.VIEW_LIBRARY:
-            if self.navigator.active is SessionId.SONOS:
+            if self.navigator.active is SessionId.WIIM:
+                context = self._wiim_device_context()
+                self._run(self.navigator.open_wiim_source_library(
+                    device_id=context[1] if context else None,
+                    return_id=context[0] if context else None,
+                ))
+            elif self.navigator.active is SessionId.SONOS:
                 self._open_sonos_view(OpenSonosView(
                     LibraryView.SONOS_LIBRARY,
                     household_id=self._sonos_content_household_id(),
@@ -7926,6 +7934,14 @@ class LiteFrame(wx.Frame):
             self._show_help()
         elif action is Action.KEYBOARD_HELP:
             self._toggle_keyboard_help()
+        elif action is Action.VERSION_INFO:
+            wx.MessageBox(
+                window_title(),
+                "Wersja programu",
+                wx.OK | wx.ICON_INFORMATION,
+                self,
+            )
+            self._restore_focus_after_dialog()
 
     # ---------------------------------------------------- wykonanie zamiarow
 
@@ -7990,6 +8006,10 @@ class LiteFrame(wx.Frame):
                 self._activate_wiim_device(intent)
             elif isinstance(intent, PlayWiiMNetworkStream):
                 self._activate_wiim_network_stream(intent)
+            elif isinstance(intent, OpenWiiMDevicePresets):
+                self._show_wiim_presets()
+            elif isinstance(intent, OpenWiiMNetworkStreams):
+                self._show_wiim_network_streams()
             elif isinstance(intent, ActivateSonosGroup):
                 self._activate_sonos_group(intent)
             elif isinstance(intent, PlaySonosMaterial):
@@ -8394,7 +8414,10 @@ class LiteFrame(wx.Frame):
             return row.item_id, row.service_id, row.title
         device_id = (
             state.library_item_id
-            if state.library_view is LibraryView.WIIM_NETWORK_STREAMS
+            if state.library_view in (
+                LibraryView.WIIM_SOURCE_LIBRARY,
+                LibraryView.WIIM_NETWORK_STREAMS,
+            )
             else None
         ) or self._wiim_active_device_id
         if not device_id:
@@ -8423,7 +8446,7 @@ class LiteFrame(wx.Frame):
         preferred_stream_id: str | None = None,
         announcement: str | None = None,
     ) -> None:
-        """Ctrl+O w WiiM: zapisane strumienie dla wybranego urządzenia."""
+        """Zapisane strumienie dla wybranego urządzenia WiiM."""
         client = self.client
         context = self._wiim_device_context()
         if client is None:
@@ -8434,6 +8457,10 @@ class LiteFrame(wx.Frame):
             return
         item_id, device_id, _device_title = context
         self._wiim_active_device_id = device_id
+        return_to_sources = (
+            self.navigator.sessions[SessionId.WIIM].library_view
+            is LibraryView.WIIM_SOURCE_LIBRARY
+        )
 
         def done(payload: object) -> None:
             if self.navigator.active is not SessionId.WIIM:
@@ -8462,6 +8489,7 @@ class LiteFrame(wx.Frame):
                     f"wiim-stream:{preferred_stream_id}"
                     if preferred_stream_id else None
                 ),
+                return_to_sources=return_to_sources,
             ))
             if announcement:
                 self.announcer.say(announcement)
@@ -8627,7 +8655,7 @@ class LiteFrame(wx.Frame):
             return
         with wx.FileDialog(
             self,
-            "Importuj strumienie z playlisty do WiiM",
+            "Otwórz playlistę lub plik ze strumieniami WiiM",
             wildcard=(
                 "Playlisty (*.m3u;*.m3u8;*.pls)|*.m3u;*.m3u8;*.pls|"
                 "Wszystkie pliki (*.*)|*.*"

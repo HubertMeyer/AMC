@@ -105,6 +105,7 @@ from amc_wx_lite.shortcuts import (
     SONOS_SESSION_VIEW,
     SONOS_OWN_STREAMS_VIEW,
     TIDAL_COLLECTION_LIST_VIEW,
+    TIDAL_SESSION_VIEW,
     WIIM_SESSION_VIEW,
     WIIM_PLAYER_VIEW,
     Action,
@@ -796,6 +797,7 @@ def test_menu_shortcut_labels_still_tell_the_truth() -> None:
         SONOS_SESSION_VIEW,
         SONOS_OWN_STREAMS_VIEW,
         TIDAL_COLLECTION_LIST_VIEW,
+        TIDAL_SESSION_VIEW,
         PLAYER_VIEW,
     ):
         for chord, action in table.items():

@@ -17,9 +17,10 @@ Stała, automatycznie aktualizowana i weryfikowana paczka użytkowa znajduje si�
 
 `D:\Projekty Codex\AMC Python\AMC.exe`
 
-Stan przygotowany i uruchomiony 14 października ma w tytule kompilację
-`2026.10.13-4a599e2a`. Jeżeli tytuł podaje inną kompilację, zatrzymaj odbiór i
-zgłoś ten numer zamiast szukać kolejnego `AMC.exe` w `.test-output`. Jedyną
+Dokładną tożsamość bieżącego programu podaje pozycja **Pomoc, Wersja programu**.
+Etykieta zawiera lokalną datę, rewizję źródeł i skrót zawartości paczki. Jeżeli
+kompilacja nie jest taka sama jak w ostatnim komunikacie narzędzia wydania,
+zatrzymaj odbiór zamiast szukać kolejnego `AMC.exe` w `.test-output`. Jedyną
 ścieżką użytkową pozostaje powyższy stały plik.
 
 Przygotowane przyrosty trafiają najpierw do osobnych katalogów testowych.
@@ -51,6 +52,18 @@ nagrywa. Nie przełączaj jej ręcznie w czasie trwającego nagrywania. Pierwszy
 7. Zastosuj poprawną aktualizację przez `AMC-Python-Updater.exe`. Po
    weryfikacji i podmianie `AMC.exe` ma uruchomić nową wersję; błąd podmiany
    ma przywrócić poprzednią, działającą całość.
+
+Zwykły odbiór deweloperski wykonuje jedno polecenie:
+
+`wxlite\tools\Promote-AMCPythonTestBuild.ps1`
+
+Skrypt odmawia pracy przy niezatwierdzonych zmianach śledzonych przez Git,
+uruchamia testy, buduje wszystkie składniki, tworzy pełną paczkę, sprawdza jej
+sumy, bezpiecznie stosuje aktualizację, ponownie sprawdza stałą instalację i
+dopiero wtedy ją uruchamia. Jeżeli stary AMC nie zgodzi się zamknąć, instalacja
+albo końcowa tożsamość nie pasuje, stara wersja nie jest uruchamiana jako rzekomo
+nowa. Ostatni jednoznaczny kwit zapisuje się w `.test-output\LAST_TEST_BUILD.txt`
+oraz `.test-output\LAST_TEST_BUILD.json`.
 
 Odbiór równoległego Radia i Multimediów wykonaj dopiero wtedy, gdy można
 bezpiecznie przerwać bieżący odsłuch. Uruchom Radio, przejdź do Plików i
@@ -232,21 +245,27 @@ WiiM:
 4. Po udanym uruchomieniu presetu ma pojawić się odtwarzacz WiiM, krótki
    komunikat z numerem i nazwą presetu oraz aktualny stan urządzenia. Po
    anulowaniu listy fokus ma wrócić do listy urządzeń albo odtwarzacza.
-5. Pełne AMC nie udaje Biblioteki ani Ulubionych WiiM: lokalne API urządzenia
-   ich nie udostępnia, dlatego `Ctrl+L` pozostaje w tej sesji nieaktywny.
-6. Na liście urządzeń albo w odtwarzaczu naciśnij `Ctrl+O`. Ma otworzyć
-   **Strumienie WiiM** zapisane w profilu AMC dla wybranego urządzenia. NVDA
+5. Pełne AMC nie udaje Biblioteki ani Ulubionych konta WiiM, których lokalne
+   API urządzenia nie udostępnia. `Ctrl+L` otwiera uczciwą **Bibliotekę źródeł
+   WiiM** z dokładnie dwiema pozycjami: „Presety urządzenia” i „Strumienie
+   zapisane w AMC”. NVDA ma czytać tylko te etykiety i rodzaj „źródło”, bez
+   identyfikatorów. Enter na pierwszej pozycji otwiera natywne presety, a na
+   drugiej zapisane strumienie.
+6. W Bibliotece źródeł wybierz **Strumienie zapisane w AMC**. NVDA
    ma czytać nazwę i rodzaj „strumień sieciowy”, nigdy adres URL ani
    identyfikator. Enter uruchamia strumień na tym urządzeniu i pokazuje jego
-   odtwarzacz. Backspace wraca dokładnie na wcześniejsze urządzenie.
+   odtwarzacz. Backspace ze strumieni wraca do Biblioteki źródeł, a kolejny
+   Backspace dokładnie na wcześniejsze urządzenie.
 7. Jeżeli lista Strumieni WiiM jest pusta, program mówi „Strumienie WiiM,
    zero elementów”. `Ctrl+N` dodaje nazwę i adres, `F2` edytuje jeden wybrany
    wpis, a Delete usuwa zaznaczone wpisy wyłącznie z profilu AMC. Usuwanie ma
    jawnie powiedzieć, że WiiM Home pozostaje bez zmian. Po każdej operacji
    lista wraca na zmieniony wpis; adres wolno pokazać tylko w jawnym oknie
    edycji F2, nigdy w zwykłej nazwie dostępnościowej. Na liście urządzeń F2
-   i Delete nie są przejmowane przez obsługę strumieni. `Ctrl+Shift+O`
-   importuje M3U/M3U8/PLS istniejącym importerem AMC, bez dublowania adresów.
+   i Delete nie są przejmowane przez obsługę strumieni. `Ctrl+O` otwiera dialog
+   playlisty lub pliku ze strumieniami i importuje M3U/M3U8/PLS istniejącym
+   importerem AMC, bez dublowania adresów. Starsze `Ctrl+Shift+O` pozostaje
+   zgodnym aliasem, ale nie jest pokazywane w menu.
    `Ctrl+E` zapisuje M3U do WiiM Home w dokładnie widocznej kolejności i bez
    technicznych identyfikatorów. `Alt+1`, `Alt+2`, `Alt+3` wybierają kolejno:
    najnowsze, alfabetycznie i kolejność własną; aktualny wybór jest polem
@@ -255,7 +274,7 @@ WiiM:
 
 Wynik odbioru 10 października: urządzenie i stan są prawidłowo widziane,
 stację można uruchomić i zatrzymać. Natywne presety pod `Ctrl+Alt+P` i
-odtwarzanie zapisanych Strumieni WiiM pod `Ctrl+O` są podłączone technicznie
+odtwarzanie zapisanych Strumieni WiiM z Biblioteki źródeł są podłączone technicznie
 i czekają na powyższy odbiór na obudzonym urządzeniu. Do przeniesienia
 pozostaje odbiór zarządzania listą Strumieni na żywym urządzeniu oraz
 pozostałe opcje sprzętowe WiiM.

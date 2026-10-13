@@ -21,20 +21,42 @@ def test_python_package_matches_isolated_runtime_app_path():
 
 def test_build_label_is_user_facing_date_and_source_revision():
     class Result:
-        stdout = "7C246DBA\n"
+        def __init__(self, stdout):
+            self.stdout = stdout
 
     original = bundle.subprocess.run
     try:
-        bundle.subprocess.run = lambda *args, **kwargs: Result()
-        label = bundle.build_label(datetime(2026, 10, 13, tzinfo=timezone.utc))
+        bundle.subprocess.run = lambda args, **kwargs: Result(
+            "7C246DBA\n" if "rev-parse" in args else ""
+        )
+        label = bundle.build_label(
+            datetime(2026, 10, 13, tzinfo=timezone.utc),
+            content_id="A1B2C3D4",
+        )
     finally:
         bundle.subprocess.run = original
-    assert label == "2026.10.13-7c246dba"
+    assert label == "2026.10.13-7c246dba-a1b2c3d4"
+
+
+def test_build_label_marks_tracked_changes_as_working_copy():
+    assert bundle.build_label(
+        datetime(2026, 10, 14, tzinfo=timezone.utc),
+        revision="1fe0f900",
+        dirty=True,
+        content_id="a1b2c3d4",
+    ) == "2026.10.14-1fe0f900-a1b2c3d4-robocza"
+
+
+def test_bundle_identity_changes_when_any_packaged_file_changes():
+    first = bundle.bundle_identity({"AMC.exe": "a" * 64})
+    second = bundle.bundle_identity({"AMC.exe": "b" * 64})
+    assert first != second
 
 
 def test_refresh_mode_updates_the_visible_build_identity():
     source = path.read_text(encoding="utf-8")
-    assert 'manifest["buildLabel"] = build_label()' in source
+    assert 'manifest["bundleId"] = bundle_identity(manifest["fileHashes"])' in source
+    assert 'manifest["buildLabel"] = build_label(' in source
 
 
 def test_production_launcher_is_copied_as_canonical_entry_point():

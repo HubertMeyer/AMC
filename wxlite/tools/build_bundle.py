@@ -69,13 +69,11 @@ def sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
-def build_label(now: datetime | None = None) -> str:
-    """Czytelna data i rewizja zrodel dla tytulu uruchomionej paczki."""
+def git_source_identity() -> tuple[str, bool]:
+    """Rewizja i stan śledzonych plików; artefakty testowe są pomijane."""
 
-    moment = now or datetime.now(timezone.utc)
-    date = moment.strftime("%Y.%m.%d")
     try:
-        result = subprocess.run(
+        revision_result = subprocess.run(
             ["git", "rev-parse", "--short=8", "HEAD"],
             cwd=REPO,
             check=True,
@@ -83,10 +81,55 @@ def build_label(now: datetime | None = None) -> str:
             text=True,
             timeout=10,
         )
-        revision = result.stdout.strip().lower()
+        status_result = subprocess.run(
+            ["git", "status", "--porcelain", "--untracked-files=no"],
+            cwd=REPO,
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        revision = revision_result.stdout.strip().lower()
+        dirty = bool(status_result.stdout.strip())
     except (OSError, subprocess.SubprocessError):
-        revision = ""
-    return f"{date}-{revision}" if revision else date
+        return "", True
+    return revision, dirty
+
+
+def bundle_identity(file_hashes: dict[str, str]) -> str:
+    """Krótka tożsamość dokładnej zawartości paczki, nie tylko źródeł."""
+
+    digest = hashlib.sha256()
+    for relative, file_digest in sorted(file_hashes.items()):
+        digest.update(relative.replace("\\", "/").encode("utf-8"))
+        digest.update(b"\0")
+        digest.update(file_digest.lower().encode("ascii"))
+        digest.update(b"\n")
+    return digest.hexdigest()[:8]
+
+
+def build_label(
+    now: datetime | None = None,
+    *,
+    revision: str | None = None,
+    dirty: bool | None = None,
+    content_id: str = "",
+) -> str:
+    """Lokalna data, rewizja i tożsamość dokładnej zawartości paczki."""
+
+    moment = now or datetime.now().astimezone()
+    date = moment.strftime("%Y.%m.%d")
+    if revision is None or dirty is None:
+        detected_revision, detected_dirty = git_source_identity()
+        revision = detected_revision if revision is None else revision
+        dirty = detected_dirty if dirty is None else dirty
+    parts = [date]
+    if revision:
+        parts.append(revision.lower())
+    if content_id:
+        parts.append(content_id.lower())
+    label = "-".join(parts)
+    return f"{label}-robocza" if dirty else label
 
 
 def copy_python_code(target: Path) -> list[str]:
@@ -269,8 +312,8 @@ def main() -> int:
         files += copy_python_code(target)
         files += copy_launcher(target, args.launcher)
         files += copy_updater(target, args.updater)
+        source_revision, source_dirty = git_source_identity()
         manifest["created"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
-        manifest["buildLabel"] = build_label()
         manifest["files"] = [
             relative
             for relative in dict.fromkeys(files)
@@ -280,6 +323,14 @@ def main() -> int:
             relative: sha256(target / Path(relative))
             for relative in manifest["files"]
         }
+        manifest["sourceRevision"] = source_revision
+        manifest["sourceDirty"] = source_dirty
+        manifest["bundleId"] = bundle_identity(manifest["fileHashes"])
+        manifest["buildLabel"] = build_label(
+            revision=source_revision,
+            dirty=source_dirty,
+            content_id=manifest["bundleId"],
+        )
         manifest["startupFiles"] = select_startup_files(
             manifest["files"],
             manifest.get("hostFolder", "host"),
@@ -301,16 +352,18 @@ def main() -> int:
         shutil.rmtree(target)
     target.mkdir(parents=True, exist_ok=True)
 
+    source_revision, source_dirty = git_source_identity()
     manifest: dict = {
         "bundleFormatVersion": 1,
         "interfaceVersion": 1,
         "hostProtocolVersion": 1,
         "application": "AMC Python",
-        "buildLabel": build_label(),
         "entryPoint": "AMC.exe",
         "pythonModule": "amc_wx_lite",
         "created": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "note": "Prywatny pakiet AMC-wx-Lite bez danych pełnego AMC. Zawartość runtime zależy od wskazanego źródła; publikacja wymaga sprawdzenia licencji.",
+        "sourceRevision": source_revision,
+        "sourceDirty": source_dirty,
         "files": [],
     }
 
@@ -332,6 +385,12 @@ def main() -> int:
         relative: sha256(target / Path(relative))
         for relative in manifest["files"]
     }
+    manifest["bundleId"] = bundle_identity(manifest["fileHashes"])
+    manifest["buildLabel"] = build_label(
+        revision=source_revision,
+        dirty=source_dirty,
+        content_id=manifest["bundleId"],
+    )
     manifest["startupFiles"] = select_startup_files(
         manifest["files"],
         args.host_subdir,

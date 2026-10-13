@@ -9,12 +9,12 @@ from amc_wx_lite.version_info import (
 
 def test_window_title_identifies_the_exact_bundle(tmp_path) -> None:
     (tmp_path / "bundle-manifest.json").write_text(
-        json.dumps({"buildLabel": "2026.10.13-7c246db"}),
+        json.dumps({"buildLabel": "2026.10.13-7c246dba-a1b2c3d4"}),
         encoding="utf-8",
     )
 
     assert window_title(tmp_path) == (
-        "AMC Python — wersja 0.1.0, kompilacja 2026.10.13-7c246db"
+        "AMC Python — wersja 0.1.0, kompilacja 2026.10.13-7c246dba-a1b2c3d4"
     )
 
 

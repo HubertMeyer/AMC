@@ -511,8 +511,10 @@ własnej normalizacji diakrytyków.
   prawdziwy stan urządzenia i otwiera odtwarzacz; Spacja, Page Up/Page Down,
   strzałki głośności, suwak oraz odczyt czasu prowadzą przez wąskie operacje
   `wiim.*`, nigdy przez lokalny silnik audio. Stan jest odświeżany okresowo.
-  `Ctrl+O` otwiera zapisane w profilu **Strumienie WiiM** dla wybranego albo
-  aktywnego urządzenia. Enter przekazuje do hosta wyłącznie stabilne ID;
+  `Ctrl+L` otwiera **Bibliotekę źródeł WiiM** z dwiema jawnymi pozycjami:
+  **Presety urządzenia** oraz **Strumienie zapisane w AMC**. Enter na drugiej
+  pozycji otwiera strumienie dla wybranego albo aktywnego urządzenia i
+  przekazuje do hosta wyłącznie stabilne ID;
   właściwy URL nie opuszcza C# i nie trafia do nazwy, komunikatu ani NVDA.
   Backspace wraca na dokładnie to urządzenie. Odtwarzacz pokazuje zapisaną
   nazwę także wtedy, gdy firmware podaje jako metadane tylko adres manifestu.
@@ -521,7 +523,9 @@ własnej normalizacji diakrytyków.
   Pythona tylko po jawnym F2, do oznaczonego pola edycji. Delete czyści też
   zapamiętany wybór urządzenia i kolejności AMC, ale nie zmienia WiiM Home.
   F2/Delete są kontekstowe i nie przechwytują listy urządzeń.
-  Import `Ctrl+Shift+O` korzysta z istniejącego parsera playlist AMC i
+  `Ctrl+O` otwiera playlistę lub plik ze strumieniami do importu; ukryty
+  alias `Ctrl+Shift+O` pozostaje zgodny ze starszym układem. Import korzysta
+  z istniejącego parsera playlist AMC i
   zachowuje kolejność partii. Eksport `Ctrl+E` używa istniejącego zapisu M3U
   WiiM i tego samego porządku co ekran. `Alt+1/2/3` zapisują w głównym profilu
   odpowiednio tryb najnowsze, alfabetyczny i własny; menu przekazuje stan jako

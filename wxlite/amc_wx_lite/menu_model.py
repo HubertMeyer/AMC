@@ -209,13 +209,6 @@ def build_menus(session_order: object = None) -> tuple[Menu, ...]:
             MenuItem("Otwórz &folder", Action.OPEN_FOLDER_DIALOG,
                      shortcut="Ctrl+Shift+O", visible_sessions=FILES_ONLY),
             MenuItem(
-                "Zapisane &strumienie WiiM",
-                Action.VIEW_WIIM_NETWORK_STREAMS,
-                shortcut="Ctrl+O",
-                accelerator=False,
-                visible_sessions=WIIM_ONLY,
-            ),
-            MenuItem(
                 "Nowy str&umień WiiM…",
                 Action.ADD_WIIM_NETWORK_STREAM,
                 shortcut="Ctrl+N",
@@ -223,9 +216,9 @@ def build_menus(session_order: object = None) -> tuple[Menu, ...]:
                 visible_sessions=WIIM_ONLY,
             ),
             MenuItem(
-                "Importuj playlistę strumieni WiiM (&Q)…",
+                "Otwórz playlistę lub plik ze strumieniami WiiM (&O)…",
                 Action.IMPORT_WIIM_NETWORK_STREAMS,
-                shortcut="Ctrl+Shift+O",
+                shortcut="Ctrl+O",
                 accelerator=False,
                 visible_sessions=WIIM_ONLY,
             ),
@@ -1177,6 +1170,8 @@ def build_menus(session_order: object = None) -> tuple[Menu, ...]:
                 accelerator=False,
                 checkable=True,
             ),
+            SEPARATOR,
+            MenuItem("&Wersja programu", Action.VERSION_INFO),
         ),
     )
 

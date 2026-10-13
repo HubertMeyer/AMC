@@ -144,8 +144,8 @@ internal static class Program
         Equal(
             ExistingInstanceAction.Activate,
             ExistingInstancePolicy.Decide(
-                "2026.10.13-6c48ebf",
-                "AMC Python — wersja 0.1.0, kompilacja 2026.10.13-6c48ebf",
+                "2026.10.14-1fe0f900-a1b2c3d4",
+                "AMC Python — wersja 0.1.0, kompilacja 2026.10.14-1fe0f900-a1b2c3d4",
                 @"D:\Projekty Codex\AMC Python",
                 @"D:\Projekty Codex\AMC Python"));
     }
@@ -155,8 +155,8 @@ internal static class Program
         Equal(
             ExistingInstanceAction.RequestSafeReplacement,
             ExistingInstancePolicy.Decide(
-                "2026.10.13-6c48ebf",
-                "AMC Python — wersja 0.1.0, kompilacja 2026.10.13-4d5d26cf",
+                "2026.10.14-1fe0f900-a1b2c3d4",
+                "AMC Python — wersja 0.1.0, kompilacja 2026.10.14-1fe0f900-e5f6a7b8",
                 @"D:\Projekty Codex\AMC Python",
                 @"D:\Projekty Codex\AMC Python"));
     }
