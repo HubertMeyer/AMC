@@ -1,4 +1,5 @@
 using System.Text.Json;
+using AccessibleMediaController.Core.Configuration;
 using AccessibleMediaController.Core.Sonos;
 
 namespace AccessibleMediaController.LiteHost.Protocol;
@@ -55,7 +56,7 @@ public static class LiteSonosContract
     {
         var householdId = LiteArgs.RequireText(args, "householdId").Trim();
         var kind = LiteArgs.RequireText(args, "kind").Trim();
-        if (kind is not ("favorite" or "playlist"))
+        if (kind is not ("favorite" or "playlist" or "ownStream"))
             throw new LiteRequestException("Nieznany rodzaj materiału Sonos.");
         return new LiteSonosMaterialsRequest(householdId, kind);
     }
@@ -72,17 +73,6 @@ public static class LiteSonosContract
     public static object CreateLibraryResult()
     {
         var items = SonosLibraryPresentation.DescribeCategories()
-            // Własne stacje dostaną osobny kontrakt zapisu/odtwarzania. Dopóki
-            // go nie ma, nie pokazujemy w wxPython martwej kategorii.
-            .Where(row =>
-                string.Equals(
-                    row.CategoryId,
-                    SonosLibraryPresentation.FavoritesCategoryId,
-                    StringComparison.Ordinal)
-                || string.Equals(
-                    row.CategoryId,
-                    SonosLibraryPresentation.PlaylistsCategoryId,
-                    StringComparison.Ordinal))
             .Select(row => new
             {
                 itemId = row.CategoryId,
@@ -92,6 +82,7 @@ public static class LiteSonosContract
                 {
                     SonosLibraryPresentation.FavoritesCategoryId => "favorites",
                     SonosLibraryPresentation.PlaylistsCategoryId => "playlists",
+                    SonosLibraryPresentation.OwnStreamsCategoryId => "ownStreams",
                     _ => throw new InvalidOperationException(
                         "Nieznana kategoria Biblioteki Sonos.")
                 }
@@ -123,6 +114,44 @@ public static class LiteSonosContract
         }).ToArray();
         return new { items, message = SonosPlaylistsLabels.SummarizeCount(items.Length) };
     }
+
+    public static object CreateOwnStreamsResult(
+        IReadOnlyList<SonosOwnStreamSettings> streams,
+        CollectionOrderSettings orders,
+        CollectionSortMode mode)
+    {
+        var valid = streams
+            .Where(stream => !string.IsNullOrWhiteSpace(stream.Id)
+                && !string.IsNullOrWhiteSpace(SonosOwnStreamsOrder.Label(stream))
+                && SonosStreamUrlPolicy.IsAcceptable(stream.StreamUrl))
+            .DistinctBy(stream => stream.Id.Trim(), StringComparer.Ordinal)
+            .ToArray();
+        var items = SonosOwnStreamsOrder.Arrange(orders, valid, mode)
+            .Select(stream => new
+            {
+                itemId = "sonos-stream:" + stream.Id.Trim(),
+                materialId = stream.Id.Trim(),
+                title = SonosOwnStreamsOrder.Label(stream).Trim(),
+                detail = "Stacja zapisana w AMC",
+                kind = "ownStream"
+            })
+            .ToArray();
+        return new
+        {
+            items,
+            message = DescribeOwnStreamsCount(items.Length),
+            sortMode = mode.ToString()
+        };
+    }
+
+    private static string DescribeOwnStreamsCount(int count) => count switch
+    {
+        0 => "Moje stacje, zero elementów",
+        1 => "Moje stacje, 1 element",
+        _ when count % 10 is >= 2 and <= 4 && count % 100 is not (12 or 13 or 14) =>
+            $"Moje stacje, {count} elementy",
+        _ => $"Moje stacje, {count} elementów"
+    };
 
     public static object CreateTargetsResult(
         IReadOnlyList<LiteSonosHouseholdTargets> sources,

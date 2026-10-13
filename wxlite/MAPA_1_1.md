@@ -533,7 +533,12 @@ własnej normalizacji diakrytyków.
   konta, magazynie DPAPI i oficjalnym kliencie Control API co główne AMC.
   `Ctrl+F5` pokazuje grupy jako cele sterowania. `Ctrl+L` otwiera Bibliotekę
   materiałów, a `Ctrl+U` i `Ctrl+P` odpowiednio Ulubione Sonos i Playlisty
-  Sonos. Enter na materiale wysyła jedno polecenie `INSERT` z odtwarzaniem do
+  Sonos. Trzecią kategorią Biblioteki są **Moje stacje** odczytane z tego samego
+  profilu AMC. Enter tworzy sesję Sonosa i uruchamia zapisany adres w wybranej
+  grupie; adres pozostaje wyłącznie po stronie hosta C# i nie trafia do Pythona,
+  nazwy wiersza ani NVDA. Dodawanie, edycja, usuwanie, import oraz sortowanie
+  Moich stacji pozostają następnym, oddzielnym etapem. Enter na ulubionym lub
+  playliście wysyła jedno polecenie `INSERT` z odtwarzaniem do
   wcześniej wybranej grupy, bez ponawiania zapisu i bez przepuszczania tokenu,
   adresu ani identyfikatora do etykiety NVDA. Backspace wraca z podlisty na
   właściwą kategorię. Odczyt stanu, transport i uruchamianie materiału używają
@@ -543,7 +548,7 @@ własnej normalizacji diakrytyków.
   grupie pozostaje do wykonania przez użytkownika; testy automatyczne nie są
   dowodem, że fizyczny głośnik rozpoczął odtwarzanie.
 - Do dalszego portu pozostają wejścia, wyjścia, korektor,
-  powtarzanie i timer, własne stacje i presety Sonosa, Spotify, dalsze ustawienia oraz
+  powtarzanie i timer, redakcja własnych stacji i presety Sonosa, Spotify, dalsze ustawienia oraz
   pozostała redakcja materiałów.
 
 ## Polityka zaniku wybranego urządzenia audio

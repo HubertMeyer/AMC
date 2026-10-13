@@ -99,7 +99,9 @@ internal static class Program
         var profileMutations = OpenProfileMutationStore(args);
         using var tidalCatalog = OpenTidalCatalog(args);
         using var wiim = OpenWiiM(args);
-        using var sonos = new LiteSonosCoordinator(new LiteSonosAccountOwner());
+        using var sonos = new LiteSonosCoordinator(
+            new LiteSonosAccountOwner(),
+            ReadArgumentPath(args, "--state-json"));
 
         var bookmarkStore = OpenBookmarkStore(args);
         using var handlers = new LiteEngineHandlers(

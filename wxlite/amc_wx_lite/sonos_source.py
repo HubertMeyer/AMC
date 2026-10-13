@@ -109,7 +109,7 @@ def library_rows(payload: object, household_id: str) -> tuple[Row, ...]:
 
 
 def material_rows(payload: object, household_id: str) -> tuple[Row, ...]:
-    """Ulubione i playlisty: techniczny identyfikator nigdy nie jest etykietą."""
+    """Materiały Sonosa: techniczny identyfikator nigdy nie jest etykietą."""
     raw_items = _items(payload, "Host Sonos nie zwrócił listy materiałów")
     rows: list[Row] = []
     seen: set[str] = set()
@@ -124,7 +124,7 @@ def material_rows(payload: object, household_id: str) -> tuple[Row, ...]:
             not item_id
             or not material_id
             or not title
-            or kind not in {"favorite", "playlist"}
+            or kind not in {"favorite", "playlist", "ownStream"}
             or item_id in seen
         ):
             continue
@@ -132,7 +132,12 @@ def material_rows(payload: object, household_id: str) -> tuple[Row, ...]:
         rows.append(Row(
             item_id=item_id,
             title=title,
-            kind="sonosFavorite" if kind == "favorite" else "sonosPlaylist",
+            kind={
+                "favorite": "sonosFavorite",
+                "playlist": "sonosPlaylist",
+                "ownStream": "sonosOwnStream",
+            }[kind],
+            detail=_text(raw.get("detail")),
             parent_id=household_id,
             service_id=material_id,
             service_kind=kind,

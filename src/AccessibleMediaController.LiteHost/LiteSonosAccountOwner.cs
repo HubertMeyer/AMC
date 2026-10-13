@@ -14,6 +14,7 @@ internal sealed class LiteSonosAccountOwner :
     ISonosFavoriteLoadSessionBackend,
     ISonosPlaylistsSessionBackend,
     ISonosPlaylistLoadSessionBackend,
+    ISonosOwnStreamsSessionBackend,
     ISonosAccountBoundBackend,
     IDisposable
 {
@@ -121,6 +122,23 @@ internal sealed class LiteSonosAccountOwner :
         EnsureCoordinator().LoadPlaylistAsync(
             EnsureControlClient(), groupId, playlistId,
             action, playOnCompletion, cancellationToken);
+
+    public Task<SonosSessionCreateResult> CreateSessionAsync(
+        string? groupId,
+        SonosSessionRequest request,
+        CancellationToken cancellationToken) =>
+        EnsureCoordinator().CreateSessionAsync(
+            EnsureControlClient(), groupId, request, cancellationToken);
+
+    public Task<SonosStreamUrlLoadResult> LoadStreamUrlAsync(
+        string? sessionId,
+        string? streamUrl,
+        bool playOnCompletion,
+        string? itemId,
+        CancellationToken cancellationToken) =>
+        EnsureCoordinator().LoadStreamUrlAsync(
+            EnsureControlClient(), sessionId, streamUrl,
+            playOnCompletion, itemId, cancellationToken);
 
     private SonosAccountCoordinator EnsureCoordinator()
     {

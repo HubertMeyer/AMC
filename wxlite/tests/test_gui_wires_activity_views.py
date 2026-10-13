@@ -95,6 +95,7 @@ _NON_SQLITE_VIEWS = (
     LibraryView.SONOS_LIBRARY,
     LibraryView.SONOS_FAVORITES,
     LibraryView.SONOS_PLAYLISTS,
+    LibraryView.SONOS_OWN_STREAMS,
 )
 
 

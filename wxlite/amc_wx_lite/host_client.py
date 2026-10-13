@@ -702,7 +702,7 @@ class LiteHostClient:
         return self.call("sonos.library", timeout=10.0)
 
     def sonos_materials(self, household_id: str, kind: str) -> Any:
-        """Read favorites or playlists for one validated Sonos household."""
+        """Read favorites, playlists or saved streams for one Sonos household."""
         return self.call(
             "sonos.materials",
             {"householdId": household_id, "kind": kind},
@@ -716,7 +716,7 @@ class LiteHostClient:
         kind: str,
         material_id: str,
     ) -> Any:
-        """Start one selected favorite or playlist in the active group."""
+        """Start one selected favorite, playlist or saved stream in the group."""
         return self.call(
             "sonos.loadMaterial",
             {

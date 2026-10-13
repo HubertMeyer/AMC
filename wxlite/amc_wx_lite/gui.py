@@ -7059,6 +7059,7 @@ class LiteFrame(wx.Frame):
             LibraryView.SONOS_LIBRARY: "Biblioteka Sonos",
             LibraryView.SONOS_FAVORITES: "Ulubione Sonos",
             LibraryView.SONOS_PLAYLISTS: "Playlisty Sonos",
+            LibraryView.SONOS_OWN_STREAMS: "Moje stacje Sonos",
         }.get(
             session.library_view,
             getattr(active_list, "_base_accessible_label", None),
@@ -8557,6 +8558,8 @@ class LiteFrame(wx.Frame):
             work = lambda: client.sonos_materials(household_id, "favorite")
         elif intent.view is LibraryView.SONOS_PLAYLISTS:
             work = lambda: client.sonos_materials(household_id, "playlist")
+        elif intent.view is LibraryView.SONOS_OWN_STREAMS:
+            work = lambda: client.sonos_materials(household_id, "ownStream")
         else:
             self.announcer.say("Ten widok Sonosa nie jest jeszcze dostępny")
             return

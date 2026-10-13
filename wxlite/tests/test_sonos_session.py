@@ -79,12 +79,26 @@ def test_sonos_library_categories_materials_and_back_are_typed() -> None:
                 "detail": "Enter otwiera listę",
                 "kind": "playlists",
             },
+            {
+                "itemId": "sonos.library.ownstreams",
+                "title": "Moje stacje",
+                "detail": "Enter otwiera listę",
+                "kind": "ownStreams",
+            },
         ]
     }, "house-1"))
     nav.apply_sonos_library(categories, household_id="house-1")
     opened = nav.activate_selected()
     assert opened == [OpenSonosView(
         LibraryView.SONOS_FAVORITES,
+        household_id="house-1",
+        preferred_id=None,
+    )]
+
+    nav.apply_sonos_library(categories, household_id="house-1")
+    assert nav.session.model.select_id("sonos.library.ownstreams")
+    assert nav.activate_selected() == [OpenSonosView(
+        LibraryView.SONOS_OWN_STREAMS,
         household_id="house-1",
         preferred_id=None,
     )]
@@ -116,6 +130,39 @@ def test_sonos_library_categories_materials_and_back_are_typed() -> None:
         LibraryView.SONOS_LIBRARY,
         household_id="house-1",
         preferred_id="sonos.library.favorites",
+    )]
+
+
+def test_sonos_own_stream_is_a_typed_material_without_spoken_url() -> None:
+    nav = Navigator()
+    nav.switch_session(SessionId.SONOS)
+    rows = list(material_rows({
+        "items": [{
+            "itemId": "sonos-stream:technical-item",
+            "materialId": "technical-material",
+            "title": "Radio domowe",
+            "detail": "Stacja zapisana w AMC",
+            "kind": "ownStream",
+            "streamUrl": "https://secret.example/live",
+        }]
+    }, "house-1"))
+    nav.apply_sonos_materials(
+        LibraryView.SONOS_OWN_STREAMS,
+        rows,
+        household_id="house-1",
+        return_id="sonos.library.ownstreams",
+    )
+
+    assert rows[0].title == "Radio domowe"
+    assert rows[0].detail == "Stacja zapisana w AMC"
+    assert "secret.example" not in rows[0].title
+    assert "secret.example" not in rows[0].detail
+    assert nav.activate_selected() == [PlaySonosMaterial(
+        item_id="sonos-stream:technical-item",
+        title="Radio domowe",
+        household_id="house-1",
+        kind="ownStream",
+        material_id="technical-material",
     )]
 
 
@@ -244,8 +291,12 @@ def test_sonos_host_client_sends_only_ids_command_and_arguments() -> None:
     )
     client.sonos_library()
     client.sonos_materials("house-1", "favorite")
+    client.sonos_materials("house-1", "ownStream")
     client.sonos_load_material(
         "house-1", "group-1", "favorite", "favorite-1"
+    )
+    client.sonos_load_material(
+        "house-1", "group-1", "ownStream", "stream-1"
     )
 
     assert calls == [
@@ -272,12 +323,27 @@ def test_sonos_host_client_sends_only_ids_command_and_arguments() -> None:
             60.0,
         ),
         (
+            "sonos.materials",
+            {"householdId": "house-1", "kind": "ownStream"},
+            60.0,
+        ),
+        (
             "sonos.loadMaterial",
             {
                 "householdId": "house-1",
                 "groupId": "group-1",
                 "kind": "favorite",
                 "materialId": "favorite-1",
+            },
+            60.0,
+        ),
+        (
+            "sonos.loadMaterial",
+            {
+                "householdId": "house-1",
+                "groupId": "group-1",
+                "kind": "ownStream",
+                "materialId": "stream-1",
             },
             60.0,
         ),

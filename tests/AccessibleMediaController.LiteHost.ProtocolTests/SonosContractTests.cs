@@ -1,4 +1,5 @@
 using System.Text.Json;
+using AccessibleMediaController.Core.Configuration;
 using AccessibleMediaController.Core.Sonos;
 using AccessibleMediaController.LiteHost.Protocol;
 
@@ -19,8 +20,8 @@ internal static class SonosContractTests
     {
         using var library = JsonDocument.Parse(JsonSerializer.Serialize(
             LiteSonosContract.CreateLibraryResult()));
-        Check(library.RootElement.GetProperty("items").GetArrayLength() == 2,
-            "Biblioteka Sonos nie ma dwóch działających kategorii");
+        Check(library.RootElement.GetProperty("items").GetArrayLength() == 3,
+            "Biblioteka Sonos nie ma trzech działających kategorii");
 
         var favorite = new SonosFavorite(
             "technical-favorite-id", "Radio Poznań", "Audycja",
@@ -48,6 +49,26 @@ internal static class SonosContractTests
             "etykieta playlisty nie używa formatera Core");
         Check(!playlistTitle.Contains("technical", StringComparison.Ordinal),
             "identyfikator playlisty wyciekł do etykiety");
+
+        using var streamPayload = JsonDocument.Parse(JsonSerializer.Serialize(
+            LiteSonosContract.CreateOwnStreamsResult(
+                [new SonosOwnStreamSettings
+                {
+                    Id = "technical-stream-id",
+                    Name = "Radio domowe",
+                    StreamUrl = "https://radio.example/live"
+                }],
+                new CollectionOrderSettings(),
+                CollectionSortMode.Custom)));
+        var streamItem = streamPayload.RootElement.GetProperty("items")[0];
+        var streamTitle = streamItem.GetProperty("title").GetString() ?? string.Empty;
+        Check(streamTitle == "Radio domowe",
+            "własna stacja nie zachowała nazwy użytkowej");
+        Check(!streamTitle.Contains("technical", StringComparison.Ordinal),
+            "identyfikator własnej stacji wyciekł do etykiety");
+        Check(!streamItem.TryGetProperty("url", out _)
+              && !streamItem.TryGetProperty("streamUrl", out _),
+            "adres własnej stacji wyciekł do zwykłej listy");
     }
 
     private static void MaterialRequestsAcceptOnlyKnownKinds()
@@ -56,6 +77,11 @@ internal static class SonosContractTests
             """{"householdId":"home-1","kind":"favorite"}""");
         Check(LiteSonosContract.ReadMaterialsRequest(accepted.RootElement).Kind == "favorite",
             "nie przyjęto ulubionych Sonos");
+
+        using var ownStream = JsonDocument.Parse(
+            """{"householdId":"home-1","kind":"ownStream"}""");
+        Check(LiteSonosContract.ReadMaterialsRequest(ownStream.RootElement).Kind == "ownStream",
+            "nie przyjęto własnych stacji Sonos");
 
         using var rejected = JsonDocument.Parse(
             """{"householdId":"home-1","kind":"runtimeObject"}""");

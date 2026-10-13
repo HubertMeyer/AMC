@@ -103,6 +103,7 @@ class LibraryView(Enum):
     SONOS_LIBRARY = "sonosLibrary"
     SONOS_FAVORITES = "sonosFavorites"
     SONOS_PLAYLISTS = "sonosPlaylists"
+    SONOS_OWN_STREAMS = "sonosOwnStreams"
 
 
 #: Wartosci ``_state.LocalMedia.LibraryView`` (``AppSettings.cs:1236``, domyslnie
@@ -454,7 +455,7 @@ class OpenSonosView:
 
 @dataclass(slots=True)
 class PlaySonosMaterial:
-    """Uruchom konkretny ulubiony albo playlistę w aktywnej grupie."""
+    """Uruchom ulubiony, playlistę albo zapisaną stację w aktywnej grupie."""
 
     item_id: str
     title: str
@@ -706,7 +707,11 @@ class Navigator:
         preferred_id: str | None = None,
         return_id: str | None = None,
     ) -> list[object]:
-        if view not in (LibraryView.SONOS_FAVORITES, LibraryView.SONOS_PLAYLISTS):
+        if view not in (
+            LibraryView.SONOS_FAVORITES,
+            LibraryView.SONOS_PLAYLISTS,
+            LibraryView.SONOS_OWN_STREAMS,
+        ):
             raise ValueError("Nieznany widok materiałów Sonos")
         state = self.sessions[SessionId.SONOS]
         state.library_view = view
@@ -882,20 +887,23 @@ class Navigator:
             if (
                 row.kind == "sonosCategory"
                 and row.parent_id
-                and row.service_kind in {"favorites", "playlists"}
+                and row.service_kind in {"favorites", "playlists", "ownStreams"}
             ):
+                target_view = {
+                    "favorites": LibraryView.SONOS_FAVORITES,
+                    "playlists": LibraryView.SONOS_PLAYLISTS,
+                    "ownStreams": LibraryView.SONOS_OWN_STREAMS,
+                }[row.service_kind]
                 return [OpenSonosView(
-                    LibraryView.SONOS_FAVORITES
-                    if row.service_kind == "favorites"
-                    else LibraryView.SONOS_PLAYLISTS,
+                    target_view,
                     household_id=row.parent_id,
                     preferred_id=None,
                 )]
             if (
-                row.kind in {"sonosFavorite", "sonosPlaylist"}
+                row.kind in {"sonosFavorite", "sonosPlaylist", "sonosOwnStream"}
                 and row.parent_id
                 and row.service_id
-                and row.service_kind in {"favorite", "playlist"}
+                and row.service_kind in {"favorite", "playlist", "ownStream"}
             ):
                 state.player_entry_anchor_id = row.item_id
                 state.list_anchor_id = row.item_id
@@ -1476,6 +1484,7 @@ class Navigator:
             if state.library_view in (
                 LibraryView.SONOS_FAVORITES,
                 LibraryView.SONOS_PLAYLISTS,
+                LibraryView.SONOS_OWN_STREAMS,
             ):
                 return [OpenSonosView(
                     LibraryView.SONOS_LIBRARY,

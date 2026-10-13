@@ -1,6 +1,9 @@
 using AccessibleMediaController.Core.Commands;
+using AccessibleMediaController.Core.Configuration;
 using AccessibleMediaController.Core.Sonos;
 using AccessibleMediaController.LiteHost.Protocol;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace AccessibleMediaController.LiteHost;
 
@@ -9,12 +12,20 @@ namespace AccessibleMediaController.LiteHost;
 /// odczyt, nigdy nie ponawia polecenia i nie nazywa HTTP 200 dowodem skutku.
 /// </summary>
 internal sealed class LiteSonosCoordinator(
-    ISonosGroupSessionBackend backend) : IDisposable
+    ISonosGroupSessionBackend backend,
+    string? statePath = null) : IDisposable
 {
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true,
+        Converters = { new JsonStringEnumConverter() }
+    };
+
     private readonly object gate = new();
     private readonly Dictionary<string, LiteSonosTarget> targets = new(StringComparer.Ordinal);
     private readonly Dictionary<string, SonosHousehold> households = new(StringComparer.Ordinal);
     private long? accountBindingGeneration;
+    private readonly string ownStreamAppContext = Guid.NewGuid().ToString("N");
 
     public object ListTargets()
     {
@@ -155,6 +166,12 @@ internal sealed class LiteSonosCoordinator(
         lock (gate)
         {
             ResolveHousehold(request.HouseholdId);
+            if (request.Kind == "ownStream")
+            {
+                var profile = ReadOwnStreamsProfile();
+                return LiteSonosContract.CreateOwnStreamsResult(
+                    profile.Streams, profile.Orders, profile.SortMode);
+            }
             if (request.Kind == "favorite")
             {
                 if (backend is not ISonosFavoritesSessionBackend favoritesBackend)
@@ -186,6 +203,53 @@ internal sealed class LiteSonosCoordinator(
             var target = ResolveTarget(new LiteSonosTargetRequest(
                 request.HouseholdId, request.GroupId));
             SonosGroupCommandResult result;
+            if (request.Kind == "ownStream")
+            {
+                if (backend is not ISonosOwnStreamsSessionBackend ownStreamsBackend)
+                    throw new LiteRequestException("Uruchamianie własnych stacji Sonos nie jest dostępne.");
+                var station = ReadOwnStreamsProfile().Streams.FirstOrDefault(candidate =>
+                    string.Equals(candidate.Id, request.MaterialId, StringComparison.Ordinal));
+                if (station is null
+                    || !SonosStreamUrlPolicy.IsAcceptable(station.StreamUrl))
+                {
+                    throw new LiteRequestException(
+                        "Nie można odnaleźć tej stacji na zapisanej liście AMC.");
+                }
+                if (!SonosSessionRequest.TryCreate(
+                        "pl.amc.accessiblemultimediacontroller",
+                        ownStreamAppContext,
+                        out var sessionRequest)
+                    || sessionRequest is null)
+                {
+                    throw new LiteRequestException(
+                        "Nie przygotowano żądania własnej stacji Sonos.");
+                }
+                var created = ownStreamsBackend.CreateSessionAsync(
+                        target.Group.Id, sessionRequest, CancellationToken.None)
+                    .GetAwaiter().GetResult();
+                if (!created.TryGetSessionId(out var sessionId))
+                    throw new LiteRequestException(created.Message);
+                var loaded = ownStreamsBackend.LoadStreamUrlAsync(
+                        sessionId,
+                        station.StreamUrl,
+                        playOnCompletion: true,
+                        SonosOwnStreamIdentity.TryComputeItemId(
+                            station.Id, station.StreamUrl),
+                        CancellationToken.None)
+                    .GetAwaiter().GetResult();
+                if (!loaded.Accepted)
+                    throw new LiteRequestException(loaded.Message);
+                Thread.Sleep(TimeSpan.FromMilliseconds(220));
+                var ownStreamState = ReadState(target.Group.Id);
+                return LiteSonosContract.CreateSnapshotResult(
+                    target.Household.Id,
+                    target.Group,
+                    ownStreamState.Playback,
+                    ownStreamState.Metadata,
+                    ownStreamState.Volume,
+                    ownStreamState.ReadUtc,
+                    $"Uruchamianie: {SonosOwnStreamsOrder.Label(station).Trim()}");
+            }
             if (request.Kind == "favorite")
             {
                 if (backend is not ISonosFavoriteLoadSessionBackend favoritesBackend)
@@ -299,6 +363,100 @@ internal sealed class LiteSonosCoordinator(
             throw new LiteRequestException(
                 "Wybrany dom Sonos nie jest już dostępny. Odśwież listę grup.");
         return household;
+    }
+
+    private LiteSonosOwnStreamsProfile ReadOwnStreamsProfile()
+    {
+        if (string.IsNullOrWhiteSpace(statePath))
+            throw new LiteRequestException(
+                "Host nie ma dostępu do profilu AMC z własnymi stacjami Sonos.");
+        try
+        {
+            using var stream = new FileStream(
+                statePath, FileMode.Open, FileAccess.Read,
+                FileShare.ReadWrite | FileShare.Delete);
+            using var document = JsonDocument.Parse(stream);
+            var root = document.RootElement;
+            var settings = new SonosSessionSettings();
+            if (TryGetProperty(root, out var sonos, "sonos", "Sonos")
+                && sonos.ValueKind == JsonValueKind.Object)
+            {
+                settings = JsonSerializer.Deserialize<SonosSessionSettings>(
+                    sonos.GetRawText(), JsonOptions) ?? new SonosSessionSettings();
+            }
+            var orders = new CollectionOrderSettings();
+            if (TryGetProperty(root, out var rawOrders, "collectionOrders", "CollectionOrders")
+                && rawOrders.ValueKind == JsonValueKind.Object)
+            {
+                orders = JsonSerializer.Deserialize<CollectionOrderSettings>(
+                    rawOrders.GetRawText(), JsonOptions) ?? new CollectionOrderSettings();
+            }
+            // Stare albo ręcznie poprawiane profile mogą zawierać jawne null.
+            // Logika kolejności Core słusznie zakłada już znormalizowany model;
+            // host tylko do odczytu musi więc odtworzyć te dwa magazyny, których
+            // używają Moje stacje, zanim przekaże go do Arrange.
+            orders.LibraryAddedItemIdsBySession ??=
+                new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+            orders.LibraryItemIdsBySession ??=
+                new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+            return new LiteSonosOwnStreamsProfile(
+                settings.OwnStreams ?? [],
+                orders,
+                ReadOwnStreamsSortMode(root));
+        }
+        catch (FileNotFoundException)
+        {
+            throw new LiteRequestException(
+                "Nie znaleziono profilu AMC z własnymi stacjami Sonos.");
+        }
+        catch (JsonException)
+        {
+            throw new LiteRequestException(
+                "Profil AMC z własnymi stacjami Sonos jest uszkodzony.");
+        }
+        catch (Exception exception) when (
+            exception is IOException or UnauthorizedAccessException)
+        {
+            throw new LiteRequestException(
+                "Nie można teraz odczytać własnych stacji Sonos z profilu AMC.");
+        }
+    }
+
+    private static CollectionSortMode ReadOwnStreamsSortMode(JsonElement root)
+    {
+        if (TryGetProperty(root, out var navigation, "sessionNavigation", "SessionNavigation")
+            && TryGetProperty(navigation, out var sessions, "sessions", "Sessions")
+            && TryGetProperty(sessions, out var sonos, "sonos", "Sonos")
+            && TryGetProperty(sonos, out var modes, "collectionSortModes", "CollectionSortModes")
+            && TryGetProperty(modes, out var value, SonosOwnStreamsOrder.ViewName))
+        {
+            if (value.ValueKind == JsonValueKind.String
+                && Enum.TryParse<CollectionSortMode>(
+                    value.GetString(), ignoreCase: true, out var parsed)
+                && Enum.IsDefined(parsed))
+                return parsed;
+            if (value.ValueKind == JsonValueKind.Number
+                && value.TryGetInt32(out var number)
+                && Enum.IsDefined(typeof(CollectionSortMode), number))
+                return (CollectionSortMode)number;
+        }
+        return CollectionSortMode.Custom;
+    }
+
+    private static bool TryGetProperty(
+        JsonElement source,
+        out JsonElement value,
+        params string[] names)
+    {
+        if (source.ValueKind == JsonValueKind.Object)
+        {
+            foreach (var name in names)
+            {
+                if (source.TryGetProperty(name, out value)) return true;
+            }
+        }
+        value = default;
+        return false;
     }
 
     private void InvalidateTargetsAfterAccountChange()
@@ -415,6 +573,11 @@ internal sealed class LiteSonosCoordinator(
 }
 
 internal sealed record LiteSonosTarget(SonosHousehold Household, SonosGroup Group);
+
+internal sealed record LiteSonosOwnStreamsProfile(
+    IReadOnlyList<SonosOwnStreamSettings> Streams,
+    CollectionOrderSettings Orders,
+    CollectionSortMode SortMode);
 
 internal sealed record LiteSonosState(
     SonosGroupPlaybackStatus? Playback,
