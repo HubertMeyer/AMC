@@ -80,6 +80,11 @@ if (-not $SkipTests) {
         (Join-Path $RepositoryRoot "tests\AccessibleMediaController.LiteHost.ProtocolTests\AccessibleMediaController.LiteHost.ProtocolTests.csproj"),
         "-c", "Release"
     ) -WorkingDirectory $RepositoryRoot -Stage "Budowanie serwera testowego protokołu"
+    Invoke-Checked -FilePath $dotnet.Source -ArgumentList @(
+        "build",
+        (Join-Path $RepositoryRoot "src\AccessibleMediaController.LiteHost\AccessibleMediaController.LiteHost.csproj"),
+        "-c", "Release"
+    ) -WorkingDirectory $RepositoryRoot -Stage "Budowanie hosta do testów integracyjnych"
     Invoke-Checked -FilePath $uv.Source -ArgumentList @(
         "run", "--with", "pytest", "--with", "wxpython",
         "python", "-m", "pytest", "tests", "-q"
