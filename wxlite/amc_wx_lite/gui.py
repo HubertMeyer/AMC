@@ -3798,10 +3798,14 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
         self.open_preset.SetValue(options.open_player_when_activating_preset)
 
         self.radio_enter = wx.CheckBox(
-            general, label="Pozostawaj na li&ście po uruchomieniu stacji Enterem"
+            general,
+            label=(
+                "Pozostawaj na li&ście po uruchomieniu stacji lub materiału "
+                "Enterem"
+            ),
         )
         self.radio_enter.SetName(
-            "Pozostawaj na liście po uruchomieniu stacji Enterem"
+            "Pozostawaj na liście po uruchomieniu stacji lub materiału Enterem"
         )
         self.radio_enter.SetValue(options.stay_on_list_after_radio_enter)
 
@@ -7259,6 +7263,17 @@ class LiteFrame(wx.Frame):
         # -- szczegolnie strzalki, Home/End i wyszukiwanie przyrostowe NVDA.
         if self.navigator.view is not View.PLAYER:
             canonical = chord_from_event(event).canonical
+            # SysListView32 używa gołej Spacji do własnego zaznaczania i na
+            # Windows potrafi połknąć ją przed EVT_KEY_DOWN. W Sonos Spacja
+            # jest sterowaniem aktywną grupą również podczas przeglądania
+            # Biblioteki. Ctrl+Spacja nadal należy do wielokrotnego zaznaczenia.
+            if (
+                getattr(getattr(self.navigator, "active", None), "value", "")
+                == "sonos"
+                and canonical == "Space"
+            ):
+                self._on_key(event)
+                return
             if (
                 getattr(getattr(self.navigator, "active", None), "value", "")
                 == "radio"
@@ -8227,7 +8242,7 @@ class LiteFrame(wx.Frame):
     def _activate(self) -> None:
         self._run(self.navigator.activate_selected(
             stay_on_list_after_radio_enter=(
-                self.navigator.active is SessionId.RADIO
+                self.navigator.active in (SessionId.RADIO, SessionId.SONOS)
                 and self.options.stay_on_list_after_radio_enter
             )
         ))
@@ -9905,6 +9920,16 @@ class LiteFrame(wx.Frame):
             ):
                 self._apply_sonos_snapshot(state, announce=True)
             self._finish_sonos_request()
+            if (
+                self.navigator.active is SessionId.SONOS
+                and intent.household_id == self._sonos_active_household_id
+                and intent.group_id == self._sonos_active_group_id
+            ):
+                self._open_sonos_view(OpenSonosView(
+                    LibraryView.SONOS_LIBRARY,
+                    household_id=intent.household_id,
+                    preferred_id=None,
+                ))
 
         def failed(error: Exception) -> None:
             if (
@@ -9914,7 +9939,6 @@ class LiteFrame(wx.Frame):
                 and intent.household_id == self._sonos_active_household_id
                 and intent.group_id == self._sonos_active_group_id
                 and self.navigator.active is SessionId.SONOS
-                and self.navigator.view is View.PLAYER
             ):
                 self._sonos_request_pending = False
                 self._sonos_retry_pending = True
@@ -9929,7 +9953,6 @@ class LiteFrame(wx.Frame):
                         intent.household_id == self._sonos_active_household_id
                         and intent.group_id == self._sonos_active_group_id
                         and self.navigator.active is SessionId.SONOS
-                        and self.navigator.view is View.PLAYER
                     ):
                         self._activate_sonos_group(intent, attempt=attempt + 1)
                     else:
@@ -10029,7 +10052,6 @@ class LiteFrame(wx.Frame):
             household_id, group_id, _command, _volume, _seconds, _attempt = candidate
             if (
                 self.navigator.active is SessionId.SONOS
-                and self.navigator.view is View.PLAYER
                 and household_id == self._sonos_active_household_id
                 and group_id == self._sonos_active_group_id
             ):
@@ -10066,7 +10088,6 @@ class LiteFrame(wx.Frame):
                 and household_id == self._sonos_active_household_id
                 and group_id == self._sonos_active_group_id
                 and self.navigator.active is SessionId.SONOS
-                and self.navigator.view is View.PLAYER
             ):
                 self._sonos_request_pending = False
                 self._sonos_retry_pending = True
@@ -10660,10 +10681,7 @@ class LiteFrame(wx.Frame):
             session.now_playing_title = intent.title
             session.current_material_id = intent.item_id
             self._sonos_snapshot = state
-            if (
-                self.navigator.active is SessionId.SONOS
-                and session.view is View.PLAYER
-            ):
+            if self.navigator.active is SessionId.SONOS:
                 state["message"] = intent.title
                 self._apply_sonos_snapshot(state, announce=True)
             self._finish_sonos_request()

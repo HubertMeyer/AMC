@@ -279,7 +279,29 @@ def test_sonos_activation_separates_labels_from_internal_ids() -> None:
     assert row.detail == "Dwa głośniki"
     assert "technical" not in row.title
     assert "technical" not in row.detail
-    assert nav.view is View.PLAYER
+    assert nav.view is View.LIST
+
+
+def test_sonos_material_uses_shared_stay_on_list_preference() -> None:
+    nav = Navigator()
+    nav.switch_session(SessionId.SONOS)
+    nav.apply_sonos_materials(
+        LibraryView.SONOS_FAVORITES,
+        list(material_rows({
+            "items": [{
+                "itemId": "sonos-favorite:item-1",
+                "materialId": "favorite-1",
+                "title": "Radio Poznań",
+                "kind": "favorite",
+            }]
+        }, "house-1")),
+        household_id="house-1",
+    )
+
+    intents = nav.activate_selected(stay_on_list_after_radio_enter=True)
+
+    assert isinstance(intents[0], PlaySonosMaterial)
+    assert nav.view is View.LIST
 
 
 def test_sonos_target_keeps_normalized_members_out_of_accessible_text() -> None:
@@ -787,6 +809,46 @@ def test_finishing_sonos_read_starts_one_waiting_command() -> None:
             "seconds": None,
         })
     ]
+
+
+def test_sonos_command_is_not_discarded_while_library_list_is_visible() -> None:
+    submissions: list = []
+    frame = _queued_sonos_frame(submissions, [])
+    frame.navigator.view = View.LIST
+
+    LiteFrame._sonos_transport(frame, "toggle")
+
+    assert len(submissions) == 1
+    assert submissions[0][0] == "sonos-transport"
+
+
+def test_selecting_sonos_group_opens_library_after_snapshot() -> None:
+    submissions: list = []
+    opened: list[OpenSonosView] = []
+    frame = _queued_sonos_frame(submissions, [])
+    frame.navigator.view = View.LIST
+    frame.client.sonos_snapshot = lambda *_args: {}
+    frame.now_playing = SimpleNamespace(SetLabel=lambda _label: None)
+    frame._set_transport_label = lambda **_kwargs: None
+    frame._open_sonos_view = opened.append
+    frame._activate_sonos_group = MethodType(LiteFrame._activate_sonos_group, frame)
+    intent = ActivateSonosGroup(
+        "sonos:group-1", "Salon", "house-1", "group-1"
+    )
+
+    LiteFrame._activate_sonos_group(frame, intent)
+    submissions[0][2]({
+        "householdId": "house-1",
+        "groupId": "group-1",
+        "groupTitle": "Salon",
+        "playbackState": "paused",
+    })
+
+    assert opened == [OpenSonosView(
+        LibraryView.SONOS_LIBRARY,
+        household_id="house-1",
+        preferred_id=None,
+    )]
 
 
 def test_busy_sonos_command_is_retried_without_speaking_error() -> None:

@@ -683,7 +683,11 @@ przypadkowe uruchomienie zastąpić stałej instalacji `AMC Python`.
    wyjście, korektor, powtarzanie, losowanie, timer oraz przechodzenie
    `Alt+Page Up`/`Alt+Page Down` po faktycznie aktywnym rodzaju źródła. Sonos ma
    Bibliotekę, Ulubione, playlisty, własne strumienie, presety oraz cel bieżącej
-   lub stałej grupy. Wykonać ponowny odbiór obu transportów i materiałów na
+   lub stałej grupy. Wybór grupy prowadzi teraz do jej Biblioteki zamiast do
+   pustego odtwarzacza; Enter na materiale może zgodnie ze wspólną opcją
+   pozostać na liście, a Spacja steruje aktywną grupą także z tej listy bez
+   przejmowania `Ctrl+Spacja` potrzebnego do zaznaczenia nieprzylegającego.
+   Wykonać ponowny odbiór obu transportów i materiałów na
    obudzonych urządzeniach, a potem uzupełnić wyłącznie brakujące opcje
    swoiste dla Sonosa. Techniczna kolejka operacji jest już podłączona. Materiał
    Sonos Redux z Hermesa

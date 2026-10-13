@@ -12,7 +12,7 @@ from typing import Any
 SOURCE = Path(__file__).parents[1] / "amc_wx_lite" / "gui.py"
 
 def _call(*, player=True, arrow=True, foreign=False, time_key=False,
-          in_filter=False, list_chord="Tab"):
+          in_filter=False, list_chord="Tab", session="files"):
     tree = ast.parse(SOURCE.read_text(encoding="utf-8"))
     methods: list[ast.stmt] = [n for n in ast.walk(tree) if isinstance(n, ast.FunctionDef)
                and n.name == "_on_player_shortcut_hook"]
@@ -23,7 +23,10 @@ def _call(*, player=True, arrow=True, foreign=False, time_key=False,
     # (gui.py, bramka ``FindFocus() is self.filter_box``). Atrapa bez tego pola
     # nie mierzyla zachowania, tylko wywalala sie na AttributeError.
     filter_box = SimpleNamespace(owner=None)
-    frame = SimpleNamespace(navigator=SimpleNamespace(view=view.PLAYER if player else view.LIST),
+    frame = SimpleNamespace(navigator=SimpleNamespace(
+                                view=view.PLAYER if player else view.LIST,
+                                active=SimpleNamespace(value=session),
+                                session=SimpleNamespace(library_view=None)),
                             filter_box=filter_box,
                             _on_filter_key=lambda event, *a, **k: actions.append("filter"),
                             _on_key=lambda event, *a, **k: actions.append("key" if arrow or time_key else "skip"))
@@ -56,6 +59,12 @@ def test_lista_i_tabulator_zachowuja_natywna_nawigacje():
 def test_f2_i_delete_listy_docieraja_do_amc_przed_natywna_kontrolka():
     for chord in ("F2", "Shift+F2", "Delete", "Shift+Delete"):
         assert _call(player=False, list_chord=chord) == ["key"]
+
+
+def test_sonos_space_dociera_do_transportu_z_listy_bez_psucia_ctrl_space():
+    assert _call(player=False, list_chord="Space", session="sonos") == ["key"]
+    assert _call(player=False, list_chord="Ctrl+Space", session="sonos") == ["skip"]
+    assert _call(player=False, list_chord="Space", session="files") == ["skip"]
 
 
 def test_modyfikowane_polecenia_listy_nie_gina_w_wyszukiwaniu_windows():

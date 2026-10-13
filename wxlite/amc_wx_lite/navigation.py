@@ -842,7 +842,13 @@ class Navigator:
     def activate_selected(
         self, *, stay_on_list_after_radio_enter: bool = False
     ) -> list[object]:
-        """Enter. Folder otwiera, utwor/stacje odtwarza i przechodzi do odtwarzacza."""
+        """Enter otwiera folder albo uruchamia zaznaczony materiał.
+
+        Historyczna nazwa opcji zostaje dla zgodności profilu, ale ta sama
+        preferencja dotyczy dziś Radia i materiałów Sonos. Wybór samej grupy
+        Sonos nigdy nie otwiera odtwarzacza: ustawia cel i prowadzi do
+        Biblioteki Sonos.
+        """
         state = self.session
         row = state.model.selected_row
         if row is None:
@@ -915,7 +921,8 @@ class Navigator:
                 state.now_playing_id = row.item_id
                 state.now_playing_title = row.title
                 state.current_material_id = row.item_id
-                state.view = View.PLAYER
+                if not stay_on_list_after_radio_enter:
+                    state.view = View.PLAYER
                 return [PlaySonosMaterial(
                     item_id=row.item_id,
                     title=row.title,
@@ -935,7 +942,7 @@ class Navigator:
             state.now_playing_id = row.item_id
             state.now_playing_title = row.title
             state.current_material_id = row.item_id
-            state.view = View.PLAYER
+            state.view = View.LIST
             return [ActivateSonosGroup(
                 item_id=row.item_id,
                 title=row.title,
