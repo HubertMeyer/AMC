@@ -242,6 +242,36 @@ def test_recording_shortcuts_have_the_scope_of_full_amc() -> None:
     assert resolve(Chord("T"), player_view=True, radio_session=False) is None
 
 
+def test_recording_bookmark_shortcuts_do_not_steal_letter_navigation() -> None:
+    assert resolve(
+        Chord("B"), player_view=True, radio_session=True
+    ) is Action.ADD_BOOKMARK
+    assert resolve(
+        Chord("B", shift=True), player_view=True, radio_session=True
+    ) is Action.ADD_NAMED_BOOKMARK
+    assert resolve(
+        Chord("B", ctrl=True, shift=True), player_view=True, radio_session=True
+    ) is Action.ADD_NAMED_BOOKMARK
+
+    for chord, expected in (
+        (Chord("B"), Action.ADD_BOOKMARK),
+        (Chord("B", shift=True), Action.ADD_NAMED_BOOKMARK),
+        (Chord("B", ctrl=True, shift=True), Action.ADD_NAMED_BOOKMARK),
+    ):
+        assert resolve(
+            chord,
+            player_view=False,
+            radio_session=True,
+            radio_recording_context=True,
+        ) is expected
+    assert resolve(
+        Chord("B"),
+        player_view=False,
+        radio_session=True,
+        radio_recording_context=False,
+    ) is None
+
+
 def test_ctrl_r_nie_jest_polykany_przez_kontekstowy_akcelerator_menu() -> None:
     """Ctrl+R obsługuje hook okna, nie stan pozycji menu wxWidgets."""
     from amc_wx_lite import menu_model
@@ -270,6 +300,7 @@ def test_host_client_methods_send_only_documented_recording_operations() -> None
     client.toggle_radio_recording(payload)
     client.toggle_radio_recording_pause("id", "https://x")
     client.split_radio_recording("id", "https://x")
+    client.add_radio_recording_bookmark("id", "https://x", "Gość audycji")
     client.stop_all_radio_recordings()
     client.radio_recording_status()
     client.radio_recording_history()
@@ -277,10 +308,55 @@ def test_host_client_methods_send_only_documented_recording_operations() -> None
         "radio.recordingToggle",
         "radio.recordingPauseToggle",
         "radio.recordingSplit",
+        "radio.recordingBookmark",
         "radio.recordingStopAll",
         "radio.recordingStatus",
         "radio.recordingHistory",
     ]
+    assert calls[3][1] == {
+        "stationId": "id",
+        "url": "https://x",
+        "name": "Gość audycji",
+    }
+
+
+def test_gui_adds_quick_radio_recording_bookmark_with_user_facing_message() -> None:
+    class Runner:
+        def submit(self, key, work, done, failed):
+            assert key == "radio-recording-bookmark"
+            try:
+                done(work())
+            except Exception as error:
+                failed(error)
+
+    class Client:
+        def __init__(self):
+            self.call = None
+
+        def add_radio_recording_bookmark(self, station_id, url, name):
+            self.call = (station_id, url, name)
+            return {
+                "state": "added",
+                "positionSeconds": 65,
+                "affectedCount": 1,
+                "recordingCount": 1,
+            }
+
+    messages: list[str] = []
+    client = Client()
+    frame = SimpleNamespace(
+        client=client,
+        runner=Runner(),
+        _recording_station=lambda: Station(
+            "radio-test", "Radio Test", "https://example.invalid/live"
+        ),
+        announcer=SimpleNamespace(say=messages.append),
+    )
+    LiteFrame._add_radio_recording_bookmark(frame, named=False)
+    assert client.call == (
+        "radio-test", "https://example.invalid/live", None
+    )
+    assert messages == ["Dodano zakładkę nagrania: 1:05"]
 
 
 def test_gui_toggle_uses_station_label_and_profile_preferences() -> None:

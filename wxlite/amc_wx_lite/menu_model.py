@@ -55,6 +55,8 @@ class MenuItem:
     needs_radio_session: bool = False
     #: Dostępna wyłącznie dla lokalnych plików, np. zakładki materiału.
     needs_files_session: bool = False
+    #: Dostępna tylko dla wskazanej stacji, która ma aktywny tor nagrywania.
+    needs_radio_recording: bool = False
     #: Widok dostepny wylacznie wewnatrz sesji Podcasty i YouTube.
     needs_podcast_session: bool = False
     #: Te trzy pozycje sa aktywne tylko w zbiorczym widoku Nowych odcinkow.
@@ -371,6 +373,14 @@ def build_menus() -> tuple[Menu, ...]:
             MenuItem("&Wstrzymaj albo wznów nagrywanie",
                      Action.RECORD_PAUSE, shortcut="Shift+Space",
                      accelerator=False, needs_radio_session=True),
+            MenuItem("Dodaj szybką zakładkę nag&rania",
+                     Action.ADD_BOOKMARK, shortcut="B",
+                     accelerator=False, needs_radio_session=True,
+                     needs_radio_recording=True),
+            MenuItem("Dodaj nazwaną zakładkę na&grania…",
+                     Action.ADD_NAMED_BOOKMARK, shortcut="Shift+B",
+                     accelerator=False, needs_radio_session=True,
+                     needs_radio_recording=True),
             MenuItem("Podziel &bieżące nagranie",
                      Action.RECORD_SPLIT, shortcut="T",
                      accelerator=False, needs_radio_session=True),

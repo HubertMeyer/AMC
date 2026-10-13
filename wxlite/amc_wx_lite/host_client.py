@@ -1145,6 +1145,17 @@ class LiteHostClient:
             timeout=30.0,
         )
 
+    def add_radio_recording_bookmark(
+        self,
+        station_id: str,
+        url: str,
+        name: str | None = None,
+    ) -> Any:
+        args = {"stationId": station_id, "url": url}
+        if name is not None:
+            args["name"] = name
+        return self.call("radio.recordingBookmark", args, timeout=10.0)
+
     def stop_all_radio_recordings(self) -> Any:
         return self.call("radio.recordingStopAll", timeout=10.0)
 

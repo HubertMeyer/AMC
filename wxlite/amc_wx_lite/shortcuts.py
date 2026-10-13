@@ -669,6 +669,8 @@ RADIO_PLAYER_VIEW: dict[str, Action] = {
     "Shift+Space": Action.RECORD_PAUSE,
     "Shift+R": Action.ADD_RADIO_SCHEDULE,
     "T": Action.RECORD_SPLIT,
+    "B": Action.ADD_BOOKMARK,
+    "Shift+B": Action.ADD_NAMED_BOOKMARK,
     "Alt+D": Action.CURRENT_RADIO_BROADCAST_INFORMATION,
     "S": Action.RECOGNIZE_RADIO_TRACK,
     "Shift+S": Action.TOGGLE_RADIO_RECOGNITION_MONITORING,
@@ -864,6 +866,7 @@ def resolve(
     *,
     player_view: bool,
     radio_session: bool,
+    radio_recording_context: bool = False,
     podcast_inbox: bool = False,
     podcast_session: bool = False,
     tidal_session: bool = False,
@@ -902,6 +905,19 @@ def resolve(
         return LIST_VIEW[canonical]
     if player_view and radio_session and canonical in RADIO_PLAYER_VIEW:
         return RADIO_PLAYER_VIEW[canonical]
+    # Na zwyklej liscie gola litera B pozostaje wyszukiwaniem przyrostowym.
+    # Zakladke nagrania przejmujemy tylko w rownorzednym widoku Nagrywane.
+    if (
+        not player_view
+        and radio_session
+        and radio_recording_context
+        and canonical in ("B", "Shift+B", "Ctrl+Shift+B")
+    ):
+        return (
+            Action.ADD_BOOKMARK
+            if canonical == "B"
+            else Action.ADD_NAMED_BOOKMARK
+        )
     if not player_view and radio_session and canonical in RADIO_LIST_VIEW:
         return RADIO_LIST_VIEW[canonical]
     return table.get(canonical)

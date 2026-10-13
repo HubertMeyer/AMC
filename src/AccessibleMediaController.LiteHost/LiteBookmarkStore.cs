@@ -6,6 +6,16 @@ using Microsoft.Data.Sqlite;
 
 namespace AccessibleMediaController.LiteHost;
 
+internal sealed record LiteRecordingBookmark(
+    string Path,
+    TimeSpan Position,
+    DateTime CreatedUtc,
+    string Name);
+
+internal sealed record LiteRecordingBookmarkImportResult(
+    int ImportedFileCount,
+    int BookmarkChangeCount);
+
 /// <summary>
 /// Waski zapis szybkiej zakladki do tej samej tabeli, ktora czyta pelne AMC.
 ///
@@ -35,17 +45,7 @@ internal sealed class LiteBookmarkStore
     {
         if (string.IsNullOrWhiteSpace(itemId))
             throw new LiteRequestException("Bieżący plik nie ma identyfikatora Biblioteki.");
-        if (!File.Exists(_databasePath))
-            throw new LiteRequestException("Nie znajduję bazy Biblioteki AMC.");
-
-        // Zainstalowany starszy WPF nie zna jeszcze blokady hosta Lite i moze
-        // zapisac cala tabele ze swojej pamieci. Wtedy nasz poprawny INSERT
-        // zostalby pozniej utracony. Odmawiamy, dopoki ten proces dziala.
-        if (_fullAmcIsRunning())
-        {
-            throw new LiteRequestException(
-                "Zamknij najpierw główne AMC. Równoczesny zapis zakładki z dwóch wersji mógłby utracić dane.");
-        }
+        EnsureMayWriteBookmarks();
 
         var roundedTicks = TimeSpan.FromSeconds(
             Math.Round(Math.Max(0d, position.TotalSeconds))).Ticks;
@@ -160,6 +160,268 @@ internal sealed class LiteBookmarkStore
             };
         }
     }
+
+    /// <summary>
+    /// Sprawdza warunki zapisu jeszcze PRZED dodaniem znacznika do trwajacego
+    /// nagrania. Dzieki temu uzytkownik nie dostaje pozornego potwierdzenia,
+    /// ktore dopiero po zakonczeniu pliku okazaloby sie nietrwale.
+    /// </summary>
+    public void EnsureMayWriteBookmarks()
+    {
+        if (!File.Exists(_databasePath))
+            throw new LiteRequestException("Nie znajduję bazy Biblioteki AMC.");
+
+        // Zainstalowany starszy WPF nie zna jeszcze blokady hosta Lite i moze
+        // zapisac cala tabele ze swojej pamieci. Wtedy nasz poprawny INSERT
+        // zostalby pozniej utracony. Odmawiamy, dopoki ten proces dziala.
+        if (_fullAmcIsRunning())
+        {
+            throw new LiteRequestException(
+                "Zamknij najpierw główne AMC. Równoczesny zapis zakładki z dwóch wersji mógłby utracić dane.");
+        }
+    }
+
+    /// <summary>
+    /// Po finalizacji nagrania importuje jedynie jego pliki i zakladki. Nie
+    /// odtwarza ani nie zapisuje calego PersistedState, wiec nie moze nadpisac
+    /// kolejki, Ulubionych, historii ani ustawien otwartych w wxPython.
+    /// </summary>
+    public LiteRecordingBookmarkImportResult ImportRadioRecordingBookmarks(
+        IReadOnlyCollection<LiteRecordingBookmark> markers,
+        DateTime completedUtc)
+    {
+        ArgumentNullException.ThrowIfNull(markers);
+        var groups = markers
+            .Where(marker => !string.IsNullOrWhiteSpace(marker.Path))
+            .GroupBy(marker => Path.GetFullPath(marker.Path), StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        if (groups.Length == 0) return new(0, 0);
+        EnsureMayWriteBookmarks();
+
+        lock (_gate)
+        {
+            using var connection = OpenConnection();
+            using var transaction = connection.BeginTransaction();
+            var nextOrdinal = ReadNextBookmarkOrdinal(connection, transaction);
+            var importedFiles = 0;
+            var bookmarkChanges = 0;
+
+            foreach (var group in groups)
+            {
+                var path = group.Key;
+                if (!File.Exists(path)) continue;
+                var info = new FileInfo(path);
+                var title = Path.GetFileNameWithoutExtension(path);
+                var item = FindLocalItemByPath(connection, transaction, path);
+                var itemId = item?.Id ?? $"local-{Guid.NewGuid():N}";
+                if (item is null)
+                {
+                    using var insertItem = connection.CreateCommand();
+                    insertItem.Transaction = transaction;
+                    insertItem.CommandText = """
+                        INSERT INTO local_items(
+                            id, title, has_custom_title, path, duration_ticks,
+                            bitrate_kbps, bitrate_estimated, sample_rate_hz,
+                            is_favorite, is_in_library, is_available, is_in_queue,
+                            is_play_next, resume_mode, playback_rate_override,
+                            output_device_id, resume_position_ticks, file_length,
+                            last_write_utc_ticks, loudness_normalization_override,
+                            smooth_track_transitions_override,
+                            inter_track_silence_ms_override, tempo_algorithm_override,
+                            clip_start_ticks, clip_end_ticks, is_radio_recording,
+                            radio_recording_completed_utc_ticks)
+                        VALUES(
+                            $id, $title, 0, $path, 0,
+                            NULL, 0, NULL,
+                            0, 1, 1, 0,
+                            0, 0, NULL,
+                            NULL, 0, $length,
+                            $last_write, NULL,
+                            NULL,
+                            NULL, NULL,
+                            NULL, NULL, 1,
+                            $completed);
+                        """;
+                    insertItem.Parameters.AddWithValue("$id", itemId);
+                    insertItem.Parameters.AddWithValue("$title", title);
+                    insertItem.Parameters.AddWithValue("$path", path);
+                    insertItem.Parameters.AddWithValue("$length", info.Length);
+                    insertItem.Parameters.AddWithValue("$last_write", info.LastWriteTimeUtc.Ticks);
+                    insertItem.Parameters.AddWithValue(
+                        "$completed", completedUtc.ToUniversalTime().Ticks);
+                    insertItem.ExecuteNonQuery();
+                }
+                else
+                {
+                    title = item.Title;
+                    using var updateItem = connection.CreateCommand();
+                    updateItem.Transaction = transaction;
+                    updateItem.CommandText = """
+                        UPDATE local_items
+                        SET is_in_library = 1,
+                            is_available = 1,
+                            is_radio_recording = 1,
+                            radio_recording_completed_utc_ticks = $completed,
+                            file_length = $length,
+                            last_write_utc_ticks = $last_write
+                        WHERE id = $id;
+                        """;
+                    updateItem.Parameters.AddWithValue("$completed", completedUtc.ToUniversalTime().Ticks);
+                    updateItem.Parameters.AddWithValue("$length", info.Length);
+                    updateItem.Parameters.AddWithValue("$last_write", info.LastWriteTimeUtc.Ticks);
+                    updateItem.Parameters.AddWithValue("$id", itemId);
+                    updateItem.ExecuteNonQuery();
+                }
+
+                using (var include = connection.CreateCommand())
+                {
+                    include.Transaction = transaction;
+                    include.CommandText =
+                        "DELETE FROM excluded_paths WHERE path = $path COLLATE NOCASE;";
+                    include.Parameters.AddWithValue("$path", path);
+                    include.ExecuteNonQuery();
+                }
+
+                foreach (var marker in group)
+                {
+                    if (AddBookmark(
+                            connection,
+                            transaction,
+                            itemId,
+                            title,
+                            marker,
+                            ref nextOrdinal))
+                    {
+                        bookmarkChanges++;
+                    }
+                }
+                importedFiles++;
+            }
+
+            if (importedFiles > 0)
+            {
+                using var metadata = connection.CreateCommand();
+                metadata.Transaction = transaction;
+                metadata.CommandText = """
+                    INSERT INTO metadata(key, value) VALUES('last_saved_utc', $value)
+                    ON CONFLICT(key) DO UPDATE SET value = excluded.value;
+                    """;
+                metadata.Parameters.AddWithValue(
+                    "$value", DateTime.UtcNow.ToString("O", CultureInfo.InvariantCulture));
+                metadata.ExecuteNonQuery();
+            }
+            transaction.Commit();
+            return new(importedFiles, bookmarkChanges);
+        }
+    }
+
+    private static bool AddBookmark(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        string itemId,
+        string itemTitle,
+        LiteRecordingBookmark marker,
+        ref long nextOrdinal)
+    {
+        var positionTicks = TimeSpan.FromSeconds(
+            Math.Round(Math.Max(0d, marker.Position.TotalSeconds))).Ticks;
+        var name = NormalizeName(marker.Name);
+        using var existing = connection.CreateCommand();
+        existing.Transaction = transaction;
+        existing.CommandText = """
+            SELECT id, name
+            FROM bookmarks
+            WHERE session_id = 'local' COLLATE NOCASE
+              AND item_id = $item_id
+              AND (purpose & 1) != 0
+              AND ABS(position_ticks - $position_ticks) <= $tolerance
+            ORDER BY ABS(position_ticks - $position_ticks), ordinal
+            LIMIT 1;
+            """;
+        existing.Parameters.AddWithValue("$item_id", itemId);
+        existing.Parameters.AddWithValue("$position_ticks", positionTicks);
+        existing.Parameters.AddWithValue("$tolerance", TicksPerSecond);
+        string? existingId = null;
+        var existingName = string.Empty;
+        using (var reader = existing.ExecuteReader())
+        {
+            if (reader.Read())
+            {
+                existingId = reader.GetString(0);
+                existingName = reader.GetString(1);
+            }
+        }
+        if (existingId is not null)
+        {
+            if (name.Length == 0
+                || string.Equals(name, existingName, StringComparison.CurrentCulture))
+            {
+                return false;
+            }
+            using var rename = connection.CreateCommand();
+            rename.Transaction = transaction;
+            rename.CommandText = "UPDATE bookmarks SET name = $name WHERE id = $id;";
+            rename.Parameters.AddWithValue("$name", name);
+            rename.Parameters.AddWithValue("$id", existingId);
+            rename.ExecuteNonQuery();
+            return true;
+        }
+
+        using var insert = connection.CreateCommand();
+        insert.Transaction = transaction;
+        insert.CommandText = """
+            INSERT INTO bookmarks(
+                id, ordinal, session_id, session_name, item_id, item_title,
+                name, position_ticks, created_utc_ticks, purpose,
+                chapter_origin, chapter_source_id)
+            VALUES(
+                $id, $ordinal, 'local', 'Pliki lokalne', $item_id, $item_title,
+                $name, $position_ticks, $created_ticks, 1, 0, NULL);
+            """;
+        insert.Parameters.AddWithValue("$id", Guid.NewGuid().ToString("N"));
+        insert.Parameters.AddWithValue("$ordinal", nextOrdinal++);
+        insert.Parameters.AddWithValue("$item_id", itemId);
+        insert.Parameters.AddWithValue("$item_title", itemTitle);
+        insert.Parameters.AddWithValue("$name", name);
+        insert.Parameters.AddWithValue("$position_ticks", positionTicks);
+        insert.Parameters.AddWithValue(
+            "$created_ticks", marker.CreatedUtc.ToUniversalTime().Ticks);
+        insert.ExecuteNonQuery();
+        return true;
+    }
+
+    private static long ReadNextBookmarkOrdinal(
+        SqliteConnection connection,
+        SqliteTransaction transaction)
+    {
+        using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = "SELECT COALESCE(MAX(ordinal), -1) + 1 FROM bookmarks;";
+        return Convert.ToInt64(command.ExecuteScalar(), CultureInfo.InvariantCulture);
+    }
+
+    private static LocalItemIdentity? FindLocalItemByPath(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        string path)
+    {
+        using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = """
+            SELECT id, title
+            FROM local_items
+            WHERE path = $path COLLATE NOCASE
+            ORDER BY is_in_library DESC
+            LIMIT 1;
+            """;
+        command.Parameters.AddWithValue("$path", path);
+        using var reader = command.ExecuteReader();
+        return reader.Read()
+            ? new LocalItemIdentity(reader.GetString(0), reader.GetString(1))
+            : null;
+    }
+
+    private sealed record LocalItemIdentity(string Id, string Title);
 
     private static string NormalizeName(string? name)
     {
@@ -365,6 +627,7 @@ internal sealed class LiteBookmarkStore
             Cache = SqliteCacheMode.Shared,
             Pooling = false
         }.ToString());
+        RegisterPolishCollation(connection);
         connection.Open();
         using var setup = connection.CreateCommand();
         setup.CommandText = "PRAGMA busy_timeout=5000;";
@@ -381,11 +644,22 @@ internal sealed class LiteBookmarkStore
             Cache = SqliteCacheMode.Shared,
             Pooling = false
         }.ToString());
+        RegisterPolishCollation(connection);
         connection.Open();
         using var setup = connection.CreateCommand();
         setup.CommandText = "PRAGMA busy_timeout=5000;";
         setup.ExecuteNonQuery();
         return connection;
+    }
+
+    private static void RegisterPolishCollation(SqliteConnection connection)
+    {
+        connection.CreateCollation(
+            "AMC_PL",
+            (left, right) => CultureInfo.GetCultureInfo("pl-PL").CompareInfo.Compare(
+                left,
+                right,
+                CompareOptions.IgnoreCase | CompareOptions.IgnoreNonSpace));
     }
 
     private static BookmarkSettings ReadBookmarks(

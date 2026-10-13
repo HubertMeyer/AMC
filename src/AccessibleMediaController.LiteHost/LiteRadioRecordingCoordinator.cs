@@ -17,7 +17,13 @@ internal sealed partial class LiteRadioRecordingCoordinator : IDisposable
     private readonly object _gate = new();
     private readonly Dictionary<string, ActiveRecording> _active = new(StringComparer.Ordinal);
     private readonly List<CompletedRecording> _history = [];
+    private readonly LiteBookmarkStore? _bookmarkStore;
     private bool _disposed;
+
+    public LiteRadioRecordingCoordinator(LiteBookmarkStore? bookmarkStore = null)
+    {
+        _bookmarkStore = bookmarkStore;
+    }
 
     internal IReadOnlyList<LiteRadioRecognitionInput> CaptureRecognitionInputs(
         TimeSpan duration)
@@ -209,6 +215,50 @@ internal sealed partial class LiteRadioRecordingCoordinator : IDisposable
         };
     }
 
+    public object AddBookmark(JsonElement args)
+    {
+        var recordings = FindForStation(args);
+        if (recordings.Length == 0)
+            return new { state = "notRecording", recordingCount = 0 };
+
+        var targets = recordings
+            .Select(active => (Active: active, Target: active.Control.CaptureBookmarkTarget()))
+            .Where(entry => entry.Target is not null)
+            .Select(entry => (entry.Active, Target: entry.Target!))
+            .ToArray();
+        if (targets.Length == 0)
+        {
+            return new
+            {
+                state = "starting",
+                recordingCount = recordings.Length
+            };
+        }
+
+        if (_bookmarkStore is null)
+        {
+            throw new LiteRequestException(
+                "Zapisywanie zakładek nagrania jest niedostępne bez profilu AMC.");
+        }
+        _bookmarkStore.EnsureMayWriteBookmarks();
+        var name = LiteArgs.ReadText(args, "name");
+        var changes = targets
+            .Select(entry => entry.Active.Control.AddBookmark(entry.Target, name))
+            .ToArray();
+        var affected = changes.Count(change => change.Kind is
+            RadioRecordingBookmarkChangeKind.Added or
+            RadioRecordingBookmarkChangeKind.NameChanged);
+        var first = changes.MinBy(change => change.Marker.Position)!;
+        return new
+        {
+            state = affected > 0 ? "added" : "duplicate",
+            affectedCount = affected,
+            recordingCount = targets.Length,
+            positionSeconds = first.Marker.Position.TotalSeconds,
+            name = first.Marker.Name
+        };
+    }
+
     public object StopAll()
     {
         ActiveRecording[] recordings;
@@ -301,6 +351,7 @@ internal sealed partial class LiteRadioRecordingCoordinator : IDisposable
         }
 
         var paths = active.Control.CompletedPaths;
+        var bookmarkError = PersistRecordingBookmarks(active.Control, DateTime.UtcNow);
         var path = result.Path ?? paths.LastOrDefault() ?? active.Path;
         var outcome = (result.Success, result.Cancelled, paths.Count) switch
         {
@@ -352,6 +403,7 @@ internal sealed partial class LiteRadioRecordingCoordinator : IDisposable
             cancelled = result.Cancelled,
             success = result.Success,
             error = result.Error,
+            bookmarkError,
             outcome,
             scheduleName = active.ScheduleName,
             startedUtcTicks = completed.StartedUtcTicks,
@@ -362,6 +414,38 @@ internal sealed partial class LiteRadioRecordingCoordinator : IDisposable
             : result.Success
                 ? "radio.recordingFinished"
                 : "radio.recordingFailed", payload);
+    }
+
+    private string PersistRecordingBookmarks(
+        RadioRecordingControl control,
+        DateTime completedUtc)
+    {
+        var markers = control.Markers;
+        if (markers.Count == 0 || _bookmarkStore is null) return string.Empty;
+        try
+        {
+            var result = _bookmarkStore.ImportRadioRecordingBookmarks(
+                markers.Select(marker => new LiteRecordingBookmark(
+                    marker.Path,
+                    marker.Position,
+                    marker.CreatedUtc,
+                    marker.Name)).ToArray(),
+                completedUtc);
+            DiagnosticLog.Info(
+                "radio-recording",
+                $"Zapisano zakladki nagrania w AMC: pliki {result.ImportedFileCount}; zmiany {result.BookmarkChangeCount}.");
+            return string.Empty;
+        }
+        catch (Exception exception)
+        {
+            DiagnosticLog.Error(
+                "radio-recording",
+                "Nie udalo sie zapisac zakladek nagrania w Bibliotece AMC.",
+                exception);
+            return exception is LiteRequestException
+                ? exception.Message
+                : "Nie udało się zapisać zakładek nagrania w Bibliotece AMC.";
+        }
     }
 
     private static object Payload(ActiveRecording active) => new

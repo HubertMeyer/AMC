@@ -283,6 +283,7 @@ internal sealed partial class LiteRadioRecordingCoordinator
         }
 
         var paths = active.Control.CompletedPaths;
+        var bookmarkError = PersistRecordingBookmarks(active.Control, DateTime.UtcNow);
         var path = result.Path ?? paths.LastOrDefault() ?? active.Path;
         var outcome = (result.Success, result.Cancelled, paths.Count) switch
         {
@@ -329,6 +330,7 @@ internal sealed partial class LiteRadioRecordingCoordinator
             cancelled = result.Cancelled,
             success = result.Success,
             error = result.Error,
+            bookmarkError,
             outcome,
             startedUtcTicks = completed.StartedUtcTicks,
             finishedUtcTicks = completed.FinishedUtcTicks

@@ -15,7 +15,7 @@ Odbiór docelowego launchera:
 
 Aktualna, automatycznie zweryfikowana paczka znajduje się w:
 
-`D:\Projekty Codex\AMC - integracja wxPython\.test-output\AMC-Python-named-bookmarks-20261013\AMC.exe`
+`D:\Projekty Codex\AMC - integracja wxPython\.test-output\AMC-Python-radio-recording-bookmarks-20261013\AMC.exe`
 
 Nie przełączaj na nią programu w czasie trwającego nagrywania. Pierwszy żywy
 odbiór wykonaj kolejno według punktów poniżej.
@@ -290,6 +290,16 @@ stacji oraz widok `Alt+R` nadal są odświeżane z rzeczywistego stanu hosta.
 Gdy nadchodzi termin planu, interfejs mówi jedno zdanie „Rozpoczynam
 zaplanowane nagrywanie: nazwa stacji”. Późniejsze otwarcie pliku tylko
 odświeża stan listy i nie powtarza komunikatu.
+
+Podczas trwającego nagrania `B` dodaje szybką zakładkę, a `Shift+B` otwiera
+pole „Nazwa zakładki”. Skróty działają w odtwarzaczu Radia oraz na wybranej
+stacji w widoku `Alt+R`; na zwykłej liście Radia sama litera `B` nadal służy
+natywnemu wyszukiwaniu przyrostowemu. Po zatrzymaniu nagrania każda część z
+zakładkami ma zostać automatycznie dodana do Biblioteki Plików jako nagranie
+radia, a zakładki mają być dostępne pod `Ctrl+Shift+B`. Powtórne dodanie w tej
+samej sekundzie nie tworzy duplikatu; `Shift+B` może nadać nazwę istniejącej
+szybkiej zakładce. Zapis profilu testuj przy zamkniętym starym głównym AMC:
+równoległa starsza wersja jest celowo blokowana, aby nie nadpisała zmian.
 
 Tor został sprawdzony końcowo na rzeczywistym LiteHost i jednej zapisanej
 stacji, bez zmiany profilu: start MP3, aktywny stan, zatrzymanie, historia oraz

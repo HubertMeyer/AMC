@@ -179,7 +179,7 @@ def test_no_duplicate_labels_or_shortcuts() -> None:
     # kontekstowe: w Radiu czyta bieżącą audycję, a w Podcastach pełny opis.
     assert set(duplicates) <= {
         "Ctrl+O", "Ctrl+N", "Ctrl+D", "Ctrl+S", "Alt+1", "Alt+2", "Alt+3", "Alt+D",
-        "Ctrl+Shift+B", "F2", "Delete"
+        "B", "Shift+B", "Ctrl+Shift+B", "F2", "Delete"
     }, duplicates
     for item in duplicates.get("Ctrl+O", []):
         assert not item.accelerator, (
@@ -208,6 +208,23 @@ def test_no_duplicate_labels_or_shortcuts() -> None:
         assert not item.accelerator, (
             "Ctrl+Shift+B musi rozstrzygnąć lista albo odtwarzacz"
         )
+    for chord in ("B", "Shift+B"):
+        for item in duplicates.get(chord, []):
+            assert not item.accelerator, (
+                f"{chord} musi rozstrzygnąć plik albo nagrywanie radia"
+            )
+
+
+def test_radio_recording_bookmark_menu_is_precisely_gated() -> None:
+    radio = next(menu for menu in menu_model.build_menus() if "Radio" in menu.title)
+    items = [
+        item for item in radio.items
+        if item.action in (Action.ADD_BOOKMARK, Action.ADD_NAMED_BOOKMARK)
+    ]
+    assert {item.shortcut for item in items} == {"B", "Shift+B"}
+    assert all(item.needs_radio_session for item in items)
+    assert all(item.needs_radio_recording for item in items)
+    assert all(not item.accelerator for item in items)
 
 
 def test_podcast_inbox_sort_menu_is_contextual_checkable_and_user_facing() -> None:

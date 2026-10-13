@@ -146,11 +146,93 @@ internal static class BookmarkStoreTests
                 refused = true;
             }
             Assert.True(refused, "dzialajace stare AMC musi blokowac tez usuwanie");
+
+            TestRadioRecordingImport(root);
         }
         finally
         {
             Directory.Delete(root, recursive: true);
         }
+    }
+
+    private static void TestRadioRecordingImport(string root)
+    {
+        var database = Path.Combine(root, "recording-library.db");
+        CreateDatabase(database);
+        var recording = Path.Combine(root, "Poranna audycja.mp3");
+        File.WriteAllBytes(recording, [1, 2, 3, 4]);
+        using (var connection = new SqliteConnection($"Data Source={database};Pooling=False"))
+        {
+            connection.Open();
+            using var exclude = connection.CreateCommand();
+            exclude.CommandText =
+                "INSERT INTO excluded_paths(ordinal, path) VALUES(0, $path);";
+            exclude.Parameters.AddWithValue("$path", recording);
+            exclude.ExecuteNonQuery();
+        }
+
+        var store = new LiteBookmarkStore(database, () => false);
+        LiteRecordingBookmark[] markers =
+        [
+            new(recording, TimeSpan.FromSeconds(5.2), DateTime.UtcNow, ""),
+            new(recording, TimeSpan.FromSeconds(12.7), DateTime.UtcNow, "  Gość   audycji  ")
+        ];
+        var first = store.ImportRadioRecordingBookmarks(markers, DateTime.UtcNow);
+        Assert.True(first.ImportedFileCount == 1 && first.BookmarkChangeCount == 2,
+            "zakonczenie nagrania importuje plik i obie zakladki");
+        var second = store.ImportRadioRecordingBookmarks(markers, DateTime.UtcNow);
+        Assert.True(second.ImportedFileCount == 1 && second.BookmarkChangeCount == 0,
+            "ponowna finalizacja nie dubluje pliku ani zakladek");
+
+        using (var connection = new SqliteConnection($"Data Source={database};Pooling=False"))
+        {
+            connection.Open();
+            Assert.True(Scalar(connection, "SELECT COUNT(*) FROM local_items;") == 1,
+                "nagranie ma jeden wpis Biblioteki");
+            Assert.True(Scalar(connection,
+                    "SELECT is_in_library + is_available + is_radio_recording FROM local_items LIMIT 1;") == 3,
+                "nagranie jest dostepnym plikiem Biblioteki oznaczonym jako nagranie radia");
+            Assert.Equal("Poranna audycja", Text(connection,
+                    "SELECT title FROM local_items LIMIT 1;"),
+                "tytul nowego nagrania jest tekstem uzytkowym z nazwy pliku");
+            Assert.True(Scalar(connection, "SELECT COUNT(*) FROM excluded_paths;") == 0,
+                "import usuwa dawne wykluczenie tej sciezki");
+            Assert.True(Scalar(connection, "SELECT COUNT(*) FROM bookmarks;") == 2,
+                "obie zakladki trafiaja do wspolnej tabeli AMC");
+            Assert.Equal("Gość audycji", Text(connection,
+                    "SELECT name FROM bookmarks WHERE name <> '' LIMIT 1;"),
+                "nazwa zakladki zostaje znormalizowana bez technicznych wartosci");
+            Assert.Equal("zostaje", Text(connection,
+                    "SELECT value FROM untouched WHERE id = 1;"),
+                "import nagrania nie narusza obcych tabel");
+        }
+
+        var blocked = new LiteBookmarkStore(database, () => true);
+        var refused = false;
+        try
+        {
+            blocked.ImportRadioRecordingBookmarks(markers, DateTime.UtcNow);
+        }
+        catch (LiteRequestException)
+        {
+            refused = true;
+        }
+        Assert.True(refused,
+            "stare AMC blokuje takze finalny import zakladek nagrania");
+    }
+
+    private static long Scalar(SqliteConnection connection, string sql)
+    {
+        using var command = connection.CreateCommand();
+        command.CommandText = sql;
+        return Convert.ToInt64(command.ExecuteScalar());
+    }
+
+    private static string Text(SqliteConnection connection, string sql)
+    {
+        using var command = connection.CreateCommand();
+        command.CommandText = sql;
+        return Convert.ToString(command.ExecuteScalar()) ?? string.Empty;
     }
 
     private static void CreateDatabase(string path)
@@ -174,6 +256,39 @@ internal static class BookmarkStoreTests
                 chapter_source_id TEXT NULL
             );
             CREATE TABLE metadata (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+            CREATE TABLE local_items (
+                id TEXT PRIMARY KEY,
+                title TEXT NOT NULL,
+                has_custom_title INTEGER NOT NULL,
+                path TEXT NOT NULL,
+                duration_ticks INTEGER NOT NULL,
+                bitrate_kbps INTEGER NULL,
+                bitrate_estimated INTEGER NOT NULL,
+                sample_rate_hz INTEGER NULL,
+                is_favorite INTEGER NOT NULL,
+                is_in_library INTEGER NOT NULL,
+                is_available INTEGER NOT NULL,
+                is_in_queue INTEGER NOT NULL,
+                is_play_next INTEGER NOT NULL,
+                resume_mode INTEGER NOT NULL,
+                playback_rate_override REAL NULL,
+                output_device_id TEXT NULL,
+                resume_position_ticks INTEGER NOT NULL,
+                file_length INTEGER NULL,
+                last_write_utc_ticks INTEGER NULL,
+                loudness_normalization_override INTEGER NULL,
+                smooth_track_transitions_override INTEGER NULL,
+                inter_track_silence_ms_override INTEGER NULL,
+                tempo_algorithm_override INTEGER NULL,
+                clip_start_ticks INTEGER NULL,
+                clip_end_ticks INTEGER NULL,
+                is_radio_recording INTEGER NOT NULL DEFAULT 0,
+                radio_recording_completed_utc_ticks INTEGER NOT NULL DEFAULT 0
+            );
+            CREATE TABLE excluded_paths (
+                ordinal INTEGER PRIMARY KEY,
+                path TEXT NOT NULL
+            );
             CREATE TABLE untouched (id INTEGER PRIMARY KEY, value TEXT NOT NULL);
             INSERT INTO untouched(id, value) VALUES (1, 'zostaje');
             """;

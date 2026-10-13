@@ -27,7 +27,7 @@ internal sealed class LiteEngineHandlers : IDisposable
     private readonly object _gate = new();
     private readonly WindowsMediaOutput _files = new();
     private readonly RadioMediaOutput _radio;
-    private readonly LiteRadioRecordingCoordinator _recordings = new();
+    private readonly LiteRadioRecordingCoordinator _recordings;
     private readonly LiteRadioRecognitionCoordinator _recognition;
     private LiteEventSink? _events;
 
@@ -131,6 +131,7 @@ internal sealed class LiteEngineHandlers : IDisposable
         _radio = new RadioMediaOutput(timeshiftMinutes);
         _queueStore = queueStore;
         _bookmarkStore = bookmarkStore;
+        _recordings = new LiteRadioRecordingCoordinator(bookmarkStore);
         _podcastProgressStore = podcastProgressStore;
         _profileMutations = profileMutations;
         _tidalCatalog = tidalCatalog;
@@ -326,6 +327,8 @@ internal sealed class LiteEngineHandlers : IDisposable
                 _recordings.TogglePause(request.Args),
             ["radio.recordingSplit"] = (request, _) =>
                 _recordings.Split(request.Args),
+            ["radio.recordingBookmark"] = (request, _) =>
+                _recordings.AddBookmark(request.Args),
             ["radio.recordingStopAll"] = (_, _) => _recordings.StopAll(),
             ["radio.recordingStatus"] = (_, _) => _recordings.Status(),
             ["radio.recordingHistory"] = (_, _) => _recordings.History(),

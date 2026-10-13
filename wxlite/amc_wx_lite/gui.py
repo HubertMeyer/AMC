@@ -4642,10 +4642,30 @@ class LiteFrame(wx.Frame):
             and tidal_scope is not None
         )
         has_row = session.model.selected_row is not None
+        selected_row = session.model.selected_row
         selected_kind = (
-            session.model.selected_row.kind
-            if session.model.selected_row is not None
+            selected_row.kind
+            if selected_row is not None
             else ""
+        )
+        recording_status = getattr(self, "_last_recording_status", {}) or {}
+        active_recordings = recording_status.get("recordings") or []
+        radio_recording = bool(
+            radio
+            and selected_row is not None
+            and any(
+                (
+                    str(recording.get("stationId") or "")
+                    == selected_row.item_id
+                )
+                or (
+                    bool(selected_row.url)
+                    and str(recording.get("url") or "").casefold()
+                    == selected_row.url.casefold()
+                )
+                for recording in active_recordings
+                if isinstance(recording, dict)
+            )
         )
         favorite_kinds = {
             SessionId.FILES: {"track"},
@@ -4679,6 +4699,8 @@ class LiteFrame(wx.Frame):
             if entry.needs_radio_session and not radio:
                 enabled = False
             if entry.needs_files_session and not files:
+                enabled = False
+            if entry.needs_radio_recording and not radio_recording:
                 enabled = False
             if entry.needs_podcast_session and not podcasts:
                 enabled = False
@@ -5669,6 +5691,11 @@ class LiteFrame(wx.Frame):
             "radio.recordingFailed",
         )
         if terminal_recording_event:
+            bookmark_error = str(data.get("bookmarkError") or "").strip()
+            if bookmark_error:
+                self.announcer.say(
+                    f"Nie zapisano zakładek nagrania: {bookmark_error}"
+                )
             self._remember_recording_result(data)
         if name.startswith("radio.recording"):
             # Zdarzenie opisuje pojedyncza zmiane, natomiast lista potrzebuje
@@ -6248,7 +6275,25 @@ class LiteFrame(wx.Frame):
         # poziomie okna. Reszte klawiszy listy nadal dostaje natywna kontrolka
         # -- szczegolnie strzalki, Home/End i wyszukiwanie przyrostowe NVDA.
         if self.navigator.view is not View.PLAYER:
-            if chord_from_event(event).canonical in {
+            canonical = chord_from_event(event).canonical
+            if (
+                getattr(getattr(self.navigator, "active", None), "value", "")
+                == "radio"
+                and getattr(
+                    getattr(
+                        getattr(self.navigator, "session", None),
+                        "library_view",
+                        None,
+                    ),
+                    "value",
+                    "",
+                )
+                == "activeRadioRecordings"
+                and canonical in ("B", "Shift+B", "Ctrl+Shift+B")
+            ):
+                self._on_key(event)
+                return
+            if canonical in {
                 "F2",
                 "Shift+F2",
                 "Delete",
@@ -6352,6 +6397,12 @@ class LiteFrame(wx.Frame):
             chord,
             player_view=player,
             radio_session=radio,
+            radio_recording_context=(
+                radio
+                and not player
+                and self.navigator.session.library_view
+                is LibraryView.ACTIVE_RADIO_RECORDINGS
+            ),
             podcast_inbox=podcast_inbox,
             podcast_session=self.navigator.active is SessionId.PODCASTS,
             tidal_session=self.navigator.active is SessionId.TIDAL,
@@ -10390,6 +10441,9 @@ class LiteFrame(wx.Frame):
 
     def _add_bookmark(self, *, named: bool = False) -> None:
         """Dodaj szybka albo nazwana zakladke przez waski zapis hosta C#."""
+        if self.navigator.active is SessionId.RADIO:
+            self._add_radio_recording_bookmark(named=named)
+            return
         if self.navigator.active is not SessionId.FILES:
             self.announcer.say(
                 "Zakładki w tej sesji nie są jeszcze dostępne w tej wersji"
@@ -10454,6 +10508,79 @@ class LiteFrame(wx.Frame):
             ),
             done,
             lambda error: self.announcer.say(f"Nie można dodać zakładki: {error}"),
+        )
+
+    def _add_radio_recording_bookmark(self, *, named: bool) -> None:
+        """B/Shift+B: znacznik bieżącej części trwającego nagrania radia."""
+        station = self._recording_station()
+        if station is None:
+            return
+        client = self.client
+        if client is None:
+            self.announcer.say(
+                "Silnik nie działa, nie mogę dodać zakładki nagrania"
+            )
+            return
+
+        name: str | None = None
+        if named:
+            with RenameItemDialog(
+                self,
+                title="Dodaj nazwaną zakładkę nagrania",
+                prompt="&Nazwa zakładki:",
+                field_name="Nazwa zakładki",
+                value="",
+                help_text=(
+                    "Nazwa opisuje bieżące miejsce w nagraniu stacji."
+                ),
+            ) as dialog:
+                if dialog.ShowModal() != wx.ID_OK:
+                    return
+                name = dialog.value
+            if not name:
+                self.announcer.say("Nazwa zakładki nie może być pusta")
+                return
+
+        def done(payload: dict) -> None:
+            result = payload or {}
+            state = str(result.get("state") or "")
+            if state == "notRecording":
+                self.announcer.say(f"Stacja nie jest nagrywana: {station.name}")
+                return
+            if state in ("starting", "busy"):
+                self.announcer.say(
+                    "Nagranie jeszcze się uruchamia albo trwa zmiana części"
+                )
+                return
+            seconds = float(result.get("positionSeconds") or 0.0)
+            position = format_duration(seconds)
+            stored_name = str(result.get("name") or name or "").strip()
+            affected = int(result.get("affectedCount") or 0)
+            suffix = f", nagrania: {affected}" if affected > 1 else ""
+            if state == "duplicate":
+                self.announcer.say(
+                    f"Nazwana zakładka nagrania już istnieje: {position}"
+                    if named
+                    else f"Zakładka nagrania już istnieje: {position}"
+                )
+                return
+            self.announcer.say(
+                f"Dodano zakładkę {stored_name}: {position}{suffix}"
+                if named
+                else f"Dodano zakładkę nagrania: {position}{suffix}"
+            )
+
+        self.runner.submit(
+            "radio-recording-bookmark",
+            lambda: client.add_radio_recording_bookmark(
+                station.id,
+                station.url,
+                name,
+            ),
+            done,
+            lambda error: self.announcer.say(
+                f"Nie można dodać zakładki nagrania: {error}"
+            ),
         )
 
     def _navigate_bookmark(self, forward: bool) -> None:
@@ -14587,6 +14714,11 @@ class LiteFrame(wx.Frame):
             chord,
             player_view=player,
             radio_session=self.navigator.active is SessionId.RADIO,
+            radio_recording_context=(
+                not player
+                and self.navigator.active is SessionId.RADIO
+                and session.library_view is LibraryView.ACTIVE_RADIO_RECORDINGS
+            ),
             podcast_inbox=(
                 not player
                 and self.navigator.active is SessionId.PODCASTS
