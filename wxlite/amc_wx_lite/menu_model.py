@@ -653,6 +653,15 @@ def build_menus() -> tuple[Menu, ...]:
         (
             MenuItem("&Pauza albo wznowienie", Action.PLAY_PAUSE, shortcut="Space",
                      accelerator=False, needs_playback=True),
+            MenuItem(
+                "Wycisz albo włącz dźwięk bieżącej sesji (&V)",
+                Action.TOGGLE_MUTE,
+                shortcut="Ctrl+M",
+                accelerator=False,
+                checkable=True,
+                needs_playback=True,
+                visible_sessions=LOCAL_AUDIO,
+            ),
             SEPARATOR,
             MenuItem(
                 "Ustaw wejście WiiM (&5)…",

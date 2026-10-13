@@ -610,14 +610,16 @@ cyklicznie odpowiednio do poprzedniego i następnego dostępnego wyjścia dla
 aktywnej sesji podczas odtwarzania. Podają użytkową nazwę, zapamiętują wybór
 dla tej sesji i nie zmieniają urządzeń innych równolegle grających sesji.
 
-## Niezależne tory sesji — regresja otwarta
+## Niezależne tory sesji — wykonane technicznie, odbiór otwarty
 
 Główne AMC pozwalało jednocześnie odtwarzać radio i plik lokalny, w tym na
-różnych urządzeniach. W bieżącym porcie uruchomienie pliku z Multimedia
-zatrzymuje radio. To regresja architektury, nie oczekiwane ograniczenie.
-Każda sesja ma utrzymywać własny transport, wyjście, pauzę i wyciszenie.
+różnych urządzeniach. W porcie rozdzielono technicznie transport, wyjście,
+pauzę, głośność i wyciszenie Radia od wspólnego toru Plików/Podcastów.
 Przełączenie sesji ustala wyłącznie cel `Spacji`, `Ctrl+M` i pozostałych
-poleceń; nie może zatrzymywać ani przejmować innego aktywnego toru.
+poleceń. `Ctrl+M` ma też stanową, zaznaczaną pozycję menu dostępną tylko w
+lokalnych sesjach audio. Pozostaje odbiór dwóch rzeczywistych strumieni i
+dwóch wyjść na sprzęcie użytkownika; Pliki i Podcasty nadal współdzielą jeden
+dekoder.
 
 Nie policzono rzetelnie procentu zgodności całego programu. Dawne237pozycji/196skrótów to historyczny spisWPF z421, nie aktualny mianownik pokrycia i nie dowód dostępności każdej funkcji.
 

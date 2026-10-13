@@ -431,3 +431,74 @@ def test_shift_space_menu_names_and_marks_the_actual_recording_state() -> None:
     assert menu_item.enabled is False
     assert menu_item.checked is False
     assert menu_item.label.startswith("&Wstrzymaj albo wznów nagrywanie")
+
+
+def test_mute_menu_names_and_marks_the_active_session_state() -> None:
+    """Ctrl+M ma opisywac stan aktywnej sesji, bez technicznych etykiet."""
+    from amc_wx_lite import menu_model
+
+    entry = next(
+        item
+        for menu in menu_model.build_menus()
+        for item in menu.items
+        if item.action is Action.TOGGLE_MUTE
+    )
+
+    class FakeMenuItem:
+        def __init__(self) -> None:
+            self.enabled = True
+            self.checked = False
+            self.label = ""
+
+        def IsEnabled(self):  # noqa: N802 - API wx
+            return self.enabled
+
+        def Enable(self, value):  # noqa: N802 - API wx
+            self.enabled = value
+
+        def Check(self, value):  # noqa: N802 - API wx
+            self.checked = value
+
+        def GetItemLabel(self):  # noqa: N802 - API wx
+            return self.label
+
+        def SetItemLabel(self, value):  # noqa: N802 - API wx
+            self.label = value
+
+    session = types.SimpleNamespace(
+        view=View.LIST,
+        library_view=LibraryView.ALL_FILES,
+        library_playlist_id=None,
+        model=types.SimpleNamespace(selected_row=None),
+    )
+    frame = object.__new__(LiteFrame)
+    frame.navigator = types.SimpleNamespace(
+        active=SessionId.FILES,
+        sessions={SessionId.FILES: session},
+    )
+    frame._last_status = {"engine": "media"}
+    frame._last_recording_status = {"recordings": []}
+    frame._podcast_inbox_sort_mode = ""
+    frame._tidal_effective_sort_modes = {}
+    frame.options = types.SimpleNamespace(
+        radio_recognition_monitoring=False,
+        radio_recognition_announcements=False,
+    )
+    frame._keyboard_help_active = False
+
+    menu_item = FakeMenuItem()
+    frame._menu_items = [(menu_item, entry)]
+    frame._transport_status_by_session = {
+        SessionId.FILES: {"muted": False},
+    }
+
+    frame._refresh_menu_state()
+    assert menu_item.enabled is True
+    assert menu_item.checked is False
+    assert menu_item.label.startswith("Wycisz bieżącą sesję")
+
+    frame._transport_status_by_session[SessionId.FILES]["muted"] = True
+    frame._refresh_menu_state()
+    assert menu_item.enabled is True
+    assert menu_item.checked is True
+    assert menu_item.label.startswith("Włącz dźwięk bieżącej sesji")

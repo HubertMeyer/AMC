@@ -573,6 +573,7 @@ def test_playback_and_view_menus_do_not_mix_foreign_sessions() -> None:
     assert Action.SHOW_PLAYER not in tidal_view
 
     radio_playback = actions(menu_model.SessionId.RADIO, "&Odtwarzanie")
+    assert Action.TOGGLE_MUTE in radio_playback
     assert Action.SEEK_BACK_10 in radio_playback
     assert Action.CLIP_MARK_START not in radio_playback
     assert Action.RATE_UP not in radio_playback
@@ -598,6 +599,23 @@ def test_playback_and_view_menus_do_not_mix_foreign_sessions() -> None:
         menu.title != "Dźwię&k"
         for menu in menu_model.menus_for_session(menu_model.SessionId.SONOS)
     )
+
+
+def test_current_session_mute_is_a_local_checkable_playback_command() -> None:
+    playback = next(
+        menu for menu in menu_model.build_menus()
+        if menu.title == "&Odtwarzanie"
+    )
+    item = next(
+        entry for entry in playback.items
+        if entry.action is Action.TOGGLE_MUTE
+    )
+
+    assert item.shortcut == "Ctrl+M"
+    assert item.checkable
+    assert item.needs_playback
+    assert item.visible_sessions == menu_model.LOCAL_AUDIO
+    assert not item.accelerator
 
 
 def test_file_menu_uses_the_active_session_instead_of_mixing_sources() -> None:

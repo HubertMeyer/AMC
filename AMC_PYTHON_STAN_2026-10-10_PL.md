@@ -72,8 +72,11 @@ Radia, a uruchomienie Radia nie odłącza kolejki plików. Pliki i Podcasty nada
 współdzielą jeden dekoder, tak jak przed tą zmianą, więc nie są jeszcze dwoma
 równoległymi torami. Pozostaje odbiór dwóch rzeczywistych strumieni i osobnych
 urządzeń. `Ctrl+M` ma już osobny stan dla obu torów i przywraca wcześniejszą
-głośność, ale także wymaga żywego odbioru; całego punktu nie uznaje się jeszcze
-za zakończony.
+głośność. To samo polecenie jest widoczne w menu Odtwarzanie wyłącznie
+dla lokalnych sesji audio; pozycja zmienia nazwę między „Wycisz bieżącą
+sesję” i „Włącz dźwięk bieżącej sesji” oraz przekazuje NVDA rzeczywisty
+stan zaznaczenia. Nadal wymaga to żywego odbioru; całego punktu nie uznaje
+się jeszcze za zakończony.
 
 Polityka zaniku urządzenia jest już ustawieniem. Użytkownik wybiera, czy po
 utracie wybranego wyjścia odsłuch ma automatycznie trwać na urządzeniu
@@ -518,8 +521,9 @@ lewą strzałką.
    sprawdza manifest i wersje oraz współpracuje z `AMC-Python-Updater.exe`.
    Pozostaje trzyczęściowy żywy odbiór jednej instancji z NVDA i nagrywaniem.
 2. W toku: technicznie rozdzielono Radio i Multimedia, ich stan, pauzę,
-   głośność, tempo i urządzenie. Pozostaje żywy odbiór równoczesnego dźwięku,
-   przełączania wyjść oraz wyciszenia `Ctrl+M` dla aktywnej sesji.
+   głośność, tempo i urządzenie. `Ctrl+M` ma osobny stan, dynamiczną
+   nazwę i zaznaczenie w menu bieżącej lokalnej sesji. Pozostaje żywy odbiór
+   równoczesnego dźwięku, przełączania wyjść i wyciszenia.
 3. W toku: `Ctrl+F` i `Ctrl+Shift+F` mają już osobne natywne okno, pełny
    lokalny cache, historię zapytań, skróty działań oraz powrót do właściwej
    listy. Domknąć zdalne katalogi i żywy odbiór NVDA. Prawa strzałka TIDAL ma
@@ -539,12 +543,13 @@ lewą strzałką.
    głównego AMC ze wszystkimi polami, zależnościami i zapisem oraz wykonać
    pełny audyt Biblioteki, menu, skrótów i sortowań `Alt+cyfra`.
 5. W toku: WiiM ma Strumienie sieciowe, natywne presety i ich mapowania
-   `Ctrl+Shift+1–0/-/=` osobno dla urządzeń. Sonos ma Bibliotekę, Ulubione,
-   playlisty, własne strumienie, presety oraz cel bieżącej lub stałej grupy.
-   Uzupełnić właściwe dla obu usług opcje urządzeń: wejścia/wyjścia, korektor,
-   powtarzanie, losowanie i timer, a następnie wykonać ponowny odbiór transportu
-   i materiałów na obudzonych urządzeniach. Techniczna kolejka operacji jest
-   już podłączona. Materiał
+   `Ctrl+Shift+1–0/-/=` osobno dla urządzeń. Jego odtwarzacz ma już wejście,
+   wyjście, korektor, powtarzanie, losowanie, timer oraz przechodzenie
+   `Alt+Page Up`/`Alt+Page Down` po faktycznie aktywnym rodzaju źródła. Sonos ma
+   Bibliotekę, Ulubione, playlisty, własne strumienie, presety oraz cel bieżącej
+   lub stałej grupy. Wykonać ponowny odbiór obu transportów i materiałów na
+   obudzonych urządzeniach, a potem uzupełnić wyłącznie brakujące opcje
+   swoiste dla Sonosa. Techniczna kolejka operacji jest już podłączona. Materiał
    Sonos Redux z Hermesa
    traktować tylko jako krótką wskazówkę projektową, gdy analogiczny problem
    wystąpi w AMC; nie przeznaczać przebiegów na analizę, uruchamianie ani testy

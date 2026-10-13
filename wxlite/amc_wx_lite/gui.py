@@ -4863,6 +4863,10 @@ class LiteFrame(wx.Frame):
         else:
             playing = bool(self._last_status)
         session = self.navigator.sessions[self.navigator.active]
+        session_transport = getattr(
+            self, "_transport_status_by_session", {}
+        ).get(self.navigator.active, {})
+        session_muted = bool(session_transport.get("muted"))
         podcast_inbox = (
             podcasts
             and session.view is View.LIST
@@ -5058,6 +5062,16 @@ class LiteFrame(wx.Frame):
                     label = "&Wstrzymaj nagrywanie"
                 else:
                     label = "&Wstrzymaj albo wznów nagrywanie"
+                native_label = self._menu_native_label(entry, label)
+                if item.GetItemLabel() != native_label:
+                    item.SetItemLabel(native_label)
+            elif entry.checkable and entry.action is Action.TOGGLE_MUTE:
+                item.Check(session_muted)
+                label = (
+                    "Włącz dźwięk bieżącej sesji (&V)"
+                    if session_muted
+                    else "Wycisz bieżącą sesję (&V)"
+                )
                 native_label = self._menu_native_label(entry, label)
                 if item.GetItemLabel() != native_label:
                     item.SetItemLabel(native_label)
