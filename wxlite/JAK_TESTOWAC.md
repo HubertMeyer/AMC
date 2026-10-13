@@ -263,10 +263,20 @@ pozostałe opcje sprzętowe WiiM.
 Sonos:
 
 1. Obudź głośniki i naciśnij `Ctrl+6`.
-2. Lista ma czytać wyłącznie nazwy grup i stan użytkowy. Enter aktywuje grupę.
-3. Sprawdź Spację, następny/poprzedni, głośność, przewijanie, szybkie
-   informacje oraz zachowanie po zmianie sesji.
-4. Nazwy klas, identyfikatory i dane uwierzytelniające nie mogą pojawić się w
+2. Lista ma czytać wyłącznie nazwy grup i stan użytkowy. Enter wybiera grupę,
+   pozostaje na liście i po odczycie pokazuje Bibliotekę Sonos. Sam wybór grupy
+   nie może uruchomić ostatniej stacji ani otworzyć odtwarzacza.
+3. W Bibliotece, Ulubionych, Playlistach Sonos i Moich stacjach sprawdź
+   Spację. Ma wstrzymywać lub wznawiać aktywną grupę bez przechodzenia do
+   odtwarzacza. `Ctrl+Spacja` nadal zaznacza nieprzylegający wiersz i nie może
+   sterować odtwarzaniem.
+4. Przy włączonej wspólnej opcji „Pozostawaj na liście po uruchomieniu stacji
+   lub materiału Enterem” uruchom materiał Sonos. Fokus ma pozostać na liście.
+   `F6` jawnie pokazuje odtwarzacz i rozpoczyna odświeżanie stanu wybranej
+   grupy; ponowne `F6` wraca do listy.
+5. Sprawdź następny/poprzedni, głośność, przewijanie, szybkie informacje oraz
+   zachowanie po zmianie sesji.
+6. Nazwy klas, identyfikatory i dane uwierzytelniające nie mogą pojawić się w
    mowie NVDA, schowku ani komunikatach.
 
 Wynik odbioru 10 października: wykrywanie grupy i odczyt stanu działają, ale
@@ -280,10 +290,12 @@ Odbiór poprawki na żywo:
 
 1. Naciśnij Enter na grupie i od razu, jeszcze podczas pierwszego odczytu,
    naciśnij Spację. Po zakończeniu odczytu Spacja ma się wykonać bez ponownego
-   naciskania i bez komunikatu „Trwa odczyt informacji”.
+   naciskania i bez komunikatu „Trwa odczyt informacji”, a program ma pokazać
+   Bibliotekę Sonos zamiast odtwarzacza.
 2. Powtórz próbę z następnym/poprzednim, zmianą głośności i wyciszeniem.
-3. Pozostaw odtwarzacz otwarty co najmniej kilka cykli odświeżania. Polecenia
-   nadal mają działać, a automatyczny odczyt nie może ich blokować.
+3. Otwórz odtwarzacz klawiszem `F6` i pozostaw go co najmniej kilka cykli
+   odświeżania. Polecenia nadal mają działać, a automatyczny odczyt nie może
+   ich blokować.
 4. Wróć do listy i szybko wybierz inną grupę. Ma obowiązywać ostatni świadomy
    wybór, bez spóźnionego powrotu do poprzedniej grupy.
 
