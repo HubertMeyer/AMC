@@ -922,6 +922,14 @@ class LiteHostClient:
             timeout=24 * 3600.0,
         )
 
+    def search_podcast_directories(self, query: str) -> Any:
+        """Przeszukaj publiczne katalogi bez danych konta użytkownika."""
+        return self.call(
+            "podcast.searchDirectories",
+            {"query": query},
+            timeout=45.0,
+        )
+
     def inspect_podcast_opml(self, path: str) -> Any:
         """Odczytaj bezpieczne etykiety źródeł przez wspólny parser AMC."""
         return self.call("podcast.opml.inspect", {"path": path}, timeout=30.0)

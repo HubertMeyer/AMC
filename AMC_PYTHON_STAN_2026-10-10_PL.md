@@ -1,4 +1,4 @@
-# AMC Python — stan prac 13 października 2026
+# AMC Python — stan prac 14 października 2026
 
 ## Decyzja architektoniczna
 
@@ -336,13 +336,28 @@ obiektów nie trafiają do nazw dostępnościowych.
 
 Historia zapytań jest zapisywana osobno dla bieżących sesji i zakresu
 globalnego; przy pustym polu strzałki w dół/w górę przeglądają ją jak w
-głównym AMC. Do domknięcia parytetu pozostają wyniki pobierane na żywo z
-internetowych katalogów (Radio Browser, Apple/Spreaker/YouTube i wyszukiwanie
-TIDAL). Relacje katalogowe TIDAL pod prawą strzałką są podłączone osobno.
-Obecne wyniki wyszukiwania są prawdziwe, ale
-pochodzą wyłącznie z kompletnego lokalnego cache'u. Potrzebny jest też żywy
-odbiór NVDA okna, skrótów i powrotu fokusu; testy automatyczne nie zastępują
-tego pomiaru.
+głównym AMC.
+
+14 października podłączono publiczne wyszukiwanie Podcastów i YouTube.
+LiteHost pyta równolegle Apple Podcasts, Spreakera i YouTube tą samą drogą co
+główne AMC. Awaria jednego katalogu daje krótki komunikat, ale nie usuwa
+wyników lokalnych ani odpowiedzi pozostałych katalogów. Wyniki są ograniczone
+do celowych nazw, autora, rodzaju, źródła i publicznego adresu HTTP(S); nazwy
+klas i identyfikatory techniczne pozostają wyłącznie w modelu. Zapisana pozycja
+ma pierwszeństwo przed tym samym adresem z katalogu, nawet gdy użytkownik
+nadał jej inną nazwę. Enter pobiera i otwiera RSS, kanał YouTube albo pojedynczy
+materiał wspólnym wykonawcą `podcast.add`. Dla materiałów YouTube działają po
+materializacji te same polecenia odtwarzania, kolejki, „jako następne”,
+playlist, presetów i pobierania; Biblioteka oraz Ulubione zapisują wynik przez
+hosta C#.
+
+Rzeczywisty, tylko do odczytu test hasła „Tyflo” zwrócił TyfloPodcast z Apple,
+kanały i materiały YouTube oraz poprawny pusty wynik Spreakera w około pięć
+sekund. Nie zmienił biblioteki. Do domknięcia pełnego parytetu pozostają zdalne
+wyniki Radio Browser i katalogu TIDAL. Relacje katalogowe TIDAL pod prawą
+strzałką są podłączone osobno. Potrzebny jest też żywy odbiór NVDA okna,
+skrótów, materializacji Enterem i powrotu fokusu; testy automatyczne nie
+zastępują tego pomiaru.
 
 ### WiiM
 
@@ -653,6 +668,14 @@ alternatywnych sposobów uruchamiania.
 Testy protokołu dowodzą granic danych i obsługi poleceń. Nie zastępują odbioru
 żywego konta TIDAL, urządzeń WiiM/Sonos ani mowy NVDA.
 
+Roboczy przyrost publicznego wyszukiwania Podcastów i YouTube, jeszcze
+nieprzeniesiony do stałej instalacji, ma czystą kompilację LiteHosta bez
+ostrzeżeń, 63 celowane testy Python bez błędów oraz pięć zaliczonych testów
+hosta z lokalnym serwerem. Pełny przebieg na Windows zaliczył 1493 testy;
+pozostałe cztery próby gniazda `127.0.0.1` przeszły po wykonaniu poza
+piaskownicą, a historyczne testy zgodności przeznaczone dla WSL nadal szukają
+ścieżki `/home/michal/dotnet` i nie są wynikiem tego przyrostu.
+
 Drugie równoległe uruchomienie interfejsu jest blokowane przed otwarciem okna.
 Zapobiega to sytuacji, w której starszy host trzyma zapis postępu podcastów,
 a nowe okno pokazuje listy, lecz nie wykonuje Enter, Ctrl+R ani informacji pod
@@ -678,8 +701,9 @@ przypadkowe uruchomienie zastąpić stałej instalacji `AMC Python`.
    równoczesnego dźwięku, przełączania wyjść i wyciszenia.
 3. W toku: `Ctrl+F` i `Ctrl+Shift+F` mają już osobne natywne okno, pełny
    lokalny cache, historię zapytań, skróty działań oraz powrót do właściwej
-   listy. Domknąć zdalne katalogi i żywy odbiór NVDA. Prawa strzałka TIDAL ma
-   już natywne menu relacji zgodne z głównym AMC.
+   listy. Publiczne wyniki Apple Podcasts, Spreakera i YouTube są podłączone;
+   domknąć Radio Browser, katalog TIDAL i żywy odbiór NVDA. Prawa strzałka
+   TIDAL ma już natywne menu relacji zgodne z głównym AMC.
    Powtarzany prefiks „Nagrane” usunięto z ukończonych wierszy `Alt+Shift+R`;
    stany nieudane, przerwane, zatrzymane i brak pliku pozostają w etykiecie.
 4. W toku: `Ctrl+,` ma już natywne karty Ogólne, Radio i nagrywanie oraz

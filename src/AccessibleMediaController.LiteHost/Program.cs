@@ -148,6 +148,10 @@ internal static class Program
                 LitePodcastDownloadCoordinator.SaveAsOperation,
                 // Sprawdzenie nowego źródła również wykonuje sieć lub yt-dlp.
                 LitePodcastAddCoordinator.Operation,
+                // Publiczne katalogi Apple Podcasts, Spreaker i YouTube są
+                // niezależne od transportu; wolna odpowiedź nie zatrzymuje
+                // radia, nagrywania ani pauzy.
+                LitePodcastDirectorySearchCoordinator.Operation,
                 // Import pobiera maksymalnie cztery RSS równolegle. Nie może
                 // zatrzymać transportu ani komunikatów o nagrywaniu.
                 LitePodcastOpmlCoordinator.ImportOperation,

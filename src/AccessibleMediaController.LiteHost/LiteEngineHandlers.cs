@@ -54,6 +54,7 @@ internal sealed class LiteEngineHandlers : IDisposable
     private readonly LitePodcastDownloadCoordinator? _podcastDownloads;
     private readonly LitePodcastAddCoordinator? _podcastAdd;
     private readonly LitePodcastOpmlCoordinator? _podcastOpml;
+    private readonly LitePodcastDirectorySearchCoordinator _podcastDirectorySearch = new();
     private readonly LiteProfileMutationStore? _profileMutations;
     private readonly LiteTidalCatalogCoordinator? _tidalCatalog;
     private readonly LiteTidalDesktopCoordinator _tidalDesktop = new();
@@ -364,6 +365,8 @@ internal sealed class LiteEngineHandlers : IDisposable
                 PodcastDownloadSaveAs(request.Args, events),
             [LitePodcastAddCoordinator.Operation] = (request, _) =>
                 AddPodcastSource(request.Args),
+            [LitePodcastDirectorySearchCoordinator.Operation] = (request, _) =>
+                _podcastDirectorySearch.Search(request.Args),
             [LitePodcastOpmlCoordinator.InspectOperation] = (request, _) =>
                 PodcastOpmlInspect(request.Args),
             [LitePodcastOpmlCoordinator.ImportOperation] = (request, _) =>
@@ -2811,6 +2814,7 @@ internal sealed class LiteEngineHandlers : IDisposable
         _podcastDownloads?.Dispose();
         _podcastAdd?.Dispose();
         _podcastOpml?.Dispose();
+        _podcastDirectorySearch.Dispose();
         _podcastProgressStore?.Dispose();
         _tidalDesktop.Dispose();
     }

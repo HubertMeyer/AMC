@@ -12,6 +12,7 @@ from amc_wx_lite.navigation import (
 )
 from amc_wx_lite.search_catalog import SearchEntry
 from amc_wx_lite.search_catalog import SearchResultAction
+from amc_wx_lite.search_sources import SearchCollection
 from amc_wx_lite.shortcuts import Action
 
 
@@ -142,6 +143,253 @@ def test_search_open_does_not_invent_a_second_action() -> None:
         SearchResultAction.OPEN,
     )
     assert opened == [result]
+
+
+def test_podcast_search_combines_cached_and_public_results() -> None:
+    shown = []
+    searched = []
+    local = SearchEntry(
+        SessionId.PODCASTS,
+        Row("saved", "Zapisany podcast", "podcast", url="https://saved.test/feed"),
+        LibraryView.PODCAST_LIBRARY,
+    )
+
+    class Runner:
+        @staticmethod
+        def submit(_name, work, done, _failed):
+            done(work())
+
+    frame = SimpleNamespace(
+        search_sources=SimpleNamespace(
+            collect=lambda _sessions: SearchCollection((local,), ())
+        ),
+        client=SimpleNamespace(
+            search_podcast_directories=lambda query: (
+                searched.append(query)
+                or {
+                    "items": [{
+                        "id": "remote",
+                        "title": "Nowy kanał",
+                        "artist": "Autor",
+                        "kind": "podcast",
+                        "remoteKind": "rss",
+                        "address": "https://remote.test/feed",
+                        "detail": "Apple Podcasts",
+                    }],
+                    "warnings": [],
+                }
+            )
+        ),
+        runner=Runner(),
+        _search_dialog_alive=lambda _dialog: True,
+    )
+    dialog = SimpleNamespace(
+        catalog=None,
+        show_results=lambda entries, warnings: shown.append((entries, warnings)),
+        search_failed=lambda: shown.append("failed"),
+    )
+
+    LiteFrame._run_search_query(
+        frame,
+        "podcast",
+        dialog,
+        all_services=False,
+        session_before=SessionId.PODCASTS,
+    )
+
+    assert searched == ["podcast"]
+    assert [entry.row.title for entry in shown[0][0]] == [
+        "Zapisany podcast",
+        "Nowy kanał",
+    ]
+    assert shown[0][1] == ()
+    assert dialog.catalog.entries == (local,)
+
+
+def test_public_search_failure_preserves_cached_results() -> None:
+    shown = []
+    local = SearchEntry(
+        SessionId.PODCASTS,
+        Row("saved", "Audycja", "podcast", url="https://saved.test/feed"),
+        LibraryView.PODCAST_LIBRARY,
+    )
+
+    class Runner:
+        @staticmethod
+        def submit(_name, work, done, _failed):
+            done(work())
+
+    def unavailable(_query):
+        raise ValueError("technical details must not be spoken")
+
+    frame = SimpleNamespace(
+        search_sources=SimpleNamespace(
+            collect=lambda _sessions: SearchCollection((local,), ())
+        ),
+        client=SimpleNamespace(search_podcast_directories=unavailable),
+        runner=Runner(),
+        _search_dialog_alive=lambda _dialog: True,
+    )
+    dialog = SimpleNamespace(
+        catalog=None,
+        show_results=lambda entries, warnings: shown.append((entries, warnings)),
+        search_failed=lambda: shown.append("failed"),
+    )
+
+    LiteFrame._run_search_query(
+        frame,
+        "audycja",
+        dialog,
+        all_services=False,
+        session_before=SessionId.PODCASTS,
+    )
+
+    assert [entry.row.item_id for entry in shown[0][0]] == ["saved"]
+    assert shown[0][1] == (
+        "Nie udało się przeszukać publicznych katalogów podcastów i YouTube",
+    )
+    assert "technical" not in shown[0][1][0]
+
+
+def test_remote_result_uses_materialization_instead_of_local_navigation() -> None:
+    calls = []
+    frame = SimpleNamespace(
+        _complete_remote_search_result_action=lambda entries, action: calls.append(
+            (entries, action)
+        )
+    )
+    result = SearchEntry(
+        SessionId.PODCASTS,
+        Row(
+            "remote-id",
+            "Kanał",
+            "podcast",
+            url="https://www.youtube.com/channel/UCexample/videos",
+        ),
+        LibraryView.PODCAST_LIBRARY,
+        remote_kind="youtubeChannel",
+    )
+
+    LiteFrame._complete_search_result_action(
+        frame,
+        result,
+        [result],
+        SearchResultAction.OPEN,
+    )
+
+    assert calls == [([result], SearchResultAction.OPEN)]
+
+
+def test_remote_youtube_queue_materializes_then_uses_real_list_action() -> None:
+    calls = []
+    selected = []
+    dispatched = []
+
+    class Runner:
+        @staticmethod
+        def submit(_name, work, done, _failed):
+            done(work())
+
+    client = SimpleNamespace(
+        add_podcast_source=lambda address, title: (
+            calls.append(("add", address, title))
+            or {
+                "subscriptionId": "internet-media",
+                "preferredEpisodeId": "saved-episode",
+                "title": title,
+            }
+        )
+    )
+    opened = []
+    frame = SimpleNamespace(
+        _podcast_add_pending=False,
+        client=client,
+        status_field=SimpleNamespace(SetLabel=lambda value: calls.append(("status", value))),
+        status_bar=SimpleNamespace(show=lambda value: calls.append(("bar", value))),
+        announcer=SimpleNamespace(say=lambda value: calls.append(("say", value))),
+        runner=Runner(),
+        _switch_session=lambda session: calls.append(("session", session)),
+        _open_podcast_view=lambda intent, **kwargs: opened.append((intent, kwargs)),
+        _active_list=lambda: SimpleNamespace(
+            select_item_ids=lambda values: selected.extend(values)
+        ),
+        _dispatch=dispatched.append,
+    )
+    result = SearchEntry(
+        SessionId.PODCASTS,
+        Row(
+            "remote-video",
+            "Materiał",
+            "episode",
+            url="https://www.youtube.com/watch?v=abc123",
+        ),
+        LibraryView.PODCAST_EPISODES,
+        parent_id="remote:internet-media",
+        remote_kind="youtubeVideo",
+    )
+
+    LiteFrame._complete_remote_search_result_action(
+        frame,
+        [result],
+        SearchResultAction.QUEUE,
+    )
+
+    assert ("add", result.row.url, "Materiał") in calls
+    assert opened[0][0].subscription_id == "internet-media"
+    assert opened[0][0].preferred_id == "saved-episode"
+    opened[0][1]["after_refresh"]()
+    assert selected == ["saved-episode"]
+    assert dispatched == [Action.ADD_TO_QUEUE]
+    assert frame._podcast_add_pending is False
+
+
+def test_remote_podcast_favorite_is_added_then_favorited_without_navigation() -> None:
+    calls = []
+
+    class Runner:
+        @staticmethod
+        def submit(_name, work, done, _failed):
+            done(work())
+
+    client = SimpleNamespace(
+        add_podcast_source=lambda _address, title: {
+            "subscriptionId": "saved-podcast",
+            "preferredEpisodeId": None,
+            "title": title,
+        },
+        toggle_podcast_favorites=lambda subscriptions, episodes: calls.append(
+            ("favorite", subscriptions, episodes)
+        ),
+    )
+    frame = SimpleNamespace(
+        _podcast_add_pending=False,
+        client=client,
+        status_field=SimpleNamespace(SetLabel=lambda value: calls.append(("status", value))),
+        status_bar=SimpleNamespace(show=lambda value: calls.append(("bar", value))),
+        announcer=SimpleNamespace(say=lambda value: calls.append(("say", value))),
+        runner=Runner(),
+    )
+    result = SearchEntry(
+        SessionId.PODCASTS,
+        Row(
+            "remote-podcast",
+            "Podcast",
+            "podcast",
+            url="https://example.test/feed.xml",
+        ),
+        LibraryView.PODCAST_LIBRARY,
+        remote_kind="rss",
+    )
+
+    LiteFrame._complete_remote_search_result_action(
+        frame,
+        [result],
+        SearchResultAction.FAVORITE,
+    )
+
+    assert ("favorite", ["saved-podcast"], []) in calls
+    assert ("say", "Dodano do ulubionych: Podcast") in calls
+    assert frame._podcast_add_pending is False
 
 
 def test_search_dialog_intercepts_enter_before_default_ok_processing() -> None:

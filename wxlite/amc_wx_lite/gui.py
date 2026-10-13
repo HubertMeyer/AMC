@@ -181,6 +181,7 @@ from .search_catalog import (
     search as search_entries,
 )
 from .search_sources import SearchCollection, SearchSources
+from .remote_search import entries_from_payload, merge_saved_and_remote
 from .radio_activity import (
     STATE_POSITION_LABELS,
     activity_cue_wav,
@@ -1467,7 +1468,8 @@ class SearchDialog(wx.Dialog):
 
     It is deliberately a separate window, as in full AMC.  ``Ctrl+K`` keeps
     filtering the already visible list; ``Ctrl+F`` searches the complete
-    cached catalogue and puts the results in this ordinary SysListView32.
+    cached catalogue and, for podcasts, the public directories. Results are
+    placed in this ordinary SysListView32.
     """
 
     def __init__(
@@ -1621,7 +1623,9 @@ class SearchDialog(wx.Dialog):
                 self.results.InsertItem(index, row.title)
                 if row.kind_label:
                     self.results.SetItem(index, 1, row.kind_label)
-                details = [row.detail] if row.detail else []
+                details = [row.artist_name] if row.artist_name else []
+                if row.detail:
+                    details.append(row.detail)
                 if self._all_services:
                     details.append(entry.session_label)
                 if details:
@@ -5735,14 +5739,50 @@ class LiteFrame(wx.Frame):
         )
         cached = dialog.catalog
 
-        def work() -> tuple[SearchCollection, list[SearchEntry]]:
+        def work() -> tuple[
+            SearchCollection,
+            list[SearchEntry],
+            tuple[str, ...],
+        ]:
             collected = cached or self.search_sources.collect(sessions)
-            return collected, search_entries(list(collected.entries), query)
+            results = search_entries(list(collected.entries), query)
+            warnings = list(collected.warnings)
+            if SessionId.PODCASTS in sessions:
+                client = self.client
+                if client is None:
+                    warnings.append(
+                        "Publiczne katalogi podcastów i YouTube są niedostępne"
+                    )
+                else:
+                    try:
+                        payload = client.search_podcast_directories(query)
+                        remote, remote_warnings = entries_from_payload(payload)
+                        results = merge_saved_and_remote(
+                            results,
+                            remote,
+                            saved_catalog=[
+                                entry for entry in collected.entries
+                                if entry.session_id is SessionId.PODCASTS
+                            ],
+                        )
+                        warnings.extend(remote_warnings)
+                    except (HostError, HostUnavailable, ValueError):
+                        # Zapisane wyniki pozostają użyteczne. Nie pokazujemy
+                        # repr wyjątku ani nazwy klasy w dostępnej etykiecie.
+                        warnings.append(
+                            "Nie udało się przeszukać publicznych katalogów "
+                            "podcastów i YouTube"
+                        )
+            return collected, results, tuple(dict.fromkeys(warnings))
 
-        def done(result: tuple[SearchCollection, list[SearchEntry]]) -> None:
+        def done(result: tuple[
+            SearchCollection,
+            list[SearchEntry],
+            tuple[str, ...],
+        ]) -> None:
             if self._search_dialog_alive(dialog):
                 dialog.catalog = result[0]
-                dialog.show_results(result[1], result[0].warnings)
+                dialog.show_results(result[1], result[2])
 
         def failed(_error: Exception) -> None:
             if self._search_dialog_alive(dialog):
@@ -5760,6 +5800,27 @@ class LiteFrame(wx.Frame):
     ) -> None:
         """Open the real list, then run the same command as that list uses."""
 
+        remote = [candidate for candidate in selected if candidate.remote_kind]
+        if remote:
+            if len(remote) != len(selected):
+                self.announcer.say(
+                    "Dla jednego działania wybierz wyniki zapisane albo wyniki katalogu"
+                )
+                return
+            targets = (
+                remote
+                if action in (
+                    SearchResultAction.QUEUE,
+                    SearchResultAction.PLAY_NEXT,
+                    SearchResultAction.FAVORITE,
+                    SearchResultAction.LIBRARY,
+                    SearchResultAction.PLAYLIST,
+                )
+                else [entry]
+            )
+            self._complete_remote_search_result_action(targets, action)
+            return
+
         if action is SearchResultAction.OPEN:
             self._open_search_result(entry)
             return
@@ -5767,42 +5828,185 @@ class LiteFrame(wx.Frame):
         selected_ids = [candidate.row.item_id for candidate in selected]
 
         def after_open() -> None:
-            if action is SearchResultAction.TOGGLE_PLAYBACK:
-                self._dispatch(Action.ACTIVATE)
-            elif action is SearchResultAction.QUEUE:
-                self._dispatch(Action.ADD_TO_QUEUE)
-            elif action is SearchResultAction.PLAY_NEXT:
-                self._dispatch(Action.TOGGLE_PLAY_NEXT)
-            elif action is SearchResultAction.FAVORITE:
-                self._dispatch(Action.TOGGLE_FAVORITE)
-            elif action is SearchResultAction.LIBRARY:
-                if entry.session_id is SessionId.PODCASTS:
-                    self._toggle_podcast_library()
-                elif entry.session_id is SessionId.TIDAL:
-                    self._toggle_tidal_membership(favorite=False)
-                else:
-                    self.announcer.say(
-                        "Ten zapisany wynik jest już w Bibliotece"
-                    )
-            elif action is SearchResultAction.PLAYLIST:
-                self._dispatch(Action.MANAGE_PLAYLIST_MEMBERSHIP)
-            elif action is SearchResultAction.PRESET:
-                self._dispatch(Action.ASSIGN_PRESET)
-            elif action is SearchResultAction.INFORMATION:
-                if entry.session_id is SessionId.PODCASTS:
-                    self._show_podcast_description()
-                else:
-                    self._announce_quick_information()
-            elif action is SearchResultAction.DOWNLOAD:
-                self._dispatch(Action.DOWNLOAD_PODCAST_EPISODES)
-            elif action is SearchResultAction.SAVE_AS:
-                self._dispatch(Action.SAVE_PODCAST_EPISODE_AS)
+            LiteFrame._perform_search_result_action(self, entry, action)
 
         self._open_search_result(
             entry,
             selected_ids=selected_ids,
             after_open=after_open,
         )
+
+    def _perform_search_result_action(
+        self,
+        entry: SearchEntry,
+        action: SearchResultAction,
+    ) -> None:
+        """Uruchom dokładnie tę samą komendę co na rzeczywistej liście."""
+
+        if action is SearchResultAction.TOGGLE_PLAYBACK:
+            self._dispatch(Action.ACTIVATE)
+        elif action is SearchResultAction.QUEUE:
+            self._dispatch(Action.ADD_TO_QUEUE)
+        elif action is SearchResultAction.PLAY_NEXT:
+            self._dispatch(Action.TOGGLE_PLAY_NEXT)
+        elif action is SearchResultAction.FAVORITE:
+            self._dispatch(Action.TOGGLE_FAVORITE)
+        elif action is SearchResultAction.LIBRARY:
+            if entry.session_id is SessionId.PODCASTS:
+                self._toggle_podcast_library()
+            elif entry.session_id is SessionId.TIDAL:
+                self._toggle_tidal_membership(favorite=False)
+            else:
+                self.announcer.say("Ten zapisany wynik jest już w Bibliotece")
+        elif action is SearchResultAction.PLAYLIST:
+            self._dispatch(Action.MANAGE_PLAYLIST_MEMBERSHIP)
+        elif action is SearchResultAction.PRESET:
+            self._dispatch(Action.ASSIGN_PRESET)
+        elif action is SearchResultAction.INFORMATION:
+            if entry.session_id is SessionId.PODCASTS:
+                self._show_podcast_description()
+            else:
+                self._announce_quick_information()
+        elif action is SearchResultAction.DOWNLOAD:
+            self._dispatch(Action.DOWNLOAD_PODCAST_EPISODES)
+        elif action is SearchResultAction.SAVE_AS:
+            self._dispatch(Action.SAVE_PODCAST_EPISODE_AS)
+
+    def _complete_remote_search_result_action(
+        self,
+        entries: list[SearchEntry],
+        action: SearchResultAction,
+    ) -> None:
+        """Materializuj publiczny wynik, nie ujawniając jego modelowego ID."""
+
+        if not entries:
+            return
+        lead = entries[0]
+        if action is SearchResultAction.INFORMATION:
+            self.announcer.say(lead.accessible_label)
+            return
+        video_only_actions = {
+            SearchResultAction.TOGGLE_PLAYBACK,
+            SearchResultAction.QUEUE,
+            SearchResultAction.PLAY_NEXT,
+            SearchResultAction.PLAYLIST,
+            SearchResultAction.PRESET,
+            SearchResultAction.DOWNLOAD,
+            SearchResultAction.SAVE_AS,
+        }
+        if (
+            action in video_only_actions
+            and any(entry.remote_kind != "youtubeVideo" for entry in entries)
+        ):
+            self.announcer.say(
+                "To działanie jest dostępne dla materiałów YouTube; "
+                "podcast lub kanał otwórz klawiszem Enter"
+            )
+            return
+        if action is SearchResultAction.SAVE_AS and len(entries) != 1:
+            self.announcer.say("Zapisz jako działa dla jednego materiału")
+            return
+        if self._podcast_add_pending:
+            self.announcer.say("Dodawanie źródła już trwa")
+            return
+        client = self.client
+        if client is None:
+            self.announcer.say("Silnik nie działa, nie mogę otworzyć wyniku")
+            return
+
+        self._podcast_add_pending = True
+        started = (
+            "Otwieranie wyniku katalogu"
+            if action is SearchResultAction.OPEN
+            else "Przygotowywanie wyniku katalogu"
+        )
+        self.status_field.SetLabel(started)
+        self.status_bar.show(started)
+        self.announcer.say(started)
+
+        def work() -> list[dict]:
+            payloads: list[dict] = []
+            for entry in entries:
+                payload = client.add_podcast_source(
+                    entry.row.url or "",
+                    entry.row.title,
+                )
+                if not isinstance(payload, dict):
+                    raise ValueError("Nieprawidłowa odpowiedź silnika")
+                payloads.append(payload)
+            if action is SearchResultAction.FAVORITE:
+                subscriptions = [
+                    str(payload.get("subscriptionId") or "").strip()
+                    for entry, payload in zip(entries, payloads)
+                    if entry.remote_kind != "youtubeVideo"
+                ]
+                episodes = [
+                    str(payload.get("preferredEpisodeId") or "").strip()
+                    for entry, payload in zip(entries, payloads)
+                    if entry.remote_kind == "youtubeVideo"
+                ]
+                subscriptions = [value for value in subscriptions if value]
+                episodes = [value for value in episodes if value]
+                client.toggle_podcast_favorites(subscriptions, episodes)
+            return payloads
+
+        def done(payloads: list[dict]) -> None:
+            self._podcast_add_pending = False
+            count = len(payloads)
+            if action in (SearchResultAction.LIBRARY, SearchResultAction.FAVORITE):
+                target = (
+                    "ulubionych"
+                    if action is SearchResultAction.FAVORITE
+                    else "Biblioteki"
+                )
+                message = (
+                    f"Dodano do {target}: {lead.row.title}"
+                    if count == 1
+                    else f"Dodano do {target}: {count} elementów"
+                )
+                self.status_field.SetLabel(message)
+                self.status_bar.show(message)
+                self.announcer.say(message)
+                return
+
+            first = payloads[0]
+            subscription_id = str(first.get("subscriptionId") or "").strip()
+            preferred_ids = [
+                str(payload.get("preferredEpisodeId") or "").strip()
+                for payload in payloads
+            ]
+            preferred_ids = [value for value in preferred_ids if value]
+            if not subscription_id:
+                self.announcer.say("Nie udało się otworzyć wyniku katalogu")
+                return
+            self._switch_session(SessionId.PODCASTS)
+
+            def after_refresh() -> None:
+                if preferred_ids:
+                    self._active_list().select_item_ids(preferred_ids)
+                if action is not SearchResultAction.OPEN:
+                    LiteFrame._perform_search_result_action(self, lead, action)
+
+            self._open_podcast_view(
+                OpenPodcastView(
+                    subscription_id=subscription_id,
+                    preferred_id=preferred_ids[0] if preferred_ids else None,
+                ),
+                after_refresh=after_refresh,
+            )
+
+        def failed(error: Exception) -> None:
+            self._podcast_add_pending = False
+            message = (
+                str(error)
+                if isinstance(error, (HostError, HostUnavailable))
+                else "Nie udało się otworzyć wyniku katalogu"
+            )
+            self.status_field.SetLabel(message)
+            self.status_bar.show(message)
+            self.announcer.say(message)
+
+        self.runner.submit("podcast-search-action", work, done, failed)
 
     def _open_search_result(
         self,

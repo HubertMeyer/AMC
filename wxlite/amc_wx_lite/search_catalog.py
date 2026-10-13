@@ -50,6 +50,9 @@ class SearchEntry:
     row: Row
     source_view: LibraryView | None = None
     parent_id: str | None = None
+    # Rodzaj wyniku publicznego katalogu służy tylko do materializacji po
+    # Enterze. Nie trafia do nazwy dostępnej ani tekstu wiersza.
+    remote_kind: str | None = None
 
     @property
     def session_label(self) -> str:
@@ -58,6 +61,8 @@ class SearchEntry:
     @property
     def accessible_label(self) -> str:
         parts = [self.row.title]
+        if self.row.artist_name and self.row.artist_name not in parts:
+            parts.append(self.row.artist_name)
         if self.row.kind_label:
             parts.append(self.row.kind_label)
         if self.row.detail and self.row.detail not in parts:

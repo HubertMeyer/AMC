@@ -46,6 +46,20 @@ def test_search_uses_artist_kind_detail_and_user_facing_session_name() -> None:
     assert [item.row.item_id for item in search(entries, "tidal anna")] == ["2"]
 
 
+def test_accessible_result_includes_intentional_artist_not_model_data() -> None:
+    result = entry(
+        SessionId.PODCASTS,
+        "technical-id",
+        "Odcinek",
+        artist="Kanał",
+        kind="episode",
+    )
+    assert result.accessible_label == (
+        "Odcinek, Kanał, odcinek, Podcasty i YouTube"
+    )
+    assert "technical-id" not in result.accessible_label
+
+
 def test_search_deduplicates_same_item_in_multiple_collection_views() -> None:
     duplicate = entry(SessionId.TIDAL, "same", "Piosenka")
     assert search([duplicate, duplicate], "piosenka") == [duplicate]

@@ -393,6 +393,16 @@ def test_podcast_add_uses_one_narrow_host_operation() -> None:
         client.close()
 
 
+def test_podcast_directory_search_uses_one_narrow_host_operation() -> None:
+    client = make_client()
+    try:
+        result = client.search_podcast_directories("nocne radio")
+        assert result["op"] == "podcast.searchDirectories"
+        assert result["args"] == {"query": "nocne radio"}
+    finally:
+        client.close()
+
+
 def test_podcast_opml_uses_named_narrow_host_operations() -> None:
     client = make_client()
     try:
