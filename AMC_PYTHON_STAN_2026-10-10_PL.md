@@ -339,7 +339,14 @@ powtarzania, `S` przełącza losowanie, a `T` ustawia timer uśpienia. Każdy
 dialog otrzymuje od hosta osobne wartości modelu i jawne etykiety użytkowe;
 adres urządzenia, obiekt stanu i nazwy właściwości nie trafiają do NVDA.
 Pozycje menu są widoczne wyłącznie w sesji WiiM i aktywne dopiero w jej
-odtwarzaczu. Pozostaje żywy odbiór wszystkich nowych dróg.
+odtwarzaczu. `Alt+Page Up` i `Alt+Page Down` przenoszą ten sam mechanizm co
+pełne AMC: jeżeli bieżącym źródłem jest zapisany strumień AMC, przechodzą
+kołowo po strumieniach w aktualnym porządku widoku; w przeciwnym razie
+przechodzą po zajętych presetach urządzenia. Presety TIDAL Connect, Spotify
+Connect i inne źródła odbiorcze są pomijane, ponieważ urządzenie nie potrafi
+uruchomić ich samodzielnie. Host pamięta źródło osobno dla urządzenia, a do
+Pythona zwraca wyłącznie bezpieczną migawkę i komunikat użytkowy. Pozostaje
+żywy odbiór wszystkich nowych dróg.
 
 ### Sonos
 

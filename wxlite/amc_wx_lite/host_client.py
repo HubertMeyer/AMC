@@ -623,6 +623,17 @@ class LiteHostClient:
             timeout=30.0,
         )
 
+    def wiim_navigate_source(self, device_id: str, direction: int) -> Any:
+        """Move through saved streams or occupied playable device presets."""
+        return self.call(
+            "wiim.sourceNavigate",
+            {
+                "deviceId": device_id,
+                "direction": 1 if direction > 0 else -1,
+            },
+            timeout=30.0,
+        )
+
     def wiim_network_streams(self) -> Any:
         """List saved WiiM streams without returning their network URLs."""
         return self.call("wiim.networkStreams", timeout=15.0)

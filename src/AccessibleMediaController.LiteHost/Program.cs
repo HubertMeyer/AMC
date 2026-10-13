@@ -168,6 +168,7 @@ internal static class Program
                 LiteWiiMContract.OptionsOperation,
                 LiteWiiMContract.SetOptionOperation,
                 LiteWiiMContract.ToggleShuffleOperation,
+                LiteWiiMContract.NavigateSourceOperation,
                 LiteWiiMContract.NetworkStreamsOperation,
                 LiteWiiMContract.PlayNetworkStreamOperation,
                 LiteWiiMContract.NetworkStreamEditInfoOperation,

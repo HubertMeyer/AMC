@@ -14,6 +14,7 @@ internal static class WiiMContractTests
         TransportAcceptsOnlyKnownCommands();
         PresetListUsesOnlyIntentionalLabels();
         PresetActivationAcceptsOnlyTwelveSlots();
+        SourceNavigationAcceptsOnlyOneStepDirections();
         OptionsUseOnlyIntentionalLabelsAndStrictValues();
         NetworkStreamListDoesNotExposeUrls();
         NetworkStreamSnapshotUsesTheSavedName();
@@ -197,6 +198,35 @@ internal static class WiiMContractTests
                 LiteWiiMContract.ReadPresetRequest(rejected.RootElement);
                 throw new InvalidOperationException(
                     $"przyjęto numer presetu {rejectedNumber} poza zakresem");
+            }
+            catch (LiteRequestException)
+            {
+            }
+        }
+    }
+
+    private static void SourceNavigationAcceptsOnlyOneStepDirections()
+    {
+        foreach (var direction in new[] { -1, 1 })
+        {
+            using var accepted = JsonDocument.Parse(
+                $$"""{"deviceId":"device-1","direction":{{direction}}}""");
+            var request = LiteWiiMContract.ReadSourceNavigationRequest(
+                accepted.RootElement);
+            Check(
+                request.DeviceId == "device-1" && request.Direction == direction,
+                "nie przyjęto prawidłowego kierunku źródła WiiM");
+        }
+
+        foreach (var direction in new[] { -2, 0, 2 })
+        {
+            using var rejected = JsonDocument.Parse(
+                $$"""{"deviceId":"device-1","direction":{{direction}}}""");
+            try
+            {
+                LiteWiiMContract.ReadSourceNavigationRequest(rejected.RootElement);
+                throw new InvalidOperationException(
+                    $"przyjęto nieprawidłowy kierunek źródła {direction}");
             }
             catch (LiteRequestException)
             {

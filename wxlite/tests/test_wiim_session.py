@@ -107,6 +107,8 @@ def test_wiim_command_gate_blocks_local_audio_features() -> None:
         Action.WIIM_SELECT_REPEAT,
         Action.WIIM_TOGGLE_SHUFFLE,
         Action.WIIM_SET_SLEEP_TIMER,
+        Action.WIIM_PREVIOUS_SOURCE,
+        Action.WIIM_NEXT_SOURCE,
         Action.ASSIGN_PRESET,
         Action.PRESET_1,
         Action.PRESET_12,
@@ -142,6 +144,8 @@ def test_wiim_host_client_sends_only_device_id_command_and_volume() -> None:
     client.wiim_options("device-1", "equalizer")
     client.wiim_set_option("device-1", "repeat", "-1")
     client.wiim_toggle_shuffle("device-1")
+    client.wiim_navigate_source("device-1", -1)
+    client.wiim_navigate_source("device-1", 1)
     client.wiim_network_streams()
     client.wiim_play_network_stream("device-1", "stream-7")
     client.wiim_network_stream_edit_info("stream-7")
@@ -181,6 +185,16 @@ def test_wiim_host_client_sends_only_device_id_command_and_volume() -> None:
         (
             "wiim.shuffleToggle",
             {"deviceId": "device-1"},
+            30.0,
+        ),
+        (
+            "wiim.sourceNavigate",
+            {"deviceId": "device-1", "direction": -1},
+            30.0,
+        ),
+        (
+            "wiim.sourceNavigate",
+            {"deviceId": "device-1", "direction": 1},
             30.0,
         ),
         ("wiim.networkStreams", None, 15.0),
@@ -274,6 +288,19 @@ def test_wiim_option_actions_route_only_to_remote_option_handlers() -> None:
         Action.WIIM_SET_SLEEP_TIMER,
         "shuffle",
     ]
+
+
+def test_wiim_source_navigation_routes_to_one_remote_step() -> None:
+    calls: list[int] = []
+    frame = SimpleNamespace(
+        navigator=SimpleNamespace(active=SessionId.WIIM),
+        _navigate_wiim_source=calls.append,
+    )
+
+    LiteFrame._dispatch(frame, Action.WIIM_PREVIOUS_SOURCE)
+    LiteFrame._dispatch(frame, Action.WIIM_NEXT_SOURCE)
+
+    assert calls == [-1, 1]
 
 
 def test_wiim_preset_list_has_only_twelve_intentional_labels() -> None:
@@ -394,6 +421,27 @@ def test_wiim_player_letters_override_local_clip_shortcuts_only_in_player() -> N
         player_view=True,
         radio_session=False,
     ) is Action.CLIP_MARK_START
+
+
+def test_wiim_player_alt_page_keys_navigate_sources_only_in_player() -> None:
+    assert resolve(
+        Chord("Prior", alt=True),
+        player_view=True,
+        radio_session=False,
+        wiim_session=True,
+    ) is Action.WIIM_PREVIOUS_SOURCE
+    assert resolve(
+        Chord("Next", alt=True),
+        player_view=True,
+        radio_session=False,
+        wiim_session=True,
+    ) is Action.WIIM_NEXT_SOURCE
+    assert resolve(
+        Chord("Prior", alt=True),
+        player_view=False,
+        radio_session=False,
+        wiim_session=True,
+    ) is None
 
 
 def test_ctrl_alt_p_routes_to_native_wiim_presets() -> None:

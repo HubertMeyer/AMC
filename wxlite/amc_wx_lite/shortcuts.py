@@ -206,6 +206,8 @@ class Action(Enum):
     WIIM_SELECT_REPEAT = "wiim.repeat.select"
     WIIM_TOGGLE_SHUFFLE = "wiim.shuffle.toggle"
     WIIM_SET_SLEEP_TIMER = "wiim.sleepTimer.set"
+    WIIM_PREVIOUS_SOURCE = "wiim.source.previous"
+    WIIM_NEXT_SOURCE = "wiim.source.next"
     ADD_WIIM_NETWORK_STREAM = "wiim.networkStreams.add"
     EDIT_WIIM_NETWORK_STREAM = "wiim.networkStreams.edit"
     REMOVE_WIIM_NETWORK_STREAMS = "wiim.networkStreams.remove"
@@ -437,6 +439,8 @@ WIIM_SUPPORTED_ACTIONS = frozenset({
     Action.WIIM_SELECT_REPEAT,
     Action.WIIM_TOGGLE_SHUFFLE,
     Action.WIIM_SET_SLEEP_TIMER,
+    Action.WIIM_PREVIOUS_SOURCE,
+    Action.WIIM_NEXT_SOURCE,
     Action.ADD_WIIM_NETWORK_STREAM,
     Action.EDIT_WIIM_NETWORK_STREAM,
     Action.REMOVE_WIIM_NETWORK_STREAMS,
@@ -947,6 +951,11 @@ WIIM_SESSION_VIEW: dict[str, Action] = {
 # Klawisze odtwarzacza WiiM z pełnego AMC. Muszą mieć pierwszeństwo przed
 # lokalnym zaznaczaniem fragmentu (I/O) i zwykłymi poleceniami plików.
 WIIM_PLAYER_VIEW: dict[str, Action] = {
+    # MainWindow.xaml.cs:21617-21618 i 22326-22327. To nie sa zwykle
+    # poprzedni/nastepny utwor: pelne AMC przechodzi po zapisanych
+    # strumieniach AMC albo zajetych, grywalnych presetach urzadzenia.
+    "Alt+Prior": Action.WIIM_PREVIOUS_SOURCE,
+    "Alt+Next": Action.WIIM_NEXT_SOURCE,
     "I": Action.WIIM_SELECT_INPUT,
     "O": Action.WIIM_SELECT_OUTPUT,
     "E": Action.WIIM_SELECT_EQUALIZER,
@@ -1222,6 +1231,12 @@ def _help_entries() -> list[tuple[str, str, Action]]:
         Action.WIIM_SELECT_REPEAT: "Wybierz tryb powtarzania WiiM",
         Action.WIIM_TOGGLE_SHUFFLE: "Włącz lub wyłącz losowanie WiiM",
         Action.WIIM_SET_SLEEP_TIMER: "Ustaw timer uśpienia WiiM",
+        Action.WIIM_PREVIOUS_SOURCE: (
+            "Poprzedni strumień lub zajęty preset urządzenia WiiM"
+        ),
+        Action.WIIM_NEXT_SOURCE: (
+            "Następny strumień lub zajęty preset urządzenia WiiM"
+        ),
         Action.ADD_WIIM_NETWORK_STREAM: "Dodaj strumień sieciowy WiiM",
         Action.EDIT_WIIM_NETWORK_STREAM: "Edytuj wybrany strumień WiiM",
         Action.REMOVE_WIIM_NETWORK_STREAMS: "Usuń wybrane strumienie WiiM z AMC",

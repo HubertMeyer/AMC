@@ -431,14 +431,20 @@ def test_every_item_is_keyboard_reachable() -> None:
 
 def test_access_keys_within_one_menu_do_not_collide() -> None:
     """Dwie pozycje na tej samej literze psuja obsluge z klawiatury."""
-    for menu in menu_model.build_menus():
-        keys = []
-        for item in menu.items:
-            if item.is_separator:
-                continue
-            letter = item.label.split("&", 1)[1][:1].lower()
-            keys.append(letter)
-        assert len(keys) == len(set(keys)), f"kolizja klawiszy dostepu w {menu.title}: {keys}"
+    # Pasek jest przebudowywany przy zmianie sesji. Sprawdzamy więc każdy
+    # rzeczywiście widoczny wariant, a nie sztuczną sumę wzajemnie wykluczających
+    # się poleceń Plików, Radia, TIDAL-a, WiiM i Sonosa.
+    for session in menu_model.SessionId:
+        for menu in menu_model.menus_for_session(session):
+            keys = []
+            for item in menu.items:
+                if item.is_separator:
+                    continue
+                letter = item.label.split("&", 1)[1][:1].lower()
+                keys.append(letter)
+            assert len(keys) == len(set(keys)), (
+                f"kolizja klawiszy dostepu w {menu.title}, {session}: {keys}"
+            )
 
 
 def test_library_views_are_not_offered_in_the_radio_menu() -> None:

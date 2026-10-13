@@ -539,6 +539,12 @@ własnej normalizacji diakrytyków.
   hosta, a zastosowanie opcji wraca jako zwykła, bezpieczna migawka
   odtwarzacza. Te litery są kontekstowe tylko w odtwarzaczu WiiM, więc nie
   uruchamiają lokalnego zaznaczania fragmentu ani obcych funkcji sesji.
+  `Alt+Page Up`/`Alt+Page Down` przechodzą kołowo po zapisanych strumieniach
+  w bieżącym porządku albo po zajętych presetach urządzenia — zależnie od
+  naprawdę aktywnego źródła. Presety Connect, których WiiM nie uruchomi bez
+  aplikacji dostawcy, są pomijane. Pamięć bieżącego strumienia i presetu jest
+  oddzielna dla każdego urządzenia i nie ujawnia identyfikatorów ani URI w
+  interfejsie.
   Próba na dwóch urządzeniach zapisanych w bieżącym profilu potwierdziła listę
   i bezpieczny komunikat braku odpowiedzi; oba urządzenia były w czasie próby
   niedostępne, więc żywy transport wymaga jeszcze odbioru na włączonym WiiM.

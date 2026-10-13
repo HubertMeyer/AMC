@@ -19,6 +19,7 @@ public static class LiteWiiMContract
     public const string OptionsOperation = "wiim.options";
     public const string SetOptionOperation = "wiim.optionSet";
     public const string ToggleShuffleOperation = "wiim.shuffleToggle";
+    public const string NavigateSourceOperation = "wiim.sourceNavigate";
     public const string NetworkStreamsOperation = "wiim.networkStreams";
     public const string PlayNetworkStreamOperation = "wiim.networkStreamPlay";
     public const string NetworkStreamEditInfoOperation = "wiim.networkStreamEditInfo";
@@ -72,6 +73,21 @@ public static class LiteWiiMContract
                 "Numer presetu WiiM musi należeć do zakresu od 1 do 12.");
         }
         return new LiteWiiMPresetRequest(deviceId, presetNumber);
+    }
+
+    public static LiteWiiMSourceNavigationRequest ReadSourceNavigationRequest(
+        JsonElement args)
+    {
+        var deviceId = ReadDeviceId(args);
+        if (!args.TryGetProperty("direction", out var rawDirection)
+            || rawDirection.ValueKind != JsonValueKind.Number
+            || !rawDirection.TryGetInt32(out var direction)
+            || direction is not (-1 or 1))
+        {
+            throw new LiteRequestException(
+                "Kierunek przechodzenia po źródłach WiiM jest nieprawidłowy.");
+        }
+        return new LiteWiiMSourceNavigationRequest(deviceId, direction);
     }
 
     public static LiteWiiMOptionRequest ReadOptionRequest(
@@ -477,6 +493,10 @@ public sealed record LiteWiiMTransportRequest(
 public sealed record LiteWiiMPresetRequest(
     string DeviceId,
     int PresetNumber);
+
+public sealed record LiteWiiMSourceNavigationRequest(
+    string DeviceId,
+    int Direction);
 
 public sealed record LiteWiiMOptionRequest(
     string DeviceId,

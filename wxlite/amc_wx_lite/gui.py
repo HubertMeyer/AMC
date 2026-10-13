@@ -4829,7 +4829,13 @@ class LiteFrame(wx.Frame):
         Nasze tablice uzywaja nazw klawiszy wx (``Back``, ``Return``), ktore po
         polsku nic nie mowia. Tlumaczymy tylko PODPIS, nie dzialanie.
         """
-        names = {"Back": "Backspace", "Return": "Enter", "Space": "Spacja"}
+        names = {
+            "Back": "Backspace",
+            "Return": "Enter",
+            "Space": "Spacja",
+            "Prior": "Page Up",
+            "Next": "Page Down",
+        }
         head, _, key = chord.rpartition("+")
         return f"{head}+{names.get(key, key)}" if head else names.get(key, key)
 
@@ -6868,6 +6874,10 @@ class LiteFrame(wx.Frame):
             self._show_wiim_option(action)
         elif action is Action.WIIM_TOGGLE_SHUFFLE:
             self._toggle_wiim_shuffle()
+        elif action is Action.WIIM_PREVIOUS_SOURCE:
+            self._navigate_wiim_source(-1)
+        elif action is Action.WIIM_NEXT_SOURCE:
+            self._navigate_wiim_source(1)
         elif action is Action.ADD_WIIM_NETWORK_STREAM:
             self._add_wiim_network_stream()
         elif action is Action.EDIT_WIIM_NETWORK_STREAM:
@@ -8910,6 +8920,45 @@ class LiteFrame(wx.Frame):
             lambda error: self.announcer.say(
                 f"Nie udało się sterować urządzeniem WiiM: {error}"
             ),
+        )
+
+    def _navigate_wiim_source(self, direction: int) -> None:
+        """Alt+Page Up/Down: ten sam zakres źródeł co w pełnym AMC."""
+        client = self.client
+        device_id = self._wiim_active_device_id
+        if (
+            client is None
+            or not device_id
+            or self.navigator.active is not SessionId.WIIM
+            or self.navigator.view is not View.PLAYER
+        ):
+            self.announcer.say(
+                "Przechodzenie po źródłach WiiM jest dostępne "
+                "w odtwarzaczu urządzenia"
+            )
+            return
+
+        def done(payload: object) -> None:
+            try:
+                state = wiim_snapshot(payload)
+            except WiiMPayloadError as error:
+                self.announcer.say(str(error))
+                return
+            if (
+                self.navigator.active is not SessionId.WIIM
+                or self.navigator.view is not View.PLAYER
+                or state.get("deviceId") != self._wiim_active_device_id
+            ):
+                return
+            self._wiim_snapshot = state
+            self._apply_wiim_snapshot(state, announce=True)
+            self.play_button.SetFocus()
+
+        self.runner.submit(
+            "wiim-source-navigation",
+            lambda: client.wiim_navigate_source(device_id, direction),
+            done,
+            lambda error: self.announcer.say(str(error)),
         )
 
     # ---------------------------------------------------------------- Sonos

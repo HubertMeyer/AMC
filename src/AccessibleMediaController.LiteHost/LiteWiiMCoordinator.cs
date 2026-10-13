@@ -22,6 +22,8 @@ internal sealed class LiteWiiMCoordinator(string statePath) : IDisposable
     private readonly WiiMDeviceClient client = new();
     private readonly Dictionary<string, string> activeNetworkStreams =
         new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, int> activePresets =
+        new(StringComparer.OrdinalIgnoreCase);
 
     public object ListDevices() => LiteWiiMContract.CreateDevicesResult(ReadSettings());
 
@@ -99,6 +101,7 @@ internal sealed class LiteWiiMCoordinator(string statePath) : IDisposable
                 client.ActivatePresetAsync(device.Address, request.PresetNumber)
                     .GetAwaiter().GetResult();
                 activeNetworkStreams.Remove(device.Id);
+                activePresets[device.Id] = request.PresetNumber;
                 Thread.Sleep(TimeSpan.FromMilliseconds(180));
                 var refreshed = ReadSnapshot(device);
                 var title = string.IsNullOrWhiteSpace(preset.Name)
@@ -213,6 +216,7 @@ internal sealed class LiteWiiMCoordinator(string statePath) : IDisposable
                             client.SwitchInputAsync(device.Address, value)
                                 .GetAwaiter().GetResult();
                             activeNetworkStreams.Remove(device.Id);
+                            activePresets.Remove(device.Id);
                             break;
                         case "output":
                             client.SetAudioOutputHardwareModeAsync(
@@ -283,6 +287,129 @@ internal sealed class LiteWiiMCoordinator(string statePath) : IDisposable
         }
     }
 
+    public object NavigateSource(JsonElement args)
+    {
+        var request = LiteWiiMContract.ReadSourceNavigationRequest(args);
+        var profile = ReadProfile();
+        var settings = profile.Settings;
+        var device = ResolveDevice(settings, request.DeviceId);
+        lock (gate)
+        {
+            try
+            {
+                var before = ReadSnapshot(device);
+                var source = ResolveActiveSourceState(
+                    settings, device, before, trustRememberedNetworkPreset: true);
+                var streams = WiiMNetworkStreamOrdering.OrderForDisplay(
+                        settings.NetworkStreams ?? [],
+                        profile.SortMode,
+                        profile.StoredItemIds)
+                    .Streams
+                    .ToArray();
+                var currentStreamIndex = Array.FindIndex(streams, stream =>
+                    string.Equals(
+                        stream.Id,
+                        source.NetworkStreamId,
+                        StringComparison.OrdinalIgnoreCase));
+                if (currentStreamIndex >= 0)
+                {
+                    if (streams.Length < 2)
+                        throw new LiteRequestException(
+                            "Lista zawiera tylko jeden strumień WiiM.");
+                    var nextStreamIndex = (
+                        currentStreamIndex + request.Direction + streams.Length
+                    ) % streams.Length;
+                    var target = streams[nextStreamIndex];
+                    if (!WiiMPlaybackUriPolicy.TryNormalize(
+                            target.StreamUrl, out var mediaUrl))
+                    {
+                        throw new LiteRequestException(
+                            "Następny strumień WiiM ma nieprawidłowy adres.");
+                    }
+                    client.PlayNetworkStreamAsync(device.Address, mediaUrl)
+                        .GetAwaiter().GetResult();
+                    activeNetworkStreams[device.Id] = target.Id.Trim();
+                    activePresets.Remove(device.Id);
+                    Thread.Sleep(TimeSpan.FromMilliseconds(450));
+                    var refreshedStream = ReadSnapshot(device);
+                    return LiteWiiMContract.CreateSnapshotResult(
+                        device,
+                        refreshedStream,
+                        $"Otwarto {target.Name.Trim()} na {UserTitle(device)}",
+                        target.Name.Trim());
+                }
+
+                var currentNumber = WiiMPresetStateResolver.ResolveCurrentPreset(
+                    before,
+                    activePresets.GetValueOrDefault(
+                        device.Id, device.LastActivatedPresetNumber),
+                    trustRememberedNetworkPreset: true);
+                if (currentNumber is null)
+                    throw new LiteRequestException(
+                        "Nie wiadomo, który preset jest odtwarzany. "
+                        + "Ctrl+Alt+P otwiera listę presetów urządzenia.");
+
+                var occupied = before.Presets
+                    .Where(preset => preset.Number is >= 1 and <= 12)
+                    .OrderBy(preset => preset.Number)
+                    .ToArray();
+                var currentIndex = Array.FindIndex(
+                    occupied, preset => preset.Number == currentNumber);
+                if (currentIndex < 0)
+                {
+                    activePresets.Remove(device.Id);
+                    throw new LiteRequestException(
+                        "Bieżący preset nie jest już zajęty. "
+                        + "Ctrl+Alt+P otwiera aktualną listę.");
+                }
+                if (occupied.Length < 2)
+                    throw new LiteRequestException(
+                        "Urządzenie ma tylko jeden zajęty preset.");
+
+                var playable = occupied.Where(WiiMPresetPlayability.CanActivate).ToArray();
+                if (playable.Length == 0
+                    || playable.Length == 1
+                    && playable[0].Number == currentNumber)
+                {
+                    throw new LiteRequestException(
+                        "Pozostałe presety to źródła, których urządzenie samo nie uruchomi.");
+                }
+                var nextIndex = (
+                    currentIndex + request.Direction + occupied.Length
+                ) % occupied.Length;
+                while (!WiiMPresetPlayability.CanActivate(occupied[nextIndex]))
+                {
+                    nextIndex = (
+                        nextIndex + request.Direction + occupied.Length
+                    ) % occupied.Length;
+                }
+                var targetPreset = occupied[nextIndex];
+                client.ActivatePresetAsync(device.Address, targetPreset.Number)
+                    .GetAwaiter().GetResult();
+                activeNetworkStreams.Remove(device.Id);
+                activePresets[device.Id] = targetPreset.Number;
+                Thread.Sleep(TimeSpan.FromMilliseconds(180));
+                var refreshedPreset = ReadSnapshot(device);
+                var title = string.IsNullOrWhiteSpace(targetPreset.Name)
+                    ? "bez nazwy"
+                    : targetPreset.Name.Trim();
+                return LiteWiiMContract.CreateSnapshotResult(
+                    device,
+                    refreshedPreset,
+                    $"Preset {targetPreset.Number}, {title}");
+            }
+            catch (LiteRequestException)
+            {
+                throw;
+            }
+            catch (Exception exception) when (IsConnectionFailure(exception))
+            {
+                throw new LiteRequestException(
+                    $"Nie udało się zmienić źródła urządzenia {UserTitle(device)}.");
+            }
+        }
+    }
+
     public object PlayNetworkStream(JsonElement args)
     {
         var request = LiteWiiMContract.ReadNetworkStreamRequest(args);
@@ -305,6 +432,7 @@ internal sealed class LiteWiiMCoordinator(string statePath) : IDisposable
                 client.PlayNetworkStreamAsync(device.Address, mediaUrl)
                     .GetAwaiter().GetResult();
                 activeNetworkStreams[device.Id] = stream.Id.Trim();
+                activePresets.Remove(device.Id);
                 Thread.Sleep(TimeSpan.FromMilliseconds(450));
                 var snapshot = ReadSnapshot(device);
                 return LiteWiiMContract.CreateSnapshotResult(
@@ -345,10 +473,12 @@ internal sealed class LiteWiiMCoordinator(string statePath) : IDisposable
                         break;
                     case "previous":
                         activeNetworkStreams.Remove(device.Id);
+                        activePresets.Remove(device.Id);
                         client.PreviousAsync(device.Address).GetAwaiter().GetResult();
                         break;
                     case "next":
                         activeNetworkStreams.Remove(device.Id);
+                        activePresets.Remove(device.Id);
                         client.NextAsync(device.Address).GetAwaiter().GetResult();
                         break;
                     case "setVolume":
@@ -442,6 +572,22 @@ internal sealed class LiteWiiMCoordinator(string statePath) : IDisposable
         WiiMDeviceSnapshot snapshot,
         string? message = null)
     {
+        var source = ResolveActiveSourceState(settings, device, snapshot);
+        var title = (settings.NetworkStreams ?? []).FirstOrDefault(stream =>
+            string.Equals(
+                stream.Id,
+                source.NetworkStreamId,
+                StringComparison.OrdinalIgnoreCase))?.Name;
+        return LiteWiiMContract.CreateSnapshotResult(
+            device, snapshot, message, title);
+    }
+
+    private (string? NetworkStreamId, int? PresetNumber) ResolveActiveSourceState(
+        WiiMSettings settings,
+        WiiMDeviceSettings device,
+        WiiMDeviceSnapshot snapshot,
+        bool trustRememberedNetworkPreset = false)
+    {
         activeNetworkStreams.TryGetValue(device.Id, out var rememberedId);
         var matched = (settings.NetworkStreams ?? []).FirstOrDefault(stream =>
             WiiMPlaybackUriPolicy.TryNormalize(stream.StreamUrl, out var candidate)
@@ -449,7 +595,10 @@ internal sealed class LiteWiiMCoordinator(string statePath) : IDisposable
                 snapshot.Playback.ContentUri, out var current)
             && string.Equals(candidate, current, StringComparison.OrdinalIgnoreCase));
         var preset = WiiMPresetStateResolver.ResolveCurrentPreset(
-            snapshot, device.LastActivatedPresetNumber);
+            snapshot,
+            activePresets.GetValueOrDefault(
+                device.Id, device.LastActivatedPresetNumber),
+            trustRememberedNetworkPreset);
         var resolvedId = WiiMActiveSourceState.ResolveNetworkStreamId(
             rememberedId,
             matched?.Id,
@@ -457,10 +606,9 @@ internal sealed class LiteWiiMCoordinator(string statePath) : IDisposable
             (settings.NetworkStreams ?? []).Select(stream => stream.Id));
         if (resolvedId is null) activeNetworkStreams.Remove(device.Id);
         else activeNetworkStreams[device.Id] = resolvedId;
-        var title = (settings.NetworkStreams ?? []).FirstOrDefault(stream =>
-            string.Equals(stream.Id, resolvedId, StringComparison.OrdinalIgnoreCase))?.Name;
-        return LiteWiiMContract.CreateSnapshotResult(
-            device, snapshot, message, title);
+        if (preset is null) activePresets.Remove(device.Id);
+        else activePresets[device.Id] = preset.Value;
+        return (resolvedId, preset);
     }
 
     private static WiiMDeviceSettings ResolveDevice(
