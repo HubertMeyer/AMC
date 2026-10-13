@@ -70,11 +70,11 @@ def sha256(path: Path) -> str:
 
 
 def git_source_identity() -> tuple[str, bool]:
-    """Rewizja i stan śledzonych plików; artefakty testowe są pomijane."""
+    """Pelna rewizja i stan wszystkich zrodel; artefakty testowe sa pomijane."""
 
     try:
         revision_result = subprocess.run(
-            ["git", "rev-parse", "--short=8", "HEAD"],
+            ["git", "rev-parse", "HEAD"],
             cwd=REPO,
             check=True,
             capture_output=True,
@@ -82,7 +82,16 @@ def git_source_identity() -> tuple[str, bool]:
             timeout=10,
         )
         status_result = subprocess.run(
-            ["git", "status", "--porcelain", "--untracked-files=no"],
+            [
+                "git",
+                "status",
+                "--porcelain",
+                "--untracked-files=all",
+                "--",
+                ".",
+                ":(exclude).test-output/**",
+                ":(exclude).test-tmp/**",
+            ],
             cwd=REPO,
             check=True,
             capture_output=True,

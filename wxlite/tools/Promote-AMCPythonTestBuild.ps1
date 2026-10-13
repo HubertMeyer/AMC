@@ -57,6 +57,118 @@ function Read-BundleManifest {
     return Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
 }
 
+function Get-SourceChanges {
+    $changes = & git -C $RepositoryRoot status --porcelain --untracked-files=all -- `
+        . ":(exclude).test-output/**" ":(exclude).test-tmp/**"
+    if ($LASTEXITCODE -ne 0) {
+        throw "Nie udało się sprawdzić stanu repozytorium."
+    }
+    return @($changes)
+}
+
+function Assert-CleanSource {
+    $changes = @(Get-SourceChanges)
+    if ($changes.Count -gt 0) {
+        throw (
+            "Odbiorcza paczka nie może powstać z niezatwierdzonych zmian, " +
+            "także z nowych plików źródłowych. Najpierw zatwierdź spójny " +
+            "przyrost w lokalnym Git.`n" + ($changes -join "`n")
+        )
+    }
+}
+
+function Assert-ReleaseIdentity {
+    param([Parameter(Mandatory)] $Manifest)
+
+    $revision = [string]$Manifest.sourceRevision
+    $bundleId = [string]$Manifest.bundleId
+    $buildLabel = [string]$Manifest.buildLabel
+    $dirtyProperty = $Manifest.PSObject.Properties["sourceDirty"]
+    if ($null -eq $dirtyProperty -or $dirtyProperty.Value -ne $false) {
+        throw "Paczka odbiorcza nie pochodzi z czystego stanu Git."
+    }
+    if ($revision -notmatch '^[0-9a-fA-F]{40}$') {
+        throw "Paczka odbiorcza nie podaje pełnego identyfikatora commita Git."
+    }
+    if ($bundleId -notmatch '^[0-9a-fA-F]{8}$') {
+        throw "Paczka odbiorcza nie podaje identyfikatora swojej zawartości."
+    }
+    $expected = [Regex]::Escape($revision.ToLowerInvariant() + "-" + $bundleId.ToLowerInvariant())
+    if ($buildLabel -notmatch "^\d{4}\.\d{2}\.\d{2}-$expected$") {
+        throw "Etykieta kompilacji nie wiąże pełnego commita z zawartością paczki."
+    }
+}
+
+function Test-BundleIntegrity {
+    param(
+        [Parameter(Mandatory)] [string]$Root,
+        [Parameter(Mandatory)] $Manifest
+    )
+
+    $resolvedRoot = [IO.Path]::GetFullPath($Root).TrimEnd(
+        [IO.Path]::DirectorySeparatorChar,
+        [IO.Path]::AltDirectorySeparatorChar
+    ) + [IO.Path]::DirectorySeparatorChar
+    $files = @($Manifest.files)
+    $hashProperties = @($Manifest.fileHashes.PSObject.Properties)
+    if ($files.Count -eq 0 -or $hashProperties.Count -ne $files.Count) {
+        throw "Manifest nie zawiera jednej sumy dla każdego pliku paczki."
+    }
+
+    $expectedHashes = [Collections.Generic.Dictionary[string,string]]::new(
+        [StringComparer]::Ordinal
+    )
+    foreach ($property in $hashProperties) {
+        $expectedHashes.Add([string]$property.Name, [string]$property.Value)
+    }
+
+    foreach ($relativeValue in $files) {
+        $relative = [string]$relativeValue
+        if ([string]::IsNullOrWhiteSpace($relative) -or [IO.Path]::IsPathRooted($relative)) {
+            throw "Manifest zawiera nieprawidłową ścieżkę pliku."
+        }
+        $normalized = $relative.Replace('/', [IO.Path]::DirectorySeparatorChar)
+        $path = [IO.Path]::GetFullPath((Join-Path $resolvedRoot $normalized))
+        if (-not $path.StartsWith($resolvedRoot, [StringComparison]::OrdinalIgnoreCase)) {
+            throw "Manifest próbuje wyjść poza folder paczki."
+        }
+        if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
+            throw "Brak pliku paczki: $relative"
+        }
+        $expected = ""
+        if (-not $expectedHashes.TryGetValue($relative, [ref]$expected) -or
+            $expected -notmatch '^[0-9a-fA-F]{64}$') {
+            throw "Brak prawidłowej sumy SHA-256 dla pliku: $relative"
+        }
+        $actual = (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash
+        if (-not $actual.Equals($expected, [StringComparison]::OrdinalIgnoreCase)) {
+            throw "Niezgodna suma SHA-256 pliku paczki: $relative"
+        }
+    }
+
+    [string[]]$names = @($expectedHashes.Keys)
+    [Array]::Sort($names, [StringComparer]::Ordinal)
+    $identityInput = [Text.StringBuilder]::new()
+    foreach ($name in $names) {
+        [void]$identityInput.Append($name.Replace('\', '/'))
+        [void]$identityInput.Append([char]0)
+        [void]$identityInput.Append($expectedHashes[$name].ToLowerInvariant())
+        [void]$identityInput.Append("`n")
+    }
+    $sha256 = [Security.Cryptography.SHA256]::Create()
+    try {
+        $identityBytes = [Text.Encoding]::UTF8.GetBytes($identityInput.ToString())
+        $identityHash = $sha256.ComputeHash($identityBytes)
+    }
+    finally {
+        $sha256.Dispose()
+    }
+    $actualBundleId = [BitConverter]::ToString($identityHash).Replace("-", "").ToLowerInvariant().Substring(0, 8)
+    if ($actualBundleId -ne ([string]$Manifest.bundleId).ToLowerInvariant()) {
+        throw "Identyfikator zawartości paczki nie pasuje do jej manifestu."
+    }
+}
+
 if (-not (Test-Path -LiteralPath $RuntimePython -PathType Leaf)) {
     throw "Brak prywatnego runtime'u bieżącej instalacji: $RuntimePython"
 }
@@ -64,16 +176,7 @@ if (-not (Test-Path -LiteralPath $InstalledLauncher -PathType Leaf)) {
     throw "Brak stałego pliku uruchamiającego: $InstalledLauncher"
 }
 
-$trackedChanges = & git -C $RepositoryRoot status --porcelain --untracked-files=no
-if ($LASTEXITCODE -ne 0) {
-    throw "Nie udało się sprawdzić stanu repozytorium."
-}
-if ($trackedChanges) {
-    throw (
-        "Odbiorcza paczka nie może powstać z niezatwierdzonych zmian. " +
-        "Najpierw zatwierdź spójny przyrost w lokalnym Git."
-    )
-}
+Assert-CleanSource
 
 $dotnet = Get-Command dotnet -ErrorAction SilentlyContinue
 if ($null -eq $dotnet) {
@@ -102,6 +205,10 @@ if (-not $SkipTests) {
     ) -WorkingDirectory $WxliteRoot -Stage "Testy interfejsu"
 }
 
+# Testy i równoległe zadania nie mogą zmienić źródeł pomiędzy pierwszą
+# kontrolą a właściwym budowaniem paczki odbiorczej.
+Assert-CleanSource
+
 $projects = @(
     "src\AccessibleMediaController.PythonLauncher\AccessibleMediaController.PythonLauncher.csproj",
     "src\AccessibleMediaController.PythonUpdater\AccessibleMediaController.PythonUpdater.csproj",
@@ -126,6 +233,7 @@ Invoke-Checked -FilePath $RuntimePython -ArgumentList @(
 ) -WorkingDirectory $WxliteRoot -Stage "Składanie paczki"
 
 $candidateManifest = Read-BundleManifest -Root $stagingRoot
+Assert-ReleaseIdentity -Manifest $candidateManifest
 $expectedBuild = [string]$candidateManifest.buildLabel
 if ([string]::IsNullOrWhiteSpace($expectedBuild) -or $expectedBuild.EndsWith("-robocza")) {
     throw "Paczka odbiorcza nie ma czystej, jednoznacznej etykiety kompilacji."
@@ -135,6 +243,8 @@ if (Test-Path -LiteralPath $candidateRoot) {
     throw "Paczka o tej tożsamości już istnieje: $candidateRoot"
 }
 Move-Item -LiteralPath $stagingRoot -Destination $candidateRoot
+
+Test-BundleIntegrity -Root $candidateRoot -Manifest $candidateManifest
 
 $candidateLauncher = Join-Path $candidateRoot "AMC.exe"
 Invoke-Checked -FilePath $candidateLauncher -ArgumentList @(
@@ -149,6 +259,7 @@ Invoke-Checked -FilePath $updater -ArgumentList @(
 ) -WorkingDirectory $candidateRoot -Stage "Instalowanie paczki"
 
 $installedManifest = Read-BundleManifest -Root $InstallRoot
+Assert-ReleaseIdentity -Manifest $installedManifest
 $installedBuild = [string]$installedManifest.buildLabel
 if ($installedBuild -ne $expectedBuild) {
     throw "Instalacja ma kompilację $installedBuild, oczekiwano $expectedBuild. Program nie zostanie uruchomiony."
@@ -156,18 +267,35 @@ if ($installedBuild -ne $expectedBuild) {
 Invoke-Checked -FilePath $InstalledLauncher -ArgumentList @(
     "--sprawdz-pakiet-cicho"
 ) -WorkingDirectory $InstallRoot -Stage "Sprawdzenie zainstalowanej paczki"
+Test-BundleIntegrity -Root $InstallRoot -Manifest $installedManifest
 
 $runningTitle = ""
+$runningProcessId = $null
+$runningExecutable = ""
 if (-not $NoLaunch) {
     Start-Process -FilePath $InstalledLauncher -WorkingDirectory $InstallRoot
+    $expectedRuntime = [IO.Path]::GetFullPath((Join-Path $InstallRoot "runtime\python.exe"))
     $deadline = [DateTime]::UtcNow.AddSeconds(20)
     do {
         Start-Sleep -Milliseconds 400
         $process = Get-Process | Where-Object {
-            $_.MainWindowTitle -like "AMC Python*kompilacja $expectedBuild"
+            if ($_.MainWindowTitle -notlike "AMC Python*kompilacja $expectedBuild") {
+                return $false
+            }
+            try {
+                return [IO.Path]::GetFullPath($_.Path).Equals(
+                    $expectedRuntime,
+                    [StringComparison]::OrdinalIgnoreCase
+                )
+            }
+            catch {
+                return $false
+            }
         } | Select-Object -First 1
         if ($null -ne $process) {
             $runningTitle = $process.MainWindowTitle
+            $runningProcessId = $process.Id
+            $runningExecutable = [IO.Path]::GetFullPath($process.Path)
             break
         }
     } while ([DateTime]::UtcNow -lt $deadline)
@@ -186,6 +314,8 @@ $receipt = [ordered]@{
     installedBuildLabel = $installedBuild
     launched = -not $NoLaunch
     runningWindowTitle = $runningTitle
+    runningProcessId = $runningProcessId
+    runningExecutable = $runningExecutable
     tests = if ($SkipTests) { "pominięte" } else { "zaliczone" }
 }
 $receipt | ConvertTo-Json -Depth 3 | Set-Content -LiteralPath (

@@ -1,6 +1,7 @@
 """Package layout checks on explicit synthetic files; not an executable test."""
 import importlib.util
 from pathlib import Path
+import subprocess
 import tempfile
 from datetime import datetime, timezone
 
@@ -27,7 +28,8 @@ def test_build_label_is_user_facing_date_and_source_revision():
     original = bundle.subprocess.run
     try:
         bundle.subprocess.run = lambda args, **kwargs: Result(
-            "7C246DBA\n" if "rev-parse" in args else ""
+            "7C246DBA1234567890ABCDEF1234567890ABCDEF\n"
+            if "rev-parse" in args else ""
         )
         label = bundle.build_label(
             datetime(2026, 10, 13, tzinfo=timezone.utc),
@@ -35,7 +37,76 @@ def test_build_label_is_user_facing_date_and_source_revision():
         )
     finally:
         bundle.subprocess.run = original
-    assert label == "2026.10.13-7c246dba-a1b2c3d4"
+    assert label == (
+        "2026.10.13-7c246dba1234567890abcdef1234567890abcdef-a1b2c3d4"
+    )
+
+
+def test_source_identity_marks_untracked_source_as_working_copy():
+    with tempfile.TemporaryDirectory() as folder:
+        root = Path(folder)
+        subprocess.run(["git", "init", "-q"], cwd=root, check=True)
+        subprocess.run(
+            ["git", "config", "user.email", "test@example.invalid"],
+            cwd=root,
+            check=True,
+        )
+        subprocess.run(
+            ["git", "config", "user.name", "AMC test"],
+            cwd=root,
+            check=True,
+        )
+        tracked = root / "tracked.txt"
+        tracked.write_text("zatwierdzone", encoding="utf-8")
+        subprocess.run(["git", "add", "tracked.txt"], cwd=root, check=True)
+        subprocess.run(["git", "commit", "-qm", "fixture"], cwd=root, check=True)
+        (root / "new-source.py").write_text("print('nowe')", encoding="utf-8")
+
+        original_repo = bundle.REPO
+        try:
+            bundle.REPO = root
+            revision, dirty = bundle.git_source_identity()
+        finally:
+            bundle.REPO = original_repo
+
+        assert len(revision) == 40
+        assert dirty is True
+
+
+def test_source_identity_ignores_only_release_scratch_directories():
+    with tempfile.TemporaryDirectory() as folder:
+        root = Path(folder)
+        subprocess.run(["git", "init", "-q"], cwd=root, check=True)
+        subprocess.run(
+            ["git", "config", "user.email", "test@example.invalid"],
+            cwd=root,
+            check=True,
+        )
+        subprocess.run(
+            ["git", "config", "user.name", "AMC test"],
+            cwd=root,
+            check=True,
+        )
+        tracked = root / "tracked.txt"
+        tracked.write_text("zatwierdzone", encoding="utf-8")
+        subprocess.run(["git", "add", "tracked.txt"], cwd=root, check=True)
+        subprocess.run(["git", "commit", "-qm", "fixture"], cwd=root, check=True)
+        output = root / ".test-output" / "candidate" / "artifact.bin"
+        temporary = root / ".test-tmp" / "probe" / "trace.txt"
+        output.parent.mkdir(parents=True)
+        temporary.parent.mkdir(parents=True)
+        output.write_bytes(b"artifact")
+        temporary.write_text("trace", encoding="utf-8")
+
+        original_repo = bundle.REPO
+        try:
+            bundle.REPO = root
+            revision, dirty = bundle.git_source_identity()
+        finally:
+            bundle.REPO = original_repo
+
+        assert len(revision) == 40
+        assert dirty is False
 
 
 def test_build_label_marks_tracked_changes_as_working_copy():
@@ -57,6 +128,17 @@ def test_refresh_mode_updates_the_visible_build_identity():
     source = path.read_text(encoding="utf-8")
     assert 'manifest["bundleId"] = bundle_identity(manifest["fileHashes"])' in source
     assert 'manifest["buildLabel"] = build_label(' in source
+
+
+def test_promotion_verifies_full_candidate_and_installed_package():
+    promotion = (
+        path.parent / "Promote-AMCPythonTestBuild.ps1"
+    ).read_text(encoding="utf-8")
+    assert "--untracked-files=all" in promotion
+    assert "Test-BundleIntegrity -Root $candidateRoot" in promotion
+    assert "Test-BundleIntegrity -Root $InstallRoot" in promotion
+    assert "$expectedRuntime" in promotion
+    assert "runningExecutable" in promotion
 
 
 def test_production_launcher_is_copied_as_canonical_entry_point():
