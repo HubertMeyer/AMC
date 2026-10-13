@@ -24,15 +24,26 @@ function Invoke-Checked {
         [Parameter(Mandatory)] [string]$Stage
     )
 
-    Push-Location -LiteralPath $WorkingDirectory
+    $startInfo = [Diagnostics.ProcessStartInfo]::new()
+    $startInfo.FileName = $FilePath
+    $startInfo.WorkingDirectory = $WorkingDirectory
+    $startInfo.UseShellExecute = $false
+    foreach ($argument in $ArgumentList) {
+        [void]$startInfo.ArgumentList.Add($argument)
+    }
+    $process = [Diagnostics.Process]::Start($startInfo)
+    if ($null -eq $process) {
+        throw "$Stage nie uruchomił procesu."
+    }
     try {
-        & $FilePath @ArgumentList
-        if ($LASTEXITCODE -ne 0) {
-            throw "$Stage zakończył się kodem $LASTEXITCODE."
+        $process.WaitForExit()
+        $exitCode = $process.ExitCode
+        if ($exitCode -ne 0) {
+            throw "$Stage zakończył się kodem $exitCode."
         }
     }
     finally {
-        Pop-Location
+        $process.Dispose()
     }
 }
 
