@@ -110,6 +110,10 @@ internal static class SonosContractTests
         var item = document.RootElement.GetProperty("items")[0];
         var title = item.GetProperty("title").GetString() ?? string.Empty;
         var detail = item.GetProperty("detail").GetString() ?? string.Empty;
+        var playerIds = item.GetProperty("playerIds")
+            .EnumerateArray()
+            .Select(value => value.GetString())
+            .ToArray();
         Check(title == "Salon", "lista nie zachowała nazwy grupy");
         Check(detail == "głośników: 2, odtwarza", "lista ma zły opis użytkowy");
         Check(!title.Contains("RINCON", StringComparison.Ordinal)
@@ -117,6 +121,9 @@ internal static class SonosContractTests
             "identyfikator grupy wyciekł do etykiety dostępnej");
         Check(!detail.Contains("player-technical", StringComparison.Ordinal),
             "identyfikator głośnika wyciekł do etykiety dostępnej");
+        Check(playerIds.SequenceEqual([
+                "player-technical-1", "player-technical-2"]),
+            "model celu nie zachował logicznego składu dla stałego presetu");
     }
 
     private static void SnapshotUsesOnlyExplicitUserFacingFields()

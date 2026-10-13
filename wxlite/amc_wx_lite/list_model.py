@@ -85,6 +85,10 @@ class Row:
     # nawigacyjnego, np. folderu „Albumy” wykonawcy TIDAL.
     service_id: str | None = None
     service_kind: str | None = None
+    # Logiczne identyfikatory członków zdalnej grupy (obecnie Sonos). Służą
+    # wyłącznie do bezpiecznego rozpoznania stałego celu presetu. Nigdy nie są
+    # tekstem kolumny, nazwą dostępną ani opisem dla czytnika ekranu.
+    service_members: tuple[str, ...] = ()
     artist_name: str = ""
     service_section: str | None = None
     # Relacja katalogowa potrzebna do wskazania utworu w ORYGINALNYM TIDALu.

@@ -35,6 +35,12 @@ def target_rows(payload: object) -> tuple[Row, ...]:
         ):
             continue
         seen.add(item_id)
+        raw_members = raw.get("playerIds")
+        members = tuple(sorted({
+            value.strip()
+            for value in raw_members
+            if isinstance(value, str) and value.strip()
+        })) if isinstance(raw_members, list) else ()
         rows.append(Row(
             item_id=item_id,
             title=title,
@@ -43,6 +49,7 @@ def target_rows(payload: object) -> tuple[Row, ...]:
             parent_id=household_id,
             service_id=group_id,
             service_kind="sonosGroup",
+            service_members=members,
         ))
     return tuple(rows)
 

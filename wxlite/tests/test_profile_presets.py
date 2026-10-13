@@ -247,6 +247,98 @@ def test_visible_rows_become_only_targets_that_wx_can_activate() -> None:
     assert target_from_row(SessionId.FILES, Row("parent:", "..", "parent")) is None
 
 
+def test_sonos_material_is_a_preset_target_but_group_is_not() -> None:
+    favorite = target_from_row(
+        SessionId.SONOS,
+        Row(
+            "sonos-favorite:visible",
+            "Radio Poznań",
+            "sonosFavorite",
+            parent_id="house-private",
+            service_id="favorite-private",
+            service_kind="favorite",
+        ),
+    )
+    group = target_from_row(
+        SessionId.SONOS,
+        Row(
+            "sonos:group-private",
+            "Salon",
+            "sonosGroup",
+            parent_id="house-private",
+            service_id="group-private",
+            service_kind="sonosGroup",
+        ),
+    )
+
+    assert favorite == PresetTarget(
+        "favorite-private",
+        "sonos-favorite",
+        "Radio Poznań",
+        None,
+        sonos_household_id="house-private",
+    )
+    assert group is None
+
+
+def test_sonos_preset_keeps_safety_fields_out_of_its_spoken_label() -> None:
+    raw = _profile()
+    raw["sessionPresets"]["entriesBySession"]["sonos"] = [{
+        "slot": 4,
+        "targetId": "favorite-private",
+        "targetKind": "sonos-favorite",
+        "targetTitle": "Radio domowe",
+        "sonosHouseholdId": "house-private",
+        "sonosFixedPlayerIds": ["player-b", "player-a", "player-a"],
+    }]
+
+    entry = resolve_preset(_write(raw), SessionId.SONOS, 4).entry
+
+    assert entry is not None
+    assert entry.sonos_household_id == "house-private"
+    assert entry.sonos_fixed_player_ids == ("player-a", "player-b")
+    assert entries_payload((entry,))[0]["sonosFixedPlayerIds"] == [
+        "player-a", "player-b"
+    ]
+    label = choices((entry,))[3].label
+    assert label.endswith("— Radio domowe")
+    assert "house-private" not in label
+    assert "player-a" not in label
+
+
+def test_same_opaque_sonos_id_in_another_house_is_a_different_target() -> None:
+    entries = (
+        PresetTarget(
+            "shared-id",
+            "sonos-favorite",
+            "Dom pierwszy",
+            None,
+            sonos_household_id="house-1",
+        ).as_entry(1),
+        PresetTarget(
+            "shared-id",
+            "sonos-favorite",
+            "Dom drugi",
+            None,
+            sonos_household_id="house-2",
+        ).as_entry(2),
+    )
+    replacement = PresetTarget(
+        "shared-id",
+        "sonos-favorite",
+        "Dom pierwszy nowy",
+        None,
+        sonos_household_id="house-1",
+    )
+
+    updated = replace_entry(entries, replacement, 3)
+
+    assert [(entry.slot, entry.title) for entry in updated] == [
+        (2, "Dom drugi"),
+        (3, "Dom pierwszy nowy"),
+    ]
+
+
 def test_preset_management_shortcuts_work_in_list_and_player() -> None:
     for table in (LIST_VIEW, PLAYER_VIEW):
         assert table["Ctrl+Alt+P"] is Action.VIEW_PRESETS

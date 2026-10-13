@@ -545,7 +545,20 @@ własnej normalizacji diakrytyków.
   zaznaczone przez `Ctrl+Spacja`. `Ctrl+E` eksportuje widoczną kolejność do
   przenośnego M3U przez ten sam zapis Core co Radio i WiiM. Adres wraca do
   Pythona tylko na czas jawnego dialogu F2; podczas eksportu pozostaje w C#.
-  Presety pozostają dalszym etapem. Enter na ulubionym lub
+  Presety materiałów działają w istniejącym układzie 12 miejsc AMC:
+  `Ctrl+Alt+P` pokazuje listę, `Ctrl+Alt+Shift+P` przypisuje zaznaczony
+  ulubiony, playlistę albo własną stację, a `Ctrl+Shift+1…0/-/=` uruchamia
+  miejsce. Grupa Sonos jest celem odtwarzania, więc nie może zostać zapisana
+  jako materiał. Ulubione i playlisty zachowują dom Sonos; ten sam niejawny
+  identyfikator w dwóch domach jest traktowany jako dwa różne materiały.
+  Istniejący preset ze stałym zestawem głośników odświeża topologię i działa
+  tylko przy jednym dokładnym dopasowaniu logicznych identyfikatorów
+  odtwarzaczy; nie przegrupowuje sprzętu i uczciwie odmawia przy braku albo
+  niejednoznaczności. Identyfikatory domu, grupy i odtwarzaczy są polami
+  modelu, nigdy etykietą kontrolki. Nowe przypisanie korzysta obecnie z
+  bieżącej grupy (bez opcji tworzenia nowego stałego zestawu) i, jak pozostałe
+  presety wxPython, zapisuje prywatne nadpisanie portu zamiast ścigać się ze
+  starszym AMC o `state.json`. Enter na ulubionym lub
   playliście wysyła jedno polecenie `INSERT` z odtwarzaniem do
   wcześniej wybranej grupy, bez ponawiania zapisu i bez przepuszczania tokenu,
   adresu ani identyfikatora do etykiety NVDA. Backspace wraca z podlisty na
@@ -556,7 +569,8 @@ własnej normalizacji diakrytyków.
   grupie pozostaje do wykonania przez użytkownika; testy automatyczne nie są
   dowodem, że fizyczny głośnik rozpoczął odtwarzanie.
 - Do dalszego portu pozostają wejścia, wyjścia, korektor,
-  powtarzanie i timer, presety Sonosa, Spotify, dalsze ustawienia oraz
+  powtarzanie i timer, opcja tworzenia stałego celu presetu Sonosa, Spotify,
+  dalsze ustawienia oraz
   pozostała redakcja materiałów.
 
 ## Polityka zaniku wybranego urządzenia audio

@@ -52,6 +52,8 @@ class PresetEntry:
     target_kind: str
     title: str
     location: str | None
+    sonos_household_id: str | None = None
+    sonos_fixed_player_ids: tuple[str, ...] = ()
 
     def to_payload(self) -> dict:
         """Zwykle dane JSON, bez tekstu kontrolki i bez reprezentacji obiektu."""
@@ -63,6 +65,10 @@ class PresetEntry:
         }
         if self.location:
             payload["targetLocation"] = self.location
+        if self.sonos_household_id:
+            payload["sonosHouseholdId"] = self.sonos_household_id
+        if self.sonos_fixed_player_ids:
+            payload["sonosFixedPlayerIds"] = list(self.sonos_fixed_player_ids)
         return payload
 
 
@@ -74,6 +80,8 @@ class PresetTarget:
     target_kind: str
     title: str
     location: str | None
+    sonos_household_id: str | None = None
+    sonos_fixed_player_ids: tuple[str, ...] = ()
 
     def as_entry(self, slot: int) -> PresetEntry:
         return PresetEntry(
@@ -82,6 +90,8 @@ class PresetTarget:
             target_kind=self.target_kind,
             title=self.title,
             location=self.location,
+            sonos_household_id=self.sonos_household_id,
+            sonos_fixed_player_ids=self.sonos_fixed_player_ids,
         )
 
 
@@ -95,6 +105,8 @@ class PresetChoice:
     target_id: str | None
     target_title: str | None
     location: str | None
+    target_kind: str | None
+    sonos_household_id: str | None
 
     @property
     def label(self) -> str:
@@ -147,17 +159,30 @@ def _entry_list(source: object) -> tuple[PresetEntry, ...]:
         target_kind = item.get("targetKind")
         title = item.get("targetTitle")
         location = item.get("targetLocation")
+        household = item.get("sonosHouseholdId")
+        raw_players = item.get("sonosFixedPlayerIds")
         if not isinstance(target_id, str) or not target_id.strip():
             continue
         if not isinstance(target_kind, str) or not target_kind.strip():
             continue
         used.add(slot)
+        fixed_players = tuple(sorted({
+            player.strip()
+            for player in raw_players
+            if isinstance(player, str) and player.strip()
+        })) if isinstance(raw_players, list) else ()
         result.append(PresetEntry(
             slot=slot,
             target_id=target_id.strip(),
             target_kind=target_kind.strip(),
             title=title.strip() if isinstance(title, str) else "",
             location=location.strip() if isinstance(location, str) and location.strip() else None,
+            sonos_household_id=(
+                household.strip()
+                if isinstance(household, str) and household.strip()
+                else None
+            ),
+            sonos_fixed_player_ids=fixed_players,
         ))
     return tuple(sorted(result, key=lambda entry: entry.slot))
 
@@ -209,7 +234,7 @@ def replace_entry(
         raise ValueError("Numer presetu musi należeć do zakresu od 1 do 12")
     kept = [
         entry for entry in entries
-        if entry.slot != slot and entry.target_id != target.target_id
+        if entry.slot != slot and _entry_identity(entry) != _target_identity(target)
     ]
     kept.append(target.as_entry(slot))
     return tuple(sorted(kept, key=lambda entry: entry.slot))
@@ -233,6 +258,8 @@ def choices(entries: tuple[PresetEntry, ...]) -> tuple[PresetChoice, ...]:
             target_id=entry.target_id if entry else None,
             target_title=(entry.title or "Element bez nazwy") if entry else None,
             location=entry.location if entry else None,
+            target_kind=entry.target_kind if entry else None,
+            sonos_household_id=entry.sonos_household_id if entry else None,
         ))
     return tuple(result)
 
@@ -242,8 +269,59 @@ def first_free_slot(entries: tuple[PresetEntry, ...]) -> int | None:
     return next((slot for slot in range(1, PRESET_COUNT + 1) if slot not in used), None)
 
 
-def existing_target_slot(entries: tuple[PresetEntry, ...], target_id: str) -> int | None:
-    return next((entry.slot for entry in entries if entry.target_id == target_id), None)
+def existing_target_slot(
+    entries: tuple[PresetEntry, ...], target: PresetTarget
+) -> int | None:
+    identity = _target_identity(target)
+    return next(
+        (entry.slot for entry in entries if _entry_identity(entry) == identity),
+        None,
+    )
+
+
+def _sonos_material_identity(
+    target_kind: str, target_id: str, household_id: str | None
+) -> tuple[str, str, str]:
+    kind = target_kind.casefold()
+    household = (
+        household_id or ""
+        if kind in {"sonos-favorite", "sonos-playlist"}
+        else ""
+    )
+    return kind, household, target_id
+
+
+def _entry_identity(entry: PresetEntry) -> tuple[str, str, str]:
+    kind = entry.target_kind.casefold()
+    if kind.startswith("sonos-"):
+        return _sonos_material_identity(
+            kind, entry.target_id, entry.sonos_household_id
+        )
+    return "", "", entry.target_id
+
+
+def _target_identity(target: PresetTarget) -> tuple[str, str, str]:
+    kind = target.target_kind.casefold()
+    if kind.startswith("sonos-"):
+        return _sonos_material_identity(
+            kind, target.target_id, target.sonos_household_id
+        )
+    return "", "", target.target_id
+
+
+def choice_matches_target(choice: PresetChoice, target: PresetTarget) -> bool:
+    """Porównaj model, nie sam napis Id; etykieta kontrolki pozostaje czysta."""
+    if choice.target_id is None or choice.target_kind is None:
+        return False
+    synthetic = PresetEntry(
+        choice.slot,
+        choice.target_id,
+        choice.target_kind,
+        choice.target_title or "",
+        choice.location,
+        sonos_household_id=choice.sonos_household_id,
+    )
+    return _entry_identity(synthetic) == _target_identity(target)
 
 
 def target_from_row(session: SessionId, row: Row | None) -> PresetTarget | None:
@@ -254,6 +332,24 @@ def target_from_row(session: SessionId, row: Row | None) -> PresetTarget | None:
         if row.kind != "station" or not row.url:
             return None
         return PresetTarget(row.item_id, "station", row.title, row.url)
+    if session is SessionId.SONOS and row.service_id:
+        kind = {
+            "favorite": "sonos-favorite",
+            "playlist": "sonos-playlist",
+            "ownStream": "sonos-own-stream",
+        }.get(row.service_kind or "")
+        if kind is None:
+            return None
+        household = row.parent_id if kind != "sonos-own-stream" else None
+        if kind != "sonos-own-stream" and not household:
+            return None
+        return PresetTarget(
+            row.service_id,
+            kind,
+            row.title,
+            None,
+            sonos_household_id=household,
+        )
     if row.kind == "playlist":
         playlist_id = row.item_id.split(":", 1)[1] if ":" in row.item_id else row.item_id
         return PresetTarget(row.item_id, "amcPlaylist", row.title, playlist_id)

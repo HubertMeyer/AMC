@@ -17,6 +17,7 @@ from amc_wx_lite.navigation import (
     SessionId,
     View,
 )
+from amc_wx_lite.profile_presets import PresetEntry
 from amc_wx_lite.shortcuts import Action, Chord, SONOS_SUPPORTED_ACTIONS, resolve
 from amc_wx_lite.sonos_source import (
     library_rows,
@@ -281,6 +282,25 @@ def test_sonos_activation_separates_labels_from_internal_ids() -> None:
     assert nav.view is View.PLAYER
 
 
+def test_sonos_target_keeps_normalized_members_out_of_accessible_text() -> None:
+    rows = target_rows({
+        "items": [{
+            "itemId": "sonos:house-private:group-private",
+            "householdId": "house-private",
+            "groupId": "group-private",
+            "playerIds": ["player-b", "player-a", "player-a"],
+            "title": "Salon",
+            "detail": "głośników: 2, zatrzymane",
+        }]
+    })
+
+    assert rows[0].service_members == ("player-a", "player-b")
+    assert rows[0].title == "Salon"
+    assert rows[0].detail == "głośników: 2, zatrzymane"
+    assert "player-a" not in rows[0].title
+    assert "player-a" not in rows[0].detail
+
+
 def test_sonos_snapshot_allowlists_accessible_text() -> None:
     state = snapshot({
         "itemId": "sonos:group-1",
@@ -329,6 +349,10 @@ def test_sonos_command_gate_blocks_local_only_features() -> None:
         Action.CUT_SONOS_OWN_STREAMS,
         Action.PASTE_SONOS_OWN_STREAMS,
         Action.EXPORT_SONOS_OWN_STREAMS,
+        Action.VIEW_PRESETS,
+        Action.ASSIGN_PRESET,
+        Action.PRESET_1,
+        Action.PRESET_12,
     } <= SONOS_SUPPORTED_ACTIONS
     assert {
         Action.ADD_BOOKMARK,
@@ -339,6 +363,92 @@ def test_sonos_command_gate_blocks_local_only_features() -> None:
         Action.PREVIOUS_AUDIO_OUTPUT,
         Action.NEXT_AUDIO_OUTPUT,
     }.isdisjoint(SONOS_SUPPORTED_ACTIONS)
+
+
+def test_fixed_sonos_preset_refreshes_topology_and_uses_exact_group() -> None:
+    submissions: list[str] = []
+    played: list[PlaySonosMaterial] = []
+    spoken: list[str] = []
+    payload = {
+        "items": [{
+            "itemId": "sonos:house-1:group-2",
+            "householdId": "house-1",
+            "groupId": "group-2",
+            "playerIds": ["player-b", "player-a"],
+            "title": "Cały salon",
+            "detail": "głośników: 2, zatrzymane",
+        }]
+    }
+    sonos_state = SimpleNamespace(sonos_target_rows=())
+    frame = SimpleNamespace(
+        navigator=SimpleNamespace(
+            active=SessionId.SONOS,
+            sessions={SessionId.SONOS: sonos_state},
+        ),
+        client=SimpleNamespace(sonos_targets=lambda: payload),
+        runner=SimpleNamespace(submit=lambda name, work, done, _failed: (
+            submissions.append(name), done(work())
+        )),
+        announcer=SimpleNamespace(say=spoken.append),
+        _sonos_active_household_id="house-old",
+        _sonos_active_group_id="group-old",
+        _play_sonos_material=played.append,
+    )
+    frame._start_sonos_preset_material = MethodType(
+        LiteFrame._start_sonos_preset_material, frame
+    )
+    entry = PresetEntry(
+        4,
+        "favorite-1",
+        "sonos-favorite",
+        "Radio domowe",
+        None,
+        sonos_household_id="house-1",
+        sonos_fixed_player_ids=("player-a", "player-b"),
+    )
+
+    LiteFrame._activate_sonos_preset(frame, entry, "4")
+
+    assert submissions == ["sonos-preset-target"]
+    assert spoken == []
+    assert frame._sonos_active_household_id == "house-1"
+    assert frame._sonos_active_group_id == "group-2"
+    assert len(played) == 1
+    assert played[0].kind == "favorite"
+    assert played[0].material_id == "favorite-1"
+    assert "player-a" not in played[0].title
+
+
+def test_sonos_preset_never_sends_household_bound_material_to_another_home() -> None:
+    played: list[PlaySonosMaterial] = []
+    spoken: list[str] = []
+    frame = SimpleNamespace(
+        navigator=SimpleNamespace(active=SessionId.SONOS),
+        announcer=SimpleNamespace(say=spoken.append),
+        _sonos_active_household_id="house-2",
+        _sonos_active_group_id="group-2",
+        _play_sonos_material=played.append,
+        _start_sonos_preset_material=None,
+    )
+    frame._start_sonos_preset_material = MethodType(
+        LiteFrame._start_sonos_preset_material, frame
+    )
+    entry = PresetEntry(
+        2,
+        "favorite-opaque",
+        "sonos-favorite",
+        "Radio domowe",
+        None,
+        sonos_household_id="house-1",
+    )
+
+    LiteFrame._activate_sonos_preset(frame, entry, "2")
+
+    assert played == []
+    assert spoken == [
+        "Preset 2 zapisano dla innego domu Sonos. "
+        "Przypisz go ponownie w tym domu. Nic nie uruchomiłem"
+    ]
 
 
 def test_sonos_host_client_uses_narrow_commands_and_arguments() -> None:

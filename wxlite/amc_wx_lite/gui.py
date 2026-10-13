@@ -2041,7 +2041,7 @@ class PresetListDialog(wx.Dialog):
         *,
         choices: tuple[profile_presets.PresetChoice, ...],
         session_name: str,
-        current_target_id: str | None,
+        current_target: profile_presets.PresetTarget | None,
     ) -> None:
         super().__init__(parent, title=f"Presety — {session_name}")
         self._choices = choices
@@ -2068,7 +2068,8 @@ class PresetListDialog(wx.Dialog):
         )
         selected = next(
             (index for index, choice in enumerate(choices)
-             if choice.target_id is not None and choice.target_id == current_target_id),
+             if current_target is not None
+             and profile_presets.choice_matches_target(choice, current_target)),
             -1,
         )
         if selected < 0:
@@ -2375,7 +2376,8 @@ class PresetAssignmentDialog(wx.Dialog):
         if choice is None:
             return
         replaces_other = (
-            choice.target_id is not None and choice.target_id != self._target.target_id
+            choice.target_id is not None
+            and not profile_presets.choice_matches_target(choice, self._target)
         )
         self._replacement_armed_slot = slot if replaces_other and repeated else None
         if not announce:
@@ -2416,7 +2418,8 @@ class PresetAssignmentDialog(wx.Dialog):
         if choice is None:
             return
         replaces_other = (
-            choice.target_id is not None and choice.target_id != self._target.target_id
+            choice.target_id is not None
+            and not profile_presets.choice_matches_target(choice, self._target)
         )
         if (
             not self._remove_pending
@@ -7411,7 +7414,6 @@ class LiteFrame(wx.Frame):
             self._show_wiim_presets()
             return
         target = self._current_preset_target()
-        current_target_id = target.target_id if target is not None else None
         overrides, _stations = self._preset_inputs(session)
 
         def work() -> tuple[profile_presets.PresetEntry, ...]:
@@ -7427,7 +7429,7 @@ class LiteFrame(wx.Frame):
                 self,
                 choices=profile_presets.choices(entries),
                 session_name=session_name,
-                current_target_id=current_target_id,
+                current_target=target,
             ) as dialog:
                 if dialog.ShowModal() != wx.ID_OK:
                     self._active_list().SetFocus() if self.navigator.view is View.LIST else self.play_button.SetFocus()
@@ -7948,7 +7950,7 @@ class LiteFrame(wx.Frame):
             if self.navigator.active is not session:
                 return
             free = profile_presets.first_free_slot(entries)
-            initial = profile_presets.existing_target_slot(entries, target.target_id) or free or 1
+            initial = profile_presets.existing_target_slot(entries, target) or free or 1
             with PresetAssignmentDialog(
                 self,
                 target=target,
@@ -8053,6 +8055,14 @@ class LiteFrame(wx.Frame):
                 ))
                 return
 
+            if session is SessionId.SONOS and entry.target_kind.casefold() in {
+                "sonos-favorite",
+                "sonos-playlist",
+                "sonos-own-stream",
+            }:
+                self._activate_sonos_preset(entry, spoken)
+                return
+
             kind = entry.target_kind.casefold()
             if kind == "folder" and entry.location:
                 self._open_library(entry.location)
@@ -8091,6 +8101,135 @@ class LiteFrame(wx.Frame):
                 self.announcer.say("Nie udało się odczytać presetu")
 
         self.runner.submit("preset", work, done, failed)
+
+    def _activate_sonos_preset(
+        self,
+        entry: profile_presets.PresetEntry,
+        spoken_slot: str,
+    ) -> None:
+        """Uruchom materiał presetu na bieżącej albo dokładnie zapisanej grupie."""
+        if self.navigator.active is not SessionId.SONOS:
+            return
+        kind = {
+            "sonos-favorite": "favorite",
+            "sonos-playlist": "playlist",
+            "sonos-own-stream": "ownStream",
+        }.get(entry.target_kind.casefold())
+        if kind is None:
+            self.announcer.say(
+                f"Preset {spoken_slot} ma nieobsługiwany rodzaj materiału Sonos"
+            )
+            return
+
+        fixed = tuple(sorted(set(entry.sonos_fixed_player_ids)))
+        if not fixed:
+            if not self._sonos_active_household_id or not self._sonos_active_group_id:
+                self.announcer.say(
+                    "Nie wybrano głośników Sonos. Wybierz grupę skrótem "
+                    "Control F5 i spróbuj ponownie. Nic nie uruchomiłem"
+                )
+                return
+            self._start_sonos_preset_material(
+                entry,
+                kind,
+                spoken_slot,
+                self._sonos_active_household_id,
+                self._sonos_active_group_id,
+            )
+            return
+
+        if not entry.sonos_household_id:
+            self.announcer.say(
+                f"Preset {spoken_slot} nie ma bezpiecznie zapisanego domu Sonos. "
+                "Przypisz go ponownie. Nic nie uruchomiłem"
+            )
+            return
+        client = self.client
+        if client is None:
+            self.announcer.say("Silnik nie jest gotowy")
+            return
+
+        def done(payload: object) -> None:
+            if self.navigator.active is not SessionId.SONOS:
+                return
+            try:
+                rows = list(sonos_target_rows(payload))
+            except SonosPayloadError:
+                self.announcer.say(
+                    "Nie udało się odczytać grup Sonos. Nic nie uruchomiłem"
+                )
+                return
+            wanted = set(fixed)
+            matches = [
+                row for row in rows
+                if row.parent_id == entry.sonos_household_id
+                and set(row.service_members) == wanted
+                and bool(row.service_id)
+            ]
+            if not matches:
+                self.announcer.say(
+                    "Nie ma teraz grupy Sonos o dokładnie tym zestawie "
+                    "głośników. Zgrupuj je tak jak przy zapisie presetu. "
+                    "Niczego nie uruchomiłem i nie przegrupowałem"
+                )
+                return
+            if len(matches) > 1:
+                self.announcer.say(
+                    "Kilka grup Sonos ma ten sam zestaw głośników, więc wybór "
+                    "nie jest jednoznaczny. Nic nie uruchomiłem"
+                )
+                return
+            target = matches[0]
+            self.navigator.sessions[SessionId.SONOS].sonos_target_rows = tuple(rows)
+            self._start_sonos_preset_material(
+                entry,
+                kind,
+                spoken_slot,
+                target.parent_id or "",
+                target.service_id or "",
+            )
+
+        self.runner.submit(
+            "sonos-preset-target",
+            client.sonos_targets,
+            done,
+            lambda _error: self.announcer.say(
+                "Nie udało się odczytać grup Sonos. Nic nie uruchomiłem"
+            ),
+        )
+
+    def _start_sonos_preset_material(
+        self,
+        entry: profile_presets.PresetEntry,
+        kind: str,
+        spoken_slot: str,
+        household_id: str,
+        group_id: str,
+    ) -> None:
+        if (
+            kind in {"favorite", "playlist"}
+            and entry.sonos_household_id
+            and entry.sonos_household_id != household_id
+        ):
+            self.announcer.say(
+                f"Preset {spoken_slot} zapisano dla innego domu Sonos. "
+                "Przypisz go ponownie w tym domu. Nic nie uruchomiłem"
+            )
+            return
+        if not household_id or not group_id:
+            self.announcer.say(
+                "Nie wybrano głośników Sonos. Nic nie uruchomiłem"
+            )
+            return
+        self._sonos_active_household_id = household_id
+        self._sonos_active_group_id = group_id
+        self._play_sonos_material(PlaySonosMaterial(
+            item_id=f"sonos-preset:{entry.slot}",
+            title=entry.title or "Preset Sonos",
+            household_id=household_id,
+            kind=kind,
+            material_id=entry.target_id,
+        ))
 
     def _switch_session(self, session_id: SessionId) -> None:
         if self.navigator.active is SessionId.TIDAL and session_id is not SessionId.TIDAL:

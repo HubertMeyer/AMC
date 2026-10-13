@@ -199,8 +199,9 @@ public static class LiteSonosContract
             var householdTitle = HouseholdTitle(source.Household, index + 1);
             foreach (var row in SonosSessionListPresentation.DescribeGroups(source.Topology))
             {
-                var state = source.Topology.Groups.First(group => string.Equals(
-                    group.Id, row.GroupId, StringComparison.Ordinal)).PlaybackState;
+                var group = source.Topology.Groups.First(candidate => string.Equals(
+                    candidate.Id, row.GroupId, StringComparison.Ordinal));
+                var state = group.PlaybackState;
                 var detail = (multipleHouseholds ? householdTitle + ", " : string.Empty)
                     + "głośników: " + row.PlayerCount
                     + ", " + SonosSessionListPresentation.DescribeState(state);
@@ -209,6 +210,12 @@ public static class LiteSonosContract
                     itemId = "sonos:" + source.Household.Id + ":" + row.GroupId,
                     householdId = source.Household.Id,
                     groupId = row.GroupId,
+                    playerIds = group.PlayerIds
+                        .Where(id => !string.IsNullOrWhiteSpace(id))
+                        .Select(id => id.Trim())
+                        .Distinct(StringComparer.Ordinal)
+                        .OrderBy(id => id, StringComparer.Ordinal)
+                        .ToArray(),
                     title = row.Name,
                     detail
                 });

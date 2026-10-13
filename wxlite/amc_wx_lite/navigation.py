@@ -224,6 +224,10 @@ class SessionState:
     #: urządzeń ani strumieni nie należą do tych wierszy.
     wiim_device_rows: tuple[Row, ...] = ()
     wiim_device_return_id: str | None = None
+    #: Ostatnia pełna topologia grup Sonos. Zostaje poza aktualnym modelem
+    #: listy, gdy użytkownik przegląda Bibliotekę, aby preset stałego zestawu
+    #: można było rozwiązać po logicznych playerIds, a nie po kruchej nazwie.
+    sonos_target_rows: tuple[Row, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -672,6 +676,7 @@ class Navigator:
     ) -> list[object]:
         """Wstaw grupy Sonos bez zmiany stanu pozostałych sesji."""
         state = self.sessions[SessionId.SONOS]
+        state.sonos_target_rows = tuple(rows)
         state.library_view = None
         state.library_item_id = None
         state.model.replace(rows, preferred_id=preferred_id or state.list_anchor_id)
