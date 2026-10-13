@@ -17,6 +17,11 @@ Stała, automatycznie aktualizowana i weryfikowana paczka użytkowa znajduje si�
 
 `D:\Projekty Codex\AMC Python\AMC.exe`
 
+Stan przygotowany i uruchomiony 14 października ma w tytule kompilację
+`2026.10.13-4a599e2a`. Jeżeli tytuł podaje inną kompilację, zatrzymaj odbiór i
+zgłoś ten numer zamiast szukać kolejnego `AMC.exe` w `.test-output`. Jedyną
+ścieżką użytkową pozostaje powyższy stały plik.
+
 Przygotowane przyrosty trafiają najpierw do osobnych katalogów testowych.
 Stała paczka jest podmieniana dopiero po potwierdzeniu, że AMC Python nie
 nagrywa. Nie przełączaj jej ręcznie w czasie trwającego nagrywania. Pierwszy

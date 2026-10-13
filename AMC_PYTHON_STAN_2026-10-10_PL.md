@@ -594,21 +594,32 @@ kodu ani wysyłać logów bez wiedzy użytkownika.
 
 ## Dowody automatyczne tego przyrostu
 
-- pełny runner Python: 1465 zaliczonych, 0 błędów, 138 historycznych pominięć;
+Stan odebrany technicznie 14 października znajduje się w stałej instalacji
+`D:\Projekty Codex\AMC Python\AMC.exe`. Manifest tej instalacji podaje
+kompilację `2026.10.13-4a599e2a`; launcher, interfejs Python i LiteHost zostały
+uruchomione z tego samego katalogu i pozostały aktywne po kontroli. Kluczowe
+pliki stałej instalacji mają te same sumy SHA-256 co zweryfikowana paczka
+przygotowawcza. Katalogów `.test-output` nie należy podawać użytkownikowi jako
+alternatywnych sposobów uruchamiania.
+
+- pełny runner Python: 1472 zaliczone, 0 błędów, 138 historycznych pominięć;
+  cztery testy korzystające z lokalnego serwera próbnego zostały powtórzone
+  po zezwoleniu na gniazda `127.0.0.1` i wszystkie przeszły;
 - resolver wygasłych transmisji YouTube: testy identyfikatora kanału i
   komunikatu zakończenia oraz dwa rzeczywiste, bezgłośne pomiary dawnych
   adresów Rzeszowa i Tarnobrzega zakończone odczytem audio;
-- testy protokołu C#: 15 zestawów zaliczonych;
+- testy protokołu C#: 19 zestawów zaliczonych;
 - całe rozwiązanie .NET zbudowane sekwencyjnie: 0 ostrzeżeń, 0 błędów;
 - sześć celowanych testów Windows rozpoznawania, ustawień, historii, podpisu
   Shazam i łączy wyszukiwania: wszystkie zaliczone;
 - LiteHost zbudowany i opublikowany dla Windows x64 bez błędów i ostrzeżeń;
 - pakiet uruchomieniowy przeszedł sprawdzenie środowiska z Pythonem 3.14.7,
   wxPython 4.3.1 i nowym hostem.
-- 12 testów kontraktu `AMC.exe` i aktualizatora: poprawna paczka, uszkodzenie,
+- 13 testów kontraktu `AMC.exe` i aktualizatora: poprawna paczka, uszkodzenie,
   niezgodny protokół, wyjście ścieżką poza katalog, prywatny runtime,
   diagnostyka, jedna instancja, rozróżnianie tej samej, nowszej i przypadkowej
-  kompilacji oraz rozpoznanie ścieżek i żywego procesu instalacji;
+  kompilacji, rozpoznanie ścieżek i żywego procesu instalacji oraz bezpieczne
+  zamknięcie wyłącznie właściwego okna AMC Python;
 - 21 celowanych testów układu paczki, startu i komunikatów: 21 zaliczonych,
   0 błędów;
 - rzeczywisty `AMC.exe --sprawdz-pakiet-cicho`: kod 0; próbna pełna podmiana
