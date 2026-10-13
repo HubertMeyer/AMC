@@ -97,6 +97,16 @@ class MenuItem:
     #: Wymaga utworu, stacji albo odcinka obsługiwanego przez lokalne playlisty
     #: AMC. Podcast nagłówkowy, kontener TIDAL i urządzenie sieciowe odpadają.
     needs_playlist_item: bool = False
+    #: Wymaga elementu, który rzeczywiście może wejść do kolejki aktywnej
+    #: sesji: pliku, odcinka albo utworu TIDAL z danymi albumu.
+    needs_queue_item: bool = False
+    #: Węższa odmiana kolejki: „odtwórz jako następne” działa tylko dla
+    #: lokalnego pliku albo odcinka podcastu, nie dla TIDAL-a.
+    needs_play_next_item: bool = False
+    #: Wymaga podcastu albo odcinka z rozpoznanym podcastem nadrzędnym.
+    needs_podcast_library_item: bool = False
+    #: Wymaga kontenera obsługiwanego przez Bibliotekę TIDAL.
+    needs_tidal_library_item: bool = False
     #: Wymaga otwartej zawartości lokalnej playlisty. To węższy warunek niż
     #: zwykły element mogący należeć do playlisty: dotyczy ręcznej kolejności.
     needs_playlist_contents: bool = False
@@ -119,9 +129,12 @@ class Menu:
 SEPARATOR = MenuItem(is_separator=True)
 FILES_ONLY = (SessionId.FILES,)
 PODCASTS_ONLY = (SessionId.PODCASTS,)
+TIDAL_ONLY = (SessionId.TIDAL,)
 WIIM_ONLY = (SessionId.WIIM,)
 SONOS_ONLY = (SessionId.SONOS,)
 LOCAL_MEDIA = (SessionId.FILES, SessionId.PODCASTS)
+QUEUE_SESSIONS = (SessionId.FILES, SessionId.PODCASTS, SessionId.TIDAL)
+PLAY_NEXT_SESSIONS = (SessionId.FILES, SessionId.PODCASTS)
 LOCAL_AUDIO = (SessionId.FILES, SessionId.RADIO, SessionId.PODCASTS)
 LOCAL_TIMELINE = (SessionId.FILES, SessionId.RADIO, SessionId.PODCASTS)
 PLAYER_SESSIONS = (
@@ -397,6 +410,23 @@ def build_menus(session_order: object = None) -> tuple[Menu, ...]:
                 Action.GO_TO_RELATED_PODCAST,
                 needs_podcast_session=True,
                 needs_podcast_episode=True,
+                visible_sessions=PODCASTS_ONLY,
+            ),
+            MenuItem(
+                "Dodaj lub usuń podcast z Biblioteki (&1)",
+                Action.TOGGLE_PODCAST_LIBRARY,
+                shortcut="Ctrl+Shift+L",
+                accelerator=False,
+                needs_podcast_library_item=True,
+                visible_sessions=PODCASTS_ONLY,
+            ),
+            MenuItem(
+                "Dodaj lub usuń z Biblioteki TIDAL (&1)",
+                Action.TIDAL_TOGGLE_LIBRARY,
+                shortcut="Ctrl+Shift+L",
+                accelerator=False,
+                needs_tidal_library_item=True,
+                visible_sessions=TIDAL_ONLY,
             ),
             MenuItem(
                 "Z&mień stan ulubionych",
@@ -411,6 +441,24 @@ def build_menus(session_order: object = None) -> tuple[Menu, ...]:
                 shortcut="Ctrl+Shift+P",
                 accelerator=False,
                 needs_playlist_item=True,
+            ),
+            MenuItem(
+                "Dodaj lub usuń z kolejki (&Q)",
+                Action.ADD_TO_QUEUE,
+                shortcut="Ctrl+Shift+Q",
+                accelerator=False,
+                needs_selection=True,
+                needs_queue_item=True,
+                visible_sessions=QUEUE_SESSIONS,
+            ),
+            MenuItem(
+                "Odtwarzaj jako następne lub usuń (&X)",
+                Action.TOGGLE_PLAY_NEXT,
+                shortcut="Ctrl+Shift+Return",
+                accelerator=False,
+                needs_selection=True,
+                needs_play_next_item=True,
+                visible_sessions=PLAY_NEXT_SESSIONS,
             ),
             SEPARATOR,
             # Ctrl+C obsluguje wspolna droga klawiatury. Nie oddajemy go

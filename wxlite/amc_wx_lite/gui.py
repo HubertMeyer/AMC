@@ -5470,6 +5470,50 @@ class LiteFrame(wx.Frame):
                 self.navigator.active, set()
             ):
                 enabled = False
+            if entry.needs_queue_item:
+                queue_item = bool(
+                    selected_row is not None
+                    and (
+                        self.navigator.active is SessionId.FILES
+                        and selected_kind == "track"
+                        or self.navigator.active is SessionId.PODCASTS
+                        and selected_kind == "episode"
+                        or self.navigator.active is SessionId.TIDAL
+                        and selected_kind == "track"
+                        and bool(selected_row.service_id)
+                        and bool(selected_row.related_album_service_id)
+                    )
+                )
+                if not queue_item:
+                    enabled = False
+            if entry.needs_play_next_item and not (
+                selected_row is not None
+                and (
+                    self.navigator.active is SessionId.FILES
+                    and selected_kind == "track"
+                    or self.navigator.active is SessionId.PODCASTS
+                    and selected_kind == "episode"
+                )
+            ):
+                enabled = False
+            if entry.needs_podcast_library_item and not (
+                podcasts
+                and selected_row is not None
+                and bool(selected_row.item_id)
+                and (
+                    selected_kind == "podcast"
+                    or selected_kind == "episode" and bool(selected_row.parent_id)
+                )
+            ):
+                enabled = False
+            if entry.needs_tidal_library_item and not (
+                self.navigator.active is SessionId.TIDAL
+                and selected_row is not None
+                and selected_kind in {"album", "artist", "playlist"}
+                and bool(selected_row.item_id)
+                and bool(selected_row.service_id)
+            ):
+                enabled = False
             if entry.needs_playlist_contents and not playlist_contents:
                 enabled = False
             if entry.needs_podcast_episode and (
@@ -14396,9 +14440,11 @@ class LiteFrame(wx.Frame):
     def _toggle_queue_membership(self, play_next: bool) -> None:
         """Zmień kolejkę dla natywnego wielokrotnego zaznaczenia.
 
-        Operacja dotyczy na razie Biblioteki plików lokalnych — dokładnie tego
-        etapu portu. Nie składamy aktywnej kolejki ponownie, więc grający plik,
-        pozycja, pauza i wyjście audio pozostają nietknięte.
+        Pliki i podcasty mają zwykłą kolejkę oraz „odtwórz jako następne”.
+        TIDAL ma własną trwałą kolejkę, ale nie obiecuje „następnego”, którego
+        oryginalna aplikacja TIDAL nie udostępnia. Nie składamy aktywnej kolejki
+        ponownie, więc grający plik, pozycja, pauza i wyjście audio pozostają
+        nietknięte.
         """
         if self.navigator.active is SessionId.PODCASTS:
             self._toggle_podcast_queue(play_next)

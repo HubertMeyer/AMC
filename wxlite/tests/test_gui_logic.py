@@ -516,3 +516,116 @@ def test_mute_menu_names_and_marks_the_active_session_state() -> None:
     assert menu_item.enabled is True
     assert menu_item.checked is True
     assert menu_item.label.startswith("Włącz dźwięk bieżącej sesji")
+
+
+def test_membership_menu_gates_follow_the_selected_user_facing_item() -> None:
+    """Menu nie oferuje operacji, którą wykonawca zaraz musiałby odrzucić."""
+    from amc_wx_lite import menu_model
+
+    entries = {
+        action: next(
+            item
+            for menu in menu_model.build_menus()
+            for item in menu.items
+            if item.action is action
+        )
+        for action in (
+            Action.ADD_TO_QUEUE,
+            Action.TOGGLE_PLAY_NEXT,
+            Action.TOGGLE_PODCAST_LIBRARY,
+            Action.TIDAL_TOGGLE_LIBRARY,
+        )
+    }
+
+    class FakeMenuItem:
+        def __init__(self) -> None:
+            self.enabled = True
+
+        def IsEnabled(self):  # noqa: N802 - API wx
+            return self.enabled
+
+        def Enable(self, value):  # noqa: N802 - API wx
+            self.enabled = value
+
+    def enabled(action: Action, active: SessionId, **row_values: object) -> bool:
+        defaults = {
+            "kind": "",
+            "item_id": "item",
+            "url": "",
+            "parent_id": "",
+            "service_id": "",
+            "related_album_service_id": "",
+        }
+        defaults.update(row_values)
+        row = types.SimpleNamespace(**defaults)
+        view = {
+            SessionId.PODCASTS: LibraryView.PODCAST_LIBRARY,
+            SessionId.TIDAL: LibraryView.TIDAL_LIBRARY,
+        }.get(active, LibraryView.ALL_FILES)
+        session = types.SimpleNamespace(
+            view=View.LIST,
+            library_view=view,
+            library_playlist_id=None,
+            model=types.SimpleNamespace(selected_row=row),
+        )
+        frame = object.__new__(LiteFrame)
+        frame.navigator = types.SimpleNamespace(
+            active=active,
+            sessions={active: session},
+        )
+        frame._last_status = {}
+        frame._last_recording_status = {"recordings": []}
+        frame._transport_status_by_session = {}
+        frame._podcast_inbox_sort_mode = ""
+        frame._tidal_effective_sort_modes = {}
+        frame._keyboard_help_active = False
+        native = FakeMenuItem()
+        frame._menu_items = [(native, entries[action])]
+        frame._refresh_menu_state()
+        return native.enabled
+
+    assert enabled(Action.ADD_TO_QUEUE, SessionId.FILES, kind="track")
+    assert enabled(Action.TOGGLE_PLAY_NEXT, SessionId.FILES, kind="track")
+    assert enabled(
+        Action.ADD_TO_QUEUE,
+        SessionId.PODCASTS,
+        kind="episode",
+        parent_id="podcast",
+    )
+    assert enabled(
+        Action.TOGGLE_PODCAST_LIBRARY,
+        SessionId.PODCASTS,
+        kind="episode",
+        parent_id="podcast",
+    )
+    assert not enabled(
+        Action.TOGGLE_PODCAST_LIBRARY,
+        SessionId.PODCASTS,
+        kind="episode",
+    )
+    assert enabled(
+        Action.ADD_TO_QUEUE,
+        SessionId.TIDAL,
+        kind="track",
+        service_id="tidal-track",
+        related_album_service_id="tidal-album",
+    )
+    assert not enabled(
+        Action.ADD_TO_QUEUE,
+        SessionId.TIDAL,
+        kind="track",
+        service_id="tidal-track",
+    )
+    assert enabled(
+        Action.TIDAL_TOGGLE_LIBRARY,
+        SessionId.TIDAL,
+        kind="album",
+        service_id="tidal-album",
+    )
+    assert not enabled(
+        Action.TIDAL_TOGGLE_LIBRARY,
+        SessionId.TIDAL,
+        kind="track",
+        service_id="tidal-track",
+        related_album_service_id="tidal-album",
+    )

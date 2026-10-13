@@ -30,6 +30,7 @@ from amc_wx_lite.shortcuts import (
     RADIO_LIST_VIEW,
     RADIO_PLAYER_VIEW,
     TIDAL_COLLECTION_LIST_VIEW,
+    TIDAL_SESSION_VIEW,
     WIIM_PLAYER_VIEW,
     WIIM_SESSION_VIEW,
     SONOS_SESSION_VIEW,
@@ -152,6 +153,7 @@ def test_shortcut_shown_in_menu_is_the_shortcut_that_really_works() -> None:
         RADIO_LIST_VIEW,
         RADIO_PLAYER_VIEW,
         TIDAL_COLLECTION_LIST_VIEW,
+        TIDAL_SESSION_VIEW,
         WIIM_SESSION_VIEW,
         WIIM_PLAYER_VIEW,
         SONOS_SESSION_VIEW,
@@ -187,7 +189,7 @@ def test_no_duplicate_labels_or_shortcuts() -> None:
     # kontekstowe: w Radiu czyta bieżącą audycję, a w Podcastach pełny opis.
     assert set(duplicates) <= {
         "Ctrl+O", "Ctrl+Shift+O", "Ctrl+N", "Ctrl+E", "Ctrl+D", "Ctrl+S",
-        "Alt+1", "Alt+2", "Alt+3", "Alt+D", "Ctrl+F5",
+        "Alt+1", "Alt+2", "Alt+3", "Alt+D", "Ctrl+F5", "Ctrl+Shift+L",
         "B", "Shift+B", "Ctrl+Shift+B", "Ctrl+X", "F2", "Delete",
         "I", "O", "S", "T"
     }, duplicates
@@ -230,6 +232,10 @@ def test_no_duplicate_labels_or_shortcuts() -> None:
     for item in duplicates.get("Ctrl+Shift+B", []):
         assert not item.accelerator, (
             "Ctrl+Shift+B musi rozstrzygnąć lista albo odtwarzacz"
+        )
+    for item in duplicates.get("Ctrl+Shift+L", []):
+        assert not item.accelerator, (
+            "Ctrl+Shift+L musi rozstrzygnąć Podcasty albo TIDAL"
         )
     for chord in ("B", "Shift+B"):
         for item in duplicates.get(chord, []):
@@ -369,6 +375,72 @@ def test_playlist_membership_menu_is_contextual_and_does_not_steal_shortcut() ->
     assert item.needs_playlist_item
     assert not item.accelerator
     assert "playlist" in item.label.replace("&", "").casefold()
+
+
+def test_library_membership_menu_is_specific_to_podcasts_and_tidal() -> None:
+    podcast = next(
+        entry for entry in all_items()
+        if entry.action is Action.TOGGLE_PODCAST_LIBRARY
+    )
+    tidal = next(
+        entry for entry in all_items()
+        if entry.action is Action.TIDAL_TOGGLE_LIBRARY
+    )
+    assert podcast.shortcut == tidal.shortcut == "Ctrl+Shift+L"
+    assert podcast.visible_sessions == (menu_model.SessionId.PODCASTS,)
+    assert podcast.needs_podcast_library_item
+    assert tidal.visible_sessions == (menu_model.SessionId.TIDAL,)
+    assert tidal.needs_tidal_library_item
+    assert not podcast.accelerator and not tidal.accelerator
+    assert "bibliotek" in podcast.label.replace("&", "").casefold()
+    assert "bibliotek" in tidal.label.replace("&", "").casefold()
+
+
+def test_queue_membership_menu_matches_supported_sessions() -> None:
+    queue = next(
+        entry for entry in all_items() if entry.action is Action.ADD_TO_QUEUE
+    )
+    play_next = next(
+        entry for entry in all_items()
+        if entry.action is Action.TOGGLE_PLAY_NEXT
+    )
+    assert queue.shortcut == "Ctrl+Shift+Q"
+    assert queue.needs_selection and queue.needs_queue_item
+    assert set(queue.visible_sessions) == {
+        menu_model.SessionId.FILES,
+        menu_model.SessionId.PODCASTS,
+        menu_model.SessionId.TIDAL,
+    }
+    assert play_next.shortcut == "Ctrl+Shift+Return"
+    assert play_next.needs_selection and play_next.needs_play_next_item
+    assert set(play_next.visible_sessions) == {
+        menu_model.SessionId.FILES,
+        menu_model.SessionId.PODCASTS,
+    }
+    assert not queue.accelerator and not play_next.accelerator
+
+    actions_by_session = {
+        session: {
+            item.action
+            for menu in menu_model.menus_for_session(session)
+            for item in menu.items
+            if not item.is_separator
+        }
+        for session in menu_model.SessionId
+    }
+    assert Action.ADD_TO_QUEUE in actions_by_session[menu_model.SessionId.FILES]
+    assert Action.ADD_TO_QUEUE in actions_by_session[menu_model.SessionId.PODCASTS]
+    assert Action.ADD_TO_QUEUE in actions_by_session[menu_model.SessionId.TIDAL]
+    assert Action.TOGGLE_PLAY_NEXT in actions_by_session[menu_model.SessionId.FILES]
+    assert Action.TOGGLE_PLAY_NEXT in actions_by_session[menu_model.SessionId.PODCASTS]
+    assert Action.TOGGLE_PLAY_NEXT not in actions_by_session[menu_model.SessionId.TIDAL]
+    for session in (
+        menu_model.SessionId.RADIO,
+        menu_model.SessionId.WIIM,
+        menu_model.SessionId.SONOS,
+    ):
+        assert Action.ADD_TO_QUEUE not in actions_by_session[session]
+        assert Action.TOGGLE_PLAY_NEXT not in actions_by_session[session]
 
 
 def test_playlist_order_menu_is_limited_to_open_playlist_contents() -> None:

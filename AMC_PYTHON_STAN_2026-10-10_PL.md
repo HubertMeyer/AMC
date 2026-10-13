@@ -254,8 +254,11 @@ Działa przeglądanie źródeł i odcinków, odtwarzanie przez wspólny silnik,
 zapisywanie postępu, kolejka, historia, pobrane materiały, import i eksport
 OPML oraz obsługa źródeł YouTube. Działa również automatyczne odświeżanie
 według indywidualnego terminu źródła i globalnego limitu partii; zapis wykonuje
-wyłącznie właściciel bazy po stronie C#. Eksport subskrypcji YouTube do przenośnego
-formatu zgodnego z innymi aplikacjami pozostaje osobnym zadaniem.
+wyłącznie właściciel bazy po stronie C#. Subskrypcje YouTube można eksportować
+do CSV zgodnego z układem Google Takeout, użytecznego m.in. w NewPipe i
+FreeTube, albo do OPML obejmującego kanały i playlisty. Menu Biblioteka
+udostępnia teraz również kontekstowe polecenia zmiany Biblioteki, kolejki i
+„odtwórz jako następne”; te nowe pozycje nie są pokazywane w obcej sesji.
 
 ### TIDAL
 
