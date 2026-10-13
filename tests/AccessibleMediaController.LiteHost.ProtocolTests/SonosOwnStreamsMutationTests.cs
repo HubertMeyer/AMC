@@ -14,6 +14,8 @@ internal static class SonosOwnStreamsMutationTests
         RemoveCleansBothOrders();
         ImportUsesTheSharedSonosRules();
         SortModeUsesTheOriginalSonosViewKey();
+        MoveAndPlaceUseTheOriginalManualOrder();
+        ExportUsesTheVisibleOrderWithoutInternalIds();
         Console.WriteLine("SonosOwnStreamsMutationTests: OK");
     }
 
@@ -116,6 +118,52 @@ internal static class SonosOwnStreamsMutationTests
             root["sessionNavigation"]!["sessions"]!["sonos"]!
                 ["collectionSortModes"]!["Moje stacje"]!.GetValue<string>(),
             "sortowanie zapisuje ten sam klucz widoku co główne AMC");
+    }
+
+    private static void MoveAndPlaceUseTheOriginalManualOrder()
+    {
+        var root = Profile();
+        var moved = LiteSonosOwnStreamsMutation.Move(root, ["stream-2"], -1);
+        Assert.True(moved.Position == 1 && moved.PreferredStreamId == "stream-2",
+            "Alt+strzałka używa kolejności własnej i zachowuje zaznaczenie");
+        Assert.True(Order(root, custom: true)
+                .Select(value => value!.GetValue<string>())
+                .SequenceEqual(["stream-2", "stream-1"]),
+            "przesunięcie zapisuje kolejność pełnego AMC");
+
+        var placed = LiteSonosOwnStreamsMutation.PlaceBefore(
+            root, ["stream-1"], "stream-2");
+        Assert.True(placed.Position == 1 && placed.PreferredStreamId == "stream-1",
+            "Ctrl+V wstawia przenoszoną stację przed celem");
+    }
+
+    private static void ExportUsesTheVisibleOrderWithoutInternalIds()
+    {
+        var root = Profile();
+        LiteSonosOwnStreamsMutation.Move(root, ["stream-2"], -1);
+        var directory = Path.Combine(
+            Path.GetTempPath(),
+            "amc-sonos-export-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        try
+        {
+            var path = Path.Combine(directory, "sonos.m3u");
+            var result = LiteSonosOwnStreamsExport.Write(root, path);
+            var text = File.ReadAllText(path);
+            Assert.True(result.ExportedCount == 2,
+                "eksport podaje liczbę stacji");
+            Assert.True(
+                text.IndexOf("Radio Drugie", StringComparison.Ordinal)
+                < text.IndexOf("Radio Poznań", StringComparison.Ordinal),
+                "eksport zachowuje widoczną kolejność własną");
+            Assert.True(!text.Contains("stream-1", StringComparison.Ordinal)
+                        && text.Contains("https://radio.invalid/poznan", StringComparison.Ordinal),
+                "eksport zawiera adres odtwarzania, ale nie identyfikator AMC");
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+        }
     }
 
     private static JsonObject Profile() => new()

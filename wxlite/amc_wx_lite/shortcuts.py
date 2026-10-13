@@ -215,6 +215,11 @@ class Action(Enum):
     SORT_SONOS_OWN_STREAMS_ADDED = "sonos.ownStreams.sort.added"
     SORT_SONOS_OWN_STREAMS_ALPHABETICAL = "sonos.ownStreams.sort.alphabetical"
     SORT_SONOS_OWN_STREAMS_CUSTOM = "sonos.ownStreams.sort.custom"
+    MOVE_SONOS_OWN_STREAM_UP = "sonos.ownStreams.moveUp"
+    MOVE_SONOS_OWN_STREAM_DOWN = "sonos.ownStreams.moveDown"
+    CUT_SONOS_OWN_STREAMS = "sonos.ownStreams.cut"
+    PASTE_SONOS_OWN_STREAMS = "sonos.ownStreams.paste"
+    EXPORT_SONOS_OWN_STREAMS = "sonos.ownStreams.export"
     OPEN_FOLDER_DIALOG = "files.openFolder"
     OPEN_FILE_DIALOG = "files.openFile"
     COPY_NAME = "clipboard.copyName"
@@ -497,6 +502,11 @@ SONOS_SUPPORTED_ACTIONS = frozenset({
     Action.SORT_SONOS_OWN_STREAMS_ADDED,
     Action.SORT_SONOS_OWN_STREAMS_ALPHABETICAL,
     Action.SORT_SONOS_OWN_STREAMS_CUSTOM,
+    Action.MOVE_SONOS_OWN_STREAM_UP,
+    Action.MOVE_SONOS_OWN_STREAM_DOWN,
+    Action.CUT_SONOS_OWN_STREAMS,
+    Action.PASTE_SONOS_OWN_STREAMS,
+    Action.EXPORT_SONOS_OWN_STREAMS,
     Action.FOCUS_FILTER,
     Action.VIEW_ACTIVE_RECORDINGS,
     Action.VIEW_RECORDED_RADIO_FILES,
@@ -924,6 +934,11 @@ SONOS_OWN_STREAMS_VIEW: dict[str, Action] = {
     "Alt+1": Action.SORT_SONOS_OWN_STREAMS_ADDED,
     "Alt+2": Action.SORT_SONOS_OWN_STREAMS_ALPHABETICAL,
     "Alt+3": Action.SORT_SONOS_OWN_STREAMS_CUSTOM,
+    "Alt+Up": Action.MOVE_SONOS_OWN_STREAM_UP,
+    "Alt+Down": Action.MOVE_SONOS_OWN_STREAM_DOWN,
+    "Ctrl+X": Action.CUT_SONOS_OWN_STREAMS,
+    "Ctrl+V": Action.PASTE_SONOS_OWN_STREAMS,
+    "Ctrl+E": Action.EXPORT_SONOS_OWN_STREAMS,
 }
 
 

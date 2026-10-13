@@ -19,6 +19,16 @@ internal sealed record LiteSonosOwnStreamImportResult(
 
 internal sealed record LiteSonosOwnStreamDraft(string Name, string Url);
 
+internal sealed record LiteSonosOwnStreamDisplayOrder(
+    IReadOnlyList<SonosOwnStreamSettings> Streams,
+    CollectionSortMode SortMode);
+
+internal sealed record LiteSonosOwnStreamOrderMutationResult(
+    string PreferredStreamId,
+    string Title,
+    int Position,
+    int Count);
+
 /// <summary>
 /// Wąskie modyfikacje lokalnych „Moich stacji” Sonosa. Operacje dotyczą tylko
 /// profilu AMC; nie zmieniają Ulubionych ani playlist na koncie Sonos.
@@ -170,6 +180,111 @@ internal static class LiteSonosOwnStreamsMutation
         modes[SonosOwnStreamsOrder.ViewName] = mode.ToString();
         NormalizeOrders(root);
         return mode;
+    }
+
+    public static LiteSonosOwnStreamDisplayOrder OrderForDisplay(JsonObject root)
+    {
+        var streams = ReadStreams(root);
+        var mode = ReadSortMode(root);
+        return new(
+            SonosOwnStreamsOrder.Arrange(ReadOrders(root), streams, mode),
+            mode);
+    }
+
+    public static LiteSonosOwnStreamOrderMutationResult Move(
+        JsonObject root,
+        IReadOnlyCollection<string> selectedIds,
+        int direction)
+    {
+        RequireCustomOrder(root);
+        var streams = ReadStreams(root);
+        var orders = ReadOrders(root);
+        var result = SonosOwnStreamsOrder.Move(
+            orders, streams, selectedIds, direction);
+        if (result is not SonosOwnStreamsOrderResult.Moved)
+            throw new LiteRequestException(result switch
+            {
+                SonosOwnStreamsOrderResult.Boundary => direction < 0
+                    ? "Już na początku listy."
+                    : "Już na końcu listy.",
+                SonosOwnStreamsOrderResult.NonContiguousSelection =>
+                    "Zaznaczenie nie jest ciągłe. Wybierz sąsiadujące stacje.",
+                _ => "Najpierw wybierz stację."
+            });
+        WriteOrderIds(root, custom: true,
+            orders.LibraryItemIdsBySession[SonosOwnStreamsOrder.StorageKey]);
+        return DescribeOrderMutation(orders, streams, selectedIds);
+    }
+
+    public static LiteSonosOwnStreamOrderMutationResult PlaceBefore(
+        JsonObject root,
+        IReadOnlyCollection<string> selectedIds,
+        string targetId)
+    {
+        RequireCustomOrder(root);
+        var streams = ReadStreams(root);
+        var orders = ReadOrders(root);
+        var result = SonosOwnStreamsOrder.PlaceBefore(
+            orders, streams, selectedIds, targetId);
+        if (result is not SonosOwnStreamsOrderResult.Moved)
+            throw new LiteRequestException(result switch
+            {
+                SonosOwnStreamsOrderResult.TargetInSelection =>
+                    "Cel jest wśród przenoszonych stacji. Wybierz inne miejsce.",
+                SonosOwnStreamsOrderResult.TargetMissing =>
+                    "Nie wybrano miejsca docelowego.",
+                SonosOwnStreamsOrderResult.Unchanged =>
+                    "Stacja już jest w tym miejscu.",
+                _ => "Nie ma czego przenieść. Naciśnij Control X na stacji."
+            });
+        WriteOrderIds(root, custom: true,
+            orders.LibraryItemIdsBySession[SonosOwnStreamsOrder.StorageKey]);
+        return DescribeOrderMutation(orders, streams, selectedIds);
+    }
+
+    private static LiteSonosOwnStreamOrderMutationResult DescribeOrderMutation(
+        CollectionOrderSettings orders,
+        IReadOnlyList<SonosOwnStreamSettings> streams,
+        IReadOnlyCollection<string> selectedIds)
+    {
+        var arranged = SonosOwnStreamsOrder.Arrange(
+            orders, streams, CollectionSortMode.Custom);
+        var selected = arranged.First(stream => selectedIds.Contains(stream.Id));
+        var position = arranged
+            .Select((stream, index) => (stream, index))
+            .First(pair => string.Equals(
+                pair.stream.Id, selected.Id, StringComparison.Ordinal))
+            .index + 1;
+        return new(
+            selected.Id,
+            SonosOwnStreamsOrder.Label(selected),
+            position,
+            arranged.Count);
+    }
+
+    private static void RequireCustomOrder(JsonObject root)
+    {
+        if (ReadSortMode(root) is not CollectionSortMode.Custom)
+            throw new LiteRequestException(
+                "Przenoszenie działa w kolejności własnej. Naciśnij Alt 3.");
+    }
+
+    private static CollectionSortMode ReadSortMode(JsonObject root)
+    {
+        var value = root["sessionNavigation"]?["sessions"]?["sonos"]?
+            ["collectionSortModes"]?[SonosOwnStreamsOrder.ViewName];
+        if (value is JsonValue json)
+        {
+            if (json.TryGetValue<string>(out var text)
+                && Enum.TryParse<CollectionSortMode>(
+                    text, ignoreCase: true, out var parsed)
+                && Enum.IsDefined(parsed))
+                return parsed;
+            if (json.TryGetValue<int>(out var number)
+                && Enum.IsDefined(typeof(CollectionSortMode), number))
+                return (CollectionSortMode)number;
+        }
+        return CollectionSortMode.Custom;
     }
 
     private static void NormalizeOrders(JsonObject root)

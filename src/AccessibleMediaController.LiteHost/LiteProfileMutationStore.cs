@@ -647,6 +647,72 @@ internal sealed class LiteProfileMutationStore
         }
     }
 
+    public object MoveSonosOwnStreams(
+        IReadOnlyList<string> streamIds,
+        int direction)
+    {
+        EnsureMayWrite();
+        lock (_gate)
+        {
+            var root = ReadState();
+            var result = LiteSonosOwnStreamsMutation.Move(
+                root, streamIds, direction);
+            WriteState(root);
+            return SonosOrderMutationResponse(result, streamIds.Count);
+        }
+    }
+
+    public object PlaceSonosOwnStreamsBefore(
+        IReadOnlyList<string> streamIds,
+        string targetId)
+    {
+        EnsureMayWrite();
+        lock (_gate)
+        {
+            var root = ReadState();
+            var result = LiteSonosOwnStreamsMutation.PlaceBefore(
+                root, streamIds, targetId);
+            WriteState(root);
+            return SonosOrderMutationResponse(result, streamIds.Count);
+        }
+    }
+
+    public LiteSonosOwnStreamsExportResult ExportSonosOwnStreams(
+        string destinationPath)
+    {
+        lock (_gate)
+        {
+            try
+            {
+                return LiteSonosOwnStreamsExport.Write(
+                    ReadState(), destinationPath);
+            }
+            catch (InvalidDataException exception)
+            {
+                throw new LiteRequestException(exception.Message);
+            }
+            catch (Exception exception) when (exception is IOException
+                or UnauthorizedAccessException
+                or ArgumentException
+                or NotSupportedException)
+            {
+                throw new LiteRequestException(
+                    "Nie można zapisać playlisty: " + exception.Message);
+            }
+        }
+    }
+
+    private static object SonosOrderMutationResponse(
+        LiteSonosOwnStreamOrderMutationResult result,
+        int selectedCount) => new
+        {
+            preferredStreamId = result.PreferredStreamId,
+            message = selectedCount == 1
+                ? $"{result.Title}, pozycja {result.Position} z {result.Count}"
+                : $"Przeniesiono {selectedCount} stacji, od pozycji "
+                    + $"{result.Position} z {result.Count}"
+        };
+
     private LiteRadioLibraryMutationResult MutateRadioLibrary(
         IReadOnlyList<LiteRadioStationDraft> stations,
         int parserSkipped,

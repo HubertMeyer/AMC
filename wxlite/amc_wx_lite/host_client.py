@@ -773,6 +773,34 @@ class LiteHostClient:
             timeout=30.0,
         )
 
+    def sonos_move_own_streams(
+        self, stream_ids: list[str], direction: int
+    ) -> Any:
+        return self.call(
+            "sonos.ownStreamMove",
+            {
+                "itemIds": list(stream_ids),
+                "direction": -1 if direction < 0 else 1,
+            },
+            timeout=30.0,
+        )
+
+    def sonos_place_own_streams(
+        self, stream_ids: list[str], target_id: str
+    ) -> Any:
+        return self.call(
+            "sonos.ownStreamPlace",
+            {"itemIds": list(stream_ids), "targetId": target_id},
+            timeout=30.0,
+        )
+
+    def sonos_export_own_streams(self, path: str) -> Any:
+        return self.call(
+            "sonos.ownStreamExport",
+            {"path": path},
+            timeout=60.0,
+        )
+
     def refresh_podcasts(self, subscription_id: str | None = None) -> Any:
         """Odśwież jedno źródło lub całą bibliotekę przez właściciela C#."""
         args = {"subscriptionId": subscription_id} if subscription_id else {}

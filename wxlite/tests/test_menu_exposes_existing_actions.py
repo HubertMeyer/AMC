@@ -186,7 +186,7 @@ def test_no_duplicate_labels_or_shortcuts() -> None:
     assert set(duplicates) <= {
         "Ctrl+O", "Ctrl+Shift+O", "Ctrl+N", "Ctrl+E", "Ctrl+D", "Ctrl+S",
         "Alt+1", "Alt+2", "Alt+3", "Alt+D", "Ctrl+F5",
-        "B", "Shift+B", "Ctrl+Shift+B", "F2", "Delete"
+        "B", "Shift+B", "Ctrl+Shift+B", "Ctrl+X", "F2", "Delete"
     }, duplicates
     for item in duplicates.get("Ctrl+O", []):
         assert not item.accelerator, (
@@ -210,6 +210,10 @@ def test_no_duplicate_labels_or_shortcuts() -> None:
     for item in duplicates.get("Ctrl+N", []):
         assert not item.accelerator, (
             "kontekstowe Ctrl+N musi rozstrzygnąć sesja podcastów albo radia"
+        )
+    for item in duplicates.get("Ctrl+X", []):
+        assert not item.accelerator, (
+            "kontekstowe Ctrl+X musi rozstrzygnąć pliki albo Moje stacje Sonosa"
         )
     for chord in ("Ctrl+Shift+O", "Ctrl+E"):
         for item in duplicates.get(chord, []):

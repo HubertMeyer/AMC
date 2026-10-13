@@ -23,6 +23,9 @@ public static class LiteSonosContract
     public const string RemoveOwnStreamsOperation = "sonos.ownStreamRemove";
     public const string ImportOwnStreamsOperation = "sonos.ownStreamImport";
     public const string SortOwnStreamsOperation = "sonos.ownStreamSort";
+    public const string MoveOwnStreamsOperation = "sonos.ownStreamMove";
+    public const string PlaceOwnStreamsOperation = "sonos.ownStreamPlace";
+    public const string ExportOwnStreamsOperation = "sonos.ownStreamExport";
 
     public static LiteSonosTargetRequest ReadTarget(JsonElement args) => new(
         LiteArgs.RequireText(args, "householdId").Trim(),
@@ -78,6 +81,17 @@ public static class LiteSonosContract
             return mode;
         throw new LiteRequestException(
             "Nieznany sposób sortowania własnych stacji Sonos.");
+    }
+
+    public static int ReadOwnStreamMoveDirection(JsonElement args)
+    {
+        if (args.TryGetProperty("direction", out var value)
+            && value.ValueKind == JsonValueKind.Number
+            && value.TryGetInt32(out var direction)
+            && direction is -1 or 1)
+            return direction;
+        throw new LiteRequestException(
+            "Kierunek przenoszenia stacji musi wynosić minus jeden albo jeden.");
     }
 
     public static LiteSonosMaterialLoadRequest ReadMaterialLoadRequest(JsonElement args)

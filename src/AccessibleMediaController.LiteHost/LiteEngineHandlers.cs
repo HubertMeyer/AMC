@@ -434,6 +434,12 @@ internal sealed class LiteEngineHandlers : IDisposable
                 ImportSonosOwnStreams(request.Args),
             [LiteSonosContract.SortOwnStreamsOperation] = (request, _) =>
                 SetSonosOwnStreamSortMode(request.Args),
+            [LiteSonosContract.MoveOwnStreamsOperation] = (request, _) =>
+                MoveSonosOwnStreams(request.Args),
+            [LiteSonosContract.PlaceOwnStreamsOperation] = (request, _) =>
+                PlaceSonosOwnStreams(request.Args),
+            [LiteSonosContract.ExportOwnStreamsOperation] = (request, _) =>
+                ExportSonosOwnStreams(request.Args),
             ["podcast.toggleFavorite"] = (request, _) =>
                 TogglePodcastFavorites(request.Args),
             ["podcast.toggleLibrary"] = (request, _) =>
@@ -910,6 +916,20 @@ internal sealed class LiteEngineHandlers : IDisposable
     private object SetSonosOwnStreamSortMode(JsonElement args) =>
         RequireProfileMutations().SetSonosOwnStreamSortMode(
             LiteSonosContract.ReadOwnStreamSortMode(args));
+
+    private object MoveSonosOwnStreams(JsonElement args) =>
+        RequireProfileMutations().MoveSonosOwnStreams(
+            ReadIds(args),
+            LiteSonosContract.ReadOwnStreamMoveDirection(args));
+
+    private object PlaceSonosOwnStreams(JsonElement args) =>
+        RequireProfileMutations().PlaceSonosOwnStreamsBefore(
+            ReadIds(args),
+            LiteArgs.RequireText(args, "targetId"));
+
+    private object ExportSonosOwnStreams(JsonElement args) =>
+        RequireProfileMutations().ExportSonosOwnStreams(
+            LiteArgs.RequirePath(args, "path"));
 
     private object RemoveProfileItems(JsonElement args) =>
         RequireProfileMutations().Remove(

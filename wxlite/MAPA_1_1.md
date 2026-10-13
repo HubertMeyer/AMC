@@ -540,9 +540,12 @@ własnej normalizacji diakrytyków.
   i usuwają wpis przez jedynego pisarza profilu C#. `Ctrl+O` korzysta z tego
   samego importera M3U/PLS co Radio i WiiM, a `Alt+1/2/3` zapisują odpowiednio
   kolejność według dodania, alfabetyczną i własną pod tym samym kluczem co
-  pełne AMC. Adres wraca do Pythona tylko na czas jawnego dialogu F2. Ręczne
-  przestawianie kolejności własnej, eksport oraz presety pozostają dalszym
-  etapem. Enter na ulubionym lub
+  pełne AMC. W kolejności własnej `Alt+Up`/`Alt+Down` przesuwają ciągły blok,
+  a `Ctrl+X`, wybór celu i `Ctrl+V` przenoszą także nieprzylegające stacje
+  zaznaczone przez `Ctrl+Spacja`. `Ctrl+E` eksportuje widoczną kolejność do
+  przenośnego M3U przez ten sam zapis Core co Radio i WiiM. Adres wraca do
+  Pythona tylko na czas jawnego dialogu F2; podczas eksportu pozostaje w C#.
+  Presety pozostają dalszym etapem. Enter na ulubionym lub
   playliście wysyła jedno polecenie `INSERT` z odtwarzaniem do
   wcześniej wybranej grupy, bez ponawiania zapisu i bez przepuszczania tokenu,
   adresu ani identyfikatora do etykiety NVDA. Backspace wraca z podlisty na
@@ -553,7 +556,7 @@ własnej normalizacji diakrytyków.
   grupie pozostaje do wykonania przez użytkownika; testy automatyczne nie są
   dowodem, że fizyczny głośnik rozpoczął odtwarzanie.
 - Do dalszego portu pozostają wejścia, wyjścia, korektor,
-  powtarzanie i timer, ręczna kolejność, eksport i presety Sonosa, Spotify, dalsze ustawienia oraz
+  powtarzanie i timer, presety Sonosa, Spotify, dalsze ustawienia oraz
   pozostała redakcja materiałów.
 
 ## Polityka zaniku wybranego urządzenia audio

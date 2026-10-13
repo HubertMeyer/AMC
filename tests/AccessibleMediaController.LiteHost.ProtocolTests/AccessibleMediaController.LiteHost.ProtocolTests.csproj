@@ -30,5 +30,7 @@
              Link="LiteWiiMNetworkStreamExport.cs" />
     <Compile Include="..\..\src\AccessibleMediaController.LiteHost\LiteSonosOwnStreamsMutation.cs"
              Link="LiteSonosOwnStreamsMutation.cs" />
+    <Compile Include="..\..\src\AccessibleMediaController.LiteHost\LiteSonosOwnStreamsExport.cs"
+             Link="LiteSonosOwnStreamsExport.cs" />
   </ItemGroup>
 </Project>

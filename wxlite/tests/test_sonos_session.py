@@ -6,6 +6,7 @@ from types import MethodType, SimpleNamespace
 from amc_wx_lite import gui as gui_module
 from amc_wx_lite.gui import LiteFrame
 from amc_wx_lite.host_client import HostError, LiteHostClient
+from amc_wx_lite.list_model import Row
 from amc_wx_lite.menu_model import build_menus
 from amc_wx_lite.navigation import (
     ActivateSonosGroup,
@@ -72,6 +73,11 @@ def test_sonos_own_stream_edit_shortcuts_are_strictly_contextual() -> None:
         "Alt+1": Action.SORT_SONOS_OWN_STREAMS_ADDED,
         "Alt+2": Action.SORT_SONOS_OWN_STREAMS_ALPHABETICAL,
         "Alt+3": Action.SORT_SONOS_OWN_STREAMS_CUSTOM,
+        "Alt+Up": Action.MOVE_SONOS_OWN_STREAM_UP,
+        "Alt+Down": Action.MOVE_SONOS_OWN_STREAM_DOWN,
+        "Ctrl+X": Action.CUT_SONOS_OWN_STREAMS,
+        "Ctrl+V": Action.PASTE_SONOS_OWN_STREAMS,
+        "Ctrl+E": Action.EXPORT_SONOS_OWN_STREAMS,
     }
     for chord, action in expected.items():
         parts = chord.split("+")
@@ -318,6 +324,11 @@ def test_sonos_command_gate_blocks_local_only_features() -> None:
         Action.REMOVE_SONOS_OWN_STREAMS,
         Action.IMPORT_SONOS_OWN_STREAMS,
         Action.SORT_SONOS_OWN_STREAMS_ALPHABETICAL,
+        Action.MOVE_SONOS_OWN_STREAM_UP,
+        Action.MOVE_SONOS_OWN_STREAM_DOWN,
+        Action.CUT_SONOS_OWN_STREAMS,
+        Action.PASTE_SONOS_OWN_STREAMS,
+        Action.EXPORT_SONOS_OWN_STREAMS,
     } <= SONOS_SUPPORTED_ACTIONS
     assert {
         Action.ADD_BOOKMARK,
@@ -359,6 +370,9 @@ def test_sonos_host_client_uses_narrow_commands_and_arguments() -> None:
     client.sonos_remove_own_streams(["stream-1", "stream-2"])
     client.sonos_import_own_streams("C:/listy/sonos.m3u")
     client.sonos_sort_own_streams("Alphabetical")
+    client.sonos_move_own_streams(["stream-1", "stream-2"], -1)
+    client.sonos_place_own_streams(["stream-1"], "stream-2")
+    client.sonos_export_own_streams("C:/listy/sonos-export.m3u")
 
     assert calls == [
         ("sonos.targets", None, 60.0),
@@ -442,7 +456,91 @@ def test_sonos_host_client_uses_narrow_commands_and_arguments() -> None:
             {"mode": "Alphabetical"},
             30.0,
         ),
+        (
+            "sonos.ownStreamMove",
+            {"itemIds": ["stream-1", "stream-2"], "direction": -1},
+            30.0,
+        ),
+        (
+            "sonos.ownStreamPlace",
+            {"itemIds": ["stream-1"], "targetId": "stream-2"},
+            30.0,
+        ),
+        (
+            "sonos.ownStreamExport",
+            {"path": "C:/listy/sonos-export.m3u"},
+            60.0,
+        ),
     ]
+
+
+def test_sonos_cut_and_paste_preserve_all_selected_stream_ids() -> None:
+    spoken: list[str] = []
+    calls: list[tuple[list[str], str]] = []
+    reloads: list[tuple[str | None, str | None]] = []
+    selected = [
+        Row(
+            "sonos-stream:one",
+            "Pierwsza",
+            "sonosOwnStream",
+            service_id="one",
+            service_kind="ownStream",
+        ),
+        Row(
+            "sonos-stream:three",
+            "Trzecia",
+            "sonosOwnStream",
+            service_id="three",
+            service_kind="ownStream",
+        ),
+    ]
+    client = SimpleNamespace(
+        sonos_place_own_streams=lambda ids, target: (
+            calls.append((list(ids), target))
+            or {
+                "preferredStreamId": "one",
+                "message": "Przeniesiono 2 stacje, od pozycji 1 z 3",
+            }
+        )
+    )
+    frame = SimpleNamespace(
+        _sonos_own_stream_sort_mode="Custom",
+        _sonos_pending_move_ids=[],
+        _selected_sonos_own_stream_rows=lambda: selected,
+        _profile_edit_client=lambda: client,
+        announcer=SimpleNamespace(say=spoken.append),
+        runner=SimpleNamespace(
+            submit=lambda _name, work, done, _failed: done(work())
+        ),
+        _reload_sonos_own_streams=lambda **kwargs: reloads.append((
+            kwargs.get("preferred_stream_id"),
+            kwargs.get("announcement"),
+        )),
+    )
+
+    LiteFrame._cut_sonos_own_streams(frame)
+    assert frame._sonos_pending_move_ids == ["one", "three"]
+    assert spoken == [
+        "Zaznaczono 2 stacji do przeniesienia. "
+        "Wybierz miejsce i naciśnij Control V"
+    ]
+
+    target = Row(
+        "sonos-stream:two",
+        "Druga",
+        "sonosOwnStream",
+        service_id="two",
+        service_kind="ownStream",
+    )
+    frame._selected_sonos_own_stream_rows = lambda: [target]
+    LiteFrame._paste_sonos_own_streams(frame)
+
+    assert calls == [(["one", "three"], "two")]
+    assert frame._sonos_pending_move_ids == []
+    assert reloads == [(
+        "one",
+        "Przeniesiono 2 stacje, od pozycji 1 z 3",
+    )]
 
 
 def test_sonos_library_and_material_rows_keep_ids_out_of_spoken_text() -> None:

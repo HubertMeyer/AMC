@@ -4351,6 +4351,7 @@ class LiteFrame(wx.Frame):
         self._sonos_active_group_id = ""
         self._sonos_browse_household_id = ""
         self._sonos_own_stream_sort_mode = SORT_CUSTOM
+        self._sonos_pending_move_ids: list[str] = []
         self._sonos_content_version = 0
         self._sonos_status_poll_pending = False
         # Jeden tor żądań Sonos. Odczyt początkowy, timer i polecenia nie mogą
@@ -6729,6 +6730,16 @@ class LiteFrame(wx.Frame):
             Action.SORT_SONOS_OWN_STREAMS_CUSTOM,
         }:
             self._set_sonos_own_stream_sort(action)
+        elif action is Action.MOVE_SONOS_OWN_STREAM_UP:
+            self._move_sonos_own_streams(-1)
+        elif action is Action.MOVE_SONOS_OWN_STREAM_DOWN:
+            self._move_sonos_own_streams(1)
+        elif action is Action.CUT_SONOS_OWN_STREAMS:
+            self._cut_sonos_own_streams()
+        elif action is Action.PASTE_SONOS_OWN_STREAMS:
+            self._paste_sonos_own_streams()
+        elif action is Action.EXPORT_SONOS_OWN_STREAMS:
+            self._export_sonos_own_streams()
         elif action is Action.ASSIGN_PRESET:
             self._assign_preset()
         elif (slot := preset_slot(action)) is not None:
@@ -8589,6 +8600,8 @@ class LiteFrame(wx.Frame):
             self._load_sonos_targets()
             return
         self._sonos_browse_household_id = household_id
+        if intent.view is not LibraryView.SONOS_OWN_STREAMS:
+            self._sonos_pending_move_ids = []
         self._sonos_content_version += 1
         version = self._sonos_content_version
         state = self.navigator.sessions[SessionId.SONOS]
@@ -8829,6 +8842,11 @@ class LiteFrame(wx.Frame):
 
         def done(payload: object) -> None:
             result = payload if isinstance(payload, dict) else {}
+            removed = set(stream_ids)
+            self._sonos_pending_move_ids = [
+                stream_id for stream_id in self._sonos_pending_move_ids
+                if stream_id not in removed
+            ]
             message = str(
                 result.get("message")
                 or f"Usunięto stacje Sonos: {len(stream_ids)}"
@@ -8901,6 +8919,8 @@ class LiteFrame(wx.Frame):
         def done(payload: object) -> None:
             result = payload if isinstance(payload, dict) else {}
             self._sonos_own_stream_sort_mode = mode
+            if mode != SORT_CUSTOM:
+                self._sonos_pending_move_ids = []
             message = str(
                 result.get("message") or "Zmieniono kolejność stacji Sonos"
             )
@@ -8915,6 +8935,131 @@ class LiteFrame(wx.Frame):
             done,
             lambda error: self.announcer.say(
                 f"Nie zapisano kolejności stacji Sonos: {error}"
+            ),
+        )
+
+    def _move_sonos_own_streams(self, direction: int) -> None:
+        if self._sonos_own_stream_sort_mode != SORT_CUSTOM:
+            self.announcer.say(
+                "Przenoszenie działa w kolejności własnej. Naciśnij Alt 3"
+            )
+            return
+        rows = self._selected_sonos_own_stream_rows()
+        if not rows:
+            self.announcer.say("Najpierw wybierz stację")
+            return
+        client = self._profile_edit_client()
+        if client is None:
+            return
+        stream_ids = [row.service_id for row in rows if row.service_id]
+
+        def done(payload: object) -> None:
+            result = payload if isinstance(payload, dict) else {}
+            preferred = str(result.get("preferredStreamId") or "") or None
+            message = str(result.get("message") or "Przeniesiono stację Sonos")
+            self._reload_sonos_own_streams(
+                preferred_stream_id=preferred,
+                announcement=message,
+            )
+
+        self.runner.submit(
+            "sonos-own-stream-order",
+            lambda: client.sonos_move_own_streams(stream_ids, direction),
+            done,
+            lambda error: self.announcer.say(str(error)),
+        )
+
+    def _cut_sonos_own_streams(self) -> None:
+        if self._sonos_own_stream_sort_mode != SORT_CUSTOM:
+            self.announcer.say(
+                "Przenoszenie działa w kolejności własnej. Naciśnij Alt 3"
+            )
+            return
+        rows = self._selected_sonos_own_stream_rows()
+        if not rows:
+            self.announcer.say("Najpierw wybierz stację")
+            return
+        self._sonos_pending_move_ids = [
+            row.service_id for row in rows if row.service_id
+        ]
+        self.announcer.say(
+            "Zaznaczono stację do przeniesienia. "
+            "Wybierz miejsce i naciśnij Control V"
+            if len(self._sonos_pending_move_ids) == 1 else
+            f"Zaznaczono {len(self._sonos_pending_move_ids)} stacji do "
+            "przeniesienia. Wybierz miejsce i naciśnij Control V"
+        )
+
+    def _paste_sonos_own_streams(self) -> None:
+        if self._sonos_own_stream_sort_mode != SORT_CUSTOM:
+            self.announcer.say(
+                "Przenoszenie działa w kolejności własnej. Naciśnij Alt 3"
+            )
+            return
+        if not self._sonos_pending_move_ids:
+            self.announcer.say(
+                "Najpierw naciśnij Control X na stacji do przeniesienia"
+            )
+            return
+        target = next(iter(self._selected_sonos_own_stream_rows()), None)
+        if target is None or not target.service_id:
+            self.announcer.say("Nie wybrano miejsca docelowego")
+            return
+        client = self._profile_edit_client()
+        if client is None:
+            return
+        pending = list(self._sonos_pending_move_ids)
+
+        def done(payload: object) -> None:
+            result = payload if isinstance(payload, dict) else {}
+            preferred = str(result.get("preferredStreamId") or "") or None
+            message = str(result.get("message") or "Przeniesiono stacje Sonos")
+            self._sonos_pending_move_ids = []
+            self._reload_sonos_own_streams(
+                preferred_stream_id=preferred,
+                announcement=message,
+            )
+
+        self.runner.submit(
+            "sonos-own-stream-order",
+            lambda: client.sonos_place_own_streams(
+                pending, target.service_id or ""
+            ),
+            done,
+            lambda error: self.announcer.say(str(error)),
+        )
+
+    def _export_sonos_own_streams(self) -> None:
+        client = self._profile_edit_client()
+        if client is None:
+            return
+        if self.navigator.session.library_view is not LibraryView.SONOS_OWN_STREAMS:
+            self.announcer.say("Otwórz kategorię Moje stacje Sonosa")
+            return
+        with wx.FileDialog(
+            self,
+            "Eksportuj Moje stacje Sonosa",
+            defaultFile="Moje stacje Sonosa AMC.m3u",
+            wildcard="Playlisty M3U (*.m3u)|*.m3u|Wszystkie pliki (*.*)|*.*",
+            style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT,
+        ) as dialog:
+            if dialog.ShowModal() != wx.ID_OK:
+                self._restore_focus_after_dialog()
+                return
+            path = str(Path(dialog.GetPath()).with_suffix(".m3u"))
+
+        def done(payload: object) -> None:
+            result = payload if isinstance(payload, dict) else {}
+            count = int(result.get("exportedCount") or 0)
+            self.announcer.say(f"Wyeksportowano stacje Sonos: {count}")
+            self._restore_focus_after_dialog()
+
+        self.runner.submit(
+            "sonos-own-stream-export",
+            lambda: client.sonos_export_own_streams(path),
+            done,
+            lambda error: self.announcer.say(
+                f"Nie można zapisać playlisty: {error}"
             ),
         )
 
