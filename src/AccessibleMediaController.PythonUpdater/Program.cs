@@ -55,6 +55,8 @@ internal static class Program
             // rodzica, a następnie cała transakcja poprawnie się wycofywała.
             if (!WaitForApplication(options.WaitUpdaterPid))
             {
+                Console.Error.WriteLine(
+                    "Aktualizacja zatrzymana: nie zakończył się proces-rodzic aktualizatora.");
                 if (!options.Silent)
                 {
                     Show("Aktualizacja nie została rozpoczęta, ponieważ poprzedni "
@@ -76,6 +78,16 @@ internal static class Program
                     options.WaitPid,
                     TimeSpan.FromSeconds(30)))
             {
+                var blockers = InstalledProcessGuard.RunningComponents(
+                    options.Target);
+                Console.Error.WriteLine(
+                    blockers.Count == 0
+                        ? "Aktualizacja zatrzymana: wskazany proces AMC nadal istnieje."
+                        : "Aktualizacja zatrzymana przez składniki instalacji: "
+                          + string.Join(
+                              "; ",
+                              blockers.Select(item =>
+                                  $"PID {item.ProcessId}: {item.Executable}")));
                 if (!options.Silent)
                 {
                     Show("Aktualizacja nie została rozpoczęta, ponieważ AMC Python nadal działa. "

@@ -10,7 +10,12 @@ namespace AccessibleMediaController.PythonUpdater;
 internal static class InstalledProcessGuard
 {
     internal static bool HasRunningComponent(string installationRoot)
+        => RunningComponents(installationRoot).Count > 0;
+
+    internal static IReadOnlyList<RunningInstalledComponent> RunningComponents(
+        string installationRoot)
     {
+        var result = new List<RunningInstalledComponent>();
         foreach (var process in Process.GetProcesses())
         {
             using (process)
@@ -21,7 +26,11 @@ internal static class InstalledProcessGuard
                 {
                     var executable = process.MainModule?.FileName;
                     if (IsInsideInstallation(installationRoot, executable))
-                        return true;
+                    {
+                        result.Add(new RunningInstalledComponent(
+                            process.Id,
+                            executable!));
+                    }
                 }
                 catch (Exception exception) when (
                     exception is InvalidOperationException
@@ -33,7 +42,7 @@ internal static class InstalledProcessGuard
                 }
             }
         }
-        return false;
+        return result;
     }
 
     internal static bool IsInsideInstallation(string installationRoot, string? executable)
@@ -48,3 +57,7 @@ internal static class InstalledProcessGuard
         return path.StartsWith(root, StringComparison.OrdinalIgnoreCase);
     }
 }
+
+internal readonly record struct RunningInstalledComponent(
+    int ProcessId,
+    string Executable);

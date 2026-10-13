@@ -222,6 +222,12 @@ internal static class Program
                         "Nie wykryto żywego procesu uruchomionego z instalacji.");
                 Thread.Sleep(50);
             }
+            var blockers = InstalledProcessGuard.RunningComponents(root);
+            Equal(1, blockers.Count);
+            Equal(process.Id, blockers[0].ProcessId);
+            Equal(true, InstalledProcessGuard.IsInsideInstallation(
+                root,
+                blockers[0].Executable));
         }
         finally
         {
