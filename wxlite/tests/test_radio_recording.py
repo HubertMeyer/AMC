@@ -757,9 +757,10 @@ def test_empty_active_recordings_have_an_exact_user_facing_count() -> None:
 
 def test_escape_and_backspace_share_the_recording_preview_exit_action() -> None:
     for chord in (Chord("Escape"), Chord("Back")):
-        assert resolve(chord, player_view=False, radio_session=True) is (
-            Action.PARENT_FOLDER
+        expected = (
+            Action.CLOSE_LIST_PREVIEW
+            if chord.key == "Escape"
+            else Action.PARENT_FOLDER
         )
-        assert resolve(chord, player_view=False, radio_session=False) is (
-            Action.PARENT_FOLDER
-        )
+        assert resolve(chord, player_view=False, radio_session=True) is expected
+        assert resolve(chord, player_view=False, radio_session=False) is expected

@@ -1,6 +1,6 @@
 # AMC Python — uruchamianie i sprawdzanie bieżącego przyrostu
 
-To rozwijany równoległy interfejs pełnegoAMC. Nie jest jeszcze zamiennikiem wszystkich funkcji programu. Katalog i nazwa uruchamiacza `wxlite` są historyczne; nie oznaczają decyzji o ograniczeniu docelowego zakresu do dwóch sesji.
+To rozwijany równoległy interfejs pełnego AMC. Nie jest jeszcze zamiennikiem wszystkich funkcji programu. Katalog i nazwa uruchamiacza `wxlite` są historyczne; nie oznaczają decyzji o ograniczeniu docelowego zakresu do dwóch sesji.
 
 ## Start aplikacji i jedna instancja
 
@@ -13,12 +13,14 @@ potrzebnych przy starcie; `AMC.exe --sprawdz` uruchamia diagnostykę interfejsu.
 
 Odbiór docelowego launchera:
 
-Aktualna, automatycznie zweryfikowana paczka znajduje się w:
+Stała, automatycznie aktualizowana i weryfikowana paczka użytkowa znajduje się w:
 
-`D:\Projekty Codex\AMC - integracja wxPython\.test-output\AMC-Python-radio-recording-bookmarks-20261013\AMC.exe`
+`D:\Projekty Codex\AMC Python\AMC.exe`
 
-Nie przełączaj na nią programu w czasie trwającego nagrywania. Pierwszy żywy
-odbiór wykonaj kolejno według punktów poniżej.
+Przygotowane przyrosty trafiają najpierw do osobnych katalogów testowych.
+Stała paczka jest podmieniana dopiero po potwierdzeniu, że AMC Python nie
+nagrywa. Nie przełączaj jej ręcznie w czasie trwającego nagrywania. Pierwszy
+żywy odbiór wykonaj kolejno według punktów poniżej.
 
 1. Uruchom `AMC.exe` bez otwierania terminala i bez wybierania interpretera.
    Okno ma od razu być zmaksymalizowane, aktywne i na pierwszym planie.
@@ -51,9 +53,11 @@ głośność bez zatrzymania drugiego toru ani nagrywania.
 Biblioteka, Ulubione, Playlisty i Kolejka są równorzędnymi widokami sesji.
 Przełącza się je odpowiednio przez `Ctrl+L`, `Ctrl+U`, `Ctrl+P` i `Ctrl+Q`.
 Na każdym z tych głównych widoków `Escape` nie może samoczynnie przenosić do
-Biblioteki ani niczego ogłaszać. `Escape` i `Backspace` służą do powrotu dopiero
-z wnętrza kontenera albo widoku podrzędnego. Sprawdź tę zasadę osobno w każdej
-sesji, która udostępnia dany widok.
+Biblioteki ani niczego ogłaszać. W drzewie folderów wyłącznie `Backspace`
+przechodzi do folderu nadrzędnego; `Escape` nie zmienia poziomu. `Escape` nadal
+czyści aktywny filtr oraz zamyka rzeczywisty podgląd lub widok podrzędny, na
+przykład listę trwających nagrań, historię nagrywania albo harmonogramy.
+Sprawdź tę zasadę osobno w każdej sesji, która udostępnia dany widok.
 
 W odtwarzaczu Plików `I` ustawia początek, a `O` koniec zaznaczonego
 fragmentu. Sprawdź także nagranie otwarte z `Alt+Shift+R`, gdy Radio nadal

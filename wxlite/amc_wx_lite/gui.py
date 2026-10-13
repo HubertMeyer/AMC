@@ -6488,12 +6488,23 @@ class LiteFrame(wx.Frame):
         elif action is Action.ACTIVATE:
             self._activate()
         elif action is Action.PARENT_FOLDER:
-            # Po Escape/Backspace z podgladu nie dopowiadamy technicznego
-            # "Powrot, Radio internetowe, lista". Natywna lista odzyskuje
-            # poprzedni wiersz i to wlasnie jego nazwe ma od razu przeczytac
-            # NVDA.
             if not LiteFrame._restore_transient_preview(self, announce=False):
                 self._run(self.navigator.go_to_parent())
+        elif action is Action.CLOSE_LIST_PREVIEW:
+            # Escape nie jest drugim Backspace. Nadal zamyka chwilowe
+            # podglady (nagrywane, historia nagran, harmonogramy, nowe
+            # odcinki) i zagniezdzone widoki, ale NIE przenosi z otwartego
+            # folderu Biblioteki do jego rodzica. Natywna lista odzyskuje
+            # fokus bez dopowiadania "Powrot, ... lista".
+            if LiteFrame._restore_transient_preview(self, announce=False):
+                return
+            state = self.navigator.session
+            if (
+                self.navigator.active is SessionId.FILES
+                and state.library_view is None
+            ):
+                return
+            self._run(self.navigator.go_to_parent())
         elif action is Action.SHOW_PLAYER:
             # F6 w odtwarzaczu TEZ wraca na liste (navigator.show_player), wiec
             # musi przejsc przez polityke pauzy tak samo jak Escape.

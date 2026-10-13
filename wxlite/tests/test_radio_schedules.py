@@ -179,7 +179,11 @@ def test_escape_and_backspace_both_leave_unanchored_schedule_view_for_stations()
         "label": "Plan, włączone",
     }]})
     for chord in (Chord("Escape"), Chord("Back")):
-        assert resolve(chord, player_view=False, radio_session=True) is Action.PARENT_FOLDER
+        assert resolve(chord, player_view=False, radio_session=True) is (
+            Action.CLOSE_LIST_PREVIEW
+            if chord.key == "Escape"
+            else Action.PARENT_FOLDER
+        )
         navigator = Navigator()
         navigator.switch_session(SessionId.RADIO)
         navigator.apply_radio_view(

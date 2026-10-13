@@ -24,6 +24,7 @@ def make_frame():
     frame.go_to_parent = lambda: parent_calls.append(True) or []
     frame._run = lambda intents: None
     frame._dispatch = gui.LiteFrame._dispatch.__get__(frame, FakeFrame)
+    frame._transient_preview_return = None
     return frame, parent_calls
 
 
@@ -39,7 +40,13 @@ def test_escape_on_filtered_list_clears_filter_before_parent():
     assert frame.files_list.focused
 
     gui.LiteFrame._on_key(frame, FakeKeyEvent(27))
-    assert parent_calls == [True], "Dopiero Escape bez filtra wraca poziom wyżej"
+    assert parent_calls == [], "Escape bez filtra nie może udawać Backspace"
+
+
+def test_backspace_still_goes_to_the_parent_folder() -> None:
+    frame, parent_calls = make_frame()
+    gui.LiteFrame._on_key(frame, FakeKeyEvent(8))
+    assert parent_calls == [True]
 
 
 def test_modified_escape_does_not_clear_filter_or_navigate():

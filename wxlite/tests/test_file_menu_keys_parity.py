@@ -112,15 +112,12 @@ def test_pomoc_f1_podaje_te_same_klawisze_co_resolver() -> None:
 # ========================================================== PUNKT 2: Escape
 
 
-def test_escape_na_liscie_wychodzi_o_poziom_wyzej() -> None:
-    """``ReturnToMediaListFromEscape`` z pustym filtrem woła poziom wyzej.
-
-    Brak wpisu ``Escape`` w ``LIST_VIEW`` znaczyl, ze klawisz szedl do
-    kontrolki i NIC nie robil -- dokladnie to zglosil Michal.
-    """
+def test_escape_na_liscie_ma_osobna_akcje_od_backspace() -> None:
     chord = chord_from_event(FakeKeyEvent(27))  # WXK_ESCAPE w zastepniku
     assert chord.canonical == "Escape"
-    assert resolve(chord, player_view=False, radio_session=False) is Action.PARENT_FOLDER
+    assert resolve(chord, player_view=False, radio_session=False) is (
+        Action.CLOSE_LIST_PREVIEW
+    )
 
 
 def test_escape_z_odtwarzacza_nadal_wraca_na_liste() -> None:
@@ -130,9 +127,11 @@ def test_escape_z_odtwarzacza_nadal_wraca_na_liste() -> None:
 
 
 def test_escape_dziala_tez_na_pustej_liscie() -> None:
-    """Pusty widok ma nadal wyjscie: akcja jest w tablicy, nie w wierszu."""
+    """Pusty podglad ma nadal wyjscie: akcja nie zalezy od zaznaczenia."""
     chord = chord_from_event(FakeKeyEvent(27))
-    assert resolve(chord, player_view=False, radio_session=True) is Action.PARENT_FOLDER
+    assert resolve(chord, player_view=False, radio_session=True) is (
+        Action.CLOSE_LIST_PREVIEW
+    )
 
 
 def test_escape_nie_jest_akceleratorem_menu() -> None:

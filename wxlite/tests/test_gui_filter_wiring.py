@@ -133,6 +133,10 @@ class FakeSession:
     def __init__(self, model: ListModel, context: tuple) -> None:
         self.model = model
         self._context = context
+        # Większość testów filtra pracuje w zwykłym folderze Biblioteki.
+        # Jawne testy nazwanych widoków mogą podać LibraryView jako trzeci
+        # element kontekstu.
+        self.library_view = context[2] if len(context) > 2 else None
 
     def view_context_parts(self) -> tuple:
         return self._context

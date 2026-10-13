@@ -98,6 +98,11 @@ class Action(Enum):
     SESSION_SONOS = "session.sonos"
     ACTIVATE = "activate"
     PARENT_FOLDER = "parent"
+    # Escape na liscie nie jest aliasem Backspace. Zamyka podglad lub
+    # zagniezdzony widok, ale w drzewie folderow Biblioteki nie przechodzi do
+    # katalogu nadrzednego. Ta roznica jest istotna przy obsludze bez wzroku:
+    # przypadkowy Escape nie moze przeniesc fokusu do innego poziomu listy.
+    CLOSE_LIST_PREVIEW = "view.closePreview"
     SHOW_PLAYER = "view.player"
     SHOW_LIST = "view.list"
     PLAY_PAUSE = "transport.playPause"
@@ -318,6 +323,7 @@ TIDAL_SUPPORTED_ACTIONS = frozenset({
     Action.SESSION_SONOS,
     Action.ACTIVATE,
     Action.PARENT_FOLDER,
+    Action.CLOSE_LIST_PREVIEW,
     Action.SHOW_LIST,
     Action.PLAY_PAUSE,
     Action.QUEUE_NEXT,
@@ -383,6 +389,7 @@ WIIM_SUPPORTED_ACTIONS = frozenset({
     Action.SESSION_SONOS,
     Action.ACTIVATE,
     Action.PARENT_FOLDER,
+    Action.CLOSE_LIST_PREVIEW,
     Action.SHOW_PLAYER,
     Action.SHOW_LIST,
     Action.PLAY_PAUSE,
@@ -426,6 +433,7 @@ SONOS_SUPPORTED_ACTIONS = frozenset({
     Action.SESSION_SONOS,
     Action.ACTIVATE,
     Action.PARENT_FOLDER,
+    Action.CLOSE_LIST_PREVIEW,
     Action.SHOW_PLAYER,
     Action.SHOW_LIST,
     Action.PLAY_PAUSE,
@@ -516,13 +524,10 @@ LIST_VIEW: dict[str, Action] = {
     "Shift+F2": Action.RENAME_LOCAL_FILE,
     "Delete": Action.REMOVE_SELECTED,
     "Shift+Delete": Action.RECYCLE_SELECTED,
-    # Escape NA LISCIE. ``MainWindow.xaml.cs:20797-20828`` kieruje go do
-    # ``ReturnToMediaListFromEscape``, a ta (cs:22551-22563) przy PUSTYM
-    # filtrze wola ``NavigateToParentLevel()`` -- czyli to samo wyjscie o
-    # poziom wyzej, co Backspace. Port nie mial tu nic, wiec Escape na liscie
-    # nie robil nic. Niepusty filtr obsluguje osobno ``_on_filter_key``
-    # (czyszczenie + powrot), bo tam fokus jest w polu edycji.
-    "Escape": Action.PARENT_FOLDER,
+    # Escape i Backspace maja rozne role. Escape czysci filtr albo zamyka
+    # rzeczywisty podglad/podwidok; nie przechodzi po drzewie folderow.
+    # Backspace powyzej pozostaje jedynym gestem "folder nadrzedny".
+    "Escape": Action.CLOSE_LIST_PREVIEW,
     "F6": Action.SHOW_PLAYER,
     # Shift+F6 na LISCIE tez idzie do odtwarzacza: warunek oryginalu to
     # ``_playerViewActive && Shift`` (MainWindow.xaml.cs:20780), a na liscie
@@ -934,6 +939,7 @@ def _help_entries() -> list[tuple[str, str, Action]]:
         Action.SESSION_SONOS: "Sonos",
         Action.ACTIVATE: "Otworz folder albo odtworz",
         Action.PARENT_FOLDER: "Folder nadrzedny",
+        Action.CLOSE_LIST_PREVIEW: "Zamknij podglad lub podwidok",
         Action.SHOW_PLAYER: "Widok odtwarzacza",
         Action.SHOW_LIST: "Powrot na liste",
         Action.PLAY_PAUSE: "Pauza albo wznowienie",
