@@ -63,6 +63,7 @@ from .audio_output import (
 )
 from .collation import HostCollation
 from .host_client import HostError, HostUnavailable, LiteHostClient, default_host_path
+from . import nvda_bridge
 from .library_source import LibrarySnapshot, LibrarySource, degradation_notice
 from . import list_sync
 from . import list_filter
@@ -745,6 +746,23 @@ class Announcer:
         # Pasek stanu jest OPCJONALNY: stare wywolania i atrapy w testach nadal
         # maja dzialac, a sama zapowiedz nie moze zalezec od dodatku.
         self._status_bar = status_bar
+        self._capture_active = False
+        self._captured_message = ""
+
+    def begin_capture(self) -> None:
+        """Przechwyć natychmiastową odpowiedź dla dodatku NVDA.
+
+        Dodatek sam wypowie odpowiedź. Lokalny live region nie może w tym
+        samym czasie mówić drugi raz tego samego tekstu.
+        """
+        self._capture_active = True
+        self._captured_message = ""
+
+    def end_capture(self) -> str:
+        message = self._captured_message
+        self._capture_active = False
+        self._captured_message = ""
+        return message
 
     def show(self, text: str) -> str:
         """Zaktualizuj dostepny tekst bez wymuszania wypowiedzi NVDA."""
@@ -759,6 +777,9 @@ class Announcer:
     def say(self, text: str) -> None:
         text = self.show(text)
         if not text:
+            return
+        if self._capture_active:
+            self._captured_message = text
             return
         # Kanal zapowiedzi i natywny pasek odtwarzania sa rozdzielne, tak jak
         # w glownym AMC. Kopiowanie tutaj ostatniego komunikatu nadpisywalo
@@ -5702,10 +5723,17 @@ class LiteFrame(wx.Frame):
                 "automatic_refresh_batch_size": int(podcast_values[3]),
             }
 
+        try:
+            nvda_window_handle = int(self.GetHandle())
+        except Exception:
+            nvda_window_handle = 0
+
         def work() -> dict:
             try:
                 client.start()
                 client.hello()
+                if nvda_window_handle > 0:
+                    client.configure_nvda_bridge(nvda_window_handle)
                 result = client.configure_audio(**settings)
                 client.configure_local_resume(
                     self._remember_local_playback_positions
@@ -5760,6 +5788,9 @@ class LiteFrame(wx.Frame):
 
     def _handle_engine_event(self, name: str, data: dict) -> None:
         if not self._window_alive():
+            return
+        if name == nvda_bridge.EVENT_NAME:
+            self._handle_nvda_command(data)
             return
         if name == "audio.outputFallback":
             paused = bool(data.get("paused"))
@@ -6075,6 +6106,174 @@ class LiteFrame(wx.Frame):
             return
         self._last_persist_error = error
         self.announcer.say(f"Nie zapisałem kolejki: {error}")
+
+    def _handle_nvda_command(self, data: dict) -> None:
+        """Wykonaj jedno polecenie istniejącego dodatku i odeślij wynik.
+
+        Zdarzenie pochodzi wyłącznie z hosta C#, który sprawdził wersję,
+        długość i białą listę na potoku bieżącego użytkownika. Walidujemy je
+        ponownie przed dotknięciem UI. Id korelacji nigdy nie jest czytane ani
+        pokazywane w kontrolce.
+        """
+        client = self.client
+        if client is None or not client.alive or not isinstance(data, dict):
+            return
+        request_id = data.get("requestId")
+        command = data.get("command")
+        if not isinstance(request_id, str) or not request_id:
+            return
+
+        if not isinstance(command, str) or command not in nvda_bridge.ALLOWED_COMMANDS:
+            ok, message = False, "Nieobsługiwane polecenie dodatku AMC."
+        else:
+            try:
+                ok, message = self._execute_nvda_command(command)
+            except Exception as error:
+                _append_frontend_log(
+                    self.store,
+                    f"Polecenie dodatku NVDA nie powiodło się: {type(error).__name__}: {error}",
+                )
+                ok, message = False, "Nie udało się wykonać polecenia dodatku AMC."
+
+        try:
+            client.reply_to_nvda(request_id, ok=ok, message=message)
+        except (HostError, HostUnavailable):
+            # Dodatek ma własny limit czasu i poda użytkownikowi jednoznaczny
+            # komunikat. Nie dokładamy drugiej, spóźnionej zapowiedzi w oknie.
+            pass
+
+    def _execute_nvda_command(self, command: str) -> tuple[bool, str]:
+        visible_auxiliary_window = any(
+            window is not self
+            and bool(getattr(window, "IsShown", lambda: False)())
+            for window in wx.GetTopLevelWindows()
+        )
+        if (
+            visible_auxiliary_window
+            and command not in nvda_bridge.WORKS_WITH_OPEN_WINDOW
+        ):
+            return (
+                False,
+                "AMC jest zajęty. Zamknij otwarte okno dialogowe lub spróbuj za chwilę.",
+            )
+
+        if command in nvda_bridge.READ_COMMANDS:
+            return True, {
+                "status": self._nvda_status_message,
+                "context": self._nvda_context_message,
+                "nowPlaying": self._nvda_now_playing_message,
+            }[command]()
+
+        if command in nvda_bridge.KNOWN_NOT_IMPLEMENTED:
+            return False, nvda_bridge.unavailable_message(command)
+
+        if command in nvda_bridge.SESSION_COMMANDS:
+            sessions = tuple(SessionId)
+            current = sessions.index(self.navigator.active)
+            direction = 1 if command == "sessionNext" else -1
+            target = sessions[(current + direction) % len(sessions)]
+            self._switch_session(target)
+            return True, SESSION_LABELS[target]
+
+        action = nvda_bridge.action_for(command)
+        if action is None:
+            return False, "Nieobsługiwane polecenie dodatku AMC."
+        if not self._action_available_in_active_session(action):
+            return False, "To polecenie nie jest dostępne w bieżącej sesji."
+
+        if command in nvda_bridge.OPEN_WINDOW_COMMANDS:
+            # Najpierw odpowiadamy dodatkowi, dopiero w następnym obrocie
+            # pętli UI otwieramy ewentualne okno modalne. Inaczej dialog
+            # zatrzymałby odpowiedź aż do zamknięcia i dodatek zgłosił timeout.
+            _present_main_window(self)
+            wx.CallAfter(self._dispatch, action)
+            return True, ""
+
+        self.announcer.begin_capture()
+        try:
+            self._dispatch(action)
+        except Exception:
+            self.announcer.end_capture()
+            raise
+        message = self.announcer.end_capture()
+        return True, message
+
+    def _nvda_playback_snapshot(self) -> dict:
+        if self.navigator.active is SessionId.WIIM:
+            return self._wiim_snapshot
+        if self.navigator.active is SessionId.SONOS:
+            return self._sonos_snapshot
+        return self._transport_status_by_session.get(self.navigator.active, {})
+
+    def _nvda_status_message(self) -> str:
+        session = self.navigator.session
+        session_name = SESSION_LABELS[self.navigator.active]
+        if self.navigator.active is SessionId.TIDAL:
+            # TIDAL gra w obcej aplikacji. Dopóki nie przechowujemy ostatniej
+            # migawki SMTC, nie wolno z samego tytułu wywnioskować „pauzy” ani
+            # „odtwarzania”: byłby to wymyślony stan czytany globalnie przez
+            # NVDA. Informujemy wyłącznie o tym, co AMC naprawdę wie.
+            if not self._tidal_desktop_has_playback:
+                return "TIDAL, brak otwartego nagrania."
+            title = session.now_playing_title.strip()
+            if title:
+                return f"{title}, TIDAL, sterowanie w oryginalnej aplikacji."
+            return "TIDAL, materiał otwarty w oryginalnej aplikacji."
+
+        snapshot = self._nvda_playback_snapshot()
+        title = str(
+            session.now_playing_title
+            or snapshot.get("title")
+            or snapshot.get("currentTitle")
+            or ""
+        ).strip()
+        if not title:
+            return f"{session_name}, brak otwartego nagrania."
+
+        playback = str(snapshot.get("playbackState") or "").casefold()
+        paused = bool(snapshot.get("paused")) or playback in {
+            "paused", "pause", "wstrzymano", "zatrzymane", "stopped"
+        }
+        state = "pauza" if paused else "odtwarzanie"
+        muted = ", wyciszone" if bool(snapshot.get("muted")) else ""
+        raw_volume = snapshot.get("volume", self.options.volume)
+        volume = (
+            int(raw_volume)
+            if isinstance(raw_volume, (int, float)) and not isinstance(raw_volume, bool)
+            else self.options.volume
+        )
+        return f"{title}, {session_name}, {state}{muted}, głośność {volume}%."
+
+    def _nvda_context_message(self) -> str:
+        session_name = SESSION_LABELS[self.navigator.active]
+        if self.navigator.session.view is View.PLAYER:
+            return f"{session_name}, Odtwarzacz"
+        label = str(self._active_list().GetName() or session_name).strip()
+        if len(label) > 240:
+            label = label[:240]
+        return f"{session_name}, {label}"
+
+    def _nvda_now_playing_message(self) -> str:
+        snapshot = self._nvda_playback_snapshot()
+        if self.navigator.active is SessionId.TIDAL:
+            if not self._tidal_desktop_has_playback:
+                return "TIDAL, brak bieżącego materiału w AMC."
+            title = self.navigator.session.now_playing_title.strip()
+            return title or "TIDAL, brak informacji o tytule."
+        if self.navigator.active is SessionId.RADIO:
+            text = str(snapshot.get("currentBroadcastText") or "").strip()
+            if text:
+                return text
+        if self.navigator.active is SessionId.WIIM:
+            text = wiim_now_playing_label(snapshot).strip()
+            if text:
+                return text
+        if self.navigator.active is SessionId.SONOS:
+            text = sonos_now_playing_label(snapshot).strip()
+            if text:
+                return text
+        title = self.navigator.session.now_playing_title.strip()
+        return title or f"{SESSION_LABELS[self.navigator.active]}, nic nie jest odtwarzane."
 
     def _check_queue_persistence(self) -> None:
         """Zapytaj o stan zapisu po NATURALNYM przejsciu kolejki.

@@ -164,3 +164,15 @@ def test_failing_notification_does_not_break_the_action() -> None:
 
     Announcer(status, notify=explode).say("Skopiowano nazwę")
     assert status.label == "Skopiowano nazwę"
+
+
+def test_remote_addon_capture_returns_one_message_without_duplicate_live_event() -> None:
+    announcer, status, sent = capture(active=False)
+    announcer.begin_capture()
+    announcer.say("Wyciszono")
+    assert announcer.end_capture() == "Wyciszono"
+    assert status.label == "Wyciszono", "status okna nadal ma aktualny tekst użytkowy"
+    assert not sent, "odpowiedź wypowie dodatek; live region nie może mówić jej drugi raz"
+
+    announcer.say("Włączono dźwięk")
+    assert not sent, "po przechwyceniu nadal obowiązuje zwykła polityka okna w tle"

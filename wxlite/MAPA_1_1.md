@@ -665,3 +665,26 @@ Python 977/0/0, protokół 8/8 zestawów. Kwit z 11 kryteriami i pełnym Podglą
 mowy: `amc_pomoc/wx-integrated-20261007/live/receipt.json`. Słuchalności dźwięku
 nie mierzono — ocenia ją użytkownik. Nie dołożono nieodebranych zmian WPF ani
 opcji sesji.
+
+## Gotowy dodatek AMC do NVDA — most LiteHost/wxPython
+
+13 października LiteHost dostał ten sam lokalny, ograniczony do bieżącego
+użytkownika potok `AMC.NVDA.v1.<sesja Windows>`, którego używa pełny AMC.
+Frontend rejestruje swój prawdziwy uchwyt okna i otrzymuje wyłącznie
+zweryfikowaną nazwę z zamkniętej listy 65 poleceń. Odpowiedź jest korelowana w
+hoście i trafia raz do dodatku; lokalny live region nie powtarza przechwyconego
+komunikatu. Polecenia widoków mogą przywołać okno, a transport i odczyty nie
+kradną fokusu.
+
+Mapa obejmuje istniejące akcje transportu, czasów, szybkości, zakładek,
+Ulubionych, Kolejki, radia, nagrywania, sesji, widoków i 12 presetów. Brakujące
+jeszcze funkcje rozdziałów, globalnego wyciszenia, listy sesji, palety poleceń
+oraz nawigacji po presetach odmawiają pod polską nazwą i nigdy nie są
+podmieniane na „podobny” skrót. Stan TIDAL-a nie zgaduje odtwarzania z samego
+zapamiętanego tytułu.
+
+Testy bezokienne dowodzą zgodności całej allow-listy dodatku, mapy akcji,
+odpowiedzi użytkowych, korelacji i anulowania żądań oraz wspólnego,
+synchronizowanego zapisu protokołu. Pozostaje odbiór na żywym NVDA. Na czas
+próby stary AMC musi być zamknięty: jedna sesja Windows ma jeden wspólny potok,
+a dodatek nie zawiera selektora aplikacji.

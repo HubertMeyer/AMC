@@ -57,6 +57,10 @@
              Link="Engine\AudioOutputPauseGuard.cs" />
     <Compile Include="..\AccessibleMediaController.Windows\Services\DiagnosticLog.cs"
              Link="Engine\DiagnosticLog.cs" />
+    <!-- Ten sam zabezpieczony potok i ta sama lista dozwolonych komend co w
+         pełnym AMC. Wykonanie poleceń pozostaje po stronie interfejsu Python. -->
+    <Compile Include="..\AccessibleMediaController.Windows\Services\NvdaCommandServer.cs"
+             Link="Engine\NvdaCommandServer.cs" />
     <Compile Include="..\AccessibleMediaController.Windows\Services\PlaybackAudioProcessors.cs"
              Link="Engine\PlaybackAudioProcessors.cs" />
     <Compile Include="..\AccessibleMediaController.Windows\Services\NormalizedVorbisWaveReader.cs"

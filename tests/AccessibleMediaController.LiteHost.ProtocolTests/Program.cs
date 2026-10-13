@@ -6,6 +6,7 @@ internal static class Program
     [
         ("--requests", RequestParsingTests.Run),
         ("--dispatch", DispatchLoopTests.Run),
+        ("--nvda-relay", NvdaRelayTests.Run),
         ("--args", ArgumentReadingTests.Run),
         ("--audio", AudioConfigurationTests.Run),
         ("--session-options", SessionOptionsPayloadTests.Run),

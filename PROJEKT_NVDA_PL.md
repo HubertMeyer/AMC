@@ -6,26 +6,38 @@ NVDA jest cienkim klientem AMC, nie osobnym odtwarzaczem Free Radio. Prefiks AMC
 
 Wymagane AMC alpha 342 i NVDA 2026.1. Stary podzbiór 14 poleceń zachowuje zgodność z AMC 339–340. Nowe polecenia nie zmieniają wersji protokołu: stary serwer bezpiecznie odmawia nieznanej komendy. Użytkownik zaakceptował wersję do publikacji 11 września 2026 r. Dalsze audyty innych modeli powinny uwzględniać poniższe granice testów; publikacja nie oznacza kompletnej weryfikacji mowy, urządzeń i usług.
 
-## Docelowa zgodność z AMC Python
+## Zgodność z AMC Python — stan 13 października 2026
 
 Istniejący dodatek ma współpracować również z AMC Python. Nie tworzymy drugiej
 wtyczki ani drugiego zestawu gestów. Zachowujemy nazwę lokalnego potoku
 `AMC.NVDA.v1.<sesja Windows>`, wersję JSON, allow-listę i dotychczasowe zasady
 bezpieczeństwa, aby gotowy dodatek mógł połączyć się bez migracji ustawień.
 
-Serwer dodatku powinien należeć do LiteHosta, ponieważ tam znajduje się wspólny
+Serwer dodatku należy teraz do LiteHosta, ponieważ tam znajduje się wspólny
 rdzeń odtwarzania, nagrywania i usług. W danej sesji może działać tylko jeden
 serwer tego potoku. Polecenia transportu, szybkich informacji, presetów,
-Ulubionych i Kolejki mają korzystać z tych samych komend i tego samego stanu co
-interfejs wxPython. Polecenia jawnie otwierające AMC lub jego widok LiteHost
-przekazuje do działającego frontendu wxPython; nie wolno w tym celu uruchamiać
-starego okna WPF.
+Ulubionych i Kolejki korzystają z tych samych akcji co interfejs wxPython.
+Polecenia jawnie otwierające AMC lub jego widok LiteHost przekazuje do
+działającego frontendu wxPython; nie uruchamia w tym celu starego okna WPF.
 
-Odpowiedź ma wracać raz przez dodatek NVDA jako tekst użytkowy do mowy i
+Odpowiedź wraca raz przez dodatek NVDA jako tekst użytkowy do mowy i
 brajla. Nazwy klas, identyfikatory poleceń, dane kont i reprezentacje obiektów
 nie mogą trafić do odpowiedzi. Jeżeli frontend nie działa albo nie może
 bezpiecznie otworzyć widoku, dodatek otrzymuje krótką odmowę zamiast
 uruchamiania drugiej instancji lub wykonywania działania na innym elemencie.
+
+Pierwszy etap obejmuje wszystkie 65 nazw poleceń gotowego dodatku. Funkcje,
+których port wxPython jeszcze nie ma, są rozpoznawane, ale zwracają krótką
+odmowę zamiast innej czynności: wyciszenie wszystkich sesji, rozdziały,
+poprzedni i następny preset, lista sesji i paleta poleceń. Bez migawki
+oryginalnego TIDAL-a odpowiedź nie wymyśla stanu pauzy ani odtwarzania.
+
+Most ma testy korelacji odpowiedzi, odrzucenia obcego i spóźnionego
+identyfikatora, anulowania przy zamknięciu, zgodności pełnej listy 65 komend,
+mapowania wyłącznie na istniejące akcje oraz braku technicznych identyfikatorów
+w odpowiedziach. Pozostaje żywy odbiór z NVDA. Musi się odbyć przy zamkniętym
+starym AMC, bo obecny protokół świadomie nie ma selektora pomiędzy dwoma
+jednocześnie uruchomionymi właścicielami tego samego potoku.
 
 ## Semantyka
 

@@ -113,12 +113,18 @@ internal static class Program
             tidalCatalog,
             wiim,
             sonos);
+        using var nvdaRelay = new LiteNvdaRelay();
+        using var nvdaBridge = new LiteNvdaBridge(nvdaRelay);
+        var registeredHandlers = new Dictionary<string, Func<LiteRequest, LiteEventSink, object?>>(
+            handlers.Build(), StringComparer.Ordinal);
+        foreach (var entry in nvdaRelay.Handlers()) registeredHandlers.Add(entry.Key, entry.Value);
+        foreach (var entry in nvdaBridge.Handlers()) registeredHandlers.Add(entry.Key, entry.Value);
         // JAWNY opt-in: poza kolejke wychodza tylko operacje, ktore moga dlugo
         // czytac/dekodowac plik: informacja pod lewa strzalka oraz eksport
         // zaznaczonego fragmentu. Transport nadal pozostaje responsywny, a
         // wszystkie pozostale polecenia sa uporzadkowane serialnie.
         var loop = new LiteDispatchLoop(
-            handlers.Build(),
+            registeredHandlers,
             concurrentOperations:
             [
                 LiteQuickInformation.Operation,
@@ -179,7 +185,8 @@ internal static class Program
                  LiteSonosContract.TransportOperation,
                  LiteSonosContract.MaterialsOperation,
                  LiteSonosContract.LoadMaterialOperation
-            ]);
+            ],
+            onReady: nvdaBridge.Start);
 
         Console.Error.WriteLine(
             $"[amc-lite-host] start, bufor transmisji {timeshiftMinutes} min, protokol 1");

@@ -207,6 +207,28 @@ def test_local_transport_commands_name_the_session_explicitly() -> None:
         client.close()
 
 
+def test_nvda_bridge_uses_only_named_registration_and_correlated_reply_operations() -> None:
+    calls: list[tuple[str, dict | None, dict]] = []
+    client = object.__new__(LiteHostClient)
+    client.call = lambda op, args=None, **kwargs: calls.append((op, args, kwargs))  # type: ignore[method-assign]
+    client.configure_nvda_bridge(123456)
+    client.reply_to_nvda(
+        "żądanie-7", ok=False, message="Nie można wykonać polecenia"
+    )
+    assert calls == [
+        ("nvda.configure", {"windowHandle": 123456}, {}),
+        (
+            "nvda.reply",
+            {
+                "requestId": "żądanie-7",
+                "ok": False,
+                "message": "Nie można wykonać polecenia",
+            },
+            {"timeout": 2.0},
+        ),
+    ]
+
+
 def test_podcast_checkpoint_is_a_narrow_host_operation() -> None:
     client = make_client()
     try:

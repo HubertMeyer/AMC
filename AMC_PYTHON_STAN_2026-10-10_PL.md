@@ -453,13 +453,29 @@ jest to pomylenie wersji. Dotychczasowa poprawka i test bezokienny są
 niewystarczające; błąd pozostaje otwarty i wymaga pomiaru kolejności zdarzeń
 klawiatury/UI Automation z żywym NVDA.
 
-Do domknięcia pozostaje połączenie AMC Python z gotowym dodatkiem AMC do NVDA.
-Docelowo LiteHost ma wystawiać ten sam bezpieczny, lokalny protokół
-`AMC.NVDA.v1`, z którego korzysta główne AMC. Dzięki temu pozostają jedna
-wtyczka, jedna mapa gestów i dotychczasowe ustawienia użytkownika. Polecenia
-silnika mają trafiać do wspólnego rdzenia, a polecenia otwierające widoki do
-frontendu wxPython. Stary proces AMC nie może być wymaganym pośrednikiem.
-Szczegółowy kontrakt i testy są opisane w `PROJEKT_NVDA_PL.md`.
+13 października podłączono AMC Python do gotowego dodatku AMC do NVDA.
+LiteHost wystawia ten sam zabezpieczony, lokalny protokół
+`AMC.NVDA.v1.<sesja Windows>`, z którego korzysta główne AMC. Dzięki temu
+pozostają jedna wtyczka, jedna mapa gestów i dotychczasowe ustawienia
+użytkownika; stary proces AMC nie jest pośrednikiem. Host C# zachowuje
+ograniczenie potoku do bieżącego konta, wersję protokołu, allow-listę i limity,
+a zweryfikowane polecenie przekazuje do działającego frontendu wxPython.
+
+Za pośrednictwem tego mostu dostępne są transport, przewijanie i czasy,
+głośność i wyciszenie, zakładki, Ulubione, Kolejka, radio i nagrywanie,
+przełączanie sesji, 12 bezpośrednich presetów oraz polecenia otwierające
+istniejące widoki. Odczyty stanu, kontekstu i bieżącego materiału zwracają
+wyłącznie tekst użytkowy. Dla TIDAL-a nie są zgadywane pauza ani odtwarzanie:
+bez zapamiętanej migawki aplikacja mówi tylko, że sterowanie odbywa się w
+oryginalnym TIDAL-u.
+
+Jawnie, bez podstawiania podobnej czynności, odmawiane są funkcje jeszcze
+nieobecne w AMC Python: wyciszenie wszystkich sesji, rozdziały, poprzedni i
+następny preset, lista sesji oraz paleta poleceń. Dodatek może sterować tylko
+jednym właścicielem wspólnego potoku. Dlatego żywy odbiór AMC Python trzeba
+wykonać przy zamkniętym starym AMC; równoległe uruchomienie dwóch wersji nie
+daje wyboru celu w obecnym protokole. Szczegółowy kontrakt i kryteria odbioru
+są opisane w `PROJEKT_NVDA_PL.md`.
 
 ## Aktualizacje i zgłaszanie błędów
 

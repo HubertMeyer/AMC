@@ -319,6 +319,25 @@ class LiteHostClient:
     def hello(self) -> Any:
         return self.call("host.hello")
 
+    def configure_nvda_bridge(self, window_handle: int) -> Any:
+        """Zarejestruj wyłącznie uchwyt głównego okna dla jawnych poleceń
+        dodatku NVDA otwierających widok. Potok i jego ACL pozostają w C#."""
+        return self.call("nvda.configure", {"windowHandle": int(window_handle)})
+
+    def reply_to_nvda(
+        self, request_id: str, *, ok: bool, message: str
+    ) -> Any:
+        """Odpowiedz na jedno zweryfikowane żądanie lokalnego dodatku."""
+        return self.call(
+            "nvda.reply",
+            {
+                "requestId": str(request_id),
+                "ok": bool(ok),
+                "message": str(message)[:2000],
+            },
+            timeout=2.0,
+        )
+
     def list_folder(self, path: str) -> Any:
         return self.call("files.listFolder", {"path": path}, timeout=60.0)
 

@@ -82,7 +82,8 @@ public static class LiteJson
 /// </summary>
 public sealed class LiteDispatchLoop(
     IReadOnlyDictionary<string, Func<LiteRequest, LiteEventSink, object?>> handlers,
-    IReadOnlyCollection<string>? concurrentOperations = null)
+    IReadOnlyCollection<string>? concurrentOperations = null,
+    Action<LiteEventSink>? onReady = null)
 {
     /// <summary>
     /// Gorna granica jednoczesnych zadan wspolbieznych. Przytrzymany klawisz
@@ -115,6 +116,11 @@ public sealed class LiteDispatchLoop(
         }
 
         var events = new LiteEventSink(WriteLine);
+        // Zewnętrzny, lokalny mostek (obecnie dodatek NVDA) może zacząć
+        // publikować zdarzenia dopiero wtedy, gdy istnieje wspólny,
+        // synchronizowany zapis protokołu. Nie wolno mu pisać do stdout
+        // samodzielnie, bo przepleciony JSON uszkodziłby połączenie z Pythonem.
+        onReady?.Invoke(events);
         var originalStdout = Console.Out;
         // Handler, ktory pisze po Console.Out (albo zrobi to biblioteka
         // ponizej), nie moze wejsc w strumien protokolu. Przekierowujemy go
