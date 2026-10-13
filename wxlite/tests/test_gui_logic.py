@@ -123,6 +123,7 @@ from amc_wx_lite.gui import (  # noqa: E402
     YOUTUBE_EXPORT_WILDCARD,
     chord_from_event,
     format_time,
+    session_selection_labels,
     youtube_export_path_for_filter,
 )
 from amc_wx_lite.shortcuts import Action, resolve  # noqa: E402
@@ -169,6 +170,19 @@ def test_enter_from_both_keyboards_activates() -> None:
     for code in (wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER):
         chord = chord_from_event(FakeKeyEvent(code))
         assert resolve(chord, player_view=False, radio_session=False) is Action.ACTIVATE
+
+
+def test_session_list_labels_are_explicit_and_never_expose_model_values() -> None:
+    labels = session_selection_labels()
+    assert labels == (
+        "Ctrl+1, Pliki lokalne",
+        "Ctrl+2, Radio internetowe",
+        "Ctrl+3, Podcasty i YouTube",
+        "Ctrl+4, TIDAL",
+        "Ctrl+5, WiiM",
+        "Ctrl+6, Sonos",
+    )
+    assert all("SessionId" not in label and "{" not in label for label in labels)
 
 
 def test_letter_keys_are_upper_cased_so_ctrl_o_matches() -> None:

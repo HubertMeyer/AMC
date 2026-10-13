@@ -45,8 +45,8 @@ Istniejący `AMC-Python-Updater.exe` pozostaje osobnym wykonawcą bezpiecznej
 podmiany i wycofania plików. Docelowe `AMC.exe` ma być stałym punktem wejścia,
 a aktualizator działać za nim, bez ręcznego wybierania skryptu lub interpretera.
 
-Aktualny kompletny pakiet EXE jest w:
-`D:\Projekty Codex\AMC - integracja wxPython\.test-output\AMC-Python-named-bookmarks-20261013`.
+Aktualny kompletny kandydat EXE jest w:
+`D:\Projekty Codex\AMC - integracja wxPython\.test-output\AMC-Python-candidate-session-list-20261013`.
 Nie zawiera `AMC-wx-Lite.cmd`. `AMC.exe` sprawdza wersję formatu pakietu,
 interfejsu i protokołu hosta oraz sumy krytycznych plików przed uruchomieniem.
 Automatyczna weryfikacja paczki i próbna aktualizacja do osobnego katalogu
@@ -476,10 +476,15 @@ nagrywanie wstrzymane, przygotowywanie i zatrzymywanie nagrania. Stan jest
 dopisywany tylko wtedy, gdy aktywne nagranie należy do faktycznie odtwarzanej
 stacji; nagranie innej stacji w tle nie jest błędnie przypisywane do odsłuchu.
 
+Poprzedni i następny preset są już wykonywane bez otwierania okna: puste
+miejsca są pomijane, koniec listy zawija się na początek, a stan jest liczony
+osobno dla każdej sesji. `Ctrl+0` oraz polecenie dodatku „Lista sesji” otwierają
+natywną listę sześciu sesji z jednoznacznymi etykietami `Ctrl+1`–`Ctrl+6`;
+wybrana jest bieżąca sesja, Enter przełącza, a Escape wraca bez zmiany.
 Jawnie, bez podstawiania podobnej czynności, odmawiane są funkcje jeszcze
-nieobecne w AMC Python: wyciszenie wszystkich sesji, rozdziały, poprzedni i
-następny preset, lista sesji oraz paleta poleceń. Dodatek może sterować tylko
-jednym właścicielem wspólnego potoku. Dlatego żywy odbiór AMC Python trzeba
+nieobecne w AMC Python: wyciszenie wszystkich sesji, rozdziały oraz paleta
+poleceń. Dodatek może sterować tylko jednym właścicielem wspólnego potoku.
+Dlatego żywy odbiór AMC Python trzeba
 wykonać przy zamkniętym starym AMC; równoległe uruchomienie dwóch wersji nie
 daje wyboru celu w obecnym protokole. Szczegółowy kontrakt i kryteria odbioru
 są opisane w `PROJEKT_NVDA_PL.md`.
@@ -520,7 +525,7 @@ kodu ani wysyłać logów bez wiedzy użytkownika.
 
 ## Dowody automatyczne tego przyrostu
 
-- pełny runner Python: 1441 zaliczonych, 0 błędów, 138 historycznych pominięć;
+- pełny runner Python: 1451 zaliczonych, 0 błędów, 138 historycznych pominięć;
 - testy protokołu C#: 15 zestawów zaliczonych;
 - całe rozwiązanie .NET zbudowane sekwencyjnie: 0 ostrzeżeń, 0 błędów;
 - sześć celowanych testów Windows rozpoznawania, ustawień, historii, podpisu
@@ -591,7 +596,9 @@ lewą strzałką.
    zweryfikować słyszalne odtwarzanie przekazanego utworu w oficjalnej
    aplikacji TIDAL, łącznie z sesją systemową i urządzeniem wyjściowym.
 7. Podłączenie gotowego dodatku AMC do NVDA bezpośrednio do LiteHosta i
-   wxPython, bez uruchamiania starego AMC, oraz żywy odbiór mowy i brajla.
+   wxPython, bez uruchamiania starego AMC, jest wykonane technicznie. Działają
+   też poprzedni/następny preset oraz natywna Lista sesji. Pozostaje żywy
+   odbiór mowy, brajla, fokusu po Enter/Escape i ponownym otwarciu listy.
 8. Uzupełnienie wykrytych braków w istniejących sesjach, bez regresji radia,
    nagrywania, harmonogramów i timeshiftu.
 9. Odzyskanie źródła lub ticketu „Sygnalisty”, analiza i wdrożenie aktualizacji.

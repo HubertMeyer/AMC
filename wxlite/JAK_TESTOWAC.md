@@ -24,13 +24,13 @@ nagrywa. Nie przełączaj jej ręcznie w czasie trwającego nagrywania. Pierwszy
 
 1. Uruchom `AMC.exe` bez otwierania terminala i bez wybierania interpretera.
    Okno ma od razu być zmaksymalizowane, aktywne i na pierwszym planie.
-2. Bez trwającego nagrywania uruchom ten sam plik ponownie. Poprzednia
-   instancja ma się zwyczajnie zamknąć, a po niej ma zostać uruchomiona jedna
-   nowa instancja, także zmaksymalizowana i aktywna.
-3. Podczas rzeczywistego nagrywania uruchom plik ponownie. Stara instancja nie
-   może zostać zamknięta ani ubita; ma wrócić na pierwszy plan, a druga ma
-   zakończyć start. Tak samo program ma postąpić, gdy nie potrafi potwierdzić
-   stanu nagrywania.
+2. Bez trwającego nagrywania uruchom ten sam plik ponownie. Nie może powstać
+   drugi proces aplikacji ani zostać uruchomiony drugi interfejs. Istniejące
+   okno ma wrócić na pierwszy plan, pozostać zmaksymalizowane i zachować stan.
+3. Podczas rzeczywistego nagrywania uruchom plik ponownie. Obowiązuje ta sama
+   zasada jednej instancji: istniejące okno ma wrócić na pierwszy plan bez
+   przerywania nagrania, a drugi start ma się zakończyć. Aktualizator może
+   podmienić pakiet dopiero po bezpiecznym zamknięciu wszystkich jego procesów.
 4. Usuń z procesu testowego systemowy Python i zmienne `PYTHONPATH` oraz
    `AMC_WX_LITE_PYTHON`. `AMC.exe` nadal ma uruchomić dołączony runtime.
 5. Podstaw celowo niezgodne wersje interfejsu i LiteHosta albo uszkodzony
@@ -58,6 +58,16 @@ przechodzi do folderu nadrzędnego; `Escape` nie zmienia poziomu. `Escape` nadal
 czyści aktywny filtr oraz zamyka rzeczywisty podgląd lub widok podrzędny, na
 przykład listę trwających nagrań, historię nagrywania albo harmonogramy.
 Sprawdź tę zasadę osobno w każdej sesji, która udostępnia dany widok.
+
+W każdym z sześciu widoków naciśnij `Ctrl+0`. Powinna otworzyć się natywna
+lista „Sesje”, a NVDA ma czytać wyłącznie kolejno: „Ctrl+1, Pliki lokalne”,
+„Ctrl+2, Radio internetowe”, „Ctrl+3, Podcasty i YouTube”, „Ctrl+4, TIDAL”,
+„Ctrl+5, WiiM” i „Ctrl+6, Sonos”. Bieżąca sesja jest wybrana przy pierwszym
+otwarciu i przy każdym ponownym otwarciu. Sprawdź strzałki, Enter, Escape oraz
+powrót fokusu po obu sposobach zamknięcia. Powtórz poleceniem „Lista sesji” z
+dodatku NVDA; w mowie nie może pojawić się `SessionId`, nazwa klasy, rekord ani
+identyfikator. Poprzedni i następny preset z dodatku mają pomijać puste miejsca
+i zawijać listę, nie otwierając po drodze okna presetów.
 
 W odtwarzaczu Plików `I` ustawia początek, a `O` koniec zaznaczonego
 fragmentu. Sprawdź także nagranie otwarte z `Alt+Shift+R`, gdy Radio nadal

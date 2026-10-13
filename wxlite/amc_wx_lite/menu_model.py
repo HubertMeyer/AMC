@@ -914,6 +914,12 @@ def build_menus() -> tuple[Menu, ...]:
             MenuItem("Sesja: &WiiM", Action.SESSION_WIIM, shortcut="Ctrl+5"),
             MenuItem("Sesja: &Sonos", Action.SESSION_SONOS, shortcut="Ctrl+6"),
             MenuItem(
+                "Lista sesji… (&0)",
+                Action.SESSION_LIST,
+                shortcut="Ctrl+0",
+                accelerator=False,
+            ),
+            MenuItem(
                 "Wybierz &grupę Sonos",
                 Action.SELECT_SONOS_TARGET,
                 shortcut="Ctrl+F5",

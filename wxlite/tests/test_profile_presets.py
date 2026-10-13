@@ -10,6 +10,7 @@ from amc_wx_lite.list_model import Row
 from amc_wx_lite.navigation import SessionId
 from amc_wx_lite.profile_presets import (
     PresetTarget,
+    adjacent_entry,
     choices,
     effective_wiim_entries,
     effective_entries,
@@ -281,6 +282,25 @@ def test_replace_moves_same_target_and_remove_keeps_slot_order() -> None:
     assert [entry.slot for entry in moved] == [5, 7]
     assert first_free_slot(moved) == 1
     assert [item["slot"] for item in entries_payload(remove_entry(moved, 7))] == [5]
+
+
+def test_adjacent_preset_skips_empty_slots_and_wraps() -> None:
+    entries = effective_entries(_write(_profile()), SessionId.FILES, {})
+
+    assert adjacent_entry(entries, direction=1, current_slot=1).slot == 7
+    assert adjacent_entry(entries, direction=1, current_slot=7).slot == 1
+    assert adjacent_entry(entries, direction=-1, current_slot=1).slot == 7
+
+
+def test_adjacent_preset_recognizes_current_target_after_fresh_start() -> None:
+    entries = effective_entries(_write(_profile()), SessionId.FILES, {})
+    current = PresetTarget(
+        "folder:d-test", "folder", "Muzyka", "D:\\Muzyka"
+    )
+
+    assert adjacent_entry(entries, direction=1, current_target=current).slot == 7
+    assert adjacent_entry(entries, direction=-1, current_target=None).slot == 7
+    assert adjacent_entry((), direction=1) is None
 
 
 def test_choice_labels_are_explicit_user_text_for_all_twelve_slots() -> None:

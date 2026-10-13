@@ -290,6 +290,37 @@ def existing_target_slot(
     )
 
 
+def adjacent_entry(
+    entries: tuple[PresetEntry, ...],
+    *,
+    direction: int,
+    current_target: PresetTarget | None = None,
+    current_slot: int | None = None,
+) -> PresetEntry | None:
+    """Wybierz poprzedni albo następny zajęty preset z zawijaniem.
+
+    Numer ostatnio uruchomionego presetu ma pierwszeństwo. Po świeżym starcie
+    można jednak rozpoznać bieżący materiał po modelu celu. Gdy nie znamy
+    żadnego z nich, następny zaczyna od pierwszego zajętego miejsca, a
+    poprzedni od ostatniego. Puste miejsca nie są fikcyjnymi przystankami.
+    """
+
+    ordered = tuple(sorted(entries, key=lambda entry: entry.slot))
+    if not ordered:
+        return None
+    step = 1 if direction >= 0 else -1
+    slot = current_slot if type(current_slot) is int else None
+    if slot is None and current_target is not None:
+        slot = existing_target_slot(ordered, current_target)
+    index = next(
+        (position for position, entry in enumerate(ordered) if entry.slot == slot),
+        None,
+    )
+    if index is None:
+        return ordered[0] if step > 0 else ordered[-1]
+    return ordered[(index + step) % len(ordered)]
+
+
 def _sonos_material_identity(
     target_kind: str, target_id: str, household_id: str | None
 ) -> tuple[str, str, str]:

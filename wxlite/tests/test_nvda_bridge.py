@@ -61,6 +61,19 @@ def test_missing_features_are_refused_in_user_language_not_mapped_to_wrong_actio
         assert "AMC Python" in message
 
 
+def test_previous_and_next_preset_are_special_supported_commands() -> None:
+    assert {"presetPrevious", "presetNext"} <= nvda_bridge.SPECIAL_COMMANDS
+    assert "presetPrevious" not in nvda_bridge.KNOWN_NOT_IMPLEMENTED
+    assert "presetNext" not in nvda_bridge.KNOWN_NOT_IMPLEMENTED
+    assert {"presetPrevious", "presetNext"} <= nvda_bridge.ALLOWED_COMMANDS
+
+
+def test_session_list_is_supported_by_the_existing_addon() -> None:
+    assert nvda_bridge.action_for("showSessions") is Action.SESSION_LIST
+    assert "showSessions" not in nvda_bridge.KNOWN_NOT_IMPLEMENTED
+    assert "showSessions" in nvda_bridge.OPEN_WINDOW_COMMANDS
+
+
 def test_only_explicit_view_commands_request_foreground() -> None:
     assert "showSearch" in nvda_bridge.OPEN_WINDOW_COMMANDS
     assert "showSchedules" in nvda_bridge.OPEN_WINDOW_COMMANDS

@@ -96,6 +96,7 @@ class Action(Enum):
     SESSION_TIDAL = "session.tidal"
     SESSION_WIIM = "session.wiim"
     SESSION_SONOS = "session.sonos"
+    SESSION_LIST = "session.list"
     SELECT_SONOS_TARGET = "sonos.target.select"
     ACTIVATE = "activate"
     PARENT_FOLDER = "parent"
@@ -351,6 +352,7 @@ TIDAL_SUPPORTED_ACTIONS = frozenset({
     Action.SESSION_TIDAL,
     Action.SESSION_WIIM,
     Action.SESSION_SONOS,
+    Action.SESSION_LIST,
     Action.ACTIVATE,
     Action.PARENT_FOLDER,
     Action.CLOSE_LIST_PREVIEW,
@@ -414,6 +416,7 @@ WIIM_SUPPORTED_ACTIONS = frozenset({
     Action.SESSION_TIDAL,
     Action.SESSION_WIIM,
     Action.SESSION_SONOS,
+    Action.SESSION_LIST,
     Action.ACTIVATE,
     Action.PARENT_FOLDER,
     Action.CLOSE_LIST_PREVIEW,
@@ -472,6 +475,7 @@ SONOS_SUPPORTED_ACTIONS = frozenset({
     Action.SESSION_TIDAL,
     Action.SESSION_WIIM,
     Action.SESSION_SONOS,
+    Action.SESSION_LIST,
     Action.SELECT_SONOS_TARGET,
     Action.ACTIVATE,
     Action.PARENT_FOLDER,
@@ -574,6 +578,7 @@ class Chord:
 # Skroty dzialajace W WIDOKU LISTY. Strzalki NIE sa tu wpisane - naleza do
 # natywnego ListCtrl, zeby czytnik ekranu i Narrator dzialaly bez dodatku.
 LIST_VIEW: dict[str, Action] = {
+    "Ctrl+0": Action.SESSION_LIST,
     "Ctrl+1": Action.SESSION_FILES,
     "Ctrl+2": Action.SESSION_RADIO,
     "Ctrl+3": Action.SESSION_PODCASTS,
@@ -752,6 +757,7 @@ RADIO_PLAYER_VIEW: dict[str, Action] = {
 # Skroty W WIDOKU ODTWARZACZA. Tu strzalki sa wolne, wiec przejmuja role
 # z profilu globalnego AMC (przewijanie i glosnosc).
 PLAYER_VIEW: dict[str, Action] = {
+    "Ctrl+0": Action.SESSION_LIST,
     "Ctrl+1": Action.SESSION_FILES,
     "Ctrl+2": Action.SESSION_RADIO,
     "Ctrl+3": Action.SESSION_PODCASTS,
@@ -817,8 +823,8 @@ PLAYER_VIEW: dict[str, Action] = {
     "Shift+Up": Action.VOLUME_UP_1,
     "Shift+Down": Action.VOLUME_DOWN_1,
     # Predkosc pod klawiszami ORYGINALU (cs:21595-21597, 22395-22397).
-    # Ctrl+Up/Down i Ctrl+0 zostaly usuniete: pierwszych dwoch oryginal nie ma
-    # wcale, a Ctrl+0 to u niego lista sesji (cs:21454-21456).
+    # Ctrl+Up/Down zostaly usuniete, bo oryginal ich nie ma. Ctrl+0 jest
+    # lista sesji i znajduje sie wyzej razem z Ctrl+1..6 (cs:21454-21456).
     "Shift+,": Action.RATE_DOWN,
     "Shift+.": Action.RATE_UP,
     "Ctrl+.": Action.RATE_RESET,
@@ -1087,6 +1093,7 @@ def _help_entries() -> list[tuple[str, str, Action]]:
         Action.SESSION_TIDAL: "TIDAL",
         Action.SESSION_WIIM: "WiiM",
         Action.SESSION_SONOS: "Sonos",
+        Action.SESSION_LIST: "Wybierz sesję z listy",
         Action.SELECT_SONOS_TARGET: "Wybierz grupę Sonos",
         Action.ACTIVATE: "Otworz folder albo odtworz",
         Action.PARENT_FOLDER: "Folder nadrzedny",

@@ -54,13 +54,17 @@ ACTION_BY_COMMAND: dict[str, Action] = {
     "showRecordings": Action.VIEW_ACTIVE_RECORDINGS,
     "showSchedules": Action.MANAGE_RADIO_SCHEDULES,
     "showRecognitions": Action.VIEW_RADIO_RECOGNITION_HISTORY,
+    "showSessions": Action.SESSION_LIST,
     "refreshPodcastLibrary": Action.REFRESH_PODCAST_LIBRARY,
     **{f"preset{slot}": getattr(Action, f"PRESET_{slot}") for slot in range(1, 13)},
 }
 
 READ_COMMANDS = frozenset({"status", "context", "nowPlaying"})
 SESSION_COMMANDS = frozenset({"sessionPrevious", "sessionNext"})
-SPECIAL_COMMANDS: frozenset[str] = frozenset()
+SPECIAL_COMMANDS: frozenset[str] = frozenset({
+    "presetPrevious",
+    "presetNext",
+})
 
 # Te komendy są prawidłową częścią istniejącego dodatku, lecz odpowiadają
 # funkcjom, których AMC Python jeszcze nie ma. Jawna odmowa jest bezpieczniejsza
@@ -69,10 +73,7 @@ KNOWN_NOT_IMPLEMENTED = frozenset({
     "muteAll",
     "previousChapter",
     "nextChapter",
-    "presetPrevious",
-    "presetNext",
     "showChapters",
-    "showSessions",
     "showCommands",
 })
 
@@ -125,8 +126,6 @@ def unavailable_message(command: str) -> str:
         "muteAll": "Wyciszenie wszystkich sesji",
         "previousChapter": "Poprzedni rozdział",
         "nextChapter": "Następny rozdział",
-        "presetPrevious": "Poprzedni preset",
-        "presetNext": "Następny preset",
         "showChapters": "Lista rozdziałów",
         "showSessions": "Lista sesji",
         "showCommands": "Paleta poleceń",

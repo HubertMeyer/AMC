@@ -601,6 +601,18 @@ def test_playback_and_view_menus_do_not_mix_foreign_sessions() -> None:
     )
 
 
+def test_every_session_has_the_accessible_session_list_command() -> None:
+    for session in menu_model.SessionId:
+        view = next(
+            menu for menu in menu_model.menus_for_session(session)
+            if menu.title == "&Widok"
+        )
+        item = next(entry for entry in view.items if entry.action is Action.SESSION_LIST)
+        assert item.label == "Lista sesji… (&0)"
+        assert item.shortcut == "Ctrl+0"
+        assert not item.accelerator
+
+
 def test_current_session_mute_is_a_local_checkable_playback_command() -> None:
     playback = next(
         menu for menu in menu_model.build_menus()

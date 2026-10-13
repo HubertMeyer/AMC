@@ -2909,6 +2909,77 @@ class PodcastPlaybackOptionsDialog(wx.Dialog):
         }
 
 
+def session_selection_labels() -> tuple[str, ...]:
+    """Jawne teksty listy Ctrl+0; wartości modelu nigdy nie trafiają do UI."""
+    return tuple(
+        f"Ctrl+{index}, {SESSION_LABELS[session]}"
+        for index, session in enumerate(SessionId, start=1)
+    )
+
+
+class SessionSelectionDialog(wx.Dialog):
+    """Natywna lista sesji z jawnymi etykietami dla czytnika ekranu."""
+
+    SESSIONS: tuple[SessionId, ...] = tuple(SessionId)
+
+    def __init__(self, parent: wx.Window, current: SessionId) -> None:
+        super().__init__(parent, title="Wybór sesji")
+        panel = wx.Panel(self)
+        layout = wx.BoxSizer(wx.VERTICAL)
+
+        hint_text = "Wybierz sesję. Enter przełącza, Escape anuluje."
+        hint = wx.StaticText(panel, label=hint_text)
+        hint.SetName(hint_text)
+        layout.Add(hint, 0, wx.ALL | wx.EXPAND, 12)
+
+        self.session_list = wx.ListBox(
+            panel,
+            choices=list(session_selection_labels()),
+            style=wx.LB_SINGLE,
+        )
+        self.session_list.SetName("Sesje")
+        selected = self.SESSIONS.index(current) if current in self.SESSIONS else 0
+        self.session_list.SetSelection(selected)
+        layout.Add(self.session_list, 1, wx.LEFT | wx.RIGHT | wx.EXPAND, 12)
+        panel.SetSizer(layout)
+
+        buttons = wx.StdDialogButtonSizer()
+        select_button = wx.Button(self, wx.ID_OK, label="&Wybierz")
+        select_button.SetName("Wybierz sesję")
+        select_button.SetDefault()
+        cancel_button = wx.Button(self, wx.ID_CANCEL, label="&Anuluj")
+        cancel_button.SetName("Anuluj wybór sesji")
+        buttons.AddButton(select_button)
+        buttons.AddButton(cancel_button)
+        buttons.Realize()
+
+        shell = wx.BoxSizer(wx.VERTICAL)
+        shell.Add(panel, 1, wx.EXPAND)
+        shell.Add(buttons, 0, wx.ALL | wx.ALIGN_RIGHT, 12)
+        self.SetSizer(shell)
+        self.SetMinSize((520, 360))
+        self.Fit()
+        self.session_list.Bind(wx.EVT_LISTBOX_DCLICK, self._accept)
+        self.Bind(wx.EVT_CHAR_HOOK, self._on_key)
+        self.session_list.SetFocus()
+
+    @property
+    def selected_session(self) -> SessionId | None:
+        index = self.session_list.GetSelection()
+        return self.SESSIONS[index] if 0 <= index < len(self.SESSIONS) else None
+
+    def _accept(self, _event) -> None:
+        if self.selected_session is not None:
+            self.EndModal(wx.ID_OK)
+
+    def _on_key(self, event: wx.KeyEvent) -> None:
+        if not event.ControlDown() and not event.AltDown() and not event.ShiftDown():
+            if event.GetKeyCode() in (wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER):
+                self._accept(event)
+                return
+        event.Skip()
+
+
 class SessionOptionsDialog(wx.Dialog):
     """Opcje sesji. Pokazuje WYLACZNIE opcje, ktore ta sesja umie wykonac.
 
@@ -4542,6 +4613,9 @@ class LiteFrame(wx.Frame):
         self._sonos_command_queue: list[
             tuple[str, str, str, int | None, float | None, int]
         ] = []
+        # Ostatni świadomie uruchomiony preset osobno dla każdej sesji. Jest
+        # stanem bieżącego procesu, nie profilem ani tekstem dla NVDA.
+        self._last_preset_slot_by_session: dict[SessionId, int] = {}
         self._radio_activity_cues: dict[tuple[bool, bool], object] = {}
 
         self._build_ui()
@@ -6165,6 +6239,13 @@ class LiteFrame(wx.Frame):
                 "nowPlaying": self._nvda_now_playing_message,
             }[command]()
 
+        if command in nvda_bridge.SPECIAL_COMMANDS:
+            direction = 1 if command == "presetNext" else -1
+            self._navigate_nvda_preset(direction)
+            return True, (
+                "Następny preset" if direction > 0 else "Poprzedni preset"
+            )
+
         if command in nvda_bridge.KNOWN_NOT_IMPLEMENTED:
             return False, nvda_bridge.unavailable_message(command)
 
@@ -7044,6 +7125,8 @@ class LiteFrame(wx.Frame):
         elif action is Action.SESSION_SONOS:
             self._transient_preview_return = None
             self._switch_session(SessionId.SONOS)
+        elif action is Action.SESSION_LIST:
+            self._show_session_list()
         elif action is Action.SELECT_SONOS_TARGET:
             self._load_sonos_targets(
                 preferred_id=self.navigator.sessions[SessionId.SONOS].list_anchor_id
@@ -8573,6 +8656,7 @@ class LiteFrame(wx.Frame):
             if choice.activation_error:
                 self.announcer.say(choice.activation_error)
                 return
+            self._last_preset_slot_by_session[SessionId.WIIM] = slot
             self._activate_wiim_preset(
                 item_id,
                 device_id,
@@ -8794,6 +8878,7 @@ class LiteFrame(wx.Frame):
                 target_row = next(
                     item for item in sequence if item.item_id == target.item_id
                 )
+                self._last_preset_slot_by_session[session] = slot
                 self._run(self.navigator.activate_radio_preset(
                     target_row,
                     sequence,
@@ -8806,11 +8891,13 @@ class LiteFrame(wx.Frame):
                 "sonos-playlist",
                 "sonos-own-stream",
             }:
+                self._last_preset_slot_by_session[session] = slot
                 self._activate_sonos_preset(entry, spoken)
                 return
 
             kind = entry.target_kind.casefold()
             if kind == "folder" and entry.location:
+                self._last_preset_slot_by_session[session] = slot
                 self._open_library(entry.location)
                 return
             if kind == "amcplaylist":
@@ -8818,6 +8905,7 @@ class LiteFrame(wx.Frame):
                 if not playlist_id and ":" in entry.target_id:
                     playlist_id = entry.target_id.split(":", 1)[1]
                 if playlist_id:
+                    self._last_preset_slot_by_session[session] = slot
                     self._open_library_view(OpenLibraryView(
                         view=LibraryView.PLAYLIST_CONTENTS,
                         playlist_id=playlist_id,
@@ -8825,6 +8913,7 @@ class LiteFrame(wx.Frame):
                     ))
                     return
             if kind in ("track", "file") and entry.location:
+                self._last_preset_slot_by_session[session] = slot
                 target_row = Row(
                     item_id=entry.target_id,
                     title=entry.title or Path(entry.location).name,
@@ -8847,6 +8936,137 @@ class LiteFrame(wx.Frame):
                 self.announcer.say("Nie udało się odczytać presetu")
 
         self.runner.submit("preset", work, done, failed)
+
+    def _navigate_nvda_preset(self, direction: int) -> None:
+        """Dodatek NVDA: przejdź po zajętych presetach bieżącej sesji.
+
+        Odczyt profilu może być duży, dlatego nie blokuje wątku okna ani
+        odpowiedzi do dodatku. Wynik rozpoczęty w jednej sesji nie uruchomi
+        niczego po przełączeniu do innej.
+        """
+
+        session = self.navigator.active
+        if session is SessionId.WIIM:
+            self._navigate_nvda_wiim_preset(direction)
+            return
+        target = self._current_preset_target()
+        overrides, _stations = self._preset_inputs(session)
+        current_slot = self._last_preset_slot_by_session.get(session)
+
+        def work() -> profile_presets.PresetEntry | None:
+            entries = profile_presets.effective_entries(
+                self.layout.state_json, session, overrides
+            )
+            return profile_presets.adjacent_entry(
+                entries,
+                direction=direction,
+                current_target=target,
+                current_slot=current_slot,
+            )
+
+        def done(entry: profile_presets.PresetEntry | None) -> None:
+            if self.navigator.active is not session:
+                return
+            if entry is None:
+                self.announcer.say(
+                    f"Brak zapisanych presetów: "
+                    f"{session_options.session_display_name(session)}"
+                )
+                return
+            self._activate_preset(entry.slot)
+
+        self.runner.submit(
+            "preset-navigate",
+            work,
+            done,
+            lambda error: self.announcer.say(
+                str(error)
+                if isinstance(error, profile_presets.PresetProfileError)
+                else "Nie udało się odczytać presetów"
+            ),
+        )
+
+    def _navigate_nvda_wiim_preset(self, direction: int) -> None:
+        """WiiM: użyj żywej listy urządzenia, bez otwierania jej w oknie."""
+
+        client = self.client
+        context = self._wiim_device_context()
+        if client is None:
+            self.announcer.say("Silnik nie jest gotowy")
+            return
+        if context is None:
+            self.announcer.say("Wybierz urządzenie WiiM")
+            return
+        item_id, device_id, device_title = context
+        overrides, _stations = self._preset_inputs(SessionId.WIIM)
+        current_slot = self._last_preset_slot_by_session.get(SessionId.WIIM)
+
+        def work():
+            payload = client.wiim_presets(device_id)
+            returned_title, choices = wiim_preset_choices(payload)
+            entries = profile_presets.effective_wiim_entries(
+                self.layout.state_json,
+                device_id,
+                choices,
+                overrides,
+            )
+            if current_slot is None:
+                current_number = next(
+                    (choice.number for choice in choices if choice.current),
+                    None,
+                )
+                active_slot = next(
+                    (
+                        entry.slot
+                        for entry in entries
+                        if profile_presets.wiim_native_preset_number(entry)
+                        == current_number
+                    ),
+                    None,
+                )
+            else:
+                active_slot = current_slot
+            entry = profile_presets.adjacent_entry(
+                entries,
+                direction=direction,
+                current_slot=active_slot,
+            )
+            return returned_title, choices, entry
+
+        def done(result) -> None:
+            if self.navigator.active is not SessionId.WIIM:
+                return
+            returned_title, choices, entry = result
+            if entry is None:
+                self.announcer.say(f"Brak zapisanych presetów: {device_title}")
+                return
+            number = profile_presets.wiim_native_preset_number(entry)
+            choice = next(
+                (candidate for candidate in choices if candidate.number == number),
+                None,
+            )
+            if choice is None or not choice.occupied:
+                self.announcer.say("Wybrany preset WiiM nie jest już dostępny")
+                return
+            if choice.activation_error:
+                self.announcer.say(choice.activation_error)
+                return
+            self._last_preset_slot_by_session[SessionId.WIIM] = entry.slot
+            self._activate_wiim_preset(
+                item_id,
+                device_id,
+                returned_title or device_title,
+                choice,
+            )
+
+        self.runner.submit(
+            "wiim-preset-navigate",
+            work,
+            done,
+            lambda error: self.announcer.say(
+                f"Nie udało się odczytać presetów urządzenia {device_title}: {error}"
+            ),
+        )
 
     def _activate_sonos_preset(
         self,
@@ -9000,6 +9220,21 @@ class LiteFrame(wx.Frame):
             state = self.navigator.sessions[SessionId.SONOS]
             if not state.model.rows:
                 self._load_sonos_targets(preferred_id=state.list_anchor_id)
+
+    def _show_session_list(self) -> None:
+        """Ctrl+0 i dodatek NVDA: wybór sesji bez ujawniania nazw modelu."""
+        with SessionSelectionDialog(self, self.navigator.active) as dialog:
+            if dialog.ShowModal() != wx.ID_OK:
+                self._restore_focus_after_dialog()
+                return
+            selected = dialog.selected_session
+        if selected is not None:
+            self._transient_preview_return = None
+            self._switch_session(selected)
+            # Gdy użytkownik zatwierdzi już aktywną sesję, _sync_views nie
+            # zmienia widoku i celowo nie ustawia fokusu ponownie. Po zamknięciu
+            # dialogu lista albo odtwarzacz nadal muszą jednak odzyskać fokus.
+            wx.CallAfter(self._restore_focus_after_dialog)
 
     # --------------------------------------------------------------- WiiM
 

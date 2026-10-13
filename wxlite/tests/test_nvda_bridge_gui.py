@@ -97,3 +97,26 @@ def test_context_uses_explicit_control_name_not_model_identifiers() -> None:
     assert message == "Radio internetowe, Ulubione stacje radiowe"
     assert "LibraryView" not in message
     assert "SessionId" not in message
+
+
+def test_previous_and_next_preset_are_routed_without_opening_a_dialog() -> None:
+    frame = _frame(SessionId.RADIO)
+    directions = []
+    frame._navigate_nvda_preset = directions.append
+    original = getattr(gui.wx, "GetTopLevelWindows", None)
+    gui.wx.GetTopLevelWindows = lambda: []
+    try:
+        assert frame._execute_nvda_command("presetNext") == (
+            True,
+            "Następny preset",
+        )
+        assert frame._execute_nvda_command("presetPrevious") == (
+            True,
+            "Poprzedni preset",
+        )
+    finally:
+        if original is None:
+            delattr(gui.wx, "GetTopLevelWindows")
+        else:
+            gui.wx.GetTopLevelWindows = original
+    assert directions == [1, -1]

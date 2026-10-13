@@ -700,11 +700,13 @@ def test_no_table_keeps_a_chord_that_the_original_gives_to_someone_else() -> Non
         "Ctrl+T": "profil po prefiksie, nie okno (KeyboardProfile.cs:72)",
         "Ctrl+Up": "oryginal nie ma takiego gestu",
         "Ctrl+Down": "oryginal nie ma takiego gestu",
-        "Ctrl+0": "SessionList (MainWindow.xaml.cs:21456)",
     }
     for table_name, table in (("LIST_VIEW", LIST_VIEW), ("PLAYER_VIEW", PLAYER_VIEW)):
         for chord, why in forbidden.items():
             assert chord not in table, f"{table_name}: {chord} nalezy do {why}"
+
+    assert LIST_VIEW["Ctrl+0"] is Action.SESSION_LIST
+    assert PLAYER_VIEW["Ctrl+0"] is Action.SESSION_LIST
 
 
 def test_help_lists_every_new_transport_gesture() -> None:
