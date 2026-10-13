@@ -22,6 +22,7 @@ def _frame(session_id: SessionId) -> gui.LiteFrame:
     frame.navigator.active = session_id
     frame.options = SimpleNamespace(volume=65)
     frame._transport_status_by_session = {}
+    frame._last_recording_status = {}
     frame._wiim_snapshot = {}
     frame._sonos_snapshot = {}
     frame._tidal_desktop_has_playback = False
@@ -40,6 +41,32 @@ def test_local_status_uses_only_user_facing_playback_values() -> None:
     assert frame._nvda_status_message() == (
         "Rozmowa dnia, Podcasty i YouTube, pauza, wyciszone, głośność 35%."
     )
+
+
+def test_radio_status_adds_only_the_current_stations_recording_state() -> None:
+    frame = _frame(SessionId.RADIO)
+    frame.navigator.session.now_playing_id = "radio-poznan"
+    frame.navigator.session.now_playing_title = "Radio Poznań"
+    frame._transport_status_by_session[SessionId.RADIO] = {
+        "id": "radio-poznan",
+        "title": "Radio Poznań",
+        "paused": False,
+        "volume": 40,
+    }
+    frame._last_recording_status = {
+        "recordings": [
+            {"stationId": "radio-opole", "state": "recording"},
+            {"stationId": "radio-poznan", "state": "paused", "paused": True},
+        ]
+    }
+
+    assert frame._nvda_status_message() == (
+        "Radio Poznań, Radio internetowe, odtwarzanie, "
+        "nagrywanie wstrzymane, głośność 40%."
+    )
+
+    frame._transport_status_by_session[SessionId.RADIO]["id"] = "radio-inne"
+    assert "nagrywanie" not in frame._nvda_status_message()
 
 
 def test_tidal_status_does_not_invent_play_or_pause_state() -> None:

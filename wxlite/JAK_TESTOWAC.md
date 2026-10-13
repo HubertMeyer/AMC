@@ -155,13 +155,15 @@ TIDAL:
    restarcie. Powtórz dla Biblioteki, Ulubionych i Playlist; każdy widok ma
    pamiętać swój tryb osobno. W albumie, wykonawcy i Kolejce te skróty nie mogą
    przełączyć widoku Plików ani udawać sortowania kolekcji.
-7. Na albumie naciśnij prawą strzałkę: natywne menu „Powiązania TIDAL” ma
-   zawierać „Przejdź do wykonawcy”. Na utworze z kompletnymi relacjami ma
-   zawierać kolejno „Przejdź do albumu” i „Przejdź do wykonawcy”. Na
-   wykonawcy ma zawierać „Pokaż albumy wykonawcy”. Enter na samym wykonawcy
+7. Na albumie naciśnij prawą strzałkę: przy jednym celu aplikacja ma od razu
+   przejść do wykonawcy, bez zbędnej zapowiedzi „menu kontekstowe”. Tak samo
+   wykonawca z jednym dostępnym celem od razu pokazuje jego albumy. Dopiero na
+   utworze z kompletnymi dwiema relacjami pojawia się natywne menu z pozycjami
+   „Przejdź do albumu” i „Przejdź do wykonawcy”. Enter na samym wykonawcy
    nadal otwiera trzy kategorie: Albumy, Utwory i Podobni wykonawcy. Po
-   anulowaniu menu fokus wraca na ten sam wiersz; Backspace z otwartej relacji
-   wraca we właściwe miejsce. NVDA nie może czytać identyfikatorów TIDAL.
+   anulowaniu rzeczywistego menu fokus wraca na ten sam wiersz; Backspace z
+   otwartej relacji wraca we właściwe miejsce. NVDA nie może czytać
+   identyfikatorów TIDAL.
 
 WiiM:
 
@@ -784,9 +786,10 @@ Pełne dowody robocze: `amc_pomoc/wx-full-profile-after421/library-gui-after422/
   wyłącznie celowe nazwy, rodzaje oraz szczegóły — nigdy ID usługi, prywatnego
   uchwytu odtwarzania ani reprezentacji obiektu.
 - `Ctrl+C` kopiuje nazwę, a `Ctrl+Shift+C` publiczny adres, jeżeli był zapisany.
-- Prawa strzałka otwiera natywne menu „Powiązania TIDAL” z wyłącznie
-  dostępnymi działaniami: album, wykonawca albo albumy wykonawcy. Anulowanie
-  przywraca fokus listy i nie zmienia zaznaczenia.
+- Prawa strzałka przy jednym dostępnym celu przechodzi do niego bez
+  jednoelementowego menu. Przy dwóch celach otwiera natywne menu z wyłącznie
+  dostępnymi działaniami. Anulowanie menu przywraca fokus listy i nie zmienia
+  zaznaczenia.
 - Lewa strzałka czyta tylko dostępne informacje katalogowe i uczciwie mówi, że
   format audio nie jest znany z zapisanej migawki.
 - Enter na albumie i playliście otwiera ich zawartość przez tę samą oficjalną
@@ -798,9 +801,11 @@ Pełne dowody robocze: `amc_pomoc/wx-full-profile-after421/library-gui-after422/
   kontenera. Backspace na głównym widoku TIDAL niczego nie oznajmia i nie
   zmienia sesji. Przełączenie do innej sesji i powrót zachowuje także wnętrze
   otwartego kontenera.
-- Enter na utworze lub wideo nadal uczciwie odmawia odtwarzania. Ten etap
-  podłącza nawigację katalogu, nie tor chronionego odtwarzania TIDAL ani zmianę
-  konta. Nie należy uznawać testów protokołu za odbiór żywego konta i NVDA.
+- Enter na utworze lub wideo przekazuje materiał do oficjalnej aplikacji
+  TIDAL. `Ctrl+Enter` przekazuje cały album albo playlistę. AMC Python nie
+  udaje własnego chronionego odtwarzacza TIDAL ani zmiany konta; słyszalny
+  start, pauzę i następny/poprzedni trzeba odebrać na żywym koncie. Nie należy
+  uznawać testów protokołu za odbiór żywego konta i NVDA.
 
 ## Zanik wybranego urządzenia audio
 

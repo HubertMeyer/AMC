@@ -74,6 +74,21 @@ internal static class Program
             }
 
             var manifest = LoadAndVerify(options.Source, options.Target);
+            // --wait-pid pilnuje procesu, który uruchomił aktualizację, ale
+            // nie obejmuje osieroconego runtime\python.exe ani hosta audio.
+            // Sprawdzamy cały katalog PRZED utworzeniem .aktualizacja-*.
+            // Odmowa nie zostawia więc kopii transakcji i nie dochodzi do
+            // częściowej podmiany działającej wersji.
+            if (InstalledProcessGuard.HasRunningComponent(options.Target))
+            {
+                if (!options.Silent)
+                {
+                    Show("Aktualizacja nie została rozpoczęta, ponieważ AMC Python "
+                         + "lub jeden z jego składników nadal działa. Może trwać "
+                         + "nagrywanie. Zamknij program bezpiecznie i spróbuj ponownie.", true);
+                }
+                return AppStillRunning;
+            }
             ApplyPackage(options.Source, options.Target, manifest.Files);
 
             if (!string.IsNullOrWhiteSpace(options.Launch))

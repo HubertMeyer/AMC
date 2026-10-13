@@ -36,7 +36,10 @@ prywatny runtime i właściwy LiteHost bez konsoli oraz bez systemowego Pythona,
 `PYTHONPATH` i skryptów wsadowych. Sprawdza zgodność wersji i manifest, pilnuje
 jednej instancji i bezpiecznej odmowy zamknięcia podczas nagrywania, pokazuje
 dostępny komunikat przy błędzie i uruchamia program ponownie po udanej
-aktualizacji.
+aktualizacji. Tytuł głównego okna zawiera wersję programu oraz etykietę
+kompilacji z manifestu, na przykład `2026.10.13-e8fed82`; dzięki temu zgłoszenie
+można jednoznacznie przypisać do uruchomionej paczki bez odczytywania ścieżek
+ani identyfikatorów technicznych.
 
 Istniejący `AMC-Python-Updater.exe` pozostaje osobnym wykonawcą bezpiecznej
 podmiany i wycofania plików. Docelowe `AMC.exe` ma być stałym punktem wejścia,
@@ -272,10 +275,11 @@ Brak prywatnego wyboru dziedziczy ustawienie z profilu głównego AMC, ale zapis
 AMC Python nie modyfikuje tego profilu. Pozostaje żywy odbiór kolejności na
 rzeczywistym koncie TIDAL i mowy po każdej zmianie.
 
-Kontekstowa prawa strzałka jest przywrócona zgodnie z głównym AMC. Otwiera
-natywne menu „Powiązania TIDAL”: na utworze może zawierać przejście do albumu
-i wykonawcy, na albumie przejście do wykonawcy, a na wykonawcy pokazanie jego
-albumów. Enter na wykonawcy nadal otwiera osobny przegląd trzech kategorii:
+Kontekstowa prawa strzałka jest przywrócona zgodnie z głównym AMC. Gdy są dwa
+rzeczywiste cele, otwiera natywne menu z przejściem do albumu lub wykonawcy.
+Gdy cel jest tylko jeden, na przykład wykonawca z dostępną listą albumów,
+przechodzi od razu bez zbędnej zapowiedzi „menu kontekstowe”. Enter na
+wykonawcy nadal otwiera osobny przegląd trzech kategorii:
 Albumy, Utwory i Podobni wykonawcy. Po zamknięciu menu fokus wraca na listę,
 Backspace z otwartej relacji przywraca wcześniejszy element, a techniczne ID
 albumu i wykonawcy pozostają wyłącznie w modelu. Pozostaje odbiór z żywym
@@ -467,7 +471,10 @@ przełączanie sesji, 12 bezpośrednich presetów oraz polecenia otwierające
 istniejące widoki. Odczyty stanu, kontekstu i bieżącego materiału zwracają
 wyłącznie tekst użytkowy. Dla TIDAL-a nie są zgadywane pauza ani odtwarzanie:
 bez zapamiętanej migawki aplikacja mówi tylko, że sterowanie odbywa się w
-oryginalnym TIDAL-u.
+oryginalnym TIDAL-u. W sesji Radia odczyt stanu rozróżnia również nagrywanie,
+nagrywanie wstrzymane, przygotowywanie i zatrzymywanie nagrania. Stan jest
+dopisywany tylko wtedy, gdy aktywne nagranie należy do faktycznie odtwarzanej
+stacji; nagranie innej stacji w tle nie jest błędnie przypisywane do odsłuchu.
 
 Jawnie, bez podstawiania podobnej czynności, odmawiane są funkcje jeszcze
 nieobecne w AMC Python: wyciszenie wszystkich sesji, rozdziały, poprzedni i
@@ -496,6 +503,12 @@ pełnego wycofania całej transakcji przy dowolnym błędzie. Błędy trafiają 
 na standardowe wyjście diagnostyczne, a nie tylko do okna komunikatu. Pełną
 samowymianę sprawdzono na osobnej kopii 597-plikowej paczki: aktualizator i
 LiteHost miały po operacji właściwe sumy, a katalog transakcji nie pozostał.
+Aktualizator sprawdza teraz przed utworzeniem katalogu transakcji wszystkie
+procesy uruchomione z folderu instalacji, nie tylko PID przekazany przez
+launcher. Pozostawiony `runtime\python.exe` albo `host\amc_lite_host.exe`
+powoduje bezpieczną odmowę z kodem 3, bez częściowej podmiany i bez nowego
+katalogu `.aktualizacja-*`. Osobny test uruchamia rzeczywisty proces z próbnej
+instalacji i potwierdza jego wykrycie.
 Katalog `D:\Projekty Codex\AMC Python` nie został podmieniony, ponieważ nadal
 działały z niego `AMC.exe`, Python i historyczny `host-next`; nie zamykano ich
 bez potwierdzenia stanu odsłuchu i nagrywania.
@@ -507,7 +520,7 @@ kodu ani wysyłać logów bez wiedzy użytkownika.
 
 ## Dowody automatyczne tego przyrostu
 
-- pełny runner Python: 1372 zaliczone, 0 błędów, 138 historycznych pominięć;
+- pełny runner Python: 1441 zaliczonych, 0 błędów, 138 historycznych pominięć;
 - testy protokołu C#: 15 zestawów zaliczonych;
 - całe rozwiązanie .NET zbudowane sekwencyjnie: 0 ostrzeżeń, 0 błędów;
 - sześć celowanych testów Windows rozpoznawania, ustawień, historii, podpisu
@@ -515,8 +528,10 @@ kodu ani wysyłać logów bez wiedzy użytkownika.
 - LiteHost zbudowany i opublikowany dla Windows x64 bez błędów i ostrzeżeń;
 - pakiet uruchomieniowy przeszedł sprawdzenie środowiska z Pythonem 3.14.7,
   wxPython 4.3.1 i nowym hostem.
-- 6 testów kontraktu `AMC.exe`: poprawna paczka, uszkodzenie, niezgodny
-  protokół, wyjście ścieżką poza katalog, prywatny runtime i diagnostyka;
+- 9 testów kontraktu `AMC.exe` i aktualizatora: poprawna paczka, uszkodzenie,
+  niezgodny protokół, wyjście ścieżką poza katalog, prywatny runtime,
+  diagnostyka, jedna instancja oraz rozpoznanie ścieżek i żywego procesu
+  instalacji;
 - 21 celowanych testów układu paczki, startu i komunikatów: 21 zaliczonych,
   0 błędów;
 - rzeczywisty `AMC.exe --sprawdz-pakiet-cicho`: kod 0; próbna pełna podmiana

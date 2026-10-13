@@ -220,6 +220,7 @@ from . import radio_schedule_settings
 from .radio_recording import (
     active_recording_rows,
     available_recorded_files,
+    current_station_recording_label,
     format_duration,
     preferences_with_overrides,
     recording_history_from_amc_state,
@@ -6242,7 +6243,20 @@ class LiteFrame(wx.Frame):
             if isinstance(raw_volume, (int, float)) and not isinstance(raw_volume, bool)
             else self.options.volume
         )
-        return f"{title}, {session_name}, {state}{muted}, głośność {volume}%."
+        recording = ""
+        if self.navigator.active is SessionId.RADIO:
+            station_id = str(
+                snapshot.get("id") or session.now_playing_id or ""
+            ).strip()
+            recording = current_station_recording_label(
+                getattr(self, "_last_recording_status", {}),
+                station_id,
+            )
+        recording_part = f", {recording}" if recording else ""
+        return (
+            f"{title}, {session_name}, {state}{recording_part}{muted}, "
+            f"głośność {volume}%."
+        )
 
     def _nvda_context_message(self) -> str:
         session_name = SESSION_LABELS[self.navigator.active]

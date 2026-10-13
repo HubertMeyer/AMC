@@ -25,6 +25,7 @@ from amc_wx_lite.radio_recording import (
     RadioRecordingPreferences,
     active_recording_rows,
     available_recorded_files,
+    current_station_recording_label,
     format_duration,
     preferences_from_amc_state,
     preferences_with_overrides,
@@ -36,6 +37,44 @@ from amc_wx_lite.radio_recording import (
 from amc_wx_lite.radio_source import RadioSource
 from amc_wx_lite.shortcuts import Action, Chord, resolve
 from amc_wx_lite.state_store import Station
+
+
+def test_current_station_recording_label_never_confuses_background_station() -> None:
+    payload = {
+        "recordings": [
+            {
+                "stationId": "radio-poznan",
+                "stationName": "Radio Poznań",
+                "state": "recording",
+                "paused": False,
+            },
+            {
+                "stationId": "radio-opole",
+                "stationName": "Radio Opole",
+                "state": "paused",
+                "paused": True,
+            },
+        ]
+    }
+
+    assert current_station_recording_label(payload, "radio-poznan") == "nagrywanie"
+    assert current_station_recording_label(payload, "radio-opole") == (
+        "nagrywanie wstrzymane"
+    )
+    assert current_station_recording_label(payload, "radio-inne") == ""
+    assert "radio-poznan" not in current_station_recording_label(
+        payload, "radio-poznan"
+    )
+
+
+def test_current_station_recording_label_names_transition_states() -> None:
+    assert current_station_recording_label(
+        {"recordings": [{"stationId": "x", "state": "starting"}]}, "x"
+    ) == "przygotowywanie nagrania"
+    assert current_station_recording_label(
+        {"recordings": [{"stationId": "x", "state": "stopping"}]}, "x"
+    ) == "zatrzymywanie nagrania"
+    assert current_station_recording_label({"count": 1}, "x") == ""
 
 
 def test_terminal_recording_event_becomes_sanitized_private_history() -> None:

@@ -1,6 +1,8 @@
+using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Text.Json;
 using AccessibleMediaController.PythonLauncher;
+using AccessibleMediaController.PythonUpdater;
 
 namespace AccessibleMediaController.PythonLauncher.Tests;
 
@@ -15,6 +17,8 @@ internal static class Program
         ("prywatny runtime bez PYTHONPATH i bez alertów pythonw", LaunchPlanUsesOnlyPrivateRuntime),
         ("diagnostyka przez python.exe", DiagnosticUsesConsoleRuntime),
         ("jedna instancja launchera", OnlyOneLauncherOwnsTheLease),
+        ("aktualizator wykrywa wszystkie procesy instalacji", UpdaterRecognizesInstalledComponents),
+        ("aktualizator wykrywa żywy proces z instalacji", UpdaterFindsRunningInstalledProcess),
     ];
 
     public static int Main()
@@ -129,6 +133,61 @@ internal static class Program
             return third.IsOwner;
         }).GetAwaiter().GetResult();
         Equal(true, thirdOwns);
+    }
+
+    private static void UpdaterRecognizesInstalledComponents()
+    {
+        var root = Path.Combine("D:\\", "Projekty Codex", "AMC Python");
+        Equal(true, InstalledProcessGuard.IsInsideInstallation(
+            root, Path.Combine(root, "AMC.exe")));
+        Equal(true, InstalledProcessGuard.IsInsideInstallation(
+            root, Path.Combine(root, "runtime", "python.exe")));
+        Equal(true, InstalledProcessGuard.IsInsideInstallation(
+            root, Path.Combine(root, "host", "amc_lite_host.exe")));
+        Equal(true, InstalledProcessGuard.IsInsideInstallation(
+            root.ToUpperInvariant(), Path.Combine(root.ToLowerInvariant(), "AMC.exe")));
+        Equal(false, InstalledProcessGuard.IsInsideInstallation(
+            root, Path.Combine("D:\\", "Projekty Codex", "AMC Python stary", "AMC.exe")));
+        Equal(false, InstalledProcessGuard.IsInsideInstallation(root, null));
+    }
+
+    private static void UpdaterFindsRunningInstalledProcess()
+    {
+        var root = Path.Combine(
+            Path.GetTempPath(), "amc-updater-process-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        var command = Environment.GetEnvironmentVariable("ComSpec")
+            ?? Path.Combine(Environment.SystemDirectory, "cmd.exe");
+        var installedCommand = Path.Combine(root, "runtime", "amc-test-process.exe");
+        Directory.CreateDirectory(Path.GetDirectoryName(installedCommand)!);
+        File.Copy(command, installedCommand);
+        using var process = Process.Start(new ProcessStartInfo
+        {
+            FileName = installedCommand,
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            ArgumentList = { "/d", "/c", "ping -n 30 127.0.0.1 > nul" },
+        }) ?? throw new InvalidOperationException("Nie uruchomiono procesu próbnego.");
+        try
+        {
+            var deadline = DateTime.UtcNow.AddSeconds(5);
+            while (!InstalledProcessGuard.HasRunningComponent(root))
+            {
+                if (process.HasExited || DateTime.UtcNow >= deadline)
+                    throw new InvalidOperationException(
+                        "Nie wykryto żywego procesu uruchomionego z instalacji.");
+                Thread.Sleep(50);
+            }
+        }
+        finally
+        {
+            if (!process.HasExited)
+            {
+                process.Kill(entireProcessTree: true);
+                process.WaitForExit(5_000);
+            }
+            Directory.Delete(root, recursive: true);
+        }
     }
 
     private static void Throws(string expected, Action action)

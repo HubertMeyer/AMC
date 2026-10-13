@@ -221,6 +221,51 @@ def format_duration(seconds: object) -> str:
     return f"{hours}:{minutes:02d}:{secs:02d}" if hours else f"{minutes}:{secs:02d}"
 
 
+def current_station_recording_label(
+    payload: object,
+    station_id: object,
+) -> str:
+    """Stan nagrywania jednej odtwarzanej stacji, gotowy do wymowienia.
+
+    Globalne polecenie stanu dodatku NVDA pyta o *odtwarzany* materiał, nie
+    o wiersz, na którym przypadkiem stoi fokus.  Dlatego dopasowanie odbywa
+    się wyłącznie po identyfikatorze stacji potwierdzonym przez transport.
+    Id pozostaje w modelu i nigdy nie trafia do zwracanego tekstu.
+
+    Pusty wynik oznacza brak pewnego dopasowania.  Jest to celowe: przy
+    nagrywaniu innej stacji w tle nie wolno dopisać jej stanu do aktualnie
+    odtwarzanej audycji.
+    """
+
+    if not isinstance(payload, dict) or not isinstance(station_id, str):
+        return ""
+    wanted = station_id.strip()
+    if not wanted:
+        return ""
+    entries = payload.get("recordings")
+    if not isinstance(entries, list):
+        return ""
+    entry = next(
+        (
+            candidate
+            for candidate in entries
+            if isinstance(candidate, dict)
+            and str(candidate.get("stationId") or "") == wanted
+        ),
+        None,
+    )
+    if entry is None:
+        return ""
+    state = str(entry.get("state") or "").strip().casefold()
+    if entry.get("paused") is True or state == "paused":
+        return "nagrywanie wstrzymane"
+    if state == "starting":
+        return "przygotowywanie nagrania"
+    if state == "stopping":
+        return "zatrzymywanie nagrania"
+    return "nagrywanie"
+
+
 def active_recording_rows(payload: object) -> list[Row]:
     """Czytelne wiersze widoku ``Nagrywane`` z odpowiedzi hosta.
 
