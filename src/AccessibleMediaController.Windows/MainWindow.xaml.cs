@@ -8384,7 +8384,7 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
         }
 
         var dialog = new PodcastSourceWindow(
-            _podcastFeedClient.FetchAsync,
+            FetchPodcastSourceAsync,
             _youTubeCollections.FetchAsync,
             YouTubeSourceResolver.ResolveAudioAsync) { Owner = this };
         if (dialog.ShowDialog() != true
@@ -8431,6 +8431,18 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
             : "Odcinki";
         PrepareViewFocusContext($"{change}: {result.Subscription.Title}. {itemKindLabel}: {dialog.Feed!.Episodes.Count}");
         RestoreMediaListFocusAfterRefresh();
+    }
+
+    private async Task<PodcastFeedDocument> FetchPodcastSourceAsync(
+        Uri address,
+        CancellationToken cancellationToken)
+    {
+        if (ApplePodcastDirectoryClient.TryGetPodcastId(address, out _))
+        {
+            var directoryItem = await _applePodcastDirectory.LookupAsync(address, cancellationToken);
+            address = new Uri(directoryItem.Source!, UriKind.Absolute);
+        }
+        return await _podcastFeedClient.FetchAsync(address, cancellationToken);
     }
 
     private MediaItem AddPublicInternetMedia(

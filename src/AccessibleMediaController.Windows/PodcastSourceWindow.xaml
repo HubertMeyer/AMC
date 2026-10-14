@@ -8,14 +8,14 @@
         <TextBlock Text="Nowy podcast, kanał YouTube lub medium internetowe" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,8"
                    automation:AutomationProperties.HeadingLevel="Level1" />
         <TextBlock Margin="0,0,0,12" TextWrapping="Wrap"
-                   Text="Wpisz bezpośredni adres kanału RSS lub Atom, publicznego kanału albo playlisty YouTube, filmu lub transmisji YouTube. AMC wczytuje najwyżej 100 najnowszych materiałów, nie loguje się do YouTube i nie synchronizuje konta. Nazwa jest opcjonalna." />
+                   Text="Wpisz bezpośredni adres kanału RSS lub Atom, publiczną stronę podcastu w Apple Podcasts, publiczny kanał albo playlistę YouTube, film lub transmisję YouTube. AMC wczytuje najwyżej 100 najnowszych materiałów, nie loguje się do Apple ani YouTube i nie synchronizuje kont. Nazwa jest opcjonalna." />
         <Label Target="{Binding ElementName=NameBox}">_Nazwa własna, opcjonalnie:</Label>
         <TextBox x:Name="NameBox" MaxLength="240" Margin="0,0,0,10"
                  automation:AutomationProperties.Name="Nazwa własna podcastu, opcjonalnie" />
-        <Label Target="{Binding ElementName=FeedBox}">Adres kanału _RSS, Atom, YouTube lub publicznego medium:</Label>
+        <Label Target="{Binding ElementName=FeedBox}">Adres kanału _RSS, Atom, strony Apple Podcasts, YouTube lub publicznego medium:</Label>
         <TextBox x:Name="FeedBox" Margin="0,0,0,10"
-                 automation:AutomationProperties.Name="Adres kanału RSS, Atom, kanału lub playlisty YouTube albo publicznego filmu lub transmisji YouTube"
-                 automation:AutomationProperties.HelpText="Pełny publiczny adres rozpoczynający się od http:// albo https://; bez logowania i prywatnych materiałów" />
+                 automation:AutomationProperties.Name="Adres kanału RSS, Atom, strony Apple Podcasts, kanału lub playlisty YouTube albo publicznego filmu lub transmisji YouTube"
+                 automation:AutomationProperties.HelpText="Pełny publiczny adres rozpoczynający się od http:// albo https://; Apple Podcasts działa przez publiczny kanał i nie obejmuje płatnych treści dostępnych wyłącznie po zalogowaniu" />
         <TextBlock x:Name="StatusText" MinHeight="48" Margin="0,0,0,12" TextWrapping="Wrap"
                    automation:AutomationProperties.Name="Wynik sprawdzania kanału"
                    automation:AutomationProperties.LiveSetting="Assertive" />

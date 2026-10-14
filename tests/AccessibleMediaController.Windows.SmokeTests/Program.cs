@@ -617,6 +617,7 @@ var tests = new (string Name, Action Test)[]
     ("Podcast Chapter Client", TestPodcastChapterClient),
     ("Podcast Episode Downloader", TestPodcastEpisodeDownloader),
     ("Apple Podcast Directory Client", TestApplePodcastDirectoryClient),
+    ("Apple Podcasts Page Lookup And Source Accessibility", TestApplePodcastPageLookupAndSourceAccessibility),
     ("Spreaker Podcast Directory Client", TestSpreakerPodcastDirectoryClient),
     ("Podcast OPML Import Selection Accessibility", TestPodcastOpmlImportSelectionAccessibility),
     ("TIDAL Refresh Request", TestTidalRefreshRequest),
@@ -6440,6 +6441,178 @@ static void TestApplePodcastDirectoryClient()
     Console.WriteLine("OK: bezpieczne wyszukiwanie katalogu Apple Podcasts");
 }
 
+static void TestApplePodcastPageLookupAndSourceAccessibility()
+{
+    const string json = """
+        {
+          "resultCount": 1,
+          "results": [
+            {
+              "collectionId": 1500480464,
+              "collectionName": "Raport o stanie świata Dariusza Rosiaka",
+              "artistName": "Dariusz Rosiak",
+              "feedUrl": "https://example.test/raport.xml",
+              "collectionViewUrl": "https://podcasts.apple.com/pl/podcast/raport/id1500480464"
+            }
+          ]
+        }
+        """;
+    var handler = new FixedJsonHandler(json);
+    using var client = new ApplePodcastDirectoryClient(handler, TimeSpan.FromSeconds(2));
+    var page = new Uri(
+        "https://podcasts.apple.com/pl/podcast/raport-o-stanie-%C5%9Bwiata/id1500480464?i=1000720011223");
+    Assert(ApplePodcastDirectoryClient.TryGetPodcastId(page, out var id) && id == 1500480464,
+        "Nie rozpoznano identyfikatora podcastu w publicznym adresie Apple Podcasts.");
+    Assert(!ApplePodcastDirectoryClient.TryGetPodcastId(
+            new Uri("https://example.test/podcast/id1500480464"),
+            out _),
+        "Obca domena została uznana za stronę Apple Podcasts.");
+    var item = client.LookupAsync(page, CancellationToken.None).GetAwaiter().GetResult();
+    Assert(item.Source == "https://example.test/raport.xml"
+           && item.Id == "podcast-directory:apple:1500480464",
+        "Lookup Apple nie zamienił strony podcastu na publiczny kanał RSS.");
+    Assert(handler.LastRequestUri?.AbsoluteUri
+            == "https://itunes.apple.com/lookup?id=1500480464&country=PL&media=podcast&entity=podcast",
+        "Lookup Apple nie użył udokumentowanej operacji i identyfikatora katalogowego.");
+
+    const string appleOnlyJson = """
+        {
+          "resultCount": 1,
+          "results": [
+            {
+              "collectionId": 1500480464,
+              "collectionName": "Audycja tylko w Apple"
+            }
+          ]
+        }
+        """;
+    using (var appleOnlyClient = new ApplePodcastDirectoryClient(
+               new FixedJsonHandler(appleOnlyJson),
+               TimeSpan.FromSeconds(2)))
+    {
+        try
+        {
+            appleOnlyClient.LookupAsync(page, CancellationToken.None).GetAwaiter().GetResult();
+            throw new Exception("Lookup przyjął audycję bez publicznego RSS.");
+        }
+        catch (InvalidDataException exception)
+        {
+            Assert(exception.Message.Contains("subskrypcji Apple", StringComparison.Ordinal),
+                "Brak publicznego RSS nie wyjaśnia ograniczenia płatnej subskrypcji Apple.");
+        }
+    }
+
+    Exception? failure = null;
+    var thread = new Thread(() =>
+    {
+        PodcastSourceWindow? window = null;
+        SearchWindow? searchWindow = null;
+        try
+        {
+            window = new PodcastSourceWindow(
+                (_, _) => throw new InvalidOperationException(),
+                (_, _) => throw new InvalidOperationException(),
+                (_, _) => throw new InvalidOperationException());
+            window.Show();
+            var addressBox = (TextBox)window.FindName("FeedBox");
+            var name = AutomationProperties.GetName(addressBox);
+            var help = AutomationProperties.GetHelpText(addressBox);
+            Assert(name.Contains("Apple Podcasts", StringComparison.Ordinal)
+                   && help.Contains("płatnych treści", StringComparison.Ordinal)
+                   && !name.Contains('{', StringComparison.Ordinal),
+                "Pole źródła nie ma jawnej, użytkowej etykiety Apple Podcasts dla NVDA.");
+            window.Close();
+            window = null;
+
+            var sessions = new SessionManager(new AppSettings { LastSessionId = "podcasts" });
+            sessions.AddOrUpdateTransientSession(
+                "podcasts",
+                "Podcasty",
+                [],
+                output: null,
+                preferredSlot: 6);
+            sessions.SelectSession("podcasts");
+            var directoryResult = new MediaItem
+            {
+                Id = "podcast-directory:apple:1500480464",
+                Title = "Raport o stanie świata Dariusza Rosiaka",
+                Kind = MediaItemKind.Podcast,
+                Source = "https://example.test/raport.xml"
+            };
+            string FormatAppleResult(MediaItem candidate) =>
+                MainWindowNavigationPolicy.FormatPodcastSearchResult(
+                    candidate,
+                    $"{candidate.Title}, podcast",
+                    parentPodcastTitle: null,
+                    parentPodcastInLibrary: false);
+            searchWindow = new SearchWindow(
+                sessions,
+                allServices: false,
+                FormatAppleResult,
+                FormatAppleResult,
+                _ => string.Empty,
+                (_, _, _, _) => null,
+                new SearchQueryHistory(new SearchHistorySettings()),
+                "podcasts",
+                () => { },
+                detailedHints: false,
+                (_, _) => Task.FromResult<IReadOnlyList<SearchWindow.SearchResult>>(
+                    [new SearchWindow.SearchResult("podcasts", directoryResult)]),
+                "katalogu Apple Podcasts");
+            searchWindow.Show();
+            searchWindow.Activate();
+            DrainDispatcher(searchWindow.Dispatcher);
+            var query = (TextBox)searchWindow.FindName("SearchBox");
+            query.Text = "Raport o stanie świata";
+            typeof(SearchWindow).GetMethod(
+                    "RunSearch",
+                    System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
+                .Invoke(searchWindow, null);
+            DrainDispatcher(searchWindow.Dispatcher);
+            var results = (ListBox)searchWindow.FindName("ResultsList");
+            Assert(results.Items.Count == 1,
+                "Wyszukiwanie testowe nie utworzyło wyniku Apple Podcasts.");
+            results.SelectedIndex = 0;
+            results.ScrollIntoView(results.Items[0]);
+            results.UpdateLayout();
+            DrainDispatcher(searchWindow.Dispatcher);
+            var row = results.ItemContainerGenerator.ContainerFromIndex(0) as ListBoxItem;
+            Assert(row is not null,
+                "Lista nie utworzyła kontenera wyniku Apple Podcasts do sprawdzenia etykiety UI Automation.");
+            var spoken = System.Windows.Automation.Peers.UIElementAutomationPeer
+                .CreatePeerForElement(row!)!.GetName();
+            Assert(spoken == FormatAppleResult(directoryResult)
+                   && results.SelectedItem?.ToString() == spoken
+                   && !spoken.Contains("SearchResultRow", StringComparison.Ordinal),
+                "Wiersz Apple Podcasts ujawnia typ obiektu zamiast jawnej etykiety wyniku dla NVDA.");
+        }
+        catch (Exception exception)
+        {
+            failure = exception;
+        }
+        finally
+        {
+            searchWindow?.Close();
+            window?.Close();
+        }
+    });
+    thread.SetApartmentState(ApartmentState.STA);
+    thread.Start();
+    thread.Join();
+    if (failure is not null)
+        throw new InvalidOperationException("Test strony Apple Podcasts i dostępności źródła nie powiódł się.", failure);
+    Console.WriteLine("OK: strona Apple Podcasts prowadzi do RSS, a pole ma jawną etykietę NVDA");
+
+    static void DrainDispatcher(System.Windows.Threading.Dispatcher dispatcher)
+    {
+        var frame = new System.Windows.Threading.DispatcherFrame();
+        dispatcher.BeginInvoke(
+            System.Windows.Threading.DispatcherPriority.ApplicationIdle,
+            () => frame.Continue = false);
+        System.Windows.Threading.Dispatcher.PushFrame(frame);
+    }
+}
+
 static void TestSpreakerPodcastDirectoryClient()
 {
     const string json = """
@@ -7787,13 +7960,19 @@ sealed class BlockingWaveStream : WaveStream
 
 sealed class FixedJsonHandler(string json) : HttpMessageHandler
 {
+    public Uri? LastRequestUri { get; private set; }
+
     protected override Task<HttpResponseMessage> SendAsync(
         HttpRequestMessage request,
-        CancellationToken cancellationToken) => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+        CancellationToken cancellationToken)
     {
-        Content = new StringContent(json, System.Text.Encoding.UTF8, "application/json"),
-        RequestMessage = request
-    });
+        LastRequestUri = request.RequestUri;
+        return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(json, System.Text.Encoding.UTF8, "application/json"),
+            RequestMessage = request
+        });
+    }
 }
 
 sealed class FixedDurationWaveStream(TimeSpan duration) : WaveStream

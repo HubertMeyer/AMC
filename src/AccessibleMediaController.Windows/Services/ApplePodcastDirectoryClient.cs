@@ -1,8 +1,10 @@
+using System.IO;
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json.Serialization;
+using System.Text.RegularExpressions;
 using AccessibleMediaController.Core.Sessions;
 
 namespace AccessibleMediaController.Windows.Services;
@@ -14,6 +16,9 @@ namespace AccessibleMediaController.Windows.Services;
 /// </summary>
 internal sealed class ApplePodcastDirectoryClient : IDisposable
 {
+    private static readonly Regex PodcastIdSegment = new(
+        "^id(?<id>[1-9][0-9]*)$",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
     private readonly HttpClient _client;
     private readonly bool _ownsClient;
     private readonly object _cacheGate = new();
@@ -78,6 +83,68 @@ internal sealed class ApplePodcastDirectoryClient : IDisposable
             _cache[normalized] = (DateTime.UtcNow, items);
         }
         return items;
+    }
+
+    /// <summary>
+    /// Resolves a public Apple Podcasts page to the public RSS/Atom address
+    /// exposed by Apple's documented Lookup operation. This does not sign in
+    /// to an Apple account and cannot expose subscriber-only Apple audio.
+    /// </summary>
+    public async Task<MediaItem> LookupAsync(
+        Uri applePodcastPage,
+        CancellationToken cancellationToken = default)
+    {
+        if (!TryGetPodcastId(applePodcastPage, out var podcastId))
+        {
+            throw new ArgumentException(
+                "Adres nie jest publiczną stroną podcastu w Apple Podcasts.",
+                nameof(applePodcastPage));
+        }
+
+        var address = new Uri(
+            "https://itunes.apple.com/lookup" +
+            $"?id={podcastId}&country=PL&media=podcast&entity=podcast");
+        var response = await _client.GetFromJsonAsync<AppleSearchResponse>(address, cancellationToken)
+            .ConfigureAwait(false);
+        var result = (response?.Results ?? [])
+            .FirstOrDefault(candidate => candidate.CollectionId == podcastId
+                && TryPublicHttpUri(candidate.FeedUrl, out _));
+        if (result is null)
+        {
+            throw new InvalidDataException(
+                "Ten podcast Apple nie udostępnia publicznego kanału RSS lub Atom. " +
+                "Treści dostępnych wyłącznie w subskrypcji Apple nie można otworzyć w AMC.");
+        }
+        return ToMediaItem(result);
+    }
+
+    internal static bool TryGetPodcastId(Uri? address, out long podcastId)
+    {
+        podcastId = 0;
+        if (address is null
+            || !address.IsAbsoluteUri
+            || address.Scheme is not ("http" or "https")
+            || !string.IsNullOrEmpty(address.UserInfo)
+            || !string.Equals(address.IdnHost, "podcasts.apple.com", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        foreach (var segment in address.AbsolutePath.Split('/', StringSplitOptions.RemoveEmptyEntries).Reverse())
+        {
+            var match = PodcastIdSegment.Match(Uri.UnescapeDataString(segment));
+            if (match.Success
+                && long.TryParse(
+                    match.Groups["id"].Value,
+                    System.Globalization.NumberStyles.None,
+                    System.Globalization.CultureInfo.InvariantCulture,
+                    out podcastId))
+            {
+                return true;
+            }
+        }
+        podcastId = 0;
+        return false;
     }
 
     private static MediaItem ToMediaItem(ApplePodcastResult result)
