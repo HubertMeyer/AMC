@@ -43,3 +43,33 @@
 - Etykiety dostępności list, pól kombi i menu muszą być tekstem użytkowym,
   nigdy domyślną reprezentacją obiektu, enuma ani identyfikatorem komendy.
   Testuj początkowy fokus, strzałki, ponowne otwarcie i powrót po zamknięciu.
+
+## Równoległe integracje systemów głośnikowych
+
+- WiiM i Sonos są wzorcem wspólnego kontraktu dla przyszłych systemów
+  głośnikowych z otwartym API. Nowa integracja ma używać wspólnego modelu
+  możliwości i zachowania interfejsu wszędzie tam, gdzie urządzenia oferują
+  równoważne funkcje; różnice producenta należy izolować w adapterze API.
+- Każda poprawka dotycząca jednego systemu wymaga przeglądu wszystkich
+  równoległych integracji. Nie kończ zadania po naprawieniu tylko zgłoszonej
+  marki, jeżeli ten sam wzorzec listy, skrótu, fokusa, transportu lub błędu
+  występuje także w pozostałych adapterach.
+- Jednorodna lista zapisanych strumieni przekazuje NVDA nazwę strumienia i
+  natywną informację o pozycji na liście. Nie dopisuj do każdego wiersza
+  stałych tekstów „stacja zapisana w AMC”, „strumień sieciowy”, nazwy źródła
+  ani marki urządzenia. Adres pozostaje danymi modelu i jest odczytywany lub
+  kopiowany wyłącznie na jawne polecenie użytkownika.
+- Dla każdej integracji zachowaj ten sam kontrakt klawiatury i fokusa, o ile
+  API wspiera daną funkcję: wybór ostatnio używanego urządzenia, wejście i
+  powrót z Biblioteki, `Ctrl+Shift+C`, transport, kierunki regulacji głośności,
+  komunikaty ładowania, pustej listy i błędu. Brak możliwości API ma być
+  uczciwie zakomunikowany, a nie zastąpiony zachowaniem pozornym.
+- Identyfikatory urządzeń, grup, strumieni i wartości protokołu pozostają w
+  modelu. Nazwy dostępne, kolumny i komunikaty muszą być złożone wyłącznie z
+  zamierzonych tekstów użytkowych.
+- Dodawaj wspólne lub parametryzowane testy kontraktowe, które uruchamiają ten
+  sam scenariusz dla WiiM, Sonos i każdego nowego adaptera. Test ma sprawdzać
+  rzeczywisty tekst wszystkich kolumn listy, początkowy i przywrócony fokus,
+  Enter, Escape, strzałki, kopiowanie adresu oraz ponowne otwarcie. Zmiana
+  adaptera wymaga też krótkiej próby z NVDA; sam poprawny tekst wizualny nie
+  jest wystarczający.
