@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import re
+from datetime import datetime
 from pathlib import Path
 
 from . import __version__
@@ -46,15 +47,41 @@ def read_build_label(root: str | Path | None = None) -> str:
     return label if _BUILD_LABEL.fullmatch(label) else ""
 
 
+def read_build_time_label(root: str | Path | None = None) -> str:
+    """Zwróć lokalną datę i godzinę paczki bez szczegółów technicznych."""
+
+    base = Path(root) if root is not None else package_root()
+    manifest = base / "bundle-manifest.json"
+    try:
+        if manifest.stat().st_size > 8 * 1024 * 1024:
+            return ""
+        payload = json.loads(manifest.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError):
+        return ""
+    created = payload.get("created") if isinstance(payload, dict) else None
+    if not isinstance(created, str):
+        return ""
+    try:
+        timestamp = datetime.fromisoformat(created.strip())
+    except ValueError:
+        return ""
+    if timestamp.tzinfo is None:
+        return ""
+    return timestamp.astimezone().strftime("%d.%m.%Y, %H:%M")
+
+
 def window_title(root: str | Path | None = None) -> str:
     """Tytul widoczny i czytany przez NVDA."""
 
-    build = read_build_label(root)
-    title = f"AMC Python — wersja {__version__}"
-    return f"{title}, kompilacja {build}" if build else title
+    build_time = read_build_time_label(root)
+    return (
+        f"AMC Python — {build_time}"
+        if build_time
+        else f"AMC Python — wersja {__version__}"
+    )
 
 
 def is_main_window_title(title: str) -> bool:
     """Odróżnij główne okno od alertu „Diagnostyka AMC Python”."""
 
-    return title == "AMC Python" or title.startswith("AMC Python — wersja ")
+    return title == "AMC Python" or title.startswith("AMC Python — ")

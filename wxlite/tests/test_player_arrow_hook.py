@@ -111,7 +111,8 @@ def test_lista_ma_wlasny_wczesny_hook_dla_copy_shift_r_i_ustawien():
         for node in ast.walk(shortcut_hook)
         if isinstance(node, ast.Constant) and isinstance(node.value, str)
     }
-    assert "Ctrl+C" in handled
+    for chord in ("F2", "Shift+F2", "Delete", "Shift+Delete", "Ctrl+C"):
+        assert chord in handled
 
 def test_strzalka_w_modalnym_dialogu_nie_steruje_odtwarzaczem():
     assert _call(foreign=True) == ["skip"]

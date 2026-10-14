@@ -477,8 +477,7 @@ internal sealed class LiteEngineHandlers : IDisposable
             ["radio.addStation"] = (request, _) => AddRadioStation(request.Args),
             ["radio.editStation"] = (request, _) => EditRadioStation(request.Args),
             ["radio.recordingHistoryForgetPaths"] = (request, _) =>
-                RequireProfileMutations().ForgetRecordingHistoryPaths(
-                    ReadOptionalIds(request.Args, "paths")),
+                ForgetRecordingHistoryPaths(request.Args),
             ["bookmark.add"] = (request, _) => AddBookmark(request.Args),
             ["bookmark.remove"] = (request, _) => RemoveBookmarks(request.Args),
             ["bookmark.navigate"] = (request, _) => NavigateBookmark(request.Args),
@@ -536,10 +535,12 @@ internal sealed class LiteEngineHandlers : IDisposable
         var sourcePath = LiteArgs.ReadText(args, "path");
         if (IsCurrentFilesItem(itemId) || IsCurrentFilesPath(sourcePath))
             StopFilesPlayback();
-        return RequireProfileMutations().RenameLocalFile(
+        var result = RequireProfileMutations().RenameLocalFile(
             itemId,
             LiteArgs.RequireText(args, "name"),
             sourcePath);
+        _recordings.RewriteHistoryPath(result.OldPath, result.Path);
+        return result;
     }
 
     private object RenamePodcastSubscription(JsonElement args) =>
@@ -969,9 +970,19 @@ internal sealed class LiteEngineHandlers : IDisposable
         var paths = ReadOptionalIds(args, "paths");
         if (ids.Any(IsCurrentFilesItem) || paths.Any(IsCurrentFilesPath))
             StopFilesPlayback();
-        return RequireProfileMutations().RecycleLocalFiles(
+        var result = RequireProfileMutations().RecycleLocalFiles(
             ids,
             paths);
+        _recordings.ForgetHistoryPaths(result.Removed.Select(item => item.Path));
+        return result;
+    }
+
+    private object ForgetRecordingHistoryPaths(JsonElement args)
+    {
+        var paths = ReadOptionalIds(args, "paths");
+        var storedRemoved = RequireProfileMutations().ForgetRecordingHistoryPaths(paths);
+        var currentRemoved = _recordings.ForgetHistoryPaths(paths);
+        return new { removedCount = Math.Max(storedRemoved, currentRemoved) };
     }
 
     private bool IsCurrentFilesItem(string itemId)

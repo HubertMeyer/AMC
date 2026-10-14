@@ -296,6 +296,60 @@ internal sealed partial class LiteRadioRecordingCoordinator : IDisposable
         };
     }
 
+    public int RewriteHistoryPath(string oldPath, string newPath)
+    {
+        var normalizedOldPath = NormalizeHistoryPath(oldPath);
+        var normalizedNewPath = NormalizeHistoryPath(newPath);
+        if (normalizedOldPath is null || normalizedNewPath is null) return 0;
+        lock (_gate)
+        {
+            ThrowIfDisposed();
+            var changed = 0;
+            for (var index = 0; index < _history.Count; index++)
+            {
+                if (!string.Equals(
+                        NormalizeHistoryPath(_history[index].Path),
+                        normalizedOldPath,
+                        StringComparison.OrdinalIgnoreCase))
+                    continue;
+                _history[index] = _history[index] with { Path = normalizedNewPath };
+                changed++;
+            }
+            return changed;
+        }
+    }
+
+    public int ForgetHistoryPaths(IEnumerable<string> sourcePaths)
+    {
+        var paths = sourcePaths
+            .Select(NormalizeHistoryPath)
+            .Where(path => path is not null)
+            .Cast<string>()
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        if (paths.Count == 0) return 0;
+        lock (_gate)
+        {
+            ThrowIfDisposed();
+            return _history.RemoveAll(recording =>
+            {
+                var path = NormalizeHistoryPath(recording.Path);
+                return path is not null && paths.Contains(path);
+            });
+        }
+    }
+
+    private static string? NormalizeHistoryPath(string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path)) return null;
+        try { return Path.GetFullPath(path); }
+        catch (Exception exception) when (exception is ArgumentException
+                                          or NotSupportedException
+                                          or PathTooLongException)
+        {
+            return null;
+        }
+    }
+
     private ActiveRecording[] FindForStation(JsonElement args)
     {
         var stationId = LiteArgs.ReadText(args, "stationId");

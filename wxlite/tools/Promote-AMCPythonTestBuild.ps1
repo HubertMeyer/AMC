@@ -235,6 +235,19 @@ Invoke-Checked -FilePath $RuntimePython -ArgumentList @(
 $candidateManifest = Read-BundleManifest -Root $stagingRoot
 Assert-ReleaseIdentity -Manifest $candidateManifest
 $expectedBuild = [string]$candidateManifest.buildLabel
+$createdText = [string]$candidateManifest.created
+if ([string]::IsNullOrWhiteSpace($createdText)) {
+    throw "Manifest paczki nie zawiera daty utworzenia."
+}
+$expectedWindowTitle = "AMC Python — " + (
+    [DateTimeOffset]::Parse(
+        $createdText,
+        [Globalization.CultureInfo]::InvariantCulture
+    ).ToLocalTime().ToString(
+        "dd.MM.yyyy, HH:mm",
+        [Globalization.CultureInfo]::InvariantCulture
+    )
+)
 if ([string]::IsNullOrWhiteSpace($expectedBuild) -or $expectedBuild.EndsWith("-robocza")) {
     throw "Paczka odbiorcza nie ma czystej, jednoznacznej etykiety kompilacji."
 }
@@ -279,7 +292,7 @@ if (-not $NoLaunch) {
     do {
         Start-Sleep -Milliseconds 400
         $process = Get-Process | Where-Object {
-            if ($_.MainWindowTitle -notlike "AMC Python*kompilacja $expectedBuild") {
+            if ($_.MainWindowTitle -ne $expectedWindowTitle) {
                 return $false
             }
             try {

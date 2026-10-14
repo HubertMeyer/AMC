@@ -62,7 +62,7 @@ internal sealed class LiteProfileMutationStore
         }
     }
 
-    public object RenameLocalFile(
+    public LocalFileRenameResult RenameLocalFile(
         string itemId,
         string requestedName,
         string? sourcePath = null)
@@ -111,14 +111,12 @@ internal sealed class LiteProfileMutationStore
                 }
                 RewriteRecordingHistoryPath(item.Path, targetPath);
                 transaction.Commit();
-                return new
-                {
-                    itemId = string.IsNullOrWhiteSpace(item.Id) ? itemId : item.Id,
-                    oldPath = item.Path,
-                    path = targetPath,
+                return new LocalFileRenameResult(
+                    string.IsNullOrWhiteSpace(item.Id) ? itemId : item.Id,
+                    item.Path,
+                    targetPath,
                     title,
-                    fileName = Path.GetFileName(targetPath)
-                };
+                    Path.GetFileName(targetPath));
             }
             catch (LiteRequestException)
             {
@@ -1190,7 +1188,7 @@ internal sealed class LiteProfileMutationStore
         }
     }
 
-    public object RecycleLocalFiles(
+    public LocalFileRecycleResult RecycleLocalFiles(
         IReadOnlyList<string> itemIds,
         IReadOnlyList<string>? sourcePaths = null)
     {
@@ -1245,21 +1243,19 @@ internal sealed class LiteProfileMutationStore
                 transaction.Commit();
                 RemoveRecordingHistoryPaths(removed.Select(item => item.Path));
             }
-            return new
-            {
-                removed = removed.Select(item => new { item.Id, item.Title, item.Path }).ToArray(),
-                failures
-            };
+            return new LocalFileRecycleResult(
+                removed.Select(item => new LocalFileMutationItem(
+                    item.Id, item.Title, item.Path)).ToArray(),
+                failures.ToArray());
         }
     }
 
-    public object ForgetRecordingHistoryPaths(IReadOnlyList<string> sourcePaths)
+    public int ForgetRecordingHistoryPaths(IReadOnlyList<string> sourcePaths)
     {
         EnsureMayWrite();
         lock (_gate)
         {
-            var removed = RemoveRecordingHistoryPaths(sourcePaths);
-            return new { removedCount = removed };
+            return RemoveRecordingHistoryPaths(sourcePaths);
         }
     }
 
@@ -1916,6 +1912,24 @@ internal sealed class LiteProfileMutationStore
             or NotSupportedException or PathTooLongException;
 
     private sealed record LocalItem(string Id, string Title, bool HasCustomTitle, string Path);
+
+    internal sealed record LocalFileRenameResult(
+        [property: JsonPropertyName("itemId")] string ItemId,
+        [property: JsonPropertyName("oldPath")] string OldPath,
+        [property: JsonPropertyName("path")] string Path,
+        [property: JsonPropertyName("title")] string Title,
+        [property: JsonPropertyName("fileName")] string FileName);
+
+    internal sealed record LocalFileMutationItem(
+        [property: JsonPropertyName("id")] string Id,
+        [property: JsonPropertyName("title")] string Title,
+        [property: JsonPropertyName("path")] string Path);
+
+    internal sealed record LocalFileRecycleResult(
+        [property: JsonPropertyName("removed")]
+        IReadOnlyList<LocalFileMutationItem> Removed,
+        [property: JsonPropertyName("failures")]
+        IReadOnlyList<string> Failures);
 
     internal sealed record LitePlaylistMutation(
         string Id,
