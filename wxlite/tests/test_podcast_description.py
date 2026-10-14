@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ast
 import sys
 from pathlib import Path
 from types import SimpleNamespace
@@ -106,6 +107,24 @@ def test_alt_d_reports_an_empty_episode_description_in_plain_language() -> None:
     gui.LiteFrame._show_podcast_description(frame)
 
     assert spoken == ["Ten odcinek nie zawiera opisu"]
+
+
+def test_okno_alt_d_uzywa_poczatku_opisu_zamiast_ogolnego_tytulu() -> None:
+    source = Path(gui.__file__).read_text(encoding="utf-8")
+    tree = ast.parse(source)
+    dialog = next(
+        node for node in tree.body
+        if isinstance(node, ast.ClassDef)
+        and node.name == "PodcastDescriptionDialog"
+    )
+    init = next(
+        node for node in dialog.body
+        if isinstance(node, ast.FunctionDef) and node.name == "__init__"
+    )
+    rendered = ast.unparse(init)
+    assert "accessible_title = information.initial_focus_name or information.window_title" in rendered
+    assert "super().__init__(parent, title=accessible_title)" in rendered
+    assert "self.content.SetName(accessible_title)" in rendered
 
 
 def test_go_to_related_podcast_opens_parent_and_reselects_episode() -> None:

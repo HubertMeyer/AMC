@@ -2143,16 +2143,20 @@ class PodcastDescriptionDialog(wx.Dialog):
         information: PodcastDescription,
         copy_text: Callable[[str], bool],
     ) -> None:
-        super().__init__(parent, title=information.window_title)
+        # Windows/MSAA ogłasza tytuł nowego okna przed kontrolką z treścią.
+        # Dlatego tytułem dostępnym jest początek prawdziwego opisu, a nie
+        # ogólne „Opis odcinka”, po którym NVDA dopowiadał rolę „dialog”.
+        accessible_title = (
+            information.initial_focus_name or information.window_title
+        )
+        super().__init__(parent, title=accessible_title)
         self._information = information.text
         self._copy_text = copy_text
 
         # NVDA najpierw ogłasza nazwę nowo otwartego okna. Nazwą dostępną
         # jest więc początek właściwego opisu, a nie powtórzone techniczne
         # „Opis odcinka, dialog”. Tytuł wizualny okna pozostaje bez zmian.
-        self.SetName(
-            information.initial_focus_name or information.window_title
-        )
+        self.SetName(accessible_title)
 
         panel = wx.Panel(self)
         layout = wx.BoxSizer(wx.VERTICAL)
@@ -2164,7 +2168,7 @@ class PodcastDescriptionDialog(wx.Dialog):
         # To jest świadomie przygotowany tekst użytkowy, nigdy repr obiektu,
         # identyfikator ani nazwa klasy. Tak samo pełny AMC rozpoczyna fokus od
         # początku właściwego opisu, zamiast od technicznej roli kontrolki.
-        self.content.SetName("Opis i informacje")
+        self.content.SetName(accessible_title)
         self.content.SetInsertionPoint(0)
         layout.Add(self.content, 1, wx.EXPAND)
 
@@ -7751,7 +7755,23 @@ class LiteFrame(wx.Frame):
         canonical = chord_from_event(event).canonical
         volume_slider = getattr(self, "volume_slider", None)
         rate_choice = getattr(self, "rate_choice", None)
-        if focus in (volume_slider, rate_choice) and focus is not None and canonical in {
+        if focus is volume_slider and canonical in {
+            "Left", "Right", "Up", "Down", "Home", "End", "Prior", "Next",
+        }:
+            current = int(volume_slider.GetValue())
+            value = {
+                "Left": current - 1,
+                "Down": current - 1,
+                "Right": current + 1,
+                "Up": current + 1,
+                "Prior": current + 10,
+                "Next": current - 10,
+                "Home": 0,
+                "End": 100,
+            }[canonical]
+            self._set_volume(value)
+            return
+        if focus is rate_choice and canonical in {
             "Left", "Right", "Up", "Down", "Home", "End", "Prior", "Next",
         }:
             event.Skip()
@@ -16166,6 +16186,7 @@ class LiteFrame(wx.Frame):
 
     def _set_volume(self, value: int) -> None:
         value = max(0, min(100, int(value)))
+        self.volume_slider.SetValue(value)
         if self.navigator.active is SessionId.WIIM:
             self._wiim_transport("setVolume", volume=value)
             return
@@ -16173,7 +16194,6 @@ class LiteFrame(wx.Frame):
             self._sonos_transport("setVolume", volume=value)
             return
         self.options.volume = value
-        self.volume_slider.SetValue(value)
         # Glosnosc tez ma swoj przelacznik (CommandRouter.cs:566-575) i swoj
         # szablon "{value}%" -- nie wlasne zdanie "Glosnosc 70".
         text = self.messages.volume_text(value)

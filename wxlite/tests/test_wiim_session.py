@@ -63,13 +63,19 @@ def test_wiim_device_activation_separates_user_label_from_internal_id() -> None:
 
     intents = nav.activate_selected()
 
-    assert len(intents) == 1
+    assert len(intents) == 2
     intent = intents[0]
     assert isinstance(intent, ActivateWiiMDevice)
     assert intent.title == "Salon"
     assert intent.device_id == "device-1"
     assert "192.168.1.40" not in repr(nav.sessions[SessionId.WIIM].model.rows)
-    assert nav.view is View.PLAYER
+    assert nav.view is View.LIST
+    assert nav.session.library_view is LibraryView.WIIM_SOURCE_LIBRARY
+    assert [row.title for row in nav.session.model.rows] == [
+        "Presety urządzenia",
+        "Strumienie zapisane w AMC",
+    ]
+    assert intents[1].text == "Biblioteka źródeł WiiM, 2 pozycje"
 
 
 def test_wiim_payload_is_allowlisted_for_accessible_text() -> None:

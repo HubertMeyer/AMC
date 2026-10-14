@@ -123,6 +123,56 @@ def test_fokus_w_polu_filtra_oddaje_klawisz_jego_wlasnej_obsludze():
     assert _call(in_filter=True) == ["filter"]
     assert _call(in_filter=True, player=False, arrow=False) == ["filter"]
 
+
+def _volume_key(chord: str, current: int = 50) -> list[int]:
+    tree = ast.parse(SOURCE.read_text(encoding="utf-8"))
+    method = next(
+        node for node in ast.walk(tree)
+        if isinstance(node, ast.FunctionDef)
+        and node.name == "_on_player_shortcut_hook"
+    )
+    view = SimpleNamespace(PLAYER=object())
+    values: list[int] = []
+    slider = SimpleNamespace(owner=None, GetValue=lambda: current)
+    rate_choice = SimpleNamespace(owner=None)
+    filter_box = SimpleNamespace(owner=None)
+    frame = SimpleNamespace(
+        navigator=SimpleNamespace(view=view.PLAYER),
+        filter_box=filter_box,
+        volume_slider=slider,
+        rate_choice=rate_choice,
+        _set_volume=values.append,
+        _on_filter_key=lambda _event: None,
+        _on_key=lambda _event: None,
+    )
+    slider.owner = frame
+    rate_choice.owner = frame
+    filter_box.owner = frame
+    wx = SimpleNamespace(
+        KeyEvent=object,
+        Window=SimpleNamespace(FindFocus=lambda: slider),
+        GetTopLevelParent=lambda focus: focus.owner,
+    )
+    ns: dict[str, Any] = {
+        "wx": wx,
+        "View": view,
+        "chord_from_event": lambda _event: SimpleNamespace(canonical=chord),
+    }
+    exec(compile(ast.Module(body=[method], type_ignores=[]), str(SOURCE), "exec"), ns)
+    ns["_on_player_shortcut_hook"](frame, SimpleNamespace(Skip=lambda: None))
+    return values
+
+
+def test_suwak_glosnosci_ma_intuicyjne_kierunki_i_krawedzie() -> None:
+    assert _volume_key("Up") == [51]
+    assert _volume_key("Right") == [51]
+    assert _volume_key("Down") == [49]
+    assert _volume_key("Left") == [49]
+    assert _volume_key("Prior") == [60]
+    assert _volume_key("Next") == [40]
+    assert _volume_key("Home") == [0]
+    assert _volume_key("End") == [100]
+
 def test_hook_jest_podpiety_w_zwyklym_oknie():
     tree = ast.parse(SOURCE.read_text(encoding="utf-8"))
     method = next(n for n in ast.walk(tree) if isinstance(n, ast.FunctionDef) and n.name == "_bind_keys")

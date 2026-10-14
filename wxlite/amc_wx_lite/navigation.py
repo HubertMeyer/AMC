@@ -942,17 +942,22 @@ class Navigator:
                 or not row.service_id
             ):
                 return [Announce("Nie można wybrać tego urządzenia WiiM")]
-            state.player_entry_anchor_id = row.item_id
-            state.list_anchor_id = row.item_id
-            state.now_playing_id = row.item_id
-            state.now_playing_title = row.title
-            state.current_material_id = row.item_id
-            state.view = View.PLAYER
-            return [ActivateWiiMDevice(
+            activation = ActivateWiiMDevice(
                 item_id=row.item_id,
                 title=row.title,
                 device_id=row.service_id,
-            )]
+            )
+            # Urządzenie WiiM jest celem sterowania, a nie materiałem do
+            # odtworzenia. Po Enter wybieramy je w hoscie, lecz pozostajemy w
+            # nawigacji listowej i od razu pokazujemy dwie rzeczywiste drogi:
+            # presety urządzenia oraz strumienie zapisane w AMC. Wcześniejsze
+            # wejście do pustego odtwarzacza ukrywało obie listy i sprawiało
+            # wrażenie, że Ctrl+L nie działa.
+            sources = self.open_wiim_source_library(
+                device_id=row.service_id,
+                return_id=row.item_id,
+            )
+            return [activation, *sources]
 
         if state.session_id is SessionId.SONOS:
             if (
