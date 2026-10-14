@@ -648,7 +648,7 @@ def copied_address_message(row: Row, *, file_copied: bool = False) -> str:
         Tak samo jak przed ta zmiana: komunikat nigdy nie obiecuje czynnosci,
         ktorej program nie wykonal.
     """
-    if row.kind == "station":
+    if row.kind in {"station", "wiimNetworkStream", "sonosOwnStream"}:
         return "Skopiowano bezpośredni adres"
     return "Skopiowano plik i pełną ścieżkę" if file_copied else "Skopiowano pełną ścieżkę"
 

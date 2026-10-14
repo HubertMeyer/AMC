@@ -61,6 +61,17 @@ def test_station_message_is_unchanged_it_was_already_true() -> None:
     assert copied_address_message(row) == "Skopiowano bezpośredni adres"
 
 
+def test_wiim_and_sonos_streams_are_described_as_addresses() -> None:
+    for kind in ("wiimNetworkStream", "sonosOwnStream"):
+        row = Row(
+            item_id=kind,
+            title="Radio domowe",
+            kind=kind,
+            url=URL,
+        )
+        assert copied_address_message(row) == "Skopiowano bezpośredni adres"
+
+
 def test_what_lands_in_the_clipboard_is_still_the_plain_text_address() -> None:
     """Dane bez zmian: poprawiamy OPIS, nie zawartosc schowka."""
     row = Row(item_id="f", title="a.mp3", kind="track", path="D:\\muzyka\\a.mp3")

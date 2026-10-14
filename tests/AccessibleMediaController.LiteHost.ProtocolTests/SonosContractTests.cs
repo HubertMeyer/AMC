@@ -66,9 +66,13 @@ internal static class SonosContractTests
             "własna stacja nie zachowała nazwy użytkowej");
         Check(!streamTitle.Contains("technical", StringComparison.Ordinal),
             "identyfikator własnej stacji wyciekł do etykiety");
-        Check(!streamItem.TryGetProperty("url", out _)
-              && !streamItem.TryGetProperty("streamUrl", out _),
-            "adres własnej stacji wyciekł do zwykłej listy");
+        Check(streamItem.GetProperty("streamUrl").GetString()
+              == "https://radio.example/live",
+            "własna stacja nie przekazuje adresu do jawnego polecenia kopiowania");
+        Check(!streamTitle.Contains("radio.example", StringComparison.Ordinal)
+              && !streamItem.GetProperty("detail").GetString()!.Contains(
+                  "radio.example", StringComparison.Ordinal),
+            "adres własnej stacji wyciekł do użytkowej etykiety listy");
     }
 
     private static void MaterialRequestsAcceptOnlyKnownKinds()

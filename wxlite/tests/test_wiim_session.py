@@ -602,6 +602,7 @@ def test_wiim_source_library_has_two_intentional_labels_and_actions() -> None:
         "wiimSource",
         "wiimSource",
     ]
+    assert [row.kind_label for row in nav.session.model.rows] == ["", ""]
     assert announcements[0].text == "Biblioteka źródeł WiiM, 2 pozycje"
     assert isinstance(nav.activate_selected()[0], OpenWiiMDevicePresets)
 
@@ -672,7 +673,7 @@ def test_wiim_network_stream_view_uses_only_user_labels_and_returns_to_device() 
             "streamId": "stream-7",
             "title": "Radio Poznań",
             "detail": "Strumień sieciowy",
-            "url": "https://secret.example/live.m3u8",
+            "streamUrl": "https://secret.example/live.m3u8",
             "runtimeObject": "NetworkStream { Id = stream-7 }",
         }]
     }, device_id="device-1"))
@@ -684,7 +685,11 @@ def test_wiim_network_stream_view_uses_only_user_labels_and_returns_to_device() 
     )
     assert nav.session.library_view is LibraryView.WIIM_NETWORK_STREAMS
     assert nav.session.model.selected_row.title == "Radio Poznań"
-    assert "secret.example" not in repr(nav.session.model.rows)
+    assert nav.session.model.selected_row.address == (
+        "https://secret.example/live.m3u8"
+    )
+    assert "secret.example" not in nav.session.model.selected_row.title
+    assert "secret.example" not in nav.session.model.selected_row.detail
     assert "Id = stream-7" not in repr(nav.session.model.rows)
 
     intents = nav.activate_selected()

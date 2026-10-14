@@ -166,7 +166,9 @@ public static class LiteSonosContract
                 materialId = stream.Id.Trim(),
                 title = SonosOwnStreamsOrder.Label(stream).Trim(),
                 detail = "Stacja zapisana w AMC",
-                kind = "ownStream"
+                kind = "ownStream",
+                // Jawna dana dla Ctrl+Shift+C; nie jest częścią etykiety listy.
+                streamUrl = stream.StreamUrl.Trim()
             })
             .ToArray();
         return new

@@ -197,6 +197,7 @@ def test_sonos_own_stream_is_a_typed_material_without_spoken_url() -> None:
 
     assert rows[0].title == "Radio domowe"
     assert rows[0].detail == "Stacja zapisana w AMC"
+    assert rows[0].address == "https://secret.example/live"
     assert "secret.example" not in rows[0].title
     assert "secret.example" not in rows[0].detail
     assert nav.activate_selected() == [PlaySonosMaterial(

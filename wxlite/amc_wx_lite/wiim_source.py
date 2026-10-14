@@ -92,6 +92,7 @@ def network_stream_rows(payload: object, *, device_id: str) -> tuple[Row, ...]:
             item_id=item_id,
             title=title,
             kind="wiimNetworkStream",
+            url=_text(raw.get("streamUrl")),
             detail=_text(raw.get("detail")) or "Strumień sieciowy",
             parent_id=device_id.strip(),
             service_id=stream_id,

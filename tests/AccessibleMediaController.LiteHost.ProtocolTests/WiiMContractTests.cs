@@ -16,7 +16,7 @@ internal static class WiiMContractTests
         PresetActivationAcceptsOnlyTwelveSlots();
         SourceNavigationAcceptsOnlyOneStepDirections();
         OptionsUseOnlyIntentionalLabelsAndStrictValues();
-        NetworkStreamListDoesNotExposeUrls();
+        NetworkStreamListKeepsUrlOutOfLabels();
         NetworkStreamSnapshotUsesTheSavedName();
         NetworkStreamSortContractIsStrictAndPreservesStoredOrder();
     }
@@ -310,7 +310,7 @@ internal static class WiiMContractTests
             "nieznana wartość wyjścia dostała mylącą etykietę");
     }
 
-    private static void NetworkStreamListDoesNotExposeUrls()
+    private static void NetworkStreamListKeepsUrlOutOfLabels()
     {
         var settings = new WiiMSettings
         {
@@ -342,8 +342,14 @@ internal static class WiiMContractTests
             "nie zachowano kolejności dodania strumieni");
         Check(items[0].GetProperty("detail").GetString() == "Strumień sieciowy",
             "brak użytkowego rodzaju strumienia");
-        Check(!json.Contains("secret.example", StringComparison.Ordinal),
-            "adres strumienia wyciekł do interfejsu Python");
+        Check(items[0].GetProperty("streamUrl").GetString()
+              == "https://secret.example/live.m3u8",
+            "lista nie przekazuje adresu do jawnego polecenia kopiowania");
+        Check(!items[0].GetProperty("title").GetString()!.Contains(
+                "secret.example", StringComparison.Ordinal)
+              && !items[0].GetProperty("detail").GetString()!.Contains(
+                "secret.example", StringComparison.Ordinal),
+            "adres strumienia wyciekł do użytkowej etykiety listy");
 
         using var requestJson = JsonDocument.Parse(
             """{"deviceId":"device-1","streamId":"stream-1"}""");

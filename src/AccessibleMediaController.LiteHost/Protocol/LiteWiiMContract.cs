@@ -178,7 +178,10 @@ public static class LiteWiiMContract
                 itemId = "wiim-stream:" + stream.Id.Trim(),
                 streamId = stream.Id.Trim(),
                 title = stream.Name.Trim(),
-                detail = "Strumień sieciowy"
+                detail = "Strumień sieciowy",
+                // Adres jest daną polecenia Ctrl+Shift+C. Python przechowuje
+                // go w Row.url, ale nie dodaje do kolumn ani nazwy dostępnej.
+                streamUrl = stream.StreamUrl.Trim()
             })
             .ToArray();
         return new { items, sortMode = mode.ToString() };

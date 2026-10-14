@@ -144,6 +144,11 @@ def material_rows(payload: object, household_id: str) -> tuple[Row, ...]:
                 "playlist": "sonosPlaylist",
                 "ownStream": "sonosOwnStream",
             }[kind],
+            url=(
+                _text(raw.get("streamUrl"))
+                if kind == "ownStream"
+                else None
+            ),
             detail=_text(raw.get("detail")),
             parent_id=household_id,
             service_id=material_id,
