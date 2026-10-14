@@ -649,6 +649,18 @@ class Navigator:
         state = self.sessions[SessionId.WIIM]
         state.wiim_device_rows = tuple(rows)
         state.model.replace(rows, preferred_id=preferred_id or state.list_anchor_id)
+        selected = state.model.selected_row
+        if (
+            selected is not None
+            and selected.kind == "device"
+            and selected.service_kind == "device"
+        ):
+            # To jest osobna kotwica korzenia WiiM. ``model.selected_id``
+            # zaraz po Enter zmieni sie na pozycje "Presety" albo
+            # "Strumienie", ale po restarcie mamy wrocic do URZADZENIA, a
+            # nie probowac zaznaczyc technicznie niepasujacego podwidoku.
+            state.wiim_device_return_id = selected.item_id
+            state.list_anchor_id = selected.item_id
         state.view = View.LIST
         state.library_view = None
         count = len(rows)
@@ -2484,6 +2496,20 @@ class Navigator:
 
     # ------------------------------------------------- zapis i odtworzenie stanu
 
+    @staticmethod
+    def _selection_for_snapshot(state: SessionState) -> str | None:
+        """Zapisz logiczny fokus korzenia, nie przypadkowy wiersz podwidoku."""
+        if state.session_id is not SessionId.WIIM:
+            return state.model.selected_id
+        row = state.model.selected_row
+        if (
+            row is not None
+            and row.kind == "device"
+            and row.service_kind == "device"
+        ):
+            return row.item_id
+        return state.wiim_device_return_id or state.list_anchor_id
+
     def snapshot(self) -> dict:
         """Stan do zapisu na dysk. Tylko to, co da sie bezpiecznie odtworzyc."""
         return {
@@ -2491,7 +2517,7 @@ class Navigator:
             "sessions": {
                 sid.value: {
                     "folderPath": state.folder_path,
-                    "selectedId": state.model.selected_id,
+                    "selectedId": self._selection_for_snapshot(state),
                     "view": state.view.value,
                     "breadcrumb": [list(pair) for pair in state.breadcrumb],
                 }

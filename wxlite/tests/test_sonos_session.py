@@ -362,6 +362,7 @@ def test_sonos_command_gate_blocks_local_only_features() -> None:
         Action.VOLUME_UP_5,
         Action.TIME_ELAPSED,
         Action.COPY_NAME,
+        Action.COPY_ADDRESS,
         Action.ADD_SONOS_OWN_STREAM,
         Action.EDIT_SONOS_OWN_STREAM,
         Action.REMOVE_SONOS_OWN_STREAMS,

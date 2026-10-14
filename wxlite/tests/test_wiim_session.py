@@ -121,6 +121,7 @@ def test_wiim_command_gate_blocks_local_audio_features() -> None:
         Action.PRESET_1,
         Action.PRESET_12,
         Action.COPY_NAME,
+        Action.COPY_ADDRESS,
         Action.FOCUS_FILTER,
         Action.VIEW_ACTIVE_RECORDINGS,
         Action.MANAGE_RADIO_SCHEDULES,
@@ -608,6 +609,43 @@ def test_wiim_source_library_has_two_intentional_labels_and_actions() -> None:
 
     nav.session.model.select_id("wiim-source:amc-streams")
     assert isinstance(nav.activate_selected()[0], OpenWiiMNetworkStreams)
+
+
+def test_wiim_snapshot_remembers_device_not_source_library_row() -> None:
+    """Restart ma wrocic do Pro Plus, nie do hostowego pierwszego WiiM Sound."""
+    devices = list(device_rows({
+        "items": [
+            {
+                "itemId": "wiim:sound",
+                "deviceId": "sound",
+                "title": "WiiM Sound",
+                "detail": "WiiM Sound",
+                "selected": True,
+            },
+            {
+                "itemId": "wiim:pro-plus",
+                "deviceId": "pro-plus",
+                "title": "WiiM Pro Plus",
+                "detail": "WiiM Pro Plus",
+            },
+        ]
+    }))
+    nav = Navigator()
+    nav.apply_wiim_devices(devices)
+    nav.switch_session(SessionId.WIIM)
+    nav.session.model.select_id("wiim:pro-plus")
+    nav.activate_selected()
+
+    assert nav.session.library_view is LibraryView.WIIM_SOURCE_LIBRARY
+    assert nav.session.model.selected_id == "wiim-source:device-presets"
+    saved = nav.snapshot()
+    assert saved["sessions"]["wiim"]["selectedId"] == "wiim:pro-plus"
+
+    restored = Navigator()
+    restored.restore(saved)
+    restored.apply_wiim_devices(devices)
+
+    assert restored.sessions[SessionId.WIIM].model.selected_id == "wiim:pro-plus"
 
 
 def test_wiim_streams_opened_from_source_library_return_to_that_library() -> None:

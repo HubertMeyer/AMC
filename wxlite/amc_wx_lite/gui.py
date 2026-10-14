@@ -10149,7 +10149,19 @@ class LiteFrame(wx.Frame):
             except WiiMPayloadError as error:
                 self.announcer.say(str(error))
                 return
-            selected_id = preferred_id
+            state = self.navigator.sessions[SessionId.WIIM]
+            # Pierwszenstwo ma wybor z prywatnego stanu AMC Python albo
+            # urzadzenie uzywane w tym procesie. Pole ``selected`` hosta jest
+            # tylko zgodnosciowym fallbackiem starego profilu i nie moze za
+            # kazdym razem przestawiac fokusu z Pro Plus na WiiM Sound.
+            selected_id = preferred_id or state.wiim_device_return_id
+            if selected_id is None and self._wiim_active_device_id:
+                active_row = next((
+                    row for row in rows
+                    if row.service_id == self._wiim_active_device_id
+                ), None)
+                if active_row is not None:
+                    selected_id = active_row.item_id
             if selected_id is None and isinstance(payload, dict):
                 raw_items = payload.get("items")
                 if isinstance(raw_items, list):
