@@ -4950,6 +4950,13 @@ class LiteFrame(wx.Frame):
         self._audio_clip_edit_percent = -1
         self._audio_clip_edit_operation_id: str | None = None
         self._audio_clip_edit_kind: str | None = None
+        # Enter zatwierdzający modalny dialog Shift+F2 może na Windows trafić
+        # jeszcze do odzyskującej fokus listy jako aktywacja wiersza. Wtedy
+        # odtwarzacz otwierał plik równolegle z File.Move i zmiana nazwy mogła
+        # przegrać wyścig o uchwyt. Bramka pozostaje aktywna do odpowiedzi
+        # hosta, a krótki termin osłania także spóźnione natywne zdarzenie.
+        self._local_file_rename_pending = False
+        self._local_file_rename_activation_guard_until = 0.0
         #: Ostatnia lokalna sesja, która zaczęła grać, zachowana dla zgodności
         #: ze starszymi ścieżkami błędów. Faktyczny stan jest wielosesyjny:
         #: Radio może grać równolegle z Plikami albo Podcastami.
@@ -5603,7 +5610,10 @@ class LiteFrame(wx.Frame):
         # ustawien. Pozostale znaki nadal oddajemy natywnej liscie.
         control.Bind(wx.EVT_CHAR_HOOK, self._on_list_shortcut_hook)
         control.Bind(wx.EVT_KEY_DOWN, self._on_key)
-        control.Bind(wx.EVT_LIST_ITEM_ACTIVATED, lambda _e: self._activate())
+        control.Bind(
+            wx.EVT_LIST_ITEM_ACTIVATED,
+            lambda _e: self._activate_selected_if_ready(),
+        )
         control.Bind(wx.EVT_LIST_ITEM_FOCUSED, self._on_item_focused)
         control.Bind(wx.EVT_LIST_ITEM_SELECTED, self._on_item_selected)
         control.Bind(wx.EVT_LIST_ITEM_DESELECTED, self._on_item_deselected)
@@ -7976,7 +7986,7 @@ class LiteFrame(wx.Frame):
                 preferred_id=self.navigator.sessions[SessionId.SONOS].list_anchor_id
             )
         elif action is Action.ACTIVATE:
-            self._activate()
+            self._activate_selected_if_ready()
         elif action is Action.PARENT_FOLDER:
             if not LiteFrame._restore_transient_preview(self, announce=False):
                 self._run(self.navigator.go_to_parent())
@@ -16784,6 +16794,16 @@ class LiteFrame(wx.Frame):
             return None
         return rows[0]
 
+    def _activate_selected_if_ready(self) -> None:
+        """Nie odtwarzaj pliku Enterem, który właśnie zatwierdził Shift+F2."""
+        if getattr(self, "_local_file_rename_pending", False):
+            return
+        if time.monotonic() < getattr(
+            self, "_local_file_rename_activation_guard_until", 0.0
+        ):
+            return
+        self._activate()
+
     def _profile_edit_client(self) -> LiteHostClient | None:
         if self.client is None:
             self.announcer.say("Silnik nie działa. Zmiana nie została zapisana")
@@ -16995,33 +17015,50 @@ class LiteFrame(wx.Frame):
             if dialog.ShowModal() != wx.ID_OK:
                 return
             new_name = dialog.value
+        # Dialog jest już zniszczony. Jawnie oddajemy fokus tej samej liście,
+        # zamiast pozwolić ramce albo odtwarzaczowi przejąć go po Enterze.
+        self._restore_focus_after_dialog()
         if not new_name:
             self.announcer.say("Nowa nazwa pliku nie może być pusta")
             return
 
+        self._local_file_rename_pending = True
+        self._local_file_rename_activation_guard_until = time.monotonic() + 1.0
+
         def done(payload: object) -> None:
+            self._local_file_rename_pending = False
             data = payload if isinstance(payload, dict) else {}
             file_name = str(data.get("fileName") or new_name)
             new_path = str(data.get("path") or "").strip()
-            if new_path:
-                old_key = os.path.normcase(os.path.normpath(row.path))
-                for item in getattr(self.state, "recording_history", []):
-                    if not isinstance(item, dict):
-                        continue
-                    candidate = item.get("path")
-                    if (
-                        isinstance(candidate, str)
-                        and os.path.normcase(os.path.normpath(candidate)) == old_key
-                    ):
-                        item["path"] = new_path
-                try:
-                    self.store.save(self.state)
-                except (OSError, TypeError, ValueError):
-                    self.announcer.say(
-                        "Zmieniono nazwę pliku, ale nie zapisano nowej ścieżki w historii"
-                    )
+            if not new_path or not os.path.isfile(new_path):
+                self.announcer.say(
+                    "Nie zmieniono nazwy pliku: silnik nie potwierdził "
+                    "nowego pliku na dysku"
+                )
+                self._refresh_profile_view(preferred_id=row.item_id)
+                return
+            old_key = os.path.normcase(os.path.normpath(row.path))
+            for item in getattr(self.state, "recording_history", []):
+                if not isinstance(item, dict):
+                    continue
+                candidate = item.get("path")
+                if (
+                    isinstance(candidate, str)
+                    and os.path.normcase(os.path.normpath(candidate)) == old_key
+                ):
+                    item["path"] = new_path
+            try:
+                self.store.save(self.state)
+            except (OSError, TypeError, ValueError):
+                self.announcer.say(
+                    "Zmieniono nazwę pliku, ale nie zapisano nowej ścieżki w historii"
+                )
             self._refresh_profile_view(preferred_id=row.item_id)
             self.announcer.say(f"Zmieniono nazwę pliku na dysku: {file_name}")
+
+        def failed(error: Exception) -> None:
+            self._local_file_rename_pending = False
+            self.announcer.say(f"Nie zmieniono nazwy pliku: {error}")
 
         self.runner.submit(
             "profile-edit",
@@ -17029,7 +17066,7 @@ class LiteFrame(wx.Frame):
                 row.item_id, new_name, path=row.path
             ),
             done,
-            lambda error: self.announcer.say(f"Nie zmieniono nazwy pliku: {error}"),
+            failed,
         )
 
     def _forget_private_recording_history_paths(self, paths: list[str]) -> None:

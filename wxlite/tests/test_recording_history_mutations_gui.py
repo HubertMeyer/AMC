@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from types import SimpleNamespace
 
 from test_gui_logic import install_wx_stub
@@ -21,9 +22,12 @@ class ImmediateRunner:
             failed(error)
 
 
-def test_shift_f2_passes_history_path_to_host() -> None:
-    old_path = r"D:\Nagrania\audycja.mp3"
-    new_path = r"D:\Nagrania\audycja poprawiona.mp3"
+def test_shift_f2_passes_history_path_to_host(tmp_path: Path) -> None:
+    old_file = tmp_path / "audycja.mp3"
+    new_file = tmp_path / "audycja poprawiona.mp3"
+    old_file.write_bytes(b"test")
+    old_path = str(old_file)
+    new_path = str(new_file)
     row = Row(
         "radio-recording-history:history-1",
         "Radio Test, audycja.mp3",
@@ -50,12 +54,12 @@ def test_shift_f2_passes_history_path_to_host() -> None:
         def ShowModal(self):  # noqa: N802 - wx API
             return gui.wx.ID_OK
 
-    client = SimpleNamespace(
-        rename_local_file=lambda item_id, name, path=None: (
-            calls.append((item_id, name, path))
-            or {"fileName": "audycja poprawiona.mp3", "path": new_path}
-        )
-    )
+    def rename_local_file(item_id, name, path=None):  # noqa: ANN001
+        calls.append((item_id, name, path))
+        old_file.rename(new_file)
+        return {"fileName": "audycja poprawiona.mp3", "path": new_path}
+
+    client = SimpleNamespace(rename_local_file=rename_local_file)
     state = SimpleNamespace(recording_history=[{"id": "history-1", "path": old_path}])
     frame = SimpleNamespace(
         navigator=SimpleNamespace(active=SessionId.FILES),
@@ -65,6 +69,9 @@ def test_shift_f2_passes_history_path_to_host() -> None:
         announcer=SimpleNamespace(say=spoken.append),
         state=state,
         store=SimpleNamespace(save=saved.append),
+        _restore_focus_after_dialog=lambda: None,
+        _local_file_rename_pending=False,
+        _local_file_rename_activation_guard_until=0.0,
         _refresh_profile_view=lambda preferred_id=None: refreshed.append(preferred_id),
     )
     original = gui.RenameItemDialog
@@ -83,6 +90,32 @@ def test_shift_f2_passes_history_path_to_host() -> None:
     assert saved == [state]
     assert refreshed == ["radio-recording-history:history-1"]
     assert spoken == ["Zmieniono nazwę pliku na dysku: audycja poprawiona.mp3"]
+
+
+def test_enter_confirming_shift_f2_cannot_activate_file_until_rename_finishes() -> None:
+    activated: list[bool] = []
+    frame = SimpleNamespace(
+        _local_file_rename_pending=True,
+        _local_file_rename_activation_guard_until=0.0,
+        _activate=lambda: activated.append(True),
+    )
+
+    gui.LiteFrame._activate_selected_if_ready(frame)
+    assert activated == []
+
+    frame._local_file_rename_pending = False
+    original_monotonic = gui.time.monotonic
+    gui.time.monotonic = lambda: 10.0
+    try:
+        frame._local_file_rename_activation_guard_until = 11.0
+        gui.LiteFrame._activate_selected_if_ready(frame)
+        assert activated == []
+
+        frame._local_file_rename_activation_guard_until = 9.0
+        gui.LiteFrame._activate_selected_if_ready(frame)
+        assert activated == [True]
+    finally:
+        gui.time.monotonic = original_monotonic
 
 
 def test_shift_delete_passes_paths_and_removes_private_history_only_after_success() -> None:
