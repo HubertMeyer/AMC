@@ -15,11 +15,13 @@ Ten plik jest krótkim punktem startowym po pracach zakończonych 14 październi
 
 ## Ostatnia odebrana technicznie wersja
 
-- commit źródłowy: `c47d5e250ed51527cf3645a6b0707c1fb7b499c9`;
-- kompilacja: `2026.10.14-c47d5e250ed51527cf3645a6b0707c1fb7b499c9-3ee86c2b`;
-- tytuł uruchomionego okna: `AMC Python — 14.10.2026, 20:09`;
-- pełny przebieg: 1546 testów zaliczonych, 110 pominiętych historycznych oraz
-  11 zaliczonych podtestów;
+- commit źródłowy: `375e5b0886e484832277cccf343f5f0d9a075bc2`;
+- kompilacja: `2026.10.14-375e5b0886e484832277cccf343f5f0d9a075bc2-3a5e9a79`;
+- tytuł uruchomionego okna: `AMC Python — 14.10.2026, 20:21`;
+- pełny przebieg bazowy z wcześniejszej kompilacji: 1546 testów zaliczonych,
+  110 pominiętych historycznych oraz 11 zaliczonych podtestów;
+- po ostatniej zmianie odczytu strumieni: 49 ukierunkowanych testów WiiM i
+  Sonos zaliczonych;
 - osobny zestaw testów launchera i aktualizatora: 13 z 13 zaliczonych;
 - rozwiązanie C#: 0 ostrzeżeń i 0 błędów;
 - zweryfikowany pakiet: 602 pliki;
@@ -30,6 +32,40 @@ Ten plik jest krótkim punktem startowym po pracach zakończonych 14 październi
 Dokładny rachunek ostatniej instalacji zapisuje lokalny plik
 `.test-output\LAST_TEST_BUILD.json`. Katalog `.test-output` jest zapleczem
 testowym, a nie drugim sposobem uruchamiania programu.
+
+## PILNE: zacząć od niedziałającego Shift+F2
+
+Po uruchomieniu kompilacji z godziny 20:21 użytkownik ponownie potwierdził, że
+`Shift+F2` zamyka dialog, ale realna zmiana nazwy pliku nie dochodzi do skutku.
+Poprzednie testy i komunikaty sukcesu nie są więc dowodem działania tej
+funkcji. To jest pierwszy i blokujący punkt prac w niedzielę, przed
+przygotowaniem zależności oraz Spotify.
+
+Należy zacząć od kontrolowanego odtworzenia na niepotrzebnym pliku w Plikach
+lokalnych i Historii nagrywania. Po zatwierdzeniu trzeba sprawdzić bezpośrednio
+na dysku, czy stara ścieżka zniknęła, nowa istnieje, a lista i historia mają
+nową ścieżkę i zachowany fokus. Samo zamknięcie dialogu albo szybki powrót do
+listy nie oznacza sukcesu.
+
+Sprawdzić kolejno:
+
+1. dojście skrótu `Shift+F2` do właściwej akcji i wybranego wiersza;
+2. wartość odebraną z dialogu oraz to, czy Enter nie uruchamia równolegle
+   odtwarzacza;
+3. wywołanie hosta i właściwej operacji systemu plików, blokady pliku oraz
+   rzeczywisty wynik na dysku;
+4. aktualizację ścieżki w Bibliotece i Historii nagrywania dopiero po
+   potwierdzonym powodzeniu;
+5. zmianę tylko wielkości liter, ponowną zmianę nazwy i uczciwy komunikat
+   błędu, gdy plik jest naprawdę zajęty;
+6. hipotezę o brakującej zależności Pythona, ale bez jej zakładania. `Ctrl+X`
+   działa, więc trzeba znaleźć rzeczywistą różnicę w przepływie operacji;
+7. implementację starego AMC WPF wolno przeczytać jako porównanie, lecz
+   poprawkę wdrażać wyłącznie w nowym AMC Python.
+
+Test odbiorczy musi zmieniać nazwę prawdziwego pliku tymczasowego i sprawdzać
+obie ścieżki na dysku. Nie instalować następnej wersji i nie przechodzić do
+dalszych etapów, dopóki ten test oraz próba z NVDA nie potwierdzą działania.
 
 ## Co naprawiono 14 października
 
@@ -47,14 +83,13 @@ testowym, a nie drugim sposobem uruchamiania programu.
    jako diagnostyka.
 6. `Ctrl+Shift+C`: kopiuje adres własnego strumienia WiiM albo Sonos. Ulubione
    Sonos nie udają adresu strumienia, gdy API udostępnia tylko identyfikator.
-7. `Shift+F2`: usunięto wyścig powodowany przez Enter zatwierdzający dialog.
-   Ten sam Enter nie może już wejść do odtwarzacza i zająć pliku przed
-   zakończeniem zmiany nazwy. Sukces jest zgłaszany dopiero po potwierdzeniu,
-   że nowa ścieżka rzeczywiście istnieje. Test GUI zmienia nazwę prawdziwego
-   pliku tymczasowego.
+7. `Shift+F2`: podjęta poprawka wyścigu nie rozwiązała problemu w próbie
+   użytkownika. Punkt pozostaje otwarty i ma pierwszeństwo przed dalszymi
+   pracami; obowiązuje sekcja „PILNE” powyżej.
 
 Najważniejsze commity, od najnowszego:
 
+- `375e5b08` — uproszczony odczyt nazw strumieni WiiM i Sonos;
 - `c47d5e25` — aktualizator rozpoznaje uproszczony tytuł okna i potrafi
   bezpiecznie zamknąć bieżącą wersję przed podmianą;
 - `4168946c` — trwały wybór urządzenia WiiM oraz dopuszczenie kopiowania
@@ -88,8 +123,8 @@ Przed zamknięciem lub aktualizacją AMC nadal trzeba potwierdzić, że nie roś
 
 ## Następny główny blok: Spotify
 
-Przed równoległymi pracami wykonać jako pierwsze zadanie
-`ZADANIE_NIEDZIELA_PRZYGOTOWANIE_ZALEZNOSCI_PL.md`. Audyt z 14 października
+Po rzeczywistym naprawieniu i odebraniu `Shift+F2`, przed równoległymi pracami
+wykonać `ZADANIE_NIEDZIELA_PRZYGOTOWANIE_ZALEZNOSCI_PL.md`. Audyt z 14 października
 potwierdził .NET, Python, Node, pnpm i WebView2, ale wykazał brak lokalnego
 toolchainu Rust i narzędzi MSVC potrzebnych do przebudowania hosta Librespot.
 Zadanie przygotuje trwały wspólny cache na dysku D i próbę pracy bez sieci.
