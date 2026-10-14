@@ -6,7 +6,10 @@
 
 ## Aktualny stan i dokumentacja rozwoju
 
-- [AMC Python — stan prac 10 października 2026](AMC_PYTHON_STAN_2026-10-10_PL.md):
+- [Przekazanie prac na niedzielę 18 października](PRZEKAZANIE_2026-10-14_NIEDZIELA_PL.md):
+  właściwa wersja, dzisiejsze poprawki, krótki odbiór, start Spotify i zasady
+  bezpiecznej pracy równoległej.
+- [AMC Python — stan prac 14 października 2026](AMC_PYTHON_STAN_2026-10-10_PL.md):
   decyzja o interfejsie wxPython i wspólnym rdzeniu C#, TIDAL, WiiM, Sonos,
   granice bezpieczeństwa, dowody oraz kolejność dalszych prac.
 - [Wydania i opisy zmian](https://github.com/michalkasperczak/AMC/releases).
@@ -18,8 +21,11 @@
 
 Opisy starszych wersji poniżej są historią tych wydań, nie samodzielną informacją o obecnym stanie każdej funkcji. Prace oznaczone jako niewydane nie są jeszcze dostępne w instalatorze.
 
-Sesja Spotify w AMC Python jest obecnie świadomie odłożona. WiiM i Sonos mają
-gotowy kod integracyjny, ale wymagają odbioru na obudzonych urządzeniach.
+Sesja Spotify jest następnym głównym blokiem prac po krótkim odbiorze wersji
+z 14 października. W niedzielę praca zaczyna się od inwentaryzacji nowego AMC
+Python i kryteriów odbioru; starego interfejsu WPF nie rozwijamy. WiiM i Sonos
+mają gotowy kod integracyjny, ale nadal wymagają odbioru na obudzonych
+urządzeniach.
 Moduł aktualizacji na wzór „Sygnalisty” pozostaje zadaniem końcowym i wymaga
 najpierw odzyskania właściwego źródła lub ticketu; dokumentacja nie przypisuje
 tej nazwy do niezweryfikowanego repozytorium.

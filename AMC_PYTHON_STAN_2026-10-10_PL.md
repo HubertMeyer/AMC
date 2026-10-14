@@ -1,5 +1,9 @@
 # AMC Python — stan prac 14 października 2026
 
+> Krótkie przekazanie na niedzielę, z numerem zainstalowanej wersji, listą
+> odbioru, startem Spotify i zasadami pracy równoległej, znajduje się w
+> `PRZEKAZANIE_2026-10-14_NIEDZIELA_PL.md`.
+
 ## Decyzja architektoniczna
 
 AMC Python nie jest przepisywaniem całego programu od zera. Docelowy układ to:
@@ -461,8 +465,11 @@ kopiujemy jego implementacji. Szczegółowy podział zakresu jest także w
 
 ### Spotify
 
-Nowa sesja Spotify jest świadomie odłożona. Nie należy jej wdrażać w obecnym
-etapie ani zużywać na nią czasu przed odbiorem istniejących sesji.
+Po ustabilizowaniu i krótkim odbiorze wersji z 14 października użytkownik
+wybrał Spotify jako następny główny blok prac na niedzielę. Pracę należy
+prowadzić wyłącznie w nowym AMC Python; stary WPF jest materiałem historycznym,
+a nie miejscem wdrożenia. Najpierw wykonać inwentaryzację istniejącego kodu,
+testów i ograniczeń oraz ustalić kontrakt dostępności, potem implementować.
 
 ## Dostępność i NVDA
 
@@ -491,6 +498,13 @@ które jest już na dysku i w historii, ale nie trafiło jeszcze do indeksu
 Biblioteki, ma osobny test przez rzeczywisty LiteHost; odpowiedź zachowuje
 identyfikator wiersza historii i nie wykonuje pozornej aktualizacji pustego
 rekordu bazy.
+
+Najnowsza poprawka usuwa dodatkowy wyścig po zatwierdzeniu dialogu zmiany
+nazwy. Enter nie przechodzi już do przywróconej listy i nie otwiera pliku,
+zanim host zakończy `File.Move`. Interfejs ma krótką blokadę aktywacji,
+przywraca fokus i zgłasza sukces dopiero wtedy, gdy host zwróci nową ścieżkę,
+a plik pod tą ścieżką rzeczywiście istnieje. Test GUI wykonuje zmianę nazwy
+na prawdziwym pliku tymczasowym.
 
 Dziennik 13 października potwierdza uruchomienie harmonogramu o 18:13. Nagranie
 z Jarosławia zakończyło się powodzeniem, natomiast Tarnobrzeg i Dominikanie
@@ -627,7 +641,18 @@ kodu ani wysyłać logów bez wiedzy użytkownika.
 
 ## Dowody automatyczne tego przyrostu
 
-Stan odebrany technicznie 14 października znajduje się w stałej instalacji
+Najświeższy pełny odbiór techniczny 14 października o 19:40 dotyczy commita
+`c525e8c04a36e2aa8624af34e5cb07eacaa6956e` i kompilacji
+`2026.10.14-c525e8c04a36e2aa8624af34e5cb07eacaa6956e-94cc3d65` zainstalowanej w
+`D:\Projekty Codex\AMC Python`. Pełny przebieg zakończył się wynikiem 1545
+testów zaliczonych, 110 pominiętych historycznych i 11 zaliczonych podtestów.
+Rozwiązanie C# zbudowano z 0 ostrzeżeń i 0 błędów, a integralność pakietu 602
+plików została potwierdzona. Uruchomione procesy pochodziły z właściwej
+instalacji, a stary proces WPF nie był aktywny. Szczegóły i lista krótkiego
+odbioru na żywo są w `PRZEKAZANIE_2026-10-14_NIEDZIELA_PL.md`.
+
+Wcześniejszy stan odebrany technicznie 14 października znajdował się w stałej
+instalacji
 `D:\Projekty Codex\AMC Python\AMC.exe`. Manifest tej instalacji podaje
 kompilację `2026.10.13-4a599e2a`; launcher, interfejs Python i LiteHost zostały
 uruchomione z tego samego katalogu i pozostały aktywne po kontroli. Kluczowe
@@ -751,8 +776,10 @@ przypadkowe uruchomienie zastąpić stałej instalacji `AMC Python`.
 8. Uzupełnienie wykrytych braków w istniejących sesjach, bez regresji radia,
    nagrywania, harmonogramów i timeshiftu.
 9. Odzyskanie źródła lub ticketu „Sygnalisty”, analiza i wdrożenie aktualizacji.
-10. Dopiero później decyzja o Spotify; wtedy osobno przenieść właściwe dla
-   Spotify sortowanie i kontekstową nawigację, bez kopiowania założeń TIDAL.
+10. W niedzielę, po krótkim odbiorze zmian plikowych i streamerów opisanym w
+   `PRZEKAZANIE_2026-10-14_NIEDZIELA_PL.md`, rozpocząć Spotify od inwentaryzacji
+   i kontraktu dostępności. Następnie osobno przenieść właściwe dla Spotify
+   sortowanie i nawigację kontekstową, bez kopiowania założeń TIDAL.
 
 Publikacja AMC Python na GitHubie jest końcowym krokiem, nie częścią bieżącego
 zapisu planu. Przed nią trzeba odebrać działanie samodzielnego pakietu, radia,

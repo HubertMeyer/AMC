@@ -1,15 +1,18 @@
 # AMC — ustalenia projektu
 
-- Kanoniczne repozytorium: `D:\Projekty Codex\Accessible Multimedia Controller`.
-- Aktywny katalog prac nad integracją interfejsu wxPython:
-  `D:\Projekty Codex\AMC - integracja wxPython`. Użytkownik 9 października
+- Kanoniczne repozytorium bieżącego, nowego AMC Python:
+  `D:\Projekty Codex\AMC - integracja wxPython`.
+- `D:\Projekty Codex\Accessible Multimedia Controller` zawiera wycofany z
+  bieżących prac stary interfejs WPF. Można go czytać jako materiał historyczny,
+  ale nie należy tam wdrażać nowych poprawek ani budować użytkowej aktualizacji.
+- Użytkownik 9 października
   2026 r. wyraził stałą zgodę na pracę w tym katalogu także po wznowieniu
   zadania; nie pytaj ponownie o wybór katalogu roboczego.
 - Zmiany z aktywnego katalogu integracji wxPython pozostają lokalne. Nie
   wysyłaj ich do GitHuba bez osobnej, aktualnej zgody użytkownika na publikację.
-- Użytkownik 9 września 2026 r. udzielił stałej zgody na publikowanie zmian
-  AMC i przygotowanych wydań w `michalkasperczak/AMC` na GitHubie. Kolejne
-  zwykłe publikacje w tym repozytorium nie wymagają ponownego pytania.
+- Historyczna zgoda z 9 września 2026 r. na publikowanie starego AMC nie jest
+  bieżącą zgodą na publikację nowego AMC Python. Dla tego projektu zawsze
+  wymagana jest osobna decyzja dotycząca konkretnego przygotowanego stanu.
 - Przed publikacją sprawdzaj zakres zmian i zawartość pakietu. Nie publikuj
   poświadczeń, danych kont, lokalnych kolekcji, prywatnych nagrań ani logów
   użytkownika. Zgoda nie obejmuje innych repozytoriów ani kontaktowania
