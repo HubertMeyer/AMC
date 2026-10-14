@@ -1,8 +1,8 @@
-# Zadanie na niedzielę — trwałe przygotowanie zależności AMC Python
+# Zadanie na wtorek — trwałe przygotowanie zależności AMC Python
 
 To zadanie należy wykonać jako pierwsze, przed równoległymi pracami nad
 Spotify. Można rozpocząć jego bezpieczne, przygotowawcze części wcześniej,
-jeżeli pozwala na to dostępny limit, ale do niedzieli nie należy podmieniać
+jeżeli pozwala na to dostępny limit, ale do wtorku nie należy podmieniać
 działającej instalacji testowanej przez użytkownika. Jego celem nie jest
 bezmyślne podniesienie wszystkich bibliotek do
 najnowszych wersji, lecz przygotowanie kompletnego, trwałego i powtarzalnego
@@ -136,11 +136,11 @@ ponownego pobierania wszystkiego, wszystkie kontrole przechodzą, a skrypty są
 idempotentne. Samo zainstalowanie `cargo` albo jednorazowy udany build nie jest
 wystarczające.
 
-## Gotowe polecenie do uruchomienia zadania w niedzielę
+## Gotowe polecenie do uruchomienia zadania we wtorek
 
 > Pracuj w nowym AMC Python od najnowszego lokalnego commita gałęzi
 > `integracja/wxpython-sonos-tidal-20261008`.
-> Najpierw przeczytaj `ZADANIE_NIEDZIELA_PRZYGOTOWANIE_ZALEZNOSCI_PL.md` i
+> Najpierw przeczytaj `ZADANIE_WTOREK_PRZYGOTOWANIE_ZALEZNOSCI_PL.md` i
 > wykonaj je w całości. Przygotuj trwały wspólny katalog zależności na dysku D,
 > idempotentne skrypty audytu i przygotowania, cache do pracy bez ponownego
 > pobierania oraz raport wersji i sum. Nie zmieniaj przypiętych wersji bez

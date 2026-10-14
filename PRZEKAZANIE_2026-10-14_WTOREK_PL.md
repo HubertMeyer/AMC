@@ -1,4 +1,4 @@
-# AMC Python — przekazanie prac na niedzielę
+# AMC Python — przekazanie prac na wtorek
 
 Ten plik jest krótkim punktem startowym po pracach zakończonych 14 października
 2026 r. Szczegółowy stan pozostaje w `AMC_PYTHON_STAN_2026-10-10_PL.md`.
@@ -33,10 +33,11 @@ Dokładny rachunek ostatniej instalacji zapisuje lokalny plik
 `.test-output\LAST_TEST_BUILD.json`. Katalog `.test-output` jest zapleczem
 testowym, a nie drugim sposobem uruchamiania programu.
 
-## Niedziela: nagrywanie ma pierwszeństwo
+## Nagrywanie zawsze ma pierwszeństwo
 
-Użytkownik uprzedził, że w niedzielę będzie dużo nagrywał. Dopóki nagrywanie
-trwa albo nie da się pewnie wykluczyć, wolno analizować i zmieniać kod,
+Niedzielne nagrania były powodem przesunięcia automatycznego startu na wtorek.
+Niezależnie od dnia, dopóki nagrywanie trwa albo nie da się go pewnie
+wykluczyć, wolno analizować i zmieniać kod,
 tworzyć lokalne commity, wykonywać lekkie testy na plikach tymczasowych oraz
 przygotowywać zależności, jeżeli nie dotyka to działającej instalacji i nie
 grozi zakłóceniem nagrania.
@@ -59,7 +60,7 @@ instalacji nie blokuje pracy nad kodem i testami izolowanymi.
 Po uruchomieniu kompilacji z godziny 20:21 użytkownik ponownie potwierdził, że
 `Shift+F2` zamyka dialog, ale realna zmiana nazwy pliku nie dochodzi do skutku.
 Poprzednie testy i komunikaty sukcesu nie są więc dowodem działania tej
-funkcji. To jest pierwszy i blokujący punkt prac w niedzielę, przed
+funkcji. To jest pierwszy i blokujący punkt prac we wtorek, przed
 przygotowaniem zależności oraz Spotify.
 
 Należy zacząć od kontrolowanego odtworzenia na niepotrzebnym pliku w Plikach
@@ -87,6 +88,20 @@ Sprawdzić kolejno:
 Test odbiorczy musi zmieniać nazwę prawdziwego pliku tymczasowego i sprawdzać
 obie ścieżki na dysku. Nie instalować następnej wersji i nie przechodzić do
 dalszych etapów, dopóki ten test oraz próba z NVDA nie potwierdzą działania.
+
+## Drobny wspólny punkt WiiM i Sonosa: lewa strzałka
+
+Po naprawieniu `Shift+F2`, a przed Spotify, należy ujednolicić odczyt
+parametrów stacji i strumienia. `Lewa strzałka` w listach WiiM i Sonosa ma
+działać tak jak w Radiu internetowym: podać raz dostępne, użytkowe parametry
+bieżącej pozycji, w tym adres lub ścieżkę źródła, jeżeli API je zwraca.
+
+Polecenie ma działać również dla ulubionych i innych pozycji tylko do odczytu,
+których nie można zmienić ani usunąć. Uprawnienie do modyfikacji nie może
+decydować o dostępności informacji. Gdy dostawca nie udostępnia adresu lub
+innego parametru, nie wolno go zgadywać ani odczytywać w zamian identyfikatora
+technicznego. Wspólne testy kontraktowe powinny objąć WiiM, Sonosa oraz
+przyszłe adaptery, pojedynczy komunikat NVDA i niezmieniony fokus.
 
 ## Co naprawiono 14 października
 
@@ -123,7 +138,7 @@ Najważniejsze commity, od najnowszego:
 
 ## Krótki odbiór na żywo przed Spotify
 
-Testy automatyczne przeszły, ale w niedzielę warto zacząć od krótkiego odbioru
+Testy automatyczne przeszły, ale we wtorek warto zacząć od krótkiego odbioru
 z NVDA na niepotrzebnych plikach:
 
 1. `Shift+F2` w Plikach lokalnych i Historii nagrywania: po Enter nazwa ma się
@@ -138,6 +153,9 @@ z NVDA na niepotrzebnych plikach:
 5. Pierwsze wczytanie własnych strumieni WiiM i Sonos: sprawdzić kolejność
    przed użyciem `Alt+3` i po ponownym otwarciu.
 6. Sprawdzić z kilku widoków globalne `Alt+R` i `Alt+Shift+R`.
+7. W zapisanych strumieniach i pozycjach tylko do odczytu WiiM oraz Sonosa
+   nacisnąć lewą strzałkę: ma podać raz dostępne parametry jak Radio
+   internetowe, bez identyfikatorów technicznych i bez zmiany fokusu.
 
 Przed zamknięciem lub aktualizacją AMC nadal trzeba potwierdzić, że nie rośnie
 żaden plik `.amc-partial` i że nie trwa nagrywanie.
@@ -145,7 +163,7 @@ Przed zamknięciem lub aktualizacją AMC nadal trzeba potwierdzić, że nie roś
 ## Następny główny blok: Spotify
 
 Po rzeczywistym naprawieniu i odebraniu `Shift+F2`, przed równoległymi pracami
-wykonać `ZADANIE_NIEDZIELA_PRZYGOTOWANIE_ZALEZNOSCI_PL.md`. Audyt z 14 października
+wykonać `ZADANIE_WTOREK_PRZYGOTOWANIE_ZALEZNOSCI_PL.md`. Audyt z 14 października
 potwierdził .NET, Python, Node, pnpm i WebView2, ale wykazał brak lokalnego
 toolchainu Rust i narzędzi MSVC potrzebnych do przebudowania hosta Librespot.
 Zadanie przygotuje trwały wspólny cache na dysku D i próbę pracy bez sieci.

@@ -59,6 +59,13 @@
   stałych tekstów „stacja zapisana w AMC”, „strumień sieciowy”, nazwy źródła
   ani marki urządzenia. Adres pozostaje danymi modelu i jest odczytywany lub
   kopiowany wyłącznie na jawne polecenie użytkownika.
+- `Lewa strzałka` jest wspólnym, jawnym poleceniem odczytu parametrów stacji
+  lub strumienia. W WiiM, Sonosie i przyszłych integracjach ma podawać te same
+  użytkowe dane, które są dostępne w Radiu internetowym, w tym adres lub
+  ścieżkę źródła, jeżeli adapter rzeczywiście je udostępnia. Działanie nie
+  zależy od prawa do edycji albo usunięcia pozycji: obejmuje także ulubione i
+  inne listy tylko do odczytu. Gdy API nie zwraca danego parametru, nie wolno
+  go zgadywać ani zastępować identyfikatorem technicznym.
 - Dla każdej integracji zachowaj ten sam kontrakt klawiatury i fokusa, o ile
   API wspiera daną funkcję: wybór ostatnio używanego urządzenia, wejście i
   powrót z Biblioteki, `Ctrl+Shift+C`, transport, kierunki regulacji głośności,

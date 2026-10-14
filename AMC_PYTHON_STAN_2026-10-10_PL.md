@@ -1,8 +1,8 @@
 # AMC Python — stan prac 14 października 2026
 
-> Krótkie przekazanie na niedzielę, z numerem zainstalowanej wersji, listą
+> Krótkie przekazanie na wtorek, z numerem zainstalowanej wersji, listą
 > odbioru, startem Spotify i zasadami pracy równoległej, znajduje się w
-> `PRZEKAZANIE_2026-10-14_NIEDZIELA_PL.md`.
+> `PRZEKAZANIE_2026-10-14_WTOREK_PL.md`.
 
 ## Decyzja architektoniczna
 
@@ -466,7 +466,7 @@ kopiujemy jego implementacji. Szczegółowy podział zakresu jest także w
 ### Spotify
 
 Po ustabilizowaniu i krótkim odbiorze wersji z 14 października użytkownik
-wybrał Spotify jako następny główny blok prac na niedzielę. Pracę należy
+wybrał Spotify jako następny główny blok prac na wtorek. Pracę należy
 prowadzić wyłącznie w nowym AMC Python; stary WPF jest materiałem historycznym,
 a nie miejscem wdrożenia. Najpierw wykonać inwentaryzację istniejącego kodu,
 testów i ograniczeń oraz ustalić kontrakt dostępności, potem implementować.
@@ -649,7 +649,7 @@ testów zaliczonych, 110 pominiętych historycznych i 11 zaliczonych podtestów.
 Rozwiązanie C# zbudowano z 0 ostrzeżeń i 0 błędów, a integralność pakietu 602
 plików została potwierdzona. Uruchomione procesy pochodziły z właściwej
 instalacji, a stary proces WPF nie był aktywny. Szczegóły i lista krótkiego
-odbioru na żywo są w `PRZEKAZANIE_2026-10-14_NIEDZIELA_PL.md`.
+odbioru na żywo są w `PRZEKAZANIE_2026-10-14_WTOREK_PL.md`.
 
 Wcześniejszy stan odebrany technicznie 14 października znajdował się w stałej
 instalacji
@@ -776,8 +776,8 @@ przypadkowe uruchomienie zastąpić stałej instalacji `AMC Python`.
 8. Uzupełnienie wykrytych braków w istniejących sesjach, bez regresji radia,
    nagrywania, harmonogramów i timeshiftu.
 9. Odzyskanie źródła lub ticketu „Sygnalisty”, analiza i wdrożenie aktualizacji.
-10. W niedzielę, po krótkim odbiorze zmian plikowych i streamerów opisanym w
-   `PRZEKAZANIE_2026-10-14_NIEDZIELA_PL.md`, rozpocząć Spotify od inwentaryzacji
+10. We wtorek, po krótkim odbiorze zmian plikowych i streamerów opisanym w
+   `PRZEKAZANIE_2026-10-14_WTOREK_PL.md`, rozpocząć Spotify od inwentaryzacji
    i kontraktu dostępności. Następnie osobno przenieść właściwe dla Spotify
    sortowanie i nawigację kontekstową, bez kopiowania założeń TIDAL.
 
