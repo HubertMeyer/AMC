@@ -138,6 +138,42 @@ wyszukanie, Enter, prawa strzałka i przeglądanie muszą być bez zapisu. Test 
 porównać bibliotekę przed i po scenariuszu, sprawdzić zapisany i niezapisany
 element, fokus, pojedynczą akcję Enter oraz właściwe menu prawej strzałki.
 
+## Kolejny etap: Ctrl+F w usługach i lokalnych listach
+
+`Ctrl+F` powinien działać spójnie także w WiiM i Sonosie. Nawet gdy oficjalne
+API nie udostępnia pełnego katalogu do przeszukania, program może lokalnie
+odnajdywać lub filtrować już wczytane strumienie, playlisty i inne nazwane
+elementy. Gdy API oferuje wyszukiwanie globalne, należy je udostępnić w tym
+samym wzorcu interfejsu, z jasno wypowiedzianym zakresem.
+
+Najpierw zinwentaryzować obecne znaczenie `Ctrl+F` i rozdział wyszukiwania
+lokalnego od globalnego w Radiu internetowym, podcastach i TIDAL-u. Następnie
+dodać wspólny kontrakt dla WiiM, Sonosa oraz przyszłych adapterów: zachowanie
+fokusu, Enter na właściwym wyniku, Escape do punktu wyjścia i brak zapisu do
+biblioteki. Innowacje AMC, takie jak szybkie presety i lokalne filtrowanie, są
+pożądane, jeżeli nie udają funkcji niedostępnej w API dostawcy.
+
+## Późniejszy etap po Spotify: jednolite logowanie
+
+Po zintegrowaniu Spotify trzeba zaprojektować pierwsze uruchomienie usług tak,
+aby odbiorca nowego instalatora nie musiał ręcznie generować ani wpisywać
+technicznych kodów aplikacji, identyfikatorów klienta lub sekretów, o ile
+oficjalny model dostawcy pozwala użyć rejestracji AMC i publicznego przepływu
+autoryzacji. Osobno sprawdzić aktualne wymagania Sonosa, WiiM, Spotify, TIDAL-u
+i pozostałych usług; nie zakładać, że wszystkie używają tego samego protokołu.
+
+Docelowo różne mechanizmy, takie jak OAuth z PKCE, kod urządzenia, dostęp
+lokalny czy automatyczne wykrywanie urządzenia, mają dawać spójne doświadczenie
+z NVDA: zrozumiałe rozpoczęcie, anulowanie, ponowienie i wylogowanie. Nie wolno
+umieszczać sekretów, tokenów ani danych kont w instalatorze, repozytorium lub
+logach. Jeżeli któraś usługa rzeczywiście wymaga własnej rejestracji
+deweloperskiej użytkownika, trzeba przygotować dostępny kreator i uczciwie to
+wyjaśnić zamiast obiecywać niemożliwe logowanie bez konfiguracji.
+
+Odbiór tego etapu wykonać na czystym profilu lub maszynie, bez wcześniejszych
+tokenów i narzędzi deweloperskich. Ten projekt jest późniejszy i nie blokuje
+wtorkowych napraw, zależności ani podstawowej integracji Spotify.
+
 ## Co naprawiono 14 października
 
 1. Edycja plików audio: wycinanie i dopisywanie korzystają z właściwego
@@ -198,6 +234,9 @@ z NVDA na niepotrzebnych plikach:
    pozostać właściwy typ wyniku, a relacje mają prowadzić do albumów i utworów.
    Następnie wykonać podobną próbę w podcastach i Radio Browserze oraz
    potwierdzić, że biblioteka nie zmieniła się bez jawnego polecenia dodania.
+10. Użyć `Ctrl+F` na listach Radia internetowego, podcastów, TIDAL-u, WiiM i
+    Sonosa. Lokalny zakres ma odnajdywać wczytane elementy, a globalny korzystać
+    z katalogu tylko tam, gdzie API go udostępnia; zakres musi być jednoznaczny.
 
 Przed zamknięciem lub aktualizacją AMC nadal trzeba potwierdzić, że nie rośnie
 żaden plik `.amc-partial` i że nie trwa nagrywanie.

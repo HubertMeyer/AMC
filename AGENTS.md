@@ -74,6 +74,41 @@
   element już zapisany oraz niezapisany, sprawdza typ zaznaczenia, fokus,
   pojedynczą reakcję Enter i menu prawej strzałki. Nie wolno uznać samego
   poprawnego tekstu wyniku za dowód prawidłowego routingu.
+- `Ctrl+F` działa w każdym sensownie przeszukiwalnym widoku, również w WiiM i
+  Sonosie. Wyszukiwanie lokalne filtruje lub odnajduje elementy już wczytanej
+  listy, na przykład strumienie i playlisty. Wyszukiwanie globalne korzysta z
+  katalogu usługi tylko wtedy, gdy oficjalne API udostępnia taką możliwość.
+  Interfejs zawsze jasno podaje zakres i nie przełącza go po cichu.
+- Lokalne i globalne wyszukiwanie używają wspólnego zachowania klawiatury:
+  przewidywalny fokus, Enter na rzeczywistym wyniku, Escape do poprzedniego
+  miejsca i brak automatycznego zapisu. Adapter dostawcy dostarcza dane oraz
+  możliwości, ale nie tworzy osobnego, rozbieżnego interfejsu wyszukiwarki.
+
+## Pierwsze uruchomienie i logowanie do usług
+
+- Docelowy instalator prowadzi zwykłego użytkownika przez dostępny, oficjalny
+  przepływ logowania. Nie powinien żądać ręcznego tworzenia aplikacji
+  deweloperskiej, wyszukiwania identyfikatora klienta ani przepisywania
+  technicznych wartości, jeżeli regulamin i API pozwalają użyć rejestracji AMC
+  oraz publicznego przepływu autoryzacji.
+- Dla każdej usługi osobno wybierz najprostszy bezpieczny mechanizm wspierany
+  przez dostawcę, na przykład OAuth z PKCE, kod urządzenia, dostęp lokalny lub
+  wykrywanie urządzenia. Nie ujednolicaj protokołów pozornie; ujednolicaj
+  doświadczenie użytkownika, komunikaty, anulowanie, ponawianie i wylogowanie.
+- Sekretu klienta, tokenu odświeżania ani danych konta nie wolno osadzać w
+  publicznym instalatorze, repozytorium, logu ani nazwie kontrolki. Dane sesji
+  przechowuj mechanizmem chronionym systemu operacyjnego. Sam publiczny
+  identyfikator aplikacji można dołączyć wyłącznie zgodnie z modelem i
+  regulaminem konkretnego dostawcy.
+- Jeżeli dostawca naprawdę wymaga od każdego użytkownika własnej rejestracji
+  deweloperskiej, nie ukrywaj tego obejściem. Przygotuj dostępny kreator z
+  jasnym wyjaśnieniem i minimalną liczbą kroków. Ostateczny projekt tego etapu
+  powstaje po integracji Spotify i po ponownej weryfikacji aktualnych wymagań
+  Sonosa, WiiM, Spotify i pozostałych usług.
+- Odbiór wykonuj na czystym profilu lub maszynie: od pierwszego uruchomienia do
+  gotowej sesji, z NVDA, bez wcześniej zapisanych tokenów i bez narzędzi
+  deweloperskich. Test obejmuje anulowanie, wygaśnięcie kodu, odmowę dostępu,
+  ponowienie, wylogowanie i aktualizację programu bez utraty ważnej sesji.
 
 ## Równoległe integracje systemów głośnikowych
 
