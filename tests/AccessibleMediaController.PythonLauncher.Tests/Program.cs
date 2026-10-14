@@ -248,6 +248,10 @@ internal static class Program
             root,
             runtime,
             "AMC Python — wersja 0.1.0, kompilacja 2026.10.13-test"));
+        Equal(true, SafeApplicationStop.IsCandidateWindow(
+            root,
+            runtime,
+            "AMC Python — 14.10.2026, 18:52"));
         Equal(true, SafeApplicationStop.IsCandidateWindow(root, runtime, "AMC Python"));
         Equal(false, SafeApplicationStop.IsCandidateWindow(
             root,

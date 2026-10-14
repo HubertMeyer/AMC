@@ -39,7 +39,7 @@ internal static class SafeApplicationStop
         InstalledProcessGuard.IsInsideInstallation(installationRoot, executable)
         && !string.IsNullOrWhiteSpace(title)
         && (string.Equals(title, "AMC Python", StringComparison.Ordinal)
-            || title.StartsWith("AMC Python — wersja ", StringComparison.Ordinal));
+            || title.StartsWith("AMC Python — ", StringComparison.Ordinal));
 
     private static void RequestCloseForInstallation(string installationRoot)
     {
