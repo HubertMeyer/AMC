@@ -33,6 +33,27 @@ Dokładny rachunek ostatniej instalacji zapisuje lokalny plik
 `.test-output\LAST_TEST_BUILD.json`. Katalog `.test-output` jest zapleczem
 testowym, a nie drugim sposobem uruchamiania programu.
 
+## Niedziela: nagrywanie ma pierwszeństwo
+
+Użytkownik uprzedził, że w niedzielę będzie dużo nagrywał. Dopóki nagrywanie
+trwa albo nie da się pewnie wykluczyć, wolno analizować i zmieniać kod,
+tworzyć lokalne commity, wykonywać lekkie testy na plikach tymczasowych oraz
+przygotowywać zależności, jeżeli nie dotyka to działającej instalacji i nie
+grozi zakłóceniem nagrania.
+
+W tym czasie nie wolno wykonywać pełnej kompilacji lub publikacji, zamykać ani
+restartować AMC, podmieniać plików instalacji, uruchamiać instalatora ani
+testować na żywej aplikacji lub plikach użytkownika. Przed każdą taką
+czynnością trzeba sprawdzić stan nagrywania oraz przez odpowiedni odstęp
+obserwować, czy rośnie którykolwiek plik `.amc-partial`. Brak widocznego okna
+nie jest wystarczającym potwierdzeniem.
+
+Jeżeli nagrywanie jest aktywne lub stan pozostaje niepewny, należy pozostawić
+bezpiecznie przygotowaną poprawkę w repozytorium i poczekać na wyraźnie
+wskazane przez użytkownika okno. Pełna kompilacja, instalacja, aktualizacja na
+żywo i odbiór z NVDA mogą ruszyć dopiero wtedy. Sam brak bezpiecznego okna do
+instalacji nie blokuje pracy nad kodem i testami izolowanymi.
+
 ## PILNE: zacząć od niedziałającego Shift+F2
 
 Po uruchomieniu kompilacji z godziny 20:21 użytkownik ponownie potwierdził, że
