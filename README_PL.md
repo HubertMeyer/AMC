@@ -9,6 +9,8 @@
 - [Przekazanie prac na niedzielę 18 października](PRZEKAZANIE_2026-10-14_NIEDZIELA_PL.md):
   właściwa wersja, dzisiejsze poprawki, krótki odbiór, start Spotify i zasady
   bezpiecznej pracy równoległej.
+- [Niedzielne przygotowanie zależności](ZADANIE_NIEDZIELA_PRZYGOTOWANIE_ZALEZNOSCI_PL.md):
+  trwały zestaw narzędzi i cache na dysku D przed pracami nad Spotify.
 - [AMC Python — stan prac 14 października 2026](AMC_PYTHON_STAN_2026-10-10_PL.md):
   decyzja o interfejsie wxPython i wspólnym rdzeniu C#, TIDAL, WiiM, Sonos,
   granice bezpieczeństwa, dowody oraz kolejność dalszych prac.

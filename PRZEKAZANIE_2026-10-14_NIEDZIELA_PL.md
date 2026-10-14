@@ -83,8 +83,15 @@ Przed zamknięciem lub aktualizacją AMC nadal trzeba potwierdzić, że nie roś
 
 ## Następny główny blok: Spotify
 
-Po powyższym krótkim odbiorze wracamy do Spotify w nowym AMC Python. Nie
-przenosimy funkcji do starego WPF. Pierwszy etap powinien być inwentaryzacją
+Przed równoległymi pracami wykonać jako pierwsze zadanie
+`ZADANIE_NIEDZIELA_PRZYGOTOWANIE_ZALEZNOSCI_PL.md`. Audyt z 14 października
+potwierdził .NET, Python, Node, pnpm i WebView2, ale wykazał brak lokalnego
+toolchainu Rust i narzędzi MSVC potrzebnych do przebudowania hosta Librespot.
+Zadanie przygotuje trwały wspólny cache na dysku D i próbę pracy bez sieci.
+
+Po przygotowaniu zależności i powyższym krótkim odbiorze wracamy do Spotify
+w nowym AMC Python. Nie przenosimy funkcji do starego WPF. Pierwszy etap
+powinien być inwentaryzacją
 bez zapisu: przeczytać ten plik, `AMC_PYTHON_STAN_2026-10-10_PL.md` oraz
 `SPOTIFY-LOSSLESS-I-MONITORING.md`, sprawdzić istniejące adaptery i testy, a
 następnie ustalić zakres sesji Spotify oraz kryteria odbioru z NVDA.
@@ -120,7 +127,8 @@ Przykładowe polecenie dla zadania roboczego:
 
 Przykładowy podział pierwszego dnia Spotify:
 
-1. zadanie tylko do odczytu: inwentaryzacja obecnego kodu i braków Spotify;
-2. osobne zadanie: kontrakt dostępności i scenariusze testów NVDA;
-3. implementacja dopiero po uzgodnieniu wyników punktów 1–2;
-4. na końcu jedno zadanie integracyjne i jedna instalacja.
+1. najpierw jedno zadanie przygotowania zależności, nie równolegle z kodem;
+2. zadanie tylko do odczytu: inwentaryzacja obecnego kodu i braków Spotify;
+3. osobne zadanie: kontrakt dostępności i scenariusze testów NVDA;
+4. implementacja dopiero po uzgodnieniu wyników punktów 2–3;
+5. na końcu jedno zadanie integracyjne i jedna instalacja.
