@@ -110,6 +110,10 @@
     <!-- Importer playlist radiowych: ten sam kod, ktorego uzywa pelne AMC. -->
     <Compile Include="..\AccessibleMediaController.Windows\Services\RadioPlaylistImporter.cs"
              Link="Engine\RadioPlaylistImporter.cs" />
+    <!-- Publiczny katalog stacji: dokładnie ten sam klient Radio Browser co
+         w pełnym AMC; frontend dostaje tylko ograniczony kontrakt wyników. -->
+    <Compile Include="..\AccessibleMediaController.Windows\Services\RadioBrowserClient.cs"
+             Link="Engine\RadioBrowserClient.cs" />
     <Compile Include="..\AccessibleMediaController.Windows\Services\RadioRecordingStagingStore.cs"
              Link="Engine\RadioRecordingStagingStore.cs" />
     <!-- Reczne nagrania wx korzystaja z DOKLADNIE tego samego prywatnego,

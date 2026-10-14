@@ -73,7 +73,7 @@ def make_frame(
         message_seek_messages=None,
     )
     frame._save_state = lambda: True
-    frame.rate_slider = SimpleNamespace(SetValue=lambda value: seeks.append({"slider": value}))
+    frame.rate_choice = SimpleNamespace(SetSelection=lambda value: seeks.append({"choice": value}))
     frame.volume_slider = SimpleNamespace(SetValue=lambda value: None)
     return frame, spoken, seeks
 

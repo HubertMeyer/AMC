@@ -245,6 +245,14 @@ def test_profile_edits_go_through_the_real_host() -> None:
                 state.read_text(encoding="utf-8")
             )["radio"]["recordingHistory"][1]
             assert stored_fresh_history["path"] == renamed_fresh_history["path"]
+            forgotten = client.forget_recording_history_paths(
+                [renamed_fresh_history["path"]]
+            )
+            assert forgotten == {"removedCount": 1}
+            remaining_history = json.loads(
+                state.read_text(encoding="utf-8")
+            )["radio"]["recordingHistory"]
+            assert [item["id"] for item in remaining_history] == ["history-1"]
             client.rename_podcast_subscription("podcast-1", "Nowy podcast")
             removed_library = client.toggle_podcast_library(["podcast-1"])
             assert removed_library == {"added": False, "requested": 1, "changed": 1}

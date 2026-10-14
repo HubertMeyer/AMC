@@ -133,6 +133,55 @@ def entries_from_payload(
     return entries, warnings
 
 
+def radio_entries_from_payload(
+    payload: object,
+) -> tuple[list[SearchEntry], tuple[str, ...]]:
+    """Zamień ograniczony kontrakt Radio Browser na bezpieczne wiersze."""
+
+    if not isinstance(payload, dict):
+        raise ValueError("Nieprawidłowa odpowiedź katalogu stacji radiowych")
+    raw_items = payload.get("items")
+    if not isinstance(raw_items, list):
+        raise ValueError("Nieprawidłowa odpowiedź katalogu stacji radiowych")
+
+    warnings = tuple(
+        text
+        for value in payload.get("warnings", [])
+        if (text := _text(value, limit=180))
+    ) if isinstance(payload.get("warnings", []), list) else ()
+    entries: list[SearchEntry] = []
+    seen: set[str] = set()
+    for index, raw in enumerate(raw_items[:120]):
+        if not isinstance(raw, dict):
+            continue
+        address = public_address(raw.get("address"))
+        normalized = normalize_public_address(address)
+        title = _text(raw.get("title"), limit=500)
+        if (
+            _text(raw.get("remoteKind"), limit=32) != "radioStation"
+            or _text(raw.get("kind"), limit=16) != "station"
+            or not title
+            or address is None
+            or normalized is None
+            or normalized in seen
+        ):
+            continue
+        seen.add(normalized)
+        internal_id = _text(raw.get("id"), limit=500) or f"remote-radio:{index}"
+        entries.append(SearchEntry(
+            SessionId.RADIO,
+            Row(
+                item_id=internal_id,
+                title=title,
+                kind="station",
+                url=address,
+                detail=_text(raw.get("detail"), limit=300),
+            ),
+            remote_kind="radioStation",
+        ))
+    return entries, warnings
+
+
 def merge_saved_and_remote(
     saved: list[SearchEntry],
     remote: list[SearchEntry],

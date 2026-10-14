@@ -36,14 +36,14 @@ def install_wx_stub() -> None:
         "LC_REPORT", "LC_VIRTUAL", "LC_SINGLE_SEL", "BORDER_SUNKEN", "ID_ANY", "ID_EXIT",
         # OK/CANCEL/YES NIE sa tu atrapami -- maja liczby, patrz nizej.
         "ID_HELP", "ID_OK", "ID_CANCEL", "YES_NO", "NO_DEFAULT",
-        "ICON_QUESTION", "ICON_INFORMATION",
+        "ICON_QUESTION", "ICON_INFORMATION", "ICON_WARNING",
         # Flagi ukladu i przyciskow maja LICZBY (patrz nizej), nie atrapy.
         "SL_HORIZONTAL", "SL_LABELS", "FONTWEIGHT_BOLD", "DD_DIR_MUST_EXIST",
         "FD_OPEN", "FD_FILE_MUST_EXIST", "EVT_TIMER", "EVT_CLOSE", "EVT_KEY_DOWN",
         "EVT_CHAR_HOOK",
         "EVT_LIST_ITEM_ACTIVATED", "EVT_LIST_ITEM_FOCUSED", "EVT_LIST_ITEM_SELECTED",
         "EVT_LIST_ITEM_DESELECTED",
-        "EVT_BUTTON", "EVT_SLIDER",
+        "EVT_BUTTON", "EVT_SLIDER", "EVT_CHOICE",
         "EVT_MENU", "ITEM_NORMAL", "ITEM_CHECK", "ITEM_RADIO", "ID_OPEN", "ID_COPY",
         "ID_PREFERENCES", "ID_ABOUT", "ACCEL_CTRL", "ACCEL_SHIFT", "ACCEL_ALT",
         "ACCEL_NORMAL",
@@ -72,6 +72,9 @@ def install_wx_stub() -> None:
     wx.OK = 0x0004  # type: ignore[attr-defined]
     wx.NO = 0x0008  # type: ignore[attr-defined]
     wx.CANCEL = 0x0010  # type: ignore[attr-defined]
+    wx.YES_NO = wx.YES | wx.NO  # type: ignore[attr-defined]
+    wx.NO_DEFAULT = 0x0080  # type: ignore[attr-defined]
+    wx.ICON_WARNING = 0x0100  # type: ignore[attr-defined]
 
     # Flagi ukladu sizerow. Tez skladane operatorem ``|`` (``wx.ALL |
     # wx.EXPAND``), wiec musza byc liczbami. Wartosci ODCZYTANE z
@@ -105,7 +108,7 @@ def install_wx_stub() -> None:
 
     for name in (
         "Frame", "Panel", "App", "Dialog", "ListCtrl", "StaticText", "TextCtrl", "Button",
-        "Slider", "BoxSizer", "FlexGridSizer", "Timer", "MenuBar", "Menu", "KeyEvent",
+        "Slider", "Choice", "BoxSizer", "FlexGridSizer", "Timer", "MenuBar", "Menu", "KeyEvent",
         "ListEvent", "CommandEvent", "TimerEvent", "CloseEvent", "DirDialog", "FileDialog",
         "Window",
     ):

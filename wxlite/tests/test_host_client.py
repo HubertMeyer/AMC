@@ -403,6 +403,16 @@ def test_podcast_directory_search_uses_one_narrow_host_operation() -> None:
         client.close()
 
 
+def test_radio_directory_search_uses_one_narrow_host_operation() -> None:
+    client = make_client()
+    try:
+        result = client.search_radio_directory("radio poznan")
+        assert result["op"] == "radio.searchDirectory"
+        assert result["args"] == {"query": "radio poznan"}
+    finally:
+        client.close()
+
+
 def test_podcast_opml_uses_named_narrow_host_operations() -> None:
     client = make_client()
     try:

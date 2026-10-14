@@ -251,6 +251,137 @@ def test_public_search_failure_preserves_cached_results() -> None:
     assert "technical" not in shown[0][1][0]
 
 
+def test_radio_search_combines_library_and_public_directory() -> None:
+    shown = []
+    searched = []
+    local = SearchEntry(
+        SessionId.RADIO,
+        Row("saved", "Radio lokalne", "station", url="https://saved.test/live"),
+    )
+
+    class Runner:
+        @staticmethod
+        def submit(_name, work, done, _failed):
+            done(work())
+
+    frame = SimpleNamespace(
+        search_sources=SimpleNamespace(
+            collect=lambda _sessions: SearchCollection((local,), ())
+        ),
+        client=SimpleNamespace(
+            search_radio_directory=lambda query: (
+                searched.append(query)
+                or {
+                    "items": [{
+                        "id": "remote",
+                        "title": "Radio publiczne",
+                        "kind": "station",
+                        "remoteKind": "radioStation",
+                        "address": "https://remote.test/live",
+                        "detail": "Polska, MP3, 128 kb/s",
+                    }],
+                    "warnings": [],
+                }
+            )
+        ),
+        runner=Runner(),
+        _search_dialog_alive=lambda _dialog: True,
+    )
+    dialog = SimpleNamespace(
+        catalog=None,
+        show_results=lambda entries, warnings: shown.append((entries, warnings)),
+        search_failed=lambda: shown.append("failed"),
+    )
+
+    LiteFrame._run_search_query(
+        frame,
+        "radio",
+        dialog,
+        all_services=False,
+        session_before=SessionId.RADIO,
+    )
+
+    assert searched == ["radio"]
+    assert [entry.row.title for entry in shown[0][0]] == [
+        "Radio lokalne",
+        "Radio publiczne",
+    ]
+    assert shown[0][1] == ()
+
+
+def test_remote_radio_open_adds_station_then_focuses_real_library_row() -> None:
+    calls = []
+    selected = []
+
+    class Runner:
+        @staticmethod
+        def submit(_name, work, done, _failed):
+            done(work())
+
+    client = SimpleNamespace(
+        add_radio_station=lambda name, address: (
+            calls.append(("add", name, address))
+            or {"preferredStationId": "saved-radio", "preferredStationName": name}
+        )
+    )
+    opened = []
+    frame = SimpleNamespace(
+        _radio_search_action_pending=False,
+        client=client,
+        status_field=SimpleNamespace(SetLabel=lambda value: calls.append(("status", value))),
+        status_bar=SimpleNamespace(show=lambda value: calls.append(("bar", value))),
+        announcer=SimpleNamespace(say=lambda value: calls.append(("say", value))),
+        runner=Runner(),
+        _switch_session=lambda session: calls.append(("session", session)),
+        _open_radio_view=lambda intent, **kwargs: opened.append((intent, kwargs)),
+        _active_list=lambda: SimpleNamespace(
+            select_item_ids=lambda values: selected.extend(values)
+        ),
+    )
+    result = SearchEntry(
+        SessionId.RADIO,
+        Row(
+            "directory-radio",
+            "Radio Poznań",
+            "station",
+            url="https://example.test/live",
+        ),
+        remote_kind="radioStation",
+    )
+
+    LiteFrame._complete_remote_radio_search_result_action(
+        frame,
+        [result],
+        SearchResultAction.OPEN,
+    )
+
+    assert ("add", "Radio Poznań", "https://example.test/live") in calls
+    assert opened[0][0].preferred_id == "saved-radio"
+    opened[0][1]["after_refresh"]()
+    assert selected == ["saved-radio"]
+    assert frame._radio_search_action_pending is False
+
+
+def test_remote_radio_queue_is_refused_without_profile_write() -> None:
+    messages = []
+    frame = SimpleNamespace(
+        announcer=SimpleNamespace(say=messages.append),
+    )
+    result = SearchEntry(
+        SessionId.RADIO,
+        Row("directory-radio", "Radio", "station", url="https://example.test/live"),
+        remote_kind="radioStation",
+    )
+
+    LiteFrame._complete_remote_radio_search_result_action(
+        frame,
+        [result],
+        SearchResultAction.QUEUE,
+    )
+
+    assert messages == ["Ta funkcja nie jest dostępna w Radiu internetowym"]
+
+
 def test_remote_result_uses_materialization_instead_of_local_navigation() -> None:
     calls = []
     frame = SimpleNamespace(

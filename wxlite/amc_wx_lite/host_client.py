@@ -930,6 +930,14 @@ class LiteHostClient:
             timeout=45.0,
         )
 
+    def search_radio_directory(self, query: str) -> Any:
+        """Przeszukaj publiczny Radio Browser wspólnym klientem AMC."""
+        return self.call(
+            "radio.searchDirectory",
+            {"query": query},
+            timeout=45.0,
+        )
+
     def inspect_podcast_opml(self, path: str) -> Any:
         """Odczytaj bezpieczne etykiety źródeł przez wspólny parser AMC."""
         return self.call("podcast.opml.inspect", {"path": path}, timeout=30.0)
@@ -1133,9 +1141,28 @@ class LiteHostClient:
             timeout=30.0,
         )
 
-    def recycle_local_files(self, item_ids: list[str]) -> Any:
+    def recycle_local_files(
+        self,
+        item_ids: list[str],
+        *,
+        paths: list[str] | None = None,
+    ) -> Any:
+        args: dict[str, Any] = {"itemIds": item_ids}
+        if paths:
+            # Historia nagrywania ma celowo własne identyfikatory wierszy.
+            # Zweryfikowana ścieżka pozwala hostowi znaleźć także świeże
+            # nagranie, którego skaner Biblioteki jeszcze nie zindeksował.
+            args["paths"] = paths
         return self.call(
-            "library.recycle", {"itemIds": item_ids}, timeout=120.0
+            "library.recycle", args, timeout=120.0
+        )
+
+    def forget_recording_history_paths(self, paths: list[str]) -> Any:
+        """Usuń ślad tylko po potwierdzonym usunięciu lub przeniesieniu pliku."""
+        return self.call(
+            "radio.recordingHistoryForgetPaths",
+            {"paths": paths},
+            timeout=20.0,
         )
 
     def add_bookmark(

@@ -124,6 +124,7 @@ from amc_wx_lite.transport_parity import (
     apply_message_overrides,
     format_clock,
     format_playback_rate,
+    playback_rate_choice_label,
     load_message_policy,
     next_playback_rate,
     normalize_custom_seek_seconds,
@@ -639,6 +640,12 @@ def test_rate_announcement_matches_format_playback_rate() -> None:
     assert format_playback_rate(1.25) == "Prędkość 1,25 razy"
     assert format_playback_rate(0.5) == "Prędkość 0,5 razy"
     assert format_playback_rate(2.0) == "Prędkość 2 razy"
+
+
+def test_rate_choice_explains_normal_slower_and_faster_values() -> None:
+    assert playback_rate_choice_label(1.0) == "1,00 razy — normalna prędkość"
+    assert playback_rate_choice_label(0.75) == "0,75 razy — wolniej"
+    assert playback_rate_choice_label(2.0) == "2,00 razy — szybciej"
 
 
 def test_rate_is_reachable_from_the_menu_and_from_the_help() -> None:

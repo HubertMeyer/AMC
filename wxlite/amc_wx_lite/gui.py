@@ -181,7 +181,11 @@ from .search_catalog import (
     search as search_entries,
 )
 from .search_sources import SearchCollection, SearchSources
-from .remote_search import entries_from_payload, merge_saved_and_remote
+from .remote_search import (
+    entries_from_payload,
+    merge_saved_and_remote,
+    radio_entries_from_payload,
+)
 from .radio_activity import (
     STATE_POSITION_LABELS,
     activity_cue_wav,
@@ -191,8 +195,7 @@ from .radio_activity import (
 from . import radio_recognition
 from .transport_parity import (
     DEFAULT_TEMPLATES,
-    PLAYBACK_RATE_MAX,
-    PLAYBACK_RATE_MIN,
+    PLAYBACK_RATES,
     SUGGESTED_CUSTOM_SEEK_SECONDS,
     TEMPLATE_KEYS,
     TEMPLATE_LABELS,
@@ -207,6 +210,7 @@ from .transport_parity import (
     load_message_policy,
     next_playback_rate,
     parse_custom_seek_length,
+    playback_rate_choice_label,
     resolve_custom_seek_seconds,
     resolve_detailed_hints,
     seek_percent_value,
@@ -2143,9 +2147,15 @@ class PodcastDescriptionDialog(wx.Dialog):
         self._information = information.text
         self._copy_text = copy_text
 
+        # NVDA najpierw ogłasza nazwę nowo otwartego okna. Nazwą dostępną
+        # jest więc początek właściwego opisu, a nie powtórzone techniczne
+        # „Opis odcinka, dialog”. Tytuł wizualny okna pozostaje bez zmian.
+        self.SetName(
+            information.initial_focus_name or information.window_title
+        )
+
         panel = wx.Panel(self)
         layout = wx.BoxSizer(wx.VERTICAL)
-        content_label = wx.StaticText(panel, label="&Treść opisu i informacje:")
         self.content = wx.TextCtrl(
             panel,
             value=information.text,
@@ -2154,11 +2164,8 @@ class PodcastDescriptionDialog(wx.Dialog):
         # To jest świadomie przygotowany tekst użytkowy, nigdy repr obiektu,
         # identyfikator ani nazwa klasy. Tak samo pełny AMC rozpoczyna fokus od
         # początku właściwego opisu, zamiast od technicznej roli kontrolki.
-        self.content.SetName(
-            information.initial_focus_name or information.window_title
-        )
+        self.content.SetName("Opis i informacje")
         self.content.SetInsertionPoint(0)
-        layout.Add(content_label, 0, wx.BOTTOM, 4)
         layout.Add(self.content, 1, wx.EXPAND)
 
         self.copy_status = wx.StaticText(panel, label="")
@@ -4927,6 +4934,7 @@ class LiteFrame(wx.Frame):
         self._podcast_download_pending = False
         self._podcast_favorite_pending = False
         self._podcast_add_pending = False
+        self._radio_search_action_pending = False
         self._podcast_opml_pending = False
         self._playlist_membership_pending = False
         self._last_podcast_progress_error: str | None = None
@@ -5076,17 +5084,21 @@ class LiteFrame(wx.Frame):
         )
         self.volume_slider = wx.Slider(
             self.player_panel, value=self.options.volume, minValue=0, maxValue=100,
-            style=wx.SL_HORIZONTAL | wx.SL_LABELS,
+            style=wx.SL_HORIZONTAL,
         )
-        self.volume_slider.SetName("Glosnosc")
-        # Zakres suwaka = konce drabiny silnika: DemoMediaSession.cs:11
-        # daje 0,50 .. 2,00. Suwak nie moze obiecywac wiecej niz silnik robi.
-        self.rate_slider = wx.Slider(
-            self.player_panel, value=int(round(self.options.rate * 100)),
-            minValue=int(PLAYBACK_RATE_MIN * 100), maxValue=int(PLAYBACK_RATE_MAX * 100),
-            style=wx.SL_HORIZONTAL | wx.SL_LABELS,
+        self.volume_slider.SetName("Głośność w procentach")
+        # Tempo ma tylko siedem prawdziwych wartości silnika. Pole wyboru
+        # udostępnia NVDA ich znaczenie i natywnie obsługuje Home/End; suwak
+        # procentowy wystawiał niejasne liczby 100 i 200 oraz sugerował
+        # wartości, których silnik w ogóle nie przyjmuje.
+        self.rate_choice = wx.Choice(
+            self.player_panel,
+            choices=[playback_rate_choice_label(rate) for rate in PLAYBACK_RATES],
         )
-        self.rate_slider.SetName("Predkosc odtwarzania w procentach")
+        self.rate_choice.SetName("Prędkość odtwarzania")
+        self.rate_choice.SetSelection(PLAYBACK_RATES.index(
+            clamp_playback_rate(self.options.rate)
+        ))
 
         player_sizer = wx.BoxSizer(wx.VERTICAL)
         for control, flag in (
@@ -5096,7 +5108,7 @@ class LiteFrame(wx.Frame):
             (wx.StaticText(self.player_panel, label="&Glosnosc:"), 0),
             (self.volume_slider, 0),
             (wx.StaticText(self.player_panel, label="&Predkosc:"), 0),
-            (self.rate_slider, 0),
+            (self.rate_choice, 0),
         ):
             player_sizer.Add(control, flag, wx.ALL | wx.EXPAND, 6)
         self.player_panel.SetSizer(player_sizer)
@@ -5603,7 +5615,7 @@ class LiteFrame(wx.Frame):
             self.sonos_list,
         ):
             self._bind_list(control)
-        for control in (self.player_panel, self.play_button, self.volume_slider, self.rate_slider):
+        for control in (self.player_panel, self.play_button):
             control.Bind(wx.EVT_KEY_DOWN, self._on_key)
         # POLE FILTRA ma WLASNA obsluge klawiszy, nie ``_on_key``: w edycji
         # litery naleza do pola, nie do skrotow. Odpowiednik bramki oryginalu
@@ -5614,7 +5626,7 @@ class LiteFrame(wx.Frame):
         self.filter_box.Bind(wx.EVT_KEY_DOWN, self._on_filter_key)
         self.play_button.Bind(wx.EVT_BUTTON, lambda _e: self._play_pause())
         self.volume_slider.Bind(wx.EVT_SLIDER, self._on_volume_slider)
-        self.rate_slider.Bind(wx.EVT_SLIDER, self._on_rate_slider)
+        self.rate_choice.Bind(wx.EVT_CHOICE, self._on_rate_choice)
 
     def _on_list_shortcut_hook(self, event: wx.KeyEvent) -> None:
         """Polecenia, ktorych natywna lista nie moze zabrac jako liter."""
@@ -5624,7 +5636,10 @@ class LiteFrame(wx.Frame):
             "Ctrl+Shift+F",
             "Ctrl+X",
             "Ctrl+V",
+            "Ctrl+I",
             "Alt+D",
+            "Alt+R",
+            "Alt+Shift+R",
             "Alt+Up",
             "Alt+Down",
             "Shift+R",
@@ -5747,6 +5762,30 @@ class LiteFrame(wx.Frame):
             collected = cached or self.search_sources.collect(sessions)
             results = search_entries(list(collected.entries), query)
             warnings = list(collected.warnings)
+            if SessionId.RADIO in sessions:
+                client = self.client
+                if client is None:
+                    warnings.append(
+                        "Publiczny katalog stacji radiowych jest niedostępny"
+                    )
+                else:
+                    try:
+                        payload = client.search_radio_directory(query)
+                        remote, remote_warnings = radio_entries_from_payload(payload)
+                        results = merge_saved_and_remote(
+                            results,
+                            remote,
+                            saved_catalog=[
+                                entry for entry in collected.entries
+                                if entry.session_id is SessionId.RADIO
+                            ],
+                        )
+                        warnings.extend(remote_warnings)
+                    except (HostError, HostUnavailable, ValueError):
+                        warnings.append(
+                            "Nie udało się przeszukać publicznego katalogu "
+                            "stacji radiowych"
+                        )
             if SessionId.PODCASTS in sessions:
                 client = self.client
                 if client is None:
@@ -5882,6 +5921,9 @@ class LiteFrame(wx.Frame):
         if not entries:
             return
         lead = entries[0]
+        if lead.session_id is SessionId.RADIO:
+            self._complete_remote_radio_search_result_action(entries, action)
+            return
         if action is SearchResultAction.INFORMATION:
             self.announcer.say(lead.accessible_label)
             return
@@ -6007,6 +6049,120 @@ class LiteFrame(wx.Frame):
             self.announcer.say(message)
 
         self.runner.submit("podcast-search-action", work, done, failed)
+
+    def _complete_remote_radio_search_result_action(
+        self,
+        entries: list[SearchEntry],
+        action: SearchResultAction,
+    ) -> None:
+        """Dodaj wynik Radio Browser wspólnym pisarzem, potem wykonaj akcję."""
+
+        if not entries:
+            return
+        lead = entries[0]
+        if action is SearchResultAction.INFORMATION:
+            self.announcer.say(lead.accessible_label)
+            return
+        if action in (SearchResultAction.QUEUE, SearchResultAction.PLAY_NEXT):
+            self.announcer.say("Ta funkcja nie jest dostępna w Radiu internetowym")
+            return
+        if action in (SearchResultAction.DOWNLOAD, SearchResultAction.SAVE_AS):
+            self.announcer.say("Pobieranie nie jest dostępne dla stacji radiowych")
+            return
+        if getattr(self, "_radio_search_action_pending", False):
+            self.announcer.say("Dodawanie stacji już trwa")
+            return
+        client = self.client
+        if client is None:
+            self.announcer.say("Silnik nie działa, nie mogę otworzyć stacji")
+            return
+
+        self._radio_search_action_pending = True
+        started = "Otwieranie stacji" if action is SearchResultAction.OPEN else "Przygotowywanie stacji"
+        self.status_field.SetLabel(started)
+        self.status_bar.show(started)
+        self.announcer.say(started)
+
+        def work() -> tuple[list[dict], dict | None]:
+            payloads: list[dict] = []
+            for entry in entries:
+                payload = client.add_radio_station(
+                    entry.row.title,
+                    entry.row.url or "",
+                )
+                if not isinstance(payload, dict):
+                    raise ValueError("Nieprawidłowa odpowiedź silnika")
+                payloads.append(payload)
+            favorite_payload = None
+            if action is SearchResultAction.FAVORITE:
+                ids = [
+                    str(payload.get("preferredStationId") or "").strip()
+                    for payload in payloads
+                ]
+                ids = [value for value in ids if value]
+                if ids:
+                    result = client.toggle_profile_favorites("radio", ids)
+                    favorite_payload = result if isinstance(result, dict) else {}
+            return payloads, favorite_payload
+
+        def done(result: tuple[list[dict], dict | None]) -> None:
+            self._radio_search_action_pending = False
+            payloads, favorite_payload = result
+            station_ids = [
+                str(payload.get("preferredStationId") or "").strip()
+                for payload in payloads
+            ]
+            station_ids = [value for value in station_ids if value]
+            if not station_ids:
+                self.announcer.say("Nie udało się otworzyć stacji")
+                return
+            if action in (SearchResultAction.LIBRARY, SearchResultAction.FAVORITE):
+                target = "ulubionych" if action is SearchResultAction.FAVORITE else "Biblioteki"
+                count = len(station_ids)
+                if action is SearchResultAction.FAVORITE and favorite_payload is not None:
+                    changed = int(favorite_payload.get("changed") or 0)
+                    if changed <= 0:
+                        message = "Ulubione bez zmian"
+                    else:
+                        message = (
+                            f"Dodano do ulubionych: {lead.row.title}"
+                            if count == 1 else f"Dodano do ulubionych: {count} elementów"
+                        )
+                else:
+                    message = (
+                        f"Dodano do {target}: {lead.row.title}"
+                        if count == 1 else f"Dodano do {target}: {count} elementów"
+                    )
+                self.status_field.SetLabel(message)
+                self.status_bar.show(message)
+                self.announcer.say(message)
+                return
+
+            self._switch_session(SessionId.RADIO)
+
+            def after_refresh() -> None:
+                self._active_list().select_item_ids(station_ids)
+                if action is not SearchResultAction.OPEN:
+                    LiteFrame._perform_search_result_action(self, lead, action)
+
+            self._open_radio_view(OpenLibraryView(
+                None,
+                preferred_id=station_ids[0],
+                target_session_id=SessionId.RADIO,
+            ), after_refresh=after_refresh)
+
+        def failed(error: Exception) -> None:
+            self._radio_search_action_pending = False
+            message = (
+                str(error)
+                if isinstance(error, (HostError, HostUnavailable))
+                else "Nie udało się otworzyć stacji"
+            )
+            self.status_field.SetLabel(message)
+            self.status_bar.show(message)
+            self.announcer.say(message)
+
+        self.runner.submit("radio-search-action", work, done, failed)
 
     def _open_search_result(
         self,
@@ -7572,12 +7728,32 @@ class LiteFrame(wx.Frame):
                 "Ctrl+Shift+C",
                 "Ctrl+X",
                 "Ctrl+V",
+                # Wspólne podglądy muszą dotrzeć do resolvera także z
+                # natywnej listy. Sama obecność w shortcuts.py nie wystarcza:
+                # SysListView32 potrafi wcześniej potraktować literę jako
+                # własne polecenie i nie wysłać EVT_KEY_DOWN do AMC.
+                "Ctrl+I",
                 "Alt+D",
+                "Alt+R",
+                "Alt+Shift+R",
                 "Alt+Up",
                 "Alt+Down",
             }:
                 self._on_key(event)
                 return
+            event.Skip()
+            return
+
+        # Gdy fokus jest na regulacji, niemodyfikowane klawisze edycji należą
+        # do niej: strzałki zmieniają wartość, a Home/End ustawiają skrajne
+        # wartości. Wcześniej globalny router przejmował je także na polu
+        # tempa, przez co obie kontrolki pozornie regulowały głośność.
+        canonical = chord_from_event(event).canonical
+        volume_slider = getattr(self, "volume_slider", None)
+        rate_choice = getattr(self, "rate_choice", None)
+        if focus in (volume_slider, rate_choice) and focus is not None and canonical in {
+            "Left", "Right", "Up", "Down", "Home", "End", "Prior", "Next",
+        }:
             event.Skip()
             return
 
@@ -8353,7 +8529,7 @@ class LiteFrame(wx.Frame):
             not tidal_external and wiim_ready
             and (not sonos_remote or sonos_volume)
         )
-        self.rate_slider.Enable(not (tidal_external or wiim_remote or sonos_remote))
+        self.rate_choice.Enable(not (tidal_external or wiim_remote or sonos_remote))
 
         if want_player:
             if wiim_remote and self._wiim_snapshot:
@@ -12719,6 +12895,19 @@ class LiteFrame(wx.Frame):
         for item_id, _path in moved:
             completed.add(item_id)
             pending.pop(item_id, None)
+        moved_paths = [path for _item_id, path in moved]
+        self._forget_private_recording_history_paths(moved_paths)
+        client = getattr(self, "client", None)
+        if client is not None:
+            # Ctrl+X tylko przygotowuje ruch. Historię czyścimy dopiero tutaj,
+            # gdy stara ścieżka rzeczywiście zniknęła; anulowanie albo błąd
+            # wklejenia nie usuwa wpisu.
+            self.runner.submit(
+                "recording-history-forget-moved",
+                lambda: client.forget_recording_history_paths(moved_paths),
+                lambda _payload: None,
+                lambda _error: None,
+            )
         changed = self._hide_completed_external_moves_from_files_model()
         if changed and self.navigator.active is SessionId.FILES:
             self._sync_views()
@@ -16004,7 +16193,7 @@ class LiteFrame(wx.Frame):
         # NAJBLIZSZEGO szczebla drabiny, nie do dowolnej wartosci z suwaka.
         value = clamp_playback_rate(value)
         self.options.rate = value
-        self.rate_slider.SetValue(int(round(value * 100)))
+        self.rate_choice.SetSelection(PLAYBACK_RATES.index(value))
         # Format jak w oryginale: "1,25x" (MainWindow.xaml.cs:16122), a nie
         # "Tempo 125 procent".
         self.announcer.say(format_playback_rate(value))
@@ -16021,8 +16210,10 @@ class LiteFrame(wx.Frame):
         self._set_volume(self.volume_slider.GetValue())
         event.Skip()
 
-    def _on_rate_slider(self, event: wx.CommandEvent) -> None:
-        self._set_rate(self.rate_slider.GetValue() / 100.0)
+    def _on_rate_choice(self, event: wx.CommandEvent) -> None:
+        selection = self.rate_choice.GetSelection()
+        if 0 <= selection < len(PLAYBACK_RATES):
+            self._set_rate(PLAYBACK_RATES[selection])
         event.Skip()
 
     def _announce_time(self, action: Action) -> None:
@@ -16817,6 +17008,47 @@ class LiteFrame(wx.Frame):
             lambda error: self.announcer.say(f"Nie zmieniono nazwy pliku: {error}"),
         )
 
+    def _forget_private_recording_history_paths(self, paths: list[str]) -> None:
+        """Usuń prywatne kopie wpisów po potwierdzonej operacji na dysku."""
+        keys: set[str] = set()
+        for path in paths:
+            try:
+                keys.add(os.path.normcase(os.path.abspath(path)))
+            except (TypeError, ValueError, OSError):
+                continue
+        if not keys:
+            return
+        current = getattr(self.state, "recording_history", [])
+        if not isinstance(current, list):
+            return
+        kept: list[dict] = []
+        changed = False
+        for item in current:
+            if not isinstance(item, dict):
+                continue
+            candidate = item.get("path") or item.get("outputPath")
+            try:
+                key = (
+                    os.path.normcase(os.path.abspath(candidate))
+                    if isinstance(candidate, str) and candidate.strip()
+                    else ""
+                )
+            except (TypeError, ValueError, OSError):
+                key = ""
+            if key and key in keys:
+                changed = True
+                continue
+            kept.append(item)
+        if not changed:
+            return
+        self.state.recording_history = kept
+        try:
+            self.store.save(self.state)
+        except (OSError, TypeError, ValueError):
+            # Wspólny profil został już poprawiony przez host. Prywatna kopia
+            # zostanie ponownie uzgodniona przy następnym zapisie stanu.
+            pass
+
     def _remove_selected_items(self) -> None:
         if (
             self.navigator.active is SessionId.FILES
@@ -16985,6 +17217,13 @@ class LiteFrame(wx.Frame):
             data = payload if isinstance(payload, dict) else {}
             removed = data.get("removed") if isinstance(data.get("removed"), list) else []
             failures = data.get("failures") if isinstance(data.get("failures"), list) else []
+            removed_paths = [
+                str(item.get("path"))
+                for item in removed
+                if isinstance(item, dict) and isinstance(item.get("path"), str)
+            ]
+            if removed_paths:
+                self._forget_private_recording_history_paths(removed_paths)
             self._refresh_profile_view()
             if removed:
                 removed_label = rows[0].title if len(removed) == 1 else format_item_count(len(removed))
@@ -16994,7 +17233,10 @@ class LiteFrame(wx.Frame):
 
         self.runner.submit(
             "profile-edit",
-            lambda: client.recycle_local_files(item_ids),
+            lambda: client.recycle_local_files(
+                item_ids,
+                paths=[row.path for row in rows if row.path],
+            ),
             done,
             lambda error: self.announcer.say(f"Nie przeniesiono do Kosza: {error}"),
         )

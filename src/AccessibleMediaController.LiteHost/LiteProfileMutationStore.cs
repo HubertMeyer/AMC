@@ -1190,7 +1190,9 @@ internal sealed class LiteProfileMutationStore
         }
     }
 
-    public object RecycleLocalFiles(IReadOnlyList<string> itemIds)
+    public object RecycleLocalFiles(
+        IReadOnlyList<string> itemIds,
+        IReadOnlyList<string>? sourcePaths = null)
     {
         var ids = itemIds.Where(id => !string.IsNullOrWhiteSpace(id))
             .Distinct(StringComparer.Ordinal).ToArray();
@@ -1199,7 +1201,25 @@ internal sealed class LiteProfileMutationStore
         lock (_gate)
         {
             using var connection = OpenDatabase(_libraryDatabasePath);
-            var items = ids.Select(id => ReadLocalItem(connection, null, id)).ToArray();
+            var items = new List<LocalItem>();
+            foreach (var path in (sourcePaths ?? []).Where(path => !string.IsNullOrWhiteSpace(path)))
+            {
+                var item = ReadLocalItemByPath(connection, null, path);
+                if (!items.Any(existing => string.Equals(
+                        existing.Path, item.Path, StringComparison.OrdinalIgnoreCase)))
+                    items.Add(item);
+            }
+            foreach (var id in ids)
+            {
+                if (items.Any(item => string.Equals(item.Id, id, StringComparison.Ordinal)))
+                    continue;
+                // Gdy podano ścieżki, pseudonim wiersza Historii nagrywania
+                // nie musi istnieć w local_items. Sięgamy po Id tylko wtedy,
+                // gdy żadna ścieżka nie opisała jeszcze tego żądania.
+                if (sourcePaths is { Count: > 0 } && items.Count >= ids.Length)
+                    break;
+                items.Add(ReadLocalItem(connection, null, id));
+            }
             var removed = new List<LocalItem>();
             var failures = new List<string>();
             foreach (var item in items)
@@ -1217,14 +1237,29 @@ internal sealed class LiteProfileMutationStore
             if (removed.Count > 0)
             {
                 using var transaction = connection.BeginTransaction();
-                foreach (var item in removed) RemoveLocalRecord(connection, transaction, item.Id);
+                foreach (var item in removed)
+                {
+                    if (!string.IsNullOrWhiteSpace(item.Id))
+                        RemoveLocalRecord(connection, transaction, item.Id);
+                }
                 transaction.Commit();
+                RemoveRecordingHistoryPaths(removed.Select(item => item.Path));
             }
             return new
             {
                 removed = removed.Select(item => new { item.Id, item.Title, item.Path }).ToArray(),
                 failures
             };
+        }
+    }
+
+    public object ForgetRecordingHistoryPaths(IReadOnlyList<string> sourcePaths)
+    {
+        EnsureMayWrite();
+        lock (_gate)
+        {
+            var removed = RemoveRecordingHistoryPaths(sourcePaths);
+            return new { removedCount = removed };
         }
     }
 
@@ -1483,6 +1518,40 @@ internal sealed class LiteProfileMutationStore
             changed = true;
         }
         if (changed) WriteState(root);
+    }
+
+    private int RemoveRecordingHistoryPaths(IEnumerable<string> sourcePaths)
+    {
+        if (!File.Exists(_statePath)) return 0;
+        var paths = sourcePaths
+            .Where(path => !string.IsNullOrWhiteSpace(path))
+            .Select(Path.GetFullPath)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        if (paths.Count == 0) return 0;
+        var root = ReadState();
+        if (root["radio"]?["recordingHistory"] is not JsonArray history) return 0;
+        var removed = 0;
+        for (var index = history.Count - 1; index >= 0; index--)
+        {
+            if (history[index] is not JsonObject entry) continue;
+            var path = ReadJsonText(entry, "path", "Path");
+            if (string.IsNullOrWhiteSpace(path))
+                path = ReadJsonText(entry, "outputPath", "OutputPath");
+            if (string.IsNullOrWhiteSpace(path)) continue;
+            string fullPath;
+            try { fullPath = Path.GetFullPath(path); }
+            catch (Exception exception) when (exception is ArgumentException
+                                              or NotSupportedException
+                                              or PathTooLongException)
+            {
+                continue;
+            }
+            if (!paths.Contains(fullPath)) continue;
+            history.RemoveAt(index);
+            removed++;
+        }
+        if (removed > 0) WriteState(root);
+        return removed;
     }
 
     private JsonObject ReadState()

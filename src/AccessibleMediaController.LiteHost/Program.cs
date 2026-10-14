@@ -152,6 +152,9 @@ internal static class Program
                 // niezależne od transportu; wolna odpowiedź nie zatrzymuje
                 // radia, nagrywania ani pauzy.
                 LitePodcastDirectorySearchCoordinator.Operation,
+                // Radio Browser używa sieci, ale nie może blokować aktywnego
+                // radia, nagrywania ani statusu transportu.
+                LiteRadioDirectorySearchCoordinator.Operation,
                 // Import pobiera maksymalnie cztery RSS równolegle. Nie może
                 // zatrzymać transportu ani komunikatów o nagrywaniu.
                 LitePodcastOpmlCoordinator.ImportOperation,

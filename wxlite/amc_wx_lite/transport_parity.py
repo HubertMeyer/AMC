@@ -265,6 +265,25 @@ def format_playback_rate(rate: float) -> str:
     return f"Prędkość {text} razy"
 
 
+def playback_rate_choice_label(rate: float) -> str:
+    """Pełna etykieta pola wyboru tempa, z wyjaśnionym punktem neutralnym.
+
+    Wartość modelu nadal jest mnożnikiem używanym przez silnik.  Kontrolka
+    pokazuje jednak tekst użytkowy, dzięki czemu czytnik ekranu nie musi
+    zgadywać, czy surowe ``100`` albo ``200`` oznacza procent, maksimum czy
+    bieżące tempo.
+    """
+    value = clamp_playback_rate(rate)
+    number = f"{value:.2f}".replace(".", ",")
+    if abs(value - 1.0) < 0.001:
+        meaning = "normalna prędkość"
+    elif value < 1.0:
+        meaning = "wolniej"
+    else:
+        meaning = "szybciej"
+    return f"{number} razy — {meaning}"
+
+
 # ----------------------------------------------------------------- predkosc
 
 #: ``DemoMediaSession.cs:11``. Drabina SIEDMIU wartosci, nie suwak procentowy.

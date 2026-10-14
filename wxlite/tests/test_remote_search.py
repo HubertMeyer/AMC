@@ -9,6 +9,7 @@ from amc_wx_lite.remote_search import (
     merge_saved_and_remote,
     normalize_public_address,
     public_address,
+    radio_entries_from_payload,
 )
 from amc_wx_lite.search_catalog import SearchEntry
 
@@ -125,3 +126,52 @@ def test_remote_video_has_episode_semantics_without_speaking_model_kind() -> Non
 def test_invalid_contract_is_reported_without_object_repr() -> None:
     with pytest.raises(ValueError, match="Nieprawidłowa odpowiedź"):
         entries_from_payload([])
+
+
+def test_radio_payload_has_user_facing_text_without_directory_identifier() -> None:
+    entries, warnings = radio_entries_from_payload({
+        "items": [{
+            "id": "radio:private-directory-id",
+            "title": "Radio Poznań",
+            "kind": "station",
+            "remoteKind": "radioStation",
+            "address": "https://stream.example.test/radio",
+            "pageAddress": "https://example.test/",
+            "detail": "Polska, polski, MP3, 128 kb/s",
+        }],
+        "warnings": [],
+    })
+
+    assert warnings == ()
+    assert len(entries) == 1
+    result = entries[0]
+    assert result.session_id is SessionId.RADIO
+    assert result.remote_kind == "radioStation"
+    assert result.accessible_label == (
+        "Radio Poznań, stacja, Polska, polski, MP3, 128 kb/s, "
+        "Radio internetowe"
+    )
+    assert "private-directory-id" not in result.accessible_label
+
+
+def test_radio_payload_rejects_credentials_and_unknown_model_kind() -> None:
+    entries, _warnings = radio_entries_from_payload({
+        "items": [
+            {
+                "id": "one",
+                "title": "Sekret",
+                "kind": "station",
+                "remoteKind": "radioStation",
+                "address": "https://user:password@example.test/radio",
+            },
+            {
+                "id": "two",
+                "title": "Nieznany model",
+                "kind": "station",
+                "remoteKind": "RadioBrowserStationRecord",
+                "address": "https://example.test/radio",
+            },
+        ],
+        "warnings": [],
+    })
+    assert entries == []

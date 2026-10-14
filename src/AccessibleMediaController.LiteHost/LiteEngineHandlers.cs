@@ -55,6 +55,7 @@ internal sealed class LiteEngineHandlers : IDisposable
     private readonly LitePodcastAddCoordinator? _podcastAdd;
     private readonly LitePodcastOpmlCoordinator? _podcastOpml;
     private readonly LitePodcastDirectorySearchCoordinator _podcastDirectorySearch = new();
+    private readonly LiteRadioDirectorySearchCoordinator _radioDirectorySearch = new();
     private readonly LiteProfileMutationStore? _profileMutations;
     private readonly LiteTidalCatalogCoordinator? _tidalCatalog;
     private readonly LiteTidalDesktopCoordinator _tidalDesktop = new();
@@ -367,6 +368,8 @@ internal sealed class LiteEngineHandlers : IDisposable
                 AddPodcastSource(request.Args),
             [LitePodcastDirectorySearchCoordinator.Operation] = (request, _) =>
                 _podcastDirectorySearch.Search(request.Args),
+            [LiteRadioDirectorySearchCoordinator.Operation] = (request, _) =>
+                _radioDirectorySearch.Search(request.Args),
             [LitePodcastOpmlCoordinator.InspectOperation] = (request, _) =>
                 PodcastOpmlInspect(request.Args),
             [LitePodcastOpmlCoordinator.ImportOperation] = (request, _) =>
@@ -473,6 +476,9 @@ internal sealed class LiteEngineHandlers : IDisposable
             ["podcast.renameSubscription"] = (request, _) => RenamePodcastSubscription(request.Args),
             ["radio.addStation"] = (request, _) => AddRadioStation(request.Args),
             ["radio.editStation"] = (request, _) => EditRadioStation(request.Args),
+            ["radio.recordingHistoryForgetPaths"] = (request, _) =>
+                RequireProfileMutations().ForgetRecordingHistoryPaths(
+                    ReadOptionalIds(request.Args, "paths")),
             ["bookmark.add"] = (request, _) => AddBookmark(request.Args),
             ["bookmark.remove"] = (request, _) => RemoveBookmarks(request.Args),
             ["bookmark.navigate"] = (request, _) => NavigateBookmark(request.Args),
@@ -527,11 +533,13 @@ internal sealed class LiteEngineHandlers : IDisposable
     private object RenameLocalFile(JsonElement args)
     {
         var itemId = LiteArgs.RequireText(args, "itemId");
-        if (IsCurrentFilesItem(itemId)) StopFilesPlayback();
+        var sourcePath = LiteArgs.ReadText(args, "path");
+        if (IsCurrentFilesItem(itemId) || IsCurrentFilesPath(sourcePath))
+            StopFilesPlayback();
         return RequireProfileMutations().RenameLocalFile(
             itemId,
             LiteArgs.RequireText(args, "name"),
-            LiteArgs.ReadText(args, "path"));
+            sourcePath);
     }
 
     private object RenamePodcastSubscription(JsonElement args) =>
@@ -958,8 +966,12 @@ internal sealed class LiteEngineHandlers : IDisposable
     private object RecycleLocalFiles(JsonElement args)
     {
         var ids = ReadIds(args);
-        if (ids.Any(IsCurrentFilesItem)) StopFilesPlayback();
-        return RequireProfileMutations().RecycleLocalFiles(ids);
+        var paths = ReadOptionalIds(args, "paths");
+        if (ids.Any(IsCurrentFilesItem) || paths.Any(IsCurrentFilesPath))
+            StopFilesPlayback();
+        return RequireProfileMutations().RecycleLocalFiles(
+            ids,
+            paths);
     }
 
     private bool IsCurrentFilesItem(string itemId)
@@ -967,6 +979,17 @@ internal sealed class LiteEngineHandlers : IDisposable
         lock (_gate)
         {
             return string.Equals(_filesItem?.Id, itemId, StringComparison.Ordinal)
+                && (_files.LoadedItemId is not null || _files.IsPreparing);
+        }
+    }
+
+    private bool IsCurrentFilesPath(string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path)) return false;
+        lock (_gate)
+        {
+            return _filesItem?.Source is { Length: > 0 } source
+                && SameLocalPath(source, path)
                 && (_files.LoadedItemId is not null || _files.IsPreparing);
         }
     }
@@ -2815,6 +2838,7 @@ internal sealed class LiteEngineHandlers : IDisposable
         _podcastAdd?.Dispose();
         _podcastOpml?.Dispose();
         _podcastDirectorySearch.Dispose();
+        _radioDirectorySearch.Dispose();
         _podcastProgressStore?.Dispose();
         _tidalDesktop.Dispose();
     }

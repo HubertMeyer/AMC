@@ -2102,6 +2102,61 @@ static void TestAudioClipOriginalEditor()
             !Directory.EnumerateFiles(directory).Any(path => Path.GetFileName(path).Contains(".amc-cut-", StringComparison.Ordinal)),
             "Po udanej edycji pozostał plik tymczasowy.");
 
+        // Regresja zgłoszona przez użytkownika: przy usuwaniu dokładnie od
+        // 9:00 do końca 12-minutowego nagrania nie wolno dopisać na końcu
+        // ostatnich ramek usuwanego fragmentu. Krótsza próbka zachowuje tę
+        // samą geometrię 9/12, a różne tony pozwalają sprawdzić treść, nie
+        // tylko deklarowaną długość nagłówka.
+        var cutToEnd = Path.Combine(directory, "cut-to-end.wav");
+        var cutFormat = new WaveFormat(8_000, 16, 1);
+        using (var writer = new WaveFileWriter(cutToEnd, cutFormat))
+        {
+            for (var frame = 0; frame < cutFormat.SampleRate * 12; frame++)
+            {
+                var seconds = frame / (double)cutFormat.SampleRate;
+                var frequency = seconds < 9d ? 440d : 1_800d;
+                writer.WriteSample((float)(0.45 * Math.Sin(
+                    2d * Math.PI * frequency * frame / cutFormat.SampleRate)));
+            }
+        }
+        var cutToEndResult = AudioClipOriginalEditor.RemoveAsync(
+                new AudioClipRemovalRequest(
+                    cutToEnd,
+                    TimeSpan.FromSeconds(9),
+                    TimeSpan.FromSeconds(12),
+                    TimeSpan.FromSeconds(12)),
+                progress: null,
+                CancellationToken.None)
+            .GetAwaiter()
+            .GetResult();
+        using (var editedToEnd = new WaveFileReader(cutToEnd))
+        {
+            Assert(
+                Math.Abs(editedToEnd.TotalTime.TotalSeconds - 9d) < 0.08d,
+                $"Cięcie 9-12 pozostawiło długość {editedToEnd.TotalTime} zamiast 9 sekund.");
+            var tailFrames = cutFormat.SampleRate / 2;
+            var tailBytes = tailFrames * cutFormat.BlockAlign;
+            editedToEnd.Position = Math.Max(0, editedToEnd.Length - tailBytes);
+            var tail = new byte[tailBytes];
+            var read = editedToEnd.Read(tail, 0, tail.Length);
+            var crossings = 0;
+            short previous = 0;
+            for (var index = 0; index + 1 < read; index += 2)
+            {
+                var current = BitConverter.ToInt16(tail, index);
+                if (index > 0 && ((previous < 0 && current >= 0)
+                                  || (previous >= 0 && current < 0)))
+                    crossings++;
+                previous = current;
+            }
+            var measuredFrequency = crossings / 2d / (read / 2d / cutFormat.SampleRate);
+            Assert(
+                Math.Abs(measuredFrequency - 440d) < 30d,
+                $"Na końcu po cięciu został ton {measuredFrequency:0} Hz z usuwanego ogona.");
+        }
+        Assert(cutToEndResult.Duration < TimeSpan.FromSeconds(9.08),
+            "Wynik cięcia do końca zgłosił pozostawiony ogon.");
+
         var ffmpeg = FfmpegRadioWaveProvider.FindExecutable()
             ?? throw new InvalidOperationException("FFmpeg zniknął podczas testu edycji.");
         var mp3 = Path.Combine(directory, "source.mp3");

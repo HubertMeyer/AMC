@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import inspect
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -21,6 +22,17 @@ def test_global_mode_exposes_all_three_previews_in_every_session() -> None:
             assert is_transient_preview_available(
                 action, session, global_previews=True
             )
+
+
+def test_global_preview_shortcuts_reach_dispatch_from_native_lists() -> None:
+    """A mapping-only test misses keys swallowed by the Windows list."""
+
+    frame_hook = inspect.getsource(LiteFrame._on_player_shortcut_hook)
+    list_hook = inspect.getsource(LiteFrame._on_list_shortcut_hook)
+    for shortcut in ("Ctrl+I", "Alt+R", "Alt+Shift+R"):
+        quoted = f'"{shortcut}"'
+        assert quoted in frame_hook
+        assert quoted in list_hook
 
 
 def test_disabled_global_mode_keeps_only_home_sessions() -> None:

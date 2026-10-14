@@ -3,6 +3,7 @@ using System.Globalization;
 using System.IO;
 using System.Text;
 using AccessibleMediaController.Core.LocalMedia;
+using NAudio.Wave;
 
 namespace AccessibleMediaController.Windows.Services;
 
@@ -105,51 +106,64 @@ internal static class AudioClipOriginalEditor
 
         try
         {
-            var parts = new List<string>(2);
-            if (request.Start > TimeSpan.FromMilliseconds(1))
+            if (extension.Equals(".wav", StringComparison.OrdinalIgnoreCase))
             {
-                await ExportPartAsync(
+                BuildExactWaveResult(
+                    sourcePath,
+                    request.Start,
+                    effectiveEnd,
+                    resultPath,
+                    progress,
+                    cancellationToken);
+            }
+            else
+            {
+                var parts = new List<string>(2);
+                if (request.Start > TimeSpan.FromMilliseconds(1))
+                {
+                    await ExportPartAsync(
+                        executable,
+                        sourcePath,
+                        firstPart,
+                        TimeSpan.Zero,
+                        request.Start,
+                        0d,
+                        0.4d,
+                        progress,
+                        cancellationToken).ConfigureAwait(false);
+                    parts.Add(firstPart);
+                }
+                if (effectiveEnd < sourceTimelineDuration - TimeSpan.FromMilliseconds(1))
+                {
+                    await ExportPartAsync(
+                        executable,
+                        sourcePath,
+                        secondPart,
+                        effectiveEnd,
+                        sourceTimelineDuration - effectiveEnd,
+                        parts.Count == 0 ? 0d : 0.4d,
+                        parts.Count == 0 ? 0.8d : 0.4d,
+                        progress,
+                        cancellationToken,
+                        readToEnd: true).ConfigureAwait(false);
+                    parts.Add(secondPart);
+                }
+                if (parts.Count == 0)
+                    throw new InvalidOperationException("Nie można usunąć całej zawartości pliku.");
+
+                await File.WriteAllTextAsync(
+                    listPath,
+                    BuildConcatList(parts),
+                    new UTF8Encoding(encoderShouldEmitUTF8Identifier: false),
+                    cancellationToken).ConfigureAwait(false);
+                await ConcatenateAsync(
                     executable,
                     sourcePath,
-                    firstPart,
-                    TimeSpan.Zero,
-                    request.Start,
-                    0d,
-                    0.4d,
+                    listPath,
+                    resultPath,
                     progress,
                     cancellationToken).ConfigureAwait(false);
-                parts.Add(firstPart);
             }
-            if (effectiveEnd < sourceTimelineDuration - TimeSpan.FromMilliseconds(1))
-            {
-                await ExportPartAsync(
-                    executable,
-                    sourcePath,
-                    secondPart,
-                    effectiveEnd,
-                    sourceTimelineDuration - effectiveEnd,
-                    parts.Count == 0 ? 0d : 0.4d,
-                    parts.Count == 0 ? 0.8d : 0.4d,
-                    progress,
-                    cancellationToken,
-                    readToEnd: true).ConfigureAwait(false);
-                parts.Add(secondPart);
-            }
-            if (parts.Count == 0)
-                throw new InvalidOperationException("Nie można usunąć całej zawartości pliku.");
-
-            await File.WriteAllTextAsync(
-                listPath,
-                BuildConcatList(parts),
-                new UTF8Encoding(encoderShouldEmitUTF8Identifier: false),
-                cancellationToken).ConfigureAwait(false);
-            await ConcatenateAsync(
-                executable,
-                sourcePath,
-                listPath,
-                resultPath,
-                progress,
-                cancellationToken).ConfigureAwait(false);
 
             var expectedDuration = sourceTimelineDuration - (effectiveEnd - request.Start);
             var metadata = await VerifyResultAsync(executable, resultPath, expectedDuration, cancellationToken)
@@ -173,6 +187,65 @@ internal static class AudioClipOriginalEditor
         {
             await DeleteTemporaryFilesAsync(temporaryPaths).ConfigureAwait(false);
         }
+    }
+
+    private static void BuildExactWaveResult(
+        string sourcePath,
+        TimeSpan removeStart,
+        TimeSpan removeEnd,
+        string destinationPath,
+        IProgress<double>? progress,
+        CancellationToken cancellationToken)
+    {
+        using var reader = new WaveFileReader(sourcePath);
+        using var writer = new WaveFileWriter(destinationPath, reader.WaveFormat);
+        var format = reader.WaveFormat;
+        var blockAlign = Math.Max(1, format.BlockAlign);
+        var startByte = TimeToAlignedByte(removeStart, format, reader.Length);
+        var endByte = TimeToAlignedByte(removeEnd, format, reader.Length);
+        if (endByte <= startByte)
+            throw new ArgumentException("Początek i koniec fragmentu są nieprawidłowe.");
+
+        var outputBytes = startByte + (reader.Length - endByte);
+        var written = 0L;
+        var buffer = new byte[Math.Max(blockAlign, 128 * 1024 / blockAlign * blockAlign)];
+
+        CopyWaveRange(0, startByte);
+        CopyWaveRange(endByte, reader.Length - endByte);
+        progress?.Report(0.95d);
+
+        void CopyWaveRange(long position, long count)
+        {
+            reader.Position = position;
+            var remaining = count;
+            while (remaining > 0)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var requested = (int)Math.Min(buffer.Length, remaining);
+                var read = reader.Read(buffer, 0, requested);
+                if (read <= 0)
+                    throw new EndOfStreamException(
+                        "Plik źródłowy skończył się podczas dokładnego cięcia WAV.");
+                writer.Write(buffer, 0, read);
+                remaining -= read;
+                written += read;
+                if (outputBytes > 0)
+                    progress?.Report(0.95d * written / outputBytes);
+            }
+        }
+    }
+
+    private static long TimeToAlignedByte(
+        TimeSpan time,
+        WaveFormat format,
+        long maximum)
+    {
+        var blockAlign = Math.Max(1, format.BlockAlign);
+        var raw = (long)Math.Round(
+            time.TotalSeconds * format.AverageBytesPerSecond,
+            MidpointRounding.AwayFromZero);
+        var aligned = raw / blockAlign * blockAlign;
+        return Math.Clamp(aligned, 0L, maximum / blockAlign * blockAlign);
     }
 
     internal static string BuildBackupPath(string sourcePath, DateTimeOffset? now = null)
