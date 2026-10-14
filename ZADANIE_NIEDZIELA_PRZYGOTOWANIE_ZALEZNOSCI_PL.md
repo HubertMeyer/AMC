@@ -1,7 +1,10 @@
 # Zadanie na niedzielę — trwałe przygotowanie zależności AMC Python
 
 To zadanie należy wykonać jako pierwsze, przed równoległymi pracami nad
-Spotify. Jego celem nie jest bezmyślne podniesienie wszystkich bibliotek do
+Spotify. Można rozpocząć jego bezpieczne, przygotowawcze części wcześniej,
+jeżeli pozwala na to dostępny limit, ale do niedzieli nie należy podmieniać
+działającej instalacji testowanej przez użytkownika. Jego celem nie jest
+bezmyślne podniesienie wszystkich bibliotek do
 najnowszych wersji, lecz przygotowanie kompletnego, trwałego i powtarzalnego
 środowiska zgodnego z plikami blokady projektu.
 

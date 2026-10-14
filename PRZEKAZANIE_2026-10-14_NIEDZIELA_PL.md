@@ -102,6 +102,34 @@ oficjalnego klienta, sortowanie i nawigację kontekstową oraz dostępne etykiet
 wszystkich list i pól kombi. Nie wykonywać logowania ani zmian na koncie bez
 bieżącej, świadomej czynności użytkownika.
 
+### Wzorzec interfejsu Spotify
+
+Logikę widoków i obsługi klawiatury Spotify należy budować na rozwiązaniach,
+które działają już w sesji TIDAL nowego AMC Python: wspólnym modelu list,
+Biblioteki, wyszukiwania, sortowania, relacji, kolejki, presetów i odtwarzacza.
+Stare AMC WPF oraz jego Librespot są wyłącznie materiałem technicznym dla API,
+autoryzacji, silnika audio i istniejących ograniczeń. Nie przenosić z niego
+zachowania interfejsu.
+
+Minimalny kontrakt odbioru Spotify:
+
+- Enter wykonuje jedno działanie po jednym naciśnięciu; nie wymaga drugiego
+  Entera i nie przepuszcza klawisza do nowo otwartego widoku;
+- lewa strzałka podaje raz zwięzłą, prawidłową informację o bieżącym elemencie
+  lub odtwarzaniu, bez dwóch komunikatów i danych technicznych;
+- prawa strzałka otwiera właściwe menu relacji lub czynności kontekstowych
+  zgodne z nowym TIDAL-em i nie odczytuje równolegle starego opisu;
+- fokus po Enter, Escape, zapisaniu i anulowaniu wraca do zamierzonego wiersza;
+- każda lista i pole kombi ma jawny tekst użytkowy dla NVDA; identyfikatory,
+  rekordy i wartości modelu nie mogą być wypowiadane;
+- odtwarzacz Spotify ma używać wspólnych, już uporządkowanych kontrolek tempa,
+  głośności i transportu AMC Python.
+
+Użytkownik będzie jeszcze obserwował bieżącą wersję w czwartek, piątek i
+sobotę pod kątem samoczynnie pojawiających się okien. Nowe zgłoszenie w tej
+sprawie ma pierwszeństwo przed instalacją kolejnego wydania, ale nie blokuje
+przygotowania zależności i analizy Spotify.
+
 ## Jak bezpiecznie prowadzić kilka zadań równolegle
 
 Równoległość jest bezpieczna, jeżeli każde zadanie zmieniające kod ma osobny
