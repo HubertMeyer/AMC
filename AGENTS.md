@@ -56,6 +56,25 @@
   parametryzowane dla reprezentatywnych widoków zamiast osobnych, rozbieżnych
   obsług klawiszy.
 
+## Wyszukiwanie, relacje i biblioteka
+
+- Wynik wyszukiwania zachowuje swój rzeczywisty typ i tożsamość. Enter na
+  wykonawcy otwiera wykonawcę, na albumie album, na utworze utwór, a w
+  podcastach odpowiednio podcast lub odcinek. Nie wolno podmieniać zaznaczenia
+  na podobny albo wcześniej zapisany element z biblioteki.
+- `Prawa strzałka` na wyniku otwiera jedno użytkowe menu relacji właściwe dla
+  typu elementu. Dla wykonawcy obejmuje co najmniej albumy i utwory, jeżeli
+  usługa je udostępnia. Relacje mają służyć przeglądaniu katalogu przed
+  świadomym dodaniem czegokolwiek do biblioteki.
+- Wyszukiwanie, Enter, prawa strzałka i samo przeglądanie nigdy nie zmieniają
+  biblioteki ani ulubionych. Dodanie wymaga osobnego, jawnego polecenia
+  użytkownika. Zasada obowiązuje TIDAL, Radio Browser, podcasty, przyszłe
+  Spotify i inne katalogi.
+- Test wyszukiwania porównuje bibliotekę przed i po przeglądaniu, obejmuje
+  element już zapisany oraz niezapisany, sprawdza typ zaznaczenia, fokus,
+  pojedynczą reakcję Enter i menu prawej strzałki. Nie wolno uznać samego
+  poprawnego tekstu wyniku za dowód prawidłowego routingu.
+
 ## Równoległe integracje systemów głośnikowych
 
 - WiiM i Sonos są wzorcem wspólnego kontraktu dla przyszłych systemów

@@ -118,6 +118,26 @@ podcastów, WiiM i Sonosa. Ten mały punkt można przygotować równolegle w oso
 worktree po ustaleniu przyczyny blokującego problemu `Shift+F2`; nie może sam
 instalować wydania ani dotykać działającej aplikacji.
 
+## Drobny punkt przekrojowy: wyszukiwanie TIDAL, podcastów i radia
+
+Użytkownik wyszukał w TIDAL-u wykonawcę, nacisnął Enter i zamiast świadomie
+wybranego wyniku trafił na album, który był już zapisany w kolekcji. Trzeba
+odtworzyć ten przypadek z wykonawcą mającym album zapisany i niezapisany oraz
+sprawdzić mapowanie zaznaczonego wiersza, typu wyniku i akcji Enter. Enter na
+wykonawcy ma otworzyć wykonawcę, a nie arbitralny album z biblioteki.
+
+`Prawa strzałka` na wykonawcy powinna otworzyć jedno menu relacji zawierające
+co najmniej albumy i utwory, jeżeli TIDAL je zwraca. Użytkownik ma móc
+przejrzeć nowości i dopiero osobnym poleceniem dodać wybrany element do
+biblioteki. Sprawdzić analogiczny routing typów i relacji w podcastach oraz
+innych wyszukiwarkach.
+
+W Radio Browserze oraz Radiu internetowym wyniki wyszukiwania nie mogą
+automatycznie trafiać do biblioteki lub zapisanych stacji. W całym AMC samo
+wyszukanie, Enter, prawa strzałka i przeglądanie muszą być bez zapisu. Test ma
+porównać bibliotekę przed i po scenariuszu, sprawdzić zapisany i niezapisany
+element, fokus, pojedynczą akcję Enter oraz właściwe menu prawej strzałki.
+
 ## Co naprawiono 14 października
 
 1. Edycja plików audio: wycinanie i dopisywanie korzystają z właściwego
@@ -174,6 +194,10 @@ z NVDA na niepotrzebnych plikach:
 8. Z Radia internetowego, podcastów, WiiM i Sonosa nacisnąć `Ctrl+H`: Historia
    odtwarzania ma otworzyć się raz, a po jej zamknięciu fokus ma wrócić do
    wcześniejszego elementu.
+9. Wyszukać wykonawcę w TIDAL-u, wejść Enterem i użyć prawej strzałki: ma
+   pozostać właściwy typ wyniku, a relacje mają prowadzić do albumów i utworów.
+   Następnie wykonać podobną próbę w podcastach i Radio Browserze oraz
+   potwierdzić, że biblioteka nie zmieniła się bez jawnego polecenia dodania.
 
 Przed zamknięciem lub aktualizacją AMC nadal trzeba potwierdzić, że nie rośnie
 żaden plik `.amc-partial` i że nie trwa nagrywanie.
