@@ -15,11 +15,12 @@ Ten plik jest krótkim punktem startowym po pracach zakończonych 14 październi
 
 ## Ostatnia odebrana technicznie wersja
 
-- commit źródłowy: `c525e8c04a36e2aa8624af34e5cb07eacaa6956e`;
-- kompilacja: `2026.10.14-c525e8c04a36e2aa8624af34e5cb07eacaa6956e-94cc3d65`;
-- tytuł uruchomionego okna: `AMC Python — 14.10.2026, 19:40`;
-- pełny przebieg: 1545 testów zaliczonych, 110 pominiętych historycznych oraz
+- commit źródłowy: `c47d5e250ed51527cf3645a6b0707c1fb7b499c9`;
+- kompilacja: `2026.10.14-c47d5e250ed51527cf3645a6b0707c1fb7b499c9-3ee86c2b`;
+- tytuł uruchomionego okna: `AMC Python — 14.10.2026, 20:09`;
+- pełny przebieg: 1546 testów zaliczonych, 110 pominiętych historycznych oraz
   11 zaliczonych podtestów;
+- osobny zestaw testów launchera i aktualizatora: 13 z 13 zaliczonych;
 - rozwiązanie C#: 0 ostrzeżeń i 0 błędów;
 - zweryfikowany pakiet: 602 pliki;
 - uruchomione procesy pochodzą z `D:\Projekty Codex\AMC Python`; stary proces
@@ -54,6 +55,10 @@ testowym, a nie drugim sposobem uruchamiania programu.
 
 Najważniejsze commity, od najnowszego:
 
+- `c47d5e25` — aktualizator rozpoznaje uproszczony tytuł okna i potrafi
+  bezpiecznie zamknąć bieżącą wersję przed podmianą;
+- `4168946c` — trwały wybór urządzenia WiiM oraz dopuszczenie kopiowania
+  adresu w sesjach WiiM i Sonos;
 - `c525e8c0` — naprawa zmiany nazwy pliku po `Shift+F2`;
 - `c843f6a5` — kopiowanie adresów strumieni WiiM i Sonos;
 - `442bc858` — operacje na plikach historii nagrań;
@@ -129,6 +134,15 @@ Użytkownik będzie jeszcze obserwował bieżącą wersję w czwartek, piątek i
 sobotę pod kątem samoczynnie pojawiających się okien. Nowe zgłoszenie w tej
 sprawie ma pierwszeństwo przed instalacją kolejnego wydania, ale nie blokuje
 przygotowania zależności i analizy Spotify.
+
+## Etap przed udostępnieniem programu testerom
+
+Po ukończeniu głównych funkcji, przed pierwszym wydaniem dla innych testerów,
+wykonać osobny plan `PLAN_WYDANIA_GITHUB_AMC_PYTHON_PL.md`. Obejmuje on jeden
+spójny proces wydań GitHub, aktualizator i moduł zgłaszania błędów, zamknięty
+zestaw zależności użytkowych, dokumentację, skróty klawiszowe oraz odbiór na
+czystej maszynie. To jest późniejszy etap; obecna zgoda użytkownika nie
+obejmuje jeszcze publikacji repozytorium ani wydania na GitHubie.
 
 ## Jak bezpiecznie prowadzić kilka zadań równolegle
 
