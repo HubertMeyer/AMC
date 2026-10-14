@@ -44,6 +44,18 @@
   nigdy domyślną reprezentacją obiektu, enuma ani identyfikatorem komendy.
   Testuj początkowy fokus, strzałki, ponowne otwarcie i powrót po zamknięciu.
 
+## Skróty globalne
+
+- Widok sesji, urządzenia ani listy nie może przejmować skrótu globalnego i
+  pozostawiać go bez działania. `Ctrl+H` otwiera Historię odtwarzania z każdego
+  głównego miejsca programu, w szczególności z Radia internetowego, podcastów,
+  WiiM i Sonosa. Po zamknięciu historii fokus wraca do elementu, z którego ją
+  wywołano.
+- Przy dodawaniu nowego widoku lub integracji sprawdź wspólną tablicę skrótów,
+  co najmniej `Ctrl+H`, `Alt+R`, `Alt+Shift+R` i `Ctrl+L`. Dodawaj testy
+  parametryzowane dla reprezentatywnych widoków zamiast osobnych, rozbieżnych
+  obsług klawiszy.
+
 ## Równoległe integracje systemów głośnikowych
 
 - WiiM i Sonos są wzorcem wspólnego kontraktu dla przyszłych systemów

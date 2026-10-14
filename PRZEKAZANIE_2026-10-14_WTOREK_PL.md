@@ -103,6 +103,21 @@ innego parametru, nie wolno go zgadywać ani odczytywać w zamian identyfikatora
 technicznego. Wspólne testy kontraktowe powinny objąć WiiM, Sonosa oraz
 przyszłe adaptery, pojedynczy komunikat NVDA i niezmieniony fokus.
 
+## Drobny punkt przekrojowy: Ctrl+H i skróty globalne
+
+`Ctrl+H` obecnie nie otwiera Historii odtwarzania z widoków WiiM i Sonosa.
+Trzeba sprawdzić także podcasty oraz inne główne widoki. Skrót ma być obsłużony
+na wspólnym poziomie aplikacji, a nie kopiowany osobno do każdego adaptera:
+powinien otworzyć jedną Historię odtwarzania niezależnie od bieżącej sesji, a
+po jej zamknięciu przywrócić fokus do wcześniejszego elementu.
+
+Przy tej poprawce należy przejrzeć routing pozostałych skrótów globalnych,
+zwłaszcza `Alt+R`, `Alt+Shift+R` i `Ctrl+L`, aby nowy widok nie przejmował ich
+bez działania. Dodać parametryzowany test wejścia z Radia internetowego,
+podcastów, WiiM i Sonosa. Ten mały punkt można przygotować równolegle w osobnym
+worktree po ustaleniu przyczyny blokującego problemu `Shift+F2`; nie może sam
+instalować wydania ani dotykać działającej aplikacji.
+
 ## Co naprawiono 14 października
 
 1. Edycja plików audio: wycinanie i dopisywanie korzystają z właściwego
@@ -156,6 +171,9 @@ z NVDA na niepotrzebnych plikach:
 7. W zapisanych strumieniach i pozycjach tylko do odczytu WiiM oraz Sonosa
    nacisnąć lewą strzałkę: ma podać raz dostępne parametry jak Radio
    internetowe, bez identyfikatorów technicznych i bez zmiany fokusu.
+8. Z Radia internetowego, podcastów, WiiM i Sonosa nacisnąć `Ctrl+H`: Historia
+   odtwarzania ma otworzyć się raz, a po jej zamknięciu fokus ma wrócić do
+   wcześniejszego elementu.
 
 Przed zamknięciem lub aktualizacją AMC nadal trzeba potwierdzić, że nie rośnie
 żaden plik `.amc-partial` i że nie trwa nagrywanie.
