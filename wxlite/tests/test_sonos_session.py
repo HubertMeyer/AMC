@@ -6,7 +6,7 @@ from types import MethodType, SimpleNamespace
 from amc_wx_lite import gui as gui_module
 from amc_wx_lite.gui import LiteFrame
 from amc_wx_lite.host_client import HostError, LiteHostClient
-from amc_wx_lite.list_model import Row
+from amc_wx_lite.list_model import ListModel, Row
 from amc_wx_lite.menu_model import build_menus
 from amc_wx_lite.navigation import (
     ActivateSonosGroup,
@@ -196,7 +196,8 @@ def test_sonos_own_stream_is_a_typed_material_without_spoken_url() -> None:
     )
 
     assert rows[0].title == "Radio domowe"
-    assert rows[0].detail == "Stacja zapisana w AMC"
+    assert rows[0].detail == ""
+    assert rows[0].show_kind is False
     assert rows[0].address == "https://secret.example/live"
     assert "secret.example" not in rows[0].title
     assert "secret.example" not in rows[0].detail
@@ -705,6 +706,27 @@ def test_sonos_library_and_material_rows_keep_ids_out_of_spoken_text() -> None:
     assert materials[0].service_id == "technical-material"
     assert "technical" not in materials[0].title
     assert "runtimeObject" not in materials[0].detail
+
+
+def test_sonos_and_wiim_style_own_stream_rows_speak_only_the_name() -> None:
+    rows = material_rows({
+        "items": [{
+            "itemId": "sonos-stream:radio-poznan",
+            "materialId": "radio-poznan",
+            "title": "Radio Poznań",
+            "kind": "ownStream",
+            "detail": "Stacja zapisana w AMC",
+            "streamUrl": "https://secret.example/live",
+        }]
+    }, "house-technical")
+    model = ListModel()
+    model.replace(rows)
+
+    assert model.text_for(0, 0) == "Radio Poznań"
+    assert model.text_for(0, 1) == ""
+    assert model.text_for(0, 2) == ""
+    assert model.selected_row is not None
+    assert model.selected_row.address == "https://secret.example/live"
 
 
 def test_sonos_dispatch_reaches_remote_volume_and_blocks_local_rate() -> None:

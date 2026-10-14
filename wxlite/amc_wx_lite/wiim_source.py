@@ -66,8 +66,9 @@ def network_stream_rows(payload: object, *, device_id: str) -> tuple[Row, ...]:
     """Zapisane strumienie WiiM bez adresów w tekście dostępnym.
 
     ``device_id`` pozostaje polem modelu potrzebnym do wykonania Entera.
-    Nazwa, rodzaj i licznik wiersza są jedynymi wartościami przekazywanymi
-    natywnej liście oraz NVDA.
+    Zwykła lista przekazuje NVDA nazwę i natywny licznik wiersza. Stałe
+    dopowiedzenie rodzaju nie odróżnia pozycji w jednorodnym widoku i tylko
+    powtarza informację zawartą w nagłówku „Strumienie zapisane w AMC”.
     """
     if not isinstance(payload, dict):
         raise WiiMPayloadError("Host WiiM zwrócił nieprawidłową odpowiedź")
@@ -93,7 +94,8 @@ def network_stream_rows(payload: object, *, device_id: str) -> tuple[Row, ...]:
             title=title,
             kind="wiimNetworkStream",
             url=_text(raw.get("streamUrl")),
-            detail=_text(raw.get("detail")) or "Strumień sieciowy",
+            detail="",
+            show_kind=False,
             parent_id=device_id.strip(),
             service_id=stream_id,
             service_kind="wiimNetworkStream",

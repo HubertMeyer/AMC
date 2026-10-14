@@ -729,6 +729,9 @@ def test_wiim_network_stream_view_uses_only_user_labels_and_returns_to_device() 
     assert "secret.example" not in nav.session.model.selected_row.title
     assert "secret.example" not in nav.session.model.selected_row.detail
     assert "Id = stream-7" not in repr(nav.session.model.rows)
+    assert nav.session.model.text_for(0, 0) == "Radio Poznań"
+    assert nav.session.model.text_for(0, 1) == ""
+    assert nav.session.model.text_for(0, 2) == ""
 
     intents = nav.activate_selected()
     assert len(intents) == 1

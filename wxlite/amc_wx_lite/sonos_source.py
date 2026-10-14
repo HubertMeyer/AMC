@@ -136,6 +136,7 @@ def material_rows(payload: object, household_id: str) -> tuple[Row, ...]:
         ):
             continue
         seen.add(item_id)
+        own_stream = kind == "ownStream"
         rows.append(Row(
             item_id=item_id,
             title=title,
@@ -149,7 +150,11 @@ def material_rows(payload: object, household_id: str) -> tuple[Row, ...]:
                 if kind == "ownStream"
                 else None
             ),
-            detail=_text(raw.get("detail")),
+            # W jednorodnym widoku własnych strumieni nagłówek już podaje
+            # kontekst. NVDA ma czytać samą nazwę, nie „nazwa, stacja zapisana
+            # w AMC”. Adres nadal jest jawnie dostępny pod Ctrl+Shift+C.
+            detail="" if own_stream else _text(raw.get("detail")),
+            show_kind=not own_stream,
             parent_id=household_id,
             service_id=material_id,
             service_kind=kind,
