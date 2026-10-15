@@ -59,6 +59,19 @@ LAUNCHER_PUBLISH = (
     / "win-x64"
     / "publish"
 )
+LIBRESPOT_HOST_SOURCE = REPO / "third_party" / "LibrespotHost" / "win-x64"
+LIBRESPOT_LICENSES_SOURCE = REPO / "licenses"
+LIBRESPOT_HOST_BINARY = "amc_spotify_librespot_host.exe"
+LIBRESPOT_HOST_PROVENANCE = "provenance-amc-host.json"
+LIBRESPOT_HOST_SHA256 = (
+    "f5b614f01d8943b5872d9a2bb86658761198b763bb25c1647aa79268a2473c8e"
+)
+LIBRESPOT_HOST_SIZE = 6_541_312
+LIBRESPOT_AMC_COMMIT = "791c8dbf2b3279f1bb8fee9220bf95d714168c96"
+LIBRESPOT_REVISION = "d36f9f1907e8cc9d68a93f8ebc6b627b1bf7267d"
+LIBRESPOT_RUN_URL = (
+    "https://github.com/michalkasperczak/AMC/actions/runs/35381167099"
+)
 
 
 def sha256(path: Path) -> str:
@@ -185,11 +198,7 @@ def copy_host(
             "  /home/michal/dotnet/dotnet publish "
             "src/AccessibleMediaController.LiteHost -c Release -r win-x64 --self-contained false"
         )
-    if Path(host_subdir).name != host_subdir or host_subdir in {"", ".", ".."}:
-        raise SystemExit(
-            "Nazwa folderu hosta musi byc pojedyncza bezpieczna nazwa, "
-            "np. host albo host-next."
-        )
+    _safe_host_subdir(host_subdir)
     destination = target / host_subdir
     destination.mkdir(parents=True, exist_ok=True)
     copied = []
@@ -212,6 +221,148 @@ def copy_host(
     if not executable.exists():
         raise SystemExit(f"W {host_dir} nie ma amc_lite_host.exe - build jest niepelny.")
     return copied, hashes
+
+
+def _safe_host_subdir(host_subdir: str) -> None:
+    if Path(host_subdir).name != host_subdir or host_subdir in {"", ".", ".."}:
+        raise SystemExit(
+            "Nazwa folderu hosta musi byc pojedyncza bezpieczna nazwa, "
+            "np. host albo host-next."
+        )
+
+
+def validate_librespot_package_source(
+    source_dir: Path = LIBRESPOT_HOST_SOURCE,
+    licenses_dir: Path = LIBRESPOT_LICENSES_SOURCE,
+) -> dict:
+    """Zweryfikuj przypiety artefakt i materialy przed pierwszym zapisem."""
+
+    binary = source_dir / LIBRESPOT_HOST_BINARY
+    provenance_path = source_dir / LIBRESPOT_HOST_PROVENANCE
+    mit_license = licenses_dir / "librespot-MIT.txt"
+    dependency_licenses = licenses_dir / "librespot-dependencies"
+    index_path = dependency_licenses / "INDEX.txt"
+    inventory_path = dependency_licenses / "inventory.json"
+    required_files = (binary, provenance_path, mit_license, index_path, inventory_path)
+    missing = [str(path) for path in required_files if not path.is_file()]
+    if missing:
+        raise SystemExit(
+            "Niepelne materialy przypietego hosta Librespot:\n  "
+            + "\n  ".join(missing)
+        )
+
+    actual_size = binary.stat().st_size
+    actual_sha = sha256(binary)
+    if actual_size != LIBRESPOT_HOST_SIZE or actual_sha != LIBRESPOT_HOST_SHA256:
+        raise SystemExit(
+            "Przypiety host Librespot nie odpowiada zatwierdzonej proweniencji: "
+            f"oczekiwano {LIBRESPOT_HOST_SIZE} B i {LIBRESPOT_HOST_SHA256}, "
+            f"jest {actual_size} B i {actual_sha}."
+        )
+
+    try:
+        provenance = json.loads(provenance_path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError) as error:
+        raise SystemExit(f"Nie mozna odczytac proweniencji Librespot: {error}") from error
+    expected = {
+        "binary": LIBRESPOT_HOST_BINARY,
+        "sha256": LIBRESPOT_HOST_SHA256,
+        "target": "x86_64-pc-windows-msvc",
+        "librespotRev": LIBRESPOT_REVISION,
+        "librespotVersion": "0.8.0",
+        "crtStatic": True,
+        "protocolVersion": 1,
+        "sessionId": "spotifyLibrespot",
+        "amcCommit": LIBRESPOT_AMC_COMMIT,
+        "runUrl": LIBRESPOT_RUN_URL,
+        "rustc": "rustc 1.98.1 (48a229cea 2026-09-01)",
+    }
+    mismatches = [
+        f"{name}: oczekiwano {value!r}, jest {provenance.get(name)!r}"
+        for name, value in expected.items()
+        if provenance.get(name) != value
+    ]
+    features = str(provenance.get("features", ""))
+    if "native-tls" not in features or "rodio-backend" not in features:
+        mismatches.append("features: brak native-tls albo rodio-backend")
+    if mismatches:
+        raise SystemExit(
+            "Niespojna proweniencja przypietego hosta Librespot:\n  "
+            + "\n  ".join(mismatches)
+        )
+
+    license_text = mit_license.read_text(encoding="utf-8")
+    if "MIT License" not in license_text or "Paul Lietar" not in license_text:
+        raise SystemExit("Licencja MIT Librespot jest niepelna albo niezgodna.")
+    index_text = index_path.read_text(encoding="utf-8")
+    if LIBRESPOT_REVISION not in index_text or "365 paczek" not in index_text:
+        raise SystemExit("Indeks licencji Librespot nie odpowiada przypietej rewizji.")
+    try:
+        inventory = json.loads(inventory_path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError) as error:
+        raise SystemExit(f"Nie mozna odczytac inwentarza licencji: {error}") from error
+    if (
+        not isinstance(inventory, list)
+        or len(inventory) != 365
+        or any(
+            not isinstance(item, dict) or item.get("verified") is not True
+            for item in inventory
+        )
+    ):
+        raise SystemExit(
+            "Inwentarz licencji Librespot nie zawiera 365 zweryfikowanych paczek."
+        )
+    return provenance
+
+
+def copy_librespot_host(
+    target: Path,
+    host_subdir: str = "host",
+    source_dir: Path = LIBRESPOT_HOST_SOURCE,
+    licenses_dir: Path = LIBRESPOT_LICENSES_SOURCE,
+) -> tuple[list[str], dict]:
+    """Dolacz przypiety host wzgledem katalogu LiteHost, nigdy wzgledem cwd."""
+
+    _safe_host_subdir(host_subdir)
+    validate_librespot_package_source(source_dir, licenses_dir)
+    copied: list[str] = []
+
+    host_destination = target / host_subdir / "LibrespotHost"
+    host_destination.mkdir(parents=True, exist_ok=True)
+    for name in (LIBRESPOT_HOST_BINARY, LIBRESPOT_HOST_PROVENANCE):
+        shutil.copy2(source_dir / name, host_destination / name)
+        copied.append(f"{host_subdir}/LibrespotHost/{name}")
+
+    licenses_destination = target / host_subdir / "licenses"
+    licenses_destination.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(
+        licenses_dir / "librespot-MIT.txt",
+        licenses_destination / "librespot-MIT.txt",
+    )
+    copied.append(f"{host_subdir}/licenses/librespot-MIT.txt")
+    dependency_source = licenses_dir / "librespot-dependencies"
+    dependency_destination = licenses_destination / "librespot-dependencies"
+    shutil.copytree(dependency_source, dependency_destination, dirs_exist_ok=True)
+    copied.extend(
+        f"{host_subdir}/licenses/librespot-dependencies/{path.relative_to(dependency_source).as_posix()}"
+        for path in sorted(dependency_source.rglob("*"))
+        if path.is_file()
+    )
+
+    executable = f"{host_subdir}/LibrespotHost/{LIBRESPOT_HOST_BINARY}"
+    provenance = f"{host_subdir}/LibrespotHost/{LIBRESPOT_HOST_PROVENANCE}"
+    license_files = [
+        relative for relative in copied if relative.startswith(f"{host_subdir}/licenses/")
+    ]
+    metadata = {
+        "executable": executable,
+        "pathFromLiteHostBase": f"LibrespotHost/{LIBRESPOT_HOST_BINARY}",
+        "sha256": LIBRESPOT_HOST_SHA256,
+        "bytes": LIBRESPOT_HOST_SIZE,
+        "provenance": provenance,
+        "licenseFiles": license_files,
+    }
+    return copied, metadata
 
 
 def copy_runtime(target: Path, runtime: Path) -> list[str]:
@@ -357,6 +508,10 @@ def main() -> int:
             "Wskaz jego folder przez --runtime."
         )
 
+    # Bramka jest przed --clean i przed pierwsza kopia: niespojna binarka albo
+    # proweniencja nie moze nawet czesciowo przebudowac katalogu kandydata.
+    validate_librespot_package_source()
+
     if args.clean and target.exists():
         shutil.rmtree(target)
     target.mkdir(parents=True, exist_ok=True)
@@ -381,8 +536,15 @@ def main() -> int:
     manifest["files"] += copy_updater(target, args.updater)
     host_files, host_hashes = copy_host(target, args.host, args.host_subdir)
     manifest["files"] += host_files
+    librespot_files, librespot_metadata = copy_librespot_host(
+        target,
+        args.host_subdir,
+    )
+    manifest["files"] += librespot_files
+    host_hashes[f"LibrespotHost/{LIBRESPOT_HOST_BINARY}"] = LIBRESPOT_HOST_SHA256
     manifest["hostHashes"] = host_hashes
     manifest["hostFolder"] = args.host_subdir
+    manifest["librespotHost"] = librespot_metadata
 
     manifest["files"] += copy_runtime(target, args.runtime)
     manifest["runtime"] = "embedded"

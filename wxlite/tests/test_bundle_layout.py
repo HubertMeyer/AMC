@@ -1,7 +1,11 @@
 """Package layout checks on explicit synthetic files; not an executable test."""
 import importlib.util
+import json
+import os
 from pathlib import Path
+import shutil
 import subprocess
+import sys
 import tempfile
 from datetime import datetime, timezone
 
@@ -162,6 +166,8 @@ def test_startup_file_selection_covers_interface_launcher_and_host():
         "runtime/LICENSE.txt",
         "host/amc_lite_host.exe",
         "host/AccessibleMediaController.Core.dll",
+        "host/LibrespotHost/amc_spotify_librespot_host.exe",
+        "host/LibrespotHost/provenance-amc-host.json",
         "host/readme.md",
     ]
     selected = bundle.select_startup_files(files, "host")
@@ -171,6 +177,8 @@ def test_startup_file_selection_covers_interface_launcher_and_host():
     assert "runtime/pythonw.exe" in selected
     assert "host/amc_lite_host.exe" in selected
     assert "host/AccessibleMediaController.Core.dll" in selected
+    assert "host/LibrespotHost/amc_spotify_librespot_host.exe" in selected
+    assert "host/LibrespotHost/provenance-amc-host.json" in selected
     assert "AMC-Python-Updater.exe" not in selected
     assert "host/readme.md" not in selected
 
@@ -241,3 +249,175 @@ def test_runtime_can_be_reused_in_place_during_bundle_update():
         copied = bundle.copy_runtime(target, runtime)
         assert marker.read_bytes() == b"sprawdzony-runtime"
         assert "runtime/python.exe" in copied
+
+
+def test_pinned_librespot_source_matches_local_provenance_and_license_inventory():
+    provenance = bundle.validate_librespot_package_source()
+    assert provenance["sha256"] == bundle.LIBRESPOT_HOST_SHA256
+    assert provenance["amcCommit"] == bundle.LIBRESPOT_AMC_COMMIT
+    assert provenance["librespotRev"] == bundle.LIBRESPOT_REVISION
+    assert provenance["runUrl"] == bundle.LIBRESPOT_RUN_URL
+
+
+def test_librespot_provenance_mismatch_refuses_before_writing_package():
+    with tempfile.TemporaryDirectory() as folder:
+        root = Path(folder)
+        source = root / "source"
+        licenses = root / "licenses"
+        dependencies = licenses / "librespot-dependencies"
+        source.mkdir()
+        dependencies.mkdir(parents=True)
+        shutil.copy2(
+            bundle.LIBRESPOT_HOST_SOURCE / bundle.LIBRESPOT_HOST_BINARY,
+            source / bundle.LIBRESPOT_HOST_BINARY,
+        )
+        provenance = json.loads(
+            (
+                bundle.LIBRESPOT_HOST_SOURCE / bundle.LIBRESPOT_HOST_PROVENANCE
+            ).read_text(encoding="utf-8")
+        )
+        provenance["sha256"] = "0" * 64
+        (source / bundle.LIBRESPOT_HOST_PROVENANCE).write_text(
+            json.dumps(provenance), encoding="utf-8"
+        )
+        (licenses / "librespot-MIT.txt").write_text(
+            "MIT License\nCopyright (c) 2015 Paul Lietar\n", encoding="utf-8"
+        )
+        (dependencies / "INDEX.txt").write_text(
+            f"365 paczek\n{bundle.LIBRESPOT_REVISION}\n", encoding="utf-8"
+        )
+        (dependencies / "inventory.json").write_text(
+            json.dumps([{"verified": True}] * 365), encoding="utf-8"
+        )
+
+        target = root / "bundle"
+        try:
+            bundle.copy_librespot_host(target, source_dir=source, licenses_dir=licenses)
+        except SystemExit as error:
+            assert "Niespojna proweniencja" in str(error)
+        else:
+            raise AssertionError("Niespojna proweniencja nie moze trafic do paczki")
+        assert not target.exists()
+
+
+def test_full_bundle_validates_librespot_before_cleaning_existing_candidate():
+    with tempfile.TemporaryDirectory() as folder:
+        root = Path(folder)
+        target = root / "bundle"
+        runtime = root / "runtime"
+        target.mkdir()
+        runtime.mkdir()
+        marker = target / "do-not-touch.txt"
+        marker.write_text("poprzedni kandydat", encoding="utf-8")
+
+        original_argv = sys.argv
+        original_validator = bundle.validate_librespot_package_source
+        try:
+            sys.argv = [
+                str(path),
+                "--out", str(target),
+                "--runtime", str(runtime),
+                "--clean",
+            ]
+
+            def refuse(*_args, **_kwargs):
+                raise SystemExit("Niespojna proweniencja")
+
+            bundle.validate_librespot_package_source = refuse
+            try:
+                bundle.main()
+            except SystemExit as error:
+                assert "Niespojna proweniencja" in str(error)
+            else:
+                raise AssertionError("Pelna paczka musi odmowic niespojnego hosta")
+        finally:
+            bundle.validate_librespot_package_source = original_validator
+            sys.argv = original_argv
+
+        assert marker.read_text(encoding="utf-8") == "poprzedni kandydat"
+
+
+def test_full_bundle_places_pinned_librespot_relative_to_lite_host_and_hashes_it():
+    with tempfile.TemporaryDirectory() as folder:
+        root = Path(folder)
+        host = root / "host-publish"
+        launcher = root / "launcher-publish"
+        updater = root / "updater-publish"
+        runtime = root / "runtime-source"
+        unrelated_cwd = root / "unrelated-cwd"
+        target = root / "bundle"
+        for directory in (host, launcher, updater, runtime, unrelated_cwd):
+            directory.mkdir()
+        (host / "amc_lite_host.exe").write_bytes(b"SYNTHETIC_LITE_HOST")
+        (launcher / "AMC.exe").write_bytes(b"SYNTHETIC_LAUNCHER")
+        (updater / "AMC-Python-Updater.exe").write_bytes(b"SYNTHETIC_UPDATER")
+        (runtime / "python.exe").write_bytes(b"SYNTHETIC_PYTHON")
+        (runtime / "pythonw.exe").write_bytes(b"SYNTHETIC_PYTHONW")
+        (runtime / "python314._pth").write_text("python314.zip\n", encoding="utf-8")
+
+        original_argv = sys.argv
+        original_cwd = Path.cwd()
+        try:
+            sys.argv = [
+                str(path),
+                "--out", str(target),
+                "--host", str(host),
+                "--host-subdir", "host-next",
+                "--launcher", str(launcher),
+                "--updater", str(updater),
+                "--runtime", str(runtime),
+            ]
+            os.chdir(unrelated_cwd)
+            assert bundle.main() == 0
+        finally:
+            os.chdir(original_cwd)
+            sys.argv = original_argv
+
+        manifest_path = target / "bundle-manifest.json"
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        assert manifest_path.stat().st_size < 8 * 1024 * 1024
+        executable = (
+            "host-next/LibrespotHost/" + bundle.LIBRESPOT_HOST_BINARY
+        )
+        provenance = (
+            "host-next/LibrespotHost/" + bundle.LIBRESPOT_HOST_PROVENANCE
+        )
+        librespot_manifest = manifest["librespotHost"]
+        assert librespot_manifest["executable"] == executable
+        assert librespot_manifest["pathFromLiteHostBase"] == (
+            "LibrespotHost/" + bundle.LIBRESPOT_HOST_BINARY
+        )
+        assert librespot_manifest["sha256"] == bundle.LIBRESPOT_HOST_SHA256
+        assert librespot_manifest["bytes"] == bundle.LIBRESPOT_HOST_SIZE
+        assert librespot_manifest["provenance"] == provenance
+        assert manifest["hostHashes"][
+            "LibrespotHost/" + bundle.LIBRESPOT_HOST_BINARY
+        ] == bundle.LIBRESPOT_HOST_SHA256
+        for relative in (
+            executable,
+            provenance,
+            "host-next/licenses/librespot-MIT.txt",
+            "host-next/licenses/librespot-dependencies/INDEX.txt",
+            "host-next/licenses/librespot-dependencies/inventory.json",
+        ):
+            assert relative in manifest["files"]
+            assert relative in manifest["fileHashes"]
+            assert manifest["fileHashes"][relative] == bundle.sha256(target / relative)
+            if "/licenses/" in relative:
+                assert relative in librespot_manifest["licenseFiles"]
+        expected_license_count = 1 + sum(
+            1
+            for item in (
+                bundle.LIBRESPOT_LICENSES_SOURCE / "librespot-dependencies"
+            ).rglob("*")
+            if item.is_file()
+        )
+        assert len(librespot_manifest["licenseFiles"]) == expected_license_count
+        for relative in librespot_manifest["licenseFiles"]:
+            assert relative in manifest["files"]
+            assert manifest["fileHashes"][relative] == bundle.sha256(target / relative)
+        assert executable in manifest["startupFiles"]
+        assert provenance in manifest["startupFiles"]
+        assert (target / executable).read_bytes() == (
+            bundle.LIBRESPOT_HOST_SOURCE / bundle.LIBRESPOT_HOST_BINARY
+        ).read_bytes()
