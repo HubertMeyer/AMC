@@ -41,6 +41,7 @@ from .audio_clip import (
     AudioClipContext,
     AudioClipFormatChoice,
     AudioClipSelection,
+    AudioClipTrackEndIntent,
     append_clip_confirmation_text,
     clip_context_from_status,
     describe_backup_outcome,
@@ -48,6 +49,7 @@ from .audio_clip import (
     format_clip_time,
     resolve_keep_audio_edit_backups,
     remove_clip_confirmation_text,
+    resolve_clip_end_position,
     restore_clip_selection,
     suggested_clip_file_name,
     update_clip_selections,
@@ -4965,6 +4967,7 @@ class LiteFrame(wx.Frame):
         self._audio_clip_edit_percent = -1
         self._audio_clip_edit_operation_id: str | None = None
         self._audio_clip_edit_kind: str | None = None
+        self._audio_clip_track_end_intent: AudioClipTrackEndIntent | None = None
         # Enter zatwierdzający modalny dialog Shift+F2 może na Windows trafić
         # jeszcze do odzyskującej fokus listy jako aktywacja wiersza. Wtedy
         # odtwarzacz otwierał plik równolegle z File.Move i zmiana nazwy mogła
@@ -14435,11 +14438,13 @@ class LiteFrame(wx.Frame):
 
     def _mark_audio_clip(self, *, start: bool) -> None:
         def ready(context: AudioClipContext, selection: AudioClipSelection) -> None:
+            marked_position = context.position_seconds
+            marked_to_source_end = False
             if start:
                 accepted = selection.set_start(
                     context.item_id,
                     context.source_path,
-                    context.position_seconds,
+                    marked_position,
                     context.duration_seconds,
                 )
                 if not accepted:
@@ -14448,10 +14453,15 @@ class LiteFrame(wx.Frame):
                     )
                     return
             else:
+                marked_position, marked_to_source_end = resolve_clip_end_position(
+                    context,
+                    getattr(self, "_audio_clip_track_end_intent", None),
+                    now=time.monotonic(),
+                )
                 accepted = selection.set_end(
                     context.item_id,
                     context.source_path,
-                    context.position_seconds,
+                    marked_position,
                     context.duration_seconds,
                 )
                 if not accepted:
@@ -14459,25 +14469,28 @@ class LiteFrame(wx.Frame):
                         "Koniec fragmentu musi znajdować się po jego początku"
                     )
                     return
+                self._audio_clip_track_end_intent = None
             if not self._persist_audio_clip_selection(selection):
                 return
 
             if start:
-                time = format_clip_time(selection.start_seconds or 0.0)
-                text = f"Początek fragmentu: {time}"
+                formatted_time = format_clip_time(selection.start_seconds or 0.0)
+                text = f"Początek fragmentu: {formatted_time}"
                 if selection.end_seconds is not None:
                     text += ". Długość: " + format_clip_time(
                         selection.end_seconds - (selection.start_seconds or 0.0)
                     )
             else:
-                time = format_clip_time(selection.end_seconds or 0.0)
-                text = f"Koniec fragmentu: {time}"
+                formatted_time = format_clip_time(selection.end_seconds or 0.0)
+                text = f"Koniec fragmentu: {formatted_time}"
                 if selection.start_seconds is not None:
                     text += ". Długość: " + format_clip_time(
                         (selection.end_seconds or 0.0) - selection.start_seconds
                     )
                 else:
                     text += ". Ustaw początek klawiszem I"
+                if marked_to_source_end:
+                    text += ". Do końca pliku"
             self.announcer.say(text)
 
         self._request_audio_clip_context(ready)
@@ -16350,6 +16363,7 @@ class LiteFrame(wx.Frame):
         if client is None:
             return
         if not to_end:
+            self._audio_clip_track_end_intent = None
             self.runner.submit(
                 "transport",
                 lambda session_id=self.navigator.active.value: client.seek_to_position(0.0, session_id),
@@ -16370,9 +16384,47 @@ class LiteFrame(wx.Frame):
         self.runner.submit(
             "transport",
             lambda session_id=self.navigator.active.value: client.seek_to_position(target, session_id),
-            lambda _payload: self._announce_track_edge(format_clock(target)),
+            lambda payload: self._complete_track_end_seek(
+                payload,
+                duration=float(duration),
+                target=target,
+            ),
             lambda error: self.announcer.say(f"Nie moge przewinac: {error}"),
         )
+
+    def _complete_track_end_seek(
+        self,
+        payload: dict | None,
+        *,
+        duration: float,
+        target: float,
+    ) -> None:
+        raw_position = (payload or {}).get("positionSeconds")
+        position = (
+            float(raw_position)
+            if isinstance(raw_position, (int, float))
+            and not isinstance(raw_position, bool)
+            else target
+        )
+        self._last_status = {**self._last_status, "positionSeconds": position}
+        item_id = self._last_status.get("id")
+        source_path = self._last_status.get("source")
+        if (
+            isinstance(item_id, str)
+            and item_id.strip()
+            and isinstance(source_path, str)
+            and source_path.strip()
+        ):
+            self._audio_clip_track_end_intent = AudioClipTrackEndIntent(
+                item_id=item_id.strip(),
+                source_path=source_path,
+                duration_seconds=duration,
+                preview_start_seconds=target,
+                expires_at=time.monotonic() + 120.0,
+            )
+        else:
+            self._audio_clip_track_end_intent = None
+        self._announce_track_edge(format_clock(target))
 
     def _announce_track_edge(self, text: str) -> None:
         """cs:318 i cs:323 pytaja o TE SAME dwie bramki, co strzalki."""

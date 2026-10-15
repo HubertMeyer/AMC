@@ -87,9 +87,15 @@ internal static class AudioClipOriginalEditor
                 sourcePath,
                 cancellationToken)
             .ConfigureAwait(false);
-        var effectiveEnd = request.End > sourceTimelineDuration
-            ? sourceTimelineDuration
-            : request.End;
+        var effectiveEnd = ResolveEffectiveEnd(
+            request.End,
+            request.SourceDuration,
+            sourceTimelineDuration);
+        DiagnosticLog.Info(
+            "audio-clip",
+            $"Granice cięcia: początek {request.Start:c}, koniec zaznaczenia {request.End:c}, "
+            + $"czas odtwarzacza {request.SourceDuration:c}, oś ramek {sourceTimelineDuration:c}, "
+            + $"koniec wykonany {effectiveEnd:c}.");
         if (effectiveEnd <= request.Start)
         {
             throw new ArgumentException("Początek i koniec fragmentu są poza rzeczywistą osią czasu pliku.");
@@ -419,6 +425,23 @@ internal static class AudioClipOriginalEditor
             Math.Max(2d, Math.Min(5d, expectedDuration.TotalSeconds * 0.02d)));
         return actualDuration > TimeSpan.Zero
             && (actualDuration - expectedDuration).Duration() <= tolerance;
+    }
+
+    internal static TimeSpan ResolveEffectiveEnd(
+        TimeSpan requestedEnd,
+        TimeSpan reportedSourceDuration,
+        TimeSpan packetTimelineDuration)
+    {
+        // Granica ustawiona na koniec zgłoszony przez odtwarzacz oznacza
+        // intencję "do końca pliku". W MP3 bez wiarygodnego nagłówka Xing
+        // zgłoszony czas bywa odrobinę krótszy od osi ostatnich ramek. Bez
+        // tego rozróżnienia ostatnie sekundy były błędnie dopisywane do wyniku.
+        var targetsSourceEnd = requestedEnd
+            >= reportedSourceDuration - TimeSpan.FromMilliseconds(50);
+        if (targetsSourceEnd) return packetTimelineDuration;
+        return requestedEnd > packetTimelineDuration
+            ? packetTimelineDuration
+            : requestedEnd;
     }
 
     private static async Task<TimeSpan> ReadPacketTimelineDurationAsync(

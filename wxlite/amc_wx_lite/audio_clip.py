@@ -227,6 +227,43 @@ class AudioClipContext:
 
 
 @dataclass(frozen=True, slots=True)
+class AudioClipTrackEndIntent:
+    """Krotkotrwala intencja ustawienia granicy na prawdziwym koncu pliku.
+
+    ``End`` celowo przenosi odtwarzanie dziesiec sekund przed koniec, aby
+    uzytkownik mogl odsluchac ogon. Sam czas odtwarzacza nie wystarcza jednak
+    do odroznienia takiego przejscia od recznego ustawienia granicy. Ten
+    kontekst pozwala nastepnemu ``O`` w koncowym odcinku wybrac dokladny koniec
+    zamiast chwili, w ktorej klawisz zostal nacisniety.
+    """
+
+    item_id: str
+    source_path: str
+    duration_seconds: float
+    preview_start_seconds: float
+    expires_at: float
+
+
+def resolve_clip_end_position(
+    context: AudioClipContext,
+    intent: AudioClipTrackEndIntent | None,
+    *,
+    now: float,
+) -> tuple[float, bool]:
+    """Rozpoznaj ``End`` + ``O`` jako jawne zaznaczenie do konca pliku."""
+    if intent is None or now > intent.expires_at:
+        return context.position_seconds, False
+    if (
+        intent.item_id != context.item_id
+        or intent.source_path.casefold() != context.source_path.casefold()
+        or abs(intent.duration_seconds - context.duration_seconds) > 0.5
+        or context.position_seconds + 0.25 < intent.preview_start_seconds
+    ):
+        return context.position_seconds, False
+    return context.duration_seconds, True
+
+
+@dataclass(frozen=True, slots=True)
 class AudioClipFormatChoice:
     """Oddziela wartosc protokolu od tekstu widocznego i mowionego."""
 

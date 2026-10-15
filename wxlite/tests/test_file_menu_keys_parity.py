@@ -33,6 +33,7 @@ from test_gui_logic import FakeKeyEvent, install_wx_stub
 install_wx_stub()
 
 from amc_wx_lite import gui, menu_model  # noqa: E402
+from amc_wx_lite.audio_clip import AudioClipContext, AudioClipSelection  # noqa: E402
 from amc_wx_lite.gui import chord_from_event  # noqa: E402
 from amc_wx_lite.library_source import LibrarySnapshot, Row  # noqa: E402
 from amc_wx_lite.navigation import View  # noqa: E402
@@ -244,6 +245,46 @@ def test_end_skacze_dziesiec_sekund_przed_koniec_nie_na_sam_koniec() -> None:
     assert skoki == [590.0]
     # Komunikat jak przy strzalkach (cs:323 pyta o te same dwie bramki).
     assert powiedziane == ["9:50"]
+
+
+def test_end_potem_o_ustawia_granice_na_dokladnym_koncu_pliku() -> None:
+    """End daje 10 sekund odsłuchu, ale zapamiętuje intencję prawdziwego końca."""
+    frame = gui.LiteFrame.__new__(gui.LiteFrame)
+    powiedziane: list[str] = []
+    frame.announcer = SimpleNamespace(say=powiedziane.append)
+    frame.messages = MessagePolicy()
+    frame._last_status = {
+        "id": "file:lisak",
+        "source": r"C:\Nagrania\Lisak.mp3",
+        "positionSeconds": 600.0,
+        "durationSeconds": 617.232,
+    }
+    frame._audio_clip_track_end_intent = None
+    frame._complete_track_end_seek(
+        {"positionSeconds": 607.232},
+        duration=617.232,
+        target=607.232,
+    )
+
+    selection = AudioClipSelection(
+        "file:lisak",
+        r"C:\Nagrania\Lisak.mp3",
+        607.232,
+        None,
+    )
+    context = AudioClipContext(
+        item_id="file:lisak",
+        source_path=r"C:\Nagrania\Lisak.mp3",
+        title="Lisak",
+        position_seconds=615.255,
+        duration_seconds=617.232,
+    )
+    frame._request_audio_clip_context = lambda ready: ready(context, selection)
+    frame._persist_audio_clip_selection = lambda _selection: True
+    frame._mark_audio_clip(start=False)
+
+    assert selection.end_seconds == 617.232
+    assert powiedziane[-1].endswith("Do końca pliku")
 
 
 def test_end_w_krotkim_utworze_nie_schodzi_pod_zero() -> None:

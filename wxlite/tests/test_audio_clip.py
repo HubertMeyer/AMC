@@ -6,6 +6,8 @@ from pathlib import Path
 from amc_wx_lite.audio_clip import (
     AudioEditSettingsReadError,
     AudioClipSelection,
+    AudioClipContext,
+    AudioClipTrackEndIntent,
     append_clip_confirmation_text,
     clip_context_from_status,
     describe_backup_outcome,
@@ -15,6 +17,7 @@ from amc_wx_lite.audio_clip import (
     resolve_keep_audio_edit_backups,
     read_clip_selections,
     remove_clip_confirmation_text,
+    resolve_clip_end_position,
     restore_clip_selection,
     suggested_clip_file_name,
     update_clip_selections,
@@ -46,6 +49,35 @@ def test_relative_boundaries_are_strict_and_directional() -> None:
     assert selection.find_relative_boundary(15.0, -1) == 10.0
     assert selection.find_relative_boundary(15.0, 1) == 20.0
     assert selection.find_relative_boundary(20.0, 1) is None
+
+
+def test_end_then_o_marks_the_real_end_but_manual_tail_boundary_stays_exact() -> None:
+    context = AudioClipContext(
+        item_id="file:lisak",
+        source_path=r"C:\Nagrania\Lisak.mp3",
+        title="Lisak",
+        position_seconds=615.25,
+        duration_seconds=617.232,
+    )
+    intent = AudioClipTrackEndIntent(
+        item_id=context.item_id,
+        source_path=context.source_path,
+        duration_seconds=context.duration_seconds,
+        preview_start_seconds=607.232,
+        expires_at=200.0,
+    )
+    assert resolve_clip_end_position(context, intent, now=100.0) == (
+        context.duration_seconds,
+        True,
+    )
+    assert resolve_clip_end_position(context, None, now=100.0) == (
+        context.position_seconds,
+        False,
+    )
+    assert resolve_clip_end_position(context, intent, now=201.0) == (
+        context.position_seconds,
+        False,
+    )
 
 
 def test_time_format_is_the_full_amc_millisecond_format() -> None:

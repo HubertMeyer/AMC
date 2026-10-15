@@ -2059,6 +2059,16 @@ static void TestAudioClipOriginalEditor()
             longExpectedDuration,
             TimeSpan.FromSeconds(6464.876168)),
         "Wynik obcięty według zaniżonego czasu nagłówka MP3 nie powinien przejść kontroli.");
+    var reportedEnd = TimeSpan.FromSeconds(617.232);
+    var packetEnd = TimeSpan.FromSeconds(617.257);
+    Assert(
+        AudioClipOriginalEditor.ResolveEffectiveEnd(reportedEnd, reportedEnd, packetEnd) == packetEnd,
+        "Koniec zaznaczony przez End nie obejmuje ostatnich ramek pliku.");
+    var manualTailBoundary = TimeSpan.FromSeconds(615.255);
+    Assert(
+        AudioClipOriginalEditor.ResolveEffectiveEnd(manualTailBoundary, reportedEnd, packetEnd)
+            == manualTailBoundary,
+        "Ręczna granica w ogonie została błędnie rozciągnięta do końca pliku.");
 
     if (!AudioClipOriginalEditor.IsAvailable)
     {
@@ -2179,6 +2189,22 @@ static void TestAudioClipOriginalEditor()
         {
             originalMp3Duration = originalMp3Reader.TotalTime;
         }
+        var mp3CutToEnd = Path.Combine(directory, "source-cut-to-end.mp3");
+        File.Copy(mp3, mp3CutToEnd);
+        var simulatedShortReportedDuration = originalMp3Duration - TimeSpan.FromMilliseconds(250);
+        var mp3CutToEndResult = AudioClipOriginalEditor.RemoveAsync(
+                new AudioClipRemovalRequest(
+                    mp3CutToEnd,
+                    TimeSpan.FromSeconds(1),
+                    simulatedShortReportedDuration,
+                    simulatedShortReportedDuration),
+                progress: null,
+                CancellationToken.None)
+            .GetAwaiter()
+            .GetResult();
+        Assert(
+            Math.Abs(mp3CutToEndResult.Duration.TotalSeconds - 1d) < 0.18d,
+            $"Cięcie MP3 do końca pozostawiło ogon: {mp3CutToEndResult.Duration}.");
         var mp3Result = AudioClipOriginalEditor.RemoveAsync(
                 new AudioClipRemovalRequest(
                     mp3,
