@@ -98,6 +98,7 @@ internal static class Program
 
         var profileMutations = OpenProfileMutationStore(args);
         using var tidalCatalog = OpenTidalCatalog(args);
+        using var spotifyCatalog = OpenSpotifyCatalog(args);
         using var wiim = OpenWiiM(args);
         using var sonos = new LiteSonosCoordinator(
             new LiteSonosAccountOwner(),
@@ -112,7 +113,8 @@ internal static class Program
             profileMutations,
             tidalCatalog,
             wiim,
-            sonos);
+            sonos,
+            spotifyCatalog);
         using var nvdaRelay = new LiteNvdaRelay();
         using var nvdaBridge = new LiteNvdaBridge(nvdaRelay);
         var registeredHandlers = new Dictionary<string, Func<LiteRequest, LiteEventSink, object?>>(
@@ -168,6 +170,11 @@ internal static class Program
                 LiteTidalCatalogContract.ContainerItemsOperation,
                 LiteTidalCatalogContract.CollectionViewOperation,
                 LiteTidalCatalogContract.MembershipOperation,
+                // Spotify uses the same authenticated Web API pattern, but
+                // this first layer contains reads only and never starts OAuth.
+                LiteSpotifyCatalogContract.SearchOperation,
+                LiteSpotifyCatalogContract.ContainerItemsOperation,
+                LiteSpotifyCatalogContract.CollectionViewOperation,
                 // Uruchomienie TIDALa i wczytanie strony albumu trwa nawet
                 // kilkadziesiat sekund. Radio, nagrywanie i status lokalnego
                 // odtwarzacza musza w tym czasie pozostac responsywne.
@@ -316,6 +323,15 @@ internal static class Program
     {
         var state = ReadArgumentPath(args, "--state-json");
         return state is null ? null : new LiteTidalCatalogCoordinator(state);
+    }
+
+    private static LiteSpotifyCatalogCoordinator? OpenSpotifyCatalog(string[] args)
+    {
+        var state = ReadArgumentPath(args, "--state-json");
+        return state is null
+            ? null
+            : new LiteSpotifyCatalogCoordinator(
+                new LiteSpotifyWindowsCatalogBackend(state));
     }
 
     private static LiteWiiMCoordinator? OpenWiiM(string[] args)

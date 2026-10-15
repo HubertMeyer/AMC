@@ -58,6 +58,7 @@ internal sealed class LiteEngineHandlers : IDisposable
     private readonly LiteRadioDirectorySearchCoordinator _radioDirectorySearch = new();
     private readonly LiteProfileMutationStore? _profileMutations;
     private readonly LiteTidalCatalogCoordinator? _tidalCatalog;
+    private readonly LiteSpotifyCatalogCoordinator? _spotifyCatalog;
     private readonly LiteTidalDesktopCoordinator _tidalDesktop = new();
     private readonly LiteWiiMCoordinator? _wiim;
     private readonly LiteSonosCoordinator? _sonos;
@@ -128,7 +129,8 @@ internal sealed class LiteEngineHandlers : IDisposable
         LiteProfileMutationStore? profileMutations = null,
         LiteTidalCatalogCoordinator? tidalCatalog = null,
         LiteWiiMCoordinator? wiim = null,
-        LiteSonosCoordinator? sonos = null)
+        LiteSonosCoordinator? sonos = null,
+        LiteSpotifyCatalogCoordinator? spotifyCatalog = null)
     {
         _radio = new RadioMediaOutput(timeshiftMinutes);
         _queueStore = queueStore;
@@ -137,6 +139,7 @@ internal sealed class LiteEngineHandlers : IDisposable
         _podcastProgressStore = podcastProgressStore;
         _profileMutations = profileMutations;
         _tidalCatalog = tidalCatalog;
+        _spotifyCatalog = spotifyCatalog;
         _wiim = wiim;
         _sonos = sonos;
         _podcastRefresh = podcastProgressStore is null
@@ -386,6 +389,18 @@ internal sealed class LiteEngineHandlers : IDisposable
                 TidalCollectionView(request.Args),
             [LiteTidalCatalogContract.MembershipOperation] = (request, _) =>
                 TidalCollectionMembership(request.Args),
+            [LiteSpotifyCatalogContract.CapabilitiesOperation] = (_, _) =>
+                SpotifyCapabilities(),
+            [LiteSpotifyCatalogContract.AccountStatusOperation] = (_, _) =>
+                SpotifyAccountStatus(),
+            [LiteSpotifyCatalogContract.CollectionRootOperation] = (_, _) =>
+                SpotifyCollectionRoot(),
+            [LiteSpotifyCatalogContract.CollectionViewOperation] = (request, _) =>
+                SpotifyCollectionView(request.Args),
+            [LiteSpotifyCatalogContract.ContainerItemsOperation] = (request, _) =>
+                SpotifyContainerItems(request.Args),
+            [LiteSpotifyCatalogContract.SearchOperation] = (request, _) =>
+                SpotifySearch(request.Args),
             [LiteTidalDesktopContract.PlayOperation] = (request, _) =>
                 _tidalDesktop.Play(request.Args),
             [LiteTidalDesktopContract.TransportOperation] = (request, _) =>
@@ -2657,6 +2672,24 @@ internal sealed class LiteEngineHandlers : IDisposable
         (_tidalCatalog ?? throw new LiteRequestException(
             "Host nie ma dostępu do profilu AMC potrzebnego do katalogu TIDAL."))
         .ChangeMembership(args);
+
+    private LiteSpotifyCatalogCoordinator RequireSpotify() =>
+        _spotifyCatalog ?? throw new LiteRequestException(
+            "Host nie ma dostępu do profilu AMC potrzebnego do katalogu Spotify.");
+
+    private object SpotifyCapabilities() => RequireSpotify().Capabilities();
+
+    private object SpotifyAccountStatus() => RequireSpotify().AccountStatus();
+
+    private object SpotifyCollectionRoot() => RequireSpotify().CollectionRoot();
+
+    private object SpotifyCollectionView(JsonElement args) =>
+        RequireSpotify().CollectionView(args);
+
+    private object SpotifyContainerItems(JsonElement args) =>
+        RequireSpotify().ContainerItems(args);
+
+    private object SpotifySearch(JsonElement args) => RequireSpotify().Search(args);
 
     private LiteWiiMCoordinator RequireWiiM() =>
         _wiim ?? throw new LiteRequestException(

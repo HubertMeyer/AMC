@@ -168,6 +168,17 @@
              Link="Engine\TidalCredentialStore.cs" />
     <Compile Include="..\AccessibleMediaController.Windows\Services\TidalOAuthClient.cs"
              Link="Engine\TidalOAuthClient.cs" />
+    <!-- Spotify read-only catalogue. OAuth code is linked only because token
+         refresh is part of authenticated reads; LiteHost exposes no login,
+         disconnect or collection-write operation. -->
+    <Compile Include="..\AccessibleMediaController.Windows\Services\SpotifyApiClient.cs"
+             Link="Engine\SpotifyApiClient.cs" />
+    <Compile Include="..\AccessibleMediaController.Windows\Services\SpotifyIntegrationService.cs"
+             Link="Engine\SpotifyIntegrationService.cs" />
+    <Compile Include="..\AccessibleMediaController.Windows\Services\SpotifyCredentialStore.cs"
+             Link="Engine\SpotifyCredentialStore.cs" />
+    <Compile Include="..\AccessibleMediaController.Windows\Services\SpotifyOAuthClient.cs"
+             Link="Engine\SpotifyOAuthClient.cs" />
     <!-- Pelne odtwarzanie TIDAL pozostaje w oryginalnej aplikacji. Linkujemy
          sprawdzony kontroler wskazywania utworu i oficjalne sterowanie SMTC. -->
     <Compile Include="..\AccessibleMediaController.Windows\Services\TidalDesktopController.cs"
