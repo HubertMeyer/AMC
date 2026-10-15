@@ -17,12 +17,15 @@ internal static class TransportRoutingTests
         var radio = LiteTransportRouting.Resolve("radio", "files", false);
         var files = LiteTransportRouting.Resolve("files", "radio", true);
         var podcasts = LiteTransportRouting.Resolve("podcasts", "radio", false);
+        var spotify = LiteTransportRouting.Resolve("spotify", "files", false);
         Assert.True(radio == new LiteTransportTarget("radio", "radio"),
             "Radio ma własny tor niezależnie od ostatniego polecenia.");
         Assert.True(files == new LiteTransportTarget("files", "files"),
             "Pliki mają własny tor niezależnie od Radia.");
         Assert.True(podcasts == new LiteTransportTarget("podcasts", "files"),
             "Podcasty używają lokalnego toru plikowego, ale zachowują nazwę sesji.");
+        Assert.True(spotify == new LiteTransportTarget("spotify", "spotify"),
+            "Spotify ma własny tor Librespot i nie może trafić do plików.");
     }
 
     private static void LegacyCallsKeepTheLastEngine()
@@ -35,6 +38,10 @@ internal static class TransportRoutingTests
             LiteTransportRouting.Resolve(null, "files", true)
                 == new LiteTransportTarget("podcasts", "files"),
             "Stary klient rozpoznaje odcinek na torze plikowym.");
+        Assert.True(
+            LiteTransportRouting.Resolve(null, "spotify", false)
+                == new LiteTransportTarget("spotify", "spotify"),
+            "Stare polecenie bez sessionId zachowuje ostatni tor Spotify.");
     }
 
     private static void UnknownSessionIsRejected()

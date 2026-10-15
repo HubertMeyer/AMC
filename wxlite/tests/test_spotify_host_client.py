@@ -1,4 +1,4 @@
-"""Narrow Python-to-host contract for read-only Spotify navigation."""
+"""Narrow Python-to-host contract for Spotify catalogue and playback."""
 
 from pathlib import Path
 
@@ -97,6 +97,38 @@ def test_spotify_search_sends_only_the_user_query() -> None:
     assert calls == [
         ("spotify.search", {"query": "Artysta"}, 120.0),
     ]
+    serialized = repr(calls).casefold()
+    assert "token" not in serialized
+    assert "credential" not in serialized
+    assert "source" not in serialized
+
+
+def test_spotify_play_sends_only_safe_item_identity_and_playback_values() -> None:
+    client, calls = recording_client()
+
+    client.spotify_play(
+        item_id="spotify:track:track123:occurrence:2",
+        title="Utwór",
+        external_id="track123",
+        kind="track",
+        artist="Wykonawca",
+        volume=37,
+        position_seconds=12.5,
+    )
+
+    assert calls == [(
+        "spotify.play",
+        {
+            "itemId": "spotify:track:track123:occurrence:2",
+            "title": "Utwór",
+            "externalId": "track123",
+            "kind": "track",
+            "artist": "Wykonawca",
+            "volume": 37,
+            "positionSeconds": 12.5,
+        },
+        60.0,
+    )]
     serialized = repr(calls).casefold()
     assert "token" not in serialized
     assert "credential" not in serialized

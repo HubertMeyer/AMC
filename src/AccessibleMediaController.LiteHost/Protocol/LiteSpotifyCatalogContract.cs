@@ -50,9 +50,10 @@ public static class LiteSpotifyCatalogContract
         CatalogSearch: true,
         CollectionWrite: false,
         Login: false,
-        Playback: false,
+        Playback: true,
         "Katalog i odtwarzanie Spotify mają osobne stany połączenia. "
-            + "Ta warstwa tylko odczytuje katalog; nie loguje, nie zapisuje biblioteki i nie odtwarza.");
+            + "Katalog pozostaje tylko do odczytu, a dźwięk odtwarza natywna sesja Librespot. "
+            + "Ta warstwa nie loguje i nie zapisuje biblioteki.");
 
     public static LiteSpotifyAccountStatusResult CreateAccountStatus(
         LiteSpotifyAccountProbe probe)
@@ -86,7 +87,7 @@ public static class LiteSpotifyCatalogContract
         {
             true => new LiteSpotifyConnectionStatus(
                 "connected", true, true,
-                "Konto odtwarzania Spotify jest zapisane. Odtwarzanie nie jest jeszcze dostępne w nowym interfejsie.",
+                "Konto odtwarzania Spotify jest zapisane i gotowe dla natywnej sesji.",
                 null, "nieznany"),
             false => new LiteSpotifyConnectionStatus(
                 "disconnected", true, false,

@@ -21,13 +21,17 @@ internal static class LiteTransportRouting
                 "radio" => new("radio", "radio"),
                 "files" => new("files", "files"),
                 "podcasts" => new("podcasts", "files"),
+                "spotify" => new("spotify", "spotify"),
                 _ => throw new LiteRequestException(
-                    "Transport lokalny obsługuje sesje Pliki, Podcasty i Radio.")
+                    "Transport obsługuje sesje Pliki, Podcasty, Radio i Spotify.")
             };
         }
 
-        return string.Equals(legacyActiveEngine, "radio", StringComparison.Ordinal)
-            ? new("radio", "radio")
-            : new(filesItemIsEpisode ? "podcasts" : "files", "files");
+        return legacyActiveEngine switch
+        {
+            "radio" => new("radio", "radio"),
+            "spotify" => new("spotify", "spotify"),
+            _ => new(filesItemIsEpisode ? "podcasts" : "files", "files")
+        };
     }
 }

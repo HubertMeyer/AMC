@@ -184,6 +184,7 @@ def test_session_list_labels_are_explicit_and_never_expose_model_values() -> Non
         "Ctrl+4, TIDAL",
         "Ctrl+5, WiiM",
         "Ctrl+6, Sonos",
+        "Ctrl+7, Spotify",
     )
     assert all("SessionId" not in label and "{" not in label for label in labels)
 

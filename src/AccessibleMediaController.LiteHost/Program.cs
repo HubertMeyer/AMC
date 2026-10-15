@@ -99,6 +99,7 @@ internal static class Program
         var profileMutations = OpenProfileMutationStore(args);
         using var tidalCatalog = OpenTidalCatalog(args);
         using var spotifyCatalog = OpenSpotifyCatalog(args);
+        using var spotifyPlayback = new LiteSpotifyPlaybackCoordinator();
         using var wiim = OpenWiiM(args);
         using var sonos = new LiteSonosCoordinator(
             new LiteSonosAccountOwner(),
@@ -114,7 +115,8 @@ internal static class Program
             tidalCatalog,
             wiim,
             sonos,
-            spotifyCatalog);
+            spotifyCatalog,
+            spotifyPlayback);
         using var nvdaRelay = new LiteNvdaRelay();
         using var nvdaBridge = new LiteNvdaBridge(nvdaRelay);
         var registeredHandlers = new Dictionary<string, Func<LiteRequest, LiteEventSink, object?>>(

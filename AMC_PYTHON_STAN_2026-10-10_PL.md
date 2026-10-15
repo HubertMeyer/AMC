@@ -471,6 +471,18 @@ prowadzić wyłącznie w nowym AMC Python; stary WPF jest materiałem historyczn
 a nie miejscem wdrożenia. Najpierw wykonać inwentaryzację istniejącego kodu,
 testów i ograniczeń oraz ustalić kontrakt dostępności, potem implementować.
 
+Ustalenie z 15 października: po pełnym dopracowaniu i odbiorze TIDAL jego
+funkcjonalność interfejsu jest bezpośrednim wzorcem dla Spotify. Dotyczy to
+wyszukiwania i zachowania kontekstu, tożsamości wyników, nawigacji po
+wykonawcach, albumach i utworach, Entera, strzałek, dodawania do biblioteki,
+odtwarzania, sortowania, skrótów, komunikatów oraz powrotu fokusu. Należy
+wykorzystać wspólne modele, polecenia i testy kontraktowe, a nie tworzyć drugi,
+niezależny interfejs. Różnicą może być tylko rzeczywiste ograniczenie lub
+dodatkowa możliwość oficjalnego API; brakujących danych nie wolno zgadywać.
+Spóźnione odpowiedzi wyszukiwania i odczytu katalogu nie mogą podmieniać
+nowszego źródła, widoku ani zaznaczenia. Stary librespot pozostaje materiałem
+technicznym, nie wzorcem UX.
+
 ## Dostępność i NVDA
 
 Listy i dialogi pozostają natywnymi kontrolkami wxPython. Nie dodajemy własnych
@@ -498,6 +510,14 @@ które jest już na dysku i w historii, ale nie trafiło jeszcze do indeksu
 Biblioteki, ma osobny test przez rzeczywisty LiteHost; odpowiedź zachowuje
 identyfikator wiersza historii i nie wykonuje pozornej aktualizacji pustego
 rekordu bazy.
+
+Użytkownik potwierdził 15 października, że semantyka `Shift+F2` ze starego AMC
+działała dobrze i ma być wzorcem dla nowego interfejsu. To świadomy wyjątek od
+zasady, że stary interfejs nie jest ogólnym wzorcem UX. Port obejmuje cały
+przepływ starego AMC: zatrzymanie wczytanego pliku, zachowanie pozycji,
+bezkolizyjne `File.Move`, aktualizację stabilnego rekordu i wszystkich
+odwołań, odświeżenie listy, powrót fokusu i jednoznaczne potwierdzenie. Samo
+przeniesienie pliku pozostaje w hoście C#, nie w warstwie wxPython.
 
 Najnowsza poprawka usuwa dodatkowy wyścig po zatwierdzeniu dialogu zmiany
 nazwy. Enter nie przechodzi już do przywróconej listy i nie otwiera pliku,
@@ -776,10 +796,16 @@ przypadkowe uruchomienie zastąpić stałej instalacji `AMC Python`.
 8. Uzupełnienie wykrytych braków w istniejących sesjach, bez regresji radia,
    nagrywania, harmonogramów i timeshiftu.
 9. Odzyskanie źródła lub ticketu „Sygnalisty”, analiza i wdrożenie aktualizacji.
-10. We wtorek, po krótkim odbiorze zmian plikowych i streamerów opisanym w
-   `PRZEKAZANIE_2026-10-14_WTOREK_PL.md`, rozpocząć Spotify od inwentaryzacji
-   i kontraktu dostępności. Następnie osobno przenieść właściwe dla Spotify
-   sortowanie i nawigację kontekstową, bez kopiowania założeń TIDAL.
+10. W toku: jedna sesja Spotify ma już katalog, wyszukiwanie, relacje,
+   historię nawigacji, powrót fokusu i bezpieczne etykiety według wzorca
+   obecnego TIDAL-a w AMC Python. Odtwarzanie utworu i odcinka jest podłączone
+   do sprawdzonego adaptera LibreSpot ze starego AMC przez osobny proces,
+   bez przekazywania tokenu do Pythona, argumentów procesu ani etykiet NVDA.
+   Działają wspólny transport, czas, przewijanie, głośność, wyciszenie oraz
+   wybór urządzenia audio; kontenery są jawnie odrzucane. Pozostają żywy
+   odbiór na zapisanym koncie Premium, test klawiatury i fokusu z NVDA oraz
+   dostępne logowanie natywnej sesji w nowym interfejsie. Interfejsu starego
+   AMC nie przenosić: jest wyłącznie źródłem działającego silnika LibreSpot.
 
 Publikacja AMC Python na GitHubie jest końcowym krokiem, nie częścią bieżącego
 zapisu planu. Przed nią trzeba odebrać działanie samodzielnego pakietu, radia,

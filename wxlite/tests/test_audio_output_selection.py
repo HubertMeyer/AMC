@@ -79,12 +79,13 @@ def test_profile_local_device_is_mapped_to_the_files_session(tmp_path: Path) -> 
             "local": "denon-usb",
             "radio": "radio-dac",
             "nieznana-sesja": "nie",
-        }}}
+        }}, "spotifyLibrespotDeviceName": "spotify-dac"}
     }), encoding="utf-8")
 
     assert read_profile_outputs(path) == {
         "files": "denon-usb",
         "radio": "radio-dac",
+        "spotify": "spotify-dac",
     }
 
 
@@ -124,6 +125,7 @@ def test_private_device_choices_survive_restart(tmp_path: Path) -> None:
         "files": "denon-usb",
         "radio": "",
         "podcasts": "sluchawki",
+        "spotify": "spotify-dac",
         "obca": "nie zapisuj",
     }))
 
@@ -131,6 +133,7 @@ def test_private_device_choices_survive_restart(tmp_path: Path) -> None:
         "files": "denon-usb",
         "radio": "",
         "podcasts": "sluchawki",
+        "spotify": "spotify-dac",
     }
 
 

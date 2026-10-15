@@ -1,0 +1,422 @@
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using AccessibleMediaController.Core.Sessions;
+using AccessibleMediaController.Core.Spotify;
+using AccessibleMediaController.LiteHost.Protocol;
+using AccessibleMediaController.Windows.Services;
+
+namespace AccessibleMediaController.LiteHost;
+
+/// <summary>
+/// Jeden tor odtwarzania Spotify dla interfejsu Python. Używa bez zmian
+/// sprawdzonego adaptera i osobnego procesu Librespot ze starego AMC, ale
+/// publikuje ten sam prosty kontrakt zdarzeń co pozostałe sesje LiteHosta.
+/// </summary>
+internal sealed class LiteSpotifyPlaybackCoordinator : IDisposable
+{
+    private const string SessionId = LiteSpotifyCatalogContract.SessionId;
+    private readonly object gate = new();
+    private readonly SpotifyLibrespotAuthenticationService authentication = new();
+    private SpotifyLibrespotMediaOutput? output;
+    private LiteEventSink? events;
+    private MediaItem? currentItem;
+    private string? selectedDeviceName;
+    private int volume = 35;
+    private bool muted;
+    private bool paused;
+    private bool playing;
+    private bool preparing;
+    private bool disposed;
+
+    internal object Play(JsonElement args, LiteEventSink eventSink)
+    {
+        var request = LiteSpotifyPlaybackContract.ReadPlay(args);
+        SpotifyLibrespotMediaOutput target;
+        int effectiveVolume;
+        lock (gate)
+        {
+            ObjectDisposedException.ThrowIf(disposed, this);
+            events = eventSink;
+            currentItem = request.Item;
+            volume = request.Volume;
+            paused = false;
+            playing = false;
+            preparing = true;
+            target = EnsureOutputLocked();
+            effectiveVolume = muted ? 0 : request.Volume;
+        }
+        target.Play(
+            request.Item,
+            request.Position,
+            effectiveVolume,
+            playbackRate: 1d);
+        return new
+        {
+            ok = true,
+            engine = SessionId,
+            sessionId = SessionId,
+            id = request.Item.Id,
+            title = request.Item.Title
+        };
+    }
+
+    internal object PauseResume()
+    {
+        SpotifyLibrespotMediaOutput target;
+        bool nextPaused;
+        lock (gate)
+        {
+            if (currentItem is null)
+                throw new LiteRequestException("Najpierw uruchom materiał w Spotify.");
+            target = EnsureOutputLocked();
+            nextPaused = !paused;
+            paused = nextPaused;
+            if (nextPaused)
+            {
+                playing = false;
+                preparing = false;
+            }
+            else
+            {
+                playing = true;
+            }
+        }
+        if (nextPaused) target.Pause();
+        else target.Resume();
+        return new
+        {
+            paused = nextPaused,
+            engine = SessionId,
+            sessionId = SessionId,
+            queue = false
+        };
+    }
+
+    internal object Stop()
+    {
+        SpotifyLibrespotMediaOutput? target;
+        lock (gate)
+        {
+            target = output;
+            currentItem = null;
+            paused = false;
+            playing = false;
+            preparing = false;
+        }
+        target?.Stop();
+        return new
+        {
+            ok = true,
+            engine = SessionId,
+            sessionId = SessionId,
+            queue = false,
+            playing = false
+        };
+    }
+
+    internal object Seek(JsonElement args)
+    {
+        var delta = LiteArgs.ReadDouble(
+            args, "deltaSeconds", double.NaN, -86_400d, 86_400d);
+        var absolute = LiteArgs.ReadDouble(
+            args, "positionSeconds", double.NaN, 0d, 86_400d);
+        SpotifyLibrespotMediaOutput target;
+        lock (gate)
+        {
+            if (currentItem is null)
+                throw new LiteRequestException("Najpierw uruchom materiał w Spotify.");
+            target = EnsureOutputLocked();
+        }
+        var position = !double.IsNaN(absolute)
+            ? TimeSpan.FromSeconds(absolute)
+            : target.Position + TimeSpan.FromSeconds(double.IsNaN(delta) ? 0d : delta);
+        if (position < TimeSpan.Zero) position = TimeSpan.Zero;
+        target.Seek(position);
+        return new
+        {
+            engine = SessionId,
+            sessionId = SessionId,
+            positionSeconds = position.TotalSeconds
+        };
+    }
+
+    internal object SetVolume(JsonElement args)
+    {
+        SpotifyLibrespotMediaOutput? target;
+        int nextVolume;
+        bool isMuted;
+        lock (gate)
+        {
+            nextVolume = LiteArgs.ReadInt(args, "volume", volume, 0, 100);
+            volume = nextVolume;
+            isMuted = muted;
+            target = output;
+        }
+        target?.SetVolume(isMuted ? 0 : nextVolume);
+        return new
+        {
+            volume = nextVolume,
+            engine = SessionId,
+            sessionId = SessionId,
+            queue = false
+        };
+    }
+
+    internal object ToggleMute()
+    {
+        SpotifyLibrespotMediaOutput? target;
+        bool nextMuted;
+        int currentVolume;
+        lock (gate)
+        {
+            muted = !muted;
+            nextMuted = muted;
+            currentVolume = volume;
+            target = output;
+        }
+        target?.SetVolume(nextMuted ? 0 : currentVolume);
+        return new
+        {
+            engine = SessionId,
+            sessionId = SessionId,
+            muted = nextMuted,
+            volume = currentVolume
+        };
+    }
+
+    internal object Status()
+    {
+        MediaItem? item;
+        SpotifyLibrespotMediaOutput? target;
+        bool isPlaying;
+        bool isPaused;
+        bool isMuted;
+        bool isPreparing;
+        int currentVolume;
+        lock (gate)
+        {
+            item = currentItem;
+            target = output;
+            isPlaying = playing;
+            isPaused = paused;
+            isMuted = muted;
+            isPreparing = preparing;
+            currentVolume = volume;
+        }
+        return new
+        {
+            engine = SessionId,
+            sessionId = SessionId,
+            playing = isPlaying,
+            paused = isPaused,
+            muted = isMuted,
+            preparing = isPreparing,
+            id = item?.Id,
+            title = item?.Title,
+            positionSeconds = target?.Position.TotalSeconds ?? 0d,
+            durationSeconds = item?.Duration.TotalSeconds ?? 0d,
+            volume = currentVolume,
+            rate = 1d,
+            bufferedSeconds = 0d,
+            behindLiveSeconds = 0d
+        };
+    }
+
+    internal object ListOutputs(JsonElement args)
+    {
+        var requested = LiteArgs.ReadText(args, "selectedDeviceId")?.Trim();
+        SpotifyLibrespotMediaOutput target;
+        lock (gate) target = EnsureOutputLocked();
+        var devices = target.GetOutputDevicesAsync().GetAwaiter().GetResult();
+        var choices = new List<LiteSpotifyOutputChoice>
+        {
+            new(null, "Domyślne urządzenie audio", true)
+        };
+        foreach (var device in devices
+            .Where(device => !string.IsNullOrWhiteSpace(device.Name))
+            .DistinctBy(device => device.Name, StringComparer.OrdinalIgnoreCase))
+        {
+            choices.Add(new(device.Name, device.Name, true));
+        }
+        if (!string.IsNullOrWhiteSpace(requested)
+            && !choices.Any(choice => string.Equals(
+                choice.Id, requested, StringComparison.OrdinalIgnoreCase)))
+        {
+            choices.Add(new(requested, $"{requested} (niedostępne)", false));
+        }
+        return new { devices = choices };
+    }
+
+    internal object SelectOutput(JsonElement args)
+    {
+        var deviceName = LiteArgs.ReadText(args, "deviceId")?.Trim();
+        var restart = LiteArgs.ReadBool(args, "restart", true);
+        SpotifyLibrespotMediaOutput? target;
+        bool active;
+        lock (gate)
+        {
+            selectedDeviceName = deviceName;
+            target = output;
+            active = currentItem is not null && (playing || paused || preparing);
+            // Konfiguracja startowa zachowuje leniwy proces: dokładnie tak jak
+            // konstruktor starego AMC, który tylko zapamiętuje nazwę urządzenia.
+            if (!restart && target is null)
+            {
+                return new
+                {
+                    sessionId = SessionId,
+                    deviceId = deviceName,
+                    available = true,
+                    active = false,
+                    rebuilt = false,
+                    usingDefault = string.IsNullOrWhiteSpace(deviceName)
+                };
+            }
+            target ??= EnsureOutputLocked();
+        }
+
+        var changed = target.TrySetOutputDeviceAsync(deviceName)
+            .GetAwaiter().GetResult();
+        if (!changed)
+            throw new LiteRequestException("Nie udało się zmienić urządzenia audio Spotify.");
+        return new
+        {
+            sessionId = SessionId,
+            deviceId = deviceName,
+            available = true,
+            active,
+            rebuilt = active && restart,
+            usingDefault = string.IsNullOrWhiteSpace(deviceName)
+        };
+    }
+
+    private SpotifyLibrespotMediaOutput EnsureOutputLocked()
+    {
+        ObjectDisposedException.ThrowIf(disposed, this);
+        if (output is not null) return output;
+        var executablePath = Path.Combine(
+            AppContext.BaseDirectory,
+            "LibrespotHost",
+            "amc_spotify_librespot_host.exe");
+        output = new SpotifyLibrespotMediaOutput(
+            () => new LibrespotHostClient(
+                () => LibrespotHostProcess.Start(executablePath),
+                credentialProvider: authentication.GetAccessTokenAsync),
+            action => action(),
+            selectedDeviceName);
+        output.PlaybackPreparing += OnPlaybackPreparing;
+        output.PlaybackStarted += OnPlaybackStarted;
+        output.DurationAvailable += OnDurationAvailable;
+        output.PlaybackEnded += OnPlaybackEnded;
+        output.PlaybackFailed += OnPlaybackFailed;
+        return output;
+    }
+
+    private void OnPlaybackPreparing(object? sender, MediaPlaybackPreparingEventArgs e)
+    {
+        lock (gate)
+        {
+            if (!IsCurrentLocked(e.Item)) return;
+            preparing = true;
+            playing = false;
+            paused = false;
+        }
+    }
+
+    private void OnPlaybackStarted(object? sender, MediaPlaybackStartedEventArgs e)
+    {
+        LiteEventSink? sink;
+        lock (gate)
+        {
+            if (!IsCurrentLocked(e.Item)) return;
+            preparing = false;
+            playing = true;
+            paused = false;
+            sink = events;
+        }
+        sink?.Publish("playback.started", new
+        {
+            engine = SessionId,
+            sessionId = SessionId,
+            id = e.Item.Id,
+            title = e.Item.Title
+        });
+    }
+
+    private void OnDurationAvailable(object? sender, MediaDurationAvailableEventArgs e)
+    {
+        lock (gate)
+        {
+            if (!IsCurrentLocked(e.Item)) return;
+            currentItem!.Duration = e.Duration;
+        }
+    }
+
+    private void OnPlaybackEnded(object? sender, MediaPlaybackEndedEventArgs e)
+    {
+        LiteEventSink? sink;
+        lock (gate)
+        {
+            if (!IsCurrentLocked(e.Item)) return;
+            preparing = false;
+            playing = false;
+            paused = false;
+            sink = events;
+        }
+        sink?.Publish("playback.ended", new
+        {
+            engine = SessionId,
+            sessionId = SessionId,
+            id = e.Item.Id,
+            title = e.Item.Title,
+            queueContinues = false
+        });
+    }
+
+    private void OnPlaybackFailed(object? sender, MediaOutputFailedEventArgs e)
+    {
+        LiteEventSink? sink;
+        lock (gate)
+        {
+            // Zmiana urządzenia bez materiału ma własną odpowiedź operacji;
+            // nie udaje awarii bieżącego utworu.
+            if (e.Item is null || !IsCurrentLocked(e.Item)) return;
+            preparing = false;
+            playing = false;
+            paused = false;
+            sink = events;
+        }
+        sink?.Publish("playback.failed", new
+        {
+            engine = SessionId,
+            sessionId = SessionId,
+            id = e.Item.Id,
+            title = e.Item.Title,
+            message = e.Message
+        });
+    }
+
+    private bool IsCurrentLocked(MediaItem item) =>
+        currentItem is not null
+        && string.Equals(currentItem.Id, item.Id, StringComparison.Ordinal);
+
+    public void Dispose()
+    {
+        SpotifyLibrespotMediaOutput? target;
+        lock (gate)
+        {
+            if (disposed) return;
+            disposed = true;
+            target = output;
+            output = null;
+            events = null;
+        }
+        target?.Dispose();
+        authentication.Dispose();
+    }
+}
+
+internal sealed record LiteSpotifyOutputChoice(
+    [property: JsonPropertyName("id")] string? Id,
+    [property: JsonPropertyName("name")] string Name,
+    [property: JsonPropertyName("available")] bool Available);

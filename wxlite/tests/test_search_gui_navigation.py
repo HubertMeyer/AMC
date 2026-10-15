@@ -395,6 +395,151 @@ def test_tidal_search_right_arrow_uses_catalog_row_without_library_write() -> No
     assert calls == [(result, True)]
 
 
+def test_spotify_search_uses_online_catalog_without_library_write() -> None:
+    shown = []
+    searched = []
+
+    class Runner:
+        @staticmethod
+        def submit(_name, work, done, _failed):
+            done(work())
+
+    frame = SimpleNamespace(
+        search_sources=SimpleNamespace(
+            collect=lambda _sessions: SearchCollection((), ())
+        ),
+        client=SimpleNamespace(
+            spotify_search=lambda query: (
+                searched.append(query)
+                or {
+                    "heading": "Wyniki wyszukiwania Spotify",
+                    "items": [{
+                        "id": "spotify:artist:private",
+                        "externalId": "privateartist",
+                        "title": "Nowy wykonawca",
+                        "artist": "",
+                        "kind": "artist",
+                        "isAvailable": True,
+                    }],
+                    "warning": "",
+                }
+            )
+        ),
+        runner=Runner(),
+        _search_dialog_alive=lambda _dialog: True,
+    )
+    dialog = SimpleNamespace(
+        catalog=None,
+        show_results=lambda entries, warnings: shown.append((entries, warnings)),
+        search_failed=lambda: shown.append("failed"),
+    )
+
+    LiteFrame._run_search_query(
+        frame,
+        "Nowy wykonawca",
+        dialog,
+        all_services=False,
+        session_before=SessionId.SPOTIFY,
+    )
+
+    assert searched == ["Nowy wykonawca"]
+    assert len(shown[0][0]) == 1
+    result = shown[0][0][0]
+    assert result.row.kind == "artist"
+    assert result.row.service_id == "privateartist"
+    assert result.remote_kind == "spotifyCatalog"
+    assert shown[0][1] == ()
+
+
+def test_spotify_search_right_arrow_uses_catalog_row_without_write() -> None:
+    calls = []
+    result = SearchEntry(
+        SessionId.SPOTIFY,
+        Row(
+            "spotify:artist:private",
+            "Nowy wykonawca",
+            "artist",
+            service_id="privateartist",
+            service_kind="artist",
+        ),
+        remote_kind="spotifyCatalog",
+    )
+    frame = SimpleNamespace(
+        _open_spotify_search_result=lambda entry, *, relations: calls.append(
+            (entry, relations)
+        )
+    )
+
+    LiteFrame._complete_search_result_action(
+        frame,
+        result,
+        [result],
+        SearchResultAction.RELATIONS,
+    )
+
+    assert calls == [(result, True)]
+
+
+def test_spotify_search_write_action_is_refused_without_client_call() -> None:
+    messages = []
+    result = SearchEntry(
+        SessionId.SPOTIFY,
+        Row(
+            "spotify:album:private",
+            "Album",
+            "album",
+            service_id="privatealbum",
+            service_kind="album",
+        ),
+        remote_kind="spotifyCatalog",
+    )
+    frame = SimpleNamespace(announcer=SimpleNamespace(say=messages.append))
+
+    LiteFrame._complete_remote_search_result_action(
+        frame,
+        [result],
+        SearchResultAction.LIBRARY,
+    )
+
+    assert messages == [
+        "Ten wynik Spotify można przeglądać albo odtworzyć; "
+        "zapisywanie w kolekcji nie jest jeszcze dostępne"
+    ]
+
+
+def test_spotify_search_playback_opens_the_result_then_activates_it() -> None:
+    calls = []
+    result = SearchEntry(
+        SessionId.SPOTIFY,
+        Row(
+            "spotify:track:private",
+            "Utwór",
+            "track",
+            service_id="privatetrack",
+            service_kind="track",
+        ),
+        remote_kind="spotifyCatalog",
+    )
+    frame = SimpleNamespace(
+        _open_spotify_search_result=lambda entry, *, relations: calls.append(
+            ("open", entry, relations)
+        ),
+        _dispatch=lambda action: calls.append(("dispatch", action)),
+    )
+
+    LiteFrame._complete_search_result_action(
+        frame,
+        result,
+        [result],
+        SearchResultAction.TOGGLE_PLAYBACK,
+    )
+
+    assert calls == [
+        ("open", result, False),
+        ("dispatch", Action.ACTIVATE),
+    ]
+
+
 def test_online_tidal_library_action_uses_tidal_membership_not_podcast_import() -> None:
     calls = []
     result = SearchEntry(

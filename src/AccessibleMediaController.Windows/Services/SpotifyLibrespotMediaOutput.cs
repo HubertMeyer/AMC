@@ -166,11 +166,11 @@ internal sealed class SpotifyLibrespotMediaOutput : IMediaOutput, IDisposable
     public void Play(MediaItem item, TimeSpan position, int volume, double playbackRate)
     {
         ArgumentNullException.ThrowIfNull(item);
-        var uri = SpotifyMediaOutput.PlaybackTrackUri(item);
+        var uri = SpotifyPlaybackItemContract.PlaybackUri(item);
         // Ta sama bramka co w sesji SDK: odcinek podcastu gra, kontener nie.
         // Dwie kopie warunku rozjechaly sie wczesniej i odcinek dzialal w jednym
         // silniku, a w drugim nie.
-        var rejection = SpotifyMediaOutput.PlaybackRejection(item);
+        var rejection = SpotifyPlaybackItemContract.Rejection(item);
         if (rejection is not null)
         {
             RaiseOnUi(() => PlaybackFailed?.Invoke(
@@ -896,7 +896,7 @@ internal sealed class SpotifyLibrespotMediaOutput : IMediaOutput, IDisposable
             + "Zatrzymaj sesję i uruchom ją ponownie z wybranym wyjściem.",
         LibrespotHostErrorCodes.Disposed =>
             "Sesja Spotify — Librespot została zamknięta.",
-        _ => SpotifyMediaOutput.SafeDiagnostic(message) is { Length: > 0 } safe
+        _ => SpotifyPlaybackItemContract.SafeDiagnostic(message) is { Length: > 0 } safe
             ? $"Sesja Spotify — Librespot zgłosiła błąd. {safe}"
             : "Sesja Spotify — Librespot zgłosiła błąd."
     };

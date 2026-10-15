@@ -179,6 +179,15 @@
              Link="Engine\SpotifyCredentialStore.cs" />
     <Compile Include="..\AccessibleMediaController.Windows\Services\SpotifyOAuthClient.cs"
              Link="Engine\SpotifyOAuthClient.cs" />
+    <!-- Natywne odtwarzanie Spotify: sprawdzony adapter, osobne logowanie
+         urządzeniowe i magazyn poświadczeń ze starego AMC. Proces Librespot
+         pozostaje potomkiem LiteHosta i dostaje token wyłącznie przez stdin. -->
+    <Compile Include="..\AccessibleMediaController.Windows\Services\SpotifyLibrespotMediaOutput.cs"
+             Link="Engine\SpotifyLibrespotMediaOutput.cs" />
+    <Compile Include="..\AccessibleMediaController.Windows\Services\SpotifyLibrespotAuthenticationService.cs"
+             Link="Engine\SpotifyLibrespotAuthenticationService.cs" />
+    <Compile Include="..\AccessibleMediaController.Windows\Services\SpotifyLibrespotCredentialStore.cs"
+             Link="Engine\SpotifyLibrespotCredentialStore.cs" />
     <!-- Pelne odtwarzanie TIDAL pozostaje w oryginalnej aplikacji. Linkujemy
          sprawdzony kontroler wskazywania utworu i oficjalne sterowanie SMTC. -->
     <Compile Include="..\AccessibleMediaController.Windows\Services\TidalDesktopController.cs"

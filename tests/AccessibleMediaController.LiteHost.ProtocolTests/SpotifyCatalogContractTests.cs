@@ -9,6 +9,7 @@ internal static class SpotifyCatalogContractTests
     public static void Run()
     {
         CapabilitiesDescribeOneReadOnlySession();
+        PlaybackRequestAcceptsOnlyTracksAndEpisodes();
         AccountStatusKeepsCatalogueAndPlaybackSeparate();
         MissingClientIdIsAnExplicitSafeState();
         CollectionRootContainsOnlyUserFacingCategories();
@@ -37,10 +38,48 @@ internal static class SpotifyCatalogContractTests
             "kontrakt nie deklaruje jednej sesji");
         Check(!root.GetProperty("collectionWrite").GetBoolean()
             && !root.GetProperty("login").GetBoolean()
-            && !root.GetProperty("playback").GetBoolean(),
-            "kontrakt wystawia niedostarczone mutacje, logowanie albo odtwarzanie");
+            && root.GetProperty("playback").GetBoolean(),
+            "kontrakt nie rozdziela odtwarzania od mutacji i logowania");
         Check(!json.Contains("spotifyLibrespot", StringComparison.OrdinalIgnoreCase),
             "historyczna druga sesja wyciekła do kontraktu");
+    }
+
+    private static void PlaybackRequestAcceptsOnlyTracksAndEpisodes()
+    {
+        using var good = JsonDocument.Parse("""
+        {
+          "itemId":"spotify:track:abc123:occurrence:2",
+          "externalId":"abc123",
+          "title":"Utwór\r\npróby",
+          "artist":"Wykonawca",
+          "kind":"track",
+          "volume":41,
+          "positionSeconds":12.5,
+          "token":"nie może przejść"
+        }
+        """);
+        var request = LiteSpotifyPlaybackContract.ReadPlay(good.RootElement);
+        Check(request.Item.Kind == MediaItemKind.Track
+            && request.Item.ExternalId == "abc123"
+            && request.Item.Source == "spotify:track:abc123"
+            && request.Item.Title == "Utwórpróby"
+            && request.Volume == 41
+            && request.Position == TimeSpan.FromSeconds(12.5),
+            "poprawny utwór nie został bezpiecznie przygotowany do Librespota");
+
+        using var container = JsonDocument.Parse("""
+        {"itemId":"album","externalId":"abc123","title":"Album","kind":"album"}
+        """);
+        try
+        {
+            LiteSpotifyPlaybackContract.ReadPlay(container.RootElement);
+            throw new InvalidOperationException("kontener Spotify trafił do odtwarzania");
+        }
+        catch (LiteRequestException exception)
+        {
+            Check(exception.Message.Contains("utwór albo odcinek", StringComparison.Ordinal),
+                "odmowa kontenera nie podpowiada właściwego działania");
+        }
     }
 
     private static void AccountStatusKeepsCatalogueAndPlaybackSeparate()

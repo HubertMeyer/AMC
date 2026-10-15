@@ -511,6 +511,32 @@ class LiteHostClient:
         """Search Spotify without changing the account collection."""
         return self.call("spotify.search", {"query": query}, timeout=120.0)
 
+    def spotify_play(
+        self,
+        *,
+        item_id: str,
+        title: str,
+        external_id: str,
+        kind: str,
+        volume: int,
+        artist: str = "",
+        position_seconds: float = 0.0,
+    ) -> Any:
+        """Play one catalogue item without moving credentials through Python."""
+        return self.call(
+            "spotify.play",
+            {
+                "itemId": item_id,
+                "title": title,
+                "externalId": external_id,
+                "kind": kind,
+                "artist": artist,
+                "volume": volume,
+                "positionSeconds": max(0.0, float(position_seconds)),
+            },
+            timeout=60.0,
+        )
+
     def tidal_search(self, query: str) -> Any:
         """Search the official catalogue without changing the collection."""
         return self.call("tidal.search", {"query": query}, timeout=120.0)
@@ -1518,12 +1544,19 @@ class LiteHostClient:
     def configure_audio(self, **options: Any) -> Any:
         return self.call("audio.configure", options)
 
-    def audio_outputs(self, selected_device_id: str | None = None) -> Any:
+    def audio_outputs(
+        self,
+        selected_device_id: str | None = None,
+        session_id: str | None = None,
+    ) -> Any:
         """Lista jawnie nazwanych wyjsc, wraz z niedostepnym zapisanym wyborem."""
+        args: dict[str, Any] = {"selectedDeviceId": selected_device_id}
+        if session_id:
+            args["sessionId"] = session_id
         return self.call(
             "audio.outputs",
-            {"selectedDeviceId": selected_device_id},
-            timeout=5.0,
+            args,
+            timeout=15.0,
         )
 
     def select_audio_output(

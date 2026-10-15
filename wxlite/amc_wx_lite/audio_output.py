@@ -19,6 +19,7 @@ _SUPPORTED_OUTPUT_SESSIONS = (
     SessionId.FILES,
     SessionId.RADIO,
     SessionId.PODCASTS,
+    SessionId.SPOTIFY,
 )
 _SESSION_KEYS = {session.value for session in _SUPPORTED_OUTPUT_SESSIONS}
 _PROFILE_TO_LITE = {"local": SessionId.FILES.value}
@@ -66,17 +67,24 @@ def read_profile_outputs(path: Path | str) -> dict[str, str]:
         if isinstance(audio, dict)
         else None
     )
-    if not isinstance(values, dict):
-        return {}
-
     mapped: dict[str, str] = {}
-    for raw_key, value in values.items():
-        key = _PROFILE_TO_LITE.get(raw_key, raw_key)
-        if key not in _SESSION_KEYS or not isinstance(value, str):
-            continue
-        normalized = value.strip()
+    if isinstance(values, dict):
+        for raw_key, value in values.items():
+            key = _PROFILE_TO_LITE.get(raw_key, raw_key)
+            if key not in _SESSION_KEYS or not isinstance(value, str):
+                continue
+            normalized = value.strip()
+            if normalized and len(normalized) <= _MAXIMUM_DEVICE_ID_LENGTH:
+                mapped[key] = normalized
+    spotify_device = (
+        settings.get("spotifyLibrespotDeviceName")
+        if isinstance(settings, dict)
+        else None
+    )
+    if isinstance(spotify_device, str):
+        normalized = spotify_device.strip()
         if normalized and len(normalized) <= _MAXIMUM_DEVICE_ID_LENGTH:
-            mapped[key] = normalized
+            mapped[SessionId.SPOTIFY.value] = normalized
     return mapped
 
 

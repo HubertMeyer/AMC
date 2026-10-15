@@ -103,6 +103,9 @@ from .navigation import (
     OpenPodcastPlaylistView,
     OpenPodcastView,
     OpenQueueView,
+    OpenSpotifyCollectionView,
+    OpenSpotifyContainer,
+    OpenSpotifyView,
     OpenTidalContainer,
     OpenTidalView,
     OpenSonosView,
@@ -110,12 +113,14 @@ from .navigation import (
     PlayQueueAt,
     PlayStation,
     PlayMedia,
+    PlaySpotifyItem,
     PlayTidalContainer,
     PlayTidalTrack,
     PlayTrack,
     PlayWiiMNetworkStream,
     PlaySonosMaterial,
     SessionId,
+    ShowSpotifyRelations,
     ShowTidalRelations,
     TransientNavigationSnapshot,
     View,
@@ -125,6 +130,7 @@ from .shortcuts import (
     Action,
     Chord,
     GLOBAL_VIEW_SHORTCUTS,
+    SPOTIFY_SUPPORTED_ACTIONS,
     TIDAL_SUPPORTED_ACTIONS,
     SONOS_SUPPORTED_ACTIONS,
     WIIM_SUPPORTED_ACTIONS,
@@ -257,6 +263,12 @@ from .radio_recording import (
     station_activity_rows,
 )
 from .state_store import LiteState, Station, StationList, StateStore
+from .spotify_source import (
+    SpotifyContainerPayloadError,
+    account_summary_from_payload as spotify_account_summary_from_payload,
+    container_result_from_payload as spotify_container_result_from_payload,
+    root_result_from_payload as spotify_root_result_from_payload,
+)
 from .tidal_source import (
     TidalContainerPayloadError,
     TidalProfileError,
@@ -4912,6 +4924,7 @@ class LiteFrame(wx.Frame):
         # Kazde otwarcie katalogu ma numer. Odpowiedz rozpoczęta przed
         # opuszczeniem sesji nie moze po powrocie podmienic nowszej listy.
         self._tidal_navigation_version = 0
+        self._spotify_navigation_version = 0
         self._podcast_loaded_counts: dict[str, int] = {}
         # ``None`` w stanie prywatnym dziedziczy wybor glownego AMC. Do czasu
         # pierwszego odczytu widoku trzymamy bezpieczny domysl; wynik strony
@@ -4981,6 +4994,7 @@ class LiteFrame(wx.Frame):
         self._playing_session: SessionId | None = None
         self._playing_sessions: set[SessionId] = set()
         self._pending_playback_session: SessionId | None = None
+        self._pending_spotify_playback: PlaySpotifyItem | None = None
         # Oryginalny TIDAL jest osobnym odtwarzaczem. Ta flaga wlacza tylko
         # jego transport; nie udaje stanu lokalnego WindowsMediaOutput.
         self._tidal_desktop_has_playback = False
@@ -5073,6 +5087,12 @@ class LiteFrame(wx.Frame):
             "TIDAL",
             self.navigator.sessions[SessionId.TIDAL],
         )
+        self.spotify_list = MediaListCtrl(
+            self.list_panel,
+            self.navigator.sessions[SessionId.SPOTIFY].model,
+            "Spotify",
+            self.navigator.sessions[SessionId.SPOTIFY],
+        )
         self.wiim_list = MediaListCtrl(
             self.list_panel,
             self.navigator.sessions[SessionId.WIIM].model,
@@ -5088,6 +5108,7 @@ class LiteFrame(wx.Frame):
         self.radio_list.Hide()
         self.podcasts_list.Hide()
         self.tidal_list.Hide()
+        self.spotify_list.Hide()
         self.wiim_list.Hide()
         self.sonos_list.Hide()
         list_sizer = wx.BoxSizer(wx.VERTICAL)
@@ -5097,6 +5118,7 @@ class LiteFrame(wx.Frame):
         list_sizer.Add(self.radio_list, 1, wx.EXPAND)
         list_sizer.Add(self.podcasts_list, 1, wx.EXPAND)
         list_sizer.Add(self.tidal_list, 1, wx.EXPAND)
+        list_sizer.Add(self.spotify_list, 1, wx.EXPAND)
         list_sizer.Add(self.wiim_list, 1, wx.EXPAND)
         list_sizer.Add(self.sonos_list, 1, wx.EXPAND)
         self.list_panel.SetSizer(list_sizer)
@@ -5643,6 +5665,7 @@ class LiteFrame(wx.Frame):
             self.radio_list,
             self.podcasts_list,
             self.tidal_list,
+            self.spotify_list,
             self.wiim_list,
             self.sonos_list,
         ):
@@ -5782,6 +5805,7 @@ class LiteFrame(wx.Frame):
                 SessionId.TIDAL,
                 SessionId.WIIM,
                 SessionId.SONOS,
+                SessionId.SPOTIFY,
             )
             if all_services
             else (session_before,)
@@ -5906,6 +5930,39 @@ class LiteFrame(wx.Frame):
                             results.append(candidate)
                     except (HostError, HostUnavailable, TidalContainerPayloadError):
                         warnings.append("Nie udało się przeszukać katalogu TIDAL")
+            # Spotify, podobnie jak TIDAL, korzysta z katalogu konta tylko w
+            # bieżącej sesji. Samo wyszukiwanie nie zapisuje żadnego wyniku.
+            if SessionId.SPOTIFY in sessions and not all_services:
+                client = self.client
+                if client is None:
+                    warnings.append("Katalog Spotify jest niedostępny")
+                else:
+                    try:
+                        payload = client.spotify_search(query)
+                        online = spotify_container_result_from_payload(payload)
+                        known = {
+                            (candidate.session_id, candidate.row.item_id)
+                            for candidate in results
+                        }
+                        for row in online.rows:
+                            candidate = SearchEntry(
+                                SessionId.SPOTIFY,
+                                row,
+                                remote_kind="spotifyCatalog",
+                            )
+                            identity = (candidate.session_id, candidate.row.item_id)
+                            if identity in known:
+                                continue
+                            known.add(identity)
+                            results.append(candidate)
+                        if online.warning:
+                            warnings.append(online.warning)
+                    except (
+                        HostError,
+                        HostUnavailable,
+                        SpotifyContainerPayloadError,
+                    ):
+                        warnings.append("Nie udało się przeszukać katalogu Spotify")
             return collected, results, tuple(dict.fromkeys(warnings))
 
         def done(result: tuple[
@@ -5943,8 +6000,26 @@ class LiteFrame(wx.Frame):
             )
             return
 
+        if (
+            entry.session_id is SessionId.SPOTIFY
+            and action in (
+                SearchResultAction.OPEN,
+                SearchResultAction.RELATIONS,
+                SearchResultAction.TOGGLE_PLAYBACK,
+            )
+        ):
+            self._open_spotify_search_result(
+                entry,
+                relations=action is SearchResultAction.RELATIONS,
+            )
+            if action is SearchResultAction.TOGGLE_PLAYBACK:
+                self._dispatch(Action.ACTIVATE)
+            return
+
         if action is SearchResultAction.RELATIONS:
-            self.announcer.say("Powiązania są dostępne dla wyników TIDAL")
+            self.announcer.say(
+                "Powiązania są dostępne dla wyników TIDAL i Spotify"
+            )
             return
 
         remote = [candidate for candidate in selected if candidate.remote_kind]
@@ -5994,6 +6069,25 @@ class LiteFrame(wx.Frame):
         self._transient_preview_return = None
         self._switch_session(SessionId.TIDAL)
         self._run(self.navigator.open_tidal_search_result(
+            entry.row,
+            relations=relations,
+        ))
+
+    def _open_spotify_search_result(
+        self,
+        entry: SearchEntry,
+        *,
+        relations: bool,
+    ) -> None:
+        """Use the online Spotify row transiently and never save it."""
+
+        self._transient_preview_return = None
+        self._switch_session(SessionId.SPOTIFY)
+        # Pierwsze przejście do sesji mogło równolegle zacząć wczytywać
+        # korzeń. Wynik wyszukiwania jest jawnym celem i nie może zostać po
+        # chwili przykryty spóźnioną odpowiedzią korzenia.
+        self._spotify_navigation_version += 1
+        self._run(self.navigator.open_spotify_search_result(
             entry.row,
             relations=relations,
         ))
@@ -6058,6 +6152,15 @@ class LiteFrame(wx.Frame):
             else:
                 self.announcer.say(
                     "Ten wynik TIDAL można otworzyć albo jawnie dodać do kolekcji"
+                )
+            return
+        if lead.session_id is SessionId.SPOTIFY:
+            if action is SearchResultAction.INFORMATION:
+                self.announcer.say(lead.accessible_label)
+            else:
+                self.announcer.say(
+                    "Ten wynik Spotify można przeglądać albo odtworzyć; "
+                    "zapisywanie w kolekcji nie jest jeszcze dostępne"
                 )
             return
         if action is SearchResultAction.INFORMATION:
@@ -6743,7 +6846,12 @@ class LiteFrame(wx.Frame):
                 private_audio_outputs,
                 profile_audio_outputs,
             )
-            for session in (SessionId.FILES, SessionId.RADIO, SessionId.PODCASTS)
+            for session in (
+                SessionId.FILES,
+                SessionId.RADIO,
+                SessionId.PODCASTS,
+                SessionId.SPOTIFY,
+            )
         }
         # ``_start_engine`` bywa tez wywolywane przez lekkie tryby testowe i
         # awaryjne, ktore nie otwieraja profilu radia. Brak migawki oznacza
@@ -6977,6 +7085,19 @@ class LiteFrame(wx.Frame):
                 self._playing_session = SessionId.RADIO
                 self._playing_sessions.add(SessionId.RADIO)
                 self._schedule_radio_recognition_after_source_change()
+            elif data.get("engine") == "spotify":
+                pending = self._pending_spotify_playback
+                item_id = str(data.get("id") or "")
+                title = str(data.get("title") or "")
+                if pending is not None:
+                    item_id = pending.item_id
+                    title = pending.title
+                self.navigator.note_spotify_playback_started(item_id, title)
+                self._playing_session = SessionId.SPOTIFY
+                self._playing_sessions.add(SessionId.SPOTIFY)
+                self._pending_spotify_playback = None
+                if self._pending_playback_session is SessionId.SPOTIFY:
+                    self._pending_playback_session = None
             if data.get("tempoFallbackReason"):
                 self.announcer.say(
                     "Wybrany algorytm tempa jest niedostępny. Używany SoundTouch."
@@ -6995,6 +7116,9 @@ class LiteFrame(wx.Frame):
                 playing_sessions.discard(SessionId.FILES)
                 playing_sessions.discard(SessionId.PODCASTS)
                 self._playing_sessions = playing_sessions
+            if data.get("engine") == "spotify":
+                playing_sessions.discard(SessionId.SPOTIFY)
+                self._playing_sessions = playing_sessions
             if ended_podcast:
                 self._podcast_checkpoint_active = False
             if data.get("engine") == "files" and not data.get("queueContinues"):
@@ -7006,6 +7130,22 @@ class LiteFrame(wx.Frame):
                 str(data.get("id") or ""), str(data.get("title") or "")
             ))
         elif name == "playback.failed":
+            if data.get("engine") == "spotify":
+                pending = self._pending_spotify_playback
+                self._pending_spotify_playback = None
+                if self._pending_playback_session is SessionId.SPOTIFY:
+                    self._pending_playback_session = None
+                self._playing_sessions.discard(SessionId.SPOTIFY)
+                if pending is not None:
+                    self.navigator.restore_spotify_playback_after_failed_handoff(
+                        pending.previous_item_id,
+                        pending.previous_title,
+                    )
+                self.announcer.say(
+                    "Nie udało się odtworzyć Spotify: "
+                    + str(data.get("message") or "błąd")
+                )
+                return
             failed_session = self._pending_playback_session
             if failed_session is None and data.get("engine") == "radio":
                 failed_session = SessionId.RADIO
@@ -7451,6 +7591,11 @@ class LiteFrame(wx.Frame):
                 preferred_id=self.navigator.sessions[SessionId.TIDAL].library_return_id,
             ))
             return
+        if self.navigator.active is SessionId.SPOTIFY:
+            self._open_spotify_view(OpenSpotifyView(
+                preferred_id=self.navigator.sessions[SessionId.SPOTIFY].library_return_id,
+            ))
+            return
         if not self.library.is_available:
             self.announcer.say(self.library.describe() or "Biblioteka niedostepna")
             return
@@ -7766,6 +7911,228 @@ class LiteFrame(wx.Frame):
             menu.Destroy()
             wx.CallAfter(active_list.SetFocus)
 
+    # ------------------------------------------------------------- Spotify
+
+    def _open_spotify_view(self, intent: OpenSpotifyView) -> None:
+        """Read the fixed Spotify collection root and its account status."""
+
+        client = self.client
+        if client is None:
+            self.announcer.say("Silnik nie jest gotowy")
+            return
+        self._spotify_navigation_version += 1
+        version = self._spotify_navigation_version
+
+        def work():
+            root = spotify_root_result_from_payload(client.spotify_collection_root())
+            try:
+                account = spotify_account_summary_from_payload(
+                    client.spotify_account_status()
+                )
+            except (HostError, HostUnavailable):
+                account = spotify_account_summary_from_payload(None)
+            return root, account
+
+        def done(result) -> None:
+            if (
+                version != self._spotify_navigation_version
+                or self.navigator.active is not SessionId.SPOTIFY
+            ):
+                return
+            root, account = result
+            self._run(self.navigator.apply_spotify_view(
+                root.heading,
+                list(root.rows),
+                preferred_id=intent.preferred_id,
+            ))
+            if account.label and not account.connected:
+                self.announcer.say(account.label)
+
+        def failed(error: Exception) -> None:
+            if (
+                version != self._spotify_navigation_version
+                or self.navigator.active is not SessionId.SPOTIFY
+            ):
+                return
+            self.announcer.say(
+                str(error)
+                if isinstance(error, (HostError, SpotifyContainerPayloadError))
+                else "Nie udało się otworzyć biblioteki Spotify"
+            )
+
+        self.runner.submit("spotify-navigation", work, done, failed)
+
+    def _open_spotify_collection_view(
+        self,
+        intent: OpenSpotifyCollectionView,
+    ) -> None:
+        """Read one collection category without changing the account."""
+
+        client = self.client
+        if client is None:
+            self.announcer.say("Silnik nie jest gotowy")
+            return
+        self._spotify_navigation_version += 1
+        version = self._spotify_navigation_version
+
+        def work():
+            return spotify_container_result_from_payload(
+                client.spotify_collection_view(intent.view)
+            )
+
+        def done(result) -> None:
+            if (
+                version != self._spotify_navigation_version
+                or self.navigator.active is not SessionId.SPOTIFY
+            ):
+                return
+            self._run(self.navigator.apply_spotify_collection_view(
+                intent,
+                result.heading,
+                list(result.rows),
+            ))
+            if result.warning:
+                self.announcer.say(result.warning)
+
+        def failed(error: Exception) -> None:
+            if (
+                version != self._spotify_navigation_version
+                or self.navigator.active is not SessionId.SPOTIFY
+            ):
+                return
+            self.announcer.say(
+                str(error)
+                if isinstance(error, (HostError, SpotifyContainerPayloadError))
+                else "Nie udało się odczytać kolekcji Spotify"
+            )
+
+        self.runner.submit("spotify-navigation", work, done, failed)
+
+    def _open_spotify_container(self, intent: OpenSpotifyContainer) -> None:
+        """Open an album, playlist, podcast or artist section read-only."""
+
+        client = self.client
+        if client is None:
+            self.announcer.say("Silnik nie jest gotowy")
+            return
+        self._spotify_navigation_version += 1
+        version = self._spotify_navigation_version
+
+        def work():
+            return spotify_container_result_from_payload(
+                client.spotify_container_items(
+                    external_id=intent.service_id,
+                    title=intent.title,
+                    kind=intent.kind,
+                    artist=intent.artist,
+                    artist_section=intent.section,
+                )
+            )
+
+        def done(result) -> None:
+            if (
+                version != self._spotify_navigation_version
+                or self.navigator.active is not SessionId.SPOTIFY
+            ):
+                return
+            self._run(self.navigator.apply_spotify_container(
+                intent,
+                result.heading,
+                list(result.rows),
+            ))
+            if result.warning:
+                self.announcer.say(result.warning)
+            if result.has_more:
+                self.announcer.say(
+                    "Spotify ma więcej wyników; dalsze strony nie są jeszcze dostępne"
+                )
+
+        def failed(error: Exception) -> None:
+            if (
+                version != self._spotify_navigation_version
+                or self.navigator.active is not SessionId.SPOTIFY
+            ):
+                return
+            self.announcer.say(
+                str(error)
+                if isinstance(error, (HostError, SpotifyContainerPayloadError))
+                else "Nie udało się otworzyć zawartości Spotify"
+            )
+
+        self.runner.submit("spotify-navigation", work, done, failed)
+
+    def _show_spotify_relations(self, intent: ShowSpotifyRelations) -> None:
+        """Show only user-facing Spotify relations in a native menu."""
+
+        if not intent.choices:
+            return
+        if len(intent.choices) == 1:
+            self._run(self.navigator.activate_spotify_relation(intent.choices[0]))
+            return
+        menu = wx.Menu(intent.title)
+        identifiers: list[int] = []
+        for choice in intent.choices:
+            item = menu.Append(wx.ID_ANY, choice.label)
+            identifier = item.GetId()
+            identifiers.append(identifier)
+            self.Bind(
+                wx.EVT_MENU,
+                lambda _event, selected=choice: self._run(
+                    self.navigator.activate_spotify_relation(selected)
+                ),
+                id=identifier,
+            )
+        active_list = self._active_list()
+        try:
+            active_list.PopupMenu(menu)
+        finally:
+            for identifier in identifiers:
+                self.Unbind(wx.EVT_MENU, id=identifier)
+            menu.Destroy()
+            wx.CallAfter(active_list.SetFocus)
+
+    def _play_spotify(self, intent: PlaySpotifyItem) -> None:
+        """Hand one safe catalogue identity to the native Librespot engine."""
+
+        client = self.client
+        if client is None:
+            self.navigator.restore_spotify_playback_after_failed_handoff(
+                intent.previous_item_id,
+                intent.previous_title,
+            )
+            self.announcer.say("Silnik nie działa, nie mogę odtworzyć Spotify")
+            return
+        self._pending_spotify_playback = intent
+        self._pending_playback_session = SessionId.SPOTIFY
+
+        def done(_payload: dict) -> None:
+            # Przyjęcie polecenia nie znaczy jeszcze, że słychać dźwięk.
+            # Stan zatwierdzi dopiero zdarzenie playback.started.
+            self._refresh_status()
+
+        def failed(error: Exception) -> None:
+            if self._pending_spotify_playback is intent:
+                self._pending_spotify_playback = None
+                self._pending_playback_session = None
+                self.navigator.restore_spotify_playback_after_failed_handoff(
+                    intent.previous_item_id,
+                    intent.previous_title,
+                )
+            self.announcer.say(f"Nie udało się odtworzyć Spotify: {error}")
+
+        self.runner.submit(
+            "playback",
+            lambda: client.spotify_play(
+                item_id=intent.item_id,
+                title=intent.title,
+                external_id=intent.service_id,
+                kind=intent.kind,
+                volume=self.options.volume,
+            ),
+            done,
+            failed,
+        )
+
     def _open_library_view(
         self,
         intent: OpenLibraryView,
@@ -8069,6 +8436,7 @@ class LiteFrame(wx.Frame):
             podcast_session=self.navigator.active is SessionId.PODCASTS,
             tidal_session=self.navigator.active is SessionId.TIDAL,
             tidal_collection=tidal_collection,
+            spotify_session=self.navigator.active is SessionId.SPOTIFY,
             wiim_session=self.navigator.active is SessionId.WIIM,
             wiim_streams=(
                 not player
@@ -8130,6 +8498,12 @@ class LiteFrame(wx.Frame):
                     "Ta funkcja nie dotyczy odtwarzania w oryginalnym TIDALu"
                 )
                 return
+        if self.navigator.active is SessionId.SPOTIFY:
+            if action not in SPOTIFY_SUPPORTED_ACTIONS:
+                self.announcer.say(
+                    "Ta funkcja nie jest jeszcze dostępna w sesji Spotify"
+                )
+                return
         if self.navigator.active is SessionId.WIIM:
             if action not in WIIM_SUPPORTED_ACTIONS:
                 self.announcer.say(
@@ -8154,6 +8528,9 @@ class LiteFrame(wx.Frame):
         elif action is Action.SESSION_TIDAL:
             self._transient_preview_return = None
             self._switch_session(SessionId.TIDAL)
+        elif action is Action.SESSION_SPOTIFY:
+            self._transient_preview_return = None
+            self._switch_session(SessionId.SPOTIFY)
         elif action is Action.SESSION_WIIM:
             self._transient_preview_return = None
             self._switch_session(SessionId.WIIM)
@@ -8362,6 +8739,8 @@ class LiteFrame(wx.Frame):
             self._choose_file()
         elif action is Action.QUICK_INFORMATION:
             self._announce_quick_information()
+        elif action is Action.SPOTIFY_RELATIONS:
+            self._run(self.navigator.spotify_relations())
         elif action is Action.COPY_NAME:
             self._copy_name()
         elif action is Action.COPY_ADDRESS:
@@ -8511,6 +8890,12 @@ class LiteFrame(wx.Frame):
                     LibraryView.SONOS_LIBRARY,
                     household_id=self._sonos_content_household_id(),
                 ))
+            elif self.navigator.active is SessionId.SPOTIFY:
+                self._open_spotify_view(OpenSpotifyView(
+                    preferred_id=self.navigator.sessions[
+                        SessionId.SPOTIFY
+                    ].library_return_id,
+                ))
             else:
                 self._return_to_library()
         elif action is Action.VIEW_HISTORY:
@@ -8581,6 +8966,12 @@ class LiteFrame(wx.Frame):
                 self._open_podcast_aggregate(intent)
             elif isinstance(intent, OpenPodcastPlaylistView):
                 self._open_podcast_playlist_view(intent)
+            elif isinstance(intent, OpenSpotifyView):
+                self._open_spotify_view(intent)
+            elif isinstance(intent, OpenSpotifyCollectionView):
+                self._open_spotify_collection_view(intent)
+            elif isinstance(intent, OpenSpotifyContainer):
+                self._open_spotify_container(intent)
             elif isinstance(intent, OpenTidalView):
                 self._open_tidal_view(intent)
             elif isinstance(intent, OpenTidalContainer):
@@ -8589,6 +8980,8 @@ class LiteFrame(wx.Frame):
                 self._open_sonos_view(intent)
             elif isinstance(intent, ShowTidalRelations):
                 self._show_tidal_relations(intent)
+            elif isinstance(intent, ShowSpotifyRelations):
+                self._show_spotify_relations(intent)
             elif isinstance(intent, PlayTrack):
                 self._play_track(intent)
             elif isinstance(intent, PlayFromQueue):
@@ -8603,6 +8996,8 @@ class LiteFrame(wx.Frame):
                 self._play_tidal_track(intent)
             elif isinstance(intent, PlayTidalContainer):
                 self._play_tidal_container(intent)
+            elif isinstance(intent, PlaySpotifyItem):
+                self._play_spotify(intent)
             elif isinstance(intent, ActivateWiiMDevice):
                 self._activate_wiim_device(intent)
             elif isinstance(intent, PlayWiiMNetworkStream):
@@ -8636,6 +9031,7 @@ class LiteFrame(wx.Frame):
             SessionId.RADIO: "Radio internetowe",
             SessionId.PODCASTS: "Podcasty i YouTube",
             SessionId.TIDAL: "TIDAL",
+            SessionId.SPOTIFY: "Spotify",
             SessionId.WIIM: "WiiM",
             SessionId.SONOS: "Sonos",
         }[self.navigator.active])
@@ -8659,6 +9055,8 @@ class LiteFrame(wx.Frame):
             LibraryView.SONOS_FAVORITES: "Ulubione Sonos",
             LibraryView.SONOS_PLAYLISTS: "Playlisty Sonos",
             LibraryView.SONOS_OWN_STREAMS: "Moje stacje Sonos",
+            LibraryView.SPOTIFY_LIBRARY: "Biblioteka Spotify",
+            LibraryView.SPOTIFY_CONTAINER: session.spotify_heading,
         }.get(
             session.library_view,
             getattr(active_list, "_base_accessible_label", None),
@@ -8673,6 +9071,7 @@ class LiteFrame(wx.Frame):
                 getattr(self, "radio_list", None),
                 getattr(self, "podcasts_list", None),
                 getattr(self, "tidal_list", None),
+                getattr(self, "spotify_list", None),
                 getattr(self, "wiim_list", None),
                 getattr(self, "sonos_list", None),
             )
@@ -8727,6 +9126,7 @@ class LiteFrame(wx.Frame):
         # uzytkownik jest w odtwarzaczu TIDAL. Przycisk gra/pauza pozostaje
         # aktywny, bo jest jawnie kierowany do sesji systemowej TIDALa.
         tidal_external = self.navigator.active is SessionId.TIDAL
+        spotify_read_only = self.navigator.active is SessionId.SPOTIFY
         wiim_remote = self.navigator.active is SessionId.WIIM
         sonos_remote = self.navigator.active is SessionId.SONOS
         wiim_ready = (
@@ -8747,10 +9147,12 @@ class LiteFrame(wx.Frame):
             and self._sonos_snapshot.get("volume") is not None
         )
         self.volume_slider.Enable(
-            not tidal_external and wiim_ready
+            not (tidal_external or spotify_read_only) and wiim_ready
             and (not sonos_remote or sonos_volume)
         )
-        self.rate_choice.Enable(not (tidal_external or wiim_remote or sonos_remote))
+        self.rate_choice.Enable(not (
+            tidal_external or spotify_read_only or wiim_remote or sonos_remote
+        ))
 
         if want_player:
             if wiim_remote and self._wiim_snapshot:
@@ -8780,6 +9182,8 @@ class LiteFrame(wx.Frame):
             return self.radio_list
         if self.navigator.active is SessionId.PODCASTS:
             return self.podcasts_list
+        if self.navigator.active is SessionId.SPOTIFY:
+            return self.spotify_list
         if self.navigator.active is SessionId.WIIM:
             return self.wiim_list
         if self.navigator.active is SessionId.SONOS:
@@ -10267,6 +10671,11 @@ class LiteFrame(wx.Frame):
     def _switch_session(self, session_id: SessionId) -> None:
         if self.navigator.active is SessionId.TIDAL and session_id is not SessionId.TIDAL:
             self._tidal_navigation_version += 1
+        if (
+            self.navigator.active is SessionId.SPOTIFY
+            and session_id is not SessionId.SPOTIFY
+        ):
+            self._spotify_navigation_version += 1
         self._run(self.navigator.switch_session(session_id))
         if session_id is SessionId.PODCASTS:
             state = self.navigator.sessions[SessionId.PODCASTS]
@@ -10277,6 +10686,12 @@ class LiteFrame(wx.Frame):
             if not state.model.rows:
                 self._open_tidal_view(OpenTidalView(
                     LibraryView.TIDAL_LIBRARY,
+                    preferred_id=state.list_anchor_id,
+                ))
+        elif session_id is SessionId.SPOTIFY:
+            state = self.navigator.sessions[SessionId.SPOTIFY]
+            if not state.model.rows:
+                self._open_spotify_view(OpenSpotifyView(
                     preferred_id=state.list_anchor_id,
                 ))
         elif session_id is SessionId.WIIM:
@@ -13201,6 +13616,9 @@ class LiteFrame(wx.Frame):
             parts.append("format audio nie został udostępniony przez zapisany katalog TIDAL")
             self.announcer.say(", ".join(dict.fromkeys(parts)))
             return
+        if self.navigator.active is SessionId.SPOTIFY:
+            self._run(self.navigator.spotify_information())
+            return
         if self.navigator.active is SessionId.WIIM:
             if self.navigator.view is View.PLAYER and self._wiim_snapshot:
                 parts = [
@@ -15750,7 +16168,7 @@ class LiteFrame(wx.Frame):
 
         self.runner.submit(
             "audio-output-list",
-            lambda: client.audio_outputs(previous_device_id),
+            lambda: client.audio_outputs(previous_device_id, session.value),
             prepared,
             lambda error: self.announcer.say(
                 f"Nie udało się odczytać urządzeń audio: {error}"
@@ -15811,7 +16229,7 @@ class LiteFrame(wx.Frame):
 
         self.runner.submit(
             "audio-output-list",
-            lambda: client.audio_outputs(previous_device_id),
+            lambda: client.audio_outputs(previous_device_id, session.value),
             prepared,
             lambda error: self.announcer.say(
                 f"Nie udało się odczytać urządzeń audio: {error}"
@@ -16870,7 +17288,12 @@ class LiteFrame(wx.Frame):
         client = self.client
         if client is None or getattr(self, "_status_poll_pending", False):
             return
-        local_sessions = (SessionId.FILES, SessionId.RADIO, SessionId.PODCASTS)
+        local_sessions = (
+            SessionId.FILES,
+            SessionId.RADIO,
+            SessionId.PODCASTS,
+            SessionId.SPOTIFY,
+        )
         active = self.navigator.active
         if active in local_sessions:
             requested_session = active
@@ -16878,6 +17301,8 @@ class LiteFrame(wx.Frame):
             requested_session = SessionId.RADIO
         elif SessionId.PODCASTS in self._playing_sessions:
             requested_session = SessionId.PODCASTS
+        elif SessionId.SPOTIFY in self._playing_sessions:
+            requested_session = SessionId.SPOTIFY
         else:
             requested_session = SessionId.FILES
         self._status_poll_pending = True
@@ -18653,6 +19078,7 @@ class LiteFrame(wx.Frame):
     def _action_available_in_active_session(self, action: Action) -> bool:
         supported = {
             SessionId.TIDAL: TIDAL_SUPPORTED_ACTIONS,
+            SessionId.SPOTIFY: SPOTIFY_SUPPORTED_ACTIONS,
             SessionId.WIIM: WIIM_SUPPORTED_ACTIONS,
             SessionId.SONOS: SONOS_SUPPORTED_ACTIONS,
         }.get(self.navigator.active)

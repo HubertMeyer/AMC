@@ -7,6 +7,7 @@ from amc_wx_lite.navigation import (
     Announce,
     LibraryView,
     Navigator,
+    OpenSpotifyCollectionView,
     OpenSpotifyContainer,
     PlaySpotifyItem,
     SessionId,
@@ -117,7 +118,7 @@ def test_album_playlist_and_podcast_enter_request_their_real_container() -> None
         )]
 
 
-def test_track_enter_player_escape_and_container_escape_restore_exact_rows() -> None:
+def test_track_enter_keeps_read_only_list_and_container_back_restores_rows() -> None:
     nav = Navigator()
     nav.active = SessionId.SPOTIFY
     albums = [_album(), _album(2)]
@@ -133,14 +134,44 @@ def test_track_enter_player_escape_and_container_escape_restore_exact_rows() -> 
     assert events == [PlaySpotifyItem(
         tracks[1].item_id, tracks[1].title, tracks[1].service_id or "", "track"
     )]
-    assert nav.session.view is View.PLAYER
-    assert nav.close_spotify_preview() == []
     assert nav.session.view is View.LIST
     assert nav.session.model.selected_row == tracks[1]
 
     assert nav.close_spotify_preview() == []
     assert nav.session.library_view is LibraryView.SPOTIFY_LIBRARY
     assert nav.session.model.selected_row == albums[1]
+
+
+def test_collection_root_enter_opens_named_view_and_back_restores_focus() -> None:
+    nav = Navigator()
+    nav.active = SessionId.SPOTIFY
+    rows = [
+        Row(
+            "spotify-collection:liked",
+            "Polubione utwory",
+            "folder",
+            service_id="liked",
+            service_kind="spotifyCollection",
+        ),
+        Row(
+            "spotify-collection:artists",
+            "Wykonawcy",
+            "folder",
+            service_id="artists",
+            service_kind="spotifyCollection",
+        ),
+    ]
+    nav.apply_spotify_view("Biblioteka Spotify", rows)
+    nav.session.model.select_id(rows[1].item_id)
+
+    intent = nav.activate_selected()[0]
+
+    assert intent == OpenSpotifyCollectionView(
+        rows[1].item_id, "artists", "Wykonawcy"
+    )
+    nav.apply_spotify_collection_view(intent, "Wykonawcy Spotify", [_artist()])
+    assert nav.go_to_parent() == []
+    assert nav.session.model.selected_row == rows[1]
 
 
 def test_episode_enter_and_right_arrow_return_to_its_podcast() -> None:

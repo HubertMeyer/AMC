@@ -84,7 +84,7 @@ def test_session_order_round_trip_is_normalized_without_exposing_labels() -> Non
     loaded = store.load()
 
     assert loaded.options.session_order == [
-        "sonos", "radio", "files", "podcasts", "tidal", "wiim",
+        "sonos", "radio", "files", "podcasts", "tidal", "wiim", "spotify",
     ]
     raw = json.loads((directory / StateStore.FILE_NAME).read_text(encoding="utf-8"))
     assert raw["options"]["session_order"] == loaded.options.session_order

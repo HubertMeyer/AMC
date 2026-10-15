@@ -59,6 +59,7 @@ internal sealed class LiteEngineHandlers : IDisposable
     private readonly LiteProfileMutationStore? _profileMutations;
     private readonly LiteTidalCatalogCoordinator? _tidalCatalog;
     private readonly LiteSpotifyCatalogCoordinator? _spotifyCatalog;
+    private readonly LiteSpotifyPlaybackCoordinator? _spotifyPlayback;
     private readonly LiteTidalDesktopCoordinator _tidalDesktop = new();
     private readonly LiteWiiMCoordinator? _wiim;
     private readonly LiteSonosCoordinator? _sonos;
@@ -130,7 +131,8 @@ internal sealed class LiteEngineHandlers : IDisposable
         LiteTidalCatalogCoordinator? tidalCatalog = null,
         LiteWiiMCoordinator? wiim = null,
         LiteSonosCoordinator? sonos = null,
-        LiteSpotifyCatalogCoordinator? spotifyCatalog = null)
+        LiteSpotifyCatalogCoordinator? spotifyCatalog = null,
+        LiteSpotifyPlaybackCoordinator? spotifyPlayback = null)
     {
         _radio = new RadioMediaOutput(timeshiftMinutes);
         _queueStore = queueStore;
@@ -140,6 +142,7 @@ internal sealed class LiteEngineHandlers : IDisposable
         _profileMutations = profileMutations;
         _tidalCatalog = tidalCatalog;
         _spotifyCatalog = spotifyCatalog;
+        _spotifyPlayback = spotifyPlayback;
         _wiim = wiim;
         _sonos = sonos;
         _podcastRefresh = podcastProgressStore is null
@@ -316,7 +319,7 @@ internal sealed class LiteEngineHandlers : IDisposable
                 {
                     host = "amc-lite-host",
                     protocol = 1,
-                    engine = "AMC WindowsMediaOutput + RadioMediaOutput"
+                    engine = "AMC WindowsMediaOutput + RadioMediaOutput + Spotify Librespot"
                 };
             },
             ["host.shutdown"] = (_, _) => new { ok = true },
@@ -401,6 +404,8 @@ internal sealed class LiteEngineHandlers : IDisposable
                 SpotifyContainerItems(request.Args),
             [LiteSpotifyCatalogContract.SearchOperation] = (request, _) =>
                 SpotifySearch(request.Args),
+            [LiteSpotifyPlaybackContract.PlayOperation] = (request, events) =>
+                RequireSpotifyPlayback().Play(request.Args, events),
             [LiteTidalDesktopContract.PlayOperation] = (request, _) =>
                 _tidalDesktop.Play(request.Args),
             [LiteTidalDesktopContract.TransportOperation] = (request, _) =>
@@ -1945,6 +1950,11 @@ internal sealed class LiteEngineHandlers : IDisposable
     private object PauseResume(JsonElement args)
     {
         var target = ResolveTransportTarget(args);
+        if (target.Engine == "spotify")
+        {
+            lock (_gate) _activeEngine = target.Engine;
+            return RequireSpotifyPlayback().PauseResume();
+        }
         // Gdy transport prowadzi KOLEJKA, pauza idzie przez jej sesje: tylko ona
         // zapamietuje pozycje tak, jak reszta AMC. Pytamy PRZED wejsciem w _gate,
         // zeby nie trzymac dwoch blokad naraz.
@@ -2084,10 +2094,16 @@ internal sealed class LiteEngineHandlers : IDisposable
         {
             StopFilesPlayback();
             StopRadioPlayback();
+            _spotifyPlayback?.Stop();
             return new { ok = true, queue = false, playing = false };
         }
 
         var target = ResolveTransportTarget(args);
+        if (target.Engine == "spotify")
+        {
+            lock (_gate) _activeEngine = target.Engine;
+            return RequireSpotifyPlayback().Stop();
+        }
         if (target.Engine == "files")
         {
             lock (_gate)
@@ -2191,9 +2207,14 @@ internal sealed class LiteEngineHandlers : IDisposable
 
     private object Seek(JsonElement args)
     {
+        var targetSession = ResolveTransportTarget(args);
+        if (targetSession.Engine == "spotify")
+        {
+            lock (_gate) _activeEngine = targetSession.Engine;
+            return RequireSpotifyPlayback().Seek(args);
+        }
         var delta = LiteArgs.ReadDouble(args, "deltaSeconds", double.NaN, -86_400d, 86_400d);
         var absolute = LiteArgs.ReadDouble(args, "positionSeconds", double.NaN, 0d, 86_400d);
-        var targetSession = ResolveTransportTarget(args);
         var engine = targetSession.Engine;
         lock (_gate)
         {
@@ -2228,6 +2249,11 @@ internal sealed class LiteEngineHandlers : IDisposable
     private object SetVolume(JsonElement args)
     {
         var target = ResolveTransportTarget(args);
+        if (target.Engine == "spotify")
+        {
+            lock (_gate) _activeEngine = target.Engine;
+            return RequireSpotifyPlayback().SetVolume(args);
+        }
         int current;
         lock (_gate) current = target.Engine == "radio" ? _radioVolume : _filesVolume;
         var volume = LiteArgs.ReadInt(args, "volume", current, 0, 100);
@@ -2266,6 +2292,11 @@ internal sealed class LiteEngineHandlers : IDisposable
     private object ToggleMute(JsonElement args)
     {
         var target = ResolveTransportTarget(args);
+        if (target.Engine == "spotify")
+        {
+            lock (_gate) _activeEngine = target.Engine;
+            return RequireSpotifyPlayback().ToggleMute();
+        }
         bool muted;
         int volume;
         lock (_gate)
@@ -2309,6 +2340,11 @@ internal sealed class LiteEngineHandlers : IDisposable
     private object SetRate(JsonElement args)
     {
         var target = ResolveTransportTarget(args);
+        if (target.Engine == "spotify")
+        {
+            throw new LiteRequestException(
+                "Natywna sesja Spotify nie obsługuje zmiany prędkości odtwarzania.");
+        }
         double current;
         lock (_gate) current = target.Engine == "radio" ? _radioRate : _filesRate;
         var rate = LiteArgs.ReadDouble(args, "rate", current, 0.5d, 2.0d);
@@ -2513,6 +2549,11 @@ internal sealed class LiteEngineHandlers : IDisposable
     private object Status(JsonElement args)
     {
         var target = ResolveTransportTarget(args);
+        if (target.Engine == "spotify")
+        {
+            lock (_gate) _activeEngine = target.Engine;
+            return RequireSpotifyPlayback().Status();
+        }
         var engine = target.Engine;
         bool paused;
         bool playing;
@@ -2677,6 +2718,10 @@ internal sealed class LiteEngineHandlers : IDisposable
         _spotifyCatalog ?? throw new LiteRequestException(
             "Host nie ma dostępu do profilu AMC potrzebnego do katalogu Spotify.");
 
+    private LiteSpotifyPlaybackCoordinator RequireSpotifyPlayback() =>
+        _spotifyPlayback ?? throw new LiteRequestException(
+            "Host nie ma dostępu do natywnego odtwarzania Spotify.");
+
     private object SpotifyCapabilities() => RequireSpotify().Capabilities();
 
     private object SpotifyAccountStatus() => RequireSpotify().AccountStatus();
@@ -2779,6 +2824,8 @@ internal sealed class LiteEngineHandlers : IDisposable
     private object SelectOutput(JsonElement args)
     {
         var sessionId = LiteArgs.RequireText(args, "sessionId");
+        if (sessionId == LiteSpotifyCatalogContract.SessionId)
+            return RequireSpotifyPlayback().SelectOutput(args);
         if (sessionId is not ("files" or "radio" or "podcasts"))
             throw new LiteRequestException("Ta sesja nie obsługuje wyboru urządzenia audio.");
         var deviceId = LiteArgs.ReadText(args, "deviceId")?.Trim();
@@ -2846,8 +2893,15 @@ internal sealed class LiteEngineHandlers : IDisposable
         };
     }
 
-    private static object ListOutputs(JsonElement args)
+    private object ListOutputs(JsonElement args)
     {
+        if (string.Equals(
+            LiteArgs.ReadText(args, "sessionId")?.Trim(),
+            LiteSpotifyCatalogContract.SessionId,
+            StringComparison.Ordinal))
+        {
+            return RequireSpotifyPlayback().ListOutputs(args);
+        }
         var selectedDeviceId = LiteArgs.ReadText(args, "selectedDeviceId");
         return new
         {
@@ -2878,6 +2932,9 @@ internal sealed class LiteEngineHandlers : IDisposable
         // Najpierw domykamy prywatne tory nagrywania. Sa niezalezne od
         // slyszalnego radia, ale nadal korzystaja z tych samych bibliotek.
         _recordings.Dispose();
+        // Librespot jest osobnym procesem potomnym. Odłączamy jego zdarzenia i
+        // kończymy go, zanim wspólny kanał protokołu przestanie istnieć.
+        _spotifyPlayback?.Dispose();
         _files.Dispose();
         _radio.Dispose();
         // Blokada wlasnosci MUSI pasc razem z hostem. Bez tego kolejny host na

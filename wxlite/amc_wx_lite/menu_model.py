@@ -137,7 +137,8 @@ LOCAL_MEDIA = (SessionId.FILES, SessionId.PODCASTS)
 QUEUE_SESSIONS = (SessionId.FILES, SessionId.PODCASTS, SessionId.TIDAL)
 PLAY_NEXT_SESSIONS = (SessionId.FILES, SessionId.PODCASTS)
 LOCAL_AUDIO = (SessionId.FILES, SessionId.RADIO, SessionId.PODCASTS)
-LOCAL_TIMELINE = (SessionId.FILES, SessionId.RADIO, SessionId.PODCASTS)
+SESSION_AUDIO_OUTPUTS = (*LOCAL_AUDIO, SessionId.SPOTIFY)
+LOCAL_TIMELINE = (*LOCAL_AUDIO, SessionId.SPOTIFY)
 PLAYER_SESSIONS = (
     SessionId.FILES,
     SessionId.RADIO,
@@ -722,7 +723,7 @@ def build_menus(session_order: object = None) -> tuple[Menu, ...]:
                 accelerator=False,
                 checkable=True,
                 needs_playback=True,
-                visible_sessions=LOCAL_AUDIO,
+                visible_sessions=SESSION_AUDIO_OUTPUTS,
             ),
             SEPARATOR,
             MenuItem(
@@ -1114,21 +1115,21 @@ def build_menus(session_order: object = None) -> tuple[Menu, ...]:
                 Action.SELECT_AUDIO_OUTPUT,
                 shortcut="Shift+A",
                 accelerator=False,
-                visible_sessions=LOCAL_AUDIO,
+                visible_sessions=SESSION_AUDIO_OUTPUTS,
             ),
             MenuItem(
                 "&Poprzednie urządzenie audio",
                 Action.PREVIOUS_AUDIO_OUTPUT,
                 shortcut="Ctrl+[",
                 accelerator=False,
-                visible_sessions=LOCAL_AUDIO,
+                visible_sessions=SESSION_AUDIO_OUTPUTS,
             ),
             MenuItem(
                 "&Następne urządzenie audio",
                 Action.NEXT_AUDIO_OUTPUT,
                 shortcut="Ctrl+]",
                 accelerator=False,
-                visible_sessions=LOCAL_AUDIO,
+                visible_sessions=SESSION_AUDIO_OUTPUTS,
             ),
             # Opcje dotyczą sesji, także na pustej liście. Ctrl+Alt+Enter
             # jest skrótem okna, więc rejestrujemy natywny akcelerator;

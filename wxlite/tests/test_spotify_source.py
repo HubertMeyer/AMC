@@ -4,9 +4,11 @@ from amc_wx_lite.list_model import ListModel, Row
 from amc_wx_lite.search_catalog import SearchEntry
 from amc_wx_lite.spotify_source import (
     SpotifyContainerPayloadError,
+    account_summary_from_payload,
     artist_overview_rows,
     container_result_from_payload,
     information_text,
+    root_result_from_payload,
 )
 from amc_wx_lite.navigation import SessionId
 
@@ -160,3 +162,41 @@ def test_artist_overview_uses_only_two_explicit_labels() -> None:
 
     assert [row.title for row in rows] == ["Albumy", "Utwory"]
     assert all("secret" not in row.title for row in rows)
+
+
+def test_collection_root_uses_labels_and_keeps_view_keys_private() -> None:
+    result = root_result_from_payload({
+        "heading": "Biblioteka Spotify",
+        "views": [
+            {"view": "liked", "label": "Polubione utwory"},
+            {"view": "artists", "label": "Wykonawcy"},
+            {"view": "private-enum", "label": "Nie pokazuj"},
+        ],
+    })
+
+    assert result.heading == "Biblioteka Spotify"
+    assert [row.title for row in result.rows] == ["Polubione utwory", "Wykonawcy"]
+    assert [row.service_id for row in result.rows] == ["liked", "artists"]
+    spoken = " ".join(
+        ListModel(list(result.rows)).text_for(index, column)
+        for index in range(len(result.rows))
+        for column in range(3)
+    )
+    assert "liked" not in spoken
+    assert "artists" not in spoken
+    assert "private-enum" not in spoken
+
+
+def test_account_summary_returns_only_intentional_catalogue_label() -> None:
+    summary = account_summary_from_payload({
+        "catalog": {
+            "state": "notConfigured",
+            "connected": False,
+            "label": "Katalog Spotify nie jest skonfigurowany.",
+            "technical": "SpotifyCredential { Secret = hidden }",
+        },
+    })
+
+    assert summary.label == "Katalog Spotify nie jest skonfigurowany."
+    assert summary.connected is False
+    assert "hidden" not in summary.label

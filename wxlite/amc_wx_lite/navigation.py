@@ -232,7 +232,7 @@ class SessionState:
     #: Stan jednej sesji Spotify. Jest niezależny od TIDAL-a mimo wspólnego
     #: kontraktu DTO: przełączenie sesji nie może zgubić listy ani fokusu.
     spotify_heading: str = "Biblioteka Spotify"
-    spotify_context: "OpenSpotifyContainer | None" = None
+    spotify_context: "OpenSpotifyContainer | OpenSpotifyCollectionView | None" = None
     spotify_history: list["SpotifyNavigationSnapshot"] = field(default_factory=list)
     #: Korzeń sesji WiiM i miejsce powrotu ze Strumieni sieciowych. Adresy
     #: urządzeń ani strumieni nie należą do tych wierszy.
@@ -357,6 +357,15 @@ class OpenSpotifyView:
 
 
 @dataclass(frozen=True, slots=True)
+class OpenSpotifyCollectionView:
+    """Open one named, read-only part of the Spotify collection."""
+
+    item_id: str
+    view: str
+    title: str
+
+
+@dataclass(frozen=True, slots=True)
 class OpenSpotifyContainer:
     """Narrow catalogue request; opaque identifiers are never spoken."""
 
@@ -394,7 +403,7 @@ class SpotifyNavigationSnapshot:
     heading: str
     rows: tuple[Row, ...]
     selected_id: str | None
-    context: OpenSpotifyContainer | None
+    context: OpenSpotifyContainer | OpenSpotifyCollectionView | None
 
 
 @dataclass(slots=True)
@@ -484,7 +493,7 @@ class PlayTidalContainer:
 
 @dataclass(slots=True)
 class PlaySpotifyItem:
-    """Play one Spotify track or episode through a future controller."""
+    """Play one Spotify track or episode through the native controller."""
 
     item_id: str
     title: str
@@ -1129,6 +1138,10 @@ class Navigator:
         if state.session_id is SessionId.SPOTIFY:
             if row.activation_message:
                 return [Announce(row.activation_message)]
+            collection = self._spotify_collection_target_from_row(row)
+            if collection is not None:
+                state.library_return_id = row.item_id
+                return [collection]
             target = self._spotify_target_from_row(row)
             if target is not None:
                 if target.kind == "artist" and target.section is None:
@@ -1151,7 +1164,10 @@ class Navigator:
                     and not candidate.activation_message
                 )
                 state.playback_uses_queue = False
-                state.view = View.PLAYER
+                # Pierwszy etap Spotify jest jawnie tylko do odczytu. Zamiar
+                # zachowujemy dla przyszłego kontrolera, ale lista nie może
+                # odsłonić pozornego odtwarzacza, którego host jeszcze nie ma.
+                state.view = View.LIST
                 return [intent]
             return [Announce("Nie można otworzyć tego elementu Spotify")]
 
@@ -1948,7 +1964,7 @@ class Navigator:
             state.playback_uses_queue = True
 
     def note_spotify_playback_started(self, item_id: str, title: str) -> None:
-        """Commit Spotify state only after its future controller confirms play."""
+        """Commit Spotify state only after Librespot confirms audible playback."""
 
         if not item_id:
             return
@@ -1970,6 +1986,7 @@ class Navigator:
         state.current_material_id = previous_id
         state.now_playing_id = previous_id or None
         state.now_playing_title = previous_title
+        state.view = View.LIST
 
     def restore_tidal_playback_after_failed_handoff(
         self, previous_id: str, previous_title: str
@@ -2558,6 +2575,44 @@ class Navigator:
             if rows else f"{heading}, pusto"
         )]
 
+    def apply_spotify_collection_view(
+        self,
+        intent: OpenSpotifyCollectionView,
+        heading: str,
+        rows: list[Row],
+        *,
+        preferred_id: str | None = None,
+    ) -> list[object]:
+        """Apply a named collection view and retain the root focus."""
+
+        state = self.sessions[SessionId.SPOTIFY]
+        state.spotify_history.append(self._spotify_snapshot(state))
+        state.library_view = LibraryView.SPOTIFY_CONTAINER
+        state.library_playlist_id = None
+        state.library_return_view = heading
+        state.spotify_heading = heading
+        state.spotify_context = intent
+        state.model.replace(rows, preferred_id=preferred_id)
+        state.view = View.LIST
+        return [Announce(
+            f"{heading}, {len(rows)} {_items_word(len(rows))}"
+            if rows else f"{heading}, pusto"
+        )]
+
+    @staticmethod
+    def _spotify_collection_target_from_row(
+        row: Row,
+    ) -> OpenSpotifyCollectionView | None:
+        if (
+            row.kind != "folder"
+            or row.service_kind != "spotifyCollection"
+            or row.service_id not in {
+                "liked", "albums", "artists", "playlists", "podcasts", "episodes"
+            }
+        ):
+            return None
+        return OpenSpotifyCollectionView(row.item_id, row.service_id, row.title)
+
     @staticmethod
     def _spotify_target_from_row(row: Row) -> OpenSpotifyContainer | None:
         if (
@@ -2620,6 +2675,8 @@ class Navigator:
             intent = self._spotify_play_intent(row)
             if isinstance(intent, Announce):
                 return [intent]
+            intent.previous_item_id = state.current_material_id
+            intent.previous_title = state.now_playing_title
             state.player_entry_anchor_id = row.item_id
             state.list_anchor_id = row.item_id
             state.now_playing_id = row.item_id
@@ -2627,7 +2684,7 @@ class Navigator:
             state.pending_material_id = row.item_id
             state.playback_source_rows = (row,)
             state.playback_uses_queue = False
-            state.view = View.PLAYER
+            state.view = View.LIST
             return [intent]
         return [Announce("Nie można otworzyć tego wyniku Spotify")]
 

@@ -17,6 +17,14 @@ from .radio_recording import format_duration
 _CONTAINER_KINDS = {"artist", "album", "playlist", "podcast"}
 _PLAYABLE_KINDS = {"track", "episode"}
 _KNOWN_KINDS = _CONTAINER_KINDS | _PLAYABLE_KINDS
+_COLLECTION_VIEWS = {
+    "liked",
+    "albums",
+    "artists",
+    "playlists",
+    "podcasts",
+    "episodes",
+}
 
 
 class SpotifyContainerPayloadError(RuntimeError):
@@ -27,6 +35,21 @@ class SpotifyContainerPayloadError(RuntimeError):
 class SpotifyContainerResult:
     heading: str
     rows: tuple[Row, ...]
+    warning: str = ""
+    available: bool = True
+    has_more: bool = False
+
+
+@dataclass(frozen=True, slots=True)
+class SpotifyRootResult:
+    heading: str
+    rows: tuple[Row, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class SpotifyAccountSummary:
+    label: str
+    connected: bool
 
 
 def _text(value: object) -> str:
@@ -147,7 +170,65 @@ def container_result_from_payload(payload: object) -> SpotifyContainerResult:
             continue
         seen.add(row.item_id)
         rows.append(row)
-    return SpotifyContainerResult(heading, tuple(rows))
+    warning = _text(payload.get("warning"))
+    available = payload.get("available") is not False
+    has_more = payload.get("hasMore") is True
+    return SpotifyContainerResult(
+        heading,
+        tuple(rows),
+        warning=warning,
+        available=available,
+        has_more=has_more,
+    )
+
+
+def root_result_from_payload(payload: object) -> SpotifyRootResult:
+    """Build the six intentional collection rows from the host root.
+
+    The technical view key stays in model-only fields.  Only the explicit
+    host label is ever placed in a native list cell or spoken by NVDA.
+    """
+
+    if not isinstance(payload, dict):
+        raise SpotifyContainerPayloadError(
+            "Biblioteka Spotify zwróciła nieprawidłową odpowiedź"
+        )
+    heading = _text(payload.get("heading"))
+    raw_views = payload.get("views")
+    if not heading or not isinstance(raw_views, list):
+        raise SpotifyContainerPayloadError(
+            "Biblioteka Spotify zwróciła niepełną odpowiedź"
+        )
+
+    rows: list[Row] = []
+    seen: set[str] = set()
+    for entry in raw_views:
+        if not isinstance(entry, dict):
+            continue
+        view = _text(entry.get("view")).casefold()
+        label = _text(entry.get("label"))
+        if view not in _COLLECTION_VIEWS or not label or view in seen:
+            continue
+        seen.add(view)
+        rows.append(Row(
+            item_id=f"spotify-collection:{view}",
+            title=label,
+            kind="folder",
+            service_id=view,
+            service_kind="spotifyCollection",
+        ))
+    return SpotifyRootResult(heading, tuple(rows))
+
+
+def account_summary_from_payload(payload: object) -> SpotifyAccountSummary:
+    """Return only the deliberate catalogue status label from account data."""
+
+    if not isinstance(payload, dict) or not isinstance(payload.get("catalog"), dict):
+        return SpotifyAccountSummary("", False)
+    catalog = payload["catalog"]
+    label = _text(catalog.get("label"))
+    connected = catalog.get("connected") is True
+    return SpotifyAccountSummary(label, connected)
 
 
 def artist_overview_rows(artist: Row) -> tuple[Row, ...]:

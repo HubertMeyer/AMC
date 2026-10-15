@@ -100,6 +100,48 @@
   miejsca i brak automatycznego zapisu. Adapter dostawcy dostarcza dane oraz
   możliwości, ale nie tworzy osobnego, rozbieżnego interfejsu wyszukiwarki.
 
+## Wspólny kontrakt interfejsu źródeł
+
+- Zachowanie, które użytkownik odebrał i jednoznacznie potwierdził jako dobre,
+  staje się wzorcem akceptacyjnym dla równoważnych funkcji w innych źródłach.
+  Nie projektuj ponownie bez wskazanej potrzeby. Przenoś ten sam układ skrótów,
+  nawigację, kolejność komunikatów, fokus, powrót i znaczenie Entera oraz
+  strzałek wszędzie, gdzie możliwości usługi na to pozwalają.
+- Dopracowany TIDAL jest wzorcem funkcjonalnym interfejsu Spotify: wejście do
+  biblioteki, wyszukiwanie lokalne i globalne, rzeczywista tożsamość wyniku,
+  relacje wykonawca–album–utwór, przeglądanie przed zapisem, odtwarzanie,
+  dodawanie i usuwanie, sortowanie, historia, Escape i przywracanie fokusu.
+  Stare AMC i librespot mogą dostarczyć rozwiązania techniczne, lecz nie są
+  wzorcem zachowania interfejsu.
+- Jawny wyjątek potwierdzony przez użytkownika: działające `Shift+F2` ze
+  starego AMC jest wzorcem funkcjonalnym zmiany nazwy pliku w AMC Python.
+  Zachowaj nazwę bez rozszerzenia w dialogu, niezmienne rozszerzenie, brak
+  nadpisywania, zatrzymanie aktualnie wczytanego pliku z zachowaniem pozycji,
+  zmianę fizycznej nazwy na dysku, stabilną tożsamość rekordu, aktualizację
+  Biblioteki, historii i zakładek oraz powrót fokusu. Sukces wolno ogłosić
+  dopiero po potwierdzeniu nowej ścieżki. Operację plikową wykonuje host C#;
+  wxPython prowadzi dialog i odświeża interfejs, więc sama technologia Python
+  nie jest powodem różnicy w zachowaniu.
+- Nie kopiuj osobnych przepływów ekran po ekranie. Utrzymuj wspólny model
+  elementu, nawigacji i możliwości oraz wspólną warstwę poleceń; adapter
+  dostawcy ma jedynie pobierać dane, mapować tożsamość i jawnie zgłaszać
+  obsługiwane możliwości. Dzięki temu poprawka wspólnej funkcji obejmuje
+  wszystkie porównywalne usługi zamiast rozchodzić się na rozbieżne wersje.
+- Kontekst nawigacji obejmuje co najmniej źródło i sesję, zakres wyszukiwania,
+  zapytanie, rzeczywisty typ i identyfikator zaznaczenia, stos powrotu,
+  sortowanie oraz bieżące urządzenie, jeśli dotyczy. Wynik asynchroniczny musi
+  należeć do aktualnej generacji żądania; spóźniona odpowiedź nie może
+  podmienić nowszego widoku, zaznaczenia ani źródła.
+- Każda nowa funkcja współdzielona dostaje test kontraktowy uruchamiany dla
+  wszystkich odpowiednich adapterów. Test obejmuje nie tylko tekst listy, ale
+  też tożsamość elementu, brak niejawnego zapisu, fokus początkowy i powrotny,
+  Enter, Escape, lewą i prawą strzałkę, skróty oraz odpowiedź spóźnionego
+  żądania. Po teście automatycznym wykonaj próbę z NVDA.
+- Ograniczenia API są dozwoloną różnicą, lecz mają być reprezentowane jako
+  brak możliwości z jasnym komunikatem. Nie zgaduj brakujących relacji, nie
+  podstawiaj podobnego elementu z biblioteki i nie pokazuj technicznego
+  identyfikatora w miejsce danych, których dostawca nie udostępnia.
+
 ## Pierwsze uruchomienie i logowanie do usług
 
 - Docelowy instalator prowadzi zwykłego użytkownika przez dostępny, oficjalny
