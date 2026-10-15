@@ -9,7 +9,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
-from amc_wx_lite.shortcuts import GLOBAL_VIEW_SHORTCUTS
+from amc_wx_lite.shortcuts import GLOBAL_VIEW_SHORTCUTS, PRESET_SHORTCUTS
 
 SOURCE = Path(__file__).parents[1] / "amc_wx_lite" / "gui.py"
 
@@ -43,6 +43,7 @@ def _call(*, player=True, arrow=True, foreign=False, time_key=False,
         "wx": wx,
         "View": view,
         "GLOBAL_VIEW_SHORTCUTS": GLOBAL_VIEW_SHORTCUTS,
+        "PRESET_SHORTCUTS": PRESET_SHORTCUTS,
         "chord_from_event": lambda _event: SimpleNamespace(canonical=list_chord),
     }
     exec(compile(ast.Module(body=methods, type_ignores=[]), str(SOURCE), "exec"), ns)
@@ -81,6 +82,17 @@ def test_modyfikowane_polecenia_listy_nie_gina_w_wyszukiwaniu_windows():
         "Shift+R",
         "Ctrl+,",
     ):
+        assert _call(player=False, list_chord=chord) == ["key"]
+
+
+def test_wszystkie_presety_docieraja_z_listy_przed_natywna_kontrolka():
+    """Zwlaszcza Ctrl+Shift+0 nie moze zginac w SysListView32.
+
+    Sama tablica resolvera nie wystarcza: ten konkretny gest byl juz osobno
+    chroniony niskopoziomowo w starym AMC, a natywna lista wx potrafi go
+    skonsumowac przed EVT_KEY_DOWN.
+    """
+    for chord in PRESET_SHORTCUTS:
         assert _call(player=False, list_chord=chord) == ["key"]
 
 
@@ -161,6 +173,7 @@ def _volume_key(chord: str, current: int = 50) -> list[int]:
         "wx": wx,
         "View": view,
         "GLOBAL_VIEW_SHORTCUTS": GLOBAL_VIEW_SHORTCUTS,
+        "PRESET_SHORTCUTS": PRESET_SHORTCUTS,
         "chord_from_event": lambda _event: SimpleNamespace(canonical=chord),
     }
     exec(compile(ast.Module(body=[method], type_ignores=[]), str(SOURCE), "exec"), ns)

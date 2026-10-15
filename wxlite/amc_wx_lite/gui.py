@@ -130,6 +130,7 @@ from .shortcuts import (
     Action,
     Chord,
     GLOBAL_VIEW_SHORTCUTS,
+    PRESET_SHORTCUTS,
     SPOTIFY_SUPPORTED_ACTIONS,
     TIDAL_SUPPORTED_ACTIONS,
     SONOS_SUPPORTED_ACTIONS,
@@ -5761,6 +5762,9 @@ class LiteFrame(wx.Frame):
 
     def _on_list_shortcut_hook(self, event: wx.KeyEvent) -> None:
         """Polecenia, ktorych natywna lista nie moze zabrac jako liter."""
+        # Presety przechwytujemy jako caly kontrakt. Szczegolnie kombinacja
+        # Ctrl+Shift+0 ginie w natywnej liscie Windows przed EVT_KEY_DOWN,
+        # choc minus i znak rownosci przechodza ta sama droga poprawnie.
         if chord_from_event(event).canonical in {
             "F2",
             "Shift+F2",
@@ -5781,7 +5785,7 @@ class LiteFrame(wx.Frame):
             "Ctrl+Alt+S",
             "Ctrl+Alt+Shift+S",
             "Ctrl+,",
-        } | set(GLOBAL_VIEW_SHORTCUTS):
+        } | set(GLOBAL_VIEW_SHORTCUTS) | set(PRESET_SHORTCUTS):
             # Ctrl+C musi zostac zatrzymane PRZED natywnym SysListView32,
             # zeby gest wykonal tylko polecenie AMC. Angielskie "Copy"
             # zgloszone w odbiorze nie pochodzi jednak z kontrolki: na
@@ -8405,6 +8409,8 @@ class LiteFrame(wx.Frame):
         # -- szczegolnie strzalki, Home/End i wyszukiwanie przyrostowe NVDA.
         if self.navigator.view is not View.PLAYER:
             canonical = chord_from_event(event).canonical
+            # Ctrl+Shift+0 wymaga tej wczesnej drogi tak samo jak w starym
+            # AMC; pozostawienie go kontrolce listy daje cisze i brak akcji.
             # SysListView32 używa gołej Spacji do własnego zaznaczania i na
             # Windows potrafi połknąć ją przed EVT_KEY_DOWN. W Sonos Spacja
             # jest sterowaniem aktywną grupą również podczas przeglądania
@@ -8472,7 +8478,7 @@ class LiteFrame(wx.Frame):
                 "Alt+Shift+R",
                 "Alt+Up",
                 "Alt+Down",
-            } | set(GLOBAL_VIEW_SHORTCUTS):
+            } | set(GLOBAL_VIEW_SHORTCUTS) | set(PRESET_SHORTCUTS):
                 self._on_key(event)
                 return
             event.Skip()
