@@ -189,6 +189,26 @@ def test_tidal_artist_categories_and_backspace_restore_exact_focus() -> None:
     assert nav.session.model.selected_row == artist
 
 
+def test_right_arrow_on_online_artist_opens_all_artist_categories_without_saving() -> None:
+    nav = Navigator()
+    nav.active = SessionId.TIDAL
+    artist = Row(
+        "tidal:artists:online",
+        "Nowy artysta",
+        "artist",
+        service_id="artists:online",
+        service_kind="artist",
+    )
+
+    events = nav.open_tidal_search_result(artist, relations=True)
+
+    assert events == [Announce("Wykonawca, Nowy artysta, 3 pozycje")]
+    assert [row.title for row in nav.session.model.rows] == [
+        "Albumy", "Utwory", "Podobni wykonawcy"
+    ]
+    assert nav.session.library_view is LibraryView.TIDAL_CONTAINER
+
+
 def test_right_arrow_relations_match_the_full_tidal_menu_without_ids() -> None:
     nav = Navigator()
     nav.active = SessionId.TIDAL

@@ -1534,7 +1534,8 @@ class SearchDialog(wx.Dialog):
         self.results.SetName("Wyniki wyszukiwania")
         self.results.SetHelpText(
             "Strzałki wybierają wynik. Enter przechodzi do wyniku na "
-            "właściwej liście. Escape zamyka okno."
+            "właściwej liście. W TIDAL prawa strzałka otwiera dostępne "
+            "albumy, utwory i podobnych wykonawców. Escape zamyka okno."
             if detailed_hints
             else ""
         )
@@ -1869,6 +1870,9 @@ class SearchDialog(wx.Dialog):
             return
         if code == wx.WXK_LEFT and not (ctrl or shift or alt):
             self._announce_quick_information()
+            return
+        if code == wx.WXK_RIGHT and not (ctrl or shift or alt):
+            self._complete_selected(SearchResultAction.RELATIONS)
             return
         if ctrl and code in (ord("C"), ord("c")):
             self._copy(addresses=shift)
@@ -5830,6 +5834,42 @@ class LiteFrame(wx.Frame):
                             "Nie udało się przeszukać publicznych katalogów "
                             "podcastów i YouTube"
                         )
+            # Tak jak w pełnym AMC, katalog konta TIDAL przeszukujemy tylko
+            # w lokalnym Ctrl+F. Globalne Ctrl+Shift+F nie może przestać
+            # działać dlatego, że wygasło logowanie jednego serwisu.
+            if SessionId.TIDAL in sessions and not all_services:
+                client = self.client
+                if client is None:
+                    warnings.append("Katalog TIDAL jest niedostępny")
+                else:
+                    try:
+                        payload = client.tidal_search(query)
+                        online = container_result_from_host(payload)
+                        saved_by_service_id = {
+                            candidate.row.service_id: candidate
+                            for candidate in collected.entries
+                            if candidate.session_id is SessionId.TIDAL
+                            and candidate.row.service_id
+                        }
+                        known = {
+                            (candidate.session_id, candidate.row.item_id)
+                            for candidate in results
+                        }
+                        for row in online.rows:
+                            candidate = saved_by_service_id.get(row.service_id)
+                            if candidate is None:
+                                candidate = SearchEntry(
+                                    SessionId.TIDAL,
+                                    row,
+                                    remote_kind="tidalCatalog",
+                                )
+                            identity = (candidate.session_id, candidate.row.item_id)
+                            if identity in known:
+                                continue
+                            known.add(identity)
+                            results.append(candidate)
+                    except (HostError, HostUnavailable, TidalContainerPayloadError):
+                        warnings.append("Nie udało się przeszukać katalogu TIDAL")
             return collected, results, tuple(dict.fromkeys(warnings))
 
         def done(result: tuple[
@@ -5856,6 +5896,20 @@ class LiteFrame(wx.Frame):
         action: SearchResultAction,
     ) -> None:
         """Open the real list, then run the same command as that list uses."""
+
+        if (
+            entry.session_id is SessionId.TIDAL
+            and action in (SearchResultAction.OPEN, SearchResultAction.RELATIONS)
+        ):
+            self._open_tidal_search_result(
+                entry,
+                relations=action is SearchResultAction.RELATIONS,
+            )
+            return
+
+        if action is SearchResultAction.RELATIONS:
+            self.announcer.say("Powiązania są dostępne dla wyników TIDAL")
+            return
 
         remote = [candidate for candidate in selected if candidate.remote_kind]
         if remote:
@@ -5892,6 +5946,21 @@ class LiteFrame(wx.Frame):
             selected_ids=selected_ids,
             after_open=after_open,
         )
+
+    def _open_tidal_search_result(
+        self,
+        entry: SearchEntry,
+        *,
+        relations: bool,
+    ) -> None:
+        """Use catalogue identity directly; never materialize a library row."""
+
+        self._transient_preview_return = None
+        self._switch_session(SessionId.TIDAL)
+        self._run(self.navigator.open_tidal_search_result(
+            entry.row,
+            relations=relations,
+        ))
 
     def _perform_search_result_action(
         self,
@@ -5941,6 +6010,19 @@ class LiteFrame(wx.Frame):
         lead = entries[0]
         if lead.session_id is SessionId.RADIO:
             self._complete_remote_radio_search_result_action(entries, action)
+            return
+        if lead.session_id is SessionId.TIDAL:
+            if action is SearchResultAction.INFORMATION:
+                self.announcer.say(lead.accessible_label)
+            elif action in (SearchResultAction.LIBRARY, SearchResultAction.FAVORITE):
+                self._change_tidal_search_result_membership(
+                    entries,
+                    favorite=action is SearchResultAction.FAVORITE,
+                )
+            else:
+                self.announcer.say(
+                    "Ten wynik TIDAL można otworzyć albo jawnie dodać do kolekcji"
+                )
             return
         if action is SearchResultAction.INFORMATION:
             self.announcer.say(lead.accessible_label)
@@ -6068,12 +6150,63 @@ class LiteFrame(wx.Frame):
 
         self.runner.submit("podcast-search-action", work, done, failed)
 
+    def _change_tidal_search_result_membership(
+        self,
+        entries: list[SearchEntry],
+        *,
+        favorite: bool,
+    ) -> None:
+        """Save online TIDAL rows only after an explicit collection command."""
+
+        client = self.client
+        if client is None:
+            self.announcer.say("Silnik nie działa, nie mogę zmienić kolekcji TIDAL")
+            return
+        allowed = {"track", "video"} if favorite else {"album", "artist", "playlist"}
+        rows = [
+            entry.row for entry in entries
+            if entry.row.kind in allowed
+            and entry.row.item_id
+            and entry.row.service_id
+        ]
+        if not rows:
+            self.announcer.say(
+                "Do Ulubionych TIDAL wybierz utwór lub materiał wideo"
+                if favorite else
+                "Do Biblioteki TIDAL wybierz album, wykonawcę albo playlistę"
+            )
+            return
+        items = [{
+            "itemId": row.item_id,
+            "externalId": row.service_id,
+            "title": row.title,
+            "kind": row.kind,
+            "artist": row.artist_name,
+            "publicUri": row.url or "",
+        } for row in rows]
+
+        def done(payload: dict) -> None:
+            message = str((payload or {}).get("message") or "").strip()
+            self.announcer.say(message or "Zmieniono kolekcję TIDAL")
+
+        self.runner.submit(
+            "tidal-search-membership",
+            lambda: client.tidal_collection_membership(
+                items,
+                mode="favorite" if favorite else "library",
+            ),
+            done,
+            lambda error: self.announcer.say(
+                f"Nie udało się zmienić kolekcji TIDAL: {error}"
+            ),
+        )
+
     def _complete_remote_radio_search_result_action(
         self,
         entries: list[SearchEntry],
         action: SearchResultAction,
     ) -> None:
-        """Dodaj wynik Radio Browser wspólnym pisarzem, potem wykonaj akcję."""
+        """Open a directory result transiently; save only on explicit request."""
 
         if not entries:
             return
@@ -6086,6 +6219,10 @@ class LiteFrame(wx.Frame):
             return
         if action in (SearchResultAction.DOWNLOAD, SearchResultAction.SAVE_AS):
             self.announcer.say("Pobieranie nie jest dostępne dla stacji radiowych")
+            return
+        if action is SearchResultAction.OPEN:
+            self._switch_session(SessionId.RADIO)
+            self._run(self.navigator.open_radio_search_result(lead.row))
             return
         if getattr(self, "_radio_search_action_pending", False):
             self.announcer.say("Dodawanie stacji już trwa")

@@ -378,6 +378,8 @@ internal sealed class LiteEngineHandlers : IDisposable
                 PodcastOpmlExport(request.Args),
             [LitePodcastOpmlCoordinator.ExportYouTubeOperation] = (request, _) =>
                 PodcastYouTubeExport(request.Args),
+            [LiteTidalCatalogContract.SearchOperation] = (request, _) =>
+                TidalSearch(request.Args),
             [LiteTidalCatalogContract.ContainerItemsOperation] = (request, _) =>
                 TidalContainerItems(request.Args),
             [LiteTidalCatalogContract.CollectionViewOperation] = (request, _) =>
@@ -2635,6 +2637,11 @@ internal sealed class LiteEngineHandlers : IDisposable
     private object PodcastYouTubeExport(JsonElement args) =>
         (_podcastOpml ?? throw new LiteRequestException(
             "Host nie ma dostępu do bazy Podcastów i YouTube.")).ExportYouTube(args);
+
+    private object TidalSearch(JsonElement args) =>
+        (_tidalCatalog ?? throw new LiteRequestException(
+            "Host nie ma dostępu do profilu AMC potrzebnego do katalogu TIDAL."))
+        .Search(args);
 
     private object TidalContainerItems(JsonElement args) =>
         (_tidalCatalog ?? throw new LiteRequestException(

@@ -5,6 +5,19 @@ from pathlib import Path
 from amc_wx_lite.host_client import LiteHostClient
 
 
+def test_tidal_search_sends_only_the_user_query() -> None:
+    calls: list[tuple[str, dict | None, float]] = []
+    client = LiteHostClient(Path("host.exe"))
+    client.call = lambda op, args=None, *, timeout=20.0: (
+        calls.append((op, args, timeout)) or {"heading": "Wyniki", "items": []}
+    )
+
+    client.tidal_search("Artysta")
+
+    assert calls == [("tidal.search", {"query": "Artysta"}, 120.0)]
+    assert "token" not in repr(calls).casefold()
+
+
 def test_tidal_container_request_contains_no_credentials_or_playback_source() -> None:
     calls: list[tuple[str, dict | None, float]] = []
     client = LiteHostClient(Path("host.exe"))

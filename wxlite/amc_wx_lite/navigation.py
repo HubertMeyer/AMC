@@ -1189,6 +1189,72 @@ class Navigator:
             artist_section=row.service_section,
         )
 
+    def open_tidal_search_result(
+        self,
+        row: Row,
+        *,
+        relations: bool = False,
+    ) -> list[object]:
+        """Open an online search row without adding it to the collection.
+
+        Search results do not have to exist in any saved TIDAL view.  Their
+        explicit catalogue identity is sufficient to open a container or to
+        start a track.  Right Arrow on an artist intentionally opens the same
+        three-category overview as Enter on an artist in the regular browser.
+        """
+
+        state = self.sessions[SessionId.TIDAL]
+        if self.active is not SessionId.TIDAL:
+            return [Announce("Wynik wyszukiwania należy do TIDAL")]
+        target = self._tidal_target_from_row(row)
+
+        if relations:
+            if target is not None and target.kind == "artist":
+                return self._open_tidal_artist_overview(row, target)
+            choices = self._tidal_relation_choices(row)
+            if len(choices) == 1:
+                choice = choices[0]
+                if choice.open_artist_overview:
+                    artist = Row(
+                        item_id=choice.target.item_id,
+                        title=choice.target.title,
+                        kind="artist",
+                        service_id=choice.target.service_id,
+                        service_kind="artist",
+                    )
+                    return self._open_tidal_artist_overview(artist, choice.target)
+                return [choice.target]
+            if choices:
+                return [Announce(
+                    "Ten wynik ma kilka powiązań; otwórz go i użyj prawej strzałki"
+                )]
+            return [Announce(
+                "Ten wynik nie ma dostępnego albumu ani wykonawcy nadrzędnego"
+            )]
+
+        if target is not None:
+            if target.kind == "artist" and target.artist_section is None:
+                return self._open_tidal_artist_overview(row, target)
+            return [target]
+
+        if row.kind == "track":
+            intent = self._tidal_track_intent(row)
+            if isinstance(intent, Announce):
+                return [intent]
+            intent.previous_item_id = state.current_material_id
+            intent.previous_title = state.now_playing_title
+            state.player_entry_anchor_id = row.item_id
+            state.list_anchor_id = row.item_id
+            state.now_playing_id = row.item_id
+            state.now_playing_title = row.title
+            state.pending_material_id = row.item_id
+            state.playback_source_rows = (row,)
+            state.playback_uses_queue = False
+            state.view = View.LIST
+            return [intent]
+
+        return [Announce("Nie można otworzyć tego wyniku TIDAL")]
+
     @staticmethod
     def _tidal_relation_choices(row: Row) -> tuple[TidalRelationChoice, ...]:
         """Mirror the relation menu of the full AMC without speaking IDs."""
@@ -1498,6 +1564,25 @@ class Navigator:
         return [
             PlayStation(target.url or "", target.item_id, target.title),
             Announce(target.title),
+        ]
+
+    def open_radio_search_result(self, row: Row) -> list[object]:
+        """Play one public-directory station without saving it to the profile."""
+
+        if self.active is not SessionId.RADIO or row.kind != "station" or not row.url:
+            return [Announce("Nie można otworzyć tego wyniku radia")]
+        state = self.sessions[SessionId.RADIO]
+        state.player_entry_anchor_id = row.item_id
+        state.list_anchor_id = row.item_id
+        state.now_playing_id = row.item_id
+        state.now_playing_title = row.title
+        state.pending_material_id = row.item_id
+        state.playback_source_rows = (row,)
+        state.playback_uses_queue = False
+        state.view = View.PLAYER
+        return [
+            PlayStation(row.url, row.item_id, row.title),
+            Announce(row.title),
         ]
 
     def activate_local_preset(

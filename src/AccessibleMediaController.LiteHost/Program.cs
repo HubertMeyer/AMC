@@ -164,6 +164,7 @@ internal static class Program
                 LiteRadioRecognitionCoordinator.Operation,
                 // Oficjalny katalog TIDAL wykonuje siec i odswiezenie tokenu,
                 // ale nie moze blokowac transportu ani nagrywania radia.
+                LiteTidalCatalogContract.SearchOperation,
                 LiteTidalCatalogContract.ContainerItemsOperation,
                 LiteTidalCatalogContract.CollectionViewOperation,
                 LiteTidalCatalogContract.MembershipOperation,

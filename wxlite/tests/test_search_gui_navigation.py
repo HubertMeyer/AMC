@@ -309,34 +309,136 @@ def test_radio_search_combines_library_and_public_directory() -> None:
     assert shown[0][1] == ()
 
 
-def test_remote_radio_open_adds_station_then_focuses_real_library_row() -> None:
-    calls = []
-    selected = []
+def test_tidal_search_uses_online_catalog_and_preserves_result_kind() -> None:
+    shown = []
+    searched = []
 
     class Runner:
         @staticmethod
         def submit(_name, work, done, _failed):
             done(work())
 
-    client = SimpleNamespace(
-        add_radio_station=lambda name, address: (
-            calls.append(("add", name, address))
-            or {"preferredStationId": "saved-radio", "preferredStationName": name}
+    frame = SimpleNamespace(
+        search_sources=SimpleNamespace(
+            collect=lambda _sessions: SearchCollection((), ())
+        ),
+        client=SimpleNamespace(
+            tidal_search=lambda query: (
+                searched.append(query)
+                or {
+                    "heading": "Wyniki wyszukiwania TIDAL",
+                    "items": [{
+                        "id": "tidal:artists:7",
+                        "externalId": "artists:7",
+                        "title": "Nowy artysta",
+                        "artist": "",
+                        "kind": "artist",
+                        "durationTicks": 0,
+                        "isFavorite": False,
+                        "isInLibrary": False,
+                    }],
+                }
+            )
+        ),
+        runner=Runner(),
+        _search_dialog_alive=lambda _dialog: True,
+    )
+    dialog = SimpleNamespace(
+        catalog=None,
+        show_results=lambda entries, warnings: shown.append((entries, warnings)),
+        search_failed=lambda: shown.append("failed"),
+    )
+
+    LiteFrame._run_search_query(
+        frame,
+        "Nowy artysta",
+        dialog,
+        all_services=False,
+        session_before=SessionId.TIDAL,
+    )
+
+    assert searched == ["Nowy artysta"]
+    assert len(shown[0][0]) == 1
+    result = shown[0][0][0]
+    assert result.row.kind == "artist"
+    assert result.row.service_id == "artists:7"
+    assert result.remote_kind == "tidalCatalog"
+    assert shown[0][1] == ()
+
+
+def test_tidal_search_right_arrow_uses_catalog_row_without_library_write() -> None:
+    calls = []
+    result = SearchEntry(
+        SessionId.TIDAL,
+        Row(
+            "tidal:artists:7",
+            "Nowy artysta",
+            "artist",
+            service_id="artists:7",
+            service_kind="artist",
+        ),
+        remote_kind="tidalCatalog",
+    )
+    frame = SimpleNamespace(
+        _open_tidal_search_result=lambda entry, *, relations: calls.append(
+            (entry, relations)
         )
     )
-    opened = []
+
+    LiteFrame._complete_search_result_action(
+        frame,
+        result,
+        [result],
+        SearchResultAction.RELATIONS,
+    )
+
+    assert calls == [(result, True)]
+
+
+def test_online_tidal_library_action_uses_tidal_membership_not_podcast_import() -> None:
+    calls = []
+    result = SearchEntry(
+        SessionId.TIDAL,
+        Row(
+            "tidal:artists:7",
+            "Nowy artysta",
+            "artist",
+            service_id="artists:7",
+            service_kind="artist",
+        ),
+        remote_kind="tidalCatalog",
+    )
+    frame = SimpleNamespace(
+        _change_tidal_search_result_membership=(
+            lambda entries, *, favorite: calls.append((entries, favorite))
+        ),
+        announcer=SimpleNamespace(say=lambda message: calls.append(message)),
+    )
+
+    LiteFrame._complete_remote_search_result_action(
+        frame,
+        [result],
+        SearchResultAction.LIBRARY,
+    )
+
+    assert calls == [([result], False)]
+
+
+def test_remote_radio_open_plays_without_profile_write() -> None:
+    calls = []
+    client = SimpleNamespace(
+        add_radio_station=lambda *_args: calls.append(("unexpected-profile-write",))
+    )
+    intents = []
     frame = SimpleNamespace(
         _radio_search_action_pending=False,
         client=client,
-        status_field=SimpleNamespace(SetLabel=lambda value: calls.append(("status", value))),
-        status_bar=SimpleNamespace(show=lambda value: calls.append(("bar", value))),
         announcer=SimpleNamespace(say=lambda value: calls.append(("say", value))),
-        runner=Runner(),
         _switch_session=lambda session: calls.append(("session", session)),
-        _open_radio_view=lambda intent, **kwargs: opened.append((intent, kwargs)),
-        _active_list=lambda: SimpleNamespace(
-            select_item_ids=lambda values: selected.extend(values)
+        navigator=SimpleNamespace(
+            open_radio_search_result=lambda row: [row]
         ),
+        _run=lambda values: intents.extend(values),
     )
     result = SearchEntry(
         SessionId.RADIO,
@@ -355,11 +457,9 @@ def test_remote_radio_open_adds_station_then_focuses_real_library_row() -> None:
         SearchResultAction.OPEN,
     )
 
-    assert ("add", "Radio Poznań", "https://example.test/live") in calls
-    assert opened[0][0].preferred_id == "saved-radio"
-    opened[0][1]["after_refresh"]()
-    assert selected == ["saved-radio"]
-    assert frame._radio_search_action_pending is False
+    assert calls == [("session", SessionId.RADIO)]
+    assert intents == [result.row]
+    assert not any(call[0] == "unexpected-profile-write" for call in calls)
 
 
 def test_remote_radio_queue_is_refused_without_profile_write() -> None:

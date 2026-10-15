@@ -27,6 +27,15 @@ internal sealed class LiteTidalCatalogCoordinator(string statePath) : IDisposabl
     private IReadOnlyList<MediaItem>? _collectionSnapshot;
     private bool _collectionSyncAttempted;
 
+    public object Search(JsonElement args)
+    {
+        var query = LiteTidalCatalogContract.ReadSearchQuery(args);
+        var items = RequireIntegration().SearchAsync(query, CancellationToken.None)
+            .GetAwaiter()
+            .GetResult();
+        return LiteTidalCatalogContract.CreateSearchResult(items);
+    }
+
     public object GetContainerItems(JsonElement args)
     {
         var request = LiteTidalCatalogContract.ReadRequest(args);

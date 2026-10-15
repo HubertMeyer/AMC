@@ -9,6 +9,8 @@ internal static class TidalCatalogContractTests
 {
     public static void Run()
     {
+        ReadsSearchWithoutCredentials();
+        SearchResultContainsOnlyIntentionalModelFields();
         ReadsAContainerWithoutAcceptingPrivatePlaybackData();
         ReadsOnlyKnownArtistSections();
         RefusesMismatchedKindsAndExternalIds();
@@ -20,6 +22,39 @@ internal static class TidalCatalogContractTests
         ReadsCollectionMembershipWithoutCredentials();
         RefusesWrongCollectionShortcutForKind();
         CollectionViewContainsOnlyIntentionalFields();
+    }
+
+    private static void ReadsSearchWithoutCredentials()
+    {
+        using var document = JsonDocument.Parse("""
+        {"query":"  Artysta próby  ","token":"nie może wejść do wyszukiwania"}
+        """);
+        Check(LiteTidalCatalogContract.ReadSearchQuery(document.RootElement)
+                == "Artysta próby",
+            "zapytanie TIDAL nie zostało oczyszczone");
+    }
+
+    private static void SearchResultContainsOnlyIntentionalModelFields()
+    {
+        var artist = new MediaItem
+        {
+            Id = "tidal:artists:7",
+            ExternalId = "artists:7",
+            Title = "Artysta",
+            Kind = MediaItemKind.Artist,
+            IsAvailable = true,
+            Source = "private-token-or-playback-handle"
+        };
+        var result = LiteTidalCatalogContract.CreateSearchResult([artist]);
+        var json = LiteJson.Serialize(result);
+        Check(json.Contains("Wyniki wyszukiwania TIDAL", StringComparison.Ordinal),
+            "wyszukiwanie nie ma użytkowego nagłówka");
+        Check(json.Contains("\"kind\":\"artist\"", StringComparison.Ordinal),
+            "wynik zgubił rodzaj wykonawcy");
+        Check(!json.Contains("private-token-or-playback-handle", StringComparison.Ordinal),
+            "prywatne źródło wyciekło do wyszukiwania");
+        Check(!json.Contains("\"source\"", StringComparison.OrdinalIgnoreCase),
+            "wyszukiwanie zawiera pole źródła");
     }
 
     private static void ReadsAContainerWithoutAcceptingPrivatePlaybackData()

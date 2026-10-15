@@ -14,6 +14,7 @@ namespace AccessibleMediaController.LiteHost.Protocol;
 /// </summary>
 public static class LiteTidalCatalogContract
 {
+    public const string SearchOperation = "tidal.search";
     public const string ContainerItemsOperation = "tidal.containerItems";
     public const string CollectionViewOperation = "tidal.collectionView";
     public const string MembershipOperation = "tidal.collectionMembership";
@@ -43,6 +44,34 @@ public static class LiteTidalCatalogContract
             ["tracks"] = ArtistBrowseSection.Tracks,
             ["similarArtists"] = ArtistBrowseSection.SimilarArtists
         };
+
+    public static string ReadSearchQuery(JsonElement args)
+    {
+        var query = LiteArgs.RequireText(args, "query").Trim();
+        if (query.Length == 0)
+            throw new LiteRequestException("Wpisz tekst do wyszukania w TIDAL.");
+        if (query.Length > 200)
+            throw new LiteRequestException("Tekst wyszukiwania TIDAL jest zbyt długi.");
+        return query;
+    }
+
+    public static LiteTidalContainerResult CreateSearchResult(
+        IReadOnlyList<MediaItem> items)
+    {
+        ArgumentNullException.ThrowIfNull(items);
+        return new LiteTidalContainerResult(
+            "Wyniki wyszukiwania TIDAL",
+            items
+                .Where(item => item.IsAvailable
+                    && item.Kind is MediaItemKind.Track or MediaItemKind.Video
+                        or MediaItemKind.Album or MediaItemKind.Artist or MediaItemKind.Playlist
+                    && !string.IsNullOrWhiteSpace(item.Id)
+                    && !string.IsNullOrWhiteSpace(item.Title)
+                    && !string.IsNullOrWhiteSpace(item.ExternalId))
+                .Select(LiteTidalCatalogItem.FromMediaItem)
+                .DistinctBy(item => item.Id, StringComparer.Ordinal)
+                .ToArray());
+    }
 
     public static LiteTidalContainerRequest ReadRequest(JsonElement args)
     {

@@ -466,6 +466,10 @@ class LiteHostClient:
         """Zapisz żywą pozycję odcinka przez wąską operację hosta C#."""
         return self.call("podcast.checkpoint", timeout=15.0)
 
+    def tidal_search(self, query: str) -> Any:
+        """Search the official catalogue without changing the collection."""
+        return self.call("tidal.search", {"query": query}, timeout=120.0)
+
     def tidal_container_items(
         self,
         *,

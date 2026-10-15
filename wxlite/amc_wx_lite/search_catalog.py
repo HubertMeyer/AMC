@@ -26,6 +26,7 @@ SESSION_LABELS: dict[SessionId, str] = {
 
 class SearchResultAction(Enum):
     OPEN = "open"
+    RELATIONS = "relations"
     TOGGLE_PLAYBACK = "togglePlayback"
     QUEUE = "queue"
     PLAY_NEXT = "playNext"
