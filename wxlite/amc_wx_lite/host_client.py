@@ -466,6 +466,51 @@ class LiteHostClient:
         """Zapisz żywą pozycję odcinka przez wąską operację hosta C#."""
         return self.call("podcast.checkpoint", timeout=15.0)
 
+    def spotify_capabilities(self) -> Any:
+        """Read the supported Spotify surface without starting authentication."""
+        return self.call("spotify.capabilities", timeout=15.0)
+
+    def spotify_account_status(self) -> Any:
+        """Read the separate catalogue and playback connection states."""
+        return self.call("spotify.accountStatus", timeout=15.0)
+
+    def spotify_collection_root(self) -> Any:
+        """Read the user-facing Spotify collection categories."""
+        return self.call("spotify.collectionRoot", timeout=15.0)
+
+    def spotify_collection_view(self, view: str) -> Any:
+        """Read one Spotify collection view through the C# host."""
+        return self.call(
+            "spotify.collectionView",
+            {"view": view},
+            timeout=180.0,
+        )
+
+    def spotify_container_items(
+        self,
+        *,
+        external_id: str,
+        title: str,
+        kind: str,
+        artist: str = "",
+        artist_section: str | None = None,
+    ) -> Any:
+        """Read a Spotify container without exposing credentials or sources."""
+        args: dict[str, Any] = {
+            "externalId": external_id,
+            "title": title,
+            "kind": kind,
+        }
+        if artist:
+            args["artist"] = artist
+        if artist_section:
+            args["artistSection"] = artist_section
+        return self.call("spotify.containerItems", args, timeout=120.0)
+
+    def spotify_search(self, query: str) -> Any:
+        """Search Spotify without changing the account collection."""
+        return self.call("spotify.search", {"query": query}, timeout=120.0)
+
     def tidal_search(self, query: str) -> Any:
         """Search the official catalogue without changing the collection."""
         return self.call("tidal.search", {"query": query}, timeout=120.0)
