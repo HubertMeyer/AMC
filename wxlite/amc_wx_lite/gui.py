@@ -122,6 +122,7 @@ from .navigation import (
 from .shortcuts import (
     Action,
     Chord,
+    GLOBAL_VIEW_SHORTCUTS,
     TIDAL_SUPPORTED_ACTIONS,
     SONOS_SUPPORTED_ACTIONS,
     WIIM_SUPPORTED_ACTIONS,
@@ -5678,7 +5679,7 @@ class LiteFrame(wx.Frame):
             "Ctrl+Alt+S",
             "Ctrl+Alt+Shift+S",
             "Ctrl+,",
-        }:
+        } | set(GLOBAL_VIEW_SHORTCUTS):
             # Ctrl+C musi zostac zatrzymane PRZED natywnym SysListView32,
             # zeby gest wykonal tylko polecenie AMC. Angielskie "Copy"
             # zgloszone w odbiorze nie pochodzi jednak z kontrolki: na
@@ -7943,7 +7944,7 @@ class LiteFrame(wx.Frame):
                 "Alt+Shift+R",
                 "Alt+Up",
                 "Alt+Down",
-            }:
+            } | set(GLOBAL_VIEW_SHORTCUTS):
                 self._on_key(event)
                 return
             event.Skip()
@@ -8494,6 +8495,8 @@ class LiteFrame(wx.Frame):
             # dostaja jawne wejscie (Alt+1, jak MainWindow.xaml:446).
             self._open_library(self.library.saved_folder())
         elif action is Action.VIEW_LIBRARY:
+            # Ctrl+L jest jawnym przejsciem, a nie zamknieciem podgladu.
+            self._transient_preview_return = None
             if self.navigator.active is SessionId.WIIM:
                 context = self._wiim_device_context()
                 self._run(self.navigator.open_wiim_source_library(
@@ -8508,13 +8511,7 @@ class LiteFrame(wx.Frame):
             else:
                 self._return_to_library()
         elif action is Action.VIEW_HISTORY:
-            if self.navigator.active is SessionId.PODCASTS:
-                self._transient_preview_return = None
-                self._open_podcast_aggregate(
-                    OpenPodcastAggregateView(LibraryView.PODCAST_HISTORY)
-                )
-            else:
-                self._run(self.navigator.open_library_view(LibraryView.HISTORY))
+            self._show_playback_history_preview()
         elif action is Action.VIEW_SAVED_QUEUE:
             if self.navigator.active is SessionId.PODCASTS:
                 self._transient_preview_return = None
@@ -12972,6 +12969,41 @@ class LiteFrame(wx.Frame):
         if self._transient_preview_return is None:
             self._transient_preview_return = self.navigator.capture_transient_navigation()
 
+    def _show_playback_history_preview(self) -> None:
+        """Ctrl+H: jedna Historia i Escape dokladnie do miejsca wywolania."""
+        self._begin_transient_preview()
+        origin = self.navigator.active
+        if origin is SessionId.RADIO:
+            state = self.navigator.sessions[SessionId.RADIO]
+            state.library_view = LibraryView.HISTORY
+            state.view = View.LIST
+            self._open_radio_view(OpenLibraryView(
+                LibraryView.HISTORY,
+                target_session_id=SessionId.RADIO,
+            ))
+            return
+        if origin is SessionId.PODCASTS:
+            state = self.navigator.sessions[SessionId.PODCASTS]
+            state.library_view = LibraryView.PODCAST_HISTORY
+            state.view = View.LIST
+            self._open_podcast_aggregate(
+                OpenPodcastAggregateView(LibraryView.PODCAST_HISTORY)
+            )
+            return
+
+        # WiiM i Sonos nie maja w profilu wlasnego katalogu historii, z ktorego
+        # mozna zbudowac uzytkowe wiersze. Pokazujemy istniejaca Historie
+        # plikow lokalnych jako wspolny podglad i zachowujemy cala sesje
+        # urzadzenia do powrotu przez Escape.
+        self.navigator.active = SessionId.FILES
+        state = self.navigator.sessions[SessionId.FILES]
+        state.library_view = LibraryView.HISTORY
+        state.view = View.LIST
+        self._open_library_view(OpenLibraryView(
+            LibraryView.HISTORY,
+            target_session_id=SessionId.FILES,
+        ))
+
     def _restore_transient_preview(
         self, *, announce: bool = True, force: bool = False
     ) -> bool:
@@ -12980,6 +13012,8 @@ class LiteFrame(wx.Frame):
             return False
         current = self.navigator.session.library_view
         if not force and current not in (
+            LibraryView.HISTORY,
+            LibraryView.PODCAST_HISTORY,
             LibraryView.ACTIVE_RADIO_RECORDINGS,
             LibraryView.RECORDED_RADIO_FILES,
             LibraryView.RADIO_RECORDING_SCHEDULES,

@@ -658,11 +658,15 @@ def test_playback_and_view_menus_do_not_mix_foreign_sessions() -> None:
     assert remote_playback == {Action.PLAY_PAUSE}
 
     sonos_library = actions(menu_model.SessionId.SONOS, "&Biblioteka")
-    assert {Action.VIEW_LIBRARY, Action.VIEW_FAVORITES, Action.VIEW_PLAYLISTS} <= sonos_library
+    assert {
+        Action.VIEW_LIBRARY,
+        Action.VIEW_FAVORITES,
+        Action.VIEW_PLAYLISTS,
+        Action.VIEW_HISTORY,
+    } <= sonos_library
     assert {
         Action.VIEW_FOLDERS,
         Action.VIEW_ALL_FILES,
-        Action.VIEW_HISTORY,
         Action.VIEW_SAVED_QUEUE,
         Action.MANAGE_PLAYLIST_MEMBERSHIP,
     }.isdisjoint(sonos_library)

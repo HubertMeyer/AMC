@@ -404,6 +404,7 @@ TIDAL_SUPPORTED_ACTIONS = frozenset({
     Action.SEARCH_CURRENT,
     Action.SEARCH_ALL,
     Action.VIEW_LIBRARY,
+    Action.VIEW_HISTORY,
     Action.VIEW_FAVORITES,
     Action.VIEW_PLAYLISTS,
     Action.VIEW_SAVED_QUEUE,
@@ -471,6 +472,8 @@ WIIM_SUPPORTED_ACTIONS = frozenset({
     Action.COPY_NAME,
     Action.COPY_ADDRESS,
     Action.FOCUS_FILTER,
+    Action.VIEW_LIBRARY,
+    Action.VIEW_HISTORY,
     Action.VIEW_ACTIVE_RECORDINGS,
     Action.VIEW_RECORDED_RADIO_FILES,
     Action.MANAGE_RADIO_SCHEDULES,
@@ -548,6 +551,7 @@ SONOS_SUPPORTED_ACTIONS = frozenset({
     Action.COPY_NAME,
     Action.COPY_ADDRESS,
     Action.VIEW_LIBRARY,
+    Action.VIEW_HISTORY,
     Action.VIEW_FAVORITES,
     Action.VIEW_PLAYLISTS,
     Action.ADD_SONOS_OWN_STREAM,
@@ -671,7 +675,6 @@ LIST_VIEW: dict[str, Action] = {
     "Alt+1": Action.VIEW_FOLDERS,
     # MainWindow.xaml:427-428 i MainWindow.xaml.cs:22173 -- powrot do
     # Biblioteki z KAZDEGO nazwanego widoku (Ulubione, Historia, ...).
-    "Ctrl+L": Action.VIEW_LIBRARY,
     "Ctrl+Q": Action.VIEW_SAVED_QUEUE,
     # Jednoznaczny zestaw bez dawnego duplikatu Shift+Enter:
     # Ctrl+Shift+Q zmienia zwykla kolejke, Ctrl+Shift+Enter ustawia blok
@@ -680,7 +683,6 @@ LIST_VIEW: dict[str, Action] = {
     "Ctrl+Shift+Return": Action.TOGGLE_PLAY_NEXT,
     "Ctrl+Shift+U": Action.TOGGLE_FAVORITE,
     "Ctrl+Shift+P": Action.MANAGE_PLAYLIST_MEMBERSHIP,
-    "Ctrl+H": Action.VIEW_HISTORY,
     # Ctrl+B to ViewBookmarks oryginalu (MainWindow.xaml:489): WSZYSTKIE
     # zakladki. Teraz mamy ten zbior naprawde (GetForDisplay), wiec skrot
     # dostaje swoje wlasne znaczenie, a wezszy widok zakladek ZAZNACZONEGO
@@ -896,13 +898,19 @@ for _chord, _slot in PRESET_SHORTCUTS.items():
 
 # To samo globalne polecenie z widoku listy.
 LIST_VIEW["Ctrl+Alt+Shift+R"] = Action.RECORD_STOP_ALL
-# Wspolne podglady pelnego AMC: dzialaja z listy i odtwarzacza niezaleznie od
-# sesji, a Escape wraca do zapamietanego miejsca.
+# Widoki rozstrzygane PRZED tabelami adapterow. Natywna lista i odtwarzacz
+# korzystaja z tego samego kontraktu, wiec WiiM, Sonos ani przyszly adapter nie
+# moga polknac gestu bez dzialania.
+GLOBAL_VIEW_SHORTCUTS: dict[str, Action] = {
+    "Alt+R": Action.VIEW_ACTIVE_RECORDINGS,
+    "Alt+Shift+R": Action.VIEW_RECORDED_RADIO_FILES,
+    "Ctrl+I": Action.VIEW_PODCAST_INBOX,
+    "Ctrl+H": Action.VIEW_HISTORY,
+    "Ctrl+L": Action.VIEW_LIBRARY,
+}
 for _table in (LIST_VIEW, PLAYER_VIEW):
-    _table["Alt+R"] = Action.VIEW_ACTIVE_RECORDINGS
-    _table["Alt+Shift+R"] = Action.VIEW_RECORDED_RADIO_FILES
+    _table.update(GLOBAL_VIEW_SHORTCUTS)
     _table["Ctrl+Shift+H"] = Action.MANAGE_RADIO_SCHEDULES
-    _table["Ctrl+I"] = Action.VIEW_PODCAST_INBOX
 
 
 PODCAST_INBOX_LIST_VIEW: dict[str, Action] = {
@@ -918,7 +926,6 @@ PODCAST_SESSION_VIEW: dict[str, Action] = {
     # Ctrl+U jest widokiem bieżącej sesji także z odtwarzacza. W Podcastach
     # obejmuje ulubione kanały i odcinki, a nie Bibliotekę plików lokalnych.
     "Ctrl+U": Action.VIEW_FAVORITES,
-    "Ctrl+H": Action.VIEW_HISTORY,
     "Ctrl+N": Action.ADD_PODCAST_SOURCE,
     "Ctrl+O": Action.IMPORT_PODCAST_OPML,
     "F5": Action.REFRESH_PODCAST,
@@ -968,7 +975,6 @@ TIDAL_COLLECTION_LIST_VIEW: dict[str, Action] = {
 # plik playlisty i zapisuje znalezione strumienie w AMC. Zapisane strumienie
 # nie potrzebują już osobnego skrótu: są drugim elementem Biblioteki źródeł.
 WIIM_SESSION_VIEW: dict[str, Action] = {
-    "Ctrl+L": Action.VIEW_LIBRARY,
     "Ctrl+O": Action.IMPORT_WIIM_NETWORK_STREAMS,
     # Zachowany jako zgodny alias starszych kompilacji; menu pokazuje prostsze
     # Ctrl+O i tylko ten skrót opisujemy użytkownikowi.
@@ -1003,7 +1009,6 @@ WIIM_PLAYER_VIEW: dict[str, Action] = {
 SONOS_SESSION_VIEW: dict[str, Action] = {
     # Jak w głównym AMC: grupy i głośniki są celem sterowania, nie Biblioteką.
     "Ctrl+F5": Action.SELECT_SONOS_TARGET,
-    "Ctrl+L": Action.VIEW_LIBRARY,
     "Ctrl+U": Action.VIEW_FAVORITES,
     "Ctrl+P": Action.VIEW_PLAYLISTS,
 }
@@ -1045,6 +1050,8 @@ def resolve(
     dla kontrolki (natywna nawigacja ma pierwszenstwo)."""
     table = PLAYER_VIEW if player_view else LIST_VIEW
     canonical = chord.canonical
+    if canonical in GLOBAL_VIEW_SHORTCUTS:
+        return GLOBAL_VIEW_SHORTCUTS[canonical]
     # W „Nowych odcinkach” te same cyfry co w glownym AMC zmieniaja
     # kolejnosc. Poza tym jednym widokiem Alt+1/Alt+2 zachowuja lokalne
     # znaczenie Folderow/Wszystkich plikow, a Alt+3 pozostaje wolne.
@@ -1091,7 +1098,7 @@ def resolve(
         return None
     # Widoki Radia sa dostepne takze z odtwarzacza, bez wychodzenia Escape.
     # Ta sama akcja co na liscie/menu; nie przenosimy edycji stacji do PLAYER.
-    if radio_session and canonical in ("Ctrl+L", "Ctrl+U", "Ctrl+H"):
+    if radio_session and canonical == "Ctrl+U":
         return LIST_VIEW[canonical]
     if player_view and radio_session and canonical in RADIO_PLAYER_VIEW:
         return RADIO_PLAYER_VIEW[canonical]

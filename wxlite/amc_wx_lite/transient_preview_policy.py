@@ -1,4 +1,4 @@
-"""Dostępność trzech chwilowych podglądów zgodna z głównym AMC."""
+"""Dostępność wspólnych chwilowych podglądów zgodna z nowym AMC."""
 
 from __future__ import annotations
 
@@ -13,6 +13,7 @@ TRANSIENT_PREVIEW_ACTIONS = frozenset({
     Action.VIEW_ACTIVE_RECORDINGS,
     Action.VIEW_RECORDED_RADIO_FILES,
     Action.VIEW_PODCAST_INBOX,
+    Action.VIEW_HISTORY,
 })
 
 
@@ -50,6 +51,8 @@ def is_transient_preview_available(
 ) -> bool:
     if action not in TRANSIENT_PREVIEW_ACTIONS:
         return False
+    if action is Action.VIEW_HISTORY:
+        return True
     if global_previews:
         return True
     if action is Action.VIEW_ACTIVE_RECORDINGS:
