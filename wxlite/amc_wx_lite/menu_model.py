@@ -91,6 +91,10 @@ class MenuItem:
     needs_player_view: bool = False
     #: Wymaga zaznaczonego wiersza na liscie (kopiowanie, otwarcie).
     needs_selection: bool = False
+    #: Wymaga elementu pod fokusem listy albo faktycznie odtwarzanego elementu.
+    #: Dzięki temu Alt+T i Alt+Enter pozostają dostępne w odtwarzaczu także
+    #: po przejściu listy do innego miejsca, ale znikają z pustego kontekstu.
+    needs_item_information: bool = False
     #: Wymaga zaznaczonego podcastu albo odcinka, nie np. „Załaduj więcej”.
     needs_podcast_item: bool = False
     #: Wspólny opis Alt+D: lokalny podcast/YouTube albo podcast Spotify.
@@ -466,6 +470,20 @@ def build_menus(session_order: object = None) -> tuple[Menu, ...]:
             MenuItem("&Otwórz zaznaczone", Action.ACTIVATE, shortcut="Return",
                      needs_selection=True),
             MenuItem(
+                "Szybkie informacje o elemencie (&0)",
+                Action.QUICK_INFORMATION,
+                shortcut="Alt+T",
+                accelerator=False,
+                needs_item_information=True,
+            ),
+            MenuItem(
+                "Właściwości i informacje (&9)…",
+                Action.ITEM_PROPERTIES,
+                shortcut="Alt+Return",
+                accelerator=False,
+                needs_item_information=True,
+            ),
+            MenuItem(
                 "Przejdź do podcastu tego o&dcinka",
                 Action.GO_TO_RELATED_PODCAST,
                 needs_podcast_session=True,
@@ -604,6 +622,42 @@ def build_menus(session_order: object = None) -> tuple[Menu, ...]:
                 "Usuń strumień WiiM z AMC (&Q)",
                 Action.REMOVE_WIIM_NETWORK_STREAMS,
                 shortcut="Delete",
+                accelerator=False,
+                needs_selection=True,
+                needs_wiim_stream=True,
+                visible_sessions=WIIM_ONLY,
+            ),
+            MenuItem(
+                "WiiM: przenieś wyżej (&3)",
+                Action.MOVE_WIIM_NETWORK_STREAM_UP,
+                shortcut="Alt+Up",
+                accelerator=False,
+                needs_selection=True,
+                needs_wiim_stream=True,
+                visible_sessions=WIIM_ONLY,
+            ),
+            MenuItem(
+                "WiiM: przenieś niżej (&4)",
+                Action.MOVE_WIIM_NETWORK_STREAM_DOWN,
+                shortcut="Alt+Down",
+                accelerator=False,
+                needs_selection=True,
+                needs_wiim_stream=True,
+                visible_sessions=WIIM_ONLY,
+            ),
+            MenuItem(
+                "WiiM: zaznacz do przeniesienia (&5)",
+                Action.CUT_WIIM_NETWORK_STREAMS,
+                shortcut="Ctrl+X",
+                accelerator=False,
+                needs_selection=True,
+                needs_wiim_stream=True,
+                visible_sessions=WIIM_ONLY,
+            ),
+            MenuItem(
+                "WiiM: wstaw przed bieżącym (&6)",
+                Action.PASTE_WIIM_NETWORK_STREAMS,
+                shortcut="Ctrl+V",
                 accelerator=False,
                 needs_selection=True,
                 needs_wiim_stream=True,

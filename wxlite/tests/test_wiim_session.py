@@ -5,6 +5,7 @@ from types import SimpleNamespace
 
 from amc_wx_lite.gui import LiteFrame
 from amc_wx_lite.host_client import LiteHostClient
+from amc_wx_lite.list_model import Row
 from amc_wx_lite.menu_model import build_menus
 from amc_wx_lite.navigation import (
     ActivateWiiMDevice,
@@ -166,6 +167,8 @@ def test_wiim_host_client_sends_only_device_id_command_and_volume() -> None:
     client.wiim_import_network_streams("C:/listy/wiim.m3u")
     client.wiim_export_network_streams("C:/listy/eksport.m3u")
     client.wiim_sort_network_streams("Alphabetical")
+    client.wiim_move_network_streams(["stream-7", "stream-8"], -1)
+    client.wiim_place_network_streams(["stream-7"], "stream-9")
 
     assert calls == [
         ("wiim.devices", None, 15.0),
@@ -249,6 +252,16 @@ def test_wiim_host_client_sends_only_device_id_command_and_volume() -> None:
         (
             "wiim.networkStreamSort",
             {"mode": "Alphabetical"},
+            30.0,
+        ),
+        (
+            "wiim.networkStreamMove",
+            {"itemIds": ["stream-7", "stream-8"], "direction": -1},
+            30.0,
+        ),
+        (
+            "wiim.networkStreamPlace",
+            {"itemIds": ["stream-7"], "targetId": "stream-9"},
             30.0,
         ),
     ]
@@ -569,6 +582,89 @@ def test_wiim_stream_edit_shortcuts_are_active_only_inside_stream_list() -> None
         ) is None
         assert resolve(
             Chord(key, alt=True),
+            player_view=False,
+            radio_session=False,
+            wiim_session=True,
+            wiim_streams=True,
+        ) is action
+
+
+def test_wiim_cut_and_paste_place_streams_before_named_target() -> None:
+    spoken: list[str] = []
+    calls: list[tuple[list[str], str]] = []
+    reloads: list[tuple[str | None, str | None]] = []
+    selected = [
+        Row(
+            "wiim-stream:one",
+            "Pierwszy",
+            "wiimNetworkStream",
+            service_id="one",
+            service_kind="wiimNetworkStream",
+        ),
+        Row(
+            "wiim-stream:three",
+            "Trzeci",
+            "wiimNetworkStream",
+            service_id="three",
+            service_kind="wiimNetworkStream",
+        ),
+    ]
+    client = SimpleNamespace(
+        wiim_place_network_streams=lambda ids, target: (
+            calls.append((list(ids), target))
+            or {"preferredStreamId": "one"}
+        )
+    )
+    frame = SimpleNamespace(
+        _wiim_network_stream_sort_mode="Custom",
+        _wiim_pending_move_ids=[],
+        _selected_wiim_stream_rows=lambda: selected,
+        _profile_edit_client=lambda: client,
+        announcer=SimpleNamespace(say=spoken.append),
+        runner=SimpleNamespace(
+            submit=lambda _name, work, done, _failed: done(work())
+        ),
+        _show_wiim_network_streams=lambda **kwargs: reloads.append((
+            kwargs.get("preferred_stream_id"),
+            kwargs.get("announcement"),
+        )),
+    )
+
+    LiteFrame._cut_wiim_network_streams(frame)
+    assert frame._wiim_pending_move_ids == ["one", "three"]
+    assert spoken == [
+        "Zaznaczono strumienie do przeniesienia: 2. "
+        "Wybierz miejsce i naciśnij Control V"
+    ]
+
+    target = Row(
+        "wiim-stream:two",
+        "Drugi",
+        "wiimNetworkStream",
+        service_id="two",
+        service_kind="wiimNetworkStream",
+    )
+    frame._selected_wiim_stream_rows = lambda: [target]
+    LiteFrame._paste_wiim_network_streams(frame)
+
+    assert calls == [(["one", "three"], "two")]
+    assert frame._wiim_pending_move_ids == []
+    assert reloads == [("one", "Przeniesiono strumienie: 2, przed Drugi")]
+
+    for chord, action in (
+        (Chord("Up", alt=True), Action.MOVE_WIIM_NETWORK_STREAM_UP),
+        (Chord("Down", alt=True), Action.MOVE_WIIM_NETWORK_STREAM_DOWN),
+        (Chord("X", ctrl=True), Action.CUT_WIIM_NETWORK_STREAMS),
+        (Chord("V", ctrl=True), Action.PASTE_WIIM_NETWORK_STREAMS),
+    ):
+        assert resolve(
+            chord,
+            player_view=False,
+            radio_session=False,
+            wiim_session=True,
+        ) is None
+        assert resolve(
+            chord,
             player_view=False,
             radio_session=False,
             wiim_session=True,

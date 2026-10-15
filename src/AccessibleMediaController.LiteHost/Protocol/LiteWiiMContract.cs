@@ -29,6 +29,8 @@ public static class LiteWiiMContract
     public const string ImportNetworkStreamsOperation = "wiim.networkStreamImport";
     public const string ExportNetworkStreamsOperation = "wiim.networkStreamExport";
     public const string SortNetworkStreamsOperation = "wiim.networkStreamSort";
+    public const string MoveNetworkStreamsOperation = "wiim.networkStreamMove";
+    public const string PlaceNetworkStreamsOperation = "wiim.networkStreamPlace";
 
     public static string ReadDeviceId(JsonElement args) =>
         LiteArgs.RequireText(args, "deviceId").Trim();
@@ -124,6 +126,17 @@ public static class LiteWiiMContract
             && Enum.IsDefined(mode))
             return mode;
         throw new LiteRequestException("Nieznany sposób sortowania strumieni WiiM.");
+    }
+
+    public static int ReadNetworkStreamMoveDirection(JsonElement args)
+    {
+        if (args.TryGetProperty("direction", out var rawDirection)
+            && rawDirection.ValueKind is JsonValueKind.Number
+            && rawDirection.TryGetInt32(out var direction)
+            && direction is (-1 or 1))
+            return direction;
+        throw new LiteRequestException(
+            "Kierunek przenoszenia strumienia WiiM jest nieprawidłowy.");
     }
 
     public static object CreateDevicesResult(WiiMSettings settings)

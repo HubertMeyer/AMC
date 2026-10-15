@@ -232,6 +232,10 @@ class Action(Enum):
     SORT_WIIM_NETWORK_STREAMS_ADDED = "wiim.networkStreams.sort.added"
     SORT_WIIM_NETWORK_STREAMS_ALPHABETICAL = "wiim.networkStreams.sort.alphabetical"
     SORT_WIIM_NETWORK_STREAMS_CUSTOM = "wiim.networkStreams.sort.custom"
+    MOVE_WIIM_NETWORK_STREAM_UP = "wiim.networkStreams.moveUp"
+    MOVE_WIIM_NETWORK_STREAM_DOWN = "wiim.networkStreams.moveDown"
+    CUT_WIIM_NETWORK_STREAMS = "wiim.networkStreams.cut"
+    PASTE_WIIM_NETWORK_STREAMS = "wiim.networkStreams.paste"
     ADD_SONOS_OWN_STREAM = "sonos.ownStreams.add"
     EDIT_SONOS_OWN_STREAM = "sonos.ownStreams.edit"
     REMOVE_SONOS_OWN_STREAMS = "sonos.ownStreams.remove"
@@ -348,6 +352,7 @@ class Action(Enum):
     # ktory oryginal przechwytuje). Gesty czytnika ekranu zostaja nietkniete --
     # NVDA czyta kolumny swoim modyfikatorem, nie sama strzalka.
     QUICK_INFORMATION = "list.quickInformation"
+    ITEM_PROPERTIES = "list.itemProperties"
     #: Opcje sesji (Ctrl+Alt+Enter). Port ``SessionPlaybackOptionsEditor``.
     #:
     #: Jedno WSPOLNE wejscie dla obu sesji -- dialog sam pokazuje tylko te
@@ -412,6 +417,7 @@ TIDAL_SUPPORTED_ACTIONS = frozenset({
     Action.PRESET_11,
     Action.PRESET_12,
     Action.QUICK_INFORMATION,
+    Action.ITEM_PROPERTIES,
     Action.COPY_NAME,
     Action.COPY_ADDRESS,
     Action.FOCUS_FILTER,
@@ -487,6 +493,7 @@ SPOTIFY_SUPPORTED_ACTIONS = frozenset({
     Action.NEXT_AUDIO_OUTPUT,
     Action.TOGGLE_SEEK_MESSAGES,
     Action.QUICK_INFORMATION,
+    Action.ITEM_PROPERTIES,
     Action.COPY_NAME,
     Action.COPY_ADDRESS,
     Action.FOCUS_FILTER,
@@ -579,9 +586,14 @@ WIIM_SUPPORTED_ACTIONS = frozenset({
     Action.SORT_WIIM_NETWORK_STREAMS_ADDED,
     Action.SORT_WIIM_NETWORK_STREAMS_ALPHABETICAL,
     Action.SORT_WIIM_NETWORK_STREAMS_CUSTOM,
+    Action.MOVE_WIIM_NETWORK_STREAM_UP,
+    Action.MOVE_WIIM_NETWORK_STREAM_DOWN,
+    Action.CUT_WIIM_NETWORK_STREAMS,
+    Action.PASTE_WIIM_NETWORK_STREAMS,
     Action.GENERAL_SETTINGS,
     Action.TOGGLE_SEEK_MESSAGES,
     Action.QUICK_INFORMATION,
+    Action.ITEM_PROPERTIES,
     Action.COPY_NAME,
     Action.COPY_ADDRESS,
     Action.FOCUS_FILTER,
@@ -663,6 +675,7 @@ SONOS_SUPPORTED_ACTIONS = frozenset({
     Action.GENERAL_SETTINGS,
     Action.TOGGLE_SEEK_MESSAGES,
     Action.QUICK_INFORMATION,
+    Action.ITEM_PROPERTIES,
     Action.COPY_NAME,
     Action.COPY_ADDRESS,
     Action.VIEW_LIBRARY,
@@ -818,7 +831,11 @@ LIST_VIEW: dict[str, Action] = {
     # oryginal wymaga ``Keyboard.Modifiers == ModifierKeys.None``
     # (cs:23206), wiec Shift/Ctrl/Alt+Left NIE sa tu wpisane i zostaja
     # kontrolce. Strzalki PIONOWE nadal naleza wylacznie do listy.
+    # Alt+T jest wspólnym, łatwym do odnalezienia gestem informacji o
+    # elemencie. Lewa strzałka pozostaje zgodnościowym skrótem z pełnego AMC.
+    "Alt+T": Action.QUICK_INFORMATION,
     "Left": Action.QUICK_INFORMATION,
+    "Alt+Return": Action.ITEM_PROPERTIES,
     # Opcje sesji: TEN SAM gest co w odtwarzaczu, bo zakres (sesja) jest ten
     # sam niezaleznie od widoku.
     "Ctrl+Alt+Return": Action.SESSION_OPTIONS,
@@ -954,6 +971,8 @@ PLAYER_VIEW: dict[str, Action] = {
     "Ctrl+Shift+Return": Action.TOGGLE_PLAY_NEXT,
     "Ctrl+Shift+U": Action.TOGGLE_FAVORITE,
     "Ctrl+Shift+P": Action.MANAGE_PLAYLIST_MEMBERSHIP,
+    "Alt+T": Action.QUICK_INFORMATION,
+    "Alt+Return": Action.ITEM_PROPERTIES,
     "Left": Action.SEEK_BACK_10,
     "Right": Action.SEEK_FORWARD_10,
     # Cztery pary krokow z oryginalu (MainWindow.xaml.cs:21583-21590,
@@ -1136,6 +1155,10 @@ WIIM_SESSION_VIEW: dict[str, Action] = {
     "Alt+1": Action.SORT_WIIM_NETWORK_STREAMS_ADDED,
     "Alt+2": Action.SORT_WIIM_NETWORK_STREAMS_ALPHABETICAL,
     "Alt+3": Action.SORT_WIIM_NETWORK_STREAMS_CUSTOM,
+    "Alt+Up": Action.MOVE_WIIM_NETWORK_STREAM_UP,
+    "Alt+Down": Action.MOVE_WIIM_NETWORK_STREAM_DOWN,
+    "Ctrl+X": Action.CUT_WIIM_NETWORK_STREAMS,
+    "Ctrl+V": Action.PASTE_WIIM_NETWORK_STREAMS,
 }
 
 
@@ -1253,6 +1276,10 @@ def resolve(
             Action.SORT_WIIM_NETWORK_STREAMS_ADDED,
             Action.SORT_WIIM_NETWORK_STREAMS_ALPHABETICAL,
             Action.SORT_WIIM_NETWORK_STREAMS_CUSTOM,
+            Action.MOVE_WIIM_NETWORK_STREAM_UP,
+            Action.MOVE_WIIM_NETWORK_STREAM_DOWN,
+            Action.CUT_WIIM_NETWORK_STREAMS,
+            Action.PASTE_WIIM_NETWORK_STREAMS,
         } and not wiim_streams:
             return None
         return action
@@ -1482,6 +1509,14 @@ def _help_entries() -> list[tuple[str, str, Action]]:
         Action.SORT_WIIM_NETWORK_STREAMS_CUSTOM: (
             "Strumienie WiiM: kolejność własna"
         ),
+        Action.MOVE_WIIM_NETWORK_STREAM_UP: "Strumienie WiiM: przenieś wyżej",
+        Action.MOVE_WIIM_NETWORK_STREAM_DOWN: "Strumienie WiiM: przenieś niżej",
+        Action.CUT_WIIM_NETWORK_STREAMS: (
+            "Strumienie WiiM: zaznacz do przeniesienia"
+        ),
+        Action.PASTE_WIIM_NETWORK_STREAMS: (
+            "Strumienie WiiM: wstaw przed bieżącym elementem"
+        ),
         Action.ASSIGN_PRESET: "Utwórz preset lub przypisz bieżący element",
         Action.VIEW_ALL_FILES: "Wszystkie pliki alfabetycznie",
         Action.VIEW_FAVORITES: "Ulubione",
@@ -1512,6 +1547,9 @@ def _help_entries() -> list[tuple[str, str, Action]]:
             "Informacje uzupelniajace o zaznaczonym wierszu "
             "(folder: sciezka)"
         ),
+        Action.ITEM_PROPERTIES: (
+            "Właściwości i pełne informacje o zaznaczonym lub odtwarzanym elemencie"
+        ),
         Action.HELP: "Ta pomoc",
         Action.KEYBOARD_HELP: "Włącz lub wyłącz Pomoc klawiatury",
         Action.VERSION_INFO: "Wersja programu",
@@ -1539,7 +1577,12 @@ def _help_entries() -> list[tuple[str, str, Action]]:
     # Nazwy klawiszy w pomocy musza byc TAKIE, jak na klawiaturze. Wewnetrzne
     # "Prior"/"Next" (z wx) czytnik przeczytalby jako obce slowa, a uzytkownik
     # nie znalazlby tych klawiszy pod palcami.
-    readable_keys = {"Prior": "Page Up", "Next": "Page Down"}
+    readable_keys = {
+        "Prior": "Page Up",
+        "Next": "Page Down",
+        "Return": "Enter",
+        "Back": "Backspace",
+    }
 
     seen: set[Action] = set()
     out: list[tuple[str, str, Action]] = []
@@ -1595,6 +1638,10 @@ def _help_entries() -> list[tuple[str, str, Action]]:
                 Action.SORT_WIIM_NETWORK_STREAMS_ADDED,
                 Action.SORT_WIIM_NETWORK_STREAMS_ALPHABETICAL,
                 Action.SORT_WIIM_NETWORK_STREAMS_CUSTOM,
+                Action.MOVE_WIIM_NETWORK_STREAM_UP,
+                Action.MOVE_WIIM_NETWORK_STREAM_DOWN,
+                Action.CUT_WIIM_NETWORK_STREAMS,
+                Action.PASTE_WIIM_NETWORK_STREAMS,
             }:
                 label = f"{label} (Strumienie WiiM)"
             # Nigdy nie wystawiamy technicznego identyfikatora Enum do mowy

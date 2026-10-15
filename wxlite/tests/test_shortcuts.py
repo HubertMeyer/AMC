@@ -36,6 +36,24 @@ def test_tab_is_never_intercepted() -> None:
         assert resolve(Chord("Tab", shift=True), player_view=view, radio_session=False) is None
 
 
+def test_item_information_shortcuts_work_in_list_and_player() -> None:
+    for player in (False, True):
+        assert resolve(
+            Chord("T", alt=True),
+            player_view=player,
+            radio_session=False,
+        ) is Action.QUICK_INFORMATION
+        assert resolve(
+            Chord("Return", alt=True),
+            player_view=player,
+            radio_session=False,
+        ) is Action.ITEM_PROPERTIES
+
+    help_entries = dict(describe())
+    assert "Alt+T" in help_entries
+    assert "Alt+Enter" in help_entries
+
+
 def test_arrows_in_player_view_control_seek_and_volume() -> None:
     # W widoku odtwarzacza nie ma po czym chodzic, wiec strzalki przejmuja
     # role z profilu globalnego AMC (KeyboardProfile.cs:57-66).

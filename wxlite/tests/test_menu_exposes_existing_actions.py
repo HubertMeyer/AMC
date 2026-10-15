@@ -196,7 +196,8 @@ def test_no_duplicate_labels_or_shortcuts() -> None:
         "Ctrl+O", "Ctrl+Shift+O", "Ctrl+N", "Ctrl+E", "Ctrl+D", "Ctrl+S",
         "Alt+1", "Alt+2", "Alt+3", "Alt+D", "Ctrl+F5", "Ctrl+Shift+L",
         "Ctrl+Shift+U",
-        "B", "Shift+B", "Ctrl+Shift+B", "Ctrl+X", "F2", "Delete",
+        "B", "Shift+B", "Ctrl+Shift+B", "Ctrl+X", "Ctrl+V",
+        "Alt+Up", "Alt+Down", "F2", "Delete",
         "Ctrl+U", "Ctrl+P", "I", "O", "S", "T"
     }, duplicates
     for chord in ("Ctrl+U", "Ctrl+P"):
@@ -233,8 +234,13 @@ def test_no_duplicate_labels_or_shortcuts() -> None:
         )
     for item in duplicates.get("Ctrl+X", []):
         assert not item.accelerator, (
-            "kontekstowe Ctrl+X musi rozstrzygnąć pliki albo Moje stacje Sonosa"
+            "kontekstowe Ctrl+X musi rozstrzygnąć pliki, WiiM albo Sonosa"
         )
+    for chord in ("Ctrl+V", "Alt+Up", "Alt+Down"):
+        for item in duplicates.get(chord, []):
+            assert not item.accelerator, (
+                f"kontekstowe {chord} musi rozstrzygnąć aktywny widok"
+            )
     for chord in ("Ctrl+Shift+O", "Ctrl+E"):
         for item in duplicates.get(chord, []):
             if item.action in {

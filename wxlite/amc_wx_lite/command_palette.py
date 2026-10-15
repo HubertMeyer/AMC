@@ -7,6 +7,7 @@ Każdy wpis prowadzi do istniejącej :class:`Action`, tej samej co menu i skrót
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Iterable
 
 from . import menu_model
 from .navigation import SessionId
@@ -90,6 +91,16 @@ def filter_entries(
         for entry in entries
         if all(word in normalize_search_text(entry.label) for word in words)
     )
+
+
+def available_entries(
+    entries: tuple[CommandPaletteEntry, ...],
+    actions: Iterable[Action],
+) -> tuple[CommandPaletteEntry, ...]:
+    """Zostaw tylko polecenia aktywne w bieżącym widoku i zaznaczeniu."""
+
+    available = set(actions)
+    return tuple(entry for entry in entries if entry.action in available)
 
 
 def count_label(count: int) -> str:

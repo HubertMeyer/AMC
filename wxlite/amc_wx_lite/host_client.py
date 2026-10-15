@@ -828,6 +828,27 @@ class LiteHostClient:
             timeout=30.0,
         )
 
+    def wiim_move_network_streams(
+        self, stream_ids: list[str], direction: int
+    ) -> Any:
+        return self.call(
+            "wiim.networkStreamMove",
+            {
+                "itemIds": list(stream_ids),
+                "direction": int(direction),
+            },
+            timeout=30.0,
+        )
+
+    def wiim_place_network_streams(
+        self, stream_ids: list[str], target_id: str
+    ) -> Any:
+        return self.call(
+            "wiim.networkStreamPlace",
+            {"itemIds": list(stream_ids), "targetId": target_id},
+            timeout=30.0,
+        )
+
     def sonos_targets(self) -> Any:
         """List Sonos groups; account tokens never leave the C# host."""
         return self.call("sonos.targets", timeout=60.0)

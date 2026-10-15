@@ -2,7 +2,12 @@
 
 from __future__ import annotations
 
-from amc_wx_lite.command_palette import count_label, entries_for_session, filter_entries
+from amc_wx_lite.command_palette import (
+    available_entries,
+    count_label,
+    entries_for_session,
+    filter_entries,
+)
 from amc_wx_lite.navigation import SessionId
 from amc_wx_lite.shortcuts import Action, Chord, resolve
 
@@ -33,6 +38,20 @@ def test_palette_filter_is_accent_insensitive_and_requires_every_word() -> None:
     result = filter_entries(entries, "paleta polecen")
     assert [entry.action for entry in result] == [Action.COMMAND_PALETTE]
     assert filter_entries(entries, "nieistniejące polecenie") == ()
+
+
+def test_palette_can_follow_current_view_availability() -> None:
+    entries = entries_for_session(SessionId.FILES)
+    result = available_entries(
+        entries,
+        {Action.COMMAND_PALETTE, Action.QUICK_INFORMATION},
+    )
+
+    assert {entry.action for entry in result} == {
+        Action.COMMAND_PALETTE,
+        Action.QUICK_INFORMATION,
+    }
+    assert len(result) == 2
 
 
 def test_palette_count_labels_are_intentional_polish_text() -> None:

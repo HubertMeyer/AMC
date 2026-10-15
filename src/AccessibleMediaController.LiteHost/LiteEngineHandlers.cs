@@ -450,6 +450,10 @@ internal sealed class LiteEngineHandlers : IDisposable
                 ExportWiiMNetworkStreams(request.Args),
             [LiteWiiMContract.SortNetworkStreamsOperation] = (request, _) =>
                 SetWiiMNetworkStreamSortMode(request.Args),
+            [LiteWiiMContract.MoveNetworkStreamsOperation] = (request, _) =>
+                MoveWiiMNetworkStreams(request.Args),
+            [LiteWiiMContract.PlaceNetworkStreamsOperation] = (request, _) =>
+                PlaceWiiMNetworkStreams(request.Args),
             [LiteSonosContract.TargetsOperation] = (_, _) =>
                 RequireSonos().ListTargets(),
             [LiteSonosContract.SnapshotOperation] = (request, _) =>
@@ -926,6 +930,16 @@ internal sealed class LiteEngineHandlers : IDisposable
     private object SetWiiMNetworkStreamSortMode(JsonElement args) =>
         RequireProfileMutations().SetWiiMNetworkStreamSortMode(
             LiteWiiMContract.ReadNetworkStreamSortMode(args));
+
+    private object MoveWiiMNetworkStreams(JsonElement args) =>
+        RequireProfileMutations().MoveWiiMNetworkStreams(
+            ReadIds(args),
+            LiteWiiMContract.ReadNetworkStreamMoveDirection(args));
+
+    private object PlaceWiiMNetworkStreams(JsonElement args) =>
+        RequireProfileMutations().PlaceWiiMNetworkStreamsBefore(
+            ReadIds(args),
+            LiteArgs.RequireText(args, "targetId"));
 
     private object SonosOwnStreamEditInfo(JsonElement args) =>
         RequireProfileMutations().SonosOwnStreamEditInfo(

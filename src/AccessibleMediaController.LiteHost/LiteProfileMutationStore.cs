@@ -549,6 +549,36 @@ internal sealed class LiteProfileMutationStore
         }
     }
 
+    public object MoveWiiMNetworkStreams(
+        IReadOnlyList<string> streamIds,
+        int direction)
+    {
+        EnsureMayWrite();
+        lock (_gate)
+        {
+            var root = ReadState();
+            var result = LiteWiiMProfileMutation.Move(
+                root, streamIds, direction);
+            WriteState(root);
+            return WiiMOrderMutationResponse(result, streamIds.Count);
+        }
+    }
+
+    public object PlaceWiiMNetworkStreamsBefore(
+        IReadOnlyList<string> streamIds,
+        string targetId)
+    {
+        EnsureMayWrite();
+        lock (_gate)
+        {
+            var root = ReadState();
+            var result = LiteWiiMProfileMutation.PlaceBefore(
+                root, streamIds, targetId);
+            WriteState(root);
+            return WiiMOrderMutationResponse(result, streamIds.Count);
+        }
+    }
+
     public LiteWiiMNetworkStreamExportResult ExportWiiMNetworkStreams(
         string destinationPath)
     {
@@ -754,6 +784,17 @@ internal sealed class LiteProfileMutationStore
             message = selectedCount == 1
                 ? $"{result.Title}, pozycja {result.Position} z {result.Count}"
                 : $"Przeniesiono {selectedCount} stacji, od pozycji "
+                    + $"{result.Position} z {result.Count}"
+        };
+
+    private static object WiiMOrderMutationResponse(
+        LiteWiiMNetworkStreamOrderMutationResult result,
+        int selectedCount) => new
+        {
+            preferredStreamId = result.PreferredStreamId,
+            message = selectedCount == 1
+                ? $"{result.Title}, pozycja {result.Position} z {result.Count}"
+                : $"Przeniesiono {selectedCount} strumieni, od pozycji "
                     + $"{result.Position} z {result.Count}"
         };
 

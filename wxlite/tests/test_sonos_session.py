@@ -674,7 +674,7 @@ def test_sonos_cut_and_paste_preserve_all_selected_stream_ids() -> None:
     assert frame._sonos_pending_move_ids == []
     assert reloads == [(
         "one",
-        "Przeniesiono 2 stacje, od pozycji 1 z 3",
+        "Przeniesiono stacje: 2, przed Druga",
     )]
 
 

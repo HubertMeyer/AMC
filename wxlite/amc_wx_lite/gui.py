@@ -65,11 +65,13 @@ from .audio_output import (
 from .collation import HostCollation
 from .command_palette import (
     CommandPaletteEntry,
+    available_entries as available_command_entries,
     count_label as command_count_label,
     entries_for_session as command_entries_for_session,
     filter_entries as filter_command_entries,
 )
 from .host_client import HostError, HostUnavailable, LiteHostClient, default_host_path
+from .item_information import item_properties_text
 from . import nvda_bridge
 from .library_source import LibrarySnapshot, LibrarySource, degradation_notice
 from . import list_sync
@@ -2384,6 +2386,8 @@ class PodcastDescriptionDialog(wx.Dialog):
         parent: wx.Window,
         information: PodcastDescription,
         copy_text: Callable[[str], bool],
+        *,
+        close_accessible_name: str = "Zamknij opis",
     ) -> None:
         # Windows/MSAA ogłasza tytuł nowego okna przed kontrolką z treścią.
         # Dlatego tytułem dostępnym jest początek prawdziwego opisu, a nie
@@ -2423,7 +2427,7 @@ class PodcastDescriptionDialog(wx.Dialog):
         copy_button = wx.Button(self, wx.ID_COPY, label="&Kopiuj wszystko")
         copy_button.SetName("Kopiuj całą treść")
         close_button = wx.Button(self, wx.ID_CANCEL, label="&Zamknij")
-        close_button.SetName("Zamknij opis")
+        close_button.SetName(close_accessible_name)
         buttons.AddButton(copy_button)
         buttons.AddButton(close_button)
         buttons.Realize()
@@ -2447,6 +2451,29 @@ class PodcastDescriptionDialog(wx.Dialog):
             return
         event.Skip()
 
+
+class ItemPropertiesDialog(PodcastDescriptionDialog):
+    """Dostępny dialog Alt+Enter oparty na natywnym polu tekstowym."""
+
+    def __init__(
+        self,
+        parent: wx.Window,
+        *,
+        item_title: str,
+        text: str,
+        copy_text: Callable[[str], bool],
+    ) -> None:
+        accessible_title = f"Właściwości: {item_title}"
+        super().__init__(
+            parent,
+            PodcastDescription(
+                window_title=accessible_title,
+                text=text,
+                initial_focus_name=accessible_title,
+            ),
+            copy_text,
+            close_accessible_name="Zamknij właściwości",
+        )
 
 def _preset_slot_from_event(event: wx.KeyEvent) -> int | None:
     """Cyfra/minus/rownosc w dialogach presetow, bez nazw technicznych wx."""
@@ -5343,6 +5370,7 @@ class LiteFrame(wx.Frame):
         self._wiim_snapshot: dict = {}
         self._wiim_active_device_id = ""
         self._wiim_network_stream_sort_mode = SORT_ADDED_NEWEST
+        self._wiim_pending_move_ids: list[str] = []
         self._wiim_status_poll_pending = False
         self._sonos_snapshot: dict = {}
         self._sonos_active_household_id = ""
@@ -5760,6 +5788,10 @@ class LiteFrame(wx.Frame):
         )
         spotify_collection = spotify_scope is not None
         has_row = session.model.selected_row is not None
+        has_information_item = (
+            LiteFrame._description_target_row(self, self.navigator.active)
+            is not None
+        )
         selected_row = session.model.selected_row
         selected_kind = (
             selected_row.kind
@@ -5889,6 +5921,8 @@ class LiteFrame(wx.Frame):
             if entry.needs_player_view and session.view is not View.PLAYER:
                 enabled = False
             if entry.needs_selection and not has_row:
+                enabled = False
+            if entry.needs_item_information and not has_information_item:
                 enabled = False
             if entry.needs_podcast_item and (
                 not podcasts or selected_kind not in ("podcast", "episode")
@@ -9473,6 +9507,14 @@ class LiteFrame(wx.Frame):
             Action.SORT_WIIM_NETWORK_STREAMS_CUSTOM,
         }:
             self._set_wiim_network_stream_sort(action)
+        elif action is Action.MOVE_WIIM_NETWORK_STREAM_UP:
+            self._move_wiim_network_streams(-1)
+        elif action is Action.MOVE_WIIM_NETWORK_STREAM_DOWN:
+            self._move_wiim_network_streams(1)
+        elif action is Action.CUT_WIIM_NETWORK_STREAMS:
+            self._cut_wiim_network_streams()
+        elif action is Action.PASTE_WIIM_NETWORK_STREAMS:
+            self._paste_wiim_network_streams()
         elif action is Action.ADD_SONOS_OWN_STREAM:
             self._add_sonos_own_stream()
         elif action is Action.EDIT_SONOS_OWN_STREAM:
@@ -9593,6 +9635,8 @@ class LiteFrame(wx.Frame):
             self._choose_file()
         elif action is Action.QUICK_INFORMATION:
             self._announce_quick_information()
+        elif action is Action.ITEM_PROPERTIES:
+            self._show_item_properties()
         elif action is Action.SPOTIFY_RELATIONS:
             self._run(self.navigator.spotify_relations())
         elif action in {
@@ -10521,6 +10565,11 @@ class LiteFrame(wx.Frame):
 
         def done(payload: object) -> None:
             result = payload if isinstance(payload, dict) else {}
+            removed = set(stream_ids)
+            self._wiim_pending_move_ids = [
+                stream_id for stream_id in self._wiim_pending_move_ids
+                if stream_id not in removed
+            ]
             message = str(
                 result.get("message")
                 or f"Usunięto strumienie WiiM: {len(stream_ids)}"
@@ -10624,6 +10673,8 @@ class LiteFrame(wx.Frame):
         def done(payload: object) -> None:
             result = payload if isinstance(payload, dict) else {}
             self._wiim_network_stream_sort_mode = mode
+            if mode != SORT_CUSTOM:
+                self._wiim_pending_move_ids = []
             message = str(result.get("message") or "Zmieniono kolejność strumieni WiiM")
             self._show_wiim_network_streams(
                 preferred_stream_id=preferred,
@@ -10637,6 +10688,143 @@ class LiteFrame(wx.Frame):
             lambda error: self.announcer.say(
                 f"Nie zapisano kolejności strumieni WiiM: {error}"
             ),
+        )
+
+    def _move_wiim_network_streams(self, direction: int) -> None:
+        if self._wiim_network_stream_sort_mode != SORT_CUSTOM:
+            self.announcer.say(
+                "Przenoszenie działa w kolejności własnej. Naciśnij Alt 3"
+            )
+            return
+        filter_box = getattr(self, "filter_box", None)
+        if filter_box is not None and filter_box.GetValue().strip():
+            self.announcer.say(
+                "Wyczyść filtr klawiszem Escape przed zmianą kolejności"
+            )
+            return
+        rows = self._selected_wiim_stream_rows()
+        if not rows:
+            self.announcer.say("Najpierw wybierz strumień")
+            return
+        client = self._profile_edit_client()
+        if client is None:
+            return
+        stream_ids = [row.service_id for row in rows if row.service_id]
+        selected = set(stream_ids)
+        visible = [
+            row for row in self.navigator.session.model.rows
+            if row.kind == "wiimNetworkStream" and row.service_id
+        ]
+        positions = [
+            index for index, row in enumerate(visible)
+            if row.service_id in selected
+        ]
+        adjacent_title = "sąsiedni element"
+        if positions and positions[-1] - positions[0] + 1 == len(positions):
+            adjacent_index = positions[0] - 1 if direction < 0 else positions[-1] + 1
+            if 0 <= adjacent_index < len(visible):
+                adjacent_title = visible[adjacent_index].title
+
+        def done(payload: object) -> None:
+            result = payload if isinstance(payload, dict) else {}
+            preferred = str(result.get("preferredStreamId") or "") or None
+            moved = (
+                "Przeniesiono strumień"
+                if len(stream_ids) == 1
+                else f"Przeniesiono strumienie: {len(stream_ids)}"
+            )
+            message = (
+                f"{moved} w górę, nad {adjacent_title}"
+                if direction < 0
+                else f"{moved} w dół, pod {adjacent_title}"
+            )
+            self._show_wiim_network_streams(
+                preferred_stream_id=preferred,
+                announcement=message,
+            )
+
+        self.runner.submit(
+            "wiim-stream-order",
+            lambda: client.wiim_move_network_streams(stream_ids, direction),
+            done,
+            lambda error: self.announcer.say(str(error)),
+        )
+
+    def _cut_wiim_network_streams(self) -> None:
+        if self._wiim_network_stream_sort_mode != SORT_CUSTOM:
+            self.announcer.say(
+                "Przenoszenie działa w kolejności własnej. Naciśnij Alt 3"
+            )
+            return
+        filter_box = getattr(self, "filter_box", None)
+        if filter_box is not None and filter_box.GetValue().strip():
+            self.announcer.say(
+                "Wyczyść filtr klawiszem Escape przed przenoszeniem elementów"
+            )
+            return
+        rows = self._selected_wiim_stream_rows()
+        if not rows:
+            self.announcer.say("Najpierw wybierz strumień")
+            return
+        self._wiim_pending_move_ids = [
+            row.service_id for row in rows if row.service_id
+        ]
+        self.announcer.say(
+            "Zaznaczono strumień do przeniesienia. "
+            "Wybierz miejsce i naciśnij Control V"
+            if len(self._wiim_pending_move_ids) == 1 else
+            f"Zaznaczono strumienie do przeniesienia: "
+            f"{len(self._wiim_pending_move_ids)}. "
+            "Wybierz miejsce i naciśnij Control V"
+        )
+
+    def _paste_wiim_network_streams(self) -> None:
+        if self._wiim_network_stream_sort_mode != SORT_CUSTOM:
+            self.announcer.say(
+                "Przenoszenie działa w kolejności własnej. Naciśnij Alt 3"
+            )
+            return
+        filter_box = getattr(self, "filter_box", None)
+        if filter_box is not None and filter_box.GetValue().strip():
+            self.announcer.say(
+                "Wyczyść filtr klawiszem Escape przed przenoszeniem elementów"
+            )
+            return
+        if not self._wiim_pending_move_ids:
+            self.announcer.say(
+                "Najpierw naciśnij Control X na strumieniu do przeniesienia"
+            )
+            return
+        target = next(iter(self._selected_wiim_stream_rows()), None)
+        if target is None or not target.service_id:
+            self.announcer.say("Nie wybrano miejsca docelowego")
+            return
+        client = self._profile_edit_client()
+        if client is None:
+            return
+        pending = list(self._wiim_pending_move_ids)
+        target_id = target.service_id
+        target_title = target.title
+
+        def done(payload: object) -> None:
+            result = payload if isinstance(payload, dict) else {}
+            preferred = str(result.get("preferredStreamId") or "") or None
+            self._wiim_pending_move_ids = []
+            message = (
+                f"Przeniesiono strumień przed {target_title}"
+                if len(pending) == 1 else
+                f"Przeniesiono strumienie: {len(pending)}, przed {target_title}"
+            )
+            self._show_wiim_network_streams(
+                preferred_stream_id=preferred,
+                announcement=message,
+            )
+
+        self.runner.submit(
+            "wiim-stream-order",
+            lambda: client.wiim_place_network_streams(pending, target_id),
+            done,
+            lambda error: self.announcer.say(str(error)),
         )
 
     def _activate_wiim_network_stream(
@@ -11744,10 +11932,21 @@ class LiteFrame(wx.Frame):
             wx.CallAfter(self._restore_focus_after_dialog)
 
     def _show_command_palette(self) -> None:
+        # Paleta korzysta z dokładnie tych samych bramek co menu. Dzięki temu
+        # zmienia się nie tylko między sesjami, ale również między widokami i
+        # po zmianie zaznaczenia; nie proponuje polecenia, które po Enterze
+        # zostałoby odrzucone jako niedostępne.
+        self._refresh_menu_state()
+        available_actions = {
+            entry.action
+            for item, entry in getattr(self, "_menu_items", ())
+            if entry.action is not None and item.IsEnabled()
+        }
         entries = command_entries_for_session(
             self.navigator.active,
             self.options.session_order,
         )
+        entries = available_command_entries(entries, available_actions)
         with CommandPaletteDialog(self, entries) as dialog:
             if dialog.ShowModal() != wx.ID_OK:
                 self._restore_focus_after_dialog()
@@ -12652,6 +12851,12 @@ class LiteFrame(wx.Frame):
                 "Przenoszenie działa w kolejności własnej. Naciśnij Alt 3"
             )
             return
+        filter_box = getattr(self, "filter_box", None)
+        if filter_box is not None and filter_box.GetValue().strip():
+            self.announcer.say(
+                "Wyczyść filtr klawiszem Escape przed zmianą kolejności"
+            )
+            return
         rows = self._selected_sonos_own_stream_rows()
         if not rows:
             self.announcer.say("Najpierw wybierz stację")
@@ -12660,11 +12865,34 @@ class LiteFrame(wx.Frame):
         if client is None:
             return
         stream_ids = [row.service_id for row in rows if row.service_id]
+        selected = set(stream_ids)
+        visible = [
+            row for row in self.navigator.session.model.rows
+            if row.kind == "sonosOwnStream" and row.service_id
+        ]
+        positions = [
+            index for index, row in enumerate(visible)
+            if row.service_id in selected
+        ]
+        adjacent_title = "sąsiedni element"
+        if positions and positions[-1] - positions[0] + 1 == len(positions):
+            adjacent_index = positions[0] - 1 if direction < 0 else positions[-1] + 1
+            if 0 <= adjacent_index < len(visible):
+                adjacent_title = visible[adjacent_index].title
 
         def done(payload: object) -> None:
             result = payload if isinstance(payload, dict) else {}
             preferred = str(result.get("preferredStreamId") or "") or None
-            message = str(result.get("message") or "Przeniesiono stację Sonos")
+            moved = (
+                "Przeniesiono stację"
+                if len(stream_ids) == 1
+                else f"Przeniesiono stacje: {len(stream_ids)}"
+            )
+            message = (
+                f"{moved} w górę, nad {adjacent_title}"
+                if direction < 0
+                else f"{moved} w dół, pod {adjacent_title}"
+            )
             self._reload_sonos_own_streams(
                 preferred_stream_id=preferred,
                 announcement=message,
@@ -12681,6 +12909,12 @@ class LiteFrame(wx.Frame):
         if self._sonos_own_stream_sort_mode != SORT_CUSTOM:
             self.announcer.say(
                 "Przenoszenie działa w kolejności własnej. Naciśnij Alt 3"
+            )
+            return
+        filter_box = getattr(self, "filter_box", None)
+        if filter_box is not None and filter_box.GetValue().strip():
+            self.announcer.say(
+                "Wyczyść filtr klawiszem Escape przed przenoszeniem elementów"
             )
             return
         rows = self._selected_sonos_own_stream_rows()
@@ -12704,6 +12938,12 @@ class LiteFrame(wx.Frame):
                 "Przenoszenie działa w kolejności własnej. Naciśnij Alt 3"
             )
             return
+        filter_box = getattr(self, "filter_box", None)
+        if filter_box is not None and filter_box.GetValue().strip():
+            self.announcer.say(
+                "Wyczyść filtr klawiszem Escape przed przenoszeniem elementów"
+            )
+            return
         if not self._sonos_pending_move_ids:
             self.announcer.say(
                 "Najpierw naciśnij Control X na stacji do przeniesienia"
@@ -12717,11 +12957,16 @@ class LiteFrame(wx.Frame):
         if client is None:
             return
         pending = list(self._sonos_pending_move_ids)
+        target_title = target.title
 
         def done(payload: object) -> None:
             result = payload if isinstance(payload, dict) else {}
             preferred = str(result.get("preferredStreamId") or "") or None
-            message = str(result.get("message") or "Przeniesiono stacje Sonos")
+            message = (
+                f"Przeniesiono stację przed {target_title}"
+                if len(pending) == 1 else
+                f"Przeniesiono stacje: {len(pending)}, przed {target_title}"
+            )
             self._sonos_pending_move_ids = []
             self._reload_sonos_own_streams(
                 preferred_stream_id=preferred,
@@ -14021,6 +14266,33 @@ class LiteFrame(wx.Frame):
             return None
         return state.model.selected_row
 
+    def _show_item_properties(self) -> None:
+        """Alt+Enter: jeden natywny dialog właściwości dla każdej sesji."""
+
+        row = LiteFrame._description_target_row(self, self.navigator.active)
+        if row is None:
+            self.announcer.say("Nie ma elementu, którego właściwości można pokazać")
+            return
+        text = item_properties_text(
+            row,
+            session_label=SESSION_LABELS[self.navigator.active],
+        )
+
+        def copy_text(value: str) -> bool:
+            copied = self._to_clipboard(value)
+            if copied:
+                self.announcer.say("Skopiowano właściwości elementu")
+            return copied
+
+        with ItemPropertiesDialog(
+            self,
+            item_title=row.title,
+            text=text,
+            copy_text=copy_text,
+        ) as dialog:
+            dialog.ShowModal()
+        self._restore_focus_after_dialog()
+
     def _show_spotify_description(self) -> None:
         """Alt+D for Spotify podcasts and episodes through the read-only host."""
 
@@ -14856,12 +15128,17 @@ class LiteFrame(wx.Frame):
         self.runner.submit("spotify-album-information", work, done, failed)
 
     def _announce_quick_information(self) -> None:
-        """Parametry zaznaczonego elementu, nie aktualnie odtwarzanego.
+        """Parametry elementu pod fokusem albo faktycznie odtwarzanego.
 
         Cache i uzupełnianie przez silnik działają poza wątkiem GUI;
         wspólny formatter Core składa napis, bramka odrzuca spóźniony wynik.
         """
-        row = self.navigator.session.model.selected_row
+        target_row = getattr(self, "_description_target_row", None)
+        row = (
+            target_row(self.navigator.active)
+            if callable(target_row)
+            else self.navigator.session.model.selected_row
+        )
         if self.navigator.active is SessionId.TIDAL:
             if row is None:
                 self.announcer.say("Lista TIDAL jest pusta")
@@ -15033,7 +15310,7 @@ class LiteFrame(wx.Frame):
         )
 
     def _selected_item_id(self) -> str | None:
-        row = self.navigator.session.model.selected_row
+        row = LiteFrame._description_target_row(self, self.navigator.active)
         return None if row is None else row.item_id
 
     def _copy_address(self) -> None:

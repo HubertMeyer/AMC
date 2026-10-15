@@ -1,6 +1,7 @@
 using System.Text.Json.Nodes;
 using AccessibleMediaController.Core.Configuration;
 using AccessibleMediaController.Core.Devices.WiiM;
+using AccessibleMediaController.Core.LocalMedia;
 using AccessibleMediaController.LiteHost.Protocol;
 
 namespace AccessibleMediaController.LiteHost;
@@ -22,6 +23,12 @@ internal sealed record LiteWiiMNetworkStreamDisplayOrder(
     CollectionSortMode SortMode);
 
 internal sealed record LiteWiiMNetworkStreamDraft(string Name, string Url);
+
+internal sealed record LiteWiiMNetworkStreamOrderMutationResult(
+    string PreferredStreamId,
+    string Title,
+    int Position,
+    int Count);
 
 internal static class LiteWiiMProfileMutation
 {
@@ -248,6 +255,103 @@ internal static class LiteWiiMProfileMutation
             custom: mode is CollectionSortMode.Custom,
             result.NormalizedItemIds);
         return new(result.Streams, mode);
+    }
+
+    public static LiteWiiMNetworkStreamOrderMutationResult Move(
+        JsonObject root,
+        IReadOnlyCollection<string> selectedIds,
+        int direction)
+    {
+        RequireCustomOrder(root);
+        var streams = ReadStreams(root);
+        var ordered = WiiMNetworkStreamOrdering.OrderForDisplay(
+            streams,
+            CollectionSortMode.Custom,
+            EffectiveOrderIds(root, streams, CollectionSortMode.Custom));
+        var customOrder = ordered.NormalizedItemIds.ToList();
+        var visibleIds = ordered.Streams.Select(stream => stream.Id).ToArray();
+        var result = LocalLibraryManualOrder.MoveVisibleBlock(
+            customOrder,
+            visibleIds,
+            selectedIds,
+            direction);
+        if (result is not ManualOrderMoveResult.Moved)
+            throw new LiteRequestException(result switch
+            {
+                ManualOrderMoveResult.Boundary => direction < 0
+                    ? "Już na początku listy."
+                    : "Już na końcu listy.",
+                ManualOrderMoveResult.NonContiguousSelection =>
+                    "Zaznaczenie nie jest ciągłe. Wybierz sąsiadujące strumienie.",
+                _ => "Najpierw wybierz strumień."
+            });
+        WriteOrderIds(root, custom: true, customOrder);
+        return DescribeOrderMutation(root, selectedIds);
+    }
+
+    public static LiteWiiMNetworkStreamOrderMutationResult PlaceBefore(
+        JsonObject root,
+        IReadOnlyCollection<string> selectedIds,
+        string targetId)
+    {
+        RequireCustomOrder(root);
+        var streams = ReadStreams(root);
+        var known = streams.Select(stream => stream.Id)
+            .ToHashSet(StringComparer.Ordinal);
+        if (selectedIds.Count == 0 || selectedIds.Any(id => !known.Contains(id)))
+            throw new LiteRequestException(
+                "Nie ma czego przenieść. Naciśnij Control X na strumieniu.");
+        var ordered = WiiMNetworkStreamOrdering.OrderForDisplay(
+            streams,
+            CollectionSortMode.Custom,
+            EffectiveOrderIds(root, streams, CollectionSortMode.Custom));
+        var customOrder = ordered.NormalizedItemIds.ToList();
+        var result = LocalLibraryManualOrder.PlaceItemsBefore(
+            customOrder,
+            selectedIds,
+            targetId);
+        if (result is not ManualOrderPlacementResult.Moved)
+            throw new LiteRequestException(result switch
+            {
+                ManualOrderPlacementResult.TargetInSelection =>
+                    "Cel jest wśród przenoszonych strumieni. Wybierz inne miejsce.",
+                ManualOrderPlacementResult.TargetMissing =>
+                    "Nie wybrano miejsca docelowego.",
+                ManualOrderPlacementResult.Unchanged =>
+                    "Strumień już jest w tym miejscu.",
+                _ => "Nie ma czego przenieść. Naciśnij Control X na strumieniu."
+            });
+        WriteOrderIds(root, custom: true, customOrder);
+        return DescribeOrderMutation(root, selectedIds);
+    }
+
+    private static LiteWiiMNetworkStreamOrderMutationResult DescribeOrderMutation(
+        JsonObject root,
+        IReadOnlyCollection<string> selectedIds)
+    {
+        var arranged = OrderForDisplay(root).Streams;
+        var selected = arranged.First(stream => selectedIds.Contains(
+            stream.Id,
+            StringComparer.Ordinal));
+        var position = arranged
+            .Select((stream, index) => (stream, index))
+            .First(pair => string.Equals(
+                pair.stream.Id,
+                selected.Id,
+                StringComparison.Ordinal))
+            .index + 1;
+        return new(
+            selected.Id,
+            selected.Name,
+            position,
+            arranged.Count);
+    }
+
+    private static void RequireCustomOrder(JsonObject root)
+    {
+        if (ReadSortMode(root) is not CollectionSortMode.Custom)
+            throw new LiteRequestException(
+                "Przenoszenie działa w kolejności własnej. Naciśnij Alt 3.");
     }
 
     private static string NormalizeUrl(string requestedUrl)

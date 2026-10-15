@@ -13,6 +13,7 @@ internal static class WiiMProfileMutationTests
         RemoveCleansDeviceMemoryAndOrders();
         ImportPreservesPlaylistOrderAndSkipsDuplicates();
         SortAndExportUseTheSameVisibleOrder();
+        MoveAndPlaceRequireAndPersistCustomOrder();
         Console.WriteLine("WiiMProfileMutationTests: OK");
     }
 
@@ -156,6 +157,47 @@ internal static class WiiMProfileMutationTests
         {
             Directory.Delete(directory, recursive: true);
         }
+    }
+
+    private static void MoveAndPlaceRequireAndPersistCustomOrder()
+    {
+        var root = Profile();
+        try
+        {
+            LiteWiiMProfileMutation.Move(root, ["stream-2"], -1);
+            throw new InvalidOperationException(
+                "przenoszenie zadziałało poza kolejnością własną");
+        }
+        catch (LiteRequestException exception)
+        {
+            Assert.True(exception.Message.Contains("Alt 3", StringComparison.Ordinal),
+                "odmowa wskazuje użytkownikowi sposób włączenia kolejności własnej");
+        }
+
+        LiteWiiMProfileMutation.SetSortMode(
+            root,
+            AccessibleMediaController.Core.Configuration.CollectionSortMode.Custom);
+        var moved = LiteWiiMProfileMutation.Move(root, ["stream-2"], -1);
+        Assert.True(moved.PreferredStreamId == "stream-2" && moved.Position == 1,
+            "Alt+strzałka przesuwa wskazany strumień o jedną pozycję");
+        Assert.True(
+            LiteWiiMProfileMutation.OrderForDisplay(root).Streams
+                .Select(stream => stream.Id)
+                .SequenceEqual(["stream-2", "stream-1"]),
+            "zmieniona kolejność jest od razu kolejnością widoczną");
+
+        var placed = LiteWiiMProfileMutation.PlaceBefore(
+            root,
+            ["stream-1"],
+            "stream-2");
+        Assert.True(placed.PreferredStreamId == "stream-1" && placed.Position == 1,
+            "Ctrl+V wstawia wycięty strumień przed wskazanym celem");
+        var stored = (JsonArray)root["collectionOrders"]!
+            ["libraryItemIdsBySession"]!["wiim"]!;
+        Assert.True(
+            stored.Select(value => value!.GetValue<string>())
+                .SequenceEqual(["stream-1", "stream-2"]),
+            "Ctrl+V zapisuje kolejność własną w istniejącym magazynie profilu");
     }
 
     private static JsonObject Profile() => new()
