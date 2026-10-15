@@ -106,6 +106,11 @@ class Row:
     # polecenia „Przejdź do wykonawcy”, nigdy ten identyfikator.
     related_artist_service_id: str | None = None
     related_artist_name: str = ""
+    # Relacja odcinka Spotify do podcastu. Id pozostaje wyłącznie danymi
+    # nawigacji; czytnik dostaje nazwę podcastu dopiero w jawnej informacji
+    # albo etykietę polecenia relacji, nigdy techniczny URI/identyfikator.
+    related_podcast_service_id: str | None = None
+    related_podcast_title: str = ""
     # Czas dodania do kolekcji TIDAL. To wyłącznie liczba modelu potrzebna do
     # porządku „najnowsze najpierw”; nie trafia do kolumn ani nazwy dostępnej.
     collection_added_ticks: int | None = None

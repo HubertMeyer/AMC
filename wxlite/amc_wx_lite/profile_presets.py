@@ -33,6 +33,7 @@ SESSION_PROFILE_KEYS = {
     SessionId.TIDAL: "tidal",
     SessionId.WIIM: "wiim",
     SessionId.SONOS: "sonos",
+    SessionId.SPOTIFY: "spotify",
 }
 WIIM_DEVICE_PRESET_PREFIX = "wiim-device:"
 WIIM_NATIVE_PRESET_PREFIX = "native-preset:"

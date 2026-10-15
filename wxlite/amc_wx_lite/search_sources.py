@@ -113,4 +113,5 @@ class SearchSources:
             SessionId.TIDAL: "TIDAL",
             SessionId.WIIM: "WiiM",
             SessionId.SONOS: "Sonos",
+            SessionId.SPOTIFY: "Spotify",
         }[session_id]

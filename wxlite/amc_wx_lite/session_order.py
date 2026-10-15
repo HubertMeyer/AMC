@@ -22,6 +22,7 @@ SESSION_ACTIONS: dict[SessionId, Action] = {
     SessionId.TIDAL: Action.SESSION_TIDAL,
     SessionId.WIIM: Action.SESSION_WIIM,
     SessionId.SONOS: Action.SESSION_SONOS,
+    SessionId.SPOTIFY: Action.SESSION_SPOTIFY,
 }
 
 SESSION_NAMES: dict[SessionId, str] = {
@@ -31,6 +32,7 @@ SESSION_NAMES: dict[SessionId, str] = {
     SessionId.TIDAL: "TIDAL",
     SessionId.WIIM: "WiiM",
     SessionId.SONOS: "Sonos",
+    SessionId.SPOTIFY: "Spotify",
 }
 
 SESSION_MENU_LABELS: dict[SessionId, str] = {
@@ -40,6 +42,7 @@ SESSION_MENU_LABELS: dict[SessionId, str] = {
     SessionId.TIDAL: "Sesja: &TIDAL",
     SessionId.WIIM: "Sesja: &WiiM",
     SessionId.SONOS: "Sesja: &Sonos",
+    SessionId.SPOTIFY: "Sesja: Spoti&fy",
 }
 
 

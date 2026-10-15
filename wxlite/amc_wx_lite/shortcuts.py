@@ -98,6 +98,7 @@ class Action(Enum):
     SESSION_TIDAL = "session.tidal"
     SESSION_WIIM = "session.wiim"
     SESSION_SONOS = "session.sonos"
+    SESSION_SPOTIFY = "session.spotify"
     SESSION_LIST = "session.list"
     PREVIOUS_SESSION = "session.previous"
     NEXT_SESSION = "session.next"
@@ -129,6 +130,7 @@ class Action(Enum):
     # Osobna akcja jest potrzebna przede wszystkim Pomocy klawiatury -- bez
     # niej działający gest był opisywany jako brak polecenia.
     TIDAL_RELATIONS = "tidal.relations"
+    SPOTIFY_RELATIONS = "spotify.relations"
     SEEK_BACK_10 = "seek.back10"
     SEEK_FORWARD_10 = "seek.forward10"
     # Shift to 30 s (MainWindow.xaml.cs:21585-21586). Dostarczona wersja
@@ -358,6 +360,7 @@ TIDAL_SUPPORTED_ACTIONS = frozenset({
     Action.SESSION_TIDAL,
     Action.SESSION_WIIM,
     Action.SESSION_SONOS,
+    Action.SESSION_SPOTIFY,
     Action.SESSION_LIST,
     Action.PREVIOUS_SESSION,
     Action.NEXT_SESSION,
@@ -418,6 +421,52 @@ TIDAL_SUPPORTED_ACTIONS = frozenset({
 })
 
 
+# Czysty kontrakt jednej sesji Spotify. Jawna lista blokuje przypadkowe
+# skierowanie operacji lokalnych plików albo innej usługi do jej kontrolera.
+SPOTIFY_SUPPORTED_ACTIONS = frozenset({
+    Action.SESSION_FILES,
+    Action.SESSION_RADIO,
+    Action.SESSION_PODCASTS,
+    Action.SESSION_TIDAL,
+    Action.SESSION_WIIM,
+    Action.SESSION_SONOS,
+    Action.SESSION_SPOTIFY,
+    Action.SESSION_LIST,
+    Action.PREVIOUS_SESSION,
+    Action.NEXT_SESSION,
+    Action.COMMAND_PALETTE,
+    Action.ACTIVATE,
+    Action.PARENT_FOLDER,
+    Action.CLOSE_LIST_PREVIEW,
+    Action.SHOW_PLAYER,
+    Action.SHOW_LIST,
+    Action.PLAY_PAUSE,
+    Action.QUEUE_NEXT,
+    Action.QUEUE_PREVIOUS,
+    Action.TIME_ELAPSED,
+    Action.TIME_REMAINING,
+    Action.TIME_TOTAL,
+    Action.QUICK_INFORMATION,
+    Action.COPY_NAME,
+    Action.COPY_ADDRESS,
+    Action.FOCUS_FILTER,
+    Action.SEARCH_CURRENT,
+    Action.SEARCH_ALL,
+    Action.VIEW_LIBRARY,
+    Action.VIEW_HISTORY,
+    Action.VIEW_PRESETS,
+    Action.ASSIGN_PRESET,
+    *(Action[f"PRESET_{slot}"] for slot in range(1, 13)),
+    Action.SESSION_OPTIONS,
+    Action.SPOTIFY_RELATIONS,
+    Action.GENERAL_SETTINGS,
+    Action.TOGGLE_SEEK_MESSAGES,
+    Action.HELP,
+    Action.KEYBOARD_HELP,
+    Action.VERSION_INFO,
+})
+
+
 # WiiM jest autonomicznym odtwarzaczem sieciowym. Dopoki polecenie nie ma
 # jawnej drogi ``wiim.*`` w hoscie, nie moze trafic do lokalnego silnika audio.
 WIIM_SUPPORTED_ACTIONS = frozenset({
@@ -427,6 +476,7 @@ WIIM_SUPPORTED_ACTIONS = frozenset({
     Action.SESSION_TIDAL,
     Action.SESSION_WIIM,
     Action.SESSION_SONOS,
+    Action.SESSION_SPOTIFY,
     Action.SESSION_LIST,
     Action.PREVIOUS_SESSION,
     Action.NEXT_SESSION,
@@ -493,6 +543,7 @@ SONOS_SUPPORTED_ACTIONS = frozenset({
     Action.SESSION_TIDAL,
     Action.SESSION_WIIM,
     Action.SESSION_SONOS,
+    Action.SESSION_SPOTIFY,
     Action.SESSION_LIST,
     Action.PREVIOUS_SESSION,
     Action.NEXT_SESSION,
@@ -612,6 +663,7 @@ LIST_VIEW: dict[str, Action] = {
     "Ctrl+4": Action.SESSION_TIDAL,
     "Ctrl+5": Action.SESSION_WIIM,
     "Ctrl+6": Action.SESSION_SONOS,
+    "Ctrl+7": Action.SESSION_SPOTIFY,
     "Return": Action.ACTIVATE,
     "Back": Action.PARENT_FOLDER,
     # Kontekstowe polecenia edycji z głównego AMC. F2 zmienia nazwę
@@ -792,6 +844,7 @@ PLAYER_VIEW: dict[str, Action] = {
     "Ctrl+4": Action.SESSION_TIDAL,
     "Ctrl+5": Action.SESSION_WIIM,
     "Ctrl+6": Action.SESSION_SONOS,
+    "Ctrl+7": Action.SESSION_SPOTIFY,
     "Escape": Action.SHOW_LIST,
     "Shift+F6": Action.SHOW_LIST,
     "F6": Action.SHOW_LIST,
@@ -964,6 +1017,11 @@ TIDAL_LIST_VIEW: dict[str, Action] = {
 }
 
 
+SPOTIFY_LIST_VIEW: dict[str, Action] = {
+    "Right": Action.SPOTIFY_RELATIONS,
+}
+
+
 TIDAL_COLLECTION_LIST_VIEW: dict[str, Action] = {
     "Alt+1": Action.SORT_TIDAL_COLLECTION_ADDED,
     "Alt+2": Action.SORT_TIDAL_COLLECTION_ALPHABETICAL,
@@ -1041,6 +1099,7 @@ def resolve(
     podcast_session: bool = False,
     tidal_session: bool = False,
     tidal_collection: bool = False,
+    spotify_session: bool = False,
     wiim_session: bool = False,
     wiim_streams: bool = False,
     sonos_session: bool = False,
@@ -1075,6 +1134,8 @@ def resolve(
         return TIDAL_SESSION_VIEW[canonical]
     if tidal_session and not player_view and canonical in TIDAL_LIST_VIEW:
         return TIDAL_LIST_VIEW[canonical]
+    if spotify_session and not player_view and canonical in SPOTIFY_LIST_VIEW:
+        return SPOTIFY_LIST_VIEW[canonical]
     if player_view and wiim_session and canonical in WIIM_PLAYER_VIEW:
         return WIIM_PLAYER_VIEW[canonical]
     if wiim_session and canonical in WIIM_SESSION_VIEW:
@@ -1129,6 +1190,7 @@ def _help_entries() -> list[tuple[str, str, Action]]:
         Action.SESSION_TIDAL: "TIDAL",
         Action.SESSION_WIIM: "WiiM",
         Action.SESSION_SONOS: "Sonos",
+        Action.SESSION_SPOTIFY: "Spotify",
         Action.SESSION_LIST: "Wybierz sesję z listy",
         Action.PREVIOUS_SESSION: "Poprzednia sesja",
         Action.NEXT_SESSION: "Następna sesja",
@@ -1152,6 +1214,7 @@ def _help_entries() -> list[tuple[str, str, Action]]:
         Action.TIDAL_RELATIONS: (
             "Pokaż menu przejścia do albumu lub wykonawcy TIDAL"
         ),
+        Action.SPOTIFY_RELATIONS: "Pokaż menu powiązań Spotify",
         Action.SEEK_BACK_10: "Przewin 10 sekund wstecz",
         Action.SEEK_FORWARD_10: "Przewin 10 sekund w przod",
         Action.SEEK_BACK_30: "Przewin 30 sekund wstecz",
@@ -1362,6 +1425,7 @@ def _help_entries() -> list[tuple[str, str, Action]]:
         PODCAST_INBOX_LIST_VIEW,
         PODCAST_SESSION_VIEW,
         TIDAL_LIST_VIEW,
+        SPOTIFY_LIST_VIEW,
         WIIM_SESSION_VIEW,
         WIIM_PLAYER_VIEW,
         SONOS_SESSION_VIEW,

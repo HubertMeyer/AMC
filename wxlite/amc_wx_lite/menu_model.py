@@ -32,6 +32,7 @@ from . import session_order as session_order_model
 from .shortcuts import (
     Action,
     SONOS_SUPPORTED_ACTIONS,
+    SPOTIFY_SUPPORTED_ACTIONS,
     TIDAL_SUPPORTED_ACTIONS,
     WIIM_SUPPORTED_ACTIONS,
 )
@@ -143,6 +144,7 @@ PLAYER_SESSIONS = (
     SessionId.PODCASTS,
     SessionId.WIIM,
     SessionId.SONOS,
+    SessionId.SPOTIFY,
 )
 
 
@@ -160,6 +162,7 @@ def menus_for_session(
         SessionId.TIDAL: TIDAL_SUPPORTED_ACTIONS,
         SessionId.WIIM: WIIM_SUPPORTED_ACTIONS,
         SessionId.SONOS: SONOS_SUPPORTED_ACTIONS,
+        SessionId.SPOTIFY: SPOTIFY_SUPPORTED_ACTIONS,
     }.get(session_id)
     menus: list[Menu] = []
     for described in build_menus(session_order):

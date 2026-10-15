@@ -29,6 +29,7 @@ class SessionId(Enum):
     TIDAL = "tidal"
     WIIM = "wiim"
     SONOS = "sonos"
+    SPOTIFY = "spotify"
 
 
 class LibraryView(Enum):
@@ -95,6 +96,10 @@ class LibraryView(Enum):
     #: Zawartosc albumu, playlisty albo jednej kategorii wykonawcy. To nadal
     #: sesja TIDAL, lecz Backspace ma tu odtworzyc dokladna poprzednia liste.
     TIDAL_CONTAINER = "tidalContainer"
+    #: Jedna sesja Spotify: korzeń zapisanej Biblioteki i dowolny jawnie
+    #: otwarty kontener katalogu. Techniczny typ kontenera pozostaje w DTO.
+    SPOTIFY_LIBRARY = "spotifyLibrary"
+    SPOTIFY_CONTAINER = "spotifyContainer"
     #: Uczciwy korzeń źródeł WiiM. Lokalny interfejs nie udaje katalogu
     #: serwisów urządzenia: pokazuje wyłącznie sprzętowe presety i strumienie
     #: zapisane przez użytkownika w profilu AMC.
@@ -224,6 +229,11 @@ class SessionState:
     tidal_heading: str = "Biblioteka TIDAL"
     tidal_context: "OpenTidalContainer | None" = None
     tidal_history: list["TidalNavigationSnapshot"] = field(default_factory=list)
+    #: Stan jednej sesji Spotify. Jest niezależny od TIDAL-a mimo wspólnego
+    #: kontraktu DTO: przełączenie sesji nie może zgubić listy ani fokusu.
+    spotify_heading: str = "Biblioteka Spotify"
+    spotify_context: "OpenSpotifyContainer | None" = None
+    spotify_history: list["SpotifyNavigationSnapshot"] = field(default_factory=list)
     #: Korzeń sesji WiiM i miejsce powrotu ze Strumieni sieciowych. Adresy
     #: urządzeń ani strumieni nie należą do tych wierszy.
     wiim_device_rows: tuple[Row, ...] = ()
@@ -339,6 +349,54 @@ class TidalNavigationSnapshot:
     context: OpenTidalContainer | None
 
 
+@dataclass(frozen=True, slots=True)
+class OpenSpotifyView:
+    """Request the read-only root of the single Spotify session."""
+
+    preferred_id: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class OpenSpotifyContainer:
+    """Narrow catalogue request; opaque identifiers are never spoken."""
+
+    item_id: str
+    service_id: str
+    title: str
+    kind: str
+    artist: str = ""
+    public_uri: str | None = None
+    section: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class SpotifyRelationChoice:
+    """One user-facing relation command for the selected Spotify row."""
+
+    label: str
+    target: OpenSpotifyContainer
+    open_artist_overview: bool = False
+
+
+@dataclass(frozen=True, slots=True)
+class ShowSpotifyRelations:
+    """Accessible relation menu requested by Right Arrow."""
+
+    title: str
+    choices: tuple[SpotifyRelationChoice, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class SpotifyNavigationSnapshot:
+    """Exact Spotify list and focus restored by Backspace."""
+
+    view: LibraryView
+    heading: str
+    rows: tuple[Row, ...]
+    selected_id: str | None
+    context: OpenSpotifyContainer | None
+
+
 @dataclass(slots=True)
 class OpenPodcastAggregateView:
     """Load one top-level aggregate without exposing a technical source ID."""
@@ -415,6 +473,18 @@ class PlayTidalTrack:
 @dataclass(slots=True)
 class PlayTidalContainer:
     """Przekaz caly album albo playliste do oryginalnego TIDALa."""
+
+    item_id: str
+    title: str
+    service_id: str
+    kind: str
+    previous_item_id: str = ""
+    previous_title: str = ""
+
+
+@dataclass(slots=True)
+class PlaySpotifyItem:
+    """Play one Spotify track or episode through a future controller."""
 
     item_id: str
     title: str
@@ -616,6 +686,7 @@ class Navigator:
             SessionId.TIDAL: SessionState(SessionId.TIDAL),
             SessionId.WIIM: SessionState(SessionId.WIIM),
             SessionId.SONOS: SessionState(SessionId.SONOS),
+            SessionId.SPOTIFY: SessionState(SessionId.SPOTIFY),
         }
         self.active = SessionId.FILES
 
@@ -801,6 +872,7 @@ class Navigator:
             SessionId.TIDAL: "TIDAL",
             SessionId.WIIM: "WiiM",
             SessionId.SONOS: "Sonos",
+            SessionId.SPOTIFY: "Spotify",
         }[session_id]
 
     def capture_transient_navigation(self) -> TransientNavigationSnapshot:
@@ -1053,6 +1125,35 @@ class Navigator:
                 # fokus na liscie i nie udaje, ze ma wlasny widok odtwarzacza.
                 state.view = View.LIST
                 return [intent]
+
+        if state.session_id is SessionId.SPOTIFY:
+            if row.activation_message:
+                return [Announce(row.activation_message)]
+            target = self._spotify_target_from_row(row)
+            if target is not None:
+                if target.kind == "artist" and target.section is None:
+                    return self._open_spotify_artist_overview(row, target)
+                return [target]
+            if row.kind in ("track", "episode"):
+                intent = self._spotify_play_intent(row)
+                if isinstance(intent, Announce):
+                    return [intent]
+                intent.previous_item_id = state.current_material_id
+                intent.previous_title = state.now_playing_title
+                state.player_entry_anchor_id = row.item_id
+                state.list_anchor_id = row.item_id
+                state.now_playing_id = row.item_id
+                state.now_playing_title = row.title
+                state.pending_material_id = row.item_id
+                state.playback_source_rows = tuple(
+                    candidate for candidate in state.model.rows
+                    if candidate.kind in ("track", "episode")
+                    and not candidate.activation_message
+                )
+                state.playback_uses_queue = False
+                state.view = View.PLAYER
+                return [intent]
+            return [Announce("Nie można otworzyć tego elementu Spotify")]
 
         if row.activation_message:
             # Wiersz zostaje zaznaczony i widoczny. Kontenery TIDAL sa
@@ -1644,6 +1745,19 @@ class Navigator:
                 state.view = View.LIST
             # Na korzeniu kolekcji Backspace jest celowo cichy.
             return []
+        if state.session_id is SessionId.SPOTIFY:
+            if state.spotify_history:
+                previous = state.spotify_history.pop()
+                state.library_view = previous.view
+                state.spotify_heading = previous.heading
+                state.library_return_view = previous.heading
+                state.spotify_context = previous.context
+                state.model.replace(
+                    list(previous.rows), preferred_id=previous.selected_id
+                )
+                state.view = View.LIST
+            # Korzeń jednej sesji Spotify jest końcem nawigacji.
+            return []
         if state.session_id is SessionId.WIIM:
             if state.library_view is LibraryView.WIIM_NETWORK_STREAMS:
                 if state.wiim_streams_return_to_sources:
@@ -1832,6 +1946,30 @@ class Navigator:
             # oryginalnego odtwarzacza, nie do starej listy zrodlowej AMC.
             state.playback_source_rows = ()
             state.playback_uses_queue = True
+
+    def note_spotify_playback_started(self, item_id: str, title: str) -> None:
+        """Commit Spotify state only after its future controller confirms play."""
+
+        if not item_id:
+            return
+        state = self.sessions[SessionId.SPOTIFY]
+        state.now_playing_id = item_id
+        state.now_playing_title = title
+        state.current_material_id = item_id
+        state.pending_material_id = ""
+        state.list_anchor_id = item_id
+        state.model.select_id(item_id)
+
+    def restore_spotify_playback_after_failed_handoff(
+        self, previous_id: str, previous_title: str
+    ) -> None:
+        """Keep the prior item after a rejected controller handoff."""
+
+        state = self.sessions[SessionId.SPOTIFY]
+        state.pending_material_id = ""
+        state.current_material_id = previous_id
+        state.now_playing_id = previous_id or None
+        state.now_playing_title = previous_title
 
     def restore_tidal_playback_after_failed_handoff(
         self, previous_id: str, previous_title: str
@@ -2363,6 +2501,297 @@ class Navigator:
             if count else f"Playlista — {playlist_title}, zero elementów"
         )]
 
+    # ------------------------------------------------------------- Spotify
+
+    def open_spotify_view(
+        self, *, preferred_id: str | None = None
+    ) -> list[object]:
+        """Request the read-only root of the single Spotify session."""
+
+        return [OpenSpotifyView(preferred_id=preferred_id)]
+
+    def apply_spotify_view(
+        self,
+        heading: str,
+        rows: list[Row],
+        *,
+        preferred_id: str | None = None,
+    ) -> list[object]:
+        """Apply the Spotify root without changing another session."""
+
+        state = self.sessions[SessionId.SPOTIFY]
+        remembered = state.view_selected_ids.get(LibraryView.SPOTIFY_LIBRARY.value)
+        state.library_view = LibraryView.SPOTIFY_LIBRARY
+        state.library_playlist_id = None
+        state.library_return_view = heading
+        state.spotify_heading = heading
+        state.spotify_context = None
+        state.spotify_history.clear()
+        state.model.replace(rows, preferred_id=preferred_id or remembered)
+        state.view = View.LIST
+        return [Announce(
+            f"{heading}, {len(rows)} {_items_word(len(rows))}"
+            if rows else f"{heading}, pusto"
+        )]
+
+    def apply_spotify_container(
+        self,
+        intent: OpenSpotifyContainer,
+        heading: str,
+        rows: list[Row],
+        *,
+        preferred_id: str | None = None,
+    ) -> list[object]:
+        """Apply one verified result and retain the exact parent focus."""
+
+        state = self.sessions[SessionId.SPOTIFY]
+        state.spotify_history.append(self._spotify_snapshot(state))
+        state.library_view = LibraryView.SPOTIFY_CONTAINER
+        state.library_playlist_id = None
+        state.library_return_view = heading
+        state.spotify_heading = heading
+        state.spotify_context = intent
+        state.model.replace(rows, preferred_id=preferred_id)
+        state.view = View.LIST
+        return [Announce(
+            f"{heading}, {len(rows)} {_items_word(len(rows))}"
+            if rows else f"{heading}, pusto"
+        )]
+
+    @staticmethod
+    def _spotify_target_from_row(row: Row) -> OpenSpotifyContainer | None:
+        if (
+            not row.service_id
+            or row.service_kind not in ("artist", "album", "playlist", "podcast")
+            or row.service_section not in (None, "albums", "tracks")
+        ):
+            return None
+        title = row.artist_name if row.service_section else row.title
+        if not title:
+            return None
+        return OpenSpotifyContainer(
+            item_id=row.item_id,
+            service_id=row.service_id,
+            title=title,
+            kind=row.service_kind,
+            artist=row.artist_name,
+            public_uri=row.url,
+            section=row.service_section,
+        )
+
+    def open_spotify_search_result(
+        self, row: Row, *, relations: bool = False
+    ) -> list[object]:
+        """Open an ephemeral search row without saving it to the library."""
+
+        if self.active is not SessionId.SPOTIFY:
+            return [Announce("Wynik wyszukiwania należy do Spotify")]
+        target = self._spotify_target_from_row(row)
+        if relations:
+            if target is not None and target.kind == "artist":
+                return self._open_spotify_artist_overview(row, target)
+            choices = self._spotify_relation_choices(row)
+            if len(choices) == 1:
+                choice = choices[0]
+                if choice.open_artist_overview:
+                    artist = Row(
+                        item_id=choice.target.item_id,
+                        title=choice.target.title,
+                        kind="artist",
+                        service_id=choice.target.service_id,
+                        service_kind="artist",
+                    )
+                    return self._open_spotify_artist_overview(artist, choice.target)
+                return [choice.target]
+            if choices:
+                return [Announce(
+                    "Ten wynik ma kilka powiązań; otwórz go i użyj prawej strzałki"
+                )]
+            return [Announce("Ten wynik nie ma dostępnego powiązania")]
+
+        if target is not None:
+            if target.kind == "artist" and target.section is None:
+                return self._open_spotify_artist_overview(row, target)
+            return [target]
+        if row.kind in ("track", "episode"):
+            state = self.sessions[SessionId.SPOTIFY]
+            if row.activation_message:
+                return [Announce(row.activation_message)]
+            intent = self._spotify_play_intent(row)
+            if isinstance(intent, Announce):
+                return [intent]
+            state.player_entry_anchor_id = row.item_id
+            state.list_anchor_id = row.item_id
+            state.now_playing_id = row.item_id
+            state.now_playing_title = row.title
+            state.pending_material_id = row.item_id
+            state.playback_source_rows = (row,)
+            state.playback_uses_queue = False
+            state.view = View.PLAYER
+            return [intent]
+        return [Announce("Nie można otworzyć tego wyniku Spotify")]
+
+    @staticmethod
+    def _spotify_play_intent(row: Row) -> PlaySpotifyItem | Announce:
+        if row.kind not in ("track", "episode") or not row.service_id:
+            return Announce("Ten materiał nie ma danych potrzebnych do odtworzenia")
+        return PlaySpotifyItem(
+            item_id=row.item_id,
+            title=row.title,
+            service_id=row.service_id,
+            kind=row.kind,
+        )
+
+    @staticmethod
+    def _spotify_relation_choices(row: Row) -> tuple[SpotifyRelationChoice, ...]:
+        choices: list[SpotifyRelationChoice] = []
+        if row.kind == "track" and row.related_album_service_id:
+            choices.append(SpotifyRelationChoice(
+                "Przejdź do albumu",
+                OpenSpotifyContainer(
+                    item_id=f"{row.item_id}:related-album",
+                    service_id=row.related_album_service_id,
+                    title=row.related_album_title or "Powiązany album",
+                    kind="album",
+                    artist=row.artist_name,
+                ),
+            ))
+        if row.kind == "artist" and row.service_id:
+            for section, label in (
+                ("albums", "Pokaż albumy wykonawcy"),
+                ("tracks", "Pokaż utwory wykonawcy"),
+            ):
+                choices.append(SpotifyRelationChoice(
+                    label,
+                    OpenSpotifyContainer(
+                        item_id=row.item_id,
+                        service_id=row.service_id,
+                        title=row.title,
+                        kind="artist",
+                        section=section,
+                    ),
+                ))
+        if (
+            row.kind in ("track", "album")
+            and row.related_artist_service_id
+        ):
+            choices.append(SpotifyRelationChoice(
+                "Przejdź do wykonawcy",
+                OpenSpotifyContainer(
+                    item_id=f"{row.item_id}:related-artist",
+                    service_id=row.related_artist_service_id,
+                    title=(
+                        row.related_artist_name
+                        or row.artist_name
+                        or "Powiązany wykonawca"
+                    ),
+                    kind="artist",
+                ),
+                open_artist_overview=True,
+            ))
+        if row.kind == "episode" and row.related_podcast_service_id:
+            choices.append(SpotifyRelationChoice(
+                "Przejdź do podcastu",
+                OpenSpotifyContainer(
+                    item_id=f"{row.item_id}:related-podcast",
+                    service_id=row.related_podcast_service_id,
+                    title=row.related_podcast_title or "Powiązany podcast",
+                    kind="podcast",
+                ),
+            ))
+        return tuple(choices)
+
+    def spotify_information(self) -> list[object]:
+        """Left Arrow: speak one safe description and keep focus unchanged."""
+
+        state = self.session
+        if state.session_id is not SessionId.SPOTIFY:
+            return [Announce("Informacje Spotify są dostępne tylko w Spotify")]
+        row = state.model.selected_row
+        if row is None:
+            return [Announce("Lista Spotify jest pusta")]
+        from .spotify_source import information_text
+
+        return [Announce(information_text(row))]
+
+    def spotify_relations(self) -> list[object]:
+        """Right Arrow: expose only relationships proved by the row DTO."""
+
+        state = self.session
+        if state.session_id is not SessionId.SPOTIFY:
+            return [Announce("Powiązania Spotify są dostępne tylko w Spotify")]
+        row = state.model.selected_row
+        if row is None:
+            return [Announce("Lista Spotify jest pusta")]
+        choices = self._spotify_relation_choices(row)
+        if not choices:
+            return [Announce("Ten element nie ma dostępnego powiązania")]
+        return [ShowSpotifyRelations("Powiązania Spotify", choices)]
+
+    def activate_spotify_relation(
+        self, choice: SpotifyRelationChoice
+    ) -> list[object]:
+        """Run a relation only while it still belongs to the focused row."""
+
+        state = self.session
+        row = state.model.selected_row
+        if (
+            state.session_id is not SessionId.SPOTIFY
+            or row is None
+            or choice not in self._spotify_relation_choices(row)
+        ):
+            return [Announce("Wybrane powiązanie Spotify nie jest już dostępne")]
+        if choice.open_artist_overview:
+            target = choice.target
+            artist = Row(
+                item_id=target.item_id,
+                title=target.title,
+                kind="artist",
+                service_id=target.service_id,
+                service_kind="artist",
+            )
+            return self._open_spotify_artist_overview(artist, target)
+        return [choice.target]
+
+    @staticmethod
+    def _spotify_snapshot(state: SessionState) -> SpotifyNavigationSnapshot:
+        return SpotifyNavigationSnapshot(
+            view=state.library_view or LibraryView.SPOTIFY_LIBRARY,
+            heading=state.spotify_heading,
+            rows=tuple(state.model.rows),
+            selected_id=state.model.selected_id,
+            context=state.spotify_context,
+        )
+
+    def _open_spotify_artist_overview(
+        self, row: Row, target: OpenSpotifyContainer
+    ) -> list[object]:
+        from .spotify_source import artist_overview_rows
+
+        state = self.sessions[SessionId.SPOTIFY]
+        rows = list(artist_overview_rows(row))
+        if not rows:
+            return [Announce("Nie można otworzyć tego wykonawcy Spotify")]
+        state.spotify_history.append(self._spotify_snapshot(state))
+        state.library_view = LibraryView.SPOTIFY_CONTAINER
+        state.spotify_heading = f"Wykonawca, {row.title}"
+        state.library_return_view = state.spotify_heading
+        state.spotify_context = target
+        state.model.replace(rows)
+        state.view = View.LIST
+        return [Announce(
+            f"{state.spotify_heading}, {len(rows)} {_items_word(len(rows))}"
+        )]
+
+    def close_spotify_preview(self) -> list[object]:
+        """Escape: close player/container and restore the exact prior focus."""
+
+        if self.active is not SessionId.SPOTIFY:
+            return []
+        if self.session.view is View.PLAYER:
+            return self.back_to_list()
+        return self.go_to_parent()
+
     # --------------------------------------------------------------- TIDAL
 
     def open_tidal_view(
@@ -2517,6 +2946,19 @@ class Navigator:
             if isinstance(intent, PlayTidalTrack):
                 intent.previous_item_id = state.current_material_id
                 intent.previous_title = state.now_playing_title
+            return [intent]
+        if (
+            state.session_id is SessionId.SPOTIFY
+            and target.kind in ("track", "episode")
+        ):
+            intent = self._spotify_play_intent(target)
+            if isinstance(intent, Announce):
+                return [intent]
+            intent.previous_item_id = state.current_material_id
+            intent.previous_title = state.now_playing_title
+            state.list_anchor_id = target.item_id
+            state.model.select_id(target.item_id)
+            state.pending_material_id = target.item_id
             return [intent]
         state.list_anchor_id = target.item_id
         state.model.select_id(target.item_id)
