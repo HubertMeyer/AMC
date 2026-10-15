@@ -483,6 +483,14 @@ Spóźnione odpowiedzi wyszukiwania i odczytu katalogu nie mogą podmieniać
 nowszego źródła, widoku ani zaznaczenia. Stary librespot pozostaje materiałem
 technicznym, nie wzorcem UX.
 
+Pierwszy odbiór 15 października ujawnił, że szybki Enter w korzeniu Spotify
+może trafić na zajętą wspólną pulę odczytów sieciowych. Program czytał wtedy
+„Trwa odczyt informacji. Powtórz skrót za chwilę” i porzucał zamierzone
+otwarcie. Poprawka zachowuje Enter i ponawia go krótko w tle bez czytania tego
+stanu technicznego. Kolejny świadomy wybór, Backspace albo zmiana sesji
+unieważnia starsze ponowienie, więc spóźniony wynik nie może zmienić listy ani
+fokusu.
+
 ## Dostępność i NVDA
 
 Listy i dialogi pozostają natywnymi kontrolkami wxPython. Nie dodajemy własnych

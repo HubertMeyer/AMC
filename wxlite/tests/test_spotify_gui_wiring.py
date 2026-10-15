@@ -2,7 +2,9 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
+import amc_wx_lite.gui as gui_module
 from amc_wx_lite.gui import LiteFrame
+from amc_wx_lite.host_client import HostError
 from amc_wx_lite.navigation import (
     Announce,
     OpenSpotifyCollectionView,
@@ -124,6 +126,89 @@ def test_spotify_artist_section_uses_the_read_only_container_contract() -> None:
         "artist": "",
         "artist_section": "tracks",
     }]
+
+
+def test_busy_spotify_collection_enter_is_retried_without_speaking_error() -> None:
+    submissions = []
+    scheduled = []
+    messages = []
+    intent = OpenSpotifyCollectionView(
+        "spotify-collection:artists", "artists", "Wykonawcy"
+    )
+    frame = SimpleNamespace(
+        client=SimpleNamespace(spotify_collection_view=lambda _view: {}),
+        _spotify_navigation_version=0,
+        navigator=SimpleNamespace(active=SessionId.SPOTIFY),
+        runner=SimpleNamespace(submit=lambda *args: submissions.append(args)),
+        announcer=SimpleNamespace(say=messages.append),
+    )
+    frame._open_spotify_collection_view = lambda received, *, attempt=0: (
+        LiteFrame._open_spotify_collection_view(
+            frame,
+            received,
+            attempt=attempt,
+        )
+    )
+    original_call_later = getattr(gui_module.wx, "CallLater", None)
+    gui_module.wx.CallLater = (
+        lambda _milliseconds, callback: scheduled.append(callback)
+    )
+    try:
+        LiteFrame._open_spotify_collection_view(frame, intent)
+        submissions[0][3](HostError(
+            "Trwa odczyt informacji. Powtórz skrót za chwilę.",
+            code="operation_busy",
+        ))
+
+        assert messages == []
+        assert len(scheduled) == 1
+        scheduled[0]()
+        assert len(submissions) == 2
+        assert frame._spotify_navigation_version == 2
+    finally:
+        if original_call_later is None:
+            del gui_module.wx.CallLater
+        else:
+            gui_module.wx.CallLater = original_call_later
+
+
+def test_new_spotify_enter_cancels_an_older_busy_retry() -> None:
+    submissions = []
+    scheduled = []
+    first = OpenSpotifyContainer(
+        "album-one", "one", "Pierwszy album", "album"
+    )
+    second = OpenSpotifyContainer(
+        "album-two", "two", "Drugi album", "album"
+    )
+    frame = SimpleNamespace(
+        client=SimpleNamespace(spotify_container_items=lambda **_values: {}),
+        _spotify_navigation_version=0,
+        navigator=SimpleNamespace(active=SessionId.SPOTIFY),
+        runner=SimpleNamespace(submit=lambda *args: submissions.append(args)),
+        announcer=SimpleNamespace(say=lambda _message: None),
+    )
+    frame._open_spotify_container = lambda received, *, attempt=0: (
+        LiteFrame._open_spotify_container(frame, received, attempt=attempt)
+    )
+    original_call_later = getattr(gui_module.wx, "CallLater", None)
+    gui_module.wx.CallLater = (
+        lambda _milliseconds, callback: scheduled.append(callback)
+    )
+    try:
+        LiteFrame._open_spotify_container(frame, first)
+        submissions[0][3](HostError("Trwa odczyt", code="operation_busy"))
+        LiteFrame._open_spotify_container(frame, second)
+
+        assert len(submissions) == 2
+        assert frame._spotify_navigation_version == 2
+        scheduled[0]()
+        assert len(submissions) == 2
+    finally:
+        if original_call_later is None:
+            del gui_module.wx.CallLater
+        else:
+            gui_module.wx.CallLater = original_call_later
 
 
 def test_spotify_playback_is_handed_to_librespot_without_committing_early() -> None:

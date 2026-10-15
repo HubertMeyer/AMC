@@ -7965,6 +7965,8 @@ class LiteFrame(wx.Frame):
     def _open_spotify_collection_view(
         self,
         intent: OpenSpotifyCollectionView,
+        *,
+        attempt: int = 0,
     ) -> None:
         """Read one collection category without changing the account."""
 
@@ -8000,6 +8002,17 @@ class LiteFrame(wx.Frame):
                 or self.navigator.active is not SessionId.SPOTIFY
             ):
                 return
+            if LiteFrame._retry_busy_spotify_navigation(
+                self,
+                error,
+                version=version,
+                attempt=attempt,
+                retry=lambda: self._open_spotify_collection_view(
+                    intent,
+                    attempt=attempt + 1,
+                ),
+            ):
+                return
             self.announcer.say(
                 str(error)
                 if isinstance(error, (HostError, SpotifyContainerPayloadError))
@@ -8008,7 +8021,12 @@ class LiteFrame(wx.Frame):
 
         self.runner.submit("spotify-navigation", work, done, failed)
 
-    def _open_spotify_container(self, intent: OpenSpotifyContainer) -> None:
+    def _open_spotify_container(
+        self,
+        intent: OpenSpotifyContainer,
+        *,
+        attempt: int = 0,
+    ) -> None:
         """Open an album, playlist, podcast or artist section read-only."""
 
         client = self.client
@@ -8053,6 +8071,17 @@ class LiteFrame(wx.Frame):
                 or self.navigator.active is not SessionId.SPOTIFY
             ):
                 return
+            if LiteFrame._retry_busy_spotify_navigation(
+                self,
+                error,
+                version=version,
+                attempt=attempt,
+                retry=lambda: self._open_spotify_container(
+                    intent,
+                    attempt=attempt + 1,
+                ),
+            ):
+                return
             self.announcer.say(
                 str(error)
                 if isinstance(error, (HostError, SpotifyContainerPayloadError))
@@ -8060,6 +8089,44 @@ class LiteFrame(wx.Frame):
             )
 
         self.runner.submit("spotify-navigation", work, done, failed)
+
+    def _retry_busy_spotify_navigation(
+        self,
+        error: Exception,
+        *,
+        version: int,
+        attempt: int,
+        retry: Callable[[], None],
+    ) -> bool:
+        """Retain one Enter while a shared long-operation slot is busy.
+
+        The host deliberately rejects excess concurrent network reads instead
+        of building an unbounded queue.  A deliberate Spotify activation must
+        nevertheless survive a short collision with another provider read.
+        The navigation version makes the retry safe: a later Enter, Back or
+        session switch wins and the older callback becomes a no-op.
+        """
+
+        if not (
+            isinstance(error, HostError)
+            and error.code == "operation_busy"
+            and attempt < 20
+        ):
+            return False
+
+        def run_retry() -> None:
+            if (
+                version == self._spotify_navigation_version
+                and self.navigator.active is SessionId.SPOTIFY
+            ):
+                retry()
+
+        call_later = getattr(wx, "CallLater", None)
+        if callable(call_later):
+            call_later(250, run_retry)
+        else:
+            run_retry()
+        return True
 
     def _show_spotify_relations(self, intent: ShowSpotifyRelations) -> None:
         """Show only user-facing Spotify relations in a native menu."""
