@@ -15,6 +15,7 @@ from amc_wx_lite.shortcuts import (
     WIIM_SUPPORTED_ACTIONS,
     resolve,
 )
+from amc_wx_lite.state_store import LiteState
 from amc_wx_lite.transient_preview_policy import (
     TRANSIENT_PREVIEW_ACTIONS,
     is_transient_preview_available,
@@ -91,6 +92,14 @@ def test_ctrl_h_opens_once_and_escape_restores_origin_and_selected_item() -> Non
         syncs: list[str] = []
         frame = SimpleNamespace(
             navigator=navigator,
+            state=LiteState(playback_history_by_session={
+                origin.value: [{
+                    "itemId": f"{origin.value}:observed:test",
+                    "title": "Historia streamera",
+                    "kind": "track",
+                    "replaySupported": False,
+                }]
+            }),
             _transient_preview_return=None,
             _sync_views=lambda: syncs.append("focus"),
         )
@@ -125,15 +134,17 @@ def test_ctrl_h_opens_once_and_escape_restores_origin_and_selected_item() -> Non
         frame._open_radio_view = open_radio
         frame._open_podcast_aggregate = open_podcasts
         frame._open_library_view = open_files
+        frame._run = lambda _events: opened.append(origin)
 
         LiteFrame._show_playback_history_preview(frame)
 
-        expected_target = (
-            origin
-            if origin in (SessionId.RADIO, SessionId.PODCASTS)
-            else SessionId.FILES
-        )
-        assert opened == [expected_target]
+        assert opened == [origin]
+        if origin in (SessionId.WIIM, SessionId.SONOS):
+            assert navigator.active is origin
+            assert navigator.session.library_view is LibraryView.SERVICE_HISTORY
+            assert navigator.session.model.selected_row.title == (
+                "Historia streamera"
+            )
         assert LiteFrame._restore_transient_preview(frame, announce=False)
         assert navigator.active is origin
         assert navigator.session.view is View.LIST
@@ -145,6 +156,8 @@ def test_ctrl_h_opens_once_and_escape_restores_origin_and_selected_item() -> Non
 def test_remote_provider_gates_allow_the_global_history_action() -> None:
     assert Action.VIEW_HISTORY in WIIM_SUPPORTED_ACTIONS
     assert Action.VIEW_HISTORY in SONOS_SUPPORTED_ACTIONS
+    assert Action.REMOVE_SELECTED in WIIM_SUPPORTED_ACTIONS
+    assert Action.REMOVE_SELECTED in SONOS_SUPPORTED_ACTIONS
 
 
 def test_disabled_global_mode_keeps_only_home_sessions() -> None:

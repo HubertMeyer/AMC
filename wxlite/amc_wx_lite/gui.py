@@ -87,6 +87,13 @@ from .playlist_dialog import (
     PlaylistPayloadError,
     choices_from_payload as playlist_choices_from_payload,
 )
+from .playback_history import (
+    history_rows as streamer_history_rows,
+    observed_sonos_row,
+    observed_wiim_row,
+    record_row as record_streamer_history_row,
+    remove_rows as remove_streamer_history_rows,
+)
 from . import profile_presets
 from .navigation import (
     ActivateWiiMDevice,
@@ -8859,6 +8866,47 @@ class LiteFrame(wx.Frame):
         if self._save_state() is False:
             self.state.spotify_playback_history = previous
 
+    def _record_streamer_history_snapshot(
+        self, session_id: SessionId, snapshot: dict
+    ) -> None:
+        """Zapisz wyłącznie potwierdzony stan grającego WiiM albo Sonosa."""
+
+        row = (
+            observed_wiim_row(snapshot)
+            if session_id is SessionId.WIIM
+            else observed_sonos_row(snapshot)
+            if session_id is SessionId.SONOS
+            else None
+        )
+        if row is None:
+            return
+        histories = self.state.playback_history_by_session
+        previous = list(histories.get(session_id.value, ()))
+        updated = record_streamer_history_row(
+            previous, row, replay_supported=False
+        )
+        if updated == previous:
+            return
+        histories[session_id.value] = updated
+        self._queue_streamer_history_save()
+
+    def _queue_streamer_history_save(self) -> None:
+        """Odłóż zapis poza obsługę migawki, aby nie blokować fokusu i F6."""
+
+        if getattr(self, "_streamer_history_save_pending", False):
+            return
+        self._streamer_history_save_pending = True
+
+        def persist() -> None:
+            self._streamer_history_save_pending = False
+            self._save_state()
+
+        call_after = getattr(wx, "CallAfter", None)
+        if callable(call_after):
+            call_after(persist)
+        else:
+            persist()
+
     def _open_library_view(
         self,
         intent: OpenLibraryView,
@@ -9236,6 +9284,11 @@ class LiteFrame(wx.Frame):
                 and self.navigator.active is SessionId.SONOS
                 and self.navigator.session.library_view
                 is LibraryView.SONOS_OWN_STREAMS
+            ),
+            service_history=(
+                not player
+                and self.navigator.session.library_view
+                is LibraryView.SERVICE_HISTORY
             ),
         )
         if action is None:
@@ -9886,6 +9939,9 @@ class LiteFrame(wx.Frame):
             LibraryView.SPOTIFY_LIBRARY: "Biblioteka Spotify",
             LibraryView.SPOTIFY_CONTAINER: session.spotify_heading,
             LibraryView.SPOTIFY_HISTORY: "Spotify — Historia odtwarzania",
+            LibraryView.SERVICE_HISTORY: (
+                f"{SESSION_LABELS[self.navigator.active]} — Historia odtwarzania"
+            ),
         }.get(
             session.library_view,
             getattr(active_list, "_base_accessible_label", None),
@@ -11803,6 +11859,11 @@ class LiteFrame(wx.Frame):
         self, state: dict, *, announce: bool = False
     ) -> None:
         """Pokaż migawkę WiiM bez przepuszczania repr, adresu ani Id."""
+        record_history = getattr(
+            self, "_record_streamer_history_snapshot", None
+        )
+        if callable(record_history):
+            record_history(SessionId.WIIM, state)
         label = wiim_now_playing_label(state)
         if self.now_playing.GetLabel() != label:
             self.now_playing.SetLabel(label)
@@ -12052,6 +12113,11 @@ class LiteFrame(wx.Frame):
         self, state: dict, *, announce: bool = False
     ) -> None:
         """Pokaż tylko jawne etykiety stanu, bez identyfikatorów Sonosa."""
+        record_history = getattr(
+            self, "_record_streamer_history_snapshot", None
+        )
+        if callable(record_history):
+            record_history(SessionId.SONOS, state)
         label = sonos_now_playing_label(state)
         if self.now_playing.GetLabel() != label:
             self.now_playing.SetLabel(label)
@@ -14540,10 +14606,16 @@ class LiteFrame(wx.Frame):
             self._run(self.navigator.apply_spotify_history(rows))
             return
 
-        # WiiM i Sonos nie maja w profilu wlasnego katalogu historii, z ktorego
-        # mozna zbudowac uzytkowe wiersze. Pokazujemy istniejaca Historie
-        # plikow lokalnych jako wspolny podglad i zachowujemy cala sesje
-        # urzadzenia do powrotu przez Escape.
+        if origin in (SessionId.WIIM, SessionId.SONOS):
+            rows = list(streamer_history_rows(
+                origin.value,
+                self.state.playback_history_by_session.get(origin.value, ()),
+            ))
+            self._run(self.navigator.apply_service_history(origin, rows))
+            return
+
+        # Pozostałe sesje zachowują dotychczasową drogę. Ten przyrost nie
+        # zmienia osobnych kontraktów TIDAL ani lokalnych plików.
         self.navigator.active = SessionId.FILES
         self._open_library_view(OpenLibraryView(
             LibraryView.HISTORY,
@@ -14565,6 +14637,7 @@ class LiteFrame(wx.Frame):
             LibraryView.RADIO_RECORDING_SCHEDULES,
             LibraryView.PODCAST_INBOX,
             LibraryView.SPOTIFY_HISTORY,
+            LibraryView.SERVICE_HISTORY,
         ):
             return False
         self._transient_preview_return = None
@@ -19247,6 +19320,13 @@ class LiteFrame(wx.Frame):
 
     def _remove_selected_items(self) -> None:
         if (
+            self.navigator.active in (SessionId.WIIM, SessionId.SONOS)
+            and self.navigator.session.library_view
+            is LibraryView.SERVICE_HISTORY
+        ):
+            self._remove_streamer_history_entries()
+            return
+        if (
             self.navigator.active is SessionId.SPOTIFY
             and self.navigator.session.library_view
             is LibraryView.SPOTIFY_HISTORY
@@ -19396,6 +19476,59 @@ class LiteFrame(wx.Frame):
         self.announcer.say(
             f"Usunięto z Historii Spotify: {label}. "
             "Biblioteka Spotify pozostała bez zmian"
+        )
+
+    def _remove_streamer_history_entries(self) -> None:
+        """Delete usuwa migawki Historii, nigdy źródło WiiM ani Sonosa."""
+
+        session_id = self.navigator.active
+        if session_id not in (SessionId.WIIM, SessionId.SONOS):
+            return
+        selected = self._selected_action_rows()
+        if not selected:
+            self.announcer.say("Brak wpisu Historii odtwarzania do usunięcia")
+            return
+        selected_ids = {row.item_id for row in selected}
+        state = self.navigator.session
+        model_rows = list(state.model.rows)
+        previous_selected_id = state.model.selected_id
+        first_index = min(
+            (
+                index for index, row in enumerate(model_rows)
+                if row.item_id in selected_ids
+            ),
+            default=0,
+        )
+        histories = self.state.playback_history_by_session
+        previous = list(histories.get(session_id.value, ()))
+        kept = remove_streamer_history_rows(previous, selected_ids)
+        if len(kept) == len(previous):
+            self.announcer.say("Historia odtwarzania bez zmian")
+            return
+        if kept:
+            histories[session_id.value] = kept
+        else:
+            histories.pop(session_id.value, None)
+        remaining = list(streamer_history_rows(session_id.value, kept))
+        preferred_id = (
+            remaining[min(first_index, len(remaining) - 1)].item_id
+            if remaining
+            else None
+        )
+        state.model.replace(remaining, preferred_id=preferred_id)
+        if self._save_state() is False:
+            histories[session_id.value] = previous
+            state.model.replace(model_rows, preferred_id=previous_selected_id)
+            return
+        self._sync_views()
+        label = (
+            selected[0].title
+            if len(selected) == 1
+            else format_item_count(len(selected))
+        )
+        self.announcer.say(
+            f"Usunięto z Historii {SESSION_LABELS[session_id]}: {label}. "
+            "Urządzenie i źródło pozostały bez zmian"
         )
 
     def _remove_selected_bookmarks(self) -> None:
@@ -20529,9 +20662,21 @@ class LiteFrame(wx.Frame):
                 and self.navigator.active is SessionId.SONOS
                 and session.library_view is LibraryView.SONOS_OWN_STREAMS
             ),
+            service_history=(
+                not player
+                and session.library_view is LibraryView.SERVICE_HISTORY
+            ),
         )
 
     def _action_available_in_active_session(self, action: Action) -> bool:
+        if (
+            self.navigator.active in (SessionId.WIIM, SessionId.SONOS)
+            and action is Action.REMOVE_SELECTED
+        ):
+            return (
+                self.navigator.session.library_view
+                is LibraryView.SERVICE_HISTORY
+            )
         if (
             self.navigator.active is SessionId.SPOTIFY
             and action is Action.REMOVE_SELECTED

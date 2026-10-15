@@ -103,6 +103,9 @@ class LibraryView(Enum):
     #: Własna historia potwierdzonych odtworzeń AMC Python. Nie jest to
     #: kompletna historia konta Spotify ani kolejny kontener katalogu.
     SPOTIFY_HISTORY = "spotifyHistory"
+    #: Prywatna, osobna historia sesji WiiM albo Sonos. Nie jest to lokalna
+    #: tabela plików i nie może przełączać aktywnej sesji.
+    SERVICE_HISTORY = "serviceHistory"
     #: Uczciwy korzeń źródeł WiiM. Lokalny interfejs nie udaje katalogu
     #: serwisów urządzenia: pokazuje wyłącznie sprzętowe presety i strumienie
     #: zapisane przez użytkownika w profilu AMC.
@@ -1037,6 +1040,10 @@ class Navigator:
             return self.go_to_parent()
 
         if state.session_id is SessionId.WIIM:
+            # Wpis Historii pozostaje czytelny, gdy urządzenie nie oddało
+            # stabilnego celu potrzebnego do ponownego uruchomienia.
+            if row.activation_message:
+                return [Announce(row.activation_message)]
             if row.kind == "wiimSource":
                 if row.service_kind == "devicePresets":
                     return [OpenWiiMDevicePresets()]
@@ -1085,6 +1092,10 @@ class Navigator:
             return [activation, *sources]
 
         if state.session_id is SessionId.SONOS:
+            # Jak wyżej: nie udajemy możliwości odtworzenia na podstawie
+            # samego tytułu zaobserwowanego na urządzeniu.
+            if row.activation_message:
+                return [Announce(row.activation_message)]
             if (
                 row.kind == "sonosCategory"
                 and row.parent_id
@@ -2672,6 +2683,30 @@ class Navigator:
             f"Spotify — Historia odtwarzania, {count} {_items_word(count)}"
             if count
             else "Spotify — Historia odtwarzania, brak odtworzonych elementów"
+        )]
+
+    def apply_service_history(
+        self, session_id: SessionId, rows: list[Row]
+    ) -> list[object]:
+        """Pokaż prywatną Historię bez przechodzenia do Plików lokalnych."""
+
+        if session_id not in (SessionId.WIIM, SessionId.SONOS):
+            raise ValueError("Historia streamerów wymaga sesji WiiM albo Sonos")
+        state = self.sessions[session_id]
+        remembered = state.view_selected_ids.get(
+            LibraryView.SERVICE_HISTORY.value
+        )
+        state.library_view = LibraryView.SERVICE_HISTORY
+        state.library_playlist_id = None
+        heading = f"{self._session_name(session_id)} — Historia odtwarzania"
+        state.library_return_view = heading
+        state.model.replace(rows, preferred_id=remembered)
+        state.view = View.LIST
+        count = len(rows)
+        return [Announce(
+            f"{heading}, {count} {_items_word(count)}"
+            if count
+            else f"{heading}, brak odtworzonych elementów"
         )]
 
     def apply_spotify_container(

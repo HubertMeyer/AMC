@@ -21,6 +21,7 @@ from pathlib import Path
 from .audio_clip import read_clip_selections
 from .audio_output import read_output_overrides
 from .profile_presets import read_preset_overrides
+from .playback_history import normalize_histories
 from .radio_activity import normalize_state_position
 from .radio_recognition import normalize_scope, read_tracks
 from .radio_schedule_settings import read_schedule_overrides
@@ -527,6 +528,12 @@ class LiteState:
     #: Nie udaje pełnej historii konta; wpis powstaje dopiero po potwierdzonym
     #: starcie Librespota. Identyfikatory są wyłącznie danymi modelu.
     spotify_playback_history: list[dict] = field(default_factory=list)
+    #: Prywatne historie streamerów, których nie da się odbudować z lokalnej
+    #: bazy plików. WiiM i Sonos zapisują migawki faktycznie grającego
+    #: urządzenia; historia TIDAL i Spotify pozostaje na swoich drogach.
+    playback_history_by_session: dict[str, list[dict]] = field(
+        default_factory=dict
+    )
 
 
 def _read_session_overrides(raw: object) -> dict:
@@ -711,6 +718,9 @@ class StateStore:
             spotify_playback_history=_read_spotify_history(
                 raw.get("spotify_playback_history")
             ),
+            playback_history_by_session=normalize_histories(
+                raw.get("playback_history_by_session")
+            ),
         )
 
     # -------------------------------------------------------------- zapis
@@ -769,6 +779,9 @@ class StateStore:
         payload["search_history"] = _read_search_history(state.search_history)
         payload["spotify_playback_history"] = _read_spotify_history(
             state.spotify_playback_history
+        )
+        payload["playback_history_by_session"] = normalize_histories(
+            state.playback_history_by_session
         )
         text = json.dumps(payload, ensure_ascii=False, indent=2)
 

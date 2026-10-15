@@ -587,6 +587,7 @@ WIIM_SUPPORTED_ACTIONS = frozenset({
     Action.FOCUS_FILTER,
     Action.VIEW_LIBRARY,
     Action.VIEW_HISTORY,
+    Action.REMOVE_SELECTED,
     Action.VIEW_ACTIVE_RECORDINGS,
     Action.VIEW_RECORDED_RADIO_FILES,
     Action.MANAGE_RADIO_SCHEDULES,
@@ -666,6 +667,7 @@ SONOS_SUPPORTED_ACTIONS = frozenset({
     Action.COPY_ADDRESS,
     Action.VIEW_LIBRARY,
     Action.VIEW_HISTORY,
+    Action.REMOVE_SELECTED,
     Action.VIEW_FAVORITES,
     Action.VIEW_PLAYLISTS,
     Action.ADD_SONOS_OWN_STREAM,
@@ -1195,6 +1197,7 @@ def resolve(
     wiim_streams: bool = False,
     sonos_session: bool = False,
     sonos_own_streams: bool = False,
+    service_history: bool = False,
 ) -> Action | None:
     """Znajdz akcje dla klawisza w DANYM widoku. Brak wpisu = klawisz zostaje
     dla kontrolki (natywna nawigacja ma pierwszenstwo)."""
@@ -1202,6 +1205,8 @@ def resolve(
     canonical = chord.canonical
     if canonical in GLOBAL_VIEW_SHORTCUTS:
         return GLOBAL_VIEW_SHORTCUTS[canonical]
+    if not player_view and service_history and canonical == "Delete":
+        return Action.REMOVE_SELECTED
     # W „Nowych odcinkach” te same cyfry co w glownym AMC zmieniaja
     # kolejnosc. Poza tym jednym widokiem Alt+1/Alt+2 zachowuja lokalne
     # znaczenie Folderow/Wszystkich plikow, a Alt+3 pozostaje wolne.

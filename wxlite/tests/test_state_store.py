@@ -316,6 +316,41 @@ def test_round_trip_keeps_only_safe_private_spotify_history_fields() -> None:
     assert "token" not in loaded[0]
 
 
+def test_round_trip_keeps_separate_sanitized_streamer_histories() -> None:
+    store, _ = temp_store()
+    store.save(LiteState(playback_history_by_session={
+        "wiim": [{
+            "itemId": "wiim:observed:one",
+            "title": "Audycja",
+            "kind": "station",
+            "source": "radio internetowe",
+            "replaySupported": False,
+            "runtimeObject": "WiiMPlaybackInformation { secret = 1 }",
+        }],
+        "sonos": [{
+            "itemId": "sonos:observed:one",
+            "title": "Utwór",
+            "kind": "track",
+            "artist": "Wykonawca",
+            "replaySupported": False,
+            "token": "nie zapisuj",
+        }],
+        "local": [{
+            "itemId": "local-file",
+            "title": "Nie wolno importować",
+            "kind": "track",
+        }],
+    }))
+
+    loaded = store.load().playback_history_by_session
+
+    assert set(loaded) == {"wiim", "sonos"}
+    assert loaded["wiim"][0]["title"] == "Audycja"
+    assert "runtimeObject" not in loaded["wiim"][0]
+    assert loaded["sonos"][0]["artist"] == "Wykonawca"
+    assert "token" not in loaded["sonos"][0]
+
+
 def test_unknown_podcast_sort_value_is_not_restored_or_rewritten() -> None:
     store, directory = temp_store()
     store.path.write_text(json.dumps({
