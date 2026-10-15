@@ -298,6 +298,7 @@ internal static class AudioClipOriginalEditor
             // single authoritative header instead.
             AddArguments(start, "-write_xing", "0", "-id3v2_version", "0");
         }
+        AddOutputContainerArguments(start, destinationPath);
         start.ArgumentList.Add(destinationPath);
         await RunAsync(
             start,
@@ -332,6 +333,7 @@ internal static class AudioClipOriginalEditor
         {
             AddArguments(start, "-write_xing", "1");
         }
+        AddOutputContainerArguments(start, destinationPath);
         start.ArgumentList.Add(destinationPath);
         await RunAsync(
             start,
@@ -339,6 +341,39 @@ internal static class AudioClipOriginalEditor
             value => progress?.Report(0.8d + 0.15d * value),
             cancellationToken).ConfigureAwait(false);
         progress?.Report(0.95d);
+    }
+
+    private static void AddOutputContainerArguments(ProcessStartInfo start, string destinationPath)
+    {
+        // FFmpeg nie rozpoznaje niezawodnie formatu po wszystkich rozszerzeniach,
+        // które AMC prawidłowo klasyfikuje jako audio (np. .wave, .bwf, .aifc,
+        // .oga i .ec3). Pliki robocze zachowują rozszerzenie oryginału, dlatego
+        // format kontenera trzeba wskazać jawnie zarówno przy dzieleniu, jak i
+        // przy ponownym łączeniu. Model danych nadal przechowuje rozszerzenie;
+        // ta mapa jest wyłącznie techniczną decyzją procesu FFmpeg.
+        var extension = Path.GetExtension(destinationPath).ToLowerInvariant();
+        var format = extension switch
+        {
+            ".mp2" => "mp2",
+            ".mp3" => "mp3",
+            ".wav" or ".wave" or ".rf64" or ".bwf" => "wav",
+            ".m4a" => "ipod",
+            ".aac" or ".adts" => "adts",
+            ".flac" => "flac",
+            ".wma" or ".asf" => "asf",
+            ".ogg" or ".oga" => "ogg",
+            ".opus" => "opus",
+            ".aif" or ".aiff" or ".aifc" => "aiff",
+            ".mka" => "matroska",
+            ".ac3" => "ac3",
+            ".eac3" or ".ec3" => "eac3",
+            ".amr" => "amr",
+            _ => null
+        };
+        if (format is null) return;
+        AddArguments(start, "-f", format);
+        if (extension == ".rf64") AddArguments(start, "-rf64", "always");
+        if (extension == ".bwf") AddArguments(start, "-write_bext", "1");
     }
 
     private static async Task RunAsync(
@@ -400,8 +435,6 @@ internal static class AudioClipOriginalEditor
                 MetadataTimeout,
                 locallyProducedFile: true)
             .ConfigureAwait(false);
-        if (!metadata.Success || metadata.Duration <= TimeSpan.Zero)
-            throw new InvalidDataException("Nie można sprawdzić pliku wynikowego. Oryginał nie został zmieniony.");
         var packetTimelineDuration = await ReadPacketTimelineDurationAsync(
                 executable,
                 path,
@@ -415,8 +448,20 @@ internal static class AudioClipOriginalEditor
         DiagnosticLog.Info(
             "audio-clip",
             $"Zweryfikowano wynik cięcia: oczekiwano {expectedDuration:c}, "
-            + $"oś czasu FFmpeg {packetTimelineDuration:c}, odczyt Windows {metadata.Duration:c}.");
-        return metadata with { Duration = packetTimelineDuration };
+            + $"oś czasu FFmpeg {packetTimelineDuration:c}, "
+            + (metadata.Success && metadata.Duration > TimeSpan.Zero
+                ? $"odczyt Windows {metadata.Duration:c}."
+                : "odczyt Windows niedostępny; wynik sprawdzony przez FFmpeg."));
+        // Odtwarzacz systemowy nie odczytuje metadanych części formatów, które
+        // AMC obsługuje przez swój dekoder FFmpeg (np. MP2 i surowe strumienie
+        // kodeków). Nie wolno z tego powodu odrzucać poprawnego wyniku. FFmpeg
+        // przeczytał cały zapisany strumień i potwierdził jego rzeczywistą oś
+        // czasu; częstotliwość próbkowania 0 oznacza „zachowaj dotychczasową”.
+        return new MediaMetadataReadResult(
+            true,
+            packetTimelineDuration,
+            metadata.Success ? metadata.SampleRateHz : 0,
+            false);
     }
 
     internal static bool DurationMatches(TimeSpan expectedDuration, TimeSpan actualDuration)

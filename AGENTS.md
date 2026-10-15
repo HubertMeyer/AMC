@@ -56,6 +56,22 @@
   parametryzowane dla reprezentatywnych widoków zamiast osobnych, rozbieżnych
   obsług klawiszy.
 
+## Edycja plików audio
+
+- Polecenie wycięcia „do końca pliku” oznacza koniec rzeczywistej osi ramek
+  odczytanej przez FFmpeg, a nie zaniżony czas z nagłówka, odtwarzacza albo
+  ostatniej pozycji odsłuchu. Ręcznie ustawiona granica wcześniejsza niż koniec
+  nadal pozostaje granicą ręczną.
+- Każda zmiana destrukcyjnej edycji audio wymaga parametryzowanego testu całej
+  listy formatów audio deklarowanej przez `LocalAudioFileDiscovery`, w tym
+  aliasów rozszerzeń. Test ma przygotować prawdziwy plik danego kodeka,
+  zasymulować zaniżony czas odtwarzacza, wyciąć ogon, sprawdzić rzeczywistą
+  długość wyniku i brak plików roboczych. Kontenery wideo pozostają jawnie
+  odrzucone, dopóki nie powstanie osobny, równie pełny kontrakt ich edycji.
+- Nie uznawaj samego kodu wyjścia FFmpeg za dowód poprawności. Oryginał wolno
+  zastąpić dopiero po odczytaniu wyniku i porównaniu jego osi czasu z
+  oczekiwanym skutkiem operacji.
+
 ## Wyszukiwanie, relacje i biblioteka
 
 - Wynik wyszukiwania zachowuje swój rzeczywisty typ i tożsamość. Enter na

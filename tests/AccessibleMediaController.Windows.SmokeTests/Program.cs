@@ -2222,11 +2222,109 @@ static void TestAudioClipOriginalEditor()
         var expectedMp3Duration = originalMp3Duration - TimeSpan.FromSeconds(1);
         Assert(Math.Abs((editedMp3.TotalTime - expectedMp3Duration).TotalSeconds) < 0.2d,
             $"Nieprawidłowa długość MP3 po usunięciu fragmentu: {editedMp3.TotalTime}.");
-        Console.WriteLine("OK: usuwanie fragmentu WAV i MP3 podmienia plik dopiero po weryfikacji i zachowuje pełną kopię");
+        TestAudioClipCutToEndFormatMatrix(ffmpeg, result.BackupPath, directory);
+        Console.WriteLine("OK: usuwanie fragmentu we wszystkich formatach audio podmienia plik dopiero po weryfikacji i nie pozostawia ogona");
     }
     finally
     {
         Directory.Delete(directory, recursive: true);
+    }
+}
+
+static void TestAudioClipCutToEndFormatMatrix(
+    string ffmpeg,
+    string waveSource,
+    string directory)
+{
+    // To jest kontrakt całej listy audio LocalAudioFileDiscovery, z wyjątkiem
+    // rozszerzeń kontenerów wideo, które interfejs jawnie odrzuca. Każdy plik
+    // ma około 3 sekund, odtwarzacz celowo zgłasza koniec o 250 ms za wcześnie,
+    // a cięcie usuwa wszystko od 1 sekundy. Powrót błędu z pozostawionym ogonem
+    // daje wynik wyraźnie dłuższy niż dopuszczalna granica 1,45 s.
+    var formats = new[]
+    {
+        (Label: "MP2", Extension: ".mp2", Encoder: "mp2", Muxer: "mp2", Extra: Array.Empty<string>()),
+        (Label: "WAVE", Extension: ".wave", Encoder: "pcm_s16le", Muxer: "wav", Extra: Array.Empty<string>()),
+        (Label: "RF64", Extension: ".rf64", Encoder: "pcm_s16le", Muxer: "wav", Extra: new[] { "-rf64", "always" }),
+        (Label: "BWF", Extension: ".bwf", Encoder: "pcm_s16le", Muxer: "wav", Extra: new[] { "-write_bext", "1" }),
+        (Label: "M4A", Extension: ".m4a", Encoder: "aac", Muxer: "ipod", Extra: Array.Empty<string>()),
+        (Label: "AAC", Extension: ".aac", Encoder: "aac", Muxer: "adts", Extra: Array.Empty<string>()),
+        (Label: "ADTS", Extension: ".adts", Encoder: "aac", Muxer: "adts", Extra: Array.Empty<string>()),
+        (Label: "FLAC", Extension: ".flac", Encoder: "flac", Muxer: "flac", Extra: Array.Empty<string>()),
+        (Label: "WMA", Extension: ".wma", Encoder: "wmav2", Muxer: "asf", Extra: Array.Empty<string>()),
+        (Label: "ASF", Extension: ".asf", Encoder: "wmav2", Muxer: "asf", Extra: Array.Empty<string>()),
+        (Label: "Ogg Vorbis", Extension: ".ogg", Encoder: "libvorbis", Muxer: "ogg", Extra: Array.Empty<string>()),
+        (Label: "OGA Vorbis", Extension: ".oga", Encoder: "libvorbis", Muxer: "ogg", Extra: Array.Empty<string>()),
+        (Label: "Opus", Extension: ".opus", Encoder: "libopus", Muxer: "opus", Extra: Array.Empty<string>()),
+        (Label: "AIF", Extension: ".aif", Encoder: "pcm_s16be", Muxer: "aiff", Extra: Array.Empty<string>()),
+        (Label: "AIFF", Extension: ".aiff", Encoder: "pcm_s16be", Muxer: "aiff", Extra: Array.Empty<string>()),
+        (Label: "AIFC", Extension: ".aifc", Encoder: "pcm_s16be", Muxer: "aiff", Extra: Array.Empty<string>()),
+        (Label: "Matroska Audio", Extension: ".mka", Encoder: "flac", Muxer: "matroska", Extra: Array.Empty<string>()),
+        (Label: "AC-3", Extension: ".ac3", Encoder: "ac3", Muxer: "ac3", Extra: Array.Empty<string>()),
+        (Label: "E-AC-3", Extension: ".eac3", Encoder: "eac3", Muxer: "eac3", Extra: Array.Empty<string>()),
+        (Label: "EC3", Extension: ".ec3", Encoder: "eac3", Muxer: "eac3", Extra: Array.Empty<string>()),
+        (Label: "AMR", Extension: ".amr", Encoder: "libopencore_amrnb", Muxer: "amr", Extra: new[] { "-ar", "8000", "-ac", "1" })
+    };
+
+    foreach (var format in formats)
+    {
+        var path = Path.Combine(directory, "cut-to-end-" + format.Label.Replace(' ', '-') + format.Extension);
+        var start = new ProcessStartInfo
+        {
+            FileName = ffmpeg,
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            RedirectStandardError = true
+        };
+        foreach (var argument in new[]
+                 {
+                     "-nostdin", "-hide_banner", "-loglevel", "error", "-y",
+                     "-i", waveSource, "-map", "0:a:0", "-c:a", format.Encoder
+                 })
+            start.ArgumentList.Add(argument);
+        foreach (var argument in format.Extra) start.ArgumentList.Add(argument);
+        start.ArgumentList.Add("-f");
+        start.ArgumentList.Add(format.Muxer);
+        start.ArgumentList.Add(path);
+        using (var conversion = Process.Start(start)
+            ?? throw new InvalidOperationException($"Nie uruchomiono FFmpeg do testu {format.Label}."))
+        {
+            var errorTask = conversion.StandardError.ReadToEndAsync();
+            conversion.WaitForExit();
+            var error = errorTask.GetAwaiter().GetResult();
+            Assert(
+                conversion.ExitCode == 0 && File.Exists(path),
+                $"Nie przygotowano kontrolnego pliku {format.Label}: {error}");
+        }
+
+        AudioClipRemovalResult edited;
+        try
+        {
+            edited = AudioClipOriginalEditor.RemoveAsync(
+                    new AudioClipRemovalRequest(
+                        path,
+                        TimeSpan.FromSeconds(1),
+                        TimeSpan.FromSeconds(2.75),
+                        TimeSpan.FromSeconds(2.75)),
+                    progress: null,
+                    CancellationToken.None)
+                .GetAwaiter()
+                .GetResult();
+        }
+        catch (Exception exception)
+        {
+            throw new InvalidOperationException(
+                $"Cięcie kontrolnego pliku {format.Label} nie powiodło się.",
+                exception);
+        }
+        Assert(
+            edited.Duration >= TimeSpan.FromSeconds(0.75)
+                && edited.Duration <= TimeSpan.FromSeconds(1.45),
+            $"Cięcie {format.Label} do końca pozostawiło ogon albo usunęło za dużo: {edited.Duration}.");
+        Assert(
+            !Directory.EnumerateFiles(directory).Any(candidate =>
+                Path.GetFileName(candidate).Contains(".amc-cut-", StringComparison.Ordinal)),
+            $"Po cięciu {format.Label} pozostał plik tymczasowy.");
     }
 }
 
