@@ -57,7 +57,16 @@ internal sealed class LiteSpotifyCatalogCoordinator(
                     true, null, string.Empty, string.Empty, null);
             }
 
-            if (!_collectionRefreshAttempted && account.CatalogConnected == true)
+            // The legacy profile already contains a durable collection cache.
+            // Showing one category must not first synchronize every saved
+            // track, album, artist, playlist and podcast: a real profile with
+            // thousands of tracks needs over a minute for that operation and
+            // consumes all concurrent host slots when Enter is repeated.
+            // Use the populated snapshot immediately.  A network refresh is
+            // retained only as the fallback for a profile with no cache.
+            if (!_collectionRefreshAttempted
+                && _collectionSnapshot.Count == 0
+                && account.CatalogConnected == true)
             {
                 _collectionRefreshAttempted = true;
                 try

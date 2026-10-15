@@ -13,6 +13,7 @@ from amc_wx_lite.navigation import (
     PlaySpotifyItem,
     SessionId,
 )
+from amc_wx_lite.shortcuts import Action
 
 
 class ImmediateRunner:
@@ -22,6 +23,21 @@ class ImmediateRunner:
             done(work())
         except Exception as error:  # pragma: no cover - diagnostics path
             failed(error)
+
+
+def test_spotify_album_shortcut_opens_the_same_collection_path_as_enter() -> None:
+    received = []
+    frame = SimpleNamespace(
+        navigator=SimpleNamespace(active=SessionId.SPOTIFY),
+        _open_spotify_collection_view=received.append,
+        messages=SimpleNamespace(custom_seek_seconds=300),
+    )
+
+    LiteFrame._dispatch(frame, Action.SPOTIFY_VIEW_ALBUMS)
+
+    assert received == [OpenSpotifyCollectionView(
+        "spotify-collection:albums", "albums", "Albumy"
+    )]
 
 
 def test_spotify_root_reads_status_and_applies_only_user_labels() -> None:

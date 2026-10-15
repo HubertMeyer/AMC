@@ -131,6 +131,12 @@ class Action(Enum):
     # niej działający gest był opisywany jako brak polecenia.
     TIDAL_RELATIONS = "tidal.relations"
     SPOTIFY_RELATIONS = "spotify.relations"
+    SPOTIFY_VIEW_LIKED = "spotify.view.liked"
+    SPOTIFY_VIEW_ALBUMS = "spotify.view.albums"
+    SPOTIFY_VIEW_ARTISTS = "spotify.view.artists"
+    SPOTIFY_VIEW_PLAYLISTS = "spotify.view.playlists"
+    SPOTIFY_VIEW_PODCASTS = "spotify.view.podcasts"
+    SPOTIFY_VIEW_EPISODES = "spotify.view.episodes"
     SEEK_BACK_10 = "seek.back10"
     SEEK_FORWARD_10 = "seek.forward10"
     # Shift to 30 s (MainWindow.xaml.cs:21585-21586). Dostarczona wersja
@@ -485,6 +491,12 @@ SPOTIFY_SUPPORTED_ACTIONS = frozenset({
     Action.VIEW_HISTORY,
     Action.SESSION_OPTIONS,
     Action.SPOTIFY_RELATIONS,
+    Action.SPOTIFY_VIEW_LIKED,
+    Action.SPOTIFY_VIEW_ALBUMS,
+    Action.SPOTIFY_VIEW_ARTISTS,
+    Action.SPOTIFY_VIEW_PLAYLISTS,
+    Action.SPOTIFY_VIEW_PODCASTS,
+    Action.SPOTIFY_VIEW_EPISODES,
     Action.HELP,
     Action.KEYBOARD_HELP,
     Action.VERSION_INFO,
@@ -1046,6 +1058,21 @@ SPOTIFY_LIST_VIEW: dict[str, Action] = {
 }
 
 
+# Bezpośrednie wejścia do sześciu kategorii Spotify. Cztery gesty zachowują
+# nazewnictwo starego AMC (Ulubione, Albumy, Playlisty i Podcasty), a dwie
+# wolne pary uzupełniają nowy interfejs o Wykonawców i zapisane odcinki.
+# Są sesyjne, więc działają również z odtwarzacza Spotify i nie odbierają
+# tych samych klawiszy innym usługom.
+SPOTIFY_SESSION_VIEW: dict[str, Action] = {
+    "Ctrl+U": Action.SPOTIFY_VIEW_LIKED,
+    "Ctrl+Shift+A": Action.SPOTIFY_VIEW_ALBUMS,
+    "Ctrl+Shift+W": Action.SPOTIFY_VIEW_ARTISTS,
+    "Ctrl+P": Action.SPOTIFY_VIEW_PLAYLISTS,
+    "Ctrl+Alt+O": Action.SPOTIFY_VIEW_PODCASTS,
+    "Ctrl+Alt+E": Action.SPOTIFY_VIEW_EPISODES,
+}
+
+
 TIDAL_COLLECTION_LIST_VIEW: dict[str, Action] = {
     "Alt+1": Action.SORT_TIDAL_COLLECTION_ADDED,
     "Alt+2": Action.SORT_TIDAL_COLLECTION_ALPHABETICAL,
@@ -1158,6 +1185,8 @@ def resolve(
         return TIDAL_SESSION_VIEW[canonical]
     if tidal_session and not player_view and canonical in TIDAL_LIST_VIEW:
         return TIDAL_LIST_VIEW[canonical]
+    if spotify_session and canonical in SPOTIFY_SESSION_VIEW:
+        return SPOTIFY_SESSION_VIEW[canonical]
     if spotify_session and not player_view and canonical in SPOTIFY_LIST_VIEW:
         return SPOTIFY_LIST_VIEW[canonical]
     if player_view and wiim_session and canonical in WIIM_PLAYER_VIEW:
@@ -1239,6 +1268,12 @@ def _help_entries() -> list[tuple[str, str, Action]]:
             "Pokaż menu przejścia do albumu lub wykonawcy TIDAL"
         ),
         Action.SPOTIFY_RELATIONS: "Pokaż menu powiązań Spotify",
+        Action.SPOTIFY_VIEW_LIKED: "Spotify: Polubione utwory",
+        Action.SPOTIFY_VIEW_ALBUMS: "Spotify: Albumy",
+        Action.SPOTIFY_VIEW_ARTISTS: "Spotify: Wykonawcy",
+        Action.SPOTIFY_VIEW_PLAYLISTS: "Spotify: Playlisty",
+        Action.SPOTIFY_VIEW_PODCASTS: "Spotify: Podcasty",
+        Action.SPOTIFY_VIEW_EPISODES: "Spotify: Zapisane odcinki",
         Action.SEEK_BACK_10: "Przewin 10 sekund wstecz",
         Action.SEEK_FORWARD_10: "Przewin 10 sekund w przod",
         Action.SEEK_BACK_30: "Przewin 30 sekund wstecz",
@@ -1449,6 +1484,7 @@ def _help_entries() -> list[tuple[str, str, Action]]:
         PODCAST_INBOX_LIST_VIEW,
         PODCAST_SESSION_VIEW,
         TIDAL_LIST_VIEW,
+        SPOTIFY_SESSION_VIEW,
         SPOTIFY_LIST_VIEW,
         WIIM_SESSION_VIEW,
         WIIM_PLAYER_VIEW,
@@ -1477,6 +1513,15 @@ def _help_entries() -> list[tuple[str, str, Action]]:
                 label = f"{label} (WiiM)"
             elif action is Action.SELECT_SONOS_TARGET:
                 label = f"{label} (Sonos)"
+            elif action in {
+                Action.SPOTIFY_VIEW_LIKED,
+                Action.SPOTIFY_VIEW_ALBUMS,
+                Action.SPOTIFY_VIEW_ARTISTS,
+                Action.SPOTIFY_VIEW_PLAYLISTS,
+                Action.SPOTIFY_VIEW_PODCASTS,
+                Action.SPOTIFY_VIEW_EPISODES,
+            }:
+                label = f"{label} (Spotify)"
             elif action in {
                 Action.ADD_WIIM_NETWORK_STREAM,
                 Action.EDIT_WIIM_NETWORK_STREAM,

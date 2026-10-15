@@ -21,6 +21,7 @@ internal static class SpotifyCatalogContractTests
         CoordinatorDoesNotAuthenticateForStatusOrCapabilities();
         CoordinatorRedactsCredentialProbeFailure();
         CoordinatorUsesCachedCollectionWithoutAConnection();
+        CoordinatorUsesPopulatedCacheImmediatelyWhenConnected();
         CoordinatorRedactsBackendFailures();
         CoordinatorSearchesExactlyOnceWithoutMutatingAnything();
     }
@@ -274,6 +275,24 @@ internal static class SpotifyCatalogContractTests
             "widok bez połączenia nie użył cache albo próbował wejść do sieci");
         Check(result.Warning.Contains("Pokazano ostatni zapis", StringComparison.Ordinal),
             "fallback cache nie jest jawny dla użytkownika");
+    }
+
+    private static void CoordinatorUsesPopulatedCacheImmediatelyWhenConnected()
+    {
+        using var backend = new FakeBackend
+        {
+            Cached = [Item(MediaItemKind.Album, "cached", "Album z zapisu", library: true)],
+            RefreshedItems = [Item(MediaItemKind.Album, "network", "Album z sieci", library: true)]
+        };
+        using var coordinator = new LiteSpotifyCatalogCoordinator(backend);
+        using var args = JsonDocument.Parse("""{"view":"albums"}""");
+
+        var result = (LiteSpotifyItemsResult)coordinator.CollectionView(args.RootElement);
+
+        Check(backend.RefreshCalls == 0,
+            "otwarcie zapisanej kolekcji uruchomiło pełną synchronizację przed pokazaniem listy");
+        Check(result.Items.Count == 1 && result.Items[0].Title == "Album z zapisu",
+            "widok nie zwrócił od razu istniejącego zapisu kolekcji");
     }
 
     private static void CoordinatorRedactsBackendFailures()

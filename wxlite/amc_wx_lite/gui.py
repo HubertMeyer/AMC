@@ -8808,6 +8808,27 @@ class LiteFrame(wx.Frame):
             self._announce_quick_information()
         elif action is Action.SPOTIFY_RELATIONS:
             self._run(self.navigator.spotify_relations())
+        elif action in {
+            Action.SPOTIFY_VIEW_LIKED,
+            Action.SPOTIFY_VIEW_ALBUMS,
+            Action.SPOTIFY_VIEW_ARTISTS,
+            Action.SPOTIFY_VIEW_PLAYLISTS,
+            Action.SPOTIFY_VIEW_PODCASTS,
+            Action.SPOTIFY_VIEW_EPISODES,
+        }:
+            view, title = {
+                Action.SPOTIFY_VIEW_LIKED: ("liked", "Polubione utwory"),
+                Action.SPOTIFY_VIEW_ALBUMS: ("albums", "Albumy"),
+                Action.SPOTIFY_VIEW_ARTISTS: ("artists", "Wykonawcy"),
+                Action.SPOTIFY_VIEW_PLAYLISTS: ("playlists", "Playlisty"),
+                Action.SPOTIFY_VIEW_PODCASTS: ("podcasts", "Podcasty"),
+                Action.SPOTIFY_VIEW_EPISODES: ("episodes", "Zapisane odcinki"),
+            }[action]
+            self._open_spotify_collection_view(OpenSpotifyCollectionView(
+                f"spotify-collection:{view}",
+                view,
+                title,
+            ))
         elif action is Action.COPY_NAME:
             self._copy_name()
         elif action is Action.COPY_ADDRESS:

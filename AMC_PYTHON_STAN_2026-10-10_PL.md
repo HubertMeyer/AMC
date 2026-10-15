@@ -1,4 +1,4 @@
-# AMC Python — stan prac 14 października 2026
+# AMC Python — stan prac 15 października 2026
 
 > Krótkie przekazanie na wtorek, z numerem zainstalowanej wersji, listą
 > odbioru, startem Spotify i zasadami pracy równoległej, znajduje się w
@@ -490,6 +490,24 @@ otwarcie. Poprawka zachowuje Enter i ponawia go krótko w tle bez czytania tego
 stanu technicznego. Kolejny świadomy wybór, Backspace albo zmiana sesji
 unieważnia starsze ponowienie, więc spóźniony wynik nie może zmienić listy ani
 fokusu.
+
+Drugi odbiór wykazał, że samo ponowienie było niewystarczające. Pierwszy Enter
+przed pokazaniem wybranej kategorii uruchamiał pełną synchronizację wszystkich
+9574 zapisanych pozycji Spotify. Na rzeczywistym profilu odczyt Albumów trwał
+67,5 sekundy, a powtórzone Entery zajmowały wszystkie trzy miejsca pracy
+hosta. Gdy profil ma już trwały zapis kolekcji ze starego AMC, LiteHost pokazuje
+go teraz od razu i nie rozpoczyna pełnej synchronizacji przed zmianą widoku.
+Na tym samym profilu Albumy otworzyły się po poprawce w 0,036 sekundy,
+Playlisty w 0,008 sekundy, a Podcasty w 0,008 sekundy. Odczyt z sieci pozostaje
+awaryjną drogą wyłącznie dla profilu bez żadnego zapisu kolekcji.
+
+Kategorie Spotify mają bezpośrednie, kontekstowe skróty działające z listy i
+odtwarzacza: `Ctrl+U` — Polubione utwory, `Ctrl+Shift+A` — Albumy,
+`Ctrl+Shift+W` — Wykonawcy, `Ctrl+P` — Playlisty, `Ctrl+Alt+O` — Podcasty oraz
+`Ctrl+Alt+E` — Zapisane odcinki. Pierwsze, drugie, czwarte i piąte znaczenie
+zachowują gesty starego AMC; dwie wolne kombinacje uzupełniają kategorie nowego
+interfejsu. Wszystkie pozycje są widoczne w menu Biblioteka i palecie poleceń
+wyłącznie w sesji Spotify, z użytkowymi etykietami dla NVDA.
 
 ## Dostępność i NVDA
 

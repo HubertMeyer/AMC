@@ -133,6 +133,7 @@ PODCASTS_ONLY = (SessionId.PODCASTS,)
 TIDAL_ONLY = (SessionId.TIDAL,)
 WIIM_ONLY = (SessionId.WIIM,)
 SONOS_ONLY = (SessionId.SONOS,)
+SPOTIFY_ONLY = (SessionId.SPOTIFY,)
 LOCAL_MEDIA = (SessionId.FILES, SessionId.PODCASTS)
 QUEUE_SESSIONS = (SessionId.FILES, SessionId.PODCASTS, SessionId.TIDAL)
 PLAY_NEXT_SESSIONS = (SessionId.FILES, SessionId.PODCASTS)
@@ -370,6 +371,48 @@ def build_menus(session_order: object = None) -> tuple[Menu, ...]:
                      shortcut="Alt+2", accelerator=False),
             MenuItem("&Ulubione", Action.VIEW_FAVORITES, shortcut="Ctrl+U"),
             MenuItem("&Playlisty", Action.VIEW_PLAYLISTS, shortcut="Ctrl+P"),
+            MenuItem(
+                "Polubione &utwory Spotify",
+                Action.SPOTIFY_VIEW_LIKED,
+                shortcut="Ctrl+U",
+                accelerator=False,
+                visible_sessions=SPOTIFY_ONLY,
+            ),
+            MenuItem(
+                "Albu&my Spotify",
+                Action.SPOTIFY_VIEW_ALBUMS,
+                shortcut="Ctrl+Shift+A",
+                accelerator=False,
+                visible_sessions=SPOTIFY_ONLY,
+            ),
+            MenuItem(
+                "W&ykonawcy Spotify",
+                Action.SPOTIFY_VIEW_ARTISTS,
+                shortcut="Ctrl+Shift+W",
+                accelerator=False,
+                visible_sessions=SPOTIFY_ONLY,
+            ),
+            MenuItem(
+                "Playlis&ty Spotify",
+                Action.SPOTIFY_VIEW_PLAYLISTS,
+                shortcut="Ctrl+P",
+                accelerator=False,
+                visible_sessions=SPOTIFY_ONLY,
+            ),
+            MenuItem(
+                "Podcasty Spoti&fy",
+                Action.SPOTIFY_VIEW_PODCASTS,
+                shortcut="Ctrl+Alt+O",
+                accelerator=False,
+                visible_sessions=SPOTIFY_ONLY,
+            ),
+            MenuItem(
+                "Zapisane o&dcinki Spotify",
+                Action.SPOTIFY_VIEW_EPISODES,
+                shortcut="Ctrl+Alt+E",
+                accelerator=False,
+                visible_sessions=SPOTIFY_ONLY,
+            ),
             MenuItem("Pr&esety…", Action.VIEW_PRESETS, shortcut="Ctrl+Alt+P"),
             MenuItem(
                 "Utwórz lub p&rzypisz preset…",

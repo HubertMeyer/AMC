@@ -29,6 +29,7 @@ from amc_wx_lite.shortcuts import (
     PODCAST_SESSION_VIEW,
     RADIO_LIST_VIEW,
     RADIO_PLAYER_VIEW,
+    SPOTIFY_SESSION_VIEW,
     TIDAL_COLLECTION_LIST_VIEW,
     TIDAL_SESSION_VIEW,
     WIIM_PLAYER_VIEW,
@@ -152,6 +153,7 @@ def test_shortcut_shown_in_menu_is_the_shortcut_that_really_works() -> None:
         LIST_VIEW,
         RADIO_LIST_VIEW,
         RADIO_PLAYER_VIEW,
+        SPOTIFY_SESSION_VIEW,
         TIDAL_COLLECTION_LIST_VIEW,
         TIDAL_SESSION_VIEW,
         WIIM_SESSION_VIEW,
@@ -191,8 +193,17 @@ def test_no_duplicate_labels_or_shortcuts() -> None:
         "Ctrl+O", "Ctrl+Shift+O", "Ctrl+N", "Ctrl+E", "Ctrl+D", "Ctrl+S",
         "Alt+1", "Alt+2", "Alt+3", "Alt+D", "Ctrl+F5", "Ctrl+Shift+L",
         "B", "Shift+B", "Ctrl+Shift+B", "Ctrl+X", "F2", "Delete",
-        "I", "O", "S", "T"
+        "Ctrl+U", "Ctrl+P", "I", "O", "S", "T"
     }, duplicates
+    for chord in ("Ctrl+U", "Ctrl+P"):
+        for item in duplicates.get(chord, []):
+            if item.action in {
+                Action.SPOTIFY_VIEW_LIKED,
+                Action.SPOTIFY_VIEW_PLAYLISTS,
+            }:
+                assert not item.accelerator, (
+                    f"kontekstowe {chord} Spotify musi rozstrzygnąć aktywna sesja"
+                )
     for item in duplicates.get("Ctrl+O", []):
         assert not item.accelerator, (
             "kontekstowe Ctrl+O musi dojsc do resolvera sesji, a nie do "
