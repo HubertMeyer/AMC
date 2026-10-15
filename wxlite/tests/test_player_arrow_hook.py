@@ -14,7 +14,8 @@ from amc_wx_lite.shortcuts import GLOBAL_VIEW_SHORTCUTS, PRESET_SHORTCUTS
 SOURCE = Path(__file__).parents[1] / "amc_wx_lite" / "gui.py"
 
 def _call(*, player=True, arrow=True, foreign=False, time_key=False,
-          in_filter=False, list_chord="Tab", session="files"):
+          in_filter=False, list_chord="Tab", session="files",
+          screen_reader_modifier=False):
     tree = ast.parse(SOURCE.read_text(encoding="utf-8"))
     methods: list[ast.stmt] = [n for n in ast.walk(tree) if isinstance(n, ast.FunctionDef)
                and n.name == "_on_player_shortcut_hook"]
@@ -30,6 +31,7 @@ def _call(*, player=True, arrow=True, foreign=False, time_key=False,
                                 active=SimpleNamespace(value=session),
                                 session=SimpleNamespace(library_view=None)),
                             filter_box=filter_box,
+                            _screen_reader_modifier_down=lambda: screen_reader_modifier,
                             _on_filter_key=lambda event, *a, **k: actions.append("filter"),
                             _on_key=lambda event, *a, **k: actions.append("key" if arrow or time_key else "skip"))
     filter_box.owner = frame
@@ -140,6 +142,35 @@ def test_fokus_w_polu_filtra_oddaje_klawisz_jego_wlasnej_obsludze():
     assert _call(in_filter=True, player=False, arrow=False) == ["filter"]
 
 
+def test_gesty_nvda_nie_steruja_odtwarzaczem() -> None:
+    for chord in ("Up", "Down", "End"):
+        assert _call(
+            player=True,
+            list_chord=chord,
+            screen_reader_modifier=True,
+        ) == ["skip"]
+
+
+def test_zwykle_klawisze_odtwarzacza_zachowuja_swoje_polecenia() -> None:
+    for chord in ("Up", "Down", "End"):
+        assert _call(player=True, list_chord=chord) == ["key"]
+
+
+def test_ochrona_nvda_sprawdza_wszystkie_modyfikatory_starego_amc() -> None:
+    tree = ast.parse(SOURCE.read_text(encoding="utf-8"))
+    method = next(
+        node for node in ast.walk(tree)
+        if isinstance(node, ast.FunctionDef)
+        and node.name == "_screen_reader_modifier_down"
+    )
+    constants = {
+        node.value
+        for node in ast.walk(method)
+        if isinstance(node, ast.Constant) and isinstance(node.value, int)
+    }
+    assert {0x2D, 0x60, 0x14} <= constants
+
+
 def _volume_key(chord: str, current: int = 50) -> list[int]:
     tree = ast.parse(SOURCE.read_text(encoding="utf-8"))
     method = next(
@@ -157,6 +188,7 @@ def _volume_key(chord: str, current: int = 50) -> list[int]:
         filter_box=filter_box,
         volume_slider=slider,
         rate_choice=rate_choice,
+        _screen_reader_modifier_down=lambda: False,
         _set_volume=values.append,
         _on_filter_key=lambda _event: None,
         _on_key=lambda _event: None,

@@ -8448,6 +8448,28 @@ class LiteFrame(wx.Frame):
 
     # ------------------------------------------------------------- klawisze
 
+    @staticmethod
+    def _screen_reader_modifier_down() -> bool:
+        """Czy fizycznie trzymany jest klawisz modyfikujący NVDA.
+
+        wx nie pokazuje Insertu ani Caps Locka jako modyfikatora zdarzenia,
+        więc ``chord_from_event`` widzi np. NVDA+End jak zwykły End. Stare AMC
+        rozwiązywało to przez sprawdzenie stanu klawisza w Win32. Zachowujemy
+        ten sam, wąski kontrakt: Insert, NumPad Insert/0 albo Caps Lock.
+        """
+        if os.name != "nt":
+            return False
+        try:
+            import ctypes
+
+            get_async_key_state = ctypes.windll.user32.GetAsyncKeyState
+            return any(
+                int(get_async_key_state(virtual_key)) & 0x8000
+                for virtual_key in (0x2D, 0x60, 0x14)
+            )
+        except (AttributeError, OSError):
+            return False
+
     def _on_player_shortcut_hook(self, event: wx.KeyEvent) -> None:
         # Pomoc klawiatury musi być pierwszą bramką. W przeciwnym razie
         # pole filtra albo natywna lista wykonałyby opisywany skrót, zanim
@@ -8472,13 +8494,31 @@ class LiteFrame(wx.Frame):
             event.Skip()
             return
 
+        # NVDA+Up czyta fokus, NVDA+End pasek stanu, a NVDA+Down porusza się
+        # po obiektach. wx nie raportuje Insertu/Caps Locka w modyfikatorach,
+        # więc bez osobnego sprawdzenia odtwarzacz zmieniał głośność albo
+        # przewijał utwór. Przepuszczamy gest również przed kontrolkami
+        # głośności i tempa; ich natywna obsługa też nie może go przejąć.
+        canonical = chord_from_event(event).canonical
+        screen_reader_modifier_down = getattr(
+            self,
+            "_screen_reader_modifier_down",
+            lambda: False,
+        )
+        if (
+            self.navigator.view is View.PLAYER
+            and canonical in {"Up", "Down", "End"}
+            and screen_reader_modifier_down()
+        ):
+            event.Skip()
+            return
+
         # Windowsowa kontrolka listy potrafi przejac F2 (wlasna edycja
         # etykiety) oraz Delete, zanim dotra do EVT_KEY_DOWN kontrolki. Te
         # cztery gesty sa poleceniami AMC, wiec przechwytujemy je juz na
         # poziomie okna. Reszte klawiszy listy nadal dostaje natywna kontrolka
         # -- szczegolnie strzalki, Home/End i wyszukiwanie przyrostowe NVDA.
         if self.navigator.view is not View.PLAYER:
-            canonical = chord_from_event(event).canonical
             # Ctrl+Shift+0 wymaga tej wczesnej drogi tak samo jak w starym
             # AMC; pozostawienie go kontrolce listy daje cisze i brak akcji.
             # SysListView32 używa gołej Spacji do własnego zaznaczania i na
@@ -8558,7 +8598,6 @@ class LiteFrame(wx.Frame):
         # do niej: strzałki zmieniają wartość, a Home/End ustawiają skrajne
         # wartości. Wcześniej globalny router przejmował je także na polu
         # tempa, przez co obie kontrolki pozornie regulowały głośność.
-        canonical = chord_from_event(event).canonical
         volume_slider = getattr(self, "volume_slider", None)
         rate_choice = getattr(self, "rate_choice", None)
         if focus is volume_slider and canonical in {
@@ -8593,6 +8632,13 @@ class LiteFrame(wx.Frame):
             return
         chord = chord_from_event(event)
         player = self.navigator.view is View.PLAYER
+        if (
+            player
+            and chord.canonical in {"Up", "Down", "End"}
+            and self._screen_reader_modifier_down()
+        ):
+            event.Skip()
+            return
         radio = self.navigator.active is SessionId.RADIO
         podcast_inbox = (
             not player
