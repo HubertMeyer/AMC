@@ -36,6 +36,7 @@ internal static partial class SpotifyLibrespotLifecycleTests
         {
             await ListaUrzadzenBezKonta();
             await PierwszyPlayLogujeRazZWybranymWyjsciem();
+            await NieobecneZapamietaneWyjscieUzywaDomyslnego();
             await ZmianaWyjsciaWTrakcieOdtwarzaRealnyNowyProces();
             await ZmianaWyjsciaWPauzieNieWlaczaDzwieku();
             await SterowanieBezKontaNieUruchamiaHosta();
@@ -89,6 +90,35 @@ internal static partial class SpotifyLibrespotLifecycleTests
         Check(Liczba(play, "positionMs") == 12_000, "Play musi nieść zapamiętaną pozycję");
         Check(host.Tokens() == 1, "Token przechodzi DOKŁADNIE raz, w initialize");
         Check(scena.Failed.Count == 0, $"Poprawny pierwszy Play nie może zgłaszać błędu: {scena.Blad}");
+    }
+
+    /// <summary>
+    /// Wyłączone zapamiętane urządzenie nie może blokować odtwarzania. Wybór
+    /// pozostaje preferencją na przyszłość, ale bieżący proces używa wyjścia
+    /// domyślnego i wystawia jeden komunikat dla interfejsu.
+    /// </summary>
+    private static async Task NieobecneZapamietaneWyjscieUzywaDomyslnego()
+    {
+        const string denon = "Cyfrowy interfejs audio (PMA-1700NE)";
+        using var scena = Scena.Nowa(device: denon);
+
+        scena.Output.Play(Utwor("A"), TimeSpan.Zero, 44, 1d);
+        await scena.Output.PendingPlaybackStart.WaitAsync(TimeSpan.FromSeconds(5));
+
+        var host = scena.Hosts.Single();
+        var initialize = host.Commands("initialize").Single();
+        Check(initialize["device"] is null,
+            "Brak zapamiętanego wyjścia musi uruchomić Librespot na wyjściu domyślnym");
+        Check(host.Commands("play").Count == 1,
+            "Fallback wyjścia musi kontynuować pierwotne odtwarzanie, bez drugiego Play");
+        Check(scena.Output.SelectedOutputDeviceName == denon,
+            "Tymczasowy fallback nie może zapomnieć preferowanego Denona");
+        Check(scena.Output.TakeDefaultOutputFallbackNotice() == denon,
+            "Interfejs musi dostać użytkową nazwę niedostępnego wyjścia");
+        Check(scena.Output.TakeDefaultOutputFallbackNotice() is null,
+            "Komunikat o fallbacku ma być jednorazowy, nie powtarzany przy każdym utworze");
+        Check(scena.Failed.Count == 0,
+            $"Dostępne wyjście domyślne nie może kończyć odtwarzania błędem: {scena.Blad}");
     }
 
     /// <summary>

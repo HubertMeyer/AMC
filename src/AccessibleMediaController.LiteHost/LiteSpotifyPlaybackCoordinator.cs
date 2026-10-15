@@ -334,12 +334,15 @@ internal sealed class LiteSpotifyPlaybackCoordinator : IDisposable
             paused = false;
             sink = events;
         }
+        var fallbackDeviceName = (sender as SpotifyLibrespotMediaOutput)?
+            .TakeDefaultOutputFallbackNotice();
         sink?.Publish("playback.started", new
         {
             engine = SessionId,
             sessionId = SessionId,
             id = e.Item.Id,
-            title = e.Item.Title
+            title = e.Item.Title,
+            audioOutputFallbackDeviceName = fallbackDeviceName
         });
     }
 

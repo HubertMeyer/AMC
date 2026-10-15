@@ -515,6 +515,36 @@ def test_spotify_started_event_commits_the_pending_item() -> None:
     assert frame._playing_sessions == {SessionId.SPOTIFY}
 
 
+def test_spotify_started_event_announces_default_output_fallback_once() -> None:
+    messages = []
+    frame = SimpleNamespace(
+        _window_alive=lambda: True,
+        _pending_spotify_playback=None,
+        _pending_playback_session=SessionId.SPOTIFY,
+        _playing_session=None,
+        _playing_sessions=set(),
+        navigator=SimpleNamespace(
+            note_spotify_playback_started=lambda _item_id, _title: None
+        ),
+        announcer=SimpleNamespace(say=messages.append),
+    )
+
+    LiteFrame._handle_engine_event(frame, "playback.started", {
+        "engine": "spotify",
+        "id": "track-1",
+        "title": "Utwór",
+        "audioOutputFallbackDeviceName": (
+            "Cyfrowy interfejs audio (PMA-1700NE)"
+        ),
+    })
+
+    assert messages == [
+        "Zapamiętane urządzenie audio Cyfrowy interfejs audio "
+        "(PMA-1700NE) jest niedostępne. Spotify odtwarza na "
+        "domyślnym urządzeniu systemowym"
+    ]
+
+
 def test_ctrl_h_in_spotify_opens_its_own_history_not_local_files() -> None:
     navigator = Navigator()
     navigator.active = SessionId.SPOTIFY

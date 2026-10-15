@@ -54,6 +54,7 @@ public static class LibrespotHostErrorCodes
     public const string HostError = "host_error";
     public const string Disposed = "host_disposed";
     public const string TokenLeakGuard = "token_leak_guard";
+    public const string NoAudioDevice = "noAudioDevice";
 
     /// <summary>
     /// Nie udalo sie zdobyc poswiadczen konta dla "initialize": dostawca tokenu

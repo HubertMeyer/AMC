@@ -7219,6 +7219,15 @@ class LiteFrame(wx.Frame):
                 self._pending_spotify_playback = None
                 if self._pending_playback_session is SessionId.SPOTIFY:
                     self._pending_playback_session = None
+                fallback_device = str(
+                    data.get("audioOutputFallbackDeviceName") or ""
+                ).strip()
+                if fallback_device:
+                    self.announcer.say(
+                        f"Zapamiętane urządzenie audio {fallback_device} "
+                        "jest niedostępne. Spotify odtwarza na domyślnym "
+                        "urządzeniu systemowym"
+                    )
             if data.get("tempoFallbackReason"):
                 self.announcer.say(
                     "Wybrany algorytm tempa jest niedostępny. Używany SoundTouch."

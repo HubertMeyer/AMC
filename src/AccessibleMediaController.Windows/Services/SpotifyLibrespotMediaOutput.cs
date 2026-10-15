@@ -56,6 +56,8 @@ internal sealed class SpotifyLibrespotMediaOutput : IMediaOutput, IDisposable
     private MediaItem? currentItem;
     private string? loadedItemId;
     private string? desiredDeviceName;
+    private string? defaultOutputFallbackDeviceName;
+    private bool defaultOutputFallbackNoticePending;
     private TimeSpan position;
     private long currentPlayId;
     private long preparationVersion;
@@ -140,6 +142,22 @@ internal sealed class SpotifyLibrespotMediaOutput : IMediaOutput, IDisposable
     public string? SelectedOutputDeviceName
     {
         get { lock (stateGate) return desiredDeviceName; }
+    }
+
+    /// <summary>
+    /// Zwraca nazwę zapamiętanego wyjścia, które przy ostatnim uruchomieniu
+    /// zastąpiono wyjściem domyślnym. Informacja jest jednorazowa: interfejs
+    /// ma ją powiedzieć przy pierwszym potwierdzonym starcie, a nie przy każdym
+    /// następnym utworze odtwarzanym przez ten sam proces.
+    /// </summary>
+    internal string? TakeDefaultOutputFallbackNotice()
+    {
+        lock (stateGate)
+        {
+            if (!defaultOutputFallbackNoticePending) return null;
+            defaultOutputFallbackNoticePending = false;
+            return defaultOutputFallbackDeviceName;
+        }
     }
 
     /// <summary>Czy proces hosta zyje. Przed pierwszym uzyciem: nie.</summary>
@@ -551,6 +569,8 @@ internal sealed class SpotifyLibrespotMediaOutput : IMediaOutput, IDisposable
             isPreparing = false;
             playbackStarted = false;
             desiredDeviceName = deviceName;
+            defaultOutputFallbackDeviceName = null;
+            defaultOutputFallbackNoticePending = false;
             if (!wasPlaying && item is not null) resumeNeedsReload = true;
         }
 
@@ -623,9 +643,49 @@ internal sealed class SpotifyLibrespotMediaOutput : IMediaOutput, IDisposable
             {
                 // Token bierze transport ze wstrzyknietego dostawcy i wysyla go
                 // WYLACZNIE stdin-em. Tu nie ma ani argv, ani dziennika.
-                await existing.InitializeAsync(null, device, volume, cancellationToken)
-                    .ConfigureAwait(false);
-                lock (stateGate) clientInitialized = true;
+                var effectiveDevice = device;
+                if (!string.IsNullOrWhiteSpace(device))
+                {
+                    try
+                    {
+                        var devices = await existing.GetDevicesAsync(cancellationToken)
+                            .ConfigureAwait(false);
+                        if (!devices.Any(candidate => string.Equals(
+                                candidate.Name, device, StringComparison.Ordinal)))
+                            effectiveDevice = null;
+                    }
+                    catch (LibrespotHostException exception)
+                        when (exception.Code == LibrespotHostErrorCodes.NoAudioDevice)
+                    {
+                        // Brak wcześniej wybranego endpointu nie może zablokować
+                        // działającego wyjścia domyślnego.
+                        effectiveDevice = null;
+                    }
+                }
+
+                try
+                {
+                    await existing.InitializeAsync(
+                            null, effectiveDevice, volume, cancellationToken)
+                        .ConfigureAwait(false);
+                }
+                catch (LibrespotHostException exception)
+                    when (effectiveDevice is not null
+                        && exception.Code == LibrespotHostErrorCodes.NoAudioDevice)
+                {
+                    // Urządzenie mogło zniknąć między listą a initialize.
+                    effectiveDevice = null;
+                    await existing.InitializeAsync(null, null, volume, cancellationToken)
+                        .ConfigureAwait(false);
+                }
+                lock (stateGate)
+                {
+                    clientInitialized = true;
+                    var usedFallback = !string.IsNullOrWhiteSpace(device)
+                        && effectiveDevice is null;
+                    defaultOutputFallbackDeviceName = usedFallback ? device : null;
+                    defaultOutputFallbackNoticePending = usedFallback;
+                }
             }
             return new HostLease(existing, generation);
         }
