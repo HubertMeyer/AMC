@@ -7,7 +7,10 @@ from amc_wx_lite.spotify_source import (
     account_summary_from_payload,
     artist_overview_rows,
     container_result_from_payload,
+    history_rows,
     information_text,
+    normalize_history_payload,
+    record_history_row,
     root_result_from_payload,
 )
 from amc_wx_lite.navigation import SessionId
@@ -200,3 +203,55 @@ def test_account_summary_returns_only_intentional_catalogue_label() -> None:
     assert summary.label == "Katalog Spotify nie jest skonfigurowany."
     assert summary.connected is False
     assert "hidden" not in summary.label
+
+
+def test_private_playback_history_is_newest_first_unique_and_accessible() -> None:
+    first = Row(
+        "private-first", "Pierwszy", "track",
+        service_id="spotify-track-first", service_kind="track",
+        artist_name="Wykonawca",
+    )
+    second = Row(
+        "private-second", "Drugi", "episode",
+        service_id="spotify-episode-second", service_kind="episode",
+        artist_name="Podcast",
+        related_podcast_service_id="spotify-show-parent",
+        related_podcast_title="Podcast użytkowy",
+    )
+
+    stored = record_history_row([], first)
+    stored = record_history_row(stored, second)
+    stored = record_history_row(stored, first)
+    rows = history_rows(stored)
+
+    assert [row.title for row in rows] == ["Pierwszy", "Drugi"]
+    assert rows[1].related_podcast_title == "Podcast użytkowy"
+    spoken = " ".join(
+        ListModel(list(rows)).text_for(index, column)
+        for index in range(len(rows))
+        for column in range(3)
+    )
+    assert "spotify-track-first" not in spoken
+    assert "spotify-episode-second" not in spoken
+
+
+def test_private_spotify_history_drops_unknown_fields_and_keeps_500_items() -> None:
+    raw = [
+        {
+            "itemId": f"private-{index}",
+            "externalId": f"external-{index}",
+            "title": f"Utwór {index}",
+            "kind": "track",
+            "token": "nie zapisuj",
+        }
+        for index in range(510)
+    ]
+    raw.insert(1, dict(raw[0]))
+    raw.insert(2, {"itemId": "bad", "kind": "InternalKind.Track"})
+
+    stored = normalize_history_payload(raw)
+
+    assert len(stored) == 500
+    assert stored[0]["title"] == "Utwór 0"
+    assert stored[1]["title"] == "Utwór 1"
+    assert all("token" not in item for item in stored)

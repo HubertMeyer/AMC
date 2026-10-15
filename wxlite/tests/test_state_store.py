@@ -281,6 +281,26 @@ def test_round_trip_keeps_only_safe_private_tidal_queue_fields() -> None:
     assert "token" not in loaded[0]
 
 
+def test_round_trip_keeps_only_safe_private_spotify_history_fields() -> None:
+    store, _ = temp_store()
+    store.save(LiteState(spotify_playback_history=[{
+        "itemId": "private-row",
+        "externalId": "spotify-track-id",
+        "title": "Utwór",
+        "kind": "track",
+        "artist": "Wykonawca",
+        "durationTicks": 123,
+        "token": "nie zapisuj",
+    }]))
+
+    loaded = store.load().spotify_playback_history
+
+    assert len(loaded) == 1
+    assert loaded[0]["title"] == "Utwór"
+    assert loaded[0]["durationTicks"] == 123
+    assert "token" not in loaded[0]
+
+
 def test_unknown_podcast_sort_value_is_not_restored_or_rewritten() -> None:
     store, directory = temp_store()
     store.path.write_text(json.dumps({

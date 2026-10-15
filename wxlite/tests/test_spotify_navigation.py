@@ -258,7 +258,10 @@ def test_visible_source_order_drives_next_item_and_confirmation() -> None:
     tracks = [_track(), _track(2)]
     nav.apply_spotify_view("Biblioteka Spotify", tracks)
     nav.activate_selected()
-    nav.note_spotify_playback_started(tracks[0].item_id, tracks[0].title)
+    confirmed = nav.note_spotify_playback_started(
+        tracks[0].item_id, tracks[0].title
+    )
+    assert confirmed == tracks[0]
 
     events = nav.step_playback_source(True)
 
@@ -271,8 +274,46 @@ def test_visible_source_order_drives_next_item_and_confirmation() -> None:
         previous_title=tracks[0].title,
     )]
     assert nav.session.now_playing_id == tracks[0].item_id
-    nav.note_spotify_playback_started(tracks[1].item_id, tracks[1].title)
+    confirmed = nav.note_spotify_playback_started(
+        tracks[1].item_id, tracks[1].title
+    )
+    assert confirmed == tracks[1]
     assert nav.session.now_playing_id == tracks[1].item_id
+
+
+def test_spotify_history_is_named_and_escape_restores_list_and_focus() -> None:
+    nav = Navigator()
+    nav.active = SessionId.SPOTIFY
+    albums = [_album(), _album(2)]
+    tracks = [_track(), _track(2)]
+    nav.apply_spotify_view("Biblioteka Spotify", albums)
+    nav.session.model.select_id(albums[1].item_id)
+    snapshot = nav.capture_transient_navigation()
+
+    events = nav.apply_spotify_history(tracks)
+
+    assert events == [Announce("Spotify — Historia odtwarzania, 2 pozycje")]
+    assert nav.session.library_view is LibraryView.SPOTIFY_HISTORY
+    nav.session.model.select_id(tracks[1].item_id)
+
+    assert nav.restore_transient_navigation(snapshot) == []
+    assert nav.session.library_view is LibraryView.SPOTIFY_LIBRARY
+    assert nav.session.model.selected_row == albums[1]
+
+    nav.apply_spotify_history(tracks)
+    assert nav.session.model.selected_row == tracks[1]
+
+
+def test_empty_spotify_history_has_one_clear_message() -> None:
+    nav = Navigator()
+    nav.active = SessionId.SPOTIFY
+
+    events = nav.apply_spotify_history([])
+
+    assert events == [Announce(
+        "Spotify — Historia odtwarzania, brak odtworzonych elementów"
+    )]
+    assert nav.session.library_view is LibraryView.SPOTIFY_HISTORY
 
 
 def test_session_switch_preserves_nested_list_and_focus() -> None:

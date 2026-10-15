@@ -5,8 +5,11 @@ from types import SimpleNamespace
 import amc_wx_lite.gui as gui_module
 from amc_wx_lite.gui import LiteFrame
 from amc_wx_lite.host_client import HostError
+from amc_wx_lite.list_model import Row
 from amc_wx_lite.navigation import (
     Announce,
+    LibraryView,
+    Navigator,
     OpenSpotifyCollectionView,
     OpenSpotifyContainer,
     OpenSpotifyView,
@@ -16,6 +19,7 @@ from amc_wx_lite.navigation import (
     SpotifyRelationChoice,
 )
 from amc_wx_lite.shortcuts import Action
+from amc_wx_lite.state_store import LiteState
 
 
 class ImmediateRunner:
@@ -363,7 +367,12 @@ def test_spotify_playback_is_handed_to_librespot_without_committing_early() -> N
 
 def test_spotify_started_event_commits_the_pending_item() -> None:
     committed = []
+    recorded = []
     intent = PlaySpotifyItem("new", "Nowy utwór", "private", "track")
+    confirmed = Row(
+        "new", "Nowy utwór", "track",
+        service_id="private", service_kind="track",
+    )
     frame = SimpleNamespace(
         _window_alive=lambda: True,
         _pending_spotify_playback=intent,
@@ -372,9 +381,12 @@ def test_spotify_started_event_commits_the_pending_item() -> None:
         _playing_sessions=set(),
         navigator=SimpleNamespace(
             note_spotify_playback_started=(
-                lambda item_id, title: committed.append((item_id, title))
+                lambda item_id, title: (
+                    committed.append((item_id, title)) or confirmed
+                )
             )
         ),
+        _record_spotify_history=recorded.append,
         announcer=SimpleNamespace(say=lambda _message: None),
     )
 
@@ -385,10 +397,133 @@ def test_spotify_started_event_commits_the_pending_item() -> None:
     })
 
     assert committed == [("new", "Nowy utwór")]
+    assert recorded == [confirmed]
     assert frame._pending_spotify_playback is None
     assert frame._pending_playback_session is None
     assert frame._playing_session is SessionId.SPOTIFY
     assert frame._playing_sessions == {SessionId.SPOTIFY}
+
+
+def test_ctrl_h_in_spotify_opens_its_own_history_not_local_files() -> None:
+    navigator = Navigator()
+    navigator.active = SessionId.SPOTIFY
+    navigator.apply_spotify_view("Biblioteka Spotify", [Row(
+        "album", "Album", "album",
+        service_id="album-private", service_kind="album",
+    )])
+    events = []
+    frame = SimpleNamespace(
+        navigator=navigator,
+        state=LiteState(spotify_playback_history=[{
+            "itemId": "track-row",
+            "externalId": "track-private",
+            "title": "Utwór z historii",
+            "kind": "track",
+            "artist": "Wykonawca",
+        }]),
+        _begin_transient_preview=lambda: None,
+        _run=events.append,
+    )
+
+    LiteFrame._show_playback_history_preview(frame)
+
+    assert navigator.active is SessionId.SPOTIFY
+    assert navigator.session.library_view is LibraryView.SPOTIFY_HISTORY
+    assert navigator.session.model.selected_row.title == "Utwór z historii"
+    assert events == [[Announce("Spotify — Historia odtwarzania, 1 pozycja")]]
+
+
+def test_confirmed_spotify_history_is_persisted_and_deduplicated() -> None:
+    saves = []
+    state = LiteState()
+    frame = SimpleNamespace(
+        state=state,
+        _save_state=lambda: saves.append(True) or True,
+    )
+    first = Row(
+        "row-1", "Pierwszy", "track",
+        service_id="external-1", service_kind="track",
+    )
+    second = Row(
+        "row-2", "Drugi", "track",
+        service_id="external-2", service_kind="track",
+    )
+
+    LiteFrame._record_spotify_history(frame, first)
+    LiteFrame._record_spotify_history(frame, second)
+    LiteFrame._record_spotify_history(frame, first)
+
+    assert [
+        item["title"] for item in state.spotify_playback_history
+    ] == ["Pierwszy", "Drugi"]
+    assert saves == [True, True, True]
+
+
+def test_delete_in_spotify_history_removes_only_history_and_keeps_focus() -> None:
+    messages = []
+    saves = []
+    synced = []
+    state = LiteState(spotify_playback_history=[
+        {
+            "itemId": "row-1",
+            "externalId": "external-1",
+            "title": "Pierwszy",
+            "kind": "track",
+        },
+        {
+            "itemId": "row-2",
+            "externalId": "external-2",
+            "title": "Drugi",
+            "kind": "track",
+        },
+    ])
+    navigator = Navigator()
+    navigator.active = SessionId.SPOTIFY
+    navigator.apply_spotify_history(list(
+        gui_module.spotify_history_rows(state.spotify_playback_history)
+    ))
+    selected = navigator.session.model.rows[0]
+    frame = SimpleNamespace(
+        navigator=navigator,
+        state=state,
+        announcer=SimpleNamespace(say=messages.append),
+        _selected_action_rows=lambda: [selected],
+        _save_state=lambda: saves.append(True) or True,
+        _sync_views=lambda: synced.append(True),
+    )
+    frame._remove_spotify_history_entries = (
+        lambda: LiteFrame._remove_spotify_history_entries(frame)
+    )
+
+    assert LiteFrame._action_available_in_active_session(
+        frame, Action.REMOVE_SELECTED
+    )
+    LiteFrame._remove_selected_items(frame)
+
+    assert [
+        item["title"] for item in state.spotify_playback_history
+    ] == ["Drugi"]
+    assert navigator.session.model.selected_row.title == "Drugi"
+    assert saves == [True]
+    assert synced == [True]
+    assert messages == [
+        "Usunięto z Historii Spotify: Pierwszy. "
+        "Biblioteka Spotify pozostała bez zmian"
+    ]
+
+
+def test_delete_remains_unavailable_in_spotify_library() -> None:
+    navigator = Navigator()
+    navigator.active = SessionId.SPOTIFY
+    navigator.apply_spotify_view("Biblioteka Spotify", [Row(
+        "track", "Utwór", "track",
+        service_id="external", service_kind="track",
+    )])
+    frame = SimpleNamespace(navigator=navigator)
+
+    assert not LiteFrame._action_available_in_active_session(
+        frame, Action.REMOVE_SELECTED
+    )
 
 
 def test_spotify_failed_event_restores_prior_item_and_list_context() -> None:

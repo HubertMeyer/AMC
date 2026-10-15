@@ -87,6 +87,47 @@ def _read_search_history(raw: object) -> dict[str, list[str]]:
     return result
 
 
+def _read_spotify_history(raw: object) -> list[dict]:
+    """Sanitize AMC Python's own confirmed Spotify playback history."""
+
+    if not isinstance(raw, list):
+        return []
+    text_fields = (
+        "itemId", "externalId", "title", "kind", "artist", "publicUri",
+        "relatedAlbumExternalId", "relatedAlbumTitle",
+        "relatedArtistExternalId", "relatedArtistName",
+        "relatedPodcastExternalId", "relatedPodcastTitle",
+    )
+    result: list[dict] = []
+    seen: set[str] = set()
+    for raw_item in raw:
+        if len(result) >= 500 or not isinstance(raw_item, dict):
+            continue
+        item = {
+            name: (
+                value.strip()
+                if isinstance(value := raw_item.get(name), str)
+                else ""
+            )
+            for name in text_fields
+        }
+        if (
+            not item["itemId"]
+            or not item["externalId"]
+            or not item["title"]
+            or item["kind"] not in ("track", "episode")
+            or item["externalId"] in seen
+        ):
+            continue
+        seen.add(item["externalId"])
+        duration = raw_item.get("durationTicks")
+        item["durationTicks"] = (
+            max(0, duration) if type(duration) is int else 0
+        )
+        result.append(item)
+    return result
+
+
 def _read_tidal_queue(raw: object) -> list[dict]:
     """Wczytaj tylko pola potrzebne do kolejki TIDAL, bez dowolnych rekordów."""
     if not isinstance(raw, list):
@@ -459,6 +500,10 @@ class LiteState:
     #: Historia zapytań osobno dla każdej sesji oraz zakresu globalnego.
     #: Zawiera wyłącznie tekst użytkownika, bez wyników i identyfikatorów.
     search_history: dict[str, list[str]] = field(default_factory=dict)
+    #: Prywatna historia tego, co AMC Python faktycznie uruchomił w Spotify.
+    #: Nie udaje pełnej historii konta; wpis powstaje dopiero po potwierdzonym
+    #: starcie Librespota. Identyfikatory są wyłącznie danymi modelu.
+    spotify_playback_history: list[dict] = field(default_factory=list)
 
 
 def _read_session_overrides(raw: object) -> dict:
@@ -637,6 +682,9 @@ class StateStore:
             tidal_queue_items=_read_tidal_queue(raw.get("tidal_queue_items")),
             tidal_sort_modes=_read_tidal_sort_modes(raw.get("tidal_sort_modes")),
             search_history=_read_search_history(raw.get("search_history")),
+            spotify_playback_history=_read_spotify_history(
+                raw.get("spotify_playback_history")
+            ),
         )
 
     # -------------------------------------------------------------- zapis
@@ -690,6 +738,9 @@ class StateStore:
         if tidal_sort_modes:
             payload["tidal_sort_modes"] = tidal_sort_modes
         payload["search_history"] = _read_search_history(state.search_history)
+        payload["spotify_playback_history"] = _read_spotify_history(
+            state.spotify_playback_history
+        )
         text = json.dumps(payload, ensure_ascii=False, indent=2)
 
         # Plik tymczasowy MUSI lezec w tym samym folderze: os.replace jest

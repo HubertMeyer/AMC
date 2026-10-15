@@ -1265,9 +1265,11 @@ def _help_entries() -> list[tuple[str, str, Action]]:
         Action.TIDAL_TOGGLE_LIBRARY: "Dodaj lub usuń z Biblioteki TIDAL",
         Action.TIDAL_TOGGLE_FAVORITE: "Dodaj lub usuń z Ulubionych TIDAL",
         Action.TIDAL_RELATIONS: (
-            "Pokaż menu przejścia do albumu lub wykonawcy TIDAL"
+            "Wybierz przejście do albumu lub wykonawcy TIDAL"
         ),
-        Action.SPOTIFY_RELATIONS: "Pokaż menu powiązań Spotify",
+        Action.SPOTIFY_RELATIONS: (
+            "Wybierz przejście do albumu, wykonawcy lub podcastu Spotify"
+        ),
         Action.SPOTIFY_VIEW_LIKED: "Spotify: Polubione utwory",
         Action.SPOTIFY_VIEW_ALBUMS: "Spotify: Albumy",
         Action.SPOTIFY_VIEW_ARTISTS: "Spotify: Wykonawcy",

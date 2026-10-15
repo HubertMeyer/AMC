@@ -88,10 +88,12 @@ _NON_SQLITE_VIEWS = (
     LibraryView.TIDAL_CONTAINER,
     # Prywatna kolejka TIDAL jest zapisana w state.json AMC-wx-Lite.
     LibraryView.TIDAL_QUEUE,
-    # Biblioteka i kontenery Spotify przychodzą z osobnego kontraktu hosta C#.
-    # Nie są widokami lokalnej bazy SQLite.
+    # Biblioteka i kontenery Spotify przychodzą z osobnego kontraktu hosta C#;
+    # Historia jest prywatnym stanem AMC Python. Żaden z tych widoków nie
+    # należy do lokalnej bazy SQLite plików.
     LibraryView.SPOTIFY_LIBRARY,
     LibraryView.SPOTIFY_CONTAINER,
+    LibraryView.SPOTIFY_HISTORY,
     # Korzeń źródeł jest stałą, uczciwą listą dwóch możliwości interfejsu;
     # zapisane strumienie czyta osobny WiimSource ze wspólnego state.json.
     LibraryView.WIIM_SOURCE_LIBRARY,

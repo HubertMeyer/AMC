@@ -100,6 +100,9 @@ class LibraryView(Enum):
     #: otwarty kontener katalogu. Techniczny typ kontenera pozostaje w DTO.
     SPOTIFY_LIBRARY = "spotifyLibrary"
     SPOTIFY_CONTAINER = "spotifyContainer"
+    #: Własna historia potwierdzonych odtworzeń AMC Python. Nie jest to
+    #: kompletna historia konta Spotify ani kolejny kontener katalogu.
+    SPOTIFY_HISTORY = "spotifyHistory"
     #: Uczciwy korzeń źródeł WiiM. Lokalny interfejs nie udaje katalogu
     #: serwisów urządzenia: pokazuje wyłącznie sprzętowe presety i strumienie
     #: zapisane przez użytkownika w profilu AMC.
@@ -272,6 +275,9 @@ class TransientNavigationSnapshot:
     library_folder_path: str | None
     library_return_view: str | None
     view_selected_ids: dict[str, str]
+    spotify_heading: str
+    spotify_context: "OpenSpotifyContainer | OpenSpotifyCollectionView | None"
+    spotify_history: tuple["SpotifyNavigationSnapshot", ...]
 
 
 @dataclass(slots=True)
@@ -906,6 +912,9 @@ class Navigator:
             library_folder_path=state.library_folder_path,
             library_return_view=state.library_return_view,
             view_selected_ids=dict(state.view_selected_ids),
+            spotify_heading=state.spotify_heading,
+            spotify_context=state.spotify_context,
+            spotify_history=tuple(state.spotify_history),
         )
 
     def restore_transient_navigation(
@@ -920,6 +929,11 @@ class Navigator:
         """
         self.active = snapshot.session_id
         state = self.sessions[snapshot.session_id]
+        spotify_history_selected_id = (
+            state.model.selected_id
+            if state.library_view is LibraryView.SPOTIFY_HISTORY
+            else None
+        )
         state.view = snapshot.view
         state.list_anchor_id = snapshot.list_anchor_id
         state.player_entry_anchor_id = snapshot.player_entry_anchor_id
@@ -935,6 +949,13 @@ class Navigator:
         state.library_folder_path = snapshot.library_folder_path
         state.library_return_view = snapshot.library_return_view
         state.view_selected_ids = dict(snapshot.view_selected_ids)
+        if spotify_history_selected_id:
+            state.view_selected_ids[
+                LibraryView.SPOTIFY_HISTORY.value
+            ] = spotify_history_selected_id
+        state.spotify_heading = snapshot.spotify_heading
+        state.spotify_context = snapshot.spotify_context
+        state.spotify_history = list(snapshot.spotify_history)
         state.model.replace(list(snapshot.rows), preferred_id=snapshot.selected_id)
         return []
 
@@ -1343,7 +1364,8 @@ class Navigator:
                 return [choice.target]
             if choices:
                 return [Announce(
-                    "Ten wynik ma kilka powiązań; otwórz go i użyj prawej strzałki"
+                    "Ten wynik prowadzi do kilku miejsc; "
+                    "otwórz go i użyj prawej strzałki"
                 )]
             return [Announce(
                 "Ten wynik nie ma dostępnego albumu ani wykonawcy nadrzędnego"
@@ -1380,7 +1402,7 @@ class Navigator:
             row.kind in ("track", "video")
             and row.related_album_service_id
         ):
-            album_title = row.related_album_title or "Powiązany album"
+            album_title = row.related_album_title or "Album"
             choices.append(TidalRelationChoice(
                 "Przejdź do albumu",
                 OpenTidalContainer(
@@ -1409,7 +1431,7 @@ class Navigator:
             artist_title = (
                 row.related_artist_name
                 or row.artist_name
-                or "Powiązany wykonawca"
+                or "Wykonawca"
             )
             choices.append(TidalRelationChoice(
                 "Przejdź do wykonawcy",
@@ -1965,18 +1987,28 @@ class Navigator:
             state.playback_source_rows = ()
             state.playback_uses_queue = True
 
-    def note_spotify_playback_started(self, item_id: str, title: str) -> None:
+    def note_spotify_playback_started(
+        self, item_id: str, title: str
+    ) -> Row | None:
         """Commit Spotify state only after Librespot confirms audible playback."""
 
         if not item_id:
-            return
+            return None
         state = self.sessions[SessionId.SPOTIFY]
+        confirmed_row = next(
+            (
+                row for row in state.playback_source_rows
+                if row.item_id == item_id and row.kind in ("track", "episode")
+            ),
+            None,
+        )
         state.now_playing_id = item_id
         state.now_playing_title = title
         state.current_material_id = item_id
         state.pending_material_id = ""
         state.list_anchor_id = item_id
         state.model.select_id(item_id)
+        return confirmed_row
 
     def restore_spotify_playback_after_failed_handoff(
         self, previous_id: str, previous_title: str
@@ -2553,6 +2585,28 @@ class Navigator:
             if rows else f"{heading}, pusto"
         )]
 
+    def apply_spotify_history(self, rows: list[Row]) -> list[object]:
+        """Show AMC's confirmed Spotify plays as a transient named view."""
+
+        state = self.sessions[SessionId.SPOTIFY]
+        remembered = state.view_selected_ids.get(
+            LibraryView.SPOTIFY_HISTORY.value
+        )
+        state.library_view = LibraryView.SPOTIFY_HISTORY
+        state.library_playlist_id = None
+        state.library_return_view = "Spotify — Historia odtwarzania"
+        state.spotify_heading = "Spotify — Historia odtwarzania"
+        state.spotify_context = None
+        state.spotify_history.clear()
+        state.model.replace(rows, preferred_id=remembered)
+        state.view = View.LIST
+        count = len(rows)
+        return [Announce(
+            f"Spotify — Historia odtwarzania, {count} {_items_word(count)}"
+            if count
+            else "Spotify — Historia odtwarzania, brak odtworzonych elementów"
+        )]
+
     def apply_spotify_container(
         self,
         intent: OpenSpotifyContainer,
@@ -2662,9 +2716,13 @@ class Navigator:
                 return [choice.target]
             if choices:
                 return [Announce(
-                    "Ten wynik ma kilka powiązań; otwórz go i użyj prawej strzałki"
+                    "Ten wynik prowadzi do kilku miejsc; "
+                    "otwórz go i użyj prawej strzałki"
                 )]
-            return [Announce("Ten wynik nie ma dostępnego powiązania")]
+            return [Announce(
+                "Z tego wyniku nie można przejść do albumu, "
+                "wykonawcy ani podcastu"
+            )]
 
         if target is not None:
             if target.kind == "artist" and target.section is None:
@@ -2710,7 +2768,7 @@ class Navigator:
                 OpenSpotifyContainer(
                     item_id=f"{row.item_id}:related-album",
                     service_id=row.related_album_service_id,
-                    title=row.related_album_title or "Powiązany album",
+                    title=row.related_album_title or "Album",
                     kind="album",
                     artist=row.artist_name,
                 ),
@@ -2742,7 +2800,7 @@ class Navigator:
                     title=(
                         row.related_artist_name
                         or row.artist_name
-                        or "Powiązany wykonawca"
+                        or "Wykonawca"
                     ),
                     kind="artist",
                 ),
@@ -2754,7 +2812,7 @@ class Navigator:
                 OpenSpotifyContainer(
                     item_id=f"{row.item_id}:related-podcast",
                     service_id=row.related_podcast_service_id,
-                    title=row.related_podcast_title or "Powiązany podcast",
+                    title=row.related_podcast_title or "Podcast",
                     kind="podcast",
                 ),
             ))

@@ -267,6 +267,8 @@ from .spotify_source import (
     SpotifyContainerPayloadError,
     account_summary_from_payload as spotify_account_summary_from_payload,
     container_result_from_payload as spotify_container_result_from_payload,
+    history_rows as spotify_history_rows,
+    record_history_row as record_spotify_history_row,
     root_result_from_payload as spotify_root_result_from_payload,
 )
 from .tidal_source import (
@@ -6092,7 +6094,8 @@ class LiteFrame(wx.Frame):
 
         if action is SearchResultAction.RELATIONS:
             self.announcer.say(
-                "Powiązania są dostępne dla wyników TIDAL i Spotify"
+                "Przejście do albumu, wykonawcy lub podcastu jest dostępne "
+                "dla wyników TIDAL i Spotify"
             )
             return
 
@@ -7166,7 +7169,11 @@ class LiteFrame(wx.Frame):
                 if pending is not None:
                     item_id = pending.item_id
                     title = pending.title
-                self.navigator.note_spotify_playback_started(item_id, title)
+                confirmed_row = self.navigator.note_spotify_playback_started(
+                    item_id, title
+                )
+                if confirmed_row is not None:
+                    self._record_spotify_history(confirmed_row)
                 self._playing_session = SessionId.SPOTIFY
                 self._playing_sessions.add(SessionId.SPOTIFY)
                 self._pending_spotify_playback = None
@@ -8273,6 +8280,17 @@ class LiteFrame(wx.Frame):
             failed,
         )
 
+    def _record_spotify_history(self, row: Row) -> None:
+        """Persist one playback only after Librespot confirmed its start."""
+
+        previous = list(self.state.spotify_playback_history)
+        updated = record_spotify_history_row(previous, row)
+        if updated == previous:
+            return
+        self.state.spotify_playback_history = updated
+        if self._save_state() is False:
+            self.state.spotify_playback_history = previous
+
     def _open_library_view(
         self,
         intent: OpenLibraryView,
@@ -8639,7 +8657,15 @@ class LiteFrame(wx.Frame):
                 )
                 return
         if self.navigator.active is SessionId.SPOTIFY:
-            if action not in SPOTIFY_SUPPORTED_ACTIONS:
+            spotify_history_removal = (
+                action is Action.REMOVE_SELECTED
+                and self.navigator.session.library_view
+                is LibraryView.SPOTIFY_HISTORY
+            )
+            if (
+                action not in SPOTIFY_SUPPORTED_ACTIONS
+                and not spotify_history_removal
+            ):
                 self.announcer.say(
                     "Ta funkcja nie jest jeszcze dostępna w sesji Spotify"
                 )
@@ -9218,6 +9244,7 @@ class LiteFrame(wx.Frame):
             LibraryView.SONOS_OWN_STREAMS: "Moje stacje Sonos",
             LibraryView.SPOTIFY_LIBRARY: "Biblioteka Spotify",
             LibraryView.SPOTIFY_CONTAINER: session.spotify_heading,
+            LibraryView.SPOTIFY_HISTORY: "Spotify — Historia odtwarzania",
         }.get(
             session.library_view,
             getattr(active_list, "_base_accessible_label", None),
@@ -13563,6 +13590,12 @@ class LiteFrame(wx.Frame):
                 OpenPodcastAggregateView(LibraryView.PODCAST_HISTORY)
             )
             return
+        if origin is SessionId.SPOTIFY:
+            rows = list(spotify_history_rows(
+                self.state.spotify_playback_history
+            ))
+            self._run(self.navigator.apply_spotify_history(rows))
+            return
 
         # WiiM i Sonos nie maja w profilu wlasnego katalogu historii, z ktorego
         # mozna zbudowac uzytkowe wiersze. Pokazujemy istniejaca Historie
@@ -13588,6 +13621,7 @@ class LiteFrame(wx.Frame):
             LibraryView.RECORDED_RADIO_FILES,
             LibraryView.RADIO_RECORDING_SCHEDULES,
             LibraryView.PODCAST_INBOX,
+            LibraryView.SPOTIFY_HISTORY,
         ):
             return False
         self._transient_preview_return = None
@@ -18027,6 +18061,13 @@ class LiteFrame(wx.Frame):
 
     def _remove_selected_items(self) -> None:
         if (
+            self.navigator.active is SessionId.SPOTIFY
+            and self.navigator.session.library_view
+            is LibraryView.SPOTIFY_HISTORY
+        ):
+            self._remove_spotify_history_entries()
+            return
+        if (
             self.navigator.active is SessionId.FILES
             and self.navigator.session.library_view
             in (LibraryView.ITEM_BOOKMARKS, LibraryView.ALL_BOOKMARKS)
@@ -18110,6 +18151,62 @@ class LiteFrame(wx.Frame):
             ),
             done,
             lambda error: self.announcer.say(f"Nie usunięto: {error}"),
+        )
+
+    def _remove_spotify_history_entries(self) -> None:
+        """Delete removes only private history rows, never Spotify content."""
+
+        selected = [
+            row for row in self._selected_action_rows()
+            if row.kind in ("track", "episode") and row.service_id
+        ]
+        if not selected:
+            self.announcer.say("Brak wpisu Historii Spotify do usunięcia")
+            return
+        selected_ids = {row.item_id for row in selected}
+        selected_external_ids = {row.service_id for row in selected}
+        model_rows = list(self.navigator.session.model.rows)
+        previous_selected_id = self.navigator.session.model.selected_id
+        first_index = min(
+            (
+                index for index, row in enumerate(model_rows)
+                if row.item_id in selected_ids
+            ),
+            default=0,
+        )
+        previous = list(self.state.spotify_playback_history)
+        kept = [
+            item for item in previous
+            if item.get("externalId") not in selected_external_ids
+        ]
+        if len(kept) == len(previous):
+            self.announcer.say("Historia Spotify bez zmian")
+            return
+        remaining = list(spotify_history_rows(kept))
+        preferred_id = (
+            remaining[min(first_index, len(remaining) - 1)].item_id
+            if remaining
+            else None
+        )
+        self.state.spotify_playback_history = kept
+        self.navigator.session.model.replace(
+            remaining, preferred_id=preferred_id
+        )
+        if self._save_state() is False:
+            self.state.spotify_playback_history = previous
+            self.navigator.session.model.replace(
+                model_rows, preferred_id=previous_selected_id
+            )
+            return
+        self._sync_views()
+        label = (
+            selected[0].title
+            if len(selected) == 1
+            else format_item_count(len(selected))
+        )
+        self.announcer.say(
+            f"Usunięto z Historii Spotify: {label}. "
+            "Biblioteka Spotify pozostała bez zmian"
         )
 
     def _remove_selected_bookmarks(self) -> None:
@@ -19237,6 +19334,13 @@ class LiteFrame(wx.Frame):
         )
 
     def _action_available_in_active_session(self, action: Action) -> bool:
+        if (
+            self.navigator.active is SessionId.SPOTIFY
+            and action is Action.REMOVE_SELECTED
+            and self.navigator.session.library_view
+            is LibraryView.SPOTIFY_HISTORY
+        ):
+            return True
         supported = {
             SessionId.TIDAL: TIDAL_SUPPORTED_ACTIONS,
             SessionId.SPOTIFY: SPOTIFY_SUPPORTED_ACTIONS,

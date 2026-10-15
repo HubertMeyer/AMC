@@ -25,6 +25,21 @@ _COLLECTION_VIEWS = {
     "podcasts",
     "episodes",
 }
+_MAX_HISTORY_ITEMS = 500
+_HISTORY_TEXT_FIELDS = (
+    "itemId",
+    "externalId",
+    "title",
+    "kind",
+    "artist",
+    "publicUri",
+    "relatedAlbumExternalId",
+    "relatedAlbumTitle",
+    "relatedArtistExternalId",
+    "relatedArtistName",
+    "relatedPodcastExternalId",
+    "relatedPodcastTitle",
+)
 
 
 class SpotifyContainerPayloadError(RuntimeError):
@@ -131,6 +146,98 @@ def _row(entry: object) -> Row | None:
         related_podcast_title=related_podcast_title,
         duration_ticks=duration,
     )
+
+
+def normalize_history_payload(raw: object) -> list[dict]:
+    """Keep only safe, playable Spotify rows in newest-first order.
+
+    This is AMC's own playback history, not a claim about the complete
+    Spotify-account history. Opaque identifiers stay as model data and are
+    never used as accessible labels.
+    """
+
+    if not isinstance(raw, list):
+        return []
+    result: list[dict] = []
+    seen: set[str] = set()
+    for raw_item in raw:
+        if len(result) >= _MAX_HISTORY_ITEMS or not isinstance(raw_item, dict):
+            continue
+        item = {
+            name: _text(raw_item.get(name))
+            for name in _HISTORY_TEXT_FIELDS
+        }
+        if (
+            not item["itemId"]
+            or not item["externalId"]
+            or not item["title"]
+            or item["kind"] not in _PLAYABLE_KINDS
+        ):
+            continue
+        key = item["externalId"]
+        if key in seen:
+            continue
+        seen.add(key)
+        item["durationTicks"] = _ticks(raw_item.get("durationTicks"))
+        result.append(item)
+    return result
+
+
+def history_rows(raw: object) -> tuple[Row, ...]:
+    """Turn private history data back into deliberate, accessible rows."""
+
+    rows: list[Row] = []
+    for item in normalize_history_payload(raw):
+        row = _row({
+            "id": item["itemId"],
+            "externalId": item["externalId"],
+            "title": item["title"],
+            "kind": item["kind"],
+            "artist": item["artist"],
+            "publicUri": item["publicUri"],
+            "durationTicks": item["durationTicks"],
+            "relatedAlbumExternalId": item["relatedAlbumExternalId"],
+            "relatedAlbumTitle": item["relatedAlbumTitle"],
+            "relatedArtistExternalId": item["relatedArtistExternalId"],
+            "relatedArtistName": item["relatedArtistName"],
+            "relatedPodcastExternalId": item["relatedPodcastExternalId"],
+            "relatedPodcastTitle": item["relatedPodcastTitle"],
+        })
+        if row is not None:
+            rows.append(row)
+    return tuple(rows)
+
+
+def record_history_row(raw: object, row: Row) -> list[dict]:
+    """Move one confirmed Spotify playback to the front of AMC history."""
+
+    current = normalize_history_payload(raw)
+    if (
+        row.kind not in _PLAYABLE_KINDS
+        or not row.item_id
+        or not row.service_id
+        or not row.title
+    ):
+        return current
+    entry = {
+        "itemId": row.item_id,
+        "externalId": row.service_id,
+        "title": row.title,
+        "kind": row.kind,
+        "artist": row.artist_name,
+        "publicUri": row.url or "",
+        "relatedAlbumExternalId": row.related_album_service_id or "",
+        "relatedAlbumTitle": row.related_album_title,
+        "relatedArtistExternalId": row.related_artist_service_id or "",
+        "relatedArtistName": row.related_artist_name,
+        "relatedPodcastExternalId": row.related_podcast_service_id or "",
+        "relatedPodcastTitle": row.related_podcast_title,
+        "durationTicks": max(0, row.duration_ticks),
+    }
+    return normalize_history_payload([
+        entry,
+        *(item for item in current if item["externalId"] != row.service_id),
+    ])
 
 
 def container_result_from_payload(payload: object) -> SpotifyContainerResult:

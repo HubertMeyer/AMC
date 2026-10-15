@@ -503,6 +503,20 @@ def test_tidal_right_arrow_has_a_precise_keyboard_help_action() -> None:
     assert "Brak polecenia" not in announcement
 
 
+def test_spotify_right_arrow_help_names_destinations_not_relations_menu() -> None:
+    action = resolve(
+        Chord("Right"),
+        player_view=False,
+        radio_session=False,
+        spotify_session=True,
+    )
+    assert action is Action.SPOTIFY_RELATIONS
+    announcement = keyboard_help_announcement(Chord("Right"), action, "Spotify")
+    assert "albumu, wykonawcy lub podcastu Spotify" in announcement
+    assert "menu" not in announcement.casefold()
+    assert "powiąza" not in announcement.casefold()
+
+
 def test_keyboard_help_uses_only_user_facing_labels() -> None:
     message = keyboard_help_announcement(
         Chord("F", ctrl=True),
