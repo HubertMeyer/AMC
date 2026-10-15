@@ -419,6 +419,18 @@ def test_playlist_membership_menu_is_contextual_and_does_not_steal_shortcut() ->
     assert "playlist" in item.label.replace("&", "").casefold()
 
 
+def test_spotify_delete_menu_is_limited_to_removable_saved_rows() -> None:
+    item = next(
+        entry for entry in all_items()
+        if entry.action is Action.REMOVE_SELECTED
+        and entry.visible_sessions == (menu_model.SessionId.SPOTIFY,)
+    )
+    assert item.shortcut == "Delete"
+    assert item.needs_selection and item.needs_spotify_saved_item
+    assert not item.accelerator
+    assert "spotify" in item.label.replace("&", "").casefold()
+
+
 def test_library_membership_menu_is_specific_to_podcasts_and_tidal() -> None:
     podcast = next(
         entry for entry in all_items()

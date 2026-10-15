@@ -116,6 +116,10 @@ class MenuItem:
     needs_spotify_library_item: bool = False
     #: Wymaga utworu albo odcinka zapisywalnego w Ulubionych Spotify.
     needs_spotify_favorite_item: bool = False
+    #: Wymaga wpisu Historii Spotify albo zapisanego elementu konta, który
+    #: oficjalne API pozwala jawnie usunąć. Playlisty są wykluczone, bo AMC
+    #: nie prosi o uprawnienia do modyfikacji playlist użytkownika.
+    needs_spotify_saved_item: bool = False
     #: Wymaga otwartej zawartości lokalnej playlisty. To węższy warunek niż
     #: zwykły element mogący należeć do playlisty: dotyczy ręcznej kolejności.
     needs_playlist_contents: bool = False
@@ -575,6 +579,15 @@ def build_menus(session_order: object = None) -> tuple[Menu, ...]:
             MenuItem("Usuń z bieżącego widoku, plik pozos&taje", Action.REMOVE_SELECTED,
                      shortcut="Delete", accelerator=False, needs_selection=True,
                      visible_sessions=LOCAL_MEDIA),
+            MenuItem(
+                "Usuń &z bieżącego widoku Spotify",
+                Action.REMOVE_SELECTED,
+                shortcut="Delete",
+                accelerator=False,
+                needs_selection=True,
+                needs_spotify_saved_item=True,
+                visible_sessions=SPOTIFY_ONLY,
+            ),
             MenuItem("Przenieś do Kosza, operac&ja plikowa", Action.RECYCLE_SELECTED,
                      shortcut="Shift+Delete", accelerator=False, needs_selection=True,
                      visible_sessions=FILES_ONLY),

@@ -17,6 +17,7 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Iterable
+from urllib.parse import urlparse
 
 from .list_model import Row
 from .navigation import SessionId
@@ -393,6 +394,22 @@ def target_from_row(session: SessionId, row: Row | None) -> PresetTarget | None:
             None,
             sonos_household_id=household,
         )
+    if (
+        session is SessionId.SPOTIFY
+        and row.service_id
+        and row.kind in {
+            "track", "episode", "album", "artist", "playlist", "podcast"
+        }
+    ):
+        # Zapisujemy katalogową tożsamość osobno od etykiety. Prefiks rodzaju
+        # odróżnia te cele od lokalnych utworów i playlist AMC, a NVDA widzi
+        # wyłącznie ``title`` przez PresetChoice.label.
+        return PresetTarget(
+            row.item_id,
+            f"spotify-{row.kind}",
+            row.title,
+            row.service_id,
+        )
     if row.kind == "playlist":
         playlist_id = row.item_id.split(":", 1)[1] if ":" in row.item_id else row.item_id
         return PresetTarget(row.item_id, "amcPlaylist", row.title, playlist_id)
@@ -400,6 +417,58 @@ def target_from_row(session: SessionId, row: Row | None) -> PresetTarget | None:
         return PresetTarget(row.item_id, "folder", row.title, row.path)
     if row.kind == "track" and row.path:
         return PresetTarget(row.item_id, "track", row.title, row.path)
+    return None
+
+
+def spotify_entry_target(entry: PresetEntry) -> tuple[str, str] | None:
+    """Return a safe Spotify kind and catalogue ID from new or legacy presets.
+
+    Full AMC stored the shareable Spotify URI/URL in ``targetLocation`` while
+    the Python interface stores the already-normalized catalogue identity.
+    Neither representation is ever used as a spoken label.
+    """
+
+    kind = entry.target_kind.casefold().removeprefix("spotify-")
+    service_type = {
+        "track": "track",
+        "episode": "episode",
+        "album": "album",
+        "artist": "artist",
+        "playlist": "playlist",
+        "podcast": "show",
+    }.get(kind)
+    if service_type is None:
+        return None
+
+    for raw in (entry.location, entry.target_id):
+        candidate = raw.strip() if isinstance(raw, str) else ""
+        if not candidate:
+            continue
+        if candidate.casefold().startswith("spotify:"):
+            parts = candidate.split(":")
+            if (
+                len(parts) == 3
+                and parts[1].casefold() == service_type
+            ):
+                candidate = parts[2]
+            else:
+                continue
+        elif candidate.casefold().startswith(("https://", "http://")):
+            parsed = urlparse(candidate)
+            parts = [part for part in parsed.path.split("/") if part]
+            if (
+                parsed.scheme.casefold() != "https"
+                or parsed.netloc.casefold() != "open.spotify.com"
+                or len(parts) < 2
+                or parts[-2].casefold() != service_type
+            ):
+                continue
+            candidate = parts[-1]
+        elif candidate.casefold().startswith("spotify-"):
+            # Syntetyczne Id wiersza nie jest tożsamością katalogową.
+            continue
+        if 0 < len(candidate) <= 128 and candidate.isalnum():
+            return kind, candidate
     return None
 
 

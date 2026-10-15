@@ -5252,6 +5252,10 @@ class LiteFrame(wx.Frame):
         # opuszczeniem sesji nie moze po powrocie podmienic nowszej listy.
         self._tidal_navigation_version = 0
         self._spotify_navigation_version = 0
+        # Osobny licznik decyzji odtwarzania z presetów. Zwykłe Enter,
+        # następny/poprzedni albo nowszy preset unieważniają czekające
+        # pobranie albumu, ale nie zmieniają historii widoków Spotify.
+        self._spotify_preset_playback_version = 0
         self._podcast_loaded_counts: dict[str, int] = {}
         self._spotify_loaded_counts: dict[str, int] = {}
         # ``None`` w stanie prywatnym dziedziczy wybor glownego AMC. Do czasu
@@ -5956,6 +5960,32 @@ class LiteFrame(wx.Frame):
                 and bool(selected_row.service_id)
             ):
                 enabled = False
+            if entry.needs_spotify_saved_item:
+                spotify_saved_kinds = {
+                    "liked": {"track"},
+                    "albums": {"album"},
+                    "artists": {"artist"},
+                    "podcasts": {"podcast"},
+                    "episodes": {"episode"},
+                }
+                spotify_history_item = bool(
+                    self.navigator.active is SessionId.SPOTIFY
+                    and session.library_view is LibraryView.SPOTIFY_HISTORY
+                    and selected_row is not None
+                    and selected_kind in {"track", "episode"}
+                )
+                spotify_collection_item = bool(
+                    self.navigator.active is SessionId.SPOTIFY
+                    and spotify_scope in spotify_saved_kinds
+                    and selected_row is not None
+                    and selected_kind in spotify_saved_kinds.get(
+                        spotify_scope, set()
+                    )
+                    and bool(selected_row.item_id)
+                    and bool(selected_row.service_id)
+                )
+                if not (spotify_history_item or spotify_collection_item):
+                    enabled = False
             if entry.needs_playlist_contents and not playlist_contents:
                 enabled = False
             if entry.needs_podcast_episode and (
@@ -7616,9 +7646,16 @@ class LiteFrame(wx.Frame):
                 if pending is not None:
                     item_id = pending.item_id
                     title = pending.title
-                confirmed_row = self.navigator.note_spotify_playback_started(
-                    item_id, title
-                )
+                if pending is not None and pending.preserve_navigation:
+                    confirmed_row = self.navigator.note_spotify_playback_started(
+                        item_id,
+                        title,
+                        preserve_navigation=True,
+                    )
+                else:
+                    confirmed_row = self.navigator.note_spotify_playback_started(
+                        item_id, title
+                    )
                 if confirmed_row is not None:
                     self._record_spotify_history(confirmed_row)
                 self._playing_session = SessionId.SPOTIFY
@@ -7626,6 +7663,8 @@ class LiteFrame(wx.Frame):
                 self._pending_spotify_playback = None
                 if self._pending_playback_session is SessionId.SPOTIFY:
                     self._pending_playback_session = None
+                if pending is not None and pending.success_announcement:
+                    self.announcer.say(pending.success_announcement)
                 fallback_device = str(
                     data.get("audioOutputFallbackDeviceName") or ""
                 ).strip()
@@ -7674,10 +7713,17 @@ class LiteFrame(wx.Frame):
                     self._pending_playback_session = None
                 self._playing_sessions.discard(SessionId.SPOTIFY)
                 if pending is not None:
-                    self.navigator.restore_spotify_playback_after_failed_handoff(
-                        pending.previous_item_id,
-                        pending.previous_title,
-                    )
+                    if pending.preserve_navigation:
+                        self.navigator.restore_spotify_playback_after_failed_handoff(
+                            pending.previous_item_id,
+                            pending.previous_title,
+                            preserve_navigation=True,
+                        )
+                    else:
+                        self.navigator.restore_spotify_playback_after_failed_handoff(
+                            pending.previous_item_id,
+                            pending.previous_title,
+                        )
                 self.announcer.say(
                     "Nie udało się odtworzyć Spotify: "
                     + str(data.get("message") or "błąd")
@@ -8744,12 +8790,23 @@ class LiteFrame(wx.Frame):
     def _play_spotify(self, intent: PlaySpotifyItem) -> None:
         """Hand one safe catalogue identity to the native Librespot engine."""
 
+        if not intent.preserve_navigation:
+            self._spotify_preset_playback_version = (
+                getattr(self, "_spotify_preset_playback_version", 0) + 1
+            )
         client = self.client
         if client is None:
-            self.navigator.restore_spotify_playback_after_failed_handoff(
-                intent.previous_item_id,
-                intent.previous_title,
-            )
+            if intent.preserve_navigation:
+                self.navigator.restore_spotify_playback_after_failed_handoff(
+                    intent.previous_item_id,
+                    intent.previous_title,
+                    preserve_navigation=True,
+                )
+            else:
+                self.navigator.restore_spotify_playback_after_failed_handoff(
+                    intent.previous_item_id,
+                    intent.previous_title,
+                )
             self.announcer.say("Silnik nie działa, nie mogę odtworzyć Spotify")
             return
         self._pending_spotify_playback = intent
@@ -8764,21 +8821,29 @@ class LiteFrame(wx.Frame):
             if self._pending_spotify_playback is intent:
                 self._pending_spotify_playback = None
                 self._pending_playback_session = None
-                self.navigator.restore_spotify_playback_after_failed_handoff(
-                    intent.previous_item_id,
-                    intent.previous_title,
-                )
+                if intent.preserve_navigation:
+                    self.navigator.restore_spotify_playback_after_failed_handoff(
+                        intent.previous_item_id,
+                        intent.previous_title,
+                        preserve_navigation=True,
+                    )
+                else:
+                    self.navigator.restore_spotify_playback_after_failed_handoff(
+                        intent.previous_item_id,
+                        intent.previous_title,
+                    )
             self.announcer.say(f"Nie udało się odtworzyć Spotify: {error}")
 
         self.runner.submit(
             "playback",
-            lambda: client.spotify_play(
-                item_id=intent.item_id,
-                title=intent.title,
-                external_id=intent.service_id,
-                kind=intent.kind,
-                volume=self.options.volume,
-            ),
+            lambda: client.spotify_play(**{
+                "item_id": intent.item_id,
+                "title": intent.title,
+                "external_id": intent.service_id,
+                "kind": intent.kind,
+                "volume": self.options.volume,
+                **({"artist": intent.artist} if intent.artist else {}),
+            }),
             done,
             failed,
         )
@@ -11130,6 +11195,21 @@ class LiteFrame(wx.Frame):
                 self._activate_sonos_preset(entry, spoken)
                 return
 
+            spotify_target = (
+                profile_presets.spotify_entry_target(entry)
+                if session is SessionId.SPOTIFY else None
+            )
+            if spotify_target is not None:
+                self._last_preset_slot_by_session[session] = slot
+                kind, external_id = spotify_target
+                self._activate_spotify_preset(
+                    entry,
+                    kind=kind,
+                    external_id=external_id,
+                    spoken_slot=spoken,
+                )
+                return
+
             kind = entry.target_kind.casefold()
             if kind == "folder" and entry.location:
                 self._last_preset_slot_by_session[session] = slot
@@ -11171,6 +11251,127 @@ class LiteFrame(wx.Frame):
                 self.announcer.say("Nie udało się odczytać presetu")
 
         self.runner.submit("preset", work, done, failed)
+
+    def _activate_spotify_preset(
+        self,
+        entry: profile_presets.PresetEntry,
+        *,
+        kind: str,
+        external_id: str,
+        spoken_slot: str,
+    ) -> None:
+        """Run one old-or-new Spotify preset through the native Python UI."""
+
+        row = Row(
+            item_id=entry.target_id,
+            title=entry.title or "Element Spotify",
+            kind=kind,
+            service_id=external_id,
+            service_kind=kind,
+        )
+        self._spotify_preset_playback_version = (
+            getattr(self, "_spotify_preset_playback_version", 0) + 1
+        )
+        version = self._spotify_preset_playback_version
+        if kind == "album":
+            self._play_spotify_album_preset(
+                row,
+                spoken_slot=spoken_slot,
+                request_version=version,
+            )
+            return
+        if kind in {"track", "episode"}:
+            intent = self.navigator.prepare_spotify_preset_playback(
+                row,
+                announcement=row.title,
+            )
+            self._run([intent])
+            return
+        # Tak jak w starym AMC: preset kontenera innego niż album otwiera
+        # właściwy katalog. Wykonawca dostaje skrócony widok Albumy/Utwory.
+        self._run(self.navigator.open_spotify_search_result(row))
+
+    def _play_spotify_album_preset(
+        self,
+        album: Row,
+        *,
+        spoken_slot: str,
+        request_version: int,
+        attempt: int = 0,
+    ) -> None:
+        """Fetch and play an album without changing list, focus or selection."""
+
+        client = self.client
+        if client is None:
+            self.announcer.say("Silnik nie działa, nie mogę odtworzyć Spotify")
+            return
+
+        def work():
+            return spotify_container_result_from_payload(
+                client.spotify_container_items(
+                    external_id=album.service_id or "",
+                    title=album.title,
+                    kind="album",
+                    artist=album.artist_name,
+                )
+            )
+
+        def is_current() -> bool:
+            return bool(
+                request_version
+                == getattr(self, "_spotify_preset_playback_version", 0)
+                and self.navigator.active is SessionId.SPOTIFY
+            )
+
+        def done(result) -> None:
+            if not is_current():
+                return
+            if not result.available:
+                self.announcer.say(
+                    result.warning
+                    or f"Preset {spoken_slot}: Spotify nie udostępnił zawartości albumu {album.title}"
+                )
+                return
+            playable = tuple(
+                row for row in result.rows
+                if row.kind in {"track", "episode"}
+                and not row.activation_message
+            )
+            if not playable:
+                self.announcer.say(
+                    f"Preset {spoken_slot}: album {album.title} nie zawiera utworów do odtworzenia"
+                )
+                return
+            intent = self.navigator.prepare_spotify_preset_playback(
+                playable[0],
+                source_rows=playable,
+                announcement=album.title,
+            )
+            self._run([intent])
+
+        def failed(error: Exception) -> None:
+            if not is_current():
+                return
+            if (
+                isinstance(error, HostError)
+                and error.code == "operation_busy"
+                and attempt < 20
+            ):
+                wx.CallLater(
+                    250,
+                    lambda: self._play_spotify_album_preset(
+                        album,
+                        spoken_slot=spoken_slot,
+                        request_version=request_version,
+                        attempt=attempt + 1,
+                    ) if is_current() else None,
+                )
+                return
+            self.announcer.say(
+                f"Preset {spoken_slot}: nie udało się odtworzyć albumu {album.title}"
+            )
+
+        self.runner.submit("spotify-preset", work, done, failed)
 
     def _navigate_nvda_preset(self, direction: int) -> None:
         """Dodatek NVDA: przejdź po zajętych presetach bieżącej sesji.
@@ -15529,6 +15730,111 @@ class LiteFrame(wx.Frame):
             failed,
         )
 
+    def _remove_spotify_saved_items(self) -> None:
+        """Delete: explicitly remove rows from the open account collection.
+
+        This is deliberately narrower than the toggle shortcuts. Delete only
+        acts in a named saved view, always sends ``add=False``, and never turns
+        an absent catalogue result into a newly saved item.
+        """
+
+        state = self.navigator.sessions[SessionId.SPOTIFY]
+        context = state.spotify_context
+        if not isinstance(context, OpenSpotifyCollectionView):
+            self.announcer.say(
+                "Usuwanie działa w Historii albo w otwartym widoku zapisanych Spotify"
+            )
+            return
+        expected = {
+            "liked": ("favorite", {"track"}),
+            "episodes": ("favorite", {"episode"}),
+            "albums": ("library", {"album"}),
+            "artists": ("library", {"artist"}),
+            "podcasts": ("library", {"podcast"}),
+        }.get(context.view)
+        if expected is None:
+            self.announcer.say(
+                "Usuwanie playlist Spotify nie jest dostępne bez dodatkowej zgody konta"
+            )
+            return
+        if self._spotify_membership_pending:
+            self.announcer.say("Zmiana kolekcji Spotify już trwa")
+            return
+        client = self.client
+        if client is None:
+            self.announcer.say(
+                "Silnik nie działa, nie mogę zmienić kolekcji Spotify"
+            )
+            return
+        mode, kinds = expected
+        rows = [
+            row for row in self._selected_action_rows()
+            if row.kind in kinds and row.item_id and row.service_id
+        ]
+        if not rows:
+            self.announcer.say("Brak zapisanego elementu Spotify do usunięcia")
+            return
+
+        model_rows = list(state.model.rows)
+        selected_ids = {row.item_id for row in rows}
+        first_index = min(
+            (
+                index for index, row in enumerate(model_rows)
+                if row.item_id in selected_ids
+            ),
+            default=0,
+        )
+        remaining = [
+            row for row in model_rows
+            if row.item_id not in selected_ids and row.kind != "loadMore"
+        ]
+        preferred_id = (
+            remaining[min(first_index, len(remaining) - 1)].item_id
+            if remaining else None
+        )
+        items = [{
+            "itemId": row.item_id,
+            "externalId": row.service_id,
+            "title": row.title,
+            "kind": row.kind,
+            "artist": row.artist_name,
+            "publicUri": row.url or "",
+        } for row in rows]
+        self._spotify_membership_pending = True
+
+        def done(payload: dict) -> None:
+            self._spotify_membership_pending = False
+            result = payload or {}
+            message = str(result.get("message") or "").strip()
+            self._spotify_loaded_counts.pop(context.view, None)
+            self._open_spotify_collection_view(OpenSpotifyCollectionView(
+                context.item_id,
+                context.view,
+                context.title,
+                preferred_id=preferred_id,
+                replace_current=True,
+                announcement=(
+                    message or "Usunięto z zapisanych Spotify"
+                ),
+            ))
+
+        def failed(error: Exception) -> None:
+            self._spotify_membership_pending = False
+            self.announcer.say(
+                f"Nie udało się usunąć z kolekcji Spotify: {error}"
+            )
+
+        self.runner.submit(
+            "spotify-membership",
+            lambda: client.spotify_collection_membership(
+                items,
+                mode=mode,
+                add=False,
+            ),
+            done,
+            failed,
+        )
+
     def _play_tidal_item(
         self,
         intent: PlayTidalTrack | PlayTidalContainer,
@@ -18947,6 +19253,9 @@ class LiteFrame(wx.Frame):
         ):
             self._remove_spotify_history_entries()
             return
+        if self.navigator.active is SessionId.SPOTIFY:
+            self._remove_spotify_saved_items()
+            return
         if (
             self.navigator.active is SessionId.FILES
             and self.navigator.session.library_view
@@ -20226,10 +20535,16 @@ class LiteFrame(wx.Frame):
         if (
             self.navigator.active is SessionId.SPOTIFY
             and action is Action.REMOVE_SELECTED
-            and self.navigator.session.library_view
-            is LibraryView.SPOTIFY_HISTORY
         ):
-            return True
+            context = self.navigator.session.spotify_context
+            return bool(
+                self.navigator.session.library_view
+                is LibraryView.SPOTIFY_HISTORY
+                or isinstance(context, OpenSpotifyCollectionView)
+                and context.view in {
+                    "liked", "albums", "artists", "podcasts", "episodes"
+                }
+            )
         supported = {
             SessionId.TIDAL: TIDAL_SUPPORTED_ACTIONS,
             SessionId.SPOTIFY: SPOTIFY_SUPPORTED_ACTIONS,

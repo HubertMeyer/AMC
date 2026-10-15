@@ -9,6 +9,7 @@ from pathlib import Path
 from amc_wx_lite.list_model import Row
 from amc_wx_lite.navigation import SessionId
 from amc_wx_lite.profile_presets import (
+    PresetEntry,
     PresetTarget,
     adjacent_entry,
     choices,
@@ -21,6 +22,7 @@ from amc_wx_lite.profile_presets import (
     replace_entry,
     resolve_preset,
     shortcut_label,
+    spotify_entry_target,
     target_from_row,
     wiim_device_preset_key,
     wiim_native_preset_number,
@@ -392,6 +394,42 @@ def test_sonos_preset_keeps_safety_fields_out_of_its_spoken_label() -> None:
     assert label.endswith("— Radio domowe")
     assert "house-private" not in label
     assert "player-a" not in label
+
+
+def test_spotify_preset_keeps_catalogue_identity_out_of_spoken_label() -> None:
+    row = Row(
+        "private-row",
+        "Album użytkownika",
+        "album",
+        service_id="AbC123",
+        service_kind="album",
+    )
+
+    target = target_from_row(SessionId.SPOTIFY, row)
+
+    assert target == PresetTarget(
+        "private-row",
+        "spotify-album",
+        "Album użytkownika",
+        "AbC123",
+    )
+    assert "AbC123" not in choices((target.as_entry(4),))[3].label
+    assert spotify_entry_target(target.as_entry(4)) == ("album", "AbC123")
+
+
+def test_legacy_spotify_preset_accepts_public_url_without_speaking_it() -> None:
+    entry = PresetEntry(
+        2,
+        "spotify:album:Old123",
+        "album",
+        "Starszy album",
+        "https://open.spotify.com/album/Old123?si=private",
+    )
+
+    assert spotify_entry_target(entry) == ("album", "Old123")
+    label = choices((entry,))[1].label
+    assert "open.spotify.com" not in label
+    assert "Old123" not in label
 
 
 def test_same_opaque_sonos_id_in_another_house_is_a_different_target() -> None:

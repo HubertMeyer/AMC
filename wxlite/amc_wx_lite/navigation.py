@@ -515,6 +515,9 @@ class PlaySpotifyItem:
     kind: str
     previous_item_id: str = ""
     previous_title: str = ""
+    artist: str = ""
+    preserve_navigation: bool = False
+    success_announcement: str = ""
 
 
 @dataclass(slots=True)
@@ -2019,7 +2022,7 @@ class Navigator:
             state.playback_uses_queue = True
 
     def note_spotify_playback_started(
-        self, item_id: str, title: str
+        self, item_id: str, title: str, *, preserve_navigation: bool = False
     ) -> Row | None:
         """Commit Spotify state only after Librespot confirms audible playback."""
 
@@ -2037,12 +2040,44 @@ class Navigator:
         state.now_playing_title = title
         state.current_material_id = item_id
         state.pending_material_id = ""
-        state.list_anchor_id = item_id
-        state.model.select_id(item_id)
+        if not preserve_navigation:
+            state.list_anchor_id = item_id
+            state.model.select_id(item_id)
         return confirmed_row
 
+    def prepare_spotify_preset_playback(
+        self,
+        row: Row,
+        *,
+        source_rows: tuple[Row, ...] | None = None,
+        announcement: str = "",
+    ) -> PlaySpotifyItem | Announce:
+        """Prepare a preset without moving the current list selection.
+
+        Preset playback has its own source sequence for Page Up/Page Down, but
+        unlike Enter it must not replace the visible list, anchor or focus.
+        """
+
+        intent = self._spotify_play_intent(row)
+        if isinstance(intent, Announce):
+            return intent
+        state = self.sessions[SessionId.SPOTIFY]
+        intent.previous_item_id = state.current_material_id
+        intent.previous_title = state.now_playing_title
+        intent.artist = row.artist_name
+        intent.preserve_navigation = True
+        intent.success_announcement = announcement or row.title
+        state.pending_material_id = row.item_id
+        state.playback_source_rows = source_rows or (row,)
+        state.playback_uses_queue = False
+        return intent
+
     def restore_spotify_playback_after_failed_handoff(
-        self, previous_id: str, previous_title: str
+        self,
+        previous_id: str,
+        previous_title: str,
+        *,
+        preserve_navigation: bool = False,
     ) -> None:
         """Keep the prior item after a rejected controller handoff."""
 
@@ -2051,7 +2086,8 @@ class Navigator:
         state.current_material_id = previous_id
         state.now_playing_id = previous_id or None
         state.now_playing_title = previous_title
-        state.view = View.LIST
+        if not preserve_navigation:
+            state.view = View.LIST
 
     def restore_tidal_playback_after_failed_handoff(
         self, previous_id: str, previous_title: str

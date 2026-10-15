@@ -364,6 +364,35 @@ def test_visible_source_order_drives_next_item_and_confirmation() -> None:
     assert nav.session.now_playing_id == tracks[1].item_id
 
 
+def test_spotify_preset_playback_keeps_visible_list_focus() -> None:
+    nav = Navigator()
+    nav.active = SessionId.SPOTIFY
+    albums = [_album(), _album(2)]
+    nav.apply_spotify_view("Biblioteka Spotify", albums)
+    nav.session.model.select_id(albums[1].item_id)
+    anchor_before = nav.session.list_anchor_id
+    track = _track()
+
+    intent = nav.prepare_spotify_preset_playback(
+        track,
+        source_rows=(track, _track(2)),
+        announcement="Album z presetu",
+    )
+
+    assert isinstance(intent, PlaySpotifyItem)
+    assert intent.preserve_navigation
+    assert intent.success_announcement == "Album z presetu"
+    assert nav.session.model.selected_row == albums[1]
+    confirmed = nav.note_spotify_playback_started(
+        track.item_id,
+        track.title,
+        preserve_navigation=True,
+    )
+    assert confirmed == track
+    assert nav.session.model.selected_row == albums[1]
+    assert nav.session.list_anchor_id == anchor_before
+
+
 def test_spotify_history_is_named_and_escape_restores_list_and_focus() -> None:
     nav = Navigator()
     nav.active = SessionId.SPOTIFY

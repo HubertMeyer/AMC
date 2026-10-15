@@ -904,6 +904,117 @@ def test_delete_remains_unavailable_in_spotify_library() -> None:
     )
 
 
+def test_delete_in_saved_spotify_view_is_explicit_remove_and_keeps_neighbor() -> None:
+    calls = []
+    opened = []
+    messages = []
+    navigator = Navigator()
+    navigator.active = SessionId.SPOTIFY
+    context = OpenSpotifyCollectionView(
+        "spotify-collection:albums", "albums", "Albumy"
+    )
+    rows = [
+        Row(
+            "row-1", "Pierwszy", "album",
+            service_id="AlbumOne", service_kind="album",
+        ),
+        Row(
+            "row-2", "Drugi", "album",
+            service_id="AlbumTwo", service_kind="album",
+        ),
+    ]
+    navigator.apply_spotify_collection_view(context, "Albumy Spotify", rows)
+    frame = SimpleNamespace(
+        navigator=navigator,
+        client=SimpleNamespace(
+            spotify_collection_membership=(
+                lambda items, *, mode, add: calls.append((items, mode, add))
+                or {
+                    "added": False,
+                    "changed": 1,
+                    "message": "Usunięto z Biblioteki Spotify: Pierwszy",
+                }
+            )
+        ),
+        runner=ImmediateRunner(),
+        announcer=SimpleNamespace(say=messages.append),
+        _selected_action_rows=lambda: [rows[0]],
+        _spotify_membership_pending=False,
+        _spotify_loaded_counts={"albums": 2},
+        _open_spotify_collection_view=opened.append,
+    )
+
+    assert LiteFrame._action_available_in_active_session(
+        frame, Action.REMOVE_SELECTED
+    )
+    LiteFrame._remove_spotify_saved_items(frame)
+
+    assert len(calls) == 1
+    assert calls[0][1:] == ("library", False)
+    assert opened == [OpenSpotifyCollectionView(
+        "spotify-collection:albums",
+        "albums",
+        "Albumy",
+        preferred_id="row-2",
+        replace_current=True,
+        announcement="Usunięto z Biblioteki Spotify: Pierwszy",
+    )]
+    assert frame._spotify_membership_pending is False
+    assert frame._spotify_loaded_counts == {}
+    assert messages == []
+
+
+def test_spotify_album_preset_plays_first_available_track_without_moving_focus() -> None:
+    received = []
+    messages = []
+    navigator = Navigator()
+    navigator.active = SessionId.SPOTIFY
+    visible = [Row(
+        "visible-album", "Widoczny album", "album",
+        service_id="VisibleAlbum", service_kind="album",
+    )]
+    navigator.apply_spotify_view("Biblioteka Spotify", visible)
+    frame = SimpleNamespace(
+        client=SimpleNamespace(
+            spotify_container_items=lambda **_values: {
+                "heading": "Album z presetu",
+                "items": [{
+                    "id": "preset-track",
+                    "externalId": "TrackOne",
+                    "title": "Pierwszy utwór",
+                    "kind": "track",
+                    "artist": "Wykonawca",
+                    "isAvailable": True,
+                }],
+            }
+        ),
+        navigator=navigator,
+        runner=ImmediateRunner(),
+        announcer=SimpleNamespace(say=messages.append),
+        _spotify_preset_playback_version=4,
+        _run=received.extend,
+    )
+    album = Row(
+        "preset-album", "Album z presetu", "album",
+        service_id="PresetAlbum", service_kind="album",
+    )
+
+    LiteFrame._play_spotify_album_preset(
+        frame,
+        album,
+        spoken_slot="cztery",
+        request_version=4,
+    )
+
+    assert len(received) == 1
+    assert isinstance(received[0], PlaySpotifyItem)
+    assert received[0].item_id == "preset-track"
+    assert received[0].preserve_navigation
+    assert received[0].success_announcement == "Album z presetu"
+    assert navigator.session.model.selected_row == visible[0]
+    assert messages == []
+
+
 def test_spotify_failed_event_restores_prior_item_and_list_context() -> None:
     restored = []
     messages = []
