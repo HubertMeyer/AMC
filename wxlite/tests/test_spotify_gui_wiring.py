@@ -144,6 +144,37 @@ def test_spotify_artist_section_uses_the_read_only_container_contract() -> None:
     }]
 
 
+def test_unavailable_spotify_playlist_stays_on_the_current_list() -> None:
+    applied = []
+    spoken = []
+    intent = OpenSpotifyContainer(
+        "private-playlist-row", "privateplaylist", "Moja playlista", "playlist"
+    )
+    frame = SimpleNamespace(
+        client=SimpleNamespace(
+            spotify_container_items=lambda **_values: {
+                "heading": "Playlista, Moja playlista",
+                "items": [],
+                "warning": "Spotify nie udostępnił zawartości tego elementu.",
+                "available": False,
+            }
+        ),
+        _spotify_navigation_version=0,
+        navigator=SimpleNamespace(
+            active=SessionId.SPOTIFY,
+            apply_spotify_container=lambda *_args: applied.append(True) or [],
+        ),
+        runner=ImmediateRunner(),
+        announcer=SimpleNamespace(say=spoken.append),
+        _run=lambda events: applied.append(events),
+    )
+
+    LiteFrame._open_spotify_container(frame, intent)
+
+    assert applied == []
+    assert spoken == ["Spotify nie udostępnił zawartości tego elementu."]
+
+
 def test_busy_spotify_collection_enter_is_retried_without_speaking_error() -> None:
     submissions = []
     scheduled = []

@@ -8053,6 +8053,17 @@ class LiteFrame(wx.Frame):
                 or self.navigator.active is not SessionId.SPOTIFY
             ):
                 return
+            # Brak zawartosci udostepnionej przez Spotify nie jest pustym
+            # kontenerem, do ktorego wolno wejsc.  Zostawiamy model, historie
+            # nawigacji, zaznaczenie i fokus bez zmian; NVDA dostaje tylko
+            # celowy komunikat hosta.  To odpowiada staremu AMC, ktore po
+            # odmowie API rowniez pozostawalo na wybranej playliscie.
+            if not result.available:
+                self.announcer.say(
+                    result.warning
+                    or "Spotify nie udostępnił zawartości tego elementu."
+                )
+                return
             self._run(self.navigator.apply_spotify_container(
                 intent,
                 result.heading,
