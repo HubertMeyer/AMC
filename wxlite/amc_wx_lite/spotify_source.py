@@ -60,10 +60,33 @@ def _row(entry: object) -> Row | None:
     if duration:
         details.append(format_duration(duration / 10_000_000))
 
-    playable = entry.get("isPlayable") is not False
+    # LiteHost nazywa pole zgodnie ze wspólnym modelem ``isAvailable``.
+    # ``isPlayable`` przyjmujemy także, aby czysty model mógł obsłużyć
+    # późniejszy adapter odtwarzacza bez zmiany kontraktu wiersza.
+    playable = (
+        entry.get("isAvailable") is not False
+        and entry.get("isPlayable") is not False
+    )
     activation_message = None
     if kind in _PLAYABLE_KINDS and not playable:
         activation_message = "Ten materiał nie jest obecnie dostępny do odtworzenia"
+
+    related_album_service_id = _text(entry.get("relatedAlbumExternalId")) or None
+    related_album_title = _text(entry.get("relatedAlbumTitle"))
+    related_podcast_service_id = (
+        _text(entry.get("relatedPodcastExternalId")) or None
+    )
+    related_podcast_title = _text(entry.get("relatedPodcastTitle"))
+    # Istniejący wspólny ``MediaItem`` przechowuje rodzica odcinka w polach
+    # RelatedAlbum*. LiteHost celowo nie wystawia typu technicznego, więc na
+    # granicy wx zamieniamy te pola na użytkową relację „podcast”.
+    if kind == "episode":
+        related_podcast_service_id = (
+            related_podcast_service_id or related_album_service_id
+        )
+        related_podcast_title = related_podcast_title or related_album_title
+        related_album_service_id = None
+        related_album_title = ""
 
     return Row(
         item_id=item_id,
@@ -75,18 +98,14 @@ def _row(entry: object) -> Row | None:
         service_id=service_id,
         service_kind=kind,
         artist_name=artist,
-        related_album_service_id=(
-            _text(entry.get("relatedAlbumExternalId")) or None
-        ),
-        related_album_title=_text(entry.get("relatedAlbumTitle")),
+        related_album_service_id=related_album_service_id,
+        related_album_title=related_album_title,
         related_artist_service_id=(
             _text(entry.get("relatedArtistExternalId")) or None
         ),
         related_artist_name=_text(entry.get("relatedArtistName")),
-        related_podcast_service_id=(
-            _text(entry.get("relatedPodcastExternalId")) or None
-        ),
-        related_podcast_title=_text(entry.get("relatedPodcastTitle")),
+        related_podcast_service_id=related_podcast_service_id,
+        related_podcast_title=related_podcast_title,
         duration_ticks=duration,
     )
 

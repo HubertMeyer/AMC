@@ -123,6 +123,33 @@ def test_unplayable_item_has_an_intentional_message_not_a_model_value() -> None:
     assert "secret" not in row.activation_message
 
 
+def test_real_litehost_fields_map_availability_and_episode_parent() -> None:
+    payload = {
+        "heading": "Odcinki podcastu",
+        "items": [{
+            "id": "spotify:episode:private-row",
+            "externalId": "privateepisode",
+            "title": "Odcinek",
+            "artist": "Podcast użytkowy",
+            "kind": "episode",
+            "isAvailable": False,
+            # Wspólny MediaItem zapisuje rodzica odcinka w RelatedAlbum*.
+            "relatedAlbumExternalId": "privatepodcast",
+            "relatedAlbumTitle": "Podcast użytkowy",
+        }],
+    }
+
+    row = container_result_from_payload(payload).rows[0]
+
+    assert row.activation_message == (
+        "Ten materiał nie jest obecnie dostępny do odtworzenia"
+    )
+    assert row.related_podcast_service_id == "privatepodcast"
+    assert row.related_podcast_title == "Podcast użytkowy"
+    assert row.related_album_service_id is None
+    assert "private" not in information_text(row)
+
+
 def test_artist_overview_uses_only_two_explicit_labels() -> None:
     artist = Row(
         "private-row", "Wykonawca", "artist",
