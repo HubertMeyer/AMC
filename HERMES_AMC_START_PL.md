@@ -36,20 +36,22 @@ brudnego drzewa i nie cofaj zmian, których sam nie utworzyłeś.
 ## Stan rozdzielonych prac 15 października 2026
 
 - Główne repozytorium jest na gałęzi
-  `integracja/wxpython-sonos-tidal-20261008`. Bieżący HEAD zawiera ten plik
-  przekazania, a jego ostatnim commitem kodu jest `8c5b61e5`. W drzewie
-  roboczym znajdują się niezakończone, niezacommitowane zmiany implementacji i
-  testów Spotify. Trzeba je zachować.
+  `integracja/wxpython-sonos-tidal-20261008`. Poprawka kodu Shift+F2 jest w
+  commicie `3312fb18`. W drzewie roboczym znajdują się niezakończone,
+  niezacommitowane zmiany implementacji i testów Spotify. Trzeba je zachować.
 - Zachowane worktree wydania:
   `D:\Projekty Codex\AMC worktrees\shift-f2-release-20261015`, gałąź
-  `local/shift-f2-release-20261015`, HEAD dokumentacji `b50fffbd`.
+  `local/shift-f2-release-20261015`, HEAD `b5df17be`.
 - Ostatni kompletnie przetestowany i zainstalowany kod pochodzi z commita
-  `90e5f750`; pełny przebieg zakończył się wynikiem 1571 testów zaliczonych,
-  110 pominiętych testów historycznych i 11 zaliczonych podtestów. Kompilacja
-  miała etykietę
-  `2026.10.15-90e5f75095451697e59ead84fb036b54f670322b-e95d4c4d`.
-- Nowszy commit `b50fffbd` dodaje dokumentację modułowych sesji, ale sam nie
-  jest źródłem zainstalowanej paczki.
+  `b5df17bebbbce01d2663cfc8a219d4c83314864e`; pełny przebieg zakończył się
+  wynikiem 1571 testów zaliczonych, 110 pominiętych testów historycznych i 11
+  zaliczonych podtestów. Kompilacja miała etykietę
+  `2026.10.15-b5df17bebbbce01d2663cfc8a219d4c83314864e-4eb61747`.
+- Shift+F2 zostało dodatkowo sprawdzone na żywej aplikacji i rzeczywistym
+  zakończonym nagraniu: plik zmienił nazwę, a potem został przywrócony do
+  pierwotnej nazwy. Przyczyną wcześniejszego braku zmiany była pusta ścieżka w
+  niezwiązanym, nieudanym lub zatrzymanym wpisie historii nagrywania. Taki wpis
+  nie przerywa już aktualizacji właściwego rekordu.
 - Przed następną kompilacją trzeba kontrolowanie zintegrować poprawki wydania z
   rozpoczętą pracą Spotify. Nie wykonuj ślepego merge, rebase ani cherry-pick
   na brudnym drzewie.
