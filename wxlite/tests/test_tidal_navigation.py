@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 from pathlib import Path
+from types import SimpleNamespace
 
 from amc_wx_lite import menu_model
+from amc_wx_lite.gui import LiteFrame
 from amc_wx_lite.list_model import Row
 from amc_wx_lite.navigation import (
     Announce,
@@ -29,6 +31,31 @@ def test_ctrl_4_selects_tidal_from_list_and_player() -> None:
     item = next(entry for entry in view.items if entry.action is Action.SESSION_TIDAL)
     assert item.label == "Sesja: &TIDAL"
     assert item.shortcut == "Ctrl+4"
+
+
+def test_tidal_left_arrow_says_only_complementary_time_and_format() -> None:
+    row = Row(
+        "album-1",
+        "Tamtej dziewczyny już nie ma",
+        "album",
+        detail="Natalia Grosiak, 40:32",
+        duration_ticks=2432 * 10_000_000,
+    )
+    spoken = []
+    frame = SimpleNamespace(
+        navigator=SimpleNamespace(
+            active=SessionId.TIDAL,
+            session=SimpleNamespace(model=SimpleNamespace(selected_row=row)),
+        ),
+        announcer=SimpleNamespace(say=spoken.append),
+    )
+
+    LiteFrame._announce_quick_information(frame)
+
+    assert spoken == [
+        "Czas: 40:32, format audio nie został udostępniony "
+        "przez zapisany katalog TIDAL"
+    ]
 
 
 def test_tidal_session_keeps_its_own_selection_across_switches() -> None:

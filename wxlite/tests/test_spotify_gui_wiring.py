@@ -85,6 +85,54 @@ def test_spotify_album_shortcut_opens_the_same_collection_path_as_enter() -> Non
     )]
 
 
+def test_spotify_library_shortcut_calls_confirmed_host_write() -> None:
+    calls = []
+    spoken = []
+    album = Row(
+        "spotify:album:private",
+        "Album",
+        "album",
+        service_id="albumprivate",
+        service_kind="album",
+        artist_name="Wykonawca",
+    )
+    frame = SimpleNamespace(
+        navigator=SimpleNamespace(
+            active=SessionId.SPOTIFY,
+            sessions={
+                SessionId.SPOTIFY: SimpleNamespace(spotify_context=None)
+            },
+        ),
+        client=SimpleNamespace(
+            spotify_collection_membership=lambda items, *, mode: (
+                calls.append((items, mode))
+                or {
+                    "added": True,
+                    "changed": 1,
+                    "message": "Dodano do Biblioteki Spotify: Album",
+                }
+            )
+        ),
+        runner=ImmediateRunner(),
+        announcer=SimpleNamespace(say=spoken.append),
+        _selected_action_rows=lambda: [album],
+        _spotify_membership_pending=False,
+    )
+
+    LiteFrame._toggle_spotify_membership(frame, favorite=False)
+
+    assert calls == [([{
+        "itemId": "spotify:album:private",
+        "externalId": "albumprivate",
+        "title": "Album",
+        "kind": "album",
+        "artist": "Wykonawca",
+        "publicUri": "",
+    }], "library")]
+    assert spoken == ["Dodano do Biblioteki Spotify: Album"]
+    assert frame._spotify_membership_pending is False
+
+
 def test_spotify_sort_reloads_first_page_without_adding_a_history_level() -> None:
     opened = []
     spoken = []
@@ -238,12 +286,13 @@ def test_spotify_sort_confirmation_is_spoken_after_the_new_rows_are_applied() ->
         runner=ImmediateRunner(),
         announcer=SimpleNamespace(say=lambda message: calls.append(("say", message))),
         _sync_views=lambda: calls.append("sync"),
+        _announce_after_list_update=lambda message: calls.append(("deferred", message)),
         _run=lambda _events: calls.append("run"),
     )
 
     LiteFrame._open_spotify_collection_view(frame, intent)
 
-    assert calls == ["apply", "sync", ("say", "Alfabetycznie")]
+    assert calls == ["apply", "sync", ("deferred", "Alfabetycznie")]
 
 
 def test_left_arrow_reads_total_spotify_album_duration_without_moving_focus() -> None:
@@ -290,8 +339,7 @@ def test_left_arrow_reads_total_spotify_album_duration_without_moving_focus() ->
     LiteFrame._announce_spotify_information(frame, album)
 
     assert len(spoken) == 1
-    assert "Rodzaj: album" in spoken[0]
-    assert "Czas: 5:00" in spoken[0]
+    assert spoken[0] == "Czas: 5:00"
     assert model.selected_row is album
 
 
@@ -495,9 +543,9 @@ def test_spotify_right_arrow_uses_two_real_destinations_without_context_menu() -
     intent = ShowSpotifyRelations("Przejdź do", choices)
 
     class FakeDialog:
-        def __init__(self, _parent, *, title, labels):
+        def __init__(self, _parent, *, title, labels, detailed_hints):
             self.selected_index = len(created) % 2
-            created.append((title, labels, self.selected_index))
+            created.append((title, labels, detailed_hints, self.selected_index))
 
         @staticmethod
         def ShowModal():
@@ -515,6 +563,7 @@ def test_spotify_right_arrow_uses_two_real_destinations_without_context_menu() -
         ),
         _active_list=lambda: SimpleNamespace(SetFocus=lambda: focused.append(True)),
         _run=run.append,
+        _detailed_hints=False,
     )
     original_dialog = gui_module.RelationDestinationDialog
     original_call_after = gui_module.wx.CallAfter
@@ -528,8 +577,8 @@ def test_spotify_right_arrow_uses_two_real_destinations_without_context_menu() -
         gui_module.wx.CallAfter = original_call_after
 
     assert created == [
-        ("Przejdź do", ("Przejdź do albumu", "Przejdź do wykonawcy"), 0),
-        ("Przejdź do", ("Przejdź do albumu", "Przejdź do wykonawcy"), 1),
+        ("Przejdź do", ("Album", "Wykonawca"), False, 0),
+        ("Przejdź do", ("Album", "Wykonawca"), False, 1),
     ]
     assert activated == [choices[0], choices[1]]
     assert run == [["Przejdź do albumu"], ["Przejdź do wykonawcy"]]

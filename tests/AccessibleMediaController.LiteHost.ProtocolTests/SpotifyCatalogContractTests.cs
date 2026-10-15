@@ -20,6 +20,7 @@ internal static class SpotifyCatalogContractTests
         SearchRowsHaveExplicitAccessibleLabelsWithoutPrivateHandles();
         ContainerRequestAcceptsOnlyMatchingSpotifyIdentity();
         DescriptionRequestAcceptsOnlyPodcastMaterialsAndCleansText();
+        MembershipRequestSeparatesFavoritesFromLibrary();
         ContainerResultNeverUsesIdentifiersInItsHeading();
         ContainerKeepsRepeatedPlaylistOccurrencesDistinct();
         CoordinatorDoesNotAuthenticateForStatusOrCapabilities();
@@ -86,6 +87,55 @@ internal static class SpotifyCatalogContractTests
             Check(exception.Message.Contains("utwór albo odcinek", StringComparison.Ordinal),
                 "odmowa kontenera nie podpowiada właściwego działania");
         }
+    }
+
+    private static void MembershipRequestSeparatesFavoritesFromLibrary()
+    {
+        using var album = JsonDocument.Parse("""
+        {
+          "mode":"library",
+          "items":[{
+            "itemId":"spotify:album:album123",
+            "externalId":"album123",
+            "title":"Album",
+            "kind":"album",
+            "artist":"Wykonawca"
+          }]
+        }
+        """);
+        var request = LiteSpotifyCatalogContract.ReadMembershipRequest(
+            album.RootElement);
+        Check(request.Mode == "library"
+            && request.Items.Single().Kind == MediaItemKind.Album
+            && request.Items.Single().ExternalId == "album123",
+            "album Spotify nie został przygotowany do zapisu Biblioteki");
+
+        using var wrong = JsonDocument.Parse("""
+        {
+          "mode":"favorite",
+          "items":[{
+            "itemId":"spotify:album:album123",
+            "externalId":"album123",
+            "title":"Album",
+            "kind":"album"
+          }]
+        }
+        """);
+        try
+        {
+            LiteSpotifyCatalogContract.ReadMembershipRequest(wrong.RootElement);
+            throw new InvalidOperationException("album przyjęto do Ulubionych Spotify");
+        }
+        catch (LiteRequestException exception)
+        {
+            Check(exception.Message.Contains("utwór albo odcinek", StringComparison.Ordinal),
+                "odmowa nie wyjaśnia rodzajów obsługiwanych przez Ulubione Spotify");
+        }
+
+        var writable = LiteSpotifyCatalogContract.CreateCapabilities(
+            collectionWrite: true);
+        Check(!writable.ReadOnly && writable.CollectionWrite,
+            "host z pisarzem Spotify nadal zgłasza kolekcję tylko do odczytu");
     }
 
     private static void AccountStatusKeepsCatalogueAndPlaybackSeparate()

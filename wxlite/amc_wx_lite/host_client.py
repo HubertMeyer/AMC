@@ -529,6 +529,24 @@ class LiteHostClient:
             timeout=30.0,
         )
 
+    def spotify_collection_membership(
+        self,
+        items: list[dict[str, Any]],
+        *,
+        mode: str,
+        add: bool | None = None,
+    ) -> Any:
+        """Change confirmed account membership without exposing credentials."""
+
+        args: dict[str, Any] = {"mode": mode, "items": items}
+        if add is not None:
+            args["add"] = bool(add)
+        return self.call(
+            "spotify.collectionMembership",
+            args,
+            timeout=120.0,
+        )
+
     def spotify_play(
         self,
         *,

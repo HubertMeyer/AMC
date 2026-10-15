@@ -378,22 +378,12 @@ def information_text(
 ) -> str:
     """One deliberate Left-Arrow announcement without technical values."""
 
-    # Nazwę właśnie przeczytała natywna lista po ustawieniu fokusu. Tak samo
-    # jak wspólny QuickMediaInformationFormatter ze starego AMC, lewa
-    # strzałka podaje wyłącznie informację UZUPEŁNIAJĄCĄ i nie powtarza
-    # tytułu. Katalog Spotify nie przekazuje rzeczywistego bitrate ani kodeka,
-    # więc uczciwie nazywamy źródło, ale nie zgadujemy parametrów Librespota.
-    values: list[str] = [
-        "Strumień Spotify" if row.kind in _PLAYABLE_KINDS
-        else "Katalog Spotify"
-    ]
-    values.append(f"Rodzaj: {row.kind_label or 'element'}")
-    if row.artist_name and row.artist_name.casefold() != row.title.casefold():
-        values.append(f"Wykonawca: {row.artist_name}")
-    if row.kind == "track" and row.related_album_title:
-        values.append(f"Album: {row.related_album_title}")
-    if row.kind == "episode" and row.related_podcast_title:
-        values.append(f"Podcast: {row.related_podcast_title}")
+    # Nazwę, rodzaj i wykonawcę właśnie przeczytała natywna lista. Lewa
+    # strzałka podaje tylko uzupełnienie, przede wszystkim czas. Nie dodajemy
+    # nazwy usługi, nazw pól ani danych relacji, bo wydłużały wypowiedź bez
+    # nowej informacji. Brakującego czasu nie pobieramy podczas chodzenia
+    # strzałkami góra/dół; album może go policzyć dopiero na jawne Left.
+    values: list[str] = []
     effective_duration = (
         row.duration_ticks if duration_ticks is None else max(0, duration_ticks)
     )
@@ -403,6 +393,9 @@ def information_text(
         )
     if row.activation_message:
         values.append(row.activation_message)
+
+    if not values:
+        values.append("Brak dodatkowych informacji")
 
     result: list[str] = []
     seen: set[str] = set()

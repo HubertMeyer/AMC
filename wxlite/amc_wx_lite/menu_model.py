@@ -112,6 +112,10 @@ class MenuItem:
     needs_podcast_library_item: bool = False
     #: Wymaga kontenera obsługiwanego przez Bibliotekę TIDAL.
     needs_tidal_library_item: bool = False
+    #: Wymaga albumu, wykonawcy albo podcastu zapisywalnego przez Spotify.
+    needs_spotify_library_item: bool = False
+    #: Wymaga utworu albo odcinka zapisywalnego w Ulubionych Spotify.
+    needs_spotify_favorite_item: bool = False
     #: Wymaga otwartej zawartości lokalnej playlisty. To węższy warunek niż
     #: zwykły element mogący należeć do playlisty: dotyczy ręcznej kolejności.
     needs_playlist_contents: bool = False
@@ -481,11 +485,27 @@ def build_menus(session_order: object = None) -> tuple[Menu, ...]:
                 visible_sessions=TIDAL_ONLY,
             ),
             MenuItem(
+                "Dodaj lub usuń z Biblioteki Spotify (&1)",
+                Action.SPOTIFY_TOGGLE_LIBRARY,
+                shortcut="Ctrl+Shift+L",
+                accelerator=False,
+                needs_spotify_library_item=True,
+                visible_sessions=SPOTIFY_ONLY,
+            ),
+            MenuItem(
                 "Z&mień stan ulubionych",
                 Action.TOGGLE_FAVORITE,
                 shortcut="Ctrl+Shift+U",
                 accelerator=False,
                 needs_favorite_item=True,
+            ),
+            MenuItem(
+                "Dodaj lub usuń z Ulubionych Spotify (&2)",
+                Action.SPOTIFY_TOGGLE_FAVORITE,
+                shortcut="Ctrl+Shift+U",
+                accelerator=False,
+                needs_spotify_favorite_item=True,
+                visible_sessions=SPOTIFY_ONLY,
             ),
             MenuItem(
                 "Przynależ&ność do playlist…",

@@ -236,6 +236,21 @@ def test_alt_digits_sort_spotify_only_at_collection_roots() -> None:
         ) is None
 
 
+def test_spotify_membership_shortcuts_work_in_list_and_player() -> None:
+    expected = {
+        "L": Action.SPOTIFY_TOGGLE_LIBRARY,
+        "U": Action.SPOTIFY_TOGGLE_FAVORITE,
+    }
+    for key, action in expected.items():
+        for player in (False, True):
+            assert resolve(
+                Chord(key, ctrl=True, shift=True),
+                player_view=player,
+                radio_session=False,
+                spotify_session=True,
+            ) is action
+
+
 def test_podcast_refresh_matches_the_full_amc_context() -> None:
     # Ctrl+F5 zawsze odswieza cala Biblioteke podcastow. F5 odswieza biezace
     # zrodlo, z jednym swiadomym wyjatkiem: w globalnej skrzynce odswieza

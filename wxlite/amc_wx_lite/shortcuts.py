@@ -125,6 +125,8 @@ class Action(Enum):
     MANAGE_PLAYLIST_MEMBERSHIP = "action.playlists.membership"
     TIDAL_TOGGLE_LIBRARY = "tidal.library.toggle"
     TIDAL_TOGGLE_FAVORITE = "tidal.favorite.toggle"
+    SPOTIFY_TOGGLE_LIBRARY = "spotify.library.toggle"
+    SPOTIFY_TOGGLE_FAVORITE = "spotify.favorite.toggle"
     # Prawa strzalka na liscie TIDAL. To polecenie jest kontekstowe: zależnie
     # od wiersza pokazuje przejście do albumu, wykonawcy albo oba kierunki.
     # Osobna akcja jest potrzebna przede wszystkim Pomocy klawiatury -- bez
@@ -494,6 +496,8 @@ SPOTIFY_SUPPORTED_ACTIONS = frozenset({
     Action.VIEW_HISTORY,
     Action.SESSION_OPTIONS,
     Action.SPOTIFY_RELATIONS,
+    Action.SPOTIFY_TOGGLE_LIBRARY,
+    Action.SPOTIFY_TOGGLE_FAVORITE,
     Action.SPOTIFY_VIEW_LIKED,
     Action.SPOTIFY_VIEW_ALBUMS,
     Action.SPOTIFY_VIEW_ARTISTS,
@@ -1080,6 +1084,8 @@ SPOTIFY_SESSION_VIEW: dict[str, Action] = {
     # Tak jak w starym AMC: opis podcastu lub odcinka pochodzi z katalogu
     # Spotify, a nie z lokalnej bazy RSS/YouTube.
     "Alt+D": Action.SHOW_PODCAST_DESCRIPTION,
+    "Ctrl+Shift+L": Action.SPOTIFY_TOGGLE_LIBRARY,
+    "Ctrl+Shift+U": Action.SPOTIFY_TOGGLE_FAVORITE,
 }
 
 
@@ -1291,6 +1297,8 @@ def _help_entries() -> list[tuple[str, str, Action]]:
         Action.MANAGE_PLAYLIST_MEMBERSHIP: "Zmień przynależność do playlist",
         Action.TIDAL_TOGGLE_LIBRARY: "Dodaj lub usuń z Biblioteki TIDAL",
         Action.TIDAL_TOGGLE_FAVORITE: "Dodaj lub usuń z Ulubionych TIDAL",
+        Action.SPOTIFY_TOGGLE_LIBRARY: "Dodaj lub usuń z Biblioteki Spotify",
+        Action.SPOTIFY_TOGGLE_FAVORITE: "Dodaj lub usuń z Ulubionych Spotify",
         Action.TIDAL_RELATIONS: (
             "Wybierz przejście do albumu lub wykonawcy TIDAL"
         ),

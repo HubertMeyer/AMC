@@ -104,6 +104,7 @@ def test_tidal_items_keep_model_ids_out_of_spoken_data() -> None:
     assert row.kind == "track"
     assert row.kind_label == "utwór"
     assert row.detail == "Wykonawca, 3:00"
+    assert row.duration_ticks == 1_800_000_000
     assert row.url == "https://tidal.com/browse/track/track-1"
     spoken = " ".join((row.title, row.kind_label, row.detail))
     assert "track-1" not in spoken
@@ -170,6 +171,7 @@ def test_online_container_payload_is_sanitized_before_becoming_rows() -> None:
     row = result.rows[0]
     assert row.title == "Utwór"
     assert row.detail == "Wykonawca, 3:00"
+    assert row.duration_ticks == 1_800_000_000
     assert row.activation_message is None
     assert row.related_album_service_id == "albums:44"
     assert row.related_album_title == "Album próby"

@@ -115,6 +115,29 @@ def test_spotify_search_sends_only_the_user_query() -> None:
     assert "source" not in serialized
 
 
+def test_spotify_membership_sends_only_selected_catalog_items() -> None:
+    client, calls = recording_client()
+    item = {
+        "itemId": "spotify:album:private",
+        "externalId": "albumprivate",
+        "title": "Album",
+        "kind": "album",
+        "artist": "Wykonawca",
+        "publicUri": "",
+    }
+
+    client.spotify_collection_membership([item], mode="library")
+
+    assert calls == [(
+        "spotify.collectionMembership",
+        {"mode": "library", "items": [item]},
+        120.0,
+    )]
+    serialized = repr(calls).casefold()
+    assert "token" not in serialized
+    assert "credential" not in serialized
+
+
 def test_spotify_play_sends_only_safe_item_identity_and_playback_values() -> None:
     client, calls = recording_client()
 

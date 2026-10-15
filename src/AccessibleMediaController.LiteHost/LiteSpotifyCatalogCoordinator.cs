@@ -1,12 +1,14 @@
 using System.Text.Json;
 using AccessibleMediaController.Core.Sessions;
+using AccessibleMediaController.Core.Spotify;
 using AccessibleMediaController.LiteHost.Protocol;
 
 namespace AccessibleMediaController.LiteHost;
 
 /// <summary>
-/// The only Spotify surface exposed by LiteHost in the first integration
-/// stage. It never starts authentication and contains no write operation.
+/// Spotify catalogue surface exposed by LiteHost. It never starts
+/// authentication; an explicit membership request may reuse an already
+/// connected account when the production backend supports verified writes.
 /// </summary>
 internal sealed class LiteSpotifyCatalogCoordinator(
     ILiteSpotifyReadOnlyBackend backend) : IDisposable
@@ -15,7 +17,8 @@ internal sealed class LiteSpotifyCatalogCoordinator(
     private IReadOnlyList<MediaItem> _collectionSnapshot = backend.CachedCollection;
     private bool _collectionRefreshAttempted;
 
-    public object Capabilities() => LiteSpotifyCatalogContract.CreateCapabilities();
+    public object Capabilities() => LiteSpotifyCatalogContract.CreateCapabilities(
+        backend is ILiteSpotifyWriteBackend);
 
     public object AccountStatus()
     {
@@ -171,6 +174,67 @@ internal sealed class LiteSpotifyCatalogCoordinator(
         }
     }
 
+    public object ChangeMembership(JsonElement args)
+    {
+        var request = LiteSpotifyCatalogContract.ReadMembershipRequest(args);
+        EnsureCatalogReady();
+        if (backend is not ILiteSpotifyWriteBackend writer)
+        {
+            throw new LiteRequestException(
+                "Ten silnik Spotify nie udostępnia zmiany kolekcji.");
+        }
+        lock (_collectionGate)
+        {
+            try
+            {
+                var result = writer.ChangeMembershipAsync(
+                        request.Items,
+                        request.RequestedAddition,
+                        CancellationToken.None)
+                    .GetAwaiter()
+                    .GetResult();
+                foreach (var confirmed in result.ConfirmedItems)
+                {
+                    SpotifyCollectionSemantics.ApplyMembership(
+                        confirmed, result.Added);
+                    foreach (var cached in _collectionSnapshot.Where(item =>
+                        item.Kind == confirmed.Kind
+                        && string.Equals(
+                            NormalizeExternalId(item.ExternalId),
+                            NormalizeExternalId(confirmed.ExternalId),
+                            StringComparison.Ordinal)))
+                    {
+                        SpotifyCollectionSemantics.ApplyMembership(
+                            cached, result.Added);
+                    }
+                }
+                var changed = result.ConfirmedItems.Count;
+                var subject = changed == 1
+                    ? result.ConfirmedItems[0].Title
+                    : $"{changed} elementów";
+                var destination = request.Mode == "favorite"
+                    ? "Ulubionych"
+                    : "Biblioteki";
+                var message = result.Added
+                    ? $"Dodano do {destination} Spotify: {subject}"
+                    : $"Usunięto z {destination} Spotify: {subject}";
+                if (result.FailedCount > 0)
+                    message += $". Bez zmiany: {result.FailedCount} elementów";
+                return new LiteSpotifyMembershipResult(
+                    result.Added,
+                    changed,
+                    result.ConfirmedItems.Select(item => item.Id).ToArray(),
+                    message);
+            }
+            catch (Exception exception)
+            {
+                throw SafeRequestException(
+                    exception,
+                    LiteSpotifyCatalogContract.MembershipOperation);
+            }
+        }
+    }
+
     private void EnsureCatalogReady()
     {
         LiteSpotifyAccountProbe account;
@@ -216,12 +280,48 @@ internal sealed class LiteSpotifyCatalogCoordinator(
         var reason = actual switch
         {
             LiteSpotifyBackendException backendException => backendException.Reason,
+            SpotifyWriteBlockedException blocked => blocked.Reason switch
+            {
+                SpotifyWriteBlockReason.MissingScope =>
+                    LiteSpotifyFailureReason.AccessDenied,
+                SpotifyWriteBlockReason.Unauthorized =>
+                    LiteSpotifyFailureReason.NotConnected,
+                SpotifyWriteBlockReason.Denied =>
+                    LiteSpotifyFailureReason.AccessDenied,
+                _ => LiteSpotifyFailureReason.Unknown
+            },
             OperationCanceledException => LiteSpotifyFailureReason.Cancelled,
             HttpRequestException => LiteSpotifyFailureReason.Network,
             TimeoutException => LiteSpotifyFailureReason.Timeout,
             _ => LiteSpotifyFailureReason.Unknown
         };
+        if (operation == LiteSpotifyCatalogContract.MembershipOperation
+            && actual is SpotifyWriteBlockedException blockedWrite)
+        {
+            return blockedWrite.Reason switch
+            {
+                SpotifyWriteBlockReason.MissingScope =>
+                    "Brakuje zgody Spotify na zmiany w kolekcji. "
+                        + "Zaloguj konto Spotify ponownie w ustawieniach AMC.",
+                SpotifyWriteBlockReason.Unauthorized =>
+                    "Logowanie katalogu Spotify wygasło. Zaloguj konto ponownie.",
+                SpotifyWriteBlockReason.UnsupportedKind =>
+                    "Spotify nie pozwala zapisać tego rodzaju elementu.",
+                _ => "Spotify odmówił zmiany kolekcji."
+            };
+        }
         return LiteSpotifyCatalogContract.FailureMessage(reason, operation);
+    }
+
+    private static string NormalizeExternalId(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return string.Empty;
+        var candidate = value.Trim();
+        var parts = candidate.Split(':', StringSplitOptions.RemoveEmptyEntries);
+        return parts.Length == 3
+            && string.Equals(parts[0], "spotify", StringComparison.OrdinalIgnoreCase)
+                ? parts[2]
+                : candidate;
     }
 
     public void Dispose() => backend.Dispose();
@@ -249,6 +349,14 @@ internal interface ILiteSpotifyReadOnlyBackend : IDisposable
         CancellationToken cancellationToken);
 }
 
+internal interface ILiteSpotifyWriteBackend : ILiteSpotifyReadOnlyBackend
+{
+    Task<LiteSpotifyMembershipChange> ChangeMembershipAsync(
+        IReadOnlyList<MediaItem> items,
+        bool? requestedAddition,
+        CancellationToken cancellationToken);
+}
+
 internal sealed record LiteSpotifyCollectionRefresh(
     IReadOnlyList<MediaItem> Items,
     bool HadWarnings);
@@ -257,6 +365,11 @@ internal sealed record LiteSpotifyContainerBackendResult(
     IReadOnlyList<MediaItem> Items,
     bool Available,
     bool HasMore = false);
+
+internal sealed record LiteSpotifyMembershipChange(
+    bool Added,
+    IReadOnlyList<MediaItem> ConfirmedItems,
+    int FailedCount);
 
 internal sealed class LiteSpotifyBackendException(
     LiteSpotifyFailureReason reason,

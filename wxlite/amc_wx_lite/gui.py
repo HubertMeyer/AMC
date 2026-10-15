@@ -498,6 +498,152 @@ def _windows_virtual_key_down(virtual_key: int) -> bool:
         return False
 
 
+def _native_preset_10_keydown(
+    hook_code: int,
+    virtual_key: int,
+    key_flags: int,
+    *,
+    ctrl_down: bool,
+    shift_down: bool,
+    alt_down: bool,
+) -> bool:
+    """Recognise the one preset chord which wx can lose before CHAR_HOOK.
+
+    ``WH_KEYBOARD`` reports the physical virtual key before a focused native
+    ``SysListView32`` translates Shift+0 to ``)``.  Bit 31 marks key-up and
+    bit 30 marks an auto-repeat.  Only the first exact Ctrl+Shift+0 key-down
+    activates preset 10; everything else remains owned by wx/NVDA.
+    """
+
+    return (
+        hook_code >= 0
+        and virtual_key == 0x30  # VK_0
+        and not (key_flags & (1 << 31))
+        and not (key_flags & (1 << 30))
+        and ctrl_down
+        and shift_down
+        and not alt_down
+    )
+
+
+class _WindowsPreset10Hook:
+    """Thread-local Win32 boundary for Ctrl+Shift+0.
+
+    A frame window procedure does not see keyboard messages addressed to the
+    native list child.  A thread-local ``WH_KEYBOARD`` hook does, while staying
+    strictly inside AMC's GUI thread (it is not a system-wide hotkey).
+    """
+
+    def __init__(self, owner: "LiteFrame") -> None:
+        self._owner = owner
+        self._handle = None
+        self._callback = None
+        self._user32 = None
+
+    def install(self) -> bool:
+        if os.name != "nt" or self._handle is not None:
+            return False
+        try:
+            import ctypes
+            from ctypes import wintypes
+
+            user32 = ctypes.WinDLL("user32", use_last_error=True)
+            kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+            hook_type = ctypes.WINFUNCTYPE(
+                ctypes.c_ssize_t,
+                ctypes.c_int,
+                wintypes.WPARAM,
+                wintypes.LPARAM,
+            )
+            user32.SetWindowsHookExW.argtypes = (
+                ctypes.c_int,
+                hook_type,
+                wintypes.HINSTANCE,
+                wintypes.DWORD,
+            )
+            user32.SetWindowsHookExW.restype = wintypes.HHOOK
+            user32.CallNextHookEx.argtypes = (
+                wintypes.HHOOK,
+                ctypes.c_int,
+                wintypes.WPARAM,
+                wintypes.LPARAM,
+            )
+            user32.CallNextHookEx.restype = ctypes.c_ssize_t
+            user32.UnhookWindowsHookEx.argtypes = (wintypes.HHOOK,)
+            user32.UnhookWindowsHookEx.restype = wintypes.BOOL
+            user32.GetForegroundWindow.restype = wintypes.HWND
+            user32.GetFocus.restype = wintypes.HWND
+            user32.GetAsyncKeyState.argtypes = (ctypes.c_int,)
+            user32.GetAsyncKeyState.restype = ctypes.c_short
+            kernel32.GetCurrentThreadId.restype = wintypes.DWORD
+
+            def key_down(virtual_key: int) -> bool:
+                return bool(int(user32.GetAsyncKeyState(virtual_key)) & 0x8000)
+
+            @hook_type
+            def keyboard_hook(code, virtual_key, flags):
+                owner = self._owner
+                try:
+                    owner_handle = int(owner.GetHandle())
+                    filter_handle = int(owner.filter_box.GetHandle())
+                    focused_handle = int(user32.GetFocus() or 0)
+                    active = int(user32.GetForegroundWindow() or 0) == owner_handle
+                    exact_chord = _native_preset_10_keydown(
+                        int(code),
+                        int(virtual_key),
+                        int(flags),
+                        ctrl_down=key_down(0x11),
+                        shift_down=key_down(0x10),
+                        alt_down=key_down(0x12),
+                    )
+                    if (
+                        active
+                        and focused_handle != filter_handle
+                        and not owner._keyboard_help_active
+                        and exact_chord
+                    ):
+                        wx.CallAfter(owner._activate_preset, 10)
+                        return 1
+                except Exception:
+                    # A keyboard hook may never break the Windows message
+                    # pump. The ordinary wx route remains the fallback.
+                    pass
+                return user32.CallNextHookEx(
+                    self._handle, code, virtual_key, flags
+                )
+
+            self._callback = keyboard_hook
+            self._user32 = user32
+            self._handle = user32.SetWindowsHookExW(
+                2,  # WH_KEYBOARD, current GUI thread only
+                keyboard_hook,
+                None,
+                kernel32.GetCurrentThreadId(),
+            )
+            if not self._handle:
+                self._callback = None
+                self._user32 = None
+                return False
+            return True
+        except (AttributeError, OSError, TypeError):
+            self._handle = None
+            self._callback = None
+            self._user32 = None
+            return False
+
+    def uninstall(self) -> None:
+        handle = self._handle
+        user32 = self._user32
+        self._handle = None
+        if handle is not None and user32 is not None:
+            try:
+                user32.UnhookWindowsHookEx(handle)
+            except (AttributeError, OSError):
+                pass
+        self._callback = None
+        self._user32 = None
+
+
 def chord_from_event(event: wx.KeyEvent) -> Chord:
     code = event.GetKeyCode()
     name = _SPECIAL_KEYS.get(code)
@@ -3177,6 +3323,7 @@ class RelationDestinationDialog(wx.Dialog):
         *,
         title: str,
         labels: tuple[str, ...],
+        detailed_hints: bool = False,
     ) -> None:
         super().__init__(parent, title=title)
         self.SetName(title)
@@ -3184,10 +3331,14 @@ class RelationDestinationDialog(wx.Dialog):
         panel = wx.Panel(self)
         layout = wx.BoxSizer(wx.VERTICAL)
 
-        hint_text = "Wybierz, dokąd przejść. Enter otwiera, Escape wraca."
-        hint = wx.StaticText(panel, label=hint_text)
-        hint.SetName(hint_text)
-        layout.Add(hint, 0, wx.ALL | wx.EXPAND, 12)
+        if detailed_hints:
+            hint_text = (
+                "Wybierz, dokąd przejść. Enter otwiera, "
+                "strzałka w lewo lub Escape wraca."
+            )
+            hint = wx.StaticText(panel, label=hint_text)
+            hint.SetName(hint_text)
+            layout.Add(hint, 0, wx.ALL | wx.EXPAND, 12)
 
         self.destinations = wx.ListBox(
             panel,
@@ -3240,7 +3391,37 @@ class RelationDestinationDialog(wx.Dialog):
             if event.GetKeyCode() in (wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER):
                 self._accept(event)
                 return
+            if event.GetKeyCode() == wx.WXK_LEFT:
+                self.EndModal(wx.ID_CANCEL)
+                return
         event.Skip()
+
+
+def relation_destination_labels(
+    labels: tuple[str, ...],
+    *,
+    detailed_hints: bool,
+) -> tuple[str, ...]:
+    """Return short everyday labels or the existing explanatory variants."""
+
+    if detailed_hints:
+        return labels
+    natural_labels = {
+        "Przejdź do albumu": "Album",
+        "Przejdź do wykonawcy": "Wykonawca",
+        "Przejdź do podcastu": "Podcast",
+        "Pokaż albumy wykonawcy": "Albumy",
+        "Pokaż utwory wykonawcy": "Utwory",
+    }
+    prefix = "Przejdź do "
+    result: list[str] = []
+    for label in labels:
+        if label in natural_labels:
+            result.append(natural_labels[label])
+            continue
+        short = label[len(prefix):] if label.startswith(prefix) else label
+        result.append(short[:1].upper() + short[1:] if short else label)
+    return tuple(result)
 
 
 class SessionSelectionDialog(wx.Dialog):
@@ -5114,6 +5295,7 @@ class LiteFrame(wx.Frame):
         self._last_radio_recognition_error: str | None = None
         self._podcast_download_pending = False
         self._podcast_favorite_pending = False
+        self._spotify_membership_pending = False
         self._podcast_add_pending = False
         self._radio_search_action_pending = False
         self._podcast_opml_pending = False
@@ -5173,8 +5355,11 @@ class LiteFrame(wx.Frame):
         # stanem bieżącego procesu, nie profilem ani tekstem dla NVDA.
         self._last_preset_slot_by_session: dict[SessionId, int] = {}
         self._radio_activity_cues: dict[tuple[bool, bool], object] = {}
+        self._windows_preset_10_hook = _WindowsPreset10Hook(self)
+        self._deferred_list_announcement_version = 0
 
         self._build_ui()
+        self._windows_preset_10_hook.install()
         self._bind_keys()
         self._start_engine()
 
@@ -5755,6 +5940,22 @@ class LiteFrame(wx.Frame):
                 and bool(selected_row.service_id)
             ):
                 enabled = False
+            if entry.needs_spotify_library_item and not (
+                self.navigator.active is SessionId.SPOTIFY
+                and selected_row is not None
+                and selected_kind in {"album", "artist", "podcast"}
+                and bool(selected_row.item_id)
+                and bool(selected_row.service_id)
+            ):
+                enabled = False
+            if entry.needs_spotify_favorite_item and not (
+                self.navigator.active is SessionId.SPOTIFY
+                and selected_row is not None
+                and selected_kind in {"track", "episode"}
+                and bool(selected_row.item_id)
+                and bool(selected_row.service_id)
+            ):
+                enabled = False
             if entry.needs_playlist_contents and not playlist_contents:
                 enabled = False
             if entry.needs_podcast_episode and (
@@ -5987,7 +6188,11 @@ class LiteFrame(wx.Frame):
         relation_dialog = RelationDestinationDialog(
             search_dialog,
             title=title,
-            labels=tuple(choice.label for choice in choices),
+            labels=relation_destination_labels(
+                tuple(choice.label for choice in choices),
+                detailed_hints=self._detailed_hints,
+            ),
+            detailed_hints=self._detailed_hints,
         )
         selected: int | None = None
         try:
@@ -6408,10 +6613,14 @@ class LiteFrame(wx.Frame):
         if lead.session_id is SessionId.SPOTIFY:
             if action is SearchResultAction.INFORMATION:
                 self.announcer.say(lead.accessible_label)
+            elif action in (SearchResultAction.LIBRARY, SearchResultAction.FAVORITE):
+                self._change_spotify_search_result_membership(
+                    entries,
+                    favorite=action is SearchResultAction.FAVORITE,
+                )
             else:
                 self.announcer.say(
-                    "Ten wynik Spotify można przeglądać albo odtworzyć; "
-                    "zapisywanie w kolekcji nie jest jeszcze dostępne"
+                    "Ten wynik Spotify można przeglądać albo odtworzyć"
                 )
             return
         if action is SearchResultAction.INFORMATION:
@@ -6589,6 +6798,70 @@ class LiteFrame(wx.Frame):
             lambda error: self.announcer.say(
                 f"Nie udało się zmienić kolekcji TIDAL: {error}"
             ),
+        )
+
+    def _change_spotify_search_result_membership(
+        self,
+        entries: list[SearchEntry],
+        *,
+        favorite: bool,
+    ) -> None:
+        """Save online Spotify rows only after an explicit collection action."""
+
+        if self._spotify_membership_pending:
+            self.announcer.say("Zmiana kolekcji Spotify już trwa")
+            return
+        client = self.client
+        if client is None:
+            self.announcer.say(
+                "Silnik nie działa, nie mogę zmienić kolekcji Spotify"
+            )
+            return
+        allowed = {"track", "episode"} if favorite else {
+            "album", "artist", "podcast"
+        }
+        rows = [
+            entry.row for entry in entries
+            if entry.row.kind in allowed
+            and entry.row.item_id
+            and entry.row.service_id
+        ]
+        if not rows:
+            self.announcer.say(
+                "Do Ulubionych Spotify wybierz utwór albo odcinek"
+                if favorite else
+                "Do Biblioteki Spotify wybierz album, wykonawcę albo podcast"
+            )
+            return
+        items = [{
+            "itemId": row.item_id,
+            "externalId": row.service_id,
+            "title": row.title,
+            "kind": row.kind,
+            "artist": row.artist_name,
+            "publicUri": row.url or "",
+        } for row in rows]
+        self._spotify_membership_pending = True
+
+        def done(payload: dict) -> None:
+            self._spotify_membership_pending = False
+            message = str((payload or {}).get("message") or "").strip()
+            self.announcer.say(message or "Zmieniono kolekcję Spotify")
+
+        def failed(error: Exception) -> None:
+            self._spotify_membership_pending = False
+            self.announcer.say(
+                f"Nie udało się zmienić kolekcji Spotify: {error}"
+            )
+
+        self.runner.submit(
+            "spotify-search-membership",
+            lambda: client.spotify_collection_membership(
+                items,
+                mode="favorite" if favorite else "library",
+            ),
+            done,
+            failed,
         )
 
     def _complete_remote_radio_search_result_action(
@@ -8157,7 +8430,11 @@ class LiteFrame(wx.Frame):
         dialog = RelationDestinationDialog(
             self,
             title=intent.title,
-            labels=tuple(choice.label for choice in intent.choices),
+            labels=relation_destination_labels(
+                tuple(choice.label for choice in intent.choices),
+                detailed_hints=self._detailed_hints,
+            ),
+            detailed_hints=self._detailed_hints,
         )
         selected: int | None = None
         try:
@@ -8279,13 +8556,15 @@ class LiteFrame(wx.Frame):
             if intent.announcement:
                 self._sync_views()
                 if result.rows:
-                    self.announcer.say(intent.announcement)
+                    self._announce_after_list_update(intent.announcement)
                 else:
                     empty = next(
                         (event.text for event in events if isinstance(event, Announce)),
                         result.heading,
                     )
-                    self.announcer.say(f"{intent.announcement}, {empty}")
+                    self._announce_after_list_update(
+                        f"{intent.announcement}, {empty}"
+                    )
             else:
                 self._run(events)
             if result.warning:
@@ -8446,7 +8725,11 @@ class LiteFrame(wx.Frame):
         dialog = RelationDestinationDialog(
             self,
             title=intent.title,
-            labels=tuple(choice.label for choice in intent.choices),
+            labels=relation_destination_labels(
+                tuple(choice.label for choice in intent.choices),
+                detailed_hints=self._detailed_hints,
+            ),
+            detailed_hints=self._detailed_hints,
         )
         selected: int | None = None
         try:
@@ -9149,6 +9432,13 @@ class LiteFrame(wx.Frame):
         ):
             self._toggle_tidal_membership(
                 favorite=action is Action.TIDAL_TOGGLE_FAVORITE
+            )
+        elif action in (
+            Action.SPOTIFY_TOGGLE_LIBRARY,
+            Action.SPOTIFY_TOGGLE_FAVORITE,
+        ):
+            self._toggle_spotify_membership(
+                favorite=action is Action.SPOTIFY_TOGGLE_FAVORITE
             )
         elif (step := seek_step_seconds(action, custom_seconds=self.messages.custom_seek_seconds)) is not None:
             # Krok czyta parytet transportu: 10 / 30 / 60 s i czas z ustawien
@@ -12618,6 +12908,36 @@ class LiteFrame(wx.Frame):
             announcement=label,
         ))
 
+    def _announce_after_list_update(self, message: str) -> None:
+        """Speak after the native list has finished its focus notification.
+
+        SysListView32 can announce the newly focused row just after ``SetItem``
+        and cut off an immediate Alt+1/2/3 confirmation. A short deferred
+        notification makes the requested sorting label the final utterance.
+        The generation discards stale labels when shortcuts are pressed fast.
+        """
+
+        message = (message or "").strip()
+        if not message:
+            return
+        self._deferred_list_announcement_version = (
+            getattr(self, "_deferred_list_announcement_version", 0) + 1
+        )
+        version = self._deferred_list_announcement_version
+
+        def announce() -> None:
+            if (
+                version
+                != getattr(self, "_deferred_list_announcement_version", 0)
+            ):
+                return
+            alive = getattr(self, "_window_alive", None)
+            if callable(alive) and not alive():
+                return
+            self.announcer.say(message)
+
+        wx.CallLater(140, announce)
+
     def _open_podcast_aggregate(
         self,
         intent: OpenPodcastAggregateView,
@@ -14272,13 +14592,16 @@ class LiteFrame(wx.Frame):
             if row is None:
                 self.announcer.say("Lista TIDAL jest pusta")
                 return
-            parts = [row.title]
-            if row.detail:
-                parts.append(row.detail)
-            if row.kind_label:
-                parts.append(row.kind_label)
-            parts.append("format audio nie został udostępniony przez zapisany katalog TIDAL")
-            self.announcer.say(", ".join(dict.fromkeys(parts)))
+            parts: list[str] = []
+            if row.duration_ticks > 0:
+                parts.append(
+                    f"Czas: {format_duration(row.duration_ticks / 10_000_000)}"
+                )
+            format_message = (
+                "format audio nie został udostępniony przez zapisany katalog TIDAL"
+            )
+            parts.append(format_message if parts else "F" + format_message[1:])
+            self.announcer.say(", ".join(parts))
             return
         if self.navigator.active is SessionId.SPOTIFY:
             if row is None:
@@ -15119,6 +15442,91 @@ class LiteFrame(wx.Frame):
             lambda error: self.announcer.say(
                 f"Nie udało się zmienić kolekcji TIDAL: {error}"
             ),
+        )
+
+    def _toggle_spotify_membership(self, *, favorite: bool) -> None:
+        """Ctrl+Shift+U/L: change the confirmed Spotify account collection."""
+
+        if self.navigator.active is not SessionId.SPOTIFY:
+            return
+        if self._spotify_membership_pending:
+            self.announcer.say("Zmiana kolekcji Spotify już trwa")
+            return
+        client = self.client
+        if client is None:
+            self.announcer.say(
+                "Silnik nie działa, nie mogę zmienić kolekcji Spotify"
+            )
+            return
+        rows = self._selected_action_rows()
+        allowed = {"track", "episode"} if favorite else {
+            "album", "artist", "podcast"
+        }
+        rows = [
+            row for row in rows
+            if row.kind in allowed and row.service_id and row.item_id
+        ]
+        if not rows:
+            self.announcer.say(
+                "Do Ulubionych Spotify wybierz utwór albo odcinek"
+                if favorite else
+                "Do Biblioteki Spotify wybierz album, wykonawcę albo podcast"
+            )
+            return
+        items = [
+            {
+                "itemId": row.item_id,
+                "externalId": row.service_id,
+                "title": row.title,
+                "kind": row.kind,
+                "artist": row.artist_name,
+                "publicUri": row.url or "",
+            }
+            for row in rows
+        ]
+        state = self.navigator.sessions[SessionId.SPOTIFY]
+        context = state.spotify_context
+        preferred_id = rows[0].item_id
+        self._spotify_membership_pending = True
+
+        def done(payload: dict) -> None:
+            self._spotify_membership_pending = False
+            result = payload or {}
+            message = str(result.get("message") or "").strip()
+            self.announcer.say(message or "Zmieniono kolekcję Spotify")
+            if not isinstance(context, OpenSpotifyCollectionView):
+                return
+            relevant = (
+                {"liked", "episodes"}
+                if favorite else
+                {"albums", "artists", "podcasts"}
+            )
+            if context.view in relevant:
+                self._spotify_loaded_counts.pop(context.view, None)
+                self._open_spotify_collection_view(OpenSpotifyCollectionView(
+                    context.item_id,
+                    context.view,
+                    context.title,
+                    preferred_id=(
+                        preferred_id if bool(result.get("added")) else None
+                    ),
+                    replace_current=True,
+                ))
+
+        def failed(error: Exception) -> None:
+            self._spotify_membership_pending = False
+            self.announcer.say(
+                f"Nie udało się zmienić kolekcji Spotify: {error}"
+            )
+
+        self.runner.submit(
+            "spotify-membership",
+            lambda: client.spotify_collection_membership(
+                items,
+                mode="favorite" if favorite else "library",
+            ),
+            done,
+            failed,
         )
 
     def _play_tidal_item(
@@ -19933,6 +20341,7 @@ class LiteFrame(wx.Frame):
         self._save_state()
         if self.client is not None:
             self.client.close()
+        self._windows_preset_10_hook.uninstall()
         event.Skip()
 
 

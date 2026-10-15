@@ -437,6 +437,7 @@ def _row(item: TidalCachedItem) -> Row:
         related_artist_service_id=item.related_artist_service_id,
         related_artist_name=item.related_artist_name,
         collection_added_ticks=item.added_ticks,
+        duration_ticks=item.duration_ticks,
     )
 
 
@@ -485,6 +486,7 @@ def _host_item_row(entry: object) -> Row | None:
         collection_added_ticks=_optional_ticks(
             entry.get("collectionAddedUtcTicks")
         ),
+        duration_ticks=duration,
     )
 
 

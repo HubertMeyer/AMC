@@ -126,6 +126,7 @@ from amc_wx_lite.gui import (  # noqa: E402
     YOUTUBE_EXPORT_WILDCARD,
     chord_from_event,
     format_time,
+    relation_destination_labels,
     session_selection_labels,
     youtube_export_path_for_filter,
 )
@@ -267,6 +268,49 @@ def test_raw_zero_does_not_rewrite_ordinary_shift_zero(monkeypatch) -> None:
         raw_code=0x30,
     ))
     assert chord.canonical == "Shift+)"
+
+
+def test_native_keyboard_boundary_recognizes_only_first_ctrl_shift_zero() -> None:
+    from amc_wx_lite.gui import _native_preset_10_keydown
+
+    assert _native_preset_10_keydown(
+        0, 0x30, 0, ctrl_down=True, shift_down=True, alt_down=False
+    )
+    for virtual_key, flags, ctrl, shift, alt in (
+        (0x39, 0, True, True, False),
+        (0x30, 1 << 30, True, True, False),
+        (0x30, 1 << 31, True, True, False),
+        (0x30, 0, False, True, False),
+        (0x30, 0, True, False, False),
+        (0x30, 0, True, True, True),
+    ):
+        assert not _native_preset_10_keydown(
+            0,
+            virtual_key,
+            flags,
+            ctrl_down=ctrl,
+            shift_down=shift,
+            alt_down=alt,
+        )
+
+
+def test_relation_destinations_use_natural_short_labels_unless_details_enabled() -> None:
+    labels = (
+        "Przejdź do albumu",
+        "Przejdź do wykonawcy",
+        "Przejdź do podcastu",
+        "Pokaż albumy wykonawcy",
+        "Pokaż utwory wykonawcy",
+    )
+
+    assert relation_destination_labels(labels, detailed_hints=False) == (
+        "Album",
+        "Wykonawca",
+        "Podcast",
+        "Albumy",
+        "Utwory",
+    )
+    assert relation_destination_labels(labels, detailed_hints=True) == labels
 
 
 def test_shift_f6_returns_to_the_list() -> None:

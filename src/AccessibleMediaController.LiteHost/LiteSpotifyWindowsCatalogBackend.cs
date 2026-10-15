@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using AccessibleMediaController.Core.Configuration;
 using AccessibleMediaController.Core.Sessions;
+using AccessibleMediaController.Core.Spotify;
 using AccessibleMediaController.LiteHost.Protocol;
 using AccessibleMediaController.Windows.Services;
 
@@ -11,9 +12,10 @@ namespace AccessibleMediaController.LiteHost;
 
 /// <summary>
 /// Windows adapter around the already tested Spotify API implementation.
-/// This class exposes no login, disconnect or collection mutation method.
+/// It never starts login or disconnect; explicit collection mutations reuse
+/// stored credentials and are confirmed by the API before returning.
 /// </summary>
-internal sealed class LiteSpotifyWindowsCatalogBackend : ILiteSpotifyReadOnlyBackend
+internal sealed class LiteSpotifyWindowsCatalogBackend : ILiteSpotifyWriteBackend
 {
     private const string CatalogCredentialTarget = "AccessibleMediaController/Spotify";
     private const string PlaybackCredentialTarget =
@@ -74,6 +76,37 @@ internal sealed class LiteSpotifyWindowsCatalogBackend : ILiteSpotifyReadOnlyBac
         {
             return await _integration.SearchAsync(query, cancellationToken)
                 .ConfigureAwait(false);
+        }
+        catch (Exception exception)
+        {
+            throw Translate(exception, cancellationToken);
+        }
+    }
+
+    public async Task<LiteSpotifyMembershipChange> ChangeMembershipAsync(
+        IReadOnlyList<MediaItem> items,
+        bool? requestedAddition,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(items);
+        EnsureCatalogReady();
+        try
+        {
+            var result = await _integration.ChangeCollectionMembershipAsync(
+                    items,
+                    requestedAddition,
+                    cancellationToken)
+                .ConfigureAwait(false);
+            return new LiteSpotifyMembershipChange(
+                result.Added,
+                result.ConfirmedItems,
+                result.FailedItems.Count);
+        }
+        catch (SpotifyWriteBlockedException)
+        {
+            // The coordinator maps this deliberately user-facing condition;
+            // wrapping it would lose whether login, scope or kind blocked it.
+            throw;
         }
         catch (Exception exception)
         {

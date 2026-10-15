@@ -86,9 +86,10 @@ def test_list_search_and_left_information_never_speak_ids_uri_enum_or_repr() -> 
     assert "Row(" not in all_spoken
     assert "SessionId" not in all_spoken
     episode_information = information_text(result.rows[-1])
-    assert "Podcast użytkowy" in episode_information
-    assert "Strumień Spotify" in episode_information
-    assert "Rodzaj: odcinek" in episode_information
+    assert "Podcast użytkowy" not in episode_information
+    assert "Spotify" not in episode_information
+    assert "Rodzaj:" not in episode_information
+    assert "Wykonawca:" not in episode_information
     assert "Czas: 2:00" in episode_information
     assert "Odcinek" not in episode_information
 
@@ -126,8 +127,7 @@ def test_album_information_can_use_the_sum_of_real_track_durations() -> None:
     text = information_text(album, duration_ticks=duration)
 
     assert duration == 180 * 10_000_000
-    assert "Rodzaj: album" in text
-    assert "Czas: 3:00" in text
+    assert text == "Czas: 3:00"
 
 
 def test_spotify_description_has_only_deliberate_user_text() -> None:

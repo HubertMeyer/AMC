@@ -5,7 +5,7 @@ using AccessibleMediaController.Core.Sessions;
 namespace AccessibleMediaController.LiteHost.Protocol;
 
 /// <summary>
-/// Read-only Spotify contract for the wx frontend. Credentials and playback
+/// Spotify catalogue contract for the wx frontend. Credentials and playback
 /// handles never cross JSON-lines. IDs are model fields; every item also has
 /// an explicit, user-facing accessible label which never contains an ID or URI.
 /// </summary>
@@ -19,6 +19,7 @@ public static class LiteSpotifyCatalogContract
     public const string ContainerItemsOperation = "spotify.containerItems";
     public const string SearchOperation = "spotify.search";
     public const string DescriptionOperation = "spotify.description";
+    public const string MembershipOperation = "spotify.collectionMembership";
 
     private const int MaximumQueryLength = 200;
     private const int MaximumLabelPartLength = 300;
@@ -42,21 +43,24 @@ public static class LiteSpotifyCatalogContract
             ["tracks"] = "tracks"
         };
 
-    public static LiteSpotifyCapabilitiesResult CreateCapabilities() => new(
+    public static LiteSpotifyCapabilitiesResult CreateCapabilities(
+        bool collectionWrite = false) => new(
         SessionId,
-        ReadOnly: true,
+        ReadOnly: !collectionWrite,
         OneSession: true,
         AccountStatus: true,
         CollectionRoot: true,
         CollectionRead: true,
         ContainerBrowse: true,
         CatalogSearch: true,
-        CollectionWrite: false,
+        CollectionWrite: collectionWrite,
         Login: false,
         Playback: true,
-        "Katalog i odtwarzanie Spotify mają osobne stany połączenia. "
-            + "Katalog pozostaje tylko do odczytu, a dźwięk odtwarza natywna sesja Librespot. "
-            + "Ta warstwa nie loguje i nie zapisuje biblioteki.");
+        collectionWrite
+            ? "Katalog i odtwarzanie Spotify mają osobne stany połączenia. "
+                + "Zmiany kolekcji wykonuje oficjalne API, a dźwięk odtwarza natywna sesja Librespot."
+            : "Katalog i odtwarzanie Spotify mają osobne stany połączenia. "
+                + "Katalog pozostaje tylko do odczytu, a dźwięk odtwarza natywna sesja Librespot.");
 
     public static LiteSpotifyAccountStatusResult CreateAccountStatus(
         LiteSpotifyAccountProbe probe)
@@ -194,6 +198,78 @@ public static class LiteSpotifyCatalogContract
         return new LiteSpotifyDescriptionRequest(kind, normalizedId);
     }
 
+    public static LiteSpotifyMembershipRequest ReadMembershipRequest(JsonElement args)
+    {
+        var mode = LiteArgs.RequireText(args, "mode").Trim().ToLowerInvariant();
+        if (mode is not ("favorite" or "library"))
+            throw new LiteRequestException("Nieznany rodzaj kolekcji Spotify.");
+        if (!args.TryGetProperty("items", out var rawItems)
+            || rawItems.ValueKind != JsonValueKind.Array)
+        {
+            throw new LiteRequestException("Nie przekazano elementów Spotify.");
+        }
+
+        var items = new List<MediaItem>();
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var raw in rawItems.EnumerateArray())
+        {
+            if (raw.ValueKind != JsonValueKind.Object) continue;
+            var itemId = LiteArgs.RequireText(raw, "itemId").Trim();
+            var externalId = LiteArgs.RequireText(raw, "externalId").Trim();
+            var title = CleanText(LiteArgs.RequireText(raw, "title"));
+            var kindName = LiteArgs.RequireText(raw, "kind").Trim().ToLowerInvariant();
+            MediaItemKind? kind = kindName switch
+            {
+                "track" => MediaItemKind.Track,
+                "episode" => MediaItemKind.Episode,
+                "album" => MediaItemKind.Album,
+                "artist" => MediaItemKind.Artist,
+                "podcast" => MediaItemKind.Podcast,
+                _ => null
+            };
+            if (itemId.Length == 0 || title.Length == 0
+                || kind is not { } itemKind
+                || !TryNormalizeExternalId(externalId, itemKind, out var normalizedId))
+            {
+                throw new LiteRequestException(
+                    "Element Spotify ma nieprawidłową tożsamość katalogową.");
+            }
+            var expectedMode = itemKind is MediaItemKind.Track or MediaItemKind.Episode
+                ? "favorite"
+                : itemKind is MediaItemKind.Album or MediaItemKind.Artist or MediaItemKind.Podcast
+                    ? "library"
+                    : string.Empty;
+            if (!string.Equals(mode, expectedMode, StringComparison.Ordinal))
+            {
+                throw new LiteRequestException(mode == "favorite"
+                    ? "Do Ulubionych Spotify wybierz utwór albo odcinek."
+                    : "Do Biblioteki Spotify wybierz album, wykonawcę albo podcast.");
+            }
+            var key = $"{itemKind}:{normalizedId}";
+            if (!seen.Add(key)) continue;
+            items.Add(new MediaItem
+            {
+                Id = itemId,
+                ExternalId = normalizedId,
+                Title = title,
+                Artist = CleanText(LiteArgs.ReadText(raw, "artist") ?? string.Empty),
+                Kind = itemKind,
+                PublicUri = LiteArgs.ReadText(raw, "publicUri")?.Trim()
+            });
+        }
+        if (items.Count == 0)
+            throw new LiteRequestException("Brak elementów Spotify możliwych do zapisania.");
+
+        bool? requestedAddition = null;
+        if (args.TryGetProperty("add", out var add))
+        {
+            if (add.ValueKind is not (JsonValueKind.True or JsonValueKind.False))
+                throw new LiteRequestException("Pole add musi mieć wartość logiczną.");
+            requestedAddition = add.GetBoolean();
+        }
+        return new LiteSpotifyMembershipRequest(mode, items, requestedAddition);
+    }
+
     public static LiteSpotifyDescriptionResult CreateDescriptionResult(
         string? description) => new(CleanDescription(description));
 
@@ -288,6 +364,7 @@ public static class LiteSpotifyCatalogContract
             SearchOperation => "Nie udało się wyszukać w Spotify.",
             ContainerItemsOperation => "Nie udało się otworzyć zawartości Spotify.",
             CollectionViewOperation => "Nie udało się odświeżyć kolekcji Spotify.",
+            MembershipOperation => "Nie udało się zmienić kolekcji Spotify.",
             _ => "Nie udało się odczytać danych Spotify."
         }
     };
@@ -522,6 +599,17 @@ public sealed record LiteSpotifyDescriptionRequest(
 
 public sealed record LiteSpotifyDescriptionResult(
     [property: JsonPropertyName("description")] string Description);
+
+public sealed record LiteSpotifyMembershipRequest(
+    string Mode,
+    IReadOnlyList<MediaItem> Items,
+    bool? RequestedAddition);
+
+public sealed record LiteSpotifyMembershipResult(
+    [property: JsonPropertyName("added")] bool Added,
+    [property: JsonPropertyName("changed")] int Changed,
+    [property: JsonPropertyName("itemIds")] IReadOnlyList<string> ItemIds,
+    [property: JsonPropertyName("message")] string Message);
 
 public sealed record LiteSpotifyItemsResult(
     [property: JsonPropertyName("heading")] string Heading,

@@ -508,8 +508,8 @@ def test_search_relation_picker_stays_owned_by_the_search_window() -> None:
     class Dialog:
         selected_index = 1
 
-        def __init__(self, parent, *, title, labels):
-            parents.append((parent, title, labels))
+        def __init__(self, parent, *, title, labels, detailed_hints):
+            parents.append((parent, title, labels, detailed_hints))
 
         @staticmethod
         def ShowModal():
@@ -519,7 +519,7 @@ def test_search_relation_picker_stays_owned_by_the_search_window() -> None:
         def Destroy():
             return None
 
-    frame = SimpleNamespace(navigator=Navigator())
+    frame = SimpleNamespace(navigator=Navigator(), _detailed_hints=False)
     original_dialog = gui_module.RelationDestinationDialog
     original_call_after = gui_module.wx.CallAfter
     gui_module.RelationDestinationDialog = Dialog
@@ -537,14 +537,15 @@ def test_search_relation_picker_stays_owned_by_the_search_window() -> None:
     assert parents == [(
         search_dialog,
         "Przejdź do",
-        ("Przejdź do albumu", "Przejdź do wykonawcy"),
+        ("Album", "Wykonawca"),
+        False,
     )]
     assert choice is not None and choice.label == "Przejdź do wykonawcy"
     assert focused == [True]
 
 
-def test_spotify_search_write_action_is_refused_without_client_call() -> None:
-    messages = []
+def test_spotify_search_library_action_uses_confirmed_membership_write() -> None:
+    calls = []
     result = SearchEntry(
         SessionId.SPOTIFY,
         Row(
@@ -556,7 +557,11 @@ def test_spotify_search_write_action_is_refused_without_client_call() -> None:
         ),
         remote_kind="spotifyCatalog",
     )
-    frame = SimpleNamespace(announcer=SimpleNamespace(say=messages.append))
+    frame = SimpleNamespace(
+        _change_spotify_search_result_membership=(
+            lambda entries, *, favorite: calls.append((entries, favorite))
+        ),
+    )
 
     LiteFrame._complete_remote_search_result_action(
         frame,
@@ -564,10 +569,7 @@ def test_spotify_search_write_action_is_refused_without_client_call() -> None:
         SearchResultAction.LIBRARY,
     )
 
-    assert messages == [
-        "Ten wynik Spotify można przeglądać albo odtworzyć; "
-        "zapisywanie w kolekcji nie jest jeszcze dostępne"
-    ]
+    assert calls == [([result], False)]
 
 
 def test_spotify_search_playback_opens_the_result_then_activates_it() -> None:
