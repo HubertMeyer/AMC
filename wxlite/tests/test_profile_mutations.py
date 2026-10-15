@@ -258,6 +258,14 @@ def test_profile_edits_go_through_the_real_host() -> None:
                         "recordingSchedules": [],
                         "recordingHistory": [
                             {
+                                "id": "history-without-file",
+                                "stationId": "radio-1",
+                                "stationName": "Stare radio",
+                                "path": "",
+                                "outputPath": "",
+                                "outcome": "Stopped",
+                            },
+                            {
                                 "id": "history-1",
                                 "stationId": "radio-1",
                                 "stationName": "Stare radio",
@@ -362,7 +370,7 @@ def test_profile_edits_go_through_the_real_host() -> None:
             assert Path(renamed_history["path"]).exists()
             stored_history = json.loads(state.read_text(encoding="utf-8"))[
                 "radio"
-            ]["recordingHistory"][0]
+            ]["recordingHistory"][1]
             assert stored_history["path"] == renamed_history["path"]
             renamed_fresh_history = client.rename_local_file(
                 "radio-recording-history:history-fresh",
@@ -378,7 +386,7 @@ def test_profile_edits_go_through_the_real_host() -> None:
             assert Path(renamed_fresh_history["path"]).exists()
             stored_fresh_history = json.loads(
                 state.read_text(encoding="utf-8")
-            )["radio"]["recordingHistory"][1]
+            )["radio"]["recordingHistory"][2]
             assert stored_fresh_history["path"] == renamed_fresh_history["path"]
             forgotten = client.forget_recording_history_paths(
                 [renamed_fresh_history["path"]]
@@ -387,7 +395,10 @@ def test_profile_edits_go_through_the_real_host() -> None:
             remaining_history = json.loads(
                 state.read_text(encoding="utf-8")
             )["radio"]["recordingHistory"]
-            assert [item["id"] for item in remaining_history] == ["history-1"]
+            assert [item["id"] for item in remaining_history] == [
+                "history-without-file",
+                "history-1",
+            ]
             client.rename_podcast_subscription("podcast-1", "Nowy podcast")
             removed_library = client.toggle_podcast_library(["podcast-1"])
             assert removed_library == {"added": False, "requested": 1, "changed": 1}

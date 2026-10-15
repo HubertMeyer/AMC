@@ -1535,13 +1535,30 @@ internal sealed class LiteProfileMutationStore
         if (!File.Exists(_statePath)) return;
         var root = ReadState();
         if (root["radio"]?["recordingHistory"] is not JsonArray history) return;
+        var fullOldPath = Path.GetFullPath(oldPath);
         var changed = false;
         foreach (var entry in history.OfType<JsonObject>())
         {
             var path = ReadJsonText(entry, "path", "Path");
             if (string.IsNullOrWhiteSpace(path))
                 path = ReadJsonText(entry, "outputPath", "OutputPath");
-            if (!string.Equals(Path.GetFullPath(path), Path.GetFullPath(oldPath), StringComparison.OrdinalIgnoreCase))
+            // Historia może legalnie zawierać zatrzymane albo nieudane
+            // nagranie bez utworzonego pliku. Taki wpis ma pustą ścieżkę i
+            // nie dotyczy bieżącej zmiany nazwy. Dotychczas GetFullPath("")
+            // przerywał całą transakcję już po File.Move; warstwa wyżej
+            // cofała plik i użytkownik słyszał tylko „The path is empty”.
+            // Pomijamy również pojedynczy uszkodzony wpis zamiast blokować
+            // poprawny, istniejący plik wybrany przez użytkownika.
+            if (string.IsNullOrWhiteSpace(path)) continue;
+            string fullPath;
+            try { fullPath = Path.GetFullPath(path); }
+            catch (Exception exception) when (exception is ArgumentException
+                                              or NotSupportedException
+                                              or PathTooLongException)
+            {
+                continue;
+            }
+            if (!string.Equals(fullPath, fullOldPath, StringComparison.OrdinalIgnoreCase))
                 continue;
             entry["path"] = newPath;
             changed = true;
