@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import json
+import os
 import sqlite3
 import tempfile
-from contextlib import closing
+from contextlib import closing, contextmanager
+import ctypes
+from ctypes import wintypes
 from pathlib import Path
 
-from amc_wx_lite.host_client import LiteHostClient
+from amc_wx_lite.host_client import HostError, LiteHostClient
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -21,6 +24,43 @@ HOST = (
     / "net8.0-windows10.0.19041.0"
     / "amc_lite_host.exe"
 )
+
+
+@contextmanager
+def _exclusive_windows_file(path: Path):
+    """Trzymaj prawdziwy uchwyt bez FILE_SHARE_DELETE podczas próby hosta."""
+
+    if os.name != "nt":
+        raise RuntimeError("Test blokady pliku wymaga Windows")
+    create_file = ctypes.windll.kernel32.CreateFileW
+    create_file.argtypes = [
+        wintypes.LPCWSTR,
+        wintypes.DWORD,
+        wintypes.DWORD,
+        wintypes.LPVOID,
+        wintypes.DWORD,
+        wintypes.DWORD,
+        wintypes.HANDLE,
+    ]
+    create_file.restype = wintypes.HANDLE
+    close_handle = ctypes.windll.kernel32.CloseHandle
+    close_handle.argtypes = [wintypes.HANDLE]
+    close_handle.restype = wintypes.BOOL
+    handle = create_file(
+        str(path),
+        0x80000000,  # GENERIC_READ
+        0,  # bez współdzielenia: także bez FILE_SHARE_DELETE
+        None,
+        3,  # OPEN_EXISTING
+        0x80,  # FILE_ATTRIBUTE_NORMAL
+        None,
+    )
+    if handle == wintypes.HANDLE(-1).value:
+        raise ctypes.WinError(ctypes.get_last_error())
+    try:
+        yield
+    finally:
+        close_handle(handle)
 
 
 def _library(path: Path, media: Path) -> None:
@@ -160,14 +200,26 @@ def test_profile_edits_go_through_the_real_host() -> None:
         history_media.write_bytes(b"history")
         fresh_history_media = root / "Swieze nagranie bez indeksu.mp3"
         fresh_history_media.write_bytes(b"fresh history")
+        busy_media = root / "zajety plik.mp3"
+        busy_media.write_bytes(b"busy")
         library = root / "library.db"
         podcasts = root / "podcasts.db"
         state = root / "state.json"
         _library(library, media)
         with closing(sqlite3.connect(library)) as database:
+            database.create_collation(
+                "AMC_PL",
+                lambda left, right: (left.casefold() > right.casefold())
+                - (left.casefold() < right.casefold()),
+            )
             database.execute(
                 "UPDATE local_items SET path = ? WHERE id = 'local-2'",
                 (str(history_media),),
+            )
+            database.execute(
+                "INSERT INTO local_items(id,title,has_custom_title,path) "
+                "VALUES('local-busy','Zajety plik',0,?)",
+                (str(busy_media),),
             )
             database.commit()
         _podcasts(podcasts)
@@ -216,6 +268,41 @@ def test_profile_edits_go_through_the_real_host() -> None:
             renamed = client.rename_local_file("local-1", "nowy plik")
             assert Path(renamed["path"]).name == "nowy plik.mp3"
             assert Path(renamed["path"]).exists()
+            assert not media.exists(), "Stara ścieżka musi zniknąć po powodzeniu"
+
+            # Zmiana wyłącznie wielkości liter przechodzi tą samą publiczną
+            # drogą hosta i ma zmienić rzeczywistą pisownię wpisu na NTFS.
+            case_renamed = client.rename_local_file(
+                "local-1",
+                "NOWY PLIK",
+                path=renamed["path"],
+            )
+            case_path = Path(case_renamed["path"])
+            assert case_path.exists()
+            assert case_path.name == "NOWY PLIK.mp3"
+            assert "NOWY PLIK.mp3" in [entry.name for entry in root.iterdir()]
+
+            # Prawdziwie zajęty plik nie może dać pozornego sukcesu ani
+            # zmienić modelu. Uchwyt blokuje rename na poziomie Windows.
+            busy_target = root / "zajety plik po zmianie.mp3"
+            with _exclusive_windows_file(busy_media):
+                try:
+                    client.rename_local_file(
+                        "local-busy",
+                        "zajety plik po zmianie",
+                        path=str(busy_media),
+                    )
+                except HostError as error:
+                    assert "Nie można zmienić nazwy pliku" in str(error)
+                else:
+                    raise AssertionError("Host zgłosił sukces mimo zajętego pliku")
+            assert busy_media.exists()
+            assert not busy_target.exists()
+            with closing(sqlite3.connect(library)) as database:
+                stored_busy = database.execute(
+                    "SELECT path FROM local_items WHERE id='local-busy'"
+                ).fetchone()
+            assert stored_busy == (str(busy_media),)
             renamed_history = client.rename_local_file(
                 "radio-recording-history:history-1",
                 "Zagadkowa niedziela - prawa dziecka",
@@ -383,7 +470,7 @@ def test_profile_edits_go_through_the_real_host() -> None:
             ).fetchone()
             assert row == (
                 "Nazwa biblioteczna",
-                str(root / "nowy plik.mp3"),
+                str(root / "NOWY PLIK.mp3"),
                 1,
                 0,
             )
@@ -393,13 +480,13 @@ def test_profile_edits_go_through_the_real_host() -> None:
             assert db.execute(
                 "SELECT item_id FROM favorite_added_order WHERE session_id='local' ORDER BY ordinal"
             ).fetchall() == [("local-1",), ("local-2",)]
-            assert (root / "nowy plik.mp3").exists(), (
+            assert (root / "NOWY PLIK.mp3").exists(), (
                 "Delete ma usunąć rekord z Biblioteki, ale zostawić plik na dysku"
             )
             excluded = db.execute(
                 "SELECT path FROM excluded_paths"
             ).fetchone()
-            assert excluded == (str(root / "nowy plik.mp3"),)
+            assert excluded == (str(root / "NOWY PLIK.mp3"),)
             bookmark = db.execute(
                 "SELECT item_title FROM bookmarks WHERE id='b'"
             ).fetchone()

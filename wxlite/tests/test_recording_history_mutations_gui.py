@@ -38,6 +38,8 @@ def test_shift_f2_passes_history_path_to_host(tmp_path: Path) -> None:
     spoken: list[str] = []
     refreshed: list[str | None] = []
     saved: list[object] = []
+    activated: list[bool] = []
+    guard_seen_before_dialog_teardown: list[bool] = []
 
     class Dialog:
         value = "audycja poprawiona"
@@ -49,6 +51,12 @@ def test_shift_f2_passes_history_path_to_host(tmp_path: Path) -> None:
             return self
 
         def __exit__(self, *_args):
+            # Windows może synchronicznie oddać Enter liście właśnie podczas
+            # niszczenia dialogu. Bramka musi już wtedy być ustawiona.
+            guard_seen_before_dialog_teardown.append(
+                frame._local_file_rename_pending
+            )
+            gui.LiteFrame._activate_selected_if_ready(frame)
             return False
 
         def ShowModal(self):  # noqa: N802 - wx API
@@ -65,11 +73,14 @@ def test_shift_f2_passes_history_path_to_host(tmp_path: Path) -> None:
         navigator=SimpleNamespace(active=SessionId.FILES),
         _single_edit_row=lambda _what: row,
         _profile_edit_client=lambda: client,
+        _activate=lambda: activated.append(True),
         runner=ImmediateRunner(),
         announcer=SimpleNamespace(say=spoken.append),
         state=state,
         store=SimpleNamespace(save=saved.append),
-        _restore_focus_after_dialog=lambda: None,
+        _restore_focus_after_dialog=(
+            lambda: gui.LiteFrame._activate_selected_if_ready(frame)
+        ),
         _local_file_rename_pending=False,
         _local_file_rename_activation_guard_until=0.0,
         _refresh_profile_view=lambda preferred_id=None: refreshed.append(preferred_id),
@@ -86,10 +97,107 @@ def test_shift_f2_passes_history_path_to_host(tmp_path: Path) -> None:
         "audycja poprawiona",
         old_path,
     )]
+    assert guard_seen_before_dialog_teardown == [True]
+    assert activated == [], "Enter z dialogu nie może uruchomić wybranego pliku"
+    assert not old_file.exists()
+    assert new_file.exists()
     assert state.recording_history[0]["path"] == new_path
     assert saved == [state]
     assert refreshed == ["radio-recording-history:history-1"]
     assert spoken == ["Zmieniono nazwę pliku na dysku: audycja poprawiona.mp3"]
+
+
+def test_shift_f2_failure_keeps_real_file_and_model_and_reports_error(
+    tmp_path: Path,
+) -> None:
+    old_file = tmp_path / "zajete nagranie.mp3"
+    target_file = tmp_path / "nowa nazwa.mp3"
+    old_file.write_bytes(b"test")
+    old_path = str(old_file)
+    row = Row(
+        "radio-recording-history:history-busy",
+        "Radio Test, zajęte nagranie.mp3",
+        "track",
+        path=old_path,
+    )
+    spoken: list[str] = []
+    refreshed: list[str | None] = []
+    saved: list[object] = []
+
+    class Dialog:
+        value = "nowa nazwa"
+
+        def __init__(self, *_args, **_kwargs) -> None:
+            pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return False
+
+        def ShowModal(self):  # noqa: N802 - wx API
+            return gui.wx.ID_OK
+
+    class Client:
+        @staticmethod
+        def rename_local_file(_item_id, _name, path=None):  # noqa: ANN001
+            assert path == old_path
+            raise RuntimeError("plik jest zajęty przez inny program")
+
+    state = SimpleNamespace(
+        recording_history=[{"id": "history-busy", "path": old_path}]
+    )
+    frame = SimpleNamespace(
+        navigator=SimpleNamespace(active=SessionId.FILES),
+        _single_edit_row=lambda _what: row,
+        _profile_edit_client=lambda: Client(),
+        runner=ImmediateRunner(),
+        announcer=SimpleNamespace(say=spoken.append),
+        state=state,
+        store=SimpleNamespace(save=saved.append),
+        _restore_focus_after_dialog=lambda: None,
+        _local_file_rename_pending=False,
+        _local_file_rename_activation_guard_until=0.0,
+        _refresh_profile_view=lambda preferred_id=None: refreshed.append(preferred_id),
+    )
+    original = gui.RenameItemDialog
+    gui.RenameItemDialog = Dialog
+    try:
+        gui.LiteFrame._rename_local_file(frame)
+    finally:
+        gui.RenameItemDialog = original
+
+    assert old_file.exists()
+    assert not target_file.exists()
+    assert state.recording_history == [{"id": "history-busy", "path": old_path}]
+    assert saved == []
+    assert refreshed == ["radio-recording-history:history-busy"]
+    assert frame._local_file_rename_pending is False
+    assert spoken == [
+        "Nie zmieniono nazwy pliku: plik jest zajęty przez inny program"
+    ]
+
+
+def test_recording_history_refresh_preserves_selected_item_id() -> None:
+    calls: list[tuple[bool, str | None]] = []
+    state = SimpleNamespace(library_view=gui.LibraryView.RECORDED_RADIO_FILES)
+    frame = SimpleNamespace(
+        navigator=SimpleNamespace(
+            active=SessionId.FILES,
+            session=state,
+        ),
+        _show_radio_recording_history=lambda *, announce=True, preferred_id=None: (
+            calls.append((announce, preferred_id))
+        ),
+    )
+
+    gui.LiteFrame._refresh_profile_view(
+        frame,
+        preferred_id="radio-recording-history:history-1",
+    )
+
+    assert calls == [(False, "radio-recording-history:history-1")]
 
 
 def test_enter_confirming_shift_f2_cannot_activate_file_until_rename_finishes() -> None:

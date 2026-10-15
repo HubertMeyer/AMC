@@ -17040,7 +17040,10 @@ class LiteFrame(wx.Frame):
             self._open_queue_view()
             return
         if state.library_view is LibraryView.RECORDED_RADIO_FILES:
-            self._show_radio_recording_history()
+            self._show_radio_recording_history(
+                announce=False,
+                preferred_id=preferred_id,
+            )
             return
         if state.library_view not in self._VIEW_KEYS:
             self.announcer.say("Zmiana została zapisana. Odśwież bieżący widok")
@@ -17164,15 +17167,21 @@ class LiteFrame(wx.Frame):
             if dialog.ShowModal() != wx.ID_OK:
                 return
             new_name = dialog.value
+            # Bramka musi powstać JESZCZE PRZED zniszczeniem modalnego
+            # dialogu. Na Windows oddanie fokusu podczas ``__exit__`` może
+            # synchronicznie dostarczyć liście Enter, którym użytkownik
+            # zatwierdził nazwę. Poprzednio ustawialiśmy flagę dopiero po
+            # wyjściu z ``with`` i po ``SetFocus``. Ten krótki przedział
+            # wystarczał, żeby uruchomić plik i ścigać się z File.Move.
+            self._local_file_rename_pending = True
+            self._local_file_rename_activation_guard_until = time.monotonic() + 1.0
         # Dialog jest już zniszczony. Jawnie oddajemy fokus tej samej liście,
         # zamiast pozwolić ramce albo odtwarzaczowi przejąć go po Enterze.
         self._restore_focus_after_dialog()
         if not new_name:
+            self._local_file_rename_pending = False
             self.announcer.say("Nowa nazwa pliku nie może być pusta")
             return
-
-        self._local_file_rename_pending = True
-        self._local_file_rename_activation_guard_until = time.monotonic() + 1.0
 
         def done(payload: object) -> None:
             self._local_file_rename_pending = False
@@ -17207,6 +17216,11 @@ class LiteFrame(wx.Frame):
 
         def failed(error: Exception) -> None:
             self._local_file_rename_pending = False
+            # Operacja hosta mogła zatrzymać odtwarzanie albo częściowo
+            # zmienić stan, zanim otrzymała błąd systemu plików. Ponowne
+            # wczytanie nie udaje sukcesu, ale gwarantuje, że lista pokazuje
+            # rzeczywisty stan dysku i zachowuje ten sam stabilny wiersz.
+            self._refresh_profile_view(preferred_id=row.item_id)
             self.announcer.say(f"Nie zmieniono nazwy pliku: {error}")
 
         self.runner.submit(
@@ -17918,7 +17932,12 @@ class LiteFrame(wx.Frame):
         self._recording_history_persist_error = False
         return True
 
-    def _show_radio_recording_history(self, *, announce: bool = True) -> None:
+    def _show_radio_recording_history(
+        self,
+        *,
+        announce: bool = True,
+        preferred_id: str | None = None,
+    ) -> None:
         """Alt+Shift+R: biezaca sesja hosta i nagrania nadal na dysku."""
         if announce:
             self._begin_transient_preview()
@@ -17978,6 +17997,7 @@ class LiteFrame(wx.Frame):
                 LibraryView.RECORDED_RADIO_FILES,
                 "Historia nagrywania",
                 rows,
+                preferred_id=preferred_id,
             )
             if self.navigator.active is SessionId.FILES:
                 if announce:
