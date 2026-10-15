@@ -234,6 +234,11 @@ def test_left_and_right_arrow_speak_only_labels_and_keep_focus() -> None:
 
     assert isinstance(information, Announce)
     assert isinstance(relations, ShowSpotifyRelations)
+    assert relations.title == "Przejdź do"
+    assert [choice.label for choice in relations.choices] == [
+        "Przejdź do albumu",
+        "Przejdź do wykonawcy",
+    ]
     spoken = " ".join((
         information.text,
         relations.title,
@@ -244,6 +249,7 @@ def test_left_and_right_arrow_speak_only_labels_and_keep_focus() -> None:
     assert "spotify:" not in spoken
     assert "SessionId" not in spoken
     assert "Row(" not in spoken
+    assert "powiąz" not in spoken.casefold()
 
 
 def test_visible_source_order_drives_next_item_and_confirmation() -> None:

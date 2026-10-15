@@ -262,7 +262,7 @@ def test_tidal_sort_is_private_preserves_selection_and_orders_fresh_rows() -> No
     assert "self.announcer.say(intent.announcement)" in loader_source
 
 
-def test_tidal_right_arrow_uses_a_native_menu_and_restores_list_focus() -> None:
+def test_tidal_right_arrow_uses_a_named_list_and_restores_list_focus() -> None:
     key_handler = next(
         node for node in ast.walk(TREE)
         if isinstance(node, ast.FunctionDef)
@@ -281,9 +281,10 @@ def test_tidal_right_arrow_uses_a_native_menu_and_restores_list_focus() -> None:
     presenter_source = ast.get_source_segment(SOURCE, presenter) or ""
     assert "len(intent.choices) == 1" in presenter_source
     assert "self.navigator.activate_tidal_relation(intent.choices[0])" in presenter_source
-    assert "wx.Menu(intent.title)" in presenter_source
+    assert "RelationDestinationDialog(" in presenter_source
     assert "choice.label" in presenter_source
-    assert "active_list.PopupMenu(menu)" in presenter_source
+    assert ".ShowModal()" in presenter_source
+    assert "PopupMenu" not in presenter_source
     assert "wx.CallAfter(active_list.SetFocus)" in presenter_source
 
 

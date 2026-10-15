@@ -12,6 +12,8 @@ from amc_wx_lite.navigation import (
     OpenSpotifyView,
     PlaySpotifyItem,
     SessionId,
+    ShowSpotifyRelations,
+    SpotifyRelationChoice,
 )
 from amc_wx_lite.shortcuts import Action
 
@@ -173,6 +175,65 @@ def test_unavailable_spotify_playlist_stays_on_the_current_list() -> None:
 
     assert applied == []
     assert spoken == ["Spotify nie udostępnił zawartości tego elementu."]
+
+
+def test_spotify_right_arrow_uses_two_real_destinations_without_context_menu() -> None:
+    created = []
+    activated = []
+    run = []
+    focused = []
+    choices = (
+        SpotifyRelationChoice(
+            "Przejdź do albumu",
+            OpenSpotifyContainer("album", "album-id", "Album", "album"),
+        ),
+        SpotifyRelationChoice(
+            "Przejdź do wykonawcy",
+            OpenSpotifyContainer("artist", "artist-id", "Wykonawca", "artist"),
+        ),
+    )
+    intent = ShowSpotifyRelations("Przejdź do", choices)
+
+    class FakeDialog:
+        def __init__(self, _parent, *, title, labels):
+            self.selected_index = len(created) % 2
+            created.append((title, labels, self.selected_index))
+
+        @staticmethod
+        def ShowModal():
+            return gui_module.wx.ID_OK
+
+        @staticmethod
+        def Destroy():
+            return None
+
+    frame = SimpleNamespace(
+        navigator=SimpleNamespace(
+            activate_spotify_relation=(
+                lambda choice: activated.append(choice) or [choice.label]
+            )
+        ),
+        _active_list=lambda: SimpleNamespace(SetFocus=lambda: focused.append(True)),
+        _run=run.append,
+    )
+    original_dialog = gui_module.RelationDestinationDialog
+    original_call_after = gui_module.wx.CallAfter
+    gui_module.RelationDestinationDialog = FakeDialog
+    gui_module.wx.CallAfter = lambda callback: callback()
+    try:
+        LiteFrame._show_spotify_relations(frame, intent)
+        LiteFrame._show_spotify_relations(frame, intent)
+    finally:
+        gui_module.RelationDestinationDialog = original_dialog
+        gui_module.wx.CallAfter = original_call_after
+
+    assert created == [
+        ("Przejdź do", ("Przejdź do albumu", "Przejdź do wykonawcy"), 0),
+        ("Przejdź do", ("Przejdź do albumu", "Przejdź do wykonawcy"), 1),
+    ]
+    assert activated == [choices[0], choices[1]]
+    assert run == [["Przejdź do albumu"], ["Przejdź do wykonawcy"]]
+    assert focused == [True, True]
 
 
 def test_busy_spotify_collection_enter_is_retried_without_speaking_error() -> None:

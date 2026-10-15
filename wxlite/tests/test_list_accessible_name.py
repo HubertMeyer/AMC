@@ -15,7 +15,12 @@ from __future__ import annotations
 import inspect
 from pathlib import Path
 
-from amc_wx_lite.gui import MediaListCtrl, PresetAssignmentDialog, PresetListDialog
+from amc_wx_lite.gui import (
+    MediaListCtrl,
+    PresetAssignmentDialog,
+    PresetListDialog,
+    RelationDestinationDialog,
+)
 from amc_wx_lite.radio_schedule_dialogs import RadioSchedulesDialog
 
 
@@ -62,6 +67,16 @@ def test_schedule_and_preset_lists_use_only_native_wx_controls() -> None:
     assert "wx.ListBox" in inspect.getsource(RadioSchedulesDialog)
     assert "wx.ListBox" in inspect.getsource(PresetListDialog)
     assert "wx.ListBox" in inspect.getsource(PresetAssignmentDialog)
+
+
+def test_relation_destinations_are_a_named_native_list_not_a_context_menu() -> None:
+    source = inspect.getsource(RelationDestinationDialog)
+
+    assert "wx.ListBox" in source
+    assert 'SetName("Dokąd przejść")' in source
+    assert "SetSelection(0)" in source
+    assert "SetAccessible" not in source
+    assert "PopupMenu" not in source
 
 
 def test_sonos_fixed_target_is_a_native_named_checkbox() -> None:

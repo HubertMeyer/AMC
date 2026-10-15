@@ -323,7 +323,7 @@ class OpenTidalContainer:
 
 @dataclass(frozen=True, slots=True)
 class TidalRelationChoice:
-    """One deliberate user-facing command in the TIDAL relations menu."""
+    """One deliberate user-facing destination available from a TIDAL row."""
 
     label: str
     target: OpenTidalContainer
@@ -332,7 +332,7 @@ class TidalRelationChoice:
 
 @dataclass(frozen=True, slots=True)
 class ShowTidalRelations:
-    """Native menu requested by Right Arrow in the TIDAL list."""
+    """User-facing destination choice requested by Right Arrow in TIDAL."""
 
     title: str
     choices: tuple[TidalRelationChoice, ...]
@@ -389,7 +389,7 @@ class SpotifyRelationChoice:
 
 @dataclass(frozen=True, slots=True)
 class ShowSpotifyRelations:
-    """Accessible relation menu requested by Right Arrow."""
+    """User-facing destination choice requested by Right Arrow in Spotify."""
 
     title: str
     choices: tuple[SpotifyRelationChoice, ...]
@@ -1374,7 +1374,7 @@ class Navigator:
 
     @staticmethod
     def _tidal_relation_choices(row: Row) -> tuple[TidalRelationChoice, ...]:
-        """Mirror the relation menu of the full AMC without speaking IDs."""
+        """Build destinations from the full AMC model without speaking IDs."""
         choices: list[TidalRelationChoice] = []
         if (
             row.kind in ("track", "video")
@@ -1427,7 +1427,9 @@ class Navigator:
         """Right Arrow: show only relationships proved by the row model."""
         state = self.session
         if state.session_id is not SessionId.TIDAL:
-            return [Announce("Powiązania TIDAL są dostępne tylko w TIDAL")]
+            return [Announce(
+                "Przechodzenie do albumu lub wykonawcy jest dostępne tylko w TIDAL"
+            )]
         row = state.model.selected_row
         if row is None:
             return [Announce("Lista TIDAL jest pusta")]
@@ -1453,7 +1455,7 @@ class Navigator:
             or row is None
             or choice not in self._tidal_relation_choices(row)
         ):
-            return [Announce("Wybrane powiązanie TIDAL nie jest już dostępne")]
+            return [Announce("Wybrane miejsce nie jest już dostępne w TIDAL")]
         if choice.open_artist_overview:
             target = choice.target
             artist = Row(
@@ -2776,14 +2778,19 @@ class Navigator:
 
         state = self.session
         if state.session_id is not SessionId.SPOTIFY:
-            return [Announce("Powiązania Spotify są dostępne tylko w Spotify")]
+            return [Announce(
+                "Przechodzenie do albumu, wykonawcy lub podcastu "
+                "jest dostępne tylko w Spotify"
+            )]
         row = state.model.selected_row
         if row is None:
             return [Announce("Lista Spotify jest pusta")]
         choices = self._spotify_relation_choices(row)
         if not choices:
-            return [Announce("Ten element nie ma dostępnego powiązania")]
-        return [ShowSpotifyRelations("Powiązania Spotify", choices)]
+            return [Announce(
+                "Spotify nie podał miejsca, do którego można przejść z tego elementu"
+            )]
+        return [ShowSpotifyRelations("Przejdź do", choices)]
 
     def activate_spotify_relation(
         self, choice: SpotifyRelationChoice
@@ -2797,7 +2804,7 @@ class Navigator:
             or row is None
             or choice not in self._spotify_relation_choices(row)
         ):
-            return [Announce("Wybrane powiązanie Spotify nie jest już dostępne")]
+            return [Announce("Wybrane miejsce nie jest już dostępne w Spotify")]
         if choice.open_artist_overview:
             target = choice.target
             artist = Row(

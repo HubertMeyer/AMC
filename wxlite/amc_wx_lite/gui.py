@@ -3103,6 +3103,80 @@ def session_selection_labels(order: object = None) -> tuple[str, ...]:
     return session_order.selection_labels(order)
 
 
+class RelationDestinationDialog(wx.Dialog):
+    """Krótka, natywna lista miejsc dostępnych pod prawą strzałką.
+
+    Zwykłe ``wx.Menu`` jest przez NVDA przedstawiane jako „menu kontekstowe”,
+    a jego tytuł staje się dodatkowym, pozornym wierszem. Ten dialog ma tylko
+    prawdziwe działania użytkowe i jawnie nazwaną listę.
+    """
+
+    def __init__(
+        self,
+        parent: wx.Window,
+        *,
+        title: str,
+        labels: tuple[str, ...],
+    ) -> None:
+        super().__init__(parent, title=title)
+        self._labels = labels
+        panel = wx.Panel(self)
+        layout = wx.BoxSizer(wx.VERTICAL)
+
+        hint_text = "Wybierz, dokąd przejść. Enter otwiera, Escape wraca."
+        hint = wx.StaticText(panel, label=hint_text)
+        hint.SetName(hint_text)
+        layout.Add(hint, 0, wx.ALL | wx.EXPAND, 12)
+
+        self.destinations = wx.ListBox(
+            panel,
+            choices=list(labels),
+            style=wx.LB_SINGLE,
+        )
+        self.destinations.SetName("Dokąd przejść")
+        if labels:
+            self.destinations.SetSelection(0)
+        layout.Add(self.destinations, 1, wx.LEFT | wx.RIGHT | wx.EXPAND, 12)
+        panel.SetSizer(layout)
+
+        buttons = wx.StdDialogButtonSizer()
+        open_button = wx.Button(self, wx.ID_OK, label="&Otwórz")
+        open_button.SetName("Otwórz wybrane miejsce")
+        open_button.SetDefault()
+        cancel_button = wx.Button(self, wx.ID_CANCEL, label="&Anuluj")
+        cancel_button.SetName("Wróć bez przechodzenia")
+        buttons.AddButton(open_button)
+        buttons.AddButton(cancel_button)
+        buttons.Realize()
+
+        shell = wx.BoxSizer(wx.VERTICAL)
+        shell.Add(panel, 1, wx.EXPAND)
+        shell.Add(buttons, 0, wx.ALL | wx.ALIGN_RIGHT, 12)
+        self.SetSizer(shell)
+        self.SetMinSize((520, 300))
+        self.Fit()
+        self.SetEscapeId(wx.ID_CANCEL)
+        self.destinations.Bind(wx.EVT_LISTBOX_DCLICK, self._accept)
+        self.Bind(wx.EVT_CHAR_HOOK, self._on_key)
+        self.destinations.SetFocus()
+
+    @property
+    def selected_index(self) -> int | None:
+        index = self.destinations.GetSelection()
+        return index if 0 <= index < len(self._labels) else None
+
+    def _accept(self, _event) -> None:
+        if self.selected_index is not None:
+            self.EndModal(wx.ID_OK)
+
+    def _on_key(self, event: wx.KeyEvent) -> None:
+        if not event.ControlDown() and not event.AltDown() and not event.ShiftDown():
+            if event.GetKeyCode() in (wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER):
+                self._accept(event)
+                return
+        event.Skip()
+
+
 class SessionSelectionDialog(wx.Dialog):
     """Natywna lista sesji z jawnymi etykietami dla czytnika ekranu."""
 
@@ -7879,37 +7953,31 @@ class LiteFrame(wx.Frame):
         self.runner.submit("tidal-navigation", work, done, failed)
 
     def _show_tidal_relations(self, intent: ShowTidalRelations) -> None:
-        """Show the same native, keyboard-driven relation menu as full AMC."""
+        """Show a keyboard-driven destination list without a context-menu role."""
         if not intent.choices:
             return
-        # Gdy istnieje tylko jeden jednoznaczny cel (np. album -> wykonawca
-        # albo wykonawca -> albumy), prawa strzalka wykonuje go od razu.
-        # Jednoelementowe menu powodowalo, ze NVDA czytal przede wszystkim
-        # „menu kontekstowe”, choc uzytkownik nie mial faktycznego wyboru.
+        # Gdy istnieje tylko jeden jednoznaczny cel (np. album -> wykonawca),
+        # prawa strzalka wykonuje go od razu. Przy wielu celach zwykle
+        # wx.Menu dodawalo w mowie „menu kontekstowe”, a tytul wygladal jak
+        # trzecia pozycja. Natywna lista pokazuje wylacznie prawdziwe cele.
         if len(intent.choices) == 1:
             self._run(self.navigator.activate_tidal_relation(intent.choices[0]))
             return
-        menu = wx.Menu(intent.title)
-        identifiers: list[int] = []
-        for choice in intent.choices:
-            item = menu.Append(wx.ID_ANY, choice.label)
-            identifier = item.GetId()
-            identifiers.append(identifier)
-            self.Bind(
-                wx.EVT_MENU,
-                lambda _event, selected=choice: self._run(
-                    self.navigator.activate_tidal_relation(selected)
-                ),
-                id=identifier,
-            )
         active_list = self._active_list()
+        dialog = RelationDestinationDialog(
+            self,
+            title=intent.title,
+            labels=tuple(choice.label for choice in intent.choices),
+        )
+        selected: int | None = None
         try:
-            active_list.PopupMenu(menu)
+            if dialog.ShowModal() == wx.ID_OK:
+                selected = dialog.selected_index
         finally:
-            for identifier in identifiers:
-                self.Unbind(wx.EVT_MENU, id=identifier)
-            menu.Destroy()
+            dialog.Destroy()
             wx.CallAfter(active_list.SetFocus)
+        if selected is not None:
+            self._run(self.navigator.activate_tidal_relation(intent.choices[selected]))
 
     # ------------------------------------------------------------- Spotify
 
@@ -8140,34 +8208,28 @@ class LiteFrame(wx.Frame):
         return True
 
     def _show_spotify_relations(self, intent: ShowSpotifyRelations) -> None:
-        """Show only user-facing Spotify relations in a native menu."""
+        """Show only real Spotify destinations in an accessible list."""
 
         if not intent.choices:
             return
         if len(intent.choices) == 1:
             self._run(self.navigator.activate_spotify_relation(intent.choices[0]))
             return
-        menu = wx.Menu(intent.title)
-        identifiers: list[int] = []
-        for choice in intent.choices:
-            item = menu.Append(wx.ID_ANY, choice.label)
-            identifier = item.GetId()
-            identifiers.append(identifier)
-            self.Bind(
-                wx.EVT_MENU,
-                lambda _event, selected=choice: self._run(
-                    self.navigator.activate_spotify_relation(selected)
-                ),
-                id=identifier,
-            )
         active_list = self._active_list()
+        dialog = RelationDestinationDialog(
+            self,
+            title=intent.title,
+            labels=tuple(choice.label for choice in intent.choices),
+        )
+        selected: int | None = None
         try:
-            active_list.PopupMenu(menu)
+            if dialog.ShowModal() == wx.ID_OK:
+                selected = dialog.selected_index
         finally:
-            for identifier in identifiers:
-                self.Unbind(wx.EVT_MENU, id=identifier)
-            menu.Destroy()
+            dialog.Destroy()
             wx.CallAfter(active_list.SetFocus)
+        if selected is not None:
+            self._run(self.navigator.activate_spotify_relation(intent.choices[selected]))
 
     def _play_spotify(self, intent: PlaySpotifyItem) -> None:
         """Hand one safe catalogue identity to the native Librespot engine."""
