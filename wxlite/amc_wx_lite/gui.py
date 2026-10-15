@@ -174,6 +174,7 @@ from .podcast_source import (
     SORT_CUSTOM,
     subscription_rows,
 )
+from .paging import load_more_row, requested_count
 from .quick_info import (
     HOST_ERROR_MESSAGE,
     QUICK_INFO_OP,
@@ -5003,6 +5004,7 @@ class LiteFrame(wx.Frame):
         self._tidal_navigation_version = 0
         self._spotify_navigation_version = 0
         self._podcast_loaded_counts: dict[str, int] = {}
+        self._spotify_loaded_counts: dict[str, int] = {}
         # ``None`` w stanie prywatnym dziedziczy wybor glownego AMC. Do czasu
         # pierwszego odczytu widoku trzymamy bezpieczny domysl; wynik strony
         # niesie potem faktycznie uzyty tryb i aktualizuje zaznaczenie menu.
@@ -8055,10 +8057,18 @@ class LiteFrame(wx.Frame):
             return
         self._spotify_navigation_version += 1
         version = self._spotify_navigation_version
+        previous_count = self._spotify_loaded_counts.get(intent.view, 0)
+        requested = requested_count(
+            previous_count,
+            load_more=intent.load_more,
+        )
 
         def work():
             return spotify_container_result_from_payload(
-                client.spotify_collection_view(intent.view)
+                client.spotify_collection_view(
+                    intent.view,
+                    loaded_count=requested,
+                )
             )
 
         def done(result) -> None:
@@ -8067,10 +8077,22 @@ class LiteFrame(wx.Frame):
                 or self.navigator.active is not SessionId.SPOTIFY
             ):
                 return
+            rows = list(result.rows)
+            loaded_count = len(rows)
+            self._spotify_loaded_counts[intent.view] = loaded_count
+            preferred_id = None
+            if intent.load_more and previous_count < loaded_count:
+                preferred_id = rows[previous_count].item_id
+            if result.has_more:
+                rows.append(load_more_row(
+                    f"spotify:{intent.view}",
+                    loaded_count,
+                ))
             self._run(self.navigator.apply_spotify_collection_view(
                 intent,
                 result.heading,
-                list(result.rows),
+                rows,
+                preferred_id=preferred_id,
             ))
             if result.warning:
                 self.announcer.say(result.warning)
@@ -12094,10 +12116,10 @@ class LiteFrame(wx.Frame):
 
         subscription_id = intent.subscription_id
         previous_count = self._podcast_loaded_counts.get(subscription_id, 0)
-        requested = (
-            max(PODCAST_PAGE_SIZE, previous_count + PODCAST_PAGE_SIZE)
-            if intent.load_more
-            else max(PODCAST_PAGE_SIZE, previous_count)
+        requested = requested_count(
+            previous_count,
+            load_more=intent.load_more,
+            page_size=PODCAST_PAGE_SIZE,
         )
 
         def work():
@@ -12297,10 +12319,10 @@ class LiteFrame(wx.Frame):
 
         key = intent.view.value
         previous_count = self._podcast_loaded_counts.get(key, 0)
-        requested = (
-            max(PODCAST_PAGE_SIZE, previous_count + PODCAST_PAGE_SIZE)
-            if intent.load_more
-            else max(PODCAST_PAGE_SIZE, previous_count)
+        requested = requested_count(
+            previous_count,
+            load_more=intent.load_more,
+            page_size=PODCAST_PAGE_SIZE,
         )
         sort_mode_override = self.state.podcast_inbox_sort_mode
 
@@ -12429,10 +12451,10 @@ class LiteFrame(wx.Frame):
         playlist_id = intent.playlist_id
         key = f"podcast-playlist:{playlist_id}" if playlist_id else "podcast-playlists"
         previous_count = self._podcast_loaded_counts.get(key, 0)
-        requested = (
-            max(PODCAST_PAGE_SIZE, previous_count + PODCAST_PAGE_SIZE)
-            if playlist_id and intent.load_more
-            else max(PODCAST_PAGE_SIZE, previous_count)
+        requested = requested_count(
+            previous_count,
+            load_more=bool(playlist_id and intent.load_more),
+            page_size=PODCAST_PAGE_SIZE,
         )
 
         def work():

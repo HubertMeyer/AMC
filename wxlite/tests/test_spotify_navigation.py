@@ -199,6 +199,49 @@ def test_collection_root_enter_opens_named_view_and_back_restores_focus() -> Non
     assert nav.session.model.selected_row == rows[1]
 
 
+def test_collection_load_more_stays_on_level_and_does_not_duplicate_history() -> None:
+    nav = Navigator()
+    nav.active = SessionId.SPOTIFY
+    root = Row(
+        "spotify-collection:liked",
+        "Polubione utwory",
+        "folder",
+        service_id="liked",
+        service_kind="spotifyCollection",
+    )
+    nav.apply_spotify_view("Biblioteka Spotify", [root])
+    intent = nav.activate_selected()[0]
+    first_page = [_track(), Row(
+        "load-more:spotify:liked:1",
+        "Załaduj więcej",
+        "loadMore",
+        detail="następne 150 elementów",
+    )]
+    nav.apply_spotify_collection_view(intent, "Polubione utwory Spotify", first_page)
+    nav.session.model.select_id(first_page[-1].item_id)
+
+    load_more = nav.activate_selected()[0]
+
+    assert load_more == OpenSpotifyCollectionView(
+        root.item_id,
+        "liked",
+        "Polubione utwory",
+        load_more=True,
+    )
+    assert len(nav.session.spotify_history) == 1
+    second_page = [_track(), _track(2)]
+    nav.apply_spotify_collection_view(
+        load_more,
+        "Polubione utwory Spotify",
+        second_page,
+        preferred_id=second_page[1].item_id,
+    )
+    assert len(nav.session.spotify_history) == 1
+    assert nav.session.model.selected_row == second_page[1]
+    assert nav.go_to_parent() == []
+    assert nav.session.model.selected_row == root
+
+
 def test_episode_enter_and_right_arrow_return_to_its_podcast() -> None:
     nav = Navigator()
     nav.active = SessionId.SPOTIFY

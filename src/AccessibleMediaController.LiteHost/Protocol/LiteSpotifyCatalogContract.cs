@@ -22,6 +22,7 @@ public static class LiteSpotifyCatalogContract
     private const int MaximumQueryLength = 200;
     private const int MaximumLabelPartLength = 300;
     private const int MaximumExternalIdLength = 128;
+    public const int CollectionPageSize = 150;
 
     private static readonly IReadOnlyDictionary<string, MediaItemKind> ContainerKinds =
         new Dictionary<string, MediaItemKind>(StringComparer.OrdinalIgnoreCase)
@@ -122,6 +123,14 @@ public static class LiteSpotifyCatalogContract
             : throw new LiteRequestException("Nieznany widok kolekcji Spotify.");
     }
 
+    public static int ReadCollectionLoadedCount(JsonElement args) =>
+        LiteArgs.ReadInt(
+            args,
+            "loadedCount",
+            CollectionPageSize,
+            CollectionPageSize,
+            int.MaxValue);
+
     public static string ReadSearchQuery(JsonElement args)
     {
         var query = LiteArgs.RequireText(args, "query").Trim();
@@ -167,7 +176,8 @@ public static class LiteSpotifyCatalogContract
     public static LiteSpotifyItemsResult CreateCollectionViewResult(
         string view,
         IReadOnlyList<MediaItem> items,
-        string warning = "")
+        string warning = "",
+        int? loadedCount = null)
     {
         ArgumentNullException.ThrowIfNull(items);
         var filtered = view switch
@@ -190,7 +200,11 @@ public static class LiteSpotifyCatalogContract
             "episodes" => "Zapisane odcinki Spotify",
             _ => "Biblioteka Spotify"
         };
-        return CreateItemsResult(heading, filtered.ToArray(), warning);
+        return CreateItemsResult(
+            heading,
+            filtered,
+            warning,
+            maximumItems: loadedCount);
     }
 
     public static LiteSpotifyItemsResult CreateContainerResult(
@@ -252,23 +266,41 @@ public static class LiteSpotifyCatalogContract
 
     private static LiteSpotifyItemsResult CreateItemsResult(
         string heading,
-        IReadOnlyList<MediaItem> items,
+        IEnumerable<MediaItem> items,
         string warning = "",
         bool available = true,
         bool hasMore = false,
-        bool preserveOccurrences = false)
+        bool preserveOccurrences = false,
+        int? maximumItems = null)
     {
-        var supported = items.Where(IsSupportedItem).ToArray();
+        var supported = items.Where(IsSupportedItem);
+        if (!preserveOccurrences)
+        {
+            var seen = new HashSet<string>(StringComparer.Ordinal);
+            supported = supported.Where(item =>
+            {
+                TryNormalizeExternalId(item.ExternalId, item.Kind, out var externalId);
+                return seen.Add($"{item.Kind}:{externalId}");
+            });
+        }
+
+        var requested = maximumItems is { } count
+            ? Math.Max(0, count)
+            : int.MaxValue;
+        var readAhead = requested == int.MaxValue ? int.MaxValue : requested + 1;
+        var page = supported.Take(readAhead).ToArray();
+        var pageHasMore = requested != int.MaxValue && page.Length > requested;
+        if (pageHasMore) page = page.Take(requested).ToArray();
+
         var visible = preserveOccurrences
-            ? supported.Select((item, index) =>
+            ? page.Select((item, index) =>
                     LiteSpotifyCatalogItem.FromMediaItem(item, index))
                 .ToArray()
-            : supported.Select(item => LiteSpotifyCatalogItem.FromMediaItem(item))
-                .GroupBy(item => $"{item.Kind}:{item.ExternalId}", StringComparer.Ordinal)
-                .Select(group => group.First())
+            : page.Select(item => LiteSpotifyCatalogItem.FromMediaItem(item))
                 .ToArray();
         return new LiteSpotifyItemsResult(
-            CleanText(heading), visible, CleanText(warning), available, hasMore);
+            CleanText(heading), visible, CleanText(warning), available,
+            hasMore || pageHasMore);
     }
 
     private static bool IsSupportedItem(MediaItem item) =>

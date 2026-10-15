@@ -43,6 +43,7 @@ internal sealed class LiteSpotifyCatalogCoordinator(
     public object CollectionView(JsonElement args)
     {
         var view = LiteSpotifyCatalogContract.ReadCollectionView(args);
+        var loadedCount = LiteSpotifyCatalogContract.ReadCollectionLoadedCount(args);
         lock (_collectionGate)
         {
             var warning = string.Empty;
@@ -102,7 +103,8 @@ internal sealed class LiteSpotifyCatalogCoordinator(
             return LiteSpotifyCatalogContract.CreateCollectionViewResult(
                 view,
                 _collectionSnapshot,
-                warning);
+                warning,
+                loadedCount);
         }
     }
 

@@ -13,7 +13,9 @@ internal static class SpotifyCatalogContractTests
         AccountStatusKeepsCatalogueAndPlaybackSeparate();
         MissingClientIdIsAnExplicitSafeState();
         CollectionRootContainsOnlyUserFacingCategories();
+        CollectionViewRequestUsesSafeCumulativePageSizes();
         CollectionViewsKeepUnavailableSavedItems();
+        CollectionViewsPageAfterFilteringAndKeepSourceOrder();
         SearchRowsHaveExplicitAccessibleLabelsWithoutPrivateHandles();
         ContainerRequestAcceptsOnlyMatchingSpotifyIdentity();
         ContainerResultNeverUsesIdentifiersInItsHeading();
@@ -145,6 +147,57 @@ internal static class SpotifyCatalogContractTests
         Check(!result.Items[0].IsAvailable
             && result.Items[0].AccessibleLabel.EndsWith(", niedostępny", StringComparison.Ordinal),
             "niedostępna zapisana pozycja nie ma uczciwej etykiety");
+    }
+
+    private static void CollectionViewRequestUsesSafeCumulativePageSizes()
+    {
+        using var missing = JsonDocument.Parse("""{"view":"liked"}""");
+        using var tooSmall = JsonDocument.Parse(
+            """{"view":"liked","loadedCount":3}""");
+        using var nextPage = JsonDocument.Parse(
+            """{"view":"liked","loadedCount":300}""");
+
+        Check(LiteSpotifyCatalogContract.ReadCollectionLoadedCount(missing.RootElement)
+                == LiteSpotifyCatalogContract.CollectionPageSize
+            && LiteSpotifyCatalogContract.ReadCollectionLoadedCount(tooSmall.RootElement)
+                == LiteSpotifyCatalogContract.CollectionPageSize
+            && LiteSpotifyCatalogContract.ReadCollectionLoadedCount(nextPage.RootElement) == 300,
+            "rozmiar porcji kolekcji nie ma bezpiecznego domyślnego minimum");
+    }
+
+    private static void CollectionViewsPageAfterFilteringAndKeepSourceOrder()
+    {
+        var items = Enumerable.Range(0, 152)
+            .Select(index => Item(
+                MediaItemKind.Track,
+                $"track{index}",
+                $"Utwór {index}",
+                favorite: true))
+            .ToList();
+        items.Insert(1, Item(
+            MediaItemKind.Album,
+            "albumIgnored",
+            "Album pomijany",
+            library: true));
+        items.Insert(2, Item(
+            MediaItemKind.Track,
+            "track0",
+            "Duplikat pomijany",
+            favorite: true));
+
+        var first = LiteSpotifyCatalogContract.CreateCollectionViewResult(
+            "liked", items, loadedCount: 150);
+        var second = LiteSpotifyCatalogContract.CreateCollectionViewResult(
+            "liked", items, loadedCount: 300);
+
+        Check(first.Items.Count == 150 && first.HasMore,
+            "pierwsza porcja kolekcji nie ma 150 elementów albo zgubiła hasMore");
+        Check(first.Items[0].Title == "Utwór 0"
+            && first.Items[149].Title == "Utwór 149",
+            "filtrowanie lub usuwanie duplikatów zmieniło kolejność przed stronicowaniem");
+        Check(second.Items.Count == 152 && !second.HasMore
+            && second.Items[^1].Title == "Utwór 151",
+            "druga porcja nie odsłoniła reszty w tej samej kolejności");
     }
 
     private static void SearchRowsHaveExplicitAccessibleLabelsWithoutPrivateHandles()

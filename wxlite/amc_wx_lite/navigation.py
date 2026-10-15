@@ -369,6 +369,7 @@ class OpenSpotifyCollectionView:
     item_id: str
     view: str
     title: str
+    load_more: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -1159,6 +1160,16 @@ class Navigator:
         if state.session_id is SessionId.SPOTIFY:
             if row.activation_message:
                 return [Announce(row.activation_message)]
+            if row.kind == "loadMore":
+                context = state.spotify_context
+                if isinstance(context, OpenSpotifyCollectionView):
+                    return [OpenSpotifyCollectionView(
+                        context.item_id,
+                        context.view,
+                        context.title,
+                        load_more=True,
+                    )]
+                return [Announce("Nie wiadomo, dla którego widoku wczytać elementy")]
             collection = self._spotify_collection_target_from_row(row)
             if collection is not None:
                 state.library_return_id = row.item_id
@@ -2642,17 +2653,23 @@ class Navigator:
         """Apply a named collection view and retain the root focus."""
 
         state = self.sessions[SessionId.SPOTIFY]
-        state.spotify_history.append(self._spotify_snapshot(state))
+        if not intent.load_more:
+            state.spotify_history.append(self._spotify_snapshot(state))
         state.library_view = LibraryView.SPOTIFY_CONTAINER
         state.library_playlist_id = None
         state.library_return_view = heading
         state.spotify_heading = heading
-        state.spotify_context = intent
+        state.spotify_context = OpenSpotifyCollectionView(
+            intent.item_id,
+            intent.view,
+            intent.title,
+        )
         state.model.replace(rows, preferred_id=preferred_id)
         state.view = View.LIST
+        count = sum(row.kind != "loadMore" for row in rows)
         return [Announce(
-            f"{heading}, {len(rows)} {_items_word(len(rows))}"
-            if rows else f"{heading}, pusto"
+            f"{heading}, {count} {_items_word(count)}"
+            if count else f"{heading}, pusto"
         )]
 
     @staticmethod

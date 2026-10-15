@@ -87,23 +87,29 @@ def test_spotify_root_reads_status_and_applies_only_user_labels() -> None:
     assert messages == ["Katalog Spotify nie jest skonfigurowany."]
 
 
-def test_spotify_collection_view_passes_only_the_private_view_key_to_host() -> None:
+def test_spotify_collection_view_requests_first_page_and_adds_load_more_row() -> None:
     calls = []
     intent = OpenSpotifyCollectionView(
         "spotify-collection:artists", "artists", "Wykonawcy"
     )
     frame = SimpleNamespace(
         client=SimpleNamespace(
-            spotify_collection_view=lambda view: (
-                calls.append(("host", view))
-                or {"heading": "Wykonawcy Spotify", "items": [], "warning": ""}
+            spotify_collection_view=lambda view, *, loaded_count: (
+                calls.append(("host", view, loaded_count))
+                or {
+                    "heading": "Wykonawcy Spotify",
+                    "items": [],
+                    "warning": "",
+                    "hasMore": True,
+                }
             )
         ),
         _spotify_navigation_version=0,
+        _spotify_loaded_counts={},
         navigator=SimpleNamespace(
             active=SessionId.SPOTIFY,
-            apply_spotify_collection_view=lambda received, heading, rows: (
-                calls.append(("apply", received, heading, rows)) or []
+            apply_spotify_collection_view=lambda received, heading, rows, preferred_id=None: (
+                calls.append(("apply", received, heading, rows, preferred_id)) or []
             ),
         ),
         runner=ImmediateRunner(),
@@ -113,8 +119,68 @@ def test_spotify_collection_view_passes_only_the_private_view_key_to_host() -> N
 
     LiteFrame._open_spotify_collection_view(frame, intent)
 
-    assert calls[0] == ("host", "artists")
-    assert calls[1] == ("apply", intent, "Wykonawcy Spotify", [])
+    assert calls[0] == ("host", "artists", 150)
+    assert calls[1][0:3] == ("apply", intent, "Wykonawcy Spotify")
+    assert [row.title for row in calls[1][3]] == ["Załaduj więcej"]
+    assert calls[1][4] is None
+
+
+def test_spotify_load_more_requests_next_page_and_focuses_first_new_item() -> None:
+    calls = []
+    intent = OpenSpotifyCollectionView(
+        "spotify-collection:liked",
+        "liked",
+        "Polubione utwory",
+        load_more=True,
+    )
+    items = [
+        {
+            "id": f"private-row-{index}",
+            "externalId": f"track{index}",
+            "title": f"Utwór {index}",
+            "kind": "track",
+        }
+        for index in range(151)
+    ]
+    frame = SimpleNamespace(
+        client=SimpleNamespace(
+            spotify_collection_view=lambda view, *, loaded_count: (
+                calls.append(("host", view, loaded_count))
+                or {
+                    "heading": "Polubione utwory Spotify",
+                    "items": items,
+                    "warning": "",
+                    "hasMore": False,
+                }
+            )
+        ),
+        _spotify_navigation_version=0,
+        _spotify_loaded_counts={"liked": 150},
+        navigator=SimpleNamespace(
+            active=SessionId.SPOTIFY,
+            apply_spotify_collection_view=(
+                lambda received, heading, rows, preferred_id=None: (
+                    calls.append(("apply", received, heading, rows, preferred_id))
+                    or []
+                )
+            ),
+        ),
+        runner=ImmediateRunner(),
+        announcer=SimpleNamespace(say=lambda message: calls.append(("say", message))),
+        _run=lambda events: calls.append(("run", events)),
+    )
+
+    LiteFrame._open_spotify_collection_view(frame, intent)
+
+    assert calls[0] == ("host", "liked", 300)
+    assert calls[1][0:3] == (
+        "apply",
+        intent,
+        "Polubione utwory Spotify",
+    )
+    assert len(calls[1][3]) == 151
+    assert calls[1][4] == "private-row-150"
+    assert frame._spotify_loaded_counts == {"liked": 151}
 
 
 def test_spotify_artist_section_uses_the_read_only_container_contract() -> None:
@@ -248,8 +314,11 @@ def test_busy_spotify_collection_enter_is_retried_without_speaking_error() -> No
         "spotify-collection:artists", "artists", "Wykonawcy"
     )
     frame = SimpleNamespace(
-        client=SimpleNamespace(spotify_collection_view=lambda _view: {}),
+        client=SimpleNamespace(
+            spotify_collection_view=lambda _view, *, loaded_count: {}
+        ),
         _spotify_navigation_version=0,
+        _spotify_loaded_counts={},
         navigator=SimpleNamespace(active=SessionId.SPOTIFY),
         runner=SimpleNamespace(submit=lambda *args: submissions.append(args)),
         announcer=SimpleNamespace(say=messages.append),

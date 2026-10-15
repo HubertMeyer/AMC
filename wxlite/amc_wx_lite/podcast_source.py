@@ -25,6 +25,7 @@ from .library_activity import ordinal_sort_key
 from .library_db import LibraryDatabase
 from .library_views import _stored_order
 from .list_model import Row
+from .paging import PAGE_SIZE
 from .profile_layout import ProfileLayout, resolve_layout
 from .radio_source import (
     SORT_ADDED_NEWEST,
@@ -33,8 +34,6 @@ from .radio_source import (
     collection_sort_modes_from_amc_state,
 )
 
-
-PAGE_SIZE = 150
 _DOTNET_EPOCH = datetime(1, 1, 1, tzinfo=timezone.utc)
 
 

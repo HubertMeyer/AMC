@@ -33,13 +33,13 @@ def test_spotify_static_reads_send_no_account_or_authentication_data() -> None:
     ]
 
 
-def test_spotify_collection_view_sends_only_the_view_name() -> None:
+def test_spotify_collection_view_sends_view_and_cumulative_page_size() -> None:
     client, calls = recording_client()
 
-    client.spotify_collection_view("albums")
+    client.spotify_collection_view("albums", loaded_count=300)
 
     assert calls == [
-        ("spotify.collectionView", {"view": "albums"}, 180.0),
+        ("spotify.collectionView", {"view": "albums", "loadedCount": 300}, 180.0),
     ]
 
 
