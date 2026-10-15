@@ -485,15 +485,55 @@ for _wx_name, _key_name in (
         _SPECIAL_KEYS[getattr(wx, _wx_name)] = _key_name
 
 
+def _windows_virtual_key_down(virtual_key: int) -> bool:
+    """Read the current physical key state when wx omits a modifier bit."""
+
+    if os.name != "nt":
+        return False
+    try:
+        import ctypes
+
+        return bool(int(ctypes.windll.user32.GetAsyncKeyState(virtual_key)) & 0x8000)
+    except (AttributeError, OSError):
+        return False
+
+
 def chord_from_event(event: wx.KeyEvent) -> Chord:
     code = event.GetKeyCode()
     name = _SPECIAL_KEYS.get(code)
+    ctrl = bool(event.ControlDown())
+    shift = bool(event.ShiftDown())
+    alt = bool(event.AltDown())
+    # ``EVT_CHAR_HOOK`` bywa na MSW tłumaczony jak zdarzenie znakowe:
+    # Shift+0 dociera wtedy jako ``)`` (albo WXK_NONE), chociaż użytkownik
+    # nacisnął fizyczny klawisz 0. To rozbija wyłącznie preset 10, bo jego
+    # skrót wymaga dokładnie Ctrl+Shift+0. Surowy kod MSW jest wParam
+    # komunikatu klawiatury, więc VK_0 (0x30) pozostaje zerem niezależnie od
+    # układu i stanu Shift. Bramka jest celowo wąska: nie zmieniamy zwykłego
+    # wpisywania znaków ani innych kombinacji klawiatury.
+    if os.name == "nt":
+        raw_key_code = getattr(event, "GetRawKeyCode", None)
+        try:
+            raw_code = int(raw_key_code()) if callable(raw_key_code) else -1
+        except (TypeError, ValueError, OverflowError):
+            raw_code = -1
+        if raw_code == 0x30:
+            # To ten sam bezpiecznik co ReadEffectiveModifierKeys w starym
+            # AMC. Dla tej kombinacji Windows/wx potrafi zgubić Shift w
+            # obiekcie zdarzenia, mimo że klawisz nadal jest fizycznie
+            # wciśnięty. Nie rozszerzamy odczytu fizycznego stanu na litery,
+            # więc AltGr i pisanie polskich znaków pozostają nietknięte.
+            ctrl = ctrl or _windows_virtual_key_down(0x11)  # VK_CONTROL
+            shift = shift or _windows_virtual_key_down(0x10)  # VK_SHIFT
+            alt = alt or _windows_virtual_key_down(0x12)  # VK_MENU
+            if ctrl and shift and not alt:
+                name = "0"
     if name is None:
         if 32 < code < 127:
             name = chr(code).upper()
         else:
             name = f"#{code}"
-    return Chord(key=name, ctrl=event.ControlDown(), shift=event.ShiftDown(), alt=event.AltDown())
+    return Chord(key=name, ctrl=ctrl, shift=shift, alt=alt)
 
 
 def format_time(seconds: float | None) -> str:

@@ -136,14 +136,26 @@ from amc_wx_lite.navigation import LibraryView, SessionId, View  # noqa: E402
 class FakeKeyEvent:
     """Zdarzenie klawisza o tym samym interfejsie, ktorego uzywa okno."""
 
-    def __init__(self, code: int, ctrl: bool = False, shift: bool = False, alt: bool = False) -> None:
+    def __init__(
+        self,
+        code: int,
+        ctrl: bool = False,
+        shift: bool = False,
+        alt: bool = False,
+        *,
+        raw_code: int | None = None,
+    ) -> None:
         self._code = code
+        self._raw_code = code if raw_code is None else raw_code
         self._ctrl = ctrl
         self._shift = shift
         self._alt = alt
 
     def GetKeyCode(self) -> int:  # noqa: N802 - API wx
         return self._code
+
+    def GetRawKeyCode(self) -> int:  # noqa: N802 - API wx
+        return self._raw_code
 
     def ControlDown(self) -> bool:  # noqa: N802
         return self._ctrl
@@ -210,6 +222,51 @@ def test_ctrl_shift_o_opens_a_folder() -> None:
 def test_digit_keys_switch_sessions() -> None:
     chord = chord_from_event(FakeKeyEvent(ord("1"), ctrl=True))
     assert resolve(chord, player_view=False, radio_session=False) is Action.SESSION_FILES
+
+
+def test_ctrl_shift_zero_uses_physical_windows_key_for_preset_10(monkeypatch) -> None:
+    """MSW CHAR_HOOK may expose Shift+0 as ``)`` instead of physical zero."""
+
+    monkeypatch.setattr(
+        "amc_wx_lite.gui._windows_virtual_key_down",
+        lambda _virtual_key: False,
+    )
+    chord = chord_from_event(FakeKeyEvent(
+        ord(")"),
+        ctrl=True,
+        shift=True,
+        raw_code=0x30,
+    ))
+    assert chord.canonical == "Ctrl+Shift+0"
+    assert resolve(chord, player_view=False, radio_session=False) is Action.PRESET_10
+
+
+def test_ctrl_shift_zero_recovers_modifier_omitted_by_wx(monkeypatch) -> None:
+    """Stare AMC też musiało dopełniać modyfikatory stanem klawiatury Win32."""
+
+    monkeypatch.setattr(
+        "amc_wx_lite.gui._windows_virtual_key_down",
+        lambda virtual_key: virtual_key in (0x11, 0x10),
+    )
+    chord = chord_from_event(FakeKeyEvent(
+        0,
+        raw_code=0x30,
+    ))
+    assert chord.canonical == "Ctrl+Shift+0"
+    assert resolve(chord, player_view=True, radio_session=False) is Action.PRESET_10
+
+
+def test_raw_zero_does_not_rewrite_ordinary_shift_zero(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "amc_wx_lite.gui._windows_virtual_key_down",
+        lambda _virtual_key: False,
+    )
+    chord = chord_from_event(FakeKeyEvent(
+        ord(")"),
+        shift=True,
+        raw_code=0x30,
+    ))
+    assert chord.canonical == "Shift+)"
 
 
 def test_shift_f6_returns_to_the_list() -> None:
