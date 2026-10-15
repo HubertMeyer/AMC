@@ -3,6 +3,61 @@
 Ten plik jest krótkim punktem startowym po pracach zakończonych 14 października
 2026 r. Szczegółowy stan pozostaje w `AMC_PYTHON_STAN_2026-10-10_PL.md`.
 
+## Aktualizacja 15 października 2026, godz. 13:57
+
+Etap drobnych poprawek przed Spotify został ukończony, przetestowany, zbudowany
+i zainstalowany w kanonicznej instalacji `D:\Projekty Codex\AMC Python`.
+
+- źródło instalacji: `80fb0792971d815498cbcdf9b7457e0a77de7c18`;
+- kompilacja: `2026.10.15-80fb0792971d815498cbcdf9b7457e0a77de7c18-d8dc97e6`;
+- tytuł uruchomionego okna: `AMC Python — 15.10.2026, 13:57`;
+- manifest i instalacja: 603 pliki, zgodny commit i identyfikator zawartości;
+- pełny zestaw głównej gałęzi: 1565 testów zaliczonych, 110 pominiętych
+  historycznych, 11 podtestów zaliczonych, zero błędów;
+- przed aktualizacją oraz po niej nie było procesu nagrywania ani żadnego
+  pliku `.amc-partial`; odtwarzanie mogło zostać przerwane przez bezpieczny
+  restart;
+- repozytorium jest czyste poza zapleczem `.test-output` i `.test-tmp`.
+
+Ukończone przyrosty:
+
+1. `Shift+F2`: naprawiono rzeczywisty wyścig między zatwierdzeniem dialogu a
+   Enterem wracającym do listy. Testy wykonują prawdziwą zmianę nazwy pliku
+   tymczasowego, także w historii nagrywania, dla zmiany samej wielkości liter,
+   blokady pliku oraz zachowania fokusu. Pozostaje krótki odbiór użytkownika
+   z NVDA w zainstalowanej wersji.
+2. WiiM i Sonos: wspólna lewa strzałka podaje dostępne parametry własnych
+   strumieni i pozycje tylko do odczytu bez ujawniania identyfikatorów;
+   `Ctrl+F` przeszukuje bieżące listy, a globalne wyniki zachowują stabilną
+   tożsamość i nie zapisują niczego.
+3. Skróty globalne: `Ctrl+H`, `Ctrl+L`, `Alt+R` i `Alt+Shift+R` dochodzą z
+   list oraz odtwarzacza. Wspólna Historia zachowuje sesję, widok i fokus;
+   poprawiono też utratę zapamiętanego folderu przy późniejszym `Ctrl+L`.
+4. TIDAL: `Ctrl+F` korzysta z katalogu online, zachowuje typ i tożsamość
+   wyniku; Enter na wykonawcy nie wybiera arbitralnego albumu. Prawa strzałka
+   w wynikach wyszukiwania otwiera relacje, a wykonawca prowadzi do albumów,
+   utworów i podobnych wykonawców. Samo wyszukanie i przeglądanie nie zapisuje
+   elementu do kolekcji. Radio Browser także odtwarza wynik przejściowo bez
+   automatycznego dopisania stacji.
+5. Zależności: dodano `scripts\Prepare-AMCDevelopmentDependencies.ps1`,
+   `scripts\Use-AMCDevelopmentEnvironment.ps1` i raport
+   `ZALEZNOSCI_AMC_STAN_PL.md`. Trwały cache znajduje się w
+   `D:\Projekty Codex\AMC - zależności`; Rust/MSVC, .NET, Node/pnpm,
+   wxPython i pytest są sprawdzone także offline. Skrypt ustawia rzeczywistą
+   ścieżkę Windowsowego `dotnet`, więc testy nie wracają do historycznej
+   ścieżki `/home/michal/dotnet/dotnet`.
+
+Rozpoczęto pierwszy etap Spotify bez logowania i bez operacji na koncie.
+Aktualny wx/LiteHost nie ma jeszcze sesji Spotify. W osobnych gałęziach są
+przygotowywane: tylko-do-odczytu kontrakt LiteHost, model jednej sesji wx oraz
+pakowanie istniejącego przypiętego hosta Librespot. Wzorzec interfejsu stanowi
+nowy TIDAL po powyższych poprawkach; stary WPF pozostaje wyłącznie technicznym
+źródłem wiedzy o Web API, OAuth i Librespot.
+
+Najbliższy odbiór użytkownika obecnej kompilacji: `Shift+F2`, TIDAL po
+wyszukaniu wykonawcy i prawa strzałka, `Ctrl+H`, WiiM/Sonos oraz `Ctrl+F`.
+Nowy błąd z tego odbioru ma pierwszeństwo przed dalszą instalacją Spotify.
+
 ## Właściwy projekt i instalacja
 
 - Aktywny projekt: `D:\Projekty Codex\AMC - integracja wxPython`.
