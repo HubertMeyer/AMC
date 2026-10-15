@@ -4999,6 +4999,12 @@ class LiteFrame(wx.Frame):
                 TIDAL_VIEW_PLAYLISTS,
             )
         }
+        self._spotify_effective_sort_modes = {
+            scope: state.spotify_sort_modes.get(scope, SORT_ADDED_NEWEST)
+            for scope in (
+                "liked", "albums", "artists", "playlists", "podcasts", "episodes",
+            )
+        }
         # Kazde otwarcie katalogu ma numer. Odpowiedz rozpoczęta przed
         # opuszczeniem sesji nie moze po powrocie podmienic nowszej listy.
         self._tidal_navigation_version = 0
@@ -5482,6 +5488,19 @@ class LiteFrame(wx.Frame):
             and session.view is View.LIST
             and tidal_scope is not None
         )
+        spotify_scope = (
+            session.spotify_context.view
+            if (
+                self.navigator.active is SessionId.SPOTIFY
+                and session.view is View.LIST
+                and isinstance(
+                    session.spotify_context,
+                    OpenSpotifyCollectionView,
+                )
+            )
+            else None
+        )
+        spotify_collection = spotify_scope is not None
         has_row = session.model.selected_row is not None
         selected_row = session.model.selected_row
         selected_kind = (
@@ -5561,6 +5580,11 @@ class LiteFrame(wx.Frame):
             Action.SORT_TIDAL_COLLECTION_ALPHABETICAL: SORT_ALPHABETICAL,
             Action.SORT_TIDAL_COLLECTION_CUSTOM: SORT_CUSTOM,
         }
+        spotify_sort_actions = {
+            Action.SORT_SPOTIFY_COLLECTION_ADDED: SORT_ADDED_NEWEST,
+            Action.SORT_SPOTIFY_COLLECTION_ALPHABETICAL: SORT_ALPHABETICAL,
+            Action.SORT_SPOTIFY_COLLECTION_CATALOG: SORT_CUSTOM,
+        }
         wiim_sort_actions = {
             Action.SORT_WIIM_NETWORK_STREAMS_ADDED: SORT_ADDED_NEWEST,
             Action.SORT_WIIM_NETWORK_STREAMS_ALPHABETICAL: SORT_ALPHABETICAL,
@@ -5584,6 +5608,8 @@ class LiteFrame(wx.Frame):
             if entry.needs_podcast_inbox and not podcast_inbox:
                 enabled = False
             if entry.needs_tidal_collection and not tidal_collection:
+                enabled = False
+            if entry.needs_spotify_collection and not spotify_collection:
                 enabled = False
             if entry.needs_wiim_stream and (
                 self.navigator.active is not SessionId.WIIM
@@ -5681,6 +5707,14 @@ class LiteFrame(wx.Frame):
                     and tidal_sort_actions[entry.action]
                     == self._tidal_effective_sort_modes.get(
                         tidal_scope, SORT_ADDED_NEWEST
+                    )
+                )
+            elif entry.checkable and entry.action in spotify_sort_actions:
+                item.Check(
+                    spotify_scope is not None
+                    and spotify_sort_actions[entry.action]
+                    == self._spotify_effective_sort_modes.get(
+                        spotify_scope, SORT_ADDED_NEWEST
                     )
                 )
             elif entry.checkable and entry.action in wiim_sort_actions:
@@ -8062,12 +8096,17 @@ class LiteFrame(wx.Frame):
             previous_count,
             load_more=intent.load_more,
         )
+        sort_mode = getattr(self, "_spotify_effective_sort_modes", {}).get(
+            intent.view,
+            SORT_ADDED_NEWEST,
+        )
 
         def work():
             return spotify_container_result_from_payload(
                 client.spotify_collection_view(
                     intent.view,
                     loaded_count=requested,
+                    sort_mode=sort_mode,
                 )
             )
 
@@ -8080,7 +8119,7 @@ class LiteFrame(wx.Frame):
             rows = list(result.rows)
             loaded_count = len(rows)
             self._spotify_loaded_counts[intent.view] = loaded_count
-            preferred_id = None
+            preferred_id = intent.preferred_id
             if intent.load_more and previous_count < loaded_count:
                 preferred_id = rows[previous_count].item_id
             if result.has_more:
@@ -8560,6 +8599,14 @@ class LiteFrame(wx.Frame):
                 LibraryView.TIDAL_PLAYLISTS,
             )
         )
+        spotify_collection = (
+            not player
+            and self.navigator.active is SessionId.SPOTIFY
+            and isinstance(
+                self.navigator.session.spotify_context,
+                OpenSpotifyCollectionView,
+            )
+        )
         # WPF czyści aktywny filtr także wtedy, gdy fokus jest już na wynikach.
         if not player and chord.canonical == "Escape" and self.filter_box.GetValue():
             self._clear_filter_and_return()
@@ -8623,6 +8670,7 @@ class LiteFrame(wx.Frame):
             tidal_session=self.navigator.active is SessionId.TIDAL,
             tidal_collection=tidal_collection,
             spotify_session=self.navigator.active is SessionId.SPOTIFY,
+            spotify_collection=spotify_collection,
             wiim_session=self.navigator.active is SessionId.WIIM,
             wiim_streams=(
                 not player
@@ -9030,6 +9078,12 @@ class LiteFrame(wx.Frame):
             Action.SORT_TIDAL_COLLECTION_CUSTOM,
         ):
             self._set_tidal_collection_sort(action)
+        elif action in (
+            Action.SORT_SPOTIFY_COLLECTION_ADDED,
+            Action.SORT_SPOTIFY_COLLECTION_ALPHABETICAL,
+            Action.SORT_SPOTIFY_COLLECTION_CATALOG,
+        ):
+            self._set_spotify_collection_sort(action)
         elif action is Action.REFRESH_PODCAST:
             self._refresh_podcasts(refresh_all=False)
         elif action is Action.REFRESH_PODCAST_LIBRARY:
@@ -12296,6 +12350,68 @@ class LiteFrame(wx.Frame):
             state.library_view,
             preferred_id=state.model.selected_id,
             announcement=label,
+        ))
+
+    def _set_spotify_collection_sort(self, action: Action) -> None:
+        """Alt+1/2/3 for a named Spotify collection, outside nested items."""
+
+        state = self.navigator.sessions[SessionId.SPOTIFY]
+        context = state.spotify_context
+        if (
+            self.navigator.active is not SessionId.SPOTIFY
+            or state.view is not View.LIST
+            or not isinstance(context, OpenSpotifyCollectionView)
+        ):
+            self.announcer.say(
+                "Sortowanie Alt+1, Alt+2 i Alt+3 działa w głównych "
+                "kolekcjach Spotify"
+            )
+            return
+
+        choices = {
+            Action.SORT_SPOTIFY_COLLECTION_ADDED: (
+                SORT_ADDED_NEWEST,
+                "Według dodania, najnowsze na początku",
+            ),
+            Action.SORT_SPOTIFY_COLLECTION_ALPHABETICAL: (
+                SORT_ALPHABETICAL,
+                "Alfabetycznie",
+            ),
+            Action.SORT_SPOTIFY_COLLECTION_CATALOG: (
+                SORT_CUSTOM,
+                "Kolejność katalogu Spotify",
+            ),
+        }
+        choice = choices.get(action)
+        if choice is None:
+            return
+        mode, label = choice
+        scope = context.view
+        previous_modes = dict(self.state.spotify_sort_modes)
+        previous_effective = self._spotify_effective_sort_modes.get(scope)
+        self.state.spotify_sort_modes[scope] = mode
+        self._spotify_effective_sort_modes[scope] = mode
+        if not self._save_state():
+            self.state.spotify_sort_modes = previous_modes
+            if previous_effective is None:
+                self._spotify_effective_sort_modes.pop(scope, None)
+            else:
+                self._spotify_effective_sort_modes[scope] = previous_effective
+            self._refresh_menu_state()
+            return
+
+        # Nowy porządek musi zacząć od pierwszej porcji. Host sortuje pełną
+        # kolekcję PRZED stronicowaniem, więc kolejne „Załaduj więcej” pozostaje
+        # stabilne i nie dubluje pozycji z poprzedniego układu.
+        self._spotify_loaded_counts.pop(scope, None)
+        self._refresh_menu_state()
+        self.announcer.say(label)
+        self._open_spotify_collection_view(OpenSpotifyCollectionView(
+            context.item_id,
+            scope,
+            context.title,
+            preferred_id=state.model.selected_id,
+            replace_current=True,
         ))
 
     def _open_podcast_aggregate(
@@ -19345,6 +19461,15 @@ class LiteFrame(wx.Frame):
                     LibraryView.TIDAL_LIBRARY,
                     LibraryView.TIDAL_FAVORITES,
                     LibraryView.TIDAL_PLAYLISTS,
+                )
+            ),
+            spotify_session=self.navigator.active is SessionId.SPOTIFY,
+            spotify_collection=(
+                not player
+                and self.navigator.active is SessionId.SPOTIFY
+                and isinstance(
+                    session.spotify_context,
+                    OpenSpotifyCollectionView,
                 )
             ),
             wiim_session=self.navigator.active is SessionId.WIIM,

@@ -144,6 +144,9 @@ def _row(entry: object) -> Row | None:
         related_artist_name=_text(entry.get("relatedArtistName")),
         related_podcast_service_id=related_podcast_service_id,
         related_podcast_title=related_podcast_title,
+        collection_added_ticks=(
+            _ticks(entry.get("collectionAddedUtcTicks")) or None
+        ),
         duration_ticks=duration,
     )
 
@@ -360,10 +363,18 @@ def artist_overview_rows(artist: Row) -> tuple[Row, ...]:
 def information_text(row: Row) -> str:
     """One deliberate Left-Arrow announcement without technical values."""
 
-    values: list[str] = [row.title]
-    if row.artist_name:
-        values.append(f"Wykonawca: {row.artist_name}")
+    # Nazwę właśnie przeczytała natywna lista po ustawieniu fokusu. Tak samo
+    # jak wspólny QuickMediaInformationFormatter ze starego AMC, lewa
+    # strzałka podaje wyłącznie informację UZUPEŁNIAJĄCĄ i nie powtarza
+    # tytułu. Katalog Spotify nie przekazuje rzeczywistego bitrate ani kodeka,
+    # więc uczciwie nazywamy źródło, ale nie zgadujemy parametrów Librespota.
+    values: list[str] = [
+        "Strumień Spotify" if row.kind in _PLAYABLE_KINDS
+        else "Katalog Spotify"
+    ]
     values.append(f"Rodzaj: {row.kind_label or 'element'}")
+    if row.artist_name and row.artist_name.casefold() != row.title.casefold():
+        values.append(f"Wykonawca: {row.artist_name}")
     if row.kind == "track" and row.related_album_title:
         values.append(f"Album: {row.related_album_title}")
     if row.kind == "episode" and row.related_podcast_title:
@@ -372,6 +383,8 @@ def information_text(row: Row) -> str:
         values.append(
             f"Czas: {format_duration(row.duration_ticks / 10_000_000)}"
         )
+    if row.activation_message:
+        values.append(row.activation_message)
 
     result: list[str] = []
     seen: set[str] = set()

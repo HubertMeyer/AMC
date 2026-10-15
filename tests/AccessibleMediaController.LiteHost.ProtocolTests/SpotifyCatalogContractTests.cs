@@ -16,6 +16,7 @@ internal static class SpotifyCatalogContractTests
         CollectionViewRequestUsesSafeCumulativePageSizes();
         CollectionViewsKeepUnavailableSavedItems();
         CollectionViewsPageAfterFilteringAndKeepSourceOrder();
+        CollectionViewsSortBeforePaging();
         SearchRowsHaveExplicitAccessibleLabelsWithoutPrivateHandles();
         ContainerRequestAcceptsOnlyMatchingSpotifyIdentity();
         ContainerResultNeverUsesIdentifiersInItsHeading();
@@ -163,6 +164,18 @@ internal static class SpotifyCatalogContractTests
                 == LiteSpotifyCatalogContract.CollectionPageSize
             && LiteSpotifyCatalogContract.ReadCollectionLoadedCount(nextPage.RootElement) == 300,
             "rozmiar porcji kolekcji nie ma bezpiecznego domyślnego minimum");
+        Check(LiteSpotifyCatalogContract.ReadCollectionSortMode(missing.RootElement)
+                == "AddedNewest",
+            "brak trybu sortowania nie wraca do bezpiecznego porządku domyślnego");
+        using var alphabetical = JsonDocument.Parse(
+            """{"view":"liked","sortMode":"Alphabetical"}""");
+        using var invalidSort = JsonDocument.Parse(
+            """{"view":"liked","sortMode":"TechnicalEnum { value = 1 }"}""");
+        Check(LiteSpotifyCatalogContract.ReadCollectionSortMode(alphabetical.RootElement)
+                == "Alphabetical"
+            && LiteSpotifyCatalogContract.ReadCollectionSortMode(invalidSort.RootElement)
+                == "AddedNewest",
+            "tryb sortowania przyjął techniczną lub nieznaną wartość");
     }
 
     private static void CollectionViewsPageAfterFilteringAndKeepSourceOrder()
@@ -198,6 +211,52 @@ internal static class SpotifyCatalogContractTests
         Check(second.Items.Count == 152 && !second.HasMore
             && second.Items[^1].Title == "Utwór 151",
             "druga porcja nie odsłoniła reszty w tej samej kolejności");
+    }
+
+    private static void CollectionViewsSortBeforePaging()
+    {
+        var items = Enumerable.Range(0, 151)
+            .Select(index => Item(
+                MediaItemKind.Track,
+                $"track{index}",
+                $"Z utwór {index:000}",
+                favorite: true))
+            .ToList();
+        items.Add(Item(
+            MediaItemKind.Track,
+            "alphabeticalFirst",
+            "A pierwszy",
+            favorite: true));
+
+        var alphabetical = LiteSpotifyCatalogContract.CreateCollectionViewResult(
+            "liked",
+            items,
+            loadedCount: 150,
+            sortMode: "Alphabetical");
+        Check(alphabetical.Items.Count == 150
+            && alphabetical.HasMore
+            && alphabetical.Items[0].Title == "A pierwszy",
+            "sortowanie alfabetyczne zostało wykonane dopiero po stronicowaniu");
+
+        var oldest = Item(MediaItemKind.Track, "oldest", "Najstarszy", favorite: true);
+        oldest.CollectionAddedUtcTicks = 10;
+        var newest = Item(MediaItemKind.Track, "newest", "Najnowszy", favorite: true);
+        newest.CollectionAddedUtcTicks = 30;
+        var undated = Item(MediaItemKind.Track, "undated", "Bez daty", favorite: true);
+        var added = LiteSpotifyCatalogContract.CreateCollectionViewResult(
+            "liked",
+            [oldest, undated, newest],
+            sortMode: "AddedNewest");
+        var custom = LiteSpotifyCatalogContract.CreateCollectionViewResult(
+            "liked",
+            [oldest, undated, newest],
+            sortMode: "Custom");
+        Check(added.Items.Select(item => item.Title).SequenceEqual(
+                new[] { "Najnowszy", "Najstarszy", "Bez daty" }),
+            "porządek według dodania nie jest stabilny albo źle układa brak daty");
+        Check(custom.Items.Select(item => item.Title).SequenceEqual(
+                new[] { "Najstarszy", "Bez daty", "Najnowszy" }),
+            "kolejność katalogu nie zachowała źródłowego cache Spotify");
     }
 
     private static void SearchRowsHaveExplicitAccessibleLabelsWithoutPrivateHandles()

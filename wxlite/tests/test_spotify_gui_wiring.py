@@ -46,6 +46,48 @@ def test_spotify_album_shortcut_opens_the_same_collection_path_as_enter() -> Non
     )]
 
 
+def test_spotify_sort_reloads_first_page_without_adding_a_history_level() -> None:
+    opened = []
+    spoken = []
+    context = OpenSpotifyCollectionView(
+        "spotify-collection:liked", "liked", "Polubione utwory"
+    )
+    session = SimpleNamespace(
+        view=gui_module.View.LIST,
+        spotify_context=context,
+        model=SimpleNamespace(selected_id="private-track-row"),
+    )
+    frame = SimpleNamespace(
+        navigator=SimpleNamespace(
+            active=SessionId.SPOTIFY,
+            sessions={SessionId.SPOTIFY: session},
+        ),
+        state=LiteState(),
+        _spotify_effective_sort_modes={"liked": "AddedNewest"},
+        _spotify_loaded_counts={"liked": 300},
+        _save_state=lambda: True,
+        _refresh_menu_state=lambda: None,
+        _open_spotify_collection_view=opened.append,
+        announcer=SimpleNamespace(say=spoken.append),
+    )
+
+    LiteFrame._set_spotify_collection_sort(
+        frame,
+        Action.SORT_SPOTIFY_COLLECTION_ALPHABETICAL,
+    )
+
+    assert frame.state.spotify_sort_modes == {"liked": "Alphabetical"}
+    assert frame._spotify_loaded_counts == {}
+    assert spoken == ["Alfabetycznie"]
+    assert opened == [OpenSpotifyCollectionView(
+        "spotify-collection:liked",
+        "liked",
+        "Polubione utwory",
+        preferred_id="private-track-row",
+        replace_current=True,
+    )]
+
+
 def test_spotify_root_reads_status_and_applies_only_user_labels() -> None:
     calls = []
     messages = []
@@ -94,8 +136,8 @@ def test_spotify_collection_view_requests_first_page_and_adds_load_more_row() ->
     )
     frame = SimpleNamespace(
         client=SimpleNamespace(
-            spotify_collection_view=lambda view, *, loaded_count: (
-                calls.append(("host", view, loaded_count))
+            spotify_collection_view=lambda view, *, loaded_count, sort_mode: (
+                calls.append(("host", view, loaded_count, sort_mode))
                 or {
                     "heading": "Wykonawcy Spotify",
                     "items": [],
@@ -119,7 +161,7 @@ def test_spotify_collection_view_requests_first_page_and_adds_load_more_row() ->
 
     LiteFrame._open_spotify_collection_view(frame, intent)
 
-    assert calls[0] == ("host", "artists", 150)
+    assert calls[0] == ("host", "artists", 150, "AddedNewest")
     assert calls[1][0:3] == ("apply", intent, "Wykonawcy Spotify")
     assert [row.title for row in calls[1][3]] == ["Załaduj więcej"]
     assert calls[1][4] is None
@@ -144,8 +186,8 @@ def test_spotify_load_more_requests_next_page_and_focuses_first_new_item() -> No
     ]
     frame = SimpleNamespace(
         client=SimpleNamespace(
-            spotify_collection_view=lambda view, *, loaded_count: (
-                calls.append(("host", view, loaded_count))
+            spotify_collection_view=lambda view, *, loaded_count, sort_mode: (
+                calls.append(("host", view, loaded_count, sort_mode))
                 or {
                     "heading": "Polubione utwory Spotify",
                     "items": items,
@@ -172,7 +214,7 @@ def test_spotify_load_more_requests_next_page_and_focuses_first_new_item() -> No
 
     LiteFrame._open_spotify_collection_view(frame, intent)
 
-    assert calls[0] == ("host", "liked", 300)
+    assert calls[0] == ("host", "liked", 300, "AddedNewest")
     assert calls[1][0:3] == (
         "apply",
         intent,
@@ -315,7 +357,7 @@ def test_busy_spotify_collection_enter_is_retried_without_speaking_error() -> No
     )
     frame = SimpleNamespace(
         client=SimpleNamespace(
-            spotify_collection_view=lambda _view, *, loaded_count: {}
+            spotify_collection_view=lambda _view, *, loaded_count, sort_mode: {}
         ),
         _spotify_navigation_version=0,
         _spotify_loaded_counts={},

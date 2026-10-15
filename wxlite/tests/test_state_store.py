@@ -241,6 +241,21 @@ def test_round_trip_keeps_private_tidal_sort_per_collection_view() -> None:
     }
 
 
+def test_round_trip_keeps_private_spotify_sort_per_collection_view() -> None:
+    store, _ = temp_store()
+    store.save(LiteState(spotify_sort_modes={
+        "liked": "Alphabetical",
+        "albums": "AddedNewest",
+        "podcasts": "Custom",
+    }))
+
+    assert store.load().spotify_sort_modes == {
+        "liked": "Alphabetical",
+        "albums": "AddedNewest",
+        "podcasts": "Custom",
+    }
+
+
 def test_search_history_is_sanitized_bounded_and_kept_per_scope() -> None:
     store, _ = temp_store()
     values = [" Radio ", "radio", *(str(index) for index in range(60)), 7]
@@ -329,6 +344,24 @@ def test_unknown_tidal_sort_views_and_values_are_not_restored_or_rewritten() -> 
     store.save(loaded)
     payload = json.loads(store.path.read_text(encoding="utf-8"))
     assert payload["tidal_sort_modes"] == {"library": "Alphabetical"}
+    assert "technical" not in json.dumps(payload, ensure_ascii=False)
+
+
+def test_unknown_spotify_sort_views_and_values_are_not_restored_or_rewritten() -> None:
+    store, _ = temp_store()
+    store.path.write_text(json.dumps({
+        "spotify_sort_modes": {
+            "liked": "Alphabetical",
+            "episodes": "CollectionSortMode.Custom { technical = 1 }",
+            "secretView": "Custom",
+        }
+    }), encoding="utf-8")
+
+    loaded = store.load()
+    assert loaded.spotify_sort_modes == {"liked": "Alphabetical"}
+    store.save(loaded)
+    payload = json.loads(store.path.read_text(encoding="utf-8"))
+    assert payload["spotify_sort_modes"] == {"liked": "Alphabetical"}
     assert "technical" not in json.dumps(payload, ensure_ascii=False)
 
 

@@ -131,6 +131,9 @@ public static class LiteSpotifyCatalogContract
             CollectionPageSize,
             int.MaxValue);
 
+    public static string ReadCollectionSortMode(JsonElement args) =>
+        NormalizeCollectionSortMode(LiteArgs.ReadText(args, "sortMode"));
+
     public static string ReadSearchQuery(JsonElement args)
     {
         var query = LiteArgs.RequireText(args, "query").Trim();
@@ -177,7 +180,8 @@ public static class LiteSpotifyCatalogContract
         string view,
         IReadOnlyList<MediaItem> items,
         string warning = "",
-        int? loadedCount = null)
+        int? loadedCount = null,
+        string sortMode = "AddedNewest")
     {
         ArgumentNullException.ThrowIfNull(items);
         var filtered = view switch
@@ -202,7 +206,7 @@ public static class LiteSpotifyCatalogContract
         };
         return CreateItemsResult(
             heading,
-            filtered,
+            OrderCollection(filtered, sortMode),
             warning,
             maximumItems: loadedCount);
     }
@@ -302,6 +306,38 @@ public static class LiteSpotifyCatalogContract
             CleanText(heading), visible, CleanText(warning), available,
             hasMore || pageHasMore);
     }
+
+    private static IEnumerable<MediaItem> OrderCollection(
+        IEnumerable<MediaItem> items,
+        string? sortMode)
+    {
+        var indexed = items.Select((item, index) => (Item: item, Index: index));
+        return NormalizeCollectionSortMode(sortMode) switch
+        {
+            "Alphabetical" => indexed
+                .OrderBy(entry => CleanText(entry.Item.Title),
+                    StringComparer.CurrentCultureIgnoreCase)
+                .ThenBy(entry => entry.Index)
+                .Select(entry => entry.Item),
+            // Alt+3 przywraca kolejność źródłowego cache katalogu. Nie
+            // nazywamy jej w interfejsie „własną”, bo ta warstwa tylko do
+            // odczytu nie oferuje ręcznego przestawiania elementów.
+            "Custom" => indexed.Select(entry => entry.Item),
+            _ => indexed
+                .OrderByDescending(entry => entry.Item.CollectionAddedUtcTicks.HasValue)
+                .ThenByDescending(entry => entry.Item.CollectionAddedUtcTicks ?? long.MinValue)
+                .ThenBy(entry => entry.Index)
+                .Select(entry => entry.Item)
+        };
+    }
+
+    private static string NormalizeCollectionSortMode(string? value) =>
+        value?.Trim() switch
+        {
+            "Alphabetical" => "Alphabetical",
+            "Custom" => "Custom",
+            _ => "AddedNewest"
+        };
 
     private static bool IsSupportedItem(MediaItem item) =>
         !string.IsNullOrWhiteSpace(item.Title)

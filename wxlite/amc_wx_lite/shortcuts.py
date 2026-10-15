@@ -278,6 +278,9 @@ class Action(Enum):
     SORT_TIDAL_COLLECTION_ADDED = "tidal.collection.sort.added"
     SORT_TIDAL_COLLECTION_ALPHABETICAL = "tidal.collection.sort.alphabetical"
     SORT_TIDAL_COLLECTION_CUSTOM = "tidal.collection.sort.custom"
+    SORT_SPOTIFY_COLLECTION_ADDED = "spotify.collection.sort.added"
+    SORT_SPOTIFY_COLLECTION_ALPHABETICAL = "spotify.collection.sort.alphabetical"
+    SORT_SPOTIFY_COLLECTION_CATALOG = "spotify.collection.sort.catalog"
     ADD_PODCAST_SOURCE = "podcasts.source.add"
     IMPORT_PODCAST_OPML = "podcasts.opml.import"
     EXPORT_PODCAST_OPML = "podcasts.opml.export"
@@ -497,6 +500,9 @@ SPOTIFY_SUPPORTED_ACTIONS = frozenset({
     Action.SPOTIFY_VIEW_PLAYLISTS,
     Action.SPOTIFY_VIEW_PODCASTS,
     Action.SPOTIFY_VIEW_EPISODES,
+    Action.SORT_SPOTIFY_COLLECTION_ADDED,
+    Action.SORT_SPOTIFY_COLLECTION_ALPHABETICAL,
+    Action.SORT_SPOTIFY_COLLECTION_CATALOG,
     Action.HELP,
     Action.KEYBOARD_HELP,
     Action.VERSION_INFO,
@@ -1073,6 +1079,13 @@ SPOTIFY_SESSION_VIEW: dict[str, Action] = {
 }
 
 
+SPOTIFY_COLLECTION_LIST_VIEW: dict[str, Action] = {
+    "Alt+1": Action.SORT_SPOTIFY_COLLECTION_ADDED,
+    "Alt+2": Action.SORT_SPOTIFY_COLLECTION_ALPHABETICAL,
+    "Alt+3": Action.SORT_SPOTIFY_COLLECTION_CATALOG,
+}
+
+
 TIDAL_COLLECTION_LIST_VIEW: dict[str, Action] = {
     "Alt+1": Action.SORT_TIDAL_COLLECTION_ADDED,
     "Alt+2": Action.SORT_TIDAL_COLLECTION_ALPHABETICAL,
@@ -1151,6 +1164,7 @@ def resolve(
     tidal_session: bool = False,
     tidal_collection: bool = False,
     spotify_session: bool = False,
+    spotify_collection: bool = False,
     wiim_session: bool = False,
     wiim_streams: bool = False,
     sonos_session: bool = False,
@@ -1185,6 +1199,15 @@ def resolve(
         return TIDAL_SESSION_VIEW[canonical]
     if tidal_session and not player_view and canonical in TIDAL_LIST_VIEW:
         return TIDAL_LIST_VIEW[canonical]
+    # Spotify ma sześć równorzędnych korzeni kolekcji. Wewnątrz albumu,
+    # playlisty, podcastu lub wykonawcy cyfry nie mogą uruchomić ani
+    # sortowania, ani lokalnego znaczenia Folderów/Wszystkich plików.
+    if spotify_session and canonical in SPOTIFY_COLLECTION_LIST_VIEW:
+        return (
+            SPOTIFY_COLLECTION_LIST_VIEW[canonical]
+            if not player_view and spotify_collection
+            else None
+        )
     if spotify_session and canonical in SPOTIFY_SESSION_VIEW:
         return SPOTIFY_SESSION_VIEW[canonical]
     if spotify_session and not player_view and canonical in SPOTIFY_LIST_VIEW:
@@ -1393,6 +1416,11 @@ def _help_entries() -> list[tuple[str, str, Action]]:
         ),
         Action.SORT_TIDAL_COLLECTION_ALPHABETICAL: "TIDAL: alfabetycznie",
         Action.SORT_TIDAL_COLLECTION_CUSTOM: "TIDAL: kolejność własna",
+        Action.SORT_SPOTIFY_COLLECTION_ADDED: (
+            "Spotify: według dodania, najnowsze na początku"
+        ),
+        Action.SORT_SPOTIFY_COLLECTION_ALPHABETICAL: "Spotify: alfabetycznie",
+        Action.SORT_SPOTIFY_COLLECTION_CATALOG: "Spotify: kolejność katalogu",
         Action.VIEW_PRESETS: "Pokaż presety aktywnej sesji",
         Action.VIEW_WIIM_NETWORK_STREAMS: "Otwórz zapisane strumienie WiiM",
         Action.WIIM_SELECT_INPUT: "Wybierz wejście urządzenia WiiM",
@@ -1487,6 +1515,7 @@ def _help_entries() -> list[tuple[str, str, Action]]:
         PODCAST_SESSION_VIEW,
         TIDAL_LIST_VIEW,
         SPOTIFY_SESSION_VIEW,
+        SPOTIFY_COLLECTION_LIST_VIEW,
         SPOTIFY_LIST_VIEW,
         WIIM_SESSION_VIEW,
         WIIM_PLAYER_VIEW,

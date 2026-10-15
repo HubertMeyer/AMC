@@ -28,6 +28,7 @@ def _payload() -> dict:
                 "artist": "Wykonawca",
                 "kind": kind,
                 "durationTicks": 120 * 10_000_000 if kind in {"track", "episode"} else 0,
+                "collectionAddedUtcTicks": 638000000000000000,
                 "publicUri": f"https://open.spotify.invalid/{kind}/secret",
                 "relatedAlbumExternalId": "spotify:album:private",
                 "relatedAlbumTitle": "Album użytkowy",
@@ -58,6 +59,7 @@ def test_explicit_payload_accepts_all_user_facing_spotify_kinds() -> None:
     ]
     assert all(row.service_id for row in result.rows)
     assert result.rows[-1].related_podcast_title == "Podcast użytkowy"
+    assert result.rows[-1].collection_added_ticks == 638000000000000000
 
 
 def test_list_search_and_left_information_never_speak_ids_uri_enum_or_repr() -> None:
@@ -81,7 +83,33 @@ def test_list_search_and_left_information_never_speak_ids_uri_enum_or_repr() -> 
     assert "InternalKind" not in all_spoken
     assert "Row(" not in all_spoken
     assert "SessionId" not in all_spoken
-    assert "Podcast użytkowy" in information_text(result.rows[-1])
+    episode_information = information_text(result.rows[-1])
+    assert "Podcast użytkowy" in episode_information
+    assert "Strumień Spotify" in episode_information
+    assert "Rodzaj: odcinek" in episode_information
+    assert "Czas: 2:00" in episode_information
+    assert "Odcinek" not in episode_information
+
+
+def test_left_information_does_not_repeat_the_focused_title_or_invent_bitrate() -> None:
+    rows = (
+        Row(
+            "private-track", "Plastelina", "track",
+            artist_name="Daria ze Śląska",
+            related_album_title="Tu była",
+            duration_ticks=180 * 10_000_000,
+        ),
+        Row(
+            "private-artist", "Daria ze Śląska", "artist",
+            artist_name="Daria ze Śląska",
+        ),
+    )
+
+    for row in rows:
+        text = information_text(row)
+        assert row.title.casefold() not in text.casefold()
+        assert "kb/s" not in text.casefold()
+        assert "kbps" not in text.casefold()
 
 
 def test_malformed_payload_has_one_short_user_facing_error() -> None:

@@ -44,6 +44,7 @@ internal sealed class LiteSpotifyCatalogCoordinator(
     {
         var view = LiteSpotifyCatalogContract.ReadCollectionView(args);
         var loadedCount = LiteSpotifyCatalogContract.ReadCollectionLoadedCount(args);
+        var sortMode = LiteSpotifyCatalogContract.ReadCollectionSortMode(args);
         lock (_collectionGate)
         {
             var warning = string.Empty;
@@ -104,7 +105,8 @@ internal sealed class LiteSpotifyCatalogCoordinator(
                 view,
                 _collectionSnapshot,
                 warning,
-                loadedCount);
+                loadedCount,
+                sortMode);
         }
     }
 

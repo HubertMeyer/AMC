@@ -478,11 +478,21 @@ class LiteHostClient:
         """Read the user-facing Spotify collection categories."""
         return self.call("spotify.collectionRoot", timeout=15.0)
 
-    def spotify_collection_view(self, view: str, *, loaded_count: int = 150) -> Any:
+    def spotify_collection_view(
+        self,
+        view: str,
+        *,
+        loaded_count: int = 150,
+        sort_mode: str = "AddedNewest",
+    ) -> Any:
         """Read one Spotify collection view through the C# host."""
         return self.call(
             "spotify.collectionView",
-            {"view": view, "loadedCount": max(150, int(loaded_count))},
+            {
+                "view": view,
+                "loadedCount": max(150, int(loaded_count)),
+                "sortMode": sort_mode,
+            },
             timeout=180.0,
         )
 

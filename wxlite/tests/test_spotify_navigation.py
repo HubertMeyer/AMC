@@ -76,6 +76,9 @@ def test_one_spotify_session_has_user_labels_and_contextual_arrow_shortcuts() ->
         Action.SPOTIFY_VIEW_PLAYLISTS,
         Action.SPOTIFY_VIEW_PODCASTS,
         Action.SPOTIFY_VIEW_EPISODES,
+        Action.SORT_SPOTIFY_COLLECTION_ADDED,
+        Action.SORT_SPOTIFY_COLLECTION_ALPHABETICAL,
+        Action.SORT_SPOTIFY_COLLECTION_CATALOG,
     } <= SPOTIFY_SUPPORTED_ACTIONS
 
 
@@ -238,6 +241,42 @@ def test_collection_load_more_stays_on_level_and_does_not_duplicate_history() ->
     )
     assert len(nav.session.spotify_history) == 1
     assert nav.session.model.selected_row == second_page[1]
+    assert nav.go_to_parent() == []
+    assert nav.session.model.selected_row == root
+
+
+def test_collection_sort_refresh_stays_on_level_and_preserves_focus() -> None:
+    nav = Navigator()
+    nav.active = SessionId.SPOTIFY
+    root = Row(
+        "spotify-collection:liked",
+        "Polubione utwory",
+        "folder",
+        service_id="liked",
+        service_kind="spotifyCollection",
+    )
+    nav.apply_spotify_view("Biblioteka Spotify", [root])
+    intent = nav.activate_selected()[0]
+    nav.apply_spotify_collection_view(intent, "Polubione utwory Spotify", [_track()])
+    history_depth = len(nav.session.spotify_history)
+    sorted_rows = [_track(2), _track()]
+    refresh = OpenSpotifyCollectionView(
+        root.item_id,
+        "liked",
+        "Polubione utwory",
+        preferred_id=sorted_rows[1].item_id,
+        replace_current=True,
+    )
+
+    nav.apply_spotify_collection_view(
+        refresh,
+        "Polubione utwory Spotify",
+        sorted_rows,
+        preferred_id=refresh.preferred_id,
+    )
+
+    assert len(nav.session.spotify_history) == history_depth
+    assert nav.session.model.selected_row == sorted_rows[1]
     assert nav.go_to_parent() == []
     assert nav.session.model.selected_row == root
 

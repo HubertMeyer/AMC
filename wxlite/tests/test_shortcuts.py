@@ -213,6 +213,29 @@ def test_alt_digits_sort_tidal_only_at_collection_roots() -> None:
         ) is None
 
 
+def test_alt_digits_sort_spotify_only_at_collection_roots() -> None:
+    expected = {
+        "1": Action.SORT_SPOTIFY_COLLECTION_ADDED,
+        "2": Action.SORT_SPOTIFY_COLLECTION_ALPHABETICAL,
+        "3": Action.SORT_SPOTIFY_COLLECTION_CATALOG,
+    }
+    for key, action in expected.items():
+        assert resolve(
+            Chord(key, alt=True),
+            player_view=False,
+            radio_session=False,
+            spotify_session=True,
+            spotify_collection=True,
+        ) is action
+        assert resolve(
+            Chord(key, alt=True),
+            player_view=False,
+            radio_session=False,
+            spotify_session=True,
+            spotify_collection=False,
+        ) is None
+
+
 def test_podcast_refresh_matches_the_full_amc_context() -> None:
     # Ctrl+F5 zawsze odswieza cala Biblioteke podcastow. F5 odswieza biezace
     # zrodlo, z jednym swiadomym wyjatkiem: w globalnej skrzynce odswieza

@@ -33,6 +33,9 @@ from .transport_parity import (
 
 _COLLECTION_SORT_MODES = {"AddedNewest", "Alphabetical", "Custom"}
 _TIDAL_SORT_VIEWS = {"library", "favorites", "playlists"}
+_SPOTIFY_SORT_VIEWS = {
+    "liked", "albums", "artists", "playlists", "podcasts", "episodes",
+}
 
 
 def _read_podcast_inbox_sort_mode(raw: object) -> str | None:
@@ -54,6 +57,23 @@ def _read_tidal_sort_modes(raw: object) -> dict[str, str]:
         if (
             isinstance(view, str)
             and view in _TIDAL_SORT_VIEWS
+            and isinstance(mode, str)
+            and mode in _COLLECTION_SORT_MODES
+        )
+    }
+
+
+def _read_spotify_sort_modes(raw: object) -> dict[str, str]:
+    """Keep only the six visible Spotify collections and known sort modes."""
+
+    if not isinstance(raw, dict):
+        return {}
+    return {
+        view: mode
+        for view, mode in raw.items()
+        if (
+            isinstance(view, str)
+            and view in _SPOTIFY_SORT_VIEWS
             and isinstance(mode, str)
             and mode in _COLLECTION_SORT_MODES
         )
@@ -497,6 +517,9 @@ class LiteState:
     #: Prywatny tryb kolejności osobno dla trzech głównych widoków TIDAL.
     #: Brak klucza oznacza dalsze dziedziczenie z profilu pełnego AMC.
     tidal_sort_modes: dict[str, str] = field(default_factory=dict)
+    #: Prywatny tryb kolejności osobno dla sześciu kolekcji Spotify.
+    #: Wartości są wyłącznie modelem; NVDA dostaje jawne polskie etykiety.
+    spotify_sort_modes: dict[str, str] = field(default_factory=dict)
     #: Historia zapytań osobno dla każdej sesji oraz zakresu globalnego.
     #: Zawiera wyłącznie tekst użytkownika, bez wyników i identyfikatorów.
     search_history: dict[str, list[str]] = field(default_factory=dict)
@@ -681,6 +704,9 @@ class StateStore:
             ),
             tidal_queue_items=_read_tidal_queue(raw.get("tidal_queue_items")),
             tidal_sort_modes=_read_tidal_sort_modes(raw.get("tidal_sort_modes")),
+            spotify_sort_modes=_read_spotify_sort_modes(
+                raw.get("spotify_sort_modes")
+            ),
             search_history=_read_search_history(raw.get("search_history")),
             spotify_playback_history=_read_spotify_history(
                 raw.get("spotify_playback_history")
@@ -737,6 +763,9 @@ class StateStore:
         tidal_sort_modes = _read_tidal_sort_modes(state.tidal_sort_modes)
         if tidal_sort_modes:
             payload["tidal_sort_modes"] = tidal_sort_modes
+        spotify_sort_modes = _read_spotify_sort_modes(state.spotify_sort_modes)
+        if spotify_sort_modes:
+            payload["spotify_sort_modes"] = spotify_sort_modes
         payload["search_history"] = _read_search_history(state.search_history)
         payload["spotify_playback_history"] = _read_spotify_history(
             state.spotify_playback_history

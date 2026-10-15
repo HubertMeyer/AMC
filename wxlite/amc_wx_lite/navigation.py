@@ -370,6 +370,10 @@ class OpenSpotifyCollectionView:
     view: str
     title: str
     load_more: bool = False
+    preferred_id: str | None = None
+    #: Zmiana sortowania odświeża ten sam widok i nie tworzy sztucznego
+    #: poziomu, z którego trzeba byłoby potem wychodzić Escape.
+    replace_current: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -2653,7 +2657,7 @@ class Navigator:
         """Apply a named collection view and retain the root focus."""
 
         state = self.sessions[SessionId.SPOTIFY]
-        if not intent.load_more:
+        if not intent.load_more and not intent.replace_current:
             state.spotify_history.append(self._spotify_snapshot(state))
         state.library_view = LibraryView.SPOTIFY_CONTAINER
         state.library_playlist_id = None

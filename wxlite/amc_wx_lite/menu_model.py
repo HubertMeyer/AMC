@@ -71,6 +71,8 @@ class MenuItem:
     needs_podcast_inbox: bool = False
     #: Aktywna wyłącznie w jednym z trzech głównych widoków kolekcji TIDAL.
     needs_tidal_collection: bool = False
+    #: Aktywna wyłącznie w jednym z sześciu głównych widoków Spotify.
+    needs_spotify_collection: bool = False
     #: Aktywna tylko na liście zapisanych strumieni, nie na urządzeniu WiiM.
     needs_wiim_stream: bool = False
     #: Aktywna tylko w lokalnej kategorii „Moje stacje” sesji Sonos.
@@ -1078,6 +1080,22 @@ def build_menus(session_order: object = None) -> tuple[Menu, ...]:
                      accelerator=False, checkable=True,
                      needs_tidal_collection=True,
                      visible_sessions=(SessionId.TIDAL,)),
+            SEPARATOR,
+            MenuItem("Spotify: według dodania — &najnowsze najpierw",
+                     Action.SORT_SPOTIFY_COLLECTION_ADDED, shortcut="Alt+1",
+                     accelerator=False, checkable=True,
+                     needs_spotify_collection=True,
+                     visible_sessions=(SessionId.SPOTIFY,)),
+            MenuItem("Spotify: &alfabetycznie",
+                     Action.SORT_SPOTIFY_COLLECTION_ALPHABETICAL,
+                     shortcut="Alt+2", accelerator=False, checkable=True,
+                     needs_spotify_collection=True,
+                     visible_sessions=(SessionId.SPOTIFY,)),
+            MenuItem("Spotify: &kolejność katalogu",
+                     Action.SORT_SPOTIFY_COLLECTION_CATALOG, shortcut="Alt+3",
+                     accelerator=False, checkable=True,
+                     needs_spotify_collection=True,
+                     visible_sessions=(SessionId.SPOTIFY,)),
             SEPARATOR,
             MenuItem("WiiM: według dodania, najnowsze najpierw (&1)",
                      Action.SORT_WIIM_NETWORK_STREAMS_ADDED, shortcut="Alt+1",
