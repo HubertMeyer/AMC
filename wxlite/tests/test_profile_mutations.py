@@ -6,6 +6,7 @@ import json
 import os
 import sqlite3
 import tempfile
+import threading
 from contextlib import closing, contextmanager
 import ctypes
 from ctypes import wintypes
@@ -30,6 +31,16 @@ HOST = (
 def _exclusive_windows_file(path: Path):
     """Trzymaj prawdziwy uchwyt bez FILE_SHARE_DELETE podczas próby hosta."""
 
+    handle = _open_exclusive_windows_file(path)
+    try:
+        yield
+    finally:
+        _close_windows_handle(handle)
+
+
+def _open_exclusive_windows_file(path: Path) -> int:
+    """Otwórz plik bez współdzielenia, tak jak uchwyt jeszcze gaszonego dekodera."""
+
     if os.name != "nt":
         raise RuntimeError("Test blokady pliku wymaga Windows")
     create_file = ctypes.windll.kernel32.CreateFileW
@@ -43,9 +54,6 @@ def _exclusive_windows_file(path: Path):
         wintypes.HANDLE,
     ]
     create_file.restype = wintypes.HANDLE
-    close_handle = ctypes.windll.kernel32.CloseHandle
-    close_handle.argtypes = [wintypes.HANDLE]
-    close_handle.restype = wintypes.BOOL
     handle = create_file(
         str(path),
         0x80000000,  # GENERIC_READ
@@ -57,10 +65,14 @@ def _exclusive_windows_file(path: Path):
     )
     if handle == wintypes.HANDLE(-1).value:
         raise ctypes.WinError(ctypes.get_last_error())
-    try:
-        yield
-    finally:
-        close_handle(handle)
+    return int(handle)
+
+
+def _close_windows_handle(handle: int) -> None:
+    close_handle = ctypes.windll.kernel32.CloseHandle
+    close_handle.argtypes = [wintypes.HANDLE]
+    close_handle.restype = wintypes.BOOL
+    close_handle(handle)
 
 
 def _library(path: Path, media: Path) -> None:
@@ -202,6 +214,8 @@ def test_profile_edits_go_through_the_real_host() -> None:
         fresh_history_media.write_bytes(b"fresh history")
         busy_media = root / "zajety plik.mp3"
         busy_media.write_bytes(b"busy")
+        releasing_media = root / "plik zwalniany przez odtwarzacz.mp3"
+        releasing_media.write_bytes(b"decoder")
         library = root / "library.db"
         podcasts = root / "podcasts.db"
         state = root / "state.json"
@@ -220,6 +234,11 @@ def test_profile_edits_go_through_the_real_host() -> None:
                 "INSERT INTO local_items(id,title,has_custom_title,path) "
                 "VALUES('local-busy','Zajety plik',0,?)",
                 (str(busy_media),),
+            )
+            database.execute(
+                "INSERT INTO local_items(id,title,has_custom_title,path) "
+                "VALUES('local-releasing','Plik zwalniany przez odtwarzacz',0,?)",
+                (str(releasing_media),),
             )
             database.commit()
         _podcasts(podcasts)
@@ -281,6 +300,35 @@ def test_profile_edits_go_through_the_real_host() -> None:
             assert case_path.exists()
             assert case_path.name == "NOWY PLIK.mp3"
             assert "NOWY PLIK.mp3" in [entry.name for entry in root.iterdir()]
+
+            # Stop odtwarzacza odczepia tor od razu, ale dekoder zamyka uchwyt
+            # w tle. Shift+F2 musi przeczekać ten krótki, rzeczywisty wyścig,
+            # zamiast zwrócić błąd po pierwszym File.Move.
+            releasing_handle = _open_exclusive_windows_file(releasing_media)
+            releasing_lock = threading.Lock()
+            handle_state: list[int] = [releasing_handle]
+
+            def release_decoder_handle() -> None:
+                with releasing_lock:
+                    if handle_state:
+                        _close_windows_handle(handle_state.pop())
+
+            release_timer = threading.Timer(0.25, release_decoder_handle)
+            release_timer.start()
+            try:
+                released_rename = client.rename_local_file(
+                    "local-releasing",
+                    "plik po zwolnieniu dekodera",
+                    path=str(releasing_media),
+                )
+            finally:
+                release_timer.cancel()
+                release_decoder_handle()
+                release_timer.join()
+            released_path = Path(released_rename["path"])
+            assert released_path.name == "plik po zwolnieniu dekodera.mp3"
+            assert released_path.exists()
+            assert not releasing_media.exists()
 
             # Prawdziwie zajęty plik nie może dać pozornego sukcesu ani
             # zmienić modelu. Uchwyt blokuje rename na poziomie Windows.

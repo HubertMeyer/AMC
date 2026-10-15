@@ -22,6 +22,8 @@ namespace AccessibleMediaController.LiteHost;
 /// </summary>
 internal sealed class LiteProfileMutationStore
 {
+    private static readonly TimeSpan LocalFileReleaseTimeout = TimeSpan.FromSeconds(5);
+    private static readonly TimeSpan LocalFileReleaseRetryDelay = TimeSpan.FromMilliseconds(50);
     private readonly object _gate = new();
     private readonly string _libraryDatabasePath;
     private readonly string _podcastsDatabasePath;
@@ -84,7 +86,7 @@ internal sealed class LiteProfileMutationStore
             var moved = false;
             try
             {
-                File.Move(item.Path, targetPath);
+                MoveLocalFileAfterRelease(item.Path, targetPath);
                 moved = true;
                 var title = item.HasCustomTitle
                     ? item.Title
@@ -130,6 +132,37 @@ internal sealed class LiteProfileMutationStore
                     catch { /* Raportujemy pierwotny błąd; stan dysku sprawdzi użytkownik. */ }
                 }
                 throw new LiteRequestException("Nie można zmienić nazwy pliku: " + exception.Message);
+            }
+        }
+    }
+
+    private static void MoveLocalFileAfterRelease(string sourcePath, string targetPath)
+    {
+        // WindowsMediaOutput.Stop odczepia tor natychmiast, ale kosztowne
+        // zamkniecie dekodera i uchwytu pliku wykonuje w tle. Shift+F2 idzie
+        // zaraz potem ta sama droga hosta, wiec pojedyncze File.Move potrafilo
+        // przegrac ten krotki wyscig mimo poprawnego zatrzymania odtwarzania.
+        // Ponawiamy wylacznie przejsciowy IOException, dopoki zrodlo nadal
+        // istnieje i cel nie zostal zajety przez inny wpis. Interfejs czeka
+        // na hosta poza watkiem GUI, a limit jest krotszy od timeoutu klienta.
+        var started = Stopwatch.StartNew();
+        while (true)
+        {
+            try
+            {
+                File.Move(sourcePath, targetPath);
+                return;
+            }
+            catch (IOException) when (
+                started.Elapsed < LocalFileReleaseTimeout
+                && File.Exists(sourcePath)
+                && (!File.Exists(targetPath) && !Directory.Exists(targetPath)
+                    || string.Equals(
+                        sourcePath,
+                        targetPath,
+                        StringComparison.OrdinalIgnoreCase)))
+            {
+                Thread.Sleep(LocalFileReleaseRetryDelay);
             }
         }
     }
