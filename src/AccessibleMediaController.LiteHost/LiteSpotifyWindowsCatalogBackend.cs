@@ -81,6 +81,30 @@ internal sealed class LiteSpotifyWindowsCatalogBackend : ILiteSpotifyReadOnlyBac
         }
     }
 
+    public async Task<string?> GetDescriptionAsync(
+        LiteSpotifyDescriptionRequest request,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        EnsureCatalogReady();
+        try
+        {
+            var credentials = await _integration
+                .GetPlaybackCredentialsAsync(cancellationToken)
+                .ConfigureAwait(false);
+            return await _api.GetPodcastDescriptionAsync(
+                    credentials.AccessToken,
+                    request.ExternalId,
+                    request.Kind,
+                    cancellationToken)
+                .ConfigureAwait(false);
+        }
+        catch (Exception exception)
+        {
+            throw Translate(exception, cancellationToken);
+        }
+    }
+
     public async Task<LiteSpotifyContainerBackendResult> GetContainerItemsAsync(
         LiteSpotifyContainerRequest request,
         CancellationToken cancellationToken)

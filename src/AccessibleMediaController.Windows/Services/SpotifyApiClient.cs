@@ -341,6 +341,36 @@ internal sealed class SpotifyApiClient(HttpClient? httpClient = null) : IDisposa
     }
 
     /// <summary>
+    /// Opis jednego podcastu albo odcinka. To wąski odczyt Alt+D: nie pobiera
+    /// całej listy odcinków tylko po to, aby pokazać kilka zdań opisu.
+    /// </summary>
+    public async Task<string?> GetPodcastDescriptionAsync(
+        string accessToken,
+        string externalId,
+        MediaItemKind kind,
+        CancellationToken cancellationToken)
+    {
+        var serviceType = kind switch
+        {
+            MediaItemKind.Podcast => "shows",
+            MediaItemKind.Episode => "episodes",
+            _ => throw new ArgumentException(
+                "Opis Spotify jest dostępny tylko dla podcastu albo odcinka.",
+                nameof(kind))
+        };
+        using var document = await GetJsonAsync(
+                accessToken,
+                $"{ApiRoot}/{serviceType}/{Uri.EscapeDataString(externalId)}",
+                cancellationToken)
+            .ConfigureAwait(false);
+        var description = Tekst(document.RootElement, "description")?.Trim();
+        ZapiszOpis(
+            $"spotify:{(kind == MediaItemKind.Podcast ? "show" : "episode")}:{externalId}",
+            description);
+        return string.IsNullOrWhiteSpace(description) ? null : description;
+    }
+
+    /// <summary>
     /// Odcinki podcastu, od najnowszego. Spotify zwraca je już w tej kolejności.
     /// </summary>
     public async Task<IReadOnlyList<MediaItem>?> GetShowEpisodesAsync(

@@ -18,10 +18,12 @@ public static class LiteSpotifyCatalogContract
     public const string CollectionViewOperation = "spotify.collectionView";
     public const string ContainerItemsOperation = "spotify.containerItems";
     public const string SearchOperation = "spotify.search";
+    public const string DescriptionOperation = "spotify.description";
 
     private const int MaximumQueryLength = 200;
     private const int MaximumLabelPartLength = 300;
     private const int MaximumExternalIdLength = 128;
+    private const int MaximumDescriptionLength = 50_000;
     public const int CollectionPageSize = 150;
 
     private static readonly IReadOnlyDictionary<string, MediaItemKind> ContainerKinds =
@@ -172,6 +174,28 @@ public static class LiteSpotifyCatalogContract
             CleanText(LiteArgs.ReadText(args, "artist") ?? string.Empty),
             artistSection);
     }
+
+    public static LiteSpotifyDescriptionRequest ReadDescriptionRequest(JsonElement args)
+    {
+        var kindText = LiteArgs.RequireText(args, "kind").Trim();
+        var kind = kindText.ToLowerInvariant() switch
+        {
+            "podcast" => MediaItemKind.Podcast,
+            "episode" => MediaItemKind.Episode,
+            _ => throw new LiteRequestException(
+                "Pełny opis Spotify jest dostępny dla podcastu albo odcinka.")
+        };
+        var externalId = LiteArgs.RequireText(args, "externalId").Trim();
+        if (!TryNormalizeExternalId(externalId, kind, out var normalizedId))
+        {
+            throw new LiteRequestException(
+                "Wybrany podcast lub odcinek Spotify nie ma prawidłowych danych katalogu.");
+        }
+        return new LiteSpotifyDescriptionRequest(kind, normalizedId);
+    }
+
+    public static LiteSpotifyDescriptionResult CreateDescriptionResult(
+        string? description) => new(CleanDescription(description));
 
     public static LiteSpotifyItemsResult CreateSearchResult(IReadOnlyList<MediaItem> items) =>
         CreateItemsResult("Wyniki wyszukiwania Spotify", items);
@@ -397,6 +421,18 @@ public static class LiteSpotifyCatalogContract
         return clean;
     }
 
+    internal static string CleanDescription(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return string.Empty;
+        var clean = new string(value
+            .Where(character => !char.IsControl(character)
+                || character is '\r' or '\n' or '\t')
+            .ToArray()).Trim();
+        return clean.Length <= MaximumDescriptionLength
+            ? clean
+            : clean[..MaximumDescriptionLength].TrimEnd() + "…";
+    }
+
     private static string? NullIfEmpty(string value) => value.Length == 0 ? null : value;
 
     private static string PlanLabel(string? product) => product?.Trim().ToLowerInvariant() switch
@@ -479,6 +515,13 @@ public sealed record LiteSpotifyContainerRequest(
     string Title,
     string Artist,
     string? ArtistSection);
+
+public sealed record LiteSpotifyDescriptionRequest(
+    MediaItemKind Kind,
+    string ExternalId);
+
+public sealed record LiteSpotifyDescriptionResult(
+    [property: JsonPropertyName("description")] string Description);
 
 public sealed record LiteSpotifyItemsResult(
     [property: JsonPropertyName("heading")] string Heading,

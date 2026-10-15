@@ -521,6 +521,14 @@ class LiteHostClient:
         """Search Spotify without changing the account collection."""
         return self.call("spotify.search", {"query": query}, timeout=120.0)
 
+    def spotify_description(self, *, external_id: str, kind: str) -> Any:
+        """Read one podcast or episode description without browsing its list."""
+        return self.call(
+            "spotify.description",
+            {"externalId": external_id, "kind": kind},
+            timeout=30.0,
+        )
+
     def spotify_play(
         self,
         *,

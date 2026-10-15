@@ -79,6 +79,7 @@ def test_one_spotify_session_has_user_labels_and_contextual_arrow_shortcuts() ->
         Action.SORT_SPOTIFY_COLLECTION_ADDED,
         Action.SORT_SPOTIFY_COLLECTION_ALPHABETICAL,
         Action.SORT_SPOTIFY_COLLECTION_CATALOG,
+        Action.SHOW_PODCAST_DESCRIPTION,
     } <= SPOTIFY_SUPPORTED_ACTIONS
 
 

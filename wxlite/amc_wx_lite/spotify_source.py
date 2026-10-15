@@ -11,6 +11,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from .list_model import Row
+from .podcast_source import PodcastDescription
 from .radio_recording import format_duration
 
 
@@ -360,7 +361,21 @@ def artist_overview_rows(artist: Row) -> tuple[Row, ...]:
     )
 
 
-def information_text(row: Row) -> str:
+def container_duration_ticks(rows: tuple[Row, ...] | list[Row]) -> int:
+    """Sum real playable durations returned for one Spotify container."""
+
+    return sum(
+        max(0, row.duration_ticks)
+        for row in rows
+        if row.kind in _PLAYABLE_KINDS
+    )
+
+
+def information_text(
+    row: Row,
+    *,
+    duration_ticks: int | None = None,
+) -> str:
     """One deliberate Left-Arrow announcement without technical values."""
 
     # Nazwę właśnie przeczytała natywna lista po ustawieniu fokusu. Tak samo
@@ -379,9 +394,12 @@ def information_text(row: Row) -> str:
         values.append(f"Album: {row.related_album_title}")
     if row.kind == "episode" and row.related_podcast_title:
         values.append(f"Podcast: {row.related_podcast_title}")
-    if row.duration_ticks:
+    effective_duration = (
+        row.duration_ticks if duration_ticks is None else max(0, duration_ticks)
+    )
+    if effective_duration:
         values.append(
-            f"Czas: {format_duration(row.duration_ticks / 10_000_000)}"
+            f"Czas: {format_duration(effective_duration / 10_000_000)}"
         )
     if row.activation_message:
         values.append(row.activation_message)
@@ -394,3 +412,42 @@ def information_text(row: Row) -> str:
             seen.add(key)
             result.append(value)
     return ", ".join(result)
+
+
+def description_from_payload(
+    payload: object,
+    row: Row,
+) -> PodcastDescription | None:
+    """Build the native Alt+D document without exposing catalogue IDs."""
+
+    if row.kind not in ("podcast", "episode") or not isinstance(payload, dict):
+        return None
+    raw = payload.get("description")
+    if not isinstance(raw, str):
+        return None
+    safe = "".join(
+        character
+        for character in raw
+        if ord(character) >= 32 or character in "\r\n\t"
+    )
+    description = "\n".join(
+        line.strip()
+        for line in safe.replace("\r\n", "\n").replace("\r", "\n").split("\n")
+    ).strip()
+    if not description:
+        return None
+    normalized = " ".join(description.split())
+    if len(normalized) > 500:
+        word_end = normalized.rfind(" ", 0, 500)
+        if word_end < 1:
+            word_end = 500
+        normalized = normalized[:word_end].rstrip() + "…"
+    return PodcastDescription(
+        window_title=(
+            "Opis podcastu Spotify"
+            if row.kind == "podcast"
+            else "Opis odcinka Spotify"
+        ),
+        text=description,
+        initial_focus_name=normalized,
+    )

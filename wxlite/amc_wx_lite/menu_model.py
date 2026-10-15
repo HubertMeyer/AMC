@@ -93,6 +93,8 @@ class MenuItem:
     needs_selection: bool = False
     #: Wymaga zaznaczonego podcastu albo odcinka, nie np. „Załaduj więcej”.
     needs_podcast_item: bool = False
+    #: Wspólny opis Alt+D: lokalny podcast/YouTube albo podcast Spotify.
+    needs_description_item: bool = False
     #: Wymaga elementu, ktory w aktywnej sesji moze nalezec do Ulubionych.
     #: Rozdzielenie tej bramki od samego ``needs_selection`` zapobiega
     #: oferowaniu polecenia m.in. na folderze, albumie TIDAL albo w WiiM.
@@ -330,6 +332,14 @@ def build_menus(session_order: object = None) -> tuple[Menu, ...]:
                 needs_podcast_session=True,
                 needs_podcast_item=True,
                 visible_sessions=PODCASTS_ONLY,
+            ),
+            MenuItem(
+                "Pełny &opis podcastu lub odcinka Spotify…",
+                Action.SHOW_PODCAST_DESCRIPTION,
+                shortcut="Alt+D",
+                accelerator=False,
+                needs_description_item=True,
+                visible_sessions=SPOTIFY_ONLY,
             ),
             SEPARATOR,
             # Backspace dzialal od dawna, ale wylacznie z klawiatury.

@@ -18,7 +18,7 @@ from amc_wx_lite.navigation import (
     ShowSpotifyRelations,
     SpotifyRelationChoice,
 )
-from amc_wx_lite.shortcuts import Action
+from amc_wx_lite.shortcuts import Action, Chord, resolve
 from amc_wx_lite.state_store import LiteState
 
 
@@ -29,6 +29,45 @@ class ImmediateRunner:
             done(work())
         except Exception as error:  # pragma: no cover - diagnostics path
             failed(error)
+
+
+def test_alt_d_is_the_spotify_podcast_description_command() -> None:
+    assert resolve(
+        Chord("D", alt=True),
+        player_view=False,
+        radio_session=False,
+        spotify_session=True,
+    ) is Action.SHOW_PODCAST_DESCRIPTION
+
+
+def test_ctrl_bracket_cycles_real_spotify_outputs_not_a_fixed_denon_name() -> None:
+    calls = []
+    frame = SimpleNamespace(
+        navigator=SimpleNamespace(active=SessionId.SPOTIFY),
+        state=LiteState(audio_output_device_ids_by_session={
+            "spotify": "Interfejs pierwszy",
+        }),
+        _profile_audio_outputs={},
+        client=SimpleNamespace(
+            audio_outputs=lambda selected, session: (
+                calls.append(("list", selected, session))
+                or {"devices": [
+                    {"id": None, "name": "Domyślne urządzenie audio"},
+                    {"id": "Interfejs pierwszy", "name": "Interfejs pierwszy"},
+                    {"id": "Słuchawki USB", "name": "Słuchawki USB"},
+                ]}
+            )
+        ),
+        runner=ImmediateRunner(),
+        announcer=SimpleNamespace(say=lambda message: calls.append(("say", message))),
+        _apply_audio_output_choice=lambda *values: calls.append(("apply", *values)),
+    )
+
+    LiteFrame._cycle_audio_output(frame, 1)
+
+    assert calls[0] == ("list", "Interfejs pierwszy", "spotify")
+    assert calls[1][0] == "apply"
+    assert calls[1][-1].label == "Słuchawki USB"
 
 
 def test_spotify_album_shortcut_opens_the_same_collection_path_as_enter() -> None:
@@ -78,13 +117,14 @@ def test_spotify_sort_reloads_first_page_without_adding_a_history_level() -> Non
 
     assert frame.state.spotify_sort_modes == {"liked": "Alphabetical"}
     assert frame._spotify_loaded_counts == {}
-    assert spoken == ["Alfabetycznie"]
+    assert spoken == []
     assert opened == [OpenSpotifyCollectionView(
         "spotify-collection:liked",
         "liked",
         "Polubione utwory",
         preferred_id="private-track-row",
         replace_current=True,
+        announcement="Alfabetycznie",
     )]
 
 
@@ -165,6 +205,154 @@ def test_spotify_collection_view_requests_first_page_and_adds_load_more_row() ->
     assert calls[1][0:3] == ("apply", intent, "Wykonawcy Spotify")
     assert [row.title for row in calls[1][3]] == ["Załaduj więcej"]
     assert calls[1][4] is None
+
+
+def test_spotify_sort_confirmation_is_spoken_after_the_new_rows_are_applied() -> None:
+    calls = []
+    intent = OpenSpotifyCollectionView(
+        "spotify-collection:albums",
+        "albums",
+        "Albumy",
+        announcement="Alfabetycznie",
+    )
+    frame = SimpleNamespace(
+        client=SimpleNamespace(
+            spotify_collection_view=lambda *_args, **_kwargs: {
+                "heading": "Albumy Spotify",
+                "items": [{
+                    "id": "private-album",
+                    "externalId": "albumprivate",
+                    "title": "Album",
+                    "kind": "album",
+                }],
+            }
+        ),
+        _spotify_navigation_version=0,
+        _spotify_loaded_counts={},
+        navigator=SimpleNamespace(
+            active=SessionId.SPOTIFY,
+            apply_spotify_collection_view=lambda *_args, **_kwargs: (
+                calls.append("apply") or [Announce("Albumy Spotify, 1 pozycja")]
+            ),
+        ),
+        runner=ImmediateRunner(),
+        announcer=SimpleNamespace(say=lambda message: calls.append(("say", message))),
+        _sync_views=lambda: calls.append("sync"),
+        _run=lambda _events: calls.append("run"),
+    )
+
+    LiteFrame._open_spotify_collection_view(frame, intent)
+
+    assert calls == ["apply", "sync", ("say", "Alfabetycznie")]
+
+
+def test_left_arrow_reads_total_spotify_album_duration_without_moving_focus() -> None:
+    album = Row(
+        "private-album-row",
+        "Album",
+        "album",
+        service_id="privatealbum",
+        service_kind="album",
+        artist_name="Wykonawca",
+    )
+    model = SimpleNamespace(selected_row=album)
+    spoken = []
+    frame = SimpleNamespace(
+        client=SimpleNamespace(
+            spotify_container_items=lambda **_kwargs: {
+                "heading": "Album, Album",
+                "items": [
+                    {
+                        "id": "private-track-1",
+                        "externalId": "trackone",
+                        "title": "Pierwszy",
+                        "kind": "track",
+                        "durationTicks": 120 * 10_000_000,
+                    },
+                    {
+                        "id": "private-track-2",
+                        "externalId": "tracktwo",
+                        "title": "Drugi",
+                        "kind": "track",
+                        "durationTicks": 180 * 10_000_000,
+                    },
+                ],
+            }
+        ),
+        navigator=SimpleNamespace(
+            active=SessionId.SPOTIFY,
+            sessions={SessionId.SPOTIFY: SimpleNamespace(model=model)},
+        ),
+        runner=ImmediateRunner(),
+        announcer=SimpleNamespace(say=spoken.append),
+    )
+
+    LiteFrame._announce_spotify_information(frame, album)
+
+    assert len(spoken) == 1
+    assert "Rodzaj: album" in spoken[0]
+    assert "Czas: 5:00" in spoken[0]
+    assert model.selected_row is album
+
+
+def test_alt_d_opens_spotify_episode_description_in_the_native_text_dialog() -> None:
+    episode = Row(
+        "private-episode-row",
+        "Odcinek",
+        "episode",
+        service_id="privateepisode",
+        service_kind="episode",
+    )
+    state = SimpleNamespace(
+        view=gui_module.View.LIST,
+        model=SimpleNamespace(selected_row=episode),
+        playback_source_rows=(),
+        now_playing_id=None,
+    )
+    shown = []
+    copied = []
+
+    class Dialog:
+        def __init__(self, _parent, information, copy_text):
+            shown.append(information)
+            self.copy_text = copy_text
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return False
+
+        def ShowModal(self):  # noqa: N802 - wx API
+            self.copy_text(shown[0].text)
+            return gui_module.wx.ID_CANCEL
+
+    frame = SimpleNamespace(
+        navigator=SimpleNamespace(
+            active=SessionId.SPOTIFY,
+            sessions={SessionId.SPOTIFY: state},
+        ),
+        client=SimpleNamespace(
+            spotify_description=lambda **values: (
+                {"description": "Opis odcinka Spotify."}
+                if values == {"external_id": "privateepisode", "kind": "episode"}
+                else {}
+            )
+        ),
+        runner=ImmediateRunner(),
+        announcer=SimpleNamespace(say=lambda message: copied.append(message)),
+        _to_clipboard=lambda text: copied.append(text) is None,
+    )
+    original = gui_module.PodcastDescriptionDialog
+    gui_module.PodcastDescriptionDialog = Dialog
+    try:
+        LiteFrame._show_podcast_description(frame)
+    finally:
+        gui_module.PodcastDescriptionDialog = original
+
+    assert shown[0].window_title == "Opis odcinka Spotify"
+    assert shown[0].text == "Opis odcinka Spotify."
+    assert copied == ["Opis odcinka Spotify.", "Skopiowano całą treść"]
 
 
 def test_spotify_load_more_requests_next_page_and_focuses_first_new_item() -> None:

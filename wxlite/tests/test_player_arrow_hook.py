@@ -87,6 +87,11 @@ def test_modyfikowane_polecenia_listy_nie_gina_w_wyszukiwaniu_windows():
         assert _call(player=False, list_chord=chord) == ["key"]
 
 
+def test_sortowanie_spotify_nie_wydaje_systemowego_sygnalu_przed_obsluga_amc():
+    for chord in ("Alt+1", "Alt+2", "Alt+3"):
+        assert _call(player=False, list_chord=chord, session="spotify") == ["key"]
+
+
 def test_wszystkie_presety_docieraja_z_listy_przed_natywna_kontrolka():
     """Zwlaszcza Ctrl+Shift+0 nie moze zginac w SysListView32.
 

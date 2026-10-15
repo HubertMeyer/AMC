@@ -22,6 +22,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from amc_wx_lite import menu_model
+from amc_wx_lite.navigation import SessionId
 from amc_wx_lite.shortcuts import (
     LIST_VIEW,
     PLAYER_VIEW,
@@ -364,9 +365,17 @@ def test_podcast_save_as_menu_is_contextual_and_does_not_steal_ctrl_s() -> None:
 
 
 def test_podcast_description_and_go_to_parent_have_precise_gates() -> None:
-    description = next(
+    descriptions = [
         entry for entry in all_items()
         if entry.action is Action.SHOW_PODCAST_DESCRIPTION
+    ]
+    description = next(
+        entry for entry in descriptions
+        if entry.visible_sessions == (SessionId.PODCASTS,)
+    )
+    spotify_description = next(
+        entry for entry in descriptions
+        if entry.visible_sessions == (SessionId.SPOTIFY,)
     )
     go_to = next(
         entry for entry in all_items()
@@ -376,6 +385,9 @@ def test_podcast_description_and_go_to_parent_have_precise_gates() -> None:
     assert description.needs_podcast_session
     assert description.needs_podcast_item
     assert not description.accelerator
+    assert spotify_description.shortcut == "Alt+D"
+    assert spotify_description.needs_description_item
+    assert not spotify_description.accelerator
     assert go_to.shortcut is None
     assert go_to.needs_podcast_session
     assert go_to.needs_podcast_episode

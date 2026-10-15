@@ -374,6 +374,9 @@ class OpenSpotifyCollectionView:
     #: Zmiana sortowania odświeża ten sam widok i nie tworzy sztucznego
     #: poziomu, z którego trzeba byłoby potem wychodzić Escape.
     replace_current: bool = False
+    #: Jednorazowe potwierdzenie wypowiadane dopiero po zastosowaniu nowego
+    #: porządku. Nie należy do zapamiętanego kontekstu nawigacji.
+    announcement: str = ""
 
 
 @dataclass(frozen=True, slots=True)
@@ -1409,6 +1412,29 @@ class Navigator:
 
         return [Announce("Nie można otworzyć tego wyniku TIDAL")]
 
+    def activate_tidal_search_relation(
+        self,
+        row: Row,
+        choice: TidalRelationChoice,
+    ) -> list[object]:
+        """Open a relation chosen inside the still-open search window."""
+
+        if self.active is not SessionId.TIDAL:
+            return [Announce("Wynik wyszukiwania należy do TIDAL")]
+        if choice not in self._tidal_relation_choices(row):
+            return [Announce("Wybrane miejsce nie jest już dostępne w TIDAL")]
+        if choice.open_artist_overview:
+            target = choice.target
+            artist = Row(
+                item_id=target.item_id,
+                title=target.title,
+                kind="artist",
+                service_id=target.service_id,
+                service_kind="artist",
+            )
+            return self._open_tidal_artist_overview(artist, target)
+        return [choice.target]
+
     @staticmethod
     def _tidal_relation_choices(row: Row) -> tuple[TidalRelationChoice, ...]:
         """Build destinations from the full AMC model without speaking IDs."""
@@ -1493,17 +1519,7 @@ class Navigator:
             or choice not in self._tidal_relation_choices(row)
         ):
             return [Announce("Wybrane miejsce nie jest już dostępne w TIDAL")]
-        if choice.open_artist_overview:
-            target = choice.target
-            artist = Row(
-                item_id=target.item_id,
-                title=target.title,
-                kind="artist",
-                service_id=target.service_id,
-                service_kind="artist",
-            )
-            return self._open_tidal_artist_overview(artist, target)
-        return [choice.target]
+        return self.activate_tidal_search_relation(row, choice)
 
     def play_selected_tidal_container(self) -> list[object]:
         """Ctrl+Enter: oddaj album lub playliste oryginalnemu TIDALowi."""
@@ -2769,6 +2785,29 @@ class Navigator:
             return [intent]
         return [Announce("Nie można otworzyć tego wyniku Spotify")]
 
+    def activate_spotify_search_relation(
+        self,
+        row: Row,
+        choice: SpotifyRelationChoice,
+    ) -> list[object]:
+        """Open a relation chosen inside the still-open search window."""
+
+        if self.active is not SessionId.SPOTIFY:
+            return [Announce("Wynik wyszukiwania należy do Spotify")]
+        if choice not in self._spotify_relation_choices(row):
+            return [Announce("Wybrane miejsce nie jest już dostępne w Spotify")]
+        if choice.open_artist_overview:
+            target = choice.target
+            artist = Row(
+                item_id=target.item_id,
+                title=target.title,
+                kind="artist",
+                service_id=target.service_id,
+                service_kind="artist",
+            )
+            return self._open_spotify_artist_overview(artist, target)
+        return [choice.target]
+
     @staticmethod
     def _spotify_play_intent(row: Row) -> PlaySpotifyItem | Announce:
         if row.kind not in ("track", "episode") or not row.service_id:
@@ -2884,17 +2923,7 @@ class Navigator:
             or choice not in self._spotify_relation_choices(row)
         ):
             return [Announce("Wybrane miejsce nie jest już dostępne w Spotify")]
-        if choice.open_artist_overview:
-            target = choice.target
-            artist = Row(
-                item_id=target.item_id,
-                title=target.title,
-                kind="artist",
-                service_id=target.service_id,
-                service_kind="artist",
-            )
-            return self._open_spotify_artist_overview(artist, target)
-        return [choice.target]
+        return self.activate_spotify_search_relation(row, choice)
 
     @staticmethod
     def _spotify_snapshot(state: SessionState) -> SpotifyNavigationSnapshot:

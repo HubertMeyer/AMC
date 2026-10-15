@@ -19,6 +19,7 @@ internal static class SpotifyCatalogContractTests
         CollectionViewsSortBeforePaging();
         SearchRowsHaveExplicitAccessibleLabelsWithoutPrivateHandles();
         ContainerRequestAcceptsOnlyMatchingSpotifyIdentity();
+        DescriptionRequestAcceptsOnlyPodcastMaterialsAndCleansText();
         ContainerResultNeverUsesIdentifiersInItsHeading();
         ContainerKeepsRepeatedPlaylistOccurrencesDistinct();
         CoordinatorDoesNotAuthenticateForStatusOrCapabilities();
@@ -27,6 +28,7 @@ internal static class SpotifyCatalogContractTests
         CoordinatorUsesPopulatedCacheImmediatelyWhenConnected();
         CoordinatorRedactsBackendFailures();
         CoordinatorSearchesExactlyOnceWithoutMutatingAnything();
+        CoordinatorReadsOneDescriptionWithoutMutation();
     }
 
     private static void CapabilitiesDescribeOneReadOnlySession()
@@ -328,6 +330,33 @@ internal static class SpotifyCatalogContractTests
             "ID weszło do nagłówka albo zgubiono informację o dalszych wynikach");
     }
 
+    private static void DescriptionRequestAcceptsOnlyPodcastMaterialsAndCleansText()
+    {
+        using var good = JsonDocument.Parse(
+            """{"externalId":"spotify:episode:episode123","kind":"episode"}""");
+        var request = LiteSpotifyCatalogContract.ReadDescriptionRequest(
+            good.RootElement);
+        var result = LiteSpotifyCatalogContract.CreateDescriptionResult(
+            " Pierwszy wiersz.\0\r\nDrugi wiersz. ");
+        Check(request.Kind == MediaItemKind.Episode
+            && request.ExternalId == "episode123"
+            && result.Description == "Pierwszy wiersz.\r\nDrugi wiersz.",
+            "opis odcinka nie został bezpiecznie znormalizowany");
+
+        using var album = JsonDocument.Parse(
+            """{"externalId":"album123","kind":"album"}""");
+        try
+        {
+            LiteSpotifyCatalogContract.ReadDescriptionRequest(album.RootElement);
+            throw new InvalidOperationException("przyjęto opis albumu jako podcast");
+        }
+        catch (LiteRequestException exception)
+        {
+            Check(exception.Message.Contains("podcastu albo odcinka", StringComparison.Ordinal),
+                "odmowa opisu albumu nie ma użytkowej etykiety");
+        }
+    }
+
     private static void ContainerKeepsRepeatedPlaylistOccurrencesDistinct()
     {
         var request = new LiteSpotifyContainerRequest(
@@ -451,6 +480,20 @@ internal static class SpotifyCatalogContractTests
             "wynik zmienił rodzaj albo wyszukiwanie wykonało mutację");
     }
 
+    private static void CoordinatorReadsOneDescriptionWithoutMutation()
+    {
+        using var backend = new FakeBackend { Description = "Opis próby" };
+        using var coordinator = new LiteSpotifyCatalogCoordinator(backend);
+        using var args = JsonDocument.Parse(
+            """{"externalId":"show123","kind":"podcast"}""");
+        var result = (LiteSpotifyDescriptionResult)coordinator.Description(
+            args.RootElement);
+        Check(result.Description == "Opis próby"
+            && backend.DescriptionCalls == 1
+            && backend.MutationCalls == 0,
+            "Alt+D nie wykonało dokładnie jednego bezpiecznego odczytu opisu");
+    }
+
     private static MediaItem Item(
         MediaItemKind kind,
         string externalId,
@@ -482,6 +525,7 @@ internal static class SpotifyCatalogContractTests
         public IReadOnlyList<MediaItem> SearchItems { get; set; } = [];
         public IReadOnlyList<MediaItem> RefreshedItems { get; set; } = [];
         public IReadOnlyList<MediaItem> ContainerItems { get; set; } = [];
+        public string? Description { get; set; }
         public Exception? SearchFailure { get; set; }
         public Exception? RefreshFailure { get; set; }
         public Exception? ContainerFailure { get; set; }
@@ -489,6 +533,7 @@ internal static class SpotifyCatalogContractTests
         public int RefreshCalls { get; private set; }
         public int SearchCalls { get; private set; }
         public int ContainerCalls { get; private set; }
+        public int DescriptionCalls { get; private set; }
         public int MutationCalls => 0;
         public string LastQuery { get; private set; } = string.Empty;
 
@@ -516,6 +561,14 @@ internal static class SpotifyCatalogContractTests
             LastQuery = query;
             if (SearchFailure is not null) throw SearchFailure;
             return Task.FromResult(SearchItems);
+        }
+
+        public Task<string?> GetDescriptionAsync(
+            LiteSpotifyDescriptionRequest request,
+            CancellationToken cancellationToken)
+        {
+            DescriptionCalls++;
+            return Task.FromResult(Description);
         }
 
         public Task<LiteSpotifyContainerBackendResult> GetContainerItemsAsync(

@@ -6,7 +6,9 @@ from amc_wx_lite.spotify_source import (
     SpotifyContainerPayloadError,
     account_summary_from_payload,
     artist_overview_rows,
+    container_duration_ticks,
     container_result_from_payload,
+    description_from_payload,
     history_rows,
     information_text,
     normalize_history_payload,
@@ -110,6 +112,47 @@ def test_left_information_does_not_repeat_the_focused_title_or_invent_bitrate() 
         assert row.title.casefold() not in text.casefold()
         assert "kb/s" not in text.casefold()
         assert "kbps" not in text.casefold()
+
+
+def test_album_information_can_use_the_sum_of_real_track_durations() -> None:
+    album = Row("album", "Płyta", "album")
+    rows = [
+        Row("one", "Pierwszy", "track", duration_ticks=61 * 10_000_000),
+        Row("two", "Drugi", "track", duration_ticks=119 * 10_000_000),
+        Row("folder", "Nie licz", "album", duration_ticks=900 * 10_000_000),
+    ]
+
+    duration = container_duration_ticks(rows)
+    text = information_text(album, duration_ticks=duration)
+
+    assert duration == 180 * 10_000_000
+    assert "Rodzaj: album" in text
+    assert "Czas: 3:00" in text
+
+
+def test_spotify_description_has_only_deliberate_user_text() -> None:
+    row = Row(
+        "private-row",
+        "Odcinek",
+        "episode",
+        service_id="private-service",
+    )
+
+    result = description_from_payload(
+        {
+            "description": " Pierwszy wiersz.\r\nDrugi wiersz. ",
+            "externalId": "nie pokazuj",
+            "kind": "InternalKind.Episode",
+        },
+        row,
+    )
+
+    assert result is not None
+    assert result.window_title == "Opis odcinka Spotify"
+    assert result.text == "Pierwszy wiersz.\nDrugi wiersz."
+    assert result.initial_focus_name == "Pierwszy wiersz. Drugi wiersz."
+    assert "private" not in result.text
+    assert "InternalKind" not in result.text
 
 
 def test_malformed_payload_has_one_short_user_facing_error() -> None:

@@ -120,8 +120,10 @@ from .navigation import (
     PlayWiiMNetworkStream,
     PlaySonosMaterial,
     SessionId,
+    SpotifyRelationChoice,
     ShowSpotifyRelations,
     ShowTidalRelations,
+    TidalRelationChoice,
     TransientNavigationSnapshot,
     View,
     view_context,
@@ -268,8 +270,11 @@ from .state_store import LiteState, Station, StationList, StateStore
 from .spotify_source import (
     SpotifyContainerPayloadError,
     account_summary_from_payload as spotify_account_summary_from_payload,
+    container_duration_ticks as spotify_container_duration_ticks,
     container_result_from_payload as spotify_container_result_from_payload,
+    description_from_payload as spotify_description_from_payload,
     history_rows as spotify_history_rows,
+    information_text as spotify_information_text,
     record_history_row as record_spotify_history_row,
     root_result_from_payload as spotify_root_result_from_payload,
 )
@@ -1512,6 +1517,7 @@ class SearchDialog(wx.Dialog):
         all_services: bool,
         current_session_label: str,
         run_search: Callable[[str, "SearchDialog"], None],
+        choose_relation: Callable[[SearchEntry, "SearchDialog"], object | None],
         copy_text: Callable[[str], bool],
         history: list[str],
         record_query: Callable[[str], list[str]],
@@ -1526,6 +1532,7 @@ class SearchDialog(wx.Dialog):
         self.SetName(f"{mode} — AMC")
         self._all_services = all_services
         self._run_search = run_search
+        self._choose_relation = choose_relation
         self._copy_text = copy_text
         self._history = list(history)
         self._record_query = record_query
@@ -1537,6 +1544,7 @@ class SearchDialog(wx.Dialog):
         self.selected_result: SearchEntry | None = None
         self.selected_results: list[SearchEntry] = []
         self.selected_action = SearchResultAction.OPEN
+        self.selected_relation: object | None = None
 
         heading = wx.StaticText(self, label=mode)
         heading.SetName(mode)
@@ -1901,7 +1909,15 @@ class SearchDialog(wx.Dialog):
             self._announce_quick_information()
             return
         if code == wx.WXK_RIGHT and not (ctrl or shift or alt):
-            self._complete_selected(SearchResultAction.RELATIONS)
+            entry = self._lead_entry()
+            if entry is None:
+                self.announcer.say("Najpierw wykonaj wyszukiwanie i wybierz wynik")
+                self.query.SetFocus()
+                return
+            relation = self._choose_relation(entry, self)
+            if relation is not None:
+                self.selected_relation = relation
+                self._complete_selected(SearchResultAction.RELATIONS)
             return
         if ctrl and code in (ord("C"), ord("c")):
             self._copy(addresses=shift)
@@ -3123,6 +3139,7 @@ class RelationDestinationDialog(wx.Dialog):
         labels: tuple[str, ...],
     ) -> None:
         super().__init__(parent, title=title)
+        self.SetName(title)
         self._labels = labels
         panel = wx.Panel(self)
         layout = wx.BoxSizer(wx.VERTICAL)
@@ -3162,7 +3179,12 @@ class RelationDestinationDialog(wx.Dialog):
         self.SetEscapeId(wx.ID_CANCEL)
         self.destinations.Bind(wx.EVT_LISTBOX_DCLICK, self._accept)
         self.Bind(wx.EVT_CHAR_HOOK, self._on_key)
-        self.destinations.SetFocus()
+        self.Bind(wx.EVT_SHOW, self._on_show)
+
+    def _on_show(self, event: wx.ShowEvent) -> None:
+        event.Skip()
+        if event.IsShown():
+            wx.CallAfter(self.destinations.SetFocus)
 
     @property
     def selected_index(self) -> int | None:
@@ -5636,6 +5658,11 @@ class LiteFrame(wx.Frame):
                 not podcasts or selected_kind not in ("podcast", "episode")
             ):
                 enabled = False
+            if entry.needs_description_item and not (
+                self.navigator.active in (SessionId.PODCASTS, SessionId.SPOTIFY)
+                and selected_kind in ("podcast", "episode")
+            ):
+                enabled = False
             if entry.needs_favorite_item and selected_kind not in favorite_kinds.get(
                 self.navigator.active, set()
             ):
@@ -5813,6 +5840,9 @@ class LiteFrame(wx.Frame):
             "Ctrl+V",
             "Ctrl+I",
             "Alt+D",
+            "Alt+1",
+            "Alt+2",
+            "Alt+3",
             "Alt+R",
             "Alt+Shift+R",
             "Alt+Up",
@@ -5859,6 +5889,7 @@ class LiteFrame(wx.Frame):
                 all_services=all_services,
                 session_before=session_before,
             ),
+            choose_relation=self._choose_search_result_relation,
             copy_text=self._to_clipboard,
             history=list(self.state.search_history.get(
                 "global" if all_services else session_before.value,
@@ -5875,6 +5906,7 @@ class LiteFrame(wx.Frame):
             selected = dialog.selected_result
             selected_results = list(dialog.selected_results)
             selected_action = dialog.selected_action
+            selected_relation = dialog.selected_relation
         finally:
             dialog.Destroy()
         if result == wx.ID_OK and selected is not None:
@@ -5882,7 +5914,49 @@ class LiteFrame(wx.Frame):
                 selected,
                 selected_results or [selected],
                 selected_action,
+                relation=selected_relation,
             )
+
+    def _choose_search_result_relation(
+        self,
+        entry: SearchEntry,
+        search_dialog: SearchDialog,
+    ) -> SpotifyRelationChoice | TidalRelationChoice | None:
+        """Choose a relationship without exposing the main window in between."""
+
+        if entry.session_id is SessionId.SPOTIFY:
+            choices = self.navigator._spotify_relation_choices(entry.row)
+            title = "Przejdź do"
+        elif entry.session_id is SessionId.TIDAL:
+            choices = self.navigator._tidal_relation_choices(entry.row)
+            title = "Przejdź do albumu lub wykonawcy TIDAL"
+        else:
+            search_dialog.announcer.say(
+                "Przejście do albumu, wykonawcy lub podcastu jest dostępne "
+                "dla wyników TIDAL i Spotify"
+            )
+            return None
+        if not choices:
+            search_dialog.announcer.say(
+                "Ten wynik nie ma dostępnego albumu, wykonawcy ani podcastu"
+            )
+            return None
+        if len(choices) == 1:
+            return choices[0]
+
+        relation_dialog = RelationDestinationDialog(
+            search_dialog,
+            title=title,
+            labels=tuple(choice.label for choice in choices),
+        )
+        selected: int | None = None
+        try:
+            if relation_dialog.ShowModal() == wx.ID_OK:
+                selected = relation_dialog.selected_index
+        finally:
+            relation_dialog.Destroy()
+            wx.CallAfter(search_dialog.results.SetFocus)
+        return choices[selected] if selected is not None else None
 
     def _record_search_query(self, scope: str, query: str) -> list[str]:
         history = add_search_history(
@@ -6103,6 +6177,8 @@ class LiteFrame(wx.Frame):
         entry: SearchEntry,
         selected: list[SearchEntry],
         action: SearchResultAction,
+        *,
+        relation: object | None = None,
     ) -> None:
         """Open the real list, then run the same command as that list uses."""
 
@@ -6110,6 +6186,15 @@ class LiteFrame(wx.Frame):
             entry.session_id is SessionId.TIDAL
             and action in (SearchResultAction.OPEN, SearchResultAction.RELATIONS)
         ):
+            if isinstance(relation, TidalRelationChoice):
+                self._transient_preview_return = None
+                self._switch_session(SessionId.TIDAL)
+                self._tidal_navigation_version += 1
+                self._run(self.navigator.activate_tidal_search_relation(
+                    entry.row,
+                    relation,
+                ))
+                return
             self._open_tidal_search_result(
                 entry,
                 relations=action is SearchResultAction.RELATIONS,
@@ -6124,6 +6209,15 @@ class LiteFrame(wx.Frame):
                 SearchResultAction.TOGGLE_PLAYBACK,
             )
         ):
+            if isinstance(relation, SpotifyRelationChoice):
+                self._transient_preview_return = None
+                self._switch_session(SessionId.SPOTIFY)
+                self._spotify_navigation_version += 1
+                self._run(self.navigator.activate_spotify_search_relation(
+                    entry.row,
+                    relation,
+                ))
+                return
             self._open_spotify_search_result(
                 entry,
                 relations=action is SearchResultAction.RELATIONS,
@@ -8136,12 +8230,24 @@ class LiteFrame(wx.Frame):
                     f"spotify:{intent.view}",
                     loaded_count,
                 ))
-            self._run(self.navigator.apply_spotify_collection_view(
+            events = self.navigator.apply_spotify_collection_view(
                 intent,
                 result.heading,
                 rows,
                 preferred_id=preferred_id,
-            ))
+            )
+            if intent.announcement:
+                self._sync_views()
+                if result.rows:
+                    self.announcer.say(intent.announcement)
+                else:
+                    empty = next(
+                        (event.text for event in events if isinstance(event, Announce)),
+                        result.heading,
+                    )
+                    self.announcer.say(f"{intent.announcement}, {empty}")
+            else:
+                self._run(events)
             if result.warning:
                 self.announcer.say(result.warning)
 
@@ -8584,6 +8690,9 @@ class LiteFrame(wx.Frame):
                 # własne polecenie i nie wysłać EVT_KEY_DOWN do AMC.
                 "Ctrl+I",
                 "Alt+D",
+                "Alt+1",
+                "Alt+2",
+                "Alt+3",
                 "Alt+R",
                 "Alt+Shift+R",
                 "Alt+Up",
@@ -12460,13 +12569,13 @@ class LiteFrame(wx.Frame):
         # stabilne i nie dubluje pozycji z poprzedniego układu.
         self._spotify_loaded_counts.pop(scope, None)
         self._refresh_menu_state()
-        self.announcer.say(label)
         self._open_spotify_collection_view(OpenSpotifyCollectionView(
             context.item_id,
             scope,
             context.title,
             preferred_id=state.model.selected_id,
             replace_current=True,
+            announcement=label,
         ))
 
     def _open_podcast_aggregate(
@@ -13270,14 +13379,89 @@ class LiteFrame(wx.Frame):
 
         self.runner.submit("podcast-save-as-info", prepare, prepared, failed)
 
+    def _description_target_row(self, session_id: SessionId) -> Row | None:
+        """Use the focused list row or the actual item shown in the player."""
+
+        state = self.navigator.sessions[session_id]
+        if getattr(state, "view", View.LIST) is View.PLAYER:
+            playing_id = getattr(state, "now_playing_id", None)
+            for candidate in getattr(state, "playback_source_rows", ()):
+                if candidate.item_id == playing_id:
+                    return candidate
+            current = state.model.selected_row
+            if current is not None and current.item_id == playing_id:
+                return current
+            return None
+        return state.model.selected_row
+
+    def _show_spotify_description(self) -> None:
+        """Alt+D for Spotify podcasts and episodes through the read-only host."""
+
+        row = LiteFrame._description_target_row(self, SessionId.SPOTIFY)
+        if row is None or row.kind not in ("podcast", "episode") or not row.service_id:
+            self.announcer.say(
+                "Pełny opis Spotify jest dostępny dla podcastu albo odcinka"
+            )
+            return
+        client = self.client
+        if client is None:
+            self.announcer.say("Silnik nie jest gotowy")
+            return
+        requested_id = row.item_id
+        requested_kind = row.kind
+
+        def work():
+            return client.spotify_description(
+                external_id=row.service_id or "",
+                kind=requested_kind,
+            )
+
+        def done(payload: object) -> None:
+            current = LiteFrame._description_target_row(self, SessionId.SPOTIFY)
+            if (
+                self.navigator.active is not SessionId.SPOTIFY
+                or current is None
+                or current.item_id != requested_id
+            ):
+                return
+            information = spotify_description_from_payload(payload, current)
+            if information is None:
+                self.announcer.say(
+                    "Spotify nie podał opisu tego podcastu"
+                    if requested_kind == "podcast"
+                    else "Spotify nie podał opisu tego odcinka"
+                )
+                return
+
+            def copy_text(text: str) -> bool:
+                copied = self._to_clipboard(text)
+                if copied:
+                    self.announcer.say("Skopiowano całą treść")
+                return copied
+
+            with PodcastDescriptionDialog(self, information, copy_text) as dialog:
+                dialog.ShowModal()
+
+        def failed(error: Exception) -> None:
+            self.announcer.say(
+                str(error)
+                if isinstance(error, (HostError, HostUnavailable))
+                else "Nie udało się odczytać opisu Spotify"
+            )
+
+        self.runner.submit("spotify-description", work, done, failed)
+
     def _show_podcast_description(self) -> None:
         """Alt+D: description first, then metadata, in a native text field."""
+        if self.navigator.active is SessionId.SPOTIFY:
+            LiteFrame._show_spotify_description(self)
+            return
         if self.navigator.active is not SessionId.PODCASTS:
             self.announcer.say(
                 "Pełny opis jest dostępny dla podcastu albo odcinka"
             )
             return
-        row = self.navigator.sessions[SessionId.PODCASTS].model.selected_row
+        row = LiteFrame._description_target_row(self, SessionId.PODCASTS)
         if row is None or row.kind not in ("podcast", "episode"):
             self.announcer.say(
                 "Pełny opis jest dostępny dla podcastu albo odcinka"
@@ -13290,8 +13474,7 @@ class LiteFrame(wx.Frame):
             return self.podcasts.description(requested_id, requested_kind)
 
         def done(information: PodcastDescription | None) -> None:
-            state = self.navigator.sessions[SessionId.PODCASTS]
-            current = state.model.selected_row
+            current = LiteFrame._description_target_row(self, SessionId.PODCASTS)
             if (
                 self.navigator.active is not SessionId.PODCASTS
                 or current is None
@@ -13991,6 +14174,53 @@ class LiteFrame(wx.Frame):
                 f"Przeniesiono pliki poza AMC: {format_file_count(len(moved))}"
             )
 
+    def _announce_spotify_information(self, row: Row) -> None:
+        """Read an album's real track durations before announcing its length."""
+
+        if row.kind != "album" or row.duration_ticks > 0 or not row.service_id:
+            self.announcer.say(spotify_information_text(row))
+            return
+        client = self.client
+        if client is None:
+            self.announcer.say(spotify_information_text(row))
+            return
+        requested_id = row.item_id
+
+        def work():
+            return spotify_container_result_from_payload(
+                client.spotify_container_items(
+                    external_id=row.service_id or "",
+                    title=row.title,
+                    kind="album",
+                    artist=row.artist_name,
+                )
+            )
+
+        def done(result) -> None:
+            current = self.navigator.sessions[SessionId.SPOTIFY].model.selected_row
+            if (
+                self.navigator.active is not SessionId.SPOTIFY
+                or current is None
+                or current.item_id != requested_id
+            ):
+                return
+            duration = spotify_container_duration_ticks(list(result.rows))
+            self.announcer.say(spotify_information_text(
+                current,
+                duration_ticks=duration,
+            ))
+
+        def failed(_error: Exception) -> None:
+            current = self.navigator.sessions[SessionId.SPOTIFY].model.selected_row
+            if (
+                self.navigator.active is SessionId.SPOTIFY
+                and current is not None
+                and current.item_id == requested_id
+            ):
+                self.announcer.say(spotify_information_text(current))
+
+        self.runner.submit("spotify-album-information", work, done, failed)
+
     def _announce_quick_information(self) -> None:
         """Parametry zaznaczonego elementu, nie aktualnie odtwarzanego.
 
@@ -14011,7 +14241,10 @@ class LiteFrame(wx.Frame):
             self.announcer.say(", ".join(dict.fromkeys(parts)))
             return
         if self.navigator.active is SessionId.SPOTIFY:
-            self._run(self.navigator.spotify_information())
+            if row is None:
+                self.announcer.say("Lista Spotify jest pusta")
+                return
+            self._announce_spotify_information(row)
             return
         if self.navigator.active is SessionId.WIIM:
             if self.navigator.view is View.PLAYER and self._wiim_snapshot:

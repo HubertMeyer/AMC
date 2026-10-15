@@ -503,6 +503,7 @@ SPOTIFY_SUPPORTED_ACTIONS = frozenset({
     Action.SORT_SPOTIFY_COLLECTION_ADDED,
     Action.SORT_SPOTIFY_COLLECTION_ALPHABETICAL,
     Action.SORT_SPOTIFY_COLLECTION_CATALOG,
+    Action.SHOW_PODCAST_DESCRIPTION,
     Action.HELP,
     Action.KEYBOARD_HELP,
     Action.VERSION_INFO,
@@ -1076,6 +1077,9 @@ SPOTIFY_SESSION_VIEW: dict[str, Action] = {
     "Ctrl+P": Action.SPOTIFY_VIEW_PLAYLISTS,
     "Ctrl+Alt+O": Action.SPOTIFY_VIEW_PODCASTS,
     "Ctrl+Alt+E": Action.SPOTIFY_VIEW_EPISODES,
+    # Tak jak w starym AMC: opis podcastu lub odcinka pochodzi z katalogu
+    # Spotify, a nie z lokalnej bazy RSS/YouTube.
+    "Alt+D": Action.SHOW_PODCAST_DESCRIPTION,
 }
 
 

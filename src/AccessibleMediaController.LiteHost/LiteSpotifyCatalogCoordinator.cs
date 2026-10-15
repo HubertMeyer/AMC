@@ -127,6 +127,27 @@ internal sealed class LiteSpotifyCatalogCoordinator(
         }
     }
 
+    public object Description(JsonElement args)
+    {
+        var request = LiteSpotifyCatalogContract.ReadDescriptionRequest(args);
+        EnsureCatalogReady();
+        try
+        {
+            var description = backend.GetDescriptionAsync(
+                    request,
+                    CancellationToken.None)
+                .GetAwaiter()
+                .GetResult();
+            return LiteSpotifyCatalogContract.CreateDescriptionResult(description);
+        }
+        catch (Exception exception)
+        {
+            throw SafeRequestException(
+                exception,
+                LiteSpotifyCatalogContract.DescriptionOperation);
+        }
+    }
+
     public object ContainerItems(JsonElement args)
     {
         var request = LiteSpotifyCatalogContract.ReadContainerRequest(args);
@@ -217,6 +238,10 @@ internal interface ILiteSpotifyReadOnlyBackend : IDisposable
 
     Task<IReadOnlyList<MediaItem>> SearchAsync(
         string query,
+        CancellationToken cancellationToken);
+
+    Task<string?> GetDescriptionAsync(
+        LiteSpotifyDescriptionRequest request,
         CancellationToken cancellationToken);
 
     Task<LiteSpotifyContainerBackendResult> GetContainerItemsAsync(

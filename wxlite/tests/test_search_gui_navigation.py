@@ -3,10 +3,12 @@ from __future__ import annotations
 from pathlib import Path
 from types import SimpleNamespace
 
+import amc_wx_lite.gui as gui_module
 from amc_wx_lite.gui import LiteFrame
 from amc_wx_lite.list_model import Row
 from amc_wx_lite.navigation import (
     LibraryView,
+    Navigator,
     SessionId,
     View,
 )
@@ -478,6 +480,67 @@ def test_spotify_search_right_arrow_uses_catalog_row_without_write() -> None:
     )
 
     assert calls == [(result, True)]
+
+
+def test_search_relation_picker_stays_owned_by_the_search_window() -> None:
+    parents = []
+    focused = []
+    result = SearchEntry(
+        SessionId.SPOTIFY,
+        Row(
+            "spotify:track:private",
+            "Utwór",
+            "track",
+            service_id="privatetrack",
+            service_kind="track",
+            related_album_service_id="privatealbum",
+            related_album_title="Album",
+            related_artist_service_id="privateartist",
+            related_artist_name="Wykonawca",
+        ),
+        remote_kind="spotifyCatalog",
+    )
+    search_dialog = SimpleNamespace(
+        results=SimpleNamespace(SetFocus=lambda: focused.append(True)),
+        announcer=SimpleNamespace(say=lambda _message: None),
+    )
+
+    class Dialog:
+        selected_index = 1
+
+        def __init__(self, parent, *, title, labels):
+            parents.append((parent, title, labels))
+
+        @staticmethod
+        def ShowModal():
+            return gui_module.wx.ID_OK
+
+        @staticmethod
+        def Destroy():
+            return None
+
+    frame = SimpleNamespace(navigator=Navigator())
+    original_dialog = gui_module.RelationDestinationDialog
+    original_call_after = gui_module.wx.CallAfter
+    gui_module.RelationDestinationDialog = Dialog
+    gui_module.wx.CallAfter = lambda callback: callback()
+    try:
+        choice = LiteFrame._choose_search_result_relation(
+            frame,
+            result,
+            search_dialog,
+        )
+    finally:
+        gui_module.RelationDestinationDialog = original_dialog
+        gui_module.wx.CallAfter = original_call_after
+
+    assert parents == [(
+        search_dialog,
+        "Przejdź do",
+        ("Przejdź do albumu", "Przejdź do wykonawcy"),
+    )]
+    assert choice is not None and choice.label == "Przejdź do wykonawcy"
+    assert focused == [True]
 
 
 def test_spotify_search_write_action_is_refused_without_client_call() -> None:
