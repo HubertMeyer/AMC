@@ -23,7 +23,12 @@ def radio_shell():
     frame = SimpleNamespace(navigator=nav, library=NoLocalRead(),
                             announcer=SimpleNamespace(say=messages.append),
                             _run=requests.extend, _open_radio_view=requests.append,
-                            messages=SimpleNamespace(custom_seek_seconds=300))
+                            messages=SimpleNamespace(custom_seek_seconds=300),
+                            _transient_preview_return=None)
+    frame._begin_transient_preview = lambda: LiteFrame._begin_transient_preview(frame)
+    frame._show_playback_history_preview = (
+        lambda: LiteFrame._show_playback_history_preview(frame)
+    )
     return frame, requests, messages
 
 

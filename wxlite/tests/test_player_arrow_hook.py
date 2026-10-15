@@ -9,6 +9,8 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
+from amc_wx_lite.shortcuts import GLOBAL_VIEW_SHORTCUTS
+
 SOURCE = Path(__file__).parents[1] / "amc_wx_lite" / "gui.py"
 
 def _call(*, player=True, arrow=True, foreign=False, time_key=False,
@@ -40,6 +42,7 @@ def _call(*, player=True, arrow=True, foreign=False, time_key=False,
     ns: dict[str, Any] = {
         "wx": wx,
         "View": view,
+        "GLOBAL_VIEW_SHORTCUTS": GLOBAL_VIEW_SHORTCUTS,
         "chord_from_event": lambda _event: SimpleNamespace(canonical=list_chord),
     }
     exec(compile(ast.Module(body=methods, type_ignores=[]), str(SOURCE), "exec"), ns)
@@ -157,6 +160,7 @@ def _volume_key(chord: str, current: int = 50) -> list[int]:
     ns: dict[str, Any] = {
         "wx": wx,
         "View": view,
+        "GLOBAL_VIEW_SHORTCUTS": GLOBAL_VIEW_SHORTCUTS,
         "chord_from_event": lambda _event: SimpleNamespace(canonical=chord),
     }
     exec(compile(ast.Module(body=[method], type_ignores=[]), str(SOURCE), "exec"), ns)

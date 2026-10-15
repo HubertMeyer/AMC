@@ -8094,7 +8094,7 @@ class LiteFrame(wx.Frame):
             and not is_transient_preview_available(
                 action,
                 self.navigator.active,
-                global_previews=self._global_transient_previews,
+                global_previews=getattr(self, "_global_transient_previews", True),
             )
         ):
             self.announcer.say(transient_preview_unavailable_message(action))
@@ -12974,18 +12974,12 @@ class LiteFrame(wx.Frame):
         self._begin_transient_preview()
         origin = self.navigator.active
         if origin is SessionId.RADIO:
-            state = self.navigator.sessions[SessionId.RADIO]
-            state.library_view = LibraryView.HISTORY
-            state.view = View.LIST
             self._open_radio_view(OpenLibraryView(
                 LibraryView.HISTORY,
                 target_session_id=SessionId.RADIO,
             ))
             return
         if origin is SessionId.PODCASTS:
-            state = self.navigator.sessions[SessionId.PODCASTS]
-            state.library_view = LibraryView.PODCAST_HISTORY
-            state.view = View.LIST
             self._open_podcast_aggregate(
                 OpenPodcastAggregateView(LibraryView.PODCAST_HISTORY)
             )
@@ -12996,9 +12990,6 @@ class LiteFrame(wx.Frame):
         # plikow lokalnych jako wspolny podglad i zachowujemy cala sesje
         # urzadzenia do powrotu przez Escape.
         self.navigator.active = SessionId.FILES
-        state = self.navigator.sessions[SessionId.FILES]
-        state.library_view = LibraryView.HISTORY
-        state.view = View.LIST
         self._open_library_view(OpenLibraryView(
             LibraryView.HISTORY,
             target_session_id=SessionId.FILES,
