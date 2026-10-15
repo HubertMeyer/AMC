@@ -54,6 +54,10 @@ class SearchEntry:
     # Rodzaj wyniku publicznego katalogu służy tylko do materializacji po
     # Enterze. Nie trafia do nazwy dostępnej ani tekstu wiersza.
     remote_kind: str | None = None
+    # Jawna nazwa rodzaju używana tylko w oknie wyników. Pozwala adapterom
+    # opisać element bez dopisywania tego samego tekstu do każdej pozycji
+    # zwykłej, jednorodnej listy.
+    result_kind_label: str = ""
 
     @property
     def session_label(self) -> str:
@@ -64,12 +68,16 @@ class SearchEntry:
         parts = [self.row.title]
         if self.row.artist_name and self.row.artist_name not in parts:
             parts.append(self.row.artist_name)
-        if self.row.kind_label:
-            parts.append(self.row.kind_label)
+        if self.kind_label:
+            parts.append(self.kind_label)
         if self.row.detail and self.row.detail not in parts:
             parts.append(self.row.detail)
         parts.append(self.session_label)
         return ", ".join(part for part in parts if part)
+
+    @property
+    def kind_label(self) -> str:
+        return self.result_kind_label.strip() or self.row.kind_label
 
 
 def normalize_search_text(value: str) -> str:
@@ -109,7 +117,7 @@ def matches(entry: SearchEntry, words: tuple[str, ...]) -> bool:
     searchable = normalize_search_text(" ".join((
         row.title,
         row.artist_name,
-        row.kind_label,
+        entry.kind_label,
         row.detail,
         entry.session_label,
     )))

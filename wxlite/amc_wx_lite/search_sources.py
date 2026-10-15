@@ -99,9 +99,9 @@ class SearchSources:
                     for row in result.rows
                 )
             return results
-        # WiiM and Sonos currently expose devices/groups, not a media
-        # catalogue.  Searching their one visible device row would pretend to
-        # search music which the integration cannot enumerate.
+        # WiiM i Sonos nie udają globalnego katalogu. Ich rzeczywiście
+        # wczytane listy są migawkami stanu nawigatora i dokłada je warstwa
+        # GUI przez wspólny kontrakt ``speaker_search_entries``.
         return []
 
     @staticmethod

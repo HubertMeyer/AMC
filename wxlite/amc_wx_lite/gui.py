@@ -181,6 +181,15 @@ from .search_catalog import (
     search as search_entries,
 )
 from .search_sources import SearchCollection, SearchSources
+from .speaker_content import (
+    SPEAKER_SESSIONS,
+    speaker_information_failure,
+    speaker_information_plan,
+    speaker_information_reply,
+    speaker_information_text,
+    speaker_search_entries,
+    speaker_search_scope_label,
+)
 from .remote_search import (
     entries_from_payload,
     merge_saved_and_remote,
@@ -1472,7 +1481,8 @@ class SearchDialog(wx.Dialog):
 
     It is deliberately a separate window, as in full AMC.  ``Ctrl+K`` keeps
     filtering the already visible list; ``Ctrl+F`` searches the complete
-    cached catalogue and, for podcasts, the public directories. Results are
+    cached catalogue, the public directories supported by a service, or the
+    explicitly labelled loaded-list scope of WiiM and Sonos. Results are
     placed in this ordinary SysListView32.
     """
 
@@ -1626,8 +1636,8 @@ class SearchDialog(wx.Dialog):
             for index, entry in enumerate(entries):
                 row = entry.row
                 self.results.InsertItem(index, row.title)
-                if row.kind_label:
-                    self.results.SetItem(index, 1, row.kind_label)
+                if entry.kind_label:
+                    self.results.SetItem(index, 1, entry.kind_label)
                 details = [row.artist_name] if row.artist_name else []
                 if row.detail:
                     details.append(row.detail)
@@ -1757,7 +1767,7 @@ class SearchDialog(wx.Dialog):
             self.announcer.say("Brak wybranego wyniku")
             return
         row = entry.row
-        parts = [row.title, row.artist_name, row.kind_label, row.detail]
+        parts = [row.title, row.artist_name, entry.kind_label, row.detail]
         if self._all_services:
             parts.append(entry.session_label)
         self.announcer.say(", ".join(dict.fromkeys(part for part in parts if part)))
@@ -5690,20 +5700,16 @@ class LiteFrame(wx.Frame):
             self.announcer.say("Wyszukiwanie jest dostępne na listach")
             return
         session_before = self.navigator.active
-        if (
-            not all_services
-            and session_before in (SessionId.WIIM, SessionId.SONOS)
-        ):
-            self.announcer.say(
-                f"Wyszukiwanie katalogu nie jest jeszcze dostępne w sesji "
-                f"{SESSION_LABELS[session_before]}"
-            )
-            return
+        current_scope_label = (
+            speaker_search_scope_label(session_before)
+            if session_before in SPEAKER_SESSIONS
+            else SESSION_LABELS[session_before]
+        )
 
         dialog = SearchDialog(
             self,
             all_services=all_services,
-            current_session_label=SESSION_LABELS[session_before],
+            current_session_label=current_scope_label,
             run_search=lambda query, target: self._run_search_query(
                 query,
                 target,
@@ -5770,10 +5776,20 @@ class LiteFrame(wx.Frame):
                 SessionId.RADIO,
                 SessionId.PODCASTS,
                 SessionId.TIDAL,
+                SessionId.WIIM,
+                SessionId.SONOS,
             )
             if all_services
             else (session_before,)
         )
+        speaker_snapshots = {
+            session_id: (
+                tuple(self.navigator.sessions[session_id].model.rows),
+                self.navigator.sessions[session_id].library_view,
+            )
+            for session_id in sessions
+            if session_id in SPEAKER_SESSIONS
+        }
         cached = dialog.catalog
 
         def work() -> tuple[
@@ -5781,7 +5797,23 @@ class LiteFrame(wx.Frame):
             list[SearchEntry],
             tuple[str, ...],
         ]:
-            collected = cached or self.search_sources.collect(sessions)
+            if cached is not None:
+                collected = cached
+            else:
+                base = self.search_sources.collect(sessions)
+                loaded_speaker_entries = tuple(
+                    entry
+                    for session_id, (rows, source_view) in speaker_snapshots.items()
+                    for entry in speaker_search_entries(
+                        session_id,
+                        rows,
+                        source_view,
+                    )
+                )
+                collected = SearchCollection(
+                    (*base.entries, *loaded_speaker_entries),
+                    base.warnings,
+                )
             results = search_entries(list(collected.entries), query)
             warnings = list(collected.warnings)
             if SessionId.RADIO in sessions:
@@ -6376,6 +6408,24 @@ class LiteFrame(wx.Frame):
                 OpenTidalView(target, preferred_id=item_id),
                 after_refresh=complete,
             )
+            return
+        if entry.session_id in SPEAKER_SESSIONS:
+            state = self.navigator.sessions[entry.session_id]
+            if state.library_view is not entry.source_view:
+                self.announcer.say(
+                    "Wczytana lista zmieniła się. Wykonaj wyszukiwanie ponownie"
+                )
+                return
+            if not state.model.select_id(item_id):
+                self.announcer.say(
+                    "Tego wyniku nie ma już na wczytanej liście"
+                )
+                return
+            self._sync_views()
+            complete()
+            active = self._active_list()
+            active.SetFocus()
+            active.sync_cursor()
 
     # -------------------------------------------------------------- filtr
 
@@ -13140,13 +13190,7 @@ class LiteFrame(wx.Frame):
                 )
                 self.announcer.say(", ".join(parts))
                 return
-            if row is None:
-                self.announcer.say("Lista WiiM jest pusta")
-                return
-            parts = [row.title]
-            if row.detail:
-                parts.append(row.detail)
-            self.announcer.say(", ".join(parts))
+            self._announce_speaker_item_information(row)
             return
         if self.navigator.active is SessionId.SONOS:
             if self.navigator.view is View.PLAYER and self._sonos_snapshot:
@@ -13160,13 +13204,7 @@ class LiteFrame(wx.Frame):
                 parts = list(dict.fromkeys(part for part in parts if part))
                 self.announcer.say(", ".join(parts) or "Brak informacji Sonos")
                 return
-            if row is None:
-                self.announcer.say("Lista Sonos jest pusta")
-                return
-            parts = [row.title]
-            if row.detail:
-                parts.append(row.detail)
-            self.announcer.say(", ".join(parts))
+            self._announce_speaker_item_information(row)
             return
         client = self.client
         plan = quick_info_plan(
@@ -13230,6 +13268,57 @@ class LiteFrame(wx.Frame):
             QUICK_INFO_STREAM,
             work,
             answer,
+            failed,
+        )
+
+    def _announce_speaker_item_information(self, row: Row | None) -> None:
+        """Jedna droga lewego klawisza dla WiiM i Sonosa."""
+
+        session = self.navigator.active
+        if session not in SPEAKER_SESSIONS:
+            return
+        if row is None:
+            self.announcer.say(f"Lista {SESSION_LABELS[session]} jest pusta")
+            return
+        plan = speaker_information_plan(
+            row,
+            session=session,
+            view=self.navigator.view.value,
+            alive=self._window_alive,
+        )
+        if plan.message is not None:
+            self.announcer.say(plan.message)
+            return
+        if plan.request is None or plan.guard is None:
+            return
+        client = self.client
+        if client is None:
+            self.announcer.say(speaker_information_text(row))
+            return
+
+        def done(payload: object) -> None:
+            speaker_information_reply(
+                payload if isinstance(payload, dict) else {},
+                plan=plan,
+                item_id=self._selected_item_id(),
+                session=self.navigator.active.value,
+                view=self.navigator.view.value,
+                say=self.announcer.say,
+            )
+
+        def failed(_error: Exception) -> None:
+            speaker_information_failure(
+                plan=plan,
+                item_id=self._selected_item_id(),
+                session=self.navigator.active.value,
+                view=self.navigator.view.value,
+                say=self.announcer.say,
+            )
+
+        self.runner.submit(
+            QUICK_INFO_STREAM,
+            lambda: client.call(QUICK_INFO_OP, plan.request, timeout=12.0),
+            done,
             failed,
         )
 
