@@ -3684,6 +3684,100 @@ class RelationDestinationDialog(wx.Dialog):
         event.Skip()
 
 
+class RelationDestinationWindow(wx.Frame):
+    """Lekka lista relacji bez roli „dialog” w mowie NVDA.
+
+    Prawa strzałka jest szybką nawigacją wewnątrz katalogu, nie formularzem.
+    Dlatego główna lista używa małego okna z jednym natywnym ``ListBox``.
+    Modalny dialog pozostaje wyłącznie wewnątrz już otwartego okna
+    wyszukiwania, gdzie wywołujący potrzebuje synchronicznego wyniku.
+    """
+
+    def __init__(
+        self,
+        parent: wx.Window,
+        *,
+        title: str,
+        labels: tuple[str, ...],
+        detailed_hints: bool,
+        finished: Callable[[int | None], None],
+    ) -> None:
+        style = (
+            wx.DEFAULT_FRAME_STYLE
+            | wx.FRAME_FLOAT_ON_PARENT
+            | wx.FRAME_NO_TASKBAR
+        ) & ~(wx.RESIZE_BORDER | wx.MAXIMIZE_BOX | wx.MINIMIZE_BOX)
+        super().__init__(parent, title=title, style=style)
+        self._labels = labels
+        self._finished = finished
+        self._closing = False
+
+        panel = wx.Panel(self)
+        layout = wx.BoxSizer(wx.VERTICAL)
+        self.destinations = wx.ListBox(
+            panel,
+            choices=list(labels),
+            style=wx.LB_SINGLE,
+        )
+        # Jedyna nazwa kontrolki, którą trzeba usłyszeć. Wybrany wiersz niesie
+        # już właściwą nazwę podcastu, albumu albo wykonawcy i pozycję 1 z N.
+        self.destinations.SetName(title)
+        if detailed_hints:
+            self.destinations.SetHelpText(
+                "Enter otwiera. Lewa strzałka lub Escape wraca."
+            )
+        if labels:
+            self.destinations.SetSelection(0)
+        layout.Add(self.destinations, 1, wx.ALL | wx.EXPAND, 10)
+        panel.SetSizer(layout)
+
+        self.SetMinSize((440, 150))
+        self.Fit()
+        self.CentreOnParent()
+        self.destinations.Bind(wx.EVT_LISTBOX_DCLICK, self._accept)
+        self.Bind(wx.EVT_CHAR_HOOK, self._on_key)
+        self.Bind(wx.EVT_CLOSE, self._on_close)
+
+    @property
+    def selected_index(self) -> int | None:
+        index = self.destinations.GetSelection()
+        return index if 0 <= index < len(self._labels) else None
+
+    def show_for_keyboard(self) -> None:
+        self.Show()
+        self.Raise()
+        wx.CallAfter(self.destinations.SetFocus)
+
+    def _finish(self, index: int | None) -> None:
+        if self._closing:
+            return
+        self._closing = True
+        callback = self._finished
+        self._finished = lambda _index: None
+        self.Hide()
+        self.Destroy()
+        callback(index)
+
+    def _accept(self, _event) -> None:
+        index = self.selected_index
+        if index is not None:
+            self._finish(index)
+
+    def _on_close(self, _event: wx.CloseEvent) -> None:
+        self._finish(None)
+
+    def _on_key(self, event: wx.KeyEvent) -> None:
+        if not event.ControlDown() and not event.AltDown() and not event.ShiftDown():
+            key = event.GetKeyCode()
+            if key in (wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER):
+                self._accept(event)
+                return
+            if key in (wx.WXK_LEFT, wx.WXK_ESCAPE):
+                self._finish(None)
+                return
+        event.Skip()
+
+
 def relation_destination_labels(
     labels: tuple[str, ...],
     *,
@@ -9021,7 +9115,7 @@ class LiteFrame(wx.Frame):
         self.runner.submit("tidal-navigation", work, done, failed)
 
     def _show_tidal_relations(self, intent: ShowTidalRelations) -> None:
-        """Show a keyboard-driven destination list without a context-menu role."""
+        """Show a keyboard-driven destination list without a menu/dialog role."""
         if not intent.choices:
             return
         # Gdy istnieje tylko jeden jednoznaczny cel (np. album -> wykonawca),
@@ -9031,25 +9125,54 @@ class LiteFrame(wx.Frame):
         if len(intent.choices) == 1:
             self._run(self.navigator.activate_tidal_relation(intent.choices[0]))
             return
-        active_list = self._active_list()
-        dialog = RelationDestinationDialog(
-            self,
+        self._show_relation_destination_window(
             title=intent.title,
             labels=relation_destination_labels(
                 tuple(choice.label for choice in intent.choices),
                 detailed_hints=self._detailed_hints,
             ),
-            detailed_hints=self._detailed_hints,
+            activate=lambda index: self._run(
+                self.navigator.activate_tidal_relation(intent.choices[index])
+            ),
         )
-        selected: int | None = None
-        try:
-            if dialog.ShowModal() == wx.ID_OK:
-                selected = dialog.selected_index
-        finally:
-            dialog.Destroy()
-            wx.CallAfter(active_list.SetFocus)
-        if selected is not None:
-            self._run(self.navigator.activate_tidal_relation(intent.choices[selected]))
+
+    def _show_relation_destination_window(
+        self,
+        *,
+        title: str,
+        labels: tuple[str, ...],
+        activate: Callable[[int], None],
+    ) -> None:
+        """Open one concise list and restore the originating list on cancel."""
+
+        active_list = self._active_list()
+        previous = getattr(self, "_relation_destination_window", None)
+        if previous is not None:
+            try:
+                previous.Destroy()
+            except (AttributeError, RuntimeError):
+                pass
+            self._relation_destination_window = None
+
+        window: RelationDestinationWindow | None = None
+
+        def finished(index: int | None) -> None:
+            if getattr(self, "_relation_destination_window", None) is window:
+                self._relation_destination_window = None
+            if index is None:
+                wx.CallAfter(active_list.SetFocus)
+                return
+            activate(index)
+
+        window = RelationDestinationWindow(
+            self,
+            title=title,
+            labels=labels,
+            detailed_hints=self._detailed_hints,
+            finished=finished,
+        )
+        self._relation_destination_window = window
+        window.show_for_keyboard()
 
     # ------------------------------------------------------------- Spotify
 
@@ -9323,25 +9446,16 @@ class LiteFrame(wx.Frame):
 
         if not intent.choices:
             return
-        active_list = self._active_list()
-        dialog = RelationDestinationDialog(
-            self,
+        self._show_relation_destination_window(
             title=intent.title,
             labels=relation_destination_labels(
                 tuple(choice.label for choice in intent.choices),
                 detailed_hints=self._detailed_hints,
             ),
-            detailed_hints=self._detailed_hints,
+            activate=lambda index: self._run(
+                self.navigator.activate_spotify_relation(intent.choices[index])
+            ),
         )
-        selected: int | None = None
-        try:
-            if dialog.ShowModal() == wx.ID_OK:
-                selected = dialog.selected_index
-        finally:
-            dialog.Destroy()
-            wx.CallAfter(active_list.SetFocus)
-        if selected is not None:
-            self._run(self.navigator.activate_spotify_relation(intent.choices[selected]))
 
     def _play_spotify(self, intent: PlaySpotifyItem) -> None:
         """Hand one safe catalogue identity to the native Librespot engine."""
@@ -16694,6 +16808,19 @@ class LiteFrame(wx.Frame):
             remaining[min(first_index, len(remaining) - 1)].item_id
             if remaining else None
         )
+        # W nazwanym widoku zapisanej kolekcji członkostwo wybranego wiersza
+        # jest już częścią kontraktu listy. Ctrl+Shift+L/U ma go wtedy jawnie
+        # usunąć. Ponowne pytanie API o „przełącz” potrafiło po odświeżeniu
+        # uznać wpis za nieobecny i dodać go ponownie, co wyglądało jak samo
+        # przeładowanie bez działania.
+        remove_from_current_collection = (
+            isinstance(context, OpenSpotifyCollectionView)
+            and (
+                favorite and context.view in {"liked", "episodes"}
+                or not favorite
+                and context.view in {"albums", "artists", "podcasts", "episodes"}
+            )
+        )
         self._spotify_membership_pending = True
 
         def done(payload: dict) -> None:
@@ -16761,12 +16888,21 @@ class LiteFrame(wx.Frame):
                 f"Nie udało się zmienić kolekcji Spotify: {error}"
             )
 
-        self.runner.submit(
-            "spotify-membership",
-            lambda: client.spotify_collection_membership(
+        def work() -> dict:
+            kwargs = (
+                {"add": False}
+                if remove_from_current_collection
+                else {}
+            )
+            return client.spotify_collection_membership(
                 items,
                 mode="favorite" if favorite else "library",
-            ),
+                **kwargs,
+            )
+
+        self.runner.submit(
+            "spotify-membership",
+            work,
             done,
             failed,
         )

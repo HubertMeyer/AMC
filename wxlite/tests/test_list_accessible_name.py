@@ -20,6 +20,7 @@ from amc_wx_lite.gui import (
     PresetAssignmentDialog,
     PresetListDialog,
     RelationDestinationDialog,
+    RelationDestinationWindow,
 )
 from amc_wx_lite.radio_schedule_dialogs import RadioSchedulesDialog
 
@@ -77,6 +78,13 @@ def test_relation_destinations_are_a_named_native_list_not_a_context_menu() -> N
     assert "SetSelection(0)" in source
     assert "SetAccessible" not in source
     assert "PopupMenu" not in source
+
+    quick_source = inspect.getsource(RelationDestinationWindow)
+    assert "wx.Frame" in quick_source
+    assert "wx.ListBox" in quick_source
+    assert "self.destinations.SetName(title)" in quick_source
+    assert "wx.Dialog" not in quick_source
+    assert "PopupMenu" not in quick_source
 
 
 def test_sonos_fixed_target_is_a_native_named_checkbox() -> None:

@@ -130,8 +130,8 @@ def test_spotify_library_shortcut_calls_confirmed_host_write() -> None:
             },
         ),
         client=SimpleNamespace(
-            spotify_collection_membership=lambda items, *, mode: (
-                calls.append((items, mode))
+            spotify_collection_membership=lambda items, *, mode, add=None: (
+                calls.append((items, mode, add))
                 or {
                     "added": True,
                     "changed": 1,
@@ -154,7 +154,7 @@ def test_spotify_library_shortcut_calls_confirmed_host_write() -> None:
         "kind": "album",
         "artist": "Wykonawca",
         "publicUri": "",
-    }], "library")]
+    }], "library", None)]
     assert spoken == ["Dodano do Biblioteki Spotify: Album"]
     assert frame._spotify_membership_pending is False
 
@@ -177,8 +177,8 @@ def test_spotify_library_shortcut_removes_a_saved_episode_and_refreshes_view() -
     frame = SimpleNamespace(
         navigator=Navigator(),
         client=SimpleNamespace(
-            spotify_collection_membership=lambda items, *, mode: (
-                calls.append((items, mode))
+            spotify_collection_membership=lambda items, *, mode, add=None: (
+                calls.append((items, mode, add))
                 or {
                     "added": False,
                     "changed": 1,
@@ -201,12 +201,61 @@ def test_spotify_library_shortcut_removes_a_saved_episode_and_refreshes_view() -
 
     LiteFrame._toggle_spotify_membership(frame, favorite=False)
 
-    assert calls[0][1] == "library"
+    assert calls[0][1:] == ("library", False)
     assert calls[0][0][0]["kind"] == "episode"
     assert spoken == ["Usunięto z Biblioteki Spotify: Odcinek"]
     assert frame._spotify_loaded_counts == {"episodes": 0}
     assert frame.navigator.session.model.rows == []
     assert refreshed == [True]
+
+
+def test_spotify_library_shortcut_removes_a_saved_podcast_and_announces_it() -> None:
+    calls = []
+    spoken = []
+    podcast = Row(
+        "spotify:show:private",
+        "Skądinąd",
+        "podcast",
+        service_id="showprivate",
+        service_kind="podcast",
+        artist_name="Tomasz Stawiszyński",
+    )
+    context = OpenSpotifyCollectionView(
+        "spotify-collection:podcasts", "podcasts", "Podcasty"
+    )
+    frame = SimpleNamespace(
+        navigator=Navigator(),
+        client=SimpleNamespace(
+            spotify_collection_membership=lambda items, *, mode, add=None: (
+                calls.append((items, mode, add))
+                or {
+                    "added": False,
+                    "changed": 1,
+                    "message": "Usunięto z Biblioteki Spotify: Skądinąd",
+                }
+            )
+        ),
+        runner=ImmediateRunner(),
+        announcer=SimpleNamespace(say=spoken.append),
+        _selected_action_rows=lambda: [podcast],
+        _spotify_membership_pending=False,
+        _spotify_loaded_counts={"podcasts": 150},
+        _sync_views=lambda: None,
+        _announce_after_list_update=spoken.append,
+    )
+    frame.navigator.active = SessionId.SPOTIFY
+    frame.navigator.apply_spotify_collection_view(
+        context, "Podcasty Spotify", [podcast]
+    )
+
+    LiteFrame._toggle_spotify_membership(frame, favorite=False)
+
+    assert calls[0][1:] == ("library", False)
+    assert calls[0][0][0]["kind"] == "podcast"
+    assert calls[0][0][0]["externalId"] == "showprivate"
+    assert spoken == ["Usunięto z Biblioteki Spotify: Skądinąd"]
+    assert frame._spotify_loaded_counts == {"podcasts": 0}
+    assert frame.navigator.session.model.rows == []
 
 
 def test_spotify_library_shortcut_keeps_album_page_sort_and_neighbor() -> None:
@@ -230,8 +279,8 @@ def test_spotify_library_shortcut_keeps_album_page_sort_and_neighbor() -> None:
     frame = SimpleNamespace(
         navigator=navigator,
         client=SimpleNamespace(
-            spotify_collection_membership=lambda items, *, mode: (
-                calls.append((items, mode))
+            spotify_collection_membership=lambda items, *, mode, add=None: (
+                calls.append((items, mode, add))
                 or {
                     "added": False,
                     "changed": 1,
@@ -252,7 +301,7 @@ def test_spotify_library_shortcut_keeps_album_page_sort_and_neighbor() -> None:
 
     LiteFrame._toggle_spotify_membership(frame, favorite=False)
 
-    assert calls[0][1] == "library"
+    assert calls[0][1:] == ("library", False)
     assert spoken == ["Usunięto z Biblioteki Spotify: Album 2"]
     assert frame._spotify_loaded_counts == {"albums": 2}
     assert frame._spotify_effective_sort_modes == {"albums": "Alphabetical"}
@@ -657,6 +706,7 @@ def test_unavailable_spotify_playlist_stays_on_the_current_list() -> None:
 
 def test_spotify_right_arrow_uses_two_real_destinations_without_context_menu() -> None:
     created = []
+    windows = []
     activated = []
     run = []
     focused = []
@@ -672,14 +722,15 @@ def test_spotify_right_arrow_uses_two_real_destinations_without_context_menu() -
     )
     intent = ShowSpotifyRelations("Przejdź do", choices)
 
-    class FakeDialog:
-        def __init__(self, _parent, *, title, labels, detailed_hints):
-            self.selected_index = len(created) % 2
-            created.append((title, labels, detailed_hints, self.selected_index))
+    class FakeWindow:
+        def __init__(self, _parent, *, title, labels, detailed_hints, finished):
+            self.finished = finished
+            created.append((title, labels, detailed_hints))
+            windows.append(self)
 
         @staticmethod
-        def ShowModal():
-            return gui_module.wx.ID_OK
+        def show_for_keyboard():
+            return None
 
         @staticmethod
         def Destroy():
@@ -694,29 +745,36 @@ def test_spotify_right_arrow_uses_two_real_destinations_without_context_menu() -
         _active_list=lambda: SimpleNamespace(SetFocus=lambda: focused.append(True)),
         _run=run.append,
         _detailed_hints=False,
+        _relation_destination_window=None,
     )
-    original_dialog = gui_module.RelationDestinationDialog
-    original_call_after = gui_module.wx.CallAfter
-    gui_module.RelationDestinationDialog = FakeDialog
-    gui_module.wx.CallAfter = lambda callback: callback()
+    frame._show_relation_destination_window = lambda **kwargs: (
+        LiteFrame._show_relation_destination_window(frame, **kwargs)
+    )
+    original_window = gui_module.RelationDestinationWindow
+    gui_module.RelationDestinationWindow = FakeWindow
     try:
         LiteFrame._show_spotify_relations(frame, intent)
+        assert activated == []
+        assert run == []
+        windows[0].finished(0)
         LiteFrame._show_spotify_relations(frame, intent)
+        assert activated == [choices[0]]
+        windows[1].finished(1)
     finally:
-        gui_module.RelationDestinationDialog = original_dialog
-        gui_module.wx.CallAfter = original_call_after
+        gui_module.RelationDestinationWindow = original_window
 
     assert created == [
-        ("Przejdź do", ("Album", "Wykonawca"), False, 0),
-        ("Przejdź do", ("Album", "Wykonawca"), False, 1),
+        ("Przejdź do", ("Album", "Wykonawca"), False),
+        ("Przejdź do", ("Album", "Wykonawca"), False),
     ]
     assert activated == [choices[0], choices[1]]
     assert run == [["Przejdź do albumu"], ["Przejdź do wykonawcy"]]
-    assert focused == [True, True]
+    assert focused == []
 
 
 def test_spotify_right_arrow_waits_for_enter_on_one_podcast_destination() -> None:
     created = []
+    windows = []
     activated = []
     run = []
     focused = []
@@ -728,15 +786,15 @@ def test_spotify_right_arrow_waits_for_enter_on_one_podcast_destination() -> Non
     )
     intent = ShowSpotifyRelations("Przejdź do", (choice,))
 
-    class FakeDialog:
-        selected_index = 0
-
-        def __init__(self, _parent, *, title, labels, detailed_hints):
+    class FakeWindow:
+        def __init__(self, _parent, *, title, labels, detailed_hints, finished):
+            self.finished = finished
             created.append((title, labels, detailed_hints))
+            windows.append(self)
 
         @staticmethod
-        def ShowModal():
-            return gui_module.wx.ID_OK
+        def show_for_keyboard():
+            return None
 
         @staticmethod
         def Destroy():
@@ -751,21 +809,25 @@ def test_spotify_right_arrow_waits_for_enter_on_one_podcast_destination() -> Non
         _active_list=lambda: SimpleNamespace(SetFocus=lambda: focused.append(True)),
         _run=run.append,
         _detailed_hints=False,
+        _relation_destination_window=None,
     )
-    original_dialog = gui_module.RelationDestinationDialog
-    original_call_after = gui_module.wx.CallAfter
-    gui_module.RelationDestinationDialog = FakeDialog
-    gui_module.wx.CallAfter = lambda callback: callback()
+    frame._show_relation_destination_window = lambda **kwargs: (
+        LiteFrame._show_relation_destination_window(frame, **kwargs)
+    )
+    original_window = gui_module.RelationDestinationWindow
+    gui_module.RelationDestinationWindow = FakeWindow
     try:
         LiteFrame._show_spotify_relations(frame, intent)
+        assert activated == []
+        assert run == []
+        windows[0].finished(0)
     finally:
-        gui_module.RelationDestinationDialog = original_dialog
-        gui_module.wx.CallAfter = original_call_after
+        gui_module.RelationDestinationWindow = original_window
 
     assert created == [("Przejdź do", ("Podcast użytkowy",), False)]
     assert activated == [choice]
     assert run == [["Przejdź do Podcast użytkowy"]]
-    assert focused == [True]
+    assert focused == []
 
 
 def test_busy_spotify_collection_enter_is_retried_without_speaking_error() -> None:

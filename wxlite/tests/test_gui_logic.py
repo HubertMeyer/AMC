@@ -137,7 +137,7 @@ from amc_wx_lite.gui import (  # noqa: E402
     session_selection_labels,
     youtube_export_path_for_filter,
 )
-from amc_wx_lite.shortcuts import Action, resolve  # noqa: E402
+from amc_wx_lite.shortcuts import Action, Chord, resolve  # noqa: E402
 from amc_wx_lite.navigation import LibraryView, Navigator, SessionId, View  # noqa: E402
 
 
@@ -262,6 +262,32 @@ def test_ctrl_shift_zero_recovers_modifier_omitted_by_wx(monkeypatch) -> None:
     ))
     assert chord.canonical == "Ctrl+Shift+0"
     assert resolve(chord, player_view=True, radio_session=False) is Action.PRESET_10
+
+
+def test_ctrl_shift_zero_is_global_in_every_session_and_view() -> None:
+    chord = Chord(key="0", ctrl=True, shift=True)
+    session_flags = (
+        {},
+        {"radio_session": True},
+        {"podcast_session": True},
+        {"tidal_session": True},
+        {"spotify_session": True},
+        {"wiim_session": True},
+        {"sonos_session": True},
+    )
+
+    for player_view in (False, True):
+        for flags in session_flags:
+            assert resolve(
+                chord,
+                player_view=player_view,
+                radio_session=flags.get("radio_session", False),
+                podcast_session=flags.get("podcast_session", False),
+                tidal_session=flags.get("tidal_session", False),
+                spotify_session=flags.get("spotify_session", False),
+                wiim_session=flags.get("wiim_session", False),
+                sonos_session=flags.get("sonos_session", False),
+            ) is Action.PRESET_10
 
 
 def test_raw_zero_does_not_rewrite_ordinary_shift_zero(monkeypatch) -> None:

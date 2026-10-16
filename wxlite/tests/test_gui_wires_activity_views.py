@@ -286,11 +286,9 @@ def test_tidal_right_arrow_uses_a_named_list_and_restores_list_focus() -> None:
     presenter_source = ast.get_source_segment(SOURCE, presenter) or ""
     assert "len(intent.choices) == 1" in presenter_source
     assert "self.navigator.activate_tidal_relation(intent.choices[0])" in presenter_source
-    assert "RelationDestinationDialog(" in presenter_source
+    assert "self._show_relation_destination_window(" in presenter_source
     assert "choice.label" in presenter_source
-    assert ".ShowModal()" in presenter_source
     assert "PopupMenu" not in presenter_source
-    assert "wx.CallAfter(active_list.SetFocus)" in presenter_source
 
 
 def test_play_track_forwards_the_bookmark_position() -> None:
