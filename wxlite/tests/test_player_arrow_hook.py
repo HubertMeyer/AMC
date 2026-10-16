@@ -5,6 +5,7 @@ Right moved focus to volume and Ctrl+E stayed silent. AST extraction tests the
 small method without importing wx on Linux; the live cycle is still required.
 """
 import ast
+from functools import lru_cache
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
@@ -13,10 +14,17 @@ from amc_wx_lite.shortcuts import GLOBAL_VIEW_SHORTCUTS, PRESET_SHORTCUTS
 
 SOURCE = Path(__file__).parents[1] / "amc_wx_lite" / "gui.py"
 
+
+@lru_cache(maxsize=1)
+def _source_tree() -> ast.Module:
+    """Parse the large GUI once; individual key cases only execute the hook."""
+
+    return ast.parse(SOURCE.read_text(encoding="utf-8"))
+
 def _call(*, player=True, arrow=True, foreign=False, time_key=False,
           in_filter=False, list_chord="Tab", session="files",
           screen_reader_modifier=False):
-    tree = ast.parse(SOURCE.read_text(encoding="utf-8"))
+    tree = _source_tree()
     methods: list[ast.stmt] = [n for n in ast.walk(tree) if isinstance(n, ast.FunctionDef)
                and n.name == "_on_player_shortcut_hook"]
     assert len(methods) == 1, "early player arrow hook is missing"
@@ -32,6 +40,9 @@ def _call(*, player=True, arrow=True, foreign=False, time_key=False,
                                 session=SimpleNamespace(library_view=None)),
                             filter_box=filter_box,
                             _screen_reader_modifier_down=lambda: screen_reader_modifier,
+                            _show_context_menu=lambda _control, *, player: actions.append(
+                                "context-player" if player else "context-list"
+                            ),
                             _on_filter_key=lambda event, *a, **k: actions.append("filter"),
                             _on_key=lambda event, *a, **k: actions.append("key" if arrow or time_key else "skip"))
     filter_box.owner = frame
@@ -65,6 +76,10 @@ def test_lista_i_tabulator_zachowuja_natywna_nawigacje():
 def test_f2_i_delete_listy_docieraja_do_amc_przed_natywna_kontrolka():
     for chord in ("F2", "Shift+F2", "Delete", "Shift+Delete"):
         assert _call(player=False, list_chord=chord) == ["key"]
+
+
+def test_shift_f10_otwiera_menu_odtwarzacza_przed_obsluga_przycisku():
+    assert _call(player=True, list_chord="Shift+F10") == ["context-player"]
 
 
 def test_sonos_space_dociera_do_transportu_z_listy_bez_psucia_ctrl_space():
@@ -110,7 +125,7 @@ def test_ctrl_c_is_stopped_by_the_top_level_hook_before_native_copy() -> None:
 
 
 def test_lista_ma_wlasny_wczesny_hook_dla_copy_shift_r_i_ustawien():
-    tree = ast.parse(SOURCE.read_text(encoding="utf-8"))
+    tree = _source_tree()
     bind = next(
         node for node in ast.walk(tree)
         if isinstance(node, ast.FunctionDef) and node.name == "_bind_list"
@@ -162,7 +177,7 @@ def test_zwykle_klawisze_odtwarzacza_zachowuja_swoje_polecenia() -> None:
 
 
 def test_ochrona_nvda_sprawdza_wszystkie_modyfikatory_starego_amc() -> None:
-    tree = ast.parse(SOURCE.read_text(encoding="utf-8"))
+    tree = _source_tree()
     method = next(
         node for node in ast.walk(tree)
         if isinstance(node, ast.FunctionDef)
@@ -177,7 +192,7 @@ def test_ochrona_nvda_sprawdza_wszystkie_modyfikatory_starego_amc() -> None:
 
 
 def _volume_key(chord: str, current: int = 50) -> list[int]:
-    tree = ast.parse(SOURCE.read_text(encoding="utf-8"))
+    tree = _source_tree()
     method = next(
         node for node in ast.walk(tree)
         if isinstance(node, ast.FunctionDef)
@@ -229,7 +244,7 @@ def test_suwak_glosnosci_ma_intuicyjne_kierunki_i_krawedzie() -> None:
     assert _volume_key("End") == [100]
 
 def test_hook_jest_podpiety_w_zwyklym_oknie():
-    tree = ast.parse(SOURCE.read_text(encoding="utf-8"))
+    tree = _source_tree()
     method = next(n for n in ast.walk(tree) if isinstance(n, ast.FunctionDef) and n.name == "_bind_keys")
     calls = [n for n in ast.walk(method) if isinstance(n, ast.Call)
              and ast.unparse(n.func) == "self.Bind"

@@ -29,6 +29,7 @@ from __future__ import annotations
 import os
 import time
 import uuid
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Callable
@@ -302,6 +303,160 @@ from .version_info import is_main_window_title, window_title
 
 APP_NAME = "AMC Python"
 TEMPO_LABELS = {1: "Mowa – Speedy", 2: "Muzyka – Signalsmith", 0: "Dotychczasowy – SoundTouch"}
+
+
+@dataclass(frozen=True, slots=True)
+class _ContextMenuCommand:
+    """One explicit, user-facing command in a native context menu.
+
+    The action and relation stay separate from ``label`` so wx/NVDA never
+    fall back to an enum name, dataclass dump or service identifier.
+    """
+
+    label: str
+    action: Action | None = None
+    relation: TidalRelationChoice | SpotifyRelationChoice | None = None
+    checkable: bool = False
+    checked: bool = False
+
+
+# The old AMC exposed item operations in this order.  The wx interface reuses
+# the existing menu-bar entries instead of duplicating their labels, enabled
+# state or dispatch logic.  Empty groups are removed before the popup is built.
+_LIST_CONTEXT_ACTION_GROUPS: tuple[tuple[Action, ...], ...] = (
+    (
+        Action.ACTIVATE,
+        Action.QUICK_INFORMATION,
+        Action.ITEM_PROPERTIES,
+    ),
+    (
+        Action.REFRESH_PODCAST,
+        Action.DOWNLOAD_PODCAST_EPISODES,
+        Action.SAVE_PODCAST_EPISODE_AS,
+        Action.SHOW_PODCAST_DESCRIPTION,
+        Action.GO_TO_RELATED_PODCAST,
+        Action.PODCAST_PLAYBACK_OPTIONS,
+        Action.CURRENT_RADIO_BROADCAST_INFORMATION,
+        Action.RECOGNIZE_RADIO_TRACK,
+        Action.RECORD_TOGGLE,
+        Action.RECORD_PAUSE,
+        Action.RECORD_SPLIT,
+        Action.ADD_RADIO_SCHEDULE,
+    ),
+    (
+        Action.TOGGLE_PLAY_NEXT,
+        Action.ADD_TO_QUEUE,
+        Action.TOGGLE_FAVORITE,
+        Action.TOGGLE_PODCAST_LIBRARY,
+        Action.TIDAL_TOGGLE_LIBRARY,
+        Action.SPOTIFY_TOGGLE_LIBRARY,
+        Action.SPOTIFY_TOGGLE_FAVORITE,
+        Action.MANAGE_PLAYLIST_MEMBERSHIP,
+        Action.ASSIGN_PRESET,
+    ),
+    (
+        Action.COPY_NAME,
+        Action.COPY_ADDRESS,
+    ),
+    (
+        Action.RENAME_LIBRARY_ITEM,
+        Action.RENAME_LOCAL_FILE,
+        Action.STATION_EDIT,
+        Action.EDIT_WIIM_NETWORK_STREAM,
+        Action.EDIT_SONOS_OWN_STREAM,
+        Action.MOVE_LIST_ITEM_UP,
+        Action.MOVE_LIST_ITEM_DOWN,
+        Action.MOVE_WIIM_NETWORK_STREAM_UP,
+        Action.MOVE_WIIM_NETWORK_STREAM_DOWN,
+        Action.MOVE_SONOS_OWN_STREAM_UP,
+        Action.MOVE_SONOS_OWN_STREAM_DOWN,
+        Action.CUT_FILE,
+        Action.CUT_WIIM_NETWORK_STREAMS,
+        Action.CUT_SONOS_OWN_STREAMS,
+        Action.PASTE_OR_MOVE,
+        Action.PASTE_WIIM_NETWORK_STREAMS,
+        Action.PASTE_SONOS_OWN_STREAMS,
+        Action.REMOVE_SELECTED,
+        Action.STATION_DELETE,
+        Action.REMOVE_WIIM_NETWORK_STREAMS,
+        Action.REMOVE_SONOS_OWN_STREAMS,
+        Action.RECYCLE_SELECTED,
+    ),
+    (
+        Action.PARENT_FOLDER,
+        Action.FOCUS_FILTER,
+        Action.SEARCH_CURRENT,
+    ),
+)
+
+_PLAYER_CONTEXT_ACTION_GROUPS: tuple[tuple[Action, ...], ...] = (
+    (
+        Action.PLAY_PAUSE,
+        Action.QUEUE_PREVIOUS,
+        Action.QUEUE_NEXT,
+        Action.TOGGLE_MUTE,
+    ),
+    (
+        Action.WIIM_PREVIOUS_SOURCE,
+        Action.WIIM_NEXT_SOURCE,
+        Action.WIIM_SELECT_INPUT,
+        Action.WIIM_SELECT_OUTPUT,
+        Action.WIIM_SELECT_EQUALIZER,
+        Action.WIIM_SELECT_REPEAT,
+        Action.WIIM_TOGGLE_SHUFFLE,
+        Action.WIIM_SET_SLEEP_TIMER,
+    ),
+    (
+        Action.ADD_BOOKMARK,
+        Action.ADD_NAMED_BOOKMARK,
+        Action.PREVIOUS_BOOKMARK,
+        Action.NEXT_BOOKMARK,
+    ),
+    (
+        Action.CLIP_MARK_START,
+        Action.CLIP_MARK_END,
+        Action.CLIP_JUMP_START,
+        Action.CLIP_JUMP_END,
+        Action.CLIP_PREVIOUS_BOUNDARY,
+        Action.CLIP_NEXT_BOUNDARY,
+        Action.CLIP_EXPORT,
+        Action.CLIP_APPEND,
+        Action.CLIP_REMOVE,
+        Action.CLIP_CLEAR,
+    ),
+    (
+        Action.SEEK_BACK_10,
+        Action.SEEK_FORWARD_10,
+        Action.SEEK_BACK_30,
+        Action.SEEK_FORWARD_30,
+        Action.SEEK_BACK_60,
+        Action.SEEK_FORWARD_60,
+        Action.SEEK_BACK_CUSTOM,
+        Action.SEEK_FORWARD_CUSTOM,
+    ),
+    (
+        Action.RATE_DOWN,
+        Action.RATE_UP,
+        Action.RATE_RESET,
+        Action.TIME_ELAPSED,
+        Action.TIME_REMAINING,
+        Action.TIME_TOTAL,
+    ),
+    (
+        Action.SELECT_AUDIO_OUTPUT,
+        Action.SESSION_OPTIONS,
+        Action.SHOW_LIST,
+    ),
+)
+
+_PLAYER_CONTEXT_ONLY_LABELS = {
+    # The old AMC exposed these two commands in the player context menu but
+    # not in the main menu bar.  Keep that distinction and use explicit text
+    # instead of leaking ``Action`` values into accessibility output.
+    Action.QUEUE_PREVIOUS: "&Poprzedni utwór kolejki\tPage Up",
+    Action.QUEUE_NEXT: "&Następny utwór kolejki\tPage Down",
+}
+
 RADIO_FORMAT_CHOICES = (
     ("MP3", "Mp3"),
     ("M4A, dźwięk AAC", "Aac"),
@@ -486,6 +641,7 @@ _SPECIAL_KEYS = {
 # rozszerzenie warunkowo, zeby test dostepnosci GUI nie musial udawac calej
 # klawiatury numerycznej tylko dlatego, ze presety obsluguja ja produkcyjnie.
 for _wx_name, _key_name in (
+    ("WXK_F10", "F10"),
     *((f"WXK_NUMPAD{digit}", str(digit)) for digit in range(10)),
     ("WXK_NUMPAD_SUBTRACT", "-"),
     ("WXK_NUMPAD_ADD", "+"),
@@ -5988,7 +6144,7 @@ class LiteFrame(wx.Frame):
             if entry.needs_spotify_library_item and not (
                 self.navigator.active is SessionId.SPOTIFY
                 and selected_row is not None
-                and selected_kind in {"album", "artist", "podcast"}
+                and selected_kind in {"album", "artist", "podcast", "episode"}
                 and bool(selected_row.item_id)
                 and bool(selected_row.service_id)
             ):
@@ -6094,6 +6250,207 @@ class LiteFrame(wx.Frame):
             elif entry.checkable and entry.action is Action.KEYBOARD_HELP:
                 item.Check(self._keyboard_help_active)
 
+    def _relation_context_menu_commands(
+        self,
+    ) -> tuple[_ContextMenuCommand, ...]:
+        """Return only relations proved by the currently focused row.
+
+        These entries deliberately use each relation's explicit label.  The
+        relation object and provider IDs remain internal and can never become
+        the accessible name of a native menu item.
+        """
+
+        row = self.navigator.session.model.selected_row
+        if row is None:
+            return ()
+        if self.navigator.active is SessionId.TIDAL:
+            choices = self.navigator._tidal_relation_choices(row)
+        elif self.navigator.active is SessionId.SPOTIFY:
+            choices = self.navigator._spotify_relation_choices(row)
+        else:
+            return ()
+        return tuple(
+            _ContextMenuCommand(label=choice.label, relation=choice)
+            for choice in choices
+        )
+
+    def _context_menu_command_groups(
+        self,
+        *,
+        player: bool,
+    ) -> tuple[tuple[_ContextMenuCommand, ...], ...]:
+        """Build one context menu from the same live items as the menu bar."""
+
+        self._refresh_menu_state()
+        available: dict[Action, tuple[wx.MenuItem, menu_model.MenuItem]] = {}
+        for native, entry in self._menu_items:
+            action = entry.action
+            if (
+                action is not None
+                and action not in available
+                and native.IsEnabled()
+            ):
+                available[action] = (native, entry)
+
+        action_groups = (
+            _PLAYER_CONTEXT_ACTION_GROUPS
+            if player
+            else _LIST_CONTEXT_ACTION_GROUPS
+        )
+        has_row = self.navigator.session.model.selected_row is not None
+        groups: list[tuple[_ContextMenuCommand, ...]] = []
+        for group_index, actions in enumerate(action_groups):
+            commands: list[_ContextMenuCommand] = []
+            for action in actions:
+                source = available.get(action)
+                if source is None:
+                    if (
+                        player
+                        and action in _PLAYER_CONTEXT_ONLY_LABELS
+                        and Action.PLAY_PAUSE in available
+                        and self._action_available_in_active_session(action)
+                    ):
+                        commands.append(_ContextMenuCommand(
+                            label=_PLAYER_CONTEXT_ONLY_LABELS[action],
+                            action=action,
+                        ))
+                    continue
+                # The menu-bar entry for Ctrl+X intentionally stays enabled
+                # on an empty list so its accelerator cannot be swallowed.
+                # A context menu is not an accelerator boundary, so do not
+                # offer an item operation when there is no item.
+                if action is Action.CUT_FILE and not has_row:
+                    continue
+                native, entry = source
+                commands.append(_ContextMenuCommand(
+                    label=native.GetItemLabel(),
+                    action=action,
+                    checkable=entry.checkable,
+                    checked=(
+                        bool(native.IsChecked())
+                        if entry.checkable
+                        else False
+                    ),
+                ))
+            if commands:
+                groups.append(tuple(commands))
+            if not player and group_index == 0:
+                relations = self._relation_context_menu_commands()
+                if relations:
+                    groups.append(relations)
+        return tuple(groups)
+
+    @staticmethod
+    def _context_menu_position(
+        control: wx.Window,
+        event: object | None,
+    ) -> object | None:
+        """Place mouse menus at the pointer and keyboard menus at the row."""
+
+        if event is not None:
+            get_position = getattr(event, "GetPosition", None)
+            if callable(get_position):
+                position = get_position()
+                if (
+                    getattr(position, "x", -1) >= 0
+                    and getattr(position, "y", -1) >= 0
+                ):
+                    return control.ScreenToClient(position)
+        if isinstance(control, MediaListCtrl):
+            try:
+                index = int(control.GetFocusedItem())
+                if index >= 0:
+                    rect = control.GetItemRect(index)
+                    return wx.Point(
+                        max(0, int(rect.GetLeft()) + 16),
+                        max(0, int(rect.GetBottom())),
+                    )
+            except (AttributeError, RuntimeError, TypeError, ValueError):
+                pass
+        return None
+
+    def _invoke_context_menu_command(
+        self,
+        command: _ContextMenuCommand,
+    ) -> None:
+        if command.action is not None:
+            self._dispatch(command.action)
+        elif isinstance(command.relation, TidalRelationChoice):
+            self._run(self.navigator.activate_tidal_relation(command.relation))
+        elif isinstance(command.relation, SpotifyRelationChoice):
+            self._run(self.navigator.activate_spotify_relation(command.relation))
+
+    def _show_context_menu(
+        self,
+        control: wx.Window,
+        *,
+        player: bool,
+        event: object | None = None,
+    ) -> None:
+        """Show the native list/player context menu and restore safe focus."""
+
+        groups = self._context_menu_command_groups(player=player)
+        if not groups:
+            self.announcer.say("Brak dostępnych poleceń dla tego miejsca")
+            return
+
+        menu = wx.Menu()
+        handler_ids: list[int] = []
+        for group_index, group in enumerate(groups):
+            if group_index:
+                menu.AppendSeparator()
+            for command in group:
+                if command.checkable:
+                    item = menu.AppendCheckItem(wx.ID_ANY, command.label)
+                    item.Check(command.checked)
+                else:
+                    item = menu.Append(wx.ID_ANY, command.label)
+                identifier = item.GetId()
+                self.Bind(
+                    wx.EVT_MENU,
+                    lambda _event, chosen=command: (
+                        self._invoke_context_menu_command(chosen)
+                    ),
+                    id=identifier,
+                )
+                handler_ids.append(identifier)
+
+        expected_view = View.PLAYER if player else View.LIST
+
+        def restore_focus() -> None:
+            try:
+                if self.navigator.view is not expected_view:
+                    return
+                target = control if player else self._active_list()
+                target.SetFocus()
+            except (AttributeError, RuntimeError):
+                # A command may close or replace its original control.
+                return
+
+        try:
+            position = self._context_menu_position(control, event)
+            if position is None:
+                control.PopupMenu(menu)
+            else:
+                control.PopupMenu(menu, position)
+        finally:
+            for identifier in handler_ids:
+                self.Unbind(wx.EVT_MENU, id=identifier)
+            menu.Destroy()
+            wx.CallAfter(restore_focus)
+
+    def _on_list_context_menu(self, event: wx.ContextMenuEvent) -> None:
+        control = event.GetEventObject()
+        if not isinstance(control, MediaListCtrl):
+            control = self._active_list()
+        self._show_context_menu(control, player=False, event=event)
+
+    def _on_player_context_menu(self, event: wx.ContextMenuEvent) -> None:
+        control = event.GetEventObject()
+        if not isinstance(control, wx.Window):
+            control = self.player_panel
+        self._show_context_menu(control, player=True, event=event)
+
     def _bind_list(self, control: MediaListCtrl) -> None:
         """Wspolne powiazania klawiatury i wyboru dla list plikow i radia."""
         # Druga, bezposrednia bramka na samej kontrolce. SysListView32 potrafi
@@ -6102,6 +6459,9 @@ class LiteFrame(wx.Frame):
         # ustawien. Pozostale znaki nadal oddajemy natywnej liscie.
         control.Bind(wx.EVT_CHAR_HOOK, self._on_list_shortcut_hook)
         control.Bind(wx.EVT_KEY_DOWN, self._on_key)
+        context_event = getattr(wx, "EVT_CONTEXT_MENU", None)
+        if context_event is not None:
+            control.Bind(context_event, self._on_list_context_menu)
         control.Bind(
             wx.EVT_LIST_ITEM_ACTIVATED,
             lambda _e: self._activate_selected_if_ready(),
@@ -6124,6 +6484,15 @@ class LiteFrame(wx.Frame):
             self._bind_list(control)
         for control in (self.player_panel, self.play_button):
             control.Bind(wx.EVT_KEY_DOWN, self._on_key)
+        context_event = getattr(wx, "EVT_CONTEXT_MENU", None)
+        if context_event is not None:
+            for control in (
+                self.player_panel,
+                self.play_button,
+                self.volume_slider,
+                self.rate_choice,
+            ):
+                control.Bind(context_event, self._on_player_context_menu)
         # POLE FILTRA ma WLASNA obsluge klawiszy, nie ``_on_key``: w edycji
         # litery naleza do pola, nie do skrotow. Odpowiednik bramki oryginalu
         # ``if (Keyboard.FocusedElement is TextBox)`` z
@@ -6137,10 +6506,18 @@ class LiteFrame(wx.Frame):
 
     def _on_list_shortcut_hook(self, event: wx.KeyEvent) -> None:
         """Polecenia, ktorych natywna lista nie moze zabrac jako liter."""
+        canonical = chord_from_event(event).canonical
+        if canonical == "Shift+F10":
+            get_source = getattr(event, "GetEventObject", None)
+            control = get_source() if callable(get_source) else self._active_list()
+            if not isinstance(control, MediaListCtrl):
+                control = self._active_list()
+            self._show_context_menu(control, player=False)
+            return
         # Presety przechwytujemy jako caly kontrakt. Szczegolnie kombinacja
         # Ctrl+Shift+0 ginie w natywnej liscie Windows przed EVT_KEY_DOWN,
         # choc minus i znak rownosci przechodza ta sama droga poprawnie.
-        if chord_from_event(event).canonical in {
+        if canonical in {
             "F2",
             "Shift+F2",
             "Delete",
@@ -9073,6 +9450,12 @@ class LiteFrame(wx.Frame):
         # przewijał utwór. Przepuszczamy gest również przed kontrolkami
         # głośności i tempa; ich natywna obsługa też nie może go przejąć.
         canonical = chord_from_event(event).canonical
+        if canonical == "Shift+F10":
+            if self.navigator.view is View.PLAYER:
+                self._show_context_menu(focus, player=True)
+            else:
+                self._show_context_menu(self._active_list(), player=False)
+            return
         screen_reader_modifier_down = getattr(
             self,
             "_screen_reader_modifier_down",

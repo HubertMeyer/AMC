@@ -25,6 +25,7 @@ def install_wx_stub() -> None:
     codes = {
         "WXK_RETURN": 13, "WXK_NUMPAD_ENTER": 370, "WXK_BACK": 8, "WXK_ESCAPE": 27,
         "WXK_SPACE": 32, "WXK_DELETE": 127, "WXK_F1": 340, "WXK_F2": 341, "WXK_F6": 345,
+        "WXK_F10": 349,
         "WXK_LEFT": 314, "WXK_RIGHT": 316, "WXK_UP": 315, "WXK_DOWN": 317, "WXK_TAB": 9,
         "WXK_HOME": 313, "WXK_END": 312, "WXK_PAGEUP": 366, "WXK_PAGEDOWN": 367,
     }
@@ -40,7 +41,7 @@ def install_wx_stub() -> None:
         # Flagi ukladu i przyciskow maja LICZBY (patrz nizej), nie atrapy.
         "SL_HORIZONTAL", "SL_LABELS", "FONTWEIGHT_BOLD", "DD_DIR_MUST_EXIST",
         "FD_OPEN", "FD_FILE_MUST_EXIST", "EVT_TIMER", "EVT_CLOSE", "EVT_KEY_DOWN",
-        "EVT_CHAR_HOOK",
+        "EVT_CHAR_HOOK", "EVT_CONTEXT_MENU",
         "EVT_LIST_ITEM_ACTIVATED", "EVT_LIST_ITEM_FOCUSED", "EVT_LIST_ITEM_SELECTED",
         "EVT_LIST_ITEM_DESELECTED",
         "EVT_BUTTON", "EVT_SLIDER", "EVT_CHOICE",
@@ -131,7 +132,7 @@ from amc_wx_lite.gui import (  # noqa: E402
     youtube_export_path_for_filter,
 )
 from amc_wx_lite.shortcuts import Action, resolve  # noqa: E402
-from amc_wx_lite.navigation import LibraryView, SessionId, View  # noqa: E402
+from amc_wx_lite.navigation import LibraryView, Navigator, SessionId, View  # noqa: E402
 
 
 class FakeKeyEvent:
@@ -311,6 +312,229 @@ def test_relation_destinations_use_natural_short_labels_unless_details_enabled()
         "Utwory",
     )
     assert relation_destination_labels(labels, detailed_hints=True) == labels
+
+
+def test_shift_f10_opens_the_list_context_menu_without_running_a_list_action() -> None:
+    import wx
+
+    calls: list[tuple[object, bool]] = []
+    control = types.SimpleNamespace()
+    frame = object.__new__(LiteFrame)
+    frame._active_list = lambda: control
+    frame._show_context_menu = lambda target, *, player: calls.append(
+        (target, player)
+    )
+
+    frame._on_list_shortcut_hook(FakeKeyEvent(wx.WXK_F10, shift=True))
+
+    assert calls == [(control, False)]
+
+
+def test_native_context_event_is_bound_to_every_media_list() -> None:
+    import wx
+
+    bindings: list[tuple[object, object]] = []
+    control = types.SimpleNamespace(
+        Bind=lambda event_type, handler: bindings.append((event_type, handler))
+    )
+    frame = object.__new__(LiteFrame)
+
+    frame._bind_list(control)
+
+    assert (wx.EVT_CONTEXT_MENU, frame._on_list_context_menu) in bindings
+
+
+def test_context_menu_reuses_only_enabled_user_facing_menu_entries() -> None:
+    from amc_wx_lite import menu_model
+
+    class Native:
+        def __init__(self, label: str, *, enabled: bool) -> None:
+            self.label = label
+            self.enabled = enabled
+
+        def IsEnabled(self):  # noqa: N802 - wx API
+            return self.enabled
+
+        def GetItemLabel(self):  # noqa: N802 - wx API
+            return self.label
+
+    frame = object.__new__(LiteFrame)
+    frame.navigator = types.SimpleNamespace(
+        active=SessionId.FILES,
+        session=types.SimpleNamespace(
+            model=types.SimpleNamespace(selected_row=object()),
+        ),
+    )
+    frame._refresh_menu_state = lambda: None
+    frame._menu_items = [
+        (
+            Native("&Otwórz zaznaczone\tEnter", enabled=True),
+            menu_model.MenuItem(
+                "&Otwórz zaznaczone",
+                Action.ACTIVATE,
+                shortcut="Return",
+            ),
+        ),
+        (
+            Native("&Skopiuj nazwę (Ctrl+C)", enabled=True),
+            menu_model.MenuItem("&Skopiuj nazwę", Action.COPY_NAME),
+        ),
+        (
+            Native("Zmień nazwę w Bibliote&ce (F2)", enabled=False),
+            menu_model.MenuItem(
+                "Zmień nazwę w Bibliote&ce",
+                Action.RENAME_LIBRARY_ITEM,
+            ),
+        ),
+    ]
+
+    groups = frame._context_menu_command_groups(player=False)
+    commands = [command for group in groups for command in group]
+
+    assert [command.action for command in commands] == [
+        Action.ACTIVATE,
+        Action.COPY_NAME,
+    ]
+    assert [command.label for command in commands] == [
+        "&Otwórz zaznaczone\tEnter",
+        "&Skopiuj nazwę (Ctrl+C)",
+    ]
+    assert all("Action." not in command.label for command in commands)
+
+
+def test_spotify_context_relation_exposes_only_the_intentional_podcast_label() -> None:
+    row = types.SimpleNamespace(
+        kind="episode",
+        item_id="episode-row",
+        related_podcast_service_id="spotify:show:private-id",
+        related_podcast_title="Podcast użytkowy",
+    )
+    frame = object.__new__(LiteFrame)
+    frame.navigator = types.SimpleNamespace(
+        active=SessionId.SPOTIFY,
+        session=types.SimpleNamespace(
+            model=types.SimpleNamespace(selected_row=row),
+        ),
+        _spotify_relation_choices=Navigator._spotify_relation_choices,
+    )
+
+    commands = frame._relation_context_menu_commands()
+
+    assert [command.label for command in commands] == ["Przejdź do podcastu"]
+    assert all("private-id" not in command.label for command in commands)
+
+
+def test_native_context_popup_dispatches_once_and_restores_list_focus() -> None:
+    from amc_wx_lite import gui
+
+    handlers: dict[int, object] = {}
+    labels: list[str] = []
+    invoked: list[object] = []
+
+    class Item:
+        def __init__(self, identifier: int) -> None:
+            self.identifier = identifier
+
+        def GetId(self):  # noqa: N802 - wx API
+            return self.identifier
+
+        def Check(self, _checked):  # noqa: N802 - wx API
+            pass
+
+    class Menu:
+        def __init__(self) -> None:
+            self.identifiers: list[int] = []
+            self.destroyed = False
+
+        def Append(self, _identifier, label):  # noqa: N802 - wx API
+            labels.append(label)
+            item = Item(7000 + len(self.identifiers))
+            self.identifiers.append(item.identifier)
+            return item
+
+        def AppendCheckItem(self, identifier, label):  # noqa: N802 - wx API
+            return self.Append(identifier, label)
+
+        def AppendSeparator(self):  # noqa: N802 - wx API
+            labels.append("---")
+
+        def Destroy(self):  # noqa: N802 - wx API
+            self.destroyed = True
+
+    class Control:
+        focused = 0
+
+        def PopupMenu(self, menu, *_position):  # noqa: N802 - wx API
+            handlers[menu.identifiers[0]](None)
+
+        def SetFocus(self):  # noqa: N802 - wx API
+            self.focused += 1
+
+    command = gui._ContextMenuCommand(
+        label="&Skopiuj nazwę (Ctrl+C)",
+        action=Action.COPY_NAME,
+    )
+    control = Control()
+    frame = object.__new__(LiteFrame)
+    frame.navigator = types.SimpleNamespace(view=View.LIST)
+    frame.announcer = types.SimpleNamespace(say=lambda _text: None)
+    frame._context_menu_command_groups = lambda *, player: ((command,),)
+    frame._context_menu_position = lambda _control, _event: None
+    frame._invoke_context_menu_command = invoked.append
+    frame._active_list = lambda: control
+    frame.Bind = lambda _event, handler, *, id: handlers.__setitem__(id, handler)
+    frame.Unbind = lambda _event, *, id: handlers.pop(id, None) is not None
+
+    original_menu = gui.wx.Menu
+    gui.wx.Menu = Menu
+    try:
+        frame._show_context_menu(control, player=False)
+    finally:
+        gui.wx.Menu = original_menu
+
+    assert labels == ["&Skopiuj nazwę (Ctrl+C)"]
+    assert invoked == [command]
+    assert control.focused == 1
+    assert handlers == {}
+
+
+def test_player_context_exposes_queue_navigation_with_readable_shortcuts() -> None:
+    from amc_wx_lite import menu_model
+
+    play_pause = next(
+        item
+        for menu in menu_model.menus_for_session(SessionId.SPOTIFY)
+        for item in menu.items
+        if item.action is Action.PLAY_PAUSE
+    )
+
+    class Native:
+        def IsEnabled(self):  # noqa: N802 - wx API
+            return True
+
+        def GetItemLabel(self):  # noqa: N802 - wx API
+            return "&Pauza albo wznowienie (Spacja)"
+
+    frame = object.__new__(LiteFrame)
+    frame.navigator = types.SimpleNamespace(
+        active=SessionId.SPOTIFY,
+        session=types.SimpleNamespace(
+            model=types.SimpleNamespace(selected_row=None),
+        ),
+    )
+    frame._menu_items = [(Native(), play_pause)]
+    frame._refresh_menu_state = lambda: None
+    frame._action_available_in_active_session = lambda _action: True
+
+    groups = frame._context_menu_command_groups(player=True)
+    labels = {
+        command.action: command.label
+        for group in groups
+        for command in group
+    }
+
+    assert labels[Action.QUEUE_PREVIOUS] == "&Poprzedni utwór kolejki\tPage Up"
+    assert labels[Action.QUEUE_NEXT] == "&Następny utwór kolejki\tPage Down"
 
 
 def test_shift_f6_returns_to_the_list() -> None:
@@ -639,6 +863,7 @@ def test_membership_menu_gates_follow_the_selected_user_facing_item() -> None:
             Action.TOGGLE_PLAY_NEXT,
             Action.TOGGLE_PODCAST_LIBRARY,
             Action.TIDAL_TOGGLE_LIBRARY,
+            Action.SPOTIFY_TOGGLE_LIBRARY,
         )
     }
 
@@ -666,12 +891,14 @@ def test_membership_menu_gates_follow_the_selected_user_facing_item() -> None:
         view = {
             SessionId.PODCASTS: LibraryView.PODCAST_LIBRARY,
             SessionId.TIDAL: LibraryView.TIDAL_LIBRARY,
+            SessionId.SPOTIFY: LibraryView.SPOTIFY_LIBRARY,
         }.get(active, LibraryView.ALL_FILES)
         session = types.SimpleNamespace(
             view=View.LIST,
             library_view=view,
             library_playlist_id=None,
             model=types.SimpleNamespace(selected_row=row),
+            spotify_context=None,
         )
         frame = object.__new__(LiteFrame)
         frame.navigator = types.SimpleNamespace(
@@ -733,4 +960,22 @@ def test_membership_menu_gates_follow_the_selected_user_facing_item() -> None:
         kind="track",
         service_id="tidal-track",
         related_album_service_id="tidal-album",
+    )
+    assert enabled(
+        Action.SPOTIFY_TOGGLE_LIBRARY,
+        SessionId.SPOTIFY,
+        kind="album",
+        service_id="spotify-album",
+    )
+    assert enabled(
+        Action.SPOTIFY_TOGGLE_LIBRARY,
+        SessionId.SPOTIFY,
+        kind="episode",
+        service_id="spotify-episode",
+    )
+    assert not enabled(
+        Action.SPOTIFY_TOGGLE_LIBRARY,
+        SessionId.SPOTIFY,
+        kind="track",
+        service_id="spotify-track",
     )

@@ -116,7 +116,8 @@ class MenuItem:
     needs_podcast_library_item: bool = False
     #: Wymaga kontenera obsługiwanego przez Bibliotekę TIDAL.
     needs_tidal_library_item: bool = False
-    #: Wymaga albumu, wykonawcy albo podcastu zapisywalnego przez Spotify.
+    #: Wymaga albumu, wykonawcy, podcastu albo odcinka zapisywalnego przez
+    #: Spotify. Odcinek jest jawnie wspierany przez ten sam kontrakt konta.
     needs_spotify_library_item: bool = False
     #: Wymaga utworu albo odcinka zapisywalnego w Ulubionych Spotify.
     needs_spotify_favorite_item: bool = False
