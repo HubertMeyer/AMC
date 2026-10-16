@@ -295,7 +295,9 @@ def test_episode_enter_and_right_arrow_return_to_its_podcast() -> None:
 
     menu = nav.spotify_relations()[0]
     assert isinstance(menu, ShowSpotifyRelations)
-    assert [choice.label for choice in menu.choices] == ["Przejdź do podcastu"]
+    assert [choice.label for choice in menu.choices] == [
+        "Przejdź do Podcast użytkowy"
+    ]
     assert nav.activate_spotify_relation(menu.choices[0]) == [OpenSpotifyContainer(
         item_id="private-episode:related-podcast",
         service_id="spotify:show:secret",

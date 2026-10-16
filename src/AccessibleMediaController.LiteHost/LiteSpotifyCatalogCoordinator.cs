@@ -16,6 +16,7 @@ internal sealed class LiteSpotifyCatalogCoordinator(
     private readonly object _collectionGate = new();
     private IReadOnlyList<MediaItem> _collectionSnapshot = backend.CachedCollection;
     private bool _collectionRefreshAttempted;
+    private bool _albumRefreshAttempted;
 
     public object Capabilities() => LiteSpotifyCatalogContract.CreateCapabilities(
         backend is ILiteSpotifyWriteBackend);
@@ -104,6 +105,46 @@ internal sealed class LiteSpotifyCatalogCoordinator(
                 warning = "Nie można sprawdzić połączenia katalogu Spotify. Pokazano ostatni zapis.";
             }
 
+            // Stary cache AMC nie przechowywał czasu albumu. Gdy użytkownik
+            // rzeczywiście otwiera kategorię Albumy, pobieramy tylko strony
+            // /me/albums. To kilka małych stron zamiast pełnej synchronizacji
+            // tysięcy utworów i nie wykonuje się podczas chodzenia strzałkami.
+            if (view == "albums"
+                && !_albumRefreshAttempted
+                && account.CatalogConnected == true
+                && _collectionSnapshot.Any(item =>
+                    item.Kind == MediaItemKind.Album
+                    && item.IsInLibrary
+                    && item.Duration <= TimeSpan.Zero))
+            {
+                _albumRefreshAttempted = true;
+                try
+                {
+                    var refreshed = backend.RefreshAlbumsAsync(CancellationToken.None)
+                        .GetAwaiter()
+                        .GetResult();
+                    _collectionSnapshot = MergeRefreshedAlbums(
+                        _collectionSnapshot,
+                        refreshed.Items,
+                        keepMissing: refreshed.HadWarnings);
+                    if (refreshed.HadWarnings)
+                    {
+                        warning = JoinWarnings(
+                            warning,
+                            "Nie wszystkie czasy albumów Spotify udało się odświeżyć.");
+                    }
+                }
+                catch (Exception exception)
+                {
+                    warning = JoinWarnings(
+                        warning,
+                        SafeFailure(
+                            exception,
+                            LiteSpotifyCatalogContract.CollectionViewOperation)
+                        + " Pokazano ostatni zapis albumów.");
+                }
+            }
+
             return LiteSpotifyCatalogContract.CreateCollectionViewResult(
                 view,
                 _collectionSnapshot,
@@ -112,6 +153,54 @@ internal sealed class LiteSpotifyCatalogCoordinator(
                 sortMode);
         }
     }
+
+    private static IReadOnlyList<MediaItem> MergeRefreshedAlbums(
+        IReadOnlyList<MediaItem> snapshot,
+        IReadOnlyList<MediaItem> refreshedAlbums,
+        bool keepMissing)
+    {
+        if (!keepMissing)
+        {
+            return snapshot
+                .Where(item => item.Kind != MediaItemKind.Album)
+                .Concat(refreshedAlbums)
+                .ToArray();
+        }
+
+        var byId = refreshedAlbums
+            .Where(item => item.Kind == MediaItemKind.Album)
+            .GroupBy(
+                item => NormalizeExternalId(item.ExternalId),
+                StringComparer.Ordinal)
+            .ToDictionary(
+                group => group.Key,
+                group => group.First(),
+                StringComparer.Ordinal);
+        var merged = new List<MediaItem>(snapshot.Count + refreshedAlbums.Count);
+        var used = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var item in snapshot)
+        {
+            var id = NormalizeExternalId(item.ExternalId);
+            if (item.Kind == MediaItemKind.Album
+                && byId.TryGetValue(id, out var replacement))
+            {
+                merged.Add(replacement);
+                used.Add(id);
+            }
+            else
+            {
+                merged.Add(item);
+            }
+        }
+        merged.AddRange(refreshedAlbums.Where(item =>
+            item.Kind == MediaItemKind.Album
+            && !used.Contains(NormalizeExternalId(item.ExternalId))));
+        return merged;
+    }
+
+    private static string JoinWarnings(string first, string second) =>
+        string.Join(" ", new[] { first, second }.Where(value =>
+            !string.IsNullOrWhiteSpace(value)));
 
     public object Search(JsonElement args)
     {
@@ -334,6 +423,9 @@ internal interface ILiteSpotifyReadOnlyBackend : IDisposable
     LiteSpotifyAccountProbe ReadAccountStatus();
 
     Task<LiteSpotifyCollectionRefresh> RefreshCollectionAsync(
+        CancellationToken cancellationToken);
+
+    Task<LiteSpotifyCollectionRefresh> RefreshAlbumsAsync(
         CancellationToken cancellationToken);
 
     Task<IReadOnlyList<MediaItem>> SearchAsync(

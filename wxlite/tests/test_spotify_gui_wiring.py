@@ -31,6 +31,32 @@ class ImmediateRunner:
             failed(error)
 
 
+def test_deferred_spotify_feedback_outlasts_native_focus_speech(monkeypatch) -> None:
+    scheduled = []
+    spoken = []
+    monkeypatch.setattr(
+        gui_module.wx,
+        "CallLater",
+        lambda delay, callback: scheduled.append((delay, callback)),
+        raising=False,
+    )
+    frame = SimpleNamespace(
+        _deferred_list_announcement_version=0,
+        _window_alive=lambda: True,
+        announcer=SimpleNamespace(say=spoken.append),
+    )
+
+    LiteFrame._announce_after_list_update(
+        frame,
+        "Dodano do Biblioteki Spotify: Album",
+    )
+
+    assert scheduled[0][0] >= 350
+    assert spoken == []
+    scheduled[0][1]()
+    assert spoken == ["Dodano do Biblioteki Spotify: Album"]
+
+
 def test_alt_d_is_the_spotify_podcast_description_command() -> None:
     assert resolve(
         Chord("D", alt=True),
@@ -136,7 +162,7 @@ def test_spotify_library_shortcut_calls_confirmed_host_write() -> None:
 def test_spotify_library_shortcut_removes_a_saved_episode_and_refreshes_view() -> None:
     calls = []
     spoken = []
-    opened = []
+    refreshed = []
     episode = Row(
         "spotify:episode:private",
         "Odcinek",
@@ -149,12 +175,7 @@ def test_spotify_library_shortcut_removes_a_saved_episode_and_refreshes_view() -
         "spotify-collection:episodes", "episodes", "Zapisane odcinki"
     )
     frame = SimpleNamespace(
-        navigator=SimpleNamespace(
-            active=SessionId.SPOTIFY,
-            sessions={
-                SessionId.SPOTIFY: SimpleNamespace(spotify_context=context)
-            },
-        ),
+        navigator=Navigator(),
         client=SimpleNamespace(
             spotify_collection_membership=lambda items, *, mode: (
                 calls.append((items, mode))
@@ -170,22 +191,22 @@ def test_spotify_library_shortcut_removes_a_saved_episode_and_refreshes_view() -
         _selected_action_rows=lambda: [episode],
         _spotify_membership_pending=False,
         _spotify_loaded_counts={"episodes": 150},
-        _open_spotify_collection_view=opened.append,
+        _sync_views=lambda: refreshed.append(True),
+        _announce_after_list_update=spoken.append,
+    )
+    frame.navigator.active = SessionId.SPOTIFY
+    frame.navigator.apply_spotify_collection_view(
+        context, "Zapisane odcinki Spotify", [episode]
     )
 
     LiteFrame._toggle_spotify_membership(frame, favorite=False)
 
     assert calls[0][1] == "library"
     assert calls[0][0][0]["kind"] == "episode"
-    assert spoken == []
-    assert frame._spotify_loaded_counts == {"episodes": 150}
-    assert opened == [OpenSpotifyCollectionView(
-        "spotify-collection:episodes",
-        "episodes",
-        "Zapisane odcinki",
-        replace_current=True,
-        announcement="Usunięto z Biblioteki Spotify: Odcinek",
-    )]
+    assert spoken == ["Usunięto z Biblioteki Spotify: Odcinek"]
+    assert frame._spotify_loaded_counts == {"episodes": 0}
+    assert frame.navigator.session.model.rows == []
+    assert refreshed == [True]
 
 
 def test_spotify_library_shortcut_keeps_album_page_sort_and_neighbor() -> None:
@@ -225,22 +246,21 @@ def test_spotify_library_shortcut_keeps_album_page_sort_and_neighbor() -> None:
         _spotify_loaded_counts={"albums": 300},
         _spotify_effective_sort_modes={"albums": "Alphabetical"},
         _open_spotify_collection_view=opened.append,
+        _sync_views=lambda: None,
+        _announce_after_list_update=spoken.append,
     )
 
     LiteFrame._toggle_spotify_membership(frame, favorite=False)
 
     assert calls[0][1] == "library"
-    assert spoken == []
-    assert frame._spotify_loaded_counts == {"albums": 300}
+    assert spoken == ["Usunięto z Biblioteki Spotify: Album 2"]
+    assert frame._spotify_loaded_counts == {"albums": 2}
     assert frame._spotify_effective_sort_modes == {"albums": "Alphabetical"}
-    assert opened == [OpenSpotifyCollectionView(
-        "spotify-collection:albums",
-        "albums",
-        "Albumy",
-        preferred_id="row-3",
-        replace_current=True,
-        announcement="Usunięto z Biblioteki Spotify: Album 2",
-    )]
+    assert [row.item_id for row in navigator.session.model.rows] == [
+        "row-1", "row-3"
+    ]
+    assert navigator.session.model.selected_id == "row-3"
+    assert opened == []
 
 
 def test_spotify_sort_reloads_first_page_without_adding_a_history_level() -> None:
@@ -701,9 +721,9 @@ def test_spotify_right_arrow_waits_for_enter_on_one_podcast_destination() -> Non
     run = []
     focused = []
     choice = SpotifyRelationChoice(
-        "Przejdź do podcastu",
+        "Przejdź do Podcast użytkowy",
         OpenSpotifyContainer(
-            "episode:related-podcast", "podcast-id", "Podcast", "podcast"
+            "episode:related-podcast", "podcast-id", "Podcast użytkowy", "podcast"
         ),
     )
     intent = ShowSpotifyRelations("Przejdź do", (choice,))
@@ -742,9 +762,9 @@ def test_spotify_right_arrow_waits_for_enter_on_one_podcast_destination() -> Non
         gui_module.RelationDestinationDialog = original_dialog
         gui_module.wx.CallAfter = original_call_after
 
-    assert created == [("Przejdź do", ("Podcasty",), False)]
+    assert created == [("Przejdź do", ("Podcast użytkowy",), False)]
     assert activated == [choice]
-    assert run == [["Przejdź do podcastu"]]
+    assert run == [["Przejdź do Podcast użytkowy"]]
     assert focused == [True]
 
 

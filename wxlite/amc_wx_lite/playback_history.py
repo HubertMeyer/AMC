@@ -9,8 +9,10 @@ zostają wyłącznie w modelu; tekst listy powstaje z jawnych pól użytkowych.
 from __future__ import annotations
 
 import hashlib
+from dataclasses import replace
 
 from .list_model import Row
+from .radio_activity import join_spoken_prefix, normalize_state_position
 
 
 MAX_ITEMS_PER_SESSION = 500
@@ -204,6 +206,53 @@ def record_row(raw: object, row: Row, *, replay_supported: bool) -> list[dict]:
         entry,
         *(item for item in current if _identity(item) != identity),
     ])
+
+
+def activity_rows(
+    rows: list[Row] | tuple[Row, ...],
+    *,
+    current_item_id: str,
+    playback_state: object,
+    position: object = "after",
+) -> list[Row]:
+    """Nałóż wspólną, krótką informację o odtwarzaniu na listę streamera."""
+
+    state = _text(playback_state).casefold()
+    label = (
+        "odtwarzane"
+        if state in {"playing", "play", "buffering", "odtwarzanie"}
+        else "odtwarzanie wstrzymane"
+        if state in {"paused", "pause", "wstrzymane"}
+        else ""
+    )
+    placement = normalize_state_position(position)
+    result: list[Row] = []
+    for row in rows:
+        active = bool(label and current_item_id and row.item_id == current_item_id)
+        prefix = (
+            join_spoken_prefix([label])
+            if active and placement == "before"
+            else ""
+        )
+        detail = label if active and placement == "after" else ""
+        if placement == "off":
+            prefix = ""
+            detail = ""
+        result.append(
+            row
+            if (
+                row.state_prefix == prefix
+                and row.state_detail == detail
+                and row.playback_activity == active
+            )
+            else replace(
+                row,
+                state_prefix=prefix,
+                state_detail=detail,
+                playback_activity=active,
+            )
+        )
+    return result
 
 
 def observed_wiim_row(state: dict) -> Row | None:

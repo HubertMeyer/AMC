@@ -672,6 +672,22 @@ def test_wiim_cut_and_paste_place_streams_before_named_target() -> None:
         ) is action
 
 
+def test_wiim_timer_reads_playback_while_stream_list_is_open() -> None:
+    submissions: list = []
+    frame = SimpleNamespace(
+        client=SimpleNamespace(wiim_snapshot=lambda _device_id: {}),
+        navigator=SimpleNamespace(active=SessionId.WIIM, view=View.LIST),
+        runner=SimpleNamespace(submit=lambda *args: submissions.append(args)),
+        _wiim_active_device_id="device-one",
+        _wiim_status_poll_pending=False,
+    )
+
+    LiteFrame._refresh_wiim_status(frame)
+
+    assert len(submissions) == 1
+    assert submissions[0][0] == "wiim-status"
+
+
 def test_wiim_source_library_has_two_intentional_labels_and_actions() -> None:
     nav = Navigator()
     devices = list(device_rows({

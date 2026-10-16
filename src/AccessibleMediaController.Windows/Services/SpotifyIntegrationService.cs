@@ -244,6 +244,34 @@ internal sealed class SpotifyIntegrationService(
     }
 
     /// <summary>
+    /// Odświeża wyłącznie albumy potrzebne widokowi Albumy. Nie pobiera przy
+    /// tym polubionych utworów ani pozostałych części dużej biblioteki.
+    /// </summary>
+    public async Task<SpotifySavedAlbumsResult> GetSavedAlbumsAsync(
+        CancellationToken cancellationToken)
+    {
+        await operationGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            var tokens = await EnsureValidTokensAsync(cancellationToken)
+                .ConfigureAwait(false);
+            var result = await api.GetSavedAlbumsAsync(
+                    tokens.AccessToken,
+                    cancellationToken)
+                .ConfigureAwait(false);
+            if (result.Items.Count == 0 && result.Warnings.Count > 0)
+            {
+                throw new InvalidOperationException(string.Join(" ", result.Warnings));
+            }
+            return result;
+        }
+        finally
+        {
+            operationGate.Release();
+        }
+    }
+
+    /// <summary>
     /// Utwory z playlisty. Zwraca null, gdy Spotify nie udostępnia zawartości -
     /// tak jest dla playlist redakcyjnych Spotify i playlist innych osób.
     /// To nie awaria, tylko granica narzucona przez Spotify w 2024 roku.

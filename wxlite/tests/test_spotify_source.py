@@ -130,6 +130,25 @@ def test_album_information_can_use_the_sum_of_real_track_durations() -> None:
     assert text == "3:00"
 
 
+def test_spotify_album_row_reads_known_total_duration_without_word_czas() -> None:
+    result = container_result_from_payload({
+        "heading": "Albumy Spotify",
+        "items": [{
+            "id": "private-album-row",
+            "externalId": "private-album",
+            "title": "Płyta",
+            "artist": "Wykonawca",
+            "kind": "album",
+            "durationTicks": (38 * 60 + 28) * 10_000_000,
+        }],
+    })
+
+    row = result.rows[0]
+    assert row.duration_ticks == (38 * 60 + 28) * 10_000_000
+    assert row.detail == "Wykonawca, 38:28"
+    assert "Czas" not in row.detail
+
+
 def test_spotify_description_has_only_deliberate_user_text() -> None:
     row = Row(
         "private-row",

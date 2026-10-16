@@ -1,5 +1,6 @@
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Text.Json;
 using AccessibleMediaController.Core.Configuration;
 using AccessibleMediaController.Core.Playback;
 using AccessibleMediaController.Core.Sessions;
@@ -61,6 +62,7 @@ internal static class SpotifyNativeCollectionTests
         var collections = (bool)typeof(MainWindow).GetMethod("UsesTidalStyleCollections",BindingFlags.Static|BindingFlags.NonPublic)!
             .Invoke(null,["spotify"])!;
         if (!collections) throw new Exception("Sesja Spotify nie rozroznia Ulubionych i Biblioteki.");
+        VerifySavedAlbumDuration();
         var cache = typeof(MainWindow).GetMethod("StoreSpotifyContainerForSession", flags);
         if (cache is null) throw new Exception("Brak zapisu zawartosci albumu dla sesji Spotify.");
         var container = new MediaItem { Id="spotify:album:ALB", ExternalId="ALB", Title="Album", Kind=MediaItemKind.Album };
@@ -77,6 +79,59 @@ internal static class SpotifyNativeCollectionTests
             throw new Exception("Ponowne otwarcie albumu zeruje kolejke.");
         VerifyNativeDeviceDialog();
         Console.WriteLine("OK: jedna kolekcja Spotify, jeden model i kolejka dla obu silnikow");
+    }
+
+    private static void VerifySavedAlbumDuration()
+    {
+        const BindingFlags flags = BindingFlags.Static | BindingFlags.NonPublic;
+        var readAlbum = typeof(AccessibleMediaController.Windows.Services.SpotifyApiClient)
+            .GetMethod("ReadAlbum", flags)
+            ?? throw new Exception("Brak parsera albumu Spotify.");
+        using var complete = JsonDocument.Parse("""
+            {
+              "added_at": "2026-10-16T10:00:00Z",
+              "album": {
+                "id": "album-duration",
+                "name": "Album z czasem",
+                "artists": [{"id":"artist","name":"Wykonawca"}],
+                "tracks": {
+                  "total": 2,
+                  "next": null,
+                  "items": [
+                    {"duration_ms":120000},
+                    {"duration_ms":180000}
+                  ]
+                }
+              }
+            }
+            """);
+        var completeRoot = complete.RootElement;
+        var item = readAlbum.Invoke(null, [
+            completeRoot.GetProperty("album"),
+            (JsonElement?)completeRoot
+        ]) as MediaItem;
+        if (item?.Duration != TimeSpan.FromMinutes(5))
+            throw new Exception(
+                "Zapisany album Spotify nie przenosi sumy czasów utworów do wiersza listy.");
+
+        using var partial = JsonDocument.Parse("""
+            {
+              "id": "partial-album",
+              "name": "Album niepełny",
+              "tracks": {
+                "total": 2,
+                "next": "https://api.spotify.com/v1/albums/partial/tracks?offset=1",
+                "items": [{"duration_ms":120000}]
+              }
+            }
+            """);
+        var partialItem = readAlbum.Invoke(null, [
+            partial.RootElement,
+            null
+        ]) as MediaItem;
+        if (partialItem?.Duration != TimeSpan.Zero)
+            throw new Exception(
+                "Niepełny album Spotify pokazuje zaniżony czas zamiast czasu nieznanego.");
     }
 
 

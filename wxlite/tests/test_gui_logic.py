@@ -42,6 +42,7 @@ def install_wx_stub() -> None:
         "SL_HORIZONTAL", "SL_LABELS", "FONTWEIGHT_BOLD", "DD_DIR_MUST_EXIST",
         "FD_OPEN", "FD_FILE_MUST_EXIST", "EVT_TIMER", "EVT_CLOSE", "EVT_KEY_DOWN",
         "EVT_CHAR_HOOK", "EVT_CONTEXT_MENU",
+        "EVT_HOTKEY",
         "EVT_LIST_ITEM_ACTIVATED", "EVT_LIST_ITEM_FOCUSED", "EVT_LIST_ITEM_SELECTED",
         "EVT_LIST_ITEM_DESELECTED",
         "EVT_BUTTON", "EVT_SLIDER", "EVT_CHOICE",
@@ -76,6 +77,8 @@ def install_wx_stub() -> None:
     wx.YES_NO = wx.YES | wx.NO  # type: ignore[attr-defined]
     wx.NO_DEFAULT = 0x0080  # type: ignore[attr-defined]
     wx.ICON_WARNING = 0x0100  # type: ignore[attr-defined]
+    wx.MOD_CONTROL = 0x0002  # type: ignore[attr-defined]
+    wx.MOD_SHIFT = 0x0004  # type: ignore[attr-defined]
 
     # Flagi ukladu sizerow. Tez skladane operatorem ``|`` (``wx.ALL |
     # wx.EXPAND``), wiec musza byc liczbami. Wartosci ODCZYTANE z
@@ -123,9 +126,12 @@ def install_wx_stub() -> None:
 install_wx_stub()
 
 from amc_wx_lite.gui import (  # noqa: E402
+    CLIPBOARD_COMMAND_DELAY_MS,
     LiteFrame,
     YOUTUBE_EXPORT_WILDCARD,
+    _WindowsPreset10HotKey,
     chord_from_event,
+    defer_clipboard_command,
     format_time,
     relation_destination_labels,
     session_selection_labels,
@@ -293,6 +299,62 @@ def test_native_keyboard_boundary_recognizes_only_first_ctrl_shift_zero() -> Non
             shift_down=shift,
             alt_down=alt,
         )
+
+
+def test_foreground_hotkey_registers_physical_ctrl_shift_zero(monkeypatch) -> None:
+    calls = []
+
+    class Owner:
+        filter_box = object()
+        _keyboard_help_active = False
+
+        def Bind(self, event_type, handler, *, id):
+            calls.append(("bind", event_type, id))
+            self.handler = handler
+
+        def RegisterHotKey(self, id, modifiers, virtual_key):
+            calls.append(("register", id, modifiers, virtual_key))
+            return True
+
+        def UnregisterHotKey(self, id):
+            calls.append(("unregister", id))
+
+        def _activate_preset(self, slot):
+            calls.append(("preset", slot))
+
+    owner = Owner()
+    monkeypatch.setattr("amc_wx_lite.gui.os.name", "nt")
+    monkeypatch.setattr(
+        "amc_wx_lite.gui.wx.Window.FindFocus",
+        lambda: object(),
+        raising=False,
+    )
+    hotkey = _WindowsPreset10HotKey(owner)
+
+    assert hotkey.register()
+    assert ("register", hotkey._ID, 0x0002 | 0x0004 | 0x4000, 0x30) in calls
+    owner.handler(None)
+    assert ("preset", 10) in calls
+    hotkey.unregister()
+    assert ("unregister", hotkey._ID) in calls
+
+
+def test_amc_copy_waits_past_nvda_global_clipboard_probe(monkeypatch) -> None:
+    scheduled = []
+    completed = []
+    monkeypatch.setattr(
+        "amc_wx_lite.gui.wx.CallLater",
+        lambda delay, callback: scheduled.append((delay, callback)),
+        raising=False,
+    )
+
+    defer_clipboard_command(lambda: completed.append("copy"))
+
+    assert CLIPBOARD_COMMAND_DELAY_MS > 100
+    assert scheduled[0][0] == CLIPBOARD_COMMAND_DELAY_MS
+    assert completed == []
+    scheduled[0][1]()
+    assert completed == ["copy"]
 
 
 def test_relation_destinations_use_natural_short_labels_unless_details_enabled() -> None:

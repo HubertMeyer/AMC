@@ -558,9 +558,8 @@ def build_menus(session_order: object = None) -> tuple[Menu, ...]:
             SEPARATOR,
             # Ctrl+C obsluguje wspolna droga klawiatury. Nie oddajemy go
             # dodatkowo wx jako systemowego akceleratora menu, bo wykonalby
-            # polecenie drugi raz. Angielskie "Copy" moze mimo tego wypowiadac
-            # globalne oglaszanie schowka z zewnetrznego dodatku NVDA; nie jest
-            # to drugi akcelerator AMC. Skrot pozostaje widoczny w nazwie.
+            # polecenie drugi raz. Klawiaturowa droga opóźnia zapis za kontrolę
+            # schowka dodatku NVDA, a skrót pozostaje widoczny w nazwie.
             MenuItem("&Skopiuj nazwę", Action.COPY_NAME, shortcut="Ctrl+C",
                      accelerator=False, needs_selection=True),
             MenuItem("W&ytnij lub zaznacz do przeniesienia", Action.CUT_FILE,

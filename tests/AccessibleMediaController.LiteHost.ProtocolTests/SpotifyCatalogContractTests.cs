@@ -27,6 +27,7 @@ internal static class SpotifyCatalogContractTests
         CoordinatorRedactsCredentialProbeFailure();
         CoordinatorUsesCachedCollectionWithoutAConnection();
         CoordinatorUsesPopulatedCacheImmediatelyWhenConnected();
+        CoordinatorRefreshesOnlyAlbumsToFillDurations();
         CoordinatorRedactsBackendFailures();
         CoordinatorSearchesExactlyOnceWithoutMutatingAnything();
         CoordinatorReadsOneDescriptionWithoutMutation();
@@ -446,6 +447,7 @@ internal static class SpotifyCatalogContractTests
         _ = coordinator.AccountStatus();
         _ = coordinator.CollectionRoot();
         Check(backend.RefreshCalls == 0
+            && backend.AlbumRefreshCalls == 0
             && backend.SearchCalls == 0
             && backend.ContainerCalls == 0,
             "status albo możliwości uruchomiły operację katalogową");
@@ -499,8 +501,35 @@ internal static class SpotifyCatalogContractTests
 
         Check(backend.RefreshCalls == 0,
             "otwarcie zapisanej kolekcji uruchomiło pełną synchronizację przed pokazaniem listy");
+        Check(backend.AlbumRefreshCalls == 1,
+            "widok Albumy nie wykonał wąskiego odświeżenia czasów albumów");
         Check(result.Items.Count == 1 && result.Items[0].Title == "Album z zapisu",
-            "widok nie zwrócił od razu istniejącego zapisu kolekcji");
+            "wąskie odświeżenie zmieniło istniejący zapis kolekcji");
+    }
+
+    private static void CoordinatorRefreshesOnlyAlbumsToFillDurations()
+    {
+        var cached = Item(
+            MediaItemKind.Album, "album123", "Album", library: true);
+        var refreshed = Item(
+            MediaItemKind.Album, "album123", "Album", library: true);
+        refreshed.Duration = TimeSpan.FromMinutes(38);
+        using var backend = new FakeBackend
+        {
+            Cached = [cached],
+            RefreshedAlbums = [refreshed]
+        };
+        using var coordinator = new LiteSpotifyCatalogCoordinator(backend);
+        using var args = JsonDocument.Parse("""{"view":"albums"}""");
+
+        var first = (LiteSpotifyItemsResult)coordinator.CollectionView(args.RootElement);
+        var second = (LiteSpotifyItemsResult)coordinator.CollectionView(args.RootElement);
+
+        Check(backend.RefreshCalls == 0 && backend.AlbumRefreshCalls == 1,
+            "czas albumu uruchomił pełną synchronizację albo odświeżał się wielokrotnie");
+        Check(first.Items.Single().DurationTicks == TimeSpan.FromMinutes(38).Ticks
+            && second.Items.Single().DurationTicks == TimeSpan.FromMinutes(38).Ticks,
+            "czas odświeżonego albumu nie trafił do wiersza listy");
     }
 
     private static void CoordinatorRedactsBackendFailures()
@@ -591,13 +620,16 @@ internal static class SpotifyCatalogContractTests
         public IReadOnlyList<MediaItem> Cached { get; set; } = [];
         public IReadOnlyList<MediaItem> SearchItems { get; set; } = [];
         public IReadOnlyList<MediaItem> RefreshedItems { get; set; } = [];
+        public IReadOnlyList<MediaItem>? RefreshedAlbums { get; set; }
         public IReadOnlyList<MediaItem> ContainerItems { get; set; } = [];
         public string? Description { get; set; }
         public Exception? SearchFailure { get; set; }
         public Exception? RefreshFailure { get; set; }
+        public Exception? AlbumRefreshFailure { get; set; }
         public Exception? ContainerFailure { get; set; }
         public Exception? AccountFailure { get; set; }
         public int RefreshCalls { get; private set; }
+        public int AlbumRefreshCalls { get; private set; }
         public int SearchCalls { get; private set; }
         public int ContainerCalls { get; private set; }
         public int DescriptionCalls { get; private set; }
@@ -618,6 +650,17 @@ internal static class SpotifyCatalogContractTests
             RefreshCalls++;
             if (RefreshFailure is not null) throw RefreshFailure;
             return Task.FromResult(new LiteSpotifyCollectionRefresh(RefreshedItems, false));
+        }
+
+        public Task<LiteSpotifyCollectionRefresh> RefreshAlbumsAsync(
+            CancellationToken cancellationToken)
+        {
+            AlbumRefreshCalls++;
+            if (AlbumRefreshFailure is not null) throw AlbumRefreshFailure;
+            return Task.FromResult(new LiteSpotifyCollectionRefresh(
+                RefreshedAlbums ?? Cached.Where(item =>
+                    item.Kind == MediaItemKind.Album).ToArray(),
+                false));
         }
 
         public Task<IReadOnlyList<MediaItem>> SearchAsync(

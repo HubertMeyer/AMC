@@ -12,6 +12,10 @@ internal sealed record SpotifyCollectionResult(
     IReadOnlyList<string> Warnings,
     IReadOnlyList<MediaItemKind> UpdatedKinds);
 
+internal sealed record SpotifySavedAlbumsResult(
+    IReadOnlyList<MediaItem> Items,
+    IReadOnlyList<string> Warnings);
+
 /// <summary>
 /// Zapisane podcasty i zapisane odcinki. Trzymamy je OSOBNO, bo to dwie rozne
 /// rzeczy: podcast jest kontenerem (wchodzi sie do niego po odcinki), a odcinek
@@ -237,6 +241,26 @@ internal sealed class SpotifyApiClient(HttpClient? httpClient = null) : IDisposa
             shows ?? [],
             episodes ?? [],
             warnings);
+    }
+
+    /// <summary>
+    /// Tylko zapisane albumy. Widok Albumy używa tej wąskiej operacji, aby
+    /// dostać czasy z osadzonych utworów bez synchronizowania tysięcy
+    /// polubionych utworów, wykonawców, playlist i podcastów.
+    /// </summary>
+    public async Task<SpotifySavedAlbumsResult> GetSavedAlbumsAsync(
+        string accessToken,
+        CancellationToken cancellationToken)
+    {
+        var warnings = new List<string>();
+        var albums = await ZbierzStronamiAsync(
+            accessToken,
+            $"{ApiRoot}/me/albums?limit={PageSize}",
+            ReadSavedAlbum,
+            "Albumy",
+            warnings,
+            cancellationToken).ConfigureAwait(false);
+        return new SpotifySavedAlbumsResult(albums ?? [], warnings);
     }
 
     /// <summary>
@@ -1204,6 +1228,12 @@ internal sealed class SpotifyApiClient(HttpClient? httpClient = null) : IDisposa
             Title = nazwa,
             ExternalId = id,
             Artist = Wykonawcy(album),
+            // Zapisany album Spotify zawiera już zagnieżdżoną, stronicowaną
+            // listę utworów z duration_ms. Nie ignorujemy tych danych: dzięki
+            // temu lista Albumy może czytać łączny czas bez osobnego żądania
+            // podczas każdego ruchu fokusu. Gdy odpowiedź zawiera tylko część
+            // utworów, zostawiamy czas nieznany zamiast podawać zaniżoną sumę.
+            Duration = CompleteAlbumDuration(album),
             IsInLibrary = entry is not null,
             PublicUri = $"https://open.spotify.com/album/{id}",
             Source = $"spotify:album:{id}"
@@ -1229,6 +1259,47 @@ internal sealed class SpotifyApiClient(HttpClient? httpClient = null) : IDisposa
             item.CollectionAddedUtcTicks = kiedy.UtcDateTime.Ticks;
         }
         return item;
+    }
+
+    private static TimeSpan CompleteAlbumDuration(JsonElement album)
+    {
+        if (!album.TryGetProperty("tracks", out var tracks)
+            || tracks.ValueKind != JsonValueKind.Object
+            || !tracks.TryGetProperty("items", out var items)
+            || items.ValueKind != JsonValueKind.Array)
+        {
+            return TimeSpan.Zero;
+        }
+
+        var itemCount = items.GetArrayLength();
+        if (tracks.TryGetProperty("total", out var totalElement)
+            && totalElement.TryGetInt32(out var total)
+            && total != itemCount)
+        {
+            return TimeSpan.Zero;
+        }
+        if (tracks.TryGetProperty("next", out var next)
+            && next.ValueKind == JsonValueKind.String
+            && !string.IsNullOrWhiteSpace(next.GetString()))
+        {
+            return TimeSpan.Zero;
+        }
+
+        long milliseconds = 0;
+        foreach (var track in items.EnumerateArray())
+        {
+            if (!track.TryGetProperty("duration_ms", out var duration)
+                || !duration.TryGetInt64(out var value)
+                || value < 0
+                || milliseconds > long.MaxValue - value)
+            {
+                return TimeSpan.Zero;
+            }
+            milliseconds += value;
+        }
+        return milliseconds > 0
+            ? TimeSpan.FromMilliseconds(milliseconds)
+            : TimeSpan.Zero;
     }
 
     private static MediaItem? ReadArtist(JsonElement artist)

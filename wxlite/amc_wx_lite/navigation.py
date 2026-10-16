@@ -2938,12 +2938,17 @@ class Navigator:
                 open_artist_overview=True,
             ))
         if row.kind == "episode" and row.related_podcast_service_id:
+            podcast_title = row.related_podcast_title.strip()
             choices.append(SpotifyRelationChoice(
-                "Przejdź do podcastu",
+                (
+                    f"Przejdź do {podcast_title}"
+                    if podcast_title
+                    else "Przejdź do podcastu"
+                ),
                 OpenSpotifyContainer(
                     item_id=f"{row.item_id}:related-podcast",
                     service_id=row.related_podcast_service_id,
-                    title=row.related_podcast_title or "Podcast",
+                    title=podcast_title or "Podcast",
                     kind="podcast",
                 ),
             ))

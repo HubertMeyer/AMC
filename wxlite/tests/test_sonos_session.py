@@ -811,6 +811,18 @@ def test_sonos_timer_does_not_overlap_a_read_or_waiting_command() -> None:
     assert submissions == []
 
 
+def test_sonos_timer_reads_playback_while_library_list_is_open() -> None:
+    submissions: list = []
+    frame = _queued_sonos_frame(submissions, [])
+    frame.navigator.view = View.LIST
+    frame.client.sonos_snapshot = lambda *_args: {}
+
+    LiteFrame._refresh_sonos_status(frame)
+
+    assert len(submissions) == 1
+    assert submissions[0][0] == "sonos-status"
+
+
 def test_finishing_sonos_read_starts_one_waiting_command() -> None:
     submissions: list = []
     frame = _queued_sonos_frame(submissions, [])

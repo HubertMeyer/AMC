@@ -67,6 +67,24 @@ internal sealed class LiteSpotifyWindowsCatalogBackend : ILiteSpotifyWriteBacken
         }
     }
 
+    public async Task<LiteSpotifyCollectionRefresh> RefreshAlbumsAsync(
+        CancellationToken cancellationToken)
+    {
+        EnsureCatalogReady();
+        try
+        {
+            var result = await _integration.GetSavedAlbumsAsync(cancellationToken)
+                .ConfigureAwait(false);
+            return new LiteSpotifyCollectionRefresh(
+                result.Items,
+                result.Warnings.Count > 0);
+        }
+        catch (Exception exception)
+        {
+            throw Translate(exception, cancellationToken);
+        }
+    }
+
     public async Task<IReadOnlyList<MediaItem>> SearchAsync(
         string query,
         CancellationToken cancellationToken)

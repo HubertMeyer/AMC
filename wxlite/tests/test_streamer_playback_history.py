@@ -3,8 +3,10 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 from amc_wx_lite.gui import LiteFrame
+from amc_wx_lite.list_model import Row
 from amc_wx_lite.navigation import Announce, LibraryView, Navigator, SessionId
 from amc_wx_lite.playback_history import (
+    activity_rows,
     history_rows,
     observed_sonos_row,
     observed_wiim_row,
@@ -42,6 +44,60 @@ def test_wiim_and_sonos_observations_require_real_playback() -> None:
     assert sonos is not None and sonos.kind == "track"
     assert "observed" in wiim.item_id
     assert "observed" in sonos.item_id
+
+
+def test_streamer_list_marks_only_confirmed_material_as_playing() -> None:
+    rows = [
+        Row("first", "Pierwsza", "sonosFavorite", detail="Radio"),
+        Row("second", "Druga", "sonosFavorite"),
+    ]
+
+    playing = activity_rows(
+        rows,
+        current_item_id="first",
+        playback_state="playing",
+    )
+    assert playing[0].detail == "Radio"
+    assert playing[0].state_detail == "odtwarzane"
+    assert playing[0].playback_activity is True
+    assert playing[1].state_detail == ""
+
+    cleared = activity_rows(
+        playing,
+        current_item_id="first",
+        playback_state="idle",
+    )
+    assert all(not row.state_detail for row in cleared)
+    assert all(not row.playback_activity for row in cleared)
+
+
+def test_confirmed_sonos_material_is_saved_as_replayable_history() -> None:
+    saved: list[bool] = []
+    frame = SimpleNamespace(
+        state=LiteState(),
+        _queue_streamer_history_save=lambda: saved.append(True),
+    )
+    row = Row(
+        "sonos-stream:one",
+        "Radio domowe",
+        "sonosOwnStream",
+        parent_id="house-one",
+        service_id="stream-one",
+        service_kind="ownStream",
+    )
+
+    LiteFrame._record_streamer_history_row(
+        frame, SessionId.SONOS, row, replay_supported=True
+    )
+
+    restored = history_rows(
+        "sonos", frame.state.playback_history_by_session["sonos"]
+    )
+    assert len(restored) == 1
+    assert restored[0].activation_message is None
+    assert restored[0].parent_id == "house-one"
+    assert restored[0].service_id == "stream-one"
+    assert saved == [True]
 
 
 def test_streamer_history_is_newest_first_deduplicated_and_user_facing() -> None:

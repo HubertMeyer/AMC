@@ -91,6 +91,7 @@ from .playlist_dialog import (
     choices_from_payload as playlist_choices_from_payload,
 )
 from .playback_history import (
+    activity_rows as streamer_activity_rows,
     history_rows as streamer_history_rows,
     observed_sonos_row,
     observed_wiim_row,
@@ -809,6 +810,80 @@ class _WindowsPreset10Hook:
         self._user32 = None
 
 
+class _WindowsPreset10HotKey:
+    """Foreground-only native registration for the physical Ctrl+Shift+0.
+
+    ``RegisterHotKey`` receives ``VK_0`` before a Polish keyboard layout can
+    translate Shift+0 to ``)`` and before ``SysListView32`` consumes it.  The
+    registration exists only while AMC is the active window, so it never
+    steals the chord from another application.  The thread hook above remains
+    a fallback for a system that refuses the registration.
+    """
+
+    _ID = 0xA510
+
+    def __init__(self, owner: "LiteFrame") -> None:
+        self._owner = owner
+        self._bound = False
+        self._registered = False
+
+    def bind(self) -> bool:
+        if self._bound:
+            return True
+        event_type = getattr(wx, "EVT_HOTKEY", None)
+        bind = getattr(self._owner, "Bind", None)
+        if event_type is None or not callable(bind):
+            return False
+        try:
+            bind(event_type, self._on_hotkey, id=self._ID)
+        except (AttributeError, TypeError):
+            return False
+        self._bound = True
+        return True
+
+    def register(self) -> bool:
+        if os.name != "nt":
+            return False
+        if self._registered:
+            return True
+        if not self.bind():
+            return False
+        register = getattr(self._owner, "RegisterHotKey", None)
+        if not callable(register):
+            return False
+        modifiers = (
+            int(getattr(wx, "MOD_CONTROL", 0))
+            | int(getattr(wx, "MOD_SHIFT", 0))
+            | 0x4000  # MOD_NOREPEAT; wxPython nie wystawia tej stałej.
+        )
+        try:
+            self._registered = bool(register(self._ID, modifiers, 0x30))
+        except (AttributeError, TypeError):
+            self._registered = False
+        return self._registered
+
+    def unregister(self) -> None:
+        if not self._registered:
+            return
+        self._registered = False
+        unregister = getattr(self._owner, "UnregisterHotKey", None)
+        if callable(unregister):
+            try:
+                unregister(self._ID)
+            except (AttributeError, TypeError):
+                pass
+
+    def _on_hotkey(self, _event) -> None:
+        owner = self._owner
+        if getattr(owner, "_keyboard_help_active", False):
+            return
+        find_focus = getattr(getattr(wx, "Window", None), "FindFocus", None)
+        focused = find_focus() if callable(find_focus) else None
+        if focused is getattr(owner, "filter_box", None):
+            return
+        owner._activate_preset(10)
+
+
 def chord_from_event(event: wx.KeyEvent) -> Chord:
     code = event.GetKeyCode()
     name = _SPECIAL_KEYS.get(code)
@@ -880,6 +955,19 @@ def player_time_label(position: float | None, duration: float | None) -> str:
 #: Komunikat Ctrl+C. ``MainWindow.xaml.cs:24372``. Byl zmierzony jako
 #: poprawny (dokladnie jeden na gest, takze przy powtorzeniu) -- nie ruszamy go.
 COPIED_NAME_MESSAGE = "Skopiowano nazwę"
+
+# NVDA Extension Global Plugin wysyła Ctrl+C do aplikacji po 80 ms, a potem
+# przez 100 ms sprawdza zmianę numeru sekwencji schowka. Natychmiastowy zapis
+# powoduje jego dodatkowe, angielskie „Copy”. Własne polecenia kopiowania AMC
+# zapisują więc dane chwilę po tym oknie. Zwykłe pola edycyjne pozostają
+# natywne i nie przechodzą przez tę funkcję.
+CLIPBOARD_COMMAND_DELAY_MS = 180
+
+
+def defer_clipboard_command(callback: Callable[[], None]) -> None:
+    """Run one AMC clipboard command after NVDA's global copy probe."""
+
+    wx.CallLater(CLIPBOARD_COMMAND_DELAY_MS, callback)
 
 
 def format_item_count(count: int) -> str:
@@ -2116,7 +2204,7 @@ class SearchDialog(wx.Dialog):
     def _open_selected(self) -> None:
         self._complete_selected(SearchResultAction.OPEN)
 
-    def _copy(self, *, addresses: bool) -> None:
+    def _copy(self, *, addresses: bool, defer: bool = False) -> None:
         values = []
         for entry in self._selected_entries():
             value = entry.row.address if addresses else entry.row.title
@@ -2127,7 +2215,11 @@ class SearchDialog(wx.Dialog):
                 "Wybrane wyniki nie mają adresu" if addresses else "Nie ma czego skopiować"
             )
             return
-        if self._copy_text(os.linesep.join(values)):
+        text = os.linesep.join(values)
+
+        def copy() -> None:
+            if not self._copy_text(text):
+                return
             if addresses:
                 self.announcer.say(
                     "Skopiowano adres" if len(values) == 1
@@ -2138,6 +2230,11 @@ class SearchDialog(wx.Dialog):
                     COPIED_NAME_MESSAGE if len(values) == 1
                     else f"Skopiowano nazwy: {len(values)} elementów"
                 )
+
+        if defer:
+            defer_clipboard_command(copy)
+        else:
+            copy()
 
     def _announce_quick_information(self) -> None:
         entry = self._lead_entry()
@@ -2271,7 +2368,7 @@ class SearchDialog(wx.Dialog):
                 self._complete_selected(SearchResultAction.RELATIONS)
             return
         if ctrl and code in (ord("C"), ord("c")):
-            self._copy(addresses=shift)
+            self._copy(addresses=shift, defer=not shift)
             return
         event.Skip()
 
@@ -4184,21 +4281,29 @@ class RadioRecognitionHistoryDialog(wx.Dialog):
         self.status.SetName(text)
         self._announce(text)
 
-    def _copy(self, *, links: bool) -> None:
+    def _copy(self, *, links: bool, defer: bool = False) -> None:
         selected = self._selected_entries()
         if not selected:
             self._set_status("Brak wybranego wpisu")
             return
         formatter = radio_recognition.rich_text if links else radio_recognition.copy_text
-        if not self._copy_to_clipboard(
-            "\n\n".join(formatter(entry) for entry in selected)
-        ):
-            return
-        if len(selected) == 1:
-            self._set_status("Skopiowano opis i łącza" if links else "Skopiowano opis")
+        text = "\n\n".join(formatter(entry) for entry in selected)
+
+        def copy() -> None:
+            if not self._copy_to_clipboard(text):
+                return
+            if len(selected) == 1:
+                self._set_status(
+                    "Skopiowano opis i łącza" if links else "Skopiowano opis"
+                )
+            else:
+                subject = "opisy i łącza" if links else "opisy"
+                self._set_status(f"Skopiowano {subject}: {len(selected)}")
+
+        if defer:
+            defer_clipboard_command(copy)
         else:
-            subject = "opisy i łącza" if links else "opisy"
-            self._set_status(f"Skopiowano {subject}: {len(selected)}")
+            copy()
 
     def _delete(self) -> None:
         selected = self._selected_entries()
@@ -4240,7 +4345,7 @@ class RadioRecognitionHistoryDialog(wx.Dialog):
             self._copy(links=True)
             return
         if chord == "Ctrl+C":
-            self._copy(links=False)
+            self._copy(links=False, defer=True)
             return
         if chord == "Delete":
             self._delete()
@@ -5550,11 +5655,12 @@ class LiteFrame(wx.Frame):
         # stanem bieżącego procesu, nie profilem ani tekstem dla NVDA.
         self._last_preset_slot_by_session: dict[SessionId, int] = {}
         self._radio_activity_cues: dict[tuple[bool, bool], object] = {}
+        self._windows_preset_10_hotkey = _WindowsPreset10HotKey(self)
         self._windows_preset_10_hook = _WindowsPreset10Hook(self)
         self._deferred_list_announcement_version = 0
 
         self._build_ui()
-        self._windows_preset_10_hook.install()
+        self._windows_preset_10_hotkey.bind()
         self._bind_keys()
         self._start_engine()
 
@@ -6542,13 +6648,9 @@ class LiteFrame(wx.Frame):
             "Ctrl+,",
         } | set(GLOBAL_VIEW_SHORTCUTS) | set(PRESET_SHORTCUTS):
             # Ctrl+C musi zostac zatrzymane PRZED natywnym SysListView32,
-            # zeby gest wykonal tylko polecenie AMC. Angielskie "Copy"
-            # zgloszone w odbiorze nie pochodzi jednak z kontrolki: na
-            # komputerze testowym wypowiada je globalna funkcja
-            # ``clipboardCommandAnnouncement`` dodatku NVDA Extension Global
-            # Plugin. Aplikacja nie moze jej wyciszyc bez przejmowania
-            # zwyklych gestow NVDA; zachowujemy wiec natywna droge i wlasny,
-            # prawdziwy komunikat sukcesu.
+            # zeby gest wykonal tylko polecenie AMC. Sam zapis do schowka jest
+            # odroczony w ``_copy_name`` za okno kontroli dodatku NVDA, więc
+            # czytnik nie dopowiada już angielskiego "Copy".
             self._on_key(event)
             return
         event.Skip()
@@ -7293,8 +7395,15 @@ class LiteFrame(wx.Frame):
 
         def done(payload: dict) -> None:
             self._spotify_membership_pending = False
-            message = str((payload or {}).get("message") or "").strip()
-            self.announcer.say(message or "Zmieniono kolekcję Spotify")
+            result = payload or {}
+            message = str(result.get("message") or "").strip()
+            destination = "Ulubionych" if favorite else "Biblioteki"
+            fallback = (
+                f"Dodano do {destination} Spotify"
+                if bool(result.get("added"))
+                else f"Usunięto z {destination} Spotify"
+            )
+            self.announcer.say(message or fallback)
 
         def failed(error: Exception) -> None:
             self._spotify_membership_pending = False
@@ -9288,10 +9397,39 @@ class LiteFrame(wx.Frame):
         )
         if row is None:
             return
+        previous = list(
+            self.state.playback_history_by_session.get(session_id.value, ())
+        )
+        if (
+            previous
+            and str(previous[0].get("title") or "").strip().casefold()
+            == row.title.strip().casefold()
+        ):
+            return
+        recorder = getattr(self, "_record_streamer_history_row", None)
+        if callable(recorder):
+            recorder(session_id, row, replay_supported=False)
+        else:
+            LiteFrame._record_streamer_history_row(
+                self,
+                session_id,
+                row,
+                replay_supported=False,
+            )
+
+    def _record_streamer_history_row(
+        self,
+        session_id: SessionId,
+        row: Row,
+        *,
+        replay_supported: bool,
+    ) -> None:
+        """Zapisz potwierdzone odtworzenie z pełną tożsamością, jeśli ją znamy."""
+
         histories = self.state.playback_history_by_session
         previous = list(histories.get(session_id.value, ()))
         updated = record_streamer_history_row(
-            previous, row, replay_supported=False
+            previous, row, replay_supported=replay_supported
         )
         if updated == previous:
             return
@@ -9314,6 +9452,30 @@ class LiteFrame(wx.Frame):
             call_after(persist)
         else:
             persist()
+
+    def _apply_streamer_activity_status(self, session_id: SessionId) -> None:
+        """Pokaż „odtwarzane” na listach Sonosa i WiiM-a jak w Radiu."""
+
+        if session_id not in (SessionId.WIIM, SessionId.SONOS):
+            return
+        session = self.navigator.sessions[session_id]
+        snapshot = (
+            self._wiim_snapshot
+            if session_id is SessionId.WIIM
+            else self._sonos_snapshot
+        )
+        rows = streamer_activity_rows(
+            session.model.rows,
+            current_item_id=session.current_material_id,
+            playback_state=snapshot.get("playbackState"),
+            position=self.options.radio_playback_state_position,
+        )
+        if rows == session.model.rows:
+            return
+        selected_id = session.model.selected_id
+        session.model.replace(rows, preferred_id=selected_id)
+        if self.navigator.active is session_id and session.view is View.LIST:
+            self._sync_views()
 
     def _open_library_view(
         self,
@@ -9528,8 +9690,8 @@ class LiteFrame(wx.Frame):
                 "Ctrl+F1",
                 # To jest NAJWCZEŚNIEJSZA bramka wx: CHAR_HOOK głównego okna
                 # przychodzi przed zdarzeniem listy. Zatrzymuje natywne
-                # wykonanie gestu; nie zatrzymuje globalnego komunikatu
-                # schowka skonfigurowanego w zewnętrznym dodatku NVDA.
+                # wykonanie gestu, a właściwy zapis jest odroczony za kontrolę
+                # schowka dodatku NVDA.
                 "Ctrl+C",
                 "Ctrl+Shift+C",
                 "Ctrl+X",
@@ -9709,6 +9871,11 @@ class LiteFrame(wx.Frame):
             # Klawisz NIE jest nasz: oddajemy go kontrolce, zeby natywna
             # nawigacja i czytnik ekranu dzialaly bez zmian.
             event.Skip()
+            return
+        if action is Action.COPY_NAME and chord.canonical == "Ctrl+C":
+            # Tylko gest klawiaturowy czeka za globalnym monitorem schowka
+            # NVDA. Pozycja menu nadal wykonuje to samo polecenie od razu.
+            self._copy_name(defer=True)
             return
         self._dispatch(action)
 
@@ -11237,6 +11404,16 @@ class LiteFrame(wx.Frame):
             session.current_material_id = intent.item_id
             session.view = View.PLAYER
             self._wiim_snapshot = state
+            record_history = getattr(self, "_record_streamer_history_row", None)
+            if callable(record_history):
+                record_history(SessionId.WIIM, Row(
+                    item_id=intent.item_id,
+                    title=intent.title,
+                    kind="wiimNetworkStream",
+                    parent_id=intent.device_id,
+                    service_id=intent.stream_id,
+                    service_kind="wiimNetworkStream",
+                ), replay_supported=True)
             if self.navigator.active is SessionId.WIIM:
                 self._sync_views()
                 self._apply_wiim_snapshot(state, announce=True)
@@ -11627,6 +11804,13 @@ class LiteFrame(wx.Frame):
             session.view = View.PLAYER
             self._wiim_active_device_id = device_id
             self._wiim_snapshot = state
+            record_history = getattr(self, "_record_streamer_history_row", None)
+            if callable(record_history):
+                record_history(SessionId.WIIM, Row(
+                    item_id=f"{item_id}:preset:{choice.number}",
+                    title=choice.title,
+                    kind="station",
+                ), replay_supported=False)
             if self.navigator.active is SessionId.WIIM:
                 self._sync_views()
                 self._apply_wiim_snapshot(state, announce=True)
@@ -12463,6 +12647,9 @@ class LiteFrame(wx.Frame):
         self._set_transport_label(
             playing=playback in {"odtwarzanie", "playing", "play"}
         )
+        apply_activity = getattr(self, "_apply_streamer_activity_status", None)
+        if callable(apply_activity):
+            apply_activity(SessionId.WIIM)
         if announce:
             message = str(state.get("message") or "").strip()
             self.announcer.say(message or label)
@@ -12716,6 +12903,9 @@ class LiteFrame(wx.Frame):
         self._set_transport_label(
             playing=playback in {"odtwarzanie", "playing", "play"}
         )
+        apply_activity = getattr(self, "_apply_streamer_activity_status", None)
+        if callable(apply_activity):
+            apply_activity(SessionId.SONOS)
         if announce:
             message = str(state.get("message") or "").strip()
             self.announcer.say(message or label)
@@ -13438,6 +13628,21 @@ class LiteFrame(wx.Frame):
             session.now_playing_title = intent.title
             session.current_material_id = intent.item_id
             self._sonos_snapshot = state
+            kind = {
+                "favorite": "sonosFavorite",
+                "playlist": "sonosPlaylist",
+                "ownStream": "sonosOwnStream",
+            }.get(intent.kind, "station")
+            record_history = getattr(self, "_record_streamer_history_row", None)
+            if callable(record_history):
+                record_history(SessionId.SONOS, Row(
+                    item_id=intent.item_id,
+                    title=intent.title,
+                    kind=kind,
+                    parent_id=intent.household_id,
+                    service_id=intent.material_id,
+                    service_kind=intent.kind,
+                ), replay_supported=kind != "station")
             if self.navigator.active is SessionId.SONOS:
                 state["message"] = intent.title
                 self._apply_sonos_snapshot(state, announce=True)
@@ -13828,7 +14033,11 @@ class LiteFrame(wx.Frame):
                 return
             self.announcer.say(message)
 
-        wx.CallLater(140, announce)
+        # Na wolniejszym przebiegu UIA/NVDA 140 ms wciąż pozwalało późnemu
+        # komunikatowi fokusowanego wiersza przeciąć etykietę Alt+1/2/3 albo
+        # potwierdzenie Ctrl+Shift+L. 360 ms pozostaje krótkie, ale daje
+        # natywnej liście czas zakończyć własną sekwencję dostępności.
+        wx.CallLater(360, announce)
 
     def _open_podcast_aggregate(
         self,
@@ -15341,7 +15550,7 @@ class LiteFrame(wx.Frame):
 
         self.runner.submit("folder", work, done, failed)
 
-    def _copy_name(self) -> None:
+    def _copy_name(self, *, defer: bool = False) -> None:
         """Ctrl+C: nazwy zaznaczonych elementow, po jednej w wierszu.
 
         Odpowiednik ``CopyActionItemName`` (MainWindow.xaml.cs:24755): pelne
@@ -15353,12 +15562,20 @@ class LiteFrame(wx.Frame):
             self.announcer.say("Nie ma czego skopiować")
             return
         self._clear_pending_external_moves()
-        if self._to_clipboard(os.linesep.join(row.title for row in rows)):
-            self.announcer.say(
-                COPIED_NAME_MESSAGE
-                if len(rows) == 1
-                else f"Skopiowano nazwy: {format_item_count(len(rows))}"
-            )
+        text = os.linesep.join(row.title for row in rows)
+
+        def copy() -> None:
+            if self._to_clipboard(text):
+                self.announcer.say(
+                    COPIED_NAME_MESSAGE
+                    if len(rows) == 1
+                    else f"Skopiowano nazwy: {format_item_count(len(rows))}"
+                )
+
+        if defer:
+            defer_clipboard_command(copy)
+        else:
+            copy()
 
     def _selected_action_rows(self) -> list[Row]:
         """Wiersze dla polecenia: natywny wielokrotny wybor albo kursor.
@@ -15388,7 +15605,14 @@ class LiteFrame(wx.Frame):
 
         event.Skip()
         if event.GetActive():
+            if self._windows_preset_10_hotkey.register():
+                self._windows_preset_10_hook.uninstall()
+            else:
+                self._windows_preset_10_hook.install()
             wx.CallAfter(self._reconcile_completed_external_moves)
+        else:
+            self._windows_preset_10_hotkey.unregister()
+            self._windows_preset_10_hook.uninstall()
 
     def _hide_completed_external_moves_from_files_model(self) -> bool:
         """Ukryj przeniesione wiersze bez zapisu do wspoldzielonej bazy AMC."""
@@ -16444,7 +16668,12 @@ class LiteFrame(wx.Frame):
             self._spotify_membership_pending = False
             result = payload or {}
             message = str(result.get("message") or "").strip()
-            completion = message or "Zmieniono kolekcję Spotify"
+            destination = "Ulubionych" if favorite else "Biblioteki"
+            completion = message or (
+                f"Dodano do {destination} Spotify"
+                if bool(result.get("added"))
+                else f"Usunięto z {destination} Spotify"
+            )
             if not isinstance(context, OpenSpotifyCollectionView):
                 self.announcer.say(completion)
                 return
@@ -16462,6 +16691,25 @@ class LiteFrame(wx.Frame):
                 or current.view != context.view
             ):
                 self.announcer.say(completion)
+                return
+            if not bool(result.get("added")):
+                # Usunięcie z otwartej kolekcji jest już potwierdzone przez
+                # Spotify. Nie przeładowujemy całej strony, bo późna odpowiedź
+                # sieciowa przesuwała fokus i potrafiła zagłuszyć komunikat.
+                current_rows = list(state.model.rows)
+                visible = [
+                    row for row in current_rows
+                    if row.item_id not in selected_ids
+                ]
+                state.model.replace(
+                    visible,
+                    preferred_id=removal_preferred_id,
+                )
+                self._spotify_loaded_counts[context.view] = len([
+                    row for row in visible if row.kind != "loadMore"
+                ])
+                self._sync_views()
+                self._announce_after_list_update(completion)
                 return
             self._open_spotify_collection_view(OpenSpotifyCollectionView(
                 context.item_id,
@@ -19522,7 +19770,6 @@ class LiteFrame(wx.Frame):
             client is None
             or not device_id
             or self.navigator.active is not SessionId.WIIM
-            or self.navigator.view is not View.PLAYER
             or getattr(self, "_wiim_status_poll_pending", False)
         ):
             return
@@ -19536,7 +19783,6 @@ class LiteFrame(wx.Frame):
                 return
             if (
                 self.navigator.active is not SessionId.WIIM
-                or self.navigator.view is not View.PLAYER
                 or state.get("deviceId") != self._wiim_active_device_id
             ):
                 return
@@ -19563,7 +19809,6 @@ class LiteFrame(wx.Frame):
             or not household_id
             or not group_id
             or self.navigator.active is not SessionId.SONOS
-            or self.navigator.view is not View.PLAYER
             or getattr(self, "_sonos_status_poll_pending", False)
             or getattr(self, "_sonos_request_pending", False)
             or getattr(self, "_sonos_retry_pending", False)
@@ -19583,7 +19828,6 @@ class LiteFrame(wx.Frame):
                 return
             if (
                 self.navigator.active is not SessionId.SONOS
-                or self.navigator.view is not View.PLAYER
                 or state.get("householdId") != self._sonos_active_household_id
                 or state.get("groupId") != self._sonos_active_group_id
             ):
@@ -21489,6 +21733,7 @@ class LiteFrame(wx.Frame):
         self._save_state()
         if self.client is not None:
             self.client.close()
+        self._windows_preset_10_hotkey.unregister()
         self._windows_preset_10_hook.uninstall()
         event.Skip()
 
