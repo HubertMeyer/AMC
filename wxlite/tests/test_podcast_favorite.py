@@ -145,3 +145,74 @@ def test_delete_in_podcast_favorites_uses_the_favorite_transaction() -> None:
     gui.LiteFrame._remove_selected_items(frame)
 
     assert calls == ["toggle"]
+
+
+def test_ctrl_shift_l_on_saved_single_youtube_video_removes_only_that_video() -> None:
+    calls: list[str] = []
+    row = Row(
+        item_id="internet-media:private-video",
+        title="Pojedynczy film",
+        kind="episode",
+        parent_id="internet-media:public",
+    )
+    frame = SimpleNamespace(
+        navigator=SimpleNamespace(active=SessionId.PODCASTS),
+        client=object(),
+        _podcast_library_pending=False,
+        _selected_action_rows=lambda: [row],
+        _remove_selected_items=lambda: calls.append("remove-video"),
+        announcer=SimpleNamespace(say=lambda message: calls.append(message)),
+    )
+
+    gui.LiteFrame._toggle_podcast_library(frame)
+
+    assert calls == ["remove-video"]
+
+
+def test_delete_on_episode_list_removes_episode_not_whole_podcast() -> None:
+    calls = []
+
+    class Runner:
+        @staticmethod
+        def submit(_name, work, done, _failed):
+            done(work())
+
+    row = Row(
+        item_id="episode-private",
+        title="Odcinek do usunięcia",
+        kind="episode",
+        parent_id="podcast-private",
+    )
+    client = SimpleNamespace(
+        remove_profile_items=lambda session, view, ids, playlist_id=None: (
+            calls.append((session, view, ids, playlist_id))
+            or {"removedCount": 1}
+        )
+    )
+    spoken = []
+    frame = SimpleNamespace(
+        navigator=SimpleNamespace(
+            active=SessionId.PODCASTS,
+            session=SimpleNamespace(
+                library_view=LibraryView.PODCAST_EPISODES,
+                library_playlist_id="podcast-private",
+            ),
+        ),
+        _selected_action_rows=lambda: [row],
+        _profile_edit_client=lambda: client,
+        _current_profile_view_name=lambda: LibraryView.PODCAST_EPISODES.value,
+        _refresh_profile_view=lambda: calls.append("refresh"),
+        announcer=SimpleNamespace(say=spoken.append),
+        runner=Runner(),
+    )
+
+    gui.LiteFrame._remove_selected_items(frame)
+
+    assert calls == [
+        ("podcasts", "podcastEpisodes", ["episode-private"], None),
+        "refresh",
+    ]
+    assert spoken == [
+        "Usunięto odcinek z Biblioteki: Odcinek do usunięcia. "
+        "Pliki na dysku pozostały bez zmian"
+    ]

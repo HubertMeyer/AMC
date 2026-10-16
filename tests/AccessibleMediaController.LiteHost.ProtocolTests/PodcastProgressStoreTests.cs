@@ -262,6 +262,10 @@ internal static class PodcastProgressStoreTests
                     ReadSubscription(database, "youtube-channel:UCabc_DEF-123")
                         .RefreshIntervalMinutes == 180,
                     "nowy kanal YouTube dostaje osobny aktualny odstep odswiezania");
+                HideEpisode(database, "youtube-ep-1");
+                store.ApplyRefresh("youtube-channel:UCabc_DEF-123", youTubeFeed);
+                Assert.True(!EpisodeExists(database, "youtube-ep-1"),
+                    "usuniety material kanalu YouTube nie wraca po odswiezeniu");
 
                 var internet = store.AddInternetMedia(
                     new PodcastInternetMediaSource(
@@ -291,6 +295,18 @@ internal static class PodcastProgressStoreTests
                         false),
                     null).AddedEpisode,
                     "powtorne dodanie tego samego medium aktualizuje zamiast dublowac");
+                HideEpisode(database, internet.EpisodeId);
+                var restoredInternet = store.AddInternetMedia(
+                    new PodcastInternetMediaSource(
+                        "https://www.youtube.com/watch?v=test123",
+                        "Publiczny materiał",
+                        "Kanał testowy",
+                        TimeSpan.FromMinutes(3),
+                        false),
+                    null);
+                Assert.True(restoredInternet.AddedEpisode
+                    && EpisodeExists(database, internet.EpisodeId),
+                    "jawne ponowne dodanie usunietego medium przywraca je do Biblioteki");
 
                 var opmlEntries = store.GetOpmlEntries();
                 Assert.True(opmlEntries.Count == 2,
@@ -379,6 +395,39 @@ internal static class PodcastProgressStoreTests
         command.CommandText = "SELECT is_favorite FROM podcast_episodes WHERE id = $id;";
         command.Parameters.AddWithValue("$id", episodeId);
         return Convert.ToInt32(command.ExecuteScalar()) != 0;
+    }
+
+    private static bool EpisodeExists(string path, string episodeId)
+    {
+        using var connection = new SqliteConnection($"Data Source={path};Pooling=False");
+        connection.Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = "SELECT COUNT(*) FROM podcast_episodes WHERE id = $id;";
+        command.Parameters.AddWithValue("$id", episodeId);
+        return Convert.ToInt32(command.ExecuteScalar()) != 0;
+    }
+
+    private static void HideEpisode(string path, string episodeId)
+    {
+        using var connection = new SqliteConnection($"Data Source={path};Pooling=False");
+        connection.Open();
+        using var transaction = connection.BeginTransaction();
+        using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = """
+            CREATE TABLE IF NOT EXISTS podcast_removed_episodes (
+                id TEXT PRIMARY KEY,
+                removed_utc_ticks INTEGER NOT NULL
+            );
+            INSERT INTO podcast_removed_episodes(id, removed_utc_ticks)
+            VALUES($id, $ticks)
+            ON CONFLICT(id) DO UPDATE SET removed_utc_ticks = excluded.removed_utc_ticks;
+            DELETE FROM podcast_episodes WHERE id = $id;
+            """;
+        command.Parameters.AddWithValue("$id", episodeId);
+        command.Parameters.AddWithValue("$ticks", DateTime.UtcNow.Ticks);
+        command.ExecuteNonQuery();
+        transaction.Commit();
     }
 
     private static void CreateDatabase(string path)

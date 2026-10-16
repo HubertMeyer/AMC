@@ -5,6 +5,7 @@ using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using AccessibleMediaController.Core.Configuration;
 using AccessibleMediaController.Core.LocalMedia;
+using AccessibleMediaController.Core.Podcasts;
 using AccessibleMediaController.Core.Sonos;
 using AccessibleMediaController.LiteHost.Protocol;
 using AccessibleMediaController.Windows.Services;
@@ -1418,6 +1419,8 @@ internal sealed class LiteProfileMutationStore
         IReadOnlyList<string> itemIds,
         string? playlistId)
     {
+        if (string.Equals(view, "podcastEpisodes", StringComparison.Ordinal))
+            return RemovePodcastEpisodes(itemIds);
         if (string.Equals(view, "podcastPlaylistContents", StringComparison.Ordinal))
         {
             var normalizedPlaylistId = CleanRequiredText(
@@ -1527,6 +1530,104 @@ internal sealed class LiteProfileMutationStore
         }
         transaction.Commit();
         return new { removedCount = removed };
+    }
+
+    private object RemovePodcastEpisodes(IReadOnlyList<string> itemIds)
+    {
+        using var connection = OpenDatabase(_podcastsDatabasePath);
+        using (var attach = connection.CreateCommand())
+        {
+            attach.CommandText = "ATTACH DATABASE $path AS library;";
+            attach.Parameters.AddWithValue("$path", _libraryDatabasePath);
+            attach.ExecuteNonQuery();
+        }
+        using var transaction = connection.BeginTransaction();
+        Execute(
+            connection,
+            transaction,
+            "CREATE TABLE IF NOT EXISTS podcast_removed_episodes ("
+            + "id TEXT PRIMARY KEY, removed_utc_ticks INTEGER NOT NULL);");
+        var removed = new List<(string Id, string Title, string SubscriptionId)>();
+        foreach (var id in itemIds)
+        {
+            using var read = connection.CreateCommand();
+            read.Transaction = transaction;
+            read.CommandText =
+                "SELECT id, title, subscription_id FROM podcast_episodes WHERE id = $id;";
+            read.Parameters.AddWithValue("$id", id);
+            using var reader = read.ExecuteReader();
+            if (!reader.Read()) continue;
+            removed.Add((reader.GetString(0), reader.GetString(1), reader.GetString(2)));
+        }
+        foreach (var item in removed)
+        {
+            Execute(
+                connection,
+                transaction,
+                "INSERT INTO podcast_removed_episodes(id, removed_utc_ticks) "
+                + "VALUES($id, $ticks) ON CONFLICT(id) DO UPDATE SET "
+                + "removed_utc_ticks = excluded.removed_utc_ticks;",
+                ("$id", item.Id), ("$ticks", DateTime.UtcNow.Ticks));
+            Execute(
+                connection,
+                transaction,
+                "DELETE FROM podcast_episodes WHERE id = $id;",
+                ("$id", item.Id));
+            Execute(
+                connection,
+                transaction,
+                "UPDATE podcast_state SET current_item_id = NULL "
+                + "WHERE singleton = 1 AND current_item_id = $id;",
+                ("$id", item.Id));
+            foreach (var table in new[]
+                     {
+                         "favorite_order", "favorite_added_order", "queue_order",
+                         "queue_regular_order", "queue_play_next_order"
+                     })
+            {
+                Execute(
+                    connection,
+                    transaction,
+                    $"DELETE FROM library.{table} "
+                    + "WHERE session_id = 'podcasts' COLLATE NOCASE AND item_id = $id;",
+                    ("$id", item.Id));
+            }
+            Execute(
+                connection,
+                transaction,
+                "DELETE FROM library.playlist_items WHERE item_id = $id;",
+                ("$id", item.Id));
+            Execute(
+                connection,
+                transaction,
+                "DELETE FROM library.bookmarks "
+                + "WHERE session_id = 'podcasts' COLLATE NOCASE AND item_id = $id;",
+                ("$id", item.Id));
+            Execute(
+                connection,
+                transaction,
+                "DELETE FROM library.playback_history "
+                + "WHERE session_id = 'podcasts' COLLATE NOCASE AND item_id = $id;",
+                ("$id", item.Id));
+        }
+        if (removed.Any(item => string.Equals(
+                item.SubscriptionId,
+                PublicInternetMediaCollections.SavedId,
+                StringComparison.Ordinal)))
+        {
+            Execute(
+                connection,
+                transaction,
+                "DELETE FROM podcast_subscriptions WHERE id = $id AND NOT EXISTS "
+                + "(SELECT 1 FROM podcast_episodes WHERE subscription_id = $id);",
+                ("$id", PublicInternetMediaCollections.SavedId));
+        }
+        transaction.Commit();
+        return new
+        {
+            removedCount = removed.Count,
+            titles = removed.Select(item => item.Title).ToArray()
+        };
     }
 
     private static void RemoveLocalRecord(

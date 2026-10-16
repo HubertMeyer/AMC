@@ -1,10 +1,10 @@
 """Testy ZGODNOSCI klienta Python z PRAWDZIWA petla protokolu hosta w C#.
 
 To nie jest atrapa protokolu: uruchamiamy ten sam ``LiteDispatchLoop``, ktory
-pojdzie na Windows, skompilowany na net8.0 i uruchomiony w WSL przez
-``dotnet amc_lite_protocol_tests.dll --wire-server``. Handlery nie dotykaja
-dzwieku (NAudio wymaga Windows), wiec mierzymy WYLACZNIE warstwe komunikacji -
-dokladnie te czesc, ktora na Linuksie da sie sprawdzic uczciwie.
+pojdzie na Windows, skompilowany na net8.0 i uruchomiony dostepnym dla danego
+systemu poleceniem ``dotnet amc_lite_protocol_tests.dll --wire-server``.
+Handlery nie dotykaja dzwieku (NAudio wymaga Windows), wiec mierzymy WYLACZNIE
+warstwe komunikacji -- rowniez na Linuksie bez udawania pulpitu Windows.
 
 Jesli zbudowanego serwera nie ma, testy sa POMIJANE jawnym komunikatem,
 zeby brak buildu nie udawal zielonego wyniku.
@@ -13,9 +13,11 @@ zeby brak buildu nie udawal zielonego wyniku.
 from __future__ import annotations
 
 import os
+import shutil
 import subprocess
 import time
 from pathlib import Path
+from unittest import SkipTest
 
 from amc_wx_lite.host_client import HostError, HostUnavailable, LiteHostClient
 
@@ -29,11 +31,24 @@ WIRE_DLL = (
     / "net8.0"
     / "amc_lite_protocol_tests.dll"
 )
-DOTNET = Path(os.environ.get("DOTNET", "/home/michal/dotnet/dotnet"))
 
 
-class SkipTest(Exception):
-    """Runner traktuje to jako POMINIETE, nie jako zdane."""
+def _resolve_dotnet() -> Path:
+    """Znajdź runtime przenośnie: jawne ustawienie, PATH, stara ścieżka WSL."""
+
+    configured = os.environ.get("DOTNET", "").strip()
+    if configured:
+        return Path(configured)
+    discovered = shutil.which("dotnet")
+    if discovered:
+        return Path(discovered)
+    legacy_wsl = Path("/home/michal/dotnet/dotnet")
+    if legacy_wsl.exists():
+        return legacy_wsl
+    return Path("dotnet")
+
+
+DOTNET = _resolve_dotnet()
 
 
 def require_wire_server() -> None:

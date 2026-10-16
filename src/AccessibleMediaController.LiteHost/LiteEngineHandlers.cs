@@ -992,12 +992,26 @@ internal sealed class LiteEngineHandlers : IDisposable
         RequireProfileMutations().ExportSonosOwnStreams(
             LiteArgs.RequirePath(args, "path"));
 
-    private object RemoveProfileItems(JsonElement args) =>
-        RequireProfileMutations().Remove(
-            LiteArgs.RequireText(args, "sessionId"),
-            LiteArgs.RequireText(args, "view"),
-            ReadIds(args),
+    private object RemoveProfileItems(JsonElement args)
+    {
+        var sessionId = LiteArgs.RequireText(args, "sessionId");
+        var view = LiteArgs.RequireText(args, "view");
+        var itemIds = ReadIds(args);
+        if (string.Equals(sessionId, "podcasts", StringComparison.Ordinal)
+            && string.Equals(view, "podcastEpisodes", StringComparison.Ordinal)
+            && itemIds.Any(IsCurrentPodcastItem))
+        {
+            // Najpierw zachowaj punkt wznowienia i zwolnij dekoder. Po
+            // skasowaniu rekordu spóźniony checkpoint nie może go odtworzyć
+            // ani zgłosić mylącego błędu w tle.
+            StopFilesPlayback();
+        }
+        return RequireProfileMutations().Remove(
+            sessionId,
+            view,
+            itemIds,
             LiteArgs.ReadText(args, "playlistId"));
+    }
 
     private object ToggleProfileFavorites(JsonElement args) =>
         RequireProfileMutations().ToggleFavorites(
@@ -1030,6 +1044,16 @@ internal sealed class LiteEngineHandlers : IDisposable
         lock (_gate)
         {
             return string.Equals(_filesItem?.Id, itemId, StringComparison.Ordinal)
+                && (_files.LoadedItemId is not null || _files.IsPreparing);
+        }
+    }
+
+    private bool IsCurrentPodcastItem(string itemId)
+    {
+        lock (_gate)
+        {
+            return _filesItem?.Kind == MediaItemKind.Episode
+                && string.Equals(_filesItem.Id, itemId, StringComparison.Ordinal)
                 && (_files.LoadedItemId is not null || _files.IsPreparing);
         }
     }

@@ -40,6 +40,16 @@
 - Testy muszą kończyć się niezerowym kodem i diagnostyką po niepowodzeniu,
   nie pozostawionym oknem awarii CLR. Test negatywny nie jest zaliczeniem
   funkcji. Profile WebView2 testów są odizolowane od konta i stanu AMC.
+- Narzędzia testowe muszą wykrywać programy przenośnie: najpierw jawna zmienna
+  środowiskowa, potem bieżący `PATH`, a dopiero na końcu istniejąca ścieżka
+  zgodności dla konkretnego systemu. Nie używaj linuksowej ścieżki jako
+  bezwarunkowej wartości domyślnej na Windows ani odwrotnie. Ręczne uruchomienie
+  tego samego testu na wspieranym systemie ma działać bez sekretnej zmiennej,
+  jeżeli wymagane narzędzie jest dostępne w `PATH`.
+- Test integracyjny zależny od nieobowiązkowego runtime'u albo wcześniej
+  zbudowanego artefaktu ma używać standardowego mechanizmu pominięcia
+  rozpoznawanego przez pytest/unittest. Własny wyjątek o nazwie `SkipTest` nie
+  jest pominięciem i nie może zamieniać braku środowiska w pozorną regresję.
 - Etykiety dostępności list, pól kombi i menu muszą być tekstem użytkowym,
   nigdy domyślną reprezentacją obiektu, enuma ani identyfikatorem komendy.
   Testuj początkowy fokus, strzałki, ponowne otwarcie i powrót po zamknięciu.
@@ -55,6 +65,52 @@
   co najmniej `Ctrl+H`, `Alt+R`, `Alt+Shift+R` i `Ctrl+L`. Dodawaj testy
   parametryzowane dla reprezentatywnych widoków zamiast osobnych, rozbieżnych
   obsług klawiszy.
+- `Ctrl+Shift+0` uruchamia preset 10 we wszystkich sesjach, także w Radiu.
+  Nie mapuj go przez znak `)` ani zwykłe `Ctrl+0`; układ klawiatury i kod
+  klawisza z górnego rzędu wymagają jawnego testu regresji. `Ctrl+Shift+-` i
+  `Ctrl+Shift+=` nie są dowodem, że wariant z zerem działa.
+- Historia `Ctrl+H` jest oddzielna dla każdej sesji i zawiera odtworzenia
+  wykonane przez AMC w tej sesji. Nie wolno pokazywać w WiiM, Sonosie,
+  Spotify ani TIDAL historii plików lokalnych. Przekazanie materiału do obcej
+  aplikacji lub urządzenia może nie zsynchronizować historii dostawcy; AMC ma
+  uczciwie utrzymywać własną historię wykonanego przez siebie odtwarzania.
+
+## Zwięzła mowa list i relacji
+
+- Równoważne elementy usług mają ten sam porządek mowy na liście: tytuł, typ,
+  wykonawca lub autor oraz czas, jeżeli czas jest już dostępny w danych.
+  Albumy mogą podawać łączny czas bezpośrednio podczas góra/dół, ale nawigacja
+  nie może wykonywać osobnego żądania sieciowego dla każdego wiersza tylko po
+  to, aby go odczytać.
+- `Lewa strzałka` podaje krótkie informacje uzupełniające i nie powtarza
+  bez potrzeby tytułu ani nazwy aplikacji. Nie wypowiada stałych prefiksów
+  `Katalog Spotify`, `Rodzaj`, `Wykonawca`, `Tytuł` ani `Czas`, jeśli kolejność
+  wartości jest jednoznaczna. Brak danych należy nazwać krótko i uczciwie.
+- `Prawa strzałka` otwiera zwartą listę relacji. Zwykły tryb nie mówi
+  `menu kontekstowe`, `dialog lista`, nazwy procesu ani długiej instrukcji;
+  podaje relację i pozycję, na przykład `Albumy, 1 z 2`. Rozszerzone wskazówki
+  mogą być osobnym ustawieniem dostępności. Na odcinku relacja do źródła musi
+  zawierać rzeczywistą nazwę podcastu lub kanału, nie ogólne `Podcasty`.
+- `Alt+1`, `Alt+2` i `Alt+3` po zmianie sortowania ogłaszają użytkową nazwę
+  wybranego porządku i nie pozostawiają systemowego sygnału sugerującego brak
+  działania. Komunikat i fokus muszą przetrwać szybkie kolejne przełączenia.
+- `Ctrl+C` i `Ctrl+Shift+C` nie mogą przepuszczać angielskiego `copy` z
+  kontrolki. Potwierdzenie po polsku ma być krótkie i natychmiastowe, bez
+  sztucznej pauzy wynikającej z podwójnej obsługi tego samego gestu.
+
+## Wyjścia dźwięku i stan odtwarzania
+
+- Zapamiętane wyjście audio jest wyborem użytkownika, nie nazwą urządzenia
+  zaszytą w kodzie. Jeśli go brakuje, AMC wybiera bezpieczne dostępne wyjście
+  lub prosi o wybór i podaje nazwę rzeczywiście użytego urządzenia. Komunikat
+  nigdy nie zakłada, że inni użytkownicy mają konkretny model sprzętu.
+- `Ctrl+[` przełącza lokalne wyjścia w tym samym wspólnym mechanizmie dla
+  Radia, plików, podcastów i Spotify Librespot, o ile dany silnik je obsługuje.
+  Spotify Connect jest osobnym katalogiem urządzeń i nie może być udawany
+  przez listę lokalnych wyjść Windows.
+- WiiM i Sonos po rozpoczęciu odtwarzania aktualizują wiersz i mowę stanem
+  `Odtwarzane`, tak jak Radio. Użytkownik musi móc ustalić, co rzeczywiście
+  gra, bez przechodzenia do innej aplikacji.
 
 ## Edycja plików audio
 
@@ -99,6 +155,22 @@
   przewidywalny fokus, Enter na rzeczywistym wyniku, Escape do poprzedniego
   miejsca i brak automatycznego zapisu. Adapter dostawcy dostarcza dane oraz
   możliwości, ale nie tworzy osobnego, rozbieżnego interfejsu wyszukiwarki.
+- `Ctrl+Shift+L` zmienia członkostwo w Bibliotece, natomiast `Delete` usuwa
+  wybrany wpis z otwartego widoku Biblioteki. `Delete` nie jest operacją na
+  katalogowych wynikach wyszukiwania. W plikach lokalnych usuwa tylko rekord
+  i nigdy nie kasuje pliku; fizyczne kasowanie pozostaje osobnym, wyraźnym
+  poleceniem. W podcaście lub kanale `Delete` usuwa pojedynczy odcinek albo
+  materiał, a nie całe źródło.
+- Pojedynczy film YouTube zapisany z wyszukiwania trafia jako odcinek do
+  użytkowego źródła `Media internetowe`. Ten pojemnik nie jest jednym kanałem:
+  `Delete` oraz ponowne `Ctrl+Shift+L` na zapisanym filmie dotyczą wyłącznie
+  tego filmu. Zwykłe `Ctrl+Shift+L` na podcaście, kanale albo ich odcinku nadal
+  zmienia członkostwo całego rzeczywistego źródła nadrzędnego.
+- Usunięty pojedynczy odcinek podcastu albo materiał kanału jest zapamiętany
+  jako świadome wykluczenie i nie wraca przy odświeżeniu RSS/YouTube. Jawne
+  ponowne dodanie pojedynczego filmu z katalogu usuwa jego wykluczenie i
+  przywraca go do `Media internetowe`. Usuwanie rekordu nie usuwa pobranych
+  plików z dysku; komunikat ma mówić o tym bez zakładania, czy plik istnieje.
 
 ## Wspólny kontrakt interfejsu źródeł
 
@@ -132,6 +204,12 @@
   sortowanie oraz bieżące urządzenie, jeśli dotyczy. Wynik asynchroniczny musi
   należeć do aktualnej generacji żądania; spóźniona odpowiedź nie może
   podmienić nowszego widoku, zaznaczenia ani źródła.
+- Źródło liczone w setkach lub tysiącach elementów nie może blokować jednego
+  wątku ani tworzyć całej listy naraz. Stosuj porcje około 150 elementów z
+  kontrolowanym doczytywaniem, stabilnym fokusem i anulowaniem starej
+  generacji. Sortowanie ma dotyczyć pełnego logicznego zbioru, jeśli adapter
+  potrafi je wykonać przed stronicowaniem; w przeciwnym razie interfejs musi
+  jasno powiedzieć, że porządek obejmuje tylko wczytany zakres.
 - Każda nowa funkcja współdzielona dostaje test kontraktowy uruchamiany dla
   wszystkich odpowiednich adapterów. Test obejmuje nie tylko tekst listy, ale
   też tożsamość elementu, brak niejawnego zapisu, fokus początkowy i powrotny,

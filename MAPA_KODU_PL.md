@@ -1609,6 +1609,31 @@ Poniższy spis rozmiarów pozostaje historycznym pomiarem alfy 387.
 - Testy: `SessionOptionsInSettingsTests`, `PodcastSessionResumeCaptureTests` oraz przypadek niezależności podcastów od przełącznika lokalnych plików w Core.
 - To mapa kodu roboczego, nie potwierdzenie wydania. Odbiór prowadzi `PLAN-16-09-2026.md`.
 
+## Uzupełnienie robocze: pojedyncze usuwanie odcinków i filmów YouTube
+
+- `wxlite/amc_wx_lite/gui.py`: `Delete` w `podcastEpisodes` usuwa wyłącznie
+  zaznaczone odcinki. `Ctrl+Shift+L` zachowuje semantykę źródła, z wyjątkiem
+  samodzielnych filmów zapisanych w `Media internetowe`, gdzie ponowienie
+  usuwa tylko wybrany film. Komunikat nie zakłada, że istnieje pobrany plik.
+- `LiteProfileMutationStore.RemovePodcastEpisodes`: jedna transakcja usuwa
+  rekord odcinka, stan bieżącego elementu oraz odwołania Biblioteki: kolejkę,
+  Ulubione, playlisty, zakładki i historię. Pliku na dysku nie usuwa.
+- `LiteEngineHandlers.RemoveProfileItems`: przed usunięciem aktualnie
+  wczytanego odcinka zatrzymuje odtwarzanie, zapisuje punkt wznowienia i zwalnia
+  dekoder, aby spóźniony checkpoint nie odtworzył skasowanego rekordu.
+- `PodcastLibraryDatabase`: tabela `podcast_removed_episodes` jest trwałym
+  wykluczeniem elementu odświeżanego RSS/YouTube. Zapis zwykłego odświeżenia
+  filtruje te identyfikatory; jawne ponowne dodanie samodzielnego filmu usuwa
+  wykluczenie i przywraca wpis.
+- Testy: `test_podcast_favorite.py`, `test_profile_mutations.py` oraz
+  `PodcastProgressStoreTests` sprawdzają zakres operacji, czyszczenie odwołań,
+  brak powrotu po odświeżeniu i świadome ponowne dodanie filmu.
+- `wxlite/tests/test_wire_compatibility.py` wykrywa `dotnet` kolejno przez
+  zmienną `DOTNET`, systemowy `PATH` i istniejącą historyczną ścieżkę WSL.
+  Linuksowa ścieżka nie jest już bezwarunkowym domyślnym wyborem na Windows;
+  brak runtime'u lub zbudowanego serwera używa standardowego `SkipTest`, który
+  pytest rzeczywiście klasyfikuje jako pominięcie.
+
 ## 1. Rozmiar i podział
 
 Dwa projekty C# plus dodatek NVDA w Pythonie.

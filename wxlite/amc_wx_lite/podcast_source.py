@@ -35,6 +35,7 @@ from .radio_source import (
 )
 
 _DOTNET_EPOCH = datetime(1, 1, 1, tzinfo=timezone.utc)
+PUBLIC_INTERNET_MEDIA_SAVED_ID = "internet-media:public"
 
 
 class PodcastProfileError(RuntimeError):

@@ -132,10 +132,17 @@ def _library(path: Path, media: Path) -> None:
             "INSERT INTO bookmarks(id,session_id,item_id,item_title) VALUES('b','local','local-1','Stara nazwa')"
         )
         db.execute(
+            "INSERT INTO bookmarks(id,session_id,item_id,item_title) "
+            "VALUES('b-episode-remove','podcasts','episode-remove','Odcinek do usunięcia')"
+        )
+        db.execute(
             "INSERT INTO playback_history VALUES('podcasts',0,'episode-1')"
         )
         db.execute(
             "INSERT INTO playback_history VALUES('podcasts',1,'episode-kept')"
+        )
+        db.execute(
+            "INSERT INTO playback_history VALUES('podcasts',2,'episode-remove')"
         )
         for table in (
             "queue_order", "queue_regular_order", "queue_play_next_order"
@@ -159,6 +166,7 @@ def _library(path: Path, media: Path) -> None:
             "INSERT INTO playlists VALUES('p-podcast-kept','podcasts',1,'Zostaje',638000000000000003)"
         )
         db.execute("INSERT INTO playlist_items VALUES('p-podcast-kept',0,'episode-queue')")
+        db.execute("INSERT INTO playlist_items VALUES('p-podcast-kept',1,'episode-remove')")
         db.commit()
 
 
@@ -177,9 +185,11 @@ def _podcasts(path: Path) -> None:
                 id TEXT PRIMARY KEY, title TEXT, is_in_library INTEGER,
                 payload_json TEXT);
             CREATE TABLE podcast_episodes(
-                id TEXT PRIMARY KEY, subscription_id TEXT,
+                id TEXT PRIMARY KEY, subscription_id TEXT, title TEXT,
                 is_in_queue INTEGER, is_play_next INTEGER,
                 payload_json TEXT);
+            CREATE TABLE podcast_state(
+                singleton INTEGER PRIMARY KEY, current_item_id TEXT);
             CREATE TABLE metadata(key TEXT PRIMARY KEY, value TEXT NOT NULL);
             """
         )
@@ -188,13 +198,24 @@ def _podcasts(path: Path) -> None:
             ("podcast-1", "Stary podcast", json.dumps(payload)),
         )
         db.execute(
-            "INSERT INTO podcast_episodes VALUES(?,?,1,1,?)",
+            "INSERT INTO podcast_episodes VALUES(?,?,?,1,1,?)",
             (
                 "episode-queue",
                 "podcast-1",
+                "Odcinek w kolejce",
                 json.dumps({"IsInQueue": True, "IsPlayNext": True}),
             ),
         )
+        db.execute(
+            "INSERT INTO podcast_episodes VALUES(?,?,?,0,0,?)",
+            (
+                "episode-remove",
+                "podcast-1",
+                "Odcinek do usunięcia",
+                json.dumps({"Id": "episode-remove", "Title": "Odcinek do usunięcia"}),
+            ),
+        )
+        db.execute("INSERT INTO podcast_state VALUES(1,'episode-remove')")
         db.commit()
 
 
@@ -509,6 +530,13 @@ def test_profile_edits_go_through_the_real_host() -> None:
                 playlist_id="p-podcast",
             )
             assert removed_from_podcast_playlist == {"removedCount": 1}
+            removed_episode = client.remove_profile_items(
+                "podcasts", "podcastEpisodes", ["episode-remove"]
+            )
+            assert removed_episode == {
+                "removedCount": 1,
+                "titles": ["Odcinek do usunięcia"],
+            }
             client.remove_profile_items("files", "library", ["local-1"])
             client.remove_profile_items(
                 "podcasts", "podcastLibrary", ["podcast-1"]
@@ -555,6 +583,9 @@ def test_profile_edits_go_through_the_real_host() -> None:
                 "WHERE session_id='podcasts' ORDER BY ordinal"
             ).fetchall()
             assert podcast_history == [("episode-kept",)]
+            assert db.execute(
+                "SELECT id FROM bookmarks WHERE item_id='episode-remove'"
+            ).fetchone() is None
             for table in (
                 "queue_order", "queue_regular_order", "queue_play_next_order"
             ):
@@ -567,6 +598,7 @@ def test_profile_edits_go_through_the_real_host() -> None:
                 ("p-local", "Nowa nazwa listy"),
                 ("p-new", "Druga lista"),
             ]
+
             assert db.execute(
                 "SELECT playlist_id,item_id FROM playlist_items "
                 "WHERE playlist_id IN ('p-local','p-new') ORDER BY playlist_id,ordinal"
@@ -602,6 +634,15 @@ def test_profile_edits_go_through_the_real_host() -> None:
             queue_payload = json.loads(queue_row[2])
             assert queue_payload["IsInQueue"] is False
             assert queue_payload["IsPlayNext"] is False
+            assert db.execute(
+                "SELECT id FROM podcast_episodes WHERE id='episode-remove'"
+            ).fetchone() is None
+            assert db.execute(
+                "SELECT id FROM podcast_removed_episodes WHERE id='episode-remove'"
+            ).fetchone() == ("episode-remove",)
+            assert db.execute(
+                "SELECT current_item_id FROM podcast_state WHERE singleton=1"
+            ).fetchone() == (None,)
         radio = json.loads(state.read_text(encoding="utf-8"))["radio"]["stations"][0]
         assert radio["name"] == "Nowe radio"
         assert radio["streamUrl"] == "https://example.invalid/new"

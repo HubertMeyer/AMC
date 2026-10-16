@@ -15,7 +15,7 @@ namespace AccessibleMediaController.Core.Configuration;
 /// </summary>
 internal sealed class PodcastLibraryDatabase(string databasePath)
 {
-    private const int DatabaseSchemaVersion = 1;
+    private const int DatabaseSchemaVersion = 2;
     private readonly object _gate = new();
     private static readonly JsonSerializerOptions PayloadJsonOptions = new();
 
@@ -188,10 +188,38 @@ internal sealed class PodcastLibraryDatabase(string databasePath)
                     ("$payload", JsonSerializer.Serialize(item, PayloadJsonOptions)));
             }
         }
-        var episodeHashes = ReadHashes(connection, transaction, "podcast_episodes");
-        for (var ordinal = 0; ordinal < settings.Episodes.Count; ordinal++)
+        var removedEpisodeIds = new HashSet<string>(StringComparer.Ordinal);
+        using (var readRemoved = connection.CreateCommand())
         {
-            var item = settings.Episodes[ordinal];
+            readRemoved.Transaction = transaction;
+            readRemoved.CommandText = "SELECT id FROM podcast_removed_episodes;";
+            using var reader = readRemoved.ExecuteReader();
+            while (reader.Read()) removedEpisodeIds.Add(reader.GetString(0));
+        }
+        // Ponowne, jawne dodanie pojedynczego medium internetowego ma je
+        // przywrócić. Zwykłe odświeżenie RSS/YouTube nie usuwa natomiast
+        // trwałej decyzji użytkownika o skasowaniu odcinka.
+        foreach (var item in settings.Episodes.Where(item =>
+                     string.Equals(
+                         item.SubscriptionId,
+                         PublicInternetMediaCollections.SavedId,
+                         StringComparison.Ordinal)
+                     && removedEpisodeIds.Contains(item.Id)))
+        {
+            Execute(
+                connection,
+                transaction,
+                "DELETE FROM podcast_removed_episodes WHERE id = $id;",
+                ("$id", item.Id));
+            removedEpisodeIds.Remove(item.Id);
+        }
+        var savedEpisodes = settings.Episodes
+            .Where(item => !removedEpisodeIds.Contains(item.Id))
+            .ToArray();
+        var episodeHashes = ReadHashes(connection, transaction, "podcast_episodes");
+        for (var ordinal = 0; ordinal < savedEpisodes.Length; ordinal++)
+        {
+            var item = savedEpisodes[ordinal];
             var hash = Fingerprint(item);
             if (!episodeHashes.Remove(item.Id, out var stored)
                 || !string.Equals(stored.Hash, hash, StringComparison.Ordinal)
@@ -1356,7 +1384,11 @@ internal sealed class PodcastLibraryDatabase(string databasePath)
                 ON podcast_episodes(is_favorite, is_in_queue, is_play_next);
             CREATE INDEX IF NOT EXISTS ix_podcast_episodes_download
                 ON podcast_episodes(download_path) WHERE download_path IS NOT NULL;
-            PRAGMA user_version = 1;
+            CREATE TABLE IF NOT EXISTS podcast_removed_episodes (
+                id TEXT PRIMARY KEY,
+                removed_utc_ticks INTEGER NOT NULL
+            );
+            PRAGMA user_version = 2;
             """;
         command.ExecuteNonQuery();
 

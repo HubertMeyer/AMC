@@ -623,6 +623,27 @@ def test_spotify_search_playback_opens_the_result_then_activates_it() -> None:
     ]
 
 
+def test_saved_local_search_library_action_removes_only_the_library_entry() -> None:
+    calls = []
+    entry = SearchEntry(
+        SessionId.FILES,
+        Row("local-private", "Nagranie", "track", path="D:/Muzyka/nagranie.mp3"),
+        LibraryView.ALL_FILES,
+    )
+    frame = SimpleNamespace(
+        _remove_selected_items=lambda: calls.append("remove-library-entry"),
+        announcer=SimpleNamespace(say=lambda message: calls.append(message)),
+    )
+
+    LiteFrame._perform_search_result_action(
+        frame,
+        entry,
+        SearchResultAction.LIBRARY,
+    )
+
+    assert calls == ["remove-library-entry"]
+
+
 def test_online_tidal_library_action_uses_tidal_membership_not_podcast_import() -> None:
     calls = []
     result = SearchEntry(

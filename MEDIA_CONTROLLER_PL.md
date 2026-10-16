@@ -2523,10 +2523,23 @@ jest stosowana dopiero po powrocie do widocznej przeglądarki Podcastów. Przy
 przywracaniu sesji bezpośrednio do odtwarzacza AMC również pomija niepotrzebną
 przebudowę listy. Chroni to fokus NVDA oraz bieżący kontekst odtwarzania.
 
-W Podcastach `Ctrl+Shift+L` działa na poziomie subskrypcji. Użycie go na
-podcaście albo na jego odcinku dodaje lub usuwa cały podcast z Biblioteki.
-Odcinek nie ma niezależnego znacznika Biblioteki; jego kolejka, Ulubione,
-historia, pobranie i pozycja pozostają osobnymi stanami.
+W Podcastach `Ctrl+Shift+L` działa na poziomie rzeczywistego źródła. Użycie go
+na podcaście, kanale albo ich odcinku dodaje lub usuwa całe źródło z
+Biblioteki. Odcinek nie ma niezależnego znacznika członkostwa; jego kolejka,
+Ulubione, historia, pobranie i pozycja pozostają osobnymi stanami.
+
+`Delete` w otwartej liście odcinków jest inną operacją: usuwa tylko zaznaczony
+odcinek lub materiał z Biblioteki, czyści jego historię, zakładki, kolejkę i
+pozycje playlist, ale nie usuwa źródła ani pobranego pliku na dysku. Decyzja
+jest trwałym wykluczeniem, więc odświeżenie RSS albo kanału YouTube nie może
+przywrócić elementu. `Delete` nie działa na katalogowych wynikach wyszukiwania.
+
+Pojedynczy film YouTube zapisany z wyszukiwania trafia jako odcinek do
+użytkowej kolekcji **Media internetowe**. Nie jest ona semantycznie kanałem,
+lecz wspólnym pojemnikiem samodzielnie zapisanych materiałów. Dlatego `Delete`
+oraz ponowne `Ctrl+Shift+L` na takim filmie usuwają wyłącznie film, nigdy cały
+pojemnik i jego pozostałe wpisy. Jawne ponowne dodanie tego samego filmu z
+katalogu cofa jego wykluczenie i przywraca go do **Media internetowe**.
 
 ### 7.29. Trwałe logowanie i awaryjna kopia Biblioteki TIDAL
 

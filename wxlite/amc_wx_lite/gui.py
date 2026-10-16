@@ -182,6 +182,7 @@ from .podcast_source import (
     PodcastGlobalSettings,
     PodcastProfileError,
     PodcastSource,
+    PUBLIC_INTERNET_MEDIA_SAVED_ID,
     SORT_ADDED_NEWEST,
     SORT_ALPHABETICAL,
     SORT_CUSTOM,
@@ -7284,6 +7285,11 @@ class LiteFrame(wx.Frame):
                 self._toggle_podcast_library()
             elif entry.session_id is SessionId.TIDAL:
                 self._toggle_tidal_membership(favorite=False)
+            elif entry.session_id in (SessionId.FILES, SessionId.RADIO):
+                # Wynik bez ``remote_kind`` pochodzi z zapisanej Biblioteki.
+                # Ten sam jawny gest, który dodaje wynik katalogowy, usuwa
+                # więc zapisany element i nigdy nie dotyka pliku na dysku.
+                self._remove_selected_items()
             else:
                 self.announcer.say("Ten zapisany wynik jest już w Bibliotece")
         elif action is SearchResultAction.PLAYLIST:
@@ -15405,6 +15411,16 @@ class LiteFrame(wx.Frame):
             row for row in self._selected_action_rows()
             if row.kind in ("podcast", "episode")
         ]
+        if rows and all(
+            row.kind == "episode"
+            and row.parent_id == PUBLIC_INTERNET_MEDIA_SAVED_ID
+            for row in rows
+        ):
+            # „Media internetowe” jest wspólnym pojemnikiem pojedynczych
+            # filmów. Usunięcie jednego wyniku nie może wypisać całej tej
+            # kolekcji i wraz z nią wszystkich pozostałych filmów.
+            self._remove_selected_items()
+            return
         subscription_ids = list(dict.fromkeys(
             row.item_id if row.kind == "podcast" else (row.parent_id or "")
             for row in rows
@@ -20570,9 +20586,13 @@ class LiteFrame(wx.Frame):
             is not LibraryView.PODCAST_QUEUE
             and self.navigator.session.library_view
             is not LibraryView.PODCAST_PLAYLIST_CONTENTS
+            and self.navigator.session.library_view
+            is not LibraryView.PODCAST_EPISODES
             and any(row.kind != "podcast" for row in rows)
         ):
-            self.announcer.say("Usuń źródło z głównej listy Podcastów i YouTube")
+            self.announcer.say(
+                "Otwórz odcinek w jego podcaście lub kanale i naciśnij Delete"
+            )
             return
         client = self._profile_edit_client()
         if client is None:
@@ -20606,7 +20626,12 @@ class LiteFrame(wx.Frame):
             elif session_id == SessionId.FILES.value:
                 message = f"Usunięto z Biblioteki: {label}. Plik pozostał na dysku"
             elif session_id == SessionId.PODCASTS.value:
-                message = f"Usunięto z Biblioteki podcastów: {label}"
+                message = (
+                    f"Usunięto odcinek z Biblioteki: {label}. "
+                    "Pliki na dysku pozostały bez zmian"
+                    if view == LibraryView.PODCAST_EPISODES.value
+                    else f"Usunięto z Biblioteki podcastów: {label}"
+                )
             else:
                 message = f"Usunięto stację: {label}"
             self.announcer.say(message)
