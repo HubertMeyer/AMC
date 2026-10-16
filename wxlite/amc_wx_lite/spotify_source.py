@@ -388,9 +388,7 @@ def information_text(
         row.duration_ticks if duration_ticks is None else max(0, duration_ticks)
     )
     if effective_duration:
-        values.append(
-            f"Czas: {format_duration(effective_duration / 10_000_000)}"
-        )
+        values.append(format_duration(effective_duration / 10_000_000))
     if row.activation_message:
         values.append(row.activation_message)
 

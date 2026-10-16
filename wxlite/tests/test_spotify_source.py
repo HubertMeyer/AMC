@@ -90,7 +90,7 @@ def test_list_search_and_left_information_never_speak_ids_uri_enum_or_repr() -> 
     assert "Spotify" not in episode_information
     assert "Rodzaj:" not in episode_information
     assert "Wykonawca:" not in episode_information
-    assert "Czas: 2:00" in episode_information
+    assert episode_information == "2:00"
     assert "Odcinek" not in episode_information
 
 
@@ -127,7 +127,7 @@ def test_album_information_can_use_the_sum_of_real_track_durations() -> None:
     text = information_text(album, duration_ticks=duration)
 
     assert duration == 180 * 10_000_000
-    assert text == "Czas: 3:00"
+    assert text == "3:00"
 
 
 def test_spotify_description_has_only_deliberate_user_text() -> None:

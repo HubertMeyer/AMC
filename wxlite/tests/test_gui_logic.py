@@ -306,7 +306,7 @@ def test_relation_destinations_use_natural_short_labels_unless_details_enabled()
     assert relation_destination_labels(labels, detailed_hints=False) == (
         "Album",
         "Wykonawca",
-        "Podcast",
+        "Podcasty",
         "Albumy",
         "Utwory",
     )

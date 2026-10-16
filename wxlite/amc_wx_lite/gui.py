@@ -3443,7 +3443,7 @@ def relation_destination_labels(
     natural_labels = {
         "Przejdź do albumu": "Album",
         "Przejdź do wykonawcy": "Wykonawca",
-        "Przejdź do podcastu": "Podcast",
+        "Przejdź do podcastu": "Podcasty",
         "Pokaż albumy wykonawcy": "Albumy",
         "Pokaż utwory wykonawcy": "Utwory",
     }
@@ -6889,7 +6889,7 @@ class LiteFrame(wx.Frame):
             )
             return
         allowed = {"track", "episode"} if favorite else {
-            "album", "artist", "podcast"
+            "album", "artist", "podcast", "episode"
         }
         rows = [
             entry.row for entry in entries
@@ -6901,7 +6901,7 @@ class LiteFrame(wx.Frame):
             self.announcer.say(
                 "Do Ulubionych Spotify wybierz utwór albo odcinek"
                 if favorite else
-                "Do Biblioteki Spotify wybierz album, wykonawcę albo podcast"
+                "Do Biblioteki Spotify wybierz album, wykonawcę, podcast albo odcinek"
             )
             return
         items = [{
@@ -8804,9 +8804,6 @@ class LiteFrame(wx.Frame):
         """Show only real Spotify destinations in an accessible list."""
 
         if not intent.choices:
-            return
-        if len(intent.choices) == 1:
-            self._run(self.navigator.activate_spotify_relation(intent.choices[0]))
             return
         active_list = self._active_list()
         dialog = RelationDestinationDialog(
@@ -16011,7 +16008,7 @@ class LiteFrame(wx.Frame):
             return
         rows = self._selected_action_rows()
         allowed = {"track", "episode"} if favorite else {
-            "album", "artist", "podcast"
+            "album", "artist", "podcast", "episode"
         }
         rows = [
             row for row in rows
@@ -16021,7 +16018,7 @@ class LiteFrame(wx.Frame):
             self.announcer.say(
                 "Do Ulubionych Spotify wybierz utwór albo odcinek"
                 if favorite else
-                "Do Biblioteki Spotify wybierz album, wykonawcę albo podcast"
+                "Do Biblioteki Spotify wybierz album, wykonawcę, podcast albo odcinek"
             )
             return
         items = [
@@ -16050,7 +16047,7 @@ class LiteFrame(wx.Frame):
             relevant = (
                 {"liked", "episodes"}
                 if favorite else
-                {"albums", "artists", "podcasts"}
+                {"albums", "artists", "podcasts", "episodes"}
             )
             if context.view in relevant:
                 self._spotify_loaded_counts.pop(context.view, None)

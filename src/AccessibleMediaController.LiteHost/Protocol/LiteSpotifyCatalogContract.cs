@@ -234,16 +234,15 @@ public static class LiteSpotifyCatalogContract
                 throw new LiteRequestException(
                     "Element Spotify ma nieprawidłową tożsamość katalogową.");
             }
-            var expectedMode = itemKind is MediaItemKind.Track or MediaItemKind.Episode
-                ? "favorite"
-                : itemKind is MediaItemKind.Album or MediaItemKind.Artist or MediaItemKind.Podcast
-                    ? "library"
-                    : string.Empty;
-            if (!string.Equals(mode, expectedMode, StringComparison.Ordinal))
+            var supported = mode == "favorite"
+                ? itemKind is MediaItemKind.Track or MediaItemKind.Episode
+                : itemKind is MediaItemKind.Album or MediaItemKind.Artist
+                    or MediaItemKind.Podcast or MediaItemKind.Episode;
+            if (!supported)
             {
                 throw new LiteRequestException(mode == "favorite"
                     ? "Do Ulubionych Spotify wybierz utwór albo odcinek."
-                    : "Do Biblioteki Spotify wybierz album, wykonawcę albo podcast.");
+                    : "Do Biblioteki Spotify wybierz album, wykonawcę, podcast albo odcinek.");
             }
             var key = $"{itemKind}:{normalizedId}";
             if (!seen.Add(key)) continue;

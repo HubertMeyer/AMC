@@ -133,6 +133,60 @@ def test_spotify_library_shortcut_calls_confirmed_host_write() -> None:
     assert frame._spotify_membership_pending is False
 
 
+def test_spotify_library_shortcut_removes_a_saved_episode_and_refreshes_view() -> None:
+    calls = []
+    spoken = []
+    opened = []
+    episode = Row(
+        "spotify:episode:private",
+        "Odcinek",
+        "episode",
+        service_id="episodeprivate",
+        service_kind="episode",
+        artist_name="Podcast użytkowy",
+    )
+    context = OpenSpotifyCollectionView(
+        "spotify-collection:episodes", "episodes", "Zapisane odcinki"
+    )
+    frame = SimpleNamespace(
+        navigator=SimpleNamespace(
+            active=SessionId.SPOTIFY,
+            sessions={
+                SessionId.SPOTIFY: SimpleNamespace(spotify_context=context)
+            },
+        ),
+        client=SimpleNamespace(
+            spotify_collection_membership=lambda items, *, mode: (
+                calls.append((items, mode))
+                or {
+                    "added": False,
+                    "changed": 1,
+                    "message": "Usunięto z Biblioteki Spotify: Odcinek",
+                }
+            )
+        ),
+        runner=ImmediateRunner(),
+        announcer=SimpleNamespace(say=spoken.append),
+        _selected_action_rows=lambda: [episode],
+        _spotify_membership_pending=False,
+        _spotify_loaded_counts={"episodes": 150},
+        _open_spotify_collection_view=opened.append,
+    )
+
+    LiteFrame._toggle_spotify_membership(frame, favorite=False)
+
+    assert calls[0][1] == "library"
+    assert calls[0][0][0]["kind"] == "episode"
+    assert spoken == ["Usunięto z Biblioteki Spotify: Odcinek"]
+    assert frame._spotify_loaded_counts == {}
+    assert opened == [OpenSpotifyCollectionView(
+        "spotify-collection:episodes",
+        "episodes",
+        "Zapisane odcinki",
+        replace_current=True,
+    )]
+
+
 def test_spotify_sort_reloads_first_page_without_adding_a_history_level() -> None:
     opened = []
     spoken = []
@@ -339,7 +393,7 @@ def test_left_arrow_reads_total_spotify_album_duration_without_moving_focus() ->
     LiteFrame._announce_spotify_information(frame, album)
 
     assert len(spoken) == 1
-    assert spoken[0] == "Czas: 5:00"
+    assert spoken[0] == "5:00"
     assert model.selected_row is album
 
 
@@ -583,6 +637,59 @@ def test_spotify_right_arrow_uses_two_real_destinations_without_context_menu() -
     assert activated == [choices[0], choices[1]]
     assert run == [["Przejdź do albumu"], ["Przejdź do wykonawcy"]]
     assert focused == [True, True]
+
+
+def test_spotify_right_arrow_waits_for_enter_on_one_podcast_destination() -> None:
+    created = []
+    activated = []
+    run = []
+    focused = []
+    choice = SpotifyRelationChoice(
+        "Przejdź do podcastu",
+        OpenSpotifyContainer(
+            "episode:related-podcast", "podcast-id", "Podcast", "podcast"
+        ),
+    )
+    intent = ShowSpotifyRelations("Przejdź do", (choice,))
+
+    class FakeDialog:
+        selected_index = 0
+
+        def __init__(self, _parent, *, title, labels, detailed_hints):
+            created.append((title, labels, detailed_hints))
+
+        @staticmethod
+        def ShowModal():
+            return gui_module.wx.ID_OK
+
+        @staticmethod
+        def Destroy():
+            return None
+
+    frame = SimpleNamespace(
+        navigator=SimpleNamespace(
+            activate_spotify_relation=(
+                lambda selected: activated.append(selected) or [selected.label]
+            )
+        ),
+        _active_list=lambda: SimpleNamespace(SetFocus=lambda: focused.append(True)),
+        _run=run.append,
+        _detailed_hints=False,
+    )
+    original_dialog = gui_module.RelationDestinationDialog
+    original_call_after = gui_module.wx.CallAfter
+    gui_module.RelationDestinationDialog = FakeDialog
+    gui_module.wx.CallAfter = lambda callback: callback()
+    try:
+        LiteFrame._show_spotify_relations(frame, intent)
+    finally:
+        gui_module.RelationDestinationDialog = original_dialog
+        gui_module.wx.CallAfter = original_call_after
+
+    assert created == [("Przejdź do", ("Podcasty",), False)]
+    assert activated == [choice]
+    assert run == [["Przejdź do podcastu"]]
+    assert focused == [True]
 
 
 def test_busy_spotify_collection_enter_is_retried_without_speaking_error() -> None:

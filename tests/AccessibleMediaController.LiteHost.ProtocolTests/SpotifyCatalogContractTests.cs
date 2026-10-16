@@ -110,6 +110,23 @@ internal static class SpotifyCatalogContractTests
             && request.Items.Single().ExternalId == "album123",
             "album Spotify nie został przygotowany do zapisu Biblioteki");
 
+        using var episode = JsonDocument.Parse("""
+        {
+          "mode":"library",
+          "items":[{
+            "itemId":"spotify:episode:episode123",
+            "externalId":"episode123",
+            "title":"Odcinek",
+            "kind":"episode"
+          }]
+        }
+        """);
+        var episodeRequest = LiteSpotifyCatalogContract.ReadMembershipRequest(
+            episode.RootElement);
+        Check(episodeRequest.Mode == "library"
+            && episodeRequest.Items.Single().Kind == MediaItemKind.Episode,
+            "odcinek Spotify nie został przygotowany do zapisu Biblioteki");
+
         using var wrong = JsonDocument.Parse("""
         {
           "mode":"favorite",
