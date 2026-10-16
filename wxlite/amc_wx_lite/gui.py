@@ -7964,30 +7964,62 @@ class LiteFrame(wx.Frame):
         except Exception:
             nvda_window_handle = 0
 
+        def optional_step(label: str, action: Callable[[], object]) -> bool:
+            """Dodatkowa konfiguracja nie może wyłączyć odtwarzacza.
+
+            Uścisk dłoni i ``audio.configure`` są warunkiem gotowości. Most
+            NVDA, zapamiętane wyjście i synchronizacja ustawień są osobnymi
+            funkcjami. Ich chwilowa niedostępność -- szczególnie celowa odmowa
+            zapisu podczas pracy głównego AMC -- zostaje tylko w dzienniku.
+            """
+
+            try:
+                action()
+            except Exception as error:
+                _append_frontend_log(
+                    self.store,
+                    f"Pominięto {label} podczas startu: "
+                    f"{type(error).__name__}: {error}",
+                )
+                return False
+            return True
+
         def work() -> dict:
             try:
                 client.start()
                 client.hello()
                 if nvda_window_handle > 0:
-                    client.configure_nvda_bridge(nvda_window_handle)
+                    optional_step(
+                        "połączenie z dodatkiem NVDA",
+                        lambda: client.configure_nvda_bridge(nvda_window_handle),
+                    )
                 result = client.configure_audio(**settings)
                 client.configure_local_resume(
                     self._remember_local_playback_positions
                 )
                 for session_id, device_id in output_devices.items():
-                    client.call(
-                        "audio.selectOutput",
-                        {
-                            "sessionId": session_id,
-                            "deviceId": device_id,
-                            "restart": False,
-                        },
+                    optional_step(
+                        f"wybór wyjścia audio sesji {session_id}",
+                        lambda session_id=session_id, device_id=device_id: client.call(
+                            "audio.selectOutput",
+                            {
+                                "sessionId": session_id,
+                                "deviceId": device_id,
+                                "restart": False,
+                            },
+                        ),
                     )
                 if schedule_payload is not None:
-                    client.sync_radio_schedules(schedule_payload)
+                    optional_step(
+                        "synchronizację harmonogramu Radia",
+                        lambda: client.sync_radio_schedules(schedule_payload),
+                    )
                 if podcast_settings_payload is not None:
-                    client.configure_podcast_global_settings(
-                        **podcast_settings_payload
+                    optional_step(
+                        "synchronizację ustawień Podcastów",
+                        lambda: client.configure_podcast_global_settings(
+                            **podcast_settings_payload
+                        ),
                     )
                 return result
             except Exception:

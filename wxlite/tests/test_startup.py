@@ -254,6 +254,7 @@ def test_engine_handshake_is_deferred_to_background():
     # ``session_options.engine_audio_payload``), zeby nowy proces dostal
     # ustawienia PO nalozeniu Opcji sesji. Atrapa musi miec ``state``.
     frame = SimpleNamespace(options=_options, state=LiteState(options=_options),
+        store=SimpleNamespace(directory=Path.cwd()),
         client=None,
         runner=SimpleNamespace(submit=lambda *args: queued.append(args)),
         timer=SimpleNamespace(Start=lambda n: calls.append("timer")),
@@ -284,6 +285,91 @@ def test_engine_handshake_is_deferred_to_background():
         assert calls.index("collation") < calls.index("content")
     finally:
         gui.LiteHostClient = original
+
+
+def test_optional_profile_sync_failure_does_not_disable_the_audio_engine(tmp_path):
+    """Stare AMC może legalnie odmówić współbieżnego zapisu Podcastów.
+
+    Taka odmowa chroni bazę, ale Radio i pozostałe odtwarzanie mają nadal
+    dostać żywego hosta oraz wczytać początkową treść.
+    """
+
+    queued = []
+    calls = []
+
+    class Client:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def start(self):
+            calls.append("start")
+
+        def hello(self):
+            calls.append("hello")
+            return {"protocol": 1}
+
+        def configure_audio(self, **options):
+            calls.append("audio")
+            return options
+
+        def configure_local_resume(self, remember):
+            calls.append("local-resume")
+            return {"remember": remember}
+
+        def configure_podcast_global_settings(self, **options):
+            calls.append("podcast-settings")
+            raise gui.HostError(
+                "Zamknij najpierw główne AMC. Równoczesna zmiana ustawień "
+                "Podcastów z dwóch wersji mogłaby utracić dane."
+            )
+
+        def close(self):
+            calls.append("close")
+
+        def call(self, op, args=None, timeout=None):
+            calls.append(("call", op))
+            return {"keys": []}
+
+    options = Options(
+        podcast_downloads_folder="C:\\Podcasty",
+        podcast_rss_refresh_interval_minutes=60,
+        podcast_youtube_refresh_interval_minutes=120,
+        podcast_automatic_refresh_batch_size=150,
+    )
+    frame = SimpleNamespace(
+        options=options,
+        state=LiteState(options=options),
+        store=gui.StateStore(tmp_path),
+        client=None,
+        runner=SimpleNamespace(submit=lambda *args: queued.append(args)),
+        timer=SimpleNamespace(Start=lambda n: calls.append("timer")),
+        announcer=SimpleNamespace(say=lambda text: calls.append(("say", text))),
+        _on_engine_event=lambda *args: None,
+        library=SimpleNamespace(
+            use_collation=lambda collation: calls.append("collation")
+        ),
+        _load_initial_content=lambda: calls.append("content"),
+        _remember_local_playback_positions=True,
+    )
+    frame._queue_persistence_arguments = lambda: {}
+
+    original = gui.LiteHostClient
+    gui.LiteHostClient = Client
+    try:
+        gui.LiteFrame._start_engine(frame)
+        _, work, done, _failed = queued[0]
+        result = work()
+        done(result)
+    finally:
+        gui.LiteHostClient = original
+
+    assert "podcast-settings" in calls
+    assert "close" not in calls
+    assert "timer" in calls
+    assert "content" in calls
+    log = (tmp_path / "logs" / "frontend.log").read_text(encoding="utf-8")
+    assert "Pominięto synchronizację ustawień Podcastów" in log
+    assert "Zamknij najpierw główne AMC" in log
 
 
 def test_closed_client_cannot_spawn_a_late_orphan():

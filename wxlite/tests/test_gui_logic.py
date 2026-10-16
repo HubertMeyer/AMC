@@ -482,7 +482,9 @@ def test_spotify_context_relation_exposes_only_the_intentional_podcast_label() -
 
     commands = frame._relation_context_menu_commands()
 
-    assert [command.label for command in commands] == ["Przejdź do podcastu"]
+    assert [command.label for command in commands] == [
+        "Przejdź do Podcast użytkowy"
+    ]
     assert all("private-id" not in command.label for command in commands)
 
 
