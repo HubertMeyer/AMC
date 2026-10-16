@@ -138,10 +138,22 @@
   typu elementu. Dla wykonawcy obejmuje co najmniej albumy i utwory, jeżeli
   usługa je udostępnia. Relacje mają służyć przeglądaniu katalogu przed
   świadomym dodaniem czegokolwiek do biblioteki.
+- Sama `Prawa strzałka` nie otwiera relacji w tle. Najpierw pokazuje i ogłasza
+  listę rzeczywistych celów, zachowując zaznaczenie elementu źródłowego; dopiero
+  Enter na wybranej relacji przechodzi do jej zawartości. Escape albo lewa
+  strzałka zamykają listę relacji i przywracają fokus dokładnie na źródle.
 - Wyszukiwanie, Enter, prawa strzałka i samo przeglądanie nigdy nie zmieniają
   biblioteki ani ulubionych. Dodanie wymaga osobnego, jawnego polecenia
   użytkownika. Zasada obowiązuje TIDAL, Radio Browser, podcasty, przyszłe
   Spotify i inne katalogi.
+- Wynik i każde polecenie Biblioteki pozostają w usłudze, z której pochodzą.
+  Album Spotify nie może trafić do TIDAL-a, element TIDAL-a do podcastów, a
+  lokalny wynik do katalogu sieciowego wskutek zbieżnego typu lub identyfikatora.
+  O routingu decyduje jawne `session_id` oraz tożsamość dostawcy, nie tytuł.
+- Jeśli dostawca nie udostępnia zawartości playlisty, albumu lub innego
+  kontenera, Enter podaje jeden jasny komunikat i pozostawia użytkownika na
+  bieżącej liście. Nie wolno wcześniej dopisać pustego poziomu do stosu
+  nawigacji ani zmuszać użytkownika do Escape z widoku, który nic nie zawiera.
 - Test wyszukiwania porównuje bibliotekę przed i po przeglądaniu, obejmuje
   element już zapisany oraz niezapisany, sprawdza typ zaznaczenia, fokus,
   pojedynczą reakcję Enter i menu prawej strzałki. Nie wolno uznać samego
@@ -185,6 +197,16 @@
   dodawanie i usuwanie, sortowanie, historia, Escape i przywracanie fokusu.
   Stare AMC i librespot mogą dostarczyć rozwiązania techniczne, lecz nie są
   wzorcem zachowania interfejsu.
+- W Spotify działający silnik, logowanie i integrację Librespot można przenosić
+  ze starego AMC, ale interfejs zawsze pozostaje współczesnym kontraktem AMC
+  Python. Dotyczy to także wyszukiwania, relacji pod prawą strzałką, zwięzłej
+  mowy list, opisów `Alt+D`, filtrów i sortowania `Alt+1–3`, historii,
+  komunikatów oczekiwania, błędów oraz obsługi niedostępnej zawartości.
+- `Ctrl+Shift+L` w usługach sieciowych ogłasza `Dodano do Biblioteki` albo
+  `Usunięto z Biblioteki` dopiero po potwierdzonym wyniku właściwego API.
+  Odświeżenie, oczekiwanie lub przeładowanie bez zmiany członkostwa nie może
+  zostać przedstawione jako sukces. Fokus zostaje na logicznie tym samym
+  elemencie, nawet gdy po usunięciu jego wiersz znika.
 - Jawny wyjątek potwierdzony przez użytkownika: działające `Shift+F2` ze
   starego AMC jest wzorcem funkcjonalnym zmiany nazwy pliku w AMC Python.
   Zachowaj nazwę bez rozszerzenia w dialogu, niezmienne rozszerzenie, brak
