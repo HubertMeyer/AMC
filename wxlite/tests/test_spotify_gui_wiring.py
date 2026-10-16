@@ -177,13 +177,69 @@ def test_spotify_library_shortcut_removes_a_saved_episode_and_refreshes_view() -
 
     assert calls[0][1] == "library"
     assert calls[0][0][0]["kind"] == "episode"
-    assert spoken == ["Usunięto z Biblioteki Spotify: Odcinek"]
-    assert frame._spotify_loaded_counts == {}
+    assert spoken == []
+    assert frame._spotify_loaded_counts == {"episodes": 150}
     assert opened == [OpenSpotifyCollectionView(
         "spotify-collection:episodes",
         "episodes",
         "Zapisane odcinki",
         replace_current=True,
+        announcement="Usunięto z Biblioteki Spotify: Odcinek",
+    )]
+
+
+def test_spotify_library_shortcut_keeps_album_page_sort_and_neighbor() -> None:
+    calls = []
+    spoken = []
+    opened = []
+    navigator = Navigator()
+    navigator.active = SessionId.SPOTIFY
+    context = OpenSpotifyCollectionView(
+        "spotify-collection:albums", "albums", "Albumy"
+    )
+    rows = [
+        Row(
+            f"row-{index}", f"Album {index}", "album",
+            service_id=f"album{index}", service_kind="album",
+        )
+        for index in range(1, 4)
+    ]
+    navigator.apply_spotify_collection_view(context, "Albumy Spotify", rows)
+    navigator.session.model.select_id("row-2")
+    frame = SimpleNamespace(
+        navigator=navigator,
+        client=SimpleNamespace(
+            spotify_collection_membership=lambda items, *, mode: (
+                calls.append((items, mode))
+                or {
+                    "added": False,
+                    "changed": 1,
+                    "message": "Usunięto z Biblioteki Spotify: Album 2",
+                }
+            )
+        ),
+        runner=ImmediateRunner(),
+        announcer=SimpleNamespace(say=spoken.append),
+        _selected_action_rows=lambda: [rows[1]],
+        _spotify_membership_pending=False,
+        _spotify_loaded_counts={"albums": 300},
+        _spotify_effective_sort_modes={"albums": "Alphabetical"},
+        _open_spotify_collection_view=opened.append,
+    )
+
+    LiteFrame._toggle_spotify_membership(frame, favorite=False)
+
+    assert calls[0][1] == "library"
+    assert spoken == []
+    assert frame._spotify_loaded_counts == {"albums": 300}
+    assert frame._spotify_effective_sort_modes == {"albums": "Alphabetical"}
+    assert opened == [OpenSpotifyCollectionView(
+        "spotify-collection:albums",
+        "albums",
+        "Albumy",
+        preferred_id="row-3",
+        replace_current=True,
+        announcement="Usunięto z Biblioteki Spotify: Album 2",
     )]
 
 

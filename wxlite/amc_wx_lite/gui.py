@@ -16035,31 +16035,62 @@ class LiteFrame(wx.Frame):
         state = self.navigator.sessions[SessionId.SPOTIFY]
         context = state.spotify_context
         preferred_id = rows[0].item_id
+        model_rows = [
+            row
+            for row in getattr(getattr(state, "model", None), "rows", ())
+            if row.kind != "loadMore"
+        ]
+        selected_ids = {row.item_id for row in rows}
+        first_index = min(
+            (
+                index for index, row in enumerate(model_rows)
+                if row.item_id in selected_ids
+            ),
+            default=0,
+        )
+        remaining = [
+            row for row in model_rows if row.item_id not in selected_ids
+        ]
+        removal_preferred_id = (
+            remaining[min(first_index, len(remaining) - 1)].item_id
+            if remaining else None
+        )
         self._spotify_membership_pending = True
 
         def done(payload: dict) -> None:
             self._spotify_membership_pending = False
             result = payload or {}
             message = str(result.get("message") or "").strip()
-            self.announcer.say(message or "Zmieniono kolekcję Spotify")
+            completion = message or "Zmieniono kolekcję Spotify"
             if not isinstance(context, OpenSpotifyCollectionView):
+                self.announcer.say(completion)
                 return
             relevant = (
                 {"liked", "episodes"}
                 if favorite else
                 {"albums", "artists", "podcasts", "episodes"}
             )
-            if context.view in relevant:
-                self._spotify_loaded_counts.pop(context.view, None)
-                self._open_spotify_collection_view(OpenSpotifyCollectionView(
-                    context.item_id,
-                    context.view,
-                    context.title,
-                    preferred_id=(
-                        preferred_id if bool(result.get("added")) else None
-                    ),
-                    replace_current=True,
-                ))
+            current = state.spotify_context
+            if (
+                context.view not in relevant
+                or self.navigator.active is not SessionId.SPOTIFY
+                or not isinstance(current, OpenSpotifyCollectionView)
+                or current.item_id != context.item_id
+                or current.view != context.view
+            ):
+                self.announcer.say(completion)
+                return
+            self._open_spotify_collection_view(OpenSpotifyCollectionView(
+                context.item_id,
+                context.view,
+                context.title,
+                preferred_id=(
+                    preferred_id
+                    if bool(result.get("added")) else removal_preferred_id
+                ),
+                replace_current=True,
+                announcement=completion,
+            ))
 
         def failed(error: Exception) -> None:
             self._spotify_membership_pending = False
