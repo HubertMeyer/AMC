@@ -465,5 +465,27 @@ def test_ctrl_c_still_copies_plain_text_name() -> None:
     assert spoken == ["Skopiowano nazwę"]
 
 
+def test_deferred_ctrl_c_announces_immediately_but_writes_after_nvda_probe(
+    monkeypatch,
+) -> None:
+    clipboard = FakeClipboard()
+    frame, spoken = make_frame(clipboard)
+    set_selected(frame, Row(item_id="f", title="a.mp3", kind="track", path="/x/a.mp3"))
+    scheduled = []
+    monkeypatch.setattr(gui, "defer_clipboard_command", scheduled.append)
+
+    frame._copy_name(defer=True)
+
+    assert spoken == ["Skopiowano nazwę"]
+    assert clipboard.data is None
+    assert len(scheduled) == 1
+
+    scheduled[0]()
+
+    assert isinstance(clipboard.data, FakeTextData)
+    assert clipboard.data.text == "a.mp3"
+    assert spoken == ["Skopiowano nazwę"]
+
+
 def test_copy_name_message_constant_is_untouched() -> None:
     assert gui.COPIED_NAME_MESSAGE == "Skopiowano nazwę"

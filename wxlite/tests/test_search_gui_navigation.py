@@ -4,6 +4,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import amc_wx_lite.gui as gui_module
+import pytest
 from amc_wx_lite.gui import LiteFrame
 from amc_wx_lite.list_model import Row
 from amc_wx_lite.navigation import (
@@ -483,8 +484,7 @@ def test_spotify_search_right_arrow_uses_catalog_row_without_write() -> None:
 
 
 def test_search_relation_picker_stays_owned_by_the_search_window() -> None:
-    parents = []
-    focused = []
+    shown = []
     result = SearchEntry(
         SessionId.SPOTIFY,
         Row(
@@ -501,47 +501,65 @@ def test_search_relation_picker_stays_owned_by_the_search_window() -> None:
         remote_kind="spotifyCatalog",
     )
     search_dialog = SimpleNamespace(
-        results=SimpleNamespace(SetFocus=lambda: focused.append(True)),
         announcer=SimpleNamespace(say=lambda _message: None),
+        show_relation_choices=lambda choices, labels, *, title: shown.append(
+            (choices, labels, title)
+        ),
     )
 
-    class Dialog:
-        selected_index = 1
-
-        def __init__(self, parent, *, title, labels, detailed_hints):
-            parents.append((parent, title, labels, detailed_hints))
-
-        @staticmethod
-        def ShowModal():
-            return gui_module.wx.ID_OK
-
-        @staticmethod
-        def Destroy():
-            return None
-
     frame = SimpleNamespace(navigator=Navigator(), _detailed_hints=False)
-    original_dialog = gui_module.RelationDestinationDialog
-    original_call_after = gui_module.wx.CallAfter
-    gui_module.RelationDestinationDialog = Dialog
-    gui_module.wx.CallAfter = lambda callback: callback()
-    try:
-        choice = LiteFrame._choose_search_result_relation(
-            frame,
-            result,
-            search_dialog,
-        )
-    finally:
-        gui_module.RelationDestinationDialog = original_dialog
-        gui_module.wx.CallAfter = original_call_after
-
-    assert parents == [(
+    choice = LiteFrame._choose_search_result_relation(
+        frame,
+        result,
         search_dialog,
-        "Przejdź do",
-        ("Album", "Wykonawca"),
-        False,
-    )]
-    assert choice is not None and choice.label == "Przejdź do wykonawcy"
-    assert focused == [True]
+    )
+
+    assert choice is None
+    assert len(shown) == 1
+    choices, labels, title = shown[0]
+    assert [candidate.label for candidate in choices] == [
+        "Przejdź do albumu",
+        "Przejdź do wykonawcy",
+    ]
+    assert labels == ("Album", "Wykonawca")
+    assert title == "Przejdź do"
+
+
+@pytest.mark.parametrize(
+    "session_id",
+    (
+        SessionId.FILES,
+        SessionId.RADIO,
+        SessionId.PODCASTS,
+        SessionId.WIIM,
+        SessionId.SONOS,
+    ),
+)
+def test_other_search_sources_do_not_open_a_relation_window(session_id) -> None:
+    messages = []
+    result = SearchEntry(
+        session_id,
+        Row("result", "Wynik", "episode"),
+    )
+    search_dialog = SimpleNamespace(
+        announcer=SimpleNamespace(say=messages.append),
+        show_relation_choices=lambda *_args, **_kwargs: pytest.fail(
+            "Źródło bez relacji nie może otwierać pomocniczego okna"
+        ),
+    )
+    frame = SimpleNamespace(navigator=Navigator(), _detailed_hints=False)
+
+    choice = LiteFrame._choose_search_result_relation(
+        frame,
+        result,
+        search_dialog,
+    )
+
+    assert choice is None
+    assert messages == [
+        "Przejście do albumu, wykonawcy lub podcastu jest dostępne "
+        "dla wyników TIDAL i Spotify"
+    ]
 
 
 def test_spotify_search_library_action_uses_confirmed_membership_write() -> None:
@@ -632,6 +650,93 @@ def test_online_tidal_library_action_uses_tidal_membership_not_podcast_import() 
     )
 
     assert calls == [([result], False)]
+
+
+def test_online_tidal_library_action_explicitly_adds_instead_of_using_stale_cache() -> None:
+    calls = []
+
+    class Runner:
+        @staticmethod
+        def submit(_name, work, done, _failed):
+            done(work())
+
+    row = Row(
+        "tidal:albums:44",
+        "365 widoków na przyszłość",
+        "album",
+        service_id="albums:44",
+        service_kind="album",
+        artist_name="Metro",
+    )
+    frame = SimpleNamespace(
+        client=SimpleNamespace(
+            tidal_collection_membership=lambda items, **kwargs: (
+                calls.append((items, kwargs))
+                or {"added": True, "message": "Dodano do Biblioteki TIDAL"}
+            )
+        ),
+        runner=Runner(),
+        announcer=SimpleNamespace(say=lambda message: calls.append(("say", message))),
+    )
+
+    LiteFrame._change_tidal_search_result_membership(
+        frame,
+        [SearchEntry(SessionId.TIDAL, row, remote_kind="tidalCatalog")],
+        favorite=False,
+    )
+
+    assert calls[0][1] == {"mode": "library", "add": True}
+    assert calls[-1] == ("say", "Dodano do Biblioteki TIDAL")
+
+
+def test_tidal_catalog_add_and_saved_library_remove_are_explicit() -> None:
+    requests = []
+
+    class Runner:
+        @staticmethod
+        def submit(_name, work, done, _failed):
+            done(work())
+
+    row = Row(
+        "tidal:albums:44",
+        "365 widoków na przyszłość",
+        "album",
+        service_id="albums:44",
+        service_kind="album",
+        artist_name="Metro",
+    )
+
+    def run_for(view: LibraryView) -> bool:
+        state = SimpleNamespace(library_view=view)
+
+        def membership(_items, **kwargs):
+            requests.append(kwargs)
+            return {
+                "added": kwargs["add"],
+                "message": "Zmieniono kolekcję TIDAL",
+            }
+
+        frame = SimpleNamespace(
+            navigator=SimpleNamespace(
+                active=SessionId.TIDAL,
+                sessions={SessionId.TIDAL: state},
+            ),
+            client=SimpleNamespace(tidal_collection_membership=membership),
+            runner=Runner(),
+            announcer=SimpleNamespace(say=lambda _message: None),
+            _selected_action_rows=lambda: [row],
+            _tidal_membership_pending=False,
+            _open_tidal_view=lambda _intent: None,
+        )
+        LiteFrame._toggle_tidal_membership(frame, favorite=False)
+        return frame._tidal_membership_pending
+
+    assert run_for(LibraryView.TIDAL_CONTAINER) is False
+    assert run_for(LibraryView.TIDAL_LIBRARY) is False
+    assert requests == [
+        {"mode": "library", "add": True},
+        {"mode": "library", "add": False},
+    ]
 
 
 def test_remote_radio_open_plays_without_profile_write() -> None:

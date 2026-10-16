@@ -1984,6 +1984,7 @@ class SearchDialog(wx.Dialog):
         self.selected_results: list[SearchEntry] = []
         self.selected_action = SearchResultAction.OPEN
         self.selected_relation: object | None = None
+        self._relation_choices: tuple[object, ...] = ()
 
         heading = wx.StaticText(self, label=mode)
         heading.SetName(mode)
@@ -2015,6 +2016,23 @@ class SearchDialog(wx.Dialog):
             if detailed_hints
             else ""
         )
+        # Relacje są drugą listą TEGO SAMEGO okna wyszukiwania. Otwieranie
+        # zagnieżdżonego okna modalnego powodowało, że Windows/NVDA na moment
+        # ogłaszał tytuł głównego okna („AMC Python”), zanim fokus dotarł do
+        # właściwych pozycji. Tutaj czytnik dostaje od razu jedną użytkową
+        # nazwę i pozycje Albumy/Utwory/Wykonawca.
+        self.relations = wx.ListBox(
+            self,
+            choices=[],
+            style=wx.LB_SINGLE,
+        )
+        self.relations.SetName("Przejdź do")
+        self.relations.SetHelpText(
+            "Enter otwiera. Lewa strzałka lub Escape wraca do wyników."
+            if detailed_hints
+            else ""
+        )
+        self.relations.Hide()
         self.status = wx.StaticText(self, label="Wpisz tekst do wyszukania")
         self.status.SetName("Stan wyszukiwania")
         self.announcer = Announcer(self.status)
@@ -2033,6 +2051,7 @@ class SearchDialog(wx.Dialog):
         layout.Add(query_label, 0, wx.LEFT | wx.RIGHT, 10)
         layout.Add(query_row, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM | wx.EXPAND, 10)
         layout.Add(self.results, 1, wx.LEFT | wx.RIGHT | wx.EXPAND, 10)
+        layout.Add(self.relations, 1, wx.LEFT | wx.RIGHT | wx.EXPAND, 10)
         layout.Add(self.status, 0, wx.ALL | wx.EXPAND, 10)
         layout.Add(buttons, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM | wx.EXPAND, 10)
         self.SetSizer(layout)
@@ -2042,6 +2061,8 @@ class SearchDialog(wx.Dialog):
         self.query.Bind(wx.EVT_TEXT, self._on_query_text)
         self.results.Bind(wx.EVT_KEY_DOWN, self._on_results_key)
         self.results.Bind(wx.EVT_LIST_ITEM_ACTIVATED, self._on_result_activated)
+        self.relations.Bind(wx.EVT_KEY_DOWN, self._on_relations_key)
+        self.relations.Bind(wx.EVT_LISTBOX_DCLICK, self._accept_relation)
         self.search_button.Bind(wx.EVT_BUTTON, lambda _event: self.start_search())
         self.open_button.Bind(wx.EVT_BUTTON, lambda _event: self._open_selected())
         self.close_button.Bind(wx.EVT_BUTTON, lambda _event: self.EndModal(wx.ID_CANCEL))
@@ -2070,6 +2091,9 @@ class SearchDialog(wx.Dialog):
         if focus is self.results:
             self._on_results_key(event)
             return
+        if focus is self.relations:
+            self._on_relations_key(event)
+            return
         if event.GetKeyCode() == wx.WXK_ESCAPE:
             self.EndModal(wx.ID_CANCEL)
             return
@@ -2095,6 +2119,7 @@ class SearchDialog(wx.Dialog):
         warnings: tuple[str, ...] = (),
     ) -> None:
         self.search_button.Enable(True)
+        self._close_relations(restore_focus=False)
         self._entries = entries
         self.results.Freeze()
         try:
@@ -2139,6 +2164,57 @@ class SearchDialog(wx.Dialog):
         )
         self.results.EnsureVisible(0)
         self.results.SetFocus()
+
+    def show_relation_choices(
+        self,
+        choices: tuple[object, ...],
+        labels: tuple[str, ...],
+        *,
+        title: str = "Przejdź do",
+    ) -> None:
+        """Pokaż relacje bez tworzenia nowego okna i odczytu nazwy aplikacji."""
+
+        if not choices or len(choices) != len(labels):
+            self.announcer.say("Ten wynik nie ma dostępnego miejsca docelowego")
+            return
+        self._relation_choices = choices
+        self.relations.Clear()
+        self.relations.AppendItems(list(labels))
+        self.relations.SetName(title or "Przejdź do")
+        self.results.Hide()
+        self.relations.Show()
+        self.Layout()
+        self.relations.SetSelection(0)
+        self.relations.SetFocus()
+
+    def _close_relations(self, *, restore_focus: bool = True) -> None:
+        if not self.relations.IsShown():
+            return
+        self.relations.Hide()
+        self.results.Show()
+        self._relation_choices = ()
+        self.Layout()
+        if restore_focus:
+            self.results.SetFocus()
+
+    def _accept_relation(self, _event=None) -> None:
+        index = self.relations.GetSelection()
+        if not (0 <= index < len(self._relation_choices)):
+            self.announcer.say("Wybierz miejsce docelowe")
+            return
+        self.selected_relation = self._relation_choices[index]
+        self._complete_selected(SearchResultAction.RELATIONS)
+
+    def _on_relations_key(self, event: wx.KeyEvent) -> None:
+        if not event.ControlDown() and not event.AltDown() and not event.ShiftDown():
+            key = event.GetKeyCode()
+            if key in (wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER):
+                self._accept_relation(event)
+                return
+            if key in (wx.WXK_LEFT, wx.WXK_ESCAPE):
+                self._close_relations()
+                return
+        event.Skip()
 
     def search_failed(self) -> None:
         self.search_button.Enable(True)
@@ -2216,23 +2292,25 @@ class SearchDialog(wx.Dialog):
             )
             return
         text = os.linesep.join(values)
+        success_message = (
+            "Skopiowano adres" if addresses and len(values) == 1
+            else f"Skopiowano adresy: {len(values)} elementów" if addresses
+            else COPIED_NAME_MESSAGE if len(values) == 1
+            else f"Skopiowano nazwy: {len(values)} elementów"
+        )
 
-        def copy() -> None:
+        def copy(*, announce: bool = True) -> None:
             if not self._copy_text(text):
                 return
-            if addresses:
-                self.announcer.say(
-                    "Skopiowano adres" if len(values) == 1
-                    else f"Skopiowano adresy: {len(values)} elementów"
-                )
-            else:
-                self.announcer.say(
-                    COPIED_NAME_MESSAGE if len(values) == 1
-                    else f"Skopiowano nazwy: {len(values)} elementów"
-                )
+            if announce:
+                self.announcer.say(success_message)
 
         if defer:
-            defer_clipboard_command(copy)
+            # Zapis nadal czeka do końca sondy dodatku NVDA, dzięki czemu nie
+            # wraca angielskie „Copy”. Potwierdzenie gestu nie musi jednak
+            # czekać 180 ms i jest wypowiadane od razu.
+            self.announcer.say(success_message)
+            defer_clipboard_command(lambda: copy(announce=False))
         else:
             copy()
 
@@ -4382,20 +4460,22 @@ class RadioRecognitionHistoryDialog(wx.Dialog):
             return
         formatter = radio_recognition.rich_text if links else radio_recognition.copy_text
         text = "\n\n".join(formatter(entry) for entry in selected)
+        success_message = (
+            "Skopiowano opis i łącza" if links and len(selected) == 1
+            else "Skopiowano opis" if len(selected) == 1
+            else f"Skopiowano opisy i łącza: {len(selected)}" if links
+            else f"Skopiowano opisy: {len(selected)}"
+        )
 
-        def copy() -> None:
+        def copy(*, announce: bool = True) -> None:
             if not self._copy_to_clipboard(text):
                 return
-            if len(selected) == 1:
-                self._set_status(
-                    "Skopiowano opis i łącza" if links else "Skopiowano opis"
-                )
-            else:
-                subject = "opisy i łącza" if links else "opisy"
-                self._set_status(f"Skopiowano {subject}: {len(selected)}")
+            if announce:
+                self._set_status(success_message)
 
         if defer:
-            defer_clipboard_command(copy)
+            self._set_status(success_message)
+            defer_clipboard_command(lambda: copy(announce=False))
         else:
             copy()
 
@@ -5689,6 +5769,7 @@ class LiteFrame(wx.Frame):
         self._podcast_download_pending = False
         self._podcast_favorite_pending = False
         self._spotify_membership_pending = False
+        self._tidal_membership_pending = False
         self._podcast_add_pending = False
         self._radio_search_action_pending = False
         self._podcast_opml_pending = False
@@ -6828,24 +6909,15 @@ class LiteFrame(wx.Frame):
             return None
         if len(choices) == 1:
             return choices[0]
-
-        relation_dialog = RelationDestinationDialog(
-            search_dialog,
-            title=title,
-            labels=relation_destination_labels(
+        search_dialog.show_relation_choices(
+            choices,
+            relation_destination_labels(
                 tuple(choice.label for choice in choices),
                 detailed_hints=self._detailed_hints,
             ),
-            detailed_hints=self._detailed_hints,
+            title=title,
         )
-        selected: int | None = None
-        try:
-            if relation_dialog.ShowModal() == wx.ID_OK:
-                selected = relation_dialog.selected_index
-        finally:
-            relation_dialog.Destroy()
-            wx.CallAfter(search_dialog.results.SetFocus)
-        return choices[selected] if selected is not None else None
+        return None
 
     def _record_search_query(self, scope: str, query: str) -> list[str]:
         history = add_search_history(
@@ -7437,6 +7509,7 @@ class LiteFrame(wx.Frame):
             lambda: client.tidal_collection_membership(
                 items,
                 mode="favorite" if favorite else "library",
+                add=True,
             ),
             done,
             lambda error: self.announcer.say(
@@ -15715,17 +15788,20 @@ class LiteFrame(wx.Frame):
             return
         self._clear_pending_external_moves()
         text = os.linesep.join(row.title for row in rows)
+        success_message = (
+            COPIED_NAME_MESSAGE
+            if len(rows) == 1
+            else f"Skopiowano nazwy: {format_item_count(len(rows))}"
+        )
 
-        def copy() -> None:
+        def copy(*, announce: bool = True) -> None:
             if self._to_clipboard(text):
-                self.announcer.say(
-                    COPIED_NAME_MESSAGE
-                    if len(rows) == 1
-                    else f"Skopiowano nazwy: {format_item_count(len(rows))}"
-                )
+                if announce:
+                    self.announcer.say(success_message)
 
         if defer:
-            defer_clipboard_command(copy)
+            self.announcer.say(success_message)
+            defer_clipboard_command(lambda: copy(announce=False))
         else:
             copy()
 
@@ -16693,6 +16769,9 @@ class LiteFrame(wx.Frame):
         """Ctrl+Shift+U/L: zmień prawdziwą kolekcję konta TIDAL."""
         if self.navigator.active is not SessionId.TIDAL:
             return
+        if getattr(self, "_tidal_membership_pending", False):
+            self.announcer.say("Zmiana kolekcji TIDAL już trwa")
+            return
         client = self.client
         if client is None:
             self.announcer.say("Silnik nie działa, nie mogę zmienić kolekcji TIDAL")
@@ -16723,8 +16802,19 @@ class LiteFrame(wx.Frame):
         ]
         active_view = self.navigator.sessions[SessionId.TIDAL].library_view
         preferred_id = rows[0].item_id
+        # W katalogu (także: wyszukiwanie -> wykonawca -> Albumy) polecenie
+        # oznacza jawne dodanie. Nie wolno opierać go na starszym cache profilu,
+        # bo wtedy nieobecny już album mógł zostać ponownie „usunięty”. W
+        # nazwanym widoku zapisanej kolekcji ten sam gest jawnie usuwa.
+        remove_from_current_collection = active_view in (
+            {LibraryView.TIDAL_FAVORITES}
+            if favorite else
+            {LibraryView.TIDAL_LIBRARY, LibraryView.TIDAL_PLAYLISTS}
+        )
+        self._tidal_membership_pending = True
 
         def done(payload: dict) -> None:
+            self._tidal_membership_pending = False
             result = payload or {}
             message = str(result.get("message") or "").strip()
             self.announcer.say(message or "Zmieniono kolekcję TIDAL")
@@ -16739,16 +16829,21 @@ class LiteFrame(wx.Frame):
                     preferred_id=preferred_id if bool(result.get("added")) else None,
                 ))
 
+        def failed(error: Exception) -> None:
+            self._tidal_membership_pending = False
+            self.announcer.say(
+                f"Nie udało się zmienić kolekcji TIDAL: {error}"
+            )
+
         self.runner.submit(
             "tidal-membership",
             lambda: client.tidal_collection_membership(
                 items,
                 mode="favorite" if favorite else "library",
+                add=not remove_from_current_collection,
             ),
             done,
-            lambda error: self.announcer.say(
-                f"Nie udało się zmienić kolekcji TIDAL: {error}"
-            ),
+            failed,
         )
 
     def _toggle_spotify_membership(self, *, favorite: bool) -> None:
