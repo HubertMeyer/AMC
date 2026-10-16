@@ -126,12 +126,10 @@ def install_wx_stub() -> None:
 install_wx_stub()
 
 from amc_wx_lite.gui import (  # noqa: E402
-    CLIPBOARD_COMMAND_DELAY_MS,
     LiteFrame,
     YOUTUBE_EXPORT_WILDCARD,
     _WindowsPreset10HotKey,
     chord_from_event,
-    defer_clipboard_command,
     format_time,
     relation_destination_labels,
     session_selection_labels,
@@ -363,24 +361,6 @@ def test_foreground_hotkey_registers_physical_ctrl_shift_zero(monkeypatch) -> No
     assert ("preset", 10) in calls
     hotkey.unregister()
     assert ("unregister", hotkey._ID) in calls
-
-
-def test_amc_copy_waits_past_nvda_global_clipboard_probe(monkeypatch) -> None:
-    scheduled = []
-    completed = []
-    monkeypatch.setattr(
-        "amc_wx_lite.gui.wx.CallLater",
-        lambda delay, callback: scheduled.append((delay, callback)),
-        raising=False,
-    )
-
-    defer_clipboard_command(lambda: completed.append("copy"))
-
-    assert CLIPBOARD_COMMAND_DELAY_MS > 100
-    assert scheduled[0][0] == CLIPBOARD_COMMAND_DELAY_MS
-    assert completed == []
-    scheduled[0][1]()
-    assert completed == ["copy"]
 
 
 def test_relation_destinations_use_natural_short_labels_unless_details_enabled() -> None:

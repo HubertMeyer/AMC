@@ -957,19 +957,6 @@ def player_time_label(position: float | None, duration: float | None) -> str:
 #: poprawny (dokladnie jeden na gest, takze przy powtorzeniu) -- nie ruszamy go.
 COPIED_NAME_MESSAGE = "Skopiowano nazwę"
 
-# NVDA Extension Global Plugin wysyła Ctrl+C do aplikacji po 80 ms, a potem
-# przez 100 ms sprawdza zmianę numeru sekwencji schowka. Natychmiastowy zapis
-# powoduje jego dodatkowe, angielskie „Copy”. Własne polecenia kopiowania AMC
-# zapisują więc dane chwilę po tym oknie. Zwykłe pola edycyjne pozostają
-# natywne i nie przechodzą przez tę funkcję.
-CLIPBOARD_COMMAND_DELAY_MS = 180
-
-
-def defer_clipboard_command(callback: Callable[[], None]) -> None:
-    """Run one AMC clipboard command after NVDA's global copy probe."""
-
-    wx.CallLater(CLIPBOARD_COMMAND_DELAY_MS, callback)
-
 
 def format_item_count(count: int) -> str:
     """Polska odmiana licznika elementow zgodna z pelnym AMC."""
@@ -2281,7 +2268,7 @@ class SearchDialog(wx.Dialog):
     def _open_selected(self) -> None:
         self._complete_selected(SearchResultAction.OPEN)
 
-    def _copy(self, *, addresses: bool, defer: bool = False) -> None:
+    def _copy(self, *, addresses: bool) -> None:
         values = []
         for entry in self._selected_entries():
             value = entry.row.address if addresses else entry.row.title
@@ -2300,20 +2287,8 @@ class SearchDialog(wx.Dialog):
             else f"Skopiowano nazwy: {len(values)} elementów"
         )
 
-        def copy(*, announce: bool = True) -> None:
-            if not self._copy_text(text):
-                return
-            if announce:
-                self.announcer.say(success_message)
-
-        if defer:
-            # Zapis nadal czeka do końca sondy dodatku NVDA, dzięki czemu nie
-            # wraca angielskie „Copy”. Potwierdzenie gestu nie musi jednak
-            # czekać 180 ms i jest wypowiadane od razu.
+        if self._copy_text(text):
             self.announcer.say(success_message)
-            defer_clipboard_command(lambda: copy(announce=False))
-        else:
-            copy()
 
     def _announce_quick_information(self) -> None:
         entry = self._lead_entry()
@@ -2447,7 +2422,7 @@ class SearchDialog(wx.Dialog):
                 self._complete_selected(SearchResultAction.RELATIONS)
             return
         if ctrl and code in (ord("C"), ord("c")):
-            self._copy(addresses=shift, defer=not shift)
+            self._copy(addresses=shift)
             return
         event.Skip()
 
@@ -4454,7 +4429,7 @@ class RadioRecognitionHistoryDialog(wx.Dialog):
         self.status.SetName(text)
         self._announce(text)
 
-    def _copy(self, *, links: bool, defer: bool = False) -> None:
+    def _copy(self, *, links: bool) -> None:
         selected = self._selected_entries()
         if not selected:
             self._set_status("Brak wybranego wpisu")
@@ -4468,17 +4443,8 @@ class RadioRecognitionHistoryDialog(wx.Dialog):
             else f"Skopiowano opisy: {len(selected)}"
         )
 
-        def copy(*, announce: bool = True) -> None:
-            if not self._copy_to_clipboard(text):
-                return
-            if announce:
-                self._set_status(success_message)
-
-        if defer:
+        if self._copy_to_clipboard(text):
             self._set_status(success_message)
-            defer_clipboard_command(lambda: copy(announce=False))
-        else:
-            copy()
 
     def _delete(self) -> None:
         selected = self._selected_entries()
@@ -4520,7 +4486,7 @@ class RadioRecognitionHistoryDialog(wx.Dialog):
             self._copy(links=True)
             return
         if chord == "Ctrl+C":
-            self._copy(links=False, defer=True)
+            self._copy(links=False)
             return
         if chord == "Delete":
             self._delete()
@@ -10096,11 +10062,6 @@ class LiteFrame(wx.Frame):
             # Klawisz NIE jest nasz: oddajemy go kontrolce, zeby natywna
             # nawigacja i czytnik ekranu dzialaly bez zmian.
             event.Skip()
-            return
-        if action is Action.COPY_NAME and chord.canonical == "Ctrl+C":
-            # Tylko gest klawiaturowy czeka za globalnym monitorem schowka
-            # NVDA. Pozycja menu nadal wykonuje to samo polecenie od razu.
-            self._copy_name(defer=True)
             return
         self._dispatch(action)
 
@@ -15791,7 +15752,7 @@ class LiteFrame(wx.Frame):
 
         self.runner.submit("folder", work, done, failed)
 
-    def _copy_name(self, *, defer: bool = False) -> None:
+    def _copy_name(self) -> None:
         """Ctrl+C: nazwy zaznaczonych elementow, po jednej w wierszu.
 
         Odpowiednik ``CopyActionItemName`` (MainWindow.xaml.cs:24755): pelne
@@ -15810,16 +15771,8 @@ class LiteFrame(wx.Frame):
             else f"Skopiowano nazwy: {format_item_count(len(rows))}"
         )
 
-        def copy(*, announce: bool = True) -> None:
-            if self._to_clipboard(text):
-                if announce:
-                    self.announcer.say(success_message)
-
-        if defer:
+        if self._to_clipboard(text):
             self.announcer.say(success_message)
-            defer_clipboard_command(lambda: copy(announce=False))
-        else:
-            copy()
 
     def _selected_action_rows(self) -> list[Row]:
         """Wiersze dla polecenia: natywny wielokrotny wybor albo kursor.
