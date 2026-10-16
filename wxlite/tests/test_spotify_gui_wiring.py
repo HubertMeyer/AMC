@@ -33,6 +33,7 @@ class ImmediateRunner:
 
 def test_deferred_spotify_feedback_outlasts_native_focus_speech(monkeypatch) -> None:
     scheduled = []
+    shown = []
     spoken = []
     monkeypatch.setattr(
         gui_module.wx,
@@ -43,7 +44,7 @@ def test_deferred_spotify_feedback_outlasts_native_focus_speech(monkeypatch) -> 
     frame = SimpleNamespace(
         _deferred_list_announcement_version=0,
         _window_alive=lambda: True,
-        announcer=SimpleNamespace(say=spoken.append),
+        announcer=SimpleNamespace(show=shown.append, say=spoken.append),
     )
 
     LiteFrame._announce_after_list_update(
@@ -51,7 +52,8 @@ def test_deferred_spotify_feedback_outlasts_native_focus_speech(monkeypatch) -> 
         "Dodano do Biblioteki Spotify: Album",
     )
 
-    assert scheduled[0][0] >= 350
+    assert shown == ["Dodano do Biblioteki Spotify: Album"]
+    assert scheduled[0][0] >= 650
     assert spoken == []
     scheduled[0][1]()
     assert spoken == ["Dodano do Biblioteki Spotify: Album"]

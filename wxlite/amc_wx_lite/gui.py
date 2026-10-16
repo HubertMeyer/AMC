@@ -14163,6 +14163,12 @@ class LiteFrame(wx.Frame):
         message = (message or "").strip()
         if not message:
             return
+        # Wynik operacji ma być dostępny natychmiast także wtedy, gdy mowa
+        # NVDA zostanie chwilowo zajęta zmianą zaznaczenia na natywnej liście.
+        # ``show`` nie wywołuje drugiej wypowiedzi: zapisuje wyłącznie jawny,
+        # użytkowy tekst w polu komunikatów. Jedyną zapowiedź wysyła funkcja
+        # ``announce`` poniżej, już po zakończeniu zdarzeń fokusu.
+        self.announcer.show(message)
         self._deferred_list_announcement_version = (
             getattr(self, "_deferred_list_announcement_version", 0) + 1
         )
@@ -14179,11 +14185,11 @@ class LiteFrame(wx.Frame):
                 return
             self.announcer.say(message)
 
-        # Na wolniejszym przebiegu UIA/NVDA 140 ms wciąż pozwalało późnemu
+        # Na wolniejszym przebiegu UIA/NVDA nawet 360 ms pozwalało późnemu
         # komunikatowi fokusowanego wiersza przeciąć etykietę Alt+1/2/3 albo
-        # potwierdzenie Ctrl+Shift+L. 360 ms pozostaje krótkie, ale daje
-        # natywnej liście czas zakończyć własną sekwencję dostępności.
-        wx.CallLater(360, announce)
+        # potwierdzenie Ctrl+Shift+L. 700 ms jest nadal krótką odpowiedzią na
+        # gest, a kończy się już po typowej sekwencji zmiany wiersza i pozycji.
+        wx.CallLater(700, announce)
 
     def _open_podcast_aggregate(
         self,
