@@ -1,9 +1,18 @@
 # YT-001 — konto YouTube i synchronizacja
 
-- Status: `Oczekuje`
+- Status: `Odłożone — po instalatorze i pierwszych stabilnych wydaniach AMC`
 - Utworzono: 18 października 2026
 - Obszar: YouTube, OAuth, Biblioteka, wyszukiwanie i bezpieczne poświadczenia
 - Polecenie uruchamiające: `Uruchom zadanie YT-001`
+
+## Kolejność realizacji
+
+Zadanie nie należy do obecnego wydania ani do prac prowadzących do pierwszego
+instalatora. Wracamy do niego dopiero po ukończeniu instalatora, sprawdzeniu
+aktualizacji i wydaniu pierwszych stabilnych wersji AMC. Nie ma obecnie terminu
+ani automatycznego warunku rozpoczęcia; potrzebne będzie ponowne, jawne
+polecenie użytkownika. Do tego czasu utrzymujemy działające publiczne
+wyszukiwanie, Bibliotekę i pobieranie YouTube bez logowania do konta.
 
 ## Cel
 

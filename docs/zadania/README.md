@@ -46,9 +46,10 @@ jawnym poleceniu użytkownika albo przez osobno uzgodniony harmonogram.
   `D:\Projekty Codex\Accessible Multimedia Controller\AMC03_AUDYT_SKROTOW_2026-10-18.md`
   oraz `AMC04_REALIZACJA_ETAP_A_2026-10-18.md`. Stare źródła WPF służą tylko
   jako wzorzec; właściwe wdrożenie wykonujemy w tym repozytorium.
-- `YT-001` — **Oczekuje** — oficjalne logowanie do konta YouTube,
-  synchronizacja subskrypcji i zwykłych playlist oraz bezpieczny zakres
-  czynności konta. Szczegóły:
+- `YT-001` — **Odłożone — po instalatorze i pierwszych stabilnych wydaniach** —
+  oficjalne logowanie do konta YouTube, synchronizacja subskrypcji i zwykłych
+  playlist oraz bezpieczny zakres czynności konta. Rozpocząć wyłącznie na nowe,
+  jawne polecenie użytkownika. Szczegóły:
   [YT-001-konto-youtube-i-synchronizacja.md](YT-001-konto-youtube-i-synchronizacja.md).
 - `NAME-001` — **Zrobione** — zmiana widocznej nazwy prywatnej wersji z
   „AMC Python” na „AMC Test”, bez zmiany technicznej tożsamości instalacji.
