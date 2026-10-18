@@ -9,7 +9,7 @@ from amc_wx_lite.command_palette import (
     filter_entries,
 )
 from amc_wx_lite.navigation import SessionId
-from amc_wx_lite.shortcuts import Action, Chord, resolve
+from amc_wx_lite.shortcuts import Action, Chord, describe_action, resolve
 
 
 def test_palette_is_reachable_from_both_views() -> None:
@@ -66,3 +66,26 @@ def test_palette_shortcuts_never_expose_internal_key_names() -> None:
     assert any("Page Down" in label for label in labels)
     assert all("Prior" not in label and "Next" not in label for label in labels)
     assert all("Page strzałka" not in label for label in labels)
+
+
+def test_recording_views_have_one_user_facing_command_contract() -> None:
+    entries = {entry.action: entry for entry in entries_for_session(SessionId.RADIO)}
+
+    active = entries[Action.VIEW_ACTIVE_RECORDINGS]
+    history = entries[Action.VIEW_RECORDED_RADIO_FILES]
+    assert active.name == "Pokaż aktualnie nagrywane pliki"
+    assert active.shortcut == "Alt+R"
+    assert describe_action(Action.VIEW_ACTIVE_RECORDINGS) == active.name
+    assert history.name == "Historia nagrywania"
+    assert history.shortcut == "Alt+Shift+R"
+    assert describe_action(Action.VIEW_RECORDED_RADIO_FILES) == history.name
+    assert resolve(
+        Chord("R", alt=True),
+        player_view=False,
+        radio_session=True,
+    ) is Action.VIEW_ACTIVE_RECORDINGS
+    assert resolve(
+        Chord("R", alt=True, shift=True),
+        player_view=False,
+        radio_session=True,
+    ) is Action.VIEW_RECORDED_RADIO_FILES

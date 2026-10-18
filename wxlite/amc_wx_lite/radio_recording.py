@@ -267,10 +267,11 @@ def current_station_recording_label(
 
 
 def active_recording_rows(payload: object) -> list[Row]:
-    """Czytelne wiersze widoku ``Nagrywane`` z odpowiedzi hosta.
+    """Krotkie wiersze plikow widoku ``Nagrywane`` z odpowiedzi hosta.
 
     Techniczne ``recordingId`` nie trafia do tytulu ani opisu. Gdy jedna
-    stacja ma kilka nagran, pokazujemy ja raz, tak jak pelne AMC.
+    stacja ma kilka nagran, pokazujemy ja raz, tak jak pelne AMC. Nazwa stacji
+    jest tylko awaryjnym opisem do czasu, az host poda sciezke pliku.
     """
     if not isinstance(payload, dict):
         return []
@@ -279,12 +280,6 @@ def active_recording_rows(payload: object) -> list[Row]:
         return []
     rows: list[Row] = []
     seen: set[str] = set()
-    state_labels = {
-        "starting": "przygotowywanie nagrania",
-        "recording": "nagrywanie trwa",
-        "paused": "nagrywanie wstrzymane",
-        "stopping": "zatrzymywanie nagrania",
-    }
     for entry in entries:
         if not isinstance(entry, dict):
             continue
@@ -296,22 +291,16 @@ def active_recording_rows(payload: object) -> list[Row]:
         if station_id in seen:
             continue
         seen.add(station_id)
-        title = station_name.strip() if isinstance(station_name, str) else ""
-        if not title:
-            title = "Stacja bez nazwy"
-        state = str(entry.get("state") or "")
-        detail = state_labels.get(state, "stan nagrania nieznany")
-        if state in ("recording", "paused"):
-            detail += f", {format_duration(entry.get('durationSeconds'))}"
-        completed = entry.get("completedFileCount")
-        if isinstance(completed, int) and not isinstance(completed, bool) and completed > 0:
-            detail += f", zapisane części: {completed}"
+        path = entry.get("path")
+        file_name = _file_name(path.strip()) if isinstance(path, str) else ""
+        fallback = station_name.strip() if isinstance(station_name, str) else ""
+        title = f"Nagrywane, {file_name or fallback or 'plik bez nazwy'}"
         rows.append(Row(
             item_id=station_id,
             title=title,
             kind="station",
             url=url.strip() if isinstance(url, str) and url.strip() else None,
-            detail=detail,
+            detail="",
             show_kind=False,
         ))
     return rows
@@ -700,7 +689,7 @@ def recording_history_rows(
 ) -> list[Row]:
     """Wiersze „Historii nagrywania” zgodne z kolejnoscia etykiet AMC."""
     now_value = now or datetime.now().astimezone()
-    merged_entries, file_details = _merge_recorded_files(entries, recorded_files)
+    merged_entries, _file_details = _merge_recorded_files(entries, recorded_files)
     outcome_labels = {
         "completed": "Nagrane",
         "stopped": "Zatrzymane",
@@ -727,28 +716,18 @@ def recording_history_rows(
                 else f"{outcome}, plik nagrania niedostępny"
             )
 
-        # Nazwa widoku i kontrolki brzmi już „Nagrane”. Powtarzanie tego
-        # samego słowa na początku każdego poprawnego wpisu spowalnia
-        # nawigację NVDA. Stany odbiegające od normy nadal muszą być
-        # wypowiadane przy konkretnym pliku.
-        parts = (
-            [station_name]
-            if entry.outcome == "completed" and state == "available"
-            else [outcome, station_name]
-        )
         file_name = _file_name(entry.path)
-        if file_name and file_name.casefold() not in ", ".join(parts).casefold():
-            parts.append(file_name)
-        parts.append(_when_label(entry.finished_utc_ticks, now_value))
-        if entry.schedule_name:
-            parts.append(f"harmonogram {entry.schedule_name}")
-        if entry.saved_file_count > 1:
-            parts.append(f"plików {entry.saved_file_count}")
-        if entry.reason:
-            parts.append(entry.reason.rstrip("."))
+        # Zwykly wiersz jest lista PLIKOW, a nie raportem harmonogramu. Stacja,
+        # data, harmonogram i folder sa dostepne innymi drogami i nie moga
+        # dublowac nazwy podczas kazdego ruchu NVDA. Wyjatek stanowi nieudana
+        # proba bez pliku: wtedy stacja i powod sa jedynymi uzytecznymi danymi.
+        if entry.outcome == "failed" and not file_name:
+            parts = [outcome, station_name]
+            if entry.reason:
+                parts.append(entry.reason.rstrip("."))
+        else:
+            parts = [outcome, file_name or station_name]
         folder = _folder_label(entry.path)
-        if folder:
-            parts.append(folder)
         label = ", ".join(parts)
 
         activation_message: str | None = None
@@ -773,7 +752,7 @@ def recording_history_rows(
             title=label,
             kind="track",
             path=path,
-            detail=file_details.get(entry.id, ""),
+            detail="",
             show_kind=False,
             activation_message=activation_message,
         ))

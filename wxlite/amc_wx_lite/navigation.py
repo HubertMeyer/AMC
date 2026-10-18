@@ -2195,6 +2195,7 @@ class Navigator:
         bookmark_targets: dict[str, tuple[str, float, str]] | None = None,
         bookmark_contexts: dict[str, object] | None = None,
         queue_flags: dict[str, tuple[bool, bool]] | None = None,
+        announce_count: bool = True,
     ) -> list[object]:
         """Skutek udanego odczytu widoku. Zawsze w sesji PLIKOW.
 
@@ -2215,6 +2216,13 @@ class Navigator:
         # Ctrl+L (cs:701-705) wraca do zapamietanego widoku Biblioteki, a
         # ``folder_path`` ponizej musi byc wyczyszczone dla Backspace.
         self._remember_view_selection(state)
+        if (
+            state.library_view is LibraryView.RECORDED_RADIO_FILES
+            and state.model.selected_id is not None
+        ):
+            state.view_selected_ids[LibraryView.RECORDED_RADIO_FILES.value] = (
+                state.model.selected_id
+            )
         if state.library_view is None and state.folder_path is not None:
             state.library_folder_path = state.folder_path
 
@@ -2238,7 +2246,12 @@ class Navigator:
         # "Ulubionych", a zostawienie starej mylilo by Backspace.
         state.folder_path = None
         state.breadcrumb = []
-        state.model.replace(rows, preferred_id=preferred_id or state.library_return_id)
+        remembered_id = (
+            state.view_selected_ids.get(LibraryView.RECORDED_RADIO_FILES.value)
+            if view is LibraryView.RECORDED_RADIO_FILES
+            else state.library_return_id
+        )
+        state.model.replace(rows, preferred_id=preferred_id or remembered_id)
         state.view = View.LIST
 
         row = state.model.selected_row
@@ -2252,8 +2265,10 @@ class Navigator:
             # natywna lista, a dokładnie ten krótki komunikat idzie po jej
             # aktualizacji, więc NVDA nie składa go z systemowym „nieznane”.
             parts = ["zero elementów"]
-        else:
+        elif announce_count:
             parts = [f"{heading}, {len(rows)} {_items_word(len(rows))}"]
+        else:
+            parts = [heading]
         if not order_matches_amc:
             # Uczciwie, tak jak LibrarySnapshot: bez kluczy hosta kolejnosc
             # jest zastepcza i nie udajemy zgodnosci 1:1.

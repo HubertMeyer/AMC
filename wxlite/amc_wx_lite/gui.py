@@ -196,6 +196,7 @@ from .quick_info import (
     quick_info_failure,
     quick_info_plan,
     quick_info_reply,
+    local_media_folder_detail,
     read_cached_information,
 )
 from .search_catalog import (
@@ -10991,7 +10992,7 @@ class LiteFrame(wx.Frame):
             LibraryView.LIVE_QUEUE: "Kolejka odtwarzania",
             LibraryView.ITEM_BOOKMARKS: "Zakładki",
             LibraryView.ACTIVE_RADIO_RECORDINGS: "Nagrywane",
-            LibraryView.RECORDED_RADIO_FILES: "Nagrane",
+            LibraryView.RECORDED_RADIO_FILES: "Historia nagrywania",
             LibraryView.RADIO_RECORDING_SCHEDULES: "Harmonogramy nagrywania",
             LibraryView.SONOS_LIBRARY: "Biblioteka Sonos",
             LibraryView.SONOS_FAVORITES: "Ulubione Sonos",
@@ -16301,6 +16302,12 @@ class LiteFrame(wx.Frame):
             self._announce_speaker_item_information(row)
             return
         client = self.client
+        library_view = getattr(self.navigator.session, "library_view", None)
+        folder_detail = local_media_folder_detail(
+            row,
+            session=self.navigator.active.value,
+            library_view=getattr(library_view, "value", None),
+        )
         plan = quick_info_plan(
             row,
             session=self.navigator.active.value,
@@ -16343,6 +16350,7 @@ class LiteFrame(wx.Frame):
                 session=self.navigator.active.value,
                 view=self.navigator.view.value,
                 say=self.announcer.say,
+                extra_detail=folder_detail,
             )
 
         def failed(_error: Exception) -> None:
@@ -21719,6 +21727,7 @@ class LiteFrame(wx.Frame):
                 "Historia nagrywania",
                 rows,
                 preferred_id=preferred_id,
+                announce_count=False,
             )
             if self.navigator.active is SessionId.FILES:
                 if announce:

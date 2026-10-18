@@ -797,7 +797,7 @@ def build_menus(session_order: object = None) -> tuple[Menu, ...]:
             MenuItem("Zatrzymaj w&szystkie nagrania",
                      Action.RECORD_STOP_ALL, shortcut="Ctrl+Alt+Shift+R",
                      accelerator=False, needs_radio_session=True),
-            MenuItem("Pokaż n&agrywane", Action.VIEW_ACTIVE_RECORDINGS,
+            MenuItem("Pokaż aktualnie n&agrywane pliki", Action.VIEW_ACTIVE_RECORDINGS,
                      shortcut="Alt+R"),
             MenuItem("&Historia nagrywania", Action.VIEW_RECORDED_RADIO_FILES,
                      shortcut="Alt+Shift+R"),

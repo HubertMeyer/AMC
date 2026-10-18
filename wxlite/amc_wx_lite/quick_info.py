@@ -40,6 +40,7 @@ host C#. Dlatego ta droga NICZEGO nie zapisuje i nie udaje, ze zapisuje.
 from __future__ import annotations
 
 import json
+import ntpath
 import sqlite3
 from dataclasses import dataclass
 from typing import Callable
@@ -76,6 +77,41 @@ QUICK_INFO_STREAM = "quickInfo"
 #: Komunikat, gdy wiersz nie ma zadnego zrodla do zmierzenia. KROTKI i
 #: UCZCIWY: nie podaje zerowego rozmiaru ani zerowego bitrate.
 NO_SOURCE_MESSAGE = "Brak zapisanych informacji uzupełniających"
+
+
+def local_media_folder_detail(
+    row: Row | None,
+    *,
+    session: str,
+    library_view: str | None,
+) -> str | None:
+    """Folder tylko dla lokalnego pliku w Historii lub Historii nagrywania.
+
+    Zdalny adres nie staje sie udawanym folderem. Zwracamy sama informacje
+    uzupelniajaca, bez tytulu wiersza, bo ten wlasnie przeczytala lista.
+    """
+    if (
+        row is None
+        or session != "files"
+        or library_view not in {"history", "recordedRadioFiles"}
+    ):
+        return None
+    path = (row.path or "").strip()
+    if not path:
+        return None
+    is_windows_path = path.startswith("\\\\") or (
+        len(path) >= 3
+        and path[0].isalpha()
+        and path[1] == ":"
+        and path[2] in "\\/"
+    )
+    if not is_windows_path:
+        return None
+    directory = ntpath.dirname(path.rstrip("\\/"))
+    if not directory:
+        return None
+    name = ntpath.basename(directory.rstrip("\\/")) or directory
+    return f"folder {name}" if name else None
 
 
 def read_cached_information(layout: ProfileLayout, row: Row, session: str) -> dict:
@@ -301,6 +337,7 @@ def quick_info_reply(
     session: str,
     view: str,
     say: Callable[[str], None],
+    extra_detail: str | None = None,
 ) -> None:
     """Krok 3: wypowiedz wynik, ale TYLKO jesli nadal opisuje ten sam wiersz.
 
@@ -313,7 +350,11 @@ def quick_info_reply(
     text = ((response or {}).get("text") or "").strip()
     # Pusta odpowiedz nie moze zamienic sie w CISZE: martwy klawisz to ten sam
     # objaw, ktory naprawiamy.
-    say(text or NO_SOURCE_MESSAGE)
+    parts = [text or NO_SOURCE_MESSAGE]
+    detail = (extra_detail or "").strip()
+    if detail and detail.casefold() not in parts[0].casefold():
+        parts.append(detail)
+    say(", ".join(parts))
 
 
 def quick_info_failure(

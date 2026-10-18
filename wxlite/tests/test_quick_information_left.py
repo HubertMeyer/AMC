@@ -28,6 +28,7 @@ from amc_wx_lite.quick_info import (
     NO_SOURCE_MESSAGE,
     QuickInfoGuard,
     folder_announcement,
+    local_media_folder_detail,
     load_more_announcement,
     quick_info_plan,
     quick_info_reply,
@@ -337,6 +338,54 @@ def test_pusta_odpowiedz_hosta_nie_zostawia_ciszy() -> None:
         say=said.append,
     )
     assert said == [NO_SOURCE_MESSAGE], f"martwy klawisz to ten sam blad: {said}"
+
+
+def test_historia_lokalnego_pliku_dodaje_folder_bez_powtorzenia_tytulu() -> None:
+    row = Row(
+        item_id="file:7",
+        title="Audycja",
+        kind="track",
+        path=r"D:\Nagrania\Radio\audycja.mp3",
+    )
+    detail = local_media_folder_detail(
+        row,
+        session="files",
+        library_view="history",
+    )
+    assert detail == "folder Radio"
+    plan = quick_info_plan(row, session="files", view="list")
+    assert plan.guard is not None
+    said: list[str] = []
+    quick_info_reply(
+        {"text": "MP3, 128 kb/s, 12 MB"},
+        guard=plan.guard,
+        item_id="file:7",
+        session="files",
+        view="list",
+        say=said.append,
+        extra_detail=detail,
+    )
+    assert said == ["MP3, 128 kb/s, 12 MB, folder Radio"]
+    assert "Audycja" not in said[0]
+
+
+def test_historia_internetowa_nie_udaje_folderu() -> None:
+    row = Row(
+        item_id="web:7",
+        title="Transmisja",
+        kind="track",
+        url="https://example.invalid/live",
+    )
+    assert local_media_folder_detail(
+        row,
+        session="files",
+        library_view="history",
+    ) is None
+    assert local_media_folder_detail(
+        Row(item_id="x", title="X", kind="track", path=r"D:\Muzyka\x.mp3"),
+        session="files",
+        library_view="favorites",
+    ) is None
 
 
 def test_wynik_dla_zamknietego_okna_jest_odrzucany() -> None:

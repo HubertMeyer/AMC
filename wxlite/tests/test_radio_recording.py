@@ -18,6 +18,7 @@ install_wx_stub()
 from amc_wx_lite.gui import LiteFrame, radio_timeshift_label
 from amc_wx_lite.host_client import LiteHostClient
 from amc_wx_lite.library_db import LibraryDatabase, LibraryItem
+from amc_wx_lite.list_model import Row
 from amc_wx_lite.navigation import LibraryView, Navigator, SessionId
 from amc_wx_lite.profile_layout import read_only_mirror
 from amc_wx_lite.radio_recording import (
@@ -654,6 +655,7 @@ def test_active_recordings_are_one_accessible_row_per_station() -> None:
                 "stationName": "Polskie Radio Trójka",
                 "url": "https://example.invalid/live",
                 "state": "paused",
+                "path": r"D:\Nagrania\Polskie Radio Trójka 2026-10-19.mp3",
                 "durationSeconds": 65,
                 "completedFileCount": 2,
             },
@@ -666,9 +668,9 @@ def test_active_recordings_are_one_accessible_row_per_station() -> None:
         ]
     })
     assert len(rows) == 1
-    assert rows[0].title == "Polskie Radio Trójka"
+    assert rows[0].title == "Nagrywane, Polskie Radio Trójka 2026-10-19"
     assert rows[0].url == "https://example.invalid/live"
-    assert rows[0].detail == "nagrywanie wstrzymane, 1:05, zapisane części: 2"
+    assert rows[0].detail == ""
     assert "techniczne-id" not in f"{rows[0].title} {rows[0].detail}"
 
 
@@ -717,12 +719,10 @@ def test_recording_history_keeps_success_failure_and_accessible_labels() -> None
         }
     })
     rows = recording_history_rows(entries, now=now, path_probe=lambda path: "available")
-    assert rows[0].title.startswith("Radio Test, audycja, dziś")
-    assert not rows[0].title.startswith("Nagrane")
-    assert rows[0].title.endswith("folder Nagrania")
+    assert rows[0].title == "Nagrane, audycja"
     assert rows[0].path == r"D:\Nagrania\audycja.mp3"
     assert "techniczne-udane" not in rows[0].title
-    assert rows[1].title.startswith("Nieudane, Radio Awaria")
+    assert rows[1].title == "Nieudane, Radio Awaria, Brak połączenia"
     assert rows[1].path is None
     assert rows[1].activation_message == (
         "Nagranie Radio Awaria nie powstało. Brak połączenia"
@@ -740,7 +740,7 @@ def test_missing_recording_is_visible_but_enter_refuses_honestly() -> None:
         }]}
     })
     row = recording_history_rows(entries, path_probe=lambda path: "missing")[0]
-    assert row.title.startswith("Zatrzymane, brak pliku nagrania, Radio Test")
+    assert row.title == "Zatrzymane, brak pliku nagrania, brak"
     assert row.path is None
     nav = Navigator()
     nav.apply_library_view(LibraryView.RECORDED_RADIO_FILES, "Historia nagrywania", [row])
@@ -779,7 +779,7 @@ def test_recorded_files_merge_without_duplicates_and_include_outside_library() -
     assert len(rows) == 3
     assert sum("audycja.mp3" in (row.path or "").casefold() for row in rows) == 1
     outside = next(row for row in rows if row.path and row.path.endswith("nowe.mp3"))
-    assert outside.detail == "poza Biblioteką"
+    assert outside.detail == ""
     interrupted = next(row for row in rows if row.title.startswith("Zatrzymane"))
     assert interrupted.path == r"D:\Nagrania\czesc.mp3"
     assert all("plik-" not in row.title for row in rows)
@@ -892,6 +892,61 @@ def test_empty_active_recordings_have_an_exact_user_facing_count() -> None:
 
     assert len(events) == 1
     assert events[0].text == "zero elementów"
+
+
+def test_recording_history_announces_heading_without_separate_item_count() -> None:
+    nav = Navigator()
+    row = Row(
+        item_id="radio-recording-history:1",
+        title="Nagrane, audycja",
+        kind="track",
+        path=r"D:\Nagrania\audycja.mp3",
+    )
+
+    events = nav.apply_library_view(
+        LibraryView.RECORDED_RADIO_FILES,
+        "Historia nagrywania",
+        [row],
+        announce_count=False,
+    )
+
+    assert events[0].text == "Historia nagrywania"
+    assert "element" not in events[0].text
+
+
+def test_active_and_completed_recording_views_remember_separate_selection() -> None:
+    nav = Navigator()
+    nav.switch_session(SessionId.RADIO)
+    active = [
+        Row(item_id="a1", title="Nagrywane, jeden", kind="station"),
+        Row(item_id="a2", title="Nagrywane, dwa", kind="station"),
+    ]
+    nav.apply_radio_view(LibraryView.ACTIVE_RADIO_RECORDINGS, "Nagrywane", active)
+    nav.session.model.select_id("a2")
+    nav.apply_radio_view(None, "Radio", [Row(item_id="s1", title="Stacja", kind="station")])
+    nav.apply_radio_view(LibraryView.ACTIVE_RADIO_RECORDINGS, "Nagrywane", active)
+    assert nav.session.model.selected_id == "a2"
+
+    nav.active = SessionId.FILES
+    completed = [
+        Row(item_id="h1", title="Nagrane, jeden", kind="track"),
+        Row(item_id="h2", title="Nagrane, dwa", kind="track"),
+    ]
+    nav.apply_library_view(
+        LibraryView.RECORDED_RADIO_FILES,
+        "Historia nagrywania",
+        completed,
+        announce_count=False,
+    )
+    nav.session.model.select_id("h2")
+    nav.apply_library_view(LibraryView.ALL_FILES, "Wszystkie pliki", [])
+    nav.apply_library_view(
+        LibraryView.RECORDED_RADIO_FILES,
+        "Historia nagrywania",
+        completed,
+        announce_count=False,
+    )
+    assert nav.session.model.selected_id == "h2"
 
 
 def test_escape_and_backspace_share_the_recording_preview_exit_action() -> None:
