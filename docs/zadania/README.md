@@ -17,6 +17,13 @@ jawnym poleceniu użytkownika albo przez osobno uzgodniony harmonogram.
 - Po zakończeniu zapisz w pliku zadania datę, wynik, zmienione pliki, commit,
   uruchomione testy z rezultatami i dokładną wersję instalacji, jeśli powstała.
   Dopiero po zweryfikowaniu kryteriów akceptacji ustaw status `Zrobione`.
+- W każdym rozpoczętym zadaniu prowadź również sekcje `Materiał do dokumentacji
+  użytkownika`, `Uzasadnienie i decyzje`, `Testy i wynik`, `Znane ograniczenia`
+  oraz `Wersja i commit`. Tekst użytkowy ma być gotowy do automatycznego
+  złożenia instrukcji i opisu wydania, ale pozostaje projektem do korekty i
+  zatwierdzenia użytkownika.
+- Korekty użytkownika zapisuj z datą i oznaczaj, które wcześniejsze ustalenie
+  zastępują. Nie utrzymuj dwóch sprzecznych wariantów jako równoważnych.
 - Jeżeli praca utknęła, ustaw `Zablokowane` i opisz konkretną przeszkodę oraz
   najkrótszy sposób wznowienia.
 - Nie zapisuj tu haseł, tokenów, danych kont ani prywatnych logów użytkownika.

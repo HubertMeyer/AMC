@@ -98,6 +98,25 @@
   błędów, plan pracy i dowody wykonania należą do pliku danego zadania, aby nie
   rozrastały się w instrukcjach obowiązujących każdą sesję.
 
+## Materiał do automatycznej dokumentacji
+
+- Każdy wykonywany etap musi pozostawić w swoim pliku zadania osobną sekcję
+  `Materiał do dokumentacji użytkownika`, napisaną zwykłym językiem i gotową
+  do późniejszego złożenia w instrukcję, opis wersji oraz listę zmian.
+- Sekcja ma zapisywać: co użytkownik może teraz zrobić, dokładne skróty i
+  miejsca w interfejsie, oczekiwane komunikaty NVDA, różnice między sesjami i
+  profilami, ważne ograniczenia, wymagane ustawienia oraz sposób bezpiecznego
+  użycia. Nie wolno zastępować tego listą klas, metod ani nazw wewnętrznych.
+- Osobno zapisuj `Uzasadnienie i decyzje`, `Testy i wynik`, `Znane ograniczenia`
+  oraz `Wersja i commit`. Informacja o wdrożeniu musi rozróżniać sam kod,
+  zaliczone testy, zbudowany pakiet, rzeczywistą instalację i publikację.
+- Każdą późniejszą korektę użytkownika dopisuj jako decyzję nadrzędną z datą;
+  nie pozostawiaj obok niej sprzecznego, starszego opisu bez oznaczenia, że
+  został zastąpiony.
+- Po większej bramce wolno automatycznie złożyć z tych sekcji roboczą
+  dokumentację i opis zmian. Taki dokument pozostaje projektem do korekty i
+  zatwierdzenia użytkownika; nie jest automatycznie publikowany.
+
 ## Skróty globalne
 
 - Widok sesji, urządzenia ani listy nie może przejmować skrótu globalnego i
