@@ -523,6 +523,38 @@ def test_scheduled_due_event_is_announced_once_and_file_start_is_silent() -> Non
     assert "techniczne-id" not in messages[0]
 
 
+def test_scheduled_terminal_event_refreshes_persisted_schedule_state() -> None:
+    messages: list[str] = []
+    refreshes: list[str] = []
+    frame = SimpleNamespace(
+        _window_alive=lambda: True,
+        announcer=SimpleNamespace(say=messages.append),
+        _refresh_recording_status=lambda: refreshes.append("recording-status"),
+        _refresh_persisted_radio_schedules=lambda: refreshes.append(
+            "schedule-status"
+        ),
+        _remember_recording_result=lambda _payload: True,
+        navigator=SimpleNamespace(
+            sessions={
+                SessionId.RADIO: SimpleNamespace(library_view=LibraryView.FAVORITES),
+                SessionId.FILES: SimpleNamespace(library_view=LibraryView.ALL_FILES),
+            }
+        ),
+    )
+
+    LiteFrame._handle_engine_event(frame, "radio.recordingStopped", {
+        "stationName": "Radio Test",
+        "scheduleName": "Poranna audycja",
+        "path": r"D:\Nagrania\radio-test.mp3",
+        "savedFileCount": 1,
+    })
+
+    assert refreshes == ["schedule-status", "recording-status"]
+    assert messages == [
+        "Zatrzymano zaplanowane nagrywanie Radio Test: radio-test.mp3"
+    ]
+
+
 def test_station_rows_expose_playback_and_recording_without_technical_values() -> None:
     from amc_wx_lite.list_model import Row
 

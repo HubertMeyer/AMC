@@ -8141,6 +8141,7 @@ class LiteFrame(wx.Frame):
             if radio_snapshot is not None
             else None
         )
+        schedule_status_after_sync: list[object] = []
         podcast_values = (
             self.options.podcast_downloads_folder,
             self.options.podcast_rss_refresh_interval_minutes,
@@ -8209,7 +8210,9 @@ class LiteFrame(wx.Frame):
                 if schedule_payload is not None:
                     optional_step(
                         "synchronizację harmonogramu Radia",
-                        lambda: client.sync_radio_schedules(schedule_payload),
+                        lambda: schedule_status_after_sync.append(
+                            client.sync_radio_schedules(schedule_payload)
+                        ),
                     )
                 if podcast_settings_payload is not None:
                     optional_step(
@@ -8224,6 +8227,12 @@ class LiteFrame(wx.Frame):
                 raise
 
         def done(_result: dict) -> None:
+            if schedule_status_after_sync and not LiteFrame._persist_radio_schedule_status(
+                self, schedule_status_after_sync[-1]
+            ):
+                self.announcer.say(
+                    "Nie udało się zapisać aktualnego stanu harmonogramu"
+                )
             self.timer.Start(1000)
             # Kolejnosc listy liczy host C# (CompareInfo pl-PL), nie wlasny
             # collator w Pythonie. Podpinamy ja DOPIERO tu, bo wymaga zywego
@@ -8585,6 +8594,8 @@ class LiteFrame(wx.Frame):
                     f"Nie zapisano zakładek nagrania: {bookmark_error}"
                 )
             self._remember_recording_result(data)
+            if str(data.get("scheduleName") or "").strip():
+                self._refresh_persisted_radio_schedules()
         if name.startswith("radio.recording"):
             # Zdarzenie opisuje pojedyncza zmiane, natomiast lista potrzebuje
             # pelnej migawki wszystkich nagran. Odswiezamy ja bez dodatkowego
@@ -21339,6 +21350,71 @@ class LiteFrame(wx.Frame):
             return False
         self._recording_history_persist_error = False
         return True
+
+    def _persist_radio_schedule_status(self, payload: object) -> bool:
+        """Utrwal przesuniecie lub wylaczenie planu wykonane przez hosta.
+
+        Host C# jest wlascicielem zegara harmonogramow, ale jego stan zyje
+        tylko do zamkniecia procesu. Po wykonaniu planu jednorazowego albo
+        przesunieciu cyklicznego zapisujemy efektywny model w prywatnym stanie
+        wxPython. Bez tego kolejny start wysylal hostowi poprzedni termin i
+        mogl uruchomic to samo nagranie jeszcze raz.
+        """
+        snapshot = getattr(self, "_radio_snapshot", None)
+        state = getattr(self, "state", None)
+        if snapshot is None or state is None:
+            return False
+        current = radio_schedule_settings.effective_schedules(
+            snapshot.recording_schedules,
+            state.radio_schedule_overrides,
+        )
+        baseline = radio_schedule_settings.clone_schedules(current)
+        updated = radio_schedule_settings.schedules_from_host_status(
+            payload, current
+        )
+        # Kolejnosc etykiet hosta nie jest zmiana modelu. Nie tworzymy tez
+        # prywatnej kopii profilu, dopoki host niczego faktycznie nie zmienil.
+        before_by_id = {item["id"]: item for item in baseline}
+        after_by_id = {item["id"]: item for item in updated}
+        if before_by_id == after_by_id:
+            return True
+        previous = state.radio_schedule_overrides
+        state.radio_schedule_overrides = updated
+        try:
+            self.store.save(state)
+        except (OSError, TypeError, ValueError):
+            state.radio_schedule_overrides = previous
+            return False
+        return True
+
+    def _refresh_persisted_radio_schedules(self) -> None:
+        """Po terminalnym zdarzeniu pobierz pelna migawke planow poza GUI."""
+        client = self.client
+        if client is None:
+            return
+
+        def done(payload: object) -> None:
+            if not self._persist_radio_schedule_status(payload):
+                self.announcer.say(
+                    "Nie udało się zapisać aktualnego stanu harmonogramu"
+                )
+
+        def failed(error: Exception) -> None:
+            _append_frontend_log(
+                self.store,
+                "Nie odświeżono stanu harmonogramu po nagraniu: "
+                f"{type(error).__name__}: {error}",
+            )
+            self.announcer.say(
+                "Nie udało się sprawdzić aktualnego stanu harmonogramu"
+            )
+
+        self.runner.submit(
+            "radio-schedule-state",
+            client.radio_schedule_status,
+            done,
+            failed,
+        )
 
     def _show_radio_recording_history(
         self,

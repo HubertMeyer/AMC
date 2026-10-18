@@ -23,6 +23,9 @@ jawnym poleceniu użytkownika albo przez osobno uzgodniony harmonogram.
 
 ## Zadania
 
+- `REC-001` — **W trakcie** — trwałość wykonanego harmonogramu nagrywania
+  Radia i zgodność listy `Alt+R` z blokadą zamknięcia. Szczegóły:
+  [REC-001-harmonogram-alt-r-zamykanie.md](REC-001-harmonogram-alt-r-zamykanie.md).
 - `NVDA-001` — **Oczekuje** — usunięcie opóźnienia `Ctrl+C` powodowanego przez
   NVDAExtensionGlobalPlugin. Szczegóły:
   [NVDA-001-opoznienie-ctrl-c.md](NVDA-001-opoznienie-ctrl-c.md).

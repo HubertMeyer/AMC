@@ -237,3 +237,62 @@ def test_old_host_status_without_model_fields_keeps_safe_fallback() -> None:
         ]
     }
     assert schedules_from_host_status(payload, [source]) == clone_schedules([source])
+
+
+def test_gui_persists_host_disabled_one_time_schedule(tmp_path) -> None:
+    import sys
+
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from test_gui_logic import install_wx_stub
+
+    install_wx_stub()
+    from amc_wx_lite.gui import LiteFrame
+
+    source = sample_schedule(enabled=True)
+    disabled = sample_schedule(enabled=False)
+    store = StateStore(tmp_path)
+    state = LiteState(radio_schedule_overrides=None)
+    frame = SimpleNamespace(
+        _radio_snapshot=SimpleNamespace(recording_schedules=(source,)),
+        state=state,
+        store=store,
+    )
+
+    assert LiteFrame._persist_radio_schedule_status(frame, {
+        "schedules": [{
+            **disabled,
+            "navigationText": "Poranna audycja",
+            "label": "Poranna audycja, wyłączone",
+        }]
+    }) is True
+    assert state.radio_schedule_overrides == [sanitize_schedule(disabled)]
+    assert store.load().radio_schedule_overrides == [sanitize_schedule(disabled)]
+
+
+def test_gui_does_not_freeze_unchanged_profile_schedule_into_private_state(tmp_path) -> None:
+    import sys
+
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from test_gui_logic import install_wx_stub
+
+    install_wx_stub()
+    from amc_wx_lite.gui import LiteFrame
+
+    source = sample_schedule()
+    store = StateStore(tmp_path)
+    state = LiteState(radio_schedule_overrides=None)
+    frame = SimpleNamespace(
+        _radio_snapshot=SimpleNamespace(recording_schedules=(source,)),
+        state=state,
+        store=store,
+    )
+
+    assert LiteFrame._persist_radio_schedule_status(frame, {
+        "schedules": [{
+            **source,
+            "navigationText": "Poranna audycja",
+            "label": "Poranna audycja, włączone",
+        }]
+    }) is True
+    assert state.radio_schedule_overrides is None
+    assert not (tmp_path / "state.json").exists()
