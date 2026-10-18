@@ -119,6 +119,22 @@
 
 ## Skróty globalne
 
+- `Ctrl+F1`, pełna pomoc klawiatury, paleta poleceń `Ctrl+Shift+K`, właściwe
+  menu oraz wykonanie polecenia muszą korzystać z jednego wspólnego katalogu
+  poleceń i tego samego modelu możliwości sesji. Nie utrzymuj ręcznie kilku
+  rozbieżnych list opisów, skrótów i warunków dostępności.
+- Każda zmiana funkcji, skrótu, nazwy, warunku dostępności, profilu wydania lub
+  możliwości sesji wymaga w tym samym etapie aktualizacji `Ctrl+F1`, pełnej
+  pomocy klawiatury, `Ctrl+Shift+K`, odpowiednich menu i instrukcji. Dotyczy to
+  także funkcji bez nowego skrótu oraz funkcji dostępnych tylko w części sesji.
+- Pomoc i paleta pokazują wyłącznie polecenia rzeczywiście dostępne w bieżącym
+  profilu, sesji, widoku i stanie. Funkcja niedostępna może być opisana tylko
+  wtedy, gdy użytkownik potrzebuje krótkiego wyjaśnienia, dlaczego nie może jej
+  wykonać; nie wolno reklamować martwej pozycji ani ukrywać działającego skrótu.
+- Test każdej zmiany polecenia ma porównać nazwę, skrót, opis, dostępność i
+  wykonanie co najmniej w `Ctrl+F1`, pełnej pomocy oraz palecie, a dla funkcji
+  kontekstowej także w reprezentatywnych sesjach i profilach AMC Test/AMC.
+
 - Widok sesji, urządzenia ani listy nie może przejmować skrótu globalnego i
   pozostawiać go bez działania. `Ctrl+H` otwiera Historię odtwarzania z każdego
   głównego miejsca programu, w szczególności z Radia internetowego, podcastów,
