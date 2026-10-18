@@ -46,6 +46,19 @@ jawnym poleceniu użytkownika albo przez osobno uzgodniony harmonogram.
   `D:\Projekty Codex\Accessible Multimedia Controller\AMC03_AUDYT_SKROTOW_2026-10-18.md`
   oraz `AMC04_REALIZACJA_ETAP_A_2026-10-18.md`. Stare źródła WPF służą tylko
   jako wzorzec; właściwe wdrożenie wykonujemy w tym repozytorium.
+- `AMC08` — **Oczekuje, zlecone do nocnej realizacji** — natywne playlisty
+  Spotify w AMC Test: `Ctrl+P`, `Ctrl+Shift+P`, tworzenie playlist i dodawanie
+  utworów lub odcinków. Zatwierdzona specyfikacja:
+  `D:\Projekty Codex\Accessible Multimedia Controller\AMC08_PLAYLISTY_SPOTIFY_2026-10-18.md`.
+  Historyczne źródła są tylko wzorcem; kod powstaje w tym repozytorium.
+- `AMC12` — **Oczekuje, etap późniejszy tej samej nocy** — jeden kod, osobne
+  profile AMC Test i publicznego AMC, izolowane magazyny oraz bezpieczny
+  instalator. Zatwierdzona specyfikacja:
+  `D:\Projekty Codex\Accessible Multimedia Controller\AMC12_PROFILE_WYDANIA_PUBLICZNEGO_I_TESTOWEGO_2026-10-18.md`.
+- `AMC14` — **Oczekuje, po fundamencie AMC12** — aplikacyjna integracja z
+  powłoką Windows, przekazywanie plików do właściwej instancji i późniejsza
+  rejestracja przez instalator. Zatwierdzona specyfikacja:
+  `D:\Projekty Codex\Accessible Multimedia Controller\AMC14_FOLDERY_I_INTEGRACJA_POWLOKI_2026-10-18.md`.
 - `YT-001` — **Odłożone — po instalatorze i pierwszych stabilnych wydaniach** —
   oficjalne logowanie do konta YouTube, synchronizacja subskrypcji i zwykłych
   playlist oraz bezpieczny zakres czynności konta. Rozpocząć wyłącznie na nowe,
