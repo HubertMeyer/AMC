@@ -133,5 +133,13 @@ Poprawka:
    `Media internetowe`, niezależnie od ich pozycji w kolejności własnej.
 4. Osobne sortowanie listy źródeł zapisano jako zadanie `POD-001`.
 
-- Testy ukierunkowane po korekcie: `65 passed`.
-- Instalacja i odbiór NVDA: oczekują na zakończenie aktywnego nagrania.
+- Testy ukierunkowane po korekcie: `84 passed`.
+- Commit korekty widoczności: `74cab87ec05e2f25e45e253f0fceae93efdcaff3`.
+- Pełny odbiór po obu korektach: `1723 passed, 110 skipped, 11 subtests
+  passed`; kompilacja projektów .NET zakończona bez ostrzeżeń i błędów.
+- Zainstalowana kompilacja:
+  `2026.10.18-74cab87ec05e2f25e45e253f0fceae93efdcaff3-a3214a5e`.
+  Uruchomiona 18 października 2026 ze stałej instalacji
+  `D:\Projekty Codex\AMC Python\AMC.exe`.
+- Odbiór ręczny z NVDA pozostaje otwarty: sprawdzić osobno kanał YouTube,
+  pojedynczy film kierowany do `Media internetowe` i wynik Spotify.

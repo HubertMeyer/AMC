@@ -2,7 +2,7 @@
 
 ## Status
 
-W trakcie.
+Zrobione.
 
 ## Cel
 
@@ -32,8 +32,14 @@ i NVDA jako `AMC Test`. Przyszły profil publiczny będzie widoczny jako `AMC`.
 ## Prace i weryfikacja
 
 - Data rozpoczęcia: 18 października 2026
-- Data zakończenia:
-- Zmienione pliki:
-- Testy:
-- Commit:
+- Data zakończenia: 18 października 2026.
+- Zmienione pliki: `wxlite/amc_wx_lite/gui.py`,
+  `wxlite/amc_wx_lite/__main__.py`, launcher i aktualizator .NET, skrypt
+  promocji kompilacji oraz testy nazwy i bezpiecznego przejścia.
+- Testy: pełny zestaw `1723 passed, 110 skipped, 11 subtests passed`;
+  kompilacja projektów .NET bez ostrzeżeń i błędów. Po instalacji potwierdzono
+  jedną instancję oraz tytuł okna `AMC Test — 18.10.2026, 21:57`.
+- Commit: `42f0bf57`.
 - Zainstalowana kompilacja:
+  `2026.10.18-74cab87ec05e2f25e45e253f0fceae93efdcaff3-a3214a5e`, uruchomiona z
+  `D:\Projekty Codex\AMC Python\AMC.exe`.

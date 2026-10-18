@@ -40,7 +40,7 @@ jawnym poleceniu użytkownika albo przez osobno uzgodniony harmonogram.
 - `POD-001` — **Oczekuje** — sortowanie zbiorczej Biblioteki podcastów,
   kanałów YouTube i kolekcji „Media internetowe”. Szczegóły:
   [POD-001-sortowanie-biblioteki-zrodel.md](POD-001-sortowanie-biblioteki-zrodel.md).
-- `NAME-001` — **W trakcie** — zmiana widocznej nazwy prywatnej wersji z
+- `NAME-001` — **Zrobione** — zmiana widocznej nazwy prywatnej wersji z
   „AMC Python” na „AMC Test”, bez zmiany technicznej tożsamości instalacji.
   Szczegóły: [NAME-001-amc-test.md](NAME-001-amc-test.md).
 - `ARC-001` — **Oczekuje** — wspólny rdzeń poleceń dla GUI, palety, NVDA,
