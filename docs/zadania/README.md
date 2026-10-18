@@ -40,6 +40,14 @@ jawnym poleceniu użytkownika albo przez osobno uzgodniony harmonogram.
 - `POD-001` — **Oczekuje** — sortowanie zbiorczej Biblioteki podcastów,
   kanałów YouTube i kolekcji „Media internetowe”. Szczegóły:
   [POD-001-sortowanie-biblioteki-zrodel.md](POD-001-sortowanie-biblioteki-zrodel.md).
+- `NAV-001` — **Oczekuje** — ujednolicenie skrótów zakładek, nazwanych
+  zakładek, rozdziałów dostawcy i historii nawigacji we wszystkich sesjach.
+  Szczegóły:
+  [NAV-001-zakladki-rozdzialy-historia-skroty.md](NAV-001-zakladki-rozdzialy-historia-skroty.md).
+- `YT-001` — **Oczekuje** — oficjalne logowanie do konta YouTube,
+  synchronizacja subskrypcji i zwykłych playlist oraz bezpieczny zakres
+  czynności konta. Szczegóły:
+  [YT-001-konto-youtube-i-synchronizacja.md](YT-001-konto-youtube-i-synchronizacja.md).
 - `NAME-001` — **Zrobione** — zmiana widocznej nazwy prywatnej wersji z
   „AMC Python” na „AMC Test”, bez zmiany technicznej tożsamości instalacji.
   Szczegóły: [NAME-001-amc-test.md](NAME-001-amc-test.md).
