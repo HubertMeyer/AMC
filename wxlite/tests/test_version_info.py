@@ -18,7 +18,7 @@ def test_window_title_identifies_the_exact_bundle(tmp_path) -> None:
     )
 
     local_time = datetime.fromisoformat(created).astimezone()
-    assert window_title(tmp_path) == f"AMC Python — {local_time:%d.%m.%Y, %H:%M}"
+    assert window_title(tmp_path) == f"AMC Test — {local_time:%d.%m.%Y, %H:%M}"
 
 
 def test_legacy_short_build_label_remains_readable(tmp_path) -> None:
@@ -38,10 +38,13 @@ def test_invalid_manifest_never_leaks_technical_content(tmp_path) -> None:
     )
 
     assert read_build_label(tmp_path) == ""
-    assert window_title(tmp_path) == "AMC Python — wersja 0.1.0"
+    assert window_title(tmp_path) == "AMC Test — wersja 0.1.0"
 
 
 def test_main_window_matcher_excludes_diagnostic_alert() -> None:
+    assert is_main_window_title("AMC Test")
+    assert is_main_window_title("AMC Test — 14.10.2026, 18:39")
     assert is_main_window_title("AMC Python")
     assert is_main_window_title("AMC Python — 14.10.2026, 18:39")
     assert not is_main_window_title("Diagnostyka AMC Python")
+    assert not is_main_window_title("Diagnostyka AMC Test")

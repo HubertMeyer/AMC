@@ -8,7 +8,6 @@ internal static class Program
 {
     private const int InvalidBundle = 2;
     private const int StartFailed = 3;
-    private const string MainWindowTitle = "AMC Python";
     private const int ExistingWindowWaitMilliseconds = 5_000;
     private const int SafeReplacementWaitMilliseconds = 10_000;
 
@@ -29,7 +28,7 @@ internal static class Program
                 "--sprawdz-pakiet",
                 StringComparison.OrdinalIgnoreCase)))
             {
-                Show("Pakiet AMC Python jest kompletny i zgodny.", false);
+                Show("Pakiet AMC Test jest kompletny i zgodny.", false);
                 return 0;
             }
 
@@ -82,7 +81,7 @@ internal static class Program
             if (!silentBundleCheck)
             {
                 Show(
-                    "Nie można uruchomić AMC Python, ponieważ pakiet jest "
+                    "Nie można uruchomić AMC Test, ponieważ pakiet jest "
                     + "niekompletny lub niezgodny: " + exception.Message + ".\n\n"
                     + "Uruchom ponownie instalator albo zastosuj pełną aktualizację.",
                     true);
@@ -94,7 +93,7 @@ internal static class Program
             if (!silentBundleCheck)
             {
                 Show(
-                    "Nie udało się uruchomić AMC Python. Pakiet nie został zmieniony. "
+                    "Nie udało się uruchomić AMC Test. Pakiet nie został zmieniony. "
                     + "Uruchom ponownie instalator albo zastosuj pełną aktualizację.",
                     true);
             }
@@ -128,14 +127,14 @@ internal static class Program
                     .Where(text => !string.IsNullOrWhiteSpace(text)));
             Show(
                 string.IsNullOrWhiteSpace(details)
-                    ? "Sprawdzenie AMC Python nie zwróciło informacji."
+                    ? "Sprawdzenie AMC Test nie zwróciło informacji."
                     : details,
                 process.ExitCode != 0);
         }
         else if (process.ExitCode != 0)
         {
             Show(
-                "AMC Python zakończył uruchamianie z błędem. "
+                "AMC Test zakończył uruchamianie z błędem. "
                 + "Uruchom AMC.exe z parametrem --sprawdz, aby sprawdzić pakiet.",
                 true);
         }
@@ -282,13 +281,12 @@ internal static class Program
         MessageBox(
             IntPtr.Zero,
             text,
-            "Diagnostyka AMC Python",
+            "Diagnostyka AMC Test",
             error ? 0x10u : 0x40u);
     }
 
     internal static bool IsMainWindowTitle(string title) =>
-        string.Equals(title, MainWindowTitle, StringComparison.Ordinal)
-        || title.StartsWith(MainWindowTitle + " — wersja ", StringComparison.Ordinal);
+        ProductIdentity.IsMainWindowTitle(title);
 
     [DllImport("user32.dll", CharSet = CharSet.Unicode)]
     private static extern int MessageBox(

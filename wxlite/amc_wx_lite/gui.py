@@ -301,9 +301,13 @@ from .tidal_source import (
     queue_payload as tidal_queue_payload,
     queue_rows as tidal_queue_rows,
 )
-from .version_info import is_main_window_title, window_title
+from .version_info import PRODUCT_NAME, is_main_window_title, window_title
 
-APP_NAME = "AMC Python"
+APP_NAME = PRODUCT_NAME
+# Nazwa blokady pozostaje technicznie stabilna podczas przejścia z nazwy
+# „AMC Python” na „AMC Test”. Dzięki temu także bezpośrednio uruchomiony
+# frontend nie otworzy drugiej instancji obok starszej kompilacji.
+INSTANCE_CHECKER_NAME = "AMC Python"
 TEMPO_LABELS = {1: "Mowa – Speedy", 2: "Muzyka – Signalsmith", 0: "Dotychczasowy – SoundTouch"}
 
 
@@ -2271,7 +2275,11 @@ class SearchDialog(wx.Dialog):
         if (
             action is SearchResultAction.LIBRARY
             and all(
-                candidate.session_id is SessionId.PODCASTS
+                candidate.session_id in (
+                    SessionId.PODCASTS,
+                    SessionId.TIDAL,
+                    SessionId.SPOTIFY,
+                )
                 and bool(candidate.remote_kind)
                 for candidate in self.selected_results
             )
@@ -7332,6 +7340,7 @@ class LiteFrame(wx.Frame):
                 self._change_tidal_search_result_membership(
                     entries,
                     favorite=action is SearchResultAction.FAVORITE,
+                    announce=say,
                 )
             else:
                 say(
@@ -7345,6 +7354,7 @@ class LiteFrame(wx.Frame):
                 self._change_spotify_search_result_membership(
                     entries,
                     favorite=action is SearchResultAction.FAVORITE,
+                    announce=say,
                 )
             else:
                 say(
@@ -7500,12 +7510,14 @@ class LiteFrame(wx.Frame):
         entries: list[SearchEntry],
         *,
         favorite: bool,
+        announce: Callable[[str], None] | None = None,
     ) -> None:
         """Save online TIDAL rows only after an explicit collection command."""
 
+        say = announce if announce is not None else self.announcer.say
         client = self.client
         if client is None:
-            self.announcer.say("Silnik nie działa, nie mogę zmienić kolekcji TIDAL")
+            say("Silnik nie działa, nie mogę zmienić kolekcji TIDAL")
             return
         allowed = {"track", "video"} if favorite else {"album", "artist", "playlist"}
         rows = [
@@ -7515,7 +7527,7 @@ class LiteFrame(wx.Frame):
             and entry.row.service_id
         ]
         if not rows:
-            self.announcer.say(
+            say(
                 "Do Ulubionych TIDAL wybierz utwór lub materiał wideo"
                 if favorite else
                 "Do Biblioteki TIDAL wybierz album, wykonawcę albo playlistę"
@@ -7532,7 +7544,7 @@ class LiteFrame(wx.Frame):
 
         def done(payload: dict) -> None:
             message = str((payload or {}).get("message") or "").strip()
-            self.announcer.say(message or "Zmieniono kolekcję TIDAL")
+            say(message or "Zmieniono kolekcję TIDAL")
 
         self.runner.submit(
             "tidal-search-membership",
@@ -7542,7 +7554,7 @@ class LiteFrame(wx.Frame):
                 add=True,
             ),
             done,
-            lambda error: self.announcer.say(
+            lambda error: say(
                 f"Nie udało się zmienić kolekcji TIDAL: {error}"
             ),
         )
@@ -7552,15 +7564,17 @@ class LiteFrame(wx.Frame):
         entries: list[SearchEntry],
         *,
         favorite: bool,
+        announce: Callable[[str], None] | None = None,
     ) -> None:
         """Save online Spotify rows only after an explicit collection action."""
 
+        say = announce if announce is not None else self.announcer.say
         if self._spotify_membership_pending:
-            self.announcer.say("Zmiana kolekcji Spotify już trwa")
+            say("Zmiana kolekcji Spotify już trwa")
             return
         client = self.client
         if client is None:
-            self.announcer.say(
+            say(
                 "Silnik nie działa, nie mogę zmienić kolekcji Spotify"
             )
             return
@@ -7574,10 +7588,11 @@ class LiteFrame(wx.Frame):
             and entry.row.service_id
         ]
         if not rows:
-            self.announcer.say(
-                "Do Ulubionych Spotify wybierz utwór albo odcinek"
+            say(
+                "Utwór lub odcinek dodaj do Ulubionych skrótem Ctrl+Shift+U"
                 if favorite else
-                "Do Biblioteki Spotify wybierz album, wykonawcę, podcast albo odcinek"
+                "Do Biblioteki Spotify wybierz album, wykonawcę albo podcast. "
+                "Utwór i odcinek dodaj do Ulubionych skrótem Ctrl+Shift+U"
             )
             return
         items = [{
@@ -7600,11 +7615,11 @@ class LiteFrame(wx.Frame):
                 if bool(result.get("added"))
                 else f"Usunięto z {destination} Spotify"
             )
-            self.announcer.say(message or fallback)
+            say(message or fallback)
 
         def failed(error: Exception) -> None:
             self._spotify_membership_pending = False
-            self.announcer.say(
+            say(
                 f"Nie udało się zmienić kolekcji Spotify: {error}"
             )
 
@@ -22078,7 +22093,7 @@ class LiteFrame(wx.Frame):
             except Exception:
                 event.Veto()
                 self.announcer.say(
-                    "Nie zamykam AMC Python, ponieważ nie można potwierdzić "
+                    f"Nie zamykam {APP_NAME}, ponieważ nie można potwierdzić "
                     "stanu nagrywania"
                 )
                 _present_main_window(self)
@@ -22086,7 +22101,7 @@ class LiteFrame(wx.Frame):
             if int((recording_status or {}).get("count") or 0) > 0:
                 event.Veto()
                 self.announcer.say(
-                    "Nie zamykam AMC Python, ponieważ trwa nagrywanie"
+                    f"Nie zamykam {APP_NAME}, ponieważ trwa nagrywanie"
                 )
                 _present_main_window(self)
                 return
@@ -22128,7 +22143,7 @@ class LiteApp(wx.App):
         # pod lewą strzałką nie działały. Checker musi pozostać polem aplikacji
         # przez cały MainLoop; zmienna lokalna zostałaby zwolniona za wcześnie.
         self._instance_checker = wx.SingleInstanceChecker(
-            f"{APP_NAME}-{wx.GetUserId()}"
+            f"{INSTANCE_CHECKER_NAME}-{wx.GetUserId()}"
         )
         if self._instance_checker.IsAnotherRunning():
             requested = _request_previous_instance_close()
@@ -22138,10 +22153,10 @@ class LiteApp(wx.App):
             if not released:
                 _activate_window_handle(_windows_main_window())
                 wx.MessageBox(
-                    "Poprzednia instancja AMC Python pozostała uruchomiona. "
+                    f"Poprzednia instancja {APP_NAME} pozostała uruchomiona. "
                     "Może trwać nagrywanie albo program nie potwierdził "
                     "bezpiecznego zamknięcia.",
-                    "AMC Python",
+                    APP_NAME,
                     wx.OK | wx.ICON_INFORMATION,
                 )
                 return False
@@ -22150,7 +22165,7 @@ class LiteApp(wx.App):
             # automatycznie stać się jej właścicielem. Tworzymy go ponownie;
             # drugie sprawdzenie zamyka krótkie okno wyścigu dwóch uruchomień.
             self._instance_checker = wx.SingleInstanceChecker(
-                f"{APP_NAME}-{wx.GetUserId()}"
+                f"{INSTANCE_CHECKER_NAME}-{wx.GetUserId()}"
             )
             if self._instance_checker.IsAnotherRunning():
                 _activate_window_handle(_windows_main_window())

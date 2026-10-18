@@ -612,7 +612,9 @@ def test_spotify_search_library_action_uses_confirmed_membership_write() -> None
     )
     frame = SimpleNamespace(
         _change_spotify_search_result_membership=(
-            lambda entries, *, favorite: calls.append((entries, favorite))
+            lambda entries, *, favorite, announce: calls.append(
+                (entries, favorite, announce)
+            )
         ),
         announcer=SimpleNamespace(say=lambda _message: None),
     )
@@ -623,7 +625,9 @@ def test_spotify_search_library_action_uses_confirmed_membership_write() -> None
         SearchResultAction.LIBRARY,
     )
 
-    assert calls == [([result], False)]
+    assert len(calls) == 1
+    assert calls[0][:2] == ([result], False)
+    assert callable(calls[0][2])
 
 
 def test_spotify_search_playback_opens_the_result_then_activates_it() -> None:
@@ -695,7 +699,9 @@ def test_online_tidal_library_action_uses_tidal_membership_not_podcast_import() 
     )
     frame = SimpleNamespace(
         _change_tidal_search_result_membership=(
-            lambda entries, *, favorite: calls.append((entries, favorite))
+            lambda entries, *, favorite, announce: calls.append(
+                (entries, favorite, announce)
+            )
         ),
         announcer=SimpleNamespace(say=lambda message: calls.append(message)),
     )
@@ -706,7 +712,9 @@ def test_online_tidal_library_action_uses_tidal_membership_not_podcast_import() 
         SearchResultAction.LIBRARY,
     )
 
-    assert calls == [([result], False)]
+    assert len(calls) == 1
+    assert calls[0][:2] == ([result], False)
+    assert callable(calls[0][2])
 
 
 def test_online_tidal_library_action_explicitly_adds_instead_of_using_stale_cache() -> None:
@@ -883,19 +891,32 @@ def test_remote_result_uses_materialization_instead_of_local_navigation() -> Non
     assert calls == [([result], SearchResultAction.OPEN)]
 
 
-def test_remote_youtube_library_action_keeps_search_dialog_open() -> None:
+@pytest.mark.parametrize(
+    ("session_id", "remote_kind", "kind"),
+    (
+        (SessionId.PODCASTS, "youtubeChannel", "podcast"),
+        (SessionId.TIDAL, "tidalCatalog", "album"),
+        (SessionId.SPOTIFY, "spotifyCatalog", "album"),
+    ),
+)
+def test_remote_library_action_keeps_search_dialog_open(
+    session_id: SessionId,
+    remote_kind: str,
+    kind: str,
+) -> None:
     direct_actions = []
     modal_results = []
     result = SearchEntry(
-        SessionId.PODCASTS,
+        session_id,
         Row(
             "remote-channel",
             "Kanał",
-            "podcast",
+            kind,
+            service_id="private-id",
             url="https://www.youtube.com/channel/UCexample/videos",
         ),
         LibraryView.PODCAST_LIBRARY,
-        remote_kind="youtubeChannel",
+        remote_kind=remote_kind,
     )
     dialog = SimpleNamespace(
         _lead_entry=lambda: result,
@@ -918,6 +939,103 @@ def test_remote_youtube_library_action_keeps_search_dialog_open() -> None:
     assert direct_actions == [([result], SearchResultAction.LIBRARY, dialog)]
     assert modal_results == []
     assert dialog.selected_result is result
+
+
+def test_spotify_search_library_confirmation_stays_inside_search_dialog() -> None:
+    calls = []
+    spoken = []
+
+    class Runner:
+        @staticmethod
+        def submit(_name, work, done, failed):
+            try:
+                done(work())
+            except Exception as error:
+                failed(error)
+
+    result = SearchEntry(
+        SessionId.SPOTIFY,
+        Row(
+            "spotify:album:private",
+            "Album użytkownika",
+            "album",
+            service_id="privatealbum",
+            service_kind="album",
+        ),
+        remote_kind="spotifyCatalog",
+    )
+    frame = SimpleNamespace(
+        _spotify_membership_pending=False,
+        client=SimpleNamespace(
+            spotify_collection_membership=lambda items, *, mode: (
+                calls.append((items, mode))
+                or {
+                    "added": True,
+                    "changed": 1,
+                    "message": "Dodano do Biblioteki Spotify: Album użytkownika",
+                }
+            )
+        ),
+        runner=Runner(),
+        announcer=SimpleNamespace(
+            say=lambda _message: pytest.fail(
+                "Główne okno nie może przesłonić komunikatu wyszukiwarki"
+            )
+        ),
+    )
+    frame._change_spotify_search_result_membership = (
+        lambda entries, *, favorite, announce: (
+            LiteFrame._change_spotify_search_result_membership(
+                frame,
+                entries,
+                favorite=favorite,
+                announce=announce,
+            )
+        )
+    )
+
+    LiteFrame._complete_remote_search_result_action(
+        frame,
+        [result],
+        SearchResultAction.LIBRARY,
+        announce=spoken.append,
+    )
+
+    assert calls[0][1] == "library"
+    assert spoken == ["Dodano do Biblioteki Spotify: Album użytkownika"]
+    assert frame._spotify_membership_pending is False
+
+
+def test_spotify_track_library_action_explains_the_favorites_shortcut() -> None:
+    spoken = []
+    result = SearchEntry(
+        SessionId.SPOTIFY,
+        Row(
+            "spotify:track:private",
+            "Utwór",
+            "track",
+            service_id="privatetrack",
+            service_kind="track",
+        ),
+        remote_kind="spotifyCatalog",
+    )
+    frame = SimpleNamespace(
+        _spotify_membership_pending=False,
+        client=SimpleNamespace(),
+        announcer=SimpleNamespace(say=lambda _message: None),
+    )
+
+    LiteFrame._change_spotify_search_result_membership(
+        frame,
+        [result],
+        favorite=False,
+        announce=spoken.append,
+    )
+
+    assert spoken == [
+        "Do Biblioteki Spotify wybierz album, wykonawcę albo podcast. "
+        "Utwór i odcinek dodaj do Ulubionych skrótem Ctrl+Shift+U"
+    ]
 
 
 @pytest.mark.parametrize(

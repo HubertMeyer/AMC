@@ -1,6 +1,6 @@
 # SEARCH-001 — YouTube, Biblioteka i komunikaty wyszukiwania
 
-- Status: `Do odbioru`
+- Status: `W trakcie`
 - Utworzono: 18 października 2026
 - Obszar: wyszukiwanie Podcastów i YouTube, Biblioteka, NVDA i fokus
 - Polecenie uruchamiające: `Uruchom zadanie SEARCH-001`
@@ -62,6 +62,17 @@ Nie dodajemy drugiego skrótu do tej samej operacji.
    `Ctrl+Shift+L`.
 
 ## Wynik wykonania
+
+### Korekta po odbiorze Spotify — 18 października 2026
+
+Użytkownik potwierdził, że w wyszukiwarce Spotify `Ctrl+Shift+L` nie daje
+czytelnego skutku, a ogłoszenie nazwy głównego okna nadal może przesłonić
+operację. Przyczyna jest analogiczna do pierwotnego błędu YouTube: bezpośrednie
+wykonanie bez zamykania wyszukiwarki ograniczono wcześniej tylko do Podcastów
+i YouTube. Rozszerzamy ten sam kontrakt fokusu i komunikatów na katalog
+Spotify oraz TIDAL. Dla utworu lub odcinka polecenie podaje wprost właściwy
+skrót `Ctrl+Shift+U`, zgodnie ze wspólnym kontraktem TIDAL/Spotify; nie może
+pozostać bez komunikatu.
 
 - Data rozpoczęcia i wdrożenia: 18 października 2026
 - Przyczyna: `SearchDialog` zamykał okno modalne przed wykonaniem

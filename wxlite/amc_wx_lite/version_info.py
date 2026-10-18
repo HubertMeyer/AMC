@@ -1,4 +1,4 @@
-"""Czytelna tozsamosc uruchomionej paczki AMC Python.
+"""Czytelna tozsamosc uruchomionej paczki AMC Test.
 
 Numer kompilacji pochodzi z podpisanego sumami manifestu paczki.  Nie
 pokazujemy sciezek, obiektow ani surowych bledow parsera w tytule okna.
@@ -12,6 +12,10 @@ from datetime import datetime
 from pathlib import Path
 
 from . import __version__
+
+
+PRODUCT_NAME = "AMC Test"
+LEGACY_PRODUCT_NAME = "AMC Python"
 
 
 _BUILD_LABEL = re.compile(
@@ -75,13 +79,16 @@ def window_title(root: str | Path | None = None) -> str:
 
     build_time = read_build_time_label(root)
     return (
-        f"AMC Python — {build_time}"
+        f"{PRODUCT_NAME} — {build_time}"
         if build_time
-        else f"AMC Python — wersja {__version__}"
+        else f"{PRODUCT_NAME} — wersja {__version__}"
     )
 
 
 def is_main_window_title(title: str) -> bool:
-    """Odróżnij główne okno od alertu „Diagnostyka AMC Python”."""
+    """Rozpoznaj obecne i przejściowo starsze główne okno aplikacji."""
 
-    return title == "AMC Python" or title.startswith("AMC Python — ")
+    return any(
+        title == name or title.startswith(name + " — ")
+        for name in (PRODUCT_NAME, LEGACY_PRODUCT_NAME)
+    )

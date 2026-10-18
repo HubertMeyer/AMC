@@ -5,7 +5,7 @@ using System.Text;
 namespace AccessibleMediaController.PythonUpdater;
 
 /// <summary>
-/// Prosi działające okno AMC Python o zwykłe zamknięcie i czeka na zwolnienie
+/// Prosi działające okno AMC Test o zwykłe zamknięcie i czeka na zwolnienie
 /// plików instalacji. Nie kończy procesów wymuszenie. Dzięki temu obsługa
 /// EVT_CLOSE może odmówić podczas nagrywania albo przy niepewnym stanie hosta.
 /// </summary>
@@ -38,8 +38,12 @@ internal static class SafeApplicationStop
         string? title) =>
         InstalledProcessGuard.IsInsideInstallation(installationRoot, executable)
         && !string.IsNullOrWhiteSpace(title)
-        && (string.Equals(title, "AMC Python", StringComparison.Ordinal)
-            || title.StartsWith("AMC Python — ", StringComparison.Ordinal));
+        && (IsProductWindowTitle(title, "AMC Test")
+            || IsProductWindowTitle(title, "AMC Python"));
+
+    private static bool IsProductWindowTitle(string title, string productName) =>
+        string.Equals(title, productName, StringComparison.Ordinal)
+        || title.StartsWith(productName + " — ", StringComparison.Ordinal);
 
     private static void RequestCloseForInstallation(string installationRoot)
     {

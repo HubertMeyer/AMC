@@ -239,7 +239,7 @@ $createdText = [string]$candidateManifest.created
 if ([string]::IsNullOrWhiteSpace($createdText)) {
     throw "Manifest paczki nie zawiera daty utworzenia."
 }
-$expectedWindowTitle = "AMC Python — " + (
+$expectedWindowTitle = "AMC Test — " + (
     [DateTimeOffset]::Parse(
         $createdText,
         [Globalization.CultureInfo]::InvariantCulture

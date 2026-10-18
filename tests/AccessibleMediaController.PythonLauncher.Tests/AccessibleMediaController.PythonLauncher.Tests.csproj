@@ -18,6 +18,8 @@
              Link="LauncherInstanceLease.cs" />
     <Compile Include="..\..\src\AccessibleMediaController.PythonLauncher\ExistingInstancePolicy.cs"
              Link="ExistingInstancePolicy.cs" />
+    <Compile Include="..\..\src\AccessibleMediaController.PythonLauncher\ProductIdentity.cs"
+             Link="ProductIdentity.cs" />
     <Compile Include="..\..\src\AccessibleMediaController.PythonUpdater\InstalledProcessGuard.cs"
              Link="InstalledProcessGuard.cs" />
     <Compile Include="..\..\src\AccessibleMediaController.PythonUpdater\SafeApplicationStop.cs"

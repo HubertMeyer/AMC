@@ -34,7 +34,7 @@ internal static class Program
             {
                 if (!silentRequested)
                 {
-                    Show("Podaj folder przygotowanej aktualizacji i folder AMC Python.\n\n"
+                    Show("Podaj folder przygotowanej aktualizacji i folder programu.\n\n"
                          + "AMC-Python-Updater.exe --source KATALOG --target KATALOG "
                          + "[--wait-pid NUMER] [--launch PLIK] [--silent]", true);
                 }
@@ -90,7 +90,7 @@ internal static class Program
                                   $"PID {item.ProcessId}: {item.Executable}")));
                 if (!options.Silent)
                 {
-                    Show("Aktualizacja nie została rozpoczęta, ponieważ AMC Python nadal działa. "
+                    Show("Aktualizacja nie została rozpoczęta, ponieważ AMC Test nadal działa. "
                          + "Może trwać nagrywanie. Zatrzymaj je i spróbuj ponownie.", true);
                 }
                 return AppStillRunning;
@@ -104,7 +104,7 @@ internal static class Program
             {
                 if (!options.Silent)
                 {
-                    Show("Aktualizacja nie została rozpoczęta, ponieważ AMC Python "
+                    Show("Aktualizacja nie została rozpoczęta, ponieważ AMC Test "
                          + "lub jeden z jego składników nadal działa. Może trwać "
                          + "nagrywanie. Zamknij program bezpiecznie i spróbuj ponownie.", true);
                 }
@@ -125,7 +125,7 @@ internal static class Program
 
             if (!options.Silent)
             {
-                Show("Aktualizacja AMC Python została zainstalowana.", false);
+                Show("Aktualizacja AMC Test została zainstalowana.", false);
             }
             return Success;
         }
@@ -138,9 +138,9 @@ internal static class Program
         }
         catch (Exception exception)
         {
-            Console.Error.WriteLine("Nie udało się zainstalować aktualizacji AMC Python: " + exception);
+            Console.Error.WriteLine("Nie udało się zainstalować aktualizacji AMC Test: " + exception);
             if (!silentRequested)
-                Show("Nie udało się zainstalować aktualizacji AMC Python: " + exception.Message, true);
+                Show("Nie udało się zainstalować aktualizacji AMC Test: " + exception.Message, true);
             return InstallFailed;
         }
     }
@@ -219,7 +219,7 @@ internal static class Program
         if (string.Equals(source.TrimEnd('\\'), target.TrimEnd('\\'), StringComparison.OrdinalIgnoreCase))
             throw new InvalidDataException("źródło i folder programu są tym samym miejscem");
         if (!File.Exists(Path.Combine(target, "AMC.exe")))
-            throw new InvalidDataException("folder docelowy nie zawiera AMC Python");
+            throw new InvalidDataException("folder docelowy nie zawiera AMC Test");
 
         var manifestPath = Path.Combine(source, "bundle-manifest.json");
         if (!File.Exists(manifestPath)) throw new InvalidDataException("brak bundle-manifest.json");
@@ -419,7 +419,7 @@ internal static class Program
 
     private static void Show(string text, bool error)
     {
-        MessageBox(IntPtr.Zero, text, "Aktualizator AMC Python", error ? 0x10u : 0x40u);
+        MessageBox(IntPtr.Zero, text, "Aktualizator AMC Test", error ? 0x10u : 0x40u);
     }
 
     [DllImport("user32.dll", CharSet = CharSet.Unicode)]

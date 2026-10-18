@@ -131,4 +131,4 @@ def unavailable_message(command: str) -> str:
         "showCommands": "Paleta poleceń",
     }
     label = labels.get(command, "To polecenie")
-    return f"Funkcja „{label}” nie jest jeszcze dostępna w AMC Python."
+    return f"Funkcja „{label}” nie jest jeszcze dostępna w AMC Test."

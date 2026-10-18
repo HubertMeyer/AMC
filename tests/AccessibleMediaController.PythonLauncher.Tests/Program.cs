@@ -17,6 +17,7 @@ internal static class Program
         ("prywatny runtime bez PYTHONPATH i bez alertów pythonw", LaunchPlanUsesOnlyPrivateRuntime),
         ("diagnostyka przez python.exe", DiagnosticUsesConsoleRuntime),
         ("jedna instancja launchera", OnlyOneLauncherOwnsTheLease),
+        ("launcher rozpoznaje obecną i starszą nazwę okna", LauncherRecognizesCurrentAndLegacyTitles),
         ("ta sama kompilacja tylko pokazuje okno", SameBuildOnlyActivates),
         ("nowa kompilacja prosi o bezpieczną podmianę", NewBuildRequestsSafeReplacement),
         ("kanoniczna instalacja wygrywa z nieznaną kopią", PreferredInstallationWins),
@@ -150,6 +151,16 @@ internal static class Program
                 @"D:\Projekty Codex\AMC Python"));
     }
 
+    private static void LauncherRecognizesCurrentAndLegacyTitles()
+    {
+        Equal(true, ProductIdentity.IsMainWindowTitle(
+            "AMC Test — 18.10.2026, 13:30"));
+        Equal(true, ProductIdentity.IsMainWindowTitle(
+            "AMC Python — 18.10.2026, 13:29"));
+        Equal(false, ProductIdentity.IsMainWindowTitle(
+            "Diagnostyka AMC Test"));
+    }
+
     private static void NewBuildRequestsSafeReplacement()
     {
         Equal(
@@ -244,6 +255,10 @@ internal static class Program
     {
         var root = Path.Combine("D:\\", "Projekty Codex", "AMC Python");
         var runtime = Path.Combine(root, "runtime", "python.exe");
+        Equal(true, SafeApplicationStop.IsCandidateWindow(
+            root,
+            runtime,
+            "AMC Test — 18.10.2026, 13:30"));
         Equal(true, SafeApplicationStop.IsCandidateWindow(
             root,
             runtime,

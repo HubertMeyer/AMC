@@ -53,12 +53,12 @@ def test_missing_features_are_refused_in_user_language_not_mapped_to_wrong_actio
     assert "previousChapter" in nvda_bridge.KNOWN_NOT_IMPLEMENTED
     assert nvda_bridge.action_for("previousChapter") is None
     assert nvda_bridge.unavailable_message("previousChapter") == (
-        "Funkcja „Poprzedni rozdział” nie jest jeszcze dostępna w AMC Python."
+        "Funkcja „Poprzedni rozdział” nie jest jeszcze dostępna w AMC Test."
     )
     for command in nvda_bridge.KNOWN_NOT_IMPLEMENTED:
         message = nvda_bridge.unavailable_message(command)
         assert command not in message
-        assert "AMC Python" in message
+        assert "AMC Test" in message
 
 
 def test_previous_and_next_preset_are_special_supported_commands() -> None:
