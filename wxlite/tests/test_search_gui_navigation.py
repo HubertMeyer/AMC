@@ -895,13 +895,16 @@ def test_remote_result_uses_materialization_instead_of_local_navigation() -> Non
     ("session_id", "remote_kind", "kind"),
     (
         (SessionId.PODCASTS, "youtubeChannel", "podcast"),
+        (SessionId.PODCASTS, None, "podcast"),
         (SessionId.TIDAL, "tidalCatalog", "album"),
+        (SessionId.TIDAL, None, "album"),
         (SessionId.SPOTIFY, "spotifyCatalog", "album"),
+        (SessionId.SPOTIFY, None, "album"),
     ),
 )
-def test_remote_library_action_keeps_search_dialog_open(
+def test_library_action_keeps_search_dialog_open(
     session_id: SessionId,
-    remote_kind: str,
+    remote_kind: str | None,
     kind: str,
 ) -> None:
     direct_actions = []
@@ -967,8 +970,8 @@ def test_spotify_search_library_confirmation_stays_inside_search_dialog() -> Non
     frame = SimpleNamespace(
         _spotify_membership_pending=False,
         client=SimpleNamespace(
-            spotify_collection_membership=lambda items, *, mode: (
-                calls.append((items, mode))
+            spotify_collection_membership=lambda items, *, mode, add=None: (
+                calls.append((items, mode, add))
                 or {
                     "added": True,
                     "changed": 1,
@@ -1001,9 +1004,154 @@ def test_spotify_search_library_confirmation_stays_inside_search_dialog() -> Non
         announce=spoken.append,
     )
 
-    assert calls[0][1] == "library"
+    assert calls[0][1:] == ("library", True)
     assert spoken == ["Dodano do Biblioteki Spotify: Album użytkownika"]
     assert frame._spotify_membership_pending is False
+
+
+def test_saved_spotify_search_result_is_removed_without_closing_dialog() -> None:
+    calls = []
+    spoken = []
+    result = SearchEntry(
+        SessionId.SPOTIFY,
+        Row(
+            "spotify:album:saved",
+            "Zapisany album",
+            "album",
+            service_id="savedalbum",
+            service_kind="album",
+        ),
+        LibraryView.SPOTIFY_LIBRARY,
+    )
+    frame = SimpleNamespace(
+        _search_dialog_alive=lambda _dialog: True,
+        announcer=SimpleNamespace(
+            say=lambda _message: pytest.fail(
+                "Komunikat ma pozostać w oknie wyszukiwania"
+            )
+        ),
+        _change_spotify_search_result_membership=(
+            lambda entries, *, favorite, add, announce: calls.append(
+                (entries, favorite, add, announce)
+            )
+        ),
+    )
+    dialog = SimpleNamespace(
+        IsShown=lambda: True,
+        announcer=SimpleNamespace(say=spoken.append),
+    )
+
+    LiteFrame._execute_search_dialog_action(
+        frame,
+        [result],
+        SearchResultAction.LIBRARY,
+        dialog,
+    )
+
+    assert len(calls) == 1
+    assert calls[0][:3] == ([result], False, False)
+    calls[0][3]("Usunięto z Biblioteki Spotify: Zapisany album")
+    assert spoken == ["Usunięto z Biblioteki Spotify: Zapisany album"]
+
+
+def test_saved_podcast_search_result_changes_source_without_navigation() -> None:
+    calls = []
+    spoken = []
+
+    class Runner:
+        @staticmethod
+        def submit(name, work, done, _failed):
+            calls.append(name)
+            done(work())
+
+    result = SearchEntry(
+        SessionId.PODCASTS,
+        Row("saved-channel", "Zapisany kanał", "podcast"),
+        LibraryView.PODCAST_LIBRARY,
+    )
+    frame = SimpleNamespace(
+        _podcast_library_pending=False,
+        client=SimpleNamespace(
+            toggle_podcast_library=lambda ids: (
+                calls.append(("toggle", ids)) or {"added": False}
+            )
+        ),
+        runner=Runner(),
+        _refresh_visible_podcast_search_membership=(
+            lambda subscription_id, **kwargs: calls.append(
+                ("refresh", subscription_id, kwargs)
+            )
+        ),
+    )
+
+    LiteFrame._change_saved_podcast_search_result_membership(
+        frame,
+        [result],
+        announce=spoken.append,
+    )
+
+    assert ("toggle", ["saved-channel"]) in calls
+    assert (
+        "refresh",
+        "saved-channel",
+        {"preferred_episode_id": None, "source_removed": True},
+    ) in calls
+    assert spoken == ["Usunięto z Biblioteki: Zapisany kanał"]
+    assert frame._podcast_library_pending is False
+
+
+def test_saved_youtube_video_removes_only_the_video_from_internet_media() -> None:
+    calls = []
+    spoken = []
+
+    class Runner:
+        @staticmethod
+        def submit(name, work, done, _failed):
+            calls.append(name)
+            done(work())
+
+    result = SearchEntry(
+        SessionId.PODCASTS,
+        Row(
+            "saved-video",
+            "Zapisany film",
+            "episode",
+            parent_id=gui_module.PUBLIC_INTERNET_MEDIA_SAVED_ID,
+        ),
+        LibraryView.PODCAST_EPISODES,
+        parent_id=gui_module.PUBLIC_INTERNET_MEDIA_SAVED_ID,
+    )
+    frame = SimpleNamespace(
+        _podcast_library_pending=False,
+        client=SimpleNamespace(
+            remove_profile_items=lambda session, view, ids: calls.append(
+                ("remove", session, view, ids)
+            )
+        ),
+        runner=Runner(),
+        _refresh_visible_podcast_search_membership=(
+            lambda subscription_id, **kwargs: calls.append(
+                ("refresh", subscription_id, kwargs)
+            )
+        ),
+    )
+
+    LiteFrame._change_saved_podcast_search_result_membership(
+        frame,
+        [result],
+        announce=spoken.append,
+    )
+
+    assert (
+        "remove",
+        SessionId.PODCASTS.value,
+        LibraryView.PODCAST_EPISODES.value,
+        ["saved-video"],
+    ) in calls
+    assert spoken == [
+        "Usunięto z Biblioteki, Media internetowe: Zapisany film"
+    ]
+    assert frame._podcast_library_pending is False
 
 
 def test_spotify_track_library_action_explains_the_favorites_shortcut() -> None:

@@ -2280,13 +2280,15 @@ class SearchDialog(wx.Dialog):
                     SessionId.TIDAL,
                     SessionId.SPOTIFY,
                 )
-                and bool(candidate.remote_kind)
                 for candidate in self.selected_results
             )
         ):
-            # Wynik katalogu musi zostać zapisany, ale samo okno wyszukiwania
-            # pozostaje otwarte. Zamknięcie modala oddawało fokus głównemu
-            # oknu i NVDA ogłaszał "AMC Python" przed potwierdzeniem zapisu.
+            # Zmiana Biblioteki ma zostać wykonana w samym oknie wyszukiwania
+            # zarówno dla wyniku katalogu, jak i dla zapisanego wyniku. Dawna
+            # droga zapisanego wyniku zamykała modal, przechodziła do listy
+            # źródłowej i dopiero tam wykonywała polecenie. NVDA ogłaszał wtedy
+            # główne okno zamiast wyniku operacji, a użytkownik tracił miejsce
+            # w wyszukiwaniu.
             self._execute_direct_action(self.selected_results, action, self)
             return
         self.EndModal(wx.ID_OK)
@@ -6925,11 +6927,44 @@ class LiteFrame(wx.Frame):
             else:
                 self.announcer.say(message)
 
-        self._complete_remote_search_result_action(
-            entries,
-            action,
-            announce=announce,
-        )
+        remote = [entry for entry in entries if entry.remote_kind]
+        if remote and len(remote) != len(entries):
+            announce(
+                "Dla jednego działania wybierz wyniki zapisane albo wyniki katalogu"
+            )
+            return
+        if remote:
+            self._complete_remote_search_result_action(
+                remote,
+                action,
+                announce=announce,
+            )
+            return
+        if not entries or action is not SearchResultAction.LIBRARY:
+            announce("Ta operacja nie jest dostępna dla wybranych wyników")
+            return
+        session_id = entries[0].session_id
+        if session_id is SessionId.PODCASTS:
+            self._change_saved_podcast_search_result_membership(
+                entries,
+                announce=announce,
+            )
+        elif session_id is SessionId.TIDAL:
+            self._change_tidal_search_result_membership(
+                entries,
+                favorite=False,
+                add=False,
+                announce=announce,
+            )
+        elif session_id is SessionId.SPOTIFY:
+            self._change_spotify_search_result_membership(
+                entries,
+                favorite=False,
+                add=False,
+                announce=announce,
+            )
+        else:
+            announce("Ta operacja nie jest dostępna dla wybranych wyników")
 
     def _record_search_query(self, scope: str, query: str) -> list[str]:
         history = add_search_history(
@@ -7529,11 +7564,150 @@ class LiteFrame(wx.Frame):
 
         self.runner.submit("podcast-search-action", work, done, failed)
 
+    def _change_saved_podcast_search_result_membership(
+        self,
+        entries: list[SearchEntry],
+        *,
+        announce: Callable[[str], None],
+    ) -> None:
+        """Usuń zapisany wynik podcastowy bez zamykania wyszukiwarki.
+
+        Zapisany kanał lub podcast reprezentuje członkostwo całego źródła.
+        Zapisany pojedynczy film w ``Media internetowe`` jest natomiast jednym
+        elementem tego wspólnego pojemnika i nie może usunąć pozostałych
+        filmów. Identyfikatory pozostają danymi modelu; do mowy trafiają tylko
+        tytuły użytkowe.
+        """
+
+        if getattr(self, "_podcast_library_pending", False):
+            announce("Zmiana Biblioteki już trwa")
+            return
+        client = self.client
+        if client is None:
+            announce("Silnik nie działa, nie mogę zmienić Biblioteki")
+            return
+        rows = [
+            entry.row for entry in entries
+            if entry.session_id is SessionId.PODCASTS
+            and entry.row.kind in ("podcast", "episode")
+            and entry.row.item_id
+        ]
+        if not rows:
+            announce("Zaznacz podcast, kanał albo materiał YouTube")
+            return
+
+        internet_media_rows = [
+            row for row in rows
+            if row.kind == "episode"
+            and row.parent_id == PUBLIC_INTERNET_MEDIA_SAVED_ID
+        ]
+        if internet_media_rows and len(internet_media_rows) != len(rows):
+            announce(
+                "Dla jednego działania wybierz kanały i podcasty albo materiały z Media internetowe"
+            )
+            return
+        label = rows[0].title if len(rows) == 1 else format_item_count(len(rows))
+        self._podcast_library_pending = True
+
+        if internet_media_rows:
+            item_ids = list(dict.fromkeys(row.item_id for row in internet_media_rows))
+
+            def work() -> object:
+                return client.remove_profile_items(
+                    SessionId.PODCASTS.value,
+                    LibraryView.PODCAST_EPISODES.value,
+                    item_ids,
+                )
+
+            def done(_payload: object) -> None:
+                self._podcast_library_pending = False
+                self._refresh_visible_podcast_search_membership(
+                    PUBLIC_INTERNET_MEDIA_SAVED_ID,
+                    preferred_episode_id=None,
+                    source_removed=False,
+                )
+                announce(
+                    f"Usunięto z Biblioteki, Media internetowe: {label}"
+                )
+
+            failure_prefix = "Nie udało się usunąć materiału z Biblioteki"
+        else:
+            subscription_ids = list(dict.fromkeys(
+                row.item_id if row.kind == "podcast" else (row.parent_id or "")
+                for row in rows
+                if row.kind == "podcast" or row.parent_id
+            ))
+            subscription_ids = [value for value in subscription_ids if value]
+            if not subscription_ids:
+                self._podcast_library_pending = False
+                announce("Nie można ustalić źródła wybranego odcinka")
+                return
+
+            def work() -> object:
+                return client.toggle_podcast_library(subscription_ids)
+
+            def done(payload: object) -> None:
+                self._podcast_library_pending = False
+                result = payload if isinstance(payload, dict) else {}
+                added = bool(result.get("added"))
+                self._refresh_visible_podcast_search_membership(
+                    subscription_ids[0],
+                    preferred_episode_id=(
+                        rows[0].item_id if added and rows[0].kind == "episode" else None
+                    ),
+                    source_removed=not added,
+                )
+                announce(
+                    f"Dodano do Biblioteki: {label}"
+                    if added else f"Usunięto z Biblioteki: {label}"
+                )
+
+            failure_prefix = "Nie udało się zmienić Biblioteki"
+
+        def failed(error: Exception) -> None:
+            self._podcast_library_pending = False
+            announce(f"{failure_prefix}: {error}")
+
+        self.runner.submit("podcast-search-library", work, done, failed)
+
+    def _refresh_visible_podcast_search_membership(
+        self,
+        subscription_id: str,
+        *,
+        preferred_episode_id: str | None,
+        source_removed: bool,
+    ) -> None:
+        """Odśwież listę pod modalem bez odbierania mu fokusu i bez mowy."""
+
+        state = self.navigator.sessions[SessionId.PODCASTS]
+        if self.navigator.active is not SessionId.PODCASTS or state.view is not View.LIST:
+            return
+        if state.library_view is LibraryView.PODCAST_LIBRARY:
+            self._open_podcast_library(
+                preferred_id=None if source_removed else subscription_id,
+                announce_result=False,
+            )
+            return
+        if (
+            state.library_view is LibraryView.PODCAST_EPISODES
+            and state.library_playlist_id == subscription_id
+        ):
+            if source_removed:
+                state.library_view = LibraryView.PODCAST_LIBRARY
+                state.library_playlist_id = None
+                self._open_podcast_library(announce_result=False)
+            else:
+                self._open_podcast_view(OpenPodcastView(
+                    subscription_id=subscription_id,
+                    preferred_id=preferred_episode_id,
+                ))
+
     def _change_tidal_search_result_membership(
         self,
         entries: list[SearchEntry],
         *,
         favorite: bool,
+        add: bool = True,
         announce: Callable[[str], None] | None = None,
     ) -> None:
         """Save online TIDAL rows only after an explicit collection command."""
@@ -7575,7 +7749,7 @@ class LiteFrame(wx.Frame):
             lambda: client.tidal_collection_membership(
                 items,
                 mode="favorite" if favorite else "library",
-                add=True,
+                add=add,
             ),
             done,
             lambda error: say(
@@ -7588,6 +7762,7 @@ class LiteFrame(wx.Frame):
         entries: list[SearchEntry],
         *,
         favorite: bool,
+        add: bool = True,
         announce: Callable[[str], None] | None = None,
     ) -> None:
         """Save online Spotify rows only after an explicit collection action."""
@@ -7652,6 +7827,7 @@ class LiteFrame(wx.Frame):
             lambda: client.spotify_collection_membership(
                 items,
                 mode="favorite" if favorite else "library",
+                add=add,
             ),
             done,
             failed,
