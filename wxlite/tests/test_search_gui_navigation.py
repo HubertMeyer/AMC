@@ -525,6 +525,41 @@ def test_search_relation_picker_stays_owned_by_the_search_window() -> None:
     assert title == "Przejdź do"
 
 
+def test_single_search_relation_is_shown_before_it_can_be_opened() -> None:
+    shown = []
+    result = SearchEntry(
+        SessionId.SPOTIFY,
+        Row(
+            "spotify:episode:private",
+            "Odcinek",
+            "episode",
+            service_id="privateepisode",
+            service_kind="episode",
+            related_podcast_service_id="privatepodcast",
+            related_podcast_title="Podcast",
+        ),
+        remote_kind="spotifyCatalog",
+    )
+    search_dialog = SimpleNamespace(
+        announcer=SimpleNamespace(say=lambda _message: None),
+        show_relation_choices=lambda choices, labels, *, title: shown.append(
+            (choices, labels, title)
+        ),
+    )
+    frame = SimpleNamespace(navigator=Navigator(), _detailed_hints=False)
+
+    choice = LiteFrame._choose_search_result_relation(
+        frame,
+        result,
+        search_dialog,
+    )
+
+    assert choice is None
+    assert len(shown) == 1
+    assert len(shown[0][0]) == 1
+    assert shown[0][1] == ("Podcast",)
+
+
 @pytest.mark.parametrize(
     "session_id",
     (
@@ -579,6 +614,7 @@ def test_spotify_search_library_action_uses_confirmed_membership_write() -> None
         _change_spotify_search_result_membership=(
             lambda entries, *, favorite: calls.append((entries, favorite))
         ),
+        announcer=SimpleNamespace(say=lambda _message: None),
     )
 
     LiteFrame._complete_remote_search_result_action(
@@ -845,6 +881,167 @@ def test_remote_result_uses_materialization_instead_of_local_navigation() -> Non
     )
 
     assert calls == [([result], SearchResultAction.OPEN)]
+
+
+def test_remote_youtube_library_action_keeps_search_dialog_open() -> None:
+    direct_actions = []
+    modal_results = []
+    result = SearchEntry(
+        SessionId.PODCASTS,
+        Row(
+            "remote-channel",
+            "Kanał",
+            "podcast",
+            url="https://www.youtube.com/channel/UCexample/videos",
+        ),
+        LibraryView.PODCAST_LIBRARY,
+        remote_kind="youtubeChannel",
+    )
+    dialog = SimpleNamespace(
+        _lead_entry=lambda: result,
+        _selected_entries=lambda: [result],
+        _execute_direct_action=lambda entries, action, owner: direct_actions.append(
+            (entries, action, owner)
+        ),
+        announcer=SimpleNamespace(say=lambda _message: None),
+        EndModal=modal_results.append,
+        selected_result=None,
+        selected_results=[],
+        selected_action=SearchResultAction.OPEN,
+    )
+
+    gui_module.SearchDialog._complete_selected(
+        dialog,
+        SearchResultAction.LIBRARY,
+    )
+
+    assert direct_actions == [([result], SearchResultAction.LIBRARY, dialog)]
+    assert modal_results == []
+    assert dialog.selected_result is result
+
+
+@pytest.mark.parametrize(
+    ("remote_kind", "title", "address"),
+    (
+        (
+            "youtubeChannel",
+            "Kanał YouTube",
+            "https://www.youtube.com/channel/UCexample/videos",
+        ),
+        (
+            "youtubeVideo",
+            "Film YouTube",
+            "https://www.youtube.com/watch?v=abc123",
+        ),
+        ("rss", "Podcast", "https://example.test/feed.xml"),
+    ),
+)
+def test_remote_library_write_is_confirmed_inside_search_dialog(
+    remote_kind: str,
+    title: str,
+    address: str,
+) -> None:
+    calls = []
+    spoken = []
+
+    class Runner:
+        @staticmethod
+        def submit(_name, work, done, _failed):
+            done(work())
+
+    client = SimpleNamespace(
+        add_podcast_source=lambda received_address, received_title: (
+            calls.append((received_address, received_title))
+            or {
+                "subscriptionId": "saved-source",
+                "preferredEpisodeId": (
+                    "saved-video" if remote_kind == "youtubeVideo" else None
+                ),
+                "title": received_title,
+                "added": True,
+                "restored": False,
+            }
+        )
+    )
+    frame = SimpleNamespace(
+        _podcast_add_pending=False,
+        client=client,
+        status_field=SimpleNamespace(SetLabel=lambda value: calls.append(("status", value))),
+        status_bar=SimpleNamespace(show=lambda value: calls.append(("bar", value))),
+        announcer=SimpleNamespace(
+            say=lambda _value: pytest.fail(
+                "Główne okno nie może przesłonić komunikatu wyszukiwarki"
+            )
+        ),
+        runner=Runner(),
+    )
+    result = SearchEntry(
+        SessionId.PODCASTS,
+        Row("remote-result", title, "podcast", url=address),
+        LibraryView.PODCAST_LIBRARY,
+        remote_kind=remote_kind,
+    )
+
+    LiteFrame._complete_remote_search_result_action(
+        frame,
+        [result],
+        SearchResultAction.LIBRARY,
+        announce=spoken.append,
+    )
+
+    assert (address, title) in calls
+    assert spoken == [
+        "Przygotowywanie wyniku katalogu",
+        f"Dodano do Biblioteki: {title}",
+    ]
+    assert frame._podcast_add_pending is False
+
+
+def test_remote_library_does_not_claim_addition_without_host_confirmation() -> None:
+    spoken = []
+
+    class Runner:
+        @staticmethod
+        def submit(_name, work, done, _failed):
+            done(work())
+
+    frame = SimpleNamespace(
+        _podcast_add_pending=False,
+        client=SimpleNamespace(
+            add_podcast_source=lambda _address, title: {
+                "subscriptionId": "saved-source",
+                "preferredEpisodeId": None,
+                "title": title,
+                "added": False,
+                "restored": False,
+            }
+        ),
+        status_field=SimpleNamespace(SetLabel=lambda _value: None),
+        status_bar=SimpleNamespace(show=lambda _value: None),
+        announcer=SimpleNamespace(say=lambda _value: None),
+        runner=Runner(),
+    )
+    result = SearchEntry(
+        SessionId.PODCASTS,
+        Row(
+            "remote-channel",
+            "Kanał YouTube",
+            "podcast",
+            url="https://www.youtube.com/channel/UCexample/videos",
+        ),
+        LibraryView.PODCAST_LIBRARY,
+        remote_kind="youtubeChannel",
+    )
+
+    LiteFrame._complete_remote_search_result_action(
+        frame,
+        [result],
+        SearchResultAction.LIBRARY,
+        announce=spoken.append,
+    )
+
+    assert spoken[-1] == "Element jest już w Bibliotece: Kanał YouTube"
+    assert not spoken[-1].startswith("Dodano")
 
 
 def test_remote_youtube_queue_materializes_then_uses_real_list_action() -> None:

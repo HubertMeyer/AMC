@@ -14,6 +14,20 @@ sumy kontrolne i dokumentacja zmian muszą wskazywać dokładnie tę samą wersj
 Nie wolno publikować paczki z lokalnymi poprawkami nieobecnymi w oznaczonym
 commicie.
 
+## Docelowe nazwy i profile produktu
+
+- Stary program WPF z serii `alpha.4xx`, w tym wersja około `alpha.422`, jest
+  historycznym AMC i nie uczestniczy w nowym procesie wydania.
+- Obecny `AMC Python` jest jedyną rozwijaną bazą produktu. Przy wydaniu jego
+  pełny profil zmieni nazwę na `AMC Test`.
+- Publiczne `AMC` jest budowane z tej samej bazy kodu i tego samego oznaczonego
+  commita co `AMC Test`, lecz z ograniczonym manifestem możliwości.
+- Funkcje testowe nie mogą przypadkiem wrócić do publicznej paczki przez menu,
+  pomoc, paletę, skrót, plik zależności ani pozostawiony adapter usługi.
+- Dane, instalacja, blokada jednej instancji i kanały aktualizacji profili są
+  rozdzielone. Kontrolowane przenoszenie zgodnych danych użytkowych wymaga
+  osobnego, jawnego mechanizmu.
+
 ## 1. Model wersji i wydań GitHub
 
 - Ustalić prostą numerację wersji oraz dwa kanały: testowy i stabilny, jeśli
@@ -81,6 +95,27 @@ odtwarzanie, pobieranie i wyszukiwanie na czystym koncie Windows.
 - Ustalić docelowy kanał: formularz tworzący zgłoszenie GitHub albo bezpieczne
   przygotowanie raportu do ręcznego wysłania. Program nie powinien publikować
   raportu bez jednoznacznego zatwierdzenia użytkownika.
+
+Zatwierdzony kierunek opisuje zadanie `REL-001`: własna instancja
+`michaldziwisz/sygnalista` na licencji MIT tworzy zwykłe GitHub Issues bez
+wymagania konta GitHub od zgłaszającego. Pełny raport i opcjonalny log trafiają
+do prywatnego repozytorium, a publiczne issue zawiera bezpieczne podsumowanie.
+Log pozostaje domyślnie wyłączony i przed wysłaniem wymaga podglądu oraz
+jednoznacznego zatwierdzenia.
+
+GitHub Issues staje się kolejką zgłoszeń, nie automatycznym poleceniem zmiany
+kodu. Po weryfikacji wybrane issue można powiązać z zadaniem w
+`docs/zadania`; Codex albo Hermes rozpoczyna analizę dopiero na jawne polecenie
+użytkownika.
+
+## 4a. Licencje i dobrowolne wpłaty
+
+Radio Browser zezwala na użycie danych i API w programach darmowych oraz
+niedarmowych, więc katalog stacji nie blokuje sam w sobie PayPala ani GitHub
+Sponsors. Osobną bramą jest dołączony BASS: jego bezpłatna licencja obejmuje
+podmiot niekomercyjny, który nie zarabia na produkcie. Przed dodaniem wpłat
+należy wykonać `LIC-001` i uzyskać pisemne potwierdzenie Un4seen, kupić
+odpowiednią licencję albo usunąć BASS z profilu publicznego.
 
 ## 5. Dokumentacja przed testami
 

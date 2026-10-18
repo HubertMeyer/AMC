@@ -25,9 +25,12 @@ W tej kolejności przeczytaj:
 
 1. `AGENTS.md` — trwałe zasady projektu, dostępności i zachowania wspólnych
    funkcji.
-2. `AMC_PYTHON_STAN_2026-10-10_PL.md` — architektura i szerszy stan aplikacji.
-3. `PRZEKAZANIE_2026-10-14_WTOREK_PL.md` — ostatnie przekazanie prac.
-4. `ZALEZNOSCI_AMC_STAN_PL.md` — przygotowane, trwałe środowisko kompilacji.
+2. `docs/zadania/README.md` — kanoniczny rejestr prac oczekujących, trwających
+   i zakończonych. Jeżeli użytkownik wskazał identyfikator zadania, przeczytaj
+   również odpowiadający mu plik przed rozpoczęciem pracy.
+3. `AMC_PYTHON_STAN_2026-10-10_PL.md` — architektura i szerszy stan aplikacji.
+4. `PRZEKAZANIE_2026-10-14_WTOREK_PL.md` — ostatnie przekazanie prac.
+5. `ZALEZNOSCI_AMC_STAN_PL.md` — przygotowane, trwałe środowisko kompilacji.
 
 Następnie wykonaj odczytowo `git status --short`, `git branch --show-current`,
 `git log -n 12 --oneline` i `git worktree list`. Nie porządkuj automatycznie

@@ -1945,6 +1945,9 @@ class SearchDialog(wx.Dialog):
         current_session_label: str,
         run_search: Callable[[str, "SearchDialog"], None],
         choose_relation: Callable[[SearchEntry, "SearchDialog"], object | None],
+        execute_direct_action: Callable[
+            [list[SearchEntry], SearchResultAction, "SearchDialog"], None
+        ],
         copy_text: Callable[[str], bool],
         history: list[str],
         record_query: Callable[[str], list[str]],
@@ -1960,6 +1963,7 @@ class SearchDialog(wx.Dialog):
         self._all_services = all_services
         self._run_search = run_search
         self._choose_relation = choose_relation
+        self._execute_direct_action = execute_direct_action
         self._copy_text = copy_text
         self._history = list(history)
         self._record_query = record_query
@@ -1999,8 +2003,9 @@ class SearchDialog(wx.Dialog):
         self.results.SetName("Wyniki wyszukiwania")
         self.results.SetHelpText(
             "Strzałki wybierają wynik. Enter przechodzi do wyniku na "
-            "właściwej liście. W TIDAL prawa strzałka otwiera dostępne "
-            "albumy, utwory i podobnych wykonawców. Escape zamyka okno."
+            "właściwej liście. Prawa strzałka pokazuje dostępne "
+            "relacje. Ctrl+Shift+L dodaje wynik katalogu do Biblioteki. "
+            "Escape zamyka okno."
             if detailed_hints
             else ""
         )
@@ -2263,6 +2268,19 @@ class SearchDialog(wx.Dialog):
         self.selected_result = entry
         self.selected_results = selected or [entry]
         self.selected_action = action
+        if (
+            action is SearchResultAction.LIBRARY
+            and all(
+                candidate.session_id is SessionId.PODCASTS
+                and bool(candidate.remote_kind)
+                for candidate in self.selected_results
+            )
+        ):
+            # Wynik katalogu musi zostać zapisany, ale samo okno wyszukiwania
+            # pozostaje otwarte. Zamknięcie modala oddawało fokus głównemu
+            # oknu i NVDA ogłaszał "AMC Python" przed potwierdzeniem zapisu.
+            self._execute_direct_action(self.selected_results, action, self)
+            return
         self.EndModal(wx.ID_OK)
 
     def _open_selected(self) -> None:
@@ -6823,6 +6841,7 @@ class LiteFrame(wx.Frame):
                 session_before=session_before,
             ),
             choose_relation=self._choose_search_result_relation,
+            execute_direct_action=self._execute_search_dialog_action,
             copy_text=self._to_clipboard,
             history=list(self.state.search_history.get(
                 "global" if all_services else session_before.value,
@@ -6874,8 +6893,6 @@ class LiteFrame(wx.Frame):
                 "Ten wynik nie ma dostępnego albumu, wykonawcy ani podcastu"
             )
             return None
-        if len(choices) == 1:
-            return choices[0]
         search_dialog.show_relation_choices(
             choices,
             relation_destination_labels(
@@ -6885,6 +6902,26 @@ class LiteFrame(wx.Frame):
             title=title,
         )
         return None
+
+    def _execute_search_dialog_action(
+        self,
+        entries: list[SearchEntry],
+        action: SearchResultAction,
+        dialog: SearchDialog,
+    ) -> None:
+        """Wykonaj zapis bez oddawania fokusu głównemu oknu AMC."""
+
+        def announce(message: str) -> None:
+            if self._search_dialog_alive(dialog):
+                dialog.announcer.say(message)
+            else:
+                self.announcer.say(message)
+
+        self._complete_remote_search_result_action(
+            entries,
+            action,
+            announce=announce,
+        )
 
     def _record_search_query(self, scope: str, query: str) -> list[str]:
         history = add_search_history(
@@ -7276,43 +7313,46 @@ class LiteFrame(wx.Frame):
         self,
         entries: list[SearchEntry],
         action: SearchResultAction,
+        *,
+        announce: Callable[[str], None] | None = None,
     ) -> None:
         """Materializuj publiczny wynik, nie ujawniając jego modelowego ID."""
 
         if not entries:
             return
+        say = announce if announce is not None else self.announcer.say
         lead = entries[0]
         if lead.session_id is SessionId.RADIO:
             self._complete_remote_radio_search_result_action(entries, action)
             return
         if lead.session_id is SessionId.TIDAL:
             if action is SearchResultAction.INFORMATION:
-                self.announcer.say(lead.accessible_label)
+                say(lead.accessible_label)
             elif action in (SearchResultAction.LIBRARY, SearchResultAction.FAVORITE):
                 self._change_tidal_search_result_membership(
                     entries,
                     favorite=action is SearchResultAction.FAVORITE,
                 )
             else:
-                self.announcer.say(
+                say(
                     "Ten wynik TIDAL można otworzyć albo jawnie dodać do kolekcji"
                 )
             return
         if lead.session_id is SessionId.SPOTIFY:
             if action is SearchResultAction.INFORMATION:
-                self.announcer.say(lead.accessible_label)
+                say(lead.accessible_label)
             elif action in (SearchResultAction.LIBRARY, SearchResultAction.FAVORITE):
                 self._change_spotify_search_result_membership(
                     entries,
                     favorite=action is SearchResultAction.FAVORITE,
                 )
             else:
-                self.announcer.say(
+                say(
                     "Ten wynik Spotify można przeglądać albo odtworzyć"
                 )
             return
         if action is SearchResultAction.INFORMATION:
-            self.announcer.say(lead.accessible_label)
+            say(lead.accessible_label)
             return
         video_only_actions = {
             SearchResultAction.TOGGLE_PLAYBACK,
@@ -7327,20 +7367,20 @@ class LiteFrame(wx.Frame):
             action in video_only_actions
             and any(entry.remote_kind != "youtubeVideo" for entry in entries)
         ):
-            self.announcer.say(
+            say(
                 "To działanie jest dostępne dla materiałów YouTube; "
                 "podcast lub kanał otwórz klawiszem Enter"
             )
             return
         if action is SearchResultAction.SAVE_AS and len(entries) != 1:
-            self.announcer.say("Zapisz jako działa dla jednego materiału")
+            say("Zapisz jako działa dla jednego materiału")
             return
         if self._podcast_add_pending:
-            self.announcer.say("Dodawanie źródła już trwa")
+            say("Dodawanie źródła już trwa")
             return
         client = self.client
         if client is None:
-            self.announcer.say("Silnik nie działa, nie mogę otworzyć wyniku")
+            say("Silnik nie działa, nie mogę otworzyć wyniku")
             return
 
         self._podcast_add_pending = True
@@ -7351,7 +7391,7 @@ class LiteFrame(wx.Frame):
         )
         self.status_field.SetLabel(started)
         self.status_bar.show(started)
-        self.announcer.say(started)
+        say(started)
 
         def work() -> list[dict]:
             payloads: list[dict] = []
@@ -7383,19 +7423,37 @@ class LiteFrame(wx.Frame):
             self._podcast_add_pending = False
             count = len(payloads)
             if action in (SearchResultAction.LIBRARY, SearchResultAction.FAVORITE):
-                target = (
-                    "ulubionych"
-                    if action is SearchResultAction.FAVORITE
-                    else "Biblioteki"
-                )
-                message = (
-                    f"Dodano do {target}: {lead.row.title}"
-                    if count == 1
-                    else f"Dodano do {target}: {count} elementów"
-                )
+                if action is SearchResultAction.FAVORITE:
+                    message = (
+                        f"Dodano do ulubionych: {lead.row.title}"
+                        if count == 1
+                        else f"Dodano do ulubionych: {count} elementów"
+                    )
+                else:
+                    changed = sum(
+                        bool(payload.get("added") or payload.get("restored"))
+                        for payload in payloads
+                    )
+                    confirmed_title = str(
+                        payloads[0].get("title") or lead.row.title
+                    ).strip()
+                    if count == 1 and changed == 1:
+                        message = f"Dodano do Biblioteki: {confirmed_title}"
+                    elif count == 1:
+                        message = (
+                            f"Element jest już w Bibliotece: {confirmed_title}"
+                        )
+                    elif changed == count:
+                        message = f"Dodano do Biblioteki: {count} elementów"
+                    elif changed:
+                        message = (
+                            f"Dodano do Biblioteki: {changed} z {count} elementów"
+                        )
+                    else:
+                        message = "Wybrane elementy są już w Bibliotece"
                 self.status_field.SetLabel(message)
                 self.status_bar.show(message)
-                self.announcer.say(message)
+                say(message)
                 return
 
             first = payloads[0]
@@ -7406,7 +7464,7 @@ class LiteFrame(wx.Frame):
             ]
             preferred_ids = [value for value in preferred_ids if value]
             if not subscription_id:
-                self.announcer.say("Nie udało się otworzyć wyniku katalogu")
+                say("Nie udało się otworzyć wyniku katalogu")
                 return
             self._switch_session(SessionId.PODCASTS)
 
@@ -7433,7 +7491,7 @@ class LiteFrame(wx.Frame):
             )
             self.status_field.SetLabel(message)
             self.status_bar.show(message)
-            self.announcer.say(message)
+            say(message)
 
         self.runner.submit("podcast-search-action", work, done, failed)
 

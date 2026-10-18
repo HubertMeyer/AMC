@@ -5,6 +5,36 @@
 - `D:\Projekty Codex\Accessible Multimedia Controller` zawiera wycofany z
   bieżących prac stary interfejs WPF. Można go czytać jako materiał historyczny,
   ale nie należy tam wdrażać nowych poprawek ani budować użytkowej aktualizacji.
+- Stary AMC z serii WPF `alpha.4xx`, w tym używana dawniej wersja około
+  `alpha.422`, jest od tej chwili nazywany **historycznym AMC**. Nie jest
+  produktem rozwijanym ani kandydatem do następnego wydania. Może służyć
+  wyłącznie jako wzorzec zachowania lub źródło sprawdzonego kodu silnika po
+  świadomej analizie.
+- **AMC Python jest jedynym bieżącym AMC.** Nazwa `AMC Python` jest nazwą
+  przejściową używaną podczas rozwoju i nie oznacza pobocznego prototypu ani
+  nakładki na historyczny program. Źródła są w tym repozytorium, a bieżąca
+  instalacja użytkowa znajduje się w `D:\Projekty Codex\AMC Python`.
+- Docelowo obecny, pełny profil AMC Python otrzyma nazwę użytkową **AMC Test**.
+  Publiczne **AMC** powstanie z dokładnie tej samej bazy kodu i tego samego
+  procesu wydania, ale z ograniczonym profilem możliwości. Nie utrzymujemy
+  osobnego starego programu jako publicznego AMC i nie rozwijamy dwóch
+  rozchodzących się implementacji.
+- Funkcje niedopuszczone do publicznego AMC mają być wyłączone profilem
+  możliwości także w interfejsie, pomocy, zależnościach, logowaniu i pakiecie,
+  a nie tylko wizualnie ukryte. `AMC Test` może zawierać funkcje eksperymentalne
+  i prywatne, których publiczne `AMC` jeszcze nie udostępnia.
+- Logika funkcji AMC ma być oddzielona od sposobu wywołania. Zdarzenie wxPython,
+  skrót, paleta poleceń, dodatek NVDA, przyszły wiersz poleceń i lokalny serwer
+  sterowania dla AI mają przekazywać to samo jawne polecenie do wspólnej warstwy
+  aplikacyjnej, zamiast naśladować klawisze albo implementować funkcję ponownie.
+  Nowe funkcje projektuj tak, aby dało się je później bezpiecznie udostępnić
+  kolejnemu adapterowi poleceń. Szczegóły: `docs/zadania/ARC-001-wspolny-rdzen-polecen-cli-ai.md`.
+- Windows pozostaje jedynym planowanym i wspieranym systemem dla pierwszego
+  publicznego AMC. Oficjalny port na macOS, Linux lub ARM jest odłożony bez
+  terminu: wymaga osobnego hosta multimedialnego, integracji systemowej oraz
+  pełnych testów z czytnikiem ekranu. Nie zwiększaj bieżącego zakresu prac w imię
+  hipotetycznej przenośności. Zachowuj sensowne granice modułów i dokumentację,
+  aby zainteresowana osoba mogła kiedyś przygotować port niezależnie.
 - Użytkownik 9 października
   2026 r. wyraził stałą zgodę na pracę w tym katalogu także po wznowieniu
   zadania; nie pytaj ponownie o wybór katalogu roboczego.
@@ -53,6 +83,20 @@
 - Etykiety dostępności list, pól kombi i menu muszą być tekstem użytkowym,
   nigdy domyślną reprezentacją obiektu, enuma ani identyfikatorem komendy.
   Testuj początkowy fokus, strzałki, ponowne otwarcie i powrót po zamknięciu.
+
+## Rejestr zadań
+
+- Kanoniczny rejestr oczekujących, trwających i zakończonych prac znajduje się
+  w `docs/zadania/README.md`. Szczegóły każdego większego zadania są w osobnym
+  pliku w tym samym katalogu.
+- Przed rozpoczęciem wskazanego zadania przeczytaj rejestr i jego plik. Nie
+  uruchamiaj innych zapisanych zadań bez polecenia użytkownika.
+- Po wykonaniu zadania zaktualizuj jego status oraz zapisz w jego pliku wynik,
+  zmienione pliki, commit, testy i dokładną wersję instalacji, jeśli powstała.
+  Następnie uaktualnij status w rejestrze.
+- `AGENTS.md` przechowuje trwałe zasady całego projektu. Diagnozy pojedynczych
+  błędów, plan pracy i dowody wykonania należą do pliku danego zadania, aby nie
+  rozrastały się w instrukcjach obowiązujących każdą sesję.
 
 ## Skróty globalne
 
