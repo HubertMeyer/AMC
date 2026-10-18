@@ -89,3 +89,11 @@ def test_recording_views_have_one_user_facing_command_contract() -> None:
         player_view=False,
         radio_session=True,
     ) is Action.VIEW_RECORDED_RADIO_FILES
+
+
+def test_schedule_manager_name_and_shortcut_match_palette_and_keyboard_help() -> None:
+    entries = {entry.action: entry for entry in entries_for_session(SessionId.RADIO)}
+    schedule = entries[Action.MANAGE_RADIO_SCHEDULES]
+    assert schedule.name == "Harmonogram nagrywania"
+    assert schedule.shortcut == "Ctrl+Shift+H"
+    assert describe_action(Action.MANAGE_RADIO_SCHEDULES) == schedule.name

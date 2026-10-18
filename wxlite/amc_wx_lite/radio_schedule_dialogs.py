@@ -24,11 +24,18 @@ from .radio_schedule_settings import (
     duplicate_schedule,
     local_start_from_utc_ticks,
     output_folder_is_valid,
-    parse_local_start,
     sanitize_schedule,
     schedules_from_host_status,
     utc_ticks_from_local,
     validate_file_name_template,
+)
+from .schedule_segments import (
+    DATE_SEGMENTS,
+    MONTH_NAMES,
+    TIME_SEGMENTS,
+    DateSegments,
+    TimeSegments,
+    duration_from_fields,
 )
 from .state_store import Station
 
@@ -47,6 +54,207 @@ _FORMAT_CHOICES = (
 _WAKE_INHERIT = object()
 
 
+class _SegmentedDateControl(wx.Panel):
+    """Trzy jawnie nazwane segmenty daty, bez tekstu ``RRRR-MM-DD``."""
+
+    def __init__(self, parent, value, on_change: Callable | None = None) -> None:
+        super().__init__(parent)
+        self._state = DateSegments(value)
+        self._on_change = on_change
+        self._buffers = {segment: "" for segment in DATE_SEGMENTS}
+        layout = wx.BoxSizer(wx.HORIZONTAL)
+        values = (value.day, value.month, value.year)
+        ranges = ((1, 31), (1, 12), (1900, 9999))
+        self._controls = []
+        for index, (segment, current, bounds) in enumerate(
+            zip(DATE_SEGMENTS, values, ranges)
+        ):
+            control = wx.SpinCtrl(
+                self,
+                min=bounds[0],
+                max=bounds[1],
+                initial=current,
+            )
+            control.Bind(wx.EVT_CHAR_HOOK, self._on_key)
+            control.Bind(wx.EVT_SPINCTRL, self._on_spin)
+            control.Bind(wx.EVT_SET_FOCUS, self._on_focus)
+            self._controls.append(control)
+            layout.Add(control, 1, wx.EXPAND)
+            if index < 2:
+                layout.Add(wx.StaticText(self, label=" / "), 0, wx.ALIGN_CENTER_VERTICAL)
+        self.SetSizer(layout)
+        self._sync()
+
+    def GetValue(self):
+        return self._state.value
+
+    def SetFocus(self) -> None:
+        self._controls[0].SetFocus()
+
+    def _index(self, event) -> int:
+        control = event.GetEventObject()
+        return self._controls.index(control) if control in self._controls else 0
+
+    def _sync(self) -> None:
+        values = (self._state.value.day, self._state.value.month, self._state.value.year)
+        for control, segment, value in zip(self._controls, DATE_SEGMENTS, values):
+            control.SetValue(value)
+            control.SetName(self._state.label(segment))
+
+    def _changed(self) -> None:
+        self._sync()
+        if self._on_change is not None:
+            self._on_change(self._state.value)
+
+    def _on_focus(self, event) -> None:
+        self._buffers[DATE_SEGMENTS[self._index(event)]] = ""
+        event.Skip()
+
+    def _on_spin(self, event) -> None:
+        index = self._index(event)
+        segment = DATE_SEGMENTS[index]
+        try:
+            self._state = self._state.replace_segment(
+                segment, self._controls[index].GetValue()
+            )
+        except ValueError:
+            self._sync()
+        else:
+            self._changed()
+
+    def _on_key(self, event) -> None:
+        index = self._index(event)
+        segment = DATE_SEGMENTS[index]
+        code = event.GetKeyCode()
+        if event.ControlDown() or event.AltDown():
+            event.Skip()
+            return
+        if code in (wx.WXK_LEFT, wx.WXK_RIGHT):
+            target = index + (-1 if code == wx.WXK_LEFT else 1)
+            if 0 <= target < len(self._controls):
+                self._controls[target].SetFocus()
+            return
+        if code in (wx.WXK_UP, wx.WXK_DOWN):
+            self._state = self._state.adjust(
+                segment, 1 if code == wx.WXK_UP else -1
+            )
+            self._buffers[segment] = ""
+            self._changed()
+            return
+        if ord("0") <= code <= ord("9") and not event.ShiftDown():
+            digit = chr(code)
+            maximum = 4 if segment == "year" else 2
+            prefix = (self._buffers[segment] + digit)[-maximum:]
+            self._buffers[segment] = prefix
+            try:
+                self._state = self._state.replace_segment(segment, int(prefix))
+            except ValueError:
+                pass
+            else:
+                self._changed()
+            if not self._state.may_extend(segment, prefix):
+                self._buffers[segment] = ""
+                if index + 1 < len(self._controls):
+                    self._controls[index + 1].SetFocus()
+            return
+        event.Skip()
+
+
+class _SegmentedTimeControl(wx.Panel):
+    """Dwa jawnie nazwane segmenty czasu: godzina i minuty."""
+
+    def __init__(self, parent, value) -> None:
+        super().__init__(parent)
+        self._state = TimeSegments(value)
+        self._buffers = {segment: "" for segment in TIME_SEGMENTS}
+        layout = wx.BoxSizer(wx.HORIZONTAL)
+        self._controls = []
+        for index, (segment, current, bounds) in enumerate((
+            ("hour", value.hour, (0, 23)),
+            ("minute", value.minute, (0, 59)),
+        )):
+            control = wx.SpinCtrl(
+                self, min=bounds[0], max=bounds[1], initial=current
+            )
+            control.Bind(wx.EVT_CHAR_HOOK, self._on_key)
+            control.Bind(wx.EVT_SPINCTRL, self._on_spin)
+            control.Bind(wx.EVT_SET_FOCUS, self._on_focus)
+            self._controls.append(control)
+            layout.Add(control, 1, wx.EXPAND)
+            if index == 0:
+                layout.Add(wx.StaticText(self, label=" : "), 0, wx.ALIGN_CENTER_VERTICAL)
+        self.SetSizer(layout)
+        self._sync()
+
+    def GetValue(self):
+        return self._state.value
+
+    def SetFocus(self) -> None:
+        self._controls[0].SetFocus()
+
+    def _index(self, event) -> int:
+        control = event.GetEventObject()
+        return self._controls.index(control) if control in self._controls else 0
+
+    def _sync(self) -> None:
+        values = (self._state.value.hour, self._state.value.minute)
+        for control, segment, value in zip(self._controls, TIME_SEGMENTS, values):
+            control.SetValue(value)
+            control.SetName(self._state.label(segment))
+
+    def _on_focus(self, event) -> None:
+        self._buffers[TIME_SEGMENTS[self._index(event)]] = ""
+        event.Skip()
+
+    def _on_spin(self, event) -> None:
+        index = self._index(event)
+        segment = TIME_SEGMENTS[index]
+        try:
+            self._state = self._state.replace_segment(
+                segment, self._controls[index].GetValue()
+            )
+        except ValueError:
+            self._sync()
+        else:
+            self._sync()
+
+    def _on_key(self, event) -> None:
+        index = self._index(event)
+        segment = TIME_SEGMENTS[index]
+        code = event.GetKeyCode()
+        if event.ControlDown() or event.AltDown():
+            event.Skip()
+            return
+        if code in (wx.WXK_LEFT, wx.WXK_RIGHT):
+            target = index + (-1 if code == wx.WXK_LEFT else 1)
+            if 0 <= target < len(self._controls):
+                self._controls[target].SetFocus()
+            return
+        if code in (wx.WXK_UP, wx.WXK_DOWN):
+            self._state = self._state.adjust(
+                segment, 1 if code == wx.WXK_UP else -1
+            )
+            self._buffers[segment] = ""
+            self._sync()
+            return
+        if ord("0") <= code <= ord("9") and not event.ShiftDown():
+            digit = chr(code)
+            prefix = (self._buffers[segment] + digit)[-2:]
+            self._buffers[segment] = prefix
+            try:
+                self._state = self._state.replace_segment(segment, int(prefix))
+            except ValueError:
+                pass
+            else:
+                self._sync()
+            if not self._state.may_extend(segment, prefix):
+                self._buffers[segment] = ""
+                if index + 1 < len(self._controls):
+                    self._controls[index + 1].SetFocus()
+            return
+        event.Skip()
+
+
 def _choice_index(values: Sequence[object], wanted: object, default: int = 0) -> int:
     return next(
         (index for index, value in enumerate(values) if value == wanted), default
@@ -63,6 +271,70 @@ def _display_name(schedule: Mapping) -> str:
         if isinstance(station, str) and station.strip()
         else "Plan nagrywania"
     )
+
+
+def _schedule_when(schedule: Mapping) -> tuple[str, str]:
+    start = local_start_from_utc_ticks(int(schedule.get("nextStartUtcTicks") or 0))
+    date_text = f"{start.day} {MONTH_NAMES[start.month - 1]} {start.year}"
+    return date_text, f"{start.hour}:{start.minute:02d}"
+
+
+def _duration_label(minutes: int) -> str:
+    hours, rest = divmod(max(0, int(minutes)), 60)
+    parts = []
+    if hours:
+        hour_word = "godzina" if hours == 1 else "godziny" if 2 <= hours <= 4 else "godzin"
+        parts.append(f"{hours} {hour_word}")
+    if rest:
+        minute_word = (
+            "minuta"
+            if rest == 1
+            else "minuty"
+            if 2 <= rest % 10 <= 4 and not 12 <= rest % 100 <= 14
+            else "minut"
+        )
+        parts.append(f"{rest} {minute_word}")
+    return " ".join(parts) or "zero minut"
+
+
+def _short_schedule_information(schedule: Mapping) -> str:
+    date_text, time_text = _schedule_when(schedule)
+    state = "włączony" if schedule.get("enabled") else "wyłączony"
+    return f"{state}, najbliższy termin {date_text}, godzina {time_text}"
+
+
+def _full_schedule_information(schedule: Mapping) -> str:
+    date_text, time_text = _schedule_when(schedule)
+    recurrence = str(schedule.get("recurrence") or "Once")
+    if recurrence == "Daily":
+        when = f"codziennie, najbliżej {date_text}"
+    elif recurrence == "SelectedDays":
+        selected = set(schedule.get("activeDays") or [])
+        days = [
+            label for name, label in zip(DAY_NAMES, DAY_LABELS) if name in selected
+        ]
+        when = (
+            f"dni tygodnia {', '.join(days)}, najbliżej {date_text}"
+            if days
+            else f"wybrane dni tygodnia, najbliżej {date_text}"
+        )
+    else:
+        when = f"jednorazowo {date_text}"
+    format_value = str(schedule.get("recordingFormat") or "").strip()
+    format_label = next(
+        (label for label, value in _FORMAT_CHOICES if value == format_value),
+        format_value or "format domyślny",
+    )
+    folder = str(schedule.get("outputFolder") or "").strip() or "domyślny folder nagrań"
+    return ", ".join((
+        f"nazwa {_display_name(schedule)}",
+        f"źródło {str(schedule.get('stationName') or 'nieznane').strip()}",
+        when,
+        f"godzina {time_text}",
+        f"długość {_duration_label(int(schedule.get('durationMinutes') or 0))}",
+        f"format {format_label}",
+        f"folder {folder}",
+    ))
 
 
 class RadioScheduleEditorDialog(wx.Dialog):
@@ -104,6 +376,7 @@ class RadioScheduleEditorDialog(wx.Dialog):
         self._preferred_station_id = preferred_station_id
         self.result_schedule: dict | None = None
         self._folder_values: list[str] = []
+        self._days_user_changed = False
 
         scroll = wx.ScrolledWindow(self, style=wx.VSCROLL)
         scroll.SetScrollRate(0, 12)
@@ -131,31 +404,28 @@ class RadioScheduleEditorDialog(wx.Dialog):
             else datetime.now().astimezone().replace(second=0, microsecond=0)
             + timedelta(minutes=5)
         )
-        self.start_date = self._add_text(
+        self.start_date = self._add_segmented_date(
             scroll,
             grid,
             "&Data rozpoczęcia:",
-            "Data rozpoczęcia, format rok miesiąc dzień",
-            initial.strftime("%Y-%m-%d"),
+            initial.date(),
+            self._on_start_date_changed,
         )
-        self.start_time = self._add_text(
+        self.start_time = self._add_segmented_time(
             scroll,
             grid,
             "&Czas rozpoczęcia:",
-            "Czas rozpoczęcia, godzina i minuta",
-            initial.strftime("%H:%M"),
+            initial.time().replace(second=0, microsecond=0),
         )
 
         duration = int((self._existing or {}).get("durationMinutes") or 60)
         hours, minutes = divmod(duration, 60)
-        self.duration_hours = self._add_spin(
+        self.duration_hours = self._add_text(
             scroll,
             grid,
             "Długość, &godziny:",
-            "Długość nagrania w godzinach",
-            hours,
-            0,
-            168,
+            "Długość nagrania w godzinach, puste oznacza zero godzin",
+            str(hours) if hours else "",
         )
         self.duration_minutes = self._add_spin(
             scroll,
@@ -321,6 +591,7 @@ class RadioScheduleEditorDialog(wx.Dialog):
         self.SetSize((780, 760))
 
         self.station.Bind(wx.EVT_CHOICE, self._on_station_changed)
+        self.days.Bind(wx.EVT_CHECKLISTBOX, self._on_days_changed)
         self.recurrence.Bind(wx.EVT_CHOICE, self._on_mode_changed)
         self.split_mode.Bind(wx.EVT_CHOICE, self._on_mode_changed)
         self.recording_format.Bind(wx.EVT_CHOICE, self._on_mode_changed)
@@ -361,6 +632,22 @@ class RadioScheduleEditorDialog(wx.Dialog):
         static = wx.StaticText(parent, label=label)
         control = wx.SpinCtrl(parent, min=minimum, max=maximum, initial=value)
         control.SetName(name)
+        grid.Add(static, 0, wx.ALIGN_CENTER_VERTICAL)
+        grid.Add(control, 1, wx.EXPAND)
+        return control
+
+    @staticmethod
+    def _add_segmented_date(parent, grid, label: str, value, on_change):
+        static = wx.StaticText(parent, label=label)
+        control = _SegmentedDateControl(parent, value, on_change)
+        grid.Add(static, 0, wx.ALIGN_CENTER_VERTICAL)
+        grid.Add(control, 1, wx.EXPAND)
+        return control
+
+    @staticmethod
+    def _add_segmented_time(parent, grid, label: str, value):
+        static = wx.StaticText(parent, label=label)
+        control = _SegmentedTimeControl(parent, value)
         grid.Add(static, 0, wx.ALIGN_CENTER_VERTICAL)
         grid.Add(control, 1, wx.EXPAND)
         return control
@@ -455,6 +742,16 @@ class RadioScheduleEditorDialog(wx.Dialog):
     def _on_station_changed(self, _event) -> None:
         self._rebuild_folder_choices()
 
+    def _on_days_changed(self, _event) -> None:
+        self._days_user_changed = True
+
+    def _on_start_date_changed(self, chosen_date) -> None:
+        if self._existing is not None or self._days_user_changed:
+            return
+        wanted = chosen_date.weekday()
+        for index in range(len(DAY_NAMES)):
+            self.days.Check(index, index == wanted)
+
     def _on_folder_mode_changed(self, _event) -> None:
         self._update_folder_path()
 
@@ -494,16 +791,16 @@ class RadioScheduleEditorDialog(wx.Dialog):
             self._show_error("Wybierz stację do nagrania", self.station)
             return
         try:
-            local_start = parse_local_start(
+            local_start = datetime.combine(
                 self.start_date.GetValue(), self.start_time.GetValue()
             )
-            duration = (
-                self.duration_hours.GetValue() * 60 + self.duration_minutes.GetValue()
-            )
-            if duration <= 0:
-                raise ScheduleValidationError(
-                    "Długość nagrania musi wynosić co najmniej jedną minutę"
+            try:
+                duration = duration_from_fields(
+                    self.duration_hours.GetValue(),
+                    self.duration_minutes.GetValue(),
                 )
+            except ValueError as error:
+                raise ScheduleValidationError(str(error)) from error
             segment = (
                 self.split_minutes.GetValue()
                 if self.split_mode.GetSelection() == 1
@@ -621,7 +918,8 @@ class RadioSchedulesDialog(wx.Dialog):
         help_text = (
             "Insert dodaje plan. Ctrl+D powiela wybrany plan jako wyłączoną kopię. "
             "Enter edytuje. Spacja włącza lub wyłącza. Delete usuwa. "
-            "Każda zmiana jest zapisywana od razu."
+            "Strzałka w lewo czyta stan i termin, a strzałka w prawo szczegóły. "
+            "Każda zapisana zmiana jest stosowana od razu."
         )
         help_label = wx.StaticText(panel, label=help_text)
         help_label.SetName(help_text)
@@ -630,7 +928,8 @@ class RadioSchedulesDialog(wx.Dialog):
         self.schedule_list = wx.ListBox(panel, choices=[], style=wx.LB_SINGLE)
         self.schedule_list.SetName("Zaplanowane nagrania radia")
         self.schedule_list.SetToolTip(
-            "Strzałki wybierają plan. Enter edytuje, Spacja włącza lub wyłącza."
+            "Góra i dół wybierają plan. Lewo czyta stan, prawo szczegóły. "
+            "Enter edytuje, Spacja włącza lub wyłącza."
         )
         layout.Add(self.schedule_list, 1, wx.LEFT | wx.RIGHT | wx.EXPAND, 12)
 
@@ -841,14 +1140,25 @@ class RadioSchedulesDialog(wx.Dialog):
         except ScheduleValidationError as error:
             self._announce(str(error))
             return
+        with RadioScheduleEditorDialog(
+            self,
+            stations=self._stations,
+            recording=self._recording,
+            global_wake=self._wake,
+            existing=copy,
+        ) as dialog:
+            if dialog.ShowModal() != wx.ID_OK or dialog.result_schedule is None:
+                self.schedule_list.SetFocus()
+                return
+            copy = dialog.result_schedule
         candidate = [*self._schedules, copy]
         self._commit(
             candidate,
             self._wake,
             preferred_id=copy["id"],
             success_message=(
-                f"Powielono plan {copy['name']}. Kopia jest wyłączona. "
-                "Enter edytuje, Spacja włącza"
+                f"Powielono i zapisano plan {_display_name(copy)}. "
+                + ("Plan jest włączony" if copy.get("enabled") else "Kopia jest wyłączona")
             ),
         )
 
@@ -944,6 +1254,20 @@ class RadioSchedulesDialog(wx.Dialog):
             self._edit(event)
         elif focus_on_list and code == wx.WXK_SPACE:
             self._toggle(event)
+        elif focus_on_list and code == wx.WXK_LEFT:
+            selected = self._selected_schedule()
+            self._announce(
+                _short_schedule_information(selected)
+                if selected is not None
+                else "Nie wybrano planu nagrywania"
+            )
+        elif focus_on_list and code == wx.WXK_RIGHT:
+            selected = self._selected_schedule()
+            self._announce(
+                _full_schedule_information(selected)
+                if selected is not None
+                else "Nie wybrano planu nagrywania"
+            )
         elif focus_on_list and code == wx.WXK_DELETE:
             self._delete(event)
         else:

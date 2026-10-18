@@ -1463,7 +1463,7 @@ def _help_entries() -> list[tuple[str, str, Action]]:
         Action.VIEW_ACTIVE_RECORDINGS: "Pokaż aktualnie nagrywane pliki",
         Action.VIEW_RECORDED_RADIO_FILES: "Historia nagrywania",
         Action.ADD_RADIO_SCHEDULE: "Zaplanuj nagranie wybranej stacji",
-        Action.MANAGE_RADIO_SCHEDULES: "Pokaz harmonogram nagrywania radia",
+        Action.MANAGE_RADIO_SCHEDULES: "Harmonogram nagrywania",
         Action.VIEW_PODCAST_INBOX: "Nowe odcinki i materiały",
         Action.VIEW_PODCAST_DOWNLOADS: "Pobrane odcinki podcastów",
         Action.SORT_PODCAST_INBOX_ADDED: (
