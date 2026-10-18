@@ -44,12 +44,15 @@ jawnym poleceniu użytkownika albo przez osobno uzgodniony harmonogram.
   harmonogramów: informacje pod strzałkami, segmentowa data i czas oraz
   jednoznaczne wpisywanie czasu trwania. Szczegóły:
   [SCHED-001-edytor-i-klawisze-harmonogramow.md](SCHED-001-edytor-i-klawisze-harmonogramow.md).
-- `NVDA-001` — **Oczekuje** — usunięcie opóźnienia `Ctrl+C` powodowanego przez
-  NVDAExtensionGlobalPlugin. Szczegóły:
+- `NVDA-001` — **W trakcie; poprawka gotowa, czeka na bezpieczne zastosowanie
+  i odbiór** — usunięcie opóźnienia `Ctrl+C` powodowanego przez
+  NVDAExtensionGlobalPlugin bez zmiany zwykłego schowka w innych programach.
+  Szczegóły:
   [NVDA-001-opoznienie-ctrl-c.md](NVDA-001-opoznienie-ctrl-c.md).
-- `SEARCH-001` — **W trakcie** — wyszukiwanie YouTube i Spotify: naprawa
-  `Ctrl+Shift+L` oraz usunięcie komunikatu „AMC Python” przesłaniającego wynik
-  prawej strzałki i potwierdzenie Biblioteki. Szczegóły:
+- `SEARCH-001` — **W trakcie; kod i izolowane testy gotowe, czeka na kompilację,
+  instalację i odbiór NVDA** — wyszukiwanie YouTube, Spotify i TIDAL:
+  `Ctrl+Shift+L` pozostaje w oknie także dla zapisanego wyniku, wykonuje jedną
+  właściwą operację i nie oddaje mowy głównemu oknu. Szczegóły:
   [SEARCH-001-youtube-biblioteka-komunikaty.md](SEARCH-001-youtube-biblioteka-komunikaty.md).
 - `POD-001` — **Oczekuje** — sortowanie zbiorczej Biblioteki podcastów,
   kanałów YouTube i kolekcji „Media internetowe”. Szczegóły:

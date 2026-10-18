@@ -143,3 +143,76 @@ Poprawka:
   `D:\Projekty Codex\AMC Python\AMC.exe`.
 - Odbiór ręczny z NVDA pozostaje otwarty: sprawdzić osobno kanał YouTube,
   pojedynczy film kierowany do `Media internetowe` i wynik Spotify.
+
+## Materiał do dokumentacji użytkownika
+
+W oknie wyników wyszukiwania `Ctrl+Shift+L` nie zamyka wyszukiwarki. Dla
+kanału YouTube lub podcastu zmienia członkostwo właściwego źródła w
+Bibliotece. Pojedynczy film YouTube jest zapisywany w `Media internetowe`, a
+ponowne użycie skrótu na zapisanym filmie usuwa tylko ten film. W Spotify i
+TIDAL polecenie pozostaje w oknie wyszukiwania i albo wykonuje zmianę właściwej
+Biblioteki, albo jasno podaje właściwy skrót dla typu elementu. Po operacji
+fokus pozostaje na wyniku; dopiero `Escape` wraca do odświeżonej Biblioteki.
+
+Przykładowe komunikaty:
+
+- „Przygotowywanie wyniku katalogu”, a po potwierdzeniu „Dodano do Biblioteki:
+  nazwa”;
+- „Dodano do Biblioteki, Media internetowe: nazwa” dla pojedynczego filmu;
+- „Usunięto z Biblioteki, Media internetowe: nazwa” dla zapisanego filmu;
+- w Spotify utwór kieruje do `Ctrl+Shift+U`, ponieważ nie jest albumem,
+  wykonawcą ani podcastem Biblioteki.
+
+## Uzasadnienie i decyzje
+
+Korekta z 19 października 2026 zastępuje wcześniejsze ograniczenie bezpośredniej
+obsługi tylko do wyników mających `remote_kind`. Zapisany wynik o tym samym
+adresie zastępował wynik katalogowy podczas scalania, dlatego wcześniejszy kod
+zamykał modal, przechodził do zwykłej listy i dopiero tam wykonywał polecenie.
+To dokładnie odpowiadało zgłoszeniu: „nic nie mówi, tylko przechodzi na listę
+podcastów”. Teraz zarówno zapisane, jak i niezapisane wyniki Podcastów i
+YouTube, Spotify oraz TIDAL używają jednej drogi działania wewnątrz okna
+wyszukiwania. Jawny parametr `add=True/False` usuwa dwuznaczność dodania i
+usunięcia w usługach streamingowych.
+
+Pojedynczy film w `Media internetowe` korzysta z operacji usunięcia pojedynczego
+rekordu. Nie wolno przełączyć całego wspólnego źródła i ukryć wszystkich
+pozostałych filmów. Podcast, kanał i zwykły odcinek nadal odnoszą się do
+rzeczywistego źródła nadrzędnego.
+
+Opis i skrót polecenia w `Ctrl+F1`, pełnej pomocy, menu oraz palecie
+`Ctrl+Shift+K` nie zmieniły się; nadal korzystają z istniejącego wpisu wspólnego
+katalogu poleceń. Zmieniono routing i warunek wykonania, a test menu potwierdza
+brak rozbieżności powierzchni.
+
+## Testy i wynik
+
+- `wxlite/tests/test_search_gui_navigation.py`: `50 passed`.
+- Szersza izolowana regresja wyszukiwania, Spotify, TIDAL, menu, schowka i
+  poprawki NVDA: `154 passed`.
+- Testy obejmują pozostanie modala otwartego dla wyników zapisanych i
+  katalogowych, jawne `add=True/False`, pojedyncze usunięcie filmu z `Media
+  internetowe`, zmianę źródła podcastowego, komunikat w aktywnym regionie
+  wyszukiwarki oraz zakaz użycia announcera głównego okna.
+- Nie wykonano jeszcze pełnej kompilacji, instalacji ani ręcznego odbioru z
+  NVDA, ponieważ etap powstał przed godziną 02:00 podczas trwającego nagrania.
+
+## Znane ograniczenia
+
+- Ręczny odbiór na prawdziwym koncie Spotify/TIDAL wymaga obecności użytkownika;
+  nocny test nie loguje usług i nie tworzy danych konta.
+- Pełny odbiór YouTube wymaga po bezpiecznej instalacji sprawdzenia osobno
+  nowego kanału, zapisanego kanału, nowego filmu i zapisanego filmu.
+- Sortowanie zbiorczej Biblioteki pozostaje osobnym zadaniem `POD-001`.
+
+## Wersja i commit
+
+- Implementacja i testy: commit
+  `1169e6aa17414c0d30c7cf4d3c40e530463ea317`.
+- Zmienione pliki:
+  `wxlite/amc_wx_lite/gui.py` oraz
+  `wxlite/tests/test_search_gui_navigation.py`.
+- Kompilacja AMC: niewykonana w tym etapie.
+- Instalacja AMC: nadal wersja
+  `2026.10.18-74cab87ec05e2f25e45e253f0fceae93efdcaff3-a3214a5e`.
+- Publikacja: niewykonana i niedozwolona w nocnym etapie.
