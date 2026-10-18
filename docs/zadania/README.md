@@ -33,10 +33,12 @@ jawnym poleceniu użytkownika albo przez osobno uzgodniony harmonogram.
 - `REC-001` — **Zrobione** — trwałość wykonanego harmonogramu nagrywania
   Radia i zgodność listy `Alt+R` z blokadą zamknięcia. Szczegóły:
   [REC-001-harmonogram-alt-r-zamykanie.md](REC-001-harmonogram-alt-r-zamykanie.md).
-- `AMC02` — **Oczekuje, zlecone do nocnej realizacji** — krótkie wiersze
-  `Alt+R` i `Alt+Shift+R`, brak osobnego „X elementów”, pamięć zaznaczenia
-  oraz bitrate, wielkość i folder pod lewą strzałką także w `Ctrl+H`.
-  Zatwierdzona analiza i rozpoczęta realizacja:
+- `AMC02` — **W trakcie; kod i izolowane testy gotowe, czeka na kompilację,
+  instalację i odbiór NVDA** — krótkie wiersze `Alt+R` i `Alt+Shift+R`, brak
+  osobnego „X elementów”, pamięć zaznaczenia oraz bitrate, wielkość i folder
+  pod lewą strzałką także w `Ctrl+H`. Bieżący zapis realizacji:
+  [AMC02-listy-nagrywania-i-historii.md](AMC02-listy-nagrywania-i-historii.md).
+  Zatwierdzona analiza historyczna:
   `D:\Projekty Codex\Accessible Multimedia Controller\AMC02_ANALIZA_2026-10-18.md`
   oraz `AMC02_REALIZACJA_ETAP_A_2026-10-18.md`. Właściwe wdrożenie wykonujemy
   w bieżącym AMC Test, a stary kod służy tylko jako wzorzec.
