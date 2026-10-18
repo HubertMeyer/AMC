@@ -117,6 +117,28 @@
   dokumentację i opis zmian. Taki dokument pozostaje projektem do korekty i
   zatwierdzenia użytkownika; nie jest automatycznie publikowany.
 
+## Porządek dysku po odebranym etapie
+
+- Po zaliczeniu testów i potwierdzeniu przez użytkownika, że etap działa,
+  usuń należące wyłącznie do niego zbędne katalogi testowe, staging, rozpakowane
+  kopie, pamięci podręczne, stare buildy i odtwarzalne pliki diagnostyczne.
+  Nie gromadź wielu historycznych paczek na głównym komputerze.
+- Przed usunięciem sprawdź dokładne, rozwiązane ścieżki i ogranicz operację do
+  jawnego katalogu tymczasowego, testowego, `bin`, `obj`, staging albo
+  `publish`. Nie usuwaj całego repozytorium, katalogu projektu, profilu
+  użytkownika, katalogu synchronizowanego ani celu wyliczonego z niepewnej
+  zmiennej lub wzorca.
+- Zachowaj źródła, `.git`, dokumentację zadań, dane i poświadczenia użytkownika,
+  Bibliotekę, nagrania, pobrania, ustawienia oraz każdą zmianę niezatwierdzoną,
+  niescommitowaną lub nieweryfikowaną. Jedyna działająca paczka instalacyjna
+  pozostaje do czasu potwierdzenia zastępstwa albo kopii zdalnej.
+- Sam push nie jest archiwizacją wydania. Lokalny ZIP lub instalator wolno
+  usunąć dopiero po sprawdzeniu odpowiadającego mu commitu albo załącznika
+  GitHub Releases, jego nazwy, rozmiaru i — jeśli dostępna — sumy SHA-256.
+- Po istotnym sprzątaniu zapisz w raporcie zadania dokładny katalog nadrzędny,
+  rodzaje usuniętych artefaktów, przybliżone odzyskane miejsce i możliwość
+  odzyskania. Przy niepewnym statusie pliku pozostaw go i zapytaj.
+
 ## Skróty globalne
 
 - `Ctrl+F1`, pełna pomoc klawiatury, paleta poleceń `Ctrl+Shift+K`, właściwe
