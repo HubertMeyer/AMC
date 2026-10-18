@@ -40,10 +40,12 @@ jawnym poleceniu użytkownika albo przez osobno uzgodniony harmonogram.
 - `POD-001` — **Oczekuje** — sortowanie zbiorczej Biblioteki podcastów,
   kanałów YouTube i kolekcji „Media internetowe”. Szczegóły:
   [POD-001-sortowanie-biblioteki-zrodel.md](POD-001-sortowanie-biblioteki-zrodel.md).
-- `NAV-001` — **Oczekuje** — ujednolicenie skrótów zakładek, nazwanych
-  zakładek, rozdziałów dostawcy i historii nawigacji we wszystkich sesjach.
-  Szczegóły:
-  [NAV-001-zakladki-rozdzialy-historia-skroty.md](NAV-001-zakladki-rozdzialy-historia-skroty.md).
+- `AMC04` — **W trakcie** — przeniesienie do bieżącego AMC Test zatwierdzonego
+  modelu skrótów zakładek, nazwanych zakładek, rozdziałów i historii. Nie jest
+  to nowe zadanie: źródłowy audyt i rozpoczęta realizacja są zapisane w
+  `D:\Projekty Codex\Accessible Multimedia Controller\AMC03_AUDYT_SKROTOW_2026-10-18.md`
+  oraz `AMC04_REALIZACJA_ETAP_A_2026-10-18.md`. Stare źródła WPF służą tylko
+  jako wzorzec; właściwe wdrożenie wykonujemy w tym repozytorium.
 - `YT-001` — **Oczekuje** — oficjalne logowanie do konta YouTube,
   synchronizacja subskrypcji i zwykłych playlist oraz bezpieczny zakres
   czynności konta. Szczegóły:
