@@ -1,6 +1,6 @@
 # REL-001 — GitHub Releases, aktualizacje i Sygnalista
 
-- Status: `Oczekuje`
+- Status: `Oczekuje — fundament klienta dopuszczony po lokalnym instalatorze`
 - Utworzono: 18 października 2026
 - Obszar: wydania, aktualizator i dostępne zgłoszenia
 - Polecenie uruchamiające: `Uruchom zadanie REL-001`
@@ -72,6 +72,25 @@ automatyzowany bez przepisywania danych:
 4. Własna instancja Workera Sygnalisty i prywatne repo raportów.
 5. Dostępny formularz AMC, filtrowanie danych, testy NVDA, brak sieci,
    ponowienie, limit i odrzucenie zbyt dużego logu.
+
+## Podział umożliwiający wcześniejszą pracę
+
+Po przygotowaniu lokalnego instalatora wolno wdrożyć bez połączenia z usługą:
+
+- dostępny formularz błędu lub sugestii;
+- jawny podgląd całego raportu i domyślnie wyłączony log;
+- filtrowanie ścieżek, nazw prywatnych plików, adresów, tokenów i danych kont;
+- wspólny kontrakt transportu z atrapą sukcesu, błędu, braku sieci, limitu i
+  zbyt dużego raportu;
+- możliwość skopiowania albo zapisania zatwierdzonego raportu lokalnie, gdy
+  prawdziwy serwer nie jest jeszcze skonfigurowany;
+- testy NVDA fokusa, ponownego otwarcia, podglądu, Anuluj i Wyślij.
+
+Nie wolno przed etapem GitHub uznawać wysyłania za działające, osadzać tokenu,
+stawiać publicznego Workera ani tworzyć prawdziwych Issues. Wdrożenie Workera,
+prywatnego repozytorium raportów, mapowania etykiet i końcowego endpointu
+pozostaje częścią tego samego REL-001, wykonywaną razem z zatwierdzonym
+repozytorium, kanałami wydań i polityką prywatności.
 
 ## Poza zakresem
 

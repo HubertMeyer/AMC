@@ -26,6 +26,13 @@ jawnym poleceniu użytkownika albo przez osobno uzgodniony harmonogram.
 - `REC-001` — **Zrobione** — trwałość wykonanego harmonogramu nagrywania
   Radia i zgodność listy `Alt+R` z blokadą zamknięcia. Szczegóły:
   [REC-001-harmonogram-alt-r-zamykanie.md](REC-001-harmonogram-alt-r-zamykanie.md).
+- `AMC02` — **Oczekuje, zlecone do nocnej realizacji** — krótkie wiersze
+  `Alt+R` i `Alt+Shift+R`, brak osobnego „X elementów”, pamięć zaznaczenia
+  oraz bitrate, wielkość i folder pod lewą strzałką także w `Ctrl+H`.
+  Zatwierdzona analiza i rozpoczęta realizacja:
+  `D:\Projekty Codex\Accessible Multimedia Controller\AMC02_ANALIZA_2026-10-18.md`
+  oraz `AMC02_REALIZACJA_ETAP_A_2026-10-18.md`. Właściwe wdrożenie wykonujemy
+  w bieżącym AMC Test, a stary kod służy tylko jako wzorzec.
 - `SCHED-001` — **Oczekuje** — dostępna przebudowa listy i edytora
   harmonogramów: informacje pod strzałkami, segmentowa data i czas oraz
   jednoznaczne wpisywanie czasu trwania. Szczegóły:
@@ -46,6 +53,15 @@ jawnym poleceniu użytkownika albo przez osobno uzgodniony harmonogram.
   `D:\Projekty Codex\Accessible Multimedia Controller\AMC03_AUDYT_SKROTOW_2026-10-18.md`
   oraz `AMC04_REALIZACJA_ETAP_A_2026-10-18.md`. Stare źródła WPF służą tylko
   jako wzorzec; właściwe wdrożenie wykonujemy w tym repozytorium.
+- `AMC05` — **Oczekuje, zlecone do nocnej realizacji** — stan `Odtwarzane` lub
+  `Wstrzymane` na właściwych listach bez utraty etykiety i bez przestawiania
+  fokusa. Zatwierdzona specyfikacja:
+  `D:\Projekty Codex\Accessible Multimedia Controller\AMC05_ODTWARZANY_ELEMENT_NA_LISTACH_2026-10-18.md`.
+- `AMC13` — **Oczekuje, zlecona naprawa regresji End** — `End` w otwartym
+  odtwarzaczu Time Shiftu wraca na żywo i do tempa normalnego, a `NVDA+End`
+  pozostaje poleceniem czytnika. Zatwierdzona specyfikacja:
+  `D:\Projekty Codex\Accessible Multimedia Controller\AMC13_TIMESHIFT_RADIA_2026-10-18.md`.
+  Eksport fragmentów Time Shiftu pozostaje późniejszym rozszerzeniem.
 - `AMC08` — **Oczekuje, zlecone do nocnej realizacji** — natywne playlisty
   Spotify w AMC Test: `Ctrl+P`, `Ctrl+Shift+P`, tworzenie playlist i dodawanie
   utworów lub odcinków. Zatwierdzona specyfikacja:
@@ -55,9 +71,10 @@ jawnym poleceniu użytkownika albo przez osobno uzgodniony harmonogram.
   profile AMC Test i publicznego AMC, izolowane magazyny oraz bezpieczny
   instalator. Zatwierdzona specyfikacja:
   `D:\Projekty Codex\Accessible Multimedia Controller\AMC12_PROFILE_WYDANIA_PUBLICZNEGO_I_TESTOWEGO_2026-10-18.md`.
-- `AMC10` — **Oczekuje, opcjonalnie tej samej nocy** — dopracowanie Sonosa i
-  WiiM: pierwsze uruchomienie, stany urządzeń, wspólne wejście i brama
-  publicznego Sonosa. Zatwierdzona specyfikacja:
+- `AMC10` — **Oczekuje, opcjonalnie tej samej nocy tylko logowanie Sonos** —
+  działające sterowanie Sonosem i WiiM jest już przeszczepione i nie wymaga
+  ponownego wdrażania. Pozostaje proste logowanie Sonos i brama publicznego
+  brokera. Zatwierdzona specyfikacja:
   `D:\Projekty Codex\Accessible Multimedia Controller\AMC10_SONOS_WIIM_URUCHOMIENIE_I_UJEDNOLICENIE_2026-10-18.md`.
   Bez obecności użytkownika nie logować konta i nie sterować głośnikami.
 - `AMC14` — **Oczekuje, po fundamencie AMC12** — aplikacyjna integracja z
@@ -82,8 +99,11 @@ jawnym poleceniu użytkownika albo przez osobno uzgodniony harmonogram.
 - `LIC-001` — **Oczekuje** — Radio Browser, licencja BASS i bezpieczna decyzja
   o dobrowolnych wpłatach. Szczegóły:
   [LIC-001-radio-browser-bass-darowizny.md](LIC-001-radio-browser-bass-darowizny.md).
-- `REL-001` — **Oczekuje** — GitHub Releases, kanały aktualizacji oraz
-  dostępny formularz Sygnalisty tworzący GitHub Issues. Szczegóły:
+- `REL-001` — **Oczekuje; lokalny formularz Sygnalisty dopuszczony po
+  instalatorze** — GitHub Releases, kanały aktualizacji oraz dostępny formularz
+  Sygnalisty. Nocą można przygotować formularz, podgląd, filtrowanie danych i
+  transport na atrapach. Własny Worker, tokeny i prawdziwe GitHub Issues
+  dopiero razem z zatwierdzoną integracją GitHub. Szczegóły:
   [REL-001-github-aktualizacje-sygnalista.md](REL-001-github-aktualizacje-sygnalista.md).
 - `STR-001` — **Oczekuje** — osobne laboratorium TIDAL i Apple Music, najpierw
   badanie oficjalnych API i warunków, później ewentualny profil testowy.
