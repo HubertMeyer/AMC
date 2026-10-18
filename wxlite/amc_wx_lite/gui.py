@@ -7447,7 +7447,21 @@ class LiteFrame(wx.Frame):
                     confirmed_title = str(
                         payloads[0].get("title") or lead.row.title
                     ).strip()
-                    if count == 1 and changed == 1:
+                    if (
+                        count == 1
+                        and lead.remote_kind == "youtubeVideo"
+                        and changed == 1
+                    ):
+                        message = (
+                            "Dodano do Biblioteki, Media internetowe: "
+                            f"{confirmed_title}"
+                        )
+                    elif count == 1 and lead.remote_kind == "youtubeVideo":
+                        message = (
+                            "Materiał jest już w Bibliotece, Media internetowe: "
+                            f"{confirmed_title}"
+                        )
+                    elif count == 1 and changed == 1:
                         message = f"Dodano do Biblioteki: {confirmed_title}"
                     elif count == 1:
                         message = (
@@ -7464,6 +7478,16 @@ class LiteFrame(wx.Frame):
                 self.status_field.SetLabel(message)
                 self.status_bar.show(message)
                 say(message)
+                if action is SearchResultAction.LIBRARY:
+                    preferred_id = next((
+                        str(payload.get("subscriptionId") or "").strip()
+                        for payload in payloads
+                        if str(payload.get("subscriptionId") or "").strip()
+                    ), "")
+                    if preferred_id:
+                        self._refresh_visible_podcast_library_after_search_add(
+                            preferred_id
+                        )
                 return
 
             first = payloads[0]
@@ -13977,6 +14001,7 @@ class LiteFrame(wx.Frame):
         *,
         completion_message: str = "",
         after_refresh: Callable[[], None] | None = None,
+        announce_result: bool = True,
     ) -> None:
         """Load the shared AMC podcast/channel library outside the GUI thread."""
         if not self.podcasts.is_available:
@@ -14002,8 +14027,12 @@ class LiteFrame(wx.Frame):
             if completion_message:
                 self._sync_views()
                 self.announcer.say(completion_message)
-            else:
+            elif announce_result:
                 self._apply_podcast_result(events)
+            else:
+                # Odświeżenie listy pod modalnym oknem wyszukiwania nie może
+                # odebrać mu fokusu ani zagłuszyć potwierdzenia dodania.
+                self._sync_views()
             if after_refresh is not None:
                 after_refresh()
 
@@ -14013,6 +14042,23 @@ class LiteFrame(wx.Frame):
                                    else "Nie udało się odczytać biblioteki podcastów")
 
         self.runner.submit("podcast-view", work, done, failed)
+
+    def _refresh_visible_podcast_library_after_search_add(
+        self,
+        preferred_id: str,
+    ) -> None:
+        """Pokaż nowy wpis po zamknięciu wyszukiwarki, bez dodatkowej mowy."""
+
+        state = self.navigator.sessions[SessionId.PODCASTS]
+        if (
+            self.navigator.active is SessionId.PODCASTS
+            and state.view is View.LIST
+            and state.library_view is LibraryView.PODCAST_LIBRARY
+        ):
+            self._open_podcast_library(
+                preferred_id=preferred_id,
+                announce_result=False,
+            )
 
     def _open_podcast_view(
         self,

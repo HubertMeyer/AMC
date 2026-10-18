@@ -1092,6 +1092,9 @@ def test_remote_library_write_is_confirmed_inside_search_dialog(
             )
         ),
         runner=Runner(),
+        _refresh_visible_podcast_library_after_search_add=(
+            lambda subscription_id: calls.append(("refresh", subscription_id))
+        ),
     )
     result = SearchEntry(
         SessionId.PODCASTS,
@@ -1108,10 +1111,13 @@ def test_remote_library_write_is_confirmed_inside_search_dialog(
     )
 
     assert (address, title) in calls
-    assert spoken == [
-        "Przygotowywanie wyniku katalogu",
-        f"Dodano do Biblioteki: {title}",
-    ]
+    expected_confirmation = (
+        f"Dodano do Biblioteki, Media internetowe: {title}"
+        if remote_kind == "youtubeVideo"
+        else f"Dodano do Biblioteki: {title}"
+    )
+    assert spoken == ["Przygotowywanie wyniku katalogu", expected_confirmation]
+    assert ("refresh", "saved-source") in calls
     assert frame._podcast_add_pending is False
 
 
@@ -1138,6 +1144,7 @@ def test_remote_library_does_not_claim_addition_without_host_confirmation() -> N
         status_bar=SimpleNamespace(show=lambda _value: None),
         announcer=SimpleNamespace(say=lambda _value: None),
         runner=Runner(),
+        _refresh_visible_podcast_library_after_search_add=lambda _value: None,
     )
     result = SearchEntry(
         SessionId.PODCASTS,
@@ -1160,6 +1167,81 @@ def test_remote_library_does_not_claim_addition_without_host_confirmation() -> N
 
     assert spoken[-1] == "Element jest już w Bibliotece: Kanał YouTube"
     assert not spoken[-1].startswith("Dodano")
+
+
+def test_saved_youtube_video_names_its_library_collection() -> None:
+    spoken = []
+
+    class Runner:
+        @staticmethod
+        def submit(_name, work, done, _failed):
+            done(work())
+
+    frame = SimpleNamespace(
+        _podcast_add_pending=False,
+        client=SimpleNamespace(
+            add_podcast_source=lambda _address, title: {
+                "subscriptionId": "internet-media:public",
+                "preferredEpisodeId": "saved-video",
+                "title": title,
+                "sourceKind": "internetMedia",
+                "added": False,
+                "restored": False,
+            }
+        ),
+        status_field=SimpleNamespace(SetLabel=lambda _value: None),
+        status_bar=SimpleNamespace(show=lambda _value: None),
+        announcer=SimpleNamespace(say=lambda _value: None),
+        runner=Runner(),
+        _refresh_visible_podcast_library_after_search_add=lambda _value: None,
+    )
+    result = SearchEntry(
+        SessionId.PODCASTS,
+        Row(
+            "remote-video",
+            "Film YouTube",
+            "episode",
+            url="https://www.youtube.com/watch?v=abc123",
+        ),
+        LibraryView.PODCAST_EPISODES,
+        remote_kind="youtubeVideo",
+    )
+
+    LiteFrame._complete_remote_search_result_action(
+        frame,
+        [result],
+        SearchResultAction.LIBRARY,
+        announce=spoken.append,
+    )
+
+    assert spoken[-1] == (
+        "Materiał jest już w Bibliotece, Media internetowe: Film YouTube"
+    )
+
+
+def test_search_add_refreshes_visible_podcast_library_silently() -> None:
+    opened = []
+    state = SimpleNamespace(
+        view=View.LIST,
+        library_view=LibraryView.PODCAST_LIBRARY,
+    )
+    frame = SimpleNamespace(
+        navigator=SimpleNamespace(
+            active=SessionId.PODCASTS,
+            sessions={SessionId.PODCASTS: state},
+        ),
+        _open_podcast_library=lambda **kwargs: opened.append(kwargs),
+    )
+
+    LiteFrame._refresh_visible_podcast_library_after_search_add(
+        frame,
+        "new-channel",
+    )
+
+    assert opened == [{
+        "preferred_id": "new-channel",
+        "announce_result": False,
+    }]
 
 
 def test_remote_youtube_queue_materializes_then_uses_real_list_action() -> None:

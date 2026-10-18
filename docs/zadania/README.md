@@ -37,6 +37,9 @@ jawnym poleceniu użytkownika albo przez osobno uzgodniony harmonogram.
   `Ctrl+Shift+L` oraz usunięcie komunikatu „AMC Python” przesłaniającego wynik
   prawej strzałki i potwierdzenie Biblioteki. Szczegóły:
   [SEARCH-001-youtube-biblioteka-komunikaty.md](SEARCH-001-youtube-biblioteka-komunikaty.md).
+- `POD-001` — **Oczekuje** — sortowanie zbiorczej Biblioteki podcastów,
+  kanałów YouTube i kolekcji „Media internetowe”. Szczegóły:
+  [POD-001-sortowanie-biblioteki-zrodel.md](POD-001-sortowanie-biblioteki-zrodel.md).
 - `NAME-001` — **W trakcie** — zmiana widocznej nazwy prywatnej wersji z
   „AMC Python” na „AMC Test”, bez zmiany technicznej tożsamości instalacji.
   Szczegóły: [NAME-001-amc-test.md](NAME-001-amc-test.md).

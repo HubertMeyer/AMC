@@ -22,7 +22,8 @@ ogłoszenia jego tytułu po zmianie fokusu.
    ten kanał jako źródło Biblioteki.
 2. Na pojedynczym filmie obowiązuje istniejący kontrakt `Media internetowe`;
    nie wolno przypadkiem zamienić filmu w cały kanał ani kanału w pojedynczy
-   materiał.
+   materiał. Potwierdzenie ma wymienić kolekcję `Media internetowe`, aby było
+   wiadomo, gdzie znaleźć zapisany film.
 3. Sukces jest ogłaszany dopiero po potwierdzeniu zapisu: „Dodano do
    Biblioteki: <nazwa>” albo „Usunięto z Biblioteki: <nazwa>”.
 4. Po potwierdzeniu nie może pojawić się wtórny komunikat „AMC Python”, który
@@ -102,3 +103,35 @@ pozostać bez komunikatu.
   wrócić lewą, następnie nacisnąć `Ctrl+Shift+L`. Potwierdzić brak
   wtórnego „AMC Python”, pozostanie fokusu na wyniku i obecność kanału po
   ponownym otwarciu Biblioteki.
+
+### Korekta widoczności zapisu YouTube — 18 października 2026
+
+Odczyt implementacji i bieżącej bazy potwierdził dwa niezależne źródła
+niejasności:
+
+- zbiorcza Biblioteka podcastów i kanałów jest obecnie czytana według pola
+  `ordinal`, czyli w kolejności własnej, a nie alfabetycznie ani według
+  ostatniego dodania;
+- pojedynczy film YouTube jest prawidłowo zapisywany jako odcinek we wspólnej
+  pozycji `Media internetowe`, natomiast wcześniejszy komunikat podawał tylko
+  tytuł filmu i nie wskazywał tej pozycji;
+- po zapisie z modalnej wyszukiwarki lista Biblioteki pod spodem nie była
+  odświeżana ani ustawiana na zwróconym `subscriptionId`.
+
+W bieżącej bibliotece kontrola tylko do odczytu wykazała 302 źródła, a
+`Media internetowe` znajdowały się na pozycji 287. To wyjaśnia, dlaczego
+poprawnie zapisany film był praktycznie niewidoczny bez filtrowania.
+
+Poprawka:
+
+1. Film otrzymuje komunikat „Dodano do Biblioteki, Media internetowe: nazwa”
+   albo „Materiał jest już w Bibliotece, Media internetowe: nazwa”.
+2. Po zapisie kanału, podcastu lub filmu widoczna Biblioteka jest odświeżana
+   bez dodatkowej mowy i bez odbierania fokusu wyszukiwarce.
+3. Zwrócony przez host identyfikator źródła staje się zaznaczeniem listy, więc
+   po zamknięciu wyszukiwania użytkownik trafia na dodany kanał albo na
+   `Media internetowe`, niezależnie od ich pozycji w kolejności własnej.
+4. Osobne sortowanie listy źródeł zapisano jako zadanie `POD-001`.
+
+- Testy ukierunkowane po korekcie: `65 passed`.
+- Instalacja i odbiór NVDA: oczekują na zakończenie aktywnego nagrania.
