@@ -26,7 +26,7 @@ jawnym poleceniu użytkownika albo przez osobno uzgodniony harmonogram.
 - `NVDA-001` — **Oczekuje** — usunięcie opóźnienia `Ctrl+C` powodowanego przez
   NVDAExtensionGlobalPlugin. Szczegóły:
   [NVDA-001-opoznienie-ctrl-c.md](NVDA-001-opoznienie-ctrl-c.md).
-- `SEARCH-001` — **W trakcie** — wyszukiwanie YouTube: naprawa dodawania kanału
+- `SEARCH-001` — **Do odbioru** — wyszukiwanie YouTube: naprawa dodawania kanału
   przez `Ctrl+Shift+L` oraz usunięcie komunikatu „AMC Python” przesłaniającego
   wynik prawej strzałki i potwierdzenie Biblioteki. Szczegóły:
   [SEARCH-001-youtube-biblioteka-komunikaty.md](SEARCH-001-youtube-biblioteka-komunikaty.md).

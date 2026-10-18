@@ -1,6 +1,6 @@
 # SEARCH-001 — YouTube, Biblioteka i komunikaty wyszukiwania
 
-- Status: `W trakcie`
+- Status: `Do odbioru`
 - Utworzono: 18 października 2026
 - Obszar: wyszukiwanie Podcastów i YouTube, Biblioteka, NVDA i fokus
 - Polecenie uruchamiające: `Uruchom zadanie SEARCH-001`
@@ -63,11 +63,31 @@ Nie dodajemy drugiego skrótu do tej samej operacji.
 
 ## Wynik wykonania
 
-Do uzupełnienia po pracy:
-
-- Data rozpoczęcia i zakończenia:
-- Przyczyna:
-- Zmienione pliki:
-- Testy i ich wyniki:
-- Pomoc i paleta:
+- Data rozpoczęcia i wdrożenia: 18 października 2026
+- Przyczyna: `SearchDialog` zamykał okno modalne przed wykonaniem
+  asynchronicznego zapisu i przed wyborem pojedynczej relacji. Fokus wracał
+  wtedy do głównego okna, dlatego NVDA ogłaszał „AMC Python” i przesłaniał
+  wynik operacji.
+- Rozwiązanie: `Ctrl+Shift+L` dla publicznego wyniku Podcastów i YouTube
+  wykonuje zapis bez zamykania wyszukiwarki. Komunikaty przygotowania, sukcesu
+  i błędu są kierowane do aktywnego regionu wyszukiwarki. Sukces wymaga flagi
+  `added` albo `restored` z hosta. Prawa strzałka zawsze pokazuje relacje w
+  drugiej liście tego samego okna, również gdy istnieje tylko jedna relacja.
+- Zmienione pliki: `wxlite/amc_wx_lite/gui.py`,
+  `wxlite/tests/test_search_gui_navigation.py` oraz niniejszy rejestr.
+- Commit implementacji: `e57cfc2480467939c751280fa2d6d64ac7ceaa81`.
+- Testy ukierunkowane: `38 passed`.
+- Testy regresji pomocy, palety, skrótów i zapisu profilu: `85 passed`.
+- Pełny odbiór: `1714 passed, 110 skipped, 11 subtests passed`.
+  Dodatkowo wszystkie trzy projekty wykonywalne zostały opublikowane, a
+  manifest i sumy SHA-256 paczki oraz instalacji przeszły kontrolę.
+- Pomoc i paleta: istniejące polecenie `Ctrl+Shift+L` w `Ctrl+F1`, menu i
+  `Ctrl+Shift+K` zostało zachowane i objęte testem regresji. Szczegółowa pomoc
+  listy wyników opisuje teraz prawą strzałkę i `Ctrl+Shift+L`.
 - Wersja instalacji:
+  `2026.10.18-e57cfc2480467939c751280fa2d6d64ac7ceaa81-3dc84e49`.
+  Uruchomiona ze stałej instalacji `D:\Projekty Codex\AMC Python\AMC.exe`.
+- Do odbioru z NVDA: wyszukać kanał YouTube, nacisnąć prawą strzałkę,
+  wrócić lewą, następnie nacisnąć `Ctrl+Shift+L`. Potwierdzić brak
+  wtórnego „AMC Python”, pozostanie fokusu na wyniku i obecność kanału po
+  ponownym otwarciu Biblioteki.
