@@ -55,6 +55,11 @@ jawnym poleceniu użytkownika albo przez osobno uzgodniony harmonogram.
   profile AMC Test i publicznego AMC, izolowane magazyny oraz bezpieczny
   instalator. Zatwierdzona specyfikacja:
   `D:\Projekty Codex\Accessible Multimedia Controller\AMC12_PROFILE_WYDANIA_PUBLICZNEGO_I_TESTOWEGO_2026-10-18.md`.
+- `AMC10` — **Oczekuje, opcjonalnie tej samej nocy** — dopracowanie Sonosa i
+  WiiM: pierwsze uruchomienie, stany urządzeń, wspólne wejście i brama
+  publicznego Sonosa. Zatwierdzona specyfikacja:
+  `D:\Projekty Codex\Accessible Multimedia Controller\AMC10_SONOS_WIIM_URUCHOMIENIE_I_UJEDNOLICENIE_2026-10-18.md`.
+  Bez obecności użytkownika nie logować konta i nie sterować głośnikami.
 - `AMC14` — **Oczekuje, po fundamencie AMC12** — aplikacyjna integracja z
   powłoką Windows, przekazywanie plików do właściwej instancji i późniejsza
   rejestracja przez instalator. Zatwierdzona specyfikacja:
