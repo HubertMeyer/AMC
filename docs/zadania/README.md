@@ -74,6 +74,14 @@ jawnym poleceniu użytkownika albo przez osobno uzgodniony harmonogram.
   utworów lub odcinków. Zatwierdzona specyfikacja:
   `D:\Projekty Codex\Accessible Multimedia Controller\AMC08_PLAYLISTY_SPOTIFY_2026-10-18.md`.
   Historyczne źródła są tylko wzorcem; kod powstaje w tym repozytorium.
+- `AMC09` — **Oczekuje, zlecone do nocnej realizacji przed AMC12** — dostępny
+  Menedżer sesji pod `Ctrl+Shift+S`, włączanie Spacją, zwarta kolejność
+  `Ctrl+1–9`, zmiana kolejności `Alt+strzałkami`, stan gotowości i stała nazwa
+  `Radio`. Ma działać już w AMC Test; profil publiczny będzie później filtrował
+  tę samą listę przez manifest możliwości. Zatwierdzona specyfikacja:
+  `D:\Projekty Codex\Accessible Multimedia Controller\AMC09_MENEDZER_SESJI_I_PIERWSZE_LOGOWANIE_2026-10-18.md`.
+  Automatyczne otwarcie na czystej instalacji pozostaje do odbioru AMC12 i nie
+  może zmienić obecnego profilu testowego.
 - `AMC12` — **Oczekuje, etap późniejszy tej samej nocy** — jeden kod, osobne
   profile AMC Test i publicznego AMC, izolowane magazyny oraz bezpieczny
   instalator. Zatwierdzona specyfikacja:
