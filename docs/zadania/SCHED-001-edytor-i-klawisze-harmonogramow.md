@@ -2,7 +2,8 @@
 
 ## Status
 
-Oczekuje.
+W trakcie; kod i testy źródłowe gotowe, czeka na bezpieczną kompilację,
+instalację i odbiór NVDA.
 
 ## Cel
 
@@ -63,9 +64,109 @@ wykonanych planów z `REC-001`; obejmuje listę harmonogramów oraz pola edytora
 
 ## Prace i weryfikacja
 
-- Data rozpoczęcia:
-- Data zakończenia:
-- Zmienione pliki:
-- Testy:
-- Commit:
-- Zainstalowana kompilacja:
+- Data rozpoczęcia: 19.10.2026.
+- Data zakończenia kodu i testów źródłowych: 19.10.2026.
+- Zmienione pliki: `radio_schedule_dialogs.py`, `schedule_segments.py`,
+  `shortcuts.py`, testy segmentów, klawiatury harmonogramów i palety poleceń.
+- Testy ukierunkowane: 63 zaliczone.
+- Pełna regresja `wxlite/tests`: 1748 zaliczonych, 110 pominiętych,
+  11 podtestów zaliczonych.
+- Commit źródłowy: `689a8c77` — „Przebuduj dostępny edytor harmonogramów”.
+- Zainstalowana kompilacja: jeszcze nie powstała; przed 02:00 trwało nagranie.
+
+## Materiał do dokumentacji użytkownika
+
+Listę harmonogramów otwiera `Ctrl+Shift+H`. Góra i dół wybierają plan.
+`Spacja` włącza albo wyłącza wybrany plan i po udanym zapisie mówi jego nowy
+stan. `Enter` otwiera edycję. `Ctrl+D` przygotowuje osobną, domyślnie wyłączoną
+kopię i najpierw otwiera ją w edytorze; kopia trafia do harmonogramu dopiero po
+wybraniu „Zapisz”. `Ctrl+Enter` nie został zmieniony. `Insert` nadal tworzy
+nowy plan, a `Delete` usuwa go po potwierdzeniu.
+
+Na liście lewa strzałka podaje tylko stan „włączony” albo „wyłączony” oraz
+najbliższy termin. Prawa strzałka podaje pełny opis: nazwę planu, stację,
+jednorazową datę albo regułę powtarzania, godzinę, długość, format i folder.
+Oba klawisze są informacyjne — nie zmieniają zaznaczenia ani planu.
+
+Data rozpoczęcia składa się z segmentów dnia, miesiąca i roku. Czas rozpoczęcia
+ma segmenty godziny i minut. Lewa i prawa strzałka przechodzą między segmentami,
+a góra i dół zmieniają bieżący segment, zawsze pozostawiając prawidłową datę
+lub czas. Można wpisywać cyfry: kontrolka czeka na drugą cyfrę tylko wtedy, gdy
+z wpisanego początku może jeszcze powstać prawidłowa wartość. Po kompletnej
+wartości przechodzi do następnego segmentu.
+
+Nazwy dostępnościowe są użytkowe, na przykład „dzień 18”, „miesiąc
+październik”, „rok 2026”, „godzina 9” i „minuty 25”. Nie zawierają nazw klas,
+pól modelu ani technicznych identyfikatorów.
+
+W nowym planie zaznaczony dzień tygodnia podąża za wybraną datą. Po ręcznej
+zmianie listy dni AMC zachowuje wybór użytkownika i kolejne zmiany daty już go
+nie nadpisują. W planie już istniejącym zapisane dni także nie są automatycznie
+zmieniane.
+
+Godziny długości nagrania wolno pozostawić puste — oznacza to zero godzin.
+Jeżeli w minutach zostanie wpisane `25`, długość wynosi 25 minut. Całkowicie
+pusta lub zerowa długość nie jest przyjmowana; edytor mówi „Podaj długość
+nagrania; puste godziny oznaczają zero”. Po „Zapisz” i po „Anuluj” fokus wraca
+na ten sam plan listy.
+
+Menu i paleta `Ctrl+Shift+K` nazywają wejście „Harmonogram nagrywania” i podają
+skrót `Ctrl+Shift+H`. Takiej samej nazwy używa pomoc klawiatury `Ctrl+F1`.
+Wewnątrz okna widoczny i dostępny opis wymienia klawisze listy.
+
+## Uzasadnienie i decyzje
+
+- Segmenty opierają się na osobnym modelu kalendarza i czasu. Dzięki temu
+  końce miesięcy, luty w roku przestępnym oraz granice 23:59/00:00 nie zależą
+  od swobodnego tekstu.
+- Zmiana miesiąca lub roku ścina dzień wyłącznie do ostatniego prawidłowego
+  dnia, na przykład 31 stycznia przechodzi na 28 albo 29 lutego.
+- Model wartości jest oddzielony od tekstu dla NVDA. Do dostępnej nazwy trafia
+  wyłącznie polska nazwa segmentu i jego wartość.
+- `Ctrl+D` nie zapisuje drugiego aktywnego planu przed pokazaniem edytora.
+  Pierwszy stan kopii jest wyłączony, a anulowanie nie zmienia harmonogramu.
+- Lewa i prawa strzałka korzystają z aktualnego, bezpiecznie oczyszczonego
+  modelu planu; etykieta hosta nie jest parsowana z powrotem na dane.
+- Korekta użytkownika z 18.10.2026 zastępuje wcześniejszy wariant ręcznego
+  wpisywania daty `RRRR-MM-DD` i czasu `GG:MM`.
+- Korekta użytkownika z 18.10.2026 potwierdza, że `Ctrl+Enter` pozostaje bez
+  zmian, a otwieranie folderu będzie osobnym zadaniem integracji z powłoką.
+
+## Testy i wynik
+
+Testy modelu obejmują:
+
+- koniec lutego w roku przestępnym i zwykłym;
+- przejście 31. dnia do krótszego miesiąca;
+- zmianę dnia na końcu miesiąca;
+- granice godziny i minut 23:59/00:00;
+- cyfry, prefiksy jedno- i dwucyfrowe oraz odrzucenie wartości spoza zakresu;
+- puste godziny długości, same minuty i całkowicie pustą długość;
+- krótką informację pod lewą i pełną pod prawą strzałką;
+- otwarcie wyłączonej kopii przez `Ctrl+D` przed zapisem;
+- brak przypisania `Ctrl+Enter`;
+- dostępne nazwy segmentów bez reprezentacji obiektów;
+- wspólną nazwę i skrót w palecie oraz pomocy;
+- trwałość harmonogramów i ochronę `REC-001` w pełnej regresji.
+
+Wynik 19.10.2026: 63/63 testy ukierunkowane oraz 1748 zaliczonych,
+110 pominiętych i 11 zaliczonych podtestów w całym `wxlite/tests`.
+Sprawdzono kod źródłowy, nie kompilację ani zainstalowaną aplikację.
+
+## Znane ograniczenia
+
+- Nie wykonano jeszcze rzeczywistego odsłuchu NVDA. Należy sprawdzić pierwsze
+  wejście, każdą strzałkę, cyfry, zapis, anulowanie i ponowne otwarcie.
+- Segmenty używają natywnych pól liczbowych wxPython. Ostateczny odbiór musi
+  potwierdzić, że dana wersja NVDA nie powtarza wartości po dostępnej nazwie.
+- Pełny opis prawej strzałki podaje długość, nie osobny czas zakończenia.
+- Zmiany dotyczą harmonogramów Radia, bo tylko ta sesja ma obecnie działający
+  wspólny model harmonogramu. Kolejna sesja ma go użyć zamiast kopiować dialog.
+- `Ctrl+Enter` i otwieranie folderów nie należą do tego etapu.
+
+## Wersja i commit
+
+- Źródła i testy: commit `689a8c77`.
+- Kompilacja: jeszcze niewykonana.
+- Instalacja: jeszcze niewykonana.
+- Publikacja: niewykonana i niedozwolona w tej pracy nocnej.

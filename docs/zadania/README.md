@@ -42,7 +42,8 @@ jawnym poleceniu użytkownika albo przez osobno uzgodniony harmonogram.
   `D:\Projekty Codex\Accessible Multimedia Controller\AMC02_ANALIZA_2026-10-18.md`
   oraz `AMC02_REALIZACJA_ETAP_A_2026-10-18.md`. Właściwe wdrożenie wykonujemy
   w bieżącym AMC Test, a stary kod służy tylko jako wzorzec.
-- `SCHED-001` — **Oczekuje** — dostępna przebudowa listy i edytora
+- `SCHED-001` — **W trakcie; kod i testy źródłowe gotowe, czeka na kompilację,
+  instalację i odbiór NVDA** — dostępna przebudowa listy i edytora
   harmonogramów: informacje pod strzałkami, segmentowa data i czas oraz
   jednoznaczne wpisywanie czasu trwania. Szczegóły:
   [SCHED-001-edytor-i-klawisze-harmonogramow.md](SCHED-001-edytor-i-klawisze-harmonogramow.md).
