@@ -394,6 +394,8 @@ def test_nowy_proces_dostaje_wybory_sesji_a_nie_sam_global():
         {
             "LiteHostClient": lambda *a, **kw: client,
             "default_host_path": lambda: Path("synthetic-host"),
+            "current_profile": lambda: SimpleNamespace(profile_id="test"),
+            "common_data_snapshot_path": lambda: Path("synthetic-snapshot"),
             "HostCollation": lambda _call: object(),
         },
     )(frame)

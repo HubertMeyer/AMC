@@ -157,6 +157,17 @@ zakończyło się wynikiem `OK`.
   nowej nazwy ani nowego skrótu w `Ctrl+F1`, pełnej pomocy i palecie
   `Ctrl+Shift+K`.
 
+2026-10-19, pierwsza pełna bramka instalacji zbiorczej:
+
+- pełna regresja zatrzymała instalację wynikiem **1827 zaliczonych, 110
+  pominiętych, 11 podtestów zaliczonych i 3 niezaliczone**;
+- dwa niezaliczone przypadki wykazały, że odświeżenie menu polecenia folderu
+  zakładało obecność pola ścieżki także w uproszczonym wierszu innego typu;
+  warunek dostępności odtąd traktuje brak ścieżki jako brak lokalnego pliku,
+  bez błędu technicznego i bez udostępniania martwego polecenia;
+- instalacja nie została rozpoczęta. Wynik nie jest uznany za zaliczenie;
+  wymaga zielonego powtórzenia pełnej bramki.
+
 ## Znane ograniczenia
 
 - Etap A jest zmianą źródłową i testową. Nie zbudowano ani nie zainstalowano

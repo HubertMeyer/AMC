@@ -6321,7 +6321,7 @@ class LiteFrame(wx.Frame):
         )
         has_local_path = bool(
             information_row is not None
-            and looks_like_local_path(information_row.path)
+            and looks_like_local_path(getattr(information_row, "path", ""))
         )
         selected_row = session.model.selected_row
         selected_kind = (

@@ -233,6 +233,11 @@ nie pobiera środowiska uruchomieniowego podczas instalacji.
   pobierania runtime i brak wymuszonego zamknięcia programu. Nie jest dowodem
   zbudowania ani uruchomienia instalatora.
 - Oba nowe skrypty PowerShell przeszły kontrolę składni bez błędów.
+- 19.10.2026 pierwsza pełna bramka późniejszej instalacji zbiorczej wykazała,
+  że odizolowany test uruchamiania hosta nie przekazywał nowych zależności
+  profilu wydania i ścieżki migawki. Uzupełniono atrapę o profil `test` i
+  odizolowaną ścieżkę migawki. Był to brak testu, nie próba obejścia jawnego
+  kontraktu profili; instalacja została zatrzymana do zielonego powtórzenia.
 - Rzeczywista samowystarczalna paczka publicznego AMC Release powstała w
   `.test-output/AMC-public-2026.10.19-bd80db01`. Manifest wskazuje profil
   `public`, czystą rewizję `bd80db01`, 1070 jawnych plików, 1070 rozmiarów i
