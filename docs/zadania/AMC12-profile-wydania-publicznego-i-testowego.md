@@ -240,5 +240,6 @@ zawsze otrzymuje jawny profil z zatwierdzonego manifestu.
   zaliczone; paczki Release nie zbudowano.
 - Instalacja: nie wykonywano dla tego etapu.
 - Publikacja: nie wykonywano; GitHub nie został użyty.
-- Migawka danych wspólnych: testy i kompilacja zaliczone; commit zostanie
-  wpisany po zapisaniu całego spójnego etapu.
+- Migawka danych wspólnych: `cdf9cb05` —
+  `feat(amc12): dodaj kontrolowana migawke danych`; testy i kompilacja
+  zaliczone, instalacji nie wykonywano.
