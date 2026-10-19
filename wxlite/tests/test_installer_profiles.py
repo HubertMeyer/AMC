@@ -51,6 +51,7 @@ def test_build_helper_verifies_profile_clean_source_and_full_bundle() -> None:
     assert "Get-FileHash" in BUILD
     assert "sha256" in BUILD
     assert "bytes" in BUILD
+    assert '$env:LOCALAPPDATA "Programs\\Inno Setup 6\\ISCC.exe"' in BUILD
 
 
 def test_bundle_builder_embeds_dotnet_and_private_python_runtime() -> None:

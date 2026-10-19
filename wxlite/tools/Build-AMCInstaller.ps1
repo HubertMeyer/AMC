@@ -51,9 +51,16 @@ if ([string]::IsNullOrWhiteSpace($IsccPath)) {
         $IsccPath = $command.Source
     }
     else {
-        $candidate = Join-Path ${env:ProgramFiles(x86)} "Inno Setup 6\ISCC.exe"
-        if (Test-Path -LiteralPath $candidate -PathType Leaf) {
-            $IsccPath = $candidate
+        $candidates = @(
+            (Join-Path $env:LOCALAPPDATA "Programs\Inno Setup 6\ISCC.exe"),
+            (Join-Path ${env:ProgramFiles(x86)} "Inno Setup 6\ISCC.exe"),
+            (Join-Path $env:ProgramFiles "Inno Setup 6\ISCC.exe")
+        )
+        foreach ($candidate in $candidates) {
+            if (Test-Path -LiteralPath $candidate -PathType Leaf) {
+                $IsccPath = $candidate
+                break
+            }
         }
     }
 }
