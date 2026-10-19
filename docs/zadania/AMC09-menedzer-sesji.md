@@ -39,10 +39,21 @@ Historyczny projekt został użyty tylko jako materiał do odczytu.
 - W tej samej sesji `F5` wykonuje pełne odświeżenie Folderów Biblioteki bez
   otwierania okna. Menu „Plik” zawiera osobno „Odśwież Foldery Biblioteki,
   F5” oraz „Foldery Biblioteki, Ctrl+F5”.
-- `Ctrl+F5` zachowuje odrębne, utrwalone znaczenie sesji: w Podcastach i
-  YouTube odświeża wszystkie źródła, w Spotify i TIDAL otwiera konto, w WiiM
-  urządzenia, a w Sonosie wybór celu sterowania. Radio nie reklamuje tego
-  skrótu, ponieważ nie ma dla niego zatwierdzonej funkcji.
+- `Ctrl+F5` zachowuje odrębne, utrwalone znaczenie sesji i ma teraz wszędzie
+  jednoznaczną nazwę:
+
+  - Pliki lokalne — „Foldery Biblioteki”; można dodać, odświeżyć albo
+    bezpiecznie odłączyć folder;
+  - Podcasty i YouTube — „Odśwież wszystkie podcasty, kanały YouTube i
+    playlisty”;
+  - Spotify — „Konto Spotify”; pomoc dopowiada, że jest tu również ponowne
+    logowanie;
+  - TIDAL — „Konto i synchronizacja TIDAL”;
+  - WiiM — „Urządzenia WiiM”; polecenie odświeża listę zapisanych urządzeń;
+  - Sonos — „Głośniki i grupy Sonos”; polecenie pozwala wybrać dom i grupę
+    sterowania.
+  Radio nie reklamuje tego skrótu, ponieważ nie ma dla niego zatwierdzonej
+  funkcji.
 - Polecenia konfiguracyjne i „Foldery Biblioteki” są w menu „Plik”, tak jak w
   historycznym AMC. `Ctrl+F1`, pełna pomoc oraz paleta `Ctrl+Shift+K` pokazują
   tylko wariant właściwy dla bieżącej sesji.
@@ -94,6 +105,12 @@ Historyczny projekt został użyty tylko jako materiał do odczytu.
   ustalenie rozszerzono o Pliki lokalne. `Ctrl+F5` otwiera „Foldery
   Biblioteki” z dodawaniem, odświeżaniem i niedestrukcyjnym odłączaniem.
   Polecenia przeniesiono z ogólnego menu „Widok” do kontekstowego menu „Plik”.
+- **Korekta użytkownika z 19 października 2026, najnowsza:** ogólne określenie
+  „Konfiguruj konto lub urządzenie bieżącej sesji” nie jest już używane jako
+  opis działającego `Ctrl+F5`. Zastąpiły je powyższe nazwy właściwe dla
+  Spotify, TIDAL-a, WiiM, Sonosa, Podcastów i YouTube oraz Plików lokalnych.
+  Nazwa, opis, skrót, widoczność i wykonywana akcja pochodzą z jednego modelu
+  używanego przez menu, pełną pomoc, `Ctrl+F1` i paletę `Ctrl+Shift+K`.
 - Natywny widok listy Windows przejmował wcześniej `F5` i `Ctrl+F5` przed
   routerem AMC. Oba gesty przechodzą teraz przez tę samą wczesną bramkę co
   pozostałe polecenia listy, więc menu, skrót, pomoc, paleta i wykonanie nie
@@ -128,6 +145,12 @@ Historyczny projekt został użyty tylko jako materiał do odczytu.
   skrótów, menu, pomocy, palety, fokusu i wczesnego routingu listy zaliczonych.
   Pełny zestaw Core zakończył się kodem 0; nowy test potwierdził dodanie,
   odświeżenie i odłączenie folderu przy zachowaniu rzeczywistego pliku.
+- Doprecyzowanie nazw `Ctrl+F5`: **131/131** testów katalogu poleceń, skrótów,
+  menu, palety, kolejności sesji i Sonosa oraz dodatkowe **73/73** testy
+  profili wydania, GUI, wczesnego routingu listy, dodatku NVDA i Menedżera
+  sesji zaliczone. Test kontraktowy sprawdza dla każdej właściwej sesji nazwę,
+  opis, skrót, widoczność, rozwiązaną akcję, menu, paletę, pełną pomoc i
+  komunikat `Ctrl+F1`; osobno potwierdza brak martwego polecenia w Radiu.
 - Końcowa regresja wxPython bez czterech istniejących prób wymagających
   lokalnego gniazda sieciowego: **1851 zaliczonych, 110 pominiętych i 11
   podtestów zaliczonych**. Cztery wyłączone próby RSS doszły w osobnym
@@ -182,9 +205,17 @@ Historyczny projekt został użyty tylko jako materiał do odczytu.
   dodanie małego folderu, ponowne odświeżenie, anulowanie odłączenia,
   potwierdzone odłączenie i powrót fokusu. Odłączenie jest celowo
   niedestrukcyjne; osobne ręczne zapominanie wpisów nie należy do tego okna.
+- Najnowsze doprecyzowanie nazw `Ctrl+F5` jest potwierdzone w źródłach i
+  testach, ale nie zostało jeszcze skompilowane ani zainstalowane. Zachowany
+  wcześniejszy kandydat `8f1dad15` również nie zawiera commitu `e1ea7f3d`.
 
 ## Porządek dysku
 
+- Po testach doprecyzowania nazw usunięto pusty, utworzony wyłącznie dla tego
+  przebiegu katalog
+  `C:\Users\micha\Documents\Codex\2026-10-18\ma\.amc-temp-ctrl-f5-labels`.
+  Nie zawierał plików ani podkatalogów, więc odzyskane miejsce wyniosło 0 B;
+  usunięcie nie objęło danych użytkownika ani zastanych artefaktów projektu.
 - Po testach tej korekty usunięto wyłącznie utworzony przez nią katalog
   `C:\Users\micha\Documents\Codex\2026-10-18\ma\.amc-temp-ctrl-f5`:
   283 odtwarzalne pliki testowe, około 0,39 MB. Usunięcie jest lokalnie
@@ -212,6 +243,10 @@ Historyczny projekt został użyty tylko jako materiał do odczytu.
 
 ## Wersja i commit
 
+- Precyzyjne, sesyjne nazwy `Ctrl+F5` we wspólnym katalogu poleceń: commit
+  `e1ea7f3d` (`fix(amc09): doprecyzuj Ctrl+F5 wedlug sesji`). Kod i testy są
+  gotowe lokalnie; kompilacji, instalacji i publikacji dla tej korekty nie
+  wykonano.
 - Ujednolicenie `F5`, `Ctrl+F5` i Folderów Biblioteki: commit `8f1dad15`
   (`feat(amc): przywroc Ctrl+F5 i Foldery Biblioteki`).
 - Sprawdzony kandydat:

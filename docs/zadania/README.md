@@ -108,8 +108,9 @@ zmian, wymagający korekty użytkownika:
   `D:\Projekty Codex\Accessible Multimedia Controller\AMC08_PLAYLISTY_SPOTIFY_2026-10-18.md`.
   Historyczne źródła są tylko wzorcem; kod powstaje w tym repozytorium.
 - `AMC09` — **Menedżer i pierwsze rozszerzenie Konfiguruj są zainstalowane;
-  ujednolicone `Ctrl+F5` oraz Foldery Biblioteki są gotowe w źródłach i
-  testach, przed bezpieczną instalacją i odbiorem NVDA** — dostępny
+  ujednolicone `Ctrl+F5`, precyzyjne nazwy dla każdej sesji oraz Foldery
+  Biblioteki są gotowe w źródłach i testach, przed bezpieczną instalacją i
+  odbiorem NVDA** — dostępny
   Menedżer sesji pod `Ctrl+Shift+S`, włączanie Spacją, zwarta kolejność
   `Ctrl+1–9`, zmiana kolejności `Alt+strzałkami`, stan gotowości i stała nazwa
   `Radio`. Ma działać już w AMC Test; profil publiczny będzie później filtrował
