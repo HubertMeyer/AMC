@@ -167,6 +167,11 @@ zakończyło się wynikiem `OK`.
   bez błędu technicznego i bez udostępniania martwego polecenia;
 - instalacja nie została rozpoczęta. Wynik nie jest uznany za zaliczenie;
   wymaga zielonego powtórzenia pełnej bramki.
+- Późniejszy zestaw launchera uruchomiony w piaskownicy dwukrotnie nie mógł
+  utworzyć prywatnego kanału Windows i miał wynik 26/27. Ten sam niezmieniony
+  zestaw wykonany poza piaskownicą, czyli w środowisku odpowiadającym normalnej
+  pracy AMC, zaliczył **27/27**. Ograniczenie środowiska testowego zapisano
+  osobno i nie przedstawia się go jako regresji kanału aplikacji.
 
 ## Znane ograniczenia
 

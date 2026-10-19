@@ -238,6 +238,13 @@ nie pobiera środowiska uruchomieniowego podczas instalacji.
   profilu wydania i ścieżki migawki. Uzupełniono atrapę o profil `test` i
   odizolowaną ścieżkę migawki. Był to brak testu, nie próba obejścia jawnego
   kontraktu profili; instalacja została zatrzymana do zielonego powtórzenia.
+- Zielone powtórzenie zaliczyło **1830 testów, 110 pominiętych i 11
+  podtestów**, a następnie kontrola kandydata zatrzymała instalację kodem 2.
+  Wszystkie 92 pliki startowe miały zgodne rozmiary i SHA-256. Przyczyną była
+  rozbieżność katalogów możliwości: manifest Python zawierał lokalny formularz
+  zgłoszeń, a zamknięty kontrakt launchera .NET jeszcze go nie dopuszczał.
+  Kontrakty ujednolicono i dodano automatyczny test pełnej listy możliwości
+  obu profili Python–.NET. Kandydat nie został zainstalowany ani uruchomiony.
 - Rzeczywista samowystarczalna paczka publicznego AMC Release powstała w
   `.test-output/AMC-public-2026.10.19-bd80db01`. Manifest wskazuje profil
   `public`, czystą rewizję `bd80db01`, 1070 jawnych plików, 1070 rozmiarów i

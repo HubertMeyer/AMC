@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import importlib
+import re
 import tempfile
 from pathlib import Path
 
@@ -31,6 +32,10 @@ from amc_wx_lite.session_order import (
 )
 from amc_wx_lite.shortcuts import Action
 from amc_wx_lite.state_store import default_state_dir
+
+
+REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
+SHARED_PROFILE_CONTRACT = REPOSITORY_ROOT / "src" / "Shared" / "ReleaseProfileContract.cs"
 
 
 def _with_release_profile(profile_id: str):
@@ -72,6 +77,29 @@ def test_public_manifest_exposes_only_approved_sessions_and_test_has_all() -> No
     assert "spotify" not in public_text
     assert "tidal" not in public_text
     assert "sonos" not in public_text
+
+
+def test_python_capabilities_match_closed_launcher_contract() -> None:
+    """Pakiet nie może przejść testów, a potem zostać odrzucony przez launcher."""
+
+    source = SHARED_PROFILE_CONTRACT.read_text(encoding="utf-8")
+    common_match = re.search(
+        r"CommonCapabilities\s*=\s*\[(.*?)\];",
+        source,
+        flags=re.DOTALL,
+    )
+    test_only_match = re.search(
+        r"CommonCapabilities\.Concat\(\s*\[(.*?)\]\)\.ToArray\(\)",
+        source,
+        flags=re.DOTALL,
+    )
+    assert common_match is not None
+    assert test_only_match is not None
+    quoted = re.compile(r'"([^"]+)"')
+    common = tuple(quoted.findall(common_match.group(1)))
+    test_only = tuple(quoted.findall(test_only_match.group(1)))
+    assert common == PUBLIC_PROFILE.capabilities
+    assert common + test_only == TEST_PROFILE.capabilities
 
 
 def test_profile_selection_prefers_environment_then_manifest_and_rejects_unknown() -> None:

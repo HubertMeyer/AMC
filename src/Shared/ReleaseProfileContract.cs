@@ -42,6 +42,7 @@ internal static class ReleaseProfileContract
         "chapters",
         "command-palette",
         "keyboard-help",
+        "problem-report-local",
     ];
 
     internal static readonly ReleaseProfileDescriptor Test = new(

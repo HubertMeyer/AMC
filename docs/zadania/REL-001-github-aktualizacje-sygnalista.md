@@ -134,6 +134,9 @@ repozytorium, kanałami wydań i polityką prywatności.
   lokalny zawsze zwraca uczciwy stan `nieskonfigurowane` i nie używa sieci.
 - Polecenie korzysta ze wspólnego modelu akcji dla menu, F1, palety i
   wykonania oraz jest jawnie dostępne we wszystkich sesjach i obu profilach.
+- Możliwość lokalnego formularza jest częścią zamkniętego manifestu zarówno
+  Python, jak i uruchamiacza .NET. Rozbieżność tych list zatrzymuje testy przed
+  instalacją zamiast tworzyć paczkę, której uruchamiacz później odmówi.
 
 ## Testy i wynik
 
@@ -150,6 +153,11 @@ repozytorium, kanałami wydań i polityką prywatności.
 - Ręczny odbiór NVDA — pierwszy fokus, poruszanie się, Anuluj, ponowne
   otwarcie, schowek i zapis — pozostaje do wykonania po instalacji przyszłej
   paczki.
+- Pierwsza zbiorcza paczka zawierająca Sygnalistę została poprawnie odrzucona
+  przed instalacją, ponieważ uruchamiacz .NET nie znał jeszcze możliwości
+  `problem-report-local`. Wszystkie sumy plików startowych były zgodne.
+  Kontrakt .NET uzupełniono, a test profili porównuje odtąd pełne listy
+  możliwości obu implementacji. Wymagane jest ponowne zielone pakowanie.
 
 ## Znane ograniczenia
 
