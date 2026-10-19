@@ -40,6 +40,7 @@ internal sealed record PythonLaunchPlan(ProcessStartInfo StartInfo, bool ShowCap
         start.Environment.Remove("PYTHONPATH");
         start.Environment.Remove("AMC_WX_LITE_PYTHON");
         start.Environment["AMC_LITE_HOST"] = bundle.HostExecutable;
+        start.Environment["AMC_RELEASE_PROFILE"] = bundle.Profile.ProfileId;
         start.Environment["PYTHONUTF8"] = "1";
         return new PythonLaunchPlan(start, diagnostic);
     }

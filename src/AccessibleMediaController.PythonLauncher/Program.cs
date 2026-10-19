@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
+using AccessibleMediaController.ReleaseProfiles;
 
 namespace AccessibleMediaController.PythonLauncher;
 
@@ -14,6 +15,7 @@ internal static class Program
     [STAThread]
     private static int Main(string[] args)
     {
+        ReleaseProfileDescriptor? profile = null;
         var silentBundleCheck = args.Any(argument => string.Equals(
             argument,
             "--sprawdz-pakiet-cicho",
@@ -21,6 +23,7 @@ internal static class Program
         try
         {
             var bundle = BundleVerifier.Verify(AppContext.BaseDirectory);
+            profile = bundle.Profile;
             if (silentBundleCheck)
                 return 0;
             if (args.Any(argument => string.Equals(
@@ -28,16 +31,19 @@ internal static class Program
                 "--sprawdz-pakiet",
                 StringComparison.OrdinalIgnoreCase)))
             {
-                Show("Pakiet AMC Test jest kompletny i zgodny.", false);
+                Show(profile, $"Pakiet {profile.DisplayName} jest kompletny i zgodny.", false);
                 return 0;
             }
 
-            LauncherInstanceLease? instance = LauncherInstanceLease.TryAcquire();
+            LauncherInstanceLease? instance = LauncherInstanceLease.TryAcquire(
+                profile.LauncherMutexName);
             try
             {
                 if (!instance.IsOwner)
                 {
-                    var existing = WaitForMainWindow(ExistingWindowWaitMilliseconds);
+                    var existing = WaitForMainWindow(
+                        profile,
+                        ExistingWindowWaitMilliseconds);
                     if (existing is null)
                         return 0;
 
@@ -45,7 +51,8 @@ internal static class Program
                             bundle.Manifest.BuildLabel,
                             existing.Value.Title,
                             bundle.Root,
-                            existing.Value.PackageRoot)
+                            existing.Value.PackageRoot,
+                            profile.PreferredInstallationFolder)
                         == ExistingInstanceAction.Activate)
                     {
                         ActivateWindow(existing.Value.Handle);
@@ -59,10 +66,12 @@ internal static class Program
                     RequestSafeClose(existing.Value.Handle);
                     instance.Dispose();
                     instance = null;
-                    instance = WaitForInstanceLease(SafeReplacementWaitMilliseconds);
+                    instance = WaitForInstanceLease(
+                        profile,
+                        SafeReplacementWaitMilliseconds);
                     if (instance is null)
                     {
-                        var stillRunning = WaitForMainWindow(500);
+                        var stillRunning = WaitForMainWindow(profile, 500);
                         if (stillRunning is not null)
                             ActivateWindow(stillRunning.Value.Handle);
                         return 0;
@@ -81,7 +90,8 @@ internal static class Program
             if (!silentBundleCheck)
             {
                 Show(
-                    "Nie można uruchomić AMC Test, ponieważ pakiet jest "
+                    profile,
+                    $"Nie można uruchomić {profile?.DisplayName ?? "AMC"}, ponieważ pakiet jest "
                     + "niekompletny lub niezgodny: " + exception.Message + ".\n\n"
                     + "Uruchom ponownie instalator albo zastosuj pełną aktualizację.",
                     true);
@@ -93,7 +103,8 @@ internal static class Program
             if (!silentBundleCheck)
             {
                 Show(
-                    "Nie udało się uruchomić AMC Test. Pakiet nie został zmieniony. "
+                    profile,
+                    $"Nie udało się uruchomić {profile?.DisplayName ?? "AMC"}. Pakiet nie został zmieniony. "
                     + "Uruchom ponownie instalator albo zastosuj pełną aktualizację.",
                     true);
             }
@@ -117,7 +128,7 @@ internal static class Program
 
         var outputText = output.Result.Trim();
         var errorText = error.Result.Trim();
-        AppendProcessLog(outputText, errorText, process.ExitCode);
+        AppendProcessLog(bundle.Profile, outputText, errorText, process.ExitCode);
 
         if (plan.ShowCapturedOutput)
         {
@@ -126,27 +137,31 @@ internal static class Program
                 new[] { outputText, errorText }
                     .Where(text => !string.IsNullOrWhiteSpace(text)));
             Show(
+                bundle.Profile,
                 string.IsNullOrWhiteSpace(details)
-                    ? "Sprawdzenie AMC Test nie zwróciło informacji."
+                    ? $"Sprawdzenie {bundle.Profile.DisplayName} nie zwróciło informacji."
                     : details,
                 process.ExitCode != 0);
         }
         else if (process.ExitCode != 0)
         {
             Show(
-                "AMC Test zakończył uruchamianie z błędem. "
+                bundle.Profile,
+                $"{bundle.Profile.DisplayName} zakończył uruchamianie z błędem. "
                 + "Uruchom AMC.exe z parametrem --sprawdz, aby sprawdzić pakiet.",
                 true);
         }
         return process.ExitCode;
     }
 
-    private static LauncherInstanceLease? WaitForInstanceLease(int timeoutMilliseconds)
+    private static LauncherInstanceLease? WaitForInstanceLease(
+        ReleaseProfileDescriptor profile,
+        int timeoutMilliseconds)
     {
         var deadline = Environment.TickCount64 + Math.Max(0, timeoutMilliseconds);
         do
         {
-            var candidate = LauncherInstanceLease.TryAcquire();
+            var candidate = LauncherInstanceLease.TryAcquire(profile.LauncherMutexName);
             if (candidate.IsOwner)
                 return candidate;
             candidate.Dispose();
@@ -157,12 +172,14 @@ internal static class Program
         return null;
     }
 
-    private static ExistingWindow? WaitForMainWindow(int timeoutMilliseconds)
+    private static ExistingWindow? WaitForMainWindow(
+        ReleaseProfileDescriptor profile,
+        int timeoutMilliseconds)
     {
         var deadline = Environment.TickCount64 + Math.Max(0, timeoutMilliseconds);
         do
         {
-            var window = FindMainWindow();
+            var window = FindMainWindow(profile);
             if (window is not null)
                 return window;
             if (Environment.TickCount64 >= deadline)
@@ -187,7 +204,7 @@ internal static class Program
         SetForegroundWindow(handle);
     }
 
-    private static ExistingWindow? FindMainWindow()
+    private static ExistingWindow? FindMainWindow(ReleaseProfileDescriptor profile)
     {
         ExistingWindow? found = null;
         EnumWindows((handle, _) =>
@@ -198,7 +215,7 @@ internal static class Program
             var text = new StringBuilder(length + 1);
             GetWindowText(handle, text, text.Capacity);
             var title = text.ToString();
-            if (!IsMainWindowTitle(title))
+            if (!IsMainWindowTitle(profile, title))
                 return true;
             found = new ExistingWindow(handle, title, PackageRootForWindow(handle));
             return false;
@@ -240,7 +257,11 @@ internal static class Program
         string Title,
         string? PackageRoot);
 
-    private static void AppendProcessLog(string output, string error, int exitCode)
+    private static void AppendProcessLog(
+        ReleaseProfileDescriptor profile,
+        string output,
+        string error,
+        int exitCode)
     {
         if (string.IsNullOrWhiteSpace(output)
             && string.IsNullOrWhiteSpace(error)
@@ -250,8 +271,7 @@ internal static class Program
         {
             var root = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                "AMC-wx-Lite",
-                "logs");
+                profile.LogFolder.Replace('/', Path.DirectorySeparatorChar));
             Directory.CreateDirectory(root);
             var text = string.Join(
                 Environment.NewLine,
@@ -276,17 +296,22 @@ internal static class Program
         return text.Length <= maximum ? text : text[^maximum..];
     }
 
-    private static void Show(string text, bool error)
+    private static void Show(
+        ReleaseProfileDescriptor? profile,
+        string text,
+        bool error)
     {
         MessageBox(
             IntPtr.Zero,
             text,
-            "Diagnostyka AMC Test",
+            "Diagnostyka " + (profile?.DisplayName ?? "AMC"),
             error ? 0x10u : 0x40u);
     }
 
-    internal static bool IsMainWindowTitle(string title) =>
-        ProductIdentity.IsMainWindowTitle(title);
+    internal static bool IsMainWindowTitle(
+        ReleaseProfileDescriptor profile,
+        string title) =>
+        ProductIdentity.IsMainWindowTitle(profile, title);
 
     [DllImport("user32.dll", CharSet = CharSet.Unicode)]
     private static extern int MessageBox(

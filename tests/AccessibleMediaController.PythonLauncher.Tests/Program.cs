@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using System.Text.Json;
 using AccessibleMediaController.PythonLauncher;
 using AccessibleMediaController.PythonUpdater;
+using AccessibleMediaController.ReleaseProfiles;
 
 namespace AccessibleMediaController.PythonLauncher.Tests;
 
@@ -11,12 +12,16 @@ internal static class Program
     private static readonly (string Name, Action Run)[] Tests =
     [
         ("poprawny pakiet", ValidBundleIsAccepted),
+        ("poprawny publiczny pakiet", ValidPublicBundleIsAccepted),
+        ("manifest nie może przedefiniować profilu", TamperedProfileIsRejected),
         ("uszkodzony plik", CorruptStartupFileIsRejected),
         ("niezgodny protokół", WrongProtocolIsRejected),
         ("wyjście poza katalog", TraversalIsRejected),
         ("prywatny runtime bez PYTHONPATH i bez alertów pythonw", LaunchPlanUsesOnlyPrivateRuntime),
         ("diagnostyka przez python.exe", DiagnosticUsesConsoleRuntime),
         ("jedna instancja launchera", OnlyOneLauncherOwnsTheLease),
+        ("osobne instancje launcherów profili", ReleaseProfilesHaveSeparateLauncherLeases),
+        ("osobne instancje aktualizatorów profili", ReleaseProfilesHaveSeparateUpdaterLeases),
         ("launcher rozpoznaje obecną i starszą nazwę okna", LauncherRecognizesCurrentAndLegacyTitles),
         ("ta sama kompilacja tylko pokazuje okno", SameBuildOnlyActivates),
         ("nowa kompilacja prosi o bezpieczną podmianę", NewBuildRequestsSafeReplacement),
@@ -24,6 +29,8 @@ internal static class Program
         ("aktualizator wykrywa wszystkie procesy instalacji", UpdaterRecognizesInstalledComponents),
         ("aktualizator wykrywa żywy proces z instalacji", UpdaterFindsRunningInstalledProcess),
         ("aktualizator zamyka tylko właściwe okno AMC", UpdaterTargetsOnlyInstalledAmcWindow),
+        ("aktualizator przyjmuje zgodny profil", UpdaterAcceptsMatchingProfile),
+        ("aktualizator odrzuca obcy profil", UpdaterRejectsDifferentProfile),
     ];
 
     public static int Main()
@@ -53,6 +60,23 @@ internal static class Program
         using var fixture = BundleFixture.Create();
         var verified = BundleVerifier.Verify(fixture.Root);
         Equal(Path.Combine(fixture.Root, "host", "amc_lite_host.exe"), verified.HostExecutable);
+        Equal("test", verified.Profile.ProfileId);
+    }
+
+    private static void ValidPublicBundleIsAccepted()
+    {
+        using var fixture = BundleFixture.Create(profile: ReleaseProfileContract.Public);
+        var verified = BundleVerifier.Verify(fixture.Root);
+        Equal("public", verified.Profile.ProfileId);
+        Equal("AMC", verified.Profile.DisplayName);
+    }
+
+    private static void TamperedProfileIsRejected()
+    {
+        using var fixture = BundleFixture.Create(
+            profile: ReleaseProfileContract.Public,
+            displayNameOverride: "AMC Test");
+        Throws("nazwa wydania", () => BundleVerifier.Verify(fixture.Root));
     }
 
     private static void CorruptStartupFileIsRejected()
@@ -95,6 +119,7 @@ internal static class Program
             Equal(false, plan.StartInfo.Environment.ContainsKey("PYTHONPATH"));
             Equal(false, plan.StartInfo.Environment.ContainsKey("AMC_WX_LITE_PYTHON"));
             Equal(verified.HostExecutable, plan.StartInfo.Environment["AMC_LITE_HOST"]);
+            Equal("test", plan.StartInfo.Environment["AMC_RELEASE_PROFILE"]);
             Equal("-m", plan.StartInfo.ArgumentList[0]);
             Equal("amc_wx_lite", plan.StartInfo.ArgumentList[1]);
         }
@@ -140,6 +165,36 @@ internal static class Program
         Equal(true, thirdOwns);
     }
 
+    private static void ReleaseProfilesHaveSeparateLauncherLeases()
+    {
+        Equal(false, string.Equals(
+            ReleaseProfileContract.Test.LauncherMutexName,
+            ReleaseProfileContract.Public.LauncherMutexName,
+            StringComparison.Ordinal));
+        var suffix = ".Probe." + Guid.NewGuid().ToString("N");
+        using var test = LauncherInstanceLease.TryAcquire(
+            ReleaseProfileContract.Test.LauncherMutexName + suffix);
+        using var publicRelease = LauncherInstanceLease.TryAcquire(
+            ReleaseProfileContract.Public.LauncherMutexName + suffix);
+        Equal(true, test.IsOwner);
+        Equal(true, publicRelease.IsOwner);
+    }
+
+    private static void ReleaseProfilesHaveSeparateUpdaterLeases()
+    {
+        Equal(false, string.Equals(
+            ReleaseProfileContract.Test.UpdaterMutexName,
+            ReleaseProfileContract.Public.UpdaterMutexName,
+            StringComparison.Ordinal));
+        var suffix = ".Probe." + Guid.NewGuid().ToString("N");
+        using var test = UpdaterInstanceLease.TryAcquire(
+            ReleaseProfileContract.Test.UpdaterMutexName + suffix);
+        using var publicRelease = UpdaterInstanceLease.TryAcquire(
+            ReleaseProfileContract.Public.UpdaterMutexName + suffix);
+        Equal(true, test.IsOwner);
+        Equal(true, publicRelease.IsOwner);
+    }
+
     private static void SameBuildOnlyActivates()
     {
         Equal(
@@ -148,16 +203,23 @@ internal static class Program
                 "2026.10.14-1fe0f900-a1b2c3d4",
                 "AMC Python — wersja 0.1.0, kompilacja 2026.10.14-1fe0f900-a1b2c3d4",
                 @"D:\Projekty Codex\AMC Python",
-                @"D:\Projekty Codex\AMC Python"));
+                @"D:\Projekty Codex\AMC Python",
+                "AMC Python"));
     }
 
     private static void LauncherRecognizesCurrentAndLegacyTitles()
     {
-        Equal(true, ProductIdentity.IsMainWindowTitle(
+        Equal(true, ProductIdentity.IsMainWindowTitle(ReleaseProfileContract.Test,
             "AMC Test — 18.10.2026, 13:30"));
-        Equal(true, ProductIdentity.IsMainWindowTitle(
+        Equal(true, ProductIdentity.IsMainWindowTitle(ReleaseProfileContract.Test,
             "AMC Python — 18.10.2026, 13:29"));
-        Equal(false, ProductIdentity.IsMainWindowTitle(
+        Equal(false, ProductIdentity.IsMainWindowTitle(ReleaseProfileContract.Test,
+            "AMC — 18.10.2026, 13:29"));
+        Equal(true, ProductIdentity.IsMainWindowTitle(ReleaseProfileContract.Public,
+            "AMC — 18.10.2026, 13:29"));
+        Equal(false, ProductIdentity.IsMainWindowTitle(ReleaseProfileContract.Public,
+            "AMC Test — 18.10.2026, 13:30"));
+        Equal(false, ProductIdentity.IsMainWindowTitle(ReleaseProfileContract.Test,
             "Diagnostyka AMC Test"));
     }
 
@@ -169,7 +231,8 @@ internal static class Program
                 "2026.10.14-1fe0f900-a1b2c3d4",
                 "AMC Python — wersja 0.1.0, kompilacja 2026.10.14-1fe0f900-e5f6a7b8",
                 @"D:\Projekty Codex\AMC Python",
-                @"D:\Projekty Codex\AMC Python"));
+                @"D:\Projekty Codex\AMC Python",
+                "AMC Python"));
     }
 
     private static void PreferredInstallationWins()
@@ -180,14 +243,16 @@ internal static class Program
                 "2026.10.13-6c48ebf",
                 "AMC Python — wersja 0.1.0",
                 @"D:\Projekty Codex\AMC Python",
-                @"D:\Projekty Codex\wydanie testowe"));
+                @"D:\Projekty Codex\wydanie testowe",
+                "AMC Python"));
         Equal(
             ExistingInstanceAction.Activate,
             ExistingInstancePolicy.Decide(
                 "RuntimeObject { Id = tajne }",
                 "AMC Python — wersja 0.1.0, kompilacja RuntimeObject { Id = tajne }",
                 @"D:\Projekty Codex\wydanie testowe",
-                @"D:\Projekty Codex\AMC Python"));
+                @"D:\Projekty Codex\AMC Python",
+                "AMC Python"));
     }
 
     private static void UpdaterRecognizesInstalledComponents()
@@ -257,25 +322,59 @@ internal static class Program
         var runtime = Path.Combine(root, "runtime", "python.exe");
         Equal(true, SafeApplicationStop.IsCandidateWindow(
             root,
+            ReleaseProfileContract.Test,
             runtime,
             "AMC Test — 18.10.2026, 13:30"));
         Equal(true, SafeApplicationStop.IsCandidateWindow(
             root,
+            ReleaseProfileContract.Test,
             runtime,
             "AMC Python — wersja 0.1.0, kompilacja 2026.10.13-test"));
         Equal(true, SafeApplicationStop.IsCandidateWindow(
             root,
+            ReleaseProfileContract.Test,
             runtime,
             "AMC Python — 14.10.2026, 18:52"));
-        Equal(true, SafeApplicationStop.IsCandidateWindow(root, runtime, "AMC Python"));
+        Equal(true, SafeApplicationStop.IsCandidateWindow(
+            root, ReleaseProfileContract.Test, runtime, "AMC Python"));
+        Equal(false, SafeApplicationStop.IsCandidateWindow(
+            root, ReleaseProfileContract.Public, runtime, "AMC Test"));
+        Equal(true, SafeApplicationStop.IsCandidateWindow(
+            root, ReleaseProfileContract.Public, runtime, "AMC"));
         Equal(false, SafeApplicationStop.IsCandidateWindow(
             root,
+            ReleaseProfileContract.Test,
             Path.Combine("D:\\", "Projekty Codex", "inna kopia", "runtime", "python.exe"),
             "AMC Python — wersja 0.1.0, kompilacja 2026.10.13-test"));
         Equal(false, SafeApplicationStop.IsCandidateWindow(
             root,
+            ReleaseProfileContract.Test,
             runtime,
             "AMC Python - techniczne okno pomocnicze"));
+    }
+
+    private static void UpdaterAcceptsMatchingProfile()
+    {
+        using var source = BundleFixture.Create(profile: ReleaseProfileContract.Public);
+        using var target = BundleFixture.Create(profile: ReleaseProfileContract.Public);
+        var manifest = AccessibleMediaController.PythonUpdater.Program.LoadAndVerify(
+            source.Root,
+            target.Root,
+            ReleaseProfileContract.Public);
+        Equal("public", manifest.ReleaseProfile);
+        Equal("stable", manifest.UpdateChannel);
+    }
+
+    private static void UpdaterRejectsDifferentProfile()
+    {
+        using var source = BundleFixture.Create(profile: ReleaseProfileContract.Public);
+        using var target = BundleFixture.Create(profile: ReleaseProfileContract.Test);
+        Throws(
+            "innego wydania",
+            () => AccessibleMediaController.PythonUpdater.Program.LoadAndVerify(
+                source.Root,
+                target.Root,
+                ReleaseProfileContract.Public));
     }
 
     private static void Throws(string expected, Action action)
@@ -312,8 +411,11 @@ internal static class Program
 
         public static BundleFixture Create(
             int hostProtocolVersion = 1,
-            string? extraStartupFile = null)
+            string? extraStartupFile = null,
+            ReleaseProfileDescriptor? profile = null,
+            string? displayNameOverride = null)
         {
+            profile ??= ReleaseProfileContract.Test;
             var root = Path.Combine(Path.GetTempPath(), "amc-launcher-" + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(root);
             string? outsidePath = null;
@@ -357,6 +459,20 @@ internal static class Program
                 entryPoint = "AMC.exe",
                 pythonModule = "amc_wx_lite",
                 hostFolder = "host",
+                releaseProfileSchema = 1,
+                releaseProfile = profile.ProfileId,
+                productId = profile.ProductId,
+                displayName = displayNameOverride ?? profile.DisplayName,
+                installId = profile.InstallId,
+                updateChannel = profile.UpdateChannel,
+                uiStateFolder = profile.UiStateFolder,
+                roamingProfileFolder = profile.RoamingProfileFolder,
+                localProfileFolder = profile.LocalProfileFolder,
+                cacheFolder = profile.CacheFolder,
+                logFolder = profile.LogFolder,
+                credentialNamespace = profile.CredentialNamespace,
+                sessions = profile.Sessions,
+                capabilities = profile.Capabilities,
                 files,
                 startupFiles = files,
                 fileHashes = hashes,

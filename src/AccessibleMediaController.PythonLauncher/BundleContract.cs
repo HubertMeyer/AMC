@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text.Json;
+using AccessibleMediaController.ReleaseProfiles;
 
 namespace AccessibleMediaController.PythonLauncher;
 
@@ -13,6 +14,20 @@ internal sealed class BundleManifest
     public string EntryPoint { get; set; } = "";
     public string PythonModule { get; set; } = "";
     public string HostFolder { get; set; } = "";
+    public int ReleaseProfileSchema { get; set; }
+    public string ReleaseProfile { get; set; } = "";
+    public string ProductId { get; set; } = "";
+    public string DisplayName { get; set; } = "";
+    public string InstallId { get; set; } = "";
+    public string UpdateChannel { get; set; } = "";
+    public string UiStateFolder { get; set; } = "";
+    public string RoamingProfileFolder { get; set; } = "";
+    public string LocalProfileFolder { get; set; } = "";
+    public string CacheFolder { get; set; } = "";
+    public string LogFolder { get; set; } = "";
+    public string CredentialNamespace { get; set; } = "";
+    public List<string> Sessions { get; set; } = [];
+    public List<string> Capabilities { get; set; } = [];
     public List<string> Files { get; set; } = [];
     public List<string> StartupFiles { get; set; } = [];
     public Dictionary<string, string> FileHashes { get; set; } =
@@ -22,7 +37,8 @@ internal sealed class BundleManifest
 internal sealed record VerifiedBundle(
     string Root,
     string HostExecutable,
-    BundleManifest Manifest);
+    BundleManifest Manifest,
+    ReleaseProfileDescriptor Profile);
 
 internal static class BundleVerifier
 {
@@ -67,6 +83,21 @@ internal static class BundleVerifier
             throw new InvalidDataException("manifest wskazuje inny moduł interfejsu");
         if (!IsSingleFolderName(manifest.HostFolder))
             throw new InvalidDataException("manifest wskazuje nieprawidłowy folder silnika");
+        var profile = ReleaseProfileContract.Validate(
+            manifest.ReleaseProfileSchema,
+            manifest.ReleaseProfile,
+            manifest.ProductId,
+            manifest.DisplayName,
+            manifest.InstallId,
+            manifest.UpdateChannel,
+            manifest.UiStateFolder,
+            manifest.RoamingProfileFolder,
+            manifest.LocalProfileFolder,
+            manifest.CacheFolder,
+            manifest.LogFolder,
+            manifest.CredentialNamespace,
+            manifest.Sessions,
+            manifest.Capabilities);
         if (manifest.Files.Count == 0 || manifest.StartupFiles.Count == 0)
             throw new InvalidDataException("manifest nie zawiera kompletnej listy startowej");
 
@@ -106,7 +137,7 @@ internal static class BundleVerifier
             root,
             $"{manifest.HostFolder}/amc_lite_host.exe",
             mustExist: true);
-        return new VerifiedBundle(root, hostExecutable, manifest);
+        return new VerifiedBundle(root, hostExecutable, manifest, profile);
     }
 
     private static bool IsSingleFolderName(string value) =>

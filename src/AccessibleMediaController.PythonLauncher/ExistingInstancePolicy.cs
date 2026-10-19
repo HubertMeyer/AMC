@@ -27,7 +27,8 @@ internal static partial class ExistingInstancePolicy
         string requestedBuildLabel,
         string existingWindowTitle,
         string requestedPackageRoot,
-        string? existingPackageRoot)
+        string? existingPackageRoot,
+        string preferredInstallationFolder)
     {
         var requested = NormalizeBuildLabel(requestedBuildLabel);
         var existing = BuildLabelFromWindowTitle(existingWindowTitle);
@@ -44,8 +45,8 @@ internal static partial class ExistingInstancePolicy
         // Only the stable, user-facing installation may supersede an arbitrary
         // test-output copy.  Starting an old test package must never close the
         // canonical AMC Python and silently downgrade the application.
-        if (IsPreferredInstallation(requestedPackageRoot)
-            && !IsPreferredInstallation(existingPackageRoot))
+        if (IsPreferredInstallation(requestedPackageRoot, preferredInstallationFolder)
+            && !IsPreferredInstallation(existingPackageRoot, preferredInstallationFolder))
             return ExistingInstanceAction.RequestSafeReplacement;
 
         return ExistingInstanceAction.Activate;
@@ -85,7 +86,7 @@ internal static partial class ExistingInstancePolicy
         }
     }
 
-    private static bool IsPreferredInstallation(string? root)
+    private static bool IsPreferredInstallation(string? root, string preferredFolder)
     {
         if (string.IsNullOrWhiteSpace(root))
             return false;
@@ -95,7 +96,7 @@ internal static partial class ExistingInstancePolicy
                 Path.GetFileName(Path.GetFullPath(root).TrimEnd(
                     Path.DirectorySeparatorChar,
                     Path.AltDirectorySeparatorChar)),
-                "AMC Python",
+                preferredFolder,
                 StringComparison.OrdinalIgnoreCase);
         }
         catch (Exception exception) when (

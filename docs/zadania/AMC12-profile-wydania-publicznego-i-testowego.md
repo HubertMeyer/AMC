@@ -2,8 +2,9 @@
 
 ## Status
 
-**W trakcie — spójny fundament etapu 1 jest gotowy w źródłach i testach; nie
-zbudowano, nie zainstalowano ani nie opublikowano profilu publicznego.**
+**W trakcie — fundament profili oraz rozdzielenie uruchamiacza i aktualizatora
+są gotowe w źródłach i testach; nie zainstalowano ani nie opublikowano profilu
+publicznego.**
 
 Źródłowa, zatwierdzona specyfikacja pozostaje w pliku tylko do odczytu:
 `D:\Projekty Codex\Accessible Multimedia Controller\AMC12_PROFILE_WYDANIA_PUBLICZNEGO_I_TESTOWEGO_2026-10-18.md`.
@@ -49,6 +50,13 @@ wersjonowanej migawce. Ten etap jeszcze jej nie udostępnia.
 Nie ma jeszcze instalatora publicznego AMC. Kod i testy fundamentu nie są
 dowodem kompilacji, instalacji ani publikacji.
 
+AMC Test i publiczny AMC mają osobne blokady uruchomienia, dlatego mogą działać
+równolegle. Drugie uruchomienie AMC Test pokazuje tylko okno AMC Test, a drugie
+uruchomienie publicznego AMC pokazuje tylko okno AMC. Tak samo rozdzielone są
+aktualizatory: paczka jednego wydania nie może zaktualizować drugiego.
+Dzienniki uruchamiania trafiają do folderu właściwego profilu, a interfejs
+zawsze otrzymuje jawny profil z zatwierdzonego manifestu.
+
 ## Uzasadnienie i decyzje
 
 - Jedna definicja profilu jest bezpieczniejsza niż osobne listy w interfejsie,
@@ -63,6 +71,17 @@ dowodem kompilacji, instalacji ani publikacji.
 - Korekta użytkownika z 18–19 października 2026 zastępuje wcześniejszy pomysł
   równoległego używania tych samych żywych magazynów. Dane wspólne mają być
   później przenoszone wyłącznie przez kontrolowaną migawkę AMC Test → AMC.
+- Uruchamiacz i aktualizator używają jednego zamkniętego kontraktu profili.
+  Manifest może wybrać `test` albo `public`, ale nie może podmienić nazwy,
+  katalogów, kanału aktualizacji, listy sesji ani przestrzeni poświadczeń.
+- AMC Test zachowuje dotychczasową blokadę uruchamiacza oraz zgodność z dawnym
+  tytułem „AMC Python”. Publiczny AMC ma nową blokadę i rozpoznaje wyłącznie
+  własny tytuł „AMC”. Ułatwia to przejście bez uruchomienia dwóch kopii starego
+  profilu testowego.
+- Aktualizator sprawdza profil paczki i istniejącej instalacji przed prośbą o
+  zamknięcie programu. Starsza instalacja bez pól profilu może zostać
+  jednorazowo rozpoznana wyłącznie jako AMC Test w dotychczasowym folderze
+  `AMC Python`; publiczny AMC nie korzysta z tego wyjątku.
 
 ## Zmienione pliki
 
@@ -75,6 +94,19 @@ dowodem kompilacji, instalacji ani publikacji.
 - `wxlite/tools/build_bundle.py`
 - `wxlite/tests/test_release_profile.py`
 - `wxlite/tests/test_bundle_layout.py`
+- `src/Shared/ReleaseProfileContract.cs`
+- `src/AccessibleMediaController.PythonLauncher/AccessibleMediaController.PythonLauncher.csproj`
+- `src/AccessibleMediaController.PythonLauncher/BundleContract.cs`
+- `src/AccessibleMediaController.PythonLauncher/ProductIdentity.cs`
+- `src/AccessibleMediaController.PythonLauncher/ExistingInstancePolicy.cs`
+- `src/AccessibleMediaController.PythonLauncher/PythonLaunchPlan.cs`
+- `src/AccessibleMediaController.PythonLauncher/Program.cs`
+- `src/AccessibleMediaController.PythonUpdater/AccessibleMediaController.PythonUpdater.csproj`
+- `src/AccessibleMediaController.PythonUpdater/Program.cs`
+- `src/AccessibleMediaController.PythonUpdater/SafeApplicationStop.cs`
+- `src/AccessibleMediaController.PythonUpdater/UpdaterInstanceLease.cs`
+- `tests/AccessibleMediaController.PythonLauncher.Tests/AccessibleMediaController.PythonLauncher.Tests.csproj`
+- `tests/AccessibleMediaController.PythonLauncher.Tests/Program.cs`
 - `docs/zadania/README.md`
 - `docs/zadania/AMC12-profile-wydania-publicznego-i-testowego.md`
 
@@ -90,16 +122,22 @@ dowodem kompilacji, instalacji ani publikacji.
 - Pełny przebieg powtórzony z jawnym pominięciem wyłącznie tego testu:
   **1789 zaliczonych, 116 pominiętych, 1 jawnie niewybrany, 11 podtestów
   zaliczonych** w 77,64 s.
-- Nie wykonywano kompilacji, instalacji, podmiany działającego AMC ani
-  publikacji. Odbiór NVDA profilu publicznego wymaga późniejszej, bezpiecznej
-  kompilacji i osobnej instalacji.
+- Dla pierwszego fundamentu nie wykonywano kompilacji, instalacji, podmiany
+  działającego AMC ani publikacji. Odbiór NVDA profilu publicznego nadal
+  wymaga późniejszej, bezpiecznej kompilacji Release i osobnej instalacji.
+- Po etapie rozdzielenia uruchamiacza i aktualizatora: **20 testów C#
+  zaliczonych**. Obejmują oba prawidłowe profile, odmowę zmienionego manifestu,
+  osobne blokady, tytuły okien, prywatny runtime, bezpieczne wskazanie okna,
+  procesy instalacji oraz przyjęcie zgodnej i odrzucenie obcej aktualizacji.
+- Testy profilu i układu paczki Python po zmianie: **27 zaliczonych**.
+- Uruchamiacz Debug i aktualizator Debug: obie kompilacje zaliczone z 0
+  ostrzeżeń i 0 błędów. Są to kompilacje odizolowane w repozytorium, nie
+  instalacja ani podmiana działającej aplikacji.
+- Przed kompilacjami pięciosekundowa bramka wykazała 0 plików
+  `.amc-partial` i 0 plików rosnących. Nie zamykano uruchomionego AMC.
 
 ## Znane ograniczenia
 
-- Uruchamiacz i aktualizator nie mają jeszcze rozdzielonych blokad jednej
-  instancji, katalogów diagnostycznych i pełnego kontraktu aktualizacji dla
-  obu profili. Dlatego nie wolno jeszcze instalować profilu publicznego obok
-  AMC Test.
 - Manifest deklaruje możliwości profilu, ale paczka publiczna nie usuwa
   jeszcze binarnych zależności ukrytych usług. Ograniczenie pakowania zostaje
   do następnego spójnego etapu.
@@ -111,6 +149,9 @@ dowodem kompilacji, instalacji ani publikacji.
   na etap instalatora.
 - Sonos publiczny pozostaje ukryty do czasu prawdziwego brokera HTTPS i
   odbioru z zewnętrznym kontem.
+- Osobne tożsamości procesu są gotowe, ale nie ma jeszcze instalatora, który
+  utworzy dwie niezależne instalacje i sprawdzi ich cykl aktualizacji od końca
+  do końca. Z tego powodu publicznego AMC nadal nie instalujemy.
 
 ## Porządek dysku
 
@@ -128,6 +169,8 @@ dowodem kompilacji, instalacji ani publikacji.
 
 - Data pracy: 19 października 2026.
 - Kod i testy fundamentu: lokalny commit `d2a34ecf`.
-- Kompilacja: nie wykonywano dla tego etapu.
+- Rozdzielenie uruchamiacza i aktualizatora: commit następujący po tym zapisie.
+- Kompilacja: odizolowane kompilacje Debug uruchamiacza i aktualizatora —
+  zaliczone; paczki Release nie zbudowano.
 - Instalacja: nie wykonywano dla tego etapu.
 - Publikacja: nie wykonywano; GitHub nie został użyty.

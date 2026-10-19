@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text.Json;
+using AccessibleMediaController.ReleaseProfiles;
 
 namespace AccessibleMediaController.PythonUpdater;
 
@@ -21,10 +22,12 @@ internal static class Program
     private const int AppStillRunning = 3;
     private const int InvalidPackage = 4;
     private const int InstallFailed = 5;
+    private const int UpdaterAlreadyRunning = 6;
 
     [STAThread]
     private static int Main(string[] args)
     {
+        ReleaseProfileDescriptor? profile = null;
         var silentRequested = args.Any(argument =>
             string.Equals(argument, "--silent", StringComparison.OrdinalIgnoreCase));
         try
@@ -34,19 +37,30 @@ internal static class Program
             {
                 if (!silentRequested)
                 {
-                    Show("Podaj folder przygotowanej aktualizacji i folder programu.\n\n"
+                    Show(null, "Podaj folder przygotowanej aktualizacji i folder programu.\n\n"
                          + "AMC-Python-Updater.exe --source KATALOG --target KATALOG "
                          + "[--wait-pid NUMER] [--launch PLIK] [--silent]", true);
                 }
                 return BadArguments;
             }
 
+            profile = LoadReleaseProfile(options.Source);
+
             // Windows nie pozwala niezawodnie podmienić uruchomionego pliku
             // wykonywalnego. Gdy aktualizator startuje z katalogu AMC, najpierw
             // uruchamiamy jego roboczą kopię poza katalogiem instalacji. Dzięki
             // temu paczka może również bezpiecznie zaktualizować sam updater.
-            if (RelaunchOutsideInstallation(options, args))
+            if (RelaunchOutsideInstallation(options, args, profile))
                 return Success;
+
+            using var updaterInstance = UpdaterInstanceLease.TryAcquire(
+                profile.UpdaterMutexName);
+            if (!updaterInstance.IsOwner)
+            {
+                if (!options.Silent)
+                    Show(profile, $"Aktualizator {profile.DisplayName} już działa.", true);
+                return UpdaterAlreadyRunning;
+            }
 
             // Kopia robocza nie może dotknąć pliku starego aktualizatora,
             // dopóki proces-rodzic nadal go wykonuje. Samo Process.Start i
@@ -59,7 +73,7 @@ internal static class Program
                     "Aktualizacja zatrzymana: nie zakończył się proces-rodzic aktualizatora.");
                 if (!options.Silent)
                 {
-                    Show("Aktualizacja nie została rozpoczęta, ponieważ poprzedni "
+                    Show(profile, "Aktualizacja nie została rozpoczęta, ponieważ poprzedni "
                          + "proces aktualizatora nie zakończył się.", true);
                 }
                 return AppStillRunning;
@@ -67,7 +81,7 @@ internal static class Program
 
             // Najpierw sprawdzamy całą paczkę. Wadliwa albo niezgodna
             // aktualizacja nie może bez potrzeby zamknąć działającego AMC.
-            var manifest = LoadAndVerify(options.Source, options.Target);
+            var manifest = LoadAndVerify(options.Source, options.Target, profile);
 
             // Zwykłe WM_CLOSE uruchamia tę samą ścieżkę co Alt+F4. Interfejs
             // sprawdza żywy stan nagrywania i może bezpiecznie odmówić. Nigdy
@@ -75,6 +89,7 @@ internal static class Program
             // składnik z katalogu instalacji nadal działa.
             if (!SafeApplicationStop.RequestAndWait(
                     options.Target,
+                    profile,
                     options.WaitPid,
                     TimeSpan.FromSeconds(30)))
             {
@@ -90,7 +105,7 @@ internal static class Program
                                   $"PID {item.ProcessId}: {item.Executable}")));
                 if (!options.Silent)
                 {
-                    Show("Aktualizacja nie została rozpoczęta, ponieważ AMC Test nadal działa. "
+                    Show(profile, $"Aktualizacja nie została rozpoczęta, ponieważ {profile.DisplayName} nadal działa. "
                          + "Może trwać nagrywanie. Zatrzymaj je i spróbuj ponownie.", true);
                 }
                 return AppStillRunning;
@@ -104,7 +119,7 @@ internal static class Program
             {
                 if (!options.Silent)
                 {
-                    Show("Aktualizacja nie została rozpoczęta, ponieważ AMC Test "
+                    Show(profile, $"Aktualizacja nie została rozpoczęta, ponieważ {profile.DisplayName} "
                          + "lub jeden z jego składników nadal działa. Może trwać "
                          + "nagrywanie. Zamknij program bezpiecznie i spróbuj ponownie.", true);
                 }
@@ -125,7 +140,7 @@ internal static class Program
 
             if (!options.Silent)
             {
-                Show("Aktualizacja AMC Test została zainstalowana.", false);
+                Show(profile, $"Aktualizacja {profile.DisplayName} została zainstalowana.", false);
             }
             return Success;
         }
@@ -133,19 +148,28 @@ internal static class Program
         {
             Console.Error.WriteLine("Pakiet aktualizacji został odrzucony: " + exception);
             if (!silentRequested)
-                Show("Pakiet aktualizacji został odrzucony: " + exception.Message, true);
+                Show(profile, "Pakiet aktualizacji został odrzucony: " + exception.Message, true);
             return InvalidPackage;
         }
         catch (Exception exception)
         {
-            Console.Error.WriteLine("Nie udało się zainstalować aktualizacji AMC Test: " + exception);
+            Console.Error.WriteLine(
+                $"Nie udało się zainstalować aktualizacji {profile?.DisplayName ?? "AMC"}: "
+                + exception);
             if (!silentRequested)
-                Show("Nie udało się zainstalować aktualizacji AMC Test: " + exception.Message, true);
+                Show(
+                    profile,
+                    $"Nie udało się zainstalować aktualizacji {profile?.DisplayName ?? "AMC"}: "
+                    + exception.Message,
+                    true);
             return InstallFailed;
         }
     }
 
-    private static bool RelaunchOutsideInstallation(Options options, string[] args)
+    private static bool RelaunchOutsideInstallation(
+        Options options,
+        string[] args,
+        ReleaseProfileDescriptor profile)
     {
         var current = Environment.ProcessPath;
         if (string.IsNullOrWhiteSpace(current) || !IsInside(options.Target, current))
@@ -153,8 +177,7 @@ internal static class Program
 
         var helperDirectory = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "AMC-Python",
-            "Updater");
+            profile.UpdaterHelperFolder.Replace('/', Path.DirectorySeparatorChar));
         Directory.CreateDirectory(helperDirectory);
         // Stala nazwa pomocnika byla druga blokada: poprzedni alert albo
         // skaner mogl nadal trzymac ten jeden plik i kolejna proba konczyla
@@ -162,7 +185,7 @@ internal static class Program
         // kazde uruchomienie dostaje wlasna nazwe.
         foreach (var oldHelper in Directory.EnumerateFiles(
                      helperDirectory,
-                     "AMC-Python-Updater*.exe"))
+                     profile.UpdaterHelperExecutablePrefix + "*.exe"))
         {
             try
             {
@@ -177,7 +200,7 @@ internal static class Program
         }
         var helper = Path.Combine(
             helperDirectory,
-            $"AMC-Python-Updater-{Guid.NewGuid():N}.exe");
+            $"{profile.UpdaterHelperExecutablePrefix}-{Guid.NewGuid():N}.exe");
         File.Copy(current, helper, overwrite: true);
 
         var start = new ProcessStartInfo
@@ -210,7 +233,53 @@ internal static class Program
         }
     }
 
-    private static Manifest LoadAndVerify(string source, string target)
+    private static ReleaseProfileDescriptor LoadReleaseProfile(string source) =>
+        ResolveReleaseProfile(ReadManifest(source));
+
+    private static Manifest ReadManifest(string root)
+    {
+        root = Path.GetFullPath(root);
+        if (!Directory.Exists(root))
+            throw new InvalidDataException("nie ma folderu pakietu");
+        var manifestPath = Path.Combine(root, "bundle-manifest.json");
+        if (!File.Exists(manifestPath))
+            throw new InvalidDataException("brak bundle-manifest.json");
+        if (new FileInfo(manifestPath).Length > 8 * 1024 * 1024)
+            throw new InvalidDataException("bundle-manifest.json jest zbyt duży");
+        try
+        {
+            return JsonSerializer.Deserialize<Manifest>(
+                File.ReadAllText(manifestPath),
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true })
+                ?? throw new InvalidDataException("pusty manifest");
+        }
+        catch (JsonException)
+        {
+            throw new InvalidDataException("bundle-manifest.json ma nieprawidłowy format");
+        }
+    }
+
+    private static ReleaseProfileDescriptor ResolveReleaseProfile(Manifest manifest) =>
+        ReleaseProfileContract.Validate(
+            manifest.ReleaseProfileSchema,
+            manifest.ReleaseProfile,
+            manifest.ProductId,
+            manifest.DisplayName,
+            manifest.InstallId,
+            manifest.UpdateChannel,
+            manifest.UiStateFolder,
+            manifest.RoamingProfileFolder,
+            manifest.LocalProfileFolder,
+            manifest.CacheFolder,
+            manifest.LogFolder,
+            manifest.CredentialNamespace,
+            manifest.Sessions,
+            manifest.Capabilities);
+
+    internal static Manifest LoadAndVerify(
+        string source,
+        string target,
+        ReleaseProfileDescriptor expectedProfile)
     {
         source = Path.GetFullPath(source);
         target = Path.GetFullPath(target);
@@ -219,14 +288,17 @@ internal static class Program
         if (string.Equals(source.TrimEnd('\\'), target.TrimEnd('\\'), StringComparison.OrdinalIgnoreCase))
             throw new InvalidDataException("źródło i folder programu są tym samym miejscem");
         if (!File.Exists(Path.Combine(target, "AMC.exe")))
-            throw new InvalidDataException("folder docelowy nie zawiera AMC Test");
+            throw new InvalidDataException(
+                $"folder docelowy nie zawiera {expectedProfile.DisplayName}");
 
-        var manifestPath = Path.Combine(source, "bundle-manifest.json");
-        if (!File.Exists(manifestPath)) throw new InvalidDataException("brak bundle-manifest.json");
-        var manifest = JsonSerializer.Deserialize<Manifest>(
-            File.ReadAllText(manifestPath),
-            new JsonSerializerOptions { PropertyNameCaseInsensitive = true })
-            ?? throw new InvalidDataException("pusty manifest");
+        var manifest = ReadManifest(source);
+        var sourceProfile = ResolveReleaseProfile(manifest);
+        if (!string.Equals(
+                sourceProfile.InstallId,
+                expectedProfile.InstallId,
+                StringComparison.Ordinal))
+            throw new InvalidDataException("profil pakietu zmienił się podczas uruchamiania aktualizacji");
+        ValidateInstalledProfile(target, sourceProfile);
         if (manifest.Files is null || manifest.Files.Count == 0)
             throw new InvalidDataException("manifest nie zawiera plików");
         if (manifest.BundleFormatVersion != SupportedBundleFormat
@@ -253,6 +325,40 @@ internal static class Program
             _ = ResolveInside(target, relative, mustExist: false);
         }
         return manifest;
+    }
+
+    private static void ValidateInstalledProfile(
+        string target,
+        ReleaseProfileDescriptor sourceProfile)
+    {
+        var installed = ReadManifest(target);
+        if (installed.ReleaseProfileSchema == 0
+            && string.IsNullOrWhiteSpace(installed.ReleaseProfile))
+        {
+            var folder = Path.GetFileName(
+                Path.GetFullPath(target).TrimEnd(
+                    Path.DirectorySeparatorChar,
+                    Path.AltDirectorySeparatorChar));
+            if (sourceProfile != ReleaseProfileContract.Test
+                || !string.Equals(folder, "AMC Python", StringComparison.OrdinalIgnoreCase)
+                || !string.Equals(installed.Application, "AMC Python", StringComparison.Ordinal)
+                || !string.Equals(installed.EntryPoint, "AMC.exe", StringComparison.OrdinalIgnoreCase))
+                throw new InvalidDataException(
+                    "starsza instalacja nie ma zgodnej tożsamości profilu wydania");
+            return;
+        }
+
+        var installedProfile = ResolveReleaseProfile(installed);
+        if (!string.Equals(
+                installedProfile.InstallId,
+                sourceProfile.InstallId,
+                StringComparison.Ordinal)
+            || !string.Equals(
+                installedProfile.UpdateChannel,
+                sourceProfile.UpdateChannel,
+                StringComparison.Ordinal))
+            throw new InvalidDataException(
+                "pakiet aktualizacji jest przeznaczony dla innego wydania AMC");
     }
 
     private static void ApplyPackage(string source, string target, IReadOnlyList<string> files)
@@ -417,21 +523,42 @@ internal static class Program
         return fullPath.StartsWith(fullRoot, StringComparison.OrdinalIgnoreCase);
     }
 
-    private static void Show(string text, bool error)
+    private static void Show(
+        ReleaseProfileDescriptor? profile,
+        string text,
+        bool error)
     {
-        MessageBox(IntPtr.Zero, text, "Aktualizator AMC Test", error ? 0x10u : 0x40u);
+        MessageBox(
+            IntPtr.Zero,
+            text,
+            "Aktualizator " + (profile?.DisplayName ?? "AMC"),
+            error ? 0x10u : 0x40u);
     }
 
     [DllImport("user32.dll", CharSet = CharSet.Unicode)]
     private static extern int MessageBox(IntPtr owner, string text, string caption, uint type);
 
-    private sealed class Manifest
+    internal sealed class Manifest
     {
         public int BundleFormatVersion { get; set; }
         public int InterfaceVersion { get; set; }
         public int HostProtocolVersion { get; set; }
         public string Application { get; set; } = "";
         public string EntryPoint { get; set; } = "";
+        public int ReleaseProfileSchema { get; set; }
+        public string ReleaseProfile { get; set; } = "";
+        public string ProductId { get; set; } = "";
+        public string DisplayName { get; set; } = "";
+        public string InstallId { get; set; } = "";
+        public string UpdateChannel { get; set; } = "";
+        public string UiStateFolder { get; set; } = "";
+        public string RoamingProfileFolder { get; set; } = "";
+        public string LocalProfileFolder { get; set; } = "";
+        public string CacheFolder { get; set; } = "";
+        public string LogFolder { get; set; } = "";
+        public string CredentialNamespace { get; set; } = "";
+        public List<string> Sessions { get; set; } = [];
+        public List<string> Capabilities { get; set; } = [];
         public List<string> Files { get; set; } = [];
         public Dictionary<string, string> FileHashes { get; set; } =
             new(StringComparer.OrdinalIgnoreCase);

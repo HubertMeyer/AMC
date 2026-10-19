@@ -4,12 +4,15 @@
     <TargetFramework>net8.0</TargetFramework>
     <RootNamespace>AccessibleMediaController.PythonLauncher.Tests</RootNamespace>
     <AssemblyName>amc_python_launcher_tests</AssemblyName>
+    <StartupObject>AccessibleMediaController.PythonLauncher.Tests.Program</StartupObject>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Program.cs" />
+    <Compile Include="..\..\src\Shared\ReleaseProfileContract.cs"
+             Link="ReleaseProfileContract.cs" />
     <Compile Include="..\..\src\AccessibleMediaController.PythonLauncher\BundleContract.cs"
              Link="BundleContract.cs" />
     <Compile Include="..\..\src\AccessibleMediaController.PythonLauncher\PythonLaunchPlan.cs"
@@ -24,5 +27,9 @@
              Link="InstalledProcessGuard.cs" />
     <Compile Include="..\..\src\AccessibleMediaController.PythonUpdater\SafeApplicationStop.cs"
              Link="SafeApplicationStop.cs" />
+    <Compile Include="..\..\src\AccessibleMediaController.PythonUpdater\UpdaterInstanceLease.cs"
+             Link="UpdaterInstanceLease.cs" />
+    <Compile Include="..\..\src\AccessibleMediaController.PythonUpdater\Program.cs"
+             Link="PythonUpdaterProgram.cs" />
   </ItemGroup>
 </Project>

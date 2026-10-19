@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
+using AccessibleMediaController.ReleaseProfiles;
 
 namespace AccessibleMediaController.PythonUpdater;
 
@@ -16,10 +17,11 @@ internal static class SafeApplicationStop
 
     internal static bool RequestAndWait(
         string installationRoot,
+        ReleaseProfileDescriptor profile,
         int? expectedProcessId,
         TimeSpan timeout)
     {
-        RequestCloseForInstallation(installationRoot);
+        RequestCloseForInstallation(installationRoot, profile);
         var deadline = DateTime.UtcNow + timeout;
         while (true)
         {
@@ -34,25 +36,23 @@ internal static class SafeApplicationStop
 
     internal static bool IsCandidateWindow(
         string installationRoot,
+        ReleaseProfileDescriptor profile,
         string? executable,
         string? title) =>
         InstalledProcessGuard.IsInsideInstallation(installationRoot, executable)
         && !string.IsNullOrWhiteSpace(title)
-        && (IsProductWindowTitle(title, "AMC Test")
-            || IsProductWindowTitle(title, "AMC Python"));
+        && ReleaseProfileContract.IsWindowTitle(profile, title);
 
-    private static bool IsProductWindowTitle(string title, string productName) =>
-        string.Equals(title, productName, StringComparison.Ordinal)
-        || title.StartsWith(productName + " — ", StringComparison.Ordinal);
-
-    private static void RequestCloseForInstallation(string installationRoot)
+    private static void RequestCloseForInstallation(
+        string installationRoot,
+        ReleaseProfileDescriptor profile)
     {
         EnumWindows((window, _) =>
         {
             var title = ReadWindowTitle(window);
             GetWindowThreadProcessId(window, out var processId);
             var executable = ExecutableForProcess(processId);
-            if (IsCandidateWindow(installationRoot, executable, title))
+            if (IsCandidateWindow(installationRoot, profile, executable, title))
                 PostMessage(window, CloseMessage, IntPtr.Zero, IntPtr.Zero);
             return true;
         }, IntPtr.Zero);
