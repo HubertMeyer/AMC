@@ -233,6 +233,12 @@ nie pobiera środowiska uruchomieniowego podczas instalacji.
   pobierania runtime i brak wymuszonego zamknięcia programu. Nie jest dowodem
   zbudowania ani uruchomienia instalatora.
 - Oba nowe skrypty PowerShell przeszły kontrolę składni bez błędów.
+- Rzeczywista samowystarczalna paczka publicznego AMC Release powstała w
+  `.test-output/AMC-public-2026.10.19-bd80db01`. Manifest wskazuje profil
+  `public`, czystą rewizję `bd80db01`, 1070 jawnych plików, 1070 rozmiarów i
+  1070 sum SHA-256. Niezależna pełna kontrola zakończyła się kodem **0**;
+  paczka nie zawiera plików Librespot. Ma 422 452 757 bajtów. Nie uruchamiano
+  jej jako aplikacji użytkowej i nie instalowano.
 
 ## Znane ograniczenia
 
@@ -269,7 +275,13 @@ nie pobiera środowiska uruchomieniowego podczas instalacji.
   `wxlite/tests/__pycache__`.
 - Odzyskano 61 685 bajtów. Pliki nie są odzyskiwane z kopii, ponieważ Python
   tworzy je ponownie automatycznie przy kolejnym uruchomieniu testu.
-- Nie utworzono nowego katalogu build, staging ani publish. Nie usunięto
+- Pierwszą próbną paczkę z niezapisanej jeszcze poprawki usunięto po
+  zweryfikowaniu czystego następcy. Usunięto dokładnie katalog
+  `.test-output/AMC-public-2026.10.19-1cc6cc85` spod repozytorium i odzyskano
+  422 452 640 bajtów. Był to odtwarzalny artefakt; nie ma potrzeby odzyskiwania.
+- Zachowano jedyny czysty kandydat publiczny
+  `.test-output/AMC-public-2026.10.19-bd80db01`. Skrypt sam usunął swoje
+  jednoznacznie nazwane katalogi `.test-tmp/bundle-build-*`. Nie usunięto
   zastanych `.test-output`, `.test-tmp`, `.pytest_cache`, źródeł, dokumentacji,
   ustawień, nagrań ani zainstalowanej paczki AMC Test.
 
@@ -289,3 +301,7 @@ nie pobiera środowiska uruchomieniowego podczas instalacji.
 - Publiczne pakowanie, pełna integralność i źródło instalatora: `7b586c14` —
   `feat(amc12): dodaj publiczne pakowanie i instalator`; testy zaliczone,
   pliku instalatora `.exe` nie zbudowano z powodu braku Inno Setup.
+- Poprawka rzeczywistej budowy: `bd80db01` —
+  `fix(amc12): ustabilizuj budowe publicznej paczki`. Kompilacja Release,
+  złożenie czystej paczki i pełna kontrola integralności zaliczone; instalacji
+  ani publikacji nie wykonywano.
