@@ -164,7 +164,8 @@ repozytorium, kanałami wydań i polityką prywatności.
 ## Wersja i commit
 
 - Wersja źródeł: `0.1.0`, profile `AMC Test` i `AMC`.
-- Commit implementacji: do wpisania po lokalnym zapisie etapu.
+- Commit implementacji: `f2e310fc` (`feat(rel): dodaj lokalny fundament
+  sygnalisty`).
 - Instalacja: nie wykonano.
 - Publikacja: nie wykonano.
 
