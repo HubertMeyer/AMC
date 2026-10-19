@@ -1,6 +1,6 @@
 # AMC09 — Menedżer sesji i zwarta numeracja
 
-Status: **Kod i testy automatyczne gotowe; przed kompilacją, instalacją i ręcznym odbiorem NVDA**
+Status: **Wdrożone i zainstalowane w AMC Test; czeka na ręczny odbiór NVDA**
 
 Data realizacji: 2026-10-19
 
@@ -94,8 +94,16 @@ Historyczny projekt został użyty tylko jako materiał do odczytu.
   pominiętych, 11 podtestów zaliczonych**, czas 82,14 s. Pominięcia dotyczą
   istniejących bramek wymagających zbudowanych składników lub środowiska i nie
   zostały policzone jako zaliczone.
-- Kompilacja, instalacja i uruchomienie: **jeszcze nie wykonane na etapie tego
-  wpisu**. Nie są przedstawiane jako potwierdzone.
+- Przed kompilacją bramka bezpieczeństwa o 02:54 UTC sprawdziła 15 jawnych
+  katalogów nagrań: 0 aktywnych okien harmonogramów, 0 plików
+  `.amc-partial`, 0 plików rosnących i 0 plików zablokowanych. Działające AMC
+  zostało podmienione dopiero po tym wyniku.
+- Skrypt odbiorczy zbudował trzy składniki .NET, utworzył pakiet liczący 1660
+  plików, sprawdził manifest i sumy SHA-256, zastosował aktualizację,
+  zweryfikował zainstalowany pakiet i uruchomił nowe AMC Test.
+- Kwit instalacji potwierdza zgodność oczekiwanej i zainstalowanej wersji oraz
+  trzy procesy uruchomione z jednego katalogu instalacji. Okno miało tytuł
+  „AMC Test — 19.10.2026, 04:54”.
 
 ## Znane ograniczenia
 
@@ -115,6 +123,13 @@ Historyczny projekt został użyty tylko jako materiał do odczytu.
 ## Wersja i commit
 
 - Kod i testy źródłowe: commit `dece7646` (`feat(amc09): dodaj menedzer sesji`).
-- Kompilacja: nie wykonana w chwili utworzenia wpisu.
-- Instalacja: nie wykonana w chwili utworzenia wpisu.
+- Dokumentacja wyniku i wersja użyta do instalacji: commit `6c79bdd3`
+  (`docs(amc09): zapisz realizacje menedzera sesji`).
+- Kompilacja, instalacja i uruchomienie: potwierdzone dla
+  `2026.10.19-6c79bdd32904b9468b07489e79da715de512d3e0-972b46e1` w
+  `D:\Projekty Codex\AMC Python`.
+- Pełne testy Python wykonano przed kompilacją. Skrypt promowania otrzymał
+  `-SkipTests`, aby nie powtarzać bez zmian tego samego przebiegu; kwit
+  prawidłowo zapisuje testy etapu promowania jako „pominięte”, a nie jako
+  zaliczone.
 - Publikacja: nie wykonana i nie jest częścią nocnego zadania.

@@ -91,8 +91,8 @@ jawnym poleceniu użytkownika albo przez osobno uzgodniony harmonogram.
   odcinków. Przebieg: `AMC08-playlisty-spotify.md`. Zatwierdzona specyfikacja:
   `D:\Projekty Codex\Accessible Multimedia Controller\AMC08_PLAYLISTY_SPOTIFY_2026-10-18.md`.
   Historyczne źródła są tylko wzorcem; kod powstaje w tym repozytorium.
-- `AMC09` — **Kod i testy automatyczne gotowe; przed kompilacją, instalacją i
-  ręcznym odbiorem NVDA** — dostępny
+- `AMC09` — **Wdrożone i zainstalowane w AMC Test; czeka na ręczny odbiór
+  NVDA** — dostępny
   Menedżer sesji pod `Ctrl+Shift+S`, włączanie Spacją, zwarta kolejność
   `Ctrl+1–9`, zmiana kolejności `Alt+strzałkami`, stan gotowości i stała nazwa
   `Radio`. Ma działać już w AMC Test; profil publiczny będzie później filtrował
