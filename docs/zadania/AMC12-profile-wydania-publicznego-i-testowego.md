@@ -308,6 +308,15 @@ nie pobiera środowiska uruchomieniowego podczas instalacji.
 - Zachowano też jedyny zbudowany instalator i jego plik integralności w
   `.test-output/installers/amc12-2026.10.19`; nie ma jeszcze zweryfikowanej
   kopii zdalnej, więc tych plików nie wolno usuwać.
+- Po udanej instalacji zbiorczej usunięto dokładnie odrzucony katalog
+  `.test-output/AMC-Python-next-2026.10.19-acb81034e44cc818d27221c143c47f8773a44a74-b90cd4ee`.
+  Zawierał niespójny kandydat profilu testowego i nie został zainstalowany.
+  Pozostawione okno „Diagnostyka AMC” z tego katalogu zamknięto zwykłym
+  żądaniem zamknięcia; działającego AMC Test ze stałej instalacji nie ruszano.
+  Odzyskano około 133,45 MiB, oszacowane na podstawie równoważnej poprawnej
+  paczki 139 933 384 bajtów. Kandydat był odtwarzalny z commitu `acb81034`,
+  lecz jako odrzucony nie wymaga odzyskania. Zachowano poprawnego kandydata
+  `fb9ba25f`, instalator publiczny, źródła, ustawienia i dane użytkownika.
 
 ## Wersja i commit
 
