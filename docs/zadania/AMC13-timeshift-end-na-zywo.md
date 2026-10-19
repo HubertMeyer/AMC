@@ -1,7 +1,7 @@
 # AMC13 — End w Time Shifcie Radia wraca na żywo
 
-- Status: **Rozszerzenie skoków procentowych gotowe w źródłach i testach;
-  instalacja nadal zawiera wcześniejszą poprawkę End**
+- Status: **Rozszerzenie skoków procentowych zainstalowane w AMC Test;
+  czeka na ręczny odbiór NVDA**
 - Data realizacji w AMC Test: 2026-10-19
 - Repozytorium wykonawcze: `D:\Projekty Codex\AMC - integracja wxPython`
 - Materiał historyczny, tylko do odczytu:
@@ -99,13 +99,17 @@ plików rosnących. Nie zamykano ani nie podmieniano działającej aplikacji.
 Osobna regresja wspólnego katalogu skrótów, `Ctrl+F1`, palety `Ctrl+Shift+K`
 i menu ma wynik **138 zaliczonych**.
 
+Instalacja zbiorcza 19.10.2026 zaliczyła pełną regresję: **1831 testów,
+110 pominiętych i 11 podtestów**. Paczka 1665 plików przeszła manifest oraz
+SHA-256, została zainstalowana i uruchomiona jako AMC Test.
+
 ## Znane ograniczenia
 
 - Nie dodano zaznaczania ani eksportu fragmentu bufora do nowego pliku.
 - Ręcznie po instalacji trzeba sprawdzić `Home`, przewijanie, zmianę tempa,
   `End`, `NVDA+End`, menu, `Ctrl+F1`, `Ctrl+Shift+K` i powrót fokusu.
-- Rozszerzenie skoków procentowych nie zostało jeszcze zbudowane do paczki,
-  zainstalowane ani odebrane z NVDA w bieżącej instalacji.
+- Rozszerzenie skoków procentowych jest już w bieżącej instalacji; pozostaje
+  ręczny odbiór klawiatury i NVDA.
 
 ## Wersja i commit
 
@@ -117,5 +121,8 @@ i menu ma wynik **138 zaliczonych**.
 - Kompilacja: Release — zaliczona.
 - Instalacja: `2026.10.19-ca7dfa167728317728be534da7a71f8484ebe573-b9d47b3d`,
   manifest, sumy i uruchomienie zweryfikowane 19 października 2026.
+- Instalacja zawierająca skoki procentowe:
+  `2026.10.19-fb9ba25fe0680cf7bf5435d53eb5b073de091cca-0debb6aa`,
+  zweryfikowana i uruchomiona 19 października 2026.
 - Publikacja: nie wykonano; brak wysyłania do GitHuba i brak wydania publicznego.
 

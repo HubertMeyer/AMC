@@ -245,6 +245,11 @@ nie pobiera środowiska uruchomieniowego podczas instalacji.
   zgłoszeń, a zamknięty kontrakt launchera .NET jeszcze go nie dopuszczał.
   Kontrakty ujednolicono i dodano automatyczny test pełnej listy możliwości
   obu profili Python–.NET. Kandydat nie został zainstalowany ani uruchomiony.
+- Końcowa zbiorcza bramka profilu testowego: **1831 zaliczonych, 110
+  pominiętych i 11 podtestów**. Zbudowano 1665 plików, potwierdzono manifest,
+  SHA-256, profil `test`, stałą instalację i jedno uruchomione okno AMC Test.
+  Nie była to próbna instalacja publicznego AMC; publiczny instalator nadal
+  czeka na osobny odbiór.
 - Rzeczywista samowystarczalna paczka publicznego AMC Release powstała w
   `.test-output/AMC-public-2026.10.19-bd80db01`. Manifest wskazuje profil
   `public`, czystą rewizję `bd80db01`, 1070 jawnych plików, 1070 rozmiarów i
@@ -327,3 +332,8 @@ nie pobiera środowiska uruchomieniowego podczas instalacji.
 - Wykrywanie użytkowej instalacji Inno Setup: `6571a4de` —
   `fix(amc12): znajdz uzytkowy kompilator instalatora`. Lokalny instalator
   zbudowany, rozmiar i SHA-256 zgodne; instalacji i publikacji nie wykonywano.
+- Domknięcie pełnej regresji profili i menu: `acb81034`; zgodność możliwości
+  Sygnalisty Python–.NET: `fb9ba25f`.
+- Zbiorcza instalacja AMC Test:
+  `2026.10.19-fb9ba25fe0680cf7bf5435d53eb5b073de091cca-0debb6aa`;
+  publicznego instalatora nadal nie uruchamiano.

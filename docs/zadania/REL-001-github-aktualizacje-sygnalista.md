@@ -1,6 +1,6 @@
 # REL-001 — GitHub Releases, aktualizacje i Sygnalista
 
-- Status: `W trakcie — lokalny fundament Sygnalisty gotowy w źródłach i testach`
+- Status: `W trakcie — lokalny fundament Sygnalisty zainstalowany w AMC Test`
 - Utworzono: 18 października 2026
 - Obszar: wydania, aktualizator i dostępne zgłoszenia
 - Polecenie uruchamiające: `Uruchom zadanie REL-001`
@@ -157,7 +157,11 @@ repozytorium, kanałami wydań i polityką prywatności.
   przed instalacją, ponieważ uruchamiacz .NET nie znał jeszcze możliwości
   `problem-report-local`. Wszystkie sumy plików startowych były zgodne.
   Kontrakt .NET uzupełniono, a test profili porównuje odtąd pełne listy
-  możliwości obu implementacji. Wymagane jest ponowne zielone pakowanie.
+  możliwości obu implementacji. Wtedy wymagane było ponowne zielone pakowanie.
+- Powtórzona pełna bramka: **1831 zaliczonych, 110 pominiętych i 11
+  podtestów**. Paczka 1665 plików przeszła kontrolę profilu, manifest i
+  SHA-256; AMC Test z lokalnym formularzem zostało zainstalowane i uruchomione.
+  Ręczny odbiór NVDA formularza nadal pozostaje otwarty.
 
 ## Znane ograniczenia
 
@@ -166,8 +170,8 @@ repozytorium, kanałami wydań i polityką prywatności.
 - Zapisany raport pozostaje plikiem lokalnym; AMC nie otwiera przeglądarki.
 - Filtry prywatności mają charakter ostrożny i mogą usunąć z logu więcej
   tekstu niż bezwzględnie konieczne.
-- Bieżąca zmiana jest gotowa w źródłach i testach, lecz nie została
-  skompilowana do paczki ani zainstalowana.
+- Bieżąca zmiana jest zainstalowana w AMC Test, lecz nie ma jeszcze odbioru
+  formularza z NVDA ani internetowego transportu.
 
 ## Porządek dysku
 
@@ -185,7 +189,10 @@ repozytorium, kanałami wydań i polityką prywatności.
 - Wersja źródeł: `0.1.0`, profile `AMC Test` i `AMC`.
 - Commit implementacji: `f2e310fc` (`feat(rel): dodaj lokalny fundament
   sygnalisty`).
-- Instalacja: nie wykonano.
+- Ujednolicenie możliwości profili Python–.NET: `fb9ba25f` —
+  `fix(rel): ujednolić możliwości profili launchera`.
+- Instalacja: `2026.10.19-fb9ba25fe0680cf7bf5435d53eb5b073de091cca-0debb6aa`;
+  manifest 1665 plików, pełna integralność i uruchomienie zweryfikowane.
 - Publikacja: nie wykonano.
 
 ## Poza zakresem

@@ -1,6 +1,7 @@
 # AMC14 — foldery i integracja z powłoką Windows
 
-Status: **W trakcie**
+Status: **W trakcie — warstwa aplikacyjna zainstalowana w AMC Test;
+rejestracja powłoki pozostaje nieaktywna**
 
 Źródło zatwierdzonego zakresu:
 `D:\Projekty Codex\Accessible Multimedia Controller\AMC14_FOLDERY_I_INTEGRACJA_POWLOKI_2026-10-18.md`.
@@ -172,11 +173,15 @@ zakończyło się wynikiem `OK`.
   zestaw wykonany poza piaskownicą, czyli w środowisku odpowiadającym normalnej
   pracy AMC, zaliczył **27/27**. Ograniczenie środowiska testowego zapisano
   osobno i nie przedstawia się go jako regresji kanału aplikacji.
+- Końcowa pełna bramka po poprawkach: **1831 testów zaliczonych, 110
+  pominiętych i 11 podtestów zaliczonych**. Paczka 1665 plików przeszła
+  manifest i SHA-256, została zainstalowana w stałej lokalizacji AMC Test oraz
+  uruchomiona. Opcjonalnych wpisów powłoki Windows nie rejestrowano.
 
 ## Znane ograniczenia
 
-- Etap A jest zmianą źródłową i testową. Nie zbudowano ani nie zainstalowano
-  nowej wersji, nie otwierano też prawdziwego Eksploratora w teście.
+- Warstwa aplikacyjna jest zbudowana i zainstalowana. Nie otwierano jeszcze
+  prawdziwego Eksploratora w ręcznym teście.
 - Rejestracja systemowa jest gotowa w źródle instalatora, ale celowo nie została
   zastosowana w rejestrze bieżącego komputera.
 - Kanał został sprawdzony testem odizolowanym, lecz nie zainstalowano nowego
@@ -191,5 +196,10 @@ zakończyło się wynikiem `OK`.
 - Commit etapu B: `662f9c52`.
 - Commit etapu C: `c9d01839`.
 - Korekta litery dostępu menu: `c07e6c21` —
-  `fix(amc14): usuń kolizję litery dostępu menu`; instalacja i publikacja
-  jeszcze bez zmian.
+  `fix(amc14): usuń kolizję litery dostępu menu`; w samym tym commicie
+  instalacja i publikacja pozostawały bez zmian.
+- Domknięcie pełnej regresji: `acb81034` —
+  `fix(amc12-amc14): domknij bramkę pełnej regresji`.
+- Instalacja warstwy aplikacyjnej:
+  `2026.10.19-fb9ba25fe0680cf7bf5435d53eb5b073de091cca-0debb6aa`;
+  rejestracja systemowa i publikacja niewykonane.

@@ -38,7 +38,7 @@ zmian, wymagający korekty użytkownika:
   Radia i zgodność listy `Alt+R` z blokadą zamknięcia. Szczegóły:
   [REC-001-harmonogram-alt-r-zamykanie.md](REC-001-harmonogram-alt-r-zamykanie.md).
 - `AMC02` — **Wdrożone i zainstalowane w AMC Test; korekta po ręcznym
-  odsłuchu gotowa w źródłach i testach, czeka na instalację** — krótkie wiersze `Alt+R` i `Alt+Shift+R`, brak
+  odsłuchu czeka na odbiór NVDA** — krótkie wiersze `Alt+R` i `Alt+Shift+R`, brak
   osobnego „X elementów”, pamięć zaznaczenia oraz bitrate, wielkość i folder
   pod lewą strzałką także w `Ctrl+H`. Ukończony plik w Historii zaczyna się
   od razu nazwą, bez powtarzanego „Nagrane”. Bieżący zapis realizacji:
@@ -82,8 +82,8 @@ zmian, wymagający korekty użytkownika:
   [AMC05-odtwarzany-element-na-listach.md](AMC05-odtwarzany-element-na-listach.md).
   Zatwierdzona specyfikacja:
   `D:\Projekty Codex\Accessible Multimedia Controller\AMC05_ODTWARZANY_ELEMENT_NA_LISTACH_2026-10-18.md`.
-- `AMC13` — **Rozszerzenie skoków procentowych gotowe w źródłach i testach;
-  instalacja nadal zawiera wcześniejszą poprawkę End** — `End` w otwartym
+- `AMC13` — **Rozszerzenie skoków procentowych zainstalowane w AMC Test;
+  czeka na odbiór NVDA** — `End` w otwartym
   odtwarzaczu Time Shiftu wraca na żywo i do tempa normalnego, `NVDA+End`
   pozostaje poleceniem czytnika, a cyfry `0`–`9` przechodzą do 0–90%
   aktualnego bufora. Bieżący zapis realizacji:
@@ -128,8 +128,8 @@ zmian, wymagający korekty użytkownika:
   `D:\Projekty Codex\Accessible Multimedia Controller\AMC10_SONOS_WIIM_URUCHOMIENIE_I_UJEDNOLICENIE_2026-10-18.md`.
   Bez obecności użytkownika nie logować konta i nie sterować głośnikami.
 - `AMC14` — **W trakcie; folder zawierający, argument pliku, osobny kanał
-  działającej instancji i idempotentne `/kolejka` gotowe w źródłach,
-  testach i kompilacji; opcjonalna i odwracalna rejestracja instalatora ma
+  działającej instancji i idempotentne `/kolejka` są zainstalowane w AMC Test;
+  opcjonalna i odwracalna rejestracja instalatora ma
   potwierdzoną składnię, lecz nie została zastosowana w systemie** —
   aplikacyjna integracja z powłoką Windows,
   przekazywanie plików do właściwej instancji i późniejsza rejestracja przez
@@ -155,8 +155,8 @@ zmian, wymagający korekty użytkownika:
 - `LIC-001` — **Oczekuje** — Radio Browser, licencja BASS i bezpieczna decyzja
   o dobrowolnych wpłatach. Szczegóły:
   [LIC-001-radio-browser-bass-darowizny.md](LIC-001-radio-browser-bass-darowizny.md).
-- `REL-001` — **W trakcie; lokalny formularz Sygnalisty gotowy w źródłach i
-  testach, bez instalacji** — menu, F1 i paleta prowadzą do dostępnego
+- `REL-001` — **W trakcie; lokalny formularz Sygnalisty zainstalowany w AMC
+  Test, czeka na odbiór NVDA** — menu, F1 i paleta prowadzą do dostępnego
   formularza z pełnym podglądem, domyślnie wyłączonym logiem, redakcją danych
   oraz kopiowaniem lub atomowym zapisem w magazynie profilu. Własny Worker,
   tokeny, aktualizacje sieciowe i prawdziwe GitHub Issues pozostają odłożone do

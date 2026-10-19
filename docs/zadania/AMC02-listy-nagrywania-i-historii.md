@@ -1,7 +1,7 @@
 # AMC02 — krótkie listy nagrywania i historia plików
 
 Status: **Wdrożone i zainstalowane w AMC Test; korekta wierszy ukończonych
-przygotowana w źródłach i czeka na instalację**.
+czeka na ręczny odbiór NVDA**.
 
 ## Zakres
 
@@ -124,14 +124,20 @@ zgodność nazw i skrótów wykonania, pomocy i palety.
 - osobny przebieg zawierający test zależny od wx nie został zebrany przez
   systemowy Python bez wxPython. Nie przedstawia się go jako zaliczonego;
   dotychczasowe testy tego widoku oraz pełny odbiór wymagają następnej paczki.
-- Nie wykonano jeszcze kompilacji ani instalacji tej korekty.
+- W tym źródłowym przebiegu korekty nie wykonywano kompilacji ani instalacji.
+
+19.10.2026, instalacja zbiorcza korekty:
+
+- pełna regresja wxPython: **1831 zaliczonych, 110 pominiętych i 11
+  podtestów zaliczonych**;
+- paczka: 1665 plików, manifest i SHA-256 zweryfikowane;
+- instalacja i uruchomienie AMC Test ze stałej ścieżki: zaliczone.
 
 ## Znane ograniczenia
 
 - Ręczny odsłuch Historii nagrywania 19.10.2026 wykrył zbyt częste słowo
-  „Nagrane”. Korekta jest gotowa w źródłach, ale jej działanie z NVDA trzeba
-  potwierdzić dopiero po instalacji następnej paczki. Osobny odbiór listy
-  aktualnie nagrywanych plików nadal pozostaje otwarty.
+  „Nagrane”. Korekta jest już zainstalowana; jej działanie z NVDA oraz osobny
+  odbiór listy aktualnie nagrywanych plików nadal pozostają do sprawdzenia.
 - Wczesny stan „uruchamianie nagrania” może chwilowo użyć nazwy stacji, dopóki
   host nie poda nazwy tworzonego pliku.
 - Bitrate i rozmiar zależą od dostępności pliku i odpowiedzi hosta. Folder
@@ -149,6 +155,9 @@ zgodność nazw i skrótów wykonania, pomocy i palety.
 - Instalacja: `2026.10.19-e0f97512d1eee067d225d7b8c73b808ff3f3e561-c0e62181`,
   manifest, sumy i uruchomienie zweryfikowane 19 października 2026; ta
   instalacja nie zawiera jeszcze korekty usuwającej „Nagrane”.
+- Instalacja korekty: `2026.10.19-fb9ba25fe0680cf7bf5435d53eb5b073de091cca-0debb6aa`;
+  manifest 1665 plików, sumy, stała ścieżka i uruchomione AMC Test
+  zweryfikowane 19 października 2026.
 - Publikacja: niewykonana i niedozwolona w tym etapie.
 
 ## Porządek dysku po korekcie
