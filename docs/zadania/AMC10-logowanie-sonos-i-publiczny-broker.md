@@ -115,6 +115,6 @@ Kontrakt sprawdzono 2026-10-19 z aktualną oficjalną dokumentacją Sonosa:
 ## Wersja i commit
 
 - Wersja kodu AMC: `0.1.0-alpha.422`.
-- Commit źródeł i testów: do uzupełnienia po lokalnym zatwierdzeniu.
+- Commit źródeł, testów i pierwszego zapisu dokumentacji: `97a29c09`.
 - Instalacja AMC: bez zmian.
 - Publikacja: brak.
