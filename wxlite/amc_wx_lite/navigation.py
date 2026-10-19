@@ -2217,6 +2217,7 @@ class Navigator:
         bookmark_contexts: dict[str, object] | None = None,
         queue_flags: dict[str, tuple[bool, bool]] | None = None,
         announce_count: bool = True,
+        announce_position: bool = False,
     ) -> list[object]:
         """Skutek udanego odczytu widoku. Zawsze w sesji PLIKOW.
 
@@ -2286,6 +2287,10 @@ class Navigator:
             # natywna lista, a dokładnie ten krótki komunikat idzie po jej
             # aktualizacji, więc NVDA nie składa go z systemowym „nieznane”.
             parts = ["zero elementów"]
+        elif announce_position:
+            parts = [
+                f"{heading}, {state.model.selected_index + 1} z {len(rows)}"
+            ]
         elif announce_count:
             parts = [f"{heading}, {len(rows)} {_items_word(len(rows))}"]
         else:
@@ -2466,6 +2471,7 @@ class Navigator:
         order_matches_amc: bool = True,
         playlist_id: str | None = None,
         fallback_to_playlists: bool = False,
+        announce_position: bool = False,
     ) -> list[object]:
         """Odpowiedz loadera Radia nie rusza listy ani wyboru Plikow."""
         if view not in (
@@ -2509,7 +2515,11 @@ class Navigator:
         state.view = View.LIST
         # Nazwe wiersza czyta natywna lista, nie powtarzamy jej w komunikacie.
         if rows:
-            message = heading
+            message = (
+                f"{heading}, {state.model.selected_index + 1} z {len(rows)}"
+                if announce_position
+                else heading
+            )
         else:
             # Nazwę widoku („Playlista”, „Nagrywane” itd.) ma sama kontrolka.
             # Pusty wynik ma być dokładnie tak krótki, jak zgłosił użytkownik.

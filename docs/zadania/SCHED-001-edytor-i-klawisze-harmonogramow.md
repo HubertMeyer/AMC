@@ -154,6 +154,14 @@ Wynik 19.10.2026: 63/63 testy ukierunkowane oraz 1748 zaliczonych,
 zaliczone, 110 pominiętych, 11 podtestów**. Kompilacja Release, kontrola paczki,
 instalacja i uruchomienie również zakończyły się powodzeniem.
 
+Ponowna bramka przed zaplanowanym restartem 19.10.2026 objęła model daty i
+czasu, klawiaturę listy, zapis planów oraz integrację z menu: razem z bieżącymi
+regresjami **204 testy zaliczone**. Nie wprowadzano drugiej implementacji —
+harmonogramy są już w aktualnym źródle i mają wejść do kolejnej instalacji
+zbiorczej po kontroli aktywnego nagrywania.
+Pełna regresja wxPython po połączeniu bieżących korekt: **1837 zaliczonych,
+110 pominiętych i 11 podtestów zaliczonych**.
+
 ## Znane ograniczenia
 
 - Nie wykonano jeszcze rzeczywistego odsłuchu NVDA. Należy sprawdzić pierwsze

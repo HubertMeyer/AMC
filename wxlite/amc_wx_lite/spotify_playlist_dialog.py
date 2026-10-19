@@ -113,7 +113,15 @@ class SpotifyPlaylistDialog(wx.Dialog):
         self.save_button.Bind(wx.EVT_BUTTON, self._save)
         self.Bind(wx.EVT_CHAR_HOOK, self._on_key)
         self.Bind(wx.EVT_SHOW, self._on_show)
-        self._rebuild()
+        preferred = next(
+            (
+                choice.playlist_id
+                for choice in self._choices
+                if choice.selected
+            ),
+            None,
+        )
+        self._rebuild(preferred)
 
     @property
     def selected_playlist_ids(self) -> list[str]:

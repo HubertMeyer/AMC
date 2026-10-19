@@ -175,3 +175,106 @@ def test_spotify_playlist_flow_does_not_claim_unconfirmed_creation() -> None:
         "Spotify nie potwierdził utworzenia playlisty Bez identyfikatora"
     )
     assert frame._playlist_membership_pending is False
+
+
+def test_spotify_playlist_flow_caches_created_playlist_and_last_destinations() -> None:
+    target_calls: list[bool] = []
+    added_to: list[list[str]] = []
+    spoken: list[str] = []
+    saved_states: list[list[str]] = []
+
+    class _DialogSequence:
+        opened = 0
+
+        def __init__(self, _parent, *, choices, target_label) -> None:
+            assert target_label == "Pierwszy"
+            type(self).opened += 1
+            if self.opened == 1:
+                assert [choice.name for choice in choices] == ["Istniejąca"]
+                assert not choices[0].selected
+                self.selected_playlist_ids = ["existing"]
+                self.new_playlists = [("Nowa publiczna", True)]
+            else:
+                assert [choice.name for choice in choices] == [
+                    "Istniejąca",
+                    "Nowa publiczna",
+                ]
+                assert [choice.selected for choice in choices] == [True, True]
+                self.selected_playlist_ids = ["existing", "created"]
+                self.new_playlists = []
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args) -> None:
+            return None
+
+        def ShowModal(self) -> int:
+            return gui.wx.ID_OK
+
+    client = SimpleNamespace(
+        spotify_playlist_targets=lambda: (
+            target_calls.append(True)
+            or {
+                "playlists": [{
+                    "id": "existing",
+                    "name": "Istniejąca",
+                    "accessibleLabel": "Istniejąca, prywatna",
+                }]
+            }
+        ),
+        spotify_playlist_create=lambda _name, is_public=False: {
+            "playlist": {
+                "id": "created",
+                "name": "Nowa publiczna",
+                "accessibleLabel": "Nowa publiczna, publiczna",
+            },
+            "message": "Utworzono playlistę Spotify: Nowa publiczna, publiczna.",
+        },
+        spotify_playlist_add_items=lambda playlist_ids, _items: (
+            added_to.append(list(playlist_ids))
+            or {"message": "Dodano pozycję do playlist Spotify."}
+        ),
+    )
+
+    def submit(_name, work, done, failed):
+        try:
+            done(work())
+        except Exception as error:
+            failed(error)
+
+    state = SimpleNamespace(spotify_playlist_destination_ids=[])
+    frame = SimpleNamespace(
+        client=client,
+        runner=SimpleNamespace(submit=submit),
+        announcer=SimpleNamespace(say=spoken.append),
+        state=state,
+        store=SimpleNamespace(
+            save=lambda current: saved_states.append(
+                list(current.spotify_playlist_destination_ids)
+            )
+        ),
+        _playlist_membership_pending=False,
+        _spotify_playlist_cache_loaded=False,
+        _spotify_playlist_choices_cache=[],
+        _selected_action_rows=lambda: [
+            Row("row-1", "Pierwszy", "track", service_id="track-1")
+        ],
+        _restore_focus_after_dialog=lambda: None,
+    )
+    previous = gui.SpotifyPlaylistDialog
+    gui.SpotifyPlaylistDialog = _DialogSequence
+    try:
+        gui.LiteFrame._manage_spotify_playlist_membership(frame)
+        gui.LiteFrame._manage_spotify_playlist_membership(frame)
+    finally:
+        gui.SpotifyPlaylistDialog = previous
+
+    assert len(target_calls) == 1
+    assert spoken.count("Pobieram playlisty Spotify") == 1
+    assert added_to == [
+        ["existing", "created"],
+        ["existing", "created"],
+    ]
+    assert state.spotify_playlist_destination_ids == ["existing", "created"]
+    assert saved_states[-1] == ["existing", "created"]

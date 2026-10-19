@@ -294,7 +294,10 @@ def active_recording_rows(payload: object) -> list[Row]:
         path = entry.get("path")
         file_name = _file_name(path.strip()) if isinstance(path, str) else ""
         fallback = station_name.strip() if isinstance(station_name, str) else ""
-        title = f"Nagrywane, {file_name or fallback or 'plik bez nazwy'}"
+        # Stan widoku jest ogłaszany raz po Alt+R razem z pozycją. Wiersz
+        # zawiera wyłącznie nazwę pliku, żeby strzałki nie powtarzały
+        # „Nagrywane” przy każdym elemencie.
+        title = file_name or fallback or "plik bez nazwy"
         rows.append(Row(
             item_id=station_id,
             title=title,

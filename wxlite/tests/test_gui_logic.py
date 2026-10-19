@@ -137,6 +137,7 @@ from amc_wx_lite.gui import (  # noqa: E402
 )
 from amc_wx_lite.shortcuts import Action, Chord, resolve  # noqa: E402
 from amc_wx_lite.navigation import LibraryView, Navigator, SessionId, View  # noqa: E402
+from amc_wx_lite.list_model import Row  # noqa: E402
 
 
 class FakeKeyEvent:
@@ -460,10 +461,118 @@ def test_context_menu_reuses_only_enabled_user_facing_menu_entries() -> None:
         Action.COPY_NAME,
     ]
     assert [command.label for command in commands] == [
-        "&Otwórz zaznaczone\tEnter",
-        "&Skopiuj nazwę (Ctrl+C)",
+        "Otwórz zaznaczone (Enter)",
+        "Skopiuj nazwę (Ctrl+C)",
     ]
     assert all("Action." not in command.label for command in commands)
+
+
+def test_context_menu_shows_action_then_real_shortcut_without_access_letter() -> None:
+    from amc_wx_lite import menu_model
+
+    frame = object.__new__(LiteFrame)
+    frame.navigator = types.SimpleNamespace(
+        session=types.SimpleNamespace(
+            model=types.SimpleNamespace(
+                selected_row=types.SimpleNamespace(kind="playlist")
+            )
+        )
+    )
+
+    quick = menu_model.MenuItem(
+        "Szybkie informacje o elemencie (&0)",
+        Action.QUICK_INFORMATION,
+        shortcut="Alt+T",
+        accelerator=False,
+    )
+    rename = menu_model.MenuItem(
+        "Zmień nazwę w Bibliote&ce",
+        Action.RENAME_LIBRARY_ITEM,
+        shortcut="F2",
+        accelerator=False,
+    )
+
+    assert frame._context_menu_entry_label(
+        quick, "Szybkie informacje o elemencie (&0) (Alt+T)"
+    ) == "Szybkie informacje o elemencie (Alt+T)"
+    assert frame._context_menu_entry_label(rename) == (
+        "Zmień nazwę playlisty (F2)"
+    )
+
+
+def test_f2_renames_playlist_through_the_atomic_profile_snapshot() -> None:
+    from amc_wx_lite import gui
+
+    replacements: list[tuple[str, list[dict[str, object]]]] = []
+    spoken: list[str] = []
+    refreshed: list[str] = []
+    focused: list[bool] = []
+
+    class _RenameDialog:
+        value = "Nowa nazwa"
+
+        def __init__(self, _parent, **_kwargs) -> None:
+            pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args) -> None:
+            return None
+
+        def ShowModal(self) -> int:
+            return gui.wx.ID_OK
+
+    client = types.SimpleNamespace(
+        profile_playlists=lambda _session_id: {
+            "playlists": [{
+                "playlistId": "p1",
+                "name": "Stara nazwa",
+                "createdUtcTicks": 123,
+                "itemIds": ["track-1"],
+            }]
+        },
+        replace_profile_playlists=lambda session_id, playlists: (
+            replacements.append((session_id, playlists)) or {}
+        ),
+    )
+
+    def submit(_name, work, done, failed):
+        try:
+            done(work())
+        except Exception as error:
+            failed(error)
+
+    frame = types.SimpleNamespace(
+        navigator=types.SimpleNamespace(active=SessionId.FILES),
+        _playlist_membership_pending=False,
+        _profile_edit_client=lambda: client,
+        runner=types.SimpleNamespace(submit=submit),
+        announcer=types.SimpleNamespace(say=spoken.append),
+        _restore_focus_after_dialog=lambda: focused.append(True),
+        _refresh_profile_view=lambda preferred_id=None: refreshed.append(preferred_id),
+    )
+    previous = gui.RenameItemDialog
+    gui.RenameItemDialog = _RenameDialog
+    try:
+        LiteFrame._rename_profile_playlist(
+            frame,
+            Row("playlist:p1", "Stara nazwa", "playlist"),
+        )
+    finally:
+        gui.RenameItemDialog = previous
+
+    assert replacements[0][0] == "local"
+    assert replacements[0][1] == [{
+        "playlistId": "p1",
+        "name": "Nowa nazwa",
+        "createdUtcTicks": 123,
+        "itemIds": ["track-1"],
+    }]
+    assert refreshed == ["playlist:p1"]
+    assert focused == [True]
+    assert spoken[-1] == "Zmieniono nazwę playlisty: Nowa nazwa"
+    assert frame._playlist_membership_pending is False
 
 
 def test_spotify_context_relation_exposes_only_the_intentional_podcast_label() -> None:
@@ -599,8 +708,8 @@ def test_player_context_exposes_queue_navigation_with_readable_shortcuts() -> No
         for command in group
     }
 
-    assert labels[Action.QUEUE_PREVIOUS] == "&Poprzedni utwór kolejki\tPage Up"
-    assert labels[Action.QUEUE_NEXT] == "&Następny utwór kolejki\tPage Down"
+    assert labels[Action.QUEUE_PREVIOUS] == "Poprzedni utwór kolejki (Page Up)"
+    assert labels[Action.QUEUE_NEXT] == "Następny utwór kolejki (Page Down)"
 
 
 def test_shift_f6_returns_to_the_list() -> None:

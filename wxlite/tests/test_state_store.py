@@ -469,6 +469,26 @@ def test_round_trip_keeps_private_recording_history() -> None:
     }]
 
 
+def test_round_trip_keeps_only_safe_last_spotify_playlist_destinations(tmp_path) -> None:
+    store = StateStore(tmp_path)
+    state = LiteState(
+        spotify_playlist_destination_ids=[
+            "playlist-one",
+            " playlist-two ",
+            "playlist-one",
+            "",
+        ]
+    )
+
+    store.save(state)
+    loaded = store.load()
+
+    assert loaded.spotify_playlist_destination_ids == [
+        "playlist-one",
+        "playlist-two",
+    ]
+
+
 def test_recording_history_rejects_invalid_ids_and_duplicate_objects() -> None:
     store, directory = temp_store()
     (directory / StateStore.FILE_NAME).write_text(json.dumps({

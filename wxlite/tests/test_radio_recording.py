@@ -668,7 +668,7 @@ def test_active_recordings_are_one_accessible_row_per_station() -> None:
         ]
     })
     assert len(rows) == 1
-    assert rows[0].title == "Nagrywane, Polskie Radio Trójka 2026-10-19"
+    assert rows[0].title == "Polskie Radio Trójka 2026-10-19"
     assert rows[0].url == "https://example.invalid/live"
     assert rows[0].detail == ""
     assert "techniczne-id" not in f"{rows[0].title} {rows[0].detail}"
@@ -895,7 +895,7 @@ def test_empty_active_recordings_have_an_exact_user_facing_count() -> None:
     assert events[0].text == "zero elementów"
 
 
-def test_recording_history_announces_heading_without_separate_item_count() -> None:
+def test_recording_history_announces_short_heading_and_selected_position() -> None:
     nav = Navigator()
     row = Row(
         item_id="radio-recording-history:1",
@@ -906,13 +906,42 @@ def test_recording_history_announces_heading_without_separate_item_count() -> No
 
     events = nav.apply_library_view(
         LibraryView.RECORDED_RADIO_FILES,
-        "Historia nagrywania",
+        "Nagrane",
         [row],
         announce_count=False,
+        announce_position=True,
     )
 
-    assert events[0].text == "Historia nagrywania"
+    assert events[0].text == "Nagrane, 1 z 1"
     assert "element" not in events[0].text
+
+
+def test_active_recordings_announce_view_position_once_not_in_each_row() -> None:
+    nav = Navigator()
+    nav.switch_session(SessionId.RADIO)
+    rows = [
+        Row(item_id="a1", title="pierwszy.mp3", kind="station"),
+        Row(item_id="a2", title="drugi.mp3", kind="station"),
+    ]
+
+    nav.apply_radio_view(
+        LibraryView.ACTIVE_RADIO_RECORDINGS,
+        "Nagrywane",
+        rows,
+    )
+    nav.session.model.select_id("a2")
+    events = nav.apply_radio_view(
+        LibraryView.ACTIVE_RADIO_RECORDINGS,
+        "Nagrywane",
+        rows,
+        announce_position=True,
+    )
+
+    assert events[0].text == "Nagrywane, 2 z 2"
+    assert [row.title for row in nav.session.model.rows] == [
+        "pierwszy.mp3",
+        "drugi.mp3",
+    ]
 
 
 def test_active_and_completed_recording_views_remember_separate_selection() -> None:

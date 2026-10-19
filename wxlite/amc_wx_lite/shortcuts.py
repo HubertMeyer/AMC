@@ -1567,12 +1567,14 @@ def _help_entries() -> list[tuple[str, str, Action]]:
         Action.PASTE_OR_MOVE: "Wstaw przenoszone pozycje przed bieżącym elementem",
         Action.MOVE_LIST_ITEM_UP: "Przenieś zaznaczenie wyżej na liście",
         Action.MOVE_LIST_ITEM_DOWN: "Przenieś zaznaczenie niżej na liście",
-        Action.RENAME_LIBRARY_ITEM: "Zmień nazwę w Bibliotece lub nazwę źródła",
+        Action.RENAME_LIBRARY_ITEM: (
+            "Zmień nazwę pliku w Bibliotece, playlisty, podcastu lub kanału"
+        ),
         Action.RENAME_LOCAL_FILE: "Zmień nazwę pliku na dysku",
         Action.REMOVE_SELECTED: "Usuń z bieżącego widoku bez kasowania pliku",
         Action.RECYCLE_SELECTED: "Przenieś zaznaczone pliki do Kosza",
         Action.STATION_ADD: "Dodaj stacje",
-        Action.STATION_EDIT: "Zmien stacje",
+        Action.STATION_EDIT: "Zmień nazwę lub adres stacji",
         Action.STATION_DELETE: "Usun stacje",
         Action.STATION_IMPORT: "Importuj liste stacji",
         Action.STATION_EXPORT_FAVORITES: "Eksportuj ulubione stacje do playlisty",

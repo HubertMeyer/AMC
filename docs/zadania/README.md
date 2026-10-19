@@ -37,11 +37,11 @@ zmian, wymagający korekty użytkownika:
 - `REC-001` — **Zrobione** — trwałość wykonanego harmonogramu nagrywania
   Radia i zgodność listy `Alt+R` z blokadą zamknięcia. Szczegóły:
   [REC-001-harmonogram-alt-r-zamykanie.md](REC-001-harmonogram-alt-r-zamykanie.md).
-- `AMC02` — **Wdrożone i zainstalowane w AMC Test; korekta po ręcznym
-  odsłuchu czeka na odbiór NVDA** — krótkie wiersze `Alt+R` i `Alt+Shift+R`, brak
-  osobnego „X elementów”, pamięć zaznaczenia oraz bitrate, wielkość i folder
-  pod lewą strzałką także w `Ctrl+H`. Ukończony plik w Historii zaczyna się
-  od razu nazwą, bez powtarzanego „Nagrane”. Bieżący zapis realizacji:
+- `AMC02` — **Kolejna korekta w źródłach i testach; czeka na instalację po
+  bezpiecznej bramce i odbiór NVDA** — `Alt+R` mówi raz „Nagrywane, X z X”, a
+  `Alt+Shift+R` „Nagrane, X z X”; same wiersze zaczynają się od nazwy pliku.
+  Zachowano osobną pamięć zaznaczenia oraz bitrate, wielkość i folder pod lewą
+  strzałką także w `Ctrl+H`. Bieżący zapis realizacji:
   [AMC02-listy-nagrywania-i-historii.md](AMC02-listy-nagrywania-i-historii.md).
   Zatwierdzona analiza historyczna:
   `D:\Projekty Codex\Accessible Multimedia Controller\AMC02_ANALIZA_2026-10-18.md`
@@ -76,6 +76,11 @@ zmian, wymagający korekty użytkownika:
   `D:\Projekty Codex\Accessible Multimedia Controller\AMC03_AUDYT_SKROTOW_2026-10-18.md`
   oraz `AMC04_REALIZACJA_ETAP_A_2026-10-18.md`. Stare źródła WPF służą tylko
   jako wzorzec; właściwe wdrożenie wykonujemy w tym repozytorium.
+- `MENU-001` — **W trakcie; korekta źródłowa i testy ukierunkowane gotowe** —
+  wspólne menu kontekstowe bez odczytu technicznych cyfr i przypadkowych
+  liter dostępu, nazwy zależne od rodzaju elementu, rzeczywiste skróty oraz
+  audyt dostępności poleceń i nawigacji między sesjami. Szczegóły:
+  [MENU-001-menu-kontekstowe-i-skroty.md](MENU-001-menu-kontekstowe-i-skroty.md).
 - `AMC05` — **Wdrożone i zainstalowane w AMC Test; czeka na ręczny odbiór
   NVDA** — stan `Odtwarzane` lub `Wstrzymane` na właściwych listach bez utraty
   etykiety i bez przestawiania fokusa. Bieżący zapis realizacji:
@@ -91,10 +96,11 @@ zmian, wymagający korekty użytkownika:
   Zatwierdzona specyfikacja:
   `D:\Projekty Codex\Accessible Multimedia Controller\AMC13_TIMESHIFT_RADIA_2026-10-18.md`.
   Eksport fragmentów Time Shiftu pozostaje późniejszym rozszerzeniem.
-- `AMC08` — **Wdrożone i zainstalowane w AMC Test; czeka na ręczny odbiór NVDA
-  i świadomą próbę na koncie** — natywne playlisty Spotify w AMC
-  Test: `Ctrl+P`, `Ctrl+Shift+P`, tworzenie playlist i dodawanie utworów lub
-  odcinków. Przebieg: `AMC08-playlisty-spotify.md`. Zatwierdzona specyfikacja:
+- `AMC08` — **Korekta cache i ostatniego celu gotowa w źródłach i testach;
+  czeka na instalację, odbiór NVDA i próbę na koncie** — natywne playlisty
+  Spotify w AMC Test: `Ctrl+P`, `Ctrl+Shift+P`, pobranie katalogu raz na
+  uruchomienie, natychmiastowa widoczność nowej playlisty i zapamiętanie
+  ostatnich celów. Przebieg: `AMC08-playlisty-spotify.md`. Zatwierdzona specyfikacja:
   `D:\Projekty Codex\Accessible Multimedia Controller\AMC08_PLAYLISTY_SPOTIFY_2026-10-18.md`.
   Historyczne źródła są tylko wzorcem; kod powstaje w tym repozytorium.
 - `AMC09` — **Wdrożone i zainstalowane w AMC Test; czeka na ręczny odbiór

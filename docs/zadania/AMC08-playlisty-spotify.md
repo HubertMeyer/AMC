@@ -1,7 +1,8 @@
 # AMC08 — natywne playlisty Spotify
 
-Status: **wdrożone i zainstalowane w AMC Test; czeka na ręczny odbiór NVDA
-oraz świadomą próbę na koncie Spotify**.
+Status: **Korekta pamięci podręcznej i ostatniego celu wdrożona w źródłach i
+testach; czeka na pełną regresję, instalację oraz świadomą próbę z NVDA na
+koncie Spotify**.
 
 Źródło decyzji: zatwierdzona analiza historyczna tylko do odczytu
 `D:\Projekty Codex\Accessible Multimedia Controller\AMC08_PLAYLISTY_SPOTIFY_2026-10-18.md`.
@@ -15,8 +16,13 @@ oraz świadomą próbę na koncie Spotify**.
   odznacza wiele playlist. Enter wykonuje operację, Escape ją anuluje.
 - Przycisk „Nowa playlista…” pyta o nazwę i widoczność: domyślnie prywatną
   albo jawnie publiczną. Nowa playlista jest od razu zaznaczona jako cel.
-- Przed oknem AMC mówi „Pobieram playlisty Spotify”. Po zapisie mówi, ile
-  pozycji dodano, które były już obecne oraz czy wynik jest częściowy.
+- Przy pierwszym `Ctrl+Shift+P` w danym uruchomieniu AMC mówi „Pobieram
+  playlisty Spotify”. Kolejne otwarcia korzystają z pamięci podręcznej i nie
+  pobierają tej samej listy ponownie. Po zapisie AMC mówi, ile pozycji dodano,
+  które były już obecne oraz czy wynik jest częściowy.
+- Playlista utworzona w oknie od razu trafia do listy bieżącego uruchomienia.
+  Przy następnym `Ctrl+Shift+P` jest widoczna, a ostatnio użyte playlisty są
+  zaznaczone. Ich wybór jest zapisany w prywatnych ustawieniach AMC Test.
 - Starsze logowanie Spotify nie zawiera zgód na zmianę playlist. AMC nie
   otwiera wtedy przeglądarki samoczynnie, tylko kieruje do `Ctrl+F5`, aby
   użytkownik świadomie zalogował konto ponownie.
@@ -50,6 +56,11 @@ oraz świadomą próbę na koncie Spotify**.
 - OAuth prosi jawnie o `playlist-modify-private` oraz
   `playlist-modify-public`. Bez obecności użytkownika nie jest rozpoczynane
   ponowne logowanie i żaden test nie zapisuje danych na prawdziwym koncie.
+- **Korekta użytkownika z 19 października 2026 zastępuje wcześniejsze
+  pobieranie listy przy każdym `Ctrl+Shift+P`.** Lista jest pobierana raz na
+  proces, ale samo dodanie nadal przechodzi przez świeżą weryfikację hosta.
+  Potwierdzona nowa playlista jest dopisywana do pamięci, zamiast czekać na
+  późniejsze odświeżenie katalogu Spotify.
 
 ## Testy i wynik
 
@@ -78,6 +89,16 @@ oraz świadomą próbę na koncie Spotify**.
 - Procedura promocji ponownie zaliczyła pełne **1754** testy wxPython,
   zbudowała paczkę 1659 plików, sprawdziła jej manifest i sumy SHA-256,
   zainstalowała ją oraz potwierdziła uruchomienie właściwego procesu i tytułu.
+- 19 października 2026 po zgłoszeniu z prawdziwego użycia: bramka obejmująca
+  cache, nową playlistę, zapamiętanie celów, magazyn ustawień, menu,
+  nagrywanie i harmonogramy — **204 zaliczone**. Atrapa potwierdza, że dwa
+  kolejne wywołania pobierają katalog tylko raz, nowa publiczna playlista jest
+  widoczna za drugim razem, oba ostatnie cele są zaznaczone, a wybór przeżywa
+  zapis ustawień. Korekta nie została jeszcze zainstalowana ani odebrana w
+  sieci na prawdziwym koncie.
+- Szeroki audyt menu, skrótów i sesji: **403 zaliczone i 5 podtestów**.
+  Pełna regresja wxPython po połączeniu korekt: **1837 zaliczonych, 110
+  pominiętych i 11 podtestów zaliczonych**.
 
 ## Znane ograniczenia
 
@@ -87,6 +108,10 @@ oraz świadomą próbę na koncie Spotify**.
 - Ręczny test NVDA i prawdziwego konta Spotify nie został wykonany. Sama
   poprawna instalacja nie potwierdza jeszcze odbioru mowy ani operacji
   sieciowej na koncie.
+- Pamięć katalogu obowiązuje do zamknięcia AMC Test. Playlista utworzona w
+  AMC trafia do niej natychmiast; zmiana wykonana równolegle w innej aplikacji
+  Spotify będzie widoczna po ponownym uruchomieniu AMC Test. Dodawanie nie
+  ufa cache — host ponownie sprawdza uprawnienia i istnienie wskazanego celu.
 
 ## Wersja i commit
 
@@ -97,3 +122,5 @@ oraz świadomą próbę na koncie Spotify**.
 - Instalacja: `2026.10.19-e0f97512d1eee067d225d7b8c73b808ff3f3e561-c0e62181`,
   manifest, sumy i uruchomienie zweryfikowane 19 października 2026.
 - Publikacja: nie wykonywać w tym etapie.
+- Korekta cache i ostatniego celu: bieżący lokalny etap, commit zostanie
+  wpisany po zapisie; kompilacja i instalacja jeszcze niewykonane.

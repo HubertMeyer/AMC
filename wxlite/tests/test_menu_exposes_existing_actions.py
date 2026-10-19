@@ -180,6 +180,19 @@ def test_shortcut_shown_in_menu_is_the_shortcut_that_really_works() -> None:
         )
 
 
+def test_corrected_menu_labels_name_the_real_action() -> None:
+    search = next(
+        item for item in all_items()
+        if item.action is Action.SEARCH_CURRENT
+    )
+    station = next(
+        item for item in all_items()
+        if item.action is Action.STATION_EDIT
+    )
+    assert search.label.replace("&", "") == "Szukaj w bieżącej usłudze"
+    assert station.label.replace("&", "") == "Zmień nazwę stacji"
+
+
 def test_no_duplicate_labels_or_shortcuts() -> None:
     """Powtórzenia są tylko celowymi skrótami kontekstowymi AMC."""
     items = all_items()

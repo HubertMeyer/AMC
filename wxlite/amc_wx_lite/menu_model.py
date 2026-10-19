@@ -643,7 +643,7 @@ def build_menus(session_order: object = None) -> tuple[Menu, ...]:
                      shortcut="Shift+Delete", accelerator=False, needs_selection=True,
                      visible_sessions=FILES_ONLY),
             MenuItem(
-                "Edytuj strumień WiiM (&X)…",
+                "Zmień nazwę lub adres strumienia WiiM (&X)…",
                 Action.EDIT_WIIM_NETWORK_STREAM,
                 shortcut="F2",
                 accelerator=False,
@@ -697,7 +697,7 @@ def build_menus(session_order: object = None) -> tuple[Menu, ...]:
                 visible_sessions=WIIM_ONLY,
             ),
             MenuItem(
-                "Edytuj stację Sonos (&1)…",
+                "Zmień nazwę lub adres stacji Sonos (&1)…",
                 Action.EDIT_SONOS_OWN_STREAM,
                 shortcut="F2",
                 accelerator=False,
@@ -769,7 +769,7 @@ def build_menus(session_order: object = None) -> tuple[Menu, ...]:
         "S&zukaj",
         (
             MenuItem(
-                "W &bieżącej usłudze",
+                "Szukaj w &bieżącej usłudze",
                 Action.SEARCH_CURRENT,
                 shortcut="Ctrl+F",
             ),
@@ -792,7 +792,7 @@ def build_menus(session_order: object = None) -> tuple[Menu, ...]:
         (
             MenuItem("&Dodaj stację", Action.STATION_ADD, shortcut="Ctrl+N",
                      accelerator=False, needs_radio_session=True),
-            MenuItem("&Zmień stację", Action.STATION_EDIT, shortcut="F2",
+            MenuItem("&Zmień nazwę stacji", Action.STATION_EDIT, shortcut="F2",
                      needs_radio_session=True),
             MenuItem("&Usuń stację", Action.STATION_DELETE, shortcut="Delete",
                      accelerator=False, needs_radio_session=True),

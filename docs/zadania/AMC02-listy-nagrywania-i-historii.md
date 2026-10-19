@@ -1,7 +1,7 @@
 # AMC02 — krótkie listy nagrywania i historia plików
 
-Status: **Wdrożone i zainstalowane w AMC Test; korekta wierszy ukończonych
-czeka na ręczny odbiór NVDA**.
+Status: **Kolejna korekta wdrożona w źródłach i testach; czeka na pełną
+regresję, instalację po bezpiecznej bramce nagrywania i odbiór NVDA**.
 
 ## Zakres
 
@@ -22,13 +22,16 @@ wspólny formatter hosta.
 
 ## Materiał do dokumentacji użytkownika
 
-`Alt+R` otwiera listę „Nagrywane”. Każdy zwykły wiersz ma krótki format
-„Nagrywane, nazwa pliku”. Podczas uruchamiania nagrania, zanim silnik zna
-jeszcze ścieżkę pliku, zamiast pustej nazwy może zostać podana nazwa stacji.
-Lista nie powtarza czasu trwania, liczby zapisanych części, folderu ani nazwy
-harmonogramu.
+`Alt+R` otwiera listę aktualnych nagrań i mówi raz „Nagrywane, X z X”, gdzie
+pierwsza liczba jest zapamiętaną pozycją, a druga liczbą widocznych plików.
+Zwykły wiersz zaczyna się od razu nazwą pliku; słowo „Nagrywane” nie jest
+powtarzane przy każdej strzałce. Podczas uruchamiania nagrania, zanim silnik
+zna jeszcze ścieżkę pliku, zamiast pustej nazwy może zostać podana nazwa
+stacji. Lista nie powtarza czasu trwania, liczby zapisanych części, folderu
+ani nazwy harmonogramu.
 
-`Alt+Shift+R` otwiera „Historię nagrywania”. Zwykły ukończony plik jest czytany
+`Alt+Shift+R` otwiera Historię nagrywania i mówi raz „Nagrane, X z X”. Zwykły
+ukończony plik jest czytany
 od razu jako sama nazwa pliku, bez powtarzanego przedrostka „Nagrane”. Inne
 stany zaczynają się od krótkiego,
 jednoznacznego określenia: „Zatrzymane”, „Przerwane”, „Nieudane”, „Brak pliku
@@ -36,10 +39,9 @@ nagrania” albo „Plik nagrania niedostępny”. Przy nieudanej próbie, dla k
 nie powstał plik, lista może podać nazwę stacji i przyczynę. Normalny wiersz nie
 powtarza stacji, harmonogramu, daty ani folderu.
 
-Po wejściu do Historii nagrywania AMC mówi jej nazwę, ale nie dodaje osobnego
-komunikatu „X elementów”. Pozycję „1 z 1”, „2 z 5” i podobną przekazuje
-natywna lista razem z aktualnym wierszem. Lista „Nagrywane” i Historia
-nagrywania pamiętają zaznaczenie oddzielnie.
+Lista „Nagrywane” i Historia nagrywania pamiętają zaznaczenie oddzielnie.
+Komunikat wejścia podaje pozycję, a kolejne strzałki pozostają krótkie i
+zaczynają się od nazwy bieżącego pliku.
 
 Na lokalnym nagraniu w Historii nagrywania lewa strzałka podaje dostępne
 parametry, między innymi bitrate i rozmiar, a na końcu nazwę folderu bez
@@ -76,6 +78,10 @@ Polecenie `Alt+R` ma w menu, pomocy klawiatury `Ctrl+F1` i palecie
   każdy ruch NVDA, dlatego wiersz zaczyna się teraz bezpośrednio nazwą pliku.
   Określenia „Zatrzymane”, „Przerwane”, „Nieudane” i informacje o braku albo
   niedostępności pliku pozostają, ponieważ opisują stan wyjątkowy.
+- **Korekta użytkownika z 19.10.2026 zastępuje wcześniejsze ustalenie o samym
+  nagłówku bez pozycji.** `Alt+R` ma ogłaszać raz „Nagrywane, X z X”, a
+  `Alt+Shift+R` — „Nagrane, X z X”. Nie przywraca to przedrostka do każdego
+  wiersza; strzałki nadal zaczynają od nazwy pliku.
 
 ## Zmienione miejsca
 
@@ -133,11 +139,23 @@ zgodność nazw i skrótów wykonania, pomocy i palety.
 - paczka: 1665 plików, manifest i SHA-256 zweryfikowane;
 - instalacja i uruchomienie AMC Test ze stałej ścieżki: zaliczone.
 
+19.10.2026, kolejna korekta pozycji i nazw wierszy:
+
+- wspólna bramka nagrywania, menu, Spotify, ustawień i harmonogramów:
+  **204 zaliczone**;
+- pełna regresja wxPython po połączeniu korekt: **1837 zaliczonych, 110
+  pominiętych i 11 podtestów zaliczonych**;
+- test sprawdza zapamiętaną pozycję „2 z 2” oraz brak słowa „Nagrywane” w
+  tytułach obu zwykłych wierszy;
+- na tym etapie wykonano wyłącznie zmianę źródeł i odizolowane testy. Pełna
+  kompilacja, instalacja i uruchomienie pozostają osobnymi krokami po 18:30 i
+  ponownej kontroli nagrywania.
+
 ## Znane ograniczenia
 
-- Ręczny odsłuch Historii nagrywania 19.10.2026 wykrył zbyt częste słowo
-  „Nagrane”. Korekta jest już zainstalowana; jej działanie z NVDA oraz osobny
-  odbiór listy aktualnie nagrywanych plików nadal pozostają do sprawdzenia.
+- Ostatnia korekta „Nagrywane/Nagrane, X z X” nie jest jeszcze zainstalowana.
+  Po instalacji wymaga odsłuchu wejścia, ruchu strzałkami i powrotu do obu
+  widoków ze wcześniej zapamiętanym zaznaczeniem.
 - Wczesny stan „uruchamianie nagrania” może chwilowo użyć nazwy stacji, dopóki
   host nie poda nazwy tworzonego pliku.
 - Bitrate i rozmiar zależą od dostępności pliku i odpowiedzi hosta. Folder
@@ -159,6 +177,8 @@ zgodność nazw i skrótów wykonania, pomocy i palety.
   manifest 1665 plików, sumy, stała ścieżka i uruchomione AMC Test
   zweryfikowane 19 października 2026.
 - Publikacja: niewykonana i niedozwolona w tym etapie.
+- Kolejna korekta źródłowa: bieżący lokalny etap, commit zostanie wpisany po
+  jego zapisaniu; kompilacja i instalacja jeszcze niewykonane.
 
 ## Porządek dysku po korekcie
 

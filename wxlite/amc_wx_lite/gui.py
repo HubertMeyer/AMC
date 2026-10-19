@@ -27,6 +27,7 @@ zostaje nietkniety: wxPython zapisuje wlasne, kompletne nadpisanie planow.
 from __future__ import annotations
 
 import os
+import re
 import time
 import uuid
 from dataclasses import dataclass
@@ -95,6 +96,7 @@ from .playlist_dialog import (
 from .problem_report_dialog import ProblemReportDialog
 from .spotify_playlist_dialog import (
     SpotifyPlaylistDialog,
+    SpotifyPlaylistChoice,
     SpotifyPlaylistPayloadError,
     choices_from_payload as spotify_playlist_choices_from_payload,
 )
@@ -482,8 +484,8 @@ _PLAYER_CONTEXT_ONLY_LABELS = {
     # The old AMC exposed these two commands in the player context menu but
     # not in the main menu bar.  Keep that distinction and use explicit text
     # instead of leaking ``Action`` values into accessibility output.
-    Action.QUEUE_PREVIOUS: "&Poprzedni utwór kolejki\tPage Up",
-    Action.QUEUE_NEXT: "&Następny utwór kolejki\tPage Down",
+    Action.QUEUE_PREVIOUS: "Poprzedni utwór kolejki (Page Up)",
+    Action.QUEUE_NEXT: "Następny utwór kolejki (Page Down)",
 }
 
 RADIO_FORMAT_CHOICES = (
@@ -5856,6 +5858,11 @@ class LiteFrame(wx.Frame):
         self._radio_search_action_pending = False
         self._podcast_opml_pending = False
         self._playlist_membership_pending = False
+        # Pierwsze Ctrl+Shift+P pobiera listę z konta. Kolejne otwarcia w tym
+        # procesie używają tej migawki; nowo utworzone playlisty dopisujemy do
+        # niej po potwierdzeniu hosta.
+        self._spotify_playlist_cache_loaded = False
+        self._spotify_playlist_choices_cache: list[SpotifyPlaylistChoice] = []
         self._last_podcast_progress_error: str | None = None
         self._recording_history_persist_error = False
         self._audio_clip_export_in_progress = False
@@ -6480,6 +6487,16 @@ class LiteFrame(wx.Frame):
                 enabled = False
             if entry.needs_selection and not has_row:
                 enabled = False
+            if entry.action is Action.RENAME_LIBRARY_ITEM and not (
+                selected_row is not None
+                and (
+                    self.navigator.active is SessionId.FILES
+                    and selected_kind in {"track", "playlist"}
+                    or self.navigator.active is SessionId.PODCASTS
+                    and selected_kind in {"podcast", "playlist"}
+                )
+            ):
+                enabled = False
             if entry.needs_item_information and not has_information_item:
                 enabled = False
             if entry.needs_local_path and not has_local_path:
@@ -6732,7 +6749,9 @@ class LiteFrame(wx.Frame):
                     continue
                 native, entry = source
                 commands.append(_ContextMenuCommand(
-                    label=native.GetItemLabel(),
+                    label=self._context_menu_entry_label(
+                        entry, native.GetItemLabel()
+                    ),
                     action=action,
                     checkable=entry.checkable,
                     checked=(
@@ -6748,6 +6767,48 @@ class LiteFrame(wx.Frame):
                 if relations:
                     groups.append(relations)
         return tuple(groups)
+
+    @staticmethod
+    def _without_menu_mnemonic(label: str) -> str:
+        """Usuń techniczny znacznik ``&`` z nazwy czytanej przez NVDA."""
+
+        label = re.sub(r"\s*\(&[^)]\)", "", label)
+        marker = "\0"
+        return label.replace("&&", marker).replace("&", "").replace(marker, "&")
+
+    def _context_menu_entry_label(
+        self,
+        entry: menu_model.MenuItem,
+        current_native_label: str = "",
+    ) -> str:
+        """Jedna nazwa użytkowa i jeden rzeczywisty skrót, bez losowej litery."""
+
+        row = self.navigator.session.model.selected_row
+        label = current_native_label or entry.label
+        label = label.split("\t", 1)[0]
+        if entry.shortcut:
+            suffix = f" ({self._menu_shortcut_text(entry.shortcut)})"
+            if label.endswith(suffix):
+                label = label[:-len(suffix)]
+        if entry.action is Action.STATION_EDIT:
+            label = "Zmień nazwę lub adres stacji"
+        elif entry.action is Action.EDIT_WIIM_NETWORK_STREAM:
+            label = "Zmień nazwę lub adres strumienia WiiM…"
+        elif entry.action is Action.EDIT_SONOS_OWN_STREAM:
+            label = "Zmień nazwę lub adres stacji Sonos…"
+        elif entry.action is Action.RENAME_LOCAL_FILE:
+            label = "Zmień nazwę pliku na dysku"
+        elif entry.action is Action.RENAME_LIBRARY_ITEM and row is not None:
+            if row.kind == "playlist":
+                label = "Zmień nazwę playlisty"
+            elif row.kind == "podcast":
+                label = "Zmień nazwę podcastu lub kanału"
+            elif row.kind == "track":
+                label = "Zmień nazwę pliku w Bibliotece"
+        label = self._without_menu_mnemonic(label)
+        if not entry.shortcut:
+            return label
+        return f"{label} ({self._menu_shortcut_text(entry.shortcut)})"
 
     @staticmethod
     def _context_menu_position(
@@ -19675,18 +19736,28 @@ class LiteFrame(wx.Frame):
         ]
         target_label = rows[0].title if len(rows) == 1 else format_item_count(len(rows))
         self._playlist_membership_pending = True
-        self.announcer.say("Pobieram playlisty Spotify")
 
-        def loaded(payload: object) -> None:
-            try:
-                choices = spotify_playlist_choices_from_payload(payload)
-            except SpotifyPlaylistPayloadError as error:
-                self._playlist_membership_pending = False
-                self.announcer.say(str(error))
-                return
+        def choices_for_dialog(
+            source: list[SpotifyPlaylistChoice],
+        ) -> list[SpotifyPlaylistChoice]:
+            state = getattr(self, "state", None)
+            selected_ids = set(
+                getattr(state, "spotify_playlist_destination_ids", []) or []
+            )
+            return [
+                SpotifyPlaylistChoice(
+                    choice.playlist_id,
+                    choice.name,
+                    choice.description,
+                    selected=choice.playlist_id in selected_ids,
+                )
+                for choice in source
+            ]
+
+        def open_dialog(choices: list[SpotifyPlaylistChoice]) -> None:
             with SpotifyPlaylistDialog(
                 self,
-                choices=choices,
+                choices=choices_for_dialog(choices),
                 target_label=target_label,
             ) as dialog:
                 if dialog.ShowModal() != wx.ID_OK:
@@ -19701,6 +19772,7 @@ class LiteFrame(wx.Frame):
                 selected = list(playlist_ids)
                 messages: list[str] = []
                 failures: list[str] = []
+                created_playlists: list[dict[str, object]] = []
                 for name, is_public in new_playlists:
                     try:
                         created = client.spotify_playlist_create(
@@ -19723,6 +19795,15 @@ class LiteFrame(wx.Frame):
                             )
                             continue
                         selected.append(playlist_id)
+                        cached_playlist = dict(raw_playlist)
+                        cached_playlist["id"] = playlist_id
+                        cached_playlist.setdefault("name", name)
+                        cached_playlist.setdefault(
+                            "accessibleLabel",
+                            f"{name}, "
+                            + ("publiczna" if is_public else "prywatna"),
+                        )
+                        created_playlists.append(cached_playlist)
                         message = str(created.get("message") or "").strip()
                         if message:
                             messages.append(message)
@@ -19738,13 +19819,60 @@ class LiteFrame(wx.Frame):
                                 messages.append(message)
                     except Exception as error:
                         failures.append(f"Nie dodano pozycji do playlist: {error}")
-                return {"messages": messages, "failures": failures}
+                return {
+                    "messages": messages,
+                    "failures": failures,
+                    "createdPlaylists": created_playlists,
+                    "selectedPlaylistIds": selected,
+                }
 
             def saved(result: object) -> None:
                 self._playlist_membership_pending = False
                 data = result if isinstance(result, dict) else {}
                 messages = [str(value) for value in data.get("messages", []) if value]
                 failures = [str(value) for value in data.get("failures", []) if value]
+                created_raw = data.get("createdPlaylists", [])
+                if isinstance(created_raw, list) and created_raw:
+                    try:
+                        created_choices = spotify_playlist_choices_from_payload({
+                            "playlists": created_raw,
+                        })
+                    except SpotifyPlaylistPayloadError:
+                        created_choices = []
+                    by_id = {
+                        choice.playlist_id: choice
+                        for choice in getattr(
+                            self, "_spotify_playlist_choices_cache", []
+                        )
+                    }
+                    for choice in created_choices:
+                        by_id[choice.playlist_id] = SpotifyPlaylistChoice(
+                            choice.playlist_id,
+                            choice.name,
+                            choice.description,
+                        )
+                    self._spotify_playlist_choices_cache = list(by_id.values())
+                    self._spotify_playlist_cache_loaded = True
+                selected_ids = [
+                    str(value).strip()
+                    for value in data.get("selectedPlaylistIds", [])
+                    if isinstance(value, str) and value.strip()
+                ]
+                state = getattr(self, "state", None)
+                if state is not None and selected_ids:
+                    state.spotify_playlist_destination_ids = list(
+                        dict.fromkeys(selected_ids)
+                    )[:50]
+                    store = getattr(self, "store", None)
+                    if store is not None and callable(getattr(store, "save", None)):
+                        try:
+                            store.save(state)
+                        except (OSError, TypeError, ValueError) as error:
+                            _append_frontend_log(
+                                store,
+                                "Nie zapisano ostatnich playlist Spotify: "
+                                f"{type(error).__name__}: {error}",
+                            )
                 if messages and failures:
                     completion = f"{' '.join(messages)} Częściowy wynik. {' '.join(failures)}"
                 elif failures:
@@ -19759,10 +19887,32 @@ class LiteFrame(wx.Frame):
 
             self.runner.submit("spotify-playlist-save", save, saved, save_failed)
 
+        def loaded(payload: object) -> None:
+            try:
+                choices = spotify_playlist_choices_from_payload(payload)
+            except SpotifyPlaylistPayloadError as error:
+                self._playlist_membership_pending = False
+                self.announcer.say(str(error))
+                return
+            self._spotify_playlist_choices_cache = [
+                SpotifyPlaylistChoice(
+                    choice.playlist_id,
+                    choice.name,
+                    choice.description,
+                )
+                for choice in choices
+            ]
+            self._spotify_playlist_cache_loaded = True
+            open_dialog(choices)
+
         def load_failed(error: Exception) -> None:
             self._playlist_membership_pending = False
             self.announcer.say(f"Nie mogę odczytać playlist Spotify: {error}")
 
+        if getattr(self, "_spotify_playlist_cache_loaded", False):
+            open_dialog(list(getattr(self, "_spotify_playlist_choices_cache", [])))
+            return
+        self.announcer.say("Pobieram playlisty Spotify")
         self.runner.submit(
             "spotify-playlist-load",
             client.spotify_playlist_targets,
@@ -21823,6 +21973,9 @@ class LiteFrame(wx.Frame):
         row = self._single_edit_row("zmiany nazwy")
         if row is None:
             return
+        if row.kind == "playlist":
+            self._rename_profile_playlist(row)
+            return
         if self.navigator.active is SessionId.PODCASTS:
             if row.kind != "podcast":
                 self.announcer.say(
@@ -21896,6 +22049,114 @@ class LiteFrame(wx.Frame):
             lambda: client.rename_library_item(row.item_id, title),
             done,
             lambda error: self.announcer.say(f"Nie zmieniono nazwy: {error}"),
+        )
+
+    def _rename_profile_playlist(self, row: Row) -> None:
+        """F2 na kontenerze playlisty korzysta z tej samej atomowej migawki."""
+
+        session_ids = {
+            SessionId.FILES: "local",
+            SessionId.PODCASTS: "podcasts",
+        }
+        session_id = session_ids.get(self.navigator.active)
+        if session_id is None:
+            self.announcer.say("Zmiana nazwy tej playlisty nie jest dostępna")
+            return
+        if self._playlist_membership_pending:
+            self.announcer.say("Zmiana playlist już trwa")
+            return
+        client = self._profile_edit_client()
+        if client is None:
+            return
+        playlist_id = row.item_id.split(":", 1)[-1].strip()
+        if not playlist_id:
+            self.announcer.say("Nie można rozpoznać wybranej playlisty")
+            return
+        origin_session = self.navigator.active
+        self._playlist_membership_pending = True
+
+        def loaded(payload: object) -> None:
+            if self.navigator.active is not origin_session:
+                self._playlist_membership_pending = False
+                return
+            try:
+                choices = playlist_choices_from_payload(payload, [])
+            except PlaylistPayloadError as error:
+                self._playlist_membership_pending = False
+                self.announcer.say(str(error))
+                return
+            current = next(
+                (choice for choice in choices if choice.playlist_id == playlist_id),
+                None,
+            )
+            if current is None:
+                self._playlist_membership_pending = False
+                self.announcer.say("Tej playlisty już nie ma")
+                self._refresh_profile_view()
+                return
+            with RenameItemDialog(
+                self,
+                title="Zmień nazwę playlisty",
+                prompt="&Nowa nazwa playlisty:",
+                field_name="Nowa nazwa playlisty",
+                value=current.name,
+                help_text="Elementy playlisty pozostaną bez zmian.",
+            ) as dialog:
+                if dialog.ShowModal() != wx.ID_OK:
+                    self._playlist_membership_pending = False
+                    self._restore_focus_after_dialog()
+                    return
+                title = dialog.value
+            self._restore_focus_after_dialog()
+            if not title:
+                self._playlist_membership_pending = False
+                self.announcer.say("Nazwa playlisty nie może być pusta")
+                return
+            if title == current.name:
+                self._playlist_membership_pending = False
+                self.announcer.say("Nazwa playlisty nie została zmieniona")
+                return
+            if any(
+                choice.playlist_id != playlist_id
+                and choice.name.casefold() == title.casefold()
+                for choice in choices
+            ):
+                self._playlist_membership_pending = False
+                self.announcer.say(f"Playlista „{title}” już istnieje")
+                return
+            replacements = [choice.payload() for choice in choices]
+            next(
+                item for item in replacements
+                if item["playlistId"] == playlist_id
+            )["name"] = title
+
+            def saved(_payload: object) -> None:
+                self._playlist_membership_pending = False
+                self._refresh_profile_view(preferred_id=row.item_id)
+                self.announcer.say(f"Zmieniono nazwę playlisty: {title}")
+
+            def save_failed(error: Exception) -> None:
+                self._playlist_membership_pending = False
+                self.announcer.say(f"Nie zmieniono nazwy playlisty: {error}")
+
+            self.runner.submit(
+                "playlist-rename-save",
+                lambda: client.replace_profile_playlists(
+                    session_id, replacements
+                ),
+                saved,
+                save_failed,
+            )
+
+        def load_failed(error: Exception) -> None:
+            self._playlist_membership_pending = False
+            self.announcer.say(f"Nie odczytano playlist do zmiany nazwy: {error}")
+
+        self.runner.submit(
+            "playlist-rename-load",
+            lambda: client.profile_playlists(session_id),
+            loaded,
+            load_failed,
         )
 
     def _rename_local_file(self) -> None:
@@ -22773,6 +23034,7 @@ class LiteFrame(wx.Frame):
                 "Nagrywane",
                 rows,
                 preferred_id=preferred_id,
+                announce_position=True,
             )
             if self.navigator.active is not SessionId.RADIO:
                 return
@@ -22951,10 +23213,11 @@ class LiteFrame(wx.Frame):
                 return
             events = self.navigator.apply_library_view(
                 LibraryView.RECORDED_RADIO_FILES,
-                "Historia nagrywania",
+                "Nagrane",
                 rows,
                 preferred_id=preferred_id,
                 announce_count=False,
+                announce_position=True,
             )
             if self.navigator.active is SessionId.FILES:
                 if announce:
