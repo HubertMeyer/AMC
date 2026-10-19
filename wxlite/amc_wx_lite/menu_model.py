@@ -37,6 +37,7 @@ from .shortcuts import (
     SPOTIFY_SUPPORTED_ACTIONS,
     TIDAL_SUPPORTED_ACTIONS,
     WIIM_SUPPORTED_ACTIONS,
+    ctrl_f5_presentation,
 )
 
 
@@ -216,19 +217,32 @@ def menus_for_session(
                 if items and not items[-1].is_separator:
                     items.append(entry)
                 continue
-            if entry.action is Action.SESSION_CONFIGURE_CURRENT:
-                account_labels = {
-                    SessionId.TIDAL: "Konto i synchronizacja &TIDAL",
-                    SessionId.SPOTIFY: "Konto Spot&ify",
-                    SessionId.WIIM: "Urzą&dzenia WiiM",
-                }
-                if session_id in account_labels:
-                    entry = replace(
-                        entry,
-                        label=account_labels[session_id],
-                        shortcut="Ctrl+F5",
-                        accelerator=False,
-                    )
+            ctrl_f5 = ctrl_f5_presentation(
+                session_order_model.SESSION_NAMES[session_id]
+            )
+            if ctrl_f5 is not None and entry.action is ctrl_f5.action:
+                access_key = {
+                    SessionId.FILES: "b",
+                    SessionId.PODCASTS: "w",
+                    SessionId.SPOTIFY: "f",
+                    SessionId.TIDAL: "t",
+                    SessionId.WIIM: "d",
+                    SessionId.SONOS: "g",
+                }[session_id]
+                key_index = ctrl_f5.name.casefold().find(access_key)
+                label = (
+                    ctrl_f5.name[:key_index]
+                    + "&"
+                    + ctrl_f5.name[key_index:]
+                    if key_index >= 0
+                    else ctrl_f5.name
+                )
+                entry = replace(
+                    entry,
+                    label=label,
+                    shortcut=ctrl_f5.shortcut,
+                    accelerator=False,
+                )
             items.append(entry)
         while items and items[-1].is_separator:
             items.pop()

@@ -9,7 +9,16 @@ from amc_wx_lite.command_palette import (
     filter_entries,
 )
 from amc_wx_lite.navigation import SessionId
-from amc_wx_lite.shortcuts import Action, Chord, describe, describe_action, resolve
+from amc_wx_lite import menu_model
+from amc_wx_lite.search_catalog import SESSION_LABELS
+from amc_wx_lite.shortcuts import (
+    Action,
+    Chord,
+    ctrl_f5_presentation,
+    describe,
+    describe_action,
+    resolve,
+)
 from amc_wx_lite.shortcuts import keyboard_help_announcement
 
 
@@ -67,6 +76,98 @@ def test_palette_shortcuts_never_expose_internal_key_names() -> None:
     assert any("Page Down" in label for label in labels)
     assert all("Prior" not in label and "Next" not in label for label in labels)
     assert all("Page strzałka" not in label for label in labels)
+
+
+def test_ctrl_f5_has_one_precise_contextual_contract_on_every_surface() -> None:
+    expected = {
+        SessionId.FILES: (
+            Action.MANAGE_LIBRARY_FOLDERS,
+            "Foldery Biblioteki",
+            "Foldery Biblioteki: dodaj, odśwież albo bezpiecznie odłącz folder",
+            "files_session",
+        ),
+        SessionId.PODCASTS: (
+            Action.REFRESH_PODCAST_LIBRARY,
+            "Odśwież wszystkie podcasty, kanały YouTube i playlisty",
+            "Odśwież wszystkie podcasty, kanały YouTube i playlisty",
+            "podcast_session",
+        ),
+        SessionId.SPOTIFY: (
+            Action.SESSION_CONFIGURE_CURRENT,
+            "Konto Spotify",
+            "Otwórz konto Spotify i możliwość ponownego logowania",
+            "spotify_session",
+        ),
+        SessionId.TIDAL: (
+            Action.SESSION_CONFIGURE_CURRENT,
+            "Konto i synchronizacja TIDAL",
+            "Otwórz konto, logowanie i synchronizację TIDAL",
+            "tidal_session",
+        ),
+        SessionId.WIIM: (
+            Action.SESSION_CONFIGURE_CURRENT,
+            "Urządzenia WiiM",
+            "Odśwież listę zapisanych urządzeń WiiM",
+            "wiim_session",
+        ),
+        SessionId.SONOS: (
+            Action.SELECT_SONOS_TARGET,
+            "Głośniki i grupy Sonos",
+            "Wybierz dom i grupę sterowania Sonos",
+            "sonos_session",
+        ),
+    }
+    chord = Chord("F5", ctrl=True)
+
+    for session, (action, name, description, session_flag) in expected.items():
+        presentation = ctrl_f5_presentation(SESSION_LABELS[session])
+        assert presentation is not None
+        assert presentation.action is action
+        assert presentation.name == name
+        assert presentation.description == description
+        assert presentation.shortcut == "Ctrl+F5"
+
+        arguments = {
+            "player_view": False,
+            "radio_session": False,
+            session_flag: True,
+        }
+        assert resolve(chord, **arguments) is action
+
+        menu_entries = [
+            item
+            for menu in menu_model.menus_for_session(session)
+            for item in menu.items
+            if item.shortcut == "Ctrl+F5"
+        ]
+        assert len(menu_entries) == 1
+        assert menu_entries[0].action is action
+        assert menu_entries[0].label.replace("&", "").rstrip("…") == name
+
+        palette_entry = next(
+            item
+            for item in entries_for_session(session)
+            if item.action is action and item.shortcut == "Ctrl+F5"
+        )
+        assert palette_entry.name == name
+        assert dict(describe(SESSION_LABELS[session], {action}))["Ctrl+F5"] == description
+        assert keyboard_help_announcement(
+            chord,
+            action,
+            SESSION_LABELS[session],
+        ) == f"Ctrl+F5. {description}. {SESSION_LABELS[session]}"
+
+    assert ctrl_f5_presentation(SESSION_LABELS[SessionId.RADIO]) is None
+    assert not any(
+        item.shortcut == "Ctrl+F5"
+        for menu in menu_model.menus_for_session(SessionId.RADIO)
+        for item in menu.items
+    )
+    assert resolve(
+        chord,
+        player_view=False,
+        radio_session=True,
+    ) is None
 
 
 def test_recording_views_have_one_user_facing_command_contract() -> None:

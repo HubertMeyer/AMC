@@ -389,6 +389,71 @@ class Action(Enum):
     VERSION_INFO = "help.version"
 
 
+@dataclass(frozen=True, slots=True)
+class CommandPresentation:
+    """Jedna użytkowa prezentacja polecenia na wszystkich powierzchniach.
+
+    ``name`` jest krótką nazwą menu i palety, a ``description`` objaśnia
+    wynik w pełnej Pomocy oraz w Pomocy klawiatury. Model nie zawiera
+    mnemoniców menu ani identyfikatorów technicznych.
+    """
+
+    action: Action
+    name: str
+    description: str
+    shortcut: str
+
+
+_CTRL_F5_PRESENTATIONS: dict[str, CommandPresentation] = {
+    "pliki lokalne": CommandPresentation(
+        Action.MANAGE_LIBRARY_FOLDERS,
+        "Foldery Biblioteki",
+        "Foldery Biblioteki: dodaj, odśwież albo bezpiecznie odłącz folder",
+        "Ctrl+F5",
+    ),
+    "podcasty i youtube": CommandPresentation(
+        Action.REFRESH_PODCAST_LIBRARY,
+        "Odśwież wszystkie podcasty, kanały YouTube i playlisty",
+        "Odśwież wszystkie podcasty, kanały YouTube i playlisty",
+        "Ctrl+F5",
+    ),
+    "spotify": CommandPresentation(
+        Action.SESSION_CONFIGURE_CURRENT,
+        "Konto Spotify",
+        "Otwórz konto Spotify i możliwość ponownego logowania",
+        "Ctrl+F5",
+    ),
+    "tidal": CommandPresentation(
+        Action.SESSION_CONFIGURE_CURRENT,
+        "Konto i synchronizacja TIDAL",
+        "Otwórz konto, logowanie i synchronizację TIDAL",
+        "Ctrl+F5",
+    ),
+    "wiim": CommandPresentation(
+        Action.SESSION_CONFIGURE_CURRENT,
+        "Urządzenia WiiM",
+        "Odśwież listę zapisanych urządzeń WiiM",
+        "Ctrl+F5",
+    ),
+    "sonos": CommandPresentation(
+        Action.SELECT_SONOS_TARGET,
+        "Głośniki i grupy Sonos",
+        "Wybierz dom i grupę sterowania Sonos",
+        "Ctrl+F5",
+    ),
+}
+
+
+def ctrl_f5_presentation(session_label: str | None) -> CommandPresentation | None:
+    """Precyzyjna funkcja ``Ctrl+F5`` dla bieżącej sesji.
+
+    Radio celowo nie ma wpisu: brak polecenia nie może być reklamowany jako
+    ogólna konfiguracja, która po użyciu niczego nie wykona.
+    """
+
+    return _CTRL_F5_PRESENTATIONS.get((session_label or "").strip().casefold())
+
+
 # TIDAL ma osobny tor: katalog czyta oficjalne API, a dzwiek odtwarza oryginalna
 # aplikacja TIDAL. Jawna lista obslugiwanych polecen jest celowo restrykcyjna:
 # nowy skrot nie moze przypadkiem trafic do lokalnego silnika AMC.
@@ -1834,22 +1899,33 @@ def describe(
     AMC przekazuje ją zawsze, dzięki czemu polecenia kontekstowe mają ten sam
     opis co menu, Ctrl+F1 i paleta.
     """
-    spotify = (session_label or "").casefold() == "spotify"
     overrides = shortcut_overrides or {}
+    ctrl_f5 = ctrl_f5_presentation(session_label)
     return [
         (
-            overrides.get(action, chord),
-            "Dodaj do playlist Spotify lub utwórz playlistę"
-            if spotify and action is Action.MANAGE_PLAYLIST_MEMBERSHIP
-            else label,
+            overrides.get(
+                action,
+                ctrl_f5.shortcut
+                if ctrl_f5 is not None and ctrl_f5.action is action
+                else chord,
+            ),
+            describe_action(action, session_label),
         )
-        for chord, label, action in _help_entries()
+        for chord, _label, action in _help_entries()
         if available_actions is None or action in available_actions
     ]
 
 
-def describe_action(action: Action) -> str:
+def describe_action(action: Action, session_label: str | None = None) -> str:
     """Jedna użytkowa nazwa polecenia dla Pomocy klawiatury Ctrl+F1."""
+    ctrl_f5 = ctrl_f5_presentation(session_label)
+    if ctrl_f5 is not None and ctrl_f5.action is action:
+        return ctrl_f5.description
+    if (
+        action is Action.MANAGE_PLAYLIST_MEMBERSHIP
+        and (session_label or "").casefold() == "spotify"
+    ):
+        return "Dodaj do playlist Spotify lub utwórz playlistę"
     for _chord, label, candidate in _help_entries():
         if candidate is action:
             return label
@@ -1881,12 +1957,7 @@ def keyboard_help_announcement(
     shortcut = readable_chord(chord)
     if action is None:
         return f"{shortcut}. Brak polecenia w sesji {session_label}"
-    label = (
-        "Dodaj do playlist Spotify lub utwórz playlistę"
-        if action is Action.MANAGE_PLAYLIST_MEMBERSHIP
-        and session_label.casefold() == "spotify"
-        else describe_action(action)
-    )
+    label = describe_action(action, session_label)
     if not available:
         return f"{shortcut}. {label}. Niedostępne w sesji {session_label}"
     return f"{shortcut}. {label}. {session_label}"
