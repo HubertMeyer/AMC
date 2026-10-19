@@ -71,6 +71,7 @@ _COMMON_CAPABILITIES = (
     "chapters",
     "command-palette",
     "keyboard-help",
+    "problem-report-local",
 )
 
 TEST_PROFILE = ReleaseProfile(

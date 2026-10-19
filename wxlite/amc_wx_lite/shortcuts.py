@@ -383,6 +383,7 @@ class Action(Enum):
     SESSION_OPTIONS = "session.options"
     HELP = "help"
     KEYBOARD_HELP = "keyboard.help"
+    REPORT_PROBLEM = "help.reportProblem"
     VERSION_INFO = "help.version"
 
 
@@ -461,6 +462,7 @@ TIDAL_SUPPORTED_ACTIONS = frozenset({
     Action.VIEW_PODCAST_INBOX,
     Action.HELP,
     Action.KEYBOARD_HELP,
+    Action.REPORT_PROBLEM,
     Action.VERSION_INFO,
 })
 
@@ -570,6 +572,7 @@ SPOTIFY_SUPPORTED_ACTIONS = frozenset({
     Action.SHOW_PODCAST_DESCRIPTION,
     Action.HELP,
     Action.KEYBOARD_HELP,
+    Action.REPORT_PROBLEM,
     Action.VERSION_INFO,
 })
 
@@ -652,6 +655,7 @@ WIIM_SUPPORTED_ACTIONS = frozenset({
     Action.VIEW_PODCAST_INBOX,
     Action.HELP,
     Action.KEYBOARD_HELP,
+    Action.REPORT_PROBLEM,
     Action.VERSION_INFO,
 })
 
@@ -757,6 +761,7 @@ SONOS_SUPPORTED_ACTIONS = frozenset({
     Action.VIEW_PODCAST_INBOX,
     Action.HELP,
     Action.KEYBOARD_HELP,
+    Action.REPORT_PROBLEM,
     Action.VERSION_INFO,
 })
 
@@ -1676,6 +1681,7 @@ def _help_entries() -> list[tuple[str, str, Action]]:
         ),
         Action.HELP: "Ta pomoc",
         Action.KEYBOARD_HELP: "Włącz lub wyłącz Pomoc klawiatury",
+        Action.REPORT_PROBLEM: "Zgłoś błąd lub sugestię",
         Action.VERSION_INFO: "Wersja programu",
         # Pomoc mowi WPROST, ze zakres to sesja, a nie zaznaczony plik -- bez
         # tego uzytkownik nie wie, czego dotkna zmiany.
@@ -1786,6 +1792,7 @@ def _help_entries() -> list[tuple[str, str, Action]]:
         Action.REFRESH_COMMON_DATA,
         Action.COMMON_DATA_STATUS,
         Action.OPEN_CONTAINING_FOLDER,
+        Action.REPORT_PROBLEM,
     ):
         if action not in seen:
             out.append(("Bez skrótu", labels[action], action))

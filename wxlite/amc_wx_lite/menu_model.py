@@ -1486,6 +1486,7 @@ def build_menus(session_order: object = None) -> tuple[Menu, ...]:
                 checkable=True,
             ),
             SEPARATOR,
+            MenuItem("Zgłoś &błąd lub sugestię…", Action.REPORT_PROBLEM),
             MenuItem("&Wersja programu", Action.VERSION_INFO),
         ),
     )

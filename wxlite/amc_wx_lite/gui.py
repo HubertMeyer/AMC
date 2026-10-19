@@ -92,6 +92,7 @@ from .playlist_dialog import (
     PlaylistPayloadError,
     choices_from_payload as playlist_choices_from_payload,
 )
+from .problem_report_dialog import ProblemReportDialog
 from .spotify_playlist_dialog import (
     SpotifyPlaylistDialog,
     SpotifyPlaylistPayloadError,
@@ -11078,6 +11079,8 @@ class LiteFrame(wx.Frame):
             self._show_help()
         elif action is Action.KEYBOARD_HELP:
             self._toggle_keyboard_help()
+        elif action is Action.REPORT_PROBLEM:
+            self._show_problem_report()
         elif action is Action.VERSION_INFO:
             wx.MessageBox(
                 window_title(),
@@ -23558,6 +23561,20 @@ class LiteFrame(wx.Frame):
             )
         ]
         wx.MessageBox("\n".join(lines), "Skroty klawiszowe", wx.OK | wx.ICON_INFORMATION, self)
+
+    def _show_problem_report(self) -> None:
+        """Otwórz lokalny Sygnalista w magazynie bieżącego profilu."""
+
+        with ProblemReportDialog(
+            self,
+            active_session=SESSION_LABELS[self.navigator.active],
+            reports_directory=self.store.directory / "reports",
+            log_path=self.store.directory / "logs" / "frontend.log",
+            copy_text=self._to_clipboard,
+            announce=self.announcer.say,
+        ) as dialog:
+            dialog.ShowModal()
+        self._restore_focus_after_dialog()
 
     # -------------------------------------------------------- zapis i koniec
 

@@ -154,11 +154,12 @@ zmian, wymagający korekty użytkownika:
 - `LIC-001` — **Oczekuje** — Radio Browser, licencja BASS i bezpieczna decyzja
   o dobrowolnych wpłatach. Szczegóły:
   [LIC-001-radio-browser-bass-darowizny.md](LIC-001-radio-browser-bass-darowizny.md).
-- `REL-001` — **Oczekuje; lokalny formularz Sygnalisty dopuszczony po
-  instalatorze** — GitHub Releases, kanały aktualizacji oraz dostępny formularz
-  Sygnalisty. Nocą można przygotować formularz, podgląd, filtrowanie danych i
-  transport na atrapach. Własny Worker, tokeny i prawdziwe GitHub Issues
-  dopiero razem z zatwierdzoną integracją GitHub. Szczegóły:
+- `REL-001` — **W trakcie; lokalny formularz Sygnalisty gotowy w źródłach i
+  testach, bez instalacji** — menu, F1 i paleta prowadzą do dostępnego
+  formularza z pełnym podglądem, domyślnie wyłączonym logiem, redakcją danych
+  oraz kopiowaniem lub atomowym zapisem w magazynie profilu. Własny Worker,
+  tokeny, aktualizacje sieciowe i prawdziwe GitHub Issues pozostają odłożone do
+  świadomie zatwierdzonego etapu GitHub. Szczegóły:
   [REL-001-github-aktualizacje-sygnalista.md](REL-001-github-aktualizacje-sygnalista.md).
 - `STR-001` — **Oczekuje** — osobne laboratorium TIDAL i Apple Music, najpierw
   badanie oficjalnych API i warunków, później ewentualny profil testowy.

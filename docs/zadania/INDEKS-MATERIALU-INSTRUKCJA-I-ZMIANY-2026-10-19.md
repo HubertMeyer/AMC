@@ -73,6 +73,11 @@ użytkownika. Nie zmienia statusu ręcznego odbioru NVDA poszczególnych funkcji
     aplikacji sekretu integracji. Publiczny Sonos pozostaje ukryty do czasu
     wdrożenia stałego HTTPS i odbioru na zewnętrznym koncie. Źródło:
     [AMC10-logowanie-sonos-i-publiczny-broker.md](AMC10-logowanie-sonos-i-publiczny-broker.md).
+14. Sygnalista — polecenie `Zgłoś błąd lub sugestię…` w menu Pomoc i palecie,
+    pełny podgląd zredagowanego raportu, domyślnie wyłączony log oraz lokalne
+    kopiowanie lub zapis w magazynie bieżącego profilu. Wysyłanie do GitHuba
+    nie jest jeszcze dostępne. Źródło:
+    [REL-001-github-aktualizacje-sygnalista.md](REL-001-github-aktualizacje-sygnalista.md).
 
 ## Materiał do przyszłego opisu zmian
 
@@ -95,6 +100,9 @@ użytkownika. Nie zmienia statusu ręcznego odbioru NVDA poszczególnych funkcji
   właściwego profilu i opcjonalną, odwracalną integrację z powłoką Windows.
 - Dodano lokalnie testowalny broker logowania Sonos z jednorazowym PKCE,
   odnowieniem i ochroną danych; nie został jeszcze wdrożony publicznie.
+- Dodano lokalny fundament Sygnalisty z pełnym podglądem, ostrożną redakcją
+  danych i osobnym zapisem raportów dla AMC Test oraz AMC; wysyłanie sieciowe
+  pozostaje wyłączone.
 
 ## Odbiory i ograniczenia do zachowania w instrukcji
 
@@ -105,6 +113,8 @@ użytkownika. Nie zmienia statusu ręcznego odbioru NVDA poszczególnych funkcji
   wydania publicznego.
 - Nie obiecywać publicznego Sonosa przed działającym brokerem HTTPS i odbiorem
   z zewnętrznym kontem.
+- Nie opisywać lokalnego Sygnalisty jako internetowego zgłoszenia ani GitHub
+  Issue, dopóki Worker i repozytorium raportów nie zostaną świadomie wdrożone.
 - Nie opisywać logowania YouTube; `YT-001` jest odłożone do czasu po
   instalatorze i pierwszych stabilnych wydaniach.
 - Pomoc `Ctrl+F1`, pełna pomoc klawiatury, menu i paleta `Ctrl+Shift+K` mają
