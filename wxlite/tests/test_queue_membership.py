@@ -39,10 +39,12 @@ def test_client_uses_two_explicit_incremental_operations() -> None:
 
     client.queue_toggle_membership(items)
     client.queue_toggle_play_next(items)
+    client.queue_add_membership(items)
 
     assert [call[0] for call in client.calls] == [
         "queue.toggleMembership",
         "queue.togglePlayNext",
+        "queue.addMembership",
     ]
     assert all(call[1]["items"] == items for call in client.calls)
     assert all(call[1]["sessionId"] == "local" for call in client.calls)

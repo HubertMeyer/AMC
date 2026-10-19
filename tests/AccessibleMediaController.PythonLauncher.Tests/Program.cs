@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Text.Json;
+using AccessibleMediaController.Core.ShellIntegration;
 using AccessibleMediaController.PythonLauncher;
 using AccessibleMediaController.PythonUpdater;
 using AccessibleMediaController.ReleaseProfiles;
@@ -21,6 +22,11 @@ internal static class Program
         ("wyjście poza katalog", TraversalIsRejected),
         ("prywatny runtime bez PYTHONPATH i bez alertów pythonw", LaunchPlanUsesOnlyPrivateRuntime),
         ("diagnostyka przez python.exe", DiagnosticUsesConsoleRuntime),
+        ("frontend odbiera polecenia powłoki przez stdin", FrontendReceivesShellRequestsOnStandardInput),
+        ("argumenty powłoki zachowują znaki i tryb kolejki", ShellArgumentsPreservePathsAndQueueMode),
+        ("polecenie powłoki ma jednoliniowy JSON", ShellHandoffUsesSingleLineJson),
+        ("kanały powłoki profili są osobne", ReleaseProfilesHaveSeparateShellChannels),
+        ("kanał przekazuje żądanie do działającej instancji", ShellChannelForwardsToExistingInstance),
         ("jedna instancja launchera", OnlyOneLauncherOwnsTheLease),
         ("osobne instancje launcherów profili", ReleaseProfilesHaveSeparateLauncherLeases),
         ("osobne instancje aktualizatorów profili", ReleaseProfilesHaveSeparateUpdaterLeases),
@@ -170,6 +176,88 @@ internal static class Program
         Equal(true, plan.StartInfo.RedirectStandardOutput);
         Equal(true, plan.StartInfo.RedirectStandardError);
         Equal("--sprawdz", plan.StartInfo.ArgumentList[2]);
+    }
+
+    private static void FrontendReceivesShellRequestsOnStandardInput()
+    {
+        using var fixture = BundleFixture.Create();
+        var plan = PythonLaunchPlan.Create(BundleVerifier.Verify(fixture.Root), []);
+        Equal(true, plan.StartInfo.RedirectStandardInput);
+        Equal("1", plan.StartInfo.Environment["AMC_SHELL_REQUESTS"]);
+    }
+
+    private static void ShellArgumentsPreservePathsAndQueueMode()
+    {
+        var root = Path.Combine(
+            Path.GetTempPath(),
+            "amc-shell-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try
+        {
+            var first = Path.Combine(root, "Żółć, średnik; (1).mp3");
+            var second = Path.Combine(root, "drugi plik.flac");
+            File.WriteAllText(first, "pierwszy");
+            File.WriteAllText(second, "drugi");
+            var request = ShellLaunchRequestContract.ParseAndValidate(
+                [second, ShellIntegrationRules.QueueSwitch, first]);
+            Equal(true, request.AddToQueue);
+            Equal(2, request.Files.Count);
+            Equal(second, request.Files[0]);
+            Equal(first, request.Files[1]);
+
+            ThrowsShell(
+                "typ pliku",
+                () => ShellLaunchRequestContract.ParseAndValidate(
+                    [Path.Combine(root, "nie-obslugiwany.xyz")],
+                    _ => true));
+            var unc = ShellLaunchRequestContract.ParseAndValidate(
+                [@"\\serwer\udział z odstępem\plik.mp3"],
+                _ => true);
+            Equal(@"\\serwer\udział z odstępem\plik.mp3", unc.Files[0]);
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    private static void ShellHandoffUsesSingleLineJson()
+    {
+        var original = new ShellLaunchRequest(
+            [@"C:\Muzyka\Żółć, średnik; (1).mp3"],
+            true);
+        var encoded = ShellIntegrationRules.EncodeHandoff(original);
+        Equal(false, encoded.Contains('\n'));
+        var decoded = ShellIntegrationRules.DecodeHandoff(encoded);
+        Equal(true, decoded.AddToQueue);
+        Equal(original.Files[0], decoded.Files[0]);
+    }
+
+    private static void ReleaseProfilesHaveSeparateShellChannels()
+    {
+        Equal(false, string.Equals(
+            ShellRequestChannel.PipeName(ReleaseProfileContract.Test),
+            ShellRequestChannel.PipeName(ReleaseProfileContract.Public),
+            StringComparison.Ordinal));
+    }
+
+    private static void ShellChannelForwardsToExistingInstance()
+    {
+        var received = new TaskCompletionSource<string>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        using var server = ShellRequestChannel.Start(
+            ReleaseProfileContract.Test,
+            payload => received.TrySetResult(payload));
+        var request = new ShellLaunchRequest([@"C:\Muzyka\plik.mp3"], false);
+        Equal(true, ShellRequestChannel.TrySend(
+            ReleaseProfileContract.Test,
+            request,
+            5_000));
+        var forwarded = received.Task.WaitAsync(TimeSpan.FromSeconds(5))
+            .GetAwaiter().GetResult();
+        var decoded = ShellIntegrationRules.DecodeHandoff(forwarded);
+        Equal(false, decoded.AddToQueue);
+        Equal(request.Files[0], decoded.Files[0]);
     }
 
     private static void OnlyOneLauncherOwnsTheLease()
@@ -413,6 +501,20 @@ internal static class Program
             action();
         }
         catch (InvalidDataException exception) when (
+            exception.Message.Contains(expected, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+        throw new InvalidOperationException("Nie otrzymano oczekiwanej odmowy: " + expected);
+    }
+
+    private static void ThrowsShell(string expected, Action action)
+    {
+        try
+        {
+            action();
+        }
+        catch (ShellLaunchRequestException exception) when (
             exception.Message.Contains(expected, StringComparison.OrdinalIgnoreCase))
         {
             return;

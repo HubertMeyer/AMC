@@ -122,8 +122,9 @@ zmian, wymagający korekty użytkownika:
   brokera. Zatwierdzona specyfikacja:
   `D:\Projekty Codex\Accessible Multimedia Controller\AMC10_SONOS_WIIM_URUCHOMIENIE_I_UJEDNOLICENIE_2026-10-18.md`.
   Bez obecności użytkownika nie logować konta i nie sterować głośnikami.
-- `AMC14` — **W trakcie; polecenie otwarcia folderu zawierającego gotowe w
-  źródłach i testach** — aplikacyjna integracja z powłoką Windows,
+- `AMC14` — **W trakcie; folder zawierający, argument pliku, osobny kanał
+  działającej instancji i idempotentne `/kolejka` gotowe w źródłach,
+  testach i kompilacji** — aplikacyjna integracja z powłoką Windows,
   przekazywanie plików do właściwej instancji i późniejsza rejestracja przez
   instalator. Bieżący zapis realizacji:
   [AMC14-foldery-i-integracja-powloki.md](AMC14-foldery-i-integracja-powloki.md).

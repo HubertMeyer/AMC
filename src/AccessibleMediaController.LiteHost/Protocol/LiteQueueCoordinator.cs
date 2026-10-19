@@ -933,6 +933,23 @@ internal sealed class LiteQueueCoordinator
     /// </summary>
     public QueueMutationResult ToggleMembership(JsonElement args, bool playNext)
     {
+        return ChangeMembership(args, playNext, requestedAdd: null);
+    }
+
+    /// <summary>
+    /// Idempotentne dodanie z powloki Windows. W odroznieniu od przelacznika
+    /// ponowne wywolanie nigdy nie usuwa istniejacego elementu kolejki.
+    /// </summary>
+    public QueueMutationResult AddMembership(JsonElement args)
+    {
+        return ChangeMembership(args, playNext: false, requestedAdd: true);
+    }
+
+    private QueueMutationResult ChangeMembership(
+        JsonElement args,
+        bool playNext,
+        bool? requestedAdd)
+    {
         if (args.ValueKind != JsonValueKind.Object
             || !args.TryGetProperty("items", out var items)
             || items.ValueKind != JsonValueKind.Array)
@@ -993,9 +1010,9 @@ internal sealed class LiteQueueCoordinator
                 .Where(item => item is not null)
                 .Select(item => item!)
                 .ToArray();
-            var add = playNext
+            var add = requestedAdd ?? (playNext
                 ? !selectedExisting.Any(item => item.IsPlayNext)
-                : !selectedExisting.Any(item => item.IsInQueue || item.IsPlayNext);
+                : !selectedExisting.Any(item => item.IsInQueue || item.IsPlayNext));
 
             var previousOrder = session.QueueItemIds.ToArray();
             if (add)

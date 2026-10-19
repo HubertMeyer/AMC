@@ -1610,6 +1610,19 @@ class LiteHostClient:
             timeout=60.0,
         )
 
+    def queue_add_membership(
+        self,
+        items: list[dict[str, Any]],
+        *,
+        session_id: str = "local",
+    ) -> Any:
+        """Dodaj do kolejki idempotentnie; istniejącej pozycji nie usuwaj."""
+        return self.call(
+            "queue.addMembership",
+            {"sessionId": session_id, "items": items},
+            timeout=60.0,
+        )
+
     def queue_toggle_play_next(
         self,
         items: list[dict[str, Any]],

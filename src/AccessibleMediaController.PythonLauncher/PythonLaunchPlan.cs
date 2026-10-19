@@ -27,6 +27,7 @@ internal sealed record PythonLaunchPlan(ProcessStartInfo StartInfo, bool ShowCap
             WorkingDirectory = bundle.Root,
             UseShellExecute = false,
             CreateNoWindow = true,
+            RedirectStandardInput = true,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
         };
@@ -41,6 +42,7 @@ internal sealed record PythonLaunchPlan(ProcessStartInfo StartInfo, bool ShowCap
         start.Environment.Remove("AMC_WX_LITE_PYTHON");
         start.Environment["AMC_LITE_HOST"] = bundle.HostExecutable;
         start.Environment["AMC_RELEASE_PROFILE"] = bundle.Profile.ProfileId;
+        start.Environment["AMC_SHELL_REQUESTS"] = "1";
         start.Environment["PYTHONUTF8"] = "1";
         return new PythonLaunchPlan(start, diagnostic);
     }

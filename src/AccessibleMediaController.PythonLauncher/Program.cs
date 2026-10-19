@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
+using AccessibleMediaController.Core.ShellIntegration;
 using AccessibleMediaController.ReleaseProfiles;
 
 namespace AccessibleMediaController.PythonLauncher;
@@ -44,6 +45,8 @@ internal static class Program
                 return 0;
             }
 
+            var shellRequest = ShellLaunchRequestContract.ParseAndValidate(args);
+
             LauncherInstanceLease? instance = LauncherInstanceLease.TryAcquire(
                 profile.LauncherMutexName);
             try
@@ -53,6 +56,25 @@ internal static class Program
                     var existing = WaitForMainWindow(
                         profile,
                         ExistingWindowWaitMilliseconds);
+                    if (shellRequest.HasFiles)
+                    {
+                        var forwarded = ShellRequestChannel.TrySend(
+                            profile,
+                            shellRequest,
+                            ExistingWindowWaitMilliseconds);
+                        if (existing is not null)
+                            ActivateWindow(existing.Value.Handle);
+                        if (!forwarded)
+                        {
+                            Show(
+                                profile,
+                                "Nie udało się przekazać pliku do działającego "
+                                + $"programu {profile.DisplayName}. Program nie został zamknięty.",
+                                true);
+                            return StartFailed;
+                        }
+                        return 0;
+                    }
                     if (existing is null)
                         return 0;
 
@@ -87,12 +109,18 @@ internal static class Program
                     }
                 }
 
-                return RunFrontend(bundle, args);
+                return RunFrontend(bundle, args, shellRequest);
             }
             finally
             {
                 instance?.Dispose();
             }
+        }
+        catch (ShellLaunchRequestException exception)
+        {
+            if (!silentBundleCheck)
+                Show(profile, exception.Message, true);
+            return StartFailed;
         }
         catch (InvalidDataException exception)
         {
@@ -121,11 +149,31 @@ internal static class Program
         }
     }
 
-    private static int RunFrontend(VerifiedBundle bundle, string[] args)
+    private static int RunFrontend(
+        VerifiedBundle bundle,
+        string[] args,
+        ShellLaunchRequest shellRequest)
     {
         var plan = PythonLaunchPlan.Create(bundle, args);
         using var process = Process.Start(plan.StartInfo)
             ?? throw new InvalidOperationException("nie uruchomiono procesu interfejsu");
+
+        var inputGate = new object();
+        void ForwardToFrontend(string payload)
+        {
+            lock (inputGate)
+            {
+                if (process.HasExited)
+                    throw new IOException("interfejs został zamknięty");
+                process.StandardInput.WriteLine(payload);
+                process.StandardInput.Flush();
+            }
+        }
+        using var shellChannel = ShellRequestChannel.Start(
+            bundle.Profile,
+            ForwardToFrontend);
+        if (shellRequest.HasFiles)
+            ForwardToFrontend(ShellIntegrationRules.EncodeHandoff(shellRequest));
 
         // Strumienie czytamy od razu także podczas zwykłej pracy. Bez
         // tego dłuższy komunikat mógłby zapełnić bufor i zatrzymać proces.

@@ -13,10 +13,16 @@
     <Compile Include="Program.cs" />
     <Compile Include="..\..\src\Shared\ReleaseProfileContract.cs"
              Link="ReleaseProfileContract.cs" />
+    <Compile Include="..\..\src\AccessibleMediaController.Core\ShellIntegration\ShellIntegrationRules.cs"
+             Link="ShellIntegrationRules.cs" />
     <Compile Include="..\..\src\AccessibleMediaController.PythonLauncher\BundleContract.cs"
              Link="BundleContract.cs" />
     <Compile Include="..\..\src\AccessibleMediaController.PythonLauncher\PythonLaunchPlan.cs"
              Link="PythonLaunchPlan.cs" />
+    <Compile Include="..\..\src\AccessibleMediaController.PythonLauncher\ShellLaunchRequestContract.cs"
+             Link="ShellLaunchRequestContract.cs" />
+    <Compile Include="..\..\src\AccessibleMediaController.PythonLauncher\ShellRequestChannel.cs"
+             Link="ShellRequestChannel.cs" />
     <Compile Include="..\..\src\AccessibleMediaController.PythonLauncher\LauncherInstanceLease.cs"
              Link="LauncherInstanceLease.cs" />
     <Compile Include="..\..\src\AccessibleMediaController.PythonLauncher\ExistingInstancePolicy.cs"

@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.Json;
 
 namespace AccessibleMediaController.Core.ShellIntegration;
 
@@ -179,31 +180,59 @@ public static class ShellIntegrationRules
     }
 
     /// <summary>
-    /// Sklada tekst przekazywany dzialajacej juz instancji AMC. Jedna linia na
-    /// pozycje, bo sciezki Windows nie zawieraja znaku nowej linii, a przecinek
-    /// czy srednik owszem.
+    /// Sklada jednoliniowy JSON przekazywany dzialajacej juz instancji AMC.
+    /// Sciezki pozostaja osobnymi wartosciami, wiec spacje, przecinki, sredniki
+    /// i polskie znaki nie zmieniaja znaczenia zadania.
     /// </summary>
     public static string EncodeHandoff(ShellLaunchRequest request)
     {
-        var builder = new StringBuilder();
-        builder.Append(request.AddToQueue ? "kolejka" : "otworz");
-        foreach (var file in request.Files)
-        {
-            builder.Append('\n').Append(file);
-        }
-
-        return builder.ToString();
+        return JsonSerializer.Serialize(new ShellHandoffEnvelope(
+            1,
+            request.AddToQueue ? "queue" : "open",
+            request.Files));
     }
 
     /// <summary>Odczytuje tekst zapisany przez <see cref="EncodeHandoff"/>.</summary>
     public static ShellLaunchRequest DecodeHandoff(string? text)
     {
         if (string.IsNullOrWhiteSpace(text)) return new ShellLaunchRequest([], false);
-        var lines = text.Split('\n', StringSplitOptions.RemoveEmptyEntries);
-        if (lines.Length == 0) return new ShellLaunchRequest([], false);
-        var queue = string.Equals(lines[0].Trim(), "kolejka", StringComparison.OrdinalIgnoreCase);
-        return new ShellLaunchRequest(lines.Skip(1).Select(line => line.Trim()).ToArray(), queue);
+        var trimmed = text.Trim();
+        if (!trimmed.StartsWith('{'))
+        {
+            // Zgodnosc z prototypem sprzed AMC14; nowy launcher juz go nie
+            // zapisuje, ale aktualizacja nie musi odrzucac starej kolejki IPC.
+            var lines = trimmed.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+            if (lines.Length == 0) return new ShellLaunchRequest([], false);
+            var legacyQueue = string.Equals(
+                lines[0].Trim(), "kolejka", StringComparison.OrdinalIgnoreCase);
+            return new ShellLaunchRequest(
+                lines.Skip(1).Select(line => line.Trim()).ToArray(),
+                legacyQueue);
+        }
+        try
+        {
+            var envelope = JsonSerializer.Deserialize<ShellHandoffEnvelope>(trimmed)
+                ?? throw new InvalidDataException("puste polecenie powloki");
+            if (envelope.Schema != 1
+                || envelope.Operation is not ("open" or "queue")
+                || envelope.Files is null)
+            {
+                throw new InvalidDataException("nieobslugiwana postac polecenia powloki");
+            }
+            return new ShellLaunchRequest(
+                envelope.Files,
+                string.Equals(envelope.Operation, "queue", StringComparison.Ordinal));
+        }
+        catch (JsonException exception)
+        {
+            throw new InvalidDataException("uszkodzone polecenie powloki", exception);
+        }
     }
+
+    private sealed record ShellHandoffEnvelope(
+        int Schema,
+        string Operation,
+        IReadOnlyList<string> Files);
 }
 
 /// <summary>Grupa rozszerzen proponowana uzytkownikowi jako jedna pozycja.</summary>

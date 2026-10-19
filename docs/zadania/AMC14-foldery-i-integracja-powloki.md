@@ -41,6 +41,20 @@ Jeżeli element internetowy nie ma lokalnej kopii, AMC mówi:
 istnieje, mówi: **Nie znaleziono lokalnego pliku**. Adres internetowy nie jest
 otwierany jako folder.
 
+### Etap B — otwieranie pliku i dodawanie z powłoki
+
+Launcher rozpoznaje istniejący, obsługiwany plik przekazany w wierszu poleceń.
+Przy zwykłym otwarciu działający AMC przechodzi do sesji Pliki lokalne,
+uruchamia wskazany plik i pokazuje jego folder. Parametr `/kolejka` dodaje jeden
+lub wiele plików do istniejącej kolejki bez zmiany bieżącej sesji, odtwarzania
+i fokusu. Ponowne dodanie tego samego pliku pozostawia go w kolejce i mówi
+**Plik jest już w kolejce** zamiast go usuwać.
+
+Jeżeli AMC danego profilu już działa, drugi launcher przekazuje zadanie przez
+prywatny kanał bieżącego użytkownika i tylko uaktywnia okno. Nie prosi o
+zamknięcie ani nie wykonuje bezpiecznej podmiany wersji, a więc nie przerywa
+nagrywania. AMC Test i publiczny AMC mają osobne kanały.
+
 ## Uzasadnienie i decyzje
 
 - 2026-10-19: etap aplikacyjny powstaje przed rejestracją powłoki i przed
@@ -54,6 +68,14 @@ otwierany jako folder.
   odświeżanie menu nie blokuje interfejsu przy niedostępnym dysku sieciowym.
 - Internetowy element bez pobranej kopii otrzymuje krótką odmowę; jego adres
   nie trafia do komunikatu NVDA.
+- Launcher ponownie sprawdza pełną ścieżkę, istnienie i obsługiwane rozszerzenie
+  przed przekazaniem żądania. Interfejs sprawdza istnienie jeszcze raz przed
+  wykonaniem, aby usunięcie pliku w krótkim oknie czasowym nie kończyło się
+  technicznym błędem.
+- Dane kanału są jednoliniowym JSON-em, a nie składaną komendą. Kanał named
+  pipe jest ograniczony do bieżącego użytkownika i rozdzielony profilem.
+- `/kolejka` korzysta z osobnej, idempotentnej operacji hosta. Nie używa
+  przełącznika członkostwa, bo drugie wywołanie przełącznika usuwałoby plik.
 
 ## Testy i wynik
 
@@ -74,18 +96,34 @@ modułów testowych wymagających nieobecnego pakietu `pytest`. Nie są to
 niepowodzenia testów AMC14; wszystkie siedem uruchomionych prób tego etapu
 zakończyło się wynikiem `OK`.
 
+2026-10-19, etap B:
+
+- testy launchera — **27/27 zaliczone**, w tym prywatny kanał, osobne nazwy
+  profili, stdin interfejsu, ścieżka UNC, spacje, polskie znaki, przecinek,
+  średnik, nawias i jednoliniowy JSON;
+- testy protokołu hosta — **20/20 zestawów zaliczonych**, w tym idempotentne
+  `queue.addMembership`, brak duplikatu i brak usunięcia przy drugim dodaniu;
+- testy Python dotyczące AMC14 i kolejki — **16 prób zaliczonych**; ten sam
+  uruchamiacz nadal kończy się kodem 1 wyłącznie przez cztery zastane moduły
+  wymagające nieobecnego `pytest`;
+- kompilacja `AccessibleMediaController.PythonLauncher` — sukces, 0 ostrzeżeń,
+  0 błędów;
+- kompilacja `AccessibleMediaController.LiteHost` oraz Core — sukces,
+  0 ostrzeżeń, 0 błędów.
+
 ## Znane ograniczenia
 
 - Etap A jest zmianą źródłową i testową. Nie zbudowano ani nie zainstalowano
   nowej wersji, nie otwierano też prawdziwego Eksploratora w teście.
-- Przekazywanie argumentu pliku do działającej instancji oraz kolejka
-  `/kolejka` są następną częścią bieżącego zadania.
 - Rejestracja typów plików, menu kontekstowego i ustawień domyślnych aplikacji
   nie została jeszcze wykonana.
+- Kanał został sprawdzony testem odizolowanym, lecz nie zainstalowano nowego
+  launchera i nie wykonano jeszcze ręcznej próby z Eksploratorem.
 
 ## Wersja i commit
 
 - Profil: źródła wspólne AMC Test i publicznego AMC, z późniejszym rozdzieleniem
   kanału przekazywania żądań według profilu.
 - Instalacja: bez zmian.
-- Commit etapu A: do uzupełnienia po zatwierdzeniu testów w repozytorium.
+- Commit etapu A: `515898c8`.
+- Commit etapu B: do uzupełnienia po zapisie spójnego etapu.

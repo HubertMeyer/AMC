@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from io import StringIO
 from types import SimpleNamespace
 
 from amc_wx_lite import gui
@@ -16,6 +17,13 @@ from amc_wx_lite.shell_paths import (
     explorer_target,
     looks_like_local_path,
     open_in_explorer,
+)
+from amc_wx_lite.shell_requests import (
+    INVALID_REQUEST_MESSAGE,
+    ShellRequest,
+    ShellRequestError,
+    decode_request,
+    start_request_reader,
 )
 from amc_wx_lite.shortcuts import Action, describe
 
@@ -123,3 +131,71 @@ def test_gui_refuses_internet_item_without_exposing_its_address() -> None:
     gui.LiteFrame._open_containing_folder(frame)
 
     assert spoken == [NO_LOCAL_FILE_MESSAGE]
+
+
+def test_shell_request_decoder_preserves_special_paths_and_rejects_bad_shape() -> None:
+    request = decode_request(
+        '{"Schema":1,"Operation":"queue","Files":'
+        '["C:\\\\Muzyka\\\\Żółć, średnik; (1).mp3"]}'
+    )
+    assert request.add_to_queue
+    assert request.files == (r"C:\Muzyka\Żółć, średnik; (1).mp3",)
+    try:
+        decode_request('{"Schema":1,"Operation":"open","Files":[] }')
+    except ShellRequestError as error:
+        assert str(error) == INVALID_REQUEST_MESSAGE
+    else:
+        raise AssertionError("Puste polecenie powłoki zostało przyjęte")
+
+
+def test_shell_reader_schedules_requests_and_user_facing_errors() -> None:
+    received: list[ShellRequest] = []
+    errors: list[str] = []
+    source = StringIO(
+        '{"Schema":1,"Operation":"open","Files":["C:\\\\Muzyka\\\\a.mp3"]}\n'
+        'nie-json\n'
+    )
+    thread = start_request_reader(
+        received.append,
+        errors.append,
+        schedule=lambda function, value: function(value),
+        stream=source,
+    )
+    thread.join(2)
+
+    assert [request.files for request in received] == [(r"C:\Muzyka\a.mp3",)]
+    assert errors == [INVALID_REQUEST_MESSAGE]
+
+
+def test_shell_queue_add_does_not_switch_session_and_is_idempotent() -> None:
+    calls: list[list[dict[str, str]]] = []
+    spoken: list[str] = []
+    refreshed: list[bool] = []
+    frame = SimpleNamespace(
+        client=SimpleNamespace(
+            queue_add_membership=lambda items: (
+                calls.append(items) or {"added": True, "changed": 0}
+            )
+        ),
+        announcer=SimpleNamespace(say=spoken.append),
+        runner=SimpleNamespace(
+            submit=lambda _slot, work, done, _failed: done(work())
+        ),
+        navigator=SimpleNamespace(active=SessionId.PODCASTS),
+        _note_queue_persistence=lambda _payload: None,
+        _refresh_live_queue=lambda: refreshed.append(True),
+    )
+
+    gui.LiteFrame._add_shell_files_to_queue(
+        frame,
+        (r"C:\Muzyka\plik.mp3",),
+    )
+
+    assert frame.navigator.active is SessionId.PODCASTS
+    assert calls[0][0] == {
+        "id": r"file:C:\Muzyka\plik.mp3",
+        "title": "plik.mp3",
+        "path": r"C:\Muzyka\plik.mp3",
+    }
+    assert spoken == ["Plik jest już w kolejce"]
+    assert refreshed == [True]

@@ -86,6 +86,7 @@ from .list_model import (
 )
 from . import menu_model
 from .shell_paths import ShellPathError, looks_like_local_path, open_in_explorer
+from .shell_requests import ShellRequest, start_request_reader
 from .playlist_dialog import (
     PlaylistMembershipDialog,
     PlaylistPayloadError,
@@ -16686,6 +16687,67 @@ class LiteFrame(wx.Frame):
         except ShellPathError as error:
             self.announcer.say(str(error))
 
+    def _handle_shell_request(self, request: ShellRequest) -> None:
+        """Wykonaj zweryfikowane zadanie launchera bez zamykania programu."""
+
+        _present_main_window(self)
+        files = tuple(
+            path
+            for path in request.files
+            if looks_like_local_path(path) and Path(path).is_file()
+        )
+        if len(files) != len(request.files):
+            self.announcer.say("Nie znaleziono lokalnego pliku")
+            return
+        if request.add_to_queue:
+            self._add_shell_files_to_queue(files)
+            return
+        if len(files) != 1:
+            self.announcer.say("Jednocześnie można otworzyć jeden plik")
+            return
+        path = files[0]
+        self._switch_session(SessionId.FILES)
+        self._play_track(PlayTrack(path, f"file:{path}", Path(path).name))
+        self._open_folder(str(Path(path).parent), preferred_id=f"file:{path}")
+
+    def _add_shell_files_to_queue(self, files: tuple[str, ...]) -> None:
+        """Dodaj pliki idempotentnie i nie zmieniaj bieżącej sesji ani fokusu."""
+
+        client = self.client
+        if client is None:
+            self.announcer.say("Silnik nie działa, nie mogę zmienić kolejki")
+            return
+        items = [
+            {"id": f"file:{path}", "title": Path(path).name, "path": path}
+            for path in files
+        ]
+
+        def done(payload: dict) -> None:
+            payload = payload or {}
+            self._note_queue_persistence(payload)
+            changed = int(payload.get("changed") or 0)
+            if changed <= 0:
+                message = (
+                    "Plik jest już w kolejce"
+                    if len(files) == 1
+                    else "Pliki są już w kolejce"
+                )
+            else:
+                label = Path(files[0]).name if changed == 1 else format_file_count(changed)
+                message = f"Dodano do kolejki: {label}"
+            self.announcer.say(message)
+            self._refresh_live_queue()
+
+        def failed(error: Exception) -> None:
+            self.announcer.say(f"Nie mogę dodać do kolejki: {error}")
+
+        self.runner.submit(
+            "shell-queue-add",
+            lambda: client.queue_add_membership(items),
+            done,
+            failed,
+        )
+
     def _copy_name(self) -> None:
         """Ctrl+C: nazwy zaznaczonych elementow, po jednej w wierszu.
 
@@ -23622,6 +23684,12 @@ class LiteApp(wx.App):
             self.SetTopWindow(frame)
         _present_main_window(frame)
         wx.CallAfter(_present_main_window, frame)
+        if os.environ.get("AMC_SHELL_REQUESTS") == "1":
+            self._shell_request_reader = start_request_reader(
+                frame._handle_shell_request,
+                frame.announcer.say,
+                schedule=wx.CallAfter,
+            )
         return True
 
 

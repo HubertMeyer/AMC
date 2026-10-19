@@ -127,6 +127,7 @@ internal static class QueueCoordinatorTests
         BlokOdtworzNastepneWyprzedzaZwykla();
         WidokPokazujeRzeczywisteNastepstwo();
         GrupowaZmianaNiePrzerywaAktywnejKolejki();
+        DodanieZPowlokiJestIdempotentne();
         NastepnyPoprzedniUzywajaRzeczywistejKolejki();
         PauzaZachowujePozycjeIPrzeskokJejNieCofa();
         StaryEventNiePrzeskakujeDwochUtworow();
@@ -305,6 +306,30 @@ internal static class QueueCoordinatorTests
             "obecność jednego zaznaczonego w kolejce zdejmuje członkostwo z całej grupy");
         Assert.True(output.Plays.Count == playsBefore + 1,
             "usunięcie z kolejki nie zatrzymuje już grającego C");
+    }
+
+    /// <summary>
+    /// Menu powloki brzmi "Dodaj", wiec drugie wywolanie nie moze zachowywac
+    /// sie jak przelacznik i usuwac pliku z kolejki.
+    /// </summary>
+    private static void DodanieZPowlokiJestIdempotentne()
+    {
+        var queue = new LiteQueueCoordinator(new RecordingOutput());
+        var args = Args($$"""
+            {"sessionId":"local","items":[
+              {"id":"file:A.wav","title":"A","path":{{Json(PathOf("A.wav"))}}}
+            ]}
+            """);
+
+        var first = queue.AddMembership(args);
+        var second = queue.AddMembership(args);
+
+        Assert.True(first.Added && first.Changed == 1,
+            "pierwsze polecenie powloki dodaje plik");
+        Assert.True(second.Added && second.Changed == 0,
+            "drugie polecenie pozostawia juz dodany plik bez zmian");
+        Assert.True(queue.Status().Rows.Count(row => row.Id == "file:A.wav") == 1,
+            "idempotentne dodanie nie duplikuje i nie usuwa pozycji");
     }
 
     /// <summary>Nastepny/Poprzedni chodza po RZECZYWISTEJ kolejce.</summary>

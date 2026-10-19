@@ -563,6 +563,7 @@ internal sealed class LiteEngineHandlers : IDisposable
             // ZYWA kolejka. "set" tylko wczytuje stan i NIC nie odtwarza.
             ["queue.set"] = (request, _) => QueueSet(request.Args),
             ["queue.toggleMembership"] = (request, _) => QueueToggleMembership(request.Args, playNext: false),
+            ["queue.addMembership"] = (request, _) => QueueAddMembership(request.Args),
             ["queue.togglePlayNext"] = (request, _) => QueueToggleMembership(request.Args, playNext: true),
             ["queue.status"] = (_, _) => QueueStatusPayload(),
             ["queue.playAt"] = (request, events) => QueuePlayAt(request.Args, events),
@@ -1514,6 +1515,12 @@ internal sealed class LiteEngineHandlers : IDisposable
     private object QueueToggleMembership(JsonElement args, bool playNext)
     {
         var result = _queue.ToggleMembership(args, playNext);
+        return QueuePayload(result.Status, added: result.Added, changed: result.Changed);
+    }
+
+    private object QueueAddMembership(JsonElement args)
+    {
+        var result = _queue.AddMembership(args);
         return QueuePayload(result.Status, added: result.Added, changed: result.Changed);
     }
 
