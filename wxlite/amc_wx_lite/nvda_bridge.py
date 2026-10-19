@@ -36,6 +36,9 @@ ACTION_BY_COMMAND: dict[str, Action] = {
     "addBookmark": Action.ADD_BOOKMARK,
     "previousBookmark": Action.PREVIOUS_BOOKMARK,
     "nextBookmark": Action.NEXT_BOOKMARK,
+    "previousChapter": Action.PREVIOUS_CHAPTER,
+    "nextChapter": Action.NEXT_CHAPTER,
+    "showChapters": Action.VIEW_CHAPTERS,
     "favorite": Action.TOGGLE_FAVORITE,
     "queue": Action.ADD_TO_QUEUE,
     "recordToggle": Action.RECORD_TOGGLE,
@@ -72,9 +75,6 @@ SPECIAL_COMMANDS: frozenset[str] = frozenset({
 # niż podstawienie podobnej, ale innej czynności (np. zakładki za rozdział).
 KNOWN_NOT_IMPLEMENTED = frozenset({
     "muteAll",
-    "previousChapter",
-    "nextChapter",
-    "showChapters",
 })
 
 ALLOWED_COMMANDS = frozenset(

@@ -88,10 +88,16 @@ def test_item_bookmarks_do_not_steal_the_broader_ctrl_b() -> None:
     assert LIST_VIEW.get("Ctrl+B") is not Action.VIEW_ITEM_BOOKMARKS
 
 
-def test_item_bookmarks_have_their_own_working_gesture() -> None:
-    """Wezszy zakres = wlasny gest, a nie brak dostepu."""
+def test_item_bookmarks_remain_in_menu_without_stealing_named_bookmark_gesture() -> None:
+    """Ctrl+Shift+B nalezy do nazwanej zakladki tylko w odtwarzaczu."""
     action = resolve(Chord("B", ctrl=True, shift=True), player_view=False, radio_session=False)
-    assert action is Action.VIEW_ITEM_BOOKMARKS
+    assert action is None
+    item = next(
+        entry
+        for entry in _menu("&Biblioteka").items
+        if entry.action is Action.VIEW_ITEM_BOOKMARKS
+    )
+    assert item.shortcut is None
 
 
 def test_folders_view_keeps_the_alt_1_of_the_original() -> None:

@@ -4,6 +4,7 @@ from pathlib import Path
 
 from amc_wx_lite.host_client import LiteHostClient
 from amc_wx_lite.menu_model import build_menus
+from amc_wx_lite.navigation import SessionId
 from amc_wx_lite.shortcuts import Action, Chord, resolve
 
 
@@ -25,12 +26,12 @@ def test_ctrl_b_in_player_still_opens_all_bookmarks() -> None:
     ) is Action.VIEW_ALL_BOOKMARKS
 
 
-def test_ctrl_shift_b_is_contextual_between_list_and_player() -> None:
+def test_ctrl_shift_b_adds_named_bookmark_only_in_player() -> None:
     assert resolve(
         Chord("B", ctrl=True, shift=True),
         player_view=False,
         radio_session=False,
-    ) is Action.VIEW_ITEM_BOOKMARKS
+    ) is None
     assert resolve(
         Chord("B", ctrl=True, shift=True),
         player_view=True,
@@ -53,7 +54,7 @@ def test_shift_page_keys_navigate_bookmarks_without_stealing_clip_boundaries() -
     ) is Action.CLIP_NEXT_BOUNDARY
 
 
-def test_playback_menu_exposes_bookmark_navigation_only_for_local_files() -> None:
+def test_playback_menu_exposes_bookmark_navigation_for_stable_timeline_sessions() -> None:
     entries = {
         item.action: item
         for menu in build_menus()
@@ -65,11 +66,14 @@ def test_playback_menu_exposes_bookmark_navigation_only_for_local_files() -> Non
     following = entries[Action.NEXT_BOOKMARK]
     assert "Shift+Page Up" in previous.label.replace("&", "")
     assert "Shift+Page Down" in following.label.replace("&", "")
-    assert previous.needs_playback and previous.needs_files_session
-    assert following.needs_playback and following.needs_files_session
+    assert previous.needs_playback and not previous.needs_files_session
+    assert following.needs_playback and not following.needs_files_session
+    assert previous.visible_sessions == (SessionId.FILES, SessionId.PODCASTS)
+    assert following.visible_sessions == (SessionId.FILES, SessionId.PODCASTS)
     named = entries[Action.ADD_NAMED_BOOKMARK]
     assert named.shortcut == "Ctrl+Shift+B"
-    assert named.needs_playback and named.needs_files_session
+    assert named.needs_playback and not named.needs_files_session
+    assert named.visible_sessions == (SessionId.FILES, SessionId.PODCASTS)
 
 
 def test_host_receives_library_database_without_queue_write() -> None:
@@ -92,7 +96,7 @@ def test_client_add_bookmark_uses_narrow_operation() -> None:
 
     assert calls == [(
         "bookmark.add",
-        {"itemId": "plik-1", "itemTitle": "Nagranie"},
+        {"sessionId": "files", "itemId": "plik-1", "itemTitle": "Nagranie"},
         15.0,
     )]
 
@@ -111,6 +115,7 @@ def test_client_adds_named_bookmark_without_another_operation() -> None:
     assert calls == [(
         "bookmark.add",
         {
+            "sessionId": "files",
             "itemId": "plik-1",
             "itemTitle": "Nagranie",
             "name": "Ważny fragment",
@@ -144,12 +149,12 @@ def test_client_navigates_bookmarks_in_the_local_session() -> None:
     assert calls == [
         (
             "bookmark.navigate",
-            {"sessionId": "files", "direction": -1},
+                {"sessionId": "files", "direction": -1, "namedOnly": False},
             15.0,
         ),
         (
             "bookmark.navigate",
-            {"sessionId": "files", "direction": 1},
+                {"sessionId": "files", "direction": 1, "namedOnly": False},
             15.0,
         ),
     ]

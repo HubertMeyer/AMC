@@ -1326,9 +1326,14 @@ class LiteHostClient:
         *,
         item_id: str,
         item_title: str,
+        session_id: str = "files",
         name: str | None = None,
     ) -> Any:
-        args = {"itemId": item_id, "itemTitle": item_title}
+        args = {
+            "sessionId": session_id,
+            "itemId": item_id,
+            "itemTitle": item_title,
+        }
         if name is not None:
             args["name"] = name
         return self.call(
@@ -1345,12 +1350,43 @@ class LiteHostClient:
             timeout=20.0,
         )
 
-    def navigate_bookmark(self, direction: int) -> Any:
-        """Przejdź do poprzedniej albo następnej zakładki bieżącego pliku."""
+    def navigate_bookmark(
+        self,
+        direction: int,
+        *,
+        session_id: str = "files",
+        named_only: bool = False,
+    ) -> Any:
+        """Przejdź po wszystkich albo tylko nazwanych zakładkach materiału."""
         return self.call(
             "bookmark.navigate",
             {
-                "sessionId": "files",
+                "sessionId": session_id,
+                "direction": -1 if int(direction) < 0 else 1,
+                "namedOnly": bool(named_only),
+            },
+            timeout=15.0,
+        )
+
+    def add_chapter(self, name: str, *, session_id: str) -> Any:
+        return self.call(
+            "chapter.add",
+            {"sessionId": session_id, "name": name},
+            timeout=20.0,
+        )
+
+    def list_chapters(self, *, session_id: str) -> Any:
+        return self.call(
+            "chapter.list",
+            {"sessionId": session_id},
+            timeout=15.0,
+        )
+
+    def navigate_chapter(self, direction: int, *, session_id: str) -> Any:
+        return self.call(
+            "chapter.navigate",
+            {
+                "sessionId": session_id,
                 "direction": -1 if int(direction) < 0 else 1,
             },
             timeout=15.0,

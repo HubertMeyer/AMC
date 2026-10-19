@@ -5639,6 +5639,13 @@ static void TestBookmarks()
     Equal("Ważny fragment", named.Entry.Name);
     var sameName = index.Add("local", "Pliki lokalne", item, TimeSpan.FromMinutes(25), now.AddMinutes(4), "Ważny fragment");
     True(!sameName.NameChanged, "Ponowne zapisanie tej samej nazwy nie powinno zgłaszać zmiany.");
+    Equal(1, index.GetNamedForItem("local", item.Id).Count);
+    Equal(second.Entry.Id, index.FindNamedRelative(
+        "local", item.Id, TimeSpan.Zero, 1)?.Id);
+    Equal(second.Entry.Id, index.FindNamedRelative(
+        "local", item.Id, TimeSpan.FromMinutes(40), -1)?.Id);
+    Equal(null, index.FindNamedAdjacent(
+        "local", item.Id, second.Entry.Id, 1)?.Id);
     Equal(3, index.GetForItem("local", item.Id).Count);
     Equal(first.Entry.Id, index.FindRelative("local", item.Id, TimeSpan.FromMinutes(20), -1)?.Id);
     Equal(second.Entry.Id, index.FindRelative("local", item.Id, TimeSpan.FromMinutes(20), 1)?.Id);

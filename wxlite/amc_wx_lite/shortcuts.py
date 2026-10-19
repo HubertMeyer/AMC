@@ -180,6 +180,16 @@ class Action(Enum):
     ADD_NAMED_BOOKMARK = "action.bookmark.addNamed"
     PREVIOUS_BOOKMARK = "transport.bookmark.previous"
     NEXT_BOOKMARK = "transport.bookmark.next"
+    PREVIOUS_NAMED_BOOKMARK = "transport.bookmark.named.previous"
+    NEXT_NAMED_BOOKMARK = "transport.bookmark.named.next"
+    VIEW_CHAPTERS = "view.chapters"
+    ADD_NAMED_CHAPTER = "action.chapter.addNamed"
+    PREVIOUS_CHAPTER = "transport.chapter.previous"
+    NEXT_CHAPTER = "transport.chapter.next"
+    VIEW_BACK = "view.history.back"
+    VIEW_FORWARD = "view.history.forward"
+    PLAYBACK_HISTORY_OLDER = "transport.history.older"
+    PLAYBACK_HISTORY_NEWER = "transport.history.newer"
     CLIP_MARK_START = "audio.clip.markStart"
     CLIP_MARK_END = "audio.clip.markEnd"
     CLIP_JUMP_START = "audio.clip.jumpStart"
@@ -425,6 +435,8 @@ TIDAL_SUPPORTED_ACTIONS = frozenset({
     Action.SEARCH_ALL,
     Action.VIEW_LIBRARY,
     Action.VIEW_HISTORY,
+    Action.VIEW_BACK,
+    Action.VIEW_FORWARD,
     Action.VIEW_FAVORITES,
     Action.VIEW_PLAYLISTS,
     Action.VIEW_SAVED_QUEUE,
@@ -501,6 +513,10 @@ SPOTIFY_SUPPORTED_ACTIONS = frozenset({
     Action.SEARCH_ALL,
     Action.VIEW_LIBRARY,
     Action.VIEW_HISTORY,
+    Action.VIEW_BACK,
+    Action.VIEW_FORWARD,
+    Action.PLAYBACK_HISTORY_OLDER,
+    Action.PLAYBACK_HISTORY_NEWER,
     Action.VIEW_PRESETS,
     Action.GENERAL_SETTINGS,
     Action.ASSIGN_PRESET,
@@ -600,6 +616,10 @@ WIIM_SUPPORTED_ACTIONS = frozenset({
     Action.FOCUS_FILTER,
     Action.VIEW_LIBRARY,
     Action.VIEW_HISTORY,
+    Action.VIEW_BACK,
+    Action.VIEW_FORWARD,
+    Action.PLAYBACK_HISTORY_OLDER,
+    Action.PLAYBACK_HISTORY_NEWER,
     Action.REMOVE_SELECTED,
     Action.VIEW_ACTIVE_RECORDINGS,
     Action.VIEW_RECORDED_RADIO_FILES,
@@ -681,6 +701,10 @@ SONOS_SUPPORTED_ACTIONS = frozenset({
     Action.COPY_ADDRESS,
     Action.VIEW_LIBRARY,
     Action.VIEW_HISTORY,
+    Action.VIEW_BACK,
+    Action.VIEW_FORWARD,
+    Action.PLAYBACK_HISTORY_OLDER,
+    Action.PLAYBACK_HISTORY_NEWER,
     Action.REMOVE_SELECTED,
     Action.VIEW_FAVORITES,
     Action.VIEW_PLAYLISTS,
@@ -820,7 +844,6 @@ LIST_VIEW: dict[str, Action] = {
     # pliku zostaje pod Ctrl+Shift+B. Dwa zakresy, dwa gesty -- zaden nie
     # podmienia drugiemu zbioru pod reka.
     "Ctrl+B": Action.VIEW_ALL_BOOKMARKS,
-    "Ctrl+Shift+B": Action.VIEW_ITEM_BOOKMARKS,
     # Filtr listy. Gest ODCZYTANY, nie zgadniety: MainWindow.xaml:491
     # ``<MenuItem Header="_Filtruj listę" InputGestureText="Ctrl+K" ...>``.
     # Osobne okno wyszukiwania, nie filtr bieżącej listy. Gesty wprost z
@@ -853,6 +876,8 @@ LIST_VIEW: dict[str, Action] = {
     # Zarzadzanie presetami z pelnego AMC (MainWindow.xaml:428-435).
     "Ctrl+Alt+P": Action.VIEW_PRESETS,
     "Ctrl+Alt+Shift+P": Action.ASSIGN_PRESET,
+    "Alt+Left": Action.VIEW_BACK,
+    "Alt+Right": Action.VIEW_FORWARD,
     "F1": Action.HELP,
     "Ctrl+F1": Action.KEYBOARD_HELP,
 }
@@ -906,7 +931,7 @@ RADIO_PLAYER_VIEW: dict[str, Action] = {
     "Shift+R": Action.ADD_RADIO_SCHEDULE,
     "T": Action.RECORD_SPLIT,
     "B": Action.ADD_BOOKMARK,
-    "Shift+B": Action.ADD_NAMED_BOOKMARK,
+    "Ctrl+Shift+B": Action.ADD_NAMED_BOOKMARK,
     "Alt+D": Action.CURRENT_RADIO_BROADCAST_INFORMATION,
     "S": Action.RECOGNIZE_RADIO_TRACK,
     "Shift+S": Action.TOGGLE_RADIO_RECOGNITION_MONITORING,
@@ -948,6 +973,21 @@ PLAYER_VIEW: dict[str, Action] = {
     # Alt+Page Up/Down, które poruszają granicami zaznaczonego fragmentu.
     "Shift+Prior": Action.PREVIOUS_BOOKMARK,
     "Shift+Next": Action.NEXT_BOOKMARK,
+    # Zakładki nazwane przez Ctrl+Shift+B pozostają zakładkami, a nie
+    # rozdziałami dostawcy. Mają własną nawigację niezależną od spisu treści.
+    "Ctrl+Shift+Prior": Action.PREVIOUS_NAMED_BOOKMARK,
+    "Ctrl+Shift+Next": Action.NEXT_NAMED_BOOKMARK,
+    # Rozdziały pochodzą od dostawcy albo użytkownika i są osobnym zbiorem.
+    "Ctrl+Shift+Left": Action.PREVIOUS_CHAPTER,
+    "Ctrl+Shift+Right": Action.NEXT_CHAPTER,
+    "Ctrl+Alt+Prior": Action.PREVIOUS_CHAPTER,
+    "Ctrl+Alt+Next": Action.NEXT_CHAPTER,
+    "Ctrl+Alt+B": Action.VIEW_CHAPTERS,
+    "Ctrl+Alt+Shift+B": Action.ADD_NAMED_CHAPTER,
+    # Historia odtwarzanych elementów działa tylko w odtwarzaczu. Na listach
+    # Alt+góra/dół zachowuje ręczne przenoszenie elementu.
+    "Alt+Down": Action.PLAYBACK_HISTORY_OLDER,
+    "Alt+Up": Action.PLAYBACK_HISTORY_NEWER,
     "Ctrl+B": Action.VIEW_ALL_BOOKMARKS,
     # Zaznaczenie fragmentu i jego plikowe operacje. Gesty wprost z obu
     # sciezek klawiatury pelnego AMC (MainWindow.xaml.cs:21619-21627 oraz
@@ -1025,6 +1065,8 @@ PLAYER_VIEW: dict[str, Action] = {
     "Ctrl+]": Action.NEXT_AUDIO_OUTPUT,
     "Ctrl+Alt+P": Action.VIEW_PRESETS,
     "Ctrl+Alt+Shift+P": Action.ASSIGN_PRESET,
+    "Alt+Left": Action.VIEW_BACK,
+    "Alt+Right": Action.VIEW_FORWARD,
     "F1": Action.HELP,
     "Ctrl+F1": Action.KEYBOARD_HELP,
     # Globalne zatrzymanie dziala niezaleznie od aktualnej sesji, jak w WPF.
@@ -1304,7 +1346,7 @@ def resolve(
         not player_view
         and radio_session
         and radio_recording_context
-        and canonical in ("B", "Shift+B", "Ctrl+Shift+B")
+        and canonical in ("B", "Ctrl+Shift+B")
     ):
         return (
             Action.ADD_BOOKMARK
@@ -1384,6 +1426,16 @@ def _help_entries() -> list[tuple[str, str, Action]]:
         Action.ADD_NAMED_BOOKMARK: "Dodaj nazwana zakladke w biezacym miejscu",
         Action.PREVIOUS_BOOKMARK: "Poprzednia zakładka",
         Action.NEXT_BOOKMARK: "Następna zakładka",
+        Action.PREVIOUS_NAMED_BOOKMARK: "Poprzednia nazwana zakładka",
+        Action.NEXT_NAMED_BOOKMARK: "Następna nazwana zakładka",
+        Action.VIEW_CHAPTERS: "Pokaż rozdziały bieżącego materiału",
+        Action.ADD_NAMED_CHAPTER: "Dodaj nazwany rozdział w bieżącym miejscu",
+        Action.PREVIOUS_CHAPTER: "Poprzedni rozdział",
+        Action.NEXT_CHAPTER: "Następny rozdział",
+        Action.VIEW_BACK: "Wstecz w historii widoków",
+        Action.VIEW_FORWARD: "Dalej w historii widoków",
+        Action.PLAYBACK_HISTORY_OLDER: "Starszy odtwarzany element z historii",
+        Action.PLAYBACK_HISTORY_NEWER: "Nowszy odtwarzany element z historii",
         Action.CLIP_MARK_START: "Ustaw poczatek fragmentu",
         Action.CLIP_MARK_END: "Ustaw koniec fragmentu",
         Action.CLIP_JUMP_START: "Skocz do poczatku fragmentu",

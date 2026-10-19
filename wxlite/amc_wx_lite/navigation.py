@@ -278,9 +278,16 @@ class TransientNavigationSnapshot:
     library_folder_path: str | None
     library_return_view: str | None
     view_selected_ids: dict[str, str]
+    tidal_heading: str
+    tidal_context: "OpenTidalContainer | None"
+    tidal_history: tuple["TidalNavigationSnapshot", ...]
     spotify_heading: str
     spotify_context: "OpenSpotifyContainer | OpenSpotifyCollectionView | None"
     spotify_history: tuple["SpotifyNavigationSnapshot", ...]
+    wiim_device_rows: tuple[Row, ...]
+    wiim_device_return_id: str | None
+    wiim_streams_return_to_sources: bool
+    sonos_target_rows: tuple[Row, ...]
 
 
 @dataclass(slots=True)
@@ -926,9 +933,16 @@ class Navigator:
             library_folder_path=state.library_folder_path,
             library_return_view=state.library_return_view,
             view_selected_ids=dict(state.view_selected_ids),
+            tidal_heading=state.tidal_heading,
+            tidal_context=state.tidal_context,
+            tidal_history=tuple(state.tidal_history),
             spotify_heading=state.spotify_heading,
             spotify_context=state.spotify_context,
             spotify_history=tuple(state.spotify_history),
+            wiim_device_rows=tuple(state.wiim_device_rows),
+            wiim_device_return_id=state.wiim_device_return_id,
+            wiim_streams_return_to_sources=state.wiim_streams_return_to_sources,
+            sonos_target_rows=tuple(state.sonos_target_rows),
         )
 
     def restore_transient_navigation(
@@ -967,9 +981,16 @@ class Navigator:
             state.view_selected_ids[
                 LibraryView.SPOTIFY_HISTORY.value
             ] = spotify_history_selected_id
+        state.tidal_heading = snapshot.tidal_heading
+        state.tidal_context = snapshot.tidal_context
+        state.tidal_history = list(snapshot.tidal_history)
         state.spotify_heading = snapshot.spotify_heading
         state.spotify_context = snapshot.spotify_context
         state.spotify_history = list(snapshot.spotify_history)
+        state.wiim_device_rows = tuple(snapshot.wiim_device_rows)
+        state.wiim_device_return_id = snapshot.wiim_device_return_id
+        state.wiim_streams_return_to_sources = snapshot.wiim_streams_return_to_sources
+        state.sonos_target_rows = tuple(snapshot.sonos_target_rows)
         state.model.replace(list(snapshot.rows), preferred_id=snapshot.selected_id)
         return []
 

@@ -423,6 +423,14 @@ _PLAYER_CONTEXT_ACTION_GROUPS: tuple[tuple[Action, ...], ...] = (
         Action.ADD_NAMED_BOOKMARK,
         Action.PREVIOUS_BOOKMARK,
         Action.NEXT_BOOKMARK,
+        Action.PREVIOUS_NAMED_BOOKMARK,
+        Action.NEXT_NAMED_BOOKMARK,
+        Action.VIEW_CHAPTERS,
+        Action.ADD_NAMED_CHAPTER,
+        Action.PREVIOUS_CHAPTER,
+        Action.NEXT_CHAPTER,
+        Action.PLAYBACK_HISTORY_OLDER,
+        Action.PLAYBACK_HISTORY_NEWER,
     ),
     (
         Action.CLIP_MARK_START,
@@ -5735,6 +5743,14 @@ class LiteFrame(wx.Frame):
             state.podcast_inbox_sort_mode or SORT_ADDED_NEWEST
         )
         self.navigator.restore(state.navigation)
+        # Alt+lewo/prawo porusza się po widokach, nie po odtwarzanych
+        # elementach. Migawki przechowują wyłącznie nawigację i fokus; żywy
+        # transport nadal aktualizuje się niezależnie.
+        self._view_history_back: list[TransientNavigationSnapshot] = []
+        self._view_history_forward: list[TransientNavigationSnapshot] = []
+        self._view_history_current = self.navigator.capture_transient_navigation()
+        self._restoring_view_history = False
+        self._playback_history_cursor_by_session: dict[SessionId, str] = {}
 
         # Brama zna zycie okna, wiec spozniony wynik nie dotknie zniszczonego
         # okna. Nazwy strumieni ("folder", "status"...) uniewazniaja poprzednie
@@ -10577,6 +10593,27 @@ class LiteFrame(wx.Frame):
             self._add_bookmark(named=True)
         elif action in (Action.PREVIOUS_BOOKMARK, Action.NEXT_BOOKMARK):
             self._navigate_bookmark(action is Action.NEXT_BOOKMARK)
+        elif action in (
+            Action.PREVIOUS_NAMED_BOOKMARK,
+            Action.NEXT_NAMED_BOOKMARK,
+        ):
+            self._navigate_bookmark(
+                action is Action.NEXT_NAMED_BOOKMARK,
+                named_only=True,
+            )
+        elif action is Action.VIEW_CHAPTERS:
+            self._show_chapters()
+        elif action is Action.ADD_NAMED_CHAPTER:
+            self._add_named_chapter()
+        elif action in (Action.PREVIOUS_CHAPTER, Action.NEXT_CHAPTER):
+            self._navigate_chapter(action is Action.NEXT_CHAPTER)
+        elif action in (
+            Action.PLAYBACK_HISTORY_OLDER,
+            Action.PLAYBACK_HISTORY_NEWER,
+        ):
+            self._navigate_playback_history(
+                older=action is Action.PLAYBACK_HISTORY_OLDER
+            )
         elif action is Action.CLIP_MARK_START:
             self._mark_audio_clip(start=True)
         elif action is Action.CLIP_MARK_END:
@@ -10865,6 +10902,10 @@ class LiteFrame(wx.Frame):
             # Ctrl+B i pozycja menu wchodza TA SAMA droga: jedna akcja, jeden
             # dispatcher. Inaczej gest i menu mogly by sie rozjechac.
             self._run(self.navigator.open_all_bookmarks())
+        elif action is Action.VIEW_BACK:
+            self._navigate_view_history(back=True)
+        elif action is Action.VIEW_FORWARD:
+            self._navigate_view_history(back=False)
         elif action is Action.HELP:
             self._show_help()
         elif action is Action.KEYBOARD_HELP:
@@ -10963,8 +11004,65 @@ class LiteFrame(wx.Frame):
         for text in announcements_after_empty_update:
             self._announce_after_native_list_update(text)
 
+    @staticmethod
+    def _view_history_fingerprint(
+        snapshot: TransientNavigationSnapshot,
+    ) -> tuple[object, ...]:
+        tidal = snapshot.tidal_context
+        spotify = snapshot.spotify_context
+        return (
+            snapshot.session_id,
+            snapshot.view,
+            snapshot.folder_path,
+            snapshot.library_view,
+            snapshot.library_playlist_id,
+            snapshot.library_item_id,
+            snapshot.tidal_heading,
+            getattr(tidal, "service_id", None),
+            getattr(tidal, "kind", None),
+            getattr(tidal, "artist_section", None),
+            snapshot.spotify_heading,
+            getattr(spotify, "service_id", None),
+            getattr(spotify, "kind", None),
+            getattr(spotify, "section", None),
+            snapshot.wiim_device_return_id,
+            snapshot.wiim_streams_return_to_sources,
+        )
+
+    def _track_view_history(self) -> None:
+        if not hasattr(self, "_view_history_current"):
+            return
+        current = self.navigator.capture_transient_navigation()
+        if self._restoring_view_history:
+            self._view_history_current = current
+            self._restoring_view_history = False
+            return
+        previous = self._view_history_current
+        if self._view_history_fingerprint(current) != self._view_history_fingerprint(previous):
+            self._view_history_back.append(previous)
+            del self._view_history_back[:-100]
+            self._view_history_forward.clear()
+        self._view_history_current = current
+
+    def _navigate_view_history(self, *, back: bool) -> None:
+        source = self._view_history_back if back else self._view_history_forward
+        destination = self._view_history_forward if back else self._view_history_back
+        if not source:
+            self.announcer.say(
+                "Brak wcześniejszego widoku" if back else "Brak następnego widoku"
+            )
+            return
+        current = self.navigator.capture_transient_navigation()
+        target = source.pop()
+        destination.append(current)
+        del destination[:-100]
+        self._restoring_view_history = True
+        self.navigator.restore_transient_navigation(target)
+        self._sync_views()
+
     def _sync_views(self) -> None:
         """Odwzoruj stan nawigatora. Fokus ruszamy TYLKO przy zmianie widoku."""
+        self._track_view_history()
         session = self.navigator.session
         # Menu musi zgadzac sie z kontekstem, ktory wlasnie sie zmienil.
         if (
@@ -17501,7 +17599,7 @@ class LiteFrame(wx.Frame):
         if self.navigator.active is SessionId.RADIO:
             self._add_radio_recording_bookmark(named=named)
             return
-        if self.navigator.active is not SessionId.FILES:
+        if self.navigator.active not in (SessionId.FILES, SessionId.PODCASTS):
             self.announcer.say(
                 "Zakładki w tej sesji nie są jeszcze dostępne w tej wersji"
             )
@@ -17561,6 +17659,7 @@ class LiteFrame(wx.Frame):
             lambda: client.add_bookmark(
                 item_id=item_id,
                 item_title=state.now_playing_title or item_id,
+                session_id=self.navigator.active.value,
                 name=name,
             ),
             done,
@@ -17640,11 +17739,16 @@ class LiteFrame(wx.Frame):
             ),
         )
 
-    def _navigate_bookmark(self, forward: bool) -> None:
-        """Shift+Page Up/Down: nawigacja po zakładkach bieżącego pliku."""
-        if self.navigator.active is not SessionId.FILES:
+    def _navigate_bookmark(
+        self,
+        forward: bool,
+        *,
+        named_only: bool = False,
+    ) -> None:
+        """Nawigacja po wszystkich albo tylko nazwanych zakładkach."""
+        if self.navigator.active not in (SessionId.FILES, SessionId.PODCASTS):
             self.announcer.say(
-                "Nawigacja po zakładkach jest dostępna dla plików lokalnych"
+                "Nawigacja po zakładkach jest dostępna dla plików lokalnych i podcastów"
             )
             return
         client = self.client
@@ -17655,14 +17759,16 @@ class LiteFrame(wx.Frame):
             return
 
         direction = 1 if forward else -1
+        session_id = self.navigator.active.value
 
         def done(payload: dict) -> None:
             result = payload or {}
             if not result.get("found"):
+                kind = "nazwanej zakładki" if named_only else "zakładki"
                 self.announcer.say(
-                    "Brak następnej zakładki w tym materiale"
+                    f"Brak następnej {kind} w tym materiale"
                     if forward
-                    else "Brak poprzedniej zakładki w tym materiale"
+                    else f"Brak poprzedniej {kind} w tym materiale"
                 )
                 return
             raw_position = result.get("positionSeconds")
@@ -17693,10 +17799,261 @@ class LiteFrame(wx.Frame):
 
         self.runner.submit(
             "bookmark-navigation",
-            lambda: client.navigate_bookmark(direction),
+            lambda: client.navigate_bookmark(
+                direction,
+                session_id=session_id,
+                named_only=named_only,
+            ),
             done,
             lambda error: self.announcer.say(
                 f"Nie można przejść do zakładki: {error}"
+            ),
+        )
+
+    def _add_named_chapter(self) -> None:
+        if self.navigator.active not in (SessionId.FILES, SessionId.PODCASTS):
+            self.announcer.say(
+                "Rozdziały są dostępne dla plików lokalnych i podcastów"
+            )
+            return
+        client = self.client
+        if client is None:
+            self.announcer.say("Silnik nie działa, nie mogę dodać rozdziału")
+            return
+        with RenameItemDialog(
+            self,
+            title="Dodaj nazwany rozdział",
+            prompt="&Nazwa rozdziału:",
+            field_name="Nazwa rozdziału",
+            value="",
+            help_text="Nazwa opisuje rozdział rozpoczynający się w bieżącym miejscu.",
+        ) as dialog:
+            if dialog.ShowModal() != wx.ID_OK:
+                return
+            name = dialog.value
+        if not name:
+            self.announcer.say("Nazwa rozdziału nie może być pusta")
+            return
+        session_id = self.navigator.active.value
+
+        def done(payload: dict) -> None:
+            result = payload or {}
+            position = format_duration(float(result.get("positionSeconds") or 0.0))
+            stored_name = str(result.get("name") or name).strip()
+            if result.get("added"):
+                text = f"Dodano rozdział {stored_name}: {position}"
+            elif result.get("nameChanged"):
+                text = f"Zmieniono nazwę rozdziału na {stored_name}: {position}"
+            else:
+                text = f"Rozdział {stored_name} już istnieje: {position}"
+            self.announcer.say(text)
+
+        self.runner.submit(
+            "chapter-write",
+            lambda: client.add_chapter(name, session_id=session_id),
+            done,
+            lambda error: self.announcer.say(f"Nie można dodać rozdziału: {error}"),
+        )
+
+    def _navigate_chapter(self, forward: bool) -> None:
+        if self.navigator.active not in (SessionId.FILES, SessionId.PODCASTS):
+            self.announcer.say(
+                "Rozdziały są dostępne dla plików lokalnych i podcastów"
+            )
+            return
+        client = self.client
+        if client is None:
+            self.announcer.say("Silnik nie działa, nawigacja po rozdziałach jest niedostępna")
+            return
+        direction = 1 if forward else -1
+        session_id = self.navigator.active.value
+
+        def done(payload: dict) -> None:
+            result = payload or {}
+            if not result.get("found"):
+                self.announcer.say(
+                    "Brak następnego rozdziału"
+                    if forward else "Brak poprzedniego rozdziału"
+                )
+                return
+            position = float(result.get("positionSeconds") or 0.0)
+            self._last_status = {**self._last_status, "positionSeconds": position}
+            name = str(result.get("name") or "Rozdział").strip() or "Rozdział"
+            self.announcer.say(f"{name}, {format_duration(position)}")
+
+        self.runner.submit(
+            "chapter-navigation",
+            lambda: client.navigate_chapter(direction, session_id=session_id),
+            done,
+            lambda error: self.announcer.say(
+                f"Nie można przejść do rozdziału: {error}"
+            ),
+        )
+
+    def _show_chapters(self) -> None:
+        if self.navigator.active not in (SessionId.FILES, SessionId.PODCASTS):
+            self.announcer.say(
+                "Rozdziały są dostępne dla plików lokalnych i podcastów"
+            )
+            return
+        client = self.client
+        if client is None:
+            self.announcer.say("Silnik nie działa, lista rozdziałów jest niedostępna")
+            return
+        session_id = self.navigator.active.value
+
+        def done(payload: dict) -> None:
+            result = payload or {}
+            raw = result.get("chapters")
+            choices: list[tuple[str, float]] = []
+            if isinstance(raw, list):
+                for entry in raw:
+                    if not isinstance(entry, dict):
+                        continue
+                    name = str(entry.get("name") or "Rozdział").strip() or "Rozdział"
+                    try:
+                        position = max(0.0, float(entry.get("positionSeconds") or 0.0))
+                    except (TypeError, ValueError):
+                        continue
+                    choices.append((f"{name}, {format_duration(position)}", position))
+            if not choices:
+                self.announcer.say("Ten materiał nie ma rozdziałów")
+                return
+            current = float(result.get("currentPositionSeconds") or 0.0)
+            selected = max(
+                (index for index, choice in enumerate(choices) if choice[1] <= current + 0.25),
+                default=0,
+            )
+            dialog = wx.SingleChoiceDialog(
+                self,
+                "Wybierz rozdział. Enter przechodzi do jego początku.",
+                "Rozdziały",
+                [choice[0] for choice in choices],
+            )
+            dialog.SetName("Rozdziały bieżącego materiału")
+            dialog.SetSelection(selected)
+            try:
+                if dialog.ShowModal() != wx.ID_OK:
+                    return
+                index = dialog.GetSelection()
+            finally:
+                dialog.Destroy()
+                self._restore_focus_after_dialog()
+            if not (0 <= index < len(choices)):
+                return
+            label, position = choices[index]
+
+            def seek_done(_payload: dict) -> None:
+                self._last_status = {**self._last_status, "positionSeconds": position}
+                self.announcer.say(label)
+
+            self.runner.submit(
+                "chapter-list-seek",
+                lambda: client.seek_to_position(position, session_id=session_id),
+                seek_done,
+                lambda error: self.announcer.say(
+                    f"Nie można przejść do rozdziału: {error}"
+                ),
+            )
+
+        self.runner.submit(
+            "chapter-list",
+            lambda: client.list_chapters(session_id=session_id),
+            done,
+            lambda error: self.announcer.say(
+                f"Nie można otworzyć listy rozdziałów: {error}"
+            ),
+        )
+
+    def _navigate_playback_history(self, *, older: bool) -> None:
+        """Alt+góra/dół: odtwórz nowszy albo starszy wpis bieżącej sesji."""
+        origin = self.navigator.active
+        if self.navigator.session.view is not View.PLAYER:
+            self.announcer.say("Nawigacja po historii działa w odtwarzaczu")
+            return
+        if origin is SessionId.TIDAL:
+            self.announcer.say(
+                "TIDAL odtwarza w zewnętrznej aplikacji; nawigacja po historii nie jest dostępna"
+            )
+            return
+        current_id = (
+            self.navigator.session.current_material_id
+            or self.navigator.session.pending_material_id
+            or self.navigator.session.now_playing_id
+            or ""
+        )
+        spotify_history = list(self.state.spotify_playback_history)
+        streamer_history = list(
+            self.state.playback_history_by_session.get(origin.value, ())
+        )
+
+        def work() -> list[Row]:
+            if origin is SessionId.FILES:
+                return list(self.library.load_view("history").rows)
+            if origin is SessionId.RADIO:
+                from .radio_views import VIEW_HISTORY, load_view
+                return list(load_view(self.radio, VIEW_HISTORY).rows)
+            if origin is SessionId.PODCASTS:
+                return list(self.podcasts.history(loaded_count=500).rows)
+            if origin is SessionId.SPOTIFY:
+                return list(spotify_history_rows(spotify_history))
+            if origin in (SessionId.WIIM, SessionId.SONOS):
+                return list(streamer_history_rows(origin.value, streamer_history))
+            return []
+
+        def done(rows: list[Row]) -> None:
+            if self.navigator.active is not origin or self.navigator.session.view is not View.PLAYER:
+                return
+            playable = [row for row in rows if not row.activation_message]
+            if not playable:
+                self.announcer.say("Historia nie zawiera elementu, który można ponownie odtworzyć")
+                return
+            state = self.navigator.session
+            cursor_id = self._playback_history_cursor_by_session.get(origin)
+            live_ids = {
+                state.current_material_id,
+                state.pending_material_id,
+                state.now_playing_id,
+            }
+            if cursor_id not in live_ids:
+                cursor_id = None
+                self._playback_history_cursor_by_session.pop(origin, None)
+            reference = cursor_id or current_id
+            index = next(
+                (position for position, row in enumerate(playable) if row.item_id == reference),
+                -1,
+            )
+            target_index = index + (1 if older else -1)
+            if index < 0:
+                target_index = 0 if older else -1
+            if not (0 <= target_index < len(playable)):
+                self.announcer.say(
+                    "Brak starszego odtwarzanego elementu"
+                    if older else "Brak nowszego odtwarzanego elementu"
+                )
+                return
+            target = playable[target_index]
+            snapshot = self.navigator.capture_transient_navigation()
+            state.model.replace(playable, preferred_id=target.item_id)
+            state.library_view = {
+                SessionId.FILES: LibraryView.HISTORY,
+                SessionId.RADIO: LibraryView.HISTORY,
+                SessionId.PODCASTS: LibraryView.PODCAST_HISTORY,
+                SessionId.SPOTIFY: LibraryView.SPOTIFY_HISTORY,
+                SessionId.WIIM: LibraryView.SERVICE_HISTORY,
+                SessionId.SONOS: LibraryView.SERVICE_HISTORY,
+            }[origin]
+            intents = self.navigator.activate_selected()
+            self.navigator.restore_transient_navigation(snapshot)
+            self._playback_history_cursor_by_session[origin] = target.item_id
+            self._run(intents)
+
+        self.runner.submit(
+            f"playback-history-{origin.value}",
+            work,
+            done,
+            lambda error: self.announcer.say(
+                f"Nie można odczytać historii odtwarzania: {error}"
             ),
         )
 

@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Globalization;
 using AccessibleMediaController.Core.Configuration;
+using AccessibleMediaController.Core.Sessions;
 using AccessibleMediaController.LiteHost.Protocol;
 using Microsoft.Data.Sqlite;
 
@@ -41,10 +42,22 @@ internal sealed class LiteBookmarkStore
         string itemTitle,
         TimeSpan position,
         DateTime utcNow,
+        string? name = null) =>
+        Add("local", "Pliki lokalne", itemId, itemTitle, position, utcNow, name);
+
+    public object Add(
+        string sessionId,
+        string sessionName,
+        string itemId,
+        string itemTitle,
+        TimeSpan position,
+        DateTime utcNow,
         string? name = null)
     {
+        if (string.IsNullOrWhiteSpace(sessionId))
+            throw new LiteRequestException("Bieżąca sesja nie ma identyfikatora.");
         if (string.IsNullOrWhiteSpace(itemId))
-            throw new LiteRequestException("Bieżący plik nie ma identyfikatora Biblioteki.");
+            throw new LiteRequestException("Bieżący materiał nie ma identyfikatora Biblioteki.");
         EnsureMayWriteBookmarks();
 
         var roundedTicks = TimeSpan.FromSeconds(
@@ -71,7 +84,7 @@ internal sealed class LiteBookmarkStore
             existing.CommandText = """
                 SELECT id, position_ticks, name
                 FROM bookmarks
-                WHERE session_id = 'local' COLLATE NOCASE
+                WHERE session_id = $session_id COLLATE NOCASE
                   AND item_id = $item_id
                   AND (purpose & 1) != 0
                   AND ABS(position_ticks - $position_ticks) <= $tolerance
@@ -79,6 +92,7 @@ internal sealed class LiteBookmarkStore
                 LIMIT 1;
                 """;
             existing.Parameters.AddWithValue("$item_id", itemId);
+            existing.Parameters.AddWithValue("$session_id", sessionId.Trim());
             existing.Parameters.AddWithValue("$position_ticks", roundedTicks);
             existing.Parameters.AddWithValue("$tolerance", TicksPerSecond);
             string? existingId = null;
@@ -138,11 +152,15 @@ internal sealed class LiteBookmarkStore
                     name, position_ticks, created_utc_ticks, purpose,
                     chapter_origin, chapter_source_id)
                 VALUES(
-                    $id, $ordinal, 'local', 'Pliki lokalne', $item_id, $item_title,
+                    $id, $ordinal, $session_id, $session_name, $item_id, $item_title,
                     $name, $position_ticks, $created_ticks, 1, 0, NULL);
                 """;
             insert.Parameters.AddWithValue("$id", bookmarkId);
             insert.Parameters.AddWithValue("$ordinal", ordinal);
+            insert.Parameters.AddWithValue("$session_id", sessionId.Trim());
+            insert.Parameters.AddWithValue(
+                "$session_name",
+                string.IsNullOrWhiteSpace(sessionName) ? sessionId.Trim() : sessionName.Trim());
             insert.Parameters.AddWithValue("$item_id", itemId);
             insert.Parameters.AddWithValue("$item_title", itemTitle);
             insert.Parameters.AddWithValue("$name", normalizedName);
@@ -541,6 +559,93 @@ internal sealed class LiteBookmarkStore
             using var transaction = connection.BeginTransaction();
             var index = new BookmarkIndex(ReadBookmarks(connection, transaction));
             return index.FindAdjacent(sessionId, itemId, anchorBookmarkId, direction);
+        }
+    }
+
+    public BookmarkEntry? FindNamedRelative(
+        string sessionId,
+        string itemId,
+        TimeSpan currentPosition,
+        int direction)
+    {
+        if (!File.Exists(_databasePath))
+            throw new LiteRequestException("Nie znajduję bazy Biblioteki AMC.");
+        lock (_gate)
+        {
+            using var connection = OpenReadOnlyConnection();
+            using var transaction = connection.BeginTransaction();
+            var index = new BookmarkIndex(ReadBookmarks(connection, transaction));
+            return index.FindNamedRelative(sessionId, itemId, currentPosition, direction);
+        }
+    }
+
+    public BookmarkEntry? FindNamedAdjacent(
+        string sessionId,
+        string itemId,
+        string anchorBookmarkId,
+        int direction)
+    {
+        if (!File.Exists(_databasePath))
+            throw new LiteRequestException("Nie znajduję bazy Biblioteki AMC.");
+        lock (_gate)
+        {
+            using var connection = OpenReadOnlyConnection();
+            using var transaction = connection.BeginTransaction();
+            var index = new BookmarkIndex(ReadBookmarks(connection, transaction));
+            return index.FindNamedAdjacent(sessionId, itemId, anchorBookmarkId, direction);
+        }
+    }
+
+    public IReadOnlyList<ChapterSegment> GetChapters(
+        string sessionId,
+        string itemId,
+        TimeSpan itemDuration)
+    {
+        if (!File.Exists(_databasePath))
+            throw new LiteRequestException("Nie znajduję bazy Biblioteki AMC.");
+        lock (_gate)
+        {
+            using var connection = OpenReadOnlyConnection();
+            using var transaction = connection.BeginTransaction();
+            return new ChapterIndex(ReadBookmarks(connection, transaction))
+                .GetForItem(sessionId, itemId, itemDuration);
+        }
+    }
+
+    public ChapterAddResult AddUserChapter(
+        string sessionId,
+        string sessionName,
+        MediaItem item,
+        TimeSpan position,
+        DateTime utcNow,
+        string name) =>
+        MutateBookmarks(settings => new ChapterIndex(settings).AddUserChapter(
+            sessionId,
+            sessionName,
+            item,
+            position,
+            utcNow,
+            name));
+
+    public ChapterSegment? FindChapter(
+        string sessionId,
+        string itemId,
+        TimeSpan itemDuration,
+        TimeSpan currentPosition,
+        int direction)
+    {
+        if (!File.Exists(_databasePath))
+            throw new LiteRequestException("Nie znajduję bazy Biblioteki AMC.");
+        lock (_gate)
+        {
+            using var connection = OpenReadOnlyConnection();
+            using var transaction = connection.BeginTransaction();
+            return new ChapterIndex(ReadBookmarks(connection, transaction)).FindRelative(
+                sessionId,
+                itemId,
+                itemDuration,
+                currentPosition,
+                direction);
         }
     }
 

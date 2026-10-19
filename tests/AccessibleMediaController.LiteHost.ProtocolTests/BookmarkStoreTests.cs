@@ -1,4 +1,5 @@
 using AccessibleMediaController.Core.Configuration;
+using AccessibleMediaController.Core.Sessions;
 using AccessibleMediaController.LiteHost.Protocol;
 using Microsoft.Data.Sqlite;
 using System.Text.Json;
@@ -78,6 +79,39 @@ internal static class BookmarkStoreTests
             Assert.True(beforeFirst is null,
                 "przed pierwsza zakladka nie ma sztucznego wyniku");
 
+            var firstNamed = store.FindNamedRelative(
+                "local", "plik-1", TimeSpan.Zero, direction: 1);
+            Assert.True(firstNamed is not null
+                && firstNamed.Name == "Ważny fragment",
+                "nawigacja po nazwanych zakladkach pomija punkty bez nazwy");
+            var nextNamed = store.FindNamedAdjacent(
+                "local", "plik-1", firstNamed!.Id, direction: 1);
+            Assert.True(nextNamed is not null
+                && nextNamed.Id == "bookmark-and-chapter",
+                "kolejne Ctrl+Shift+Page Down kontynuuje od nazwanej kotwicy");
+
+            var chapterItem = new MediaItem
+            {
+                Id = "plik-1",
+                Title = "Nagranie",
+                Duration = TimeSpan.FromMinutes(4)
+            };
+            var addedChapter = store.AddUserChapter(
+                "local", "Pliki lokalne", chapterItem,
+                TimeSpan.FromMinutes(3), DateTime.UtcNow, "Finał");
+            Assert.True(addedChapter.Added,
+                "uzytkownik moze zapisac nazwany rozdzial dla stabilnego pliku");
+            var chapters = store.GetChapters(
+                "local", "plik-1", chapterItem.Duration);
+            Assert.True(chapters.Count == 2
+                && chapters[0].Name == "Zakładka i rozdział"
+                && chapters[1].Name == "Finał",
+                "rozdzialy sa osobnym, uporzadkowanym widokiem danych");
+            Assert.True(store.FindChapter(
+                    "local", "plik-1", chapterItem.Duration,
+                    TimeSpan.FromMinutes(2).Add(TimeSpan.FromSeconds(2)), 1)?.Name == "Finał",
+                "Ctrl+Shift+prawo znajduje rzeczywisty nastepny rozdzial");
+
             string quickBookmarkId;
             using (var connection = new SqliteConnection($"Data Source={database};Pooling=False"))
             {
@@ -108,8 +142,8 @@ internal static class BookmarkStoreTests
                 connection.Open();
                 using var count = connection.CreateCommand();
                 count.CommandText = "SELECT COUNT(*) FROM bookmarks;";
-                Assert.True(Convert.ToInt64(count.ExecuteScalar()) == 2L,
-                    "zwykla zakladka znika, a oba rozdzialy zostaja");
+                Assert.True(Convert.ToInt64(count.ExecuteScalar()) == 3L,
+                    "zwykla zakladka znika, a rozdzialy zostaja");
                 using var combined = connection.CreateCommand();
                 combined.CommandText =
                     "SELECT purpose FROM bookmarks WHERE id = 'bookmark-and-chapter';";

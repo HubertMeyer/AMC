@@ -288,7 +288,7 @@ def test_recording_bookmark_shortcuts_do_not_steal_letter_navigation() -> None:
         Chord("B"), player_view=True, radio_session=True
     ) is Action.ADD_BOOKMARK
     assert resolve(
-        Chord("B", shift=True), player_view=True, radio_session=True
+        Chord("B", ctrl=True, shift=True), player_view=True, radio_session=True
     ) is Action.ADD_NAMED_BOOKMARK
     assert resolve(
         Chord("B", ctrl=True, shift=True), player_view=True, radio_session=True
@@ -296,7 +296,7 @@ def test_recording_bookmark_shortcuts_do_not_steal_letter_navigation() -> None:
 
     for chord, expected in (
         (Chord("B"), Action.ADD_BOOKMARK),
-        (Chord("B", shift=True), Action.ADD_NAMED_BOOKMARK),
+        (Chord("B", ctrl=True, shift=True), Action.ADD_NAMED_BOOKMARK),
         (Chord("B", ctrl=True, shift=True), Action.ADD_NAMED_BOOKMARK),
     ):
         assert resolve(

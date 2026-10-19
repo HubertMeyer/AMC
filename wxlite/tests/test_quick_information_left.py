@@ -70,12 +70,14 @@ def test_lewa_strzalka_w_odtwarzaczu_nadal_przewija() -> None:
     assert resolve(Chord("Left"), player_view=True, radio_session=True) is Action.SEEK_BACK_10
 
 
-def test_lewa_strzalka_z_modyfikatorem_na_liscie_nie_jest_nasza() -> None:
-    """Oryginal wymaga ``ModifierKeys.None``; Shift/Ctrl/Alt zostaja kontrolce."""
+def test_alt_lewo_na_liscie_nawiguje_po_historii_widokow() -> None:
+    """Alt+Left jest historią widoków; pozostałe modyfikatory zostają kontrolce."""
+    assert resolve(
+        Chord("Left", alt=True), player_view=False, radio_session=False
+    ) is Action.VIEW_BACK
     for chord in (
         Chord("Left", shift=True),
         Chord("Left", ctrl=True),
-        Chord("Left", alt=True),
         Chord("Left", ctrl=True, alt=True),
     ):
         assert resolve(chord, player_view=False, radio_session=False) is None, chord.canonical

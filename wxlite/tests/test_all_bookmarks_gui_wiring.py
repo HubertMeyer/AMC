@@ -37,18 +37,21 @@ from amc_wx_lite.shortcuts import Action, Chord, resolve
 # --------------------------------------------------------------- 1. gest i menu
 
 
-def test_ctrl_b_opens_the_collective_view_and_is_not_ctrl_shift_b() -> None:
+def test_ctrl_b_opens_collective_view_and_ctrl_shift_b_stays_player_only() -> None:
     """Ctrl+B to ``ViewBookmarks``/``GetForDisplay`` -- WSZYSTKIE zakladki.
 
-    Ctrl+Shift+B (``GetForItem``) musi zostac osobnym, wezszym gestem: dwa
-    rozne zbiory nie moga dzielic jednego klawisza.
+    Ctrl+Shift+B tworzy nazwaną zakładkę wyłącznie w odtwarzaczu. Widok
+    jednego elementu pozostaje dostępny z menu, bez konfliktowego skrótu.
     """
     collective = resolve(Chord("B", ctrl=True), player_view=False, radio_session=False)
     single = resolve(
         Chord("B", ctrl=True, shift=True), player_view=False, radio_session=False
     )
     assert collective is Action.VIEW_ALL_BOOKMARKS
-    assert single is Action.VIEW_ITEM_BOOKMARKS
+    assert single is None
+    assert resolve(
+        Chord("B", ctrl=True, shift=True), player_view=True, radio_session=False
+    ) is Action.ADD_NAMED_BOOKMARK
     assert collective is not single
 
 
@@ -92,11 +95,17 @@ def test_collective_bookmarks_action_is_handled_in_the_window() -> None:
     assert LibraryView.ALL_BOOKMARKS.name in mapped, "widok bez klucza danych"
 
 
-def test_help_names_both_bookmark_views_separately() -> None:
-    """Pomoc nie moze obiecywac jednego zbioru pod dwoma gestami."""
+def test_help_separates_collective_view_from_named_bookmark_creation() -> None:
+    """Pomoc nie może nazywać Ctrl+Shift+B widokiem zakładek elementu."""
     described = dict(shortcuts.describe())
     assert "Ctrl+B" in described and "Ctrl+Shift+B" in described
-    assert described["Ctrl+B"] != described["Ctrl+Shift+B"]
+    assert "Wszystkie" in described["Ctrl+B"]
+    assert "Dodaj" in described["Ctrl+Shift+B"]
+    item_view = next(
+        item for menu in menu_model.build_menus() for item in menu.items
+        if item.action is Action.VIEW_ITEM_BOOKMARKS
+    )
+    assert item_view.shortcut is None
 
 
 # -------------------------------------------- 2. kontekst biezacego materialu

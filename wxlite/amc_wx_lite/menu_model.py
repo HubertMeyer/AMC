@@ -147,6 +147,13 @@ class Menu:
 SEPARATOR = MenuItem(is_separator=True)
 FILES_ONLY = (SessionId.FILES,)
 PODCASTS_ONLY = (SessionId.PODCASTS,)
+STABLE_TIMELINE_SESSIONS = (SessionId.FILES, SessionId.PODCASTS)
+PLAYBACK_HISTORY_SESSIONS = (
+    SessionId.FILES,
+    SessionId.RADIO,
+    SessionId.PODCASTS,
+    SessionId.SPOTIFY,
+)
 TIDAL_ONLY = (SessionId.TIDAL,)
 WIIM_ONLY = (SessionId.WIIM,)
 SONOS_ONLY = (SessionId.SONOS,)
@@ -457,7 +464,6 @@ def build_menus(session_order: object = None) -> tuple[Menu, ...]:
             # Etykieta i gest musza ten wezszy zakres pokazac, a nie udawac
             # szerszej komendy oryginalu.
             MenuItem("&Zakładki zaznaczonego", Action.VIEW_ITEM_BOOKMARKS,
-                     shortcut="Ctrl+Shift+B", accelerator=False,
                      needs_selection=True),
             # Pozycja oryginalu (MainWindow.xaml:489, Ctrl+B). Bez
             # ``needs_selection``: zbiorczy widok nie zalezy od zaznaczenia --
@@ -798,7 +804,7 @@ def build_menus(session_order: object = None) -> tuple[Menu, ...]:
                      accelerator=False, needs_radio_session=True,
                      needs_radio_recording=True),
             MenuItem("Dodaj nazwaną zakładkę na&grania…",
-                     Action.ADD_NAMED_BOOKMARK, shortcut="Shift+B",
+                     Action.ADD_NAMED_BOOKMARK, shortcut="Ctrl+Shift+B",
                      accelerator=False, needs_radio_session=True,
                      needs_radio_recording=True),
             MenuItem("Podziel &bieżące nagranie",
@@ -952,31 +958,88 @@ def build_menus(session_order: object = None) -> tuple[Menu, ...]:
             ),
             MenuItem("Dodaj &zakładkę", Action.ADD_BOOKMARK, shortcut="B",
                      accelerator=False, needs_playback=True,
-                     needs_files_session=True, visible_sessions=FILES_ONLY),
+                     visible_sessions=STABLE_TIMELINE_SESSIONS),
             MenuItem(
                 "Dodaj nazwaną zakładk&ę…",
                 Action.ADD_NAMED_BOOKMARK,
                 shortcut="Ctrl+Shift+B",
                 accelerator=False,
                 needs_playback=True,
-                needs_files_session=True,
-                visible_sessions=FILES_ONLY,
+                visible_sessions=STABLE_TIMELINE_SESSIONS,
             ),
             MenuItem(
                 "&2. Poprzednia zakładka, Shift+Page Up",
                 Action.PREVIOUS_BOOKMARK,
                 accelerator=False,
                 needs_playback=True,
-                needs_files_session=True,
-                visible_sessions=FILES_ONLY,
+                visible_sessions=STABLE_TIMELINE_SESSIONS,
             ),
             MenuItem(
                 "&4. Następna zakładka, Shift+Page Down",
                 Action.NEXT_BOOKMARK,
                 accelerator=False,
                 needs_playback=True,
-                needs_files_session=True,
-                visible_sessions=FILES_ONLY,
+                visible_sessions=STABLE_TIMELINE_SESSIONS,
+            ),
+            MenuItem(
+                "Poprzednia nazwana zak&ładka, Ctrl+Shift+Page Up",
+                Action.PREVIOUS_NAMED_BOOKMARK,
+                accelerator=False,
+                needs_playback=True,
+                visible_sessions=STABLE_TIMELINE_SESSIONS,
+            ),
+            MenuItem(
+                "Następna sp&óśród nazwanych zakładek, Ctrl+Shift+Page Down",
+                Action.NEXT_NAMED_BOOKMARK,
+                accelerator=False,
+                needs_playback=True,
+                visible_sessions=STABLE_TIMELINE_SESSIONS,
+            ),
+            MenuItem(
+                "&5. Lista rozdziałów…",
+                Action.VIEW_CHAPTERS,
+                shortcut="Ctrl+Alt+B",
+                accelerator=False,
+                needs_playback=True,
+                visible_sessions=STABLE_TIMELINE_SESSIONS,
+            ),
+            MenuItem(
+                "&6. Dodaj nazwany rozdział…",
+                Action.ADD_NAMED_CHAPTER,
+                shortcut="Ctrl+Alt+Shift+B",
+                accelerator=False,
+                needs_playback=True,
+                visible_sessions=STABLE_TIMELINE_SESSIONS,
+            ),
+            MenuItem(
+                "&7. Poprzedni rozdział, Ctrl+Shift+strzałka w lewo",
+                Action.PREVIOUS_CHAPTER,
+                accelerator=False,
+                needs_playback=True,
+                visible_sessions=STABLE_TIMELINE_SESSIONS,
+            ),
+            MenuItem(
+                "&8. Następny rozdział, Ctrl+Shift+strzałka w prawo",
+                Action.NEXT_CHAPTER,
+                accelerator=False,
+                needs_playback=True,
+                visible_sessions=STABLE_TIMELINE_SESSIONS,
+            ),
+            MenuItem(
+                "&9. Starszy odtwarzany element, Alt+strzałka w dół",
+                Action.PLAYBACK_HISTORY_OLDER,
+                accelerator=False,
+                needs_playback=True,
+                needs_player_view=True,
+                visible_sessions=PLAYBACK_HISTORY_SESSIONS,
+            ),
+            MenuItem(
+                "Nowszy odtwarzany element, Alt+strzałka w górę (&Q)",
+                Action.PLAYBACK_HISTORY_NEWER,
+                accelerator=False,
+                needs_playback=True,
+                needs_player_view=True,
+                visible_sessions=PLAYBACK_HISTORY_SESSIONS,
             ),
             SEPARATOR,
             # Zaznaczanie i edycja fragmentu. Kazda pozycja prowadzi do tej
@@ -1244,6 +1307,16 @@ def build_menus(session_order: object = None) -> tuple[Menu, ...]:
             #
             # ``needs_playback`` ZOSTAJE: pozycja ma byc wyszarzona, gdy nie ma
             # czego pokazywac. Zdejmujemy tylko akcelerator.
+            MenuItem(
+                "Wstecz w historii widoków (&4)",
+                Action.VIEW_BACK,
+                shortcut="Alt+Left",
+            ),
+            MenuItem(
+                "Dalej w historii widoków (&5)",
+                Action.VIEW_FORWARD,
+                shortcut="Alt+Right",
+            ),
             MenuItem("Widok &odtwarzacza", Action.SHOW_PLAYER, shortcut="F6",
                      accelerator=False, needs_playback=True,
                      visible_sessions=PLAYER_SESSIONS),

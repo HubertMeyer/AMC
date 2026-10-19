@@ -271,7 +271,7 @@ def test_radio_recording_bookmark_menu_is_precisely_gated() -> None:
         item for item in radio.items
         if item.action in (Action.ADD_BOOKMARK, Action.ADD_NAMED_BOOKMARK)
     ]
-    assert {item.shortcut for item in items} == {"B", "Shift+B"}
+    assert {item.shortcut for item in items} == {"B", "Ctrl+Shift+B"}
     assert all(item.needs_radio_session for item in items)
     assert all(item.needs_radio_recording for item in items)
     assert all(not item.accelerator for item in items)

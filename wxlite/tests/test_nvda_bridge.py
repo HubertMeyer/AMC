@@ -50,11 +50,10 @@ def test_actions_are_existing_actions_not_arbitrary_router_identifiers() -> None
 
 
 def test_missing_features_are_refused_in_user_language_not_mapped_to_wrong_action() -> None:
-    assert "previousChapter" in nvda_bridge.KNOWN_NOT_IMPLEMENTED
-    assert nvda_bridge.action_for("previousChapter") is None
-    assert nvda_bridge.unavailable_message("previousChapter") == (
-        "Funkcja „Poprzedni rozdział” nie jest jeszcze dostępna w AMC Test."
-    )
+    assert nvda_bridge.KNOWN_NOT_IMPLEMENTED == frozenset({"muteAll"})
+    assert nvda_bridge.action_for("previousChapter") is Action.PREVIOUS_CHAPTER
+    assert nvda_bridge.action_for("nextChapter") is Action.NEXT_CHAPTER
+    assert nvda_bridge.action_for("showChapters") is Action.VIEW_CHAPTERS
     for command in nvda_bridge.KNOWN_NOT_IMPLEMENTED:
         message = nvda_bridge.unavailable_message(command)
         assert command not in message

@@ -22,6 +22,7 @@ internal sealed class LiteEngineHandlers : IDisposable
     private sealed record BookmarkNavigationCursor(
         string ItemId,
         string BookmarkId,
+        bool NamedOnly,
         DateTime LastNavigationUtc);
 
     private readonly object _gate = new();
@@ -517,6 +518,9 @@ internal sealed class LiteEngineHandlers : IDisposable
             ["bookmark.add"] = (request, _) => AddBookmark(request.Args),
             ["bookmark.remove"] = (request, _) => RemoveBookmarks(request.Args),
             ["bookmark.navigate"] = (request, _) => NavigateBookmark(request.Args),
+            ["chapter.add"] = (request, _) => AddChapter(request.Args),
+            ["chapter.list"] = (request, _) => ListChapters(request.Args),
+            ["chapter.navigate"] = (request, _) => NavigateChapter(request.Args),
             ["radio.importPlaylist"] = (request, _) => ImportPlaylist(request.Args),
             ["radio.importPlaylistToLibrary"] = (request, _) => ImportPlaylistToLibrary(request.Args),
             ["radio.exportFavorites"] = (request, _) => ExportRadioFavorites(request.Args),
@@ -1235,18 +1239,34 @@ internal sealed class LiteEngineHandlers : IDisposable
         var name = LiteArgs.ReadText(args, "name");
         TimeSpan position;
         TimeSpan duration;
+        string sessionId;
+        string sessionName;
         lock (_gate)
         {
+            var target = ResolveTransportTarget(args);
+            RequireTargetOwnsFilesItemLocked(target);
             if (_filesItem is null)
-                throw new LiteRequestException("Zakładkę można dodać w odtwarzaczu otwartego pliku.");
+                throw new LiteRequestException("Zakładkę można dodać w odtwarzaczu otwartego materiału.");
+            if (!string.Equals(_filesItem.Id, itemId, StringComparison.Ordinal))
+                throw new LiteRequestException("W trakcie dodawania zmienił się odtwarzany materiał. Powtórz skrót.");
             position = _files.Position;
             duration = string.Equals(_filesDurationId, _filesItem.Id, StringComparison.Ordinal)
                 ? _filesDuration
                 : _filesItem.Duration;
+            var podcast = target.SessionId == "podcasts";
+            sessionId = podcast ? "podcasts" : "local";
+            sessionName = podcast ? "Podcasty i YouTube" : "Pliki lokalne";
         }
         if (duration <= TimeSpan.Zero)
             throw new LiteRequestException("Nie można dodać zakładki: czas trwania materiału jest nieznany.");
-        return _bookmarkStore.Add(itemId, itemTitle, position, DateTime.UtcNow, name);
+        return _bookmarkStore.Add(
+            sessionId,
+            sessionName,
+            itemId,
+            itemTitle,
+            position,
+            DateTime.UtcNow,
+            name);
     }
 
     private object RemoveBookmarks(JsonElement args)
@@ -1262,10 +1282,11 @@ internal sealed class LiteEngineHandlers : IDisposable
             throw new LiteRequestException("Nawigacja po zakładkach nie ma dostępu do Biblioteki AMC.");
 
         var target = ResolveTransportTarget(args);
-        if (!string.Equals(target.SessionId, "files", StringComparison.Ordinal))
+        if (target.SessionId is not ("files" or "podcasts"))
             throw new LiteRequestException(
-                "Nawigacja po zakładkach jest dostępna dla plików lokalnych.");
+                "Nawigacja po zakładkach jest dostępna dla plików lokalnych i podcastów.");
         var direction = Math.Sign(LiteArgs.ReadInt(args, "direction", 0, -1, 1));
+        var namedOnly = LiteArgs.ReadBool(args, "namedOnly", false);
         if (direction == 0)
             throw new LiteRequestException("Nie podano kierunku nawigacji po zakładkach.");
 
@@ -1282,13 +1303,21 @@ internal sealed class LiteEngineHandlers : IDisposable
         }
 
         var now = DateTime.UtcNow;
+        var storageSessionId = target.SessionId == "podcasts" ? "podcasts" : "local";
         var bookmark = cursor is not null
             && string.Equals(cursor.ItemId, item.Id, StringComparison.Ordinal)
+            && cursor.NamedOnly == namedOnly
             && now - cursor.LastNavigationUtc <= BookmarkNavigationContinuationWindow
-                ? _bookmarkStore.FindAdjacent(
-                    "local", item.Id, cursor.BookmarkId, direction)
-                : _bookmarkStore.FindRelative(
-                    "local", item.Id, currentPosition, direction);
+                ? namedOnly
+                    ? _bookmarkStore.FindNamedAdjacent(
+                        storageSessionId, item.Id, cursor.BookmarkId, direction)
+                    : _bookmarkStore.FindAdjacent(
+                        storageSessionId, item.Id, cursor.BookmarkId, direction)
+                : namedOnly
+                    ? _bookmarkStore.FindNamedRelative(
+                        storageSessionId, item.Id, currentPosition, direction)
+                    : _bookmarkStore.FindRelative(
+                        storageSessionId, item.Id, currentPosition, direction);
         if (bookmark is null)
         {
             return new
@@ -1307,6 +1336,7 @@ internal sealed class LiteEngineHandlers : IDisposable
             _bookmarkNavigationCursor = new BookmarkNavigationCursor(
                 item.Id,
                 bookmark.Id,
+                namedOnly,
                 now);
         }
 
@@ -1320,6 +1350,124 @@ internal sealed class LiteEngineHandlers : IDisposable
             name = bookmark.Name,
             positionSeconds = position.TotalSeconds
         };
+    }
+
+    private object AddChapter(JsonElement args)
+    {
+        if (_bookmarkStore is null)
+            throw new LiteRequestException("Zapisywanie rozdziałów nie ma dostępu do Biblioteki AMC.");
+        var name = LiteArgs.RequireText(args, "name").Trim();
+        MediaItem item;
+        TimeSpan position;
+        TimeSpan duration;
+        string sessionId;
+        string sessionName;
+        lock (_gate)
+        {
+            var target = ResolveTransportTarget(args);
+            RequireTargetOwnsFilesItemLocked(target);
+            var current = _filesItem
+                ?? throw new LiteRequestException("Najpierw otwórz materiał w odtwarzaczu.");
+            position = _files.Position;
+            duration = string.Equals(_filesDurationId, current.Id, StringComparison.Ordinal)
+                ? _filesDuration
+                : current.Duration;
+            item = new MediaItem
+            {
+                Id = current.Id,
+                Title = current.Title,
+                Kind = current.Kind,
+                Duration = duration
+            };
+            var podcast = target.SessionId == "podcasts";
+            sessionId = podcast ? "podcasts" : "local";
+            sessionName = podcast ? "Podcasty i YouTube" : "Pliki lokalne";
+        }
+        if (duration <= TimeSpan.Zero)
+            throw new LiteRequestException("Nie można dodać rozdziału: czas trwania materiału jest nieznany.");
+        var result = _bookmarkStore.AddUserChapter(
+            sessionId, sessionName, item, position, DateTime.UtcNow, name);
+        return new
+        {
+            added = result.Added,
+            nameChanged = result.NameChanged,
+            name = result.Entry.Name,
+            positionSeconds = TimeSpan.FromTicks(result.Entry.PositionTicks).TotalSeconds
+        };
+    }
+
+    private object ListChapters(JsonElement args)
+    {
+        var context = CurrentChapterContext(args);
+        var chapters = _bookmarkStore?.GetChapters(
+            context.StorageSessionId,
+            context.Item.Id,
+            context.Duration) ?? [];
+        return new
+        {
+            title = context.Item.Title,
+            currentPositionSeconds = context.Position.TotalSeconds,
+            chapters = chapters.Select(chapter => new
+            {
+                chapterId = chapter.Entry.Id,
+                name = chapter.Name,
+                positionSeconds = chapter.Start.TotalSeconds,
+                durationSeconds = chapter.Duration.TotalSeconds,
+                userCreated = chapter.Entry.ChapterOrigin == ChapterOrigin.User
+            }).ToArray()
+        };
+    }
+
+    private object NavigateChapter(JsonElement args)
+    {
+        if (_bookmarkStore is null)
+            throw new LiteRequestException("Nawigacja po rozdziałach nie ma dostępu do Biblioteki AMC.");
+        var direction = Math.Sign(LiteArgs.ReadInt(args, "direction", 0, -1, 1));
+        if (direction == 0)
+            throw new LiteRequestException("Nie podano kierunku nawigacji po rozdziałach.");
+        var context = CurrentChapterContext(args);
+        var chapter = _bookmarkStore.FindChapter(
+            context.StorageSessionId,
+            context.Item.Id,
+            context.Duration,
+            context.Position,
+            direction);
+        if (chapter is null) return new { found = false, direction };
+        _files.Seek(chapter.Start);
+        if (!_queue.NotePosition(chapter.Start)) TrySaveCurrentLocalResume();
+        return new
+        {
+            found = true,
+            direction,
+            name = chapter.Name,
+            positionSeconds = chapter.Start.TotalSeconds
+        };
+    }
+
+    private (MediaItem Item, TimeSpan Position, TimeSpan Duration, string StorageSessionId)
+        CurrentChapterContext(JsonElement args)
+    {
+        if (_bookmarkStore is null)
+            throw new LiteRequestException("Rozdziały nie mają dostępu do Biblioteki AMC.");
+        var target = ResolveTransportTarget(args);
+        if (target.SessionId is not ("files" or "podcasts"))
+            throw new LiteRequestException("Rozdziały są dostępne dla plików lokalnych i podcastów.");
+        lock (_gate)
+        {
+            RequireTargetOwnsFilesItemLocked(target);
+            var item = _filesItem
+                ?? throw new LiteRequestException("Najpierw otwórz materiał w odtwarzaczu.");
+            var duration = string.Equals(_filesDurationId, item.Id, StringComparison.Ordinal)
+                ? _filesDuration
+                : item.Duration;
+            if (duration <= TimeSpan.Zero)
+                throw new LiteRequestException("Czas trwania materiału jest nieznany.");
+            return (
+                item,
+                _files.Position,
+                duration,
+                target.SessionId == "podcasts" ? "podcasts" : "local");
+        }
     }
 
     /// <summary>
