@@ -2,8 +2,8 @@
 
 ## Status
 
-Korekta po ręcznym odbiorze została wdrożona, przetestowana, zainstalowana i
-uruchomiona w AMC Test; czeka na ponowny odsłuch z NVDA.
+Druga korekta po ręcznym odbiorze została wdrożona i przetestowana w źródłach;
+czeka na zbudowanie, instalację i ponowny odsłuch z NVDA.
 
 ## Cel
 
@@ -17,12 +17,11 @@ wykonanych planów z `REC-001`; obejmuje listę harmonogramów oraz pola edytora
 - `Enter` — otwiera edycję zaznaczonego harmonogramu.
 - `Ctrl+D` — tworzy kopię zaznaczonego harmonogramu i otwiera ją do edycji,
   bez ryzyka uruchomienia dwóch identycznych aktywnych planów przed zapisem.
-- `Strzałka w lewo` — czyta krótki stan: włączony lub wyłączony oraz najbliższy
-  termin wykonania. Nie zmienia zaznaczenia ani ustawień.
-- `Strzałka w prawo` — czyta pełne szczegóły zaznaczonego planu bez otwierania
-  edytora: nazwa, źródło, data lub powtarzanie, godzina, czas trwania lub czas
-  zakończenia, format i folder docelowy. Pomija pola, które nie mają znaczenia
-  dla danego rodzaju harmonogramu i nie powtarza nazwy listy.
+- `Strzałka w lewo` — powtarza krótko stan, datę i godzinę bez słów
+  „najbliższy termin” oraz „godzina”. Nie zmienia zaznaczenia ani ustawień.
+- `Strzałka w prawo` — czyta wyłącznie informacje uzupełniające: źródło,
+  jednorazowość albo dni powtarzania, czas trwania, format i folder. Nie
+  powtarza nazwy, stanu, daty ani godziny przeczytanych już na liście.
 - `Ctrl+Enter` pozostaje bez zmiany do osobnej decyzji. Otwieranie folderu
   nagrania zostanie zaprojektowane razem z integracją powłoki Windows.
 - `Shift+F10` albo klawisz menu otwiera menu z tymi samymi czynnościami:
@@ -86,10 +85,16 @@ kopię i najpierw otwiera ją w edytorze; kopia trafia do harmonogramu dopiero p
 wybraniu „Zapisz”. `Ctrl+Enter` nie został zmieniony. `Insert` nadal tworzy
 nowy plan, a `Delete` usuwa go po potwierdzeniu.
 
-Na liście lewa strzałka podaje tylko stan „włączony” albo „wyłączony” oraz
-najbliższy termin. Prawa strzałka podaje pełny opis: nazwę planu, stację,
-jednorazową datę albo regułę powtarzania, godzinę, długość, format i folder.
-Oba klawisze są informacyjne — nie zmieniają zaznaczenia ani planu.
+Zwykły wiersz listy zawiera nazwę, stan, datę i godzinę, na przykład
+„Ekonomia, włączony, 20 października 2026, 9:30”. Lewa strzałka powtarza sam
+stan, datę i godzinę: „włączony, 20 października 2026, 9:30”. Prawa strzałka
+podaje tylko pozostałe szczegóły: stację, sposób powtarzania, długość, format i
+folder. Nie zaczyna od słowa „nazwa” i nie powtarza terminu. Oba klawisze są
+informacyjne — nie zmieniają zaznaczenia ani planu.
+
+`Shift+F10` i fizyczny klawisz menu otwierają menu harmonogramu także wtedy,
+gdy fokus pozostaje na natywnej liście Windows. Menu zawiera dokładnie te same
+operacje co klawiatura i po zamknięciu oddaje fokus tej samej liście.
 
 Data rozpoczęcia składa się z segmentów dnia, miesiąca i roku. Czas rozpoczęcia
 ma segmenty godziny i minut. Lewa i prawa strzałka przechodzą między segmentami,
@@ -119,6 +124,12 @@ Wewnątrz okna widoczny i dostępny opis wymienia klawisze listy.
 
 ## Uzasadnienie i decyzje
 
+- **Druga korekta użytkownika z 19 października 2026 zastępuje wcześniejszy
+  pełny opis prawej strzałki.** Zwykła lista była nadal zbyt długa, prawa
+  strzałka powtarzała nazwę i termin, a `Shift+F10` był odrzucany przez filtr
+  modyfikatorów przed otwarciem menu. Lista, lewa i prawa strzałka mają teraz
+  trzy rozłączne, przewidywalne zakresy informacji. `Shift+F10` oraz klawisz
+  menu są obsługiwane przed ogólnym filtrem modyfikatorów.
 - **Korekta użytkownika z 19 października 2026 zastępuje wcześniejsze
   stwierdzenie, że obsługa listy została odebrana.** Kod strzałek był obecny,
   ale zmieniał wyłącznie tekst kontrolki statusu i nie wysyłał zdarzenia
@@ -144,6 +155,12 @@ Wewnątrz okna widoczny i dostępny opis wymienia klawisze listy.
 
 ## Testy i wynik
 
+- Druga korekta: **71/71** testów klawiatury harmonogramów, menu, nazw
+  `Alt+D`, palety `Ctrl+Shift+K` i pomocy zaliczonych. Pełny zestaw Core
+  SmokeTests, obejmujący wspólny formatter wiersza harmonogramu, zakończony
+  kodem 0. Kompilacja projektu Core SmokeTests: 0 ostrzeżeń i 0 błędów.
+- Test behawioralny wywołuje rzeczywisty handler `Shift+F10` i potwierdza, że
+  zdarzenie nie zostaje oddane natywnej liście przed otwarciem menu.
 - Korekta po odbiorze: **136/136** testów ukierunkowanych harmonogramów,
   menu, `Ctrl+F1`, palety i Spotify oraz pełna regresja wxPython:
   **1845 zaliczonych, 110 pominiętych, 11 podtestów zaliczonych**.
@@ -188,9 +205,8 @@ manifest, SHA-256, instalacja, integralność i uruchomienie — zaliczone.
 
 ## Znane ograniczenia
 
-- Korekta z commitu `4b85e0c8` jest już w bieżącej instalacji, ale nie została
-  jeszcze odebrana z prawdziwym NVDA. Testy automatyczne i instalacja nie są
-  dowodem działania mowy na komputerze użytkownika.
+- Druga korekta po ręcznym odbiorze nie jest jeszcze w bieżącej instalacji.
+  Testy automatyczne nie są dowodem działania mowy na komputerze użytkownika.
 
 - Nie wykonano jeszcze rzeczywistego odsłuchu NVDA. Należy sprawdzić pierwsze
   wejście, każdą strzałkę, cyfry, zapis, anulowanie i ponowne otwarcie.
@@ -205,6 +221,8 @@ manifest, SHA-256, instalacja, integralność i uruchomienie — zaliczone.
 
 ## Wersja i commit
 
+- Druga korekta po ręcznym odbiorze: bieżący commit zadania; testy Pythona i
+  pełny Core SmokeTests zaliczone. Instalacja jeszcze niewykonana.
 - Korekta po ręcznym odbiorze: `4b85e0c8` — kod i testy; pełna regresja,
   kompilacja pakietu, instalacja i uruchomienie zaliczone.
 - Instalacja zawierająca korektę:

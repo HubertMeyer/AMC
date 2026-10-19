@@ -846,7 +846,7 @@ def build_menus(session_order: object = None) -> tuple[Menu, ...]:
                      shortcut="Ctrl+Shift+H"),
             SEPARATOR,
             MenuItem(
-                "Bieżąca audycja lub u&twór",
+                "In&formacje o bieżącym odtwarzaniu",
                 Action.CURRENT_RADIO_BROADCAST_INFORMATION,
                 shortcut="Alt+D",
                 accelerator=False,

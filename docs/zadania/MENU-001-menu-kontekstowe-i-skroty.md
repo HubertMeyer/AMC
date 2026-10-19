@@ -1,7 +1,7 @@
 # MENU-001 — menu kontekstowe i skróty zależne od sesji
 
-Status: **W trakcie; najnowsza korekta nazw i menu harmonogramów jest
-przetestowana, zainstalowana i uruchomiona; czeka na odbiór NVDA**.
+Status: **W trakcie; korekta `Shift+F10` harmonogramów i nazwy `Alt+D` jest
+przetestowana w źródłach, ale jeszcze niezainstalowana**.
 
 ## Materiał do dokumentacji użytkownika
 
@@ -21,6 +21,11 @@ podcastów rzeczywiście zmienia jej nazwę oraz zachowuje elementy.
 Menu pokazuje tylko polecenia dozwolone przez bieżącą sesję, widok, rodzaj
 wiersza i prawdziwy stan odtwarzania lub nagrywania. Korzysta z tych samych
 akcji i bramek, co skróty, `Ctrl+F1`, pełna pomoc i paleta `Ctrl+Shift+K`.
+
+W Radiu `Alt+D` nazywa się „Informacje o bieżącym odtwarzaniu”. Polecenie niczego
+nie otwiera i nigdzie nie przechodzi: odczytuje nazwę stacji, parametry
+strumienia oraz dostępne metadane audycji albo utworu. Ta sama nazwa występuje
+w menu, pomocy `Ctrl+F1`, pełnej pomocy i palecie `Ctrl+Shift+K`.
 
 Polecenie `Ctrl+Shift+Enter` nazywa się krótko „Odtwarzaj jako następne”, bez
 mylącego dopisku „lub usuń”. `Ctrl+Shift+C` ma nazwę zależną od elementu:
@@ -42,6 +47,14 @@ w osobistej umiejętności Codexa `accessible-desktop-contracts`.
 
 ## Uzasadnienie i decyzje
 
+- **Korekta użytkownika z 19 października 2026:** nazwa „Bieżąca audycja lub
+  utwór” mogła sugerować przejście do innego widoku. Zastąpiła ją nazwa
+  „Informacje o bieżącym odtwarzaniu”, zgodna z rzeczywistym, wyłącznie
+  informacyjnym działaniem `Alt+D`.
+- **Korekta użytkownika z 19 października 2026:** samo podłączenie
+  `EVT_CONTEXT_MENU` nie wystarczało dla `Shift+F10` na natywnej liście
+  harmonogramów. Jawna trasa klawisza jest teraz wykonywana przed filtrem
+  modyfikatorów i prowadzi do tej samej metody menu.
 - **Korekta użytkownika z 19 października 2026:** usunięto z nazwy polecenia
   dopisek „lub usuń”, a lokalny plik nie jest już nazywany adresem. Zmiana
   objęła wspólny model menu, pomoc `Ctrl+F1`, pełną pomoc, paletę oraz
@@ -71,6 +84,10 @@ w osobistej umiejętności Codexa `accessible-desktop-contracts`.
 
 ## Testy i wynik
 
+- Najnowsza korekta: **71/71** testów menu, harmonogramów, pomocy i palety;
+  pełny Core SmokeTests zakończony kodem 0. Test unikatowych klawiszy dostępu
+  wykrył kolizję pierwszego wariantu mnemonika `Alt+D`; poprawiono ją przed
+  zieloną bramką.
 - Po korekcie nazw i harmonogramów: **136/136** testów ukierunkowanych oraz
   pełna regresja **1845 zaliczonych, 110 pominiętych, 11 podtestów**.
   Test kolizji mnemoniców wykrył pierwszą nieprawidłową literę dostępu;
@@ -100,8 +117,8 @@ w osobistej umiejętności Codexa `accessible-desktop-contracts`.
 
 ## Znane ograniczenia
 
-- Najnowsze nazwy i menu harmonogramów z commitu `4b85e0c8` są w bieżącej
-  instalacji użytkownika; wymagają jeszcze odbioru NVDA.
+- Najnowsza korekta `Shift+F10` i nazwy `Alt+D` nie jest jeszcze w bieżącej
+  instalacji użytkownika; wymaga instalacji i odbioru NVDA.
 
 - Odbiór NVDA musi potwierdzić menu listy i odtwarzacza w Plikach lokalnych,
   Radiu, Podcastach i YouTube, Spotify, TIDAL, WiiM i Sonos.
@@ -112,6 +129,8 @@ w osobistej umiejętności Codexa `accessible-desktop-contracts`.
 
 ## Wersja i commit
 
+- Najnowsza korekta: bieżący commit zadania; testy zaliczone, instalacja jeszcze
+  niewykonana.
 - Korekta po ręcznym odbiorze: `4b85e0c8` — źródła, testy, instalacja i
   uruchomienie zweryfikowane.
 - Instalacja zawierająca korektę:

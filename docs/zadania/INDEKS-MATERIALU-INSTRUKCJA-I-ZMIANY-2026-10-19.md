@@ -34,8 +34,9 @@ użytkownika. Nie zmienia statusu ręcznego odbioru NVDA poszczególnych funkcji
    oddzielna pamięć zaznaczenia oraz szczegóły bitrate, wielkości i folderu pod
    lewą strzałką, również w `Ctrl+H`. Źródło:
    [AMC02-listy-nagrywania-i-historii.md](AMC02-listy-nagrywania-i-historii.md).
-4. Harmonogramy — znaczenie lewej i prawej strzałki, Spacji, Enter i
-   `Ctrl+D`; menu pod `Shift+F10`; segmentowe wpisywanie daty, czasu i czasu
+4. Harmonogramy — zwięzły wiersz nazwa–stan–data–czas, lewa strzałka
+   powtarzająca stan i termin oraz prawa z niepowtarzanymi szczegółami;
+   Spacja, Enter i `Ctrl+D`; menu pod `Shift+F10`; segmentowe wpisywanie daty, czasu i czasu
    trwania; powrót fokusu i komunikaty NVDA. Źródło:
    [SCHED-001-edytor-i-klawisze-harmonogramow.md](SCHED-001-edytor-i-klawisze-harmonogramow.md).
 5. Playlisty Spotify — przed pierwszą próbą zapisu po aktualizacji `Ctrl+F5`
@@ -94,6 +95,10 @@ użytkownika. Nie zmienia statusu ręcznego odbioru NVDA poszczególnych funkcji
 - Przebudowano dostępny edytor harmonogramów oraz nawigację daty i czasu.
 - Dodano rzeczywiste menu kontekstowe harmonogramów i region aktywny, dzięki
   któremu informacje pod strzałkami mogą zostać wypowiedziane przez NVDA.
+- Naprawiono bezpośrednie otwieranie tego menu przez `Shift+F10`, skrócono
+  zwykły wiersz harmonogramu i rozdzielono zakres lewej oraz prawej strzałki.
+- Nazwę radiowego `Alt+D` zmieniono na „Informacje o bieżącym odtwarzaniu”,
+  ponieważ polecenie tylko odczytuje stan i nie przechodzi do innego widoku.
 - Dodano zarządzanie natywnymi playlistami Spotify, bez obiecywania
   nieobsługiwanego odtwarzania całych playlist.
 - Uporządkowano tworzenie playlisty Spotify i zachowano potwierdzony nowy cel
@@ -123,6 +128,8 @@ użytkownika. Nie zmienia statusu ręcznego odbioru NVDA poszczególnych funkcji
 - Nie przedstawiać testów atrap Spotify/TIDAL jako próby prawdziwego konta.
 - Korekta `4b85e0c8` jest zainstalowana; nadal nie przedstawiać jej jako
   odebranej z NVDA ani sprawdzonej zapisem na prawdziwym koncie Spotify.
+- Druga korekta harmonogramów i nazwy `Alt+D` jest na razie tylko w źródłach;
+  nie przedstawiać jej jako zainstalowanej przed kolejną bezpieczną promocją.
 - Nie przedstawiać zbudowanej paczki i instalatora AMC12 jako instalacji albo
   wydania publicznego.
 - Nie obiecywać publicznego Sonosa przed działającym brokerem HTTPS i odbiorem

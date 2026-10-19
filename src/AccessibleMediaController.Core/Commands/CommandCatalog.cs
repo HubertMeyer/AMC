@@ -93,7 +93,7 @@ public static class CommandCatalog
             CommandIds.TimeTotal => "Czas całkowity",
             CommandIds.ItemProperties => "Właściwości i informacje",
             CommandIds.PodcastDescription => "Pokaż pełny opis podcastu lub odcinka",
-            CommandIds.CurrentBroadcastInformation => "Odczytaj bieżącą audycję lub utwór",
+            CommandIds.CurrentBroadcastInformation => "Informacje o bieżącym odtwarzaniu",
             CommandIds.GoToPodcast => "Przejdź do podcastu tego odcinka",
             CommandIds.GoToAlbum => "Przejdź do albumu",
             CommandIds.GoToArtist => "Przejdź do wykonawcy",

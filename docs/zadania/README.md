@@ -47,8 +47,8 @@ zmian, wymagający korekty użytkownika:
   `D:\Projekty Codex\Accessible Multimedia Controller\AMC02_ANALIZA_2026-10-18.md`
   oraz `AMC02_REALIZACJA_ETAP_A_2026-10-18.md`. Właściwe wdrożenie wykonujemy
   w bieżącym AMC Test, a stary kod służy tylko jako wzorzec.
-- `SCHED-001` — **Korekta po ręcznym odbiorze zainstalowana w AMC Test;
-  czeka na ponowny odbiór NVDA** — dostępna przebudowa listy i edytora
+- `SCHED-001` — **Druga korekta po ręcznym odbiorze przetestowana w źródłach;
+  czeka na instalację i ponowny odbiór NVDA** — dostępna przebudowa listy i edytora
   harmonogramów: informacje pod strzałkami, segmentowa data i czas oraz
   jednoznaczne wpisywanie czasu trwania. Szczegóły:
   [SCHED-001-edytor-i-klawisze-harmonogramow.md](SCHED-001-edytor-i-klawisze-harmonogramow.md).
@@ -76,8 +76,8 @@ zmian, wymagający korekty użytkownika:
   `D:\Projekty Codex\Accessible Multimedia Controller\AMC03_AUDYT_SKROTOW_2026-10-18.md`
   oraz `AMC04_REALIZACJA_ETAP_A_2026-10-18.md`. Stare źródła WPF służą tylko
   jako wzorzec; właściwe wdrożenie wykonujemy w tym repozytorium.
-- `MENU-001` — **W trakcie; najnowsze nazwy i menu harmonogramów zainstalowane,
-  czekają na odbiór NVDA** —
+- `MENU-001` — **W trakcie; naprawa `Shift+F10` harmonogramów i nazwa `Alt+D`
+  są przetestowane w źródłach, ale jeszcze niezainstalowane** —
   wspólne menu kontekstowe bez odczytu technicznych cyfr i przypadkowych
   liter dostępu, nazwy zależne od rodzaju elementu, rzeczywiste skróty oraz
   audyt dostępności poleceń i nawigacji między sesjami. Szczegóły:

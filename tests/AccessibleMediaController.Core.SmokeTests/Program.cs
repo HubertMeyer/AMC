@@ -2887,6 +2887,9 @@ static void TestRadioRecordingSchedule()
         RadioSchedulePresentation.BuildRecurrenceLabel(schedule));
     Equal("1 godzina 30 minut", RadioSchedulePresentation.FormatDurationMinutes(90));
     Equal(
+        "Stacja A, włączony, 29 sierpnia 2026, 20:00",
+        RadioSchedulePresentation.BuildLabel(schedule, active: false));
+    Equal(
         "Plan nagrywania",
         RadioSchedulePresentation.DisplayName(new RadioRecordingScheduleSettings()));
     schedule.ActiveDays = [(DayOfWeek)99];

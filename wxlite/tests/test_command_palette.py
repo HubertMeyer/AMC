@@ -100,6 +100,22 @@ def test_schedule_manager_name_and_shortcut_match_palette_and_keyboard_help() ->
     assert describe_action(Action.MANAGE_RADIO_SCHEDULES) == schedule.name
 
 
+def test_current_radio_information_has_one_name_in_every_command_surface() -> None:
+    entries = {entry.action: entry for entry in entries_for_session(SessionId.RADIO)}
+    information = entries[Action.CURRENT_RADIO_BROADCAST_INFORMATION]
+    expected = "Informacje o bieżącym odtwarzaniu"
+    assert information.name == expected
+    assert information.shortcut == "Alt+D"
+    assert describe_action(Action.CURRENT_RADIO_BROADCAST_INFORMATION) == expected
+    assert dict(describe("Radio"))["Alt+D"] == expected
+    message = keyboard_help_announcement(
+        Chord("D", alt=True),
+        Action.CURRENT_RADIO_BROADCAST_INFORMATION,
+        "Radio",
+    )
+    assert expected in message and "Alt+D" in message
+
+
 def test_spotify_playlist_command_matches_palette_and_contextual_keyboard_help() -> None:
     entries = {entry.action: entry for entry in entries_for_session(SessionId.SPOTIFY)}
     playlist = entries[Action.MANAGE_PLAYLIST_MEMBERSHIP]

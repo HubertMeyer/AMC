@@ -301,40 +301,38 @@ def _duration_label(minutes: int) -> str:
 def _short_schedule_information(schedule: Mapping) -> str:
     date_text, time_text = _schedule_when(schedule)
     state = "włączony" if schedule.get("enabled") else "wyłączony"
-    return f"{state}, najbliższy termin {date_text}, godzina {time_text}"
+    return f"{state}, {date_text}, {time_text}"
 
 
 def _full_schedule_information(schedule: Mapping) -> str:
-    date_text, time_text = _schedule_when(schedule)
     recurrence = str(schedule.get("recurrence") or "Once")
     if recurrence == "Daily":
-        when = f"codziennie, najbliżej {date_text}"
+        recurrence_text = "codziennie"
     elif recurrence == "SelectedDays":
         selected = set(schedule.get("activeDays") or [])
         days = [
             label for name, label in zip(DAY_NAMES, DAY_LABELS) if name in selected
         ]
-        when = (
-            f"dni tygodnia {', '.join(days)}, najbliżej {date_text}"
+        recurrence_text = (
+            f"powtarzanie: {', '.join(days)}"
             if days
-            else f"wybrane dni tygodnia, najbliżej {date_text}"
+            else "wybrane dni tygodnia"
         )
     else:
-        when = f"jednorazowo {date_text}"
+        recurrence_text = "jednorazowo"
     format_value = str(schedule.get("recordingFormat") or "").strip()
     format_label = next(
         (label for label, value in _FORMAT_CHOICES if value == format_value),
         format_value or "format domyślny",
     )
-    folder = str(schedule.get("outputFolder") or "").strip() or "domyślny folder nagrań"
+    folder = str(schedule.get("outputFolder") or "").strip()
+    folder_text = f"folder {folder}" if folder else "domyślny folder nagrań"
     return ", ".join((
-        f"nazwa {_display_name(schedule)}",
         f"źródło {str(schedule.get('stationName') or 'nieznane').strip()}",
-        when,
-        f"godzina {time_text}",
+        recurrence_text,
         f"długość {_duration_label(int(schedule.get('durationMinutes') or 0))}",
         f"format {format_label}",
-        f"folder {folder}",
+        folder_text,
     ))
 
 
@@ -919,7 +917,8 @@ class RadioSchedulesDialog(wx.Dialog):
         help_text = (
             "Insert dodaje plan. Ctrl+D powiela wybrany plan jako wyłączoną kopię. "
             "Enter edytuje. Spacja włącza lub wyłącza. Delete usuwa. "
-            "Strzałka w lewo czyta stan i termin, a strzałka w prawo szczegóły. "
+            "Strzałka w lewo powtarza stan i termin, a strzałka w prawo czyta "
+            "pozostałe szczegóły bez powtarzania terminu. "
             "Shift+F10 albo klawisz menu otwiera te same polecenia. "
             "Każda zapisana zmiana jest stosowana od razu."
         )
@@ -930,7 +929,8 @@ class RadioSchedulesDialog(wx.Dialog):
         self.schedule_list = wx.ListBox(panel, choices=[], style=wx.LB_SINGLE)
         self.schedule_list.SetName("Zaplanowane nagrania radia")
         self.schedule_list.SetToolTip(
-            "Góra i dół wybierają plan. Lewo czyta stan, prawo szczegóły. "
+            "Góra i dół wybierają plan. Lewo powtarza stan i termin, prawo "
+            "czyta pozostałe szczegóły. "
             "Enter edytuje, Spacja włącza lub wyłącza."
         )
         layout.Add(self.schedule_list, 1, wx.LEFT | wx.RIGHT | wx.EXPAND, 12)
@@ -1288,6 +1288,23 @@ class RadioSchedulesDialog(wx.Dialog):
             event_object is self.schedule_list
             or wx.Window.FindFocus() is self.schedule_list
         )
+        menu_key = getattr(wx, "WXK_WINDOWS_MENU", -1)
+        if focus_on_list and (
+            (
+                code == wx.WXK_F10
+                and event.ShiftDown()
+                and not event.ControlDown()
+                and not event.AltDown()
+            )
+            or (
+                code == menu_key
+                and not event.ControlDown()
+                and not event.AltDown()
+                and not event.ShiftDown()
+            )
+        ):
+            self._show_context_menu(event)
+            return
         if (
             focus_on_list
             and event.ControlDown()

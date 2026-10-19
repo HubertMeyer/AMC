@@ -46,6 +46,14 @@ def test_radio_menu_exposes_alt_d_without_a_window_accelerator() -> None:
     assert item.shortcut == "Alt+D"
     assert item.needs_radio_session
     assert not item.accelerator
+    assert item.label.replace("&", "") == "Informacje o bieżącym odtwarzaniu"
+
+
+def test_alt_d_help_names_information_instead_of_navigation() -> None:
+    from amc_wx_lite.shortcuts import describe_action
+
+    description = describe_action(Action.CURRENT_RADIO_BROADCAST_INFORMATION)
+    assert description == "Informacje o bieżącym odtwarzaniu"
 
 
 def test_alt_d_is_not_also_a_top_level_menu_mnemonic() -> None:

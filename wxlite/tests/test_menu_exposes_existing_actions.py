@@ -206,7 +206,8 @@ def test_no_duplicate_labels_or_shortcuts() -> None:
     # F2/Delete są teraz tak samo kontekstowe jak w pełnym AMC: ogólna
     # pozycja Biblioteki obsługuje pliki i podcasty, a menu Radio ma bardziej
     # szczegółową nazwę tej samej intencji dla stacji. Alt+D również jest
-    # kontekstowe: w Radiu czyta bieżącą audycję, a w Podcastach pełny opis.
+    # kontekstowe: w Radiu czyta informacje o bieżącym odtwarzaniu, a w
+    # Podcastach pełny opis.
     assert set(duplicates) <= {
         "Ctrl+O", "Ctrl+Shift+O", "Ctrl+N", "Ctrl+E", "Ctrl+D", "Ctrl+S",
         "Alt+1", "Alt+2", "Alt+3", "Alt+D", "Ctrl+F5", "Ctrl+Shift+L",

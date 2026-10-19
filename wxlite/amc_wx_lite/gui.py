@@ -22666,7 +22666,7 @@ class LiteFrame(wx.Frame):
         return station
 
     def _announce_current_radio_broadcast_information(self) -> None:
-        """Alt+D: stacja, parametry audio i aktualna audycja albo utwor."""
+        """Alt+D: stacja, parametry strumienia i dostępne metadane."""
         client = self.client
         if client is None:
             self.announcer.say("Silnik odtwarzania jest niedostępny")
@@ -22676,7 +22676,7 @@ class LiteFrame(wx.Frame):
             data = payload if isinstance(payload, dict) else {}
             text = str(data.get("text") or "").strip()
             self.announcer.say(
-                text or "Brak informacji o bieżącej audycji lub utworze"
+                text or "Brak informacji o bieżącym odtwarzaniu"
             )
 
         self.runner.submit(

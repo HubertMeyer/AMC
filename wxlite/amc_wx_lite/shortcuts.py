@@ -1521,7 +1521,7 @@ def _help_entries() -> list[tuple[str, str, Action]]:
         Action.SAVE_PODCAST_EPISODE_AS: "Zapisz jeden odcinek podcastu jako plik",
         Action.SHOW_PODCAST_DESCRIPTION: "Pokaż pełny opis podcastu lub odcinka",
         Action.CURRENT_RADIO_BROADCAST_INFORMATION: (
-            "Odczytaj bieżącą audycję lub utwór w Radiu"
+            "Informacje o bieżącym odtwarzaniu"
         ),
         Action.RECOGNIZE_RADIO_TRACK: "Rozpoznaj utwór z odtwarzanej stacji",
         Action.TOGGLE_RADIO_RECOGNITION_MONITORING: (

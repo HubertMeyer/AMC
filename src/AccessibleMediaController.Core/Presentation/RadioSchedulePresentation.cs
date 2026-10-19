@@ -24,8 +24,7 @@ public static class RadioSchedulePresentation
         var utc = new DateTime(schedule.NextStartUtcTicks, DateTimeKind.Utc);
         var zone = RadioScheduleCalculator.ResolveTimeZone(schedule.TimeZoneId);
         var local = TimeZoneInfo.ConvertTimeFromUtc(utc, zone);
-        var recurrence = BuildRecurrenceLabel(schedule);
-        var state = schedule.Enabled ? "włączone" : "wyłączone";
+        var state = schedule.Enabled ? "włączony" : "wyłączony";
         var activity = schedule.Enabled && active
             ? ", nagrywanie trwa"
             : !schedule.Enabled && active
@@ -35,17 +34,10 @@ public static class RadioSchedulePresentation
                         ? ", bieżące wystąpienie zatrzymane"
                         : string.Empty;
         var lastFailure = BuildLastFailureLabel(schedule, zone);
-        var fileDivision = schedule.SegmentMinutes > 0
-            ? $"części co {schedule.SegmentMinutes} min"
-            : "jeden plik";
-        var exampleFileName = RadioRecordingFileNameTemplate.Expand(
-            schedule.FileNameTemplate,
-            schedule.StationName,
-            local,
-            partNumber: 1);
-        return $"{DisplayName(schedule)}, {state}, {local:dd.MM.yyyy HH:mm}, "
-            + $"długość nagrania: {FormatDurationMinutes(schedule.DurationMinutes)}, "
-            + $"{fileDivision}, nazwa pliku: {exampleFileName}, {recurrence}{activity}{lastFailure}";
+        var occurrence = local.ToString(
+            "d MMMM yyyy, H:mm",
+            System.Globalization.CultureInfo.GetCultureInfo("pl-PL"));
+        return $"{DisplayName(schedule)}, {state}, {occurrence}{activity}{lastFailure}";
     }
 
     public static string BuildRecurrenceLabel(RadioRecordingScheduleSettings schedule)

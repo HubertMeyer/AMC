@@ -119,6 +119,39 @@ def test_schedule_context_menu_contains_the_same_actions_as_keyboard() -> None:
     ]
 
 
+def test_shift_f10_opens_schedule_context_menu_before_modifier_filter() -> None:
+    import amc_wx_lite.radio_schedule_dialogs as dialogs
+
+    calls: list[object] = []
+    schedule_list = object()
+    dialog = object.__new__(RadioSchedulesDialog)
+    dialog.schedule_list = schedule_list
+    dialog._show_context_menu = calls.append
+
+    class _Event:
+        def GetKeyCode(self):
+            return dialogs.wx.WXK_F10
+
+        def GetEventObject(self):
+            return schedule_list
+
+        def ControlDown(self):
+            return False
+
+        def AltDown(self):
+            return False
+
+        def ShiftDown(self):
+            return True
+
+        def Skip(self):
+            raise AssertionError("Shift+F10 nie może zostać oddane kontrolce")
+
+    event = _Event()
+    RadioSchedulesDialog._on_key(dialog, event)
+    assert calls == [event]
+
+
 def test_schedule_toggle_keeps_an_intentional_spoken_state() -> None:
     source = SOURCE.read_text(encoding="utf-8")
     assert 'state = "włączony" if updated["enabled"] else "wyłączony"' in source
@@ -169,19 +202,20 @@ def test_schedule_information_is_short_on_left_and_complete_on_right() -> None:
         "enabled": True,
     }
     short = _short_schedule_information(schedule)
-    assert short.startswith("włączony, najbliższy termin ")
+    assert short.startswith("włączony, ")
+    assert "najbliższy termin" not in short and "godzina" not in short
     assert "Poranek" not in short and "D:\\Nagrania" not in short
     full = _full_schedule_information(schedule)
     for expected in (
-        "nazwa Poranek",
         "źródło Radio Test",
         "codziennie",
-        "godzina ",
         "długość 1 godzina 25 minut",
         "format MP3",
         r"folder D:\Nagrania",
     ):
         assert expected in full
+    for repeated in ("nazwa Poranek", "włączony", "najbliżej"):
+        assert repeated not in full
 
 
 def test_new_schedule_updates_weekday_until_user_edits_days() -> None:
