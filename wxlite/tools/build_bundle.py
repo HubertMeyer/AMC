@@ -29,6 +29,14 @@ from pathlib import Path
 
 WXLITE = Path(__file__).resolve().parent.parent
 REPO = WXLITE.parent
+if str(WXLITE) not in sys.path:
+    sys.path.insert(0, str(WXLITE))
+
+from amc_wx_lite.release_profile import (  # noqa: E402
+    TEST_PROFILE_ID,
+    ReleaseProfile,
+    profile_from_id,
+)
 HOST_PUBLISH = (
     REPO
     / "src"
@@ -419,9 +427,44 @@ def select_startup_files(files: list[str], host_subdir: str) -> list[str]:
     ]
 
 
+def initial_manifest(
+    profile: ReleaseProfile,
+    source_revision: str,
+    source_dirty: bool,
+) -> dict[str, object]:
+    """Utworz jawny, testowalny kontrakt paczki dla jednego profilu."""
+
+    manifest: dict[str, object] = {
+        "bundleFormatVersion": 1,
+        "interfaceVersion": 1,
+        "hostProtocolVersion": 1,
+        # Zgodnosc przejsciowa z walidatorem obecnego launchera. O tozsamosci
+        # uzytkowej i instalacyjnej decyduja pola profilu ponizej.
+        "application": "AMC Python",
+        "entryPoint": "AMC.exe",
+        "pythonModule": "amc_wx_lite",
+        "created": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "note": (
+            "Pakiet AMC bez danych użytkownika. Zawartość runtime zależy od "
+            "wskazanego źródła; publikacja wymaga sprawdzenia licencji."
+        ),
+        "sourceRevision": source_revision,
+        "sourceDirty": source_dirty,
+        "files": [],
+    }
+    manifest.update(profile.manifest_fields())
+    return manifest
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Zloz pakiet AMC-wx-Lite")
     parser.add_argument("--out", required=True, type=Path, help="folder docelowy")
+    parser.add_argument(
+        "--profile",
+        choices=("test", "public"),
+        default=None,
+        help="profil wydania; dla pelnej paczki domyslnie test",
+    )
     parser.add_argument("--host", type=Path, default=HOST_PUBLISH, help="folder z publish silnika")
     parser.add_argument(
         "--host-subdir",
@@ -468,6 +511,13 @@ def main() -> int:
                 "Tryb --refresh-python-only wymaga istniejacej kompletnej paczki"
             )
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        existing_profile_id = manifest.get("releaseProfile", TEST_PROFILE_ID)
+        if args.profile is not None and args.profile != existing_profile_id:
+            raise SystemExit(
+                "Tryb --refresh-python-only nie moze zmienic profilu istniejacej paczki"
+            )
+        profile = profile_from_id(existing_profile_id)
+        manifest.update(profile.manifest_fields())
         files = list(manifest.get("files") or [])
         files += copy_python_code(target)
         files += copy_launcher(target, args.launcher)
@@ -517,19 +567,8 @@ def main() -> int:
     target.mkdir(parents=True, exist_ok=True)
 
     source_revision, source_dirty = git_source_identity()
-    manifest: dict = {
-        "bundleFormatVersion": 1,
-        "interfaceVersion": 1,
-        "hostProtocolVersion": 1,
-        "application": "AMC Python",
-        "entryPoint": "AMC.exe",
-        "pythonModule": "amc_wx_lite",
-        "created": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-        "note": "Prywatny pakiet AMC-wx-Lite bez danych pełnego AMC. Zawartość runtime zależy od wskazanego źródła; publikacja wymaga sprawdzenia licencji.",
-        "sourceRevision": source_revision,
-        "sourceDirty": source_dirty,
-        "files": [],
-    }
+    profile = profile_from_id(args.profile or TEST_PROFILE_ID)
+    manifest: dict = initial_manifest(profile, source_revision, source_dirty)
 
     manifest["files"] += copy_python_code(target)
     manifest["files"] += copy_launcher(target, args.launcher)

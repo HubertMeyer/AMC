@@ -24,6 +24,22 @@ def test_python_package_matches_isolated_runtime_app_path():
         assert not (target / "AMC-wx-Lite.cmd").exists()
 
 
+def test_bundle_manifest_profile_is_explicit_and_public_is_restricted():
+    public = bundle.profile_from_id("public")
+    manifest = bundle.initial_manifest(public, "a" * 40, False)
+
+    assert manifest["releaseProfileSchema"] == 1
+    assert manifest["releaseProfile"] == "public"
+    assert manifest["displayName"] == "AMC"
+    assert manifest["installId"] == "AMC.Public.win-x64"
+    assert manifest["updateChannel"] == "stable"
+    assert manifest["sessions"] == ["files", "radio", "podcasts", "wiim"]
+    assert "spotify" not in " ".join(manifest["capabilities"]).casefold()
+    assert manifest["credentialNamespace"] != (
+        bundle.profile_from_id("test").credential_namespace
+    )
+
+
 def test_build_label_is_user_facing_date_and_source_revision():
     class Result:
         def __init__(self, stdout):

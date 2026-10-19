@@ -30,6 +30,8 @@ from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
 
+from .release_profile import current_profile, profile_directory
+
 
 class ProfileMode(str, Enum):
     """Wariant uruchomienia wxPython wzgledem profilu AMC."""
@@ -57,19 +59,27 @@ HOST_OWNED_DUTIES = (
 
 
 def default_amc_profile_dir() -> Path:
-    """Katalog profilu AMC (``%APPDATA%\\AccessibleMediaController``)."""
+    """Katalog profilu rdzenia wybranego wydania AMC."""
+    profile = current_profile()
     appdata = os.environ.get("APPDATA")
     if appdata:
-        return Path(appdata) / "AccessibleMediaController"
-    return Path.home() / "AppData" / "Roaming" / "AccessibleMediaController"
+        return profile_directory(Path(appdata), profile.roaming_profile_folder)
+    return profile_directory(
+        Path.home() / "AppData" / "Roaming",
+        profile.roaming_profile_folder,
+    )
 
 
 def default_amc_local_dir() -> Path:
-    """Katalog baz AMC (``%LOCALAPPDATA%\\AccessibleMediaController``)."""
+    """Katalog lokalnych baz wybranego wydania AMC."""
+    profile = current_profile()
     local = os.environ.get("LOCALAPPDATA")
     if local:
-        return Path(local) / "AccessibleMediaController"
-    return Path.home() / "AppData" / "Local" / "AccessibleMediaController"
+        return profile_directory(Path(local), profile.local_profile_folder)
+    return profile_directory(
+        Path.home() / "AppData" / "Local",
+        profile.local_profile_folder,
+    )
 
 
 @dataclass(frozen=True, slots=True)

@@ -12,9 +12,10 @@ from datetime import datetime
 from pathlib import Path
 
 from . import __version__
+from .release_profile import current_profile
 
 
-PRODUCT_NAME = "AMC Test"
+PRODUCT_NAME = current_profile().display_name
 LEGACY_PRODUCT_NAME = "AMC Python"
 
 

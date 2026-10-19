@@ -25,6 +25,7 @@ from .playback_history import normalize_histories
 from .radio_activity import normalize_state_position
 from .radio_recognition import normalize_scope, read_tracks
 from .radio_schedule_settings import read_schedule_overrides
+from .release_profile import current_profile, profile_directory
 from .session_order import (
     migrated_values as migrated_session_order_values,
     values as normalized_session_order_values,
@@ -621,8 +622,12 @@ def default_state_dir() -> Path:
         return Path(override)
     appdata = os.environ.get("APPDATA")
     if appdata:
-        return Path(appdata) / "AMC-wx-Lite"
-    return Path.home() / ".config" / "amc-wx-lite"
+        profile = current_profile()
+        return profile_directory(Path(appdata), profile.ui_state_folder)
+    return profile_directory(
+        Path.home() / ".config",
+        current_profile().ui_state_folder,
+    )
 
 
 class StateStore:

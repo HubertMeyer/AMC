@@ -101,9 +101,13 @@ jawnym poleceniu użytkownika albo przez osobno uzgodniony harmonogram.
   Automatyczne otwarcie na czystej instalacji pozostaje do odbioru AMC12 i nie
   może zmienić obecnego profilu testowego. Bieżący zapis realizacji:
   [AMC09-menedzer-sesji.md](AMC09-menedzer-sesji.md).
-- `AMC12` — **Oczekuje, etap późniejszy tej samej nocy** — jeden kod, osobne
-  profile AMC Test i publicznego AMC, izolowane magazyny oraz bezpieczny
-  instalator. Zatwierdzona specyfikacja:
+- `AMC12` — **W trakcie; spójny fundament profili jest gotowy w źródłach i
+  testach, bez kompilacji i instalacji publicznego wydania** — jeden kod,
+  jawny manifest możliwości oraz osobne katalogi AMC Test i publicznego AMC.
+  Rozdzielenie uruchamiacza, migawka danych i instalator pozostają następnymi
+  etapami. Bieżący zapis realizacji:
+  [AMC12-profile-wydania-publicznego-i-testowego.md](AMC12-profile-wydania-publicznego-i-testowego.md).
+  Zatwierdzona specyfikacja:
   `D:\Projekty Codex\Accessible Multimedia Controller\AMC12_PROFILE_WYDANIA_PUBLICZNEGO_I_TESTOWEGO_2026-10-18.md`.
 - `AMC10` — **Oczekuje, opcjonalnie tej samej nocy tylko logowanie Sonos** —
   działające sterowanie Sonosem i WiiM jest już przeszczepione i nie wymaga

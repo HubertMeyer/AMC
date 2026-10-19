@@ -10,6 +10,7 @@ from __future__ import annotations
 from collections.abc import Iterable
 
 from .navigation import SessionId
+from .release_profile import current_profile
 from .shortcuts import Action
 
 
@@ -56,6 +57,20 @@ SESSION_MENU_LABELS: dict[SessionId, str] = {
 }
 
 
+def available_sessions() -> tuple[SessionId, ...]:
+    """Sesje jawnie dopuszczone przez manifest bieżącego wydania."""
+
+    allowed: list[SessionId] = []
+    for value in current_profile().session_ids:
+        try:
+            session = SessionId(value)
+        except ValueError:
+            continue
+        if session not in allowed:
+            allowed.append(session)
+    return tuple(allowed)
+
+
 def normalize(raw: object) -> tuple[SessionId, ...]:
     """Zachowaj zwartą listę aktywnych sesji, bez dopisywania wyłączonych."""
 
@@ -67,18 +82,19 @@ def normalize(raw: object) -> tuple[SessionId, ...]:
 
     result: list[SessionId] = []
     seen: set[SessionId] = set()
+    allowed = set(available_sessions())
     for value in values:
         try:
             session = value if isinstance(value, SessionId) else SessionId(value)
         except (TypeError, ValueError):
             continue
-        if session in seen:
+        if session in seen or session not in allowed:
             continue
         seen.add(session)
         result.append(session)
 
     if not result:
-        result.extend(DEFAULT_SESSION_ORDER)
+        result.extend(session for session in DEFAULT_SESSION_ORDER if session in allowed)
     return tuple(result[:MAX_ACTIVE_SESSIONS])
 
 
@@ -87,7 +103,9 @@ def migrate_legacy(raw: object) -> tuple[SessionId, ...]:
 
     migrated = list(normalize(raw))
     migrated.extend(
-        session for session in LEGACY_SESSION_ORDER if session not in migrated
+        session
+        for session in LEGACY_SESSION_ORDER
+        if session in available_sessions() and session not in migrated
     )
     return tuple(migrated[:MAX_ACTIVE_SESSIONS])
 
@@ -139,6 +157,8 @@ def enable(session: SessionId, raw: object) -> tuple[tuple[SessionId, ...], str]
     """Dopisz sesję na końcu bez naruszania limitu dziewięciu."""
 
     ordered = list(normalize(raw))
+    if session not in available_sessions():
+        return tuple(ordered), "Ta sesja nie jest dostępna w tym wydaniu AMC"
     if session in ordered:
         return tuple(ordered), f"{SESSION_NAMES[session]} jest już włączona"
     if len(ordered) >= MAX_ACTIVE_SESSIONS:
@@ -202,12 +222,12 @@ def manager_labels(
     raw: object,
     readiness: dict[SessionId, str] | None = None,
     *,
-    available: Iterable[SessionId] = AVAILABLE_TEST_SESSIONS,
+    available: Iterable[SessionId] | None = None,
 ) -> tuple[tuple[SessionId, str], ...]:
     """Celowe etykiety Menedżera: aktywne najpierw, potem dostępne do dodania."""
 
     ready = readiness or {}
-    allowed = tuple(dict.fromkeys(available))
+    allowed = tuple(dict.fromkeys(available_sessions() if available is None else available))
     active = tuple(session for session in normalize(raw) if session in allowed)
     inactive = tuple(session for session in allowed if session not in active)
     result: list[tuple[SessionId, str]] = []

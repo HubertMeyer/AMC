@@ -3956,7 +3956,7 @@ class SessionSelectionDialog(wx.Dialog):
         self._refresh_rows(
             next(
                 (
-                    session for session in session_order.AVAILABLE_TEST_SESSIONS
+                    session for session in session_order.available_sessions()
                     if focus_inactive and session not in self._order
                 ),
                 current,
@@ -6416,7 +6416,7 @@ class LiteFrame(wx.Frame):
         )
         inactive_sessions = tuple(
             candidate
-            for candidate in session_order.AVAILABLE_TEST_SESSIONS
+            for candidate in session_order.available_sessions()
             if candidate not in active_sessions
         )
         blocked_sessions = self._sessions_blocked_from_disabling()
@@ -7117,15 +7117,7 @@ class LiteFrame(wx.Frame):
         session_before: SessionId,
     ) -> None:
         sessions = (
-            (
-                SessionId.FILES,
-                SessionId.RADIO,
-                SessionId.PODCASTS,
-                SessionId.TIDAL,
-                SessionId.WIIM,
-                SessionId.SONOS,
-                SessionId.SPOTIFY,
-            )
+            session_order.available_sessions()
             if all_services
             else (session_before,)
         )
