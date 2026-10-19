@@ -1,7 +1,7 @@
 # MENU-001 — menu kontekstowe i skróty zależne od sesji
 
-Status: **W trakcie; korekta i trwały kontrakt zainstalowane w AMC Test po
-pełnej regresji, czekają na odbiór NVDA w reprezentatywnych sesjach**.
+Status: **W trakcie; najnowsza korekta nazw i menu harmonogramów jest
+przetestowana w źródłach, ale jeszcze niezainstalowana**.
 
 ## Materiał do dokumentacji użytkownika
 
@@ -22,6 +22,11 @@ Menu pokazuje tylko polecenia dozwolone przez bieżącą sesję, widok, rodzaj
 wiersza i prawdziwy stan odtwarzania lub nagrywania. Korzysta z tych samych
 akcji i bramek, co skróty, `Ctrl+F1`, pełna pomoc i paleta `Ctrl+Shift+K`.
 
+Polecenie `Ctrl+Shift+Enter` nazywa się krótko „Odtwarzaj jako następne”, bez
+mylącego dopisku „lub usuń”. `Ctrl+Shift+C` ma nazwę zależną od elementu:
+na nagraniu lub innym lokalnym pliku menu mówi „Skopiuj ścieżkę do pliku”, a
+w ogólnych powierzchniach „Skopiuj adres lub ścieżkę”.
+
 Zakładki, nazwane zakładki, rozdziały i historia nadal mają rozdzielone
 znaczenia z AMC04. `Alt+lewo/prawo` przechodzi po historii widoków.
 `Alt+góra/dół` w odtwarzaczu wybiera starszy lub nowszy odtwarzany element,
@@ -36,6 +41,14 @@ reprezentacji obiektu. Trwały kontrakt zapisano w instrukcjach repozytorium ora
 w osobistej umiejętności Codexa `accessible-desktop-contracts`.
 
 ## Uzasadnienie i decyzje
+
+- **Korekta użytkownika z 19 października 2026:** usunięto z nazwy polecenia
+  dopisek „lub usuń”, a lokalny plik nie jest już nazywany adresem. Zmiana
+  objęła wspólny model menu, pomoc `Ctrl+F1`, pełną pomoc, paletę oraz
+  kontekstową etykietę bieżącego wiersza.
+- **Korekta użytkownika z 19 października 2026:** lista harmonogramów musi mieć
+  własne menu kontekstowe. Jego pozycje prowadzą do tych samych metod co
+  Insert, Enter, Ctrl+D, Spacja, strzałki i Delete.
 
 - **Korekta użytkownika z 19 października 2026:** „Zmień stację” zastąpiono
   nazwą opisującą zmianę nazwy lub adresu, a ogólne `F2` opisuje dokładnie
@@ -57,6 +70,11 @@ w osobistej umiejętności Codexa `accessible-desktop-contracts`.
   trwały kontrakt projektu oraz automatycznie wykrywana umiejętność Codexa.
 
 ## Testy i wynik
+
+- Po korekcie nazw i harmonogramów: **136/136** testów ukierunkowanych oraz
+  pełna regresja **1845 zaliczonych, 110 pominiętych, 11 podtestów**.
+  Test kolizji mnemoniców wykrył pierwszą nieprawidłową literę dostępu;
+  poprawiono ją przed powtórną zieloną bramką.
 
 - 19.10.2026: wspólna bramka nagrywania, Spotify, menu, ustawień i
   harmonogramów — **204 zaliczone**.
@@ -82,6 +100,9 @@ w osobistej umiejętności Codexa `accessible-desktop-contracts`.
 
 ## Znane ograniczenia
 
+- Najnowsze nazwy i menu harmonogramów są w commicie `4b85e0c8`, ale nie w
+  bieżącej instalacji użytkownika; wymagają jeszcze instalacji i odbioru NVDA.
+
 - Odbiór NVDA musi potwierdzić menu listy i odtwarzacza w Plikach lokalnych,
   Radiu, Podcastach i YouTube, Spotify, TIDAL, WiiM i Sonos.
 - Pozycje niedostępne są pomijane w menu kontekstowym; pasek menu może je
@@ -90,6 +111,9 @@ w osobistej umiejętności Codexa `accessible-desktop-contracts`.
   stabilnej pozycji.
 
 ## Wersja i commit
+
+- Korekta po ręcznym odbiorze: `4b85e0c8` — źródła i testy. Instalacja oraz
+  uruchomienie tej rewizji jeszcze niewykonane.
 
 - Źródła: commit `fdc26b83` — `fix(amc): uporzadkuj nagrania menu i playlisty
   Spotify`.

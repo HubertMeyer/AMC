@@ -9,7 +9,9 @@ użytkownika. Nie zmienia statusu ręcznego odbioru NVDA poszczególnych funkcji
 ## Punkt odniesienia wersji
 
 - Najnowsza zainstalowana i uruchomiona paczka AMC Test:
-  `2026.10.19-6c79bdd32904b9468b07489e79da715de512d3e0-972b46e1`.
+  `2026.10.19-8093e22adfa9b6abfc72c35c5c7029eaaade88c8-718893c9`.
+- Poprawki z commitu `4b85e0c8` są przetestowane w źródłach, lecz nie należą
+  jeszcze do powyższej instalacji.
 - Fundament profili AMC12 został skompilowany i sprawdzony; zbudowano czystą
   paczkę publiczną oraz lokalny instalator z kontrolą integralności. Nie
   zainstalowano ich i nie opublikowano.
@@ -33,12 +35,13 @@ użytkownika. Nie zmienia statusu ręcznego odbioru NVDA poszczególnych funkcji
    lewą strzałką, również w `Ctrl+H`. Źródło:
    [AMC02-listy-nagrywania-i-historii.md](AMC02-listy-nagrywania-i-historii.md).
 4. Harmonogramy — znaczenie lewej i prawej strzałki, Spacji, Enter i
-   `Ctrl+D`; segmentowe wpisywanie daty, czasu i czasu trwania; powrót fokusu i
-   komunikaty NVDA. Źródło:
+   `Ctrl+D`; menu pod `Shift+F10`; segmentowe wpisywanie daty, czasu i czasu
+   trwania; powrót fokusu i komunikaty NVDA. Źródło:
    [SCHED-001-edytor-i-klawisze-harmonogramow.md](SCHED-001-edytor-i-klawisze-harmonogramow.md).
 5. Playlisty Spotify — `Ctrl+P`, `Ctrl+Shift+P`, jedna lub wiele playlist,
-   tworzenie playlisty prywatnej lub publicznej oraz uczciwe wyniki częściowe.
-   Ręczny odbiór konta nadal otwarty. Źródło:
+   jednoznacznie nazwane pole nowej playlisty, tworzenie playlisty prywatnej
+   lub publicznej, jasne rozróżnienie przygotowania od zapisu oraz uczciwe
+   wyniki częściowe. Ponowny ręczny odbiór konta nadal otwarty. Źródło:
    [AMC08-playlisty-spotify.md](AMC08-playlisty-spotify.md).
 6. Zakładki, nazwane zakładki, rozdziały i historia — rozróżnienie danych oraz
    skróty `B`, `Ctrl+Shift+B`, `Shift+Page Up/Down`,
@@ -87,8 +90,14 @@ użytkownika. Nie zmienia statusu ręcznego odbioru NVDA poszczególnych funkcji
 - Uporządkowano listy nagrywania, historię nagrań i szczegóły plików bez
   powtarzania stacji, harmonogramu i folderu w zwykłym wierszu.
 - Przebudowano dostępny edytor harmonogramów oraz nawigację daty i czasu.
+- Dodano rzeczywiste menu kontekstowe harmonogramów i region aktywny, dzięki
+  któremu informacje pod strzałkami mogą zostać wypowiedziane przez NVDA.
 - Dodano zarządzanie natywnymi playlistami Spotify, bez obiecywania
   nieobsługiwanego odtwarzania całych playlist.
+- Uporządkowano tworzenie playlisty Spotify i zachowano potwierdzony nowy cel
+  również podczas krótkiej niespójności katalogu Spotify.
+- Uproszczono nazwę „Odtwarzaj jako następne” oraz zmieniono opis
+  `Ctrl+Shift+C` na „Skopiuj ścieżkę do pliku” dla lokalnych plików.
 - Ujednolicono zakładki, nazwane zakładki, rozdziały i historię we wspólnym
   katalogu poleceń.
 - Dodano wiarygodne oznaczenie odtwarzanego elementu oraz przywrócono `End` na
@@ -110,6 +119,8 @@ użytkownika. Nie zmienia statusu ręcznego odbioru NVDA poszczególnych funkcji
 - Nie oznaczać ręcznych testów NVDA jako zaliczonych, dopóki użytkownik ich nie
   potwierdzi.
 - Nie przedstawiać testów atrap Spotify/TIDAL jako próby prawdziwego konta.
+- Nie przedstawiać korekty `4b85e0c8` jako zainstalowanej przed zbudowaniem,
+  kontrolą integralności i podmianą AMC Test.
 - Nie przedstawiać zbudowanej paczki i instalatora AMC12 jako instalacji albo
   wydania publicznego.
 - Nie obiecywać publicznego Sonosa przed działającym brokerem HTTPS i odbiorem

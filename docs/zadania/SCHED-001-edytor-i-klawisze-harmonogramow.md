@@ -2,7 +2,8 @@
 
 ## Status
 
-Wdrożone i zainstalowane w AMC Test; czeka na ręczny odbiór NVDA.
+Korekta po ręcznym odbiorze wdrożona w źródłach i przetestowana; nie została
+jeszcze zainstalowana w AMC Test.
 
 ## Cel
 
@@ -24,6 +25,9 @@ wykonanych planów z `REC-001`; obejmuje listę harmonogramów oraz pola edytora
   dla danego rodzaju harmonogramu i nie powtarza nazwy listy.
 - `Ctrl+Enter` pozostaje bez zmiany do osobnej decyzji. Otwieranie folderu
   nagrania zostanie zaprojektowane razem z integracją powłoki Windows.
+- `Shift+F10` albo klawisz menu otwiera menu z tymi samymi czynnościami:
+  nowy plan, edycja, powielenie, przełączenie stanu, krótka informacja, pełne
+  szczegóły i usunięcie. Menu nie ma drugiej implementacji operacji.
 
 ## Ustalony zakres edytora daty i czasu
 
@@ -115,6 +119,13 @@ Wewnątrz okna widoczny i dostępny opis wymienia klawisze listy.
 
 ## Uzasadnienie i decyzje
 
+- **Korekta użytkownika z 19 października 2026 zastępuje wcześniejsze
+  stwierdzenie, że obsługa listy została odebrana.** Kod strzałek był obecny,
+  ale zmieniał wyłącznie tekst kontrolki statusu i nie wysyłał zdarzenia
+  regionu aktywnego, dlatego NVDA milczał. Lista nie miała też podłączonego
+  menu kontekstowego. Okna modalne dostały własny wspólny kanał komunikatów
+  NVDA, a menu wywołuje dokładnie te same metody co klawisze.
+
 - Segmenty opierają się na osobnym modelu kalendarza i czasu. Dzięki temu
   końce miesięcy, luty w roku przestępnym oraz granice 23:59/00:00 nie zależą
   od swobodnego tekstu.
@@ -132,6 +143,12 @@ Wewnątrz okna widoczny i dostępny opis wymienia klawisze listy.
   zmian, a otwieranie folderu będzie osobnym zadaniem integracji z powłoką.
 
 ## Testy i wynik
+
+- Korekta po odbiorze: **136/136** testów ukierunkowanych harmonogramów,
+  menu, `Ctrl+F1`, palety i Spotify oraz pełna regresja wxPython:
+  **1845 zaliczonych, 110 pominiętych, 11 podtestów zaliczonych**.
+- Test behawioralny potwierdza jedno zdarzenie regionu aktywnego z dokładnym
+  komunikatem, komplet siedmiu pozycji menu i powrót fokusu na listę.
 
 Testy modelu obejmują:
 
@@ -171,6 +188,10 @@ manifest, SHA-256, instalacja, integralność i uruchomienie — zaliczone.
 
 ## Znane ograniczenia
 
+- Korekta z commitu `4b85e0c8` nie została jeszcze zainstalowana ani odebrana
+  z prawdziwym NVDA. Poprzednia instalacja nie jest dowodem działania tej
+  korekty.
+
 - Nie wykonano jeszcze rzeczywistego odsłuchu NVDA. Należy sprawdzić pierwsze
   wejście, każdą strzałkę, cyfry, zapis, anulowanie i ponowne otwarcie.
 - Segmenty używają natywnych pól liczbowych wxPython. Ostateczny odbiór musi
@@ -183,6 +204,9 @@ manifest, SHA-256, instalacja, integralność i uruchomienie — zaliczone.
   nadal pozostaje do wykonania; automatyczne etykiety nie zastępują odsłuchu.
 
 ## Wersja i commit
+
+- Korekta po ręcznym odbiorze: `4b85e0c8` — kod i testy; pełna regresja
+  zaliczona. Kompilacja pakietu, instalacja i uruchomienie jeszcze niewykonane.
 
 - Źródła i testy: commit `689a8c77`.
 - Kompilacja: Release, zaliczona bez ostrzeżeń i błędów; pełna regresja po

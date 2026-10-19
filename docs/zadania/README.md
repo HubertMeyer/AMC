@@ -47,8 +47,8 @@ zmian, wymagający korekty użytkownika:
   `D:\Projekty Codex\Accessible Multimedia Controller\AMC02_ANALIZA_2026-10-18.md`
   oraz `AMC02_REALIZACJA_ETAP_A_2026-10-18.md`. Właściwe wdrożenie wykonujemy
   w bieżącym AMC Test, a stary kod służy tylko jako wzorzec.
-- `SCHED-001` — **Wdrożone i zainstalowane w AMC Test; czeka na ręczny odbiór
-  NVDA** — dostępna przebudowa listy i edytora
+- `SCHED-001` — **Korekta po ręcznym odbiorze przetestowana w źródłach;
+  jeszcze niezainstalowana** — dostępna przebudowa listy i edytora
   harmonogramów: informacje pod strzałkami, segmentowa data i czas oraz
   jednoznaczne wpisywanie czasu trwania. Szczegóły:
   [SCHED-001-edytor-i-klawisze-harmonogramow.md](SCHED-001-edytor-i-klawisze-harmonogramow.md).
@@ -76,8 +76,8 @@ zmian, wymagający korekty użytkownika:
   `D:\Projekty Codex\Accessible Multimedia Controller\AMC03_AUDYT_SKROTOW_2026-10-18.md`
   oraz `AMC04_REALIZACJA_ETAP_A_2026-10-18.md`. Stare źródła WPF służą tylko
   jako wzorzec; właściwe wdrożenie wykonujemy w tym repozytorium.
-- `MENU-001` — **W trakcie; korekta i trwały kontrakt zainstalowane, czekają na
-  odbiór NVDA w reprezentatywnych sesjach** —
+- `MENU-001` — **W trakcie; najnowsze nazwy i menu harmonogramów przetestowane,
+  jeszcze niezainstalowane** —
   wspólne menu kontekstowe bez odczytu technicznych cyfr i przypadkowych
   liter dostępu, nazwy zależne od rodzaju elementu, rzeczywiste skróty oraz
   audyt dostępności poleceń i nawigacji między sesjami. Szczegóły:
@@ -97,8 +97,8 @@ zmian, wymagający korekty użytkownika:
   Zatwierdzona specyfikacja:
   `D:\Projekty Codex\Accessible Multimedia Controller\AMC13_TIMESHIFT_RADIA_2026-10-18.md`.
   Eksport fragmentów Time Shiftu pozostaje późniejszym rozszerzeniem.
-- `AMC08` — **Wspólny cache usług i ostatniego celu zainstalowany; czeka na
-  odbiór NVDA i świadomą próbę na koncie** — natywne playlisty
+- `AMC08` — **Korekta po próbie na prawdziwym koncie przetestowana na
+  atrapach; jeszcze niezainstalowana i niepowtórzona na koncie** — natywne playlisty
   Spotify w AMC Test: `Ctrl+P`, `Ctrl+Shift+P`, pobranie katalogu raz na
   uruchomienie, natychmiastowa widoczność nowej playlisty i zapamiętanie
   ostatnich celów. Mechanizm ma partycje usług i kont, aby kolejne integracje

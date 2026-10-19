@@ -1,8 +1,7 @@
 # AMC08 — natywne playlisty Spotify
 
-Status: **Korekta pamięci podręcznej i ostatniego celu oraz wspólny fundament
-dla kolejnych usług zainstalowane w AMC Test; czeka na świadomą próbę z NVDA
-na koncie Spotify**.
+Status: **Korekta po próbie na prawdziwym koncie wdrożona w źródłach i
+przetestowana na atrapach; jeszcze niezainstalowana i niepowtórzona na koncie**.
 
 Źródło decyzji: zatwierdzona analiza historyczna tylko do odczytu
 `D:\Projekty Codex\Accessible Multimedia Controller\AMC08_PLAYLISTY_SPOTIFY_2026-10-18.md`.
@@ -15,7 +14,9 @@ na koncie Spotify**.
   playlist Spotify”. Strzałki wybierają playlistę, a Spacja zaznacza lub
   odznacza wiele playlist. Enter wykonuje operację, Escape ją anuluje.
 - Przycisk „Nowa playlista…” pyta o nazwę i widoczność: domyślnie prywatną
-  albo jawnie publiczną. Nowa playlista jest od razu zaznaczona jako cel.
+  albo jawnie publiczną w jednym oknie. Pole ma jednoznaczną nazwę „Nazwa
+  playlisty Spotify”. Nowa playlista jest od razu zaznaczona jako cel, a AMC
+  mówi, że kolejny Enter utworzy ją i doda wybrane elementy.
 - Przy pierwszym `Ctrl+Shift+P` w danym uruchomieniu AMC mówi „Pobieram
   playlisty Spotify”. Kolejne otwarcia korzystają z pamięci podręcznej i nie
   pobierają tej samej listy ponownie. Po zapisie AMC mówi, ile pozycji dodano,
@@ -41,6 +42,19 @@ na koncie Spotify**.
   celów nawet przy takich samych nazwach lub identyfikatorach.
 
 ## Uzasadnienie i decyzje
+
+- **Korekta użytkownika z 19 października 2026 zastępuje wcześniejszy odbiór
+  cache'u oparty tylko na atrapach.** W prawdziwym użyciu pole nazwy było
+  niejednoznaczne, nie było wiadomo, który Enter jedynie przygotowuje cel, a
+  nowa playlista nie wracała na następną listę. Nazwa i widoczność są teraz w
+  jednym dostępnym formularzu, przygotowanie i rozpoczęcie zapisu mają osobne
+  komunikaty, a pusta nazwa dostępna z odpowiedzi hosta jest uzupełniana
+  świadomą etykietą użytkową.
+- Potwierdzenie HTTP 201 po utworzeniu jest autorytatywne dla bieżącego konta.
+  Jeżeli późniejszy odczyt `/me/playlists` jest chwilowo niespójny, host
+  zachowuje potwierdzony cel i pozwala natychmiast dodać element. Gdy katalog
+  zacznie już zwracać playlistę, wpis przejściowy jest usuwany; nie staje się
+  trwałym źródłem uprawnień.
 
 - **Korekta użytkownika z 18 października 2026:** `Ctrl+Shift+P` zastępuje
   wcześniejszy pomysł osobnego `Alt+Shift+P`.
@@ -74,6 +88,12 @@ na koncie Spotify**.
   przez świeżą walidację adaptera konkretnej usługi.
 
 ## Testy i wynik
+
+- Po korekcie prawdziwego przepływu: **136/136** testów ukierunkowanych oraz
+  pełna regresja wxPython **1845 zaliczonych, 110 pominiętych, 11 podtestów**.
+- Osobny test hosta kompiluje rzeczywisty `SpotifyIntegrationService` i
+  symuluje opóźnione `/me/playlists`: nowa playlista pozostaje widoczna i
+  przyjmuje utwór. Kompilacja i ten test zakończyły się kodem 0.
 
 - 19 października 2026, przed 02:00: `py_compile` zmienionych modułów —
   zaliczony.
@@ -129,6 +149,10 @@ na koncie Spotify**.
 
 ## Znane ograniczenia
 
+- Korekta `4b85e0c8` nie została jeszcze zainstalowana. Nie wykonano po niej
+  kolejnego zapisu na prawdziwym koncie Spotify; odbiór sieciowy wymaga
+  świadomej próby użytkownika.
+
 - Odtwarzanie całej playlisty Spotify przez AMC nadal nie jest obiecywane.
 - Zewnętrzny odbiór na prawdziwym koncie, w tym ponowne OAuth z nowymi
   zakresami, pozostaje zadaniem ręcznym.
@@ -149,6 +173,9 @@ na koncie Spotify**.
   hoście, więc pamięć interfejsu nie może nadać uprawnień do obcej playlisty.
 
 ## Wersja i commit
+
+- Korekta po odbiorze: `4b85e0c8` — kod, testy wxPython i test hosta C#.
+  Pełnego pakietu AMC Test jeszcze nie zbudowano ani nie zainstalowano.
 
 - Profil docelowy: bieżący AMC Test.
 - Kod źródłowy: commit `697d1a73fd66c12bfa061f4d5f55a93ddaa36e85`.
