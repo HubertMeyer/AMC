@@ -292,6 +292,9 @@ class Action(Enum):
     SORT_PODCAST_INBOX_ADDED = "podcasts.inbox.sort.added"
     SORT_PODCAST_INBOX_ALPHABETICAL = "podcasts.inbox.sort.alphabetical"
     SORT_PODCAST_INBOX_BY_PODCAST = "podcasts.inbox.sort.byPodcast"
+    SORT_PODCAST_LIBRARY_ADDED = "podcasts.library.sort.added"
+    SORT_PODCAST_LIBRARY_ALPHABETICAL = "podcasts.library.sort.alphabetical"
+    SORT_PODCAST_LIBRARY_CUSTOM = "podcasts.library.sort.custom"
     SORT_TIDAL_COLLECTION_ADDED = "tidal.collection.sort.added"
     SORT_TIDAL_COLLECTION_ALPHABETICAL = "tidal.collection.sort.alphabetical"
     SORT_TIDAL_COLLECTION_CUSTOM = "tidal.collection.sort.custom"
@@ -1103,6 +1106,15 @@ PODCAST_INBOX_LIST_VIEW: dict[str, Action] = {
     "F5": Action.REFRESH_PODCAST_LIBRARY,
 }
 
+# Główna Biblioteka źródeł ma ten sam układ cyfr, ale osobny model i osobne
+# akcje. Dzięki temu polecenia skrzynki odcinków nie mogą przez pomyłkę zapisać
+# trybu podcastów, kanałów YouTube i kolekcji Media internetowe.
+PODCAST_LIBRARY_LIST_VIEW: dict[str, Action] = {
+    "Alt+1": Action.SORT_PODCAST_LIBRARY_ADDED,
+    "Alt+2": Action.SORT_PODCAST_LIBRARY_ALPHABETICAL,
+    "Alt+3": Action.SORT_PODCAST_LIBRARY_CUSTOM,
+}
+
 # Kontekst sesji, niezaleznie od listy/odtwarzacza. F5 w skrzynce jest
 # przesloniete powyzej, dokladnie jak w glownym AMC.
 PODCAST_SESSION_VIEW: dict[str, Action] = {
@@ -1257,6 +1269,7 @@ def resolve(
     radio_session: bool,
     radio_recording_context: bool = False,
     podcast_inbox: bool = False,
+    podcast_library: bool = False,
     podcast_session: bool = False,
     tidal_session: bool = False,
     tidal_collection: bool = False,
@@ -1276,10 +1289,22 @@ def resolve(
         return GLOBAL_VIEW_SHORTCUTS[canonical]
     if not player_view and service_history and canonical == "Delete":
         return Action.REMOVE_SELECTED
-    # W „Nowych odcinkach” te same cyfry co w glownym AMC zmieniaja
-    # kolejnosc. Poza tym jednym widokiem Alt+1/Alt+2 zachowuja lokalne
-    # znaczenie Folderow/Wszystkich plikow, a Alt+3 pozostaje wolne.
+    # Alt+1/2/3 ma dwa jawne znaczenia w sesji Podcasty i YouTube: sortuje
+    # główną Bibliotekę albo skrzynkę Nowych odcinków. W pozostałych widokach
+    # tej sesji nie może wpaść w obce znaczenie lokalnych Folderów/Plików.
+    if (
+        not player_view
+        and (podcast_session or podcast_library or podcast_inbox)
+        and canonical in PODCAST_LIBRARY_LIST_VIEW
+    ):
+        if podcast_library:
+            return PODCAST_LIBRARY_LIST_VIEW[canonical]
+        if podcast_inbox:
+            return PODCAST_INBOX_LIST_VIEW[canonical]
+        return None
     if not player_view and podcast_inbox and canonical in PODCAST_INBOX_LIST_VIEW:
+        # F5 w globalnej skrzynce odświeża wszystkie źródła. Alt+1/2/3 są już
+        # rozstrzygnięte wyżej, lecz pozostają w tej samej tabeli poleceń.
         return PODCAST_INBOX_LIST_VIEW[canonical]
     # Parity z głównym AMC: Ctrl+F5 zawsze odświeża wszystkie źródła sesji,
     # F5 w skrzynce robi to samo, a F5 w pozostałych widokach odświeża źródło
@@ -1528,6 +1553,15 @@ def _help_entries() -> list[tuple[str, str, Action]]:
         ),
         Action.SORT_PODCAST_INBOX_ALPHABETICAL: "Nowe odcinki: alfabetycznie",
         Action.SORT_PODCAST_INBOX_BY_PODCAST: "Nowe odcinki: według podcastu",
+        Action.SORT_PODCAST_LIBRARY_ADDED: (
+            "Biblioteka podcastów i kanałów: ostatnio dodane na początku"
+        ),
+        Action.SORT_PODCAST_LIBRARY_ALPHABETICAL: (
+            "Biblioteka podcastów i kanałów: alfabetycznie"
+        ),
+        Action.SORT_PODCAST_LIBRARY_CUSTOM: (
+            "Biblioteka podcastów i kanałów: kolejność własna"
+        ),
         Action.SORT_TIDAL_COLLECTION_ADDED: (
             "TIDAL: według dodania, najnowsze na początku"
         ),
@@ -1644,6 +1678,7 @@ def _help_entries() -> list[tuple[str, str, Action]]:
     seen: set[Action] = set()
     out: list[tuple[str, str, Action]] = []
     for table in (
+        PODCAST_LIBRARY_LIST_VIEW,
         PODCAST_INBOX_LIST_VIEW,
         PODCAST_SESSION_VIEW,
         TIDAL_LIST_VIEW,
@@ -1710,7 +1745,10 @@ def _help_entries() -> list[tuple[str, str, Action]]:
     return out
 
 
-def describe(session_label: str | None = None) -> list[tuple[str, str]]:
+def describe(
+    session_label: str | None = None,
+    available_actions: set[Action] | None = None,
+) -> list[tuple[str, str]]:
     """Tekst spisu F1 bez technicznych identyfikatorów poleceń.
 
     Nazwa sesji jest opcjonalna dla zgodności narzędzi diagnostycznych. Okno
@@ -1726,6 +1764,7 @@ def describe(session_label: str | None = None) -> list[tuple[str, str]]:
             else label,
         )
         for chord, label, action in _help_entries()
+        if available_actions is None or action in available_actions
     ]
 
 

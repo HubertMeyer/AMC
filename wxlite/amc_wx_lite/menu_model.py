@@ -69,6 +69,9 @@ class MenuItem:
     needs_podcast_session: bool = False
     #: Te trzy pozycje sa aktywne tylko w zbiorczym widoku Nowych odcinkow.
     needs_podcast_inbox: bool = False
+    #: Te trzy pozycje są aktywne tylko na głównej liście źródeł Podcastów i
+    #: YouTube, nie wewnątrz kanału, playlisty ani zbiorczego widoku odcinków.
+    needs_podcast_library: bool = False
     #: Aktywna wyłącznie w jednym z trzech głównych widoków kolekcji TIDAL.
     needs_tidal_collection: bool = False
     #: Aktywna wyłącznie w jednym z sześciu głównych widoków Spotify.
@@ -1224,6 +1227,22 @@ def build_menus(session_order: object = None) -> tuple[Menu, ...]:
                      visible_sessions=(SessionId.PODCASTS,)),
             MenuItem("Po&brane", Action.VIEW_PODCAST_DOWNLOADS,
                      needs_podcast_session=True,
+                     visible_sessions=(SessionId.PODCASTS,)),
+            SEPARATOR,
+            MenuItem("Biblioteka: ostatnio dodane na początku (&1)",
+                     Action.SORT_PODCAST_LIBRARY_ADDED, shortcut="Alt+1",
+                     accelerator=False, checkable=True,
+                     needs_podcast_library=True,
+                     visible_sessions=(SessionId.PODCASTS,)),
+            MenuItem("Biblioteka: alfabetycznie (&2)",
+                     Action.SORT_PODCAST_LIBRARY_ALPHABETICAL,
+                     shortcut="Alt+2", accelerator=False, checkable=True,
+                     needs_podcast_library=True,
+                     visible_sessions=(SessionId.PODCASTS,)),
+            MenuItem("Biblioteka: kolejność własna (&3)",
+                     Action.SORT_PODCAST_LIBRARY_CUSTOM, shortcut="Alt+3",
+                     accelerator=False, checkable=True,
+                     needs_podcast_library=True,
                      visible_sessions=(SessionId.PODCASTS,)),
             SEPARATOR,
             # Skroty sa kontekstowe. Nie robimy z nich akceleratorow okna:

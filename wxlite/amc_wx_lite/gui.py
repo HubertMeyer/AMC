@@ -5755,6 +5755,11 @@ class LiteFrame(wx.Frame):
         self._podcast_inbox_sort_mode = (
             state.podcast_inbox_sort_mode or SORT_ADDED_NEWEST
         )
+        # Brak prywatnego wyboru zachowuje dotychczasową kolejność własną z
+        # bazy. Sortowanie nie może po aktualizacji po cichu przestawić listy.
+        self._podcast_library_sort_mode = (
+            state.podcast_library_sort_mode or SORT_CUSTOM
+        )
         self.navigator.restore(state.navigation)
         # Alt+lewo/prawo porusza się po widokach, nie po odtwarzanych
         # elementach. Migawki przechowują wyłącznie nawigację i fokus; żywy
@@ -6230,6 +6235,11 @@ class LiteFrame(wx.Frame):
             and session.view is View.LIST
             and session.library_view is LibraryView.PODCAST_INBOX
         )
+        podcast_library = (
+            podcasts
+            and session.view is View.LIST
+            and session.library_view is LibraryView.PODCAST_LIBRARY
+        )
         tidal_view_scopes = {
             LibraryView.TIDAL_LIBRARY: TIDAL_VIEW_LIBRARY,
             LibraryView.TIDAL_FAVORITES: TIDAL_VIEW_FAVORITES,
@@ -6333,6 +6343,11 @@ class LiteFrame(wx.Frame):
             Action.SORT_PODCAST_INBOX_ALPHABETICAL: SORT_ALPHABETICAL,
             Action.SORT_PODCAST_INBOX_BY_PODCAST: SORT_CUSTOM,
         }
+        podcast_library_sort_actions = {
+            Action.SORT_PODCAST_LIBRARY_ADDED: SORT_ADDED_NEWEST,
+            Action.SORT_PODCAST_LIBRARY_ALPHABETICAL: SORT_ALPHABETICAL,
+            Action.SORT_PODCAST_LIBRARY_CUSTOM: SORT_CUSTOM,
+        }
         tidal_sort_actions = {
             Action.SORT_TIDAL_COLLECTION_ADDED: SORT_ADDED_NEWEST,
             Action.SORT_TIDAL_COLLECTION_ALPHABETICAL: SORT_ALPHABETICAL,
@@ -6364,6 +6379,8 @@ class LiteFrame(wx.Frame):
             if entry.needs_podcast_session and not podcasts:
                 enabled = False
             if entry.needs_podcast_inbox and not podcast_inbox:
+                enabled = False
+            if entry.needs_podcast_library and not podcast_library:
                 enabled = False
             if entry.needs_tidal_collection and not tidal_collection:
                 enabled = False
@@ -6503,7 +6520,12 @@ class LiteFrame(wx.Frame):
                 enabled = False
             if item.IsEnabled() != enabled:
                 item.Enable(enabled)
-            if entry.checkable and entry.action in podcast_sort_actions:
+            if entry.checkable and entry.action in podcast_library_sort_actions:
+                item.Check(
+                    podcast_library_sort_actions[entry.action]
+                    == getattr(self, "_podcast_library_sort_mode", SORT_CUSTOM)
+                )
+            elif entry.checkable and entry.action in podcast_sort_actions:
                 item.Check(
                     podcast_sort_actions[entry.action]
                     == self._podcast_inbox_sort_mode
@@ -10294,6 +10316,11 @@ class LiteFrame(wx.Frame):
             and self.navigator.active is SessionId.PODCASTS
             and self.navigator.session.library_view is LibraryView.PODCAST_INBOX
         )
+        podcast_library = (
+            not player
+            and self.navigator.active is SessionId.PODCASTS
+            and self.navigator.session.library_view is LibraryView.PODCAST_LIBRARY
+        )
         tidal_collection = (
             not player
             and self.navigator.active is SessionId.TIDAL
@@ -10370,6 +10397,7 @@ class LiteFrame(wx.Frame):
                 is LibraryView.ACTIVE_RADIO_RECORDINGS
             ),
             podcast_inbox=podcast_inbox,
+            podcast_library=podcast_library,
             podcast_session=self.navigator.active is SessionId.PODCASTS,
             tidal_session=self.navigator.active is SessionId.TIDAL,
             tidal_collection=tidal_collection,
@@ -10815,6 +10843,12 @@ class LiteFrame(wx.Frame):
             self._show_podcast_inbox()
         elif action is Action.VIEW_PODCAST_DOWNLOADS:
             self._show_podcast_downloads()
+        elif action in (
+            Action.SORT_PODCAST_LIBRARY_ADDED,
+            Action.SORT_PODCAST_LIBRARY_ALPHABETICAL,
+            Action.SORT_PODCAST_LIBRARY_CUSTOM,
+        ):
+            self._set_podcast_library_sort(action)
         elif action in (
             Action.SORT_PODCAST_INBOX_ADDED,
             Action.SORT_PODCAST_INBOX_ALPHABETICAL,
@@ -14314,6 +14348,7 @@ class LiteFrame(wx.Frame):
         preferred_id: str | None = None,
         *,
         completion_message: str = "",
+        sort_label: str = "",
         after_refresh: Callable[[], None] | None = None,
         announce_result: bool = True,
     ) -> None:
@@ -14324,9 +14359,18 @@ class LiteFrame(wx.Frame):
             return
 
         def work():
-            return self.podcasts.subscriptions()
+            ordered = getattr(self.podcasts, "ordered_subscriptions", None)
+            if callable(ordered):
+                return ordered(
+                    getattr(self, "_podcast_library_sort_mode", SORT_CUSTOM),
+                    collation=getattr(self, "_collation", None),
+                )
+            # Minimalne atrapy starszych testów udostępniają tylko odczyt
+            # źródeł. Produkcja zawsze przechodzi przez metodę powyżej.
+            return self.podcasts.subscriptions(), True
 
-        def done(subscriptions) -> None:
+        def done(result) -> None:
+            subscriptions, order_matches_amc = result
             if completion_message:
                 state = self.navigator.sessions[SessionId.PODCASTS]
                 if (
@@ -14336,7 +14380,10 @@ class LiteFrame(wx.Frame):
                 ):
                     return
             events = self.navigator.apply_podcast_library(
-                subscription_rows(subscriptions), preferred_id=preferred_id
+                subscription_rows(subscriptions),
+                preferred_id=preferred_id,
+                sort_label=sort_label,
+                order_matches_amc=order_matches_amc,
             )
             if completion_message:
                 self._sync_views()
@@ -14465,6 +14512,54 @@ class LiteFrame(wx.Frame):
         self._transient_preview_return = None
         self._open_podcast_aggregate(
             OpenPodcastAggregateView(LibraryView.PODCAST_DOWNLOADS)
+        )
+
+    def _set_podcast_library_sort(self, action: Action) -> None:
+        """Alt+1/2/3 on the source library, persisted only by AMC Test."""
+
+        state = self.navigator.sessions[SessionId.PODCASTS]
+        if (
+            self.navigator.active is not SessionId.PODCASTS
+            or state.view is not View.LIST
+            or state.library_view is not LibraryView.PODCAST_LIBRARY
+        ):
+            self.announcer.say(
+                "Sortowanie Alt+1, Alt+2 i Alt+3 działa w Bibliotece podcastów i kanałów"
+            )
+            return
+
+        choices = {
+            Action.SORT_PODCAST_LIBRARY_ADDED: (
+                SORT_ADDED_NEWEST,
+                "Ostatnio dodane na początku",
+            ),
+            Action.SORT_PODCAST_LIBRARY_ALPHABETICAL: (
+                SORT_ALPHABETICAL,
+                "Alfabetycznie",
+            ),
+            Action.SORT_PODCAST_LIBRARY_CUSTOM: (
+                SORT_CUSTOM,
+                "Kolejność własna",
+            ),
+        }
+        choice = choices.get(action)
+        if choice is None:
+            return
+        mode, label = choice
+        previous_override = self.state.podcast_library_sort_mode
+        previous_effective = self._podcast_library_sort_mode
+        preferred_id = state.model.selected_id
+        self.state.podcast_library_sort_mode = mode
+        self._podcast_library_sort_mode = mode
+        if not self._save_state():
+            self.state.podcast_library_sort_mode = previous_override
+            self._podcast_library_sort_mode = previous_effective
+            self._refresh_menu_state()
+            return
+        self._refresh_menu_state()
+        self._open_podcast_library(
+            preferred_id=preferred_id,
+            sort_label=label,
         )
 
     def _set_podcast_inbox_sort(self, action: Action) -> None:
@@ -22843,6 +22938,11 @@ class LiteFrame(wx.Frame):
                 and self.navigator.active is SessionId.PODCASTS
                 and session.library_view is LibraryView.PODCAST_INBOX
             ),
+            podcast_library=(
+                not player
+                and self.navigator.active is SessionId.PODCASTS
+                and session.library_view is LibraryView.PODCAST_LIBRARY
+            ),
             podcast_session=self.navigator.active is SessionId.PODCASTS,
             tidal_session=self.navigator.active is SessionId.TIDAL,
             tidal_collection=(
@@ -22940,9 +23040,20 @@ class LiteFrame(wx.Frame):
         return True
 
     def _show_help(self) -> None:
+        # Pełna pomoc używa tej samej bieżącej dostępności co menu i paleta.
+        # Nie reklamuje sortowania innego widoku ani polecenia bez zaznaczenia.
+        self._refresh_menu_state()
+        available_actions = {
+            entry.action
+            for item, entry in getattr(self, "_menu_items", ())
+            if entry.action is not None and item.IsEnabled()
+        }
         lines = [
             f"{chord}\t{label}"
-            for chord, label in describe(SESSION_LABELS[self.navigator.active])
+            for chord, label in describe(
+                SESSION_LABELS[self.navigator.active],
+                available_actions,
+            )
         ]
         wx.MessageBox("\n".join(lines), "Skroty klawiszowe", wx.OK | wx.ICON_INFORMATION, self)
 

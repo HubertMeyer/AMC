@@ -27,6 +27,7 @@ from amc_wx_lite.shortcuts import (
     LIST_VIEW,
     PLAYER_VIEW,
     PODCAST_INBOX_LIST_VIEW,
+    PODCAST_LIBRARY_LIST_VIEW,
     PODCAST_SESSION_VIEW,
     RADIO_LIST_VIEW,
     RADIO_PLAYER_VIEW,
@@ -150,6 +151,7 @@ def test_shortcut_shown_in_menu_is_the_shortcut_that_really_works() -> None:
     """
     real: dict[str, set[Action]] = {}
     for table in (
+        PODCAST_LIBRARY_LIST_VIEW,
         PODCAST_INBOX_LIST_VIEW,
         PODCAST_SESSION_VIEW,
         LIST_VIEW,
@@ -216,7 +218,7 @@ def test_no_duplicate_labels_or_shortcuts() -> None:
         )
     for chord in ("Alt+1", "Alt+2", "Alt+3"):
         contextual = duplicates.get(chord, [])
-        assert len(contextual) == (6 if chord in ("Alt+1", "Alt+2") else 5)
+        assert len(contextual) == (7 if chord in ("Alt+1", "Alt+2") else 6)
         assert all(not item.accelerator for item in contextual), (
             f"kontekstowe {chord} nie moze byc akceleratorem okna"
         )

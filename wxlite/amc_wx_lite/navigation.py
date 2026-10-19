@@ -2528,7 +2528,12 @@ class Navigator:
         return [Announce(f"Stacje: {len(rows)}{suffix}")]
 
     def apply_podcast_library(
-        self, rows: list[Row], preferred_id: str | None = None
+        self,
+        rows: list[Row],
+        preferred_id: str | None = None,
+        *,
+        sort_label: str = "",
+        order_matches_amc: bool = True,
     ) -> list[object]:
         """Apply the shared podcast/YouTube source list without touching files."""
         state = self.sessions[SessionId.PODCASTS]
@@ -2540,10 +2545,20 @@ class Navigator:
         state.model.replace(rows, preferred_id=preferred_id or state.library_return_id)
         state.view = View.LIST
         state.library_return_id = state.model.selected_id
-        return [Announce(
-            f"Podcasty i YouTube, {len(rows)} {_items_word(len(rows))}"
-            if rows else "Podcasty i YouTube, pusto"
-        )]
+        if sort_label and state.model.selected_row is not None:
+            selected = state.model.selected_row
+            message = (
+                f"{sort_label}. {selected.title}, "
+                f"{state.model.selected_index + 1} z {len(rows)}"
+            )
+        else:
+            message = (
+                f"Podcasty i YouTube, {len(rows)} {_items_word(len(rows))}"
+                if rows else "Podcasty i YouTube, pusto"
+            )
+        if not order_matches_amc:
+            message = f"{message}, kolejność zastępcza"
+        return [Announce(message)]
 
     def apply_podcast_episodes(
         self,

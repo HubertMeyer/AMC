@@ -49,6 +49,9 @@ class PodcastSubscription:
     source_kind: int
     feed_url: str = ""
     author: str = ""
+    # Trwała kolejność z ``podcast_subscriptions.ordinal``. Pozostaje danymi
+    # modelu i nigdy nie wchodzi do etykiety dostępnościowej wiersza.
+    ordinal: int = 0
 
     @property
     def kind_label(self) -> str:
@@ -448,7 +451,7 @@ class PodcastSource:
             with closing(self._open()) as connection:
                 records = connection.execute(
                     """
-                    SELECT id, title, feed_url, payload_json
+                    SELECT id, ordinal, title, feed_url, payload_json
                     FROM podcast_subscriptions
                     WHERE is_in_library = 1
                     ORDER BY ordinal
@@ -471,8 +474,57 @@ class PodcastSource:
                 source_kind=_source_kind(data),
                 feed_url=str(record["feed_url"] or "").strip(),
                 author=_author_label(_get(data, "Author", "")),
+                ordinal=_as_int(record["ordinal"]),
             ))
         return result
+
+    def ordered_subscriptions(
+        self,
+        sort_mode: str,
+        *,
+        collation: HostCollation | None = None,
+    ) -> tuple[list[PodcastSubscription], bool]:
+        """Trzy jawne porządki głównej Biblioteki bez zapisu do jej bazy.
+
+        ``Custom`` zachowuje dokładne ``ORDER BY ordinal``. ``AddedNewest``
+        odwraca tę trwałą kolejność, bo nowe źródło jest dopisywane na jej
+        końcu. ``Alphabetical`` używa kluczy hosta C# zgodnych z polskim
+        porównaniem. Gdy host nie może ich policzyć, zwracamy deterministyczny
+        porządek zastępczy i jawnie oznaczamy go jako niezgodny.
+        """
+
+        subscriptions = self.subscriptions()
+        mode = (
+            sort_mode
+            if sort_mode in (SORT_ADDED_NEWEST, SORT_ALPHABETICAL, SORT_CUSTOM)
+            else SORT_CUSTOM
+        )
+        if mode == SORT_CUSTOM:
+            return subscriptions, True
+        if mode == SORT_ADDED_NEWEST:
+            return list(reversed(subscriptions)), True
+
+        fallback = sorted(
+            subscriptions,
+            key=lambda item: (
+                item.title.casefold(),
+                item.ordinal,
+                item.subscription_id,
+            ),
+        )
+        if collation is None:
+            return fallback, False
+        try:
+            return (
+                collation.sort_rows(
+                    subscriptions,
+                    key=lambda item: item.title,
+                    mode=COLLATION_TITLE_IGNORE_CASE,
+                ),
+                True,
+            )
+        except HostCollationUnavailable:
+            return fallback, False
 
     def subscription(self, subscription_id: str) -> PodcastSubscription | None:
         try:

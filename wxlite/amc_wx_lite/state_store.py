@@ -44,6 +44,11 @@ def _read_podcast_inbox_sort_mode(raw: object) -> str | None:
     return raw if isinstance(raw, str) and raw in _COLLECTION_SORT_MODES else None
 
 
+def _read_podcast_library_sort_mode(raw: object) -> str | None:
+    """Validate the private main-library mode without exposing model text."""
+    return raw if isinstance(raw, str) and raw in _COLLECTION_SORT_MODES else None
+
+
 def _read_tidal_sort_modes(raw: object) -> dict[str, str]:
     """Keep only supported TIDAL views and model values.
 
@@ -511,6 +516,10 @@ class LiteState:
     #: Prywatne nadpisanie kolejnosci widoku „Nowe odcinki”. ``None`` znaczy:
     #: czytaj wybor glownego AMC, ale nigdy nie zapisuj do jego ``state.json``.
     podcast_inbox_sort_mode: str | None = None
+    #: Prywatny porządek głównej listy podcastów, kanałów YouTube i kolekcji
+    #: Media internetowe. ``None`` zachowuje dotychczasową kolejność własną z
+    #: bazy, a jawny wybór przeżywa restart wyłącznie w magazynie AMC Test.
+    podcast_library_sort_mode: str | None = None
     #: Prywatna kolejka utworów przekazywanych do oryginalnego TIDALa.
     #: Nie zapisujemy jej do wspólnego state.json, aby dwa programy nie
     #: ścigały się o profil. Pola techniczne pozostają wyłącznie modelem.
@@ -709,6 +718,9 @@ class StateStore:
             podcast_inbox_sort_mode=_read_podcast_inbox_sort_mode(
                 raw.get("podcast_inbox_sort_mode")
             ),
+            podcast_library_sort_mode=_read_podcast_library_sort_mode(
+                raw.get("podcast_library_sort_mode")
+            ),
             tidal_queue_items=_read_tidal_queue(raw.get("tidal_queue_items")),
             tidal_sort_modes=_read_tidal_sort_modes(raw.get("tidal_sort_modes")),
             spotify_sort_modes=_read_spotify_sort_modes(
@@ -769,6 +781,11 @@ class StateStore:
         )
         if podcast_sort_mode is not None:
             payload["podcast_inbox_sort_mode"] = podcast_sort_mode
+        podcast_library_sort_mode = _read_podcast_library_sort_mode(
+            state.podcast_library_sort_mode
+        )
+        if podcast_library_sort_mode is not None:
+            payload["podcast_library_sort_mode"] = podcast_library_sort_mode
         payload["tidal_queue_items"] = _read_tidal_queue(state.tidal_queue_items)
         tidal_sort_modes = _read_tidal_sort_modes(state.tidal_sort_modes)
         if tidal_sort_modes:
