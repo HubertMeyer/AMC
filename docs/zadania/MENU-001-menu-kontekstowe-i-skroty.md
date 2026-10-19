@@ -1,7 +1,7 @@
 # MENU-001 — menu kontekstowe i skróty zależne od sesji
 
 Status: **W trakcie; najnowsza korekta nazw i menu harmonogramów jest
-przetestowana w źródłach, ale jeszcze niezainstalowana**.
+przetestowana, zainstalowana i uruchomiona; czeka na odbiór NVDA**.
 
 ## Materiał do dokumentacji użytkownika
 
@@ -100,8 +100,8 @@ w osobistej umiejętności Codexa `accessible-desktop-contracts`.
 
 ## Znane ograniczenia
 
-- Najnowsze nazwy i menu harmonogramów są w commicie `4b85e0c8`, ale nie w
-  bieżącej instalacji użytkownika; wymagają jeszcze instalacji i odbioru NVDA.
+- Najnowsze nazwy i menu harmonogramów z commitu `4b85e0c8` są w bieżącej
+  instalacji użytkownika; wymagają jeszcze odbioru NVDA.
 
 - Odbiór NVDA musi potwierdzić menu listy i odtwarzacza w Plikach lokalnych,
   Radiu, Podcastach i YouTube, Spotify, TIDAL, WiiM i Sonos.
@@ -112,8 +112,10 @@ w osobistej umiejętności Codexa `accessible-desktop-contracts`.
 
 ## Wersja i commit
 
-- Korekta po ręcznym odbiorze: `4b85e0c8` — źródła i testy. Instalacja oraz
-  uruchomienie tej rewizji jeszcze niewykonane.
+- Korekta po ręcznym odbiorze: `4b85e0c8` — źródła, testy, instalacja i
+  uruchomienie zweryfikowane.
+- Instalacja zawierająca korektę:
+  `2026.10.19-0c098eb5dde2b039f5d6f86c415559d63c84adcc-9e2be1b9`.
 
 - Źródła: commit `fdc26b83` — `fix(amc): uporzadkuj nagrania menu i playlisty
   Spotify`.

@@ -9,9 +9,9 @@ użytkownika. Nie zmienia statusu ręcznego odbioru NVDA poszczególnych funkcji
 ## Punkt odniesienia wersji
 
 - Najnowsza zainstalowana i uruchomiona paczka AMC Test:
-  `2026.10.19-8093e22adfa9b6abfc72c35c5c7029eaaade88c8-718893c9`.
-- Poprawki z commitu `4b85e0c8` są przetestowane w źródłach, lecz nie należą
-  jeszcze do powyższej instalacji.
+  `2026.10.19-0c098eb5dde2b039f5d6f86c415559d63c84adcc-9e2be1b9`.
+- Poprawki z commitu `4b85e0c8` należą do powyższej instalacji. Ręczny odbiór
+  harmonogramów, menu i playlist Spotify nadal pozostaje otwarty.
 - Fundament profili AMC12 został skompilowany i sprawdzony; zbudowano czystą
   paczkę publiczną oraz lokalny instalator z kontrolą integralności. Nie
   zainstalowano ich i nie opublikowano.
@@ -38,7 +38,9 @@ użytkownika. Nie zmienia statusu ręcznego odbioru NVDA poszczególnych funkcji
    `Ctrl+D`; menu pod `Shift+F10`; segmentowe wpisywanie daty, czasu i czasu
    trwania; powrót fokusu i komunikaty NVDA. Źródło:
    [SCHED-001-edytor-i-klawisze-harmonogramow.md](SCHED-001-edytor-i-klawisze-harmonogramow.md).
-5. Playlisty Spotify — `Ctrl+P`, `Ctrl+Shift+P`, jedna lub wiele playlist,
+5. Playlisty Spotify — przed pierwszą próbą zapisu po aktualizacji `Ctrl+F5`
+   odnawia zgodę konta na prywatne i publiczne playlisty; dalej `Ctrl+P`,
+   `Ctrl+Shift+P`, jedna lub wiele playlist,
    jednoznacznie nazwane pole nowej playlisty, tworzenie playlisty prywatnej
    lub publicznej, jasne rozróżnienie przygotowania od zapisu oraz uczciwe
    wyniki częściowe. Ponowny ręczny odbiór konta nadal otwarty. Źródło:
@@ -119,8 +121,8 @@ użytkownika. Nie zmienia statusu ręcznego odbioru NVDA poszczególnych funkcji
 - Nie oznaczać ręcznych testów NVDA jako zaliczonych, dopóki użytkownik ich nie
   potwierdzi.
 - Nie przedstawiać testów atrap Spotify/TIDAL jako próby prawdziwego konta.
-- Nie przedstawiać korekty `4b85e0c8` jako zainstalowanej przed zbudowaniem,
-  kontrolą integralności i podmianą AMC Test.
+- Korekta `4b85e0c8` jest zainstalowana; nadal nie przedstawiać jej jako
+  odebranej z NVDA ani sprawdzonej zapisem na prawdziwym koncie Spotify.
 - Nie przedstawiać zbudowanej paczki i instalatora AMC12 jako instalacji albo
   wydania publicznego.
 - Nie obiecywać publicznego Sonosa przed działającym brokerem HTTPS i odbiorem

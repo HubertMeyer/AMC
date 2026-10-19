@@ -2,8 +2,8 @@
 
 ## Status
 
-Korekta po ręcznym odbiorze wdrożona w źródłach i przetestowana; nie została
-jeszcze zainstalowana w AMC Test.
+Korekta po ręcznym odbiorze została wdrożona, przetestowana, zainstalowana i
+uruchomiona w AMC Test; czeka na ponowny odsłuch z NVDA.
 
 ## Cel
 
@@ -188,9 +188,9 @@ manifest, SHA-256, instalacja, integralność i uruchomienie — zaliczone.
 
 ## Znane ograniczenia
 
-- Korekta z commitu `4b85e0c8` nie została jeszcze zainstalowana ani odebrana
-  z prawdziwym NVDA. Poprzednia instalacja nie jest dowodem działania tej
-  korekty.
+- Korekta z commitu `4b85e0c8` jest już w bieżącej instalacji, ale nie została
+  jeszcze odebrana z prawdziwym NVDA. Testy automatyczne i instalacja nie są
+  dowodem działania mowy na komputerze użytkownika.
 
 - Nie wykonano jeszcze rzeczywistego odsłuchu NVDA. Należy sprawdzić pierwsze
   wejście, każdą strzałkę, cyfry, zapis, anulowanie i ponowne otwarcie.
@@ -205,8 +205,12 @@ manifest, SHA-256, instalacja, integralność i uruchomienie — zaliczone.
 
 ## Wersja i commit
 
-- Korekta po ręcznym odbiorze: `4b85e0c8` — kod i testy; pełna regresja
-  zaliczona. Kompilacja pakietu, instalacja i uruchomienie jeszcze niewykonane.
+- Korekta po ręcznym odbiorze: `4b85e0c8` — kod i testy; pełna regresja,
+  kompilacja pakietu, instalacja i uruchomienie zaliczone.
+- Instalacja zawierająca korektę:
+  `2026.10.19-0c098eb5dde2b039f5d6f86c415559d63c84adcc-9e2be1b9`;
+  właściwy uruchamiacz, interfejs wxPython i host zweryfikowane 19 października
+  2026. Ręczny odbiór NVDA pozostaje otwarty.
 
 - Źródła i testy: commit `689a8c77`.
 - Kompilacja: Release, zaliczona bez ostrzeżeń i błędów; pełna regresja po

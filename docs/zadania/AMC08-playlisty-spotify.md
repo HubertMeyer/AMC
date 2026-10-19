@@ -1,7 +1,8 @@
 # AMC08 — natywne playlisty Spotify
 
-Status: **Korekta po próbie na prawdziwym koncie wdrożona w źródłach i
-przetestowana na atrapach; jeszcze niezainstalowana i niepowtórzona na koncie**.
+Status: **Korekta po próbie na prawdziwym koncie wdrożona, przetestowana na
+atrapach, zainstalowana i uruchomiona; wymaga ponownego logowania oraz odbioru
+na prawdziwym koncie**.
 
 Źródło decyzji: zatwierdzona analiza historyczna tylko do odczytu
 `D:\Projekty Codex\Accessible Multimedia Controller\AMC08_PLAYLISTY_SPOTIFY_2026-10-18.md`.
@@ -149,9 +150,14 @@ przetestowana na atrapach; jeszcze niezainstalowana i niepowtórzona na koncie**
 
 ## Znane ograniczenia
 
-- Korekta `4b85e0c8` nie została jeszcze zainstalowana. Nie wykonano po niej
-  kolejnego zapisu na prawdziwym koncie Spotify; odbiór sieciowy wymaga
-  świadomej próby użytkownika.
+- Korekta `4b85e0c8` została zainstalowana. Nie wykonano po niej kolejnego
+  zapisu na prawdziwym koncie Spotify; odbiór sieciowy wymaga świadomej próby
+  użytkownika.
+- Token zapisany przed tą korektą nie zawiera zakresów
+  `playlist-modify-private` i `playlist-modify-public`. Przed próbą tworzenia
+  i dodawania trzeba wykonać `Ctrl+F5` w sesji Spotify i ponownie zatwierdzić
+  logowanie. Bez tego Spotify prawidłowo odmówi zapisu niezależnie od działania
+  interfejsu AMC.
 
 - Odtwarzanie całej playlisty Spotify przez AMC nadal nie jest obiecywane.
 - Zewnętrzny odbiór na prawdziwym koncie, w tym ponowne OAuth z nowymi
@@ -174,8 +180,11 @@ przetestowana na atrapach; jeszcze niezainstalowana i niepowtórzona na koncie**
 
 ## Wersja i commit
 
-- Korekta po odbiorze: `4b85e0c8` — kod, testy wxPython i test hosta C#.
-  Pełnego pakietu AMC Test jeszcze nie zbudowano ani nie zainstalowano.
+- Korekta po odbiorze: `4b85e0c8` — kod, testy wxPython i test hosta C#;
+  pełny pakiet AMC Test zbudowano, zainstalowano i uruchomiono.
+- Instalacja zawierająca korektę:
+  `2026.10.19-0c098eb5dde2b039f5d6f86c415559d63c84adcc-9e2be1b9`;
+  publikacji nie wykonano.
 
 - Profil docelowy: bieżący AMC Test.
 - Kod źródłowy: commit `697d1a73fd66c12bfa061f4d5f55a93ddaa36e85`.
