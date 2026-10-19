@@ -174,5 +174,6 @@ zakończyło się wynikiem `OK`.
 - Commit etapu A: `515898c8`.
 - Commit etapu B: `662f9c52`.
 - Commit etapu C: `c9d01839`.
-- Korekta litery dostępu menu: commit następujący po zapisaniu tej zmiany;
-  instalacja i publikacja jeszcze bez zmian.
+- Korekta litery dostępu menu: `c07e6c21` —
+  `fix(amc14): usuń kolizję litery dostępu menu`; instalacja i publikacja
+  jeszcze bez zmian.
