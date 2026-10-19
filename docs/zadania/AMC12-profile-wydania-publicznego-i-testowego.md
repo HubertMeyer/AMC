@@ -115,7 +115,7 @@ dowodem kompilacji, instalacji ani publikacji.
 ## Wersja i commit
 
 - Data pracy: 19 października 2026.
-- Kod: lokalna zmiana źródłowa AMC12, commit zostanie wpisany po utworzeniu.
+- Kod i testy fundamentu: lokalny commit `d2a34ecf`.
 - Kompilacja: nie wykonywano dla tego etapu.
 - Instalacja: nie wykonywano dla tego etapu.
 - Publikacja: nie wykonywano; GitHub nie został użyty.
