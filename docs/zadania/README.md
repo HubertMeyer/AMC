@@ -97,8 +97,9 @@ zmian, wymagający korekty użytkownika:
   Zatwierdzona specyfikacja:
   `D:\Projekty Codex\Accessible Multimedia Controller\AMC13_TIMESHIFT_RADIA_2026-10-18.md`.
   Eksport fragmentów Time Shiftu pozostaje późniejszym rozszerzeniem.
-- `AMC08` — **Korekta po próbie na prawdziwym koncie zainstalowana; przed
-  ponowną próbą wymaga `Ctrl+F5` i zgody na zakresy zapisu playlist** — natywne playlisty
+- `AMC08` — **Kod zainstalowany, ale prawdziwy profil ujawnił brak zakresów
+  zapisu i brak wejścia ponownego OAuth w AMC Test; funkcja jeszcze nieodebrana**
+  — natywne playlisty
   Spotify w AMC Test: `Ctrl+P`, `Ctrl+Shift+P`, pobranie katalogu raz na
   uruchomienie, natychmiastowa widoczność nowej playlisty i zapamiętanie
   ostatnich celów. Mechanizm ma partycje usług i kont, aby kolejne integracje
