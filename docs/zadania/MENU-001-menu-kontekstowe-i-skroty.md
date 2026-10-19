@@ -88,8 +88,10 @@ w osobistej umiejętności Codexa `accessible-desktop-contracts`.
 
 - Źródła: commit `fdc26b83` — `fix(amc): uporzadkuj nagrania menu i playlisty
   Spotify`.
-- Trwały kontrakt repozytorium i umiejętność osobista: gotowe 19 października
-  2026; numer commitu repozytorium zostanie dopisany po zamknięciu etapu.
+- Trwały kontrakt repozytorium: commit `e317cbbc` — `refactor(amc): ujednolic
+  listy uslug i kontrakt menu`. Umiejętność osobista
+  `accessible-desktop-contracts` jest zapisana poza repozytorium w katalogu
+  umiejętności Codexa.
 - Testy ukierunkowane: zaliczone.
 - Kompilacja, instalacja i uruchomienie: jeszcze niewykonane.
 - Publikacja: niewykonana i niedozwolona bez osobnego polecenia użytkownika.

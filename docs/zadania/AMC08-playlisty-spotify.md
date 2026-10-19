@@ -154,5 +154,6 @@ dla kolejnych usług wdrożone w źródłach i testach; czeka na instalację ora
 - Korekta cache i ostatniego celu: commit `fdc26b83` — `fix(amc): uporzadkuj
   nagrania menu i playlisty Spotify`; kompilacja i instalacja jeszcze
   niewykonane.
-- Uogólnienie dla kolejnych usług: źródła i testy gotowe 19 października 2026;
-  numer commitu zostanie dopisany po zamknięciu etapu.
+- Uogólnienie dla kolejnych usług: commit `e317cbbc` — `refactor(amc):
+  ujednolic listy uslug i kontrakt menu`; źródła i testy gotowe 19 października
+  2026, kompilacja i instalacja jeszcze niewykonane.
