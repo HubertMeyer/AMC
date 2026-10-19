@@ -408,6 +408,12 @@ internal sealed class LiteEngineHandlers : IDisposable
                 SpotifyDescription(request.Args),
             [LiteSpotifyCatalogContract.MembershipOperation] = (request, _) =>
                 SpotifyCollectionMembership(request.Args),
+            [LiteSpotifyCatalogContract.PlaylistTargetsOperation] = (_, _) =>
+                SpotifyPlaylistTargets(),
+            [LiteSpotifyCatalogContract.PlaylistCreateOperation] = (request, _) =>
+                SpotifyPlaylistCreate(request.Args),
+            [LiteSpotifyCatalogContract.PlaylistAddItemsOperation] = (request, _) =>
+                SpotifyPlaylistAddItems(request.Args),
             [LiteSpotifyPlaybackContract.PlayOperation] = (request, events) =>
                 RequireSpotifyPlayback().Play(request.Args, events),
             [LiteTidalDesktopContract.PlayOperation] = (request, _) =>
@@ -2783,6 +2789,14 @@ internal sealed class LiteEngineHandlers : IDisposable
 
     private object SpotifyCollectionMembership(JsonElement args) =>
         RequireSpotify().ChangeMembership(args);
+
+    private object SpotifyPlaylistTargets() => RequireSpotify().PlaylistTargets();
+
+    private object SpotifyPlaylistCreate(JsonElement args) =>
+        RequireSpotify().CreatePlaylist(args);
+
+    private object SpotifyPlaylistAddItems(JsonElement args) =>
+        RequireSpotify().AddPlaylistItems(args);
 
     private LiteWiiMCoordinator RequireWiiM() =>
         _wiim ?? throw new LiteRequestException(

@@ -138,6 +138,39 @@ def test_spotify_membership_sends_only_selected_catalog_items() -> None:
     assert "credential" not in serialized
 
 
+def test_spotify_playlist_operations_use_narrow_host_contracts() -> None:
+    client, calls = recording_client()
+    item = {
+        "itemId": "row-1",
+        "externalId": "track-1",
+        "title": "Utwór",
+        "kind": "track",
+        "artist": "Wykonawca",
+    }
+
+    client.spotify_playlist_targets()
+    client.spotify_playlist_create("Nowa", is_public=True)
+    client.spotify_playlist_add_items(["playlist-1"], [item])
+
+    assert calls == [
+        ("spotify.playlistTargets", None, 120.0),
+        (
+            "spotify.playlistCreate",
+            {"name": "Nowa", "isPublic": True},
+            120.0,
+        ),
+        (
+            "spotify.playlistAddItems",
+            {"playlistIds": ["playlist-1"], "items": [item]},
+            180.0,
+        ),
+    ]
+    serialized = repr(calls).casefold()
+    assert "token" not in serialized
+    assert "credential" not in serialized
+    assert "snapshot" not in serialized
+
+
 def test_spotify_play_sends_only_safe_item_identity_and_playback_values() -> None:
     client, calls = recording_client()
 

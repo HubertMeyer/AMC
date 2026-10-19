@@ -92,10 +92,11 @@ internal static class SpotifyMembershipWriteTests
         Assert(
             SpotifyScopes.Requested.Contains("user-follow-modify", StringComparison.Ordinal),
             "zakres zapisu obserwowanych w prośbie o logowanie");
-        // Playlisty poza zakresem tej zmiany: nie prosimy o zgodę bez funkcji.
+        // Natywne playlisty mają osobną, wdrożoną funkcję Ctrl+Shift+P.
         Assert(
-            !SpotifyScopes.Requested.Contains("playlist-modify", StringComparison.Ordinal),
-            "brak zakresów zmiany playlist");
+            SpotifyScopes.Requested.Contains("playlist-modify-private", StringComparison.Ordinal)
+                && SpotifyScopes.Requested.Contains("playlist-modify-public", StringComparison.Ordinal),
+            "jawne zakresy zmiany playlist prywatnych i publicznych");
         Assert(
             SpotifyScopes.WriteScopeForUriType("track") == "user-library-modify",
             "utwór wymaga user-library-modify");
@@ -278,8 +279,8 @@ internal static class SpotifyMembershipWriteTests
 
     private static void TestPlaylistaPozaZakresem()
     {
-        // Playlisty poza zakresem tej zmiany: brak funkcji i brak zakresu.
-        // Nie wolno udawać, że się udało.
+        // Playlista nadal nie jest elementem zapisywanym W BIBLIOTECE przez
+        // /me/library. Osobna funkcja playlist używa własnego klienta i zakresów.
         var atrapa = new SpotifyLibraryHttpStub();
         using var client = new SpotifyLibraryWriteClient(new HttpClient(atrapa));
         var wyjatek = Throws(() => client.ChangeMembershipAsync(

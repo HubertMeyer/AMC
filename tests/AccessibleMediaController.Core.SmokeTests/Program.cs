@@ -27,6 +27,11 @@ if (args.Length == 1 && args[0] == "--spotify-membership")
     try { SpotifyMembershipWriteTests.Run(); return 0; }
     catch (Exception exception) { Console.Error.WriteLine(exception); return 1; }
 }
+if (args.Length == 1 && args[0] == "--spotify-playlists")
+{
+    try { SpotifyPlaylistWriteTests.Run(); return 0; }
+    catch (Exception exception) { Console.Error.WriteLine(exception); return 1; }
+}
 if (args.Length == 1 && args[0] == "--spotify-migration-review")
 {
     try { SpotifyMigrationReviewTests.Run(); return 0; }
@@ -235,6 +240,7 @@ var tests = new (string Name, Action Test)[]
     ("Numery sesji z dziurami i silnik Spotify wg wyjścia", SessionSlotGapsAndEngineTests.Run),
     ("Jedna sesja Spotify i silnik Librespot/SDK z zapisu", SpotifySingleSessionEngineTests.Run),
     ("Zapis Ulubionych, Biblioteki i usuwania Spotify na API konta", SpotifyMembershipWriteTests.Run),
+    ("Natywne playlisty Spotify: zakresy, partie i wyniki częściowe", SpotifyPlaylistWriteTests.Run),
     ("Transport osobnego procesu hosta Librespot", LibrespotHostClientTests.Run),
     ("Kategorie wykonawcy TIDAL, paginacja i rozdzielenie zasobów", TidalArtistBrowseTests.Run),
     ("Oddzielony tor oficjalnego odtwarzania TIDAL", TestTidalPlaybackBoundary),

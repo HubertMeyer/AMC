@@ -521,6 +521,7 @@ SPOTIFY_SUPPORTED_ACTIONS = frozenset({
     Action.SPOTIFY_RELATIONS,
     Action.SPOTIFY_TOGGLE_LIBRARY,
     Action.SPOTIFY_TOGGLE_FAVORITE,
+    Action.MANAGE_PLAYLIST_MEMBERSHIP,
     Action.SPOTIFY_VIEW_LIKED,
     Action.SPOTIFY_VIEW_ALBUMS,
     Action.SPOTIFY_VIEW_ARTISTS,
@@ -1651,9 +1652,23 @@ def _help_entries() -> list[tuple[str, str, Action]]:
     return out
 
 
-def describe() -> list[tuple[str, str]]:
-    """Tekst spisu F1 bez technicznych identyfikatorów poleceń."""
-    return [(chord, label) for chord, label, _action in _help_entries()]
+def describe(session_label: str | None = None) -> list[tuple[str, str]]:
+    """Tekst spisu F1 bez technicznych identyfikatorów poleceń.
+
+    Nazwa sesji jest opcjonalna dla zgodności narzędzi diagnostycznych. Okno
+    AMC przekazuje ją zawsze, dzięki czemu polecenia kontekstowe mają ten sam
+    opis co menu, Ctrl+F1 i paleta.
+    """
+    spotify = (session_label or "").casefold() == "spotify"
+    return [
+        (
+            chord,
+            "Dodaj do playlist Spotify lub utwórz playlistę"
+            if spotify and action is Action.MANAGE_PLAYLIST_MEMBERSHIP
+            else label,
+        )
+        for chord, label, action in _help_entries()
+    ]
 
 
 def describe_action(action: Action) -> str:
@@ -1689,7 +1704,12 @@ def keyboard_help_announcement(
     shortcut = readable_chord(chord)
     if action is None:
         return f"{shortcut}. Brak polecenia w sesji {session_label}"
-    label = describe_action(action)
+    label = (
+        "Dodaj do playlist Spotify lub utwórz playlistę"
+        if action is Action.MANAGE_PLAYLIST_MEMBERSHIP
+        and session_label.casefold() == "spotify"
+        else describe_action(action)
+    )
     if not available:
         return f"{shortcut}. {label}. Niedostępne w sesji {session_label}"
     return f"{shortcut}. {label}. {session_label}"

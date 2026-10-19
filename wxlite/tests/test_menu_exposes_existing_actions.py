@@ -195,7 +195,7 @@ def test_no_duplicate_labels_or_shortcuts() -> None:
     assert set(duplicates) <= {
         "Ctrl+O", "Ctrl+Shift+O", "Ctrl+N", "Ctrl+E", "Ctrl+D", "Ctrl+S",
         "Alt+1", "Alt+2", "Alt+3", "Alt+D", "Ctrl+F5", "Ctrl+Shift+L",
-        "Ctrl+Shift+U",
+            "Ctrl+Shift+U", "Ctrl+Shift+P",
         "B", "Shift+B", "Ctrl+Shift+B", "Ctrl+X", "Ctrl+V",
         "Alt+Up", "Alt+Down", "F2", "Delete",
         "Ctrl+U", "Ctrl+P", "I", "O", "S", "T"

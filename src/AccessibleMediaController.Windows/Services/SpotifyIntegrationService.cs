@@ -78,10 +78,11 @@ internal sealed class SpotifyIntegrationService(
         string.IsNullOrWhiteSpace(settings.CountryCode) ? "PL" : settings.CountryCode;
 
     private readonly SpotifyOAuthClient oauth = new();
-    private readonly SpotifyApiClient api = new();
+    private readonly SpotifyApiClient api = new(httpClient);
     // Pisarz dostaje TEN SAM transport co reszta serwisu: inaczej test z atrapą
     // HTTP mierzyłby wszystko poza jedynym miejscem, które faktycznie zapisuje.
     private readonly SpotifyLibraryWriteClient writer = new(httpClient);
+    private readonly SpotifyPlaylistWriteClient playlistWriter = new(httpClient);
     private readonly HttpClient http = httpClient ?? new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
     private readonly bool ownsHttpClient = httpClient is null;
     private readonly SemaphoreSlim operationGate = new(1, 1);
@@ -377,6 +378,123 @@ internal sealed class SpotifyIntegrationService(
         }
     }
 
+    /// <summary>Edytowalne natywne playlisty konta; bez rozpoczynania logowania.</summary>
+    public async Task<IReadOnlyList<SpotifyPlaylistTarget>> GetEditablePlaylistsAsync(
+        CancellationToken cancellationToken)
+    {
+        await operationGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            var tokens = await EnsureValidTokensAsync(cancellationToken).ConfigureAwait(false);
+            var profile = await ReadProfileAsync(tokens, cancellationToken).ConfigureAwait(false);
+            return await playlistWriter.GetEditablePlaylistsAsync(
+                    tokens.AccessToken,
+                    profile.UserId,
+                    cancellationToken)
+                .ConfigureAwait(false);
+        }
+        finally
+        {
+            operationGate.Release();
+        }
+    }
+
+    /// <summary>Tworzy natywną playlistę prywatną albo publiczną.</summary>
+    public async Task<SpotifyPlaylistTarget> CreatePlaylistAsync(
+        string name,
+        bool isPublic,
+        CancellationToken cancellationToken)
+    {
+        await operationGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            var tokens = await EnsureValidTokensAsync(cancellationToken).ConfigureAwait(false);
+            var profile = await ReadProfileAsync(tokens, cancellationToken).ConfigureAwait(false);
+            var scope = string.IsNullOrWhiteSpace(tokens.Scope) ? settings.GrantedScope : tokens.Scope;
+            return await playlistWriter.CreatePlaylistAsync(
+                    tokens.AccessToken,
+                    scope,
+                    profile.UserId,
+                    name,
+                    isPublic,
+                    cancellationToken)
+                .ConfigureAwait(false);
+        }
+        finally
+        {
+            operationGate.Release();
+        }
+    }
+
+    /// <summary>
+    /// Dodaje wybrane utwory lub odcinki do wskazanych playlist. Identyfikatory
+    /// playlist są ponownie rozwiązywane na świeżym odczycie konta, więc dane
+    /// przesłane przez interfejs nie decydują o prawie do zapisu.
+    /// </summary>
+    public async Task<SpotifyPlaylistWriteResult> AddItemsToPlaylistsAsync(
+        IReadOnlyList<string> playlistIds,
+        IReadOnlyList<MediaItem> items,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(playlistIds);
+        ArgumentNullException.ThrowIfNull(items);
+        await operationGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            var tokens = await EnsureValidTokensAsync(cancellationToken).ConfigureAwait(false);
+            var profile = await ReadProfileAsync(tokens, cancellationToken).ConfigureAwait(false);
+            var targets = await playlistWriter.GetEditablePlaylistsAsync(
+                    tokens.AccessToken,
+                    profile.UserId,
+                    cancellationToken)
+                .ConfigureAwait(false);
+            var requestedIds = playlistIds
+                .Where(id => !string.IsNullOrWhiteSpace(id))
+                .Select(id => id.Trim())
+                .ToHashSet(StringComparer.Ordinal);
+            var selectedTargets = targets.Where(target => requestedIds.Contains(target.Id)).ToArray();
+            if (selectedTargets.Length != requestedIds.Count)
+            {
+                throw new SpotifyWriteBlockedException(
+                    "Co najmniej jedna wybrana playlista nie jest już dostępna do edycji. Odśwież listę playlist.",
+                    SpotifyWriteBlockReason.Denied);
+            }
+            var uris = items
+                .Select(item => item.Kind switch
+                {
+                    MediaItemKind.Track when !string.IsNullOrWhiteSpace(item.ExternalId) =>
+                        $"spotify:track:{NormalizeSpotifyId(item.ExternalId)}",
+                    MediaItemKind.Episode when !string.IsNullOrWhiteSpace(item.ExternalId) =>
+                        $"spotify:episode:{NormalizeSpotifyId(item.ExternalId)}",
+                    _ => string.Empty
+                })
+                .Where(uri => uri.Length > 0)
+                .Distinct(StringComparer.Ordinal)
+                .ToArray();
+            var scope = string.IsNullOrWhiteSpace(tokens.Scope) ? settings.GrantedScope : tokens.Scope;
+            return await playlistWriter.AddItemsAsync(
+                    tokens.AccessToken,
+                    scope,
+                    selectedTargets,
+                    uris,
+                    cancellationToken)
+                .ConfigureAwait(false);
+        }
+        finally
+        {
+            operationGate.Release();
+        }
+    }
+
+    private static string NormalizeSpotifyId(string id)
+    {
+        var candidate = id.Trim();
+        var parts = candidate.Split(':', StringSplitOptions.RemoveEmptyEntries);
+        return parts.Length == 3 && string.Equals(parts[0], "spotify", StringComparison.OrdinalIgnoreCase)
+            ? parts[2]
+            : candidate;
+    }
+
     /// <summary>
     /// Wyszukiwanie w katalogu Spotify dla Ctrl+F. Osobne wejscie obok
     /// synchronizacji: wyszukiwanie NIE dotyka biblioteki ani cache konta.
@@ -487,6 +605,7 @@ internal sealed class SpotifyIntegrationService(
         oauth.Dispose();
         api.Dispose();
         writer.Dispose();
+        playlistWriter.Dispose();
         operationGate.Dispose();
         if (ownsHttpClient) http.Dispose();
     }

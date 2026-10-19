@@ -547,6 +547,30 @@ class LiteHostClient:
             timeout=120.0,
         )
 
+    def spotify_playlist_targets(self) -> Any:
+        """Read editable native playlists without starting authentication."""
+        return self.call("spotify.playlistTargets", timeout=120.0)
+
+    def spotify_playlist_create(self, name: str, *, is_public: bool = False) -> Any:
+        """Create one native Spotify playlist with explicit visibility."""
+        return self.call(
+            "spotify.playlistCreate",
+            {"name": name, "isPublic": bool(is_public)},
+            timeout=120.0,
+        )
+
+    def spotify_playlist_add_items(
+        self,
+        playlist_ids: list[str],
+        items: list[dict[str, Any]],
+    ) -> Any:
+        """Add tracks or episodes to native Spotify playlists."""
+        return self.call(
+            "spotify.playlistAddItems",
+            {"playlistIds": playlist_ids, "items": items},
+            timeout=180.0,
+        )
+
     def spotify_play(
         self,
         *,

@@ -324,6 +324,103 @@ internal sealed class LiteSpotifyCatalogCoordinator(
         }
     }
 
+    public object PlaylistTargets()
+    {
+        EnsureCatalogReady();
+        if (backend is not ILiteSpotifyWriteBackend writer)
+            throw new LiteRequestException("Ten silnik Spotify nie udostępnia zmiany playlist.");
+        try
+        {
+            var targets = writer.GetPlaylistTargetsAsync(CancellationToken.None)
+                .GetAwaiter().GetResult();
+            return new LiteSpotifyPlaylistTargetsResult(
+                targets.Select(LiteSpotifyCatalogContract.ToPlaylistTarget).ToArray(),
+                targets.Count == 0
+                    ? "Nie ma playlist Spotify dostępnych do edycji. Możesz utworzyć nową."
+                    : $"Playlisty Spotify dostępne do edycji: {targets.Count}.");
+        }
+        catch (Exception exception)
+        {
+            throw SafeRequestException(exception, LiteSpotifyCatalogContract.PlaylistTargetsOperation);
+        }
+    }
+
+    public object CreatePlaylist(JsonElement args)
+    {
+        var request = LiteSpotifyCatalogContract.ReadPlaylistCreateRequest(args);
+        EnsureCatalogReady();
+        if (backend is not ILiteSpotifyWriteBackend writer)
+            throw new LiteRequestException("Ten silnik Spotify nie udostępnia tworzenia playlist.");
+        try
+        {
+            var created = writer.CreatePlaylistAsync(
+                    request.Name,
+                    request.IsPublic,
+                    CancellationToken.None)
+                .GetAwaiter().GetResult();
+            return new LiteSpotifyPlaylistCreateResult(
+                LiteSpotifyCatalogContract.ToPlaylistTarget(created),
+                $"Utworzono playlistę Spotify: {created.Name}, "
+                    + (created.IsPublic ? "publiczna." : "prywatna."));
+        }
+        catch (Exception exception)
+        {
+            throw SafeRequestException(exception, LiteSpotifyCatalogContract.PlaylistCreateOperation);
+        }
+    }
+
+    public object AddPlaylistItems(JsonElement args)
+    {
+        var request = LiteSpotifyCatalogContract.ReadPlaylistAddRequest(args);
+        EnsureCatalogReady();
+        if (backend is not ILiteSpotifyWriteBackend writer)
+            throw new LiteRequestException("Ten silnik Spotify nie udostępnia zmiany playlist.");
+        try
+        {
+            var result = writer.AddPlaylistItemsAsync(
+                    request.PlaylistIds,
+                    request.Items,
+                    CancellationToken.None)
+                .GetAwaiter().GetResult();
+            var outcomes = result.Playlists.Select(item => new LiteSpotifyPlaylistOutcome(
+                item.Target.Id,
+                item.Target.AccessibleLabel,
+                item.AddedCount,
+                item.AlreadyPresentCount,
+                item.FailedCount,
+                item.SnapshotId,
+                item.Message)).ToArray();
+            var failureMessages = result.Playlists
+                .Where(item => item.FailedCount > 0)
+                .Select(item => item.Message)
+                .Where(message => !string.IsNullOrWhiteSpace(message))
+                .Distinct(StringComparer.CurrentCulture)
+                .ToArray();
+            var failureDetail = failureMessages.FirstOrDefault() ?? string.Empty;
+            var message = result.IsPartial
+                ? $"Częściowy wynik: dodano {result.AddedCount}, bez potwierdzenia {result.FailedCount}."
+                    + (failureDetail.Length > 0 ? $" {failureDetail}" : string.Empty)
+                : result.FailedCount > 0
+                    ? (failureDetail.Length > 0
+                        ? failureDetail
+                        : $"Nie dodano pozycji. Bez potwierdzenia: {result.FailedCount}.")
+                    : result.AddedCount > 0
+                        ? $"Dodano {result.AddedCount} pozycji do wybranych playlist Spotify."
+                        : "Wybrane playlisty już zawierają te pozycje.";
+            return new LiteSpotifyPlaylistAddResult(
+                result.RequestedItemCount,
+                result.AddedCount,
+                result.FailedCount,
+                result.IsPartial,
+                outcomes,
+                message);
+        }
+        catch (Exception exception)
+        {
+            throw SafeRequestException(exception, LiteSpotifyCatalogContract.PlaylistAddItemsOperation);
+        }
+    }
+
     private void EnsureCatalogReady()
     {
         LiteSpotifyAccountProbe account;
@@ -384,7 +481,10 @@ internal sealed class LiteSpotifyCatalogCoordinator(
             TimeoutException => LiteSpotifyFailureReason.Timeout,
             _ => LiteSpotifyFailureReason.Unknown
         };
-        if (operation == LiteSpotifyCatalogContract.MembershipOperation
+        if ((operation == LiteSpotifyCatalogContract.MembershipOperation
+                || operation == LiteSpotifyCatalogContract.PlaylistTargetsOperation
+                || operation == LiteSpotifyCatalogContract.PlaylistCreateOperation
+                || operation == LiteSpotifyCatalogContract.PlaylistAddItemsOperation)
             && actual is SpotifyWriteBlockedException blockedWrite)
         {
             return blockedWrite.Reason switch
@@ -446,6 +546,19 @@ internal interface ILiteSpotifyWriteBackend : ILiteSpotifyReadOnlyBackend
     Task<LiteSpotifyMembershipChange> ChangeMembershipAsync(
         IReadOnlyList<MediaItem> items,
         bool? requestedAddition,
+        CancellationToken cancellationToken);
+
+    Task<IReadOnlyList<SpotifyPlaylistTarget>> GetPlaylistTargetsAsync(
+        CancellationToken cancellationToken);
+
+    Task<SpotifyPlaylistTarget> CreatePlaylistAsync(
+        string name,
+        bool isPublic,
+        CancellationToken cancellationToken);
+
+    Task<SpotifyPlaylistWriteResult> AddPlaylistItemsAsync(
+        IReadOnlyList<string> playlistIds,
+        IReadOnlyList<MediaItem> items,
         CancellationToken cancellationToken);
 }
 

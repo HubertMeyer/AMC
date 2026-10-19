@@ -178,6 +178,9 @@ internal static class Program
                 LiteSpotifyCatalogContract.ContainerItemsOperation,
                 LiteSpotifyCatalogContract.CollectionViewOperation,
                 LiteSpotifyCatalogContract.MembershipOperation,
+                LiteSpotifyCatalogContract.PlaylistTargetsOperation,
+                LiteSpotifyCatalogContract.PlaylistCreateOperation,
+                LiteSpotifyCatalogContract.PlaylistAddItemsOperation,
                 // Uruchomienie TIDALa i wczytanie strony albumu trwa nawet
                 // kilkadziesiat sekund. Radio, nagrywanie i status lokalnego
                 // odtwarzacza musza w tym czasie pozostac responsywne.

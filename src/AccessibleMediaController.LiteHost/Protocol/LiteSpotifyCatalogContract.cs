@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using AccessibleMediaController.Core.Sessions;
+using AccessibleMediaController.Core.Spotify;
 
 namespace AccessibleMediaController.LiteHost.Protocol;
 
@@ -20,6 +21,9 @@ public static class LiteSpotifyCatalogContract
     public const string SearchOperation = "spotify.search";
     public const string DescriptionOperation = "spotify.description";
     public const string MembershipOperation = "spotify.collectionMembership";
+    public const string PlaylistTargetsOperation = "spotify.playlistTargets";
+    public const string PlaylistCreateOperation = "spotify.playlistCreate";
+    public const string PlaylistAddItemsOperation = "spotify.playlistAddItems";
 
     private const int MaximumQueryLength = 200;
     private const int MaximumLabelPartLength = 300;
@@ -269,6 +273,75 @@ public static class LiteSpotifyCatalogContract
         return new LiteSpotifyMembershipRequest(mode, items, requestedAddition);
     }
 
+    public static LiteSpotifyPlaylistCreateRequest ReadPlaylistCreateRequest(JsonElement args)
+    {
+        var name = CleanText(LiteArgs.RequireText(args, "name")).Trim();
+        if (name.Length is 0 or > 100)
+            throw new LiteRequestException("Nazwa playlisty Spotify musi mieć od 1 do 100 znaków.");
+        return new LiteSpotifyPlaylistCreateRequest(
+            name,
+            LiteArgs.ReadBool(args, "isPublic", false));
+    }
+
+    public static LiteSpotifyPlaylistAddRequest ReadPlaylistAddRequest(JsonElement args)
+    {
+        if (!args.TryGetProperty("playlistIds", out var rawPlaylists)
+            || rawPlaylists.ValueKind != JsonValueKind.Array)
+            throw new LiteRequestException("Nie wybrano playlisty Spotify.");
+        var playlistIds = rawPlaylists.EnumerateArray()
+            .Where(value => value.ValueKind == JsonValueKind.String)
+            .Select(value => value.GetString()?.Trim() ?? string.Empty)
+            .Where(value => value.Length is > 0 and <= MaximumExternalIdLength)
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+        if (playlistIds.Length == 0)
+            throw new LiteRequestException("Nie wybrano playlisty Spotify.");
+        if (!args.TryGetProperty("items", out var rawItems)
+            || rawItems.ValueKind != JsonValueKind.Array)
+            throw new LiteRequestException("Nie przekazano utworów ani odcinków Spotify.");
+
+        var items = new List<MediaItem>();
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var raw in rawItems.EnumerateArray())
+        {
+            if (raw.ValueKind != JsonValueKind.Object) continue;
+            var externalId = LiteArgs.RequireText(raw, "externalId").Trim();
+            var title = CleanText(LiteArgs.RequireText(raw, "title"));
+            var itemId = LiteArgs.RequireText(raw, "itemId").Trim();
+            var kindName = LiteArgs.RequireText(raw, "kind").Trim().ToLowerInvariant();
+            var kind = kindName switch
+            {
+                "track" => MediaItemKind.Track,
+                "episode" => MediaItemKind.Episode,
+                _ => throw new LiteRequestException(
+                    "Do playlisty Spotify można dodać tylko utwór albo odcinek.")
+            };
+            if (!TryNormalizeExternalId(externalId, kind, out var normalizedId))
+                throw new LiteRequestException("Element Spotify ma nieprawidłową tożsamość katalogową.");
+            if (!seen.Add($"{kind}:{normalizedId}")) continue;
+            items.Add(new MediaItem
+            {
+                Id = itemId,
+                ExternalId = normalizedId,
+                Title = title,
+                Artist = CleanText(LiteArgs.ReadText(raw, "artist") ?? string.Empty),
+                Kind = kind
+            });
+        }
+        if (items.Count == 0)
+            throw new LiteRequestException("Brak utworów albo odcinków Spotify do dodania.");
+        return new LiteSpotifyPlaylistAddRequest(playlistIds, items);
+    }
+
+    public static LiteSpotifyPlaylistTarget ToPlaylistTarget(SpotifyPlaylistTarget target) =>
+        new(
+            target.Id,
+            CleanText(target.Name),
+            target.IsPublic,
+            target.Collaborative,
+            CleanText(target.AccessibleLabel),
+            target.SnapshotId);
+
     public static LiteSpotifyDescriptionResult CreateDescriptionResult(
         string? description) => new(CleanDescription(description));
 
@@ -364,6 +437,9 @@ public static class LiteSpotifyCatalogContract
             ContainerItemsOperation => "Nie udało się otworzyć zawartości Spotify.",
             CollectionViewOperation => "Nie udało się odświeżyć kolekcji Spotify.",
             MembershipOperation => "Nie udało się zmienić kolekcji Spotify.",
+            PlaylistTargetsOperation => "Nie udało się odczytać playlist Spotify.",
+            PlaylistCreateOperation => "Nie udało się utworzyć playlisty Spotify.",
+            PlaylistAddItemsOperation => "Nie udało się dodać pozycji do playlist Spotify.",
             _ => "Nie udało się odczytać danych Spotify."
         }
     };
@@ -608,6 +684,48 @@ public sealed record LiteSpotifyMembershipResult(
     [property: JsonPropertyName("added")] bool Added,
     [property: JsonPropertyName("changed")] int Changed,
     [property: JsonPropertyName("itemIds")] IReadOnlyList<string> ItemIds,
+    [property: JsonPropertyName("message")] string Message);
+
+public sealed record LiteSpotifyPlaylistCreateRequest(string Name, bool IsPublic);
+
+public sealed record LiteSpotifyPlaylistAddRequest(
+    IReadOnlyList<string> PlaylistIds,
+    IReadOnlyList<MediaItem> Items);
+
+public sealed record LiteSpotifyPlaylistTarget(
+    [property: JsonPropertyName("id")] string Id,
+    [property: JsonPropertyName("name")] string Name,
+    [property: JsonPropertyName("isPublic")] bool IsPublic,
+    [property: JsonPropertyName("collaborative")] bool Collaborative,
+    [property: JsonPropertyName("accessibleLabel")] string AccessibleLabel,
+    [property: JsonPropertyName("snapshotId")] string SnapshotId)
+{
+    public override string ToString() => AccessibleLabel;
+}
+
+public sealed record LiteSpotifyPlaylistTargetsResult(
+    [property: JsonPropertyName("playlists")] IReadOnlyList<LiteSpotifyPlaylistTarget> Playlists,
+    [property: JsonPropertyName("message")] string Message);
+
+public sealed record LiteSpotifyPlaylistCreateResult(
+    [property: JsonPropertyName("playlist")] LiteSpotifyPlaylistTarget Playlist,
+    [property: JsonPropertyName("message")] string Message);
+
+public sealed record LiteSpotifyPlaylistOutcome(
+    [property: JsonPropertyName("playlistId")] string PlaylistId,
+    [property: JsonPropertyName("accessibleLabel")] string AccessibleLabel,
+    [property: JsonPropertyName("added")] int Added,
+    [property: JsonPropertyName("alreadyPresent")] int AlreadyPresent,
+    [property: JsonPropertyName("failed")] int Failed,
+    [property: JsonPropertyName("snapshotId")] string SnapshotId,
+    [property: JsonPropertyName("message")] string Message);
+
+public sealed record LiteSpotifyPlaylistAddResult(
+    [property: JsonPropertyName("requestedItems")] int RequestedItems,
+    [property: JsonPropertyName("added")] int Added,
+    [property: JsonPropertyName("failed")] int Failed,
+    [property: JsonPropertyName("partial")] bool Partial,
+    [property: JsonPropertyName("playlists")] IReadOnlyList<LiteSpotifyPlaylistOutcome> Playlists,
     [property: JsonPropertyName("message")] string Message);
 
 public sealed record LiteSpotifyItemsResult(

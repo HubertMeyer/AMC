@@ -331,7 +331,7 @@ internal sealed class SpotifyApiClient(HttpClient? httpClient = null) : IDisposa
         CancellationToken cancellationToken)
     {
         var items = new List<MediaItem>();
-        var next = $"{ApiRoot}/playlists/{Uri.EscapeDataString(playlistId)}/tracks?limit={PageSize}";
+        var next = $"{ApiRoot}/playlists/{Uri.EscapeDataString(playlistId)}/items?limit={PageSize}";
         var pages = 0;
         while (!string.IsNullOrEmpty(next) && pages++ < MaxPages)
         {
@@ -1113,7 +1113,13 @@ internal sealed class SpotifyApiClient(HttpClient? httpClient = null) : IDisposa
 
     private static MediaItem? ReadSavedTrack(JsonElement entry)
     {
-        if (!entry.TryGetProperty("track", out var track) || track.ValueKind != JsonValueKind.Object) return null;
+        JsonElement track;
+        if (entry.TryGetProperty("item", out var current) && current.ValueKind == JsonValueKind.Object)
+            track = current;
+        else if (entry.TryGetProperty("track", out var legacy) && legacy.ValueKind == JsonValueKind.Object)
+            track = legacy;
+        else
+            return null;
         var item = ReadTrack(track);
         if (item is null) return null;
         // Polubiony utwor nalezy do Ulubionych (Ctrl+U), NIE do Biblioteki

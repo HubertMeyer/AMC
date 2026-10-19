@@ -23,11 +23,10 @@ namespace AccessibleMediaController.Core.Spotify;
 /// jednym punktem "/me/library", który dla utworów i albumów wymaga
 /// "user-library-modify", a dla obserwowanych wykonawców "user-follow-modify".
 ///
-/// NIE DODAWAJ tu zakresów zapisu, których żadna funkcja AMC nie używa.
-/// "playlist-modify-public" i "playlist-modify-private" pozostają POZA listą,
-/// bo AMC nie zmienia jeszcze zawartości playlist Spotify. Zakres bez funkcji
-/// to prośba o zgodę bez powodu, a użytkownik czytnikiem ekranu musi wysłuchać
-/// całej listy uprawnień na stronie Spotify.
+/// PLAYLISTS - tworzenie natywnych playlist Spotify i dodawanie do nich
+/// utworów lub odcinków. Oba zakresy są jawne, bo AMC pozwala wybrać playlistę
+/// prywatną albo publiczną. Starsze logowanie bez tych zakresów pozostaje
+/// ważne do odczytu i odtwarzania, ale przed zapisem wymaga ponownej zgody.
 /// </summary>
 public static class SpotifyScopes
 {
@@ -56,8 +55,8 @@ public static class SpotifyScopes
     /// <summary>
     /// Zapis do biblioteki konta. Tylko te dwa: "user-library-modify" obsługuje
     /// utwory, albumy, odcinki, podcasty i audiobooki, "user-follow-modify"
-    /// obserwowanych wykonawców. Playlisty wymagałyby "playlist-modify-*" -
-    /// dopisz je dopiero razem z funkcją zmiany playlist.
+    /// obserwowanych wykonawców. Zakresy playlist są niżej osobną grupą,
+    /// ponieważ nie dotyczą przynależności do Biblioteki ani Ulubionych.
     /// </summary>
     public static readonly string[] Membership =
     [
@@ -65,9 +64,15 @@ public static class SpotifyScopes
         "user-follow-modify"
     ];
 
+    public static readonly string[] Playlists =
+    [
+        "playlist-modify-private",
+        "playlist-modify-public"
+    ];
+
     /// <summary>Pełny zestaw w kolejności grup, rozdzielony spacjami.</summary>
     public static string Requested { get; } =
-        string.Join(' ', Playback.Concat(Library).Concat(Control).Concat(Membership));
+        string.Join(' ', Playback.Concat(Library).Concat(Control).Concat(Membership).Concat(Playlists));
 
     /// <summary>
     /// Czy przyznany zakres pozwala uruchomić wbudowany odtwarzacz.
@@ -96,6 +101,19 @@ public static class SpotifyScopes
 
     public static bool AllowsFollowWrite(string? grantedScope) =>
         Contains(grantedScope, "user-follow-modify");
+
+    public static bool AllowsPlaylistWrite(string? grantedScope, bool isPublic) =>
+        Contains(
+            grantedScope,
+            isPublic ? "playlist-modify-public" : "playlist-modify-private");
+
+    public static IReadOnlyList<string> MissingPlaylistScopes(string? grantedScope)
+    {
+        var granted = Split(grantedScope);
+        return Playlists
+            .Where(scope => !granted.Contains(scope, StringComparer.Ordinal))
+            .ToArray();
+    }
 
     /// <summary>
     /// Zakres wymagany do zapisu dla danego typu adresu URI Spotify

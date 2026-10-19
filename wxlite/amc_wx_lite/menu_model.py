@@ -155,6 +155,7 @@ LOCAL_MEDIA = (SessionId.FILES, SessionId.PODCASTS)
 QUEUE_SESSIONS = (SessionId.FILES, SessionId.PODCASTS, SessionId.TIDAL)
 PLAY_NEXT_SESSIONS = (SessionId.FILES, SessionId.PODCASTS)
 LOCAL_AUDIO = (SessionId.FILES, SessionId.RADIO, SessionId.PODCASTS)
+LOCAL_PLAYLISTS = (SessionId.FILES, SessionId.RADIO, SessionId.PODCASTS)
 SESSION_AUDIO_OUTPUTS = (*LOCAL_AUDIO, SessionId.SPOTIFY)
 LOCAL_TIMELINE = (*LOCAL_AUDIO, SessionId.SPOTIFY)
 PLAYER_SESSIONS = (
@@ -536,6 +537,15 @@ def build_menus(session_order: object = None) -> tuple[Menu, ...]:
                 shortcut="Ctrl+Shift+P",
                 accelerator=False,
                 needs_playlist_item=True,
+                visible_sessions=LOCAL_PLAYLISTS,
+            ),
+            MenuItem(
+                "Doda&j do playlist Spotify lub utwórz playlistę…",
+                Action.MANAGE_PLAYLIST_MEMBERSHIP,
+                shortcut="Ctrl+Shift+P",
+                accelerator=False,
+                needs_playlist_item=True,
+                visible_sessions=SPOTIFY_ONLY,
             ),
             MenuItem(
                 "Dodaj lub usuń z kolejki (&Q)",

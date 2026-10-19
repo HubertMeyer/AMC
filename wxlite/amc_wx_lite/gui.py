@@ -90,6 +90,11 @@ from .playlist_dialog import (
     PlaylistPayloadError,
     choices_from_payload as playlist_choices_from_payload,
 )
+from .spotify_playlist_dialog import (
+    SpotifyPlaylistDialog,
+    SpotifyPlaylistPayloadError,
+    choices_from_payload as spotify_playlist_choices_from_payload,
+)
 from .playback_history import (
     activity_rows as streamer_activity_rows,
     history_rows as streamer_history_rows,
@@ -6281,6 +6286,7 @@ class LiteFrame(wx.Frame):
             SessionId.FILES: {"track"},
             SessionId.RADIO: {"station"},
             SessionId.PODCASTS: {"episode"},
+            SessionId.SPOTIFY: {"track", "episode"},
         }
         playlist_contents = (
             session.view is View.LIST
@@ -18601,6 +18607,9 @@ class LiteFrame(wx.Frame):
     def _manage_playlist_membership(self) -> None:
         """Ctrl+Shift+P: pełne, atomowe okno playlist głównego AMC."""
         active = self.navigator.active
+        if active is SessionId.SPOTIFY:
+            self._manage_spotify_playlist_membership()
+            return
         supported = {
             SessionId.FILES: ("local", "track", "Wybierz plik"),
             SessionId.RADIO: ("radio", "station", "Wybierz stację radiową"),
@@ -18692,6 +18701,129 @@ class LiteFrame(wx.Frame):
             self.announcer.say(f"Nie mogę odczytać playlist: {error}")
 
         self.runner.submit("playlist-membership-load", load, loaded, load_failed)
+
+    def _manage_spotify_playlist_membership(self) -> None:
+        """Ctrl+Shift+P: natywne playlisty konta Spotify, bez odtwarzania list."""
+        if self._playlist_membership_pending:
+            self.announcer.say("Zmiana playlist Spotify już trwa")
+            return
+        client = self.client
+        if client is None:
+            self.announcer.say("Silnik nie działa, nie mogę otworzyć playlist Spotify")
+            return
+        rows = [
+            row for row in self._selected_action_rows()
+            if row.kind in {"track", "episode"} and row.item_id and row.service_id
+        ]
+        if not rows:
+            self.announcer.say("Do playlisty Spotify wybierz utwór albo odcinek")
+            return
+        items = [
+            {
+                "itemId": row.item_id,
+                "externalId": row.service_id,
+                "title": row.title,
+                "kind": row.kind,
+                "artist": row.artist_name,
+            }
+            for row in rows
+        ]
+        target_label = rows[0].title if len(rows) == 1 else format_item_count(len(rows))
+        self._playlist_membership_pending = True
+        self.announcer.say("Pobieram playlisty Spotify")
+
+        def loaded(payload: object) -> None:
+            try:
+                choices = spotify_playlist_choices_from_payload(payload)
+            except SpotifyPlaylistPayloadError as error:
+                self._playlist_membership_pending = False
+                self.announcer.say(str(error))
+                return
+            with SpotifyPlaylistDialog(
+                self,
+                choices=choices,
+                target_label=target_label,
+            ) as dialog:
+                if dialog.ShowModal() != wx.ID_OK:
+                    self._playlist_membership_pending = False
+                    self._restore_focus_after_dialog()
+                    return
+                playlist_ids = dialog.selected_playlist_ids
+                new_playlists = dialog.new_playlists
+            self._restore_focus_after_dialog()
+
+            def save() -> dict:
+                selected = list(playlist_ids)
+                messages: list[str] = []
+                failures: list[str] = []
+                for name, is_public in new_playlists:
+                    try:
+                        created = client.spotify_playlist_create(
+                            name,
+                            is_public=is_public,
+                        )
+                        raw_playlist = (
+                            created.get("playlist")
+                            if isinstance(created, dict)
+                            else None
+                        )
+                        playlist_id = (
+                            str(raw_playlist.get("id") or "").strip()
+                            if isinstance(raw_playlist, dict)
+                            else ""
+                        )
+                        if not playlist_id:
+                            failures.append(
+                                f"Spotify nie potwierdził utworzenia playlisty {name}"
+                            )
+                            continue
+                        selected.append(playlist_id)
+                        message = str(created.get("message") or "").strip()
+                        if message:
+                            messages.append(message)
+                    except Exception as error:
+                        failures.append(f"Nie utworzono playlisty {name}: {error}")
+                selected = list(dict.fromkeys(selected))
+                if selected:
+                    try:
+                        result = client.spotify_playlist_add_items(selected, items)
+                        if isinstance(result, dict):
+                            message = str(result.get("message") or "").strip()
+                            if message:
+                                messages.append(message)
+                    except Exception as error:
+                        failures.append(f"Nie dodano pozycji do playlist: {error}")
+                return {"messages": messages, "failures": failures}
+
+            def saved(result: object) -> None:
+                self._playlist_membership_pending = False
+                data = result if isinstance(result, dict) else {}
+                messages = [str(value) for value in data.get("messages", []) if value]
+                failures = [str(value) for value in data.get("failures", []) if value]
+                if messages and failures:
+                    completion = f"{' '.join(messages)} Częściowy wynik. {' '.join(failures)}"
+                elif failures:
+                    completion = " ".join(failures)
+                else:
+                    completion = " ".join(messages) or "Playlisty Spotify bez zmian"
+                self.announcer.say(completion)
+
+            def save_failed(error: Exception) -> None:
+                self._playlist_membership_pending = False
+                self.announcer.say(f"Nie zapisano playlist Spotify: {error}")
+
+            self.runner.submit("spotify-playlist-save", save, saved, save_failed)
+
+        def load_failed(error: Exception) -> None:
+            self._playlist_membership_pending = False
+            self.announcer.say(f"Nie mogę odczytać playlist Spotify: {error}")
+
+        self.runner.submit(
+            "spotify-playlist-load",
+            client.spotify_playlist_targets,
+            loaded,
+            load_failed,
+        )
 
     def _toggle_profile_favorite(self) -> None:
         """Ctrl+Shift+U dla lokalnych plików i stacji radiowych."""
@@ -22286,7 +22418,10 @@ class LiteFrame(wx.Frame):
         return True
 
     def _show_help(self) -> None:
-        lines = [f"{chord}\t{label}" for chord, label in describe()]
+        lines = [
+            f"{chord}\t{label}"
+            for chord, label in describe(SESSION_LABELS[self.navigator.active])
+        ]
         wx.MessageBox("\n".join(lines), "Skroty klawiszowe", wx.OK | wx.ICON_INFORMATION, self)
 
     # -------------------------------------------------------- zapis i koniec

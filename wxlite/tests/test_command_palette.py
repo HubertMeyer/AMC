@@ -9,7 +9,8 @@ from amc_wx_lite.command_palette import (
     filter_entries,
 )
 from amc_wx_lite.navigation import SessionId
-from amc_wx_lite.shortcuts import Action, Chord, describe_action, resolve
+from amc_wx_lite.shortcuts import Action, Chord, describe, describe_action, resolve
+from amc_wx_lite.shortcuts import keyboard_help_announcement
 
 
 def test_palette_is_reachable_from_both_views() -> None:
@@ -97,3 +98,20 @@ def test_schedule_manager_name_and_shortcut_match_palette_and_keyboard_help() ->
     assert schedule.name == "Harmonogram nagrywania"
     assert schedule.shortcut == "Ctrl+Shift+H"
     assert describe_action(Action.MANAGE_RADIO_SCHEDULES) == schedule.name
+
+
+def test_spotify_playlist_command_matches_palette_and_contextual_keyboard_help() -> None:
+    entries = {entry.action: entry for entry in entries_for_session(SessionId.SPOTIFY)}
+    playlist = entries[Action.MANAGE_PLAYLIST_MEMBERSHIP]
+    assert playlist.name == "Dodaj do playlist Spotify lub utwórz playlistę…"
+    assert playlist.shortcut == "Ctrl+Shift+P"
+    message = keyboard_help_announcement(
+        Chord("P", ctrl=True, shift=True),
+        Action.MANAGE_PLAYLIST_MEMBERSHIP,
+        "Spotify",
+    )
+    assert "Dodaj do playlist Spotify lub utwórz playlistę" in message
+    assert "Ctrl+Shift+P" in message
+    assert dict(describe("Spotify"))["Ctrl+Shift+P"] == (
+        "Dodaj do playlist Spotify lub utwórz playlistę"
+    )

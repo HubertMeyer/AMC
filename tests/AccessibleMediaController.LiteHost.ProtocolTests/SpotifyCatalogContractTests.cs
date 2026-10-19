@@ -1,5 +1,6 @@
 using System.Text.Json;
 using AccessibleMediaController.Core.Sessions;
+using AccessibleMediaController.Core.Spotify;
 using AccessibleMediaController.LiteHost.Protocol;
 
 namespace AccessibleMediaController.LiteHost.ProtocolTests;
@@ -21,6 +22,7 @@ internal static class SpotifyCatalogContractTests
         ContainerRequestAcceptsOnlyMatchingSpotifyIdentity();
         DescriptionRequestAcceptsOnlyPodcastMaterialsAndCleansText();
         MembershipRequestSeparatesFavoritesFromLibrary();
+        PlaylistRequestsAcceptOnlyNamedTargetsAndPlayableItems();
         ContainerResultNeverUsesIdentifiersInItsHeading();
         ContainerKeepsRepeatedPlaylistOccurrencesDistinct();
         CoordinatorDoesNotAuthenticateForStatusOrCapabilities();
@@ -154,6 +156,57 @@ internal static class SpotifyCatalogContractTests
             collectionWrite: true);
         Check(!writable.ReadOnly && writable.CollectionWrite,
             "host z pisarzem Spotify nadal zgłasza kolekcję tylko do odczytu");
+    }
+
+    private static void PlaylistRequestsAcceptOnlyNamedTargetsAndPlayableItems()
+    {
+        using var create = JsonDocument.Parse("""
+        {"name":"  Wieczór\r\n  ","isPublic":true,"token":"nie przechodzi"}
+        """);
+        var createRequest = LiteSpotifyCatalogContract.ReadPlaylistCreateRequest(
+            create.RootElement);
+        Check(createRequest.Name == "Wieczór" && createRequest.IsPublic,
+            "tworzenie playlisty nie czyści nazwy albo widoczności");
+
+        using var add = JsonDocument.Parse("""
+        {
+          "playlistIds":["one","one","two"],
+          "items":[
+            {"itemId":"row1","externalId":"track1","title":"Utwór","kind":"track"},
+            {"itemId":"row2","externalId":"episode2","title":"Odcinek","kind":"episode"}
+          ]
+        }
+        """);
+        var addRequest = LiteSpotifyCatalogContract.ReadPlaylistAddRequest(add.RootElement);
+        Check(addRequest.PlaylistIds.SequenceEqual(["one", "two"])
+            && addRequest.Items.Select(item => item.Kind).SequenceEqual(
+                [MediaItemKind.Track, MediaItemKind.Episode]),
+            "żądanie nie odduplikowało playlist albo pomyliło rodzaj elementu");
+
+        using var wrong = JsonDocument.Parse("""
+        {
+          "playlistIds":["one"],
+          "items":[{"itemId":"row","externalId":"album","title":"Album","kind":"album"}]
+        }
+        """);
+        try
+        {
+            LiteSpotifyCatalogContract.ReadPlaylistAddRequest(wrong.RootElement);
+            throw new InvalidOperationException("album przyjęto do playlisty jako odtwarzalny element");
+        }
+        catch (LiteRequestException exception)
+        {
+            Check(exception.Message.Contains("utwór albo odcinek", StringComparison.Ordinal),
+                "odmowa albumu nie wyjaśnia obsługiwanych rodzajów");
+        }
+
+        var target = LiteSpotifyCatalogContract.ToPlaylistTarget(
+            new SpotifyPlaylistTarget(
+                "secret-id", "Nazwa", "owner-id", "Michał", false, false, true,
+                "secret-snapshot"));
+        Check(target.ToString() == target.AccessibleLabel
+            && !target.AccessibleLabel.Contains("secret", StringComparison.Ordinal),
+            "natywna lista mogłaby odczytać rekord albo identyfikator techniczny");
     }
 
     private static void AccountStatusKeepsCatalogueAndPlaybackSeparate()

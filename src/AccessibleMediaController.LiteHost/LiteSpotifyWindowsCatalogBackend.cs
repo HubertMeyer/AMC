@@ -132,6 +132,66 @@ internal sealed class LiteSpotifyWindowsCatalogBackend : ILiteSpotifyWriteBacken
         }
     }
 
+    public async Task<IReadOnlyList<SpotifyPlaylistTarget>> GetPlaylistTargetsAsync(
+        CancellationToken cancellationToken)
+    {
+        EnsureCatalogReady();
+        try
+        {
+            return await _integration.GetEditablePlaylistsAsync(cancellationToken)
+                .ConfigureAwait(false);
+        }
+        catch (Exception exception)
+        {
+            throw Translate(exception, cancellationToken);
+        }
+    }
+
+    public async Task<SpotifyPlaylistTarget> CreatePlaylistAsync(
+        string name,
+        bool isPublic,
+        CancellationToken cancellationToken)
+    {
+        EnsureCatalogReady();
+        try
+        {
+            return await _integration.CreatePlaylistAsync(name, isPublic, cancellationToken)
+                .ConfigureAwait(false);
+        }
+        catch (SpotifyWriteBlockedException)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            throw Translate(exception, cancellationToken);
+        }
+    }
+
+    public async Task<SpotifyPlaylistWriteResult> AddPlaylistItemsAsync(
+        IReadOnlyList<string> playlistIds,
+        IReadOnlyList<MediaItem> items,
+        CancellationToken cancellationToken)
+    {
+        EnsureCatalogReady();
+        try
+        {
+            return await _integration.AddItemsToPlaylistsAsync(
+                    playlistIds,
+                    items,
+                    cancellationToken)
+                .ConfigureAwait(false);
+        }
+        catch (SpotifyWriteBlockedException)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            throw Translate(exception, cancellationToken);
+        }
+    }
+
     public async Task<string?> GetDescriptionAsync(
         LiteSpotifyDescriptionRequest request,
         CancellationToken cancellationToken)
