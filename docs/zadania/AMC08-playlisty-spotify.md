@@ -1,0 +1,94 @@
+# AMC08 — natywne playlisty Spotify
+
+Status: **wdrażanie; kod, kompilacja i pełne regresje źródłowe gotowe,
+instalacja oraz odbiór NVDA pozostają do wykonania**.
+
+Źródło decyzji: zatwierdzona analiza historyczna tylko do odczytu
+`D:\Projekty Codex\Accessible Multimedia Controller\AMC08_PLAYLISTY_SPOTIFY_2026-10-18.md`.
+
+## Materiał do dokumentacji użytkownika
+
+- W sesji Spotify `Ctrl+P` otwiera listę natywnych playlist konta Spotify.
+  Samo wejście na listę nie obiecuje odtwarzania całej playlisty.
+- Na zaznaczonym utworze albo odcinku `Ctrl+Shift+P` otwiera okno „Dodaj do
+  playlist Spotify”. Strzałki wybierają playlistę, a Spacja zaznacza lub
+  odznacza wiele playlist. Enter wykonuje operację, Escape ją anuluje.
+- Przycisk „Nowa playlista…” pyta o nazwę i widoczność: domyślnie prywatną
+  albo jawnie publiczną. Nowa playlista jest od razu zaznaczona jako cel.
+- Przed oknem AMC mówi „Pobieram playlisty Spotify”. Po zapisie mówi, ile
+  pozycji dodano, które były już obecne oraz czy wynik jest częściowy.
+- Starsze logowanie Spotify nie zawiera zgód na zmianę playlist. AMC nie
+  otwiera wtedy przeglądarki samoczynnie, tylko kieruje do `Ctrl+F5`, aby
+  użytkownik świadomie zalogował konto ponownie.
+- Lista odczytywana przez NVDA zawiera tylko nazwę, widoczność, informację o
+  współdzieleniu i właścicielu oraz stan zaznaczenia. Identyfikatory playlist,
+  adresy i `snapshot_id` pozostają niewidocznymi danymi modelu.
+- `Ctrl+F1`, pełna pomoc, menu i paleta `Ctrl+Shift+K` używają tego samego
+  polecenia. W Spotify brzmi ono „Dodaj do playlist Spotify lub utwórz
+  playlistę”; w Plikach, Radiu i Podcastach zachowuje lokalne znaczenie
+  „Przynależność do playlist”.
+
+## Uzasadnienie i decyzje
+
+- **Korekta użytkownika z 18 października 2026:** `Ctrl+Shift+P` zastępuje
+  wcześniejszy pomysł osobnego `Alt+Shift+P`.
+- **Korekta użytkownika z 18 października 2026:** tworzone są prawdziwe
+  playlisty Spotify, które można udostępnić. Funkcja nie obiecuje odtwarzania
+  całych playlist przez Librespot.
+- Używane są ścieżki `/me/playlists` i `/playlists/{id}/items`. Odczyt
+  zawartości przyjmuje pole `item`, a `track` wyłącznie jako kontrolowany
+  fallback zgodności.
+- Wejściowe utwory i odcinki są odduplikowane. Przed zapisem klient odczytuje
+  istniejącą zawartość każdej playlisty, więc ponowienie nie dopisuje drugiego
+  wystąpienia tej samej pozycji.
+- Jedno żądanie zawiera najwyżej 100 pozycji. Każda przyjęta partia zapisuje
+  zwrócony `snapshot_id`; awaria późniejszej partii zachowuje i raportuje
+  wcześniejszy sukces.
+- Identyfikatory playlist z wxPython są ponownie rozwiązywane na świeżej liście
+  edytowalnych playlist wewnątrz C#. Interfejs nie może nadać sobie prawa do
+  cudzej playlisty przez podmianę danych żądania.
+- OAuth prosi jawnie o `playlist-modify-private` oraz
+  `playlist-modify-public`. Bez obecności użytkownika nie jest rozpoczynane
+  ponowne logowanie i żaden test nie zapisuje danych na prawdziwym koncie.
+
+## Testy i wynik
+
+- 19 października 2026, przed 02:00: `py_compile` zmienionych modułów —
+  zaliczony.
+- 19 października 2026, odizolowane testy Pythona: parser etykiet, przepływ
+  tworzenia i dodawania, fokus po dialogu, klient hosta, skróty, menu,
+  `Ctrl+F1` i paleta `Ctrl+Shift+K` — **101 zaliczonych**.
+- Po wzmocnieniu obsługi niepotwierdzonego utworzenia playlisty ponowiono
+  ukierunkowany zestaw — **63 zaliczone**.
+- Pełna odizolowana regresja wxPython po ostatecznej zmianie — **1754
+  zaliczone, 110 pominiętych, 11 podtestów zaliczonych** w 91,86 s.
+- Testy atrap C# obejmują zakresy OAuth, listę edytowalnych playlist,
+  prywatne i publiczne tworzenie, partie 100, idempotencję, `snapshot_id`,
+  endpoint `/items` i wynik częściowy. Ukierunkowane zestawy playlist i
+  istniejącej zmiany Biblioteki Spotify zaliczone; pełne Core SmokeTests
+  zakończone kodem 0.
+- Ukierunkowany kontrakt protokołu playlist zaliczony **1/1**, a pełna regresja
+  LiteHost ProtocolTests — **20/20 zestawów**.
+- Kompilacja Release Core SmokeTests, LiteHost ProtocolTests i właściwego
+  LiteHost zakończona powodzeniem, bez ostrzeżeń i błędów.
+- Bramkę bezpieczeństwa po 02:00 zaliczono: żaden harmonogram nie pozostawał
+  w aktywnym oknie, przez 10 sekund nie rósł żaden plik `.amc-partial`, a żaden
+  z zachowanych plików odzyskiwania nie był zablokowany przez proces.
+- Nie wykonano odbioru sieciowego ani zapisu na koncie Spotify.
+
+## Znane ograniczenia
+
+- Odtwarzanie całej playlisty Spotify przez AMC nadal nie jest obiecywane.
+- Zewnętrzny odbiór na prawdziwym koncie, w tym ponowne OAuth z nowymi
+  zakresami, pozostaje zadaniem ręcznym.
+- Instalacja i test NVDA nie zostały jeszcze wykonane. Kod, testy i udana
+  kompilacja nie dowodzą jeszcze zainstalowanej wersji.
+
+## Wersja i commit
+
+- Profil docelowy: bieżący AMC Test.
+- Kod źródłowy: commit `697d1a73fd66c12bfa061f4d5f55a93ddaa36e85`.
+- Kompilacja: Release, zaliczona 19 października 2026 po bezpiecznej bramce
+  nagrywania; nie jest to jeszcze paczka instalacyjna.
+- Instalacja: jeszcze niewykonana.
+- Publikacja: nie wykonywać w tym etapie.

@@ -75,9 +75,10 @@ jawnym poleceniu użytkownika albo przez osobno uzgodniony harmonogram.
   pozostaje poleceniem czytnika. Zatwierdzona specyfikacja:
   `D:\Projekty Codex\Accessible Multimedia Controller\AMC13_TIMESHIFT_RADIA_2026-10-18.md`.
   Eksport fragmentów Time Shiftu pozostaje późniejszym rozszerzeniem.
-- `AMC08` — **Oczekuje, zlecone do nocnej realizacji** — natywne playlisty
-  Spotify w AMC Test: `Ctrl+P`, `Ctrl+Shift+P`, tworzenie playlist i dodawanie
-  utworów lub odcinków. Zatwierdzona specyfikacja:
+- `AMC08` — **Wdrażanie; kod, kompilacja i pełne regresje źródłowe gotowe,
+  instalacja oraz odbiór NVDA pozostają** — natywne playlisty Spotify w AMC
+  Test: `Ctrl+P`, `Ctrl+Shift+P`, tworzenie playlist i dodawanie utworów lub
+  odcinków. Przebieg: `AMC08-playlisty-spotify.md`. Zatwierdzona specyfikacja:
   `D:\Projekty Codex\Accessible Multimedia Controller\AMC08_PLAYLISTY_SPOTIFY_2026-10-18.md`.
   Historyczne źródła są tylko wzorcem; kod powstaje w tym repozytorium.
 - `AMC09` — **Oczekuje, zlecone do nocnej realizacji przed AMC12** — dostępny
