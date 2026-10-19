@@ -54,10 +54,15 @@ def test_build_helper_verifies_profile_clean_source_and_full_bundle() -> None:
 
 
 def test_bundle_builder_embeds_dotnet_and_private_python_runtime() -> None:
+    assert "$hostOutput" in BUNDLE_BUILD
+    assert "$host =" not in BUNDLE_BUILD
     assert BUNDLE_BUILD.count('"--self-contained", "true"') == 3
+    assert BUNDLE_BUILD.count('"--artifacts-path"') == 3
     assert '"--profile", $Profile' in BUNDLE_BUILD
     assert '"--runtime", $runtime' in BUNDLE_BUILD
     assert "--sprawdz-pakiet-pelny-cicho" in BUNDLE_BUILD
+    assert "Start-Process -FilePath $LauncherPath" in BUNDLE_BUILD
+    assert "-Wait -PassThru -WindowStyle Hidden" in BUNDLE_BUILD
     assert "Folder docelowy już istnieje" in BUNDLE_BUILD
     assert "Move-Item -LiteralPath $candidate" in BUNDLE_BUILD
 

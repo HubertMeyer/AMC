@@ -36,26 +36,49 @@ function Invoke-Checked {
     }
 }
 
+function Invoke-FullBundleCheck {
+    param([Parameter(Mandatory)] [string]$LauncherPath)
+
+    $check = Start-Process -FilePath $LauncherPath `
+        -ArgumentList @("--sprawdz-pakiet-pelny-cicho") `
+        -WorkingDirectory (Split-Path -Parent $LauncherPath) `
+        -Wait -PassThru -WindowStyle Hidden
+    try {
+        if ($check.ExitCode -ne 0) {
+            throw "Pełna kontrola kandydata zakończyła się kodem $($check.ExitCode)."
+        }
+    }
+    finally {
+        $check.Dispose()
+    }
+}
+
 New-Item -ItemType Directory -Path $components -Force | Out-Null
 try {
-    $host = Join-Path $components "host"
+    $hostOutput = Join-Path $components "host"
     $launcher = Join-Path $components "launcher"
     $updater = Join-Path $components "updater"
+    $hostArtifacts = Join-Path $operationRoot "artifacts-host"
+    $launcherArtifacts = Join-Path $operationRoot "artifacts-launcher"
+    $updaterArtifacts = Join-Path $operationRoot "artifacts-updater"
 
     Invoke-Checked -FilePath "dotnet" -Stage "Publikowanie samowystarczalnego hosta" -ArgumentList @(
         "publish", (Join-Path $repositoryRoot "src\AccessibleMediaController.LiteHost\AccessibleMediaController.LiteHost.csproj"),
         "-c", "Release", "-r", "win-x64", "--self-contained", "true",
-        "-p:NuGetAudit=false", "-o", $host
+        "--artifacts-path", $hostArtifacts,
+        "-p:NuGetAudit=false", "-o", $hostOutput
     )
     Invoke-Checked -FilePath "dotnet" -Stage "Publikowanie samowystarczalnego uruchamiacza" -ArgumentList @(
         "publish", (Join-Path $repositoryRoot "src\AccessibleMediaController.PythonLauncher\AccessibleMediaController.PythonLauncher.csproj"),
         "-c", "Release", "-r", "win-x64", "--self-contained", "true",
+        "--artifacts-path", $launcherArtifacts,
         "-p:PublishSingleFile=true", "-p:IncludeNativeLibrariesForSelfExtract=true",
         "-p:NuGetAudit=false", "-o", $launcher
     )
     Invoke-Checked -FilePath "dotnet" -Stage "Publikowanie samowystarczalnego aktualizatora" -ArgumentList @(
         "publish", (Join-Path $repositoryRoot "src\AccessibleMediaController.PythonUpdater\AccessibleMediaController.PythonUpdater.csproj"),
         "-c", "Release", "-r", "win-x64", "--self-contained", "true",
+        "--artifacts-path", $updaterArtifacts,
         "-p:PublishSingleFile=true", "-p:IncludeNativeLibrariesForSelfExtract=true",
         "-p:NuGetAudit=false", "-o", $updater
     )
@@ -64,16 +87,14 @@ try {
         $bundleTool,
         "--out", $candidate,
         "--profile", $Profile,
-        "--host", $host,
+        "--host", $hostOutput,
         "--launcher", $launcher,
         "--updater", $updater,
         "--runtime", $runtime,
         "--clean"
     )
 
-    Invoke-Checked -FilePath (Join-Path $candidate "AMC.exe") `
-        -Stage "Pełna kontrola kandydata" `
-        -ArgumentList @("--sprawdz-pakiet-pelny-cicho")
+    Invoke-FullBundleCheck -LauncherPath (Join-Path $candidate "AMC.exe")
 
     New-Item -ItemType Directory -Path (Split-Path -Parent $output) -Force | Out-Null
     Move-Item -LiteralPath $candidate -Destination $output
