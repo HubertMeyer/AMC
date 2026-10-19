@@ -156,6 +156,15 @@
 - Test każdej zmiany polecenia ma porównać nazwę, skrót, opis, dostępność i
   wykonanie co najmniej w `Ctrl+F1`, pełnej pomocy oraz palecie, a dla funkcji
   kontekstowej także w reprezentatywnych sesjach i profilach AMC Test/AMC.
+- Klawisz dostępu paska menu i skrót polecenia są różnymi danymi. Pasek może
+  zachować unikatowy mnemonic oznaczony `&`, ale etykieta czytana w menu
+  kontekstowym ma zawierać wyłącznie pełną nazwę czynności i co najwyżej jeden
+  prawdziwy skrót polecenia. Usuwaj z niej `(&0)`, przypadkowe pojedyncze
+  litery lub cyfry, drugą kolumnę natywnego menu i zduplikowane kombinacje.
+- Dynamiczna nazwa polecenia, na przykład `F2`, wynika z semantycznego typu
+  zaznaczonego elementu i jest rozwiązywana wspólnie dla menu, pomocy i palety.
+  Nie twórz osobnych tekstów dla stacji, playlisty, pliku, podcastu, kanału
+  albo urządzenia w niezależnych procedurach powierzchni interfejsu.
 
 - Widok sesji, urządzenia ani listy nie może przejmować skrótu globalnego i
   pozostawiać go bez działania. `Ctrl+H` otwiera Historię odtwarzania z każdego
@@ -284,6 +293,30 @@
   ponowne dodanie pojedynczego filmu z katalogu usuwa jego wykluczenie i
   przywraca go do `Media internetowe`. Usuwanie rekordu nie usuwa pobranych
   plików z dysku; komunikat ma mówić o tym bez zakładania, czy plik istnieje.
+
+## Zdalne listy wyboru usług
+
+- Playlisty, foldery, urządzenia i inne cele pobierane z konta używają
+  wspólnego mechanizmu pamięci procesu, przywracania zaznaczenia i fokusu.
+  Dane są zawsze rozdzielone profilem, usługą, rodzajem listy oraz — gdy jest
+  dostępna — tożsamością konta. Zbieżna nazwa lub identyfikator nie może
+  przenieść celu pomiędzy Spotify, TIDAL-em ani przyszłą usługą.
+- Pierwsze otwarcie może pobrać katalog i ogłosić to jeden raz. Kolejne
+  otwarcie w tym samym procesie korzysta z migawki. Cel utworzony i
+  potwierdzony przez usługę jest natychmiast dopisywany, a ostatnie cele są
+  ponownie zaznaczane. Niepotwierdzona operacja nie zmienia migawki ani
+  ustawień.
+- Pamięć listy służy tylko szybkości interfejsu. Przy każdym zapisie adapter
+  usługi ponownie sprawdza istnienie celu, konto, uprawnienia i możliwość
+  edycji oraz uczciwie raportuje wynik częściowy. Zmiana konta, profilu,
+  uwierzytelnienia, jawne odświeżenie albo odpowiedź o nieaktualnym celu
+  unieważnia wyłącznie odpowiednią partycję.
+- Model wspólny nie zakłada endpointów ani możliwości Spotify. Każdy adapter
+  jawnie deklaruje tworzenie, widoczność publiczną, współdzielenie, odtwarzanie
+  i limity partii. Testy atrap obejmują dwa otwarcia z jednym pobraniem,
+  natychmiastową widoczność potwierdzonego celu, pamięć wyboru, izolację usług
+  i kont, unieważnienie, świeżą walidację zapisu, wynik częściowy oraz fokus i
+  etykiety NVDA.
 
 ## Wspólny kontrakt interfejsu źródeł
 

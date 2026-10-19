@@ -243,7 +243,10 @@ def test_spotify_playlist_flow_caches_created_playlist_and_last_destinations() -
         except Exception as error:
             failed(error)
 
-    state = SimpleNamespace(spotify_playlist_destination_ids=[])
+    state = SimpleNamespace(
+        spotify_playlist_destination_ids=[],
+        service_picker_destination_ids={},
+    )
     frame = SimpleNamespace(
         client=client,
         runner=SimpleNamespace(submit=submit),
@@ -251,12 +254,10 @@ def test_spotify_playlist_flow_caches_created_playlist_and_last_destinations() -
         state=state,
         store=SimpleNamespace(
             save=lambda current: saved_states.append(
-                list(current.spotify_playlist_destination_ids)
+                list(current.service_picker_destination_ids["spotify:playlists"])
             )
         ),
         _playlist_membership_pending=False,
-        _spotify_playlist_cache_loaded=False,
-        _spotify_playlist_choices_cache=[],
         _selected_action_rows=lambda: [
             Row("row-1", "Pierwszy", "track", service_id="track-1")
         ],
@@ -277,4 +278,7 @@ def test_spotify_playlist_flow_caches_created_playlist_and_last_destinations() -
         ["existing", "created"],
     ]
     assert state.spotify_playlist_destination_ids == ["existing", "created"]
+    assert state.service_picker_destination_ids == {
+        "spotify:playlists": ["existing", "created"]
+    }
     assert saved_states[-1] == ["existing", "created"]

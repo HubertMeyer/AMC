@@ -21,6 +21,7 @@ __all__ = [
     "host_client",
     "list_model",
     "navigation",
+    "service_picker",
     "shortcuts",
     "state_store",
 ]

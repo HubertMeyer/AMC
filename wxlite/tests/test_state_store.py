@@ -487,6 +487,32 @@ def test_round_trip_keeps_only_safe_last_spotify_playlist_destinations(tmp_path)
         "playlist-one",
         "playlist-two",
     ]
+    assert loaded.service_picker_destination_ids == {
+        "spotify:playlists": ["playlist-one", "playlist-two"]
+    }
+
+
+def test_round_trip_partitions_remote_picker_destinations_by_service(tmp_path) -> None:
+    store = StateStore(tmp_path)
+    state = LiteState(
+        service_picker_destination_ids={
+            "spotify:playlists": [" spotify-one ", "spotify-one", "spotify-two"],
+            "tidal:playlists": ["tidal-one"],
+            "Nieprawidłowy zakres": ["do-usunięcia"],
+        }
+    )
+
+    store.save(state)
+    loaded = store.load()
+
+    assert loaded.service_picker_destination_ids == {
+        "spotify:playlists": ["spotify-one", "spotify-two"],
+        "tidal:playlists": ["tidal-one"],
+    }
+    assert loaded.spotify_playlist_destination_ids == [
+        "spotify-one",
+        "spotify-two",
+    ]
 
 
 def test_recording_history_rejects_invalid_ids_and_duplicate_objects() -> None:

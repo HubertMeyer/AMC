@@ -88,6 +88,12 @@ from .list_model import (
 from . import menu_model
 from .shell_paths import ShellPathError, looks_like_local_path, open_in_explorer
 from .shell_requests import ShellRequest, start_request_reader
+from .service_picker import (
+    ServiceDestination,
+    ServiceDestinationCache,
+    remember_destination_ids,
+    remembered_destination_ids,
+)
 from .playlist_dialog import (
     PlaylistMembershipDialog,
     PlaylistPayloadError,
@@ -5858,11 +5864,9 @@ class LiteFrame(wx.Frame):
         self._radio_search_action_pending = False
         self._podcast_opml_pending = False
         self._playlist_membership_pending = False
-        # Pierwsze Ctrl+Shift+P pobiera listę z konta. Kolejne otwarcia w tym
-        # procesie używają tej migawki; nowo utworzone playlisty dopisujemy do
-        # niej po potwierdzeniu hosta.
-        self._spotify_playlist_cache_loaded = False
-        self._spotify_playlist_choices_cache: list[SpotifyPlaylistChoice] = []
+        # Zdalne listy wyboru używają jednego mechanizmu, ale osobnych partycji
+        # usługi i konta. Cache przyspiesza dialog; nie zatwierdza zapisu.
+        self._service_destination_cache = ServiceDestinationCache()
         self._last_podcast_progress_error: str | None = None
         self._recording_history_persist_error = False
         self._audio_clip_export_in_progress = False
@@ -19710,6 +19714,11 @@ class LiteFrame(wx.Frame):
 
     def _manage_spotify_playlist_membership(self) -> None:
         """Ctrl+Shift+P: natywne playlisty konta Spotify, bez odtwarzania list."""
+        destination_scope = "spotify:playlists"
+        destination_cache = getattr(self, "_service_destination_cache", None)
+        if not isinstance(destination_cache, ServiceDestinationCache):
+            destination_cache = ServiceDestinationCache()
+            self._service_destination_cache = destination_cache
         if self._playlist_membership_pending:
             self.announcer.say("Zmiana playlist Spotify już trwa")
             return
@@ -19737,27 +19746,23 @@ class LiteFrame(wx.Frame):
         target_label = rows[0].title if len(rows) == 1 else format_item_count(len(rows))
         self._playlist_membership_pending = True
 
-        def choices_for_dialog(
-            source: list[SpotifyPlaylistChoice],
-        ) -> list[SpotifyPlaylistChoice]:
+        def cached_choices() -> list[SpotifyPlaylistChoice]:
             state = getattr(self, "state", None)
-            selected_ids = set(
-                getattr(state, "spotify_playlist_destination_ids", []) or []
-            )
+            selected_ids = set(remembered_destination_ids(state, destination_scope))
             return [
                 SpotifyPlaylistChoice(
-                    choice.playlist_id,
-                    choice.name,
-                    choice.description,
-                    selected=choice.playlist_id in selected_ids,
+                    destination.destination_id,
+                    destination.name,
+                    destination.accessible_label,
+                    selected=destination.destination_id in selected_ids,
                 )
-                for choice in source
+                for destination in destination_cache.snapshot(destination_scope)
             ]
 
-        def open_dialog(choices: list[SpotifyPlaylistChoice]) -> None:
+        def open_dialog() -> None:
             with SpotifyPlaylistDialog(
                 self,
-                choices=choices_for_dialog(choices),
+                choices=cached_choices(),
                 target_label=target_label,
             ) as dialog:
                 if dialog.ShowModal() != wx.ID_OK:
@@ -19839,20 +19844,17 @@ class LiteFrame(wx.Frame):
                         })
                     except SpotifyPlaylistPayloadError:
                         created_choices = []
-                    by_id = {
-                        choice.playlist_id: choice
-                        for choice in getattr(
-                            self, "_spotify_playlist_choices_cache", []
-                        )
-                    }
-                    for choice in created_choices:
-                        by_id[choice.playlist_id] = SpotifyPlaylistChoice(
-                            choice.playlist_id,
-                            choice.name,
-                            choice.description,
-                        )
-                    self._spotify_playlist_choices_cache = list(by_id.values())
-                    self._spotify_playlist_cache_loaded = True
+                    destination_cache.merge_confirmed(
+                        destination_scope,
+                        [
+                            ServiceDestination(
+                                choice.playlist_id,
+                                choice.name,
+                                choice.description,
+                            )
+                            for choice in created_choices
+                        ],
+                    )
                 selected_ids = [
                     str(value).strip()
                     for value in data.get("selectedPlaylistIds", [])
@@ -19860,9 +19862,11 @@ class LiteFrame(wx.Frame):
                 ]
                 state = getattr(self, "state", None)
                 if state is not None and selected_ids:
-                    state.spotify_playlist_destination_ids = list(
-                        dict.fromkeys(selected_ids)
-                    )[:50]
+                    remember_destination_ids(
+                        state,
+                        destination_scope,
+                        selected_ids,
+                    )
                     store = getattr(self, "store", None)
                     if store is not None and callable(getattr(store, "save", None)):
                         try:
@@ -19894,23 +19898,25 @@ class LiteFrame(wx.Frame):
                 self._playlist_membership_pending = False
                 self.announcer.say(str(error))
                 return
-            self._spotify_playlist_choices_cache = [
-                SpotifyPlaylistChoice(
-                    choice.playlist_id,
-                    choice.name,
-                    choice.description,
-                )
-                for choice in choices
-            ]
-            self._spotify_playlist_cache_loaded = True
-            open_dialog(choices)
+            destination_cache.replace(
+                destination_scope,
+                [
+                    ServiceDestination(
+                        choice.playlist_id,
+                        choice.name,
+                        choice.description,
+                    )
+                    for choice in choices
+                ],
+            )
+            open_dialog()
 
         def load_failed(error: Exception) -> None:
             self._playlist_membership_pending = False
             self.announcer.say(f"Nie mogę odczytać playlist Spotify: {error}")
 
-        if getattr(self, "_spotify_playlist_cache_loaded", False):
-            open_dialog(list(getattr(self, "_spotify_playlist_choices_cache", [])))
+        if destination_cache.has_snapshot(destination_scope):
+            open_dialog()
             return
         self.announcer.say("Pobieram playlisty Spotify")
         self.runner.submit(

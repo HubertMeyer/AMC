@@ -1,8 +1,8 @@
 # AMC08 — natywne playlisty Spotify
 
-Status: **Korekta pamięci podręcznej i ostatniego celu wdrożona w źródłach i
-testach; czeka na pełną regresję, instalację oraz świadomą próbę z NVDA na
-koncie Spotify**.
+Status: **Korekta pamięci podręcznej i ostatniego celu oraz wspólny fundament
+dla kolejnych usług wdrożone w źródłach i testach; czeka na instalację oraz
+świadomą próbę z NVDA na koncie Spotify**.
 
 Źródło decyzji: zatwierdzona analiza historyczna tylko do odczytu
 `D:\Projekty Codex\Accessible Multimedia Controller\AMC08_PLAYLISTY_SPOTIFY_2026-10-18.md`.
@@ -33,6 +33,12 @@ koncie Spotify**.
   polecenia. W Spotify brzmi ono „Dodaj do playlist Spotify lub utwórz
   playlistę”; w Plikach, Radiu i Podcastach zachowuje lokalne znaczenie
   „Przynależność do playlist”.
+- To samo zachowanie ma obowiązywać w następnych usługach, które udostępnią
+  zdalne playlisty albo inne cele: pierwsze otwarcie pobiera listę, kolejne
+  korzysta z pamięci bieżącego uruchomienia, potwierdzony nowy cel pojawia się
+  od razu, a ostatni wybór wraca z właściwego profilu. Mechanizm ma osobne
+  partycje usług i kont, aby adapter z dostępną tożsamością konta nie pomieszał
+  celów nawet przy takich samych nazwach lub identyfikatorach.
 
 ## Uzasadnienie i decyzje
 
@@ -61,6 +67,11 @@ koncie Spotify**.
   proces, ale samo dodanie nadal przechodzi przez świeżą weryfikację hosta.
   Potwierdzona nowa playlista jest dopisywana do pamięci, zamiast czekać na
   późniejsze odświeżenie katalogu Spotify.
+- **Korekta użytkownika z 19 października 2026 rozszerza tę zasadę na kolejne
+  wdrażane usługi.** Powstał neutralny mechanizm list celów przygotowany do
+  rozdzielenia usługi i konta. Nie narzuca on innym dostawcom endpointów ani możliwości
+  Spotify. Pamięć przyspiesza interfejs, natomiast zapis zawsze przechodzi
+  przez świeżą walidację adaptera konkretnej usługi.
 
 ## Testy i wynik
 
@@ -99,6 +110,16 @@ koncie Spotify**.
 - Szeroki audyt menu, skrótów i sesji: **403 zaliczone i 5 podtestów**.
   Pełna regresja wxPython po połączeniu korekt: **1837 zaliczonych, 110
   pominiętych i 11 podtestów zaliczonych**.
+- Po uogólnieniu mechanizmu: **61 zaliczonych** testów Spotify, wspólnego
+  cache'u, migracji i magazynu oraz **121 zaliczonych** testów menu, skrótów,
+  pomocy i palety. Testy potwierdzają izolację Spotify/TIDAL i dwóch kont,
+  selektywne unieważnianie, natychmiastowe dopisanie potwierdzonego celu oraz
+  migrację wcześniejszego pola ustawień Spotify.
+- Pełna regresja wxPython po uogólnieniu: **1842 zaliczone, 110 pominiętych i
+  11 podtestów zaliczonych** w 78,80 s. Cztery testy hosta podcastów, które w
+  pierwszym przebiegu zatrzymała blokada lokalnego `127.0.0.1`, zaliczyły się
+  po udzieleniu dostępu do testowego serwera lokalnego; drugi pełny przebieg
+  zakończył się bez błędów.
 
 ## Znane ograniczenia
 
@@ -112,6 +133,14 @@ koncie Spotify**.
   AMC trafia do niej natychmiast; zmiana wykonana równolegle w innej aplikacji
   Spotify będzie widoczna po ponownym uruchomieniu AMC Test. Dodawanie nie
   ufa cache — host ponownie sprawdza uprawnienia i istnienie wskazanego celu.
+- TIDAL i przyszłe usługi mają teraz wspólny fundament i trwały kontrakt, ale
+  ich adapter musi jawnie podłączyć własną zdalną listę. Nie przypisujemy im
+  automatycznie tworzenia playlist publicznych ani innych możliwości Spotify.
+- Bieżący kontrakt hosta Spotify nie przekazuje interfejsowi stabilnego
+  identyfikatora konta. W jednym procesie używane jest bieżące konto; po jego
+  zmianie wymagane jest ponowne uruchomienie albo przyszłe jawne unieważnienie
+  cache'u przez przepływ logowania. Sam zapis nadal sprawdza konto i prawa w
+  hoście, więc pamięć interfejsu nie może nadać uprawnień do obcej playlisty.
 
 ## Wersja i commit
 
@@ -125,3 +154,5 @@ koncie Spotify**.
 - Korekta cache i ostatniego celu: commit `fdc26b83` — `fix(amc): uporzadkuj
   nagrania menu i playlisty Spotify`; kompilacja i instalacja jeszcze
   niewykonane.
+- Uogólnienie dla kolejnych usług: źródła i testy gotowe 19 października 2026;
+  numer commitu zostanie dopisany po zamknięciu etapu.

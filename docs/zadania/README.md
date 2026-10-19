@@ -76,7 +76,7 @@ zmian, wymagający korekty użytkownika:
   `D:\Projekty Codex\Accessible Multimedia Controller\AMC03_AUDYT_SKROTOW_2026-10-18.md`
   oraz `AMC04_REALIZACJA_ETAP_A_2026-10-18.md`. Stare źródła WPF służą tylko
   jako wzorzec; właściwe wdrożenie wykonujemy w tym repozytorium.
-- `MENU-001` — **W trakcie; korekta źródłowa i testy ukierunkowane gotowe** —
+- `MENU-001` — **W trakcie; korekta źródłowa, trwały kontrakt i testy gotowe** —
   wspólne menu kontekstowe bez odczytu technicznych cyfr i przypadkowych
   liter dostępu, nazwy zależne od rodzaju elementu, rzeczywiste skróty oraz
   audyt dostępności poleceń i nawigacji między sesjami. Szczegóły:
@@ -96,11 +96,13 @@ zmian, wymagający korekty użytkownika:
   Zatwierdzona specyfikacja:
   `D:\Projekty Codex\Accessible Multimedia Controller\AMC13_TIMESHIFT_RADIA_2026-10-18.md`.
   Eksport fragmentów Time Shiftu pozostaje późniejszym rozszerzeniem.
-- `AMC08` — **Korekta cache i ostatniego celu gotowa w źródłach i testach;
+- `AMC08` — **Wspólny cache usług i ostatniego celu gotowy w źródłach i testach;
   czeka na instalację, odbiór NVDA i próbę na koncie** — natywne playlisty
   Spotify w AMC Test: `Ctrl+P`, `Ctrl+Shift+P`, pobranie katalogu raz na
   uruchomienie, natychmiastowa widoczność nowej playlisty i zapamiętanie
-  ostatnich celów. Przebieg: `AMC08-playlisty-spotify.md`. Zatwierdzona specyfikacja:
+  ostatnich celów. Mechanizm ma partycje usług i kont, aby kolejne integracje
+  używały tego samego kontraktu bez kopiowania kodu Spotify. Przebieg:
+  `AMC08-playlisty-spotify.md`. Zatwierdzona specyfikacja:
   `D:\Projekty Codex\Accessible Multimedia Controller\AMC08_PLAYLISTY_SPOTIFY_2026-10-18.md`.
   Historyczne źródła są tylko wzorcem; kod powstaje w tym repozytorium.
 - `AMC09` — **Wdrożone i zainstalowane w AMC Test; czeka na ręczny odbiór

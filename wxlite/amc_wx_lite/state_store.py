@@ -30,6 +30,10 @@ from .session_order import (
     migrated_values as migrated_session_order_values,
     values as normalized_session_order_values,
 )
+from .service_picker import (
+    normalize_destination_ids,
+    normalize_remembered_destinations,
+)
 from .transport_parity import (
     normalize_custom_seek_seconds,
     normalize_message_templates,
@@ -41,6 +45,19 @@ _TIDAL_SORT_VIEWS = {"library", "favorites", "playlists"}
 _SPOTIFY_SORT_VIEWS = {
     "liked", "albums", "artists", "playlists", "podcasts", "episodes",
 }
+
+
+def _read_service_picker_destination_ids(
+    raw: object,
+    legacy_spotify_raw: object,
+) -> dict[str, list[str]]:
+    """Read generic selections and migrate the earlier Spotify-only field."""
+
+    result = normalize_remembered_destinations(raw)
+    legacy_spotify_ids = normalize_destination_ids(legacy_spotify_raw)
+    if legacy_spotify_ids and "spotify:playlists" not in result:
+        result["spotify:playlists"] = legacy_spotify_ids
+    return result
 
 
 def _read_podcast_inbox_sort_mode(raw: object) -> str | None:
@@ -88,24 +105,6 @@ def _read_spotify_sort_modes(raw: object) -> dict[str, str]:
             and mode in _COLLECTION_SORT_MODES
         )
     }
-
-
-def _read_spotify_playlist_destination_ids(raw: object) -> list[str]:
-    """Zapamiętaj wyłącznie stabilne identyfikatory ostatnich celów Spotify."""
-
-    if not isinstance(raw, list):
-        return []
-    result: list[str] = []
-    seen: set[str] = set()
-    for value in raw:
-        playlist_id = value.strip() if isinstance(value, str) else ""
-        if not playlist_id or playlist_id in seen:
-            continue
-        seen.add(playlist_id)
-        result.append(playlist_id)
-        if len(result) >= 50:
-            break
-    return result
 
 
 def _read_search_history(raw: object) -> dict[str, list[str]]:
@@ -553,8 +552,13 @@ class LiteState:
     #: Wartości są wyłącznie modelem; NVDA dostaje jawne polskie etykiety.
     spotify_sort_modes: dict[str, str] = field(default_factory=dict)
     #: Ostatnie natywne playlisty Spotify wybrane pod Ctrl+Shift+P. To dane
-    #: modelu przypisane do profilu, nie tekst dla czytnika ani token konta.
+    #: zgodności wstecznej; nowe usługi używają mapy poniżej.
     spotify_playlist_destination_ids: list[str] = field(default_factory=list)
+    #: Ostatnie cele zdalnych okien wyboru według usługi i rodzaju listy.
+    #: Identyfikatory pozostają modelem; etykiety NVDA powstają w adapterze.
+    service_picker_destination_ids: dict[str, list[str]] = field(
+        default_factory=dict
+    )
     #: Historia zapytań osobno dla każdej sesji oraz zakresu globalnego.
     #: Zawiera wyłącznie tekst użytkownika, bez wyników i identyfikatorów.
     search_history: dict[str, list[str]] = field(default_factory=dict)
@@ -763,9 +767,13 @@ class StateStore:
             spotify_sort_modes=_read_spotify_sort_modes(
                 raw.get("spotify_sort_modes")
             ),
-            spotify_playlist_destination_ids=(
-                _read_spotify_playlist_destination_ids(
-                    raw.get("spotify_playlist_destination_ids")
+            spotify_playlist_destination_ids=normalize_destination_ids(
+                raw.get("spotify_playlist_destination_ids")
+            ),
+            service_picker_destination_ids=(
+                _read_service_picker_destination_ids(
+                    raw.get("service_picker_destination_ids"),
+                    raw.get("spotify_playlist_destination_ids"),
                 )
             ),
             search_history=_read_search_history(raw.get("search_history")),
@@ -836,11 +844,16 @@ class StateStore:
         spotify_sort_modes = _read_spotify_sort_modes(state.spotify_sort_modes)
         if spotify_sort_modes:
             payload["spotify_sort_modes"] = spotify_sort_modes
-        payload["spotify_playlist_destination_ids"] = (
-            _read_spotify_playlist_destination_ids(
-                state.spotify_playlist_destination_ids
-            )
+        remembered_destinations = normalize_remembered_destinations(
+            state.service_picker_destination_ids
         )
+        legacy_spotify_ids = remembered_destinations.get(
+            "spotify:playlists",
+            normalize_destination_ids(state.spotify_playlist_destination_ids),
+        )
+        payload["service_picker_destination_ids"] = remembered_destinations
+        # Jeden cykl zgodności pozwala na bezpieczny powrót do starszej paczki.
+        payload["spotify_playlist_destination_ids"] = legacy_spotify_ids
         payload["search_history"] = _read_search_history(state.search_history)
         payload["spotify_playback_history"] = _read_spotify_history(
             state.spotify_playback_history

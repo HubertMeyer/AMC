@@ -1,7 +1,7 @@
 # MENU-001 — menu kontekstowe i skróty zależne od sesji
 
-Status: **W trakcie; korekta źródłowa i testy ukierunkowane gotowe, pełna
-regresja, instalacja i odbiór NVDA jeszcze niewykonane**.
+Status: **W trakcie; korekta źródłowa, trwały kontrakt i testy gotowe,
+instalacja oraz odbiór NVDA jeszcze niewykonane**.
 
 ## Materiał do dokumentacji użytkownika
 
@@ -29,6 +29,12 @@ natomiast na liście z ręczną kolejnością przenosi element. Menu nie reklamu
 tych poleceń w sesji lub widoku, który nie ma wymaganej tożsamości albo osi
 czasu.
 
+Ta sama zasada obowiązuje przy następnych funkcjach i w innych dużych
+aplikacjach: klawisz dostępu menu nie jest drugim skrótem polecenia, a NVDA nie
+może dostać technicznej cyfry, przypadkowej litery, identyfikatora polecenia ani
+reprezentacji obiektu. Trwały kontrakt zapisano w instrukcjach repozytorium oraz
+w osobistej umiejętności Codexa `accessible-desktop-contracts`.
+
 ## Uzasadnienie i decyzje
 
 - **Korekta użytkownika z 19 października 2026:** „Zmień stację” zastąpiono
@@ -45,6 +51,10 @@ czasu.
 - Zmiana nazwy playlisty używa pełnej, atomowej migawki playlist danej sesji.
   Nie usuwa elementów, nie zmienia kolejności i po zapisie przywraca fokus na
   ten sam stabilny identyfikator playlisty.
+- **Korekta użytkownika z 19 października 2026:** uporządkowanie nie może być
+  jednorazową łatką AMC. Reguła rozdzielenia mnemoniców od rzeczywistych
+  skrótów, semantycznych nazw i dostępnych etykiet została zapisana jako
+  trwały kontrakt projektu oraz automatycznie wykrywana umiejętność Codexa.
 
 ## Testy i wynik
 
@@ -58,6 +68,12 @@ czasu.
 - Pełna regresja wxPython: **1837 zaliczonych, 110 pominiętych i 11 podtestów
   zaliczonych**. Kompilacja, instalacja i uruchomienie nadal pozostają
   osobnymi, jeszcze niewykonanymi krokami.
+- Po dodaniu trwałego kontraktu ponownie zaliczono **121** testów menu,
+  skrótów, pomocy i palety. Struktura umiejętności, odsyłacze i kodowanie UTF-8
+  zostały sprawdzone; dostarczony walidator nie mógł ruszyć bez nieobecnego
+  lokalnie modułu `yaml`, dlatego nie pobierano zależności z sieci.
+- Pełna regresja po połączeniu kontraktu menu i wspólnego mechanizmu usług:
+  **1842 zaliczone, 110 pominiętych i 11 podtestów zaliczonych** w 78,80 s.
 
 ## Znane ograniczenia
 
@@ -72,6 +88,8 @@ czasu.
 
 - Źródła: commit `fdc26b83` — `fix(amc): uporzadkuj nagrania menu i playlisty
   Spotify`.
+- Trwały kontrakt repozytorium i umiejętność osobista: gotowe 19 października
+  2026; numer commitu repozytorium zostanie dopisany po zamknięciu etapu.
 - Testy ukierunkowane: zaliczone.
 - Kompilacja, instalacja i uruchomienie: jeszcze niewykonane.
 - Publikacja: niewykonana i niedozwolona bez osobnego polecenia użytkownika.
