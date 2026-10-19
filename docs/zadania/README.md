@@ -30,6 +30,10 @@ jawnym poleceniu użytkownika albo przez osobno uzgodniony harmonogram.
 
 ## Zadania
 
+Roboczy indeks materiału z nocnych etapów do przyszłej instrukcji i opisu
+zmian, wymagający korekty użytkownika:
+[INDEKS-MATERIALU-INSTRUKCJA-I-ZMIANY-2026-10-19.md](INDEKS-MATERIALU-INSTRUKCJA-I-ZMIANY-2026-10-19.md).
+
 - `REC-001` — **Zrobione** — trwałość wykonanego harmonogramu nagrywania
   Radia i zgodność listy `Alt+R` z blokadą zamknięcia. Szczegóły:
   [REC-001-harmonogram-alt-r-zamykanie.md](REC-001-harmonogram-alt-r-zamykanie.md).
