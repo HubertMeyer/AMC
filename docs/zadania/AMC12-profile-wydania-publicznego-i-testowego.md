@@ -169,7 +169,8 @@ zawsze otrzymuje jawny profil z zatwierdzonego manifestu.
 
 - Data pracy: 19 października 2026.
 - Kod i testy fundamentu: lokalny commit `d2a34ecf`.
-- Rozdzielenie uruchamiacza i aktualizatora: commit następujący po tym zapisie.
+- Rozdzielenie uruchamiacza i aktualizatora: `f9a70db8` —
+  `feat(amc12): rozdziel launcher i updater profili`.
 - Kompilacja: odizolowane kompilacje Debug uruchamiacza i aktualizatora —
   zaliczone; paczki Release nie zbudowano.
 - Instalacja: nie wykonywano dla tego etapu.
