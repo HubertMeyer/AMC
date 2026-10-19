@@ -120,6 +120,23 @@ Historyczny projekt został użyty tylko jako materiał do odczytu.
   Spację, Enter, Alt+strzałki, Konfiguruj, anulowanie, powrót fokusu i ponowne
   otwarcie. Testy automatyczne nie są dowodem rzeczywistej mowy NVDA.
 
+## Porządek dysku
+
+- Po potwierdzonej instalacji usunięto wyłącznie katalog roboczy etapu
+  `C:\Users\micha\Documents\Codex\2026-10-18\ma\work\amc09` (27 plików,
+  około 1,6 MB) oraz odtwarzalne katalogi `bin\Release` trzech budowanych
+  projektów pod
+  `D:\Projekty Codex\AMC - integracja wxPython\src` (157 plików, około
+  133,3 MB).
+- Łącznie odzyskano około 128,7 MiB. Usunięcie jest lokalnie nieodwracalne,
+  ale te pliki są odtwarzalne z zatwierdzonych źródeł przez kompilację.
+- Skrypt promowania sam usunął bieżący staging w `.test-tmp`. Nie usuwano
+  zastanych, niepewnych katalogów `.test-tmp`, pamięci testów ani danych
+  użytkownika.
+- Zachowano zainstalowany program w `D:\Projekty Codex\AMC Python`, bieżący
+  kwit oraz jedyną zweryfikowaną paczkę odbiorczą w `.test-output`. Nie
+  usunięto źródeł, `.git`, ustawień, poświadczeń, nagrań ani pobrań.
+
 ## Wersja i commit
 
 - Kod i testy źródłowe: commit `dece7646` (`feat(amc09): dodaj menedzer sesji`).
