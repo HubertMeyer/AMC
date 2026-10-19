@@ -2,7 +2,8 @@
 
 ## Status
 
-Oczekuje.
+Wdrożone w kodzie i zweryfikowane testami; czeka na kompilację, instalację oraz
+ręczny odbiór NVDA.
 
 ## Stan obecny
 
@@ -28,9 +29,12 @@ współdzielonego profilu przez interfejs Python.
 - tryb alfabetyczny używa polskiego porównania nazw, nie technicznych ID;
 - sortowanie nie miesza podcastów, kanałów i `Media internetowe` z odcinkami.
 
-Skróty oraz domyślny tryb wymagają potwierdzenia przed wdrożeniem. Zadanie nie
-jest częścią poprawki `SEARCH-001` i nie powinno opóźniać widocznego zaznaczenia
-elementu właśnie dodanego z wyszukiwarki.
+Korekta użytkownika z 2026-10-19 zastępuje wcześniejsze zastrzeżenie, że skróty
+i domyślny tryb wymagają potwierdzenia: `Alt+1`, `Alt+2` i `Alt+3` zostały
+zatwierdzone do wdrożenia. Domyślnie zachowujemy kolejność własną, aby
+aktualizacja nie przestawiła po cichu istniejącej Biblioteki. Zadanie nie jest
+częścią poprawki `SEARCH-001` i nie opóźnia widocznego zaznaczenia elementu
+właśnie dodanego z wyszukiwarki.
 
 ## Kryteria akceptacji
 
@@ -42,9 +46,87 @@ elementu właśnie dodanego z wyszukiwarki.
 
 ## Prace i weryfikacja
 
-- Data rozpoczęcia:
-- Data zakończenia:
-- Zmienione pliki:
-- Testy:
-- Commit:
-- Zainstalowana kompilacja:
+- Data rozpoczęcia: 2026-10-19.
+- Data zakończenia kodu i testów: 2026-10-19.
+- Zmienione pliki: `wxlite/amc_wx_lite/gui.py`, `menu_model.py`,
+  `navigation.py`, `podcast_source.py`, `shortcuts.py`, `state_store.py`,
+  `wxlite/tests/test_podcast_library_sort.py`,
+  `test_menu_exposes_existing_actions.py`, `test_transport_parity.py`.
+- Commit kodu: `b3768226` (`feat(pod-001): dodaj sortowanie biblioteki
+  zrodel`).
+- Zainstalowana kompilacja: jeszcze nie; zapis dotyczy kodu i testów, nie
+  instalacji ani publikacji.
+
+## Materiał do dokumentacji użytkownika
+
+Na głównej liście `Biblioteka` w sesji `Podcasty i YouTube` można wybrać sposób
+ułożenia źródeł:
+
+- `Alt+1` — ostatnio dodane na początku;
+- `Alt+2` — alfabetycznie według polskich nazw;
+- `Alt+3` — kolejność własna zapisana w Bibliotece.
+
+Zmiana sortowania pozostawia zaznaczenie na tym samym podcaście, kanale
+YouTube albo pozycji `Media internetowe`. NVDA mówi nazwę wybranego trybu,
+nazwę źródła i jego pozycję, na przykład `Alfabetycznie. Żuraw, 3 z 3`.
+Wybrany tryb jest pamiętany prywatnie przez AMC Test. Przy pierwszym
+uruchomieniu po aktualizacji program zachowuje dotychczasową kolejność własną.
+
+Te same trzy polecenia pojawiają się w menu, pomocy bieżącego miejsca pod
+`Ctrl+F1`, pełnej pomocy klawiatury i palecie poleceń `Ctrl+Shift+K` tylko
+wtedy, gdy otwarta jest główna Biblioteka. W Skrzynce podcastów `Alt+1–3`
+nadal steruje jej osobnym sortowaniem. W pozostałych widokach sesji skróty nie
+udają poleceń Biblioteki.
+
+## Uzasadnienie i decyzje
+
+- Kolejność własna pozostaje odczytem trwałego pola porządku z bazy i jest
+  domyślna dla istniejącego profilu. Python nie zapisuje sortowania do
+  `podcasts.db`.
+- `Ostatnio dodane` odwraca kolejność własną, ponieważ nowe źródła są
+  dopisywane na jej końcu.
+- Sortowanie alfabetyczne korzysta ze wspólnej polskiej kolacji hosta C#.
+  Jeżeli host nie może jej dostarczyć, AMC używa deterministycznej kolejności
+  zastępczej i uczciwie dopowiada `kolejność zastępcza`.
+- Podcast, kanał YouTube i `Media internetowe` zachowują swój użytkowy typ;
+  odcinki nie trafiają na listę źródeł. Pole techniczne `ordinal` pozostaje w
+  modelu i nie jest wypowiadane przez NVDA.
+- Zaznaczenie jest odtwarzane po stabilnym identyfikatorze. Ten sam mechanizm
+  pozwala po wyjściu z wyszukiwarki wskazać właśnie dodane źródło niezależnie
+  od aktywnego sortowania.
+- Pomoc pełna filtruje polecenia przez ten sam bieżący stan menu i model
+  możliwości, którego używa paleta poleceń.
+
+## Testy i wynik
+
+- Testy ukierunkowane dla źródła, stanu, skrótów, menu, palety, pomocy i
+  fokusu: `165 passed in 3.85s`.
+- Poprawiony test parytetu po dodaniu nowego kontekstu skrótów:
+  `1 passed in 0.32s`.
+- Pełna regresja Python po poprawce: `1777 passed, 110 skipped, 11 subtests
+  passed in 86.05s`.
+- Test bazy porównuje SHA-256 przed i po trzech sortowaniach; wynik pozostaje
+  identyczny. Osobne testy potwierdzają brak źródła ukrytego, właściwe etykiety
+  typów, trwałość prywatnego wyboru, odrzucenie technicznej wartości, fokus po
+  zmianie kolejności i parytet menu–skrót–pomoc–paleta.
+- `git diff --check` zakończył się bez błędów; wystąpiło jedynie informacyjne
+  ostrzeżenie Git o przyszłej normalizacji LF do CRLF.
+
+## Znane ograniczenia
+
+- Ręczny odbiór NVDA oraz rzeczywiste zachowanie po zainstalowaniu kompilacji
+  pozostają do wykonania.
+- Tryb `Ostatnio dodane` opiera się na kolejności dopisywania `ordinal`, bo
+  współdzielona baza nie przechowuje osobnej daty dodania źródła.
+- Przy niedostępnej polskiej kolacji hosta program nie przedstawia zastępczego
+  porządku jako pełnego sortowania AMC.
+- Zadanie nie zmienia ręcznie ustawionej kolejności w bazie i nie dodaje
+  interfejsu jej przesuwania.
+
+## Wersja i commit
+
+- Kod i testy: commit `b3768226`.
+- Kompilacja: jeszcze nie wykonana po tym commicie.
+- Instalacja: jeszcze nie wykonana po tym commicie.
+- Publikacja: nie wykonywano; zgodnie z zakresem nocnym nic nie wysłano na
+  GitHub.
