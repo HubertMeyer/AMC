@@ -129,7 +129,7 @@ w osobistej umiejętności Codexa `accessible-desktop-contracts`.
 
 ## Wersja i commit
 
-- Najnowsza korekta: bieżący commit zadania; testy zaliczone, instalacja jeszcze
+- Najnowsza korekta: `4c75f237`; testy zaliczone, instalacja jeszcze
   niewykonana.
 - Korekta po ręcznym odbiorze: `4b85e0c8` — źródła, testy, instalacja i
   uruchomienie zweryfikowane.

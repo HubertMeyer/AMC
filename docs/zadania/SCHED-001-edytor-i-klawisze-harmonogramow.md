@@ -221,7 +221,7 @@ manifest, SHA-256, instalacja, integralność i uruchomienie — zaliczone.
 
 ## Wersja i commit
 
-- Druga korekta po ręcznym odbiorze: bieżący commit zadania; testy Pythona i
+- Druga korekta po ręcznym odbiorze: `4c75f237`; testy Pythona i
   pełny Core SmokeTests zaliczone. Instalacja jeszcze niewykonana.
 - Korekta po ręcznym odbiorze: `4b85e0c8` — kod i testy; pełna regresja,
   kompilacja pakietu, instalacja i uruchomienie zaliczone.
