@@ -725,6 +725,12 @@ def recording_history_rows(
             parts = [outcome, station_name]
             if entry.reason:
                 parts.append(entry.reason.rstrip("."))
+        elif entry.outcome == "completed" and state == "available":
+            # Historia jest przede wszystkim lista plikow. Powtarzane
+            # „Nagrane” przed kazdym poprawnym plikiem nie rozroznia wierszy,
+            # a wyraznie spowalnia nawigacje NVDA. Stany wyjatkowe ponizej
+            # zachowuja prefiks, bo wtedy niesie on potrzebna informacje.
+            parts = [file_name or station_name]
         else:
             parts = [outcome, file_name or station_name]
         folder = _folder_label(entry.path)

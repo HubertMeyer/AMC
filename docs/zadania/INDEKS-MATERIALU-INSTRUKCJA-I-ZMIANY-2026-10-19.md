@@ -27,7 +27,8 @@ użytkownika. Nie zmienia statusu ręcznego odbioru NVDA poszczególnych funkcji
    pozostanie w wyszukiwarce oraz powrót do odświeżonej Biblioteki po
    `Escape`. Źródło:
    [SEARCH-001-youtube-biblioteka-komunikaty.md](SEARCH-001-youtube-biblioteka-komunikaty.md).
-3. Nagrywane pliki i historia — krótkie widoki `Alt+R`, `Alt+Shift+R`,
+3. Nagrywane pliki i historia — krótkie widoki `Alt+R`, `Alt+Shift+R`;
+   ukończony plik zaczyna się od razu nazwą bez powtarzanego „Nagrane”;
    oddzielna pamięć zaznaczenia oraz szczegóły bitrate, wielkości i folderu pod
    lewą strzałką, również w `Ctrl+H`. Źródło:
    [AMC02-listy-nagrywania-i-historii.md](AMC02-listy-nagrywania-i-historii.md).

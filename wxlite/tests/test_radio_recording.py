@@ -719,7 +719,8 @@ def test_recording_history_keeps_success_failure_and_accessible_labels() -> None
         }
     })
     rows = recording_history_rows(entries, now=now, path_probe=lambda path: "available")
-    assert rows[0].title == "Nagrane, audycja"
+    assert rows[0].title == "audycja"
+    assert not rows[0].title.startswith("Nagrane")
     assert rows[0].path == r"D:\Nagrania\audycja.mp3"
     assert "techniczne-udane" not in rows[0].title
     assert rows[1].title == "Nieudane, Radio Awaria, Brak połączenia"
@@ -898,7 +899,7 @@ def test_recording_history_announces_heading_without_separate_item_count() -> No
     nav = Navigator()
     row = Row(
         item_id="radio-recording-history:1",
-        title="Nagrane, audycja",
+        title="audycja",
         kind="track",
         path=r"D:\Nagrania\audycja.mp3",
     )
@@ -929,8 +930,8 @@ def test_active_and_completed_recording_views_remember_separate_selection() -> N
 
     nav.active = SessionId.FILES
     completed = [
-        Row(item_id="h1", title="Nagrane, jeden", kind="track"),
-        Row(item_id="h2", title="Nagrane, dwa", kind="track"),
+        Row(item_id="h1", title="jeden", kind="track"),
+        Row(item_id="h2", title="dwa", kind="track"),
     ]
     nav.apply_library_view(
         LibraryView.RECORDED_RADIO_FILES,

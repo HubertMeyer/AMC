@@ -37,10 +37,11 @@ zmian, wymagający korekty użytkownika:
 - `REC-001` — **Zrobione** — trwałość wykonanego harmonogramu nagrywania
   Radia i zgodność listy `Alt+R` z blokadą zamknięcia. Szczegóły:
   [REC-001-harmonogram-alt-r-zamykanie.md](REC-001-harmonogram-alt-r-zamykanie.md).
-- `AMC02` — **Wdrożone i zainstalowane w AMC Test; czeka na ręczny odbiór
-  NVDA** — krótkie wiersze `Alt+R` i `Alt+Shift+R`, brak
+- `AMC02` — **Wdrożone i zainstalowane w AMC Test; korekta po ręcznym
+  odsłuchu gotowa w źródłach i testach, czeka na instalację** — krótkie wiersze `Alt+R` i `Alt+Shift+R`, brak
   osobnego „X elementów”, pamięć zaznaczenia oraz bitrate, wielkość i folder
-  pod lewą strzałką także w `Ctrl+H`. Bieżący zapis realizacji:
+  pod lewą strzałką także w `Ctrl+H`. Ukończony plik w Historii zaczyna się
+  od razu nazwą, bez powtarzanego „Nagrane”. Bieżący zapis realizacji:
   [AMC02-listy-nagrywania-i-historii.md](AMC02-listy-nagrywania-i-historii.md).
   Zatwierdzona analiza historyczna:
   `D:\Projekty Codex\Accessible Multimedia Controller\AMC02_ANALIZA_2026-10-18.md`
@@ -51,8 +52,8 @@ zmian, wymagający korekty użytkownika:
   harmonogramów: informacje pod strzałkami, segmentowa data i czas oraz
   jednoznaczne wpisywanie czasu trwania. Szczegóły:
   [SCHED-001-edytor-i-klawisze-harmonogramow.md](SCHED-001-edytor-i-klawisze-harmonogramow.md).
-- `NVDA-001` — **W trakcie; poprawka zastosowana i NVDA zrestartowane, czeka
-  na ręczny odbiór mowy oraz schowka** — usunięcie opóźnienia `Ctrl+C` powodowanego przez
+- `NVDA-001` — **W trakcie; użytkownik potwierdził bardzo szybką reakcję
+  `Ctrl+C` w AMC, pozostaje kontrola zwykłej aplikacji** — usunięcie opóźnienia `Ctrl+C` powodowanego przez
   NVDAExtensionGlobalPlugin bez zmiany zwykłego schowka w innych programach.
   Szczegóły:
   [NVDA-001-opoznienie-ctrl-c.md](NVDA-001-opoznienie-ctrl-c.md).

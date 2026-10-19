@@ -1,6 +1,6 @@
 # NVDA-001 — opóźnienie Ctrl+C z NVDAExtensionGlobalPlugin
 
-- Status: `W trakcie — poprawka zastosowana, NVDA zrestartowane; czeka na ręczny odbiór mowy i schowka`
+- Status: `W trakcie — użytkownik potwierdził bardzo szybką reakcję Ctrl+C w AMC; pozostaje kontrola zwykłej aplikacji`
 - Utworzono: 17 października 2026
 - Obszar: NVDA, schowek i skróty AMC
 - Polecenie uruchamiające: `Uruchom zadanie NVDA-001`
@@ -88,6 +88,8 @@ aplikacjach.
   poprawka zgodności CRLF: `df2f8fe6`.
 - Pozostałe ograniczenie: wynik mowy, zawartość schowka i zachowanie zwykłej
   aplikacji muszą zostać potwierdzone ręcznie przez użytkownika.
+- Odbiór użytkownika 19 października 2026: „Ctrl+C poprawione, działa bardzo
+  szybko”. Potwierdza to główny cel usunięcia zauważalnej zwłoki w AMC.
 
 ## Materiał do dokumentacji użytkownika
 
@@ -132,8 +134,9 @@ okna ani ogólnej nazwy `python.exe`.
 
 - Aktualizacja NVDAExtensionGlobalPlugin może nadpisać lokalną poprawkę; po
   aktualizacji trzeba najpierw ponownie wykonać suchą walidację nowego układu.
-- Status pozostaje „W trakcie” wyłącznie do ręcznej próby `Ctrl+C` w AMC oraz
-  w zwykłej aplikacji.
+- Szybkość `Ctrl+C` w AMC została potwierdzona ręcznie 19 października 2026.
+  Status pozostaje „W trakcie” tylko do potwierdzenia, że zwykła aplikacja
+  zachowała zamierzone działanie dodatku.
 - Kopia oryginału musi zostać zachowana do ręcznego odbioru użytkownika.
 
 ## Wersja i commit

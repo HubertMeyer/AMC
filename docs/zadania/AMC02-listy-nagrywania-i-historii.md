@@ -1,6 +1,7 @@
 # AMC02 — krótkie listy nagrywania i historia plików
 
-Status: **Wdrożone i zainstalowane w AMC Test; czeka na ręczny odbiór NVDA**.
+Status: **Wdrożone i zainstalowane w AMC Test; korekta wierszy ukończonych
+przygotowana w źródłach i czeka na instalację**.
 
 ## Zakres
 
@@ -28,7 +29,8 @@ Lista nie powtarza czasu trwania, liczby zapisanych części, folderu ani nazwy
 harmonogramu.
 
 `Alt+Shift+R` otwiera „Historię nagrywania”. Zwykły ukończony plik jest czytany
-jako „Nagrane, nazwa pliku”. Inne stany zaczynają się od krótkiego,
+od razu jako sama nazwa pliku, bez powtarzanego przedrostka „Nagrane”. Inne
+stany zaczynają się od krótkiego,
 jednoznacznego określenia: „Zatrzymane”, „Przerwane”, „Nieudane”, „Brak pliku
 nagrania” albo „Plik nagrania niedostępny”. Przy nieudanej próbie, dla której
 nie powstał plik, lista może podać nazwę stacji i przyczynę. Normalny wiersz nie
@@ -68,6 +70,12 @@ Polecenie `Alt+R` ma w menu, pomocy klawiatury `Ctrl+F1` i palecie
   ukończony wpis nie zaczynał się od „Nagrane”.
 - Korekta użytkownika z 18.10.2026 zastępuje wcześniejszy wariant, w którym
   `Alt+Shift+R` ogłaszał osobny licznik elementów przed pierwszym wierszem.
+- Korekta użytkownika z 19.10.2026 zastępuje ustalenie z 18.10.2026, według
+  którego każdy poprawnie ukończony wiersz zaczynał się od „Nagrane”. W
+  zwykłej historii ta informacja nie rozróżnia plików i niepotrzebnie wydłuża
+  każdy ruch NVDA, dlatego wiersz zaczyna się teraz bezpośrednio nazwą pliku.
+  Określenia „Zatrzymane”, „Przerwane”, „Nieudane” i informacje o braku albo
+  niedostępności pliku pozostają, ponieważ opisują stan wyjątkowy.
 
 ## Zmienione miejsca
 
@@ -105,10 +113,25 @@ osobnego licznika w niepustej Historii nagrywania, oddzielną pamięć zaznacze�
 odrzucenie folderu dla wpisu internetowego, brak powtórzenia tytułu oraz
 zgodność nazw i skrótów wykonania, pomocy i palety.
 
+19.10.2026, korekta po ręcznym odsłuchu użytkownika:
+
+- `39 passed` — cały `test_radio_recording.py`, w tym jawne sprawdzenie, że
+  poprawnie ukończony i dostępny plik zaczyna się od nazwy, a nie od słowa
+  „Nagrane”;
+- `96 passed` — regresje palety poleceń, informacji pod lewą strzałką,
+  nawigacji i widoków Biblioteki;
+- `py_compile` zmienionego formattera i testu: zaliczony;
+- osobny przebieg zawierający test zależny od wx nie został zebrany przez
+  systemowy Python bez wxPython. Nie przedstawia się go jako zaliczonego;
+  dotychczasowe testy tego widoku oraz pełny odbiór wymagają następnej paczki.
+- Nie wykonano jeszcze kompilacji ani instalacji tej korekty.
+
 ## Znane ograniczenia
 
-- Nie przeprowadzono jeszcze ręcznego odsłuchu rzeczywistego NVDA na obu
-  listach. Instalacja i testy automatyczne nie zastępują tego odbioru.
+- Ręczny odsłuch Historii nagrywania 19.10.2026 wykrył zbyt częste słowo
+  „Nagrane”. Korekta jest gotowa w źródłach, ale jej działanie z NVDA trzeba
+  potwierdzić dopiero po instalacji następnej paczki. Osobny odbiór listy
+  aktualnie nagrywanych plików nadal pozostaje otwarty.
 - Wczesny stan „uruchamianie nagrania” może chwilowo użyć nazwy stacji, dopóki
   host nie poda nazwy tworzonego pliku.
 - Bitrate i rozmiar zależą od dostępności pliku i odpowiedzi hosta. Folder
@@ -120,8 +143,11 @@ zgodność nazw i skrótów wykonania, pomocy i palety.
 
 - Zmiana źródłowa: commit `de9814b6` — „Skróć listy nagrywania i uzupełnij
   informacje o folderze”.
+- Korekta usuwająca „Nagrane” z poprawnych wierszy: commit do wpisania po
+  lokalnym zapisie.
 - Kompilacja: Release, zaliczona bez ostrzeżeń i błędów.
 - Instalacja: `2026.10.19-e0f97512d1eee067d225d7b8c73b808ff3f3e561-c0e62181`,
-  manifest, sumy i uruchomienie zweryfikowane 19 października 2026.
+  manifest, sumy i uruchomienie zweryfikowane 19 października 2026; ta
+  instalacja nie zawiera jeszcze korekty usuwającej „Nagrane”.
 - Publikacja: niewykonana i niedozwolona w tym etapie.
 
