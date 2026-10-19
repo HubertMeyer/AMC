@@ -70,7 +70,8 @@ czasu.
 
 ## Wersja i commit
 
-- Źródła: bieżący lokalny etap; hash zostanie wpisany po zapisaniu commitu.
+- Źródła: commit `fdc26b83` — `fix(amc): uporzadkuj nagrania menu i playlisty
+  Spotify`.
 - Testy ukierunkowane: zaliczone.
 - Kompilacja, instalacja i uruchomienie: jeszcze niewykonane.
 - Publikacja: niewykonana i niedozwolona bez osobnego polecenia użytkownika.

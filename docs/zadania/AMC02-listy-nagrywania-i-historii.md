@@ -177,8 +177,9 @@ zgodność nazw i skrótów wykonania, pomocy i palety.
   manifest 1665 plików, sumy, stała ścieżka i uruchomione AMC Test
   zweryfikowane 19 października 2026.
 - Publikacja: niewykonana i niedozwolona w tym etapie.
-- Kolejna korekta źródłowa: bieżący lokalny etap, commit zostanie wpisany po
-  jego zapisaniu; kompilacja i instalacja jeszcze niewykonane.
+- Kolejna korekta źródłowa: commit `fdc26b83` — `fix(amc): uporzadkuj
+  nagrania menu i playlisty Spotify`; kompilacja i instalacja jeszcze
+  niewykonane.
 
 ## Porządek dysku po korekcie
 

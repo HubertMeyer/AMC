@@ -122,5 +122,6 @@ koncie Spotify**.
 - Instalacja: `2026.10.19-e0f97512d1eee067d225d7b8c73b808ff3f3e561-c0e62181`,
   manifest, sumy i uruchomienie zweryfikowane 19 października 2026.
 - Publikacja: nie wykonywać w tym etapie.
-- Korekta cache i ostatniego celu: bieżący lokalny etap, commit zostanie
-  wpisany po zapisie; kompilacja i instalacja jeszcze niewykonane.
+- Korekta cache i ostatniego celu: commit `fdc26b83` — `fix(amc): uporzadkuj
+  nagrania menu i playlisty Spotify`; kompilacja i instalacja jeszcze
+  niewykonane.
