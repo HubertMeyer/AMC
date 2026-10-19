@@ -106,11 +106,12 @@ zmian, wymagający korekty użytkownika:
   Automatyczne otwarcie na czystej instalacji pozostaje do odbioru AMC12 i nie
   może zmienić obecnego profilu testowego. Bieżący zapis realizacji:
   [AMC09-menedzer-sesji.md](AMC09-menedzer-sesji.md).
-- `AMC12` — **W trakcie; fundament profili i rozdzielenie uruchamiacza oraz
-  aktualizatora są gotowe w źródłach i testach, bez instalacji publicznego
-  wydania** — jeden kod, jawny manifest możliwości, osobne katalogi, blokady,
-  logi i kanały AMC Test oraz publicznego AMC. Kontrolowana migawka danych i
-  instalator pozostają następnymi etapami. Bieżący zapis realizacji:
+- `AMC12` — **W trakcie; fundament profili, rozdzielenie uruchamiacza i
+  aktualizatora oraz kontrolowana migawka AMC Test → AMC są gotowe w źródłach,
+  kompilacji i testach, bez instalacji publicznego wydania** — jeden kod, jawny
+  manifest możliwości, osobne katalogi, blokady, logi i kanały AMC Test oraz
+  publicznego AMC. Następnym etapem jest publiczny pakiet i instalator. Bieżący
+  zapis realizacji:
   [AMC12-profile-wydania-publicznego-i-testowego.md](AMC12-profile-wydania-publicznego-i-testowego.md).
   Zatwierdzona specyfikacja:
   `D:\Projekty Codex\Accessible Multimedia Controller\AMC12_PROFILE_WYDANIA_PUBLICZNEGO_I_TESTOWEGO_2026-10-18.md`.

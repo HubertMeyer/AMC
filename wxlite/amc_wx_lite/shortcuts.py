@@ -212,6 +212,8 @@ class Action(Enum):
     # (MainWindow.xaml.cs:21670 i 22188).
     TOGGLE_SEEK_MESSAGES = "settings.toggleSeekMessages"
     GENERAL_SETTINGS = "settings.general"
+    REFRESH_COMMON_DATA = "profile.commonData.refresh"
+    COMMON_DATA_STATUS = "profile.commonData.status"
     SELECT_AUDIO_OUTPUT = "audio.selectOutput"
     PREVIOUS_AUDIO_OUTPUT = "audio.previousOutput"
     NEXT_AUDIO_OUTPUT = "audio.nextOutput"
@@ -422,6 +424,8 @@ TIDAL_SUPPORTED_ACTIONS = frozenset({
     Action.SESSION_OPTIONS,
     Action.VIEW_PRESETS,
     Action.GENERAL_SETTINGS,
+    Action.REFRESH_COMMON_DATA,
+    Action.COMMON_DATA_STATUS,
     Action.TOGGLE_SEEK_MESSAGES,
     Action.ASSIGN_PRESET,
     Action.PRESET_1,
@@ -532,6 +536,8 @@ SPOTIFY_SUPPORTED_ACTIONS = frozenset({
     Action.PLAYBACK_HISTORY_NEWER,
     Action.VIEW_PRESETS,
     Action.GENERAL_SETTINGS,
+    Action.REFRESH_COMMON_DATA,
+    Action.COMMON_DATA_STATUS,
     Action.ASSIGN_PRESET,
     Action.PRESET_1,
     Action.PRESET_2,
@@ -624,6 +630,8 @@ WIIM_SUPPORTED_ACTIONS = frozenset({
     Action.CUT_WIIM_NETWORK_STREAMS,
     Action.PASTE_WIIM_NETWORK_STREAMS,
     Action.GENERAL_SETTINGS,
+    Action.REFRESH_COMMON_DATA,
+    Action.COMMON_DATA_STATUS,
     Action.TOGGLE_SEEK_MESSAGES,
     Action.QUICK_INFORMATION,
     Action.ITEM_PROPERTIES,
@@ -713,6 +721,8 @@ SONOS_SUPPORTED_ACTIONS = frozenset({
     Action.PRESET_11,
     Action.PRESET_12,
     Action.GENERAL_SETTINGS,
+    Action.REFRESH_COMMON_DATA,
+    Action.COMMON_DATA_STATUS,
     Action.TOGGLE_SEEK_MESSAGES,
     Action.QUICK_INFORMATION,
     Action.ITEM_PROPERTIES,
@@ -1681,6 +1691,8 @@ def _help_entries() -> list[tuple[str, str, Action]]:
             "Następne dostępne urządzenie audio bieżącej sesji"
         ),
         Action.GENERAL_SETTINGS: "Ustawienia interfejsu i odtwarzania",
+        Action.REFRESH_COMMON_DATA: "Odśwież dane z AMC Test",
+        Action.COMMON_DATA_STATUS: "Stan synchronizacji danych z AMC Test",
     }
     labels.update({
         action: f"Uruchom preset {slot} bieżącej sesji"
@@ -1769,6 +1781,8 @@ def _help_entries() -> list[tuple[str, str, Action]]:
         Action.SESSION_ENABLE,
         Action.SESSION_DISABLE_CURRENT,
         Action.SESSION_CONFIGURE_CURRENT,
+        Action.REFRESH_COMMON_DATA,
+        Action.COMMON_DATA_STATUS,
     ):
         if action not in seen:
             out.append(("Bez skrótu", labels[action], action))

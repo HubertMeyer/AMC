@@ -11,6 +11,7 @@ from amc_wx_lite import menu_model
 from amc_wx_lite.command_palette import entries_for_session
 from amc_wx_lite.navigation import SessionId
 from amc_wx_lite.profile_layout import (
+    common_data_snapshot_path,
     default_amc_local_dir,
     default_amc_profile_dir,
 )
@@ -133,6 +134,59 @@ def test_public_runtime_directories_are_separate_from_test_directories() -> None
         if previous_override is not None:
             os.environ["AMC_WX_LITE_HOME"] = previous_override
     assert all(test != public for test, public in zip(test_paths, public_paths))
+
+
+def test_common_data_snapshot_is_neutral_and_shared_by_both_profiles() -> None:
+    previous_local = os.environ.get("LOCALAPPDATA")
+    os.environ["LOCALAPPDATA"] = "C:/Users/test/AppData/Local"
+    try:
+        with _with_release_profile("test"):
+            test_path = common_data_snapshot_path()
+        with _with_release_profile("public"):
+            public_path = common_data_snapshot_path()
+    finally:
+        if previous_local is None:
+            os.environ.pop("LOCALAPPDATA", None)
+        else:
+            os.environ["LOCALAPPDATA"] = previous_local
+    assert test_path == public_path
+    assert test_path == Path("C:/Users/test/AppData/Local/AMC/shared/common-data-v1.json")
+
+
+def test_common_data_commands_follow_profile_in_menu_palette_and_help() -> None:
+    previous_local = os.environ.get("LOCALAPPDATA")
+    with tempfile.TemporaryDirectory(prefix="amc-common-data-menu-") as folder:
+        os.environ["LOCALAPPDATA"] = folder
+        snapshot = common_data_snapshot_path()
+        snapshot.parent.mkdir(parents=True)
+        snapshot.write_text("{}", encoding="utf-8")
+        try:
+            with _with_release_profile("public"):
+                settings = next(
+                    menu for menu in menu_model.build_menus() if menu.title == "&Ustawienia"
+                )
+                public_actions = {item.action for item in settings.items}
+                assert Action.REFRESH_COMMON_DATA in public_actions
+                assert Action.COMMON_DATA_STATUS in public_actions
+                palette = {
+                    entry.action
+                    for entry in entries_for_session(SessionId.FILES)
+                }
+                assert Action.REFRESH_COMMON_DATA in palette
+                assert Action.COMMON_DATA_STATUS in palette
+
+            with _with_release_profile("test"):
+                settings = next(
+                    menu for menu in menu_model.build_menus() if menu.title == "&Ustawienia"
+                )
+                test_actions = {item.action for item in settings.items}
+                assert Action.REFRESH_COMMON_DATA not in test_actions
+                assert Action.COMMON_DATA_STATUS in test_actions
+        finally:
+            if previous_local is None:
+                os.environ.pop("LOCALAPPDATA", None)
+            else:
+                os.environ["LOCALAPPDATA"] = previous_local
 
 
 def test_window_identity_uses_user_facing_name_of_selected_profile() -> None:

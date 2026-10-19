@@ -97,6 +97,8 @@ class LiteHostClient:
         library_db: str | Path | None = None,
         podcasts_db: str | Path | None = None,
         state_json: str | Path | None = None,
+        release_profile: str | None = None,
+        common_data_snapshot: str | Path | None = None,
         on_event: Callable[[str, dict], None] | None = None,
         on_stderr: Callable[[str], None] | None = None,
         spawn: Callable[..., Any] | None = None,
@@ -115,6 +117,10 @@ class LiteHostClient:
         self.library_db = str(library_db) if library_db else None
         self.podcasts_db = str(podcasts_db) if podcasts_db else None
         self.state_json = str(state_json) if state_json else None
+        self.release_profile = str(release_profile).strip() if release_profile else None
+        self.common_data_snapshot = (
+            str(common_data_snapshot) if common_data_snapshot else None
+        )
         self._on_event = on_event
         self._on_stderr = on_stderr
         self._spawn = spawn or subprocess.Popen
@@ -152,6 +158,10 @@ class LiteHostClient:
             command += ["--podcasts-db", self.podcasts_db]
         if self.state_json is not None:
             command += ["--state-json", self.state_json]
+        if self.release_profile is not None:
+            command += ["--release-profile", self.release_profile]
+        if self.common_data_snapshot is not None:
+            command += ["--common-data-snapshot", self.common_data_snapshot]
         return command
 
     def start(self) -> None:
@@ -1258,6 +1268,29 @@ class LiteHostClient:
             "library.playlists",
             {"sessionId": session_id},
             timeout=30.0,
+        )
+
+    def export_common_data_snapshot(
+        self,
+        search_history: dict[str, list[str]] | None = None,
+    ) -> Any:
+        """AMC Test: zapisz ostatnia kompletna migawke dla publicznego AMC."""
+        return self.call(
+            "profile.commonDataExport",
+            {"searchHistory": search_history or {}},
+            timeout=120.0,
+        )
+
+    def common_data_snapshot_status(self) -> Any:
+        """Stan migawki bez modyfikowania zadnego profilu."""
+        return self.call("profile.commonDataStatus", timeout=60.0)
+
+    def import_common_data_snapshot(self, *, accept_test_data: bool = False) -> Any:
+        """Publiczne AMC: odswiez dane; konflikt wymaga jawnej decyzji."""
+        return self.call(
+            "profile.commonDataImport",
+            {"acceptTestData": bool(accept_test_data)},
+            timeout=180.0,
         )
 
     def replace_profile_playlists(

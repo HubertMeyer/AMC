@@ -278,6 +278,14 @@ internal sealed partial class LiteRadioRecordingCoordinator : IDisposable
         };
     }
 
+    public bool HasActiveRecordings
+    {
+        get
+        {
+            lock (_gate) return _active.Count > 0;
+        }
+    }
+
     public object History()
     {
         CompletedRecording[] recordings;

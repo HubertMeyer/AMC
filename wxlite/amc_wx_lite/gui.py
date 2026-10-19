@@ -185,7 +185,8 @@ from .sonos_source import (
     now_playing_label as sonos_now_playing_label,
     snapshot as sonos_snapshot,
 )
-from .profile_layout import resolve_layout
+from .profile_layout import common_data_snapshot_path, resolve_layout
+from .release_profile import current_profile
 from .podcast_source import (
     PAGE_SIZE as PODCAST_PAGE_SIZE,
     PodcastDescription,
@@ -8398,6 +8399,8 @@ class LiteFrame(wx.Frame):
         client = LiteHostClient(
             default_host_path(),
             timeshift_minutes=self.options.timeshift_minutes,
+            release_profile=current_profile().profile_id,
+            common_data_snapshot=common_data_snapshot_path(),
             # Odczyt list nadal nalezy do Pythona w trybie ro. Sciezka daje
             # hostowi C# wyłącznie możliwość wykonania wąskiej, transakcyjnej
             # operacji ``bookmark.add`` z własną bramką konfliktu WPF.
@@ -8547,6 +8550,17 @@ class LiteFrame(wx.Frame):
                         "synchronizację ustawień Podcastów",
                         lambda: client.configure_podcast_global_settings(
                             **podcast_settings_payload
+                        ),
+                    )
+                if (
+                    current_profile().profile_id == "test"
+                    and layout is not None
+                    and not layout.may_write_profile
+                ):
+                    optional_step(
+                        "migawkę danych dla publicznego AMC",
+                        lambda: client.export_common_data_snapshot(
+                            self.state.search_history
                         ),
                     )
                 return result
@@ -10642,6 +10656,10 @@ class LiteFrame(wx.Frame):
             self._cycle_audio_output(1)
         elif action is Action.GENERAL_SETTINGS:
             self._show_general_playback_options()
+        elif action is Action.REFRESH_COMMON_DATA:
+            self._refresh_common_data_from_test()
+        elif action is Action.COMMON_DATA_STATUS:
+            self._show_common_data_status()
         elif action is Action.VIEW_PRESETS:
             self._show_presets()
         elif action is Action.VIEW_WIIM_NETWORK_STREAMS:
@@ -11055,6 +11073,132 @@ class LiteFrame(wx.Frame):
                 self,
             )
             self._restore_focus_after_dialog()
+
+    @staticmethod
+    def _common_data_summary(payload: object) -> str:
+        data = payload if isinstance(payload, dict) else {}
+        state = str(data.get("state") or "unknown")
+        if state == "missing" or not data.get("available"):
+            return "Nie ma jeszcze danych z AMC Test"
+        state_label = {
+            "exported": "migawka przygotowana",
+            "available": "migawka dostępna",
+            "ready": "dane gotowe do odświeżenia",
+            "imported": "dane odświeżone",
+            "current": "dane są aktualne",
+            "conflict": "publiczne AMC ma własne zmiany",
+        }.get(state, "stan danych odczytany")
+        ticks = int(data.get("createdUtcTicks") or 0)
+        created = ""
+        if ticks >= 621355968000000000:
+            try:
+                seconds = (ticks - 621355968000000000) / 10_000_000
+                created = datetime.fromtimestamp(seconds).astimezone().strftime(
+                    "%d.%m.%Y, %H:%M"
+                )
+            except (OSError, OverflowError, ValueError):
+                created = ""
+        counts = (
+            f"pliki {int(data.get('localFiles') or 0)}, "
+            f"stacje {int(data.get('radioStations') or 0)}, "
+            f"źródła podcastów i YouTube {int(data.get('podcastSources') or 0)}, "
+            f"odcinki {int(data.get('podcastEpisodes') or 0)}, "
+            f"zakładki {int(data.get('bookmarks') or 0)}, "
+            f"harmonogramy {int(data.get('recordingSchedules') or 0)}"
+        )
+        when = f" z {created}" if created else ""
+        return f"{state_label}. Migawka{when}. {counts}"
+
+    def _show_common_data_status(self) -> None:
+        client = self._profile_edit_client()
+        if client is None:
+            return
+        self.runner.submit(
+            "common-data-status",
+            client.common_data_snapshot_status,
+            lambda payload: self.announcer.say(self._common_data_summary(payload)),
+            lambda error: self.announcer.say(
+                f"Nie można odczytać stanu danych: {error}"
+            ),
+        )
+
+    def _refresh_common_data_from_test(self) -> None:
+        if current_profile().profile_id != "public":
+            self.announcer.say("Dane z AMC Test odświeża publiczne AMC")
+            return
+        client = self._profile_edit_client()
+        if client is None:
+            return
+
+        def checked(payload: object) -> None:
+            data = payload if isinstance(payload, dict) else {}
+            state = str(data.get("state") or "")
+            if state == "missing":
+                self.announcer.say("Nie ma jeszcze danych z AMC Test")
+                return
+            if state == "current":
+                self.announcer.say(self._common_data_summary(data))
+                return
+            if state == "conflict":
+                answer = wx.MessageBox(
+                    "Publiczne AMC ma własne zmiany od poprzedniego odświeżenia. "
+                    "Czy zastąpić zgodne dane danymi z AMC Test? Ustawienia, "
+                    "konta i bieżący widok pozostaną bez zmian.",
+                    "Odśwież dane z AMC Test",
+                    wx.YES_NO | wx.NO_DEFAULT | wx.ICON_QUESTION,
+                    self,
+                )
+                self._restore_focus_after_dialog()
+                if answer != wx.YES:
+                    self.announcer.say("Zachowano dane publicznego AMC")
+                    return
+                self._import_common_data(accept_test_data=True)
+                return
+            self._import_common_data(accept_test_data=False)
+
+        self.runner.submit(
+            "common-data-status",
+            client.common_data_snapshot_status,
+            checked,
+            lambda error: self.announcer.say(
+                f"Nie można odświeżyć danych: {error}"
+            ),
+        )
+
+    def _import_common_data(self, *, accept_test_data: bool) -> None:
+        client = self._profile_edit_client()
+        if client is None:
+            return
+        preferred_id = self.navigator.session.model.selected_id
+
+        def done(payload: object) -> None:
+            data = payload if isinstance(payload, dict) else {}
+            search_history_saved = True
+            search_history = data.get("searchHistory")
+            if isinstance(search_history, dict):
+                self.state.search_history = {
+                    str(scope): [str(query) for query in queries if str(query).strip()]
+                    for scope, queries in search_history.items()
+                    if isinstance(scope, str) and isinstance(queries, list)
+                }
+                if self._save_state() is False:
+                    search_history_saved = False
+            # Ponowne otwarcie TEGO SAMEGO widoku zachowuje Id fokusu. Jezeli
+            # element zniknal, model wybiera najblizszy prawidlowy wiersz.
+            self._refresh_profile_view(preferred_id=preferred_id)
+            message = "Odświeżono dane z AMC Test. " + self._common_data_summary(payload)
+            if not search_history_saved:
+                message += ". Nie zapisano historii wyszukiwania interfejsu"
+            self.announcer.say(message)
+
+        self.runner.submit(
+            "common-data-import",
+            lambda: client.import_common_data_snapshot(
+                accept_test_data=accept_test_data
+            ),
+            done,
+            lambda error: self.announcer.say(f"Nie odświeżono danych: {error}"),
+        )
 
     # ---------------------------------------------------- wykonanie zamiarow
 

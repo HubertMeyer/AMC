@@ -2,9 +2,11 @@
 
 ## Status
 
-**W trakcie — fundament profili oraz rozdzielenie uruchamiacza i aktualizatora
-są gotowe w źródłach i testach; nie zainstalowano ani nie opublikowano profilu
-publicznego.**
+**W trakcie — fundament profili, rozdzielenie uruchamiacza i aktualizatora oraz
+kontrolowana migawka AMC Test → AMC są gotowe w źródłach, skompilowane i
+sprawdzone testami magazynów oraz pełną regresją Core. Nie zainstalowano ani
+nie opublikowano profilu publicznego. Następnym etapem jest publiczny pakiet i
+instalator, bez mieszania magazynów obu profili.**
 
 Źródłowa, zatwierdzona specyfikacja pozostaje w pliku tylko do odczytu:
 `D:\Projekty Codex\Accessible Multimedia Controller\AMC12_PROFILE_WYDANIA_PUBLICZNEGO_I_TESTOWEGO_2026-10-18.md`.
@@ -43,9 +45,25 @@ WiiM. Ukrytej usługi nie będzie ani w Menedżerze sesji, ani w menu, pomocy
 również jej nie uruchomi.
 
 Oba wydania mają osobne ustawienia, logi, pamięć podręczną i dane kont. Samo
-uruchomienie jednego wydania nie zmienia danych drugiego. Planowane kopiowanie
-wybranych danych z AMC Test do AMC będzie osobną, jawną czynnością opartą na
-wersjonowanej migawce. Ten etap jeszcze jej nie udostępnia.
+uruchomienie jednego wydania nie zmienia danych drugiego. Kopiowanie wybranych
+danych z AMC Test do AMC jest osobną, jawną czynnością opartą na wersjonowanej
+migawce. AMC Test przygotowuje ostatnią kompletną migawkę przy bezpiecznym
+uruchomieniu silnika. Publiczne AMC udostępnia w menu Ustawienia, pełnej pomocy
+i palecie polecenia „Odśwież dane z AMC Test” oraz „Stan synchronizacji danych”.
+Polecenia pojawiają się tylko wtedy, gdy istnieje drugi profil albo migawka.
+
+Migawka przenosi bibliotekę lokalną, stacje, podcasty i kanały YouTube,
+historię wyszukiwania i odtwarzania, zakładki użytkownika, playlisty AMC,
+harmonogramy oraz historię nagrywania. Nie kopiuje plików audio — oba profile
+mogą wskazywać te same istniejące pliki. Nie przenosi Spotify, TIDAL-u,
+poświadczeń, kolejności sesji, ostatniej sesji, bieżącego okna, fokusu ani stanu
+trwającego nagrywania.
+
+Przy pierwszym odświeżeniu publiczne AMC nie nadpisuje bez pytania istniejących
+danych wspólnych. Przy następnych odświeżeniach porównuje stan z ostatnio
+zastosowaną migawką. Jeśli dane publiczne zmieniły się osobno, pyta, czy
+przyjąć dane z AMC Test, czy zachować dane publiczne. Po odświeżeniu pozostaje
+ten sam widok i, o ile element nadal istnieje, ten sam zaznaczony wiersz.
 
 Nie ma jeszcze instalatora publicznego AMC. Kod i testy fundamentu nie są
 dowodem kompilacji, instalacji ani publikacji.
@@ -82,6 +100,18 @@ zawsze otrzymuje jawny profil z zatwierdzonego manifestu.
   zamknięcie programu. Starsza instalacja bez pól profilu może zostać
   jednorazowo rozpoznana wyłącznie jako AMC Test w dotychczasowym folderze
   `AMC Python`; publiczny AMC nie korzysta z tego wyjątku.
+- Migawka ma własny format wersji 1 niezależny od schematów `state.json` i
+  SQLite. Powstaje przez jawne złożenie dopuszczonych pól; nie jest kopią
+  żadnego żywego magazynu.
+- Plik jest zapisywany przez plik tymczasowy, opróżnienie bufora i atomową
+  podmianę. Przed podmianą host ponownie czyta plik tymczasowy i sprawdza
+  SHA-256. Poprzednia poprawna migawka pozostaje jako wersja awaryjna.
+- Metadane ostatniego importu są zapisywane dopiero po udanym zapisie obu baz
+  i `state.json`. Brak wiarygodnych metadanych przy istniejących danych
+  publicznych jest konfliktem, a nie zgodą na ciche nadpisanie.
+- Historia wyszukiwania interfejsu wxPython jest przekazywana jawnie przez
+  ograniczony kontrakt hosta, ponieważ celowo nie należy do baz C#. Przy
+  imporcie wraca także do osobnego magazynu interfejsu publicznego AMC.
 
 ## Zmienione pliki
 
@@ -105,6 +135,19 @@ zawsze otrzymuje jawny profil z zatwierdzonego manifestu.
 - `src/AccessibleMediaController.PythonUpdater/Program.cs`
 - `src/AccessibleMediaController.PythonUpdater/SafeApplicationStop.cs`
 - `src/AccessibleMediaController.PythonUpdater/UpdaterInstanceLease.cs`
+- `src/AccessibleMediaController.Core/Configuration/CommonDataSnapshotStore.cs`
+- `src/AccessibleMediaController.Core/Configuration/ConfigurationStore.cs`
+- `src/AccessibleMediaController.LiteHost/LiteCommonDataSnapshotCoordinator.cs`
+- `src/AccessibleMediaController.LiteHost/LiteEngineHandlers.cs`
+- `src/AccessibleMediaController.LiteHost/LiteRadioRecordingCoordinator.cs`
+- `src/AccessibleMediaController.LiteHost/Program.cs`
+- `wxlite/amc_wx_lite/host_client.py`
+- `wxlite/amc_wx_lite/menu_model.py`
+- `wxlite/amc_wx_lite/shortcuts.py`
+- `wxlite/tests/test_host_client.py`
+- `tests/AccessibleMediaController.Core.SmokeTests/CommonDataSnapshotTests.cs`
+- `tests/AccessibleMediaController.Core.SmokeTests/LibrespotHostClientTests.cs`
+- `tests/AccessibleMediaController.Core.SmokeTests/Program.cs`
 - `tests/AccessibleMediaController.PythonLauncher.Tests/AccessibleMediaController.PythonLauncher.Tests.csproj`
 - `tests/AccessibleMediaController.PythonLauncher.Tests/Program.cs`
 - `docs/zadania/README.md`
@@ -135,14 +178,36 @@ zawsze otrzymuje jawny profil z zatwierdzonego manifestu.
   instalacja ani podmiana działającej aplikacji.
 - Przed kompilacjami pięciosekundowa bramka wykazała 0 plików
   `.amc-partial` i 0 plików rosnących. Nie zamykano uruchomionego AMC.
+- Migawka, profil, menu, pełna pomoc, paleta i klient protokołu Python:
+  **157 testów zaliczonych**. Dodatkowa kontrola składni zmienionych modułów
+  Python zaliczona.
+- Przed planowaną kompilacją nowej warstwy C# kolejne pięciosekundowe bramki
+  wykazały **1 rosnący plik `.amc-partial`**. Kompilacji, testów C#,
+  instalacji i restartu świadomie nie wykonano; nagranie użytkownika ma
+  pierwszeństwo.
+- Przy późniejszej bramce nie było żadnego pliku `.amc-partial`. Odizolowany
+  test migawki C# zaliczył eksport, filtrowanie danych, atomową podmianę,
+  integralność SHA-256, zapis i ponowne otwarcie obu baz SQLite, zachowanie
+  prywatnych ustawień, pierwszy konflikt, następny konflikt oraz uszkodzony
+  znacznik synchronizacji.
+- Host LiteHost Debug zbudował się z **0 ostrzeżeń i 0 błędów**.
+- Pierwsze uruchomienie pełnej regresji Core wykryło wyścig w istniejącym
+  teście zakończenia osobnego procesu Librespot: błąd polecenia docierał przed
+  równoległym zdarzeniem awarii. Test poprawiono tak, by czekał na oba wymagane
+  skutki. Powtórzona pełna regresja Core zakończyła się kodem **0**.
 
 ## Znane ograniczenia
 
 - Manifest deklaruje możliwości profilu, ale paczka publiczna nie usuwa
   jeszcze binarnych zależności ukrytych usług. Ograniczenie pakowania zostaje
   do następnego spójnego etapu.
-- Nie ma jeszcze wersjonowanej, atomowej migawki AMC Test → AMC ani ekranu
-  wyboru zakresu kopiowanych danych.
+- Wersjonowana, atomowa migawka została skompilowana i sprawdzona na
+  odizolowanych magazynach testowych, ale nie została jeszcze odebrana w
+  zainstalowanych AMC Test i AMC. Pierwsza wersja ma stały bezpieczny zakres;
+  nie ma jeszcze ekranu ręcznego wyboru pojedynczych kategorii.
+- Migawka automatyczna jest obecnie przygotowywana przy uruchomieniu AMC Test.
+  Odświeżenie jej po zmianach wykonanych w tej samej długiej sesji oraz
+  globalny właściciel wykonywania harmonogramów wymagają następnego podetapu.
 - Nie ma jeszcze migracji poświadczeń; zgodnie ze specyfikacją tokeny nie będą
   kopiowane migawką.
 - Jednorazowe otwarcie Menedżera sesji na czystej publicznej instalacji czeka
@@ -175,3 +240,5 @@ zawsze otrzymuje jawny profil z zatwierdzonego manifestu.
   zaliczone; paczki Release nie zbudowano.
 - Instalacja: nie wykonywano dla tego etapu.
 - Publikacja: nie wykonywano; GitHub nie został użyty.
+- Migawka danych wspólnych: testy i kompilacja zaliczone; commit zostanie
+  wpisany po zapisaniu całego spójnego etapu.

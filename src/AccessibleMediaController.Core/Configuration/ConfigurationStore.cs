@@ -23,6 +23,7 @@ public sealed class ConfigurationStore
     private readonly string statePath;
     private readonly string migrationBackupPath;
     private readonly string podcastMigrationBackupPath;
+    private readonly string commonDataSynchronizationMetadataPath;
     private readonly LocalLibraryDatabase libraryDatabase;
     private readonly PodcastLibraryDatabase podcastDatabase;
     private readonly object saveGate = new();
@@ -46,6 +47,9 @@ public sealed class ConfigurationStore
         podcastMigrationBackupPath = Path.Combine(
             Path.GetDirectoryName(statePath) ?? string.Empty,
             "state.pre-podcast-sqlite-migration.json");
+        commonDataSynchronizationMetadataPath = Path.Combine(
+            Path.GetDirectoryName(statePath) ?? string.Empty,
+            "common-data-sync.json");
         libraryDatabase = new LocalLibraryDatabase(
             libraryDatabasePath
             ?? Path.Combine(Path.GetDirectoryName(statePath) ?? string.Empty, "library.db"));
@@ -263,6 +267,74 @@ public sealed class ConfigurationStore
         ValidateState(export.State);
         EnsureBuiltInProfile(export.State);
         return export.State;
+    }
+
+    /// <summary>
+    /// Tworzy ostatnia kompletna migawke danych wspolnych AMC Test. Odczyt
+    /// sklada stan z kompaktowego JSON i obu baz SQLite, a zapis migawki jest
+    /// atomowy i zachowuje poprzednia zweryfikowana wersje.
+    /// </summary>
+    public CommonDataSnapshotSummary ExportCommonDataSnapshot(
+        string path,
+        SearchHistorySettings? searchHistoryOverride = null)
+    {
+        lock (saveGate)
+        {
+            var state = LoadOrCreate();
+            if (searchHistoryOverride is not null)
+                state.SearchHistory = StateSnapshotCopier.Copy(searchHistoryOverride);
+            return CommonDataSnapshotStore.Export(path, state);
+        }
+    }
+
+    /// <summary>
+    /// Sprawdza import bez zapisu. Wynik Conflict znaczy, ze publiczne AMC
+    /// zmienilo dane wspolne od poprzedniego odswiezenia.
+    /// </summary>
+    public CommonDataImportPlan PlanCommonDataImport(string path)
+    {
+        lock (saveGate)
+        {
+            return CommonDataSnapshotStore.PlanImport(
+                path,
+                LoadOrCreate(),
+                commonDataSynchronizationMetadataPath);
+        }
+    }
+
+    /// <summary>
+    /// Importuje migawke do publicznego magazynu. Najpierw sklada nowy,
+    /// odłączony stan, potem zapisuje bazy i state.json, a dopiero po udanym
+    /// zapisie aktualizuje znacznik konfliktow.
+    /// </summary>
+    public CommonDataImportResult ImportCommonDataSnapshot(
+        string path,
+        CommonDataConflictResolution resolution = CommonDataConflictResolution.Stop)
+    {
+        lock (saveGate)
+        {
+            var current = LoadOrCreate();
+            var plan = CommonDataSnapshotStore.PlanImport(
+                path,
+                current,
+                commonDataSynchronizationMetadataPath);
+            if (plan.Disposition == CommonDataImportDisposition.NoChanges)
+            {
+                CommonDataSnapshotStore.MarkImported(
+                    commonDataSynchronizationMetadataPath,
+                    plan,
+                    current);
+                return new CommonDataImportResult(plan.Disposition, plan.Summary, current);
+            }
+
+            var merged = CommonDataSnapshotStore.Apply(plan, current, resolution);
+            Save(merged);
+            CommonDataSnapshotStore.MarkImported(
+                commonDataSynchronizationMetadataPath,
+                plan,
+                merged);
+            return new CommonDataImportResult(plan.Disposition, plan.Summary, merged);
+        }
     }
 
     public PersistedState CloneState(PersistedState state)

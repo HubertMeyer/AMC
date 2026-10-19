@@ -619,8 +619,9 @@ internal static class LibrespotHostClientTests
         try
         {
             client.StartAsync().GetAwaiter().GetResult();
-            var failures = new List<LibrespotHostFailureEventArgs>();
-            client.HostFailed += (_, e) => failures.Add(e);
+            var failureSignal = new TaskCompletionSource<LibrespotHostFailureEventArgs>(
+                TaskCreationOptions.RunContinuationsAsynchronously);
+            client.HostFailed += (_, e) => failureSignal.TrySetResult(e);
 
             var stopwatch = System.Diagnostics.Stopwatch.StartNew();
             var error = Throws(() => client.PingAsync().GetAwaiter().GetResult());
@@ -629,7 +630,11 @@ internal static class LibrespotHostClientTests
                 $"Koniec procesu musi dać błąd o padniętym hoście; otrzymano: {error?.Code ?? "brak błędu"}");
             Check(stopwatch.Elapsed < TimeSpan.FromSeconds(10),
                 $"Pad procesu musi zakończyć polecenie OD RAZU, nie po limicie czasu; zmierzono {stopwatch.Elapsed.TotalSeconds:0.0} s");
-            Check(failures.Any(f => f.Code == LibrespotHostErrorCodes.HostExited),
+            var sessionFailure = failureSignal.Task
+                .WaitAsync(TimeSpan.FromSeconds(2))
+                .GetAwaiter()
+                .GetResult();
+            Check(sessionFailure.Code == LibrespotHostErrorCodes.HostExited,
                 "Awaria procesu musi być zgłoszona jako awaria sesji");
             Check(error!.Message.Length > 0, "Komunikat o padniętym hoście nie może być pusty");
 

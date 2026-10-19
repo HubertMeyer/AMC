@@ -97,6 +97,7 @@ internal static class Program
         }
 
         var profileMutations = OpenProfileMutationStore(args);
+        var commonDataSnapshot = OpenCommonDataSnapshot(args);
         using var tidalCatalog = OpenTidalCatalog(args);
         using var spotifyCatalog = OpenSpotifyCatalog(args);
         using var spotifyPlayback = new LiteSpotifyPlaybackCoordinator();
@@ -116,7 +117,8 @@ internal static class Program
             wiim,
             sonos,
             spotifyCatalog,
-            spotifyPlayback);
+            spotifyPlayback,
+            commonDataSnapshot);
         using var nvdaRelay = new LiteNvdaRelay();
         using var nvdaBridge = new LiteNvdaBridge(nvdaRelay);
         var registeredHandlers = new Dictionary<string, Func<LiteRequest, LiteEventSink, object?>>(
@@ -325,6 +327,27 @@ internal static class Program
             : null;
     }
 
+    private static LiteCommonDataSnapshotCoordinator? OpenCommonDataSnapshot(string[] args)
+    {
+        var profile = ReadArgumentText(args, "--release-profile");
+        var snapshot = ReadArgumentPath(args, "--common-data-snapshot");
+        var library = ReadArgumentPath(args, "--library-db");
+        var podcasts = ReadArgumentPath(args, "--podcasts-db");
+        var state = ReadArgumentPath(args, "--state-json");
+        return profile is not null
+            && snapshot is not null
+            && library is not null
+            && podcasts is not null
+            && state is not null
+                ? new LiteCommonDataSnapshotCoordinator(
+                    profile,
+                    snapshot,
+                    state,
+                    library,
+                    podcasts)
+                : null;
+    }
+
     private static LiteTidalCatalogCoordinator? OpenTidalCatalog(string[] args)
     {
         var state = ReadArgumentPath(args, "--state-json");
@@ -352,6 +375,16 @@ internal static class Program
         {
             if (string.Equals(values[index], name, StringComparison.Ordinal))
                 return Path.GetFullPath(values[index + 1]);
+        }
+        return null;
+    }
+
+    private static string? ReadArgumentText(string[] values, string name)
+    {
+        for (var index = 0; index < values.Length - 1; index++)
+        {
+            if (string.Equals(values[index], name, StringComparison.Ordinal))
+                return values[index + 1].Trim();
         }
         return null;
     }

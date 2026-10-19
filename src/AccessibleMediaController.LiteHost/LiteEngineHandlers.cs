@@ -61,6 +61,7 @@ internal sealed class LiteEngineHandlers : IDisposable
     private readonly LiteTidalCatalogCoordinator? _tidalCatalog;
     private readonly LiteSpotifyCatalogCoordinator? _spotifyCatalog;
     private readonly LiteSpotifyPlaybackCoordinator? _spotifyPlayback;
+    private readonly LiteCommonDataSnapshotCoordinator? _commonDataSnapshot;
     private readonly LiteTidalDesktopCoordinator _tidalDesktop = new();
     private readonly LiteWiiMCoordinator? _wiim;
     private readonly LiteSonosCoordinator? _sonos;
@@ -133,7 +134,8 @@ internal sealed class LiteEngineHandlers : IDisposable
         LiteWiiMCoordinator? wiim = null,
         LiteSonosCoordinator? sonos = null,
         LiteSpotifyCatalogCoordinator? spotifyCatalog = null,
-        LiteSpotifyPlaybackCoordinator? spotifyPlayback = null)
+        LiteSpotifyPlaybackCoordinator? spotifyPlayback = null,
+        LiteCommonDataSnapshotCoordinator? commonDataSnapshot = null)
     {
         _radio = new RadioMediaOutput(timeshiftMinutes);
         _queueStore = queueStore;
@@ -144,6 +146,7 @@ internal sealed class LiteEngineHandlers : IDisposable
         _tidalCatalog = tidalCatalog;
         _spotifyCatalog = spotifyCatalog;
         _spotifyPlayback = spotifyPlayback;
+        _commonDataSnapshot = commonDataSnapshot;
         _wiim = wiim;
         _sonos = sonos;
         _podcastRefresh = podcastProgressStore is null
@@ -324,6 +327,12 @@ internal sealed class LiteEngineHandlers : IDisposable
                 };
             },
             ["host.shutdown"] = (_, _) => new { ok = true },
+            [LiteCommonDataSnapshotCoordinator.ExportOperation] = (request, _) =>
+                RequireCommonDataSnapshot().Export(request.Args),
+            [LiteCommonDataSnapshotCoordinator.StatusOperation] = (_, _) =>
+                RequireCommonDataSnapshot().Status(),
+            [LiteCommonDataSnapshotCoordinator.ImportOperation] = (request, _) =>
+                ImportCommonDataSnapshot(request.Args),
             ["files.listFolder"] = (request, _) => ListFolder(request.Args),
             ["files.play"] = (request, events) => PlayFile(request.Args, events),
             ["media.play"] = (request, events) => PlayMedia(request.Args, events),
@@ -560,6 +569,20 @@ internal sealed class LiteEngineHandlers : IDisposable
             ["queue.next"] = (_, events) => QueueRelative(1, events),
             ["queue.previous"] = (_, events) => QueueRelative(-1, events)
         };
+    }
+
+    private LiteCommonDataSnapshotCoordinator RequireCommonDataSnapshot() =>
+        _commonDataSnapshot
+        ?? throw new LiteRequestException("Synchronizacja danych profili nie jest dostepna w tym uruchomieniu.");
+
+    private object ImportCommonDataSnapshot(JsonElement args)
+    {
+        if (_recordings.HasActiveRecordings)
+        {
+            throw new LiteRequestException(
+                "Nie odswiezono danych, poniewaz trwa nagrywanie. Sprobuj po jego zakonczeniu.");
+        }
+        return RequireCommonDataSnapshot().Import(args);
     }
 
     private LiteProfileMutationStore RequireProfileMutations() =>

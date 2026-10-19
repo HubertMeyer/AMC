@@ -29,6 +29,8 @@ from dataclasses import dataclass
 
 from .navigation import SessionId
 from . import session_order as session_order_model
+from .profile_layout import common_data_commands_available
+from .release_profile import PUBLIC_PROFILE_ID, current_profile
 from .shortcuts import (
     Action,
     SONOS_SUPPORTED_ACTIONS,
@@ -1430,6 +1432,24 @@ def build_menus(session_order: object = None) -> tuple[Menu, ...]:
         ),
     )
 
+    synchronization_items: tuple[MenuItem, ...] = ()
+    if common_data_commands_available():
+        status = MenuItem(
+            "&Stan synchronizacji danych z AMC Test",
+            Action.COMMON_DATA_STATUS,
+        )
+        if current_profile().profile_id == PUBLIC_PROFILE_ID:
+            synchronization_items = (
+                SEPARATOR,
+                MenuItem(
+                    "&Odśwież dane z AMC Test",
+                    Action.REFRESH_COMMON_DATA,
+                ),
+                status,
+            )
+        else:
+            synchronization_items = (SEPARATOR, status)
+
     settings = Menu(
         "&Ustawienia",
         (
@@ -1439,6 +1459,7 @@ def build_menus(session_order: object = None) -> tuple[Menu, ...]:
                 shortcut="Ctrl+,",
                 accelerator=False,
             ),
+            *synchronization_items,
         ),
     )
 

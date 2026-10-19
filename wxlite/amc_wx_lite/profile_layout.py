@@ -30,7 +30,13 @@ from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
 
-from .release_profile import current_profile, profile_directory
+from .release_profile import (
+    PUBLIC_PROFILE_ID,
+    TEST_PROFILE_ID,
+    current_profile,
+    profile_directory,
+    profile_from_id,
+)
 
 
 class ProfileMode(str, Enum):
@@ -79,6 +85,42 @@ def default_amc_local_dir() -> Path:
     return profile_directory(
         Path.home() / "AppData" / "Local",
         profile.local_profile_folder,
+    )
+
+
+def common_data_snapshot_path() -> Path:
+    """Wspolny, neutralny plik przekazania AMC Test -> AMC.
+
+    Nie lezy w zadnym z dwoch zywych profili i nigdy nie jest otwierany jako
+    baza. Zawiera tylko wersjonowany, filtrowany eksport Core.
+    """
+    local = os.environ.get("LOCALAPPDATA")
+    base = Path(local) if local else Path.home() / "AppData" / "Local"
+    return base / "AMC" / "shared" / "common-data-v1.json"
+
+
+def common_data_commands_available() -> bool:
+    """Czy istnieje drugi profil albo zweryfikowana do odczytu migawka.
+
+    Sama kontrola menu nie uznaje pliku za poprawny kryptograficznie; robi to
+    host przy wykonaniu. Tu chodzi tylko o to, by nie reklamowac funkcji na
+    komputerze zwyklego uzytkownika, ktory nigdy nie mial AMC Test.
+    """
+    if common_data_snapshot_path().is_file():
+        return True
+    current = current_profile()
+    other_id = (
+        PUBLIC_PROFILE_ID
+        if current.profile_id == TEST_PROFILE_ID
+        else TEST_PROFILE_ID
+    )
+    other = profile_from_id(other_id)
+    appdata = Path(os.environ.get("APPDATA") or Path.home() / "AppData" / "Roaming")
+    local = Path(os.environ.get("LOCALAPPDATA") or Path.home() / "AppData" / "Local")
+    return (
+        (profile_directory(appdata, other.roaming_profile_folder) / "state.json").is_file()
+        or (profile_directory(local, other.local_profile_folder) / "library.db").is_file()
+        or (profile_directory(local, other.local_profile_folder) / "podcasts.db").is_file()
     )
 
 

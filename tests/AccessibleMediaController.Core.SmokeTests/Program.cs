@@ -52,6 +52,11 @@ if (args.Length == 1 && args[0] == "--clone-state-cost")
     try { CloneStateCostTests.Run(); return 0; }
     catch (Exception exception) { Console.Error.WriteLine(exception); return 1; }
 }
+if (args.Length == 1 && args[0] == "--common-data-snapshot")
+{
+    try { CommonDataSnapshotTests.Run(); return 0; }
+    catch (Exception exception) { Console.Error.WriteLine(exception); return 1; }
+}
 if (args.Length == 1 && args[0] == "--playback-rate-state")
 {
     try { PlaybackRateStateTests.Run(); return 0; }

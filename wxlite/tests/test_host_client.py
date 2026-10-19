@@ -580,6 +580,37 @@ def test_state_json_path_is_passed_explicitly_to_the_host() -> None:
     ]
 
 
+def test_release_profile_and_common_snapshot_are_passed_explicitly_to_host() -> None:
+    client = LiteHostClient(
+        "host.exe",
+        release_profile="public",
+        common_data_snapshot="common-data.json",
+    )
+    assert client._command()[-4:] == [
+        "--release-profile", "public",
+        "--common-data-snapshot", "common-data.json",
+    ]
+
+
+def test_common_data_snapshot_client_uses_narrow_operations() -> None:
+    client = make_client()
+    try:
+        assert client.export_common_data_snapshot({"global": ["radio"]}) == {
+            "op": "profile.commonDataExport",
+            "args": {"searchHistory": {"global": ["radio"]}},
+        }
+        assert client.common_data_snapshot_status() == {
+            "op": "profile.commonDataStatus",
+            "args": {},
+        }
+        assert client.import_common_data_snapshot(accept_test_data=True) == {
+            "op": "profile.commonDataImport",
+            "args": {"acceptTestData": True},
+        }
+    finally:
+        client.close()
+
+
 def test_host_error_is_raised_as_host_error_not_crash() -> None:
     client = make_client()
     try:
