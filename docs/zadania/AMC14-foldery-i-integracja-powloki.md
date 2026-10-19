@@ -97,6 +97,11 @@ drugiego profilu.
 - Opcje instalatora są domyślnie wyłączone. Rejestracja ogranicza się do
   bieżącego użytkownika, nie zapisuje chronionego `UserChoice` i nie wymusza
   domyślnej aplikacji.
+- 2026-10-19: kontrola przed kolejną instalacją wykryła, że w menu **Pliki**
+  litera dostępu `Z` była wspólna dla poleceń **Otwórz folder zawierający** i
+  **Zakończ**. Polecenie otwarcia folderu otrzymało literę dostępu `L` w
+  słowie „folder”. Jego nazwa, brak skrótu, dostępność, wykonanie, pomoc i
+  paleta nie zmieniły się.
 
 ## Testy i wynik
 
@@ -144,6 +149,14 @@ zakończyło się wynikiem `OK`.
   1 odtwarzalny plik, 123 321 674 bajty. Odzyskanie po usunięciu wymagałoby
   ponownej kompilacji; zachowano właściwy zweryfikowany instalator AMC12.
 
+2026-10-19, korekta litery dostępu przed instalacją zbiorczą:
+
+- pojedynczy test wszystkich widocznych wariantów menu i sesji: **1
+  zaliczony**; nie pozostała kolizja liter dostępu w menu **Pliki**;
+- zmiana dotyczy wyłącznie znacznika litery dostępu w menu, dlatego nie tworzy
+  nowej nazwy ani nowego skrótu w `Ctrl+F1`, pełnej pomocy i palecie
+  `Ctrl+Shift+K`.
+
 ## Znane ograniczenia
 
 - Etap A jest zmianą źródłową i testową. Nie zbudowano ani nie zainstalowano
@@ -161,3 +174,5 @@ zakończyło się wynikiem `OK`.
 - Commit etapu A: `515898c8`.
 - Commit etapu B: `662f9c52`.
 - Commit etapu C: `c9d01839`.
+- Korekta litery dostępu menu: commit następujący po zapisaniu tej zmiany;
+  instalacja i publikacja jeszcze bez zmian.

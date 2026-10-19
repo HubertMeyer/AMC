@@ -248,7 +248,7 @@ def build_menus(session_order: object = None) -> tuple[Menu, ...]:
             MenuItem("Otwórz &folder", Action.OPEN_FOLDER_DIALOG,
                      shortcut="Ctrl+Shift+O", visible_sessions=FILES_ONLY),
             MenuItem(
-                "Otwórz folder &zawierający",
+                "Otwórz fo&lder zawierający",
                 Action.OPEN_CONTAINING_FOLDER,
                 accelerator=False,
                 needs_item_information=True,
