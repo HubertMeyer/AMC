@@ -108,11 +108,11 @@ zmian, wymagający korekty użytkownika:
   [AMC09-menedzer-sesji.md](AMC09-menedzer-sesji.md).
 - `AMC12` — **W trakcie; fundament profili, rozdzielenie uruchamiacza i
   aktualizatora oraz kontrolowana migawka AMC Test → AMC są gotowe w źródłach,
-  kompilacji i testach; zbudowano też czystą, ograniczoną paczkę publiczną z
-  pełną integralnością, ale jeszcze bez pliku instalatora publicznego** —
+  kompilacji i testach; zbudowano czystą, ograniczoną paczkę publiczną oraz
+  lokalny instalator z pełną integralnością, ale jeszcze bez próbnej instalacji
+  i publikacji** —
   jeden kod, jawny manifest możliwości, osobne katalogi, blokady, logi i kanały
-  AMC Test oraz publicznego AMC. Kompilator Inno Setup nie jest obecny na tym
-  komputerze. Bieżący zapis realizacji:
+  AMC Test oraz publicznego AMC. Bieżący zapis realizacji:
   [AMC12-profile-wydania-publicznego-i-testowego.md](AMC12-profile-wydania-publicznego-i-testowego.md).
   Zatwierdzona specyfikacja:
   `D:\Projekty Codex\Accessible Multimedia Controller\AMC12_PROFILE_WYDANIA_PUBLICZNEGO_I_TESTOWEGO_2026-10-18.md`.

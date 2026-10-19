@@ -2,11 +2,10 @@
 
 ## Status
 
-**W trakcie — fundament profili, rozdzielenie uruchamiacza i aktualizatora oraz
-kontrolowana migawka AMC Test → AMC oraz źródła publicznego pakowania i
-instalatora są gotowe i sprawdzone testami. Nie zbudowano jeszcze instalatora,
-ponieważ na komputerze nie ma kompilatora Inno Setup; nie zainstalowano ani nie
-opublikowano profilu publicznego.**
+**W trakcie — fundament profili, rozdzielenie uruchamiacza i aktualizatora,
+kontrolowana migawka AMC Test → AMC, publiczne pakowanie i instalator są gotowe.
+Powstała zweryfikowana paczka oraz lokalny instalator publiczny. Nie wykonano
+jeszcze próbnej instalacji ani publikacji profilu publicznego.**
 
 Źródłowa, zatwierdzona specyfikacja pozostaje w pliku tylko do odczytu:
 `D:\Projekty Codex\Accessible Multimedia Controller\AMC12_PROFILE_WYDANIA_PUBLICZNEGO_I_TESTOWEGO_2026-10-18.md`.
@@ -65,8 +64,9 @@ zastosowaną migawką. Jeśli dane publiczne zmieniły się osobno, pyta, czy
 przyjąć dane z AMC Test, czy zachować dane publiczne. Po odświeżeniu pozostaje
 ten sam widok i, o ile element nadal istnieje, ten sam zaznaczony wiersz.
 
-Nie ma jeszcze instalatora publicznego AMC. Kod i testy fundamentu nie są
-dowodem kompilacji, instalacji ani publikacji.
+Lokalny kandydat instalatora publicznego istnieje, ale jego samo zbudowanie nie
+jest dowodem poprawnej instalacji ani publikacji. Przed udostępnieniem wymaga
+jeszcze czystej instalacji i odbioru NVDA.
 
 AMC Test i publiczny AMC mają osobne blokady uruchomienia, dlatego mogą działać
 równolegle. Drugie uruchomienie AMC Test pokazuje tylko okno AMC Test, a drugie
@@ -239,6 +239,11 @@ nie pobiera środowiska uruchomieniowego podczas instalacji.
   1070 sum SHA-256. Niezależna pełna kontrola zakończyła się kodem **0**;
   paczka nie zawiera plików Librespot. Ma 422 452 757 bajtów. Nie uruchamiano
   jej jako aplikacji użytkowej i nie instalowano.
+- Inno Setup 6.7.3 skompilował lokalny instalator
+  `.test-output/installers/amc12-2026.10.19/AMC-0.1.0-alpha.422-win-x64.exe`.
+  Ma 123 320 342 bajty. Ponowne obliczenie SHA-256 dało
+  `23f0df0d10910ba9e0e32867ffbf06651226b30f0ee02b1597a0dec969777ea3`
+  i jest zgodne z osobnym plikiem integralności. Instalatora nie uruchamiano.
 
 ## Znane ograniczenia
 
@@ -260,12 +265,11 @@ nie pobiera środowiska uruchomieniowego podczas instalacji.
   na etap instalatora.
 - Sonos publiczny pozostaje ukryty do czasu prawdziwego brokera HTTPS i
   odbioru z zewnętrznym kontem.
-- Osobne tożsamości procesu są gotowe, ale nie ma jeszcze instalatora, który
-  utworzy dwie niezależne instalacje i sprawdzi ich cykl aktualizacji od końca
-  do końca. Z tego powodu publicznego AMC nadal nie instalujemy.
-- Źródło instalatora jest gotowe, ale `ISCC.exe` (Inno Setup) nie jest obecny
-  na tym komputerze. Nie powstał więc jeszcze plik `.exe` instalatora ani jego
-  końcowy plik integralności.
+- Osobne tożsamości procesu i instalator są gotowe, ale nie sprawdzono jeszcze
+  czystej instalacji, aktualizacji i odinstalowania od końca do końca. Próba ma
+  poczekać na pewny brak nagrywania i osobny odbiór użytkownika.
+- Instalator nie jest jeszcze podpisany cyfrowo ani opublikowany. Plik
+  integralności potwierdza lokalny wynik budowy, nie zastępuje podpisu kodu.
 
 ## Porządek dysku
 
@@ -284,6 +288,9 @@ nie pobiera środowiska uruchomieniowego podczas instalacji.
   jednoznacznie nazwane katalogi `.test-tmp/bundle-build-*`. Nie usunięto
   zastanych `.test-output`, `.test-tmp`, `.pytest_cache`, źródeł, dokumentacji,
   ustawień, nagrań ani zainstalowanej paczki AMC Test.
+- Zachowano też jedyny zbudowany instalator i jego plik integralności w
+  `.test-output/installers/amc12-2026.10.19`; nie ma jeszcze zweryfikowanej
+  kopii zdalnej, więc tych plików nie wolno usuwać.
 
 ## Wersja i commit
 
@@ -305,3 +312,6 @@ nie pobiera środowiska uruchomieniowego podczas instalacji.
   `fix(amc12): ustabilizuj budowe publicznej paczki`. Kompilacja Release,
   złożenie czystej paczki i pełna kontrola integralności zaliczone; instalacji
   ani publikacji nie wykonywano.
+- Wykrywanie użytkowej instalacji Inno Setup: `6571a4de` —
+  `fix(amc12): znajdz uzytkowy kompilator instalatora`. Lokalny instalator
+  zbudowany, rozmiar i SHA-256 zgodne; instalacji i publikacji nie wykonywano.
