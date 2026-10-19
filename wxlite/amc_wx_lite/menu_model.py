@@ -220,7 +220,7 @@ def menus_for_session(
                 account_labels = {
                     SessionId.TIDAL: "Konto i synchronizacja &TIDAL",
                     SessionId.SPOTIFY: "Konto Spot&ify",
-                    SessionId.WIIM: "&Urządzenia WiiM",
+                    SessionId.WIIM: "Urzą&dzenia WiiM",
                 }
                 if session_id in account_labels:
                     entry = replace(
@@ -260,6 +260,27 @@ def build_menus(session_order: object = None) -> tuple[Menu, ...]:
                      accelerator=False, visible_sessions=FILES_ONLY),
             MenuItem("Otwórz &folder", Action.OPEN_FOLDER_DIALOG,
                      shortcut="Ctrl+Shift+O", visible_sessions=FILES_ONLY),
+            MenuItem(
+                "Foldery &Biblioteki…",
+                Action.MANAGE_LIBRARY_FOLDERS,
+                shortcut="Ctrl+F5",
+                accelerator=False,
+                visible_sessions=FILES_ONLY,
+            ),
+            MenuItem(
+                "&Odśwież Foldery Biblioteki",
+                Action.REFRESH_LOCAL_LIBRARY,
+                shortcut="F5",
+                accelerator=False,
+                visible_sessions=FILES_ONLY,
+            ),
+            MenuItem(
+                "Kon&figuruj konto lub urządzenie…",
+                Action.SESSION_CONFIGURE_CURRENT,
+                shortcut="Ctrl+F5",
+                accelerator=False,
+                visible_sessions=(SessionId.TIDAL, SessionId.SPOTIFY, SessionId.WIIM),
+            ),
             MenuItem(
                 "Otwórz fo&lder zawierający",
                 Action.OPEN_CONTAINING_FOLDER,
@@ -1234,10 +1255,6 @@ def build_menus(session_order: object = None) -> tuple[Menu, ...]:
             MenuItem(
                 "Wyłącz bieżącą &sesję…",
                 Action.SESSION_DISABLE_CURRENT,
-            ),
-            MenuItem(
-                "Kon&figuruj konto lub urządzenie…",
-                Action.SESSION_CONFIGURE_CURRENT,
             ),
             MenuItem(
                 "Poprzednia sesja (&7)",

@@ -158,6 +158,10 @@ internal static class Program
                 // niezależne od transportu; wolna odpowiedź nie zatrzymuje
                 // radia, nagrywania ani pauzy.
                 LitePodcastDirectorySearchCoordinator.Operation,
+                // Skan Folderów Biblioteki może objąć tysiące plików. Nie
+                // blokuje transportu; zapis pozostaje pod jedną bramą profilu.
+                "library.folderSource.add",
+                "library.folderSource.refresh",
                 // Radio Browser używa sieci, ale nie może blokować aktywnego
                 // radia, nagrywania ani statusu transportu.
                 LiteRadioDirectorySearchCoordinator.Operation,

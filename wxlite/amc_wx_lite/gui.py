@@ -4014,6 +4014,212 @@ class ServiceAccountDialog(wx.Dialog):
         self.login_button.SetFocus()
 
 
+class LibraryFoldersDialog(wx.Dialog):
+    """Dostępne zarządzanie korzeniami lokalnej Biblioteki."""
+
+    def __init__(
+        self,
+        parent: wx.Window,
+        payload: object,
+        *,
+        add_folder: Callable[[str, "LibraryFoldersDialog"], None],
+        refresh_folders: Callable[[list[str], "LibraryFoldersDialog"], None],
+        detach_folder: Callable[[str, "LibraryFoldersDialog"], None],
+    ) -> None:
+        super().__init__(
+            parent,
+            title="Foldery Biblioteki",
+            style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER,
+        )
+        self.SetName("Foldery Biblioteki")
+        self._add_folder = add_folder
+        self._refresh_folders = refresh_folders
+        self._detach_folder = detach_folder
+        self._sources: list[dict] = []
+        self._busy = False
+
+        explanation = wx.StaticText(
+            self,
+            label=(
+                "Dodane foldery są skanowane do lokalnej Biblioteki. "
+                "Odłączenie folderu nie usuwa plików z dysku ani zapisanych danych AMC."
+            ),
+        )
+        explanation.Wrap(700)
+        self.sources = wx.ListBox(self, choices=[], style=wx.LB_SINGLE)
+        self.sources.SetName("Foldery Biblioteki")
+        self.sources.SetHelpText(
+            "Strzałki wybierają folder. Przyciski dodają, odświeżają albo "
+            "bezpiecznie odłączają wybrany folder."
+        )
+        self.status = wx.StaticText(self, label="Gotowe")
+        self.status.SetName("Wynik operacji: Gotowe")
+        self.add_button = wx.Button(self, label="&Dodaj folder…")
+        self.refresh_button = wx.Button(self, label="Odśwież &wybrany")
+        self.refresh_all_button = wx.Button(self, label="Odśwież w&szystkie")
+        self.detach_button = wx.Button(self, label="&Odłącz folder…")
+        self.close_button = wx.Button(self, wx.ID_CANCEL, label="&Zamknij")
+
+        buttons = wx.BoxSizer(wx.HORIZONTAL)
+        for button in (
+            self.add_button,
+            self.refresh_button,
+            self.refresh_all_button,
+            self.detach_button,
+            self.close_button,
+        ):
+            buttons.Add(button, 0, wx.RIGHT, 8)
+        layout = wx.BoxSizer(wx.VERTICAL)
+        layout.Add(explanation, 0, wx.ALL | wx.EXPAND, 12)
+        layout.Add(self.sources, 1, wx.LEFT | wx.RIGHT | wx.EXPAND, 12)
+        layout.Add(self.status, 0, wx.ALL | wx.EXPAND, 12)
+        layout.Add(buttons, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 12)
+        self.SetSizer(layout)
+        self.SetMinSize((760, 430))
+        self.SetEscapeId(wx.ID_CANCEL)
+
+        self.add_button.Bind(wx.EVT_BUTTON, self._on_add)
+        self.refresh_button.Bind(wx.EVT_BUTTON, self._on_refresh_selected)
+        self.refresh_all_button.Bind(wx.EVT_BUTTON, self._on_refresh_all)
+        self.detach_button.Bind(wx.EVT_BUTTON, self._on_detach)
+        self.sources.Bind(wx.EVT_LISTBOX, self._on_selection)
+        self.Bind(wx.EVT_SHOW, self._on_show)
+        self.apply_payload(payload)
+
+    @property
+    def selected_source_id(self) -> str | None:
+        index = self.sources.GetSelection()
+        if 0 <= index < len(self._sources):
+            source_id = self._sources[index].get("id")
+            return source_id.strip() if isinstance(source_id, str) else None
+        return None
+
+    def apply_payload(self, payload: object, preferred_id: str | None = None) -> None:
+        previous = preferred_id or self.selected_source_id
+        raw = payload.get("sources") if isinstance(payload, dict) else None
+        self._sources = [item for item in (raw or []) if isinstance(item, dict)]
+        labels = []
+        for item in self._sources:
+            label = item.get("label")
+            labels.append(
+                label.strip()
+                if isinstance(label, str) and label.strip()
+                else "Folder Biblioteki"
+            )
+        self.sources.Set(labels)
+        index = 0
+        if previous:
+            index = next(
+                (
+                    position
+                    for position, item in enumerate(self._sources)
+                    if item.get("id") == previous
+                ),
+                0,
+            )
+        if self._sources:
+            self.sources.SetSelection(index)
+        message = payload.get("message") if isinstance(payload, dict) else None
+        if isinstance(message, str) and message.strip():
+            self.set_status(message.strip())
+        self._update_buttons()
+
+    def set_busy(self, busy: bool, message: str = "") -> None:
+        self._busy = bool(busy)
+        if message:
+            self.set_status(message)
+        self._update_buttons()
+
+    def finish(self, payload: object, preferred_id: str | None = None) -> None:
+        self._busy = False
+        self.apply_payload(payload, preferred_id)
+        if self._sources:
+            self.sources.SetFocus()
+        else:
+            self.add_button.SetFocus()
+
+    def fail(self, message: str) -> None:
+        self._busy = False
+        self.set_status(message)
+        self._update_buttons()
+        self.sources.SetFocus() if self._sources else self.add_button.SetFocus()
+
+    def set_status(self, message: str) -> None:
+        self.status.SetLabel(message)
+        self.status.SetName(f"Wynik operacji: {message}")
+        self.Layout()
+
+    def _update_buttons(self) -> None:
+        selected = self.selected_source_id is not None
+        self.add_button.Enable(not self._busy)
+        self.refresh_button.Enable(not self._busy and selected)
+        self.refresh_all_button.Enable(not self._busy and bool(self._sources))
+        self.detach_button.Enable(not self._busy and selected)
+        self.close_button.Enable(not self._busy)
+
+    def _on_show(self, event: wx.ShowEvent) -> None:
+        event.Skip()
+        if event.IsShown():
+            wx.CallAfter(
+                self.sources.SetFocus if self._sources else self.add_button.SetFocus
+            )
+
+    def _on_selection(self, event: wx.CommandEvent) -> None:
+        self._update_buttons()
+        event.Skip()
+
+    def _on_add(self, _event: wx.CommandEvent) -> None:
+        if self._busy:
+            return
+        with wx.DirDialog(
+            self,
+            "Dodaj folder do Biblioteki",
+            style=wx.DD_DEFAULT_STYLE | wx.DD_DIR_MUST_EXIST,
+        ) as dialog:
+            if dialog.ShowModal() != wx.ID_OK:
+                self.add_button.SetFocus()
+                return
+            path = dialog.GetPath()
+        self.set_busy(True, "Dodawanie i odświeżanie folderu")
+        self._add_folder(path, self)
+
+    def _on_refresh_selected(self, _event: wx.CommandEvent) -> None:
+        source_id = self.selected_source_id
+        if self._busy or source_id is None:
+            return
+        self.set_busy(True, "Odświeżanie wybranego folderu")
+        self._refresh_folders([source_id], self)
+
+    def _on_refresh_all(self, _event: wx.CommandEvent) -> None:
+        if self._busy or not self._sources:
+            return
+        self.set_busy(True, "Odświeżanie Folderów Biblioteki")
+        self._refresh_folders([], self)
+
+    def _on_detach(self, _event: wx.CommandEvent) -> None:
+        source_id = self.selected_source_id
+        index = self.sources.GetSelection()
+        if self._busy or source_id is None or not (0 <= index < len(self._sources)):
+            return
+        name = self._sources[index].get("name") or "wybrany folder"
+        question = (
+            f"Odłączyć folder „{name}” od automatycznej synchronizacji?\n\n"
+            "Pliki na dysku nie zostaną usunięte. AMC zachowa wpisy "
+            "Biblioteki, Ulubione, kolejkę, historię, zakładki i pozycje odtwarzania."
+        )
+        with wx.MessageDialog(
+            self,
+            question,
+            "Bezpieczne odłączenie folderu",
+            wx.YES_NO | wx.NO_DEFAULT | wx.ICON_QUESTION,
+        ) as dialog:
+            if dialog.ShowModal() != wx.ID_YES:
+                self.sources.SetFocus()
+                return
+        self.set_busy(True, "Odłączanie folderu")
+        self._detach_folder(source_id, self)
+
+
 class SessionSelectionDialog(wx.Dialog):
     """Jeden dostępny Menedżer sesji, bez technicznych wartości w mowie."""
 
@@ -7108,6 +7314,8 @@ class LiteFrame(wx.Frame):
             "Ctrl+Alt+S",
             "Ctrl+Alt+Shift+S",
             "Ctrl+,",
+            "F5",
+            "Ctrl+F5",
         } | set(GLOBAL_VIEW_SHORTCUTS) | set(PRESET_SHORTCUTS):
             # Ctrl+C musi zostac zatrzymane PRZED natywnym SysListView32,
             # zeby gest wykonal tylko polecenie AMC. Sam zapis do schowka jest
@@ -10480,6 +10688,8 @@ class LiteFrame(wx.Frame):
                 "Ctrl+Alt+Shift+S",
                 "Ctrl+,",
                 "Ctrl+F1",
+                "F5",
+                "Ctrl+F5",
                 # To jest NAJWCZEŚNIEJSZA bramka wx: CHAR_HOOK głównego okna
                 # przychodzi przed zdarzeniem listy. Zatrzymuje natywne
                 # wykonanie gestu, a właściwy zapis jest odroczony za kontrolę
@@ -10645,6 +10855,7 @@ class LiteFrame(wx.Frame):
             podcast_inbox=podcast_inbox,
             podcast_library=podcast_library,
             podcast_session=self.navigator.active is SessionId.PODCASTS,
+            files_session=self.navigator.active is SessionId.FILES,
             tidal_session=self.navigator.active is SessionId.TIDAL,
             tidal_collection=tidal_collection,
             spotify_session=self.navigator.active is SessionId.SPOTIFY,
@@ -10774,6 +10985,10 @@ class LiteFrame(wx.Frame):
             self.announcer.say(message)
         elif action is Action.SESSION_CONFIGURE_CURRENT:
             self._configure_session(self.navigator.active)
+        elif action is Action.MANAGE_LIBRARY_FOLDERS:
+            self._show_library_folders()
+        elif action is Action.REFRESH_LOCAL_LIBRARY:
+            self._refresh_local_library()
         elif action in (Action.PREVIOUS_SESSION, Action.NEXT_SESSION):
             target = session_order.adjacent(
                 self.navigator.active,
@@ -13643,7 +13858,10 @@ class LiteFrame(wx.Frame):
             )
             return
         self._switch_session(session_id)
-        if session_id in (SessionId.FILES, SessionId.RADIO, SessionId.PODCASTS):
+        if session_id is SessionId.FILES:
+            wx.CallAfter(self._show_library_folders)
+            return
+        if session_id in (SessionId.RADIO, SessionId.PODCASTS):
             wx.CallAfter(self._show_session_options)
             return
         if session_id in (SessionId.SPOTIFY, SessionId.TIDAL):
@@ -13659,6 +13877,107 @@ class LiteFrame(wx.Frame):
         }.get(session_id)
         if guidance:
             self.announcer.say(guidance)
+
+    def _show_library_folders(self) -> None:
+        client = self._profile_edit_client()
+        if client is None:
+            return
+        try:
+            payload = client.local_folder_sources()
+        except (HostError, HostUnavailable) as error:
+            self.announcer.say(str(error))
+            return
+        except Exception:
+            self.announcer.say("Nie można teraz odczytać Folderów Biblioteki")
+            return
+
+        def submit(
+            task_name: str,
+            work: Callable[[], object],
+            dialog: LibraryFoldersDialog,
+            preferred_id: str | None = None,
+        ) -> None:
+            def done(result: object) -> None:
+                if not dialog.IsBeingDeleted():
+                    dialog.finish(result, preferred_id)
+                if self.navigator.active is SessionId.FILES:
+                    self._refresh_profile_view()
+
+            def failed(error: Exception) -> None:
+                message = (
+                    str(error)
+                    if isinstance(error, (HostError, HostUnavailable))
+                    else "Operacja na Folderach Biblioteki nie powiodła się"
+                )
+                if not dialog.IsBeingDeleted():
+                    dialog.fail(message)
+
+            self.runner.submit(task_name, work, done, failed)
+
+        def add_folder(path: str, dialog: LibraryFoldersDialog) -> None:
+            submit(
+                "library-folder-add",
+                lambda: client.add_local_folder_source(path),
+                dialog,
+            )
+
+        def refresh_folders(
+            source_ids: list[str],
+            dialog: LibraryFoldersDialog,
+        ) -> None:
+            preferred = source_ids[0] if len(source_ids) == 1 else None
+            submit(
+                "library-folder-refresh",
+                lambda: client.refresh_local_folder_sources(source_ids),
+                dialog,
+                preferred,
+            )
+
+        def detach_folder(source_id: str, dialog: LibraryFoldersDialog) -> None:
+            submit(
+                "library-folder-detach",
+                lambda: client.detach_local_folder_source(source_id),
+                dialog,
+            )
+
+        with LibraryFoldersDialog(
+            self,
+            payload,
+            add_folder=add_folder,
+            refresh_folders=refresh_folders,
+            detach_folder=detach_folder,
+        ) as dialog:
+            dialog.ShowModal()
+        self._restore_focus_after_dialog()
+
+    def _refresh_local_library(self) -> None:
+        client = self._profile_edit_client()
+        if client is None:
+            return
+        self.announcer.say("Odświeżanie Folderów Biblioteki")
+
+        def done(result: object) -> None:
+            message = result.get("message") if isinstance(result, dict) else None
+            self._refresh_profile_view()
+            self.announcer.say(
+                message.strip()
+                if isinstance(message, str) and message.strip()
+                else "Odświeżono Foldery Biblioteki"
+            )
+
+        def failed(error: Exception) -> None:
+            self.announcer.say(
+                str(error)
+                if isinstance(error, (HostError, HostUnavailable))
+                else "Nie można teraz odświeżyć Folderów Biblioteki"
+            )
+
+        self.runner.submit(
+            "library-folders-refresh-all",
+            lambda: client.refresh_local_folder_sources([]),
+            done,
+            failed,
+        )
 
     @staticmethod
     def _service_account_status_message(
@@ -23897,6 +24216,7 @@ class LiteFrame(wx.Frame):
                 and session.library_view is LibraryView.PODCAST_LIBRARY
             ),
             podcast_session=self.navigator.active is SessionId.PODCASTS,
+            files_session=self.navigator.active is SessionId.FILES,
             tidal_session=self.navigator.active is SessionId.TIDAL,
             tidal_collection=(
                 not player

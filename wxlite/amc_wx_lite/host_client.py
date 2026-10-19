@@ -351,6 +351,33 @@ class LiteHostClient:
     def list_folder(self, path: str) -> Any:
         return self.call("files.listFolder", {"path": path}, timeout=60.0)
 
+    def local_folder_sources(self) -> Any:
+        return self.call("library.folderSources", timeout=15.0)
+
+    def add_local_folder_source(self, path: str) -> Any:
+        return self.call(
+            "library.folderSource.add",
+            {"path": path},
+            timeout=3600.0,
+        )
+
+    def refresh_local_folder_sources(
+        self,
+        source_ids: list[str] | None = None,
+    ) -> Any:
+        return self.call(
+            "library.folderSource.refresh",
+            {"sourceIds": list(source_ids or [])},
+            timeout=3600.0,
+        )
+
+    def detach_local_folder_source(self, source_id: str) -> Any:
+        return self.call(
+            "library.folderSource.detach",
+            {"sourceId": source_id},
+            timeout=30.0,
+        )
+
     def play_file(
         self,
         path: str,

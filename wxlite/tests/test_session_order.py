@@ -166,11 +166,18 @@ def test_active_order_drives_menu_palette_and_help_shortcuts() -> None:
     assert "Podcasty i YouTube" not in help_rows.values()
 
 
-def test_session_manager_commands_share_the_view_menu() -> None:
+def test_session_manager_commands_share_the_view_menu_and_configuration_is_in_files() -> None:
     view = next(menu for menu in menu_model.build_menus() if menu.title == "&Widok")
     by_action = {item.action: item for item in view.items}
     assert by_action[Action.SESSION_LIST].shortcut == "Ctrl+Shift+S"
     assert "Menedżer sesji" in by_action[Action.SESSION_LIST].label
     assert Action.SESSION_ENABLE in by_action
     assert Action.SESSION_DISABLE_CURRENT in by_action
-    assert Action.SESSION_CONFIGURE_CURRENT in by_action
+    assert Action.SESSION_CONFIGURE_CURRENT not in by_action
+    files = next(menu for menu in menu_model.build_menus() if menu.title == "&Pliki")
+    configure = next(
+        item for item in files.items
+        if item.action is Action.SESSION_CONFIGURE_CURRENT
+    )
+    assert configure.shortcut == "Ctrl+F5"
+    assert configure.visible_sessions

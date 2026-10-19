@@ -78,6 +78,11 @@ def test_f2_i_delete_listy_docieraja_do_amc_przed_natywna_kontrolka():
         assert _call(player=False, list_chord=chord) == ["key"]
 
 
+def test_f5_i_ctrl_f5_nie_gina_w_natywnej_liscie() -> None:
+    for chord in ("F5", "Ctrl+F5"):
+        assert _call(player=False, list_chord=chord) == ["key"]
+
+
 def test_shift_f10_otwiera_menu_odtwarzacza_przed_obsluga_przycisku():
     assert _call(player=True, list_chord="Shift+F10") == ["context-player"]
 
@@ -148,7 +153,9 @@ def test_lista_ma_wlasny_wczesny_hook_dla_copy_shift_r_i_ustawien():
         for node in ast.walk(shortcut_hook)
         if isinstance(node, ast.Constant) and isinstance(node.value, str)
     }
-    for chord in ("F2", "Shift+F2", "Delete", "Shift+Delete", "Ctrl+C"):
+    for chord in (
+        "F2", "Shift+F2", "Delete", "Shift+Delete", "Ctrl+C", "F5", "Ctrl+F5"
+    ):
         assert chord in handled
 
 def test_strzalka_w_modalnym_dialogu_nie_steruje_odtwarzaczem():

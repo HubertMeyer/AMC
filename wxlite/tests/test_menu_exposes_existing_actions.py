@@ -24,6 +24,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from amc_wx_lite import menu_model
 from amc_wx_lite.navigation import SessionId
 from amc_wx_lite.shortcuts import (
+    FILES_SESSION_VIEW,
     LIST_VIEW,
     PLAYER_VIEW,
     PODCAST_INBOX_LIST_VIEW,
@@ -151,6 +152,7 @@ def test_shortcut_shown_in_menu_is_the_shortcut_that_really_works() -> None:
     """
     real: dict[str, set[Action]] = {}
     for table in (
+        FILES_SESSION_VIEW,
         PODCAST_LIBRARY_LIST_VIEW,
         PODCAST_INBOX_LIST_VIEW,
         PODCAST_SESSION_VIEW,
@@ -229,7 +231,7 @@ def test_no_duplicate_labels_or_shortcuts() -> None:
     # Podcastach pełny opis.
     assert set(duplicates) <= {
         "Ctrl+O", "Ctrl+Shift+O", "Ctrl+N", "Ctrl+E", "Ctrl+D", "Ctrl+S",
-        "Alt+1", "Alt+2", "Alt+3", "Alt+D", "Ctrl+F5", "Ctrl+Shift+L",
+        "Alt+1", "Alt+2", "Alt+3", "Alt+D", "F5", "Ctrl+F5", "Ctrl+Shift+L",
             "Ctrl+Shift+U", "Ctrl+Shift+P",
         "B", "Shift+B", "Ctrl+Shift+B", "Ctrl+X", "Ctrl+V",
         "Alt+Up", "Alt+Down", "F2", "Delete",

@@ -1,8 +1,9 @@
 # AMC09 — Menedżer sesji i zwarta numeracja
 
-Status: **Menedżer oraz rozszerzenie Konfiguruj i `Ctrl+F5` dla kont Spotify,
-TIDAL i urządzeń WiiM są zainstalowane w AMC Test; czekają na ręczny odbiór
-NVDA i usług**
+Status: **Menedżer oraz pierwsze rozszerzenie Konfiguruj są zainstalowane w
+AMC Test. Ujednolicone `Ctrl+F5`, Foldery Biblioteki i naprawa obsługi
+klawiszy na natywnych listach są gotowe w źródłach i testach; czekają na
+bezpieczną instalację oraz ręczny odbiór NVDA i usług**
 
 Data realizacji: 2026-10-19
 
@@ -29,6 +30,22 @@ Historyczny projekt został użyty tylko jako materiał do odczytu.
   przyciskiem „Zaloguj w przeglądarce”, a WiiM odświeża zapisane urządzenia.
   Samo otwarcie Menedżera ani okna konta nie uruchamia OAuth, nie skanuje sieci
   i nie steruje głośnikami.
+- W Plikach lokalnych `Ctrl+F5` otwiera okno „Foldery Biblioteki”. Można w nim
+  dodać folder, odświeżyć zaznaczony folder albo wszystkie foldery oraz
+  bezpiecznie odłączyć folder. Odłączenie wyłącza dalsze skanowanie, ale nie
+  usuwa plików z dysku ani zapisanych w AMC pozycji, historii, Ulubionych,
+  kolejki, playlist, zakładek i pozycji odtwarzania. Po zapisie fokus wraca na
+  listę folderów albo — gdy lista jest pusta — na „Dodaj folder”.
+- W tej samej sesji `F5` wykonuje pełne odświeżenie Folderów Biblioteki bez
+  otwierania okna. Menu „Plik” zawiera osobno „Odśwież Foldery Biblioteki,
+  F5” oraz „Foldery Biblioteki, Ctrl+F5”.
+- `Ctrl+F5` zachowuje odrębne, utrwalone znaczenie sesji: w Podcastach i
+  YouTube odświeża wszystkie źródła, w Spotify i TIDAL otwiera konto, w WiiM
+  urządzenia, a w Sonosie wybór celu sterowania. Radio nie reklamuje tego
+  skrótu, ponieważ nie ma dla niego zatwierdzonej funkcji.
+- Polecenia konfiguracyjne i „Foldery Biblioteki” są w menu „Plik”, tak jak w
+  historycznym AMC. `Ctrl+F1`, pełna pomoc oraz paleta `Ctrl+Shift+K` pokazują
+  tylko wariant właściwy dla bieżącej sesji.
 - Nie można wyłączyć ostatniej sesji. Nie można również wyłączyć sesji, w
   której trwa wewnętrzne odtwarzanie, oczekiwanie na rozpoczęcie odtwarzania
   albo nagrywanie. Wyłączenie Sonosa lub WiiM zmienia tylko widoczność sesji;
@@ -73,6 +90,14 @@ Historyczny projekt został użyty tylko jako materiał do odczytu.
   znaczenie `Ctrl+F5` ze starego AMC. Spotify i TIDAL otwierają konto, WiiM
   odświeża urządzenia, Podcasty odświeżają Bibliotekę, a Sonos zachowuje wybór
   celu. Zwykłe `F5` nadal jest odświeżaniem bieżącego widoku.
+- **Korekta użytkownika z 19 października 2026, późniejsza:** powyższe
+  ustalenie rozszerzono o Pliki lokalne. `Ctrl+F5` otwiera „Foldery
+  Biblioteki” z dodawaniem, odświeżaniem i niedestrukcyjnym odłączaniem.
+  Polecenia przeniesiono z ogólnego menu „Widok” do kontekstowego menu „Plik”.
+- Natywny widok listy Windows przejmował wcześniej `F5` i `Ctrl+F5` przed
+  routerem AMC. Oba gesty przechodzą teraz przez tę samą wczesną bramkę co
+  pozostałe polecenia listy, więc menu, skrót, pomoc, paleta i wykonanie nie
+  rozchodzą się.
 
 ## Zmienione miejsca
 
@@ -82,6 +107,8 @@ Historyczny projekt został użyty tylko jako materiał do odczytu.
   `wxlite/amc_wx_lite/gui.py`.
 - Wspólne menu, skróty, pomoc, paleta i dodatek NVDA:
   `menu_model.py`, `shortcuts.py`, `nvda_bridge.py`.
+- Obsługa Folderów Biblioteki: `LocalFolderLibraryManager.cs`, operacje
+  LiteHost, `host_client.py` i dostępne okno `LibraryFoldersDialog` w `gui.py`.
 - Ujednolicona nazwa „Radio”: `navigation.py`, `search_catalog.py`,
   `search_sources.py`, `transient_preview_policy.py` oraz powiązane testy.
 - Nowe testy Menedżera: `wxlite/tests/test_session_manager.py`, rozszerzone
@@ -97,6 +124,18 @@ Historyczny projekt został użyty tylko jako materiał do odczytu.
   zbudowała 1667 plików, potwierdziła manifest i sumy SHA-256 kandydata oraz
   instalacji, a następnie uruchomiła właściwy profil AMC Test. Niezależna
   kontrola po promocji potwierdziła działający uruchamiacz, LiteHost i okno.
+- Korekta `Ctrl+F5` i Folderów Biblioteki: **160/160** ukierunkowanych testów
+  skrótów, menu, pomocy, palety, fokusu i wczesnego routingu listy zaliczonych.
+  Pełny zestaw Core zakończył się kodem 0; nowy test potwierdził dodanie,
+  odświeżenie i odłączenie folderu przy zachowaniu rzeczywistego pliku.
+- Końcowa regresja wxPython bez czterech istniejących prób wymagających
+  lokalnego gniazda sieciowego: **1851 zaliczonych, 110 pominiętych i 11
+  podtestów zaliczonych**. Cztery wyłączone próby RSS doszły w osobnym
+  przebiegu do połączenia z `127.0.0.1`, lecz sandbox zabronił tego połączenia;
+  nie dotyczyły zmienionego kodu Folderów Biblioteki.
+- LiteHost oraz projekt testów Core zbudowały się w konfiguracji Release bez
+  ostrzeżeń i błędów. Na tym etapie nie wykonano jeszcze instalacji ani
+  uruchomienia zmienionej wersji.
 
 - Testy ukierunkowane modelu, magazynu, skrótów, palety, GUI i dostępnych
   etykiet: **94 zaliczone**.
@@ -137,6 +176,10 @@ Historyczny projekt został użyty tylko jako materiał do odczytu.
 - Ręczny odbiór NVDA powinien sprawdzić pierwsze otwarcie, ruch po wierszach,
   Spację, Enter, Alt+strzałki, Konfiguruj, anulowanie, powrót fokusu i ponowne
   otwarcie. Testy automatyczne nie są dowodem rzeczywistej mowy NVDA.
+- Ręczny odbiór Folderów Biblioteki powinien sprawdzić początkowy fokus,
+  dodanie małego folderu, ponowne odświeżenie, anulowanie odłączenia,
+  potwierdzone odłączenie i powrót fokusu. Odłączenie jest celowo
+  niedestrukcyjne; osobne ręczne zapominanie wpisów nie należy do tego okna.
 
 ## Porządek dysku
 
@@ -159,6 +202,10 @@ Historyczny projekt został użyty tylko jako materiał do odczytu.
   zawierał jeden plik Markdown (około 8,7 KB) i również został usunięty.
 
 ## Wersja i commit
+
+- Ujednolicenie `Ctrl+F5` i Folderów Biblioteki: zmiana gotowa w źródłach;
+  dokładny commit i wersja instalacji zostaną dopisane po lokalnym commicie i
+  bezpiecznej promocji. Publikacji nie wykonano.
 
 - Rozszerzenie `Ctrl+F5` oraz kont Spotify i TIDAL: commit `c3ffea7`
   (`feat(amc): dodaj konta Spotify i TIDAL pod Ctrl+F5`).

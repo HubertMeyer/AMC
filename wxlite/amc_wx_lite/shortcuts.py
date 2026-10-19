@@ -103,6 +103,8 @@ class Action(Enum):
     SESSION_ENABLE = "session.enable"
     SESSION_DISABLE_CURRENT = "session.disableCurrent"
     SESSION_CONFIGURE_CURRENT = "session.configureCurrent"
+    MANAGE_LIBRARY_FOLDERS = "library.folderSources.manage"
+    REFRESH_LOCAL_LIBRARY = "library.folderSources.refresh"
     PREVIOUS_SESSION = "session.previous"
     NEXT_SESSION = "session.next"
     COMMAND_PALETTE = "view.commandPalette"
@@ -1137,6 +1139,12 @@ PODCAST_INBOX_LIST_VIEW: dict[str, Action] = {
     "F5": Action.REFRESH_PODCAST_LIBRARY,
 }
 
+
+FILES_SESSION_VIEW: dict[str, Action] = {
+    "F5": Action.REFRESH_LOCAL_LIBRARY,
+    "Ctrl+F5": Action.MANAGE_LIBRARY_FOLDERS,
+}
+
 # Główna Biblioteka źródeł ma ten sam układ cyfr, ale osobny model i osobne
 # akcje. Dzięki temu polecenia skrzynki odcinków nie mogą przez pomyłkę zapisać
 # trybu podcastów, kanałów YouTube i kolekcji Media internetowe.
@@ -1307,6 +1315,7 @@ def resolve(
     podcast_inbox: bool = False,
     podcast_library: bool = False,
     podcast_session: bool = False,
+    files_session: bool = False,
     tidal_session: bool = False,
     tidal_collection: bool = False,
     spotify_session: bool = False,
@@ -1342,6 +1351,8 @@ def resolve(
         # F5 w globalnej skrzynce odświeża wszystkie źródła. Alt+1/2/3 są już
         # rozstrzygnięte wyżej, lecz pozostają w tej samej tabeli poleceń.
         return PODCAST_INBOX_LIST_VIEW[canonical]
+    if files_session and canonical in FILES_SESSION_VIEW:
+        return FILES_SESSION_VIEW[canonical]
     # Parity z głównym AMC: Ctrl+F5 zawsze odświeża wszystkie źródła sesji,
     # F5 w skrzynce robi to samo, a F5 w pozostałych widokach odświeża źródło
     # bieżącego podcastu lub odcinka.
@@ -1439,6 +1450,10 @@ def _help_entries() -> list[tuple[str, str, Action]]:
         Action.SESSION_ENABLE: "Włącz sesję w Menedżerze sesji",
         Action.SESSION_DISABLE_CURRENT: "Wyłącz bieżącą sesję",
         Action.SESSION_CONFIGURE_CURRENT: "Konfiguruj konto lub urządzenie bieżącej sesji",
+        Action.MANAGE_LIBRARY_FOLDERS: (
+            "Foldery Biblioteki: dodaj, odśwież albo bezpiecznie odłącz folder"
+        ),
+        Action.REFRESH_LOCAL_LIBRARY: "Odśwież wszystkie Foldery Biblioteki",
         Action.PREVIOUS_SESSION: "Poprzednia sesja",
         Action.NEXT_SESSION: "Następna sesja",
         Action.COMMAND_PALETTE: "Paleta poleceń",
@@ -1726,6 +1741,7 @@ def _help_entries() -> list[tuple[str, str, Action]]:
     seen: set[Action] = set()
     out: list[tuple[str, str, Action]] = []
     for table in (
+        FILES_SESSION_VIEW,
         PODCAST_LIBRARY_LIST_VIEW,
         PODCAST_INBOX_LIST_VIEW,
         PODCAST_SESSION_VIEW,

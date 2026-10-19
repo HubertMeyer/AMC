@@ -323,6 +323,7 @@ var tests = new (string Name, Action Test)[]
     ("Zmiana wyłącznie wielkości liter nazwy pliku", RenameCaseOnlyTests.Run),
     ("Integracyjny cykl zmian folderu", TestLocalFolderSynchronizationCycle),
     ("Bezpieczne zarządzanie Folderami Biblioteki", TestLocalFolderSourcePolicy),
+    ("Magazyn Folderów Biblioteki bez usuwania plików", TestLocalFolderLibraryManager),
     ("Normalizacja korzeni folderów w jednym przebiegu", LocalFolderPathNormalizerTests.Run),
     ("Ręczne zapominanie niedostępnych rekordów", TestUnavailableLocalItemPolicy),
     ("Trwała kolejność własna Biblioteki", TestLocalLibraryManualOrder),
@@ -7345,6 +7346,37 @@ static void TestLocalFolderSourcePolicy()
     Equal(0, sources.Count);
     Equal(3, items.Count);
     Equal(true, items[0].IsInLibrary);
+}
+
+static void TestLocalFolderLibraryManager()
+{
+    var root = Path.Combine(Path.GetTempPath(), "amc-folder-manager-" + Guid.NewGuid().ToString("N"));
+    var media = Path.Combine(root, "Muzyka");
+    var database = Path.Combine(root, "library.db");
+    Directory.CreateDirectory(media);
+    var file = Path.Combine(media, "utwor.mp3");
+    File.WriteAllBytes(file, [0, 1, 2, 3]);
+    try
+    {
+        var manager = new LocalFolderLibraryManager(database);
+        Equal(0, manager.List().Count);
+        var added = manager.Add(media);
+        Equal(1, added.Sources.Count);
+        Equal(1, added.Sources[0].ActiveItemCount);
+        var sourceId = added.Sources[0].Id;
+
+        var refreshed = manager.Refresh([sourceId]);
+        Equal(sourceId, refreshed.SelectedSourceId);
+        Equal(1, refreshed.Sources[0].ActiveItemCount);
+
+        var detached = manager.Detach(sourceId);
+        Equal(0, detached.Sources.Count);
+        True(File.Exists(file), "Odłączenie Folderu Biblioteki nie może usuwać pliku.");
+    }
+    finally
+    {
+        if (Directory.Exists(root)) Directory.Delete(root, true);
+    }
 }
 
 static void TestUnavailableLocalItemPolicy()

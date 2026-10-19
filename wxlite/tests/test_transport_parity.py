@@ -96,6 +96,7 @@ from pathlib import Path
 from amc_wx_lite import menu_model
 from amc_wx_lite.profile_layout import private_sandbox, read_only_mirror
 from amc_wx_lite.shortcuts import (
+    FILES_SESSION_VIEW,
     LIST_VIEW,
     PLAYER_VIEW,
     PODCAST_LIBRARY_LIST_VIEW,
@@ -797,6 +798,7 @@ def test_menu_shortcut_labels_still_tell_the_truth() -> None:
     """
     real: dict[str, set[Action]] = {}
     for table in (
+        FILES_SESSION_VIEW,
         PODCAST_LIBRARY_LIST_VIEW,
         PODCAST_INBOX_LIST_VIEW,
         PODCAST_SESSION_VIEW,

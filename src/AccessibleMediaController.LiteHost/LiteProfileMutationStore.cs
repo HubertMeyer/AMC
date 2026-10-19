@@ -30,6 +30,7 @@ internal sealed class LiteProfileMutationStore
     private readonly string _podcastsDatabasePath;
     private readonly string _statePath;
     private readonly Func<bool> _fullAmcIsRunning;
+    private readonly LocalFolderLibraryManager _localFolders;
 
     public LiteProfileMutationStore(
         string libraryDatabasePath,
@@ -41,6 +42,48 @@ internal sealed class LiteProfileMutationStore
         _podcastsDatabasePath = Path.GetFullPath(podcastsDatabasePath);
         _statePath = Path.GetFullPath(statePath);
         _fullAmcIsRunning = fullAmcIsRunning ?? FullAmcIsRunning;
+        _localFolders = new LocalFolderLibraryManager(_libraryDatabasePath);
+    }
+
+    public object ListLocalFolderSources()
+    {
+        lock (_gate)
+        {
+            return LocalFolderPayload(_localFolders.List(), null, null);
+        }
+    }
+
+    public object AddLocalFolderSource(string path)
+    {
+        EnsureMayWrite();
+        lock (_gate)
+        {
+            var result = _localFolders.Add(path);
+            return LocalFolderPayload(
+                result.Sources, result.Message, result.SelectedSourceId);
+        }
+    }
+
+    public object RefreshLocalFolderSources(IReadOnlyCollection<string> sourceIds)
+    {
+        EnsureMayWrite();
+        lock (_gate)
+        {
+            var result = _localFolders.Refresh(sourceIds);
+            return LocalFolderPayload(
+                result.Sources, result.Message, result.SelectedSourceId);
+        }
+    }
+
+    public object DetachLocalFolderSource(string sourceId)
+    {
+        EnsureMayWrite();
+        lock (_gate)
+        {
+            var result = _localFolders.Detach(sourceId);
+            return LocalFolderPayload(
+                result.Sources, result.Message, result.SelectedSourceId);
+        }
     }
 
     public object RenameLibraryItem(string itemId, string requestedTitle)
@@ -1783,6 +1826,26 @@ internal sealed class LiteProfileMutationStore
                    string.Equals(ReadJsonText(station, "id", "Id"), stationId, StringComparison.Ordinal))
                ?? throw new LiteRequestException("Nie można odnaleźć tej stacji w profilu AMC.");
     }
+
+    private static object LocalFolderPayload(
+        IReadOnlyList<LocalFolderSourceStatus> sources,
+        string? message,
+        string? selectedSourceId) => new
+    {
+        message,
+        selectedSourceId,
+        sources = sources.Select(source => new
+        {
+            id = source.Id,
+            label = source.Label,
+            name = source.DisplayName,
+            path = source.Path,
+            reachable = source.IsReachable,
+            activeCount = source.ActiveItemCount,
+            unavailableCount = source.UnavailableItemCount,
+            excludedCount = source.ExcludedItemCount
+        }).ToArray()
+    };
 
     private static JsonObject ParseObject(string json, string error)
     {

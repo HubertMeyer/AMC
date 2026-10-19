@@ -520,6 +520,17 @@ internal sealed class LiteEngineHandlers : IDisposable
                 SetPodcastPlaybackOptions(request.Args),
             ["library.renameTitle"] = (request, _) => RenameLibraryTitle(request.Args),
             ["library.renameFile"] = (request, _) => RenameLocalFile(request.Args),
+            ["library.folderSources"] = (_, _) =>
+                RequireProfileMutations().ListLocalFolderSources(),
+            ["library.folderSource.add"] = (request, _) =>
+                RequireProfileMutations().AddLocalFolderSource(
+                    LiteArgs.RequirePath(request.Args, "path")),
+            ["library.folderSource.refresh"] = (request, _) =>
+                RequireProfileMutations().RefreshLocalFolderSources(
+                    ReadOptionalIds(request.Args, "sourceIds")),
+            ["library.folderSource.detach"] = (request, _) =>
+                RequireProfileMutations().DetachLocalFolderSource(
+                    LiteArgs.RequireText(request.Args, "sourceId")),
             ["library.toggleFavorite"] = (request, _) => ToggleProfileFavorites(request.Args),
             ["library.playlists"] = (request, _) => GetProfilePlaylists(request.Args),
             ["library.playlists.replace"] = (request, _) => ReplaceProfilePlaylists(request.Args),

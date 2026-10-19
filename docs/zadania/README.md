@@ -107,15 +107,19 @@ zmian, wymagający korekty użytkownika:
   `AMC08-playlisty-spotify.md`. Zatwierdzona specyfikacja:
   `D:\Projekty Codex\Accessible Multimedia Controller\AMC08_PLAYLISTY_SPOTIFY_2026-10-18.md`.
   Historyczne źródła są tylko wzorcem; kod powstaje w tym repozytorium.
-- `AMC09` — **Menedżer oraz rozszerzenie Konfiguruj i `Ctrl+F5` dla Spotify,
-  TIDAL i WiiM są zainstalowane; czekają na ręczny odbiór NVDA i usług** — dostępny
+- `AMC09` — **Menedżer i pierwsze rozszerzenie Konfiguruj są zainstalowane;
+  ujednolicone `Ctrl+F5` oraz Foldery Biblioteki są gotowe w źródłach i
+  testach, przed bezpieczną instalacją i odbiorem NVDA** — dostępny
   Menedżer sesji pod `Ctrl+Shift+S`, włączanie Spacją, zwarta kolejność
   `Ctrl+1–9`, zmiana kolejności `Alt+strzałkami`, stan gotowości i stała nazwa
   `Radio`. Ma działać już w AMC Test; profil publiczny będzie później filtrował
   tę samą listę przez manifest możliwości. Zatwierdzona specyfikacja:
   `D:\Projekty Codex\Accessible Multimedia Controller\AMC09_MENEDZER_SESJI_I_PIERWSZE_LOGOWANIE_2026-10-18.md`.
   Automatyczne otwarcie na czystej instalacji pozostaje do odbioru AMC12 i nie
-  może zmienić obecnego profilu testowego. Bieżący zapis realizacji:
+  może zmienić obecnego profilu testowego. W Plikach lokalnych `Ctrl+F5`
+  otwiera teraz niedestrukcyjny menedżer dodawania, odświeżania i odłączania
+  Folderów Biblioteki; pozostałe sesje zachowują własne znaczenie tego skrótu.
+  Bieżący zapis realizacji:
   [AMC09-menedzer-sesji.md](AMC09-menedzer-sesji.md).
 - `AMC12` — **W trakcie; fundament profili, rozdzielenie uruchamiacza i
   aktualizatora oraz kontrolowana migawka AMC Test → AMC są gotowe w źródłach,

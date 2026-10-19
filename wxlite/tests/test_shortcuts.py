@@ -298,6 +298,18 @@ def test_podcast_refresh_matches_the_full_amc_context() -> None:
 
 def test_ctrl_f5_opens_account_or_device_configuration_by_session() -> None:
     chord = Chord("F5", ctrl=True)
+    assert resolve(
+        Chord("F5"),
+        player_view=False,
+        radio_session=False,
+        files_session=True,
+    ) is Action.REFRESH_LOCAL_LIBRARY
+    assert resolve(
+        chord,
+        player_view=False,
+        radio_session=False,
+        files_session=True,
+    ) is Action.MANAGE_LIBRARY_FOLDERS
     for flag in ("tidal_session", "spotify_session", "wiim_session"):
         arguments = {
             "player_view": False,
