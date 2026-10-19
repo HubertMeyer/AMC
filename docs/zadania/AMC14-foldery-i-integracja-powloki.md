@@ -55,6 +55,21 @@ prywatny kanał bieżącego użytkownika i tylko uaktywnia okno. Nie prosi o
 zamknięcie ani nie wykonuje bezpiecznej podmiany wersji, a więc nie przerywa
 nagrywania. AMC Test i publiczny AMC mają osobne kanały.
 
+### Etap C — opcjonalna integracja instalatora
+
+Instalator ma dwie domyślnie odznaczone opcje w grupie **Integracja z
+Eksploratorem Windows**:
+
+- dodanie poleceń **Otwórz w AMC** oraz **Dodaj do kolejki AMC** do menu
+  kontekstowego obsługiwanych plików;
+- pokazanie AMC na liście **Otwórz za pomocą** i w ustawieniach aplikacji
+  domyślnych Windows.
+
+AMC Test otrzymuje własne etykiety i osobne wpisy. Instalator nie wybiera AMC
+jako programu domyślnego. Wyłączenie opcji podczas aktualizacji usuwa wpisy
+danego profilu, a odinstalowanie usuwa je wszystkie bez naruszania wpisów
+drugiego profilu.
+
 ## Uzasadnienie i decyzje
 
 - 2026-10-19: etap aplikacyjny powstaje przed rejestracją powłoki i przed
@@ -76,6 +91,12 @@ nagrywania. AMC Test i publiczny AMC mają osobne kanały.
   pipe jest ograniczony do bieżącego użytkownika i rozdzielony profilem.
 - `/kolejka` korzysta z osobnej, idempotentnej operacji hosta. Nie używa
   przełącznika członkostwa, bo drugie wywołanie przełącznika usuwałoby plik.
+- Lista rozszerzeń instalatora jest sprawdzana automatycznie względem katalogu
+  Core. Rozbieżność zatrzymuje test zamiast pozostawiać częściowo działające
+  skojarzenia.
+- Opcje instalatora są domyślnie wyłączone. Rejestracja ogranicza się do
+  bieżącego użytkownika, nie zapisuje chronionego `UserChoice` i nie wymusza
+  domyślnej aplikacji.
 
 ## Testy i wynik
 
@@ -111,12 +132,24 @@ zakończyło się wynikiem `OK`.
 - kompilacja `AccessibleMediaController.LiteHost` oraz Core — sukces,
   0 ostrzeżeń, 0 błędów.
 
+2026-10-19, etap C:
+
+- pełny projekt `AccessibleMediaController.Core.SmokeTests` — zaliczony, w tym
+  kontrakt dobrowolnej i odwracalnej integracji, brak `UserChoice` oraz pełna
+  zgodność rozszerzeń instalatora z `ShellIntegrationRules.AllExtensions`;
+- Inno Setup 6.7.3 — rzeczywista kompilacja próbnego instalatora zakończona
+  sukcesem w 125,375 s; instalatora nie uruchomiono i nie zainstalowano;
+- po próbie usunięto wyłącznie katalog
+  `D:\Projekty Codex\AMC - integracja wxPython\.test-tmp\amc14-iss-check`:
+  1 odtwarzalny plik, 123 321 674 bajty. Odzyskanie po usunięciu wymagałoby
+  ponownej kompilacji; zachowano właściwy zweryfikowany instalator AMC12.
+
 ## Znane ograniczenia
 
 - Etap A jest zmianą źródłową i testową. Nie zbudowano ani nie zainstalowano
   nowej wersji, nie otwierano też prawdziwego Eksploratora w teście.
-- Rejestracja typów plików, menu kontekstowego i ustawień domyślnych aplikacji
-  nie została jeszcze wykonana.
+- Rejestracja systemowa jest gotowa w źródle instalatora, ale celowo nie została
+  zastosowana w rejestrze bieżącego komputera.
 - Kanał został sprawdzony testem odizolowanym, lecz nie zainstalowano nowego
   launchera i nie wykonano jeszcze ręcznej próby z Eksploratorem.
 
@@ -126,4 +159,5 @@ zakończyło się wynikiem `OK`.
   kanału przekazywania żądań według profilu.
 - Instalacja: bez zmian.
 - Commit etapu A: `515898c8`.
-- Commit etapu B: do uzupełnienia po zapisie spójnego etapu.
+- Commit etapu B: `662f9c52`.
+- Commit etapu C: do uzupełnienia po zapisie spójnego etapu.

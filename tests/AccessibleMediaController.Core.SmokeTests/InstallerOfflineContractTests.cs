@@ -1,3 +1,6 @@
+using System.Text.RegularExpressions;
+using AccessibleMediaController.Core.ShellIntegration;
+
 /// <summary>
 /// Czy paczka wydania jest SAMOWYSTARCZALNA: instalator nie ma prawa niczego
 /// dociagac z sieci ani instalowac obcego srodowiska .NET.
@@ -74,8 +77,51 @@ public static class InstallerOfflineContractTests
             !iss.Contains("dociaga runtime", StringComparison.OrdinalIgnoreCase),
             "Komentarz instalatora wciaz twierdzi, ze instalator dociaga runtime.");
 
+        // 5. Integracja z powloka jest dobrowolna, odwracalna i ma dokladnie
+        //    ten sam zakres rozszerzen co katalog Core. Nie ustawiamy
+        //    UserChoice ani domyslnej aplikacji poza interfejsem Windows.
+        foreach (var wymagane in new[]
+                 {
+                     "Name: \"shellcontext\"",
+                     "Name: \"shellopenwith\"",
+                     "Flags: unchecked",
+                     "RemoveShellIntegration",
+                     "CurUninstallStepChanged",
+                     "Software\\RegisteredApplications",
+                     "OpenWithProgids",
+                     "SystemFileAssociations",
+                     "/kolejka \"%1\"",
+                     "AccessibleMediaController.{#ShellProfileKey}.",
+                 })
+        {
+            Check(
+                iss.Contains(wymagane, StringComparison.Ordinal),
+                $"Instalator stracil bezpieczny element integracji powloki: {wymagane}.");
+        }
+        Check(
+            !iss.Contains("UserChoice", StringComparison.OrdinalIgnoreCase),
+            "Instalator nie moze wymuszac domyslnej aplikacji przez UserChoice.");
+
+        const string extensionsMarker = "ShellExtensions = ";
+        var extensionsStart = iss.IndexOf(extensionsMarker, StringComparison.Ordinal);
+        var extensionsEnd = extensionsStart < 0
+            ? -1
+            : iss.IndexOf(';', extensionsStart);
+        Check(extensionsStart >= 0 && extensionsEnd > extensionsStart,
+            "Instalator nie zawiera katalogu rozszerzen powloki.");
+        var extensionsBlock = iss[extensionsStart..extensionsEnd];
+        var installerExtensions = Regex.Matches(extensionsBlock, "'([^']*)'")
+            .Select(match => match.Groups[1].Value)
+            .Aggregate(string.Empty, (left, right) => left + right)
+            .Split('|', StringSplitOptions.RemoveEmptyEntries)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        Check(
+            installerExtensions.SetEquals(ShellIntegrationRules.AllExtensions),
+            "Rozszerzenia instalatora i katalogu Core nie sa identyczne.");
+
         Console.WriteLine(
             "OK: instalator nie pobiera ani nie instaluje zewnetrznego .NET "
+                + "oraz ma opcjonalna, odwracalna integracje powloki "
                 + "(kontrakt skryptow, nie dowod instalacji)");
     }
 
