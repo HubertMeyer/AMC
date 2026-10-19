@@ -134,8 +134,10 @@ Historyczny projekt został użyty tylko jako materiał do odczytu.
   przebiegu do połączenia z `127.0.0.1`, lecz sandbox zabronił tego połączenia;
   nie dotyczyły zmienionego kodu Folderów Biblioteki.
 - LiteHost oraz projekt testów Core zbudowały się w konfiguracji Release bez
-  ostrzeżeń i błędów. Na tym etapie nie wykonano jeszcze instalacji ani
-  uruchomienia zmienionej wersji.
+  ostrzeżeń i błędów. Następnie utworzono i sprawdzono integralność paczki 1667
+  plików. Aktualizator dwukrotnie odmówił podmiany, ponieważ widział działające
+  składniki bieżącej instalacji AMC Test. Nie zatrzymano ich i nie zmieniono
+  zainstalowanej wersji.
 
 - Testy ukierunkowane modelu, magazynu, skrótów, palety, GUI i dostępnych
   etykiet: **94 zaliczone**.
@@ -203,9 +205,14 @@ Historyczny projekt został użyty tylko jako materiał do odczytu.
 
 ## Wersja i commit
 
-- Ujednolicenie `Ctrl+F5` i Folderów Biblioteki: zmiana gotowa w źródłach;
-  dokładny commit i wersja instalacji zostaną dopisane po lokalnym commicie i
-  bezpiecznej promocji. Publikacji nie wykonano.
+- Ujednolicenie `F5`, `Ctrl+F5` i Folderów Biblioteki: commit `8f1dad15`
+  (`feat(amc): przywroc Ctrl+F5 i Foldery Biblioteki`).
+- Sprawdzony kandydat:
+  `2026.10.19-8f1dad15c1af78d25ebc074f0f571fac8bb18cdd-0cfb4e32`,
+  1667 plików. Instalacja została bezpiecznie wstrzymana przez aktualizator;
+  zainstalowany AMC Test pozostał na
+  `2026.10.19-c3ffea70d9f002d936bbabd43421b03393c9702d-a329942c`.
+  Publikacji nie wykonano.
 
 - Rozszerzenie `Ctrl+F5` oraz kont Spotify i TIDAL: commit `c3ffea7`
   (`feat(amc): dodaj konta Spotify i TIDAL pod Ctrl+F5`).
