@@ -443,6 +443,11 @@ class LiteHostClient:
             ),
         )
 
+    def radio_jump_live(self) -> Any:
+        """Wróć z bufora Time Shift do żywej transmisji i normalnego tempa."""
+
+        return self.call("radio.jumpLive", {"sessionId": "radio"})
+
     def set_volume(self, volume: int, session_id: str | None = None) -> Any:
         return self.call(
             "transport.setVolume",

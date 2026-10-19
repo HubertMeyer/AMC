@@ -72,6 +72,11 @@ class Row:
     # Stan, ktory uzytkownik wybral PRZED nazwa. Surowy ``title`` pozostaje
     # nietkniety dla kopiowania, wyszukiwania i uruchamiania stacji.
     state_prefix: str = ""
+    # Niezależna dekoracja odtwarzania dla zwykłych list materiałów. Osobne
+    # pole zapobiega zatarciu prefiksów Radia i szczegółów nagrywania. Zawiera
+    # wyłącznie świadomie przygotowane słowo użytkowe: „Odtwarzane” albo
+    # „Wstrzymane”; nigdy surowy stan hosta.
+    playback_state: str = ""
     # Flagi sluza wylacznie do opcjonalnego sygnalu przy fokusie. Nie sa
     # tekstem dostepnosciowym i nie ujawniaja technicznego stanu hosta.
     playback_activity: bool = False
@@ -201,10 +206,15 @@ class ListModel:
         if row is None:
             return ""
         if column == 0:
-            return (
+            title = (
                 f"{row.state_prefix} {row.title}"
                 if row.state_prefix
                 else row.title
+            )
+            return (
+                f"{row.playback_state}, {title}"
+                if row.playback_state
+                else title
             )
         if column == 1:
             return row.kind_label if row.show_kind else ""

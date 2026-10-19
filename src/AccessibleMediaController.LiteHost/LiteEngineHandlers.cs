@@ -351,6 +351,7 @@ internal sealed class LiteEngineHandlers : IDisposable
             ["transport.toggleMute"] = (request, _) => ToggleMute(request.Args),
             ["transport.stop"] = (request, _) => StopTransport(request.Args),
             ["transport.seek"] = (request, _) => Seek(request.Args),
+            ["radio.jumpLive"] = (request, _) => JumpRadioToLive(request.Args),
             ["transport.setVolume"] = (request, _) => SetVolume(request.Args),
             ["transport.setRate"] = (request, _) => SetRate(request.Args),
             ["transport.status"] = (request, _) => Status(request.Args),
@@ -2439,6 +2440,46 @@ internal sealed class LiteEngineHandlers : IDisposable
             engine,
             sessionId = targetSession.SessionId,
             positionSeconds = target.TotalSeconds
+        };
+    }
+
+    private object JumpRadioToLive(JsonElement args)
+    {
+        var target = ResolveTransportTarget(args);
+        if (target.Engine != "radio")
+            throw new LiteRequestException(
+                "Powrót do transmisji na żywo jest dostępny tylko w Radiu.");
+
+        MediaItem item;
+        bool paused;
+        bool playing;
+        lock (_gate)
+        {
+            item = _radioItem ?? throw new LiteRequestException(
+                "Radio nie ma otwartej transmisji.");
+            if (!_radioPlaying)
+                throw new LiteRequestException("Radio nie odtwarza transmisji.");
+            _activeEngine = "radio";
+            _radioRate = 1d;
+            paused = _radioPaused;
+            playing = _radioPlaying;
+        }
+
+        _radio.JumpToLive();
+        return new
+        {
+            engine = "radio",
+            sessionId = target.SessionId,
+            id = item.Id,
+            title = item.Title,
+            playing,
+            paused,
+            queue = false,
+            positionSeconds = _radio.Position.TotalSeconds,
+            durationSeconds = 0d,
+            bufferedSeconds = _radio.BufferedDuration.TotalSeconds,
+            behindLiveSeconds = _radio.BehindLive.TotalSeconds,
+            rate = 1d
         };
     }
 

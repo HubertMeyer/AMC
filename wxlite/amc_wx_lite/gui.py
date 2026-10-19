@@ -103,6 +103,11 @@ from .playback_history import (
     record_row as record_streamer_history_row,
     remove_rows as remove_streamer_history_rows,
 )
+from .playback_activity import (
+    activity_rows as playback_activity_rows,
+    playback_state_label,
+    row_can_show_playback_state,
+)
 from . import profile_presets
 from .navigation import (
     ActivateWiiMDevice,
@@ -1969,6 +1974,7 @@ class SearchDialog(wx.Dialog):
         copy_text: Callable[[str], bool],
         history: list[str],
         record_query: Callable[[str], list[str]],
+        playback_label: Callable[[SearchEntry], str] | None = None,
         detailed_hints: bool = False,
     ) -> None:
         mode = (
@@ -1985,6 +1991,7 @@ class SearchDialog(wx.Dialog):
         self._copy_text = copy_text
         self._history = list(history)
         self._record_query = record_query
+        self._playback_label = playback_label or (lambda _entry: "")
         self._history_index = -1
         self._browsing_history = False
         self._applying_history = False
@@ -2137,7 +2144,13 @@ class SearchDialog(wx.Dialog):
             self.results.DeleteAllItems()
             for index, entry in enumerate(entries):
                 row = entry.row
-                self.results.InsertItem(index, row.title)
+                playback_label = self._playback_label(entry).strip()
+                title = (
+                    f"{playback_label}, {row.title}"
+                    if playback_label
+                    else row.title
+                )
+                self.results.InsertItem(index, title)
                 if entry.kind_label:
                     self.results.SetItem(index, 1, entry.kind_label)
                 details = [row.artist_name] if row.artist_name else []
@@ -6884,6 +6897,7 @@ class LiteFrame(wx.Frame):
                 "global" if all_services else session_before.value,
                 query,
             ),
+            playback_label=self._search_playback_label,
             detailed_hints=self._detailed_hints,
         )
         try:
@@ -8731,6 +8745,11 @@ class LiteFrame(wx.Frame):
                     "Nie udało się odtworzyć Spotify: "
                     + str(data.get("message") or "błąd")
                 )
+                refresh_activity = getattr(
+                    self, "_refresh_native_playback_activity_view", None
+                )
+                if callable(refresh_activity):
+                    refresh_activity()
                 return
             failed_session = self._pending_playback_session
             if failed_session is None and data.get("engine") == "radio":
@@ -8859,6 +8878,17 @@ class LiteFrame(wx.Frame):
             # zapisac. Pytamy tu, a nie w _refresh_live_queue, bo tamta droga
             # istnieje tylko w otwartym Ctrl+Q.
             self._check_queue_persistence()
+        if name in (
+            "playback.started",
+            "playback.ended",
+            "playback.failed",
+            "queue.advanced",
+        ):
+            refresh_activity = getattr(
+                self, "_refresh_native_playback_activity_view", None
+            )
+            if callable(refresh_activity):
+                refresh_activity()
 
     # --------------------------------------------- slyszalna trwalosc kolejki
 
@@ -10686,6 +10716,8 @@ class LiteFrame(wx.Frame):
             self._set_rate(1.0)
         elif action in (Action.TIME_ELAPSED, Action.TIME_REMAINING, Action.TIME_TOTAL):
             self._announce_time(action)
+        elif action is Action.RADIO_JUMP_LIVE:
+            self._jump_radio_live()
         elif action in (Action.TRACK_START, Action.TRACK_END):
             self._seek_to_track_edge(action is Action.TRACK_END)
         elif action is Action.TOGGLE_SEEK_MESSAGES:
@@ -11063,6 +11095,7 @@ class LiteFrame(wx.Frame):
     def _sync_views(self) -> None:
         """Odwzoruj stan nawigatora. Fokus ruszamy TYLKO przy zmianie widoku."""
         self._track_view_history()
+        self._apply_native_playback_activity_status(self.navigator.active)
         session = self.navigator.session
         # Menu musi zgadzac sie z kontekstem, ktory wlasnie sie zmienil.
         if (
@@ -19514,6 +19547,11 @@ class LiteFrame(wx.Frame):
             if self.navigator.active is session:
                 self._last_status = updated
             self._set_transport_label(playing=not paused)
+            refresh_activity = getattr(
+                self, "_refresh_native_playback_activity_view", None
+            )
+            if callable(refresh_activity):
+                refresh_activity(session)
 
         # Przez istniejacy TaskRunner z bramka zywego kontekstu: synchroniczne
         # wywolanie hosta na watku GUI zawiesilo by okno na czas call timeout.
@@ -20119,6 +20157,11 @@ class LiteFrame(wx.Frame):
             # Etykieta zawsze zgodna ze stanem: po wstrzymaniu przycisk ma juz
             # proponowac odtwarzanie (MainWindow.xaml.cs:2560).
             self._set_transport_label(playing=not paused)
+            refresh_activity = getattr(
+                self, "_refresh_native_playback_activity_view", None
+            )
+            if callable(refresh_activity):
+                refresh_activity(session)
             message = transport_confirmation(paused=paused)
             if (
                 self.messages.announces_playback
@@ -20239,6 +20282,39 @@ class LiteFrame(wx.Frame):
                 target=target,
             ),
             lambda error: self.announcer.say(f"Nie moge przewinac: {error}"),
+        )
+
+    def _jump_radio_live(self) -> None:
+        """End w odtwarzaczu Radia: koniec bufora, nie koniec pliku."""
+
+        client = self.client
+        if client is None:
+            self.announcer.say("Silnik nie działa")
+            return
+
+        def done(payload: dict) -> None:
+            updated = {
+                **self._transport_status_by_session.get(SessionId.RADIO, {}),
+                **(payload or {}),
+                "rate": 1.0,
+            }
+            self._transport_status_by_session[SessionId.RADIO] = updated
+            if self.navigator.active is SessionId.RADIO:
+                self._last_status = updated
+                self.options.rate = 1.0
+                rate_choice = getattr(self, "rate_choice", None)
+                if rate_choice is not None:
+                    rate_choice.SetSelection(PLAYBACK_RATES.index(1.0))
+                self._update_native_playback_status(updated)
+            self.announcer.say("Na żywo")
+
+        self.runner.submit(
+            "radio-jump-live",
+            client.radio_jump_live,
+            done,
+            lambda error: self.announcer.say(
+                f"Nie mogę wrócić do transmisji na żywo: {error}"
+            ),
         )
 
     def _complete_track_end_seek(
@@ -20767,6 +20843,16 @@ class LiteFrame(wx.Frame):
             if "paused" in payload and not remote_player:
                 self._set_transport_label(playing=not bool(payload.get("paused")))
             self._apply_radio_activity_status()
+            if requested_session in (
+                SessionId.FILES,
+                SessionId.PODCASTS,
+                SessionId.SPOTIFY,
+            ):
+                refresh_activity = getattr(
+                    self, "_refresh_native_playback_activity_view", None
+                )
+                if callable(refresh_activity):
+                    refresh_activity(requested_session)
 
         def failed(_error: Exception) -> None:
             self._status_poll_pending = False
@@ -20951,6 +21037,85 @@ class LiteFrame(wx.Frame):
         state.model.replace(rows, preferred_id=preferred_id)
         if self.navigator.active is SessionId.RADIO:
             self._sync_views()
+
+    def _native_playback_snapshot(self, session_id: SessionId) -> tuple[bool, bool]:
+        """Potwierdzony stan jednej wewnętrznej sesji bez zgadywania po tytule."""
+
+        playing_sessions = getattr(self, "_playing_sessions", set())
+        confirmed = (
+            isinstance(playing_sessions, set)
+            and session_id in playing_sessions
+        )
+        status = getattr(self, "_transport_status_by_session", {}).get(
+            session_id, {}
+        )
+        return confirmed, confirmed and bool(status.get("paused"))
+
+    def _apply_native_playback_activity_status(self, session_id: SessionId) -> None:
+        """Odśwież napis Odtwarzane/Wstrzymane bez zmiany wyboru i fokusu."""
+
+        if session_id not in (
+            SessionId.FILES,
+            SessionId.PODCASTS,
+            SessionId.SPOTIFY,
+        ):
+            return
+        state = self.navigator.sessions[session_id]
+        playing, paused = self._native_playback_snapshot(session_id)
+        rows = playback_activity_rows(
+            state.model.rows,
+            current_item_id=state.current_material_id,
+            playing=playing,
+            paused=paused,
+        )
+        if rows == state.model.rows:
+            return
+        state.model.replace(rows, preferred_id=state.model.selected_id)
+
+    def _refresh_native_playback_activity_view(
+        self, session_id: SessionId | None = None
+    ) -> None:
+        """Odśwież wyłącznie tekst widocznej listy, bez ruszania fokusu."""
+
+        navigator = getattr(self, "navigator", None)
+        sessions = getattr(navigator, "sessions", None)
+        active = getattr(navigator, "active", None)
+        if not isinstance(sessions, dict) or active not in sessions:
+            return
+        if session_id is not None and active is not session_id:
+            return
+        if active not in (
+            SessionId.FILES,
+            SessionId.PODCASTS,
+            SessionId.SPOTIFY,
+        ):
+            return
+        LiteFrame._apply_native_playback_activity_status(self, active)
+        try:
+            control = self._active_list()
+        except (AttributeError, KeyError):
+            return
+        sync_rows = getattr(control, "sync_rows", None)
+        if callable(sync_rows):
+            sync_rows()
+
+    def _search_playback_label(self, entry: SearchEntry) -> str:
+        """Stan wyniku wyszukiwania z tej samej sesji i tej samej tożsamości."""
+
+        if entry.session_id not in (
+            SessionId.FILES,
+            SessionId.PODCASTS,
+            SessionId.SPOTIFY,
+        ):
+            return ""
+        state = self.navigator.sessions[entry.session_id]
+        if (
+            entry.row.item_id != state.current_material_id
+            or not row_can_show_playback_state(entry.row)
+        ):
+            return ""
+        playing, paused = self._native_playback_snapshot(entry.session_id)
+        return playback_state_label(playing=playing, paused=paused)
 
     # ------------------------------------------------------- edycja Biblioteki
 

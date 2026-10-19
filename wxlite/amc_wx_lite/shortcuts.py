@@ -204,6 +204,7 @@ class Action(Enum):
     #: zeby przyszly port komend sieciowych i palety nie wymyslal wlasnych.
     TRACK_START = "transport.trackStart"
     TRACK_END = "transport.trackEnd"
+    RADIO_JUMP_LIVE = "radio.jumpLive"
     # CommandIds.SettingsToggleSeekMessages, Ctrl+Shift+G
     # (MainWindow.xaml.cs:21670 i 22188).
     TOGGLE_SEEK_MESSAGES = "settings.toggleSeekMessages"
@@ -937,6 +938,8 @@ RADIO_PLAYER_VIEW: dict[str, Action] = {
     "Shift+S": Action.TOGGLE_RADIO_RECOGNITION_MONITORING,
     "Ctrl+Alt+S": Action.VIEW_RADIO_RECOGNITION_HISTORY,
     "Ctrl+Alt+Shift+S": Action.TOGGLE_RADIO_RECOGNITION_ANNOUNCEMENTS,
+    # W Time Shifcie End nie oznacza końca pliku: wraca do transmisji na żywo.
+    "End": Action.RADIO_JUMP_LIVE,
 }
 
 # Skroty W WIDOKU ODTWARZACZA. Tu strzalki sa wolne, wiec przejmuja role
@@ -1494,6 +1497,7 @@ def _help_entries() -> list[tuple[str, str, Action]]:
         # Pomoc mowi, ILE oryginal zostawia (CommandRouter.cs:321), zeby
         # uzytkownik nie uznal braku ciszy na koncu za blad.
         Action.TRACK_END: "Koniec utworu, dziesiec sekund przed koncem",
+        Action.RADIO_JUMP_LIVE: "Wróć do transmisji na żywo",
         Action.COPY_NAME: "Skopiuj nazwe",
         Action.COPY_ADDRESS: "Skopiuj adres",
         Action.CUT_FILE: "Wytnij plik albo zaznacz pozycje playlisty do przeniesienia",
@@ -1667,6 +1671,8 @@ def _help_entries() -> list[tuple[str, str, Action]]:
             # zwykle Ctrl+O nadal brzmi po prostu jak wybor pliku.
             if action is Action.STATION_IMPORT:
                 label = f"{label} (Radio internetowe)"
+            elif action is Action.RADIO_JUMP_LIVE:
+                label = f"{label} (Radio)"
             elif action is Action.IMPORT_PODCAST_OPML:
                 label = f"{label} (Podcasty i YouTube)"
             elif action is Action.VIEW_WIIM_NETWORK_STREAMS:

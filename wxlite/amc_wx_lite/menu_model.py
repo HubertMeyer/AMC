@@ -147,6 +147,7 @@ class Menu:
 SEPARATOR = MenuItem(is_separator=True)
 FILES_ONLY = (SessionId.FILES,)
 PODCASTS_ONLY = (SessionId.PODCASTS,)
+RADIO_ONLY = (SessionId.RADIO,)
 STABLE_TIMELINE_SESSIONS = (SessionId.FILES, SessionId.PODCASTS)
 PLAYBACK_HISTORY_SESSIONS = (
     SessionId.FILES,
@@ -1095,6 +1096,15 @@ def build_menus(session_order: object = None) -> tuple[Menu, ...]:
                      accelerator=False, needs_playback=True,
                      visible_sessions=FILES_ONLY),
             SEPARATOR,
+            MenuItem(
+                "Wróć do transmisji &na żywo",
+                Action.RADIO_JUMP_LIVE,
+                shortcut="End",
+                accelerator=False,
+                needs_playback=True,
+                needs_player_view=True,
+                visible_sessions=RADIO_ONLY,
+            ),
             # Przewijanie. CZTERY kroki oryginalu (MainWindow.xaml.cs:21583-21590):
             # 10 s goly, 30 s z Shift, 60 s z Ctrl, czas z ustawien z Ctrl+Alt.
             # Dotad zadnego z nich nie bylo w menu, wiec uzytkownik, ktory nie
