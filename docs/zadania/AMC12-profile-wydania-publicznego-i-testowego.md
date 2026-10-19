@@ -286,5 +286,6 @@ nie pobiera środowiska uruchomieniowego podczas instalacji.
 - Migawka danych wspólnych: `cdf9cb05` —
   `feat(amc12): dodaj kontrolowana migawke danych`; testy i kompilacja
   zaliczone, instalacji nie wykonywano.
-- Publiczne pakowanie, pełna integralność i źródło instalatora: testy
-  zaliczone; commit zostanie wpisany po zapisaniu spójnego etapu.
+- Publiczne pakowanie, pełna integralność i źródło instalatora: `7b586c14` —
+  `feat(amc12): dodaj publiczne pakowanie i instalator`; testy zaliczone,
+  pliku instalatora `.exe` nie zbudowano z powodu braku Inno Setup.
