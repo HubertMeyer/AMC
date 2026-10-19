@@ -15,6 +15,7 @@ install_wx_stub()
 import amc_wx_lite.gui as gui  # noqa: E402
 from amc_wx_lite.list_model import Row  # noqa: E402
 from amc_wx_lite.spotify_playlist_dialog import (  # noqa: E402
+    SpotifyPlaylistDialog,
     SpotifyPlaylistPayloadError,
     choices_from_payload,
 )
@@ -122,6 +123,7 @@ def test_spotify_playlist_flow_creates_then_adds_and_restores_focus() -> None:
     assert [item["kind"] for item in items] == ["track", "episode"]
     assert focused == [True]
     assert spoken[0] == "Pobieram playlisty Spotify"
+    assert spoken[1] == "Tworzę playlistę Spotify i dodaję wybrane elementy"
     assert "Utworzono playlistę Spotify" in spoken[-1]
     assert "Dodano 4 pozycje" in spoken[-1]
     assert frame._playlist_membership_pending is False
@@ -226,8 +228,8 @@ def test_spotify_playlist_flow_caches_created_playlist_and_last_destinations() -
         spotify_playlist_create=lambda _name, is_public=False: {
             "playlist": {
                 "id": "created",
-                "name": "Nowa publiczna",
-                "accessibleLabel": "Nowa publiczna, publiczna",
+                "name": "",
+                "accessibleLabel": "",
             },
             "message": "Utworzono playlistę Spotify: Nowa publiczna, publiczna.",
         },
@@ -282,3 +284,50 @@ def test_spotify_playlist_flow_caches_created_playlist_and_last_destinations() -
         "spotify:playlists": ["existing", "created"]
     }
     assert saved_states[-1] == ["existing", "created"]
+
+
+def test_new_playlist_dialog_prepares_clear_selected_row_and_instruction() -> None:
+    import amc_wx_lite.spotify_playlist_dialog as playlist_dialog
+
+    spoken: list[str] = []
+    focused: list[bool] = []
+    rebuilt: list[str] = []
+
+    class _NameDialog:
+        result_name = "Wieczór"
+        result_public = False
+
+        def __init__(self, _parent) -> None:
+            pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args) -> None:
+            return None
+
+        def ShowModal(self) -> int:
+            return gui.wx.ID_OK
+
+    dialog = object.__new__(SpotifyPlaylistDialog)
+    dialog._temporary_counter = 0
+    dialog._choices = []
+    dialog.status = object()
+    dialog.playlist_list = SimpleNamespace(SetFocus=lambda: focused.append(True))
+    dialog._rebuild = rebuilt.append
+    previous_name_dialog = playlist_dialog.SpotifyPlaylistNameDialog
+    previous_announce = playlist_dialog.announce_status
+    playlist_dialog.SpotifyPlaylistNameDialog = _NameDialog
+    playlist_dialog.announce_status = lambda _control, message: spoken.append(message)
+    try:
+        SpotifyPlaylistDialog._create(dialog)
+    finally:
+        playlist_dialog.SpotifyPlaylistNameDialog = previous_name_dialog
+        playlist_dialog.announce_status = previous_announce
+
+    assert dialog._choices[0].label == "Nowa playlista Wieczór, prywatna, zaznaczona"
+    assert rebuilt == ["new-1"] and focused == [True]
+    assert spoken == [
+        "Przygotowano nową playlistę Wieczór, prywatna, zaznaczoną. "
+        "Naciśnij Enter, aby ją utworzyć i dodać wybrane elementy"
+    ]

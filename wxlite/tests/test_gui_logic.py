@@ -499,6 +499,21 @@ def test_context_menu_shows_action_then_real_shortcut_without_access_letter() ->
         "Zmień nazwę playlisty (F2)"
     )
 
+    frame.navigator.session.model.selected_row = Row(
+        "recording-1",
+        "Nagranie.mp3",
+        "track",
+        path=r"D:\Nagrania\Nagranie.mp3",
+    )
+    copy_path = menu_model.MenuItem(
+        "Skopiuj &adres lub ścieżkę",
+        Action.COPY_ADDRESS,
+        shortcut="Ctrl+Shift+C",
+    )
+    assert frame._context_menu_entry_label(copy_path) == (
+        "Skopiuj ścieżkę do pliku (Ctrl+Shift+C)"
+    )
+
 
 def test_f2_renames_playlist_through_the_atomic_profile_snapshot() -> None:
     from amc_wx_lite import gui

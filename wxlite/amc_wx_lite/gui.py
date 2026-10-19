@@ -6809,6 +6809,12 @@ class LiteFrame(wx.Frame):
                 label = "Zmień nazwę podcastu lub kanału"
             elif row.kind == "track":
                 label = "Zmień nazwę pliku w Bibliotece"
+        elif entry.action is Action.COPY_ADDRESS and row is not None and row.path:
+            label = (
+                "Skopiuj ścieżkę do folderu"
+                if row.kind in {"folder", "parent"}
+                else "Skopiuj ścieżkę do pliku"
+            )
         label = self._without_menu_mnemonic(label)
         if not entry.shortcut:
             return label
@@ -19773,6 +19779,12 @@ class LiteFrame(wx.Frame):
                 new_playlists = dialog.new_playlists
             self._restore_focus_after_dialog()
 
+            self.announcer.say(
+                "Tworzę playlistę Spotify i dodaję wybrane elementy"
+                if new_playlists
+                else "Dodaję wybrane elementy do playlist Spotify"
+            )
+
             def save() -> dict:
                 selected = list(playlist_ids)
                 messages: list[str] = []
@@ -19802,12 +19814,15 @@ class LiteFrame(wx.Frame):
                         selected.append(playlist_id)
                         cached_playlist = dict(raw_playlist)
                         cached_playlist["id"] = playlist_id
-                        cached_playlist.setdefault("name", name)
-                        cached_playlist.setdefault(
-                            "accessibleLabel",
-                            f"{name}, "
-                            + ("publiczna" if is_public else "prywatna"),
-                        )
+                        if not str(cached_playlist.get("name") or "").strip():
+                            cached_playlist["name"] = name
+                        if not str(
+                            cached_playlist.get("accessibleLabel") or ""
+                        ).strip():
+                            cached_playlist["accessibleLabel"] = (
+                                f"{name}, "
+                                + ("publiczna" if is_public else "prywatna")
+                            )
                         created_playlists.append(cached_playlist)
                         message = str(created.get("message") or "").strip()
                         if message:

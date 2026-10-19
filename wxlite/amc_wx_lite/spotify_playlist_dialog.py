@@ -11,6 +11,8 @@ from dataclasses import dataclass
 
 import wx
 
+from .live_region import announce_status
+
 
 class SpotifyPlaylistPayloadError(ValueError):
     """Krótki błąd odpowiedzi hosta bez ujawniania danych technicznych."""
@@ -49,6 +51,76 @@ def choices_from_payload(payload: object) -> list[SpotifyPlaylistChoice]:
         seen.add(playlist_id)
         result.append(SpotifyPlaylistChoice(playlist_id, name, label))
     return result
+
+
+class SpotifyPlaylistNameDialog(wx.Dialog):
+    """Jednoznaczne pola nazwy i widoczności nowej playlisty Spotify."""
+
+    def __init__(self, parent: wx.Window) -> None:
+        super().__init__(
+            parent,
+            title="Nowa playlista Spotify",
+            style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER,
+        )
+        self.result_name = ""
+        self.result_public = False
+
+        panel = wx.Panel(self)
+        grid = wx.FlexGridSizer(0, 2, 8, 10)
+        grid.AddGrowableCol(1, 1)
+        grid.Add(wx.StaticText(panel, label="&Nazwa playlisty:"), 0, wx.ALIGN_CENTER_VERTICAL)
+        self.name_control = wx.TextCtrl(panel)
+        self.name_control.SetName("Nazwa playlisty Spotify")
+        grid.Add(self.name_control, 1, wx.EXPAND)
+        grid.Add(wx.StaticText(panel, label="&Widoczność:"), 0, wx.ALIGN_CENTER_VERTICAL)
+        self.visibility = wx.Choice(
+            panel,
+            choices=["Prywatna (domyślna)", "Publiczna"],
+        )
+        self.visibility.SetName("Widoczność playlisty Spotify")
+        self.visibility.SetSelection(0)
+        grid.Add(self.visibility, 1, wx.EXPAND)
+        self.validation = wx.StaticText(panel, label="Wpisz nazwę playlisty")
+        self.validation.SetName("Wynik sprawdzenia nazwy playlisty Spotify")
+        grid.Add(wx.StaticText(panel, label=""), 0)
+        grid.Add(self.validation, 1, wx.EXPAND)
+        panel.SetSizer(grid)
+
+        buttons = wx.StdDialogButtonSizer()
+        save = wx.Button(self, wx.ID_OK, label="&Dalej")
+        cancel = wx.Button(self, wx.ID_CANCEL, label="&Anuluj")
+        save.SetName("Zatwierdź nazwę i widoczność playlisty Spotify")
+        cancel.SetName("Anuluj tworzenie playlisty Spotify")
+        save.SetDefault()
+        buttons.AddButton(save)
+        buttons.AddButton(cancel)
+        buttons.Realize()
+
+        shell = wx.BoxSizer(wx.VERTICAL)
+        shell.Add(panel, 1, wx.ALL | wx.EXPAND, 12)
+        shell.Add(buttons, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM | wx.ALIGN_RIGHT, 12)
+        self.SetSizer(shell)
+        self.SetMinSize((520, 230))
+        save.Bind(wx.EVT_BUTTON, self._save)
+        self.Bind(wx.EVT_SHOW, self._on_show)
+
+    def _save(self, _event: object | None = None) -> None:
+        name = self.name_control.GetValue().strip()
+        if not 1 <= len(name) <= 100:
+            announce_status(
+                self.validation,
+                "Nazwa playlisty musi mieć od 1 do 100 znaków",
+            )
+            self.name_control.SetFocus()
+            return
+        self.result_name = name
+        self.result_public = self.visibility.GetSelection() == 1
+        self.EndModal(wx.ID_OK)
+
+    def _on_show(self, event: wx.ShowEvent) -> None:
+        event.Skip()
+        if event.IsShown():
+            wx.CallAfter(self.name_control.SetFocus)
 
 
 class SpotifyPlaylistDialog(wx.Dialog):
@@ -171,36 +243,11 @@ class SpotifyPlaylistDialog(wx.Dialog):
         self._rebuild(choice.playlist_id)
 
     def _create(self, _event: object | None = None) -> None:
-        name_dialog = wx.TextEntryDialog(
-            self,
-            "Nazwa nowej playlisty Spotify:",
-            "Nowa playlista Spotify",
-        )
-        try:
-            name_dialog.SetName("Nazwa nowej playlisty Spotify")
+        with SpotifyPlaylistNameDialog(self) as name_dialog:
             if name_dialog.ShowModal() != wx.ID_OK:
                 return
-            name = name_dialog.GetValue().strip()
-        finally:
-            name_dialog.Destroy()
-        if not 1 <= len(name) <= 100:
-            self.status.SetLabel("Nazwa playlisty musi mieć od 1 do 100 znaków")
-            self.status.SetName(self.status.GetLabel())
-            return
-        visibility = wx.SingleChoiceDialog(
-            self,
-            "Wybierz widoczność nowej playlisty:",
-            "Widoczność playlisty Spotify",
-            ["Prywatna (domyślna)", "Publiczna"],
-        )
-        try:
-            visibility.SetName("Widoczność playlisty Spotify")
-            visibility.SetSelection(0)
-            if visibility.ShowModal() != wx.ID_OK:
-                return
-            is_public = visibility.GetSelection() == 1
-        finally:
-            visibility.Destroy()
+            name = name_dialog.result_name
+            is_public = name_dialog.result_public
         self._temporary_counter += 1
         kind = "publiczna" if is_public else "prywatna"
         choice = SpotifyPlaylistChoice(
@@ -213,6 +260,11 @@ class SpotifyPlaylistDialog(wx.Dialog):
         self._choices.append(choice)
         self._rebuild(choice.playlist_id)
         self.playlist_list.SetFocus()
+        announce_status(
+            self.status,
+            f"Przygotowano nową playlistę {name}, {kind}, zaznaczoną. "
+            "Naciśnij Enter, aby ją utworzyć i dodać wybrane elementy",
+        )
 
     def _save(self, _event: object | None = None) -> None:
         if not any(choice.selected for choice in self._choices):

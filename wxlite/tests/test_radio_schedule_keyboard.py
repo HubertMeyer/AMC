@@ -12,8 +12,15 @@ from test_gui_logic import install_wx_stub
 install_wx_stub()
 
 from amc_wx_lite.radio_schedule_dialogs import (
+    RadioSchedulesDialog,
     _full_schedule_information,
     _short_schedule_information,
+)
+from amc_wx_lite.live_region import (
+    CHILDID_SELF,
+    EVENT_OBJECT_LIVEREGIONCHANGED,
+    OBJID_CLIENT,
+    announce_status,
 )
 
 
@@ -27,6 +34,89 @@ def test_schedule_list_receives_space_directly_and_through_the_dialog_hook() -> 
     assert "event_object is self.schedule_list" in source
     assert "focus_on_list and code == wx.WXK_SPACE" in source
     assert "self._toggle(event)" in source
+
+
+def test_modal_status_sends_one_real_live_region_event() -> None:
+    calls: list[tuple[int, int, int, int]] = []
+
+    class _Status:
+        label = "Gotowe"
+        name = ""
+
+        def GetLabel(self):
+            return self.label
+
+        def SetLabel(self, value):
+            self.label = value
+
+        def SetName(self, value):
+            self.name = value
+
+        def GetHandle(self):
+            return 741
+
+    status = _Status()
+    assert announce_status(status, "włączony, jutro 10:00", notify=lambda *args: calls.append(args)) == (
+        "włączony, jutro 10:00"
+    )
+    assert status.label == status.name == "włączony, jutro 10:00"
+    assert calls == [(EVENT_OBJECT_LIVEREGIONCHANGED, 741, OBJID_CLIENT, CHILDID_SELF)]
+
+
+def test_schedule_context_menu_contains_the_same_actions_as_keyboard() -> None:
+    import amc_wx_lite.radio_schedule_dialogs as dialogs
+
+    labels: list[tuple[str, bool]] = []
+    focus: list[bool] = []
+    shown: list[bool] = []
+
+    class _Item:
+        def __init__(self, label: str) -> None:
+            self.label = label
+
+        def Enable(self, enabled: bool) -> None:
+            labels.append((self.label, enabled))
+
+    class _Menu:
+        def Append(self, _item_id: int, label: str):
+            return _Item(label)
+
+        def AppendSeparator(self) -> None:
+            return None
+
+        def Bind(self, *_args, **_kwargs) -> None:
+            return None
+
+        def Destroy(self) -> None:
+            return None
+
+    dialog = object.__new__(RadioSchedulesDialog)
+    dialog.schedule_list = type("ScheduleList", (), {"SetFocus": lambda self: focus.append(True)})()
+    dialog._selected_schedule = lambda: {"id": "plan-1"}
+    dialog.PopupMenu = lambda _menu: shown.append(True)
+    previous_menu = dialogs.wx.Menu
+    previous_id = getattr(dialogs.wx, "NewIdRef", None)
+    dialogs.wx.Menu = _Menu
+    dialogs.wx.NewIdRef = iter(range(100, 200)).__next__
+    try:
+        RadioSchedulesDialog._show_context_menu(dialog)
+    finally:
+        dialogs.wx.Menu = previous_menu
+        if previous_id is None:
+            delattr(dialogs.wx, "NewIdRef")
+        else:
+            dialogs.wx.NewIdRef = previous_id
+
+    assert shown == [True] and focus == [True]
+    assert labels == [
+        ("Nowy plan (Insert)", True),
+        ("Edytuj plan (Enter)", True),
+        ("Powiel plan (Ctrl+D)", True),
+        ("Włącz lub wyłącz plan (Spacja)", True),
+        ("Krótka informacja (strzałka w lewo)", True),
+        ("Pełne szczegóły (strzałka w prawo)", True),
+        ("Usuń plan (Delete)", True),
+    ]
 
 
 def test_schedule_toggle_keeps_an_intentional_spoken_state() -> None:

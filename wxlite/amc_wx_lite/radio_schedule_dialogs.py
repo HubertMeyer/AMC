@@ -14,6 +14,7 @@ from datetime import datetime, timedelta
 
 import wx
 
+from .live_region import announce_status
 from .radio_schedule_settings import (
     BITRATES,
     DAY_LABELS,
@@ -919,6 +920,7 @@ class RadioSchedulesDialog(wx.Dialog):
             "Insert dodaje plan. Ctrl+D powiela wybrany plan jako wyłączoną kopię. "
             "Enter edytuje. Spacja włącza lub wyłącza. Delete usuwa. "
             "Strzałka w lewo czyta stan i termin, a strzałka w prawo szczegóły. "
+            "Shift+F10 albo klawisz menu otwiera te same polecenia. "
             "Każda zapisana zmiana jest stosowana od razu."
         )
         help_label = wx.StaticText(panel, label=help_text)
@@ -979,6 +981,7 @@ class RadioSchedulesDialog(wx.Dialog):
         # list directly as well; the hook consumes handled keys, so one press
         # still performs exactly one change.
         self.schedule_list.Bind(wx.EVT_KEY_DOWN, self._on_key)
+        self.schedule_list.Bind(wx.EVT_CONTEXT_MENU, self._show_context_menu)
         self.schedule_list.Bind(wx.EVT_LISTBOX_DCLICK, self._edit)
         self.new_button.Bind(wx.EVT_BUTTON, self._new)
         self.edit_button.Bind(wx.EVT_BUTTON, self._edit)
@@ -992,8 +995,58 @@ class RadioSchedulesDialog(wx.Dialog):
             wx.CallAfter(self._new_for_station, initial_station_id)
 
     def _announce(self, message: str) -> None:
-        self.status.SetLabel(message)
-        self.status.SetName(message)
+        announce_status(self.status, message)
+
+    def _announce_short_information(self, _event: object | None = None) -> None:
+        selected = self._selected_schedule()
+        self._announce(
+            _short_schedule_information(selected)
+            if selected is not None
+            else "Nie wybrano planu nagrywania"
+        )
+
+    def _announce_full_information(self, _event: object | None = None) -> None:
+        selected = self._selected_schedule()
+        self._announce(
+            _full_schedule_information(selected)
+            if selected is not None
+            else "Nie wybrano planu nagrywania"
+        )
+
+    def _show_context_menu(self, _event: object | None = None) -> None:
+        """Menu harmonogramu prowadzi do tych samych metod co klawiatura."""
+
+        menu = wx.Menu()
+        selected = self._selected_schedule() is not None
+        commands = (
+            ("Nowy plan (Insert)", self._new, True),
+            ("Edytuj plan (Enter)", self._edit, selected),
+            ("Powiel plan (Ctrl+D)", self._duplicate, selected),
+            ("Włącz lub wyłącz plan (Spacja)", self._toggle, selected),
+            (
+                "Krótka informacja (strzałka w lewo)",
+                self._announce_short_information,
+                selected,
+            ),
+            (
+                "Pełne szczegóły (strzałka w prawo)",
+                self._announce_full_information,
+                selected,
+            ),
+            ("Usuń plan (Delete)", self._delete, selected),
+        )
+        try:
+            for index, (label, handler, enabled) in enumerate(commands):
+                if index == len(commands) - 1:
+                    menu.AppendSeparator()
+                item_id = int(wx.NewIdRef())
+                item = menu.Append(item_id, label)
+                item.Enable(enabled)
+                menu.Bind(wx.EVT_MENU, handler, id=item_id)
+            self.PopupMenu(menu)
+        finally:
+            menu.Destroy()
+            wx.CallAfter(self.schedule_list.SetFocus)
 
     def _refresh(self, payload: object, preferred_id: str | None = None) -> None:
         previous_id = preferred_id
@@ -1255,19 +1308,9 @@ class RadioSchedulesDialog(wx.Dialog):
         elif focus_on_list and code == wx.WXK_SPACE:
             self._toggle(event)
         elif focus_on_list and code == wx.WXK_LEFT:
-            selected = self._selected_schedule()
-            self._announce(
-                _short_schedule_information(selected)
-                if selected is not None
-                else "Nie wybrano planu nagrywania"
-            )
+            self._announce_short_information(event)
         elif focus_on_list and code == wx.WXK_RIGHT:
-            selected = self._selected_schedule()
-            self._announce(
-                _full_schedule_information(selected)
-                if selected is not None
-                else "Nie wybrano planu nagrywania"
-            )
+            self._announce_full_information(event)
         elif focus_on_list and code == wx.WXK_DELETE:
             self._delete(event)
         else:

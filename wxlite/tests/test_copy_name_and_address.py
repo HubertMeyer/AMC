@@ -73,4 +73,4 @@ def test_copy_actions_are_described_in_help() -> None:
 
     entries = dict((chord, label) for chord, label in describe())
     assert entries.get("Ctrl+C") == "Skopiuj nazwe"
-    assert entries.get("Ctrl+Shift+C") == "Skopiuj adres"
+    assert entries.get("Ctrl+Shift+C") == "Skopiuj adres lub ścieżkę"

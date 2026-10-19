@@ -74,6 +74,10 @@ if (args.Contains("--spotify-account-routing-gui", StringComparer.Ordinal))
 {
     SpotifyAccountRoutingTests.ShowForNvda(); return 0;
 }
+if (args.Contains("--spotify-playlist-fresh-creation", StringComparer.Ordinal))
+{
+    SpotifyPlaylistFreshCreationTests.Run(); return 0;
+}
 if (args.Contains("--clipboard-locations-ui", StringComparer.Ordinal))
 {
     SonosFavoritePlayRealOwnerTests.RunClipboardLocations(); return 0;
@@ -646,6 +650,7 @@ var tests = new (string Name, Action Test)[]
     ("Historia nagran po zmianie plikow i ponownym starcie", RecordingFilesAcceptanceTests.Run),
     ("Bezpieczne powielanie planu nagrywania", RadioScheduleCopyTests.Run),
     ("Proste powiązania Spotify z klawiatury", SpotifyRelationsAcceptanceTests.Run),
+    ("Spotify: nowa playlista pozostaje widoczna i przyjmuje element", SpotifyPlaylistFreshCreationTests.Run),
     ("Ustawienie kopii po edycji i jego dostępność", AudioEditBackupSettingsTests.Run),
     ("Pozostawanie na liście po uruchomieniu stacji Enterem", RadioEnterStaysOnListTests.Run),
     ("Bezpieczne sprzątanie nowych kopii po edycji", () => {

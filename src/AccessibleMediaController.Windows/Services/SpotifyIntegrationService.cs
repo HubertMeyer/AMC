@@ -86,6 +86,11 @@ internal sealed class SpotifyIntegrationService(
     private readonly HttpClient http = httpClient ?? new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
     private readonly bool ownsHttpClient = httpClient is null;
     private readonly SemaphoreSlim operationGate = new(1, 1);
+    // Odpowiedź 201 po utworzeniu jest autorytatywna dla bieżącego konta.
+    // Spotify może jeszcze przez chwilę nie zwracać nowej listy z /me/playlists;
+    // zachowujemy więc wyłącznie potwierdzone cele utworzone w tym procesie.
+    private readonly Dictionary<string, SpotifyPlaylistTarget> recentlyCreatedPlaylists =
+        new(StringComparer.Ordinal);
     private bool? storedLoginProbe;
     private string? storedLoginProbeFailure;
 
@@ -387,11 +392,12 @@ internal sealed class SpotifyIntegrationService(
         {
             var tokens = await EnsureValidTokensAsync(cancellationToken).ConfigureAwait(false);
             var profile = await ReadProfileAsync(tokens, cancellationToken).ConfigureAwait(false);
-            return await playlistWriter.GetEditablePlaylistsAsync(
+            var targets = await playlistWriter.GetEditablePlaylistsAsync(
                     tokens.AccessToken,
                     profile.UserId,
                     cancellationToken)
                 .ConfigureAwait(false);
+            return MergeRecentlyCreated(profile.UserId, targets);
         }
         finally
         {
@@ -411,7 +417,7 @@ internal sealed class SpotifyIntegrationService(
             var tokens = await EnsureValidTokensAsync(cancellationToken).ConfigureAwait(false);
             var profile = await ReadProfileAsync(tokens, cancellationToken).ConfigureAwait(false);
             var scope = string.IsNullOrWhiteSpace(tokens.Scope) ? settings.GrantedScope : tokens.Scope;
-            return await playlistWriter.CreatePlaylistAsync(
+            var created = await playlistWriter.CreatePlaylistAsync(
                     tokens.AccessToken,
                     scope,
                     profile.UserId,
@@ -419,6 +425,8 @@ internal sealed class SpotifyIntegrationService(
                     isPublic,
                     cancellationToken)
                 .ConfigureAwait(false);
+            recentlyCreatedPlaylists[RecentPlaylistKey(profile.UserId, created.Id)] = created;
+            return created;
         }
         finally
         {
@@ -443,11 +451,12 @@ internal sealed class SpotifyIntegrationService(
         {
             var tokens = await EnsureValidTokensAsync(cancellationToken).ConfigureAwait(false);
             var profile = await ReadProfileAsync(tokens, cancellationToken).ConfigureAwait(false);
-            var targets = await playlistWriter.GetEditablePlaylistsAsync(
+            var fetchedTargets = await playlistWriter.GetEditablePlaylistsAsync(
                     tokens.AccessToken,
                     profile.UserId,
                     cancellationToken)
                 .ConfigureAwait(false);
+            var targets = MergeRecentlyCreated(profile.UserId, fetchedTargets);
             var requestedIds = playlistIds
                 .Where(id => !string.IsNullOrWhiteSpace(id))
                 .Select(id => id.Trim())
@@ -495,6 +504,27 @@ internal sealed class SpotifyIntegrationService(
             : candidate;
     }
 
+    private IReadOnlyList<SpotifyPlaylistTarget> MergeRecentlyCreated(
+        string currentUserId,
+        IReadOnlyList<SpotifyPlaylistTarget> fetched)
+    {
+        var merged = fetched.ToDictionary(target => target.Id, StringComparer.Ordinal);
+        foreach (var target in fetched)
+            recentlyCreatedPlaylists.Remove(RecentPlaylistKey(currentUserId, target.Id));
+        foreach (var target in recentlyCreatedPlaylists.Values)
+        {
+            if (string.Equals(target.OwnerId, currentUserId, StringComparison.Ordinal)
+                && !merged.ContainsKey(target.Id))
+                merged[target.Id] = target;
+        }
+        return merged.Values
+            .OrderBy(target => target.Name, StringComparer.CurrentCultureIgnoreCase)
+            .ToArray();
+    }
+
+    private static string RecentPlaylistKey(string userId, string playlistId) =>
+        $"{userId}\n{playlistId}";
+
     /// <summary>
     /// Wyszukiwanie w katalogu Spotify dla Ctrl+F. Osobne wejscie obok
     /// synchronizacji: wyszukiwanie NIE dotyka biblioteki ani cache konta.
@@ -522,6 +552,7 @@ internal sealed class SpotifyIntegrationService(
     public void Disconnect()
     {
         SpotifyCredentialStore.Delete();
+        recentlyCreatedPlaylists.Clear();
         InvalidateStoredLoginProbe();
         settings.AccountDisplayName = string.Empty;
         settings.AccountProduct = string.Empty;

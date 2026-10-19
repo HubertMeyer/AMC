@@ -580,7 +580,7 @@ def build_menus(session_order: object = None) -> tuple[Menu, ...]:
                 visible_sessions=QUEUE_SESSIONS,
             ),
             MenuItem(
-                "Odtwarzaj jako następne lub usuń (&X)",
+                "Odtwarzaj jako następne (&X)",
                 Action.TOGGLE_PLAY_NEXT,
                 shortcut="Ctrl+Shift+Return",
                 accelerator=False,
@@ -597,7 +597,7 @@ def build_menus(session_order: object = None) -> tuple[Menu, ...]:
                      accelerator=False, needs_selection=True),
             MenuItem("W&ytnij lub zaznacz do przeniesienia", Action.CUT_FILE,
                      shortcut="Ctrl+X", accelerator=False),
-            MenuItem("Skopiuj &adres", Action.COPY_ADDRESS, shortcut="Ctrl+Shift+C",
+            MenuItem("Skopiuj &adres lub ścieżkę", Action.COPY_ADDRESS, shortcut="Ctrl+Shift+C",
                      needs_selection=True),
             MenuItem(
                 "Przenieś wyżej, Alt+strzałka w g&órę",
