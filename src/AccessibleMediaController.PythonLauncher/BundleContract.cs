@@ -32,6 +32,8 @@ internal sealed class BundleManifest
     public List<string> StartupFiles { get; set; } = [];
     public Dictionary<string, string> FileHashes { get; set; } =
         new(StringComparer.OrdinalIgnoreCase);
+    public Dictionary<string, long> FileSizes { get; set; } =
+        new(StringComparer.OrdinalIgnoreCase);
 }
 
 internal sealed record VerifiedBundle(
@@ -47,7 +49,7 @@ internal static class BundleVerifier
     internal const int SupportedHostProtocolVersion = 1;
     private const int MaxManifestBytes = 8 * 1024 * 1024;
 
-    internal static VerifiedBundle Verify(string packageRoot)
+    internal static VerifiedBundle Verify(string packageRoot, bool verifyAllFiles = false)
     {
         var root = Path.GetFullPath(packageRoot);
         var manifestPath = Path.Combine(root, "bundle-manifest.json");
@@ -104,6 +106,12 @@ internal static class BundleVerifier
         var files = new HashSet<string>(manifest.Files, StringComparer.OrdinalIgnoreCase);
         if (files.Count != manifest.Files.Count)
             throw new InvalidDataException("manifest zawiera powtórzone pliki");
+        if (manifest.FileHashes.Count != files.Count)
+            throw new InvalidDataException("manifest nie zawiera sum wszystkich plików");
+        if (manifest.FileSizes.Count > 0 && manifest.FileSizes.Count != files.Count)
+            throw new InvalidDataException("manifest nie zawiera rozmiarów wszystkich plików");
+        if (verifyAllFiles && manifest.FileSizes.Count != files.Count)
+            throw new InvalidDataException("pełne sprawdzenie wymaga rozmiaru każdego pliku");
 
         var required = new[]
         {
@@ -120,17 +128,24 @@ internal static class BundleVerifier
                 throw new InvalidDataException($"manifest nie obejmuje pliku startowego {relative}");
         }
 
-        foreach (var relative in manifest.StartupFiles)
+        var filesToVerify = verifyAllFiles ? manifest.Files : manifest.StartupFiles;
+        foreach (var relative in filesToVerify)
         {
             if (!files.Contains(relative))
-                throw new InvalidDataException($"plik startowy {relative} nie należy do pakietu");
+                throw new InvalidDataException($"plik {relative} nie należy do pakietu");
             if (!manifest.FileHashes.TryGetValue(relative, out var expected)
-                || expected.Length != 64)
-                throw new InvalidDataException($"brakuje sumy pliku startowego {relative}");
+                || !IsSha256(expected))
+                throw new InvalidDataException($"brakuje sumy SHA-256 pliku {relative}");
             var path = ResolveInside(root, relative, mustExist: true);
-            var actual = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(path)));
+            var info = new FileInfo(path);
+            if (manifest.FileSizes.TryGetValue(relative, out var expectedSize)
+                && (expectedSize < 0 || info.Length != expectedSize))
+                throw new InvalidDataException(
+                    $"plik {relative} jest uszkodzony: ma nieprawidłowy rozmiar");
+            using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+            var actual = Convert.ToHexString(SHA256.HashData(stream));
             if (!string.Equals(actual, expected, StringComparison.OrdinalIgnoreCase))
-                throw new InvalidDataException($"plik startowy {relative} jest uszkodzony");
+                throw new InvalidDataException($"plik {relative} jest uszkodzony");
         }
 
         var hostExecutable = ResolveInside(
@@ -145,6 +160,9 @@ internal static class BundleVerifier
         && !Path.IsPathRooted(value)
         && Path.GetFileName(value) == value
         && value is not "." and not "..";
+
+    private static bool IsSha256(string value) =>
+        value.Length == 64 && value.All(Uri.IsHexDigit);
 
     private static string ResolveInside(string root, string relative, bool mustExist)
     {

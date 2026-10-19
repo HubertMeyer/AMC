@@ -312,10 +312,19 @@ internal static class Program
             throw new InvalidDataException("aktualizacja nie zawiera AMC.exe");
         if (manifest.FileHashes is null || manifest.FileHashes.Count != manifest.Files.Count)
             throw new InvalidDataException("manifest nie zawiera sum wszystkich plików");
+        if (manifest.FileSizes is not null
+            && manifest.FileSizes.Count > 0
+            && manifest.FileSizes.Count != manifest.Files.Count)
+            throw new InvalidDataException("manifest nie zawiera rozmiarów wszystkich plików");
 
         foreach (var relative in manifest.Files)
         {
             var path = ResolveInside(source, relative, mustExist: true);
+            if (manifest.FileSizes is { Count: > 0 }
+                && (!manifest.FileSizes.TryGetValue(relative, out var expectedSize)
+                    || expectedSize < 0
+                    || new FileInfo(path).Length != expectedSize))
+                throw new InvalidDataException($"niezgodny rozmiar pliku {relative}");
             if (!manifest.FileHashes.TryGetValue(relative, out var expected)
                 || expected.Length != 64)
                 throw new InvalidDataException($"brak sumy SHA-256 dla {relative}");
@@ -561,6 +570,8 @@ internal static class Program
         public List<string> Capabilities { get; set; } = [];
         public List<string> Files { get; set; } = [];
         public Dictionary<string, string> FileHashes { get; set; } =
+            new(StringComparer.OrdinalIgnoreCase);
+        public Dictionary<string, long> FileSizes { get; set; } =
             new(StringComparer.OrdinalIgnoreCase);
     }
 

@@ -427,6 +427,46 @@ def select_startup_files(files: list[str], host_subdir: str) -> list[str]:
     ]
 
 
+def profile_allows_librespot(profile: ReleaseProfile) -> bool:
+    """Dedykowany host Spotify trafia tylko do profilu, który go udostępnia."""
+
+    return "session.spotify" in profile.capabilities
+
+
+def validate_profile_files(profile: ReleaseProfile, files: list[str]) -> None:
+    """Odmow niejawnego pozostawienia prywatnej zaleznosci w publicznej paczce."""
+
+    if profile_allows_librespot(profile):
+        return
+    forbidden = [
+        relative
+        for relative in files
+        if "/librespothost/" in ("/" + relative.replace("\\", "/")).casefold()
+        or Path(relative).name.casefold() == LIBRESPOT_HOST_BINARY.casefold()
+    ]
+    if forbidden:
+        raise SystemExit(
+            "Publiczny pakiet AMC zawiera skladniki Spotify Librespot. "
+            "Wykonaj pelne czyste zlozenie profilu publicznego; znaleziono: "
+            + ", ".join(forbidden[:5])
+        )
+
+
+def add_file_integrity(manifest: dict, target: Path) -> None:
+    """Zapisz hash i rozmiar kazdego jawnie wymienionego pliku paczki."""
+
+    files = list(dict.fromkeys(manifest["files"]))
+    manifest["files"] = files
+    manifest["fileHashes"] = {
+        relative: sha256(target / Path(relative))
+        for relative in files
+    }
+    manifest["fileSizes"] = {
+        relative: (target / Path(relative)).stat().st_size
+        for relative in files
+    }
+
+
 def initial_manifest(
     profile: ReleaseProfile,
     source_revision: str,
@@ -519,6 +559,7 @@ def main() -> int:
         profile = profile_from_id(existing_profile_id)
         manifest.update(profile.manifest_fields())
         files = list(manifest.get("files") or [])
+        validate_profile_files(profile, files)
         files += copy_python_code(target)
         files += copy_launcher(target, args.launcher)
         files += copy_updater(target, args.updater)
@@ -529,10 +570,7 @@ def main() -> int:
             for relative in dict.fromkeys(files)
             if (target / Path(relative)).is_file()
         ]
-        manifest["fileHashes"] = {
-            relative: sha256(target / Path(relative))
-            for relative in manifest["files"]
-        }
+        add_file_integrity(manifest, target)
         manifest["sourceRevision"] = source_revision
         manifest["sourceDirty"] = source_dirty
         manifest["bundleId"] = bundle_identity(manifest["fileHashes"])
@@ -558,16 +596,20 @@ def main() -> int:
             "Wskaz jego folder przez --runtime."
         )
 
+    profile = profile_from_id(args.profile or TEST_PROFILE_ID)
+
     # Bramka jest przed --clean i przed pierwsza kopia: niespojna binarka albo
     # proweniencja nie moze nawet czesciowo przebudowac katalogu kandydata.
-    validate_librespot_package_source()
+    # Publiczny profil nie uzywa Spotify, wiec nie wymaga ani nie odczytuje
+    # jego prywatnego hosta oraz setek plikow licencji zaleznosci.
+    if profile_allows_librespot(profile):
+        validate_librespot_package_source()
 
     if args.clean and target.exists():
         shutil.rmtree(target)
     target.mkdir(parents=True, exist_ok=True)
 
     source_revision, source_dirty = git_source_identity()
-    profile = profile_from_id(args.profile or TEST_PROFILE_ID)
     manifest: dict = initial_manifest(profile, source_revision, source_dirty)
 
     manifest["files"] += copy_python_code(target)
@@ -575,26 +617,24 @@ def main() -> int:
     manifest["files"] += copy_updater(target, args.updater)
     host_files, host_hashes = copy_host(target, args.host, args.host_subdir)
     manifest["files"] += host_files
-    librespot_files, librespot_metadata = copy_librespot_host(
-        target,
-        args.host_subdir,
-    )
-    manifest["files"] += librespot_files
-    host_hashes[f"LibrespotHost/{LIBRESPOT_HOST_BINARY}"] = LIBRESPOT_HOST_SHA256
+    if profile_allows_librespot(profile):
+        librespot_files, librespot_metadata = copy_librespot_host(
+            target,
+            args.host_subdir,
+        )
+        manifest["files"] += librespot_files
+        host_hashes[f"LibrespotHost/{LIBRESPOT_HOST_BINARY}"] = LIBRESPOT_HOST_SHA256
+        manifest["librespotHost"] = librespot_metadata
     manifest["hostHashes"] = host_hashes
     manifest["hostFolder"] = args.host_subdir
-    manifest["librespotHost"] = librespot_metadata
 
     manifest["files"] += copy_runtime(target, args.runtime)
     manifest["runtime"] = "embedded"
 
     # Aktualizator akceptuje wyłącznie kompletne paczki. Sumy obejmują każdy
     # plik wymieniony w manifeście, nie tylko binaria hosta.
-    manifest["files"] = list(dict.fromkeys(manifest["files"]))
-    manifest["fileHashes"] = {
-        relative: sha256(target / Path(relative))
-        for relative in manifest["files"]
-    }
+    validate_profile_files(profile, manifest["files"])
+    add_file_integrity(manifest, target)
     manifest["bundleId"] = bundle_identity(manifest["fileHashes"])
     manifest["buildLabel"] = build_label(
         revision=source_revision,

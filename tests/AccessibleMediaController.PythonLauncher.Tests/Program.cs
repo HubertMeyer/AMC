@@ -15,6 +15,8 @@ internal static class Program
         ("poprawny publiczny pakiet", ValidPublicBundleIsAccepted),
         ("manifest nie może przedefiniować profilu", TamperedProfileIsRejected),
         ("uszkodzony plik", CorruptStartupFileIsRejected),
+        ("pełna integralność obejmuje pliki niestartowe", FullVerificationCoversNonStartupFiles),
+        ("pełna integralność sprawdza rozmiary", FullVerificationChecksSizes),
         ("niezgodny protokół", WrongProtocolIsRejected),
         ("wyjście poza katalog", TraversalIsRejected),
         ("prywatny runtime bez PYTHONPATH i bez alertów pythonw", LaunchPlanUsesOnlyPrivateRuntime),
@@ -84,6 +86,33 @@ internal static class Program
         using var fixture = BundleFixture.Create();
         File.AppendAllText(Path.Combine(fixture.Root, "app", "amc_wx_lite", "__main__.py"), "uszkodzenie");
         Throws("uszkodzony", () => BundleVerifier.Verify(fixture.Root));
+    }
+
+    private static void FullVerificationCoversNonStartupFiles()
+    {
+        using var fixture = BundleFixture.Create(extraPackageFile: "runtime/library.zip");
+        File.AppendAllText(Path.Combine(fixture.Root, "runtime", "library.zip"), "uszkodzenie");
+        _ = BundleVerifier.Verify(fixture.Root);
+        Throws("uszkodzony", () => BundleVerifier.Verify(fixture.Root, verifyAllFiles: true));
+    }
+
+    private static void FullVerificationChecksSizes()
+    {
+        using var fixture = BundleFixture.Create(extraPackageFile: "runtime/library.zip");
+        var manifestPath = Path.Combine(fixture.Root, "bundle-manifest.json");
+        var text = File.ReadAllText(manifestPath);
+        var marker = "\"runtime/library.zip\":";
+        var sizesStart = text.IndexOf("\"fileSizes\"", StringComparison.Ordinal);
+        var index = text.IndexOf(marker, sizesStart, StringComparison.Ordinal);
+        if (index < 0) throw new InvalidOperationException("Fixture nie zawiera rozmiaru pliku");
+        var valueStart = index + marker.Length;
+        var valueEnd = text.IndexOfAny([',', '}'], valueStart);
+        var size = long.Parse(text[valueStart..valueEnd], System.Globalization.CultureInfo.InvariantCulture);
+        text = text[..valueStart]
+            + (size + 1).ToString(System.Globalization.CultureInfo.InvariantCulture)
+            + text[valueEnd..];
+        File.WriteAllText(manifestPath, text);
+        Throws("rozmiar", () => BundleVerifier.Verify(fixture.Root, verifyAllFiles: true));
     }
 
     private static void WrongProtocolIsRejected()
@@ -412,6 +441,7 @@ internal static class Program
         public static BundleFixture Create(
             int hostProtocolVersion = 1,
             string? extraStartupFile = null,
+            string? extraPackageFile = null,
             ReleaseProfileDescriptor? profile = null,
             string? displayNameOverride = null)
         {
@@ -419,7 +449,7 @@ internal static class Program
             var root = Path.Combine(Path.GetTempPath(), "amc-launcher-" + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(root);
             string? outsidePath = null;
-            var files = new[]
+            var startupFiles = new[]
             {
                 "AMC.exe",
                 "runtime/python.exe",
@@ -427,12 +457,15 @@ internal static class Program
                 "app/amc_wx_lite/__main__.py",
                 "host/amc_lite_host.exe",
             }.ToList();
+            var files = startupFiles.ToList();
             if (extraStartupFile is not null)
             {
                 files.Add(extraStartupFile);
+                startupFiles.Add(extraStartupFile);
                 outsidePath = Path.GetFullPath(Path.Combine(root, extraStartupFile));
                 File.WriteAllText(outsidePath, "poza");
             }
+            if (extraPackageFile is not null) files.Add(extraPackageFile);
             foreach (var relative in files.Where(path => !path.StartsWith("..", StringComparison.Ordinal)))
             {
                 var path = Path.Combine(root, relative.Replace('/', Path.DirectorySeparatorChar));
@@ -448,6 +481,12 @@ internal static class Program
                         relative.Replace('/', Path.DirectorySeparatorChar)));
                     return Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(path)));
                 },
+                StringComparer.OrdinalIgnoreCase);
+            var sizes = files.ToDictionary(
+                relative => relative,
+                relative => new FileInfo(Path.GetFullPath(Path.Combine(
+                    root,
+                    relative.Replace('/', Path.DirectorySeparatorChar)))).Length,
                 StringComparer.OrdinalIgnoreCase);
             var manifest = new
             {
@@ -474,8 +513,9 @@ internal static class Program
                 sessions = profile.Sessions,
                 capabilities = profile.Capabilities,
                 files,
-                startupFiles = files,
+                startupFiles,
                 fileHashes = hashes,
+                fileSizes = sizes,
             };
             File.WriteAllText(
                 Path.Combine(root, "bundle-manifest.json"),

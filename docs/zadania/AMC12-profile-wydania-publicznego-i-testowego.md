@@ -3,10 +3,10 @@
 ## Status
 
 **W trakcie — fundament profili, rozdzielenie uruchamiacza i aktualizatora oraz
-kontrolowana migawka AMC Test → AMC są gotowe w źródłach, skompilowane i
-sprawdzone testami magazynów oraz pełną regresją Core. Nie zainstalowano ani
-nie opublikowano profilu publicznego. Następnym etapem jest publiczny pakiet i
-instalator, bez mieszania magazynów obu profili.**
+kontrolowana migawka AMC Test → AMC oraz źródła publicznego pakowania i
+instalatora są gotowe i sprawdzone testami. Nie zbudowano jeszcze instalatora,
+ponieważ na komputerze nie ma kompilatora Inno Setup; nie zainstalowano ani nie
+opublikowano profilu publicznego.**
 
 Źródłowa, zatwierdzona specyfikacja pozostaje w pliku tylko do odczytu:
 `D:\Projekty Codex\Accessible Multimedia Controller\AMC12_PROFILE_WYDANIA_PUBLICZNEGO_I_TESTOWEGO_2026-10-18.md`.
@@ -75,6 +75,19 @@ aktualizatory: paczka jednego wydania nie może zaktualizować drugiego.
 Dzienniki uruchamiania trafiają do folderu właściwego profilu, a interfejs
 zawsze otrzymuje jawny profil z zatwierdzonego manifestu.
 
+Publiczna paczka nie zawiera dedykowanego hosta Spotify Librespot ani jego
+zestawu licencji zależności. Każdy dołączony plik ma w manifeście dokładny
+rozmiar i SHA-256. Przed utworzeniem instalatora oraz po instalacji AMC wykonuje
+pełną kontrolę wszystkich plików, a nie tylko plików potrzebnych do startu.
+
+Nowy instalator ma osobne warianty `AMC-<wersja>-win-x64.exe` i
+`AMC-Test-<wersja>-win-x64.exe`, różne identyfikatory produktu, katalogi,
+skróty, wpisy systemowe i blokady uruchomienia. Nie wymusza zamknięcia
+działającego AMC. Jeśli właściwy profil nadal działa, instalacja zostaje
+zatrzymana; program trzeba zamknąć zwykłą drogą, która chroni nagrywanie.
+Paczka zawiera prywatny runtime Pythona oraz samowystarczalne procesy .NET i
+nie pobiera środowiska uruchomieniowego podczas instalacji.
+
 ## Uzasadnienie i decyzje
 
 - Jedna definicja profilu jest bezpieczniejsza niż osobne listy w interfejsie,
@@ -112,6 +125,15 @@ zawsze otrzymuje jawny profil z zatwierdzonego manifestu.
 - Historia wyszukiwania interfejsu wxPython jest przekazywana jawnie przez
   ograniczony kontrakt hosta, ponieważ celowo nie należy do baz C#. Przy
   imporcie wraca także do osobnego magazynu interfejsu publicznego AMC.
+- Manifest integralności zawiera teraz zarówno SHA-256, jak i rozmiar każdego
+  pliku. Zwykły start nadal sprawdza krytyczne pliki startowe, natomiast jawna
+  kontrola instalatora sprawdza całą paczkę strumieniowo.
+- Dedykowany binarny host Librespot jest składnikiem profilu testowego. Samo
+  ukrycie sesji w interfejsie nie wystarczało, dlatego publiczny proces
+  pakowania w ogóle go nie odczytuje ani nie kopiuje.
+- Instalator wxPython jest osobnym skryptem od historycznego instalatora WPF.
+  Używa zamkniętych identyfikatorów obu profili i `CloseApplications=no`;
+  działającego nagrania nie wolno chronić przez wymuszenie zakończenia procesu.
 
 ## Zmienione pliki
 
@@ -122,8 +144,12 @@ zawsze otrzymuje jawny profil z zatwierdzonego manifestu.
 - `wxlite/amc_wx_lite/session_order.py`
 - `wxlite/amc_wx_lite/gui.py`
 - `wxlite/tools/build_bundle.py`
+- `wxlite/tools/Build-AMCBundle.ps1`
+- `wxlite/tools/Build-AMCInstaller.ps1`
+- `installer/AMC_Wx_Setup.iss`
 - `wxlite/tests/test_release_profile.py`
 - `wxlite/tests/test_bundle_layout.py`
+- `wxlite/tests/test_installer_profiles.py`
 - `src/Shared/ReleaseProfileContract.cs`
 - `src/AccessibleMediaController.PythonLauncher/AccessibleMediaController.PythonLauncher.csproj`
 - `src/AccessibleMediaController.PythonLauncher/BundleContract.cs`
@@ -146,6 +172,7 @@ zawsze otrzymuje jawny profil z zatwierdzonego manifestu.
 - `wxlite/amc_wx_lite/shortcuts.py`
 - `wxlite/tests/test_host_client.py`
 - `tests/AccessibleMediaController.Core.SmokeTests/CommonDataSnapshotTests.cs`
+- `tests/AccessibleMediaController.Core.SmokeTests/InstallerOfflineContractTests.cs`
 - `tests/AccessibleMediaController.Core.SmokeTests/LibrespotHostClientTests.cs`
 - `tests/AccessibleMediaController.Core.SmokeTests/Program.cs`
 - `tests/AccessibleMediaController.PythonLauncher.Tests/AccessibleMediaController.PythonLauncher.Tests.csproj`
@@ -195,12 +222,25 @@ zawsze otrzymuje jawny profil z zatwierdzonego manifestu.
   teście zakończenia osobnego procesu Librespot: błąd polecenia docierał przed
   równoległym zdarzeniem awarii. Test poprawiono tak, by czekał na oba wymagane
   skutki. Powtórzona pełna regresja Core zakończyła się kodem **0**.
+- Publiczne pakowanie, profile, instalator i manifest integralności:
+  **38 testów Python zaliczonych**. Obejmują pełne syntetyczne złożenie profilu
+  publicznego bez odczytu Librespot oraz zgodność rozmiaru i SHA-256 każdego
+  pliku.
+- Uruchamiacz i aktualizator po dodaniu pełnej kontroli wszystkich plików:
+  **22 testy C# zaliczone**.
+- Test strukturalny samowystarczalności instalatora zaliczony. Potwierdza trzy
+  publikacje `.NET --self-contained true`, prywatny runtime Pythona, brak
+  pobierania runtime i brak wymuszonego zamknięcia programu. Nie jest dowodem
+  zbudowania ani uruchomienia instalatora.
+- Oba nowe skrypty PowerShell przeszły kontrolę składni bez błędów.
 
 ## Znane ograniczenia
 
-- Manifest deklaruje możliwości profilu, ale paczka publiczna nie usuwa
-  jeszcze binarnych zależności ukrytych usług. Ograniczenie pakowania zostaje
-  do następnego spójnego etapu.
+- Publiczne pakowanie usuwa dedykowany binarny host Librespot, ale wspólna
+  paczka nadal zawiera część modułów źródłowych usług prywatnych, ponieważ
+  obecny interfejs importuje je przy starcie. Profil blokuje ich sesje i
+  polecenia. Fizyczne odchudzenie pozostałych modułów wymaga rozdzielenia
+  importów i jest osobną bramką przed publikacją publiczną.
 - Wersjonowana, atomowa migawka została skompilowana i sprawdzona na
   odizolowanych magazynach testowych, ale nie została jeszcze odebrana w
   zainstalowanych AMC Test i AMC. Pierwsza wersja ma stały bezpieczny zakres;
@@ -217,6 +257,9 @@ zawsze otrzymuje jawny profil z zatwierdzonego manifestu.
 - Osobne tożsamości procesu są gotowe, ale nie ma jeszcze instalatora, który
   utworzy dwie niezależne instalacje i sprawdzi ich cykl aktualizacji od końca
   do końca. Z tego powodu publicznego AMC nadal nie instalujemy.
+- Źródło instalatora jest gotowe, ale `ISCC.exe` (Inno Setup) nie jest obecny
+  na tym komputerze. Nie powstał więc jeszcze plik `.exe` instalatora ani jego
+  końcowy plik integralności.
 
 ## Porządek dysku
 
@@ -243,3 +286,5 @@ zawsze otrzymuje jawny profil z zatwierdzonego manifestu.
 - Migawka danych wspólnych: `cdf9cb05` —
   `feat(amc12): dodaj kontrolowana migawke danych`; testy i kompilacja
   zaliczone, instalacji nie wykonywano.
+- Publiczne pakowanie, pełna integralność i źródło instalatora: testy
+  zaliczone; commit zostanie wpisany po zapisaniu spójnego etapu.

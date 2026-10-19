@@ -21,14 +21,18 @@ public static class InstallerOfflineContractTests
     {
         var korzen = KorzenRepozytorium();
 
-        // 1. Build MUSI publikowac wersje samowystarczalna - bez tego usuniecie
-        //    downloadera z instalatora zostawiloby uzytkownika bez runtime.
-        var build = File.ReadAllText(Path.Combine(korzen, "build.ps1"));
+        // 1. Bieżący build wxPython publikuje WSZYSTKIE trzy procesy .NET
+        //    samowystarczalnie i dokłada prywatny runtime Pythona.
+        var build = File.ReadAllText(Path.Combine(
+            korzen, "wxlite", "tools", "Build-AMCBundle.ps1"));
         Check(
-            build.Contains("--self-contained true", StringComparison.Ordinal),
-            "build.ps1 nie publikuje wersji samowystarczalnej (--self-contained true).");
+            Count(build, "\"--self-contained\", \"true\"") == 3,
+            "Build AMC nie publikuje trzech procesow .NET jako samowystarczalnych.");
+        Check(
+            build.Contains("\"--runtime\", $runtime", StringComparison.Ordinal),
+            "Build AMC nie dolacza prywatnego runtime Pythona.");
 
-        var iss = File.ReadAllText(Path.Combine(korzen, "installer", "AMC_Setup.iss"));
+        var iss = File.ReadAllText(Path.Combine(korzen, "installer", "AMC_Wx_Setup.iss"));
 
         // 2. Zero pobierania i zero instalowania obcego runtime w instalatorze.
         foreach (var zakazane in new[]
@@ -45,18 +49,18 @@ public static class InstallerOfflineContractTests
                 $"Instalator wciaz zawiera zewnetrzny tor .NET: {zakazane}.");
         }
 
-        // 3. To, co w instalatorze musi zostac nietkniete. Usuwanie downloadera
-        //    nie moze po drodze zgubic stalej nazwy pliku, tozsamosci produktu,
-        //    kopiowania plikow, skrotow ani wpisu App Paths.
+        // 3. Instalator nie moze zgubic odrebnej tozsamosci obu profili,
+        //    kopiowania plikow, skrotow, App Paths ani pelnej kontroli paczki.
         foreach (var wymagane in new[]
                  {
-                     "DestName: \"AccessibleMediaController.exe\"",
-                     "AppId={{8F3A6C21-4E7B-4D59-9C08-A3C0919E7B21}",
+                     "AppIdentity \"{{1E437448-30B4-4E4A-BCA1-CDA114B096A9}\"",
+                     "AppIdentity \"{{0B807571-BDC5-4287-BD7C-4F4A7C71438F}\"",
                      "[Files]",
                      "[Icons]",
                      "[Registry]",
-                     "App Paths\\AccessibleMediaController.exe",
-                     "CloseApplications=force",
+                     "App Paths\\{#AppPathName}",
+                     "CloseApplications=no",
+                     "--sprawdz-pakiet-pelny-cicho",
                  })
         {
             Check(
@@ -98,5 +102,17 @@ public static class InstallerOfflineContractTests
     private static void Check(bool condition, string message)
     {
         if (!condition) throw new Exception(message);
+    }
+
+    private static int Count(string text, string value)
+    {
+        var count = 0;
+        var offset = 0;
+        while ((offset = text.IndexOf(value, offset, StringComparison.Ordinal)) >= 0)
+        {
+            count++;
+            offset += value.Length;
+        }
+        return count;
     }
 }

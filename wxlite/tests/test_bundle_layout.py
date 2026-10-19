@@ -40,6 +40,31 @@ def test_bundle_manifest_profile_is_explicit_and_public_is_restricted():
     )
 
 
+def test_public_profile_rejects_any_listed_librespot_component():
+    public = bundle.profile_from_id("public")
+    try:
+        bundle.validate_profile_files(
+            public,
+            ["host/LibrespotHost/amc_spotify_librespot_host.exe"],
+        )
+    except SystemExit as error:
+        assert "Publiczny pakiet AMC" in str(error)
+    else:
+        raise AssertionError("Publiczny profil nie moze zawierac hosta Librespot")
+
+
+def test_file_integrity_contains_hash_and_exact_size_for_every_file():
+    with tempfile.TemporaryDirectory() as folder:
+        root = Path(folder)
+        (root / "one.bin").write_bytes(b"1234")
+        (root / "two.bin").write_bytes(b"abc")
+        manifest = {"files": ["one.bin", "two.bin", "one.bin"]}
+        bundle.add_file_integrity(manifest, root)
+        assert manifest["files"] == ["one.bin", "two.bin"]
+        assert set(manifest["fileHashes"]) == set(manifest["files"])
+        assert manifest["fileSizes"] == {"one.bin": 4, "two.bin": 3}
+
+
 def test_build_label_is_user_facing_date_and_source_revision():
     class Result:
         def __init__(self, stdout):
@@ -437,3 +462,57 @@ def test_full_bundle_places_pinned_librespot_relative_to_lite_host_and_hashes_it
         assert (target / executable).read_bytes() == (
             bundle.LIBRESPOT_HOST_SOURCE / bundle.LIBRESPOT_HOST_BINARY
         ).read_bytes()
+
+
+def test_full_public_bundle_omits_librespot_and_has_complete_sizes():
+    with tempfile.TemporaryDirectory() as folder:
+        root = Path(folder)
+        host = root / "host-publish"
+        launcher = root / "launcher-publish"
+        updater = root / "updater-publish"
+        runtime = root / "runtime-source"
+        target = root / "public-bundle"
+        for directory in (host, launcher, updater, runtime):
+            directory.mkdir()
+        (host / "amc_lite_host.exe").write_bytes(b"SYNTHETIC_LITE_HOST")
+        (launcher / "AMC.exe").write_bytes(b"SYNTHETIC_LAUNCHER")
+        (updater / "AMC-Python-Updater.exe").write_bytes(b"SYNTHETIC_UPDATER")
+        (runtime / "python.exe").write_bytes(b"SYNTHETIC_PYTHON")
+        (runtime / "pythonw.exe").write_bytes(b"SYNTHETIC_PYTHONW")
+        (runtime / "python314._pth").write_text("python314.zip\n", encoding="utf-8")
+
+        original_argv = sys.argv
+        original_validator = bundle.validate_librespot_package_source
+        try:
+            sys.argv = [
+                str(path),
+                "--out", str(target),
+                "--profile", "public",
+                "--host", str(host),
+                "--launcher", str(launcher),
+                "--updater", str(updater),
+                "--runtime", str(runtime),
+                "--clean",
+            ]
+
+            def must_not_read_private_component(*_args, **_kwargs):
+                raise AssertionError("Publiczny build odczytal prywatny host Librespot")
+
+            bundle.validate_librespot_package_source = must_not_read_private_component
+            assert bundle.main() == 0
+        finally:
+            bundle.validate_librespot_package_source = original_validator
+            sys.argv = original_argv
+
+        manifest = json.loads(
+            (target / "bundle-manifest.json").read_text(encoding="utf-8")
+        )
+        assert manifest["releaseProfile"] == "public"
+        assert "librespotHost" not in manifest
+        assert not any("librespot" in relative.casefold() for relative in manifest["files"])
+        assert set(manifest["fileHashes"]) == set(manifest["files"])
+        assert set(manifest["fileSizes"]) == set(manifest["files"])
+        for relative in manifest["files"]:
+            file_path = target / relative
+            assert manifest["fileSizes"][relative] == file_path.stat().st_size
+            assert manifest["fileHashes"][relative] == bundle.sha256(file_path)

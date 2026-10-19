@@ -16,22 +16,31 @@ internal static class Program
     private static int Main(string[] args)
     {
         ReleaseProfileDescriptor? profile = null;
-        var silentBundleCheck = args.Any(argument => string.Equals(
-            argument,
-            "--sprawdz-pakiet-cicho",
-            StringComparison.OrdinalIgnoreCase));
+        var fullBundleCheck = args.Any(argument =>
+            string.Equals(argument, "--sprawdz-pakiet-pelny", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(argument, "--sprawdz-pakiet-pelny-cicho", StringComparison.OrdinalIgnoreCase));
+        var silentBundleCheck = args.Any(argument =>
+            string.Equals(argument, "--sprawdz-pakiet-cicho", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(argument, "--sprawdz-pakiet-pelny-cicho", StringComparison.OrdinalIgnoreCase));
         try
         {
-            var bundle = BundleVerifier.Verify(AppContext.BaseDirectory);
+            var bundle = BundleVerifier.Verify(
+                AppContext.BaseDirectory,
+                verifyAllFiles: fullBundleCheck);
             profile = bundle.Profile;
             if (silentBundleCheck)
                 return 0;
-            if (args.Any(argument => string.Equals(
-                argument,
-                "--sprawdz-pakiet",
-                StringComparison.OrdinalIgnoreCase)))
+            if (fullBundleCheck || args.Any(argument => string.Equals(
+                    argument,
+                    "--sprawdz-pakiet",
+                    StringComparison.OrdinalIgnoreCase)))
             {
-                Show(profile, $"Pakiet {profile.DisplayName} jest kompletny i zgodny.", false);
+                Show(
+                    profile,
+                    fullBundleCheck
+                        ? $"Pełna integralność pakietu {profile.DisplayName} jest potwierdzona."
+                        : $"Pakiet {profile.DisplayName} jest kompletny i zgodny.",
+                    false);
                 return 0;
             }
 
