@@ -60,9 +60,12 @@ jawnym poleceniu użytkownika albo przez osobno uzgodniony harmonogram.
 - `POD-001` — **Oczekuje** — sortowanie zbiorczej Biblioteki podcastów,
   kanałów YouTube i kolekcji „Media internetowe”. Szczegóły:
   [POD-001-sortowanie-biblioteki-zrodel.md](POD-001-sortowanie-biblioteki-zrodel.md).
-- `AMC04` — **W trakcie** — przeniesienie do bieżącego AMC Test zatwierdzonego
-  modelu skrótów zakładek, nazwanych zakładek, rozdziałów i historii. Nie jest
-  to nowe zadanie: źródłowy audyt i rozpoczęta realizacja są zapisane w
+- `AMC04` — **Kod i testy zakończone; czeka na instalację i ręczny odbiór
+  NVDA** — przeniesiony do bieżącego AMC Test zatwierdzony model skrótów
+  zakładek, nazwanych zakładek, rozdziałów, historii widoków i historii
+  odtwarzanych elementów. Bieżący zapis realizacji:
+  [AMC04-nawigacja-zakladki-rozdzialy-historia.md](AMC04-nawigacja-zakladki-rozdzialy-historia.md).
+  Źródłowy audyt i rozpoczęta realizacja są zapisane w
   `D:\Projekty Codex\Accessible Multimedia Controller\AMC03_AUDYT_SKROTOW_2026-10-18.md`
   oraz `AMC04_REALIZACJA_ETAP_A_2026-10-18.md`. Stare źródła WPF służą tylko
   jako wzorzec; właściwe wdrożenie wykonujemy w tym repozytorium.
