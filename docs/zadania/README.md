@@ -33,8 +33,8 @@ jawnym poleceniu użytkownika albo przez osobno uzgodniony harmonogram.
 - `REC-001` — **Zrobione** — trwałość wykonanego harmonogramu nagrywania
   Radia i zgodność listy `Alt+R` z blokadą zamknięcia. Szczegóły:
   [REC-001-harmonogram-alt-r-zamykanie.md](REC-001-harmonogram-alt-r-zamykanie.md).
-- `AMC02` — **W trakcie; kod i izolowane testy gotowe, czeka na kompilację,
-  instalację i odbiór NVDA** — krótkie wiersze `Alt+R` i `Alt+Shift+R`, brak
+- `AMC02` — **Wdrożone i zainstalowane w AMC Test; czeka na ręczny odbiór
+  NVDA** — krótkie wiersze `Alt+R` i `Alt+Shift+R`, brak
   osobnego „X elementów”, pamięć zaznaczenia oraz bitrate, wielkość i folder
   pod lewą strzałką także w `Ctrl+H`. Bieżący zapis realizacji:
   [AMC02-listy-nagrywania-i-historii.md](AMC02-listy-nagrywania-i-historii.md).
@@ -42,18 +42,18 @@ jawnym poleceniu użytkownika albo przez osobno uzgodniony harmonogram.
   `D:\Projekty Codex\Accessible Multimedia Controller\AMC02_ANALIZA_2026-10-18.md`
   oraz `AMC02_REALIZACJA_ETAP_A_2026-10-18.md`. Właściwe wdrożenie wykonujemy
   w bieżącym AMC Test, a stary kod służy tylko jako wzorzec.
-- `SCHED-001` — **W trakcie; kod i testy źródłowe gotowe, czeka na kompilację,
-  instalację i odbiór NVDA** — dostępna przebudowa listy i edytora
+- `SCHED-001` — **Wdrożone i zainstalowane w AMC Test; czeka na ręczny odbiór
+  NVDA** — dostępna przebudowa listy i edytora
   harmonogramów: informacje pod strzałkami, segmentowa data i czas oraz
   jednoznaczne wpisywanie czasu trwania. Szczegóły:
   [SCHED-001-edytor-i-klawisze-harmonogramow.md](SCHED-001-edytor-i-klawisze-harmonogramow.md).
-- `NVDA-001` — **W trakcie; poprawka gotowa, czeka na bezpieczne zastosowanie
-  i odbiór** — usunięcie opóźnienia `Ctrl+C` powodowanego przez
+- `NVDA-001` — **W trakcie; poprawka zastosowana i NVDA zrestartowane, czeka
+  na ręczny odbiór mowy oraz schowka** — usunięcie opóźnienia `Ctrl+C` powodowanego przez
   NVDAExtensionGlobalPlugin bez zmiany zwykłego schowka w innych programach.
   Szczegóły:
   [NVDA-001-opoznienie-ctrl-c.md](NVDA-001-opoznienie-ctrl-c.md).
-- `SEARCH-001` — **W trakcie; kod i izolowane testy gotowe, czeka na kompilację,
-  instalację i odbiór NVDA** — wyszukiwanie YouTube, Spotify i TIDAL:
+- `SEARCH-001` — **Wdrożone i zainstalowane w AMC Test; czeka na ręczny odbiór
+  NVDA** — wyszukiwanie YouTube, Spotify i TIDAL:
   `Ctrl+Shift+L` pozostaje w oknie także dla zapisanego wyniku, wykonuje jedną
   właściwą operację i nie oddaje mowy głównemu oknu. Szczegóły:
   [SEARCH-001-youtube-biblioteka-komunikaty.md](SEARCH-001-youtube-biblioteka-komunikaty.md).
@@ -75,8 +75,8 @@ jawnym poleceniu użytkownika albo przez osobno uzgodniony harmonogram.
   pozostaje poleceniem czytnika. Zatwierdzona specyfikacja:
   `D:\Projekty Codex\Accessible Multimedia Controller\AMC13_TIMESHIFT_RADIA_2026-10-18.md`.
   Eksport fragmentów Time Shiftu pozostaje późniejszym rozszerzeniem.
-- `AMC08` — **Wdrażanie; kod, kompilacja i pełne regresje źródłowe gotowe,
-  instalacja oraz odbiór NVDA pozostają** — natywne playlisty Spotify w AMC
+- `AMC08` — **Wdrożone i zainstalowane w AMC Test; czeka na ręczny odbiór NVDA
+  i świadomą próbę na koncie** — natywne playlisty Spotify w AMC
   Test: `Ctrl+P`, `Ctrl+Shift+P`, tworzenie playlist i dodawanie utworów lub
   odcinków. Przebieg: `AMC08-playlisty-spotify.md`. Zatwierdzona specyfikacja:
   `D:\Projekty Codex\Accessible Multimedia Controller\AMC08_PLAYLISTY_SPOTIFY_2026-10-18.md`.

@@ -2,8 +2,7 @@
 
 ## Status
 
-W trakcie; kod i testy źródłowe gotowe, czeka na bezpieczną kompilację,
-instalację i odbiór NVDA.
+Wdrożone i zainstalowane w AMC Test; czeka na ręczny odbiór NVDA.
 
 ## Cel
 
@@ -150,8 +149,10 @@ Testy modelu obejmują:
 - trwałość harmonogramów i ochronę `REC-001` w pełnej regresji.
 
 Wynik 19.10.2026: 63/63 testy ukierunkowane oraz 1748 zaliczonych,
-110 pominiętych i 11 zaliczonych podtestów w całym `wxlite/tests`.
-Sprawdzono kod źródłowy, nie kompilację ani zainstalowaną aplikację.
+110 pominiętych i 11 zaliczonych podtestów w ówczesnym pełnym
+`wxlite/tests`. Po połączeniu nocnych etapów pełna regresja dała **1754
+zaliczone, 110 pominiętych, 11 podtestów**. Kompilacja Release, kontrola paczki,
+instalacja i uruchomienie również zakończyły się powodzeniem.
 
 ## Znane ograniczenia
 
@@ -163,10 +164,14 @@ Sprawdzono kod źródłowy, nie kompilację ani zainstalowaną aplikację.
 - Zmiany dotyczą harmonogramów Radia, bo tylko ta sesja ma obecnie działający
   wspólny model harmonogramu. Kolejna sesja ma go użyć zamiast kopiować dialog.
 - `Ctrl+Enter` i otwieranie folderów nie należą do tego etapu.
+- Kod został zainstalowany, ale ręczny odbiór wszystkich segmentów z NVDA
+  nadal pozostaje do wykonania; automatyczne etykiety nie zastępują odsłuchu.
 
 ## Wersja i commit
 
 - Źródła i testy: commit `689a8c77`.
-- Kompilacja: jeszcze niewykonana.
-- Instalacja: jeszcze niewykonana.
+- Kompilacja: Release, zaliczona bez ostrzeżeń i błędów; pełna regresja po
+  połączeniu etapów: **1754 zaliczone, 110 pominiętych, 11 podtestów**.
+- Instalacja: `2026.10.19-e0f97512d1eee067d225d7b8c73b808ff3f3e561-c0e62181`,
+  manifest, sumy SHA-256 i uruchomienie zweryfikowane 19 października 2026.
 - Publikacja: niewykonana i niedozwolona w tej pracy nocnej.

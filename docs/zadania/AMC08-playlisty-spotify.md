@@ -1,7 +1,7 @@
 # AMC08 — natywne playlisty Spotify
 
-Status: **wdrażanie; kod, kompilacja i pełne regresje źródłowe gotowe,
-instalacja oraz odbiór NVDA pozostają do wykonania**.
+Status: **wdrożone i zainstalowane w AMC Test; czeka na ręczny odbiór NVDA
+oraz świadomą próbę na koncie Spotify**.
 
 Źródło decyzji: zatwierdzona analiza historyczna tylko do odczytu
 `D:\Projekty Codex\Accessible Multimedia Controller\AMC08_PLAYLISTY_SPOTIFY_2026-10-18.md`.
@@ -75,14 +75,18 @@ instalacja oraz odbiór NVDA pozostają do wykonania**.
   w aktywnym oknie, przez 10 sekund nie rósł żaden plik `.amc-partial`, a żaden
   z zachowanych plików odzyskiwania nie był zablokowany przez proces.
 - Nie wykonano odbioru sieciowego ani zapisu na koncie Spotify.
+- Procedura promocji ponownie zaliczyła pełne **1754** testy wxPython,
+  zbudowała paczkę 1659 plików, sprawdziła jej manifest i sumy SHA-256,
+  zainstalowała ją oraz potwierdziła uruchomienie właściwego procesu i tytułu.
 
 ## Znane ograniczenia
 
 - Odtwarzanie całej playlisty Spotify przez AMC nadal nie jest obiecywane.
 - Zewnętrzny odbiór na prawdziwym koncie, w tym ponowne OAuth z nowymi
   zakresami, pozostaje zadaniem ręcznym.
-- Instalacja i test NVDA nie zostały jeszcze wykonane. Kod, testy i udana
-  kompilacja nie dowodzą jeszcze zainstalowanej wersji.
+- Ręczny test NVDA i prawdziwego konta Spotify nie został wykonany. Sama
+  poprawna instalacja nie potwierdza jeszcze odbioru mowy ani operacji
+  sieciowej na koncie.
 
 ## Wersja i commit
 
@@ -90,5 +94,6 @@ instalacja oraz odbiór NVDA pozostają do wykonania**.
 - Kod źródłowy: commit `697d1a73fd66c12bfa061f4d5f55a93ddaa36e85`.
 - Kompilacja: Release, zaliczona 19 października 2026 po bezpiecznej bramce
   nagrywania; nie jest to jeszcze paczka instalacyjna.
-- Instalacja: jeszcze niewykonana.
+- Instalacja: `2026.10.19-e0f97512d1eee067d225d7b8c73b808ff3f3e561-c0e62181`,
+  manifest, sumy i uruchomienie zweryfikowane 19 października 2026.
 - Publikacja: nie wykonywać w tym etapie.

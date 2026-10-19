@@ -1,6 +1,6 @@
 # NVDA-001 — opóźnienie Ctrl+C z NVDAExtensionGlobalPlugin
 
-- Status: `W trakcie — poprawka przygotowana i przetestowana, czeka na bezpieczne zastosowanie oraz odbiór z NVDA`
+- Status: `W trakcie — poprawka zastosowana, NVDA zrestartowane; czeka na ręczny odbiór mowy i schowka`
 - Utworzono: 17 października 2026
 - Obszar: NVDA, schowek i skróty AMC
 - Polecenie uruchamiające: `Uruchom zadanie NVDA-001`
@@ -76,15 +76,18 @@ aplikacjach.
 
 ## Wynik wykonania
 
-Do uzupełnienia po pracy:
-
-- Data zakończenia:
-- Wynik:
-- Zmienione pliki:
-- Commit bazowy i końcowy:
-- Testy i rezultaty:
-- Zbudowana lub zainstalowana wersja:
-- Pozostałe ograniczenia:
+- Data zastosowania: 19 października 2026, po potwierdzonym zakończeniu
+  nagrywania.
+- Wynik: lokalna poprawka jest obecna dokładnie raz, oryginał zachowany obok
+  pliku, a NVDA uruchomiono ponownie jego własnym przełącznikiem `-r`.
+- Zmieniony plik instalacji dodatku:
+  `%APPDATA%\nvda\addons\NVDAExtensionGlobalPlugin\globalPlugins\NVDAExtensionGlobalPlugin\clipboardCommandAnnouncement\__init__.py`.
+- Kopia do wycofania:
+  `__init__.py.amc-original-f4ecf28d9df2` w tym samym folderze.
+- Commit narzędzia: `1169e6aa17414c0d30c7cf4d3c40e530463ea317`;
+  poprawka zgodności CRLF: `df2f8fe6`.
+- Pozostałe ograniczenie: wynik mowy, zawartość schowka i zachowanie zwykłej
+  aplikacji muszą zostać potwierdzone ręcznie przez użytkownika.
 
 ## Materiał do dokumentacji użytkownika
 
@@ -115,20 +118,22 @@ okna ani ogólnej nazwy `python.exe`.
 
 - Sucha walidacja na rzeczywistym pliku NVDAExtensionGlobalPlugin 14.1.2:
   poprawkę można zastosować, a wygenerowany kod przechodzi kompilację składni.
-- `wxlite/tests/test_nvda_extension_clipboard_compat.py`: `3 passed`.
+- `wxlite/tests/test_nvda_extension_clipboard_compat.py`: początkowo `3
+  passed`; po wykryciu instalacyjnego układu CRLF dodano przypadek regresyjny
+  i uzyskano `4 passed`.
 - Łączna izolowana regresja SEARCH-001/NVDA-001, Spotify, TIDAL, menu i
   schowka: `154 passed`.
-- Nie zrestartowano NVDA i nie wykonano jeszcze odbioru mowy, ponieważ w chwili
-  przygotowania trwało nagrywanie i obowiązywała bramka bezpieczeństwa do
-  godziny 02:00.
+- Po 02:00 potwierdzono brak aktywnego harmonogramu, brak wzrostu plików
+  `.amc-partial` i brak blokady tych plików. Poprawkę zastosowano atomowo,
+  sucha kontrola po zapisie rozpoznała ją jako obecną, a proces NVDA został
+  ponownie uruchomiony.
 
 ## Znane ograniczenia
 
 - Aktualizacja NVDAExtensionGlobalPlugin może nadpisać lokalną poprawkę; po
   aktualizacji trzeba najpierw ponownie wykonać suchą walidację nowego układu.
-- Status pozostaje „W trakcie” do czasu zastosowania poprawki po sprawdzeniu
-  braku nagrywania, restartu NVDA i próby `Ctrl+C` w AMC oraz w zwykłej
-  aplikacji.
+- Status pozostaje „W trakcie” wyłącznie do ręcznej próby `Ctrl+C` w AMC oraz
+  w zwykłej aplikacji.
 - Kopia oryginału musi zostać zachowana do ręcznego odbioru użytkownika.
 
 ## Wersja i commit
@@ -138,7 +143,8 @@ okna ani ogólnej nazwy `python.exe`.
 - Zmienione pliki repozytorium:
   `tools/nvda_extension_clipboard_compat.py` oraz
   `wxlite/tests/test_nvda_extension_clipboard_compat.py`.
-- Kompilacja AMC: nie wykonywana w tym etapie.
-- Instalacja AMC: bez zmian.
-- Instalacja poprawki dodatku NVDA: jeszcze niewykonana.
+- Kompilacja i instalacja AMC Test:
+  `2026.10.19-e0f97512d1eee067d225d7b8c73b808ff3f3e561-c0e62181`.
+- Instalacja poprawki dodatku NVDA: wykonana; poprawka obecna dokładnie raz,
+  kopia oryginału zachowana, NVDA zrestartowane.
 - Publikacja: niewykonana i niedozwolona w nocnym etapie.

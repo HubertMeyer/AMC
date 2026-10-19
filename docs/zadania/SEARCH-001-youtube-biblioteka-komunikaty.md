@@ -1,6 +1,6 @@
 # SEARCH-001 — YouTube, Biblioteka i komunikaty wyszukiwania
 
-- Status: `W trakcie`
+- Status: `Wdrożone i zainstalowane w AMC Test; czeka na ręczny odbiór NVDA`
 - Utworzono: 18 października 2026
 - Obszar: wyszukiwanie Podcastów i YouTube, Biblioteka, NVDA i fokus
 - Polecenie uruchamiające: `Uruchom zadanie SEARCH-001`
@@ -194,8 +194,11 @@ brak rozbieżności powierzchni.
   katalogowych, jawne `add=True/False`, pojedyncze usunięcie filmu z `Media
   internetowe`, zmianę źródła podcastowego, komunikat w aktywnym regionie
   wyszukiwarki oraz zakaz użycia announcera głównego okna.
-- Nie wykonano jeszcze pełnej kompilacji, instalacji ani ręcznego odbioru z
-  NVDA, ponieważ etap powstał przed godziną 02:00 podczas trwającego nagrania.
+- Po bezpiecznej bramce nagrywania pełna regresja wxPython zakończyła się
+  wynikiem **1754 zaliczone, 110 pominiętych, 11 podtestów**. Paczkę
+  zbudowano, sprawdzono manifest i SHA-256, zainstalowano i uruchomiono.
+- Nie wykonano jeszcze ręcznego odbioru wyszukiwania z NVDA ani operacji na
+  prawdziwym koncie Spotify lub TIDAL.
 
 ## Znane ograniczenia
 
@@ -212,7 +215,8 @@ brak rozbieżności powierzchni.
 - Zmienione pliki:
   `wxlite/amc_wx_lite/gui.py` oraz
   `wxlite/tests/test_search_gui_navigation.py`.
-- Kompilacja AMC: niewykonana w tym etapie.
-- Instalacja AMC: nadal wersja
-  `2026.10.18-74cab87ec05e2f25e45e253f0fceae93efdcaff3-a3214a5e`.
+- Kompilacja AMC: Release, zaliczona bez ostrzeżeń i błędów.
+- Instalacja AMC:
+  `2026.10.19-e0f97512d1eee067d225d7b8c73b808ff3f3e561-c0e62181`;
+  manifest, sumy oraz uruchomienie zweryfikowane.
 - Publikacja: niewykonana i niedozwolona w nocnym etapie.

@@ -1,7 +1,6 @@
 # AMC02 — krótkie listy nagrywania i historia plików
 
-Status: **W trakcie; kod i testy źródłowe gotowe, czeka na bezpieczną
-kompilację, instalację i odbiór NVDA**.
+Status: **Wdrożone i zainstalowane w AMC Test; czeka na ręczny odbiór NVDA**.
 
 ## Zakres
 
@@ -95,6 +94,11 @@ kompilowania, instalowania ani uruchamiania AMC:
 - kontrola składni zmienionych modułów: zaliczona;
 - `git diff --check`: zaliczony; ostrzeżenia o planowanej normalizacji końców
   wierszy nie są błędem diffu.
+- Po 02:00 potwierdzono brak aktywnego harmonogramu, brak wzrostu
+  `.amc-partial` i brak blokady tych plików. Pełna regresja wxPython po
+  połączeniu etapów: **1754 zaliczone, 110 pominiętych, 11 podtestów**.
+- Paczka instalacyjna przeszła kontrolę manifestu i SHA-256, została
+  zainstalowana, a AMC Test uruchomiono z potwierdzoną tożsamością kompilacji.
 
 Testy potwierdzają krótkie etykiety bez nazw stacji i harmonogramów, brak
 osobnego licznika w niepustej Historii nagrywania, oddzielną pamięć zaznaczeń,
@@ -103,8 +107,8 @@ zgodność nazw i skrótów wykonania, pomocy i palety.
 
 ## Znane ograniczenia
 
-- Zmiana nie została jeszcze skompilowana ani zainstalowana. Nie przeprowadzono
-  jeszcze odsłuchu rzeczywistego NVDA; nagrywanie użytkownika ma pierwszeństwo.
+- Nie przeprowadzono jeszcze ręcznego odsłuchu rzeczywistego NVDA na obu
+  listach. Instalacja i testy automatyczne nie zastępują tego odbioru.
 - Wczesny stan „uruchamianie nagrania” może chwilowo użyć nazwy stacji, dopóki
   host nie poda nazwy tworzonego pliku.
 - Bitrate i rozmiar zależą od dostępności pliku i odpowiedzi hosta. Folder
@@ -116,7 +120,8 @@ zgodność nazw i skrótów wykonania, pomocy i palety.
 
 - Zmiana źródłowa: commit `de9814b6` — „Skróć listy nagrywania i uzupełnij
   informacje o folderze”.
-- Kompilacja: jeszcze niewykonana.
-- Instalacja: jeszcze niewykonana.
+- Kompilacja: Release, zaliczona bez ostrzeżeń i błędów.
+- Instalacja: `2026.10.19-e0f97512d1eee067d225d7b8c73b808ff3f3e561-c0e62181`,
+  manifest, sumy i uruchomienie zweryfikowane 19 października 2026.
 - Publikacja: niewykonana i niedozwolona w tym etapie.
 
