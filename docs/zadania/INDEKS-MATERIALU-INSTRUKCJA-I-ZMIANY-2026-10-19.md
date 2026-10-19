@@ -9,9 +9,10 @@ użytkownika. Nie zmienia statusu ręcznego odbioru NVDA poszczególnych funkcji
 ## Punkt odniesienia wersji
 
 - Najnowsza zainstalowana i uruchomiona paczka AMC Test:
-  `2026.10.19-0c098eb5dde2b039f5d6f86c415559d63c84adcc-9e2be1b9`.
-- Poprawki z commitu `4b85e0c8` należą do powyższej instalacji. Ręczny odbiór
-  harmonogramów, menu i playlist Spotify nadal pozostaje otwarty.
+  `2026.10.19-c3ffea70d9f002d936bbabd43421b03393c9702d-a329942c`.
+- Zawiera dostępne okna kont Spotify i TIDAL oraz kontekstowy `Ctrl+F5` z
+  commitu `c3ffea7`. Ręczny odbiór NVDA, OAuth i playlist Spotify pozostaje
+  otwarty.
 - Fundament profili AMC12 został skompilowany i sprawdzony; zbudowano czystą
   paczkę publiczną oraz lokalny instalator z kontrolą integralności. Nie
   zainstalowano ich i nie opublikowano.
@@ -132,8 +133,8 @@ użytkownika. Nie zmienia statusu ręcznego odbioru NVDA poszczególnych funkcji
 - Nie oznaczać ręcznych testów NVDA jako zaliczonych, dopóki użytkownik ich nie
   potwierdzi.
 - Nie przedstawiać testów atrap Spotify/TIDAL jako próby prawdziwego konta.
-- Nie przedstawiać gotowego w źródłach okna konta jako zainstalowanego ani
-  odebranego, dopóki nie przejdzie bezpiecznej promocji i ręcznej próby OAuth.
+- Okna kont są zainstalowane, ale nie przedstawiać ich jako odebranych, dopóki
+  nie przejdą ręcznej próby NVDA i OAuth.
 - Korekta `4b85e0c8` jest zainstalowana; nadal nie przedstawiać jej jako
   odebranej z NVDA ani sprawdzonej zapisem na prawdziwym koncie Spotify.
 - Druga korekta harmonogramów i nazwy `Alt+D` jest zainstalowana w AMC Test w

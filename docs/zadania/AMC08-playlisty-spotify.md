@@ -1,8 +1,8 @@
 # AMC08 — natywne playlisty Spotify
 
-Status: **Kod playlist jest zainstalowany, a dostępne ponowne logowanie konta
-jest gotowe w źródłach, testach i kompilacji. Wymaga instalacji oraz świadomego
-odbioru OAuth i zapisu na prawdziwym koncie.**
+Status: **Kod playlist i dostępne ponowne logowanie konta są zainstalowane w
+AMC Test. Wymagają świadomego odbioru OAuth, NVDA i zapisu na prawdziwym
+koncie.**
 
 Źródło decyzji: zatwierdzona analiza historyczna tylko do odczytu
 `D:\Projekty Codex\Accessible Multimedia Controller\AMC08_PLAYLISTY_SPOTIFY_2026-10-18.md`.
@@ -112,6 +112,13 @@ odbioru OAuth i zapisu na prawdziwym koncie.**
   ustawień: **3/3 zestawy zaliczone**. Kompilacje Release testów protokołu i
   LiteHost zakończyły się bez ostrzeżeń i błędów. Nie otwierano przeglądarki,
   nie wykonywano OAuth ani operacji na prawdziwym koncie.
+- Poszerzona regresja wspólnego katalogu poleceń, palety, Menedżera sesji,
+  Spotify, TIDAL i WiiM: **191/191 zaliczonych**. Skrypt promocji zbudował
+  1667 plików, zweryfikował manifest oraz SHA-256 kandydata i instalacji,
+  zastosował aktualizację, a niezależne uruchomienie potwierdziło uruchamiacz,
+  LiteHost i okno właściwej wersji. Pierwsze wywołanie przez Windows
+  PowerShell 5 zatrzymało się przed budową z powodu kodowania skryptu; właściwa
+  promocja w PowerShell 7 zakończyła się powodzeniem.
 
 - 19 października 2026, diagnoza bez mutacji konta: odczytano wyłącznie nazwy
   przyznanych zakresów z lokalnego profilu. Obecne są zakresy odczytu playlist,
@@ -178,9 +185,9 @@ odbioru OAuth i zapisu na prawdziwym koncie.**
 
 ## Znane ograniczenia
 
-- Wejście ponownego logowania jest na razie potwierdzone w źródłach, testach i
-  kompilacji, lecz nie zostało jeszcze zainstalowane ani ręcznie odebrane z
-  NVDA. Stary token nadal nie uzyska nowych zakresów bez świadomego OAuth.
+- Wejście ponownego logowania jest zainstalowane, lecz nie zostało jeszcze
+  ręcznie odebrane z NVDA ani prawdziwym kontem. Stary token nadal nie uzyska
+  nowych zakresów bez świadomego OAuth.
 - Trwającego OAuth nie można jeszcze anulować przyciskiem okna AMC; do wyniku
   albo limitu czasu okno pozostaje otwarte. Hasła i tokeny nadal nie trafiają
   do interfejsu Python.
@@ -214,9 +221,11 @@ odbioru OAuth i zapisu na prawdziwym koncie.**
 
 ## Wersja i commit
 
-- Dostępne konta Spotify i TIDAL oraz kontekstowy `Ctrl+F5`: zmiana źródłowa,
-  testy i kompilacja z 19 października 2026; commit oraz wersja instalacji
-  zostaną dopisane po bezpiecznej promocji. Publikacji nie wykonano.
+- Dostępne konta Spotify i TIDAL oraz kontekstowy `Ctrl+F5`: commit `c3ffea7`
+  (`feat(amc): dodaj konta Spotify i TIDAL pod Ctrl+F5`).
+- Instalacja i uruchomienie: potwierdzone dla
+  `2026.10.19-c3ffea70d9f002d936bbabd43421b03393c9702d-a329942c` w
+  `D:\Projekty Codex\AMC Python`. Publikacji nie wykonano.
 
 - Korekta po odbiorze: `4b85e0c8` — kod, testy wxPython i test hosta C#;
   pełny pakiet AMC Test zbudowano, zainstalowano i uruchomiono.

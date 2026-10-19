@@ -97,9 +97,8 @@ zmian, wymagający korekty użytkownika:
   Zatwierdzona specyfikacja:
   `D:\Projekty Codex\Accessible Multimedia Controller\AMC13_TIMESHIFT_RADIA_2026-10-18.md`.
   Eksport fragmentów Time Shiftu pozostaje późniejszym rozszerzeniem.
-- `AMC08` — **Kod playlist jest zainstalowany; dostępne wejście ponownego OAuth
-  jest gotowe w źródłach, testach i kompilacji, czeka na instalację oraz
-  świadomy odbiór prawdziwego konta**
+- `AMC08` — **Kod playlist i dostępne wejście ponownego OAuth są zainstalowane;
+  czekają na świadomy odbiór NVDA i prawdziwego konta**
   — natywne playlisty
   Spotify w AMC Test: `Ctrl+P`, `Ctrl+Shift+P`, pobranie katalogu raz na
   uruchomienie, natychmiastowa widoczność nowej playlisty i zapamiętanie
@@ -108,8 +107,8 @@ zmian, wymagający korekty użytkownika:
   `AMC08-playlisty-spotify.md`. Zatwierdzona specyfikacja:
   `D:\Projekty Codex\Accessible Multimedia Controller\AMC08_PLAYLISTY_SPOTIFY_2026-10-18.md`.
   Historyczne źródła są tylko wzorcem; kod powstaje w tym repozytorium.
-- `AMC09` — **Menedżer jest zainstalowany; rozszerzenie Konfiguruj i `Ctrl+F5`
-  dla Spotify, TIDAL i WiiM czeka na instalację i ręczny odbiór NVDA** — dostępny
+- `AMC09` — **Menedżer oraz rozszerzenie Konfiguruj i `Ctrl+F5` dla Spotify,
+  TIDAL i WiiM są zainstalowane; czekają na ręczny odbiór NVDA i usług** — dostępny
   Menedżer sesji pod `Ctrl+Shift+S`, włączanie Spacją, zwarta kolejność
   `Ctrl+1–9`, zmiana kolejności `Alt+strzałkami`, stan gotowości i stała nazwa
   `Radio`. Ma działać już w AMC Test; profil publiczny będzie później filtrował

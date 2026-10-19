@@ -1,8 +1,8 @@
 # AMC09 — Menedżer sesji i zwarta numeracja
 
-Status: **Menedżer jest zainstalowany; rozszerzenie Konfiguruj i `Ctrl+F5` dla
-kont Spotify, TIDAL i urządzeń WiiM jest gotowe w źródłach, testach i
-kompilacji oraz czeka na instalację i ręczny odbiór NVDA**
+Status: **Menedżer oraz rozszerzenie Konfiguruj i `Ctrl+F5` dla kont Spotify,
+TIDAL i urządzeń WiiM są zainstalowane w AMC Test; czekają na ręczny odbiór
+NVDA i usług**
 
 Data realizacji: 2026-10-19
 
@@ -93,6 +93,10 @@ Historyczny projekt został użyty tylko jako materiał do odczytu.
   **3/3** zestawy protokołu .NET zaliczone. Kompilacje Release testów protokołu
   i LiteHost zakończyły się bez ostrzeżeń i błędów. Testy nie otwierały
   przeglądarki, nie logowały kont i nie wysyłały poleceń do urządzeń.
+- Poszerzona regresja poleceń i sesji: **191/191 zaliczonych**. Promocja
+  zbudowała 1667 plików, potwierdziła manifest i sumy SHA-256 kandydata oraz
+  instalacji, a następnie uruchomiła właściwy profil AMC Test. Niezależna
+  kontrola po promocji potwierdziła działający uruchamiacz, LiteHost i okno.
 
 - Testy ukierunkowane modelu, magazynu, skrótów, palety, GUI i dostępnych
   etykiet: **94 zaliczone**.
@@ -122,8 +126,8 @@ Historyczny projekt został użyty tylko jako materiał do odczytu.
 - Prawdziwe logowanie Spotify, TIDAL i Sonos oraz odświeżenie rzeczywistego WiiM
   wymagają świadomej próby użytkownika. Automaty tej nocy nie otwierały
   przeglądarki, nie logowały kont i nie wysyłały poleceń do urządzeń.
-- Rozszerzenie okna konta i `Ctrl+F5` nie jest jeszcze częścią zainstalowanej
-  paczki. Trwającego OAuth nie można jeszcze anulować z okna AMC.
+- Trwającego OAuth nie można jeszcze anulować z okna AMC; okno pozostaje
+  otwarte do wyniku albo limitu czasu.
 - Stan Spotify jest „Połączona” dopiero po odczycie konta w bieżącym procesie;
   przed nim Menedżer uczciwie pokazuje „Wymaga zalogowania”. TIDAL może użyć
   istniejącej lokalnej migawki Biblioteki, ale nie pobiera jej w tle.
@@ -156,9 +160,11 @@ Historyczny projekt został użyty tylko jako materiał do odczytu.
 
 ## Wersja i commit
 
-- Rozszerzenie `Ctrl+F5` oraz kont Spotify i TIDAL: zmiana źródłowa, testy i
-  kompilacja z 19 października 2026; commit i wersja instalacji zostaną
-  dopisane po bezpiecznej promocji. Publikacji nie wykonano.
+- Rozszerzenie `Ctrl+F5` oraz kont Spotify i TIDAL: commit `c3ffea7`
+  (`feat(amc): dodaj konta Spotify i TIDAL pod Ctrl+F5`).
+- Instalacja i uruchomienie: potwierdzone dla
+  `2026.10.19-c3ffea70d9f002d936bbabd43421b03393c9702d-a329942c` w
+  `D:\Projekty Codex\AMC Python`. Publikacji nie wykonano.
 
 - Kod i testy źródłowe: commit `dece7646` (`feat(amc09): dodaj menedzer sesji`).
 - Dokumentacja wyniku i wersja użyta do instalacji: commit `6c79bdd3`
