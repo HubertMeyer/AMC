@@ -1066,7 +1066,7 @@ public sealed class RadioMediaOutput(int timeshiftMinutes, bool audible = true)
         }
     }
 
-    internal bool TryGetBufferedSeekPosition(int percentage, out TimeSpan position)
+    public bool TryGetBufferedSeekPosition(int percentage, out TimeSpan position)
     {
         lock (_gate)
         {

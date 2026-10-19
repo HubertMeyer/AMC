@@ -81,10 +81,11 @@ zmian, wymagający korekty użytkownika:
   [AMC05-odtwarzany-element-na-listach.md](AMC05-odtwarzany-element-na-listach.md).
   Zatwierdzona specyfikacja:
   `D:\Projekty Codex\Accessible Multimedia Controller\AMC05_ODTWARZANY_ELEMENT_NA_LISTACH_2026-10-18.md`.
-- `AMC13` — **Wdrożone i zainstalowane w AMC Test; czeka na ręczny odbiór
-  NVDA** — `End` w otwartym odtwarzaczu Time Shiftu wraca na żywo i do tempa
-  normalnego, a `NVDA+End` pozostaje poleceniem czytnika. Bieżący zapis
-  realizacji:
+- `AMC13` — **Rozszerzenie skoków procentowych gotowe w źródłach i testach;
+  instalacja nadal zawiera wcześniejszą poprawkę End** — `End` w otwartym
+  odtwarzaczu Time Shiftu wraca na żywo i do tempa normalnego, `NVDA+End`
+  pozostaje poleceniem czytnika, a cyfry `0`–`9` przechodzą do 0–90%
+  aktualnego bufora. Bieżący zapis realizacji:
   [AMC13-timeshift-end-na-zywo.md](AMC13-timeshift-end-na-zywo.md).
   Zatwierdzona specyfikacja:
   `D:\Projekty Codex\Accessible Multimedia Controller\AMC13_TIMESHIFT_RADIA_2026-10-18.md`.

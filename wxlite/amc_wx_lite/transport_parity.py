@@ -544,6 +544,24 @@ class MessagePolicy:
             return None
         return self.percent_text(percent, position_seconds=position_seconds)
 
+    def radio_percent_seek_text(
+        self,
+        percent: int,
+        *,
+        position_seconds: float | None,
+        duration_seconds: float | None,
+    ) -> str | None:
+        """Komunikat cyfr 0–9 odnosi do aktualnego bufora Time Shift."""
+        if duration_seconds is None or duration_seconds <= 0:
+            return "Skok procentowy niedostępny: bufor transmisji jest pusty lub niegotowy"
+        if not self.announces_percent_seek:
+            return None
+        if self.percent_announcement is PercentAnnouncement.TIME:
+            return f"Pozycja w buforze: {format_clock(position_seconds)}"
+        if self.percent_announcement is PercentAnnouncement.PERCENT_AND_TIME:
+            return f"{percent}% bufora, {format_clock(position_seconds)}"
+        return f"{percent}% bufora"
+
     def volume_text(self, value: int, *, muted: bool = False) -> str | None:
         """``Volume`` (``cs:567-575``). Wyciszenie ma zdanie POZA szablonem.
 

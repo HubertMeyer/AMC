@@ -43,6 +43,22 @@ def test_host_client_uses_dedicated_radio_operation() -> None:
     assert calls == [("radio.jumpLive", {"sessionId": "radio"})]
 
 
+def test_host_client_uses_dedicated_timeshift_percentage_operation() -> None:
+    calls: list[tuple[str, dict]] = []
+    client = object.__new__(LiteHostClient)
+    client.call = lambda operation, args=None, **_kwargs: calls.append(
+        (operation, args or {})
+    ) or {"bufferPositionSeconds": 90.0, "bufferedSeconds": 180.0}
+
+    assert client.radio_seek_percent(50) == {
+        "bufferPositionSeconds": 90.0,
+        "bufferedSeconds": 180.0,
+    }
+    assert calls == [
+        ("radio.seekPercent", {"sessionId": "radio", "percentage": 50})
+    ]
+
+
 class _Runner:
     def __init__(self) -> None:
         self.name = ""

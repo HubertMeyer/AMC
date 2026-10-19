@@ -26,7 +26,7 @@ install_wx_stub()
 from amc_wx_lite import gui  # noqa: E402  (zastepnik wx musi byc pierwszy)
 from amc_wx_lite.navigation import SessionId  # noqa: E402
 from amc_wx_lite.shortcuts import Action  # noqa: E402
-from amc_wx_lite.transport_parity import MessagePolicy  # noqa: E402
+from amc_wx_lite.transport_parity import MessagePolicy, PercentAnnouncement  # noqa: E402
 
 
 class FakeRunner:
@@ -60,10 +60,12 @@ def make_frame(
         "durationSeconds": 600.0,
     }
     frame.runner = FakeRunner(payload)
+    frame.navigator = SimpleNamespace(active=SessionId.FILES)
     seeks: list[dict] = []
     frame.client = SimpleNamespace(
         seek_by=lambda seconds, _session_id=None: seeks.append({"delta": seconds}),
         seek_to_position=lambda seconds, _session_id=None: seeks.append({"position": seconds}),
+        radio_seek_percent=lambda percentage: seeks.append({"radioPercentage": percentage}),
         set_rate=lambda rate, _session_id=None: seeks.append({"rate": rate}),
         set_volume=lambda value, _session_id=None: seeks.append({"volume": value}),
     )
@@ -198,6 +200,34 @@ def test_skok_procentowy_bez_czasu_trwania_mowi_o_tym_zawsze() -> None:
     frame._dispatch(Action.SEEK_PERCENT_50)
     assert seeks == []
     assert spoken == ["Skok procentowy niedostępny: czas trwania jest nieznany"]
+
+
+def test_skok_procentowy_radia_uzywa_aktualnego_bufora_timeshift() -> None:
+    frame, spoken, seeks = make_frame(
+        payload={
+            "positionSeconds": 3720.0,
+            "bufferPositionSeconds": 120.0,
+            "bufferedSeconds": 240.0,
+        },
+    )
+    frame.navigator.active = SessionId.RADIO
+
+    frame._dispatch(Action.SEEK_PERCENT_50)
+
+    assert seeks == [{"radioPercentage": 50}]
+    assert spoken == ["50% bufora"]
+
+
+def test_skok_procentowy_radia_szanuje_tryb_procent_i_czas() -> None:
+    frame, spoken, _ = make_frame(
+        MessagePolicy(percent_announcement=PercentAnnouncement.PERCENT_AND_TIME),
+        payload={"bufferPositionSeconds": 75.0, "bufferedSeconds": 150.0},
+    )
+    frame.navigator.active = SessionId.RADIO
+
+    frame._dispatch(Action.SEEK_PERCENT_50)
+
+    assert spoken == ["50% bufora, 1:15"]
 
 
 # ------------------------------------------------------------- czasy na zadanie

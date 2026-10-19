@@ -20708,6 +20708,14 @@ class LiteFrame(wx.Frame):
                 return
             self._sonos_transport("seekRelative", seconds=delta)
             return
+        if self.navigator.active is SessionId.RADIO:
+            self.runner.submit(
+                "radio-seek-percent",
+                lambda: client.radio_seek_percent(percent),
+                lambda payload: self._announce_radio_seek_percent(percent, payload),
+                lambda error: self.announcer.say(f"Nie mogę przewinąć: {error}"),
+            )
+            return
         duration = self._last_status.get("durationSeconds")
         if not isinstance(duration, (int, float)) or duration <= 0:
             # cs:546-551 -- brak czasu trwania to blad wykonania, mowiony
@@ -20733,6 +20741,16 @@ class LiteFrame(wx.Frame):
             percent,
             position_seconds=(payload or {}).get("positionSeconds"),
             duration_seconds=duration,
+        )
+        if text is not None and self.messages.speaks_routine:
+            self.announcer.say(text)
+
+    def _announce_radio_seek_percent(self, percent: int, payload: dict | None) -> None:
+        result = payload or {}
+        text = self.messages.radio_percent_seek_text(
+            percent,
+            position_seconds=result.get("bufferPositionSeconds"),
+            duration_seconds=result.get("bufferedSeconds"),
         )
         if text is not None and self.messages.speaks_routine:
             self.announcer.say(text)

@@ -352,6 +352,7 @@ internal sealed class LiteEngineHandlers : IDisposable
             ["transport.stop"] = (request, _) => StopTransport(request.Args),
             ["transport.seek"] = (request, _) => Seek(request.Args),
             ["radio.jumpLive"] = (request, _) => JumpRadioToLive(request.Args),
+            ["radio.seekPercent"] = (request, _) => SeekRadioPercent(request.Args),
             ["transport.setVolume"] = (request, _) => SetVolume(request.Args),
             ["transport.setRate"] = (request, _) => SetRate(request.Args),
             ["transport.status"] = (request, _) => Status(request.Args),
@@ -2480,6 +2481,47 @@ internal sealed class LiteEngineHandlers : IDisposable
             bufferedSeconds = _radio.BufferedDuration.TotalSeconds,
             behindLiveSeconds = _radio.BehindLive.TotalSeconds,
             rate = 1d
+        };
+    }
+
+    private object SeekRadioPercent(JsonElement args)
+    {
+        var target = ResolveTransportTarget(args);
+        if (target.Engine != "radio")
+            throw new LiteRequestException(
+                "Skok po buforze Time Shift jest dostępny tylko w Radiu.");
+
+        var percentage = LiteArgs.ReadInt(args, "percentage", -1, 0, 100);
+        MediaItem item;
+        lock (_gate)
+        {
+            item = _radioItem ?? throw new LiteRequestException(
+                "Radio nie ma otwartej transmisji.");
+            if (!_radioPlaying)
+                throw new LiteRequestException("Radio nie odtwarza transmisji.");
+            _activeEngine = "radio";
+        }
+
+        if (!_radio.TryGetBufferedSeekPosition(percentage, out var position))
+            throw new LiteRequestException(
+                "Skok procentowy niedostępny: bufor transmisji jest pusty lub niegotowy.");
+
+        _radio.Seek(position);
+        var buffered = _radio.BufferedDuration;
+        var offset = buffered - _radio.BehindLive;
+        if (offset < TimeSpan.Zero) offset = TimeSpan.Zero;
+        return new
+        {
+            engine = "radio",
+            sessionId = target.SessionId,
+            id = item.Id,
+            title = item.Title,
+            percentage,
+            positionSeconds = _radio.Position.TotalSeconds,
+            bufferPositionSeconds = offset.TotalSeconds,
+            bufferedSeconds = buffered.TotalSeconds,
+            behindLiveSeconds = _radio.BehindLive.TotalSeconds,
+            rate = _radioRate
         };
     }
 

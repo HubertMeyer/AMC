@@ -448,6 +448,14 @@ class LiteHostClient:
 
         return self.call("radio.jumpLive", {"sessionId": "radio"})
 
+    def radio_seek_percent(self, percentage: int) -> Any:
+        """Przejdź do procentu aktualnego okna bufora Time Shift."""
+
+        return self.call(
+            "radio.seekPercent",
+            {"sessionId": "radio", "percentage": max(0, min(100, int(percentage)))},
+        )
+
     def set_volume(self, volume: int, session_id: str | None = None) -> Any:
         return self.call(
             "transport.setVolume",
