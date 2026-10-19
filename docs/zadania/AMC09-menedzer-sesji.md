@@ -185,6 +185,13 @@ Historyczny projekt został użyty tylko jako materiał do odczytu.
 
 ## Porządek dysku
 
+- Po testach tej korekty usunięto wyłącznie utworzony przez nią katalog
+  `C:\Users\micha\Documents\Codex\2026-10-18\ma\.amc-temp-ctrl-f5`:
+  283 odtwarzalne pliki testowe, około 0,39 MB. Usunięcie jest lokalnie
+  nieodwracalne, lecz nie obejmowało źródeł ani danych użytkownika.
+- Zachowano sprawdzoną paczkę kandydującą w projektowym `.test-output`, bo
+  instalacja nie została ukończona. Nie usuwano zastanych `.test-output` ani
+  `.test-tmp` i nie traktowano ich jako śmieci bez potwierdzenia pochodzenia.
 - Po potwierdzonej instalacji usunięto wyłącznie katalog roboczy etapu
   `C:\Users\micha\Documents\Codex\2026-10-18\ma\work\amc09` (27 plików,
   około 1,6 MB) oraz odtwarzalne katalogi `bin\Release` trzech budowanych
