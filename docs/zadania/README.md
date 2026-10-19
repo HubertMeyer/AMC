@@ -69,13 +69,18 @@ jawnym poleceniu użytkownika albo przez osobno uzgodniony harmonogram.
   `D:\Projekty Codex\Accessible Multimedia Controller\AMC03_AUDYT_SKROTOW_2026-10-18.md`
   oraz `AMC04_REALIZACJA_ETAP_A_2026-10-18.md`. Stare źródła WPF służą tylko
   jako wzorzec; właściwe wdrożenie wykonujemy w tym repozytorium.
-- `AMC05` — **Oczekuje, zlecone do nocnej realizacji** — stan `Odtwarzane` lub
-  `Wstrzymane` na właściwych listach bez utraty etykiety i bez przestawiania
-  fokusa. Zatwierdzona specyfikacja:
+- `AMC05` — **Kod i testy zakończone; czeka na instalację i ręczny odbiór
+  NVDA** — stan `Odtwarzane` lub `Wstrzymane` na właściwych listach bez utraty
+  etykiety i bez przestawiania fokusa. Bieżący zapis realizacji:
+  [AMC05-odtwarzany-element-na-listach.md](AMC05-odtwarzany-element-na-listach.md).
+  Zatwierdzona specyfikacja:
   `D:\Projekty Codex\Accessible Multimedia Controller\AMC05_ODTWARZANY_ELEMENT_NA_LISTACH_2026-10-18.md`.
-- `AMC13` — **Oczekuje, zlecona naprawa regresji End** — `End` w otwartym
-  odtwarzaczu Time Shiftu wraca na żywo i do tempa normalnego, a `NVDA+End`
-  pozostaje poleceniem czytnika. Zatwierdzona specyfikacja:
+- `AMC13` — **Kod i testy zakończone; czeka na instalację i ręczny odbiór
+  NVDA** — `End` w otwartym odtwarzaczu Time Shiftu wraca na żywo i do tempa
+  normalnego, a `NVDA+End` pozostaje poleceniem czytnika. Bieżący zapis
+  realizacji:
+  [AMC13-timeshift-end-na-zywo.md](AMC13-timeshift-end-na-zywo.md).
+  Zatwierdzona specyfikacja:
   `D:\Projekty Codex\Accessible Multimedia Controller\AMC13_TIMESHIFT_RADIA_2026-10-18.md`.
   Eksport fragmentów Time Shiftu pozostaje późniejszym rozszerzeniem.
 - `AMC08` — **Wdrożone i zainstalowane w AMC Test; czeka na ręczny odbiór NVDA
