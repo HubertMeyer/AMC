@@ -171,12 +171,14 @@ internal static class Program
                 // Oficjalny katalog TIDAL wykonuje siec i odswiezenie tokenu,
                 // ale nie moze blokowac transportu ani nagrywania radia.
                 LiteTidalCatalogContract.SearchOperation,
+                LiteTidalCatalogContract.LoginOperation,
                 LiteTidalCatalogContract.ContainerItemsOperation,
                 LiteTidalCatalogContract.CollectionViewOperation,
                 LiteTidalCatalogContract.MembershipOperation,
                 // Spotify uses the same authenticated Web API pattern, but
                 // this first layer contains reads only and never starts OAuth.
                 LiteSpotifyCatalogContract.SearchOperation,
+                LiteSpotifyCatalogContract.LoginOperation,
                 LiteSpotifyCatalogContract.ContainerItemsOperation,
                 LiteSpotifyCatalogContract.CollectionViewOperation,
                 LiteSpotifyCatalogContract.MembershipOperation,

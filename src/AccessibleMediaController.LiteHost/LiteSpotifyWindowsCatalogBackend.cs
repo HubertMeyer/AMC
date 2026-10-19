@@ -12,10 +12,12 @@ namespace AccessibleMediaController.LiteHost;
 
 /// <summary>
 /// Windows adapter around the already tested Spotify API implementation.
-/// It never starts login or disconnect; explicit collection mutations reuse
-/// stored credentials and are confirmed by the API before returning.
+/// Login starts only after an explicit account command. Collection mutations
+/// reuse stored credentials and are confirmed by the API before returning.
 /// </summary>
-internal sealed class LiteSpotifyWindowsCatalogBackend : ILiteSpotifyWriteBackend
+internal sealed class LiteSpotifyWindowsCatalogBackend :
+    ILiteSpotifyWriteBackend,
+    ILiteSpotifyAccountBackend
 {
     private const string CatalogCredentialTarget = "AccessibleMediaController/Spotify";
     private const string PlaybackCredentialTarget =
@@ -30,14 +32,37 @@ internal sealed class LiteSpotifyWindowsCatalogBackend : ILiteSpotifyWriteBacken
     private readonly SpotifySettings _settings;
     private readonly SpotifyIntegrationService _integration;
     private readonly SpotifyApiClient _api = new();
+    private readonly string _statePath;
 
     public LiteSpotifyWindowsCatalogBackend(string statePath)
     {
+        _statePath = Path.GetFullPath(statePath);
         _settings = ReadSettings(statePath);
         CachedCollection = _settings.CachedCollectionItems
             .Select(item => item.ToMediaItem())
             .ToArray();
         _integration = new SpotifyIntegrationService(_settings);
+    }
+
+    public async Task<LiteSpotifyLoginOutcome> LoginAsync(
+        CancellationToken cancellationToken)
+    {
+        if (!_integration.IsConfigured)
+            throw new LiteSpotifyBackendException(LiteSpotifyFailureReason.NotConfigured);
+        try
+        {
+            var profile = await _integration.LoginAsync(cancellationToken)
+                .ConfigureAwait(false);
+            // Token pozostaje wyłącznie w Menedżerze poświadczeń Windows.
+            // Do profilu zapisujemy tylko jawne ustawienia, nazwę konta,
+            // rodzaj planu i faktycznie przyznane zakresy.
+            LiteAccountSettingsStore.UpdateSection(_statePath, "spotify", _settings);
+            return new LiteSpotifyLoginOutcome(profile.DisplayName, profile.Product);
+        }
+        catch (Exception exception)
+        {
+            throw Translate(exception, cancellationToken);
+        }
     }
 
     public IReadOnlyList<MediaItem> CachedCollection { get; }

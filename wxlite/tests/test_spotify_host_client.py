@@ -33,6 +33,15 @@ def test_spotify_static_reads_send_no_account_or_authentication_data() -> None:
     ]
 
 
+def test_spotify_login_is_a_named_explicit_operation_without_credentials() -> None:
+    client, calls = recording_client()
+
+    client.spotify_login()
+
+    assert calls == [("spotify.login", None, 360.0)]
+    assert "token" not in repr(calls).casefold()
+
+
 def test_spotify_collection_view_sends_view_and_cumulative_page_size() -> None:
     client, calls = recording_client()
 

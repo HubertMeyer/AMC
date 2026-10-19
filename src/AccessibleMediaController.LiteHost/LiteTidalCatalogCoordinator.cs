@@ -10,8 +10,8 @@ namespace AccessibleMediaController.LiteHost;
 /// <summary>
 /// Czytelnik katalogu TIDAL dla wxPython. Korzysta z tego samego klienta API,
 /// tego samego odswiezania tokenu i tego samego Menedzera poswiadczen Windows
-/// co glowne AMC. Profil jest otwierany wylacznie do odczytu; token nigdy nie
-/// trafia do odpowiedzi protokolu.
+/// co glowne AMC. Token nigdy nie trafia do odpowiedzi protokolu. Jawnie
+/// wywolane logowanie zapisuje go tylko w Menedzerze poswiadczen Windows.
 /// </summary>
 internal sealed class LiteTidalCatalogCoordinator(string statePath) : IDisposable
 {
@@ -24,8 +24,53 @@ internal sealed class LiteTidalCatalogCoordinator(string statePath) : IDisposabl
     private readonly object _gate = new();
     private readonly object _collectionGate = new();
     private TidalIntegrationService? _integration;
+    private TidalSettings? _settings;
     private IReadOnlyList<MediaItem>? _collectionSnapshot;
     private bool _collectionSyncAttempted;
+
+    public object AccountStatus()
+    {
+        var integration = RequireIntegration();
+        var settings = _settings!;
+        return LiteTidalCatalogContract.CreateAccountStatus(
+            integration.IsConfigured,
+            integration.HasStoredLogin,
+            settings.AccountDisplayName);
+    }
+
+    public object Login()
+    {
+        var integration = RequireIntegration();
+        var settings = _settings!;
+        if (!integration.IsConfigured)
+            throw new LiteRequestException(
+                "Konto TIDAL nie jest skonfigurowane. Uzupełnij identyfikator aplikacji w ustawieniach AMC.");
+        try
+        {
+            integration.LoginAsync(CancellationToken.None)
+                .GetAwaiter()
+                .GetResult();
+            LiteAccountSettingsStore.UpdateSection(statePath, "tidal", settings);
+            return LiteTidalCatalogContract.CreateLoginResult(settings.AccountDisplayName);
+        }
+        catch (OperationCanceledException)
+        {
+            throw new LiteRequestException("Logowanie TIDAL zostało anulowane.");
+        }
+        catch (HttpRequestException)
+        {
+            throw new LiteRequestException(
+                "Nie udało się połączyć z TIDAL. Sprawdź połączenie z internetem i spróbuj ponownie.");
+        }
+        catch (InvalidOperationException exception)
+        {
+            throw new LiteRequestException(exception.Message);
+        }
+        catch
+        {
+            throw new LiteRequestException("Nie udało się zalogować konta TIDAL.");
+        }
+    }
 
     public object Search(JsonElement args)
     {
@@ -116,6 +161,7 @@ internal sealed class LiteTidalCatalogCoordinator(string statePath) : IDisposabl
         {
             if (_integration is not null) return _integration;
             var settings = ReadSettings();
+            _settings = settings;
             var integration = new TidalIntegrationService(settings);
             var cached = settings.CachedCollectionItems
                 .Select(item => item.ToMediaItem())

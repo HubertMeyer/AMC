@@ -10,6 +10,7 @@ internal static class SpotifyCatalogContractTests
     public static void Run()
     {
         CapabilitiesDescribeOneReadOnlySession();
+        LoginResultContainsOnlyUserFacingState();
         PlaybackRequestAcceptsOnlyTracksAndEpisodes();
         AccountStatusKeepsCatalogueAndPlaybackSeparate();
         MissingClientIdIsAnExplicitSafeState();
@@ -52,6 +53,23 @@ internal static class SpotifyCatalogContractTests
             "kontrakt nie rozdziela odtwarzania od mutacji i logowania");
         Check(!json.Contains("spotifyLibrespot", StringComparison.OrdinalIgnoreCase),
             "historyczna druga sesja wyciekła do kontraktu");
+        var withLogin = LiteSpotifyCatalogContract.CreateCapabilities(login: true);
+        Check(withLogin.Login, "adapter konta nie ujawnia dostępnego logowania");
+    }
+
+    private static void LoginResultContainsOnlyUserFacingState()
+    {
+        var result = LiteSpotifyCatalogContract.CreateLoginResult(
+            "  Michał\r\nPróba  ",
+            "premium");
+        var json = LiteJson.Serialize(result);
+        Check(result.Connected
+            && result.Message.Contains("MichałPróba", StringComparison.Ordinal)
+            && result.Message.Contains("Premium", StringComparison.Ordinal),
+            "wynik logowania Spotify nie ma bezpiecznej informacji dla użytkownika");
+        Check(!json.Contains("token", StringComparison.OrdinalIgnoreCase)
+            && !json.Contains("scope", StringComparison.OrdinalIgnoreCase),
+            "wynik logowania Spotify ujawnia dane techniczne");
     }
 
     private static void PlaybackRequestAcceptsOnlyTracksAndEpisodes()

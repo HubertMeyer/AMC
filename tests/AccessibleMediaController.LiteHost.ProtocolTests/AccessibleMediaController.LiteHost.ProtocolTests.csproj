@@ -34,5 +34,7 @@
              Link="LiteSonosOwnStreamsExport.cs" />
     <Compile Include="..\..\src\AccessibleMediaController.LiteHost\LiteSpotifyCatalogCoordinator.cs"
              Link="LiteSpotifyCatalogCoordinator.cs" />
+    <Compile Include="..\..\src\AccessibleMediaController.LiteHost\LiteAccountSettingsStore.cs"
+             Link="LiteAccountSettingsStore.cs" />
   </ItemGroup>
 </Project>

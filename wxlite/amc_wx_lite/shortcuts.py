@@ -1178,6 +1178,7 @@ PODCAST_SESSION_VIEW: dict[str, Action] = {
 
 
 TIDAL_SESSION_VIEW: dict[str, Action] = {
+    "Ctrl+F5": Action.SESSION_CONFIGURE_CURRENT,
     "Ctrl+Shift+L": Action.TIDAL_TOGGLE_LIBRARY,
     "Ctrl+Shift+U": Action.TIDAL_TOGGLE_FAVORITE,
 }
@@ -1201,6 +1202,7 @@ SPOTIFY_LIST_VIEW: dict[str, Action] = {
 # Są sesyjne, więc działają również z odtwarzacza Spotify i nie odbierają
 # tych samych klawiszy innym usługom.
 SPOTIFY_SESSION_VIEW: dict[str, Action] = {
+    "Ctrl+F5": Action.SESSION_CONFIGURE_CURRENT,
     "Ctrl+U": Action.SPOTIFY_VIEW_LIKED,
     "Ctrl+Shift+A": Action.SPOTIFY_VIEW_ALBUMS,
     "Ctrl+Shift+W": Action.SPOTIFY_VIEW_ARTISTS,
@@ -1233,6 +1235,9 @@ TIDAL_COLLECTION_LIST_VIEW: dict[str, Action] = {
 # plik playlisty i zapisuje znalezione strumienie w AMC. Zapisane strumienie
 # nie potrzebują już osobnego skrótu: są drugim elementem Biblioteki źródeł.
 WIIM_SESSION_VIEW: dict[str, Action] = {
+    # Jak w historycznym AMC: Ctrl+F5 prowadzi do urządzeń, a zwykłe F5
+    # odświeża bieżący widok bez otwierania konfiguracji.
+    "Ctrl+F5": Action.SESSION_CONFIGURE_CURRENT,
     "Ctrl+O": Action.IMPORT_WIIM_NETWORK_STREAMS,
     # Zachowany jako zgodny alias starszych kompilacji; menu pokazuje prostsze
     # Ctrl+O i tylko ten skrót opisujemy użytkownikowi.
@@ -1724,6 +1729,7 @@ def _help_entries() -> list[tuple[str, str, Action]]:
         PODCAST_LIBRARY_LIST_VIEW,
         PODCAST_INBOX_LIST_VIEW,
         PODCAST_SESSION_VIEW,
+        TIDAL_SESSION_VIEW,
         TIDAL_LIST_VIEW,
         SPOTIFY_SESSION_VIEW,
         SPOTIFY_COLLECTION_LIST_VIEW,

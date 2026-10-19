@@ -497,6 +497,10 @@ class LiteHostClient:
         """Read the separate catalogue and playback connection states."""
         return self.call("spotify.accountStatus", timeout=15.0)
 
+    def spotify_login(self) -> Any:
+        """Start OAuth only after an explicit user action in the account dialog."""
+        return self.call("spotify.login", timeout=360.0)
+
     def spotify_collection_root(self) -> Any:
         """Read the user-facing Spotify collection categories."""
         return self.call("spotify.collectionRoot", timeout=15.0)
@@ -619,6 +623,14 @@ class LiteHostClient:
             },
             timeout=60.0,
         )
+
+    def tidal_account_status(self) -> Any:
+        """Read the stored TIDAL connection state without opening a browser."""
+        return self.call("tidal.accountStatus", timeout=15.0)
+
+    def tidal_login(self) -> Any:
+        """Start OAuth only after an explicit user action in the account dialog."""
+        return self.call("tidal.login", timeout=360.0)
 
     def tidal_search(self, query: str) -> Any:
         """Search the official catalogue without changing the collection."""

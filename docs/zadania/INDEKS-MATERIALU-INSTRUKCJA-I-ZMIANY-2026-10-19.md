@@ -40,7 +40,8 @@ użytkownika. Nie zmienia statusu ręcznego odbioru NVDA poszczególnych funkcji
    trwania; powrót fokusu i komunikaty NVDA. Źródło:
    [SCHED-001-edytor-i-klawisze-harmonogramow.md](SCHED-001-edytor-i-klawisze-harmonogramow.md).
 5. Playlisty Spotify — przed pierwszą próbą zapisu po aktualizacji `Ctrl+F5`
-   odnawia zgodę konta na prywatne i publiczne playlisty; dalej `Ctrl+P`,
+   otwiera konto, a dopiero „Zaloguj w przeglądarce” rozpoczyna oficjalne OAuth
+   i odnawia zgodę na prywatne i publiczne playlisty; dalej `Ctrl+P`,
    `Ctrl+Shift+P`, jedna lub wiele playlist,
    jednoznacznie nazwane pole nowej playlisty, tworzenie playlisty prywatnej
    lub publicznej, jasne rozróżnienie przygotowania od zapisu oraz uczciwe
@@ -64,7 +65,10 @@ użytkownika. Nie zmienia statusu ręcznego odbioru NVDA poszczególnych funkcji
    [POD-001-sortowanie-biblioteki-zrodel.md](POD-001-sortowanie-biblioteki-zrodel.md).
 10. Menedżer sesji — `Ctrl+Shift+S`, Enter, Spacja,
     `Alt+strzałka w górę/dół`, „Konfiguruj…”, zwarta numeracja `Ctrl+1–9` i
-    zabezpieczenia przed wyłączeniem aktywnej lub ostatniej sesji. Źródło:
+    zabezpieczenia przed wyłączeniem aktywnej lub ostatniej sesji. Kontekstowe
+    `Ctrl+F5` otwiera konto Spotify lub TIDAL, odświeża urządzenia WiiM,
+    odświeża Podcasty albo wybiera cel Sonos; zwykłe `F5` nadal odświeża widok.
+    Źródło:
     [AMC09-menedzer-sesji.md](AMC09-menedzer-sesji.md).
 11. AMC Test i przyszły publiczny AMC — osobne dane i możliwości, publiczne
     sesje Pliki lokalne, Radio, Podcasty i YouTube oraz WiiM, bez reklamowania
@@ -111,6 +115,8 @@ użytkownika. Nie zmienia statusu ręcznego odbioru NVDA poszczególnych funkcji
   żywo w Time Shifcie.
 - Dodano trwałe sortowanie zbiorczej Biblioteki Podcastów i YouTube.
 - Dodano Menedżer sesji i dynamiczne, zwarte skróty `Ctrl+1–9`.
+- Przywrócono kontekstowe `Ctrl+F5` oraz dostępne okna kont Spotify i TIDAL;
+  samo otwarcie okna nie rozpoczyna logowania.
 - Rozpoczęto fundament dwóch izolowanych profili wydania; ta ostatnia zmiana
   nie jest jeszcze częścią zainstalowanej paczki.
 - Dodano aplikacyjne otwieranie folderu, bezpieczne przekazywanie plików do
@@ -126,6 +132,8 @@ użytkownika. Nie zmienia statusu ręcznego odbioru NVDA poszczególnych funkcji
 - Nie oznaczać ręcznych testów NVDA jako zaliczonych, dopóki użytkownik ich nie
   potwierdzi.
 - Nie przedstawiać testów atrap Spotify/TIDAL jako próby prawdziwego konta.
+- Nie przedstawiać gotowego w źródłach okna konta jako zainstalowanego ani
+  odebranego, dopóki nie przejdzie bezpiecznej promocji i ręcznej próby OAuth.
 - Korekta `4b85e0c8` jest zainstalowana; nadal nie przedstawiać jej jako
   odebranej z NVDA ani sprawdzonej zapisem na prawdziwym koncie Spotify.
 - Druga korekta harmonogramów i nazwy `Alt+D` jest zainstalowana w AMC Test w

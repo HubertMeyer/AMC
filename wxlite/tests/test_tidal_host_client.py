@@ -5,6 +5,25 @@ from pathlib import Path
 from amc_wx_lite.host_client import LiteHostClient
 
 
+def test_tidal_account_operations_are_explicit_and_send_no_credentials() -> None:
+    calls: list[tuple[str, dict | None, float]] = []
+    client = LiteHostClient(Path("host.exe"))
+    client.call = lambda op, args=None, *, timeout=20.0: (
+        calls.append((op, args, timeout)) or {"connected": True}
+    )
+
+    client.tidal_account_status()
+    client.tidal_login()
+
+    assert calls == [
+        ("tidal.accountStatus", None, 15.0),
+        ("tidal.login", None, 360.0),
+    ]
+    serialized = repr(calls).casefold()
+    assert "token" not in serialized
+    assert "credential" not in serialized
+
+
 def test_tidal_search_sends_only_the_user_query() -> None:
     calls: list[tuple[str, dict | None, float]] = []
     client = LiteHostClient(Path("host.exe"))

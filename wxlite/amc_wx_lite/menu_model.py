@@ -25,7 +25,7 @@ Czego tu NIE MA i dlaczego:
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from .navigation import SessionId
 from . import session_order as session_order_model
@@ -216,6 +216,19 @@ def menus_for_session(
                 if items and not items[-1].is_separator:
                     items.append(entry)
                 continue
+            if entry.action is Action.SESSION_CONFIGURE_CURRENT:
+                account_labels = {
+                    SessionId.TIDAL: "Konto i synchronizacja &TIDAL",
+                    SessionId.SPOTIFY: "Konto Spot&ify",
+                    SessionId.WIIM: "&Urządzenia WiiM",
+                }
+                if session_id in account_labels:
+                    entry = replace(
+                        entry,
+                        label=account_labels[session_id],
+                        shortcut="Ctrl+F5",
+                        accelerator=False,
+                    )
             items.append(entry)
         while items and items[-1].is_separator:
             items.pop()

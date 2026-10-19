@@ -6,9 +6,9 @@ using AccessibleMediaController.LiteHost.Protocol;
 namespace AccessibleMediaController.LiteHost;
 
 /// <summary>
-/// Spotify catalogue surface exposed by LiteHost. It never starts
-/// authentication; an explicit membership request may reuse an already
-/// connected account when the production backend supports verified writes.
+/// Spotify catalogue surface exposed by LiteHost. Authentication starts only
+/// through the explicit login operation; ordinary reads and writes reuse the
+/// account already stored in Windows Credential Manager.
 /// </summary>
 internal sealed class LiteSpotifyCatalogCoordinator(
     ILiteSpotifyReadOnlyBackend backend) : IDisposable
@@ -19,7 +19,8 @@ internal sealed class LiteSpotifyCatalogCoordinator(
     private bool _albumRefreshAttempted;
 
     public object Capabilities() => LiteSpotifyCatalogContract.CreateCapabilities(
-        backend is ILiteSpotifyWriteBackend);
+        backend is ILiteSpotifyWriteBackend,
+        backend is ILiteSpotifyAccountBackend);
 
     public object AccountStatus()
     {
@@ -39,6 +40,25 @@ internal sealed class LiteSpotifyCatalogCoordinator(
                     AccountDisplayName: string.Empty,
                     AccountProduct: string.Empty,
                     PlaybackConnected: null));
+        }
+    }
+
+    public object Login()
+    {
+        if (backend is not ILiteSpotifyAccountBackend accountBackend)
+            throw new LiteRequestException("Logowanie Spotify nie jest dostępne w tym profilu AMC.");
+        try
+        {
+            var result = accountBackend.LoginAsync(CancellationToken.None)
+                .GetAwaiter()
+                .GetResult();
+            return LiteSpotifyCatalogContract.CreateLoginResult(
+                result.AccountDisplayName,
+                result.AccountProduct);
+        }
+        catch (Exception exception)
+        {
+            throw SafeRequestException(exception, LiteSpotifyCatalogContract.LoginOperation);
         }
     }
 
@@ -561,6 +581,15 @@ internal interface ILiteSpotifyWriteBackend : ILiteSpotifyReadOnlyBackend
         IReadOnlyList<MediaItem> items,
         CancellationToken cancellationToken);
 }
+
+internal interface ILiteSpotifyAccountBackend : ILiteSpotifyReadOnlyBackend
+{
+    Task<LiteSpotifyLoginOutcome> LoginAsync(CancellationToken cancellationToken);
+}
+
+internal sealed record LiteSpotifyLoginOutcome(
+    string AccountDisplayName,
+    string AccountProduct);
 
 internal sealed record LiteSpotifyCollectionRefresh(
     IReadOnlyList<MediaItem> Items,

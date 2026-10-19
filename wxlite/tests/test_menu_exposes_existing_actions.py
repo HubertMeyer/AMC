@@ -193,6 +193,25 @@ def test_corrected_menu_labels_name_the_real_action() -> None:
     assert station.label.replace("&", "") == "Zmień nazwę stacji"
 
 
+def test_account_or_device_menu_uses_ctrl_f5_only_in_matching_sessions() -> None:
+    expected = {
+        SessionId.SPOTIFY: "Konto Spotify",
+        SessionId.TIDAL: "Konto i synchronizacja TIDAL",
+        SessionId.WIIM: "Urządzenia WiiM",
+    }
+    for session, label in expected.items():
+        entries = [
+            item
+            for menu in menu_model.menus_for_session(session)
+            for item in menu.items
+            if item.action is Action.SESSION_CONFIGURE_CURRENT
+        ]
+        assert len(entries) == 1
+        assert entries[0].label.replace("&", "") == label
+        assert entries[0].shortcut == "Ctrl+F5"
+        assert not entries[0].accelerator
+
+
 def test_no_duplicate_labels_or_shortcuts() -> None:
     """Powtórzenia są tylko celowymi skrótami kontekstowymi AMC."""
     items = all_items()

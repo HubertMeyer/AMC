@@ -398,6 +398,10 @@ internal sealed class LiteEngineHandlers : IDisposable
                 PodcastYouTubeExport(request.Args),
             [LiteTidalCatalogContract.SearchOperation] = (request, _) =>
                 TidalSearch(request.Args),
+            [LiteTidalCatalogContract.AccountStatusOperation] = (_, _) =>
+                TidalAccountStatus(),
+            [LiteTidalCatalogContract.LoginOperation] = (_, _) =>
+                TidalLogin(),
             [LiteTidalCatalogContract.ContainerItemsOperation] = (request, _) =>
                 TidalContainerItems(request.Args),
             [LiteTidalCatalogContract.CollectionViewOperation] = (request, _) =>
@@ -408,6 +412,8 @@ internal sealed class LiteEngineHandlers : IDisposable
                 SpotifyCapabilities(),
             [LiteSpotifyCatalogContract.AccountStatusOperation] = (_, _) =>
                 SpotifyAccountStatus(),
+            [LiteSpotifyCatalogContract.LoginOperation] = (_, _) =>
+                SpotifyLogin(),
             [LiteSpotifyCatalogContract.CollectionRootOperation] = (_, _) =>
                 SpotifyCollectionRoot(),
             [LiteSpotifyCatalogContract.CollectionViewOperation] = (request, _) =>
@@ -3008,6 +3014,14 @@ internal sealed class LiteEngineHandlers : IDisposable
             "Host nie ma dostępu do profilu AMC potrzebnego do katalogu TIDAL."))
         .Search(args);
 
+    private LiteTidalCatalogCoordinator RequireTidal() =>
+        _tidalCatalog ?? throw new LiteRequestException(
+            "Host nie ma dostępu do profilu AMC potrzebnego do katalogu TIDAL.");
+
+    private object TidalAccountStatus() => RequireTidal().AccountStatus();
+
+    private object TidalLogin() => RequireTidal().Login();
+
     private object TidalContainerItems(JsonElement args) =>
         (_tidalCatalog ?? throw new LiteRequestException(
             "Host nie ma dostępu do profilu AMC potrzebnego do katalogu TIDAL."))
@@ -3034,6 +3048,8 @@ internal sealed class LiteEngineHandlers : IDisposable
     private object SpotifyCapabilities() => RequireSpotify().Capabilities();
 
     private object SpotifyAccountStatus() => RequireSpotify().AccountStatus();
+
+    private object SpotifyLogin() => RequireSpotify().Login();
 
     private object SpotifyCollectionRoot() => RequireSpotify().CollectionRoot();
 

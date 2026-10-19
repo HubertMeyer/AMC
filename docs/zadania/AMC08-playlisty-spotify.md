@@ -1,8 +1,8 @@
 # AMC08 — natywne playlisty Spotify
 
-Status: **Kod playlist jest zainstalowany, ale odbiór na prawdziwym koncie
-ujawnił brak wymaganych zgód OAuth i brak działającej drogi ponownego logowania
-w AMC Test. Funkcji nie uznajemy jeszcze za działającą dla użytkownika.**
+Status: **Kod playlist jest zainstalowany, a dostępne ponowne logowanie konta
+jest gotowe w źródłach, testach i kompilacji. Wymaga instalacji oraz świadomego
+odbioru OAuth i zapisu na prawdziwym koncie.**
 
 Źródło decyzji: zatwierdzona analiza historyczna tylko do odczytu
 `D:\Projekty Codex\Accessible Multimedia Controller\AMC08_PLAYLISTY_SPOTIFY_2026-10-18.md`.
@@ -26,10 +26,11 @@ w AMC Test. Funkcji nie uznajemy jeszcze za działającą dla użytkownika.**
   Przy następnym `Ctrl+Shift+P` jest widoczna, a ostatnio użyte playlisty są
   zaznaczone. Ich wybór jest zapisany w prywatnych ustawieniach AMC Test.
 - Starsze logowanie Spotify nie zawiera zgód na zmianę playlist. AMC nie może
-  wtedy utworzyć playlisty ani dodać do niej elementów. Docelowo polecenie
-  „Konfiguruj…” w Menedżerze sesji ma otworzyć dostępne ustawienia konta i
-  pozwolić użytkownikowi świadomie rozpocząć ponowne logowanie. `Ctrl+F5` jest
-  odświeżaniem źródeł i nie wolno go przedstawiać jako logowania.
+  wtedy utworzyć playlisty ani dodać do niej elementów. W sesji Spotify
+  `Ctrl+F5` oraz „Konto Spotify” otwierają dostępne okno konta. Dopiero
+  przycisk „Zaloguj w przeglądarce” rozpoczyna oficjalne OAuth i prosi między
+  innymi o zgodę na prywatne i publiczne playlisty. Hasło podaje się wyłącznie
+  na stronie Spotify; AMC nie prosi o przepisywanie kodu.
 - Lista odczytywana przez NVDA zawiera tylko nazwę, widoczność, informację o
   współdzieleniu i właścicielu oraz stan zaznaczenia. Identyfikatory playlist,
   adresy i `snapshot_id` pozostają niewidocznymi danymi modelu.
@@ -46,15 +47,17 @@ w AMC Test. Funkcji nie uznajemy jeszcze za działającą dla użytkownika.**
 
 ## Uzasadnienie i decyzje
 
-- **Korekta użytkownika i diagnoza z 19 października 2026 zastępują wcześniejszą
-  instrukcję ponownego logowania przez `Ctrl+F5`.** Rzeczywisty profil ma
+- **Korekta użytkownika z 19 października 2026 zastępuje wcześniejsze
+  ustalenie, że `Ctrl+F5` ma być wyłącznie odświeżaniem źródeł.** Historyczny
+  kontrakt AMC został przywrócony kontekstowo: w Spotify i TIDAL otwiera konto,
+  w WiiM odświeża urządzenia, w Podcastach odświeża Bibliotekę, a w Sonos
+  zachowuje wybór celu. Rzeczywisty profil Spotify ma
   zakresy odczytu playlist, ale nie ma `playlist-modify-private` ani
   `playlist-modify-public`. Dlatego lista istniejących playlist może się
   otworzyć, lecz Spotify odrzuca utworzenie i dodanie. Potwierdzonej nowej
-  playlisty nie ma potem w pamięci ani na kolejnym otwarciu. `Ctrl+F5` nie
-  naprawia zakresów, a obecne „Konfiguruj…” dla Spotify tylko przełącza sesję.
-  Kolejnym etapem jest prawdziwe, dostępne wejście OAuth w AMC Test; dopiero po
-  nim należy ponowić odbiór tworzenia, dodawania, cache'u i zapamiętania celu.
+  playlisty nie ma potem w pamięci ani na kolejnym otwarciu. Nowe okno konta
+  daje świadome wejście OAuth; dopiero po jego ręcznym odbiorze należy ponowić
+  odbiór tworzenia, dodawania, cache'u i zapamiętania celu.
 
 - **Korekta użytkownika z 19 października 2026 zastępuje wcześniejszy odbiór
   cache'u oparty tylko na atrapach.** W prawdziwym użyciu pole nazwy było
@@ -101,6 +104,14 @@ w AMC Test. Funkcji nie uznajemy jeszcze za działającą dla użytkownika.**
   przez świeżą walidację adaptera konkretnej usługi.
 
 ## Testy i wynik
+
+- 19 października 2026, etap konta: **105/105** ukierunkowanych testów wxPython
+  sprawdza wspólne polecenie `Ctrl+F5`, menu, etykiety dostępności, fokus,
+  klienta hosta oraz to, że interfejs nie przesyła haseł ani tokenów.
+  Ukierunkowane testy protokołu .NET dla Spotify, TIDAL i atomowego magazynu
+  ustawień: **3/3 zestawy zaliczone**. Kompilacje Release testów protokołu i
+  LiteHost zakończyły się bez ostrzeżeń i błędów. Nie otwierano przeglądarki,
+  nie wykonywano OAuth ani operacji na prawdziwym koncie.
 
 - 19 października 2026, diagnoza bez mutacji konta: odczytano wyłącznie nazwy
   przyznanych zakresów z lokalnego profilu. Obecne są zakresy odczytu playlist,
@@ -167,10 +178,12 @@ w AMC Test. Funkcji nie uznajemy jeszcze za działającą dla użytkownika.**
 
 ## Znane ograniczenia
 
-- AMC Test nie ma jeszcze działającego wejścia ponownego logowania katalogu
-  Spotify. Polecenie „Konfiguruj…” tylko otwiera sesję, a `Ctrl+F5` odświeża
-  źródła. Do czasu wdrożenia dostępnego OAuth kod playlist nie może zadziałać na
-  koncie zalogowanym bez obu zakresów `playlist-modify-*`.
+- Wejście ponownego logowania jest na razie potwierdzone w źródłach, testach i
+  kompilacji, lecz nie zostało jeszcze zainstalowane ani ręcznie odebrane z
+  NVDA. Stary token nadal nie uzyska nowych zakresów bez świadomego OAuth.
+- Trwającego OAuth nie można jeszcze anulować przyciskiem okna AMC; do wyniku
+  albo limitu czasu okno pozostaje otwarte. Hasła i tokeny nadal nie trafiają
+  do interfejsu Python.
 
 - Korekta `4b85e0c8` została zainstalowana. Nie wykonano po niej kolejnego
   zapisu na prawdziwym koncie Spotify; odbiór sieciowy wymaga świadomej próby
@@ -200,6 +213,10 @@ w AMC Test. Funkcji nie uznajemy jeszcze za działającą dla użytkownika.**
   hoście, więc pamięć interfejsu nie może nadać uprawnień do obcej playlisty.
 
 ## Wersja i commit
+
+- Dostępne konta Spotify i TIDAL oraz kontekstowy `Ctrl+F5`: zmiana źródłowa,
+  testy i kompilacja z 19 października 2026; commit oraz wersja instalacji
+  zostaną dopisane po bezpiecznej promocji. Publikacji nie wykonano.
 
 - Korekta po odbiorze: `4b85e0c8` — kod, testy wxPython i test hosta C#;
   pełny pakiet AMC Test zbudowano, zainstalowano i uruchomiono.

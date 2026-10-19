@@ -15,6 +15,7 @@ public static class LiteSpotifyCatalogContract
     public const string SessionId = "spotify";
     public const string CapabilitiesOperation = "spotify.capabilities";
     public const string AccountStatusOperation = "spotify.accountStatus";
+    public const string LoginOperation = "spotify.login";
     public const string CollectionRootOperation = "spotify.collectionRoot";
     public const string CollectionViewOperation = "spotify.collectionView";
     public const string ContainerItemsOperation = "spotify.containerItems";
@@ -48,7 +49,8 @@ public static class LiteSpotifyCatalogContract
         };
 
     public static LiteSpotifyCapabilitiesResult CreateCapabilities(
-        bool collectionWrite = false) => new(
+        bool collectionWrite = false,
+        bool login = false) => new(
         SessionId,
         ReadOnly: !collectionWrite,
         OneSession: true,
@@ -58,7 +60,7 @@ public static class LiteSpotifyCatalogContract
         ContainerBrowse: true,
         CatalogSearch: true,
         CollectionWrite: collectionWrite,
-        Login: false,
+        Login: login,
         Playback: true,
         collectionWrite
             ? "Katalog i odtwarzanie Spotify mają osobne stany połączenia. "
@@ -111,6 +113,19 @@ public static class LiteSpotifyCatalogContract
         };
 
         return new LiteSpotifyAccountStatusResult(SessionId, catalog, playback);
+    }
+
+    public static LiteSpotifyLoginResult CreateLoginResult(
+        string? accountDisplayName,
+        string? accountProduct)
+    {
+        var name = CleanText(accountDisplayName);
+        var plan = PlanLabel(accountProduct);
+        var account = name.Length == 0 ? string.Empty : $": {name}";
+        var planText = plan == "nieznany" ? string.Empty : $" Plan: {plan}.";
+        return new LiteSpotifyLoginResult(
+            true,
+            $"Zalogowano konto Spotify{account}.{planText} Uprawnienia konta zostały odświeżone.");
     }
 
     public static LiteSpotifyCollectionRootResult CreateCollectionRoot() => new(
@@ -433,6 +448,7 @@ public static class LiteSpotifyCatalogContract
             "Operację Spotify anulowano.",
         _ => operation switch
         {
+            LoginOperation => "Nie udało się zalogować konta Spotify.",
             SearchOperation => "Nie udało się wyszukać w Spotify.",
             ContainerItemsOperation => "Nie udało się otworzyć zawartości Spotify.",
             CollectionViewOperation => "Nie udało się odświeżyć kolekcji Spotify.",
@@ -644,6 +660,10 @@ public sealed record LiteSpotifyAccountStatusResult(
     [property: JsonPropertyName("sessionId")] string SessionId,
     [property: JsonPropertyName("catalog")] LiteSpotifyConnectionStatus Catalog,
     [property: JsonPropertyName("playback")] LiteSpotifyConnectionStatus Playback);
+
+public sealed record LiteSpotifyLoginResult(
+    [property: JsonPropertyName("connected")] bool Connected,
+    [property: JsonPropertyName("message")] string Message);
 
 public sealed record LiteSpotifyConnectionStatus(
     [property: JsonPropertyName("state")] string State,

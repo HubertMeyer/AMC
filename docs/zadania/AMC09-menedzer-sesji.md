@@ -1,6 +1,8 @@
 # AMC09 — Menedżer sesji i zwarta numeracja
 
-Status: **Wdrożone i zainstalowane w AMC Test; czeka na ręczny odbiór NVDA**
+Status: **Menedżer jest zainstalowany; rozszerzenie Konfiguruj i `Ctrl+F5` dla
+kont Spotify, TIDAL i urządzeń WiiM jest gotowe w źródłach, testach i
+kompilacji oraz czeka na instalację i ręczny odbiór NVDA**
 
 Data realizacji: 2026-10-19
 
@@ -22,10 +24,11 @@ Historyczny projekt został użyty tylko jako materiał do odczytu.
   historii ani ustawień usługi.
 - `Alt+strzałka w górę` i `Alt+strzałka w dół` zmieniają położenie włączonej
   sesji oraz jej numer. Fokus pozostaje na tej samej sesji.
-- Przycisk „Konfiguruj…” przechodzi do ustawień sesji podstawowej albo do
-  właściwej sesji konta lub urządzenia. Samo otwarcie Menedżera nie otwiera
-  przeglądarki, nie rozpoczyna logowania, nie skanuje sieci i nie steruje
-  głośnikami.
+- Przycisk „Konfiguruj…” oraz kontekstowe `Ctrl+F5` prowadzą do właściwego
+  konta albo urządzenia. Spotify i TIDAL otwierają okno statusu konta z
+  przyciskiem „Zaloguj w przeglądarce”, a WiiM odświeża zapisane urządzenia.
+  Samo otwarcie Menedżera ani okna konta nie uruchamia OAuth, nie skanuje sieci
+  i nie steruje głośnikami.
 - Nie można wyłączyć ostatniej sesji. Nie można również wyłączyć sesji, w
   której trwa wewnętrzne odtwarzanie, oczekiwanie na rozpoczęcie odtwarzania
   albo nagrywanie. Wyłączenie Sonosa lub WiiM zmienia tylko widoczność sesji;
@@ -66,6 +69,10 @@ Historyczny projekt został użyty tylko jako materiał do odczytu.
 - Automatyczne pierwsze otwarcie Menedżera w publicznym AMC nie zostało
   włączone. To zachowanie należy do odbioru czystego profilu w AMC12 i nie
   zmienia obecnego profilu AMC Test.
+- **Korekta użytkownika z 19 października 2026:** przywrócono kontekstowe
+  znaczenie `Ctrl+F5` ze starego AMC. Spotify i TIDAL otwierają konto, WiiM
+  odświeża urządzenia, Podcasty odświeżają Bibliotekę, a Sonos zachowuje wybór
+  celu. Zwykłe `F5` nadal jest odświeżaniem bieżącego widoku.
 
 ## Zmienione miejsca
 
@@ -81,6 +88,11 @@ Historyczny projekt został użyty tylko jako materiał do odczytu.
   testy kolejności, migracji, menu, pomocy, palety i sesji usługowych.
 
 ## Testy i wynik
+
+- Rozszerzenie kont i WiiM: **105/105** ukierunkowanych testów wxPython oraz
+  **3/3** zestawy protokołu .NET zaliczone. Kompilacje Release testów protokołu
+  i LiteHost zakończyły się bez ostrzeżeń i błędów. Testy nie otwierały
+  przeglądarki, nie logowały kont i nie wysyłały poleceń do urządzeń.
 
 - Testy ukierunkowane modelu, magazynu, skrótów, palety, GUI i dostępnych
   etykiet: **94 zaliczone**.
@@ -107,9 +119,11 @@ Historyczny projekt został użyty tylko jako materiał do odczytu.
 
 ## Znane ograniczenia
 
-- Prawdziwe logowanie Spotify, TIDAL i Sonos oraz wybór rzeczywistego WiiM
+- Prawdziwe logowanie Spotify, TIDAL i Sonos oraz odświeżenie rzeczywistego WiiM
   wymagają świadomej próby użytkownika. Automaty tej nocy nie otwierały
   przeglądarki, nie logowały kont i nie wysyłały poleceń do urządzeń.
+- Rozszerzenie okna konta i `Ctrl+F5` nie jest jeszcze częścią zainstalowanej
+  paczki. Trwającego OAuth nie można jeszcze anulować z okna AMC.
 - Stan Spotify jest „Połączona” dopiero po odczycie konta w bieżącym procesie;
   przed nim Menedżer uczciwie pokazuje „Wymaga zalogowania”. TIDAL może użyć
   istniejącej lokalnej migawki Biblioteki, ale nie pobiera jej w tle.
@@ -141,6 +155,10 @@ Historyczny projekt został użyty tylko jako materiał do odczytu.
   zawierał jeden plik Markdown (około 8,7 KB) i również został usunięty.
 
 ## Wersja i commit
+
+- Rozszerzenie `Ctrl+F5` oraz kont Spotify i TIDAL: zmiana źródłowa, testy i
+  kompilacja z 19 października 2026; commit i wersja instalacji zostaną
+  dopisane po bezpiecznej promocji. Publikacji nie wykonano.
 
 - Kod i testy źródłowe: commit `dece7646` (`feat(amc09): dodaj menedzer sesji`).
 - Dokumentacja wyniku i wersja użyta do instalacji: commit `6c79bdd3`

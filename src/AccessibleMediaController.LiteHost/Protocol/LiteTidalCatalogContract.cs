@@ -14,6 +14,8 @@ namespace AccessibleMediaController.LiteHost.Protocol;
 /// </summary>
 public static class LiteTidalCatalogContract
 {
+    public const string AccountStatusOperation = "tidal.accountStatus";
+    public const string LoginOperation = "tidal.login";
     public const string SearchOperation = "tidal.search";
     public const string ContainerItemsOperation = "tidal.containerItems";
     public const string CollectionViewOperation = "tidal.collectionView";
@@ -44,6 +46,41 @@ public static class LiteTidalCatalogContract
             ["tracks"] = ArtistBrowseSection.Tracks,
             ["similarArtists"] = ArtistBrowseSection.SimilarArtists
         };
+
+    public static LiteTidalAccountStatusResult CreateAccountStatus(
+        bool configured,
+        bool connected,
+        string? accountDisplayName)
+    {
+        var name = CleanLabel(accountDisplayName);
+        var label = !configured
+            ? "Konto TIDAL nie jest skonfigurowane."
+            : connected
+                ? name.Length == 0
+                    ? "Konto TIDAL jest połączone."
+                    : $"Konto TIDAL jest połączone: {name}."
+                : "Konto TIDAL nie jest połączone.";
+        return new(configured, connected, label, name.Length == 0 ? null : name);
+    }
+
+    public static LiteTidalLoginResult CreateLoginResult(string? accountDisplayName)
+    {
+        var name = CleanLabel(accountDisplayName);
+        return new(
+            true,
+            name.Length == 0
+                ? "Zalogowano konto TIDAL."
+                : $"Zalogowano konto TIDAL: {name}.");
+    }
+
+    private static string CleanLabel(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return string.Empty;
+        var text = string.Join(
+            " ",
+            value.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+        return text.Length <= 200 ? text : text[..200];
+    }
 
     public static string ReadSearchQuery(JsonElement args)
     {
@@ -258,6 +295,16 @@ public sealed record LiteTidalMembershipRequest(
     string Mode,
     IReadOnlyList<MediaItem> Items,
     bool? RequestedAddition);
+
+public sealed record LiteTidalAccountStatusResult(
+    [property: JsonPropertyName("configured")] bool Configured,
+    [property: JsonPropertyName("connected")] bool Connected,
+    [property: JsonPropertyName("label")] string Label,
+    [property: JsonPropertyName("accountDisplayName")] string? AccountDisplayName);
+
+public sealed record LiteTidalLoginResult(
+    [property: JsonPropertyName("connected")] bool Connected,
+    [property: JsonPropertyName("message")] string Message);
 
 public sealed record LiteTidalMembershipResult(
     [property: JsonPropertyName("added")] bool Added,

@@ -9,6 +9,7 @@ internal static class TidalCatalogContractTests
 {
     public static void Run()
     {
+        AccountStatusAndLoginUseOnlyUserFacingLabels();
         ReadsSearchWithoutCredentials();
         SearchResultContainsOnlyIntentionalModelFields();
         ReadsAContainerWithoutAcceptingPrivatePlaybackData();
@@ -22,6 +23,25 @@ internal static class TidalCatalogContractTests
         ReadsCollectionMembershipWithoutCredentials();
         RefusesWrongCollectionShortcutForKind();
         CollectionViewContainsOnlyIntentionalFields();
+    }
+
+    private static void AccountStatusAndLoginUseOnlyUserFacingLabels()
+    {
+        var status = LiteTidalCatalogContract.CreateAccountStatus(
+            configured: true,
+            connected: true,
+            accountDisplayName: "  Konto   próby  ");
+        var login = LiteTidalCatalogContract.CreateLoginResult("Konto próby");
+        var json = LiteJson.Serialize(new { status, login });
+        Check(status.Configured && status.Connected
+            && status.Label == "Konto TIDAL jest połączone: Konto próby.",
+            "stan konta TIDAL nie ma jednoznacznej etykiety");
+        Check(login.Connected
+            && login.Message == "Zalogowano konto TIDAL: Konto próby.",
+            "wynik logowania TIDAL nie ma użytkowego komunikatu");
+        Check(!json.Contains("token", StringComparison.OrdinalIgnoreCase)
+            && !json.Contains("credential", StringComparison.OrdinalIgnoreCase),
+            "kontrakt konta TIDAL ujawnia poświadczenia");
     }
 
     private static void ReadsSearchWithoutCredentials()

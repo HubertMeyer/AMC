@@ -168,9 +168,9 @@
              Link="Engine\TidalCredentialStore.cs" />
     <Compile Include="..\AccessibleMediaController.Windows\Services\TidalOAuthClient.cs"
              Link="Engine\TidalOAuthClient.cs" />
-    <!-- Spotify read-only catalogue. OAuth code is linked only because token
-         refresh is part of authenticated reads; LiteHost exposes no login,
-         disconnect or collection-write operation. -->
+    <!-- Spotify catalogue and explicit account login. OAuth starts only after
+         the user activates the account command; credentials stay in Windows
+         Credential Manager and never cross the Python protocol. -->
     <Compile Include="..\AccessibleMediaController.Windows\Services\SpotifyApiClient.cs"
              Link="Engine\SpotifyApiClient.cs" />
     <Compile Include="..\AccessibleMediaController.Windows\Services\SpotifyIntegrationService.cs"

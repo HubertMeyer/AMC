@@ -3926,6 +3926,94 @@ def relation_destination_labels(
     return tuple(result)
 
 
+class ServiceAccountDialog(wx.Dialog):
+    """Wspólna, dostępna powierzchnia konta; OAuth pozostaje w adapterze C#."""
+
+    def __init__(
+        self,
+        parent: wx.Window,
+        service_name: str,
+        status: str,
+        start_login: Callable[["ServiceAccountDialog"], None],
+    ) -> None:
+        super().__init__(
+            parent,
+            title=f"Konto {service_name}",
+            style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER,
+        )
+        self.SetName(f"Konto {service_name}")
+        self._service_name = service_name
+        self._start_login = start_login
+        self._busy = False
+
+        heading = wx.StaticText(self, label=f"Konto {service_name}")
+        heading.SetName(f"Konto {service_name}")
+        explanation = wx.StaticText(
+            self,
+            label=(
+                f"Zaloguj się zwykłym kontem na oficjalnej stronie {service_name}. "
+                "Hasło wpisujesz wyłącznie w przeglądarce. AMC nie wymaga "
+                "przepisywania kodu."
+            ),
+        )
+        explanation.Wrap(620)
+        self.status = wx.StaticText(self, label=status)
+        self.status.SetName(f"Stan konta {service_name}: {status}")
+        self.login_button = wx.Button(self, label="Zaloguj w przeglądarce")
+        self.login_button.SetName(f"Zaloguj konto {service_name} w przeglądarce")
+        self.close_button = wx.Button(self, wx.ID_CANCEL, "Zamknij")
+        self.close_button.SetName("Zamknij okno konta")
+
+        buttons = wx.BoxSizer(wx.HORIZONTAL)
+        buttons.Add(self.login_button, 0, wx.RIGHT, 8)
+        buttons.Add(self.close_button, 0)
+        layout = wx.BoxSizer(wx.VERTICAL)
+        layout.Add(heading, 0, wx.ALL, 12)
+        layout.Add(explanation, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM | wx.EXPAND, 12)
+        layout.Add(self.status, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM | wx.EXPAND, 12)
+        layout.Add(buttons, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 12)
+        self.SetSizerAndFit(layout)
+        self.SetMinSize((680, 300))
+
+        self.login_button.Bind(wx.EVT_BUTTON, self._on_login)
+        self.Bind(wx.EVT_CLOSE, self._on_close)
+        wx.CallAfter(self.login_button.SetFocus)
+
+    def _on_login(self, _event: wx.CommandEvent) -> None:
+        if self._busy:
+            return
+        self.set_busy(True)
+        self.set_status(
+            f"Otwieranie oficjalnego logowania {self._service_name} w przeglądarce"
+        )
+        self._start_login(self)
+
+    def _on_close(self, event: wx.CloseEvent) -> None:
+        if self._busy:
+            self.set_status(
+                "Logowanie nadal trwa. Dokończ je w przeglądarce; "
+                "to okno zamkniesz po otrzymaniu wyniku."
+            )
+            event.Veto()
+            return
+        event.Skip()
+
+    def set_busy(self, busy: bool) -> None:
+        self._busy = bool(busy)
+        self.login_button.Enable(not self._busy)
+        self.close_button.Enable(not self._busy)
+
+    def set_status(self, message: str) -> None:
+        self.status.SetLabel(message)
+        self.status.SetName(f"Stan konta {self._service_name}: {message}")
+        self.Layout()
+
+    def finish(self, message: str) -> None:
+        self.set_status(message)
+        self.set_busy(False)
+        self.login_button.SetFocus()
+
+
 class SessionSelectionDialog(wx.Dialog):
     """Jeden dostępny Menedżer sesji, bez technicznych wartości w mowie."""
 
@@ -13558,14 +13646,107 @@ class LiteFrame(wx.Frame):
         if session_id in (SessionId.FILES, SessionId.RADIO, SessionId.PODCASTS):
             wx.CallAfter(self._show_session_options)
             return
+        if session_id in (SessionId.SPOTIFY, SessionId.TIDAL):
+            self._show_service_account(session_id)
+            return
+        if session_id is SessionId.WIIM:
+            state = self.navigator.sessions[SessionId.WIIM]
+            self.announcer.say("Odświeżam zapisane urządzenia WiiM")
+            self._load_wiim_devices(preferred_id=state.list_anchor_id)
+            return
         guidance = {
-            SessionId.WIIM: "Wybierz zapisane urządzenie WiiM albo otwórz jego ustawienia",
             SessionId.SONOS: "Wybierz dom i grupę Sonos",
-            SessionId.SPOTIFY: "Otworzono konto i Bibliotekę Spotify",
-            SessionId.TIDAL: "Otworzono konto i Bibliotekę TIDAL",
         }.get(session_id)
         if guidance:
             self.announcer.say(guidance)
+
+    @staticmethod
+    def _service_account_status_message(
+        session_id: SessionId,
+        payload: object,
+    ) -> str:
+        if not isinstance(payload, dict):
+            return "Nie można teraz odczytać stanu konta."
+        if session_id is SessionId.TIDAL:
+            label = payload.get("label")
+            return label.strip() if isinstance(label, str) and label.strip() else (
+                "Nie można teraz odczytać stanu konta TIDAL."
+            )
+        labels: list[str] = []
+        for key in ("catalog", "playback"):
+            part = payload.get(key)
+            if not isinstance(part, dict):
+                continue
+            label = part.get("label")
+            if isinstance(label, str) and label.strip():
+                labels.append(label.strip())
+        return " ".join(labels) or "Nie można teraz odczytać stanu konta Spotify."
+
+    def _show_service_account(self, session_id: SessionId) -> None:
+        client = self.client
+        service_name = "Spotify" if session_id is SessionId.SPOTIFY else "TIDAL"
+        if client is None:
+            self.announcer.say("Silnik nie jest gotowy")
+            return
+        try:
+            payload = (
+                client.spotify_account_status()
+                if session_id is SessionId.SPOTIFY
+                else client.tidal_account_status()
+            )
+            status = self._service_account_status_message(session_id, payload)
+        except (HostError, HostUnavailable) as error:
+            status = str(error)
+        except Exception:
+            status = f"Nie można teraz odczytać stanu konta {service_name}."
+
+        def start_login(dialog: ServiceAccountDialog) -> None:
+            def work() -> object:
+                return (
+                    client.spotify_login()
+                    if session_id is SessionId.SPOTIFY
+                    else client.tidal_login()
+                )
+
+            def done(result: object) -> None:
+                message = "Zalogowano konto."
+                if isinstance(result, dict):
+                    returned = result.get("message")
+                    if isinstance(returned, str) and returned.strip():
+                        message = returned.strip()
+                if session_id is SessionId.SPOTIFY:
+                    cache = getattr(self, "_service_destination_cache", None)
+                    if isinstance(cache, ServiceDestinationCache):
+                        cache.invalidate("spotify:playlists")
+                if not dialog.IsBeingDeleted():
+                    dialog.finish(message)
+                self.announcer.say(message)
+
+            def failed(error: Exception) -> None:
+                message = (
+                    str(error)
+                    if isinstance(error, (HostError, HostUnavailable))
+                    else f"Nie udało się zalogować konta {service_name}."
+                )
+                if not dialog.IsBeingDeleted():
+                    dialog.finish(message)
+                self.announcer.say(message)
+
+            self.runner.submit(
+                f"{session_id.value}-account-login",
+                work,
+                done,
+                failed,
+            )
+
+        with ServiceAccountDialog(
+            self,
+            service_name,
+            status,
+            start_login,
+        ) as dialog:
+            dialog.ShowModal()
+        self._restore_focus_after_dialog()
 
     def _show_session_list(self, *, focus_inactive: bool = False) -> None:
         """Ctrl+Shift+S i dodatek NVDA: jeden Menedżer sesji."""

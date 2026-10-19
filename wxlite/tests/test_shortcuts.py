@@ -296,6 +296,31 @@ def test_podcast_refresh_matches_the_full_amc_context() -> None:
     ) is Action.REFRESH_PODCAST_LIBRARY
 
 
+def test_ctrl_f5_opens_account_or_device_configuration_by_session() -> None:
+    chord = Chord("F5", ctrl=True)
+    for flag in ("tidal_session", "spotify_session", "wiim_session"):
+        arguments = {
+            "player_view": False,
+            "radio_session": False,
+            flag: True,
+        }
+        assert resolve(chord, **arguments) is Action.SESSION_CONFIGURE_CURRENT
+
+    # Sonos zachowuje odrębny wybór celu, a Podcasty pełne odświeżenie.
+    assert resolve(
+        chord,
+        player_view=False,
+        radio_session=False,
+        sonos_session=True,
+    ) is Action.SELECT_SONOS_TARGET
+    assert resolve(
+        chord,
+        player_view=False,
+        radio_session=False,
+        podcast_session=True,
+    ) is Action.REFRESH_PODCAST_LIBRARY
+
+
 def test_alt_shift_enter_opens_podcast_item_options_in_list_and_player() -> None:
     chord = Chord("Return", alt=True, shift=True)
     for player in (False, True):
