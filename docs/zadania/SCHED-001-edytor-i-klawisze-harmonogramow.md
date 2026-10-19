@@ -205,8 +205,9 @@ manifest, SHA-256, instalacja, integralność i uruchomienie — zaliczone.
 
 ## Znane ograniczenia
 
-- Druga korekta po ręcznym odbiorze nie jest jeszcze w bieżącej instalacji.
-  Testy automatyczne nie są dowodem działania mowy na komputerze użytkownika.
+- Druga korekta po ręcznym odbiorze jest w bieżącej instalacji AMC Test.
+  Testy automatyczne i udany start nie są jednak dowodem prawidłowej mowy NVDA;
+  pozostaje ręczny odsłuch użytkownika.
 
 - Nie wykonano jeszcze rzeczywistego odsłuchu NVDA. Należy sprawdzić pierwsze
   wejście, każdą strzałkę, cyfry, zapis, anulowanie i ponowne otwarcie.
@@ -221,8 +222,14 @@ manifest, SHA-256, instalacja, integralność i uruchomienie — zaliczone.
 
 ## Wersja i commit
 
-- Druga korekta po ręcznym odbiorze: `4c75f237`; testy Pythona i
-  pełny Core SmokeTests zaliczone. Instalacja jeszcze niewykonana.
+- Druga korekta po ręcznym odbiorze: `4c75f237`; pełna regresja wxPython:
+  **1848 zaliczonych, 110 pominiętych i 11 podtestów zaliczonych**. Core
+  SmokeTests, kompilacje Release, manifest, SHA-256, instalacja i uruchomienie
+  zaliczone.
+- Instalacja zawierająca drugą korektę:
+  `2026.10.19-2930a9498f7abc4e64a10362ab67631d6423b407-67d8b325`;
+  właściwy uruchamiacz, interfejs wxPython i host zweryfikowane 19 października
+  2026. Ręczny odbiór NVDA pozostaje otwarty.
 - Korekta po ręcznym odbiorze: `4b85e0c8` — kod i testy; pełna regresja,
   kompilacja pakietu, instalacja i uruchomienie zaliczone.
 - Instalacja zawierająca korektę:

@@ -128,8 +128,10 @@ użytkownika. Nie zmienia statusu ręcznego odbioru NVDA poszczególnych funkcji
 - Nie przedstawiać testów atrap Spotify/TIDAL jako próby prawdziwego konta.
 - Korekta `4b85e0c8` jest zainstalowana; nadal nie przedstawiać jej jako
   odebranej z NVDA ani sprawdzonej zapisem na prawdziwym koncie Spotify.
-- Druga korekta harmonogramów i nazwy `Alt+D` jest na razie tylko w źródłach;
-  nie przedstawiać jej jako zainstalowanej przed kolejną bezpieczną promocją.
+- Druga korekta harmonogramów i nazwy `Alt+D` jest zainstalowana w AMC Test w
+  kompilacji
+  `2026.10.19-2930a9498f7abc4e64a10362ab67631d6423b407-67d8b325`;
+  nie przedstawiać jej jako odebranej z NVDA przed testem użytkownika.
 - Nie przedstawiać zbudowanej paczki i instalatora AMC12 jako instalacji albo
   wydania publicznego.
 - Nie obiecywać publicznego Sonosa przed działającym brokerem HTTPS i odbiorem

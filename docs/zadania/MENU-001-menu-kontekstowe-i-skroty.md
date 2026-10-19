@@ -117,8 +117,8 @@ w osobistej umiejętności Codexa `accessible-desktop-contracts`.
 
 ## Znane ograniczenia
 
-- Najnowsza korekta `Shift+F10` i nazwy `Alt+D` nie jest jeszcze w bieżącej
-  instalacji użytkownika; wymaga instalacji i odbioru NVDA.
+- Najnowsza korekta `Shift+F10` i nazwy `Alt+D` jest w bieżącej instalacji AMC
+  Test; wymaga jeszcze ręcznego odbioru NVDA.
 
 - Odbiór NVDA musi potwierdzić menu listy i odtwarzacza w Plikach lokalnych,
   Radiu, Podcastach i YouTube, Spotify, TIDAL, WiiM i Sonos.
@@ -129,8 +129,11 @@ w osobistej umiejętności Codexa `accessible-desktop-contracts`.
 
 ## Wersja i commit
 
-- Najnowsza korekta: `4c75f237`; testy zaliczone, instalacja jeszcze
-  niewykonana.
+- Najnowsza korekta: `4c75f237`; pełna regresja wxPython: **1848 zaliczonych,
+  110 pominiętych i 11 podtestów zaliczonych**. Kompilacje Release, manifest,
+  SHA-256, instalacja i uruchomienie zaliczone.
+- Instalacja zawierająca najnowszą korektę:
+  `2026.10.19-2930a9498f7abc4e64a10362ab67631d6423b407-67d8b325`.
 - Korekta po ręcznym odbiorze: `4b85e0c8` — źródła, testy, instalacja i
   uruchomienie zweryfikowane.
 - Instalacja zawierająca korektę:
