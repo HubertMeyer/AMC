@@ -143,11 +143,22 @@ zgodność nazw i skrótów wykonania, pomocy i palety.
 
 - Zmiana źródłowa: commit `de9814b6` — „Skróć listy nagrywania i uzupełnij
   informacje o folderze”.
-- Korekta usuwająca „Nagrane” z poprawnych wierszy: commit do wpisania po
-  lokalnym zapisie.
+- Korekta usuwająca „Nagrane” z poprawnych wierszy: `5e6a15eb` —
+  `fix(amc02): zacznij historie nagran od nazwy pliku`.
 - Kompilacja: Release, zaliczona bez ostrzeżeń i błędów.
 - Instalacja: `2026.10.19-e0f97512d1eee067d225d7b8c73b808ff3f3e561-c0e62181`,
   manifest, sumy i uruchomienie zweryfikowane 19 października 2026; ta
   instalacja nie zawiera jeszcze korekty usuwającej „Nagrane”.
 - Publikacja: niewykonana i niedozwolona w tym etapie.
+
+## Porządek dysku po korekcie
+
+- Usunięto trzy odtwarzalne pliki `.pyc` utworzone przez test i kontrolę
+  składni w katalogach nadrzędnych
+  `D:\Projekty Codex\AMC - integracja wxPython\wxlite\amc_wx_lite\__pycache__`
+  oraz `D:\Projekty Codex\AMC - integracja wxPython\wxlite\tests\__pycache__`.
+  Odzyskano 237 379 bajtów. Python może utworzyć te pliki ponownie; ich
+  odzyskiwanie nie jest potrzebne.
+- Nie usunięto `.test-output`, `.test-tmp`, paczek, instalatorów, źródeł,
+  dokumentacji, ustawień ani danych użytkownika.
 
