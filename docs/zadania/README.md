@@ -57,8 +57,8 @@ jawnym poleceniu użytkownika albo przez osobno uzgodniony harmonogram.
   `Ctrl+Shift+L` pozostaje w oknie także dla zapisanego wyniku, wykonuje jedną
   właściwą operację i nie oddaje mowy głównemu oknu. Szczegóły:
   [SEARCH-001-youtube-biblioteka-komunikaty.md](SEARCH-001-youtube-biblioteka-komunikaty.md).
-- `POD-001` — **Wdrożone w kodzie i zweryfikowane testami; czeka na
-  kompilację, instalację oraz ręczny odbiór NVDA** — trzy tryby sortowania
+- `POD-001` — **Wdrożone i zainstalowane w AMC Test; czeka na ręczny odbiór
+  NVDA** — trzy tryby sortowania
   zbiorczej Biblioteki podcastów, kanałów YouTube i „Media internetowe”,
   prywatna trwałość wyboru i zachowanie zaznaczenia po stabilnym ID. Szczegóły:
   [POD-001-sortowanie-biblioteki-zrodel.md](POD-001-sortowanie-biblioteki-zrodel.md).

@@ -2,8 +2,7 @@
 
 ## Status
 
-Wdrożone w kodzie i zweryfikowane testami; czeka na kompilację, instalację oraz
-ręczny odbiór NVDA.
+Wdrożone i zainstalowane w AMC Test; czeka na ręczny odbiór NVDA.
 
 ## Stan obecny
 
@@ -54,8 +53,8 @@ właśnie dodanego z wyszukiwarki.
   `test_menu_exposes_existing_actions.py`, `test_transport_parity.py`.
 - Commit kodu: `b3768226` (`feat(pod-001): dodaj sortowanie biblioteki
   zrodel`).
-- Zainstalowana kompilacja: jeszcze nie; zapis dotyczy kodu i testów, nie
-  instalacji ani publikacji.
+- Zainstalowana kompilacja:
+  `2026.10.19-d42d8d82cd76f4b19088e8962b69adca2e4547a9-86754006`.
 
 ## Materiał do dokumentacji użytkownika
 
@@ -111,11 +110,20 @@ udają poleceń Biblioteki.
   zmianie kolejności i parytet menu–skrót–pomoc–paleta.
 - `git diff --check` zakończył się bez błędów; wystąpiło jedynie informacyjne
   ostrzeżenie Git o przyszłej normalizacji LF do CRLF.
+- Przed kompilacją i instalacją bramka bezpieczeństwa sprawdziła 15 jawnych
+  katalogów nagrań: 0 aktywnych okien harmonogramów, 0 plików
+  `.amc-partial`, 0 plików rosnących i 0 zablokowanych.
+- Procedura promocji zbudowała 1660 plików, zweryfikowała manifest i sumy
+  SHA-256, zainstalowała paczkę w `D:\Projekty Codex\AMC Python` oraz
+  potwierdziła proces i tytuł `AMC Test — 19.10.2026, 04:18`.
+- Promocja została uruchomiona z `-SkipTests`, ponieważ pełna regresja Python
+  zakończyła się powodzeniem bezpośrednio przed promocją. Potwierdzenie
+  instalacji nie jest przedstawiane jako ponowne wykonanie testów.
 
 ## Znane ograniczenia
 
-- Ręczny odbiór NVDA oraz rzeczywiste zachowanie po zainstalowaniu kompilacji
-  pozostają do wykonania.
+- Ręczny odbiór NVDA i klawiatury na rzeczywistej Bibliotece pozostaje do
+  wykonania; automaty potwierdzają etykiety i fokus, ale nie zastępują odsłuchu.
 - Tryb `Ostatnio dodane` opiera się na kolejności dopisywania `ordinal`, bo
   współdzielona baza nie przechowuje osobnej daty dodania źródła.
 - Przy niedostępnej polskiej kolacji hosta program nie przedstawia zastępczego
@@ -126,7 +134,9 @@ udają poleceń Biblioteki.
 ## Wersja i commit
 
 - Kod i testy: commit `b3768226`.
-- Kompilacja: jeszcze nie wykonana po tym commicie.
-- Instalacja: jeszcze nie wykonana po tym commicie.
+- Pierwszy zapis dokumentacji: commit `d42d8d82`.
+- Kompilacja i instalacja:
+  `2026.10.19-d42d8d82cd76f4b19088e8962b69adca2e4547a9-86754006`,
+  1660 plików, manifest i SHA-256 zgodne, uruchomienie potwierdzone.
 - Publikacja: nie wykonywano; zgodnie z zakresem nocnym nic nie wysłano na
   GitHub.
