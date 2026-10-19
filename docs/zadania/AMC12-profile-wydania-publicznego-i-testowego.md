@@ -112,6 +112,18 @@ dowodem kompilacji, instalacji ani publikacji.
 - Sonos publiczny pozostaje ukryty do czasu prawdziwego brokera HTTPS i
   odbioru z zewnętrznym kontem.
 
+## Porządek dysku
+
+- Testy tworzyły pozostałe po nowym module wyłącznie trzy odtwarzalne pliki
+  `.pyc`. Po weryfikacji usunięto je dokładnymi ścieżkami spod katalogów
+  nadrzędnych `wxlite/amc_wx_lite/__pycache__` i
+  `wxlite/tests/__pycache__`.
+- Odzyskano 61 685 bajtów. Pliki nie są odzyskiwane z kopii, ponieważ Python
+  tworzy je ponownie automatycznie przy kolejnym uruchomieniu testu.
+- Nie utworzono nowego katalogu build, staging ani publish. Nie usunięto
+  zastanych `.test-output`, `.test-tmp`, `.pytest_cache`, źródeł, dokumentacji,
+  ustawień, nagrań ani zainstalowanej paczki AMC Test.
+
 ## Wersja i commit
 
 - Data pracy: 19 października 2026.
