@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>AccessibleMediaController.SonosBroker</RootNamespace>
+    <AssemblyName>AccessibleMediaController.SonosBroker</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="AccessibleMediaController.SonosBroker.SmokeTests" />
+  </ItemGroup>
+</Project>

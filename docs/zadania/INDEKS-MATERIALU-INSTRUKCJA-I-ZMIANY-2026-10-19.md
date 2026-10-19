@@ -10,8 +10,9 @@ użytkownika. Nie zmienia statusu ręcznego odbioru NVDA poszczególnych funkcji
 
 - Najnowsza zainstalowana i uruchomiona paczka AMC Test:
   `2026.10.19-6c79bdd32904b9468b07489e79da715de512d3e0-972b46e1`.
-- Fundament profili AMC12 istnieje później w źródłach i testach, ale nie został
-  skompilowany, zainstalowany ani opublikowany.
+- Fundament profili AMC12 został skompilowany i sprawdzony; zbudowano czystą
+  paczkę publiczną oraz lokalny instalator z kontrolą integralności. Nie
+  zainstalowano ich i nie opublikowano.
 - Nie wykonano publikacji na GitHubie ani publicznego wydania.
 
 ## Materiał do przyszłej instrukcji użytkownika
@@ -48,7 +49,8 @@ użytkownika. Nie zmienia statusu ręcznego odbioru NVDA poszczególnych funkcji
    Sonos/WiiM. Źródło:
    [AMC05-odtwarzany-element-na-listach.md](AMC05-odtwarzany-element-na-listach.md).
 8. Time Shift Radia — `Home` przechodzi na początek, `End` wraca do transmisji
-   na żywo i tempa normalnego; `NVDA+End` pozostaje skrótem NVDA. Źródło:
+   na żywo i tempa normalnego, a cyfry `0`–`9` przechodzą do 0–90% bieżącego
+   bufora; `NVDA+End` pozostaje skrótem NVDA. Źródło:
    [AMC13-timeshift-end-na-zywo.md](AMC13-timeshift-end-na-zywo.md).
 9. Sortowanie Biblioteki Podcastów i YouTube — trzy tryby, trwałość wyboru,
    zachowanie zaznaczenia oraz wspólne powierzchnie poleceń. Źródło:
@@ -60,8 +62,17 @@ użytkownika. Nie zmienia statusu ręcznego odbioru NVDA poszczególnych funkcji
 11. AMC Test i przyszły publiczny AMC — osobne dane i możliwości, publiczne
     sesje Pliki lokalne, Radio, Podcasty i YouTube oraz WiiM, bez reklamowania
     ukrytych usług w menu, pomocy i palecie. Ten rozdział opisuje na razie kod,
-    nie dostępną instalację. Źródło:
+    lokalnie zbudowaną, ale jeszcze niezainstalowaną paczkę. Źródło:
     [AMC12-profile-wydania-publicznego-i-testowego.md](AMC12-profile-wydania-publicznego-i-testowego.md).
+12. Foldery i powłoka Windows — „Otwórz folder zawierający”, argument pliku,
+    przekazanie do właściwej działającej instancji oraz dobrowolne „Otwórz za
+    pomocą AMC” i „Dodaj do kolejki AMC”. Rejestracja systemowa nie została
+    jeszcze zastosowana. Źródło:
+    [AMC14-foldery-i-integracja-powloki.md](AMC14-foldery-i-integracja-powloki.md).
+13. Sonos — istniejące okno konta korzysta z brokera, który nie ujawnia
+    aplikacji sekretu integracji. Publiczny Sonos pozostaje ukryty do czasu
+    wdrożenia stałego HTTPS i odbioru na zewnętrznym koncie. Źródło:
+    [AMC10-logowanie-sonos-i-publiczny-broker.md](AMC10-logowanie-sonos-i-publiczny-broker.md).
 
 ## Materiał do przyszłego opisu zmian
 
@@ -80,13 +91,18 @@ użytkownika. Nie zmienia statusu ręcznego odbioru NVDA poszczególnych funkcji
 - Dodano Menedżer sesji i dynamiczne, zwarte skróty `Ctrl+1–9`.
 - Rozpoczęto fundament dwóch izolowanych profili wydania; ta ostatnia zmiana
   nie jest jeszcze częścią zainstalowanej paczki.
+- Dodano aplikacyjne otwieranie folderu, bezpieczne przekazywanie plików do
+  właściwego profilu i opcjonalną, odwracalną integrację z powłoką Windows.
+- Dodano lokalnie testowalny broker logowania Sonos z jednorazowym PKCE,
+  odnowieniem i ochroną danych; nie został jeszcze wdrożony publicznie.
 
 ## Odbiory i ograniczenia do zachowania w instrukcji
 
 - Nie oznaczać ręcznych testów NVDA jako zaliczonych, dopóki użytkownik ich nie
   potwierdzi.
 - Nie przedstawiać testów atrap Spotify/TIDAL jako próby prawdziwego konta.
-- Nie przedstawiać kodu AMC12 jako kompilacji, instalacji albo wydania.
+- Nie przedstawiać zbudowanej paczki i instalatora AMC12 jako instalacji albo
+  wydania publicznego.
 - Nie obiecywać publicznego Sonosa przed działającym brokerem HTTPS i odbiorem
   z zewnętrznym kontem.
 - Nie opisywać logowania YouTube; `YT-001` jest odłożone do czasu po

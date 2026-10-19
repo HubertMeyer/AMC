@@ -116,10 +116,14 @@ zmian, wymagający korekty użytkownika:
   [AMC12-profile-wydania-publicznego-i-testowego.md](AMC12-profile-wydania-publicznego-i-testowego.md).
   Zatwierdzona specyfikacja:
   `D:\Projekty Codex\Accessible Multimedia Controller\AMC12_PROFILE_WYDANIA_PUBLICZNEGO_I_TESTOWEGO_2026-10-18.md`.
-- `AMC10` — **Oczekuje, opcjonalnie tej samej nocy tylko logowanie Sonos** —
-  działające sterowanie Sonosem i WiiM jest już przeszczepione i nie wymaga
-  ponownego wdrażania. Pozostaje proste logowanie Sonos i brama publicznego
-  brokera. Zatwierdzona specyfikacja:
+- `AMC10` — **W trakcie; publiczny broker gotowy w źródłach, kompilacji i
+  testach lokalnych, czeka na domenę, dane integracji i odbiór na zewnętrznym
+  koncie** — działające sterowanie Sonosem i WiiM nie zostało przepisane.
+  Dodano serwerowy kontrakt logowania, PKCE, jednorazowe sesje, odnowienie,
+  ograniczenie tempa i bezpieczne logowanie. Publiczny Sonos nadal jest ukryty.
+  Bieżący zapis realizacji:
+  [AMC10-logowanie-sonos-i-publiczny-broker.md](AMC10-logowanie-sonos-i-publiczny-broker.md).
+  Zatwierdzona specyfikacja:
   `D:\Projekty Codex\Accessible Multimedia Controller\AMC10_SONOS_WIIM_URUCHOMIENIE_I_UJEDNOLICENIE_2026-10-18.md`.
   Bez obecności użytkownika nie logować konta i nie sterować głośnikami.
 - `AMC14` — **W trakcie; folder zawierający, argument pliku, osobny kanał

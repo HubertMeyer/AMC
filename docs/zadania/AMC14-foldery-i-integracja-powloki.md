@@ -160,4 +160,4 @@ zakończyło się wynikiem `OK`.
 - Instalacja: bez zmian.
 - Commit etapu A: `515898c8`.
 - Commit etapu B: `662f9c52`.
-- Commit etapu C: do uzupełnienia po zapisie spójnego etapu.
+- Commit etapu C: `c9d01839`.
