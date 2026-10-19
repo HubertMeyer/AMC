@@ -266,6 +266,7 @@ class Action(Enum):
     EXPORT_SONOS_OWN_STREAMS = "sonos.ownStreams.export"
     OPEN_FOLDER_DIALOG = "files.openFolder"
     OPEN_FILE_DIALOG = "files.openFile"
+    OPEN_CONTAINING_FOLDER = "files.openContainingFolder"
     COPY_NAME = "clipboard.copyName"
     COPY_ADDRESS = "clipboard.copyAddress"
     #: Ctrl+X jest kontekstowe jak w głównym AMC: w otwartej playliście
@@ -1549,6 +1550,7 @@ def _help_entries() -> list[tuple[str, str, Action]]:
         Action.SEEK_PERCENT_90: "Skok do 90% materiału lub bufora Time Shift",
         Action.OPEN_FOLDER_DIALOG: "Wybierz folder",
         Action.OPEN_FILE_DIALOG: "Wybierz plik",
+        Action.OPEN_CONTAINING_FOLDER: "Otwórz folder zawierający",
         Action.TRACK_START: "Poczatek utworu",
         # Pomoc mowi, ILE oryginal zostawia (CommandRouter.cs:321), zeby
         # uzytkownik nie uznal braku ciszy na koncu za blad.
@@ -1783,6 +1785,7 @@ def _help_entries() -> list[tuple[str, str, Action]]:
         Action.SESSION_CONFIGURE_CURRENT,
         Action.REFRESH_COMMON_DATA,
         Action.COMMON_DATA_STATUS,
+        Action.OPEN_CONTAINING_FOLDER,
     ):
         if action not in seen:
             out.append(("Bez skrótu", labels[action], action))

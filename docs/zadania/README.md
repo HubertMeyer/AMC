@@ -122,9 +122,12 @@ zmian, wymagający korekty użytkownika:
   brokera. Zatwierdzona specyfikacja:
   `D:\Projekty Codex\Accessible Multimedia Controller\AMC10_SONOS_WIIM_URUCHOMIENIE_I_UJEDNOLICENIE_2026-10-18.md`.
   Bez obecności użytkownika nie logować konta i nie sterować głośnikami.
-- `AMC14` — **Oczekuje, po fundamencie AMC12** — aplikacyjna integracja z
-  powłoką Windows, przekazywanie plików do właściwej instancji i późniejsza
-  rejestracja przez instalator. Zatwierdzona specyfikacja:
+- `AMC14` — **W trakcie; polecenie otwarcia folderu zawierającego gotowe w
+  źródłach i testach** — aplikacyjna integracja z powłoką Windows,
+  przekazywanie plików do właściwej instancji i późniejsza rejestracja przez
+  instalator. Bieżący zapis realizacji:
+  [AMC14-foldery-i-integracja-powloki.md](AMC14-foldery-i-integracja-powloki.md).
+  Zatwierdzona specyfikacja:
   `D:\Projekty Codex\Accessible Multimedia Controller\AMC14_FOLDERY_I_INTEGRACJA_POWLOKI_2026-10-18.md`.
 - `YT-001` — **Odłożone — po instalatorze i pierwszych stabilnych wydaniach** —
   oficjalne logowanie do konta YouTube, synchronizacja subskrypcji i zwykłych

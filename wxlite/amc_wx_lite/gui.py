@@ -85,6 +85,7 @@ from .list_model import (
     rows_from_stations,
 )
 from . import menu_model
+from .shell_paths import ShellPathError, looks_like_local_path, open_in_explorer
 from .playlist_dialog import (
     PlaylistMembershipDialog,
     PlaylistPayloadError,
@@ -6313,6 +6314,13 @@ class LiteFrame(wx.Frame):
             LiteFrame._description_target_row(self, self.navigator.active)
             is not None
         )
+        information_row = LiteFrame._description_target_row(
+            self, self.navigator.active
+        )
+        has_local_path = bool(
+            information_row is not None
+            and looks_like_local_path(information_row.path)
+        )
         selected_row = session.model.selected_row
         selected_kind = (
             selected_row.kind
@@ -6471,6 +6479,8 @@ class LiteFrame(wx.Frame):
             if entry.needs_selection and not has_row:
                 enabled = False
             if entry.needs_item_information and not has_information_item:
+                enabled = False
+            if entry.needs_local_path and not has_local_path:
                 enabled = False
             if entry.needs_podcast_item and (
                 not podcasts or selected_kind not in ("podcast", "episode")
@@ -10843,6 +10853,8 @@ class LiteFrame(wx.Frame):
             self._choose_folder()
         elif action is Action.OPEN_FILE_DIALOG:
             self._choose_file()
+        elif action is Action.OPEN_CONTAINING_FOLDER:
+            self._open_containing_folder()
         elif action is Action.QUICK_INFORMATION:
             self._announce_quick_information()
         elif action is Action.ITEM_PROPERTIES:
@@ -16661,6 +16673,18 @@ class LiteFrame(wx.Frame):
             self.announcer.say(f"Nie moge wczytac folderu: {error}")
 
         self.runner.submit("folder", work, done, failed)
+
+    def _open_containing_folder(self) -> None:
+        """Otwórz lokalny folder zaznaczonego lub odtwarzanego elementu."""
+
+        row = LiteFrame._description_target_row(self, self.navigator.active)
+        if row is None or not looks_like_local_path(row.path):
+            self.announcer.say("Ten element nie ma lokalnego pliku")
+            return
+        try:
+            open_in_explorer(row.path)
+        except ShellPathError as error:
+            self.announcer.say(str(error))
 
     def _copy_name(self) -> None:
         """Ctrl+C: nazwy zaznaczonych elementow, po jednej w wierszu.

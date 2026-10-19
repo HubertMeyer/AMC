@@ -100,6 +100,9 @@ class MenuItem:
     #: Dzięki temu Alt+T i Alt+Enter pozostają dostępne w odtwarzaczu także
     #: po przejściu listy do innego miejsca, ale znikają z pustego kontekstu.
     needs_item_information: bool = False
+    #: Wymaga lokalnej ścieżki pliku lub folderu. Adresy usług internetowych
+    #: pozostają wyłączone zamiast otwierać pusty albo mylący Eksplorator.
+    needs_local_path: bool = False
     #: Wymaga zaznaczonego podcastu albo odcinka, nie np. „Załaduj więcej”.
     needs_podcast_item: bool = False
     #: Wspólny opis Alt+D: lokalny podcast/YouTube albo podcast Spotify.
@@ -244,6 +247,14 @@ def build_menus(session_order: object = None) -> tuple[Menu, ...]:
                      accelerator=False, visible_sessions=FILES_ONLY),
             MenuItem("Otwórz &folder", Action.OPEN_FOLDER_DIALOG,
                      shortcut="Ctrl+Shift+O", visible_sessions=FILES_ONLY),
+            MenuItem(
+                "Otwórz folder &zawierający",
+                Action.OPEN_CONTAINING_FOLDER,
+                accelerator=False,
+                needs_item_information=True,
+                needs_local_path=True,
+                visible_sessions=(SessionId.FILES, SessionId.PODCASTS),
+            ),
             MenuItem(
                 "Nowy str&umień WiiM…",
                 Action.ADD_WIIM_NETWORK_STREAM,
