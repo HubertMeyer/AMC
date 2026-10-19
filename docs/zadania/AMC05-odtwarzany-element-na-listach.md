@@ -1,6 +1,6 @@
 # AMC05 — odtwarzany element na listach
 
-- Status: **Kod i testy zakończone; czeka na instalację i ręczny odbiór NVDA**
+- Status: **Wdrożone i zainstalowane w AMC Test; czeka na ręczny odbiór NVDA**
 - Data realizacji w AMC Test: 2026-10-19
 - Repozytorium wykonawcze: `D:\Projekty Codex\AMC - integracja wxPython`
 - Materiał historyczny, tylko do odczytu:
@@ -65,8 +65,13 @@ bez oznaczania kontenerów i bez utraty dotychczasowych szczegółów wiersza.
 - Core SmokeTests: zaliczone, kod wyjścia 0.
 - `git diff --check`: bez błędów przed zatwierdzeniem źródeł.
 
-Wyniki potwierdzają kod, testy i kompilację. Nie są jeszcze dowodem instalacji
-tej wersji ani ręcznego odbioru zachowania przez NVDA.
+Po commicie dokumentacji pełną regresję wxPython powtórzono: **1770
+zaliczonych, 110 pominiętych i 11 podtestów zaliczonych** w 85,32 s. Procedura
+promocji zbudowała 1660 plików, sprawdziła manifest i sumy SHA-256,
+zainstalowała wersję i potwierdziła uruchomiony proces oraz tytuł „AMC Test”.
+W samej procedurze testy oznaczono jako pominięte, ponieważ pełny zestaw został
+wykonany bezpośrednio tuż przed promocją. Ręczny odbiór NVDA nadal pozostaje
+osobnym etapem.
 
 ## Znane ograniczenia
 
@@ -84,6 +89,7 @@ tej wersji ani ręcznego odbioru zachowania przez NVDA.
   `feat(amc05-amc13): oznacz odtwarzanie i napraw End radia`.
 - Dokumentacja zadania: commit następujący po commicie implementacji.
 - Kompilacja: Release — zaliczona.
-- Instalacja: jeszcze nie wykonano dla tego commita.
+- Instalacja: `2026.10.19-ca7dfa167728317728be534da7a71f8484ebe573-b9d47b3d`,
+  manifest, sumy i uruchomienie zweryfikowane 19 października 2026.
 - Publikacja: nie wykonano; brak wysyłania do GitHuba i brak wydania publicznego.
 

@@ -1,6 +1,6 @@
 # AMC13 — End w Time Shifcie Radia wraca na żywo
 
-- Status: **Kod i testy zakończone; czeka na instalację i ręczny odbiór NVDA**
+- Status: **Wdrożone i zainstalowane w AMC Test; czeka na ręczny odbiór NVDA**
 - Data realizacji w AMC Test: 2026-10-19
 - Repozytorium wykonawcze: `D:\Projekty Codex\AMC - integracja wxPython`
 - Materiał historyczny, tylko do odczytu:
@@ -65,8 +65,11 @@ do nowego pliku. Funkcja ta pozostaje poza AMC13.
   0 aktywnych harmonogramów, 0 plików `.amc-partial` w folderze nagrań i 0
   rosnących plików.
 
-To potwierdza źródła, testy i kompilację. Instalacja oraz ręczna próba
-klawiatury i NVDA pozostają osobnymi etapami.
+Tuż przed promocją pełną regresję wxPython powtórzono: **1770 zaliczonych,
+110 pominiętych i 11 podtestów zaliczonych** w 85,32 s. Procedura promocji
+zbudowała 1660 plików, zweryfikowała manifest i sumy SHA-256, zainstalowała
+wersję oraz potwierdziła uruchomiony proces i tytuł „AMC Test”. Ręczna próba
+klawiatury i NVDA pozostaje osobnym etapem.
 
 ## Znane ograniczenia
 
@@ -81,6 +84,7 @@ klawiatury i NVDA pozostają osobnymi etapami.
   `feat(amc05-amc13): oznacz odtwarzanie i napraw End radia`.
 - Dokumentacja zadania: commit następujący po commicie implementacji.
 - Kompilacja: Release — zaliczona.
-- Instalacja: jeszcze nie wykonano dla tego commita.
+- Instalacja: `2026.10.19-ca7dfa167728317728be534da7a71f8484ebe573-b9d47b3d`,
+  manifest, sumy i uruchomienie zweryfikowane 19 października 2026.
 - Publikacja: nie wykonano; brak wysyłania do GitHuba i brak wydania publicznego.
 

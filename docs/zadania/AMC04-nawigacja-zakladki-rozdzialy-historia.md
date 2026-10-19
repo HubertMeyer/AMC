@@ -1,6 +1,6 @@
 # AMC04 — zakładki, rozdziały i historia nawigacji
 
-- Status: **W trakcie — kod i testy zakończone, brak instalacji i ręcznego odbioru NVDA**
+- Status: **Wdrożone i zainstalowane w AMC Test; czeka na ręczny odbiór NVDA**
 - Data rozpoczęcia w AMC Test: 2026-10-19
 - Repozytorium wykonawcze: `D:\Projekty Codex\AMC - integracja wxPython`
 - Materiał historyczny, tylko do odczytu:
@@ -117,9 +117,11 @@ spójnie `B` oraz `Ctrl+Shift+B`.
 - `git diff --check`: bez błędów białych znaków; ostrzeżenia dotyczyły tylko
   repozytoryjnej konwersji końców linii LF/CRLF.
 
-To są wyniki kodu i testów. Nie są dowodem instalacji ani ręcznego odbioru z
-NVDA. AMC04 nie weszło do wcześniej zainstalowanej wersji
-`2026.10.19-e0f97512d1eee067d225d7b8c73b808ff3f3e561-c0e62181`.
+Po połączeniu z AMC05 i AMC13 wykonano pełną regresję wxPython: **1770
+zaliczonych, 110 pominiętych i 11 podtestów zaliczonych** w 85,32 s. Następnie
+utworzono paczkę 1660 plików, zweryfikowano manifest i sumy SHA-256,
+zainstalowano ją oraz uruchomiono proces z tytułem „AMC Test”. Instalacja nie
+jest jeszcze dowodem ręcznego odbioru z NVDA.
 
 ## Znane ograniczenia
 
@@ -130,8 +132,7 @@ NVDA. AMC04 nie weszło do wcześniej zainstalowanej wersji
   ponieważ te sesje nie zapewniają w tym kontrakcie wspólnej trwałej osi czasu.
 - Rozdziały dostawcy pojawią się tylko tam, gdzie importer zapisał rzeczywiste
   dane rozdziałów. Brak rozdziałów jest komunikowany wprost.
-- Nie wykonano instalacji ani uruchomienia nowej paczki po tym commicie, aby
-  połączyć bezpiecznie AMC04 z następną małą bramką AMC05/AMC13.
+- Ręczny odbiór z NVDA pozostaje osobnym etapem mimo poprawnej instalacji.
 
 ## Wersja i commit
 
@@ -139,5 +140,6 @@ NVDA. AMC04 nie weszło do wcześniej zainstalowanej wersji
   `feat(amc04): ujednolic nawigacje zakladek i rozdzialow`.
 - Dokumentacja zadania: commit następujący po commicie implementacji.
 - Kompilacja: projekty testowe Core i LiteHost, konfiguracja Release — sukces.
-- Instalacja: nie wykonano dla tego commita.
+- Instalacja: `2026.10.19-ca7dfa167728317728be534da7a71f8484ebe573-b9d47b3d`,
+  manifest, sumy i uruchomienie zweryfikowane 19 października 2026.
 - Publikacja: nie wykonano; brak wysyłania do GitHuba i brak wydania publicznego.

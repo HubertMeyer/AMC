@@ -60,7 +60,7 @@ jawnym poleceniu użytkownika albo przez osobno uzgodniony harmonogram.
 - `POD-001` — **Oczekuje** — sortowanie zbiorczej Biblioteki podcastów,
   kanałów YouTube i kolekcji „Media internetowe”. Szczegóły:
   [POD-001-sortowanie-biblioteki-zrodel.md](POD-001-sortowanie-biblioteki-zrodel.md).
-- `AMC04` — **Kod i testy zakończone; czeka na instalację i ręczny odbiór
+- `AMC04` — **Wdrożone i zainstalowane w AMC Test; czeka na ręczny odbiór
   NVDA** — przeniesiony do bieżącego AMC Test zatwierdzony model skrótów
   zakładek, nazwanych zakładek, rozdziałów, historii widoków i historii
   odtwarzanych elementów. Bieżący zapis realizacji:
@@ -69,13 +69,13 @@ jawnym poleceniu użytkownika albo przez osobno uzgodniony harmonogram.
   `D:\Projekty Codex\Accessible Multimedia Controller\AMC03_AUDYT_SKROTOW_2026-10-18.md`
   oraz `AMC04_REALIZACJA_ETAP_A_2026-10-18.md`. Stare źródła WPF służą tylko
   jako wzorzec; właściwe wdrożenie wykonujemy w tym repozytorium.
-- `AMC05` — **Kod i testy zakończone; czeka na instalację i ręczny odbiór
+- `AMC05` — **Wdrożone i zainstalowane w AMC Test; czeka na ręczny odbiór
   NVDA** — stan `Odtwarzane` lub `Wstrzymane` na właściwych listach bez utraty
   etykiety i bez przestawiania fokusa. Bieżący zapis realizacji:
   [AMC05-odtwarzany-element-na-listach.md](AMC05-odtwarzany-element-na-listach.md).
   Zatwierdzona specyfikacja:
   `D:\Projekty Codex\Accessible Multimedia Controller\AMC05_ODTWARZANY_ELEMENT_NA_LISTACH_2026-10-18.md`.
-- `AMC13` — **Kod i testy zakończone; czeka na instalację i ręczny odbiór
+- `AMC13` — **Wdrożone i zainstalowane w AMC Test; czeka na ręczny odbiór
   NVDA** — `End` w otwartym odtwarzaczu Time Shiftu wraca na żywo i do tempa
   normalnego, a `NVDA+End` pozostaje poleceniem czytnika. Bieżący zapis
   realizacji:
