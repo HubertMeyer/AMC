@@ -161,6 +161,17 @@ repozytorium, kanałami wydań i polityką prywatności.
 - Bieżąca zmiana jest gotowa w źródłach i testach, lecz nie została
   skompilowana do paczki ani zainstalowana.
 
+## Porządek dysku
+
+- Po testach usunięto osiem odtwarzalnych plików `.pyc` utworzonych w
+  `D:\Projekty Codex\AMC - integracja wxPython\wxlite\amc_wx_lite\__pycache__`
+  oraz `D:\Projekty Codex\AMC - integracja wxPython\wxlite\tests\__pycache__`.
+  Odzyskano 1 600 458 bajtów, około 1,53 MiB. Pliki nie wymagają odzyskania,
+  ponieważ Python utworzy je ponownie przy następnym uruchomieniu.
+- Zachowano jedyną zweryfikowaną paczkę publiczną, instalator, całe zastane
+  `.test-output` i `.test-tmp`, źródła, dokumentację, ustawienia oraz dane
+  użytkownika.
+
 ## Wersja i commit
 
 - Wersja źródeł: `0.1.0`, profile `AMC Test` i `AMC`.
