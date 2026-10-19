@@ -111,7 +111,8 @@ i menu ma wynik **138 zaliczonych**.
 
 - Implementacja i testy: `12b5856ee2f90be8b6d6b501c09ac27cf749085f` —
   `feat(amc05-amc13): oznacz odtwarzanie i napraw End radia`.
-- Rozszerzenie skoków procentowych: commit następujący po tym zapisie.
+- Rozszerzenie skoków procentowych: `be709c48` —
+  `feat(amc13): dodaj skoki procentowe bufora radia`.
 - Dokumentacja zadania: commit następujący po commicie implementacji.
 - Kompilacja: Release — zaliczona.
 - Instalacja: `2026.10.19-ca7dfa167728317728be534da7a71f8484ebe573-b9d47b3d`,
