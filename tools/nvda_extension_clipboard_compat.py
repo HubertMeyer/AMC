@@ -129,7 +129,12 @@ def atomic_write(target: Path, data: bytes) -> None:
 
 def apply_patch(target: Path) -> tuple[str, Path | None]:
     source_bytes = target.read_bytes()
-    source = source_bytes.decode("utf-8")
+    raw_source = source_bytes.decode("utf-8")
+    # Dry-run reads translate CRLF automatically.  Applying starts from exact
+    # bytes, so normalize only for matching and then preserve the installed
+    # add-on's newline convention in the atomically written replacement.
+    crlf_only = "\r\n" in raw_source and "\n" not in raw_source.replace("\r\n", "")
+    source = raw_source.replace("\r\n", "\n") if crlf_only else raw_source
     patched = build_patched_text(source)
     if patched == source:
         return "already-applied", None
@@ -138,7 +143,8 @@ def apply_patch(target: Path) -> tuple[str, Path | None]:
         shutil.copy2(target, backup)
     elif backup.read_bytes() != source_bytes:
         raise ValueError(f"Istniejąca kopia nie odpowiada oryginałowi: {backup}")
-    atomic_write(target, patched.encode("utf-8"))
+    output = patched.replace("\n", "\r\n") if crlf_only else patched
+    atomic_write(target, output.encode("utf-8"))
     return "applied", backup
 
 

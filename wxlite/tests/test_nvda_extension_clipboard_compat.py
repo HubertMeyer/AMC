@@ -54,3 +54,18 @@ def test_unknown_upstream_layout_is_rejected() -> None:
         assert "Nieznany układ" in str(error)
     else:
         raise AssertionError("Nieznany plik dodatku nie może zostać nadpisany")
+
+
+def test_apply_preserves_crlf_installed_addon(tmp_path: Path) -> None:
+    target = tmp_path / "__init__.py"
+    source = UPSTREAM_FIXTURE.replace("\n", "\r\n")
+    target.write_bytes(source.encode("utf-8"))
+
+    status, backup = compat.apply_patch(target)
+
+    assert status == "applied"
+    assert backup is not None and backup.read_bytes() == source.encode("utf-8")
+    patched = target.read_bytes()
+    assert b"\r\n" in patched
+    assert b"\n" not in patched.replace(b"\r\n", b"")
+    assert compat.BEGIN.encode("utf-8") in patched
