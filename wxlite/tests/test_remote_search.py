@@ -149,7 +149,7 @@ def test_radio_payload_has_user_facing_text_without_directory_identifier() -> No
     assert result.remote_kind == "radioStation"
     assert result.accessible_label == (
         "Radio Poznań, stacja, Polska, polski, MP3, 128 kb/s, "
-        "Radio internetowe"
+        "Radio"
     )
     assert "private-directory-id" not in result.accessible_label
 

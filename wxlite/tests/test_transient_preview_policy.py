@@ -182,7 +182,7 @@ def test_disabled_global_mode_keeps_only_home_sessions() -> None:
 
 
 def test_unavailable_messages_name_user_facing_home_sessions() -> None:
-    assert "Radio internetowe" in transient_preview_unavailable_message(
+    assert "Radio" in transient_preview_unavailable_message(
         Action.VIEW_ACTIVE_RECORDINGS
     )
     assert "Pliki lokalne" in transient_preview_unavailable_message(
@@ -220,7 +220,7 @@ def test_window_blocks_global_shortcut_before_running_foreign_session_action() -
     LiteFrame._dispatch(frame, Action.VIEW_ACTIVE_RECORDINGS)
 
     assert len(spoken) == 1
-    assert "Radio internetowe" in spoken[0]
+    assert "Radio" in spoken[0]
 
 
 def test_window_runs_preview_in_its_home_session_when_global_mode_is_off() -> None:

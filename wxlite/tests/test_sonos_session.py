@@ -36,7 +36,11 @@ def test_ctrl_6_and_menu_open_the_sonos_session() -> None:
             player_view=player,
             radio_session=False,
         ) is Action.SESSION_SONOS
-    view = next(menu for menu in build_menus() if menu.title == "&Widok")
+    view = next(
+        menu
+        for menu in build_menus([session.value for session in SessionId])
+        if menu.title == "&Widok"
+    )
     item = next(entry for entry in view.items if entry.action is Action.SESSION_SONOS)
     assert item.label == "Sesja: &Sonos"
     assert item.shortcut == "Ctrl+6"

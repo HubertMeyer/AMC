@@ -7,6 +7,7 @@ import os
 import tempfile
 from pathlib import Path
 
+from amc_wx_lite.navigation import SessionId
 from amc_wx_lite.state_store import (
     LiteState,
     Options,
@@ -83,12 +84,35 @@ def test_session_order_round_trip_is_normalized_without_exposing_labels() -> Non
 
     loaded = store.load()
 
-    assert loaded.options.session_order == [
-        "sonos", "radio", "files", "podcasts", "tidal", "wiim", "spotify",
-    ]
+    assert loaded.options.session_order == ["sonos", "radio"]
     raw = json.loads((directory / StateStore.FILE_NAME).read_text(encoding="utf-8"))
+    assert raw["session_manager_version"] == StateStore.SESSION_MANAGER_VERSION
     assert raw["options"]["session_order"] == loaded.options.session_order
     assert "Sonos" not in raw["options"]["session_order"]
+
+
+def test_legacy_state_migration_preserves_order_and_does_not_disable_services() -> None:
+    store, _ = temp_store()
+    store.path.write_text(json.dumps({
+        "version": 1,
+        "options": {"session_order": ["sonos", "radio", "sonos"]},
+        "navigation": {"active_session": "sonos", "sessions": {}},
+    }), encoding="utf-8")
+
+    loaded = store.load()
+
+    assert loaded.options.session_order[:2] == ["sonos", "radio"]
+    assert set(loaded.options.session_order) == set(item.value for item in SessionId)
+    assert loaded.navigation["active_session"] == "sonos"
+
+
+def test_missing_state_starts_with_local_radio_and_podcasts_only() -> None:
+    store, _ = temp_store()
+
+    loaded = store.load()
+
+    assert loaded.options.session_order == ["files", "radio", "podcasts"]
+    assert loaded.navigation == {}
 
 
 def test_round_trip_keeps_private_audio_edit_backup_choice() -> None:

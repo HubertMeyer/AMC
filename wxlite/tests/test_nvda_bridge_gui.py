@@ -61,7 +61,7 @@ def test_radio_status_adds_only_the_current_stations_recording_state() -> None:
     }
 
     assert frame._nvda_status_message() == (
-        "Radio Poznań, Radio internetowe, odtwarzanie, "
+        "Radio Poznań, Radio, odtwarzanie, "
         "nagrywanie wstrzymane, głośność 40%."
     )
 
@@ -94,7 +94,7 @@ def test_context_uses_explicit_control_name_not_model_identifiers() -> None:
     frame.navigator.session.view = View.LIST
 
     message = frame._nvda_context_message()
-    assert message == "Radio internetowe, Ulubione stacje radiowe"
+    assert message == "Radio, Ulubione stacje radiowe"
     assert "LibraryView" not in message
     assert "SessionId" not in message
 

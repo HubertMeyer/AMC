@@ -40,7 +40,7 @@ def test_item_properties_use_address_for_stream_without_path() -> None:
             kind="station",
             url="https://example.test/live",
         ),
-        session_label="Radio internetowe",
+        session_label="Radio",
     )
 
     assert "Adres: https://example.test/live" in text

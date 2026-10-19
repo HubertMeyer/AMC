@@ -3915,46 +3915,76 @@ def relation_destination_labels(
 
 
 class SessionSelectionDialog(wx.Dialog):
-    """Natywna lista sesji z jawnymi etykietami dla czytnika ekranu."""
-
-    SESSIONS: tuple[SessionId, ...] = tuple(SessionId)
+    """Jeden dostępny Menedżer sesji, bez technicznych wartości w mowie."""
 
     def __init__(
         self,
         parent: wx.Window,
         current: SessionId,
         order: object = None,
+        readiness: dict[SessionId, str] | None = None,
+        *,
+        toggle_session: Callable[[SessionId], tuple[object, str]] | None = None,
+        move_session: Callable[[SessionId, int], tuple[object, str]] | None = None,
+        focus_inactive: bool = False,
     ) -> None:
-        super().__init__(parent, title="Wybór sesji")
-        self.sessions = session_order.normalize(order)
+        super().__init__(parent, title="Menedżer sesji")
+        self.SetName("Menedżer sesji")
+        self._order = session_order.normalize(order)
+        self._readiness = dict(readiness or {})
+        self._toggle_session = toggle_session
+        self._move_session = move_session
+        self.configure_session: SessionId | None = None
         panel = wx.Panel(self)
         layout = wx.BoxSizer(wx.VERTICAL)
 
-        hint_text = "Wybierz sesję. Enter przełącza, Escape anuluje."
+        hint_text = (
+            "Enter przełącza do włączonej sesji. Spacja włącza lub wyłącza. "
+            "Alt+strzałka w górę lub w dół zmienia kolejność i numery."
+        )
         hint = wx.StaticText(panel, label=hint_text)
         hint.SetName(hint_text)
         layout.Add(hint, 0, wx.ALL | wx.EXPAND, 12)
 
         self.session_list = wx.ListBox(
             panel,
-            choices=list(session_selection_labels(self.sessions)),
+            choices=[],
             style=wx.LB_SINGLE,
         )
         self.session_list.SetName("Sesje")
-        selected = self.sessions.index(current) if current in self.sessions else 0
-        self.session_list.SetSelection(selected)
+        self.sessions: tuple[SessionId, ...] = ()
+        self._refresh_rows(
+            next(
+                (
+                    session for session in session_order.AVAILABLE_TEST_SESSIONS
+                    if focus_inactive and session not in self._order
+                ),
+                current,
+            )
+        )
         layout.Add(self.session_list, 1, wx.LEFT | wx.RIGHT | wx.EXPAND, 12)
+        self.status = wx.StaticText(panel, label="Gotowe")
+        self.status.SetName("Gotowe")
+        layout.Add(self.status, 0, wx.ALL | wx.EXPAND, 12)
         panel.SetSizer(layout)
 
-        buttons = wx.StdDialogButtonSizer()
-        select_button = wx.Button(self, wx.ID_OK, label="&Wybierz")
-        select_button.SetName("Wybierz sesję")
+        buttons = wx.BoxSizer(wx.HORIZONTAL)
+        select_button = wx.Button(self, wx.ID_OK, label="&Przełącz")
+        select_button.SetName("Przełącz do wybranej sesji")
         select_button.SetDefault()
-        cancel_button = wx.Button(self, wx.ID_CANCEL, label="&Anuluj")
-        cancel_button.SetName("Anuluj wybór sesji")
-        buttons.AddButton(select_button)
-        buttons.AddButton(cancel_button)
-        buttons.Realize()
+        self.toggle_button = wx.Button(self, label="&Włącz lub wyłącz")
+        self.toggle_button.SetName("Włącz lub wyłącz wybraną sesję")
+        self.configure_button = wx.Button(self, label="&Konfiguruj…")
+        self.configure_button.SetName("Konfiguruj wybrane konto lub urządzenie")
+        cancel_button = wx.Button(self, wx.ID_CANCEL, label="&Zamknij")
+        cancel_button.SetName("Zamknij Menedżer sesji")
+        for button in (
+            select_button,
+            self.toggle_button,
+            self.configure_button,
+            cancel_button,
+        ):
+            buttons.Add(button, 0, wx.RIGHT, 8)
 
         shell = wx.BoxSizer(wx.VERTICAL)
         shell.Add(panel, 1, wx.EXPAND)
@@ -3963,8 +3993,31 @@ class SessionSelectionDialog(wx.Dialog):
         self.SetMinSize((520, 360))
         self.Fit()
         self.session_list.Bind(wx.EVT_LISTBOX_DCLICK, self._accept)
+        self.toggle_button.Bind(wx.EVT_BUTTON, self._toggle)
+        self.configure_button.Bind(wx.EVT_BUTTON, self._configure)
         self.Bind(wx.EVT_CHAR_HOOK, self._on_key)
-        self.session_list.SetFocus()
+        self.Bind(wx.EVT_SHOW, self._on_show)
+
+    def _on_show(self, event: wx.ShowEvent) -> None:
+        event.Skip()
+        if event.IsShown():
+            wx.CallAfter(self.session_list.SetFocus)
+
+    def _refresh_rows(self, preferred: SessionId | None) -> None:
+        entries = session_order.manager_labels(self._order, self._readiness)
+        self.sessions = tuple(session for session, _label in entries)
+        self.session_list.Set([label for _session, label in entries])
+        if not self.sessions:
+            return
+        try:
+            index = self.sessions.index(preferred) if preferred is not None else 0
+        except ValueError:
+            index = 0
+        self.session_list.SetSelection(index)
+
+    def _say(self, message: str) -> None:
+        self.status.SetLabel(message)
+        self.status.SetName(message)
 
     @property
     def selected_session(self) -> SessionId | None:
@@ -3972,13 +4025,63 @@ class SessionSelectionDialog(wx.Dialog):
         return self.sessions[index] if 0 <= index < len(self.sessions) else None
 
     def _accept(self, _event) -> None:
-        if self.selected_session is not None:
-            self.EndModal(wx.ID_OK)
+        selected = self.selected_session
+        if selected is None:
+            return
+        if selected not in session_order.normalize(self._order):
+            self._say("Ta sesja jest wyłączona. Naciśnij Spację, aby ją włączyć")
+            self.session_list.SetFocus()
+            return
+        self.EndModal(wx.ID_OK)
+
+    def _toggle(self, _event) -> None:
+        selected = self.selected_session
+        if selected is None or self._toggle_session is None:
+            return
+        order, message = self._toggle_session(selected)
+        self._order = session_order.normalize(order)
+        self._refresh_rows(selected)
+        self._say(message)
+        self.session_list.SetFocus()
+
+    def _move(self, direction: int) -> None:
+        selected = self.selected_session
+        if selected is None or self._move_session is None:
+            return
+        order, message = self._move_session(selected, direction)
+        self._order = session_order.normalize(order)
+        self._refresh_rows(selected)
+        self._say(message)
+        self.session_list.SetFocus()
+
+    def _configure(self, _event) -> None:
+        selected = self.selected_session
+        if selected is None:
+            return
+        self.configure_session = selected
+        self.EndModal(wx.ID_APPLY)
 
     def _on_key(self, event: wx.KeyEvent) -> None:
+        if (
+            event.AltDown()
+            and not event.ControlDown()
+            and not event.ShiftDown()
+        ):
+            if event.GetKeyCode() == wx.WXK_UP:
+                self._move(-1)
+                return
+            if event.GetKeyCode() == wx.WXK_DOWN:
+                self._move(1)
+                return
         if not event.ControlDown() and not event.AltDown() and not event.ShiftDown():
             if event.GetKeyCode() in (wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER):
                 self._accept(event)
+                return
+            if event.GetKeyCode() == wx.WXK_SPACE:
+                self._toggle(event)
+                return
+            if event.GetKeyCode() == wx.WXK_ESCAPE:
+                self.EndModal(wx.ID_CANCEL)
                 return
         event.Skip()
 
@@ -4619,7 +4722,7 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
         self._startup_target_values = ["MediaList", "SessionList"]
         self.startup_target = wx.Choice(
             general,
-            choices=["Ostatnia używana sesja", "Lista sesji"],
+            choices=["Ostatnia używana sesja", "Menedżer sesji"],
         )
         self.startup_target.SetName("Wyświetlaj po uruchomieniu")
         try:
@@ -4722,53 +4825,18 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
         ):
             general_layout.Add(control, 0, wx.BOTTOM | wx.EXPAND, 10)
 
-        session_order_label = wx.StaticText(
-            general, label="Kolejność sesji i skrótów &Ctrl+1–9:"
-        )
         self._session_order = list(session_order.normalize(options.session_order))
-        self.session_order_list = wx.ListBox(
+        session_manager_note = wx.StaticText(
             general,
-            choices=list(session_order.selection_labels(self._session_order)),
-            style=wx.LB_SINGLE,
+            label=(
+                "Włączaniem i kolejnością sesji zarządza Menedżer sesji "
+                "pod Ctrl+Shift+S."
+            ),
         )
-        self.session_order_list.SetName(
-            "Sesje: kolejność i skróty Control od 1 do 9"
+        session_manager_note.SetName(
+            "Włączaniem i kolejnością sesji zarządza Menedżer sesji pod Control Shift S"
         )
-        self.session_order_list.SetHelpText(
-            "Alt+strzałka w górę lub w dół zmienia położenie zaznaczonej sesji"
-        )
-        if self._session_order:
-            self.session_order_list.SetSelection(0)
-        self.session_order_list.Bind(wx.EVT_CHAR_HOOK, self._on_session_order_key)
-
-        session_order_buttons = wx.BoxSizer(wx.HORIZONTAL)
-        self.session_up = wx.Button(general, label="Przenieś &wyżej")
-        self.session_up.SetName("Przenieś zaznaczoną sesję wyżej")
-        self.session_down = wx.Button(general, label="Przenieś &niżej")
-        self.session_down.SetName("Przenieś zaznaczoną sesję niżej")
-        self.session_default = wx.Button(
-            general, label="Przywróć &domyślną kolejność"
-        )
-        self.session_default.SetName("Przywróć domyślną kolejność sesji")
-        self.session_up.Bind(
-            wx.EVT_BUTTON, lambda _event: self._move_session_order(-1)
-        )
-        self.session_down.Bind(
-            wx.EVT_BUTTON, lambda _event: self._move_session_order(1)
-        )
-        self.session_default.Bind(
-            wx.EVT_BUTTON, self._restore_default_session_order
-        )
-        session_order_buttons.Add(self.session_up, 0, wx.RIGHT, 8)
-        session_order_buttons.Add(self.session_down, 0, wx.RIGHT, 8)
-        session_order_buttons.Add(self.session_default, 0)
-        general_layout.Add(session_order_label, 0, wx.TOP | wx.BOTTOM, 4)
-        general_layout.Add(
-            self.session_order_list, 0, wx.BOTTOM | wx.EXPAND, 8
-        )
-        general_layout.Add(
-            session_order_buttons, 0, wx.BOTTOM | wx.EXPAND, 12
-        )
+        general_layout.Add(session_manager_note, 0, wx.TOP | wx.BOTTOM | wx.EXPAND, 8)
 
         custom_seek_label = wx.StaticText(
             general,
@@ -5425,43 +5493,6 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
             dialog.Destroy()
         self.recording_folder.SetFocus()
 
-    def _refresh_session_order_list(self, selected: int) -> None:
-        self.session_order_list.Set(
-            list(session_order.selection_labels(self._session_order))
-        )
-        if self._session_order:
-            self.session_order_list.SetSelection(
-                max(0, min(selected, len(self._session_order) - 1))
-            )
-        self.session_order_list.SetFocus()
-
-    def _move_session_order(self, direction: int) -> None:
-        index = self.session_order_list.GetSelection()
-        target = index + (-1 if direction < 0 else 1)
-        if index < 0 or target < 0 or target >= len(self._session_order):
-            self.session_order_list.SetFocus()
-            return
-        self._session_order[index], self._session_order[target] = (
-            self._session_order[target],
-            self._session_order[index],
-        )
-        self._refresh_session_order_list(target)
-
-    def _restore_default_session_order(self, _event: wx.CommandEvent) -> None:
-        self._session_order = list(session_order.DEFAULT_SESSION_ORDER)
-        self._refresh_session_order_list(0)
-
-    def _on_session_order_key(self, event: wx.KeyEvent) -> None:
-        if event.AltDown() and not event.ControlDown() and not event.ShiftDown():
-            code = event.GetKeyCode()
-            if code == wx.WXK_UP:
-                self._move_session_order(-1)
-                return
-            if code == wx.WXK_DOWN:
-                self._move_session_order(1)
-                return
-        event.Skip()
-
     def _on_save(self, event: wx.CommandEvent) -> None:
         parsed = parse_custom_seek_length(self.custom_seek.GetValue())
         if parsed is None:
@@ -5739,6 +5770,10 @@ class LiteFrame(wx.Frame):
                 "liked", "albums", "artists", "playlists", "podcasts", "episodes",
             )
         }
+        # ``None`` znaczy: konto nie było jeszcze sprawdzone w tym procesie.
+        # Menedżer nie uruchamia logowania ani sieci tylko po to, by wypełnić
+        # etykietę; stan uaktualnia zwykłe otwarcie Biblioteki Spotify.
+        self._spotify_account_connected: bool | None = None
         # Kazde otwarcie katalogu ma numer. Odpowiedz rozpoczęta przed
         # opuszczeniem sesji nie moze po powrocie podmienic nowszej listy.
         self._tidal_navigation_version = 0
@@ -5761,6 +5796,14 @@ class LiteFrame(wx.Frame):
             state.podcast_library_sort_mode or SORT_CUSTOM
         )
         self.navigator.restore(state.navigation)
+        active_sessions = session_order.normalize(
+            getattr(self.options, "session_order", None)
+        )
+        if self.navigator.active not in active_sessions:
+            # Wyłączona sesja nie może zostać przywrócona z wcześniejszej
+            # migawki. Pierwsza aktywna jest też bezpiecznym domysłem świeżego
+            # profilu: Pliki lokalne.
+            self.navigator.active = active_sessions[0]
         # Alt+lewo/prawo porusza się po widokach, nie po odtwarzanych
         # elementach. Migawki przechowują wyłącznie nawigację i fokus; żywy
         # transport nadal aktualizuje się niezależnie.
@@ -6368,8 +6411,27 @@ class LiteFrame(wx.Frame):
             Action.SORT_SONOS_OWN_STREAMS_ALPHABETICAL: SORT_ALPHABETICAL,
             Action.SORT_SONOS_OWN_STREAMS_CUSTOM: SORT_CUSTOM,
         }
+        active_sessions = session_order.normalize(
+            getattr(self.options, "session_order", None)
+        )
+        inactive_sessions = tuple(
+            candidate
+            for candidate in session_order.AVAILABLE_TEST_SESSIONS
+            if candidate not in active_sessions
+        )
+        blocked_sessions = self._sessions_blocked_from_disabling()
         for item, entry in self._menu_items:
             enabled = True
+            if entry.action is Action.SESSION_ENABLE and (
+                not inactive_sessions
+                or len(active_sessions) >= session_order.MAX_ACTIVE_SESSIONS
+            ):
+                enabled = False
+            if entry.action is Action.SESSION_DISABLE_CURRENT and (
+                len(active_sessions) <= 1
+                or self.navigator.active in blocked_sessions
+            ):
+                enabled = False
             if entry.needs_radio_session and not radio:
                 enabled = False
             if entry.needs_files_session and not files:
@@ -9007,10 +9069,12 @@ class LiteFrame(wx.Frame):
             return False, nvda_bridge.unavailable_message(command)
 
         if command in nvda_bridge.SESSION_COMMANDS:
-            sessions = tuple(SessionId)
-            current = sessions.index(self.navigator.active)
             direction = 1 if command == "sessionNext" else -1
-            target = sessions[(current + direction) % len(sessions)]
+            target = session_order.adjacent(
+                self.navigator.active,
+                direction,
+                self.options.session_order,
+            )
             self._switch_session(target)
             return True, SESSION_LABELS[target]
 
@@ -9607,6 +9671,7 @@ class LiteFrame(wx.Frame):
             ):
                 return
             root, account = result
+            self._spotify_account_connected = bool(account.connected)
             self._run(self.navigator.apply_spotify_view(
                 root.heading,
                 list(root.rows),
@@ -10385,7 +10450,11 @@ class LiteFrame(wx.Frame):
             )
             if action is not None:
                 self._dispatch(action)
-                return
+            else:
+                self.announcer.say(f"Brak sesji pod Ctrl+{chord.key}")
+            # Nie wolno spaść do historycznej statycznej tabeli Ctrl+1–7:
+            # brak slotu oznacza wyłączoną sesję, a nie stary numer usługi.
+            return
         action = resolve(
             chord,
             player_view=player,
@@ -10518,6 +10587,16 @@ class LiteFrame(wx.Frame):
             self._switch_session(SessionId.SONOS)
         elif action is Action.SESSION_LIST:
             self._show_session_list()
+        elif action is Action.SESSION_ENABLE:
+            self._show_session_list(focus_inactive=True)
+        elif action is Action.SESSION_DISABLE_CURRENT:
+            _order, message = self._toggle_session_enabled(
+                self.navigator.active,
+                disable_only=True,
+            )
+            self.announcer.say(message)
+        elif action is Action.SESSION_CONFIGURE_CURRENT:
+            self._configure_session(self.navigator.active)
         elif action in (Action.PREVIOUS_SESSION, Action.NEXT_SESSION):
             target = session_order.adjacent(
                 self.navigator.active,
@@ -11142,7 +11221,7 @@ class LiteFrame(wx.Frame):
             self._refresh_menu_state()
         self.session_label.SetLabel({
             SessionId.FILES: "Pliki lokalne",
-            SessionId.RADIO: "Radio internetowe",
+            SessionId.RADIO: "Radio",
             SessionId.PODCASTS: "Podcasty i YouTube",
             SessionId.TIDAL: "TIDAL",
             SessionId.SPOTIFY: "Spotify",
@@ -13084,6 +13163,12 @@ class LiteFrame(wx.Frame):
         ))
 
     def _switch_session(self, session_id: SessionId) -> None:
+        if session_id not in session_order.normalize(self.options.session_order):
+            self.announcer.say(
+                f"Sesja {session_order.SESSION_NAMES[session_id]} jest wyłączona. "
+                "Otwórz Menedżer sesji skrótem Ctrl+Shift+S"
+            )
+            return
         if self.navigator.active is SessionId.TIDAL and session_id is not SessionId.TIDAL:
             self._tidal_navigation_version += 1
         if (
@@ -13118,18 +13203,168 @@ class LiteFrame(wx.Frame):
             if not state.model.rows:
                 self._load_sonos_targets(preferred_id=state.list_anchor_id)
 
-    def _show_session_list(self) -> None:
-        """Ctrl+Shift+S i dodatek NVDA: wybór sesji bez nazw modelu."""
+    def _session_readiness(self) -> dict[SessionId, str]:
+        """Tylko lokalne, już znane stany; samo otwarcie niczego nie loguje."""
+
+        ready = {
+            SessionId.FILES: "Gotowa",
+            SessionId.RADIO: "Gotowa",
+            SessionId.PODCASTS: "Gotowa",
+            SessionId.WIIM: (
+                "Gotowa"
+                if getattr(self, "_wiim_active_device_id", "")
+                or self.navigator.sessions[SessionId.WIIM].model.rows
+                else "Wymaga wybrania urządzenia"
+            ),
+            SessionId.SONOS: (
+                "Gotowa"
+                if getattr(self, "_sonos_active_group_id", "")
+                or self.navigator.sessions[SessionId.SONOS].sonos_target_rows
+                else "Wymaga zalogowania"
+            ),
+            SessionId.SPOTIFY: (
+                "Połączona, odtwarzanie ograniczone"
+                if getattr(self, "_spotify_account_connected", None) is True
+                else "Wymaga zalogowania"
+            ),
+            SessionId.TIDAL: "Wymaga zalogowania",
+        }
+        try:
+            cached = self.tidal.load_view(TIDAL_VIEW_LIBRARY)
+        except (OSError, ValueError, TidalProfileError):
+            pass
+        else:
+            if cached.rows:
+                ready[SessionId.TIDAL] = "Połączona, odtwarzanie ograniczone"
+        return ready
+
+    def _sessions_blocked_from_disabling(self) -> set[SessionId]:
+        """Wewnętrzne odtwarzanie i nagrywanie; urządzeń nie zatrzymujemy."""
+
+        blocked = {
+            session
+            for session in self.__dict__.get("_playing_sessions", set())
+            if session not in (SessionId.WIIM, SessionId.SONOS, SessionId.TIDAL)
+        }
+        pending = self.__dict__.get("_pending_playback_session")
+        if pending is not None and pending not in (
+            SessionId.WIIM,
+            SessionId.SONOS,
+            SessionId.TIDAL,
+        ):
+            blocked.add(pending)
+        recordings = (self.__dict__.get("_last_recording_status", {}) or {}).get(
+            "recordings"
+        )
+        if (
+            isinstance(recordings, list) and bool(recordings)
+            or int((self.__dict__.get("_last_recording_status", {}) or {}).get("count") or 0)
+            > 0
+        ):
+            blocked.add(SessionId.RADIO)
+        return blocked
+
+    def _toggle_session_enabled(
+        self,
+        session_id: SessionId,
+        *,
+        disable_only: bool = False,
+    ) -> tuple[object, str]:
+        previous = list(self.options.session_order)
+        active = session_order.normalize(previous)
+        if session_id not in active:
+            if disable_only:
+                return active, f"{session_order.SESSION_NAMES[session_id]} jest już wyłączona"
+            changed, message = session_order.enable(session_id, active)
+            new_current = self.navigator.active
+        else:
+            changed, new_current, message = session_order.disable(
+                session_id,
+                active,
+                current=self.navigator.active,
+                blocked=self._sessions_blocked_from_disabling(),
+            )
+        if tuple(changed) == tuple(active):
+            return changed, message
+        self.options.session_order = [item.value for item in changed]
+        previous_current = self.navigator.active
+        if new_current is not previous_current:
+            # Migawka zapisywana w tej samej transakcji ma już wskazywać
+            # aktywną, włączoną sesję. W razie błędu oba pola wracają razem.
+            self.navigator.active = new_current
+        if not self._save_state():
+            self.options.session_order = previous
+            self.navigator.active = previous_current
+            return active, "Nie udało się zapisać zmiany sesji"
+        if new_current is not previous_current:
+            self.navigator.active = previous_current
+        self._build_menu()
+        if new_current is not self.navigator.active:
+            self._transient_preview_return = None
+            self._switch_session(new_current)
+            slot = session_order.slot_for_session(new_current, changed)
+            message += (
+                f". Aktywna sesja: {session_order.SESSION_NAMES[new_current]}, "
+                f"Ctrl+{slot}"
+            )
+        return changed, message
+
+    def _move_managed_session(
+        self,
+        session_id: SessionId,
+        direction: int,
+    ) -> tuple[object, str]:
+        previous = list(self.options.session_order)
+        changed, message = session_order.move(session_id, direction, previous)
+        if tuple(changed) == tuple(session_order.normalize(previous)):
+            return changed, message
+        self.options.session_order = [item.value for item in changed]
+        if not self._save_state():
+            self.options.session_order = previous
+            return session_order.normalize(previous), "Nie udało się zapisać kolejności sesji"
+        self._build_menu()
+        return changed, message
+
+    def _configure_session(self, session_id: SessionId) -> None:
+        if session_id not in session_order.normalize(self.options.session_order):
+            self.announcer.say(
+                "Najpierw włącz tę sesję Spacją w Menedżerze sesji"
+            )
+            return
+        self._switch_session(session_id)
+        if session_id in (SessionId.FILES, SessionId.RADIO, SessionId.PODCASTS):
+            wx.CallAfter(self._show_session_options)
+            return
+        guidance = {
+            SessionId.WIIM: "Wybierz zapisane urządzenie WiiM albo otwórz jego ustawienia",
+            SessionId.SONOS: "Wybierz dom i grupę Sonos",
+            SessionId.SPOTIFY: "Otworzono konto i Bibliotekę Spotify",
+            SessionId.TIDAL: "Otworzono konto i Bibliotekę TIDAL",
+        }.get(session_id)
+        if guidance:
+            self.announcer.say(guidance)
+
+    def _show_session_list(self, *, focus_inactive: bool = False) -> None:
+        """Ctrl+Shift+S i dodatek NVDA: jeden Menedżer sesji."""
         with SessionSelectionDialog(
             self,
             self.navigator.active,
             self.options.session_order,
+            self._session_readiness(),
+            toggle_session=self._toggle_session_enabled,
+            move_session=self._move_managed_session,
+            focus_inactive=focus_inactive,
         ) as dialog:
-            if dialog.ShowModal() != wx.ID_OK:
+            result = dialog.ShowModal()
+            selected = dialog.selected_session
+            configure = dialog.configure_session
+            if result not in (wx.ID_OK, wx.ID_APPLY):
                 self._restore_focus_after_dialog()
                 return
-            selected = dialog.selected_session
-        if selected is not None:
+        if result == wx.ID_APPLY and configure is not None:
+            self._restore_focus_after_dialog()
+            wx.CallAfter(self._configure_session, configure)
+        elif selected is not None:
             self._transient_preview_return = None
             self._switch_session(selected)
             # Gdy użytkownik zatwierdzi już aktywną sesję, _sync_views nie
@@ -22924,6 +23159,16 @@ class LiteFrame(wx.Frame):
     def _shortcut_action_for_help(self, chord: Chord) -> Action | None:
         player = self.navigator.view is View.PLAYER
         session = self.navigator.sessions[self.navigator.active]
+        if (
+            chord.ctrl
+            and not chord.alt
+            and not chord.shift
+            and chord.key in "123456789"
+        ):
+            return session_order.action_for_slot(
+                int(chord.key),
+                self.options.session_order,
+            )
         return resolve(
             chord,
             player_view=player,
@@ -22982,6 +23227,15 @@ class LiteFrame(wx.Frame):
         )
 
     def _action_available_in_active_session(self, action: Action) -> bool:
+        target_session = next((
+            session
+            for session, candidate in session_order.SESSION_ACTIONS.items()
+            if candidate is action
+        ), None)
+        if target_session is not None:
+            return target_session in session_order.normalize(
+                self.options.session_order
+            )
         if (
             self.navigator.active in (SessionId.WIIM, SessionId.SONOS)
             and action is Action.REMOVE_SELECTED
@@ -23048,11 +23302,19 @@ class LiteFrame(wx.Frame):
             for item, entry in getattr(self, "_menu_items", ())
             if entry.action is not None and item.IsEnabled()
         }
+        shortcut_overrides = {
+            session_order.SESSION_ACTIONS[session]: f"Ctrl+{slot}"
+            for slot, session in enumerate(
+                session_order.normalize(self.options.session_order),
+                start=1,
+            )
+        }
         lines = [
             f"{chord}\t{label}"
             for chord, label in describe(
                 SESSION_LABELS[self.navigator.active],
                 available_actions,
+                shortcut_overrides,
             )
         ]
         wx.MessageBox("\n".join(lines), "Skroty klawiszowe", wx.OK | wx.ICON_INFORMATION, self)

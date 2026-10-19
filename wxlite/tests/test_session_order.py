@@ -1,63 +1,127 @@
 from __future__ import annotations
 
-from amc_wx_lite.navigation import SessionId
 from amc_wx_lite import menu_model
 from amc_wx_lite.command_palette import entries_for_session
+from amc_wx_lite.navigation import SessionId
 from amc_wx_lite.session_order import (
     action_for_slot,
     adjacent,
+    disable,
+    enable,
+    manager_labels,
+    migrate_legacy,
+    move,
     normalize,
     selection_labels,
     slot_for_session,
     values,
 )
-from amc_wx_lite.shortcuts import Action
+from amc_wx_lite.shortcuts import Action, describe
 
 
-def test_default_order_preserves_existing_wx_shortcuts() -> None:
-    assert values(None) == [
-        "files", "radio", "podcasts", "tidal", "wiim", "sonos", "spotify"
-    ]
+def test_fresh_profile_has_three_compact_sessions() -> None:
+    assert values(None) == ["files", "radio", "podcasts"]
     assert action_for_slot(1, None) is Action.SESSION_FILES
-    assert action_for_slot(6, None) is Action.SESSION_SONOS
-    assert action_for_slot(7, None) is Action.SESSION_SPOTIFY
-    assert action_for_slot(8, None) is None
+    assert action_for_slot(2, None) is Action.SESSION_RADIO
+    assert action_for_slot(3, None) is Action.SESSION_PODCASTS
+    assert action_for_slot(4, None) is None
+    assert slot_for_session(SessionId.SPOTIFY, None) is None
 
 
-def test_custom_order_drives_slots_labels_and_actions_without_model_leaks() -> None:
-    raw = ["sonos", "radio", "files", "wiim", "tidal", "podcasts", "spotify"]
+def test_custom_active_order_does_not_reenable_missing_sessions() -> None:
+    raw = ["sonos", "radio", "files", "sonos", "technical", 7]
 
+    assert normalize(raw) == (SessionId.SONOS, SessionId.RADIO, SessionId.FILES)
     assert slot_for_session(SessionId.FILES, raw) == 3
     assert action_for_slot(1, raw) is Action.SESSION_SONOS
-    assert selection_labels(raw)[:3] == (
+    assert selection_labels(raw) == (
         "Ctrl+1, Sonos",
-        "Ctrl+2, Radio internetowe",
+        "Ctrl+2, Radio",
         "Ctrl+3, Pliki lokalne",
     )
     assert all("SessionId" not in label for label in selection_labels(raw))
 
 
-def test_invalid_duplicates_are_removed_and_missing_sessions_are_appended() -> None:
-    assert normalize(["tidal", "tidal", "TechnicalEnum.Value", 7]) == (
-        SessionId.TIDAL,
+def test_legacy_migration_preserves_order_and_appends_known_sessions_once() -> None:
+    migrated = migrate_legacy(["sonos", "radio", "sonos", "obca-wartosc"])
+    assert migrated[:2] == (SessionId.SONOS, SessionId.RADIO)
+    assert set(migrated) == set(SessionId)
+    assert len(migrated) == len(SessionId)
+
+
+def test_enable_disable_reenable_and_move_keep_compact_slots() -> None:
+    enabled, message = enable(SessionId.SONOS, ["files", "radio", "podcasts"])
+    assert enabled[-1] is SessionId.SONOS
+    assert message.endswith("Ctrl+4")
+
+    moved, message = move(SessionId.SONOS, -1, enabled)
+    assert moved == (
         SessionId.FILES,
         SessionId.RADIO,
-        SessionId.PODCASTS,
-        SessionId.WIIM,
         SessionId.SONOS,
-        SessionId.SPOTIFY,
+        SessionId.PODCASTS,
     )
+    assert message.endswith("Ctrl+3")
+
+    disabled, current, message = disable(
+        SessionId.RADIO,
+        moved,
+        current=SessionId.RADIO,
+    )
+    assert disabled == (SessionId.FILES, SessionId.SONOS, SessionId.PODCASTS)
+    assert current is SessionId.SONOS
+    assert message == "Wyłączono sesję Radio"
+
+    reenabled, message = enable(SessionId.RADIO, disabled)
+    assert reenabled[-1] is SessionId.RADIO
+    assert message.endswith("Ctrl+4")
 
 
-def test_adjacent_session_wraps_in_custom_order() -> None:
-    raw = ["wiim", "files", "radio", "podcasts", "tidal", "sonos", "spotify"]
-    assert adjacent(SessionId.WIIM, -1, raw) is SessionId.SPOTIFY
+def test_disable_rejects_last_and_busy_session_without_changing_order() -> None:
+    last, current, message = disable(
+        SessionId.FILES,
+        ["files"],
+        current=SessionId.FILES,
+    )
+    assert last == (SessionId.FILES,)
+    assert current is SessionId.FILES
+    assert message == "Nie można wyłączyć ostatniej aktywnej sesji"
+
+    busy, current, message = disable(
+        SessionId.RADIO,
+        ["files", "radio"],
+        current=SessionId.FILES,
+        blocked=[SessionId.RADIO],
+    )
+    assert busy == (SessionId.FILES, SessionId.RADIO)
+    assert current is SessionId.FILES
+    assert "trwa odtwarzanie albo nagrywanie" in message
+
+
+def test_manager_labels_are_explicit_accessible_and_inactive_rows_have_no_slot() -> None:
+    rows = dict(manager_labels(
+        ["files", "radio", "podcasts"],
+        {
+            SessionId.FILES: "Gotowa",
+            SessionId.SPOTIFY: "Wymaga zalogowania",
+        },
+    ))
+    assert rows[SessionId.FILES] == "Ctrl+1, Pliki lokalne, włączona, gotowa"
+    assert rows[SessionId.SPOTIFY] == "Spotify, wyłączona, wymaga zalogowania"
+    joined = " ".join(rows.values())
+    assert "SessionId" not in joined
+    assert "{" not in joined
+
+
+def test_adjacent_session_wraps_only_in_active_order() -> None:
+    raw = ["wiim", "files", "radio"]
+    assert adjacent(SessionId.WIIM, -1, raw) is SessionId.RADIO
     assert adjacent(SessionId.WIIM, 1, raw) is SessionId.FILES
-    assert adjacent(SessionId.SPOTIFY, 1, raw) is SessionId.WIIM
+    assert adjacent(SessionId.RADIO, 1, raw) is SessionId.WIIM
 
 
-def test_custom_order_drives_menu_shortcuts_and_palette_labels() -> None:
-    raw = ["sonos", "radio", "files", "wiim", "tidal", "podcasts", "spotify"]
+def test_active_order_drives_menu_palette_and_help_shortcuts() -> None:
+    raw = ["sonos", "radio", "files"]
     view = next(menu for menu in menu_model.build_menus(raw) if menu.title == "&Widok")
     sessions = [
         item for item in view.items
@@ -75,17 +139,38 @@ def test_custom_order_drives_menu_shortcuts_and_palette_labels() -> None:
         (Action.SESSION_SONOS, "Ctrl+1"),
         (Action.SESSION_RADIO, "Ctrl+2"),
         (Action.SESSION_FILES, "Ctrl+3"),
-        (Action.SESSION_WIIM, "Ctrl+4"),
-        (Action.SESSION_TIDAL, "Ctrl+5"),
-        (Action.SESSION_PODCASTS, "Ctrl+6"),
-        (Action.SESSION_SPOTIFY, "Ctrl+7"),
     ]
-    palette = {entry.action: entry.shortcut for entry in entries_for_session(SessionId.FILES, raw)}
+    palette = {
+        entry.action: entry.shortcut
+        for entry in entries_for_session(SessionId.FILES, raw)
+    }
     assert palette[Action.SESSION_SONOS] == "Ctrl+1"
     assert palette[Action.SESSION_FILES] == "Ctrl+3"
+    assert Action.SESSION_SPOTIFY not in palette
+
+    active_actions = {
+        Action.SESSION_SONOS,
+        Action.SESSION_RADIO,
+        Action.SESSION_FILES,
+    }
+    help_rows = dict(describe(
+        available_actions=active_actions,
+        shortcut_overrides={
+            Action.SESSION_SONOS: "Ctrl+1",
+            Action.SESSION_RADIO: "Ctrl+2",
+            Action.SESSION_FILES: "Ctrl+3",
+        },
+    ))
+    assert help_rows["Ctrl+1"] == "Sonos"
+    assert help_rows["Ctrl+2"] == "Radio"
+    assert "Podcasty i YouTube" not in help_rows.values()
 
 
-def test_session_list_has_one_shortcut_and_ctrl_zero_is_unused() -> None:
+def test_session_manager_commands_share_the_view_menu() -> None:
     view = next(menu for menu in menu_model.build_menus() if menu.title == "&Widok")
-    item = next(entry for entry in view.items if entry.action is Action.SESSION_LIST)
-    assert item.shortcut == "Ctrl+Shift+S"
+    by_action = {item.action: item for item in view.items}
+    assert by_action[Action.SESSION_LIST].shortcut == "Ctrl+Shift+S"
+    assert "Menedżer sesji" in by_action[Action.SESSION_LIST].label
+    assert Action.SESSION_ENABLE in by_action
+    assert Action.SESSION_DISABLE_CURRENT in by_action
+    assert Action.SESSION_CONFIGURE_CURRENT in by_action

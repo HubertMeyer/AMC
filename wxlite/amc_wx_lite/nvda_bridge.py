@@ -127,7 +127,7 @@ def unavailable_message(command: str) -> str:
         "previousChapter": "Poprzedni rozdział",
         "nextChapter": "Następny rozdział",
         "showChapters": "Lista rozdziałów",
-        "showSessions": "Lista sesji",
+        "showSessions": "Menedżer sesji",
         "showCommands": "Paleta poleceń",
     }
     label = labels.get(command, "To polecenie")

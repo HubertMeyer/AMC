@@ -13,7 +13,17 @@ from .navigation import SessionId
 from .shortcuts import Action
 
 
-DEFAULT_SESSION_ORDER: tuple[SessionId, ...] = tuple(SessionId)
+# Świeży profil zaczyna od trzech zawsze użytecznych sesji. Pozostałe można
+# świadomie dopisać w Menedżerze sesji. Istniejący profil jest migrowany
+# osobną funkcją poniżej, aby aktualizacja nie wyłączyła mu usług.
+DEFAULT_SESSION_ORDER: tuple[SessionId, ...] = (
+    SessionId.FILES,
+    SessionId.RADIO,
+    SessionId.PODCASTS,
+)
+LEGACY_SESSION_ORDER: tuple[SessionId, ...] = tuple(SessionId)
+AVAILABLE_TEST_SESSIONS: tuple[SessionId, ...] = tuple(SessionId)
+MAX_ACTIVE_SESSIONS = 9
 
 SESSION_ACTIONS: dict[SessionId, Action] = {
     SessionId.FILES: Action.SESSION_FILES,
@@ -27,7 +37,7 @@ SESSION_ACTIONS: dict[SessionId, Action] = {
 
 SESSION_NAMES: dict[SessionId, str] = {
     SessionId.FILES: "Pliki lokalne",
-    SessionId.RADIO: "Radio internetowe",
+    SessionId.RADIO: "Radio",
     SessionId.PODCASTS: "Podcasty i YouTube",
     SessionId.TIDAL: "TIDAL",
     SessionId.WIIM: "WiiM",
@@ -47,7 +57,7 @@ SESSION_MENU_LABELS: dict[SessionId, str] = {
 
 
 def normalize(raw: object) -> tuple[SessionId, ...]:
-    """Zachowaj znane, niepowtórzone sesje i dopisz brakujące na końcu."""
+    """Zachowaj zwartą listę aktywnych sesji, bez dopisywania wyłączonych."""
 
     values: Iterable[object]
     if isinstance(raw, (list, tuple)):
@@ -67,8 +77,19 @@ def normalize(raw: object) -> tuple[SessionId, ...]:
         seen.add(session)
         result.append(session)
 
-    result.extend(session for session in DEFAULT_SESSION_ORDER if session not in seen)
-    return tuple(result)
+    if not result:
+        result.extend(DEFAULT_SESSION_ORDER)
+    return tuple(result[:MAX_ACTIVE_SESSIONS])
+
+
+def migrate_legacy(raw: object) -> tuple[SessionId, ...]:
+    """Jednorazowo zachowaj wszystkie sesje starego profilu i ich kolejność."""
+
+    migrated = list(normalize(raw))
+    migrated.extend(
+        session for session in LEGACY_SESSION_ORDER if session not in migrated
+    )
+    return tuple(migrated[:MAX_ACTIVE_SESSIONS])
 
 
 def values(raw: object) -> list[str]:
@@ -77,8 +98,18 @@ def values(raw: object) -> list[str]:
     return [session.value for session in normalize(raw)]
 
 
-def slot_for_session(session: SessionId, raw: object) -> int:
-    return normalize(raw).index(session) + 1
+def migrated_values(raw: object) -> list[str]:
+    """Wartości jednorazowej migracji starego zapisu kolejności."""
+
+    return [session.value for session in migrate_legacy(raw)]
+
+
+def slot_for_session(session: SessionId, raw: object) -> int | None:
+    ordered = normalize(raw)
+    try:
+        return ordered.index(session) + 1
+    except ValueError:
+        return None
 
 
 def session_for_slot(slot: int, raw: object) -> SessionId | None:
@@ -102,6 +133,97 @@ def adjacent(current: SessionId, direction: int, raw: object) -> SessionId:
         index = 0
     step = -1 if direction < 0 else 1
     return ordered[(index + step) % len(ordered)]
+
+
+def enable(session: SessionId, raw: object) -> tuple[tuple[SessionId, ...], str]:
+    """Dopisz sesję na końcu bez naruszania limitu dziewięciu."""
+
+    ordered = list(normalize(raw))
+    if session in ordered:
+        return tuple(ordered), f"{SESSION_NAMES[session]} jest już włączona"
+    if len(ordered) >= MAX_ACTIVE_SESSIONS:
+        return (
+            tuple(ordered),
+            "Można włączyć najwyżej dziewięć sesji. Najpierw wyłącz jedną z nich",
+        )
+    ordered.append(session)
+    return tuple(ordered), f"Włączono sesję {SESSION_NAMES[session]}, Ctrl+{len(ordered)}"
+
+
+def disable(
+    session: SessionId,
+    raw: object,
+    *,
+    current: SessionId,
+    blocked: Iterable[SessionId] = (),
+) -> tuple[tuple[SessionId, ...], SessionId, str]:
+    """Wyłącz sesję, wybierając zwarty, bezpieczny nowy cel interfejsu."""
+
+    ordered = list(normalize(raw))
+    if session not in ordered:
+        return tuple(ordered), current, f"{SESSION_NAMES[session]} jest już wyłączona"
+    if len(ordered) == 1:
+        return tuple(ordered), current, "Nie można wyłączyć ostatniej aktywnej sesji"
+    if session in set(blocked):
+        return (
+            tuple(ordered),
+            current,
+            f"Nie można teraz wyłączyć sesji {SESSION_NAMES[session]}, ponieważ trwa odtwarzanie albo nagrywanie",
+        )
+    index = ordered.index(session)
+    ordered.remove(session)
+    if current is session:
+        current = ordered[min(index, len(ordered) - 1)]
+    return tuple(ordered), current, f"Wyłączono sesję {SESSION_NAMES[session]}"
+
+
+def move(
+    session: SessionId,
+    direction: int,
+    raw: object,
+) -> tuple[tuple[SessionId, ...], str]:
+    """Przesuń aktywną sesję o jedno miejsce i od razu przelicz skróty."""
+
+    ordered = list(normalize(raw))
+    if session not in ordered:
+        return tuple(ordered), f"{SESSION_NAMES[session]} jest wyłączona"
+    index = ordered.index(session)
+    target = index + (-1 if direction < 0 else 1)
+    if target < 0 or target >= len(ordered):
+        return tuple(ordered), "Sesja jest już na skraju listy"
+    ordered[index], ordered[target] = ordered[target], ordered[index]
+    return (
+        tuple(ordered),
+        f"{SESSION_NAMES[session]}, Ctrl+{target + 1}",
+    )
+
+
+def manager_labels(
+    raw: object,
+    readiness: dict[SessionId, str] | None = None,
+    *,
+    available: Iterable[SessionId] = AVAILABLE_TEST_SESSIONS,
+) -> tuple[tuple[SessionId, str], ...]:
+    """Celowe etykiety Menedżera: aktywne najpierw, potem dostępne do dodania."""
+
+    ready = readiness or {}
+    allowed = tuple(dict.fromkeys(available))
+    active = tuple(session for session in normalize(raw) if session in allowed)
+    inactive = tuple(session for session in allowed if session not in active)
+    result: list[tuple[SessionId, str]] = []
+    for slot, session in enumerate(active, start=1):
+        status = ready.get(session, "Wymaga konfiguracji")
+        result.append((
+            session,
+            f"Ctrl+{slot}, {SESSION_NAMES[session]}, włączona, {status.casefold()}",
+        ))
+    for session in inactive:
+        status = ready.get(session, "Wymaga konfiguracji")
+        result.append((
+            session,
+            f"{SESSION_NAMES[session]}, wyłączona, {status.casefold()}",
+        ))
+    return tuple(result)
 
 
 def selection_labels(raw: object) -> tuple[str, ...]:

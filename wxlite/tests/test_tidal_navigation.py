@@ -27,7 +27,11 @@ def test_ctrl_4_selects_tidal_from_list_and_player() -> None:
     assert resolve(chord, player_view=False, radio_session=False) is Action.SESSION_TIDAL
     assert resolve(chord, player_view=True, radio_session=False) is Action.SESSION_TIDAL
 
-    view = next(menu for menu in menu_model.build_menus() if "Widok" in menu.title)
+    view = next(
+        menu
+        for menu in menu_model.build_menus([session.value for session in SessionId])
+        if "Widok" in menu.title
+    )
     item = next(entry for entry in view.items if entry.action is Action.SESSION_TIDAL)
     assert item.label == "Sesja: &TIDAL"
     assert item.shortcut == "Ctrl+4"

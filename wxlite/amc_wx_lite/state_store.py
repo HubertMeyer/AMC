@@ -25,7 +25,10 @@ from .playback_history import normalize_histories
 from .radio_activity import normalize_state_position
 from .radio_recognition import normalize_scope, read_tracks
 from .radio_schedule_settings import read_schedule_overrides
-from .session_order import values as normalized_session_order_values
+from .session_order import (
+    migrated_values as migrated_session_order_values,
+    values as normalized_session_order_values,
+)
 from .transport_parity import (
     normalize_custom_seek_seconds,
     normalize_message_templates,
@@ -215,7 +218,7 @@ class Options:
     #: Zapis zawiera wyłącznie stabilne wartości modelu; GUI tworzy osobne,
     #: celowe etykiety użytkowe.
     session_order: list[str] = field(default_factory=lambda: [
-        "files", "radio", "podcasts", "tidal", "wiim", "sonos"
+        "files", "radio", "podcasts"
     ])
     last_folder: str | None = None
     #: Czy wyjscie z odtwarzacza (Escape, F6) ma wstrzymac odtwarzanie.
@@ -627,6 +630,7 @@ class StateStore:
 
     FILE_NAME = "state.json"
     VERSION = 1
+    SESSION_MANAGER_VERSION = 1
 
     def __init__(self, directory: Path | str | None = None) -> None:
         self.directory = Path(directory) if directory is not None else default_state_dir()
@@ -669,6 +673,13 @@ class StateStore:
                     setattr(options, key, value)
                 except (TypeError, ValueError):
                     pass
+        # Stary zapis nie odróżniał kolejności od włączenia. Pierwszy odczyt
+        # zachowuje więc wszystkie znane sesje i ich wzajemny porządek. Dopiero
+        # jawny znacznik AMC09 pozwala traktować brak sesji jako jej wyłączenie.
+        if raw.get("session_manager_version") != self.SESSION_MANAGER_VERSION:
+            options.session_order = migrated_session_order_values(
+                raw_options.get("session_order")
+            )
         try:
             options.clamp()
         except (TypeError, ValueError):
@@ -743,6 +754,7 @@ class StateStore:
         state.options.clamp()
         payload = {
             "version": self.VERSION,
+            "session_manager_version": self.SESSION_MANAGER_VERSION,
             "options": asdict(state.options),
             "stations": [asdict(station) for station in state.stations],
             "navigation": state.navigation,

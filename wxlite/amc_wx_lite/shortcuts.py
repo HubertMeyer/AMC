@@ -100,6 +100,9 @@ class Action(Enum):
     SESSION_SONOS = "session.sonos"
     SESSION_SPOTIFY = "session.spotify"
     SESSION_LIST = "session.list"
+    SESSION_ENABLE = "session.enable"
+    SESSION_DISABLE_CURRENT = "session.disableCurrent"
+    SESSION_CONFIGURE_CURRENT = "session.configureCurrent"
     PREVIOUS_SESSION = "session.previous"
     NEXT_SESSION = "session.next"
     COMMAND_PALETTE = "view.commandPalette"
@@ -392,6 +395,9 @@ TIDAL_SUPPORTED_ACTIONS = frozenset({
     Action.SESSION_SONOS,
     Action.SESSION_SPOTIFY,
     Action.SESSION_LIST,
+    Action.SESSION_ENABLE,
+    Action.SESSION_DISABLE_CURRENT,
+    Action.SESSION_CONFIGURE_CURRENT,
     Action.PREVIOUS_SESSION,
     Action.NEXT_SESSION,
     Action.COMMAND_PALETTE,
@@ -465,6 +471,9 @@ SPOTIFY_SUPPORTED_ACTIONS = frozenset({
     Action.SESSION_SONOS,
     Action.SESSION_SPOTIFY,
     Action.SESSION_LIST,
+    Action.SESSION_ENABLE,
+    Action.SESSION_DISABLE_CURRENT,
+    Action.SESSION_CONFIGURE_CURRENT,
     Action.PREVIOUS_SESSION,
     Action.NEXT_SESSION,
     Action.COMMAND_PALETTE,
@@ -569,6 +578,9 @@ WIIM_SUPPORTED_ACTIONS = frozenset({
     Action.SESSION_SONOS,
     Action.SESSION_SPOTIFY,
     Action.SESSION_LIST,
+    Action.SESSION_ENABLE,
+    Action.SESSION_DISABLE_CURRENT,
+    Action.SESSION_CONFIGURE_CURRENT,
     Action.PREVIOUS_SESSION,
     Action.NEXT_SESSION,
     Action.COMMAND_PALETTE,
@@ -646,6 +658,9 @@ SONOS_SUPPORTED_ACTIONS = frozenset({
     Action.SESSION_SONOS,
     Action.SESSION_SPOTIFY,
     Action.SESSION_LIST,
+    Action.SESSION_ENABLE,
+    Action.SESSION_DISABLE_CURRENT,
+    Action.SESSION_CONFIGURE_CURRENT,
     Action.PREVIOUS_SESSION,
     Action.NEXT_SESSION,
     Action.COMMAND_PALETTE,
@@ -1390,13 +1405,19 @@ def _help_entries() -> list[tuple[str, str, Action]]:
     """Tekst pomocy (F1). Po polsku, krotko, bez zaleznosci od wx."""
     labels = {
         Action.SESSION_FILES: "Pliki lokalne",
-        Action.SESSION_RADIO: "Radio internetowe",
+        Action.SESSION_RADIO: "Radio",
         Action.SESSION_PODCASTS: "Podcasty i YouTube",
         Action.SESSION_TIDAL: "TIDAL",
         Action.SESSION_WIIM: "WiiM",
         Action.SESSION_SONOS: "Sonos",
         Action.SESSION_SPOTIFY: "Spotify",
-        Action.SESSION_LIST: "Wybierz sesję z listy",
+        Action.SESSION_LIST: (
+            "Menedżer sesji: Enter przełącza, Spacja włącza lub wyłącza, "
+            "Alt+strzałka zmienia kolejność"
+        ),
+        Action.SESSION_ENABLE: "Włącz sesję w Menedżerze sesji",
+        Action.SESSION_DISABLE_CURRENT: "Wyłącz bieżącą sesję",
+        Action.SESSION_CONFIGURE_CURRENT: "Konfiguruj konto lub urządzenie bieżącej sesji",
         Action.PREVIOUS_SESSION: "Poprzednia sesja",
         Action.NEXT_SESSION: "Następna sesja",
         Action.COMMAND_PALETTE: "Paleta poleceń",
@@ -1705,7 +1726,7 @@ def _help_entries() -> list[tuple[str, str, Action]]:
             # zgubilby pierwszy. Dopowiadamy sesje tylko przy imporcie Radia;
             # zwykle Ctrl+O nadal brzmi po prostu jak wybor pliku.
             if action is Action.STATION_IMPORT:
-                label = f"{label} (Radio internetowe)"
+                label = f"{label} (Radio)"
             elif action is Action.RADIO_JUMP_LIVE:
                 label = f"{label} (Radio)"
             elif action is Action.IMPORT_PODCAST_OPML:
@@ -1742,12 +1763,22 @@ def _help_entries() -> list[tuple[str, str, Action]]:
             # czytnika. Brak etykiety jest defektem katalogu, ale bezpieczny
             # tekst użytkowy nadal nie ujawnia ``action.value``.
             out.append((label, labels.get(action, "Polecenie AMC"), action))
+    # Polecenia bez własnego skrótu nadal należą do pełnej pomocy i palety.
+    # Tekst „Bez skrótu” jest celową etykietą użytkową, nie identyfikatorem.
+    for action in (
+        Action.SESSION_ENABLE,
+        Action.SESSION_DISABLE_CURRENT,
+        Action.SESSION_CONFIGURE_CURRENT,
+    ):
+        if action not in seen:
+            out.append(("Bez skrótu", labels[action], action))
     return out
 
 
 def describe(
     session_label: str | None = None,
     available_actions: set[Action] | None = None,
+    shortcut_overrides: dict[Action, str] | None = None,
 ) -> list[tuple[str, str]]:
     """Tekst spisu F1 bez technicznych identyfikatorów poleceń.
 
@@ -1756,9 +1787,10 @@ def describe(
     opis co menu, Ctrl+F1 i paleta.
     """
     spotify = (session_label or "").casefold() == "spotify"
+    overrides = shortcut_overrides or {}
     return [
         (
-            chord,
+            overrides.get(action, chord),
             "Dodaj do playlist Spotify lub utwórz playlistę"
             if spotify and action is Action.MANAGE_PLAYLIST_MEMBERSHIP
             else label,

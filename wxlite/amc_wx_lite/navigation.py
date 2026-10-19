@@ -903,7 +903,7 @@ class Navigator:
     def _session_name(session_id: SessionId) -> str:
         return {
             SessionId.FILES: "Pliki lokalne",
-            SessionId.RADIO: "Radio internetowe",
+            SessionId.RADIO: "Radio",
             SessionId.PODCASTS: "Podcasty i YouTube",
             SessionId.TIDAL: "TIDAL",
             SessionId.WIIM: "WiiM",

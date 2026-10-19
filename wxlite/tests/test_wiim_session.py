@@ -41,7 +41,11 @@ def test_ctrl_5_and_menu_open_the_wiim_session() -> None:
             player_view=player,
             radio_session=False,
         ) is Action.SESSION_WIIM
-    view = next(menu for menu in build_menus() if menu.title == "&Widok")
+    view = next(
+        menu
+        for menu in build_menus([session.value for session in SessionId])
+        if menu.title == "&Widok"
+    )
     item = next(entry for entry in view.items if entry.action is Action.SESSION_WIIM)
     assert item.label == "Sesja: &WiiM"
     assert item.shortcut == "Ctrl+5"

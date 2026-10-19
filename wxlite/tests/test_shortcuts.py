@@ -588,5 +588,5 @@ def test_keyboard_help_uses_only_user_facing_labels() -> None:
 
 def test_keyboard_help_says_when_a_key_has_no_command() -> None:
     assert keyboard_help_announcement(
-        Chord("G"), None, "Radio internetowe"
-    ) == "G. Brak polecenia w sesji Radio internetowe"
+        Chord("G"), None, "Radio"
+    ) == "G. Brak polecenia w sesji Radio"

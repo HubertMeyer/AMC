@@ -65,10 +65,10 @@ def is_transient_preview_available(
 def transient_preview_unavailable_message(action: Action) -> str:
     suffix = " Wspólne podglądy ze wszystkich sesji włączysz w Ustawieniach"
     if action is Action.VIEW_ACTIVE_RECORDINGS:
-        return "Widok nagrywanych stacji jest dostępny w sesji Radio internetowe." + suffix
+        return "Widok nagrywanych stacji jest dostępny w sesji Radio." + suffix
     if action is Action.VIEW_RECORDED_RADIO_FILES:
         return (
-            "Historia nagrywania jest dostępna w sesjach Radio internetowe "
+            "Historia nagrywania jest dostępna w sesjach Radio "
             "i Pliki lokalne." + suffix
         )
     if action is Action.VIEW_PODCAST_INBOX:

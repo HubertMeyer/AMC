@@ -1199,10 +1199,19 @@ def build_menus(session_order: object = None) -> tuple[Menu, ...]:
         (
             *session_items,
             MenuItem(
-                "Poka&ż listę sesji…",
+                "Otwórz &Menedżer sesji…",
                 Action.SESSION_LIST,
                 shortcut="Ctrl+Shift+S",
                 accelerator=False,
+            ),
+            MenuItem("&Włącz sesję…", Action.SESSION_ENABLE),
+            MenuItem(
+                "Wyłącz bieżącą &sesję…",
+                Action.SESSION_DISABLE_CURRENT,
+            ),
+            MenuItem(
+                "Kon&figuruj konto lub urządzenie…",
+                Action.SESSION_CONFIGURE_CURRENT,
             ),
             MenuItem(
                 "Poprzednia sesja (&7)",

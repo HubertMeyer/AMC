@@ -156,6 +156,6 @@ def test_one_source_failure_does_not_erase_other_global_results() -> None:
     result = sources.collect((SessionId.FILES, SessionId.RADIO))
     assert [item.row.item_id for item in result.entries] == ["f"]
     assert result.warnings == (
-        "Nie udało się odczytać zapisanych danych: Radio internetowe",
+        "Nie udało się odczytać zapisanych danych: Radio",
     )
     assert "OSError" not in result.warnings[0]

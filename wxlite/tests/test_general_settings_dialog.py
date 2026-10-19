@@ -17,7 +17,7 @@ def test_settings_have_real_native_pages_and_explicit_accessible_names() -> None
     assert 'self.notebook.AddPage(podcasts, "Podcasty i YouTube")' in source
     assert 'self.notebook.AddPage(messages, "Komunikaty")' in source
     assert 'self.startup_target.SetName("Wyświetlaj po uruchomieniu")' in source
-    assert 'choices=["Ostatnia używana sesja", "Lista sesji"]' in source
+    assert 'choices=["Ostatnia używana sesja", "Menedżer sesji"]' in source
     assert 'self.silence.SetName("Dodatkowa cisza po naturalnym końcu utworu")' in source
     assert 'self.tempo.SetName("Sposób przeliczania zmienionego tempa")' in source
     assert 'self.keep_audio_edit_backups.SetName("Zachowuj kopie po edycji")' in source
