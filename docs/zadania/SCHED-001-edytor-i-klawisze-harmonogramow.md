@@ -162,6 +162,13 @@ zbiorczej po kontroli aktywnego nagrywania.
 Pełna regresja wxPython po połączeniu bieżących korekt: **1837 zaliczonych,
 110 pominiętych i 11 podtestów zaliczonych**.
 
+19.10.2026 harmonogramy weszły także do kolejnej instalacji zbiorczej AMC
+Test. Przed promocją użytkownik potwierdził brak nagrywania, a niezależna
+bramka nie wykazała aktywnego procesu poprzedniej instalacji, rosnącego pliku
+`.amc-partial` ani harmonogramu w bieżącym oknie. Pełna regresja: **1842
+zaliczone, 110 pominiętych i 11 podtestów zaliczonych**; kompilacje Release,
+manifest, SHA-256, instalacja, integralność i uruchomienie — zaliczone.
+
 ## Znane ograniczenia
 
 - Nie wykonano jeszcze rzeczywistego odsłuchu NVDA. Należy sprawdzić pierwsze
@@ -182,4 +189,7 @@ Pełna regresja wxPython po połączeniu bieżących korekt: **1837 zaliczonych,
   połączeniu etapów: **1754 zaliczone, 110 pominiętych, 11 podtestów**.
 - Instalacja: `2026.10.19-e0f97512d1eee067d225d7b8c73b808ff3f3e561-c0e62181`,
   manifest, sumy SHA-256 i uruchomienie zweryfikowane 19 października 2026.
+- Bieżąca instalacja zbiorcza:
+  `2026.10.19-8093e22adfa9b6abfc72c35c5c7029eaaade88c8-718893c9`;
+  integralność i właściwy proces AMC Test zweryfikowane 19 października 2026.
 - Publikacja: niewykonana i niedozwolona w tej pracy nocnej.

@@ -1,7 +1,7 @@
 # AMC02 — krótkie listy nagrywania i historia plików
 
-Status: **Kolejna korekta wdrożona w źródłach i testach; czeka na pełną
-regresję, instalację po bezpiecznej bramce nagrywania i odbiór NVDA**.
+Status: **Kolejna korekta zainstalowana w AMC Test po pełnej regresji i
+bezpiecznej bramce nagrywania; czeka na odbiór NVDA**.
 
 ## Zakres
 
@@ -151,11 +151,25 @@ zgodność nazw i skrótów wykonania, pomocy i palety.
   kompilacja, instalacja i uruchomienie pozostają osobnymi krokami po 18:30 i
   ponownej kontroli nagrywania.
 
+19.10.2026, promocja korekty do AMC Test:
+
+- użytkownik potwierdził brak nagrywania; niezależna bramka wykazała brak
+  procesu poprzedniej instalacji, brak rosnących plików `.amc-partial` w dwóch
+  pomiarach oraz brak harmonogramu przypadającego na bieżące okno;
+- pełna regresja wxPython: **1842 zaliczone, 110 pominiętych i 11 podtestów
+  zaliczonych** w 86,72 s;
+- kompilacje Release hosta, uruchamiacza i aktualizatora: zaliczone bez
+  ostrzeżeń i błędów;
+- paczka 1666 plików przeszła kontrolę manifestu i SHA-256, została
+  zainstalowana, a integralność instalacji zwróciła kod 0;
+- potwierdzono działający proces
+  `D:\Projekty Codex\AMC Python\runtime\python.exe` i okno „AMC Test”.
+
 ## Znane ograniczenia
 
-- Ostatnia korekta „Nagrywane/Nagrane, X z X” nie jest jeszcze zainstalowana.
-  Po instalacji wymaga odsłuchu wejścia, ruchu strzałkami i powrotu do obu
-  widoków ze wcześniej zapamiętanym zaznaczeniem.
+- Ostatnia korekta „Nagrywane/Nagrane, X z X” jest zainstalowana, ale wymaga
+  odsłuchu wejścia, ruchu strzałkami i powrotu do obu widoków ze wcześniej
+  zapamiętanym zaznaczeniem.
 - Wczesny stan „uruchamianie nagrania” może chwilowo użyć nazwy stacji, dopóki
   host nie poda nazwy tworzonego pliku.
 - Bitrate i rozmiar zależą od dostępności pliku i odpowiedzi hosta. Folder
@@ -178,8 +192,11 @@ zgodność nazw i skrótów wykonania, pomocy i palety.
   zweryfikowane 19 października 2026.
 - Publikacja: niewykonana i niedozwolona w tym etapie.
 - Kolejna korekta źródłowa: commit `fdc26b83` — `fix(amc): uporzadkuj
-  nagrania menu i playlisty Spotify`; kompilacja i instalacja jeszcze
-  niewykonane.
+  nagrania menu i playlisty Spotify`.
+- Instalacja zawierająca kolejną korektę:
+  `2026.10.19-8093e22adfa9b6abfc72c35c5c7029eaaade88c8-718893c9`;
+  pełna regresja, manifest, sumy, integralność, stała ścieżka procesu i
+  uruchomienie zweryfikowane 19 października 2026.
 
 ## Porządek dysku po korekcie
 

@@ -1,7 +1,7 @@
 # MENU-001 — menu kontekstowe i skróty zależne od sesji
 
-Status: **W trakcie; korekta źródłowa, trwały kontrakt i testy gotowe,
-instalacja oraz odbiór NVDA jeszcze niewykonane**.
+Status: **W trakcie; korekta i trwały kontrakt zainstalowane w AMC Test po
+pełnej regresji, czekają na odbiór NVDA w reprezentatywnych sesjach**.
 
 ## Materiał do dokumentacji użytkownika
 
@@ -74,6 +74,11 @@ w osobistej umiejętności Codexa `accessible-desktop-contracts`.
   lokalnie modułu `yaml`, dlatego nie pobierano zależności z sieci.
 - Pełna regresja po połączeniu kontraktu menu i wspólnego mechanizmu usług:
   **1842 zaliczone, 110 pominiętych i 11 podtestów zaliczonych** w 78,80 s.
+- 19 października 2026 procedura promocji ponownie zaliczyła pełne **1842**
+  testy wxPython, przy **110 pominiętych** i **11 podtestach zaliczonych**.
+  Kompilacje Release przeszły bez ostrzeżeń i błędów; paczka 1666 plików
+  przeszła manifest, SHA-256, instalację, kontrolę integralności z kodem 0 i
+  weryfikację procesu oraz tytułu „AMC Test”.
 
 ## Znane ograniczenia
 
@@ -93,5 +98,7 @@ w osobistej umiejętności Codexa `accessible-desktop-contracts`.
   `accessible-desktop-contracts` jest zapisana poza repozytorium w katalogu
   umiejętności Codexa.
 - Testy ukierunkowane: zaliczone.
-- Kompilacja, instalacja i uruchomienie: jeszcze niewykonane.
+- Kompilacja, instalacja i uruchomienie:
+  `2026.10.19-8093e22adfa9b6abfc72c35c5c7029eaaade88c8-718893c9`;
+  zweryfikowane 19 października 2026.
 - Publikacja: niewykonana i niedozwolona bez osobnego polecenia użytkownika.

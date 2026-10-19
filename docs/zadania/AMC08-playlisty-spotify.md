@@ -1,8 +1,8 @@
 # AMC08 — natywne playlisty Spotify
 
 Status: **Korekta pamięci podręcznej i ostatniego celu oraz wspólny fundament
-dla kolejnych usług wdrożone w źródłach i testach; czeka na instalację oraz
-świadomą próbę z NVDA na koncie Spotify**.
+dla kolejnych usług zainstalowane w AMC Test; czeka na świadomą próbę z NVDA
+na koncie Spotify**.
 
 Źródło decyzji: zatwierdzona analiza historyczna tylko do odczytu
 `D:\Projekty Codex\Accessible Multimedia Controller\AMC08_PLAYLISTY_SPOTIFY_2026-10-18.md`.
@@ -120,6 +120,12 @@ dla kolejnych usług wdrożone w źródłach i testach; czeka na instalację ora
   pierwszym przebiegu zatrzymała blokada lokalnego `127.0.0.1`, zaliczyły się
   po udzieleniu dostępu do testowego serwera lokalnego; drugi pełny przebieg
   zakończył się bez błędów.
+- 19 października 2026 przy promocji do AMC Test pełna regresja została
+  powtórzona: **1842 zaliczone, 110 pominiętych i 11 podtestów zaliczonych** w
+  86,72 s. Kompilacje Release zakończyły się bez ostrzeżeń i błędów. Paczka
+  1666 plików przeszła kontrolę manifestu i SHA-256, instalację, osobną
+  kontrolę integralności z kodem 0 oraz weryfikację uruchomionego procesu.
+- Nie wykonano automatycznego OAuth ani zapisu na prawdziwym koncie Spotify.
 
 ## Znane ograniczenia
 
@@ -147,13 +153,15 @@ dla kolejnych usług wdrożone w źródłach i testach; czeka na instalację ora
 - Profil docelowy: bieżący AMC Test.
 - Kod źródłowy: commit `697d1a73fd66c12bfa061f4d5f55a93ddaa36e85`.
 - Kompilacja: Release, zaliczona 19 października 2026 po bezpiecznej bramce
-  nagrywania; nie jest to jeszcze paczka instalacyjna.
+  nagrywania.
 - Instalacja: `2026.10.19-e0f97512d1eee067d225d7b8c73b808ff3f3e561-c0e62181`,
   manifest, sumy i uruchomienie zweryfikowane 19 października 2026.
 - Publikacja: nie wykonywać w tym etapie.
 - Korekta cache i ostatniego celu: commit `fdc26b83` — `fix(amc): uporzadkuj
-  nagrania menu i playlisty Spotify`; kompilacja i instalacja jeszcze
-  niewykonane.
+  nagrania menu i playlisty Spotify`.
 - Uogólnienie dla kolejnych usług: commit `e317cbbc` — `refactor(amc):
-  ujednolic listy uslug i kontrakt menu`; źródła i testy gotowe 19 października
-  2026, kompilacja i instalacja jeszcze niewykonane.
+  ujednolic listy uslug i kontrakt menu`.
+- Instalacja zawierająca obie korekty:
+  `2026.10.19-8093e22adfa9b6abfc72c35c5c7029eaaade88c8-718893c9`;
+  manifest, sumy, integralność i uruchomienie zweryfikowane 19 października
+  2026. Publikacji nie wykonano.

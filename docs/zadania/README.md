@@ -37,8 +37,8 @@ zmian, wymagający korekty użytkownika:
 - `REC-001` — **Zrobione** — trwałość wykonanego harmonogramu nagrywania
   Radia i zgodność listy `Alt+R` z blokadą zamknięcia. Szczegóły:
   [REC-001-harmonogram-alt-r-zamykanie.md](REC-001-harmonogram-alt-r-zamykanie.md).
-- `AMC02` — **Kolejna korekta w źródłach i testach; czeka na instalację po
-  bezpiecznej bramce i odbiór NVDA** — `Alt+R` mówi raz „Nagrywane, X z X”, a
+- `AMC02` — **Kolejna korekta zainstalowana po bezpiecznej bramce; czeka na
+  odbiór NVDA** — `Alt+R` mówi raz „Nagrywane, X z X”, a
   `Alt+Shift+R` „Nagrane, X z X”; same wiersze zaczynają się od nazwy pliku.
   Zachowano osobną pamięć zaznaczenia oraz bitrate, wielkość i folder pod lewą
   strzałką także w `Ctrl+H`. Bieżący zapis realizacji:
@@ -76,7 +76,8 @@ zmian, wymagający korekty użytkownika:
   `D:\Projekty Codex\Accessible Multimedia Controller\AMC03_AUDYT_SKROTOW_2026-10-18.md`
   oraz `AMC04_REALIZACJA_ETAP_A_2026-10-18.md`. Stare źródła WPF służą tylko
   jako wzorzec; właściwe wdrożenie wykonujemy w tym repozytorium.
-- `MENU-001` — **W trakcie; korekta źródłowa, trwały kontrakt i testy gotowe** —
+- `MENU-001` — **W trakcie; korekta i trwały kontrakt zainstalowane, czekają na
+  odbiór NVDA w reprezentatywnych sesjach** —
   wspólne menu kontekstowe bez odczytu technicznych cyfr i przypadkowych
   liter dostępu, nazwy zależne od rodzaju elementu, rzeczywiste skróty oraz
   audyt dostępności poleceń i nawigacji między sesjami. Szczegóły:
@@ -96,8 +97,8 @@ zmian, wymagający korekty użytkownika:
   Zatwierdzona specyfikacja:
   `D:\Projekty Codex\Accessible Multimedia Controller\AMC13_TIMESHIFT_RADIA_2026-10-18.md`.
   Eksport fragmentów Time Shiftu pozostaje późniejszym rozszerzeniem.
-- `AMC08` — **Wspólny cache usług i ostatniego celu gotowy w źródłach i testach;
-  czeka na instalację, odbiór NVDA i próbę na koncie** — natywne playlisty
+- `AMC08` — **Wspólny cache usług i ostatniego celu zainstalowany; czeka na
+  odbiór NVDA i świadomą próbę na koncie** — natywne playlisty
   Spotify w AMC Test: `Ctrl+P`, `Ctrl+Shift+P`, pobranie katalogu raz na
   uruchomienie, natychmiastowa widoczność nowej playlisty i zapamiętanie
   ostatnich celów. Mechanizm ma partycje usług i kont, aby kolejne integracje
