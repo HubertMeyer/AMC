@@ -136,6 +136,9 @@ Historyczny projekt został użyty tylko jako materiał do odczytu.
 - Zachowano zainstalowany program w `D:\Projekty Codex\AMC Python`, bieżący
   kwit oraz jedyną zweryfikowaną paczkę odbiorczą w `.test-output`. Nie
   usunięto źródeł, `.git`, ustawień, poświadczeń, nagrań ani pobrań.
+- Pomocniczy katalog zapisu tego kwitu
+  `C:\Users\micha\Documents\Codex\2026-10-18\ma\work\amc09-docs`
+  zawierał jeden plik Markdown (około 8,7 KB) i również został usunięty.
 
 ## Wersja i commit
 
