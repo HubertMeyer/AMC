@@ -184,6 +184,26 @@ Historyczny projekt został użyty tylko jako materiał do odczytu.
 - Kwit instalacji potwierdza zgodność oczekiwanej i zainstalowanej wersji oraz
   trzy procesy uruchomione z jednego katalogu instalacji. Okno miało tytuł
   „AMC Test — 19.10.2026, 04:54”.
+- 20.10.2026 przed promocją ponownie sprawdzono procesy według pełnych ścieżek
+  i wierszy poleceń, rozpoznano 17 skonfigurowanych lokalizacji nagrań,
+  sprawdzono dziennik hosta, dziesięciosekundowy przyrost dostępnych plików
+  `.amc-partial` oraz najbliższe terminy harmonogramów. Sześć folderów na
+  dysku `H:` nie było dostępnych dla izolowanego procesu kontrolnego; w
+  pozostałych nie znaleziono pliku częściowego ani terminu przypadającego w
+  ciągu 10 minut, a ostatnie wpisy nagrywania w dzienniku były zakończone.
+  Rozstrzygającą bramką było przyjęcie zwykłego zamknięcia przez działający
+  interfejs i jego żywy host: ta sama ścieżka odmawia zamknięcia przy aktywnym
+  nagraniu albo niepewnym stanie. Nie wymuszono zakończenia żadnego procesu.
+- Promocja bieżącego `HEAD` zbudowała trzy składniki .NET i paczkę 1667 plików.
+  Skrypt sprawdził pełny manifest i wszystkie 1667 sum SHA-256 przed i po
+  atomowej podmianie. Zainstalowany manifest ma SHA-256
+  `CA4FAF3711E018728A2493D1F866F502F756A6A8904E0BD439B9F5554391D16F`.
+- Uruchomienie zostało potwierdzone niezależnie: dokładnie jeden uruchamiacz,
+  jeden frontend i jeden LiteHost działają z `D:\Projekty Codex\AMC Python`.
+  Okno ma tytuł „AMC Test — 20.10.2026, 00:10”. W tym przebiegu nie powtarzano
+  testów, ponieważ niezmieniony kod `e1ea7f3d` miał wiarygodny wynik
+  **131 + 73 = 204 zaliczone**; kwit uczciwie zapisuje testy promocji jako
+  „pominięte”.
 
 ## Znane ograniczenia
 
@@ -205,9 +225,9 @@ Historyczny projekt został użyty tylko jako materiał do odczytu.
   dodanie małego folderu, ponowne odświeżenie, anulowanie odłączenia,
   potwierdzone odłączenie i powrót fokusu. Odłączenie jest celowo
   niedestrukcyjne; osobne ręczne zapominanie wpisów nie należy do tego okna.
-- Najnowsze doprecyzowanie nazw `Ctrl+F5` jest potwierdzone w źródłach i
-  testach, ale nie zostało jeszcze skompilowane ani zainstalowane. Zachowany
-  wcześniejszy kandydat `8f1dad15` również nie zawiera commitu `e1ea7f3d`.
+- Ręczny odbiór NVDA nadal powinien sprawdzić sesyjne nazwy i działanie
+  `Ctrl+F5` na prawdziwych kontach i urządzeniach. Kompilacja i instalacja
+  potwierdzają dostarczenie kodu, ale nie zastępują tego odbioru.
 
 ## Porządek dysku
 
@@ -240,13 +260,26 @@ Historyczny projekt został użyty tylko jako materiał do odczytu.
 - Pomocniczy katalog zapisu tego kwitu
   `C:\Users\micha\Documents\Codex\2026-10-18\ma\work\amc09-docs`
   zawierał jeden plik Markdown (około 8,7 KB) i również został usunięty.
+- Po zweryfikowaniu nowej instalacji usunięto dokładnie zastąpionego kandydata
+  `AMC-Python-next-2026.10.19-8f1dad15c1af78d25ebc074f0f571fac8bb18cdd-0cfb4e32`
+  z projektowego `.test-output` oraz odtwarzalne `bin\Release` projektów
+  uruchamiacza, aktualizatora, LiteHost i Core. Było to łącznie 1828 plików i
+  275 600 358 bajtów, czyli około 262,8 MiB. Usunięcie jest lokalnie
+  nieodwracalne, lecz zawartość można odtworzyć z zatwierdzonych źródeł.
+- Zachowano nowego zweryfikowanego kandydata `f96149f7-904ceb8c`, kwit
+  instalacji oraz wszystkie zastane, niepewne katalogi `.test-output` i
+  `.test-tmp`. Nie usunięto danych użytkownika, nagrań, ustawień ani źródeł.
 
 ## Wersja i commit
 
+- Instalacja i uruchomienie doprecyzowanych nazw `Ctrl+F5`: potwierdzone dla
+  `2026.10.20-f96149f75e83eea064899db78c762596e56d2504-904ceb8c` w
+  `D:\Projekty Codex\AMC Python`. Paczka zawiera 1667 plików; źródłem jest
+  `f96149f7`, czyli commit dokumentacyjny oparty na zmianie `e1ea7f3d`.
+  Publikacji nie wykonano.
 - Precyzyjne, sesyjne nazwy `Ctrl+F5` we wspólnym katalogu poleceń: commit
-  `e1ea7f3d` (`fix(amc09): doprecyzuj Ctrl+F5 wedlug sesji`). Kod i testy są
-  gotowe lokalnie; kompilacji, instalacji i publikacji dla tej korekty nie
-  wykonano.
+  `e1ea7f3d` (`fix(amc09): doprecyzuj Ctrl+F5 wedlug sesji`). Kod, testy,
+  kompilacja, instalacja i uruchomienie są potwierdzone lokalnie.
 - Ujednolicenie `F5`, `Ctrl+F5` i Folderów Biblioteki: commit `8f1dad15`
   (`feat(amc): przywroc Ctrl+F5 i Foldery Biblioteki`).
 - Sprawdzony kandydat:
