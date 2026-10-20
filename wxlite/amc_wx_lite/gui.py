@@ -336,6 +336,21 @@ APP_NAME = PRODUCT_NAME
 # „AMC Python” na „AMC Test”. Dzięki temu także bezpośrednio uruchomiony
 # frontend nie otworzy drugiej instancji obok starszej kompilacji.
 INSTANCE_CHECKER_NAME = "AMC Python"
+
+
+def _instance_checker_name() -> str:
+    """Zwróć blokadę jednego okna osobną dla AMC i AMC Test.
+
+    Uruchamiacz C# od początku rozdziela profile własnymi mutexami.  Drugi,
+    wewnętrzny bezpiecznik wx również musi używać tożsamości profilu; inaczej
+    publiczny AMC uznaje działający AMC Test za swoją poprzednią instancję i
+    nie uruchamia hosta ani własnego magazynu danych.
+    """
+
+    return (
+        f"{INSTANCE_CHECKER_NAME}-{current_profile().product_id}-"
+        f"{wx.GetUserId()}"
+    )
 TEMPO_LABELS = {1: "Mowa – Speedy", 2: "Muzyka – Signalsmith", 0: "Dotychczasowy – SoundTouch"}
 
 
@@ -24853,9 +24868,7 @@ class LiteApp(wx.App):
         # się bez hosta: lista była widoczna, lecz Enter, Ctrl+R i informacje
         # pod lewą strzałką nie działały. Checker musi pozostać polem aplikacji
         # przez cały MainLoop; zmienna lokalna zostałaby zwolniona za wcześnie.
-        self._instance_checker = wx.SingleInstanceChecker(
-            f"{INSTANCE_CHECKER_NAME}-{wx.GetUserId()}"
-        )
+        self._instance_checker = wx.SingleInstanceChecker(_instance_checker_name())
         if self._instance_checker.IsAnotherRunning():
             requested = _request_previous_instance_close()
             released = requested and _wait_for_previous_instance(
@@ -24875,9 +24888,7 @@ class LiteApp(wx.App):
             # Checker utworzony, gdy blokada należała do poprzednika, nie musi
             # automatycznie stać się jej właścicielem. Tworzymy go ponownie;
             # drugie sprawdzenie zamyka krótkie okno wyścigu dwóch uruchomień.
-            self._instance_checker = wx.SingleInstanceChecker(
-                f"{INSTANCE_CHECKER_NAME}-{wx.GetUserId()}"
-            )
+            self._instance_checker = wx.SingleInstanceChecker(_instance_checker_name())
             if self._instance_checker.IsAnotherRunning():
                 _activate_window_handle(_windows_main_window())
                 return False

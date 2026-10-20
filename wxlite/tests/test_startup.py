@@ -1,4 +1,5 @@
 """Startup must schedule I/O rather than wait inside the GUI constructor."""
+import os
 import sys
 from pathlib import Path
 from types import SimpleNamespace
@@ -8,6 +9,32 @@ install_wx_stub()
 import amc_wx_lite.gui as gui
 from amc_wx_lite.state_store import LiteState, Options
 from amc_wx_lite.host_client import LiteHostClient, HostUnavailable
+
+
+def test_wx_single_instance_names_are_separate_for_public_and_test_profiles():
+    previous_profile = os.environ.get("AMC_RELEASE_PROFILE")
+    old_user = getattr(gui.wx, "GetUserId", None)
+    try:
+        gui.wx.GetUserId = lambda: "test-user"
+        os.environ["AMC_RELEASE_PROFILE"] = "test"
+        test_name = gui._instance_checker_name()
+        os.environ["AMC_RELEASE_PROFILE"] = "public"
+        public_name = gui._instance_checker_name()
+    finally:
+        if previous_profile is None:
+            os.environ.pop("AMC_RELEASE_PROFILE", None)
+        else:
+            os.environ["AMC_RELEASE_PROFILE"] = previous_profile
+        if old_user is None:
+            delattr(gui.wx, "GetUserId")
+        else:
+            gui.wx.GetUserId = old_user
+
+    assert test_name != public_name
+    assert "org.accessible-media-controller.test" in test_name
+    assert "org.accessible-media-controller.public" in public_name
+    assert test_name.endswith("-test-user")
+    assert public_name.endswith("-test-user")
 
 
 def test_second_instance_is_kept_when_safe_close_cannot_be_confirmed():

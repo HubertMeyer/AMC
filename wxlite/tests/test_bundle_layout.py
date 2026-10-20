@@ -49,7 +49,14 @@ def test_public_gui_imports_without_private_service_modules():
         bundle.copy_python_code(target, bundle.profile_from_id("public"))
         environment = dict(os.environ)
         environment["AMC_RELEASE_PROFILE"] = "public"
-        environment["PYTHONPATH"] = str(target / "app")
+        # Kopia pakietu ma być pierwsza, ale potomny interpreter nadal
+        # potrzebuje tej samej instalacji wxPython co proces testowy. Samo
+        # zastąpienie PYTHONPATH ścieżką ``app`` dawało wynik zależny od tego,
+        # czy wx było globalnie zainstalowane, a w prywatnym runtime mogło
+        # wręcz zaimportować inną, już zainstalowaną kopię AMC.
+        environment["PYTHONPATH"] = os.pathsep.join(
+            [str(target / "app"), *(entry for entry in sys.path if entry)]
+        )
 
         result = subprocess.run(
             [
