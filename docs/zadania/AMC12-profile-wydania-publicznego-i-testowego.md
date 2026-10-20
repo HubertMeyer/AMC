@@ -593,6 +593,11 @@ skrótów.
 ## Wersja i commit
 
 - Data pracy: 19–20 października 2026.
+- Wspólna, weryfikowana aktualizacja FFmpeg i yt-dlp dla AMC Test oraz
+  publicznego AMC, razem z menu, pomocą, paletą i międzyprocesową bramką:
+  `31381b2d` — `feat(amc12): aktualizuj skladniki obu profili`. Testy
+  ukierunkowane i kompilacje Debug są zaliczone; paczki Release, instalacji,
+  rzeczywistego pobrania składników i publikacji nie wykonywano.
 - Kod i testy fundamentu: lokalny commit `d2a34ecf`.
 - Rozdzielenie uruchamiacza i aktualizatora: `f9a70db8` —
   `feat(amc12): rozdziel launcher i updater profili`.
