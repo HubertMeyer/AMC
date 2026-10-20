@@ -1,3 +1,5 @@
+using System.Net;
+
 namespace AccessibleMediaController.SonosBroker;
 
 internal sealed record SonosBrokerOptions(
@@ -15,6 +17,7 @@ internal sealed record SonosBrokerOptions(
     {
         ArgumentNullException.ThrowIfNull(configuration);
 
+        var trustedProxies = LoadTrustedProxies(configuration["SONOS_TRUSTED_PROXIES"]);
         var originText = configuration["SONOS_BROKER_PUBLIC_ORIGIN"];
         var clientId = configuration["SONOS_CLIENT_ID"];
         var clientSecret = configuration["SONOS_CLIENT_SECRET"];
@@ -24,7 +27,7 @@ internal sealed record SonosBrokerOptions(
             .Count(value => !string.IsNullOrWhiteSpace(value));
         if (supplied == 0)
         {
-            return SonosBrokerConfiguration.Unconfigured;
+            return new SonosBrokerConfiguration(null, trustedProxies);
         }
 
         if (supplied != 4
@@ -51,13 +54,52 @@ internal sealed record SonosBrokerOptions(
                 "Adres powrotu Sonos musi wskazywać dokładnie publiczny adres brokera.");
         }
 
-        return new SonosBrokerConfiguration(new SonosBrokerOptions(
-            origin!,
-            clientId,
-            clientSecret,
-            redirect,
-            TimeSpan.FromMinutes(10),
-            1024));
+        return new SonosBrokerConfiguration(
+            new SonosBrokerOptions(
+                origin!,
+                clientId,
+                clientSecret,
+                redirect,
+                TimeSpan.FromMinutes(10),
+                1024),
+            trustedProxies);
+    }
+
+    private static IReadOnlyList<IPAddress> LoadTrustedProxies(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return Array.Empty<IPAddress>();
+        }
+
+        var entries = value.Split(',', StringSplitOptions.TrimEntries);
+        if (entries.Length > 16
+            || entries.Any(string.IsNullOrWhiteSpace))
+        {
+            throw new InvalidOperationException(
+                "Lista zaufanych reverse proxy Sonos jest nieprawidłowa.");
+        }
+
+        var addresses = new List<IPAddress>(entries.Length);
+        foreach (var entry in entries)
+        {
+            if (!IPAddress.TryParse(entry, out var address)
+                || address.Equals(IPAddress.Any)
+                || address.Equals(IPAddress.IPv6Any)
+                || address.Equals(IPAddress.None)
+                || address.Equals(IPAddress.IPv6None))
+            {
+                throw new InvalidOperationException(
+                    "Lista zaufanych reverse proxy Sonos jest nieprawidłowa.");
+            }
+
+            if (!addresses.Contains(address))
+            {
+                addresses.Add(address);
+            }
+        }
+
+        return addresses.AsReadOnly();
     }
 
     private static bool TryHttpsOrigin(string? value, out Uri? uri)
@@ -99,10 +141,12 @@ internal sealed record SonosBrokerOptions(
         && left.Port == right.Port;
 }
 
-internal sealed record SonosBrokerConfiguration(SonosBrokerOptions? Options)
+internal sealed record SonosBrokerConfiguration(
+    SonosBrokerOptions? Options,
+    IReadOnlyList<IPAddress> TrustedProxies)
 {
     internal static SonosBrokerConfiguration Unconfigured { get; } =
-        new((SonosBrokerOptions?)null);
+        new(null, Array.Empty<IPAddress>());
 
     internal bool IsConfigured => Options is not null;
 }

@@ -2,6 +2,7 @@ using System.Net;
 using System.Text;
 using System.Text.Encodings.Web;
 using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.RateLimiting;
 
 namespace AccessibleMediaController.SonosBroker;
@@ -19,6 +20,23 @@ internal static class SonosBrokerApplication
 
         var configuration = SonosBrokerOptions.Load(builder.Configuration);
         var sessionOptions = configuration.Options;
+        if (configuration.TrustedProxies.Count > 0)
+        {
+            builder.Services.Configure<ForwardedHeadersOptions>(options =>
+            {
+                options.ForwardedHeaders =
+                    ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+                options.ForwardLimit = 1;
+                options.RequireHeaderSymmetry = true;
+                options.KnownNetworks.Clear();
+                options.KnownProxies.Clear();
+                foreach (var address in configuration.TrustedProxies)
+                {
+                    options.KnownProxies.Add(address);
+                }
+            });
+        }
+
         builder.Services.AddSingleton(configuration);
         builder.Services.AddSingleton(TimeProvider.System);
         builder.Services.AddSingleton(new SonosLoginSessionStore(
@@ -48,6 +66,13 @@ internal static class SonosBrokerApplication
         });
 
         var app = builder.Build();
+        if (configuration.TrustedProxies.Count > 0)
+        {
+            // Nagłówki są honorowane tylko od jawnie wskazanych adresów proxy.
+            // Middleware musi poprzedzać kontrolę HTTPS i limiter po adresie klienta.
+            app.UseForwardedHeaders();
+        }
+
         app.Use(async (context, next) =>
         {
             context.Response.Headers["Cache-Control"] = "no-store";

@@ -16,6 +16,10 @@ prawie gotowe. Ten etap nie zmienia adapterów, list, transportu ani WiiM.
 - 2026-10-19: użytkownik polecił kontynuować broker podczas ręcznego testowania
   AMC. Nie zezwala to na otwieranie przeglądarki, logowanie konta ani wysyłanie
   poleceń do głośników.
+- 2026-10-20: użytkownik wskazał Sonosa jako wcześniejszą bramę do publicznego
+  instalatora. Zastępuje to późniejszą kolejność AMC10, ale nie znosi bramy
+  prawdziwej domeny, danych integracji, odbioru na zewnętrznym koncie ani
+  osobnej zgody na publikację w GitHubie.
 
 ## Materiał do dokumentacji użytkownika
 
@@ -44,8 +48,13 @@ zewnętrznym koncie. WiiM nie zależy od tego brokera.
 - Broker ma ograniczenie tempa per adres i ścisły limit aktywnych sesji.
 - Wyłączono informacyjne logi HTTP zawierające query string callbacku, ponieważ
   znalazłyby się tam krótkotrwały kod Sonosa i `state`.
-- Produkcja wymaga HTTPS. Nie dodano ślepego zaufania do
-  `X-Forwarded-Proto`; konfiguracja reverse proxy zależy od wybranego hostingu.
+- Produkcja wymaga HTTPS. Reverse proxy może zakończyć TLS tylko wtedy, gdy
+  jego konkretny adres IP znajduje się w `SONOS_TRUSTED_PROXIES`. Bez tej
+  wartości broker ignoruje `X-Forwarded-For` i `X-Forwarded-Proto`; nie ufa
+  nagłówkom przesłanym bezpośrednio przez publicznego klienta.
+- Przyjęto najwyżej jeden krok przekazania i najwyżej 16 dokładnych adresów IP.
+  Nazwy hostów, zakresy CIDR, adresy ogólne oraz puste elementy zatrzymują start
+  zamiast przypadkowo poszerzać zaufanie.
 - Publiczny profil AMC nadal nie udostępnia Sonosa. Bieżący prywatny AMC Test
   nadal używa dotychczasowego brokera; przełączenie originu nastąpi dopiero po
   rzeczywistym wdrożeniu i odbiorze.
@@ -75,17 +84,21 @@ Kontrakt sprawdzono 2026-10-19 z aktualną oficjalną dokumentacją Sonosa:
 - `dotnet build src/AccessibleMediaController.SonosBroker/AccessibleMediaController.SonosBroker.csproj -c Release --no-restore`
   — sukces, 0 ostrzeżeń, 0 błędów.
 - `dotnet run --project tests/AccessibleMediaController.SonosBroker.SmokeTests/AccessibleMediaController.SonosBroker.SmokeTests.csproj -c Release`
-  — 13/13 testów przeszło.
+  — 16/16 testów przeszło 2026-10-20.
 - `dotnet build AccessibleMediaController.sln -c Release --no-restore` — sukces;
   nowy broker i jego testy kompilują się razem z całym rozwiązaniem.
 - Testy obejmują: brak i częściową konfigurację, zgodność originu i callbacku,
   PKCE, jednorazową sesję, zły verifier bez utraty wyniku, ochronę przed drugim
   callbackiem, wygaśnięcie, równoległy limit pojemności, dokładny adres Sonosa,
   serwerową wymianę kodu, odnowienie z rotacją i bez rotacji oraz zgodność
-  endpointów start/odmowa/wynik z klientem AMC.
+  endpointów start/odmowa/wynik z klientem AMC, ścisłą listę proxy, odrzucenie
+  fałszywego `X-Forwarded-Proto` od niezaufanego klienta oraz poprawne
+  zakończenie TLS przez jawnie zaufane lokalne proxy.
 - Integracyjny test HTTP działał wyłącznie na lokalnym porcie w środowisku
-  `Development`; nie otworzył przeglądarki, nie użył sieci Sonosa, konta ani
-  głośnika.
+  `Development` i `Production`; nie otworzył przeglądarki, nie użył sieci
+  Sonosa, konta ani głośnika. Pierwsza próba w piaskownicy nie mogła połączyć
+  się z lokalnym gniazdem; identyczny test uruchomiony z dostępem do localhost
+  zaliczył komplet 16 przypadków.
 - Nie wykonano instalacji, publikacji, logowania ani wdrożenia publicznego.
 
 ## Znane ograniczenia
@@ -94,8 +107,10 @@ Kontrakt sprawdzono 2026-10-19 z aktualną oficjalną dokumentacją Sonosa:
   callbacku w portalu Sonos. Tych danych nie wolno wymyślać ani zapisywać w Git.
 - Magazyn sesji jest pamięciowy i przeznaczony dla jednej instancji. Skalowanie
   na wiele replik wymaga wspólnego atomowego magazynu.
-- Reverse proxy wymaga osobnej listy zaufanych adresów. Broker nie ufa
-  dowolnemu nagłówkowi przekazanemu przez Internet.
+- Nadal trzeba znać dokładne adresy reverse proxy wybranego hostingu. Jeżeli
+  hosting zmienia je dynamicznie i nie gwarantuje stałej listy, należy użyć
+  bezpośredniego HTTPS w Kestrel albo wybrać inny sposób wdrożenia; nie wolno
+  omijać tej ochrony przez zaufanie wszystkim klientom.
 - Nie wykonano ręcznego odbioru NVDA istniejącego okna konta ani prawdziwego
   odnowienia tokenu. Potrzebna jest obecność użytkownika.
 - Pomoc `Ctrl+F1`, pełna pomoc i paleta nie zmieniają się w tym etapie, ponieważ

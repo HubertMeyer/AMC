@@ -14,6 +14,7 @@ var tests = new (string Name, Func<Task> Run)[]
     ("Brak sekretów uruchamia bezpieczny stan nieskonfigurowany", ConfigurationCanBeAbsent),
     ("Częściowa konfiguracja jest odrzucana", PartialConfigurationIsRejected),
     ("Publiczny adres i callback muszą mieć ten sam HTTPS origin", ConfigurationRequiresExactOrigin),
+    ("Lista zaufanych reverse proxy przyjmuje tylko dokładne adresy IP", TrustedProxyConfigurationIsStrict),
     ("Sesja PKCE jest jednorazowa", SessionIsOneTime),
     ("Zły verifier nie konsumuje gotowego wyniku", WrongVerifierDoesNotConsume),
     ("Powtórzony callback nie rozpoczyna drugiej wymiany", CallbackCannotStartTwice),
@@ -23,7 +24,9 @@ var tests = new (string Name, Func<Task> Run)[]
     ("Wymiana kodu używa Basic i nie ujawnia sekretu w adresie", CodeExchangeIsServerSide),
     ("Odnowienie zachowuje stary refresh token, gdy Sonos go nie obraca", RefreshKeepsFallbackToken),
     ("Odmowa odnowienia wymaga ponownego logowania", RefreshInvalidGrantIsNamed),
-    ("Endpointy start, odmowa i jednorazowy wynik są zgodne z klientem AMC", EndpointsMatchClientContract)
+    ("Endpointy start, odmowa i jednorazowy wynik są zgodne z klientem AMC", EndpointsMatchClientContract),
+    ("Nagłówek HTTPS od niezaufanego proxy jest ignorowany", UntrustedProxyCannotClaimHttps),
+    ("Jawnie zaufane proxy może bezpiecznie zakończyć TLS", TrustedProxyCanTerminateTls)
 };
 
 var failed = new List<string>();
@@ -79,6 +82,28 @@ static Task ConfigurationRequiresExactOrigin()
     subpath["SONOS_BROKER_PUBLIC_ORIGIN"] = "https://sonos.example.test/broker/";
     subpath["SONOS_REDIRECT_URI"] = "https://sonos.example.test/broker/login/callback";
     AssertThrows<InvalidOperationException>(() => SonosBrokerOptions.Load(Configuration(subpath)));
+    return Task.CompletedTask;
+}
+
+static Task TrustedProxyConfigurationIsStrict()
+{
+    var values = ValidConfiguration();
+    values["SONOS_TRUSTED_PROXIES"] = "127.0.0.1, ::1, 127.0.0.1";
+    var state = SonosBrokerOptions.Load(Configuration(values));
+    Assert(state.TrustedProxies.Count == 2,
+        "duplikat adresu proxy nie został usunięty");
+    Assert(state.TrustedProxies.Contains(IPAddress.Loopback)
+        && state.TrustedProxies.Contains(IPAddress.IPv6Loopback),
+        "poprawne adresy proxy nie zostały zachowane");
+
+    foreach (var invalid in new[] { "proxy.example.test", "0.0.0.0", "127.0.0.1/32", "127.0.0.1," })
+    {
+        var bad = ValidConfiguration();
+        bad["SONOS_TRUSTED_PROXIES"] = invalid;
+        AssertThrows<InvalidOperationException>(() =>
+            SonosBrokerOptions.Load(Configuration(bad)));
+    }
+
     return Task.CompletedTask;
 }
 
@@ -274,6 +299,59 @@ static async Task EndpointsMatchClientContract()
         Assert(replay.StatusCode == HttpStatusCode.NotFound
             && await ErrorCode(replay) == "unknown_session",
             "wynik nie był jednorazowy");
+    }
+    finally
+    {
+        await app.StopAsync();
+    }
+}
+
+static async Task UntrustedProxyCannotClaimHttps()
+{
+    using var response = await ProductionHealthRequest(trustedProxy: false);
+    Assert(response.StatusCode == HttpStatusCode.BadRequest,
+        "niezaufany X-Forwarded-Proto ominął wymaganie HTTPS");
+    Assert(await ErrorCode(response) == "https_required",
+        "odmowa niezaufanego proxy ma zły kod");
+}
+
+static async Task TrustedProxyCanTerminateTls()
+{
+    using var response = await ProductionHealthRequest(trustedProxy: true);
+    Assert(response.StatusCode == HttpStatusCode.OK,
+        "jawnie zaufane proxy nie przekazało bezpiecznego schematu HTTPS");
+    using var document = JsonDocument.Parse(await response.Content.ReadAsByteArrayAsync());
+    Assert(document.RootElement.GetProperty("status").GetString() == "ready",
+        "gotowy broker nie zwrócił stanu ready za zaufanym proxy");
+}
+
+static async Task<HttpResponseMessage> ProductionHealthRequest(bool trustedProxy)
+{
+    var args = new List<string>
+    {
+        "--environment", "Production",
+        "--SONOS_BROKER_PUBLIC_ORIGIN", "https://sonos.example.test/",
+        "--SONOS_CLIENT_ID", "client-id",
+        "--SONOS_CLIENT_SECRET", "client-secret",
+        "--SONOS_REDIRECT_URI", "https://sonos.example.test/login/callback"
+    };
+    if (trustedProxy)
+    {
+        args.AddRange(new[] { "--SONOS_TRUSTED_PROXIES", "127.0.0.1" });
+    }
+
+    await using var app = SonosBrokerApplication.Build(args.ToArray());
+    app.Urls.Add("http://127.0.0.1:0");
+    await app.StartAsync();
+    try
+    {
+        var address = app.Services.GetRequiredService<IServer>()
+            .Features.Get<IServerAddressesFeature>()!.Addresses.Single();
+        using var client = new HttpClient { BaseAddress = new Uri(address) };
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/health/ready");
+        request.Headers.TryAddWithoutValidation("X-Forwarded-For", "198.51.100.10");
+        request.Headers.TryAddWithoutValidation("X-Forwarded-Proto", "https");
+        return await client.SendAsync(request);
     }
     finally
     {

@@ -140,7 +140,8 @@ zmian, wymagający korekty użytkownika:
   testach lokalnych, czeka na domenę, dane integracji i odbiór na zewnętrznym
   koncie** — działające sterowanie Sonosem i WiiM nie zostało przepisane.
   Dodano serwerowy kontrakt logowania, PKCE, jednorazowe sesje, odnowienie,
-  ograniczenie tempa i bezpieczne logowanie. Publiczny Sonos nadal jest ukryty.
+  ograniczenie tempa, bezpieczne logowanie oraz ścisłą obsługę zakończenia TLS
+  przez jawnie zaufane reverse proxy. Publiczny Sonos nadal jest ukryty.
   Bieżący zapis realizacji:
   [AMC10-logowanie-sonos-i-publiczny-broker.md](AMC10-logowanie-sonos-i-publiczny-broker.md).
   Zatwierdzona specyfikacja:
