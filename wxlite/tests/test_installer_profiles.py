@@ -36,6 +36,15 @@ def test_installer_never_forces_running_amc_to_close() -> None:
     assert "AppMutex={#LauncherMutex}" in ISS
 
 
+def test_installer_shortcuts_are_optional_and_noicons_is_effective() -> None:
+    assert "DisableProgramGroupPage=auto" in ISS
+    assert "AllowNoIcons=yes" in ISS
+    assert 'Name: "desktopicon"' in ISS
+    assert 'Flags: unchecked' in ISS
+    assert ISS.count("Check: not WizardNoIcons") == 3
+    assert "Tasks: desktopicon" in ISS
+
+
 def test_installer_performs_full_post_install_integrity_check() -> None:
     assert "--sprawdz-pakiet-pelny-cicho" in ISS
     assert "ewWaitUntilTerminated" in ISS

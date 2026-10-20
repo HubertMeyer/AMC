@@ -88,6 +88,11 @@ zatrzymana; program trzeba zamknąć zwykłą drogą, która chroni nagrywanie.
 Paczka zawiera prywatny runtime Pythona oraz samowystarczalne procesy .NET i
 nie pobiera środowiska uruchomieniowego podczas instalacji.
 
+Skrót na pulpicie jest dobrowolnym, domyślnie wyłączonym zadaniem instalatora.
+Użytkownik może też zaznaczyć „Nie twórz folderu w menu Start”. Tryb
+administracyjny `/NOICONS` ma to samo znaczenie i nie tworzy żadnego z tych
+skrótów.
+
 ## Uzasadnienie i decyzje
 
 - Jedna definicja profilu jest bezpieczniejsza niż osobne listy w interfejsie,
@@ -139,6 +144,9 @@ nie pobiera środowiska uruchomieniowego podczas instalacji.
   istniejącej paczki ma dokładny `installId` bieżącego profilu. Chroni to
   szczególnie domyślny folder `AMC`, który na starszym komputerze może nadal
   należeć do historycznego WPF.
+- Skróty nie są bezwarunkowe. Strona folderu menu Start pozostaje dostępna,
+  pulpit jest osobnym niezaznaczonym zadaniem, a wszystkie trzy wpisy skrótów
+  respektują wybór „bez skrótów”.
 
 ## Zmienione pliki
 
@@ -272,6 +280,20 @@ nie pobiera środowiska uruchomieniowego podczas instalacji.
   kontrolny zakończyła się oczekiwanym kodem 7 i komunikatem odmowy; liczba i
   treść plików katalogu nie zmieniły się. Nie wykonywano tej próby przeciw
   rzeczywistemu historycznemu AMC.
+- Czysta instalacja publicznego profilu do odizolowanego katalogu zakończyła
+  się kodem **0**. Zainstalowano 1079 plików łącznie z deinstalatorem i jego
+  danymi; manifest wskazał profil `public`, źródło `863539bd` i paczkę
+  `00ab4530`. Ponowna pełna kontrola zainstalowanych 1076 plików zakończyła
+  się kodem **0**, a próbne odinstalowanie także kodem **0** i usunęło katalog.
+- Próba ujawniła, że `/NOICONS` było ignorowane przez wcześniejsze
+  `DisableProgramGroupPage=yes`, przez co próbny instalator utworzył skróty.
+  Przed odinstalowaniem rozpoznano oba zainstalowane produkty, a po nim
+  odtworzono trzy skróty historycznego AMC; prowadzą ponownie do
+  `AccessibleMediaController.exe` i jego deinstalatora.
+- Po korekcie dobrowolnych skrótów test strukturalny zaliczył **8/8**
+  przypadków, a Inno Setup 6.7.3 ponownie skompilował instalator. Drugiej
+  instalacji na głównym koncie nie wykonywano bez dodatkowej zgody, aby po
+  wcześniejszym wykryciu kolizji nie ryzykować ponownej zmiany skrótów.
 
 ## Znane ograniczenia
 
@@ -294,8 +316,9 @@ nie pobiera środowiska uruchomieniowego podczas instalacji.
 - Sonos publiczny pozostaje ukryty do czasu prawdziwego brokera HTTPS i
   odbioru z zewnętrznym kontem.
 - Osobne tożsamości procesu i instalator są gotowe, ale nie sprawdzono jeszcze
-  czystej instalacji, aktualizacji i odinstalowania od końca do końca. Próba ma
-  poczekać na pewny brak nagrywania i osobny odbiór użytkownika.
+  aktualizacji istniejącego publicznego profilu od końca do końca. Czysta
+  instalacja, pełna kontrola i odinstalowanie przeszły; wykonawcza próba
+  ostatecznej korekty `/NOICONS` wymaga osobnej zgody albo maszyny izolowanej.
 - Instalator nie jest jeszcze podpisany cyfrowo ani opublikowany. Plik
   integralności potwierdza lokalny wynik budowy, nie zastępuje podpisu kodu.
 - Na głównym komputerze domyślny publiczny folder

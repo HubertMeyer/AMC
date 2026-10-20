@@ -64,7 +64,8 @@ OutputBaseFilename={#NazwaWyjscia}
 OutputDir={#Wyjscie}
 SourceDir={#Zrodlo}
 PrivilegesRequired=lowest
-DisableProgramGroupPage=yes
+DisableProgramGroupPage=auto
+AllowNoIcons=yes
 DisableStartupPrompt=yes
 DisableWelcomePage=no
 DisableReadyPage=no
@@ -88,15 +89,20 @@ Name: "shellcontext"; Description: "Dodaj polecenia Otwórz i Dodaj do kolejki w
     GroupDescription: "Integracja z Eksploratorem Windows:"; Flags: unchecked
 Name: "shellopenwith"; Description: "Pokaż {#KrotkaNazwa} na liście Otwórz za pomocą i w ustawieniach aplikacji domyślnych"; \
     GroupDescription: "Integracja z Eksploratorem Windows:"; Flags: unchecked
+Name: "desktopicon"; Description: "Utwórz skrót na pulpicie"; \
+    GroupDescription: "Dodatkowe skróty:"; Flags: unchecked
 
 [Files]
 Source: "*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
-Name: "{group}\{#KrotkaNazwa}"; Filename: "{app}\AMC.exe"; WorkingDir: "{app}"
-Name: "{group}\Odinstaluj {#KrotkaNazwa}"; Filename: "{uninstallexe}"
+Name: "{group}\{#KrotkaNazwa}"; Filename: "{app}\AMC.exe"; WorkingDir: "{app}"; \
+    Check: not WizardNoIcons
+Name: "{group}\Odinstaluj {#KrotkaNazwa}"; Filename: "{uninstallexe}"; \
+    Check: not WizardNoIcons
 Name: "{autodesktop}\{#KrotkaNazwa}"; Filename: "{app}\AMC.exe"; WorkingDir: "{app}"; \
-    Comment: "Uruchom lub przywołaj {#KrotkaNazwa}"
+    Comment: "Uruchom lub przywołaj {#KrotkaNazwa}"; Tasks: desktopicon; \
+    Check: not WizardNoIcons
 
 [Registry]
 Root: HKA; Subkey: "Software\Microsoft\Windows\CurrentVersion\App Paths\{#AppPathName}"; \
