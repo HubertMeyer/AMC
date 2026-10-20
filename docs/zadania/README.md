@@ -213,7 +213,9 @@ zmian, wymagający korekty użytkownika:
   atomowym zapisem w magazynie profilu. Po zweryfikowanym endpointcie ten sam
   formularz wysyła dokładnie widoczny raport w tle. Worker ma drugą redakcję,
   limit, idempotencję i rozdziela prywatną treść od publicznego issue; nie
-  został jeszcze wdrożony i nie utworzył prawdziwego zgłoszenia. Prywatne
+  został jeszcze wdrożony i nie utworzył prawdziwego zgłoszenia. Zależności
+  Workera są przypięte, a skrypt wdrożenia działa domyślnie tylko jako lokalna
+  bramka i nigdy sam nie rozpoczyna logowania. Prywatne
   repozytorium intake i wymagane etykiety są już utworzone. Lokalna bramka
   publikacji instalatora sprawdza profil, rewizję, rozmiar, SHA-256 i wynik
   odczytany z GitHuba, ale bez jawnego `-Publish` niczego nie wysyła. Czysta

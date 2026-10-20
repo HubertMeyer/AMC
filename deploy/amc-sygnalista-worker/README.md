@@ -31,11 +31,17 @@ Użytkownik AMC nie potrzebuje konta GitHub.
    `npx wrangler login --device --browser=false --use-keyring`, a podany adres
    i jednorazowy kod otworzyć samodzielnie. `--use-keyring` przechowuje dane
    OAuth w systemowym magazynie poświadczeń zamiast jawnego pliku.
-5. Uruchom testy, a następnie `npm run deploy`. Własna domena nie jest wymagana;
-   `workers_dev: true` publikuje usługę pod adresem HTTPS w `workers.dev`.
-6. Sprawdź `/health` i kontrolowany raport testowy. Dopiero potem wpisz końcowy
-   adres `https://.../v1/report` do pliku
+5. Uruchom jawnie skrypt `Deploy-AMCSygnalistaWorker.ps1`, podając bazowy adres
+   HTTPS Workera. Bez `-Deploy` skrypt wykonuje tylko `npm ci` z przypiętego
+   `package-lock.json` i testy. Z `-Deploy` wymaga istniejącej sesji Cloudflare,
+   sekretu i pełnej konfiguracji; nigdy sam nie rozpoczyna logowania.
+6. Po wdrożeniu skrypt sprawdza `/health`. Dopiero jawne połączenie `-Deploy`
+   i `-ActivateEndpoint` zapisuje końcowy adres `https://.../v1/report` do
    `wxlite/amc_wx_lite/problem-report-endpoint.txt` przed budową wydania.
+   Własna domena nie jest wymagana; `workers_dev: true` publikuje usługę pod
+   adresem HTTPS w `workers.dev`.
+7. Osobno wykonaj kontrolowany raport próbny i sprawdź prywatny oraz publiczny
+   wpis. Skrypt wdrożeniowy celowo nie tworzy zgłoszenia bez tej decyzji.
 
 Repozytorium celowo nie zawiera działającego endpointu, identyfikatora KV ani
 tokenów. Samo zbudowanie AMC pozostawia więc formularz w bezpiecznym trybie

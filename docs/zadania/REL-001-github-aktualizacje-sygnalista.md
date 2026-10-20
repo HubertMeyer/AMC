@@ -158,6 +158,12 @@ repozytorium, kanałami wydań i polityką prywatności.
   `workers.dev`, wymaga sekretu `GITHUB_TOKEN`, KV i limitera. Logowanie
   urządzeniem może wypisać adres i kod bez otwierania przeglądarki, a dane OAuth
   na Windows mają być przechowywane w systemowym magazynie poświadczeń.
+- Zależności Workera są utrwalone w `package-lock.json`. Skrypt wdrożenia
+  domyślnie wykonuje wyłącznie czyste `npm ci` i testy. Dopiero jawne `-Deploy`
+  sprawdza istniejącą sesję Cloudflare, obecność sekretu `GITHUB_TOKEN`,
+  wdraża usługę i weryfikuje `/health`. Skrypt nie wywołuje logowania.
+  Dodatkowe `-ActivateEndpoint` zapisuje adres raportów atomowo dopiero po
+  poprawnej odpowiedzi zdrowia; nie tworzy automatycznie próbnego issue.
 - Publikacja instalatora ma osobną bramkę PowerShell. Domyślny przebieg tylko
   sprawdza profil `public`, wersję, nazwę, rozmiar, SHA-256 i pełną rewizję
   źródeł oraz przygotowuje opis i manifest gotowości. Dopiero jawne `-Publish`
@@ -235,6 +241,11 @@ repozytorium, kanałami wydań i polityką prywatności.
   **6 zaliczonych**. Potwierdzono snapshot bez rodzica, identyczne drzewo,
   idempotencję, liniowego rodzica następnego wydania, brak zmiany bieżącego
   checkoutu, odmowę przy niezapisanych zmianach i brak polecenia wysyłania.
+- Powtarzalna bramka wdrożenia Sygnalisty: czyste `npm ci` z pliku blokady i
+  **8/8 testów Workera**, następnie **23/23 testy Python** transportu,
+  współbieżności i kontraktu skryptu wdrożenia. Parser PowerShell przyjął
+  skrypt bez błędów. Nie wykonano `wrangler deploy`, logowania ani prawdziwego
+  zgłoszenia.
 
 ## Znane ograniczenia
 
@@ -245,6 +256,9 @@ repozytorium, kanałami wydań i polityką prywatności.
 - Prawdziwe uruchomienie wymaga świadomego logowania do właściwego konta
   Cloudflare, utworzenia prywatnego `amc-support-intake`, etykiet, ograniczonego
   tokenu GitHuba w sekrecie Workera i kontrolowanego raportu próbnego.
+- Skrypt wdrożenia nie może sam utworzyć konta, przestrzeni KV ani sekretu;
+  zatrzymuje się bez gotowego `wrangler.jsonc` i istniejącej sesji. To celowa
+  bramka wymagająca obecności użytkownika.
 - Publiczny snapshot źródeł pozostaje lokalny do czasu odbioru zainstalowanego
   kandydata. Samo jego utworzenie nie jest kopią zdalną ani publikacją.
 - Zapisany raport pozostaje plikiem lokalnym; AMC nie otwiera przeglądarki.
@@ -278,6 +292,9 @@ repozytorium, kanałami wydań i polityką prywatności.
 - Czysta publiczna linia źródeł: `9e4024c4` —
   `feat(rel): przygotuj czysta linie zrodel`; narzędzie
   `scripts/Prepare-AMCPublicSourceSnapshot.ps1` nie publikuje danych.
+- Integralna bramka wdrożenia Workera: commit zostanie wpisany po lokalnym
+  zatwierdzeniu; pakiet nie zawiera konfiguracji konta, identyfikatora KV ani
+  sekretu.
 - Druga redakcja serwerowa ścieżek, przypisań tokenów i kont,
   identyfikatorów oraz nazw plików: `8149d076` —
   `fix(rel): wzmocnij redakcje Workera`.
