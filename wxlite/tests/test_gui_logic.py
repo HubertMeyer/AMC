@@ -24,7 +24,8 @@ def install_wx_stub() -> None:
 
     codes = {
         "WXK_RETURN": 13, "WXK_NUMPAD_ENTER": 370, "WXK_BACK": 8, "WXK_ESCAPE": 27,
-        "WXK_SPACE": 32, "WXK_DELETE": 127, "WXK_F1": 340, "WXK_F2": 341, "WXK_F6": 345,
+        "WXK_SPACE": 32, "WXK_DELETE": 127, "WXK_F1": 340, "WXK_F2": 341,
+        "WXK_F5": 344, "WXK_F6": 345,
         "WXK_F10": 349,
         "WXK_LEFT": 314, "WXK_RIGHT": 316, "WXK_UP": 315, "WXK_DOWN": 317, "WXK_TAB": 9,
         "WXK_HOME": 313, "WXK_END": 312, "WXK_PAGEUP": 366, "WXK_PAGEDOWN": 367,
@@ -225,6 +226,30 @@ def test_ctrl_shift_o_opens_a_folder() -> None:
 def test_digit_keys_switch_sessions() -> None:
     chord = chord_from_event(FakeKeyEvent(ord("1"), ctrl=True))
     assert resolve(chord, player_view=False, radio_session=False) is Action.SESSION_FILES
+
+
+def test_physical_f5_and_ctrl_f5_reach_the_files_session_commands() -> None:
+    """Use raw wx key codes, not a prebuilt Chord, to cover the GUI boundary."""
+
+    import wx
+
+    refresh = chord_from_event(FakeKeyEvent(wx.WXK_F5))
+    configure = chord_from_event(FakeKeyEvent(wx.WXK_F5, ctrl=True))
+
+    assert refresh.canonical == "F5"
+    assert configure.canonical == "Ctrl+F5"
+    assert resolve(
+        refresh,
+        player_view=False,
+        radio_session=False,
+        files_session=True,
+    ) is Action.REFRESH_LOCAL_LIBRARY
+    assert resolve(
+        configure,
+        player_view=False,
+        radio_session=False,
+        files_session=True,
+    ) is Action.MANAGE_LIBRARY_FOLDERS
 
 
 def test_ctrl_shift_zero_uses_physical_windows_key_for_preset_10(monkeypatch) -> None:

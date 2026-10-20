@@ -109,8 +109,8 @@ zmian, wymagający korekty użytkownika:
   Historyczne źródła są tylko wzorcem; kod powstaje w tym repozytorium.
 - `AMC09` — **Menedżer, pierwsze rozszerzenie Konfiguruj, ujednolicone
   `Ctrl+F5`, precyzyjne nazwy dla każdej sesji oraz Foldery Biblioteki są
-  zbudowane, bezpiecznie zainstalowane i uruchomione; pozostaje odbiór NVDA na
-  prawdziwych usługach** — dostępny
+  zbudowane; po ręcznym wykryciu brakującego mapowania fizycznego `F5` poprawka
+  granicy wxPython czeka na bezpieczną instalację i ponowny odbiór NVDA** — dostępny
   Menedżer sesji pod `Ctrl+Shift+S`, włączanie Spacją, zwarta kolejność
   `Ctrl+1–9`, zmiana kolejności `Alt+strzałkami`, stan gotowości i stała nazwa
   `Radio`. Ma działać już w AMC Test; profil publiczny będzie później filtrował
@@ -122,7 +122,10 @@ zmian, wymagający korekty użytkownika:
   Folderów Biblioteki; pozostałe sesje zachowują własne znaczenie tego skrótu.
   Korekta z 20.10.2026 dodaje w Radiu rzeczywiste „Odśwież stacje Radia” pod
   `Ctrl+F5`, również z odtwarzacza, przy wspólnym opisie menu, pomocy i palety.
-  Kod, testy i instalacja tej korekty są potwierdzone; pozostaje odbiór NVDA.
+  Kod i testy kontraktu są potwierdzone. Ręczny odbiór ujawnił jednak wspólną
+  przyczynę ciszy `F5` i `Ctrl+F5`: brak mapowania rzeczywistego kodu klawisza
+  wxPython. Poprawka i test od surowego zdarzenia są gotowe; instalacja tej
+  najnowszej korekty pozostaje do wykonania.
   Bieżący zapis realizacji:
   [AMC09-menedzer-sesji.md](AMC09-menedzer-sesji.md).
 - `AMC12` — **W trakcie; fundament profili, rozdzielenie uruchamiacza i

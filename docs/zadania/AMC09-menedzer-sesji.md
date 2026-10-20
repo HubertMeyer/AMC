@@ -129,6 +129,14 @@ Historyczny projekt został użyty tylko jako materiał do odczytu.
   i Sonosa. Nie zawiera jednak późniejszego commitu `a6614d11`; właśnie dlatego
   w Radiu nie ma ani rozstrzygniętej akcji skrótu, ani prezentacji, ani pozycji
   menu. Zgłoszenie nie wynika z NVDA ani z awarii klawiatury.
+- **Późniejsza korekta użytkownika z 20 października 2026 zastępuje powyższą
+  diagnozę działania klawiatury:** także po instalacji zawierającej radiowe
+  polecenie ani fizyczne `F5`, ani `Ctrl+F5` nie wykonywały akcji. Przyczyną
+  było brakujące mapowanie kodu `F5` na granicy wxPython. Router, menu, pomoc i
+  paleta miały poprawny kontrakt, lecz prawdziwe zdarzenie klawiatury docierało
+  do nich jako nierozpoznana wartość liczbowa. Dodano brakujące mapowanie oraz
+  test rozpoczynający się od surowego kodu klawisza, a nie od gotowego napisu
+  `F5`.
 
 ## Zmienione miejsca
 
@@ -234,6 +242,12 @@ Historyczny projekt został użyty tylko jako materiał do odczytu.
   testów, ponieważ niezmieniony kod `e1ea7f3d` miał wiarygodny wynik
   **131 + 73 = 204 zaliczone**; kwit uczciwie zapisuje testy promocji jako
   „pominięte”.
+- Po zgłoszeniu z żywej instalacji odtworzono różnicę między testem a
+  klawiaturą: testy katalogu tworzyły bezpośrednio akord `F5`, podczas gdy
+  funkcja tłumacząca prawdziwe zdarzenie wxPython nie znała `WXK_F5`. Po
+  poprawce **113/113** ukierunkowanych testów granicy GUI, resolvera, wczesnej
+  bramki listy i zgodności menu zaliczono. Nowy test sprawdza zarówno `F5`, jak
+  i `Ctrl+F5` od surowego kodu 344 aż do akcji Plików lokalnych.
 
 ## Znane ograniczenia
 
@@ -255,9 +269,10 @@ Historyczny projekt został użyty tylko jako materiał do odczytu.
   dodanie małego folderu, ponowne odświeżenie, anulowanie odłączenia,
   potwierdzone odłączenie i powrót fokusu. Odłączenie jest celowo
   niedestrukcyjne; osobne ręczne zapominanie wpisów nie należy do tego okna.
-- Ręczny odbiór NVDA nadal powinien sprawdzić sesyjne nazwy i działanie
-  `Ctrl+F5` na prawdziwych kontach i urządzeniach. Kompilacja i instalacja
-  potwierdzają dostarczenie kodu, ale nie zastępują tego odbioru.
+- Ręczny odbiór NVDA nadal powinien sprawdzić fizyczne `F5` i `Ctrl+F5`, a
+  następnie sesyjne nazwy i działanie na prawdziwych kontach i urządzeniach.
+  Test źródłowy potwierdza naprawę translacji klawisza, ale kompilacja i
+  instalacja nie zastępują odbioru na rzeczywistej klawiaturze.
 - Radiowe i sesyjne `Ctrl+F5` jest zainstalowane w AMC Test w pakiecie
   `fd5f4231-b7475d46`. Nadal wymaga ręcznego odbioru NVDA na prawdziwych
   kontach i urządzeniach; instalacja nie jest dowodem działania zewnętrznej
@@ -316,6 +331,9 @@ Historyczny projekt został użyty tylko jako materiał do odczytu.
   `2026.10.20-fd5f423117f87c34aff6e9c4def22a985aa307a6-b7475d46`
   (1667 plików). Instalację, integralność i uruchomienie potwierdzono
   20 października 2026 o 12:55. Publikacji nie wykonano.
+- Naprawa fizycznego `F5` i `Ctrl+F5` na granicy wxPython: kod i test
+  regresji przygotowane 20 października 2026; dokładny commit oraz wynik
+  instalacji zostaną dopisane po utworzeniu i bezpiecznej promocji paczki.
 - Instalacja i uruchomienie doprecyzowanych nazw `Ctrl+F5`: potwierdzone dla
   `2026.10.20-f96149f75e83eea064899db78c762596e56d2504-904ceb8c` w
   `D:\Projekty Codex\AMC Python`. Paczka zawiera 1667 plików; źródłem jest

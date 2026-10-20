@@ -666,6 +666,7 @@ _SPECIAL_KEYS = {
     wx.WXK_DELETE: "Delete",
     wx.WXK_F1: "F1",
     wx.WXK_F2: "F2",
+    wx.WXK_F5: "F5",
     wx.WXK_F6: "F6",
     wx.WXK_LEFT: "Left",
     wx.WXK_RIGHT: "Right",
