@@ -2,12 +2,15 @@
 
 ## Status
 
-**W trakcie — niezależny broker ma gotowy i sprawdzony pakiet wdrożeniowy
-Docker Compose z własnym HTTPS, ale nie został jeszcze uruchomiony na publicznym
-serwerze. Bieżące źródła AMC Test są odłączone od Hermesa i pozostają w
-bezpiecznym stanie „publiczny broker nieskonfigurowany”. Publiczny serwer,
-dane integracji Sonos, instalacja klienta oraz odbiór z zewnętrznym kontem
-pozostają bramą.**
+**W trakcie — zainstalowany AMC Test ma działające konto Sonos i kompletną
+obsługę sterowania, grupowania oraz treści. Jego broker na Hermesie uczestniczy
+tylko w logowaniu i odnawianiu tokenu; polecenia wykonuje bezpośrednio oficjalne
+Sonos Control API. Niezależny broker ma gotowy i sprawdzony pakiet wdrożeniowy
+Docker Compose z własnym HTTPS, ale nie został jeszcze uruchomiony publicznie.
+Bieżące, jeszcze niezainstalowane źródła są odłączone od Hermesa i pozostają w
+stanie „publiczny broker nieskonfigurowany”. Przed ich instalacją trzeba
+uruchomić nowy broker albo przygotować bezpieczne zachowanie dotychczasowego
+konta autora.**
 
 Sterowanie Sonosem i WiiM było już przeszczepione i użytkownik ocenił je jako
 prawie gotowe. Ten etap nie zmienia adapterów, list, transportu ani WiiM.
@@ -61,6 +64,13 @@ prawie gotowe. Ten etap nie zmienia adapterów, list, transportu ani WiiM.
   Sonos z 19 października. Nie oznacza to zgody na ujawnienie lub przesłanie
   sekretu w rozmowie; należy go odnaleźć i przenieść wyłącznie chronionym
   kanałem wdrożeniowym.
+- 2026-10-20: użytkownik przypomniał, że w historycznym AMC działało pełne
+  sterowanie i grupowanie Sonosa, a po przeniesieniu działa ono również w
+  zainstalowanym AMC Test. To zastępuje zbyt szerokie wcześniejsze sformułowanie,
+  że bieżąca architektura „nie ma związku” z Hermesem. Dokładnie: gotowa
+  obsługa Sonosa nie zależy od Hermesa przy zwykłym sterowaniu, ale zainstalowany
+  wariant używa go jako brokera logowania i odnowienia tokenu. Docelowe wydanie
+  publiczne nadal ma otrzymać broker niezależny od Hermesa.
 
 ## Materiał do dokumentacji użytkownika
 
@@ -99,11 +109,12 @@ sekretu ani serwera. Użytkownik wybierze logowanie, otrzyma adres oficjalnej
 strony Sonosa, zaloguje się tam i wróci do AMC, aby sprawdzić wynik. Sekret
 integracji pozostaje tylko na wspólnym serwerze AMC.
 
-Istniejące konto autora było wcześniej prawidłowo połączone z Sonosem, ale jego
-zaszyfrowany rekord jest przypisany do historycznego originu. Po uruchomieniu
-nowego publicznego brokera AMC poprosi autora o świeże, świadome logowanie.
-Nie będzie po cichu przepisywać starego tokenu ani udawać, że należy on do
-nowego serwera.
+Istniejące konto autora jest prawidłowo połączone z Sonosem i obsługuje
+sterowanie oraz grupowanie w zainstalowanym AMC Test. Zaszyfrowany rekord jest
+jednak przypisany do historycznego originu. Przed instalacją wariantu z nowym
+brokerem AMC albo poprosi autora o świeże, świadome logowanie, albo zastosuje
+osobno sprawdzoną migrację tego samego konta i integracji. Nie będzie po cichu
+przepisywać starego tokenu ani udawać, że należy on do innego serwera.
 
 AMC nie zna i nie przechowuje sekretu integracji Sonos. Tokeny użytkownika
 pozostają wyłącznie w procesie C# i w istniejącym lokalnym magazynie chronionym
@@ -181,6 +192,17 @@ brokera.
 - Token użytkownika i sekret integracji są różnymi danymi. Zaszyfrowany plik
   Windows potwierdza udane logowanie użytkownika, ale nie zawiera i nie może
   zastąpić serwerowego `SONOS_CLIENT_SECRET`.
+- Zainstalowany pakiet ma `sourceRevision`
+  `1df89b186803cd6c4b1b4163a2a4ebd41e54f118`. W tej rewizji
+  `SonosIntegrationDefaults.BrokerOrigin` wskazuje Hermesa. Broker jest używany
+  do rozpoczęcia, sprawdzenia i odnowienia logowania. Wszystkie operacje
+  urządzeń, grup, ulubionych, playlist i strumieni używają bezpośrednio
+  `SonosControlApiClient` z tokenem konta i publicznym kluczem integracji.
+- Obecne źródła mają nieroutowalny placeholder i `BrokerAvailable=false`.
+  Zainstalowanie ich przed uruchomieniem następcy brokera odebrałoby autorowi
+  możliwość odnowienia sesji i mogłoby unieważnić odczyt rekordu związanego ze
+  starym originem. Dlatego tego wariantu nie należy jeszcze promować na główną
+  instalację testową.
 
 Kontrakt sprawdzono 2026-10-19 z aktualną oficjalną dokumentacją Sonosa:
 
@@ -377,6 +399,13 @@ Kontrakt sprawdzono 2026-10-19 z aktualną oficjalną dokumentacją Sonosa:
   przypisanie do historycznego originu. Token dostępu wygasł 20 października,
   ale sam rekord nadal zawiera refresh token. Bufory jawnego tekstu wyzerowano
   po sprawdzeniu.
+- Manifest zainstalowanego AMC Test wskazuje rewizję
+  `1df89b186803cd6c4b1b4163a2a4ebd41e54f118`. Odczyt tej rewizji potwierdził
+  broker `https://hermes.tail6caad7.ts.net/`, a odczyt bieżącego HEAD —
+  nieroutowalny placeholder. To wyjaśnia jednocześnie działanie obecnej
+  instalacji oraz brak gotowości nowszych źródeł do instalacji. W czasie audytu
+  proces AMC nie był uruchomiony; nie wykonywano polecenia do głośników,
+  odnowienia tokenu, kompilacji ani instalacji.
 
 ## Znane ograniczenia
 

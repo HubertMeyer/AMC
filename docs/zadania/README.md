@@ -148,18 +148,17 @@ zmian, wymagający korekty użytkownika:
   [AMC12-profile-wydania-publicznego-i-testowego.md](AMC12-profile-wydania-publicznego-i-testowego.md).
   Zatwierdzona specyfikacja:
   `D:\Projekty Codex\Accessible Multimedia Controller\AMC12_PROFILE_WYDANIA_PUBLICZNEGO_I_TESTOWEGO_2026-10-18.md`.
-- `AMC10` — **W trakcie; niezależny broker ma czysty, sprawdzony pakiet
-  wdrożeniowy Docker Compose z Caddy i własnym HTTPS. Nie został jeszcze
-  uruchomiony publicznie, ponieważ brakuje konkretnego serwera, DNS oraz danych
-  integracji z portalu Sonos. Historyczny zaszyfrowany magazyn potwierdza udane
-  prawdziwe logowanie 19 października i publiczny identyfikator integracji;
-  trzeba jeszcze bezpiecznie sprawdzić na Hermesie obecność serwerowego sekretu
-  bez wypisywania go. Bieżące źródła klienta są odłączone od Hermesa,
-  a zainstalowany AMC Test nadal jest wcześniejszą wersją. Hermes nie jest
-  częścią architektury Sonosa** —
-  działające sterowanie Sonosem i WiiM nie zostało
-  przepisane. `Ctrl+F5` wybiera dom i grupę, a przy braku połączenia prowadzi do
-  konta zamiast kończyć się błędem. Okno udostępnia rozpoczęcie, jawne
+- `AMC10` — **W trakcie; zainstalowany AMC Test ma prawidłowo zapisane konto i
+  działające sterowanie, grupowanie oraz treści Sonos. Polecenia idą bezpośrednio
+  do Sonos Control API, natomiast broker na Hermesie obsługuje w tej instalacji
+  wyłącznie logowanie i odnowienie tokenu. Niezależny broker ma czysty,
+  sprawdzony pakiet Docker Compose z Caddy i własnym HTTPS, ale nie został
+  jeszcze uruchomiony publicznie. Bieżących źródeł z wyłączonym brokerem nie
+  należy instalować przed zapewnieniem następcy albo bezpiecznej ciągłości
+  konta autora** — działające sterowanie Sonosem i WiiM jest już przepisane i
+  nie wymaga ponownej implementacji. `Ctrl+F5` wybiera dom i grupę, a przy braku
+  połączenia prowadzi do konta zamiast kończyć się błędem. Okno udostępnia
+  rozpoczęcie, jawne
   sprawdzenie, anulowanie i odświeżenie logowania bez przekazywania tokenów do
   Pythona i bez samoczynnego otwierania przeglądarki. Dodano wcześniej serwerowy
   kontrakt logowania, PKCE, jednorazowe sesje, odnowienie, ograniczenie tempa,
