@@ -11,6 +11,7 @@ from __future__ import annotations
 import os
 import re
 import tempfile
+import uuid
 from collections import deque
 from dataclasses import dataclass
 from datetime import datetime
@@ -64,6 +65,8 @@ class PreparedReport:
     title: str
     body: str
     included_log: bool
+    report_id: str = ""
+    kind: ReportKind = ReportKind.BUG
 
     @property
     def utf8_size(self) -> int:
@@ -225,6 +228,7 @@ def prepare_report(
     environment: ReportEnvironment,
     *,
     log_lines: tuple[str, ...] | list[str] = (),
+    report_id: str | None = None,
 ) -> PreparedReport:
     """Zbuduj dokładnie tę treść, którą można potem skopiować lub zapisać."""
 
@@ -274,7 +278,18 @@ def prepare_report(
 
     body = "\n".join(sections).rstrip() + "\n"
     body = redact_private_data(body)
-    return PreparedReport(f"[{kind}] {title_text}", body, included_log)
+    stable_report_id = str(report_id or uuid.uuid4())
+    try:
+        stable_report_id = str(uuid.UUID(stable_report_id))
+    except (ValueError, AttributeError, TypeError):
+        stable_report_id = str(uuid.uuid4())
+    return PreparedReport(
+        f"[{kind}] {title_text}",
+        body,
+        included_log,
+        stable_report_id,
+        draft.kind,
+    )
 
 
 def deliver_report(

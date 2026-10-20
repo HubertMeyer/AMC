@@ -1,0 +1,27 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "amc-sygnalista",
+  "main": "src/worker.mjs",
+  "compatibility_date": "2026-10-20",
+  "vars": {
+    "GITHUB_OWNER": "michalkasperczak",
+    "PUBLIC_REPOSITORY": "AMC",
+    "INTAKE_REPOSITORY": "amc-support-intake"
+  },
+  "kv_namespaces": [
+    {
+      "binding": "REPORT_RESULTS",
+      "id": "UZUPELNIJ_IDENTYFIKATOR_KV"
+    }
+  ],
+  "ratelimits": [
+    {
+      "name": "REPORT_RATE_LIMITER",
+      "namespace_id": "1001",
+      "simple": {
+        "limit": 5,
+        "period": 60
+      }
+    }
+  ]
+}

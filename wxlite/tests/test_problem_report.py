@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+import io
+import json
 from pathlib import Path
+from urllib.error import HTTPError, URLError
 
 from amc_wx_lite.command_palette import entries_for_session
 from amc_wx_lite.navigation import SessionId
@@ -21,6 +24,11 @@ from amc_wx_lite.problem_report import (
     read_log_tail,
     redact_private_data,
     save_report_atomic,
+)
+from amc_wx_lite.problem_report_transport import (
+    HttpReportTransport,
+    configured_report_transport,
+    transport_is_online,
 )
 from amc_wx_lite.release_profile import PUBLIC_PROFILE, TEST_PROFILE
 from amc_wx_lite.shortcuts import (
@@ -92,6 +100,8 @@ def test_report_uses_one_redacted_body_and_log_is_off_by_default() -> None:
     assert "sekret" not in report.body
     assert "Jan" not in report.body
     assert "Log dołączony: nie" in report.body
+    assert report.report_id
+    assert report.kind is ReportKind.BUG
 
 
 def test_log_reader_is_bounded_and_redacted(tmp_path: Path) -> None:
@@ -159,6 +169,127 @@ def test_transport_contract_reports_success_error_offline_rate_and_size() -> Non
     assert LocalOnlyTransport().send(report).status is DeliveryStatus.NOT_CONFIGURED
 
 
+class _Response:
+    def __init__(self, status: int, payload: object) -> None:
+        self.status = status
+        self._body = io.BytesIO(json.dumps(payload).encode("utf-8"))
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_args):
+        return False
+
+    def read(self, maximum: int) -> bytes:
+        return self._body.read(maximum)
+
+    def getcode(self) -> int:
+        return self.status
+
+
+def _network_report() -> PreparedReport:
+    return prepare_report(
+        ReportDraft(ReportKind.SUGGESTION, "Tytuł", "Opis"),
+        _environment(),
+        report_id="123e4567-e89b-42d3-a456-426614174000",
+    )
+
+
+def test_https_transport_sends_exact_preview_without_any_secret() -> None:
+    calls = []
+
+    def opener(request, *, timeout):
+        calls.append((request, timeout))
+        return _Response(201, {
+            "issueNumber": 84,
+            "issueUrl": "https://github.com/michalkasperczak/AMC/issues/84",
+        })
+
+    report = _network_report()
+    result = HttpReportTransport(
+        "https://reports.example.test/v1/report",
+        opener=opener,
+    ).send(report)
+
+    assert result == DeliveryResult(
+        DeliveryStatus.SUCCESS,
+        84,
+        "https://github.com/michalkasperczak/AMC/issues/84",
+    )
+    request, timeout = calls[0]
+    assert request.full_url == "https://reports.example.test/v1/report"
+    assert timeout == 15.0
+    payload = json.loads(request.data.decode("utf-8"))
+    assert payload == {
+        "schemaVersion": 1,
+        "reportId": report.report_id,
+        "kind": "suggestion",
+        "title": report.title,
+        "reportText": report.body,
+        "includedLog": False,
+    }
+    headers = {key.casefold(): value for key, value in request.header_items()}
+    assert "authorization" not in headers
+    assert "token" not in request.data.decode("utf-8").casefold()
+
+
+def test_https_transport_maps_network_rate_size_and_malformed_responses() -> None:
+    report = _network_report()
+
+    def http_error(code: int):
+        def opener(request, *, timeout):
+            del request, timeout
+            raise HTTPError("https://reports.example.test/v1/report", code, "error", {}, None)
+        return opener
+
+    def offline(request, *, timeout):
+        del request, timeout
+        raise URLError("offline")
+
+    assert HttpReportTransport(
+        "https://reports.example.test/v1/report", opener=http_error(429)
+    ).send(report).status is DeliveryStatus.RATE_LIMITED
+    assert HttpReportTransport(
+        "https://reports.example.test/v1/report", opener=http_error(413)
+    ).send(report).status is DeliveryStatus.TOO_LARGE
+    assert HttpReportTransport(
+        "https://reports.example.test/v1/report", opener=offline
+    ).send(report).status is DeliveryStatus.OFFLINE
+    assert HttpReportTransport(
+        "https://reports.example.test/v1/report",
+        opener=lambda request, timeout: _Response(200, {}),
+    ).send(report).status is DeliveryStatus.FAILED
+    assert HttpReportTransport(
+        "https://reports.example.test/v1/report",
+        opener=lambda request, timeout: _Response(201, {"issueNumber": "x"}),
+    ).send(report).status is DeliveryStatus.FAILED
+
+
+def test_transport_configuration_accepts_only_plain_https_endpoint(tmp_path: Path) -> None:
+    absent = configured_report_transport(environment={}, resource_path=tmp_path / "none")
+    assert isinstance(absent, LocalOnlyTransport)
+    for unsafe in (
+        "http://reports.example.test/v1/report",
+        "https://user:secret@reports.example.test/v1/report",
+        "https://reports.example.test/v1/report?token=secret",
+        "https://reports.example.test/v1/report#fragment",
+    ):
+        assert isinstance(
+            configured_report_transport(
+                environment={"AMC_PROBLEM_REPORT_ENDPOINT": unsafe},
+                resource_path=tmp_path / "none",
+            ),
+            LocalOnlyTransport,
+        )
+    online = configured_report_transport(
+        environment={
+            "AMC_PROBLEM_REPORT_ENDPOINT": "https://reports.example.test/v1/report"
+        },
+        resource_path=tmp_path / "none",
+    )
+    assert transport_is_online(online)
+
+
 def test_report_command_has_one_name_in_menu_palette_help_and_dispatch() -> None:
     action = Action.REPORT_PROBLEM
     for session in SessionId:
@@ -181,7 +312,7 @@ def test_report_command_has_one_name_in_menu_palette_help_and_dispatch() -> None
         assert action in supported
 
 
-def test_both_profiles_advertise_only_the_local_report_capability() -> None:
+def test_both_profiles_advertise_the_shared_report_command_without_secrets() -> None:
     assert "problem-report-local" in TEST_PROFILE.capabilities
     assert "problem-report-local" in PUBLIC_PROFILE.capabilities
     assert not any("github" in value or "worker" in value for value in PUBLIC_PROFILE.capabilities)
@@ -198,5 +329,8 @@ def test_dialog_source_keeps_log_opt_in_full_preview_and_initial_focus() -> None
     assert "Pełny podgląd zredagowanego raportu" in source
     assert "wx.CallAfter(self.subject.SetFocus)" in source
     assert "Wysyłanie przez Internet nie jest jeszcze skonfigurowane" in source
-    assert "Wyślij" not in source
+    assert 'label="Wyślij zgłoszenie"' in source
+    assert 'self._announce("Wysyłanie zgłoszenia")' in source
+    assert "BackgroundRunner" in source
+    assert "Skopiuj adres zgłoszenia" in source
     assert "path.parent" not in source
