@@ -294,6 +294,18 @@ skrótów.
   przypadków, a Inno Setup 6.7.3 ponownie skompilował instalator. Drugiej
   instalacji na głównym koncie nie wykonywano bez dodatkowej zgody, aby po
   wcześniejszym wykryciu kolizji nie ryzykować ponownej zmiany skrótów.
+- Końcowa paczka po tej korekcie powstała w
+  `.test-output/AMC-public-2026.10.20-20babb7b`. Manifest wskazuje profil
+  `public`, czystą rewizję `20babb7ba7b4485211f8da769b37156a5045f7e7`,
+  paczkę `29558d7d` i 1076 plików kontrolowanych; katalog zawiera 1077 plików
+  razem z manifestem i zajmuje 422 624 783 bajty. Ponowna pełna kontrola
+  zakończyła się kodem **0**.
+- Końcowy lokalny instalator znajduje się w
+  `.test-output/installers/amc12-2026.10.20-20babb7b/AMC-0.1.0-alpha.422-win-x64.exe`.
+  Ma 123 354 484 bajty, a jego SHA-256 to
+  `3d9e969e3d9a51b4e0ace9f95b06091761970ad2ae31501f3d624e61a237df23`;
+  wynik jest zgodny z osobnym plikiem integralności. Ten końcowy wariant został
+  zbudowany i sprawdzony, lecz nie został ponownie zainstalowany ani uruchomiony.
 
 ## Znane ograniczenia
 
@@ -355,10 +367,20 @@ skrótów.
   paczki 139 933 384 bajtów. Kandydat był odtwarzalny z commitu `acb81034`,
   lecz jako odrzucony nie wymaga odzyskania. Zachowano poprawnego kandydata
   `fb9ba25f`, instalator publiczny, źródła, ustawienia i dane użytkownika.
+- 20.10.2026 po sprawdzeniu następcy usunięto dokładnie dwa zastąpione katalogi
+  paczek publicznych, dwa odpowiadające im katalogi instalatorów, dwa próbne
+  katalogi kompilacji Inno Setup, katalog kontrolny obcej instalacji oraz dwa
+  logi z bieżącego przebiegu. Wszystkie znajdowały się wyłącznie pod
+  `.test-output` albo `.test-tmp` tego repozytorium. Odzyskano 1 339 154 013
+  bajtów, około 1,25 GiB. Były to odtwarzalne artefakty z rewizji `cdad1bdf`
+  i `863539bd`; odzyskanie wymagałoby ich ponownego zbudowania.
+- Zachowano końcową paczkę i instalator z rewizji `20babb7b`, wcześniejszy
+  jedyny historyczny instalator z 19.10.2026, źródła, dokumentację, ustawienia,
+  dane użytkownika, nagrania oraz zastane niepewne katalogi testowe.
 
 ## Wersja i commit
 
-- Data pracy: 19 października 2026.
+- Data pracy: 19–20 października 2026.
 - Kod i testy fundamentu: lokalny commit `d2a34ecf`.
 - Rozdzielenie uruchamiacza i aktualizatora: `f9a70db8` —
   `feat(amc12): rozdziel launcher i updater profili`.
@@ -384,3 +406,15 @@ skrótów.
 - Zbiorcza instalacja AMC Test:
   `2026.10.19-fb9ba25fe0680cf7bf5435d53eb5b073de091cca-0debb6aa`;
   publicznego instalatora nadal nie uruchamiano.
+- Ochrona istniejącej instalacji: `863539bd` —
+  `fix(amc12): nie nadpisuj historycznej instalacji`. Ten wariant przeszedł
+  czystą instalację, pełną kontrolę i odinstalowanie w katalogu projektowym;
+  nie został wydany publicznie.
+- Dobrowolne skróty instalatora: `20babb7b` —
+  `fix(amc12): zrob skroty instalatora dobrowolne`. Końcowy wariant został
+  skompilowany i sprawdzony przez test strukturalny 8/8 oraz pełną kontrolę
+  paczki; jego ponownej instalacji na głównym koncie nie wykonywano.
+- Instalacja publiczna: wykonano wyłącznie odizolowaną próbę wariantu
+  `863539bd`, po czym go odinstalowano. Końcowy wariant `20babb7b` pozostaje
+  lokalnym kandydatem, a nie zainstalowanym wydaniem.
+- Publikacja: nie wykonywano; GitHub nie został użyty.

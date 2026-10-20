@@ -128,9 +128,10 @@ zmian, wymagający korekty użytkownika:
   [AMC09-menedzer-sesji.md](AMC09-menedzer-sesji.md).
 - `AMC12` — **W trakcie; fundament profili, rozdzielenie uruchamiacza i
   aktualizatora oraz kontrolowana migawka AMC Test → AMC są gotowe w źródłach,
-  kompilacji i testach; zbudowano czystą, ograniczoną paczkę publiczną oraz
-  lokalny instalator z pełną integralnością, ale jeszcze bez próbnej instalacji
-  i publikacji** —
+  kompilacji i testach; wariant ochronny instalatora przeszedł czystą instalację,
+  pełną kontrolę i odinstalowanie, a końcowy kandydat z dobrowolnymi skrótami
+  jest zbudowany i ma potwierdzoną integralność, lecz nie został ponownie
+  zainstalowany ani opublikowany** —
   jeden kod, jawny manifest możliwości, osobne katalogi, blokady, logi i kanały
   AMC Test oraz publicznego AMC. Bieżący zapis realizacji:
   [AMC12-profile-wydania-publicznego-i-testowego.md](AMC12-profile-wydania-publicznego-i-testowego.md).

@@ -73,8 +73,10 @@ użytkownika. Nie zmienia statusu ręcznego odbioru NVDA poszczególnych funkcji
     [AMC09-menedzer-sesji.md](AMC09-menedzer-sesji.md).
 11. AMC Test i przyszły publiczny AMC — osobne dane i możliwości, publiczne
     sesje Pliki lokalne, Radio, Podcasty i YouTube oraz WiiM, bez reklamowania
-    ukrytych usług w menu, pomocy i palecie. Ten rozdział opisuje na razie kod,
-    lokalnie zbudowaną, ale jeszcze niezainstalowaną paczkę. Źródło:
+    ukrytych usług w menu, pomocy i palecie. Wariant ochronny przeszedł
+    odizolowaną instalację i odinstalowanie; końcowy kandydat z dobrowolnymi
+    skrótami jest lokalnie zbudowany i sprawdzony, ale nie był ponownie
+    instalowany ani publikowany. Źródło:
     [AMC12-profile-wydania-publicznego-i-testowego.md](AMC12-profile-wydania-publicznego-i-testowego.md).
 12. Foldery i powłoka Windows — „Otwórz folder zawierający”, argument pliku,
     przekazanie do właściwej działającej instancji oraz dobrowolne „Otwórz za
