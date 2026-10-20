@@ -53,6 +53,17 @@ internal sealed class LiteSpotifyCatalogCoordinator(
             var result = accountBackend.LoginAsync(CancellationToken.None)
                 .GetAwaiter()
                 .GetResult();
+            lock (_collectionGate)
+            {
+                // OAuth może połączyć inne konto albo rozszerzyć zakresy
+                // bieżącego. Żadna migawka sprzed logowania nie jest wtedy
+                // wiarygodna. Następny widok wykona dokładnie jeden świeży
+                // odczyt właściwej kategorii.
+                _collectionSnapshot = [];
+                _collectionRefreshAttempted = false;
+                _albumRefreshAttempted = false;
+                _playlistRefreshAttempted = false;
+            }
             return LiteSpotifyCatalogContract.CreateLoginResult(
                 result.AccountDisplayName,
                 result.AccountProduct);

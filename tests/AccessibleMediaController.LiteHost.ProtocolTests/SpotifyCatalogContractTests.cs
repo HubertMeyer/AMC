@@ -36,6 +36,7 @@ internal static class SpotifyCatalogContractTests
         CoordinatorReadsOneDescriptionWithoutMutation();
         CoordinatorShowsConfirmedCreatedPlaylistInCollectionImmediately();
         CoordinatorRefreshesPlaylistViewOnceWithoutFullCollectionSync();
+        CoordinatorLoginInvalidatesPreviousPlaylistSnapshot();
     }
 
     private static void CapabilitiesDescribeOneReadOnlySession()
@@ -715,6 +716,39 @@ internal static class SpotifyCatalogContractTests
             "playlista utworzona wcześniej na koncie nie pojawiła się pod Ctrl+P");
     }
 
+    private static void CoordinatorLoginInvalidatesPreviousPlaylistSnapshot()
+    {
+        using var backend = new WritableFakeBackend
+        {
+            PlaylistTargets =
+            [
+                new SpotifyPlaylistTarget(
+                    "old123", "Playlista sprzed logowania", "owner", "Michał",
+                    false, false, true, "snapshot-old")
+            ]
+        };
+        using var coordinator = new LiteSpotifyCatalogCoordinator(backend);
+        using var view = JsonDocument.Parse(
+            """{"view":"playlists","loadedCount":150}""");
+        var before = (LiteSpotifyItemsResult)coordinator.CollectionView(view.RootElement);
+
+        backend.PlaylistTargets =
+        [
+            new SpotifyPlaylistTarget(
+                "new123", "Playlista po logowaniu", "owner", "Michał",
+                false, false, true, "snapshot-new")
+        ];
+        _ = coordinator.Login();
+        var after = (LiteSpotifyItemsResult)coordinator.CollectionView(view.RootElement);
+
+        Check(backend.LoginCalls == 1 && backend.PlaylistTargetCalls == 2,
+            "Ponowne logowanie nie wymusiło jednego świeżego odczytu playlist.");
+        Check(before.Items.Single().Title == "Playlista sprzed logowania"
+              && after.Items.Count == 1
+              && after.Items[0].Title == "Playlista po logowaniu",
+            "Ctrl+P zachował playlistę z migawki sprzed logowania.");
+    }
+
     private static MediaItem Item(
         MediaItemKind kind,
         string externalId,
@@ -821,11 +855,12 @@ internal static class SpotifyCatalogContractTests
         }
     }
 
-    private sealed class WritableFakeBackend : ILiteSpotifyWriteBackend
+    private sealed class WritableFakeBackend : ILiteSpotifyWriteBackend, ILiteSpotifyAccountBackend
     {
         public int CreateCalls { get; private set; }
         public int RefreshCalls { get; private set; }
         public int PlaylistTargetCalls { get; private set; }
+        public int LoginCalls { get; private set; }
         public IReadOnlyList<SpotifyPlaylistTarget> PlaylistTargets { get; set; } = [];
 
         public IReadOnlyList<MediaItem> CachedCollection => [];
@@ -888,6 +923,13 @@ internal static class SpotifyCatalogContractTests
             IReadOnlyList<MediaItem> items,
             CancellationToken cancellationToken) =>
             Task.FromResult(new SpotifyPlaylistWriteResult(items.Count, []));
+
+        public Task<LiteSpotifyLoginOutcome> LoginAsync(
+            CancellationToken cancellationToken)
+        {
+            LoginCalls++;
+            return Task.FromResult(new LiteSpotifyLoginOutcome("Michał", "premium"));
+        }
 
         public void Dispose()
         {
