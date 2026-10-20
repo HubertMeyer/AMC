@@ -151,8 +151,8 @@ zmian, wymagający korekty użytkownika:
 - `AMC10` — **W trakcie; broker oraz dostępne okno konta są zainstalowane
   w AMC Test, a jawna mowa stanu konta i precyzyjny komunikat o
   nieuruchomionej usłudze brokera są gotowe w kodzie i testach; dalej
-  potrzebne są uruchomienie brokera na Hermesie, instalacja korekty i odbiór
-  na zewnętrznym koncie** —
+  potrzebne są niezależny wspólny broker publiczny, instalacja korekty i odbiór
+  na zewnętrznym koncie; Hermes nie jest częścią architektury Sonosa** —
   działające sterowanie Sonosem i WiiM nie zostało
   przepisane. `Ctrl+F5` wybiera dom i grupę, a przy braku połączenia prowadzi do
   konta zamiast kończyć się błędem. Okno udostępnia rozpoczęcie, jawne

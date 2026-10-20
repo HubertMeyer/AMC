@@ -37,6 +37,11 @@ prawie gotowe. Ten etap nie zmienia adapterów, list, transportu ani WiiM.
   użytkownik polecił wrócić do Sonosa. Odczyt Hermesa wykazał działający host
   HTTPS, ale brak usługi brokera. AMC rozróżnia teraz ten stan od uszkodzonej
   odpowiedzi i nie ujawnia użytkownikowi adresu ani treści odpowiedzi serwera.
+- 2026-10-20: użytkownik doprecyzował, że obecna architektura Sonosa **nie
+  bazuje na Hermesie i nie ma z nim związku**. To ustalenie zastępuje wcześniejszy
+  roboczy plan uruchomienia brokera na Hermesie. Wykonany odczyt hosta i lokalny
+  ZIP pozostają wyłącznie historycznym śladem eksperymentu; nie są celem
+  wdrożenia. Docelowym elementem jest niezależny, wspólny publiczny broker HTTPS.
 
 ## Materiał do dokumentacji użytkownika
 
@@ -70,7 +75,8 @@ adres autoryzacji.
 
 Publiczny Sonos nie jest jeszcze widoczny. Pozostanie ukryty, dopóki broker nie
 będzie działał pod stałym adresem HTTPS i nie przejdzie świadomego odbioru na
-zewnętrznym koncie. WiiM nie zależy od tego brokera.
+zewnętrznym koncie. Broker nie będzie usługą Hermesa. WiiM nie zależy od tego
+brokera.
 
 ## Uzasadnienie i decyzje
 
@@ -94,9 +100,11 @@ zewnętrznym koncie. WiiM nie zależy od tego brokera.
 - Przyjęto najwyżej jeden krok przekazania i najwyżej 16 dokładnych adresów IP.
   Nazwy hostów, zakresy CIDR, adresy ogólne oraz puste elementy zatrzymują start
   zamiast przypadkowo poszerzać zaufanie.
-- Publiczny profil AMC nadal nie udostępnia Sonosa. Bieżący prywatny AMC Test
-  nadal używa dotychczasowego brokera; przełączenie originu nastąpi dopiero po
-  rzeczywistym wdrożeniu i odbiorze.
+- Publiczny profil AMC nadal nie udostępnia Sonosa. W czasie rozwoju adres
+  klienta pozostaje konfigurowalny, lecz wydanie ma używać jednego zaufanego,
+  publicznego brokera. Zwykły użytkownik nie podaje identyfikatora klienta,
+  sekretu ani własnego serwera. Przełączenie originu nastąpi dopiero po
+  rzeczywistym publicznym wdrożeniu i odbiorze.
 - Nie zmieniono znaczenia `Ctrl+F5` ani istniejącego transportu Sonosa. Dodano
   jedynie świadomą bramkę konta przed odczytem grup. Nazwa, skrót, opis, menu,
   pomoc `Ctrl+F1`, pełna pomoc i paleta `Ctrl+Shift+K` nadal pochodzą ze
@@ -166,10 +174,11 @@ Kontrakt sprawdzono 2026-10-19 z aktualną oficjalną dokumentacją Sonosa:
   Sonosa, konta ani głośnika. Pierwsza próba w piaskownicy nie mogła połączyć
   się z lokalnym gniazdem; identyczny test uruchomiony z dostępem do localhost
   zaliczył komplet 16 przypadków.
-- 20 października 2026 wykonano wyłącznie bezpieczne odczyty
+- Historyczny eksperyment z 20 października 2026 obejmował wyłącznie bezpieczne odczyty
   `https://hermes.tail6caad7.ts.net/health/live` i `/health/ready`. Host
   odpowiada przez HTTPS, ale oba adresy zwracają `404`. Pod originem wpisanym
-  obecnie w AMC nie jest więc uruchomiony przygotowany broker Sonos. Nie
+  wtedy w AMC nie był więc uruchomiony przygotowany broker Sonos. Po późniejszej
+  korekcie użytkownika Hermes nie jest już kandydatem do wdrożenia. Nie
   rozpoczynano logowania, nie otwierano przeglądarki i nie wysyłano poleceń do
   głośników.
 - Skrypt `Build-SonosBrokerBundle.ps1` zbudował próbny pakiet framework-dependent
@@ -179,15 +188,17 @@ Kontrakt sprawdzono 2026-10-19 z aktualną oficjalną dokumentacją Sonosa:
   `30e691e3726e09c689bd4df8896ef4b4fcd8c61c900feb215d6615d11f7cb2ae`.
   Ponieważ źródła były w trakcie pracy, manifest uczciwie oznaczył go jako
   `dirty`; nie jest to paczka do wdrożenia ani publikacji.
-- Po zapisaniu zmian zbudowano czysty następca przeznaczony do późniejszego
-  uruchomienia na Hermesie:
+- Po zapisaniu zmian zbudowano czysty następca, który pierwotnie miał służyć
+  próbie na Hermesie:
   `.test-output/sonos-broker/AMC-Sonos-Broker-0.1.0-alpha.422-9431fd8d2619.zip`.
   Archiwum ma 30 029 bajtów i SHA-256
   `388f5e7a1dd31f8cd8b2c609c2096a641571a528ca6c8fe20569e2f3359c8660`.
   Manifest wskazuje czysty commit
   `9431fd8d2619a1c267299e91b70f89637980ba40`, .NET 8, cztery pliki
   kontrolowane i pięć plików razem z manifestem. Sumę archiwum obliczono
-  ponownie niezależnie. Pakiet nie został wdrożony ani uruchomiony.
+  ponownie niezależnie. Pakiet nie został wdrożony ani uruchomiony i po korekcie
+  z 20 października jest wyłącznie artefaktem historycznym, nie kandydatem do
+  uruchomienia.
 - Nie wykonano instalacji, publikacji, logowania ani wdrożenia publicznego.
 - `python -m compileall -q wxlite/amc_wx_lite` — sukces.
 - `dotnet build src/AccessibleMediaController.LiteHost/AccessibleMediaController.LiteHost.csproj --no-restore`
@@ -197,7 +208,7 @@ Kontrakt sprawdzono 2026-10-19 z aktualną oficjalną dokumentacją Sonosa:
 - `dotnet run --project tests/AccessibleMediaController.LiteHost.ProtocolTests/AccessibleMediaController.LiteHost.ProtocolTests.csproj --no-build -- --sonos`
   — jeden ukierunkowany zestaw Sonos zaliczony. Test potwierdza jawne etykiety
   i brak tokenu, adresu brokera oraz technicznych nazw stanów w odpowiedzi.
-- Po rozdzieleniu braku endpointu Hermesa kompilacje Release testów Core i
+- Po rozdzieleniu odpowiedzi `404` historycznego hosta kompilacje Release testów Core i
   protokołu LiteHost zakończyły się z 0 ostrzeżeń i 0 błędów. Ukierunkowane
   testy klienta pierwszego logowania: **36 zaliczonych**. Ukierunkowany
   kontrakt Sonos LiteHost: **1/1 zaliczony**. Test potwierdza stały komunikat
@@ -256,10 +267,9 @@ Kontrakt sprawdzono 2026-10-19 z aktualną oficjalną dokumentacją Sonosa:
 
 - Brak publicznej domeny, certyfikatu, produkcyjnych danych integracji i wpisu
   callbacku w portalu Sonos. Tych danych nie wolno wymyślać ani zapisywać w Git.
-- Prywatny origin `hermes.tail6caad7.ts.net` jest osiągalny, lecz obecnie nie
-  udostępnia endpointów zdrowia brokera. Prawdziwy odbiór logowania pozostaje
-  zablokowany do uruchomienia paczki brokera na tamtym Hermesie i przekazania
-  jej czterech wartości Sonosa w bezpiecznym magazynie środowiska.
+- Nie wybrano jeszcze publicznego hostingu, domeny i sposobu bezpiecznego
+  przekazania serwerowi danych integracji Sonos. Hermes nie jest rozwiązaniem
+  tego ograniczenia ani częścią obecnej architektury.
 - Magazyn sesji jest pamięciowy i przeznaczony dla jednej instancji. Skalowanie
   na wiele replik wymaga wspólnego atomowego magazynu.
 - Nadal trzeba znać dokładne adresy reverse proxy wybranego hostingu. Jeżeli
@@ -312,11 +322,12 @@ Kontrakt sprawdzono 2026-10-19 z aktualną oficjalną dokumentacją Sonosa:
   **124** testy reprezentatywnych powierzchni interfejsu oraz ukierunkowane
   zestawy protokołu Spotify i Sonos **2/2** zaliczone; kompilacja Release bez
   ostrzeżeń i błędów. Instalacji i publikacji nie wykonywano.
-- Czysty lokalny pakiet brokera do późniejszego uruchomienia na Hermesie:
+- Historyczny lokalny pakiet brokera, pierwotnie przygotowany do próby na Hermesie:
   źródło `9431fd8d`, ZIP 30 029 bajtów, SHA-256
   `388f5e7a1dd31f8cd8b2c609c2096a641571a528ca6c8fe20569e2f3359c8660`.
   Budowa i integralność są potwierdzone; wdrożenia, konfiguracji sekretów,
-  logowania i publikacji nie wykonywano.
+  logowania i publikacji nie wykonywano. Pakiet nie jest obecnym celem
+  wdrożenia i nie należy go uruchamiać na Hermesie.
 - Osobny użytkowy stan braku endpointu brokera: commit `c6eaeee9` —
   `fix(amc10): rozpoznaj brak uslugi logowania Sonos`. Kompilacja Release oraz
   testy 36 i 1/1 są zaliczone; instalacji ani publikacji nie wykonywano.

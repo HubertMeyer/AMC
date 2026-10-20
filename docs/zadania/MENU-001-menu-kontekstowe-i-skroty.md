@@ -1,7 +1,7 @@
 # MENU-001 — menu kontekstowe i skróty zależne od sesji
 
-Status: **W trakcie; korekta `Shift+F10` harmonogramów i nazwy `Alt+D` jest
-przetestowana w źródłach, ale jeszcze niezainstalowana**.
+Status: **W trakcie; korekta natywnej granicy `Ctrl+Shift+0` jest przetestowana
+w źródłach, ale jeszcze niezainstalowana**.
 
 ## Materiał do dokumentacji użytkownika
 
@@ -45,8 +45,21 @@ może dostać technicznej cyfry, przypadkowej litery, identyfikatora polecenia a
 reprezentacji obiektu. Trwały kontrakt zapisano w instrukcjach repozytorium oraz
 w osobistej umiejętności Codexa `accessible-desktop-contracts`.
 
+`Ctrl+Shift+0` uruchamia preset 10 we wszystkich sesjach i w odtwarzaczu.
+Windows może przekazać fizyczne zero dwiema natywnymi drogami; AMC utrzymuje
+obie tylko wtedy, gdy jego okno jest aktywne, a jeden gest wykonuje preset
+dokładnie raz. Skrót nie działa w polu filtrowania ani w trybie pomocy
+klawiatury. Nazwa i dostępność w `Ctrl+F1`, pełnej pomocy, menu i palecie
+`Ctrl+Shift+K` pozostają bez zmian, ponieważ regresja dotyczyła wyłącznie
+dostarczenia istniejącego polecenia z natywnej listy Windows.
+
 ## Uzasadnienie i decyzje
 
+- **Korekta użytkownika z 20 października 2026:** `Ctrl+Shift+0` przestał
+  wykonywać preset 10. Przyczyną było uznanie samego sukcesu `RegisterHotKey`
+  za dowód, że wxPython otrzyma późniejsze zdarzenie, i wyłączenie wcześniejszej
+  granicy klawiatury. Obie wąskie granice pozostają teraz aktywne dla okna AMC,
+  a wspólna krótka bramka usuwa ewentualne podwójne zgłoszenie.
 - **Korekta użytkownika z 19 października 2026:** nazwa „Bieżąca audycja lub
   utwór” mogła sugerować przejście do innego widoku. Zastąpiła ją nazwa
   „Informacje o bieżącym odtwarzaniu”, zgodna z rzeczywistym, wyłącznie
@@ -84,6 +97,14 @@ w osobistej umiejętności Codexa `accessible-desktop-contracts`.
 
 ## Testy i wynik
 
+- Korekta `Ctrl+Shift+0`: **4/4 ukierunkowane testy zaliczone**. Potwierdzono
+  rozpoznanie wyłącznie pierwszego dokładnego naciśnięcia, dostępność we
+  wszystkich sesjach i widokach, równoczesne utrzymanie obu natywnych granic
+  oraz pojedyncze wykonanie po podwójnym zgłoszeniu. `compileall` modułu
+  wxPython zakończył się powodzeniem. Projektowy runner wykonał te cztery testy,
+  ale cały przebieg oznaczył jako niezaliczony z powodu czterech niezwiązanych
+  modułów testowych wymagających nieobecnego w systemowym Pythonie `pytest`;
+  nie jest to przedstawiane jako pełna regresja.
 - Najnowsza korekta: **71/71** testów menu, harmonogramów, pomocy i palety;
   pełny Core SmokeTests zakończony kodem 0. Test unikatowych klawiszy dostępu
   wykrył kolizję pierwszego wariantu mnemonika `Alt+D`; poprawiono ją przed
@@ -117,6 +138,8 @@ w osobistej umiejętności Codexa `accessible-desktop-contracts`.
 
 ## Znane ograniczenia
 
+- Korekta `Ctrl+Shift+0` z commitu `5d959607` nie została jeszcze zbudowana,
+  zainstalowana ani odebrana ręcznie z NVDA.
 - Najnowsza korekta `Shift+F10` i nazwy `Alt+D` jest w bieżącej instalacji AMC
   Test; wymaga jeszcze ręcznego odbioru NVDA.
 
@@ -129,6 +152,10 @@ w osobistej umiejętności Codexa `accessible-desktop-contracts`.
 
 ## Wersja i commit
 
+- Źródła regresji `Ctrl+Shift+0`: `5d959607` —
+  `fix(amc): przywroc Ctrl Shift 0 na listach`. Testy ukierunkowane i analiza
+  składni przeszły; kompilacji paczki, instalacji, uruchomienia ani publikacji
+  nie wykonywano.
 - Najnowsza korekta: `4c75f237`; pełna regresja wxPython: **1848 zaliczonych,
   110 pominiętych i 11 podtestów zaliczonych**. Kompilacje Release, manifest,
   SHA-256, instalacja i uruchomienie zaliczone.
