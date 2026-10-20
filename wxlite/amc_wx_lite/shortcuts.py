@@ -105,6 +105,7 @@ class Action(Enum):
     SESSION_CONFIGURE_CURRENT = "session.configureCurrent"
     MANAGE_LIBRARY_FOLDERS = "library.folderSources.manage"
     REFRESH_LOCAL_LIBRARY = "library.folderSources.refresh"
+    REFRESH_RADIO_STATIONS = "radio.stations.refresh"
     PREVIOUS_SESSION = "session.previous"
     NEXT_SESSION = "session.next"
     COMMAND_PALETTE = "view.commandPalette"
@@ -417,6 +418,12 @@ _CTRL_F5_PRESENTATIONS: dict[str, CommandPresentation] = {
         "Odśwież wszystkie podcasty, kanały YouTube i playlisty",
         "Ctrl+F5",
     ),
+    "radio": CommandPresentation(
+        Action.REFRESH_RADIO_STATIONS,
+        "Odśwież stacje Radia",
+        "Odśwież stacje i bieżący widok Radia",
+        "Ctrl+F5",
+    ),
     "spotify": CommandPresentation(
         Action.SESSION_CONFIGURE_CURRENT,
         "Konto Spotify",
@@ -445,11 +452,7 @@ _CTRL_F5_PRESENTATIONS: dict[str, CommandPresentation] = {
 
 
 def ctrl_f5_presentation(session_label: str | None) -> CommandPresentation | None:
-    """Precyzyjna funkcja ``Ctrl+F5`` dla bieżącej sesji.
-
-    Radio celowo nie ma wpisu: brak polecenia nie może być reklamowany jako
-    ogólna konfiguracja, która po użyciu niczego nie wykona.
-    """
+    """Precyzyjna funkcja ``Ctrl+F5`` dla bieżącej sesji."""
 
     return _CTRL_F5_PRESENTATIONS.get((session_label or "").strip().casefold())
 
@@ -1005,6 +1008,7 @@ for _chord, _slot in PRESET_SHORTCUTS.items():
 
 # Dodatkowo w sesji radiowej: zarzadzanie wlasna lista stacji.
 RADIO_LIST_VIEW: dict[str, Action] = {
+    "Ctrl+F5": Action.REFRESH_RADIO_STATIONS,
     "Ctrl+N": Action.STATION_ADD,
     "F2": Action.STATION_EDIT,
     "Delete": Action.STATION_DELETE,
@@ -1025,6 +1029,7 @@ RADIO_LIST_VIEW: dict[str, Action] = {
 # Litery bez modyfikatora sa bezpieczne tylko w odtwarzaczu Radia. Na liscie
 # T i R musza pozostac natywnej kontroli (wyszukiwanie przyrostowe).
 RADIO_PLAYER_VIEW: dict[str, Action] = {
+    "Ctrl+F5": Action.REFRESH_RADIO_STATIONS,
     "Ctrl+O": Action.STATION_IMPORT,
     "Ctrl+E": Action.STATION_EXPORT_FAVORITES,
     "R": Action.RECORD_TOGGLE,
@@ -1519,6 +1524,7 @@ def _help_entries() -> list[tuple[str, str, Action]]:
             "Foldery Biblioteki: dodaj, odśwież albo bezpiecznie odłącz folder"
         ),
         Action.REFRESH_LOCAL_LIBRARY: "Odśwież wszystkie Foldery Biblioteki",
+        Action.REFRESH_RADIO_STATIONS: "Odśwież stacje i bieżący widok Radia",
         Action.PREVIOUS_SESSION: "Poprzednia sesja",
         Action.NEXT_SESSION: "Następna sesja",
         Action.COMMAND_PALETTE: "Paleta poleceń",

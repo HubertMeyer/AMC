@@ -10989,6 +10989,16 @@ class LiteFrame(wx.Frame):
             self._show_library_folders()
         elif action is Action.REFRESH_LOCAL_LIBRARY:
             self._refresh_local_library()
+        elif action is Action.REFRESH_RADIO_STATIONS:
+            state = self.navigator.sessions[SessionId.RADIO]
+            preferred_id = state.model.selected_id
+            self.announcer.say("Odświeżanie stacji Radia")
+            self._refresh_profile_view(
+                preferred_id=preferred_id,
+                after_refresh=lambda: self.announcer.say(
+                    "Odświeżono stacje Radia"
+                ),
+            )
         elif action in (Action.PREVIOUS_SESSION, Action.NEXT_SESSION):
             target = session_order.adjacent(
                 self.navigator.active,

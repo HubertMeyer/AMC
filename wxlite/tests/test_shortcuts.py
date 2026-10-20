@@ -307,6 +307,16 @@ def test_ctrl_f5_opens_account_or_device_configuration_by_session() -> None:
     assert resolve(
         chord,
         player_view=False,
+        radio_session=True,
+    ) is Action.REFRESH_RADIO_STATIONS
+    assert resolve(
+        chord,
+        player_view=True,
+        radio_session=True,
+    ) is Action.REFRESH_RADIO_STATIONS
+    assert resolve(
+        chord,
+        player_view=False,
         radio_session=False,
         files_session=True,
     ) is Action.MANAGE_LIBRARY_FOLDERS

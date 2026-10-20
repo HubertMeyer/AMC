@@ -44,6 +44,9 @@ Historyczny projekt został użyty tylko jako materiał do odczytu.
 
   - Pliki lokalne — „Foldery Biblioteki”; można dodać, odświeżyć albo
     bezpiecznie odłączyć folder;
+  - Radio — „Odśwież stacje Radia”; ponownie wczytuje stacje i aktualnie
+    otwarty widok, zachowując zaznaczenie tego samego elementu, jeżeli nadal
+    istnieje;
   - Podcasty i YouTube — „Odśwież wszystkie podcasty, kanały YouTube i
     playlisty”;
   - Spotify — „Konto Spotify”; pomoc dopowiada, że jest tu również ponowne
@@ -52,8 +55,6 @@ Historyczny projekt został użyty tylko jako materiał do odczytu.
   - WiiM — „Urządzenia WiiM”; polecenie odświeża listę zapisanych urządzeń;
   - Sonos — „Głośniki i grupy Sonos”; polecenie pozwala wybrać dom i grupę
     sterowania.
-  Radio nie reklamuje tego skrótu, ponieważ nie ma dla niego zatwierdzonej
-  funkcji.
 - Polecenia konfiguracyjne i „Foldery Biblioteki” są w menu „Plik”, tak jak w
   historycznym AMC. `Ctrl+F1`, pełna pomoc oraz paleta `Ctrl+Shift+K` pokazują
   tylko wariant właściwy dla bieżącej sesji.
@@ -111,6 +112,13 @@ Historyczny projekt został użyty tylko jako materiał do odczytu.
   Spotify, TIDAL-a, WiiM, Sonosa, Podcastów i YouTube oraz Plików lokalnych.
   Nazwa, opis, skrót, widoczność i wykonywana akcja pochodzą z jednego modelu
   używanego przez menu, pełną pomoc, `Ctrl+F1` i paletę `Ctrl+Shift+K`.
+- **Korekta użytkownika z 20 października 2026:** zgłoszenie „Ctrl+F5 dalej
+  nie działa” ujawniło, że poprzednia decyzja o pozostawieniu skrótu bez
+  funkcji w Radiu była błędna. Ta korekta zastępuje zdanie, że Radio nie
+  reklamuje `Ctrl+F5`. W Radiu skrót ma teraz nazwę „Odśwież stacje Radia”,
+  przeładowuje bieżący widok bez zmiany zaznaczenia i jest dostępny również
+  w otwartym odtwarzaczu. Ta sama nazwa, akcja i dostępność obowiązują w menu,
+  pełnej pomocy, `Ctrl+F1` i palecie `Ctrl+Shift+K`.
 - Natywny widok listy Windows przejmował wcześniej `F5` i `Ctrl+F5` przed
   routerem AMC. Oba gesty przechodzą teraz przez tę samą wczesną bramkę co
   pozostałe polecenia listy, więc menu, skrót, pomoc, paleta i wykonanie nie
@@ -150,7 +158,16 @@ Historyczny projekt został użyty tylko jako materiał do odczytu.
   profili wydania, GUI, wczesnego routingu listy, dodatku NVDA i Menedżera
   sesji zaliczone. Test kontraktowy sprawdza dla każdej właściwej sesji nazwę,
   opis, skrót, widoczność, rozwiązaną akcję, menu, paletę, pełną pomoc i
-  komunikat `Ctrl+F1`; osobno potwierdza brak martwego polecenia w Radiu.
+  komunikat `Ctrl+F1`; ówczesne założenie o braku polecenia w Radiu zostało
+  zastąpione korektą z 20 października 2026.
+- Radiowe `Ctrl+F5`: **5/5** bezpośrednich testów kontraktu zaliczonych.
+  Sprawdzono rozstrzygnięcie skrótu na liście i w odtwarzaczu, wykonanie,
+  zachowanie zaznaczenia, kolejność komunikatów, pojedynczą pozycję menu,
+  paletę, pełną pomoc i `Ctrl+F1`. Szerszy lokalny przebieg zaliczył 154 testy,
+  w tym wszystkie zmienione, ale jako całość nie był zieloną bramką: dwa
+  niezależne testy nie mogły pisać do systemowego katalogu tymczasowego, a
+  cztery moduły wymagały nieobecnego w tym interpreterze pakietu `pytest`.
+  Dlatego wyniku 154 nie przedstawia się jako pełnego zaliczonego zestawu.
 - Końcowa regresja wxPython bez czterech istniejących prób wymagających
   lokalnego gniazda sieciowego: **1851 zaliczonych, 110 pominiętych i 11
   podtestów zaliczonych**. Cztery wyłączone próby RSS doszły w osobnym
@@ -228,6 +245,10 @@ Historyczny projekt został użyty tylko jako materiał do odczytu.
 - Ręczny odbiór NVDA nadal powinien sprawdzić sesyjne nazwy i działanie
   `Ctrl+F5` na prawdziwych kontach i urządzeniach. Kompilacja i instalacja
   potwierdzają dostarczenie kodu, ale nie zastępują tego odbioru.
+- Radiowe `Ctrl+F5` jest na razie potwierdzone w źródłach i testach. Nie
+  skompilowano ani nie zainstalowano tej korekty, ponieważ w chwili pracy
+  trwały dwa nagrania radiowe; działająca instalacja nadal zawiera wcześniejszy
+  wariant bez polecenia `Ctrl+F5` w Radiu.
 
 ## Porządek dysku
 

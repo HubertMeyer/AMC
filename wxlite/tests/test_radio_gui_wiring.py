@@ -110,6 +110,28 @@ def test_shift_r_dispatches_direct_new_schedule_request():
     assert calls == [{"create_for_selected": True}]
 
 
+def test_ctrl_f5_dispatches_radio_refresh_and_preserves_selection():
+    from amc_wx_lite.list_model import Row
+    from amc_wx_lite.shortcuts import Action
+
+    frame, _, messages = radio_shell()
+    frame.navigator.apply_stations([
+        Row(item_id="radio-2", title="Radio Dwa", kind="station")
+    ])
+    refreshes = []
+    frame._refresh_profile_view = lambda **kwargs: refreshes.append(kwargs)
+
+    LiteFrame._dispatch(frame, Action.REFRESH_RADIO_STATIONS)
+
+    assert messages == ["Odświeżanie stacji Radia"]
+    assert refreshes[0]["preferred_id"] == "radio-2"
+    refreshes[0]["after_refresh"]()
+    assert messages == [
+        "Odświeżanie stacji Radia",
+        "Odświeżono stacje Radia",
+    ]
+
+
 def test_shared_profile_add_station_uses_host_writer_and_opens_library():
     import amc_wx_lite.gui as gui
 

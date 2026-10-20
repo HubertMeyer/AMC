@@ -223,6 +223,7 @@ def menus_for_session(
             if ctrl_f5 is not None and entry.action is ctrl_f5.action:
                 access_key = {
                     SessionId.FILES: "b",
+                    SessionId.RADIO: "o",
                     SessionId.PODCASTS: "w",
                     SessionId.SPOTIFY: "f",
                     SessionId.TIDAL: "t",
@@ -287,6 +288,13 @@ def build_menus(session_order: object = None) -> tuple[Menu, ...]:
                 shortcut="F5",
                 accelerator=False,
                 visible_sessions=FILES_ONLY,
+            ),
+            MenuItem(
+                "&Odśwież stacje Radia",
+                Action.REFRESH_RADIO_STATIONS,
+                shortcut="Ctrl+F5",
+                accelerator=False,
+                visible_sessions=RADIO_ONLY,
             ),
             MenuItem(
                 "Kon&figuruj konto lub urządzenie…",

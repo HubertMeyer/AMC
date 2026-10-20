@@ -120,6 +120,10 @@ zmian, wymagający korekty użytkownika:
   może zmienić obecnego profilu testowego. W Plikach lokalnych `Ctrl+F5`
   otwiera teraz niedestrukcyjny menedżer dodawania, odświeżania i odłączania
   Folderów Biblioteki; pozostałe sesje zachowują własne znaczenie tego skrótu.
+  Korekta z 20.10.2026 dodaje w Radiu rzeczywiste „Odśwież stacje Radia” pod
+  `Ctrl+F5`, również z odtwarzacza, przy wspólnym opisie menu, pomocy i palety.
+  Kod i testy są gotowe, lecz instalacja tej korekty czeka na koniec trwających
+  nagrań.
   Bieżący zapis realizacji:
   [AMC09-menedzer-sesji.md](AMC09-menedzer-sesji.md).
 - `AMC12` — **W trakcie; fundament profili, rozdzielenie uruchamiacza i

@@ -86,6 +86,12 @@ def test_ctrl_f5_has_one_precise_contextual_contract_on_every_surface() -> None:
             "Foldery Biblioteki: dodaj, odśwież albo bezpiecznie odłącz folder",
             "files_session",
         ),
+        SessionId.RADIO: (
+            Action.REFRESH_RADIO_STATIONS,
+            "Odśwież stacje Radia",
+            "Odśwież stacje i bieżący widok Radia",
+            "radio_session",
+        ),
         SessionId.PODCASTS: (
             Action.REFRESH_PODCAST_LIBRARY,
             "Odśwież wszystkie podcasty, kanały YouTube i playlisty",
@@ -156,19 +162,6 @@ def test_ctrl_f5_has_one_precise_contextual_contract_on_every_surface() -> None:
             action,
             SESSION_LABELS[session],
         ) == f"Ctrl+F5. {description}. {SESSION_LABELS[session]}"
-
-    assert ctrl_f5_presentation(SESSION_LABELS[SessionId.RADIO]) is None
-    assert not any(
-        item.shortcut == "Ctrl+F5"
-        for menu in menu_model.menus_for_session(SessionId.RADIO)
-        for item in menu.items
-    )
-    assert resolve(
-        chord,
-        player_view=False,
-        radio_session=True,
-    ) is None
-
 
 def test_recording_views_have_one_user_facing_command_contract() -> None:
     entries = {entry.action: entry for entry in entries_for_session(SessionId.RADIO)}
