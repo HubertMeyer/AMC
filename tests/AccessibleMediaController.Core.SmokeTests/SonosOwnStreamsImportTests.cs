@@ -79,7 +79,7 @@ internal static class SonosOwnStreamsImportTests
         var tooLong = "https://radio.example/" + new string('a', 1025 - "https://radio.example/".Length);
         string?[] rejected =
         [
-            null, "", "   ", "nie-adres", @"C:\muzyka\utwor.mp3", "/home/michal/muzyka.mp3",
+            null, "", "   ", "nie-adres", @"C:\muzyka\utwor.mp3", "/home/test/muzyka.mp3",
             "file:///C:/muzyka.mp3", "ftp://radio.example/x", "spotify:track:abc", "tidal://album/1",
             "javascript:alert(1)", "//radio.example/x", "http://", "https://zly host/x",
             "https://radio.example/zly\"adres", "https://radio.example/zly|adres", tooLong

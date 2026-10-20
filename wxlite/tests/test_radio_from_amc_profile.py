@@ -46,7 +46,7 @@ from amc_wx_lite.radio_source import RadioSource
 from amc_wx_lite.state_store import StateStore
 
 FIXTURE_STATE = Path(
-    "/home/michal/projekty/amc_pomoc/wx-full-profile-after421/fixture/state.json"
+    "/home/test/projekty/amc_pomoc/wx-full-profile-after421/fixture/state.json"
 )
 
 

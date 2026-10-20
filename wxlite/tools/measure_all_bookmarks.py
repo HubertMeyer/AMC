@@ -44,7 +44,7 @@ from amc_wx_lite.library_db import LibraryDatabase  # noqa: E402
 DEFAULT_DB = Path(
     os.environ.get(
         "AMC_WX_FIXTURE",
-        "/home/michal/projekty/amc_pomoc/wx-full-profile-after421/fixture",
+        str(Path.home() / "projekty/amc_pomoc/wx-full-profile-after421/fixture"),
     )
 ) / "library.db"
 

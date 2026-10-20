@@ -745,7 +745,7 @@ ostrzeżeń, 63 celowane testy Python bez błędów oraz pięć zaliczonych test
 hosta z lokalnym serwerem. Pełny przebieg na Windows zaliczył 1493 testy;
 pozostałe cztery próby gniazda `127.0.0.1` przeszły po wykonaniu poza
 piaskownicą, a historyczne testy zgodności przeznaczone dla WSL nadal szukają
-ścieżki `/home/michal/dotnet` i nie są wynikiem tego przyrostu.
+ścieżki `/home/test/dotnet` i nie są wynikiem tego przyrostu.
 
 Drugie równoległe uruchomienie interfejsu jest blokowane przed otwarciem okna.
 Zapobiega to sytuacji, w której starszy host trzyma zapis postępu podcastów,

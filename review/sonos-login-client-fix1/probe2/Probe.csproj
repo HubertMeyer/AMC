@@ -11,7 +11,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Program.cs" />
-    <Compile Include="/home/michal/projekty/amc-sonos-login-client-after410/src/AccessibleMediaController.Core/Sonos/SonosLoginContract.cs" Link="SonosLoginContract.cs" />
-    <Compile Include="/home/michal/projekty/amc-sonos-login-client-after410/src/AccessibleMediaController.Core/Sonos/SonosLoginClient.cs" Link="SonosLoginClient.cs" />
+    <Compile Include="/home/test/projekty/amc-sonos-login-client-after410/src/AccessibleMediaController.Core/Sonos/SonosLoginContract.cs" Link="SonosLoginContract.cs" />
+    <Compile Include="/home/test/projekty/amc-sonos-login-client-after410/src/AccessibleMediaController.Core/Sonos/SonosLoginClient.cs" Link="SonosLoginClient.cs" />
   </ItemGroup>
 </Project>

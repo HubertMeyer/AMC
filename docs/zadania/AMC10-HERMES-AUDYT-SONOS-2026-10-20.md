@@ -4,8 +4,8 @@ Zakres: tylko odczyt. Nie zmieniono konfiguracji, usługi, kontenerów ani repoz
 
 1. Repozytorium
 
-- Dokładna ścieżka `/home/michal/projekty/amc-sonos-auth` nie istnieje.
-- Znaleziony następca: `/home/michal/projekty/amc-sonos-auth-refresh1`.
+- Dokładna ścieżka `/home/test/projekty/amc-sonos-auth` nie istnieje.
+- Znaleziony następca: `/home/test/projekty/amc-sonos-auth-refresh1`.
 - Commit: `b27ed4b2e31fcc232677f9fe2f36aa36f237d1d3`.
 - Gałąź: `master`.
 - Niezapisane zmiany: nie.

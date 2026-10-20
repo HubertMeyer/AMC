@@ -47,7 +47,7 @@ from amc_wx_lite.library_views import (  # noqa: E402
 FIXTURE = Path(
     os.environ.get(
         "AMC_WX_FIXTURE",
-        "/home/michal/projekty/amc_pomoc/wx-full-profile-after421/fixture",
+        "/home/test/projekty/amc_pomoc/wx-full-profile-after421/fixture",
     )
 )
 LIBRARY_DB = FIXTURE / "library.db"

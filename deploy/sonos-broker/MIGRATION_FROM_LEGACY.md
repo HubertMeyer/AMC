@@ -6,7 +6,7 @@ użytkowników i nie wymaga ponownego wdrażania sterowania głośnikami.
 
 ## Potwierdzony punkt wyjścia
 
-- dawne źródła: `/home/michal/projekty/amc-sonos-auth-refresh1`, commit
+- dawne źródła: `/home/test/projekty/amc-sonos-auth-refresh1`, commit
   `b27ed4b2e31fcc232677f9fe2f36aa36f237d1d3`;
 - działające usługi: `amc-sonos-auth.service` i `amc-sonos-proxy.service`;
 - reverse proxy: nginx;

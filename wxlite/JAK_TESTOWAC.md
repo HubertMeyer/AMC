@@ -561,7 +561,7 @@ pakietu; nie wolno zamykać działającego okna podczas nagrywania tylko po to,
 Testy bezokienne (wszystko, co zmierzone):
 
 ```bash
-cd /home/michal/projekty/amc-wx-session-options-20261007/wxlite
+cd /home/test/projekty/amc-wx-session-options-20261007/wxlite
 python3 run_tests.py          # 968 PASS / 0 FAIL / 0 SKIP
 ```
 
@@ -694,11 +694,11 @@ Nadrzędny kwit `live-queue-after-native-lists/parent-speech-full-profile/`: pe�
 
 Aktualny kwit `queue-persistence-after-live/gui-integration-parent/REPORT.md`: pełny Python603/0/0, GUI odmowa zapisu ostatniego utworu z prawdziwą mową NVDA, ponowne uruchomienie niepustej kolejki, udany zapis do zera i kolejny restart z0wierszy. Własny profil `profile-persist-parent-final` zawiera pełne11203 rekordy; nie zastępuj go małą próbką.
 
-Host: `C:\Users\Michal\AppData\Local\Temp\amc-wx-queue-persist-parent\complete-host-8abc180\amc_lite_host.exe`, DLL13f38747…. Przed użyciem sprawdź komplet wymaganych bibliotek z deps.json i manifest41plików w kwicie. Sam SHA własnejDLL NIE wykrywa brakujących NAudio/SoundTouch; poprzedni katalog był niekompletny mimo zgodnego SHA. Starych kwitów/profili nie nadpisuj, użyj następnego backupuSQLite. Zapisy są dozwolone tylko na prywatnej kopii, a późniejszy odbiór czasu opisano poniżej.
+Host: `C:\Users\test\AppData\Local\Temp\amc-wx-queue-persist-parent\complete-host-8abc180\amc_lite_host.exe`, DLL13f38747…. Przed użyciem sprawdź komplet wymaganych bibliotek z deps.json i manifest41plików w kwicie. Sam SHA własnejDLL NIE wykrywa brakujących NAudio/SoundTouch; poprzedni katalog był niekompletny mimo zgodnego SHA. Starych kwitów/profili nie nadpisuj, użyj następnego backupuSQLite. Zapisy są dozwolone tylko na prywatnej kopii, a późniejszy odbiór czasu opisano poniżej.
 
 ## Czas wznowienia — odbiór z rzeczywistym NVDA
 
-Kod70c833d nad984c660/4ad9696. Aktualny host: `C:\Users\Michal\AppData\Local\Temp\amc-wx-resume-parent-final\host-policy-completion\amc_lite_host.exe`, DLL9cedd23b…,41plików,22wymagane DLL z deps.json i0braków. Kwity: `queue-resume-after-persistence/parent-final/REPORT.md`, `accepted-gui-cycles.json`, pełny `python-final-full.log` (608/0/0).
+Kod70c833d nad984c660/4ad9696. Aktualny host: `C:\Users\test\AppData\Local\Temp\amc-wx-resume-parent-final\host-policy-completion\amc_lite_host.exe`, DLL9cedd23b…,41plików,22wymagane DLL z deps.json i0braków. Kwity: `queue-resume-after-persistence/parent-final/REPORT.md`, `accepted-gui-cycles.json`, pełny `python-final-full.log` (608/0/0).
 
 Na NOWEJ pełnej kopii, nie na zachowanych kwitach: Ctrl+Q, wybór niepierwszego utworu, Enter, Right+10s. Sprawdź rzeczywisty `loadedId` i rosnącą pozycję; `transport.status` nie ma pola `playing`. Zamknij własne okno podczas grania. Nowy GUI/host nie może grać sam: ma odtworzyć porządek, wybrać bieżące ID, a świadomy Enter wznowić od zapisanego czasu. Dla czytnika wstrzymaj materiał, poczekaj na aktualizację stanu, wywołaj Ctrl+E i odczytaj NOWY tekst Podglądu mowy przed zamknięciem okna. Sam `Announcer.say` nie dowodzi mowy. Wykonana próba:12,63s zapisane →12,75s start, NVDA „Minelo 12 s”.
 
@@ -708,12 +708,12 @@ C#7 zielonych zestawów, jedna pominięta próba ścieżki produkcyjnej naWSL. A
 
 ## Przygotowane stanowisko prywatne
 
-Odebrany układ naHermesie: `C:\Users\Michal\AppData\Local\Temp\amc-wx-425` z podkatalogami `app`, `runtime`, `host` i prywatną kopią `profile`. Jest to staging, nie numer publicznego wydania.
+Odebrany układ naHermesie: `C:\Users\test\AppData\Local\Temp\amc-wx-425` z podkatalogami `app`, `runtime`, `host` i prywatną kopią `profile`. Jest to staging, nie numer publicznego wydania.
 
 Uruchomienie bez obserwatora, z tym samym prawdziwym punktem wejścia:
 
 ```powershell
-$stage = 'C:\Users\Michal\AppData\Local\Temp\amc-wx-425'
+$stage = 'C:\Users\test\AppData\Local\Temp\amc-wx-425'
 $env:APPDATA = "$stage\profile"
 $env:LOCALAPPDATA = "$stage\profile"
 $env:AMC_LITE_HOST = "$stage\host\amc_lite_host.exe"
@@ -838,7 +838,7 @@ Próba widoków aktywności: `amc_pomoc/wx-full-profile-after421/activity-gui-af
 ## Testy kodu
 
 ```bash
-cd /home/michal/projekty/amc-wx-full-profile/wxlite
+cd /home/test/projekty/amc-wx-full-profile/wxlite
 python3 run_tests.py
 ```
 

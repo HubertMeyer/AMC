@@ -43,15 +43,21 @@ if ($LASTEXITCODE -ne 0 -or $trackedChanges) {
     throw "Snapshot wymaga czystych śledzonych źródeł."
 }
 
+$profileNames = @("micha", "michal", $env:USERNAME) |
+    Where-Object { -not [string]::IsNullOrWhiteSpace($_) } |
+    ForEach-Object { [Regex]::Escape($_) } |
+    Select-Object -Unique
+$profileAlternation = $profileNames -join "|"
 $forbiddenPatterns = [ordered]@{
     "token GitHub" = 'gh[pousr]_[A-Za-z0-9_]{30,}'
     "token OpenAI albo Google" = 'sk-[A-Za-z0-9_-]{20,}|AIza[0-9A-Za-z_-]{20,}'
     "JWT" = 'eyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{10,}(\.[A-Za-z0-9_-]{10,})?'
     "klucz prywatny" = 'BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY'
-    "lokalna ścieżka profilu Windows" = 'C:[\\/]+Users[\\/]+[A-Za-z0-9._-]+'
+    "lokalna ścieżka profilu Windows" = "C:[\\/]+Users[\\/]+($profileAlternation)([^A-Za-z0-9]|$)"
+    "lokalna ścieżka profilu Unix" = "/home/($profileAlternation)([^A-Za-z0-9]|$)"
 }
 foreach ($entry in $forbiddenPatterns.GetEnumerator()) {
-    $matches = & git -C $root grep -I -n -E -- $entry.Value HEAD 2>$null
+    $matches = & git -C $root grep -I -n -i -E -- $entry.Value HEAD 2>$null
     $grepExitCode = $LASTEXITCODE
     if ($grepExitCode -notin @(0, 1)) {
         throw "Nie udało się wykonać audytu prywatności źródeł."

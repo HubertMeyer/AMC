@@ -1,6 +1,6 @@
 # Raport: pierwszy przyrost klienta logowania Sonos (Core, bez GUI)
 
-Worktree: `/home/michal/projekty/amc-sonos-login-client-after410`
+Worktree: `/home/test/projekty/amc-sonos-login-client-after410`
 Branch: `hermes/sonos-login-client-after410`, baza `73bd4fe` ("Procentowa nawigacja po buforze TimeShift; alfa 410")
 Zakres: **wyłącznie Core** — start logowania + jednorazowy odbiór wyniku. Bez GUI, bez instalowania, bez refreshu, bez DPAPI/storage.
 
@@ -14,7 +14,7 @@ Zakres: **wyłącznie Core** — start logowania + jednorazowy odbiór wyniku. B
 
 ## Skąd wzięty kontrakt (kod, nie README)
 
-Odczyt tylko-do-odczytu `/home/michal/projekty/amc-sonos-auth/amc_sonos_auth/{core.py,server.py}`:
+Odczyt tylko-do-odczytu `/home/test/projekty/amc-sonos-auth/amc_sonos_auth/{core.py,server.py}`:
 
 - `POST /login/start` `{code_challenge, code_challenge_method:"S256"}` → `200 {session_id, authorize_url, expires_in}`; `400 invalid_code_challenge`/`unsupported_challenge_method`/`invalid_body`, `429 too_many_sessions`, `503 server_not_configured` (+ `503 server_busy` z warstwy HTTP `server.py`).
 - `POST /login/result` `{session_id, code_verifier}` → `200 {access_token, token_type, expires_in, refresh_token, scope}`; `404 unknown_session` (brak wyniku / już odebrany / wygasła), `403 verifier_mismatch`, `400` = `invalid_code_verifier` albo **rozpoznana odmowa** (`access_denied`, `invalid_callback`, `token_exchange_failed`, domyślnie `login_failed`).
@@ -46,7 +46,7 @@ Zmodyfikowane (minimalnie, 2 linie):
 
 ## Wykonane komendy i rzeczywiste wyniki
 
-.NET nie jest w PATH; użyto zweryfikowanego `/home/michal/dotnet/dotnet` (8.0.425). Jedna kompilacja naraz, `/m:1`. Nie instalowano pakietów ani SDK.
+.NET nie jest w PATH; użyto zweryfikowanego `/home/test/dotnet/dotnet` (8.0.425). Jedna kompilacja naraz, `/m:1`. Nie instalowano pakietów ani SDK.
 
 1. Kompilacja:
    `dotnet build tests/AccessibleMediaController.Core.SmokeTests/AccessibleMediaController.Core.SmokeTests.csproj -c Debug /m:1`

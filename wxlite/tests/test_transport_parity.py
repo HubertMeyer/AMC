@@ -12,7 +12,7 @@ NIE jest tym transportem, ktory zna z AMC:
   4. Regulacji predkosci nie da sie znalezc pod klawiszami oryginalu.
 
 Kwit RED rodzica (wszystkie piec gestow => ``None``):
-``/home/michal/projekty/amc_pomoc/wx-transport-parity-20261005/delivered-shortcuts-repro.json``
+``/home/test/projekty/amc_pomoc/wx-transport-parity-20261005/delivered-shortcuts-repro.json``
 
 WZORZEC C#, ODCZYTANY, NIE ZGADNIETY
 ------------------------------------

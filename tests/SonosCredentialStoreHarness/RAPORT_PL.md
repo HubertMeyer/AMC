@@ -1,6 +1,6 @@
 # Sonos: trwały magazyn poświadczeń szyfrowany DPAPI — raport przyrostu
 
-Worktree: `/home/michal/projekty/amc-sonos-credentials-after410`
+Worktree: `/home/test/projekty/amc-sonos-credentials-after410`
 Gałąź: `hermes/sonos-credentials-after410`, baza `bfbcb84`.
 Data przebiegu: 2026-09-27.
 

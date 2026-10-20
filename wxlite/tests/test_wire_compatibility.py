@@ -42,7 +42,7 @@ def _resolve_dotnet() -> Path:
     discovered = shutil.which("dotnet")
     if discovered:
         return Path(discovered)
-    legacy_wsl = Path("/home/michal/dotnet/dotnet")
+    legacy_wsl = Path("/home/test/dotnet/dotnet")
     if legacy_wsl.exists():
         return legacy_wsl
     return Path("dotnet")

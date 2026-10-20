@@ -271,7 +271,7 @@ def copy_host(
         raise SystemExit(
             f"Nie ma zbudowanego silnika w {host_dir}.\n"
             "Zbuduj go najpierw:\n"
-            "  /home/michal/dotnet/dotnet publish "
+            "  /home/test/dotnet/dotnet publish "
             "src/AccessibleMediaController.LiteHost -c Release -r win-x64 --self-contained false"
         )
     _safe_host_subdir(host_subdir)

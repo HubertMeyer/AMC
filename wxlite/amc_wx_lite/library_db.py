@@ -5,7 +5,7 @@ Dlaczego ten modul istnieje
 Biblioteka AMC nie jest katalogiem na dysku. Jest tabela ``local_items`` w
 ``library.db`` plus trzy ``folder_sources``. Poprzednia wersja wxlite pytala
 system plikow (``files.listFolder`` + ``Path.exists``), wiec na maszynie bez
-``D:\\`` i bez ``C:\\Users\\micha`` lista pod Ctrl+1 byla PUSTA -- dokladnie
+``D:\\`` i bez ``C:\\Users\\test`` lista pod Ctrl+1 byla PUSTA -- dokladnie
 to zglosil uzytkownik.
 
 Zasady, ktore ten modul trzyma twardo
@@ -60,7 +60,7 @@ Zasady, ktore ten modul trzyma twardo
 3. **ID sa NAPISAMI.** W tym projekcie pomylenie napisu z liczba raz juz
    zepsulo protokol. Nigdzie nie rzutujemy ID na int i nie przenumerowujemy.
 4. **Nie filtrujemy przez istnienie pliku.** ``D:\\...`` i
-   ``C:\\Users\\micha\\...`` nie istnieja na tej maszynie; rekordy i tak
+   ``C:\\Users\\test\\...`` nie istnieja na tej maszynie; rekordy i tak
    musza byc widoczne. Dostepnosc bierzemy z kolumny ``is_available``, ktora
    zapisal host -- nie z ``Path.exists`` tutaj.
 """

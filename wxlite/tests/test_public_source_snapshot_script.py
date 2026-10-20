@@ -120,7 +120,7 @@ def test_snapshot_rejects_tracked_changes_and_never_pushes(tmp_path: Path) -> No
 def test_snapshot_rejects_private_windows_profile_path(tmp_path: Path) -> None:
     repository = _repository(tmp_path)
     (repository / "app.txt").write_text(
-        "przykład C:\\Users\\jan\\sekret\\plik.txt\n", encoding="utf-8"
+        "przykład C:\\Users\\micha\\sekret\\plik.txt\n", encoding="utf-8"
     )
     _git(repository, "add", "app.txt")
     _git(repository, "commit", "-m", "prywatna ścieżka")

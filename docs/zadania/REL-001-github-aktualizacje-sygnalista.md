@@ -251,6 +251,12 @@ repozytorium, kanałami wydań i polityką prywatności.
   rzeczywistą ścieżką profilu Windows. Zastąpiono ją neutralnym przykładem,
   dodano stałą bramkę i zdecydowano odtworzyć nieopublikowaną linię publiczną
   od zera, zamiast zachowywać wcześniejsze cztery lokalne snapshoty.
+- Rozszerzony audyt wykazał także historyczne ścieżki profili Windows i Unix
+  w dokumentacji, dowodach testowych, fiksturach i starych skryptach. W 51
+  śledzonych plikach zastąpiono rzeczywiste nazwy neutralnym profilem
+  testowym. Aktywne skrypty nie dostały fikcyjnej ścieżki: wyliczają teraz
+  katalog narzędzi z `AMC_BUILD_TOOLS_ROOT` albo profilu systemowego, staging
+  z systemowego katalogu tymczasowego, a polecenie `dotnet` z `PATH`.
 - Testy czystej publicznej linii źródeł wraz z istniejącą bramką wydania:
   **6 zaliczonych**. Potwierdzono snapshot bez rodzica, identyczne drzewo,
   idempotencję, liniowego rodzica następnego wydania, brak zmiany bieżącego
@@ -267,6 +273,10 @@ repozytorium, kanałami wydań i polityką prywatności.
 - Bramka prywatności snapshotu oraz regresje GUI i klawiatury: **59
   zaliczonych testów**. Syntetyczne źródło z `C:\Users\jan\...` zostało
   odrzucone przed utworzeniem snapshotu.
+- Po anonimizacji ścieżek: **298 zaliczonych, 109 pominiętych i 6 podtestów
+  zaliczonych** dla baz, bibliotek, historii, profili, transportu i pakowania.
+  Pięć skryptów PowerShell oraz trzy skrypty Bash przeszły kontrolę składni.
+  Pominięcia są platformowe i zastane; zestaw zakończył się kodem 0.
 
 ## Znane ograniczenia
 
@@ -321,6 +331,8 @@ repozytorium, kanałami wydań i polityką prywatności.
 - Automatyczna odmowa publicznego snapshotu przy prywatnej ścieżce lub
   poświadczeniu: `adcf1d9c` —
   `fix(rel): blokuj prywatne dane w snapshocie`.
+- Anonimizacja historycznych ścieżek oraz przenośne wartości domyślne starych
+  narzędzi: commit zostanie wpisany po lokalnym zatwierdzeniu.
 - Druga redakcja serwerowa ścieżek, przypisań tokenów i kont,
   identyfikatorów oraz nazw plików: `8149d076` —
   `fix(rel): wzmocnij redakcje Workera`.

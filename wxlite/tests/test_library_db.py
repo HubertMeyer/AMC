@@ -5,7 +5,7 @@ foldery. Przyczyna w kodzie: ``gui._load_initial_content`` pytalo wylacznie
 o ``Path(folder).exists()`` i hosta ``files.listFolder`` -- czyli czytalo
 DYSK, a nie Biblioteke AMC. Biblioteka zyje w ``library.db`` (SQLite) i w
 HERMESie zadna z tych sciezek nie istnieje (profil nagrany jako ``micha``,
-tu nie ma ani ``D:\\`` ani ``C:\\Users\\micha``), wiec lista byla pusta.
+tu nie ma ani ``D:\\`` ani ``C:\\Users\\test``), wiec lista byla pusta.
 
 Te testy przypinaja kontrakt odczytu do schematu C#
 (``LocalLibraryDatabase.cs`` + ``MainWindow.CreateFolderRows``):
@@ -16,7 +16,7 @@ Te testy przypinaja kontrakt odczytu do schematu C#
 * ``is_available``/``is_in_library`` filtruja tak jak ``ActiveLocalItems()``;
 * ID zostaja NAPISAMI (w tym projekcie mylenie napisu z liczba juz raz
   zepsulo protokol) i nie wolno ich przenumerowac;
-* NIE wolno odsiewac wierszy przez ``Path.exists`` -- D:\\ i C:\\Users\\micha
+* NIE wolno odsiewac wierszy przez ``Path.exists`` -- D:\\ i C:\\Users\\test
   nie istnieja na tej maszynie, a rekordy i tak maja byc widoczne.
 """
 
@@ -40,7 +40,7 @@ from amc_wx_lite.library_db import (  # noqa: E402
 FIXTURE = Path(
     os.environ.get(
         "AMC_WX_FIXTURE",
-        "/home/michal/projekty/amc_pomoc/wx-full-profile-after421/fixture",
+        "/home/test/projekty/amc_pomoc/wx-full-profile-after421/fixture",
     )
 )
 LIBRARY_DB = FIXTURE / "library.db"

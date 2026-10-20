@@ -43,13 +43,13 @@ from amc_wx_lite.collation import (  # noqa: E402
 EVIDENCE = Path(
     os.environ.get(
         "AMC_WX_COLLATION_EVIDENCE",
-        "/home/michal/projekty/amc_pomoc/wx-full-profile-after421/resume-after422",
+        "/home/test/projekty/amc_pomoc/wx-full-profile-after421/resume-after422",
     )
 )
 CORPUS = Path(
     os.environ.get(
         "AMC_WX_CORPUS",
-        "/home/michal/projekty/amc_pomoc/wx-full-profile-after421/correction/corpus-full.txt",
+        "/home/test/projekty/amc_pomoc/wx-full-profile-after421/correction/corpus-full.txt",
     )
 )
 
@@ -457,7 +457,7 @@ class LibrarySourceActuallyUsesTheHostOrder(unittest.TestCase):
     FIXTURE = Path(
         os.environ.get(
             "AMC_WX_FIXTURE",
-            "/home/michal/projekty/amc_pomoc/wx-full-profile-after421/fixture",
+            "/home/test/projekty/amc_pomoc/wx-full-profile-after421/fixture",
         )
     )
 

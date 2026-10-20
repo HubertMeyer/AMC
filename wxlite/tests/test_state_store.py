@@ -28,7 +28,7 @@ def temp_store() -> tuple[StateStore, Path]:
 
 def test_state_directory_is_private_and_not_shared_with_full_amc() -> None:
     old = os.environ.pop("AMC_WX_LITE_HOME", None)
-    os.environ["APPDATA"] = "C:\\Users\\micha\\AppData\\Roaming"
+    os.environ["APPDATA"] = "C:\\Users\\test\\AppData\\Roaming"
     try:
         directory = default_state_dir()
     finally:

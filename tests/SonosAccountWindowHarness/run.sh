@@ -14,7 +14,7 @@ set -euo pipefail
 
 WORKTREE="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 PROJECT="$WORKTREE/tests/SonosAccountWindowHarness/csharp/Harness.csproj"
-DOTNET_WSL="${DOTNET_WSL:-/home/michal/dotnet/dotnet}"
+DOTNET_WSL="${DOTNET_WSL:-dotnet}"
 DOTNET_WIN="${DOTNET_WIN:-/mnt/c/Program Files/dotnet/dotnet.exe}"
 OUTPUT_DIR="$WORKTREE/tests/SonosAccountWindowHarness/csharp/bin/Release/net8.0-windows"
 

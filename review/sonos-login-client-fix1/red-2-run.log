@@ -18,6 +18,6 @@ B3.1 token_type walidowany i kanonizowany, zly odrzucony bez echa => Sonos: typ 
 B3.2 model tokenow nie przyjmuje dowolnego typu do ToString => Sonos: publiczny model NIE moze wypisywac dowolnego tekstu z konstruktora
 B4.1 403 verifier_mismatch to blad lokalnego dowodu, nie odmowa Sonos => Sonos: 403 verifier_mismatch to blad LOKALNEGO dowodu klienta, dostano: Denied
 B4.2 400 invalid_callback/token_exchange_failed nie obwinia Sonos => Sonos: invalid_callback to blad po stronie brokera/wymiany, NIE decyzja Sonos, dostano: Denied
-   at SonosLoginClientTests.UruchomPrzypadkiPoprawek() in /home/michal/projekty/amc-sonos-login-client-after410/tests/AccessibleMediaController.Core.SmokeTests/SonosLoginClientTests.cs:line 101
-   at SonosLoginClientTests.Run() in /home/michal/projekty/amc-sonos-login-client-after410/tests/AccessibleMediaController.Core.SmokeTests/SonosLoginClientTests.cs:line 57
-   at Program.<Main>$(String[] args) in /home/michal/projekty/amc-sonos-login-client-after410/tests/AccessibleMediaController.Core.SmokeTests/Program.cs:line 52
+   at SonosLoginClientTests.UruchomPrzypadkiPoprawek() in /home/test/projekty/amc-sonos-login-client-after410/tests/AccessibleMediaController.Core.SmokeTests/SonosLoginClientTests.cs:line 101
+   at SonosLoginClientTests.Run() in /home/test/projekty/amc-sonos-login-client-after410/tests/AccessibleMediaController.Core.SmokeTests/SonosLoginClientTests.cs:line 57
+   at Program.<Main>$(String[] args) in /home/test/projekty/amc-sonos-login-client-after410/tests/AccessibleMediaController.Core.SmokeTests/Program.cs:line 52

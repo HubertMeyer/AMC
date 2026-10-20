@@ -14,7 +14,7 @@
 # Uzycie: scripts/mutacje-librespot.sh [nazwa-mutacji ...]  (bez argumentow: wszystkie)
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-DOTNET="${DOTNET:-/home/michal/dotnet/dotnet}"
+DOTNET="${DOTNET:-dotnet}"
 CORE_PROJ="$REPO/tests/AccessibleMediaController.Core.SmokeTests/AccessibleMediaController.Core.SmokeTests.csproj"
 CORE_DLL="$REPO/tests/AccessibleMediaController.Core.SmokeTests/bin/Debug/net8.0/AccessibleMediaController.Core.SmokeTests.dll"
 CORE_TEST="Transport osobnego procesu hosta Librespot"

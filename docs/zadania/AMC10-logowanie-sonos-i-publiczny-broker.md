@@ -200,7 +200,7 @@ brokera.
   identyfikatora integracji
   `b051a8f0-499c-4deb-9f66-843a752c36e4`. Identyfikator nie jest sekretem.
   Historyczna dokumentacja wskazuje źródła dawnego brokera pod
-  `/home/michal/projekty/amc-sonos-auth` oraz konfigurację produkcyjną pod
+  `/home/test/projekty/amc-sonos-auth` oraz konfigurację produkcyjną pod
   `/etc/amc-sonos-auth/sonos.env`; tych danych nie znaleziono lokalnie na
   komputerze Windows.
 - Token użytkownika i sekret integracji są różnymi danymi. Zaszyfrowany plik

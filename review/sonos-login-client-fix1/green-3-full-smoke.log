@@ -6,9 +6,9 @@ OK: zwykła zmiana nazwy pozostaje dozwolona
 OK: zmiana folderu sprawdza końcową ścieżkę pliku
 OK: ręczne odzyskanie starego wpisu z kopii pozostaje dozwolone
 dwie natywne podmiany, zmiana nazwy i zapis/odczyt: System.InvalidOperationException: Sonda nie odebrała natywnego rename do pierwszej kopii
-   at AudioEditRenameTests.Check(Boolean condition, String message) in /home/michal/projekty/amc-sonos-login-client-after410/tests/AccessibleMediaController.Core.SmokeTests/AudioEditRenameTests.cs:line 141
-   at AudioEditRenameTests.NativeReplacementSequence() in /home/michal/projekty/amc-sonos-login-client-after410/tests/AccessibleMediaController.Core.SmokeTests/AudioEditRenameTests.cs:line 121
-   at AudioEditRenameTests.Run() in /home/michal/projekty/amc-sonos-login-client-after410/tests/AccessibleMediaController.Core.SmokeTests/AudioEditRenameTests.cs:line 26
+   at AudioEditRenameTests.Check(Boolean condition, String message) in /home/test/projekty/amc-sonos-login-client-after410/tests/AccessibleMediaController.Core.SmokeTests/AudioEditRenameTests.cs:line 141
+   at AudioEditRenameTests.NativeReplacementSequence() in /home/test/projekty/amc-sonos-login-client-after410/tests/AccessibleMediaController.Core.SmokeTests/AudioEditRenameTests.cs:line 121
+   at AudioEditRenameTests.Run() in /home/test/projekty/amc-sonos-login-client-after410/tests/AccessibleMediaController.Core.SmokeTests/AudioEditRenameTests.cs:line 26
 AUDIO EDIT RENAME: 7 OK / 1 BLAD / razem 8
 OK: Koszt i wierność migawki stanu
 OK: sesja podaje faktyczne tempo wyjścia, nie potwierdza odmowy i zachowuje starsze adaptery

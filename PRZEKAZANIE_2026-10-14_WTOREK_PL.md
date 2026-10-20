@@ -45,7 +45,7 @@ Ukończone przyrosty:
    `D:\Projekty Codex\AMC - zależności`; Rust/MSVC, .NET, Node/pnpm,
    wxPython i pytest są sprawdzone także offline. Skrypt ustawia rzeczywistą
    ścieżkę Windowsowego `dotnet`, więc testy nie wracają do historycznej
-   ścieżki `/home/michal/dotnet/dotnet`.
+   ścieżki `/home/test/dotnet/dotnet`.
 
 Rozpoczęto pierwszy etap Spotify bez logowania i bez operacji na koncie.
 Aktualny wx/LiteHost nie ma jeszcze sesji Spotify. W osobnych gałęziach są

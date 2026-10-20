@@ -58,7 +58,7 @@ internal static class FocusCases
     internal static int Run(string[] args)
     {
         var resultsRoot = ArgumentValue(args, "--results-root")
-            ?? "/home/michal/projekty/amc_pomoc/sonos-account-window-focus-fix1";
+            ?? "/home/test/projekty/amc_pomoc/sonos-account-window-focus-fix1";
         var seconds = int.TryParse(ArgumentValue(args, "--seconds"), out var parsed) ? parsed : 180;
         Directory.CreateDirectory(resultsRoot);
 

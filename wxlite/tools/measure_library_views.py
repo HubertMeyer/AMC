@@ -37,18 +37,20 @@ from amc_wx_lite.library_views import (  # noqa: E402
 FIXTURE = Path(
     os.environ.get(
         "AMC_WX_FIXTURE",
-        "/home/michal/projekty/amc_pomoc/wx-full-profile-after421/fixture",
+        str(Path.home() / "projekty/amc_pomoc/wx-full-profile-after421/fixture"),
     )
 )
 LIBRARY_DB = FIXTURE / "library.db"
 PROBE = Path(
     os.environ.get(
         "AMC_WX_SORTKEY_PROBE",
-        "/home/michal/projekty/amc_pomoc/wx-full-profile-after421"
-        "/library-views-after422/probe-csharp-order",
+        str(
+            Path.home()
+            / "projekty/amc_pomoc/wx-full-profile-after421/library-views-after422/probe-csharp-order"
+        ),
     )
 )
-DOTNET = os.environ.get("DOTNET", "/home/michal/dotnet/dotnet")
+DOTNET = os.environ.get("DOTNET", "dotnet")
 
 
 def sha256_file(path: Path) -> str:
@@ -117,7 +119,7 @@ def run_probe(items) -> tuple[dict, dict[str, bytes]] | tuple[None, None]:
             ],
             capture_output=True,
             text=True,
-            env={**os.environ, "HOME": os.environ.get("HOME", "/home/michal")},
+            env={**os.environ, "HOME": os.environ.get("HOME", str(Path.home()))},
         )
         if result.returncode != 0 or not output.exists():
             return None, None
@@ -340,7 +342,7 @@ def main() -> int:
     target = Path(
         os.environ.get(
             "AMC_WX_RECEIPT",
-            "/home/michal/projekty/amc_pomoc/wx-full-profile-after421"
+            "/home/test/projekty/amc_pomoc/wx-full-profile-after421"
             "/library-views-after422/full-profile-receipt.json",
         )
     )

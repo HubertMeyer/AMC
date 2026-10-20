@@ -1,13 +1,13 @@
 # Naprawa czterech blokad odbioru klienta pierwszego logowania Sonos (fix1)
 
 Zakres: WYŁĄCZNIE klient pierwszego logowania Sonos w izolowanym worktree.
-Praca: `/home/michal/projekty/amc-sonos-login-client-after410`, branch
+Praca: `/home/test/projekty/amc-sonos-login-client-after410`, branch
 `hermes/sonos-login-client-after410`, HEAD przed pracą
 `b1957d443d886aeec1c4e5013903f5b35a59f83f` (baza `73bd4fe`).
-SDK `/home/michal/dotnet/dotnet` (8.0.425), `-m:1`.
+SDK `/home/test/dotnet/dotnet` (8.0.425), `-m:1`.
 
 Bez push, bez merge, bez publikacji, bez zmiany wersji. Backend produkcyjny
-`/home/michal/projekty/amc-sonos-auth/amc_sonos_auth/{core.py,server.py}`
+`/home/test/projekty/amc-sonos-auth/amc_sonos_auth/{core.py,server.py}`
 czytany TYLKO do rozstrzygnięcia semantyki błędów; nie zmieniany, konfiguracja
 sekretów nietknięta. Zero GUI/WPF/NVDA/SSH/systemd/sieci/Sonos LIVE — wszystkie
 transporty syntetyczne (wstrzyknięty `HttpMessageHandler`).

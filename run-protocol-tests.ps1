@@ -1,13 +1,18 @@
 # Buduje i uruchamia testy protokolu LiteHost na SDK Windows (SDK nie ma w WSL).
 # Pakiety z istniejacego RestorePackagesPath -- nie sciagamy cache od nowa.
 $ErrorActionPreference = 'Stop'
-$legacyDotnet = 'C:\Users\Michal\amc-build-tools\dotnet-8.0.425\dotnet.exe'
+$buildTools = if ($env:AMC_BUILD_TOOLS_ROOT) {
+    $env:AMC_BUILD_TOOLS_ROOT
+} else {
+    Join-Path $env:USERPROFILE 'amc-build-tools'
+}
+$legacyDotnet = Join-Path $buildTools 'dotnet-8.0.425\dotnet.exe'
 $dotnet = if (Test-Path -LiteralPath $legacyDotnet) {
     $legacyDotnet
 } else {
     (Get-Command dotnet -ErrorAction Stop).Source
 }
-$legacyPackages = 'C:\Users\Michal\amc-build-tools\nuget-packages'
+$legacyPackages = Join-Path $buildTools 'nuget-packages'
 if (Test-Path -LiteralPath $legacyPackages) {
     $env:NUGET_PACKAGES = $legacyPackages
 }

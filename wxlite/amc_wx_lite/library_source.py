@@ -3,7 +3,7 @@
 Rozdziela dwie rzeczy, ktore wczesniej byly zlepione w jedna:
 
 * **Biblioteka AMC** -- rekordy z ``library.db``. Dziala tez wtedy, gdy
-  sciezek nie ma na tej maszynie (``D:\\``, ``C:\\Users\\micha``). To ona
+  sciezek nie ma na tej maszynie (``D:\\``, ``C:\\Users\\test``). To ona
   stoi pod Ctrl+1.
 * **Przegladanie dysku** -- ``files.listFolder`` w hoscie. Przydatne przy
   Ctrl+O, ale NIE jest Biblioteka.

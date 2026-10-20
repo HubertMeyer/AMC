@@ -18,6 +18,6 @@ Granice: nie jest to prawdziwe logowanie Sonos ani próba produkcyjnego brokera/
 
 Błędy i naprawy aparatury, bez zmiany produktu: pierwotny automat jedynie zapisywał wyniki i ogłaszał ok, omijał paletę oraz maskował Escape przez Close; brakowało deklarowanego override instalatora. Zachowano oryginał w sonos-account-wiring-gui1. Własna pierwsza próba nie przeszła inicjalizacji SQLite; dodano zależność tej samej wersji co produkt. Dwa wcześniejsze odczyty NVDA wymagały oczekiwania na świeży fokus i poprawnej nazwy ASCII pola Tresc komunikatu. Wszystkie nieudane wyniki zachowano.
 
-Dowody i źródła harnessu: `/home/michal/projekty/amc_pomoc/sonos-account-wiring-gui-parent1/` (ACCEPTANCE.json, nvda.jsonl, runtime-evidence/). Wcześniejszy build/komenda6/login36/refresh58/coordinator26/headless19: `/home/michal/projekty/amc_pomoc/sonos-account-wiring-parent1/`. Pełny przegląd: `/home/michal/projekty/amc_pomoc/sonos-account-wiring-quality1/REPORT.md`.
+Dowody i źródła harnessu: `/home/test/projekty/amc_pomoc/sonos-account-wiring-gui-parent1/` (ACCEPTANCE.json, nvda.jsonl, runtime-evidence/). Wcześniejszy build/komenda6/login36/refresh58/coordinator26/headless19: `/home/test/projekty/amc_pomoc/sonos-account-wiring-parent1/`. Pełny przegląd: `/home/test/projekty/amc_pomoc/sonos-account-wiring-quality1/REPORT.md`.
 
 Ten dokument dodano po pomiarze jako zapis odbioru. Zmiany dokumentacyjne nie zmieniają badanych źródeł produktu.

@@ -143,7 +143,7 @@ siebie.
 
 Każde uruchomienie zakłada **nowy** katalog z kwitami (PID, HWND, liczniki
 operacji, lista komunikatów) i nie usuwa poprzednich:
-`/home/michal/projekty/amc_pomoc/sonos-account-window1/okno-<data>-pid<PID>/`.
+`/home/test/projekty/amc_pomoc/sonos-account-window1/okno-<data>-pid<PID>/`.
 
 ## Czego jeszcze nie ma
 

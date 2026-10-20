@@ -1,11 +1,11 @@
 # Klient odnawiania dostępu Sonos w Core AMC — raport
 
 Gałąź `hermes/sonos-refresh-client-after410`, baza `310162b`, izolowany worktree
-`/home/michal/projekty/amc-sonos-refresh-client-after410`. Worktree odebranego
+`/home/test/projekty/amc-sonos-refresh-client-after410`. Worktree odebranego
 logowania (`amc-sonos-login-client-after410`) pozostał nietknięty.
 
 Kontrakt odczytany ze **źródeł** odebranego backendu:
-`/home/michal/projekty/amc-sonos-auth-refresh1`, commit
+`/home/test/projekty/amc-sonos-auth-refresh1`, commit
 `b27ed4b2e31fcc232677f9fe2f36aa36f237d1d3` — `amc_sonos_auth/core.py` i
 `README.md`. Katalogu produkcyjnego nie czytałem, poświadczeń z `/etc` ani
 instalacji w `/opt` nie dotykałem, publicznego brokera i Sonosa nie wołałem.
@@ -77,7 +77,7 @@ odpowiedź, a nie zgoda. Poprawną wielkość liter `bearer` kanonizuję do `Bea
 
 ## Testy — rzeczywiste przebiegi
 
-SDK: `/home/michal/dotnet/dotnet` 8.0.425, `/m:1`, cel `net8.0`, bez GUI/WPF.
+SDK: `/home/test/dotnet/dotnet` 8.0.425, `/m:1`, cel `net8.0`, bez GUI/WPF.
 Cały ruch przez syntetyczne atrapy `HttpMessageHandler`; zero sieci, zero konta.
 
 | Krok | Polecenie | Wynik |
@@ -112,7 +112,7 @@ bez sekretu, zaufany `RefreshUri`, opisy bez wartości.
 ### Sześć awarii bazowych pełnego Core pod WSL
 
 Niezwiązane z Sonosem, zmierzone wcześniej w
-`/home/michal/projekty/amc_pomoc/sonos-login-final-core/results.json`: edycja
+`/home/test/projekty/amc_pomoc/sonos-login-final-core/results.json`: edycja
 nagrań/kopia bezpieczeństwa, dwa testy TIDAL o adresie kolejnej strony, „Pokaż
 w folderze”, odkrywanie plików lokalnych, bezpieczna zmiana nazwy. Nie nazywam
 pełnego Core zaliczonym i nie nazywam tych awarii flaky.
@@ -128,7 +128,7 @@ ani Librespota.
 
 ## Kwity
 
-`/home/michal/projekty/amc_pomoc/sonos-refresh-client-final/`: `results.json`
+`/home/test/projekty/amc_pomoc/sonos-refresh-client-final/`: `results.json`
 (polecenia, kody wyjścia, liczniki, SHA-256 źródeł), `red.txt`, `refresh.txt`,
 `login.txt`, `full.txt`…`full4.txt`, `kontrola-baseline.txt`, `diff.patch` oraz
 kopie dostarczonych plików.

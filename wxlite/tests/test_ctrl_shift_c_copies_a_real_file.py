@@ -85,7 +85,7 @@ def test_absolute_windows_path_is_local() -> None:
 
 def test_absolute_posix_path_is_local() -> None:
     """Testy chodza w WSL; sciezka POSIX tez jest w pelni kwalifikowana."""
-    assert gui.is_local_path("/home/michal/a.mp3") is True
+    assert gui.is_local_path("/home/test/a.mp3") is True
 
 
 def test_unc_path_is_local_it_is_fully_qualified() -> None:
@@ -134,7 +134,7 @@ def test_file_uri_with_a_host_keeps_the_unc_share() -> None:
 def test_plain_file_uri_without_a_host_is_unchanged() -> None:
     """Kontrola odwrotna: pusty ``netloc`` nie dorabia zadnego UNC."""
     assert gui.local_path_from_source("file:///D:/muzyka/a.mp3") == "D:/muzyka/a.mp3"
-    assert gui.local_path_from_source("file:///home/michal/a.mp3") == "/home/michal/a.mp3"
+    assert gui.local_path_from_source("file:///home/test/a.mp3") == "/home/test/a.mp3"
 
 
 def test_localhost_in_a_file_uri_is_not_a_server_name() -> None:
@@ -145,7 +145,7 @@ def test_localhost_in_a_file_uri_is_not_a_server_name() -> None:
 def test_real_windows_paths_pass_through_untouched() -> None:
     """NAJWAZNIEJSZY przypadek: zwykle istniejace sciezki C:/D: bez zmian."""
     assert gui.local_path_from_source("D:\\muzyka\\a.mp3") == "D:\\muzyka\\a.mp3"
-    assert gui.local_path_from_source("C:\\Users\\Michal\\a.mp3") == "C:\\Users\\Michal\\a.mp3"
+    assert gui.local_path_from_source("C:\\Users\\test\\a.mp3") == "C:\\Users\\test\\a.mp3"
     assert gui.local_path_from_source("\\\\serwer\\udzial\\a.mp3") == "\\\\serwer\\udzial\\a.mp3"
 
 

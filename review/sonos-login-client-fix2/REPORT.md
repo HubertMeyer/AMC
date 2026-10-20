@@ -1,8 +1,8 @@
 # Sonos — naprawa I-1: 404 unknown_session odróżnione od błędnego 404
 
-Repozytorium: `/home/michal/projekty/amc-sonos-login-client-after410`,
+Repozytorium: `/home/test/projekty/amc-sonos-login-client-after410`,
 gałąź `hermes/sonos-login-client-after410`, baza `37a1b5a`.
-SDK: `/home/michal/dotnet/dotnet` (8.0.425). Cały ruch w testach i sondach jest
+SDK: `/home/test/dotnet/dotnet` (8.0.425). Cały ruch w testach i sondach jest
 SYNTETYCZNY (atrapa `HttpMessageHandler`); żadnego kontaktu z brokerem, kontem
 Sonos ani siecią. Backend `amc_sonos_auth` czytany tylko do odczytu.
 
@@ -27,8 +27,8 @@ Nowy przypadek `TestI1CzterystaCztery404RozroznioneOdBledu` (rejestracja w
 `UruchomPrzypadkiPoprawek`) uruchomiony PRZED zmianą produkcji:
 
 ```
-/home/michal/dotnet/dotnet build tests/AccessibleMediaController.Core.SmokeTests/AccessibleMediaController.Core.SmokeTests.csproj -c Debug /m:1
-/home/michal/dotnet/dotnet tests/AccessibleMediaController.Core.SmokeTests/bin/Debug/net8.0/AccessibleMediaController.Core.SmokeTests.dll --sonos-login-client
+/home/test/dotnet/dotnet build tests/AccessibleMediaController.Core.SmokeTests/AccessibleMediaController.Core.SmokeTests.csproj -c Debug /m:1
+/home/test/dotnet/dotnet tests/AccessibleMediaController.Core.SmokeTests/bin/Debug/net8.0/AccessibleMediaController.Core.SmokeTests.dll --sonos-login-client
 ```
 
 Rzeczywisty wynik (`../../amc_pomoc/sonos-login-client-fix2/red-client.log`), kod wyjścia 1:
@@ -63,8 +63,8 @@ komentarz — algorytm cyklu życia nietknięty.
 ## 4. GREEN
 
 ```
-/home/michal/dotnet/dotnet build tests/AccessibleMediaController.Core.SmokeTests/AccessibleMediaController.Core.SmokeTests.csproj -c Debug /m:1   # Build succeeded, 0 Warning(s), 0 Error(s)
-/home/michal/dotnet/dotnet tests/.../AccessibleMediaController.Core.SmokeTests.dll --sonos-login-client                                          # kod wyjscia 0
+/home/test/dotnet/dotnet build tests/AccessibleMediaController.Core.SmokeTests/AccessibleMediaController.Core.SmokeTests.csproj -c Debug /m:1   # Build succeeded, 0 Warning(s), 0 Error(s)
+/home/test/dotnet/dotnet tests/.../AccessibleMediaController.Core.SmokeTests.dll --sonos-login-client                                          # kod wyjscia 0
 ```
 
 `../../amc_pomoc/sonos-login-client-fix2/green-client.log`:
@@ -83,7 +83,7 @@ tokenów, bez echa ciała i ze STAŁYM komunikatem.
 
 ### Licznik testów policzony programatycznie
 
-`python3 /home/michal/projekty/amc_pomoc/sonos-login-client-fix2/policz_testy.py`:
+`python3 /home/test/projekty/amc_pomoc/sonos-login-client-fix2/policz_testy.py`:
 
 ```
 bezposrednie: 24 przypadki-poprawek: 12 RAZEM: 36
@@ -96,12 +96,12 @@ Czyli 35 → 36; komunikat i faktyczna liczba są zgodne.
 ## 5. Sonda jakości — 16 przypadków, NOWY katalog
 
 Oryginalne dowody nie zostały nadpisane. Sondę skopiowano do
-`/home/michal/projekty/amc_pomoc/sonos-login-client-fix2/probe` (ten sam
+`/home/test/projekty/amc_pomoc/sonos-login-client-fix2/probe` (ten sam
 `Program.cs`, `Probe.csproj` wskazuje absolutnie na pliki produkcyjne w repo).
 
 ```
-cd /home/michal/projekty/amc_pomoc/sonos-login-client-fix2/probe
-/home/michal/dotnet/dotnet run -c Debug /m:1 > ../probe-post-fix.json
+cd /home/test/projekty/amc_pomoc/sonos-login-client-fix2/probe
+/home/test/dotnet/dotnet run -c Debug /m:1 > ../probe-post-fix.json
 ```
 
 Kod wyjścia 0, `fail=0`, **16 przypadków, 16 OK, 0 PROBLEM**. Kluczowa różnica
@@ -119,7 +119,7 @@ Pozostałe 12 przypadków bez zmian, wszystkie OK.
 
 ## 6. Sonda zgodności ze specyfikacją (spec)
 
-`/home/michal/projekty/amc_pomoc/sonos-login-client-fix2/spec-probe` (kopia
+`/home/test/projekty/amc_pomoc/sonos-login-client-fix2/spec-probe` (kopia
 `sonos-login-spec-review1/probe`), log `../spec-post-fix.log`:
 14 × SPEC_PASS, 1 × SPEC_FAIL — `S2-odmowa-429-503-5xx`. To NIE jest regresja
 mojej zmiany: ta sonda nadal oczekuje `token_exchange_failed == Denied`, co
@@ -140,7 +140,7 @@ zachowane).
   błędne: `B1.5 saczone cialo ma LACZNY deadline` jest [OK]; klient nie zwraca
   tam Success.
 - Reviewer pisał o WPF; `AccessibleMediaController.Core.csproj` celuje w czysty
-  `net8.0`, bez WPF. Poprawna ścieżka SDK to `/home/michal/dotnet/dotnet`
+  `net8.0`, bez WPF. Poprawna ścieżka SDK to `/home/test/dotnet/dotnet`
   (wersja 8.0.425) — nie `dotnet8.0.425/dotnet`.
 - Librespot nie był tu uruchamiany i nie jest nazywany „flaky” — brak diagnozy,
   brak takiego twierdzenia.

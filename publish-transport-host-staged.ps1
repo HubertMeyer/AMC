@@ -5,11 +5,25 @@
 # Dlaczego osobny staging, a nie publish-queue-host.ps1: tamten ma zahardcodowane
 # build-src\ i host-queue\, ktore czyta rodzic. Nie wolno ich nadpisac.
 $ErrorActionPreference = 'Stop'
-$dotnet = 'C:\Users\Michal\amc-build-tools\dotnet-8.0.425\dotnet.exe'
-$env:NUGET_PACKAGES = 'C:\Users\Michal\amc-build-tools\nuget-packages'
+$buildTools = if ($env:AMC_BUILD_TOOLS_ROOT) {
+    $env:AMC_BUILD_TOOLS_ROOT
+} else {
+    Join-Path $env:USERPROFILE 'amc-build-tools'
+}
+$preferredDotnet = Join-Path $buildTools 'dotnet-8.0.425\dotnet.exe'
+$dotnet = if (Test-Path -LiteralPath $preferredDotnet) {
+    $preferredDotnet
+} else {
+    (Get-Command dotnet -ErrorAction Stop).Source
+}
+$env:NUGET_PACKAGES = if ($env:NUGET_PACKAGES) {
+    $env:NUGET_PACKAGES
+} else {
+    Join-Path $buildTools 'nuget-packages'
+}
 $env:DOTNET_CLI_TELEMETRY_OPTOUT = '1'
 
-$stage = 'C:\Users\Michal\AppData\Local\Temp\amc-wx-queue-transport-final-host'
+$stage = Join-Path ([IO.Path]::GetTempPath()) 'amc-wx-queue-transport-final-host'
 $free = [math]::Round((Get-PSDrive C).Free / 1GB, 2)
 Write-Output "FREE-GB-BEFORE=$free"
 if ($free -lt 2) { Write-Output 'GUARD=za malo miejsca'; exit 3 }

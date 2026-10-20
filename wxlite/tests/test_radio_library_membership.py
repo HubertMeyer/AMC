@@ -42,7 +42,7 @@ from amc_wx_lite.profile_layout import read_only_mirror
 from amc_wx_lite.radio_source import RadioSource, stations_from_amc_state
 
 FIXTURE_STATE = Path(
-    "/home/michal/projekty/amc_pomoc/wx-full-profile-after421/fixture/state.json"
+    "/home/test/projekty/amc_pomoc/wx-full-profile-after421/fixture/state.json"
 )
 
 
@@ -169,7 +169,7 @@ class FlagsComeFromRealBooleans(unittest.TestCase):
 class MeasuredOnACopyOfTheFullProfile(unittest.TestCase):
     """Przeliczenie na READ-ONLY kopii pelnego profilu.
 
-    Zrodlo: ``/home/michal/projekty/amc_pomoc/wx-full-profile-after421/fixture/state.json``.
+    Zrodlo: ``/home/test/projekty/amc_pomoc/wx-full-profile-after421/fixture/state.json``.
     Liczby NIE sa zahardkodowane jako oczekiwanie -- test liczy je w swoim
     zrodle i porownuje z tym, co oddal czytnik.
     """

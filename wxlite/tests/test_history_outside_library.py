@@ -41,7 +41,7 @@ from amc_wx_lite.library_db import LibraryDatabase
 from amc_wx_lite.library_views import active_items, all_files_rows
 
 FIXTURE_DB = Path(
-    "/home/michal/projekty/amc_pomoc/wx-full-profile-after421/fixture/library.db"
+    "/home/test/projekty/amc_pomoc/wx-full-profile-after421/fixture/library.db"
 )
 
 _SCHEMA = """

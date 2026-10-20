@@ -374,7 +374,7 @@ internal static class FixtureMode
     internal static int Run(string[] args)
     {
         var resultsRoot = ArgumentValue(args, "--results-root")
-            ?? "/home/michal/projekty/amc_pomoc/sonos-account-window1";
+            ?? "/home/test/projekty/amc_pomoc/sonos-account-window1";
         var seconds = int.TryParse(ArgumentValue(args, "--seconds"), out var parsed) ? parsed : 240;
         var stamp = DateTimeOffset.Now.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture);
         var runDirectory = Path.Combine(resultsRoot, "okno-" + stamp + "-pid" + Environment.ProcessId);

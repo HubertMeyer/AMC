@@ -1,7 +1,7 @@
 # Naprawa: wadliwe Unicode w odpowiedzi /login/refresh
 
 Gałąź `hermes/sonos-refresh-client-after410`, baza `093d548`.
-SDK: `/home/michal/dotnet/dotnet` **8.0.425**, budowa `/m:1`.
+SDK: `/home/test/dotnet/dotnet` **8.0.425**, budowa `/m:1`.
 
 ## Zmierzony błąd (stan przed naprawą)
 
@@ -17,7 +17,7 @@ Wyjątek zamiast wyniku oznacza, że warstwa wyżej nie dostaje `InvalidResponse
 a niezgodna odpowiedź 401 nie może być bezpiecznie sklasyfikowana.
 
 Dowód niezależny (probe rodzica, pojedyncze pola, bez zduplikowanych kluczy):
-`/home/michal/projekty/amc_pomoc/sonos-refresh-client-parent1/probe-single-fields/red-result.json`
+`/home/test/projekty/amc_pomoc/sonos-refresh-client-parent1/probe-single-fields/red-result.json`
 — exit 1, 5× `pass: false`.
 
 ## Zmiana w produkcji (minimalna)

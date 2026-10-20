@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Odtwarzalny przebieg testu trwalego magazynu poswiadczen Sonos (DPAPI
 # biezacego uzytkownika Windows). Zarchiwizowana kopia harnessu z przebiegu
-# /home/michal/projekty/amc_pomoc/sonos-credentials1/.
+# prywatnego katalogu pomiarowego opiekuna.
 #
 # 1. buduje minimalny harness net8.0 w WSL (SDK 8.0.425), BEZ projektu WPF i
 #    bez ProjectReference, linkujac pliki produktowe wprost z tego worktree,
@@ -17,9 +17,9 @@ set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WORKTREE="${AMC_WORKTREE:-$(cd "$HERE/../.." && pwd)}"
-DOTNET="${AMC_DOTNET:-/home/michal/dotnet/dotnet}"
-WIN_TEMP_WSL="${AMC_WIN_TEMP:-/mnt/c/Users/Michal/AppData/Local/Temp}"
-WIN_TEMP_WIN="${AMC_WIN_TEMP_WIN:-C:\\Users\\Michal\\AppData\\Local\\Temp}"
+DOTNET="${AMC_DOTNET:-dotnet}"
+WIN_TEMP_WSL="${AMC_WIN_TEMP:-/mnt/c/Windows/Temp}"
+WIN_TEMP_WIN="${AMC_WIN_TEMP_WIN:-C:\\Windows\\Temp}"
 export DOTNET_CLI_TELEMETRY_OPTOUT=1 DOTNET_NOLOGO=1
 
 RUN_ID="$(head -c 8 /dev/urandom | od -An -tx1 | tr -d ' \n')"
