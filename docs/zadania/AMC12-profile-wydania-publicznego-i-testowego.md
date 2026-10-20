@@ -98,6 +98,13 @@ skrótów.
 
 ## Uzasadnienie i decyzje
 
+- **Korekta użytkownika z 20 października 2026:** nie budujemy kolejnego
+  publicznego instalatora po każdej poprawce AMC Test. Istniejący kandydat
+  pozostaje lokalnym punktem kontrolnym, a następny publiczny wariant powstanie
+  dopiero z zestawu domkniętych i odebranych funkcji. Zastępuje to roboczą
+  praktykę natychmiastowego przebudowywania profilu publicznego po małej
+  korekcie wspólnego kodu.
+
 - Jedna definicja profilu jest bezpieczniejsza niż osobne listy w interfejsie,
   pomocy i pakowaniu. Zapobiega sytuacji, w której ukryta usługa nadal pojawia
   się w palecie albo daje się uruchomić skrótem.

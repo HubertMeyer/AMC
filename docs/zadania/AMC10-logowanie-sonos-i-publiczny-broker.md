@@ -29,6 +29,10 @@ prawie gotowe. Ten etap nie zmienia adapterów, list, transportu ani WiiM.
   z 12:30 zakończył plik o 12:35, ale równolegle trwały cztery prawdziwe
   nagrania rozpoczęte około 10:25–10:33. Zakończyły się dopiero około 12:51,
   dlatego odmowa zamknięcia była prawidłowa.
+- 2026-10-20: użytkownik polecił dalej dopracowywać Sonosa w AMC Test, ale nie
+  budować teraz następnego publicznego instalatora. Nowy publiczny kandydat ma
+  powstać dopiero po domknięciu kolejnych funkcji. Zastępuje to przebudowywanie
+  profilu publicznego po każdej małej korekcie.
 
 ## Materiał do dokumentacji użytkownika
 
@@ -44,6 +48,11 @@ logowania”. Po ukończeniu logowania użytkownik wraca do okna i wybiera
 „Sprawdź logowanie”. `Ctrl+F5` nadal oznacza „Głośniki i grupy Sonos”. Gdy konto
 jest połączone, otwiera wybór domu i grupy; gdy konto nie jest gotowe, prowadzi
 do okna konta zamiast kończyć się niejasnym błędem.
+
+Po otwarciu okna konta AMC jawnie wypowiada aktualny stan Sonosa, mimo że fokus
+trafia na przycisk. Gdy `Ctrl+F5` wykryje już połączone konto, mówi „Konto
+Sonos jest połączone. Wczytuję głośniki i grupy”, a następnie otwiera listę.
+Nie uruchamia ponownie logowania i nie wysyła polecenia do głośnika.
 
 AMC nie zna i nie przechowuje sekretu integracji Sonos. Tokeny użytkownika
 pozostają wyłącznie w procesie C# i w istniejącym lokalnym magazynie chronionym
@@ -228,6 +237,8 @@ Kontrakt sprawdzono 2026-10-19 z aktualną oficjalną dokumentacją Sonosa:
   instalacji widziała równoległe, rzeczywiste nagrania, których nie obejmowała
   początkowa kontrola samych plików harmonogramowych. Kolejne bramki muszą więc
   nadal łączyć stan hosta z kontrolą wszystkich jawnych folderów nagrań.
+- Jawne oznajmienie stanu konta z 20 października jest potwierdzone w kodzie i
+  testach, ale nie zostało jeszcze zainstalowane ani odebrane z NVDA.
 
 ## Brama publicznego udostępnienia
 
@@ -255,3 +266,7 @@ Kontrakt sprawdzono 2026-10-19 z aktualną oficjalną dokumentacją Sonosa:
   `2026.10.20-fd5f423117f87c34aff6e9c4def22a985aa307a6-b7475d46`
   w `D:\Projekty Codex\AMC Python` 20 października 2026 o 12:55.
 - Publikacja: brak.
+- Jawna mowa bieżącego stanu kont Spotify i Sonos: commit `39386e90`.
+  **124** testy reprezentatywnych powierzchni interfejsu oraz ukierunkowane
+  zestawy protokołu Spotify i Sonos **2/2** zaliczone; kompilacja Release bez
+  ostrzeżeń i błędów. Instalacji i publikacji nie wykonywano.

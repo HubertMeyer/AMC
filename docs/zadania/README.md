@@ -99,8 +99,9 @@ zmian, wymagający korekty użytkownika:
   Zatwierdzona specyfikacja:
   `D:\Projekty Codex\Accessible Multimedia Controller\AMC13_TIMESHIFT_RADIA_2026-10-18.md`.
   Eksport fragmentów Time Shiftu pozostaje późniejszym rozszerzeniem.
-- `AMC08` — **Kod playlist i dostępne wejście ponownego OAuth są zainstalowane;
-  czekają na świadomy odbiór NVDA i prawdziwego konta**
+- `AMC08` — **Prawdziwe OAuth i dodawanie do playlist zostały potwierdzone
+  przez użytkownika; korekta mowy `Ctrl+F5` i widoczności nowej playlisty pod
+  `Ctrl+P` jest w kodzie i testach, czeka na instalację oraz odbiór NVDA**
   — natywne playlisty
   Spotify w AMC Test: `Ctrl+P`, `Ctrl+Shift+P`, pobranie katalogu raz na
   uruchomienie, natychmiastowa widoczność nowej playlisty i zapamiętanie
@@ -147,7 +148,8 @@ zmian, wymagający korekty użytkownika:
   Zatwierdzona specyfikacja:
   `D:\Projekty Codex\Accessible Multimedia Controller\AMC12_PROFILE_WYDANIA_PUBLICZNEGO_I_TESTOWEGO_2026-10-18.md`.
 - `AMC10` — **W trakcie; broker oraz dostępne okno konta są zainstalowane
-  w AMC Test; dalej potrzebne są domena i odbiór na zewnętrznym koncie** —
+  w AMC Test, a jawna mowa stanu konta jest gotowa w kodzie i testach; dalej
+  potrzebne są domena, instalacja korekty i odbiór na zewnętrznym koncie** —
   działające sterowanie Sonosem i WiiM nie zostało
   przepisane. `Ctrl+F5` wybiera dom i grupę, a przy braku połączenia prowadzi do
   konta zamiast kończyć się błędem. Okno udostępnia rozpoczęcie, jawne

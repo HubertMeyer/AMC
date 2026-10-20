@@ -1,8 +1,9 @@
 # AMC08 — natywne playlisty Spotify
 
-Status: **Kod playlist i dostępne ponowne logowanie konta są zainstalowane w
-AMC Test. Wymagają świadomego odbioru OAuth, NVDA i zapisu na prawdziwym
-koncie.**
+Status: **Użytkownik potwierdził prawdziwe OAuth i skuteczne dodawanie do
+playlist Spotify. Korekta jawnej mowy stanu konta oraz widoczności nowej
+playlisty także pod `Ctrl+P` jest gotowa w źródłach i testach; czeka na
+instalację AMC Test i odbiór NVDA.**
 
 Źródło decyzji: zatwierdzona analiza historyczna tylko do odczytu
 `D:\Projekty Codex\Accessible Multimedia Controller\AMC08_PLAYLISTY_SPOTIFY_2026-10-18.md`.
@@ -11,6 +12,9 @@ koncie.**
 
 - W sesji Spotify `Ctrl+P` otwiera listę natywnych playlist konta Spotify.
   Samo wejście na listę nie obiecuje odtwarzania całej playlisty.
+- Po utworzeniu playlisty w AMC potwierdzony wpis pojawia się od razu zarówno
+  przy następnym `Ctrl+Shift+P`, jak i na liście otwieranej przez `Ctrl+P`.
+  Nie trzeba wykonywać pełnej synchronizacji całej kolekcji Spotify.
 - Na zaznaczonym utworze albo odcinku `Ctrl+Shift+P` otwiera okno „Dodaj do
   playlist Spotify”. Strzałki wybierają playlistę, a Spacja zaznacza lub
   odznacza wiele playlist. Enter wykonuje operację, Escape ją anuluje.
@@ -31,6 +35,10 @@ koncie.**
   przycisk „Zaloguj w przeglądarce” rozpoczyna oficjalne OAuth i prosi między
   innymi o zgodę na prywatne i publiczne playlisty. Hasło podaje się wyłącznie
   na stronie Spotify; AMC nie prosi o przepisywanie kodu.
+- Samo otwarcie konta przez `Ctrl+F5` nie rozpoczyna ponownego logowania. AMC
+  odczytuje bieżący stan i jawnie mówi między innymi, że katalog Spotify jest
+  połączony oraz czy konto odtwarzania jest gotowe. OAuth zaczyna dopiero
+  przycisk „Zaloguj w przeglądarce”.
 - Lista odczytywana przez NVDA zawiera tylko nazwę, widoczność, informację o
   współdzieleniu i właścicielu oraz stan zaznaczenia. Identyfikatory playlist,
   adresy i `snapshot_id` pozostają niewidocznymi danymi modelu.
@@ -46,6 +54,17 @@ koncie.**
   celów nawet przy takich samych nazwach lub identyfikatorach.
 
 ## Uzasadnienie i decyzje
+
+- **Korekta użytkownika z 20 października 2026 zastępuje wcześniejsze
+  ograniczenie „odbiór na prawdziwym koncie niewykonany”.** Użytkownik
+  zalogował się ponownie, potwierdził skuteczne dodanie utworu do utworzonej
+  playlisty na urządzeniu oraz działanie `F5`. Pozostały dwa konkretne braki:
+  stan zalogowania nie był wypowiadany po `Ctrl+F5`, a potwierdzona nowa
+  playlista nie pojawiała się w osobnym widoku `Ctrl+P`.
+- Lista celów dodawania i widok kolekcji są różnymi powierzchniami. Po
+  potwierdzonym utworzeniu host dopisuje teraz tę samą playlistę do bieżącej
+  migawki kolekcji. Nie ufa temu wpisowi jako uprawnieniu do zapisu; właściwe
+  dodawanie nadal ponownie weryfikuje playlistę po stronie dostawcy.
 
 - **Korekta użytkownika z 19 października 2026 zastępuje wcześniejsze
   ustalenie, że `Ctrl+F5` ma być wyłącznie odświeżaniem źródeł.** Historyczny
@@ -182,6 +201,18 @@ koncie.**
   1666 plików przeszła kontrolę manifestu i SHA-256, instalację, osobną
   kontrolę integralności z kodem 0 oraz weryfikację uruchomionego procesu.
 - Nie wykonano automatycznego OAuth ani zapisu na prawdziwym koncie Spotify.
+- 20 października 2026 po ręcznym odbiorze użytkownika: **124 testy**
+  interfejsu Spotify, Sonosa, skrótów, pomocy i palety zaliczone. Obejmują
+  jawne oznajmienie aktualnego stanu konta bez uruchamiania logowania.
+- Kompilacja Release testów protokołu LiteHost: zaliczona, 0 ostrzeżeń i 0
+  błędów. Ukierunkowane zestawy `--spotify-catalog --sonos`: **2/2 zaliczone**.
+  Nowy test potwierdza, że playlista potwierdzona przez Spotify jest od razu
+  widoczna pod `Ctrl+P` i nie ujawnia identyfikatora w etykiecie NVDA.
+- Próba pełnego ProtocolTests w piaskownicy uruchomiła pozostałe zestawy, ale
+  cztery niezwiązane testy zapisu plików zostały zatrzymane przez odmowę
+  dostępu do katalogu tymczasowego. Nie przedstawiono tego wyniku ani jako
+  regresji kodu, ani jako zaliczonej pełnej regresji. Nie wykonywano nowego
+  OAuth ani kolejnej mutacji prawdziwego konta.
 
 ## Znane ograniczenia
 
@@ -218,6 +249,9 @@ koncie.**
   zmianie wymagane jest ponowne uruchomienie albo przyszłe jawne unieważnienie
   cache'u przez przepływ logowania. Sam zapis nadal sprawdza konto i prawa w
   hoście, więc pamięć interfejsu nie może nadać uprawnień do obcej playlisty.
+- Korekta z 20 października jest na razie potwierdzona w kodzie, kompilacji i
+  testach. Nie została jeszcze zainstalowana; ręczny odbiór mowy `Ctrl+F5` i
+  widoku `Ctrl+P` wymaga następnego bezpiecznego uruchomienia AMC Test.
 
 ## Wersja i commit
 
@@ -248,3 +282,7 @@ koncie.**
   `2026.10.19-8093e22adfa9b6abfc72c35c5c7029eaaade88c8-718893c9`;
   manifest, sumy, integralność i uruchomienie zweryfikowane 19 października
   2026. Publikacji nie wykonano.
+- Jawna mowa stanu kont Spotify/Sonos i zgodność nowej playlisty z widokiem
+  `Ctrl+P`: commit `39386e90` — `fix(amc): oznajmiaj konta i synchronizuj
+  playlisty Spotify`. Kod, testy interfejsu i ukierunkowane testy protokołu są
+  zaliczone; instalacji ani publikacji nie wykonano.
