@@ -10,12 +10,10 @@ from .navigation import LibraryView, SessionId
 from .podcast_source import PodcastSource
 from .radio_source import RadioSource, SCOPE_LIBRARY
 from .search_catalog import SearchEntry
-from .tidal_source import (
-    TidalSource,
-    VIEW_FAVORITES,
-    VIEW_LIBRARY,
-    VIEW_PLAYLISTS,
-)
+
+TIDAL_VIEW_LIBRARY = "library"
+TIDAL_VIEW_FAVORITES = "favorites"
+TIDAL_VIEW_PLAYLISTS = "playlists"
 
 
 @dataclass(frozen=True, slots=True)
@@ -32,7 +30,7 @@ class SearchSources:
         library: LibrarySource,
         radio: RadioSource,
         podcasts: PodcastSource,
-        tidal: TidalSource,
+        tidal: object | None,
     ) -> None:
         self.library = library
         self.radio = radio
@@ -87,11 +85,13 @@ class SearchSources:
                 for row in self.podcasts.search_rows()
             ]
         if session_id is SessionId.TIDAL:
+            if self.tidal is None:
+                return []
             results: list[SearchEntry] = []
             for source, target in (
-                (VIEW_LIBRARY, LibraryView.TIDAL_LIBRARY),
-                (VIEW_FAVORITES, LibraryView.TIDAL_FAVORITES),
-                (VIEW_PLAYLISTS, LibraryView.TIDAL_PLAYLISTS),
+                (TIDAL_VIEW_LIBRARY, LibraryView.TIDAL_LIBRARY),
+                (TIDAL_VIEW_FAVORITES, LibraryView.TIDAL_FAVORITES),
+                (TIDAL_VIEW_PLAYLISTS, LibraryView.TIDAL_PLAYLISTS),
             ):
                 result = self.tidal.load_view(source)
                 results.extend(

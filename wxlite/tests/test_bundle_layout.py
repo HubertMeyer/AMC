@@ -21,7 +21,53 @@ def test_python_package_matches_isolated_runtime_app_path():
         target = Path(folder)
         bundle.copy_python_code(target)
         assert (target / "app" / "amc_wx_lite" / "__main__.py").is_file()
+        assert (target / "app" / "amc_wx_lite" / "spotify_source.py").is_file()
+        assert (target / "app" / "amc_wx_lite" / "tidal_source.py").is_file()
         assert not (target / "AMC-wx-Lite.cmd").exists()
+
+
+def test_public_python_package_omits_and_removes_private_service_modules():
+    with tempfile.TemporaryDirectory() as folder:
+        target = Path(folder)
+        package = target / "app" / "amc_wx_lite"
+        package.mkdir(parents=True)
+        for name in bundle.PRIVATE_SERVICE_MODULES:
+            (package / name).write_text("stary prywatny modul", encoding="utf-8")
+
+        copied = bundle.copy_python_code(target, bundle.profile_from_id("public"))
+
+        assert "app/amc_wx_lite/gui.py" in copied
+        for name in bundle.PRIVATE_SERVICE_MODULES:
+            assert not (package / name).exists()
+            assert f"app/amc_wx_lite/{name}" not in copied
+
+
+def test_public_gui_imports_without_private_service_modules():
+    with tempfile.TemporaryDirectory() as folder:
+        target = Path(folder)
+        bundle.copy_python_code(target, bundle.profile_from_id("public"))
+        environment = dict(os.environ)
+        environment["AMC_RELEASE_PROFILE"] = "public"
+        environment["PYTHONPATH"] = str(target / "app")
+
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-c",
+                (
+                    "import amc_wx_lite.gui as gui; "
+                    "assert gui._RELEASE_PROFILE.profile_id == 'public'; "
+                    "assert not hasattr(gui, 'TidalSource'); "
+                    "assert not hasattr(gui, 'SpotifyPlaylistDialog')"
+                ),
+            ],
+            cwd=target,
+            env=environment,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        assert result.returncode == 0, result.stderr or result.stdout
 
 
 def test_bundle_manifest_profile_is_explicit_and_public_is_restricted():
@@ -51,6 +97,19 @@ def test_public_profile_rejects_any_listed_librespot_component():
         assert "Publiczny pakiet AMC" in str(error)
     else:
         raise AssertionError("Publiczny profil nie moze zawierac hosta Librespot")
+
+
+def test_public_profile_rejects_any_listed_private_service_module():
+    public = bundle.profile_from_id("public")
+    for name in bundle.PRIVATE_SERVICE_MODULES:
+        try:
+            bundle.validate_profile_files(public, [f"app/amc_wx_lite/{name}"])
+        except SystemExit as error:
+            assert "Publiczny pakiet AMC" in str(error)
+        else:
+            raise AssertionError(
+                f"Publiczny profil nie moze zawierac prywatnego modulu {name}"
+            )
 
 
 def test_file_integrity_contains_hash_and_exact_size_for_every_file():
@@ -510,6 +569,10 @@ def test_full_public_bundle_omits_librespot_and_has_complete_sizes():
         assert manifest["releaseProfile"] == "public"
         assert "librespotHost" not in manifest
         assert not any("librespot" in relative.casefold() for relative in manifest["files"])
+        assert not any(
+            Path(relative).name in bundle.PRIVATE_SERVICE_MODULES
+            for relative in manifest["files"]
+        )
         assert set(manifest["fileHashes"]) == set(manifest["files"])
         assert set(manifest["fileSizes"]) == set(manifest["files"])
         for relative in manifest["files"]:

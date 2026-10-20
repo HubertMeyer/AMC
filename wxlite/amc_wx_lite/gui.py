@@ -73,6 +73,7 @@ from .command_palette import (
     filter_entries as filter_command_entries,
 )
 from .host_client import HostError, HostUnavailable, LiteHostClient, default_host_path
+from .release_profile import current_profile
 from .item_information import item_properties_text
 from . import nvda_bridge
 from .library_source import LibrarySnapshot, LibrarySource, degradation_notice
@@ -100,12 +101,14 @@ from .playlist_dialog import (
     choices_from_payload as playlist_choices_from_payload,
 )
 from .problem_report_dialog import ProblemReportDialog
-from .spotify_playlist_dialog import (
-    SpotifyPlaylistDialog,
-    SpotifyPlaylistChoice,
-    SpotifyPlaylistPayloadError,
-    choices_from_payload as spotify_playlist_choices_from_payload,
-)
+_RELEASE_PROFILE = current_profile()
+if "session.spotify" in _RELEASE_PROFILE.capabilities:
+    from .spotify_playlist_dialog import (
+        SpotifyPlaylistDialog,
+        SpotifyPlaylistChoice,
+        SpotifyPlaylistPayloadError,
+        choices_from_payload as spotify_playlist_choices_from_payload,
+    )
 from .playback_history import (
     activity_rows as streamer_activity_rows,
     history_rows as streamer_history_rows,
@@ -197,7 +200,6 @@ from .sonos_source import (
     snapshot as sonos_snapshot,
 )
 from .profile_layout import common_data_snapshot_path, resolve_layout
-from .release_profile import current_profile
 from .podcast_source import (
     PAGE_SIZE as PODCAST_PAGE_SIZE,
     PodcastDescription,
@@ -302,28 +304,30 @@ from .radio_recording import (
     station_activity_rows,
 )
 from .state_store import LiteState, Station, StationList, StateStore
-from .spotify_source import (
-    SpotifyContainerPayloadError,
-    account_summary_from_payload as spotify_account_summary_from_payload,
-    container_duration_ticks as spotify_container_duration_ticks,
-    container_result_from_payload as spotify_container_result_from_payload,
-    description_from_payload as spotify_description_from_payload,
-    history_rows as spotify_history_rows,
-    information_text as spotify_information_text,
-    record_history_row as record_spotify_history_row,
-    root_result_from_payload as spotify_root_result_from_payload,
-)
-from .tidal_source import (
-    TidalContainerPayloadError,
-    TidalProfileError,
-    TidalSource,
-    VIEW_FAVORITES as TIDAL_VIEW_FAVORITES,
-    VIEW_LIBRARY as TIDAL_VIEW_LIBRARY,
-    VIEW_PLAYLISTS as TIDAL_VIEW_PLAYLISTS,
-    container_result_from_host,
-    queue_payload as tidal_queue_payload,
-    queue_rows as tidal_queue_rows,
-)
+if "session.spotify" in _RELEASE_PROFILE.capabilities:
+    from .spotify_source import (
+        SpotifyContainerPayloadError,
+        account_summary_from_payload as spotify_account_summary_from_payload,
+        container_duration_ticks as spotify_container_duration_ticks,
+        container_result_from_payload as spotify_container_result_from_payload,
+        description_from_payload as spotify_description_from_payload,
+        history_rows as spotify_history_rows,
+        information_text as spotify_information_text,
+        record_history_row as record_spotify_history_row,
+        root_result_from_payload as spotify_root_result_from_payload,
+    )
+if "session.tidal" in _RELEASE_PROFILE.capabilities:
+    from .tidal_source import (
+        TidalContainerPayloadError,
+        TidalProfileError,
+        TidalSource,
+        VIEW_FAVORITES as TIDAL_VIEW_FAVORITES,
+        VIEW_LIBRARY as TIDAL_VIEW_LIBRARY,
+        VIEW_PLAYLISTS as TIDAL_VIEW_PLAYLISTS,
+        container_result_from_host,
+        queue_payload as tidal_queue_payload,
+        queue_rows as tidal_queue_rows,
+    )
 from .version_info import PRODUCT_NAME, is_main_window_title, window_title
 
 APP_NAME = PRODUCT_NAME
@@ -6057,19 +6061,24 @@ class LiteFrame(wx.Frame):
         # drugiego, konkurencyjnego zegara.
         self.library = LibrarySource()
         self.podcasts = PodcastSource(self.layout)
-        self.tidal = TidalSource(self.layout)
+        private_tidal_enabled = "session.tidal" in _RELEASE_PROFILE.capabilities
+        self.tidal = TidalSource(self.layout) if private_tidal_enabled else None
         self.search_sources = SearchSources(
             self.library, self.radio, self.podcasts, self.tidal
         )
-        self._tidal_queue_rows = list(tidal_queue_rows(state.tidal_queue_items))
-        self._tidal_effective_sort_modes = {
-            scope: state.tidal_sort_modes.get(scope, SORT_ADDED_NEWEST)
-            for scope in (
-                TIDAL_VIEW_LIBRARY,
-                TIDAL_VIEW_FAVORITES,
-                TIDAL_VIEW_PLAYLISTS,
-            )
-        }
+        if private_tidal_enabled:
+            self._tidal_queue_rows = list(tidal_queue_rows(state.tidal_queue_items))
+            self._tidal_effective_sort_modes = {
+                scope: state.tidal_sort_modes.get(scope, SORT_ADDED_NEWEST)
+                for scope in (
+                    TIDAL_VIEW_LIBRARY,
+                    TIDAL_VIEW_FAVORITES,
+                    TIDAL_VIEW_PLAYLISTS,
+                )
+            }
+        else:
+            self._tidal_queue_rows = []
+            self._tidal_effective_sort_modes = {}
         self._spotify_effective_sort_modes = {
             scope: state.spotify_sort_modes.get(scope, SORT_ADDED_NEWEST)
             for scope in (

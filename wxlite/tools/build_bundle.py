@@ -80,6 +80,11 @@ LIBRESPOT_REVISION = "d36f9f1907e8cc9d68a93f8ebc6b627b1bf7267d"
 LIBRESPOT_RUN_URL = (
     "https://github.com/michalkasperczak/AMC/actions/runs/35381167099"
 )
+PRIVATE_SERVICE_MODULES = {
+    "spotify_playlist_dialog.py": "session.spotify",
+    "spotify_source.py": "session.spotify",
+    "tidal_source.py": "session.tidal",
+}
 
 
 def sha256(path: Path) -> str:
@@ -162,11 +167,32 @@ def build_label(
     return f"{label}-robocza" if dirty else label
 
 
-def copy_python_code(target: Path) -> list[str]:
+def copy_python_code(
+    target: Path,
+    profile: ReleaseProfile | None = None,
+) -> list[str]:
+    """Skopiuj wyłącznie moduły dozwolone przez profil wydania.
+
+    Pełny AMC Test zachowuje wszystkie moduły. Publiczny AMC nie dostaje kodu
+    prywatnych usług tylko dlatego, że wspólne GUI umie go obsłużyć. Przy
+    odświeżeniu istniejącej paczki usuwamy dokładnie znane, niedozwolone pliki,
+    aby stary kandydat nie zachował ich przez przypadek.
+    """
+
+    selected_profile = profile or profile_from_id(TEST_PROFILE_ID)
     package = target / "app" / "amc_wx_lite"
     package.mkdir(parents=True, exist_ok=True)
     copied = []
     for source in sorted((WXLITE / "amc_wx_lite").glob("*.py")):
+        required_capability = PRIVATE_SERVICE_MODULES.get(source.name)
+        if (
+            required_capability is not None
+            and required_capability not in selected_profile.capabilities
+        ):
+            stale = package / source.name
+            if stale.is_file():
+                stale.unlink()
+            continue
         shutil.copy2(source, package / source.name)
         copied.append(f"app/amc_wx_lite/{source.name}")
     # AMC-wx-Lite.cmd zostaje w repo jako narzedzie deweloperskie. Nie wolno
@@ -436,17 +462,30 @@ def profile_allows_librespot(profile: ReleaseProfile) -> bool:
 def validate_profile_files(profile: ReleaseProfile, files: list[str]) -> None:
     """Odmow niejawnego pozostawienia prywatnej zaleznosci w publicznej paczce."""
 
-    if profile_allows_librespot(profile):
-        return
+    forbidden_names = {
+        name.casefold()
+        for name, capability in PRIVATE_SERVICE_MODULES.items()
+        if capability not in profile.capabilities
+    }
     forbidden = [
         relative
         for relative in files
-        if "/librespothost/" in ("/" + relative.replace("\\", "/")).casefold()
-        or Path(relative).name.casefold() == LIBRESPOT_HOST_BINARY.casefold()
+        if (
+            (
+                not profile_allows_librespot(profile)
+                and (
+                    "/librespothost/"
+                    in ("/" + relative.replace("\\", "/")).casefold()
+                    or Path(relative).name.casefold()
+                    == LIBRESPOT_HOST_BINARY.casefold()
+                )
+            )
+            or Path(relative).name.casefold() in forbidden_names
+        )
     ]
     if forbidden:
         raise SystemExit(
-            "Publiczny pakiet AMC zawiera skladniki Spotify Librespot. "
+            "Publiczny pakiet AMC zawiera niedozwolone składniki prywatnych usług. "
             "Wykonaj pelne czyste zlozenie profilu publicznego; znaleziono: "
             + ", ".join(forbidden[:5])
         )
@@ -559,8 +598,7 @@ def main() -> int:
         profile = profile_from_id(existing_profile_id)
         manifest.update(profile.manifest_fields())
         files = list(manifest.get("files") or [])
-        validate_profile_files(profile, files)
-        files += copy_python_code(target)
+        files += copy_python_code(target, profile)
         files += copy_launcher(target, args.launcher)
         files += copy_updater(target, args.updater)
         source_revision, source_dirty = git_source_identity()
@@ -570,6 +608,7 @@ def main() -> int:
             for relative in dict.fromkeys(files)
             if (target / Path(relative)).is_file()
         ]
+        validate_profile_files(profile, manifest["files"])
         add_file_integrity(manifest, target)
         manifest["sourceRevision"] = source_revision
         manifest["sourceDirty"] = source_dirty
@@ -612,7 +651,7 @@ def main() -> int:
     source_revision, source_dirty = git_source_identity()
     manifest: dict = initial_manifest(profile, source_revision, source_dirty)
 
-    manifest["files"] += copy_python_code(target)
+    manifest["files"] += copy_python_code(target, profile)
     manifest["files"] += copy_launcher(target, args.launcher)
     manifest["files"] += copy_updater(target, args.updater)
     host_files, host_hashes = copy_host(target, args.host, args.host_subdir)
