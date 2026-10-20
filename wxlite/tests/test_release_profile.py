@@ -30,7 +30,7 @@ from amc_wx_lite.session_order import (
     manager_labels,
     normalize,
 )
-from amc_wx_lite.shortcuts import Action
+from amc_wx_lite.shortcuts import Action, Chord, resolve
 from amc_wx_lite.state_store import default_state_dir
 
 
@@ -77,6 +77,19 @@ def test_public_manifest_exposes_only_approved_sessions_and_test_has_all() -> No
     assert "spotify" not in public_text
     assert "tidal" not in public_text
     assert "sonos" not in public_text
+
+
+def test_public_profile_keeps_presets_and_radio_timeshift_navigation() -> None:
+    """Wycięcie usług prywatnych nie może wyciąć wspólnego sterowania."""
+
+    assert "radio" in PUBLIC_PROFILE.session_ids
+    assert "recording" in PUBLIC_PROFILE.capabilities
+    assert (
+        resolve(Chord("Ctrl+Shift+0"), player_view=False, radio_session=False)
+        is Action.PRESET_10
+    )
+    assert resolve(Chord("End"), player_view=True, radio_session=True) is Action.RADIO_JUMP_LIVE
+    assert resolve(Chord("5"), player_view=True, radio_session=True) is Action.SEEK_PERCENT_50
 
 
 def test_python_capabilities_match_closed_launcher_contract() -> None:

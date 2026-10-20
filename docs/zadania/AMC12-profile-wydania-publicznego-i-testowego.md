@@ -395,6 +395,15 @@ skrótów.
   `58caaa28b367a63f049c0a86ada8061e2940992468195736abce702a402d6680`;
   niezależny odczyt pliku i plik integralności podają tę samą wartość.
   Instalatora nie uruchamiano, nie instalowano i nie publikowano.
+- Korekta użytkownika z 20.10.2026: pierwsze publiczne AMC ma zachować
+  wspólne sterowanie obecnego AMC Test, w szczególności `Ctrl+Shift+0` dla
+  presetu 10, `End` wracający na żywo w odtwarzaczu Radia oraz cyfry `0`–`9`
+  skaczące po buforze Time Shift. Wycięcie Spotify, TIDAL i Sonosa nie może
+  zmienić tych funkcji.
+- Ukierunkowany test profilu publicznego i transportu: **60 zaliczonych**.
+  Jawnie potwierdzono obecność sesji Radia i wspólnych możliwości oraz
+  rozwiązywanie `Ctrl+Shift+0`, `End` i skoku `5` do 50% bufora. Obejmuje to
+  kod i testy, jeszcze nie ręczny odbiór zainstalowanego `alpha.425`.
 
 ## Znane ograniczenia
 
@@ -554,3 +563,6 @@ skrótów.
   `9893de59` — `fix(amc12): rozdziel instancje wx profili`; 24 testy
   ukierunkowane zaliczone. Nowy build, instalacja i uruchomienie pozostają do
   wykonania, więc sam commit nie jest jeszcze dowodem naprawionej instalacji.
+- Ochrona wspólnych skrótów w profilu publicznym: commit zostanie wpisany po
+  lokalnym zatwierdzeniu testu. Docelowa rewizja czystej linii źródeł będzie
+  odświeżona przed budową `alpha.425`.
