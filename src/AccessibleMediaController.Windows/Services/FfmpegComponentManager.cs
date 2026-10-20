@@ -106,6 +106,10 @@ internal static class FfmpegComponentManager
         await UpdateGate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
+            using var processGate = await ComponentUpdateProcessGate.EnterAsync(
+                    "ffmpeg",
+                    cancellationToken)
+                .ConfigureAwait(false);
             Directory.CreateDirectory(ComponentRoot);
             CleanupAbandonedStagingDirectories();
             progress?.Report(0.01d);

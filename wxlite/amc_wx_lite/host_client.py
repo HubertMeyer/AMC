@@ -1348,6 +1348,13 @@ class LiteHostClient:
         """Stan migawki bez modyfikowania zadnego profilu."""
         return self.call("profile.commonDataStatus", timeout=60.0)
 
+    def update_media_components(self, *, automatic: bool = False) -> Any:
+        """Sprawdź wspólne, zweryfikowane składniki FFmpeg i yt-dlp."""
+        return self.call(
+            "components.updateAutomatic" if automatic else "components.update",
+            timeout=1_200.0,
+        )
+
     def import_common_data_snapshot(self, *, accept_test_data: bool = False) -> Any:
         """Publiczne AMC: odswiez dane; konflikt wymaga jawnej decyzji."""
         return self.call(

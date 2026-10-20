@@ -6406,6 +6406,7 @@ class LiteFrame(wx.Frame):
         self._radio_search_action_pending = False
         self._podcast_opml_pending = False
         self._playlist_membership_pending = False
+        self._component_update_pending = False
         # Zdalne listy wyboru używają jednego mechanizmu, ale osobnych partycji
         # usługi i konta. Cache przyspiesza dialog; nie zatwierdza zapisu.
         self._service_destination_cache = ServiceDestinationCache()
@@ -9219,6 +9220,10 @@ class LiteFrame(wx.Frame):
             # Jeden obiekt dla obu sesji: to ten sam host i ten sam cache.
             self._collation = collation
             self._load_initial_content()
+            # Oba profile korzystają z tych samych zweryfikowanych binariów,
+            # ale z własnej polityki profilu. Kontrola działa w tle i nie
+            # blokuje listy, transportu ani nagrywania.
+            self._update_media_components(automatic=True)
             if self.options.startup_target == "SessionList":
                 # Lista jest zwykłym, natywnym dialogiem i powstaje dopiero
                 # po gotowości hosta. Dzięki temu Enter może od razu przejść
@@ -11714,6 +11719,8 @@ class LiteFrame(wx.Frame):
             self._show_help()
         elif action is Action.KEYBOARD_HELP:
             self._toggle_keyboard_help()
+        elif action is Action.UPDATE_MEDIA_COMPONENTS:
+            self._update_media_components()
         elif action is Action.REPORT_PROBLEM:
             self._show_problem_report()
         elif action is Action.VERSION_INFO:
@@ -11724,6 +11731,62 @@ class LiteFrame(wx.Frame):
                 self,
             )
             self._restore_focus_after_dialog()
+
+    def _update_media_components(self, *, automatic: bool = False) -> None:
+        if self._component_update_pending:
+            if not automatic:
+                self.announcer.say("Aktualizacja składników już trwa")
+            return
+        client = self.client
+        if client is None or not client.alive:
+            if not automatic:
+                self.announcer.say(
+                    "Silnik nie działa, nie mogę zaktualizować składników"
+                )
+            return
+
+        self._component_update_pending = True
+        if not automatic:
+            self.announcer.say("Sprawdzanie składników FFmpeg i yt-dlp")
+
+        def work() -> object:
+            return client.update_media_components(automatic=automatic)
+
+        def done(payload: object) -> None:
+            self._component_update_pending = False
+            data = payload if isinstance(payload, dict) else {}
+            performed = bool(data.get("performed"))
+            success = bool(data.get("success"))
+            changed = bool(data.get("changed"))
+            complete = bool(data.get("complete"))
+            message = str(data.get("message") or "").strip()
+            if automatic and not performed:
+                return
+            if automatic and success and complete and not changed:
+                return
+            if automatic and success and changed:
+                lead = "Zaktualizowano składniki multimedialne"
+            elif success and complete:
+                lead = "Składniki multimedialne są gotowe"
+            elif success:
+                lead = "Składniki multimedialne nie są jeszcze kompletne"
+            else:
+                lead = "Nie udało się bezpiecznie zaktualizować składników"
+            self.announcer.say(f"{lead}. {message}" if message else lead)
+
+        def failed(error: Exception) -> None:
+            self._component_update_pending = False
+            _append_frontend_log(
+                self.store,
+                "Aktualizacja składników nie powiodła się: "
+                f"{type(error).__name__}: {error}",
+            )
+            if not automatic:
+                self.announcer.say(
+                    f"Nie udało się zaktualizować składników: {error}"
+                )
+
+        self.runner.submit("component-update", work, done, failed)
 
     @staticmethod
     def _common_data_summary(payload: object) -> str:

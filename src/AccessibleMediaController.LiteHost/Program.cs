@@ -103,6 +103,8 @@ internal static class Program
         using var spotifyCatalog = OpenSpotifyCatalog(args);
         using var spotifyPlayback = new LiteSpotifyPlaybackCoordinator();
         using var wiim = OpenWiiM(args);
+        var componentUpdates = new LiteComponentUpdateCoordinator(
+            ReadArgumentPath(args, "--state-json"));
         using var sonos = new LiteSonosCoordinator(
             new LiteSonosAccountOwner(),
             ReadArgumentPath(args, "--state-json"),
@@ -127,6 +129,7 @@ internal static class Program
             handlers.Build(), StringComparer.Ordinal);
         foreach (var entry in nvdaRelay.Handlers()) registeredHandlers.Add(entry.Key, entry.Value);
         foreach (var entry in nvdaBridge.Handlers()) registeredHandlers.Add(entry.Key, entry.Value);
+        foreach (var entry in componentUpdates.Handlers()) registeredHandlers.Add(entry.Key, entry.Value);
         // JAWNY opt-in: poza kolejke wychodza tylko operacje, ktore moga dlugo
         // czytac/dekodowac plik: informacja pod lewa strzalka oraz eksport
         // zaznaczonego fragmentu. Transport nadal pozostaje responsywny, a
@@ -136,6 +139,10 @@ internal static class Program
             concurrentOperations:
             [
                 LiteQuickInformation.Operation,
+                // Aktualizacja FFmpeg może pobrać i zweryfikować duży pakiet.
+                // Nie wolno jej stawiać przed pauzą, nagrywaniem ani statusem.
+                LiteComponentUpdateCoordinator.UpdateOperation,
+                LiteComponentUpdateCoordinator.AutomaticOperation,
                 // Eksport moze trwac dlugo. Odtwarzanie, pauza i status nie
                 // moga na ten czas utknac za dekoderem/FFmpeg.
                 LiteAudioClipOperations.ExportOperation,

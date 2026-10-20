@@ -104,6 +104,10 @@ internal static class YtDlpComponentManager
         await UpdateGate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
+            using var processGate = await ComponentUpdateProcessGate.EnterAsync(
+                    "yt-dlp",
+                    cancellationToken)
+                .ConfigureAwait(false);
             Directory.CreateDirectory(ComponentRoot);
             CleanupAbandonedStagingDirectories();
             progress?.Report(0.01d);

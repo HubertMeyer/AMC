@@ -1538,6 +1538,10 @@ def build_menus(session_order: object = None) -> tuple[Menu, ...]:
                 checkable=True,
             ),
             SEPARATOR,
+            MenuItem(
+                "Sprawdź i zaktualizuj składniki: FFmpeg i &yt-dlp",
+                Action.UPDATE_MEDIA_COMPONENTS,
+            ),
             MenuItem("Zgłoś &błąd lub sugestię…", Action.REPORT_PROBLEM),
             MenuItem("&Wersja programu", Action.VERSION_INFO),
         ),

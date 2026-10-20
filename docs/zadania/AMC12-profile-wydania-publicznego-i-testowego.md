@@ -4,9 +4,10 @@
 
 **W trakcie — fundament profili, rozdzielenie uruchamiacza i aktualizatora,
 kontrolowana migawka AMC Test → AMC, publiczne pakowanie i instalator są gotowe.
-Wariant ochronny przeszedł odizolowaną instalację i odinstalowanie. Końcowa
-paczka bez prywatnych modułów usług oraz lokalny instalator są zweryfikowane,
-ale tego wariantu nie zainstalowano ponownie ani nie opublikowano.**
+Do obu profili dodano wspólną, weryfikowaną aktualizację FFmpeg i yt-dlp oraz
+ręczne polecenie dostępne w menu, pomocy i palecie. Kod i kompilacja testowa są
+potwierdzone, ale nowej paczki, instalatora i rzeczywistego pobrania składników
+jeszcze nie wykonano. Poprzedni kandydat nie jest pełnym kandydatem wydania.**
 
 Źródłowa, zatwierdzona specyfikacja pozostaje w pliku tylko do odczytu:
 `D:\Projekty Codex\Accessible Multimedia Controller\AMC12_PROFILE_WYDANIA_PUBLICZNEGO_I_TESTOWEGO_2026-10-18.md`.
@@ -94,6 +95,28 @@ zatrzymana; program trzeba zamknąć zwykłą drogą, która chroni nagrywanie.
 Paczka zawiera prywatny runtime Pythona oraz samowystarczalne procesy .NET i
 nie pobiera środowiska uruchomieniowego podczas instalacji.
 
+Po pierwszym uruchomieniu zarówno AMC Test, jak i publiczny AMC sprawdzają w
+tle wymagane składniki multimedialne FFmpeg i yt-dlp. Świeży profil domyślnie
+pobiera je z oficjalnych, przypiętych źródeł, porównuje sumę SHA-256 podaną
+przez dostawcę, sprawdza uruchomienie programu i dopiero wtedy atomowo uaktywnia
+nową wersję. Następna automatyczna kontrola następuje najwcześniej po 24
+godzinach. Poprzednia działająca wersja pozostaje aktywna, gdy pobranie,
+kontrola sumy albo uruchomienie nowej wersji nie powiedzie się.
+
+W menu Pomoc, pełnej pomocy i palecie `Ctrl+Shift+K` znajduje się polecenie
+„Sprawdź i zaktualizuj składniki: FFmpeg i yt-dlp”. Nie ma ono osobnego skrótu.
+Po ręcznym uruchomieniu NVDA najpierw mówi „Sprawdzanie składników FFmpeg i
+yt-dlp”, a na końcu podaje jeden wynik: gotowość, niepełny stan albo konkretny
+błąd bez ścieżek technicznych. Automatyczna kontrola pozostaje cicha, gdy nic
+nie zmieniła; ogłasza dopiero zainstalowanie składników albo problem wymagający
+uwagi.
+
+Binaria FFmpeg i yt-dlp są wspólne dla obu profili, ponieważ są identycznymi,
+bezstanowymi narzędziami multimedialnymi, a nie danymi użytkownika. Ustawienia
+automatycznego sprawdzania pozostają osobne. Międzyprocesowa bramka zapobiega
+jednoczesnej podmianie tego samego składnika przez AMC i AMC Test. Współdzielenie
+nie obejmuje ustawień, baz, nagrań, logów ani poświadczeń.
+
 Skrót na pulpicie jest dobrowolnym, domyślnie wyłączonym zadaniem instalatora.
 Użytkownik może też zaznaczyć „Nie twórz folderu w menu Start”. Tryb
 administracyjny `/NOICONS` ma to samo znaczenie i nie tworzy żadnego z tych
@@ -101,6 +124,24 @@ skrótów.
 
 ## Uzasadnienie i decyzje
 
+- **Korekta użytkownika z 20 października 2026:** instalator i aktualizator
+  obu profili — AMC Test i publicznego AMC — mają obejmować również wszystkie
+  wymagane biblioteki i składniki potrzebne do działania. Zastępuje to
+  wcześniejszy, zbyt wąski opis „pełnej integralności”, który potwierdzał tylko
+  pliki zawarte w paczce, mimo że FFmpeg i yt-dlp pozostawały poza nią bez
+  podłączonego aktualizatora w nowym interfejsie. Kandydat wydania nie może być
+  odtąd nazwany kompletnym bez testu obu warstw: manifestu paczki oraz
+  zarządzanych składników multimedialnych.
+- Składniki wbudowane — prywatny Python, samowystarczalne procesy .NET i
+  biblioteki paczki — są przypięte do wydania i objęte jego manifestem rozmiaru
+  oraz SHA-256. FFmpeg i yt-dlp mają niezależny cykl aktualizacji, dlatego są
+  pobierane przez istniejące menedżery AMC, weryfikowane sumą dostawcy i
+  aktywowane atomowo. Nie udajemy, że suma instalatora obejmuje plik pobrany
+  później z sieci.
+- Automatyczna kontrola zachowuje dotychczasową politykę ustawień AMC:
+  `CheckAutomatically` i `DownloadAutomatically`, z bezpiecznymi wartościami
+  włączonymi dla świeżego profilu. Ręczne polecenie zawsze próbuje pobrać
+  brakującą lub nowszą wersję i nie zmienia ustawień profilu.
 - **Korekta użytkownika z 20 października 2026:** pierwszy publiczny instalator
   ma zawierać wszystkie zatwierdzone wspólne poprawki bieżącego AMC Test,
   w tym `Ctrl+Shift+0`, `End` oraz skoki procentowe Time Shiftu, ale nie może
@@ -217,6 +258,16 @@ skrótów.
 - `wxlite/amc_wx_lite/host_client.py`
 - `wxlite/amc_wx_lite/menu_model.py`
 - `wxlite/amc_wx_lite/shortcuts.py`
+- `src/AccessibleMediaController.LiteHost/LiteComponentUpdateCoordinator.cs`
+- `src/AccessibleMediaController.LiteHost/Protocol/LiteComponentUpdatePolicy.cs`
+- `src/AccessibleMediaController.LiteHost/Program.cs`
+- `src/AccessibleMediaController.LiteHost/AccessibleMediaController.LiteHost.csproj`
+- `src/AccessibleMediaController.Windows/Services/ComponentUpdateProcessGate.cs`
+- `src/AccessibleMediaController.Windows/Services/FfmpegComponentManager.cs`
+- `src/AccessibleMediaController.Windows/Services/YtDlpComponentManager.cs`
+- `tests/AccessibleMediaController.LiteHost.ProtocolTests/ComponentUpdatePolicyTests.cs`
+- `tests/AccessibleMediaController.LiteHost.ProtocolTests/Program.cs`
+- `wxlite/tests/test_component_updates.py`
 - `wxlite/tests/test_host_client.py`
 - `tests/AccessibleMediaController.Core.SmokeTests/CommonDataSnapshotTests.cs`
 - `tests/AccessibleMediaController.Core.SmokeTests/InstallerOfflineContractTests.cs`
@@ -228,6 +279,32 @@ skrótów.
 - `docs/zadania/AMC12-profile-wydania-publicznego-i-testowego.md`
 
 ## Testy i wynik
+
+### Wspólna aktualizacja składników obu profili — 20 października 2026
+
+- 57 ukierunkowanych testów Python obejmujących nowe polecenie, menu Pomoc,
+  pełną pomoc, paletę wszystkich sesji, wykonanie w tle, pojedynczy komunikat
+  końcowy i cichą aktualną kontrolę automatyczną — zaliczone.
+- Test protokołu `--component-updates`: wartości domyślne świeżej instalacji,
+  osobne wybory profilu, brak zapisu przy odczycie i granica 24 godzin —
+  zaliczone.
+- Kompilacja Debug `AccessibleMediaController.LiteHost`: zaliczona bez
+  ostrzeżeń.
+- Kompilacja Debug projektu Windows i jego testów dymnych, które korzystają z
+  tych samych menedżerów FFmpeg oraz yt-dlp: zaliczona bez ostrzeżeń. Pierwsza
+  próba w ograniczonym środowisku zakończyła się przed kompilacją bez
+  diagnostyki; powtórzenie poza tym ograniczeniem zbudowało oba projekty.
+- Odczyt rzeczywistej operacji `components.status` ze skompilowanego hosta:
+  odpowiedź poprawna i użytkowa; wykazała brak obu zarządzanych składników na
+  tym komputerze. Nie wykonywano pobierania ani modyfikacji sieciowej.
+- Próba pełnego pomocniczego runnera Python wykonała i zaliczyła 58 testów z
+  wybranych modułów, ale sam runner zakończył się błędem importu pięciu innych
+  modułów, ponieważ prywatny runtime nie zawiera pakietu `pytest`. Nie jest to
+  zaliczenie pełnej regresji ani błąd nowej funkcji; testy ukierunkowane
+  uruchomiono następnie bez importowania obcych modułów.
+- Nie budowano paczki Release, instalatora ani nie instalowano AMC. Nie
+  uruchamiano sieciowej aktualizacji FFmpeg lub yt-dlp i niczego nie
+  publikowano.
 
 - Testy profilu, kolejności sesji i manifestu paczki: **35 zaliczonych**.
 - Rozszerzona regresja profilu, magazynów, menu, pomocy i palety:
@@ -411,6 +488,17 @@ skrótów.
   pozostały czyste. To nadal test kodu, nie kompilacja ani instalacja.
 
 ## Znane ograniczenia
+
+- Pełny odbiór wymaga jeszcze kontrolowanego pobrania obu składników,
+  potwierdzenia ich wersji i sum, ponownej budowy obu paczek, instalacji AMC
+  Test oraz równoległej instalacji publicznego AMC. Do tego czasu kod jest
+  skompilowany, lecz żaden instalator nie jest jeszcze dowodem kompletnej
+  instalacji po tej korekcie.
+- Pierwsza instalacja offline uruchomi podstawowy interfejs i funkcje
+  niewymagające tych narzędzi, ale nie pobierze FFmpeg ani yt-dlp bez sieci.
+  Pełny instalator całkowicie offline wymagałby świadomego dołączenia dużego
+  pakietu FFmpeg wraz z osobnym przeglądem licencji i rozmiaru; nie jest to
+  obecnie deklarowane zachowanie.
 
 - Publiczne pakowanie usuwa dedykowany binarny host Librespot i trzy moduły
   interfejsu prywatnych usług. Wspólny samowystarczalny host .NET nadal powstaje

@@ -69,6 +69,8 @@
              Link="Engine\FfmpegLocalAudioWaveStream.cs" />
     <Compile Include="..\AccessibleMediaController.Windows\Services\FfmpegComponentManager.cs"
              Link="Engine\FfmpegComponentManager.cs" />
+    <Compile Include="..\AccessibleMediaController.Windows\Services\ComponentUpdateProcessGate.cs"
+             Link="Engine\ComponentUpdateProcessGate.cs" />
     <Compile Include="..\AccessibleMediaController.Windows\Services\ExternalToolProcess.cs"
              Link="Engine\ExternalToolProcess.cs" />
     <Compile Include="..\AccessibleMediaController.Windows\Services\YouTubeSourceResolver.cs"

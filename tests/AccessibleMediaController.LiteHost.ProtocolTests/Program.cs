@@ -8,6 +8,7 @@ internal static class Program
         ("--dispatch", DispatchLoopTests.Run),
         ("--nvda-relay", NvdaRelayTests.Run),
         ("--args", ArgumentReadingTests.Run),
+        ("--component-updates", ComponentUpdatePolicyTests.Run),
         ("--audio", AudioConfigurationTests.Run),
         ("--session-options", SessionOptionsPayloadTests.Run),
         ("--queue", QueueCoordinatorTests.Run),

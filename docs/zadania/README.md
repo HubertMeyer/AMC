@@ -144,8 +144,12 @@ zmian, wymagający korekty użytkownika:
   ukierunkowane są zielone. Kandydat `alpha.423` został zbudowany,
   zainstalowany obok AMC Test i ujawnił wspólną dodatkową blokadę wxPython:
   osobny publiczny host nie wystartował. Przyczynę poprawiono w `9893de59`,
-  testy ukierunkowane są zielone, a kandydat zastępczy czeka na budowę i
-  rzeczywistą próbę dwóch hostów. Niczego nie opublikowano** —
+  testy ukierunkowane są zielone. Korekta z 20.10.2026 rozszerza obowiązek
+  kompletności obu profili o FFmpeg i yt-dlp: wspólny, atomowy aktualizator,
+  kontrola dostawcy oraz polecenie w menu, pomocy i palecie są gotowe w kodzie,
+  testach i kompilacji Debug. Kandydat zastępczy czeka teraz na sieciowy odbiór
+  składników, budowę obu paczek i rzeczywistą próbę dwóch hostów; wcześniejszy
+  instalator nie jest pełnym kandydatem. Niczego nie opublikowano** —
   jeden kod, jawny manifest możliwości, osobne katalogi, blokady, logi i kanały
   AMC Test oraz publicznego AMC. Bieżący zapis realizacji:
   [AMC12-profile-wydania-publicznego-i-testowego.md](AMC12-profile-wydania-publicznego-i-testowego.md).
