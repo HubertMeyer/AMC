@@ -164,6 +164,15 @@ Kontrakt sprawdzono 2026-10-19 z aktualną oficjalną dokumentacją Sonosa:
   `30e691e3726e09c689bd4df8896ef4b4fcd8c61c900feb215d6615d11f7cb2ae`.
   Ponieważ źródła były w trakcie pracy, manifest uczciwie oznaczył go jako
   `dirty`; nie jest to paczka do wdrożenia ani publikacji.
+- Po zapisaniu zmian zbudowano czysty następca przeznaczony do późniejszego
+  uruchomienia na Hermesie:
+  `.test-output/sonos-broker/AMC-Sonos-Broker-0.1.0-alpha.422-9431fd8d2619.zip`.
+  Archiwum ma 30 029 bajtów i SHA-256
+  `388f5e7a1dd31f8cd8b2c609c2096a641571a528ca6c8fe20569e2f3359c8660`.
+  Manifest wskazuje czysty commit
+  `9431fd8d2619a1c267299e91b70f89637980ba40`, .NET 8, cztery pliki
+  kontrolowane i pięć plików razem z manifestem. Sumę archiwum obliczono
+  ponownie niezależnie. Pakiet nie został wdrożony ani uruchomiony.
 - Nie wykonano instalacji, publikacji, logowania ani wdrożenia publicznego.
 - `python -m compileall -q wxlite/amc_wx_lite` — sukces.
 - `dotnet build src/AccessibleMediaController.LiteHost/AccessibleMediaController.LiteHost.csproj --no-restore`
@@ -280,3 +289,8 @@ Kontrakt sprawdzono 2026-10-19 z aktualną oficjalną dokumentacją Sonosa:
   **124** testy reprezentatywnych powierzchni interfejsu oraz ukierunkowane
   zestawy protokołu Spotify i Sonos **2/2** zaliczone; kompilacja Release bez
   ostrzeżeń i błędów. Instalacji i publikacji nie wykonywano.
+- Czysty lokalny pakiet brokera do późniejszego uruchomienia na Hermesie:
+  źródło `9431fd8d`, ZIP 30 029 bajtów, SHA-256
+  `388f5e7a1dd31f8cd8b2c609c2096a641571a528ca6c8fe20569e2f3359c8660`.
+  Budowa i integralność są potwierdzone; wdrożenia, konfiguracji sekretów,
+  logowania i publikacji nie wykonywano.
