@@ -315,18 +315,18 @@ Historyczny projekt został użyty tylko jako materiał do odczytu.
 
 - Po testach doprecyzowania nazw usunięto pusty, utworzony wyłącznie dla tego
   przebiegu katalog
-  `C:\Users\micha\Documents\Codex\2026-10-18\ma\.amc-temp-ctrl-f5-labels`.
+  `C:\Users\<użytkownik>\Documents\Codex\2026-10-18\ma\.amc-temp-ctrl-f5-labels`.
   Nie zawierał plików ani podkatalogów, więc odzyskane miejsce wyniosło 0 B;
   usunięcie nie objęło danych użytkownika ani zastanych artefaktów projektu.
 - Po testach tej korekty usunięto wyłącznie utworzony przez nią katalog
-  `C:\Users\micha\Documents\Codex\2026-10-18\ma\.amc-temp-ctrl-f5`:
+  `C:\Users\<użytkownik>\Documents\Codex\2026-10-18\ma\.amc-temp-ctrl-f5`:
   283 odtwarzalne pliki testowe, około 0,39 MB. Usunięcie jest lokalnie
   nieodwracalne, lecz nie obejmowało źródeł ani danych użytkownika.
 - Zachowano sprawdzoną paczkę kandydującą w projektowym `.test-output`, bo
   instalacja nie została ukończona. Nie usuwano zastanych `.test-output` ani
   `.test-tmp` i nie traktowano ich jako śmieci bez potwierdzenia pochodzenia.
 - Po potwierdzonej instalacji usunięto wyłącznie katalog roboczy etapu
-  `C:\Users\micha\Documents\Codex\2026-10-18\ma\work\amc09` (27 plików,
+  `C:\Users\<użytkownik>\Documents\Codex\2026-10-18\ma\work\amc09` (27 plików,
   około 1,6 MB) oraz odtwarzalne katalogi `bin\Release` trzech budowanych
   projektów pod
   `D:\Projekty Codex\AMC - integracja wxPython\src` (157 plików, około
@@ -340,7 +340,7 @@ Historyczny projekt został użyty tylko jako materiał do odczytu.
   kwit oraz jedyną zweryfikowaną paczkę odbiorczą w `.test-output`. Nie
   usunięto źródeł, `.git`, ustawień, poświadczeń, nagrań ani pobrań.
 - Pomocniczy katalog zapisu tego kwitu
-  `C:\Users\micha\Documents\Codex\2026-10-18\ma\work\amc09-docs`
+  `C:\Users\<użytkownik>\Documents\Codex\2026-10-18\ma\work\amc09-docs`
   zawierał jeden plik Markdown (około 8,7 KB) i również został usunięty.
 - Po zweryfikowaniu nowej instalacji usunięto dokładnie zastąpionego kandydata
   `AMC-Python-next-2026.10.19-8f1dad15c1af78d25ebc074f0f571fac8bb18cdd-0cfb4e32`

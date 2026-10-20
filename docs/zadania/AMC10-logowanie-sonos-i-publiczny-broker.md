@@ -414,7 +414,7 @@ Kontrakt sprawdzono 2026-10-19 z aktualną oficjalną dokumentacją Sonosa:
   `includesSecrets=false`; niezależne ponowne obliczenie rozmiarów i sum nie
   wykazało rozbieżności. ZIP rozpakowano próbnie i ponownie zweryfikowano.
 - Audyt historycznego magazynu wykazał plik
-  `C:\Users\micha\AppData\Local\AccessibleMediaController\credentials\sonos.bin`
+  `%LOCALAPPDATA%\AccessibleMediaController\credentials\sonos.bin`
   o rozmiarze 518 bajtów, zmieniony 19 października 2026 o 18:27 czasu
   lokalnego. Kontrolowany odczyt przez DPAPI bieżącego użytkownika nie wypisał
   żadnego poświadczenia. Potwierdził format 1, typ Bearer, zakres

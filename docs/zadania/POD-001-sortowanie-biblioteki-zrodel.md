@@ -120,7 +120,7 @@ udają poleceń Biblioteki.
   zakończyła się powodzeniem bezpośrednio przed promocją. Potwierdzenie
   instalacji nie jest przedstawiane jako ponowne wykonanie testów.
 - Po potwierdzeniu instalacji usunięto wyłącznie odtwarzalny katalog roboczy
-  `C:\Users\micha\Documents\Codex\2026-10-18\ma\work\pod-001`: 11 plików,
+  `C:\Users\<użytkownik>\Documents\Codex\2026-10-18\ma\work\pod-001`: 11 plików,
   1 462 589 bajtów (około 1,4 MB). Usunięcie jest bez odzysku z Kosza, ale
   źródła i dokumentacja są w lokalnych commitach, a zainstalowana paczka i
   kandydat odbiorczy pozostały zachowane.

@@ -213,6 +213,13 @@ repozytorium, kanałami wydań i polityką prywatności.
   Istniejący instalator `alpha.424` przeszedł dodatkowo rzeczywistą kontrolę
   rozmiaru i SHA-256; powstał lokalny opis oraz manifest gotowości z polem
   `published: false`. Niczego nie wysłano na GitHub.
+- Audyt śledzonego drzewa przed przyszłym publicznym push: nie znaleziono
+  wzorców tokenów GitHub/OpenAI/Google/JWT ani nagłówków kluczy prywatnych.
+  Siedem wpisów dokumentacji zawierało rzeczywistą nazwę profilu Windows;
+  zastąpiono ją `%LOCALAPPDATA%` albo `C:\Users\<użytkownik>`, a ponowny skan
+  nie znalazł tej nazwy. Sześć małych logów w `review/sonos-login-client-fix1`
+  zachowano jako śledzone dowody czerwonej i zielonej próby; skan nie znalazł w
+  nich typowych wzorców poświadczeń.
 
 ## Znane ograniczenia
 
