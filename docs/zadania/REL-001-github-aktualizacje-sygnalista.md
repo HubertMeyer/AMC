@@ -292,9 +292,9 @@ repozytorium, kanałami wydań i polityką prywatności.
 - Czysta publiczna linia źródeł: `9e4024c4` —
   `feat(rel): przygotuj czysta linie zrodel`; narzędzie
   `scripts/Prepare-AMCPublicSourceSnapshot.ps1` nie publikuje danych.
-- Integralna bramka wdrożenia Workera: commit zostanie wpisany po lokalnym
-  zatwierdzeniu; pakiet nie zawiera konfiguracji konta, identyfikatora KV ani
-  sekretu.
+- Integralna bramka wdrożenia Workera: `65037b21` —
+  `feat(rel): domknij bramke wdrozenia Sygnalisty`; pakiet nie zawiera
+  konfiguracji konta, identyfikatora KV ani sekretu.
 - Druga redakcja serwerowa ścieżek, przypisań tokenów i kont,
   identyfikatorów oraz nazw plików: `8149d076` —
   `fix(rel): wzmocnij redakcje Workera`.
