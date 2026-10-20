@@ -664,10 +664,6 @@ _SPECIAL_KEYS = {
     wx.WXK_ESCAPE: "Escape",
     wx.WXK_SPACE: "Space",
     wx.WXK_DELETE: "Delete",
-    wx.WXK_F1: "F1",
-    wx.WXK_F2: "F2",
-    wx.WXK_F5: "F5",
-    wx.WXK_F6: "F6",
     wx.WXK_LEFT: "Left",
     wx.WXK_RIGHT: "Right",
     wx.WXK_UP: "Up",
@@ -683,10 +679,19 @@ _SPECIAL_KEYS = {
 # rozszerzenie warunkowo, zeby test dostepnosci GUI nie musial udawac calej
 # klawiatury numerycznej tylko dlatego, ze presety obsluguja ja produkcyjnie.
 for _wx_name, _key_name in (
-    ("WXK_F10", "F10"),
+    *((f"WXK_F{number}", f"F{number}") for number in range(1, 25)),
     *((f"WXK_NUMPAD{digit}", str(digit)) for digit in range(10)),
     ("WXK_NUMPAD_SUBTRACT", "-"),
     ("WXK_NUMPAD_ADD", "+"),
+    ("WXK_NUMPAD_LEFT", "Left"),
+    ("WXK_NUMPAD_RIGHT", "Right"),
+    ("WXK_NUMPAD_UP", "Up"),
+    ("WXK_NUMPAD_DOWN", "Down"),
+    ("WXK_NUMPAD_HOME", "Home"),
+    ("WXK_NUMPAD_END", "End"),
+    ("WXK_NUMPAD_PAGEUP", "Prior"),
+    ("WXK_NUMPAD_PAGEDOWN", "Next"),
+    ("WXK_NUMPAD_DELETE", "Delete"),
 ):
     if hasattr(wx, _wx_name):
         _SPECIAL_KEYS[getattr(wx, _wx_name)] = _key_name

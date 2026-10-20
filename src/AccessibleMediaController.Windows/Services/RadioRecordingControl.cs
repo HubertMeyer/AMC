@@ -516,18 +516,44 @@ internal sealed class RadioRecordingControl
     private string? StopCurrentSegmentCore(IRadioRecordingBackend? backend)
     {
         if (backend is null) return null;
+        string? expectedPath;
         lock (_gate)
         {
             if (!ReferenceEquals(_backend, backend)) return null;
             _stopRequested = true;
+            expectedPath = _currentPath;
         }
         var path = backend.StopRecording();
+        // Gdy odbiornik radia nie odzyska zerwanego strumienia, jego potok
+        // bezpiecznie domyka i publikuje plik przed późniejszym żądaniem Stop.
+        // Backend nie ma już wtedy aktywnego potoku i zwraca null, chociaż
+        // unikatowa ścieżka utworzona dla tego nagrania istnieje i ma dane.
+        // Nie wolno przez to zgubić gotowego pliku z historii ani ogłaszać
+        // użytkownikowi, że nagranie nie powstało.
+        path ??= ExistingPublishedPath(expectedPath);
         lock (_gate)
         {
             AddCompletedPath(path);
             _currentPath = null;
         }
         return path;
+    }
+
+    private static string? ExistingPublishedPath(string? expectedPath)
+    {
+        if (string.IsNullOrWhiteSpace(expectedPath)) return null;
+        try
+        {
+            return File.Exists(expectedPath) && new FileInfo(expectedPath).Length > 0
+                ? expectedPath
+                : null;
+        }
+        catch (Exception exception) when (exception is IOException
+            or UnauthorizedAccessException
+            or NotSupportedException)
+        {
+            return null;
+        }
     }
 
     private void AddCompletedPath(string? path)

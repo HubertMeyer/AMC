@@ -24,12 +24,17 @@ def install_wx_stub() -> None:
 
     codes = {
         "WXK_RETURN": 13, "WXK_NUMPAD_ENTER": 370, "WXK_BACK": 8, "WXK_ESCAPE": 27,
-        "WXK_SPACE": 32, "WXK_DELETE": 127, "WXK_F1": 340, "WXK_F2": 341,
-        "WXK_F5": 344, "WXK_F6": 345,
-        "WXK_F10": 349,
+        "WXK_SPACE": 32, "WXK_DELETE": 127,
         "WXK_LEFT": 314, "WXK_RIGHT": 316, "WXK_UP": 315, "WXK_DOWN": 317, "WXK_TAB": 9,
         "WXK_HOME": 313, "WXK_END": 312, "WXK_PAGEUP": 366, "WXK_PAGEDOWN": 367,
+        "WXK_NUMPAD_LEFT": 372, "WXK_NUMPAD_RIGHT": 374,
+        "WXK_NUMPAD_UP": 373, "WXK_NUMPAD_DOWN": 375,
+        "WXK_NUMPAD_HOME": 371, "WXK_NUMPAD_END": 376,
+        "WXK_NUMPAD_PAGEUP": 377, "WXK_NUMPAD_PAGEDOWN": 378,
+        "WXK_NUMPAD_DELETE": 380,
     }
+    for number in range(1, 25):
+        codes[f"WXK_F{number}"] = 339 + number
     for name, value in codes.items():
         setattr(wx, name, value)
 
@@ -250,6 +255,43 @@ def test_physical_f5_and_ctrl_f5_reach_the_files_session_commands() -> None:
         radio_session=False,
         files_session=True,
     ) is Action.MANAGE_LIBRARY_FOLDERS
+
+
+def test_all_physical_function_keys_have_stable_canonical_names() -> None:
+    """Future commands must not leak raw wx codes such as ``#343``."""
+
+    import wx
+
+    for number in range(1, 25):
+        code = getattr(wx, f"WXK_F{number}")
+        assert chord_from_event(FakeKeyEvent(code)).canonical == f"F{number}"
+        assert chord_from_event(
+            FakeKeyEvent(code, ctrl=True, shift=True, alt=True)
+        ).canonical == f"Ctrl+Alt+Shift+F{number}"
+
+    # F4 nie ma obecnie polecenia. Ma jednak poprawna nazwe i pozostaje
+    # bezczynny, zamiast przypadkiem trafic do innej akcji przez surowy kod wx.
+    f4 = chord_from_event(FakeKeyEvent(wx.WXK_F4))
+    assert f4.canonical == "F4"
+    assert resolve(f4, player_view=False, radio_session=False) is None
+
+
+def test_numpad_navigation_uses_the_same_names_as_navigation_cluster() -> None:
+    import wx
+
+    expected = {
+        wx.WXK_NUMPAD_LEFT: "Left",
+        wx.WXK_NUMPAD_RIGHT: "Right",
+        wx.WXK_NUMPAD_UP: "Up",
+        wx.WXK_NUMPAD_DOWN: "Down",
+        wx.WXK_NUMPAD_HOME: "Home",
+        wx.WXK_NUMPAD_END: "End",
+        wx.WXK_NUMPAD_PAGEUP: "Prior",
+        wx.WXK_NUMPAD_PAGEDOWN: "Next",
+        wx.WXK_NUMPAD_DELETE: "Delete",
+    }
+    for code, name in expected.items():
+        assert chord_from_event(FakeKeyEvent(code)).canonical == name
 
 
 def test_ctrl_shift_zero_uses_physical_windows_key_for_preset_10(monkeypatch) -> None:

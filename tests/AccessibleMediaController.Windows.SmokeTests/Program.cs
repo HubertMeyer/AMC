@@ -63,6 +63,11 @@ if (args.Contains("--youtube-source-resolver-only", StringComparer.Ordinal))
     TestYouTubeSourceResolver();
     return 0;
 }
+if (args.Contains("--radio-recording-stream-failure-only", StringComparer.Ordinal))
+{
+    TestRadioRecordingControlKeepsPublishedFileAfterStreamFailure();
+    return 0;
+}
 if (args.FirstOrDefault(argument =>
         argument.StartsWith("--youtube-live-only-url=", StringComparison.OrdinalIgnoreCase))
     is { } youtubeLiveArgument)
@@ -722,6 +727,7 @@ var tests = new (string Name, Action Test)[]
     ("Radio Reconnect Format Compatibility", TestRadioReconnectFormatCompatibility),
     ("Radio Recording Folder Fallback", TestRadioRecordingFolderFallback),
     ("Radio Recording Split Control", TestRadioRecordingSplitControl),
+    ("Radio Recording Published File After Stream Failure", TestRadioRecordingControlKeepsPublishedFileAfterStreamFailure),
     ("Radio Recording Split Pipeline", TestRadioRecordingSplitPipeline),
     ("Radio Recording Staging Publication", TestRadioRecordingStagingPublication),
     ("Scheduled Radio Segmentation", TestScheduledRadioSegmentation),
@@ -5522,6 +5528,52 @@ static void TestRadioRecordingSplitControl()
     Console.WriteLine("OK: bezpieczne odrzucenie podziału niegotowego nagrania");
 }
 
+static void TestRadioRecordingControlKeepsPublishedFileAfterStreamFailure()
+{
+    var root = Path.Combine(Path.GetTempPath(), $"amc-radio-stream-failure-{Guid.NewGuid():N}");
+    Directory.CreateDirectory(root);
+    var publishedPath = Path.Combine(root, "poznan.mp3");
+    try
+    {
+        // Odtwarzacz publikuje plik podczas zwalniania uszkodzonego potoku,
+        // zanim koordynator nagrania otrzyma późniejsze żądanie Stop.
+        File.WriteAllBytes(publishedPath, [1, 2, 3, 4]);
+        var backend = new TestRadioRecordingBackend(publishedPath)
+        {
+            ReturnNullWhenStopping = true
+        };
+        var control = new RadioRecordingControl();
+        control.Attach(backend, root, RadioRecordingFormat.Mp3, 192, publishedPath);
+
+        var completedPath = control.StopCurrentSegment(backend);
+
+        Assert(string.Equals(completedPath, publishedPath, StringComparison.OrdinalIgnoreCase),
+            "Domknięty plik po zerwaniu strumienia nie wrócił do koordynatora.");
+        Assert(control.CompletedPaths.Count == 1
+               && string.Equals(control.CompletedPaths[0], publishedPath, StringComparison.OrdinalIgnoreCase),
+            "Domknięty plik po zerwaniu strumienia nie trafił do historii nagrania.");
+        Assert(control.CurrentPath is null,
+            "Po odzyskaniu domkniętego pliku pozostała fałszywa bieżąca ścieżka.");
+
+        var emptyPath = Path.Combine(root, "pusty.mp3");
+        File.WriteAllBytes(emptyPath, []);
+        var emptyBackend = new TestRadioRecordingBackend(emptyPath)
+        {
+            ReturnNullWhenStopping = true
+        };
+        var emptyControl = new RadioRecordingControl();
+        emptyControl.Attach(emptyBackend, root, RadioRecordingFormat.Mp3, 192, emptyPath);
+        Assert(emptyControl.StopCurrentSegment(emptyBackend) is null
+               && emptyControl.CompletedPaths.Count == 0,
+            "Pusty plik roboczy został błędnie uznany za ukończone nagranie.");
+        Console.WriteLine("OK: plik zapisany przed awarią strumienia pozostaje w historii");
+    }
+    finally
+    {
+        if (Directory.Exists(root)) Directory.Delete(root, true);
+    }
+}
+
 static void TestRadioRecordingSplitPipeline()
 {
     var folder = Path.Combine(Path.GetTempPath(), "amc-radio-split-test");
@@ -8131,6 +8183,7 @@ sealed class TestRadioRecordingBackend(string initialPath) : IRadioRecordingBack
     public string CurrentPath { get; private set; } = initialPath;
 
     public RadioAudioSnapshot? RecentAudio { get; set; }
+    public bool ReturnNullWhenStopping { get; set; }
 
     public bool TryGetRecentAudio(TimeSpan duration, out RadioAudioSnapshot? snapshot)
     {
@@ -8157,7 +8210,7 @@ sealed class TestRadioRecordingBackend(string initialPath) : IRadioRecordingBack
         if (!IsRecording) return null;
         IsRecording = false;
         IsRecordingPaused = false;
-        return CurrentPath;
+        return ReturnNullWhenStopping ? null : CurrentPath;
     }
 
     public void PauseRecording()
