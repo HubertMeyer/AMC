@@ -164,6 +164,13 @@ repozytorium, kanałami wydań i polityką prywatności.
   może utworzyć wydanie; wymaga czystych śledzonych źródeł i obecności rewizji
   instalatora na GitHubie, nie zastępuje istniejącego tagu i odczytowo
   potwierdza oba przesłane pliki oraz sumę w opisie.
+- Źródła pierwszego wydania mają osobną, czystą linię `public/release-line`.
+  Skrypt przygotowawczy tworzy lokalny commit z drzewem identycznym z
+  zatwierdzonym stanem roboczym, ale bez setek wcześniejszych commitów
+  integracyjnych. Nie przełącza bieżącej gałęzi, nie zmienia jej historii i
+  nie wykonuje `push`. Następne snapshoty wskazują poprzedni snapshot publiczny
+  jako jedynego rodzica. Dzięki temu wydanie może wskazać dokładne źródła bez
+  ujawniania dawnych lokalnych ścieżek występujących w roboczej historii.
 - Polecenie korzysta ze wspólnego modelu akcji dla menu, F1, palety i
   wykonania oraz jest jawnie dostępne we wszystkich sesjach i obu profilach.
 - Możliwość lokalnego formularza jest częścią zamkniętego manifestu zarówno
@@ -220,6 +227,14 @@ repozytorium, kanałami wydań i polityką prywatności.
   nie znalazł tej nazwy. Sześć małych logów w `review/sonos-login-client-fix1`
   zachowano jako śledzone dowody czerwonej i zielonej próby; skan nie znalazł w
   nich typowych wzorców poświadczeń.
+- Audyt całej roboczej historii: zero commitów z wzorcami tokenów GitHub,
+  OpenAI i Google, JWT albo nagłówkami kluczy prywatnych. Dawna nazwa lokalnego
+  profilu Windows występuje w 10 commitach i pięciu plikach historycznych,
+  dlatego pierwsze wydanie nie będzie publikowało całej tej historii.
+- Testy czystej publicznej linii źródeł wraz z istniejącą bramką wydania:
+  **6 zaliczonych**. Potwierdzono snapshot bez rodzica, identyczne drzewo,
+  idempotencję, liniowego rodzica następnego wydania, brak zmiany bieżącego
+  checkoutu, odmowę przy niezapisanych zmianach i brak polecenia wysyłania.
 
 ## Znane ograniczenia
 
@@ -230,6 +245,8 @@ repozytorium, kanałami wydań i polityką prywatności.
 - Prawdziwe uruchomienie wymaga świadomego logowania do właściwego konta
   Cloudflare, utworzenia prywatnego `amc-support-intake`, etykiet, ograniczonego
   tokenu GitHuba w sekrecie Workera i kontrolowanego raportu próbnego.
+- Publiczny snapshot źródeł pozostaje lokalny do czasu odbioru zainstalowanego
+  kandydata. Samo jego utworzenie nie jest kopią zdalną ani publikacją.
 - Zapisany raport pozostaje plikiem lokalnym; AMC nie otwiera przeglądarki.
 - Filtry prywatności mają charakter ostrożny i mogą usunąć z logu więcej
   tekstu niż bezwzględnie konieczne.
@@ -258,6 +275,9 @@ repozytorium, kanałami wydań i polityką prywatności.
   `feat(rel): przygotuj internetowego Sygnaliste`.
 - Bezpieczna bramka publikacji publicznego instalatora: `61837b26` —
   `feat(rel): dodaj bezpieczna publikacje instalatora`.
+- Czysta publiczna linia źródeł: commit zostanie wpisany po lokalnym
+  zatwierdzeniu niniejszego etapu; narzędzie
+  `scripts/Prepare-AMCPublicSourceSnapshot.ps1` nie publikuje danych.
 - Druga redakcja serwerowa ścieżek, przypisań tokenów i kont,
   identyfikatorów oraz nazw plików: `8149d076` —
   `fix(rel): wzmocnij redakcje Workera`.

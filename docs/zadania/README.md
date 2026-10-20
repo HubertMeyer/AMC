@@ -216,7 +216,10 @@ zmian, wymagający korekty użytkownika:
   został jeszcze wdrożony i nie utworzył prawdziwego zgłoszenia. Prywatne
   repozytorium intake i wymagane etykiety są już utworzone. Lokalna bramka
   publikacji instalatora sprawdza profil, rewizję, rozmiar, SHA-256 i wynik
-  odczytany z GitHuba, ale bez jawnego `-Publish` niczego nie wysyła. Szczegóły:
+  odczytany z GitHuba, ale bez jawnego `-Publish` niczego nie wysyła. Czysta
+  publiczna linia źródeł powstaje jako lokalny snapshot identycznego drzewa,
+  bez publikowania roboczej historii i bez przełączania bieżącej gałęzi.
+  Szczegóły:
   [REL-001-github-aktualizacje-sygnalista.md](REL-001-github-aktualizacje-sygnalista.md).
 - `STR-001` — **Oczekuje** — osobne laboratorium TIDAL i Apple Music, najpierw
   badanie oficjalnych API i warunków, później ewentualny profil testowy.
