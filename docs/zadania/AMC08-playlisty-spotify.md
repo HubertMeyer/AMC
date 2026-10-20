@@ -1,9 +1,9 @@
 # AMC08 — natywne playlisty Spotify
 
 Status: **Użytkownik potwierdził prawdziwe OAuth i skuteczne dodawanie do
-playlist Spotify. Korekta jawnej mowy stanu konta oraz widoczności nowej
-playlisty także pod `Ctrl+P` jest gotowa w źródłach i testach; czeka na
-instalację AMC Test i odbiór NVDA.**
+playlist Spotify. Korekta jawnej mowy stanu konta oraz widoczności pod
+`Ctrl+P` playlist istniejących i właśnie utworzonych jest gotowa w źródłach
+i testach; czeka na instalację AMC Test i odbiór NVDA.**
 
 Źródło decyzji: zatwierdzona analiza historyczna tylko do odczytu
 `D:\Projekty Codex\Accessible Multimedia Controller\AMC08_PLAYLISTY_SPOTIFY_2026-10-18.md`.
@@ -11,7 +11,10 @@ instalację AMC Test i odbiór NVDA.**
 ## Materiał do dokumentacji użytkownika
 
 - W sesji Spotify `Ctrl+P` otwiera listę natywnych playlist konta Spotify.
-  Samo wejście na listę nie obiecuje odtwarzania całej playlisty.
+  Przy pierwszym otwarciu w danym uruchomieniu AMC pobiera wąską, aktualną
+  listę playlist konta. Następne otwarcia korzystają z tej pamięci i nie
+  uruchamiają pełnej synchronizacji kolekcji. Samo wejście na listę nie
+  obiecuje odtwarzania całej playlisty.
 - Po utworzeniu playlisty w AMC potwierdzony wpis pojawia się od razu zarówno
   przy następnym `Ctrl+Shift+P`, jak i na liście otwieranej przez `Ctrl+P`.
   Nie trzeba wykonywać pełnej synchronizacji całej kolekcji Spotify.
@@ -65,6 +68,13 @@ instalację AMC Test i odbiór NVDA.**
   potwierdzonym utworzeniu host dopisuje teraz tę samą playlistę do bieżącej
   migawki kolekcji. Nie ufa temu wpisowi jako uprawnieniu do zapisu; właściwe
   dodawanie nadal ponownie weryfikuje playlistę po stronie dostawcy.
+- **Korekta użytkownika z 20 października 2026 uzupełnia poprzednią poprawkę
+  widoczności.** Dodawanie do nowej playlisty zostało potwierdzone na
+  urządzeniu, ale osobny widok `Ctrl+P` nie pokazywał playlisty utworzonej
+  przed bieżącym uruchomieniem AMC. Pierwsze `Ctrl+P` w procesie korzysta
+  teraz z wąskiego odczytu `/me/playlists`, scala wynik z bieżącą kolekcją i
+  zachowuje pozostałe pozycje. Ten odczyt nie uruchamia kosztownej pełnej
+  synchronizacji katalogu Spotify.
 
 - **Korekta użytkownika z 19 października 2026 zastępuje wcześniejsze
   ustalenie, że `Ctrl+F5` ma być wyłącznie odświeżaniem źródeł.** Historyczny
@@ -206,8 +216,11 @@ instalację AMC Test i odbiór NVDA.**
   jawne oznajmienie aktualnego stanu konta bez uruchamiania logowania.
 - Kompilacja Release testów protokołu LiteHost: zaliczona, 0 ostrzeżeń i 0
   błędów. Ukierunkowane zestawy `--spotify-catalog --sonos`: **2/2 zaliczone**.
-  Nowy test potwierdza, że playlista potwierdzona przez Spotify jest od razu
-  widoczna pod `Ctrl+P` i nie ujawnia identyfikatora w etykiecie NVDA.
+  Nowe testy potwierdzają, że playlista potwierdzona przez Spotify jest od
+  razu widoczna pod `Ctrl+P`, playlista istniejąca wcześniej jest pobierana
+  tylko raz na proces i pozostaje widoczna przy ponownym otwarciu, pełna
+  synchronizacja kolekcji nie jest przy tym wywoływana, a identyfikator
+  playlisty nie trafia do etykiety NVDA.
 - Próba pełnego ProtocolTests w piaskownicy uruchomiła pozostałe zestawy, ale
   cztery niezwiązane testy zapisu plików zostały zatrzymane przez odmowę
   dostępu do katalogu tymczasowego. Nie przedstawiono tego wyniku ani jako
@@ -216,31 +229,20 @@ instalację AMC Test i odbiór NVDA.**
 
 ## Znane ograniczenia
 
-- Wejście ponownego logowania jest zainstalowane, lecz nie zostało jeszcze
-  ręcznie odebrane z NVDA ani prawdziwym kontem. Stary token nadal nie uzyska
-  nowych zakresów bez świadomego OAuth.
+- Ponowne logowanie i rzeczywiste dodawanie do playlisty zostały odebrane
+  przez użytkownika. Jawna mowa aktualnego stanu konta po `Ctrl+F5` oraz
+  odświeżony widok `Ctrl+P` pochodzą z późniejszej korekty, która nie jest
+  jeszcze zainstalowana w AMC Test.
 - Trwającego OAuth nie można jeszcze anulować przyciskiem okna AMC; do wyniku
   albo limitu czasu okno pozostaje otwarte. Hasła i tokeny nadal nie trafiają
   do interfejsu Python.
 
-- Korekta `4b85e0c8` została zainstalowana. Nie wykonano po niej kolejnego
-  zapisu na prawdziwym koncie Spotify; odbiór sieciowy wymaga świadomej próby
-  użytkownika.
-- Token zapisany przed tą korektą nie zawiera zakresów
-  `playlist-modify-private` i `playlist-modify-public`. Samo odświeżenie sesji
-  nie może rozszerzyć zgód istniejącego tokenu. Potrzebne jest ponowne OAuth po
-  wdrożeniu rzeczywistego polecenia logowania w AMC Test.
-
 - Odtwarzanie całej playlisty Spotify przez AMC nadal nie jest obiecywane.
-- Zewnętrzny odbiór na prawdziwym koncie, w tym ponowne OAuth z nowymi
-  zakresami, pozostaje zadaniem ręcznym.
-- Ręczny test NVDA i prawdziwego konta Spotify nie został wykonany. Sama
-  poprawna instalacja nie potwierdza jeszcze odbioru mowy ani operacji
-  sieciowej na koncie.
 - Pamięć katalogu obowiązuje do zamknięcia AMC Test. Playlista utworzona w
   AMC trafia do niej natychmiast; zmiana wykonana równolegle w innej aplikacji
-  Spotify będzie widoczna po ponownym uruchomieniu AMC Test. Dodawanie nie
-  ufa cache — host ponownie sprawdza uprawnienia i istnienie wskazanego celu.
+  Spotify po pierwszym odczycie będzie widoczna po ponownym uruchomieniu AMC
+  Test. Dodawanie nie ufa cache — host ponownie sprawdza uprawnienia i
+  istnienie wskazanego celu.
 - TIDAL i przyszłe usługi mają teraz wspólny fundament i trwały kontrakt, ale
   ich adapter musi jawnie podłączyć własną zdalną listę. Nie przypisujemy im
   automatycznie tworzenia playlist publicznych ani innych możliwości Spotify.
@@ -286,3 +288,7 @@ instalację AMC Test i odbiór NVDA.**
   `Ctrl+P`: commit `39386e90` — `fix(amc): oznajmiaj konta i synchronizuj
   playlisty Spotify`. Kod, testy interfejsu i ukierunkowane testy protokołu są
   zaliczone; instalacji ani publikacji nie wykonano.
+- Jednorazowe odświeżenie istniejących playlist pod `Ctrl+P`: commit
+  `640afc65` — `fix(amc08): odswiez playlisty Spotify pod Ctrl+P`. Kod,
+  kompilacja Release i ukierunkowane testy protokołu są zaliczone; instalacji
+  ani publikacji nie wykonano.
