@@ -650,6 +650,15 @@ przez profil. Zainstalowany numer to `0.1.0-alpha.425`.
   Zachowano nową paczkę i instalator `6e1f6bc9`, źródła, dokumentację,
   ustawienia, dane użytkownika, nagrania oraz zastane niepewne katalogi
   testowe.
+- Po instalacji i uruchomieniu poprawionego następcy `0866d668` usunięto
+  dokładnie wadliwą paczkę
+  `.test-output/AMC-public-2026.10.20-215e51e9-alpha425` oraz odpowiadający jej
+  katalog instalatora
+  `.test-output/installers/amc12-2026.10.20-215e51e9-alpha425`. Usunięto
+  546 006 306 bajtów, około 520,7 MiB. Były to odtwarzalne artefakty, których
+  interfejs publiczny nie uruchamiał się. Zachowano poprawioną paczkę i jedyny
+  aktualny instalator `0866d668-alpha425-fix`, źródła, dokumentację, profile,
+  ustawienia, nagrania oraz zastane katalogi testowe o niepewnym pochodzeniu.
 
 ## Wersja i commit
 
