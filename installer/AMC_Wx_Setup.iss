@@ -23,6 +23,7 @@
   #define FolderProgramu "AMC"
   #define NazwaWyjscia "AMC-" + Wersja + "-win-x64"
   #define AppPathName "AMC.exe"
+  #define ExpectedInstallId "AMC.Public.win-x64"
   #define LauncherMutex "Local\AccessibleMultimediaController.PythonLauncher.Public.SingleInstance"
   #define ShellProfileKey "Public"
   #define ShellApplicationName "Accessible Multimedia Controller"
@@ -35,6 +36,7 @@
   #define FolderProgramu "AMC Test"
   #define NazwaWyjscia "AMC-Test-" + Wersja + "-win-x64"
   #define AppPathName "AMC-Test.exe"
+  #define ExpectedInstallId "AMC.Test.win-x64"
   #define LauncherMutex "Local\AccessibleMultimediaController.PythonLauncher.SingleInstance"
   #define ShellProfileKey "Test"
   #define ShellApplicationName "Accessible Multimedia Controller — Test"
@@ -116,6 +118,55 @@ const
   ShellRegisteredApplication = '{#ShellApplicationName}';
   ShellClassPrefix = 'AccessibleMediaController.{#ShellProfileKey}.';
   ShellVerbPrefix = 'AccessibleMediaController.{#ShellProfileKey}.';
+
+function DirectoryHasEntries(const Directory: string): Boolean;
+var
+  FindRec: TFindRec;
+begin
+  Result := False;
+  if not FindFirst(AddBackslash(Directory) + '*', FindRec) then
+    Exit;
+  try
+    repeat
+      if (FindRec.Name <> '.') and (FindRec.Name <> '..') then
+      begin
+        Result := True;
+        Exit;
+      end;
+    until not FindNext(FindRec);
+  finally
+    FindClose(FindRec);
+  end;
+end;
+
+function ExistingDirectoryBelongsToThisProfile(const Directory: string): Boolean;
+var
+  Manifest: AnsiString;
+  ManifestPath: string;
+begin
+  Result := False;
+  ManifestPath := AddBackslash(Directory) + 'bundle-manifest.json';
+  if (not FileExists(ManifestPath)) or
+     (not LoadStringFromFile(ManifestPath, Manifest)) then
+    Exit;
+  Result := Pos('"installId": "{#ExpectedInstallId}"', String(Manifest)) > 0;
+end;
+
+function PrepareToInstall(var NeedsRestart: Boolean): string;
+var
+  Target: string;
+begin
+  Result := '';
+  Target := ExpandConstant('{app}');
+  if (not DirExists(Target)) or (not DirectoryHasEntries(Target)) or
+     ExistingDirectoryBelongsToThisProfile(Target) then
+    Exit;
+
+  Result :=
+    'Wybrany folder zawiera inną albo historyczną wersję programu. ' +
+    'Instalator nie nadpisze jej plików. Wróć i wybierz pusty folder albo ' +
+    'najpierw odinstaluj poprzedni program.';
+end;
 
 function PopShellExtension(var Values: string): string;
 var

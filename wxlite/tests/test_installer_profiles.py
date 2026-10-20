@@ -43,6 +43,17 @@ def test_installer_performs_full_post_install_integrity_check() -> None:
     assert "RaiseException" in ISS
 
 
+def test_installer_refuses_to_overlay_another_or_historical_product() -> None:
+    assert 'ExpectedInstallId "AMC.Public.win-x64"' in ISS
+    assert 'ExpectedInstallId "AMC.Test.win-x64"' in ISS
+    assert "DirectoryHasEntries" in ISS
+    assert "ExistingDirectoryBelongsToThisProfile" in ISS
+    assert 'bundle-manifest.json' in ISS
+    assert '"installId": "{#ExpectedInstallId}"' in ISS
+    assert "function PrepareToInstall" in ISS
+    assert "Instalator nie nadpisze jej plików" in ISS
+
+
 def test_build_helper_verifies_profile_clean_source_and_full_bundle() -> None:
     assert 'ValidateSet("public", "test")' in BUILD
     assert "manifest.releaseProfile" in BUILD

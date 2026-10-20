@@ -134,6 +134,11 @@ nie pobiera środowiska uruchomieniowego podczas instalacji.
 - Instalator wxPython jest osobnym skryptem od historycznego instalatora WPF.
   Używa zamkniętych identyfikatorów obu profili i `CloseApplications=no`;
   działającego nagrania nie wolno chronić przez wymuszenie zakończenia procesu.
+- Instalator odmawia nałożenia nowego AMC na niepusty folder historycznego albo
+  obcego programu. Aktualizacja jest dozwolona tylko wtedy, gdy manifest
+  istniejącej paczki ma dokładny `installId` bieżącego profilu. Chroni to
+  szczególnie domyślny folder `AMC`, który na starszym komputerze może nadal
+  należeć do historycznego WPF.
 
 ## Zmienione pliki
 
@@ -261,6 +266,12 @@ nie pobiera środowiska uruchomieniowego podczas instalacji.
   Ma 123 320 342 bajty. Ponowne obliczenie SHA-256 dało
   `23f0df0d10910ba9e0e32867ffbf06651226b30f0ee02b1597a0dec969777ea3`
   i jest zgodne z osobnym plikiem integralności. Instalatora nie uruchamiano.
+- 20.10.2026 strukturalny kontrakt instalatora zaliczył **7/7** przypadków.
+  Inno Setup 6.7.3 skompilował wariant z ochroną istniejącego folderu.
+  Próba cicha przeciw projektowemu katalogowi zawierającemu jeden plik
+  kontrolny zakończyła się oczekiwanym kodem 7 i komunikatem odmowy; liczba i
+  treść plików katalogu nie zmieniły się. Nie wykonywano tej próby przeciw
+  rzeczywistemu historycznemu AMC.
 
 ## Znane ograniczenia
 
@@ -287,6 +298,10 @@ nie pobiera środowiska uruchomieniowego podczas instalacji.
   poczekać na pewny brak nagrywania i osobny odbiór użytkownika.
 - Instalator nie jest jeszcze podpisany cyfrowo ani opublikowany. Plik
   integralności potwierdza lokalny wynik budowy, nie zastępuje podpisu kodu.
+- Na głównym komputerze domyślny publiczny folder
+  `%LOCALAPPDATA%\Programs\AMC` nadal zawiera historyczne AMC WPF. Próba
+  odbiorcza nowego publicznego AMC musi użyć osobnego pustego katalogu albo
+  nastąpić dopiero po świadomym odinstalowaniu starego programu.
 
 ## Porządek dysku
 
