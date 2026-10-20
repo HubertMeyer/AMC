@@ -37,6 +37,19 @@ public static class LiteSonosContract
     public static object CreateAccountStatusResult(SonosAccountSnapshot snapshot) =>
         CreateAccountActionResult(snapshot, DescribeAccountSnapshot(snapshot));
 
+    public static object CreateBrokerUnavailableResult() => new
+    {
+        label = SonosIntegrationDefaults.BrokerUnavailableMessage,
+        message = SonosIntegrationDefaults.BrokerUnavailableMessage,
+        connected = false,
+        awaitingBrowser = false,
+        canLogin = false,
+        canRefresh = false,
+        canRetryPersist = false,
+        canDisconnect = false,
+        authorizeUrl = (string?)null
+    };
+
     public static object CreateAccountLoginStartResult(
         SonosAccountLoginStartResult result)
     {
@@ -113,6 +126,7 @@ public static class LiteSonosContract
             message = Useful(message),
             connected = snapshot.HasCredentials,
             awaitingBrowser = snapshot.IsAwaitingBrowser,
+            canLogin = true,
             canRefresh = snapshot.HasCredentials && snapshot.HasRefreshToken,
             canRetryPersist = snapshot.CanRetryPersist,
             canDisconnect = snapshot.HasCredentials || snapshot.PersistedRecordMayRemain,

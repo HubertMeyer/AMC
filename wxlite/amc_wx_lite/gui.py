@@ -4151,6 +4151,7 @@ class SonosAccountDialog(wx.Dialog):
         self.status.SetName(f"Stan konta Sonos: {label}")
         connected = isinstance(payload, dict) and bool(payload.get("connected"))
         awaiting = isinstance(payload, dict) and bool(payload.get("awaitingBrowser"))
+        can_login = not isinstance(payload, dict) or payload.get("canLogin") is not False
         can_refresh = isinstance(payload, dict) and bool(payload.get("canRefresh"))
         can_retry = isinstance(payload, dict) and bool(payload.get("canRetryPersist"))
         can_disconnect = isinstance(payload, dict) and bool(payload.get("canDisconnect"))
@@ -4165,6 +4166,7 @@ class SonosAccountDialog(wx.Dialog):
         has_address = bool(self._authorize_url)
 
         self.address.Show(has_address)
+        self.login_button.Show(can_login)
         self.open_button.Show(has_address)
         self.copy_button.Show(has_address)
         self.check_button.Show(awaiting)
@@ -4181,7 +4183,8 @@ class SonosAccountDialog(wx.Dialog):
             target = (
                 self.check_button if awaiting
                 else self.targets_button if connected
-                else self.login_button
+                else self.login_button if can_login
+                else self.close_button
             )
             wx.CallAfter(target.SetFocus)
 

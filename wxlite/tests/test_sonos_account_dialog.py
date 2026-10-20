@@ -37,6 +37,15 @@ def test_sonos_dialog_has_explicit_labels_and_never_opens_browser_on_start() -> 
     assert 'label="Sprawdź logowanie"' in dialog
     assert 'label="Odśwież dostęp"' in dialog
     assert 'label="Głośniki i grupy Sonos"' in dialog
+
+
+def test_sonos_dialog_hides_login_when_public_service_is_unavailable() -> None:
+    source = SOURCE.read_text(encoding="utf-8")
+    dialog = source[source.index("class SonosAccountDialog") :]
+    dialog = dialog[:dialog.index("class LibraryFoldersDialog")]
+    assert 'payload.get("canLogin") is not False' in dialog
+    assert "self.login_button.Show(can_login)" in dialog
+    assert "else self.close_button" in dialog
     assert "wx.LaunchDefaultBrowser" in dialog
     start_handler = dialog[dialog.index("    def _on_action") :]
     start_handler = start_handler[:start_handler.index("    def _on_open")]

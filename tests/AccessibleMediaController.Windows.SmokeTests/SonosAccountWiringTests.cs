@@ -101,16 +101,18 @@ internal static class SonosAccountWiringTests
             throw new Exception("Samo utworzenie właściciela wysłało żądanie do brokera.");
         }
 
-        // Domyslny broker: ROOT origin, z ktorego wyprowadzaja sie sciezki.
+        // Do czasu publicznego wdrozenia domyslny origin jest nieroutowalnym
+        // placeholderem, a warstwa hosta blokuje operacje przed siecia.
         if (!SonosLoginBrokerConfiguration.TryCreate(SonosAccountOwner.DefaultBrokerOrigin, out var broker)
             || broker is null)
         {
             throw new Exception("Domyślny adres brokera Sonos nie przechodzi własnej konfiguracji.");
         }
-        if (broker.Origin.AbsoluteUri != "https://hermes.tail6caad7.ts.net/"
-            || broker.StartUri.AbsoluteUri != "https://hermes.tail6caad7.ts.net/login/start"
-            || broker.ResultUri.AbsoluteUri != "https://hermes.tail6caad7.ts.net/login/result"
-            || broker.RefreshUri.AbsoluteUri != "https://hermes.tail6caad7.ts.net/login/refresh")
+        if (SonosIntegrationDefaults.BrokerAvailable
+            || broker.Origin.AbsoluteUri != "https://sonos-login-not-configured.invalid/"
+            || broker.StartUri.AbsoluteUri != "https://sonos-login-not-configured.invalid/login/start"
+            || broker.ResultUri.AbsoluteUri != "https://sonos-login-not-configured.invalid/login/result"
+            || broker.RefreshUri.AbsoluteUri != "https://sonos-login-not-configured.invalid/login/refresh")
         {
             throw new Exception("Domyślny broker nie wyprowadza oczekiwanych ścieżek z roota.");
         }

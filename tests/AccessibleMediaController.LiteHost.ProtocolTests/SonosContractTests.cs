@@ -10,11 +10,30 @@ internal static class SonosContractTests
     public static void Run()
     {
         AccountStatusUsesOnlyExplicitUserFacingFields();
+        MissingPublicLoginServiceIsExplicitAndCannotStartLogin();
         TargetLabelsNeverUseTechnicalIdentifiers();
         SnapshotUsesOnlyExplicitUserFacingFields();
         TransportAcceptsOnlyTheNarrowAllowlist();
         LibraryAndMaterialLabelsNeverExposeIds();
         MaterialRequestsAcceptOnlyKnownKinds();
+    }
+
+    private static void MissingPublicLoginServiceIsExplicitAndCannotStartLogin()
+    {
+        using var payload = JsonDocument.Parse(JsonSerializer.Serialize(
+            LiteSonosContract.CreateBrokerUnavailableResult()));
+        var root = payload.RootElement;
+        Check(root.GetProperty("message").GetString()
+              == "Publiczna usługa logowania Sonos nie jest jeszcze skonfigurowana w tej wersji AMC.",
+            "brak publicznej usługi nie ma jawnego komunikatu użytkowego");
+        Check(!root.GetProperty("canLogin").GetBoolean()
+              && !root.GetProperty("connected").GetBoolean()
+              && root.GetProperty("authorizeUrl").ValueKind == JsonValueKind.Null,
+            "brak publicznej usługi nadal pozwala rozpocząć logowanie");
+        var json = root.GetRawText();
+        Check(!json.Contains("hermes", StringComparison.OrdinalIgnoreCase)
+              && !json.Contains("tail6caad7", StringComparison.OrdinalIgnoreCase),
+            "kontrakt logowania nadal ujawnia historyczny host");
     }
 
     private static void AccountStatusUsesOnlyExplicitUserFacingFields()

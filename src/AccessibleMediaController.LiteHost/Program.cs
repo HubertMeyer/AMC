@@ -1,4 +1,5 @@
 using System.Text;
+using AccessibleMediaController.Core.Sonos;
 using AccessibleMediaController.LiteHost.Protocol;
 using AccessibleMediaController.Windows.Services;
 
@@ -104,7 +105,8 @@ internal static class Program
         using var wiim = OpenWiiM(args);
         using var sonos = new LiteSonosCoordinator(
             new LiteSonosAccountOwner(),
-            ReadArgumentPath(args, "--state-json"));
+            ReadArgumentPath(args, "--state-json"),
+            loginBrokerAvailable: SonosIntegrationDefaults.BrokerAvailable);
 
         var bookmarkStore = OpenBookmarkStore(args);
         using var handlers = new LiteEngineHandlers(

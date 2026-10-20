@@ -26,7 +26,9 @@ namespace AccessibleMediaController.Windows.Services;
 internal sealed class SonosAccountOwner : IDisposable
 {
     /// <summary>
-    /// DOMYSLNY zaufany broker AMC. ROOT origin - z niego
+    /// Origin integracji AMC. Do czasu uruchomienia publicznej uslugi jest to
+    /// nieroutowalny placeholder, a LiteHost zatrzymuje operacje przed siecia.
+    /// Po odbiorze publicznego wdrozenia bedzie to ROOT origin, z ktorego
     /// <see cref="SonosLoginBrokerConfiguration"/> wyprowadza login/start,
     /// login/result i login/refresh. NIE wpisujemy tu sciezki zwrotnej
     /// (/sonos/callback): ona nalezy do brokera i Sonos, nie do klienta.

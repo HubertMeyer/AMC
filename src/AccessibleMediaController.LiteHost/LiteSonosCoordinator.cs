@@ -33,7 +33,8 @@ internal interface ILiteSonosAccountBackend
 /// </summary>
 internal sealed class LiteSonosCoordinator(
     ISonosGroupSessionBackend backend,
-    string? statePath = null) : IDisposable
+    string? statePath = null,
+    bool loginBrokerAvailable = true) : IDisposable
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -49,40 +50,55 @@ internal sealed class LiteSonosCoordinator(
 
     public object ListTargets()
     {
+        RequireLoginBroker();
         lock (gate) return ReadTargets();
     }
 
     public object AccountStatus() =>
-        LiteSonosContract.CreateAccountStatusResult(
-            RequireAccountBackend().ReadAccountSnapshot());
+        loginBrokerAvailable
+            ? LiteSonosContract.CreateAccountStatusResult(
+                RequireAccountBackend().ReadAccountSnapshot())
+            : LiteSonosContract.CreateBrokerUnavailableResult();
 
     public object BeginAccountLogin() =>
-        LiteSonosContract.CreateAccountLoginStartResult(
-            RequireAccountBackend().BeginLoginAsync(CancellationToken.None)
-                .GetAwaiter().GetResult());
+        loginBrokerAvailable
+            ? LiteSonosContract.CreateAccountLoginStartResult(
+                RequireAccountBackend().BeginLoginAsync(CancellationToken.None)
+                    .GetAwaiter().GetResult())
+            : LiteSonosContract.CreateBrokerUnavailableResult();
 
     public object CheckAccountLogin() =>
-        LiteSonosContract.CreateAccountLoginCheckResult(
-            RequireAccountBackend().CheckLoginAsync(CancellationToken.None)
-                .GetAwaiter().GetResult());
+        loginBrokerAvailable
+            ? LiteSonosContract.CreateAccountLoginCheckResult(
+                RequireAccountBackend().CheckLoginAsync(CancellationToken.None)
+                    .GetAwaiter().GetResult())
+            : LiteSonosContract.CreateBrokerUnavailableResult();
 
     public object CancelAccountLogin() =>
-        LiteSonosContract.CreateAccountActionResult(
-            RequireAccountBackend().CancelPendingLogin(),
-            "Logowanie Sonos zostało anulowane.");
+        loginBrokerAvailable
+            ? LiteSonosContract.CreateAccountActionResult(
+                RequireAccountBackend().CancelPendingLogin(),
+                "Logowanie Sonos zostało anulowane.")
+            : LiteSonosContract.CreateBrokerUnavailableResult();
 
     public object RefreshAccount() =>
-        LiteSonosContract.CreateAccountRefreshResult(
-            RequireAccountBackend().RefreshAccountAsync(CancellationToken.None)
-                .GetAwaiter().GetResult());
+        loginBrokerAvailable
+            ? LiteSonosContract.CreateAccountRefreshResult(
+                RequireAccountBackend().RefreshAccountAsync(CancellationToken.None)
+                    .GetAwaiter().GetResult())
+            : LiteSonosContract.CreateBrokerUnavailableResult();
 
     public object RetryAccountPersist() =>
-        LiteSonosContract.CreateAccountPersistRetryResult(
-            RequireAccountBackend().RetryPersist());
+        loginBrokerAvailable
+            ? LiteSonosContract.CreateAccountPersistRetryResult(
+                RequireAccountBackend().RetryPersist())
+            : LiteSonosContract.CreateBrokerUnavailableResult();
 
     public object DisconnectAccount() =>
-        LiteSonosContract.CreateAccountDisconnectResult(
-            RequireAccountBackend().DisconnectAccount());
+        loginBrokerAvailable
+            ? LiteSonosContract.CreateAccountDisconnectResult(
+                RequireAccountBackend().DisconnectAccount())
+            : LiteSonosContract.CreateBrokerUnavailableResult();
 
     public object Snapshot(System.Text.Json.JsonElement args)
     {
@@ -622,6 +638,13 @@ internal sealed class LiteSonosCoordinator(
         backend as ILiteSonosAccountBackend
         ?? throw new LiteRequestException(
             "Zarządzanie kontem Sonos nie jest dostępne w tym profilu AMC.");
+
+    private void RequireLoginBroker()
+    {
+        if (!loginBrokerAvailable)
+            throw new LiteRequestException(
+                SonosIntegrationDefaults.BrokerUnavailableMessage);
+    }
 
     public void Dispose()
     {
