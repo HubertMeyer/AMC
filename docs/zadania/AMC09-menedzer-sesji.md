@@ -248,6 +248,13 @@ Historyczny projekt został użyty tylko jako materiał do odczytu.
   poprawce **113/113** ukierunkowanych testów granicy GUI, resolvera, wczesnej
   bramki listy i zgodności menu zaliczono. Nowy test sprawdza zarówno `F5`, jak
   i `Ctrl+F5` od surowego kodu 344 aż do akcji Plików lokalnych.
+- Z commitu `c6231e59` zbudowano i sprawdzono integralność kandydata
+  `2026.10.20-c6231e599462026de5018be3039ccd9812bf9cfb-46b3cb81`, obejmującego
+  1667 plików. SHA-256 manifestu wynosi
+  `B6BCE02E9EBD54464C2DD30564C8B9A0E0A430D3EBF350E5913345AAA55A7D7D`.
+  Instalacja nie została wykonana: podczas kompilacji użytkownik rozpoczął
+  ręczne nagrywanie stacji 3 o 13:22. Aktualizator zobaczył działające składniki,
+  zakończył się ochronnym kodem 3 i nie podmienił bieżącej instalacji.
 
 ## Znane ograniczenia
 
@@ -331,9 +338,11 @@ Historyczny projekt został użyty tylko jako materiał do odczytu.
   `2026.10.20-fd5f423117f87c34aff6e9c4def22a985aa307a6-b7475d46`
   (1667 plików). Instalację, integralność i uruchomienie potwierdzono
   20 października 2026 o 12:55. Publikacji nie wykonano.
-- Naprawa fizycznego `F5` i `Ctrl+F5` na granicy wxPython: kod i test
-  regresji przygotowane 20 października 2026; dokładny commit oraz wynik
-  instalacji zostaną dopisane po utworzeniu i bezpiecznej promocji paczki.
+- Naprawa fizycznego `F5` i `Ctrl+F5` na granicy wxPython: commit `2475250c`
+  (`fix(amc09): rozpoznaj fizyczny klawisz F5`). Kandydat zawierający tę zmianę
+  ma wersję `2026.10.20-c6231e599462026de5018be3039ccd9812bf9cfb-46b3cb81`.
+  Kod, testy, kompilacja i integralność kandydata są potwierdzone; instalacja i
+  uruchomienie pozostają niewykonane z powodu rozpoczętego nagrywania.
 - Instalacja i uruchomienie doprecyzowanych nazw `Ctrl+F5`: potwierdzone dla
   `2026.10.20-f96149f75e83eea064899db78c762596e56d2504-904ceb8c` w
   `D:\Projekty Codex\AMC Python`. Paczka zawiera 1667 plików; źródłem jest
