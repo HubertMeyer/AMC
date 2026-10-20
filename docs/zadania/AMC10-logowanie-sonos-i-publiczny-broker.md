@@ -160,6 +160,16 @@ Kontrakt sprawdzono 2026-10-19 z aktualną oficjalną dokumentacją Sonosa:
 - `dotnet build src/AccessibleMediaController.LiteHost/AccessibleMediaController.LiteHost.csproj -c Release --no-restore`
   — sukces, 0 ostrzeżeń, 0 błędów; po nim brakujący
   `test_profile_edits_go_through_the_real_host` przeszedł: **1 zaliczony**.
+- Zbudowano pełnego kandydata AMC Test
+  `2026.10.20-fd5f423117f87c34aff6e9c4def22a985aa307a6-b7475d46`:
+  manifest obejmuje 1667 plików, a cały katalog 1668 plików i około 133,59 MiB.
+  SHA-256 manifestu:
+  `C60D5072408CFC936160531CF627B8F35432EF4A2F14CEA064F4D08C098C1F66`.
+- Pierwsza próba instalacji została prawidłowo zatrzymana przed podmianą.
+  Między wcześniejszą kontrolą a etapem zamykania programu harmonogram o 12:30
+  rozpoczął nagrywanie `3 - 2026-10-20 12-30.mp3`. AMC Test odmówił zwykłego
+  zamknięcia, aktualizator zakończył się kodem 3 i nie zmienił zainstalowanych
+  plików. To potwierdza działanie ochrony nagrywania, nie błąd instalatora.
 
 ## Znane ograniczenia
 
@@ -173,9 +183,9 @@ Kontrakt sprawdzono 2026-10-19 z aktualną oficjalną dokumentacją Sonosa:
   omijać tej ochrony przez zaufanie wszystkim klientom.
 - Nie wykonano ręcznego odbioru NVDA istniejącego okna konta ani prawdziwego
   odnowienia tokenu. Potrzebna jest obecność użytkownika.
-- Nowe okno konta jest gotowe w źródłach i testach, ale nie jest jeszcze
-  zbudowane ani zainstalowane w użytkowym AMC Test. Dopiero bezpieczna bramka
-  nagrywania pozwala podmienić działającą instalację.
+- Nowe okno konta jest gotowe w źródłach, testach i zweryfikowanym kandydacie,
+  ale nie jest jeszcze zainstalowane w użytkowym AMC Test. Dopiero bezpieczna
+  bramka nagrywania pozwala podmienić działającą instalację.
 - Prawdziwe rozpoczęcie logowania, otwarcie przeglądarki, sprawdzenie konta i
   odczyt grup nie były automatyzowane. Wymagają świadomego odbioru użytkownika;
   żadne polecenie nie zostało wysłane do głośnika.
@@ -198,5 +208,9 @@ Kontrakt sprawdzono 2026-10-19 z aktualną oficjalną dokumentacją Sonosa:
 - Commit bezpiecznego reverse proxy i testów 16/16: `1db05e74`.
 - Commit okna konta Sonos, bramki `Ctrl+F5`, testów i zapisu realizacji:
   `6b967a29`.
-- Instalacja AMC: bez zmian.
+- Kandydat AMC Test: `2026.10.20-fd5f423117f87c34aff6e9c4def22a985aa307a6-b7475d46`.
+- Zainstalowany AMC Test pozostaje w wersji
+  `2026.10.20-f96149f75e83eea064899db78c762596e56d2504-904ceb8c`;
+  instalacja nowego kandydata została bezpiecznie odłożona przez aktywne
+  nagrywanie harmonogramowe.
 - Publikacja: brak.
