@@ -161,6 +161,19 @@ znalazło stację już zapisaną, podaje „Stacja jest już w Bibliotece: nazwa
 nie usuwa jej ukradkiem. `Ctrl+L` w oknie wyszukiwania zamyka je i wykonuje to
 samo wspólne polecenie Biblioteki co menu, pomoc i paleta.
 
+Od 21 października 2026 zasada pozostania w wyszukiwarce obejmuje wszystkie
+sesje: Pliki lokalne, Radio, Podcasty i YouTube, Spotify, TIDAL, WiiM oraz
+Sonos. Jeżeli dana sesja nie obsługuje zmiany Biblioteki, użytkownik otrzymuje
+krótki komunikat w oknie wyszukiwania, a fokus i zaznaczony wynik pozostają na
+miejscu. Wynik lokalny jest już elementem Biblioteki, dlatego skrót niczego
+nie usuwa. AMC podaje wtedy, że wpis można usunąć po przejściu `Ctrl+L` do
+Biblioteki i użyciu `Delete`; sam plik pozostaje na dysku.
+
+Na świeżym profilu bez zapisanych danych wyszukiwanie nadal jest poprawnym,
+pustym katalogiem. Użycie `Ctrl+Shift+L` bez zaznaczonego wyniku mówi
+„Najpierw wykonaj wyszukiwanie i wybierz wynik” i zwraca fokus do pola
+wyszukiwania zamiast zamykać okno.
+
 Przykładowe komunikaty:
 
 - „Przygotowywanie wyniku katalogu”, a po potwierdzeniu „Dodano do Biblioteki:
@@ -171,6 +184,20 @@ Przykładowe komunikaty:
   wykonawcą ani podcastem Biblioteki.
 
 ## Uzasadnienie i decyzje
+
+**Korekta użytkownika z 21 października 2026:** po naprawie Radia należało
+sprawdzić ten sam przypadek na nowym profilu oraz w wyszukiwaniu lokalnym,
+Podcastach i YouTube. Audyt wykazał wspólną lukę: pozostanie w modalu było
+uzależnione od zamkniętej listy kilku sesji. Pliki lokalne, WiiM i Sonos mogły
+więc zamknąć wyszukiwarkę przed podaniem wyniku operacji. Warunek został
+zastąpiony wspólną zasadą: każda akcja `Ctrl+Shift+L` jest rozstrzygana w
+aktywnym oknie wyszukiwania. Poprawka zastępuje wcześniejsze, wyliczane osobno
+warunki dla Radia, Podcastów i YouTube, Spotify oraz TIDAL.
+
+Dla Plików lokalnych nie wprowadzono ukrytego usuwania rekordu z poziomu
+wyszukiwania. Byłaby to nowa, destrukcyjna semantyka tego samego skrótu.
+Zamiast tego AMC wyjaśnia bezpieczną drogę przez Bibliotekę. `Ctrl+L` pozostaje
+jedyną świadomą nawigacją zamykającą wyszukiwarkę.
 
 **Korekta użytkownika z 20 października 2026:** wyszukanie „Polskie radio” i
 `Ctrl+Shift+L` gubiło kursor, po czym `Ctrl+L` nie pozwalało wejść do
@@ -203,6 +230,17 @@ brak rozbieżności powierzchni.
 
 ## Testy i wynik
 
+- Korekta wspólna z 21 października 2026: **78/78 testów zaliczonych** dla
+  nawigacji wyszukiwarki, katalogu źródeł i startu aplikacji.
+- Macierz obejmuje Pliki lokalne, Radio, zapisane i publiczne wyniki Podcastów
+  i YouTube, WiiM, Sonos, Spotify oraz TIDAL. Każdy przypadek sprawdza brak
+  zamknięcia modala po `Ctrl+Shift+L`.
+- Osobne testy potwierdzają poprawny pusty katalog na świeżym profilu, brak
+  ostrzeżeń przy pustych bazach, komunikat bez zaznaczenia, powrót fokusu do
+  pola zapytania oraz bezpieczny komunikat dla pliku lokalnego.
+- Testy uruchomiono w przypiętym środowisku developerskim wxPython 4.3.1.
+  Zapakowany runtime instalacji celowo nie zawiera programu `pytest`.
+
 - Korekta radiowa i `Ctrl+L`: ukierunkowany zestaw wyszukiwania, startu hosta i
   instalatora — **75 zaliczonych**; szersza regresja skrótów, menu, pomocy,
   logiki GUI, wyszukiwania i startu — **194 zaliczone**.
@@ -229,6 +267,10 @@ brak rozbieżności powierzchni.
 
 ## Znane ograniczenia
 
+- Automatyczne testy nie zastępują ręcznego odbioru z NVDA na świeżym profilu.
+  Po instalacji trzeba sprawdzić otwieranie wyszukiwania, pusty wynik,
+  `Ctrl+Shift+L`, `Ctrl+L`, `Escape` i powrót fokusu w obu profilach.
+
 - Korekta Radia i `Ctrl+L` jest zbudowana, zainstalowana i uruchomiona w AMC
   Test. Pozostaje ręczny odbiór fokusu i komunikatów z NVDA.
 
@@ -239,6 +281,12 @@ brak rozbieżności powierzchni.
 - Sortowanie zbiorczej Biblioteki pozostaje osobnym zadaniem `POD-001`.
 
 ## Wersja i commit
+
+- Wspólna korekta wszystkich sesji z 21 października 2026 jest zapisywana w
+  bieżącym commicie implementacyjnym; dokładny identyfikator zostanie dopisany
+  w rejestrze po utworzeniu commitu. Zmieniono `wxlite/amc_wx_lite/gui.py`,
+  `wxlite/tests/test_search_gui_navigation.py`,
+  `wxlite/tests/test_search_catalog.py` oraz niniejszy dokument.
 
 - Korekta z 20 października 2026: `3be15559` —
   `fix(amc): utrzymaj wyszukiwanie i profil hosta`.

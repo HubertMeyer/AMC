@@ -159,3 +159,38 @@ def test_one_source_failure_does_not_erase_other_global_results() -> None:
         "Nie udało się odczytać zapisanych danych: Radio",
     )
     assert "OSError" not in result.warnings[0]
+
+
+def test_fresh_empty_profile_is_a_valid_search_catalog() -> None:
+    class EmptyLibrary:
+        def load_view(self, view):
+            assert view == "all_files"
+            return type("Result", (), {"rows": ()})()
+
+    class EmptyRadio:
+        def load(self, *, scope):
+            assert scope == "library"
+            return type(
+                "Snapshot",
+                (),
+                {"load_error": None, "as_payload": lambda self: ()},
+            )()
+
+    class EmptyPodcasts:
+        def search_rows(self):
+            return ()
+
+    sources = SearchSources(
+        EmptyLibrary(),
+        EmptyRadio(),
+        EmptyPodcasts(),
+        None,
+    )
+    result = sources.collect((
+        SessionId.FILES,
+        SessionId.RADIO,
+        SessionId.PODCASTS,
+    ))
+
+    assert result.entries == ()
+    assert result.warnings == ()

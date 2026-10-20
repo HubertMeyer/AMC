@@ -2356,24 +2356,13 @@ class SearchDialog(wx.Dialog):
         self.selected_result = entry
         self.selected_results = selected or [entry]
         self.selected_action = action
-        if (
-            action is SearchResultAction.LIBRARY
-            and all(
-                candidate.session_id in (
-                    SessionId.RADIO,
-                    SessionId.PODCASTS,
-                    SessionId.TIDAL,
-                    SessionId.SPOTIFY,
-                )
-                for candidate in self.selected_results
-            )
-        ):
+        if action is SearchResultAction.LIBRARY:
             # Zmiana Biblioteki ma zostać wykonana w samym oknie wyszukiwania
-            # zarówno dla wyniku katalogu, jak i dla zapisanego wyniku. Dawna
-            # droga zapisanego wyniku zamykała modal, przechodziła do listy
-            # źródłowej i dopiero tam wykonywała polecenie. NVDA ogłaszał wtedy
-            # główne okno zamiast wyniku operacji, a użytkownik tracił miejsce
-            # w wyszukiwaniu.
+            # dla każdego źródła. Także brak obsługi ma zostać ogłoszony tutaj,
+            # zamiast zamknąć modal i zgubić fokus. Dawna droga zapisanego
+            # wyniku przechodziła do listy źródłowej i dopiero tam wykonywała
+            # polecenie. NVDA ogłaszał wtedy główne okno zamiast wyniku
+            # operacji, a użytkownik tracił miejsce w wyszukiwaniu.
             self._execute_direct_action(self.selected_results, action, self)
             return
         self.EndModal(wx.ID_OK)
@@ -7726,7 +7715,13 @@ class LiteFrame(wx.Frame):
             announce("Ta operacja nie jest dostępna dla wybranych wyników")
             return
         session_id = entries[0].session_id
-        if session_id is SessionId.PODCASTS:
+        if session_id is SessionId.FILES:
+            announce(
+                "Wynik lokalny jest już w Bibliotece. "
+                "Aby usunąć wpis, przejdź skrótem Ctrl+L do Biblioteki "
+                "i naciśnij Delete. Plik pozostanie na dysku"
+            )
+        elif session_id is SessionId.PODCASTS:
             self._change_saved_podcast_search_result_membership(
                 entries,
                 announce=announce,

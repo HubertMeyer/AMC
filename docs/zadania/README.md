@@ -59,8 +59,10 @@ zmian, wymagający korekty użytkownika:
   NVDAExtensionGlobalPlugin bez zmiany zwykłego schowka w innych programach.
   Szczegóły:
   [NVDA-001-opoznienie-ctrl-c.md](NVDA-001-opoznienie-ctrl-c.md).
-- `SEARCH-001` — **Korekta Radia i `Ctrl+L` jest zainstalowana w AMC Test;
-  czeka na ręczny odbiór NVDA** — wyszukiwanie YouTube, Radia, Spotify i TIDAL:
+- `SEARCH-001` — **Wspólny kontrakt wyszukiwania dla wszystkich sesji oraz
+  pustego profilu ma 78/78 zaliczonych testów; czeka na przebudowę obu profili
+  i ręczny odbiór NVDA** — wyszukiwanie Plików lokalnych, YouTube, Radia,
+  Spotify, TIDAL, WiiM i Sonosa:
   `Ctrl+Shift+L` pozostaje w oknie także dla zapisanego wyniku, wykonuje jedną
   właściwą operację i nie oddaje mowy głównemu oknu. `Ctrl+L` zamyka modal i
   przechodzi wspólnym poleceniem do Biblioteki. Szczegóły:

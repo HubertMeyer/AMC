@@ -894,9 +894,12 @@ def test_remote_result_uses_materialization_instead_of_local_navigation() -> Non
 @pytest.mark.parametrize(
     ("session_id", "remote_kind", "kind"),
     (
+        (SessionId.FILES, None, "track"),
         (SessionId.RADIO, "radioStation", "station"),
         (SessionId.PODCASTS, "youtubeChannel", "podcast"),
         (SessionId.PODCASTS, None, "podcast"),
+        (SessionId.WIIM, None, "wiimSource"),
+        (SessionId.SONOS, None, "sonosGroup"),
         (SessionId.TIDAL, "tidalCatalog", "album"),
         (SessionId.TIDAL, None, "album"),
         (SessionId.SPOTIFY, "spotifyCatalog", "album"),
@@ -943,6 +946,65 @@ def test_library_action_keeps_search_dialog_open(
     assert direct_actions == [([result], SearchResultAction.LIBRARY, dialog)]
     assert modal_results == []
     assert dialog.selected_result is result
+
+
+def test_empty_search_library_action_keeps_dialog_and_returns_query_focus() -> None:
+    calls = []
+    dialog = SimpleNamespace(
+        _lead_entry=lambda: None,
+        announcer=SimpleNamespace(say=lambda message: calls.append(("say", message))),
+        query=SimpleNamespace(SetFocus=lambda: calls.append(("focus", "query"))),
+        EndModal=lambda result: calls.append(("close", result)),
+    )
+
+    gui_module.SearchDialog._complete_selected(
+        dialog,
+        SearchResultAction.LIBRARY,
+    )
+
+    assert calls == [
+        ("say", "Najpierw wykonaj wyszukiwanie i wybierz wynik"),
+        ("focus", "query"),
+    ]
+
+
+def test_local_search_library_action_stays_open_and_explains_safe_removal() -> None:
+    spoken = []
+    result = SearchEntry(
+        SessionId.FILES,
+        Row(
+            "local-private",
+            "Nagranie",
+            "track",
+            path="D:/Muzyka/nagranie.mp3",
+        ),
+        LibraryView.ALL_FILES,
+    )
+    frame = SimpleNamespace(
+        _search_dialog_alive=lambda _dialog: True,
+        announcer=SimpleNamespace(
+            say=lambda _message: pytest.fail(
+                "Główne okno nie może przejąć komunikatu wyszukiwarki"
+            )
+        ),
+    )
+    dialog = SimpleNamespace(
+        IsShown=lambda: True,
+        announcer=SimpleNamespace(say=spoken.append),
+    )
+
+    LiteFrame._execute_search_dialog_action(
+        frame,
+        [result],
+        SearchResultAction.LIBRARY,
+        dialog,
+    )
+
+    assert spoken == [
+        "Wynik lokalny jest już w Bibliotece. "
+        "Aby usunąć wpis, przejdź skrótem Ctrl+L do Biblioteki "
+        "i naciśnij Delete. Plik pozostanie na dysku"
+    ]
 
 
 def test_radio_search_library_confirmation_uses_dialog_and_keeps_focus_context() -> None:
