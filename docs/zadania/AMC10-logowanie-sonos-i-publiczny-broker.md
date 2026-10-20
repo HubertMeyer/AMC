@@ -33,6 +33,10 @@ prawie gotowe. Ten etap nie zmienia adapterów, list, transportu ani WiiM.
   budować teraz następnego publicznego instalatora. Nowy publiczny kandydat ma
   powstać dopiero po domknięciu kolejnych funkcji. Zastępuje to przebudowywanie
   profilu publicznego po każdej małej korekcie.
+- 2026-10-20: po potwierdzeniu działania Spotify i poprawki wyszukiwania
+  użytkownik polecił wrócić do Sonosa. Odczyt Hermesa wykazał działający host
+  HTTPS, ale brak usługi brokera. AMC rozróżnia teraz ten stan od uszkodzonej
+  odpowiedzi i nie ujawnia użytkownikowi adresu ani treści odpowiedzi serwera.
 
 ## Materiał do dokumentacji użytkownika
 
@@ -53,6 +57,11 @@ Po otwarciu okna konta AMC jawnie wypowiada aktualny stan Sonosa, mimo że fokus
 trafia na przycisk. Gdy `Ctrl+F5` wykryje już połączone konto, mówi „Konto
 Sonos jest połączone. Wczytuję głośniki i grupy”, a następnie otwiera listę.
 Nie uruchamia ponownie logowania i nie wysyła polecenia do głośnika.
+
+Jeżeli skonfigurowany host odpowiada, ale nie ma pod nim uruchomionej usługi
+logowania AMC, po wybraniu „Rozpocznij logowanie” program mówi: „Usługa
+logowania Sonos nie jest uruchomiona pod skonfigurowanym adresem”. Ten stan
+nie jest mylony z odmową Sonosa ani z oczekiwaniem na przeglądarkę.
 
 AMC nie zna i nie przechowuje sekretu integracji Sonos. Tokeny użytkownika
 pozostają wyłącznie w procesie C# i w istniejącym lokalnym magazynie chronionym
@@ -96,6 +105,9 @@ zewnętrznym koncie. WiiM nie zależy od tego brokera.
   poświadczeń: stan, rozpoczęcie, sprawdzenie i anulowanie logowania,
   odświeżenie, ponowienie samego zapisu oraz wylogowanie. Odpowiedzi nie
   zawierają tokenów, sekretu, adresu brokera, nazw klas ani wartości enumów.
+- `404` z punktu rozpoczęcia logowania nie jest prawidłową odpowiedzią
+  brokera. Oznacza, że pod zaufanym hostem nie działa usługa AMC, dlatego ma
+  osobny stały komunikat. Treść HTML lub JSON odpowiedzi nie jest cytowana.
 
 Kontrakt sprawdzono 2026-10-19 z aktualną oficjalną dokumentacją Sonosa:
 
@@ -113,8 +125,11 @@ Kontrakt sprawdzono 2026-10-19 z aktualną oficjalną dokumentacją Sonosa:
 - `src/AccessibleMediaController.SonosBroker/SonosLoginSessionStore.cs`
 - `src/AccessibleMediaController.SonosBroker/SonosOAuthGateway.cs`
 - `src/AccessibleMediaController.SonosBroker/README.md`
+- `src/AccessibleMediaController.Core/Sonos/SonosLoginContract.cs`
+- `src/AccessibleMediaController.Core/Sonos/SonosLoginClient.cs`
 - `scripts/Build-SonosBrokerBundle.ps1`
 - `tests/AccessibleMediaController.SonosBroker.SmokeTests/*`
+- `tests/AccessibleMediaController.Core.SmokeTests/SonosLoginClientTests.cs`
 - `src/AccessibleMediaController.LiteHost/LiteSonosAccountOwner.cs`
 - `src/AccessibleMediaController.LiteHost/LiteSonosCoordinator.cs`
 - `src/AccessibleMediaController.LiteHost/LiteEngineHandlers.cs`
@@ -182,6 +197,12 @@ Kontrakt sprawdzono 2026-10-19 z aktualną oficjalną dokumentacją Sonosa:
 - `dotnet run --project tests/AccessibleMediaController.LiteHost.ProtocolTests/AccessibleMediaController.LiteHost.ProtocolTests.csproj --no-build -- --sonos`
   — jeden ukierunkowany zestaw Sonos zaliczony. Test potwierdza jawne etykiety
   i brak tokenu, adresu brokera oraz technicznych nazw stanów w odpowiedzi.
+- Po rozdzieleniu braku endpointu Hermesa kompilacje Release testów Core i
+  protokołu LiteHost zakończyły się z 0 ostrzeżeń i 0 błędów. Ukierunkowane
+  testy klienta pierwszego logowania: **36 zaliczonych**. Ukierunkowany
+  kontrakt Sonos LiteHost: **1/1 zaliczony**. Test potwierdza stały komunikat
+  bez adresu brokera i rozróżnienie `404` od niezgodnej odpowiedzi innego
+  rodzaju.
 - 136 ukierunkowanych testów wxPython — zaliczone. Obejmują `Ctrl+F5`, menu,
   pomoc, paletę, Menedżer sesji, jawne etykiety, rozdzielenie stanu konta od
   tokenów, drogę konto–grupy oraz zachowanie innych kont i sesji.
@@ -258,6 +279,8 @@ Kontrakt sprawdzono 2026-10-19 z aktualną oficjalną dokumentacją Sonosa:
   nadal łączyć stan hosta z kontrolą wszystkich jawnych folderów nagrań.
 - Jawne oznajmienie stanu konta z 20 października jest potwierdzone w kodzie i
   testach, ale nie zostało jeszcze zainstalowane ani odebrane z NVDA.
+- Rozpoznanie nieuruchomionej usługi brokera jest potwierdzone w kodzie,
+  kompilacji i testach, lecz nie zostało jeszcze zainstalowane w AMC Test.
 
 ## Brama publicznego udostępnienia
 
@@ -294,3 +317,6 @@ Kontrakt sprawdzono 2026-10-19 z aktualną oficjalną dokumentacją Sonosa:
   `388f5e7a1dd31f8cd8b2c609c2096a641571a528ca6c8fe20569e2f3359c8660`.
   Budowa i integralność są potwierdzone; wdrożenia, konfiguracji sekretów,
   logowania i publikacji nie wykonywano.
+- Osobny użytkowy stan braku endpointu brokera: commit `c6eaeee9` —
+  `fix(amc10): rozpoznaj brak uslugi logowania Sonos`. Kompilacja Release oraz
+  testy 36 i 1/1 są zaliczone; instalacji ani publikacji nie wykonywano.

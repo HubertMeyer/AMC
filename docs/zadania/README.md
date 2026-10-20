@@ -149,8 +149,10 @@ zmian, wymagający korekty użytkownika:
   Zatwierdzona specyfikacja:
   `D:\Projekty Codex\Accessible Multimedia Controller\AMC12_PROFILE_WYDANIA_PUBLICZNEGO_I_TESTOWEGO_2026-10-18.md`.
 - `AMC10` — **W trakcie; broker oraz dostępne okno konta są zainstalowane
-  w AMC Test, a jawna mowa stanu konta jest gotowa w kodzie i testach; dalej
-  potrzebne są domena, instalacja korekty i odbiór na zewnętrznym koncie** —
+  w AMC Test, a jawna mowa stanu konta i precyzyjny komunikat o
+  nieuruchomionej usłudze brokera są gotowe w kodzie i testach; dalej
+  potrzebne są uruchomienie brokera na Hermesie, instalacja korekty i odbiór
+  na zewnętrznym koncie** —
   działające sterowanie Sonosem i WiiM nie zostało
   przepisane. `Ctrl+F5` wybiera dom i grupę, a przy braku połączenia prowadzi do
   konta zamiast kończyć się błędem. Okno udostępnia rozpoczęcie, jawne
