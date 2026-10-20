@@ -523,6 +523,10 @@ sekretów oraz tokenów:
 - Dowód historycznego logowania użytkownika, rozdzielenie tokenu od sekretu
   integracji i bezpieczna lista kontroli dla Hermesa: commit `8ac9b2be` —
   `docs(amc10): zapisz dowod historycznego logowania`.
+- Korekta stanu działającego konta, dokładne rozdzielenie bezpośredniego
+  sterowania od brokera logowania oraz bramka przed instalacją źródeł z
+  wyłączonym brokerem: commit `2759b508` —
+  `docs(amc10): doprecyzuj dzialajace konto Sonos`.
 
 ## Porządek dysku
 
