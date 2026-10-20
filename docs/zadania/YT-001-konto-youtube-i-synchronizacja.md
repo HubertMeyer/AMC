@@ -143,6 +143,7 @@ Automatyczne usuwanie po obu stronach jest wykluczone.
   `src/AccessibleMediaController.Core/YouTube/YouTubeOAuthLoopbackReceiver.cs`,
   `src/AccessibleMediaController.Core/YouTube/YouTubeAccountCoordinator.cs`,
   `src/AccessibleMediaController.Core/YouTube/YouTubeSubscriptionClient.cs`,
+  `src/AccessibleMediaController.Core/YouTube/YouTubeSubscriptionSyncPlanner.cs`,
   `src/AccessibleMediaController.Windows/Services/YouTubeCredentialStore.cs`,
   powiązanie magazynu z LiteHostem oraz testy Core i Windows.
 - Testy: `dotnet run --project
@@ -151,13 +152,15 @@ Automatyczne usuwanie po obu stronach jest wykluczone.
   Test granicy poświadczeń Windows `--youtube-credential-boundary` — zaliczone
   6 z 6 sprawdzeń. Test `--youtube-account-coordinator` — zaliczone 5 z 5
   scenariuszy cyklu konta. Test `--youtube-subscriptions` — zaliczone 5 z 5
-  scenariuszy odczytu, stronicowania i błędów API. Projekty Windows i LiteHost
-  zbudowane bez ostrzeżeń i błędów.
+  scenariuszy odczytu, stronicowania i błędów API. Test
+  `--youtube-subscription-sync-plan` — zaliczone 5 z 5 scenariuszy polityki
+  jednokierunkowej. Projekty Windows i LiteHost zbudowane bez ostrzeżeń i błędów.
 - Commity źródła i testów: `ce723bff` (`feat(youtube): add safe OAuth protocol foundation`)
   `0c15fbcb` (`feat(youtube): isolate token exchange and credentials`) oraz
   `cbd2a5d3` (`feat(youtube): add guarded loopback callback`) i `161cb856`
   (`feat(youtube): coordinate account lifecycle safely`) oraz `86309bb0`
-  (`feat(youtube): read account subscriptions safely`).
+  (`feat(youtube): read account subscriptions safely`) i `436c5e3d`
+  (`feat(youtube): plan one-way subscription sync`).
 - Zainstalowana kompilacja: brak. Ten etap nie zmienia jeszcze interfejsu ani
   bieżącej instalacji AMC Test.
 
@@ -203,6 +206,10 @@ bez konta.
   jeszcze niczego w Bibliotece AMC. Oficjalne źródła:
   [subscriptions.list](https://developers.google.com/youtube/data/reference/rest/v3/subscriptions/list?hl=en),
   [błędy YouTube Data API](https://developers.google.com/youtube/data/reference/rest/v3/errors).
+- Plan synchronizacji jest czysty i niedestrukcyjny: nie zapisuje bazy przed
+  potwierdzeniem. Rozróżnia nowe, już obecne i świadomie usunięte kanały,
+  ignoruje zdalny brak bez usuwania danych, a przywrócenie oznacza osobną akcję
+  wskazującą istniejący rekord AMC.
 
 ## Testy i wynik
 
@@ -221,15 +228,18 @@ zapis dopiero po prawidłowym powrocie, zachowanie konta po odmowie, odświeżen
 wygasłego tokenu, brak sieci dla świeżego tokenu i wylogowanie. Pięć scenariuszy
 klienta subskrypcji potwierdziło wszystkie strony, usuwanie duplikatów po ID,
 zatrzymanie powtarzającej się strony, użytkowe błędy limitu i konta bez kanału
-oraz pomijanie wpisów bez stabilnej tożsamości.
+oraz pomijanie wpisów bez stabilnej tożsamości. Pięć scenariuszy planu
+synchronizacji potwierdziło nowe kanały, brak duplikatów, zachowanie lokalnie
+usuniętego źródła, jawne przywrócenie i brak usuwania po zniknięciu z Google.
 
 ## Znane ograniczenia
 
 - Brak jeszcze przydzielonego identyfikatora aplikacji Google dla AMC.
-- Nie ma jeszcze warstwy zapisującej subskrypcje do Biblioteki AMC ani
-  interfejsu wx. Koordynator, lokalny odbiornik, transport tokenów, odczyt API
-  i chroniony, profilowo rozdzielony magazyn są gotowe, ale nie są jeszcze
-  połączone z widocznym poleceniem ani z identyfikatorem aplikacji Google.
+- Nie ma jeszcze warstwy wykonującej zatwierdzony plan w Bibliotece AMC ani
+  interfejsu wx. Koordynator, lokalny odbiornik, transport tokenów, odczyt API,
+  plan synchronizacji i chroniony, profilowo rozdzielony magazyn są gotowe,
+  ale nie są jeszcze połączone z widocznym poleceniem ani z identyfikatorem
+  aplikacji Google.
 - Przed dodaniem widocznego polecenia trzeba połączyć magazyn z profilem hosta
   i dodać testy parytetu Ctrl+F1, Ctrl+Shift+K i menu.
 - Profil publiczny wymaga osobnej decyzji po konfiguracji i weryfikacji Google.
@@ -237,7 +247,7 @@ oraz pomijanie wpisów bez stabilnej tożsamości.
 ## Wersja i commit
 
 Kod źródłowy i testy są zapisane w lokalnych commitach `ce723bff`, `0c15fbcb`,
-`cbd2a5d3`, `161cb856` oraz `86309bb0`, po zainstalowanej kompilacji
+`cbd2a5d3`, `161cb856`, `86309bb0` oraz `436c5e3d`, po zainstalowanej kompilacji
 `2026.10.21-a947f79d...`. Projekty
 źródłowe zostały pomyślnie zbudowane, ale nie powstał nowy pakiet, instalacja
 ani publikacja.
