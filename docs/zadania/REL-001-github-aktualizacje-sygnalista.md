@@ -319,7 +319,8 @@ repozytorium, kanałami wydań i polityką prywatności.
 - Warunkowe pakowanie zweryfikowanego endpointu: `f9afe750` —
   `fix(rel): pakuj endpoint internetowego Sygnalisty`.
 - Automatyczna odmowa publicznego snapshotu przy prywatnej ścieżce lub
-  poświadczeniu: commit zostanie wpisany po lokalnym zatwierdzeniu.
+  poświadczeniu: `adcf1d9c` —
+  `fix(rel): blokuj prywatne dane w snapshocie`.
 - Druga redakcja serwerowa ścieżek, przypisań tokenów i kont,
   identyfikatorów oraz nazw plików: `8149d076` —
   `fix(rel): wzmocnij redakcje Workera`.
