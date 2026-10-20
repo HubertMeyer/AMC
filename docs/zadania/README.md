@@ -141,11 +141,11 @@ zmian, wymagający korekty użytkownika:
   jest zbudowany, ma potwierdzoną integralność i fizycznie nie zawiera modułów
   interfejsu Spotify/TIDAL ani Librespot. Przed pierwszym wydaniem rozszerzono
   ten kontrakt również o fizyczne pominięcie modułu interfejsu Sonosa; testy
-  ukierunkowane są zielone, a nowy końcowy kandydat jest przygotowywany.
-  Dotychczasowy kandydat `6e1f6bc9`
-  zawiera też poprawione mapowanie `F1`–`F24` i zachowanie nagrania po awarii
-  strumienia; został zbudowany i sprawdzony lokalnie, lecz nie został
-  zainstalowany ani opublikowany** —
+  ukierunkowane są zielone. Kandydat `alpha.423` został zbudowany,
+  zainstalowany obok AMC Test i ujawnił wspólną dodatkową blokadę wxPython:
+  osobny publiczny host nie wystartował. Przyczynę poprawiono w `9893de59`,
+  testy ukierunkowane są zielone, a kandydat zastępczy czeka na budowę i
+  rzeczywistą próbę dwóch hostów. Niczego nie opublikowano** —
   jeden kod, jawny manifest możliwości, osobne katalogi, blokady, logi i kanały
   AMC Test oraz publicznego AMC. Bieżący zapis realizacji:
   [AMC12-profile-wydania-publicznego-i-testowego.md](AMC12-profile-wydania-publicznego-i-testowego.md).

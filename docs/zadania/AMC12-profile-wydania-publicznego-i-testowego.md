@@ -65,10 +65,13 @@ zastosowaną migawką. Jeśli dane publiczne zmieniły się osobno, pyta, czy
 przyjąć dane z AMC Test, czy zachować dane publiczne. Po odświeżeniu pozostaje
 ten sam widok i, o ile element nadal istnieje, ten sam zaznaczony wiersz.
 
-Lokalny kandydat instalatora publicznego istnieje. Wariant ochronny przeszedł
-czystą instalację, pełną kontrolę i odinstalowanie, ale późniejszy wariant z
-dobrowolnymi skrótami oraz bez prywatnych modułów usług nie był ponownie
-instalowany. Żaden z nich nie został opublikowany ani odebrany z NVDA.
+Publiczny kandydat `alpha.423` został zainstalowany równolegle w osobnym
+katalogu `D:\Projekty Codex\AMC Public`. Jego pliki i profil są oddzielone od
+AMC Test, a pakiet nie zawiera Spotify, TIDAL-u ani Sonosa. Pierwsze
+uruchomienie wykryło jednak, że dodatkowa blokada jednego okna wewnątrz
+wxPython nadal miała wspólną nazwę obu profili. Ten kandydat pozostaje tylko
+punktem diagnostycznym; przed odbiorem i publikacją zastąpi go instalator z
+poprawioną blokadą. Żaden publiczny kandydat nie został jeszcze opublikowany.
 
 AMC Test i publiczny AMC mają osobne blokady uruchomienia, dlatego mogą działać
 równolegle. Drugie uruchomienie AMC Test pokazuje tylko okno AMC Test, a drugie
@@ -112,6 +115,12 @@ skrótów.
   dopiero z zestawu domkniętych i odebranych funkcji. Zastępuje to roboczą
   praktykę natychmiastowego przebudowywania profilu publicznego po małej
   korekcie wspólnego kodu.
+- **Korekta wykonawcza z 20 października 2026:** równoległość oznacza dwie
+  kompletne, działające instancje, nie tylko osobne procesy uruchamiacza.
+  Próba `alpha.423` wykazała, że mutexy C# były rozdzielone, lecz
+  `wx.SingleInstanceChecker` nadal łączył AMC z AMC Test. Blokada wxPython
+  zawiera teraz tożsamość profilu. Zastępuje to wcześniejszy opis, według
+  którego same rozdzielone mutexy uruchamiacza były wystarczającym dowodem.
 
 - Jedna definicja profilu jest bezpieczniejsza niż osobne listy w interfejsie,
   pomocy i pakowaniu. Zapobiega sytuacji, w której ukryta usługa nadal pojawia
@@ -186,6 +195,7 @@ skrótów.
 - `installer/AMC_Wx_Setup.iss`
 - `wxlite/tests/test_release_profile.py`
 - `wxlite/tests/test_bundle_layout.py`
+- `wxlite/tests/test_startup.py`
 - `wxlite/tests/test_installer_profiles.py`
 - `src/Shared/ReleaseProfileContract.cs`
 - `src/AccessibleMediaController.PythonLauncher/AccessibleMediaController.PythonLauncher.csproj`
@@ -274,6 +284,16 @@ skrótów.
   w kolizję z inną instancją. Izolowano wyłącznie tożsamość kanału testowego;
   powtórzenie zaliczyło wszystkie **27 przypadków** bez osłabiania kontraktu
   produkcyjnego.
+- Pierwsza rzeczywista równoległa instalacja `alpha.423` potwierdziła osobne
+  pliki, manifesty i procesy uruchamiacza/Pythona, ale nie uruchomiła drugiego
+  hosta i nie utworzyła publicznego magazynu. Przyczyną była wspólna nazwa
+  wewnętrznego `SingleInstanceChecker` wxPython. Po poprawce **24 testy
+  ukierunkowane zaliczono**; obejmują odrębne nazwy AMC/AMC Test, ochronę
+  drugiej instancji tego samego profilu, ścieżki magazynów, publiczny import
+  bez prywatnych modułów i syntetyczne złożenie publicznej paczki. Wcześniejszy
+  długi przebieg przerwano, ponieważ runner importował wszystkie moduły testów
+  i używał niedostępnego katalogu tymczasowego piaskownicy; nie został uznany
+  za wynik funkcjonalny.
 - Pełna regresja rdzenia uruchomiona jako użytkowy program testowy zakończyła
   się kodem **0**. Obejmuje między innymi Time Shift (`End`, czas i procent),
   nagrywanie, harmonogramy, pliki lokalne, Podcasty i YouTube, WiiM, profile,
@@ -383,6 +403,10 @@ skrótów.
   z jednego kodu, lecz uruchomiony profil publiczny blokuje niedopuszczone sesje
   i operacje przez manifest możliwości; nie otrzymuje poświadczeń ani osobnego
   hosta Spotify.
+- Zainstalowany do próby kandydat `alpha.423` poprzedza poprawkę blokady
+  wxPython i nie jest kandydatem do publikacji. Nie należy na jego podstawie
+  oceniać równoległego działania silnika; zostanie zastąpiony po nowej
+  kompilacji, instalacji i potwierdzeniu dwóch hostów.
 - Wersjonowana, atomowa migawka została skompilowana i sprawdzona na
   odizolowanych magazynach testowych, ale nie została jeszcze odebrana w
   zainstalowanych AMC Test i AMC. Pierwsza wersja ma stały bezpieczny zakres;
@@ -520,3 +544,13 @@ skrótów.
   `6e1f6bc9` został przez
   tę decyzję zastąpiony jako planowany materiał wydania, ale pozostaje lokalnym
   artefaktem do czasu zweryfikowania następcy.
+- Rzeczywista paczka i instalator `alpha.423` z rewizji `3176b7fb`, paczki
+  `7ca86660`: zbudowane, integralność potwierdzona i zainstalowane do
+  `D:\Projekty Codex\AMC Public`. Instalator ma 123 359 009 bajtów i SHA-256
+  `60104491a6fb47f1bf98dd9684945e5c4343f85b96b84bc68f9c4cde25ab3695`.
+  Uruchomienie ujawniło kolizję dodatkowej blokady wxPython, dlatego wariant
+  nie jest przeznaczony do publikacji.
+- Poprawka blokady profilu i test importu rzeczywistej kopii pakietu:
+  `9893de59` — `fix(amc12): rozdziel instancje wx profili`; 24 testy
+  ukierunkowane zaliczone. Nowy build, instalacja i uruchomienie pozostają do
+  wykonania, więc sam commit nie jest jeszcze dowodem naprawionej instalacji.
