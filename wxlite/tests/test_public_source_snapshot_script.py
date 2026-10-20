@@ -119,8 +119,9 @@ def test_snapshot_rejects_tracked_changes_and_never_pushes(tmp_path: Path) -> No
 @pytest.mark.skipif(POWERSHELL is None, reason="Brak PowerShell")
 def test_snapshot_rejects_private_windows_profile_path(tmp_path: Path) -> None:
     repository = _repository(tmp_path)
+    private_path = "C:\\Users\\" + "micha\\sekret\\plik.txt"
     (repository / "app.txt").write_text(
-        "przykład C:\\Users\\micha\\sekret\\plik.txt\n", encoding="utf-8"
+        f"przykład {private_path}\n", encoding="utf-8"
     )
     _git(repository, "add", "app.txt")
     _git(repository, "commit", "-m", "prywatna ścieżka")

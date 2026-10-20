@@ -332,7 +332,7 @@ repozytorium, kanałami wydań i polityką prywatności.
   poświadczeniu: `adcf1d9c` —
   `fix(rel): blokuj prywatne dane w snapshocie`.
 - Anonimizacja historycznych ścieżek oraz przenośne wartości domyślne starych
-  narzędzi: commit zostanie wpisany po lokalnym zatwierdzeniu.
+  narzędzi: `98e5549f` — `chore(rel): zanonimizuj sciezki zrodel`.
 - Druga redakcja serwerowa ścieżek, przypisań tokenów i kont,
   identyfikatorów oraz nazw plików: `8149d076` —
   `fix(rel): wzmocnij redakcje Workera`.
