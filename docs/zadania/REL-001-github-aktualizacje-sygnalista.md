@@ -152,6 +152,12 @@ repozytorium, kanałami wydań i polityką prywatności.
 - Worker ponownie redaguje dane, ogranicza wielkość i tempo żądań, zapisuje
   pełną treść w prywatnym repozytorium intake, a w publicznym AMC tworzy tylko
   krótki wpis. Sekret GitHuba występuje wyłącznie jako sekret Workera.
+- Publikacja instalatora ma osobną bramkę PowerShell. Domyślny przebieg tylko
+  sprawdza profil `public`, wersję, nazwę, rozmiar, SHA-256 i pełną rewizję
+  źródeł oraz przygotowuje opis i manifest gotowości. Dopiero jawne `-Publish`
+  może utworzyć wydanie; wymaga czystych śledzonych źródeł i obecności rewizji
+  instalatora na GitHubie, nie zastępuje istniejącego tagu i odczytowo
+  potwierdza oba przesłane pliki oraz sumę w opisie.
 - Polecenie korzysta ze wspólnego modelu akcji dla menu, F1, palety i
   wykonania oraz jest jawnie dostępne we wszystkich sesjach i obu profilach.
 - Możliwość lokalnego formularza jest częścią zamkniętego manifestu zarówno
@@ -196,6 +202,11 @@ repozytorium, kanałami wydań i polityką prywatności.
   `from-app`. Nie utworzono żadnego issue.
 - Zmiana internetowa nie została zbudowana ani zainstalowana, ponieważ bramka
   bezpieczeństwa wykazała aktywne nagrywanie w AMC Test. Nie przerwano go.
+- Testy skryptu pierwszego publicznego wydania: **3 zaliczone** — poprawne
+  przygotowanie bez publikacji oraz odmowa profilu testowego i zmienionej sumy.
+  Istniejący instalator `alpha.424` przeszedł dodatkowo rzeczywistą kontrolę
+  rozmiaru i SHA-256; powstał lokalny opis oraz manifest gotowości z polem
+  `published: false`. Niczego nie wysłano na GitHub.
 
 ## Znane ograniczenia
 
@@ -232,6 +243,11 @@ repozytorium, kanałami wydań i polityką prywatności.
   `fix(rel): ujednolić możliwości profili launchera`.
 - Internetowy klient i lokalnie testowalny Worker: `d9426684` —
   `feat(rel): przygotuj internetowego Sygnaliste`.
+- Bezpieczna bramka publikacji publicznego instalatora: `61837b26` —
+  `feat(rel): dodaj bezpieczna publikacje instalatora`.
+- Druga redakcja serwerowa ścieżek, przypisań tokenów i kont,
+  identyfikatorów oraz nazw plików: `8149d076` —
+  `fix(rel): wzmocnij redakcje Workera`; 7/7 testów Workera zaliczone.
 - Instalacja: `2026.10.19-fb9ba25fe0680cf7bf5435d53eb5b073de091cca-0debb6aa`;
   manifest 1665 plików, pełna integralność i uruchomienie zweryfikowane.
 - Publikacja: nie wykonano.
