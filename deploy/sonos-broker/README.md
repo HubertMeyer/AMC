@@ -4,6 +4,11 @@ Ten katalog uruchamia jedną instancję brokera AMC za Caddy. Caddy obsługuje
 publiczny HTTPS, a broker nie publikuje własnego portu. Rozwiązanie nie korzysta
 z Hermesa i nie przechowuje tokenów użytkowników na dysku.
 
+Samodzielny ZIP do przekazania na serwer, bez źródeł i bez sekretów, buduje
+`scripts/Build-SonosBrokerDeploymentBundle.ps1`. W takim ZIP-ie `Dockerfile`
+korzysta z gotowych plików z katalogu `app`; zwykły plik repozytoryjny buduje
+je bezpośrednio ze źródeł.
+
 ## Wymagania
 
 - mały, stale działający serwer Linux z Docker Engine i wtyczką Compose;

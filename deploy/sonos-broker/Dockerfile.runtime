@@ -1,0 +1,11 @@
+FROM mcr.microsoft.com/dotnet/aspnet:8.0-alpine
+WORKDIR /app
+COPY app/ ./
+
+ENV ASPNETCORE_URLS=http://+:8080 \
+    DOTNET_EnableDiagnostics=0 \
+    DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1
+EXPOSE 8080
+USER app
+
+ENTRYPOINT ["dotnet", "AccessibleMediaController.SonosBroker.dll"]
