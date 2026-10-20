@@ -141,16 +141,20 @@ Automatyczne usuwanie po obu stronach jest wykluczone.
 - Zmienione pliki: `src/AccessibleMediaController.Core/YouTube/YouTubeOAuthProtocol.cs`,
   `src/AccessibleMediaController.Core/YouTube/YouTubeOAuthTokenClient.cs`,
   `src/AccessibleMediaController.Core/YouTube/YouTubeOAuthLoopbackReceiver.cs`,
+  `src/AccessibleMediaController.Core/YouTube/YouTubeAccountCoordinator.cs`,
   `src/AccessibleMediaController.Windows/Services/YouTubeCredentialStore.cs`,
   powiązanie magazynu z LiteHostem oraz testy Core i Windows.
 - Testy: `dotnet run --project
   tests/AccessibleMediaController.Core.SmokeTests/AccessibleMediaController.Core.SmokeTests.csproj
   --no-restore -- --youtube-oauth-foundation` — zaliczone 10 z 10 scenariuszy.
   Test granicy poświadczeń Windows `--youtube-credential-boundary` — zaliczone
-  6 z 6 sprawdzeń. Projekty Windows i LiteHost zbudowane bez ostrzeżeń i błędów.
+  6 z 6 sprawdzeń. Test `--youtube-account-coordinator` — zaliczone 5 z 5
+  scenariuszy cyklu konta. Projekty Windows i LiteHost zbudowane bez ostrzeżeń
+  i błędów.
 - Commity źródła i testów: `ce723bff` (`feat(youtube): add safe OAuth protocol foundation`)
   `0c15fbcb` (`feat(youtube): isolate token exchange and credentials`) oraz
-  `cbd2a5d3` (`feat(youtube): add guarded loopback callback`).
+  `cbd2a5d3` (`feat(youtube): add guarded loopback callback`) i `161cb856`
+  (`feat(youtube): coordinate account lifecycle safely`).
 - Zainstalowana kompilacja: brak. Ten etap nie zmienia jeszcze interfejsu ani
   bieżącej instalacji AMC Test.
 
@@ -186,6 +190,10 @@ bez konta.
   port, sprawdza dokładną ścieżkę i losowy stan stałoczasowo oraz odrzuca
   powtórzone lub nadmiernie duże pola. Strona powrotu nie zawiera kodu i ma
   zakaz zapisu w pamięci podręcznej.
+- Jeden koordynator jest właścicielem całego cyklu konta. Dopiero jawne
+  logowanie może uruchomić stronę Google; anulowanie nie nadpisuje poprzedniego
+  konta, świeży token nie powoduje żądania sieciowego, wygasły jest odświeżany
+  dokładnie raz, a wylogowanie usuwa tylko magazyn bieżącego profilu.
 
 ## Testy i wynik
 
@@ -199,21 +207,25 @@ dużego. Testy nie używały sieci, prawdziwego klienta Google, przeglądarki an
 danych użytkownika; nie zapisały także syntetycznych tokenów w prawdziwym
 Menedżerze poświadczeń. Dwa scenariusze odbiornika użyły wyłącznie lokalnego
 połączenia `127.0.0.1` na losowym porcie i potwierdziły prawidłowy powrót oraz
-odrzucenie odpowiedzi z obcym stanem.
+odrzucenie odpowiedzi z obcym stanem. Pięć scenariuszy koordynatora potwierdziło
+zapis dopiero po prawidłowym powrocie, zachowanie konta po odmowie, odświeżenie
+wygasłego tokenu, brak sieci dla świeżego tokenu i wylogowanie.
 
 ## Znane ograniczenia
 
 - Brak jeszcze przydzielonego identyfikatora aplikacji Google dla AMC.
-- Nie ma jeszcze koordynatora konta, synchronizacji subskrypcji ani interfejsu
-  wx. Lokalny odbiornik, transport tokenów i chroniony, profilowo rozdzielony
-  magazyn są gotowe, ale nie są jeszcze połączone z widocznym poleceniem.
+- Nie ma jeszcze synchronizacji subskrypcji ani interfejsu wx. Koordynator,
+  lokalny odbiornik, transport tokenów i chroniony, profilowo rozdzielony
+  magazyn są gotowe, ale nie są jeszcze połączone z widocznym poleceniem ani
+  z identyfikatorem aplikacji Google.
 - Przed dodaniem widocznego polecenia trzeba połączyć magazyn z profilem hosta
   i dodać testy parytetu Ctrl+F1, Ctrl+Shift+K i menu.
 - Profil publiczny wymaga osobnej decyzji po konfiguracji i weryfikacji Google.
 
 ## Wersja i commit
 
-Kod źródłowy i testy są zapisane w lokalnych commitach `ce723bff`, `0c15fbcb`
-oraz `cbd2a5d3`, po zainstalowanej kompilacji `2026.10.21-a947f79d...`. Projekty
+Kod źródłowy i testy są zapisane w lokalnych commitach `ce723bff`, `0c15fbcb`,
+`cbd2a5d3` oraz `161cb856`, po zainstalowanej kompilacji
+`2026.10.21-a947f79d...`. Projekty
 źródłowe zostały pomyślnie zbudowane, ale nie powstał nowy pakiet, instalacja
 ani publikacja.
