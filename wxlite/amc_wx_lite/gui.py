@@ -814,7 +814,7 @@ class _WindowsPreset10Hook:
                         and not owner._keyboard_help_active
                         and exact_chord
                     ):
-                        wx.CallAfter(owner._activate_preset, 10)
+                        wx.CallAfter(owner._trigger_preset_10_from_native_boundary)
                         return 1
                 except Exception:
                     # A keyboard hook may never break the Windows message
@@ -863,7 +863,9 @@ class _WindowsPreset10HotKey:
     translate Shift+0 to ``)`` and before ``SysListView32`` consumes it.  The
     registration exists only while AMC is the active window, so it never
     steals the chord from another application.  The thread hook above remains
-    a fallback for a system that refuses the registration.
+    active as a second native route because successful registration alone does
+    not guarantee delivery through every wx/Windows control combination.  The
+    frame deduplicates the two routes before executing the preset.
     """
 
     _ID = 0xA510
@@ -920,14 +922,7 @@ class _WindowsPreset10HotKey:
                 pass
 
     def _on_hotkey(self, _event) -> None:
-        owner = self._owner
-        if getattr(owner, "_keyboard_help_active", False):
-            return
-        find_focus = getattr(getattr(wx, "Window", None), "FindFocus", None)
-        focused = find_focus() if callable(find_focus) else None
-        if focused is getattr(owner, "filter_box", None):
-            return
-        owner._activate_preset(10)
+        self._owner._trigger_preset_10_from_native_boundary()
 
 
 def chord_from_event(event: wx.KeyEvent) -> Chord:
@@ -6453,10 +6448,15 @@ class LiteFrame(wx.Frame):
         self._radio_activity_cues: dict[tuple[bool, bool], object] = {}
         self._windows_preset_10_hotkey = _WindowsPreset10HotKey(self)
         self._windows_preset_10_hook = _WindowsPreset10Hook(self)
+        self._native_preset_10_guard_until = 0.0
         self._deferred_list_announcement_version = 0
 
         self._build_ui()
         self._windows_preset_10_hotkey.bind()
+        # Instaluj sprawdzona granice watku od razu. Pierwsze EVT_ACTIVATE nie
+        # na kazdym zestawie wx/Windows dociera po pokazaniu okna, a samo
+        # RegisterHotKey moze zostac przyjete bez pozniejszego zdarzenia wx.
+        self._windows_preset_10_hook.install()
         self._bind_keys()
         self._start_engine()
 
@@ -13425,6 +13425,28 @@ class LiteFrame(wx.Frame):
 
         self.runner.submit("preset", work, done, failed)
 
+    def _trigger_preset_10_from_native_boundary(
+        self,
+        *,
+        now: float | None = None,
+    ) -> None:
+        """Wykonaj preset 10 raz, niezaleznie od natywnej trasy Windows."""
+
+        if bool(getattr(self, "_keyboard_help_active", False)):
+            return
+        find_focus = getattr(getattr(wx, "Window", None), "FindFocus", None)
+        focused = find_focus() if callable(find_focus) else None
+        if focused is getattr(self, "filter_box", None):
+            return
+        current = time.monotonic() if now is None else float(now)
+        if current < float(getattr(self, "_native_preset_10_guard_until", 0.0)):
+            return
+        # RegisterHotKey i WH_KEYBOARD moga zglosic ten sam fizyczny gest.
+        # Krotka bramka usuwa wylacznie duplikat; kolejne swiadome nacisniecie
+        # po zwolnieniu klawiszy nadal dziala normalnie.
+        self._native_preset_10_guard_until = current + 0.25
+        self._activate_preset(10)
+
     def _activate_preset(self, slot: int) -> None:
         """Uruchom preset profilu AMC albo jego prywatne nadpisanie wxPython."""
         session = self.navigator.active
@@ -17753,10 +17775,11 @@ class LiteFrame(wx.Frame):
 
         event.Skip()
         if event.GetActive():
-            if self._windows_preset_10_hotkey.register():
-                self._windows_preset_10_hook.uninstall()
-            else:
-                self._windows_preset_10_hook.install()
+            # Utrzymuj obie waskie granice aktywne. RegisterHotKey moze zwrocic
+            # sukces, a mimo to nie dostarczyc EVT_HOTKEY przez dana wersje wx.
+            # Wspolna bramka presetu usuwa podwojne wywolanie tego samego gestu.
+            self._windows_preset_10_hotkey.register()
+            self._windows_preset_10_hook.install()
             wx.CallAfter(self._reconcile_completed_external_moves)
         else:
             self._windows_preset_10_hotkey.unregister()

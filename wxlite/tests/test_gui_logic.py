@@ -407,6 +407,10 @@ def test_foreground_hotkey_registers_physical_ctrl_shift_zero(monkeypatch) -> No
         def UnregisterHotKey(self, id):
             calls.append(("unregister", id))
 
+        def _trigger_preset_10_from_native_boundary(self):
+            calls.append(("native",))
+            self._activate_preset(10)
+
         def _activate_preset(self, slot):
             calls.append(("preset", slot))
 
@@ -422,9 +426,72 @@ def test_foreground_hotkey_registers_physical_ctrl_shift_zero(monkeypatch) -> No
     assert hotkey.register()
     assert ("register", hotkey._ID, 0x0002 | 0x0004 | 0x4000, 0x30) in calls
     owner.handler(None)
+    assert ("native",) in calls
     assert ("preset", 10) in calls
     hotkey.unregister()
     assert ("unregister", hotkey._ID) in calls
+
+
+def test_native_preset_10_routes_are_deduplicated() -> None:
+    calls = []
+
+    class Owner:
+        filter_box = object()
+        _keyboard_help_active = False
+        _native_preset_10_guard_until = 0.0
+
+        def _activate_preset(self, slot):
+            calls.append(slot)
+
+    owner = Owner()
+
+    LiteFrame._trigger_preset_10_from_native_boundary(owner, now=10.0)
+    LiteFrame._trigger_preset_10_from_native_boundary(owner, now=10.1)
+    LiteFrame._trigger_preset_10_from_native_boundary(owner, now=10.3)
+
+    assert calls == [10, 10]
+
+
+def test_active_window_keeps_both_native_preset_10_routes() -> None:
+    calls = []
+
+    class Boundary:
+        def __init__(self, name):
+            self.name = name
+
+        def register(self):
+            calls.append((self.name, "register"))
+            return True
+
+        def install(self):
+            calls.append((self.name, "install"))
+            return True
+
+        def unregister(self):
+            calls.append((self.name, "unregister"))
+
+        def uninstall(self):
+            calls.append((self.name, "uninstall"))
+
+    class Event:
+        def Skip(self):
+            calls.append(("event", "skip"))
+
+        def GetActive(self):
+            return True
+
+    class Owner:
+        _windows_preset_10_hotkey = Boundary("hotkey")
+        _windows_preset_10_hook = Boundary("hook")
+
+        def _reconcile_completed_external_moves(self):
+            calls.append(("owner", "reconcile"))
+
+    LiteFrame._on_window_activate(Owner(), Event())
+
+    assert ("hotkey", "register") in calls
+    assert ("hook", "install") in calls
+    assert ("hook", "uninstall") not in calls
 
 
 def test_relation_destinations_use_natural_short_labels_unless_details_enabled() -> None:
