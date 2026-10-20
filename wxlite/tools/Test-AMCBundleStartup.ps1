@@ -48,10 +48,8 @@ try {
         else {
             "brak szczegółów z interfejsu"
         }
-        throw (
-            "Kontrolowany start paczki zakończył się kodem "
-            + "$($process.ExitCode): $failure"
-        )
+        throw ("Kontrolowany start paczki zakończył się kodem {0}: {1}" -f `
+            $process.ExitCode, $failure)
     }
     if (-not (Test-Path -LiteralPath $resultPath -PathType Leaf)) {
         throw "Kontrolowany start nie zapisał potwierdzenia gotowości."

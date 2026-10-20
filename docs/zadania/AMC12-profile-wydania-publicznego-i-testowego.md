@@ -335,6 +335,11 @@ przez profil. Zainstalowany numer to `0.1.0-alpha.425`.
   uruchomiła wadliwej wersji. Host tworzy teraz katalog, a warstwa Core pustą
   bazę z prawidłowym schematem i ustawieniami domyślnymi. Powtórne testy:
   **22/22 Python** oraz wszystkie **22 zestawy protokołu hosta** — zaliczone.
+- Druga promocja również zatrzymała się przed instalacją: rozszerzony tekst
+  błędu w pomocniczym skrypcie miał błąd składni PowerShell. Po zastąpieniu go
+  bezpiecznym formatowaniem parser PowerShell nie zgłasza błędów, a zachowany
+  kandydat z poprawionym hostem przeszedł rzeczywisty kontrolowany start
+  interfejsu i hosta. Nadal nie utożsamiamy tego z instalacją.
 
 ### Wspólna aktualizacja składników obu profili — 20 października 2026
 
