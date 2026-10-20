@@ -137,8 +137,10 @@ zmian, wymagający korekty użytkownika:
   kompilacji i testach; wariant ochronny instalatora przeszedł czystą instalację,
   pełną kontrolę i odinstalowanie, a końcowy kandydat z dobrowolnymi skrótami
   jest zbudowany, ma potwierdzoną integralność i fizycznie nie zawiera modułów
-  interfejsu Spotify/TIDAL ani Librespot, lecz nie został ponownie zainstalowany
-  ani opublikowany** —
+  interfejsu Spotify/TIDAL ani Librespot. Najnowszy kandydat `6e1f6bc9`
+  zawiera też poprawione mapowanie `F1`–`F24` i zachowanie nagrania po awarii
+  strumienia; został zbudowany i sprawdzony lokalnie, lecz nie został
+  zainstalowany ani opublikowany** —
   jeden kod, jawny manifest możliwości, osobne katalogi, blokady, logi i kanały
   AMC Test oraz publicznego AMC. Bieżący zapis realizacji:
   [AMC12-profile-wydania-publicznego-i-testowego.md](AMC12-profile-wydania-publicznego-i-testowego.md).

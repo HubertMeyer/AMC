@@ -129,4 +129,6 @@ aktywny.
   (`fix(amc): ujednolic klawisze i zachowaj nagranie po awarii`). Kod, test i
   kompilacja są potwierdzone. Zainstalowana wersja:
   `2026.10.20-1df89b186803cd6c4b1b4163a2a4ebd41e54f118-bddb827d`.
-  Publikacji nie wykonano.
+  Ograniczony publiczny profil również zbudowano z tym kodem jako paczkę
+  `9bc38937` i instalator z rewizji `6e1f6bc9`; integralność potwierdzono,
+  instalacji ani publikacji nie wykonano.

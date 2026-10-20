@@ -372,6 +372,10 @@ Historyczny projekt został użyty tylko jako materiał do odczytu.
   `2026.10.20-1df89b186803cd6c4b1b4163a2a4ebd41e54f118-bddb827d`.
   Kod, testy, paczka, integralność, instalacja i uruchomienie są potwierdzone;
   publikacji nie wykonano.
+- Ten sam kod zbudowano również jako ograniczony profil publiczny z rewizji
+  `6e1f6bc9`: paczka `9bc38937` i instalator
+  `AMC-0.1.0-alpha.422-win-x64.exe` mają potwierdzoną integralność. Publicznego
+  wariantu nie instalowano i nie publikowano.
 
 - Radiowe `Ctrl+F5`, wspólny katalog poleceń i testy kontraktu: commit
   `a6614d11` (`fix(amc09): dodaj Ctrl+F5 w Radiu`). Zmiana jest potwierdzona

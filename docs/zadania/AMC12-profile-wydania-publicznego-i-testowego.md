@@ -332,6 +332,19 @@ skrótów.
 - Odpowiadający instalator ma 123 363 456 bajtów i SHA-256
   `65e34d13dd7ff2449f7b3d356b354646cf991d3875c15cf1f434757c3b9673b5`.
   Plik integralności podaje tę samą wartość. Instalatora nie uruchamiano.
+- Po wspólnej poprawce granicy klawiatury oraz zachowania nagrania po awarii
+  strumienia zbudowano następcę
+  `.test-output/AMC-public-2026.10.20-6e1f6bc9`. Manifest wskazuje profil
+  `public`, czystą rewizję `6e1f6bc93e0fbcafb22c7a12a127471d325c0442`,
+  paczkę `9bc38937`, 1073 pliki kontrolowane i 1074 pliki razem z manifestem.
+  Katalog ma 422 602 524 bajty, nie zawiera prywatnych modułów Spotify,
+  TIDAL ani Librespot, a pełna kontrola paczki zakończyła się kodem **0**.
+- Nowy lokalny instalator znajduje się w
+  `.test-output/installers/amc12-2026.10.20-6e1f6bc9/AMC-0.1.0-alpha.422-win-x64.exe`.
+  Ma 123 357 916 bajtów i SHA-256
+  `58caaa28b367a63f049c0a86ada8061e2940992468195736abce702a402d6680`;
+  niezależny odczyt pliku i plik integralności podają tę samą wartość.
+  Instalatora nie uruchamiano, nie instalowano i nie publikowano.
 
 ## Znane ograniczenia
 
@@ -412,6 +425,14 @@ skrótów.
 - Zachowano bieżącą paczkę i instalator `cf6d1e2c`, wcześniejszy instalator z
   19.10.2026, zastane katalogi testowe o niepewnym pochodzeniu oraz mieszane
   katalogi `__pycache__`; nie usunięto źródeł, danych użytkownika ani nagrań.
+- Po pełnym sprawdzeniu następcy `6e1f6bc9` usunięto dokładnie zastąpioną
+  paczkę `.test-output/AMC-public-2026.10.20-cf6d1e2c` oraz odpowiadający jej
+  katalog `.test-output/installers/amc12-2026.10.20-cf6d1e2c`. Usunięto 1076
+  plików i odzyskano 545 939 294 bajty, około 520,6 MiB. Były to odtwarzalne
+  artefakty z commitu `cf6d1e2c`; lokalne odzyskanie wymaga ponownej budowy.
+  Zachowano nową paczkę i instalator `6e1f6bc9`, źródła, dokumentację,
+  ustawienia, dane użytkownika, nagrania oraz zastane niepewne katalogi
+  testowe.
 
 ## Wersja i commit
 
@@ -457,3 +478,9 @@ skrótów.
   `fix(amc12): usun prywatne moduly z publicznej paczki`. Testy ukierunkowane i
   pełna regresja zaliczone, paczka i instalator z pełną integralnością zbudowane;
   instalacji końcowego wariantu ani publikacji nie wykonywano.
+- Aktualny publiczny kandydat: rewizja źródłowa `6e1f6bc9`, paczka `9bc38937`
+  i instalator `AMC-0.1.0-alpha.422-win-x64.exe`. Zawiera kod poprawki
+  `4d87189e`, obejmującej wspólne mapowanie `F1`–`F24`, nawigację bloku
+  numerycznego oraz zachowanie niepustego nagrania po awarii strumienia.
+  Paczka, manifest i integralność instalatora są potwierdzone lokalnie;
+  instalacji publicznego wariantu ani publikacji nie wykonywano.
