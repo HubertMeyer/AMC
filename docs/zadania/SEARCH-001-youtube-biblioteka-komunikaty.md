@@ -297,8 +297,15 @@ brak rozbieżności powierzchni.
 - Pełna bramka po tej korekcie ujawniła nieaktualną atrapę startu silnika;
   naprawił ją osobny commit `bd708f7522f5365d1397595bb98366d1f93403c2`.
   Powtórzony pełny wynik: **1910 zaliczonych, 110 pominiętych i 11 podtestów**.
-- Usunięcie zapowiedzi „Przygotowywanie stacji” jest częścią bieżącego commitu
-  korekty odbiorczej; dokładny identyfikator zostanie dopisany po zapisie.
+- Usunięcie zapowiedzi „Przygotowywanie stacji”: commit
+  `a947f79d83f11888e2d1ea353909a1ee50b3ccaa`. Dokładnie ten commit przeszedł
+  pełną regresję: **1910 zaliczonych, 110 pominiętych i 11 podtestów**.
+- Zainstalowany i uruchomiony AMC Test:
+  `2026.10.21-a947f79d83f11888e2d1ea353909a1ee50b3ccaa-1dfc80e8`.
+- Zainstalowany publiczny AMC:
+  `2026.10.21-a947f79d83f11888e2d1ea353909a1ee50b3ccaa-5b07f9a1`.
+  Pełna kontrola 1073 plików i odizolowany start zainstalowanej kopii są
+  zaliczone. Publikacji nie wykonywano; ręczny odbiór NVDA pozostaje otwarty.
 
 - Korekta z 20 października 2026: `3be15559` —
   `fix(amc): utrzymaj wyszukiwanie i profil hosta`.

@@ -60,8 +60,9 @@ zmian, wymagający korekty użytkownika:
   Szczegóły:
   [NVDA-001-opoznienie-ctrl-c.md](NVDA-001-opoznienie-ctrl-c.md).
 - `SEARCH-001` — **Wspólny kontrakt wyszukiwania dla wszystkich sesji oraz
-  pustego profilu ma 78/78 zaliczonych testów; czeka na przebudowę obu profili
-  i ręczny odbiór NVDA** — wyszukiwanie Plików lokalnych, YouTube, Radia,
+  pustego profilu jest zainstalowany w obu profilach po pełnej regresji 1910
+  testów; czeka na ręczny odbiór NVDA** — wyszukiwanie Plików lokalnych,
+  YouTube, Radia,
   Spotify, TIDAL, WiiM i Sonosa:
   `Ctrl+Shift+L` pozostaje w oknie także dla zapisanego wyniku, wykonuje jedną
   właściwą operację i nie oddaje mowy głównemu oknu. `Ctrl+L` zamyka modal i
@@ -155,7 +156,7 @@ zmian, wymagający korekty użytkownika:
   składników, budowę obu paczek i rzeczywistą próbę dwóch hostów; wcześniejszy
   instalator nie jest pełnym kandydatem. Ustalono trwałe nazwy kanałów: pełna
   prywatna wersja właściciela to `AMC Test`, a wydanie dla wszystkich to `AMC`.
-  `alpha.423` pozostaje zużytym numerem diagnostycznym; następny numer roboczy
+  `alpha.423` pozostaje zużytym numerem diagnostycznym; numer roboczy
   `0.1.0-alpha.425` został przypisany lokalnemu kandydatowi. Pierwsza instalacja
   ujawniła zależność wspólnego menu od wyciętego modułu TIDAL. Poprawka
   `0866d668` została przetestowana, przebudowana i zainstalowana do
@@ -167,7 +168,10 @@ zmian, wymagający korekty użytkownika:
   AMC Test sprawdza kandydata przed podmianą i zainstalowaną kopię przed
   widocznym uruchomieniem. Bramka zatrzymała pierwszą paczkę na wykrytym
   błędzie świeżej bazy Podcastów; po naprawie kandydat i instalacja AMC Test z
-  rewizji `233767f1` przeszły kontrolowany start. Niczego nie
+  rewizji `233767f1` przeszły kontrolowany start. Końcowy na 21 października
+  wspólny commit `a947f79d` przeszedł 1910 testów, został zainstalowany jako
+  AMC Test (`1dfc80e8`) i publiczny AMC (`5b07f9a1`); publiczna instalacja ma
+  1073 sprawdzone pliki i zaliczony start izolowany. Niczego nie
   opublikowano** — jeden kod, jawny manifest możliwości, osobne katalogi,
   blokady, logi i kanały AMC Test oraz publicznego AMC. Bieżący zapis realizacji:
   [AMC12-profile-wydania-publicznego-i-testowego.md](AMC12-profile-wydania-publicznego-i-testowego.md).

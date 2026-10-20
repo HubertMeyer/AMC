@@ -2,12 +2,12 @@
 
 ## Status
 
-**W trakcie — publiczne AMC `0.1.0-alpha.425` jest zbudowane, zainstalowane w
-`D:\Projekty Codex\AMC Public` i działa równolegle z AMC Test. Pełna kontrola
-1073 plików jest zaliczona. Pierwszy kandydat ujawnił błąd startu profilu bez
-TIDAL-a; poprawiony kandydat z rewizji `0866d668` został sprawdzony przed i po
-instalacji. Publikacji ani sieciowego odbioru aktualizacji składników jeszcze nie
-wykonywano.**
+**W trakcie — publiczne AMC `0.1.0-alpha.425` z rewizji `a947f79d` jest
+zbudowane i zainstalowane w `D:\Projekty Codex\AMC Public`. Pełna kontrola
+1073 plików oraz odizolowany start zainstalowanego interfejsu i hosta są
+zaliczone. AMC Test z tej samej rewizji przeszedł pełną regresję, atomową
+aktualizację i działa ze swojego osobnego katalogu. Publikacji ani ręcznego
+odbioru obu profili z NVDA jeszcze nie wykonywano.**
 
 Źródłowa, zatwierdzona specyfikacja pozostaje w pliku tylko do odczytu:
 `D:\Projekty Codex\Accessible Multimedia Controller\AMC12_PROFILE_WYDANIA_PUBLICZNEGO_I_TESTOWEGO_2026-10-18.md`.
@@ -137,7 +137,19 @@ Oba okna mają osobne procesy, hosty, profile i magazyny. Publiczne AMC nie
 pokazuje Spotify, TIDAL-a ani Sonosa, ale zachowuje wspólne funkcje dopuszczone
 przez profil. Zainstalowany numer to `0.1.0-alpha.425`.
 
+Kandydat z 21 października 2026 zawiera także wspólną poprawkę wyszukiwania:
+`Ctrl+Shift+L` nie zamyka okna w żadnej sesji ani na świeżym, pustym profilu.
+W Radiu NVDA mówi dopiero potwierdzony wynik dodania albo konkretny błąd, bez
+nadmiarowej zapowiedzi „Przygotowywanie stacji”.
+
 ## Uzasadnienie i decyzje
+
+- **Korekta użytkownika z 21 października 2026:** jutrzejszy odbiór ma dotyczyć
+  publicznego AMC z tym samym zatwierdzonym kodem wspólnym co AMC Test, ale bez
+  prywatnych usług. Dlatego pierwszy instalator z rewizji `8c5ef356` oraz
+  pośredni z `bd708f75` zostały zastąpione po kolejnych korektach wyszukiwania.
+  Odbiorczym lokalnym kandydatem jest dopiero rewizja `a947f79d`. Sonos nadal
+  pozostaje ukryty w profilu publicznym i czeka na osobną decyzję o serwerze.
 
 - **Korekta użytkownika z 20 października 2026:** wadliwy instalator nie może
   zostać zbudowany ani uruchomiony. Sama integralność plików nie wykryła
@@ -322,6 +334,25 @@ przez profil. Zainstalowany numer to `0.1.0-alpha.425`.
 - `docs/zadania/AMC12-profile-wydania-publicznego-i-testowego.md`
 
 ## Testy i wynik
+
+- 21 października 2026 rewizja `a947f79d` przeszła pełną regresję AMC Test:
+  **1910 zaliczonych, 110 pominiętych i 11 podtestów**. Kompilacja hosta,
+  uruchamiacza i aktualizatora zakończyła się bez błędów.
+- AMC Test został atomowo zaktualizowany do paczki `1dfc80e8`; kontrolowany
+  start kandydata i zainstalowanej kopii jest zaliczony, a dokładnie ta wersja
+  została uruchomiona ze stałego katalogu `D:\Projekty Codex\AMC Python`.
+- Publiczna paczka `5b07f9a1` ma profil `public`, czystą rewizję źródłową
+  `a947f79d83f11888e2d1ea353909a1ee50b3ccaa` i 1073 kontrolowane pliki.
+  Pełna integralność oraz kontrolowany start kandydata i zainstalowanej kopii
+  są zaliczone.
+- Instalator `AMC-0.1.0-alpha.425-win-x64.exe` ma 123 980 643 bajty i SHA-256
+  `e35545f9be42f3ffe4693772a4b699708322642d58bc0589073f2a710192272c`.
+  Niezależny odczyt zgadza się z plikiem integralności. Instalacja do
+  `D:\Projekty Codex\AMC Public` zakończyła się kodem 0.
+- Bramki przed podmianami sprawdziły 47 włączonych harmonogramów, 0 aktywnych
+  okien oraz 15 znanych folderów nagrań: bez `.amc-partial` i bez przyrostu.
+  Krótkie procesy `yt-dlp --dump-json --flat-playlist` zostały rozpoznane jako
+  wyszukiwanie bez opcji wyjścia, a nie jako nagrywanie.
 
 - Strukturalny kontrakt instalatora i obu skryptów budowy: **11/11**.
 - Szersza regresja Python obejmująca instalator, start, wyszukiwanie, skróty,
@@ -590,9 +621,9 @@ przez profil. Zainstalowany numer to `0.1.0-alpha.425`.
 - Bramka sprawdza konstrukcję pełnego okna, start właściwego hosta, `hello` i
   konfigurację audio. Nie zastępuje ręcznych prób każdej funkcji sieciowej,
   logowania usług ani odbioru mowy NVDA.
-- Bramka została sprawdzona na rzeczywistej paczce i zainstalowanej kopii AMC
-  Test. Nie zbudowano ponownie publicznego instalatora i niczego nie
-  opublikowano.
+- Bramka została sprawdzona na rzeczywistej paczce i zainstalowanej kopii obu
+  profili. Publiczny instalator przebudowano i zainstalowano lokalnie, ale
+  niczego nie opublikowano.
 
 - Pozostaje kontrolowany odbiór rzeczywistego pobrania i aktualizacji FFmpeg
   oraz yt-dlp w obu profilach. Sama równoległa instalacja i praca obu hostów
@@ -639,6 +670,16 @@ przez profil. Zainstalowany numer to `0.1.0-alpha.425`.
   nastąpić dopiero po świadomym odinstalowaniu starego programu.
 
 ## Porządek dysku
+
+- 21.10.2026 po zweryfikowaniu i zainstalowaniu następcy `a947f79d` usunięto
+  dokładnie dwie zastąpione paczki publiczne (`8c5ef356`, `bd708f75`), ich dwa
+  katalogi instalatorów oraz dwa zastąpione kandydaty AMC Test (`233767f1`,
+  `bd708f75`). Wszystkie sześć celów znajdowało się wyłącznie pod projektowym
+  `.test-output`. Usunięto 5724 odtwarzalne pliki i odzyskano 1 385 876 578
+  bajtów, około 1,29 GiB. Nie ma odzyskiwania z Kosza; artefakty można ponownie
+  zbudować z zapisanych commitów. Zachowano najnowszą paczkę i instalator
+  `a947f79d`, zainstalowane profile, źródła, dokumentację, dane użytkownika,
+  nagrania oraz zastane katalogi `.test-tmp` o niepewnym pochodzeniu.
 
 - Testy tworzyły pozostałe po nowym module wyłącznie trzy odtwarzalne pliki
   `.pyc`. Po weryfikacji usunięto je dokładnymi ścieżkami spod katalogów
@@ -716,6 +757,17 @@ przez profil. Zainstalowany numer to `0.1.0-alpha.425`.
   niepewnym pochodzeniu.
 
 ## Wersja i commit
+
+- Bieżąca wspólna rewizja instalacji: `a947f79d83f11888e2d1ea353909a1ee50b3ccaa`.
+- AMC Test: paczka `1dfc80e8`, etykieta
+  `2026.10.21-a947f79d83f11888e2d1ea353909a1ee50b3ccaa-1dfc80e8`;
+  zainstalowana i uruchomiona.
+- Publiczny AMC `0.1.0-alpha.425`: paczka `5b07f9a1`, etykieta
+  `2026.10.21-a947f79d83f11888e2d1ea353909a1ee50b3ccaa-5b07f9a1`;
+  zainstalowana, pełna kontrola i start izolowany zaliczone, zwykłego okna po
+  instalacji nie pozostawiono otwartego, aby nie przerywać bieżącego testu.
+- Publikacja: niewykonana. Najnowszy instalator pozostaje lokalnym kandydatem
+  do ręcznego odbioru użytkownika.
 
 - Trwała bramka uruchomienia kandydata: `3be15559`; objęcie nią lokalnej
   promocji AMC Test: `8b8a4728`; świeży profil hosta: `7a58e926`; czytelna
