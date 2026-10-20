@@ -153,7 +153,11 @@ zmian, wymagający korekty użytkownika:
   do Sonos Control API, natomiast broker na Hermesie obsługuje w tej instalacji
   wyłącznie logowanie i odnowienie tokenu. Niezależny broker ma czysty,
   sprawdzony pakiet Docker Compose z Caddy i własnym HTTPS, ale nie został
-  jeszcze uruchomiony publicznie. Bieżących źródeł z wyłączonym brokerem nie
+  jeszcze uruchomiony publicznie. Odczytowy audyt potwierdził zgodny identyfikator
+  istniejącej integracji, obecność chronionego sekretu oraz działające dawne
+  usługi; nie trzeba tworzyć nowej integracji ani przepisywać sterowania.
+  Pakiet zawiera teraz bezprzerwową instrukcję przejścia z zachowaniem starego
+  callbacku do czasu odbioru następcy. Bieżących źródeł z wyłączonym brokerem nie
   należy instalować przed zapewnieniem następcy albo bezpiecznej ciągłości
   konta autora** — działające sterowanie Sonosem i WiiM jest już przepisane i
   nie wymaga ponownej implementacji. `Ctrl+F5` wybiera dom i grupę, a przy braku

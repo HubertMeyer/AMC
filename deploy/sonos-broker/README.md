@@ -9,6 +9,10 @@ Samodzielny ZIP do przekazania na serwer, bez źródeł i bez sekretów, buduje
 korzysta z gotowych plików z katalogu `app`; zwykły plik repozytoryjny buduje
 je bezpośrednio ze źródeł.
 
+Przejście z działającej integracji autora opisuje
+`MIGRATION_FROM_LEGACY.md`. Migracja zachowuje stary broker do czasu odbioru
+nowego i nie kopiuje tokenów użytkownika.
+
 ## Wymagania
 
 - mały, stale działający serwer Linux z Docker Engine i wtyczką Compose;
@@ -32,8 +36,10 @@ callbackiem i nie jest właściwym miejscem dla obecnej wersji.
    `secrets/sonos_client_secret.txt`. Plik jest ignorowany przez Git i trafia
    do kontenera przez mechanizm Docker secrets.
 4. W portalu Sonos wpisz dokładnie
-   `https://NAZWA-DNS/login/callback`. Nazwa integracji będzie widoczna
-   użytkownikowi na oficjalnej stronie zgody Sonosa.
+   `https://NAZWA-DNS/login/callback`. Podczas migracji dodaj ten adres obok
+   dotychczasowego callbacku; starego nie usuwaj przed odbiorem nowej usługi.
+   Nazwa integracji będzie widoczna użytkownikowi na oficjalnej stronie zgody
+   Sonosa.
 
 Sekretu nie należy podawać w argumentach polecenia, commitować, dołączać do ZIP-a
 ani wpisywać do `.env`. AMC dla Windows nigdy go nie otrzymuje.

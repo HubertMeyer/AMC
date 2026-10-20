@@ -7,6 +7,9 @@ obsługę sterowania, grupowania oraz treści. Jego broker na Hermesie uczestnic
 tylko w logowaniu i odnawianiu tokenu; polecenia wykonuje bezpośrednio oficjalne
 Sonos Control API. Niezależny broker ma gotowy i sprawdzony pakiet wdrożeniowy
 Docker Compose z własnym HTTPS, ale nie został jeszcze uruchomiony publicznie.
+Bieżąca integracja, identyfikator klienta i chroniony sekret zostały
+potwierdzone odczytowym audytem Hermesa i mogą zostać wykorzystane przez
+następcę bez tworzenia nowej integracji.
 Bieżące, jeszcze niezainstalowane źródła są odłączone od Hermesa i pozostają w
 stanie „publiczny broker nieskonfigurowany”. Przed ich instalacją trzeba
 uruchomić nowy broker albo przygotować bezpieczne zachowanie dotychczasowego
@@ -71,6 +74,11 @@ prawie gotowe. Ten etap nie zmienia adapterów, list, transportu ani WiiM.
   obsługa Sonosa nie zależy od Hermesa przy zwykłym sterowaniu, ale zainstalowany
   wariant używa go jako brokera logowania i odnowienia tokenu. Docelowe wydanie
   publiczne nadal ma otrzymać broker niezależny od Hermesa.
+- 2026-10-20: użytkownik dostarczył odczytowy raport Hermesa. Zastępuje on
+  wcześniejszy wniosek, że odpowiedź `404` z `/health/*` oznacza brak dawnej
+  usługi. Historyczny broker i proxy nadal działają, lecz nie udostępniają
+  nowych endpointów zdrowia. Raport potwierdził zgodny identyfikator klienta,
+  obecność niepustego sekretu i obsługę odnowienia bez ujawnienia wartości.
 
 ## Materiał do dokumentacji użytkownika
 
@@ -108,6 +116,12 @@ Wydanie publiczne nie będzie wymagało od zwykłego użytkownika własnego kluc
 sekretu ani serwera. Użytkownik wybierze logowanie, otrzyma adres oficjalnej
 strony Sonosa, zaloguje się tam i wróci do AMC, aby sprawdzić wynik. Sekret
 integracji pozostaje tylko na wspólnym serwerze AMC.
+
+Podczas przejścia na niezależny serwer nowy adres powrotu zostanie dodany do
+tej samej integracji Sonos obok działającego adresu Hermesa. Stary broker
+pozostanie czynny do czasu sprawdzenia nowego HTTPS, świeżego logowania,
+odnowienia tokenu oraz AMC Test z NVDA. Zwykły użytkownik nie zobaczy tego
+etapu migracji.
 
 Istniejące konto autora jest prawidłowo połączone z Sonosem i obsługuje
 sterowanie oraz grupowanie w zainstalowanym AMC Test. Zaszyfrowany rekord jest
@@ -203,6 +217,13 @@ brokera.
   możliwość odnowienia sesji i mogłoby unieważnić odczyt rekordu związanego ze
   starym originem. Dlatego tego wariantu nie należy jeszcze promować na główną
   instalację testową.
+- Oficjalny kontrakt Sonosa wymaga, aby `redirect_uri` odpowiadał jednemu z
+  adresów zapisanych dla klucza integracji. Pozwala to najpierw dodać callback
+  niezależnego brokera i zachować callback Hermesa jako punkt powrotu, zamiast
+  wykonywać ryzykowne przełączenie jednoczesne.
+- Nowy pakiet zawiera `MIGRATION_FROM_LEGACY.md`: kolejność bezprzerwowego
+  wdrożenia, zakaz kopiowania tokenów, świeże logowanie po zmianie originu,
+  odbiór i wycofanie nieudanej próby.
 
 Kontrakt sprawdzono 2026-10-19 z aktualną oficjalną dokumentacją Sonosa:
 
@@ -248,7 +269,9 @@ Kontrakt sprawdzono 2026-10-19 z aktualną oficjalną dokumentacją Sonosa:
 - `deploy/sonos-broker/Caddyfile`
 - `deploy/sonos-broker/.env.example`
 - `deploy/sonos-broker/README.md`
+- `deploy/sonos-broker/MIGRATION_FROM_LEGACY.md`
 - `scripts/Build-SonosBrokerDeploymentBundle.ps1`
+- `docs/zadania/AMC10-HERMES-AUDYT-SONOS-2026-10-20.md`
 - `AccessibleMediaController.sln`
 - `docs/zadania/README.md`
 
@@ -406,10 +429,27 @@ Kontrakt sprawdzono 2026-10-19 z aktualną oficjalną dokumentacją Sonosa:
   instalacji oraz brak gotowości nowszych źródeł do instalacji. W czasie audytu
   proces AMC nie był uruchomiony; nie wykonywano polecenia do głośników,
   odnowienia tokenu, kompilacji ani instalacji.
+- Odczytowy raport Hermesa potwierdził działające usługi
+  `amc-sonos-auth.service` i `amc-sonos-proxy.service`, nginx, zgodny publiczny
+  identyfikator oraz niepusty sekret w chronionej konfiguracji pod nazwami
+  `AMC_SONOS_*`. Nie ujawniono wartości, nie wykonano odnowienia, restartu ani
+  zmiany konfiguracji. Źródła dawnego brokera są czyste na commicie
+  `b27ed4b2e31fcc232677f9fe2f36aa36f237d1d3`.
+- Próba pakowania po dodaniu instrukcji migracji zakończyła się sukcesem.
+  Brudny pakiet kontrolny miał 37 148 bajtów i SHA-256
+  `ff213bb24755b5e2f7cf8609aa11b34a68d1eb9dee31246c1633399dbbf067b5`.
+  Manifest obejmował 11 kontrolowanych plików, zawierał
+  `MIGRATION_FROM_LEGACY.md`, miał `includesSecrets=false` i nie zawierał
+  `secrets/sonos_client_secret.txt`. Pakiet służy wyłącznie weryfikacji i nie
+  jest kandydatem wdrożeniowym, ponieważ powstał przed commitem zmian.
+- Ukierunkowane testy brokera: pierwsze 15 testów logiki przeszło w
+  piaskownicy, a trzy próby HTTP zostały przez nią zablokowane na localhost.
+  Identyczny zestaw uruchomiony z dostępem wyłącznie do `127.0.0.1` zaliczył
+  wszystkie **18/18** przypadków. Nie użyto sieci Sonosa, konta ani głośników.
 
 ## Znane ograniczenia
 
-- Brak publicznej domeny, certyfikatu, produkcyjnych danych integracji i wpisu
+- Brak publicznej domeny, certyfikatu niezależnego serwera i nowego wpisu
   callbacku w portalu Sonos. Tych danych nie wolno wymyślać ani zapisywać w Git.
 - Przygotowano techniczny wariant pojedynczego serwera Linux, ale nie ma jeszcze
   konkretnego publicznego serwera, nazwy DNS ani sposobu opłacenia i utrzymania
@@ -439,44 +479,32 @@ Kontrakt sprawdzono 2026-10-19 z aktualną oficjalną dokumentacją Sonosa:
 - Bezpieczny stan „publiczny broker nieskonfigurowany” jest potwierdzony w
   źródłach i testach, ale nie został jeszcze zainstalowany. Zainstalowany AMC
   Test nadal zawiera wcześniejszą wersję i nie jest dowodem tej korekty.
-- Nie ma jeszcze niezależnego hostingu, domeny, certyfikatu ani produkcyjnej
-  integracji Sonos. Do czasu ich powstania logowanie w nowych źródłach jest
-  celowo niedostępne, a nie częściowo emulowane.
+- Nie ma jeszcze niezależnego hostingu, domeny ani certyfikatu. Produkcyjna
+  integracja Sonos istnieje i może zostać ponownie wykorzystana, ale do czasu
+  uruchomienia następcy logowanie w nowych źródłach jest celowo niedostępne.
 - Nie znaleziono na komputerze Docker Engine, Azure CLI, narzędzi Fly.io,
   Cloudflare, Google Cloud ani zmiennych `SONOS_*`. Nie ma więc lokalnego dowodu
   dostępu do zewnętrznego hostingu lub sekretu integracji. Publicznego
   wdrożenia nie wolno pozorować samym ZIP-em.
-- Lokalny magazyn użytkownika nie zawiera sekretu integracji. Trzeba potwierdzić
-  na dawnym hoście, czy istnieją źródła brokera i chroniona konfiguracja oraz
-  czy publiczny identyfikator odpowiada temu w AMC. Sekretu nie wolno zwracać
-  w odpowiedzi Hermesa, historii terminala ani w pliku zadania.
+- Lokalny magazyn użytkownika nie zawiera sekretu integracji. Audyt potwierdził
+  go w chronionej konfiguracji dawnego brokera; jego wartość nadal nie może
+  trafić do odpowiedzi, historii terminala, repozytorium ani pliku zadania.
 
-## Bezpieczne sprawdzenie na Hermesie
+## Wynik bezpiecznego sprawdzenia na Hermesie
 
-Hermes ma wykonać wyłącznie odczyt metadanych i odpowiedzieć bez wartości
-sekretów oraz tokenów:
-
-1. Czy istnieje repozytorium `/home/michal/projekty/amc-sonos-auth` albo jego
-   następca oraz jaki jest jego bieżący commit i stan zmian.
-2. Czy istnieje konfiguracja `/etc/amc-sonos-auth/sonos.env` albo równoważny
-   magazyn sekretów. Wystarczy odpowiedź tak/nie dla nazw
-   `SONOS_CLIENT_ID`, `SONOS_CLIENT_SECRET`, `SONOS_REDIRECT_URI` i
-   `SONOS_BROKER_PUBLIC_ORIGIN`; nie wolno wypisywać wartości.
-3. Czy zapisany `SONOS_CLIENT_ID` jest równy publicznemu identyfikatorowi
-   `b051a8f0-499c-4deb-9f66-843a752c36e4` — wyłącznie tak/nie.
-4. Czy działała lub nadal istnieje usługa systemowa, kontener, reverse proxy
-   albo certyfikat dawnego brokera; podać nazwy usług i ścieżki konfiguracji,
-   bez treści sekretów.
-5. Czy sekret można później umieścić bezpośrednio w chronionym pliku na nowym
-   serwerze, bez przesyłania go przez czat. Na tym etapie nie należy go jeszcze
-   kopiować ani uruchamiać starej usługi.
+Pełny odczytowy raport znajduje się w
+`AMC10-HERMES-AUDYT-SONOS-2026-10-20.md`. Nie zawiera sekretów ani tokenów.
+Potwierdza następcę repozytorium, czysty commit, działające usługi, nginx,
+zgodny identyfikator, obecność sekretu oraz możliwość bezpiecznego przeniesienia
+go bez czatu. Historyczny callback to `/sonos/callback`; niezależny broker używa
+`/login/callback`. Oba adresy należy utrzymać w integracji do zakończenia
+migracji.
 
 ## Brama publicznego udostępnienia
 
 1. Wybrać stałą domenę i hosting obsługujący prawdziwy HTTPS.
-2. Odzyskać metadane istniejącej integracji z Hermesa albo zatwierdzić nową
-   produkcyjną integrację Sonos i dokładny callback
-   `/login/callback`.
+2. Dodać do istniejącej integracji Sonos dokładny callback nowego brokera
+   `/login/callback`, pozostawiając dotychczasowy callback Hermesa.
 3. Wprowadzić sekrety poza repozytorium i sprawdzić `/health/ready`.
 4. Z użytkownikiem wykonać logowanie, odmowę, odnowienie oraz ponowne
    uruchomienie brokera.

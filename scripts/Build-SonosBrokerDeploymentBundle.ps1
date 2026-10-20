@@ -24,7 +24,8 @@ foreach ($required in @(
     (Join-Path $deploymentSource 'Caddyfile'),
     (Join-Path $deploymentSource 'Dockerfile.runtime'),
     (Join-Path $deploymentSource '.env.example'),
-    (Join-Path $deploymentSource 'README.md')
+    (Join-Path $deploymentSource 'README.md'),
+    (Join-Path $deploymentSource 'MIGRATION_FROM_LEGACY.md')
 )) {
     if (-not (Test-Path -LiteralPath $required -PathType Leaf)) {
         throw "Brakuje pliku wdrożenia: $required"
@@ -82,6 +83,8 @@ Copy-Item -LiteralPath (Join-Path $deploymentSource 'Dockerfile.runtime') `
     -Destination (Join-Path $stagePath 'Dockerfile')
 Copy-Item -LiteralPath (Join-Path $deploymentSource '.env.example') -Destination $stagePath
 Copy-Item -LiteralPath (Join-Path $deploymentSource 'README.md') -Destination $stagePath
+Copy-Item -LiteralPath (Join-Path $deploymentSource 'MIGRATION_FROM_LEGACY.md') `
+    -Destination $stagePath
 
 $composeText = Get-Content -Raw -LiteralPath (Join-Path $deploymentSource 'compose.yaml')
 $composeText = $composeText.Replace('context: ../..', 'context: .')
