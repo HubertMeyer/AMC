@@ -4,8 +4,9 @@
 
 **W trakcie — fundament profili, rozdzielenie uruchamiacza i aktualizatora,
 kontrolowana migawka AMC Test → AMC, publiczne pakowanie i instalator są gotowe.
-Powstała zweryfikowana paczka oraz lokalny instalator publiczny. Nie wykonano
-jeszcze próbnej instalacji ani publikacji profilu publicznego.**
+Wariant ochronny przeszedł odizolowaną instalację i odinstalowanie. Końcowa
+paczka bez prywatnych modułów usług oraz lokalny instalator są zweryfikowane,
+ale tego wariantu nie zainstalowano ponownie ani nie opublikowano.**
 
 Źródłowa, zatwierdzona specyfikacja pozostaje w pliku tylko do odczytu:
 `D:\Projekty Codex\Accessible Multimedia Controller\AMC12_PROFILE_WYDANIA_PUBLICZNEGO_I_TESTOWEGO_2026-10-18.md`.
@@ -64,9 +65,10 @@ zastosowaną migawką. Jeśli dane publiczne zmieniły się osobno, pyta, czy
 przyjąć dane z AMC Test, czy zachować dane publiczne. Po odświeżeniu pozostaje
 ten sam widok i, o ile element nadal istnieje, ten sam zaznaczony wiersz.
 
-Lokalny kandydat instalatora publicznego istnieje, ale jego samo zbudowanie nie
-jest dowodem poprawnej instalacji ani publikacji. Przed udostępnieniem wymaga
-jeszcze czystej instalacji i odbioru NVDA.
+Lokalny kandydat instalatora publicznego istnieje. Wariant ochronny przeszedł
+czystą instalację, pełną kontrolę i odinstalowanie, ale późniejszy wariant z
+dobrowolnymi skrótami oraz bez prywatnych modułów usług nie był ponownie
+instalowany. Żaden z nich nie został opublikowany ani odebrany z NVDA.
 
 AMC Test i publiczny AMC mają osobne blokady uruchomienia, dlatego mogą działać
 równolegle. Drugie uruchomienie AMC Test pokazuje tylko okno AMC Test, a drugie
@@ -75,10 +77,11 @@ aktualizatory: paczka jednego wydania nie może zaktualizować drugiego.
 Dzienniki uruchamiania trafiają do folderu właściwego profilu, a interfejs
 zawsze otrzymuje jawny profil z zatwierdzonego manifestu.
 
-Publiczna paczka nie zawiera dedykowanego hosta Spotify Librespot ani jego
-zestawu licencji zależności. Każdy dołączony plik ma w manifeście dokładny
-rozmiar i SHA-256. Przed utworzeniem instalatora oraz po instalacji AMC wykonuje
-pełną kontrolę wszystkich plików, a nie tylko plików potrzebnych do startu.
+Publiczna paczka nie zawiera dedykowanego hosta Spotify Librespot, jego zestawu
+licencji zależności ani modułów interfejsu Spotify i TIDAL. AMC Test nadal
+zawiera te moduły. Każdy dołączony plik ma w manifeście dokładny rozmiar i
+SHA-256. Przed utworzeniem instalatora oraz po instalacji AMC wykonuje pełną
+kontrolę wszystkich plików, a nie tylko plików potrzebnych do startu.
 
 Nowy instalator ma osobne warianty `AMC-<wersja>-win-x64.exe` i
 `AMC-Test-<wersja>-win-x64.exe`, różne identyfikatory produktu, katalogi,
@@ -136,6 +139,11 @@ skrótów.
 - Dedykowany binarny host Librespot jest składnikiem profilu testowego. Samo
   ukrycie sesji w interfejsie nie wystarczało, dlatego publiczny proces
   pakowania w ogóle go nie odczytuje ani nie kopiuje.
+- Ta sama zasada obejmuje kod interfejsu prywatnych usług. Pakowanie publiczne
+  usuwa moduły Spotify, okna playlist Spotify i TIDAL, a wspólny interfejs
+  importuje je tylko wtedy, gdy manifest profilu rzeczywiście dopuszcza daną
+  sesję. Odświeżenie starszej paczki także usuwa dokładnie te odziedziczone
+  pliki, zamiast pozostawiać je poza manifestem.
 - Instalator wxPython jest osobnym skryptem od historycznego instalatora WPF.
   Używa zamkniętych identyfikatorów obu profili i `CloseApplications=no`;
   działającego nagrania nie wolno chronić przez wymuszenie zakończenia procesu.
@@ -156,6 +164,7 @@ skrótów.
 - `wxlite/amc_wx_lite/version_info.py`
 - `wxlite/amc_wx_lite/session_order.py`
 - `wxlite/amc_wx_lite/gui.py`
+- `wxlite/amc_wx_lite/search_sources.py`
 - `wxlite/tools/build_bundle.py`
 - `wxlite/tools/Build-AMCBundle.ps1`
 - `wxlite/tools/Build-AMCInstaller.ps1`
@@ -306,14 +315,31 @@ skrótów.
   `3d9e969e3d9a51b4e0ace9f95b06091761970ad2ae31501f3d624e61a237df23`;
   wynik jest zgodny z osobnym plikiem integralności. Ten końcowy wariant został
   zbudowany i sprawdzony, lecz nie został ponownie zainstalowany ani uruchomiony.
+- Fizyczne rozdzielenie modułów usług: **44 testy ukierunkowane zaliczone**.
+  Obejmują usunięcie starych plików przy odświeżeniu, odmowę niedozwolonego
+  manifestu, syntetyczne złożenie profilu publicznego oraz import kompletnego
+  interfejsu bez modułów Spotify i TIDAL.
+- Pełna regresja wxPython po zmianie: **1856 zaliczonych, 116 pominiętych,
+  1 jawnie niewybrany i 11 podtestów zaliczonych**. Jedyny niewybrany test
+  wymagał wcześniej zbudowanego `LiteHost` w innej ścieżce; właściwy host został
+  następnie zbudowany przez pełny proces paczki.
+- Końcowa odchudzona paczka
+  `.test-output/AMC-public-2026.10.20-cf6d1e2c` ma 1073 pliki kontrolowane,
+  1074 pliki razem z manifestem i 422 575 507 bajtów. Manifest wskazuje czystą
+  rewizję `cf6d1e2c65cc99d87217fa01187125b5a3428715`, paczkę `6030732f`, zero
+  prywatnych modułów Spotify/TIDAL i zero składników Librespot. Pełna kontrola
+  zakończyła się kodem **0**.
+- Odpowiadający instalator ma 123 363 456 bajtów i SHA-256
+  `65e34d13dd7ff2449f7b3d356b354646cf991d3875c15cf1f434757c3b9673b5`.
+  Plik integralności podaje tę samą wartość. Instalatora nie uruchamiano.
 
 ## Znane ograniczenia
 
-- Publiczne pakowanie usuwa dedykowany binarny host Librespot, ale wspólna
-  paczka nadal zawiera część modułów źródłowych usług prywatnych, ponieważ
-  obecny interfejs importuje je przy starcie. Profil blokuje ich sesje i
-  polecenia. Fizyczne odchudzenie pozostałych modułów wymaga rozdzielenia
-  importów i jest osobną bramką przed publikacją publiczną.
+- Publiczne pakowanie usuwa dedykowany binarny host Librespot i trzy moduły
+  interfejsu prywatnych usług. Wspólny samowystarczalny host .NET nadal powstaje
+  z jednego kodu, lecz uruchomiony profil publiczny blokuje niedopuszczone sesje
+  i operacje przez manifest możliwości; nie otrzymuje poświadczeń ani osobnego
+  hosta Spotify.
 - Wersjonowana, atomowa migawka została skompilowana i sprawdzona na
   odizolowanych magazynach testowych, ale nie została jeszcze odebrana w
   zainstalowanych AMC Test i AMC. Pierwsza wersja ma stały bezpieczny zakres;
@@ -377,6 +403,15 @@ skrótów.
 - Zachowano końcową paczkę i instalator z rewizji `20babb7b`, wcześniejszy
   jedyny historyczny instalator z 19.10.2026, źródła, dokumentację, ustawienia,
   dane użytkownika, nagrania oraz zastane niepewne katalogi testowe.
+- Po zbudowaniu i pełnym sprawdzeniu następcy `cf6d1e2c` usunięto dokładnie
+  zastąpioną paczkę `AMC-public-2026.10.20-20babb7b`, odpowiadający jej katalog
+  instalatora oraz trzy jawne katalogi tymczasowe pełnej regresji tego etapu.
+  Cele znajdowały się wyłącznie pod `.test-output` i `.test-tmp`; odzyskano
+  546 252 450 bajtów, około 521 MiB. Artefakty można odtworzyć z commitu
+  `20babb7b` albo ponownym uruchomieniem testów.
+- Zachowano bieżącą paczkę i instalator `cf6d1e2c`, wcześniejszy instalator z
+  19.10.2026, zastane katalogi testowe o niepewnym pochodzeniu oraz mieszane
+  katalogi `__pycache__`; nie usunięto źródeł, danych użytkownika ani nagrań.
 
 ## Wersja i commit
 
@@ -418,3 +453,7 @@ skrótów.
   `863539bd`, po czym go odinstalowano. Końcowy wariant `20babb7b` pozostaje
   lokalnym kandydatem, a nie zainstalowanym wydaniem.
 - Publikacja: nie wykonywano; GitHub nie został użyty.
+- Fizyczne usunięcie prywatnych modułów z publicznej paczki: `cf6d1e2c` —
+  `fix(amc12): usun prywatne moduly z publicznej paczki`. Testy ukierunkowane i
+  pełna regresja zaliczone, paczka i instalator z pełną integralnością zbudowane;
+  instalacji końcowego wariantu ani publikacji nie wykonywano.

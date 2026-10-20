@@ -75,7 +75,8 @@ użytkownika. Nie zmienia statusu ręcznego odbioru NVDA poszczególnych funkcji
     sesje Pliki lokalne, Radio, Podcasty i YouTube oraz WiiM, bez reklamowania
     ukrytych usług w menu, pomocy i palecie. Wariant ochronny przeszedł
     odizolowaną instalację i odinstalowanie; końcowy kandydat z dobrowolnymi
-    skrótami jest lokalnie zbudowany i sprawdzony, ale nie był ponownie
+    skrótami jest lokalnie zbudowany, sprawdzony i nie zawiera prywatnych
+    modułów interfejsu Spotify/TIDAL ani Librespot, ale nie był ponownie
     instalowany ani publikowany. Źródło:
     [AMC12-profile-wydania-publicznego-i-testowego.md](AMC12-profile-wydania-publicznego-i-testowego.md).
 12. Foldery i powłoka Windows — „Otwórz folder zawierający”, argument pliku,
