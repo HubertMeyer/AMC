@@ -213,7 +213,8 @@ zmian, wymagający korekty użytkownika:
   atomowym zapisem w magazynie profilu. Po zweryfikowanym endpointcie ten sam
   formularz wysyła dokładnie widoczny raport w tle. Worker ma drugą redakcję,
   limit, idempotencję i rozdziela prywatną treść od publicznego issue; nie
-  został jeszcze wdrożony i nie utworzył prawdziwego zgłoszenia. Szczegóły:
+  został jeszcze wdrożony i nie utworzył prawdziwego zgłoszenia. Prywatne
+  repozytorium intake i wymagane etykiety są już utworzone. Szczegóły:
   [REL-001-github-aktualizacje-sygnalista.md](REL-001-github-aktualizacje-sygnalista.md).
 - `STR-001` — **Oczekuje** — osobne laboratorium TIDAL i Apple Music, najpierw
   badanie oficjalnych API i warunków, później ewentualny profil testowy.

@@ -190,6 +190,10 @@ repozytorium, kanałami wydań i polityką prywatności.
   częściową awarię i brak wycieku błędu GitHuba.
 - Kod Workera nie został wdrożony, nie połączono prawdziwego tokenu i nie
   utworzono próbnego GitHub Issue. To są testy kodu i atrap, nie odbiór sieci.
+- Utworzono prywatne repozytorium `michalkasperczak/amc-support-intake`.
+  Odczyt zwrotny GitHuba potwierdził `PRIVATE`, włączone Issues i etykiety
+  `bug`, `enhancement`, `from-app`. Publiczne repozytorium AMC również ma
+  `from-app`. Nie utworzono żadnego issue.
 - Zmiana internetowa nie została zbudowana ani zainstalowana, ponieważ bramka
   bezpieczeństwa wykazała aktywne nagrywanie w AMC Test. Nie przerwano go.
 
@@ -243,8 +247,9 @@ repozytorium, kanałami wydań i polityką prywatności.
 ## Wynik wykonania
 
 - Data lokalnego etapu: 19–20 października 2026.
-- Repozytorium i kanały: profile i kanały są rozdzielone przez AMC12; GitHub
-  nie został skonfigurowany ani użyty.
+- Repozytorium i kanały: profile i kanały są rozdzielone przez AMC12. GitHub
+  został użyty wyłącznie do utworzenia i zweryfikowania prywatnego repozytorium
+  intake oraz etykiet; nie wysłano kodu, instalatora, wydania ani zgłoszenia.
 - Kontrakt Workera: `POST /v1/report`, schemat 1; adres końcowy nadal brak,
   ponieważ infrastruktura nie została wdrożona.
 - Testy aktualizacji: poza zakresem tego etapu.
