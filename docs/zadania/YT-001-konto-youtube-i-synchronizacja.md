@@ -139,12 +139,18 @@ Automatyczne usuwanie po obu stronach jest wykluczone.
   [wymagania weryfikacji](https://support.google.com/cloud/answer/13463073?hl=en),
   [status testowy ekranu zgody](https://support.google.com/cloud/answer/15549945?hl=en).
 - Zmienione pliki: `src/AccessibleMediaController.Core/YouTube/YouTubeOAuthProtocol.cs`,
-  `tests/AccessibleMediaController.Core.SmokeTests/YouTubeOAuthFoundationTests.cs`
-  oraz rejestr testów w `Program.cs`.
+  `src/AccessibleMediaController.Core/YouTube/YouTubeOAuthTokenClient.cs`,
+  `src/AccessibleMediaController.Core/YouTube/YouTubeOAuthLoopbackReceiver.cs`,
+  `src/AccessibleMediaController.Windows/Services/YouTubeCredentialStore.cs`,
+  powiązanie magazynu z LiteHostem oraz testy Core i Windows.
 - Testy: `dotnet run --project
   tests/AccessibleMediaController.Core.SmokeTests/AccessibleMediaController.Core.SmokeTests.csproj
-  --no-restore -- --youtube-oauth-foundation` — zaliczone 5 z 5 scenariuszy.
-- Commit źródła i testów: `ce723bff` (`feat(youtube): add safe OAuth protocol foundation`).
+  --no-restore -- --youtube-oauth-foundation` — zaliczone 10 z 10 scenariuszy.
+  Test granicy poświadczeń Windows `--youtube-credential-boundary` — zaliczone
+  6 z 6 sprawdzeń. Projekty Windows i LiteHost zbudowane bez ostrzeżeń i błędów.
+- Commity źródła i testów: `ce723bff` (`feat(youtube): add safe OAuth protocol foundation`)
+  `0c15fbcb` (`feat(youtube): isolate token exchange and credentials`) oraz
+  `cbd2a5d3` (`feat(youtube): add guarded loopback callback`).
 - Zainstalowana kompilacja: brak. Ten etap nie zmienia jeszcze interfejsu ani
   bieżącej instalacji AMC Test.
 
@@ -159,8 +165,9 @@ bez konta.
 
 ## Uzasadnienie i decyzje
 
-- Kod przygotowawczy nie uruchamia przeglądarki, serwera lokalnego ani sieci.
-  Dzięki temu można przetestować zasady bezpieczeństwa bez dotykania konta.
+- Samo uruchomienie AMC nadal nie otwiera przeglądarki, nie uruchamia odbiornika
+  i nie łączy się z Google. Odbiornik powstanie dopiero po przyszłym, jawnym
+  poleceniu logowania użytkownika.
 - Weryfikator PKCE nie trafia do adresu przeglądarki. Adres zawiera tylko jego
   skrót S256 i losowy stan chroniący powrót do właściwej próby logowania.
 - Akceptowany jest wyłącznie `http://127.0.0.1` z jawnie przydzielonym portem.
@@ -169,26 +176,44 @@ bez konta.
 - Nie tworzymy jeszcze polecenia w menu, pomocy ani palecie. Bez identyfikatora
   klienta Google byłoby to martwe polecenie sprzeczne ze wspólnym katalogiem
   możliwości AMC.
+- Wymiana kodu i odświeżenie korzystają wyłącznie z oficjalnego punktu tokenów
+  Google. Nie wysyłają `client_secret`, a odświeżenie nie prosi po cichu o
+  szerszy zakres.
+- Poświadczenia AMC Test i publicznego AMC mają różne cele w Menedżerze
+  poświadczeń Windows. Nie są częścią migawki wspólnych danych i nie mogą
+  przejść z profilu testowego do publicznego.
+- Jednorazowy odbiornik słucha wyłącznie na `127.0.0.1`, przydziela losowy
+  port, sprawdza dokładną ścieżkę i losowy stan stałoczasowo oraz odrzuca
+  powtórzone lub nadmiernie duże pola. Strona powrotu nie zawiera kodu i ma
+  zakaz zapisu w pamięci podręcznej.
 
 ## Testy i wynik
 
-Zaliczono pięć syntetycznych scenariuszy: żądanie tylko do odczytu z PKCE S256,
+Zaliczono dziesięć syntetycznych scenariuszy Core: żądanie tylko do odczytu z PKCE S256,
 odrzucanie niebezpiecznych adresów powrotu, wymianę kodu i odświeżenie bez
 sekretu klienta, zachowanie refresh tokenu i zakresu oraz brak treści wadliwej
-odpowiedzi Google w wyjątku. Test nie używał sieci, prawdziwego klienta Google,
-przeglądarki ani danych użytkownika.
+odpowiedzi Google w wyjątku. Sześć dalszych sprawdzeń Windows potwierdziło
+osobne cele magazynu dla AMC Test/AMC, odrzucenie nieznanego profilu, pełny
+zapis i odczyt syntetycznego rekordu oraz odrzucenie rekordu niepełnego i zbyt
+dużego. Testy nie używały sieci, prawdziwego klienta Google, przeglądarki ani
+danych użytkownika; nie zapisały także syntetycznych tokenów w prawdziwym
+Menedżerze poświadczeń. Dwa scenariusze odbiornika użyły wyłącznie lokalnego
+połączenia `127.0.0.1` na losowym porcie i potwierdziły prawidłowy powrót oraz
+odrzucenie odpowiedzi z obcym stanem.
 
 ## Znane ograniczenia
 
 - Brak jeszcze przydzielonego identyfikatora aplikacji Google dla AMC.
-- Nie ma jeszcze odbiornika lokalnego, transportu HTTP, chronionego magazynu
-  tokenów, koordynatora konta, synchronizacji subskrypcji ani interfejsu wx.
-- Przed dodaniem widocznego polecenia trzeba zapewnić osobne poświadczenia dla
-  profili AMC Test i AMC oraz testy parytetu Ctrl+F1, Ctrl+Shift+K i menu.
+- Nie ma jeszcze koordynatora konta, synchronizacji subskrypcji ani interfejsu
+  wx. Lokalny odbiornik, transport tokenów i chroniony, profilowo rozdzielony
+  magazyn są gotowe, ale nie są jeszcze połączone z widocznym poleceniem.
+- Przed dodaniem widocznego polecenia trzeba połączyć magazyn z profilem hosta
+  i dodać testy parytetu Ctrl+F1, Ctrl+Shift+K i menu.
 - Profil publiczny wymaga osobnej decyzji po konfiguracji i weryfikacji Google.
 
 ## Wersja i commit
 
-Kod źródłowy i testy są zapisane w lokalnym commicie `ce723bff`, po
-zainstalowanej kompilacji `2026.10.21-a947f79d...`. Nie zostały jeszcze
-zbudowane do instalacji, zainstalowane ani opublikowane.
+Kod źródłowy i testy są zapisane w lokalnych commitach `ce723bff`, `0c15fbcb`
+oraz `cbd2a5d3`, po zainstalowanej kompilacji `2026.10.21-a947f79d...`. Projekty
+źródłowe zostały pomyślnie zbudowane, ale nie powstał nowy pakiet, instalacja
+ani publikacja.

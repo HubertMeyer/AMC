@@ -215,8 +215,9 @@ zmian, wymagający korekty użytkownika:
   [AMC14-foldery-i-integracja-powloki.md](AMC14-foldery-i-integracja-powloki.md).
   Zatwierdzona specyfikacja:
   `D:\Projekty Codex\Accessible Multimedia Controller\AMC14_FOLDERY_I_INTEGRACJA_POWLOKI_2026-10-18.md`.
-- `YT-001` — **W trakcie — bezpieczny fundament OAuth gotowy; brak jeszcze
-  klienta Google, magazynu poświadczeń i interfejsu** — oficjalne logowanie do
+- `YT-001` — **W trakcie — bezpieczny fundament OAuth, lokalny odbiornik,
+  transport tokenów i osobne magazyny poświadczeń AMC Test/AMC gotowe; brak
+  identyfikatora aplikacji Google, koordynatora i interfejsu** — oficjalne logowanie do
   konta YouTube, synchronizacja subskrypcji i zwykłych playlist oraz bezpieczny
   zakres czynności konta. Etap rozpoczęto 21 października 2026 na nowe jawne
   polecenie użytkownika; nic nie loguje konta ani nie otwiera przeglądarki.
