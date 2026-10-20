@@ -151,6 +151,12 @@ Kontrakt sprawdzono 2026-10-19 z aktualną oficjalną dokumentacją Sonosa:
   Sonosa, konta ani głośnika. Pierwsza próba w piaskownicy nie mogła połączyć
   się z lokalnym gniazdem; identyczny test uruchomiony z dostępem do localhost
   zaliczył komplet 16 przypadków.
+- 20 października 2026 wykonano wyłącznie bezpieczne odczyty
+  `https://hermes.tail6caad7.ts.net/health/live` i `/health/ready`. Host
+  odpowiada przez HTTPS, ale oba adresy zwracają `404`. Pod originem wpisanym
+  obecnie w AMC nie jest więc uruchomiony przygotowany broker Sonos. Nie
+  rozpoczynano logowania, nie otwierano przeglądarki i nie wysyłano poleceń do
+  głośników.
 - Skrypt `Build-SonosBrokerBundle.ps1` zbudował próbny pakiet framework-dependent
   bez symboli i sekretów. Manifest objął 4 pliki opublikowanego brokera, a
   kontrola ponownie obliczonych rozmiarów i SHA-256 nie wykazała rozbieżności.
@@ -220,6 +226,10 @@ Kontrakt sprawdzono 2026-10-19 z aktualną oficjalną dokumentacją Sonosa:
 
 - Brak publicznej domeny, certyfikatu, produkcyjnych danych integracji i wpisu
   callbacku w portalu Sonos. Tych danych nie wolno wymyślać ani zapisywać w Git.
+- Prywatny origin `hermes.tail6caad7.ts.net` jest osiągalny, lecz obecnie nie
+  udostępnia endpointów zdrowia brokera. Prawdziwy odbiór logowania pozostaje
+  zablokowany do uruchomienia paczki brokera na tamtym Hermesie i przekazania
+  jej czterech wartości Sonosa w bezpiecznym magazynie środowiska.
 - Magazyn sesji jest pamięciowy i przeznaczony dla jednej instancji. Skalowanie
   na wiele replik wymaga wspólnego atomowego magazynu.
 - Nadal trzeba znać dokładne adresy reverse proxy wybranego hostingu. Jeżeli
