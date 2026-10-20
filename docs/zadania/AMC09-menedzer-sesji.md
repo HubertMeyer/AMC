@@ -1,8 +1,8 @@
 # AMC09 — Menedżer sesji i zwarta numeracja
 
 Status: **Menedżer oraz pierwsze rozszerzenie Konfiguruj są zainstalowane w
-AMC Test. Ujednolicone `Ctrl+F5`, Foldery Biblioteki i naprawa obsługi
-klawiszy na natywnych listach są gotowe w źródłach i testach; czekają na
+AMC Test. Ujednolicone `Ctrl+F5`, Foldery Biblioteki i pełne mapowanie klawiszy
+funkcyjnych oraz nawigacyjnych są gotowe w źródłach i testach; czekają na
 bezpieczną instalację oraz ręczny odbiór NVDA i usług**
 
 Data realizacji: 2026-10-19
@@ -39,6 +39,10 @@ Historyczny projekt został użyty tylko jako materiał do odczytu.
 - W tej samej sesji `F5` wykonuje pełne odświeżenie Folderów Biblioteki bez
   otwierania okna. Menu „Plik” zawiera osobno „Odśwież Foldery Biblioteki,
   F5” oraz „Foldery Biblioteki, Ctrl+F5”.
+- Warstwa klawiatury rozpoznaje wszystkie fizyczne klawisze `F1`–`F24` oraz
+  nawigację z bloku numerycznego. Samo rozpoznanie klawisza nie tworzy nowego
+  polecenia: przykładowo `F4` pozostaje wolny, dopóki nie zostanie mu jawnie
+  przypisana funkcja we wspólnym katalogu poleceń.
 - `Ctrl+F5` zachowuje odrębne, utrwalone znaczenie sesji i ma teraz wszędzie
   jednoznaczną nazwę:
 
@@ -137,6 +141,12 @@ Historyczny projekt został użyty tylko jako materiał do odczytu.
   do nich jako nierozpoznana wartość liczbowa. Dodano brakujące mapowanie oraz
   test rozpoczynający się od surowego kodu klawisza, a nie od gotowego napisu
   `F5`.
+- **Korekta użytkownika z 20 października 2026 rozszerza naprawę `F5`:**
+  pojedyncze dopisywanie wybranych klawiszy funkcyjnych utrwalałoby ten sam
+  błąd przy `F4`, `F7`, `F11` albo przyszłym skrócie. Granica wxPython mapuje
+  więc całą rodzinę `F1`–`F24`. Ujednolicono również strzałki, `Home`, `End`,
+  `Page Up`, `Page Down` i `Delete` z bloku numerycznego. Nie przypisano
+  żadnej nowej akcji do wolnego `F4`.
 
 ## Zmienione miejsca
 
@@ -152,6 +162,8 @@ Historyczny projekt został użyty tylko jako materiał do odczytu.
   `search_sources.py`, `transient_preview_policy.py` oraz powiązane testy.
 - Nowe testy Menedżera: `wxlite/tests/test_session_manager.py`, rozszerzone
   testy kolejności, migracji, menu, pomocy, palety i sesji usługowych.
+- Granica fizycznej klawiatury i jej testy: `wxlite/amc_wx_lite/gui.py` oraz
+  `wxlite/tests/test_gui_logic.py`.
 
 ## Testy i wynik
 
@@ -255,6 +267,10 @@ Historyczny projekt został użyty tylko jako materiał do odczytu.
   Instalacja nie została wykonana: podczas kompilacji użytkownik rozpoczął
   ręczne nagrywanie stacji 3 o 13:22. Aktualizator zobaczył działające składniki,
   zakończył się ochronnym kodem 3 i nie podmienił bieżącej instalacji.
+- Po korekcie całej rodziny klawiszy **115/115** ukierunkowanych testów
+  klawiatury, skrótów, menu i routingu listy zaliczono. Dodatkowa próba na
+  prawdziwym wxPython potwierdziła nazwy fizycznych `F1`, `F4`, `F5`, `F11`,
+  `F12` i `F24`. Test `F4` potwierdza zarazem brak przypadkowej akcji.
 
 ## Znane ograniczenia
 
@@ -280,6 +296,9 @@ Historyczny projekt został użyty tylko jako materiał do odczytu.
   następnie sesyjne nazwy i działanie na prawdziwych kontach i urządzeniach.
   Test źródłowy potwierdza naprawę translacji klawisza, ale kompilacja i
   instalacja nie zastępują odbioru na rzeczywistej klawiaturze.
+- `F4` jest poprawnie rozpoznawany, lecz celowo nie ma obecnie przypisanego
+  polecenia. Pełne mapowanie zapobiega surowym kodom wxPython i przygotowuje
+  bezpieczną podstawę pod przyszłe skróty; nie stanowi obietnicy nowych akcji.
 - Radiowe i sesyjne `Ctrl+F5` jest zainstalowane w AMC Test w pakiecie
   `fd5f4231-b7475d46`. Nadal wymaga ręcznego odbioru NVDA na prawdziwych
   kontach i urządzeniach; instalacja nie jest dowodem działania zewnętrznej
@@ -331,6 +350,11 @@ Historyczny projekt został użyty tylko jako materiał do odczytu.
   `Ctrl+F5` i nie został jeszcze bezpiecznie zainstalowany.
 
 ## Wersja i commit
+
+- Pełne mapowanie `F1`–`F24` i nawigacji bloku numerycznego: commit
+  `4d87189e` (`fix(amc): ujednolic klawisze i zachowaj nagranie po awarii`).
+  Kod i testy źródłowe są potwierdzone; nowa paczka i instalacja nie powstały
+  jeszcze po tej korekcie.
 
 - Radiowe `Ctrl+F5`, wspólny katalog poleceń i testy kontraktu: commit
   `a6614d11` (`fix(amc09): dodaj Ctrl+F5 w Radiu`). Zmiana jest potwierdzona

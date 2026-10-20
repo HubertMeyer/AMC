@@ -1,6 +1,7 @@
 # REC-001 — harmonogram, Alt+R i bezpieczne zamykanie
 
-Status: **Zrobione**
+Status: **Pierwotna poprawka zrobiona; korekta zachowania pliku po zerwaniu
+strumienia gotowa w źródłach, teście i kompilacji, czeka na instalację**
 
 ## Zgłoszenie
 
@@ -21,6 +22,12 @@ uruchomienie AMC.
 - `Alt+R` i blokada zamknięcia pytają ten sam host o pełną migawkę. Pusta
   lista mogła wystąpić w krótkim oknie pomiędzy startem interfejsu a
   uruchomieniem zaległego planu; wymaga to testu po wdrożeniu poprawki.
+- 20.10.2026 ręczne nagrywanie stacji „Poznań” rozpoczęło się prawidłowo o
+  11:22:15. O 12:04:44 serwer zakończył strumień; dwie próby ponownego
+  połączenia odrzuciły dekodery. AMC bezpiecznie domknął plik o 12:04:46:
+  istnieje, ma 40 637 231 bajtów i około 42 minuty materiału. Gdy użytkownik
+  później zatrzymał zadanie, nieaktywny już potok zwrócił pustą ścieżkę, więc
+  koordynator błędnie zgłosił brak pliku i zapisał zero plików w historii.
 
 ## Zakres poprawki
 
@@ -71,3 +78,50 @@ okna czasowego przed startem nagrania albo z odczytu wykonanego zanim zdarzenie
 startu dotarło do interfejsu. Usunięto przyczynę ponownego odtwarzania tej
 sytuacji przy kolejnych uruchomieniach: wykonany termin nie wróci już jako
 aktywny.
+
+## Materiał do dokumentacji użytkownika
+
+- Zerwanie odbioru stacji nie usuwa dźwięku zapisanego przed awarią. Jeżeli
+  AMC zdążyło utworzyć i domknąć niepusty plik, zatrzymanie nagrania zachowuje
+  go jako ukończony plik i umieszcza w Historii nagrywania.
+- Pusty plik roboczy nie jest przedstawiany jako poprawne nagranie.
+- Sam odbiór stacji nadal może się zakończyć, gdy serwer odrzuci wszystkie
+  próby ponownego połączenia; poprawka dotyczy zachowania już nagranego
+  materiału i prawdziwego wyniku w historii.
+
+## Uzasadnienie i decyzje
+
+- Docelowa ścieżka nagrania jest unikatowa i zostaje ustalona przed startem
+  kodera. Gdy backend po awarii nie ma już aktywnego potoku i zwraca brak
+  ścieżki, koordynator może bezpiecznie uznać dokładnie ten oczekiwany plik,
+  ale tylko jeśli plik rzeczywiście istnieje i ma co najmniej jeden bajt.
+- Korekta użytkownika z 20.10.2026 uzupełnia wcześniejszą realizację REC-001:
+  udane zapisanie pliku ma pierwszeństwo przed późniejszym technicznym brakiem
+  ścieżki z już zwolnionego potoku.
+
+## Testy i wynik
+
+- Test regresji odtwarza backend, który po awarii zwraca brak ścieżki mimo
+  istniejącego, niepustego pliku. Potwierdzono zwrot właściwej ścieżki,
+  dokładnie jeden wpis ukończonego pliku i wyczyszczenie bieżącej ścieżki.
+- Ten sam test potwierdza, że plik zerowej długości nie trafia do historii.
+- Kompilacja Release projektu Windows SmokeTests: zaliczona, 0 ostrzeżeń i 0
+  błędów. Ukierunkowany przebieg zakończył się komunikatem „OK: plik zapisany
+  przed awarią strumienia pozostaje w historii”.
+- Odczyt dziennika i pliku Poznania był diagnostyką istniejących danych;
+  pliku użytkownika nie zmieniano ani nie przenoszono.
+
+## Znane ograniczenia
+
+- Istniejący błędny wpis Poznania nie został zmieniony podczas działania AMC.
+  Sam plik jest dostępny na dysku, ale automatyczna naprawa historycznego wpisu
+  wymaga osobnej, bezpiecznej migracji danych albo ręcznego odbioru.
+- Poprawka nie zwiększa liczby prób ponownego połączenia i nie gwarantuje, że
+  zewnętrzny serwer radia wznowi transmisję.
+
+## Wersja i commit
+
+- Zachowanie opublikowanego pliku po zerwaniu strumienia: commit `4d87189e`
+  (`fix(amc): ujednolic klawisze i zachowaj nagranie po awarii`). Kod, test i
+  kompilacja są potwierdzone. Instalacja i uruchomienie tej korekty jeszcze nie
+  zostały wykonane.

@@ -34,8 +34,10 @@ Roboczy indeks materiału z nocnych etapów do przyszłej instrukcji i opisu
 zmian, wymagający korekty użytkownika:
 [INDEKS-MATERIALU-INSTRUKCJA-I-ZMIANY-2026-10-19.md](INDEKS-MATERIALU-INSTRUKCJA-I-ZMIANY-2026-10-19.md).
 
-- `REC-001` — **Zrobione** — trwałość wykonanego harmonogramu nagrywania
-  Radia i zgodność listy `Alt+R` z blokadą zamknięcia. Szczegóły:
+- `REC-001` — **Pierwotny zakres zrobiony; korekta zachowania istniejącego
+  pliku po zerwaniu strumienia czeka na instalację** — trwałość wykonanego
+  harmonogramu nagrywania, zgodność listy `Alt+R` z blokadą zamknięcia oraz
+  zachowanie niepustego pliku domkniętego przed awarią odbioru. Szczegóły:
   [REC-001-harmonogram-alt-r-zamykanie.md](REC-001-harmonogram-alt-r-zamykanie.md).
 - `AMC02` — **Kolejna korekta zainstalowana po bezpiecznej bramce; czeka na
   odbiór NVDA** — `Alt+R` mówi raz „Nagrywane, X z X”, a
@@ -109,8 +111,9 @@ zmian, wymagający korekty użytkownika:
   Historyczne źródła są tylko wzorcem; kod powstaje w tym repozytorium.
 - `AMC09` — **Menedżer, pierwsze rozszerzenie Konfiguruj, ujednolicone
   `Ctrl+F5`, precyzyjne nazwy dla każdej sesji oraz Foldery Biblioteki są
-  zbudowane; po ręcznym wykryciu brakującego mapowania fizycznego `F5` poprawka
-  granicy wxPython czeka na bezpieczną instalację i ponowny odbiór NVDA** — dostępny
+  zbudowane; po ręcznym wykryciu brakującego mapowania poprawiono całą rodzinę
+  `F1`–`F24` i nawigację bloku numerycznego, a najnowsza korekta czeka na
+  bezpieczną instalację i ponowny odbiór NVDA** — dostępny
   Menedżer sesji pod `Ctrl+Shift+S`, włączanie Spacją, zwarta kolejność
   `Ctrl+1–9`, zmiana kolejności `Alt+strzałkami`, stan gotowości i stała nazwa
   `Radio`. Ma działać już w AMC Test; profil publiczny będzie później filtrował
@@ -124,7 +127,8 @@ zmian, wymagający korekty użytkownika:
   `Ctrl+F5`, również z odtwarzacza, przy wspólnym opisie menu, pomocy i palety.
   Kod i testy kontraktu są potwierdzone. Ręczny odbiór ujawnił jednak wspólną
   przyczynę ciszy `F5` i `Ctrl+F5`: brak mapowania rzeczywistego kodu klawisza
-  wxPython. Poprawka i test od surowego zdarzenia są gotowe; instalacja tej
+  wxPython. Poprawka obejmuje już wszystkie klawisze funkcyjne, a nie tylko
+  `F5`; testy zaczynają się od surowych zdarzeń klawiatury. Instalacja tej
   najnowszej korekty pozostaje do wykonania.
   Bieżący zapis realizacji:
   [AMC09-menedzer-sesji.md](AMC09-menedzer-sesji.md).
