@@ -274,6 +274,10 @@ skrótów.
   w kolizję z inną instancją. Izolowano wyłącznie tożsamość kanału testowego;
   powtórzenie zaliczyło wszystkie **27 przypadków** bez osłabiania kontraktu
   produkcyjnego.
+- Pełna regresja rdzenia uruchomiona jako użytkowy program testowy zakończyła
+  się kodem **0**. Obejmuje między innymi Time Shift (`End`, czas i procent),
+  nagrywanie, harmonogramy, pliki lokalne, Podcasty i YouTube, WiiM, profile,
+  instalator offline, aktualizacje oraz wspólny katalog poleceń.
 - Uruchamiacz i aktualizator po dodaniu pełnej kontroli wszystkich plików:
   **22 testy C# zaliczone**.
 - Test strukturalny samowystarczalności instalatora zaliczony. Potwierdza trzy
