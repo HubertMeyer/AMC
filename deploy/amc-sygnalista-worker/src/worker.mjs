@@ -22,10 +22,13 @@ export function redactPrivateData(value) {
     .replace(/\b[a-z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-z0-9.-]+\.[a-z]{2,}\b/gi, "[adres e-mail usunięty]")
     .replace(/\b(?:[0-9a-f]{2}[:-]){5}[0-9a-f]{2}\b/gi, "[adres urządzenia usunięty]")
     .replace(/\b(?:\d{1,3}\.){3}\d{1,3}\b/g, "[adres sieciowy usunięty]")
+    .replace(/\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi, "[identyfikator usunięty]")
     .replace(/\b(?:authorization|proxy-authorization|cookie|set-cookie)\s*:\s*[^\r\n]*/gi, "[nagłówek poufny usunięty]")
     .replace(/\bbearer\s+[a-z0-9._~+/=-]+/gi, "Bearer [wartość usunięta]")
+    .replace(/\b(?:access[_ -]?token|refresh[_ -]?token|client[_ -]?secret|api[_ -]?key|password|passwd|account(?:[_ -]?name)?|user(?:[_ -]?name)?)\s*[:=]\s*(?:"[^"\r\n]*"|'[^'\r\n]*'|[^\r\n]*)/gi, "[wartość konta usunięta]")
     .replace(/\beyJ[a-zA-Z0-9_-]{20,}\.[a-zA-Z0-9_-]{10,}(?:\.[a-zA-Z0-9_-]{10,})?\b/g, "[token usunięty]")
-    .replace(/(^|[^a-zA-Z0-9_-])[a-zA-Z0-9_-]{64,}(?=$|[^a-zA-Z0-9_-])/g, "$1[wartość poufna usunięta]");
+    .replace(/(^|[^a-zA-Z0-9_-])[a-zA-Z0-9_-]{64,}(?=$|[^a-zA-Z0-9_-])/g, "$1[wartość poufna usunięta]")
+    .replace(/(^|[^\w.-])[^\s\\/:*?"<>|]{1,180}\.(?:mp3|m4a|aac|flac|wav|ogg|opus|wma|mp4|mkv|avi|mov|webm|m3u8?|pls|asx|xspf|json|db|sqlite|log|txt)(?![\w.-])/gi, "$1[nazwa pliku usunięta]");
 }
 
 async function sha256(value) {

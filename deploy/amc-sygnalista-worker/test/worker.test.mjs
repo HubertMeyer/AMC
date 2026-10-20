@@ -55,9 +55,18 @@ test("health is small and does not expose configuration", async () => {
 
 test("server performs a second privacy redaction", () => {
   const safe = redactPrivateData(
-    "C:\\Users\\Jan\\sekret.mp3 https://private.test jan@example.test Authorization: Bearer sekret",
+    [
+      "C:\\Users\\Jan\\sekret.mp3 https://private.test jan@example.test",
+      "Authorization: Bearer sekret",
+      "access_token=krótki-sekret",
+      "accountName: Jan Kowalski",
+      "123e4567-e89b-42d3-a456-426614174000 radio.mp3",
+    ].join("\n"),
   );
-  assert.doesNotMatch(safe, /Jan|private\.test|jan@example|Bearer sekret/);
+  assert.doesNotMatch(
+    safe,
+    /Jan|Kowalski|private\.test|jan@example|Bearer sekret|krótki-sekret|123e4567|radio\.mp3/,
+  );
   assert.match(safe, /usunięty|prywatna/);
 });
 
