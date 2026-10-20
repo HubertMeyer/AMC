@@ -34,6 +34,7 @@ internal static class SpotifyCatalogContractTests
         CoordinatorRedactsBackendFailures();
         CoordinatorSearchesExactlyOnceWithoutMutatingAnything();
         CoordinatorReadsOneDescriptionWithoutMutation();
+        CoordinatorShowsConfirmedCreatedPlaylistInCollectionImmediately();
     }
 
     private static void CapabilitiesDescribeOneReadOnlySession()
@@ -661,6 +662,31 @@ internal static class SpotifyCatalogContractTests
             "Alt+D nie wykonało dokładnie jednego bezpiecznego odczytu opisu");
     }
 
+    private static void CoordinatorShowsConfirmedCreatedPlaylistInCollectionImmediately()
+    {
+        using var backend = new WritableFakeBackend();
+        using var coordinator = new LiteSpotifyCatalogCoordinator(backend);
+        using var create = JsonDocument.Parse(
+            """{"name":"Nowa playlista","isPublic":true}""");
+        using var view = JsonDocument.Parse(
+            """{"view":"playlists","loadedCount":150}""");
+
+        _ = coordinator.CreatePlaylist(create.RootElement);
+        var result = (LiteSpotifyItemsResult)coordinator.CollectionView(
+            view.RootElement);
+
+        Check(backend.CreateCalls == 1 && backend.RefreshCalls == 0,
+            "utworzenie playlisty nie wykonało jednej mutacji albo wymusiło pełne odświeżenie");
+        Check(result.Items.Count == 1
+            && result.Items[0].Title == "Nowa playlista"
+            && result.Items[0].Kind == "playlist"
+            && result.Items[0].ExternalId == "created123",
+            "potwierdzona playlista nie pojawiła się od razu pod Ctrl+P");
+        Check(!result.Items[0].AccessibleLabel.Contains(
+                "created123", StringComparison.Ordinal),
+            "techniczny identyfikator nowej playlisty wszedł do etykiety dostępnościowej");
+    }
+
     private static MediaItem Item(
         MediaItemKind kind,
         string externalId,
@@ -761,6 +787,74 @@ internal static class SpotifyCatalogContractTests
             return Task.FromResult(
                 new LiteSpotifyContainerBackendResult(ContainerItems, true));
         }
+
+        public void Dispose()
+        {
+        }
+    }
+
+    private sealed class WritableFakeBackend : ILiteSpotifyWriteBackend
+    {
+        public int CreateCalls { get; private set; }
+        public int RefreshCalls { get; private set; }
+
+        public IReadOnlyList<MediaItem> CachedCollection => [];
+
+        public LiteSpotifyAccountProbe ReadAccountStatus() => new(
+            true, true, "Konto", "premium", true);
+
+        public Task<LiteSpotifyCollectionRefresh> RefreshCollectionAsync(
+            CancellationToken cancellationToken)
+        {
+            RefreshCalls++;
+            return Task.FromResult(new LiteSpotifyCollectionRefresh([], false));
+        }
+
+        public Task<LiteSpotifyCollectionRefresh> RefreshAlbumsAsync(
+            CancellationToken cancellationToken) =>
+            Task.FromResult(new LiteSpotifyCollectionRefresh([], false));
+
+        public Task<IReadOnlyList<MediaItem>> SearchAsync(
+            string query,
+            CancellationToken cancellationToken) =>
+            Task.FromResult<IReadOnlyList<MediaItem>>([]);
+
+        public Task<string?> GetDescriptionAsync(
+            LiteSpotifyDescriptionRequest request,
+            CancellationToken cancellationToken) => Task.FromResult<string?>(null);
+
+        public Task<LiteSpotifyContainerBackendResult> GetContainerItemsAsync(
+            LiteSpotifyContainerRequest request,
+            CancellationToken cancellationToken) =>
+            Task.FromResult(new LiteSpotifyContainerBackendResult([], true));
+
+        public Task<LiteSpotifyMembershipChange> ChangeMembershipAsync(
+            IReadOnlyList<MediaItem> items,
+            bool? requestedAddition,
+            CancellationToken cancellationToken) =>
+            Task.FromResult(new LiteSpotifyMembershipChange(
+                requestedAddition ?? true, [], 0));
+
+        public Task<IReadOnlyList<SpotifyPlaylistTarget>> GetPlaylistTargetsAsync(
+            CancellationToken cancellationToken) =>
+            Task.FromResult<IReadOnlyList<SpotifyPlaylistTarget>>([]);
+
+        public Task<SpotifyPlaylistTarget> CreatePlaylistAsync(
+            string name,
+            bool isPublic,
+            CancellationToken cancellationToken)
+        {
+            CreateCalls++;
+            return Task.FromResult(new SpotifyPlaylistTarget(
+                "created123", name, "owner", "Michał", isPublic,
+                false, true, "snapshot123"));
+        }
+
+        public Task<SpotifyPlaylistWriteResult> AddPlaylistItemsAsync(
+            IReadOnlyList<string> playlistIds,
+            IReadOnlyList<MediaItem> items,
+            CancellationToken cancellationToken) =>
+            Task.FromResult(new SpotifyPlaylistWriteResult(items.Count, []));
 
         public void Dispose()
         {

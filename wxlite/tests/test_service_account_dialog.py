@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 from pathlib import Path
+from types import SimpleNamespace
 
 from test_gui_logic import install_wx_stub
 
 install_wx_stub()
 
+import amc_wx_lite.gui as gui_module
 from amc_wx_lite.gui import LiteFrame
 from amc_wx_lite.navigation import SessionId
 
@@ -59,3 +61,58 @@ def test_configure_routes_spotify_tidal_and_wiim_without_opening_browser_itself(
     assert "self._load_wiim_devices" in section
     assert "LaunchDefaultBrowser" not in section
     assert "webbrowser" not in section.casefold()
+
+
+def test_opening_spotify_account_announces_current_status_without_login() -> None:
+    spoken: list[str] = []
+    shown: list[tuple[str, str]] = []
+
+    class FakeDialog:
+        def __init__(self, _parent, service_name, status, _start_login) -> None:
+            self.service_name = service_name
+            self.status = status
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args) -> None:
+            return None
+
+        def ShowModal(self) -> int:  # noqa: N802 - API wx
+            shown.append((self.service_name, self.status))
+            return 0
+
+    original_dialog = gui_module.ServiceAccountDialog
+    gui_module.ServiceAccountDialog = FakeDialog
+    try:
+        frame = SimpleNamespace(
+            client=SimpleNamespace(
+                spotify_account_status=lambda: {
+                    "catalog": {
+                        "connected": True,
+                        "label": "Katalog Spotify jest połączony: Michał.",
+                    },
+                    "playback": {
+                        "connected": True,
+                        "label": "Konto odtwarzania Spotify jest zapisane i gotowe.",
+                    },
+                }
+            ),
+            runner=SimpleNamespace(submit=lambda *_args: None),
+            announcer=SimpleNamespace(say=spoken.append),
+            _service_account_status_message=(
+                LiteFrame._service_account_status_message
+            ),
+            _restore_focus_after_dialog=lambda: None,
+        )
+
+        LiteFrame._show_service_account(frame, SessionId.SPOTIFY)
+    finally:
+        gui_module.ServiceAccountDialog = original_dialog
+
+    expected = (
+        "Katalog Spotify jest połączony: Michał. "
+        "Konto odtwarzania Spotify jest zapisane i gotowe."
+    )
+    assert shown == [("Spotify", expected)]
+    assert spoken == [expected]

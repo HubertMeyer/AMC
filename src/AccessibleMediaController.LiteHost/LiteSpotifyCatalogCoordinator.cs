@@ -378,6 +378,32 @@ internal sealed class LiteSpotifyCatalogCoordinator(
                     request.IsPublic,
                     CancellationToken.None)
                 .GetAwaiter().GetResult();
+            // Lista celów Ctrl+Shift+P ma własną migawkę interfejsu, natomiast
+            // Ctrl+P czyta _collectionSnapshot. Po potwierdzonym utworzeniu
+            // dopisujemy tę samą playlistę również do kolekcji bieżącego hosta,
+            // aby oba wejścia natychmiast pokazywały zgodny stan bez kosztownej
+            // pełnej synchronizacji konta.
+            lock (_collectionGate)
+            {
+                var createdItem = new MediaItem
+                {
+                    Id = $"spotify:playlist:{created.Id}",
+                    ExternalId = created.Id,
+                    Title = created.Name,
+                    Kind = MediaItemKind.Playlist,
+                    IsInLibrary = true,
+                    IsAvailable = true,
+                    CollectionAddedUtcTicks = DateTime.UtcNow.Ticks
+                };
+                _collectionSnapshot = _collectionSnapshot
+                    .Where(item => item.Kind != MediaItemKind.Playlist
+                        || !string.Equals(
+                            NormalizeExternalId(item.ExternalId),
+                            created.Id,
+                            StringComparison.Ordinal))
+                    .Prepend(createdItem)
+                    .ToArray();
+            }
             return new LiteSpotifyPlaylistCreateResult(
                 LiteSpotifyCatalogContract.ToPlaylistTarget(created),
                 $"Utworzono playlistę Spotify: {created.Name}, "

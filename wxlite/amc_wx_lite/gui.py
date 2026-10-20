@@ -14304,6 +14304,10 @@ class LiteFrame(wx.Frame):
             status,
             start_login,
         ) as dialog:
+            # Statyczny tekst stanu nie zawsze jest automatycznie czytany,
+            # ponieważ fokus trafia na przycisk logowania. Zlecenie po wejściu
+            # w pętlę modalną daje jeden jawny komunikat bez uruchamiania OAuth.
+            wx.CallAfter(self.announcer.say, status)
             dialog.ShowModal()
         self._restore_focus_after_dialog()
 
@@ -14399,6 +14403,10 @@ class LiteFrame(wx.Frame):
             run_action=run_action,
             copy_address=lambda address: self._to_clipboard(address),
         ) as dialog:
+            wx.CallAfter(
+                self.announcer.say,
+                LiteFrame._sonos_account_message(initial_payload),
+            )
             dialog.ShowModal()
             open_targets = dialog.open_targets
         self._restore_focus_after_dialog()
@@ -14680,6 +14688,10 @@ class LiteFrame(wx.Frame):
 
         def done(payload: object) -> None:
             if isinstance(payload, dict) and bool(payload.get("connected")):
+                self.announcer.say(
+                    f"{LiteFrame._sonos_account_message(payload)} "
+                    "Wczytuję głośniki i grupy."
+                )
                 self._load_sonos_targets(preferred_id=preferred_id)
                 return
             self._show_sonos_account(payload)

@@ -643,6 +643,7 @@ def test_ctrl_f5_routes_connected_account_to_targets_and_missing_account_to_logi
     submissions: list[str] = []
     targets: list[str | None] = []
     accounts: list[object] = []
+    spoken: list[str] = []
     payloads = [
         {"connected": True, "label": "Konto Sonos jest połączone."},
         {"connected": False, "label": "Konto Sonos nie jest połączone."},
@@ -657,7 +658,7 @@ def test_ctrl_f5_routes_connected_account_to_targets_and_missing_account_to_logi
         runner=SimpleNamespace(submit=lambda name, work, done, _failed: (
             submissions.append(name), done(work())
         )),
-        announcer=SimpleNamespace(say=lambda _message: None),
+        announcer=SimpleNamespace(say=spoken.append),
         _load_sonos_targets=lambda preferred_id=None: targets.append(preferred_id),
         _show_sonos_account=accounts.append,
     )
@@ -667,6 +668,9 @@ def test_ctrl_f5_routes_connected_account_to_targets_and_missing_account_to_logi
 
     assert submissions == ["sonos-account-status", "sonos-account-status"]
     assert targets == ["sonos:home:group"]
+    assert spoken == [
+        "Konto Sonos jest połączone. Wczytuję głośniki i grupy."
+    ]
     assert accounts == [
         {"connected": False, "label": "Konto Sonos nie jest połączone."}
     ]
