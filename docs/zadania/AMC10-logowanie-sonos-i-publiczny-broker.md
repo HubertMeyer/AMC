@@ -20,14 +20,30 @@ prawie gotowe. Ten etap nie zmienia adapterów, list, transportu ani WiiM.
   instalatora. Zastępuje to późniejszą kolejność AMC10, ale nie znosi bramy
   prawdziwej domeny, danych integracji, odbioru na zewnętrznym koncie ani
   osobnej zgody na publikację w GitHubie.
+- 2026-10-20: użytkownik potwierdził, że bieżący publiczny kandydat ma pozostać
+  czysty, bez Spotify i TIDAL-a, a logowanie Sonos oraz `Ctrl+F5` należy najpierw
+  dopracować w AMC Test i dopiero po odbiorze podpiąć do profilu publicznego.
+  Zastępuje to ewentualne bezpośrednie odsłonięcie Sonosa w obecnym instalatorze.
 
 ## Materiał do dokumentacji użytkownika
 
-W Menedżerze sesji polecenie „Konfiguruj…” dla Sonosa prowadzi do istniejącego
-okna konta. Rozpoczęcie logowania ma otworzyć oficjalną stronę Sonosa, a po
-ukończeniu użytkownik wraca do AMC i wybiera sprawdzenie wyniku. AMC nie zna
-i nie przechowuje sekretu integracji Sonos. Tokeny użytkownika są przechowywane
-lokalnie przez istniejący magazyn chroniony systemem Windows.
+W AMC Test polecenie „Konfiguruj…” w Menedżerze sesji otwiera okno „Konto
+Sonos”. Pokazuje ono wyłącznie informacje potrzebne użytkownikowi i przyciski
+właściwe dla bieżącego stanu: rozpoczęcie i sprawdzenie logowania, anulowanie,
+odświeżenie dostępu, ponowienie zapisu, wylogowanie oraz przejście do listy
+głośników i grup. Hasło podaje się tylko na oficjalnej stronie Sonosa.
+
+„Rozpocznij logowanie” przygotowuje adres. AMC nie otwiera wtedy przeglądarki
+samoczynnie: adres można skopiować albo jawnie wybrać „Otwórz stronę
+logowania”. Po ukończeniu logowania użytkownik wraca do okna i wybiera
+„Sprawdź logowanie”. `Ctrl+F5` nadal oznacza „Głośniki i grupy Sonos”. Gdy konto
+jest połączone, otwiera wybór domu i grupy; gdy konto nie jest gotowe, prowadzi
+do okna konta zamiast kończyć się niejasnym błędem.
+
+AMC nie zna i nie przechowuje sekretu integracji Sonos. Tokeny użytkownika
+pozostają wyłącznie w procesie C# i w istniejącym lokalnym magazynie chronionym
+systemem Windows; interfejs wxPython otrzymuje tylko stan, komunikaty i zaufany
+adres autoryzacji.
 
 Publiczny Sonos nie jest jeszcze widoczny. Pozostanie ukryty, dopóki broker nie
 będzie działał pod stałym adresem HTTPS i nie przejdzie świadomego odbioru na
@@ -58,6 +74,14 @@ zewnętrznym koncie. WiiM nie zależy od tego brokera.
 - Publiczny profil AMC nadal nie udostępnia Sonosa. Bieżący prywatny AMC Test
   nadal używa dotychczasowego brokera; przełączenie originu nastąpi dopiero po
   rzeczywistym wdrożeniu i odbiorze.
+- Nie zmieniono znaczenia `Ctrl+F5` ani istniejącego transportu Sonosa. Dodano
+  jedynie świadomą bramkę konta przed odczytem grup. Nazwa, skrót, opis, menu,
+  pomoc `Ctrl+F1`, pełna pomoc i paleta `Ctrl+Shift+K` nadal pochodzą ze
+  wspólnego katalogu poleceń.
+- Host udostępnia wxPythonowi siedem wąskich operacji konta bez argumentów
+  poświadczeń: stan, rozpoczęcie, sprawdzenie i anulowanie logowania,
+  odświeżenie, ponowienie samego zapisu oraz wylogowanie. Odpowiedzi nie
+  zawierają tokenów, sekretu, adresu brokera, nazw klas ani wartości enumów.
 
 Kontrakt sprawdzono 2026-10-19 z aktualną oficjalną dokumentacją Sonosa:
 
@@ -76,6 +100,19 @@ Kontrakt sprawdzono 2026-10-19 z aktualną oficjalną dokumentacją Sonosa:
 - `src/AccessibleMediaController.SonosBroker/SonosOAuthGateway.cs`
 - `src/AccessibleMediaController.SonosBroker/README.md`
 - `tests/AccessibleMediaController.SonosBroker.SmokeTests/*`
+- `src/AccessibleMediaController.LiteHost/LiteSonosAccountOwner.cs`
+- `src/AccessibleMediaController.LiteHost/LiteSonosCoordinator.cs`
+- `src/AccessibleMediaController.LiteHost/LiteEngineHandlers.cs`
+- `src/AccessibleMediaController.LiteHost/Protocol/LiteSonosContract.cs`
+- `src/AccessibleMediaController.LiteHost/Program.cs`
+- `wxlite/amc_wx_lite/gui.py`
+- `wxlite/amc_wx_lite/host_client.py`
+- `wxlite/amc_wx_lite/menu_model.py`
+- `wxlite/amc_wx_lite/shortcuts.py`
+- `wxlite/tests/test_sonos_account_dialog.py`
+- `wxlite/tests/test_sonos_session.py`
+- `wxlite/tests/test_command_palette.py`
+- `tests/AccessibleMediaController.LiteHost.ProtocolTests/SonosContractTests.cs`
 - `AccessibleMediaController.sln`
 - `docs/zadania/README.md`
 
@@ -100,6 +137,29 @@ Kontrakt sprawdzono 2026-10-19 z aktualną oficjalną dokumentacją Sonosa:
   się z lokalnym gniazdem; identyczny test uruchomiony z dostępem do localhost
   zaliczył komplet 16 przypadków.
 - Nie wykonano instalacji, publikacji, logowania ani wdrożenia publicznego.
+- `python -m compileall -q wxlite/amc_wx_lite` — sukces.
+- `dotnet build src/AccessibleMediaController.LiteHost/AccessibleMediaController.LiteHost.csproj --no-restore`
+  — sukces, 0 ostrzeżeń, 0 błędów.
+- `dotnet build tests/AccessibleMediaController.LiteHost.ProtocolTests/AccessibleMediaController.LiteHost.ProtocolTests.csproj --no-restore`
+  — sukces, 0 ostrzeżeń, 0 błędów.
+- `dotnet run --project tests/AccessibleMediaController.LiteHost.ProtocolTests/AccessibleMediaController.LiteHost.ProtocolTests.csproj --no-build -- --sonos`
+  — jeden ukierunkowany zestaw Sonos zaliczony. Test potwierdza jawne etykiety
+  i brak tokenu, adresu brokera oraz technicznych nazw stanów w odpowiedzi.
+- 136 ukierunkowanych testów wxPython — zaliczone. Obejmują `Ctrl+F5`, menu,
+  pomoc, paletę, Menedżer sesji, jawne etykiety, rozdzielenie stanu konta od
+  tokenów, drogę konto–grupy oraz zachowanie innych kont i sesji.
+- Pierwszy niepoprawny równoległy przebieg dwóch kompilacji został odrzucony:
+  oba procesy próbowały pisać ten sam plik `obj`. Powtórzenie sekwencyjne
+  przeszło bez błędów. Nie jest to wada kodu.
+- Próba pełnego `wxlite/tests` w piaskownicy została zatrzymana po potwierdzeniu,
+  że `tempfile` nie może pisać SQLite w wirtualnym katalogu `%TEMP%`. Wynik ten
+  nie jest przedstawiany jako regresja ani jako zaliczenie.
+- Pełny `wxlite/tests` poza piaskownicą: **1861 zaliczonych, 116 świadomie
+  pominiętych, 11 podtestów zaliczonych**. Jedyny początkowy brak dotyczył
+  wymaganego wcześniejszego pliku LiteHost Release, a nie zachowania kodu.
+- `dotnet build src/AccessibleMediaController.LiteHost/AccessibleMediaController.LiteHost.csproj -c Release --no-restore`
+  — sukces, 0 ostrzeżeń, 0 błędów; po nim brakujący
+  `test_profile_edits_go_through_the_real_host` przeszedł: **1 zaliczony**.
 
 ## Znane ograniczenia
 
@@ -113,8 +173,12 @@ Kontrakt sprawdzono 2026-10-19 z aktualną oficjalną dokumentacją Sonosa:
   omijać tej ochrony przez zaufanie wszystkim klientom.
 - Nie wykonano ręcznego odbioru NVDA istniejącego okna konta ani prawdziwego
   odnowienia tokenu. Potrzebna jest obecność użytkownika.
-- Pomoc `Ctrl+F1`, pełna pomoc i paleta nie zmieniają się w tym etapie, ponieważ
-  nie dodano polecenia ani nie odsłonięto Sonosa w żadnym nowym profilu.
+- Nowe okno konta jest gotowe w źródłach i testach, ale nie jest jeszcze
+  zbudowane ani zainstalowane w użytkowym AMC Test. Dopiero bezpieczna bramka
+  nagrywania pozwala podmienić działającą instalację.
+- Prawdziwe rozpoczęcie logowania, otwarcie przeglądarki, sprawdzenie konta i
+  odczyt grup nie były automatyzowane. Wymagają świadomego odbioru użytkownika;
+  żadne polecenie nie zostało wysłane do głośnika.
 
 ## Brama publicznego udostępnienia
 
@@ -132,5 +196,7 @@ Kontrakt sprawdzono 2026-10-19 z aktualną oficjalną dokumentacją Sonosa:
 - Wersja kodu AMC: `0.1.0-alpha.422`.
 - Commit źródeł, testów i pierwszego zapisu dokumentacji: `97a29c09`.
 - Commit bezpiecznego reverse proxy i testów 16/16: `1db05e74`.
+- Commit okna konta Sonos i bramki `Ctrl+F5`: bieżący etap, hash zostanie
+  dopisany po lokalnym zatwierdzeniu.
 - Instalacja AMC: bez zmian.
 - Publikacja: brak.

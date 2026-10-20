@@ -9,11 +9,31 @@ internal static class SonosContractTests
 {
     public static void Run()
     {
+        AccountStatusUsesOnlyExplicitUserFacingFields();
         TargetLabelsNeverUseTechnicalIdentifiers();
         SnapshotUsesOnlyExplicitUserFacingFields();
         TransportAcceptsOnlyTheNarrowAllowlist();
         LibraryAndMaterialLabelsNeverExposeIds();
         MaterialRequestsAcceptOnlyKnownKinds();
+    }
+
+    private static void AccountStatusUsesOnlyExplicitUserFacingFields()
+    {
+        using var payload = JsonDocument.Parse(JsonSerializer.Serialize(
+            LiteSonosContract.CreateAccountStatusResult(
+                SonosAccountSnapshots.Empty)));
+        var root = payload.RootElement;
+        Check(root.GetProperty("label").GetString() == "Konto Sonos nie jest połączone.",
+            "stan konta nie ma jawnej etykiety użytkowej");
+        Check(!root.GetProperty("connected").GetBoolean(),
+            "pusta migawka została przedstawiona jako połączone konto");
+        Check(!root.GetProperty("awaitingBrowser").GetBoolean(),
+            "pusta migawka została przedstawiona jako oczekujące logowanie");
+        var json = root.GetRawText();
+        Check(!json.Contains("token", StringComparison.OrdinalIgnoreCase)
+              && !json.Contains("broker", StringComparison.OrdinalIgnoreCase)
+              && !json.Contains("SonosAccountState", StringComparison.Ordinal),
+            "stan konta ujawnił token, brokera albo nazwę typu");
     }
 
     private static void LibraryAndMaterialLabelsNeverExposeIds()

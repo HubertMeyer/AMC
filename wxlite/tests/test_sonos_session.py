@@ -613,6 +613,65 @@ def test_sonos_host_client_uses_narrow_commands_and_arguments() -> None:
     ]
 
 
+def test_sonos_account_host_client_never_accepts_credentials() -> None:
+    calls: list[tuple[str, dict | None, float]] = []
+    client = LiteHostClient(Path("host.exe"))
+    client.call = lambda op, args=None, *, timeout=20.0: (
+        calls.append((op, args, timeout)) or {}
+    )
+
+    client.sonos_account_status()
+    client.sonos_account_login_start()
+    client.sonos_account_login_check()
+    client.sonos_account_login_cancel()
+    client.sonos_account_refresh()
+    client.sonos_account_persist_retry()
+    client.sonos_account_disconnect()
+
+    assert calls == [
+        ("sonos.accountStatus", None, 15.0),
+        ("sonos.accountLoginStart", None, 60.0),
+        ("sonos.accountLoginCheck", None, 60.0),
+        ("sonos.accountLoginCancel", None, 15.0),
+        ("sonos.accountRefresh", None, 60.0),
+        ("sonos.accountPersistRetry", None, 15.0),
+        ("sonos.accountDisconnect", None, 15.0),
+    ]
+
+
+def test_ctrl_f5_routes_connected_account_to_targets_and_missing_account_to_login() -> None:
+    submissions: list[str] = []
+    targets: list[str | None] = []
+    accounts: list[object] = []
+    payloads = [
+        {"connected": True, "label": "Konto Sonos jest połączone."},
+        {"connected": False, "label": "Konto Sonos nie jest połączone."},
+    ]
+    frame = SimpleNamespace(
+        client=SimpleNamespace(sonos_account_status=lambda: payloads.pop(0)),
+        navigator=SimpleNamespace(
+            sessions={
+                SessionId.SONOS: SimpleNamespace(list_anchor_id="sonos:home:group")
+            }
+        ),
+        runner=SimpleNamespace(submit=lambda name, work, done, _failed: (
+            submissions.append(name), done(work())
+        )),
+        announcer=SimpleNamespace(say=lambda _message: None),
+        _load_sonos_targets=lambda preferred_id=None: targets.append(preferred_id),
+        _show_sonos_account=accounts.append,
+    )
+
+    LiteFrame._select_sonos_target(frame)
+    LiteFrame._select_sonos_target(frame)
+
+    assert submissions == ["sonos-account-status", "sonos-account-status"]
+    assert targets == ["sonos:home:group"]
+    assert accounts == [
+        {"connected": False, "label": "Konto Sonos nie jest połączone."}
+    ]
+
+
 def test_sonos_cut_and_paste_preserve_all_selected_stream_ids() -> None:
     spoken: list[str] = []
     calls: list[tuple[list[str], str]] = []

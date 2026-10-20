@@ -16,6 +16,7 @@ internal sealed class LiteSonosAccountOwner :
     ISonosPlaylistLoadSessionBackend,
     ISonosOwnStreamsSessionBackend,
     ISonosAccountBoundBackend,
+    ILiteSonosAccountBackend,
     IDisposable
 {
     private readonly object gate = new();
@@ -33,6 +34,30 @@ internal sealed class LiteSonosAccountOwner :
             lock (gate) return coordinator?.Snapshot;
         }
     }
+
+    public SonosAccountSnapshot ReadAccountSnapshot() =>
+        EnsureCoordinator().Snapshot;
+
+    public Task<SonosAccountLoginStartResult> BeginLoginAsync(
+        CancellationToken cancellationToken) =>
+        EnsureCoordinator().BeginLoginAsync(cancellationToken);
+
+    public Task<SonosAccountLoginCheckResult> CheckLoginAsync(
+        CancellationToken cancellationToken) =>
+        EnsureCoordinator().CheckLoginAsync(cancellationToken);
+
+    public SonosAccountSnapshot CancelPendingLogin() =>
+        EnsureCoordinator().CancelPendingLogin();
+
+    public Task<SonosAccountRefreshResult> RefreshAccountAsync(
+        CancellationToken cancellationToken) =>
+        EnsureCoordinator().RefreshAsync(cancellationToken);
+
+    public SonosAccountPersistRetryResult RetryPersist() =>
+        EnsureCoordinator().RetryPersist();
+
+    public SonosAccountDisconnectResult DisconnectAccount() =>
+        EnsureCoordinator().Disconnect();
 
     public Task<SonosHouseholdsReadResult> ReadHouseholdsAsync(
         CancellationToken cancellationToken) =>

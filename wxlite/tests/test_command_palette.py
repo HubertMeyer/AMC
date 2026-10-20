@@ -119,7 +119,7 @@ def test_ctrl_f5_has_one_precise_contextual_contract_on_every_surface() -> None:
         SessionId.SONOS: (
             Action.SELECT_SONOS_TARGET,
             "Głośniki i grupy Sonos",
-            "Wybierz dom i grupę sterowania Sonos",
+            "Wybierz dom i grupę sterowania Sonos; przy braku połączenia otwórz konto Sonos",
             "sonos_session",
         ),
     }

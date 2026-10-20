@@ -480,6 +480,20 @@ internal sealed class LiteEngineHandlers : IDisposable
                 PlaceWiiMNetworkStreams(request.Args),
             [LiteSonosContract.TargetsOperation] = (_, _) =>
                 RequireSonos().ListTargets(),
+            [LiteSonosContract.AccountStatusOperation] = (_, _) =>
+                RequireSonos().AccountStatus(),
+            [LiteSonosContract.AccountLoginStartOperation] = (_, _) =>
+                RequireSonos().BeginAccountLogin(),
+            [LiteSonosContract.AccountLoginCheckOperation] = (_, _) =>
+                RequireSonos().CheckAccountLogin(),
+            [LiteSonosContract.AccountLoginCancelOperation] = (_, _) =>
+                RequireSonos().CancelAccountLogin(),
+            [LiteSonosContract.AccountRefreshOperation] = (_, _) =>
+                RequireSonos().RefreshAccount(),
+            [LiteSonosContract.AccountPersistRetryOperation] = (_, _) =>
+                RequireSonos().RetryAccountPersist(),
+            [LiteSonosContract.AccountDisconnectOperation] = (_, _) =>
+                RequireSonos().DisconnectAccount(),
             [LiteSonosContract.SnapshotOperation] = (request, _) =>
                 RequireSonos().Snapshot(request.Args),
             [LiteSonosContract.TransportOperation] = (request, _) =>

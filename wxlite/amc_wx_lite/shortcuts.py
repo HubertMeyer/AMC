@@ -445,7 +445,7 @@ _CTRL_F5_PRESENTATIONS: dict[str, CommandPresentation] = {
     "sonos": CommandPresentation(
         Action.SELECT_SONOS_TARGET,
         "Głośniki i grupy Sonos",
-        "Wybierz dom i grupę sterowania Sonos",
+        "Wybierz dom i grupę sterowania Sonos; przy braku połączenia otwórz konto Sonos",
         "Ctrl+F5",
     ),
 }

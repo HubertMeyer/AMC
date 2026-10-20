@@ -1289,7 +1289,7 @@ def build_menus(session_order: object = None) -> tuple[Menu, ...]:
                 shortcut="Ctrl+Next",
             ),
             MenuItem(
-                "Wybierz &grupę Sonos",
+                "&Głośniki i grupy Sonos",
                 Action.SELECT_SONOS_TARGET,
                 shortcut="Ctrl+F5",
                 accelerator=False,

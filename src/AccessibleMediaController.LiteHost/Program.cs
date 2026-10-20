@@ -209,6 +209,9 @@ internal static class Program
                 LiteWiiMContract.NetworkStreamEditInfoOperation,
                 // Sonos korzysta z chmury i odnowienia konta. Wszystkie jego
                 // operacje muszą pozostawić radio i nagrywanie responsywne.
+                LiteSonosContract.AccountLoginStartOperation,
+                LiteSonosContract.AccountLoginCheckOperation,
+                LiteSonosContract.AccountRefreshOperation,
                 LiteSonosContract.TargetsOperation,
                 LiteSonosContract.SnapshotOperation,
                  LiteSonosContract.TransportOperation,

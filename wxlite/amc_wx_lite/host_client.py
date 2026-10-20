@@ -939,6 +939,30 @@ class LiteHostClient:
         """List Sonos groups; account tokens never leave the C# host."""
         return self.call("sonos.targets", timeout=60.0)
 
+    def sonos_account_status(self) -> Any:
+        """Read only user-facing Sonos account state; never return tokens."""
+        return self.call("sonos.accountStatus", timeout=15.0)
+
+    def sonos_account_login_start(self) -> Any:
+        """Create one broker login attempt and return its trusted authorize URL."""
+        return self.call("sonos.accountLoginStart", timeout=60.0)
+
+    def sonos_account_login_check(self) -> Any:
+        """Check one pending login exactly once; no polling is hidden here."""
+        return self.call("sonos.accountLoginCheck", timeout=60.0)
+
+    def sonos_account_login_cancel(self) -> Any:
+        return self.call("sonos.accountLoginCancel", timeout=15.0)
+
+    def sonos_account_refresh(self) -> Any:
+        return self.call("sonos.accountRefresh", timeout=60.0)
+
+    def sonos_account_persist_retry(self) -> Any:
+        return self.call("sonos.accountPersistRetry", timeout=15.0)
+
+    def sonos_account_disconnect(self) -> Any:
+        return self.call("sonos.accountDisconnect", timeout=15.0)
+
     def sonos_snapshot(self, household_id: str, group_id: str) -> Any:
         """Read the current state of one group from the shared Sonos core."""
         return self.call(

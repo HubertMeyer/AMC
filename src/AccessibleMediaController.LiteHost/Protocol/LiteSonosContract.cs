@@ -12,6 +12,13 @@ namespace AccessibleMediaController.LiteHost.Protocol;
 public static class LiteSonosContract
 {
     public const string TargetsOperation = "sonos.targets";
+    public const string AccountStatusOperation = "sonos.accountStatus";
+    public const string AccountLoginStartOperation = "sonos.accountLoginStart";
+    public const string AccountLoginCheckOperation = "sonos.accountLoginCheck";
+    public const string AccountLoginCancelOperation = "sonos.accountLoginCancel";
+    public const string AccountRefreshOperation = "sonos.accountRefresh";
+    public const string AccountPersistRetryOperation = "sonos.accountPersistRetry";
+    public const string AccountDisconnectOperation = "sonos.accountDisconnect";
     public const string SnapshotOperation = "sonos.snapshot";
     public const string TransportOperation = "sonos.transport";
     public const string LibraryOperation = "sonos.library";
@@ -26,6 +33,102 @@ public static class LiteSonosContract
     public const string MoveOwnStreamsOperation = "sonos.ownStreamMove";
     public const string PlaceOwnStreamsOperation = "sonos.ownStreamPlace";
     public const string ExportOwnStreamsOperation = "sonos.ownStreamExport";
+
+    public static object CreateAccountStatusResult(SonosAccountSnapshot snapshot) =>
+        CreateAccountActionResult(snapshot, DescribeAccountSnapshot(snapshot));
+
+    public static object CreateAccountLoginStartResult(
+        SonosAccountLoginStartResult result)
+    {
+        var authorizeUrl = result.Started
+            && result.AuthorizeUri is not null
+            && SonosAuthorizeUrlPolicy.IsTrustedAuthorizeUrl(
+                result.AuthorizeUri.AbsoluteUri)
+            ? result.AuthorizeUri.AbsoluteUri
+            : null;
+        var message = authorizeUrl is not null
+            ? "Adres logowania Sonos jest gotowy. Otwórz go i zaloguj się, a potem wybierz Sprawdź logowanie."
+            : result.Message;
+        return CreateAccountActionResult(
+            result.Snapshot, message, authorizeUrl);
+    }
+
+    public static object CreateAccountLoginCheckResult(
+        SonosAccountLoginCheckResult result)
+    {
+        var message = !result.HadPendingLogin
+            ? "Nie ma rozpoczętego logowania Sonos. Wybierz Rozpocznij logowanie."
+            : result.Discarded
+                ? "Ta próba logowania Sonos została zastąpiona nowszą."
+                : result.Connected
+                    ? "Konto Sonos zostało połączone."
+                    : result.StillWaiting
+                        ? result.LoginStatus == SonosLoginStatus.Pending
+                            ? "Logowanie Sonos nie jest jeszcze zakończone. Dokończ je w przeglądarce i sprawdź ponownie."
+                            : result.Message
+                        : result.Message;
+        return CreateAccountActionResult(result.Snapshot, message);
+    }
+
+    public static object CreateAccountRefreshResult(
+        SonosAccountRefreshResult result)
+    {
+        var message = result.Renewed
+            ? "Odnowiono dostęp do konta Sonos."
+            : result.WaiterCanceled
+                ? "Odświeżanie dostępu Sonos zostało przerwane."
+                : result.Message;
+        return CreateAccountActionResult(result.Snapshot, message);
+    }
+
+    public static object CreateAccountPersistRetryResult(
+        SonosAccountPersistRetryResult result)
+    {
+        var message = result.Succeeded
+            ? "Zapisano konto Sonos."
+            : !result.Attempted
+                ? "Konto Sonos nie wymaga ponownego zapisu."
+                : "Nie udało się zapisać konta Sonos. Konto może nadal działać do zamknięcia AMC.";
+        return CreateAccountActionResult(result.Snapshot, message);
+    }
+
+    public static object CreateAccountDisconnectResult(
+        SonosAccountDisconnectResult result)
+    {
+        var message = result.Disconnected
+            ? "Wylogowano konto Sonos."
+            : "Konto Sonos odłączono z pamięci, ale zapis mógł pozostać na dysku. Spróbuj wylogować ponownie.";
+        return CreateAccountActionResult(result.Snapshot, message);
+    }
+
+    public static object CreateAccountActionResult(
+        SonosAccountSnapshot snapshot,
+        string message,
+        string? authorizeUrl = null)
+    {
+        ArgumentNullException.ThrowIfNull(snapshot);
+        return new
+        {
+            label = DescribeAccountSnapshot(snapshot),
+            message = Useful(message),
+            connected = snapshot.HasCredentials,
+            awaitingBrowser = snapshot.IsAwaitingBrowser,
+            canRefresh = snapshot.HasCredentials && snapshot.HasRefreshToken,
+            canRetryPersist = snapshot.CanRetryPersist,
+            canDisconnect = snapshot.HasCredentials || snapshot.PersistedRecordMayRemain,
+            authorizeUrl
+        };
+    }
+
+    private static string DescribeAccountSnapshot(SonosAccountSnapshot snapshot)
+    {
+        var parts = new List<string> { snapshot.Message };
+        if (!string.IsNullOrWhiteSpace(snapshot.IssueMessage))
+            parts.Add(snapshot.IssueMessage);
+        if (snapshot.HasCredentials && !snapshot.IsPersisted)
+            parts.Add("Konto działa, ale nie zostało zapisane. Możesz ponowić sam zapis.");
+        return string.Join(" ", parts.Where(part => !string.IsNullOrWhiteSpace(part)));
+    }
 
     public static LiteSonosTargetRequest ReadTarget(JsonElement args) => new(
         LiteArgs.RequireText(args, "householdId").Trim(),

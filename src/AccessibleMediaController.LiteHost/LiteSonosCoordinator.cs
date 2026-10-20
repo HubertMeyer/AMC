@@ -7,6 +7,26 @@ using System.Text.Json.Serialization;
 
 namespace AccessibleMediaController.LiteHost;
 
+internal interface ILiteSonosAccountBackend
+{
+    SonosAccountSnapshot ReadAccountSnapshot();
+
+    Task<SonosAccountLoginStartResult> BeginLoginAsync(
+        CancellationToken cancellationToken);
+
+    Task<SonosAccountLoginCheckResult> CheckLoginAsync(
+        CancellationToken cancellationToken);
+
+    SonosAccountSnapshot CancelPendingLogin();
+
+    Task<SonosAccountRefreshResult> RefreshAccountAsync(
+        CancellationToken cancellationToken);
+
+    SonosAccountPersistRetryResult RetryPersist();
+
+    SonosAccountDisconnectResult DisconnectAccount();
+}
+
 /// <summary>
 /// Serializuje odczyty i polecenia sesji Sonos. Po każdym POST wykonuje jawny
 /// odczyt, nigdy nie ponawia polecenia i nie nazywa HTTP 200 dowodem skutku.
@@ -31,6 +51,38 @@ internal sealed class LiteSonosCoordinator(
     {
         lock (gate) return ReadTargets();
     }
+
+    public object AccountStatus() =>
+        LiteSonosContract.CreateAccountStatusResult(
+            RequireAccountBackend().ReadAccountSnapshot());
+
+    public object BeginAccountLogin() =>
+        LiteSonosContract.CreateAccountLoginStartResult(
+            RequireAccountBackend().BeginLoginAsync(CancellationToken.None)
+                .GetAwaiter().GetResult());
+
+    public object CheckAccountLogin() =>
+        LiteSonosContract.CreateAccountLoginCheckResult(
+            RequireAccountBackend().CheckLoginAsync(CancellationToken.None)
+                .GetAwaiter().GetResult());
+
+    public object CancelAccountLogin() =>
+        LiteSonosContract.CreateAccountActionResult(
+            RequireAccountBackend().CancelPendingLogin(),
+            "Logowanie Sonos zostało anulowane.");
+
+    public object RefreshAccount() =>
+        LiteSonosContract.CreateAccountRefreshResult(
+            RequireAccountBackend().RefreshAccountAsync(CancellationToken.None)
+                .GetAwaiter().GetResult());
+
+    public object RetryAccountPersist() =>
+        LiteSonosContract.CreateAccountPersistRetryResult(
+            RequireAccountBackend().RetryPersist());
+
+    public object DisconnectAccount() =>
+        LiteSonosContract.CreateAccountDisconnectResult(
+            RequireAccountBackend().DisconnectAccount());
 
     public object Snapshot(System.Text.Json.JsonElement args)
     {
@@ -565,6 +617,11 @@ internal sealed class LiteSonosCoordinator(
 
     private static string Key(string householdId, string groupId) =>
         householdId + "\n" + groupId;
+
+    private ILiteSonosAccountBackend RequireAccountBackend() =>
+        backend as ILiteSonosAccountBackend
+        ?? throw new LiteRequestException(
+            "Zarządzanie kontem Sonos nie jest dostępne w tym profilu AMC.");
 
     public void Dispose()
     {

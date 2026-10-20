@@ -4018,6 +4018,225 @@ class ServiceAccountDialog(wx.Dialog):
         self.login_button.SetFocus()
 
 
+class SonosAccountDialog(wx.Dialog):
+    """Dostępne konto Sonos; adres logowania powstaje wyłącznie w C#."""
+
+    def __init__(
+        self,
+        parent: wx.Window,
+        payload: object,
+        *,
+        run_action: Callable[[str, "SonosAccountDialog"], None],
+        copy_address: Callable[[str], bool],
+    ) -> None:
+        super().__init__(
+            parent,
+            title="Konto Sonos",
+            style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER,
+        )
+        self.SetName("Konto Sonos")
+        self._run_action = run_action
+        self._copy_address = copy_address
+        self._authorize_url = ""
+        self._busy = False
+        self.open_targets = False
+
+        heading = wx.StaticText(self, label="Konto Sonos")
+        heading.SetName("Konto Sonos")
+        explanation = wx.StaticText(
+            self,
+            label=(
+                "Logujesz się zwykłym kontem na oficjalnej stronie Sonos. "
+                "Hasło wpisujesz wyłącznie w przeglądarce; AMC go nie widzi. "
+                "Rozpoczęcie logowania przygotuje adres, ale nie otworzy strony "
+                "bez Twojego polecenia."
+            ),
+        )
+        explanation.Wrap(700)
+        self.status = wx.StaticText(self, label="")
+        self.status.SetName("Stan konta Sonos")
+        self.address = wx.TextCtrl(self, style=wx.TE_READONLY)
+        self.address.SetName("Adres logowania Sonos")
+        self.address.SetHelpText(
+            "Adres przygotowany przez AMC. Możesz go skopiować albo otworzyć "
+            "w domyślnej przeglądarce."
+        )
+
+        self.login_button = wx.Button(self, label="Rozpocznij logowanie")
+        self.open_button = wx.Button(self, label="Otwórz stronę logowania")
+        self.copy_button = wx.Button(self, label="Kopiuj adres logowania")
+        self.check_button = wx.Button(self, label="Sprawdź logowanie")
+        self.cancel_login_button = wx.Button(self, label="Anuluj logowanie")
+        self.refresh_button = wx.Button(self, label="Odśwież dostęp")
+        self.retry_button = wx.Button(self, label="Ponów zapis konta")
+        self.disconnect_button = wx.Button(self, label="Wyloguj konto")
+        self.targets_button = wx.Button(self, label="Głośniki i grupy Sonos")
+        self.close_button = wx.Button(self, wx.ID_CANCEL, "Zamknij")
+
+        for button, name in (
+            (self.login_button, "Rozpocznij logowanie do konta Sonos"),
+            (self.open_button, "Otwórz stronę logowania Sonos"),
+            (self.copy_button, "Kopiuj adres logowania Sonos"),
+            (self.check_button, "Sprawdź wynik logowania Sonos"),
+            (self.cancel_login_button, "Anuluj logowanie Sonos"),
+            (self.refresh_button, "Odśwież dostęp do konta Sonos"),
+            (self.retry_button, "Ponów zapis konta Sonos"),
+            (self.disconnect_button, "Wyloguj konto Sonos"),
+            (self.targets_button, "Głośniki i grupy Sonos"),
+            (self.close_button, "Zamknij okno konta Sonos"),
+        ):
+            button.SetName(name)
+
+        buttons = wx.WrapSizer(wx.HORIZONTAL)
+        for button in (
+            self.login_button,
+            self.open_button,
+            self.copy_button,
+            self.check_button,
+            self.cancel_login_button,
+            self.refresh_button,
+            self.retry_button,
+            self.disconnect_button,
+            self.targets_button,
+            self.close_button,
+        ):
+            buttons.Add(button, 0, wx.RIGHT | wx.BOTTOM, 8)
+
+        layout = wx.BoxSizer(wx.VERTICAL)
+        layout.Add(heading, 0, wx.ALL, 12)
+        layout.Add(explanation, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM | wx.EXPAND, 12)
+        layout.Add(self.status, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM | wx.EXPAND, 12)
+        layout.Add(self.address, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM | wx.EXPAND, 12)
+        layout.Add(buttons, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM | wx.EXPAND, 12)
+        self.SetSizerAndFit(layout)
+        self.SetMinSize((760, 360))
+
+        for button, action in (
+            (self.login_button, "loginStart"),
+            (self.check_button, "loginCheck"),
+            (self.cancel_login_button, "loginCancel"),
+            (self.refresh_button, "refresh"),
+            (self.retry_button, "persistRetry"),
+            (self.disconnect_button, "disconnect"),
+        ):
+            button.Bind(
+                wx.EVT_BUTTON,
+                lambda _event, selected=action: self._on_action(selected),
+            )
+        self.open_button.Bind(wx.EVT_BUTTON, self._on_open)
+        self.copy_button.Bind(wx.EVT_BUTTON, self._on_copy)
+        self.targets_button.Bind(wx.EVT_BUTTON, self._on_targets)
+        self.apply_payload(payload, focus=True)
+
+    @staticmethod
+    def _text(payload: object, name: str, fallback: str = "") -> str:
+        if not isinstance(payload, dict):
+            return fallback
+        value = payload.get(name)
+        return value.strip() if isinstance(value, str) and value.strip() else fallback
+
+    def apply_payload(
+        self,
+        payload: object,
+        *,
+        focus: bool = False,
+    ) -> None:
+        label = self._text(
+            payload,
+            "message",
+            self._text(payload, "label", "Nie można teraz odczytać stanu konta Sonos."),
+        )
+        self.status.SetLabel(label)
+        self.status.SetName(f"Stan konta Sonos: {label}")
+        connected = isinstance(payload, dict) and bool(payload.get("connected"))
+        awaiting = isinstance(payload, dict) and bool(payload.get("awaitingBrowser"))
+        can_refresh = isinstance(payload, dict) and bool(payload.get("canRefresh"))
+        can_retry = isinstance(payload, dict) and bool(payload.get("canRetryPersist"))
+        can_disconnect = isinstance(payload, dict) and bool(payload.get("canDisconnect"))
+        if isinstance(payload, dict):
+            url = payload.get("authorizeUrl")
+            if isinstance(url, str) and url.strip():
+                self._authorize_url = url.strip()
+                self.address.SetValue(self._authorize_url)
+            elif not awaiting:
+                self._authorize_url = ""
+                self.address.SetValue("")
+        has_address = bool(self._authorize_url)
+
+        self.address.Show(has_address)
+        self.open_button.Show(has_address)
+        self.copy_button.Show(has_address)
+        self.check_button.Show(awaiting)
+        self.cancel_login_button.Show(awaiting)
+        self.refresh_button.Show(can_refresh)
+        self.retry_button.Show(can_retry)
+        self.disconnect_button.Show(can_disconnect)
+        self.targets_button.Show(connected)
+        self._set_action_buttons_enabled(not self._busy)
+        self.Layout()
+        self.Fit()
+
+        if focus:
+            target = (
+                self.check_button if awaiting
+                else self.targets_button if connected
+                else self.login_button
+            )
+            wx.CallAfter(target.SetFocus)
+
+    def _set_action_buttons_enabled(self, enabled: bool) -> None:
+        for button in (
+            self.login_button,
+            self.open_button,
+            self.copy_button,
+            self.check_button,
+            self.cancel_login_button,
+            self.refresh_button,
+            self.retry_button,
+            self.disconnect_button,
+            self.targets_button,
+        ):
+            button.Enable(enabled)
+        if self._busy and self.cancel_login_button.IsShown():
+            self.cancel_login_button.Enable(True)
+        self.close_button.Enable(True)
+
+    def set_busy(self, busy: bool) -> None:
+        self._busy = bool(busy)
+        self._set_action_buttons_enabled(not self._busy)
+
+    def finish(self, payload: object) -> None:
+        self.set_busy(False)
+        self.apply_payload(payload, focus=True)
+
+    def fail(self, message: str) -> None:
+        self.set_busy(False)
+        self.status.SetLabel(message)
+        self.status.SetName(f"Stan konta Sonos: {message}")
+        self.Layout()
+
+    def _on_action(self, action: str) -> None:
+        if self._busy:
+            return
+        self.set_busy(True)
+        self._run_action(action, self)
+
+    def _on_open(self, _event: wx.CommandEvent) -> None:
+        if not self._authorize_url:
+            return
+        if not wx.LaunchDefaultBrowser(self._authorize_url):
+            self.fail("Nie udało się otworzyć strony logowania Sonos.")
+
+    def _on_copy(self, _event: wx.CommandEvent) -> None:
+        if self._authorize_url and self._copy_address(self._authorize_url):
+            self.status.SetLabel("Skopiowano adres logowania Sonos.")
+            self.status.SetName("Stan konta Sonos: Skopiowano adres logowania Sonos.")
+
+    def _on_targets(self, _event: wx.CommandEvent) -> None:
+        self.open_targets = True
+        self.EndModal(wx.ID_OK)
+
+
 class LibraryFoldersDialog(wx.Dialog):
     """Dostępne zarządzanie korzeniami lokalnej Biblioteki."""
 
@@ -11019,9 +11238,7 @@ class LiteFrame(wx.Frame):
         elif action is Action.COMMAND_PALETTE:
             self._show_command_palette()
         elif action is Action.SELECT_SONOS_TARGET:
-            self._load_sonos_targets(
-                preferred_id=self.navigator.sessions[SessionId.SONOS].list_anchor_id
-            )
+            self._select_sonos_target()
         elif action is Action.ACTIVATE:
             self._activate_selected_if_ready()
         elif action is Action.PARENT_FOLDER:
@@ -13891,11 +14108,9 @@ class LiteFrame(wx.Frame):
             self.announcer.say("Odświeżam zapisane urządzenia WiiM")
             self._load_wiim_devices(preferred_id=state.list_anchor_id)
             return
-        guidance = {
-            SessionId.SONOS: "Wybierz dom i grupę Sonos",
-        }.get(session_id)
-        if guidance:
-            self.announcer.say(guidance)
+        if session_id is SessionId.SONOS:
+            self._show_sonos_account()
+            return
 
     def _show_library_folders(self) -> None:
         client = self._profile_edit_client()
@@ -14085,6 +14300,107 @@ class LiteFrame(wx.Frame):
         ) as dialog:
             dialog.ShowModal()
         self._restore_focus_after_dialog()
+
+    @staticmethod
+    def _sonos_account_message(payload: object) -> str:
+        if not isinstance(payload, dict):
+            return "Nie można teraz odczytać stanu konta Sonos."
+        for key in ("message", "label"):
+            value = payload.get(key)
+            if isinstance(value, str) and value.strip():
+                return value.strip()
+        return "Nie można teraz odczytać stanu konta Sonos."
+
+    def _show_sonos_account(self, initial_payload: object | None = None) -> None:
+        client = self.client
+        if client is None:
+            self.announcer.say("Silnik nie jest gotowy")
+            return
+        if initial_payload is None:
+            try:
+                initial_payload = client.sonos_account_status()
+            except (HostError, HostUnavailable) as error:
+                initial_payload = {"message": str(error)}
+            except Exception:
+                initial_payload = {
+                    "message": "Nie można teraz odczytać stanu konta Sonos."
+                }
+
+        operations: dict[str, Callable[[], object]] = {
+            "loginStart": client.sonos_account_login_start,
+            "loginCheck": client.sonos_account_login_check,
+            "loginCancel": client.sonos_account_login_cancel,
+            "refresh": client.sonos_account_refresh,
+            "persistRetry": client.sonos_account_persist_retry,
+            "disconnect": client.sonos_account_disconnect,
+        }
+
+        def run_action(action: str, dialog: SonosAccountDialog) -> None:
+            work = operations.get(action)
+            if work is None:
+                dialog.fail("Ta operacja konta Sonos nie jest dostępna.")
+                return
+            if action == "disconnect":
+                with wx.MessageDialog(
+                    dialog,
+                    (
+                        "Wylogować konto Sonos z AMC? Zapisane połączenie zostanie "
+                        "usunięte z tego profilu. Nie zmienia to hasła ani konta "
+                        "na stronie Sonos."
+                    ),
+                    "Wylogowanie Sonos",
+                    wx.YES_NO | wx.NO_DEFAULT | wx.ICON_WARNING,
+                ) as confirm:
+                    if confirm.ShowModal() != wx.ID_YES:
+                        dialog.set_busy(False)
+                        dialog.disconnect_button.SetFocus()
+                        return
+
+            def done(result: object) -> None:
+                if (
+                    action == "disconnect"
+                    and isinstance(result, dict)
+                    and not bool(result.get("connected"))
+                ):
+                    self._sonos_active_household_id = None
+                    self._sonos_active_group_id = None
+                    self._sonos_browse_household_id = None
+                message = self._sonos_account_message(result)
+                if not dialog.IsBeingDeleted():
+                    dialog.finish(result)
+                self.announcer.say(message)
+
+            def failed(error: Exception) -> None:
+                message = (
+                    str(error)
+                    if isinstance(error, (HostError, HostUnavailable))
+                    else "Operacja konta Sonos nie powiodła się."
+                )
+                if not dialog.IsBeingDeleted():
+                    dialog.fail(message)
+                self.announcer.say(message)
+
+            self.runner.submit(
+                f"sonos-account-{action}",
+                work,
+                done,
+                failed,
+            )
+
+        with SonosAccountDialog(
+            self,
+            initial_payload,
+            run_action=run_action,
+            copy_address=lambda address: self._to_clipboard(address),
+        ) as dialog:
+            dialog.ShowModal()
+            open_targets = dialog.open_targets
+        self._restore_focus_after_dialog()
+        if open_targets:
+            wx.CallAfter(
+                self._load_sonos_targets,
+                self.navigator.sessions[SessionId.SONOS].list_anchor_id,
+            )
 
     def _show_session_list(self, *, focus_inactive: bool = False) -> None:
         """Ctrl+Shift+S i dodatek NVDA: jeden Menedżer sesji."""
@@ -14347,6 +14663,34 @@ class LiteFrame(wx.Frame):
         )
 
     # ---------------------------------------------------------------- Sonos
+
+    def _select_sonos_target(self) -> None:
+        """Ctrl+F5: wybór grupy po zalogowaniu, konfiguracja przy braku konta."""
+        client = self.client
+        if client is None:
+            self.announcer.say("Silnik nie jest gotowy")
+            return
+        preferred_id = self.navigator.sessions[SessionId.SONOS].list_anchor_id
+
+        def done(payload: object) -> None:
+            if isinstance(payload, dict) and bool(payload.get("connected")):
+                self._load_sonos_targets(preferred_id=preferred_id)
+                return
+            self._show_sonos_account(payload)
+
+        def failed(error: Exception) -> None:
+            self.announcer.say(
+                str(error)
+                if isinstance(error, (HostError, HostUnavailable))
+                else "Nie można teraz sprawdzić konta Sonos"
+            )
+
+        self.runner.submit(
+            "sonos-account-status",
+            client.sonos_account_status,
+            done,
+            failed,
+        )
 
     def _load_sonos_targets(self, preferred_id: str | None = None) -> None:
         """Wczytaj grupy przez wspólny Core; token konta zostaje w C#."""
