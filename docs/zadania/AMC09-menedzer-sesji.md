@@ -293,6 +293,10 @@ Historyczny projekt został użyty tylko jako materiał do odczytu.
 
 ## Wersja i commit
 
+- Radiowe `Ctrl+F5`, wspólny katalog poleceń i testy kontraktu: commit
+  `a6614d11` (`fix(amc09): dodaj Ctrl+F5 w Radiu`). Zmiana jest potwierdzona
+  w źródłach i testach, ale nie została jeszcze skompilowana, zainstalowana
+  ani uruchomiona z powodu trwającego nagrywania. Publikacji nie wykonano.
 - Instalacja i uruchomienie doprecyzowanych nazw `Ctrl+F5`: potwierdzone dla
   `2026.10.20-f96149f75e83eea064899db78c762596e56d2504-904ceb8c` w
   `D:\Projekty Codex\AMC Python`. Paczka zawiera 1667 plików; źródłem jest
