@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using AccessibleMediaController.Core.Podcasts;
+using AccessibleMediaController.Core.YouTube;
 using Microsoft.Data.Sqlite;
 
 namespace AccessibleMediaController.Core.Configuration;
@@ -1149,6 +1150,24 @@ internal sealed class PodcastLibraryDatabase(string databasePath)
                 episode.Id,
                 episode.Title,
                 added);
+        }
+    }
+
+    public YouTubeSubscriptionSyncApplyResult ApplyYouTubeSubscriptions(
+        IEnumerable<YouTubeSubscription> remoteSubscriptions,
+        bool restoreSuppressed)
+    {
+        ArgumentNullException.ThrowIfNull(remoteSubscriptions);
+        lock (_gate)
+        {
+            var settings = new PodcastSettings();
+            LoadInto(settings);
+            var result = YouTubeSubscriptionSyncApplier.Apply(
+                remoteSubscriptions,
+                settings,
+                restoreSuppressed);
+            if (result.Changed > 0) Save(settings);
+            return result;
         }
     }
 

@@ -1,4 +1,5 @@
 using AccessibleMediaController.Core.Podcasts;
+using AccessibleMediaController.Core.YouTube;
 
 namespace AccessibleMediaController.Core.Configuration;
 
@@ -82,6 +83,11 @@ public sealed class PodcastLibraryMutationStore(string databasePath)
         PodcastInternetMediaSource media,
         string? titleOverride) =>
         _database.AddInternetMedia(media, titleOverride);
+
+    public YouTubeSubscriptionSyncApplyResult ApplyYouTubeSubscriptions(
+        IEnumerable<YouTubeSubscription> remoteSubscriptions,
+        bool restoreSuppressed = false) =>
+        _database.ApplyYouTubeSubscriptions(remoteSubscriptions, restoreSuppressed);
 
     public IReadOnlyList<PodcastOpmlEntry> GetOpmlEntries() =>
         _database.GetOpmlEntries();
