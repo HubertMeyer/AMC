@@ -170,6 +170,14 @@ Kontrakt sprawdzono 2026-10-19 z aktualną oficjalną dokumentacją Sonosa:
   rozpoczął nagrywanie `3 - 2026-10-20 12-30.mp3`. AMC Test odmówił zwykłego
   zamknięcia, aktualizator zakończył się kodem 3 i nie zmienił zainstalowanych
   plików. To potwierdza działanie ochrony nagrywania, nie błąd instalatora.
+- Po zakończeniu nagrania o 12:35 wykonano drugą bramkę: 15/15 folderów było
+  dostępnych, nie znaleziono plików `.amc-partial`, a następny harmonogram był
+  dopiero o 13:00. Aktualizator ponownie nie podmienił plików, ponieważ
+  działający frontend nie zakończył się po bezpiecznym `WM_CLOSE`. Dwa
+  dodatkowe zwykłe polecenia zamknięcia skierowane do potwierdzonego głównego
+  okna również zostały odrzucone. Okno było widoczne, włączone i bez okna
+  modalnego. Procesów nie zakończono wymuszenie; przyczyna odmowy wewnętrznej
+  bramki pozostaje do doprecyzowania przed kolejną próbą instalacji.
 
 ## Znane ograniczenia
 
@@ -189,6 +197,11 @@ Kontrakt sprawdzono 2026-10-19 z aktualną oficjalną dokumentacją Sonosa:
 - Prawdziwe rozpoczęcie logowania, otwarcie przeglądarki, sprawdzenie konta i
   odczyt grup nie były automatyzowane. Wymagają świadomego odbioru użytkownika;
   żadne polecenie nie zostało wysłane do głośnika.
+- Bieżąca zainstalowana wersja nie zamyka się na żądanie aktualizatora także
+  po potwierdzonym zakończeniu nagrania. Nie wolno obchodzić tej odmowy
+  wymuszonym zakończeniem procesu. Trzeba ustalić, czy komunikat użytkowy mówi
+  o nadal aktywnym nagraniu, czy o braku odpowiedzi hosta, i dodać trwałą
+  diagnostykę tej decyzji.
 
 ## Brama publicznego udostępnienia
 
