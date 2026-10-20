@@ -183,6 +183,10 @@ repozytorium, kanałami wydań i polityką prywatności.
   nie wykonuje `push`. Następne snapshoty wskazują poprzedni snapshot publiczny
   jako jedynego rodzica. Dzięki temu wydanie może wskazać dokładne źródła bez
   ujawniania dawnych lokalnych ścieżek występujących w roboczej historii.
+- Przed utworzeniem snapshotu skrypt automatycznie skanuje zatwierdzone drzewo
+  pod kątem tokenów GitHub, OpenAI i Google, JWT, nagłówków kluczy prywatnych
+  oraz rzeczywistych ścieżek `C:\Users\...`. Wykrycie któregokolwiek wzorca
+  zatrzymuje etap przed utworzeniem publicznego commitu.
 - Polecenie korzysta ze wspólnego modelu akcji dla menu, F1, palety i
   wykonania oraz jest jawnie dostępne we wszystkich sesjach i obu profilach.
 - Możliwość lokalnego formularza jest częścią zamkniętego manifestu zarówno
@@ -243,6 +247,10 @@ repozytorium, kanałami wydań i polityką prywatności.
   OpenAI i Google, JWT albo nagłówkami kluczy prywatnych. Dawna nazwa lokalnego
   profilu Windows występuje w 10 commitach i pięciu plikach historycznych,
   dlatego pierwsze wydanie nie będzie publikowało całej tej historii.
+- Audyt pierwszej lokalnej linii snapshotów wykrył jeden komentarz kodu z
+  rzeczywistą ścieżką profilu Windows. Zastąpiono ją neutralnym przykładem,
+  dodano stałą bramkę i zdecydowano odtworzyć nieopublikowaną linię publiczną
+  od zera, zamiast zachowywać wcześniejsze cztery lokalne snapshoty.
 - Testy czystej publicznej linii źródeł wraz z istniejącą bramką wydania:
   **6 zaliczonych**. Potwierdzono snapshot bez rodzica, identyczne drzewo,
   idempotencję, liniowego rodzica następnego wydania, brak zmiany bieżącego
@@ -256,6 +264,9 @@ repozytorium, kanałami wydań i polityką prywatności.
   układu paczki, transportu i bramki wdrożenia. Sprawdzono oba profile,
   odrzucenie adresu z danymi logowania i parametrem oraz usunięcie starego
   zasobu przy braku konfiguracji.
+- Bramka prywatności snapshotu oraz regresje GUI i klawiatury: **59
+  zaliczonych testów**. Syntetyczne źródło z `C:\Users\jan\...` zostało
+  odrzucone przed utworzeniem snapshotu.
 
 ## Znane ograniczenia
 
@@ -307,6 +318,8 @@ repozytorium, kanałami wydań i polityką prywatności.
   konfiguracji konta, identyfikatora KV ani sekretu.
 - Warunkowe pakowanie zweryfikowanego endpointu: `f9afe750` —
   `fix(rel): pakuj endpoint internetowego Sygnalisty`.
+- Automatyczna odmowa publicznego snapshotu przy prywatnej ścieżce lub
+  poświadczeniu: commit zostanie wpisany po lokalnym zatwierdzeniu.
 - Druga redakcja serwerowa ścieżek, przypisań tokenów i kont,
   identyfikatorów oraz nazw plików: `8149d076` —
   `fix(rel): wzmocnij redakcje Workera`.

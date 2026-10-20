@@ -9887,7 +9887,7 @@ class LiteFrame(wx.Frame):
             )
         # Biblioteka AMC ma PIERWSZENSTWO nad przegladaniem dysku. Dawniej
         # bylo odwrotnie: pytalismy ``Path(folder).exists()``, a skoro sciezki
-        # profilu (D:\, C:\Users\micha) na tej maszynie nie istnieja, lista pod
+        # profilu (D:\, C:\Users\<użytkownik>) na tej maszynie nie istnieją, lista pod
         # Ctrl+1 byla pusta -- to jest zglaszany blad.
         if self.library.is_available:
             # ``saved_folder`` otwiera SQLite, a jestesmy w ``done()`` zadania

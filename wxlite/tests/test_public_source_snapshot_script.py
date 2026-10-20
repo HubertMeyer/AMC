@@ -114,3 +114,19 @@ def test_snapshot_rejects_tracked_changes_and_never_pushes(tmp_path: Path) -> No
     assert "Snapshot wymaga czystych" in (result.stdout + result.stderr)
     source = SCRIPT.read_text(encoding="utf-8")
     assert "git push" not in source
+
+
+@pytest.mark.skipif(POWERSHELL is None, reason="Brak PowerShell")
+def test_snapshot_rejects_private_windows_profile_path(tmp_path: Path) -> None:
+    repository = _repository(tmp_path)
+    (repository / "app.txt").write_text(
+        "przykład C:\\Users\\jan\\sekret\\plik.txt\n", encoding="utf-8"
+    )
+    _git(repository, "add", "app.txt")
+    _git(repository, "commit", "-m", "prywatna ścieżka")
+
+    result = _run(repository, "0.1.0-alpha.1")
+
+    assert result.returncode != 0
+    assert "lokalna" in (result.stdout + result.stderr)
+    assert "profilu Windows" in (result.stdout + result.stderr)
