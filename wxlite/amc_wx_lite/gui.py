@@ -231,7 +231,13 @@ from .search_catalog import (
     record_query as add_search_history,
     search as search_entries,
 )
-from .search_sources import SearchCollection, SearchSources
+from .search_sources import (
+    SearchCollection,
+    SearchSources,
+    TIDAL_VIEW_FAVORITES,
+    TIDAL_VIEW_LIBRARY,
+    TIDAL_VIEW_PLAYLISTS,
+)
 from .speaker_content import (
     SPEAKER_SESSIONS,
     speaker_information_failure,
@@ -322,9 +328,6 @@ if "session.tidal" in _RELEASE_PROFILE.capabilities:
         TidalContainerPayloadError,
         TidalProfileError,
         TidalSource,
-        VIEW_FAVORITES as TIDAL_VIEW_FAVORITES,
-        VIEW_LIBRARY as TIDAL_VIEW_LIBRARY,
-        VIEW_PLAYLISTS as TIDAL_VIEW_PLAYLISTS,
         container_result_from_host,
         queue_payload as tidal_queue_payload,
         queue_rows as tidal_queue_rows,

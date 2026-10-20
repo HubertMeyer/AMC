@@ -1,4 +1,5 @@
 """Startup must schedule I/O rather than wait inside the GUI constructor."""
+import importlib
 import os
 import sys
 from pathlib import Path
@@ -9,6 +10,31 @@ install_wx_stub()
 import amc_wx_lite.gui as gui
 from amc_wx_lite.state_store import LiteState, Options
 from amc_wx_lite.host_client import LiteHostClient, HostUnavailable
+
+
+def test_public_profile_defines_shared_collection_scopes_without_tidal_adapter():
+    """Wspolne menu nie moze zalezec od prywatnego modulu TIDAL."""
+    previous_profile = os.environ.get("AMC_RELEASE_PROFILE")
+    names = (
+        "TIDAL_VIEW_LIBRARY",
+        "TIDAL_VIEW_FAVORITES",
+        "TIDAL_VIEW_PLAYLISTS",
+    )
+    try:
+        os.environ["AMC_RELEASE_PROFILE"] = "public"
+        for name in names:
+            gui.__dict__.pop(name, None)
+        importlib.reload(gui)
+
+        assert gui.TIDAL_VIEW_LIBRARY == "library"
+        assert gui.TIDAL_VIEW_FAVORITES == "favorites"
+        assert gui.TIDAL_VIEW_PLAYLISTS == "playlists"
+    finally:
+        if previous_profile is None:
+            os.environ.pop("AMC_RELEASE_PROFILE", None)
+        else:
+            os.environ["AMC_RELEASE_PROFILE"] = previous_profile
+        importlib.reload(gui)
 
 
 def test_wx_single_instance_names_are_separate_for_public_and_test_profiles():
