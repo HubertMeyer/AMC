@@ -151,7 +151,10 @@ zmian, wymagający korekty użytkownika:
 - `AMC10` — **W trakcie; niezależny broker ma czysty, sprawdzony pakiet
   wdrożeniowy Docker Compose z Caddy i własnym HTTPS. Nie został jeszcze
   uruchomiony publicznie, ponieważ brakuje konkretnego serwera, DNS oraz danych
-  integracji z portalu Sonos. Bieżące źródła klienta są odłączone od Hermesa,
+  integracji z portalu Sonos. Historyczny zaszyfrowany magazyn potwierdza udane
+  prawdziwe logowanie 19 października i publiczny identyfikator integracji;
+  trzeba jeszcze bezpiecznie sprawdzić na Hermesie obecność serwerowego sekretu
+  bez wypisywania go. Bieżące źródła klienta są odłączone od Hermesa,
   a zainstalowany AMC Test nadal jest wcześniejszą wersją. Hermes nie jest
   częścią architektury Sonosa** —
   działające sterowanie Sonosem i WiiM nie zostało

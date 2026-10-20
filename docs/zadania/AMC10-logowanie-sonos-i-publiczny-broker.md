@@ -55,6 +55,12 @@ prawie gotowe. Ten etap nie zmienia adapterów, list, transportu ani WiiM.
   open source. Lyd jest wyłącznie porównaniem użytkowym; nie kopiujemy jego
   kodu ani nie opieramy architektury AMC na przypuszczeniach o zamkniętej
   implementacji. Obowiązującym kontraktem są oficjalne wymagania Control API.
+- 2026-10-20: użytkownik potwierdził, że wcześniej logował się do portalu Sonos
+  prawdopodobnie kontem Google i tworzył integrację, oraz zezwolił sprawdzić
+  historyczny AMC. Audyt tylko do odczytu potwierdził prawdziwy zapis konta
+  Sonos z 19 października. Nie oznacza to zgody na ujawnienie lub przesłanie
+  sekretu w rozmowie; należy go odnaleźć i przenieść wyłącznie chronionym
+  kanałem wdrożeniowym.
 
 ## Materiał do dokumentacji użytkownika
 
@@ -92,6 +98,12 @@ Wydanie publiczne nie będzie wymagało od zwykłego użytkownika własnego kluc
 sekretu ani serwera. Użytkownik wybierze logowanie, otrzyma adres oficjalnej
 strony Sonosa, zaloguje się tam i wróci do AMC, aby sprawdzić wynik. Sekret
 integracji pozostaje tylko na wspólnym serwerze AMC.
+
+Istniejące konto autora było wcześniej prawidłowo połączone z Sonosem, ale jego
+zaszyfrowany rekord jest przypisany do historycznego originu. Po uruchomieniu
+nowego publicznego brokera AMC poprosi autora o świeże, świadome logowanie.
+Nie będzie po cichu przepisywać starego tokenu ani udawać, że należy on do
+nowego serwera.
 
 AMC nie zna i nie przechowuje sekretu integracji Sonos. Tokeny użytkownika
 pozostają wyłącznie w procesie C# i w istniejącym lokalnym magazynie chronionym
@@ -159,6 +171,16 @@ brokera.
 - Sekret może być podany z chronionego pliku `SONOS_CLIENT_SECRET_FILE`.
   Jednoczesna wartość i plik, względna ścieżka, brak pliku, nadmierny rozmiar
   albo wielowierszowa zawartość zatrzymują start bez ujawnienia sekretu.
+- Historyczny AMC i bieżący AMC Test używają tego samego publicznego
+  identyfikatora integracji
+  `b051a8f0-499c-4deb-9f66-843a752c36e4`. Identyfikator nie jest sekretem.
+  Historyczna dokumentacja wskazuje źródła dawnego brokera pod
+  `/home/michal/projekty/amc-sonos-auth` oraz konfigurację produkcyjną pod
+  `/etc/amc-sonos-auth/sonos.env`; tych danych nie znaleziono lokalnie na
+  komputerze Windows.
+- Token użytkownika i sekret integracji są różnymi danymi. Zaszyfrowany plik
+  Windows potwierdza udane logowanie użytkownika, ale nie zawiera i nie może
+  zastąpić serwerowego `SONOS_CLIENT_SECRET`.
 
 Kontrakt sprawdzono 2026-10-19 z aktualną oficjalną dokumentacją Sonosa:
 
@@ -346,6 +368,15 @@ Kontrakt sprawdzono 2026-10-19 z aktualną oficjalną dokumentacją Sonosa:
   Manifest obejmuje 10 plików, ma `workingTreeClean=true` i
   `includesSecrets=false`; niezależne ponowne obliczenie rozmiarów i sum nie
   wykazało rozbieżności. ZIP rozpakowano próbnie i ponownie zweryfikowano.
+- Audyt historycznego magazynu wykazał plik
+  `C:\Users\micha\AppData\Local\AccessibleMediaController\credentials\sonos.bin`
+  o rozmiarze 518 bajtów, zmieniony 19 października 2026 o 18:27 czasu
+  lokalnego. Kontrolowany odczyt przez DPAPI bieżącego użytkownika nie wypisał
+  żadnego poświadczenia. Potwierdził format 1, typ Bearer, zakres
+  `playback-control-all`, obecność access tokenu i refresh tokenu oraz
+  przypisanie do historycznego originu. Token dostępu wygasł 20 października,
+  ale sam rekord nadal zawiera refresh token. Bufory jawnego tekstu wyzerowano
+  po sprawdzeniu.
 
 ## Znane ograniczenia
 
@@ -386,11 +417,36 @@ Kontrakt sprawdzono 2026-10-19 z aktualną oficjalną dokumentacją Sonosa:
   Cloudflare, Google Cloud ani zmiennych `SONOS_*`. Nie ma więc lokalnego dowodu
   dostępu do zewnętrznego hostingu lub sekretu integracji. Publicznego
   wdrożenia nie wolno pozorować samym ZIP-em.
+- Lokalny magazyn użytkownika nie zawiera sekretu integracji. Trzeba potwierdzić
+  na dawnym hoście, czy istnieją źródła brokera i chroniona konfiguracja oraz
+  czy publiczny identyfikator odpowiada temu w AMC. Sekretu nie wolno zwracać
+  w odpowiedzi Hermesa, historii terminala ani w pliku zadania.
+
+## Bezpieczne sprawdzenie na Hermesie
+
+Hermes ma wykonać wyłącznie odczyt metadanych i odpowiedzieć bez wartości
+sekretów oraz tokenów:
+
+1. Czy istnieje repozytorium `/home/michal/projekty/amc-sonos-auth` albo jego
+   następca oraz jaki jest jego bieżący commit i stan zmian.
+2. Czy istnieje konfiguracja `/etc/amc-sonos-auth/sonos.env` albo równoważny
+   magazyn sekretów. Wystarczy odpowiedź tak/nie dla nazw
+   `SONOS_CLIENT_ID`, `SONOS_CLIENT_SECRET`, `SONOS_REDIRECT_URI` i
+   `SONOS_BROKER_PUBLIC_ORIGIN`; nie wolno wypisywać wartości.
+3. Czy zapisany `SONOS_CLIENT_ID` jest równy publicznemu identyfikatorowi
+   `b051a8f0-499c-4deb-9f66-843a752c36e4` — wyłącznie tak/nie.
+4. Czy działała lub nadal istnieje usługa systemowa, kontener, reverse proxy
+   albo certyfikat dawnego brokera; podać nazwy usług i ścieżki konfiguracji,
+   bez treści sekretów.
+5. Czy sekret można później umieścić bezpośrednio w chronionym pliku na nowym
+   serwerze, bez przesyłania go przez czat. Na tym etapie nie należy go jeszcze
+   kopiować ani uruchamiać starej usługi.
 
 ## Brama publicznego udostępnienia
 
 1. Wybrać stałą domenę i hosting obsługujący prawdziwy HTTPS.
-2. Utworzyć albo zatwierdzić produkcyjną integrację Sonos i dokładny callback
+2. Odzyskać metadane istniejącej integracji z Hermesa albo zatwierdzić nową
+   produkcyjną integrację Sonos i dokładny callback
    `/login/callback`.
 3. Wprowadzić sekrety poza repozytorium i sprawdzić `/health/ready`.
 4. Z użytkownikiem wykonać logowanie, odmowę, odnowienie oraz ponowne
