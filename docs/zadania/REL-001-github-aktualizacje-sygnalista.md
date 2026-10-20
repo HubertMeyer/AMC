@@ -305,8 +305,8 @@ repozytorium, kanałami wydań i polityką prywatności.
 - Integralna bramka wdrożenia Workera: `65037b21` —
   `feat(rel): domknij bramke wdrozenia Sygnalisty`; pakiet nie zawiera
   konfiguracji konta, identyfikatora KV ani sekretu.
-- Warunkowe pakowanie zweryfikowanego endpointu: commit zostanie wpisany po
-  lokalnym zatwierdzeniu poprawki.
+- Warunkowe pakowanie zweryfikowanego endpointu: `f9afe750` —
+  `fix(rel): pakuj endpoint internetowego Sygnalisty`.
 - Druga redakcja serwerowa ścieżek, przypisań tokenów i kont,
   identyfikatorów oraz nazw plików: `8149d076` —
   `fix(rel): wzmocnij redakcje Workera`.
