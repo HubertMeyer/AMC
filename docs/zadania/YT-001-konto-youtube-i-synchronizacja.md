@@ -1,6 +1,6 @@
 # YT-001 — konto YouTube i synchronizacja
 
-- Status: `W trakcie — bezpieczny fundament OAuth gotowy, brak jeszcze klienta Google i interfejsu`
+- Status: `W trakcie — bezpieczny fundament OAuth i atomowy zapis subskrypcji gotowe, brak jeszcze klienta Google i interfejsu`
 - Utworzono: 18 października 2026
 - Obszar: YouTube, OAuth, Biblioteka, wyszukiwanie i bezpieczne poświadczenia
 - Polecenie uruchamiające: `Uruchom zadanie YT-001`
@@ -144,6 +144,7 @@ Automatyczne usuwanie po obu stronach jest wykluczone.
   `src/AccessibleMediaController.Core/YouTube/YouTubeAccountCoordinator.cs`,
   `src/AccessibleMediaController.Core/YouTube/YouTubeSubscriptionClient.cs`,
   `src/AccessibleMediaController.Core/YouTube/YouTubeSubscriptionSyncPlanner.cs`,
+  `src/AccessibleMediaController.Core/YouTube/YouTubeSubscriptionSyncApplier.cs`,
   `src/AccessibleMediaController.Windows/Services/YouTubeCredentialStore.cs`,
   powiązanie magazynu z LiteHostem oraz testy Core i Windows.
 - Testy: `dotnet run --project
@@ -154,13 +155,16 @@ Automatyczne usuwanie po obu stronach jest wykluczone.
   scenariuszy cyklu konta. Test `--youtube-subscriptions` — zaliczone 5 z 5
   scenariuszy odczytu, stronicowania i błędów API. Test
   `--youtube-subscription-sync-plan` — zaliczone 5 z 5 scenariuszy polityki
-  jednokierunkowej. Projekty Windows i LiteHost zbudowane bez ostrzeżeń i błędów.
+  jednokierunkowej. Test `--youtube-subscription-sync-apply` — zaliczone 4 z 4
+  scenariuszy prawdziwej bazy SQLite. Kompilacja Release Core SmokeTests oraz
+  projekty Windows i LiteHost zakończyły się bez ostrzeżeń i błędów.
 - Commity źródła i testów: `ce723bff` (`feat(youtube): add safe OAuth protocol foundation`)
   `0c15fbcb` (`feat(youtube): isolate token exchange and credentials`) oraz
   `cbd2a5d3` (`feat(youtube): add guarded loopback callback`) i `161cb856`
   (`feat(youtube): coordinate account lifecycle safely`) oraz `86309bb0`
   (`feat(youtube): read account subscriptions safely`) i `436c5e3d`
-  (`feat(youtube): plan one-way subscription sync`).
+  (`feat(youtube): plan one-way subscription sync`) oraz `904c8011`
+  (`feat(youtube): apply subscription sync atomically`).
 - Zainstalowana kompilacja: brak. Ten etap nie zmienia jeszcze interfejsu ani
   bieżącej instalacji AMC Test.
 
@@ -210,6 +214,11 @@ bez konta.
   potwierdzeniem. Rozróżnia nowe, już obecne i świadomie usunięte kanały,
   ignoruje zdalny brak bez usuwania danych, a przywrócenie oznacza osobną akcję
   wskazującą istniejący rekord AMC.
+- Zatwierdzony plan może zostać zapisany jedną transakcją do bazy Podcastów.
+  Nowe kanały trafiają jako źródła bez masowego pobierania materiałów; mają
+  zerowy czas ostatniego odświeżenia, więc istniejący harmonogram uzupełnia je
+  później w skonfigurowanych porcjach. Wyłączony automat pozostaje wyłączony i
+  wtedy użytkownik może odświeżyć źródła ręcznie.
 
 ## Testy i wynik
 
@@ -231,15 +240,19 @@ zatrzymanie powtarzającej się strony, użytkowe błędy limitu i konta bez kan
 oraz pomijanie wpisów bez stabilnej tożsamości. Pięć scenariuszy planu
 synchronizacji potwierdziło nowe kanały, brak duplikatów, zachowanie lokalnie
 usuniętego źródła, jawne przywrócenie i brak usuwania po zniknięciu z Google.
+Cztery scenariusze prawdziwej tymczasowej bazy SQLite potwierdziły atomowy
+zapis pustych źródeł oczekujących na odświeżenie, idempotentne ponowienie,
+ochronę świadomie usuniętego kanału, jawne przywrócenie istniejącego rekordu,
+brak usuwania przy pustej odpowiedzi oraz brak częściowego zapisu przy kolizji.
 
 ## Znane ograniczenia
 
 - Brak jeszcze przydzielonego identyfikatora aplikacji Google dla AMC.
-- Nie ma jeszcze warstwy wykonującej zatwierdzony plan w Bibliotece AMC ani
-  interfejsu wx. Koordynator, lokalny odbiornik, transport tokenów, odczyt API,
-  plan synchronizacji i chroniony, profilowo rozdzielony magazyn są gotowe,
-  ale nie są jeszcze połączone z widocznym poleceniem ani z identyfikatorem
-  aplikacji Google.
+- Nie ma jeszcze interfejsu wx ani operacji protokołu LiteHost spinającej
+  logowanie, odczyt API i przygotowany atomowy zapis. Koordynator, lokalny
+  odbiornik, transport tokenów, odczyt API, plan, wykonanie planu i chroniony,
+  profilowo rozdzielony magazyn są gotowe, ale nie są jeszcze połączone z
+  widocznym poleceniem ani z identyfikatorem aplikacji Google.
 - Przed dodaniem widocznego polecenia trzeba połączyć magazyn z profilem hosta
   i dodać testy parytetu Ctrl+F1, Ctrl+Shift+K i menu.
 - Profil publiczny wymaga osobnej decyzji po konfiguracji i weryfikacji Google.
@@ -247,7 +260,7 @@ usuniętego źródła, jawne przywrócenie i brak usuwania po zniknięciu z Goog
 ## Wersja i commit
 
 Kod źródłowy i testy są zapisane w lokalnych commitach `ce723bff`, `0c15fbcb`,
-`cbd2a5d3`, `161cb856`, `86309bb0` oraz `436c5e3d`, po zainstalowanej kompilacji
+`cbd2a5d3`, `161cb856`, `86309bb0`, `436c5e3d` oraz `904c8011`, po zainstalowanej kompilacji
 `2026.10.21-a947f79d...`. Projekty
 źródłowe zostały pomyślnie zbudowane, ale nie powstał nowy pakiet, instalacja
 ani publikacja.
