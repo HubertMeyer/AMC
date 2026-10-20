@@ -57,7 +57,8 @@ Klawisze funkcyjne korzystające z edycji profilu, w tym `F2`, otrzymują od
 hosta pełne ścieżki Biblioteki, Podcastów i ustawień także na świeżym profilu,
 zanim te trzy pliki powstaną. Brak jednego pliku nie wyłącza już całej edycji
 komunikatem „Host nie dostał pełnych ścieżek profilu AMC”. Pliki są tworzone
-dopiero przez właściwą, wąską i atomową operację hosta.
+wyłącznie przez hosta: na świeżym profilu host zakłada także katalog i pustą,
+poprawną bazę Podcastów, zamiast kończyć start z powodu braku pliku.
 
 ## Uzasadnienie i decyzje
 
@@ -114,6 +115,11 @@ dopiero przez właściwą, wąską i atomową operację hosta.
   trafia do konstruktora klienta hosta przed rozpoczęciem pracy w tle.
 - Łączna bramka tej korekty: **75** testów ukierunkowanych, **194** testy
   skrótów/menu/pomocy/logiki GUI oraz **22/22** zestawy protokołu hosta.
+- Pierwszy rzeczywisty kontrolowany start świeżego profilu został poprawnie
+  odrzucony kodem 4 przed instalacją, ponieważ host wymagał już istniejącej
+  bazy Podcastów. Po usunięciu tego błędnego założenia **22/22** testy Pythona
+  startu i instalatora oraz wszystkie **22** zestawy protokołu hosta przeszły;
+  test protokołu potwierdza utworzenie schematu i użytkowe wartości domyślne.
 
 - Korekta `Ctrl+Shift+0`: **4/4 ukierunkowane testy zaliczone**. Potwierdzono
   rozpoznanie wyłącznie pierwszego dokładnego naciśnięcia, dostępność we

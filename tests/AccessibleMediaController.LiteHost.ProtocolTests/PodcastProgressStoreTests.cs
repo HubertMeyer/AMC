@@ -15,6 +15,19 @@ internal static class PodcastProgressStoreTests
         Directory.CreateDirectory(root);
         try
         {
+            var freshDatabase = Path.Combine(root, "fresh", "podcasts.db");
+            using (var freshStore = LitePodcastProgressStore.Open(freshDatabase, () => false))
+            {
+                var defaults = freshStore.GetGlobalSettings();
+                Assert.True(File.Exists(freshDatabase),
+                    "host powinien utworzyc baze Podcastow na swiezym profilu");
+                Assert.True(defaults.DownloadsFolder is null
+                    && defaults.RssRefreshIntervalMinutes == 60
+                    && defaults.YouTubeRefreshIntervalMinutes == 60
+                    && defaults.AutomaticRefreshBatchSize == 4,
+                    "swieza baza powinna miec jawne ustawienia domyslne");
+            }
+
             var database = Path.Combine(root, "podcasts.db");
             CreateDatabase(database);
             using (var store = LitePodcastProgressStore.Open(database, () => false))

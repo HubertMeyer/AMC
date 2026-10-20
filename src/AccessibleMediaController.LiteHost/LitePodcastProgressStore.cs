@@ -39,13 +39,16 @@ internal sealed class LitePodcastProgressStore : IDisposable
         if (string.IsNullOrWhiteSpace(databasePath))
             throw new LitePodcastProgressStoreDenied("Nie podano bazy Podcastów i YouTube.");
         var fullPath = Path.GetFullPath(databasePath);
-        if (!File.Exists(fullPath))
-            throw new LitePodcastProgressStoreDenied("Nie znaleziono bazy Podcastów i YouTube.");
         var directory = Path.GetDirectoryName(fullPath)
             ?? throw new LitePodcastProgressStoreDenied("Baza Podcastów nie ma katalogu.");
         FileStream ownerLock;
         try
         {
+            // Świeży profil ma prawidłową docelową ścieżkę, zanim istnieje
+            // sam plik. Host jest jedynym pisarzem tej bazy, więc tworzy
+            // katalog i pozwala warstwie Core założyć schemat przy pierwszym
+            // odczycie. Odrzucanie brakującego pliku wyłączało cały host.
+            Directory.CreateDirectory(directory);
             ownerLock = new FileStream(
                 Path.Combine(directory, OwnerLockFileName),
                 FileMode.OpenOrCreate,

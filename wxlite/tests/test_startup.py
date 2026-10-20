@@ -276,7 +276,7 @@ def test_close_is_refused_when_recording_state_cannot_be_confirmed():
     assert any("nie można potwierdzić" in entry[1] for entry in calls if entry[0] == "say")
 
 
-def test_engine_handshake_is_deferred_to_background():
+def test_engine_handshake_is_deferred_to_background(tmp_path):
     queued = []
     calls = []
     client_arguments = []
@@ -314,7 +314,7 @@ def test_engine_handshake_is_deferred_to_background():
         may_write_profile=False,
     )
     frame = SimpleNamespace(options=_options, state=LiteState(options=_options),
-        store=SimpleNamespace(directory=Path.cwd()),
+        store=SimpleNamespace(directory=tmp_path),
         layout=profile_paths,
         client=None,
         runner=SimpleNamespace(submit=lambda *args: queued.append(args)),

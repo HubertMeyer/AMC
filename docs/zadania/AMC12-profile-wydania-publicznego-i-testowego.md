@@ -328,8 +328,13 @@ przez profil. Zainstalowany numer to `0.1.0-alpha.425`.
   menu, pomoc i logikę GUI: **194 zaliczone**.
 - Uruchamiacz C#: **27/27**; protokół hosta: **22/22**. Powtórzenie poza
   piaskownicą potwierdziło nazwane kanały IPC i atomowe pliki tymczasowe.
-- Test rzeczywistej nowej paczki pozostaje krokiem po czystym commicie; nie jest
-  zastępowany uruchomieniem starej zainstalowanej kopii.
+- Pierwsza rzeczywista paczka z nową bramką została odrzucona kodem 4 przed
+  instalacją. Wynik `FAILED: HostError: Silnik przestał odpowiadać` ujawnił,
+  że świeży profil przekazywał pełną docelową ścieżkę `podcasts.db`, ale host
+  dopuszczał tylko już istniejący plik. Bramka nie podmieniła ani nie
+  uruchomiła wadliwej wersji. Host tworzy teraz katalog, a warstwa Core pustą
+  bazę z prawidłowym schematem i ustawieniami domyślnymi. Powtórne testy:
+  **22/22 Python** oraz wszystkie **22 zestawy protokołu hosta** — zaliczone.
 
 ### Wspólna aktualizacja składników obu profili — 20 października 2026
 

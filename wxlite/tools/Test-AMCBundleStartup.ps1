@@ -42,7 +42,16 @@ try {
         throw "Kontrolowany start paczki przekroczył $TimeoutSeconds sekund."
     }
     if ($process.ExitCode -ne 0) {
-        throw "Kontrolowany start paczki zakończył się kodem $($process.ExitCode)."
+        $failure = if (Test-Path -LiteralPath $resultPath -PathType Leaf) {
+            (Get-Content -LiteralPath $resultPath -Raw).Trim()
+        }
+        else {
+            "brak szczegółów z interfejsu"
+        }
+        throw (
+            "Kontrolowany start paczki zakończył się kodem "
+            + "$($process.ExitCode): $failure"
+        )
     }
     if (-not (Test-Path -LiteralPath $resultPath -PathType Leaf)) {
         throw "Kontrolowany start nie zapisał potwierdzenia gotowości."

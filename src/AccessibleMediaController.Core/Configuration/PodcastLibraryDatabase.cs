@@ -1343,6 +1343,9 @@ internal sealed class PodcastLibraryDatabase(string databasePath)
                 volume INTEGER NOT NULL,
                 playback_rate REAL NOT NULL
             );
+            INSERT OR IGNORE INTO podcast_state(
+                singleton, downloads_folder, current_item_id, volume, playback_rate)
+            VALUES(1, NULL, NULL, 35, 1.0);
             CREATE TABLE IF NOT EXISTS podcast_subscriptions (
                 id TEXT PRIMARY KEY,
                 ordinal INTEGER NOT NULL,
