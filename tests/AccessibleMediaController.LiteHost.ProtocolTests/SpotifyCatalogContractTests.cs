@@ -35,6 +35,7 @@ internal static class SpotifyCatalogContractTests
         CoordinatorSearchesExactlyOnceWithoutMutatingAnything();
         CoordinatorReadsOneDescriptionWithoutMutation();
         CoordinatorShowsConfirmedCreatedPlaylistInCollectionImmediately();
+        CoordinatorRefreshesPlaylistViewOnceWithoutFullCollectionSync();
     }
 
     private static void CapabilitiesDescribeOneReadOnlySession()
@@ -687,6 +688,33 @@ internal static class SpotifyCatalogContractTests
             "techniczny identyfikator nowej playlisty wszedł do etykiety dostępnościowej");
     }
 
+    private static void CoordinatorRefreshesPlaylistViewOnceWithoutFullCollectionSync()
+    {
+        using var backend = new WritableFakeBackend
+        {
+            PlaylistTargets =
+            [
+                new SpotifyPlaylistTarget(
+                    "existing123", "Playlista z konta", "owner", "Michał",
+                    false, false, true, "snapshot-existing")
+            ]
+        };
+        using var coordinator = new LiteSpotifyCatalogCoordinator(backend);
+        using var view = JsonDocument.Parse(
+            """{"view":"playlists","loadedCount":150}""");
+
+        var first = (LiteSpotifyItemsResult)coordinator.CollectionView(
+            view.RootElement);
+        var second = (LiteSpotifyItemsResult)coordinator.CollectionView(
+            view.RootElement);
+
+        Check(backend.PlaylistTargetCalls == 1 && backend.RefreshCalls == 0,
+            "Ctrl+P pobrał playlisty wielokrotnie albo zsynchronizował całą kolekcję");
+        Check(first.Items.Single().Title == "Playlista z konta"
+            && second.Items.Single().Title == "Playlista z konta",
+            "playlista utworzona wcześniej na koncie nie pojawiła się pod Ctrl+P");
+    }
+
     private static MediaItem Item(
         MediaItemKind kind,
         string externalId,
@@ -797,6 +825,8 @@ internal static class SpotifyCatalogContractTests
     {
         public int CreateCalls { get; private set; }
         public int RefreshCalls { get; private set; }
+        public int PlaylistTargetCalls { get; private set; }
+        public IReadOnlyList<SpotifyPlaylistTarget> PlaylistTargets { get; set; } = [];
 
         public IReadOnlyList<MediaItem> CachedCollection => [];
 
@@ -836,8 +866,11 @@ internal static class SpotifyCatalogContractTests
                 requestedAddition ?? true, [], 0));
 
         public Task<IReadOnlyList<SpotifyPlaylistTarget>> GetPlaylistTargetsAsync(
-            CancellationToken cancellationToken) =>
-            Task.FromResult<IReadOnlyList<SpotifyPlaylistTarget>>([]);
+            CancellationToken cancellationToken)
+        {
+            PlaylistTargetCalls++;
+            return Task.FromResult(PlaylistTargets);
+        }
 
         public Task<SpotifyPlaylistTarget> CreatePlaylistAsync(
             string name,

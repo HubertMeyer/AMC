@@ -17,6 +17,7 @@ internal sealed class LiteSpotifyCatalogCoordinator(
     private IReadOnlyList<MediaItem> _collectionSnapshot = backend.CachedCollection;
     private bool _collectionRefreshAttempted;
     private bool _albumRefreshAttempted;
+    private bool _playlistRefreshAttempted;
 
     public object Capabilities() => LiteSpotifyCatalogContract.CreateCapabilities(
         backend is ILiteSpotifyWriteBackend,
@@ -92,7 +93,8 @@ internal sealed class LiteSpotifyCatalogCoordinator(
             // retained only as the fallback for a profile with no cache.
             if (!_collectionRefreshAttempted
                 && _collectionSnapshot.Count == 0
-                && account.CatalogConnected == true)
+                && account.CatalogConnected == true
+                && !(view == "playlists" && backend is ILiteSpotifyWriteBackend))
             {
                 _collectionRefreshAttempted = true;
                 try
@@ -123,6 +125,37 @@ internal sealed class LiteSpotifyCatalogCoordinator(
             else if (account.CatalogConnected is null)
             {
                 warning = "Nie można sprawdzić połączenia katalogu Spotify. Pokazano ostatni zapis.";
+            }
+
+            // Lista playlist ma własny, mały endpoint /me/playlists. Dzięki
+            // temu Ctrl+P widzi także playlistę utworzoną wcześniej (na
+            // przykład w poprzednim uruchomieniu), bez pełnej synchronizacji
+            // tysięcy elementów kolekcji. Jedno uruchomienie odczytuje ją raz.
+            if (view == "playlists"
+                && !_playlistRefreshAttempted
+                && account.CatalogConnected == true
+                && backend is ILiteSpotifyWriteBackend playlistReader)
+            {
+                _playlistRefreshAttempted = true;
+                try
+                {
+                    var refreshed = playlistReader
+                        .GetPlaylistTargetsAsync(CancellationToken.None)
+                        .GetAwaiter()
+                        .GetResult();
+                    _collectionSnapshot = MergeEditablePlaylists(
+                        _collectionSnapshot,
+                        refreshed);
+                }
+                catch (Exception exception)
+                {
+                    warning = JoinWarnings(
+                        warning,
+                        SafeFailure(
+                            exception,
+                            LiteSpotifyCatalogContract.PlaylistTargetsOperation)
+                        + " Pokazano ostatni zapis playlist.");
+                }
             }
 
             // Stary cache AMC nie przechowywał czasu albumu. Gdy użytkownik
@@ -216,6 +249,36 @@ internal sealed class LiteSpotifyCatalogCoordinator(
             item.Kind == MediaItemKind.Album
             && !used.Contains(NormalizeExternalId(item.ExternalId))));
         return merged;
+    }
+
+    private static IReadOnlyList<MediaItem> MergeEditablePlaylists(
+        IReadOnlyList<MediaItem> snapshot,
+        IReadOnlyList<SpotifyPlaylistTarget> refreshedPlaylists)
+    {
+        var refreshed = refreshedPlaylists
+            .Where(target => !string.IsNullOrWhiteSpace(target.Id)
+                && !string.IsNullOrWhiteSpace(target.Name))
+            .GroupBy(target => target.Id.Trim(), StringComparer.Ordinal)
+            .Select(group => group.First())
+            .Select(target => new MediaItem
+            {
+                Id = $"spotify:playlist:{target.Id.Trim()}",
+                ExternalId = target.Id.Trim(),
+                Title = target.Name.Trim(),
+                Kind = MediaItemKind.Playlist,
+                IsInLibrary = true,
+                IsAvailable = true
+            })
+            .ToArray();
+        var refreshedIds = refreshed
+            .Select(item => NormalizeExternalId(item.ExternalId))
+            .Where(id => id.Length > 0)
+            .ToHashSet(StringComparer.Ordinal);
+        return refreshed
+            .Concat(snapshot.Where(item =>
+                item.Kind != MediaItemKind.Playlist
+                || !refreshedIds.Contains(NormalizeExternalId(item.ExternalId))))
+            .ToArray();
     }
 
     private static string JoinWarnings(string first, string second) =>
@@ -353,6 +416,13 @@ internal sealed class LiteSpotifyCatalogCoordinator(
         {
             var targets = writer.GetPlaylistTargetsAsync(CancellationToken.None)
                 .GetAwaiter().GetResult();
+            lock (_collectionGate)
+            {
+                _collectionSnapshot = MergeEditablePlaylists(
+                    _collectionSnapshot,
+                    targets);
+                _playlistRefreshAttempted = true;
+            }
             return new LiteSpotifyPlaylistTargetsResult(
                 targets.Select(LiteSpotifyCatalogContract.ToPlaylistTarget).ToArray(),
                 targets.Count == 0
@@ -380,29 +450,12 @@ internal sealed class LiteSpotifyCatalogCoordinator(
                 .GetAwaiter().GetResult();
             // Lista celów Ctrl+Shift+P ma własną migawkę interfejsu, natomiast
             // Ctrl+P czyta _collectionSnapshot. Po potwierdzonym utworzeniu
-            // dopisujemy tę samą playlistę również do kolekcji bieżącego hosta,
-            // aby oba wejścia natychmiast pokazywały zgodny stan bez kosztownej
-            // pełnej synchronizacji konta.
+            // dopisujemy tę samą playlistę również do kolekcji bieżącego hosta.
             lock (_collectionGate)
             {
-                var createdItem = new MediaItem
-                {
-                    Id = $"spotify:playlist:{created.Id}",
-                    ExternalId = created.Id,
-                    Title = created.Name,
-                    Kind = MediaItemKind.Playlist,
-                    IsInLibrary = true,
-                    IsAvailable = true,
-                    CollectionAddedUtcTicks = DateTime.UtcNow.Ticks
-                };
-                _collectionSnapshot = _collectionSnapshot
-                    .Where(item => item.Kind != MediaItemKind.Playlist
-                        || !string.Equals(
-                            NormalizeExternalId(item.ExternalId),
-                            created.Id,
-                            StringComparison.Ordinal))
-                    .Prepend(createdItem)
-                    .ToArray();
+                _collectionSnapshot = MergeEditablePlaylists(
+                    _collectionSnapshot,
+                    [created]);
             }
             return new LiteSpotifyPlaylistCreateResult(
                 LiteSpotifyCatalogContract.ToPlaylistTarget(created),
