@@ -228,9 +228,9 @@ zakończyło się wynikiem `OK`.
   instalacja i publikacja pozostawały bez zmian.
 - Domknięcie pełnej regresji: `acb81034` —
   `fix(amc12-amc14): domknij bramkę pełnej regresji`.
-- Korekta dostępności powłoki w obu profilach: commit zostanie wpisany po
-  zatwierdzeniu spójnej zmiany; kod programu nie wymagał zmiany, dodano testy
-  blokujące regresję i zapis decyzji użytkownika.
+- Korekta dostępności powłoki w obu profilach: `43cfefb5` —
+  `test(amc14): rozdziel powloke obu profili`; kod programu nie wymagał
+  zmiany, dodano testy blokujące regresję i zapis decyzji użytkownika.
 - Instalacja warstwy aplikacyjnej:
   `2026.10.19-fb9ba25fe0680cf7bf5435d53eb5b073de091cca-0debb6aa`;
   rejestracja systemowa i publikacja niewykonane.
