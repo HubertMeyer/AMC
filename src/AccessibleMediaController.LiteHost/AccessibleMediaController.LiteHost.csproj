@@ -148,6 +148,10 @@
              Link="Engine\YouTubeChannelFeedClient.cs" />
     <Compile Include="..\AccessibleMediaController.Windows\Services\YouTubeCollectionClient.cs"
              Link="Engine\YouTubeCollectionClient.cs" />
+    <!-- Tokeny przyszłego konta YouTube zostają w hoście C# i w osobnym
+         magazynie każdego profilu wydania. Python nigdy ich nie otrzyma. -->
+    <Compile Include="..\AccessibleMediaController.Windows\Services\YouTubeCredentialStore.cs"
+             Link="Engine\YouTubeCredentialStore.cs" />
     <!-- Publiczne katalogi podcastów i YouTube. Host zwraca wyłącznie
          ograniczone metadane i publiczne adresy; konta użytkownika nie są
          potrzebne ani przekazywane do interfejsu Python. -->

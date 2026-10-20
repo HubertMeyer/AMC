@@ -63,6 +63,11 @@ if (args.Contains("--youtube-source-resolver-only", StringComparer.Ordinal))
     TestYouTubeSourceResolver();
     return 0;
 }
+if (args.Contains("--youtube-credential-boundary", StringComparer.Ordinal))
+{
+    YouTubeCredentialBoundaryTests.Run();
+    return 0;
+}
 if (args.Contains("--radio-recording-stream-failure-only", StringComparer.Ordinal))
 {
     TestRadioRecordingControlKeepsPublishedFileAfterStreamFailure();
@@ -710,6 +715,7 @@ var tests = new (string Name, Action Test)[]
     ("FFmpeg Component Security", TestFfmpegComponentSecurity),
     ("Yt-dlp Component Security", TestYtDlpComponentSecurity),
     ("You Tube Source Resolver", TestYouTubeSourceResolver),
+    ("YouTube: osobne i chronione poświadczenia profili", YouTubeCredentialBoundaryTests.Run),
     ("You Tube Search Results", TestYouTubeSearchResults),
     ("You Tube Collection Results", TestYouTubeCollectionResults),
     ("Radio You Tube Address Accessibility", TestRadioYouTubeAddressAccessibility),

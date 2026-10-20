@@ -1,3 +1,4 @@
+using System.Net;
 using AccessibleMediaController.Core.YouTube;
 
 internal static class YouTubeOAuthFoundationTests
@@ -12,7 +13,10 @@ internal static class YouTubeOAuthFoundationTests
         BuildsTokenRequestsWithoutClientSecret();
         PreservesRefreshTokenAndScope();
         DoesNotEchoMalformedResponse();
-        Console.WriteLine("OK: bezpieczny fundament oficjalnego logowania YouTube (5 scenariuszy)");
+        ExchangesCodeThroughOfficialEndpoint();
+        RefreshesWithoutLosingRefreshToken();
+        SanitizesTokenEndpointErrors();
+        Console.WriteLine("OK: bezpieczny fundament oficjalnego logowania YouTube (8 scenariuszy)");
     }
 
     private static void BuildsReadOnlyPkceRequestWithoutSecret()
@@ -118,6 +122,76 @@ internal static class YouTubeOAuthFoundationTests
         }
     }
 
+    private static void ExchangesCodeThroughOfficialEndpoint()
+    {
+        var handler = new TokenHandler(
+            HttpStatusCode.OK,
+            "{\"access_token\":\"syntetyczny-access\",\"refresh_token\":\"syntetyczny-refresh\",\"expires_in\":3600,\"scope\":\"https://www.googleapis.com/auth/youtube.readonly\"}");
+        using var client = new YouTubeOAuthTokenClient(new HttpClient(handler));
+        var verifier = Convert.ToBase64String(new byte[32]).TrimEnd('=').Replace('+', '-').Replace('/', '_');
+        var callback = new Uri("http://127.0.0.1:49321/youtube/callback/");
+        var tokens = client.ExchangeCodeAsync(
+                ClientId, callback, "syntetyczny-kod", verifier,
+                new DateTimeOffset(2026, 10, 21, 12, 0, 0, TimeSpan.Zero),
+                CancellationToken.None)
+            .GetAwaiter().GetResult();
+        var form = ParseQuery(handler.Body);
+
+        Assert(handler.RequestUri?.AbsoluteUri == "https://oauth2.googleapis.com/token",
+            "Wymiana kodu używa innego punktu niż oficjalny punkt tokenów Google.");
+        Assert(form.GetValueOrDefault("code") == "syntetyczny-kod"
+               && form.GetValueOrDefault("code_verifier") == verifier,
+            "Transport nie przekazał kodu i weryfikatora PKCE.");
+        Assert(!form.ContainsKey("client_secret"), "Transport wysłał sekret klienta.");
+        Assert(tokens.RefreshToken == "syntetyczny-refresh", "Nie odczytano refresh tokenu.");
+    }
+
+    private static void RefreshesWithoutLosingRefreshToken()
+    {
+        var handler = new TokenHandler(
+            HttpStatusCode.OK,
+            "{\"access_token\":\"nowy-access\",\"expires_in\":1800}");
+        using var client = new YouTubeOAuthTokenClient(new HttpClient(handler));
+        var current = new YouTubeTokenSet(
+            "stary-access", "trwale-odswiezenie", DateTimeOffset.UtcNow.AddMinutes(-1),
+            YouTubeOAuthProtocol.ReadOnlyScope, ClientId);
+        var refreshed = client.RefreshAsync(current, DateTimeOffset.UtcNow, CancellationToken.None)
+            .GetAwaiter().GetResult();
+        var form = ParseQuery(handler.Body);
+
+        Assert(form.GetValueOrDefault("refresh_token") == current.RefreshToken,
+            "Transport nie przekazał refresh tokenu.");
+        Assert(!form.ContainsKey("scope"),
+            "Odświeżenie próbowałoby po cichu rozszerzyć zakres uprawnień.");
+        Assert(refreshed.RefreshToken == current.RefreshToken,
+            "Odpowiedź bez nowego refresh tokenu wylogowałaby konto.");
+    }
+
+    private static void SanitizesTokenEndpointErrors()
+    {
+        const string marker = "SEKRET-Z-ODPOWIEDZI";
+        var handler = new TokenHandler(
+            HttpStatusCode.BadRequest,
+            "{\"error\":\"invalid_grant\",\"error_description\":\"" + marker + "\"}");
+        using var client = new YouTubeOAuthTokenClient(new HttpClient(handler));
+        var current = new YouTubeTokenSet(
+            "access", "refresh", DateTimeOffset.UtcNow.AddMinutes(-1),
+            YouTubeOAuthProtocol.ReadOnlyScope, ClientId);
+        try
+        {
+            client.RefreshAsync(current, DateTimeOffset.UtcNow, CancellationToken.None)
+                .GetAwaiter().GetResult();
+            throw new InvalidOperationException("Odrzucona odpowiedź została przyjęta.");
+        }
+        catch (InvalidOperationException exception)
+        {
+            Assert(!exception.ToString().Contains(marker, StringComparison.Ordinal),
+                "Błąd punktu tokenów ujawnił treść odpowiedzi.");
+            Assert(exception.Message.Contains("Zaloguj się ponownie", StringComparison.Ordinal),
+                "Błąd invalid_grant nie dostał użytkowego komunikatu.");
+        }
+    }
+
     private static Dictionary<string, string> ParseQuery(string query) =>
         query.TrimStart('?')
             .Split('&', StringSplitOptions.RemoveEmptyEntries)
@@ -132,5 +206,25 @@ internal static class YouTubeOAuthFoundationTests
     private static void Assert(bool condition, string message)
     {
         if (!condition) throw new InvalidOperationException(message);
+    }
+
+    private sealed class TokenHandler(HttpStatusCode statusCode, string responseBody) : HttpMessageHandler
+    {
+        internal Uri? RequestUri { get; private set; }
+        internal string Body { get; private set; } = string.Empty;
+
+        protected override async Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken)
+        {
+            RequestUri = request.RequestUri;
+            Body = request.Content is null
+                ? string.Empty
+                : await request.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+            return new HttpResponseMessage(statusCode)
+            {
+                Content = new StringContent(responseBody)
+            };
+        }
     }
 }
