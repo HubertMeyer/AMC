@@ -123,6 +123,12 @@ Historyczny projekt został użyty tylko jako materiał do odczytu.
   routerem AMC. Oba gesty przechodzą teraz przez tę samą wczesną bramkę co
   pozostałe polecenia listy, więc menu, skrót, pomoc, paleta i wykonanie nie
   rozchodzą się.
+- **Doprecyzowanie diagnozy z 20 października 2026:** działająca instalacja
+  `f96149f7-904ceb8c` zawiera już wczesną bramkę listy oraz poprawne funkcje
+  `Ctrl+F5` dla Plików lokalnych, Podcastów i YouTube, Spotify, TIDAL-a, WiiM-a
+  i Sonosa. Nie zawiera jednak późniejszego commitu `a6614d11`; właśnie dlatego
+  w Radiu nie ma ani rozstrzygniętej akcji skrótu, ani prezentacji, ani pozycji
+  menu. Zgłoszenie nie wynika z NVDA ani z awarii klawiatury.
 
 ## Zmienione miejsca
 
@@ -168,6 +174,13 @@ Historyczny projekt został użyty tylko jako materiał do odczytu.
   niezależne testy nie mogły pisać do systemowego katalogu tymczasowego, a
   cztery moduły wymagały nieobecnego w tym interpreterze pakietu `pytest`.
   Dlatego wyniku 154 nie przedstawia się jako pełnego zaliczonego zestawu.
+- Ponowna diagnoza z działającej instalacji potwierdziła kontrakt sześciu
+  pozostałych sesji i dokładny brak trzech elementów wyłącznie w Radiu:
+  prezentacji, wykonywanej akcji i pozycji menu. Aktualne źródła zaliczyły
+  **135/135** ukierunkowanych testów skrótów, wczesnego routingu listy, menu,
+  palety, pełnej pomocy, `Ctrl+F1` i wykonania. Zbudowany kandydat został
+  dodatkowo zaimportowany z własnego runtime: każda z siedmiu sesji ma
+  dokładnie jedną właściwą akcję i jedną pozycję `Ctrl+F5`.
 - Końcowa regresja wxPython bez czterech istniejących prób wymagających
   lokalnego gniazda sieciowego: **1851 zaliczonych, 110 pominiętych i 11
   podtestów zaliczonych**. Cztery wyłączone próby RSS doszły w osobnym
@@ -245,10 +258,12 @@ Historyczny projekt został użyty tylko jako materiał do odczytu.
 - Ręczny odbiór NVDA nadal powinien sprawdzić sesyjne nazwy i działanie
   `Ctrl+F5` na prawdziwych kontach i urządzeniach. Kompilacja i instalacja
   potwierdzają dostarczenie kodu, ale nie zastępują tego odbioru.
-- Radiowe `Ctrl+F5` jest na razie potwierdzone w źródłach i testach. Nie
-  skompilowano ani nie zainstalowano tej korekty, ponieważ w chwili pracy
-  trwały dwa nagrania radiowe; działająca instalacja nadal zawiera wcześniejszy
-  wariant bez polecenia `Ctrl+F5` w Radiu.
+- Radiowe `Ctrl+F5` jest potwierdzone w źródłach, testach i zbudowanym
+  kandydacie, ale nadal nie jest zainstalowane. Pierwszą wcześniejszą próbę
+  wstrzymały dwa nagrania. Próba z 20 października zbudowała poprawny pakiet,
+  lecz aktualizator nie podmienił działającej instalacji, a zwykłe zamknięcie
+  zostało odłożone ze względu na harmonogram rozpoczynający się o 12:13.
+  Działający AMC Test nadal ma wariant `f96149f7-904ceb8c` bez radiowej akcji.
 
 ## Porządek dysku
 
@@ -290,13 +305,20 @@ Historyczny projekt został użyty tylko jako materiał do odczytu.
 - Zachowano nowego zweryfikowanego kandydata `f96149f7-904ceb8c`, kwit
   instalacji oraz wszystkie zastane, niepewne katalogi `.test-output` i
   `.test-tmp`. Nie usunięto danych użytkownika, nagrań, ustawień ani źródeł.
+- Po ponownej diagnozie usunięto wyłącznie odtwarzalny katalog testowy
+  `.test-tmp\ctrl-f5-diagnoza-20261020`. Zachowano nowego kandydata
+  `18f48ef0-86421c1d`, ponieważ jest jedynym gotowym pakietem z radiowym
+  `Ctrl+F5` i nie został jeszcze bezpiecznie zainstalowany.
 
 ## Wersja i commit
 
 - Radiowe `Ctrl+F5`, wspólny katalog poleceń i testy kontraktu: commit
   `a6614d11` (`fix(amc09): dodaj Ctrl+F5 w Radiu`). Zmiana jest potwierdzona
-  w źródłach i testach, ale nie została jeszcze skompilowana, zainstalowana
-  ani uruchomiona z powodu trwającego nagrywania. Publikacji nie wykonano.
+  w źródłach, testach i kandydacie
+  `2026.10.20-18f48ef058b696f5c14204bc7e8096f9f2a77048-86421c1d`
+  (1667 plików). Instalacja i uruchomienie nie są jeszcze potwierdzone;
+  aktualizator zatrzymał się bez podmiany przed bliskim harmonogramem.
+  Publikacji nie wykonano.
 - Instalacja i uruchomienie doprecyzowanych nazw `Ctrl+F5`: potwierdzone dla
   `2026.10.20-f96149f75e83eea064899db78c762596e56d2504-904ceb8c` w
   `D:\Projekty Codex\AMC Python`. Paczka zawiera 1667 plików; źródłem jest
