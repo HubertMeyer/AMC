@@ -13,7 +13,7 @@ namespace AccessibleMediaController.Windows.Services;
 /// Windows. Tokeny nie trafiają do state.json, migawki AMC Test → AMC,
 /// argumentów procesu ani protokołu Python–C#.
 /// </summary>
-internal sealed class YouTubeCredentialStore
+internal sealed class YouTubeCredentialStore : IYouTubeCredentialStore
 {
     private const uint CredentialTypeGeneric = 1;
     private const uint CredentialPersistLocalMachine = 2;
@@ -42,7 +42,7 @@ internal sealed class YouTubeCredentialStore
                 "Nie można wybrać magazynu logowania YouTube dla nieznanego profilu AMC.")
         };
 
-    internal bool TryRead(out YouTubeTokenSet? tokens)
+    public bool TryRead(out YouTubeTokenSet? tokens)
     {
         tokens = null;
         if (!CredRead(_targetName, CredentialTypeGeneric, 0, out var pointer))
@@ -70,7 +70,7 @@ internal sealed class YouTubeCredentialStore
         }
     }
 
-    internal void Write(YouTubeTokenSet tokens)
+    public void Write(YouTubeTokenSet tokens)
     {
         ArgumentNullException.ThrowIfNull(tokens);
         var bytes = Serialize(tokens);
@@ -99,7 +99,7 @@ internal sealed class YouTubeCredentialStore
         }
     }
 
-    internal void Delete()
+    public void Delete()
     {
         if (CredDelete(_targetName, CredentialTypeGeneric, 0)) return;
         var error = Marshal.GetLastWin32Error();

@@ -42,6 +42,11 @@ if (args.Length == 1 && args[0] == "--youtube-oauth-foundation")
     try { YouTubeOAuthFoundationTests.Run(); return 0; }
     catch (Exception exception) { Console.Error.WriteLine(exception); return 1; }
 }
+if (args.Length == 1 && args[0] == "--youtube-account-coordinator")
+{
+    try { YouTubeAccountCoordinatorTests.Run(); return 0; }
+    catch (Exception exception) { Console.Error.WriteLine(exception); return 1; }
+}
 if (args.Length == 1 && args[0] == "--audio-edit-renames")
 {
     try { AudioEditRenameTests.Run(); return 0; }
@@ -252,6 +257,7 @@ var tests = new (string Name, Action Test)[]
     ("Zapis Ulubionych, Biblioteki i usuwania Spotify na API konta", SpotifyMembershipWriteTests.Run),
     ("Natywne playlisty Spotify: zakresy, partie i wyniki częściowe", SpotifyPlaylistWriteTests.Run),
     ("Bezpieczny fundament oficjalnego logowania YouTube", YouTubeOAuthFoundationTests.Run),
+    ("Koordynator konta YouTube bez ujawniania tokenów", YouTubeAccountCoordinatorTests.Run),
     ("Transport osobnego procesu hosta Librespot", LibrespotHostClientTests.Run),
     ("Kategorie wykonawcy TIDAL, paginacja i rozdzielenie zasobów", TidalArtistBrowseTests.Run),
     ("Oddzielony tor oficjalnego odtwarzania TIDAL", TestTidalPlaybackBoundary),
