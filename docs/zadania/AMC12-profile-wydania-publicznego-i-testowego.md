@@ -404,6 +404,11 @@ skrótów.
   Jawnie potwierdzono obecność sesji Radia i wspólnych możliwości oraz
   rozwiązywanie `Ctrl+Shift+0`, `End` i skoku `5` do 50% bufora. Obejmuje to
   kod i testy, jeszcze nie ręczny odbiór zainstalowanego `alpha.425`.
+- Czysty, pojedynczy snapshot linii publicznej przeszedł dodatkowo **87
+  zaliczonych testów** profili, instalatora, manifestu i pełnych sum plików,
+  startu, niezależnych transportów obu wariantów, presetów oraz Menedżera
+  sesji. Testy zapisywały dane poza worktree; po przebiegu źródła snapshotu
+  pozostały czyste. To nadal test kodu, nie kompilacja ani instalacja.
 
 ## Znane ograniczenia
 
@@ -566,3 +571,6 @@ skrótów.
 - Ochrona wspólnych skrótów w profilu publicznym: `d5c16d2b` —
   `test(amc12): chron wspolne skroty profilu publicznego`. Docelowa rewizja
   czystej linii źródeł będzie odświeżona przed budową `alpha.425`.
+- Pojedyncza, zanonimizowana linia źródeł `public/release-line` jest lokalna i
+  nieopublikowana. Jej końcową rewizję należy zapisać dopiero po ostatnim
+  odświeżeniu poprzedzającym budowę.
