@@ -3,6 +3,10 @@
   "name": "amc-sygnalista",
   "main": "src/worker.mjs",
   "compatibility_date": "2026-10-20",
+  "workers_dev": true,
+  "secrets": {
+    "required": ["GITHUB_TOKEN"]
+  },
   "vars": {
     "GITHUB_OWNER": "michalkasperczak",
     "PUBLIC_REPOSITORY": "AMC",

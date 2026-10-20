@@ -1,7 +1,19 @@
 import assert from "node:assert/strict";
+import fs from "node:fs";
 import test from "node:test";
 
 import { createWorker, redactPrivateData } from "../src/worker.mjs";
+
+test("deployment config requires secret and uses workers.dev", () => {
+  const config = JSON.parse(fs.readFileSync(
+    new URL("../wrangler.jsonc.example", import.meta.url),
+    "utf8",
+  ));
+  assert.equal(config.workers_dev, true);
+  assert.deepEqual(config.secrets.required, ["GITHUB_TOKEN"]);
+  assert.equal(config.ratelimits[0].name, "REPORT_RATE_LIMITER");
+  assert.equal(config.kv_namespaces[0].binding, "REPORT_RESULTS");
+});
 
 class MemoryKv {
   constructor() { this.values = new Map(); }

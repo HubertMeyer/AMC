@@ -26,9 +26,14 @@ Użytkownik AMC nie potrzebuje konta GitHub.
 3. Utwórz fine-grained token GitHuba z prawem zapisu Issues tylko w publicznym
    AMC i prywatnym repozytorium zgłoszeń. Zapisz go poleceniem
    `wrangler secret put GITHUB_TOKEN`; nie zapisuj wartości do pliku.
-4. Zaloguj Wrangler świadomie na właściwe konto Cloudflare, uruchom testy,
-   a następnie `npm run deploy`.
-5. Sprawdź `/health` i kontrolowany raport testowy. Dopiero potem wpisz końcowy
+4. Zaloguj Wrangler świadomie na właściwe konto Cloudflare. Bez samoczynnego
+   otwierania przeglądarki można użyć
+   `npx wrangler login --device --browser=false --use-keyring`, a podany adres
+   i jednorazowy kod otworzyć samodzielnie. `--use-keyring` przechowuje dane
+   OAuth w systemowym magazynie poświadczeń zamiast jawnego pliku.
+5. Uruchom testy, a następnie `npm run deploy`. Własna domena nie jest wymagana;
+   `workers_dev: true` publikuje usługę pod adresem HTTPS w `workers.dev`.
+6. Sprawdź `/health` i kontrolowany raport testowy. Dopiero potem wpisz końcowy
    adres `https://.../v1/report` do pliku
    `wxlite/amc_wx_lite/problem-report-endpoint.txt` przed budową wydania.
 
