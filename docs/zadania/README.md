@@ -107,7 +107,8 @@ zmian, wymagający korekty użytkownika:
 - `AMC08` — **Prawdziwe OAuth i dodawanie do playlist zostały potwierdzone
   przez użytkownika; korekta mowy `Ctrl+F5` i widoczności pod `Ctrl+P`
   playlist istniejących oraz nowych jest zainstalowana w AMC Test, czeka na
-  ręczny odbiór NVDA**
+  ręczny odbiór NVDA; dodatkowe czyszczenie migawki po ponownym logowaniu ma
+  zaliczone testy i czeka na instalację**
   — natywne playlisty
   Spotify w AMC Test: `Ctrl+P`, `Ctrl+Shift+P`, pobranie katalogu raz na
   uruchomienie, natychmiastowa widoczność nowej playlisty i zapamiętanie

@@ -3,7 +3,8 @@
 Status: **Użytkownik potwierdził prawdziwe OAuth i skuteczne dodawanie do
 playlist Spotify. Korekta jawnej mowy stanu konta oraz widoczności pod
 `Ctrl+P` playlist istniejących i właśnie utworzonych jest zainstalowana w AMC
-Test; czeka na ręczny odbiór NVDA.**
+Test; czeka na ręczny odbiór NVDA. Dodatkowa korekta unieważnienia migawki po
+ponownym logowaniu jest w kodzie i testach, ale nie została jeszcze zainstalowana.**
 
 Źródło decyzji: zatwierdzona analiza historyczna tylko do odczytu
 `D:\Projekty Codex\Accessible Multimedia Controller\AMC08_PLAYLISTY_SPOTIFY_2026-10-18.md`.
@@ -42,6 +43,9 @@ Test; czeka na ręczny odbiór NVDA.**
   odczytuje bieżący stan i jawnie mówi między innymi, że katalog Spotify jest
   połączony oraz czy konto odtwarzania jest gotowe. OAuth zaczyna dopiero
   przycisk „Zaloguj w przeglądarce”.
+- Po udanym ponownym logowaniu następne `Ctrl+P` pobiera playlisty bieżącego
+  konta od nowa dokładnie raz. AMC nie pokazuje wtedy migawki sprzed logowania
+  ani playlist poprzedniego konta.
 - Lista odczytywana przez NVDA zawiera tylko nazwę, widoczność, informację o
   współdzieleniu i właścicielu oraz stan zaznaczenia. Identyfikatory playlist,
   adresy i `snapshot_id` pozostają niewidocznymi danymi modelu.
@@ -57,6 +61,12 @@ Test; czeka na ręczny odbiór NVDA.**
   celów nawet przy takich samych nazwach lub identyfikatorach.
 
 ## Uzasadnienie i decyzje
+
+- **Korekta użytkownika z 21 października 2026 uzupełnia wcześniejszy odbiór
+  logowania i `Ctrl+P`.** Sukces OAuth unieważnia teraz migawkę kolekcji oraz
+  znaczniki jednorazowego odświeżenia playlist i albumów. Nie kasuje danych
+  Biblioteki ani trwałych ustawień; następne wejście do kategorii wykonuje
+  jeden właściwy odczyt dla aktualnego konta.
 
 - **Korekta użytkownika z 20 października 2026 zastępuje wcześniejsze
   ograniczenie „odbiór na prawdziwym koncie niewykonany”.** Użytkownik
@@ -133,6 +143,11 @@ Test; czeka na ręczny odbiór NVDA.**
   przez świeżą walidację adaptera konkretnej usługi.
 
 ## Testy i wynik
+
+- 21 października 2026 ukierunkowane zestawy protokołu Spotify oraz YouTube
+  przeszły 2 z 2. Nowy scenariusz otworzył `Ctrl+P` przed logowaniem, zmienił
+  konto atrapą OAuth i potwierdził jeden świeży odczyt oraz brak starej
+  playlisty po logowaniu. Kod nie wykonywał prawdziwego OAuth ani mutacji konta.
 
 - 21 października 2026 potwierdzono, że commity `39386e90` i `640afc65` są
   przodkami zainstalowanej rewizji `a947f79d`. Dokładnie ta rewizja przeszła
@@ -241,6 +256,8 @@ Test; czeka na ręczny odbiór NVDA.**
   przez użytkownika. Jawna mowa aktualnego stanu konta po `Ctrl+F5` oraz
   odświeżony widok `Ctrl+P` są już zainstalowane, ale wymagają ręcznego odbioru
   NVDA na prawdziwym koncie.
+- Korekta czyszczenia migawki po sukcesie OAuth ma zaliczone testy źródła, ale
+  nie została jeszcze zbudowana ani zainstalowana w AMC Test.
 - Trwającego OAuth nie można jeszcze anulować przyciskiem okna AMC; do wyniku
   albo limitu czasu okno pozostaje otwarte. Hasła i tokeny nadal nie trafiają
   do interfejsu Python.
@@ -305,3 +322,7 @@ Test; czeka na ręczny odbiór NVDA.**
   `640afc65` — `fix(amc08): odswiez playlisty Spotify pod Ctrl+P`. Kod,
   kompilacja Release i ukierunkowane testy protokołu są zaliczone; instalacji
   ani publikacji nie wykonano.
+- Unieważnienie migawki playlist po udanym logowaniu: commit `b493ae07` —
+  `fix(spotify): refresh playlist view after login`. Testy protokołu zaliczone;
+  kompilacja właściwego hosta, instalacja i publikacja nie zostały jeszcze
+  wykonane dla tej rewizji.
