@@ -148,11 +148,11 @@ zmian, wymagający korekty użytkownika:
   [AMC12-profile-wydania-publicznego-i-testowego.md](AMC12-profile-wydania-publicznego-i-testowego.md).
   Zatwierdzona specyfikacja:
   `D:\Projekty Codex\Accessible Multimedia Controller\AMC12_PROFILE_WYDANIA_PUBLICZNEGO_I_TESTOWEGO_2026-10-18.md`.
-- `AMC10` — **W trakcie; broker oraz dostępne okno konta są zainstalowane
-  w AMC Test, a jawna mowa stanu konta i precyzyjny komunikat o
-  nieuruchomionej usłudze brokera są gotowe w kodzie i testach; dalej
-  potrzebne są niezależny wspólny broker publiczny, instalacja korekty i odbiór
-  na zewnętrznym koncie; Hermes nie jest częścią architektury Sonosa** —
+- `AMC10` — **W trakcie; bieżące źródła klienta są odłączone od Hermesa
+  i pozostają w bezpiecznym stanie „publiczny broker nieskonfigurowany”.
+  Zainstalowany AMC Test nadal jest wcześniejszą wersją. Dalej potrzebne są
+  niezależny wspólny broker publiczny, instalacja korekty i odbiór na
+  zewnętrznym koncie; Hermes nie jest częścią architektury Sonosa** —
   działające sterowanie Sonosem i WiiM nie zostało
   przepisane. `Ctrl+F5` wybiera dom i grupę, a przy braku połączenia prowadzi do
   konta zamiast kończyć się błędem. Okno udostępnia rozpoczęcie, jawne
@@ -160,7 +160,9 @@ zmian, wymagający korekty użytkownika:
   Pythona i bez samoczynnego otwierania przeglądarki. Dodano wcześniej serwerowy
   kontrakt logowania, PKCE, jednorazowe sesje, odnowienie, ograniczenie tempa,
   bezpieczne logowanie oraz ścisłą obsługę zakończenia TLS przez jawnie zaufane
-  reverse proxy. Publiczny Sonos nadal jest ukryty.
+  reverse proxy. Do czasu prawdziwego publicznego wdrożenia przycisk logowania
+  jest ukryty, stan ma jawną etykietę i nie wykonuje żądania sieciowego.
+  Publiczny Sonos nadal jest ukryty.
   Bieżący zapis realizacji:
   [AMC10-logowanie-sonos-i-publiczny-broker.md](AMC10-logowanie-sonos-i-publiczny-broker.md).
   Zatwierdzona specyfikacja:

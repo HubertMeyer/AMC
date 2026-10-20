@@ -2,8 +2,10 @@
 
 ## Status
 
-**W trakcie — broker i okno konta są zainstalowane w AMC Test;
-publiczne wdrożenie oraz odbiór z zewnętrznym kontem pozostają bramą.**
+**W trakcie — bieżące źródła AMC Test są odłączone od Hermesa i pozostają
+w bezpiecznym stanie „publiczny broker nieskonfigurowany”. Niezależne publiczne
+wdrożenie, instalacja tej korekty oraz odbiór z zewnętrznym kontem pozostają
+bramą. Zainstalowanego AMC Test nie podmieniono w tym etapie.**
 
 Sterowanie Sonosem i WiiM było już przeszczepione i użytkownik ocenił je jako
 prawie gotowe. Ten etap nie zmienia adapterów, list, transportu ani WiiM.
@@ -42,6 +44,10 @@ prawie gotowe. Ten etap nie zmienia adapterów, list, transportu ani WiiM.
   roboczy plan uruchomienia brokera na Hermesie. Wykonany odczyt hosta i lokalny
   ZIP pozostają wyłącznie historycznym śladem eksperymentu; nie są celem
   wdrożenia. Docelowym elementem jest niezależny, wspólny publiczny broker HTTPS.
+- 2026-10-20: kontrola źródeł po tej korekcie wykazała pozostały stały origin
+  Hermesa w konfiguracji klienta. Został usunięty z aktywnej ścieżki AMC Test.
+  Zastępuje go nierutowalny znacznik konfiguracyjny oraz jawna bramka
+  dostępności. Nie jest to nowy adres usługi ani próba połączenia.
 
 ## Materiał do dokumentacji użytkownika
 
@@ -67,6 +73,13 @@ Jeżeli skonfigurowany host odpowiada, ale nie ma pod nim uruchomionej usługi
 logowania AMC, po wybraniu „Rozpocznij logowanie” program mówi: „Usługa
 logowania Sonos nie jest uruchomiona pod skonfigurowanym adresem”. Ten stan
 nie jest mylony z odmową Sonosa ani z oczekiwaniem na przeglądarkę.
+
+W bieżących źródłach, dopóki niezależny publiczny broker nie zostanie naprawdę
+skonfigurowany, okno „Konto Sonos” mówi: „Publiczna usługa logowania Sonos nie
+jest jeszcze skonfigurowana w tej wersji AMC”. Przycisk rozpoczęcia logowania
+nie jest wtedy pokazywany, a początkowy fokus trafia na „Zamknij”. Program nie
+otwiera przeglądarki i nie wykonuje żądania sieciowego. To zachowanie nie jest
+jeszcze zainstalowane w użytkowym AMC Test.
 
 AMC nie zna i nie przechowuje sekretu integracji Sonos. Tokeny użytkownika
 pozostają wyłącznie w procesie C# i w istniejącym lokalnym magazynie chronionym
@@ -116,6 +129,14 @@ brokera.
 - `404` z punktu rozpoczęcia logowania nie jest prawidłową odpowiedzią
   brokera. Oznacza, że pod zaufanym hostem nie działa usługa AMC, dlatego ma
   osobny stały komunikat. Treść HTML lub JSON odpowiedzi nie jest cytowana.
+- Sama wartość adresu w modelu nie może włączać logowania. Program przekazuje
+  do hosta osobną informację o dostępności publicznego brokera. Gdy jest
+  wyłączona, stan konta, próba logowania oraz odczyt celów kończą się lokalnym,
+  użytkowym komunikatem przed wykonaniem jakiegokolwiek żądania HTTP.
+- Nierutowalna domena `.invalid` jest wyłącznie bezpiecznym znacznikiem
+  konfiguracji. Zostanie zastąpiona prawdziwym publicznym originem dopiero razem
+  z wdrożeniem, konfiguracją Sonosa i odbiorem. Historyczne poświadczenia
+  powiązane z innym originem nie są automatycznie używane ani migrowane.
 
 Kontrakt sprawdzono 2026-10-19 z aktualną oficjalną dokumentacją Sonosa:
 
@@ -151,6 +172,9 @@ Kontrakt sprawdzono 2026-10-19 z aktualną oficjalną dokumentacją Sonosa:
 - `wxlite/tests/test_sonos_session.py`
 - `wxlite/tests/test_command_palette.py`
 - `tests/AccessibleMediaController.LiteHost.ProtocolTests/SonosContractTests.cs`
+- `tests/AccessibleMediaController.Windows.SmokeTests/SonosAccountWiringTests.cs`
+- `src/AccessibleMediaController.Core/Sonos/SonosIntegrationDefaults.cs`
+- `src/AccessibleMediaController.Windows/Services/SonosAccountOwner.cs`
 - `AccessibleMediaController.sln`
 - `docs/zadania/README.md`
 
@@ -262,6 +286,22 @@ Kontrakt sprawdzono 2026-10-19 z aktualną oficjalną dokumentacją Sonosa:
   `C60D5072408CFC936160531CF627B8F35432EF4A2F14CEA064F4D08C098C1F66`.
   O 12:55 działały dokładnie trzy nowe procesy z katalogu instalacji: jeden
   uruchamiacz, jeden frontend i jeden LiteHost.
+- Po odłączeniu aktywnych źródeł od Hermesa wyszukiwanie w `src` nie znalazło
+  originu `hermes.tail6caad7.ts.net`; jedyny pozostały tekst znajduje się w
+  asercji testowej chroniącej przed jego ponownym wprowadzeniem.
+- `python -m compileall -q wxlite/amc_wx_lite` — sukces. Cztery bezpośrednie
+  testy okna konta Sonos — **4/4 zaliczone**; potwierdzają ukrycie rozpoczęcia
+  logowania, jawny komunikat, fokus „Zamknij” i brak technicznego adresu.
+- Kompilacje Release LiteHost i jego testów protokołu — sukces, 0 ostrzeżeń,
+  0 błędów. Ukierunkowany zestaw `--sonos` — **1/1 zaliczony**.
+- Kompilacja Release `AccessibleMediaController.Windows.SmokeTests` — sukces,
+  0 ostrzeżeń, 0 błędów. Pierwszy przebieg w piaskownicy zatrzymał resolver
+  workloadów MSBuild bez diagnostyki źródłowej; identyczny przebieg poza tą
+  izolacją przeszedł. `--sonos-account-wiring` zaliczył **24 sprawdzenia** bez
+  pokazywania GUI.
+- Przed testami nie znaleziono uruchomionego procesu AMC, LiteHost ani Pythona
+  należącego do aplikacji oraz plików `.amc-partial` w jawnych katalogach
+  projektu. Nie zamykano, nie instalowano i nie uruchamiano użytkowego AMC Test.
 
 ## Znane ograniczenia
 
@@ -291,6 +331,12 @@ Kontrakt sprawdzono 2026-10-19 z aktualną oficjalną dokumentacją Sonosa:
   testach, ale nie zostało jeszcze zainstalowane ani odebrane z NVDA.
 - Rozpoznanie nieuruchomionej usługi brokera jest potwierdzone w kodzie,
   kompilacji i testach, lecz nie zostało jeszcze zainstalowane w AMC Test.
+- Bezpieczny stan „publiczny broker nieskonfigurowany” jest potwierdzony w
+  źródłach i testach, ale nie został jeszcze zainstalowany. Zainstalowany AMC
+  Test nadal zawiera wcześniejszą wersję i nie jest dowodem tej korekty.
+- Nie ma jeszcze niezależnego hostingu, domeny, certyfikatu ani produkcyjnej
+  integracji Sonos. Do czasu ich powstania logowanie w nowych źródłach jest
+  celowo niedostępne, a nie częściowo emulowane.
 
 ## Brama publicznego udostępnienia
 
@@ -331,3 +377,16 @@ Kontrakt sprawdzono 2026-10-19 z aktualną oficjalną dokumentacją Sonosa:
 - Osobny użytkowy stan braku endpointu brokera: commit `c6eaeee9` —
   `fix(amc10): rozpoznaj brak uslugi logowania Sonos`. Kompilacja Release oraz
   testy 36 i 1/1 są zaliczone; instalacji ani publikacji nie wykonywano.
+- Usunięcie Hermesa z aktywnych źródeł klienta, jawna bramka dostępności,
+  użytkowy stan niedostępności i testy: commit `3ab4c079` —
+  `fix(amc10): oddziel logowanie Sonos od Hermesa`. Kod i testy są
+  zweryfikowane; paczki, instalacji, uruchomienia i publikacji nie wykonywano.
+
+## Porządek dysku
+
+- Po pomyślnej weryfikacji usunięto wyłącznie odtwarzalny dziennik diagnostyczny
+  `D:\Projekty Codex\AMC - integracja wxPython\.test-output\sonos-windows-build.log`
+  o rozmiarze 1 402 075 bajtów, czyli około 1,34 MiB. Plik nie jest możliwy do
+  odzyskania, ale można go ponownie wytworzyć kompilacją diagnostyczną.
+- Nie usunięto zastanych katalogów `.test-output` ani `.test-tmp`, ponieważ ich
+  pozostała zawartość nie powstała wyłącznie w tym etapie i wymaga osobnej oceny.
