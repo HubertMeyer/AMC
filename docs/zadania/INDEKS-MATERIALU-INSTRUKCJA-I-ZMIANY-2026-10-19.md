@@ -95,8 +95,11 @@ użytkownika. Nie zmienia statusu ręcznego odbioru NVDA poszczególnych funkcji
     [AMC10-logowanie-sonos-i-publiczny-broker.md](AMC10-logowanie-sonos-i-publiczny-broker.md).
 14. Sygnalista — polecenie `Zgłoś błąd lub sugestię…` w menu Pomoc i palecie,
     pełny podgląd zredagowanego raportu, domyślnie wyłączony log oraz lokalne
-    kopiowanie lub zapis w magazynie bieżącego profilu. Wysyłanie do GitHuba
-    nie jest jeszcze dostępne. Źródło:
+    kopiowanie lub zapis w magazynie bieżącego profilu. Po dostarczeniu
+    zweryfikowanego endpointu ten sam formularz pokaże `Wyślij zgłoszenie`,
+    poda wynik i pozwoli skopiować adres issue; bez endpointu uczciwie pozostaje
+    lokalny. Worker i klient są gotowe w kodzie, ale nie są jeszcze wdrożone.
+    Źródło:
     [REL-001-github-aktualizacje-sygnalista.md](REL-001-github-aktualizacje-sygnalista.md).
 
 ## Materiał do przyszłego opisu zmian
@@ -135,9 +138,9 @@ użytkownika. Nie zmienia statusu ręcznego odbioru NVDA poszczególnych funkcji
 - Dodano dostępne okno konta Sonos w AMC Test i bezpieczną bramkę `Ctrl+F5`:
   połączone konto prowadzi do grup, a brak połączenia do logowania. Zmiana
   pozostaje materiałem roboczym do instrukcji do czasu instalacji i odbioru NVDA.
-- Dodano lokalny fundament Sygnalisty z pełnym podglądem, ostrożną redakcją
-  danych i osobnym zapisem raportów dla AMC Test oraz AMC; wysyłanie sieciowe
-  pozostaje wyłączone.
+- Rozszerzono Sygnalistę o bezsekretowy klient HTTPS i własnego Workera z drugą
+  redakcją, limitem, prywatnym intake oraz idempotencją. Kod przeszedł testy na
+  atrapach; wysyłanie pozostaje wyłączone do prawdziwego wdrożenia i odbioru.
 
 ## Odbiory i ograniczenia do zachowania w instrukcji
 
@@ -156,8 +159,9 @@ użytkownika. Nie zmienia statusu ręcznego odbioru NVDA poszczególnych funkcji
   wydania publicznego.
 - Nie obiecywać publicznego Sonosa przed działającym brokerem HTTPS i odbiorem
   z zewnętrznym kontem.
-- Nie opisywać lokalnego Sygnalisty jako internetowego zgłoszenia ani GitHub
-  Issue, dopóki Worker i repozytorium raportów nie zostaną świadomie wdrożone.
+- Nie opisywać gotowego kodu Sygnalisty jako działającego internetowego
+  zgłoszenia ani GitHub Issue, dopóki Worker, prywatne repozytorium i endpoint
+  nie zostaną świadomie wdrożone i odebrane.
 - Nie opisywać logowania YouTube; `YT-001` jest odłożone do czasu po
   instalatorze i pierwszych stabilnych wydaniach.
 - Pomoc `Ctrl+F1`, pełna pomoc klawiatury, menu i paleta `Ctrl+Shift+K` mają

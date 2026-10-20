@@ -1,6 +1,6 @@
 # REL-001 — GitHub Releases, aktualizacje i Sygnalista
 
-- Status: `W trakcie — lokalny fundament Sygnalisty zainstalowany w AMC Test`
+- Status: `W trakcie — transport i Worker gotowe lokalnie; czekają na infrastrukturę i odbiór`
 - Utworzono: 18 października 2026
 - Obszar: wydania, aktualizator i dostępne zgłoszenia
 - Polecenie uruchamiające: `Uruchom zadanie REL-001`
@@ -99,6 +99,12 @@ repozytorium, kanałami wydań i polityką prywatności.
   kolejność: bieżący etap nie wdraża Workera, tokenu, GitHub Issues ani
   publikacji, lecz przygotowuje bezpieczny formularz, redakcję i kontrakt
   transportu.
+- 20 października 2026: użytkownik polecił dokończyć internetową część
+  Sygnalisty przed pierwszym publicznym wydaniem. To zastępuje wcześniejsze
+  odłożenie kodu Workera, ale nie jest zgodą na publikację AMC bez odbioru ani
+  na pozorowane wdrożenie bez konta Cloudflare, prywatnego repozytorium i
+  końcowego HTTPS. Kod klienta i Workera wolno przygotować oraz testować na
+  atrapach; prawdziwy endpoint musi przejść osobny odbiór.
 
 ## Materiał do dokumentacji użytkownika
 
@@ -109,14 +115,18 @@ repozytorium, kanałami wydań i polityką prywatności.
   opcjonalne kroki odtworzenia. Początkowy fokus trafia do pola tytułu, a
   wszystkie pola i wybory mają jawne etykiety dla czytnika ekranu.
 - Cały raport jest widoczny w polu `Pełny podgląd zredagowanego raportu`.
-  Dokładnie ten tekst jest kopiowany do schowka albo zapisywany lokalnie.
+  Dokładnie ten tekst jest kopiowany do schowka, zapisywany lokalnie albo —
+  po skonfigurowaniu serwera — wysyłany.
 - Log jest domyślnie wyłączony. Po świadomym włączeniu dołączany jest tylko
   ograniczony ogon dziennika po redakcji danych prywatnych.
 - Raport może zostać skopiowany albo zapisany atomowo w osobnym folderze
   zgłoszeń bieżącego profilu. AMC Test i publiczny AMC nie współdzielą żywego
   folderu raportów.
-- Formularz uczciwie informuje, że wysyłanie przez Internet nie jest jeszcze
-  skonfigurowane. Nie ma przycisku, który udawałby działającą wysyłkę.
+- Gdy wydanie nie ma zweryfikowanego endpointu, formularz uczciwie pozostaje
+  w trybie lokalnym i nie pokazuje martwego przycisku. Po wpisaniu końcowego
+  endpointu HTTPS pojawia się `Wyślij zgłoszenie`; w trakcie pracy przycisk
+  jest wyłączony, NVDA słyszy `Wysyłanie zgłoszenia`, a po sukcesie numer issue
+  i przycisk `Skopiuj adres zgłoszenia`. AMC nie otwiera przeglądarki.
 
 ## Uzasadnienie i decyzje
 
@@ -132,6 +142,16 @@ repozytorium, kanałami wydań i polityką prywatności.
 - Kontrakt transportu rozróżnia sukces, brak konfiguracji, brak sieci,
   ograniczenie tempa, zbyt duży raport i pozostały błąd. Bieżący transport
   lokalny zawsze zwraca uczciwy stan `nieskonfigurowane` i nie używa sieci.
+- Internetowy klient przyjmuje tylko prosty adres HTTPS bez danych logowania,
+  parametrów i fragmentu. Wysyła widoczny raport w wątku roboczym, nie zawiera
+  tokenu GitHuba i nie ponawia automatycznie niepewnego żądania.
+- Każda wersja treści ma losowy identyfikator raportu. Ponowienie niezmienionej
+  treści zachowuje identyfikator, a edycja przydziela nowy. Worker przechowuje
+  etap realizacji w Cloudflare KV: ten sam raport zwraca istniejące issue,
+  inna treść z tym samym identyfikatorem jest odrzucana.
+- Worker ponownie redaguje dane, ogranicza wielkość i tempo żądań, zapisuje
+  pełną treść w prywatnym repozytorium intake, a w publicznym AMC tworzy tylko
+  krótki wpis. Sekret GitHuba występuje wyłącznie jako sekret Workera.
 - Polecenie korzysta ze wspólnego modelu akcji dla menu, F1, palety i
   wykonania oraz jest jawnie dostępne we wszystkich sesjach i obu profilach.
 - Możliwość lokalnego formularza jest częścią zamkniętego manifestu zarówno
@@ -162,11 +182,26 @@ repozytorium, kanałami wydań i polityką prywatności.
   podtestów**. Paczka 1665 plików przeszła kontrolę profilu, manifest i
   SHA-256; AMC Test z lokalnym formularzem zostało zainstalowane i uruchomione.
   Ręczny odbiór NVDA formularza nadal pozostaje otwarty.
+- Internetowy etap z 20 października: **20 zaliczonych testów Python**
+  (`test_problem_report.py` i `test_async_gate.py`) oraz **7 zaliczonych testów
+  Node Workera**. Sprawdzono dokładną treść żądania bez sekretu, wyłącznie
+  HTTPS, brak sieci, limit, rozmiar, uszkodzoną odpowiedź, drugą redakcję,
+  prywatne i publiczne issue na atrapach, idempotencję, konflikt treści,
+  częściową awarię i brak wycieku błędu GitHuba.
+- Kod Workera nie został wdrożony, nie połączono prawdziwego tokenu i nie
+  utworzono próbnego GitHub Issue. To są testy kodu i atrap, nie odbiór sieci.
+- Zmiana internetowa nie została zbudowana ani zainstalowana, ponieważ bramka
+  bezpieczeństwa wykazała aktywne nagrywanie w AMC Test. Nie przerwano go.
 
 ## Znane ograniczenia
 
-- Nie ma jeszcze internetowego wysyłania, Workera, prawdziwego endpointu,
-  tokenu aplikacji, repozytorium raportów ani automatycznego GitHub Issue.
+- Jest gotowy kod internetowego transportu i Workera, ale nie ma jeszcze
+  wdrożonego Workera, prawdziwego endpointu, Cloudflare KV, limitera ani
+  prywatnego repozytorium raportów. Dlatego zbudowane obecnie wydanie nadal
+  pozostaje w trybie lokalnym i nie tworzy GitHub Issues.
+- Prawdziwe uruchomienie wymaga świadomego logowania do właściwego konta
+  Cloudflare, utworzenia prywatnego `amc-support-intake`, etykiet, ograniczonego
+  tokenu GitHuba w sekrecie Workera i kontrolowanego raportu próbnego.
 - Zapisany raport pozostaje plikiem lokalnym; AMC nie otwiera przeglądarki.
 - Filtry prywatności mają charakter ostrożny i mogą usunąć z logu więcej
   tekstu niż bezwzględnie konieczne.
@@ -191,6 +226,8 @@ repozytorium, kanałami wydań i polityką prywatności.
   sygnalisty`).
 - Ujednolicenie możliwości profili Python–.NET: `fb9ba25f` —
   `fix(rel): ujednolić możliwości profili launchera`.
+- Internetowy klient i lokalnie testowalny Worker: `d9426684` —
+  `feat(rel): przygotuj internetowego Sygnaliste`.
 - Instalacja: `2026.10.19-fb9ba25fe0680cf7bf5435d53eb5b073de091cca-0debb6aa`;
   manifest 1665 plików, pełna integralność i uruchomienie zweryfikowane.
 - Publikacja: nie wykonano.
@@ -205,10 +242,11 @@ repozytorium, kanałami wydań i polityką prywatności.
 
 ## Wynik wykonania
 
-- Data lokalnego etapu: 19 października 2026.
+- Data lokalnego etapu: 19–20 października 2026.
 - Repozytorium i kanały: profile i kanały są rozdzielone przez AMC12; GitHub
   nie został skonfigurowany ani użyty.
-- Adres i wersja kontraktu Workera: brak — etap internetowy odłożony.
+- Kontrakt Workera: `POST /v1/report`, schemat 1; adres końcowy nadal brak,
+  ponieważ infrastruktura nie została wdrożona.
 - Testy aktualizacji: poza zakresem tego etapu.
 - Testy prywatności: zaliczone na poziomie kodu; ręczny NVDA po instalacji.
 - Wydanie: nie utworzono i nie opublikowano.
