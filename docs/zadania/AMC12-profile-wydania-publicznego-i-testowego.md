@@ -39,7 +39,10 @@ jeszcze nie wykonano. Poprzedni kandydat nie jest pełnym kandydatem wydania.**
 ## Materiał do dokumentacji użytkownika
 
 AMC Test i przyszły publiczny AMC powstają z tego samego kodu, ale są dwoma
-różnymi wydaniami. AMC Test zachowuje wszystkie sesje przeznaczone do prób.
+różnymi wydaniami. **AMC Test jest pełną, codzienną wersją właściciela projektu**
+i zachowuje wszystkie sesje prywatne oraz funkcje przeznaczone do prób. Słowo
+„Test” określa kanał dystrybucji, a nie niesprawny prototyp. **AMC** jest nazwą
+wydania przeznaczonego dla wszystkich.
 Publiczny AMC pokazuje tylko Pliki lokalne, Radio, Podcasty i YouTube oraz
 WiiM. Ukrytej usługi nie będzie ani w Menedżerze sesji, ani w menu, pomocy
 `Ctrl+F1`, pełnej pomocy klawiatury i palecie `Ctrl+Shift+K`; jej stary skrót
@@ -124,6 +127,18 @@ skrótów.
 
 ## Uzasadnienie i decyzje
 
+- **Korekta użytkownika z 20 października 2026:** pełne prywatne wydanie używane
+  na co dzień nosi nazwę „AMC Test”, a wydanie dla wszystkich — „AMC”. Zastępuje
+  to wcześniejsze robocze określanie bieżącej instalacji nazwą „AMC Python”;
+  zgodność ze starym tytułem może pozostać wyłącznie technicznym mechanizmem
+  przejściowym. Numer wydania nie jest częścią nazwy produktu.
+- Każdy materialnie inny instalator otrzymuje kolejny, nigdy nieużyty numer.
+  `alpha.423` pozostaje historycznym kandydatem diagnostycznym, który został
+  naprawdę zbudowany i zainstalowany, więc nie wolno nadać tego numeru nowej
+  paczce. Następny numer roboczy to `0.1.0-alpha.425`, zgodnie z istniejącym
+  planem budowy; zostanie potwierdzony dopiero przy tworzeniu kandydata.
+  Kolejne wydania zwiększają numer `alpha.N`, a przejście do `1.0.0` nastąpi po
+  odbiorze publicznego instalatora i podstawowych funkcji, nie według samej daty.
 - **Korekta użytkownika z 20 października 2026:** instalator i aktualizator
   obu profili — AMC Test i publicznego AMC — mają obejmować również wszystkie
   wymagane biblioteki i składniki potrzebne do działania. Zastępuje to
@@ -480,12 +495,18 @@ skrótów.
 - Ukierunkowany test profilu publicznego i transportu: **60 zaliczonych**.
   Jawnie potwierdzono obecność sesji Radia i wspólnych możliwości oraz
   rozwiązywanie `Ctrl+Shift+0`, `End` i skoku `5` do 50% bufora. Obejmuje to
-  kod i testy, jeszcze nie ręczny odbiór zainstalowanego `alpha.425`.
+  kod i testy, jeszcze nie ręczny odbiór zainstalowanego następnego kandydata
+  (roboczo `alpha.425`).
 - Czysty, pojedynczy snapshot linii publicznej przeszedł dodatkowo **87
   zaliczonych testów** profili, instalatora, manifestu i pełnych sum plików,
   startu, niezależnych transportów obu wariantów, presetów oraz Menedżera
   sesji. Testy zapisywały dane poza worktree; po przebiegu źródła snapshotu
   pozostały czyste. To nadal test kodu, nie kompilacja ani instalacja.
+- Decyzję o nazwach i numeracji sprawdzono względem rejestru artefaktów:
+  `alpha.423` ma zapisaną rzeczywistą paczkę, instalator, rozmiar i SHA-256,
+  natomiast `alpha.425` występuje jako następny planowany kandydat. Była to
+  weryfikacja dokumentacji; kodu, kompilacji, instalacji ani publikacji nie
+  wykonywano.
 
 ## Znane ograniczenia
 
@@ -509,6 +530,8 @@ skrótów.
   wxPython i nie jest kandydatem do publikacji. Nie należy na jego podstawie
   oceniać równoległego działania silnika; zostanie zastąpiony po nowej
   kompilacji, instalacji i potwierdzeniu dwóch hostów.
+- Dokładny numer następnego wydania pozostaje niezatwierdzony do chwili budowy.
+  `alpha.425` jest numerem roboczym, a nie obietnicą opublikowanej wersji.
 - Wersjonowana, atomowa migawka została skompilowana i sprawdzona na
   odizolowanych magazynach testowych, ale nie została jeszcze odebrana w
   zainstalowanych AMC Test i AMC. Pierwsza wersja ma stały bezpieczny zakres;
@@ -593,6 +616,10 @@ skrótów.
 ## Wersja i commit
 
 - Data pracy: 19–20 października 2026.
+- Nazwy kanałów ustalone 20 października 2026: prywatne pełne wydanie „AMC
+  Test”, wydanie dla wszystkich „AMC”; następny numer roboczy
+  `0.1.0-alpha.425`. Zmiana dotyczy dokumentacji i nie zmienia jeszcze stałych
+  wersji, paczki, instalacji ani opublikowanego wydania.
 - Wspólna, weryfikowana aktualizacja FFmpeg i yt-dlp dla AMC Test oraz
   publicznego AMC, razem z menu, pomocą, paletą i międzyprocesową bramką:
   `31381b2d` — `feat(amc12): aktualizuj skladniki obu profili`. Testy

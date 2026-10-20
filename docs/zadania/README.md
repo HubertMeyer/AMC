@@ -149,7 +149,11 @@ zmian, wymagający korekty użytkownika:
   kontrola dostawcy oraz polecenie w menu, pomocy i palecie są gotowe w kodzie,
   testach i kompilacji Debug. Kandydat zastępczy czeka teraz na sieciowy odbiór
   składników, budowę obu paczek i rzeczywistą próbę dwóch hostów; wcześniejszy
-  instalator nie jest pełnym kandydatem. Niczego nie opublikowano** —
+  instalator nie jest pełnym kandydatem. Ustalono trwałe nazwy kanałów: pełna
+  prywatna wersja właściciela to `AMC Test`, a wydanie dla wszystkich to `AMC`.
+  `alpha.423` pozostaje zużytym numerem diagnostycznym; następny numer roboczy
+  to `0.1.0-alpha.425`, potwierdzany dopiero podczas budowy. Niczego nie
+  opublikowano** —
   jeden kod, jawny manifest możliwości, osobne katalogi, blokady, logi i kanały
   AMC Test oraz publicznego AMC. Bieżący zapis realizacji:
   [AMC12-profile-wydania-publicznego-i-testowego.md](AMC12-profile-wydania-publicznego-i-testowego.md).
