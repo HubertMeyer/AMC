@@ -90,6 +90,13 @@ zawiera te moduły. Każdy dołączony plik ma w manifeście dokładny rozmiar i
 SHA-256. Przed utworzeniem instalatora oraz po instalacji AMC wykonuje pełną
 kontrolę wszystkich plików, a nie tylko plików potrzebnych do startu.
 
+Kontrola sum i rozmiarów nie jest już ostatnim warunkiem wydania. Kandydat musi
+jeszcze bez okna uruchomić własny interfejs wxPython, własny host, uzgodnić
+protokół i ustawienia audio oraz jawnie zapisać wynik `READY`. Próba używa
+jednorazowego profilu, nie odczytuje danych, kont ani poświadczeń użytkownika,
+nie rejestruje globalnych skrótów i nie aktywuje już działającego AMC. Limit
+czasu oraz kontrola pozostałych procesów zatrzymują wadliwy kandydat.
+
 Nowy instalator ma osobne warianty `AMC-<wersja>-win-x64.exe` i
 `AMC-Test-<wersja>-win-x64.exe`, różne identyfikatory produktu, katalogi,
 skróty, wpisy systemowe i blokady uruchomienia. Nie wymusza zamknięcia
@@ -131,6 +138,14 @@ pokazuje Spotify, TIDAL-a ani Sonosa, ale zachowuje wspólne funkcje dopuszczone
 przez profil. Zainstalowany numer to `0.1.0-alpha.425`.
 
 ## Uzasadnienie i decyzje
+
+- **Korekta użytkownika z 20 października 2026:** wadliwy instalator nie może
+  zostać zbudowany ani uruchomiony. Sama integralność plików nie wykryła
+  wcześniejszego błędu startu publicznego interfejsu, bo wszystkie uszkodzone
+  zależności mogły mieć poprawne SHA-256. Dlatego prawdziwy, odizolowany start
+  jest obowiązkowy w trzech miejscach: przed przyjęciem paczki z budowy, przed
+  kompilacją instalatora i po skopiowaniu plików przez instalator, jeszcze
+  przed rejestracją powłoki i zwykłym uruchomieniem programu.
 
 - **Korekta użytkownika z 20 października 2026:** pełne prywatne wydanie używane
   na co dzień nosi nazwę „AMC Test”, a wydanie dla wszystkich — „AMC”. Zastępuje
@@ -303,6 +318,14 @@ przez profil. Zainstalowany numer to `0.1.0-alpha.425`.
 - `docs/zadania/AMC12-profile-wydania-publicznego-i-testowego.md`
 
 ## Testy i wynik
+
+- Strukturalny kontrakt instalatora i obu skryptów budowy: **11/11**.
+- Szersza regresja Python obejmująca instalator, start, wyszukiwanie, skróty,
+  menu, pomoc i logikę GUI: **194 zaliczone**.
+- Uruchamiacz C#: **27/27**; protokół hosta: **22/22**. Powtórzenie poza
+  piaskownicą potwierdziło nazwane kanały IPC i atomowe pliki tymczasowe.
+- Test rzeczywistej nowej paczki pozostaje krokiem po czystym commicie; nie jest
+  zastępowany uruchomieniem starej zainstalowanej kopii.
 
 ### Wspólna aktualizacja składników obu profili — 20 października 2026
 
@@ -550,6 +573,12 @@ przez profil. Zainstalowany numer to `0.1.0-alpha.425`.
 
 ## Znane ograniczenia
 
+- Bramka sprawdza konstrukcję pełnego okna, start właściwego hosta, `hello` i
+  konfigurację audio. Nie zastępuje ręcznych prób każdej funkcji sieciowej,
+  logowania usług ani odbioru mowy NVDA.
+- Kod bramki jest obecnie przetestowany źródłowo. Nowej paczki ani instalatora
+  z tym mechanizmem jeszcze nie zbudowano, nie zainstalowano i nie opublikowano.
+
 - Pozostaje kontrolowany odbiór rzeczywistego pobrania i aktualizacji FFmpeg
   oraz yt-dlp w obu profilach. Sama równoległa instalacja i praca obu hostów
   została już potwierdzona.
@@ -661,6 +690,11 @@ przez profil. Zainstalowany numer to `0.1.0-alpha.425`.
   ustawienia, nagrania oraz zastane katalogi testowe o niepewnym pochodzeniu.
 
 ## Wersja i commit
+
+- Trwała bramka uruchomienia kandydata: bieżący commit o nazwie
+  `fix(amc): utrzymaj wyszukiwanie i profil hosta`; dokładny identyfikator
+  zostanie dopisany po zapisie. Zainstalowany publiczny AMC pozostaje
+  `0.1.0-alpha.425`; ten etap nie tworzy ponownie numeru `alpha.425`.
 
 - Data pracy: 19–20 października 2026.
 - Nazwy kanałów ustalone 20 października 2026: prywatne pełne wydanie „AMC

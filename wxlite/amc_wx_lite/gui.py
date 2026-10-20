@@ -28,6 +28,7 @@ from __future__ import annotations
 
 import os
 import re
+import sys
 import time
 import uuid
 from dataclasses import dataclass
@@ -339,6 +340,12 @@ APP_NAME = PRODUCT_NAME
 # „AMC Python” na „AMC Test”. Dzięki temu także bezpośrednio uruchomiony
 # frontend nie otworzy drugiej instancji obok starszej kompilacji.
 INSTANCE_CHECKER_NAME = "AMC Python"
+
+
+def _startup_smoke_mode() -> bool:
+    """Czy trwa odizolowana, bezokienna bramka prawdziwego startu paczki."""
+
+    return os.environ.get("AMC_STARTUP_SMOKE") == "1"
 
 
 def _instance_checker_name() -> str:
@@ -2007,6 +2014,7 @@ class SearchDialog(wx.Dialog):
         execute_direct_action: Callable[
             [list[SearchEntry], SearchResultAction, "SearchDialog"], None
         ],
+        open_library: Callable[[], None],
         copy_text: Callable[[str], bool],
         history: list[str],
         record_query: Callable[[str], list[str]],
@@ -2024,6 +2032,7 @@ class SearchDialog(wx.Dialog):
         self._run_search = run_search
         self._choose_relation = choose_relation
         self._execute_direct_action = execute_direct_action
+        self._open_library = open_library
         self._copy_text = copy_text
         self._history = list(history)
         self._record_query = record_query
@@ -2066,7 +2075,7 @@ class SearchDialog(wx.Dialog):
             "Strzałki wybierają wynik. Enter przechodzi do wyniku na "
             "właściwej liście. Prawa strzałka pokazuje dostępne "
             "relacje. Ctrl+Shift+L dodaje wynik katalogu do Biblioteki. "
-            "Escape zamyka okno."
+            "Ctrl+L zamyka wyszukiwanie i otwiera Bibliotekę. Escape zamyka okno."
             if detailed_hints
             else ""
         )
@@ -2138,6 +2147,18 @@ class SearchDialog(wx.Dialog):
     def _on_dialog_shortcut_hook(self, event: wx.KeyEvent) -> None:
         """Oddaj klawisz wlasciwej kontrolce przed domyslami dialogu wx."""
 
+        if (
+            event.ControlDown()
+            and not event.ShiftDown()
+            and not event.AltDown()
+            and event.GetKeyCode() in (ord("L"), ord("l"))
+        ):
+            self.EndModal(wx.ID_CANCEL)
+            # Użyj wspólnego polecenia głównego okna dopiero po wyjściu z
+            # modala. Dzięki temu lista Biblioteki dostaje prawdziwy fokus,
+            # zamiast pozostawić go na niszczonej liście wyników.
+            wx.CallAfter(self._open_library)
+            return
         focus = wx.Window.FindFocus()
         if focus is self.query:
             self._on_query_key(event)
@@ -2339,6 +2360,7 @@ class SearchDialog(wx.Dialog):
             action is SearchResultAction.LIBRARY
             and all(
                 candidate.session_id in (
+                    SessionId.RADIO,
                     SessionId.PODCASTS,
                     SessionId.TIDAL,
                     SessionId.SPOTIFY,
@@ -6475,11 +6497,12 @@ class LiteFrame(wx.Frame):
         self._deferred_list_announcement_version = 0
 
         self._build_ui()
-        self._windows_preset_10_hotkey.bind()
-        # Instaluj sprawdzona granice watku od razu. Pierwsze EVT_ACTIVATE nie
-        # na kazdym zestawie wx/Windows dociera po pokazaniu okna, a samo
-        # RegisterHotKey moze zostac przyjete bez pozniejszego zdarzenia wx.
-        self._windows_preset_10_hook.install()
+        if not _startup_smoke_mode():
+            self._windows_preset_10_hotkey.bind()
+            # Instaluj sprawdzona granice watku od razu. Pierwsze EVT_ACTIVATE nie
+            # na kazdym zestawie wx/Windows dociera po pokazaniu okna, a samo
+            # RegisterHotKey moze zostac przyjete bez pozniejszego zdarzenia wx.
+            self._windows_preset_10_hook.install()
         self._bind_keys()
         self._start_engine()
 
@@ -7609,6 +7632,7 @@ class LiteFrame(wx.Frame):
             ),
             choose_relation=self._choose_search_result_relation,
             execute_direct_action=self._execute_search_dialog_action,
+            open_library=lambda: self._dispatch(Action.VIEW_LIBRARY),
             copy_text=self._to_clipboard,
             history=list(self.state.search_history.get(
                 "global" if all_services else session_before.value,
@@ -7707,6 +7731,12 @@ class LiteFrame(wx.Frame):
                 entries,
                 announce=announce,
             )
+        elif session_id is SessionId.RADIO:
+            # Wynik zapisany wygrywa podczas scalania z katalogiem po tym
+            # samym adresie. Nie zamykamy wtedy wyszukiwarki ani nie udajemy
+            # ponownego zapisu; usuwanie stacji pozostaje jawnym Delete.
+            title = entries[0].row.title if len(entries) == 1 else f"{len(entries)} elementów"
+            announce(f"Stacja jest już w Bibliotece: {title}")
         elif session_id is SessionId.TIDAL:
             self._change_tidal_search_result_membership(
                 entries,
@@ -8116,7 +8146,11 @@ class LiteFrame(wx.Frame):
         say = announce if announce is not None else self.announcer.say
         lead = entries[0]
         if lead.session_id is SessionId.RADIO:
-            self._complete_remote_radio_search_result_action(entries, action)
+            self._complete_remote_radio_search_result_action(
+                entries,
+                action,
+                announce=say,
+            )
             return
         if lead.session_id is SessionId.TIDAL:
             if action is SearchResultAction.INFORMATION:
@@ -8587,38 +8621,41 @@ class LiteFrame(wx.Frame):
         self,
         entries: list[SearchEntry],
         action: SearchResultAction,
+        *,
+        announce: Callable[[str], None] | None = None,
     ) -> None:
         """Open a directory result transiently; save only on explicit request."""
 
         if not entries:
             return
+        say = announce if announce is not None else self.announcer.say
         lead = entries[0]
         if action is SearchResultAction.INFORMATION:
-            self.announcer.say(lead.accessible_label)
+            say(lead.accessible_label)
             return
         if action in (SearchResultAction.QUEUE, SearchResultAction.PLAY_NEXT):
-            self.announcer.say("Ta funkcja nie jest dostępna w Radiu internetowym")
+            say("Ta funkcja nie jest dostępna w Radiu")
             return
         if action in (SearchResultAction.DOWNLOAD, SearchResultAction.SAVE_AS):
-            self.announcer.say("Pobieranie nie jest dostępne dla stacji radiowych")
+            say("Pobieranie nie jest dostępne dla stacji radiowych")
             return
         if action is SearchResultAction.OPEN:
             self._switch_session(SessionId.RADIO)
             self._run(self.navigator.open_radio_search_result(lead.row))
             return
         if getattr(self, "_radio_search_action_pending", False):
-            self.announcer.say("Dodawanie stacji już trwa")
+            say("Dodawanie stacji już trwa")
             return
         client = self.client
         if client is None:
-            self.announcer.say("Silnik nie działa, nie mogę otworzyć stacji")
+            say("Silnik nie działa, nie mogę otworzyć stacji")
             return
 
         self._radio_search_action_pending = True
         started = "Otwieranie stacji" if action is SearchResultAction.OPEN else "Przygotowywanie stacji"
         self.status_field.SetLabel(started)
         self.status_bar.show(started)
-        self.announcer.say(started)
+        say(started)
 
         def work() -> tuple[list[dict], dict | None]:
             payloads: list[dict] = []
@@ -8651,7 +8688,7 @@ class LiteFrame(wx.Frame):
             ]
             station_ids = [value for value in station_ids if value]
             if not station_ids:
-                self.announcer.say("Nie udało się otworzyć stacji")
+                say("Nie udało się otworzyć stacji")
                 return
             if action in (SearchResultAction.LIBRARY, SearchResultAction.FAVORITE):
                 target = "ulubionych" if action is SearchResultAction.FAVORITE else "Biblioteki"
@@ -8672,7 +8709,7 @@ class LiteFrame(wx.Frame):
                     )
                 self.status_field.SetLabel(message)
                 self.status_bar.show(message)
-                self.announcer.say(message)
+                say(message)
                 return
 
             self._switch_session(SessionId.RADIO)
@@ -8697,7 +8734,7 @@ class LiteFrame(wx.Frame):
             )
             self.status_field.SetLabel(message)
             self.status_bar.show(message)
-            self.announcer.say(message)
+            say(message)
 
         self.runner.submit("radio-search-action", work, done, failed)
 
@@ -9040,17 +9077,17 @@ class LiteFrame(wx.Frame):
             # Odczyt list nadal nalezy do Pythona w trybie ro. Sciezka daje
             # hostowi C# wyłącznie możliwość wykonania wąskiej, transakcyjnej
             # operacji ``bookmark.add`` z własną bramką konfliktu WPF.
-            library_db=(str(library_db) if library_db is not None and library_db.exists() else None),
+            library_db=(str(library_db) if library_db is not None else None),
             # Python nadal otwiera baze w mode=ro. Ta sciezka daje hostowi C#
             # wylacznie waska transakcje postepu jednego odcinka.
             podcasts_db=(
                 str(podcasts_db)
-                if podcasts_db is not None and podcasts_db.exists()
+                if podcasts_db is not None
                 else None
             ),
             state_json=(
                 str(state_json)
-                if state_json is not None and state_json.exists()
+                if state_json is not None
                 else None
             ),
             on_event=self._on_engine_event,
@@ -9222,6 +9259,12 @@ class LiteFrame(wx.Frame):
             # bezstanowe, wiec kolacje trzymamy TUTAJ i podajemy na wywolanie.
             # Jeden obiekt dla obu sesji: to ten sam host i ten sam cache.
             self._collation = collation
+            if _startup_smoke_mode():
+                # Konstrukcja całego okna, start hosta, hello i konfiguracja
+                # audio są wystarczającą bramką pakietu. Nie wczytujemy danych,
+                # nie pytamy sieci i nie uruchamiamy aktualizatora składników.
+                self._startup_smoke_ready = True
+                return
             self._load_initial_content()
             # Oba profile korzystają z tych samych zweryfikowanych binariów,
             # ale z własnej polityki profilu. Kontrola działa w tle i nie
@@ -9235,6 +9278,8 @@ class LiteFrame(wx.Frame):
 
         def failed(error: Exception) -> None:
             self.client = None
+            if _startup_smoke_mode():
+                self._startup_smoke_error = f"{type(error).__name__}: {error}"
             _append_frontend_log(
                 self.store,
                 f"Silnik nie wystartował: {type(error).__name__}: {error}",
@@ -17859,6 +17904,11 @@ class LiteFrame(wx.Frame):
         """Po powrocie do AMC rozpoznaj przeniesienie wykonane przez shell."""
 
         event.Skip()
+        if _startup_smoke_mode():
+            # Bramka wydania nie przejmuje globalnego Ctrl+Shift+0 i nie
+            # obserwuje klawiatury używanego równolegle AMC. Testuje wyłącznie
+            # konstrukcję okna oraz gotowość własnego hosta z paczki.
+            return
         if event.GetActive():
             # Utrzymuj obie waskie granice aktywne. RegisterHotKey moze zwrocic
             # sukces, a mimo to nie dostarczyc EVT_HOTKEY przez dana wersje wx.
@@ -24927,6 +24977,56 @@ class LiteFrame(wx.Frame):
 
 
 class LiteApp(wx.App):
+    _startup_smoke_timeout_seconds = 20.0
+
+    def _finish_startup_smoke(
+        self,
+        frame: LiteFrame,
+        exit_code: int,
+        message: str,
+    ) -> None:
+        if getattr(self, "_startup_smoke_finished", False):
+            return
+        self._startup_smoke_finished = True
+        self._startup_smoke_exit_code = exit_code
+        result_path = os.environ.get("AMC_STARTUP_SMOKE_RESULT")
+        if result_path:
+            try:
+                Path(result_path).write_text(
+                    "READY" if exit_code == 0 else "FAILED: " + message,
+                    encoding="utf-8",
+                )
+            except OSError:
+                self._startup_smoke_exit_code = 6
+        if exit_code == 0:
+            print("AMC_STARTUP_SMOKE_READY", flush=True)
+        else:
+            print(f"AMC_STARTUP_SMOKE_FAILED: {message}", file=sys.stderr, flush=True)
+        frame.Close(force=True)
+        self.ExitMainLoop()
+
+    def _poll_startup_smoke(self, frame: LiteFrame, deadline: float) -> None:
+        if getattr(frame, "_startup_smoke_ready", False):
+            self._finish_startup_smoke(frame, 0, "gotowe")
+            return
+        error = getattr(frame, "_startup_smoke_error", "")
+        if error:
+            self._finish_startup_smoke(frame, 4, str(error))
+            return
+        if time.monotonic() >= deadline:
+            self._finish_startup_smoke(
+                frame,
+                5,
+                "przekroczono czas oczekiwania na gotowość hosta",
+            )
+            return
+        self._startup_smoke_call = wx.CallLater(
+            100,
+            self._poll_startup_smoke,
+            frame,
+            deadline,
+        )
+
     def OnInit(self) -> bool:  # noqa: N802 - API wx
         self.SetAppName(APP_NAME)
         # Drugi frontend nie może uruchamiać drugiego właściciela postępu
@@ -24934,8 +25034,11 @@ class LiteApp(wx.App):
         # się bez hosta: lista była widoczna, lecz Enter, Ctrl+R i informacje
         # pod lewą strzałką nie działały. Checker musi pozostać polem aplikacji
         # przez cały MainLoop; zmienna lokalna zostałaby zwolniona za wcześnie.
-        self._instance_checker = wx.SingleInstanceChecker(_instance_checker_name())
-        if self._instance_checker.IsAnotherRunning():
+        startup_smoke = _startup_smoke_mode()
+        self._instance_checker = None
+        if not startup_smoke:
+            self._instance_checker = wx.SingleInstanceChecker(_instance_checker_name())
+        if self._instance_checker is not None and self._instance_checker.IsAnotherRunning():
             requested = _request_previous_instance_close()
             released = requested and _wait_for_previous_instance(
                 self._instance_checker
@@ -24969,9 +25072,19 @@ class LiteApp(wx.App):
         frame = LiteFrame(store, store.load())
         if hasattr(self, "SetTopWindow"):
             self.SetTopWindow(frame)
-        _present_main_window(frame)
-        wx.CallAfter(_present_main_window, frame)
-        if os.environ.get("AMC_SHELL_REQUESTS") == "1":
+        if startup_smoke:
+            frame.Hide()
+            self._startup_smoke_exit_code = 5
+            self._startup_smoke_call = wx.CallLater(
+                100,
+                self._poll_startup_smoke,
+                frame,
+                time.monotonic() + self._startup_smoke_timeout_seconds,
+            )
+        else:
+            _present_main_window(frame)
+            wx.CallAfter(_present_main_window, frame)
+        if not startup_smoke and os.environ.get("AMC_SHELL_REQUESTS") == "1":
             self._shell_request_reader = start_request_reader(
                 frame._handle_shell_request,
                 frame.announcer.say,
@@ -24991,4 +25104,4 @@ def main() -> int:
             pass
     app = LiteApp(False)
     app.MainLoop()
-    return 0
+    return int(getattr(app, "_startup_smoke_exit_code", 0))

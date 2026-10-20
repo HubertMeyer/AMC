@@ -59,10 +59,11 @@ zmian, wymagający korekty użytkownika:
   NVDAExtensionGlobalPlugin bez zmiany zwykłego schowka w innych programach.
   Szczegóły:
   [NVDA-001-opoznienie-ctrl-c.md](NVDA-001-opoznienie-ctrl-c.md).
-- `SEARCH-001` — **Wdrożone i zainstalowane w AMC Test; czeka na ręczny odbiór
-  NVDA** — wyszukiwanie YouTube, Spotify i TIDAL:
+- `SEARCH-001` — **Korekta Radia i `Ctrl+L` jest w źródłach i testach; czeka na
+  budowę oraz instalację** — wyszukiwanie YouTube, Radia, Spotify i TIDAL:
   `Ctrl+Shift+L` pozostaje w oknie także dla zapisanego wyniku, wykonuje jedną
-  właściwą operację i nie oddaje mowy głównemu oknu. Szczegóły:
+  właściwą operację i nie oddaje mowy głównemu oknu. `Ctrl+L` zamyka modal i
+  przechodzi wspólnym poleceniem do Biblioteki. Szczegóły:
   [SEARCH-001-youtube-biblioteka-komunikaty.md](SEARCH-001-youtube-biblioteka-komunikaty.md).
 - `POD-001` — **Wdrożone i zainstalowane w AMC Test; czeka na ręczny odbiór
   NVDA** — trzy tryby sortowania
@@ -79,7 +80,8 @@ zmian, wymagający korekty użytkownika:
   oraz `AMC04_REALIZACJA_ETAP_A_2026-10-18.md`. Stare źródła WPF służą tylko
   jako wzorzec; właściwe wdrożenie wykonujemy w tym repozytorium.
 - `MENU-001` — **W trakcie; naprawa `Shift+F10` harmonogramów i nazwa `Alt+D`
-  są zainstalowane w AMC Test i czekają na odbiór NVDA** —
+  są zainstalowane w AMC Test, a korekta pełnych ścieżek profilu hosta czeka na
+  nową instalację** —
   wspólne menu kontekstowe bez odczytu technicznych cyfr i przypadkowych
   liter dostępu, nazwy zależne od rodzaju elementu, rzeczywiste skróty oraz
   audyt dostępności poleceń i nawigacji między sesjami. Szczegóły:
@@ -157,9 +159,12 @@ zmian, wymagający korekty użytkownika:
   `0866d668` została przetestowana, przebudowana i zainstalowana do
   `D:\Projekty Codex\AMC Public`. Pełna kontrola 1073 plików przeszła, a
   publiczny uruchamiacz, interfejs i host z profilem `public` działają
-  równolegle z osobnym kompletem AMC Test. Niczego nie opublikowano** —
-  jeden kod, jawny manifest możliwości, osobne katalogi, blokady, logi i kanały
-  AMC Test oraz publicznego AMC. Bieżący zapis realizacji:
+  równolegle z osobnym kompletem AMC Test.
+  Dodano obowiązkowy odizolowany start interfejsu i hosta przed przyjęciem
+  paczki, przed kompilacją instalatora i po instalacji; kod oraz testy są
+  gotowe, a rzeczywista nowa paczka czeka na czysty commit. Niczego nie
+  opublikowano** — jeden kod, jawny manifest możliwości, osobne katalogi,
+  blokady, logi i kanały AMC Test oraz publicznego AMC. Bieżący zapis realizacji:
   [AMC12-profile-wydania-publicznego-i-testowego.md](AMC12-profile-wydania-publicznego-i-testowego.md).
   Zatwierdzona specyfikacja:
   `D:\Projekty Codex\Accessible Multimedia Controller\AMC12_PROFILE_WYDANIA_PUBLICZNEGO_I_TESTOWEGO_2026-10-18.md`.

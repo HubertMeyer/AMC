@@ -11,6 +11,13 @@ BUILD = (ROOT / "wxlite" / "tools" / "Build-AMCInstaller.ps1").read_text(
 BUNDLE_BUILD = (ROOT / "wxlite" / "tools" / "Build-AMCBundle.ps1").read_text(
     encoding="utf-8"
 )
+LAUNCHER = (
+    ROOT / "src" / "AccessibleMediaController.PythonLauncher" / "Program.cs"
+).read_text(encoding="utf-8")
+PYTHON_MAIN = (ROOT / "wxlite" / "amc_wx_lite" / "__main__.py").read_text(
+    encoding="utf-8"
+)
+GUI = (ROOT / "wxlite" / "amc_wx_lite" / "gui.py").read_text(encoding="utf-8")
 
 
 def test_installer_profiles_have_separate_ids_names_folders_and_mutexes() -> None:
@@ -71,9 +78,11 @@ def test_installer_shortcuts_are_optional_and_noicons_is_effective() -> None:
 
 def test_installer_performs_full_post_install_integrity_check() -> None:
     assert "--sprawdz-pakiet-pelny-cicho" in ISS
+    assert "--sprawdz-start-cicho" in ISS
     assert "ewWaitUntilTerminated" in ISS
     assert "ResultCode <> 0" in ISS
     assert "RaiseException" in ISS
+    assert ISS.index("--sprawdz-start-cicho") < ISS.index("RegisterShellIntegration;", ISS.index("procedure CurStepChanged"))
 
 
 def test_installer_refuses_to_overlay_another_or_historical_product() -> None:
@@ -92,6 +101,8 @@ def test_build_helper_verifies_profile_clean_source_and_full_bundle() -> None:
     assert "manifest.releaseProfile" in BUILD
     assert "manifest.sourceDirty" in BUILD
     assert "--sprawdz-pakiet-pelny-cicho" in BUILD
+    assert "Test-AMCBundleStartup.ps1" in BUILD
+    assert "& $startupSmokeTool -BundleRoot $bundle" in BUILD
     assert "Get-FileHash" in BUILD
     assert "sha256" in BUILD
     assert "bytes" in BUILD
@@ -106,6 +117,8 @@ def test_bundle_builder_embeds_dotnet_and_private_python_runtime() -> None:
     assert '"--profile", $Profile' in BUNDLE_BUILD
     assert '"--runtime", $runtime' in BUNDLE_BUILD
     assert "--sprawdz-pakiet-pelny-cicho" in BUNDLE_BUILD
+    assert "Test-AMCBundleStartup.ps1" in BUNDLE_BUILD
+    assert "& $startupSmokeTool -BundleRoot $candidate" in BUNDLE_BUILD
     assert "Start-Process -FilePath $LauncherPath" in BUNDLE_BUILD
     assert "-Wait -PassThru -WindowStyle Hidden" in BUNDLE_BUILD
     assert "Folder docelowy już istnieje" in BUNDLE_BUILD
@@ -116,3 +129,46 @@ def test_bundle_builder_cleans_only_its_unique_project_temporary_folder() -> Non
     assert 'Join-Path $repositoryRoot ".test-tmp"' in BUNDLE_BUILD
     assert '"bundle-build-" + [guid]::NewGuid()' in BUNDLE_BUILD
     assert "Remove-Item -LiteralPath $operationRoot -Recurse -Force" in BUNDLE_BUILD
+
+
+def test_startup_smoke_requires_ready_marker_timeout_and_no_leftovers() -> None:
+    smoke = (ROOT / "wxlite" / "tools" / "Test-AMCBundleStartup.ps1").read_text(
+        encoding="utf-8"
+    )
+    for required in (
+        "--sprawdz-start-cicho",
+        "AMC_STARTUP_SMOKE_RESULT",
+        'result -ne "READY"',
+        "WaitForExit($TimeoutSeconds * 1000)",
+        "Get-Process -ErrorAction SilentlyContinue",
+        "Kontrolowany start pozostawił procesy",
+        '"startup-smoke-" + [guid]::NewGuid()',
+    ):
+        assert required in smoke
+
+
+def test_startup_smoke_is_isolated_and_cannot_activate_an_existing_instance() -> None:
+    assert '"--sprawdz-start-cicho"' in LAUNCHER
+    assert "suppressFailureDialog: true" in LAUNCHER
+    assert "if (!suppressFailureDialog)\n            AppendProcessLog" in LAUNCHER
+    assert LAUNCHER.index("if (silentStartupCheck)") < LAUNCHER.index(
+        "LauncherInstanceLease.TryAcquire"
+    )
+    for required in (
+        "AMC_STARTUP_SMOKE",
+        "AMC_WX_FIXTURE",
+        "TemporaryDirectory",
+        "APPDATA",
+        "LOCALAPPDATA",
+    ):
+        assert required in PYTHON_MAIN
+    assert 'frame.Hide()' in GUI
+    assert 'AMC_STARTUP_SMOKE_READY' in GUI
+    assert 'self._startup_smoke_ready = True' in GUI
+    assert 'if not _startup_smoke_mode()' in GUI
+    activation_handler = GUI[GUI.index("def _on_window_activate"):]
+    activation_handler = activation_handler[: activation_handler.index("def ", 4)]
+    assert "if _startup_smoke_mode():" in activation_handler
+    assert activation_handler.index("if _startup_smoke_mode():") < activation_handler.index(
+        "self._windows_preset_10_hotkey.register()"
+    )

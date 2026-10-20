@@ -859,7 +859,7 @@ def test_remote_radio_queue_is_refused_without_profile_write() -> None:
         SearchResultAction.QUEUE,
     )
 
-    assert messages == ["Ta funkcja nie jest dostępna w Radiu internetowym"]
+    assert messages == ["Ta funkcja nie jest dostępna w Radiu"]
 
 
 def test_remote_result_uses_materialization_instead_of_local_navigation() -> None:
@@ -894,6 +894,7 @@ def test_remote_result_uses_materialization_instead_of_local_navigation() -> Non
 @pytest.mark.parametrize(
     ("session_id", "remote_kind", "kind"),
     (
+        (SessionId.RADIO, "radioStation", "station"),
         (SessionId.PODCASTS, "youtubeChannel", "podcast"),
         (SessionId.PODCASTS, None, "podcast"),
         (SessionId.TIDAL, "tidalCatalog", "album"),
@@ -942,6 +943,112 @@ def test_library_action_keeps_search_dialog_open(
     assert direct_actions == [([result], SearchResultAction.LIBRARY, dialog)]
     assert modal_results == []
     assert dialog.selected_result is result
+
+
+def test_radio_search_library_confirmation_uses_dialog_and_keeps_focus_context() -> None:
+    calls = []
+    spoken = []
+
+    class Runner:
+        @staticmethod
+        def submit(_name, work, done, failed):
+            try:
+                done(work())
+            except Exception as error:
+                failed(error)
+
+    result = SearchEntry(
+        SessionId.RADIO,
+        Row(
+            "radio-directory:poznan",
+            "Polskie Radio Poznań",
+            "station",
+            url="https://example.test/poznan",
+        ),
+        remote_kind="radioStation",
+    )
+    frame = SimpleNamespace(
+        _radio_search_action_pending=False,
+        client=SimpleNamespace(
+            add_radio_station=lambda title, address: (
+                calls.append((title, address))
+                or {"preferredStationId": "saved-poznan"}
+            )
+        ),
+        runner=Runner(),
+        status_field=SimpleNamespace(SetLabel=lambda _message: None),
+        status_bar=SimpleNamespace(show=lambda _message: None),
+        announcer=SimpleNamespace(
+            say=lambda _message: pytest.fail(
+                "Główne okno nie może przejąć komunikatu wyszukiwarki"
+            )
+        ),
+    )
+
+    LiteFrame._complete_remote_radio_search_result_action(
+        frame,
+        [result],
+        SearchResultAction.LIBRARY,
+        announce=spoken.append,
+    )
+
+    assert calls == [("Polskie Radio Poznań", "https://example.test/poznan")]
+    assert spoken == [
+        "Przygotowywanie stacji",
+        "Dodano do Biblioteki: Polskie Radio Poznań",
+    ]
+    assert frame._radio_search_action_pending is False
+
+
+def test_saved_radio_search_result_stays_open_and_reports_existing_library_item() -> None:
+    spoken = []
+    result = SearchEntry(
+        SessionId.RADIO,
+        Row("saved-poznan", "Polskie Radio Poznań", "station"),
+    )
+    frame = SimpleNamespace(
+        _search_dialog_alive=lambda _dialog: True,
+        announcer=SimpleNamespace(
+            say=lambda _message: pytest.fail(
+                "Główne okno nie może przejąć komunikatu wyszukiwarki"
+            )
+        ),
+    )
+    dialog = SimpleNamespace(
+        IsShown=lambda: True,
+        announcer=SimpleNamespace(say=spoken.append),
+    )
+
+    LiteFrame._execute_search_dialog_action(
+        frame,
+        [result],
+        SearchResultAction.LIBRARY,
+        dialog,
+    )
+
+    assert spoken == ["Stacja jest już w Bibliotece: Polskie Radio Poznań"]
+
+
+def test_ctrl_l_closes_search_then_uses_shared_library_command(monkeypatch) -> None:
+    calls = []
+    dialog = SimpleNamespace(
+        EndModal=lambda result: calls.append(("close", result)),
+        _open_library=lambda: calls.append(("library", Action.VIEW_LIBRARY)),
+    )
+    event = SimpleNamespace(
+        ControlDown=lambda: True,
+        ShiftDown=lambda: False,
+        AltDown=lambda: False,
+        GetKeyCode=lambda: ord("L"),
+    )
+    monkeypatch.setattr(gui_module.wx, "CallAfter", lambda callback: callback())
+
+    gui_module.SearchDialog._on_dialog_shortcut_hook(dialog, event)
+
+    assert calls == [
+        ("close", gui_module.wx.ID_CANCEL),
+        ("library", Action.VIEW_LIBRARY),
+    ]
 
 
 def test_spotify_search_library_confirmation_stays_inside_search_dialog() -> None:

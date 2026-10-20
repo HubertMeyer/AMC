@@ -11,8 +11,13 @@ uruchomieniu i w zdalnej sesji bez pulpitu.
 
 from __future__ import annotations
 
+import os
 import sys
+import tempfile
 from pathlib import Path
+
+
+STARTUP_SMOKE_SWITCH = "--sprawdz-start-cicho"
 
 
 def diagnose() -> int:
@@ -65,6 +70,35 @@ def main(argv: list[str] | None = None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
     if "--sprawdz" in argv or "--check" in argv:
         return diagnose()
+
+    if STARTUP_SMOKE_SWITCH in argv:
+        # Prawdziwy start okna i hosta, ale zawsze na jednorazowych danych.
+        # Dzięki temu bramka wydania może działać obok używanego AMC i nigdy
+        # nie odczytuje ani nie zapisuje Biblioteki, ustawień czy poświadczeń.
+        previous = {
+            name: os.environ.get(name)
+            for name in ("AMC_STARTUP_SMOKE", "AMC_WX_FIXTURE", "APPDATA", "LOCALAPPDATA")
+        }
+        with tempfile.TemporaryDirectory(prefix="amc-startup-smoke-") as root:
+            os.environ["AMC_STARTUP_SMOKE"] = "1"
+            os.environ["AMC_WX_FIXTURE"] = str(Path(root) / "profile")
+            os.environ["APPDATA"] = str(Path(root) / "appdata")
+            os.environ["LOCALAPPDATA"] = str(Path(root) / "localappdata")
+            try:
+                from .gui import main as gui_main  # noqa: PLC0415
+                return gui_main()
+            except Exception as error:  # noqa: BLE001
+                print(
+                    f"Kontrolowany start interfejsu nie powiódł się: {error}",
+                    file=sys.stderr,
+                )
+                return 2
+            finally:
+                for name, value in previous.items():
+                    if value is None:
+                        os.environ.pop(name, None)
+                    else:
+                        os.environ[name] = value
 
     try:
         from .gui import main as gui_main  # noqa: PLC0415

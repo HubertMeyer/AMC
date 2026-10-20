@@ -154,6 +154,13 @@ TIDAL polecenie pozostaje w oknie wyszukiwania i albo wykonuje zmianę właściw
 Biblioteki, albo jasno podaje właściwy skrót dla typu elementu. Po operacji
 fokus pozostaje na wyniku; dopiero `Escape` wraca do odświeżonej Biblioteki.
 
+Ta sama zasada obejmuje Radio. Na stacji z publicznego katalogu
+`Ctrl+Shift+L` pozostaje na liście wyników, mówi „Przygotowywanie stacji”, a po
+potwierdzonym zapisie „Dodano do Biblioteki: nazwa”. Jeżeli wyszukiwanie
+znalazło stację już zapisaną, podaje „Stacja jest już w Bibliotece: nazwa” i
+nie usuwa jej ukradkiem. `Ctrl+L` w oknie wyszukiwania zamyka je i wykonuje to
+samo wspólne polecenie Biblioteki co menu, pomoc i paleta.
+
 Przykładowe komunikaty:
 
 - „Przygotowywanie wyniku katalogu”, a po potwierdzeniu „Dodano do Biblioteki:
@@ -164,6 +171,15 @@ Przykładowe komunikaty:
   wykonawcą ani podcastem Biblioteki.
 
 ## Uzasadnienie i decyzje
+
+**Korekta użytkownika z 20 października 2026:** wyszukanie „Polskie radio” i
+`Ctrl+Shift+L` gubiło kursor, po czym `Ctrl+L` nie pozwalało wejść do
+Biblioteki. Przyczyną było pominięcie sesji Radio w bezpośredniej obsłudze
+modalnego okna: skrót zamykał wyszukiwarkę, a operacja przechodziła przez
+główne okno. Radio korzysta teraz z tej samej drogi pozostającej w modalu co
+Podcasty i YouTube, Spotify oraz TIDAL. Komunikaty asynchronicznego zapisu są
+kierowane do aktywnego regionu wyników, a `Ctrl+L` wywołuje wspólną akcję
+`Biblioteka` dopiero po zamknięciu modala.
 
 Korekta z 19 października 2026 zastępuje wcześniejsze ograniczenie bezpośredniej
 obsługi tylko do wyników mających `remote_kind`. Zapisany wynik o tym samym
@@ -187,6 +203,17 @@ brak rozbieżności powierzchni.
 
 ## Testy i wynik
 
+- Korekta radiowa i `Ctrl+L`: ukierunkowany zestaw wyszukiwania, startu hosta i
+  instalatora — **75 zaliczonych**; szersza regresja skrótów, menu, pomocy,
+  logiki GUI, wyszukiwania i startu — **194 zaliczone**.
+- Testy obejmują brak `EndModal` po radiowym `Ctrl+Shift+L`, dokładnie jeden
+  zapis stacji, dwa komunikaty w regionie wyszukiwarki, brak użycia announcera
+  głównego okna, komunikat dla stacji już zapisanej oraz przejście `Ctrl+L`
+  przez wspólną akcję `VIEW_LIBRARY`.
+- Zestaw protokołu hosta: **22/22**, zestaw uruchamiacza: **27/27**. Pierwsze
+  przebiegi w piaskownicy miały wyłącznie odmowy nazwanych potoków i atomowych
+  plików tymczasowych; powtórzenie poza piaskownicą przeszło w całości.
+
 - `wxlite/tests/test_search_gui_navigation.py`: `50 passed`.
 - Szersza izolowana regresja wyszukiwania, Spotify, TIDAL, menu, schowka i
   poprawki NVDA: `154 passed`.
@@ -202,6 +229,9 @@ brak rozbieżności powierzchni.
 
 ## Znane ograniczenia
 
+- Korekta Radia i `Ctrl+L` jest obecnie potwierdzona w źródłach i testach, ale
+  nie została jeszcze zbudowana, zainstalowana ani odebrana ręcznie z NVDA.
+
 - Ręczny odbiór na prawdziwym koncie Spotify/TIDAL wymaga obecności użytkownika;
   nocny test nie loguje usług i nie tworzy danych konta.
 - Pełny odbiór YouTube wymaga po bezpiecznej instalacji sprawdzenia osobno
@@ -209,6 +239,11 @@ brak rozbieżności powierzchni.
 - Sortowanie zbiorczej Biblioteki pozostaje osobnym zadaniem `POD-001`.
 
 ## Wersja i commit
+
+- Korekta z 20 października 2026: bieżący commit o nazwie
+  `fix(amc): utrzymaj wyszukiwanie i profil hosta`; dokładny identyfikator jest
+  zapisywany w rejestrze po utworzeniu commitu. Nie zmienia numeru istniejącej
+  instalacji `alpha.425` i nie została jeszcze opublikowana.
 
 - Implementacja i testy: commit
   `1169e6aa17414c0d30c7cf4d3c40e530463ea317`.

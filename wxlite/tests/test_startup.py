@@ -279,9 +279,10 @@ def test_close_is_refused_when_recording_state_cannot_be_confirmed():
 def test_engine_handshake_is_deferred_to_background():
     queued = []
     calls = []
+    client_arguments = []
     class Client:
         def __init__(self, *args, **kwargs):
-            pass
+            client_arguments.append((args, kwargs))
         def start(self):
             calls.append("start")
         def hello(self):
@@ -306,8 +307,15 @@ def test_engine_handshake_is_deferred_to_background():
     # ``_start_engine`` liczy payload audio ze stanu (wspolna funkcja
     # ``session_options.engine_audio_payload``), zeby nowy proces dostal
     # ustawienia PO nalozeniu Opcji sesji. Atrapa musi miec ``state``.
+    profile_paths = SimpleNamespace(
+        library_db=Path("missing-profile/library.db"),
+        podcasts_db=Path("missing-profile/podcasts.db"),
+        state_json=Path("missing-profile/state.json"),
+        may_write_profile=False,
+    )
     frame = SimpleNamespace(options=_options, state=LiteState(options=_options),
         store=SimpleNamespace(directory=Path.cwd()),
+        layout=profile_paths,
         client=None,
         runner=SimpleNamespace(submit=lambda *args: queued.append(args)),
         timer=SimpleNamespace(Start=lambda n: calls.append("timer")),
@@ -318,6 +326,7 @@ def test_engine_handshake_is_deferred_to_background():
         library=SimpleNamespace(
             use_collation=lambda collation: calls.append("collation")),
         _load_initial_content=lambda: calls.append("content"),
+        _update_media_components=lambda **_kwargs: calls.append("components"),
         _remember_local_playback_positions=True)
     # Tryb trwalosci kolejki wyprowadza sie z UKLADU PROFILU; ten test mierzy
     # odroczenie I/O, a nie wybor trybu, wiec deklarujemy zwykly start bez
@@ -326,6 +335,9 @@ def test_engine_handshake_is_deferred_to_background():
     try:
         gui.LiteFrame._start_engine(frame)
         assert not calls, "The GUI thread must not perform startup I/O"
+        assert client_arguments[0][1]["library_db"] == str(profile_paths.library_db)
+        assert client_arguments[0][1]["podcasts_db"] == str(profile_paths.podcasts_db)
+        assert client_arguments[0][1]["state_json"] == str(profile_paths.state_json)
         assert len(queued) == 1
         _, work, done, failed = queued[0]
         result = work()
@@ -402,6 +414,7 @@ def test_optional_profile_sync_failure_does_not_disable_the_audio_engine(tmp_pat
             use_collation=lambda collation: calls.append("collation")
         ),
         _load_initial_content=lambda: calls.append("content"),
+        _update_media_components=lambda **_kwargs: calls.append("components"),
         _remember_local_playback_positions=True,
     )
     frame._queue_persistence_arguments = lambda: {}

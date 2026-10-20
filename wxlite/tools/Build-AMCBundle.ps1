@@ -17,6 +17,7 @@ $components = Join-Path $operationRoot "components"
 $candidate = Join-Path $operationRoot "candidate"
 $python = Join-Path $runtime "python.exe"
 $bundleTool = Join-Path $repositoryRoot "wxlite\tools\build_bundle.py"
+$startupSmokeTool = Join-Path $repositoryRoot "wxlite\tools\Test-AMCBundleStartup.ps1"
 
 if (-not (Test-Path -LiteralPath $python -PathType Leaf)) {
     throw "Wskazany prywatny runtime nie zawiera python.exe: $runtime"
@@ -95,6 +96,7 @@ try {
     )
 
     Invoke-FullBundleCheck -LauncherPath (Join-Path $candidate "AMC.exe")
+    & $startupSmokeTool -BundleRoot $candidate
 
     New-Item -ItemType Directory -Path (Split-Path -Parent $output) -Force | Out-Null
     Move-Item -LiteralPath $candidate -Destination $output

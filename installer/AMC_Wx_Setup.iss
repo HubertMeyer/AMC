@@ -289,10 +289,6 @@ var
 begin
   if CurStep = ssPostInstall then
   begin
-    { Aktualizacja najpierw usuwa wpisy TEGO profilu. Odznaczenie zadania
-      jest dzięki temu prawdziwym wyłączeniem, nie tylko brakiem nowych wpisów. }
-    RemoveShellIntegration;
-    RegisterShellIntegration;
     if (not Exec(
           ExpandConstant('{app}\AMC.exe'),
           '--sprawdz-pakiet-pelny-cicho',
@@ -305,6 +301,23 @@ begin
         'Pełna kontrola integralności zainstalowanego pakietu nie powiodła się. ' +
         'Instalacja nie może zostać uznana za zakończoną.');
     end;
+    if (not Exec(
+          ExpandConstant('{app}\AMC.exe'),
+          '--sprawdz-start-cicho',
+          ExpandConstant('{app}'),
+          SW_HIDE,
+          ewWaitUntilTerminated,
+          ResultCode)) or (ResultCode <> 0) then
+    begin
+      RaiseException(
+        'Kontrolowany start interfejsu i silnika nie powiódł się. ' +
+        'Program nie zostanie uruchomiony jako gotowa instalacja.');
+    end;
+    { Dopiero zweryfikowana instalacja zmienia wpisy TEGO profilu.
+      Odznaczenie zadania jest dzięki temu prawdziwym wyłączeniem, nie tylko
+      brakiem nowych wpisów. }
+    RemoveShellIntegration;
+    RegisterShellIntegration;
   end;
 end;
 

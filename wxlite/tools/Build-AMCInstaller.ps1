@@ -14,6 +14,7 @@ $repositoryRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot "..\.."))
 $bundle = [IO.Path]::GetFullPath($BundleRoot)
 $output = [IO.Path]::GetFullPath($OutputDirectory)
 $installerScript = Join-Path $repositoryRoot "installer\AMC_Wx_Setup.iss"
+$startupSmokeTool = Join-Path $repositoryRoot "wxlite\tools\Test-AMCBundleStartup.ps1"
 $manifestPath = Join-Path $bundle "bundle-manifest.json"
 $launcher = Join-Path $bundle "AMC.exe"
 
@@ -44,6 +45,8 @@ try {
 finally {
     $check.Dispose()
 }
+
+& $startupSmokeTool -BundleRoot $bundle
 
 if ([string]::IsNullOrWhiteSpace($IsccPath)) {
     $command = Get-Command ISCC.exe -ErrorAction SilentlyContinue

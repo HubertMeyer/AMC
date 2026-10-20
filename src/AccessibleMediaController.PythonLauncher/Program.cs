@@ -23,6 +23,8 @@ internal static class Program
         var silentBundleCheck = args.Any(argument =>
             string.Equals(argument, "--sprawdz-pakiet-cicho", StringComparison.OrdinalIgnoreCase)
             || string.Equals(argument, "--sprawdz-pakiet-pelny-cicho", StringComparison.OrdinalIgnoreCase));
+        var silentStartupCheck = args.Any(argument =>
+            string.Equals(argument, "--sprawdz-start-cicho", StringComparison.OrdinalIgnoreCase));
         try
         {
             var bundle = BundleVerifier.Verify(
@@ -43,6 +45,19 @@ internal static class Program
                         : $"Pakiet {profile.DisplayName} jest kompletny i zgodny.",
                     false);
                 return 0;
+            }
+
+            // Bramka wydania uruchamia prawdziwy frontend i host na
+            // odizolowanym profilu. Nie może aktywować działającego AMC ani
+            // uznać jego okna za wynik testu nowej paczki, dlatego świadomie
+            // omija zwykłą dzierżawę pojedynczej instancji.
+            if (silentStartupCheck)
+            {
+                return RunFrontend(
+                    bundle,
+                    args,
+                    new ShellLaunchRequest([], false),
+                    suppressFailureDialog: true);
             }
 
             var shellRequest = ShellLaunchRequestContract.ParseAndValidate(args);
@@ -118,13 +133,13 @@ internal static class Program
         }
         catch (ShellLaunchRequestException exception)
         {
-            if (!silentBundleCheck)
+            if (!silentBundleCheck && !silentStartupCheck)
                 Show(profile, exception.Message, true);
             return StartFailed;
         }
         catch (InvalidDataException exception)
         {
-            if (!silentBundleCheck)
+            if (!silentBundleCheck && !silentStartupCheck)
             {
                 Show(
                     profile,
@@ -137,7 +152,7 @@ internal static class Program
         }
         catch
         {
-            if (!silentBundleCheck)
+            if (!silentBundleCheck && !silentStartupCheck)
             {
                 Show(
                     profile,
@@ -152,7 +167,8 @@ internal static class Program
     private static int RunFrontend(
         VerifiedBundle bundle,
         string[] args,
-        ShellLaunchRequest shellRequest)
+        ShellLaunchRequest shellRequest,
+        bool suppressFailureDialog = false)
     {
         var plan = PythonLaunchPlan.Create(bundle, args);
         using var process = Process.Start(plan.StartInfo)
@@ -185,7 +201,10 @@ internal static class Program
 
         var outputText = output.Result.Trim();
         var errorText = error.Result.Trim();
-        AppendProcessLog(bundle.Profile, outputText, errorText, process.ExitCode);
+        // Kontrolowany start działa na profilu tymczasowym i nie może
+        // dopisywać technicznego wyniku do dziennika prawdziwego profilu.
+        if (!suppressFailureDialog)
+            AppendProcessLog(bundle.Profile, outputText, errorText, process.ExitCode);
 
         if (plan.ShowCapturedOutput)
         {
@@ -200,7 +219,7 @@ internal static class Program
                     : details,
                 process.ExitCode != 0);
         }
-        else if (process.ExitCode != 0)
+        else if (process.ExitCode != 0 && !suppressFailureDialog)
         {
             Show(
                 bundle.Profile,

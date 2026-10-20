@@ -53,7 +53,20 @@ klawiatury. Nazwa i dostępność w `Ctrl+F1`, pełnej pomocy, menu i palecie
 `Ctrl+Shift+K` pozostają bez zmian, ponieważ regresja dotyczyła wyłącznie
 dostarczenia istniejącego polecenia z natywnej listy Windows.
 
+Klawisze funkcyjne korzystające z edycji profilu, w tym `F2`, otrzymują od
+hosta pełne ścieżki Biblioteki, Podcastów i ustawień także na świeżym profilu,
+zanim te trzy pliki powstaną. Brak jednego pliku nie wyłącza już całej edycji
+komunikatem „Host nie dostał pełnych ścieżek profilu AMC”. Pliki są tworzone
+dopiero przez właściwą, wąską i atomową operację hosta.
+
 ## Uzasadnienie i decyzje
+
+- **Korekta użytkownika z 20 października 2026:** po klawiszu funkcyjnym host
+  mówił, że nie dostał pełnych ścieżek profilu i edycja jest niedostępna.
+  Frontend przekazywał każdą ścieżkę tylko wtedy, gdy odpowiadający jej plik już
+  istniał, natomiast host świadomie tworzy brakujące magazyny przy pierwszej
+  transakcji. Od tej korekty komplet trzech docelowych ścieżek jest częścią
+  kontraktu startu także dla świeżego AMC i AMC Test.
 
 - **Korekta użytkownika z 20 października 2026:** `Ctrl+Shift+0` przestał
   wykonywać preset 10. Przyczyną było uznanie samego sukcesu `RegisterHotKey`
@@ -97,6 +110,11 @@ dostarczenia istniejącego polecenia z natywnej listy Windows.
 
 ## Testy i wynik
 
+- Test startu tworzy trzy nieistniejące ścieżki profilu i potwierdza, że każda
+  trafia do konstruktora klienta hosta przed rozpoczęciem pracy w tle.
+- Łączna bramka tej korekty: **75** testów ukierunkowanych, **194** testy
+  skrótów/menu/pomocy/logiki GUI oraz **22/22** zestawy protokołu hosta.
+
 - Korekta `Ctrl+Shift+0`: **4/4 ukierunkowane testy zaliczone**. Potwierdzono
   rozpoznanie wyłącznie pierwszego dokładnego naciśnięcia, dostępność we
   wszystkich sesjach i widokach, równoczesne utrzymanie obu natywnych granic
@@ -138,6 +156,9 @@ dostarczenia istniejącego polecenia z natywnej listy Windows.
 
 ## Znane ograniczenia
 
+- Korekta pełnych ścieżek profilu jest obecnie w źródłach i testach; czeka na
+  nową paczkę, instalację i ręczny odbiór klawiszy funkcyjnych z NVDA.
+
 - Korekta `Ctrl+Shift+0` z commitu `5d959607` nie została jeszcze zbudowana,
   zainstalowana ani odebrana ręcznie z NVDA.
 - Najnowsza korekta `Shift+F10` i nazwy `Alt+D` jest w bieżącej instalacji AMC
@@ -151,6 +172,10 @@ dostarczenia istniejącego polecenia z natywnej listy Windows.
   stabilnej pozycji.
 
 ## Wersja i commit
+
+- Korekta z 20 października 2026: bieżący commit o nazwie
+  `fix(amc): utrzymaj wyszukiwanie i profil hosta`; instalacja `alpha.425` nie
+  została jeszcze podmieniona tym kodem.
 
 - Źródła regresji `Ctrl+Shift+0`: `5d959607` —
   `fix(amc): przywroc Ctrl Shift 0 na listach`. Testy ukierunkowane i analiza
