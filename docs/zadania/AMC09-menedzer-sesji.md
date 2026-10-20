@@ -1,9 +1,8 @@
 # AMC09 — Menedżer sesji i zwarta numeracja
 
-Status: **Menedżer oraz pierwsze rozszerzenie Konfiguruj są zainstalowane w
-AMC Test. Ujednolicone `Ctrl+F5`, Foldery Biblioteki i pełne mapowanie klawiszy
-funkcyjnych oraz nawigacyjnych są gotowe w źródłach i testach; czekają na
-bezpieczną instalację oraz ręczny odbiór NVDA i usług**
+Status: **Menedżer, ujednolicone `Ctrl+F5`, Foldery Biblioteki oraz pełne
+mapowanie klawiszy funkcyjnych i nawigacyjnych są zainstalowane w AMC Test;
+czekają na ręczny odbiór NVDA i usług**
 
 Data realizacji: 2026-10-19
 
@@ -271,6 +270,14 @@ Historyczny projekt został użyty tylko jako materiał do odczytu.
   klawiatury, skrótów, menu i routingu listy zaliczono. Dodatkowa próba na
   prawdziwym wxPython potwierdziła nazwy fizycznych `F1`, `F4`, `F5`, `F11`,
   `F12` i `F24`. Test `F4` potwierdza zarazem brak przypadkowej akcji.
+- Promocja z commitu dokumentacyjnego `1df89b18` zbudowała 1667 plików,
+  zweryfikowała manifest i każdą sumę SHA-256, atomowo zainstalowała AMC Test
+  oraz uruchomiła dokładnie jedną instancję ze stałej ścieżki. Manifest
+  instalacji ma SHA-256
+  `9B01BE3FC965AACE69510CB1A10F350DE614F6CEBEA260730E1705122AF69AA1`.
+  Testów nie powtarzano w skrypcie promocji: kwit uczciwie podaje
+  „pominięte”, ponieważ wcześniej zaliczono 115 testów klawiatury oraz osobny
+  test i kompilację .NET poprawki nagrywania.
 
 ## Znane ograniczenia
 
@@ -348,13 +355,23 @@ Historyczny projekt został użyty tylko jako materiał do odczytu.
   `.test-tmp\ctrl-f5-diagnoza-20261020`. Zachowano nowego kandydata
   `18f48ef0-86421c1d`, ponieważ jest jedynym gotowym pakietem z radiowym
   `Ctrl+F5` i nie został jeszcze bezpiecznie zainstalowany.
+- Po zweryfikowaniu instalacji `1df89b18-bddb827d` usunięto sześć dokładnie
+  wskazanych, odtwarzalnych katalogów `bin\Release` budowanych projektów,
+  pomocniczy katalog `.dotnet-amc`, dwa lokalne logi kompilacji oraz
+  zastąpionego kandydata `c6231e59-46b3cb81`. Było to 4103 pliki i
+  458 628 539 bajtów, około 437,4 MiB. Usunięcie jest lokalnie
+  nieodwracalne, ale źródła i wyniki można odtworzyć; zachowano nowego,
+  zweryfikowanego kandydata `1df89b18-bddb827d`, instalację, ustawienia,
+  poświadczenia, nagrania i wszystkie niepewne zastane katalogi testowe.
 
 ## Wersja i commit
 
 - Pełne mapowanie `F1`–`F24` i nawigacji bloku numerycznego: commit
   `4d87189e` (`fix(amc): ujednolic klawisze i zachowaj nagranie po awarii`).
-  Kod i testy źródłowe są potwierdzone; nowa paczka i instalacja nie powstały
-  jeszcze po tej korekcie.
+  Dokumentacja: `1df89b18`. Instalacja:
+  `2026.10.20-1df89b186803cd6c4b1b4163a2a4ebd41e54f118-bddb827d`.
+  Kod, testy, paczka, integralność, instalacja i uruchomienie są potwierdzone;
+  publikacji nie wykonano.
 
 - Radiowe `Ctrl+F5`, wspólny katalog poleceń i testy kontraktu: commit
   `a6614d11` (`fix(amc09): dodaj Ctrl+F5 w Radiu`). Zmiana jest potwierdzona

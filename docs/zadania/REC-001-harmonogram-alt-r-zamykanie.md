@@ -1,7 +1,7 @@
 # REC-001 — harmonogram, Alt+R i bezpieczne zamykanie
 
-Status: **Pierwotna poprawka zrobiona; korekta zachowania pliku po zerwaniu
-strumienia gotowa w źródłach, teście i kompilacji, czeka na instalację**
+Status: **Zrobione; korekta zachowania pliku po zerwaniu strumienia jest
+zainstalowana w AMC Test i czeka na ręczny odbiór przyszłego nagrania**
 
 ## Zgłoszenie
 
@@ -110,6 +110,10 @@ aktywny.
   przed awarią strumienia pozostaje w historii”.
 - Odczyt dziennika i pliku Poznania był diagnostyką istniejących danych;
   pliku użytkownika nie zmieniano ani nie przenoszono.
+- Paczka 1667 plików przeszła sprawdzenie manifestu i sum SHA-256, została
+  atomowo zainstalowana, a AMC Test uruchomiono ze stałej ścieżki. Jedna
+  instancja używa launchera, prywatnego Pythona i LiteHosta z tej samej
+  instalacji.
 
 ## Znane ograniczenia
 
@@ -123,5 +127,6 @@ aktywny.
 
 - Zachowanie opublikowanego pliku po zerwaniu strumienia: commit `4d87189e`
   (`fix(amc): ujednolic klawisze i zachowaj nagranie po awarii`). Kod, test i
-  kompilacja są potwierdzone. Instalacja i uruchomienie tej korekty jeszcze nie
-  zostały wykonane.
+  kompilacja są potwierdzone. Zainstalowana wersja:
+  `2026.10.20-1df89b186803cd6c4b1b4163a2a4ebd41e54f118-bddb827d`.
+  Publikacji nie wykonano.

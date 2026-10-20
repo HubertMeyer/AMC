@@ -34,8 +34,8 @@ Roboczy indeks materiału z nocnych etapów do przyszłej instrukcji i opisu
 zmian, wymagający korekty użytkownika:
 [INDEKS-MATERIALU-INSTRUKCJA-I-ZMIANY-2026-10-19.md](INDEKS-MATERIALU-INSTRUKCJA-I-ZMIANY-2026-10-19.md).
 
-- `REC-001` — **Pierwotny zakres zrobiony; korekta zachowania istniejącego
-  pliku po zerwaniu strumienia czeka na instalację** — trwałość wykonanego
+- `REC-001` — **Zrobione; korekta zachowania istniejącego pliku po zerwaniu
+  strumienia jest zainstalowana w AMC Test** — trwałość wykonanego
   harmonogramu nagrywania, zgodność listy `Alt+R` z blokadą zamknięcia oraz
   zachowanie niepustego pliku domkniętego przed awarią odbioru. Szczegóły:
   [REC-001-harmonogram-alt-r-zamykanie.md](REC-001-harmonogram-alt-r-zamykanie.md).
@@ -112,8 +112,8 @@ zmian, wymagający korekty użytkownika:
 - `AMC09` — **Menedżer, pierwsze rozszerzenie Konfiguruj, ujednolicone
   `Ctrl+F5`, precyzyjne nazwy dla każdej sesji oraz Foldery Biblioteki są
   zbudowane; po ręcznym wykryciu brakującego mapowania poprawiono całą rodzinę
-  `F1`–`F24` i nawigację bloku numerycznego, a najnowsza korekta czeka na
-  bezpieczną instalację i ponowny odbiór NVDA** — dostępny
+  `F1`–`F24` i nawigację bloku numerycznego; najnowsza korekta jest
+  zainstalowana i czeka na ponowny odbiór NVDA** — dostępny
   Menedżer sesji pod `Ctrl+Shift+S`, włączanie Spacją, zwarta kolejność
   `Ctrl+1–9`, zmiana kolejności `Alt+strzałkami`, stan gotowości i stała nazwa
   `Radio`. Ma działać już w AMC Test; profil publiczny będzie później filtrował
@@ -128,8 +128,8 @@ zmian, wymagający korekty użytkownika:
   Kod i testy kontraktu są potwierdzone. Ręczny odbiór ujawnił jednak wspólną
   przyczynę ciszy `F5` i `Ctrl+F5`: brak mapowania rzeczywistego kodu klawisza
   wxPython. Poprawka obejmuje już wszystkie klawisze funkcyjne, a nie tylko
-  `F5`; testy zaczynają się od surowych zdarzeń klawiatury. Instalacja tej
-  najnowszej korekty pozostaje do wykonania.
+  `F5`; testy zaczynają się od surowych zdarzeń klawiatury. Najnowsza wersja
+  została zainstalowana 20.10.2026.
   Bieżący zapis realizacji:
   [AMC09-menedzer-sesji.md](AMC09-menedzer-sesji.md).
 - `AMC12` — **W trakcie; fundament profili, rozdzielenie uruchamiacza i
