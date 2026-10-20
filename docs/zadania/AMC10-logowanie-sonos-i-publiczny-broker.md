@@ -24,6 +24,11 @@ prawie gotowe. Ten etap nie zmienia adapterów, list, transportu ani WiiM.
   czysty, bez Spotify i TIDAL-a, a logowanie Sonos oraz `Ctrl+F5` należy najpierw
   dopracować w AMC Test i dopiero po odbiorze podpiąć do profilu publicznego.
   Zastępuje to ewentualne bezpośrednie odsłonięcie Sonosa w obecnym instalatorze.
+- 2026-10-20: późniejsza kontrola dziennika zastępuje roboczą diagnozę, według
+  której zakończony harmonogram pozostawił fałszywy stan nagrywania. Harmonogram
+  z 12:30 zakończył plik o 12:35, ale równolegle trwały cztery prawdziwe
+  nagrania rozpoczęte około 10:25–10:33. Zakończyły się dopiero około 12:51,
+  dlatego odmowa zamknięcia była prawidłowa.
 
 ## Materiał do dokumentacji użytkownika
 
@@ -99,6 +104,7 @@ Kontrakt sprawdzono 2026-10-19 z aktualną oficjalną dokumentacją Sonosa:
 - `src/AccessibleMediaController.SonosBroker/SonosLoginSessionStore.cs`
 - `src/AccessibleMediaController.SonosBroker/SonosOAuthGateway.cs`
 - `src/AccessibleMediaController.SonosBroker/README.md`
+- `scripts/Build-SonosBrokerBundle.ps1`
 - `tests/AccessibleMediaController.SonosBroker.SmokeTests/*`
 - `src/AccessibleMediaController.LiteHost/LiteSonosAccountOwner.cs`
 - `src/AccessibleMediaController.LiteHost/LiteSonosCoordinator.cs`
@@ -136,6 +142,13 @@ Kontrakt sprawdzono 2026-10-19 z aktualną oficjalną dokumentacją Sonosa:
   Sonosa, konta ani głośnika. Pierwsza próba w piaskownicy nie mogła połączyć
   się z lokalnym gniazdem; identyczny test uruchomiony z dostępem do localhost
   zaliczył komplet 16 przypadków.
+- Skrypt `Build-SonosBrokerBundle.ps1` zbudował próbny pakiet framework-dependent
+  bez symboli i sekretów. Manifest objął 4 pliki opublikowanego brokera, a
+  kontrola ponownie obliczonych rozmiarów i SHA-256 nie wykazała rozbieżności.
+  Próbny ZIP miał 30 025 bajtów i SHA-256
+  `30e691e3726e09c689bd4df8896ef4b4fcd8c61c900feb215d6615d11f7cb2ae`.
+  Ponieważ źródła były w trakcie pracy, manifest uczciwie oznaczył go jako
+  `dirty`; nie jest to paczka do wdrożenia ani publikacji.
 - Nie wykonano instalacji, publikacji, logowania ani wdrożenia publicznego.
 - `python -m compileall -q wxlite/amc_wx_lite` — sukces.
 - `dotnet build src/AccessibleMediaController.LiteHost/AccessibleMediaController.LiteHost.csproj --no-restore`
@@ -170,21 +183,22 @@ Kontrakt sprawdzono 2026-10-19 z aktualną oficjalną dokumentacją Sonosa:
   rozpoczął nagrywanie `3 - 2026-10-20 12-30.mp3`. AMC Test odmówił zwykłego
   zamknięcia, aktualizator zakończył się kodem 3 i nie zmienił zainstalowanych
   plików. To potwierdza działanie ochrony nagrywania, nie błąd instalatora.
-- Po zakończeniu nagrania o 12:35 wykonano drugą bramkę: 15/15 folderów było
-  dostępnych, nie znaleziono plików `.amc-partial`, a następny harmonogram był
-  dopiero o 13:00. Aktualizator ponownie nie podmienił plików, ponieważ
-  działający frontend nie zakończył się po bezpiecznym `WM_CLOSE`. Dwa
-  dodatkowe zwykłe polecenia zamknięcia skierowane do potwierdzonego głównego
-  okna również zostały odrzucone. Okno było widoczne, włączone i bez okna
-  modalnego. Tekst kontrolki stanu po odmowie brzmiał: „Nie zamykam AMC Test,
-  ponieważ trwa nagrywanie”. Oznacza to pozostawiony wewnętrzny wpis aktywnego
-  nagrania po zamknięciu pliku, a nie brak odpowiedzi hosta. Procesów nie
-  zakończono wymuszenie; cykl kończenia nagrania wymaga osobnej korekty przed
-  kolejną próbą instalacji.
+- Po zakończeniu harmonogramu z 12:30 o 12:35 wykonano drugą bramkę: 15/15
+  folderów było dostępnych, nie znaleziono plików `.amc-partial`, a następny
+  harmonogram był dopiero o 13:00. Aktualizator ponownie nie podmienił plików,
+  ponieważ działający frontend nie zakończył się po bezpiecznym `WM_CLOSE`.
+  Dwa dodatkowe zwykłe polecenia zamknięcia skierowane do potwierdzonego
+  głównego okna również zostały odrzucone. Okno było widoczne, włączone i bez
+  okna modalnego. Tekst kontrolki stanu brzmiał: „Nie zamykam AMC Test,
+  ponieważ trwa nagrywanie”. Późniejsza analiza pełnego dziennika wykazała, że
+  wciąż działały cztery inne nagrania: Gdańsk Regiony, Meteor, RDC i PIK.
+  Wszystkie zakończyły pliki oraz wpisy stanu około 12:50:51–12:50:56.
+  Odmowa zamknięcia była więc prawidłową ochroną rzeczywistych nagrań, a nie
+  pozostawionym wpisem po harmonogramie. Procesów nie zakończono wymuszenie.
 - O 12:53 ponowna bramka wykazała 15/15 dostępnych folderów, 0 plików
   `.amc-partial`, 0 plików rosnących i następny sześciominutowy harmonogram
-  o 13:00. Wewnętrzny wpis nagrania zdążył się domknąć, więc zwykłe zamknięcie
-  zostało przyjęte. Pierwsze wywołanie aktualizatora zwróciło kod 2 wyłącznie
+  o 13:00. Cztery równoległe nagrania zakończyły się około 12:51, więc zwykłe
+  zamknięcie zostało przyjęte. Pierwsze wywołanie aktualizatora zwróciło kod 2 wyłącznie
   przez nieprawidłowe ujęcie ścieżek ze spacjami i nie rozpoczęło podmiany.
   Powtórzenie z poprawnymi argumentami zakończyło się kodem 0.
 - Zainstalowana paczka przeszła pełne `--sprawdz-pakiet-cicho` z kodem 0.
@@ -210,11 +224,10 @@ Kontrakt sprawdzono 2026-10-19 z aktualną oficjalną dokumentacją Sonosa:
 - Prawdziwe rozpoczęcie logowania, otwarcie przeglądarki, sprawdzenie konta i
   odczyt grup nie były automatyzowane. Wymagają świadomego odbioru użytkownika;
   żadne polecenie nie zostało wysłane do głośnika.
-- Po wcześniejszym zakończeniu pliku host przez kilkanaście minut nadal
-  zgłaszał aktywne nagranie i prawidłowo blokował zamknięcie. Wpis ostatecznie
-  domknął się bez wymuszania procesu. Trzeba obserwować następny harmonogram;
-  jeśli opóźnienie się powtórzy, cykl kończenia nagrania wymaga osobnej
-  korekty i trwałej diagnostyki.
+- Nie potwierdzono regresji pozostawiającej fałszywe aktywne nagranie. Bramka
+  instalacji widziała równoległe, rzeczywiste nagrania, których nie obejmowała
+  początkowa kontrola samych plików harmonogramowych. Kolejne bramki muszą więc
+  nadal łączyć stan hosta z kontrolą wszystkich jawnych folderów nagrań.
 
 ## Brama publicznego udostępnienia
 
@@ -234,6 +247,9 @@ Kontrakt sprawdzono 2026-10-19 z aktualną oficjalną dokumentacją Sonosa:
 - Commit bezpiecznego reverse proxy i testów 16/16: `1db05e74`.
 - Commit okna konta Sonos, bramki `Ctrl+F5`, testów i zapisu realizacji:
   `6b967a29`.
+- Powtarzalny skrypt tworzenia lokalnego pakietu brokera i jego manifestu:
+  przygotowany oraz sprawdzony 20 października 2026; commit zostanie zapisany
+  po domknięciu tej części pracy.
 - Kandydat AMC Test: `2026.10.20-fd5f423117f87c34aff6e9c4def22a985aa307a6-b7475d46`.
 - Instalacja i uruchomienie AMC Test są potwierdzone dla
   `2026.10.20-fd5f423117f87c34aff6e9c4def22a985aa307a6-b7475d46`

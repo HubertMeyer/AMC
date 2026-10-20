@@ -59,6 +59,26 @@ Nie uruchamiaj prawdziwego logowania podczas automatycznych testów. Testy w
 `tests/AccessibleMediaController.SonosBroker.SmokeTests` używają atrap Sonosa
 i lokalnego portu HTTP wyłącznie w środowisku `Development`.
 
+## Powtarzalny pakiet wdrożeniowy
+
+Na komputerze deweloperskim pakiet bez sekretów przygotowuje polecenie:
+
+```powershell
+pwsh -File scripts/Build-SonosBrokerBundle.ps1
+```
+
+Skrypt publikuje framework-dependent aplikację `net8.0`, tworzy manifest
+każdego pliku z rozmiarem i SHA-256, a następnie zapisuje katalog oraz ZIP pod
+`.test-output\sonos-broker`. Nazwa zawiera wersję i commit źródeł. Jeżeli
+śledzone pliki repozytorium są zmienione, pakiet otrzymuje oznaczenie `dirty`
+i nie powinien być wdrażany produkcyjnie.
+
+ZIP nie zawiera konfiguracji ani sekretów. Na serwerze nadal trzeba zapewnić
+.NET 8 ASP.NET Core Runtime, pojedynczą instancję procesu, cztery wymagane
+wartości Sonosa w magazynie sekretów oraz prawdziwy HTTPS. Sposób uruchomienia
+usługi, certyfikat i dokładna lista adresów reverse proxy zależą od wybranego
+hostingu i nie są zgadywane przez skrypt.
+
 ## Źródła kontraktu
 
 - https://docs.sonos.com/docs/authorize
