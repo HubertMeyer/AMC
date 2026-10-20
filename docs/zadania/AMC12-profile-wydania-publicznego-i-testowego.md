@@ -2,12 +2,12 @@
 
 ## Status
 
-**W trakcie — fundament profili, rozdzielenie uruchamiacza i aktualizatora,
-kontrolowana migawka AMC Test → AMC, publiczne pakowanie i instalator są gotowe.
-Do obu profili dodano wspólną, weryfikowaną aktualizację FFmpeg i yt-dlp oraz
-ręczne polecenie dostępne w menu, pomocy i palecie. Kod i kompilacja testowa są
-potwierdzone, ale nowej paczki, instalatora i rzeczywistego pobrania składników
-jeszcze nie wykonano. Poprzedni kandydat nie jest pełnym kandydatem wydania.**
+**W trakcie — publiczne AMC `0.1.0-alpha.425` jest zbudowane, zainstalowane w
+`D:\Projekty Codex\AMC Public` i działa równolegle z AMC Test. Pełna kontrola
+1073 plików jest zaliczona. Pierwszy kandydat ujawnił błąd startu profilu bez
+TIDAL-a; poprawiony kandydat z rewizji `0866d668` został sprawdzony przed i po
+instalacji. Publikacji ani sieciowego odbioru aktualizacji składników jeszcze nie
+wykonywano.**
 
 Źródłowa, zatwierdzona specyfikacja pozostaje w pliku tylko do odczytu:
 `D:\Projekty Codex\Accessible Multimedia Controller\AMC12_PROFILE_WYDANIA_PUBLICZNEGO_I_TESTOWEGO_2026-10-18.md`.
@@ -125,6 +125,11 @@ Użytkownik może też zaznaczyć „Nie twórz folderu w menu Start”. Tryb
 administracyjny `/NOICONS` ma to samo znaczenie i nie tworzy żadnego z tych
 skrótów.
 
+Od 20 października 2026 publiczne AMC można uruchamiać niezależnie od AMC Test.
+Oba okna mają osobne procesy, hosty, profile i magazyny. Publiczne AMC nie
+pokazuje Spotify, TIDAL-a ani Sonosa, ale zachowuje wspólne funkcje dopuszczone
+przez profil. Zainstalowany numer to `0.1.0-alpha.425`.
+
 ## Uzasadnienie i decyzje
 
 - **Korekta użytkownika z 20 października 2026:** pełne prywatne wydanie używane
@@ -235,6 +240,10 @@ skrótów.
 - Skróty nie są bezwarunkowe. Strona folderu menu Start pozostaje dostępna,
   pulpit jest osobnym niezaznaczonym zadaniem, a wszystkie trzy wpisy skrótów
   respektują wybór „bez skrótów”.
+- Stałe opisujące wspólne widoki kolekcji nie mogą pochodzić wyłącznie z
+  prywatnego adaptera TIDAL. Menu buduje się w każdym profilu, dlatego nazwy
+  zakresów są teraz pobierane z zawsze obecnego wspólnego modułu wyszukiwania.
+  Zapobiega to awarii startu publicznego AMC bez ponownego dołączania TIDAL-a.
 
 ## Zmienione pliki
 
@@ -527,14 +536,23 @@ skrótów.
   bezpieczeństwa przerwała operację przed zamknięciem lub podmianą AMC.
   Instalatora nie uruchomiono, istniejących instalacji nie zmieniono i niczego
   nie opublikowano.
+- Pierwsza instalacja `alpha.425` uruchomiła okno diagnostyczne zamiast
+  interfejsu. Dziennik wykazał `NameError` dla stałej widoku TIDAL używanej
+  przez wspólne menu. Po poprawce `0866d668` bezpośredni test importu profilu
+  publicznego przeszedł, a nowa paczka `29f384d7` uruchomiła uruchamiacz,
+  interfejs Python i host z `--release-profile public`.
+- Poprawiony instalator ma 123 991 839 bajtów i SHA-256
+  `074479a63e653f5f211db4c49d33312de792301259f552f1ac5e1f14dca1ca70`.
+  Instalacja do `D:\Projekty Codex\AMC Public` zakończyła się kodem 0, pełna
+  kontrola 1073 plików zakończyła się kodem 0, a wersja uruchomionego
+  `AMC.exe` to `0.1.0-alpha.425`. Równocześnie potwierdzono osobny komplet
+  trzech procesów AMC Test; żadnego z nich nie zatrzymano podczas instalacji.
 
 ## Znane ograniczenia
 
-- Pełny odbiór wymaga jeszcze kontrolowanego pobrania obu składników,
-  potwierdzenia ich wersji i sum, ponownej budowy obu paczek, instalacji AMC
-  Test oraz równoległej instalacji publicznego AMC. Do tego czasu kod jest
-  skompilowany, lecz żaden instalator nie jest jeszcze dowodem kompletnej
-  instalacji po tej korekcie.
+- Pozostaje kontrolowany odbiór rzeczywistego pobrania i aktualizacji FFmpeg
+  oraz yt-dlp w obu profilach. Sama równoległa instalacja i praca obu hostów
+  została już potwierdzona.
 - Pierwsza instalacja offline uruchomi podstawowy interfejs i funkcje
   niewymagające tych narzędzi, ale nie pobierze FFmpeg ani yt-dlp bez sieci.
   Pełny instalator całkowicie offline wymagałby świadomego dołączenia dużego
@@ -566,10 +584,9 @@ skrótów.
   na etap instalatora.
 - Sonos publiczny pozostaje ukryty do czasu prawdziwego brokera HTTPS i
   odbioru z zewnętrznym kontem.
-- Osobne tożsamości procesu i instalator są gotowe, ale nie sprawdzono jeszcze
-  aktualizacji istniejącego publicznego profilu od końca do końca. Czysta
-  instalacja, pełna kontrola i odinstalowanie przeszły; wykonawcza próba
-  ostatecznej korekty `/NOICONS` wymaga osobnej zgody albo maszyny izolowanej.
+- Aktualizacja istniejącego publicznego profilu `alpha.423` do `alpha.425`
+  przeszła od końca do końca z `/NOICONS`; nadal potrzebny jest osobny odbiór
+  zwykłego kreatora na czystym koncie użytkownika.
 - Instalator nie jest jeszcze podpisany cyfrowo ani opublikowany. Plik
   integralności potwierdza lokalny wynik budowy, nie zastępuje podpisu kodu.
 - Na głównym komputerze domyślny publiczny folder
@@ -645,11 +662,16 @@ skrótów.
   `chore(release): ustaw wersje alpha425`.
 - Lokalna linia źródeł `public/release-line`: snapshot `670870d4` z drzewa
   rewizji `215e51e9`; nieopublikowany.
-- Kandydat publiczny `0.1.0-alpha.425`: paczka `2cc62e59`, instalator
-  `AMC-0.1.0-alpha.425-win-x64.exe`, SHA-256
-  `3a1e9e44cdf6de3521d5a59d20b9481fc3e1555b3fb9f0723b2bc08b7d70abae`.
-  Testy i kompilacja są zaliczone. Instalacja została bezpiecznie pominięta z
-  powodu trwającego nagrywania; publikacji nie wykonywano.
+- Pierwszy kandydat publiczny `alpha.425`, paczka `2cc62e59`, został zastąpiony,
+  ponieważ próba startu ujawniła zależność wspólnego menu od wyciętego adaptera
+  TIDAL. Poprawka i test: `0866d668` —
+  `fix(public): uruchom interfejs bez Tidala`.
+- Zainstalowany kandydat publiczny `0.1.0-alpha.425`: paczka `29f384d7`, rewizja
+  źródłowa `0866d6680adbb26d8cd5b1d54c8a145354dea79c`, instalator
+  `AMC-0.1.0-alpha.425-win-x64.exe`, 123 991 839 bajtów, SHA-256
+  `074479a63e653f5f211db4c49d33312de792301259f552f1ac5e1f14dca1ca70`.
+  Test, kompilacja, instalacja, pełna kontrola i uruchomienie są zaliczone.
+  Publikacji nie wykonywano.
 - Wspólna, weryfikowana aktualizacja FFmpeg i yt-dlp dla AMC Test oraz
   publicznego AMC, razem z menu, pomocą, paletą i międzyprocesową bramką:
   `31381b2d` — `feat(amc12): aktualizuj skladniki obu profili`. Testy

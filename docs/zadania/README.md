@@ -152,11 +152,12 @@ zmian, wymagający korekty użytkownika:
   instalator nie jest pełnym kandydatem. Ustalono trwałe nazwy kanałów: pełna
   prywatna wersja właściciela to `AMC Test`, a wydanie dla wszystkich to `AMC`.
   `alpha.423` pozostaje zużytym numerem diagnostycznym; następny numer roboczy
-  `0.1.0-alpha.425` został przypisany lokalnemu kandydatowi. Paczka publiczna i
-  instalator są zbudowane, mają potwierdzoną integralność oraz nie zawierają
-  prywatnych usług. Instalację przerwano przed zamknięciem programu, ponieważ
-  bramka bezpieczeństwa wykryła nowe, rosnące nagranie. Niczego nie
-  zainstalowano ani nie opublikowano** —
+  `0.1.0-alpha.425` został przypisany lokalnemu kandydatowi. Pierwsza instalacja
+  ujawniła zależność wspólnego menu od wyciętego modułu TIDAL. Poprawka
+  `0866d668` została przetestowana, przebudowana i zainstalowana do
+  `D:\Projekty Codex\AMC Public`. Pełna kontrola 1073 plików przeszła, a
+  publiczny uruchamiacz, interfejs i host z profilem `public` działają
+  równolegle z osobnym kompletem AMC Test. Niczego nie opublikowano** —
   jeden kod, jawny manifest możliwości, osobne katalogi, blokady, logi i kanały
   AMC Test oraz publicznego AMC. Bieżący zapis realizacji:
   [AMC12-profile-wydania-publicznego-i-testowego.md](AMC12-profile-wydania-publicznego-i-testowego.md).
