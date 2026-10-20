@@ -106,6 +106,13 @@ drugiego profilu.
 
 ## Testy i wynik
 
+- 20.10.2026: przed pierwszym publicznym wydaniem test przekazywania żądania do
+  działającej instancji dwukrotnie wszedł w timeout, ponieważ używał stałej
+  nazwy rzeczywistego kanału profilu. Test otrzymał unikalną tożsamość profilu,
+  dzięki czemu nie może połączyć się z użytkowym AMC ani równoległym przebiegiem.
+  Kod produkcyjny i nazwy kanałów AMC oraz AMC Test nie zostały zmienione.
+  Powtórzenie zaliczyło wszystkie **27 testów** launchera i aktualizatora.
+
 2026-10-19, etap A:
 
 - `python wxlite/run_tests.py shell_paths_and_folder_command` — wszystkie 7

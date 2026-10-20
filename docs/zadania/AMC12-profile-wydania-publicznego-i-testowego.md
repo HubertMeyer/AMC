@@ -267,6 +267,13 @@ skrótów.
   układu paczki zakończyły się wynikiem **36 zaliczonych**. Sprawdzają fizyczne
   pominięcie modułów Spotify, TIDAL-u i Sonosa, import publicznego interfejsu
   bez tych modułów, brak ich sesji i możliwości oraz zamknięty kontrakt profilu.
+- Pełna regresja wxPython po tej decyzji: **1875 zaliczonych, 110 pominiętych
+  i 11 podtestów zaliczonych**. Testy protokołu hosta zaliczyły wszystkie
+  **21 zestawów**. Pierwszy i drugi przebieg testów launchera wykrył timeout
+  potoku, ponieważ test używał stałego użytkowego kanału profilu i mógł wejść
+  w kolizję z inną instancją. Izolowano wyłącznie tożsamość kanału testowego;
+  powtórzenie zaliczyło wszystkie **27 przypadków** bez osłabiania kontraktu
+  produkcyjnego.
 - Uruchamiacz i aktualizator po dodaniu pełnej kontroli wszystkich plików:
   **22 testy C# zaliczone**.
 - Test strukturalny samowystarczalności instalatora zaliczony. Potwierdza trzy
@@ -504,7 +511,8 @@ skrótów.
   Paczka, manifest i integralność instalatora są potwierdzone lokalnie;
   instalacji publicznego wariantu ani publikacji nie wykonywano.
 - Wykluczenie modułu interfejsu Sonosa z pierwszego publicznego wydania:
-  oczekuje na lokalny commit, pełną regresję, nową paczkę, instalator i
-  równoległą instalację odbiorczą. Istniejący kandydat `6e1f6bc9` został przez
+  commit `5ff46900`; pełna regresja jest zielona. Nowa paczka, instalator i
+  równoległa instalacja odbiorcza pozostają do wykonania. Istniejący kandydat
+  `6e1f6bc9` został przez
   tę decyzję zastąpiony jako planowany materiał wydania, ale pozostaje lokalnym
   artefaktem do czasu zweryfikowania następcy.

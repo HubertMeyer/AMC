@@ -243,14 +243,21 @@ internal static class Program
 
     private static void ShellChannelForwardsToExistingInstance()
     {
+        // Kanał użytkowego profilu może należeć do równolegle uruchomionego
+        // AMC albo innego przebiegu testów. Unikalna tożsamość zachowuje ten
+        // sam kontrakt potoku, ale nie pozwala testowi wejść do obcej instancji.
+        var profile = ReleaseProfileContract.Test with
+        {
+            ProfileId = "test-" + Guid.NewGuid().ToString("N"),
+        };
         var received = new TaskCompletionSource<string>(
             TaskCreationOptions.RunContinuationsAsynchronously);
         using var server = ShellRequestChannel.Start(
-            ReleaseProfileContract.Test,
+            profile,
             payload => received.TrySetResult(payload));
         var request = new ShellLaunchRequest([@"C:\Muzyka\plik.mp3"], false);
         Equal(true, ShellRequestChannel.TrySend(
-            ReleaseProfileContract.Test,
+            profile,
             request,
             5_000));
         var forwarded = received.Task.WaitAsync(TimeSpan.FromSeconds(5))
