@@ -507,6 +507,26 @@ skrótów.
   natomiast `alpha.425` występuje jako następny planowany kandydat. Była to
   weryfikacja dokumentacji; kodu, kompilacji, instalacji ani publikacji nie
   wykonywano.
+- Bramka wydania `alpha.425` z 20.10.2026 zaliczyła **51 testów Python** profilu,
+  instalatora, układu paczki i aktualizatora składników. Osobny zestaw .NET
+  `ComponentUpdatePolicyTests` również zaliczono. Pierwsza próba .NET nie
+  uruchomiła testu z powodu niedostępnego internetowego audytu NuGet; powtórzenie
+  z projektowym `NuGetAudit=false` zakończyło się kodem 0.
+- Zbudowano czystą publiczną paczkę z rewizji `215e51e9`: profil `public`, nazwa
+  `AMC`, identyfikator paczki `2cc62e59`, 1073 pliki kontrolowane i 1074 pliki
+  razem z manifestem, 422 627 178 bajtów. Manifest ma `sourceDirty=false`, a
+  kontrola nie znalazła modułów Spotify, TIDAL-u, Sonosa ani Librespot. Pełna
+  kontrola paczki zakończyła się kodem 0; uruchamiacz i silnik zgłaszają
+  `0.1.0-alpha.425`. Paczka znajduje się w
+  `.test-output/AMC-public-2026.10.20-215e51e9-alpha425`.
+- Instalator w `.test-output/installers/amc12-2026.10.20-215e51e9-alpha425/`
+  pod nazwą `AMC-0.1.0-alpha.425-win-x64.exe` ma 123 378 797 bajtów i SHA-256
+  `3a1e9e44cdf6de3521d5a59d20b9481fc3e1555b3fb9f0723b2bc08b7d70abae`.
+  Niezależny odczyt pliku oraz manifest integralności są zgodne. Bezpośrednio
+  przed instalacją wykryto nowy, rosnący plik `.amc-partial`; bramka
+  bezpieczeństwa przerwała operację przed zamknięciem lub podmianą AMC.
+  Instalatora nie uruchomiono, istniejących instalacji nie zmieniono i niczego
+  nie opublikowano.
 
 ## Znane ograniczenia
 
@@ -531,7 +551,8 @@ skrótów.
   oceniać równoległego działania silnika; zostanie zastąpiony po nowej
   kompilacji, instalacji i potwierdzeniu dwóch hostów.
 - Dokładny numer następnego wydania pozostaje niezatwierdzony do chwili budowy.
-  `alpha.425` jest numerem roboczym, a nie obietnicą opublikowanej wersji.
+  Numer `alpha.425` został już przypisany zbudowanemu lokalnemu kandydatowi, ale
+  nie oznacza jeszcze zainstalowanego ani opublikowanego wydania.
 - Wersjonowana, atomowa migawka została skompilowana i sprawdzona na
   odizolowanych magazynach testowych, ale nie została jeszcze odebrana w
   zainstalowanych AMC Test i AMC. Pierwsza wersja ma stały bezpieczny zakres;
@@ -620,6 +641,15 @@ skrótów.
   Test”, wydanie dla wszystkich „AMC”; następny numer roboczy
   `0.1.0-alpha.425`. Zmiana dotyczy dokumentacji i nie zmienia jeszcze stałych
   wersji, paczki, instalacji ani opublikowanego wydania.
+- Ustawienie numeru w metadanych źródeł: `215e51e9` —
+  `chore(release): ustaw wersje alpha425`.
+- Lokalna linia źródeł `public/release-line`: snapshot `670870d4` z drzewa
+  rewizji `215e51e9`; nieopublikowany.
+- Kandydat publiczny `0.1.0-alpha.425`: paczka `2cc62e59`, instalator
+  `AMC-0.1.0-alpha.425-win-x64.exe`, SHA-256
+  `3a1e9e44cdf6de3521d5a59d20b9481fc3e1555b3fb9f0723b2bc08b7d70abae`.
+  Testy i kompilacja są zaliczone. Instalacja została bezpiecznie pominięta z
+  powodu trwającego nagrywania; publikacji nie wykonywano.
 - Wspólna, weryfikowana aktualizacja FFmpeg i yt-dlp dla AMC Test oraz
   publicznego AMC, razem z menu, pomocą, paletą i międzyprocesową bramką:
   `31381b2d` — `feat(amc12): aktualizuj skladniki obu profili`. Testy
