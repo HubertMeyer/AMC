@@ -8,8 +8,8 @@ użytkownika. Nie zmienia statusu ręcznego odbioru NVDA poszczególnych funkcji
 
 ## Punkt odniesienia wersji
 
-- Najnowsza zainstalowana i uruchomiona paczka AMC Test:
-  `2026.10.19-c3ffea70d9f002d936bbabd43421b03393c9702d-a329942c`.
+- Najnowsza potwierdzona zainstalowana paczka AMC Test przed bieżącym etapem:
+  `2026.10.20-f96149f75e83eea064899db78c762596e56d2504-904ceb8c`.
 - Zawiera dostępne okna kont Spotify i TIDAL oraz kontekstowy `Ctrl+F5` z
   commitu `c3ffea7`. Ręczny odbiór NVDA, OAuth i playlist Spotify pozostaje
   otwarty.
@@ -68,7 +68,8 @@ użytkownika. Nie zmienia statusu ręcznego odbioru NVDA poszczególnych funkcji
     `Alt+strzałka w górę/dół`, „Konfiguruj…”, zwarta numeracja `Ctrl+1–9` i
     zabezpieczenia przed wyłączeniem aktywnej lub ostatniej sesji. Kontekstowe
     `Ctrl+F5` otwiera konto Spotify lub TIDAL, odświeża urządzenia WiiM,
-    odświeża Podcasty albo wybiera cel Sonos; zwykłe `F5` nadal odświeża widok.
+    odświeża Podcasty albo wybiera cel Sonos; przy braku połączenia Sonos
+    prowadzi do okna konta. Zwykłe `F5` nadal odświeża widok.
     Źródło:
     [AMC09-menedzer-sesji.md](AMC09-menedzer-sesji.md).
 11. AMC Test i przyszły publiczny AMC — osobne dane i możliwości, publiczne
@@ -84,9 +85,13 @@ użytkownika. Nie zmienia statusu ręcznego odbioru NVDA poszczególnych funkcji
     pomocą AMC” i „Dodaj do kolejki AMC”. Rejestracja systemowa nie została
     jeszcze zastosowana. Źródło:
     [AMC14-foldery-i-integracja-powloki.md](AMC14-foldery-i-integracja-powloki.md).
-13. Sonos — istniejące okno konta korzysta z brokera, który nie ujawnia
-    aplikacji sekretu integracji. Publiczny Sonos pozostaje ukryty do czasu
-    wdrożenia stałego HTTPS i odbioru na zewnętrznym koncie. Źródło:
+13. Sonos — okno konta w AMC Test udostępnia rozpoczęcie, jawne sprawdzenie i
+    anulowanie logowania, odświeżenie dostępu, ponowienie zapisu, wylogowanie
+    oraz przejście do głośników i grup. Rozpoczęcie przygotowuje adres; stronę
+    można skopiować lub otworzyć dopiero świadomym przyciskiem. Tokeny pozostają
+    w C#, a broker nie ujawnia aplikacji sekretu integracji. Publiczny Sonos
+    pozostaje ukryty do czasu wdrożenia stałego HTTPS i odbioru na zewnętrznym
+    koncie. Źródło:
     [AMC10-logowanie-sonos-i-publiczny-broker.md](AMC10-logowanie-sonos-i-publiczny-broker.md).
 14. Sygnalista — polecenie `Zgłoś błąd lub sugestię…` w menu Pomoc i palecie,
     pełny podgląd zredagowanego raportu, domyślnie wyłączony log oraz lokalne
@@ -127,6 +132,9 @@ użytkownika. Nie zmienia statusu ręcznego odbioru NVDA poszczególnych funkcji
   właściwego profilu i opcjonalną, odwracalną integrację z powłoką Windows.
 - Dodano lokalnie testowalny broker logowania Sonos z jednorazowym PKCE,
   odnowieniem i ochroną danych; nie został jeszcze wdrożony publicznie.
+- Dodano dostępne okno konta Sonos w AMC Test i bezpieczną bramkę `Ctrl+F5`:
+  połączone konto prowadzi do grup, a brak połączenia do logowania. Zmiana
+  pozostaje materiałem roboczym do instrukcji do czasu instalacji i odbioru NVDA.
 - Dodano lokalny fundament Sygnalisty z pełnym podglądem, ostrożną redakcją
   danych i osobnym zapisem raportów dla AMC Test oraz AMC; wysyłanie sieciowe
   pozostaje wyłączone.
