@@ -462,8 +462,7 @@ sekretów oraz tokenów:
 - Commit okna konta Sonos, bramki `Ctrl+F5`, testów i zapisu realizacji:
   `6b967a29`.
 - Powtarzalny skrypt tworzenia lokalnego pakietu brokera i jego manifestu:
-  przygotowany oraz sprawdzony 20 października 2026; commit zostanie zapisany
-  po domknięciu tej części pracy.
+  przygotowany oraz sprawdzony 20 października 2026; commit `2bac12d0`.
 - Kandydat AMC Test: `2026.10.20-fd5f423117f87c34aff6e9c4def22a985aa307a6-b7475d46`.
 - Instalacja i uruchomienie AMC Test są potwierdzone dla
   `2026.10.20-fd5f423117f87c34aff6e9c4def22a985aa307a6-b7475d46`
@@ -492,6 +491,9 @@ sekretów oraz tokenów:
 - Powtarzalny samodzielny ZIP bez źródeł i sekretów: commit `2bac12d0` —
   `build(amc10): pakuj broker do wdrozenia`. Pakiet został zbudowany i
   zweryfikowany lokalnie; nie został wysłany ani uruchomiony na serwerze.
+- Dowód historycznego logowania użytkownika, rozdzielenie tokenu od sekretu
+  integracji i bezpieczna lista kontroli dla Hermesa: commit `8ac9b2be` —
+  `docs(amc10): zapisz dowod historycznego logowania`.
 
 ## Porządek dysku
 
