@@ -446,6 +446,14 @@ Kontrakt sprawdzono 2026-10-19 z aktualną oficjalną dokumentacją Sonosa:
   piaskownicy, a trzy próby HTTP zostały przez nią zablokowane na localhost.
   Identyczny zestaw uruchomiony z dostępem wyłącznie do `127.0.0.1` zaliczył
   wszystkie **18/18** przypadków. Nie użyto sieci Sonosa, konta ani głośników.
+- Po commicie zbudowano czysty pakiet
+  `AMC-Sonos-Deployment-0.1.0-alpha.422-b762c9b59b58.zip`: 37 153 bajty,
+  SHA-256 `6b799ec360f62c1008494b44fd556ee8e11a616154825efd885cdd1de96d4643`.
+  Manifest wskazuje pełny commit
+  `b762c9b59b585fe3571a1fb0aaaf8fc83c3439fc`,
+  `workingTreeClean=true`, `includesSecrets=false` i 11 kontrolowanych plików.
+  Ponowne obliczenie wszystkich sum dało zero rozbieżności. Instrukcja migracji
+  jest obecna w manifeście i ZIP-ie; `sonos_client_secret.txt` nie występuje.
 
 ## Znane ograniczenia
 
@@ -555,6 +563,9 @@ migracji.
   sterowania od brokera logowania oraz bramka przed instalacją źródeł z
   wyłączonym brokerem: commit `2759b508` —
   `docs(amc10): doprecyzuj dzialajace konto Sonos`.
+- Raport Hermesa, bezprzerwowa instrukcja przejścia i dołączenie jej do pakietu
+  wdrożeniowego: commit `b762c9b5` —
+  `docs(amc10): przygotuj migracje dzialajacej integracji`.
 
 ## Porządek dysku
 
@@ -570,3 +581,8 @@ migracji.
   `D:\Projekty Codex\AMC - integracja wxPython\.test-output`. Są odtwarzalne i
   nie podlegają odzyskaniu. Zachowano jedyny czysty ZIP wdrożeniowy o rozmiarze
   34 856 bajtów oraz nie dotknięto zastanych `.test-output` i `.test-tmp`.
+- Po kontroli nowego pakietu usunięto dokładnie katalog brudnej próby
+  `.test-output\sonos-deployment-migration-check` oraz rozpakowany katalog
+  czystego kandydata pod `.test-output\sonos-deployment-migration-final`.
+  Odzyskano około 189 KiB. Pliki są odtwarzalne i nie podlegają odzyskaniu;
+  zachowano jedyny zweryfikowany ZIP nowego kandydata o rozmiarze 37 153 bajtów.
