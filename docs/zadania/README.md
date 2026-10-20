@@ -122,8 +122,7 @@ zmian, wymagający korekty użytkownika:
   Folderów Biblioteki; pozostałe sesje zachowują własne znaczenie tego skrótu.
   Korekta z 20.10.2026 dodaje w Radiu rzeczywiste „Odśwież stacje Radia” pod
   `Ctrl+F5`, również z odtwarzacza, przy wspólnym opisie menu, pomocy i palety.
-  Kod i testy są gotowe, lecz instalacja tej korekty czeka na koniec trwających
-  nagrań.
+  Kod, testy i instalacja tej korekty są potwierdzone; pozostaje odbiór NVDA.
   Bieżący zapis realizacji:
   [AMC09-menedzer-sesji.md](AMC09-menedzer-sesji.md).
 - `AMC12` — **W trakcie; fundament profili, rozdzielenie uruchamiacza i
@@ -138,10 +137,9 @@ zmian, wymagający korekty użytkownika:
   [AMC12-profile-wydania-publicznego-i-testowego.md](AMC12-profile-wydania-publicznego-i-testowego.md).
   Zatwierdzona specyfikacja:
   `D:\Projekty Codex\Accessible Multimedia Controller\AMC12_PROFILE_WYDANIA_PUBLICZNEGO_I_TESTOWEGO_2026-10-18.md`.
-- `AMC10` — **W trakcie; broker oraz dostępne okno konta AMC Test są gotowe
-  w źródłach, kompilacji, testach i zweryfikowanym kandydacie; instalację
-  prawidłowo odłożyła ochrona trwającego nagrania, a dalej potrzebne są domena
-  i odbiór na zewnętrznym koncie** — działające sterowanie Sonosem i WiiM nie zostało
+- `AMC10` — **W trakcie; broker oraz dostępne okno konta są zainstalowane
+  w AMC Test; dalej potrzebne są domena i odbiór na zewnętrznym koncie** —
+  działające sterowanie Sonosem i WiiM nie zostało
   przepisane. `Ctrl+F5` wybiera dom i grupę, a przy braku połączenia prowadzi do
   konta zamiast kończyć się błędem. Okno udostępnia rozpoczęcie, jawne
   sprawdzenie, anulowanie i odświeżenie logowania bez przekazywania tokenów do

@@ -258,12 +258,10 @@ Historyczny projekt został użyty tylko jako materiał do odczytu.
 - Ręczny odbiór NVDA nadal powinien sprawdzić sesyjne nazwy i działanie
   `Ctrl+F5` na prawdziwych kontach i urządzeniach. Kompilacja i instalacja
   potwierdzają dostarczenie kodu, ale nie zastępują tego odbioru.
-- Radiowe `Ctrl+F5` jest potwierdzone w źródłach, testach i zbudowanym
-  kandydacie, ale nadal nie jest zainstalowane. Pierwszą wcześniejszą próbę
-  wstrzymały dwa nagrania. Próba z 20 października zbudowała poprawny pakiet,
-  lecz aktualizator nie podmienił działającej instalacji, a zwykłe zamknięcie
-  zostało odłożone ze względu na harmonogram rozpoczynający się o 12:13.
-  Działający AMC Test nadal ma wariant `f96149f7-904ceb8c` bez radiowej akcji.
+- Radiowe i sesyjne `Ctrl+F5` jest zainstalowane w AMC Test w pakiecie
+  `fd5f4231-b7475d46`. Nadal wymaga ręcznego odbioru NVDA na prawdziwych
+  kontach i urządzeniach; instalacja nie jest dowodem działania zewnętrznej
+  usługi.
 
 ## Porządek dysku
 
@@ -315,10 +313,9 @@ Historyczny projekt został użyty tylko jako materiał do odczytu.
 - Radiowe `Ctrl+F5`, wspólny katalog poleceń i testy kontraktu: commit
   `a6614d11` (`fix(amc09): dodaj Ctrl+F5 w Radiu`). Zmiana jest potwierdzona
   w źródłach, testach i kandydacie
-  `2026.10.20-18f48ef058b696f5c14204bc7e8096f9f2a77048-86421c1d`
-  (1667 plików). Instalacja i uruchomienie nie są jeszcze potwierdzone;
-  aktualizator zatrzymał się bez podmiany przed bliskim harmonogramem.
-  Publikacji nie wykonano.
+  `2026.10.20-fd5f423117f87c34aff6e9c4def22a985aa307a6-b7475d46`
+  (1667 plików). Instalację, integralność i uruchomienie potwierdzono
+  20 października 2026 o 12:55. Publikacji nie wykonano.
 - Instalacja i uruchomienie doprecyzowanych nazw `Ctrl+F5`: potwierdzone dla
   `2026.10.20-f96149f75e83eea064899db78c762596e56d2504-904ceb8c` w
   `D:\Projekty Codex\AMC Python`. Paczka zawiera 1667 plików; źródłem jest

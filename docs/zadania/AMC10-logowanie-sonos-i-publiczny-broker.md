@@ -2,7 +2,7 @@
 
 ## Status
 
-**W trakcie — broker gotowy w źródłach, kompilacji i testach lokalnych;
+**W trakcie — broker i okno konta są zainstalowane w AMC Test;
 publiczne wdrożenie oraz odbiór z zewnętrznym kontem pozostają bramą.**
 
 Sterowanie Sonosem i WiiM było już przeszczepione i użytkownik ocenił je jako
@@ -181,6 +181,17 @@ Kontrakt sprawdzono 2026-10-19 z aktualną oficjalną dokumentacją Sonosa:
   nagrania po zamknięciu pliku, a nie brak odpowiedzi hosta. Procesów nie
   zakończono wymuszenie; cykl kończenia nagrania wymaga osobnej korekty przed
   kolejną próbą instalacji.
+- O 12:53 ponowna bramka wykazała 15/15 dostępnych folderów, 0 plików
+  `.amc-partial`, 0 plików rosnących i następny sześciominutowy harmonogram
+  o 13:00. Wewnętrzny wpis nagrania zdążył się domknąć, więc zwykłe zamknięcie
+  zostało przyjęte. Pierwsze wywołanie aktualizatora zwróciło kod 2 wyłącznie
+  przez nieprawidłowe ujęcie ścieżek ze spacjami i nie rozpoczęło podmiany.
+  Powtórzenie z poprawnymi argumentami zakończyło się kodem 0.
+- Zainstalowana paczka przeszła pełne `--sprawdz-pakiet-cicho` z kodem 0.
+  Manifest ma 1667 plików i SHA-256
+  `C60D5072408CFC936160531CF627B8F35432EF4A2F14CEA064F4D08C098C1F66`.
+  O 12:55 działały dokładnie trzy nowe procesy z katalogu instalacji: jeden
+  uruchamiacz, jeden frontend i jeden LiteHost.
 
 ## Znane ograniczenia
 
@@ -194,17 +205,16 @@ Kontrakt sprawdzono 2026-10-19 z aktualną oficjalną dokumentacją Sonosa:
   omijać tej ochrony przez zaufanie wszystkim klientom.
 - Nie wykonano ręcznego odbioru NVDA istniejącego okna konta ani prawdziwego
   odnowienia tokenu. Potrzebna jest obecność użytkownika.
-- Nowe okno konta jest gotowe w źródłach, testach i zweryfikowanym kandydacie,
-  ale nie jest jeszcze zainstalowane w użytkowym AMC Test. Dopiero bezpieczna
-  bramka nagrywania pozwala podmienić działającą instalację.
+- Nowe okno konta jest zainstalowane w użytkowym AMC Test. Nadal wymaga
+  ręcznego odbioru NVDA i świadomej próby prawdziwego logowania.
 - Prawdziwe rozpoczęcie logowania, otwarcie przeglądarki, sprawdzenie konta i
   odczyt grup nie były automatyzowane. Wymagają świadomego odbioru użytkownika;
   żadne polecenie nie zostało wysłane do głośnika.
-- Bieżąca zainstalowana wersja nie zamyka się na żądanie aktualizatora także
-  po potwierdzonym zakończeniu zapisu pliku. Nie wolno obchodzić tej odmowy
-  wymuszonym zakończeniem procesu. Komunikat użytkowy potwierdza, że host nadal
-  zgłasza aktywne nagranie; trzeba naprawić domknięcie tego wpisu i dodać
-  trwałą diagnostykę decyzji.
+- Po wcześniejszym zakończeniu pliku host przez kilkanaście minut nadal
+  zgłaszał aktywne nagranie i prawidłowo blokował zamknięcie. Wpis ostatecznie
+  domknął się bez wymuszania procesu. Trzeba obserwować następny harmonogram;
+  jeśli opóźnienie się powtórzy, cykl kończenia nagrania wymaga osobnej
+  korekty i trwałej diagnostyki.
 
 ## Brama publicznego udostępnienia
 
@@ -225,8 +235,7 @@ Kontrakt sprawdzono 2026-10-19 z aktualną oficjalną dokumentacją Sonosa:
 - Commit okna konta Sonos, bramki `Ctrl+F5`, testów i zapisu realizacji:
   `6b967a29`.
 - Kandydat AMC Test: `2026.10.20-fd5f423117f87c34aff6e9c4def22a985aa307a6-b7475d46`.
-- Zainstalowany AMC Test pozostaje w wersji
-  `2026.10.20-f96149f75e83eea064899db78c762596e56d2504-904ceb8c`;
-  instalacja nowego kandydata została bezpiecznie odłożona przez aktywne
-  nagrywanie harmonogramowe.
+- Instalacja i uruchomienie AMC Test są potwierdzone dla
+  `2026.10.20-fd5f423117f87c34aff6e9c4def22a985aa307a6-b7475d46`
+  w `D:\Projekty Codex\AMC Python` 20 października 2026 o 12:55.
 - Publikacja: brak.

@@ -124,5 +124,8 @@ SHA-256, została zainstalowana i uruchomiona jako AMC Test.
 - Instalacja zawierająca skoki procentowe:
   `2026.10.19-fb9ba25fe0680cf7bf5435d53eb5b073de091cca-0debb6aa`,
   zweryfikowana i uruchomiona 19 października 2026.
+- Bieżąca instalacja zbiorcza zawierająca ten sam mechanizm:
+  `2026.10.20-fd5f423117f87c34aff6e9c4def22a985aa307a6-b7475d46`,
+  integralność i uruchomienie zweryfikowane 20 października 2026 o 12:55.
 - Publikacja: nie wykonano; brak wysyłania do GitHuba i brak wydania publicznego.
 
