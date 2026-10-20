@@ -95,6 +95,11 @@ test("valid report creates private intake and public issue exactly once", async 
   assert.match(calls[0].url, /amc-support-intake\/issues$/);
   assert.match(calls[1].url, /AMC\/issues$/);
   assert.equal(calls[0].options.headers.authorization, "Bearer worker-secret-never-returned");
+  const privateIssue = JSON.parse(calls[0].options.body);
+  const publicIssue = JSON.parse(calls[1].options.body);
+  assert.match(privateIssue.body, /Raport AMC/);
+  assert.doesNotMatch(publicIssue.body, /Raport AMC|Radio nie startuje/);
+  assert.match(publicIssue.body, /Prywatny zapis dla opiekuna/);
   assert.doesNotMatch(JSON.stringify(firstBody).toLowerCase(), /worker-secret/);
 
   const duplicate = await worker.fetch(reportRequest(), env);
