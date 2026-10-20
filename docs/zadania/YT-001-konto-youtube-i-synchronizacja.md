@@ -1,6 +1,6 @@
 # YT-001 — konto YouTube i synchronizacja
 
-- Status: `W trakcie — bezpieczny fundament OAuth i atomowy zapis subskrypcji gotowe, brak jeszcze klienta Google i interfejsu`
+- Status: `W trakcie — bezpieczny fundament OAuth, atomowy zapis i chroniony protokół hosta gotowe, brak jeszcze klienta Google i interfejsu wx`
 - Utworzono: 18 października 2026
 - Obszar: YouTube, OAuth, Biblioteka, wyszukiwanie i bezpieczne poświadczenia
 - Polecenie uruchamiające: `Uruchom zadanie YT-001`
@@ -146,7 +146,10 @@ Automatyczne usuwanie po obu stronach jest wykluczone.
   `src/AccessibleMediaController.Core/YouTube/YouTubeSubscriptionSyncPlanner.cs`,
   `src/AccessibleMediaController.Core/YouTube/YouTubeSubscriptionSyncApplier.cs`,
   `src/AccessibleMediaController.Windows/Services/YouTubeCredentialStore.cs`,
-  powiązanie magazynu z LiteHostem oraz testy Core i Windows.
+  `src/AccessibleMediaController.LiteHost/LiteYouTubeAccountCoordinator.cs`,
+  `src/AccessibleMediaController.LiteHost/LiteYouTubeWindowsAccountBackend.cs`,
+  `src/AccessibleMediaController.LiteHost/Protocol/LiteYouTubeAccountContract.cs`,
+  powiązanie magazynu z LiteHostem oraz testy Core, Windows i protokołu.
 - Testy: `dotnet run --project
   tests/AccessibleMediaController.Core.SmokeTests/AccessibleMediaController.Core.SmokeTests.csproj
   --no-restore -- --youtube-oauth-foundation` — zaliczone 10 z 10 scenariuszy.
@@ -157,14 +160,17 @@ Automatyczne usuwanie po obu stronach jest wykluczone.
   `--youtube-subscription-sync-plan` — zaliczone 5 z 5 scenariuszy polityki
   jednokierunkowej. Test `--youtube-subscription-sync-apply` — zaliczone 4 z 4
   scenariuszy prawdziwej bazy SQLite. Kompilacja Release Core SmokeTests oraz
-  projekty Windows i LiteHost zakończyły się bez ostrzeżeń i błędów.
+  projekty Windows i LiteHost zakończyły się bez ostrzeżeń i błędów. Test
+  protokołu `--youtube-account` — zaliczone 5 z 5 scenariuszy, kompilacja
+  ProtocolTests Release — zaliczona bez ostrzeżeń i błędów.
 - Commity źródła i testów: `ce723bff` (`feat(youtube): add safe OAuth protocol foundation`)
   `0c15fbcb` (`feat(youtube): isolate token exchange and credentials`) oraz
   `cbd2a5d3` (`feat(youtube): add guarded loopback callback`) i `161cb856`
   (`feat(youtube): coordinate account lifecycle safely`) oraz `86309bb0`
   (`feat(youtube): read account subscriptions safely`) i `436c5e3d`
   (`feat(youtube): plan one-way subscription sync`) oraz `904c8011`
-  (`feat(youtube): apply subscription sync atomically`).
+  (`feat(youtube): apply subscription sync atomically`) i `8f0c1341`
+  (`feat(youtube): connect guarded account host protocol`).
 - Zainstalowana kompilacja: brak. Ten etap nie zmienia jeszcze interfejsu ani
   bieżącej instalacji AMC Test.
 
@@ -219,6 +225,14 @@ bez konta.
   zerowy czas ostatniego odświeżenia, więc istniejący harmonogram uzupełnia je
   później w skonfigurowanych porcjach. Wyłączony automat pozostaje wyłączony i
   wtedy użytkownik może odświeżyć źródła ręcznie.
+- Protokół hosta rozdziela status, jawne logowanie, wylogowanie, podgląd i
+  zastosowanie synchronizacji. Zastosowanie wymaga podglądu nie starszego niż
+  dziesięć minut i dokładnie tego samego wyboru przywracania usuniętych kanałów.
+  Odpowiedzi zawierają tylko użytkowe nazwy oraz liczniki; tokeny, kody, adresy,
+  identyfikatory klienta, konta i kanału nie przechodzą do Pythona.
+- Host rejestruje te operacje tylko w profilu `AMC Test`, gdy otrzyma prawidłowy
+  identyfikator klienta Google i ścieżkę bazy Podcastów. Sam brak konfiguracji
+  nie tworzy martwych poleceń. Publiczny profil pozostaje twardo wyłączony.
 
 ## Testy i wynik
 
@@ -244,13 +258,15 @@ Cztery scenariusze prawdziwej tymczasowej bazy SQLite potwierdziły atomowy
 zapis pustych źródeł oczekujących na odświeżenie, idempotentne ponowienie,
 ochronę świadomie usuniętego kanału, jawne przywrócenie istniejącego rekordu,
 brak usuwania przy pustej odpowiedzi oraz brak częściowego zapisu przy kolizji.
+Pięć scenariuszy protokołu potwierdziło oddzielenie podglądu od zapisu, brak
+sekretów i technicznych identyfikatorów w JSON, jednoznaczny wybór przywracania,
+redakcję nieznanego błędu oraz zachowanie konkretnego komunikatu o limicie.
 
 ## Znane ograniczenia
 
 - Brak jeszcze przydzielonego identyfikatora aplikacji Google dla AMC.
-- Nie ma jeszcze interfejsu wx ani operacji protokołu LiteHost spinającej
-  logowanie, odczyt API i przygotowany atomowy zapis. Koordynator, lokalny
-  odbiornik, transport tokenów, odczyt API, plan, wykonanie planu i chroniony,
+- Nie ma jeszcze interfejsu wx. Koordynator, lokalny odbiornik, transport
+  tokenów, odczyt API, plan, wykonanie planu, protokół hosta i chroniony,
   profilowo rozdzielony magazyn są gotowe, ale nie są jeszcze połączone z
   widocznym poleceniem ani z identyfikatorem aplikacji Google.
 - Przed dodaniem widocznego polecenia trzeba połączyć magazyn z profilem hosta
@@ -260,7 +276,7 @@ brak usuwania przy pustej odpowiedzi oraz brak częściowego zapisu przy kolizji
 ## Wersja i commit
 
 Kod źródłowy i testy są zapisane w lokalnych commitach `ce723bff`, `0c15fbcb`,
-`cbd2a5d3`, `161cb856`, `86309bb0`, `436c5e3d` oraz `904c8011`, po zainstalowanej kompilacji
+`cbd2a5d3`, `161cb856`, `86309bb0`, `436c5e3d`, `904c8011` oraz `8f0c1341`, po zainstalowanej kompilacji
 `2026.10.21-a947f79d...`. Projekty
 źródłowe zostały pomyślnie zbudowane, ale nie powstał nowy pakiet, instalacja
 ani publikacja.
