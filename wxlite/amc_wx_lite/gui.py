@@ -189,16 +189,17 @@ from .wiim_source import (
     preset_choices as wiim_preset_choices,
     snapshot as wiim_snapshot,
 )
-from .sonos_source import (
-    SonosPayloadError,
-    library_rows as sonos_library_rows,
-    material_rows as sonos_material_rows,
-    own_stream_edit_info as sonos_own_stream_edit_info,
-    response_message as sonos_response_message,
-    target_rows as sonos_target_rows,
-    now_playing_label as sonos_now_playing_label,
-    snapshot as sonos_snapshot,
-)
+if "session.sonos" in _RELEASE_PROFILE.capabilities:
+    from .sonos_source import (
+        SonosPayloadError,
+        library_rows as sonos_library_rows,
+        material_rows as sonos_material_rows,
+        own_stream_edit_info as sonos_own_stream_edit_info,
+        response_message as sonos_response_message,
+        target_rows as sonos_target_rows,
+        now_playing_label as sonos_now_playing_label,
+        snapshot as sonos_snapshot,
+    )
 from .profile_layout import common_data_snapshot_path, resolve_layout
 from .podcast_source import (
     PAGE_SIZE as PODCAST_PAGE_SIZE,

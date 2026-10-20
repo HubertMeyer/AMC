@@ -98,6 +98,14 @@ skrótów.
 
 ## Uzasadnienie i decyzje
 
+- **Korekta użytkownika z 20 października 2026:** pierwszy publiczny instalator
+  ma zawierać wszystkie zatwierdzone wspólne poprawki bieżącego AMC Test,
+  w tym `Ctrl+Shift+0`, `End` oraz skoki procentowe Time Shiftu, ale nie może
+  udostępniać Spotify, TIDAL-u ani Sonosa. Publiczne pakowanie usuwa teraz także
+  moduł interfejsu Sonosa; wspólny host nadal odmawia operacji niedopuszczonej
+  przez zamknięty manifest możliwości. Zastępuje to wcześniejszy wariant,
+  w którym Sonos był ukryty profilem, lecz jego moduł Python pozostawał w
+  paczce w oczekiwaniu na publiczny broker.
 - **Korekta użytkownika z 20 października 2026:** nie budujemy kolejnego
   publicznego instalatora po każdej poprawce AMC Test. Istniejący kandydat
   pozostaje lokalnym punktem kontrolnym, a następny publiczny wariant powstanie
@@ -255,6 +263,10 @@ skrótów.
   **38 testów Python zaliczonych**. Obejmują pełne syntetyczne złożenie profilu
   publicznego bez odczytu Librespot oraz zgodność rozmiaru i SHA-256 każdego
   pliku.
+- Po decyzji o pierwszym wydaniu bez Sonosa ukierunkowane testy profilu i
+  układu paczki zakończyły się wynikiem **36 zaliczonych**. Sprawdzają fizyczne
+  pominięcie modułów Spotify, TIDAL-u i Sonosa, import publicznego interfejsu
+  bez tych modułów, brak ich sesji i możliwości oraz zamknięty kontrakt profilu.
 - Uruchamiacz i aktualizator po dodaniu pełnej kontroli wszystkich plików:
   **22 testy C# zaliczone**.
 - Test strukturalny samowystarczalności instalatora zaliczony. Potwierdza trzy
@@ -491,3 +503,8 @@ skrótów.
   numerycznego oraz zachowanie niepustego nagrania po awarii strumienia.
   Paczka, manifest i integralność instalatora są potwierdzone lokalnie;
   instalacji publicznego wariantu ani publikacji nie wykonywano.
+- Wykluczenie modułu interfejsu Sonosa z pierwszego publicznego wydania:
+  oczekuje na lokalny commit, pełną regresję, nową paczkę, instalator i
+  równoległą instalację odbiorczą. Istniejący kandydat `6e1f6bc9` został przez
+  tę decyzję zastąpiony jako planowany materiał wydania, ale pozostaje lokalnym
+  artefaktem do czasu zweryfikowania następcy.

@@ -139,7 +139,10 @@ zmian, wymagający korekty użytkownika:
   kompilacji i testach; wariant ochronny instalatora przeszedł czystą instalację,
   pełną kontrolę i odinstalowanie, a końcowy kandydat z dobrowolnymi skrótami
   jest zbudowany, ma potwierdzoną integralność i fizycznie nie zawiera modułów
-  interfejsu Spotify/TIDAL ani Librespot. Najnowszy kandydat `6e1f6bc9`
+  interfejsu Spotify/TIDAL ani Librespot. Przed pierwszym wydaniem rozszerzono
+  ten kontrakt również o fizyczne pominięcie modułu interfejsu Sonosa; testy
+  ukierunkowane są zielone, a nowy końcowy kandydat jest przygotowywany.
+  Dotychczasowy kandydat `6e1f6bc9`
   zawiera też poprawione mapowanie `F1`–`F24` i zachowanie nagrania po awarii
   strumienia; został zbudowany i sprawdzony lokalnie, lecz nie został
   zainstalowany ani opublikowany** —

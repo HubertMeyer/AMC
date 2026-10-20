@@ -23,6 +23,7 @@ def test_python_package_matches_isolated_runtime_app_path():
         assert (target / "app" / "amc_wx_lite" / "__main__.py").is_file()
         assert (target / "app" / "amc_wx_lite" / "spotify_source.py").is_file()
         assert (target / "app" / "amc_wx_lite" / "tidal_source.py").is_file()
+        assert (target / "app" / "amc_wx_lite" / "sonos_source.py").is_file()
         assert not (target / "AMC-wx-Lite.cmd").exists()
 
 
@@ -58,7 +59,8 @@ def test_public_gui_imports_without_private_service_modules():
                     "import amc_wx_lite.gui as gui; "
                     "assert gui._RELEASE_PROFILE.profile_id == 'public'; "
                     "assert not hasattr(gui, 'TidalSource'); "
-                    "assert not hasattr(gui, 'SpotifyPlaylistDialog')"
+                    "assert not hasattr(gui, 'SpotifyPlaylistDialog'); "
+                    "assert not hasattr(gui, 'SonosPayloadError')"
                 ),
             ],
             cwd=target,

@@ -81,6 +81,7 @@ LIBRESPOT_RUN_URL = (
     "https://github.com/michalkasperczak/AMC/actions/runs/35381167099"
 )
 PRIVATE_SERVICE_MODULES = {
+    "sonos_source.py": "session.sonos",
     "spotify_playlist_dialog.py": "session.spotify",
     "spotify_source.py": "session.spotify",
     "tidal_source.py": "session.tidal",
