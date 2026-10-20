@@ -1,18 +1,17 @@
 # YT-001 — konto YouTube i synchronizacja
 
-- Status: `Odłożone — po instalatorze i pierwszych stabilnych wydaniach AMC`
+- Status: `W trakcie — bezpieczny fundament OAuth gotowy, brak jeszcze klienta Google i interfejsu`
 - Utworzono: 18 października 2026
 - Obszar: YouTube, OAuth, Biblioteka, wyszukiwanie i bezpieczne poświadczenia
 - Polecenie uruchamiające: `Uruchom zadanie YT-001`
 
 ## Kolejność realizacji
 
-Zadanie nie należy do obecnego wydania ani do prac prowadzących do pierwszego
-instalatora. Wracamy do niego dopiero po ukończeniu instalatora, sprawdzeniu
-aktualizacji i wydaniu pierwszych stabilnych wersji AMC. Nie ma obecnie terminu
-ani automatycznego warunku rozpoczęcia; potrzebne będzie ponowne, jawne
-polecenie użytkownika. Do tego czasu utrzymujemy działające publiczne
-wyszukiwanie, Bibliotekę i pobieranie YouTube bez logowania do konta.
+Korekta użytkownika z 21 października 2026 zastępuje wcześniejsze odłożenie:
+po przygotowaniu instalatora wolno rozpocząć bezpieczny etap przygotowawczy.
+Nie oznacza to zgody na samoczynne logowanie konta ani otwarcie przeglądarki.
+Do czasu ukończenia i odbioru utrzymujemy działające publiczne wyszukiwanie,
+Bibliotekę i pobieranie YouTube bez logowania do konta.
 
 ## Cel
 
@@ -122,10 +121,74 @@ Automatyczne usuwanie po obu stronach jest wykluczone.
 
 ## Prace i weryfikacja
 
-- Data rozpoczęcia:
-- Decyzja o kliencie Google i weryfikacji:
-- Zakresy OAuth:
-- Zmienione pliki:
-- Testy:
-- Commit:
-- Zainstalowana kompilacja:
+- Data rozpoczęcia: 21 października 2026 — na nowe jawne polecenie użytkownika.
+- Decyzja o kliencie Google i weryfikacji: aplikacja komputerowa, zwykła
+  przeglądarka systemowa, Authorization Code z PKCE S256 i odpowiedź na
+  losowym porcie `127.0.0.1`. Nie używamy osadzonej przeglądarki, wycofanego
+  przepisywania kodu OOB ani sekretu klienta w instalatorze. Oficjalne źródła:
+  [OAuth dla aplikacji komputerowych](https://developers.google.com/identity/protocols/oauth2/native-app),
+  [autoryzacja YouTube Data API](https://developers.google.com/youtube/data/guides/auth/installed-apps),
+  [wycofanie OOB](https://developers.google.com/identity/protocols/oauth2/resources/oob-migration).
+- Zakresy OAuth: tylko
+  `https://www.googleapis.com/auth/youtube.readonly` w pierwszym etapie.
+- Weryfikacja publikacji: profil publiczny pozostaje wyłączony, dopóki AMC nie
+  ma własnego projektu Google, skonfigurowanego ekranu zgody, polityki
+  prywatności i wymaganej weryfikacji zakresu. W trybie testowym Google pozwala
+  wskazać ograniczoną listę kont testowych; nie jest to jeszcze przepływ dla
+  wszystkich użytkowników. Oficjalne źródła:
+  [wymagania weryfikacji](https://support.google.com/cloud/answer/13463073?hl=en),
+  [status testowy ekranu zgody](https://support.google.com/cloud/answer/15549945?hl=en).
+- Zmienione pliki: `src/AccessibleMediaController.Core/YouTube/YouTubeOAuthProtocol.cs`,
+  `tests/AccessibleMediaController.Core.SmokeTests/YouTubeOAuthFoundationTests.cs`
+  oraz rejestr testów w `Program.cs`.
+- Testy: `dotnet run --project
+  tests/AccessibleMediaController.Core.SmokeTests/AccessibleMediaController.Core.SmokeTests.csproj
+  --no-restore -- --youtube-oauth-foundation` — zaliczone 5 z 5 scenariuszy.
+- Commit źródła i testów: `ce723bff` (`feat(youtube): add safe OAuth protocol foundation`).
+- Zainstalowana kompilacja: brak. Ten etap nie zmienia jeszcze interfejsu ani
+  bieżącej instalacji AMC Test.
+
+## Materiał do dokumentacji użytkownika
+
+Logowanie do YouTube nie jest jeszcze widoczne w AMC. Przygotowany mechanizm
+ma docelowo otworzyć oficjalną stronę Google w zwykłej przeglądarce i wrócić
+do AMC przez lokalny adres na komputerze. AMC nie poprosi o hasło Google i nie
+wyświetli pola na sekret aplikacji. Pierwsza wersja poprosi wyłącznie o odczyt
+subskrypcji i playlist; zwykłe wyszukiwanie oraz pobieranie pozostaną dostępne
+bez konta.
+
+## Uzasadnienie i decyzje
+
+- Kod przygotowawczy nie uruchamia przeglądarki, serwera lokalnego ani sieci.
+  Dzięki temu można przetestować zasady bezpieczeństwa bez dotykania konta.
+- Weryfikator PKCE nie trafia do adresu przeglądarki. Adres zawiera tylko jego
+  skrót S256 i losowy stan chroniący powrót do właściwej próby logowania.
+- Akceptowany jest wyłącznie `http://127.0.0.1` z jawnie przydzielonym portem.
+  `localhost`, zdalny host, HTTPS udające lokalny odbiornik i port domyślny są
+  odrzucane przed rozpoczęciem logowania.
+- Nie tworzymy jeszcze polecenia w menu, pomocy ani palecie. Bez identyfikatora
+  klienta Google byłoby to martwe polecenie sprzeczne ze wspólnym katalogiem
+  możliwości AMC.
+
+## Testy i wynik
+
+Zaliczono pięć syntetycznych scenariuszy: żądanie tylko do odczytu z PKCE S256,
+odrzucanie niebezpiecznych adresów powrotu, wymianę kodu i odświeżenie bez
+sekretu klienta, zachowanie refresh tokenu i zakresu oraz brak treści wadliwej
+odpowiedzi Google w wyjątku. Test nie używał sieci, prawdziwego klienta Google,
+przeglądarki ani danych użytkownika.
+
+## Znane ograniczenia
+
+- Brak jeszcze przydzielonego identyfikatora aplikacji Google dla AMC.
+- Nie ma jeszcze odbiornika lokalnego, transportu HTTP, chronionego magazynu
+  tokenów, koordynatora konta, synchronizacji subskrypcji ani interfejsu wx.
+- Przed dodaniem widocznego polecenia trzeba zapewnić osobne poświadczenia dla
+  profili AMC Test i AMC oraz testy parytetu Ctrl+F1, Ctrl+Shift+K i menu.
+- Profil publiczny wymaga osobnej decyzji po konfiguracji i weryfikacji Google.
+
+## Wersja i commit
+
+Kod źródłowy i testy są zapisane w lokalnym commicie `ce723bff`, po
+zainstalowanej kompilacji `2026.10.21-a947f79d...`. Nie zostały jeszcze
+zbudowane do instalacji, zainstalowane ani opublikowane.
