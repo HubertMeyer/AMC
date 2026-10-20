@@ -12,18 +12,23 @@ Broker czyta wyłącznie te wartości środowiskowe:
 - `SONOS_BROKER_PUBLIC_ORIGIN` — publiczny adres główny HTTPS, zakończony `/`;
 - `SONOS_CLIENT_ID` — klucz z portalu integracji Sonos;
 - `SONOS_CLIENT_SECRET` — sekret przechowywany wyłącznie na serwerze;
+- `SONOS_CLIENT_SECRET_FILE` — zalecana alternatywa dla poprzedniej wartości:
+  bezwzględna ścieżka do chronionego pliku zawierającego wyłącznie sekret;
 - `SONOS_REDIRECT_URI` — dokładnie
   `SONOS_BROKER_PUBLIC_ORIGIN` + `login/callback`;
 - `SONOS_TRUSTED_PROXIES` — opcjonalna, rozdzielona przecinkami lista dokładnych
   adresów IP reverse proxy, od których wolno przyjąć `X-Forwarded-For` i
   `X-Forwarded-Proto`.
 
-Brak czterech wartości Sonosa uruchamia bezpieczny stan
+Należy podać dokładnie jedno źródło sekretu: wartość albo plik. Podanie obu,
+względnej ścieżki, pustego lub wielowierszowego pliku zatrzymuje start bez
+ujawnienia ścieżki i zawartości w komunikacie. Brak czterech wartości Sonosa uruchamia bezpieczny stan
 nieskonfigurowany. Podanie tylko części albo adresu HTTP zatrzymuje start.
 Pusta lista proxy oznacza, że nagłówki przekazywane nie są honorowane. Nazwy
 hostów, zakresy i adresy ogólne nie są przyjmowane; trzeba podać najwyżej 16
 konkretnych adresów IP infrastruktury, która naprawdę kończy TLS.
-Sekretów nie wolno umieszczać w repozytorium, pakiecie AMC, pliku instalatora
+Sekretów nie wolno umieszczać w repozytorium, pliku `.env`, pakiecie AMC,
+pliku instalatora
 ani argumentach wiersza poleceń widocznych innym procesom.
 
 ## Endpointy
@@ -78,6 +83,11 @@ ZIP nie zawiera konfiguracji ani sekretów. Na serwerze nadal trzeba zapewnić
 wartości Sonosa w magazynie sekretów oraz prawdziwy HTTPS. Sposób uruchomienia
 usługi, certyfikat i dokładna lista adresów reverse proxy zależą od wybranego
 hostingu i nie są zgadywane przez skrypt.
+
+Powtarzalny wariant dla pojedynczego serwera Linux z Docker Compose i Caddy
+znajduje się w `deploy/sonos-broker`. Caddy uzyskuje certyfikat HTTPS, a broker
+pozostaje dostępny wyłącznie w prywatnej sieci kontenerów. Pakiet nie zawiera
+sekretu i nie zależy od Hermesa.
 
 ## Źródła kontraktu
 

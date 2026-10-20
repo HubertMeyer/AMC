@@ -20,7 +20,7 @@ internal sealed record SonosBrokerOptions(
         var trustedProxies = LoadTrustedProxies(configuration["SONOS_TRUSTED_PROXIES"]);
         var originText = configuration["SONOS_BROKER_PUBLIC_ORIGIN"];
         var clientId = configuration["SONOS_CLIENT_ID"];
-        var clientSecret = configuration["SONOS_CLIENT_SECRET"];
+        var clientSecret = LoadClientSecret(configuration);
         var redirectText = configuration["SONOS_REDIRECT_URI"];
 
         var supplied = new[] { originText, clientId, clientSecret, redirectText }
@@ -63,6 +63,63 @@ internal sealed record SonosBrokerOptions(
                 TimeSpan.FromMinutes(10),
                 1024),
             trustedProxies);
+    }
+
+    private static string? LoadClientSecret(IConfiguration configuration)
+    {
+        var direct = configuration["SONOS_CLIENT_SECRET"];
+        var filePath = configuration["SONOS_CLIENT_SECRET_FILE"];
+        var hasDirect = !string.IsNullOrWhiteSpace(direct);
+        var hasFile = !string.IsNullOrWhiteSpace(filePath);
+
+        if (hasDirect && hasFile)
+        {
+            throw new InvalidOperationException(
+                "Sekret Sonosa może pochodzić tylko z jednego źródła wdrożeniowego.");
+        }
+
+        if (!hasFile)
+        {
+            return direct;
+        }
+
+        if (!Path.IsPathFullyQualified(filePath!))
+        {
+            throw new InvalidOperationException(
+                "Plik sekretu Sonosa musi mieć bezwzględną ścieżkę.");
+        }
+
+        try
+        {
+            var file = new FileInfo(filePath!);
+            if (!file.Exists || file.Length is <= 0 or > 4096)
+            {
+                throw new InvalidOperationException(
+                    "Plik sekretu Sonosa nie istnieje albo ma nieprawidłowy rozmiar.");
+            }
+
+            var value = File.ReadAllText(file.FullName).TrimEnd('\r', '\n');
+            if (string.IsNullOrWhiteSpace(value)
+                || value.Length > 2048
+                || value.Any(character => character is '\r' or '\n' or '\0'))
+            {
+                throw new InvalidOperationException(
+                    "Plik sekretu Sonosa ma nieprawidłową zawartość.");
+            }
+
+            return value;
+        }
+        catch (InvalidOperationException)
+        {
+            throw;
+        }
+        catch (Exception error) when (error is IOException
+            or UnauthorizedAccessException
+            or System.Security.SecurityException)
+        {
+            throw new InvalidOperationException(
+                "Nie można bezpiecznie odczytać pliku sekretu Sonosa.");
+        }
     }
 
     private static IReadOnlyList<IPAddress> LoadTrustedProxies(string? value)

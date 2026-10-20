@@ -1,0 +1,17 @@
+.git
+.github
+.test-output
+.test-tmp
+**/bin
+**/obj
+**/__pycache__
+**/.pytest_cache
+**/.venv
+artifacts
+node_modules
+publish
+wxlite
+tests
+docs
+deploy/sonos-broker/.env
+deploy/sonos-broker/secrets

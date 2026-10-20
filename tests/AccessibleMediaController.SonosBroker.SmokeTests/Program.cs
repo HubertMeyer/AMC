@@ -13,6 +13,8 @@ var tests = new (string Name, Func<Task> Run)[]
 {
     ("Brak sekretów uruchamia bezpieczny stan nieskonfigurowany", ConfigurationCanBeAbsent),
     ("Częściowa konfiguracja jest odrzucana", PartialConfigurationIsRejected),
+    ("Sekret wdrożeniowy można bezpiecznie odczytać z pliku", SecretCanBeLoadedFromFile),
+    ("Niejednoznaczne albo błędne źródło sekretu jest odrzucane", SecretFileConfigurationIsStrict),
     ("Publiczny adres i callback muszą mieć ten sam HTTPS origin", ConfigurationRequiresExactOrigin),
     ("Lista zaufanych reverse proxy przyjmuje tylko dokładne adresy IP", TrustedProxyConfigurationIsStrict),
     ("Sesja PKCE jest jednorazowa", SessionIsOneTime),
@@ -64,6 +66,49 @@ static Task PartialConfigurationIsRejected()
 {
     AssertThrows<InvalidOperationException>(() => SonosBrokerOptions.Load(Configuration(
         new Dictionary<string, string?> { ["SONOS_CLIENT_ID"] = "client" })));
+    return Task.CompletedTask;
+}
+
+static Task SecretCanBeLoadedFromFile()
+{
+    var path = Path.Combine(Path.GetTempPath(), "amc-sonos-secret-" + Guid.NewGuid().ToString("N"));
+    try
+    {
+        File.WriteAllText(path, "sekret-z-pliku\n");
+        var values = ValidConfiguration();
+        values.Remove("SONOS_CLIENT_SECRET");
+        values["SONOS_CLIENT_SECRET_FILE"] = path;
+
+        var state = SonosBrokerOptions.Load(Configuration(values));
+        Assert(state.Options?.ClientSecret == "sekret-z-pliku",
+            "sekret z chronionego pliku nie został użyty");
+    }
+    finally
+    {
+        if (File.Exists(path))
+        {
+            File.Delete(path);
+        }
+    }
+
+    return Task.CompletedTask;
+}
+
+static Task SecretFileConfigurationIsStrict()
+{
+    var values = ValidConfiguration();
+    values["SONOS_CLIENT_SECRET_FILE"] = Path.Combine(
+        Path.GetTempPath(), "amc-sonos-brak-" + Guid.NewGuid().ToString("N"));
+    AssertThrows<InvalidOperationException>(() =>
+        SonosBrokerOptions.Load(Configuration(values)));
+
+    values.Remove("SONOS_CLIENT_SECRET");
+    AssertThrows<InvalidOperationException>(() =>
+        SonosBrokerOptions.Load(Configuration(values)));
+
+    values["SONOS_CLIENT_SECRET_FILE"] = "wzgledny-sekret.txt";
+    AssertThrows<InvalidOperationException>(() =>
+        SonosBrokerOptions.Load(Configuration(values)));
     return Task.CompletedTask;
 }
 
