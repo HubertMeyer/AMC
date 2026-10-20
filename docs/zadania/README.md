@@ -106,8 +106,8 @@ zmian, wymagający korekty użytkownika:
   Eksport fragmentów Time Shiftu pozostaje późniejszym rozszerzeniem.
 - `AMC08` — **Prawdziwe OAuth i dodawanie do playlist zostały potwierdzone
   przez użytkownika; korekta mowy `Ctrl+F5` i widoczności pod `Ctrl+P`
-  playlist istniejących oraz nowych jest w kodzie i testach, czeka na
-  instalację oraz odbiór NVDA**
+  playlist istniejących oraz nowych jest zainstalowana w AMC Test, czeka na
+  ręczny odbiór NVDA**
   — natywne playlisty
   Spotify w AMC Test: `Ctrl+P`, `Ctrl+Shift+P`, pobranie katalogu raz na
   uruchomienie, natychmiastowa widoczność nowej playlisty i zapamiętanie

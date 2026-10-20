@@ -2,8 +2,8 @@
 
 Status: **Użytkownik potwierdził prawdziwe OAuth i skuteczne dodawanie do
 playlist Spotify. Korekta jawnej mowy stanu konta oraz widoczności pod
-`Ctrl+P` playlist istniejących i właśnie utworzonych jest gotowa w źródłach
-i testach; czeka na instalację AMC Test i odbiór NVDA.**
+`Ctrl+P` playlist istniejących i właśnie utworzonych jest zainstalowana w AMC
+Test; czeka na ręczny odbiór NVDA.**
 
 Źródło decyzji: zatwierdzona analiza historyczna tylko do odczytu
 `D:\Projekty Codex\Accessible Multimedia Controller\AMC08_PLAYLISTY_SPOTIFY_2026-10-18.md`.
@@ -134,6 +134,14 @@ i testach; czeka na instalację AMC Test i odbiór NVDA.**
 
 ## Testy i wynik
 
+- 21 października 2026 potwierdzono, że commity `39386e90` i `640afc65` są
+  przodkami zainstalowanej rewizji `a947f79d`. Dokładnie ta rewizja przeszła
+  pełną regresję: **1910 zaliczonych, 110 pominiętych i 11 podtestów**, została
+  zbudowana, atomowo zainstalowana i uruchomiona jako AMC Test.
+- Nie wykonano kolejnej mutacji prawdziwego konta Spotify. Jutrzejszy odbiór
+  ma sprawdzić istniejącą playlistę pod `Ctrl+P`, utworzenie nowej przez
+  `Ctrl+Shift+P`, ponowne otwarcie obu list i przywrócenie fokusu.
+
 - 19 października 2026, etap konta: **105/105** ukierunkowanych testów wxPython
   sprawdza wspólne polecenie `Ctrl+F5`, menu, etykiety dostępności, fokus,
   klienta hosta oraz to, że interfejs nie przesyła haseł ani tokenów.
@@ -231,8 +239,8 @@ i testach; czeka na instalację AMC Test i odbiór NVDA.**
 
 - Ponowne logowanie i rzeczywiste dodawanie do playlisty zostały odebrane
   przez użytkownika. Jawna mowa aktualnego stanu konta po `Ctrl+F5` oraz
-  odświeżony widok `Ctrl+P` pochodzą z późniejszej korekty, która nie jest
-  jeszcze zainstalowana w AMC Test.
+  odświeżony widok `Ctrl+P` są już zainstalowane, ale wymagają ręcznego odbioru
+  NVDA na prawdziwym koncie.
 - Trwającego OAuth nie można jeszcze anulować przyciskiem okna AMC; do wyniku
   albo limitu czasu okno pozostaje otwarte. Hasła i tokeny nadal nie trafiają
   do interfejsu Python.
@@ -251,11 +259,16 @@ i testach; czeka na instalację AMC Test i odbiór NVDA.**
   zmianie wymagane jest ponowne uruchomienie albo przyszłe jawne unieważnienie
   cache'u przez przepływ logowania. Sam zapis nadal sprawdza konto i prawa w
   hoście, więc pamięć interfejsu nie może nadać uprawnień do obcej playlisty.
-- Korekta z 20 października jest na razie potwierdzona w kodzie, kompilacji i
-  testach. Nie została jeszcze zainstalowana; ręczny odbiór mowy `Ctrl+F5` i
-  widoku `Ctrl+P` wymaga następnego bezpiecznego uruchomienia AMC Test.
+- Korekta z 20 października jest potwierdzona w kodzie, testach, kompilacji,
+  instalacji i uruchomieniu. Ręczny odbiór mowy `Ctrl+F5` i widoku `Ctrl+P`
+  pozostaje do wykonania przez użytkownika.
 
 ## Wersja i commit
+
+- Bieżąca instalacja zawierająca `39386e90` i `640afc65`:
+  `2026.10.21-a947f79d83f11888e2d1ea353909a1ee50b3ccaa-1dfc80e8` w
+  `D:\Projekty Codex\AMC Python`. Pełna regresja, manifest, integralność,
+  instalacja i uruchomienie są zaliczone; publikacji nie wykonywano.
 
 - Dostępne konta Spotify i TIDAL oraz kontekstowy `Ctrl+F5`: commit `c3ffea7`
   (`feat(amc): dodaj konta Spotify i TIDAL pod Ctrl+F5`).
