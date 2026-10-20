@@ -148,11 +148,12 @@ zmian, wymagający korekty użytkownika:
   [AMC12-profile-wydania-publicznego-i-testowego.md](AMC12-profile-wydania-publicznego-i-testowego.md).
   Zatwierdzona specyfikacja:
   `D:\Projekty Codex\Accessible Multimedia Controller\AMC12_PROFILE_WYDANIA_PUBLICZNEGO_I_TESTOWEGO_2026-10-18.md`.
-- `AMC10` — **W trakcie; bieżące źródła klienta są odłączone od Hermesa
-  i pozostają w bezpiecznym stanie „publiczny broker nieskonfigurowany”.
-  Zainstalowany AMC Test nadal jest wcześniejszą wersją. Dalej potrzebne są
-  niezależny wspólny broker publiczny, instalacja korekty i odbiór na
-  zewnętrznym koncie; Hermes nie jest częścią architektury Sonosa** —
+- `AMC10` — **W trakcie; niezależny broker ma czysty, sprawdzony pakiet
+  wdrożeniowy Docker Compose z Caddy i własnym HTTPS. Nie został jeszcze
+  uruchomiony publicznie, ponieważ brakuje konkretnego serwera, DNS oraz danych
+  integracji z portalu Sonos. Bieżące źródła klienta są odłączone od Hermesa,
+  a zainstalowany AMC Test nadal jest wcześniejszą wersją. Hermes nie jest
+  częścią architektury Sonosa** —
   działające sterowanie Sonosem i WiiM nie zostało
   przepisane. `Ctrl+F5` wybiera dom i grupę, a przy braku połączenia prowadzi do
   konta zamiast kończyć się błędem. Okno udostępnia rozpoczęcie, jawne

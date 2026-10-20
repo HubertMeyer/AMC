@@ -2,10 +2,12 @@
 
 ## Status
 
-**W trakcie — bieżące źródła AMC Test są odłączone od Hermesa i pozostają
-w bezpiecznym stanie „publiczny broker nieskonfigurowany”. Niezależne publiczne
-wdrożenie, instalacja tej korekty oraz odbiór z zewnętrznym kontem pozostają
-bramą. Zainstalowanego AMC Test nie podmieniono w tym etapie.**
+**W trakcie — niezależny broker ma gotowy i sprawdzony pakiet wdrożeniowy
+Docker Compose z własnym HTTPS, ale nie został jeszcze uruchomiony na publicznym
+serwerze. Bieżące źródła AMC Test są odłączone od Hermesa i pozostają w
+bezpiecznym stanie „publiczny broker nieskonfigurowany”. Publiczny serwer,
+dane integracji Sonos, instalacja klienta oraz odbiór z zewnętrznym kontem
+pozostają bramą.**
 
 Sterowanie Sonosem i WiiM było już przeszczepione i użytkownik ocenił je jako
 prawie gotowe. Ten etap nie zmienia adapterów, list, transportu ani WiiM.
@@ -48,6 +50,11 @@ prawie gotowe. Ten etap nie zmienia adapterów, list, transportu ani WiiM.
   Hermesa w konfiguracji klienta. Został usunięty z aktywnej ścieżki AMC Test.
   Zastępuje go nierutowalny znacznik konfiguracyjny oraz jawna bramka
   dostępności. Nie jest to nowy adres usługi ani próba połączenia.
+- 2026-10-20: użytkownik polecił wdrażać niezależny broker i wskazał Lyd jako
+  przykład innej aplikacji Sonos, zaznaczając, że prawdopodobnie nie jest ona
+  open source. Lyd jest wyłącznie porównaniem użytkowym; nie kopiujemy jego
+  kodu ani nie opieramy architektury AMC na przypuszczeniach o zamkniętej
+  implementacji. Obowiązującym kontraktem są oficjalne wymagania Control API.
 
 ## Materiał do dokumentacji użytkownika
 
@@ -80,6 +87,11 @@ jest jeszcze skonfigurowana w tej wersji AMC”. Przycisk rozpoczęcia logowania
 nie jest wtedy pokazywany, a początkowy fokus trafia na „Zamknij”. Program nie
 otwiera przeglądarki i nie wykonuje żądania sieciowego. To zachowanie nie jest
 jeszcze zainstalowane w użytkowym AMC Test.
+
+Wydanie publiczne nie będzie wymagało od zwykłego użytkownika własnego klucza,
+sekretu ani serwera. Użytkownik wybierze logowanie, otrzyma adres oficjalnej
+strony Sonosa, zaloguje się tam i wróci do AMC, aby sprawdzić wynik. Sekret
+integracji pozostaje tylko na wspólnym serwerze AMC.
 
 AMC nie zna i nie przechowuje sekretu integracji Sonos. Tokeny użytkownika
 pozostają wyłącznie w procesie C# i w istniejącym lokalnym magazynie chronionym
@@ -137,6 +149,16 @@ brokera.
   konfiguracji. Zostanie zastąpiona prawdziwym publicznym originem dopiero razem
   z wdrożeniem, konfiguracją Sonosa i odbiorem. Historyczne poświadczenia
   powiązane z innym originem nie są automatycznie używane ani migrowane.
+- Wybrano przenośny wariant jednej stale działającej instancji Linux:
+  Docker Compose uruchamia broker w prywatnej sieci, a Caddy wystawia wyłącznie
+  porty 80 i 443 oraz automatycznie obsługuje certyfikat. Stałe adresy prywatne
+  pozwalają brokerowi ufać dokładnie jednemu reverse proxy, a nie całej sieci.
+- Obecny pamięciowy magazyn dziesięciominutowych prób logowania wyklucza hosting
+  zasypiający lub skalujący usługę do zera. Restart bezpiecznie unieważnia próbę,
+  ale nie może następować między rozpoczęciem logowania i callbackiem.
+- Sekret może być podany z chronionego pliku `SONOS_CLIENT_SECRET_FILE`.
+  Jednoczesna wartość i plik, względna ścieżka, brak pliku, nadmierny rozmiar
+  albo wielowierszowa zawartość zatrzymują start bez ujawnienia sekretu.
 
 Kontrakt sprawdzono 2026-10-19 z aktualną oficjalną dokumentacją Sonosa:
 
@@ -175,6 +197,14 @@ Kontrakt sprawdzono 2026-10-19 z aktualną oficjalną dokumentacją Sonosa:
 - `tests/AccessibleMediaController.Windows.SmokeTests/SonosAccountWiringTests.cs`
 - `src/AccessibleMediaController.Core/Sonos/SonosIntegrationDefaults.cs`
 - `src/AccessibleMediaController.Windows/Services/SonosAccountOwner.cs`
+- `.dockerignore`
+- `deploy/sonos-broker/Dockerfile`
+- `deploy/sonos-broker/Dockerfile.runtime`
+- `deploy/sonos-broker/compose.yaml`
+- `deploy/sonos-broker/Caddyfile`
+- `deploy/sonos-broker/.env.example`
+- `deploy/sonos-broker/README.md`
+- `scripts/Build-SonosBrokerDeploymentBundle.ps1`
 - `AccessibleMediaController.sln`
 - `docs/zadania/README.md`
 
@@ -302,14 +332,29 @@ Kontrakt sprawdzono 2026-10-19 z aktualną oficjalną dokumentacją Sonosa:
 - Przed testami nie znaleziono uruchomionego procesu AMC, LiteHost ani Pythona
   należącego do aplikacji oraz plików `.amc-partial` w jawnych katalogach
   projektu. Nie zamykano, nie instalowano i nie uruchamiano użytkowego AMC Test.
+- Po dodaniu plikowego sekretu i pakietu wdrożeniowego kompilacja Release
+  testów brokera zakończyła się z 0 ostrzeżeń i 0 błędów. Wszystkie
+  **18/18** testów przeszło; nowe przypadki obejmują poprawny plik sekretu,
+  konflikt dwóch źródeł, brak pliku i ścieżkę względną.
+- Publikacja framework-dependent utworzyła 5 plików aplikacji o łącznym
+  rozmiarze 97 504 bajtów. Na tym komputerze nie ma Docker Engine ani innego
+  runtime'u kontenerowego, więc nie przedstawia się statycznej kontroli plików
+  Compose jako rzeczywistego uruchomienia kontenerów.
+- Skrypt pakowania z czystego commitu `2bac12d0` utworzył samodzielny ZIP
+  `AMC-Sonos-Deployment-0.1.0-alpha.422-2bac12d03241.zip`: 34 856 bajtów,
+  SHA-256 `defd288ec942bb22706ffe8e05d3a5c73454df3cec651e1f1a1abceffc3ce9cd`.
+  Manifest obejmuje 10 plików, ma `workingTreeClean=true` i
+  `includesSecrets=false`; niezależne ponowne obliczenie rozmiarów i sum nie
+  wykazało rozbieżności. ZIP rozpakowano próbnie i ponownie zweryfikowano.
 
 ## Znane ograniczenia
 
 - Brak publicznej domeny, certyfikatu, produkcyjnych danych integracji i wpisu
   callbacku w portalu Sonos. Tych danych nie wolno wymyślać ani zapisywać w Git.
-- Nie wybrano jeszcze publicznego hostingu, domeny i sposobu bezpiecznego
-  przekazania serwerowi danych integracji Sonos. Hermes nie jest rozwiązaniem
-  tego ograniczenia ani częścią obecnej architektury.
+- Przygotowano techniczny wariant pojedynczego serwera Linux, ale nie ma jeszcze
+  konkretnego publicznego serwera, nazwy DNS ani sposobu opłacenia i utrzymania
+  hostingu. Hermes nie jest rozwiązaniem tego ograniczenia ani częścią obecnej
+  architektury.
 - Magazyn sesji jest pamięciowy i przeznaczony dla jednej instancji. Skalowanie
   na wiele replik wymaga wspólnego atomowego magazynu.
 - Nadal trzeba znać dokładne adresy reverse proxy wybranego hostingu. Jeżeli
@@ -337,6 +382,10 @@ Kontrakt sprawdzono 2026-10-19 z aktualną oficjalną dokumentacją Sonosa:
 - Nie ma jeszcze niezależnego hostingu, domeny, certyfikatu ani produkcyjnej
   integracji Sonos. Do czasu ich powstania logowanie w nowych źródłach jest
   celowo niedostępne, a nie częściowo emulowane.
+- Nie znaleziono na komputerze Docker Engine, Azure CLI, narzędzi Fly.io,
+  Cloudflare, Google Cloud ani zmiennych `SONOS_*`. Nie ma więc lokalnego dowodu
+  dostępu do zewnętrznego hostingu lub sekretu integracji. Publicznego
+  wdrożenia nie wolno pozorować samym ZIP-em.
 
 ## Brama publicznego udostępnienia
 
@@ -381,6 +430,12 @@ Kontrakt sprawdzono 2026-10-19 z aktualną oficjalną dokumentacją Sonosa:
   użytkowy stan niedostępności i testy: commit `3ab4c079` —
   `fix(amc10): oddziel logowanie Sonos od Hermesa`. Kod i testy są
   zweryfikowane; paczki, instalacji, uruchomienia i publikacji nie wykonywano.
+- Kontenerowy wariant niezależnego serwera, Caddy, plikowy sekret i testy
+  18/18: commit `5cfb60bb` — `feat(amc10): przygotuj niezalezne wdrozenie
+  brokera`.
+- Powtarzalny samodzielny ZIP bez źródeł i sekretów: commit `2bac12d0` —
+  `build(amc10): pakuj broker do wdrozenia`. Pakiet został zbudowany i
+  zweryfikowany lokalnie; nie został wysłany ani uruchomiony na serwerze.
 
 ## Porządek dysku
 
@@ -390,3 +445,9 @@ Kontrakt sprawdzono 2026-10-19 z aktualną oficjalną dokumentacją Sonosa:
   odzyskania, ale można go ponownie wytworzyć kompilacją diagnostyczną.
 - Nie usunięto zastanych katalogów `.test-output` ani `.test-tmp`, ponieważ ich
   pozostała zawartość nie powstała wyłącznie w tym etapie i wymaga osobnej oceny.
+- Po weryfikacji usunięto należące wyłącznie do tego etapu brudny pakiet próbny,
+  osobny katalog publikacji oraz rozpakowany czysty pakiet i katalog kontroli:
+  razem około 346 KiB z
+  `D:\Projekty Codex\AMC - integracja wxPython\.test-output`. Są odtwarzalne i
+  nie podlegają odzyskaniu. Zachowano jedyny czysty ZIP wdrożeniowy o rozmiarze
+  34 856 bajtów oraz nie dotknięto zastanych `.test-output` i `.test-tmp`.
