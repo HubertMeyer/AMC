@@ -103,6 +103,14 @@ drugiego profilu.
   **Zakończ**. Polecenie otwarcia folderu otrzymało literę dostępu `L` w
   słowie „folder”. Jego nazwa, brak skrótu, dostępność, wykonanie, pomoc i
   paleta nie zmieniły się.
+- 2026-10-20: użytkownik doprecyzował, że integracja z powłoką i systemem ma
+  być dostępna **zarówno w publicznym AMC, jak i w AMC Test**. Zastępuje to
+  ewentualne odczytanie etapu C jako funkcji tylko publicznego instalatora.
+  Oba profile oferują te same dwie dobrowolne opcje instalatora, ale mają
+  osobne nazwy „Otwórz w…”, identyfikatory aplikacji, klasy plików, czasowniki
+  menu kontekstowego, kanały działającej instancji i procedury odinstalowania.
+  Żaden profil nie przejmuje automatycznie domyślnej aplikacji ani nie usuwa
+  wpisów drugiego profilu.
 
 ## Testy i wynik
 
@@ -157,6 +165,19 @@ zakończyło się wynikiem `OK`.
   1 odtwarzalny plik, 123 321 674 bajty. Odzyskanie po usunięciu wymagałoby
   ponownej kompilacji; zachowano właściwy zweryfikowany instalator AMC12.
 
+2026-10-20, korekta dwóch profili:
+
+- dodano testy strukturalne wymagające osobnych nazw, identyfikatorów i wpisów
+  powłoki dla publicznego AMC oraz AMC Test;
+- potwierdzono, że wspólna lista formatów i wspólne operacje otwarcia oraz
+  dodania do kolejki nie oznaczają współdzielenia wpisów rejestru;
+- ukierunkowane testy Python instalatora i warstwy aplikacyjnej: **19
+  zaliczonych**;
+- test C# kontraktu offline został rozszerzony, lecz nie uruchamiano jego
+  kompilacji podczas nagrywania. Zostanie wykonany w bramce kandydata;
+- rzeczywistej rejestracji w Windows jeszcze nie wykonano, ponieważ trwa
+  nagrywanie.
+
 2026-10-19, korekta litery dostępu przed instalacją zbiorczą:
 
 - pojedynczy test wszystkich widocznych wariantów menu i sesji: **1
@@ -207,6 +228,9 @@ zakończyło się wynikiem `OK`.
   instalacja i publikacja pozostawały bez zmian.
 - Domknięcie pełnej regresji: `acb81034` —
   `fix(amc12-amc14): domknij bramkę pełnej regresji`.
+- Korekta dostępności powłoki w obu profilach: commit zostanie wpisany po
+  zatwierdzeniu spójnej zmiany; kod programu nie wymagał zmiany, dodano testy
+  blokujące regresję i zapis decyzji użytkownika.
 - Instalacja warstwy aplikacyjnej:
   `2026.10.19-fb9ba25fe0680cf7bf5435d53eb5b073de091cca-0debb6aa`;
   rejestracja systemowa i publikacja niewykonane.

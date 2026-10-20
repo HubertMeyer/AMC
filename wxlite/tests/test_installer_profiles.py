@@ -29,6 +29,30 @@ def test_installer_profiles_have_separate_ids_names_folders_and_mutexes() -> Non
         assert required in ISS
 
 
+def test_shell_integration_is_available_and_isolated_for_both_profiles() -> None:
+    """AMC oraz AMC Test mogą współistnieć w powłoce bez wspólnych wpisów."""
+    for required in (
+        'ShellProfileKey "Public"',
+        'ShellProfileKey "Test"',
+        'ShellApplicationName "Accessible Multimedia Controller"',
+        'ShellApplicationName "Accessible Multimedia Controller — Test"',
+        'ShellOpenLabel "Otwórz w AMC"',
+        'ShellOpenLabel "Otwórz w AMC Test"',
+        'ShellQueueLabel "Dodaj do kolejki AMC"',
+        'ShellQueueLabel "Dodaj do kolejki AMC Test"',
+        "ShellCapabilitiesRoot = 'Software\\AccessibleMultimediaController\\{#ShellProfileKey}\\Capabilities'",
+        "ShellClassPrefix = 'AccessibleMediaController.{#ShellProfileKey}.'",
+        "ShellVerbPrefix = 'AccessibleMediaController.{#ShellProfileKey}.'",
+    ):
+        assert required in ISS
+
+    assert 'RegDeleteKeyIncludingSubkeys(HKA, ShellCapabilitiesRoot)' in ISS
+    assert "AssociationRoot + 'open'" in ISS
+    assert "AssociationRoot + 'queue'" in ISS
+    assert "ShellClassesRoot + ClassName" in ISS
+    assert "UserChoice" not in ISS
+
+
 def test_installer_never_forces_running_amc_to_close() -> None:
     assert "CloseApplications=no" in ISS
     assert "RestartApplications=no" in ISS

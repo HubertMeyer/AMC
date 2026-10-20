@@ -180,7 +180,8 @@ zmian, wymagający korekty użytkownika:
   Bez obecności użytkownika nie logować konta i nie sterować głośnikami.
 - `AMC14` — **W trakcie; folder zawierający, argument pliku, osobny kanał
   działającej instancji i idempotentne `/kolejka` są zainstalowane w AMC Test;
-  opcjonalna i odwracalna rejestracja instalatora ma
+  opcjonalna i odwracalna rejestracja instalatora jest rozdzielona dla AMC
+  oraz AMC Test, ma
   potwierdzoną składnię, lecz nie została zastosowana w systemie** —
   aplikacyjna integracja z powłoką Windows,
   przekazywanie plików do właściwej instancji i późniejsza rejestracja przez

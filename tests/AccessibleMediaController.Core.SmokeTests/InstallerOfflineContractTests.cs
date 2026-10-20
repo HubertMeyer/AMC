@@ -102,6 +102,28 @@ public static class InstallerOfflineContractTests
             !iss.Contains("UserChoice", StringComparison.OrdinalIgnoreCase),
             "Instalator nie moze wymuszac domyslnej aplikacji przez UserChoice.");
 
+        // 6. Oba profile udostepniaja te same dobrowolne funkcje powloki,
+        //    lecz pod osobnymi nazwami i kluczami. Odinstalowanie jednego
+        //    profilu nie moze usunac wpisow drugiego.
+        foreach (var wymagane in new[]
+                 {
+                     "ShellProfileKey \"Public\"",
+                     "ShellProfileKey \"Test\"",
+                     "ShellApplicationName \"Accessible Multimedia Controller\"",
+                     "ShellApplicationName \"Accessible Multimedia Controller — Test\"",
+                     "ShellOpenLabel \"Otwórz w AMC\"",
+                     "ShellOpenLabel \"Otwórz w AMC Test\"",
+                     "ShellQueueLabel \"Dodaj do kolejki AMC\"",
+                     "ShellQueueLabel \"Dodaj do kolejki AMC Test\"",
+                     "Software\\AccessibleMultimediaController\\{#ShellProfileKey}\\Capabilities",
+                     "AccessibleMediaController.{#ShellProfileKey}.",
+                 })
+        {
+            Check(
+                iss.Contains(wymagane, StringComparison.Ordinal),
+                $"Instalator stracil rozdzielenie powloki AMC i AMC Test: {wymagane}.");
+        }
+
         const string extensionsMarker = "ShellExtensions = ";
         var extensionsStart = iss.IndexOf(extensionsMarker, StringComparison.Ordinal);
         var extensionsEnd = extensionsStart < 0
