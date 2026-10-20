@@ -4,6 +4,8 @@
 - Utworzono: 18 października 2026
 - Obszar: wydania, aktualizator i dostępne zgłoszenia
 - Polecenie uruchamiające: `Uruchom zadanie REL-001`
+- Roboczy opis pierwszego wydania:
+  [REL-001-opis-pierwszego-wydania-publicznego-roboczy.md](REL-001-opis-pierwszego-wydania-publicznego-roboczy.md).
 
 ## Cel
 
