@@ -11,6 +11,7 @@ $ErrorActionPreference = "Stop"
 $RepositoryRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot "..\.."))
 $WxliteRoot = Join-Path $RepositoryRoot "wxlite"
 $BuildTool = Join-Path $WxliteRoot "tools\build_bundle.py"
+$StartupSmokeTool = Join-Path $WxliteRoot "tools\Test-AMCBundleStartup.ps1"
 $RuntimePython = Join-Path $InstallRoot "runtime\python.exe"
 $InstalledLauncher = Join-Path $InstallRoot "AMC.exe"
 $TestOutputRoot = Join-Path $RepositoryRoot ".test-output"
@@ -264,6 +265,11 @@ Invoke-Checked -FilePath $candidateLauncher -ArgumentList @(
     "--sprawdz-pakiet-cicho"
 ) -WorkingDirectory $candidateRoot -Stage "Sprawdzenie paczki kandydującej"
 
+# Sama zgodność manifestu nie dowodzi, że połączone wersje Pythona, wx i hosta
+# potrafią się uruchomić. Ta bramka używa odizolowanego profilu i musi przejść
+# przed pierwszym zapisem do stałego katalogu instalacji.
+& $StartupSmokeTool -BundleRoot $candidateRoot
+
 $updater = Join-Path $candidateRoot "AMC-Python-Updater.exe"
 Invoke-Checked -FilePath $updater -ArgumentList @(
     "--source", $candidateRoot,
@@ -281,6 +287,9 @@ Invoke-Checked -FilePath $InstalledLauncher -ArgumentList @(
     "--sprawdz-pakiet-cicho"
 ) -WorkingDirectory $InstallRoot -Stage "Sprawdzenie zainstalowanej paczki"
 Test-BundleIntegrity -Root $InstallRoot -Manifest $installedManifest
+# Druga próba sprawdza dokładnie pliki po atomowej podmianie. Jej błąd nie
+# pozwala przejść niżej do zwykłego, widocznego uruchomienia programu.
+& $StartupSmokeTool -BundleRoot $InstallRoot
 
 $runningTitle = ""
 $runningProcessId = $null

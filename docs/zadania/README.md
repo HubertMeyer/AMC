@@ -161,8 +161,10 @@ zmian, wymagający korekty użytkownika:
   publiczny uruchamiacz, interfejs i host z profilem `public` działają
   równolegle z osobnym kompletem AMC Test.
   Dodano obowiązkowy odizolowany start interfejsu i hosta przed przyjęciem
-  paczki, przed kompilacją instalatora i po instalacji; kod oraz testy są
-  gotowe, a rzeczywista nowa paczka czeka na czysty commit. Niczego nie
+  paczki, przed kompilacją instalatora i po instalacji. Także lokalna promocja
+  AMC Test sprawdza kandydata przed podmianą i zainstalowaną kopię przed
+  widocznym uruchomieniem; kod oraz testy są gotowe, a rzeczywista nowa paczka
+  czeka na czysty commit. Niczego nie
   opublikowano** — jeden kod, jawny manifest możliwości, osobne katalogi,
   blokady, logi i kanały AMC Test oraz publicznego AMC. Bieżący zapis realizacji:
   [AMC12-profile-wydania-publicznego-i-testowego.md](AMC12-profile-wydania-publicznego-i-testowego.md).

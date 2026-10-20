@@ -146,6 +146,10 @@ przez profil. Zainstalowany numer to `0.1.0-alpha.425`.
   jest obowiązkowy w trzech miejscach: przed przyjęciem paczki z budowy, przed
   kompilacją instalatora i po skopiowaniu plików przez instalator, jeszcze
   przed rejestracją powłoki i zwykłym uruchomieniem programu.
+  Lokalna promocja AMC Test stosuje tę samą zasadę dwukrotnie: sprawdza
+  kandydata przed atomową podmianą instalacji i zainstalowaną kopię przed
+  pokazaniem jej okna. Nie istnieje już boczna droga wdrożenia oparta wyłącznie
+  na zgodności manifestu i sum plików.
 
 - **Korekta użytkownika z 20 października 2026:** pełne prywatne wydanie używane
   na co dzień nosi nazwę „AMC Test”, a wydanie dla wszystkich — „AMC”. Zastępuje

@@ -11,6 +11,9 @@ BUILD = (ROOT / "wxlite" / "tools" / "Build-AMCInstaller.ps1").read_text(
 BUNDLE_BUILD = (ROOT / "wxlite" / "tools" / "Build-AMCBundle.ps1").read_text(
     encoding="utf-8"
 )
+PROMOTE_TEST = (
+    ROOT / "wxlite" / "tools" / "Promote-AMCPythonTestBuild.ps1"
+).read_text(encoding="utf-8")
 LAUNCHER = (
     ROOT / "src" / "AccessibleMediaController.PythonLauncher" / "Program.cs"
 ).read_text(encoding="utf-8")
@@ -129,6 +132,19 @@ def test_bundle_builder_cleans_only_its_unique_project_temporary_folder() -> Non
     assert 'Join-Path $repositoryRoot ".test-tmp"' in BUNDLE_BUILD
     assert '"bundle-build-" + [guid]::NewGuid()' in BUNDLE_BUILD
     assert "Remove-Item -LiteralPath $operationRoot -Recurse -Force" in BUNDLE_BUILD
+
+
+def test_test_profile_promotion_smokes_candidate_and_installed_copy_before_launch() -> None:
+    assert "Test-AMCBundleStartup.ps1" in PROMOTE_TEST
+    candidate_gate = "& $StartupSmokeTool -BundleRoot $candidateRoot"
+    installed_gate = "& $StartupSmokeTool -BundleRoot $InstallRoot"
+    visible_launch = "Start-Process -FilePath $InstalledLauncher"
+    assert candidate_gate in PROMOTE_TEST
+    assert installed_gate in PROMOTE_TEST
+    assert PROMOTE_TEST.index(candidate_gate) < PROMOTE_TEST.index(
+        '"--source", $candidateRoot'
+    )
+    assert PROMOTE_TEST.index(installed_gate) < PROMOTE_TEST.index(visible_launch)
 
 
 def test_startup_smoke_requires_ready_marker_timeout_and_no_leftovers() -> None:
