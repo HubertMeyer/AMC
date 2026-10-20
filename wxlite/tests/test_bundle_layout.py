@@ -43,6 +43,58 @@ def test_public_python_package_omits_and_removes_private_service_modules():
             assert f"app/amc_wx_lite/{name}" not in copied
 
 
+def test_problem_report_endpoint_is_optional_validated_and_shared_by_profiles():
+    with tempfile.TemporaryDirectory() as folder:
+        root = Path(folder)
+        source = root / "source"
+        source_package = source / "amc_wx_lite"
+        source_package.mkdir(parents=True)
+        (source_package / "__init__.py").write_text("", encoding="utf-8")
+        endpoint = "https://amc-sygnalista.example.workers.dev/v1/report"
+        (source_package / bundle.PROBLEM_REPORT_ENDPOINT_RESOURCE).write_text(
+            endpoint + "\n", encoding="utf-8"
+        )
+
+        for profile_id in ("public", "test"):
+            target = root / profile_id
+            copied = bundle.copy_python_code(
+                target,
+                bundle.profile_from_id(profile_id),
+                source,
+            )
+            relative = "app/amc_wx_lite/problem-report-endpoint.txt"
+            assert relative in copied
+            assert (target / relative).read_text(encoding="utf-8") == endpoint + "\n"
+
+        (source_package / bundle.PROBLEM_REPORT_ENDPOINT_RESOURCE).write_text(
+            "https://user:secret@example.test/v1/report?token=bad\n",
+            encoding="utf-8",
+        )
+        try:
+            bundle.copy_python_code(root / "invalid", source_wxlite=source)
+        except SystemExit as error:
+            assert "prostym adresem HTTPS" in str(error)
+        else:
+            raise AssertionError("Nieprawidłowy endpoint nie może trafić do paczki")
+
+
+def test_missing_problem_report_endpoint_removes_stale_packaged_resource():
+    with tempfile.TemporaryDirectory() as folder:
+        root = Path(folder)
+        source = root / "source"
+        (source / "amc_wx_lite").mkdir(parents=True)
+        (source / "amc_wx_lite" / "__init__.py").write_text("", encoding="utf-8")
+        target = root / "bundle"
+        stale = target / "app" / "amc_wx_lite" / bundle.PROBLEM_REPORT_ENDPOINT_RESOURCE
+        stale.parent.mkdir(parents=True)
+        stale.write_text("https://stary.example/v1/report\n", encoding="utf-8")
+
+        copied = bundle.copy_python_code(target, source_wxlite=source)
+
+        assert not stale.exists()
+        assert "app/amc_wx_lite/problem-report-endpoint.txt" not in copied
+
+
 def test_public_gui_imports_without_private_service_modules():
     with tempfile.TemporaryDirectory() as folder:
         target = Path(folder)

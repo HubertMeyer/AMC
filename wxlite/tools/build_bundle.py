@@ -26,6 +26,7 @@ import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
+from urllib.parse import urlsplit
 
 WXLITE = Path(__file__).resolve().parent.parent
 REPO = WXLITE.parent
@@ -168,9 +169,41 @@ def build_label(
     return f"{label}-robocza" if dirty else label
 
 
+PROBLEM_REPORT_ENDPOINT_RESOURCE = "problem-report-endpoint.txt"
+
+
+def _read_optional_problem_report_endpoint(source_wxlite: Path) -> str | None:
+    source = source_wxlite / "amc_wx_lite" / PROBLEM_REPORT_ENDPOINT_RESOURCE
+    if not source.is_file():
+        return None
+    if source.stat().st_size > 2048:
+        raise SystemExit("Endpoint Sygnalisty jest zbyt długi.")
+    try:
+        endpoint = source.read_text(encoding="utf-8").strip()
+        parsed = urlsplit(endpoint)
+        _ = parsed.port
+    except (OSError, UnicodeError, ValueError) as error:
+        raise SystemExit("Nie można odczytać endpointu Sygnalisty.") from error
+    if (
+        not endpoint
+        or "\n" in endpoint
+        or "\r" in endpoint
+        or parsed.scheme.casefold() != "https"
+        or not parsed.hostname
+        or parsed.username is not None
+        or parsed.password is not None
+        or parsed.query
+        or parsed.fragment
+        or parsed.path != "/v1/report"
+    ):
+        raise SystemExit("Endpoint Sygnalisty nie jest prostym adresem HTTPS /v1/report.")
+    return endpoint
+
+
 def copy_python_code(
     target: Path,
     profile: ReleaseProfile | None = None,
+    source_wxlite: Path = WXLITE,
 ) -> list[str]:
     """Skopiuj wyłącznie moduły dozwolone przez profil wydania.
 
@@ -181,10 +214,11 @@ def copy_python_code(
     """
 
     selected_profile = profile or profile_from_id(TEST_PROFILE_ID)
+    report_endpoint = _read_optional_problem_report_endpoint(source_wxlite)
     package = target / "app" / "amc_wx_lite"
     package.mkdir(parents=True, exist_ok=True)
     copied = []
-    for source in sorted((WXLITE / "amc_wx_lite").glob("*.py")):
+    for source in sorted((source_wxlite / "amc_wx_lite").glob("*.py")):
         required_capability = PRIVATE_SERVICE_MODULES.get(source.name)
         if (
             required_capability is not None
@@ -196,10 +230,17 @@ def copy_python_code(
             continue
         shutil.copy2(source, package / source.name)
         copied.append(f"app/amc_wx_lite/{source.name}")
+    endpoint_destination = package / PROBLEM_REPORT_ENDPOINT_RESOURCE
+    if report_endpoint is None:
+        if endpoint_destination.is_file():
+            endpoint_destination.unlink()
+    else:
+        endpoint_destination.write_text(report_endpoint + "\n", encoding="utf-8")
+        copied.append(f"app/amc_wx_lite/{PROBLEM_REPORT_ENDPOINT_RESOURCE}")
     # AMC-wx-Lite.cmd zostaje w repo jako narzedzie deweloperskie. Nie wolno
     # go dokladac do paczki uzytkownika, bo moglby wybrac obcy interpreter.
     for name in ("requirements-win64.txt", "JAK_TESTOWAC.md"):
-        source = WXLITE / name
+        source = source_wxlite / name
         if source.exists():
             shutil.copy2(source, target / name)
             copied.append(name)

@@ -164,6 +164,12 @@ repozytorium, kanałami wydań i polityką prywatności.
   wdraża usługę i weryfikuje `/health`. Skrypt nie wywołuje logowania.
   Dodatkowe `-ActivateEndpoint` zapisuje adres raportów atomowo dopiero po
   poprawnej odpowiedzi zdrowia; nie tworzy automatycznie próbnego issue.
+- Pakowacz obu profili rozpoznaje opcjonalny
+  `problem-report-endpoint.txt`. Kopiuje go tylko po walidacji prostego adresu
+  HTTPS zakończonego `/v1/report`; dane logowania, parametry, fragment,
+  wielowierszowa lub zbyt długa wartość zatrzymują budowę. Brak konfiguracji
+  usuwa stary zasób z odświeżanej paczki, więc wydanie nie zachowa przypadkiem
+  wycofanego serwera.
 - Publikacja instalatora ma osobną bramkę PowerShell. Domyślny przebieg tylko
   sprawdza profil `public`, wersję, nazwę, rozmiar, SHA-256 i pełną rewizję
   źródeł oraz przygotowuje opis i manifest gotowości. Dopiero jawne `-Publish`
@@ -246,6 +252,10 @@ repozytorium, kanałami wydań i polityką prywatności.
   współbieżności i kontraktu skryptu wdrożenia. Parser PowerShell przyjął
   skrypt bez błędów. Nie wykonano `wrangler deploy`, logowania ani prawdziwego
   zgłoszenia.
+- Pakowanie endpointu i jego kontrakt z klientem: **42 zaliczone testy**
+  układu paczki, transportu i bramki wdrożenia. Sprawdzono oba profile,
+  odrzucenie adresu z danymi logowania i parametrem oraz usunięcie starego
+  zasobu przy braku konfiguracji.
 
 ## Znane ograniczenia
 
@@ -295,6 +305,8 @@ repozytorium, kanałami wydań i polityką prywatności.
 - Integralna bramka wdrożenia Workera: `65037b21` —
   `feat(rel): domknij bramke wdrozenia Sygnalisty`; pakiet nie zawiera
   konfiguracji konta, identyfikatora KV ani sekretu.
+- Warunkowe pakowanie zweryfikowanego endpointu: commit zostanie wpisany po
+  lokalnym zatwierdzeniu poprawki.
 - Druga redakcja serwerowa ścieżek, przypisań tokenów i kont,
   identyfikatorów oraz nazw plików: `8149d076` —
   `fix(rel): wzmocnij redakcje Workera`.
