@@ -142,6 +142,7 @@ Automatyczne usuwanie po obu stronach jest wykluczone.
   `src/AccessibleMediaController.Core/YouTube/YouTubeOAuthTokenClient.cs`,
   `src/AccessibleMediaController.Core/YouTube/YouTubeOAuthLoopbackReceiver.cs`,
   `src/AccessibleMediaController.Core/YouTube/YouTubeAccountCoordinator.cs`,
+  `src/AccessibleMediaController.Core/YouTube/YouTubeSubscriptionClient.cs`,
   `src/AccessibleMediaController.Windows/Services/YouTubeCredentialStore.cs`,
   powiązanie magazynu z LiteHostem oraz testy Core i Windows.
 - Testy: `dotnet run --project
@@ -149,12 +150,14 @@ Automatyczne usuwanie po obu stronach jest wykluczone.
   --no-restore -- --youtube-oauth-foundation` — zaliczone 10 z 10 scenariuszy.
   Test granicy poświadczeń Windows `--youtube-credential-boundary` — zaliczone
   6 z 6 sprawdzeń. Test `--youtube-account-coordinator` — zaliczone 5 z 5
-  scenariuszy cyklu konta. Projekty Windows i LiteHost zbudowane bez ostrzeżeń
-  i błędów.
+  scenariuszy cyklu konta. Test `--youtube-subscriptions` — zaliczone 5 z 5
+  scenariuszy odczytu, stronicowania i błędów API. Projekty Windows i LiteHost
+  zbudowane bez ostrzeżeń i błędów.
 - Commity źródła i testów: `ce723bff` (`feat(youtube): add safe OAuth protocol foundation`)
   `0c15fbcb` (`feat(youtube): isolate token exchange and credentials`) oraz
   `cbd2a5d3` (`feat(youtube): add guarded loopback callback`) i `161cb856`
-  (`feat(youtube): coordinate account lifecycle safely`).
+  (`feat(youtube): coordinate account lifecycle safely`) oraz `86309bb0`
+  (`feat(youtube): read account subscriptions safely`).
 - Zainstalowana kompilacja: brak. Ten etap nie zmienia jeszcze interfejsu ani
   bieżącej instalacji AMC Test.
 
@@ -194,6 +197,12 @@ bez konta.
   logowanie może uruchomić stronę Google; anulowanie nie nadpisuje poprzedniego
   konta, świeży token nie powoduje żądania sieciowego, wygasły jest odświeżany
   dokładnie raz, a wylogowanie usuwa tylko magazyn bieżącego profilu.
+- Odczyt subskrypcji używa oficjalnego `subscriptions.list` z `mine=true`,
+  pobiera wszystkie strony po 50 pozycji, przekazuje token wyłącznie w nagłówku
+  Bearer i scala duplikaty po stabilnym identyfikatorze kanału. Nie zapisuje
+  jeszcze niczego w Bibliotece AMC. Oficjalne źródła:
+  [subscriptions.list](https://developers.google.com/youtube/data/reference/rest/v3/subscriptions/list?hl=en),
+  [błędy YouTube Data API](https://developers.google.com/youtube/data/reference/rest/v3/errors).
 
 ## Testy i wynik
 
@@ -209,15 +218,18 @@ Menedżerze poświadczeń. Dwa scenariusze odbiornika użyły wyłącznie lokaln
 połączenia `127.0.0.1` na losowym porcie i potwierdziły prawidłowy powrót oraz
 odrzucenie odpowiedzi z obcym stanem. Pięć scenariuszy koordynatora potwierdziło
 zapis dopiero po prawidłowym powrocie, zachowanie konta po odmowie, odświeżenie
-wygasłego tokenu, brak sieci dla świeżego tokenu i wylogowanie.
+wygasłego tokenu, brak sieci dla świeżego tokenu i wylogowanie. Pięć scenariuszy
+klienta subskrypcji potwierdziło wszystkie strony, usuwanie duplikatów po ID,
+zatrzymanie powtarzającej się strony, użytkowe błędy limitu i konta bez kanału
+oraz pomijanie wpisów bez stabilnej tożsamości.
 
 ## Znane ograniczenia
 
 - Brak jeszcze przydzielonego identyfikatora aplikacji Google dla AMC.
-- Nie ma jeszcze synchronizacji subskrypcji ani interfejsu wx. Koordynator,
-  lokalny odbiornik, transport tokenów i chroniony, profilowo rozdzielony
-  magazyn są gotowe, ale nie są jeszcze połączone z widocznym poleceniem ani
-  z identyfikatorem aplikacji Google.
+- Nie ma jeszcze warstwy zapisującej subskrypcje do Biblioteki AMC ani
+  interfejsu wx. Koordynator, lokalny odbiornik, transport tokenów, odczyt API
+  i chroniony, profilowo rozdzielony magazyn są gotowe, ale nie są jeszcze
+  połączone z widocznym poleceniem ani z identyfikatorem aplikacji Google.
 - Przed dodaniem widocznego polecenia trzeba połączyć magazyn z profilem hosta
   i dodać testy parytetu Ctrl+F1, Ctrl+Shift+K i menu.
 - Profil publiczny wymaga osobnej decyzji po konfiguracji i weryfikacji Google.
@@ -225,7 +237,7 @@ wygasłego tokenu, brak sieci dla świeżego tokenu i wylogowanie.
 ## Wersja i commit
 
 Kod źródłowy i testy są zapisane w lokalnych commitach `ce723bff`, `0c15fbcb`,
-`cbd2a5d3` oraz `161cb856`, po zainstalowanej kompilacji
+`cbd2a5d3`, `161cb856` oraz `86309bb0`, po zainstalowanej kompilacji
 `2026.10.21-a947f79d...`. Projekty
 źródłowe zostały pomyślnie zbudowane, ale nie powstał nowy pakiet, instalacja
 ani publikacja.
