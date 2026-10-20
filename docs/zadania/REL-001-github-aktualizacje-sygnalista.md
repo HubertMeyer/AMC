@@ -154,6 +154,10 @@ repozytorium, kanałami wydań i polityką prywatności.
 - Worker ponownie redaguje dane, ogranicza wielkość i tempo żądań, zapisuje
   pełną treść w prywatnym repozytorium intake, a w publicznym AMC tworzy tylko
   krótki wpis. Sekret GitHuba występuje wyłącznie jako sekret Workera.
+- Własna domena nie jest wymagana: zatwierdzona konfiguracja używa HTTPS pod
+  `workers.dev`, wymaga sekretu `GITHUB_TOKEN`, KV i limitera. Logowanie
+  urządzeniem może wypisać adres i kod bez otwierania przeglądarki, a dane OAuth
+  na Windows mają być przechowywane w systemowym magazynie poświadczeń.
 - Publikacja instalatora ma osobną bramkę PowerShell. Domyślny przebieg tylko
   sprawdza profil `public`, wersję, nazwę, rozmiar, SHA-256 i pełną rewizję
   źródeł oraz przygotowuje opis i manifest gotowości. Dopiero jawne `-Publish`
@@ -191,7 +195,7 @@ repozytorium, kanałami wydań i polityką prywatności.
   SHA-256; AMC Test z lokalnym formularzem zostało zainstalowane i uruchomione.
   Ręczny odbiór NVDA formularza nadal pozostaje otwarty.
 - Internetowy etap z 20 października: **20 zaliczonych testów Python**
-  (`test_problem_report.py` i `test_async_gate.py`) oraz **7 zaliczonych testów
+  (`test_problem_report.py` i `test_async_gate.py`) oraz **8 zaliczonych testów
   Node Workera**. Sprawdzono dokładną treść żądania bez sekretu, wyłącznie
   HTTPS, brak sieci, limit, rozmiar, uszkodzoną odpowiedź, drugą redakcję,
   prywatne i publiczne issue na atrapach, idempotencję, konflikt treści,
@@ -249,7 +253,10 @@ repozytorium, kanałami wydań i polityką prywatności.
   `feat(rel): dodaj bezpieczna publikacje instalatora`.
 - Druga redakcja serwerowa ścieżek, przypisań tokenów i kont,
   identyfikatorów oraz nazw plików: `8149d076` —
-  `fix(rel): wzmocnij redakcje Workera`; 7/7 testów Workera zaliczone.
+  `fix(rel): wzmocnij redakcje Workera`.
+- Wymagany sekret, `workers.dev`, systemowy magazyn logowania i ochrona plików
+  lokalnych: `94d6a0f7` — `fix(rel): utwardz wdrozenie Workera`; 8/8 testów
+  Workera zaliczone.
 - Instalacja: `2026.10.19-fb9ba25fe0680cf7bf5435d53eb5b073de091cca-0debb6aa`;
   manifest 1665 plików, pełna integralność i uruchomienie zweryfikowane.
 - Publikacja: nie wykonano.
