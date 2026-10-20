@@ -275,8 +275,8 @@ repozytorium, kanałami wydań i polityką prywatności.
   `feat(rel): przygotuj internetowego Sygnaliste`.
 - Bezpieczna bramka publikacji publicznego instalatora: `61837b26` —
   `feat(rel): dodaj bezpieczna publikacje instalatora`.
-- Czysta publiczna linia źródeł: commit zostanie wpisany po lokalnym
-  zatwierdzeniu niniejszego etapu; narzędzie
+- Czysta publiczna linia źródeł: `9e4024c4` —
+  `feat(rel): przygotuj czysta linie zrodel`; narzędzie
   `scripts/Prepare-AMCPublicSourceSnapshot.ps1` nie publikuje danych.
 - Druga redakcja serwerowa ścieżek, przypisań tokenów i kont,
   identyfikatorów oraz nazw plików: `8149d076` —
