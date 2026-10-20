@@ -563,6 +563,6 @@ skrótów.
   `9893de59` — `fix(amc12): rozdziel instancje wx profili`; 24 testy
   ukierunkowane zaliczone. Nowy build, instalacja i uruchomienie pozostają do
   wykonania, więc sam commit nie jest jeszcze dowodem naprawionej instalacji.
-- Ochrona wspólnych skrótów w profilu publicznym: commit zostanie wpisany po
-  lokalnym zatwierdzeniu testu. Docelowa rewizja czystej linii źródeł będzie
-  odświeżona przed budową `alpha.425`.
+- Ochrona wspólnych skrótów w profilu publicznym: `d5c16d2b` —
+  `test(amc12): chron wspolne skroty profilu publicznego`. Docelowa rewizja
+  czystej linii źródeł będzie odświeżona przed budową `alpha.425`.
