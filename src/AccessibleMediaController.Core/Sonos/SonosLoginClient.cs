@@ -543,6 +543,7 @@ public sealed class SonosLoginClient : IDisposable
     // ---------- mapowanie bledow (BEZ echa ciala odpowiedzi) ----------
     private static SonosLoginStatus MapStartFailure(ReadResponse read) => read.HttpStatus switch
     {
+        HttpStatusCode.NotFound => SonosLoginStatus.BrokerEndpointMissing,
         HttpStatusCode.TooManyRequests => SonosLoginStatus.RateLimited,
         HttpStatusCode.ServiceUnavailable =>
             ReadErrorCode(read.Body) == "server_not_configured"

@@ -217,6 +217,11 @@ public enum SonosLoginStatus
     RateLimited,
     /// <summary>Broker dziala, ale nie ma skonfigurowanych kluczy Sonos (503 server_not_configured).</summary>
     BrokerNotConfigured,
+    /// <summary>
+    /// Skonfigurowany host HTTPS odpowiada, ale nie udostepnia punktu
+    /// rozpoczecia logowania AMC (HTTP 404 dla /login/start).
+    /// </summary>
+    BrokerEndpointMissing,
     /// <summary>Broker odpowiedzial bledem 5xx innym niz brak konfiguracji.</summary>
     BrokerError,
     /// <summary>Nie udalo sie nawiazac polaczenia albo minal skonczony limit czasu.</summary>
@@ -246,6 +251,8 @@ public static class SonosLoginMessages
                 "Dowód logowania Sonos nie zgadza się z rozpoczętą sesją. Rozpocznij logowanie ponownie.",
             [SonosLoginStatus.RateLimited] = "Serwer logowania Sonos jest chwilowo przeciążony. Spróbuj później.",
             [SonosLoginStatus.BrokerNotConfigured] = "Serwer logowania Sonos nie ma skonfigurowanego dostępu do Sonos.",
+            [SonosLoginStatus.BrokerEndpointMissing] =
+                "Usługa logowania Sonos nie jest uruchomiona pod skonfigurowanym adresem.",
             [SonosLoginStatus.BrokerError] = "Serwer logowania Sonos zgłosił błąd.",
             [SonosLoginStatus.BrokerUnreachable] = "Nie udało się połączyć z serwerem logowania Sonos.",
             [SonosLoginStatus.Canceled] = "Logowanie Sonos zostało anulowane.",

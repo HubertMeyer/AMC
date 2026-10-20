@@ -590,6 +590,12 @@ internal static class SonosLoginClientTests
             == SonosLoginStatus.BrokerNotConfigured, "503 server_not_configured rozpoznane osobno");
         Assert(StartStatus(HttpStatusCode.ServiceUnavailable, "{\"error\": \"server_busy\"}")
             == SonosLoginStatus.BrokerError, "inne 503 to BrokerError");
+        Assert(StartStatus(HttpStatusCode.NotFound, "<html>not found</html>")
+            == SonosLoginStatus.BrokerEndpointMissing,
+            "404 przy rozpoczeciu oznacza brak uslugi brokera pod skonfigurowanym adresem");
+        Assert(SonosLoginMessages.Describe(SonosLoginStatus.BrokerEndpointMissing)
+            == "Usługa logowania Sonos nie jest uruchomiona pod skonfigurowanym adresem.",
+            "komunikat 404 ma byc staly, uzytkowy i bez adresu brokera");
         Assert(StartStatus(HttpStatusCode.BadRequest, "{\"error\": \"invalid_code_challenge\"}")
             == SonosLoginStatus.InvalidResponse, "400 przy starcie oznacza niezgodnosc kontraktu");
     }
