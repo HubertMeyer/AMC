@@ -176,8 +176,11 @@ Kontrakt sprawdzono 2026-10-19 z aktualną oficjalną dokumentacją Sonosa:
   działający frontend nie zakończył się po bezpiecznym `WM_CLOSE`. Dwa
   dodatkowe zwykłe polecenia zamknięcia skierowane do potwierdzonego głównego
   okna również zostały odrzucone. Okno było widoczne, włączone i bez okna
-  modalnego. Procesów nie zakończono wymuszenie; przyczyna odmowy wewnętrznej
-  bramki pozostaje do doprecyzowania przed kolejną próbą instalacji.
+  modalnego. Tekst kontrolki stanu po odmowie brzmiał: „Nie zamykam AMC Test,
+  ponieważ trwa nagrywanie”. Oznacza to pozostawiony wewnętrzny wpis aktywnego
+  nagrania po zamknięciu pliku, a nie brak odpowiedzi hosta. Procesów nie
+  zakończono wymuszenie; cykl kończenia nagrania wymaga osobnej korekty przed
+  kolejną próbą instalacji.
 
 ## Znane ograniczenia
 
@@ -198,10 +201,10 @@ Kontrakt sprawdzono 2026-10-19 z aktualną oficjalną dokumentacją Sonosa:
   odczyt grup nie były automatyzowane. Wymagają świadomego odbioru użytkownika;
   żadne polecenie nie zostało wysłane do głośnika.
 - Bieżąca zainstalowana wersja nie zamyka się na żądanie aktualizatora także
-  po potwierdzonym zakończeniu nagrania. Nie wolno obchodzić tej odmowy
-  wymuszonym zakończeniem procesu. Trzeba ustalić, czy komunikat użytkowy mówi
-  o nadal aktywnym nagraniu, czy o braku odpowiedzi hosta, i dodać trwałą
-  diagnostykę tej decyzji.
+  po potwierdzonym zakończeniu zapisu pliku. Nie wolno obchodzić tej odmowy
+  wymuszonym zakończeniem procesu. Komunikat użytkowy potwierdza, że host nadal
+  zgłasza aktywne nagranie; trzeba naprawić domknięcie tego wpisu i dodać
+  trwałą diagnostykę decyzji.
 
 ## Brama publicznego udostępnienia
 
