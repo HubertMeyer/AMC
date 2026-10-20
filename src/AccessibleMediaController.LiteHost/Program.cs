@@ -109,6 +109,7 @@ internal static class Program
             new LiteSonosAccountOwner(),
             ReadArgumentPath(args, "--state-json"),
             loginBrokerAvailable: SonosIntegrationDefaults.BrokerAvailable);
+        using var youtubeAccount = OpenYouTubeAccount(args);
 
         var bookmarkStore = OpenBookmarkStore(args);
         using var handlers = new LiteEngineHandlers(
@@ -130,6 +131,11 @@ internal static class Program
         foreach (var entry in nvdaRelay.Handlers()) registeredHandlers.Add(entry.Key, entry.Value);
         foreach (var entry in nvdaBridge.Handlers()) registeredHandlers.Add(entry.Key, entry.Value);
         foreach (var entry in componentUpdates.Handlers()) registeredHandlers.Add(entry.Key, entry.Value);
+        if (youtubeAccount is not null)
+        {
+            foreach (var entry in youtubeAccount.Handlers())
+                registeredHandlers.Add(entry.Key, entry.Value);
+        }
         // JAWNY opt-in: poza kolejke wychodza tylko operacje, ktore moga dlugo
         // czytac/dekodowac plik: informacja pod lewa strzalka oraz eksport
         // zaznaczonego fragmentu. Transport nadal pozostaje responsywny, a
@@ -198,6 +204,11 @@ internal static class Program
                 LiteSpotifyCatalogContract.PlaylistTargetsOperation,
                 LiteSpotifyCatalogContract.PlaylistCreateOperation,
                 LiteSpotifyCatalogContract.PlaylistAddItemsOperation,
+                // OAuth i odczyt konta YouTube są jawne, a synchronizacja
+                // używa świeżego podglądu i jednej transakcji bazy Podcastów.
+                LiteYouTubeAccountContract.LoginOperation,
+                LiteYouTubeAccountContract.SyncPreviewOperation,
+                LiteYouTubeAccountContract.SyncApplyOperation,
                 // Uruchomienie TIDALa i wczytanie strony albumu trwa nawet
                 // kilkadziesiat sekund. Radio, nagrywanie i status lokalnego
                 // odtwarzacza musza w tym czasie pozostac responsywne.
@@ -385,6 +396,18 @@ internal static class Program
     {
         var state = ReadArgumentPath(args, "--state-json");
         return state is null ? null : new LiteWiiMCoordinator(state);
+    }
+
+    private static LiteYouTubeAccountCoordinator? OpenYouTubeAccount(string[] args)
+    {
+        var profile = ReadArgumentText(args, "--release-profile")?.ToLowerInvariant();
+        var clientId = ReadArgumentText(args, "--youtube-client-id");
+        var podcasts = ReadArgumentPath(args, "--podcasts-db");
+        // Pierwszy odbiór jest wyłącznie w AMC Test. Publiczny profil pozostaje
+        // wyłączony do czasu weryfikacji ekranu zgody i polityki Google.
+        if (profile != "test" || clientId is null || podcasts is null) return null;
+        return new LiteYouTubeAccountCoordinator(
+            new LiteYouTubeWindowsAccountBackend(clientId, profile, podcasts));
     }
 
     private static string? ReadArgumentPath(string[] values, string name)

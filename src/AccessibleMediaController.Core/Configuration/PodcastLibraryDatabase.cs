@@ -1171,6 +1171,22 @@ internal sealed class PodcastLibraryDatabase(string databasePath)
         }
     }
 
+    public YouTubeSubscriptionSyncPlan PreviewYouTubeSubscriptions(
+        IEnumerable<YouTubeSubscription> remoteSubscriptions,
+        bool restoreSuppressed)
+    {
+        ArgumentNullException.ThrowIfNull(remoteSubscriptions);
+        lock (_gate)
+        {
+            var settings = new PodcastSettings();
+            LoadInto(settings);
+            return YouTubeSubscriptionSyncPlanner.Create(
+                remoteSubscriptions,
+                settings,
+                restoreSuppressed);
+        }
+    }
+
     public PodcastRefreshResult ApplyRefresh(
         string subscriptionId,
         PodcastFeedDocument feed,

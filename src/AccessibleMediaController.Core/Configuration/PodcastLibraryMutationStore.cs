@@ -89,6 +89,11 @@ public sealed class PodcastLibraryMutationStore(string databasePath)
         bool restoreSuppressed = false) =>
         _database.ApplyYouTubeSubscriptions(remoteSubscriptions, restoreSuppressed);
 
+    public YouTubeSubscriptionSyncPlan PreviewYouTubeSubscriptions(
+        IEnumerable<YouTubeSubscription> remoteSubscriptions,
+        bool restoreSuppressed = false) =>
+        _database.PreviewYouTubeSubscriptions(remoteSubscriptions, restoreSuppressed);
+
     public IReadOnlyList<PodcastOpmlEntry> GetOpmlEntries() =>
         _database.GetOpmlEntries();
 

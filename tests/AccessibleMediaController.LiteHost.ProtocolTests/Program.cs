@@ -21,6 +21,7 @@ internal static class Program
         ("--podcast-progress", PodcastProgressStoreTests.Run),
         ("--tidal-catalog", TidalCatalogContractTests.Run),
         ("--spotify-catalog", SpotifyCatalogContractTests.Run),
+        ("--youtube-account", YouTubeAccountContractTests.Run),
         ("--account-settings", AccountSettingsStoreTests.Run),
         ("--wiim", WiiMContractTests.Run),
         ("--wiim-profile", WiiMProfileMutationTests.Run),

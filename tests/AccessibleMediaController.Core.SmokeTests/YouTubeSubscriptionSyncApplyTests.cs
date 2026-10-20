@@ -16,6 +16,10 @@ internal static class YouTubeSubscriptionSyncApplyTests
     {
         WithDatabase(new PodcastSettings(), (database, store) =>
         {
+            var preview = store.PreviewYouTubeSubscriptions(
+                [Remote("UC-JEDEN", "Kanał jeden"), Remote("UC-DWA", "Kanał dwa")]);
+            Assert(preview.Actions.Count == 2 && store.GetRefreshTargets().Count == 0,
+                "Sam podgląd zmienił Bibliotekę przed potwierdzeniem.");
             var first = store.ApplyYouTubeSubscriptions(
                 [Remote("UC-JEDEN", "Kanał jeden"), Remote("UC-DWA", "Kanał dwa")]);
             Assert(first.Added == 2 && first.Changed == 2,
