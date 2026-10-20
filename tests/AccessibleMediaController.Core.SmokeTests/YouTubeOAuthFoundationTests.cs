@@ -16,7 +16,9 @@ internal static class YouTubeOAuthFoundationTests
         ExchangesCodeThroughOfficialEndpoint();
         RefreshesWithoutLosingRefreshToken();
         SanitizesTokenEndpointErrors();
-        Console.WriteLine("OK: bezpieczny fundament oficjalnego logowania YouTube (8 scenariuszy)");
+        ReceivesValidLoopbackCallbackWithoutEchoingCode();
+        RejectsWrongLoopbackState();
+        Console.WriteLine("OK: bezpieczny fundament oficjalnego logowania YouTube (10 scenariuszy)");
     }
 
     private static void BuildsReadOnlyPkceRequestWithoutSecret()
@@ -190,6 +192,49 @@ internal static class YouTubeOAuthFoundationTests
             Assert(exception.Message.Contains("Zaloguj się ponownie", StringComparison.Ordinal),
                 "Błąd invalid_grant nie dostał użytkowego komunikatu.");
         }
+    }
+
+    private static void ReceivesValidLoopbackCallbackWithoutEchoingCode()
+    {
+        using var receiver = YouTubeOAuthLoopbackReceiver.Start();
+        var request = YouTubeOAuthProtocol.CreateAuthorizationRequest(ClientId, receiver.RedirectUri);
+        const string code = "kod-ktory-nie-moze-wrocic-w-html";
+        var receiveTask = receiver.ReceiveAsync(request.State, CancellationToken.None);
+        using var http = new HttpClient();
+        var uri = new UriBuilder(receiver.RedirectUri)
+        {
+            Query = "state=" + Uri.EscapeDataString(request.State)
+                + "&code=" + Uri.EscapeDataString(code)
+        }.Uri;
+        var response = http.GetAsync(uri).GetAwaiter().GetResult();
+        var page = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+        var callback = receiveTask.GetAwaiter().GetResult();
+
+        Assert(callback.Succeeded && callback.Code == code,
+            "Lokalny odbiornik nie przekazał prawidłowego kodu hostowi.");
+        Assert(!page.Contains(code, StringComparison.Ordinal)
+               && page.Contains("wrócić do AMC", StringComparison.Ordinal),
+            "Strona powrotu ujawniła kod albo nie podała użytkowej instrukcji.");
+        Assert(response.Headers.CacheControl?.NoStore == true,
+            "Strona powrotu mogłaby zostać zapisana w pamięci podręcznej.");
+    }
+
+    private static void RejectsWrongLoopbackState()
+    {
+        using var receiver = YouTubeOAuthLoopbackReceiver.Start();
+        var receiveTask = receiver.ReceiveAsync("oczekiwany-stan-bezpieczenstwa", CancellationToken.None);
+        using var http = new HttpClient();
+        var uri = new UriBuilder(receiver.RedirectUri)
+        {
+            Query = "state=obcy-stan&code=obcy-kod"
+        }.Uri;
+        _ = http.GetAsync(uri).GetAwaiter().GetResult();
+        var callback = receiveTask.GetAwaiter().GetResult();
+
+        Assert(!callback.Succeeded && callback.Code is null,
+            "Odbiornik przyjął odpowiedź z obcej sesji OAuth.");
+        Assert(callback.Message.Contains("zabezpieczenie sesji", StringComparison.Ordinal),
+            "Odrzucenie obcej sesji nie ma użytkowego komunikatu.");
     }
 
     private static Dictionary<string, string> ParseQuery(string query) =>
