@@ -59,8 +59,8 @@ zmian, wymagający korekty użytkownika:
   NVDAExtensionGlobalPlugin bez zmiany zwykłego schowka w innych programach.
   Szczegóły:
   [NVDA-001-opoznienie-ctrl-c.md](NVDA-001-opoznienie-ctrl-c.md).
-- `SEARCH-001` — **Korekta Radia i `Ctrl+L` jest w źródłach i testach; czeka na
-  budowę oraz instalację** — wyszukiwanie YouTube, Radia, Spotify i TIDAL:
+- `SEARCH-001` — **Korekta Radia i `Ctrl+L` jest zainstalowana w AMC Test;
+  czeka na ręczny odbiór NVDA** — wyszukiwanie YouTube, Radia, Spotify i TIDAL:
   `Ctrl+Shift+L` pozostaje w oknie także dla zapisanego wyniku, wykonuje jedną
   właściwą operację i nie oddaje mowy głównemu oknu. `Ctrl+L` zamyka modal i
   przechodzi wspólnym poleceniem do Biblioteki. Szczegóły:
@@ -80,8 +80,8 @@ zmian, wymagający korekty użytkownika:
   oraz `AMC04_REALIZACJA_ETAP_A_2026-10-18.md`. Stare źródła WPF służą tylko
   jako wzorzec; właściwe wdrożenie wykonujemy w tym repozytorium.
 - `MENU-001` — **W trakcie; naprawa `Shift+F10` harmonogramów i nazwa `Alt+D`
-  są zainstalowane w AMC Test, a korekta pełnych ścieżek profilu hosta czeka na
-  nową instalację** —
+  oraz korekta pełnych ścieżek profilu hosta są zainstalowane w AMC Test i
+  czekają na odbiór NVDA** —
   wspólne menu kontekstowe bez odczytu technicznych cyfr i przypadkowych
   liter dostępu, nazwy zależne od rodzaju elementu, rzeczywiste skróty oraz
   audyt dostępności poleceń i nawigacji między sesjami. Szczegóły:
@@ -163,9 +163,9 @@ zmian, wymagający korekty użytkownika:
   Dodano obowiązkowy odizolowany start interfejsu i hosta przed przyjęciem
   paczki, przed kompilacją instalatora i po instalacji. Także lokalna promocja
   AMC Test sprawdza kandydata przed podmianą i zainstalowaną kopię przed
-  widocznym uruchomieniem; kod oraz testy są gotowe, a rzeczywista nowa paczka
-  poprawnie została zatrzymana przed instalacją na wykrytym błędzie świeżej
-  bazy Podcastów. Przyczyna jest naprawiona i czeka na powtórną paczkę. Niczego nie
+  widocznym uruchomieniem. Bramka zatrzymała pierwszą paczkę na wykrytym
+  błędzie świeżej bazy Podcastów; po naprawie kandydat i instalacja AMC Test z
+  rewizji `233767f1` przeszły kontrolowany start. Niczego nie
   opublikowano** — jeden kod, jawny manifest możliwości, osobne katalogi,
   blokady, logi i kanały AMC Test oraz publicznego AMC. Bieżący zapis realizacji:
   [AMC12-profile-wydania-publicznego-i-testowego.md](AMC12-profile-wydania-publicznego-i-testowego.md).

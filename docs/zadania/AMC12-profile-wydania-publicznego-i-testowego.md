@@ -332,8 +332,8 @@ przez profil. Zainstalowany numer to `0.1.0-alpha.425`.
   instalacją. Wynik `FAILED: HostError: Silnik przestał odpowiadać` ujawnił,
   że świeży profil przekazywał pełną docelową ścieżkę `podcasts.db`, ale host
   dopuszczał tylko już istniejący plik. Bramka nie podmieniła ani nie
-  uruchomiła wadliwej wersji. Host tworzy teraz katalog, a warstwa Core pustą
-  bazę z prawidłowym schematem i ustawieniami domyślnymi. Powtórne testy:
+  uruchomiła wadliwej wersji. Host tworzy teraz katalog, a warstwa Core tworzy
+  pustą bazę z prawidłowym schematem i ustawieniami domyślnymi. Powtórne testy:
   **22/22 Python** oraz wszystkie **22 zestawy protokołu hosta** — zaliczone.
 - Druga promocja również zatrzymała się przed instalacją: rozszerzony tekst
   błędu w pomocniczym skrypcie miał błąd składni PowerShell. Po zastąpieniu go
@@ -590,8 +590,9 @@ przez profil. Zainstalowany numer to `0.1.0-alpha.425`.
 - Bramka sprawdza konstrukcję pełnego okna, start właściwego hosta, `hello` i
   konfigurację audio. Nie zastępuje ręcznych prób każdej funkcji sieciowej,
   logowania usług ani odbioru mowy NVDA.
-- Kod bramki jest obecnie przetestowany źródłowo. Nowej paczki ani instalatora
-  z tym mechanizmem jeszcze nie zbudowano, nie zainstalowano i nie opublikowano.
+- Bramka została sprawdzona na rzeczywistej paczce i zainstalowanej kopii AMC
+  Test. Nie zbudowano ponownie publicznego instalatora i niczego nie
+  opublikowano.
 
 - Pozostaje kontrolowany odbiór rzeczywistego pobrania i aktualizacji FFmpeg
   oraz yt-dlp w obu profilach. Sama równoległa instalacja i praca obu hostów
@@ -702,13 +703,30 @@ przez profil. Zainstalowany numer to `0.1.0-alpha.425`.
   interfejs publiczny nie uruchamiał się. Zachowano poprawioną paczkę i jedyny
   aktualny instalator `0866d668-alpha425-fix`, źródła, dokumentację, profile,
   ustawienia, nagrania oraz zastane katalogi testowe o niepewnym pochodzeniu.
+- 21.10.2026 po potwierdzeniu integralności i kontrolowanego startu kandydata
+  `233767f1` oraz zainstalowanej kopii usunięto dokładnie dwa zastąpione
+  katalogi profilu testowego:
+  `.test-output/AMC-Python-next-2026.10.21-8b8a472860302bc29c49b71638f63dfeac92ca97-6ec8efcd`
+  i
+  `.test-output/AMC-Python-next-2026.10.21-7a58e926f555055ebe77dcf88d8c10c2bc209f52-0c73b6fb`.
+  Odzyskano 286 012 840 bajtów, około 272,76 MiB. Były to odtwarzalne
+  artefakty; można je odzyskać przez ponowną budowę z odpowiadających im
+  commitów. Zachowano bieżącego kandydata `233767f1`, źródła, dokumentację,
+  ustawienia, dane użytkownika, nagrania i pozostałe katalogi testowe o
+  niepewnym pochodzeniu.
 
 ## Wersja i commit
 
-- Trwała bramka uruchomienia kandydata: bieżący commit o nazwie
-  `fix(amc): utrzymaj wyszukiwanie i profil hosta`; dokładny identyfikator
-  zostanie dopisany po zapisie. Zainstalowany publiczny AMC pozostaje
-  `0.1.0-alpha.425`; ten etap nie tworzy ponownie numeru `alpha.425`.
+- Trwała bramka uruchomienia kandydata: `3be15559`; objęcie nią lokalnej
+  promocji AMC Test: `8b8a4728`; świeży profil hosta: `7a58e926`; czytelna
+  przyczyna odrzucenia: `233767f1`.
+- Zainstalowany AMC Test: rewizja `233767f1971349a32bb33468c16bfca19217403e`,
+  paczka `0c73b6fb`, 1668 plików, etykieta
+  `2026.10.21-233767f1971349a32bb33468c16bfca19217403e-0c73b6fb`.
+  Pełna integralność, kontrolowany start kandydata i zainstalowanej kopii oraz
+  pojedynczy komplet procesów zostały potwierdzone. Publiczny AMC pozostaje
+  `0.1.0-alpha.425`; tego instalatora nie przebudowano i niczego nie
+  opublikowano.
 
 - Data pracy: 19–20 października 2026.
 - Nazwy kanałów ustalone 20 października 2026: prywatne pełne wydanie „AMC

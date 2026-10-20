@@ -229,8 +229,8 @@ brak rozbieżności powierzchni.
 
 ## Znane ograniczenia
 
-- Korekta Radia i `Ctrl+L` jest obecnie potwierdzona w źródłach i testach, ale
-  nie została jeszcze zbudowana, zainstalowana ani odebrana ręcznie z NVDA.
+- Korekta Radia i `Ctrl+L` jest zbudowana, zainstalowana i uruchomiona w AMC
+  Test. Pozostaje ręczny odbiór fokusu i komunikatów z NVDA.
 
 - Ręczny odbiór na prawdziwym koncie Spotify/TIDAL wymaga obecności użytkownika;
   nocny test nie loguje usług i nie tworzy danych konta.
@@ -240,10 +240,12 @@ brak rozbieżności powierzchni.
 
 ## Wersja i commit
 
-- Korekta z 20 października 2026: bieżący commit o nazwie
-  `fix(amc): utrzymaj wyszukiwanie i profil hosta`; dokładny identyfikator jest
-  zapisywany w rejestrze po utworzeniu commitu. Nie zmienia numeru istniejącej
-  instalacji `alpha.425` i nie została jeszcze opublikowana.
+- Korekta z 20 października 2026: `3be15559` —
+  `fix(amc): utrzymaj wyszukiwanie i profil hosta`.
+- Zainstalowana kompilacja:
+  `2026.10.21-233767f1971349a32bb33468c16bfca19217403e-0c73b6fb`,
+  uruchomiona ze stałej ścieżki `D:\Projekty Codex\AMC Python\AMC.exe`.
+  Publikacji nie wykonywano.
 
 - Implementacja i testy: commit
   `1169e6aa17414c0d30c7cf4d3c40e530463ea317`.

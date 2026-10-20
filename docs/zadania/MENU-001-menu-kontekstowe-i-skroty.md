@@ -162,11 +162,12 @@ poprawną bazę Podcastów, zamiast kończyć start z powodu braku pliku.
 
 ## Znane ograniczenia
 
-- Korekta pełnych ścieżek profilu jest obecnie w źródłach i testach; czeka na
-  nową paczkę, instalację i ręczny odbiór klawiszy funkcyjnych z NVDA.
+- Korekta pełnych ścieżek profilu i świeżej bazy Podcastów jest zbudowana,
+  zainstalowana i uruchomiona; czeka na ręczny odbiór klawiszy funkcyjnych z
+  NVDA.
 
-- Korekta `Ctrl+Shift+0` z commitu `5d959607` nie została jeszcze zbudowana,
-  zainstalowana ani odebrana ręcznie z NVDA.
+- Korekta `Ctrl+Shift+0` z commitu `5d959607` jest w bieżącej instalacji;
+  pozostaje ręczny odbiór z NVDA.
 - Najnowsza korekta `Shift+F10` i nazwy `Alt+D` jest w bieżącej instalacji AMC
   Test; wymaga jeszcze ręcznego odbioru NVDA.
 
@@ -179,9 +180,13 @@ poprawną bazę Podcastów, zamiast kończyć start z powodu braku pliku.
 
 ## Wersja i commit
 
-- Korekta z 20 października 2026: bieżący commit o nazwie
-  `fix(amc): utrzymaj wyszukiwanie i profil hosta`; instalacja `alpha.425` nie
-  została jeszcze podmieniona tym kodem.
+- Pełne ścieżki profilu: `3be15559` —
+  `fix(amc): utrzymaj wyszukiwanie i profil hosta`; bezpieczny świeży magazyn:
+  `7a58e926` — `fix(host): uruchom swiezy profil z pelnymi sciezkami`.
+- Zainstalowana kompilacja:
+  `2026.10.21-233767f1971349a32bb33468c16bfca19217403e-0c73b6fb`;
+  pełna integralność, kontrolowany start instalacji i jeden komplet procesów
+  AMC Test zostały potwierdzone. Publikacji nie wykonywano.
 
 - Źródła regresji `Ctrl+Shift+0`: `5d959607` —
   `fix(amc): przywroc Ctrl Shift 0 na listach`. Testy ukierunkowane i analiza
