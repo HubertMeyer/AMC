@@ -8650,7 +8650,8 @@ class LiteFrame(wx.Frame):
         started = "Otwieranie stacji" if action is SearchResultAction.OPEN else "Przygotowywanie stacji"
         self.status_field.SetLabel(started)
         self.status_bar.show(started)
-        say(started)
+        if action is not SearchResultAction.LIBRARY:
+            say(started)
 
         def work() -> tuple[list[dict], dict | None]:
             payloads: list[dict] = []

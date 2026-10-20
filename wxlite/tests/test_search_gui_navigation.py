@@ -1055,10 +1055,7 @@ def test_radio_search_library_confirmation_uses_dialog_and_keeps_focus_context()
     )
 
     assert calls == [("Polskie Radio Poznań", "https://example.test/poznan")]
-    assert spoken == [
-        "Przygotowywanie stacji",
-        "Dodano do Biblioteki: Polskie Radio Poznań",
-    ]
+    assert spoken == ["Dodano do Biblioteki: Polskie Radio Poznań"]
     assert frame._radio_search_action_pending is False
 
 

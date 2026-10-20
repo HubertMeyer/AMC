@@ -155,8 +155,9 @@ Biblioteki, albo jasno podaje właściwy skrót dla typu elementu. Po operacji
 fokus pozostaje na wyniku; dopiero `Escape` wraca do odświeżonej Biblioteki.
 
 Ta sama zasada obejmuje Radio. Na stacji z publicznego katalogu
-`Ctrl+Shift+L` pozostaje na liście wyników, mówi „Przygotowywanie stacji”, a po
-potwierdzonym zapisie „Dodano do Biblioteki: nazwa”. Jeżeli wyszukiwanie
+`Ctrl+Shift+L` pozostaje na liście wyników i po potwierdzonym zapisie mówi
+„Dodano do Biblioteki: nazwa”. Nie poprzedza już tego nadmiarowym komunikatem
+„Przygotowywanie stacji”. Jeżeli wyszukiwanie
 znalazło stację już zapisaną, podaje „Stacja jest już w Bibliotece: nazwa” i
 nie usuwa jej ukradkiem. `Ctrl+L` w oknie wyszukiwania zamyka je i wykonuje to
 samo wspólne polecenie Biblioteki co menu, pomoc i paleta.
@@ -184,6 +185,12 @@ Przykładowe komunikaty:
   wykonawcą ani podcastem Biblioteki.
 
 ## Uzasadnienie i decyzje
+
+**Korekta użytkownika z 21 października 2026, druga:** komunikat
+„Przygotowywanie stacji” po `Ctrl+Shift+L` w Radiu był nadmiarowy. Operacja
+pozostaje widoczna w pasku stanu, ale NVDA otrzymuje dopiero potwierdzony wynik
+zapisu albo konkretny błąd. Ta korekta zastępuje wcześniejsze wymaganie dwóch
+komunikatów dla dodawania stacji.
 
 **Korekta użytkownika z 21 października 2026:** po naprawie Radia należało
 sprawdzić ten sam przypadek na nowym profilu oraz w wyszukiwaniu lokalnym,
@@ -282,11 +289,16 @@ brak rozbieżności powierzchni.
 
 ## Wersja i commit
 
-- Wspólna korekta wszystkich sesji z 21 października 2026 jest zapisywana w
-  bieżącym commicie implementacyjnym; dokładny identyfikator zostanie dopisany
-  w rejestrze po utworzeniu commitu. Zmieniono `wxlite/amc_wx_lite/gui.py`,
+- Wspólna korekta wszystkich sesji z 21 października 2026: commit
+  `00903317bca522ee0c5c6833a2350ec67d5b9b1c`. Zmieniono
+  `wxlite/amc_wx_lite/gui.py`,
   `wxlite/tests/test_search_gui_navigation.py`,
   `wxlite/tests/test_search_catalog.py` oraz niniejszy dokument.
+- Pełna bramka po tej korekcie ujawniła nieaktualną atrapę startu silnika;
+  naprawił ją osobny commit `bd708f7522f5365d1397595bb98366d1f93403c2`.
+  Powtórzony pełny wynik: **1910 zaliczonych, 110 pominiętych i 11 podtestów**.
+- Usunięcie zapowiedzi „Przygotowywanie stacji” jest częścią bieżącego commitu
+  korekty odbiorczej; dokładny identyfikator zostanie dopisany po zapisie.
 
 - Korekta z 20 października 2026: `3be15559` —
   `fix(amc): utrzymaj wyszukiwanie i profil hosta`.
