@@ -27,6 +27,70 @@ streamingowych, które nie są jeszcze dopracowane. Ukończone funkcje — w tym
 Sonos — pozostają dostępne. Obecnie wyłączone pozostają TIDAL, Spotify i
 nieodebrana jeszcze integracja Frontier Smart.
 
+### Korekta odbiorcza z 21.10.2026 — Ctrl+F5 i kopia danych Test → Public
+
+Ta korekta uzupełnia wcześniejszą decyzję o osobnych profilach. Użytkownik nie
+powinien ręcznie szukać katalogu profilu ani reinstalować programu, żeby
+przygotować publiczny AMC do odbioru. Wygodnym modelem jest pełna kopia danych
+wspólnych z AMC Test do osobnego profilu publicznego. Oba uruchomione programy
+nie mogą natomiast stale zapisywać do tych samych plików SQLite i JSON, bo
+oznaczałoby to dwóch pisarzy, konflikty historii, ustawień i harmonogramów.
+
+#### Zachowanie widoczne dla użytkownika
+
+- Polecenie `Odśwież dane z AMC Test` w menu Ustawienia i palecie poleceń jest
+  bezpieczną, jednokierunkową kopią Test → Public. Przy konflikcie pyta przed
+  zastąpieniem danych; nie przenosi haseł, tokenów ani funkcji wyłączonych w
+  profilu publicznym.
+- W sesji Pliki lokalne `Ctrl+F5` otwiera `Foldery Biblioteki`. Jeżeli lista
+  jest pusta, okno mówi: `Brak dodanych folderów. Wybierz Dodaj folder, aby
+  utworzyć Bibliotekę.` i ustawia fokus na przycisku `Dodaj folder`.
+- Po skopiowaniu danych `Ctrl+F5` pokazuje trzy foldery Biblioteki. Kopia
+  zastosowana 21.10.2026 zawiera 11 685 plików, 242 stacje, 352 źródła
+  podcastów i YouTube, 54 655 odcinków, 25 zakładek, 52 harmonogramy oraz 538
+  wpisów historii nagrywania. Publiczna baza ma 931 wpisów historii
+  odtwarzania.
+- AMC Test i AMC Public należy podczas odbioru uruchamiać kolejno, nie
+  równocześnie. Jest to zasada testowa do czasu osobnego potwierdzenia pracy
+  dwóch silników audio i mostu NVDA obok siebie; nie jest wymogiem instalacji
+  dla zwykłego użytkownika, który ma tylko publiczny AMC.
+
+#### Diagnoza, zabezpieczenie danych i dowody
+
+- Profil publiczny był rzeczywiście pusty: 0 źródeł folderów i 0 lokalnych
+  rekordów. Migawka AMC Test zawierała 3 źródła i 11 685 rekordów. Reinstalacja
+  tego samego pakietu nie naprawiłaby tej różnicy.
+- Dziennik frontendu zawierał cztery awarie startu hosta zakończone ogólnym
+  `Silnik przestał odpowiadać`, w tym o 20:18, gdy AMC Test nadal pracował.
+  Interfejs przekazywał dotąd `on_stderr=lambda line: None`, więc usuwał
+  diagnostykę procesu potomnego. `alpha.432` zapisuje ją w lokalnym dzienniku
+  frontendu; techniczne wiersze nie trafiają do zwykłej mowy NVDA.
+- Przed kopią utworzono niezmienioną kopię bezpieczeństwa 7 plików, 315 834
+  bajty, w `D:\Projekty Codex\AMC Public Profile
+  Backups\before-test-copy-20261021-2028`. Następnie AMC Test zamknięto zwykłym
+  żądaniem zamknięcia okna. Ostatnie ręczne nagranie miało potwierdzone
+  zakończenie o 19:56; procesu nie kończono siłowo.
+- Kontrolowany start AMC Test utworzył świeżą migawkę o 20:28 i zakończył się
+  kodem 0. Import do publicznego profilu zakończył się stanem `imported`, a
+  ponowny odczyt stanem `current`; host zwrócił 3 dostępne foldery. Kopia
+  bezpieczeństwa nie została usunięta.
+- Testy celowane poprawki: 113 zaliczonych. Pełna regresja wxPython: 1955
+  zaliczonych, 110 świadomie pominiętych i 11 podtestów zaliczonych. Wszystkie
+  26 zestawów protokołu C# przeszło. Kompilacja całego rozwiązania Release:
+  0 ostrzeżeń i 0 błędów.
+- Powyższe potwierdza źródła, testy, kompilację i rzeczywisty import profilu.
+  Nie potwierdza jeszcze instalatora `alpha.432`, zainstalowanej kopii ani
+  ręcznego odbioru fokusu i wypowiedzi NVDA; te etapy są zapisywane osobno.
+
+#### Szkic listy zmian do zatwierdzenia przez użytkownika
+
+- `Ctrl+F5` w Plikach lokalnych prowadzi do czytelnego zarządzania Folderami
+  Biblioteki także na pustym profilu.
+- Dane do odbioru publicznego AMC można skopiować z AMC Test jednym poleceniem,
+  bez współdzielenia żywych baz i bez reinstalacji.
+- Awarie silnika zachowują użyteczną diagnostykę w lokalnym dzienniku zamiast
+  kończyć się wyłącznie komunikatem `Silnik przestał odpowiadać`.
+
 ### Korekta odbiorcza z 21.10.2026 — Ctrl+Shift+U i folder z Ctrl+O
 
 Ta korekta zastępuje wcześniejsze założenie, że każdy wiersz zwykłego folderu

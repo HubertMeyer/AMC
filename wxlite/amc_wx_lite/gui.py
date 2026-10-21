@@ -4407,6 +4407,10 @@ class LibraryFoldersDialog(wx.Dialog):
         message = payload.get("message") if isinstance(payload, dict) else None
         if isinstance(message, str) and message.strip():
             self.set_status(message.strip())
+        elif not self._sources:
+            self.set_status(
+                "Brak dodanych folderów. Wybierz Dodaj folder, aby utworzyć Bibliotekę."
+            )
         self._update_buttons()
 
     def set_busy(self, busy: bool, message: str = "") -> None:
@@ -9413,7 +9417,10 @@ class LiteFrame(wx.Frame):
                 else None
             ),
             on_event=self._on_engine_event,
-            on_stderr=lambda line: None,
+            on_stderr=lambda line: _append_frontend_log(
+                self.store,
+                f"Silnik: {line}",
+            ),
             **persistence,  # type: ignore[arg-type]
         )
         self.client = client

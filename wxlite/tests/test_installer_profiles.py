@@ -214,3 +214,16 @@ def test_startup_smoke_is_isolated_and_cannot_activate_an_existing_instance() ->
     assert activation_handler.index("if _startup_smoke_mode():") < activation_handler.index(
         "self._windows_preset_10_hotkey.register()"
     )
+
+
+def test_empty_library_folders_dialog_explains_the_next_action() -> None:
+    """Puste Ctrl+F5 ma prowadzić do Dodaj folder, a nie mówić tylko „Gotowe”."""
+
+    dialog = GUI[GUI.index("class LibraryFoldersDialog") :]
+    dialog = dialog[: dialog.index("class FrontierSmartDevicesDialog")]
+    message = (
+        "Brak dodanych folderów. Wybierz Dodaj folder, aby utworzyć Bibliotekę."
+    )
+    assert message in dialog
+    assert "elif not self._sources:" in dialog
+    assert "self.add_button.SetFocus()" in dialog

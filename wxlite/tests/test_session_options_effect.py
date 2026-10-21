@@ -409,6 +409,53 @@ def test_nowy_proces_dostaje_wybory_sesji_a_nie_sam_global():
     assert payloads[-1]["interTrackSilenceMs"] == 2000
 
 
+def test_diagnostyka_hosta_trafia_do_dziennika_frontendu():
+    """Błąd procesu potomnego nie może znów zniknąć w pustej funkcji zwrotnej."""
+
+    state = LiteState(options=Options())
+    client = FakeClient()
+    captured: dict[str, object] = {}
+    logged: list[tuple[object, str]] = []
+    store = object()
+
+    def make_client(*_args, **kwargs):
+        captured.update(kwargs)
+        return client
+
+    frame = SimpleNamespace(
+        state=state,
+        options=state.options,
+        client=None,
+        store=store,
+        runner=ImmediateRunner(),
+        timer=SimpleNamespace(Start=lambda _ms: None),
+        library=SimpleNamespace(use_collation=lambda _c: None),
+        announcer=SimpleNamespace(say=lambda _t: None),
+        _queue_persistence_arguments=lambda: {},
+        _on_engine_event=lambda *a: None,
+        _load_initial_content=lambda: None,
+        _update_media_components=lambda *, automatic: None,
+        _remember_local_playback_positions=True,
+    )
+    real_method(
+        "_start_engine",
+        {
+            "LiteHostClient": make_client,
+            "default_host_path": lambda: Path("synthetic-host"),
+            "current_profile": lambda: SimpleNamespace(profile_id="public"),
+            "common_data_snapshot_path": lambda: Path("synthetic-snapshot"),
+            "HostCollation": lambda _call: object(),
+            "_startup_smoke_mode": lambda: False,
+            "_append_frontend_log": lambda target, text: logged.append((target, text)),
+        },
+    )(frame)
+
+    callback = captured.get("on_stderr")
+    assert callable(callback)
+    callback("syntetyczny wyjątek silnika")
+    assert logged == [(store, "Silnik: syntetyczny wyjątek silnika")]
+
+
 def test_zmiana_algorytmu_tempa_nie_ucina_wyborow_sesji():
     """Wspolny payload: menu Dzwiek nie moze zdmuchnac opcji sesji."""
     state = LiteState(options=Options())
