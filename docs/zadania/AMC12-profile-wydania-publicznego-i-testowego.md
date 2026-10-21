@@ -2,30 +2,23 @@
 
 ## Status
 
-**Publiczny AMC `0.1.0-alpha.428` jest zbudowany i zainstalowany w
-`D:\Projekty Codex\AMC Public`. Korekta przeszła pełną regresję wxPython: 1945
-testów zaliczonych, 110 świadomie pominiętych i 11 podtestów zaliczonych.
-Naprawia `B` dla pliku otwartego bezpośrednio z folderu, pozostanie w tym samym
-folderze po `Shift+Delete` oraz powtarzany pomiar pod lewą strzałką. Końcowa
-paczka `90f156c2` ma 1075 kontrolowanych plików; pełna integralność i
-kontrolowany start zainstalowanej kopii są zaliczone. TIDAL, Spotify i Frontier
-Smart są nieobecne, WiiM, Sonos oraz pełny eksport/import pozostają. Ręczny
-odbiór NVDA pozostaje do wykonania; publikacji zdalnej nie wykonano.**
-
-**Po ręcznym odbiorze z 21.10.2026 przygotowano w źródłach następną, wspólną
-korektę: `Alt+R` ma po odświeżeniu listy podać także nazwę jedynego aktywnego
-nagrania. Pełna regresja: 1948 zaliczonych, 110 pominiętych i 11 podtestów
-zaliczonych. Ta korekta nie została jeszcze zbudowana ani zainstalowana, bo w
-AMC Test trwa rzeczywiste nagranie. Zainstalowany publiczny AMC pozostaje więc
-bez zmian w wersji `alpha.428`.**
+**Publiczny AMC `0.1.0-alpha.429` jest zbudowany, zainstalowany i uruchomiony z
+`D:\Projekty Codex\AMC Public`. Wspólna korekta `Alt+R` podaje po odświeżeniu
+listy także nazwę jedynego aktywnego nagrania. Pełna regresja wxPython: 1948
+zaliczonych, 110 świadomie pominiętych i 11 podtestów zaliczonych; dodatkowe
+18 testów wersji i instalatora także przeszło. Paczka `cf01ffda` ma 1075
+kontrolowanych plików; pełna integralność i kontrolowany start zainstalowanej
+kopii są zaliczone. TIDAL, Spotify i Frontier Smart są nieobecne, WiiM, Sonos
+oraz pełny eksport/import pozostają. Ręczny odbiór wypowiedzi NVDA pozostaje do
+wykonania; publikacji zdalnej nie wykonano.**
 
 Korekta źródłowa jest zapisana w commicie `d94ccecf` —
 `fix(amc02): odczytaj pojedyncze aktywne nagranie`. Identyfikator ten opisuje
 kod i testy, nie kompilację, instalację ani publikację.
 
-Następny kandydat ma numer `0.1.0-alpha.429`; `alpha.428` pozostaje dokładnym
-oznaczeniem obecnie zainstalowanej wersji do chwili pomyślnej budowy,
-instalacji i weryfikacji następcy.
+Kandydat `0.1.0-alpha.429` został następnie pomyślnie zbudowany, zainstalowany
+i zweryfikowany. Ten zapis zastępuje wcześniejszy stan oczekiwania na koniec
+nagrania i budowę; `alpha.428` pozostaje wyłącznie poprzednią instalacją.
 
 ### Korekta użytkownika z 21.10.2026
 
@@ -1041,11 +1034,12 @@ zapisie NVDA słyszy „Dodano do Biblioteki” albo „Usunięto z Biblioteki�
   `2026.10.21-63b304449076998a45079f257c6a002ece8ee0b4-82d28f84`.
 - Poprawka pierwszego zapisu na świeżym profilu: `15b38eb1` —
   `fix(amc): inicjalizuj swiezy profil publiczny`.
-- Zainstalowany publiczny AMC: `0.1.0-alpha.428`, rewizja paczki
-  `fa08432ea8db01fcbd80ba53c67d1cba19d6b138`, rewizja instalatora
-  `555fbe6ab1b47c528c2aa24a6a3732a8a0cd9e74`, paczka `90f156c2`, 1075 plików.
+- Zainstalowany publiczny AMC: `0.1.0-alpha.429`, rewizja paczki i instalatora
+  `ed5db3679d046a6861283a7a98952396deef2663`, paczka `cf01ffda`, 1075 plików.
   Instalator i plik integralności pozostają lokalnie w
-  `publish\installers\alpha.428`. Zainstalowana kopia z
+  `publish\installers\alpha.429`. Instalator ma 124 094 692 bajty i SHA-256
+  `09df938029ee66722785ad27a3c3b3f1aadc2bedd21e35f2323bc25d0b01c81b`.
+  Zainstalowana kopia z
   `D:\Projekty Codex\AMC Public\AMC.exe` przeszła pełną kontrolę integralności
   oraz kontrolowany start.
 - Publikacja: niewykonana. Cloudflare, GitHub i zdalny aktualizator nie były

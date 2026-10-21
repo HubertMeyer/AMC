@@ -45,8 +45,8 @@ zmian, wymagający korekty użytkownika:
   harmonogramu nagrywania, zgodność listy `Alt+R` z blokadą zamknięcia oraz
   zachowanie niepustego pliku domkniętego przed awarią odbioru. Szczegóły:
   [REC-001-harmonogram-alt-r-zamykanie.md](REC-001-harmonogram-alt-r-zamykanie.md).
-- `AMC02` — **Korekta odczytu jednego aktywnego nagrania zweryfikowana w
-  źródłach; czeka na bezpieczną instalację i odbiór NVDA** — `Alt+R` po
+- `AMC02` — **Korekta odczytu jednego aktywnego nagrania zainstalowana w
+  publicznym AMC `alpha.429`; czeka na odbiór NVDA** — `Alt+R` po
   odświeżeniu listy mówi „Nagrywane, X z X, nazwa pliku”, a
   `Alt+Shift+R` „Nagrane, X z X”; same wiersze zaczynają się od nazwy pliku.
   Zachowano osobną pamięć zaznaczenia oraz bitrate, wielkość i folder pod lewą
@@ -147,7 +147,7 @@ zmian, wymagający korekty użytkownika:
   została zainstalowana 20.10.2026.
   Bieżący zapis realizacji:
   [AMC09-menedzer-sesji.md](AMC09-menedzer-sesji.md).
-- `AMC12` — **Korekta odbiorcza `alpha.428` przeszła pełną regresję źródeł,
+- `AMC12` — **Korekta odbiorcza `alpha.429` przeszła pełną regresję źródeł,
   została zbudowana i zainstalowana w `D:\Projekty Codex\AMC Public`.
   Publiczny AMC jest budowany z tego samego kodu co AMC Test; zgodnie z korektą
   użytkownika z 21.10.2026 wyłącza

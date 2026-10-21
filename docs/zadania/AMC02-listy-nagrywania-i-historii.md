@@ -1,8 +1,8 @@
 # AMC02 — krótkie listy nagrywania i historia plików
 
-Status: **Korekta odczytu jednego aktywnego nagrania jest zweryfikowana w
-źródłach; nie została jeszcze zbudowana ani zainstalowana, ponieważ trwa
-rzeczywiste nagranie. Czeka na bezpieczną instalację i odbiór NVDA**.
+Status: **Korekta odczytu jednego aktywnego nagrania jest zbudowana i
+zainstalowana w publicznym AMC `0.1.0-alpha.429`. Integralność i kontrolowany
+start są zaliczone; pozostaje ręczny odbiór wypowiedzi w NVDA**.
 
 ## Zakres
 
@@ -188,11 +188,22 @@ zgodność nazw i skrótów wykonania, pomocy i palety.
   rzeczywistej mowy NVDA. Budowę odłożono, ponieważ żywy AMC Test nadal
   nagrywał stację i plik roboczy faktycznie zwiększał rozmiar.
 
+21.10.2026, budowa i instalacja po bezpiecznym zakończeniu nagrania:
+
+- publiczna paczka `cf01ffda` powstała z czystej rewizji `ed5db367`, ma 1075
+  kontrolowanych plików i numer `0.1.0-alpha.429`;
+- instalator zakończył aktualizację `D:\Projekty Codex\AMC Public` kodem 0;
+  zainstalowana kopia przeszła pełną integralność oraz kontrolowany start;
+- w zainstalowanym profilu są WiiM, Sonos i pełny eksport/import, a nie ma
+  modułów TIDAL, Spotify ani Frontier Smart;
+- program uruchomiono z właściwej stałej ścieżki. Rzeczywista wypowiedź NVDA
+  dla jednego aktywnego nagrania nadal wymaga ręcznego odsłuchu użytkownika.
+
 ## Znane ograniczenia
 
-- Ostatnia korekta pełnego komunikatu `Alt+R` jest tylko w źródłach. Wymaga
-  zbudowania, instalacji oraz odsłuchu wejścia, ruchu strzałkami i powrotu ze
-  wcześniej zapamiętanym zaznaczeniem.
+- Ostatnia korekta pełnego komunikatu `Alt+R` jest zainstalowana w publicznym
+  AMC. Wymaga jeszcze odsłuchu wejścia, ruchu strzałkami i powrotu ze wcześniej
+  zapamiętanym zaznaczeniem w rzeczywistym NVDA.
 - Wczesny stan „uruchamianie nagrania” może chwilowo użyć nazwy stacji, dopóki
   host nie poda nazwy tworzonego pliku.
 - Bitrate i rozmiar zależą od dostępności pliku i odpowiedzi hosta. Folder
@@ -222,6 +233,10 @@ zgodność nazw i skrótów wykonania, pomocy i palety.
   instalacji.
 - Kandydat instalacyjny tej korekty otrzymuje numer `0.1.0-alpha.429`, aby nie
   nadpisywać nieodróżnialnym plikiem odebranego wcześniej `alpha.428`.
+- Zainstalowana paczka `alpha.429`: rewizja `ed5db3679d046a6861283a7a98952396deef2663`,
+  identyfikator `cf01ffda`, 1075 plików. Instalator ma 124 094 692 bajty i
+  SHA-256 `09df938029ee66722785ad27a3c3b3f1aadc2bedd21e35f2323bc25d0b01c81b`.
+  Instalacja, pełna integralność i kontrolowany start są zaliczone.
 - Instalacja zawierająca kolejną korektę:
   `2026.10.19-8093e22adfa9b6abfc72c35c5c7029eaaade88c8-718893c9`;
   pełna regresja, manifest, sumy, integralność, stała ścieżka procesu i
