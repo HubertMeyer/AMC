@@ -2,15 +2,13 @@
 
 ## Status
 
-**Gotowe lokalnie do odbioru — publiczny AMC `0.1.0-alpha.427` z rewizji
-`3be68067` został zbudowany, zainstalowany w `D:\Projekty Codex\AMC Public`
-i przeszedł pełną kontrolę integralności oraz kontrolowany start interfejsu z
-hostem. Publiczny profil jest kopią gotowego do wydania AMC Test, z której
-wyłączone są wyłącznie niedopracowane jeszcze funkcje streamingowe; zawiera
-Sonosa. Import playlisty Radia zachowuje kolejność pliku,
-`Alt+1–3` sortują Bibliotekę i Ulubione, `Ctrl+Shift+U` zmienia Ulubione, a
-`Ctrl+Shift+L` rzeczywiście zmienia członkostwo w Bibliotece. Publikacji
-zdalnej nie wykonano.**
+**Korekta odbiorcza publicznego AMC jest wdrożona w źródłach i przeszła pełną
+regresję wxPython: 1945 testów zaliczonych, 110 świadomie pominiętych i 11
+podtestów zaliczonych. Naprawia `B` dla pliku otwartego bezpośrednio z folderu,
+pozostanie w tym samym folderze po `Shift+Delete` oraz powtarzany pomiar pod
+lewą strzałką. Numer źródeł ustawiono na `0.1.0-alpha.428`. Budowa, instalacja
+i kontrolowany start nowego kandydata są następnym krokiem; publikacji zdalnej
+nie wykonano.**
 
 ### Korekta użytkownika z 21.10.2026
 
@@ -20,6 +18,73 @@ publiczny AMC ma być kopią AMC Test i nie zawierać wyłącznie tych funkcji
 streamingowych, które nie są jeszcze dopracowane. Ukończone funkcje — w tym
 Sonos — pozostają dostępne. Obecnie wyłączone pozostają TIDAL, Spotify i
 nieodebrana jeszcze integracja Frontier Smart.
+
+### Korekta odbiorcza z 21.10.2026 — `alpha.428`
+
+Ta korekta zastępuje wcześniejsze założenie, że po fizycznym usunięciu pliku
+zwykłe odświeżenie Biblioteki jest bezpieczne także w folderze otwartym przez
+`Ctrl+O`. Folder z `Ctrl+O` jest bieżącym widokiem dysku, a nie widokiem bazy
+SQLite. Próba odświeżenia go jako Biblioteki przełączała listę na pustą
+Bibliotekę i stwarzała wrażenie, że zniknęła cała zawartość folderu.
+
+#### Materiał do dokumentacji użytkownika
+
+- `Shift+Delete` przenosi do systemowego Kosza tylko zaznaczone pliki
+  potwierdzone przez silnik. Po operacji AMC pozostaje w tym samym folderze,
+  usuwa z listy tylko te ścieżki i ustawia fokus na najbliższej pozostałej
+  pozycji. NVDA otrzymuje na przykład: `Przeniesiono do Kosza: 2 pliki. Liczba
+  pozycji pozostałych w folderze: 159`.
+- Jeśli odpowiedź o usunięciu wróci po przejściu do innej sesji albo
+  odtwarzacza, AMC nie przenosi użytkownika z powrotem i nie podmienia
+  aktualnie oglądanego widoku.
+- `B` w odtwarzaczu zapisuje zakładkę również dla pliku uruchomionego
+  bezpośrednio z folderu, nawet gdy plik nie ma rekordu Biblioteki. Zwykły
+  komunikat sukcesu pozostaje bez zmian, na przykład `Dodano zakładkę: 1:05`.
+- Lewa strzałka nadal mierzy rzeczywiste parametry pliku. Kolejne naciśnięcie
+  dla tego samego elementu korzysta z krótkiej pamięci procesu, a kilka
+  szybkich naciśnięć nie uruchamia kilku kosztownych pomiarów jednocześnie.
+- Pusta Biblioteka na świeżym profilu publicznym jest stanem prawidłowym.
+  `Ctrl+O` tylko otwiera folder do przeglądania; trwałe dodanie folderu do
+  Biblioteki jest osobnym, jawnym poleceniem zarządzania Biblioteką.
+- AMC Test i publiczny AMC nadal powstają z jednego kodu i jednego procesu
+  budowy. Publiczny profil różni się wyłącznie manifestem możliwości: obecnie
+  nie zawiera TIDAL-a, Spotify ani Frontier Smart. WiiM i Sonos pozostają.
+
+#### Uzasadnienie i decyzje
+
+- Oględziny systemowego Kosza potwierdziły trzy pliki przeniesione dokładnie w
+  czasie zgłoszonej operacji. Ich zawartość istnieje w Koszu, a rozmiary są
+  zgodne. W folderze pozostało 159 plików multimedialnych. Nie przywracano ich
+  bez osobnego polecenia użytkownika.
+- Zniknięcie całej listy było zmianą widoku na pustą Bibliotekę, a nie
+  skasowaniem całego folderu.
+- Osobne instalatory są potrzebne dla tożsamości programu, profilu danych i
+  kanału aktualizacji, lecz nie oznaczają dwóch implementacji. Oba warianty
+  są składane z tego samego commitu i filtrowane manifestem wydania.
+
+#### Testy i wynik
+
+- Testy ukierunkowane skrótu, dyspozycji polecenia, menu, zakładek, Kosza,
+  szybkiej informacji i źródeł Biblioteki: `128 passed`.
+- Pełna regresja wxPython po zmianie: `1945 passed, 110 skipped, 11 subtests
+  passed` w 106,49 s.
+- Test obejmuje także spóźnioną odpowiedź `Shift+Delete` po przejściu do innej
+  sesji oraz ponowne naciśnięcie lewej strzałki bez drugiego wywołania hosta.
+- Ręczny odbiór mowy i fokusu w NVDA pozostaje do wykonania na zainstalowanym
+  kandydacie.
+
+#### Znane ograniczenia
+
+- Pierwszy, niebuforowany odczyt parametrów nowego pliku może nadal trwać tyle,
+  ile rzeczywisty pomiar hosta. Poprawka usuwa powtarzanie tego kosztu i
+  kumulowanie równoległych zadań, nie fałszuje wyniku szybszym przybliżeniem.
+- Pliki pozostają w systemowym Koszu do chwili decyzji użytkownika.
+
+#### Wersja i commit
+
+- Numer źródeł: `0.1.0-alpha.428`.
+- Commit poprawki, identyfikator paczki, instalator, suma SHA-256 i wynik
+  instalacji zostaną dopisane po przejściu bramki budowy.
 
 Źródłowa, zatwierdzona specyfikacja pozostaje w pliku tylko do odczytu:
 `D:\Projekty Codex\Accessible Multimedia Controller\AMC12_PROFILE_WYDANIA_PUBLICZNEGO_I_TESTOWEGO_2026-10-18.md`.

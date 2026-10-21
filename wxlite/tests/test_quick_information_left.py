@@ -27,6 +27,7 @@ from amc_wx_lite.list_model import Row
 from amc_wx_lite.quick_info import (
     NO_SOURCE_MESSAGE,
     QuickInfoGuard,
+    QuickInfoMemoryCache,
     folder_announcement,
     local_media_folder_detail,
     load_more_announcement,
@@ -159,6 +160,45 @@ def test_zadanie_nie_wysyla_niedodatniego_czasu() -> None:
 def test_zadanie_dla_wiersza_bez_zrodla_nie_powstaje() -> None:
     row = Row(item_id="x", title="Nic", kind="track", path=None, url=None)
     assert quick_info_request(row, session="files") is None
+
+
+def test_cache_blokuje_powtorzony_pomiar_i_oddaje_kopie_wyniku() -> None:
+    now = [100.0]
+    cache = QuickInfoMemoryCache(clock=lambda: now[0])
+    request = {
+        "session": "files",
+        "itemId": "file:7",
+        "source": r"D:\Muzyka\Laka.mp3",
+        "kind": "track",
+    }
+
+    assert cache.get(request) is None
+    assert cache.begin(request) is True
+    assert cache.begin(dict(request)) is False, "ten sam pomiar nie może trafić drugi raz do hosta"
+    cache.finish(request, {"text": "MP3, 128 kb/s"})
+
+    first = cache.get(request)
+    assert first == {"text": "MP3, 128 kb/s"}
+    first["text"] = "zmienione przez odbiorcę"
+    assert cache.get(request) == {"text": "MP3, 128 kb/s"}
+    assert cache.begin(request) is True, "po zakończeniu wolno wykonać późniejszy pomiar"
+    cache.finish(request)
+
+
+def test_cache_wygasa_i_rozroznia_zrodlo() -> None:
+    now = [10.0]
+    cache = QuickInfoMemoryCache(
+        local_ttl_seconds=5.0,
+        remote_ttl_seconds=2.0,
+        clock=lambda: now[0],
+    )
+    local = {"session": "files", "itemId": "file:1", "source": r"D:\a.mp3"}
+    changed = {**local, "source": r"D:\b.mp3"}
+    cache.begin(local)
+    cache.finish(local, {"text": "MP3"})
+    assert cache.get(changed) is None
+    now[0] = 15.0
+    assert cache.get(local) is None, "wynik o osiągniętym terminie nie może pozostać bez końca"
 
 
 # ------------------------- kontrakt PODCASTOW (droga gotowa, lista nieobecna)

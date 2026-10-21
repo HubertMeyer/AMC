@@ -11,7 +11,7 @@ install_wx_stub()
 
 from amc_wx_lite import gui  # noqa: E402
 from amc_wx_lite.list_model import Row  # noqa: E402
-from amc_wx_lite.navigation import SessionId  # noqa: E402
+from amc_wx_lite.navigation import LibraryView, Navigator, SessionId  # noqa: E402
 
 
 class ImmediateRunner:
@@ -237,7 +237,7 @@ def test_shift_delete_passes_paths_and_removes_private_history_only_after_succes
     calls: list[tuple[list[str], list[str] | None]] = []
     forgotten: list[list[str]] = []
     spoken: list[str] = []
-    refreshed: list[bool] = []
+    refreshed: list[str | None] = []
 
     class Client:
         def recycle_local_files(self, item_ids, *, paths=None):  # noqa: ANN001
@@ -247,14 +247,17 @@ def test_shift_delete_passes_paths_and_removes_private_history_only_after_succes
                 "failures": [],
             }
 
+    navigator = Navigator()
+    navigator.session.library_view = LibraryView.RECORDED_RADIO_FILES
+    navigator.session.model.replace([row])
     frame = SimpleNamespace(
-        navigator=SimpleNamespace(active=SessionId.FILES),
+        navigator=navigator,
         _selected_action_rows=lambda: [row],
         _profile_edit_client=lambda: Client(),
         runner=ImmediateRunner(),
         announcer=SimpleNamespace(say=spoken.append),
         _forget_private_recording_history_paths=lambda paths: forgotten.append(paths),
-        _refresh_profile_view=lambda: refreshed.append(True),
+        _refresh_profile_view=lambda preferred_id=None: refreshed.append(preferred_id),
     )
     original = gui.wx.MessageBox
     gui.wx.MessageBox = lambda *_args, **_kwargs: gui.wx.YES
@@ -265,7 +268,7 @@ def test_shift_delete_passes_paths_and_removes_private_history_only_after_succes
 
     assert calls == [(["radio-recording-history:history-1"], [path])]
     assert forgotten == [[path]]
-    assert refreshed == [True]
+    assert refreshed == [None]
     assert spoken == [
         "Przeniesiono do Kosza i usunięto z AMC: Radio Test, audycja.mp3"
     ]

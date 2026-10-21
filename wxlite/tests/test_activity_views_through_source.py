@@ -127,6 +127,44 @@ def test_bookmark_outside_the_catalog_has_no_target_instead_of_a_fake_one() -> N
         assert "bookmark:b9" not in result.bookmark_targets
 
 
+def test_bookmark_from_open_folder_uses_exact_file_id_as_real_target() -> None:
+    """B w zwykłym ``Otwórz folder`` zapisuje dokładne ``file:<path>``.
+
+    Taki wpis nie należy do Biblioteki, ale nadal ma prawdziwą ścieżkę i po
+    ponownym otwarciu widoku zakładek musi dać się uruchomić.
+    """
+    with tempfile.TemporaryDirectory() as raw:
+        tmp = Path(raw)
+        src = source(tmp)
+        transient_id = r"file:D:\Nagrania\Audycja.mp3"
+        con = sqlite3.connect(tmp / "library.db")
+        con.execute(
+            "INSERT INTO bookmarks VALUES "
+            "('bt','local','Pliki lokalne',?,'Audycja','',12500000,1,1)",
+            (transient_id,),
+        )
+        # Zbiorczy widok używa także porządku zapisu. Minimalny historyczny
+        # schemat tego pliku nie ma tej kolumny, więc dokładamy ją wyłącznie do
+        # przypadku, który rzeczywiście otwiera ``all_bookmarks``.
+        con.execute("ALTER TABLE bookmarks ADD COLUMN ordinal INTEGER NOT NULL DEFAULT 0")
+        con.commit()
+        con.close()
+
+        item_view = src.load_view("item_bookmarks", item_id=transient_id)
+        assert item_view.bookmark_targets["bookmark:bt"] == (
+            r"D:\Nagrania\Audycja.mp3",
+            1.25,
+            "Audycja",
+        )
+
+        all_view = src.load_view("all_bookmarks")
+        assert all_view.bookmark_targets["bookmark:bt"] == (
+            r"D:\Nagrania\Audycja.mp3",
+            1.25,
+            "Audycja",
+        )
+
+
 def _spy_client():
     """``LiteHostClient`` bez procesu: liczymy WYWOLANIA protokolu."""
     from amc_wx_lite.host_client import LiteHostClient

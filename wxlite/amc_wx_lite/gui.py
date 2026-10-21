@@ -245,6 +245,7 @@ from .quick_info import (
     HOST_ERROR_MESSAGE,
     QUICK_INFO_OP,
     QUICK_INFO_STREAM,
+    QuickInfoMemoryCache,
     quick_info_failure,
     quick_info_plan,
     quick_info_reply,
@@ -6664,6 +6665,7 @@ class LiteFrame(wx.Frame):
         # zadania tego samego rodzaju.
         self.gate = StaleResultGate(alive=self._window_alive)
         self.runner = BackgroundRunner(self.gate, to_gui=wx.CallAfter)
+        self._quick_info_cache = QuickInfoMemoryCache()
 
         self.client: LiteHostClient | None = None
         self._last_status: dict = {}
@@ -19411,11 +19413,6 @@ class LiteFrame(wx.Frame):
         layout = self.layout
         assert row is not None
 
-        def work() -> object:
-            enriched = dict(request)
-            enriched.update(read_cached_information(layout, row, guard.session))
-            return client.call(QUICK_INFO_OP, enriched, timeout=12.0)
-
         def answer(payload: object) -> None:
             quick_info_reply(
                 payload if isinstance(payload, dict) else {},
@@ -19426,6 +19423,33 @@ class LiteFrame(wx.Frame):
                 say=self.announcer.say,
                 extra_detail=folder_detail,
             )
+
+        cache = getattr(self, "_quick_info_cache", None)
+        if cache is None:
+            # Testy czystej logiki nie budują całego okna. Leniwe utworzenie
+            # zachowuje tę samą drogę wykonania bez specjalnego trybu testowego.
+            cache = QuickInfoMemoryCache()
+            self._quick_info_cache = cache
+        cached = cache.get(request)
+        if cached is not None:
+            answer(cached)
+            return
+        if not cache.begin(request):
+            # Pierwsze naciśnięcie już mierzy dokładnie ten sam element. Jego
+            # odpowiedź nadal wróci do czytnika; nie dokładamy kolejnego wątku.
+            return
+
+        def work() -> object:
+            payload: dict | None = None
+            try:
+                enriched = dict(request)
+                enriched.update(read_cached_information(layout, row, guard.session))
+                result = client.call(QUICK_INFO_OP, enriched, timeout=12.0)
+                if isinstance(result, dict):
+                    payload = result
+                return result
+            finally:
+                cache.finish(request, payload)
 
         def failed(_error: Exception) -> None:
             quick_info_failure(
@@ -20576,8 +20600,14 @@ class LiteFrame(wx.Frame):
             return
         state = self.navigator.session
         item_id = state.current_material_id or state.pending_material_id
+        if not item_id and self.navigator.active is SessionId.FILES:
+            transient_id = str(state.now_playing_id or "")
+            if transient_id.startswith("file:"):
+                # Plik otwarty zwykłym Ctrl+O nie ma wpisu Biblioteki, ale host
+                # odtwarzania zna jego jednoznaczne ``file:<pełna ścieżka>``.
+                item_id = transient_id
         if not item_id:
-            self.announcer.say("Bieżący plik nie ma identyfikatora Biblioteki")
+            self.announcer.say("Nie można dodać zakładki do bieżącego materiału")
             return
         client = self.client
         if client is None:
@@ -25029,7 +25059,7 @@ class LiteFrame(wx.Frame):
         if not rows:
             self.announcer.say("Brak pliku do przeniesienia do Kosza")
             return
-        label = rows[0].title if len(rows) == 1 else format_item_count(len(rows))
+        label = rows[0].title if len(rows) == 1 else format_file_count(len(rows))
         if wx.MessageBox(
             f"Przenieść do Kosza: {label}?\n\n"
             "Pliki zostaną też usunięte z AMC. Można je odzyskać z systemowego Kosza.",
@@ -25041,7 +25071,24 @@ class LiteFrame(wx.Frame):
         client = self._profile_edit_client()
         if client is None:
             return
+        origin_state = self.navigator.session
+        origin_context = view_context(origin_state)
+        origin_view = self.navigator.view
+        origin_library_view = origin_state.library_view
+        origin_rows = list(origin_state.model.rows)
         item_ids = [row.item_id for row in rows]
+
+        def path_key(value: str | None) -> str:
+            return os.path.normcase(os.path.normpath(str(value or "")))
+
+        selected_path_keys = {path_key(row.path) for row in rows if row.path}
+        first_selected_index = min(
+            (
+                index for index, candidate in enumerate(origin_rows)
+                if path_key(candidate.path) in selected_path_keys
+            ),
+            default=0,
+        )
 
         def done(payload: object) -> None:
             data = payload if isinstance(payload, dict) else {}
@@ -25054,10 +25101,82 @@ class LiteFrame(wx.Frame):
             ]
             if removed_paths:
                 self._forget_private_recording_history_paths(removed_paths)
-            self._refresh_profile_view()
+            removed_path_keys = {path_key(path) for path in removed_paths}
+            origin_context_intact = view_context(origin_state) == origin_context
+            same_view = (
+                self.navigator.active is SessionId.FILES
+                and self.navigator.session is origin_state
+                and self.navigator.view is origin_view
+                and origin_context_intact
+            )
+            if removed and origin_context_intact:
+                if origin_library_view is None:
+                    # Zwykły folder z Ctrl+O nie jest widokiem SQLite. Ponowne
+                    # wczytanie go przez _open_library dawało fałszywe wrażenie,
+                    # że skasowano wszystko. Usuwamy tylko ścieżki potwierdzone
+                    # przez hosta i pozostajemy w tym samym folderze.
+                    current_rows = list(origin_state.model.rows)
+                    remaining = [
+                        candidate for candidate in current_rows
+                        if path_key(candidate.path) not in removed_path_keys
+                    ]
+                    selected = origin_state.model.selected_row
+                    preferred_id = (
+                        selected.item_id
+                        if selected is not None
+                        and path_key(selected.path) not in removed_path_keys
+                        else (
+                            remaining[min(first_selected_index, len(remaining) - 1)].item_id
+                            if remaining else None
+                        )
+                    )
+                    origin_state.model.replace(
+                        remaining,
+                        keep_selection=False,
+                        preferred_id=preferred_id,
+                    )
+                    if same_view:
+                        self._sync_views()
+                else:
+                    remaining = [
+                        candidate for candidate in origin_rows
+                        if path_key(candidate.path) not in removed_path_keys
+                    ]
+                    preferred_id = (
+                        remaining[min(first_selected_index, len(remaining) - 1)].item_id
+                        if remaining else None
+                    )
+                    if same_view:
+                        self._refresh_profile_view(preferred_id=preferred_id)
+                    else:
+                        # Użytkownik zdążył przejść do innej sesji albo do
+                        # odtwarzacza. Nie wolno go cofać spóźnioną odpowiedzią,
+                        # ale po powrocie usunięty wiersz nie może znów udawać,
+                        # że istnieje.
+                        origin_state.model.replace(
+                            remaining,
+                            keep_selection=False,
+                            preferred_id=preferred_id,
+                        )
             if removed:
-                removed_label = rows[0].title if len(removed) == 1 else format_item_count(len(removed))
-                self.announcer.say(f"Przeniesiono do Kosza i usunięto z AMC: {removed_label}")
+                removed_label = rows[0].title if len(removed) == 1 else format_file_count(len(removed))
+                if origin_library_view is None:
+                    remaining_count = sum(
+                        1 for candidate in origin_state.model.rows
+                        if candidate.kind != "parent"
+                    ) if origin_context_intact else max(
+                        0,
+                        sum(1 for candidate in origin_rows if candidate.kind != "parent")
+                        - len(removed),
+                    )
+                    self.announcer.say(
+                        f"Przeniesiono do Kosza: {removed_label}. "
+                        f"Liczba pozycji pozostałych w folderze: {remaining_count}"
+                    )
+                else:
+                    self.announcer.say(
+                        f"Przeniesiono do Kosza i usunięto z AMC: {removed_label}"
+                    )
             if failures:
                 self.announcer.say("Nie przeniesiono do Kosza: " + "; ".join(map(str, failures)))
 

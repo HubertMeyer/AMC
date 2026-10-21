@@ -42,6 +42,9 @@ from __future__ import annotations
 import json
 import ntpath
 import sqlite3
+import threading
+import time
+from collections import OrderedDict
 from dataclasses import dataclass
 from typing import Callable
 
@@ -77,6 +80,82 @@ QUICK_INFO_STREAM = "quickInfo"
 #: Komunikat, gdy wiersz nie ma zadnego zrodla do zmierzenia. KROTKI i
 #: UCZCIWY: nie podaje zerowego rozmiaru ani zerowego bitrate.
 NO_SOURCE_MESSAGE = "Brak zapisanych informacji uzupełniających"
+
+
+class QuickInfoMemoryCache:
+    """Krótki cache wyniku pomiaru i bramka powtórzonego zapytania.
+
+    Pomiar lokalnego pliku może potrwać do pięciu sekund. Powtarzanie lewej
+    strzałki nie może uruchamiać kolejnych takich samych pomiarów, bo każdy z
+    nich zajmuje osobny wątek i kolejkę hosta. Cache jest wyłącznie procesowy:
+    niczego nie zapisuje do profilu, a po krótkim czasie ponownie pyta silnik.
+    """
+
+    def __init__(
+        self,
+        *,
+        max_entries: int = 128,
+        local_ttl_seconds: float = 300.0,
+        remote_ttl_seconds: float = 15.0,
+        clock: Callable[[], float] = time.monotonic,
+    ) -> None:
+        self._max_entries = max(1, int(max_entries))
+        self._local_ttl = max(0.0, float(local_ttl_seconds))
+        self._remote_ttl = max(0.0, float(remote_ttl_seconds))
+        self._clock = clock
+        self._entries: OrderedDict[tuple[object, ...], tuple[float, dict]] = OrderedDict()
+        self._inflight: set[tuple[object, ...]] = set()
+        self._lock = threading.Lock()
+
+    @staticmethod
+    def _key(request: dict) -> tuple[object, ...]:
+        """Tożsamość danych wejściowych bez gotowego tekstu dostępnościowego."""
+        names = (
+            "session", "itemId", "source", "kind", "durationTicks",
+            "podcastMediaLength", "podcastMediaType", "bitrateKbps",
+            "sampleRateHz", "isBitrateEstimated", "codec", "artist",
+            "country", "language",
+        )
+        return tuple(request.get(name) for name in names)
+
+    def get(self, request: dict) -> dict | None:
+        key = self._key(request)
+        now = self._clock()
+        with self._lock:
+            entry = self._entries.get(key)
+            if entry is None:
+                return None
+            expires_at, payload = entry
+            if expires_at <= now:
+                self._entries.pop(key, None)
+                return None
+            self._entries.move_to_end(key)
+            return dict(payload)
+
+    def begin(self, request: dict) -> bool:
+        """Zwróć ``True`` tylko pierwszemu równoległemu pomiarowi tego celu."""
+        key = self._key(request)
+        with self._lock:
+            if key in self._inflight:
+                return False
+            self._inflight.add(key)
+            return True
+
+    def finish(self, request: dict, payload: dict | None = None) -> None:
+        """Zakończ pomiar; poprawną odpowiedź zachowaj w ograniczonym cache."""
+        key = self._key(request)
+        now = self._clock()
+        with self._lock:
+            self._inflight.discard(key)
+            if payload is None:
+                return
+            ttl = self._local_ttl if request.get("session") == "files" else self._remote_ttl
+            if ttl <= 0.0:
+                return
+            self._entries[key] = (now + ttl, dict(payload))
+            self._entries.move_to_end(key)
+            while len(self._entries) > self._max_entries:
+                self._entries.popitem(last=False)
 
 
 def local_media_folder_detail(

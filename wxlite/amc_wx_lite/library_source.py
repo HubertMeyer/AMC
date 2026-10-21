@@ -14,6 +14,7 @@ Caly odczyt jest synchroniczny i tani (SQLite), ale okno i tak wola go przez
 
 from __future__ import annotations
 
+import ntpath
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -323,11 +324,16 @@ def _local_bookmark_targets(db, activity) -> dict[str, tuple[str, float, str]]:
     for entry in local:
         target = found.get(entry.bookmark.item_id)
         if target is None:
-            # Zakladki NIE maja filtra ``ActiveLocalItems``: material moze w
-            # katalogu nie istniec. Wtedy celu po prostu nie ma -- i nie
-            # wysylamy do hosta zmyslonej sciezki.
-            continue
-        path, title = target
+            path = _transient_file_path(entry.bookmark.item_id)
+            if path is None:
+                # Zakladki NIE maja filtra ``ActiveLocalItems``: material moze
+                # w katalogu nie istniec. Wyjatkiem jest jawne ``file:<path>``
+                # utworzone przez host przy zwyklym Otworz folder. Ono niesie
+                # prawdziwa sciezke, nie wymaga zgadywania po tytule.
+                continue
+            title = entry.bookmark.item_title
+        else:
+            path, title = target
         targets[entry.row.item_id] = (
             path,
             entry.position_seconds,
@@ -362,8 +368,12 @@ def _bookmark_targets(db, activity) -> dict[str, tuple[str, float, str]]:
     for mark in marks:
         target = found.get(mark.item_id)
         if target is None:
-            continue
-        path, title = target
+            path = _transient_file_path(mark.item_id)
+            if path is None:
+                continue
+            title = mark.item_title
+        else:
+            path, title = target
         # Dzielenie ZWYKLE, nie calkowite: zakladka 83,456 s nie moze
         # wrocic jako 83 s.
         targets[mark.row.item_id] = (
@@ -372,3 +382,17 @@ def _bookmark_targets(db, activity) -> dict[str, tuple[str, float, str]]:
             title or mark.item_title,
         )
     return targets
+
+
+def _transient_file_path(item_id: str) -> str | None:
+    """Ścieżka z dokładnego Id ``file:<path>`` nadanego przez LiteHost.
+
+    Tylko pełna ścieżka Windows jest akceptowana. Inne brakujące Id nadal nie
+    dostają celu, więc tytuł zakładki nigdy nie staje się domniemaną ścieżką.
+    """
+    if not item_id.startswith("file:"):
+        return None
+    path = item_id[len("file:"):].strip()
+    if not path or not ntpath.isabs(path):
+        return None
+    return ntpath.normpath(path)
