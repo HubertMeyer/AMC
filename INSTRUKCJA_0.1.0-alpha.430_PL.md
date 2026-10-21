@@ -5,6 +5,11 @@ Programy po instalacji uruchamiają się z:
 - `D:\Projekty Codex\AMC Public\AMC.exe` — publiczny AMC;
 - `D:\Projekty Codex\AMC Python\AMC.exe` — AMC Test.
 
+Publiczny `alpha.430` jest już zainstalowany i uruchomiony. AMC Test pozostał
+na poprzedniej instalacji, ponieważ dwukrotnie odrzucił zwykłe, bezpieczne
+zamknięcie. Nie wymuszano końca procesu ani nagrania; aktualizację Test należy
+wykonać po jego własnym prawidłowym zamknięciu.
+
 ## Historia odtwarzania `Ctrl+H`
 
 1. W Radiu uruchom stację i poczekaj, aż rzeczywiście zacznie grać.

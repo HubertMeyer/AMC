@@ -26,3 +26,13 @@ Publiczny AMC pozostaje kopią wspólnego kodu AMC Test z wyłączonymi i fizycz
 pominiętymi niedopracowanymi modułami TIDAL, Spotify oraz Frontier Smart. WiiM,
 Sonos i pełny eksport/import pozostają dostępne. Dokument jest szkicem do
 ręcznego odbioru; nie jest automatycznie publikowany.
+
+## Stan sprawdzenia
+
+Pełna regresja wxPython: 1952 zaliczone, 110 świadomie pominiętych i 11
+podtestów zaliczonych. Wszystkie 26 zestawów protokołu C# przeszło. Kompilacja
+Release całego rozwiązania zakończyła się bez ostrzeżeń i błędów. Publiczna
+paczka oraz zainstalowana kopia przeszły pełną integralność i kontrolowany
+start; publiczny program jest uruchomiony do ręcznego odbioru NVDA. Instalacji
+AMC Test nie podmieniono, ponieważ działający program nie potwierdził
+bezpiecznego zamknięcia. Niczego nie opublikowano zdalnie.

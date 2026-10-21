@@ -2,23 +2,27 @@
 
 ## Status
 
-**Publiczny AMC `0.1.0-alpha.429` jest zbudowany, zainstalowany i uruchomiony z
-`D:\Projekty Codex\AMC Public`. Wspólna korekta `Alt+R` podaje po odświeżeniu
-listy także nazwę jedynego aktywnego nagrania. Pełna regresja wxPython: 1948
-zaliczonych, 110 świadomie pominiętych i 11 podtestów zaliczonych; dodatkowe
-18 testów wersji i instalatora także przeszło. Paczka `cf01ffda` ma 1075
-kontrolowanych plików; pełna integralność i kontrolowany start zainstalowanej
-kopii są zaliczone. TIDAL, Spotify i Frontier Smart są nieobecne, WiiM, Sonos
-oraz pełny eksport/import pozostają. Ręczny odbiór wypowiedzi NVDA pozostaje do
-wykonania; publikacji zdalnej nie wykonano.**
+**Publiczny AMC `0.1.0-alpha.430` jest zbudowany, zainstalowany i uruchomiony z
+`D:\Projekty Codex\AMC Public`. Zapisuje potwierdzony start Radia, pliku i
+podcastu do `Ctrl+H`; przy jednym wpisie `Alt+R`, `Alt+Shift+R`, `Ctrl+H` i
+`Ctrl+I` podają także użytkową nazwę elementu. Pełna regresja wxPython: 1952
+zaliczone, 110 świadomie pominiętych i 11 podtestów zaliczonych; 26 zestawów
+protokołu C# przeszło, a kompilacja Release miała 0 ostrzeżeń i 0 błędów.
+Paczka `d8eb2766` ma 1075 kontrolowanych plików; pełna integralność i
+kontrolowany start zainstalowanej kopii są zaliczone. TIDAL, Spotify i Frontier
+Smart są nieobecne, WiiM, Sonos oraz pełny eksport/import pozostają. AMC Test
+nie został podmieniony, ponieważ nie potwierdził bezpiecznego zamknięcia.
+Ręczny odbiór wypowiedzi NVDA pozostaje do wykonania; publikacji zdalnej nie
+wykonano.**
 
-Korekta źródłowa jest zapisana w commicie `d94ccecf` —
-`fix(amc02): odczytaj pojedyncze aktywne nagranie`. Identyfikator ten opisuje
-kod i testy, nie kompilację, instalację ani publikację.
+Korekta źródłowa jest zapisana w commicie `d94b4303` — `fix(amc): zapisz
+historie i nazwij pojedyncze podglady`; kandydat wydania w `462783c5` —
+`build(amc): przygotuj kandydata alpha430`.
 
-Kandydat `0.1.0-alpha.429` został następnie pomyślnie zbudowany, zainstalowany
-i zweryfikowany. Ten zapis zastępuje wcześniejszy stan oczekiwania na koniec
-nagrania i budowę; `alpha.428` pozostaje wyłącznie poprzednią instalacją.
+Kandydat `0.1.0-alpha.430` został pomyślnie zbudowany, zainstalowany i
+zweryfikowany w profilu publicznym. Ten zapis zastępuje wcześniejszy status
+`alpha.429`; instalacja AMC Test nadal pozostaje osobnym krokiem po jej
+bezpiecznym zamknięciu.
 
 ### Korekta użytkownika z 21.10.2026
 
@@ -1084,6 +1088,15 @@ zapisie NVDA słyszy „Dodano do Biblioteki” albo „Usunięto z Biblioteki�
   oraz kontrolowany start.
 - Publikacja: niewykonana. Cloudflare, GitHub i zdalny aktualizator nie były
   częścią tej poprawki.
+
+- Publiczny kandydat `alpha.430`: rewizja
+  `462783c56383757819b9aa5df02f6d6ccbbbc826`, paczka `d8eb2766`, 1075 plików.
+  Instalator ma 124 077 804 bajty i SHA-256
+  `848f3d7ca9e397bb0e10d8ec006a2fcc1faca777d6531031b36215c3e2d45f1b`.
+  Instalacja do `D:\Projekty Codex\AMC Public`, pełna integralność, kontrolowany
+  start i widoczne uruchomienie są zaliczone. AMC Test nie został podmieniony,
+  ponieważ dwukrotnie odrzucił bezpieczne zamknięcie; procesu nie wymuszono.
+  Publikacji nie wykonywano.
 
 - Najnowszy AMC Test: rewizja
   `b258fb69fef580f7899c30abd0d48e6b877119be`, paczka `726f0791`, 1668 plików,

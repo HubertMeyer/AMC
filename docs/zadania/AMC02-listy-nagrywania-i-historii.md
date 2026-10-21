@@ -1,8 +1,9 @@
 # AMC02 — krótkie listy nagrywania i historia plików
 
-Status: **Korekta odczytu jednego aktywnego nagrania jest zbudowana i
-zainstalowana w publicznym AMC `0.1.0-alpha.429`. Integralność i kontrolowany
-start są zaliczone; pozostaje ręczny odbiór wypowiedzi w NVDA**.
+Status: **Uogólniona korekta pojedynczego wiersza i zapisu `Ctrl+H` jest
+zbudowana, zainstalowana i uruchomiona w publicznym AMC `0.1.0-alpha.430`.
+Integralność i kontrolowany start są zaliczone; AMC Test czeka na bezpieczne
+zamknięcie starej instalacji, a oba profile czekają na ręczny odbiór NVDA**.
 
 ### Korekta użytkownika z 21.10.2026 — pojedynczy wiersz i `Ctrl+H`
 
@@ -213,6 +214,22 @@ zgodność nazw i skrótów wykonania, pomocy i palety.
 - program uruchomiono z właściwej stałej ścieżki. Rzeczywista wypowiedź NVDA
   dla jednego aktywnego nagrania nadal wymaga ręcznego odsłuchu użytkownika.
 
+21.10.2026, `alpha.430` po zgłoszeniu pustego `Ctrl+H` i `Alt+Shift+R`:
+
+- pełna regresja wxPython: **1952 zaliczone, 110 pominiętych i 11 podtestów
+  zaliczonych**; wszystkie **26 zestawów** protokołu C# przeszło;
+- kompilacja Release całego rozwiązania: **0 ostrzeżeń, 0 błędów**;
+- publiczna paczka `d8eb2766` ma 1075 kontrolowanych plików i pochodzi z
+  czystej rewizji `462783c56383757819b9aa5df02f6d6ccbbbc826`;
+- instalacja publiczna zakończyła się kodem 0, pełna integralność zwróciła 0,
+  kontrolowany start przeszedł, a widoczne okno uruchomiono ze stałej ścieżki;
+- przed podmianą sprawdzono 15 skonfigurowanych folderów i 47 włączonych
+  harmonogramów: brak aktywnego okna, terminu w ciągu 5 minut i rosnących
+  plików. AMC Public zamknął się prawidłowo;
+- AMC Test dwukrotnie odrzucił zwykłe `WM_CLOSE`. W lokalnym magazynie
+  odzyskiwania były 23 zachowane pliki `.amc-partial`; żaden nie rósł w
+  pomiarze, lecz procesu nie wymuszono i instalacji Test nie podmieniono.
+
 ## Znane ograniczenia
 
 - Ostatnia korekta pełnego komunikatu `Alt+R` jest zainstalowana w publicznym
@@ -255,6 +272,12 @@ zgodność nazw i skrótów wykonania, pomocy i palety.
   identyfikator `cf01ffda`, 1075 plików. Instalator ma 124 094 692 bajty i
   SHA-256 `09df938029ee66722785ad27a3c3b3f1aadc2bedd21e35f2323bc25d0b01c81b`.
   Instalacja, pełna integralność i kontrolowany start są zaliczone.
+- Zainstalowana publiczna paczka `alpha.430`: rewizja
+  `462783c56383757819b9aa5df02f6d6ccbbbc826`, identyfikator `d8eb2766`, 1075
+  plików. Instalator `AMC-0.1.0-alpha.430-win-x64.exe` ma 124 077 804 bajty i
+  SHA-256 `848f3d7ca9e397bb0e10d8ec006a2fcc1faca777d6531031b36215c3e2d45f1b`.
+  Instalacja, pełna integralność, kontrolowany start i widoczny start są
+  zaliczone; publikacji nie wykonano.
 - Instalacja zawierająca kolejną korektę:
   `2026.10.19-8093e22adfa9b6abfc72c35c5c7029eaaade88c8-718893c9`;
   pełna regresja, manifest, sumy, integralność, stała ścieżka procesu i
