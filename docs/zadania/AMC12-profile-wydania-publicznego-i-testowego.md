@@ -23,6 +23,10 @@ Korekta źródłowa jest zapisana w commicie `d94ccecf` —
 `fix(amc02): odczytaj pojedyncze aktywne nagranie`. Identyfikator ten opisuje
 kod i testy, nie kompilację, instalację ani publikację.
 
+Następny kandydat ma numer `0.1.0-alpha.429`; `alpha.428` pozostaje dokładnym
+oznaczeniem obecnie zainstalowanej wersji do chwili pomyślnej budowy,
+instalacji i weryfikacji następcy.
+
 ### Korekta użytkownika z 21.10.2026
 
 Ta decyzja zastępuje wcześniejsze opisy o stałym, ogólnym ograniczaniu profilu

@@ -220,6 +220,8 @@ zgodność nazw i skrótów wykonania, pomocy i palety.
   `d94ccecf` — `fix(amc02): odczytaj pojedyncze aktywne nagranie`. Jest to
   stan źródeł i testów; nie jest jeszcze dowodem nowej kompilacji ani
   instalacji.
+- Kandydat instalacyjny tej korekty otrzymuje numer `0.1.0-alpha.429`, aby nie
+  nadpisywać nieodróżnialnym plikiem odebranego wcześniej `alpha.428`.
 - Instalacja zawierająca kolejną korektę:
   `2026.10.19-8093e22adfa9b6abfc72c35c5c7029eaaade88c8-718893c9`;
   pełna regresja, manifest, sumy, integralność, stała ścieżka procesu i
