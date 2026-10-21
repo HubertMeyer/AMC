@@ -402,6 +402,36 @@
   deweloperskich. Test obejmuje anulowanie, wygaśnięcie kodu, odmowę dostępu,
   ponowienie, wylogowanie i aktualizację programu bez utraty ważnej sesji.
 
+## Publiczne formularze i usługi pośredniczące
+
+- Publiczna aplikacja nie przechowuje tokenu GitHub, sekretu klienta ani
+  wspólnego „sekretu aplikacji”. Formularz wysyła wyłącznie jawnie pokazany i
+  zatwierdzony dokument do własnego endpointu HTTPS, a poświadczenie usługi
+  docelowej pozostaje sekretem po stronie serwera pośredniczącego.
+- Brak endpointu albo sieci nie może odbierać użytkownikowi przygotowanego
+  raportu. Zachowaj pełny podgląd, kopiowanie i atomowy zapis lokalny oraz
+  uczciwie ukryj martwy przycisk wysyłania. Log pozostaje domyślnie wyłączony.
+- Dane prywatne redaguj co najmniej dwa razy: przed podglądem w aplikacji i po
+  przyjęciu przez serwer. Ogranicz wielkość, tempo oraz czas przechowywania;
+  nie zwracaj klientowi treści błędu dostawcy ani wartości sekretów.
+- Żądanie zmieniające stan ma stabilny identyfikator i zapis etapów po stronie
+  serwera. Ponowienie tej samej treści zwraca wcześniejszy wynik, a inna treść
+  z tym samym identyfikatorem jest odrzucana. Częściowa awaria nie może tworzyć
+  ponownie już potwierdzonej prywatnej części operacji.
+- Konfiguracja wersjonowana nie zawiera identyfikatorów konta, zasobów ani
+  sekretów, jeżeli narzędzie potrafi bezpiecznie przygotować je podczas
+  jawnego wdrożenia. Lokalna konfiguracja z takimi wartościami musi być
+  ignorowana przez Git. Sekret o minimalnym zakresie ustawia się osobnym,
+  świadomym krokiem i nigdy nie kopiuje szerokiego tokenu z innego narzędzia.
+- Skrypt wdrożeniowy domyślnie wykonuje tylko odtworzenie przypiętych
+  zależności, testy oraz lokalne pakowanie próbne. Zdalne wdrożenie wymaga
+  jawnego przełącznika i istniejącej sesji, nigdy samoczynnie nie rozpoczyna
+  logowania. Endpoint wolno wpisać do pakietu aplikacji dopiero po sprawdzeniu
+  HTTPS, kontraktu zdrowia i wersji schematu.
+- Rozróżniaj w raporcie: kod Workera, testy atrap, lokalne pakowanie, zdalne
+  wdrożenie, aktywację endpointu w aplikacji i prawdziwe zgłoszenie odbiorcze.
+  Żaden wcześniejszy etap nie jest dowodem późniejszego.
+
 ## Równoległe integracje systemów głośnikowych
 
 - WiiM i Sonos są wzorcem wspólnego kontraktu dla przyszłych systemów

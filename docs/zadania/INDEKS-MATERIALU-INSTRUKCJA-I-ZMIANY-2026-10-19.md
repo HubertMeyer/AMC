@@ -1,4 +1,4 @@
-# Roboczy indeks materiału do instrukcji i opisu zmian — 19 października 2026
+# Roboczy indeks materiału do instrukcji i opisu zmian — stan na 21 października 2026
 
 ## Status dokumentu
 
@@ -8,11 +8,14 @@ użytkownika. Nie zmienia statusu ręcznego odbioru NVDA poszczególnych funkcji
 
 ## Punkt odniesienia wersji
 
-- Najnowsza potwierdzona zainstalowana paczka AMC Test przed bieżącym etapem:
-  `2026.10.20-f96149f75e83eea064899db78c762596e56d2504-904ceb8c`.
-- Zawiera dostępne okna kont Spotify i TIDAL oraz kontekstowy `Ctrl+F5` z
-  commitu `c3ffea7`. Ręczny odbiór NVDA, OAuth i playlist Spotify pozostaje
-  otwarty.
+- Najnowsza potwierdzona zainstalowana i uruchomiona paczka AMC Test:
+  `2026.10.21-b258fb69fef580f7899c30abd0d48e6b877119be-726f0791`.
+- Zawiera dostępne okna kont Spotify i TIDAL, kontekstowy `Ctrl+F5`, poprawki
+  wyszukiwania i Biblioteki, playlist Spotify oraz lokalny formularz
+  Sygnalisty. Użytkownik potwierdził szybkie `Ctrl+C`, działające ponowne
+  logowanie Spotify, zapis do playlisty na prawdziwym koncie oraz brak
+  powtarzania komunikatu AMC na prawej strzałce wyszukiwarki. Pozostały odbiór
+  NVDA innych funkcji i internetowa wysyłka Sygnalisty są nadal otwarte.
 - Fundament profili AMC12 został skompilowany i sprawdzony; zbudowano czystą
   paczkę publiczną oraz lokalny instalator z kontrolą integralności. Nie
   zainstalowano ich i nie opublikowano.
@@ -28,7 +31,9 @@ użytkownika. Nie zmienia statusu ręcznego odbioru NVDA poszczególnych funkcji
 2. Wyszukiwanie i Biblioteka — `Ctrl+Shift+L` w modalnych wynikach YouTube,
    Spotify i TIDAL; różnica między kanałem, podcastem, filmem i odcinkiem;
    pozostanie w wyszukiwarce oraz powrót do odświeżonej Biblioteki po
-   `Escape`. Źródło:
+   `Escape`. W Radiu polecenie nie poprzedza potwierdzonego wyniku zbędnym
+   komunikatem „Przygotowywanie stacji”. Na świeżym profilu wyszukiwarki nie
+   mogą zależeć od nieprzekazanej ścieżki starego magazynu. Źródło:
    [SEARCH-001-youtube-biblioteka-komunikaty.md](SEARCH-001-youtube-biblioteka-komunikaty.md).
 3. Nagrywane pliki i historia — krótkie widoki `Alt+R`, `Alt+Shift+R`;
    ukończony plik zaczyna się od razu nazwą bez powtarzanego „Nagrane”;
@@ -46,7 +51,11 @@ użytkownika. Nie zmienia statusu ręcznego odbioru NVDA poszczególnych funkcji
    `Ctrl+Shift+P`, jedna lub wiele playlist,
    jednoznacznie nazwane pole nowej playlisty, tworzenie playlisty prywatnej
    lub publicznej, jasne rozróżnienie przygotowania od zapisu oraz uczciwe
-   wyniki częściowe. Ponowny ręczny odbiór konta nadal otwarty. Źródło:
+   wyniki częściowe. Udane ponowne logowanie unieważnia migawkę playlist, więc
+   następne `Ctrl+P` lub `Ctrl+Shift+P` pobiera aktualną listę dokładnie raz.
+   Użytkownik potwierdził zapis do istniejącej playlisty na prawdziwym koncie;
+   pełny odbiór tworzenia i ponownego otwierania nowej playlisty pozostaje
+   otwarty. Źródło:
    [AMC08-playlisty-spotify.md](AMC08-playlisty-spotify.md).
 6. Zakładki, nazwane zakładki, rozdziały i historia — rozróżnienie danych oraz
    skróty `B`, `Ctrl+Shift+B`, `Shift+Page Up/Down`,
@@ -98,7 +107,12 @@ użytkownika. Nie zmienia statusu ręcznego odbioru NVDA poszczególnych funkcji
     kopiowanie lub zapis w magazynie bieżącego profilu. Po dostarczeniu
     zweryfikowanego endpointu ten sam formularz pokaże `Wyślij zgłoszenie`,
     poda wynik i pozwoli skopiować adres issue; bez endpointu uczciwie pozostaje
-    lokalny. Worker i klient są gotowe w kodzie, ale nie są jeszcze wdrożone.
+    lokalny. Worker, klient i samodzielna bramka wdrożenia są gotowe w kodzie:
+    lokalny przebieg wykonuje testy i pakowanie `--dry-run`, a jawne wdrożenie
+    potrafi automatycznie przygotować KV i odczytać standardowy adres
+    `workers.dev`. Internet pozostaje wyłączony do świadomego logowania
+    Cloudflare, ustawienia ograniczonego sekretu GitHub i odbioru prawdziwego
+    zgłoszenia.
     Źródło:
     [REL-001-github-aktualizacje-sygnalista.md](REL-001-github-aktualizacje-sygnalista.md).
 
@@ -140,7 +154,13 @@ użytkownika. Nie zmienia statusu ręcznego odbioru NVDA poszczególnych funkcji
   pozostaje materiałem roboczym do instrukcji do czasu instalacji i odbioru NVDA.
 - Rozszerzono Sygnalistę o bezsekretowy klient HTTPS i własnego Workera z drugą
   redakcją, limitem, prywatnym intake oraz idempotencją. Kod przeszedł testy na
-  atrapach; wysyłanie pozostaje wyłączone do prawdziwego wdrożenia i odbioru.
+  atrapach oraz rzeczywiste pakowanie Wranglera bez publikacji. Uproszczono
+  przyszłe wdrożenie przez automatyczne przygotowanie KV i odczyt adresu
+  `workers.dev`; wysyłanie pozostaje wyłączone do autoryzacji i odbioru.
+- Usunięto zbędne „Przygotowywanie stacji” przed wynikiem `Ctrl+Shift+L` w
+  Radiu i rozszerzono regresje pustego profilu na wyszukiwarki oraz Bibliotekę.
+- Po udanym OAuth Spotify pamięć playlist jest unieważniana, aby kolejna lista
+  pokazała aktualne cele bez wielokrotnego pobierania przy każdym otwarciu.
 
 ## Odbiory i ograniczenia do zachowania w instrukcji
 
@@ -160,8 +180,10 @@ użytkownika. Nie zmienia statusu ręcznego odbioru NVDA poszczególnych funkcji
 - Nie obiecywać publicznego Sonosa przed działającym brokerem HTTPS i odbiorem
   z zewnętrznym kontem.
 - Nie opisywać gotowego kodu Sygnalisty jako działającego internetowego
-  zgłoszenia ani GitHub Issue, dopóki Worker, prywatne repozytorium i endpoint
-  nie zostaną świadomie wdrożone i odebrane.
+  zgłoszenia ani GitHub Issue, dopóki Worker i endpoint nie zostaną świadomie
+  wdrożone i odebrane. Prywatne repozytorium intake i etykiety już istnieją;
+  brakującą granicą jest Cloudflare, sekret o minimalnym zakresie i raport
+  próbny.
 - Nie opisywać logowania YouTube; `YT-001` jest odłożone do czasu po
   instalatorze i pierwszych stabilnych wydaniach.
 - Pomoc `Ctrl+F1`, pełna pomoc klawiatury, menu i paleta `Ctrl+Shift+K` mają
