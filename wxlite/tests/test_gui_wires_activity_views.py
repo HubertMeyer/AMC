@@ -14,7 +14,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from amc_wx_lite.navigation import LibraryView
+from amc_wx_lite.list_model import Row
+from amc_wx_lite.navigation import Announce, LibraryView, Navigator, SessionId
 from amc_wx_lite.shortcuts import Action
 
 GUI = Path(__file__).resolve().parents[1] / "amc_wx_lite" / "gui.py"
@@ -197,6 +198,63 @@ def test_empty_recording_view_speaks_exact_count_after_native_empty_event() -> N
     source = ast.get_source_segment(SOURCE, method) or ""
     assert "CallLater" in source
     assert "self.announcer.say" in source
+
+
+def test_active_recording_preview_syncs_before_naming_selected_file() -> None:
+    """Jeden wiersz musi być nazwany nawet bez nowego zdarzenia fokusu MSAA."""
+    from types import SimpleNamespace
+
+    from amc_wx_lite.gui import LiteFrame
+
+    navigator = Navigator()
+    navigator.switch_session(SessionId.RADIO)
+    navigator.apply_radio_view(
+        LibraryView.ACTIVE_RADIO_RECORDINGS,
+        "Nagrywane",
+        [Row("techniczne-id", "TVP Info - 2026-10-21 17-14-45.mp3", "station")],
+    )
+    calls: list[object] = []
+    frame = SimpleNamespace(
+        navigator=navigator,
+        _sync_views=lambda: calls.append("sync"),
+        _announce_after_native_list_update=lambda text: calls.append(("say", text)),
+    )
+
+    LiteFrame._announce_recording_preview(
+        frame,
+        [Announce("Nagrywane, 1 z 1")],
+    )
+
+    assert calls == [
+        "sync",
+        ("say", "Nagrywane, 1 z 1, TVP Info - 2026-10-21 17-14-45.mp3"),
+    ]
+    assert "techniczne-id" not in calls[1][1]
+
+
+def test_empty_active_recording_preview_stays_exact_and_after_sync() -> None:
+    """Pusta lista nadal kończy się dokładnym, krótkim komunikatem."""
+    from types import SimpleNamespace
+
+    from amc_wx_lite.gui import LiteFrame
+
+    navigator = Navigator()
+    navigator.switch_session(SessionId.RADIO)
+    navigator.apply_radio_view(
+        LibraryView.ACTIVE_RADIO_RECORDINGS,
+        "Nagrywane",
+        [],
+    )
+    calls: list[object] = []
+    frame = SimpleNamespace(
+        navigator=navigator,
+        _sync_views=lambda: calls.append("sync"),
+        _announce_after_native_list_update=lambda text: calls.append(("say", text)),
+    )
+
+    LiteFrame._announce_recording_preview(frame, [Announce("zero elementów")])
+
+    assert calls == ["sync", ("say", "zero elementów")]
 
 
 def test_podcast_inbox_sort_reuses_the_source_and_preserves_selection() -> None:

@@ -364,6 +364,13 @@ Na tym etapie przeszukiwany jest kompletny lokalny cache. Zdalne katalogi na
 żywo pozostają do domknięcia. Relacje TIDAL pod prawą strzałką są podłączone,
 ale ich odbiór z kontem i NVDA nie może być zaliczony samym testem lokalnym.
 
+Uruchom jedno nagranie i naciśnij `Alt+R`. Po ukończeniu aktualizacji natywnej
+listy ostatnim pełnym komunikatem ma być „Nagrywane, 1 z 1, nazwa pliku”. Nie
+może skończyć się na samym „Nagrywane, 1 z 1”, ujawnić identyfikatora ani
+przemilczeć nazwy jedynego wiersza. Strzałki na gotowej liście nadal czytają
+krótko od nazwy pliku, bez przedrostka „Nagrywane”. Powtórz próbę po Escape i
+ponownym `Alt+R`, aby sprawdzić przywrócenie zaznaczenia.
+
 W `Alt+Shift+R` zwykły ukończony plik nie powinien zaczynać się od słowa
 „Nagrane”, ponieważ taki jest już kontekst listy. Odczyt ma zaczynać się od
 nazwy stacji lub pliku. Osobno sprawdź wpisy przerwane, nieudane, zatrzymane i

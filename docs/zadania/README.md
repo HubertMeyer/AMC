@@ -45,8 +45,9 @@ zmian, wymagający korekty użytkownika:
   harmonogramu nagrywania, zgodność listy `Alt+R` z blokadą zamknięcia oraz
   zachowanie niepustego pliku domkniętego przed awarią odbioru. Szczegóły:
   [REC-001-harmonogram-alt-r-zamykanie.md](REC-001-harmonogram-alt-r-zamykanie.md).
-- `AMC02` — **Kolejna korekta zainstalowana po bezpiecznej bramce; czeka na
-  odbiór NVDA** — `Alt+R` mówi raz „Nagrywane, X z X”, a
+- `AMC02` — **Korekta odczytu jednego aktywnego nagrania zweryfikowana w
+  źródłach; czeka na bezpieczną instalację i odbiór NVDA** — `Alt+R` po
+  odświeżeniu listy mówi „Nagrywane, X z X, nazwa pliku”, a
   `Alt+Shift+R` „Nagrane, X z X”; same wiersze zaczynają się od nazwy pliku.
   Zachowano osobną pamięć zaznaczenia oraz bitrate, wielkość i folder pod lewą
   strzałką także w `Ctrl+H`. Bieżący zapis realizacji:

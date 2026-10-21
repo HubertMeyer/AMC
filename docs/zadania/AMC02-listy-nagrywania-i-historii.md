@@ -1,7 +1,8 @@
 # AMC02 — krótkie listy nagrywania i historia plików
 
-Status: **Kolejna korekta zainstalowana w AMC Test po pełnej regresji i
-bezpiecznej bramce nagrywania; czeka na odbiór NVDA**.
+Status: **Korekta odczytu jednego aktywnego nagrania jest zweryfikowana w
+źródłach; nie została jeszcze zbudowana ani zainstalowana, ponieważ trwa
+rzeczywiste nagranie. Czeka na bezpieczną instalację i odbiór NVDA**.
 
 ## Zakres
 
@@ -22,13 +23,16 @@ wspólny formatter hosta.
 
 ## Materiał do dokumentacji użytkownika
 
-`Alt+R` otwiera listę aktualnych nagrań i mówi raz „Nagrywane, X z X”, gdzie
-pierwsza liczba jest zapamiętaną pozycją, a druga liczbą widocznych plików.
-Zwykły wiersz zaczyna się od razu nazwą pliku; słowo „Nagrywane” nie jest
-powtarzane przy każdej strzałce. Podczas uruchamiania nagrania, zanim silnik
-zna jeszcze ścieżkę pliku, zamiast pustej nazwy może zostać podana nazwa
-stacji. Lista nie powtarza czasu trwania, liczby zapisanych części, folderu
-ani nazwy harmonogramu.
+`Alt+R` otwiera listę aktualnych nagrań. Po zaktualizowaniu listy podaje jeden
+pełny komunikat wejścia, na przykład „Nagrywane, 1 z 1, TVP Info - data i
+godzina.mp3”. Pierwsza liczba jest zapamiętaną pozycją, druga liczbą widocznych
+plików, a końcówka nazwą rzeczywiście wybranego pliku. Dzięki temu także
+jedyny wiersz jest nazwany, nawet gdy Windows nie wyśle nowego zdarzenia
+fokusu. Kolejne strzałki zaczynają się od samej nazwy pliku; słowo
+„Nagrywane” nie jest powtarzane przy każdym ruchu. Podczas uruchamiania
+nagrania, zanim silnik zna jeszcze ścieżkę pliku, zamiast pustej nazwy może
+zostać podana nazwa stacji. Lista nie powtarza czasu trwania, liczby zapisanych
+części, folderu ani nazwy harmonogramu.
 
 `Alt+Shift+R` otwiera Historię nagrywania i mówi raz „Nagrane, X z X”. Zwykły
 ukończony plik jest czytany
@@ -82,6 +86,12 @@ Polecenie `Alt+R` ma w menu, pomocy klawiatury `Ctrl+F1` i palecie
   nagłówku bez pozycji.** `Alt+R` ma ogłaszać raz „Nagrywane, X z X”, a
   `Alt+Shift+R` — „Nagrane, X z X”. Nie przywraca to przedrostka do każdego
   wiersza; strzałki nadal zaczynają od nazwy pliku.
+- **Korekta odbiorcza użytkownika z 21.10.2026 zastępuje dla `Alt+R`
+  założenie, że natywna lista zawsze sama odczyta pierwszy wiersz po komunikacie
+  „Nagrywane, X z X”.** Przy pojedynczym aktywnym nagraniu nazwa nie została
+  odczytana. Program synchronizuje teraz listę przed komunikatem i jawnie
+  dołącza użytkową nazwę wybranego pliku. Techniczny identyfikator nagrania
+  nadal nie trafia do mowy ani tekstu kontrolki.
 
 ## Zmienione miejsca
 
@@ -165,11 +175,24 @@ zgodność nazw i skrótów wykonania, pomocy i palety.
 - potwierdzono działający proces
   `D:\Projekty Codex\AMC Python\runtime\python.exe` i okno „AMC Test”.
 
+21.10.2026, korekta po ręcznym odbiorze pojedynczego wiersza:
+
+- ukierunkowane testy widoków aktywności, nagrywania, skrótów, palety i
+  publicznych regresji: **121 zaliczonych**;
+- pełna regresja wxPython w przypiętym środowisku projektu: **1948
+  zaliczonych, 110 pominiętych i 11 podtestów zaliczonych** w 155,69 s;
+- test sprawdza kolejność „synchronizacja listy, potem komunikat”, pełny tekst
+  „Nagrywane, 1 z 1, nazwa pliku”, brak technicznego ID oraz niezmienione
+  „zero elementów” dla pustej listy;
+- źródła, testy i dokumentacja nie są jeszcze dowodem buildu, instalacji ani
+  rzeczywistej mowy NVDA. Budowę odłożono, ponieważ żywy AMC Test nadal
+  nagrywał stację i plik roboczy faktycznie zwiększał rozmiar.
+
 ## Znane ograniczenia
 
-- Ostatnia korekta „Nagrywane/Nagrane, X z X” jest zainstalowana, ale wymaga
-  odsłuchu wejścia, ruchu strzałkami i powrotu do obu widoków ze wcześniej
-  zapamiętanym zaznaczeniem.
+- Ostatnia korekta pełnego komunikatu `Alt+R` jest tylko w źródłach. Wymaga
+  zbudowania, instalacji oraz odsłuchu wejścia, ruchu strzałkami i powrotu ze
+  wcześniej zapamiętanym zaznaczeniem.
 - Wczesny stan „uruchamianie nagrania” może chwilowo użyć nazwy stacji, dopóki
   host nie poda nazwy tworzonego pliku.
 - Bitrate i rozmiar zależą od dostępności pliku i odpowiedzi hosta. Folder

@@ -19032,6 +19032,32 @@ class LiteFrame(wx.Frame):
             # Atrapy wx w testach bez CallLater zachowuja dotychczasowa droge.
             wx.CallAfter(self.announcer.say, text)
 
+    def _announce_recording_preview(self, events: list[object]) -> None:
+        """Najpierw pokaż wiersze, potem podaj pełny kontekst zaznaczenia.
+
+        Przy jednym aktywnym nagraniu SysListView32 nie zawsze emituje nowe
+        zdarzenie fokusu: lista może już mieć fokus i indeks zero. Sam
+        komunikat ``Nagrywane, 1 z 1`` nie mówi wtedy, jaki plik jest
+        nagrywany. Nie polegamy więc na przypadkowym zdarzeniu kontrolki.
+        Po synchronizacji podajemy jeden celowy komunikat z użytkową nazwą
+        wybranego wiersza. Techniczne ID pozostaje wyłącznie w modelu.
+        """
+        self._sync_views()
+        message = next(
+            (
+                intent.text
+                for intent in events
+                if isinstance(intent, Announce) and intent.text.strip()
+            ),
+            "",
+        )
+        row = self.navigator.session.model.selected_row
+        title = (row.title if row is not None else "").strip()
+        if title:
+            message = f"{message}, {title}" if message else title
+        if message:
+            self._announce_after_native_list_update(message)
+
     # ---------------------------------------------------------------- pliki
 
     def _open_folder(self, path: str, preferred_id: str | None = None) -> None:
@@ -25613,15 +25639,13 @@ class LiteFrame(wx.Frame):
             if self.navigator.active is not SessionId.RADIO:
                 return
             if announce:
-                if rows:
-                    self._run(events)
-                else:
-                    # Najpierw opróżniamy natywna liste, a dopiero potem
-                    # wypowiadamy wynik. Gdy komunikat szedl przed zmiana
-                    # kontrolki, zdarzenie usuniecia ostatniego wiersza
-                    # dopisywalo na koncu mylace "nieznane".
-                    self._sync_views()
-                    self._announce_after_native_list_update(events[0].text)
+                # Niezależnie od liczby wierszy najpierw kończymy zmianę
+                # natywnej listy. Dla jednego nagrania kontrolka nie musi
+                # wygenerować nowego fokusu, więc jawnie dopowiadamy nazwę
+                # wybranego pliku razem z pozycją. Dla pustej listy ta sama
+                # droga zachowuje jednoznaczne "zero elementów" po zdarzeniach
+                # usunięcia ostatniego dziecka.
+                self._announce_recording_preview(events)
             else:
                 # Odswiezenie po zdarzeniu nie moze zagluszac komunikatu o
                 # starcie, zatrzymaniu lub bledzie nagrania.

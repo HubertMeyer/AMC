@@ -12,6 +12,13 @@ kontrolowany start zainstalowanej kopii są zaliczone. TIDAL, Spotify i Frontier
 Smart są nieobecne, WiiM, Sonos oraz pełny eksport/import pozostają. Ręczny
 odbiór NVDA pozostaje do wykonania; publikacji zdalnej nie wykonano.**
 
+**Po ręcznym odbiorze z 21.10.2026 przygotowano w źródłach następną, wspólną
+korektę: `Alt+R` ma po odświeżeniu listy podać także nazwę jedynego aktywnego
+nagrania. Pełna regresja: 1948 zaliczonych, 110 pominiętych i 11 podtestów
+zaliczonych. Ta korekta nie została jeszcze zbudowana ani zainstalowana, bo w
+AMC Test trwa rzeczywiste nagranie. Zainstalowany publiczny AMC pozostaje więc
+bez zmian w wersji `alpha.428`.**
+
 ### Korekta użytkownika z 21.10.2026
 
 Ta decyzja zastępuje wcześniejsze opisy o stałym, ogólnym ograniczaniu profilu
@@ -92,6 +99,11 @@ Bibliotekę i stwarzała wrażenie, że zniknęła cała zawartość folderu.
 - Pierwszy, niebuforowany odczyt parametrów nowego pliku może nadal trwać tyle,
   ile rzeczywisty pomiar hosta. Poprawka usuwa powtarzanie tego kosztu i
   kumulowanie równoległych zadań, nie fałszuje wyniku szybszym przybliżeniem.
+- `Ctrl+0` nie ma w bieżącym AMC funkcji. Listę sesji otwiera `Ctrl+Shift+S`,
+  Historię odtwarzania `Ctrl+H`, aktywne nagrania `Alt+R`, a Historię
+  nagrywania `Alt+Shift+R`. Komunikat „zero elementów” po `Ctrl+0` nie jest
+  wynikiem polecenia Historii i wymaga osobnego żywego pomiaru, jeżeli nadal
+  wystąpi po zainstalowaniu następnego kandydata.
 - Pliki pozostają w systemowym Koszu do chwili decyzji użytkownika.
 
 #### Wersja i commit
