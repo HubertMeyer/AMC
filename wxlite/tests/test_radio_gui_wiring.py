@@ -127,6 +127,29 @@ def test_main_window_routes_radio_sort_favorite_and_library_shortcuts():
         assert actions[-1] is expected
 
 
+def test_main_window_routes_shared_order_shortcuts_in_radio_playlist():
+    import wx
+    from amc_wx_lite.shortcuts import Action
+
+    frame, _, _ = radio_shell()
+    frame.navigator.session.library_view = LibraryView.PLAYLIST_CONTENTS
+    frame.navigator.session.library_playlist_id = "radio-morning"
+    actions = []
+    frame._dispatch = actions.append
+    frame._screen_reader_modifier_down = lambda: False
+    frame.filter_box = SimpleNamespace(GetValue=lambda: "")
+    frame.options = SimpleNamespace(session_order=None)
+
+    for event, expected in (
+        (FakeKeyEvent(ord("X"), ctrl=True), Action.CUT_FILE),
+        (FakeKeyEvent(ord("V"), ctrl=True), Action.PASTE_OR_MOVE),
+        (FakeKeyEvent(wx.WXK_UP, alt=True), Action.MOVE_LIST_ITEM_UP),
+        (FakeKeyEvent(wx.WXK_DOWN, alt=True), Action.MOVE_LIST_ITEM_DOWN),
+    ):
+        LiteFrame._on_key(frame, event)
+        assert actions[-1] is expected
+
+
 def test_dispatch_uses_same_radio_sort_and_library_implementations_as_menu():
     from amc_wx_lite.shortcuts import Action
 

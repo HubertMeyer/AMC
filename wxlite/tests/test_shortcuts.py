@@ -531,6 +531,32 @@ def test_radio_collection_shortcuts_have_one_contextual_meaning() -> None:
         ) is Action.TOGGLE_FAVORITE
 
 
+def test_radio_playlist_contents_reuse_shared_manual_order_shortcuts() -> None:
+    manual_order = {
+        Chord("X", ctrl=True): Action.CUT_FILE,
+        Chord("V", ctrl=True): Action.PASTE_OR_MOVE,
+        Chord("Up", alt=True): Action.MOVE_LIST_ITEM_UP,
+        Chord("Down", alt=True): Action.MOVE_LIST_ITEM_DOWN,
+    }
+    for chord, action in manual_order.items():
+        assert resolve(
+            chord,
+            player_view=False,
+            radio_session=True,
+            radio_playlist_contents=True,
+        ) is action
+
+    # Sortowanie calej Biblioteki/Ulubionych nie moze przestawiac zawartosci
+    # pojedynczej playlisty ani reklamowac w niej obcego trybu widoku.
+    for key in "123":
+        assert resolve(
+            Chord(key, alt=True),
+            player_view=False,
+            radio_session=True,
+            radio_playlist_contents=True,
+        ) is None
+
+
 def test_ctrl_shift_p_opens_playlist_membership_in_list_and_player() -> None:
     for player in (False, True):
         for radio in (False, True):

@@ -1485,6 +1485,7 @@ def resolve(
     player_view: bool,
     radio_session: bool,
     radio_collection: bool = False,
+    radio_playlist_contents: bool = False,
     radio_recording_context: bool = False,
     podcast_inbox: bool = False,
     podcast_library: bool = False,
@@ -1510,11 +1511,20 @@ def resolve(
     if not player_view and service_history and canonical == "Delete":
         return Action.REMOVE_SELECTED
     if radio_session and canonical in RADIO_COLLECTION_LIST_VIEW:
-        return (
-            RADIO_COLLECTION_LIST_VIEW[canonical]
-            if not player_view and radio_collection
-            else None
-        )
+        if not player_view and radio_collection:
+            return RADIO_COLLECTION_LIST_VIEW[canonical]
+        # Alt+1/2/3 belong only to the two radio collections.  The four
+        # manual-order gestures are also the shared playlist gestures, so an
+        # open radio playlist must be allowed to reach LIST_VIEW below.
+        if not player_view and radio_playlist_contents and canonical in {
+            "Alt+Up",
+            "Alt+Down",
+            "Ctrl+X",
+            "Ctrl+V",
+        }:
+            pass
+        else:
+            return None
     # Alt+1/2/3 ma dwa jawne znaczenia w sesji Podcasty i YouTube: sortuje
     # główną Bibliotekę albo skrzynkę Nowych odcinków. W pozostałych widokach
     # tej sesji nie może wpaść w obce znaczenie lokalnych Folderów/Plików.

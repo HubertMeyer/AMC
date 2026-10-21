@@ -11545,6 +11545,13 @@ class LiteFrame(wx.Frame):
                 LibraryView.FAVORITES,
             )
         )
+        radio_playlist_contents = (
+            not player
+            and radio
+            and self.navigator.session.library_view
+            is LibraryView.PLAYLIST_CONTENTS
+            and bool(self.navigator.session.library_playlist_id)
+        )
         podcast_inbox = (
             not player
             and self.navigator.active is SessionId.PODCASTS
@@ -11629,6 +11636,7 @@ class LiteFrame(wx.Frame):
             player_view=player,
             radio_session=radio,
             radio_collection=radio_collection,
+            radio_playlist_contents=radio_playlist_contents,
             radio_recording_context=(
                 radio
                 and not player
@@ -26729,6 +26737,12 @@ class LiteFrame(wx.Frame):
                 not player
                 and self.navigator.active is SessionId.RADIO
                 and session.library_view in (None, LibraryView.FAVORITES)
+            ),
+            radio_playlist_contents=(
+                not player
+                and self.navigator.active is SessionId.RADIO
+                and session.library_view is LibraryView.PLAYLIST_CONTENTS
+                and bool(session.library_playlist_id)
             ),
             radio_recording_context=(
                 not player
