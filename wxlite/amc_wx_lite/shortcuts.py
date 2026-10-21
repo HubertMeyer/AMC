@@ -460,7 +460,7 @@ _CTRL_F5_PRESENTATIONS: dict[str, CommandPresentation] = {
     "frontier smart": CommandPresentation(
         Action.SESSION_CONFIGURE_CURRENT,
         "Urządzenia Frontier Smart",
-        "Wykryj, dodaj albo wybierz urządzenie Frontier Smart",
+        "Pokaż zapisane urządzenia Frontier Smart i opcjonalnie wyszukaj nowe",
         "Ctrl+F5",
     ),
 }

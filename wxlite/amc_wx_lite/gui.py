@@ -190,6 +190,7 @@ if "session.frontier-smart" in _RELEASE_PROFILE.capabilities:
         now_playing_label as frontier_smart_now_playing_label,
         payload_message as frontier_smart_payload_message,
         preset_choices as frontier_smart_preset_choices,
+        should_auto_discover_devices as frontier_smart_should_auto_discover,
         snapshot as frontier_smart_snapshot,
     )
 from .wiim_source import (
@@ -4522,7 +4523,7 @@ class FrontierSmartDevicesDialog(wx.Dialog):
         remove: Callable[[str, "FrontierSmartDevicesDialog"], None],
         select: Callable[[str, "FrontierSmartDevicesDialog"], None],
         announce: Callable[[str], None],
-        auto_discover: bool = True,
+        auto_discover: bool,
     ) -> None:
         super().__init__(
             parent,
@@ -4543,8 +4544,12 @@ class FrontierSmartDevicesDialog(wx.Dialog):
         intro = wx.StaticText(
             self,
             label=(
-                "AMC automatycznie wyszuka urządzenia w sieci. "
-                "Ręczny adres jest dostępny jako opcja awaryjna. "
+                (
+                    "AMC automatycznie wyszuka pierwsze urządzenie w sieci. "
+                    if auto_discover
+                    else "Wybierz zapisane urządzenie albo wyszukaj nowe. "
+                )
+                + "Ręczny adres jest dostępny jako opcja awaryjna. "
                 "PIN zostanie zapisany bezpiecznie w Menedżerze poświadczeń Windows."
             ),
         )
@@ -4561,7 +4566,8 @@ class FrontierSmartDevicesDialog(wx.Dialog):
         self.status = wx.StaticText(self, label="Gotowe")
         self.status.SetName("Stan konfiguracji: Gotowe")
 
-        self.discover_button = wx.Button(self, label="&Szukaj ponownie")
+        self.discover_button = wx.Button(self, label="&Szukaj nowych urządzeń")
+        self.discover_button.SetName("Szukaj nowych urządzeń w sieci lokalnej")
         self.manual_button = wx.Button(self, label="Wpisz adres &ręcznie…")
         self.manual_button.SetName("Wpisz lokalny adres IP ręcznie")
         self.save_button = wx.Button(self, label="&Połącz i zapisz")
@@ -16057,6 +16063,9 @@ class LiteFrame(wx.Frame):
                 remove=remove,
                 select=select,
                 announce=self.announcer.say,
+                auto_discover=frontier_smart_should_auto_discover(
+                    initial_payload
+                ),
             ) as dialog:
                 dialog.ShowModal()
             self._restore_focus_after_dialog()

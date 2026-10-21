@@ -8,6 +8,7 @@ from amc_wx_lite.frontier_smart_source import (
     mode_choices,
     now_playing_label,
     preset_choices,
+    should_auto_discover_devices,
     snapshot,
 )
 from amc_wx_lite.host_client import LiteHostClient
@@ -181,7 +182,7 @@ def test_frontier_smart_commands_have_menu_help_palette_and_execution_route() ->
         available_actions=set(FRONTIER_SMART_SUPPORTED_ACTIONS),
     )
     assert dict(help_entries)["Ctrl+F5"] == (
-        "Wykryj, dodaj albo wybierz urządzenie Frontier Smart"
+        "Pokaż zapisane urządzenia Frontier Smart i opcjonalnie wyszukaj nowe"
     )
     assert any(
         "tryb urządzenia Frontier Smart" in label
@@ -210,6 +211,10 @@ def test_frontier_smart_device_dialog_has_explicit_names_and_keyboard_contract()
     assert 'self.address.SetName("Lokalny adres IP urządzenia")' in dialog
     assert 'self.pin.SetName("PIN urządzenia, pole chronione")' in dialog
     assert 'self.manual_button.SetName("Wpisz lokalny adres IP ręcznie")' in dialog
+    assert (
+        'self.discover_button.SetName("Szukaj nowych urządzeń w sieci lokalnej")'
+        in dialog
+    )
     assert "self.Bind(wx.EVT_CHAR_HOOK, self._on_key)" in dialog
     assert "self.devices.Bind(wx.EVT_LISTBOX_DCLICK, self._on_select)" in dialog
     assert "self.devices.HasFocus()" in dialog
@@ -221,6 +226,31 @@ def test_frontier_smart_device_dialog_has_explicit_names_and_keyboard_contract()
     assert "self.manual_button.SetFocus()" in dialog
     assert "self.pin.SetFocus()" in dialog
     assert "close_after=True" not in dialog
+
+
+def test_frontier_smart_auto_discovers_only_without_saved_devices() -> None:
+    assert should_auto_discover_devices({"items": []}) is True
+    assert should_auto_discover_devices({
+        "items": [
+            {
+                "itemId": "frontier:radio-1",
+                "deviceId": "radio-1",
+                "title": "Radio w salonie",
+                "detail": "Frontier Smart",
+            }
+        ]
+    }) is False
+
+    source = (
+        Path(__file__).parents[1] / "amc_wx_lite" / "gui.py"
+    ).read_text(encoding="utf-8")
+    flow = source[source.index("    def _show_frontier_smart_devices") :]
+    flow = flow[:flow.index("    def _activate_frontier_smart_device")]
+    assert (
+        "auto_discover=frontier_smart_should_auto_discover("
+        in flow
+    )
+    assert 'label="&Szukaj nowych urządzeń"' in source
 
 
 def test_frontier_smart_success_closes_configuration_and_returns_to_device_list() -> None:

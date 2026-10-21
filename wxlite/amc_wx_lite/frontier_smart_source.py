@@ -58,6 +58,12 @@ def device_rows(payload: object) -> tuple[Row, ...]:
     return tuple(rows)
 
 
+def should_auto_discover_devices(payload: object) -> bool:
+    """Szukaj samoczynnie wyłącznie przy pustej, nieskonfigurowanej sesji."""
+
+    return not device_rows(payload)
+
+
 def device_list_state(payload: object) -> tuple[str, str]:
     if not isinstance(payload, dict):
         raise FrontierSmartPayloadError(
