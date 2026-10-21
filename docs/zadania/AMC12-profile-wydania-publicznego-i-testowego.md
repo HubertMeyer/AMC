@@ -2,21 +2,22 @@
 
 ## Status
 
-**Publiczny AMC `0.1.0-alpha.431` jest zbudowany, zainstalowany i uruchomiony z
-`D:\Projekty Codex\AMC Public`. `Ctrl+Shift+U` w folderze z `Ctrl+O` rozpoznaje
-teraz istniejący rekord Biblioteki po ścieżce i nie przełącza bieżącej listy na
-pustą Bibliotekę. Pełna regresja wxPython: 1953 zaliczone, 110 świadomie
-pominiętych i 11 podtestów zaliczonych; 26 zestawów protokołu C# przeszło, a
-kompilacja całego rozwiązania Release miała 0 ostrzeżeń i 0 błędów. Paczka
-`1555412f` ma 1075 kontrolowanych plików; pełna integralność i kontrolowany
-start zainstalowanej kopii są zaliczone. TIDAL, Spotify i Frontier Smart są
-nieobecne, WiiM, Sonos oraz pełny eksport/import pozostają. Działający AMC Test
-nie został zamknięty ani podmieniony. Ręczny odbiór wypowiedzi i fokusu NVDA
-pozostaje do wykonania; publikacji zdalnej nie wykonano.**
+**Publiczny AMC `0.1.0-alpha.432` jest zbudowany, zainstalowany i uruchomiony z
+`D:\Projekty Codex\AMC Public`. Profil AMC Test skopiowano jednokierunkowo do
+osobnego profilu publicznego: silnik zainstalowanej kopii widzi 3 dostępne
+foldery i 11 685 elementów Biblioteki. Pełna regresja wxPython: 1955 zaliczone,
+110 świadomie pominiętych i 11 podtestów zaliczonych; 26 zestawów protokołu C#
+przeszło, a kompilacja całego rozwiązania Release miała 0 ostrzeżeń i 0 błędów.
+Paczka `7f03dd5e` ma 1075 kontrolowanych plików; pełna integralność i
+kontrolowany start zainstalowanej kopii są zaliczone. TIDAL, Spotify i Frontier
+Smart są nieobecne, WiiM, Sonos oraz pełny eksport/import pozostają. AMC Test
+jest zamknięty; działa wyłącznie AMC Public. Ręczny odbiór wypowiedzi i fokusu
+NVDA pozostaje do wykonania; publikacji zdalnej nie wykonano.**
 
-Korekta źródłowa i kandydat wydania są zapisane w commicie `435eb49c` —
-`fix(amc): zachowaj biblioteke przy zmianie ulubionych`. Kandydat
-`0.1.0-alpha.431` zastępuje zainstalowany wcześniej `alpha.430`.
+Korekta źródłowa i kandydat wydania są zapisane w commicie
+`20877cf7bc0299f4f6e1c189ced83aaf9515e46b` —
+`fix(amc): odtworz profil publiczny i diagnozuj hosta`. Kandydat
+`0.1.0-alpha.432` zastępuje zainstalowany wcześniej `alpha.431`.
 
 ### Korekta użytkownika z 21.10.2026
 
@@ -51,9 +52,11 @@ oznaczałoby to dwóch pisarzy, konflikty historii, ustawień i harmonogramów.
   wpisów historii nagrywania. Publiczna baza ma 931 wpisów historii
   odtwarzania.
 - AMC Test i AMC Public należy podczas odbioru uruchamiać kolejno, nie
-  równocześnie. Jest to zasada testowa do czasu osobnego potwierdzenia pracy
-  dwóch silników audio i mostu NVDA obok siebie; nie jest wymogiem instalacji
-  dla zwykłego użytkownika, który ma tylko publiczny AMC.
+  równocześnie. Korekta użytkownika z 21.10.2026 zastępuje wcześniejsze
+  rozważanie technicznej blokady obu procesów: wystarczającym modelem pracy
+  jest świadome zamknięcie bieżącego wariantu przed przełączeniem. Nie dodajemy
+  osobnej blokady ani automatycznej synchronizacji. Nie jest to utrudnienie dla
+  zwykłego użytkownika, który ma tylko publiczny AMC.
 
 #### Diagnoza, zabezpieczenie danych i dowody
 
@@ -78,9 +81,20 @@ oznaczałoby to dwóch pisarzy, konflikty historii, ustawień i harmonogramów.
   zaliczonych, 110 świadomie pominiętych i 11 podtestów zaliczonych. Wszystkie
   26 zestawów protokołu C# przeszło. Kompilacja całego rozwiązania Release:
   0 ostrzeżeń i 0 błędów.
-- Powyższe potwierdza źródła, testy, kompilację i rzeczywisty import profilu.
-  Nie potwierdza jeszcze instalatora `alpha.432`, zainstalowanej kopii ani
-  ręcznego odbioru fokusu i wypowiedzi NVDA; te etapy są zapisywane osobno.
+- Instalator `AMC-0.1.0-alpha.432-win-x64.exe` ma 124 071 145 bajtów i SHA-256
+  `9313dd6a0fcaf179d705bd87949b188ff02de8f33b12d68cebb301c4f1bec6f4`.
+  Zawiera paczkę `7f03dd5e`, profil `public`, czystą rewizję `20877cf7` oraz
+  sesje Pliki, Radio, Podcasty i YouTube, WiiM i Sonos; nie zawiera TIDAL,
+  Spotify ani Frontier Smart.
+- Instalacja do `D:\Projekty Codex\AMC Public` zakończyła się kodem 0. Pełna
+  kontrola integralności zainstalowanej kopii zakończyła się kodem 0, a
+  izolowany test startu interfejsu i hosta wynikiem `OK`. Test rzeczywistego
+  profilu po instalacji zwrócił 3 dostępne foldery, 11 685 elementów lokalnych
+  i stan wspólnych danych `current`. Uruchomiono tylko procesy z katalogu AMC
+  Public; AMC Test pozostał zamknięty.
+- Powyższe potwierdza źródła, testy, kompilację, paczkę, instalator,
+  zainstalowaną kopię i rzeczywisty profil. Nadal nie zastępuje ręcznego
+  odbioru fokusu, komunikatów i nawigacji z NVDA.
 
 #### Szkic listy zmian do zatwierdzenia przez użytkownika
 
