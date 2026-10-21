@@ -59,9 +59,18 @@ wyłącznie cztery gesty ręcznej kolejności przechodzą wtedy do wspólnej akc
   tym ograniczeniem. Łączny wynik funkcjonalny: 1965 zaliczonych.
 - Zmiana źródłowa: commit `c25ecb50` —
   `fix(radio): przywroc reczne porzadkowanie playlist`.
-- Na tym etapie jest to potwierdzona zmiana źródeł i testów. Nowa paczka Test,
-  instalacja i ręczny odbiór NVDA są osobnymi krokami i nie są jeszcze przez
-  ten zapis uznane za zakończone.
+- Paczka Test z rewizji
+  `20a3ca68dd2a078554821e9a2bdea21cd478a88e` ma identyfikator `a60df04f`
+  i 1670 kontrolowanych plików. Integralność oraz kontrolowany start kandydata
+  i zainstalowanej kopii przeszły. Atomowa instalacja do
+  `D:\Projekty Codex\AMC Python` zakończyła się powodzeniem, a następnie
+  potwierdzono okno `AMC Test — 21.10.2026, 21:43` z prywatnego runtime'u tej
+  instalacji.
+- Po uruchomieniu potok dodatku NVDA `AMC.NVDA.v1.1` był dostępny w tej samej
+  sesji Windows co NVDA i AMC. Rzeczywiste polecenie dodatku `status` zwróciło
+  `Radio, brak otwartego nagrania.` Ręczny odbiór czterech gestów oraz ich
+  komunikatów przez użytkownika pozostaje wymagany; pomyślny test potoku nie
+  zastępuje nawigacji klawiaturą z NVDA.
 
 ### Korekta użytkownika z 21.10.2026 — wstrzymanie publicznego kandydata
 
