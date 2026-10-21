@@ -26,7 +26,9 @@ MAX_STEPS_CHARACTERS = 10_000
 MAX_LOG_LINES = 200
 MAX_LOG_SOURCE_BYTES = 512 * 1024
 MAX_LOG_CHARACTERS = 64 * 1024
-MAX_REPORT_BYTES = 256 * 1024
+# Zostawia zapas na nagłówek i stopkę prywatnego GitHub Issue. Kontrola jest
+# liczona w UTF-8, więc nie zależy od tego, ile bajtów zajmują polskie znaki.
+MAX_REPORT_BYTES = 60 * 1024
 
 
 class ReportKind(str, Enum):

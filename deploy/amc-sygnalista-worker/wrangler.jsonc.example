@@ -12,9 +12,18 @@
     "PUBLIC_REPOSITORY": "AMC",
     "INTAKE_REPOSITORY": "amc-support-intake"
   },
-  "kv_namespaces": [
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "REPORT_COORDINATORS",
+        "class_name": "ReportCoordinator"
+      }
+    ]
+  },
+  "migrations": [
     {
-      "binding": "REPORT_RESULTS"
+      "tag": "v1",
+      "new_sqlite_classes": ["ReportCoordinator"]
     }
   ],
   "ratelimits": [
