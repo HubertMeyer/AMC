@@ -2,22 +2,98 @@
 
 ## Status
 
-**Publiczny AMC `0.1.0-alpha.432` jest zbudowany, zainstalowany i uruchomiony z
-`D:\Projekty Codex\AMC Public`. Profil AMC Test skopiowano jednokierunkowo do
-osobnego profilu publicznego: silnik zainstalowanej kopii widzi 3 dostępne
-foldery i 11 685 elementów Biblioteki. Pełna regresja wxPython: 1955 zaliczone,
-110 świadomie pominiętych i 11 podtestów zaliczonych; 26 zestawów protokołu C#
-przeszło, a kompilacja całego rozwiązania Release miała 0 ostrzeżeń i 0 błędów.
-Paczka `7f03dd5e` ma 1075 kontrolowanych plików; pełna integralność i
-kontrolowany start zainstalowanej kopii są zaliczone. TIDAL, Spotify i Frontier
-Smart są nieobecne, WiiM, Sonos oraz pełny eksport/import pozostają. AMC Test
-jest zamknięty; działa wyłącznie AMC Public. Ręczny odbiór wypowiedzi i fokusu
-NVDA pozostaje do wykonania; publikacji zdalnej nie wykonano.**
+**Lokalny publiczny kandydat `0.1.0-alpha.433` jest zbudowany i zainstalowany w
+`D:\Projekty Codex\AMC Public`, ale decyzją użytkownika z 21.10.2026 pozostaje
+wstrzymany do odbioru Smart Frontier. Nie uruchomiono go do odbioru, nie
+opublikowano i nie należy go jeszcze przekazywać użytkownikom. Kandydat ma
+ręczne porządkowanie Biblioteki i Ulubionych Radia przez `Alt+strzałka góra/dół`
+oraz `Ctrl+X`, `Ctrl+V`. Pełna regresja wxPython: 1962 zaliczone, 110 świadomie
+pominiętych i 11 podtestów zaliczonych; 26 zestawów protokołu C# przeszło, a
+kompilacja całego rozwiązania Release miała 0 ostrzeżeń i 0 błędów. Paczka
+`e6d4269d` ma 1075 kontrolowanych plików; integralność i kontrolowany start
+paczki są zaliczone, a integralność zainstalowanej kopii zakończyła się kodem
+0. Ten wstrzymany wariant nie zawiera TIDAL-a, Spotify ani Frontier Smart;
+WiiM i Sonos pozostają. Następny publiczny kandydat powstanie dopiero po
+decyzji, czy odebrany Smart Frontier ma wejść do profilu publicznego.**
 
-Korekta źródłowa i kandydat wydania są zapisane w commicie
-`20877cf7bc0299f4f6e1c189ced83aaf9515e46b` —
-`fix(amc): odtworz profil publiczny i diagnozuj hosta`. Kandydat
-`0.1.0-alpha.432` zastępuje zainstalowany wcześniej `alpha.431`.
+Korekta ręcznej kolejności jest zapisana w commicie
+`8ab21a25bb61a0807fc4870b558b39a1eeb93c57` —
+`fix(amc): dodaj reczne porzadkowanie radia`. Z tej czystej rewizji powstał
+wstrzymany kandydat `0.1.0-alpha.433`; nie jest wydaniem publicznym.
+
+### Korekta użytkownika z 21.10.2026 — wstrzymanie publicznego kandydata
+
+Ta decyzja zastępuje wcześniejszy plan natychmiastowego uruchomienia i odbioru
+`alpha.433`. Użytkownik chce najpierw sprawdzić Smart Frontier. Jeżeli funkcja
+przejdzie odbiór, kolejny publiczny instalator ma ją zawierać; dzisiejszego
+kandydata bez Frontier nie publikujemy ani nie przekazujemy dalej.
+
+#### Materiał do dokumentacji użytkownika
+
+- W Bibliotece i Ulubionych Radia `Alt+3` wybiera kolejność własną.
+- `Alt+strzałka w górę` i `Alt+strzałka w dół` przesuwają stację albo ciągły
+  blok o jedną pozycję. NVDA podaje kierunek oraz konkretną stację, na przykład
+  `Przeniesiono stację w dół, pod Trójka`.
+- `Ctrl+X` zapamiętuje stację albo wielozaznaczenie do przeniesienia. Po
+  ustawieniu fokusu na celu `Ctrl+V` wstawia wybór przed tą stacją i podaje jej
+  nazwę. Identyfikatory techniczne nie trafiają do mowy.
+- Gdy lista nie używa kolejności własnej, AMC mówi:
+  `Przenoszenie działa w kolejności własnej. Naciśnij Alt 3`. Aktywny filtr
+  należy wcześniej wyczyścić klawiszem `Escape`.
+- Istniejące lokalne playlisty oraz własne strumienie WiiM i Sonos zachowują
+  swoje analogiczne polecenia. Menu, `Ctrl+F1`, pełna pomoc i paleta poleceń
+  korzystają z tych samych akcji i warunków dostępności.
+
+#### Uzasadnienie i decyzje
+
+- Brak działania w Radiu nie był skutkiem profilu ani dwóch instalatorów.
+  Widok Radia miał sortowanie `Alt+1–3`, lecz nie był dołączony do istniejącego
+  wspólnego kontraktu ręcznej kolejności.
+- Zapis wykonuje wyłącznie host C# w jednej transakcji SQLite i zmienia tylko
+  `library_custom_order` albo `favorite_order` sesji `radio`. Python nie zapisuje
+  bazy bezpośrednio.
+- Ręczna kolejność jest dostępna tylko w Bibliotece i Ulubionych Radia. Historia,
+  wyniki wyszukiwania i odtwarzacz nie mają własnego trwałego porządku, więc
+  skróty nie są tam reklamowane.
+- Szybkie działanie pełnego profilu potwierdza, że liczba danych nie jest sama
+  w sobie przyczyną wcześniejszych opóźnień. Wcześniejszy pusty profil,
+  nieudane starty hosta i błędne odświeżanie widoków były osobnymi problemami.
+  Nie jest to dowód, że dwa procesy powinny stale współdzielić jedną bazę.
+
+#### Testy i wynik
+
+- Testy celowane skrótów, menu, klienta hosta i komunikatów GUI: 127 zaliczonych.
+- Rzeczywisty proces LiteHost i tymczasowa baza SQLite potwierdziły osobny
+  zapis kolejności Biblioteki i Ulubionych oraz odrzucenie Historii.
+- Pełna regresja wxPython po poprawce zgodności: `1962 passed, 110 skipped, 11
+  subtests passed`.
+- Wszystkie 26 zestawów protokołu C# przeszło. Kompilacja całego rozwiązania
+  Release: 0 ostrzeżeń i 0 błędów.
+- Paczka publiczna przeszła pełną integralność i kontrolowany start. Instalacja
+  do `D:\Projekty Codex\AMC Public` zakończyła się kodem 0; cicha kontrola
+  integralności zainstalowanej kopii również kodem 0.
+
+#### Znane ograniczenia
+
+- Ręczny odbiór komunikatów, wielozaznaczenia i powrotu fokusu z NVDA pozostaje
+  do wykonania.
+- Zdalne playlisty TIDAL/Spotify nie są częścią tego lokalnego kontraktu i nie
+  występują w publicznym profilu. Własne strumienie WiiM i Sonos są obsługiwane
+  przez ich istniejące, osobne operacje.
+- `alpha.433` jest zachowany jako lokalny, odtwarzalny kandydat, ale został
+  wstrzymany przed uruchomieniem i publikacją. Nie usuwać go przed decyzją o
+  następcy z Frontier Smart.
+
+#### Wersja i commit
+
+- Źródła ręcznej kolejności: `8ab21a25bb61a0807fc4870b558b39a1eeb93c57`.
+- Paczka publiczna: `e6d4269d`, 1075 plików, czyste źródła.
+- Instalator:
+  `D:\Projekty Codex\AMC - integracja wxPython\publish\installers\alpha.433\AMC-0.1.0-alpha.433-win-x64.exe`.
+- Rozmiar: 124 085 306 bajtów. SHA-256:
+  `0ee2acbb30842734aca0e81bfbd9fa685ea9c194d1db95e7f6994ea3160a89a1`.
+- Instalacja: wykonana lokalnie; uruchomienie widocznego AMC Public i publikacja:
+  wstrzymane.
 
 ### Korekta użytkownika z 21.10.2026
 

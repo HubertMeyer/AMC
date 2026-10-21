@@ -149,23 +149,28 @@ zmian, wymagający korekty użytkownika:
   została zainstalowana 20.10.2026.
   Bieżący zapis realizacji:
   [AMC09-menedzer-sesji.md](AMC09-menedzer-sesji.md).
-- `AMC12` — **Korekta odbiorcza `alpha.431` przeszła pełną regresję źródeł,
-  została zbudowana i zainstalowana w `D:\Projekty Codex\AMC Public`.
+- `AMC12` — **Lokalny kandydat `alpha.433` przeszedł pełną regresję źródeł,
+  został zbudowany i zainstalowany w `D:\Projekty Codex\AMC Public`, lecz
+  decyzją użytkownika z 21.10.2026 jest wstrzymany do odbioru Smart Frontier.
+  Nie uruchomiono go do odbioru, nie opublikowano i nie należy go jeszcze
+  przekazywać. Dodaje ręczną kolejność Biblioteki i Ulubionych Radia:
+  `Alt+strzałka góra/dół` oraz `Ctrl+X`, `Ctrl+V`, z nazwaniem stacji nad albo
+  pod którą przeniesiono wybór.
   Publiczny AMC jest budowany z tego samego kodu co AMC Test; zgodnie z korektą
   użytkownika z 21.10.2026 wyłącza
   wyłącznie niedopracowane funkcje streamingowe, a wszystkie ukończone funkcje,
   w tym Sonosa, zachowuje. Obecnie TIDAL, Spotify i nieodebrana jeszcze
   integracja Frontier Smart pozostają tylko w AMC Test. Końcowa paczka
-  `1555412f` ma 1075 plików; integralność i kontrolowany start zainstalowanej
-  kopii są zaliczone. Instalator usuwa także stare moduły niedostępnych usług
+  `e6d4269d` ma 1075 plików; integralność i kontrolowany start paczki oraz
+  integralność zainstalowanej kopii są zaliczone. Instalator usuwa także stare moduły niedostępnych usług
   pozostałe po wcześniejszej wersji. Najnowsza poprawka rozpoznaje ten sam plik
   w `Ctrl+O` i Bibliotece podczas `Ctrl+Shift+U`, nie przełącza folderu na pustą
   Bibliotekę oraz jasno wskazuje `Ctrl+F5`, gdy folder nie jest źródłem.
   Wcześniejsza poprawka zachowuje
   kolejność importowanej playlisty Radia, uruchamia `Alt+1–3` w Bibliotece i
   Ulubionych, wiąże `Ctrl+Shift+U` z Ulubionymi oraz `Ctrl+Shift+L` z
-  członkostwem w Bibliotece. Ręczny odbiór w NVDA pozostaje do wykonania;
-  niczego nie opublikowano** — jeden kod, jawny manifest możliwości, osobne
+  członkostwem w Bibliotece. Ręczny odbiór w NVDA i decyzja o dołączeniu
+  Frontier Smart pozostają do wykonania; niczego nie opublikowano** — jeden kod, jawny manifest możliwości, osobne
   katalogi, blokady, logi i kanały AMC Test oraz publicznego AMC. Bieżący zapis
   realizacji:
   [AMC12-profile-wydania-publicznego-i-testowego.md](AMC12-profile-wydania-publicznego-i-testowego.md).
