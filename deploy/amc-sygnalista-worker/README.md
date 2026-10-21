@@ -36,7 +36,9 @@ Użytkownik AMC nie potrzebuje konta GitHub.
    automatycznie tworzy powiązany magazyn KV; nie trzeba kopiować identyfikatora.
    Skrypt nadal wymaga istniejącej sesji Cloudflare i sekretu, nigdy nie
    rozpoczyna logowania ani nie zapisuje tokenu w pliku.
-5. Uruchom jawne wdrożenie z `-Deploy`, podając bazowy adres HTTPS Workera.
+5. Uruchom jawne wdrożenie z `-Deploy`. Dla zwykłego adresu `workers.dev`
+   skrypt odczyta adres z potwierdzenia Wranglera; `-WorkerBaseUrl` jest potrzebny
+   tylko przy własnym adresie albo gdy Cloudflare nie zwróci go w wyniku.
    Po wdrożeniu skrypt sprawdza `/health`. Dopiero jawne połączenie `-Deploy`
    i `-ActivateEndpoint` zapisuje końcowy adres `https://.../v1/report` do
    `wxlite/amc_wx_lite/problem-report-endpoint.txt` przed budową wydania.

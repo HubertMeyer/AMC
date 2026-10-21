@@ -31,18 +31,22 @@ if ($ActivateEndpoint -and -not $Deploy) {
     throw "Włączenie endpointu wymaga jawnego przełącznika -Deploy."
 }
 
-$baseUrl = ""
-if ($Deploy) {
+function Get-ValidatedWorkerBaseUrl([string]$Value) {
     $workerUri = $null
-    if (-not [Uri]::TryCreate($WorkerBaseUrl, [UriKind]::Absolute, [ref]$workerUri) -or
+    if (-not [Uri]::TryCreate($Value, [UriKind]::Absolute, [ref]$workerUri) -or
         $workerUri.Scheme -ne "https" -or
         -not [string]::IsNullOrWhiteSpace($workerUri.UserInfo) -or
         -not [string]::IsNullOrWhiteSpace($workerUri.Query) -or
         -not [string]::IsNullOrWhiteSpace($workerUri.Fragment) -or
         ($workerUri.AbsolutePath -ne "/" -and $workerUri.AbsolutePath -ne "")) {
-        throw "Przy wdrożeniu podaj bazowy adres HTTPS Workera bez ścieżki, danych logowania i parametrów."
+        throw "Podaj bazowy adres HTTPS Workera bez ścieżki, danych logowania i parametrów."
     }
-    $baseUrl = $WorkerBaseUrl.TrimEnd("/")
+    return $Value.TrimEnd("/")
+}
+
+$baseUrl = ""
+if ($Deploy -and -not [string]::IsNullOrWhiteSpace($WorkerBaseUrl)) {
+    $baseUrl = Get-ValidatedWorkerBaseUrl $WorkerBaseUrl
 }
 
 Push-Location $workerRoot
@@ -91,8 +95,23 @@ try {
     if (-not ($secrets | Where-Object { [string]$_.name -eq "GITHUB_TOKEN" })) {
         throw "Worker nie ma wymaganego sekretu GITHUB_TOKEN. Ustaw ograniczony token poleceniem wrangler secret put GITHUB_TOKEN; nie zapisuj jego wartości w pliku."
     }
-    & $npmPath exec -- wrangler deploy
-    if ($LASTEXITCODE -ne 0) { throw "Cloudflare nie potwierdził wdrożenia Workera." }
+    $deployOutput = @(& $npmPath exec -- wrangler deploy 2>&1)
+    $deployExitCode = $LASTEXITCODE
+    foreach ($line in $deployOutput) { Write-Output ([string]$line) }
+    if ($deployExitCode -ne 0) { throw "Cloudflare nie potwierdził wdrożenia Workera." }
+    if ([string]::IsNullOrWhiteSpace($baseUrl)) {
+        $deployText = ($deployOutput | ForEach-Object { [string]$_ }) -join "`n"
+        $workerAddress = [Regex]::Match(
+            $deployText,
+            'https://[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?\.workers\.dev',
+            [Text.RegularExpressions.RegexOptions]::IgnoreCase
+        )
+        if (-not $workerAddress.Success) {
+            throw "Worker został wdrożony, ale nie udało się odczytać jego adresu. Uruchom skrypt ponownie z -WorkerBaseUrl."
+        }
+        $baseUrl = Get-ValidatedWorkerBaseUrl $workerAddress.Value
+        Write-Output "Odczytano bazowy adres Workera: $baseUrl"
+    }
 } finally {
     Pop-Location
 }

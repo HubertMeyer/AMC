@@ -35,7 +35,7 @@ def test_deployment_is_opt_in_and_never_starts_login() -> None:
     assert "secret list --json" in source
     assert 'GITHUB_TOKEN' in source
     assert '[string]$WorkerBaseUrl = ""' in source
-    assert 'if ($Deploy) {' in source
+    assert 'if ($Deploy -and -not [string]::IsNullOrWhiteSpace($WorkerBaseUrl)) {' in source
 
 
 def test_first_deploy_uses_ignored_local_config_and_automatic_kv_provisioning() -> None:
@@ -48,6 +48,15 @@ def test_first_deploy_uses_ignored_local_config_and_automatic_kv_provisioning() 
     assert "wrangler.jsonc" in (
         REPOSITORY_ROOT / "deploy" / "amc-sygnalista-worker" / ".gitignore"
     ).read_text(encoding="utf-8")
+
+
+def test_workers_dev_address_is_read_from_confirmed_deployment_output() -> None:
+    source = SCRIPT.read_text(encoding="utf-8")
+    assert '$deployOutput = @(& $npmPath exec -- wrangler deploy 2>&1)' in source
+    assert '$deployExitCode = $LASTEXITCODE' in source
+    assert '\\.workers\\.dev' in source
+    assert 'Get-ValidatedWorkerBaseUrl $workerAddress.Value' in source
+    assert 'Uruchom skrypt ponownie z -WorkerBaseUrl' in source
 
 
 def test_local_gate_packs_worker_without_deploying_or_requiring_an_endpoint() -> None:
