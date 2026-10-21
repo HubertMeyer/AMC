@@ -2,13 +2,14 @@
 
 ## Status
 
-**W trakcie — publiczne AMC `0.1.0-alpha.426` z rewizji `15b38eb1` jest
-zbudowane, zainstalowane i uruchomione w `D:\Projekty Codex\AMC Public`.
-Pełna kontrola 1073 plików, odizolowany start oraz utworzenie kompletnego
-świeżego profilu są zaliczone. Rzeczywisty test hosta potwierdził pierwszy
-zapis stacji z wyszukiwania i import playlisty M3U na pustym profilu. AMC Test
-pozostał uruchomiony ze swojego osobnego katalogu. Publikacji ani końcowego
-ręcznego odbioru `Ctrl+Shift+L` i importu z NVDA jeszcze nie wykonywano.**
+**W trakcie — zainstalowane publiczne AMC pozostaje w wersji
+`0.1.0-alpha.426` z rewizji `15b38eb1`. W źródłach przygotowano następną
+poprawkę: publiczny profil jest kopią gotowego do wydania AMC Test z jedynym
+wyjątkiem dla TIDAL-a i Spotify, zawiera więc również Sonosa. Import playlisty
+Radia zachowuje kolejność pliku, `Alt+1–3` sortują Bibliotekę i Ulubione,
+`Ctrl+Shift+U` zmienia Ulubione, a `Ctrl+Shift+L` rzeczywiście zmienia
+członkostwo w Bibliotece. Testy ukierunkowane i host są zielone. Nowej paczki,
+instalatora, instalacji ani publikacji jeszcze nie wykonano.**
 
 Źródłowa, zatwierdzona specyfikacja pozostaje w pliku tylko do odczytu:
 `D:\Projekty Codex\Accessible Multimedia Controller\AMC12_PROFILE_WYDANIA_PUBLICZNEGO_I_TESTOWEGO_2026-10-18.md`.
@@ -21,9 +22,10 @@ ręcznego odbioru `Ctrl+Shift+L` i importu z NVDA jeszcze nie wykonywano.**
   podręczną, logi i przestrzeń nazw poświadczeń.
 - Obecny AMC Test zachowuje istniejące katalogi, więc ten etap nie przenosi i
   nie zeruje danych użytkownika.
-- Publiczny AMC ma od początku osobne katalogi i dopuszcza tylko sesje:
-  Pliki lokalne, Radio, Podcasty i YouTube oraz WiiM. Sonos pozostaje ukryty do
-  odbioru brokera, a Spotify i TIDAL są ukryte.
+- Publiczny AMC ma od początku osobne katalogi. Funkcjonalnie odpowiada
+  wydawanej wersji AMC Test; wyłączone są wyłącznie niedopuszczone jeszcze
+  TIDAL i Spotify. Sonos oraz każda inna ukończona wspólna sesja pozostają
+  dostępne tak samo jak w AMC Test.
 - Ten sam model możliwości filtruje kolejność `Ctrl+1–9`, Menedżer sesji,
   menu, pomoc `Ctrl+F1`, pełną pomoc klawiatury, paletę `Ctrl+Shift+K`,
   wykonanie poleceń sesji i zakres wyszukiwania we wszystkich usługach.
@@ -44,10 +46,10 @@ różnymi wydaniami. **AMC Test jest pełną, codzienną wersją właściciela p
 i zachowuje wszystkie sesje prywatne oraz funkcje przeznaczone do prób. Słowo
 „Test” określa kanał dystrybucji, a nie niesprawny prototyp. **AMC** jest nazwą
 wydania przeznaczonego dla wszystkich.
-Publiczny AMC pokazuje tylko Pliki lokalne, Radio, Podcasty i YouTube oraz
-WiiM. Ukrytej usługi nie będzie ani w Menedżerze sesji, ani w menu, pomocy
-`Ctrl+F1`, pełnej pomocy klawiatury i palecie `Ctrl+Shift+K`; jej stary skrót
-również jej nie uruchomi.
+Publiczny AMC pokazuje te same ukończone funkcje co AMC Test, w tym Sonosa.
+Jedynymi wyłączonymi usługami są obecnie TIDAL i Spotify. Nie ma ich ani w
+Menedżerze sesji, ani w menu, pomocy `Ctrl+F1`, pełnej pomocy klawiatury i
+palecie `Ctrl+Shift+K`; ich stare skróty również ich nie uruchomią.
 
 Oba wydania mają osobne ustawienia, logi, pamięć podręczną i dane kont. Samo
 uruchomienie jednego wydania nie zmienia danych drugiego. Kopiowanie wybranych
@@ -134,9 +136,9 @@ administracyjny `/NOICONS` ma to samo znaczenie i nie tworzy żadnego z tych
 skrótów.
 
 Od 20 października 2026 publiczne AMC można uruchamiać niezależnie od AMC Test.
-Oba okna mają osobne procesy, hosty, profile i magazyny. Publiczne AMC nie
-pokazuje Spotify, TIDAL-a ani Sonosa, ale zachowuje wspólne funkcje dopuszczone
-przez profil. Zainstalowany numer to `0.1.0-alpha.425`.
+Oba okna mają osobne procesy, hosty, profile i magazyny. Historyczny kandydat
+`0.1.0-alpha.425` nie pokazywał Spotify, TIDAL-a ani Sonosa; wykluczenie Sonosa
+zostało zastąpione decyzją użytkownika z 21 października 2026.
 
 Kandydat z 21 października 2026 zawiera także wspólną poprawkę wyszukiwania:
 `Ctrl+Shift+L` nie zamyka okna w żadnej sesji ani na świeżym, pustym profilu.
@@ -149,6 +151,16 @@ pierwsze `Ctrl+Shift+L` w wynikach wyszukiwania Radia zapisuje stację, a import
 playlisty radiowej działa również wtedy, gdy użytkownik nie miał wcześniej
 żadnych danych AMC. Program nie kopiuje przy tym ustawień ani kont z AMC Test;
 przeniesienie wybranych danych nadal wymaga jawnej migawki.
+
+Następna poprawka Radia zachowuje kolejność wpisów z importowanej playlisty.
+Jeśli plik zawiera kolejno „Jedynka”, „Radio Środek” i „Dominikanie Rzeszów”,
+te stacje pojawiają się w tej samej kolejności. Ponowny import porządkuje także
+stacje już obecne w Bibliotece, więc naprawia listę odwróconą przez starszą
+wersję bez potrzeby ręcznego usuwania wpisów. W Bibliotece i Ulubionych Radia
+`Alt+1` wybiera najnowsze pozycje na początku, `Alt+2` kolejność alfabetyczną,
+a `Alt+3` kolejność własną. `Ctrl+Shift+U` dodaje albo usuwa zaznaczoną stację
+z Ulubionych. `Ctrl+Shift+L` dodaje albo usuwa ją z Biblioteki i dopiero po
+zapisie NVDA słyszy „Dodano do Biblioteki” albo „Usunięto z Biblioteki”.
 
 ## Uzasadnienie i decyzje
 
@@ -212,7 +224,19 @@ przeniesienie wybranych danych nadal wymaga jawnej migawki.
   `CheckAutomatically` i `DownloadAutomatically`, z bezpiecznymi wartościami
   włączonymi dla świeżego profilu. Ręczne polecenie zawsze próbuje pobrać
   brakującą lub nowszą wersję i nie zmienia ustawień profilu.
-- **Korekta użytkownika z 20 października 2026:** pierwszy publiczny instalator
+- **Nadrzędna korekta użytkownika z 21 października 2026:** publiczny instalator
+  ma być dokładną kopią gotowej wersji AMC Test, z wyłączonymi wyłącznie
+  martwymi obecnie funkcjami TIDAL i Spotify. Sonos pozostaje w publicznym AMC
+  i działa dokładnie tak samo jak w AMC Test. Ta decyzja zastępuje wszystkie
+  wcześniejsze zapisy nakazujące wycięcie albo ukrycie Sonosa. Funkcja będąca
+  dopiero w trakcie implementacji nie jest jeszcze częścią gotowej wersji Test;
+  po ukończeniu i przyjęciu w Test trafia do obu profili z tego samego kodu.
+- Kontrola z 21.10.2026 wykazała, że zainstalowany instalator nazwany
+  `alpha.426` zawiera `AMC.exe` z metadanymi produktu `0.1.0-alpha.425`.
+  Następny instalator nie może już powstać z takim rozjazdem: skrypt przed
+  kompilacją porównuje żądaną wersję z `ProductVersion` rzeczywistego launchera
+  i zatrzymuje się z jasnym błędem, zamiast nadać paczce mylącą nazwę.
+- **Zastąpiona korekta użytkownika z 20 października 2026:** pierwszy publiczny instalator
   ma zawierać wszystkie zatwierdzone wspólne poprawki bieżącego AMC Test,
   w tym `Ctrl+Shift+0`, `End` oraz skoki procentowe Time Shiftu, ale nie może
   udostępniać Spotify, TIDAL-u ani Sonosa. Publiczne pakowanie usuwa teraz także
@@ -327,6 +351,8 @@ przeniesienie wybranych danych nadal wymaga jawnej migawki.
 - `src/AccessibleMediaController.Core/Configuration/ConfigurationStore.cs`
 - `src/AccessibleMediaController.LiteHost/LiteCommonDataSnapshotCoordinator.cs`
 - `src/AccessibleMediaController.LiteHost/LiteEngineHandlers.cs`
+- `src/AccessibleMediaController.LiteHost/LiteProfileMutationStore.cs`
+- `src/AccessibleMediaController.LiteHost/LiteRadioLibraryMutation.cs`
 - `src/AccessibleMediaController.LiteHost/LiteRadioRecordingCoordinator.cs`
 - `src/AccessibleMediaController.LiteHost/Program.cs`
 - `src/AccessibleMediaController.LiteHost/LiteFreshProfileInitializer.cs`
@@ -343,9 +369,13 @@ przeniesienie wybranych danych nadal wymaga jawnej migawki.
 - `tests/AccessibleMediaController.LiteHost.ProtocolTests/ComponentUpdatePolicyTests.cs`
 - `tests/AccessibleMediaController.LiteHost.ProtocolTests/Program.cs`
 - `tests/AccessibleMediaController.LiteHost.ProtocolTests/FreshProfileInitializationTests.cs`
+- `tests/AccessibleMediaController.LiteHost.ProtocolTests/RadioLibraryMutationTests.cs`
 - `wxlite/tests/test_fresh_public_profile_host_e2e.py`
 - `wxlite/tests/test_component_updates.py`
 - `wxlite/tests/test_host_client.py`
+- `wxlite/tests/test_radio_gui_wiring.py`
+- `wxlite/tests/test_shortcuts.py`
+- `wxlite/tests/test_menu_exposes_existing_actions.py`
 - `tests/AccessibleMediaController.Core.SmokeTests/CommonDataSnapshotTests.cs`
 - `tests/AccessibleMediaController.Core.SmokeTests/InstallerOfflineContractTests.cs`
 - `tests/AccessibleMediaController.Core.SmokeTests/LibrespotHostClientTests.cs`
@@ -356,6 +386,24 @@ przeniesienie wybranych danych nadal wymaga jawnej migawki.
 - `docs/zadania/AMC12-profile-wydania-publicznego-i-testowego.md`
 
 ## Testy i wynik
+
+- 21.10.2026, poprawka kolejności i poleceń Radia: kompilacja LiteHost Release
+  zakończyła się z **0 ostrzeżeń i 0 błędów**, a wszystkie **24 zestawy** testów
+  protokołu przeszły. Rzeczywisty proces hosta na całkowicie świeżym publicznym
+  profilu zaimportował kolejno „Jedynkę”, „Radio Środek” i „Dominikanie
+  Rzeszów”, zachował tę kolejność widoczną, zapisał sortowanie alfabetyczne,
+  usunięcie i ponowne dodanie do Biblioteki oraz dodanie do Ulubionych.
+- Izolowany zestaw **151 testów Python** dla skrótów, menu, pomocy, profili,
+  pakowania, klienta hosta i pełnego scenariusza publicznego przeszedł bez
+  błędu. Sprawdza rzeczywiste wejście klawiatury dla `Alt+1–3`,
+  `Ctrl+Shift+U` i `Ctrl+Shift+L`, wspólną drogę wykonania z menu oraz fizyczną
+  obecność Sonosa i brak modułów TIDAL/Spotify w syntetycznej paczce publicznej.
+- Ujawniona przez szerszy przebieg rozbieżność wspólnego polecenia wyciszenia
+  w równolegle rozwijanej sesji Frontier Smart została usunięta. Po połączeniu
+  obu przyrostów pełna bramka Python przeszła **1926 testów**, celowo pominęła
+  **110 testów środowiskowych** i zaliczyła **11 podtestów**. Wcześniejsze pięć
+  błędów importu z uruchomienia bez `pytest` nie było testami produktu i nie
+  jest używane jako wynik odbiorczy.
 
 - 21 października 2026 poprawka świeżego profilu przeszła oba ukierunkowane
   zestawy protokołu, a następnie pełne **24/24 zestawy protokołu LiteHost**.
@@ -705,8 +753,9 @@ przeniesienie wybranych danych nadal wymaga jawnej migawki.
   kopiowane migawką.
 - Jednorazowe otwarcie Menedżera sesji na czystej publicznej instalacji czeka
   na etap instalatora.
-- Sonos publiczny pozostaje ukryty do czasu prawdziwego brokera HTTPS i
-  odbioru z zewnętrznym kontem.
+- Sonos nie ma już osobnej blokady profilu publicznego. Ograniczenia jego
+  połączenia i brokera są takie same w AMC i AMC Test i nie mogą powodować
+  rozbieżności kodu ani interfejsu obu wydań.
 - Aktualizacja istniejącego publicznego profilu `alpha.423` do `alpha.425`
   przeszła od końca do końca z `/NOICONS`; nadal potrzebny jest osobny odbiór
   zwykłego kreatora na czystym koncie użytkownika.
@@ -806,6 +855,11 @@ przeniesienie wybranych danych nadal wymaga jawnej migawki.
 
 ## Wersja i commit
 
+- Bieżąca poprawka kolejności importu, skrótów i zasady „AMC Test minus tylko
+  TIDAL/Spotify” jest zweryfikowana w źródłach roboczych. Nie ma jeszcze
+  osobnego commitu ani nowego numeru, paczki, instalatora czy instalacji;
+  równoległa implementacja Frontier Smart musi najpierw zakończyć własną
+  bramkę, aby wspólny commit i kandydat nie utrwaliły stanu przejściowego.
 - Poprawka pierwszego zapisu na świeżym profilu: `15b38eb1` —
   `fix(amc): inicjalizuj swiezy profil publiczny`.
 - Zainstalowany publiczny AMC: `0.1.0-alpha.426`, rewizja

@@ -125,6 +125,7 @@ from .playback_activity import (
 )
 from . import profile_presets
 from .navigation import (
+    ActivateFrontierSmartDevice,
     ActivateWiiMDevice,
     ActivateSonosGroup,
     Announce,
@@ -167,6 +168,7 @@ from .navigation import (
 from .shortcuts import (
     Action,
     Chord,
+    FRONTIER_SMART_SUPPORTED_ACTIONS,
     GLOBAL_VIEW_SHORTCUTS,
     PRESET_SHORTCUTS,
     SPOTIFY_SUPPORTED_ACTIONS,
@@ -177,6 +179,17 @@ from .shortcuts import (
     keyboard_help_announcement,
     preset_slot,
     resolve,
+)
+from .frontier_smart_source import (
+    FrontierSmartPayloadError,
+    device_list_state as frontier_smart_device_list_state,
+    device_rows as frontier_smart_device_rows,
+    discovered_devices as frontier_smart_discovered_devices,
+    mode_choices as frontier_smart_mode_choices,
+    now_playing_label as frontier_smart_now_playing_label,
+    payload_message as frontier_smart_payload_message,
+    preset_choices as frontier_smart_preset_choices,
+    snapshot as frontier_smart_snapshot,
 )
 from .wiim_source import (
     WiiMOptionChoice,
@@ -4477,6 +4490,254 @@ class LibraryFoldersDialog(wx.Dialog):
         self._detach_folder(source_id, self)
 
 
+class FrontierSmartDevicesDialog(wx.Dialog):
+    """Konfiguracja FSAPI: celowe etykiety, osobne wartości modelu."""
+
+    def __init__(
+        self,
+        parent: wx.Window,
+        payload: object,
+        *,
+        discover: Callable[["FrontierSmartDevicesDialog"], None],
+        save: Callable[[str, str, "FrontierSmartDevicesDialog"], None],
+        remove: Callable[[str, "FrontierSmartDevicesDialog"], None],
+        select: Callable[[str, "FrontierSmartDevicesDialog"], None],
+    ) -> None:
+        super().__init__(
+            parent,
+            title="Urządzenia Frontier Smart",
+            style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER,
+        )
+        self._discover = discover
+        self._save = save
+        self._remove = remove
+        self._select = select
+        self._busy = False
+        self._devices: list[tuple[str, str]] = []
+
+        intro = wx.StaticText(
+            self,
+            label=(
+                "Wykryj urządzenie w sieci albo wpisz jego lokalny adres IP. "
+                "PIN zostanie zapisany bezpiecznie w Menedżerze poświadczeń Windows."
+            ),
+        )
+        self.devices = wx.ListBox(self)
+        self.devices.SetName("Zapisane urządzenia Frontier Smart")
+
+        address_label = wx.StaticText(self, label="&Lokalny adres IP:")
+        self.address = wx.TextCtrl(self)
+        self.address.SetName("Lokalny adres IP urządzenia")
+        pin_label = wx.StaticText(self, label="&PIN urządzenia:")
+        self.pin = wx.TextCtrl(self, style=wx.TE_PASSWORD)
+        self.pin.SetName("PIN urządzenia, pole chronione")
+
+        self.status = wx.StaticText(self, label="Gotowe")
+        self.status.SetName("Stan konfiguracji: Gotowe")
+
+        self.discover_button = wx.Button(self, label="&Wykryj urządzenia")
+        self.save_button = wx.Button(self, label="&Dodaj lub sprawdź")
+        self.select_button = wx.Button(self, label="&Użyj wybranego")
+        self.remove_button = wx.Button(self, label="&Usuń z AMC")
+        self.close_button = wx.Button(self, wx.ID_CANCEL, "&Zamknij")
+        self.SetEscapeId(wx.ID_CANCEL)
+
+        fields = wx.FlexGridSizer(cols=2, hgap=8, vgap=6)
+        fields.AddGrowableCol(1, 1)
+        fields.Add(address_label, 0, wx.ALIGN_CENTER_VERTICAL)
+        fields.Add(self.address, 1, wx.EXPAND)
+        fields.Add(pin_label, 0, wx.ALIGN_CENTER_VERTICAL)
+        fields.Add(self.pin, 1, wx.EXPAND)
+
+        buttons = wx.BoxSizer(wx.HORIZONTAL)
+        for button in (
+            self.discover_button,
+            self.save_button,
+            self.select_button,
+            self.remove_button,
+            self.close_button,
+        ):
+            buttons.Add(button, 0, wx.RIGHT, 6)
+
+        layout = wx.BoxSizer(wx.VERTICAL)
+        layout.Add(intro, 0, wx.EXPAND | wx.ALL, 10)
+        layout.Add(self.devices, 1, wx.EXPAND | wx.LEFT | wx.RIGHT, 10)
+        layout.Add(fields, 0, wx.EXPAND | wx.ALL, 10)
+        layout.Add(self.status, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 10)
+        layout.Add(buttons, 0, wx.ALIGN_RIGHT | wx.LEFT | wx.RIGHT | wx.BOTTOM, 10)
+        self.SetSizerAndFit(layout)
+        self.SetMinSize((650, 430))
+
+        self.Bind(wx.EVT_SHOW, self._on_show)
+        self.Bind(wx.EVT_CHAR_HOOK, self._on_key)
+        self.devices.Bind(wx.EVT_LISTBOX, self._on_selection)
+        self.devices.Bind(wx.EVT_LISTBOX_DCLICK, self._on_select)
+        self.discover_button.Bind(wx.EVT_BUTTON, self._on_discover)
+        self.save_button.Bind(wx.EVT_BUTTON, self._on_save)
+        self.select_button.Bind(wx.EVT_BUTTON, self._on_select)
+        self.remove_button.Bind(wx.EVT_BUTTON, self._on_remove)
+        self.apply_payload(payload)
+
+    @property
+    def selected_device_id(self) -> str | None:
+        index = self.devices.GetSelection()
+        return self._devices[index][0] if 0 <= index < len(self._devices) else None
+
+    def apply_payload(
+        self, payload: object, preferred_device_id: str | None = None
+    ) -> None:
+        rows = frontier_smart_device_rows(payload)
+        selected_id, message = frontier_smart_device_list_state(payload)
+        preferred = preferred_device_id or selected_id
+        self._devices = [(row.service_id or "", row.title) for row in rows]
+        labels: list[str] = []
+        for row in rows:
+            label = row.title
+            if row.detail:
+                label += ", " + row.detail
+            if row.service_id == selected_id:
+                label += ", wybrane"
+            labels.append(label)
+        self.devices.Set(labels)
+        index = next(
+            (i for i, (device_id, _title) in enumerate(self._devices)
+             if device_id == preferred),
+            0 if self._devices else wx.NOT_FOUND,
+        )
+        if index != wx.NOT_FOUND:
+            self.devices.SetSelection(index)
+        self.set_status(message or (
+            "Wybierz urządzenie albo dodaj nowe"
+            if self._devices else
+            "Brak zapisanych urządzeń. Użyj wykrywania albo wpisz adres."
+        ))
+        self._busy = False
+        self._update_buttons()
+
+    def set_busy(self, message: str) -> None:
+        self._busy = True
+        self.set_status(message)
+        self._update_buttons()
+
+    def fail(self, message: str, *, focus_pin: bool = False) -> None:
+        self._busy = False
+        self.set_status(message)
+        self._update_buttons()
+        (self.pin if focus_pin else self.address).SetFocus()
+
+    def finish(self, payload: object, preferred_device_id: str | None = None) -> None:
+        self.apply_payload(payload, preferred_device_id)
+        self.devices.SetFocus() if self._devices else self.address.SetFocus()
+
+    def set_status(self, message: str) -> None:
+        text = message.strip() or "Gotowe"
+        self.status.SetLabel(text)
+        self.status.SetName("Stan konfiguracji: " + text)
+        self.Layout()
+
+    def use_discovered(self, choices: tuple[tuple[str, str], ...], message: str) -> None:
+        self._busy = False
+        self._update_buttons()
+        if not choices:
+            self.set_status(message)
+            self.address.SetFocus()
+            return
+        index = 0
+        if len(choices) > 1:
+            with wx.SingleChoiceDialog(
+                self,
+                "Wybierz wykryte urządzenie. Po wyborze wpisz jego PIN.",
+                "Wykryte urządzenia Frontier Smart",
+                [label for _address, label in choices],
+            ) as dialog:
+                dialog.SetName("Wykryte urządzenia Frontier Smart")
+                if dialog.ShowModal() != wx.ID_OK:
+                    self.discover_button.SetFocus()
+                    return
+                index = dialog.GetSelection()
+        self.address.SetValue(choices[index][0])
+        self.set_status("Wpisz PIN urządzenia i wybierz Dodaj lub sprawdź")
+        self.pin.SetFocus()
+
+    def _update_buttons(self) -> None:
+        selected = self.selected_device_id is not None
+        self.discover_button.Enable(not self._busy)
+        self.save_button.Enable(not self._busy)
+        self.select_button.Enable(not self._busy and selected)
+        self.remove_button.Enable(not self._busy and selected)
+        self.close_button.Enable(not self._busy)
+
+    def _on_show(self, event: wx.ShowEvent) -> None:
+        event.Skip()
+        if event.IsShown():
+            wx.CallAfter(
+                self.devices.SetFocus if self._devices else self.address.SetFocus
+            )
+
+    def _on_selection(self, event: wx.CommandEvent) -> None:
+        self._update_buttons()
+        event.Skip()
+
+    def _on_key(self, event: wx.KeyEvent) -> None:
+        if (
+            not self._busy
+            and self.devices.HasFocus()
+            and event.GetKeyCode() in (wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER)
+            and not event.HasAnyModifiers()
+        ):
+            self._on_select(event)
+            return
+        event.Skip()
+
+    def _on_discover(self, _event: wx.CommandEvent) -> None:
+        if self._busy:
+            return
+        self.set_busy("Wykrywanie urządzeń w sieci lokalnej")
+        self._discover(self)
+
+    def _on_save(self, _event: wx.CommandEvent) -> None:
+        if self._busy:
+            return
+        address = self.address.GetValue().strip()
+        pin = self.pin.GetValue().strip()
+        if not address:
+            self.fail("Wpisz lokalny adres IP urządzenia")
+            return
+        if not pin or len(pin) > 16 or not pin.isascii() or not pin.isdigit():
+            self.fail("PIN musi zawierać od 1 do 16 cyfr", focus_pin=True)
+            return
+        self.set_busy("Sprawdzanie połączenia i zapisywanie urządzenia")
+        self._save(address, pin, self)
+
+    def _on_select(self, _event: wx.CommandEvent) -> None:
+        device_id = self.selected_device_id
+        if self._busy or device_id is None:
+            return
+        self.set_busy("Wybieranie urządzenia")
+        self._select(device_id, self)
+
+    def _on_remove(self, _event: wx.CommandEvent) -> None:
+        device_id = self.selected_device_id
+        index = self.devices.GetSelection()
+        if self._busy or device_id is None or not (0 <= index < len(self._devices)):
+            return
+        title = self._devices[index][1]
+        with wx.MessageDialog(
+            self,
+            (
+                f"Usunąć urządzenie „{title}” z AMC?\n\n"
+                "Zapisany PIN również zostanie usunięty. Urządzenie nie zostanie wyłączone ani zresetowane."
+            ),
+            "Usuń urządzenie Frontier Smart",
+            wx.YES_NO | wx.NO_DEFAULT | wx.ICON_QUESTION,
+        ) as dialog:
+            if dialog.ShowModal() != wx.ID_YES:
+                self.devices.SetFocus()
+                return
+        self.set_busy("Usuwanie urządzenia z AMC")
+        self._remove(device_id, self)
+
+
 class SessionSelectionDialog(wx.Dialog):
     """Jeden dostępny Menedżer sesji, bez technicznych wartości w mowie."""
 
@@ -6363,6 +6624,10 @@ class LiteFrame(wx.Frame):
         self._podcast_library_sort_mode = (
             state.podcast_library_sort_mode or SORT_CUSTOM
         )
+        self._radio_effective_sort_modes = {
+            "library": SORT_ADDED_NEWEST,
+            "favorites": SORT_ADDED_NEWEST,
+        }
         self.navigator.restore(state.navigation)
         active_sessions = session_order.normalize(
             getattr(self.options, "session_order", None)
@@ -6458,6 +6723,9 @@ class LiteFrame(wx.Frame):
         self._wiim_network_stream_sort_mode = SORT_ADDED_NEWEST
         self._wiim_pending_move_ids: list[str] = []
         self._wiim_status_poll_pending = False
+        self._frontier_smart_snapshot: dict = {}
+        self._frontier_smart_active_device_id = ""
+        self._frontier_smart_status_poll_pending = False
         self._sonos_snapshot: dict = {}
         self._sonos_active_household_id = ""
         self._sonos_active_group_id = ""
@@ -6563,6 +6831,12 @@ class LiteFrame(wx.Frame):
             "Urządzenia WiiM",
             self.navigator.sessions[SessionId.WIIM],
         )
+        self.frontier_smart_list = MediaListCtrl(
+            self.list_panel,
+            self.navigator.sessions[SessionId.FRONTIER_SMART].model,
+            "Urządzenia Frontier Smart",
+            self.navigator.sessions[SessionId.FRONTIER_SMART],
+        )
         self.sonos_list = MediaListCtrl(
             self.list_panel,
             self.navigator.sessions[SessionId.SONOS].model,
@@ -6574,6 +6848,7 @@ class LiteFrame(wx.Frame):
         self.tidal_list.Hide()
         self.spotify_list.Hide()
         self.wiim_list.Hide()
+        self.frontier_smart_list.Hide()
         self.sonos_list.Hide()
         list_sizer = wx.BoxSizer(wx.VERTICAL)
         list_sizer.Add(self.filter_label, 0, wx.BOTTOM, 3)
@@ -6584,6 +6859,7 @@ class LiteFrame(wx.Frame):
         list_sizer.Add(self.tidal_list, 1, wx.EXPAND)
         list_sizer.Add(self.spotify_list, 1, wx.EXPAND)
         list_sizer.Add(self.wiim_list, 1, wx.EXPAND)
+        list_sizer.Add(self.frontier_smart_list, 1, wx.EXPAND)
         list_sizer.Add(self.sonos_list, 1, wx.EXPAND)
         self.list_panel.SetSizer(list_sizer)
 
@@ -6844,6 +7120,8 @@ class LiteFrame(wx.Frame):
             playing = bool(getattr(self, "_wiim_active_device_id", ""))
         elif self.navigator.active is SessionId.SONOS:
             playing = bool(getattr(self, "_sonos_active_group_id", ""))
+        elif self.navigator.active is SessionId.FRONTIER_SMART:
+            playing = bool(getattr(self, "_frontier_smart_active_device_id", ""))
         else:
             playing = bool(self._last_status)
         session = self.navigator.sessions[self.navigator.active]
@@ -6861,6 +7139,18 @@ class LiteFrame(wx.Frame):
             and session.view is View.LIST
             and session.library_view is LibraryView.PODCAST_LIBRARY
         )
+        radio_scope = (
+            "library"
+            if radio and session.view is View.LIST and session.library_view is None
+            else "favorites"
+            if (
+                radio
+                and session.view is View.LIST
+                and session.library_view is LibraryView.FAVORITES
+            )
+            else None
+        )
+        radio_collection = radio_scope is not None
         tidal_view_scopes = {
             LibraryView.TIDAL_LIBRARY: TIDAL_VIEW_LIBRARY,
             LibraryView.TIDAL_FAVORITES: TIDAL_VIEW_FAVORITES,
@@ -6971,6 +7261,11 @@ class LiteFrame(wx.Frame):
             Action.SORT_PODCAST_INBOX_ALPHABETICAL: SORT_ALPHABETICAL,
             Action.SORT_PODCAST_INBOX_BY_PODCAST: SORT_CUSTOM,
         }
+        radio_sort_actions = {
+            Action.SORT_RADIO_COLLECTION_ADDED: SORT_ADDED_NEWEST,
+            Action.SORT_RADIO_COLLECTION_ALPHABETICAL: SORT_ALPHABETICAL,
+            Action.SORT_RADIO_COLLECTION_CUSTOM: SORT_CUSTOM,
+        }
         podcast_library_sort_actions = {
             Action.SORT_PODCAST_LIBRARY_ADDED: SORT_ADDED_NEWEST,
             Action.SORT_PODCAST_LIBRARY_ALPHABETICAL: SORT_ALPHABETICAL,
@@ -7018,6 +7313,12 @@ class LiteFrame(wx.Frame):
             ):
                 enabled = False
             if entry.needs_radio_session and not radio:
+                enabled = False
+            if entry.needs_radio_collection and not radio_collection:
+                enabled = False
+            if entry.needs_radio_station and not (
+                radio and selected_row is not None and selected_kind == "station"
+            ):
                 enabled = False
             if entry.needs_files_session and not files:
                 enabled = False
@@ -7179,7 +7480,15 @@ class LiteFrame(wx.Frame):
                 enabled = False
             if item.IsEnabled() != enabled:
                 item.Enable(enabled)
-            if entry.checkable and entry.action in podcast_library_sort_actions:
+            if entry.checkable and entry.action in radio_sort_actions:
+                item.Check(
+                    radio_scope is not None
+                    and radio_sort_actions[entry.action]
+                    == self._radio_effective_sort_modes.get(
+                        radio_scope, SORT_ADDED_NEWEST
+                    )
+                )
+            elif entry.checkable and entry.action in podcast_library_sort_actions:
                 item.Check(
                     podcast_library_sort_actions[entry.action]
                     == getattr(self, "_podcast_library_sort_mode", SORT_CUSTOM)
@@ -7522,6 +7831,7 @@ class LiteFrame(wx.Frame):
             self.tidal_list,
             self.spotify_list,
             self.wiim_list,
+            self.frontier_smart_list,
             self.sonos_list,
         ):
             self._bind_list(control)
@@ -9793,6 +10103,8 @@ class LiteFrame(wx.Frame):
             return self._wiim_snapshot
         if self.navigator.active is SessionId.SONOS:
             return self._sonos_snapshot
+        if self.navigator.active is SessionId.FRONTIER_SMART:
+            return self._frontier_smart_snapshot
         return self._transport_status_by_session.get(self.navigator.active, {})
 
     def _nvda_status_message(self) -> str:
@@ -9875,6 +10187,10 @@ class LiteFrame(wx.Frame):
             text = sonos_now_playing_label(snapshot).strip()
             if text:
                 return text
+        if self.navigator.active is SessionId.FRONTIER_SMART:
+            text = frontier_smart_now_playing_label(snapshot).strip()
+            if text:
+                return text
         title = self.navigator.session.now_playing_title.strip()
         return title or f"{SESSION_LABELS[self.navigator.active]}, nic nie jest odtwarzane."
 
@@ -9929,6 +10245,12 @@ class LiteFrame(wx.Frame):
         if getattr(self.navigator, "active", None) is SessionId.WIIM:
             self._load_wiim_devices(
                 preferred_id=self.navigator.sessions[SessionId.WIIM].list_anchor_id
+            )
+        if getattr(self.navigator, "active", None) is SessionId.FRONTIER_SMART:
+            self._load_frontier_smart_devices(
+                preferred_id=self.navigator.sessions[
+                    SessionId.FRONTIER_SMART
+                ].list_anchor_id
             )
         if getattr(self.navigator, "active", None) is SessionId.SONOS:
             self._load_sonos_targets(
@@ -10086,6 +10408,8 @@ class LiteFrame(wx.Frame):
                 if self.navigator.active is SessionId.RADIO:
                     self.announcer.say(result.unavailable_reason)
                 return
+            if scope in ("library", "favorites"):
+                self._radio_effective_sort_modes[scope] = result.sort_mode
             events = self.navigator.apply_radio_view(
                 intent.view, result.heading, result.rows,
                 preferred_id=intent.preferred_id,
@@ -11065,6 +11389,14 @@ class LiteFrame(wx.Frame):
             event.Skip()
             return
         radio = self.navigator.active is SessionId.RADIO
+        radio_collection = (
+            not player
+            and radio
+            and self.navigator.session.library_view in (
+                None,
+                LibraryView.FAVORITES,
+            )
+        )
         podcast_inbox = (
             not player
             and self.navigator.active is SessionId.PODCASTS
@@ -11148,6 +11480,7 @@ class LiteFrame(wx.Frame):
             chord,
             player_view=player,
             radio_session=radio,
+            radio_collection=radio_collection,
             radio_recording_context=(
                 radio
                 and not player
@@ -11170,6 +11503,9 @@ class LiteFrame(wx.Frame):
                 is LibraryView.WIIM_NETWORK_STREAMS
             ),
             sonos_session=self.navigator.active is SessionId.SONOS,
+            frontier_smart_session=(
+                self.navigator.active is SessionId.FRONTIER_SMART
+            ),
             sonos_own_streams=(
                 not player
                 and self.navigator.active is SessionId.SONOS
@@ -11254,6 +11590,12 @@ class LiteFrame(wx.Frame):
                     "To polecenie nie jest dostępne w sesji Sonos"
                 )
                 return
+        if self.navigator.active is SessionId.FRONTIER_SMART:
+            if action not in FRONTIER_SMART_SUPPORTED_ACTIONS:
+                self.announcer.say(
+                    "To polecenie nie jest dostępne w sesji Frontier Smart"
+                )
+                return
         if action is Action.SESSION_FILES:
             self._transient_preview_return = None
             self._switch_session(SessionId.FILES)
@@ -11275,6 +11617,9 @@ class LiteFrame(wx.Frame):
         elif action is Action.SESSION_SONOS:
             self._transient_preview_return = None
             self._switch_session(SessionId.SONOS)
+        elif action is Action.SESSION_FRONTIER_SMART:
+            self._transient_preview_return = None
+            self._switch_session(SessionId.FRONTIER_SMART)
         elif action is Action.SESSION_LIST:
             self._show_session_list()
         elif action is Action.SESSION_ENABLE:
@@ -11358,6 +11703,8 @@ class LiteFrame(wx.Frame):
             self._show_common_data_status()
         elif action is Action.VIEW_PRESETS:
             self._show_presets()
+        elif action is Action.FRONTIER_SMART_SELECT_MODE:
+            self._show_frontier_smart_modes()
         elif action is Action.VIEW_WIIM_NETWORK_STREAMS:
             self._show_wiim_network_streams()
         elif action in {
@@ -11488,6 +11835,8 @@ class LiteFrame(wx.Frame):
                 self._toggle_tidal_membership(favorite=True)
             else:
                 self._toggle_profile_favorite()
+        elif action is Action.TOGGLE_RADIO_LIBRARY:
+            self._toggle_radio_library()
         elif action is Action.MANAGE_PLAYLIST_MEMBERSHIP:
             self._manage_playlist_membership()
         elif action in (
@@ -11630,6 +11979,12 @@ class LiteFrame(wx.Frame):
             self._show_podcast_inbox()
         elif action is Action.VIEW_PODCAST_DOWNLOADS:
             self._show_podcast_downloads()
+        elif action in (
+            Action.SORT_RADIO_COLLECTION_ADDED,
+            Action.SORT_RADIO_COLLECTION_ALPHABETICAL,
+            Action.SORT_RADIO_COLLECTION_CUSTOM,
+        ):
+            self._set_radio_collection_sort(action)
         elif action in (
             Action.SORT_PODCAST_LIBRARY_ADDED,
             Action.SORT_PODCAST_LIBRARY_ALPHABETICAL,
@@ -12029,6 +12384,8 @@ class LiteFrame(wx.Frame):
                 self._play_spotify(intent)
             elif isinstance(intent, ActivateWiiMDevice):
                 self._activate_wiim_device(intent)
+            elif isinstance(intent, ActivateFrontierSmartDevice):
+                self._activate_frontier_smart_device(intent)
             elif isinstance(intent, PlayWiiMNetworkStream):
                 self._activate_wiim_network_stream(intent)
             elif isinstance(intent, OpenWiiMDevicePresets):
@@ -12121,6 +12478,7 @@ class LiteFrame(wx.Frame):
             SessionId.SPOTIFY: "Spotify",
             SessionId.WIIM: "WiiM",
             SessionId.SONOS: "Sonos",
+            SessionId.FRONTIER_SMART: "Frontier Smart",
         }[self.navigator.active])
 
         active_list = self._active_list()
@@ -12165,6 +12523,7 @@ class LiteFrame(wx.Frame):
                 getattr(self, "spotify_list", None),
                 getattr(self, "wiim_list", None),
                 getattr(self, "sonos_list", None),
+                getattr(self, "frontier_smart_list", None),
             )
             if candidate is not None
         )
@@ -12220,6 +12579,9 @@ class LiteFrame(wx.Frame):
         spotify_read_only = self.navigator.active is SessionId.SPOTIFY
         wiim_remote = self.navigator.active is SessionId.WIIM
         sonos_remote = self.navigator.active is SessionId.SONOS
+        frontier_smart_remote = (
+            self.navigator.active is SessionId.FRONTIER_SMART
+        )
         wiim_ready = (
             not wiim_remote
             or bool(self._wiim_snapshot)
@@ -12237,12 +12599,27 @@ class LiteFrame(wx.Frame):
             and self._sonos_snapshot.get("fixedVolume") is not True
             and self._sonos_snapshot.get("volume") is not None
         )
+        frontier_smart_ready = (
+            not frontier_smart_remote
+            or bool(self._frontier_smart_snapshot)
+            and self._frontier_smart_snapshot.get("deviceId")
+            == self._frontier_smart_active_device_id
+        )
+        frontier_smart_volume = (
+            frontier_smart_ready
+            and self._frontier_smart_snapshot.get("volume") is not None
+        )
         self.volume_slider.Enable(
             not (tidal_external or spotify_read_only) and wiim_ready
             and (not sonos_remote or sonos_volume)
+            and (not frontier_smart_remote or frontier_smart_volume)
         )
         self.rate_choice.Enable(not (
-            tidal_external or spotify_read_only or wiim_remote or sonos_remote
+            tidal_external
+            or spotify_read_only
+            or wiim_remote
+            or sonos_remote
+            or frontier_smart_remote
         ))
 
         if want_player:
@@ -12250,6 +12627,11 @@ class LiteFrame(wx.Frame):
                 self._apply_wiim_snapshot(self._wiim_snapshot, announce=False)
             elif sonos_remote and self._sonos_snapshot:
                 self._apply_sonos_snapshot(self._sonos_snapshot, announce=False)
+            elif frontier_smart_remote and self._frontier_smart_snapshot:
+                self._apply_frontier_smart_snapshot(
+                    self._frontier_smart_snapshot,
+                    announce=False,
+                )
             else:
                 self.now_playing.SetLabel(
                     session.now_playing_title or "Nic nie jest odtwarzane"
@@ -12279,6 +12661,8 @@ class LiteFrame(wx.Frame):
             return self.wiim_list
         if self.navigator.active is SessionId.SONOS:
             return self.sonos_list
+        if self.navigator.active is SessionId.FRONTIER_SMART:
+            return self.frontier_smart_list
         return self.tidal_list
 
     def _on_item_focused(self, event: wx.ListEvent) -> None:
@@ -12464,6 +12848,9 @@ class LiteFrame(wx.Frame):
         if session is SessionId.WIIM:
             self._show_wiim_presets()
             return
+        if session is SessionId.FRONTIER_SMART:
+            self._show_frontier_smart_presets()
+            return
         target = self._current_preset_target()
         overrides, _stations = self._preset_inputs(session)
 
@@ -12496,6 +12883,203 @@ class LiteFrame(wx.Frame):
                 self.announcer.say("Nie udało się odczytać presetów")
 
         self.runner.submit("preset", work, done, failed)
+
+    def _frontier_smart_device_context(self) -> tuple[str, str] | None:
+        state = self.navigator.sessions[SessionId.FRONTIER_SMART]
+        row = state.model.selected_row
+        if (
+            row is not None
+            and row.kind == "frontierSmartDevice"
+            and row.service_kind == "frontierSmartDevice"
+            and row.service_id
+        ):
+            return row.service_id, row.title
+        device_id = self._frontier_smart_active_device_id
+        if not device_id:
+            return None
+        match = next((
+            candidate
+            for candidate in state.model.rows
+            if candidate.service_id == device_id
+        ), None)
+        return device_id, match.title if match is not None else "Frontier Smart"
+
+    def _apply_frontier_smart_operation_snapshot(self, payload: object) -> None:
+        try:
+            state = frontier_smart_snapshot(payload)
+        except FrontierSmartPayloadError as error:
+            self.announcer.say(str(error))
+            return
+        if state.get("deviceId") != self._frontier_smart_active_device_id:
+            return
+        self._frontier_smart_snapshot = state
+        if self.navigator.active is SessionId.FRONTIER_SMART:
+            self._apply_frontier_smart_snapshot(state, announce=True)
+
+    def _show_frontier_smart_modes(self) -> None:
+        client = self.client
+        context = self._frontier_smart_device_context()
+        if client is None:
+            self.announcer.say("Silnik nie jest gotowy")
+            return
+        if context is None:
+            self.announcer.say("Wybierz urządzenie Frontier Smart")
+            return
+        device_id, _title = context
+        self._frontier_smart_active_device_id = device_id
+
+        def done(payload: object) -> None:
+            try:
+                device_title, all_choices, _selected_index = (
+                    frontier_smart_mode_choices(payload)
+                )
+            except FrontierSmartPayloadError as error:
+                self.announcer.say(str(error))
+                return
+            choices = tuple(choice for choice in all_choices if choice.enabled)
+            if not choices:
+                self.announcer.say(
+                    f"{device_title} nie podał trybów dostępnych do wyboru"
+                )
+                return
+            selected_index = next((
+                index for index, choice in enumerate(choices) if choice.selected
+            ), 0)
+            with wx.SingleChoiceDialog(
+                self,
+                "Wybierz tryb urządzenia.",
+                f"Tryb — {device_title}",
+                [choice.label for choice in choices],
+            ) as dialog:
+                dialog.SetName("Tryby urządzenia Frontier Smart")
+                dialog.SetSelection(selected_index)
+                if dialog.ShowModal() != wx.ID_OK:
+                    self._restore_focus_after_dialog()
+                    return
+                choice = choices[dialog.GetSelection()]
+            self._restore_focus_after_dialog()
+            self.runner.submit(
+                "frontier-smart-mode-set",
+                lambda: client.frontier_smart_set_mode(device_id, choice.key),
+                self._apply_frontier_smart_operation_snapshot,
+                lambda error: self.announcer.say(
+                    f"Nie udało się zmienić trybu Frontier Smart: {error}"
+                ),
+            )
+
+        self.runner.submit(
+            "frontier-smart-modes",
+            lambda: client.frontier_smart_modes(device_id),
+            done,
+            lambda error: self.announcer.say(
+                f"Nie udało się odczytać trybów Frontier Smart: {error}"
+            ),
+        )
+
+    def _show_frontier_smart_presets(self) -> None:
+        client = self.client
+        context = self._frontier_smart_device_context()
+        if client is None:
+            self.announcer.say("Silnik nie jest gotowy")
+            return
+        if context is None:
+            self.announcer.say("Wybierz urządzenie Frontier Smart")
+            return
+        device_id, _title = context
+        self._frontier_smart_active_device_id = device_id
+
+        def done(payload: object) -> None:
+            try:
+                device_title, choices = frontier_smart_preset_choices(payload)
+            except FrontierSmartPayloadError as error:
+                self.announcer.say(str(error))
+                return
+            if not choices:
+                self.announcer.say(f"{device_title} nie podał żadnych presetów")
+                return
+            with wx.SingleChoiceDialog(
+                self,
+                "Wybierz preset zapisany w urządzeniu.",
+                f"Presety — {device_title}",
+                [choice.label for choice in choices],
+            ) as dialog:
+                dialog.SetName("Presety urządzenia Frontier Smart")
+                dialog.SetSelection(0)
+                if dialog.ShowModal() != wx.ID_OK:
+                    self._restore_focus_after_dialog()
+                    return
+                choice = choices[dialog.GetSelection()]
+            self._restore_focus_after_dialog()
+            self._activate_frontier_smart_preset(
+                device_id,
+                choice.key,
+                choice.title,
+            )
+
+        self.runner.submit(
+            "frontier-smart-presets",
+            lambda: client.frontier_smart_presets(device_id),
+            done,
+            lambda error: self.announcer.say(
+                f"Nie udało się odczytać presetów Frontier Smart: {error}"
+            ),
+        )
+
+    def _activate_frontier_smart_preset(
+        self,
+        device_id: str,
+        preset_key: int,
+        title: str,
+    ) -> None:
+        client = self.client
+        if client is None:
+            self.announcer.say("Silnik nie jest gotowy")
+            return
+        self._frontier_smart_active_device_id = device_id
+        self.runner.submit(
+            "frontier-smart-preset-activate",
+            lambda: client.frontier_smart_activate_preset(device_id, preset_key),
+            self._apply_frontier_smart_operation_snapshot,
+            lambda error: self.announcer.say(
+                f"Nie udało się uruchomić presetu {title}: {error}"
+            ),
+        )
+
+    def _activate_frontier_smart_shortcut_preset(self, slot: int) -> None:
+        client = self.client
+        context = self._frontier_smart_device_context()
+        if client is None or context is None:
+            self.announcer.say("Najpierw wybierz urządzenie Frontier Smart")
+            return
+        device_id, _title = context
+
+        def done(payload: object) -> None:
+            try:
+                _device_title, choices = frontier_smart_preset_choices(payload)
+            except FrontierSmartPayloadError as error:
+                self.announcer.say(str(error))
+                return
+            choice = next(
+                (candidate for candidate in choices if candidate.key == slot - 1),
+                None,
+            )
+            if choice is None:
+                self.announcer.say(f"Preset {slot} jest pusty lub niedostępny")
+                return
+            self._activate_frontier_smart_preset(
+                device_id,
+                choice.key,
+                choice.title,
+            )
+
+        self.runner.submit(
+            "frontier-smart-preset-shortcut",
+            lambda: client.frontier_smart_presets(device_id),
+            done,
+            lambda error: self.announcer.say(
+                f"Nie udało się odczytać presetów Frontier Smart: {error}"
+            ),
+        )
 
     def _wiim_device_context(self) -> tuple[str, str, str] | None:
         """Zwróć wybrane urządzenie bez umieszczania jego Id w interfejsie."""
@@ -13579,6 +14163,9 @@ class LiteFrame(wx.Frame):
         if session is SessionId.WIIM:
             self._activate_wiim_shortcut_preset(slot)
             return
+        if session is SessionId.FRONTIER_SMART:
+            self._activate_frontier_smart_shortcut_preset(slot)
+            return
         spoken = profile_presets.shortcut_label(slot, spoken=True)
         overrides, stations = self._preset_inputs(session)
 
@@ -13830,6 +14417,9 @@ class LiteFrame(wx.Frame):
         if session is SessionId.WIIM:
             self._navigate_nvda_wiim_preset(direction)
             return
+        if session is SessionId.FRONTIER_SMART:
+            self._navigate_nvda_frontier_smart_preset(direction)
+            return
         target = self._current_preset_target()
         overrides, _stations = self._preset_inputs(session)
         current_slot = self._last_preset_slot_by_session.get(session)
@@ -13864,6 +14454,48 @@ class LiteFrame(wx.Frame):
                 str(error)
                 if isinstance(error, profile_presets.PresetProfileError)
                 else "Nie udało się odczytać presetów"
+            ),
+        )
+
+    def _navigate_nvda_frontier_smart_preset(self, direction: int) -> None:
+        client = self.client
+        context = self._frontier_smart_device_context()
+        if client is None or context is None:
+            self.announcer.say("Najpierw wybierz urządzenie Frontier Smart")
+            return
+        device_id, _title = context
+        current_key = getattr(self, "_last_frontier_smart_preset_key", None)
+
+        def done(payload: object) -> None:
+            if self.navigator.active is not SessionId.FRONTIER_SMART:
+                return
+            try:
+                _device_title, choices = frontier_smart_preset_choices(payload)
+            except FrontierSmartPayloadError as error:
+                self.announcer.say(str(error))
+                return
+            if not choices:
+                self.announcer.say("Brak zapisanych presetów Frontier Smart")
+                return
+            index = next((
+                position
+                for position, choice in enumerate(choices)
+                if choice.key == current_key
+            ), -1 if direction > 0 else 0)
+            choice = choices[(index + direction) % len(choices)]
+            self._last_frontier_smart_preset_key = choice.key
+            self._activate_frontier_smart_preset(
+                device_id,
+                choice.key,
+                choice.title,
+            )
+
+        self.runner.submit(
+            "frontier-smart-preset-navigate",
+            lambda: client.frontier_smart_presets(device_id),
+            done,
+            lambda error: self.announcer.say(
+                f"Nie udało się odczytać presetów Frontier Smart: {error}"
             ),
         )
 
@@ -14114,6 +14746,10 @@ class LiteFrame(wx.Frame):
             state = self.navigator.sessions[SessionId.WIIM]
             if not state.model.rows:
                 self._load_wiim_devices(preferred_id=state.list_anchor_id)
+        elif session_id is SessionId.FRONTIER_SMART:
+            state = self.navigator.sessions[SessionId.FRONTIER_SMART]
+            if not state.model.rows:
+                self._load_frontier_smart_devices(preferred_id=state.list_anchor_id)
         elif session_id is SessionId.SONOS:
             state = self.navigator.sessions[SessionId.SONOS]
             if not state.model.rows:
@@ -14130,6 +14766,12 @@ class LiteFrame(wx.Frame):
                 "Gotowa"
                 if getattr(self, "_wiim_active_device_id", "")
                 or self.navigator.sessions[SessionId.WIIM].model.rows
+                else "Wymaga wybrania urządzenia"
+            ),
+            SessionId.FRONTIER_SMART: (
+                "Gotowa"
+                if getattr(self, "_frontier_smart_active_device_id", "")
+                or self.navigator.sessions[SessionId.FRONTIER_SMART].model.rows
                 else "Wymaga wybrania urządzenia"
             ),
             SessionId.SONOS: (
@@ -14160,12 +14802,18 @@ class LiteFrame(wx.Frame):
         blocked = {
             session
             for session in self.__dict__.get("_playing_sessions", set())
-            if session not in (SessionId.WIIM, SessionId.SONOS, SessionId.TIDAL)
+            if session not in (
+                SessionId.WIIM,
+                SessionId.SONOS,
+                SessionId.FRONTIER_SMART,
+                SessionId.TIDAL,
+            )
         }
         pending = self.__dict__.get("_pending_playback_session")
         if pending is not None and pending not in (
             SessionId.WIIM,
             SessionId.SONOS,
+            SessionId.FRONTIER_SMART,
             SessionId.TIDAL,
         ):
             blocked.add(pending)
@@ -14261,6 +14909,9 @@ class LiteFrame(wx.Frame):
             state = self.navigator.sessions[SessionId.WIIM]
             self.announcer.say("Odświeżam zapisane urządzenia WiiM")
             self._load_wiim_devices(preferred_id=state.list_anchor_id)
+            return
+        if session_id is SessionId.FRONTIER_SMART:
+            wx.CallAfter(self._show_frontier_smart_devices)
             return
         if session_id is SessionId.SONOS:
             self._show_sonos_account()
@@ -14822,6 +15473,281 @@ class LiteFrame(wx.Frame):
             lambda: client.wiim_navigate_source(device_id, direction),
             done,
             lambda error: self.announcer.say(str(error)),
+        )
+
+    # ------------------------------------------------------ Frontier Smart
+
+    def _apply_frontier_smart_devices_payload(
+        self,
+        payload: object,
+        preferred_id: str | None = None,
+    ) -> None:
+        rows = list(frontier_smart_device_rows(payload))
+        selected_device_id, _message = frontier_smart_device_list_state(payload)
+        if selected_device_id:
+            self._frontier_smart_active_device_id = selected_device_id
+        selected_item_id = preferred_id
+        if selected_item_id is None and selected_device_id:
+            selected = next((
+                row for row in rows if row.service_id == selected_device_id
+            ), None)
+            if selected is not None:
+                selected_item_id = selected.item_id
+        events = self.navigator.apply_frontier_smart_devices(
+            rows,
+            selected_item_id,
+        )
+        if self.navigator.active is SessionId.FRONTIER_SMART:
+            self._run(events)
+        else:
+            self._sync_views()
+
+    def _load_frontier_smart_devices(
+        self,
+        preferred_id: str | None = None,
+    ) -> None:
+        client = self.client
+        if client is None:
+            self.announcer.say("Silnik nie jest gotowy")
+            return
+
+        def done(payload: object) -> None:
+            try:
+                self._apply_frontier_smart_devices_payload(payload, preferred_id)
+            except FrontierSmartPayloadError as error:
+                self.announcer.say(str(error))
+
+        self.runner.submit(
+            "frontier-smart-devices",
+            client.frontier_smart_devices,
+            done,
+            lambda error: self.announcer.say(
+                f"Nie udało się odczytać urządzeń Frontier Smart: {error}"
+            ),
+        )
+
+    def _show_frontier_smart_devices(self) -> None:
+        """Otwórz konfigurację dopiero po odczycie hosta poza wątkiem GUI."""
+        client = self.client
+        if client is None:
+            self.announcer.say("Silnik nie jest gotowy")
+            return
+        self.announcer.say("Wczytuję urządzenia Frontier Smart")
+
+        def ready(initial_payload: object) -> None:
+            try:
+                self._apply_frontier_smart_devices_payload(initial_payload)
+            except FrontierSmartPayloadError as error:
+                self.announcer.say(str(error))
+                return
+
+            def alive(dialog: FrontierSmartDevicesDialog) -> bool:
+                return not dialog.IsBeingDeleted()
+
+            def failed(
+                error: Exception,
+                dialog: FrontierSmartDevicesDialog,
+                *,
+                focus_pin: bool = False,
+            ) -> None:
+                if alive(dialog):
+                    dialog.fail(str(error), focus_pin=focus_pin)
+
+            def finish(
+                payload: object,
+                dialog: FrontierSmartDevicesDialog,
+                preferred_device_id: str | None = None,
+            ) -> None:
+                try:
+                    self._apply_frontier_smart_devices_payload(payload)
+                    if alive(dialog):
+                        dialog.finish(payload, preferred_device_id)
+                except FrontierSmartPayloadError as error:
+                    if alive(dialog):
+                        dialog.fail(str(error))
+
+            def discover(dialog: FrontierSmartDevicesDialog) -> None:
+                def discovered(payload: object) -> None:
+                    try:
+                        choices = frontier_smart_discovered_devices(payload)
+                        message = frontier_smart_payload_message(payload)
+                    except FrontierSmartPayloadError as error:
+                        failed(error, dialog)
+                        return
+                    if alive(dialog):
+                        dialog.use_discovered(choices, message)
+
+                self.runner.submit(
+                    "frontier-smart-discover",
+                    client.frontier_smart_discover,
+                    discovered,
+                    lambda error: failed(error, dialog),
+                )
+
+            def save(
+                address: str,
+                pin: str,
+                dialog: FrontierSmartDevicesDialog,
+            ) -> None:
+                self.runner.submit(
+                    "frontier-smart-add",
+                    lambda: client.frontier_smart_add(address, pin),
+                    lambda payload: finish(payload, dialog),
+                    lambda error: failed(error, dialog, focus_pin=True),
+                )
+
+            def remove(
+                device_id: str,
+                dialog: FrontierSmartDevicesDialog,
+            ) -> None:
+                self.runner.submit(
+                    "frontier-smart-remove",
+                    lambda: client.frontier_smart_remove(device_id),
+                    lambda payload: finish(payload, dialog),
+                    lambda error: failed(error, dialog),
+                )
+
+            def select(
+                device_id: str,
+                dialog: FrontierSmartDevicesDialog,
+            ) -> None:
+                self.runner.submit(
+                    "frontier-smart-select",
+                    lambda: client.frontier_smart_select(device_id),
+                    lambda payload: finish(payload, dialog, device_id),
+                    lambda error: failed(error, dialog),
+                )
+
+            with FrontierSmartDevicesDialog(
+                self,
+                initial_payload,
+                discover=discover,
+                save=save,
+                remove=remove,
+                select=select,
+            ) as dialog:
+                dialog.ShowModal()
+            self._restore_focus_after_dialog()
+
+        self.runner.submit(
+            "frontier-smart-configure",
+            client.frontier_smart_devices,
+            ready,
+            lambda error: self.announcer.say(
+                f"Nie udało się otworzyć konfiguracji Frontier Smart: {error}"
+            ),
+        )
+
+    def _activate_frontier_smart_device(
+        self,
+        intent: ActivateFrontierSmartDevice,
+    ) -> None:
+        client = self.client
+        if client is None:
+            self._run(self.navigator.back_to_list())
+            self.announcer.say("Silnik nie jest gotowy")
+            return
+        self._frontier_smart_active_device_id = intent.device_id
+        self._frontier_smart_snapshot = {}
+        self.now_playing.SetLabel(intent.title)
+        self._set_transport_label(playing=False, preparing=True)
+
+        def done(payload: object) -> None:
+            try:
+                state = frontier_smart_snapshot(payload)
+            except FrontierSmartPayloadError as error:
+                failed(error)
+                return
+            if state.get("deviceId") != self._frontier_smart_active_device_id:
+                return
+            self._frontier_smart_snapshot = state
+            if (
+                self.navigator.active is SessionId.FRONTIER_SMART
+                and self.navigator.view is View.PLAYER
+            ):
+                self._apply_frontier_smart_snapshot(state, announce=True)
+
+        def failed(error: Exception) -> None:
+            state = self.navigator.sessions[SessionId.FRONTIER_SMART]
+            state.view = View.LIST
+            if self.navigator.active is SessionId.FRONTIER_SMART:
+                self._sync_views()
+                self.announcer.say(str(error))
+
+        self.runner.submit(
+            "frontier-smart-snapshot",
+            lambda: client.frontier_smart_snapshot(intent.device_id),
+            done,
+            failed,
+        )
+
+    def _apply_frontier_smart_snapshot(
+        self,
+        state: dict,
+        *,
+        announce: bool = False,
+    ) -> None:
+        label = frontier_smart_now_playing_label(state)
+        if self.navigator.active is SessionId.FRONTIER_SMART:
+            self.navigator.session.now_playing_title = label
+        if self.now_playing.GetLabel() != label:
+            self.now_playing.SetLabel(label)
+        self.now_playing.SetName("Teraz odtwarzane")
+        time_label = player_time_label(
+            state.get("positionSeconds"),
+            state.get("durationSeconds"),
+        )
+        if self.time_label.GetLabel() != time_label:
+            self.time_label.SetLabel(time_label)
+        volume = state.get("volume")
+        if isinstance(volume, int) and self.volume_slider.GetValue() != volume:
+            self.volume_slider.SetValue(volume)
+        self.volume_slider.Enable(isinstance(volume, int))
+        playback = str(state.get("playbackState") or "").casefold()
+        self._set_transport_label(playing=playback == "odtwarzanie")
+        self._transport_status_by_session[SessionId.FRONTIER_SMART] = state
+        if announce:
+            message = str(state.get("message") or "").strip()
+            self.announcer.say(message or label)
+
+    def _frontier_smart_transport(
+        self,
+        command: str,
+        *,
+        volume: int | None = None,
+    ) -> None:
+        client = self.client
+        device_id = self._frontier_smart_active_device_id
+        if client is None or not device_id:
+            self.announcer.say(
+                "Brak aktywnego urządzenia Frontier Smart. "
+                "Naciśnij Enter na urządzeniu"
+            )
+            return
+
+        def done(payload: object) -> None:
+            try:
+                state = frontier_smart_snapshot(payload)
+            except FrontierSmartPayloadError as error:
+                self.announcer.say(str(error))
+                return
+            if state.get("deviceId") != self._frontier_smart_active_device_id:
+                return
+            self._frontier_smart_snapshot = state
+            if self.navigator.active is SessionId.FRONTIER_SMART:
+                self._apply_frontier_smart_snapshot(state, announce=True)
+
+        self.runner.submit(
+            "frontier-smart-transport",
+            lambda: client.frontier_smart_transport(
+                device_id,
+                command,
+                volume=volume,
+            ),
+            done,
+            lambda error: self.announcer.say(
+                f"Nie udało się sterować urządzeniem Frontier Smart: {error}"
+            ),
         )
 
     # ---------------------------------------------------------------- Sonos
@@ -15999,6 +16925,69 @@ class LiteFrame(wx.Frame):
         self._transient_preview_return = None
         self._open_podcast_aggregate(
             OpenPodcastAggregateView(LibraryView.PODCAST_DOWNLOADS)
+        )
+
+    def _set_radio_collection_sort(self, action: Action) -> None:
+        """Alt+1/2/3 w Bibliotece i Ulubionych Radia."""
+        state = self.navigator.sessions[SessionId.RADIO]
+        if (
+            self.navigator.active is not SessionId.RADIO
+            or state.view is not View.LIST
+            or state.library_view not in (None, LibraryView.FAVORITES)
+        ):
+            self.announcer.say(
+                "Sortowanie jest dostępne w Bibliotece i Ulubionych Radia"
+            )
+            return
+        client = self.client
+        if client is None:
+            self.announcer.say("Silnik nie działa, nie mogę zmienić sortowania")
+            return
+        choice = {
+            Action.SORT_RADIO_COLLECTION_ADDED: (
+                SORT_ADDED_NEWEST,
+                "Radio: według dodania, najnowsze na początku",
+            ),
+            Action.SORT_RADIO_COLLECTION_ALPHABETICAL: (
+                SORT_ALPHABETICAL,
+                "Radio: alfabetycznie",
+            ),
+            Action.SORT_RADIO_COLLECTION_CUSTOM: (
+                SORT_CUSTOM,
+                "Radio: kolejność własna",
+            ),
+        }.get(action)
+        if choice is None:
+            return
+        mode, label = choice
+        scope = (
+            "favorites"
+            if state.library_view is LibraryView.FAVORITES
+            else "library"
+        )
+        preferred_id = state.model.selected_id
+
+        def done(payload: dict) -> None:
+            result = payload or {}
+            effective = str(result.get("sortMode") or mode)
+            self._radio_effective_sort_modes[scope] = effective
+            self._refresh_menu_state()
+            self._open_radio_view(
+                OpenLibraryView(
+                    view=state.library_view,
+                    preferred_id=preferred_id,
+                    target_session_id=SessionId.RADIO,
+                ),
+                after_refresh=lambda: self.announcer.say(label),
+            )
+
+        self.runner.submit(
+            "radio-sort",
+            lambda: client.set_radio_collection_sort(scope, mode),
+            done,
+            lambda error: self.announcer.say(
+                f"Nie mogę zmienić sortowania Radia: {error}"
+            ),
         )
 
     def _set_podcast_library_sort(self, action: Action) -> None:
@@ -21035,6 +22024,53 @@ class LiteFrame(wx.Frame):
             failed,
         )
 
+    def _toggle_radio_library(self) -> None:
+        """Ctrl+Shift+L: jawna zmiana Biblioteki dla stacji Radia."""
+        if self.navigator.active is not SessionId.RADIO:
+            self.announcer.say("Biblioteka stacji jest dostępna w sesji Radio")
+            return
+        client = self.client
+        if client is None:
+            self.announcer.say("Silnik nie działa, nie mogę zmienić Biblioteki")
+            return
+        rows = [
+            row for row in self._selected_action_rows()
+            if row.kind == "station" and row.item_id
+        ]
+        if not rows:
+            self.announcer.say("Wybierz stację radiową")
+            return
+        item_ids = list(dict.fromkeys(row.item_id for row in rows))
+        preferred_id = item_ids[0]
+
+        def done(payload: dict) -> None:
+            result = payload or {}
+            changed = int(result.get("changed") or 0)
+            in_library = bool(result.get("inLibrary"))
+            label = rows[0].title if len(item_ids) == 1 else format_item_count(len(item_ids))
+            if changed <= 0:
+                message = "Biblioteka bez zmian"
+            elif in_library:
+                message = f"Dodano do Biblioteki: {label}"
+            else:
+                message = f"Usunięto z Biblioteki: {label}"
+            if self.navigator.session.view is View.PLAYER:
+                self.announcer.say(message)
+                return
+            self._refresh_profile_view(
+                preferred_id=preferred_id,
+                after_refresh=lambda: self.announcer.say(message),
+            )
+
+        self.runner.submit(
+            "radio-library",
+            lambda: client.toggle_radio_library(item_ids),
+            done,
+            lambda error: self.announcer.say(
+                f"Nie mogę zmienić Biblioteki: {error}"
+            ),
+        )
+
     def _open_tidal_queue(self, preferred_id: str | None = None) -> None:
         self._transient_preview_return = None
         self._run(self.navigator.apply_tidal_queue(
@@ -21167,6 +22203,9 @@ class LiteFrame(wx.Frame):
             return
         if self.navigator.active is SessionId.SONOS:
             self._sonos_transport("next" if forward else "previous")
+            return
+        if self.navigator.active is SessionId.FRONTIER_SMART:
+            self._frontier_smart_transport("next" if forward else "previous")
             return
 
         source_intents = self.navigator.step_playback_source(forward)
@@ -21904,6 +22943,9 @@ class LiteFrame(wx.Frame):
         if self.navigator.active is SessionId.SONOS:
             self._sonos_transport("toggle")
             return
+        if self.navigator.active is SessionId.FRONTIER_SMART:
+            self._frontier_smart_transport("toggle")
+            return
 
         session = self.navigator.active
 
@@ -21945,6 +22987,9 @@ class LiteFrame(wx.Frame):
             self.announcer.say("Silnik nie działa")
             return
         session = self.navigator.active
+        if session is SessionId.FRONTIER_SMART:
+            self._frontier_smart_transport("toggleMute")
+            return
 
         def done(payload: dict) -> None:
             muted = bool((payload or {}).get("muted"))
@@ -22215,6 +23260,16 @@ class LiteFrame(wx.Frame):
             if command is not None:
                 self._sonos_transport(command)
                 return
+        if self.navigator.active is SessionId.FRONTIER_SMART:
+            command = {
+                5: "volumeUp5",
+                -5: "volumeDown5",
+                1: "volumeUp1",
+                -1: "volumeDown1",
+            }.get(delta)
+            if command is not None:
+                self._frontier_smart_transport(command)
+                return
         self._set_volume(self.options.volume + delta)
 
     def _set_volume(self, value: int) -> None:
@@ -22225,6 +23280,9 @@ class LiteFrame(wx.Frame):
             return
         if self.navigator.active is SessionId.SONOS:
             self._sonos_transport("setVolume", volume=value)
+            return
+        if self.navigator.active is SessionId.FRONTIER_SMART:
+            self._frontier_smart_transport("setVolume", volume=value)
             return
         self.options.volume = value
         # Glosnosc tez ma swoj przelacznik (CommandRouter.cs:566-575) i swoj
@@ -22306,6 +23364,19 @@ class LiteFrame(wx.Frame):
                 self.announcer.say(text)
             else:
                 self.announcer.say("Sonos nie podał tego czasu")
+            return
+        if self.navigator.active is SessionId.FRONTIER_SMART:
+            state = self._frontier_smart_snapshot
+            text = time_announcement(
+                action,
+                self.messages,
+                position=state.get("positionSeconds"),
+                duration=state.get("durationSeconds"),
+            )
+            if text is not None:
+                self.announcer.say(text)
+            else:
+                self.announcer.say("Frontier Smart nie podał tego czasu")
             return
         status = self._last_status
         text = time_announcement(
@@ -22421,6 +23492,7 @@ class LiteFrame(wx.Frame):
         # Etykiete czasu nadal zmieniamy tylko w widoku odtwarzacza.
         self._refresh_status()
         self._refresh_wiim_status()
+        self._refresh_frontier_smart_status()
         self._refresh_sonos_status()
         self._refresh_recording_status()
         self._checkpoint_podcast_if_due()
@@ -22602,6 +23674,7 @@ class LiteFrame(wx.Frame):
             remote_player = (
                 self.navigator.active is SessionId.WIIM
                 or self.navigator.active is SessionId.SONOS
+                or self.navigator.active is SessionId.FRONTIER_SMART
                 or (
                     self.navigator.active is SessionId.TIDAL
                     and self._tidal_desktop_has_playback
@@ -22701,6 +23774,44 @@ class LiteFrame(wx.Frame):
         self.runner.submit(
             "wiim-status",
             lambda: client.wiim_snapshot(device_id),
+            done,
+            failed,
+        )
+
+    def _refresh_frontier_smart_status(self) -> None:
+        """Cichy odczyt wybranego radia, bez nakładania zapytań timera."""
+        client = self.client
+        device_id = self._frontier_smart_active_device_id
+        if (
+            client is None
+            or not device_id
+            or self.navigator.active is not SessionId.FRONTIER_SMART
+            or getattr(self, "_frontier_smart_status_poll_pending", False)
+        ):
+            return
+        self._frontier_smart_status_poll_pending = True
+
+        def done(payload: object) -> None:
+            self._frontier_smart_status_poll_pending = False
+            try:
+                state = frontier_smart_snapshot(payload)
+            except FrontierSmartPayloadError:
+                return
+            if (
+                self.navigator.active is not SessionId.FRONTIER_SMART
+                or state.get("deviceId")
+                != self._frontier_smart_active_device_id
+            ):
+                return
+            self._frontier_smart_snapshot = state
+            self._apply_frontier_smart_snapshot(state, announce=False)
+
+        def failed(_error: Exception) -> None:
+            self._frontier_smart_status_poll_pending = False
+
+        self.runner.submit(
+            "frontier-smart-status",
+            lambda: client.frontier_smart_snapshot(device_id),
             done,
             failed,
         )
@@ -24735,6 +25846,11 @@ class LiteFrame(wx.Frame):
             chord,
             player_view=player,
             radio_session=self.navigator.active is SessionId.RADIO,
+            radio_collection=(
+                not player
+                and self.navigator.active is SessionId.RADIO
+                and session.library_view in (None, LibraryView.FAVORITES)
+            ),
             radio_recording_context=(
                 not player
                 and self.navigator.active is SessionId.RADIO
@@ -24778,6 +25894,9 @@ class LiteFrame(wx.Frame):
                 and session.library_view is LibraryView.WIIM_NETWORK_STREAMS
             ),
             sonos_session=self.navigator.active is SessionId.SONOS,
+            frontier_smart_session=(
+                self.navigator.active is SessionId.FRONTIER_SMART
+            ),
             sonos_own_streams=(
                 not player
                 and self.navigator.active is SessionId.SONOS
@@ -24825,6 +25944,7 @@ class LiteFrame(wx.Frame):
             SessionId.SPOTIFY: SPOTIFY_SUPPORTED_ACTIONS,
             SessionId.WIIM: WIIM_SUPPORTED_ACTIONS,
             SessionId.SONOS: SONOS_SUPPORTED_ACTIONS,
+            SessionId.FRONTIER_SMART: FRONTIER_SMART_SUPPORTED_ACTIONS,
         }.get(self.navigator.active)
         return supported is None or action in supported
 

@@ -33,6 +33,7 @@ from .profile_layout import common_data_commands_available
 from .release_profile import PUBLIC_PROFILE_ID, current_profile
 from .shortcuts import (
     Action,
+    FRONTIER_SMART_SUPPORTED_ACTIONS,
     SONOS_SUPPORTED_ACTIONS,
     SPOTIFY_SUPPORTED_ACTIONS,
     TIDAL_SUPPORTED_ACTIONS,
@@ -64,6 +65,10 @@ class MenuItem:
     accelerator: bool = True
     #: Wylaczana poza sesja radiowa, zamiast udawac, ze zadziala.
     needs_radio_session: bool = False
+    #: Aktywna tylko w głównej Bibliotece albo Ulubionych Radia.
+    needs_radio_collection: bool = False
+    #: Wymaga wskazania prawdziwej stacji radiowej.
+    needs_radio_station: bool = False
     #: Dostępna wyłącznie dla lokalnych plików, np. zakładki materiału.
     needs_files_session: bool = False
     #: Dostępna tylko dla wskazanej stacji, która ma aktywny tor nagrywania.
@@ -168,12 +173,14 @@ TIDAL_ONLY = (SessionId.TIDAL,)
 WIIM_ONLY = (SessionId.WIIM,)
 SONOS_ONLY = (SessionId.SONOS,)
 SPOTIFY_ONLY = (SessionId.SPOTIFY,)
+FRONTIER_SMART_ONLY = (SessionId.FRONTIER_SMART,)
 LOCAL_MEDIA = (SessionId.FILES, SessionId.PODCASTS)
 QUEUE_SESSIONS = (SessionId.FILES, SessionId.PODCASTS, SessionId.TIDAL)
 PLAY_NEXT_SESSIONS = (SessionId.FILES, SessionId.PODCASTS)
 LOCAL_AUDIO = (SessionId.FILES, SessionId.RADIO, SessionId.PODCASTS)
 LOCAL_PLAYLISTS = (SessionId.FILES, SessionId.RADIO, SessionId.PODCASTS)
 SESSION_AUDIO_OUTPUTS = (*LOCAL_AUDIO, SessionId.SPOTIFY)
+MUTE_SESSIONS = (*SESSION_AUDIO_OUTPUTS, SessionId.FRONTIER_SMART)
 LOCAL_TIMELINE = (*LOCAL_AUDIO, SessionId.SPOTIFY)
 PLAYER_SESSIONS = (
     SessionId.FILES,
@@ -182,6 +189,7 @@ PLAYER_SESSIONS = (
     SessionId.WIIM,
     SessionId.SONOS,
     SessionId.SPOTIFY,
+    SessionId.FRONTIER_SMART,
 )
 
 
@@ -200,6 +208,7 @@ def menus_for_session(
         SessionId.WIIM: WIIM_SUPPORTED_ACTIONS,
         SessionId.SONOS: SONOS_SUPPORTED_ACTIONS,
         SessionId.SPOTIFY: SPOTIFY_SUPPORTED_ACTIONS,
+        SessionId.FRONTIER_SMART: FRONTIER_SMART_SUPPORTED_ACTIONS,
     }.get(session_id)
     menus: list[Menu] = []
     for described in build_menus(session_order):
@@ -229,6 +238,7 @@ def menus_for_session(
                     SessionId.TIDAL: "t",
                     SessionId.WIIM: "d",
                     SessionId.SONOS: "g",
+                    SessionId.FRONTIER_SMART: "r",
                 }[session_id]
                 key_index = ctrl_f5.name.casefold().find(access_key)
                 label = (
@@ -301,7 +311,12 @@ def build_menus(session_order: object = None) -> tuple[Menu, ...]:
                 Action.SESSION_CONFIGURE_CURRENT,
                 shortcut="Ctrl+F5",
                 accelerator=False,
-                visible_sessions=(SessionId.TIDAL, SessionId.SPOTIFY, SessionId.WIIM),
+                visible_sessions=(
+                    SessionId.TIDAL,
+                    SessionId.SPOTIFY,
+                    SessionId.WIIM,
+                    SessionId.FRONTIER_SMART,
+                ),
             ),
             MenuItem(
                 "Otwórz fo&lder zawierający",
@@ -578,6 +593,14 @@ def build_menus(session_order: object = None) -> tuple[Menu, ...]:
                 accelerator=False,
                 needs_podcast_library_item=True,
                 visible_sessions=PODCASTS_ONLY,
+            ),
+            MenuItem(
+                "Dodaj lub usuń stację z Biblioteki Radia (&1)",
+                Action.TOGGLE_RADIO_LIBRARY,
+                shortcut="Ctrl+Shift+L",
+                accelerator=False,
+                needs_radio_station=True,
+                visible_sessions=RADIO_ONLY,
             ),
             MenuItem(
                 "Dodaj lub usuń z Biblioteki TIDAL (&1)",
@@ -954,7 +977,14 @@ def build_menus(session_order: object = None) -> tuple[Menu, ...]:
                 accelerator=False,
                 checkable=True,
                 needs_playback=True,
-                visible_sessions=SESSION_AUDIO_OUTPUTS,
+                visible_sessions=MUTE_SESSIONS,
+            ),
+            MenuItem(
+                "Wybierz &tryb Frontier Smart…",
+                Action.FRONTIER_SMART_SELECT_MODE,
+                needs_playback=True,
+                needs_player_view=True,
+                visible_sessions=FRONTIER_SMART_ONLY,
             ),
             SEPARATOR,
             MenuItem(
@@ -1302,6 +1332,22 @@ def build_menus(session_order: object = None) -> tuple[Menu, ...]:
             MenuItem("Po&brane", Action.VIEW_PODCAST_DOWNLOADS,
                      needs_podcast_session=True,
                      visible_sessions=(SessionId.PODCASTS,)),
+            SEPARATOR,
+            MenuItem("Radio: ostatnio dodane na początku (&1)",
+                     Action.SORT_RADIO_COLLECTION_ADDED, shortcut="Alt+1",
+                     accelerator=False, checkable=True,
+                     needs_radio_collection=True,
+                     visible_sessions=RADIO_ONLY),
+            MenuItem("Radio: alfabetycznie (&2)",
+                     Action.SORT_RADIO_COLLECTION_ALPHABETICAL,
+                     shortcut="Alt+2", accelerator=False, checkable=True,
+                     needs_radio_collection=True,
+                     visible_sessions=RADIO_ONLY),
+            MenuItem("Radio: kolejność własna (&3)",
+                     Action.SORT_RADIO_COLLECTION_CUSTOM, shortcut="Alt+3",
+                     accelerator=False, checkable=True,
+                     needs_radio_collection=True,
+                     visible_sessions=RADIO_ONLY),
             SEPARATOR,
             MenuItem("Biblioteka: ostatnio dodane na początku (&1)",
                      Action.SORT_PODCAST_LIBRARY_ADDED, shortcut="Alt+1",

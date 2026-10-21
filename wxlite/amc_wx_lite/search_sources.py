@@ -113,5 +113,6 @@ class SearchSources:
             SessionId.TIDAL: "TIDAL",
             SessionId.WIIM: "WiiM",
             SessionId.SONOS: "Sonos",
+            SessionId.FRONTIER_SMART: "Frontier Smart",
             SessionId.SPOTIFY: "Spotify",
         }[session_id]

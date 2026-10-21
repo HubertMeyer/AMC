@@ -65,6 +65,7 @@ _COMMON_CAPABILITIES = (
     "session.radio",
     "session.podcasts-youtube",
     "session.wiim",
+    "session.sonos",
     "recording",
     "schedules",
     "bookmarks",
@@ -72,6 +73,7 @@ _COMMON_CAPABILITIES = (
     "command-palette",
     "keyboard-help",
     "problem-report-local",
+    "experimental",
 )
 
 TEST_PROFILE = ReleaseProfile(
@@ -95,14 +97,14 @@ TEST_PROFILE = ReleaseProfile(
         "wiim",
         "sonos",
         "spotify",
+        "frontierSmart",
     ),
     capabilities=_COMMON_CAPABILITIES
     + (
-        "session.sonos",
         "session.spotify",
         "session.tidal",
+        "session.frontier-smart",
         "spotify.playlists",
-        "experimental",
     ),
 )
 
@@ -118,7 +120,7 @@ PUBLIC_PROFILE = ReleaseProfile(
     cache_folder="AMC/cache",
     log_folder="AMC/logs",
     credential_namespace="AccessibleMediaController.Public",
-    session_ids=("files", "radio", "podcasts", "wiim"),
+    session_ids=("files", "radio", "podcasts", "wiim", "sonos"),
     capabilities=_COMMON_CAPABILITIES,
 )
 

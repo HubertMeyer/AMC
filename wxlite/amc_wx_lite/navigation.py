@@ -30,6 +30,7 @@ class SessionId(Enum):
     WIIM = "wiim"
     SONOS = "sonos"
     SPOTIFY = "spotify"
+    FRONTIER_SMART = "frontierSmart"
 
 
 class LibraryView(Enum):
@@ -540,6 +541,15 @@ class ActivateWiiMDevice:
 
 
 @dataclass(slots=True)
+class ActivateFrontierSmartDevice:
+    """Otwórz odtwarzacz zapisanego urządzenia zgodnego z FSAPI."""
+
+    item_id: str
+    title: str
+    device_id: str
+
+
+@dataclass(slots=True)
 class PlayWiiMNetworkStream:
     """Otwórz zapisany strumień na wybranym urządzeniu WiiM."""
 
@@ -723,6 +733,7 @@ class Navigator:
             SessionId.WIIM: SessionState(SessionId.WIIM),
             SessionId.SONOS: SessionState(SessionId.SONOS),
             SessionId.SPOTIFY: SessionState(SessionId.SPOTIFY),
+            SessionId.FRONTIER_SMART: SessionState(SessionId.FRONTIER_SMART),
         }
         self.active = SessionId.FILES
 
@@ -775,6 +786,24 @@ class Navigator:
             f"WiiM, {count} {_items_word(count)}"
             if count
             else "WiiM, brak zapisanych urządzeń"
+        )]
+
+    def apply_frontier_smart_devices(
+        self, rows: list[Row], preferred_id: str | None = None
+    ) -> list[object]:
+        """Wstaw zapisane urządzenia FSAPI bez ujawniania ich adresów."""
+        state = self.sessions[SessionId.FRONTIER_SMART]
+        state.model.replace(rows, preferred_id=preferred_id or state.list_anchor_id)
+        selected = state.model.selected_row
+        if selected is not None:
+            state.list_anchor_id = selected.item_id
+        state.view = View.LIST
+        state.library_view = None
+        count = len(rows)
+        return [Announce(
+            f"Frontier Smart, {count} {_items_word(count)}"
+            if count
+            else "Frontier Smart, brak zapisanych urządzeń"
         )]
 
     def apply_wiim_network_streams(
@@ -909,6 +938,7 @@ class Navigator:
             SessionId.WIIM: "WiiM",
             SessionId.SONOS: "Sonos",
             SessionId.SPOTIFY: "Spotify",
+            SessionId.FRONTIER_SMART: "Frontier Smart",
         }[session_id]
 
     def capture_transient_navigation(self) -> TransientNavigationSnapshot:
@@ -1111,6 +1141,26 @@ class Navigator:
                 return_id=row.item_id,
             )
             return [activation, *sources]
+
+        if state.session_id is SessionId.FRONTIER_SMART:
+            if (
+                row.kind != "frontierSmartDevice"
+                or row.service_kind != "frontierSmartDevice"
+                or not row.service_id
+            ):
+                return [Announce(
+                    "Nie można wybrać tego urządzenia Frontier Smart"
+                )]
+            state.player_entry_anchor_id = row.item_id
+            state.list_anchor_id = row.item_id
+            state.now_playing_id = row.item_id
+            state.now_playing_title = row.title
+            state.view = View.PLAYER
+            return [ActivateFrontierSmartDevice(
+                item_id=row.item_id,
+                title=row.title,
+                device_id=row.service_id,
+            )]
 
         if state.session_id is SessionId.SONOS:
             # Jak wyżej: nie udajemy możliwości odtworzenia na podstawie

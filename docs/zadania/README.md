@@ -235,6 +235,11 @@ zmian, wymagający korekty użytkownika:
 - `NAME-001` — **Zrobione** — zmiana widocznej nazwy prywatnej wersji z
   „AMC Python” na „AMC Test”, bez zmiany technicznej tożsamości instalacji.
   Szczegóły: [NAME-001-amc-test.md](NAME-001-amc-test.md).
+- `FRONTIER-001` — **W trakcie** — sesja „Frontier Smart” dla odbiorników
+  zgodnych z FSAPI: włączenie w Menedżerze sesji, wykrywanie albo ręczny adres,
+  bezpieczny PIN, transport, tryby i presety. Pierwszy odbiór jest przeznaczony
+  wyłącznie dla AMC Test i prawdziwego urządzenia użytkownika. Szczegóły:
+  [FRONTIER-001-frontier-smart-fsapi.md](FRONTIER-001-frontier-smart-fsapi.md).
 - `ARC-001` — **Oczekuje** — wspólny rdzeń poleceń dla GUI, palety, NVDA,
   przyszłego CLI i lokalnego sterowania AI. Szczegóły:
   [ARC-001-wspolny-rdzen-polecen-cli-ai.md](ARC-001-wspolny-rdzen-polecen-cli-ai.md).

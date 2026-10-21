@@ -594,6 +594,7 @@ public sealed class PersistedState
     public RadioSettings Radio { get; set; } = new();
     public PodcastSettings Podcasts { get; set; } = new();
     public WiiMSettings WiiM { get; set; } = new();
+    public FrontierSmartSettings FrontierSmart { get; set; } = new();
     public SonosSessionSettings Sonos { get; set; } = new();
     public TidalSettings Tidal { get; set; } = new();
     public SpotifySettings Spotify { get; set; } = new();
@@ -957,6 +958,21 @@ public sealed class WiiMDeviceSettings
     public long LastSeenUtcTicks { get; set; }
     public int LastActivatedPresetNumber { get; set; }
     public string? LastActivatedNetworkStreamId { get; set; }
+}
+
+public sealed class FrontierSmartSettings
+{
+    public List<FrontierSmartDeviceSettings> Devices { get; set; } = [];
+    public string? SelectedDeviceId { get; set; }
+}
+
+public sealed class FrontierSmartDeviceSettings
+{
+    public string Id { get; set; } = string.Empty;
+    public string Address { get; set; } = string.Empty;
+    public string DisplayName { get; set; } = string.Empty;
+    public string FirmwareVersion { get; set; } = string.Empty;
+    public long LastSeenUtcTicks { get; set; }
 }
 
 public sealed class PlaybackVolumeMemorySettings

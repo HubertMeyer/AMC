@@ -20,7 +20,8 @@ internal sealed record LiteRadioLibraryMutationResult(
     [property: JsonPropertyName("skippedCount")] int SkippedCount,
     [property: JsonPropertyName("preferredStationId")] string? PreferredStationId,
     [property: JsonPropertyName("preferredStationName")] string? PreferredStationName,
-    [property: JsonIgnore] IReadOnlyList<string> ChangedStationIds)
+    [property: JsonIgnore] IReadOnlyList<string> ChangedStationIds,
+    [property: JsonIgnore] IReadOnlyList<string> SourceStationIds)
 {
     [JsonIgnore]
     public bool Changed => ChangedStationIds.Count > 0;
@@ -58,7 +59,9 @@ internal static class LiteRadioLibraryMutation
         var added = new List<string>();
         var promoted = new List<string>();
         var updated = new List<string>();
-        var changedNames = new Dictionary<string, string>(StringComparer.Ordinal);
+        var changedInSourceOrder = new List<string>();
+        var sourceStationIds = new List<string>();
+        var sourceNames = new Dictionary<string, string>(StringComparer.Ordinal);
         var skipped = Math.Max(0, parserSkipped);
 
         foreach (var draft in drafts)
@@ -71,6 +74,10 @@ internal static class LiteRadioLibraryMutation
                     skipped++;
                     continue;
                 }
+                sourceStationIds.Add(existingId);
+                sourceNames[existingId] = updateExistingTitles
+                    ? draft.Name
+                    : Text(existing, "name", "Name");
 
                 if (updateExistingTitles)
                 {
@@ -79,7 +86,7 @@ internal static class LiteRadioLibraryMutation
                     existing["hasCustomTitle"] = true;
                     existing["isInLibrary"] = true;
                     updated.Add(existingId);
-                    changedNames[existingId] = draft.Name;
+                    changedInSourceOrder.Add(existingId);
                     continue;
                 }
 
@@ -91,7 +98,7 @@ internal static class LiteRadioLibraryMutation
 
                 existing["isInLibrary"] = true;
                 promoted.Add(existingId);
-                changedNames[existingId] = Text(existing, "name", "Name");
+                changedInSourceOrder.Add(existingId);
                 continue;
             }
 
@@ -113,21 +120,47 @@ internal static class LiteRadioLibraryMutation
             stations.Add(station);
             existingByUrl[draft.Url] = station;
             added.Add(newId);
-            changedNames[newId] = draft.Name;
+            changedInSourceOrder.Add(newId);
+            sourceStationIds.Add(newId);
+            sourceNames[newId] = draft.Name;
         }
 
-        var preferred = updateExistingTitles
-            ? updated.FirstOrDefault() ?? added.FirstOrDefault()
-            : promoted.FirstOrDefault() ?? added.FirstOrDefault();
-        var changedIds = updated.Concat(promoted).Concat(added).Distinct(StringComparer.Ordinal).ToArray();
+        // To jest kolejność playlisty, a nie kolejność typów zmian. Import
+        // może przeplatać stacje istniejące i nowe; grupowanie ich na
+        // promoted/added odwracało lub tasowało wynik widoczny po imporcie.
+        var changedIds = changedInSourceOrder
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+        var orderedIds = sourceStationIds
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+        var preferred = orderedIds.FirstOrDefault();
         return new LiteRadioLibraryMutationResult(
             added.Count,
             promoted.Count,
             updated.Count,
             skipped,
             preferred,
-            preferred is not null && changedNames.TryGetValue(preferred, out var name) ? name : null,
-            changedIds);
+            preferred is not null && sourceNames.TryGetValue(preferred, out var name) ? name : null,
+            changedIds,
+            orderedIds);
+    }
+
+    public static void ApplyChangedOrder(
+        List<string> customOrder,
+        List<string> addedOldestToNewest,
+        IReadOnlyList<string> changedInSourceOrder)
+    {
+        foreach (var id in changedInSourceOrder)
+        {
+            customOrder.RemoveAll(candidate =>
+                string.Equals(candidate, id, StringComparison.Ordinal));
+            customOrder.Add(id);
+            addedOldestToNewest.RemoveAll(candidate =>
+                string.Equals(candidate, id, StringComparison.Ordinal));
+        }
+        foreach (var id in changedInSourceOrder.Reverse())
+            addedOldestToNewest.Add(id);
     }
 
     private static string Text(JsonObject value, string first, string second) =>

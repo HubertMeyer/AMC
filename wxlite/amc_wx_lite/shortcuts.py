@@ -99,6 +99,7 @@ class Action(Enum):
     SESSION_WIIM = "session.wiim"
     SESSION_SONOS = "session.sonos"
     SESSION_SPOTIFY = "session.spotify"
+    SESSION_FRONTIER_SMART = "session.frontierSmart"
     SESSION_LIST = "session.list"
     SESSION_ENABLE = "session.enable"
     SESSION_DISABLE_CURRENT = "session.disableCurrent"
@@ -110,6 +111,7 @@ class Action(Enum):
     NEXT_SESSION = "session.next"
     COMMAND_PALETTE = "view.commandPalette"
     SELECT_SONOS_TARGET = "sonos.target.select"
+    FRONTIER_SMART_SELECT_MODE = "frontierSmart.mode.select"
     ACTIVATE = "activate"
     PARENT_FOLDER = "parent"
     # Escape na liscie nie jest aliasem Backspace. Zamyka podglad lub
@@ -128,6 +130,7 @@ class Action(Enum):
     ADD_TO_QUEUE = "action.queue.add"
     TOGGLE_PLAY_NEXT = "action.queue.playNextToggle"
     TOGGLE_FAVORITE = "action.favorite.toggle"
+    TOGGLE_RADIO_LIBRARY = "radio.library.toggle"
     MANAGE_PLAYLIST_MEMBERSHIP = "action.playlists.membership"
     TIDAL_TOGGLE_LIBRARY = "tidal.library.toggle"
     TIDAL_TOGGLE_FAVORITE = "tidal.favorite.toggle"
@@ -296,6 +299,9 @@ class Action(Enum):
     VIEW_RECORDED_RADIO_FILES = "radio.recording.completedView"
     ADD_RADIO_SCHEDULE = "radio.recording.schedule.add"
     MANAGE_RADIO_SCHEDULES = "radio.recording.schedules"
+    SORT_RADIO_COLLECTION_ADDED = "radio.collection.sort.added"
+    SORT_RADIO_COLLECTION_ALPHABETICAL = "radio.collection.sort.alphabetical"
+    SORT_RADIO_COLLECTION_CUSTOM = "radio.collection.sort.custom"
     VIEW_PODCAST_INBOX = "podcasts.inbox"
     VIEW_PODCAST_DOWNLOADS = "podcasts.downloads"
     SORT_PODCAST_INBOX_ADDED = "podcasts.inbox.sort.added"
@@ -449,6 +455,12 @@ _CTRL_F5_PRESENTATIONS: dict[str, CommandPresentation] = {
         "Wybierz dom i grupę sterowania Sonos; przy braku połączenia otwórz konto Sonos",
         "Ctrl+F5",
     ),
+    "frontier smart": CommandPresentation(
+        Action.SESSION_CONFIGURE_CURRENT,
+        "Urządzenia Frontier Smart",
+        "Wykryj, dodaj albo wybierz urządzenie Frontier Smart",
+        "Ctrl+F5",
+    ),
 }
 
 
@@ -469,6 +481,7 @@ TIDAL_SUPPORTED_ACTIONS = frozenset({
     Action.SESSION_WIIM,
     Action.SESSION_SONOS,
     Action.SESSION_SPOTIFY,
+    Action.SESSION_FRONTIER_SMART,
     Action.SESSION_LIST,
     Action.SESSION_ENABLE,
     Action.SESSION_DISABLE_CURRENT,
@@ -549,6 +562,7 @@ SPOTIFY_SUPPORTED_ACTIONS = frozenset({
     Action.SESSION_WIIM,
     Action.SESSION_SONOS,
     Action.SESSION_SPOTIFY,
+    Action.SESSION_FRONTIER_SMART,
     Action.SESSION_LIST,
     Action.SESSION_ENABLE,
     Action.SESSION_DISABLE_CURRENT,
@@ -660,6 +674,7 @@ WIIM_SUPPORTED_ACTIONS = frozenset({
     Action.SESSION_WIIM,
     Action.SESSION_SONOS,
     Action.SESSION_SPOTIFY,
+    Action.SESSION_FRONTIER_SMART,
     Action.SESSION_LIST,
     Action.SESSION_ENABLE,
     Action.SESSION_DISABLE_CURRENT,
@@ -744,6 +759,7 @@ SONOS_SUPPORTED_ACTIONS = frozenset({
     Action.SESSION_WIIM,
     Action.SESSION_SONOS,
     Action.SESSION_SPOTIFY,
+    Action.SESSION_FRONTIER_SMART,
     Action.SESSION_LIST,
     Action.SESSION_ENABLE,
     Action.SESSION_DISABLE_CURRENT,
@@ -833,6 +849,56 @@ SONOS_SUPPORTED_ACTIONS = frozenset({
     Action.VIEW_RECORDED_RADIO_FILES,
     Action.MANAGE_RADIO_SCHEDULES,
     Action.VIEW_PODCAST_INBOX,
+    Action.HELP,
+    Action.KEYBOARD_HELP,
+    Action.UPDATE_MEDIA_COMPONENTS,
+    Action.REPORT_PROBLEM,
+    Action.VERSION_INFO,
+})
+
+
+# Frontier Smart jest autonomicznym radiem. Jawna lista chroni przed
+# skierowaniem polecenia lokalnego silnika albo innej usługi do FSAPI.
+FRONTIER_SMART_SUPPORTED_ACTIONS = frozenset({
+    Action.SESSION_FILES,
+    Action.SESSION_RADIO,
+    Action.SESSION_PODCASTS,
+    Action.SESSION_TIDAL,
+    Action.SESSION_WIIM,
+    Action.SESSION_SONOS,
+    Action.SESSION_SPOTIFY,
+    Action.SESSION_FRONTIER_SMART,
+    Action.SESSION_LIST,
+    Action.SESSION_ENABLE,
+    Action.SESSION_DISABLE_CURRENT,
+    Action.SESSION_CONFIGURE_CURRENT,
+    Action.PREVIOUS_SESSION,
+    Action.NEXT_SESSION,
+    Action.COMMAND_PALETTE,
+    Action.ACTIVATE,
+    Action.CLOSE_LIST_PREVIEW,
+    Action.SHOW_PLAYER,
+    Action.SHOW_LIST,
+    Action.PLAY_PAUSE,
+    Action.TOGGLE_MUTE,
+    Action.QUEUE_NEXT,
+    Action.QUEUE_PREVIOUS,
+    Action.VOLUME_UP_5,
+    Action.VOLUME_DOWN_5,
+    Action.VOLUME_UP_1,
+    Action.VOLUME_DOWN_1,
+    Action.TIME_ELAPSED,
+    Action.TIME_REMAINING,
+    Action.TIME_TOTAL,
+    Action.VIEW_PRESETS,
+    *(Action[f"PRESET_{slot}"] for slot in range(1, 13)),
+    Action.FRONTIER_SMART_SELECT_MODE,
+    Action.GENERAL_SETTINGS,
+    Action.TOGGLE_SEEK_MESSAGES,
+    Action.QUICK_INFORMATION,
+    Action.ITEM_PROPERTIES,
+    Action.COPY_NAME,
+    Action.FOCUS_FILTER,
     Action.HELP,
     Action.KEYBOARD_HELP,
     Action.UPDATE_MEDIA_COMPONENTS,
@@ -1029,6 +1095,16 @@ RADIO_LIST_VIEW: dict[str, Action] = {
     "Alt+D": Action.CURRENT_RADIO_BROADCAST_INFORMATION,
     "Ctrl+Alt+S": Action.VIEW_RADIO_RECOGNITION_HISTORY,
     "Ctrl+Alt+Shift+S": Action.TOGGLE_RADIO_RECOGNITION_ANNOUNCEMENTS,
+    "Ctrl+Shift+L": Action.TOGGLE_RADIO_LIBRARY,
+}
+
+# Alt+1/2/3 dotyczy tylko dwóch równorzędnych kolekcji Radia. W Historii,
+# Playlistach i innych podwidokach nie wolno dopuścić do odziedziczenia
+# lokalnego znaczenia „Foldery/Wszystkie pliki”.
+RADIO_COLLECTION_LIST_VIEW: dict[str, Action] = {
+    "Alt+1": Action.SORT_RADIO_COLLECTION_ADDED,
+    "Alt+2": Action.SORT_RADIO_COLLECTION_ALPHABETICAL,
+    "Alt+3": Action.SORT_RADIO_COLLECTION_CUSTOM,
 }
 
 # Litery bez modyfikatora sa bezpieczne tylko w odtwarzaczu Radia. Na liscie
@@ -1043,6 +1119,7 @@ RADIO_PLAYER_VIEW: dict[str, Action] = {
     "Shift+R": Action.ADD_RADIO_SCHEDULE,
     "T": Action.RECORD_SPLIT,
     "B": Action.ADD_BOOKMARK,
+    "Ctrl+Shift+L": Action.TOGGLE_RADIO_LIBRARY,
     "Ctrl+Shift+B": Action.ADD_NAMED_BOOKMARK,
     "Alt+D": Action.CURRENT_RADIO_BROADCAST_INFORMATION,
     "S": Action.RECOGNIZE_RADIO_TRACK,
@@ -1339,6 +1416,11 @@ WIIM_SESSION_VIEW: dict[str, Action] = {
 }
 
 
+FRONTIER_SMART_SESSION_VIEW: dict[str, Action] = {
+    "Ctrl+F5": Action.SESSION_CONFIGURE_CURRENT,
+}
+
+
 # Klawisze odtwarzacza WiiM z pełnego AMC. Muszą mieć pierwszeństwo przed
 # lokalnym zaznaczaniem fragmentu (I/O) i zwykłymi poleceniami plików.
 WIIM_PLAYER_VIEW: dict[str, Action] = {
@@ -1386,6 +1468,7 @@ def resolve(
     *,
     player_view: bool,
     radio_session: bool,
+    radio_collection: bool = False,
     radio_recording_context: bool = False,
     podcast_inbox: bool = False,
     podcast_library: bool = False,
@@ -1397,6 +1480,7 @@ def resolve(
     spotify_collection: bool = False,
     wiim_session: bool = False,
     wiim_streams: bool = False,
+    frontier_smart_session: bool = False,
     sonos_session: bool = False,
     sonos_own_streams: bool = False,
     service_history: bool = False,
@@ -1409,6 +1493,12 @@ def resolve(
         return GLOBAL_VIEW_SHORTCUTS[canonical]
     if not player_view and service_history and canonical == "Delete":
         return Action.REMOVE_SELECTED
+    if radio_session and canonical in RADIO_COLLECTION_LIST_VIEW:
+        return (
+            RADIO_COLLECTION_LIST_VIEW[canonical]
+            if not player_view and radio_collection
+            else None
+        )
     # Alt+1/2/3 ma dwa jawne znaczenia w sesji Podcasty i YouTube: sortuje
     # główną Bibliotekę albo skrzynkę Nowych odcinków. W pozostałych widokach
     # tej sesji nie może wpaść w obce znaczenie lokalnych Folderów/Plików.
@@ -1476,6 +1566,11 @@ def resolve(
         } and not wiim_streams:
             return None
         return action
+    if (
+        frontier_smart_session
+        and canonical in FRONTIER_SMART_SESSION_VIEW
+    ):
+        return FRONTIER_SMART_SESSION_VIEW[canonical]
     if sonos_session and canonical in SONOS_OWN_STREAMS_VIEW:
         return SONOS_OWN_STREAMS_VIEW[canonical] if sonos_own_streams else None
     if sonos_session and canonical in SONOS_SESSION_VIEW:
@@ -1518,6 +1613,7 @@ def _help_entries() -> list[tuple[str, str, Action]]:
         Action.SESSION_WIIM: "WiiM",
         Action.SESSION_SONOS: "Sonos",
         Action.SESSION_SPOTIFY: "Spotify",
+        Action.SESSION_FRONTIER_SMART: "Frontier Smart",
         Action.SESSION_LIST: (
             "Menedżer sesji: Enter przełącza, Spacja włącza lub wyłącza, "
             "Alt+strzałka zmienia kolejność"
@@ -1534,6 +1630,9 @@ def _help_entries() -> list[tuple[str, str, Action]]:
         Action.NEXT_SESSION: "Następna sesja",
         Action.COMMAND_PALETTE: "Paleta poleceń",
         Action.SELECT_SONOS_TARGET: "Wybierz grupę Sonos",
+        Action.FRONTIER_SMART_SELECT_MODE: (
+            "Wybierz tryb urządzenia Frontier Smart"
+        ),
         Action.ACTIVATE: "Otworz folder albo odtworz",
         Action.PARENT_FOLDER: "Folder nadrzedny",
         Action.CLOSE_LIST_PREVIEW: "Zamknij podglad lub podwidok",
@@ -1546,6 +1645,7 @@ def _help_entries() -> list[tuple[str, str, Action]]:
         Action.ADD_TO_QUEUE: "Dodaj zaznaczenie do kolejki albo je usun",
         Action.TOGGLE_PLAY_NEXT: "Odtwarzaj jako następne",
         Action.TOGGLE_FAVORITE: "Dodaj lub usuń z Ulubionych",
+        Action.TOGGLE_RADIO_LIBRARY: "Dodaj lub usuń stację z Biblioteki Radia",
         Action.MANAGE_PLAYLIST_MEMBERSHIP: "Zmień przynależność do playlist",
         Action.TIDAL_TOGGLE_LIBRARY: "Dodaj lub usuń z Biblioteki TIDAL",
         Action.TIDAL_TOGGLE_FAVORITE: "Dodaj lub usuń z Ulubionych TIDAL",
@@ -1682,6 +1782,11 @@ def _help_entries() -> list[tuple[str, str, Action]]:
         Action.VIEW_RECORDED_RADIO_FILES: "Historia nagrywania",
         Action.ADD_RADIO_SCHEDULE: "Zaplanuj nagranie wybranej stacji",
         Action.MANAGE_RADIO_SCHEDULES: "Harmonogram nagrywania",
+        Action.SORT_RADIO_COLLECTION_ADDED: (
+            "Radio: według dodania, najnowsze na początku"
+        ),
+        Action.SORT_RADIO_COLLECTION_ALPHABETICAL: "Radio: alfabetycznie",
+        Action.SORT_RADIO_COLLECTION_CUSTOM: "Radio: kolejność własna",
         Action.VIEW_PODCAST_INBOX: "Nowe odcinki i materiały",
         Action.VIEW_PODCAST_DOWNLOADS: "Pobrane odcinki podcastów",
         Action.SORT_PODCAST_INBOX_ADDED: (
@@ -1831,8 +1936,10 @@ def _help_entries() -> list[tuple[str, str, Action]]:
         SPOTIFY_LIST_VIEW,
         WIIM_SESSION_VIEW,
         WIIM_PLAYER_VIEW,
+        FRONTIER_SMART_SESSION_VIEW,
         SONOS_SESSION_VIEW,
         LIST_VIEW,
+        RADIO_COLLECTION_LIST_VIEW,
         RADIO_LIST_VIEW,
         RADIO_PLAYER_VIEW,
         PLAYER_VIEW,
@@ -1892,6 +1999,7 @@ def _help_entries() -> list[tuple[str, str, Action]]:
         Action.SESSION_ENABLE,
         Action.SESSION_DISABLE_CURRENT,
         Action.SESSION_CONFIGURE_CURRENT,
+        Action.FRONTIER_SMART_SELECT_MODE,
         Action.REFRESH_COMMON_DATA,
         Action.COMMON_DATA_STATUS,
         Action.OPEN_CONTAINING_FOLDER,

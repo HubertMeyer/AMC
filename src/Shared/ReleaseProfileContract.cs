@@ -36,6 +36,7 @@ internal static class ReleaseProfileContract
         "session.radio",
         "session.podcasts-youtube",
         "session.wiim",
+        "session.sonos",
         "recording",
         "schedules",
         "bookmarks",
@@ -43,6 +44,7 @@ internal static class ReleaseProfileContract
         "command-palette",
         "keyboard-help",
         "problem-report-local",
+        "experimental",
     ];
 
     internal static readonly ReleaseProfileDescriptor Test = new(
@@ -57,14 +59,13 @@ internal static class ReleaseProfileContract
         "AMC-wx-Lite/cache",
         "AMC-wx-Lite/logs",
         "AccessibleMediaController.Test",
-        ["files", "radio", "podcasts", "tidal", "wiim", "sonos", "spotify"],
+        ["files", "radio", "podcasts", "tidal", "wiim", "sonos", "spotify", "frontierSmart"],
         CommonCapabilities.Concat(
         [
-            "session.sonos",
             "session.spotify",
             "session.tidal",
+            "session.frontier-smart",
             "spotify.playlists",
-            "experimental",
         ]).ToArray(),
         @"Local\AccessibleMultimediaController.PythonLauncher.SingleInstance",
         @"Local\AccessibleMultimediaController.PythonUpdater.Test.SingleInstance",
@@ -85,7 +86,7 @@ internal static class ReleaseProfileContract
         "AMC/cache",
         "AMC/logs",
         "AccessibleMediaController.Public",
-        ["files", "radio", "podcasts", "wiim"],
+        ["files", "radio", "podcasts", "wiim", "sonos"],
         CommonCapabilities,
         @"Local\AccessibleMultimediaController.PythonLauncher.Public.SingleInstance",
         @"Local\AccessibleMultimediaController.PythonUpdater.Public.SingleInstance",

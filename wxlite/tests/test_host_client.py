@@ -453,6 +453,8 @@ def test_profile_mutations_use_narrow_named_operations() -> None:
             client.add_radio_station("Nowa stacja", "https://example.invalid/new"),
             client.import_playlist_to_library("D:/wymiana/stacje.m3u"),
             client.export_radio_favorites("D:/wymiana/ulubione.m3u"),
+            client.toggle_radio_library(["radio-1"]),
+            client.set_radio_collection_sort("library", "Alphabetical"),
             client.toggle_profile_favorites("files", ["local-1"]),
             client.remove_profile_items("files", "favorites", ["local-1"]),
             client.recycle_local_files(["local-1"]),
@@ -465,6 +467,8 @@ def test_profile_mutations_use_narrow_named_operations() -> None:
             "radio.addStation",
             "radio.importPlaylistToLibrary",
             "radio.exportFavorites",
+            "radio.toggleLibrary",
+            "radio.collectionSort",
             "library.toggleFavorite",
             "library.remove",
             "library.recycle",
@@ -480,6 +484,11 @@ def test_profile_mutations_use_narrow_named_operations() -> None:
         }
         assert calls[5]["args"] == {"path": "D:/wymiana/stacje.m3u"}
         assert calls[6]["args"] == {"path": "D:/wymiana/ulubione.m3u"}
+        assert calls[7]["args"] == {"itemIds": ["radio-1"]}
+        assert calls[8]["args"] == {
+            "view": "library",
+            "mode": "Alphabetical",
+        }
     finally:
         client.close()
 

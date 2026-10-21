@@ -26,6 +26,7 @@ internal static class Program
         ("--account-settings", AccountSettingsStoreTests.Run),
         ("--wiim", WiiMContractTests.Run),
         ("--wiim-profile", WiiMProfileMutationTests.Run),
+        ("--frontier-smart", FrontierSmartContractTests.Run),
         ("--sonos", SonosContractTests.Run),
         ("--sonos-profile", SonosOwnStreamsMutationTests.Run),
     ];

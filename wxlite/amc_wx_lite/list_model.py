@@ -37,6 +37,7 @@ KIND_LABELS: dict[str, str] = {
     "podcast": "podcast",
     "episode": "odcinek",
     "device": "urządzenie",
+    "frontierSmartDevice": "urządzenie",
     # Te dwa wiersze są samowyjaśniającymi kategoriami („Presety urządzenia”
     # i „Strumienie zapisane w AMC”). Słowo „źródło” przed natywnym licznikiem
     # 1 z 2 nie wnosiło informacji i tylko wydłużało odczyt NVDA.

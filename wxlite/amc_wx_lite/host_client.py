@@ -777,6 +777,72 @@ class LiteHostClient:
         """List configured WiiM devices without exposing their IP addresses."""
         return self.call("wiim.devices", timeout=15.0)
 
+    def frontier_smart_devices(self) -> Any:
+        return self.call("frontierSmart.devices", timeout=15.0)
+
+    def frontier_smart_discover(self) -> Any:
+        return self.call("frontierSmart.discover", timeout=15.0)
+
+    def frontier_smart_add(self, address: str, pin: str) -> Any:
+        return self.call(
+            "frontierSmart.add",
+            {"address": address, "pin": pin},
+            timeout=30.0,
+        )
+
+    def frontier_smart_remove(self, device_id: str) -> Any:
+        return self.call(
+            "frontierSmart.remove", {"deviceId": device_id}, timeout=15.0
+        )
+
+    def frontier_smart_select(self, device_id: str) -> Any:
+        return self.call(
+            "frontierSmart.select", {"deviceId": device_id}, timeout=15.0
+        )
+
+    def frontier_smart_snapshot(self, device_id: str) -> Any:
+        return self.call(
+            "frontierSmart.snapshot", {"deviceId": device_id}, timeout=30.0
+        )
+
+    def frontier_smart_transport(
+        self,
+        device_id: str,
+        command: str,
+        *,
+        volume: int | None = None,
+    ) -> Any:
+        args: dict[str, Any] = {"deviceId": device_id, "command": command}
+        if volume is not None:
+            args["volume"] = int(volume)
+        return self.call("frontierSmart.transport", args, timeout=30.0)
+
+    def frontier_smart_modes(self, device_id: str) -> Any:
+        return self.call(
+            "frontierSmart.modes", {"deviceId": device_id}, timeout=30.0
+        )
+
+    def frontier_smart_set_mode(self, device_id: str, mode_key: int) -> Any:
+        return self.call(
+            "frontierSmart.modeSet",
+            {"deviceId": device_id, "modeKey": int(mode_key)},
+            timeout=30.0,
+        )
+
+    def frontier_smart_presets(self, device_id: str) -> Any:
+        return self.call(
+            "frontierSmart.presets", {"deviceId": device_id}, timeout=30.0
+        )
+
+    def frontier_smart_activate_preset(
+        self, device_id: str, preset_key: int
+    ) -> Any:
+        return self.call(
+            "frontierSmart.presetActivate",
+            {"deviceId": device_id, "presetKey": int(preset_key)},
+            timeout=30.0,
+        )
+
     def wiim_snapshot(self, device_id: str) -> Any:
         """Read the current state of one configured WiiM device."""
         return self.call(
@@ -1713,6 +1779,20 @@ class LiteHostClient:
         """Scal playlistę ze wspólną Biblioteką radia i zapisz profil."""
         return self.call(
             "radio.importPlaylistToLibrary", {"path": path}, timeout=60.0
+        )
+
+    def toggle_radio_library(self, item_ids: list[str]) -> Any:
+        """Dodaj albo usuń stacje ze wspólnej Biblioteki Radia."""
+        return self.call(
+            "radio.toggleLibrary", {"itemIds": item_ids}, timeout=60.0
+        )
+
+    def set_radio_collection_sort(self, view: str, mode: str) -> Any:
+        """Zapisz tryb sortowania Biblioteki albo Ulubionych Radia."""
+        return self.call(
+            "radio.collectionSort",
+            {"view": view, "mode": mode},
+            timeout=60.0,
         )
 
     def export_radio_favorites(self, path: str) -> Any:

@@ -864,18 +864,19 @@ internal sealed class LiteProfileMutationStore
             {
                 throw new LiteRequestException(exception.Message);
             }
-            if (!result.Changed) return result;
+            if (result.SourceStationIds.Count == 0) return result;
 
-            WriteState(root);
+            if (result.Changed) WriteState(root);
             using var connection = OpenDatabase(_libraryDatabasePath);
             using var transaction = connection.BeginTransaction();
             var customOrder = ReadOrder(connection, transaction, "library_custom_order", "radio");
             var addedOrder = ReadOrder(connection, transaction, "library_added_order", "radio");
-            foreach (var id in result.ChangedStationIds)
-            {
-                SetOrderedMembership(customOrder, id, true);
-                SetOrderedMembership(addedOrder, id, true);
-            }
+            // Jedna współdzielona reguła dla zapisu i testu: lista AddedNewest
+            // odwraca trwały porządek, ale nie może odwrócić samej playlisty.
+            LiteRadioLibraryMutation.ApplyChangedOrder(
+                customOrder,
+                addedOrder,
+                result.SourceStationIds);
             RewriteOrder(connection, transaction, "library_custom_order", "radio", customOrder);
             RewriteOrder(connection, transaction, "library_added_order", "radio", addedOrder);
             TouchMetadata(connection, transaction);
@@ -914,6 +915,110 @@ internal sealed class LiteProfileMutationStore
             if (string.Equals(sessionId, "radio", StringComparison.Ordinal))
                 return ToggleRadioFavorites(ids);
             throw new LiteRequestException("Ulubione nie są dostępne w tej sesji.");
+        }
+    }
+
+    /// <summary>
+    /// Ctrl+Shift+L w Radiu zmienia członkostwo zaznaczonych stacji w
+    /// Bibliotece. Jeden gest ustawia wspólny stan całego zaznaczenia:
+    /// dodaje, jeżeli choć jednej stacji brakuje, a usuwa dopiero wtedy, gdy
+    /// wszystkie już należą do Biblioteki.
+    /// </summary>
+    public object ToggleRadioLibrary(IReadOnlyList<string> itemIds)
+    {
+        var ids = CleanDistinctIds(itemIds, "Wybierz stację radiową.");
+        EnsureMayWrite();
+        lock (_gate)
+        {
+            var root = ReadState();
+            var rows = ids.Select(id =>
+            {
+                var station = FindRadioStation(root, id);
+                return (
+                    Id: id,
+                    Title: ReadJsonText(station, "name", "Name"),
+                    InLibrary: ReadJsonBoolean(station, "isInLibrary", "IsInLibrary"),
+                    Station: station);
+            }).ToArray();
+            var inLibrary = rows.Any(row => !row.InLibrary);
+            var changed = 0;
+            foreach (var row in rows)
+            {
+                if (row.InLibrary == inLibrary) continue;
+                row.Station["isInLibrary"] = inLibrary;
+                if (!inLibrary) row.Station["isFavorite"] = false;
+                changed++;
+            }
+            if (changed > 0) WriteState(root);
+
+            using var connection = OpenDatabase(_libraryDatabasePath);
+            using var transaction = connection.BeginTransaction();
+            var libraryCustom = ReadOrder(connection, transaction, "library_custom_order", "radio");
+            var libraryAdded = ReadOrder(connection, transaction, "library_added_order", "radio");
+            var favoriteCustom = ReadOrder(connection, transaction, "favorite_order", "radio");
+            var favoriteAdded = ReadOrder(connection, transaction, "favorite_added_order", "radio");
+            foreach (var row in rows)
+            {
+                SetOrderedMembership(libraryCustom, row.Id, inLibrary);
+                if (!inLibrary)
+                {
+                    SetOrderedMembership(libraryAdded, row.Id, false);
+                    SetOrderedMembership(favoriteCustom, row.Id, false);
+                    SetOrderedMembership(favoriteAdded, row.Id, false);
+                }
+            }
+            if (inLibrary)
+            {
+                foreach (var row in rows.Reverse())
+                    SetOrderedMembership(libraryAdded, row.Id, true);
+            }
+            RewriteOrder(connection, transaction, "library_custom_order", "radio", libraryCustom);
+            RewriteOrder(connection, transaction, "library_added_order", "radio", libraryAdded);
+            RewriteOrder(connection, transaction, "favorite_order", "radio", favoriteCustom);
+            RewriteOrder(connection, transaction, "favorite_added_order", "radio", favoriteAdded);
+            TouchMetadata(connection, transaction);
+            transaction.Commit();
+            return new
+            {
+                inLibrary,
+                requested = rows.Length,
+                changed,
+                titles = rows.Select(row => row.Title).ToArray()
+            };
+        }
+    }
+
+    public object SetRadioCollectionSortMode(string requestedView, CollectionSortMode mode)
+    {
+        var (view, profileView) = requestedView.Trim().ToLowerInvariant() switch
+        {
+            "library" => ("library", "Biblioteka"),
+            "favorites" => ("favorites", "Ulubione"),
+            _ => throw new LiteRequestException(
+                "Sortowanie jest dostępne w Bibliotece i Ulubionych Radia.")
+        };
+        EnsureMayWrite();
+        lock (_gate)
+        {
+            var root = ReadState();
+            var navigation = EnsureObject(root, "sessionNavigation");
+            var sessions = EnsureObject(navigation, "sessions");
+            var radio = EnsureObject(sessions, "radio");
+            var modes = EnsureObject(radio, "collectionSortModes");
+            modes[profileView] = mode.ToString();
+            WriteState(root);
+            var label = mode switch
+            {
+                CollectionSortMode.Alphabetical => "alfabetycznie",
+                CollectionSortMode.Custom => "kolejność własna",
+                _ => "według dodania, najnowsze najpierw"
+            };
+            return new
+            {
+                view,
+                sortMode = mode.ToString(),
+                message = $"Radio — {profileView}: {label}"
+            };
         }
     }
 
@@ -1825,6 +1930,14 @@ internal sealed class LiteProfileMutationStore
         return stations.OfType<JsonObject>().FirstOrDefault(station =>
                    string.Equals(ReadJsonText(station, "id", "Id"), stationId, StringComparison.Ordinal))
                ?? throw new LiteRequestException("Nie można odnaleźć tej stacji w profilu AMC.");
+    }
+
+    private static JsonObject EnsureObject(JsonObject parent, string name)
+    {
+        if (parent[name] is JsonObject current) return current;
+        var created = new JsonObject();
+        parent[name] = created;
+        return created;
     }
 
     private static object LocalFolderPayload(

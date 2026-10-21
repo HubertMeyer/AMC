@@ -122,6 +122,7 @@ internal static class Program
         using var spotifyCatalog = OpenSpotifyCatalog(args);
         using var spotifyPlayback = new LiteSpotifyPlaybackCoordinator();
         using var wiim = OpenWiiM(args);
+        using var frontierSmart = OpenFrontierSmart(args);
         var componentUpdates = new LiteComponentUpdateCoordinator(
             ReadArgumentPath(args, "--state-json"));
         using var sonos = new LiteSonosCoordinator(
@@ -139,6 +140,7 @@ internal static class Program
             profileMutations,
             tidalCatalog,
             wiim,
+            frontierSmart,
             sonos,
             spotifyCatalog,
             spotifyPlayback,
@@ -424,6 +426,13 @@ internal static class Program
     {
         var state = ReadArgumentPath(args, "--state-json");
         return state is null ? null : new LiteWiiMCoordinator(state);
+    }
+
+    private static LiteFrontierSmartCoordinator? OpenFrontierSmart(string[] args)
+    {
+        var state = ReadArgumentPath(args, "--state-json");
+        var profile = ReadArgumentText(args, "--release-profile") ?? "test";
+        return state is null ? null : new LiteFrontierSmartCoordinator(state, profile);
     }
 
     private static LiteYouTubeAccountCoordinator? OpenYouTubeAccount(string[] args)

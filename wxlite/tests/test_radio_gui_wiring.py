@@ -3,7 +3,7 @@ import sys
 from pathlib import Path
 from types import SimpleNamespace
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from test_gui_logic import install_wx_stub
+from test_gui_logic import FakeKeyEvent, install_wx_stub
 install_wx_stub()
 from amc_wx_lite.gui import LiteFrame
 from amc_wx_lite.radio_views import RadioViewResult
@@ -24,6 +24,10 @@ def radio_shell():
                             announcer=SimpleNamespace(say=messages.append),
                             _run=requests.extend, _open_radio_view=requests.append,
                             messages=SimpleNamespace(custom_seek_seconds=300),
+                            _radio_effective_sort_modes={
+                                "library": "AddedNewest",
+                                "favorites": "AddedNewest",
+                            },
                             _transient_preview_return=None)
     frame._begin_transient_preview = lambda: LiteFrame._begin_transient_preview(frame)
     frame._show_playback_history_preview = (
@@ -98,6 +102,123 @@ def test_menu_help_and_keyboard_share_radio_actions():
         LiteFrame._dispatch(frame, action)
         assert len(requests) == 1 and requests[0].target_session_id is SessionId.RADIO
         assert requests[0].view is view
+
+
+def test_main_window_routes_radio_sort_favorite_and_library_shortcuts():
+    from amc_wx_lite.shortcuts import Action
+
+    frame, _, _ = radio_shell()
+    actions = []
+    frame._dispatch = actions.append
+    frame._screen_reader_modifier_down = lambda: False
+    frame.filter_box = SimpleNamespace(GetValue=lambda: "")
+    frame.options = SimpleNamespace(session_order=None)
+
+    for event, expected in (
+        (FakeKeyEvent(ord("1"), alt=True), Action.SORT_RADIO_COLLECTION_ADDED),
+        (FakeKeyEvent(ord("2"), alt=True), Action.SORT_RADIO_COLLECTION_ALPHABETICAL),
+        (FakeKeyEvent(ord("3"), alt=True), Action.SORT_RADIO_COLLECTION_CUSTOM),
+        (FakeKeyEvent(ord("U"), ctrl=True, shift=True), Action.TOGGLE_FAVORITE),
+        (FakeKeyEvent(ord("L"), ctrl=True, shift=True), Action.TOGGLE_RADIO_LIBRARY),
+    ):
+        LiteFrame._on_key(frame, event)
+        assert actions[-1] is expected
+
+
+def test_dispatch_uses_same_radio_sort_and_library_implementations_as_menu():
+    from amc_wx_lite.shortcuts import Action
+
+    frame, _, _ = radio_shell()
+    calls = []
+    frame._set_radio_collection_sort = lambda action: calls.append(("sort", action))
+    frame._toggle_radio_library = lambda: calls.append(("library", None))
+    frame._toggle_profile_favorite = lambda: calls.append(("favorite", None))
+    LiteFrame._dispatch(frame, Action.SORT_RADIO_COLLECTION_ALPHABETICAL)
+    LiteFrame._dispatch(frame, Action.TOGGLE_RADIO_LIBRARY)
+    LiteFrame._dispatch(frame, Action.TOGGLE_FAVORITE)
+    assert calls == [
+        ("sort", Action.SORT_RADIO_COLLECTION_ALPHABETICAL),
+        ("library", None),
+        ("favorite", None),
+    ]
+
+
+def test_radio_library_and_favorite_commands_write_and_announce_result():
+    from amc_wx_lite.list_model import Row
+
+    frame, _, messages = radio_shell()
+    row = Row(item_id="radio-1", title="Jedynka", kind="station")
+    frame.navigator.apply_stations([row])
+    calls, refreshes = [], []
+    frame.client = SimpleNamespace(
+        toggle_radio_library=lambda ids: calls.append(("library", ids)) or {
+            "changed": 1,
+            "inLibrary": False,
+        },
+        toggle_profile_favorites=lambda session, ids: calls.append(
+            ("favorite", session, ids)
+        ) or {
+            "changed": 1,
+            "favorite": True,
+        },
+    )
+    frame.runner = DeferredRunner()
+    frame._selected_action_rows = lambda: [row]
+
+    def refresh(**kwargs):
+        refreshes.append(kwargs)
+        callback = kwargs.get("after_refresh")
+        if callback is not None:
+            callback()
+
+    frame._refresh_profile_view = refresh
+
+    LiteFrame._toggle_radio_library(frame)
+    assert frame.runner.key == "radio-library"
+    frame.runner.done(frame.runner.work())
+    assert calls[-1] == ("library", ["radio-1"])
+    assert messages[-1] == "Usunięto z Biblioteki: Jedynka"
+
+    LiteFrame._toggle_profile_favorite(frame)
+    assert frame.runner.key == "profile-favorite"
+    frame.runner.done(frame.runner.work())
+    assert calls[-1] == ("favorite", "radio", ["radio-1"])
+    assert messages[-1] == "Dodano do ulubionych: Jedynka"
+    assert all(item["preferred_id"] == "radio-1" for item in refreshes)
+
+
+def test_radio_sort_command_persists_refreshes_and_announces_user_label():
+    from amc_wx_lite.list_model import Row
+    from amc_wx_lite.shortcuts import Action
+
+    frame, _, messages = radio_shell()
+    frame.navigator.apply_stations([
+        Row(item_id="radio-1", title="Jedynka", kind="station")
+    ])
+    calls, opened = [], []
+    frame.client = SimpleNamespace(
+        set_radio_collection_sort=lambda view, mode: calls.append(
+            (view, mode)
+        ) or {"sortMode": mode}
+    )
+    frame.runner = DeferredRunner()
+    frame._refresh_menu_state = lambda: None
+
+    def open_view(intent, *, after_refresh=None):
+        opened.append(intent)
+        if after_refresh is not None:
+            after_refresh()
+
+    frame._open_radio_view = open_view
+    LiteFrame._set_radio_collection_sort(
+        frame,
+        Action.SORT_RADIO_COLLECTION_ALPHABETICAL,
+    )
+    assert frame.runner.key == "radio-sort"
+    frame.runner.done(frame.runner.work())
+    assert calls == [("library", "Alphabetical")]
+    assert opened[0].preferred_id == "radio-1"
+    assert messages == ["Radio: alfabetycznie"]
 
 
 def test_shift_r_dispatches_direct_new_schedule_request():

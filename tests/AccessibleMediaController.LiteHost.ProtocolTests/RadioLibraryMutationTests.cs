@@ -59,9 +59,9 @@ internal static class RadioLibraryMutationTests
         var result = LiteRadioLibraryMutation.Apply(
             root,
             [
+                new LiteRadioStationDraft("Nowa", "https://radio.invalid/new"),
                 new LiteRadioStationDraft("Nazwa z playlisty", "https://radio.invalid/catalog"),
                 new LiteRadioStationDraft("Duplikat", "https://radio.invalid/saved"),
-                new LiteRadioStationDraft("Nowa", "https://radio.invalid/new"),
                 new LiteRadioStationDraft("Nowa drugi raz", "https://radio.invalid/new")
             ],
             parserSkipped: 2,
@@ -71,10 +71,31 @@ internal static class RadioLibraryMutationTests
             value["id"]?.GetValue<string>() == "radio:catalog");
         Assert.True(result.PromotedCount == 1 && result.AddedCount == 1,
             "import przywraca katalogową stację i dodaje tylko jeden nowy adres");
+        Assert.True(result.ChangedStationIds.Count == 2
+                    && result.ChangedStationIds[0].StartsWith(
+                        "radio:imported:", StringComparison.Ordinal)
+                    && result.ChangedStationIds[1] == "radio:catalog",
+            "zmienione stacje zachowują kolejność playlisty między wpisem istniejącym i nowym");
+        Assert.True(result.SourceStationIds.Count == 3
+                    && result.SourceStationIds[0] == result.ChangedStationIds[0]
+                    && result.SourceStationIds[1] == "radio:catalog"
+                    && result.SourceStationIds[2] == "radio:saved",
+            "ponowny import obejmuje też już zapisane stacje i może naprawić ich kolejność");
+        var customOrder = new List<string> { "radio:starsza" };
+        var addedOrder = new List<string> { "radio:starsza" };
+        LiteRadioLibraryMutation.ApplyChangedOrder(
+            customOrder,
+            addedOrder,
+            result.SourceStationIds);
+        Assert.True(customOrder.Skip(1).SequenceEqual(result.SourceStationIds),
+            "kolejność własna zachowuje kolejność importowanej playlisty");
+        Assert.True(addedOrder.AsEnumerable().Reverse().Take(3)
+                .SequenceEqual(result.SourceStationIds),
+            "widok najnowszych nie odwraca kolejności wewnątrz importowanej playlisty");
         Assert.True(result.SkippedCount == 4,
             "wynik sumuje błędy parsera i duplikaty Biblioteki oraz playlisty");
-        Assert.Equal("radio:catalog", result.PreferredStationId,
-            "po imporcie pierwszeństwo fokusu ma przywrócona stacja");
+        Assert.Equal(result.SourceStationIds[0], result.PreferredStationId,
+            "po imporcie fokus wraca na pierwszy wpis playlisty");
         Assert.Equal("Bogata nazwa katalogowa", catalog["name"]?.GetValue<string>(),
             "import nie zastępuje bogatej nazwy katalogowej nazwą z pliku");
         Assert.True(catalog["isInLibrary"]?.GetValue<bool>() == true,

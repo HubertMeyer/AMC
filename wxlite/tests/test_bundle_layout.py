@@ -27,20 +27,25 @@ def test_python_package_matches_isolated_runtime_app_path():
         assert not (target / "AMC-wx-Lite.cmd").exists()
 
 
-def test_public_python_package_omits_and_removes_private_service_modules():
+def test_public_python_package_contains_sonos_and_omits_only_disabled_services():
     with tempfile.TemporaryDirectory() as folder:
         target = Path(folder)
         package = target / "app" / "amc_wx_lite"
         package.mkdir(parents=True)
-        for name in bundle.PRIVATE_SERVICE_MODULES:
+        for name in bundle.PROFILE_GATED_SERVICE_MODULES:
             (package / name).write_text("stary prywatny modul", encoding="utf-8")
 
         copied = bundle.copy_python_code(target, bundle.profile_from_id("public"))
 
         assert "app/amc_wx_lite/gui.py" in copied
-        for name in bundle.PRIVATE_SERVICE_MODULES:
-            assert not (package / name).exists()
-            assert f"app/amc_wx_lite/{name}" not in copied
+        profile = bundle.profile_from_id("public")
+        for name, capability in bundle.PROFILE_GATED_SERVICE_MODULES.items():
+            if capability in profile.capabilities:
+                assert (package / name).is_file()
+                assert f"app/amc_wx_lite/{name}" in copied
+            else:
+                assert not (package / name).exists()
+                assert f"app/amc_wx_lite/{name}" not in copied
 
 
 def test_problem_report_endpoint_is_optional_validated_and_shared_by_profiles():
@@ -114,12 +119,12 @@ def test_public_gui_imports_without_private_service_modules():
             [
                 sys.executable,
                 "-c",
-                (
+                (f"import sys; sys.path.insert(0, {str(target / 'app')!r}); "
                     "import amc_wx_lite.gui as gui; "
                     "assert gui._RELEASE_PROFILE.profile_id == 'public'; "
                     "assert not hasattr(gui, 'TidalSource'); "
                     "assert not hasattr(gui, 'SpotifyPlaylistDialog'); "
-                    "assert not hasattr(gui, 'SonosPayloadError')"
+                    "assert hasattr(gui, 'SonosPayloadError')"
                 ),
             ],
             cwd=target,
@@ -140,7 +145,9 @@ def test_bundle_manifest_profile_is_explicit_and_public_is_restricted():
     assert manifest["displayName"] == "AMC"
     assert manifest["installId"] == "AMC.Public.win-x64"
     assert manifest["updateChannel"] == "stable"
-    assert manifest["sessions"] == ["files", "radio", "podcasts", "wiim"]
+    assert manifest["sessions"] == [
+        "files", "radio", "podcasts", "wiim", "sonos"
+    ]
     assert "spotify" not in " ".join(manifest["capabilities"]).casefold()
     assert manifest["credentialNamespace"] != (
         bundle.profile_from_id("test").credential_namespace
@@ -162,7 +169,10 @@ def test_public_profile_rejects_any_listed_librespot_component():
 
 def test_public_profile_rejects_any_listed_private_service_module():
     public = bundle.profile_from_id("public")
-    for name in bundle.PRIVATE_SERVICE_MODULES:
+    for name, capability in bundle.PROFILE_GATED_SERVICE_MODULES.items():
+        if capability in public.capabilities:
+            bundle.validate_profile_files(public, [f"app/amc_wx_lite/{name}"])
+            continue
         try:
             bundle.validate_profile_files(public, [f"app/amc_wx_lite/{name}"])
         except SystemExit as error:
@@ -630,8 +640,12 @@ def test_full_public_bundle_omits_librespot_and_has_complete_sizes():
         assert manifest["releaseProfile"] == "public"
         assert "librespotHost" not in manifest
         assert not any("librespot" in relative.casefold() for relative in manifest["files"])
+        forbidden_modules = {
+            name for name, capability in bundle.PROFILE_GATED_SERVICE_MODULES.items()
+            if capability not in bundle.profile_from_id("public").capabilities
+        }
         assert not any(
-            Path(relative).name in bundle.PRIVATE_SERVICE_MODULES
+            Path(relative).name in forbidden_modules
             for relative in manifest["files"]
         )
         assert set(manifest["fileHashes"]) == set(manifest["files"])

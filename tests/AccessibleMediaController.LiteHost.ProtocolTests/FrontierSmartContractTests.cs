@@ -1,0 +1,163 @@
+using System.Text.Json;
+using AccessibleMediaController.Core.Devices.FrontierSmart;
+using AccessibleMediaController.LiteHost.Protocol;
+
+namespace AccessibleMediaController.LiteHost.ProtocolTests;
+
+internal static class FrontierSmartContractTests
+{
+    public static void Run()
+    {
+        AddressPolicyAcceptsOnlyLocalIpAddresses();
+        XmlParserReadsTypedValuesAndRejectsDtd();
+        ListsUseOnlyIntentionalLabels();
+        DeviceAndSnapshotResultsDoNotExposeAddressOrRuntimeTypes();
+        TransportAndNumericArgumentsAreStrict();
+    }
+
+    private static void AddressPolicyAcceptsOnlyLocalIpAddresses()
+    {
+        foreach (var accepted in new[]
+                 {
+                     "192.168.1.55", "10.20.30.40", "172.16.0.8", "127.0.0.1", "fe80::1"
+                 })
+        {
+            Check(FrontierSmartAddressPolicy.TryNormalize(accepted, out _),
+                $"odrzucono lokalny adres {accepted}");
+        }
+        foreach (var rejected in new[]
+                 {
+                     "8.8.8.8", "1.1.1.1", "radio.example", "https://192.168.1.55"
+                 })
+        {
+            Check(!FrontierSmartAddressPolicy.TryNormalize(rejected, out _),
+                $"przyjęto zewnętrzny albo niejawny adres {rejected}");
+        }
+    }
+
+    private static void XmlParserReadsTypedValuesAndRejectsDtd()
+    {
+        var value = FrontierSmartXmlParser.ParseValue(
+            FrontierSmartNodes.Volume,
+            """<fsapiResponse><status>FS_OK</status><value><u8>17</u8></value></fsapiResponse>""");
+        Check(value.Success && value.AsInt32() == 17 && value.ValueType == "u8",
+            "parser nie odczytał typowanej wartości FSAPI");
+
+        try
+        {
+            FrontierSmartXmlParser.ParseValue(
+                FrontierSmartNodes.PlayName,
+                """<!DOCTYPE x [<!ENTITY y SYSTEM "file:///C:/Windows/win.ini">]><fsapiResponse><status>FS_OK</status><value><c8_array>&y;</c8_array></value></fsapiResponse>""");
+            throw new InvalidOperationException("parser przyjął DTD w odpowiedzi urządzenia");
+        }
+        catch (System.Xml.XmlException)
+        {
+        }
+    }
+
+    private static void ListsUseOnlyIntentionalLabels()
+    {
+        var modes = FrontierSmartXmlParser.ParseModes(
+            """<fsapiResponse><status>FS_OK</status><item key="0"><field name="id"><c8_array>ir</c8_array></field><field name="label"><c8_array>Radio internetowe</c8_array></field><field name="selectable"><u8>1</u8></field><field name="streamable"><u8>1</u8></field><field name="modetype"><u8>0</u8></field></item></fsapiResponse>""");
+        Check(modes.Count == 1 && modes[0].AccessibleLabel == "Radio internetowe",
+            "tryb nie ma celowej etykiety użytkowej");
+
+        var presets = FrontierSmartXmlParser.ParsePresets(
+            """<fsapiResponse><status>FS_OK</status><item key="0"><field name="name"><c8_array>Trójka</c8_array></field></item></fsapiResponse>""");
+        Check(presets.Count == 1 && presets[0].AccessibleLabel == "Trójka, preset 1",
+            "preset nie ma celowej etykiety użytkowej");
+    }
+
+    private static void DeviceAndSnapshotResultsDoNotExposeAddressOrRuntimeTypes()
+    {
+        var device = new FrontierSmartDeviceSettings
+        {
+            Id = "technical-device-id",
+            Address = "192.168.1.55",
+            DisplayName = "Radio w salonie",
+            FirmwareVersion = "ir-mmi-FS2026-0500-088"
+        };
+        var settings = new FrontierSmartSettings
+        {
+            SelectedDeviceId = device.Id,
+            Devices = [device]
+        };
+        var devicesJson = JsonSerializer.Serialize(
+            LiteFrontierSmartContract.CreateDevicesResult(settings));
+        using var devices = JsonDocument.Parse(devicesJson);
+        var item = devices.RootElement.GetProperty("items")[0];
+        Check(item.GetProperty("title").GetString() == "Radio w salonie",
+            "lista zgubiła nazwę urządzenia");
+        Check(item.GetProperty("detail").GetString()
+              == "Firmware ir-mmi-FS2026-0500-088",
+            "lista zgubiła użytkowy opis firmware");
+        Check(!devicesJson.Contains("192.168.1.55", StringComparison.Ordinal)
+              && !devicesJson.Contains("FrontierSmartDeviceSettings", StringComparison.Ordinal),
+            "adres albo typ obiektu wyciekł do listy urządzeń");
+
+        var snapshot = new FrontierSmartSnapshot(
+            "Radio w salonie", "radio-id", "firmware", true,
+            8, 21, false, 0, 1, 2,
+            "Trójka", "Audycja", "Polskie Radio", "", 
+            TimeSpan.FromMinutes(60), TimeSpan.FromSeconds(15));
+        var snapshotJson = JsonSerializer.Serialize(
+            LiteFrontierSmartContract.CreateSnapshotResult(device, snapshot));
+        using var payload = JsonDocument.Parse(snapshotJson);
+        Check(payload.RootElement.GetProperty("title").GetString() == "Trójka",
+            "migawka zgubiła tytuł");
+        Check(payload.RootElement.GetProperty("volume").GetInt32() == 40,
+            "migawka nie przeliczyła kroków głośności na procent");
+        Check(payload.RootElement.GetProperty("playbackState").GetString()
+              == "odtwarzanie",
+            "migawka nie zmapowała stanu odtwarzania");
+        Check(!snapshotJson.Contains("192.168.1.55", StringComparison.Ordinal)
+              && !snapshotJson.Contains("FrontierSmartSnapshot", StringComparison.Ordinal),
+            "adres albo typ obiektu wyciekł do migawki");
+    }
+
+    private static void TransportAndNumericArgumentsAreStrict()
+    {
+        foreach (var command in new[]
+                 {
+                     "toggle", "previous", "next", "setVolume", "volumeUp5",
+                     "volumeDown5", "volumeUp1", "volumeDown1", "toggleMute", "togglePower"
+                 })
+        {
+            using var accepted = JsonDocument.Parse(
+                $$"""{"deviceId":"device-1","command":"{{command}}"}""");
+            Check(LiteFrontierSmartContract.ReadTransportCommand(accepted.RootElement)
+                  == command,
+                $"odrzucono polecenie {command}");
+        }
+        using var invalidCommand = JsonDocument.Parse(
+            """{"deviceId":"device-1","command":"shell"}""");
+        ExpectLiteError(
+            () => LiteFrontierSmartContract.ReadTransportCommand(invalidCommand.RootElement),
+            "przyjęto nieznane polecenie transportu");
+
+        using var acceptedVolume = JsonDocument.Parse("""{"volume":37}""");
+        Check(LiteFrontierSmartContract.ReadVolume(acceptedVolume.RootElement) == 37,
+            "odrzucono prawidłową głośność");
+        using var invalidVolume = JsonDocument.Parse("""{"volume":137}""");
+        ExpectLiteError(
+            () => LiteFrontierSmartContract.ReadVolume(invalidVolume.RootElement),
+            "przyjęto głośność poza zakresem");
+    }
+
+    private static void ExpectLiteError(Action action, string message)
+    {
+        try
+        {
+            action();
+            throw new InvalidOperationException(message);
+        }
+        catch (LiteRequestException)
+        {
+        }
+    }
+
+    private static void Check(bool condition, string message)
+    {
+        if (!condition) throw new InvalidOperationException(message);
+    }
+}

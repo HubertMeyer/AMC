@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using AccessibleMediaController.Core.Commands;
+using AccessibleMediaController.Core.Devices.FrontierSmart;
 using AccessibleMediaController.Core.Devices.WiiM;
 using AccessibleMediaController.Core.Input;
 using AccessibleMediaController.Core.LocalMedia;
@@ -183,6 +184,7 @@ public sealed class ConfigurationStore
         NormalizeRadio(state);
         NormalizePodcasts(state);
         NormalizeWiiM(state);
+        NormalizeFrontierSmart(state);
         NormalizeSonos(state);
         NormalizeTidal(state);
         ValidateState(state);
@@ -211,6 +213,7 @@ public sealed class ConfigurationStore
             NormalizeRadio(state);
             NormalizePodcasts(state);
             NormalizeWiiM(state);
+            NormalizeFrontierSmart(state);
             NormalizeSonos(state);
             ValidateState(state);
             try
@@ -376,6 +379,7 @@ public sealed class ConfigurationStore
         LocalMedia = includeLibraryPayload ? state.LocalMedia : new(),
         Radio = state.Radio,
         WiiM = state.WiiM,
+        FrontierSmart = state.FrontierSmart,
         Sonos = state.Sonos,
         Tidal = state.Tidal,
         Spotify = state.Spotify,
@@ -511,6 +515,7 @@ public sealed class ConfigurationStore
         NormalizeRadio(state);
         NormalizePodcasts(state);
         NormalizeWiiM(state);
+        NormalizeFrontierSmart(state);
         NormalizeSonos(state);
         MigrateLegacyWiiMNetworkStreamOrder(state, sourceSchemaVersion);
         MigrateLegacyPodcastInbox(state, sourceSchemaVersion);
@@ -613,6 +618,41 @@ public sealed class ConfigurationStore
                 StringComparison.OrdinalIgnoreCase)))
         {
             state.WiiM.SelectedDeviceId = state.WiiM.Devices.FirstOrDefault()?.Id;
+        }
+    }
+
+    private static void NormalizeFrontierSmart(PersistedState state)
+    {
+        state.FrontierSmart ??= new FrontierSmartSettings();
+        state.FrontierSmart.Devices = (state.FrontierSmart.Devices ?? [])
+            .Where(device =>
+                device is not null
+                && FrontierSmartAddressPolicy.TryNormalize(device.Address, out _))
+            .Select(device =>
+            {
+                FrontierSmartAddressPolicy.TryNormalize(
+                    device.Address,
+                    out var normalizedAddress);
+                device.Address = normalizedAddress;
+                device.Id = string.IsNullOrWhiteSpace(device.Id)
+                    ? "frontier-smart:" + normalizedAddress
+                    : device.Id.Trim();
+                device.DisplayName = string.IsNullOrWhiteSpace(device.DisplayName)
+                    ? "Urządzenie Frontier Smart"
+                    : device.DisplayName.Trim();
+                device.FirmwareVersion = (device.FirmwareVersion ?? string.Empty).Trim();
+                return device;
+            })
+            .DistinctBy(device => device.Id, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        if (state.FrontierSmart.SelectedDeviceId is not null
+            && state.FrontierSmart.Devices.All(device => !string.Equals(
+                device.Id,
+                state.FrontierSmart.SelectedDeviceId,
+                StringComparison.OrdinalIgnoreCase)))
+        {
+            state.FrontierSmart.SelectedDeviceId =
+                state.FrontierSmart.Devices.FirstOrDefault()?.Id;
         }
     }
 

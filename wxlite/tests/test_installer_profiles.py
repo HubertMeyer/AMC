@@ -103,6 +103,9 @@ def test_build_helper_verifies_profile_clean_source_and_full_bundle() -> None:
     assert 'ValidateSet("public", "test")' in BUILD
     assert "manifest.releaseProfile" in BUILD
     assert "manifest.sourceDirty" in BUILD
+    assert ".VersionInfo.ProductVersion" in BUILD
+    assert "$launcherVersion -ne $Version" in BUILD
+    assert "Numer instalatora $Version nie zgadza się" in BUILD
     assert "--sprawdz-pakiet-pelny-cicho" in BUILD
     assert "Test-AMCBundleStartup.ps1" in BUILD
     assert "& $startupSmokeTool -BundleRoot $bundle" in BUILD

@@ -30,6 +30,7 @@ from amc_wx_lite.shortcuts import (
     PODCAST_INBOX_LIST_VIEW,
     PODCAST_LIBRARY_LIST_VIEW,
     PODCAST_SESSION_VIEW,
+    RADIO_COLLECTION_LIST_VIEW,
     RADIO_LIST_VIEW,
     RADIO_PLAYER_VIEW,
     SPOTIFY_COLLECTION_LIST_VIEW,
@@ -157,6 +158,7 @@ def test_shortcut_shown_in_menu_is_the_shortcut_that_really_works() -> None:
         PODCAST_INBOX_LIST_VIEW,
         PODCAST_SESSION_VIEW,
         LIST_VIEW,
+        RADIO_COLLECTION_LIST_VIEW,
         RADIO_LIST_VIEW,
         RADIO_PLAYER_VIEW,
         SPOTIFY_COLLECTION_LIST_VIEW,
@@ -253,7 +255,7 @@ def test_no_duplicate_labels_or_shortcuts() -> None:
         )
     for chord in ("Alt+1", "Alt+2", "Alt+3"):
         contextual = duplicates.get(chord, [])
-        assert len(contextual) == (7 if chord in ("Alt+1", "Alt+2") else 6)
+        assert len(contextual) == (8 if chord in ("Alt+1", "Alt+2") else 7)
         assert all(not item.accelerator for item in contextual), (
             f"kontekstowe {chord} nie moze byc akceleratorem okna"
         )
@@ -449,6 +451,28 @@ def test_favorite_menu_is_contextual_and_does_not_steal_shortcut() -> None:
     assert not item.needs_podcast_item
     assert not item.accelerator
     assert "ulubion" in item.label.replace("&", "").casefold()
+
+
+def test_radio_library_and_sort_commands_are_discoverable_and_contextual() -> None:
+    membership = next(
+        entry for entry in all_items()
+        if entry.action is Action.TOGGLE_RADIO_LIBRARY
+    )
+    assert membership.shortcut == "Ctrl+Shift+L"
+    assert membership.visible_sessions == (SessionId.RADIO,)
+    assert membership.needs_radio_station
+    assert not membership.accelerator
+
+    sort_actions = {
+        Action.SORT_RADIO_COLLECTION_ADDED,
+        Action.SORT_RADIO_COLLECTION_ALPHABETICAL,
+        Action.SORT_RADIO_COLLECTION_CUSTOM,
+    }
+    entries = [entry for entry in all_items() if entry.action in sort_actions]
+    assert {entry.shortcut for entry in entries} == {"Alt+1", "Alt+2", "Alt+3"}
+    assert all(entry.checkable and entry.needs_radio_collection for entry in entries)
+    assert all(entry.visible_sessions == (SessionId.RADIO,) for entry in entries)
+    assert all(not entry.accelerator for entry in entries)
 
 
 def test_playlist_membership_menu_is_contextual_and_does_not_steal_shortcut() -> None:
@@ -804,7 +828,7 @@ def test_current_session_mute_is_an_audio_checkable_playback_command() -> None:
     assert item.shortcut == "Ctrl+M"
     assert item.checkable
     assert item.needs_playback
-    assert item.visible_sessions == menu_model.SESSION_AUDIO_OUTPUTS
+    assert item.visible_sessions == menu_model.MUTE_SESSIONS
     assert not item.accelerator
 
 

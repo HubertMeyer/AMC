@@ -64,6 +64,7 @@ internal sealed class LiteEngineHandlers : IDisposable
     private readonly LiteCommonDataSnapshotCoordinator? _commonDataSnapshot;
     private readonly LiteTidalDesktopCoordinator _tidalDesktop = new();
     private readonly LiteWiiMCoordinator? _wiim;
+    private readonly LiteFrontierSmartCoordinator? _frontierSmart;
     private readonly LiteSonosCoordinator? _sonos;
     private string? _lastPodcastProgressError;
     private bool _currentPodcastCompleted;
@@ -132,6 +133,7 @@ internal sealed class LiteEngineHandlers : IDisposable
         LiteProfileMutationStore? profileMutations = null,
         LiteTidalCatalogCoordinator? tidalCatalog = null,
         LiteWiiMCoordinator? wiim = null,
+        LiteFrontierSmartCoordinator? frontierSmart = null,
         LiteSonosCoordinator? sonos = null,
         LiteSpotifyCatalogCoordinator? spotifyCatalog = null,
         LiteSpotifyPlaybackCoordinator? spotifyPlayback = null,
@@ -148,6 +150,7 @@ internal sealed class LiteEngineHandlers : IDisposable
         _spotifyPlayback = spotifyPlayback;
         _commonDataSnapshot = commonDataSnapshot;
         _wiim = wiim;
+        _frontierSmart = frontierSmart;
         _sonos = sonos;
         _podcastRefresh = podcastProgressStore is null
             ? null
@@ -456,6 +459,28 @@ internal sealed class LiteEngineHandlers : IDisposable
                 RequireWiiM().ToggleShuffle(request.Args),
             [LiteWiiMContract.NavigateSourceOperation] = (request, _) =>
                 RequireWiiM().NavigateSource(request.Args),
+            [LiteFrontierSmartContract.DevicesOperation] = (_, _) =>
+                RequireFrontierSmart().ListDevices(),
+            [LiteFrontierSmartContract.DiscoverOperation] = (_, _) =>
+                RequireFrontierSmart().Discover(),
+            [LiteFrontierSmartContract.AddOperation] = (request, _) =>
+                RequireFrontierSmart().AddOrUpdate(request.Args),
+            [LiteFrontierSmartContract.RemoveOperation] = (request, _) =>
+                RequireFrontierSmart().Remove(request.Args),
+            [LiteFrontierSmartContract.SelectOperation] = (request, _) =>
+                RequireFrontierSmart().Select(request.Args),
+            [LiteFrontierSmartContract.SnapshotOperation] = (request, _) =>
+                RequireFrontierSmart().Snapshot(request.Args),
+            [LiteFrontierSmartContract.TransportOperation] = (request, _) =>
+                RequireFrontierSmart().Transport(request.Args),
+            [LiteFrontierSmartContract.ModesOperation] = (request, _) =>
+                RequireFrontierSmart().Modes(request.Args),
+            [LiteFrontierSmartContract.SetModeOperation] = (request, _) =>
+                RequireFrontierSmart().SetMode(request.Args),
+            [LiteFrontierSmartContract.PresetsOperation] = (request, _) =>
+                RequireFrontierSmart().Presets(request.Args),
+            [LiteFrontierSmartContract.ActivatePresetOperation] = (request, _) =>
+                RequireFrontierSmart().ActivatePreset(request.Args),
             [LiteWiiMContract.NetworkStreamsOperation] = (_, _) =>
                 RequireWiiM().ListNetworkStreams(),
             [LiteWiiMContract.PlayNetworkStreamOperation] = (request, _) =>
@@ -546,6 +571,7 @@ internal sealed class LiteEngineHandlers : IDisposable
                 RequireProfileMutations().DetachLocalFolderSource(
                     LiteArgs.RequireText(request.Args, "sourceId")),
             ["library.toggleFavorite"] = (request, _) => ToggleProfileFavorites(request.Args),
+            ["radio.toggleLibrary"] = (request, _) => ToggleRadioLibrary(request.Args),
             ["library.playlists"] = (request, _) => GetProfilePlaylists(request.Args),
             ["library.playlists.replace"] = (request, _) => ReplaceProfilePlaylists(request.Args),
             ["library.playlist.move"] = (request, _) => MoveProfilePlaylistItems(request.Args),
@@ -566,6 +592,7 @@ internal sealed class LiteEngineHandlers : IDisposable
             ["radio.importPlaylist"] = (request, _) => ImportPlaylist(request.Args),
             ["radio.importPlaylistToLibrary"] = (request, _) => ImportPlaylistToLibrary(request.Args),
             ["radio.exportFavorites"] = (request, _) => ExportRadioFavorites(request.Args),
+            ["radio.collectionSort"] = (request, _) => SetRadioCollectionSort(request.Args),
             ["audio.configure"] = (request, _) => ConfigureAudio(request.Args),
             ["audio.outputs"] = (request, _) => ListOutputs(request.Args),
             ["audio.selectOutput"] = (request, _) => SelectOutput(request.Args),
@@ -1084,6 +1111,20 @@ internal sealed class LiteEngineHandlers : IDisposable
         RequireProfileMutations().ToggleFavorites(
             LiteArgs.RequireText(args, "sessionId"),
             ReadIds(args));
+
+    private object ToggleRadioLibrary(JsonElement args) =>
+        RequireProfileMutations().ToggleRadioLibrary(ReadIds(args));
+
+    private object SetRadioCollectionSort(JsonElement args)
+    {
+        var text = LiteArgs.RequireText(args, "mode").Trim();
+        if (!Enum.TryParse<CollectionSortMode>(text, ignoreCase: true, out var mode)
+            || !Enum.IsDefined(mode))
+            throw new LiteRequestException("Nieznany sposób sortowania stacji Radia.");
+        return RequireProfileMutations().SetRadioCollectionSortMode(
+            LiteArgs.RequireText(args, "view"),
+            mode);
+    }
 
     private object RecycleLocalFiles(JsonElement args)
     {
@@ -3103,6 +3144,10 @@ internal sealed class LiteEngineHandlers : IDisposable
     private LiteWiiMCoordinator RequireWiiM() =>
         _wiim ?? throw new LiteRequestException(
             "Host nie ma dostępu do profilu AMC potrzebnego do obsługi WiiM.");
+
+    private LiteFrontierSmartCoordinator RequireFrontierSmart() =>
+        _frontierSmart ?? throw new LiteRequestException(
+            "Host nie ma dostępu do profilu AMC potrzebnego do obsługi Frontier Smart.");
 
     private LiteSonosCoordinator RequireSonos() =>
         _sonos ?? throw new LiteRequestException(

@@ -81,7 +81,7 @@ LIBRESPOT_REVISION = "d36f9f1907e8cc9d68a93f8ebc6b627b1bf7267d"
 LIBRESPOT_RUN_URL = (
     "https://github.com/michalkasperczak/AMC/actions/runs/35381167099"
 )
-PRIVATE_SERVICE_MODULES = {
+PROFILE_GATED_SERVICE_MODULES = {
     "sonos_source.py": "session.sonos",
     "spotify_playlist_dialog.py": "session.spotify",
     "spotify_source.py": "session.spotify",
@@ -219,7 +219,7 @@ def copy_python_code(
     package.mkdir(parents=True, exist_ok=True)
     copied = []
     for source in sorted((source_wxlite / "amc_wx_lite").glob("*.py")):
-        required_capability = PRIVATE_SERVICE_MODULES.get(source.name)
+        required_capability = PROFILE_GATED_SERVICE_MODULES.get(source.name)
         if (
             required_capability is not None
             and required_capability not in selected_profile.capabilities
@@ -506,7 +506,7 @@ def validate_profile_files(profile: ReleaseProfile, files: list[str]) -> None:
 
     forbidden_names = {
         name.casefold()
-        for name, capability in PRIVATE_SERVICE_MODULES.items()
+        for name, capability in PROFILE_GATED_SERVICE_MODULES.items()
         if capability not in profile.capabilities
     }
     forbidden = [

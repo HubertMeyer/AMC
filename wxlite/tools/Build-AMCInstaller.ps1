@@ -33,6 +33,15 @@ if ([bool]$manifest.sourceDirty) {
     throw "Instalator nie może powstać z niezapisanych źródeł roboczych."
 }
 
+$launcherVersion = [string](Get-Item -LiteralPath $launcher).VersionInfo.ProductVersion
+$launcherVersion = ($launcherVersion -split '\+', 2)[0]
+if ($launcherVersion -ne $Version) {
+    throw (
+        "Numer instalatora $Version nie zgadza się z numerem skompilowanego " +
+        "programu $launcherVersion. Najpierw ustaw i zbuduj jedną wersję źródeł."
+    )
+}
+
 $check = Start-Process -FilePath $launcher `
     -ArgumentList @("--sprawdz-pakiet-pelny-cicho") `
     -WorkingDirectory $bundle `

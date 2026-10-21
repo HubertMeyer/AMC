@@ -472,6 +472,40 @@ def test_ctrl_shift_u_toggles_local_and_radio_favorites_in_list_and_player() -> 
             ) is Action.TOGGLE_FAVORITE
 
 
+def test_radio_collection_shortcuts_have_one_contextual_meaning() -> None:
+    expected = {
+        "1": Action.SORT_RADIO_COLLECTION_ADDED,
+        "2": Action.SORT_RADIO_COLLECTION_ALPHABETICAL,
+        "3": Action.SORT_RADIO_COLLECTION_CUSTOM,
+    }
+    for key, action in expected.items():
+        assert resolve(
+            Chord(key, alt=True),
+            player_view=False,
+            radio_session=True,
+            radio_collection=True,
+        ) is action
+        assert resolve(
+            Chord(key, alt=True),
+            player_view=False,
+            radio_session=True,
+            radio_collection=False,
+        ) is None
+    for player in (False, True):
+        assert resolve(
+            Chord("L", ctrl=True, shift=True),
+            player_view=player,
+            radio_session=True,
+            radio_collection=not player,
+        ) is Action.TOGGLE_RADIO_LIBRARY
+        assert resolve(
+            Chord("U", ctrl=True, shift=True),
+            player_view=player,
+            radio_session=True,
+            radio_collection=not player,
+        ) is Action.TOGGLE_FAVORITE
+
+
 def test_ctrl_shift_p_opens_playlist_membership_in_list_and_player() -> None:
     for player in (False, True):
         for radio in (False, True):
