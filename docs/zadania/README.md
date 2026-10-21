@@ -171,8 +171,14 @@ zmian, wymagający korekty użytkownika:
   błędzie świeżej bazy Podcastów; po naprawie kandydat i instalacja AMC Test z
   rewizji `233767f1` przeszły kontrolowany start. Końcowy na 21 października
   wspólny commit `a947f79d` przeszedł 1910 testów, został zainstalowany jako
-  AMC Test (`1dfc80e8`) i publiczny AMC (`5b07f9a1`); publiczna instalacja ma
-  1073 sprawdzone pliki i zaliczony start izolowany. Niczego nie
+  AMC Test (`1dfc80e8`) i pierwszy publiczny AMC (`5b07f9a1`). Ręczny odbiór
+  wykazał, że `alpha.425` na zupełnie pustym profilu nie tworzył jeszcze
+  magazynów potrzebnych pierwszemu `Ctrl+Shift+L` i importowi playlisty.
+  Poprawka `15b38eb1` inicjalizuje pełny profil przed udostępnieniem poleceń;
+  pełne 24/24 zestawy protokołu oraz rzeczywisty test pierwszego zapisu są
+  zielone. Publiczny `0.1.0-alpha.426` (`83400218`) został zbudowany,
+  zainstalowany i uruchomiony z `D:\Projekty Codex\AMC Public`; ma 1073
+  sprawdzone pliki i trzy utworzone magazyny profilu. Niczego nie
   opublikowano** — jeden kod, jawny manifest możliwości, osobne katalogi,
   blokady, logi i kanały AMC Test oraz publicznego AMC. Bieżący zapis realizacji:
   [AMC12-profile-wydania-publicznego-i-testowego.md](AMC12-profile-wydania-publicznego-i-testowego.md).

@@ -2,12 +2,13 @@
 
 ## Status
 
-**W trakcie — publiczne AMC `0.1.0-alpha.425` z rewizji `a947f79d` jest
-zbudowane i zainstalowane w `D:\Projekty Codex\AMC Public`. Pełna kontrola
-1073 plików oraz odizolowany start zainstalowanego interfejsu i hosta są
-zaliczone. AMC Test z tej samej rewizji przeszedł pełną regresję, atomową
-aktualizację i działa ze swojego osobnego katalogu. Publikacji ani ręcznego
-odbioru obu profili z NVDA jeszcze nie wykonywano.**
+**W trakcie — publiczne AMC `0.1.0-alpha.426` z rewizji `15b38eb1` jest
+zbudowane, zainstalowane i uruchomione w `D:\Projekty Codex\AMC Public`.
+Pełna kontrola 1073 plików, odizolowany start oraz utworzenie kompletnego
+świeżego profilu są zaliczone. Rzeczywisty test hosta potwierdził pierwszy
+zapis stacji z wyszukiwania i import playlisty M3U na pustym profilu. AMC Test
+pozostał uruchomiony ze swojego osobnego katalogu. Publikacji ani końcowego
+ręcznego odbioru `Ctrl+Shift+L` i importu z NVDA jeszcze nie wykonywano.**
 
 Źródłowa, zatwierdzona specyfikacja pozostaje w pliku tylko do odczytu:
 `D:\Projekty Codex\Accessible Multimedia Controller\AMC12_PROFILE_WYDANIA_PUBLICZNEGO_I_TESTOWEGO_2026-10-18.md`.
@@ -142,7 +143,25 @@ Kandydat z 21 października 2026 zawiera także wspólną poprawkę wyszukiwania
 W Radiu NVDA mówi dopiero potwierdzony wynik dodania albo konkretny błąd, bez
 nadmiarowej zapowiedzi „Przygotowywanie stacji”.
 
+Publiczne AMC `alpha.426` przy pierwszym uruchomieniu samo tworzy kompletny,
+osobny profil: ustawienia, Bibliotekę i bazę Podcastów i YouTube. Dzięki temu
+pierwsze `Ctrl+Shift+L` w wynikach wyszukiwania Radia zapisuje stację, a import
+playlisty radiowej działa również wtedy, gdy użytkownik nie miał wcześniej
+żadnych danych AMC. Program nie kopiuje przy tym ustawień ani kont z AMC Test;
+przeniesienie wybranych danych nadal wymaga jawnej migawki.
+
 ## Uzasadnienie i decyzje
+
+- **Korekta użytkownika z 21 października 2026:** odbiór `alpha.425` ujawnił,
+  że publiczne AMC na pustym profilu mówiło „brak profilu AMC” po
+  `Ctrl+Shift+L`, a import playlisty stacji nie działał. Zastępuje to
+  wcześniejszy wniosek, że sam poprawny start pustego profilu dowodzi gotowości
+  pierwszych operacji zapisu. Przyczyną nie był routing wyszukiwarki ani brak
+  ścieżek w uruchamiaczu: pliki profilu nie istniały jeszcze, a magazyn mutacji
+  umiał wyłącznie otworzyć istniejące dane. Host inicjalizuje teraz wszystkie
+  trzy magazyny przez tę samą warstwę konfiguracji i aktualny schemat, zanim
+  udostępni polecenia. Test wydania musi wykonać co najmniej jedną rzeczywistą
+  zmianę danych na całkowicie pustym profilu.
 
 - **Korekta użytkownika z 21 października 2026:** jutrzejszy odbiór ma dotyczyć
   publicznego AMC z tym samym zatwierdzonym kodem wspólnym co AMC Test, ale bez
@@ -310,6 +329,7 @@ nadmiarowej zapowiedzi „Przygotowywanie stacji”.
 - `src/AccessibleMediaController.LiteHost/LiteEngineHandlers.cs`
 - `src/AccessibleMediaController.LiteHost/LiteRadioRecordingCoordinator.cs`
 - `src/AccessibleMediaController.LiteHost/Program.cs`
+- `src/AccessibleMediaController.LiteHost/LiteFreshProfileInitializer.cs`
 - `wxlite/amc_wx_lite/host_client.py`
 - `wxlite/amc_wx_lite/menu_model.py`
 - `wxlite/amc_wx_lite/shortcuts.py`
@@ -322,6 +342,8 @@ nadmiarowej zapowiedzi „Przygotowywanie stacji”.
 - `src/AccessibleMediaController.Windows/Services/YtDlpComponentManager.cs`
 - `tests/AccessibleMediaController.LiteHost.ProtocolTests/ComponentUpdatePolicyTests.cs`
 - `tests/AccessibleMediaController.LiteHost.ProtocolTests/Program.cs`
+- `tests/AccessibleMediaController.LiteHost.ProtocolTests/FreshProfileInitializationTests.cs`
+- `wxlite/tests/test_fresh_public_profile_host_e2e.py`
 - `wxlite/tests/test_component_updates.py`
 - `wxlite/tests/test_host_client.py`
 - `tests/AccessibleMediaController.Core.SmokeTests/CommonDataSnapshotTests.cs`
@@ -334,6 +356,26 @@ nadmiarowej zapowiedzi „Przygotowywanie stacji”.
 - `docs/zadania/AMC12-profile-wydania-publicznego-i-testowego.md`
 
 ## Testy i wynik
+
+- 21 października 2026 poprawka świeżego profilu przeszła oba ukierunkowane
+  zestawy protokołu, a następnie pełne **24/24 zestawy protokołu LiteHost**.
+  Kompilacja Release hosta zakończyła się bez ostrzeżeń i błędów.
+- Test od końca do końca uruchomił rzeczywisty host Release z nieistniejącymi
+  wcześniej katalogami lokalnym i roamingowym. Host utworzył `state.json`,
+  `library.db` i `podcasts.db`, dodał jedną stację jak po `Ctrl+Shift+L`,
+  zaimportował drugą z M3U i zapisał obie w profilu: **1 test zaliczony**.
+  Powtórna inicjalizacja nie zmieniła bajtów żadnego z trzech plików.
+- Publiczna paczka z rewizji `15b38eb1` ma identyfikator `83400218`, profil
+  `public` i 1073 pliki. Pełna kontrola paczki oraz kontrolowany start przed
+  instalatorem i zainstalowanej kopii zakończyły się kodem 0.
+- Instalator `AMC-0.1.0-alpha.426-win-x64.exe` ma 124 028 858 bajtów i SHA-256
+  `1e21fd2f730df4387da908af7ed6f26509c8af85594edf0c4cac1f7f704fb294`.
+  Instalacja do `D:\Projekty Codex\AMC Public` zakończyła się kodem 0.
+  Uruchomiona instalacja ma osobny komplet trzech procesów, jawny profil
+  `public` oraz wszystkie trzy utworzone magazyny publicznego profilu.
+- Przed budową, instalacją i uruchomieniem sprawdzono 15 skonfigurowanych
+  folderów nagrań. Wszystkie były dostępne; pomiary 15- i 5-sekundowe wykazały
+  0 plików `.amc-partial` i 0 przyrostów. AMC Test nie został zatrzymany.
 
 - 21 października 2026 rewizja `a947f79d` przeszła pełną regresję AMC Test:
   **1910 zaliczonych, 110 pominiętych i 11 podtestów**. Kompilacja hosta,
@@ -618,6 +660,12 @@ nadmiarowej zapowiedzi „Przygotowywanie stacji”.
 
 ## Znane ograniczenia
 
+- Automatyczny test potwierdza dokładnie operacje, które wcześniej zawodziły,
+  oraz uruchomioną instalację `alpha.426`. Pozostaje krótki ręczny odbiór z
+  NVDA: dodanie wyniku wyszukiwania przez `Ctrl+Shift+L`, powrót fokusu i import
+  rzeczywistej playlisty użytkownika. Dopiero ten odbiór zamknie błąd
+  użytkowy; nie jest potrzebny do ponownego tworzenia profilu.
+
 - Bramka sprawdza konstrukcję pełnego okna, start właściwego hosta, `hello` i
   konfigurację audio. Nie zastępuje ręcznych prób każdej funkcji sieciowej,
   logowania usług ani odbioru mowy NVDA.
@@ -643,9 +691,9 @@ nadmiarowej zapowiedzi „Przygotowywanie stacji”.
   wxPython i nie jest kandydatem do publikacji. Nie należy na jego podstawie
   oceniać równoległego działania silnika; zostanie zastąpiony po nowej
   kompilacji, instalacji i potwierdzeniu dwóch hostów.
-- Dokładny numer następnego wydania pozostaje niezatwierdzony do chwili budowy.
-  Numer `alpha.425` został już przypisany zbudowanemu lokalnemu kandydatowi, ale
-  nie oznacza jeszcze zainstalowanego ani opublikowanego wydania.
+- `alpha.425` pozostaje zastąpionym kandydatem, który nie obsługiwał pierwszego
+  zapisu na pustym profilu. Zainstalowanym, nieopublikowanym następcą jest
+  `alpha.426`.
 - Wersjonowana, atomowa migawka została skompilowana i sprawdzona na
   odizolowanych magazynach testowych, ale nie została jeszcze odebrana w
   zainstalowanych AMC Test i AMC. Pierwsza wersja ma stały bezpieczny zakres;
@@ -757,6 +805,16 @@ nadmiarowej zapowiedzi „Przygotowywanie stacji”.
   niepewnym pochodzeniu.
 
 ## Wersja i commit
+
+- Poprawka pierwszego zapisu na świeżym profilu: `15b38eb1` —
+  `fix(amc): inicjalizuj swiezy profil publiczny`.
+- Zainstalowany publiczny AMC: `0.1.0-alpha.426`, rewizja
+  `15b38eb10de18609ec6b3357d12c59b0b97563b6`, paczka `83400218`, 1073 pliki.
+  Instalator i plik integralności pozostają lokalnie w
+  `publish\installers\alpha.426`. Program uruchomiono z
+  `D:\Projekty Codex\AMC Public\AMC.exe`.
+- Publikacja: niewykonana. Cloudflare, GitHub i zdalny aktualizator nie były
+  częścią tej poprawki.
 
 - Najnowszy AMC Test: rewizja
   `b258fb69fef580f7899c30abd0d48e6b877119be`, paczka `726f0791`, 1668 plików,
