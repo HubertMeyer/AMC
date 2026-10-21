@@ -14,8 +14,7 @@
   },
   "kv_namespaces": [
     {
-      "binding": "REPORT_RESULTS",
-      "id": "UZUPELNIJ_IDENTYFIKATOR_KV"
+      "binding": "REPORT_RESULTS"
     }
   ],
   "ratelimits": [
