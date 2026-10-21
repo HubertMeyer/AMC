@@ -146,6 +146,20 @@ Historyczny projekt został użyty tylko jako materiał do odczytu.
   więc całą rodzinę `F1`–`F24`. Ujednolicono również strzałki, `Home`, `End`,
   `Page Up`, `Page Down` i `Delete` z bloku numerycznego. Nie przypisano
   żadnej nowej akcji do wolnego `F4`.
+- **Korekta użytkownika z 21 października 2026:** `Ctrl+F5` i „Konfiguruj…” są
+  stanowymi menedżerami, nie poleceniem powtarzającym pierwszą konfigurację.
+  Pusta sesja może prowadzić do pierwszego wykrywania albo logowania, natomiast
+  skonfigurowana ma pokazać zapisane urządzenia, źródła lub bieżące konto bez
+  automatycznego skanowania i bez rozpoczynania OAuth. Nowe wyszukiwanie,
+  ponowne logowanie i wylogowanie są jawnymi przyciskami. Ta decyzja obejmuje
+  Frontier Smart, WiiM, Sonosa, Foldery Biblioteki, Spotify i TIDAL oraz
+  zastępuje każde wcześniejsze sformułowanie sugerujące automatyczne ponawianie
+  konfiguracji przy każdym `Ctrl+F5`.
+- Audyt wykonany przy tej korekcie potwierdził, że wspólne okno kont Spotify i
+  TIDAL ma obecnie wyłącznie „Zaloguj w przeglądarce” oraz „Zamknij”. Odczytuje
+  stan bez samoczynnego OAuth, ale po istniejącym logowaniu nie udostępnia
+  jeszcze jawnego wylogowania i nadal pokazuje przycisk logowania. To jest
+  zapisana luka do domknięcia, a nie potwierdzona gotowa funkcja.
 
 ## Zmienione miejsca
 
@@ -286,6 +300,10 @@ Historyczny projekt został użyty tylko jako materiał do odczytu.
   przeglądarki, nie logowały kont i nie wysyłały poleceń do urządzeń.
 - Trwającego OAuth nie można jeszcze anulować z okna AMC; okno pozostaje
   otwarte do wyniku albo limitu czasu.
+- Spotify i TIDAL nie mają jeszcze w swoim wspólnym oknie konta osobnego
+  „Wyloguj konto” ani stanowego przełączenia przycisków po zalogowaniu. Zgodnie
+  z korektą z 21.10.2026 ich obsługa kont nie jest w tym zakresie ukończona;
+  samo `Ctrl+F5`, odczyt stanu i ponowne logowanie nie zastępują wylogowania.
 - Stan Spotify jest „Połączona” dopiero po odczycie konta w bieżącym procesie;
   przed nim Menedżer uczciwie pokazuje „Wymaga zalogowania”. TIDAL może użyć
   istniejącej lokalnej migawki Biblioteki, ale nie pobiera jej w tle.

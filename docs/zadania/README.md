@@ -146,7 +146,10 @@ zmian, wymagający korekty użytkownika:
   przyczynę ciszy `F5` i `Ctrl+F5`: brak mapowania rzeczywistego kodu klawisza
   wxPython. Poprawka obejmuje już wszystkie klawisze funkcyjne, a nie tylko
   `F5`; testy zaczynają się od surowych zdarzeń klawiatury. Najnowsza wersja
-  została zainstalowana 20.10.2026.
+  została zainstalowana 20.10.2026. Korekta z 21.10.2026 utrwala zasadę, że
+  `Ctrl+F5` po skonfigurowaniu pokazuje stan i zapisane cele bez ponownego
+  logowania lub skanowania. Audyt wykazał, że Spotify i TIDAL nadal wymagają
+  domknięcia jawnego wylogowania oraz stanowych przycisków konta.
   Bieżący zapis realizacji:
   [AMC09-menedzer-sesji.md](AMC09-menedzer-sesji.md).
 - `AMC12` — **Lokalny kandydat `alpha.433` przeszedł pełną regresję źródeł,

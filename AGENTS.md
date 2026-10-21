@@ -166,6 +166,34 @@
   Nie twórz osobnych tekstów dla stacji, playlisty, pliku, podcastu, kanału
   albo urządzenia w niezależnych procedurach powierzchni interfejsu.
 
+## Stanowe zarządzanie kontami, urządzeniami i źródłami
+
+- `Ctrl+F5` i „Konfiguruj…” otwierają zarządzanie bieżącą sesją, a nie zawsze
+  powtarzają jej pierwszą konfigurację. Zasada obejmuje konta Spotify, TIDAL i
+  Sonos, urządzenia WiiM i Frontier Smart oraz Foldery Biblioteki i przyszłe
+  równoważne integracje.
+- Gdy sesja nie ma jeszcze konta, urządzenia ani źródła, pierwsze otwarcie ma
+  prowadzić do konfiguracji. Bezpieczne lokalne wykrywanie może rozpocząć się
+  automatycznie, ale zewnętrznego OAuth ani przeglądarki nie wolno uruchamiać
+  bez jawnego działania użytkownika.
+- Gdy konfiguracja już istnieje, ponowne `Ctrl+F5` pokazuje zapisane urządzenia,
+  źródła albo stan konta i skupia bieżący wybór. Nie rozpoczyna automatycznie
+  nowego skanowania, logowania ani ponownego logowania.
+- Dodanie lub wyszukanie kolejnego urządzenia, odświeżenie, ponowne logowanie,
+  wylogowanie, odłączenie i usunięcie są osobnymi, jednoznacznie nazwanymi
+  czynnościami pokazywanymi tylko wtedy, gdy adapter rzeczywiście je obsługuje.
+  Integracja z logowaniem nie jest ukończona, dopóki nie ma bezpiecznego
+  zarządzania istniejącym połączeniem, w tym wylogowania z bieżącego profilu.
+- Wylogowanie albo usunięcie wymaga jasnego opisu zakresu: usuwa połączenie,
+  poświadczenie lub wpis wyłącznie z bieżącego profilu AMC i nie zmienia hasła,
+  konta dostawcy ani ustawień fizycznego urządzenia. Po powodzeniu fokus wraca
+  do przewidywalnego miejsca, a pusta sesja znów korzysta z przebiegu pierwszej
+  konfiguracji.
+- Stan, etykiety, dostępność przycisków, fokus po otwarciu i zamknięciu oraz
+  znaczenie `Ctrl+F5` muszą pochodzić ze wspólnego modelu i mieć testy dla
+  pustej konfiguracji, istniejącej konfiguracji, ponownego otwarcia, anulowania,
+  błędu oraz potwierdzonego wylogowania lub usunięcia.
+
 - Widok sesji, urządzenia ani listy nie może przejmować skrótu globalnego i
   pozostawiać go bez działania. `Ctrl+H` otwiera Historię odtwarzania z każdego
   głównego miejsca programu, w szczególności z Radia internetowego, podcastów,
