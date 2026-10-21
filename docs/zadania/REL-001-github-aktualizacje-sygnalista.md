@@ -139,8 +139,8 @@ repozytorium, kanałami wydań i polityką prywatności.
   multimedialnych i diagnostycznych, adresy WWW i e-mail, adresy IP i MAC,
   identyfikatory, nagłówki autoryzacji, tokeny, hasła oraz nazwy kont.
 - Odczyt logu jest ograniczony do ostatnich 512 KiB, najwyżej 200 wierszy i
-  64 KiB zredagowanej treści. Cały raport ma bramkę 256 KiB przed przyszłą
-  wysyłką.
+  64 KiB zredagowanej treści. Cały raport ma bramkę 60 KiB przed wysyłką, aby
+  wraz z bezpiecznym zapasem mieścił się w pojedynczym prywatnym GitHub Issue.
 - Kontrakt transportu rozróżnia sukces, brak konfiguracji, brak sieci,
   ograniczenie tempa, zbyt duży raport i pozostały błąd. Bieżący transport
   lokalny zawsze zwraca uczciwy stan `nieskonfigurowane` i nie używa sieci.
@@ -148,22 +148,28 @@ repozytorium, kanałami wydań i polityką prywatności.
   parametrów i fragmentu. Wysyła widoczny raport w wątku roboczym, nie zawiera
   tokenu GitHuba i nie ponawia automatycznie niepewnego żądania.
 - Każda wersja treści ma losowy identyfikator raportu. Ponowienie niezmienionej
-  treści zachowuje identyfikator, a edycja przydziela nowy. Worker przechowuje
-  etap realizacji w Cloudflare KV: ten sam raport zwraca istniejące issue,
-  inna treść z tym samym identyfikatorem jest odrzucana.
+  treści zachowuje identyfikator, a edycja przydziela nowy. Osobny koordynator
+  Durable Object dla każdego identyfikatora serializuje równoległe żądania i
+  zapisuje etap przed zewnętrznym wywołaniem. Ten sam raport zwraca istniejące
+  issue, a inna treść z tym samym identyfikatorem jest odrzucana.
 - Worker ponownie redaguje dane, ogranicza wielkość i tempo żądań, zapisuje
   pełną treść w prywatnym repozytorium intake, a w publicznym AMC tworzy tylko
   krótki wpis. Sekret GitHuba występuje wyłącznie jako sekret Workera.
+- Limiter sprawdza osobno adres klienta i wspólny ruch całej usługi. Adres nie
+  jest zapisywany w Issue ani w trwałym stanie raportu; służy tylko do
+  krótkookresowej ochrony przed nadużyciem.
 - Własna domena nie jest wymagana: zatwierdzona konfiguracja używa HTTPS pod
-  `workers.dev`, wymaga sekretu `GITHUB_TOKEN`, KV i limitera. Logowanie
-  urządzeniem może wypisać adres i kod bez otwierania przeglądarki, a dane OAuth
-  na Windows mają być przechowywane w systemowym magazynie poświadczeń.
+  `workers.dev`, wymaga sekretu `GITHUB_TOKEN`, Durable Object i limitera.
+  Dane OAuth Wranglera na Windows są przechowywane w szyfrowanym pliku, którego
+  klucz znajduje się w systemowym magazynie poświadczeń.
 - Zależności Workera są utrwalone w `package-lock.json`. Skrypt wdrożenia
-  domyślnie wykonuje wyłącznie czyste `npm ci` i testy. Dopiero jawne `-Deploy`
-  sprawdza istniejącą sesję Cloudflare, obecność sekretu `GITHUB_TOKEN`,
-  wdraża usługę i weryfikuje `/health`. Skrypt nie wywołuje logowania.
-  Dodatkowe `-ActivateEndpoint` zapisuje adres raportów atomowo dopiero po
-  poprawnej odpowiedzi zdrowia; nie tworzy automatycznie próbnego issue.
+  domyślnie wykonuje wyłącznie czyste `npm ci`, testy i dwa pakowania
+  `--dry-run`. Zdalny przebieg jest rozdzielony na `-Bootstrap`, interaktywny
+  `-SetGitHubToken` i właściwy `-Deploy`. Bootstrap używa jednorazowej
+  konfiguracji bez nieistniejącego jeszcze sekretu i usuwa ją także po błędzie;
+  nie aktywuje endpointu AMC. Skrypt nie wywołuje logowania. Dopiero jawne
+  `-Deploy -ActivateEndpoint` po próbach zdrowia, metody i schematu zapisuje
+  adres raportów atomowo; żaden etap nie tworzy automatycznie próbnego issue.
 - Pakowacz obu profili rozpoznaje opcjonalny
   `problem-report-endpoint.txt`. Kopiuje go tylko po walidacji prostego adresu
   HTTPS zakończonego `/v1/report`; dane logowania, parametry, fragment,
@@ -194,14 +200,17 @@ repozytorium, kanałami wydań i polityką prywatności.
   instalacją zamiast tworzyć paczkę, której uruchamiacz później odmówi.
 - Korekta użytkownika z 21 października 2026: internetowy Sygnalista ma być
   domknięty przed rozpoczęciem widocznego logowania YouTube przez Google.
-  Dlatego nie kontynuowano YT-001, a w REL-001 usunięto ręczne przygotowywanie
-  KV i ręczne przepisywanie zwykłego adresu `workers.dev`.
-- Zgodnie z bieżącym kontraktem Wranglera brak identyfikatora w powiązaniu KV
-  oznacza kontrolowane automatyczne utworzenie zasobu przy pierwszym jawnym
-  wdrożeniu. Wersjonowany wzór nie zawiera identyfikatora konta, a utworzony
-  lokalnie `wrangler.jsonc` pozostaje ignorowany przez Git.
+  Dlatego nie kontynuowano YT-001, a w REL-001 usunięto ręczne przepisywanie
+  zwykłego adresu `workers.dev`.
+- Korekta techniczna z 21 października 2026 zastępuje wcześniejszą decyzję o
+  Cloudflare KV. KV nie zapewniało bezpiecznej serializacji równoległych
+  żądań. Bieżący kontrakt używa wersjonowanej migracji SQLite Durable Object
+  `ReportCoordinator`, osobnej dla każdego `reportId`; nie wymaga ręcznego
+  identyfikatora zasobu. Lokalny `wrangler.jsonc` pozostaje ignorowany przez
+  Git, a token nie jest w nim zapisywany.
 - Bramka lokalna nie wymaga adresu serwera: wykonuje czyste odtworzenie
-  zależności, testy i rzeczywiste pakowanie `--dry-run` w jednorazowym katalogu.
+  zależności, testy i dwa rzeczywiste pakowania `--dry-run` w jednorazowym
+  katalogu: zwykłe oraz pierwszego bootstrapu bez sekretu.
   Przy wdrożeniu skrypt odczytuje standardowy adres `workers.dev` z
   potwierdzenia Wranglera, sprawdza go, weryfikuje `/health` i dopiero wtedy
   może atomowo włączyć endpoint w źródłach AMC.
@@ -296,26 +305,38 @@ repozytorium, kanałami wydań i polityką prywatności.
 - Etap z 21 października: **45 zaliczonych testów Python** dla formularza,
   transportu, pakowania endpointu i nowej bramki wdrożenia; parser PowerShell
   nie zgłosił błędu. Osobna rzeczywista bramka wykonała `npm ci`, **8/8 testów
-  Workera** oraz pakowanie Wranglera `--dry-run` z kompletem KV, limitera i
-  zmiennych, bez wysyłania kodu.
-- Odczytowe `wrangler whoami` potwierdziło, że na tym komputerze nie ma
-  autoryzowanej sesji Cloudflare. Nie rozpoczęto logowania, nie utworzono
-  zasobu zdalnego, nie ustawiono sekretu, nie aktywowano endpointu i nie
-  utworzono próbnego issue.
+  Workera** oraz pakowanie Wranglera `--dry-run` z ówczesnym kompletem KV,
+  limitera i zmiennych, bez wysyłania kodu. Ten wariant magazynu został
+  zastąpiony niżej opisanym Durable Object.
+- Końcowa bramka magazynu Durable Object: **11/11 testów Node** — w tym dwa
+  równoległe żądania jednego raportu oraz błędy odczytu i zapisu magazynu — i
+  **27/27 testów Python** klienta, współbieżności oraz kontraktu skryptu.
+  Parser PowerShell nie zgłosił błędu. Rzeczywisty skrypt wykonał czyste
+  `npm ci` i dwa pakowania Wranglera `--dry-run`; oba zawierały
+  `REPORT_COORDINATORS`, limiter i zmienne, niczego nie wdrażając.
+- Odczytowe `wrangler whoami` potwierdziło aktywną sesję Cloudflare dla
+  właściwego konta. Osobny odczyt po nazwie potwierdził, że Worker
+  `amc-sygnalista` jeszcze nie istnieje. Nie utworzono zasobu zdalnego, nie
+  ustawiono sekretu, nie aktywowano endpointu i nie utworzono próbnego issue.
 
 ## Znane ograniczenia
 
 - Jest gotowy kod internetowego transportu, Workera i powtarzalnej bramki, ale
-  nie ma jeszcze wdrożonego Workera, prawdziwego endpointu, Cloudflare KV ani
-  limitera. Prywatne repozytorium raportów i etykiety już istnieją. Zbudowane
+  nie ma jeszcze wdrożonego Workera, prawdziwego endpointu, zdalnego Durable
+  Object ani limitera. Prywatne repozytorium raportów i etykiety już istnieją. Zbudowane
   obecnie wydanie nadal pozostaje w trybie lokalnym i nie tworzy GitHub Issues.
 - Prawdziwe uruchomienie wymaga świadomego logowania do właściwego konta
   Cloudflare, ustawienia ograniczonego tokenu GitHuba w sekrecie Workera i
-  kontrolowanego raportu próbnego. Bieżący odczyt potwierdził brak sesji.
+  kontrolowanego raportu próbnego. Sesja Cloudflare jest już potwierdzona;
+  osobny token GitHuba o minimalnym zakresie nie został jeszcze ustawiony.
 - Skrypt nie może sam utworzyć konta Cloudflare ani sekretu. Potrafi natomiast
-  bezpiecznie przygotować ignorowany `wrangler.jsonc`, zlecić Wranglerowi
-  automatyczne utworzenie KV i odczytać adres `workers.dev`. Brak autoryzacji
-  lub nazwy sekretu zatrzymuje wdrożenie przed aktywacją endpointu.
+  bezpiecznie przygotować ignorowany `wrangler.jsonc`, wykonać migrację Durable
+  Object i odczytać adres `workers.dev`. Brak autoryzacji lub nazwy sekretu
+  zatrzymuje właściwe wdrożenie przed aktywacją endpointu.
+- Przy niejednoznacznym błędzie transportu po wysłaniu żądania do GitHuba
+  koordynator celowo zatrzymuje automatyczne ponowienie, ponieważ issue mogło
+  już powstać. W takim przypadku opiekun musi sprawdzić oba repozytoria i
+  rozstrzygnąć raport ręcznie; ważniejsze jest niedublowanie wpisów.
 - Publiczny snapshot źródeł pozostaje lokalny do czasu odbioru zainstalowanego
   kandydata. Samo jego utworzenie nie jest kopią zdalną ani publikacją.
 - Zapisany raport pozostaje plikiem lokalnym; AMC nie otwiera przeglądarki.
@@ -339,6 +360,12 @@ repozytorium, kanałami wydań i polityką prywatności.
   o rozmiarze 180 906 448 bajtów, około 172,53 MiB. Nie jest odzyskiwany z
   Kosza; dokładną zawartość odtworzy przypięte `npm ci`. Zachowano zastane
   `.test-output`, `.test-tmp` i wszystkie źródła.
+- Po końcowej bramce ponownie usunięto odtworzony przez `npm ci` katalog
+  `D:\Projekty Codex\AMC - integracja wxPython\deploy\amc-sygnalista-worker\node_modules`
+  (180 906 448 bajtów) oraz trzy własne podkatalogi `sygnalista-*` utworzone
+  przez ten przebieg w `D:\Projekty Codex\AMC - integracja wxPython\.test-tmp`
+  (łącznie 22 911 bajtów). Odzyskano około 172,55 MiB. Dane są odtwarzalne;
+  nie ruszono żadnych zastanych katalogów ani niepewnych wyników testów.
 
 ## Wersja i commit
 
@@ -356,7 +383,7 @@ repozytorium, kanałami wydań i polityką prywatności.
   `scripts/Prepare-AMCPublicSourceSnapshot.ps1` nie publikuje danych.
 - Integralna bramka wdrożenia Workera: `65037b21` —
   `feat(rel): domknij bramke wdrozenia Sygnalisty`; pakiet nie zawiera
-  konfiguracji konta, identyfikatora KV ani sekretu.
+  konfiguracji konta ani sekretu.
 - Warunkowe pakowanie zweryfikowanego endpointu: `f9afe750` —
   `fix(rel): pakuj endpoint internetowego Sygnalisty`.
 - Automatyczna odmowa publicznego snapshotu przy prywatnej ścieżce lub
@@ -370,10 +397,13 @@ repozytorium, kanałami wydań i polityką prywatności.
 - Wymagany sekret, `workers.dev`, systemowy magazyn logowania i ochrona plików
   lokalnych: `94d6a0f7` — `fix(rel): utwardz wdrozenie Workera`; 8/8 testów
   Workera zaliczone.
-- Samodzielna lokalna bramka oraz automatyczne przygotowanie KV: `05741a4e` —
-  `fix(rel): uprosc przygotowanie Workera Sygnalisty`.
+- Samodzielna lokalna bramka i dawny wariant automatycznego przygotowania KV:
+  `05741a4e` — `fix(rel): uprosc przygotowanie Workera Sygnalisty`; wariant KV
+  został 21 października zastąpiony koordynatorem Durable Object.
 - Odczyt standardowego adresu z potwierdzonego wdrożenia: `c1554642` —
   `fix(rel): odczytaj adres wdrozonego Workera`.
+- Koordynator Durable Object, bezpieczny bootstrap i trzyczęściowa bramka
+  wdrożenia: `84c1d988` — `fix(rel): utwardz wdrozenie Sygnalisty`.
 - Instalacja: `2026.10.19-fb9ba25fe0680cf7bf5435d53eb5b073de091cca-0debb6aa`;
   manifest 1665 plików, pełna integralność i uruchomienie zweryfikowane.
 - Bieżąca uruchomiona instalacja AMC Test ma źródło `b258fb69fef580f7899c30abd0d48e6b877119be`
