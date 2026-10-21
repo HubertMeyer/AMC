@@ -48,7 +48,8 @@ Bibliotekę i stwarzała wrażenie, że zniknęła cała zawartość folderu.
   Biblioteki jest osobnym, jawnym poleceniem zarządzania Biblioteką.
 - AMC Test i publiczny AMC nadal powstają z jednego kodu i jednego procesu
   budowy. Publiczny profil różni się wyłącznie manifestem możliwości: obecnie
-  nie zawiera TIDAL-a, Spotify ani Frontier Smart. WiiM i Sonos pozostają.
+  nie zawiera TIDAL-a, Spotify ani Frontier Smart. Ich niedostępne adaptery są
+  też fizycznie pomijane w paczce. WiiM i Sonos pozostają.
 
 #### Uzasadnienie i decyzje
 
@@ -67,7 +68,7 @@ Bibliotekę i stwarzała wrażenie, że zniknęła cała zawartość folderu.
 - Testy ukierunkowane skrótu, dyspozycji polecenia, menu, zakładek, Kosza,
   szybkiej informacji i źródeł Biblioteki: `128 passed`.
 - Pełna regresja wxPython po zmianie: `1945 passed, 110 skipped, 11 subtests
-  passed` w 106,49 s.
+  passed` w końcowym przebiegu 108,52 s.
 - Test obejmuje także spóźnioną odpowiedź `Shift+Delete` po przejściu do innej
   sesji oraz ponowne naciśnięcie lewej strzałki bez drugiego wywołania hosta.
 - Ręczny odbiór mowy i fokusu w NVDA pozostaje do wykonania na zainstalowanym

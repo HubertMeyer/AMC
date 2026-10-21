@@ -82,6 +82,7 @@ LIBRESPOT_RUN_URL = (
     "https://github.com/michalkasperczak/AMC/actions/runs/35381167099"
 )
 PROFILE_GATED_SERVICE_MODULES = {
+    "frontier_smart_source.py": "session.frontier-smart",
     "sonos_source.py": "session.sonos",
     "spotify_playlist_dialog.py": "session.spotify",
     "spotify_source.py": "session.spotify",

@@ -180,17 +180,18 @@ from .shortcuts import (
     preset_slot,
     resolve,
 )
-from .frontier_smart_source import (
-    FrontierSmartPayloadError,
-    device_list_state as frontier_smart_device_list_state,
-    device_rows as frontier_smart_device_rows,
-    discovered_devices as frontier_smart_discovered_devices,
-    mode_choices as frontier_smart_mode_choices,
-    now_playing_label as frontier_smart_now_playing_label,
-    payload_message as frontier_smart_payload_message,
-    preset_choices as frontier_smart_preset_choices,
-    snapshot as frontier_smart_snapshot,
-)
+if "session.frontier-smart" in _RELEASE_PROFILE.capabilities:
+    from .frontier_smart_source import (
+        FrontierSmartPayloadError,
+        device_list_state as frontier_smart_device_list_state,
+        device_rows as frontier_smart_device_rows,
+        discovered_devices as frontier_smart_discovered_devices,
+        mode_choices as frontier_smart_mode_choices,
+        now_playing_label as frontier_smart_now_playing_label,
+        payload_message as frontier_smart_payload_message,
+        preset_choices as frontier_smart_preset_choices,
+        snapshot as frontier_smart_snapshot,
+    )
 from .wiim_source import (
     WiiMOptionChoice,
     WiiMPresetChoice,

@@ -24,6 +24,7 @@ def test_python_package_matches_isolated_runtime_app_path():
         assert (target / "app" / "amc_wx_lite" / "spotify_source.py").is_file()
         assert (target / "app" / "amc_wx_lite" / "tidal_source.py").is_file()
         assert (target / "app" / "amc_wx_lite" / "sonos_source.py").is_file()
+        assert (target / "app" / "amc_wx_lite" / "frontier_smart_source.py").is_file()
         assert not (target / "AMC-wx-Lite.cmd").exists()
 
 
@@ -39,6 +40,7 @@ def test_public_python_package_contains_sonos_and_omits_only_disabled_services()
 
         assert "app/amc_wx_lite/gui.py" in copied
         profile = bundle.profile_from_id("public")
+        assert not (package / "frontier_smart_source.py").exists()
         for name, capability in bundle.PROFILE_GATED_SERVICE_MODULES.items():
             if capability in profile.capabilities:
                 assert (package / name).is_file()
