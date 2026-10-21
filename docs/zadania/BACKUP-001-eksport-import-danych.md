@@ -1,6 +1,7 @@
 # BACKUP-001 — eksport i import danych AMC
 
-Status: W trakcie
+Status: W trakcie — wdrożone i zweryfikowane w źródłach; czeka na instalację
+kandydata oraz ręczny odbiór NVDA
 
 ## Cel
 
@@ -102,6 +103,7 @@ opublikowany.
 
 ## Wersja i commit
 
-- Kod i pełna regresja: gotowe do osobnego commitu.
+- Kod i pełna regresja: commit `3ed70f7d` (`feat(backup): dodaj bezpieczne
+  kopie profilu`).
 - Build hosta Release: udany; nie jest to dowód instalacji.
 - Instalacja i publikacja: nie wykonano.
