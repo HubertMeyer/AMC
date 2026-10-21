@@ -1,7 +1,7 @@
 # BACKUP-001 — eksport i import danych AMC
 
-Status: W trakcie — wdrożone i zweryfikowane w źródłach; czeka na instalację
-kandydata oraz ręczny odbiór NVDA
+Status: Wdrożone do AMC Test i automatycznie zweryfikowane; czeka na ręczny
+odbiór NVDA
 
 ## Cel
 
@@ -97,11 +97,41 @@ opublikowany.
   nowy `ProfileBackupTests`.
 - Końcowy zestaw po przeglądzie bezpieczeństwa: 58 testów kopii, protokołu,
   parytetu poleceń i menu — zaliczone; końcowy E2E hosta — 1 zaliczony.
+- Bramka instalacyjna z 2026-10-21 po godz. 17:00, uruchomiona z czystego
+  commitu `ab2c8e25`:
+  - 29 testów launchera i aktualizatora — zaliczone;
+  - pełna regresja wxPython: 1937 testów zaliczonych, 110 świadomie
+    pominiętych, 11 podtestów zaliczonych;
+  - kompilacje hosta i składników instalacji — zaliczone, 0 ostrzeżeń i
+    0 błędów;
+  - kontrolowany start interfejsu i hosta dla kandydata oraz po instalacji —
+    zaliczony;
+  - kontrola integralności manifestu i sum SHA-256 po instalacji — zaliczona.
+
+## Instalacja AMC Test — 2026-10-21
+
+- Przed podmianą działał AMC Test z commitu `63b30444`, bez BACKUP-001.
+- Aktualizator wysłał zwykłe żądanie zamknięcia do AMC Test. Aplikacja
+  odczytała stan bezpośrednio z żywego hosta i zamknęła się, co potwierdziło
+  brak aktywnego nagrywania; przy nagrywaniu albo braku odpowiedzi zamknięcie
+  zostałoby odrzucone przed rozpoczęciem podmiany.
+- Zainstalowano wyłącznie w `D:\Projekty Codex\AMC Python` kompilację
+  `2026.10.21-ab2c8e25d9f5b876628eec961f79878d6246554b-913bad47`.
+- Manifest instalacji wskazuje czysty commit
+  `ab2c8e25d9f5b876628eec961f79878d6246554b`, identyfikator zawartości
+  `913bad47` i 1670 plików. Moduł `app/amc_wx_lite/full_backup.py` jest
+  obecny, a sumy kluczowych plików interfejsu i Core są zgodne z manifestem.
+- Po instalacji uruchomiono AMC Test z
+  `D:\Projekty Codex\AMC Python\AMC.exe`; potwierdzono okno
+  „AMC Test — 21.10.2026, 17:12”, prywatny runtime i host z katalogu tej
+  instalacji.
+- Historycznego AMC WPF i `D:\Projekty Codex\AMC Public` nie zmieniono.
+  Nie wykonano publikacji wydania.
 
 ## Znane ograniczenia
 
-- Żywy odbiór NVDA nastąpi po zbudowaniu i zainstalowaniu kandydata; testy
-  automatyczne nie są dowodem rzeczywistej mowy czytnika.
+- Żywy odbiór NVDA pozostaje do wykonania; testy automatyczne i kontrolowany
+  start nie są dowodem rzeczywistej mowy czytnika.
 - Kopia danych nie zawiera plików audio, nagrań ani pobranych odcinków.
 - Eksport playlist AMC zabezpiecza lokalne kontenery programu. Eksport
   pojedynczej playlisty sesji i zdalne playlisty kont pozostają osobnymi
@@ -111,5 +141,9 @@ opublikowany.
 
 - Kod i pełna regresja: commit `3ed70f7d` (`feat(backup): dodaj bezpieczne
   kopie profilu`).
-- Build hosta Release: udany; nie jest to dowód instalacji.
-- Instalacja i publikacja: nie wykonano.
+- Kandydat instalacyjny: commit `ab2c8e25` obejmujący `3ed70f7d`,
+  `8360752a` i `ab2c8e25`.
+- Build i testy kandydata: udane; szczegóły są w sekcji „Testy i wynik”.
+- Instalacja AMC Test: udana, wersja
+  `2026.10.21-ab2c8e25d9f5b876628eec961f79878d6246554b-913bad47`.
+- Publikacja wersji publicznej: nie wykonano.
