@@ -19,6 +19,10 @@ zaliczonych. Ta korekta nie została jeszcze zbudowana ani zainstalowana, bo w
 AMC Test trwa rzeczywiste nagranie. Zainstalowany publiczny AMC pozostaje więc
 bez zmian w wersji `alpha.428`.**
 
+Korekta źródłowa jest zapisana w commicie `d94ccecf` —
+`fix(amc02): odczytaj pojedyncze aktywne nagranie`. Identyfikator ten opisuje
+kod i testy, nie kompilację, instalację ani publikację.
+
 ### Korekta użytkownika z 21.10.2026
 
 Ta decyzja zastępuje wcześniejsze opisy o stałym, ogólnym ograniczaniu profilu

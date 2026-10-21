@@ -216,6 +216,10 @@ zgodność nazw i skrótów wykonania, pomocy i palety.
 - Publikacja: niewykonana i niedozwolona w tym etapie.
 - Kolejna korekta źródłowa: commit `fdc26b83` — `fix(amc): uporzadkuj
   nagrania menu i playlisty Spotify`.
+- Korekta odczytu pojedynczego aktywnego nagrania z 21.10.2026: commit
+  `d94ccecf` — `fix(amc02): odczytaj pojedyncze aktywne nagranie`. Jest to
+  stan źródeł i testów; nie jest jeszcze dowodem nowej kompilacji ani
+  instalacji.
 - Instalacja zawierająca kolejną korektę:
   `2026.10.19-8093e22adfa9b6abfc72c35c5c7029eaaade88c8-718893c9`;
   pełna regresja, manifest, sumy, integralność, stała ścieżka procesu i
