@@ -14,19 +14,30 @@ install_wx_stub()
 
 import amc_wx_lite.gui as gui  # noqa: E402
 from amc_wx_lite.list_model import ListModel, Row  # noqa: E402
-from amc_wx_lite.navigation import SessionId, View  # noqa: E402
+from amc_wx_lite.navigation import LibraryView, SessionId, View  # noqa: E402
 
 
-def _frame(active: SessionId, rows: list[Row], *, favorite: bool, player: bool = False):
+def _frame(
+    active: SessionId,
+    rows: list[Row],
+    *,
+    favorite: bool,
+    player: bool = False,
+    library_view: LibraryView | None = None,
+):
     model = ListModel()
     model.replace(rows)
-    state = SimpleNamespace(model=model, view=View.PLAYER if player else View.LIST)
-    calls: list[tuple[str, list[str]]] = []
+    state = SimpleNamespace(
+        model=model,
+        view=View.PLAYER if player else View.LIST,
+        library_view=library_view,
+    )
+    calls: list[tuple[str, list[str], list[str] | None]] = []
     spoken: list[str] = []
     refreshed: list[str | None] = []
 
-    def toggle(session_id, item_ids):
-        calls.append((session_id, list(item_ids)))
+    def toggle(session_id, item_ids, *, paths=None):
+        calls.append((session_id, list(item_ids), paths))
         return {
             "favorite": favorite,
             "requested": len(item_ids),
@@ -39,20 +50,25 @@ def _frame(active: SessionId, rows: list[Row], *, favorite: bool, player: bool =
         except Exception as error:
             failed(error)
 
+    def refresh(preferred_id=None, *, after_refresh=None):
+        refreshed.append(preferred_id)
+        if after_refresh is not None:
+            after_refresh()
+
     return SimpleNamespace(
         navigator=SimpleNamespace(active=active, session=state),
         client=SimpleNamespace(toggle_profile_favorites=toggle),
         runner=SimpleNamespace(submit=submit),
         announcer=SimpleNamespace(say=spoken.append),
         _selected_action_rows=lambda: rows,
-        _refresh_profile_view=lambda preferred_id=None: refreshed.append(preferred_id),
+        _refresh_profile_view=refresh,
         calls=calls,
         spoken=spoken,
         refreshed=refreshed,
     )
 
 
-def test_local_multiselection_is_sent_in_visible_order_and_refreshed() -> None:
+def test_local_multiselection_sends_paths_without_replacing_the_current_folder() -> None:
     rows = [
         Row(item_id="local-1", title="Pierwszy plik", kind="track", path="D:/pierwszy.mp3"),
         Row(item_id="local-2", title="Drugi plik", kind="track", path="D:/drugi.mp3"),
@@ -61,9 +77,38 @@ def test_local_multiselection_is_sent_in_visible_order_and_refreshed() -> None:
 
     gui.LiteFrame._toggle_profile_favorite(frame)
 
-    assert frame.calls == [("files", ["local-1", "local-2"])]
-    assert frame.refreshed == ["local-1"]
+    assert frame.calls == [(
+        "files",
+        ["local-1", "local-2"],
+        ["D:/pierwszy.mp3", "D:/drugi.mp3"],
+    )]
+    assert frame.refreshed == []
     assert frame.spoken == ["Dodano do ulubionych: 2 elementy"]
+
+
+def test_removing_the_last_visible_favorite_announces_after_refresh() -> None:
+    row = Row(
+        item_id="local-1",
+        title="Jedyny ulubiony",
+        kind="track",
+        path="D:/jedyny.mp3",
+    )
+    frame = _frame(
+        SessionId.FILES,
+        [row],
+        favorite=False,
+        library_view=LibraryView.FAVORITES,
+    )
+
+    gui.LiteFrame._toggle_profile_favorite(frame)
+
+    assert frame.calls == [(
+        "files",
+        ["local-1"],
+        ["D:/jedyny.mp3"],
+    )]
+    assert frame.refreshed == ["local-1"]
+    assert frame.spoken == ["Usunięto z ulubionych: Jedyny ulubiony"]
 
 
 def test_radio_uses_station_names_and_does_not_leave_player() -> None:
@@ -72,7 +117,7 @@ def test_radio_uses_station_names_and_does_not_leave_player() -> None:
 
     gui.LiteFrame._toggle_profile_favorite(frame)
 
-    assert frame.calls == [("radio", ["station-private"])]
+    assert frame.calls == [("radio", ["station-private"], None)]
     assert frame.refreshed == []
     assert frame.spoken == ["Usunięto z ulubionych: Radio Poznań"]
 

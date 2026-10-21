@@ -33,6 +33,50 @@ streamingowych, które nie są jeszcze dopracowane. Ukończone funkcje — w tym
 Sonos — pozostają dostępne. Obecnie wyłączone pozostają TIDAL, Spotify i
 nieodebrana jeszcze integracja Frontier Smart.
 
+### Korekta odbiorcza z 21.10.2026 — Ctrl+Shift+U i folder z Ctrl+O
+
+Ta korekta zastępuje wcześniejsze założenie, że każdy wiersz zwykłego folderu
+i każdy wiersz Biblioteki mają ten sam identyfikator. Folder otwarty przez
+`Ctrl+O` używa identyfikatora `file:` z pełną ścieżką, natomiast ten sam plik
+w bazie Biblioteki ma trwały identyfikator `local-*`. Host próbował wcześniej
+odnaleźć w bazie dosłowne `file:...`, a po powodzeniu interfejs bez potrzeby
+odświeżał bieżący folder jak widok Biblioteki. To mogło podać „zero elementów”
+i stworzyć wrażenie, że zniknął folder albo cała Biblioteka.
+
+#### Zachowanie widoczne dla użytkownika
+
+- `Ctrl+Shift+U` w folderze z `Ctrl+O` przekazuje hostowi także zweryfikowaną
+  ścieżkę. Host rozpoznaje po niej istniejący rekord Biblioteki i atomowo
+  zmienia Ulubione; jeżeli rekord był czasowo poza zakresem Biblioteki,
+  przywraca również jego członkostwo i oba trwałe porządki.
+- Po zmianie Ulubionych AMC pozostaje w bieżącym folderze. Nie przełącza listy
+  na pustą Bibliotekę i nie przykrywa komunikatu powodzenia komunikatem
+  „zero elementów”. Tylko otwarty widok `Ulubione` jest odświeżany, bo jego
+  skład rzeczywiście się wtedy zmienia; komunikat pada po odświeżeniu.
+- Jeśli plik naprawdę nie ma jeszcze rekordu Biblioteki, AMC nie udaje
+  powodzenia i nie dodaje potajemnie całego folderu. NVDA otrzymuje:
+  `Nie mogę zmienić Ulubionych: Wybranego pliku nie ma w Bibliotece. Ctrl+O
+  tylko otwiera folder. Dodaj folder poleceniem Foldery Biblioteki, Ctrl+F5.`
+- Usunięcie z Ulubionych nie usuwa pliku z Biblioteki ani z dysku. Dodanie do
+  Ulubionych gwarantuje natomiast, że plik należy również do Biblioteki.
+
+#### Dowody i rozróżnienie etapów
+
+- Odczyt aktywnego profilu AMC Test w chwili diagnozy potwierdził 11 685
+  rekordów lokalnych, 3 źródła folderów, 3 517 elementów Biblioteki i 9
+  Ulubionych; dane nie zostały skasowane. Nieaktywny profil publiczny miał 0
+  źródeł i 0 lokalnych rekordów, ponieważ `Ctrl+O` jedynie przeglądał folder.
+- Test integracyjny przez rzeczywisty proces hosta i tymczasową bazę potwierdza
+  rozpoznanie dwóch wierszy `file:` po ścieżkach, ustawienie Ulubionych i
+  Biblioteki, zapis kolejności oraz uczciwy błąd dla pliku spoza Biblioteki.
+- Testy celowane: 59 zaliczonych. Pełna regresja wxPython po korekcie: 1953
+  zaliczone, 110 świadomie pominiętych i 11 podtestów zaliczonych. Wszystkie
+  26 zestawów protokołu C# przeszło. Kompilacja LiteHost Release: 0 ostrzeżeń,
+  0 błędów.
+- Powyższe punkty potwierdzają kod i testy. Numer źródeł ustawiono na
+  `0.1.0-alpha.431`; budowa paczki, instalatora, instalacja i ręczny odbiór NVDA
+  są osobnymi etapami i w chwili tego zapisu nie są jeszcze potwierdzone.
+
 ### Korekta odbiorcza z 21.10.2026 — Historia i pojedynczy element
 
 Ta decyzja zastępuje wcześniejsze założenie, że puste `Ctrl+H` po działającym

@@ -924,14 +924,17 @@ internal sealed class LiteProfileMutationStore
     /// razem z członkostwem, żeby widoki „według dodania” i „własna” nie
     /// rozjechały się po ponownym uruchomieniu.
     /// </summary>
-    public object ToggleFavorites(string sessionId, IReadOnlyList<string> itemIds)
+    public object ToggleFavorites(
+        string sessionId,
+        IReadOnlyList<string> itemIds,
+        IReadOnlyList<string>? sourcePaths = null)
     {
         var ids = CleanDistinctIds(itemIds, "Wybierz plik albo stację radiową.");
         EnsureMayWrite();
         lock (_gate)
         {
             if (string.Equals(sessionId, "files", StringComparison.Ordinal))
-                return ToggleLocalFavorites(ids);
+                return ToggleLocalFavorites(ids, sourcePaths);
             if (string.Equals(sessionId, "radio", StringComparison.Ordinal))
                 return ToggleRadioFavorites(ids);
             throw new LiteRequestException("Ulubione nie są dostępne w tej sesji.");
@@ -1042,41 +1045,99 @@ internal sealed class LiteProfileMutationStore
         }
     }
 
-    private object ToggleLocalFavorites(IReadOnlyList<string> itemIds)
+    private object ToggleLocalFavorites(
+        IReadOnlyList<string> itemIds,
+        IReadOnlyList<string>? sourcePaths)
     {
         using var connection = OpenDatabase(_libraryDatabasePath);
         using var transaction = connection.BeginTransaction();
-        var rows = new List<(string Id, string Title, bool Favorite)>();
-        foreach (var id in itemIds)
+        var rows = new List<(string Id, string Title, bool Favorite, bool InLibrary)>();
+        for (var index = 0; index < itemIds.Count; index++)
         {
+            var id = itemIds[index];
             using var read = connection.CreateCommand();
             read.Transaction = transaction;
-            read.CommandText = "SELECT id, title, is_favorite FROM local_items WHERE id = $id;";
+            read.CommandText = "SELECT id, title, is_favorite, is_in_library "
+                + "FROM local_items WHERE id = $id;";
             read.Parameters.AddWithValue("$id", id);
             using var reader = read.ExecuteReader();
-            if (!reader.Read())
-                throw new LiteRequestException("Niektórych wybranych plików nie ma już w Bibliotece.");
-            rows.Add((reader.GetString(0), reader.GetString(1), reader.GetInt64(2) != 0));
+            if (reader.Read())
+            {
+                rows.Add((reader.GetString(0), reader.GetString(1),
+                    reader.GetInt64(2) != 0, reader.GetInt64(3) != 0));
+                continue;
+            }
+            reader.Close();
+
+            var path = sourcePaths is not null && index < sourcePaths.Count
+                ? sourcePaths[index]
+                : null;
+            if (!string.IsNullOrWhiteSpace(path))
+            {
+                string fullPath;
+                try { fullPath = Path.GetFullPath(path); }
+                catch (Exception exception) when (exception is ArgumentException
+                                                  or NotSupportedException
+                                                  or PathTooLongException)
+                {
+                    throw new LiteRequestException("Ścieżka wybranego pliku jest nieprawidłowa.");
+                }
+                using var byPath = connection.CreateCommand();
+                byPath.Transaction = transaction;
+                byPath.CommandText = "SELECT id, title, is_favorite, is_in_library "
+                    + "FROM local_items WHERE path = $path COLLATE NOCASE LIMIT 1;";
+                byPath.Parameters.AddWithValue("$path", fullPath);
+                using var pathReader = byPath.ExecuteReader();
+                if (pathReader.Read())
+                {
+                    var resolved = (
+                        Id: pathReader.GetString(0),
+                        Title: pathReader.GetString(1),
+                        Favorite: pathReader.GetInt64(2) != 0,
+                        InLibrary: pathReader.GetInt64(3) != 0);
+                    if (!rows.Any(row => string.Equals(
+                            row.Id, resolved.Id, StringComparison.Ordinal)))
+                    {
+                        rows.Add(resolved);
+                    }
+                    continue;
+                }
+            }
+            throw new LiteRequestException(
+                "Wybranego pliku nie ma w Bibliotece. Ctrl+O tylko otwiera folder. "
+                + "Dodaj folder poleceniem Foldery Biblioteki, Ctrl+F5.");
         }
 
         var favorite = rows.Any(row => !row.Favorite);
         var changed = 0;
         var customOrder = ReadOrder(connection, transaction, "favorite_order", "local");
         var addedOrder = ReadOrder(connection, transaction, "favorite_added_order", "local");
+        var libraryCustom = ReadOrder(connection, transaction, "library_custom_order", "local");
+        var libraryAdded = ReadOrder(connection, transaction, "library_added_order", "local");
         foreach (var row in rows)
         {
-            if (row.Favorite != favorite)
+            if (row.Favorite != favorite || (favorite && !row.InLibrary))
             {
                 Execute(connection, transaction,
-                    "UPDATE local_items SET is_favorite = $favorite WHERE id = $id;",
+                    "UPDATE local_items SET is_favorite = $favorite, "
+                    + "is_in_library = CASE WHEN $favorite THEN 1 ELSE is_in_library END "
+                    + "WHERE id = $id;",
                     ("$favorite", favorite), ("$id", row.Id));
                 changed++;
             }
             SetOrderedMembership(customOrder, row.Id, favorite);
             SetOrderedMembership(addedOrder, row.Id, favorite);
+            if (favorite) SetOrderedMembership(libraryCustom, row.Id, true);
+        }
+        if (favorite)
+        {
+            for (var index = rows.Count - 1; index >= 0; index--)
+                SetOrderedMembership(libraryAdded, rows[index].Id, true);
         }
         RewriteOrder(connection, transaction, "favorite_order", "local", customOrder);
         RewriteOrder(connection, transaction, "favorite_added_order", "local", addedOrder);
+        RewriteOrder(connection, transaction, "library_custom_order", "local", libraryCustom);
+        RewriteOrder(connection, transaction, "library_added_order", "local", libraryAdded);
         TouchMetadata(connection, transaction);
         transaction.Commit();
         return new

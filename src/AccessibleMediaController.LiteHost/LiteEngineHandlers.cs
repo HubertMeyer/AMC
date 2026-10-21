@@ -1161,7 +1161,8 @@ internal sealed class LiteEngineHandlers : IDisposable
     private object ToggleProfileFavorites(JsonElement args) =>
         RequireProfileMutations().ToggleFavorites(
             LiteArgs.RequireText(args, "sessionId"),
-            ReadIds(args));
+            ReadIds(args),
+            ReadOptionalTextList(args, "paths"));
 
     private object ToggleRadioLibrary(JsonElement args) =>
         RequireProfileMutations().ToggleRadioLibrary(ReadIds(args));
@@ -1267,6 +1268,23 @@ internal sealed class LiteEngineHandlers : IDisposable
             .Where(value => value.Length > 0)
             .Distinct(StringComparer.Ordinal)
             .Take(1_000)
+            .ToArray();
+    }
+
+    private static string[] ReadOptionalTextList(JsonElement args, string propertyName)
+    {
+        if (args.ValueKind != JsonValueKind.Object
+            || !args.TryGetProperty(propertyName, out var values))
+            return [];
+        if (values.ValueKind != JsonValueKind.Array)
+            throw new LiteRequestException($"Argument \"{propertyName}\" nie jest listą.");
+        // Zachowujemy puste pozycje i duplikaty: lista jest wyrównana indeksem
+        // z itemIds, więc filtrowanie przesunęłoby ścieżkę do innego wiersza.
+        return values.EnumerateArray()
+            .Take(1_000)
+            .Select(value => value.ValueKind == JsonValueKind.String
+                ? value.GetString()?.Trim() ?? string.Empty
+                : string.Empty)
             .ToArray();
     }
 

@@ -455,7 +455,11 @@ def test_profile_mutations_use_narrow_named_operations() -> None:
             client.export_radio_favorites("D:/wymiana/ulubione.m3u"),
             client.toggle_radio_library(["radio-1"]),
             client.set_radio_collection_sort("library", "Alphabetical"),
-            client.toggle_profile_favorites("files", ["local-1"]),
+            client.toggle_profile_favorites(
+                "files",
+                ["file:D:/muzyka/utwor.mp3"],
+                paths=["D:/muzyka/utwor.mp3"],
+            ),
             client.remove_profile_items("files", "favorites", ["local-1"]),
             client.recycle_local_files(["local-1"]),
         ]
@@ -488,6 +492,11 @@ def test_profile_mutations_use_narrow_named_operations() -> None:
         assert calls[8]["args"] == {
             "view": "library",
             "mode": "Alphabetical",
+        }
+        assert calls[9]["args"] == {
+            "sessionId": "files",
+            "itemIds": ["file:D:/muzyka/utwor.mp3"],
+            "paths": ["D:/muzyka/utwor.mp3"],
         }
     finally:
         client.close()

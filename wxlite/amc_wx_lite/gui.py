@@ -22384,8 +22384,20 @@ class LiteFrame(wx.Frame):
             )
             return
         session_id = "files" if active is SessionId.FILES else "radio"
-        item_ids = list(dict.fromkeys(row.item_id for row in rows))
+        selected_rows = []
+        seen_ids: set[str] = set()
+        for row in rows:
+            if row.item_id in seen_ids:
+                continue
+            seen_ids.add(row.item_id)
+            selected_rows.append(row)
+        item_ids = [row.item_id for row in selected_rows]
         preferred_id = item_ids[0]
+        source_paths = (
+            [row.path or "" for row in selected_rows]
+            if active is SessionId.FILES
+            else []
+        )
 
         def done(payload: dict) -> None:
             payload = payload or {}
@@ -22406,7 +22418,22 @@ class LiteFrame(wx.Frame):
                 else:
                     LiteFrame._announce_routine_text(self, message)
                 return
-            self._refresh_profile_view(preferred_id=preferred_id)
+            # Członkostwo w Ulubionych zmienia skład wyłącznie bieżącego
+            # widoku Ulubione. W Folderach, Wszystkich plikach i Bibliotece
+            # Radia przeładowanie całej listy jest niepotrzebne. Co ważniejsze,
+            # folder otwarty przez Ctrl+O jest widokiem dysku, a nie drzewem
+            # SQLite; ogólne odświeżenie przełączało go na pustą Bibliotekę i
+            # przykrywało właściwy komunikat wynikiem „zero elementów”.
+            if self.navigator.session.library_view is LibraryView.FAVORITES:
+                self._refresh_profile_view(
+                    preferred_id=preferred_id,
+                    after_refresh=lambda: (
+                        self.announcer.say(message)
+                        if changed <= 0
+                        else LiteFrame._announce_routine_text(self, message)
+                    ),
+                )
+                return
             if changed <= 0:
                 self.announcer.say(message)
             else:
@@ -22415,9 +22442,18 @@ class LiteFrame(wx.Frame):
         def failed(error: Exception) -> None:
             self.announcer.say(f"Nie mogę zmienić Ulubionych: {error}")
 
+        def toggle_favorite() -> dict:
+            if active is SessionId.FILES:
+                return client.toggle_profile_favorites(
+                    session_id,
+                    item_ids,
+                    paths=source_paths,
+                )
+            return client.toggle_profile_favorites(session_id, item_ids)
+
         self.runner.submit(
             "profile-favorite",
-            lambda: client.toggle_profile_favorites(session_id, item_ids),
+            toggle_favorite,
             done,
             failed,
         )

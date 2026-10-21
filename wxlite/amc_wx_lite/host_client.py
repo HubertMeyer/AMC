@@ -1383,11 +1383,25 @@ class LiteHostClient:
         )
 
     def toggle_profile_favorites(
-        self, session_id: str, item_ids: list[str]
+        self,
+        session_id: str,
+        item_ids: list[str],
+        *,
+        paths: list[str] | None = None,
     ) -> Any:
+        args: dict[str, Any] = {
+            "sessionId": session_id,
+            "itemIds": item_ids,
+        }
+        if paths:
+            # Ctrl+O pokazuje wiersze dysku z identyfikatorem ``file:<path>``,
+            # podczas gdy ten sam plik w Bibliotece ma trwałe ``local-*``.
+            # Host rozwiązuje zweryfikowaną ścieżkę do istniejącego rekordu;
+            # frontend nadal nie zapisuje bazy i nie tworzy własnych ID.
+            args["paths"] = paths
         return self.call(
             "library.toggleFavorite",
-            {"sessionId": session_id, "itemIds": item_ids},
+            args,
             timeout=30.0,
         )
 

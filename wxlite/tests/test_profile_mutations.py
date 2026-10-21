@@ -248,7 +248,8 @@ def test_profile_edits_go_through_the_real_host() -> None:
                 - (left.casefold() < right.casefold()),
             )
             database.execute(
-                "UPDATE local_items SET path = ? WHERE id = 'local-2'",
+                "UPDATE local_items SET path = ?, is_in_library = 0 "
+                "WHERE id = 'local-2'",
                 (str(history_media),),
             )
             database.execute(
@@ -441,7 +442,9 @@ def test_profile_edits_go_through_the_real_host() -> None:
             )
             assert radio_edit["streamChanged"] is True
             local_favorite = client.toggle_profile_favorites(
-                "files", ["local-1", "local-2"]
+                "files",
+                ["file:" + str(case_path), "file:" + renamed_history["path"]],
+                paths=[str(case_path), renamed_history["path"]],
             )
             assert local_favorite == {
                 "favorite": True,
@@ -452,6 +455,33 @@ def test_profile_edits_go_through_the_real_host() -> None:
                     "Zagadkowa niedziela - prawa dziecka",
                 ],
             }, local_favorite
+            with closing(sqlite3.connect(library)) as database:
+                flags = database.execute(
+                    "SELECT id, is_favorite, is_in_library FROM local_items "
+                    "WHERE id IN ('local-1', 'local-2') ORDER BY id"
+                ).fetchall()
+                assert flags == [
+                    ("local-1", 1, 1),
+                    ("local-2", 1, 1),
+                ]
+                assert database.execute(
+                    "SELECT COUNT(*) FROM library_added_order "
+                    "WHERE session_id = 'local' AND item_id = 'local-2'"
+                ).fetchone() == (1,)
+            unindexed_path = renamed_fresh_history["path"]
+            try:
+                client.toggle_profile_favorites(
+                    "files",
+                    ["file:" + unindexed_path],
+                    paths=[unindexed_path],
+                )
+            except HostError as error:
+                assert "Ctrl+O tylko otwiera folder" in str(error)
+                assert "Ctrl+F5" in str(error)
+            else:
+                raise AssertionError(
+                    "Plik spoza Biblioteki nie może otrzymać pozornego Ulubionego"
+                )
             radio_favorite = client.toggle_profile_favorites("radio", ["radio-1"])
             assert radio_favorite["favorite"] is False
             assert radio_favorite["changed"] == 1
