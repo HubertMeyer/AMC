@@ -209,9 +209,28 @@ def test_frontier_smart_device_dialog_has_explicit_names_and_keyboard_contract()
     assert 'self.devices.SetName("Zapisane urządzenia Frontier Smart")' in dialog
     assert 'self.address.SetName("Lokalny adres IP urządzenia")' in dialog
     assert 'self.pin.SetName("PIN urządzenia, pole chronione")' in dialog
+    assert 'self.manual_button.SetName("Wpisz lokalny adres IP ręcznie")' in dialog
     assert "self.Bind(wx.EVT_CHAR_HOOK, self._on_key)" in dialog
     assert "self.devices.Bind(wx.EVT_LISTBOX_DCLICK, self._on_select)" in dialog
     assert "self.devices.HasFocus()" in dialog
     assert "event.HasAnyModifiers()" in dialog
     assert "self.save_button.SetDefault()" not in dialog
-    assert "self.devices.SetFocus() if self._devices else self.address.SetFocus()" in dialog
+    assert "wx.CallAfter(self._start_discovery)" in dialog
+    assert "self.address_label.Hide()" in dialog
+    assert "self.address.Hide()" in dialog
+    assert "self.manual_button.SetFocus()" in dialog
+    assert "self.pin.SetFocus()" in dialog
+    assert "close_after=True" not in dialog
+
+
+def test_frontier_smart_success_closes_configuration_and_returns_to_device_list() -> None:
+    source = (
+        Path(__file__).parents[1] / "amc_wx_lite" / "gui.py"
+    ).read_text(encoding="utf-8")
+    flow = source[source.index("    def _show_frontier_smart_devices") :]
+    flow = flow[:flow.index("    def _activate_frontier_smart_device")]
+
+    assert "announce=self.announcer.say" in flow
+    assert "lambda payload: finish(payload, dialog, close_after=True)" in flow
+    assert "close_after=True" in flow
+    assert "dialog.fail(str(error), focus_pin=focus_pin)" in flow

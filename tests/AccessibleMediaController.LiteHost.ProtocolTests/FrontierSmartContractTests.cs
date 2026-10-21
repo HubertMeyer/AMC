@@ -9,10 +9,56 @@ internal static class FrontierSmartContractTests
     public static void Run()
     {
         AddressPolicyAcceptsOnlyLocalIpAddresses();
+        DiscoveryAcceptsLegacyAndUndokServiceTypes();
+        SnapshotFallsBackWhenDeviceRejectsGetMultiple();
         XmlParserReadsTypedValuesAndRejectsDtd();
         ListsUseOnlyIntentionalLabels();
         DeviceAndSnapshotResultsDoNotExposeAddressOrRuntimeTypes();
         TransportAndNumericArgumentsAreStrict();
+    }
+
+    private static void SnapshotFallsBackWhenDeviceRejectsGetMultiple()
+    {
+        var handler = new GetMultipleRejectedHandler();
+        using var client = new FrontierSmartClient(handler);
+
+        var snapshot = client.ReadSnapshotAsync("192.168.0.132", "1234")
+            .GetAwaiter().GetResult();
+
+        Check(handler.MultipleRequests == 1,
+            "klient nie spróbował zbiorczego odczytu FSAPI");
+        Check(handler.SingleRequests > 1,
+            "odmowa GET_MULTIPLE nie uruchomiła pojedynczych GET");
+        Check(snapshot.DisplayName == "Radio testowe",
+            "fallback pojedynczych GET zgubił nazwę urządzenia");
+    }
+
+    private static void DiscoveryAcceptsLegacyAndUndokServiceTypes()
+    {
+        foreach (var serviceType in new[]
+                 {
+                     FrontierSmartDiscoveryService.LegacyServiceType,
+                     FrontierSmartDiscoveryService.UndokServiceType
+                 })
+        {
+            var response =
+                "HTTP/1.1 200 OK\r\n"
+                + "LOCATION: http://192.168.0.132:80/device\r\n"
+                + $"ST: {serviceType}\r\n\r\n";
+            Check(FrontierSmartDiscoveryService.TryParseResponse(
+                    response, out var address),
+                $"odrzucono odpowiedź SSDP {serviceType}");
+            Check(address == "192.168.0.132",
+                "wykrywanie nie zachowało lokalnego adresu radia");
+        }
+
+        const string unrelated =
+            "HTTP/1.1 200 OK\r\n"
+            + "LOCATION: http://192.168.0.132:49152/description.xml\r\n"
+            + "ST: urn:schemas-upnp-org:device:MediaRenderer:1\r\n\r\n";
+        Check(!FrontierSmartDiscoveryService.TryParseResponse(
+                unrelated, out _),
+            "wykrywanie przyjęło niezwiązany renderer UPnP");
     }
 
     private static void AddressPolicyAcceptsOnlyLocalIpAddresses()
@@ -159,5 +205,35 @@ internal static class FrontierSmartContractTests
     private static void Check(bool condition, string message)
     {
         if (!condition) throw new InvalidOperationException(message);
+    }
+
+    private sealed class GetMultipleRejectedHandler : HttpMessageHandler
+    {
+        public int MultipleRequests { get; private set; }
+        public int SingleRequests { get; private set; }
+
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken)
+        {
+            if (request.RequestUri?.AbsolutePath.EndsWith(
+                    "/GET_MULTIPLE", StringComparison.Ordinal) is true)
+            {
+                MultipleRequests++;
+                return Task.FromResult(new HttpResponseMessage(
+                    System.Net.HttpStatusCode.BadRequest));
+            }
+
+            SingleRequests++;
+            var value = request.RequestUri?.AbsolutePath.EndsWith(
+                    FrontierSmartNodes.FriendlyName, StringComparison.Ordinal) is true
+                ? "Radio testowe"
+                : "1";
+            return Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.OK)
+            {
+                Content = new StringContent(
+                    $"<fsapiResponse><status>FS_OK</status><value><c8_array>{value}</c8_array></value></fsapiResponse>")
+            });
+        }
     }
 }

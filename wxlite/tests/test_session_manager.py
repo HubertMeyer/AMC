@@ -119,6 +119,9 @@ def test_manager_dialog_has_explicit_names_keys_and_focus_restoration_contract()
     assert "event.GetKeyCode() == wx.WXK_DOWN" in dialog
     assert "self._refresh_rows(selected)" in dialog
     assert "self.session_list.SetFocus()" in dialog
+    assert "selected is SessionId.FRONTIER_SMART" in dialog
+    assert "self.configure_session = selected" in dialog
+    assert "self.EndModal(wx.ID_APPLY)" in dialog
 
 
 def test_opening_manager_reads_only_cached_readiness_and_does_not_authenticate() -> None:

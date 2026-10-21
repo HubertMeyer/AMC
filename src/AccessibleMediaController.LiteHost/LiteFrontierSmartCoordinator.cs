@@ -44,14 +44,14 @@ internal sealed class LiteFrontierSmartCoordinator : IDisposable
     {
         try
         {
-            var addresses = discovery.DiscoverAddressesAsync(TimeSpan.FromSeconds(3))
+            var addresses = discovery.DiscoverAddressesAsync(TimeSpan.FromSeconds(5))
                 .GetAwaiter().GetResult();
             return new
             {
                 items = addresses.Select(address => new
                 {
                     address,
-                    label = "Urządzenie pod adresem " + address
+                    label = "Wykryte urządzenie Frontier Smart, adres " + address
                 }).ToArray(),
                 message = addresses.Count == 0
                     ? "Nie wykryto urządzenia. Możesz wpisać lokalny adres IP ręcznie."
@@ -83,7 +83,7 @@ internal sealed class LiteFrontierSmartCoordinator : IDisposable
         catch (Exception exception) when (IsExpectedFailure(exception))
         {
             throw new LiteRequestException(
-                "Urządzenie Frontier Smart nie odpowiedziało. Sprawdź adres, PIN i połączenie z tą samą siecią.");
+                "Urządzenie Frontier Smart nie odpowiedziało. Sprawdź, czy radio jest włączone i połączone z tą samą siecią. Możesz wyszukać je ponownie albo użyć ręcznego adresu.");
         }
 
         lock (gate)

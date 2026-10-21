@@ -4521,6 +4521,8 @@ class FrontierSmartDevicesDialog(wx.Dialog):
         save: Callable[[str, str, "FrontierSmartDevicesDialog"], None],
         remove: Callable[[str, "FrontierSmartDevicesDialog"], None],
         select: Callable[[str, "FrontierSmartDevicesDialog"], None],
+        announce: Callable[[str], None],
+        auto_discover: bool = True,
     ) -> None:
         super().__init__(
             parent,
@@ -4531,20 +4533,25 @@ class FrontierSmartDevicesDialog(wx.Dialog):
         self._save = save
         self._remove = remove
         self._select = select
+        self._announce = announce
+        self._auto_discover = auto_discover
+        self._automatic_discovery_started = False
+        self._manual_address_visible = False
         self._busy = False
         self._devices: list[tuple[str, str]] = []
 
         intro = wx.StaticText(
             self,
             label=(
-                "Wykryj urządzenie w sieci albo wpisz jego lokalny adres IP. "
+                "AMC automatycznie wyszuka urządzenia w sieci. "
+                "Ręczny adres jest dostępny jako opcja awaryjna. "
                 "PIN zostanie zapisany bezpiecznie w Menedżerze poświadczeń Windows."
             ),
         )
         self.devices = wx.ListBox(self)
         self.devices.SetName("Zapisane urządzenia Frontier Smart")
 
-        address_label = wx.StaticText(self, label="&Lokalny adres IP:")
+        self.address_label = wx.StaticText(self, label="&Lokalny adres IP:")
         self.address = wx.TextCtrl(self)
         self.address.SetName("Lokalny adres IP urządzenia")
         pin_label = wx.StaticText(self, label="&PIN urządzenia:")
@@ -4554,8 +4561,10 @@ class FrontierSmartDevicesDialog(wx.Dialog):
         self.status = wx.StaticText(self, label="Gotowe")
         self.status.SetName("Stan konfiguracji: Gotowe")
 
-        self.discover_button = wx.Button(self, label="&Wykryj urządzenia")
-        self.save_button = wx.Button(self, label="&Dodaj lub sprawdź")
+        self.discover_button = wx.Button(self, label="&Szukaj ponownie")
+        self.manual_button = wx.Button(self, label="Wpisz adres &ręcznie…")
+        self.manual_button.SetName("Wpisz lokalny adres IP ręcznie")
+        self.save_button = wx.Button(self, label="&Połącz i zapisz")
         self.select_button = wx.Button(self, label="&Użyj wybranego")
         self.remove_button = wx.Button(self, label="&Usuń z AMC")
         self.close_button = wx.Button(self, wx.ID_CANCEL, "&Zamknij")
@@ -4563,7 +4572,7 @@ class FrontierSmartDevicesDialog(wx.Dialog):
 
         fields = wx.FlexGridSizer(cols=2, hgap=8, vgap=6)
         fields.AddGrowableCol(1, 1)
-        fields.Add(address_label, 0, wx.ALIGN_CENTER_VERTICAL)
+        fields.Add(self.address_label, 0, wx.ALIGN_CENTER_VERTICAL)
         fields.Add(self.address, 1, wx.EXPAND)
         fields.Add(pin_label, 0, wx.ALIGN_CENTER_VERTICAL)
         fields.Add(self.pin, 1, wx.EXPAND)
@@ -4571,6 +4580,7 @@ class FrontierSmartDevicesDialog(wx.Dialog):
         buttons = wx.BoxSizer(wx.HORIZONTAL)
         for button in (
             self.discover_button,
+            self.manual_button,
             self.save_button,
             self.select_button,
             self.remove_button,
@@ -4592,9 +4602,12 @@ class FrontierSmartDevicesDialog(wx.Dialog):
         self.devices.Bind(wx.EVT_LISTBOX, self._on_selection)
         self.devices.Bind(wx.EVT_LISTBOX_DCLICK, self._on_select)
         self.discover_button.Bind(wx.EVT_BUTTON, self._on_discover)
+        self.manual_button.Bind(wx.EVT_BUTTON, self._on_manual)
         self.save_button.Bind(wx.EVT_BUTTON, self._on_save)
         self.select_button.Bind(wx.EVT_BUTTON, self._on_select)
         self.remove_button.Bind(wx.EVT_BUTTON, self._on_remove)
+        self.address_label.Hide()
+        self.address.Hide()
         self.apply_payload(payload)
 
     @property
@@ -4635,31 +4648,51 @@ class FrontierSmartDevicesDialog(wx.Dialog):
 
     def set_busy(self, message: str) -> None:
         self._busy = True
-        self.set_status(message)
+        self.set_status(message, announce=True)
         self._update_buttons()
 
     def fail(self, message: str, *, focus_pin: bool = False) -> None:
         self._busy = False
-        self.set_status(message)
+        self.set_status(message, announce=True)
         self._update_buttons()
-        (self.pin if focus_pin else self.address).SetFocus()
+        if focus_pin and self.address.GetValue().strip():
+            self.pin.SetFocus()
+        elif self._manual_address_visible:
+            self.address.SetFocus()
+        else:
+            self.manual_button.SetFocus()
 
-    def finish(self, payload: object, preferred_device_id: str | None = None) -> None:
+    def finish(
+        self,
+        payload: object,
+        preferred_device_id: str | None = None,
+        *,
+        close_after: bool = False,
+    ) -> None:
         self.apply_payload(payload, preferred_device_id)
-        self.devices.SetFocus() if self._devices else self.address.SetFocus()
+        self._announce(self.status.GetLabel())
+        if close_after:
+            self.EndModal(wx.ID_OK)
+            return
+        self.devices.SetFocus() if self._devices else self.manual_button.SetFocus()
 
-    def set_status(self, message: str) -> None:
+    def set_status(self, message: str, *, announce: bool = False) -> None:
         text = message.strip() or "Gotowe"
         self.status.SetLabel(text)
         self.status.SetName("Stan konfiguracji: " + text)
         self.Layout()
+        if announce:
+            self._announce(text)
 
     def use_discovered(self, choices: tuple[tuple[str, str], ...], message: str) -> None:
         self._busy = False
         self._update_buttons()
         if not choices:
-            self.set_status(message)
-            self.address.SetFocus()
+            self.set_status(
+                message + " Wybierz Wpisz adres ręcznie, jeżeli znasz adres radia.",
+                announce=True,
+            )
+            self.manual_button.SetFocus()
             return
         index = 0
         if len(choices) > 1:
@@ -4675,23 +4708,34 @@ class FrontierSmartDevicesDialog(wx.Dialog):
                     return
                 index = dialog.GetSelection()
         self.address.SetValue(choices[index][0])
-        self.set_status("Wpisz PIN urządzenia i wybierz Dodaj lub sprawdź")
+        self.set_status(
+            message + " " + choices[index][1]
+            + ". Wpisz PIN urządzenia i wybierz Połącz i zapisz.",
+            announce=True,
+        )
+        self._update_buttons()
         self.pin.SetFocus()
 
     def _update_buttons(self) -> None:
         selected = self.selected_device_id is not None
         self.discover_button.Enable(not self._busy)
-        self.save_button.Enable(not self._busy)
+        self.manual_button.Enable(not self._busy)
+        self.save_button.Enable(
+            not self._busy and bool(self.address.GetValue().strip())
+        )
         self.select_button.Enable(not self._busy and selected)
         self.remove_button.Enable(not self._busy and selected)
-        self.close_button.Enable(not self._busy)
+        self.close_button.Enable(True)
 
     def _on_show(self, event: wx.ShowEvent) -> None:
         event.Skip()
         if event.IsShown():
             wx.CallAfter(
-                self.devices.SetFocus if self._devices else self.address.SetFocus
+                self.devices.SetFocus if self._devices else self.close_button.SetFocus
             )
+            if self._auto_discover and not self._automatic_discovery_started:
+                self._automatic_discovery_started = True
+                wx.CallAfter(self._start_discovery)
 
     def _on_selection(self, event: wx.CommandEvent) -> None:
         self._update_buttons()
@@ -4711,8 +4755,27 @@ class FrontierSmartDevicesDialog(wx.Dialog):
     def _on_discover(self, _event: wx.CommandEvent) -> None:
         if self._busy:
             return
+        self._start_discovery()
+
+    def _start_discovery(self) -> None:
+        if self._busy:
+            return
         self.set_busy("Wykrywanie urządzeń w sieci lokalnej")
         self._discover(self)
+
+    def _on_manual(self, _event: wx.CommandEvent) -> None:
+        if self._busy:
+            return
+        if not self._manual_address_visible:
+            self._manual_address_visible = True
+            self.address_label.Show()
+            self.address.Show()
+            self.Layout()
+        self.set_status(
+            "Wpisz lokalny adres IP radia, następnie PIN i wybierz Połącz i zapisz.",
+            announce=True,
+        )
+        self.address.SetFocus()
 
     def _on_save(self, _event: wx.CommandEvent) -> None:
         if self._busy:
@@ -4881,10 +4944,19 @@ class SessionSelectionDialog(wx.Dialog):
         selected = self.selected_session
         if selected is None or self._toggle_session is None:
             return
+        was_enabled = selected in session_order.normalize(self._order)
         order, message = self._toggle_session(selected)
         self._order = session_order.normalize(order)
         self._refresh_rows(selected)
         self._say(message)
+        if (
+            not was_enabled
+            and selected in self._order
+            and selected is SessionId.FRONTIER_SMART
+        ):
+            self.configure_session = selected
+            self.EndModal(wx.ID_APPLY)
+            return
         self.session_list.SetFocus()
 
     def _move(self, direction: int) -> None:
@@ -15892,11 +15964,17 @@ class LiteFrame(wx.Frame):
                 payload: object,
                 dialog: FrontierSmartDevicesDialog,
                 preferred_device_id: str | None = None,
+                *,
+                close_after: bool = False,
             ) -> None:
                 try:
                     self._apply_frontier_smart_devices_payload(payload)
                     if alive(dialog):
-                        dialog.finish(payload, preferred_device_id)
+                        dialog.finish(
+                            payload,
+                            preferred_device_id,
+                            close_after=close_after,
+                        )
                 except FrontierSmartPayloadError as error:
                     if alive(dialog):
                         dialog.fail(str(error))
@@ -15927,8 +16005,12 @@ class LiteFrame(wx.Frame):
                 self.runner.submit(
                     "frontier-smart-add",
                     lambda: client.frontier_smart_add(address, pin),
-                    lambda payload: finish(payload, dialog),
-                    lambda error: failed(error, dialog, focus_pin=True),
+                    lambda payload: finish(payload, dialog, close_after=True),
+                    lambda error: failed(
+                        error,
+                        dialog,
+                        focus_pin="PIN" in str(error).upper(),
+                    ),
                 )
 
             def remove(
@@ -15949,7 +16031,12 @@ class LiteFrame(wx.Frame):
                 self.runner.submit(
                     "frontier-smart-select",
                     lambda: client.frontier_smart_select(device_id),
-                    lambda payload: finish(payload, dialog, device_id),
+                    lambda payload: finish(
+                        payload,
+                        dialog,
+                        device_id,
+                        close_after=True,
+                    ),
                     lambda error: failed(error, dialog),
                 )
 
@@ -15960,6 +16047,7 @@ class LiteFrame(wx.Frame):
                 save=save,
                 remove=remove,
                 select=select,
+                announce=self.announcer.say,
             ) as dialog:
                 dialog.ShowModal()
             self._restore_focus_after_dialog()

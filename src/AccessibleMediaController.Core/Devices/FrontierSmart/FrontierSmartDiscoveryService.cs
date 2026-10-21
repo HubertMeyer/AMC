@@ -7,8 +7,16 @@ namespace AccessibleMediaController.Core.Devices.FrontierSmart;
 
 public sealed class FrontierSmartDiscoveryService
 {
-    public const string ServiceType =
+    public const string LegacyServiceType =
         "urn:schemas-frontier-silicon-com:fs_reference:fsapi:1";
+    public const string UndokServiceType =
+        "urn:schemas-frontier-silicon-com:undok:fsapi:1";
+    public const string ServiceType = LegacyServiceType;
+    private static readonly string[] DiscoveryServiceTypes =
+    [
+        LegacyServiceType,
+        UndokServiceType
+    ];
     private static readonly IPEndPoint MulticastEndpoint =
         new(IPAddress.Parse("239.255.255.250"), 1900);
 
@@ -58,7 +66,9 @@ public sealed class FrontierSmartDiscoveryService
             if (name.Equals("ST", StringComparison.OrdinalIgnoreCase)) serviceType = value;
         }
         if (!string.IsNullOrWhiteSpace(serviceType)
-            && !serviceType.Equals(ServiceType, StringComparison.OrdinalIgnoreCase))
+            && !DiscoveryServiceTypes.Contains(
+                serviceType,
+                StringComparer.OrdinalIgnoreCase))
         {
             return false;
         }
@@ -78,14 +88,29 @@ public sealed class FrontierSmartDiscoveryService
         using var socket = new UdpClient(new IPEndPoint(localAddress, 0));
         socket.Client.SetSocketOption(
             SocketOptionLevel.IP, SocketOptionName.MulticastTimeToLive, 2);
-        var message = Encoding.ASCII.GetBytes(
-            "M-SEARCH * HTTP/1.1\r\n" +
-            "HOST: 239.255.255.250:1900\r\n" +
-            "MAN: \"ssdp:discover\"\r\n" +
-            "MX: 2\r\n" +
-            $"ST: {ServiceType}\r\n\r\n");
-        await socket.SendAsync(message, MulticastEndpoint, cancellationToken)
-            .ConfigureAwait(false);
+        // Starsze moduły Frontier odpowiadają na fs_reference, a nowsze
+        // urządzenia sterowane przez UNDOK (m.in. Teufel RADIO 3SIXTY)
+        // reklamują wyłącznie undok:fsapi. Dwie krótkie serie ograniczają
+        // utratę pojedynczego pakietu w Wi-Fi bez skanowania całej podsieci.
+        for (var attempt = 0; attempt < 2; attempt++)
+        {
+            foreach (var serviceType in DiscoveryServiceTypes)
+            {
+                var message = Encoding.ASCII.GetBytes(
+                    "M-SEARCH * HTTP/1.1\r\n" +
+                    "HOST: 239.255.255.250:1900\r\n" +
+                    "MAN: \"ssdp:discover\"\r\n" +
+                    "MX: 2\r\n" +
+                    $"ST: {serviceType}\r\n\r\n");
+                await socket.SendAsync(message, MulticastEndpoint, cancellationToken)
+                    .ConfigureAwait(false);
+            }
+            if (attempt == 0)
+            {
+                await Task.Delay(TimeSpan.FromMilliseconds(250), cancellationToken)
+                    .ConfigureAwait(false);
+            }
+        }
         while (!cancellationToken.IsCancellationRequested)
         {
             UdpReceiveResult result;

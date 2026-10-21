@@ -68,13 +68,29 @@ public sealed class FrontierSmartClient : IDisposable
             values = await GetMultipleAsync(address, pin, SnapshotNodes, cancellationToken)
                 .ConfigureAwait(false);
         }
-        catch (HttpRequestException exception) when (exception.StatusCode == HttpStatusCode.NotFound)
+        catch (HttpRequestException exception) when (exception.StatusCode is
+            HttpStatusCode.BadRequest
+            or HttpStatusCode.NotFound
+            or HttpStatusCode.MethodNotAllowed)
         {
+            // Część starszych odmian FSAPI zna tylko pojedyncze GET. Niektóre
+            // zwracają 400 (a nie 404) dla zbyt dużego GET_MULTIPLE, mimo że
+            // te same węzły poprawnie udostępniają osobno.
             var fallback = new Dictionary<string, FrontierSmartValue>(StringComparer.Ordinal);
-            foreach (var node in SnapshotNodes)
+            for (var index = 0; index < SnapshotNodes.Length; index++)
             {
-                fallback[node] = await GetAsync(address, pin, node, cancellationToken)
+                var node = SnapshotNodes[index];
+                fallback[node] = await GetCompatibilityValueAsync(
+                        address, pin, node, cancellationToken)
                     .ConfigureAwait(false);
+                if (index + 1 < SnapshotNodes.Length)
+                {
+                    // Starsze radia potrafią gwałtownie zamknąć połączenie,
+                    // gdy po odrzuconym GET_MULTIPLE dostaną serię GET bez
+                    // choćby krótkiej przerwy.
+                    await Task.Delay(TimeSpan.FromMilliseconds(75), cancellationToken)
+                        .ConfigureAwait(false);
+                }
             }
             values = fallback;
         }
@@ -306,6 +322,26 @@ public sealed class FrontierSmartClient : IDisposable
             throw new FrontierSmartProtocolException("Urządzenie odrzuciło PIN.");
         response.EnsureSuccessStatusCode();
         return await ReadBoundedResponseAsync(response, cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task<FrontierSmartValue> GetCompatibilityValueAsync(
+        string address,
+        string pin,
+        string node,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await GetAsync(address, pin, node, cancellationToken)
+                .ConfigureAwait(false);
+        }
+        catch (HttpRequestException) when (!cancellationToken.IsCancellationRequested)
+        {
+            await Task.Delay(TimeSpan.FromMilliseconds(150), cancellationToken)
+                .ConfigureAwait(false);
+            return await GetAsync(address, pin, node, cancellationToken)
+                .ConfigureAwait(false);
+        }
     }
 
     private static async Task<string> ReadBoundedResponseAsync(
