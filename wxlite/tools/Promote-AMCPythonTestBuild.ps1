@@ -191,6 +191,11 @@ if (-not $SkipTests) {
         throw "Brak polecenia uv potrzebnego do uruchomienia testów Pythona."
     }
     Invoke-Checked -FilePath $dotnet.Source -ArgumentList @(
+        "run", "--project",
+        (Join-Path $RepositoryRoot "tests\AccessibleMediaController.PythonLauncher.Tests\AccessibleMediaController.PythonLauncher.Tests.csproj"),
+        "-c", "Release"
+    ) -WorkingDirectory $RepositoryRoot -Stage "Testy launchera i aktualizatora"
+    Invoke-Checked -FilePath $dotnet.Source -ArgumentList @(
         "build",
         (Join-Path $RepositoryRoot "tests\AccessibleMediaController.LiteHost.ProtocolTests\AccessibleMediaController.LiteHost.ProtocolTests.csproj"),
         "-c", "Release"

@@ -404,6 +404,14 @@ zapisie NVDA słyszy „Dodano do Biblioteki” albo „Usunięto z Biblioteki�
   **110 testów środowiskowych** i zaliczyła **11 podtestów**. Wcześniejsze pięć
   błędów importu z uruchomienia bez `pytest` nie było testami produktu i nie
   jest używane jako wynik odbiorczy.
+- Pierwsza próba promocji AMC Test z nową sesją Frontier ujawniła, że updater
+  wymaga identycznej listy sesji również od manifestu już zainstalowanej,
+  starszej wersji. Paczka przeszła testy i odizolowany start, ale updater
+  zatrzymał się przed zapisem. Poprawiony kontrakt nadal dokładnie sprawdza
+  tożsamość i izolowane katalogi wydania, dopuszczając jedynie starszy podzbiór
+  obecnie znanych sesji i możliwości. Zaliczył **29/29 testów
+  launchera/updatera** oraz **52/52 testy profili i pakowania**; te 29 testów
+  weszło do obowiązkowej bramki promocji.
 
 - 21 października 2026 poprawka świeżego profilu przeszła oba ukierunkowane
   zestawy protokołu, a następnie pełne **24/24 zestawy protokołu LiteHost**.

@@ -38,6 +38,8 @@ internal static class Program
         ("aktualizator wykrywa żywy proces z instalacji", UpdaterFindsRunningInstalledProcess),
         ("aktualizator zamyka tylko właściwe okno AMC", UpdaterTargetsOnlyInstalledAmcWindow),
         ("aktualizator przyjmuje zgodny profil", UpdaterAcceptsMatchingProfile),
+        ("aktualizator przyjmuje starszy zakres tego samego profilu", UpdaterAcceptsKnownProfileExpansion),
+        ("aktualizator odrzuca nieznany zakres starego profilu", UpdaterRejectsUnknownInstalledCapability),
         ("aktualizator odrzuca obcy profil", UpdaterRejectsDifferentProfile),
     ];
 
@@ -501,6 +503,37 @@ internal static class Program
                 ReleaseProfileContract.Public));
     }
 
+    private static void UpdaterAcceptsKnownProfileExpansion()
+    {
+        using var source = BundleFixture.Create(profile: ReleaseProfileContract.Test);
+        using var target = BundleFixture.Create(
+            profile: ReleaseProfileContract.Test,
+            sessionsOverride: ReleaseProfileContract.Test.Sessions
+                .Where(value => value != "frontierSmart").Reverse().ToArray(),
+            capabilitiesOverride: ReleaseProfileContract.Test.Capabilities
+                .Where(value => value != "session.frontier-smart").Reverse().ToArray());
+        var manifest = AccessibleMediaController.PythonUpdater.Program.LoadAndVerify(
+            source.Root,
+            target.Root,
+            ReleaseProfileContract.Test);
+        Equal("test", manifest.ReleaseProfile);
+    }
+
+    private static void UpdaterRejectsUnknownInstalledCapability()
+    {
+        using var source = BundleFixture.Create(profile: ReleaseProfileContract.Test);
+        using var target = BundleFixture.Create(
+            profile: ReleaseProfileContract.Test,
+            capabilitiesOverride: ReleaseProfileContract.Test.Capabilities
+                .Append("session.unknown").ToArray());
+        Throws(
+            "niezgodne pole: lista możliwości",
+            () => AccessibleMediaController.PythonUpdater.Program.LoadAndVerify(
+                source.Root,
+                target.Root,
+                ReleaseProfileContract.Test));
+    }
+
     private static void Throws(string expected, Action action)
     {
         try
@@ -552,7 +585,9 @@ internal static class Program
             string? extraStartupFile = null,
             string? extraPackageFile = null,
             ReleaseProfileDescriptor? profile = null,
-            string? displayNameOverride = null)
+            string? displayNameOverride = null,
+            IReadOnlyList<string>? sessionsOverride = null,
+            IReadOnlyList<string>? capabilitiesOverride = null)
         {
             profile ??= ReleaseProfileContract.Test;
             var root = Path.Combine(Path.GetTempPath(), "amc-launcher-" + Guid.NewGuid().ToString("N"));
@@ -619,8 +654,8 @@ internal static class Program
                 cacheFolder = profile.CacheFolder,
                 logFolder = profile.LogFolder,
                 credentialNamespace = profile.CredentialNamespace,
-                sessions = profile.Sessions,
-                capabilities = profile.Capabilities,
+                sessions = sessionsOverride ?? profile.Sessions,
+                capabilities = capabilitiesOverride ?? profile.Capabilities,
                 files,
                 startupFiles,
                 fileHashes = hashes,

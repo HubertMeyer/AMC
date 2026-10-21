@@ -115,6 +115,11 @@ def test_build_helper_verifies_profile_clean_source_and_full_bundle() -> None:
     assert '$env:LOCALAPPDATA "Programs\\Inno Setup 6\\ISCC.exe"' in BUILD
 
 
+def test_test_build_promotion_runs_launcher_and_updater_contracts() -> None:
+    assert "AccessibleMediaController.PythonLauncher.Tests.csproj" in PROMOTE_TEST
+    assert '"Testy launchera i aktualizatora"' in PROMOTE_TEST
+
+
 def test_bundle_builder_embeds_dotnet_and_private_python_runtime() -> None:
     assert "$hostOutput" in BUNDLE_BUILD
     assert "$host =" not in BUNDLE_BUILD

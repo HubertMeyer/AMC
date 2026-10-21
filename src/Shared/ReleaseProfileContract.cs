@@ -140,6 +140,48 @@ internal static class ReleaseProfileContract
             string.Equals(title, productName, StringComparison.Ordinal)
             || title.StartsWith(productName + " — ", StringComparison.Ordinal));
 
+    /// <summary>
+    /// Validates the identity of an already installed older bundle. Release
+    /// capabilities may grow and their display order may change, so an older
+    /// manifest is compatible when all of its sessions and capabilities are
+    /// still known by the current profile. Isolation fields remain exact.
+    /// </summary>
+    internal static void ValidateCompatibleInstalled(
+        ReleaseProfileDescriptor expected,
+        int schema,
+        string profileId,
+        string productId,
+        string displayName,
+        string installId,
+        string updateChannel,
+        string uiStateFolder,
+        string roamingProfileFolder,
+        string localProfileFolder,
+        string cacheFolder,
+        string logFolder,
+        string credentialNamespace,
+        IReadOnlyList<string>? sessions,
+        IReadOnlyList<string>? capabilities)
+    {
+        if (schema != SupportedSchema
+            || !string.Equals(expected.ProfileId, profileId, StringComparison.Ordinal)
+            || !string.Equals(expected.ProductId, productId, StringComparison.Ordinal)
+            || !string.Equals(expected.DisplayName, displayName, StringComparison.Ordinal)
+            || !string.Equals(expected.InstallId, installId, StringComparison.Ordinal)
+            || !string.Equals(expected.UpdateChannel, updateChannel, StringComparison.Ordinal)
+            || !string.Equals(expected.UiStateFolder, uiStateFolder, StringComparison.Ordinal)
+            || !string.Equals(expected.RoamingProfileFolder, roamingProfileFolder, StringComparison.Ordinal)
+            || !string.Equals(expected.LocalProfileFolder, localProfileFolder, StringComparison.Ordinal)
+            || !string.Equals(expected.CacheFolder, cacheFolder, StringComparison.Ordinal)
+            || !string.Equals(expected.LogFolder, logFolder, StringComparison.Ordinal)
+            || !string.Equals(expected.CredentialNamespace, credentialNamespace, StringComparison.Ordinal))
+            throw new InvalidDataException(
+                "pakiet aktualizacji jest przeznaczony dla innego wydania AMC");
+
+        RequireKnownSubset(expected.Sessions, sessions, "lista sesji");
+        RequireKnownSubset(expected.Capabilities, capabilities, "lista możliwości");
+    }
+
     private static void Require(string expected, string actual, string field)
     {
         if (!string.Equals(expected, actual, StringComparison.Ordinal))
@@ -153,5 +195,20 @@ internal static class ReleaseProfileContract
     {
         if (actual is null || !expected.SequenceEqual(actual, StringComparer.Ordinal))
             throw new InvalidDataException($"profil wydania ma nieprawidłowe pole: {field}");
+    }
+
+    private static void RequireKnownSubset(
+        IReadOnlyList<string> expected,
+        IReadOnlyList<string>? actual,
+        string field)
+    {
+        if (actual is null
+            || actual.Count == 0
+            || actual.Distinct(StringComparer.Ordinal).Count() != actual.Count
+            || actual.Any(value =>
+                string.IsNullOrWhiteSpace(value)
+                || !expected.Contains(value, StringComparer.Ordinal)))
+            throw new InvalidDataException(
+                $"zainstalowany profil ma niezgodne pole: {field}");
     }
 }

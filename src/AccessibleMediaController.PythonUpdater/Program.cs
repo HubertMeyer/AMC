@@ -357,17 +357,22 @@ internal static class Program
             return;
         }
 
-        var installedProfile = ResolveReleaseProfile(installed);
-        if (!string.Equals(
-                installedProfile.InstallId,
-                sourceProfile.InstallId,
-                StringComparison.Ordinal)
-            || !string.Equals(
-                installedProfile.UpdateChannel,
-                sourceProfile.UpdateChannel,
-                StringComparison.Ordinal))
-            throw new InvalidDataException(
-                "pakiet aktualizacji jest przeznaczony dla innego wydania AMC");
+        ReleaseProfileContract.ValidateCompatibleInstalled(
+            sourceProfile,
+            installed.ReleaseProfileSchema,
+            installed.ReleaseProfile,
+            installed.ProductId,
+            installed.DisplayName,
+            installed.InstallId,
+            installed.UpdateChannel,
+            installed.UiStateFolder,
+            installed.RoamingProfileFolder,
+            installed.LocalProfileFolder,
+            installed.CacheFolder,
+            installed.LogFolder,
+            installed.CredentialNamespace,
+            installed.Sessions,
+            installed.Capabilities);
     }
 
     private static void ApplyPackage(string source, string target, IReadOnlyList<string> files)

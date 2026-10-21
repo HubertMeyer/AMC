@@ -102,6 +102,16 @@ Materiały wskazane przez użytkownika:
 - 21.10.2026: ukierunkowana bramka Python przeszła **72/72 testy**.
 - 21.10.2026: pełna bramka Python przeszła **1926 testów**, **110 testów
   środowiskowych celowo pominięto**, a **11 podtestów** również przeszło.
+- Pierwsza promocja kandydata z rewizji `c3258214` ponownie zaliczyła pełną
+  bramkę Python i odizolowany start paczki `1debd5a9`, po czym zatrzymała się
+  bez podmiany stałej instalacji: starszy manifest AMC Test nie znał jeszcze
+  sesji Frontier Smart, a updater wymagał identycznej listy sesji.
+- Walidator migracji nadal wymaga dokładnie tej samej tożsamości, kanału,
+  katalogów i przestrzeni poświadczeń, lecz przyjmuje starszy podzbiór znanych
+  sesji i możliwości niezależnie od ich dawnej kolejności. Nieznana sesja lub
+  możliwość nadal powoduje odmowę. Nowy kontrakt przeszedł **29/29 testów
+  launchera i updatera** oraz **52/52 ukierunkowane testy profili i pakowania**.
+  Testy launchera/updatera są od tej pory obowiązkową bramką skryptu promocji.
 - To są wyniki źródeł i kompilacji. Nie są jeszcze dowodem instalacji ani
   połączenia z fizycznym radiem; te dwa wyniki zostaną zapisane osobno.
 
@@ -127,5 +137,6 @@ Nowa sekcja konfiguracji jest opcjonalna i nie wymaga migracji istniejących
 profili. Profil publiczny nie otrzymuje możliwości `session.frontier-smart`.
 Commit źródłowy implementacji i testów: `412adf67` —
 `feat(amc): dodaj Frontier Smart i domknij poprawki Radia`. Identyfikator
-zainstalowanej kompilacji zostanie dopisany po promocji AMC Test. Nie
-publikować ani nie promować do profilu publicznego bez nowej zgody użytkownika.
+poprawki zgodnej migracji profilu oraz zainstalowanej kompilacji zostanie
+dopisany po następnej promocji AMC Test. Nie publikować ani nie promować do
+profilu publicznego bez nowej zgody użytkownika.
