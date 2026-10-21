@@ -186,9 +186,13 @@ internal sealed class LiteEngineHandlers : IDisposable
                 _filesPlaying = true;
                 _filesPaused = false;
             }
+            var historyError = TryRecordPlaybackHistory(
+                e.Item.Kind == MediaItemKind.Episode ? "podcasts" : "local",
+                e.Item.Id);
             Publish("playback.started",
                 new { engine = "files", title = e.Item.Title, id = e.Item.Id,
-                    tempoFallbackReason = _files.TempoFallbackReason });
+                    tempoFallbackReason = _files.TempoFallbackReason,
+                    historyError });
         };
         _files.PlaybackEnded += (_, e) =>
         {
@@ -294,9 +298,11 @@ internal sealed class LiteEngineHandlers : IDisposable
                 _radioPlaying = true;
                 _radioPaused = false;
             }
+            var historyError = TryRecordPlaybackHistory("radio", e.Item.Id);
             Publish("playback.started",
                 new { engine = "radio", title = e.Item.Title, id = e.Item.Id,
-                    tempoFallbackReason = _radio.TempoFallbackReason });
+                    tempoFallbackReason = _radio.TempoFallbackReason,
+                    historyError });
         };
         _radio.NowPlayingChanged += (_, e) => Publish("radio.nowPlaying",
             new { id = e.Item.Id, station = e.Item.Title, streamTitle = e.StreamTitle });
@@ -314,6 +320,24 @@ internal sealed class LiteEngineHandlers : IDisposable
     }
 
     private void Publish(string name, object data) => _events?.Publish(name, data);
+
+    private string? TryRecordPlaybackHistory(string sessionId, string itemId)
+    {
+        if (_profileMutations is null) return null;
+        try
+        {
+            _profileMutations.RecordPlaybackHistory(sessionId, itemId);
+            return null;
+        }
+        catch (Exception exception)
+        {
+            // Start dźwięku już został potwierdzony przez prawdziwy silnik.
+            // Awaria zapisu historii nie może zmienić go w fałszywy błąd
+            // odtwarzania ani przerwać działającego materiału. Przekazujemy
+            // przyczynę interfejsowi do logu i jednego komunikatu użytkowego.
+            return exception.Message;
+        }
+    }
 
     public IReadOnlyDictionary<string, Func<LiteRequest, LiteEventSink, object?>> Build()
     {

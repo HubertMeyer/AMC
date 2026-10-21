@@ -17,6 +17,7 @@ internal static class Program
         ("--persistence", QueuePersistenceTests.Run),
         ("--quickinfo", QuickInformationTests.Run),
         ("--bookmarks", BookmarkStoreTests.Run),
+        ("--playback-history", PlaybackHistoryMutationTests.Run),
         ("--radio-library", RadioLibraryMutationTests.Run),
         ("--podcast-progress", PodcastProgressStoreTests.Run),
         ("--fresh-profile", FreshProfileInitializationTests.Run),

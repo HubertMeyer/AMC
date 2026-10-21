@@ -916,6 +916,16 @@ def test_recording_history_announces_short_heading_and_selected_position() -> No
     assert "element" not in events[0].text
 
 
+def test_recording_history_gui_uses_complete_single_item_announcement() -> None:
+    """Alt+Shift+R korzysta z tej samej poprawki co Alt+R."""
+    source = (
+        Path(__file__).parents[1] / "amc_wx_lite" / "gui.py"
+    ).read_text(encoding="utf-8")
+    method = source[source.index("def _show_radio_recording_history") :]
+    method = method[:method.index("def _show_radio_schedules")]
+    assert "self._announce_transient_preview(events)" in method
+
+
 def test_active_recordings_announce_view_position_once_not_in_each_row() -> None:
     nav = Navigator()
     nav.switch_session(SessionId.RADIO)

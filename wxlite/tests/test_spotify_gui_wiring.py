@@ -1047,7 +1047,7 @@ def test_ctrl_h_in_spotify_opens_its_own_history_not_local_files() -> None:
             "artist": "Wykonawca",
         }]),
         _begin_transient_preview=lambda: None,
-        _run=events.append,
+        _announce_transient_preview=events.append,
     )
 
     LiteFrame._show_playback_history_preview(frame)

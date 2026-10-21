@@ -53,6 +53,26 @@ internal sealed class LiteProfileMutationStore
         }
     }
 
+    public bool RecordPlaybackHistory(string sessionId, string itemId)
+    {
+        if (string.IsNullOrWhiteSpace(sessionId)
+            || string.IsNullOrWhiteSpace(itemId))
+        {
+            return false;
+        }
+        EnsureMayWrite();
+        lock (_gate)
+        {
+            using var connection = OpenDatabase(_libraryDatabasePath);
+            using var transaction = connection.BeginTransaction();
+            var changed = LitePlaybackHistoryMutation.Record(
+                connection, transaction, sessionId, itemId);
+            if (changed) TouchMetadata(connection, transaction);
+            transaction.Commit();
+            return changed;
+        }
+    }
+
     public object AddLocalFolderSource(string path)
     {
         EnsureMayWrite();

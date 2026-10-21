@@ -220,7 +220,7 @@ def test_active_recording_preview_syncs_before_naming_selected_file() -> None:
         _announce_after_native_list_update=lambda text: calls.append(("say", text)),
     )
 
-    LiteFrame._announce_recording_preview(
+    LiteFrame._announce_transient_preview(
         frame,
         [Announce("Nagrywane, 1 z 1")],
     )
@@ -252,9 +252,38 @@ def test_empty_active_recording_preview_stays_exact_and_after_sync() -> None:
         _announce_after_native_list_update=lambda text: calls.append(("say", text)),
     )
 
-    LiteFrame._announce_recording_preview(frame, [Announce("zero elementów")])
+    LiteFrame._announce_transient_preview(frame, [Announce("zero elementów")])
 
     assert calls == ["sync", ("say", "zero elementów")]
+
+
+def test_transient_preview_with_many_rows_keeps_native_list_speech() -> None:
+    """Pełny komunikat własny jest potrzebny tylko przy jednym wierszu."""
+    from types import SimpleNamespace
+
+    from amc_wx_lite.gui import LiteFrame
+
+    navigator = Navigator()
+    navigator.apply_library_view(
+        LibraryView.HISTORY,
+        "Biblioteka — Historia odtwarzania",
+        [
+            Row("id-1", "Pierwszy", "track"),
+            Row("id-2", "Drugi", "track"),
+        ],
+    )
+    calls: list[object] = []
+    events = [Announce("Biblioteka — Historia odtwarzania, 2 elementy")]
+    frame = SimpleNamespace(
+        navigator=navigator,
+        _run=lambda value: calls.append(("run", value)),
+        _sync_views=lambda: calls.append("sync"),
+        _announce_after_native_list_update=lambda text: calls.append(("say", text)),
+    )
+
+    LiteFrame._announce_transient_preview(frame, events)
+
+    assert calls == [("run", events)]
 
 
 def test_podcast_inbox_sort_reuses_the_source_and_preserves_selection() -> None:

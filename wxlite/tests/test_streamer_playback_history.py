@@ -176,7 +176,7 @@ def test_ctrl_h_keeps_each_streamer_in_its_own_session() -> None:
                 }]
             }),
             _transient_preview_return=None,
-            _run=events.append,
+            _announce_transient_preview=events.append,
         )
         frame._begin_transient_preview = (
             lambda current=frame: LiteFrame._begin_transient_preview(current)

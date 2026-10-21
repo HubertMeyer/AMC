@@ -86,7 +86,7 @@ def _frame(nav: Navigator, zapamietany_widok: str):
     foldery: list[tuple[str | None, str | None]] = []
     widoki: list[OpenLibraryView] = []
     frame._open_library = lambda folder, preferred_id=None: foldery.append((folder, preferred_id))
-    frame._open_library_view = widoki.append
+    frame._open_library_view = lambda intent, **_kwargs: widoki.append(intent)
     # ``_run`` jest PRAWDZIWE (ono rozpoznaje zamiary). Wyciszamy tylko
     # ``_sync_views`` -- to czysto wx-owe odwzorowanie kontrolek, ktorych w WSL
     # nie ma; sama droga zamiarow zostaje nietknieta.

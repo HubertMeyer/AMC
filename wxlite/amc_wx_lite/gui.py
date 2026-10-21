@@ -9792,6 +9792,23 @@ class LiteFrame(wx.Frame):
                 self.announcer.say(
                     "Wybrany algorytm tempa jest niedostępny. Używany SoundTouch."
                 )
+            if data.get("engine") in ("files", "radio"):
+                history_error = str(data.get("historyError") or "").strip()
+                if history_error:
+                    _append_frontend_log(
+                        self.store,
+                        "Nie zapisano Historii odtwarzania: " + history_error,
+                    )
+                    if history_error != getattr(
+                        self, "_last_playback_history_error", None
+                    ):
+                        self._last_playback_history_error = history_error
+                        self.announcer.say(
+                            "Odtwarzanie działa, ale nie udało się zapisać "
+                            "pozycji w Historii odtwarzania"
+                        )
+                else:
+                    self._last_playback_history_error = None
         elif name == "playback.ended":
             # Przy ZYWEJ kolejce koniec utworu nie jest koncem sluchania: host
             # zaraz przysle ``queue.advanced``. Mowienie "Koniec utworu" przed
@@ -10387,6 +10404,7 @@ class LiteFrame(wx.Frame):
         *,
         restore_selected_ids: list[str] | None = None,
         after_refresh: Callable[[], None] | None = None,
+        announce_single_item: bool = False,
     ) -> None:
         """Odczyt Radia ma osobny bilet zadania, bez lokalnego katalogu plikow."""
         if intent.view not in (
@@ -10436,7 +10454,10 @@ class LiteFrame(wx.Frame):
             # Odczyt zaczal sie w Radiu, ale uzytkownik mogl juz przejsc do Plikow.
             # Zachowujemy stan wlasciwej sesji, nie przestawiamy obcego fokusu.
             if self.navigator.active is SessionId.RADIO:
-                self._run(events)
+                if announce_single_item:
+                    self._announce_transient_preview(events)
+                else:
+                    self._run(events)
                 if (
                     restore_selected_ids
                     and self.navigator.session.library_view
@@ -11125,6 +11146,7 @@ class LiteFrame(wx.Frame):
         *,
         restore_selected_ids: list[str] | None = None,
         after_refresh: Callable[[], None] | None = None,
+        announce_single_item: bool = False,
     ) -> None:
         """Wczytanie nazwanego widoku Biblioteki -- tak samo POZA watkiem GUI.
 
@@ -11132,7 +11154,19 @@ class LiteFrame(wx.Frame):
         wiec odczyt w watku GUI zamrozilby okno w trakcie czytania listy.
         """
         if intent.target_session_id is SessionId.RADIO:
-            self._open_radio_view(intent)
+            if (
+                restore_selected_ids
+                or after_refresh is not None
+                or announce_single_item
+            ):
+                self._open_radio_view(
+                    intent,
+                    restore_selected_ids=restore_selected_ids,
+                    after_refresh=after_refresh,
+                    announce_single_item=announce_single_item,
+                )
+            else:
+                self._open_radio_view(intent)
             return
         if not self.library.is_available:
             # Niedostepne D: w kopii profilu NIE znaczy pustej Biblioteki --
@@ -11170,7 +11204,7 @@ class LiteFrame(wx.Frame):
             # wiec mowimy o nim ta sama droga co w Folderach.
             if not result.sees_live_writes:
                 self.announcer.say("Uwaga: zamrozona migawka profilu.")
-            self._run(self.navigator.apply_library_view(
+            events = self.navigator.apply_library_view(
                 view,
                 result.heading,
                 result.rows,
@@ -11181,7 +11215,11 @@ class LiteFrame(wx.Frame):
                 bookmark_targets=result.bookmark_targets,
                 bookmark_contexts=result.bookmark_contexts,
                 queue_flags=result.queue_flags,
-            ))
+            )
+            if announce_single_item:
+                self._announce_transient_preview(events)
+            else:
+                self._run(events)
             if (
                 restore_selected_ids
                 and self.navigator.active is SessionId.FILES
@@ -17203,7 +17241,8 @@ class LiteFrame(wx.Frame):
         podcast_state.library_view = LibraryView.PODCAST_INBOX
         podcast_state.view = View.LIST
         self._open_podcast_aggregate(
-            OpenPodcastAggregateView(LibraryView.PODCAST_INBOX)
+            OpenPodcastAggregateView(LibraryView.PODCAST_INBOX),
+            announce_single_item=True,
         )
 
     def _show_podcast_downloads(self) -> None:
@@ -17541,6 +17580,7 @@ class LiteFrame(wx.Frame):
         intent: OpenPodcastAggregateView,
         *,
         completion_message: str = "",
+        announce_single_item: bool = False,
     ) -> None:
         if intent.view not in (
             LibraryView.PODCAST_FAVORITES,
@@ -17653,6 +17693,12 @@ class LiteFrame(wx.Frame):
                     heading,
                 )
                 self._announce_after_native_list_update(message)
+            elif (
+                self.navigator.active is SessionId.PODCASTS
+                and announce_single_item
+                and count == 1
+            ):
+                self._announce_transient_preview(events)
             else:
                 self._apply_podcast_result(events)
 
@@ -18960,18 +19006,21 @@ class LiteFrame(wx.Frame):
             self._open_radio_view(OpenLibraryView(
                 LibraryView.HISTORY,
                 target_session_id=SessionId.RADIO,
-            ))
+            ), announce_single_item=True)
             return
         if origin is SessionId.PODCASTS:
             self._open_podcast_aggregate(
-                OpenPodcastAggregateView(LibraryView.PODCAST_HISTORY)
+                OpenPodcastAggregateView(LibraryView.PODCAST_HISTORY),
+                announce_single_item=True,
             )
             return
         if origin is SessionId.SPOTIFY:
             rows = list(spotify_history_rows(
                 self.state.spotify_playback_history
             ))
-            self._run(self.navigator.apply_spotify_history(rows))
+            self._announce_transient_preview(
+                self.navigator.apply_spotify_history(rows)
+            )
             return
 
         if origin in (SessionId.WIIM, SessionId.SONOS):
@@ -18979,7 +19028,9 @@ class LiteFrame(wx.Frame):
                 origin.value,
                 self.state.playback_history_by_session.get(origin.value, ()),
             ))
-            self._run(self.navigator.apply_service_history(origin, rows))
+            self._announce_transient_preview(
+                self.navigator.apply_service_history(origin, rows)
+            )
             return
 
         # Pozostałe sesje zachowują dotychczasową drogę. Ten przyrost nie
@@ -18988,7 +19039,7 @@ class LiteFrame(wx.Frame):
         self._open_library_view(OpenLibraryView(
             LibraryView.HISTORY,
             target_session_id=SessionId.FILES,
-        ))
+        ), announce_single_item=True)
 
     def _restore_transient_preview(
         self, *, announce: bool = True, force: bool = False
@@ -19032,16 +19083,19 @@ class LiteFrame(wx.Frame):
             # Atrapy wx w testach bez CallLater zachowuja dotychczasowa droge.
             wx.CallAfter(self.announcer.say, text)
 
-    def _announce_recording_preview(self, events: list[object]) -> None:
-        """Najpierw pokaż wiersze, potem podaj pełny kontekst zaznaczenia.
+    def _announce_transient_preview(self, events: list[object]) -> None:
+        """Przy 0 lub 1 wierszu podaj wynik bez zależności od MSAA/UIA.
 
-        Przy jednym aktywnym nagraniu SysListView32 nie zawsze emituje nowe
-        zdarzenie fokusu: lista może już mieć fokus i indeks zero. Sam
-        komunikat ``Nagrywane, 1 z 1`` nie mówi wtedy, jaki plik jest
-        nagrywany. Nie polegamy więc na przypadkowym zdarzeniu kontrolki.
-        Po synchronizacji podajemy jeden celowy komunikat z użytkową nazwą
-        wybranego wiersza. Techniczne ID pozostaje wyłącznie w modelu.
+        SysListView32 nie zawsze emituje nowe zdarzenie fokusu, gdy lista już
+        miała fokus i po odświeżeniu nadal wybrany jest indeks zero. Dotyczy to
+        nie tylko Alt+R, lecz także Alt+Shift+R, Ctrl+I i historii Ctrl+H.
+        Dla pojedynczego wiersza po synchronizacji podajemy jeden celowy
+        komunikat z jego użytkową nazwą. Techniczne ID pozostaje wyłącznie w
+        modelu. Przy wielu wierszach zachowujemy zwykłą mowę kontrolki.
         """
+        if len(self.navigator.session.model.rows) > 1:
+            self._run(events)
+            return
         self._sync_views()
         message = next(
             (
@@ -25645,7 +25699,7 @@ class LiteFrame(wx.Frame):
                 # wybranego pliku razem z pozycją. Dla pustej listy ta sama
                 # droga zachowuje jednoznaczne "zero elementów" po zdarzeniach
                 # usunięcia ostatniego dziecka.
-                self._announce_recording_preview(events)
+                self._announce_transient_preview(events)
             else:
                 # Odswiezenie po zdarzeniu nie moze zagluszac komunikatu o
                 # starcie, zatrzymaniu lub bledzie nagrania.
@@ -25819,7 +25873,7 @@ class LiteFrame(wx.Frame):
             )
             if self.navigator.active is SessionId.FILES:
                 if announce:
-                    self._run(events)
+                    self._announce_transient_preview(events)
                 else:
                     self._sync_views()
                 if announce and snapshot.load_error:

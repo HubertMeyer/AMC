@@ -22,7 +22,9 @@ def radio_shell():
     requests, messages = [], []
     frame = SimpleNamespace(navigator=nav, library=NoLocalRead(),
                             announcer=SimpleNamespace(say=messages.append),
-                            _run=requests.extend, _open_radio_view=requests.append,
+                            _run=requests.extend,
+                            _announce_transient_preview=requests.extend,
+                            _open_radio_view=lambda intent, **_kwargs: requests.append(intent),
                             messages=SimpleNamespace(custom_seek_seconds=300),
                             _radio_effective_sort_modes={
                                 "library": "AddedNewest",
@@ -498,8 +500,16 @@ def test_real_radio_data_flows_through_gui_dispatch_without_profile_writes():
         frame.radio = fixture.source
         frame.runner = DeferredRunner()
         frame._sync_views = lambda: None
-        frame._open_library_view = lambda intent: LiteFrame._open_library_view(frame, intent)
-        frame._open_radio_view = lambda intent: LiteFrame._open_radio_view(frame, intent)
+        frame._open_library_view = (
+            lambda intent, **kwargs: LiteFrame._open_library_view(
+                frame, intent, **kwargs
+            )
+        )
+        frame._open_radio_view = (
+            lambda intent, **kwargs: LiteFrame._open_radio_view(
+                frame, intent, **kwargs
+            )
+        )
         frame._return_to_library = lambda: LiteFrame._return_to_library(frame)
         frame._run = lambda intents: LiteFrame._run(frame, intents)
         snapshot = fixture.source.load()
@@ -568,7 +578,11 @@ def test_initial_radio_library_uses_saved_order_before_ctrl_l():
         frame.library = SimpleNamespace(is_available=False, describe=lambda: "")
         frame.runner = DeferredRunner()
         frame._sync_views = lambda: None
-        frame._open_radio_view = lambda intent: LiteFrame._open_radio_view(frame, intent)
+        frame._open_radio_view = (
+            lambda intent, **kwargs: LiteFrame._open_radio_view(
+                frame, intent, **kwargs
+            )
+        )
         frame._run = lambda intents: LiteFrame._run(frame, intents)
         LiteFrame._load_initial_content(frame)
         # Zadanie jest konczone jawnie: bez dodatkowego Ctrl+L po starcie.

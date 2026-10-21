@@ -107,7 +107,8 @@ def test_ctrl_h_opens_once_and_escape_restores_origin_and_selected_item() -> Non
             lambda current=frame: LiteFrame._begin_transient_preview(current)
         )
 
-        def open_radio(_intent) -> None:
+        def open_radio(_intent, **kwargs) -> None:
+            assert kwargs["announce_single_item"] is True
             opened.append(SessionId.RADIO)
             navigator.apply_radio_view(
                 LibraryView.HISTORY,
@@ -115,7 +116,8 @@ def test_ctrl_h_opens_once_and_escape_restores_origin_and_selected_item() -> Non
                 [Row("historia", "Historia", "station")],
             )
 
-        def open_podcasts(_intent) -> None:
+        def open_podcasts(_intent, **kwargs) -> None:
+            assert kwargs["announce_single_item"] is True
             opened.append(SessionId.PODCASTS)
             navigator.apply_podcast_aggregate(
                 LibraryView.PODCAST_HISTORY,
@@ -123,7 +125,8 @@ def test_ctrl_h_opens_once_and_escape_restores_origin_and_selected_item() -> Non
                 [Row("historia", "Historia", "episode")],
             )
 
-        def open_files(_intent) -> None:
+        def open_files(_intent, **kwargs) -> None:
+            assert kwargs["announce_single_item"] is True
             opened.append(SessionId.FILES)
             navigator.apply_library_view(
                 LibraryView.HISTORY,
@@ -135,6 +138,7 @@ def test_ctrl_h_opens_once_and_escape_restores_origin_and_selected_item() -> Non
         frame._open_podcast_aggregate = open_podcasts
         frame._open_library_view = open_files
         frame._run = lambda _events: opened.append(origin)
+        frame._announce_transient_preview = lambda _events: opened.append(origin)
 
         LiteFrame._show_playback_history_preview(frame)
 
