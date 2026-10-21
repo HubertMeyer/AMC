@@ -675,6 +675,16 @@ class StateStore:
             raw = json.loads(self.path.read_text(encoding="utf-8"))
         except (FileNotFoundError, json.JSONDecodeError, OSError, UnicodeDecodeError):
             return LiteState()
+        return self.load_payload(raw)
+
+    def load_payload(self, raw: object) -> LiteState:
+        """Zweryfikuj stan przekazany w pamięci, np. z pełnej kopii AMC.
+
+        Ta sama droga obsługuje zwykły start i import. Dzięki temu kopia nie
+        może ominąć ograniczeń rozmiaru list, dozwolonych trybów ani jawnych
+        etykiet modelu tylko dlatego, że nie pochodzi bezpośrednio z pliku
+        ``state.json`` interfejsu.
+        """
         if not isinstance(raw, dict):
             return LiteState()
 
@@ -787,9 +797,9 @@ class StateStore:
 
     # -------------------------------------------------------------- zapis
 
-    def save(self, state: LiteState) -> None:
-        """Zapis ATOMOWY. Nie zostawia obcietego pliku przy przerwaniu."""
-        self.directory.mkdir(parents=True, exist_ok=True)
+    def to_payload(self, state: LiteState) -> dict:
+        """Znormalizuj stan do jednego, wersjonowanego dokumentu JSON."""
+
         state.options.clamp()
         payload = {
             "version": self.VERSION,
@@ -861,6 +871,13 @@ class StateStore:
         payload["playback_history_by_session"] = normalize_histories(
             state.playback_history_by_session
         )
+        return payload
+
+    def save(self, state: LiteState) -> None:
+        """Zapis ATOMOWY. Nie zostawia obcietego pliku przy przerwaniu."""
+
+        self.directory.mkdir(parents=True, exist_ok=True)
+        payload = self.to_payload(state)
         text = json.dumps(payload, ensure_ascii=False, indent=2)
 
         # Plik tymczasowy MUSI lezec w tym samym folderze: os.replace jest

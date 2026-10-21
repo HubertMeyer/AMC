@@ -34,6 +34,11 @@ Roboczy indeks materiału z nocnych etapów do przyszłej instrukcji i opisu
 zmian, wymagający korekty użytkownika:
 [INDEKS-MATERIALU-INSTRUKCJA-I-ZMIANY-2026-10-19.md](INDEKS-MATERIALU-INSTRUKCJA-I-ZMIANY-2026-10-19.md).
 
+- `BACKUP-001` — **W trakcie** — bezpieczna pełna kopia bieżącego profilu
+  oraz osobny eksport i import ustawień, Biblioteki, playlist AMC, Radia,
+  harmonogramów, Podcastów i YouTube oraz urządzeń i usług. Szczegóły:
+  [BACKUP-001-eksport-import-danych.md](BACKUP-001-eksport-import-danych.md).
+
 - `REC-001` — **Zrobione; korekta zachowania istniejącego pliku po zerwaniu
   strumienia jest zainstalowana w AMC Test** — trwałość wykonanego
   harmonogramu nagrywania, zgodność listy `Alt+R` z blokadą zamknięcia oraz

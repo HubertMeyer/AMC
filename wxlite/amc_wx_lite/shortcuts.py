@@ -220,6 +220,8 @@ class Action(Enum):
     GENERAL_SETTINGS = "settings.general"
     REFRESH_COMMON_DATA = "profile.commonData.refresh"
     COMMON_DATA_STATUS = "profile.commonData.status"
+    EXPORT_BACKUP = "profile.backup.export"
+    IMPORT_BACKUP = "profile.backup.import"
     SELECT_AUDIO_OUTPUT = "audio.selectOutput"
     PREVIOUS_AUDIO_OUTPUT = "audio.previousOutput"
     NEXT_AUDIO_OUTPUT = "audio.nextOutput"
@@ -512,6 +514,8 @@ TIDAL_SUPPORTED_ACTIONS = frozenset({
     Action.GENERAL_SETTINGS,
     Action.REFRESH_COMMON_DATA,
     Action.COMMON_DATA_STATUS,
+    Action.EXPORT_BACKUP,
+    Action.IMPORT_BACKUP,
     Action.TOGGLE_SEEK_MESSAGES,
     Action.ASSIGN_PRESET,
     Action.PRESET_1,
@@ -627,6 +631,8 @@ SPOTIFY_SUPPORTED_ACTIONS = frozenset({
     Action.GENERAL_SETTINGS,
     Action.REFRESH_COMMON_DATA,
     Action.COMMON_DATA_STATUS,
+    Action.EXPORT_BACKUP,
+    Action.IMPORT_BACKUP,
     Action.ASSIGN_PRESET,
     Action.PRESET_1,
     Action.PRESET_2,
@@ -724,6 +730,8 @@ WIIM_SUPPORTED_ACTIONS = frozenset({
     Action.GENERAL_SETTINGS,
     Action.REFRESH_COMMON_DATA,
     Action.COMMON_DATA_STATUS,
+    Action.EXPORT_BACKUP,
+    Action.IMPORT_BACKUP,
     Action.TOGGLE_SEEK_MESSAGES,
     Action.QUICK_INFORMATION,
     Action.ITEM_PROPERTIES,
@@ -818,6 +826,8 @@ SONOS_SUPPORTED_ACTIONS = frozenset({
     Action.GENERAL_SETTINGS,
     Action.REFRESH_COMMON_DATA,
     Action.COMMON_DATA_STATUS,
+    Action.EXPORT_BACKUP,
+    Action.IMPORT_BACKUP,
     Action.TOGGLE_SEEK_MESSAGES,
     Action.QUICK_INFORMATION,
     Action.ITEM_PROPERTIES,
@@ -894,6 +904,8 @@ FRONTIER_SMART_SUPPORTED_ACTIONS = frozenset({
     *(Action[f"PRESET_{slot}"] for slot in range(1, 13)),
     Action.FRONTIER_SMART_SELECT_MODE,
     Action.GENERAL_SETTINGS,
+    Action.EXPORT_BACKUP,
+    Action.IMPORT_BACKUP,
     Action.TOGGLE_SEEK_MESSAGES,
     Action.QUICK_INFORMATION,
     Action.ITEM_PROPERTIES,
@@ -1907,6 +1919,8 @@ def _help_entries() -> list[tuple[str, str, Action]]:
         Action.GENERAL_SETTINGS: "Ustawienia interfejsu i odtwarzania",
         Action.REFRESH_COMMON_DATA: "Odśwież dane z AMC Test",
         Action.COMMON_DATA_STATUS: "Stan synchronizacji danych z AMC Test",
+        Action.EXPORT_BACKUP: "Eksportuj dane AMC",
+        Action.IMPORT_BACKUP: "Importuj dane AMC",
     }
     labels.update({
         action: f"Uruchom preset {slot} bieżącej sesji"
@@ -2002,6 +2016,8 @@ def _help_entries() -> list[tuple[str, str, Action]]:
         Action.FRONTIER_SMART_SELECT_MODE,
         Action.REFRESH_COMMON_DATA,
         Action.COMMON_DATA_STATUS,
+        Action.EXPORT_BACKUP,
+        Action.IMPORT_BACKUP,
         Action.OPEN_CONTAINING_FOLDER,
         Action.UPDATE_MEDIA_COMPONENTS,
         Action.REPORT_PROBLEM,

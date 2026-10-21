@@ -336,6 +336,12 @@ internal sealed class LiteEngineHandlers : IDisposable
                 RequireCommonDataSnapshot().Status(),
             [LiteCommonDataSnapshotCoordinator.ImportOperation] = (request, _) =>
                 ImportCommonDataSnapshot(request.Args),
+            [LiteCommonDataSnapshotCoordinator.BackupExportOperation] = (request, _) =>
+                ExportBackup(request.Args),
+            [LiteCommonDataSnapshotCoordinator.BackupInspectOperation] = (request, _) =>
+                RequireCommonDataSnapshot().InspectBackup(request.Args),
+            [LiteCommonDataSnapshotCoordinator.BackupImportOperation] = (request, _) =>
+                ImportBackup(request.Args),
             ["files.listFolder"] = (request, _) => ListFolder(request.Args),
             ["files.play"] = (request, events) => PlayFile(request.Args, events),
             ["media.play"] = (request, events) => PlayMedia(request.Args, events),
@@ -642,6 +648,27 @@ internal sealed class LiteEngineHandlers : IDisposable
                 "Nie odswiezono danych, poniewaz trwa nagrywanie. Sprobuj po jego zakonczeniu.");
         }
         return RequireCommonDataSnapshot().Import(args);
+    }
+
+    private object ExportBackup(JsonElement args)
+    {
+        EnsureNoActiveRecordingForProfileTransfer("Nie wyeksportowano kopii danych");
+        return RequireCommonDataSnapshot().ExportBackup(args);
+    }
+
+    private object ImportBackup(JsonElement args)
+    {
+        EnsureNoActiveRecordingForProfileTransfer("Nie zaimportowano kopii danych");
+        return RequireCommonDataSnapshot().ImportBackup(args);
+    }
+
+    private void EnsureNoActiveRecordingForProfileTransfer(string lead)
+    {
+        if (_recordings.HasActiveRecordings)
+        {
+            throw new LiteRequestException(
+                $"{lead}, ponieważ trwa nagrywanie. Spróbuj po jego zakończeniu.");
+        }
     }
 
     private LiteProfileMutationStore RequireProfileMutations() =>

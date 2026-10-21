@@ -82,6 +82,11 @@ if (args.Length == 1 && args[0] == "--common-data-snapshot")
     try { CommonDataSnapshotTests.Run(); return 0; }
     catch (Exception exception) { Console.Error.WriteLine(exception); return 1; }
 }
+if (args.Length == 1 && args[0] == "--profile-backup")
+{
+    try { ProfileBackupTests.Run(); return 0; }
+    catch (Exception exception) { Console.Error.WriteLine(exception); return 1; }
+}
 if (args.Length == 1 && args[0] == "--playback-rate-state")
 {
     try { PlaybackRateStateTests.Run(); return 0; }
@@ -384,6 +389,7 @@ var tests = new (string Name, Action Test)[]
     ("Skok wpisanym czasem i procentem", TestSeekInputParser),
     ("Niedestrukcyjne zaznaczanie fragmentu audio", TestAudioClipSelection),
     ("Trzy rodzaje eksportu", TestExports),
+    ("Pełne i częściowe kopie profilu", ProfileBackupTests.Run),
     ("Zapis stanu nie wymazuje zadnej sekcji ustawien", TestZapisNieGubiSekcji),
     ("Zapamietana biblioteka nie traci adresu odtwarzania", TestCacheZachowujeSource),
     ("Odswiezenie tokenu nie kasuje wiedzy o zakresie", TestOdswiezenieNieKasujeZakresu),

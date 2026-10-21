@@ -1356,15 +1356,53 @@ Na karcie **Komunikaty** opcja **Pokazuj szczegółowe podpowiedzi klawiatury pr
 
 ## Import i eksport
 
-Program rozróżnia trzy rodzaje plików:
+W menu **Ustawienia** są dwa wspólne polecenia: **Eksportuj dane AMC…**
+i **Importuj dane AMC…**. Te same polecenia, z tymi samymi nazwami i
+dostępnością, znajdują się w palecie `Ctrl+Shift+K` oraz w pomocy
+klawiaturowej. Eksport najpierw otwiera listę zakresów. Początkowo zaznaczona
+jest pełna kopia; strzałki wybierają inny zakres, Enter zatwierdza, a Escape
+anuluje i oddaje fokus do głównej listy.
 
-- `*.amckeys.json` — pojedyncza mapa klawiszy;
-- `*.amcsettings.json` — konfiguracja bez map klawiatury;
-- `*.amcbackup.json` — pełna kopia: ustawienia, profile klawiatury, sesje, zakładki, playlisty i szablony komunikatów.
+Program rozróżnia następujące przenośne pliki:
 
-Żaden eksport nie zawiera haseł, tokenów ani danych logowania.
+- `*.amcbackup.json` — wszystkie dane bieżącego profilu;
+- `*.amcsettings.json` — ustawienia programu i interfejsu, historia
+  wyszukiwania, presety i profile klawiatury;
+- `*.amclibrary.json` — Biblioteka, Ulubione, kolejki, historia odtwarzania
+  i zakładki;
+- `*.amcplaylists.json` — wszystkie lokalne playlisty AMC;
+- `*.amcradio.json` — stacje, presety, rozpoznane utwory i historia
+  nagrywania Radia, bez harmonogramów;
+- `*.amcschedules.json` — wyłącznie harmonogramy nagrywania Radia;
+- `*.amcpodcasts.json` — Podcasty, kanały i playlisty YouTube oraz Media
+  internetowe;
+- `*.amcservices.json` — ustawienia i lokalne dane WiiM, Sonosa, Frontier
+  Smart, TIDALa i Spotify.
 
-Ustawienia robocze i profile programu są przechowywane w `%AppData%\AccessibleMediaController\state.json`. Lokalny katalog Biblioteki i jego relacje znajdują się w `%LocalAppData%\AccessibleMediaController\library.db`, a archiwum metadanych Podcastów w `%LocalAppData%\AccessibleMediaController\podcasts.db`. Pełna kopia `.amcbackup.json` nadal łączy wszystkie zbiory w jeden przenośny plik.
+Import sam odczytuje zakres z pliku i przed zapisem mówi, które dane zostaną
+zastąpione. Działy nieobecne w kopii pozostają bez zmian. Radio i harmonogramy
+są rozdzielone, więc można przenieść same stacje bez naruszania planów albo
+same plany bez naruszania stacji. Po udanym imporcie AMC zamyka się; ponowne
+uruchomienie otwiera już spójny, odtworzony profil.
+
+Przed importem AMC sprawdza format, wersję, manifest zakresów, profil wydania
+i integralność części interfejsu, a następnie tworzy pełną kopię ratunkową.
+Nieudany zapis powoduje próbę automatycznego powrotu do danych sprzed importu.
+Eksport i import są zablokowane w czasie aktywnego nagrywania. Starsza pełna
+kopia `*.amcbackup.json` z pierwotnego AMC nadal jest obsługiwana; jeżeli nie
+ma w niej sekcji nowego interfejsu, bieżące ustawienia interfejsu są
+zachowywane.
+
+Żaden eksport nie zawiera haseł, tokenów ani danych logowania. Kopia playlist
+AMC zawiera kontenery i odwołania programu, ale nie kopiuje samych plików
+audio, nagrań, pobranych odcinków ani playlist przechowywanych wyłącznie na
+koncie zewnętrznej usługi. Osobny eksport playlisty otwartej w jednej sesji
+pozostaje niezależną funkcją wymiany list.
+
+Ustawienia profilu są przechowywane w pliku stanu, lokalny katalog Biblioteki
+i jego relacje w `library.db`, a archiwum metadanych Podcastów w
+`podcasts.db`. Pełna kopia `*.amcbackup.json` łączy te zbiory oraz prywatny
+stan interfejsu wxPython w jeden przenośny plik.
 
 ## Aktualizacje
 

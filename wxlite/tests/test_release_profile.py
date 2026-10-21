@@ -30,7 +30,7 @@ from amc_wx_lite.session_order import (
     manager_labels,
     normalize,
 )
-from amc_wx_lite.shortcuts import Action, Chord, resolve
+from amc_wx_lite.shortcuts import Action, Chord, describe, resolve
 from amc_wx_lite.state_store import default_state_dir
 
 
@@ -221,12 +221,22 @@ def test_common_data_commands_follow_profile_in_menu_palette_and_help() -> None:
                 public_actions = {item.action for item in settings.items}
                 assert Action.REFRESH_COMMON_DATA in public_actions
                 assert Action.COMMON_DATA_STATUS in public_actions
+                assert Action.EXPORT_BACKUP in public_actions
+                assert Action.IMPORT_BACKUP in public_actions
                 palette = {
                     entry.action
                     for entry in entries_for_session(SessionId.FILES)
                 }
                 assert Action.REFRESH_COMMON_DATA in palette
                 assert Action.COMMON_DATA_STATUS in palette
+                assert Action.EXPORT_BACKUP in palette
+                assert Action.IMPORT_BACKUP in palette
+                for session in SessionId:
+                    session_actions = {
+                        entry.action for entry in entries_for_session(session)
+                    }
+                    assert Action.EXPORT_BACKUP in session_actions
+                    assert Action.IMPORT_BACKUP in session_actions
 
             with _with_release_profile("test"):
                 settings = next(
@@ -235,6 +245,23 @@ def test_common_data_commands_follow_profile_in_menu_palette_and_help() -> None:
                 test_actions = {item.action for item in settings.items}
                 assert Action.REFRESH_COMMON_DATA not in test_actions
                 assert Action.COMMON_DATA_STATUS in test_actions
+                assert Action.EXPORT_BACKUP in test_actions
+                assert Action.IMPORT_BACKUP in test_actions
+                for session in SessionId:
+                    session_actions = {
+                        entry.action for entry in entries_for_session(session)
+                    }
+                    assert Action.EXPORT_BACKUP in session_actions
+                    assert Action.IMPORT_BACKUP in session_actions
+                help_entries = set(describe())
+                assert (
+                    "Bez skrótu",
+                    "Eksportuj dane AMC",
+                ) in help_entries
+                assert (
+                    "Bez skrótu",
+                    "Importuj dane AMC",
+                ) in help_entries
         finally:
             if previous_local is None:
                 os.environ.pop("LOCALAPPDATA", None)

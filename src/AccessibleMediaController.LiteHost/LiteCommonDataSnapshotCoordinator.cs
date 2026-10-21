@@ -13,6 +13,9 @@ internal sealed class LiteCommonDataSnapshotCoordinator
     public const string ExportOperation = "profile.commonDataExport";
     public const string StatusOperation = "profile.commonDataStatus";
     public const string ImportOperation = "profile.commonDataImport";
+    public const string BackupExportOperation = "profile.backupExport";
+    public const string BackupInspectOperation = "profile.backupInspect";
+    public const string BackupImportOperation = "profile.backupImport";
 
     private readonly string _releaseProfile;
     private readonly string _snapshotPath;
@@ -74,6 +77,10 @@ internal sealed class LiteCommonDataSnapshotCoordinator
         {
             throw new LiteRequestException(exception.Message);
         }
+        catch (IOException)
+        {
+            throw new LiteRequestException("Nie można zapisać wskazanej kopii danych AMC.");
+        }
     }
 
     public object Import(JsonElement args)
@@ -108,6 +115,61 @@ internal sealed class LiteCommonDataSnapshotCoordinator
         }
     }
 
+    public object ExportBackup(JsonElement args)
+    {
+        var path = ReadBackupPath(args, mustExist: false);
+        try
+        {
+            var summary = _store.ExportCurrentBackup(path, ReadSections(args, required: true)!);
+            return BackupPayload("exported", summary);
+        }
+        catch (InvalidDataException exception)
+        {
+            throw new LiteRequestException(exception.Message);
+        }
+        catch (IOException)
+        {
+            throw new LiteRequestException("Nie można zapisać wskazanej kopii danych AMC.");
+        }
+    }
+
+    public object InspectBackup(JsonElement args)
+    {
+        var path = ReadBackupPath(args, mustExist: true);
+        try
+        {
+            return BackupPayload("ready", _store.InspectBackup(path));
+        }
+        catch (InvalidDataException exception)
+        {
+            throw new LiteRequestException(exception.Message);
+        }
+        catch (IOException)
+        {
+            throw new LiteRequestException("Nie można odczytać wskazanej kopii danych AMC.");
+        }
+    }
+
+    public object ImportBackup(JsonElement args)
+    {
+        var path = ReadBackupPath(args, mustExist: true);
+        try
+        {
+            var result = _store.ImportAndSaveBackup(
+                path,
+                ReadSections(args, required: false));
+            return BackupPayload("imported", result.Summary);
+        }
+        catch (InvalidDataException exception)
+        {
+            throw new LiteRequestException(exception.Message);
+        }
+        catch (IOException exception)
+        {
+            throw new LiteRequestException("Nie udało się bezpiecznie zapisać kopii danych: " + exception.Message);
+        }
+    }
+
     private void RequireProfile(string expected)
     {
         if (!string.Equals(_releaseProfile, expected, StringComparison.Ordinal))
@@ -127,6 +189,52 @@ internal sealed class LiteCommonDataSnapshotCoordinator
             CommonDataImportDisposition.Conflict => "conflict",
             _ => "unknown"
         };
+
+    private static string ReadBackupPath(JsonElement args, bool mustExist)
+    {
+        var path = Path.GetFullPath(LiteArgs.RequireText(args, "path"));
+        if (!path.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+            throw new LiteRequestException("Kopia danych AMC musi być plikiem JSON.");
+        if (mustExist && !File.Exists(path))
+            throw new LiteRequestException("Nie znaleziono wskazanej kopii danych AMC.");
+        return path;
+    }
+
+    private static IReadOnlyList<string>? ReadSections(JsonElement args, bool required)
+    {
+        if (args.ValueKind != JsonValueKind.Object
+            || !args.TryGetProperty("sections", out var value))
+        {
+            if (required) throw new LiteRequestException("Nie wybrano zakresu kopii danych.");
+            return null;
+        }
+        if (value.ValueKind != JsonValueKind.Array)
+            throw new LiteRequestException("Zakres kopii danych ma nieprawidłowy format.");
+        var result = new List<string>();
+        foreach (var item in value.EnumerateArray())
+        {
+            if (item.ValueKind != JsonValueKind.String)
+                throw new LiteRequestException("Zakres kopii danych ma nieprawidłowy format.");
+            result.Add(item.GetString() ?? string.Empty);
+            if (result.Count > ProfileBackupSectionCatalog.All.Count)
+                throw new LiteRequestException("Zakres kopii danych jest zbyt duży.");
+        }
+        return result;
+    }
+
+    private static object BackupPayload(string stateName, ProfileBackupSummary summary) => new
+    {
+        state = stateName,
+        sections = summary.Sections,
+        localFiles = summary.LocalFiles,
+        radioStations = summary.RadioStations,
+        podcastSources = summary.PodcastSources,
+        podcastEpisodes = summary.PodcastEpisodes,
+        bookmarks = summary.Bookmarks,
+        playlists = summary.Playlists,
+        recordingSchedules = summary.RecordingSchedules,
+        recordingHistoryEntries = summary.RecordingHistoryEntries
+    };
 
     private static object Payload(
         string state,

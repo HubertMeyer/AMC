@@ -2052,3 +2052,32 @@ oraz okno „Moje stacje”.
 - Nie ma osobnego modelu widoku; `MainWindow.xaml.cs` łączy widok i sterowanie.
 - Nie ma testów jednostkowych w klasycznym sensie, są testy dymne z własnym
   biegaczem kończącym się niezerowym kodem po niepowodzeniu.
+
+## 19. Pełne i częściowe kopie profilu AMC
+
+- `Core/Configuration/ConfigurationStore.cs` — katalog siedmiu stabilnych
+  działów kopii, składanie stanu wybranego zakresu, import przez scalanie z
+  bieżącym profilem, zgodność z historycznym `fullBackup`, limit rozmiaru,
+  walidacja wersji oraz atomowy zapis pliku eksportu. Rdzeń pozostaje jedynym
+  właścicielem `state.json`, `library.db` i `podcasts.db`.
+- `LiteHost/LiteCommonDataSnapshotCoordinator.cs` — trzy wąskie operacje IPC:
+  sprawdzenie kopii bez zapisu, eksport wybranych działów i import działów
+  obecnych w manifeście. Odpowiedź zawiera stabilny manifest oraz liczby
+  elementów potrzebne do komunikatu użytkowego.
+- `LiteHost/LiteEngineHandlers.cs` — wspólna blokada eksportu i importu podczas
+  aktywnego nagrywania. Samo sprawdzenie pliku pozostaje operacją tylko do
+  odczytu.
+- `wxlite/amc_wx_lite/full_backup.py` — przenośna sekcja prywatnego stanu
+  wxPython, mapowanie pól na te same działy, SHA-256 integralności, izolacja
+  profilu publicznego i testowego, zgodność ze starszą kopią oraz atomowa
+  publikacja gotowego pliku.
+- `wxlite/amc_wx_lite/gui.py` — dostępny wybór ośmiu zakresów, komunikat
+  skutków przed importem, pełna kopia ratunkowa tuż przed zmianą, automatyczny
+  powrót po błędzie i zamknięcie programu dopiero po spójnym sukcesie.
+- `wxlite/amc_wx_lite/shortcuts.py` i `menu_model.py` — jedno źródło poleceń
+  **Eksportuj dane AMC** i **Importuj dane AMC** dla menu, palety i pomocy.
+- `tests/AccessibleMediaController.Core.SmokeTests/ProfileBackupTests.cs` oraz
+  `wxlite/tests/test_full_backup.py` — rozdzielenie zakresów, zgodność pełnej
+  kopii, zachowanie nieobecnych działów, kontrola integralności i jawne etykiety
+  wyboru. `test_fresh_public_profile_host_e2e.py` sprawdza rzeczywisty cykl
+  eksport–import przez proces LiteHost.

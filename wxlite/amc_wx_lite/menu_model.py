@@ -1568,6 +1568,15 @@ def build_menus(session_order: object = None) -> tuple[Menu, ...]:
                 shortcut="Ctrl+,",
                 accelerator=False,
             ),
+            SEPARATOR,
+            MenuItem(
+                "&Eksportuj dane AMC…",
+                Action.EXPORT_BACKUP,
+            ),
+            MenuItem(
+                "Im&portuj dane AMC…",
+                Action.IMPORT_BACKUP,
+            ),
             *synchronization_items,
         ),
     )

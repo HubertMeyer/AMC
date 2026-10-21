@@ -1429,6 +1429,33 @@ class LiteHostClient:
             timeout=180.0,
         )
 
+    def export_backup(self, path: str | Path, sections: list[str]) -> Any:
+        """Eksportuj wskazane działy profilu przez jedynego pisarza C#."""
+        return self.call(
+            "profile.backupExport",
+            {"path": str(path), "sections": list(sections)},
+            timeout=180.0,
+        )
+
+    def inspect_backup(self, path: str | Path) -> Any:
+        """Zweryfikuj manifest i dane bez zmiany profilu."""
+        return self.call(
+            "profile.backupInspect",
+            {"path": str(path)},
+            timeout=180.0,
+        )
+
+    def import_backup(
+        self,
+        path: str | Path,
+        sections: list[str] | None = None,
+    ) -> Any:
+        """Odtwórz wyłącznie działy obecne w kopii i jawnie wybrane."""
+        args: dict[str, Any] = {"path": str(path)}
+        if sections is not None:
+            args["sections"] = list(sections)
+        return self.call("profile.backupImport", args, timeout=180.0)
+
     def replace_profile_playlists(
         self, session_id: str, playlists: list[dict[str, Any]]
     ) -> Any:

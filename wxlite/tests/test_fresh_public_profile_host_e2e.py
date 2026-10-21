@@ -8,6 +8,7 @@ import unittest
 from pathlib import Path
 
 from amc_wx_lite.host_client import LiteHostClient
+from amc_wx_lite.full_backup import ALL_SECTIONS
 
 
 def test_fresh_public_profile_accepts_search_add_and_playlist_import(
@@ -31,6 +32,8 @@ def test_fresh_public_profile_accepts_search_add_and_playlist_import(
     library = local / "library.db"
     podcasts = local / "podcasts.db"
     state = roaming / "state.json"
+    shared_snapshot = tmp_path / "shared" / "common-data-v1.json"
+    full_backup = tmp_path / "pelna-kopia.amcbackup.json"
     playlist = tmp_path / "stacje.m3u"
     forward_playlist = (
         "#EXTM3U\n"
@@ -46,6 +49,7 @@ def test_fresh_public_profile_accepts_search_add_and_playlist_import(
         podcasts_db=podcasts,
         state_json=state,
         release_profile="public",
+        common_data_snapshot=shared_snapshot,
     )
     try:
         client.start()
@@ -90,8 +94,43 @@ def test_fresh_public_profile_accepts_search_add_and_playlist_import(
         assert restored["inLibrary"] is True and restored["changed"] == 1
         favorite = client.toggle_profile_favorites("radio", [station_id])
         assert favorite["favorite"] is True and favorite["changed"] == 1
+        exported = client.export_backup(full_backup, list(ALL_SECTIONS))
+        assert exported["state"] == "exported"
+        assert exported["radioStations"] == 4
     finally:
         client.close()
+
+    restored_local = tmp_path / "restored-local" / "AMC" / "profile"
+    restored_roaming = tmp_path / "restored-roaming" / "AMC" / "profile"
+    restored_client = LiteHostClient(
+        host,
+        library_db=restored_local / "library.db",
+        podcasts_db=restored_local / "podcasts.db",
+        state_json=restored_roaming / "state.json",
+        release_profile="public",
+        common_data_snapshot=shared_snapshot,
+    )
+    try:
+        restored_client.start()
+        restored = restored_client.import_backup(full_backup, list(ALL_SECTIONS))
+        assert restored["state"] == "imported"
+        assert restored["radioStations"] == 4
+        assert restored["bookmarks"] >= 0
+    finally:
+        restored_client.close()
+
+    restored_payload = json.loads(
+        (restored_roaming / "state.json").read_text(encoding="utf-8")
+    )
+    assert {
+        str(item.get("name") or "")
+        for item in restored_payload["radio"]["stations"]
+    } == {
+        "Stacja z wyszukiwania",
+        "Jedynka",
+        "Radio Środek",
+        "Dominikanie Rzeszów",
+    }
 
     assert library.is_file()
     assert podcasts.is_file()

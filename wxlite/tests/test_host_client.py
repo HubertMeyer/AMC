@@ -616,6 +616,28 @@ def test_common_data_snapshot_client_uses_narrow_operations() -> None:
             "op": "profile.commonDataImport",
             "args": {"acceptTestData": True},
         }
+        assert client.export_backup(
+            "C:/kopie/radio.amcradio.json", ["radio"]
+        ) == {
+            "op": "profile.backupExport",
+            "args": {
+                "path": "C:/kopie/radio.amcradio.json",
+                "sections": ["radio"],
+            },
+        }
+        assert client.inspect_backup("C:/kopie/radio.amcradio.json") == {
+            "op": "profile.backupInspect",
+            "args": {"path": "C:/kopie/radio.amcradio.json"},
+        }
+        assert client.import_backup(
+            "C:/kopie/radio.amcradio.json", ["radio"]
+        ) == {
+            "op": "profile.backupImport",
+            "args": {
+                "path": "C:/kopie/radio.amcradio.json",
+                "sections": ["radio"],
+            },
+        }
     finally:
         client.close()
 

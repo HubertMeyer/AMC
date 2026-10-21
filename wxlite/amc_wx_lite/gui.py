@@ -215,6 +215,19 @@ if "session.sonos" in _RELEASE_PROFILE.capabilities:
         snapshot as sonos_snapshot,
     )
 from .profile_layout import common_data_snapshot_path, resolve_layout
+from .full_backup import (
+    ALL_SECTIONS,
+    BACKUP_SCOPES,
+    IMPORT_WILDCARD,
+    FullBackupError,
+    build_imported_ui_state,
+    complete_export as complete_full_backup_export,
+    describe_sections as describe_backup_sections,
+    inspect_import as inspect_full_backup_import,
+    normalize_sections as normalize_backup_sections,
+    rollback_path as full_backup_rollback_path,
+    staging_path as full_backup_staging_path,
+)
 from .podcast_source import (
     PAGE_SIZE as PODCAST_PAGE_SIZE,
     PodcastDescription,
@@ -11701,6 +11714,10 @@ class LiteFrame(wx.Frame):
             self._refresh_common_data_from_test()
         elif action is Action.COMMON_DATA_STATUS:
             self._show_common_data_status()
+        elif action is Action.EXPORT_BACKUP:
+            self._export_backup()
+        elif action is Action.IMPORT_BACKUP:
+            self._import_backup()
         elif action is Action.VIEW_PRESETS:
             self._show_presets()
         elif action is Action.FRONTIER_SMART_SELECT_MODE:
@@ -12311,6 +12328,276 @@ class LiteFrame(wx.Frame):
             ),
             done,
             lambda error: self.announcer.say(f"Nie odświeżono danych: {error}"),
+        )
+
+    @staticmethod
+    def _backup_summary(payload: object) -> str:
+        data = payload if isinstance(payload, dict) else {}
+        return (
+            f"pliki {int(data.get('localFiles') or 0)}, "
+            f"stacje {int(data.get('radioStations') or 0)}, "
+            f"źródła podcastów i YouTube {int(data.get('podcastSources') or 0)}, "
+            f"odcinki {int(data.get('podcastEpisodes') or 0)}, "
+            f"zakładki {int(data.get('bookmarks') or 0)}, "
+            f"playlisty {int(data.get('playlists') or 0)}, "
+            f"harmonogramy {int(data.get('recordingSchedules') or 0)}"
+        )
+
+    def _choose_backup_scope(self):
+        labels = [scope.label for scope in BACKUP_SCOPES]
+        with wx.SingleChoiceDialog(
+            self,
+            "Wybierz zakres danych. Strzałki zmieniają wybór, Enter "
+            "zatwierdza, a Escape anuluje.",
+            "Eksportuj dane AMC",
+            labels,
+        ) as dialog:
+            dialog.SetName("Wybierz zakres eksportu danych AMC")
+            dialog.SetSelection(0)
+            pending = list(dialog.GetChildren())
+            while pending:
+                child = pending.pop()
+                if isinstance(child, (wx.Choice, wx.ListBox)):
+                    child.SetName("Zakres eksportu danych AMC")
+                pending.extend(child.GetChildren())
+            if dialog.ShowModal() != wx.ID_OK:
+                self._restore_focus_after_dialog()
+                return None
+            selected = dialog.GetSelection()
+        self._restore_focus_after_dialog()
+        if selected < 0 or selected >= len(BACKUP_SCOPES):
+            return None
+        return BACKUP_SCOPES[selected]
+
+    def _export_backup(self) -> None:
+        client = self._profile_edit_client()
+        if client is None:
+            return
+        scope = self._choose_backup_scope()
+        if scope is None:
+            self.announcer.say("Anulowano eksport danych AMC")
+            return
+        if not self._save_state():
+            return
+        with wx.FileDialog(
+            self,
+            f"Eksportuj: {scope.label}",
+            wildcard=scope.wildcard,
+            defaultFile=scope.default_file_name(),
+            style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT,
+        ) as dialog:
+            if dialog.ShowModal() != wx.ID_OK:
+                self._restore_focus_after_dialog()
+                return
+            target = Path(dialog.GetPath())
+        self._restore_focus_after_dialog()
+        staged = full_backup_staging_path(target)
+
+        def work() -> object:
+            result = client.export_backup(staged, list(scope.sections))
+            complete_full_backup_export(
+                staged,
+                target,
+                profile_id=current_profile().profile_id,
+                ui_state_path=self.store.path,
+                sections=scope.sections,
+            )
+            return result
+
+        def cleanup_staged() -> None:
+            try:
+                staged.unlink(missing_ok=True)
+            except OSError:
+                pass
+
+        def done(payload: object) -> None:
+            self.Enable(True)
+            self._restore_focus_after_dialog()
+            cleanup_staged()
+            self.announcer.say(
+                f"Wyeksportowano {describe_backup_sections(scope.sections)}: "
+                f"{target.name}. "
+                + self._backup_summary(payload)
+                + ". Hasła i tokeny nie zostały zapisane"
+            )
+
+        def failed(error: Exception) -> None:
+            self.Enable(True)
+            self._restore_focus_after_dialog()
+            cleanup_staged()
+            self.announcer.say(f"Nie wyeksportowano danych AMC: {error}")
+
+        self.Enable(False)
+        self.announcer.say("Eksportuję dane AMC")
+        self.runner.submit("profile-backup-export", work, done, failed)
+
+    def _import_backup(self) -> None:
+        client = self._profile_edit_client()
+        if client is None:
+            return
+        if not self._save_state():
+            return
+        with wx.FileDialog(
+            self,
+            "Importuj dane AMC",
+            wildcard=IMPORT_WILDCARD,
+            style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST,
+        ) as dialog:
+            if dialog.ShowModal() != wx.ID_OK:
+                self._restore_focus_after_dialog()
+                return
+            path = Path(dialog.GetPath())
+        self._restore_focus_after_dialog()
+
+        def inspect_work():
+            plan = inspect_full_backup_import(
+                path,
+                expected_profile_id=current_profile().profile_id,
+                state_store=self.store,
+            )
+            inspected = client.inspect_backup(path)
+            data = inspected if isinstance(inspected, dict) else {}
+            host_sections = normalize_backup_sections(data.get("sections"))
+            if host_sections != plan.included_sections:
+                raise FullBackupError(
+                    "Rdzeń i interfejs AMC rozpoznały różny zakres kopii."
+                )
+            return plan
+
+        def inspected(plan) -> None:
+            self.Enable(True)
+            description = describe_backup_sections(plan.included_sections)
+            answer = wx.MessageBox(
+                f"Kopia zawiera: {description}. Import zastąpi wyłącznie te "
+                "dane w bieżącym profilu. Pozostałe dane zostaną zachowane. "
+                "Hasła i tokeny nie są importowane. Przed zmianą AMC utworzy "
+                "kopię ratunkową. Po udanym imporcie program zostanie "
+                "zamknięty; uruchom go ponownie. Czy kontynuować?",
+                "Importuj dane AMC",
+                wx.YES_NO | wx.NO_DEFAULT | wx.ICON_QUESTION,
+                self,
+            )
+            self._restore_focus_after_dialog()
+            if answer != wx.YES:
+                self.announcer.say("Anulowano import danych AMC")
+                return
+            self._start_backup_import(client, path, plan)
+
+        def inspection_failed(error: Exception) -> None:
+            self.Enable(True)
+            self._restore_focus_after_dialog()
+            self.announcer.say(f"Nie można zaimportować danych AMC: {error}")
+
+        self.Enable(False)
+        self.announcer.say("Sprawdzam kopię danych AMC")
+        self.runner.submit(
+            "profile-backup-inspect",
+            inspect_work,
+            inspected,
+            inspection_failed,
+        )
+
+    def _start_backup_import(self, client, path: Path, plan) -> None:
+        rescue = full_backup_rollback_path(self.store.directory)
+        rescue_stage = full_backup_staging_path(rescue)
+
+        def cleanup(path_to_remove: Path) -> None:
+            try:
+                path_to_remove.unlink(missing_ok=True)
+            except OSError:
+                pass
+
+        def work():
+            imported_state = build_imported_ui_state(plan, self.store)
+            rescue_ready = False
+            try:
+                client.export_backup(rescue_stage, list(ALL_SECTIONS))
+                complete_full_backup_export(
+                    rescue_stage,
+                    rescue,
+                    profile_id=current_profile().profile_id,
+                    ui_state_path=self.store.path,
+                    sections=ALL_SECTIONS,
+                )
+                rescue_ready = True
+                try:
+                    payload = client.import_backup(
+                        path, list(plan.included_sections)
+                    )
+                except Exception as import_error:
+                    try:
+                        client.import_backup(rescue, list(ALL_SECTIONS))
+                    except Exception as rollback_error:
+                        raise FullBackupError(
+                            "Import nie powiódł się i nie udało się "
+                            "automatycznie przywrócić danych. Kopię ratunkową "
+                            "zachowano w folderze danych profilu."
+                        ) from rollback_error
+                    cleanup(rescue)
+                    rescue_ready = False
+                    raise FullBackupError(
+                        "Import nie powiódł się. Poprzednie dane zostały "
+                        "przywrócone."
+                    ) from import_error
+                try:
+                    self.store.save(imported_state)
+                except Exception as state_error:
+                    try:
+                        client.import_backup(rescue, list(ALL_SECTIONS))
+                    except Exception as rollback_error:
+                        raise FullBackupError(
+                            "Nie zapisano ustawień interfejsu i nie udało się "
+                            "automatycznie przywrócić danych. Kopię ratunkową "
+                            "zachowano w folderze danych profilu."
+                        ) from rollback_error
+                    cleanup(rescue)
+                    rescue_ready = False
+                    raise FullBackupError(
+                        "Nie zapisano ustawień interfejsu. Poprzednie dane "
+                        "zostały przywrócone."
+                    ) from state_error
+                cleanup(rescue)
+                rescue_ready = False
+                return payload, imported_state
+            finally:
+                cleanup(rescue_stage)
+                if not rescue_ready:
+                    cleanup(rescue)
+
+        def done(result) -> None:
+            self.Enable(True)
+            payload, imported_state = result
+            self.state = imported_state
+            self.options = imported_state.options
+            suffix = (
+                " Przywrócono także ustawienia interfejsu."
+                if plan.has_ui_state
+                else " To starsza kopia; zachowano obecne ustawienia interfejsu."
+            )
+            wx.MessageBox(
+                f"Zaimportowano {describe_backup_sections(plan.included_sections)}. "
+                + self._backup_summary(payload)
+                + "."
+                + suffix
+                + " Program zostanie teraz zamknięty; uruchom go ponownie.",
+                "Import zakończony",
+                wx.OK | wx.ICON_INFORMATION,
+                self,
+            )
+            self.Close()
+
+        def failed(error: Exception) -> None:
+            self.Enable(True)
+            self._restore_focus_after_dialog()
+            self.announcer.say(f"Nie zaimportowano danych AMC: {error}")
+
+        self.Enable(False)
+        self.announcer.say("Importuję dane AMC")
+        self.runner.submit(
+            "profile-backup-import",
+            work,
+            done,
+            failed,
         )
 
     # ---------------------------------------------------- wykonanie zamiarow

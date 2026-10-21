@@ -8357,3 +8357,67 @@ dosłowny adres. Dla stacji bez zapisanego adresu słyszysz „Ta stacja nie ma
 zapisanego adresu”, a dla ulubionego bez adresu „Sonos nie podał adresu tego
 ulubionego” — i schowek zostaje NIETKNIĘTY (poprzednia zawartość zachowana).
 W polach tekstowych oba skróty działają jak zwykła edycja tekstu.
+
+## BACKUP-001 — eksport i import danych AMC
+
+### BACKUP-001-01 — wspólne polecenia i fokus wyboru zakresu
+
+Otwórz menu **Ustawienia**, pomoc klawiaturową i paletę `Ctrl+Shift+K`.
+Sprawdź, że wszędzie są dokładnie polecenia **Eksportuj dane AMC** oraz
+**Importuj dane AMC**. Uruchom eksport z menu, a potem ponownie z palety.
+
+Oczekiwane: otwiera się ta sama lista zakresów. NVDA czyta wyłącznie pełne
+polskie etykiety, początkowo zaznaczone są „Wszystkie dane — pełna kopia
+profilu”, strzałki przechodzą po ośmiu zakresach, Enter zatwierdza, Escape
+anuluje, a po anulowaniu i ponownym otwarciu fokus znów jest na pierwszym
+zakresie. Nie wolno usłyszeć nazw klas, właściwości ani identyfikatorów.
+
+### BACKUP-001-02 — osobne pliki i komunikat po eksporcie
+
+Wyeksportuj kolejno pełną kopię, ustawienia, Bibliotekę, playlisty AMC, Radio,
+harmonogramy, Podcasty i YouTube oraz urządzenia i usługi.
+
+Oczekiwane: okno zapisu proponuje właściwe rozszerzenie dla każdego zakresu,
+istniejący plik wymaga potwierdzenia zastąpienia, a po sukcesie AMC podaje
+nazwę pliku, liczby elementów i informację, że haseł ani tokenów nie zapisano.
+Anulowanie okna zapisu niczego nie zmienia.
+
+### BACKUP-001-03 — import zastępuje tylko zawarty dział
+
+Po eksporcie zmień po jednym elemencie w ustawieniach, Bibliotece, Radiu i
+harmonogramach. Importuj najpierw same ustawienia, potem samo Radio, a na końcu
+same harmonogramy.
+
+Oczekiwane: przed każdym importem AMC mówi dokładny zakres i pyta o zgodę.
+Import ustawień nie zmienia Biblioteki, stacji ani planów. Import Radia zmienia
+stacje, ale zachowuje plany. Import harmonogramów zmienia plany, ale zachowuje
+stacje. Po sukcesie program prosi o ponowne uruchomienie i zamyka się.
+
+### BACKUP-001-04 — pełna kopia i zgodność ze starym AMC
+
+Zaimportuj pełną kopię utworzoną przez bieżące AMC, a osobno zgodną pełną
+kopię `*.amcbackup.json` bez sekcji wxPython, pochodzącą ze starszego AMC.
+
+Oczekiwane: bieżąca kopia odtwarza wszystkie działy i ustawienia interfejsu.
+Starsza kopia odtwarza dane rdzenia, zachowuje obecne ustawienia interfejsu i
+mówi o tym w komunikacie końcowym.
+
+### BACKUP-001-05 — uszkodzony, obcy i niewłaściwy plik
+
+Spróbuj wskazać obcy JSON, ucięty plik, plik z ręcznie zmienioną sekcją
+interfejsu oraz kopię z innego profilu wydania.
+
+Oczekiwane: błąd pojawia się przed potwierdzeniem i przed zmianą danych.
+Program nie pokazuje technicznego zrzutu wyjątku, nie usuwa żadnego działu i
+pozostaje gotowy do dalszej pracy.
+
+### BACKUP-001-06 — nagrywanie i kopia ratunkowa
+
+Rozpocznij ręczne nagrywanie Radia i spróbuj eksportu oraz importu. Po
+zakończeniu nagrania powtórz operacje. W kontrolowanym teście zapisu zasymuluj
+błąd po rozpoczęciu importu.
+
+Oczekiwane: podczas nagrywania obie operacje są zablokowane czytelnym
+komunikatem. Po zakończeniu nagrania działają. Błąd zapisu uruchamia powrót do
+pełnej kopii ratunkowej; komunikat odróżnia udane przywrócenie od sytuacji, w
+której kopię ratunkową zachowano do ręcznego odzyskania.

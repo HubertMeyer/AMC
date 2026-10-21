@@ -1,3 +1,4 @@
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using AccessibleMediaController.Core.Commands;
@@ -18,6 +19,7 @@ namespace AccessibleMediaController.Core.Configuration;
 public sealed class ConfigurationStore
 {
     public const int CurrentSchemaVersion = 54;
+    private const long MaximumExportBytes = 512L * 1024L * 1024L;
     private const string Version1DefaultPrefix = "Ctrl+Alt+Space";
     private const string Version2DefaultPrefix = "Ctrl+Alt+Windows+Enter";
     private const string CurrentDefaultPrefix = "Ctrl+Alt+Windows+F12";
@@ -263,6 +265,21 @@ public sealed class ConfigurationStore
         Write(path, new FullBackupExport(CurrentSchemaVersion, "fullBackup", state));
     }
 
+    /// <summary>
+    /// Eksportuje faktyczny, bieżący stan profilu złożony z pliku ustawień oraz
+    /// obu baz SQLite. Wywołujący nie musi i nie powinien składać tego stanu
+    /// samodzielnie.
+    /// </summary>
+    public PersistedState ExportCurrentFullBackup(string path)
+    {
+        lock (saveGate)
+        {
+            var state = LoadOrCreate();
+            ExportFullBackup(path, state);
+            return state;
+        }
+    }
+
     public PersistedState ImportFullBackup(string path)
     {
         var export = Read<FullBackupExport>(path, "fullBackup");
@@ -271,6 +288,276 @@ public sealed class ConfigurationStore
         EnsureBuiltInProfile(export.State);
         return export.State;
     }
+
+    /// <summary>
+    /// Waliduje pełną kopię, a następnie zapisuje ją jedyną wspólną drogą do
+    /// state.json, library.db i podcasts.db. Nie pozostawia importu wyłącznie
+    /// w pamięci procesu.
+    /// </summary>
+    public PersistedState ImportAndSaveFullBackup(string path)
+    {
+        return ImportAndSaveBackup(path).State;
+    }
+
+    /// <summary>
+    /// Eksportuje pełny profil albo jeden lub kilka jawnie wskazanych działów.
+    /// Pełny zakres zachowuje historyczny format fullBackup. Kopia częściowa
+    /// ma manifest, dzięki któremu brakujący dział nigdy nie zostanie uznany za
+    /// pusty i nie skasuje danych odbiorcy.
+    /// </summary>
+    public ProfileBackupSummary ExportCurrentBackup(
+        string path,
+        IEnumerable<string> sections)
+    {
+        lock (saveGate)
+        {
+            var normalized = ProfileBackupSectionCatalog.Normalize(sections);
+            var state = LoadOrCreate();
+            PersistedState exportedState;
+            if (ProfileBackupSectionCatalog.IsComplete(normalized))
+            {
+                ExportFullBackup(path, state);
+                exportedState = state;
+            }
+            else
+            {
+                var scopedState = CreateScopedBackupState(state, normalized);
+                Write(
+                    path,
+                    new ProfileBackupExport(
+                        CurrentSchemaVersion,
+                        "profileBackup",
+                        normalized.ToList(),
+                        scopedState));
+                exportedState = scopedState;
+            }
+            return CreateProfileBackupSummary(exportedState, normalized);
+        }
+    }
+
+    /// <summary>
+    /// Czyta, migruje i waliduje kopię bez zmiany profilu.
+    /// </summary>
+    public ProfileBackupSummary InspectBackup(string path)
+    {
+        lock (saveGate)
+        {
+            var document = ReadProfileBackup(path);
+            return CreateProfileBackupSummary(document.State, document.Sections);
+        }
+    }
+
+    /// <summary>
+    /// Importuje wyłącznie działy zapisane w manifeście. Każdy inny dział
+    /// pochodzi z bieżącego profilu. W razie błędu zapisu wykonywana jest próba
+    /// odtworzenia pełnego stanu sprzed operacji.
+    /// </summary>
+    public ProfileBackupImportResult ImportAndSaveBackup(
+        string path,
+        IEnumerable<string>? requestedSections = null)
+    {
+        lock (saveGate)
+        {
+            var document = ReadProfileBackup(path);
+            var selected = requestedSections is null
+                ? document.Sections
+                : ProfileBackupSectionCatalog.Normalize(requestedSections);
+            var available = document.Sections.ToHashSet(StringComparer.OrdinalIgnoreCase);
+            if (selected.Any(section => !available.Contains(section)))
+            {
+                throw new InvalidDataException(
+                    "Wybrany zakres nie znajduje się we wskazanej kopii AMC.");
+            }
+
+            var current = LoadOrCreate();
+            var merged = ApplyProfileBackup(current, document.State, selected);
+            try
+            {
+                Save(merged);
+            }
+            catch (Exception importException) when (
+                importException is not OutOfMemoryException
+                and not StackOverflowException
+                and not AccessViolationException)
+            {
+                try
+                {
+                    Save(current);
+                }
+                catch (Exception rollbackException)
+                {
+                    throw new IOException(
+                        "Nie udało się zapisać importu ani automatycznie przywrócić poprzednich danych.",
+                        new AggregateException(importException, rollbackException));
+                }
+
+                throw new IOException(
+                    "Nie udało się zapisać importu. Poprzednie dane zostały przywrócone.",
+                    importException);
+            }
+
+            return new ProfileBackupImportResult(
+                merged,
+                CreateProfileBackupSummary(
+                    CreateScopedBackupState(document.State, selected),
+                    selected));
+        }
+    }
+
+    private ProfileBackupDocument ReadProfileBackup(string path)
+    {
+        string kind;
+        try
+        {
+            using var header = JsonDocument.Parse(ReadExportText(path));
+            kind = header.RootElement.TryGetProperty("kind", out var kindElement)
+                && kindElement.ValueKind == JsonValueKind.String
+                    ? kindElement.GetString() ?? string.Empty
+                    : string.Empty;
+        }
+        catch (JsonException exception)
+        {
+            throw new InvalidDataException("Plik eksportu jest pusty lub uszkodzony.", exception);
+        }
+
+        if (string.Equals(kind, "fullBackup", StringComparison.Ordinal))
+        {
+            return new ProfileBackupDocument(
+                ProfileBackupSectionCatalog.All,
+                ImportFullBackup(path));
+        }
+        if (!string.Equals(kind, "profileBackup", StringComparison.Ordinal))
+        {
+            throw new InvalidDataException("Wskazany plik nie jest kopią danych AMC.");
+        }
+
+        var export = Read<ProfileBackupExport>(path, "profileBackup");
+        var sections = ProfileBackupSectionCatalog.Normalize(export.Sections);
+        MigrateState(export.State);
+        ValidateState(export.State);
+        EnsureBuiltInProfile(export.State);
+        return new ProfileBackupDocument(sections, export.State);
+    }
+
+    private static PersistedState CreateScopedBackupState(
+        PersistedState source,
+        IReadOnlyCollection<string> sections)
+    {
+        var selected = sections.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var result = CreateDefaultState();
+        result.SchemaVersion = source.SchemaVersion;
+
+        if (selected.Contains(ProfileBackupSectionCatalog.Configuration))
+        {
+            result.Settings = StateSnapshotCopier.Copy(source.Settings);
+            result.SearchHistory = StateSnapshotCopier.Copy(source.SearchHistory);
+            result.SessionNavigation = StateSnapshotCopier.Copy(source.SessionNavigation);
+            result.SessionPresets = StateSnapshotCopier.Copy(source.SessionPresets);
+            result.PlaybackVolumes = StateSnapshotCopier.Copy(source.PlaybackVolumes);
+            result.KeyboardProfiles = StateSnapshotCopier.Copy(source.KeyboardProfiles);
+        }
+        if (selected.Contains(ProfileBackupSectionCatalog.Library))
+        {
+            result.LocalMedia = StateSnapshotCopier.Copy(source.LocalMedia);
+            result.PlaybackHistory = StateSnapshotCopier.Copy(source.PlaybackHistory);
+            result.Bookmarks = StateSnapshotCopier.Copy(source.Bookmarks);
+            result.CollectionOrders = StateSnapshotCopier.Copy(source.CollectionOrders);
+            result.RemoteQueues = StateSnapshotCopier.Copy(source.RemoteQueues);
+        }
+        if (selected.Contains(ProfileBackupSectionCatalog.Playlists))
+            result.Playlists = StateSnapshotCopier.Copy(source.Playlists);
+        if (selected.Contains(ProfileBackupSectionCatalog.Radio))
+        {
+            result.Radio = StateSnapshotCopier.Copy(source.Radio);
+            result.Radio.RecordingSchedules = [];
+        }
+        if (selected.Contains(ProfileBackupSectionCatalog.RadioSchedules))
+        {
+            result.Radio.RecordingSchedules =
+                StateSnapshotCopier.Copy(source.Radio.RecordingSchedules);
+        }
+        if (selected.Contains(ProfileBackupSectionCatalog.Podcasts))
+            result.Podcasts = StateSnapshotCopier.Copy(source.Podcasts);
+        if (selected.Contains(ProfileBackupSectionCatalog.Services))
+        {
+            result.WiiM = StateSnapshotCopier.Copy(source.WiiM);
+            result.FrontierSmart = StateSnapshotCopier.Copy(source.FrontierSmart);
+            result.Sonos = StateSnapshotCopier.Copy(source.Sonos);
+            result.Tidal = StateSnapshotCopier.Copy(source.Tidal);
+            result.Spotify = StateSnapshotCopier.Copy(source.Spotify);
+        }
+
+        return result;
+    }
+
+    private static PersistedState ApplyProfileBackup(
+        PersistedState current,
+        PersistedState imported,
+        IReadOnlyCollection<string> sections)
+    {
+        var selected = sections.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var result = StateSnapshotCopier.Copy(current);
+
+        if (selected.Contains(ProfileBackupSectionCatalog.Configuration))
+        {
+            result.Settings = StateSnapshotCopier.Copy(imported.Settings);
+            result.SearchHistory = StateSnapshotCopier.Copy(imported.SearchHistory);
+            result.SessionNavigation = StateSnapshotCopier.Copy(imported.SessionNavigation);
+            result.SessionPresets = StateSnapshotCopier.Copy(imported.SessionPresets);
+            result.PlaybackVolumes = StateSnapshotCopier.Copy(imported.PlaybackVolumes);
+            result.KeyboardProfiles = StateSnapshotCopier.Copy(imported.KeyboardProfiles);
+        }
+        if (selected.Contains(ProfileBackupSectionCatalog.Library))
+        {
+            result.LocalMedia = StateSnapshotCopier.Copy(imported.LocalMedia);
+            result.PlaybackHistory = StateSnapshotCopier.Copy(imported.PlaybackHistory);
+            result.Bookmarks = StateSnapshotCopier.Copy(imported.Bookmarks);
+            result.CollectionOrders = StateSnapshotCopier.Copy(imported.CollectionOrders);
+            result.RemoteQueues = StateSnapshotCopier.Copy(imported.RemoteQueues);
+        }
+        if (selected.Contains(ProfileBackupSectionCatalog.Playlists))
+            result.Playlists = StateSnapshotCopier.Copy(imported.Playlists);
+        if (selected.Contains(ProfileBackupSectionCatalog.Radio))
+        {
+            var schedules = result.Radio.RecordingSchedules;
+            result.Radio = StateSnapshotCopier.Copy(imported.Radio);
+            if (!selected.Contains(ProfileBackupSectionCatalog.RadioSchedules))
+                result.Radio.RecordingSchedules = schedules;
+        }
+        if (selected.Contains(ProfileBackupSectionCatalog.RadioSchedules))
+        {
+            result.Radio.RecordingSchedules =
+                StateSnapshotCopier.Copy(imported.Radio.RecordingSchedules);
+        }
+        if (selected.Contains(ProfileBackupSectionCatalog.Podcasts))
+            result.Podcasts = StateSnapshotCopier.Copy(imported.Podcasts);
+        if (selected.Contains(ProfileBackupSectionCatalog.Services))
+        {
+            result.WiiM = StateSnapshotCopier.Copy(imported.WiiM);
+            result.FrontierSmart = StateSnapshotCopier.Copy(imported.FrontierSmart);
+            result.Sonos = StateSnapshotCopier.Copy(imported.Sonos);
+            result.Tidal = StateSnapshotCopier.Copy(imported.Tidal);
+            result.Spotify = StateSnapshotCopier.Copy(imported.Spotify);
+        }
+
+        result.SchemaVersion = CurrentSchemaVersion;
+        EnsureBuiltInProfile(result);
+        ValidateState(result);
+        return result;
+    }
+
+    private static ProfileBackupSummary CreateProfileBackupSummary(
+        PersistedState state,
+        IReadOnlyCollection<string> sections) => new(
+            sections.ToArray(),
+            state.LocalMedia.Items.Count,
+            state.Radio.Stations.Count,
+            state.Podcasts.Subscriptions.Count,
+            state.Podcasts.Episodes.Count,
+            state.Bookmarks.Entries.Count,
+            state.Playlists.Entries.Count,
+            state.Radio.RecordingSchedules.Count,
+            state.Radio.RecordingHistory.Count);
 
     /// <summary>
     /// Tworzy ostatnia kompletna migawke danych wspolnych AMC Test. Odczyt
@@ -1942,11 +2229,19 @@ public sealed class ConfigurationStore
 
     private static T Read<T>(string path, string expectedKind) where T : IExportEnvelope
     {
-        var value = JsonSerializer.Deserialize<T>(File.ReadAllText(path), JsonOptions)
-            ?? throw new InvalidDataException("Plik eksportu jest pusty lub uszkodzony.");
+        T value;
+        try
+        {
+            value = JsonSerializer.Deserialize<T>(ReadExportText(path), JsonOptions)
+                ?? throw new InvalidDataException("Plik eksportu jest pusty lub uszkodzony.");
+        }
+        catch (JsonException exception)
+        {
+            throw new InvalidDataException("Plik eksportu jest pusty lub uszkodzony.", exception);
+        }
         if (!string.Equals(value.Kind, expectedKind, StringComparison.Ordinal))
         {
-            throw new InvalidDataException($"Oczekiwano pliku typu {expectedKind}, otrzymano {value.Kind}.");
+            throw new InvalidDataException("Wskazany plik ma inny rodzaj danych AMC.");
         }
         if (value.SchemaVersion > CurrentSchemaVersion)
         {
@@ -1955,9 +2250,43 @@ public sealed class ConfigurationStore
         return value;
     }
 
+    private static string ReadExportText(string path)
+    {
+        var length = new FileInfo(path).Length;
+        if (length <= 0 || length > MaximumExportBytes)
+            throw new InvalidDataException("Plik eksportu ma nieprawidłowy rozmiar.");
+        return File.ReadAllText(path, Encoding.UTF8);
+    }
+
     private static void Write<T>(string path, T value)
     {
-        File.WriteAllText(path, JsonSerializer.Serialize(value, JsonOptions));
+        var fullPath = Path.GetFullPath(path);
+        var directory = Path.GetDirectoryName(fullPath);
+        if (!string.IsNullOrWhiteSpace(directory)) Directory.CreateDirectory(directory);
+        var temporaryPath = Path.Combine(
+            directory ?? string.Empty,
+            $".{Path.GetFileName(fullPath)}.{Guid.NewGuid():N}.tmp");
+        try
+        {
+            using (var stream = new FileStream(
+                temporaryPath,
+                FileMode.CreateNew,
+                FileAccess.Write,
+                FileShare.None,
+                64 * 1024,
+                FileOptions.WriteThrough))
+            using (var writer = new StreamWriter(stream, new UTF8Encoding(false)))
+            {
+                writer.Write(JsonSerializer.Serialize(value, JsonOptions));
+                writer.Flush();
+                stream.Flush(flushToDisk: true);
+            }
+            File.Move(temporaryPath, fullPath, overwrite: true);
+        }
+        finally
+        {
+            if (File.Exists(temporaryPath)) File.Delete(temporaryPath);
+        }
     }
 
     private static AppSettings Clone(AppSettings settings) =>
@@ -1974,3 +2303,70 @@ public interface IExportEnvelope
 public sealed record KeyboardMapExport(int SchemaVersion, string Kind, KeyboardProfile Profile) : IExportEnvelope;
 public sealed record ConfigurationExport(int SchemaVersion, string Kind, AppSettings Settings) : IExportEnvelope;
 public sealed record FullBackupExport(int SchemaVersion, string Kind, PersistedState State) : IExportEnvelope;
+public sealed record ProfileBackupExport(
+    int SchemaVersion,
+    string Kind,
+    List<string> Sections,
+    PersistedState State) : IExportEnvelope;
+
+public static class ProfileBackupSectionCatalog
+{
+    public const string Configuration = "configuration";
+    public const string Library = "library";
+    public const string Playlists = "playlists";
+    public const string Radio = "radio";
+    public const string RadioSchedules = "radioSchedules";
+    public const string Podcasts = "podcasts";
+    public const string Services = "services";
+
+    private static readonly string[] Ordered =
+    [
+        Configuration,
+        Library,
+        Playlists,
+        Radio,
+        RadioSchedules,
+        Podcasts,
+        Services
+    ];
+
+    public static IReadOnlyList<string> All => Ordered;
+
+    public static IReadOnlyList<string> Normalize(IEnumerable<string>? sections)
+    {
+        if (sections is null) throw new InvalidDataException("Kopia nie podaje zakresu danych.");
+        var requested = sections
+            .Where(section => !string.IsNullOrWhiteSpace(section))
+            .Select(section => section.Trim())
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        if (requested.Count == 0) throw new InvalidDataException("Nie wybrano danych do kopii.");
+        var unknown = requested.Where(section => !Ordered.Contains(section, StringComparer.OrdinalIgnoreCase));
+        if (unknown.Any()) throw new InvalidDataException("Kopia zawiera nieznany zakres danych.");
+        return Ordered.Where(requested.Contains).ToArray();
+    }
+
+    public static bool IsComplete(IEnumerable<string> sections)
+    {
+        var selected = sections.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        return Ordered.All(selected.Contains) && selected.Count == Ordered.Length;
+    }
+}
+
+public sealed record ProfileBackupSummary(
+    IReadOnlyList<string> Sections,
+    int LocalFiles,
+    int RadioStations,
+    int PodcastSources,
+    int PodcastEpisodes,
+    int Bookmarks,
+    int Playlists,
+    int RecordingSchedules,
+    int RecordingHistoryEntries);
+
+public sealed record ProfileBackupImportResult(
+    PersistedState State,
+    ProfileBackupSummary Summary);
+
+internal sealed record ProfileBackupDocument(
+    IReadOnlyList<string> Sections,
+    PersistedState State);
