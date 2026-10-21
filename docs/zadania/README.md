@@ -227,11 +227,13 @@ zmian, wymagający korekty użytkownika:
 - `NAME-001` — **Zrobione** — zmiana widocznej nazwy prywatnej wersji z
   „AMC Python” na „AMC Test”, bez zmiany technicznej tożsamości instalacji.
   Szczegóły: [NAME-001-amc-test.md](NAME-001-amc-test.md).
-- `FRONTIER-001` — **Poprawka po pierwszym odbiorze zainstalowana w AMC Test;
+- `FRONTIER-001` — **Druga poprawka po odbiorze zainstalowana w AMC Test;
   wykrywanie i połączenie z Teufel RADIO 3SIXTY potwierdzone, czeka na odbiór
-  NVDA całej sesji** — pierwsze włączenie i `Ctrl+F5` automatycznie szukają
-  urządzeń FSAPI/UNDOK, a ręczny adres jest opcją awaryjną. Bezpieczny PIN,
-  transport, tryby i presety pozostają dostępne wyłącznie w AMC Test.
+  NVDA całej sesji** — pusta sesja automatycznie szuka pierwszego urządzenia
+  FSAPI/UNDOK. Po zapisaniu urządzenia `Ctrl+F5` pokazuje listę bez ponownego
+  skanowania, a osobny przycisk pozwala szukać nowych urządzeń; ręczny adres
+  jest opcją awaryjną. Bezpieczny PIN, transport, tryby i presety pozostają
+  dostępne wyłącznie w AMC Test.
   Szczegóły:
   [FRONTIER-001-frontier-smart-fsapi.md](FRONTIER-001-frontier-smart-fsapi.md).
 - `ARC-001` — **Oczekuje** — wspólny rdzeń poleceń dla GUI, palety, NVDA,

@@ -40,10 +40,12 @@ Materiały wskazane przez użytkownika:
 - Menedżer sesji pokazuje celową nazwę „Frontier Smart”, stan włączenia i
   lokalnie znaną gotowość. Pierwsze włączenie sesji Spacją zamyka Menedżer
   sesji, przechodzi do konfiguracji i od razu rozpoczyna wykrywanie urządzeń.
-- „Konfiguruj…” oraz `Ctrl+F5` otwierają okno „Urządzenia Frontier Smart” i
-  automatycznie rozpoczynają wykrywanie. Lista, pola i przyciski mają jawne
-  nazwy użytkowe; obiekty, enumy i identyfikatory nie są tekstem
-  dostępnościowym.
+- „Konfiguruj…” oraz `Ctrl+F5` otwierają okno „Urządzenia Frontier Smart”. Gdy
+  lista jest pusta, pierwsze otwarcie automatycznie rozpoczyna wykrywanie. Po
+  zapisaniu urządzenia kolejne otwarcia od razu pokazują listę i nie skanują
+  sieci; nowe wyszukiwanie uruchamia osobny przycisk „Szukaj nowych urządzeń”.
+  Lista, pola i przyciski mają jawne nazwy użytkowe; obiekty, enumy i
+  identyfikatory nie są tekstem dostępnościowym.
 - Pole PIN jest chronione. Zwykłe listy i komunikaty nie pokazują PIN-u ani
   pełnych adresów żądań FSAPI.
 - Ręczny adres jest schowany pod osobnym przyciskiem „Wpisz adres ręcznie…” i
@@ -56,10 +58,12 @@ Materiały wskazane przez użytkownika:
 
 ## Korekta po pierwszym odbiorze — 21.10.2026
 
-Ta decyzja zastępuje wcześniejsze ustalenie z tego zadania, według którego
-skanowanie miało rozpoczynać się dopiero po osobnym poleceniu. Użytkownik
-potwierdził, że pierwsze włączenie nowej sesji i `Ctrl+F5` mają od razu szukać
-urządzeń, a ręczny adres ma być dopiero opcją awaryjną.
+Ta decyzja zastąpiła pierwszą wersję zadania, według której każde skanowanie
+miało rozpoczynać się dopiero po osobnym poleceniu. Pierwsze włączenie pustej
+sesji ma od razu szukać urządzeń, a ręczny adres ma być dopiero opcją awaryjną.
+Późniejsza korekta dotycząca ponownego otwarcia `Ctrl+F5` jest zapisana poniżej
+i ma pierwszeństwo przed wcześniejszym, zbyt szerokim opisem automatycznego
+skanowania.
 
 Rzeczywisty pomiar sieci wykazał, że Teufel RADIO 3SIXTY reklamuje usługę
 `urn:schemas-frontier-silicon-com:undok:fsapi:1`, podczas gdy pierwsza wersja
@@ -72,6 +76,24 @@ Drugą przyczyną pozornej pętli był firmware radia, który odrzuca duże
 serii pojedynczych odczytów. Klient przechodzi teraz na pojedyncze `GET`, robi
 krótkie przerwy i jednokrotnie ponawia przejściowy błąd połączenia. Błędny PIN
 i brak radia mają osobne komunikaty i odmienny powrót fokusu.
+
+## Korekta ponownego otwarcia listy — 21.10.2026
+
+Ta decyzja zastępuje wcześniejsze ustalenie z tego samego dnia, że `Ctrl+F5`
+ma automatycznie skanować sieć przy każdym otwarciu. Wzorzec jest teraz zgodny
+z WiiM, Sonosem i Folderami Biblioteki:
+
+- pierwsze włączenie sesji bez zapisanego urządzenia automatycznie skanuje;
+- `Ctrl+F5` przy pustej liście również pomaga znaleźć pierwsze urządzenie;
+- po zapisaniu co najmniej jednego urządzenia `Ctrl+F5` natychmiast pokazuje
+  listę zapisanych urządzeń, skupia ją i nie wykonuje skanowania sieci;
+- późniejsze dodanie urządzenia jest jawną czynnością pod przyciskiem „Szukaj
+  nowych urządzeń”; ręczny adres pozostaje osobną opcją awaryjną;
+- po usunięciu wszystkich urządzeń sesja znów jest nieskonfigurowana, więc jej
+  następne otwarcie może automatycznie wyszukać pierwsze urządzenie.
+
+Opis `Ctrl+F5` w menu, pomocy kontekstowej, pełnej pomocy i palecie brzmi:
+„Pokaż zapisane urządzenia Frontier Smart i opcjonalnie wyszukaj nowe”.
 
 ## Różnice względem WiiM
 
@@ -165,6 +187,20 @@ i brak radia mają osobne komunikaty i odmienny powrót fokusu.
   `2026.10.21-19ae6089b6cb24ea102273d37cb00f8eb86b1c38-e894430c`.
   Dodatkowy odczyt przez dokładnie zainstalowany runtime i LiteHost wykrył w
   bieżącej sieci jedno urządzenie Frontier Smart pod prawidłowym adresem.
+- Ukierunkowana regresja korekty ponownego otwarcia listy zaliczyła **99/99
+  testów**. Obejmuje pustą i niepustą listę, celową nazwę przycisku, wykonanie
+  `Ctrl+F5`, menu, pomoc kontekstową, pełną pomoc oraz paletę poleceń.
+- Pełna promocja z czystego worktree commitu `86727573` przeszła **29/29
+  testów launchera i aktualizatora**, **1963 testy Python**, **110 celowo
+  pominiętych testów środowiskowych** i **11 podtestów**. Kompilacje .NET
+  zakończyły się z 0 ostrzeżeń i 0 błędów. Kandydat oraz stała instalacja po
+  atomowej podmianie zaliczyły integralność i kontrolowany start interfejsu
+  oraz hosta.
+- Zainstalowano AMC Test z kompilacji
+  `2026.10.21-8672757327c7bc5ae1995e47753f3976f2399600-e97b3868`.
+  Manifest stałej instalacji potwierdza commit `86727573`, pakiet `e97b3868`
+  i 1670 plików. Kontrola instalatora potwierdziła okno „AMC Test —
+  21.10.2026, 21:29” oraz właściwy runtime ze stałego katalogu instalacji.
 
 ## Znane ograniczenia i dalszy odbiór
 
@@ -179,9 +215,11 @@ i brak radia mają osobne komunikaty i odmienny powrót fokusu.
   urządzenia. Polecenia, których sesja nie obsługuje, są ukryte w jej menu i
   pomocy albo odmawiane z komunikatem zamiast wysyłania przypadkowego żądania.
 - Ręczny odbiór obejmie `Ctrl+Shift+S`, pierwsze włączenie i konfigurację,
-  `Ctrl+F5`, wykrywanie, ręczny adres, błędny i prawidłowy PIN, Enter oraz
-  dwuklik na liście urządzeń, powrót fokusu po Zamknij, ponowne otwarcie,
-  odtwarzanie, głośność, wyciszenie, tryby i presety z NVDA.
+  automatyczne wykrywanie pustej sesji, `Ctrl+F5` bez ponownego skanowania po
+  zapisaniu urządzenia, przycisk „Szukaj nowych urządzeń”, ręczny adres, błędny
+  i prawidłowy PIN, Enter oraz dwuklik na liście urządzeń, powrót fokusu po
+  Zamknij, ponowne otwarcie, odtwarzanie, głośność, wyciszenie, tryby i presety
+  z NVDA.
 
 ## Migracja, wersja i commit
 
@@ -192,8 +230,10 @@ Commit źródłowy implementacji i testów: `412adf67` —
 poprawki zgodnej migracji profilu: `63b30444` —
 `fix(amc): pozwol updaterowi rozszerzyc profil wydania`. Korekta po pierwszym
 odbiorze urządzenia: `19ae6089` —
-`fix(frontier): wykryj radio UNDOK i uprosc konfiguracje`. Zainstalowana
+`fix(frontier): wykryj radio UNDOK i uprosc konfiguracje`. Poprawka zachowania
+pustej i zapisanej listy: `86727573` —
+`fix(frontier): skanuj automatycznie tylko pusta sesje`. Zainstalowana
 kompilacja AMC Test:
-`2026.10.21-19ae6089b6cb24ea102273d37cb00f8eb86b1c38-e894430c`.
+`2026.10.21-8672757327c7bc5ae1995e47753f3976f2399600-e97b3868`.
 Nie publikować ani nie promować do profilu publicznego bez nowej zgody
 użytkownika.
