@@ -18,6 +18,24 @@ $startupSmokeTool = Join-Path $repositoryRoot "wxlite\tools\Test-AMCBundleStartu
 $manifestPath = Join-Path $bundle "bundle-manifest.json"
 $launcher = Join-Path $bundle "AMC.exe"
 
+Push-Location $repositoryRoot
+try {
+    $installerSourceRevision = (& git rev-parse HEAD).Trim()
+    if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($installerSourceRevision)) {
+        throw "Nie można odczytać rewizji źródeł instalatora."
+    }
+    $trackedChanges = @(& git status --porcelain --untracked-files=no)
+    if ($LASTEXITCODE -ne 0) {
+        throw "Nie można sprawdzić stanu źródeł instalatora."
+    }
+    if ($trackedChanges.Count -gt 0) {
+        throw "Instalator nie może powstać z niezapisanych zmian w śledzonych źródłach."
+    }
+}
+finally {
+    Pop-Location
+}
+
 if (-not (Test-Path -LiteralPath $manifestPath -PathType Leaf)) {
     throw "Brak bundle-manifest.json w folderze paczki: $bundle"
 }
@@ -120,6 +138,7 @@ $integrity = [ordered]@{
     sha256 = (Get-FileHash -LiteralPath $installer -Algorithm SHA256).Hash.ToLowerInvariant()
     bundleId = [string]$manifest.bundleId
     sourceRevision = [string]$manifest.sourceRevision
+    installerSourceRevision = $installerSourceRevision
 }
 $integrityPath = Join-Path $output ($baseName + ".integrity.json")
 $integrity | ConvertTo-Json | Set-Content -LiteralPath $integrityPath -Encoding utf8

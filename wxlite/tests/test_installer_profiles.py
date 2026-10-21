@@ -99,10 +99,28 @@ def test_installer_refuses_to_overlay_another_or_historical_product() -> None:
     assert "Instalator nie nadpisze jej plików" in ISS
 
 
+def test_public_update_removes_modules_disabled_for_that_profile() -> None:
+    section_start = ISS.index("[InstallDelete]")
+    install_delete = ISS[section_start : ISS.index("#endif", section_start)]
+
+    for stale_name in (
+        "frontier_smart_source.py",
+        "spotify_playlist_dialog.py",
+        "spotify_source.py",
+        "tidal_source.py",
+    ):
+        assert f'Name: "{{app}}\\app\\amc_wx_lite\\{stale_name}"' in install_delete
+        assert stale_name.removesuffix(".py") + ".*.pyc" in install_delete
+
+    assert "sonos_source" not in install_delete
+
+
 def test_build_helper_verifies_profile_clean_source_and_full_bundle() -> None:
     assert 'ValidateSet("public", "test")' in BUILD
     assert "manifest.releaseProfile" in BUILD
     assert "manifest.sourceDirty" in BUILD
+    assert "git status --porcelain --untracked-files=no" in BUILD
+    assert "installerSourceRevision" in BUILD
     assert ".VersionInfo.ProductVersion" in BUILD
     assert "$launcherVersion -ne $Version" in BUILD
     assert "Numer instalatora $Version nie zgadza się" in BUILD

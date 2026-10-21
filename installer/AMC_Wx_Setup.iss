@@ -95,6 +95,24 @@ Name: "desktopicon"; Description: "Utwórz skrót na pulpicie"; \
 [Files]
 Source: "*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
+; Inno Setup kopiuje i nadpisuje pliki, ale sam nie usuwa plików, które były
+; obecne w poprzedniej wersji paczki. Publiczna aktualizacja musi więc usunąć
+; źródła usług niedostępnych w tym profilu także przy instalacji na istniejący
+; katalog. Bez tego wycofany moduł pozostawał po aktualizacji mimo jego braku
+; w bundle-manifest.json. Pliki Sonosa nie należą do tej listy, bo Sonos jest
+; obsługiwany przez profil publiczny.
+#if Profil == "public"
+[InstallDelete]
+Type: files; Name: "{app}\app\amc_wx_lite\frontier_smart_source.py"
+Type: files; Name: "{app}\app\amc_wx_lite\spotify_playlist_dialog.py"
+Type: files; Name: "{app}\app\amc_wx_lite\spotify_source.py"
+Type: files; Name: "{app}\app\amc_wx_lite\tidal_source.py"
+Type: files; Name: "{app}\app\amc_wx_lite\__pycache__\frontier_smart_source.*.pyc"
+Type: files; Name: "{app}\app\amc_wx_lite\__pycache__\spotify_playlist_dialog.*.pyc"
+Type: files; Name: "{app}\app\amc_wx_lite\__pycache__\spotify_source.*.pyc"
+Type: files; Name: "{app}\app\amc_wx_lite\__pycache__\tidal_source.*.pyc"
+#endif
+
 [Icons]
 Name: "{group}\{#KrotkaNazwa}"; Filename: "{app}\AMC.exe"; WorkingDir: "{app}"; \
     Check: not WizardNoIcons
