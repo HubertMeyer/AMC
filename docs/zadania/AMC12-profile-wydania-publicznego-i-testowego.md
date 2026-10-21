@@ -1,5 +1,37 @@
 # AMC12 — profile wydania publicznego i testowego
 
+## Punkt wznowienia po odnowieniu limitu — 21.10.2026
+
+Nie rozpoczynać ponownej analizy architektury ani odtwarzania wcześniejszych
+ustaleń. Bazą następnego publicznego instalatora ma być najnowsza odebrana
+wersja AMC Test. Warunek użytkownika: dopiero po jego jednoznacznym odbiorze
+Frontier Smart dołączyć tę sesję do profilu publicznego. Publiczny wariant ma
+być kopią odebranego Testu z ukrytymi i wyłączonymi wyłącznie niedopracowanymi
+funkcjami streamingowymi — obecnie TIDAL i Spotify.
+
+Kolejność dalszych prac:
+
+1. Po komunikacie użytkownika, że Frontier Smart został odebrany, dodać go do
+   publicznego profilu sesji i możliwości. Nie publikować go warunkowo ani
+   automatycznie przed tym potwierdzeniem.
+2. Zbudować następcę wstrzymanego `alpha.433` z najnowszych odebranych źródeł,
+   w tym z poprawką ręcznej kolejności playlist Radia z commita `c25ecb50`.
+3. Osobno potwierdzić źródła, testy, paczkę, integralność, kontrolowany start,
+   czystą instalację i działający proces. Dopiero po odbiorze uznać instalator
+   za przeznaczony do wysłania.
+4. Ten sam zweryfikowany plik umieścić jako zasób wydania GitHub, a następnie
+   sprawdzić z wcześniejszej wersji publicznej wykrycie, pobranie, instalację i
+   ponowny start aktualizacji. Zweryfikować zdalną nazwę, rozmiar i SHA-256.
+5. Sprawdzić pełny przepływ zgłaszania błędów z aplikacji.
+6. Następnym etapem funkcjonalnym jest dokończenie logowania YouTube.
+
+Aktualny `alpha.433` pozostaje kandydatem wstrzymanym: został zbudowany około
+21:26 z rewizji `8ab21a25`, nie ma Frontier Smart ani późniejszej poprawki
+playlist Radia i nie powinien być wysyłany jako najnowsze wydanie. Aktualna
+zainstalowana paczka Test powstała około 21:43 z rewizji `20a3ca68`, zawiera
+Frontier Smart oraz poprawkę playlist Radia, lecz nie jest instalatorem
+publicznym.
+
 ## Status
 
 **Lokalny publiczny kandydat `0.1.0-alpha.433` jest zbudowany i zainstalowany w
