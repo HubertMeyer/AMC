@@ -171,8 +171,11 @@ Automatyczne usuwanie po obu stronach jest wykluczone.
   (`feat(youtube): plan one-way subscription sync`) oraz `904c8011`
   (`feat(youtube): apply subscription sync atomically`) i `8f0c1341`
   (`feat(youtube): connect guarded account host protocol`).
-- Zainstalowana kompilacja: brak. Ten etap nie zmienia jeszcze interfejsu ani
-  bieżącej instalacji AMC Test.
+- Zainstalowana kompilacja AMC Test zawierająca niewidoczny fundament:
+  `2026.10.21-b258fb69fef580f7899c30abd0d48e6b877119be-726f0791`, 1668 plików.
+  Kandydat i zainstalowana kopia przeszły integralność oraz kontrolowany start.
+  Instalacja nie włączyła polecenia, nie skonfigurowała klienta Google, nie
+  otworzyła przeglądarki i nie zalogowała konta.
 
 ## Materiał do dokumentacji użytkownika
 
@@ -261,6 +264,10 @@ brak usuwania przy pustej odpowiedzi oraz brak częściowego zapisu przy kolizji
 Pięć scenariuszy protokołu potwierdziło oddzielenie podglądu od zapisu, brak
 sekretów i technicznych identyfikatorów w JSON, jednoznaczny wybór przywracania,
 redakcję nieznanego błędu oraz zachowanie konkretnego komunikatu o limicie.
+Wspólna regresja pustego profilu, katalogu i nawigacji wyszukiwania zakończyła
+się wynikiem 88/88. Kompilacja Release uruchamiacza, aktualizatora i LiteHosta
+zakończyła się bez błędów; złożony pakiet miał 1668 plików, a odizolowany start
+przeszedł przed i po atomowej instalacji.
 
 ## Znane ograniczenia
 
@@ -276,7 +283,8 @@ redakcję nieznanego błędu oraz zachowanie konkretnego komunikatu o limicie.
 ## Wersja i commit
 
 Kod źródłowy i testy są zapisane w lokalnych commitach `ce723bff`, `0c15fbcb`,
-`cbd2a5d3`, `161cb856`, `86309bb0`, `436c5e3d`, `904c8011` oraz `8f0c1341`, po zainstalowanej kompilacji
-`2026.10.21-a947f79d...`. Projekty
-źródłowe zostały pomyślnie zbudowane, ale nie powstał nowy pakiet, instalacja
-ani publikacja.
+`cbd2a5d3`, `161cb856`, `86309bb0`, `436c5e3d`, `904c8011` oraz `8f0c1341`.
+Zainstalowany AMC Test pochodzi z rewizji
+`b258fb69fef580f7899c30abd0d48e6b877119be`, paczki `726f0791`; publikacji
+nie wykonywano. Widoczny interfejs i identyfikator klienta Google nadal nie
+istnieją, więc nie jest to jeszcze funkcja gotowa do odbioru użytkowego.

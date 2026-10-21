@@ -237,6 +237,12 @@ brak rozbieżności powierzchni.
 
 ## Testy i wynik
 
+- Ponowna kontrola po pytaniu użytkownika o inne wyszukiwarki na świeżym
+  profilu: **88/88**. Obejmuje pustą Bibliotekę Plików lokalnych, Radio,
+  Podcasty i YouTube, wspólny modal wszystkich sesji, `Ctrl+Shift+L`, `Ctrl+L`,
+  fokus pola zapytania oraz start z trzema początkowo nieistniejącymi
+  magazynami profilu. Nie znaleziono drugiej odmiany błędu radiowego.
+
 - Korekta wspólna z 21 października 2026: **78/78 testów zaliczonych** dla
   nawigacji wyszukiwarki, katalogu źródeł i startu aplikacji.
 - Macierz obejmuje Pliki lokalne, Radio, zapisane i publiczne wyniki Podcastów
@@ -301,7 +307,9 @@ brak rozbieżności powierzchni.
   `a947f79d83f11888e2d1ea353909a1ee50b3ccaa`. Dokładnie ten commit przeszedł
   pełną regresję: **1910 zaliczonych, 110 pominiętych i 11 podtestów**.
 - Zainstalowany i uruchomiony AMC Test:
-  `2026.10.21-a947f79d83f11888e2d1ea353909a1ee50b3ccaa-1dfc80e8`.
+  `2026.10.21-b258fb69fef580f7899c30abd0d48e6b877119be-726f0791`.
+  Paczka zawiera 1668 plików; integralność i kontrolowany start kandydata oraz
+  kopii po atomowej instalacji są zaliczone. Publikacji nie wykonywano.
 - Zainstalowany publiczny AMC:
   `2026.10.21-a947f79d83f11888e2d1ea353909a1ee50b3ccaa-5b07f9a1`.
   Pełna kontrola 1073 plików i odizolowany start zainstalowanej kopii są

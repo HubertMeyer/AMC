@@ -106,9 +106,9 @@ zmian, wymagający korekty użytkownika:
   Eksport fragmentów Time Shiftu pozostaje późniejszym rozszerzeniem.
 - `AMC08` — **Prawdziwe OAuth i dodawanie do playlist zostały potwierdzone
   przez użytkownika; korekta mowy `Ctrl+F5` i widoczności pod `Ctrl+P`
-  playlist istniejących oraz nowych jest zainstalowana w AMC Test, czeka na
-  ręczny odbiór NVDA; dodatkowe czyszczenie migawki po ponownym logowaniu ma
-  zaliczone testy i czeka na instalację**
+  playlist istniejących oraz nowych jest zainstalowana w AMC Test; również
+  czyszczenie migawki po ponownym logowaniu jest zbudowane i zainstalowane,
+  całość czeka na ręczny odbiór NVDA**
   — natywne playlisty
   Spotify w AMC Test: `Ctrl+P`, `Ctrl+Shift+P`, pobranie katalogu raz na
   uruchomienie, natychmiastowa widoczność nowej playlisty i zapamiętanie
@@ -219,7 +219,8 @@ zmian, wymagający korekty użytkownika:
 - `YT-001` — **W trakcie — bezpieczny fundament OAuth, lokalny odbiornik,
   transport tokenów, koordynator, odczyt, niedestrukcyjny plan oraz atomowy
   zapis subskrypcji, chroniony protokół hosta i osobne magazyny poświadczeń
-  AMC Test/AMC gotowe; brak identyfikatora aplikacji Google i interfejsu wx** — oficjalne logowanie do
+  AMC Test/AMC są zbudowane i obecne niewidocznie w AMC Test; brak
+  identyfikatora aplikacji Google i interfejsu wx** — oficjalne logowanie do
   konta YouTube, synchronizacja subskrypcji i zwykłych playlist oraz bezpieczny
   zakres czynności konta. Etap rozpoczęto 21 października 2026 na nowe jawne
   polecenie użytkownika; nic nie loguje konta ani nie otwiera przeglądarki.

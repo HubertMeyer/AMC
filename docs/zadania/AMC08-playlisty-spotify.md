@@ -4,7 +4,8 @@ Status: **Użytkownik potwierdził prawdziwe OAuth i skuteczne dodawanie do
 playlist Spotify. Korekta jawnej mowy stanu konta oraz widoczności pod
 `Ctrl+P` playlist istniejących i właśnie utworzonych jest zainstalowana w AMC
 Test; czeka na ręczny odbiór NVDA. Dodatkowa korekta unieważnienia migawki po
-ponownym logowaniu jest w kodzie i testach, ale nie została jeszcze zainstalowana.**
+ponownym logowaniu także jest zbudowana, zainstalowana i uruchomiona; czeka na
+ręczny odbiór NVDA na prawdziwym koncie.**
 
 Źródło decyzji: zatwierdzona analiza historyczna tylko do odczytu
 `D:\Projekty Codex\Accessible Multimedia Controller\AMC08_PLAYLISTY_SPOTIFY_2026-10-18.md`.
@@ -256,8 +257,10 @@ ponownym logowaniu jest w kodzie i testach, ale nie została jeszcze zainstalowa
   przez użytkownika. Jawna mowa aktualnego stanu konta po `Ctrl+F5` oraz
   odświeżony widok `Ctrl+P` są już zainstalowane, ale wymagają ręcznego odbioru
   NVDA na prawdziwym koncie.
-- Korekta czyszczenia migawki po sukcesie OAuth ma zaliczone testy źródła, ale
-  nie została jeszcze zbudowana ani zainstalowana w AMC Test.
+- Korekta czyszczenia migawki po sukcesie OAuth ma zaliczone testy źródła,
+  kompilację Release, instalację i uruchomienie w AMC Test. Pozostaje ręczny
+  odbiór: po zalogowaniu pierwsze `Ctrl+P` ma pobrać bieżące playlisty dokładnie
+  raz i nie pokazać pozycji poprzedniego konta.
 - Trwającego OAuth nie można jeszcze anulować przyciskiem okna AMC; do wyniku
   albo limitu czasu okno pozostaje otwarte. Hasła i tokeny nadal nie trafiają
   do interfejsu Python.
@@ -323,6 +326,13 @@ ponownym logowaniu jest w kodzie i testach, ale nie została jeszcze zainstalowa
   kompilacja Release i ukierunkowane testy protokołu są zaliczone; instalacji
   ani publikacji nie wykonano.
 - Unieważnienie migawki playlist po udanym logowaniu: commit `b493ae07` —
-  `fix(spotify): refresh playlist view after login`. Testy protokołu zaliczone;
-  kompilacja właściwego hosta, instalacja i publikacja nie zostały jeszcze
-  wykonane dla tej rewizji.
+  `fix(spotify): refresh playlist view after login`. Ukierunkowane testy
+  Spotify i YouTube zaliczone: 2/2 zestawy protokołu. Wspólna bramka
+  wyszukiwania i świeżego profilu: 88/88. Właściwy host skompilowano w Release.
+- Zainstalowany i uruchomiony AMC Test: rewizja `b258fb69fef580f7899c30abd0d48e6b877119be`,
+  paczka `726f0791`, 1668 plików, etykieta
+  `2026.10.21-b258fb69fef580f7899c30abd0d48e6b877119be-726f0791`.
+  Integralność i kontrolowany start kandydata oraz zainstalowanej kopii są
+  zaliczone. Pełnego zestawu wxPython nie powtarzano: wcześniejszy wspólny
+  stan miał 1910 zaliczonych testów, a bieżący przyrost sprawdzono testami
+  ukierunkowanymi. Publikacji nie wykonywano.

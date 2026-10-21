@@ -758,6 +758,16 @@ nadmiarowej zapowiedzi „Przygotowywanie stacji”.
 
 ## Wersja i commit
 
+- Najnowszy AMC Test: rewizja
+  `b258fb69fef580f7899c30abd0d48e6b877119be`, paczka `726f0791`, 1668 plików,
+  etykieta `2026.10.21-b258fb69fef580f7899c30abd0d48e6b877119be-726f0791`.
+  Po bramce 15 katalogów nagrań kandydat i zainstalowana kopia przeszły pełną
+  integralność oraz kontrolowany start; program uruchomiono ze stałej ścieżki
+  `D:\Projekty Codex\AMC Python\AMC.exe`. W tej promocji nie powtarzano całej
+  regresji wxPython: zaliczono 88 testów wyszukiwania i świeżego profilu oraz
+  ukierunkowane testy protokołu nowych przyrostów. Publicznego AMC nie
+  przebudowano i niczego nie opublikowano.
+
 - Bieżąca wspólna rewizja instalacji: `a947f79d83f11888e2d1ea353909a1ee50b3ccaa`.
 - AMC Test: paczka `1dfc80e8`, etykieta
   `2026.10.21-a947f79d83f11888e2d1ea353909a1ee50b3ccaa-1dfc80e8`;
