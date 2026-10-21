@@ -1,6 +1,6 @@
 # FRONTIER-001 — Frontier Smart przez FSAPI
 
-Status: **Gotowe w źródłach AMC Test — przed instalacją i odbiorem na prawdziwym urządzeniu**
+Status: **Zbudowane, zainstalowane i uruchomione w AMC Test — przed odbiorem na prawdziwym urządzeniu**
 
 Data rozpoczęcia: 2026-10-21
 
@@ -100,7 +100,7 @@ Materiały wskazane przez użytkownika:
   trybów/presetów oraz brak adresu i technicznych reprezentacji w danych
   czytanych przez NVDA.
 - 21.10.2026: ukierunkowana bramka Python przeszła **72/72 testy**.
-- 21.10.2026: pełna bramka Python przeszła **1926 testów**, **110 testów
+- 21.10.2026: pierwsza pełna bramka Python przeszła **1926 testów**, **110 testów
   środowiskowych celowo pominięto**, a **11 podtestów** również przeszło.
 - Pierwsza promocja kandydata z rewizji `c3258214` ponownie zaliczyła pełną
   bramkę Python i odizolowany start paczki `1debd5a9`, po czym zatrzymała się
@@ -112,8 +112,19 @@ Materiały wskazane przez użytkownika:
   możliwość nadal powoduje odmowę. Nowy kontrakt przeszedł **29/29 testów
   launchera i updatera** oraz **52/52 ukierunkowane testy profili i pakowania**.
   Testy launchera/updatera są od tej pory obowiązkową bramką skryptu promocji.
-- To są wyniki źródeł i kompilacji. Nie są jeszcze dowodem instalacji ani
-  połączenia z fizycznym radiem; te dwa wyniki zostaną zapisane osobno.
+- Końcowa bramka przed instalacją przeszła **29/29 testów
+  launchera/updatera**, **1927 testów Python**, **110 celowo pominiętych
+  testów środowiskowych** i **11 podtestów**; kompilacje .NET ponownie miały
+  0 ostrzeżeń i 0 błędów.
+- Kandydat `82d28f84` przeszedł pełną kontrolę 1669 plików i odizolowany start.
+  Updater zakończył się kodem 0, pełna kontrola stałej instalacji kodem 0, a
+  kontrolowany start interfejsu i hosta z `D:\Projekty Codex\AMC Python`
+  również wynikiem OK.
+- Uruchomiono widoczne okno `AMC Test — 21.10.2026, 14:35`; potwierdzony proces
+  interfejsu to `D:\Projekty Codex\AMC Python\runtime\python.exe`.
+- Instalacja nie dowodzi jeszcze połączenia z fizycznym radiem. Wynik
+  wykrywania, PIN-u, trybów, presetów i ręcznej nawigacji NVDA zostanie
+  dopisany po odbiorze użytkownika.
 
 ## Znane ograniczenia i dalszy odbiór
 
@@ -137,6 +148,9 @@ Nowa sekcja konfiguracji jest opcjonalna i nie wymaga migracji istniejących
 profili. Profil publiczny nie otrzymuje możliwości `session.frontier-smart`.
 Commit źródłowy implementacji i testów: `412adf67` —
 `feat(amc): dodaj Frontier Smart i domknij poprawki Radia`. Identyfikator
-poprawki zgodnej migracji profilu oraz zainstalowanej kompilacji zostanie
-dopisany po następnej promocji AMC Test. Nie publikować ani nie promować do
-profilu publicznego bez nowej zgody użytkownika.
+poprawki zgodnej migracji profilu: `63b30444` —
+`fix(amc): pozwol updaterowi rozszerzyc profil wydania`. Zainstalowana
+kompilacja AMC Test:
+`2026.10.21-63b304449076998a45079f257c6a002ece8ee0b4-82d28f84`.
+Nie publikować ani nie promować do profilu publicznego bez nowej zgody
+użytkownika.

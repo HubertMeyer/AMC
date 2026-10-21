@@ -8,8 +8,11 @@ poprawkę: publiczny profil jest kopią gotowego do wydania AMC Test z jedynym
 wyjątkiem dla TIDAL-a i Spotify, zawiera więc również Sonosa. Import playlisty
 Radia zachowuje kolejność pliku, `Alt+1–3` sortują Bibliotekę i Ulubione,
 `Ctrl+Shift+U` zmienia Ulubione, a `Ctrl+Shift+L` rzeczywiście zmienia
-członkostwo w Bibliotece. Testy ukierunkowane i host są zielone. Nowej paczki,
-instalatora, instalacji ani publikacji jeszcze nie wykonano.**
+członkostwo w Bibliotece. Wspólny przyrost z Frontier Smart został
+zainstalowany wyłącznie w AMC Test jako kompilacja
+`2026.10.21-63b304449076998a45079f257c6a002ece8ee0b4-82d28f84` i uruchomiony
+ze stałej ścieżki. Nowej paczki publicznej, instalatora publicznego ani
+publikacji jeszcze nie wykonano.**
 
 Źródłowa, zatwierdzona specyfikacja pozostaje w pliku tylko do odczytu:
 `D:\Projekty Codex\Accessible Multimedia Controller\AMC12_PROFILE_WYDANIA_PUBLICZNEGO_I_TESTOWEGO_2026-10-18.md`.
@@ -412,6 +415,13 @@ zapisie NVDA słyszy „Dodano do Biblioteki” albo „Usunięto z Biblioteki�
   obecnie znanych sesji i możliwości. Zaliczył **29/29 testów
   launchera/updatera** oraz **52/52 testy profili i pakowania**; te 29 testów
   weszło do obowiązkowej bramki promocji.
+- Końcowa promocja AMC Test zaliczyła **29/29 testów launchera/updatera**,
+  **1927 testów Python**, **110 pominiętych testów środowiskowych** i **11
+  podtestów**. Kandydat `82d28f84` oraz stała instalacja przeszły pełną kontrolę
+  1669 plików i odizolowany start. Updater, kontrola integralności i kontrolowany
+  start zakończyły się powodzeniem, a widoczne okno uruchomiono z
+  `D:\Projekty Codex\AMC Python`. Nie zbudowano ani nie zmieniono publicznego
+  AMC.
 
 - 21 października 2026 poprawka świeżego profilu przeszła oba ukierunkowane
   zestawy protokołu, a następnie pełne **24/24 zestawy protokołu LiteHost**.
@@ -868,6 +878,10 @@ zapisie NVDA słyszy „Dodano do Biblioteki” albo „Usunięto z Biblioteki�
   Smart w commicie `412adf67` — `feat(amc): dodaj Frontier Smart i domknij
   poprawki Radia`. Nowego publicznego numeru, instalatora ani instalacji nadal
   nie utworzono.
+- Zainstalowana kompilacja AMC Test: pełna rewizja
+  `63b304449076998a45079f257c6a002ece8ee0b4`, identyfikator zawartości
+  `82d28f84`, etykieta
+  `2026.10.21-63b304449076998a45079f257c6a002ece8ee0b4-82d28f84`.
 - Poprawka pierwszego zapisu na świeżym profilu: `15b38eb1` —
   `fix(amc): inicjalizuj swiezy profil publiczny`.
 - Zainstalowany publiczny AMC: `0.1.0-alpha.426`, rewizja
