@@ -45,7 +45,7 @@ zmian, wymagający korekty użytkownika:
   harmonogramu nagrywania, zgodność listy `Alt+R` z blokadą zamknięcia oraz
   zachowanie niepustego pliku domkniętego przed awarią odbioru. Szczegóły:
   [REC-001-harmonogram-alt-r-zamykanie.md](REC-001-harmonogram-alt-r-zamykanie.md).
-- `AMC02` — **Publiczny `alpha.430` zainstalowany i uruchomiony do odbioru
+- `AMC02` — **Publiczny `alpha.431` zainstalowany i uruchomiony do odbioru
   NVDA; AMC Test czeka na bezpieczne zamknięcie** — `Alt+R`
   i `Alt+Shift+R` przy jednym wpisie podają widok, pozycję oraz nazwę pliku.
   `Ctrl+H` zapisuje od teraz potwierdzony start Radia, pliku i podcastu, a
@@ -149,16 +149,19 @@ zmian, wymagający korekty użytkownika:
   została zainstalowana 20.10.2026.
   Bieżący zapis realizacji:
   [AMC09-menedzer-sesji.md](AMC09-menedzer-sesji.md).
-- `AMC12` — **Korekta odbiorcza `alpha.429` przeszła pełną regresję źródeł,
+- `AMC12` — **Korekta odbiorcza `alpha.431` przeszła pełną regresję źródeł,
   została zbudowana i zainstalowana w `D:\Projekty Codex\AMC Public`.
   Publiczny AMC jest budowany z tego samego kodu co AMC Test; zgodnie z korektą
   użytkownika z 21.10.2026 wyłącza
   wyłącznie niedopracowane funkcje streamingowe, a wszystkie ukończone funkcje,
   w tym Sonosa, zachowuje. Obecnie TIDAL, Spotify i nieodebrana jeszcze
   integracja Frontier Smart pozostają tylko w AMC Test. Końcowa paczka
-  `90f156c2` ma 1075 plików; integralność i kontrolowany start zainstalowanej
+  `1555412f` ma 1075 plików; integralność i kontrolowany start zainstalowanej
   kopii są zaliczone. Instalator usuwa także stare moduły niedostępnych usług
-  pozostałe po wcześniejszej wersji. Nowa poprawka zachowuje
+  pozostałe po wcześniejszej wersji. Najnowsza poprawka rozpoznaje ten sam plik
+  w `Ctrl+O` i Bibliotece podczas `Ctrl+Shift+U`, nie przełącza folderu na pustą
+  Bibliotekę oraz jasno wskazuje `Ctrl+F5`, gdy folder nie jest źródłem.
+  Wcześniejsza poprawka zachowuje
   kolejność importowanej playlisty Radia, uruchamia `Alt+1–3` w Bibliotece i
   Ulubionych, wiąże `Ctrl+Shift+U` z Ulubionymi oraz `Ctrl+Shift+L` z
   członkostwem w Bibliotece. Ręczny odbiór w NVDA pozostaje do wykonania;

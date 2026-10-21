@@ -3,6 +3,12 @@
 Ten dokument jest szkicem do sprawdzenia i korekty użytkownika. Nie jest
 automatycznie publikowany.
 
+Publiczny kandydat jest zainstalowany i uruchomiony z:
+
+- `D:\Projekty Codex\AMC Public\AMC.exe`.
+
+AMC Test pozostał uruchomiony z własnym profilem i nie został podmieniony.
+
 ## Ctrl+Shift+U w folderze otwartym przez Ctrl+O
 
 1. Otwórz zwykły folder skrótem `Ctrl+O`.

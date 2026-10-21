@@ -1,9 +1,9 @@
 # AMC02 — krótkie listy nagrywania i historia plików
 
 Status: **Uogólniona korekta pojedynczego wiersza i zapisu `Ctrl+H` jest
-zbudowana, zainstalowana i uruchomiona w publicznym AMC `0.1.0-alpha.430`.
-Integralność i kontrolowany start są zaliczone; AMC Test czeka na bezpieczne
-zamknięcie starej instalacji, a oba profile czekają na ręczny odbiór NVDA**.
+zbudowana, zainstalowana i uruchomiona także w najnowszym publicznym AMC
+`0.1.0-alpha.431`. Integralność i kontrolowany start są zaliczone; działający
+AMC Test nie został podmieniony, a oba profile czekają na ręczny odbiór NVDA**.
 
 ### Korekta użytkownika z 21.10.2026 — pojedynczy wiersz i `Ctrl+H`
 

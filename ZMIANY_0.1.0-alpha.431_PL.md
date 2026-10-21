@@ -14,13 +14,16 @@ po zakończeniu odświeżenia. Plik, którego naprawdę nie ma w Bibliotece,
 otrzymuje jasny komunikat z poleceniem `Foldery Biblioteki, Ctrl+F5`; AMC nie
 udaje wtedy powodzenia i nie importuje niejawnie całego folderu.
 
-## Stan sprawdzenia źródeł
+## Stan sprawdzenia
 
 Testy bezpośrednie: 59 zaliczonych. Pełna regresja wxPython: 1953 zaliczone,
 110 świadomie pominiętych i 11 podtestów zaliczonych. Wszystkie 26 zestawów
-protokołu C# przeszło. LiteHost Release zbudował się bez ostrzeżeń i błędów.
-Budowa paczki, instalatora, instalacja i ręczny odbiór NVDA są odrębnymi
-etapami i zostaną dopisane po ich rzeczywistym wykonaniu.
+protokołu C# przeszło. Całe rozwiązanie Release zbudowało się bez ostrzeżeń i
+błędów. Publiczna paczka `1555412f` ma 1075 kontrolowanych plików; zainstalowana
+kopia przeszła pełną integralność i kontrolowany start. Publiczny `alpha.431`
+został zainstalowany i uruchomiony z `D:\Projekty Codex\AMC Public`. Ręczny
+odbiór mowy i fokusu NVDA pozostaje do wykonania.
 
 Publiczny profil pozostaje kopią wspólnego kodu bez niedopracowanych modułów
 TIDAL, Spotify i Frontier Smart. WiiM i Sonos pozostają dostępne.
+Niczego nie opublikowano zdalnie.

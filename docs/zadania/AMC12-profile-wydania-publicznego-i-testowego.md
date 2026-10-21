@@ -2,27 +2,21 @@
 
 ## Status
 
-**Publiczny AMC `0.1.0-alpha.430` jest zbudowany, zainstalowany i uruchomiony z
-`D:\Projekty Codex\AMC Public`. Zapisuje potwierdzony start Radia, pliku i
-podcastu do `Ctrl+H`; przy jednym wpisie `Alt+R`, `Alt+Shift+R`, `Ctrl+H` i
-`Ctrl+I` podają także użytkową nazwę elementu. Pełna regresja wxPython: 1952
-zaliczone, 110 świadomie pominiętych i 11 podtestów zaliczonych; 26 zestawów
-protokołu C# przeszło, a kompilacja Release miała 0 ostrzeżeń i 0 błędów.
-Paczka `d8eb2766` ma 1075 kontrolowanych plików; pełna integralność i
-kontrolowany start zainstalowanej kopii są zaliczone. TIDAL, Spotify i Frontier
-Smart są nieobecne, WiiM, Sonos oraz pełny eksport/import pozostają. AMC Test
-nie został podmieniony, ponieważ nie potwierdził bezpiecznego zamknięcia.
-Ręczny odbiór wypowiedzi NVDA pozostaje do wykonania; publikacji zdalnej nie
-wykonano.**
+**Publiczny AMC `0.1.0-alpha.431` jest zbudowany, zainstalowany i uruchomiony z
+`D:\Projekty Codex\AMC Public`. `Ctrl+Shift+U` w folderze z `Ctrl+O` rozpoznaje
+teraz istniejący rekord Biblioteki po ścieżce i nie przełącza bieżącej listy na
+pustą Bibliotekę. Pełna regresja wxPython: 1953 zaliczone, 110 świadomie
+pominiętych i 11 podtestów zaliczonych; 26 zestawów protokołu C# przeszło, a
+kompilacja całego rozwiązania Release miała 0 ostrzeżeń i 0 błędów. Paczka
+`1555412f` ma 1075 kontrolowanych plików; pełna integralność i kontrolowany
+start zainstalowanej kopii są zaliczone. TIDAL, Spotify i Frontier Smart są
+nieobecne, WiiM, Sonos oraz pełny eksport/import pozostają. Działający AMC Test
+nie został zamknięty ani podmieniony. Ręczny odbiór wypowiedzi i fokusu NVDA
+pozostaje do wykonania; publikacji zdalnej nie wykonano.**
 
-Korekta źródłowa jest zapisana w commicie `d94b4303` — `fix(amc): zapisz
-historie i nazwij pojedyncze podglady`; kandydat wydania w `462783c5` —
-`build(amc): przygotuj kandydata alpha430`.
-
-Kandydat `0.1.0-alpha.430` został pomyślnie zbudowany, zainstalowany i
-zweryfikowany w profilu publicznym. Ten zapis zastępuje wcześniejszy status
-`alpha.429`; instalacja AMC Test nadal pozostaje osobnym krokiem po jej
-bezpiecznym zamknięciu.
+Korekta źródłowa i kandydat wydania są zapisane w commicie `435eb49c` —
+`fix(amc): zachowaj biblioteke przy zmianie ulubionych`. Kandydat
+`0.1.0-alpha.431` zastępuje zainstalowany wcześniej `alpha.430`.
 
 ### Korekta użytkownika z 21.10.2026
 
@@ -73,9 +67,17 @@ i stworzyć wrażenie, że zniknął folder albo cała Biblioteka.
   zaliczone, 110 świadomie pominiętych i 11 podtestów zaliczonych. Wszystkie
   26 zestawów protokołu C# przeszło. Kompilacja LiteHost Release: 0 ostrzeżeń,
   0 błędów.
-- Powyższe punkty potwierdzają kod i testy. Numer źródeł ustawiono na
-  `0.1.0-alpha.431`; budowa paczki, instalatora, instalacja i ręczny odbiór NVDA
-  są osobnymi etapami i w chwili tego zapisu nie są jeszcze potwierdzone.
+- Z czystej rewizji `435eb49c6d4176a32a9b40f017d2e420790befaa` powstała
+  publiczna paczka `1555412f` z 1075 plikami. Manifest potwierdza obecność WiiM
+  i Sonosa oraz brak TIDAL-a, Spotify i Frontier Smart.
+- Instalator `AMC-0.1.0-alpha.431-win-x64.exe` ma 124 075 026 bajtów i SHA-256
+  `cf6309666f981b728167be16bbddf4066643ba9e2cbbed6d901b96310ba5910d`.
+  Instalacja do `D:\Projekty Codex\AMC Public` zakończyła się kodem 0; pełna
+  integralność, kontrolowany start i zwykłe uruchomienie trzech procesów
+  profilu `public` są zaliczone.
+- Działający równolegle AMC Test pozostał nietknięty. Ręczny odbiór mowy,
+  zachowania listy i powrotu fokusu w NVDA pozostaje do wykonania przez
+  użytkownika. Publikacji zdalnej nie wykonano.
 
 ### Korekta odbiorcza z 21.10.2026 — Historia i pojedynczy element
 
