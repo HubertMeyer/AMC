@@ -1,6 +1,6 @@
 # FRONTIER-001 — Frontier Smart przez FSAPI
 
-Status: **Zbudowane, zainstalowane i uruchomione w AMC Test — przed odbiorem na prawdziwym urządzeniu**
+Status: **W trakcie — poprawione, zweryfikowane z Teufel RADIO 3SIXTY, zainstalowane i uruchomione w AMC Test; czeka na odbiór NVDA**
 
 Data rozpoczęcia: 2026-10-21
 
@@ -38,16 +38,40 @@ Materiały wskazane przez użytkownika:
 ## Zachowanie użytkowe i komunikaty czytnika
 
 - Menedżer sesji pokazuje celową nazwę „Frontier Smart”, stan włączenia i
-  lokalnie znaną gotowość. Samo otwarcie listy nie skanuje sieci.
-- „Konfiguruj…” otwiera okno „Urządzenia Frontier Smart”. Lista, pola i
-  przyciski mają jawne nazwy użytkowe; obiekty, enumy i identyfikatory nie są
-  tekstem dostępnościowym.
+  lokalnie znaną gotowość. Pierwsze włączenie sesji Spacją zamyka Menedżer
+  sesji, przechodzi do konfiguracji i od razu rozpoczyna wykrywanie urządzeń.
+- „Konfiguruj…” oraz `Ctrl+F5` otwierają okno „Urządzenia Frontier Smart” i
+  automatycznie rozpoczynają wykrywanie. Lista, pola i przyciski mają jawne
+  nazwy użytkowe; obiekty, enumy i identyfikatory nie są tekstem
+  dostępnościowym.
 - Pole PIN jest chronione. Zwykłe listy i komunikaty nie pokazują PIN-u ani
   pełnych adresów żądań FSAPI.
-- Automatyczne wykrywanie rozpoczyna się tylko po jawnym poleceniu użytkownika.
-  Ręczny adres pozostaje dostępny, gdy SSDP jest blokowane przez sieć.
-- Po Zapisz, Anuluj, błędzie i ponownym otwarciu fokus wraca do właściwej listy
-  albo pola, a zaznaczenie zapisanego urządzenia jest zachowane.
+- Ręczny adres jest schowany pod osobnym przyciskiem „Wpisz adres ręcznie…” i
+  pozostaje opcją awaryjną, gdy SSDP jest blokowane przez sieć.
+- Po wykryciu jednego urządzenia fokus przechodzi do chronionego pola PIN.
+  Brak urządzeń lub błąd jest odczytywany przez NVDA i prowadzi do ponownego
+  wyszukania albo jawnego ręcznego adresu, a nie do nieopisanej pętli pól.
+- Po potwierdzonym połączeniu okno konfiguracji zamyka się i wraca do listy
+  urządzeń. Anulowanie, błąd i ponowne otwarcie zachowują przewidywalny fokus.
+
+## Korekta po pierwszym odbiorze — 21.10.2026
+
+Ta decyzja zastępuje wcześniejsze ustalenie z tego zadania, według którego
+skanowanie miało rozpoczynać się dopiero po osobnym poleceniu. Użytkownik
+potwierdził, że pierwsze włączenie nowej sesji i `Ctrl+F5` mają od razu szukać
+urządzeń, a ręczny adres ma być dopiero opcją awaryjną.
+
+Rzeczywisty pomiar sieci wykazał, że Teufel RADIO 3SIXTY reklamuje usługę
+`urn:schemas-frontier-silicon-com:undok:fsapi:1`, podczas gdy pierwsza wersja
+AMC pytała wyłącznie o starsze `fs_reference:fsapi:1`. AMC wysyła teraz dwie
+krótkie serie zapytań dla obu wariantów i czeka pięć sekund. Nie skanuje całej
+podsieci i nadal odrzuca niezwiązane renderery UPnP.
+
+Drugą przyczyną pozornej pętli był firmware radia, który odrzuca duże
+`GET_MULTIPLE` kodem HTTP 400 i może zamknąć połączenie przy zbyt szybkiej
+serii pojedynczych odczytów. Klient przechodzi teraz na pojedyncze `GET`, robi
+krótkie przerwy i jednokrotnie ponawia przejściowy błąd połączenia. Błędny PIN
+i brak radia mają osobne komunikaty i odmienny powrót fokusu.
 
 ## Różnice względem WiiM
 
@@ -122,14 +146,31 @@ Materiały wskazane przez użytkownika:
   również wynikiem OK.
 - Uruchomiono widoczne okno `AMC Test — 21.10.2026, 14:35`; potwierdzony proces
   interfejsu to `D:\Projekty Codex\AMC Python\runtime\python.exe`.
-- Instalacja nie dowodzi jeszcze połączenia z fizycznym radiem. Wynik
-  wykrywania, PIN-u, trybów, presetów i ręcznej nawigacji NVDA zostanie
-  dopisany po odbiorze użytkownika.
+- 21.10.2026 po pierwszym odbiorze ręczna sonda SSDP na dwóch aktywnych
+  interfejsach wykryła radio pod wariantem `undok:fsapi`. Poprawiony,
+  rzeczywisty LiteHost AMC wykrył jedno urządzenie, a pełny odczyt FSAPI z
+  właściwym PIN-em zwrócił nazwę „Teufel RADIO 3SIXTY”, wersję firmware i
+  bieżący stan. Próba zapisu odbyła się w odizolowanym profilu diagnostycznym;
+  po teście urządzenie i tymczasowe poświadczenie zostały usunięte, co
+  potwierdzono osobnym odczytem.
+- Ukierunkowana regresja po korekcie: **13/13 testów Python** oraz **1/1 zestaw
+  kontraktu Frontier Smart**. Kompilacja LiteHost przeszła z **0 ostrzeżeń i
+  0 błędów**.
+- Pełna promocja z czystego worktree commitu `19ae6089` przeszła **29/29
+  testów launchera i aktualizatora**, **1956 testów Python**, **110 celowo
+  pominiętych testów środowiskowych** i **11 podtestów**. Kandydat obejmuje
+  1670 plików; integralność i kontrolowany start interfejsu oraz hosta przeszły
+  przed i po atomowej instalacji.
+- Zainstalowano i uruchomiono AMC Test z kompilacji
+  `2026.10.21-19ae6089b6cb24ea102273d37cb00f8eb86b1c38-e894430c`.
+  Dodatkowy odczyt przez dokładnie zainstalowany runtime i LiteHost wykrył w
+  bieżącej sieci jedno urządzenie Frontier Smart pod prawidłowym adresem.
 
 ## Znane ograniczenia i dalszy odbiór
 
-- Środowisko deweloperskie nie ma urządzenia FSAPI, więc automatyczne testy nie
-  zastąpią odbioru użytkownika.
+- Połączenie, nazwa, firmware i bieżący stan zostały potwierdzone na prawdziwym
+  Teufel RADIO 3SIXTY. Nawigacja całej sesji, tryby, presety oraz mowa i fokus
+  nadal wymagają ręcznego odbioru użytkownika z NVDA w zainstalowanym AMC Test.
 - Wykrywanie SSDP zależy od multicastu w lokalnej sieci; ręczny adres jest
   obowiązkowym obejściem.
 - Dokładne węzły wspierane przez konkretny firmware zostaną potwierdzone dopiero
@@ -149,8 +190,10 @@ profili. Profil publiczny nie otrzymuje możliwości `session.frontier-smart`.
 Commit źródłowy implementacji i testów: `412adf67` —
 `feat(amc): dodaj Frontier Smart i domknij poprawki Radia`. Identyfikator
 poprawki zgodnej migracji profilu: `63b30444` —
-`fix(amc): pozwol updaterowi rozszerzyc profil wydania`. Zainstalowana
+`fix(amc): pozwol updaterowi rozszerzyc profil wydania`. Korekta po pierwszym
+odbiorze urządzenia: `19ae6089` —
+`fix(frontier): wykryj radio UNDOK i uprosc konfiguracje`. Zainstalowana
 kompilacja AMC Test:
-`2026.10.21-63b304449076998a45079f257c6a002ece8ee0b4-82d28f84`.
+`2026.10.21-19ae6089b6cb24ea102273d37cb00f8eb86b1c38-e894430c`.
 Nie publikować ani nie promować do profilu publicznego bez nowej zgody
 użytkownika.
