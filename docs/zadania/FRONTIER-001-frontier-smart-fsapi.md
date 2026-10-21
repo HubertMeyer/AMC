@@ -125,6 +125,7 @@ Materiały wskazane przez użytkownika:
 
 Nowa sekcja konfiguracji jest opcjonalna i nie wymaga migracji istniejących
 profili. Profil publiczny nie otrzymuje możliwości `session.frontier-smart`.
-Identyfikator commita źródłowego i zainstalowanej kompilacji zostanie dopisany
-po lokalnym zatwierdzeniu i promocji. Nie publikować ani nie promować do profilu
-publicznego bez nowej zgody użytkownika.
+Commit źródłowy implementacji i testów: `412adf67` —
+`feat(amc): dodaj Frontier Smart i domknij poprawki Radia`. Identyfikator
+zainstalowanej kompilacji zostanie dopisany po promocji AMC Test. Nie
+publikować ani nie promować do profilu publicznego bez nowej zgody użytkownika.

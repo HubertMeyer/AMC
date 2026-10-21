@@ -855,11 +855,11 @@ zapisie NVDA słyszy „Dodano do Biblioteki” albo „Usunięto z Biblioteki�
 
 ## Wersja i commit
 
-- Bieżąca poprawka kolejności importu, skrótów i zasady „AMC Test minus tylko
-  TIDAL/Spotify” jest zweryfikowana w źródłach roboczych. Nie ma jeszcze
-  osobnego commitu ani nowego numeru, paczki, instalatora czy instalacji;
-  równoległa implementacja Frontier Smart musi najpierw zakończyć własną
-  bramkę, aby wspólny commit i kandydat nie utrwaliły stanu przejściowego.
+- Poprawka kolejności importu, skrótów i zasady „AMC Test minus tylko
+  TIDAL/Spotify” została zatwierdzona razem z ukończoną implementacją Frontier
+  Smart w commicie `412adf67` — `feat(amc): dodaj Frontier Smart i domknij
+  poprawki Radia`. Nowego publicznego numeru, instalatora ani instalacji nadal
+  nie utworzono.
 - Poprawka pierwszego zapisu na świeżym profilu: `15b38eb1` —
   `fix(amc): inicjalizuj swiezy profil publiczny`.
 - Zainstalowany publiczny AMC: `0.1.0-alpha.426`, rewizja
