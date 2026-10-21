@@ -2,17 +2,15 @@
 
 ## Status
 
-**W trakcie — zainstalowane publiczne AMC pozostaje w wersji
-`0.1.0-alpha.426` z rewizji `15b38eb1`. W źródłach przygotowano następną
-poprawkę: publiczny profil jest kopią gotowego do wydania AMC Test z jedynym
-wyjątkiem dla TIDAL-a i Spotify, zawiera więc również Sonosa. Import playlisty
-Radia zachowuje kolejność pliku, `Alt+1–3` sortują Bibliotekę i Ulubione,
-`Ctrl+Shift+U` zmienia Ulubione, a `Ctrl+Shift+L` rzeczywiście zmienia
-członkostwo w Bibliotece. Wspólny przyrost z Frontier Smart został
-zainstalowany wyłącznie w AMC Test jako kompilacja
-`2026.10.21-63b304449076998a45079f257c6a002ece8ee0b4-82d28f84` i uruchomiony
-ze stałej ścieżki. Nowej paczki publicznej, instalatora publicznego ani
-publikacji jeszcze nie wykonano.**
+**Gotowe lokalnie do odbioru — publiczny AMC `0.1.0-alpha.427` z rewizji
+`3be68067` został zbudowany, zainstalowany w `D:\Projekty Codex\AMC Public`
+i przeszedł pełną kontrolę integralności oraz kontrolowany start interfejsu z
+hostem. Publiczny profil jest kopią gotowego do wydania AMC Test z wyjątkiem
+TIDAL-a i Spotify oraz niezaakceptowanej jeszcze sprzętowo sesji Frontier
+Smart; zawiera Sonosa. Import playlisty Radia zachowuje kolejność pliku,
+`Alt+1–3` sortują Bibliotekę i Ulubione, `Ctrl+Shift+U` zmienia Ulubione, a
+`Ctrl+Shift+L` rzeczywiście zmienia członkostwo w Bibliotece. Publikacji
+zdalnej nie wykonano.**
 
 Źródłowa, zatwierdzona specyfikacja pozostaje w pliku tylko do odczytu:
 `D:\Projekty Codex\Accessible Multimedia Controller\AMC12_PROFILE_WYDANIA_PUBLICZNEGO_I_TESTOWEGO_2026-10-18.md`.
@@ -389,6 +387,21 @@ zapisie NVDA słyszy „Dodano do Biblioteki” albo „Usunięto z Biblioteki�
 - `docs/zadania/AMC12-profile-wydania-publicznego-i-testowego.md`
 
 ## Testy i wynik
+
+- 21.10.2026 z czystej rewizji
+  `3be68067cb033e0fc258df47ab1fa18834db0257` zbudowano publiczną paczkę
+  `dc9821e2` z 1075 kontrolowanymi plikami. Profil zawiera sesje Pliki, Radio,
+  Podcasty/YouTube, WiiM i Sonos; moduły TIDAL oraz Spotify są nieobecne.
+  Pełna kontrola integralności i kontrolowany start interfejsu z hostem
+  zakończyły się powodzeniem zarówno przed instalatorem, jak i po instalacji.
+- Instalator `AMC-0.1.0-alpha.427-win-x64.exe` ma 124 069 512 bajtów i SHA-256
+  `3867110ff00e719b0da5455f2902b67c587d38c1c998da6944e8fe5a890b3d63`.
+  Jego wersja jest zgodna z `AMC.exe`: `0.1.0-alpha.427`. Instalacja do
+  `D:\Projekty Codex\AMC Public` zakończyła się kodem 0, a kontrola pełnego
+  pakietu zainstalowanej kopii także zwróciła 0.
+- Ręczny odbiór skrótów i wypowiedzi w rzeczywistym NVDA pozostaje do wykonania
+  przez użytkownika; automaty zaliczyły routing klawiatury, wykonanie GUI,
+  wspólny model menu/pomocy/palety oraz teksty komunikatów dostępnościowych.
 
 - 21.10.2026, poprawka kolejności i poleceń Radia: kompilacja LiteHost Release
   zakończyła się z **0 ostrzeżeń i 0 błędów**, a wszystkie **24 zestawy** testów
@@ -876,19 +889,20 @@ zapisie NVDA słyszy „Dodano do Biblioteki” albo „Usunięto z Biblioteki�
 - Poprawka kolejności importu, skrótów i zasady „AMC Test minus tylko
   TIDAL/Spotify” została zatwierdzona razem z ukończoną implementacją Frontier
   Smart w commicie `412adf67` — `feat(amc): dodaj Frontier Smart i domknij
-  poprawki Radia`. Nowego publicznego numeru, instalatora ani instalacji nadal
-  nie utworzono.
+  poprawki Radia`. Wersję ustawiono w commicie `3be68067` —
+  `chore(release): ustaw wersje alpha427`.
 - Zainstalowana kompilacja AMC Test: pełna rewizja
   `63b304449076998a45079f257c6a002ece8ee0b4`, identyfikator zawartości
   `82d28f84`, etykieta
   `2026.10.21-63b304449076998a45079f257c6a002ece8ee0b4-82d28f84`.
 - Poprawka pierwszego zapisu na świeżym profilu: `15b38eb1` —
   `fix(amc): inicjalizuj swiezy profil publiczny`.
-- Zainstalowany publiczny AMC: `0.1.0-alpha.426`, rewizja
-  `15b38eb10de18609ec6b3357d12c59b0b97563b6`, paczka `83400218`, 1073 pliki.
+- Zainstalowany publiczny AMC: `0.1.0-alpha.427`, rewizja
+  `3be68067cb033e0fc258df47ab1fa18834db0257`, paczka `dc9821e2`, 1075 plików.
   Instalator i plik integralności pozostają lokalnie w
-  `publish\installers\alpha.426`. Program uruchomiono z
-  `D:\Projekty Codex\AMC Public\AMC.exe`.
+  `publish\installers\alpha.427`. Zainstalowana kopia z
+  `D:\Projekty Codex\AMC Public\AMC.exe` przeszła pełną kontrolę integralności
+  oraz kontrolowany start.
 - Publikacja: niewykonana. Cloudflare, GitHub i zdalny aktualizator nie były
   częścią tej poprawki.
 

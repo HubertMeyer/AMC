@@ -140,47 +140,19 @@ zmian, wymagający korekty użytkownika:
   została zainstalowana 20.10.2026.
   Bieżący zapis realizacji:
   [AMC09-menedzer-sesji.md](AMC09-menedzer-sesji.md).
-- `AMC12` — **W trakcie; fundament profili, rozdzielenie uruchamiacza i
-  aktualizatora oraz kontrolowana migawka AMC Test → AMC są gotowe w źródłach,
-  kompilacji i testach; wariant ochronny instalatora przeszedł czystą instalację,
-  pełną kontrolę i odinstalowanie, a końcowy kandydat z dobrowolnymi skrótami
-  jest zbudowany, ma potwierdzoną integralność i fizycznie nie zawiera modułów
-  interfejsu Spotify/TIDAL ani Librespot. Przed pierwszym wydaniem rozszerzono
-  ten kontrakt również o fizyczne pominięcie modułu interfejsu Sonosa; testy
-  ukierunkowane są zielone. Kandydat `alpha.423` został zbudowany,
-  zainstalowany obok AMC Test i ujawnił wspólną dodatkową blokadę wxPython:
-  osobny publiczny host nie wystartował. Przyczynę poprawiono w `9893de59`,
-  testy ukierunkowane są zielone. Korekta z 20.10.2026 rozszerza obowiązek
-  kompletności obu profili o FFmpeg i yt-dlp: wspólny, atomowy aktualizator,
-  kontrola dostawcy oraz polecenie w menu, pomocy i palecie są gotowe w kodzie,
-  testach i kompilacji Debug. Kandydat zastępczy czeka teraz na sieciowy odbiór
-  składników, budowę obu paczek i rzeczywistą próbę dwóch hostów; wcześniejszy
-  instalator nie jest pełnym kandydatem. Ustalono trwałe nazwy kanałów: pełna
-  prywatna wersja właściciela to `AMC Test`, a wydanie dla wszystkich to `AMC`.
-  `alpha.423` pozostaje zużytym numerem diagnostycznym; numer roboczy
-  `0.1.0-alpha.425` został przypisany lokalnemu kandydatowi. Pierwsza instalacja
-  ujawniła zależność wspólnego menu od wyciętego modułu TIDAL. Poprawka
-  `0866d668` została przetestowana, przebudowana i zainstalowana do
-  `D:\Projekty Codex\AMC Public`. Pełna kontrola 1073 plików przeszła, a
-  publiczny uruchamiacz, interfejs i host z profilem `public` działają
-  równolegle z osobnym kompletem AMC Test.
-  Dodano obowiązkowy odizolowany start interfejsu i hosta przed przyjęciem
-  paczki, przed kompilacją instalatora i po instalacji. Także lokalna promocja
-  AMC Test sprawdza kandydata przed podmianą i zainstalowaną kopię przed
-  widocznym uruchomieniem. Bramka zatrzymała pierwszą paczkę na wykrytym
-  błędzie świeżej bazy Podcastów; po naprawie kandydat i instalacja AMC Test z
-  rewizji `233767f1` przeszły kontrolowany start. Końcowy na 21 października
-  wspólny commit `a947f79d` przeszedł 1910 testów, został zainstalowany jako
-  AMC Test (`1dfc80e8`) i pierwszy publiczny AMC (`5b07f9a1`). Ręczny odbiór
-  wykazał, że `alpha.425` na zupełnie pustym profilu nie tworzył jeszcze
-  magazynów potrzebnych pierwszemu `Ctrl+Shift+L` i importowi playlisty.
-  Poprawka `15b38eb1` inicjalizuje pełny profil przed udostępnieniem poleceń;
-  pełne 24/24 zestawy protokołu oraz rzeczywisty test pierwszego zapisu są
-  zielone. Publiczny `0.1.0-alpha.426` (`83400218`) został zbudowany,
-  zainstalowany i uruchomiony z `D:\Projekty Codex\AMC Public`; ma 1073
-  sprawdzone pliki i trzy utworzone magazyny profilu. Niczego nie
-  opublikowano** — jeden kod, jawny manifest możliwości, osobne katalogi,
-  blokady, logi i kanały AMC Test oraz publicznego AMC. Bieżący zapis realizacji:
+- `AMC12` — **Gotowe lokalnie do odbioru. Publiczny AMC jest budowany z tego
+  samego kodu co AMC Test; zgodnie z korektą użytkownika z 21.10.2026 zawiera
+  Sonosa, a wyłącza TIDAL i Spotify. Niedokończona sprzętowo sesja Frontier
+  Smart pozostaje tylko w AMC Test do czasu odbioru. Publiczny
+  `0.1.0-alpha.427` z rewizji `3be68067` i paczki `dc9821e2` został zbudowany,
+  zainstalowany w `D:\Projekty Codex\AMC Public` oraz przeszedł pełną kontrolę
+  1075 plików i kontrolowany start interfejsu z hostem. Poprawka zachowuje
+  kolejność importowanej playlisty Radia, uruchamia `Alt+1–3` w Bibliotece i
+  Ulubionych, wiąże `Ctrl+Shift+U` z Ulubionymi oraz `Ctrl+Shift+L` z
+  członkostwem w Bibliotece. Ręczny odbiór w NVDA pozostaje do wykonania;
+  niczego nie opublikowano** — jeden kod, jawny manifest możliwości, osobne
+  katalogi, blokady, logi i kanały AMC Test oraz publicznego AMC. Bieżący zapis
+  realizacji:
   [AMC12-profile-wydania-publicznego-i-testowego.md](AMC12-profile-wydania-publicznego-i-testowego.md).
   Zatwierdzona specyfikacja:
   `D:\Projekty Codex\Accessible Multimedia Controller\AMC12_PROFILE_WYDANIA_PUBLICZNEGO_I_TESTOWEGO_2026-10-18.md`.
