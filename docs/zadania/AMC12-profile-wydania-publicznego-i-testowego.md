@@ -21,6 +21,48 @@ Korekta ręcznej kolejności jest zapisana w commicie
 `fix(amc): dodaj reczne porzadkowanie radia`. Z tej czystej rewizji powstał
 wstrzymany kandydat `0.1.0-alpha.433`; nie jest wydaniem publicznym.
 
+### Korekta użytkownika z 21.10.2026 — ręczna kolejność w playliście Radia
+
+Ta korekta zastępuje wcześniejsze ograniczenie, według którego gesty ręcznej
+kolejności Radia dotyczyły wyłącznie Biblioteki i Ulubionych. Użytkownik
+potwierdził w zainstalowanym AMC Test, że `Ctrl+X` oraz
+`Alt+strzałka góra/dół` nadal nie były dostępne na liście stacji radiowych.
+
+#### Zachowanie widoczne dla użytkownika
+
+- W Bibliotece i Ulubionych Radia ręczne przesuwanie nadal wymaga kolejności
+  własnej wybranej skrótem `Alt+3`.
+- W otwartej playliście Radia `Alt+strzałka góra/dół` przesuwa ciągły blok o
+  jedną pozycję, a `Ctrl+X`, wybór celu i `Ctrl+V` przenoszą jedną lub wiele
+  stacji przed nazwany element — dokładnie przez wspólny mechanizm playlist.
+- `Alt+1`, `Alt+2` i `Alt+3` w otwartej playliście nie zmieniają trybu
+  sortowania całej Biblioteki ani Ulubionych.
+- Historia, nagrania i pozostałe listy Radia nie przejmują przypadkowo
+  `Ctrl+X`, `Ctrl+V` ani `Alt+strzałek` jako operacji porządkowania.
+
+#### Przyczyna i rozwiązanie
+
+Router rozpoznawał cztery gesty jako polecenia kolekcji Radia i poza
+Biblioteką/Ulubionymi kończył obsługę wynikiem „brak polecenia”. W efekcie
+otwarta playlista radiowa nie docierała do istniejącego wspólnego mechanizmu
+playlist, mimo że wykonanie i zapis kolejności już ją obsługiwały. Dodano jawny
+kontekst zawartości playlisty Radia w wykonaniu oraz w pomocy klawiatury;
+wyłącznie cztery gesty ręcznej kolejności przechodzą wtedy do wspólnej akcji.
+
+#### Testy i wersja
+
+- Testy celowane routingu, rzeczywistego zdarzenia klawiatury i operacji GUI:
+  23 zaliczone; po dodaniu testu okna dla playlisty ponowny zestaw: 8 zaliczonych.
+- Pełna regresja wxPython: 1961 testów zaliczonych, 110 pominiętych i 11
+  podtestów zaliczonych; cztery testy lokalnego serwera podcastów zostały
+  zablokowane przez sieć piaskownicy, a następnie wszystkie 4 zaliczono poza
+  tym ograniczeniem. Łączny wynik funkcjonalny: 1965 zaliczonych.
+- Zmiana źródłowa: commit `c25ecb50` —
+  `fix(radio): przywroc reczne porzadkowanie playlist`.
+- Na tym etapie jest to potwierdzona zmiana źródeł i testów. Nowa paczka Test,
+  instalacja i ręczny odbiór NVDA są osobnymi krokami i nie są jeszcze przez
+  ten zapis uznane za zakończone.
+
 ### Korekta użytkownika z 21.10.2026 — wstrzymanie publicznego kandydata
 
 Ta decyzja zastępuje wcześniejszy plan natychmiastowego uruchomienia i odbioru
