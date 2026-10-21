@@ -2,13 +2,15 @@
 
 ## Status
 
-**Korekta odbiorcza publicznego AMC jest wdrożona w źródłach i przeszła pełną
-regresję wxPython: 1945 testów zaliczonych, 110 świadomie pominiętych i 11
-podtestów zaliczonych. Naprawia `B` dla pliku otwartego bezpośrednio z folderu,
-pozostanie w tym samym folderze po `Shift+Delete` oraz powtarzany pomiar pod
-lewą strzałką. Numer źródeł ustawiono na `0.1.0-alpha.428`. Budowa, instalacja
-i kontrolowany start nowego kandydata są następnym krokiem; publikacji zdalnej
-nie wykonano.**
+**Publiczny AMC `0.1.0-alpha.428` jest zbudowany i zainstalowany w
+`D:\Projekty Codex\AMC Public`. Korekta przeszła pełną regresję wxPython: 1945
+testów zaliczonych, 110 świadomie pominiętych i 11 podtestów zaliczonych.
+Naprawia `B` dla pliku otwartego bezpośrednio z folderu, pozostanie w tym samym
+folderze po `Shift+Delete` oraz powtarzany pomiar pod lewą strzałką. Końcowa
+paczka `90f156c2` ma 1075 kontrolowanych plików; pełna integralność i
+kontrolowany start zainstalowanej kopii są zaliczone. TIDAL, Spotify i Frontier
+Smart są nieobecne, WiiM, Sonos oraz pełny eksport/import pozostają. Ręczny
+odbiór NVDA pozostaje do wykonania; publikacji zdalnej nie wykonano.**
 
 ### Korekta użytkownika z 21.10.2026
 
@@ -62,6 +64,13 @@ Bibliotekę i stwarzała wrażenie, że zniknęła cała zawartość folderu.
 - Osobne instalatory są potrzebne dla tożsamości programu, profilu danych i
   kanału aktualizacji, lecz nie oznaczają dwóch implementacji. Oba warianty
   są składane z tego samego commitu i filtrowane manifestem wydania.
+- Pierwsza instalacja `alpha.428` ujawniła, że Inno Setup pozostawiał w
+  istniejącym katalogu plik modułu wycofany z nowej paczki. Paczka była
+  prawidłowa, ale aktualizacja nie dawała jeszcze dokładnej kopii. Instalator
+  usuwa teraz przed kopiowaniem moduły niedostępne w profilu publicznym, a
+  budowa wymaga czystych śledzonych źródeł i zapisuje osobną rewizję kodu
+  instalatora. Powtórna instalacja na celowo zastanym katalogu usunęła stary
+  plik Frontier bez naruszenia WiiM, Sonosa i kopii danych.
 
 #### Testy i wynik
 
@@ -71,6 +80,10 @@ Bibliotekę i stwarzała wrażenie, że zniknęła cała zawartość folderu.
   passed` w końcowym przebiegu 108,52 s.
 - Test obejmuje także spóźnioną odpowiedź `Shift+Delete` po przejściu do innej
   sesji oraz ponowne naciśnięcie lewej strzałki bez drugiego wywołania hosta.
+- Kontrakt instalatora i pakowania po poprawce aktualizacji: `42 passed`;
+  parser PowerShell bez błędów. Rzeczywista aktualizacja istniejącego AMC
+  Public zakończyła się kodem 0, usunęła cztery niedostępne moduły i zachowała
+  trzy wymagane moduły sprawdzane w odbiorze.
 - Ręczny odbiór mowy i fokusu w NVDA pozostaje do wykonania na zainstalowanym
   kandydacie.
 
@@ -84,8 +97,21 @@ Bibliotekę i stwarzała wrażenie, że zniknęła cała zawartość folderu.
 #### Wersja i commit
 
 - Numer źródeł: `0.1.0-alpha.428`.
-- Commit poprawki, identyfikator paczki, instalator, suma SHA-256 i wynik
-  instalacji zostaną dopisane po przejściu bramki budowy.
+- Poprawka zachowania programu: `5a05f98d50496066606f3176f69a0dd45aea65e1`.
+- Fizyczne wycięcie Frontier z paczki publicznej:
+  `fa08432ea8db01fcbd80ba53c67d1cba19d6b138`; z tej czystej rewizji powstała
+  paczka `90f156c2` z 1075 plikami.
+- Poprawka aktualizacji instalatora: `555fbe6ab1b47c528c2aa24a6a3732a8a0cd9e74`.
+- Instalator `AMC-0.1.0-alpha.428-win-x64.exe` ma 124 073 632 bajty i SHA-256
+  `8f43f0251266953804776fbbf9ebecafeed762837b4f7326fcd72a67b6385581`.
+  Plik integralności rozróżnia rewizję paczki i rewizję instalatora.
+- Instalacja do `D:\Projekty Codex\AMC Public` zakończyła się kodem 0. Pełna
+  integralność oraz kontrolowany start zainstalowanej kopii są zaliczone.
+- Widocznego okna Public nie uruchomiono do równoległego odbioru: zwykłe
+  żądanie zamknięcia AMC Test zostało odrzucone z komunikatem
+  `Nie zamykam AMC Test, ponieważ trwa nagrywanie`. Procesów nie wymuszano,
+  nagrania nie przerwano. Po jego zakończeniu należy zamknąć Test i uruchomić
+  `D:\Projekty Codex\AMC Public\AMC.exe`.
 
 Źródłowa, zatwierdzona specyfikacja pozostaje w pliku tylko do odczytu:
 `D:\Projekty Codex\Accessible Multimedia Controller\AMC12_PROFILE_WYDANIA_PUBLICZNEGO_I_TESTOWEGO_2026-10-18.md`.
@@ -464,6 +490,28 @@ zapisie NVDA słyszy „Dodano do Biblioteki” albo „Usunięto z Biblioteki�
 
 ## Testy i wynik
 
+- 21.10.2026 publiczna paczka `alpha.428` z czystej rewizji
+  `fa08432ea8db01fcbd80ba53c67d1cba19d6b138` ma identyfikator `90f156c2` i
+  1075 kontrolowanych plików. Manifest dopuszcza Pliki, Radio,
+  Podcasty/YouTube, WiiM i Sonos. Fizycznie nie zawiera modułów TIDAL, Spotify
+  ani Frontier; zawiera WiiM, Sonosa i pełną kopię danych.
+- Pierwszy instalator prawidłowej paczki pozostawił po aktualizacji stary plik
+  Frontier z `alpha.427`. Nie został uznany za wynik końcowy. Poprawka
+  `555fbe6a` usuwa wycofane moduły profilu podczas aktualizacji, wymaga czystych
+  śledzonych źródeł instalatora i zapisuje ich rewizję. `42/42` testy kontraktu
+  instalatora i paczki przeszły.
+- Końcowy instalator ma 124 073 632 bajty i SHA-256
+  `8f43f0251266953804776fbbf9ebecafeed762837b4f7326fcd72a67b6385581`.
+  Aktualizacja rzeczywistego `D:\Projekty Codex\AMC Public` zakończyła się kodem
+  0. Niezależny odbiór potwierdził brak czterech niedostępnych modułów, obecność
+  WiiM, Sonosa i pełnej kopii danych, kod 0 pełnej integralności oraz poprawny
+  kontrolowany start interfejsu z hostem.
+- Po zweryfikowaniu następcy usunięto wyłącznie zastąpioną paczkę
+  `.test-output/AMC-public-2026.10.21-5a05f98d-alpha428`, która zawierała
+  niedostępny Frontier. Odzyskano 425 940 022 bajty, około 406,21 MiB. Artefakt
+  nie trafił do Kosza, ale można go odtworzyć z commita `5a05f98d`. Zachowano
+  poprawną paczkę `fa08432e`, instalator, zainstalowany program, źródła, dane
+  użytkownika i nagrania.
 - 21.10.2026 z czystej rewizji
   `3be68067cb033e0fc258df47ab1fa18834db0257` zbudowano publiczną paczkę
   `dc9821e2` z 1075 kontrolowanymi plikami. Profil zawiera sesje Pliki, Radio,
@@ -816,10 +864,10 @@ zapisie NVDA słyszy „Dodano do Biblioteki” albo „Usunięto z Biblioteki�
 ## Znane ograniczenia
 
 - Automatyczny test potwierdza dokładnie operacje, które wcześniej zawodziły,
-  oraz uruchomioną instalację `alpha.426`. Pozostaje krótki ręczny odbiór z
-  NVDA: dodanie wyniku wyszukiwania przez `Ctrl+Shift+L`, powrót fokusu i import
-  rzeczywistej playlisty użytkownika. Dopiero ten odbiór zamknie błąd
-  użytkowy; nie jest potrzebny do ponownego tworzenia profilu.
+  oraz zainstalowaną kopię `alpha.428`. Pozostaje krótki ręczny odbiór z NVDA:
+  `B` dla pliku z folderu, małe zaznaczenie pod `Shift+Delete`, powrót fokusu,
+  powtórzona lewa strzałka oraz polecenia Radia i Biblioteki. Dopiero ten odbiór
+  zamknie błąd użytkowy; nie jest potrzebny do ponownego tworzenia profilu.
 
 - Bramka sprawdza konstrukcję pełnego okna, start właściwego hosta, `hello` i
   konfigurację audio. Nie zastępuje ręcznych prób każdej funkcji sieciowej,
@@ -973,10 +1021,11 @@ zapisie NVDA słyszy „Dodano do Biblioteki” albo „Usunięto z Biblioteki�
   `2026.10.21-63b304449076998a45079f257c6a002ece8ee0b4-82d28f84`.
 - Poprawka pierwszego zapisu na świeżym profilu: `15b38eb1` —
   `fix(amc): inicjalizuj swiezy profil publiczny`.
-- Zainstalowany publiczny AMC: `0.1.0-alpha.427`, rewizja
-  `3be68067cb033e0fc258df47ab1fa18834db0257`, paczka `dc9821e2`, 1075 plików.
+- Zainstalowany publiczny AMC: `0.1.0-alpha.428`, rewizja paczki
+  `fa08432ea8db01fcbd80ba53c67d1cba19d6b138`, rewizja instalatora
+  `555fbe6ab1b47c528c2aa24a6a3732a8a0cd9e74`, paczka `90f156c2`, 1075 plików.
   Instalator i plik integralności pozostają lokalnie w
-  `publish\installers\alpha.427`. Zainstalowana kopia z
+  `publish\installers\alpha.428`. Zainstalowana kopia z
   `D:\Projekty Codex\AMC Public\AMC.exe` przeszła pełną kontrolę integralności
   oraz kontrolowany start.
 - Publikacja: niewykonana. Cloudflare, GitHub i zdalny aktualizator nie były

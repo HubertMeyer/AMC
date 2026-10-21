@@ -146,15 +146,16 @@ zmian, wymagający korekty użytkownika:
   została zainstalowana 20.10.2026.
   Bieżący zapis realizacji:
   [AMC09-menedzer-sesji.md](AMC09-menedzer-sesji.md).
-- `AMC12` — **Korekta odbiorcza `alpha.428` przeszła pełną regresję źródeł;
-  trwa budowa i instalacja nowego kandydata. Publiczny AMC jest budowany z tego
-  samego kodu co AMC Test; zgodnie z korektą użytkownika z 21.10.2026 wyłącza
+- `AMC12` — **Korekta odbiorcza `alpha.428` przeszła pełną regresję źródeł,
+  została zbudowana i zainstalowana w `D:\Projekty Codex\AMC Public`.
+  Publiczny AMC jest budowany z tego samego kodu co AMC Test; zgodnie z korektą
+  użytkownika z 21.10.2026 wyłącza
   wyłącznie niedopracowane funkcje streamingowe, a wszystkie ukończone funkcje,
   w tym Sonosa, zachowuje. Obecnie TIDAL, Spotify i nieodebrana jeszcze
-  integracja Frontier Smart pozostają tylko w AMC Test. Publiczny
-  Poprzedni `0.1.0-alpha.427` pozostaje zainstalowany w
-  `D:\Projekty Codex\AMC Public` do czasu zweryfikowania następcy. Nowa poprawka
-  zachowuje
+  integracja Frontier Smart pozostają tylko w AMC Test. Końcowa paczka
+  `90f156c2` ma 1075 plików; integralność i kontrolowany start zainstalowanej
+  kopii są zaliczone. Instalator usuwa także stare moduły niedostępnych usług
+  pozostałe po wcześniejszej wersji. Nowa poprawka zachowuje
   kolejność importowanej playlisty Radia, uruchamia `Alt+1–3` w Bibliotece i
   Ulubionych, wiąże `Ctrl+Shift+U` z Ulubionymi oraz `Ctrl+Shift+L` z
   członkostwem w Bibliotece. Ręczny odbiór w NVDA pozostaje do wykonania;
