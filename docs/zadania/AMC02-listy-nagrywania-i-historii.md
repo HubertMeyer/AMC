@@ -107,6 +107,11 @@ Polecenie `Alt+R` ma w menu, pomocy klawiatury `Ctrl+F1` i palecie
   odczytana. Program synchronizuje teraz listę przed komunikatem i jawnie
   dołącza użytkową nazwę wybranego pliku. Techniczny identyfikator nagrania
   nadal nie trafia do mowy ani tekstu kontrolki.
+- **Korekta użytkownika z 21.10.2026 zastępuje każde wyjaśnienie wiążące
+  pustą Historię odtwarzania z pustym profilem albo eksportem i importem.**
+  Publiczny AMC prowadzi własną lokalną historię bieżącego profilu. Po
+  potwierdzonym rozpoczęciu stacji wpis ma być od razu dostępny pod `Ctrl+H`;
+  eksport, import i zawartość profilu AMC Test nie mają na to wpływu.
 
 ## Zmienione miejsca
 
@@ -230,6 +235,19 @@ zgodność nazw i skrótów wykonania, pomocy i palety.
   odzyskiwania były 23 zachowane pliki `.amc-partial`; żaden nie rósł w
   pomiarze, lecz procesu nie wymuszono i instalacji Test nie podmieniono.
 
+21.10.2026, diagnostyka zainstalowanego `alpha.430` po korekcie użytkownika:
+
+- rzeczywista publiczna baza profilu miała poprawną integralność, lecz nadal
+  zero wpisów `playback_history`; jej ostatni zapis danych pochodził sprzed
+  instalacji `alpha.430`, więc nie jest to dowód niepowodzenia bieżącego kodu;
+- zainstalowany host z `D:\Projekty Codex\AMC Public` uruchomiono na
+  izolowanej kopii profilu i wyciszonym lokalnym strumieniu HTTP. Potwierdzony
+  start dopisał jeden wpis sesji `radio` z pozycją 0, bez `historyError`;
+- ten sam czytnik danych, którego używa `Ctrl+H`, odczytał dokładnie ten wpis,
+  dopasował go do właściwej stacji i nie zgłosił ograniczenia widoku;
+- próba nie zmieniła prawdziwego profilu użytkownika. Kopię diagnostyczną
+  usunięto z katalogu Temp po zamknięciu hosta; odzyskano 410 166 bajtów.
+
 ## Znane ograniczenia
 
 - Ostatnia korekta pełnego komunikatu `Alt+R` jest zainstalowana w publicznym
@@ -241,6 +259,10 @@ zgodność nazw i skrótów wykonania, pomocy i palety.
   pochodzi z lokalnej ścieżki i nie jest zgadywany dla elementu sieciowego.
 - Zadanie nie dodaje podglądu pliku podczas nagrywania ani nowych działań na
   pliku. Ten zakres pozostaje osobnym, późniejszym zadaniem.
+- Odtworzeń wykonanych przed zainstalowaniem `alpha.430`, których wcześniejsza
+  wersja nie zapisała, nie da się wiarygodnie odtworzyć wstecz. Nie jest to
+  zamierzone czyszczenie historii: każde nowe, potwierdzone odtworzenie w
+  `alpha.430` ma być zapisane lokalnie i widoczne pod `Ctrl+H`.
 
 ## Wersja i commit
 
