@@ -678,3 +678,110 @@ def test_profile_edits_go_through_the_real_host() -> None:
         assert radio["streamUrl"] == "https://example.invalid/new"
         assert radio["isInLibrary"] is False
         assert radio["isFavorite"] is False
+
+
+def test_radio_manual_order_mutations_persist_through_the_real_host() -> None:
+    assert HOST.exists(), "Najpierw zbuduj LiteHost w konfiguracji Release"
+    temporary_root = ROOT / ".tmp-tests"
+    temporary_root.mkdir(exist_ok=True)
+    with tempfile.TemporaryDirectory(
+        prefix="amc-radio-order-", dir=temporary_root
+    ) as raw:
+        root = Path(raw)
+        media = root / "nagranie.mp3"
+        media.write_bytes(b"test")
+        library = root / "library.db"
+        podcasts = root / "podcasts.db"
+        state = root / "state.json"
+        _library(library, media)
+        _podcasts(podcasts)
+        with closing(sqlite3.connect(library)) as database:
+            for table in ("library_custom_order", "favorite_order"):
+                database.executemany(
+                    f"INSERT INTO {table}(session_id, ordinal, item_id) "
+                    "VALUES('radio', ?, ?)",
+                    enumerate(("radio-1", "radio-2", "radio-3")),
+                )
+            database.commit()
+        state.write_text(
+            json.dumps(
+                {
+                    "radio": {
+                        "stations": [
+                            {
+                                "id": f"radio-{index}",
+                                "name": name,
+                                "streamUrl": f"https://example.invalid/{index}",
+                                "isInLibrary": True,
+                                "isFavorite": True,
+                            }
+                            for index, name in enumerate(
+                                ("Jedynka", "Dwójka", "Trójka"), start=1
+                            )
+                        ],
+                        "recordingSchedules": [],
+                        "recordingHistory": [],
+                    }
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        client = LiteHostClient(
+            HOST, library_db=library, podcasts_db=podcasts, state_json=state
+        )
+        try:
+            client.start()
+            moved = client.move_radio_collection_items(
+                "library",
+                ["radio-2"],
+                ["radio-1", "radio-2", "radio-3"],
+                -1,
+            )
+            assert moved == {
+                "view": "library",
+                "status": "moved",
+                "moved": True,
+                "count": 1,
+            }
+            placed = client.place_radio_collection_items_before(
+                "favorites",
+                ["radio-3"],
+                ["radio-1", "radio-2", "radio-3"],
+                "radio-1",
+            )
+            assert placed == {
+                "view": "favorites",
+                "status": "moved",
+                "moved": True,
+                "count": 1,
+            }
+            try:
+                client.move_radio_collection_items(
+                    "history",
+                    ["radio-1"],
+                    ["radio-1", "radio-2", "radio-3"],
+                    1,
+                )
+            except HostError as error:
+                assert "Bibliotece i Ulubionych Radia" in str(error)
+            else:
+                raise AssertionError("Host dopuścił ręczną kolejność Historii")
+        finally:
+            client.close()
+
+        with closing(sqlite3.connect(library)) as database:
+            library_order = database.execute(
+                "SELECT item_id FROM library_custom_order "
+                "WHERE session_id='radio' ORDER BY ordinal"
+            ).fetchall()
+            favorite_order = database.execute(
+                "SELECT item_id FROM favorite_order "
+                "WHERE session_id='radio' ORDER BY ordinal"
+            ).fetchall()
+        assert library_order == [
+            ("radio-2",), ("radio-1",), ("radio-3",)
+        ]
+        assert favorite_order == [
+            ("radio-3",), ("radio-1",), ("radio-2",)
+        ]

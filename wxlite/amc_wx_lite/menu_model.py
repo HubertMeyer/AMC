@@ -139,9 +139,9 @@ class MenuItem:
     #: oficjalne API pozwala jawnie usunąć. Playlisty są wykluczone, bo AMC
     #: nie prosi o uprawnienia do modyfikacji playlist użytkownika.
     needs_spotify_saved_item: bool = False
-    #: Wymaga otwartej zawartości lokalnej playlisty. To węższy warunek niż
-    #: zwykły element mogący należeć do playlisty: dotyczy ręcznej kolejności.
-    needs_playlist_contents: bool = False
+    #: Wymaga listy o ręcznej kolejności: otwartej playlisty albo głównej
+    #: Biblioteki/Ulubionych Radia. Jedna bramka zasila menu, pomoc i paletę.
+    needs_manual_order_context: bool = False
     #: Wymaga zaznaczonego odcinka; wykonanie sprawdza jeszcze członkostwo
     #: podcastu w Bibliotece na świeżym, tylko do odczytu odczycie SQLite.
     needs_podcast_episode: bool = False
@@ -683,21 +683,21 @@ def build_menus(session_order: object = None) -> tuple[Menu, ...]:
                 Action.MOVE_LIST_ITEM_UP,
                 accelerator=False,
                 needs_selection=True,
-                needs_playlist_contents=True,
+                needs_manual_order_context=True,
             ),
             MenuItem(
                 "Przenieś niżej, Alt+strzałka w dó&ł",
                 Action.MOVE_LIST_ITEM_DOWN,
                 accelerator=False,
                 needs_selection=True,
-                needs_playlist_contents=True,
+                needs_manual_order_context=True,
             ),
             MenuItem(
                 "Wstaw przenoszone przed bieżącym, Ctrl+&V",
                 Action.PASTE_OR_MOVE,
                 accelerator=False,
                 needs_selection=True,
-                needs_playlist_contents=True,
+                needs_manual_order_context=True,
             ),
             SEPARATOR,
             MenuItem("Zmień nazwę w Bibliote&ce", Action.RENAME_LIBRARY_ITEM,

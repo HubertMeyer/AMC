@@ -623,6 +623,8 @@ internal sealed class LiteEngineHandlers : IDisposable
             ["radio.importPlaylistToLibrary"] = (request, _) => ImportPlaylistToLibrary(request.Args),
             ["radio.exportFavorites"] = (request, _) => ExportRadioFavorites(request.Args),
             ["radio.collectionSort"] = (request, _) => SetRadioCollectionSort(request.Args),
+            ["radio.collectionMove"] = (request, _) => MoveRadioCollectionItems(request.Args),
+            ["radio.collectionPlaceBefore"] = (request, _) => PlaceRadioCollectionItems(request.Args),
             ["audio.configure"] = (request, _) => ConfigureAudio(request.Args),
             ["audio.outputs"] = (request, _) => ListOutputs(request.Args),
             ["audio.selectOutput"] = (request, _) => SelectOutput(request.Args),
@@ -1177,6 +1179,32 @@ internal sealed class LiteEngineHandlers : IDisposable
             LiteArgs.RequireText(args, "view"),
             mode);
     }
+
+    private object MoveRadioCollectionItems(JsonElement args) =>
+        RequireProfileMutations().MoveRadioCollectionItems(
+            LiteArgs.RequireText(args, "view"),
+            ReadRequiredIdArray(
+                args,
+                "selectedItemIds",
+                "Nie wskazano stacji do przeniesienia."),
+            ReadRequiredIdArray(
+                args,
+                "visibleItemIds",
+                "Nie przekazano widocznej kolejności stacji."),
+            ReadMoveDirection(args));
+
+    private object PlaceRadioCollectionItems(JsonElement args) =>
+        RequireProfileMutations().PlaceRadioCollectionItemsBefore(
+            LiteArgs.RequireText(args, "view"),
+            ReadRequiredIdArray(
+                args,
+                "selectedItemIds",
+                "Nie wskazano stacji do przeniesienia."),
+            ReadRequiredIdArray(
+                args,
+                "visibleItemIds",
+                "Nie przekazano widocznej kolejności stacji."),
+            LiteArgs.RequireText(args, "targetItemId"));
 
     private object RecycleLocalFiles(JsonElement args)
     {

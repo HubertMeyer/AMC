@@ -564,7 +564,7 @@ def test_queue_membership_menu_matches_supported_sessions() -> None:
         assert Action.TOGGLE_PLAY_NEXT not in actions_by_session[session]
 
 
-def test_playlist_order_menu_is_limited_to_open_playlist_contents() -> None:
+def test_manual_order_menu_is_limited_to_playlist_or_radio_collection() -> None:
     expected = {
         Action.MOVE_LIST_ITEM_UP,
         Action.MOVE_LIST_ITEM_DOWN,
@@ -572,7 +572,7 @@ def test_playlist_order_menu_is_limited_to_open_playlist_contents() -> None:
     }
     items = [entry for entry in all_items() if entry.action in expected]
     assert {entry.action for entry in items} == expected
-    assert all(entry.needs_playlist_contents for entry in items)
+    assert all(entry.needs_manual_order_context for entry in items)
     assert all(entry.needs_selection for entry in items)
     assert all(not entry.accelerator for entry in items)
 

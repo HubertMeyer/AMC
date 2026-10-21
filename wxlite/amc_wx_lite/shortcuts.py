@@ -277,9 +277,9 @@ class Action(Enum):
     OPEN_CONTAINING_FOLDER = "files.openContainingFolder"
     COPY_NAME = "clipboard.copyName"
     COPY_ADDRESS = "clipboard.copyAddress"
-    #: Ctrl+X jest kontekstowe jak w głównym AMC: w otwartej playliście
-    #: rozpoczyna wewnętrzne przenoszenie, a w pozostałych lokalnych widokach
-    #: przygotowuje rzeczywiste pliki do przeniesienia poza AMC.
+    #: Ctrl+X jest kontekstowe jak w głównym AMC: w otwartej playliście oraz
+    #: Bibliotece/Ulubionych Radia rozpoczyna wewnętrzne przenoszenie, a w
+    #: pozostałych lokalnych widokach przygotowuje prawdziwe pliki do ruchu.
     CUT_FILE = "clipboard.cutFile"
     PASTE_OR_MOVE = "clipboard.pasteOrMove"
     MOVE_LIST_ITEM_UP = "library.moveItemUp"
@@ -1117,6 +1117,10 @@ RADIO_COLLECTION_LIST_VIEW: dict[str, Action] = {
     "Alt+1": Action.SORT_RADIO_COLLECTION_ADDED,
     "Alt+2": Action.SORT_RADIO_COLLECTION_ALPHABETICAL,
     "Alt+3": Action.SORT_RADIO_COLLECTION_CUSTOM,
+    "Alt+Up": Action.MOVE_LIST_ITEM_UP,
+    "Alt+Down": Action.MOVE_LIST_ITEM_DOWN,
+    "Ctrl+X": Action.CUT_FILE,
+    "Ctrl+V": Action.PASTE_OR_MOVE,
 }
 
 # Litery bez modyfikatora sa bezpieczne tylko w odtwarzaczu Radia. Na liscie
@@ -1771,7 +1775,9 @@ def _help_entries() -> list[tuple[str, str, Action]]:
         Action.RADIO_JUMP_LIVE: "Wróć do transmisji na żywo",
         Action.COPY_NAME: "Skopiuj nazwe",
         Action.COPY_ADDRESS: "Skopiuj adres lub ścieżkę",
-        Action.CUT_FILE: "Wytnij plik albo zaznacz pozycje playlisty do przeniesienia",
+        Action.CUT_FILE: (
+            "Wytnij plik albo zaznacz element ręcznej kolejności do przeniesienia"
+        ),
         Action.PASTE_OR_MOVE: "Wstaw przenoszone pozycje przed bieżącym elementem",
         Action.MOVE_LIST_ITEM_UP: "Przenieś zaznaczenie wyżej na liście",
         Action.MOVE_LIST_ITEM_DOWN: "Przenieś zaznaczenie niżej na liście",

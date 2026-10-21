@@ -7038,6 +7038,11 @@ class LiteFrame(wx.Frame):
         self._pending_internal_playlist_move: (
             tuple[str, str, tuple[str, ...]] | None
         ) = None
+        #: (Biblioteka/Ulubione, Id stacji) rozpoczęte przez Ctrl+X w Radiu.
+        #: Osobny zakres nie pozwala wkleić wyboru do innego widoku.
+        self._pending_radio_collection_move: (
+            tuple[str, tuple[str, ...]] | None
+        ) = None
         self._playlist_order_pending = False
 
         outer = wx.BoxSizer(wx.VERTICAL)
@@ -7564,7 +7569,9 @@ class LiteFrame(wx.Frame):
                 )
                 if not (spotify_history_item or spotify_collection_item):
                     enabled = False
-            if entry.needs_playlist_contents and not playlist_contents:
+            if entry.needs_manual_order_context and not (
+                playlist_contents or radio_collection
+            ):
                 enabled = False
             if entry.needs_podcast_episode and (
                 not podcasts or selected_kind != "episode"
@@ -10539,10 +10546,12 @@ class LiteFrame(wx.Frame):
                     self._run(events)
                 if (
                     restore_selected_ids
-                    and self.navigator.session.library_view
-                    is LibraryView.PLAYLIST_CONTENTS
-                    and self.navigator.session.library_playlist_id
-                    == intent.playlist_id
+                    and self.navigator.session.library_view is intent.view
+                    and (
+                        intent.view is not LibraryView.PLAYLIST_CONTENTS
+                        or self.navigator.session.library_playlist_id
+                        == intent.playlist_id
+                    )
                 ):
                     self._active_list().select_item_ids(restore_selected_ids)
                 if result.missing_item_count:
@@ -17395,6 +17404,8 @@ class LiteFrame(wx.Frame):
             result = payload or {}
             effective = str(result.get("sortMode") or mode)
             self._radio_effective_sort_modes[scope] = effective
+            if effective != SORT_CUSTOM:
+                self._pending_radio_collection_move = None
             self._refresh_menu_state()
             self._open_radio_view(
                 OpenLibraryView(
@@ -17413,6 +17424,240 @@ class LiteFrame(wx.Frame):
                 f"Nie mogę zmienić sortowania Radia: {error}"
             ),
         )
+
+    def _radio_manual_order_context(
+        self,
+    ) -> tuple[str, LibraryView | None] | None:
+        """Zakres ręcznej kolejności aktywnej kolekcji Radia."""
+        if self.navigator.active is not SessionId.RADIO:
+            return None
+        state = self.navigator.session
+        if state.view is not View.LIST:
+            return None
+        if state.library_view is None:
+            return "library", None
+        if state.library_view is LibraryView.FAVORITES:
+            return "favorites", LibraryView.FAVORITES
+        return None
+
+    def _radio_collection_order_rows(
+        self,
+    ) -> tuple[list[Row], list[Row]] | None:
+        """Zaznaczenie i pełna widoczna kolejność stacji bez filtra."""
+        if self.filter_box.GetValue().strip():
+            self.announcer.say(
+                "Wyczyść filtr klawiszem Escape przed zmianą kolejności"
+            )
+            return None
+        rows = [
+            row for row in self._selected_action_rows()
+            if row.kind == "station" and row.item_id
+        ]
+        if not rows:
+            self.announcer.say("Wybierz stację do przeniesienia")
+            return None
+        visible = [
+            row for row in self.navigator.session.model.rows
+            if row.kind == "station" and row.item_id
+        ]
+        return rows, visible
+
+    def _move_radio_collection_selection(self, direction: int) -> None:
+        context = self._radio_manual_order_context()
+        if context is None:
+            self.announcer.say(
+                "Ręczne przenoszenie działa w Bibliotece i Ulubionych Radia"
+            )
+            return
+        scope, _view = context
+        if self._radio_effective_sort_modes.get(scope) != SORT_CUSTOM:
+            self.announcer.say(
+                "Przenoszenie działa w kolejności własnej. Naciśnij Alt 3"
+            )
+            return
+        if self._playlist_order_pending:
+            self.announcer.say("Zmiana kolejności już trwa")
+            return
+        prepared = self._radio_collection_order_rows()
+        if prepared is None:
+            return
+        rows, visible = prepared
+        selected_ids = list(dict.fromkeys(row.item_id for row in rows))
+        visible_ids = [row.item_id for row in visible]
+        client = self.client
+        if client is None:
+            self.announcer.say("Silnik nie działa. Kolejność nie została zmieniona")
+            return
+
+        selected_set = set(selected_ids)
+        positions = [
+            index for index, row in enumerate(visible)
+            if row.item_id in selected_set
+        ]
+        adjacent_title = "sąsiedni element"
+        if positions and positions[-1] - positions[0] + 1 == len(positions):
+            adjacent_index = positions[0] - 1 if direction < 0 else positions[-1] + 1
+            if 0 <= adjacent_index < len(visible):
+                adjacent_title = visible[adjacent_index].title
+        self._playlist_order_pending = True
+
+        def work() -> dict:
+            result = client.move_radio_collection_items(
+                scope,
+                selected_ids,
+                visible_ids,
+                direction,
+            )
+            return result if isinstance(result, dict) else {}
+
+        def done(result: dict) -> None:
+            self._playlist_order_pending = False
+            status = str(result.get("status") or "invalid")
+            if status != "moved":
+                self.announcer.say({
+                    "boundary": (
+                        "To początek tej listy" if direction < 0
+                        else "To koniec tej listy"
+                    ),
+                    "nonContiguous": (
+                        "Do wspólnego przeniesienia zaznacz ciągły blok elementów"
+                    ),
+                }.get(status, "Nie można zmienić kolejności zaznaczenia"))
+                return
+            self._pending_radio_collection_move = None
+            moved = (
+                "Przeniesiono stację" if len(selected_ids) == 1
+                else f"Przeniesiono stacje: {len(selected_ids)}"
+            )
+            message = (
+                f"{moved} w górę, nad {adjacent_title}"
+                if direction < 0
+                else f"{moved} w dół, pod {adjacent_title}"
+            )
+            if self._radio_manual_order_context() == context:
+                self._refresh_profile_view(
+                    preferred_id=selected_ids[0],
+                    selected_ids=selected_ids,
+                    after_refresh=lambda: self.announcer.say(message),
+                )
+            else:
+                self.announcer.say(message)
+
+        def failed(error: Exception) -> None:
+            self._playlist_order_pending = False
+            self.announcer.say(f"Nie zmieniono kolejności stacji: {error}")
+
+        self.runner.submit("radio-order-move", work, done, failed)
+
+    def _cut_radio_collection_move(self) -> None:
+        context = self._radio_manual_order_context()
+        if context is None:
+            return
+        scope, _view = context
+        if self._radio_effective_sort_modes.get(scope) != SORT_CUSTOM:
+            self.announcer.say(
+                "Przenoszenie działa w kolejności własnej. Naciśnij Alt 3"
+            )
+            return
+        prepared = self._radio_collection_order_rows()
+        if prepared is None:
+            return
+        rows, _visible = prepared
+        item_ids = tuple(dict.fromkeys(row.item_id for row in rows))
+        self._pending_radio_collection_move = (scope, item_ids)
+        self._pending_internal_playlist_move = None
+        self._clear_pending_external_moves()
+        self.announcer.say(
+            "Zaznaczono stację do przeniesienia. "
+            "Wybierz miejsce i naciśnij Ctrl+V"
+            if len(item_ids) == 1
+            else f"Zaznaczono stacje do przeniesienia: {len(item_ids)}. "
+                 "Wybierz miejsce i naciśnij Ctrl+V"
+        )
+
+    def _paste_radio_collection_move(self) -> None:
+        context = self._radio_manual_order_context()
+        if context is None:
+            return
+        scope, _view = context
+        if self._radio_effective_sort_modes.get(scope) != SORT_CUSTOM:
+            self.announcer.say(
+                "Przenoszenie działa w kolejności własnej. Naciśnij Alt 3"
+            )
+            return
+        pending = self._pending_radio_collection_move
+        if pending is None or pending[0] != scope:
+            self.announcer.say(
+                "Najpierw zaznacz stację lub grupę skrótem Ctrl+X"
+            )
+            return
+        if self._playlist_order_pending:
+            self.announcer.say("Zmiana kolejności już trwa")
+            return
+        if self.filter_box.GetValue().strip():
+            self.announcer.say(
+                "Wyczyść filtr klawiszem Escape przed przenoszeniem stacji"
+            )
+            return
+        target = self.navigator.session.model.selected_row
+        if target is None or target.kind != "station" or not target.item_id:
+            self.announcer.say(
+                "Wybierz stację, przed którą chcesz przenieść zaznaczenie"
+            )
+            return
+        visible = [
+            row for row in self.navigator.session.model.rows
+            if row.kind == "station" and row.item_id
+        ]
+        client = self.client
+        if client is None:
+            self.announcer.say("Silnik nie działa. Kolejność nie została zmieniona")
+            return
+        selected_ids = list(pending[1])
+        visible_ids = [row.item_id for row in visible]
+        target_id = target.item_id
+        target_title = target.title
+        self._playlist_order_pending = True
+
+        def work() -> dict:
+            result = client.place_radio_collection_items_before(
+                scope,
+                selected_ids,
+                visible_ids,
+                target_id,
+            )
+            return result if isinstance(result, dict) else {}
+
+        def done(result: dict) -> None:
+            self._playlist_order_pending = False
+            status = str(result.get("status") or "invalid")
+            if status != "moved":
+                self.announcer.say({
+                    "targetInSelection": "Wybierz inną stację jako miejsce docelowe",
+                    "targetMissing": "Nie znaleziono wskazanego miejsca docelowego",
+                    "unchanged": "Stacje są już w tym miejscu",
+                }.get(status, "Nie można przenieść zaznaczonych stacji"))
+                return
+            self._pending_radio_collection_move = None
+            message = (
+                f"Przeniesiono stację przed {target_title}"
+                if len(selected_ids) == 1
+                else f"Przeniesiono stacje: {len(selected_ids)}, przed {target_title}"
+            )
+            if self._radio_manual_order_context() == context:
+                self._refresh_profile_view(
+                    preferred_id=selected_ids[0],
+                    selected_ids=selected_ids,
+                    after_refresh=lambda: self.announcer.say(message),
+                )
+            else:
+                self.announcer.say(message)
+
+        def failed(error: Exception) -> None:
+            self._playlist_order_pending = False
+            self.announcer.say(f"Nie przeniesiono stacji: {error}")
+
+        self.runner.submit("radio-order-place", work, done, failed)
 
     def _set_podcast_library_sort(self, action: Action) -> None:
         """Alt+1/2/3 on the source library, persisted only by AMC Test."""
@@ -19831,6 +20076,9 @@ class LiteFrame(wx.Frame):
 
     def _cut_or_start_internal_playlist_move(self) -> None:
         """Ctrl+X: najpierw wewnętrzna kolejność, poza playlistą pliki."""
+        if LiteFrame._radio_manual_order_context(self) is not None:
+            LiteFrame._cut_radio_collection_move(self)
+            return
         context = self._open_profile_playlist_context()
         if context is None:
             self._cut_file()
@@ -19885,6 +20133,9 @@ class LiteFrame(wx.Frame):
 
     def _move_playlist_selection(self, direction: int) -> None:
         """Alt+Up/Down: ciągły blok o jedną pozycję jak w głównym AMC."""
+        if LiteFrame._radio_manual_order_context(self) is not None:
+            LiteFrame._move_radio_collection_selection(self, direction)
+            return
         context = self._open_profile_playlist_context()
         if context is None:
             self.announcer.say(
@@ -19969,6 +20220,9 @@ class LiteFrame(wx.Frame):
 
     def _paste_internal_playlist_move(self) -> None:
         """Ctrl+V: wstaw wcześniej wycięty blok przed bieżącym wierszem."""
+        if LiteFrame._radio_manual_order_context(self) is not None:
+            LiteFrame._paste_radio_collection_move(self)
+            return
         context = self._open_profile_playlist_context()
         if context is None:
             self.announcer.say(

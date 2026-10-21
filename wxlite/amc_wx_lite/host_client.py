@@ -1836,6 +1836,44 @@ class LiteHostClient:
             timeout=60.0,
         )
 
+    def move_radio_collection_items(
+        self,
+        view: str,
+        selected_item_ids: list[str],
+        visible_item_ids: list[str],
+        direction: int,
+    ) -> Any:
+        """Atomowo przesuń widoczny blok Biblioteki albo Ulubionych Radia."""
+        return self.call(
+            "radio.collectionMove",
+            {
+                "view": view,
+                "selectedItemIds": selected_item_ids,
+                "visibleItemIds": visible_item_ids,
+                "direction": direction,
+            },
+            timeout=30.0,
+        )
+
+    def place_radio_collection_items_before(
+        self,
+        view: str,
+        selected_item_ids: list[str],
+        visible_item_ids: list[str],
+        target_item_id: str,
+    ) -> Any:
+        """Wstaw wybrane stacje przed wskazaną stacją w kolejności własnej."""
+        return self.call(
+            "radio.collectionPlaceBefore",
+            {
+                "view": view,
+                "selectedItemIds": selected_item_ids,
+                "visibleItemIds": visible_item_ids,
+                "targetItemId": target_item_id,
+            },
+            timeout=30.0,
+        )
+
     def export_radio_favorites(self, path: str) -> Any:
         """Eksportuj Ulubione wspólnego profilu bez kopiowania danych do Pythona."""
         return self.call("radio.exportFavorites", {"path": path}, timeout=60.0)

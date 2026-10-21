@@ -491,6 +491,31 @@ def test_radio_collection_shortcuts_have_one_contextual_meaning() -> None:
             radio_session=True,
             radio_collection=False,
         ) is None
+    manual_order = {
+        Chord("X", ctrl=True): Action.CUT_FILE,
+        Chord("V", ctrl=True): Action.PASTE_OR_MOVE,
+        Chord("Up", alt=True): Action.MOVE_LIST_ITEM_UP,
+        Chord("Down", alt=True): Action.MOVE_LIST_ITEM_DOWN,
+    }
+    for chord, action in manual_order.items():
+        assert resolve(
+            chord,
+            player_view=False,
+            radio_session=True,
+            radio_collection=True,
+        ) is action
+        assert resolve(
+            chord,
+            player_view=True,
+            radio_session=True,
+            radio_collection=False,
+        ) is None
+        assert resolve(
+            chord,
+            player_view=False,
+            radio_session=True,
+            radio_collection=False,
+        ) is None
     for player in (False, True):
         assert resolve(
             Chord("L", ctrl=True, shift=True),

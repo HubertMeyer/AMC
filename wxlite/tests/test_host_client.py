@@ -574,6 +574,40 @@ def test_profile_playlists_use_one_read_and_one_atomic_replace_operation() -> No
         client.close()
 
 
+def test_radio_manual_order_uses_narrow_named_operations() -> None:
+    client = make_client()
+    try:
+        moved = client.move_radio_collection_items(
+            "library", ["radio-2"], ["radio-1", "radio-2", "radio-3"], -1
+        )
+        placed = client.place_radio_collection_items_before(
+            "favorites",
+            ["radio-3"],
+            ["radio-1", "radio-2", "radio-3"],
+            "radio-1",
+        )
+        assert moved == {
+            "op": "radio.collectionMove",
+            "args": {
+                "view": "library",
+                "selectedItemIds": ["radio-2"],
+                "visibleItemIds": ["radio-1", "radio-2", "radio-3"],
+                "direction": -1,
+            },
+        }
+        assert placed == {
+            "op": "radio.collectionPlaceBefore",
+            "args": {
+                "view": "favorites",
+                "selectedItemIds": ["radio-3"],
+                "visibleItemIds": ["radio-1", "radio-2", "radio-3"],
+                "targetItemId": "radio-1",
+            },
+        }
+    finally:
+        client.close()
+
+
 def test_current_radio_information_uses_a_narrow_read_only_operation() -> None:
     client = make_client()
     try:

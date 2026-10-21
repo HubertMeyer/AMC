@@ -1045,6 +1045,132 @@ internal sealed class LiteProfileMutationStore
         }
     }
 
+    /// <summary>
+    /// Przesuwa ciągły blok stacji w ręcznej kolejności Biblioteki albo
+    /// Ulubionych. Widoczna kolejność pochodzi z dokładnie tego widoku, który
+    /// obsługuje klawiaturę; niewidoczne lub chwilowo niedostępne wpisy
+    /// zachowują swoje miejsca w trwałej tabeli.
+    /// </summary>
+    public object MoveRadioCollectionItems(
+        string requestedView,
+        IReadOnlyList<string> selectedItemIds,
+        IReadOnlyList<string> visibleItemIds,
+        int direction)
+    {
+        var (view, table) = RadioCustomOrder(requestedView);
+        var selected = CleanDistinctIds(
+            selectedItemIds,
+            "Wybierz stację do przeniesienia.");
+        var visible = CleanDistinctIds(
+            visibleItemIds,
+            "Lista stacji jest pusta.");
+        if (selected.Length > 10_000 || visible.Length > 10_000)
+            throw new LiteRequestException("Lista może zawierać najwyżej 10000 stacji.");
+        if (direction is not (-1 or 1))
+            throw new LiteRequestException("Nieprawidłowy kierunek zmiany kolejności.");
+
+        EnsureMayWrite();
+        lock (_gate)
+        {
+            using var connection = OpenDatabase(_libraryDatabasePath);
+            using var transaction = connection.BeginTransaction();
+            var order = ReadOrder(connection, transaction, table, "radio");
+            foreach (var itemId in visible)
+                SetOrderedMembership(order, itemId, true);
+            var result = LocalLibraryManualOrder.MoveVisibleBlock(
+                order,
+                visible,
+                selected,
+                direction);
+            if (result == ManualOrderMoveResult.Moved)
+            {
+                RewriteOrder(connection, transaction, table, "radio", order);
+                TouchMetadata(connection, transaction);
+            }
+            transaction.Commit();
+            return new
+            {
+                view,
+                status = result switch
+                {
+                    ManualOrderMoveResult.Moved => "moved",
+                    ManualOrderMoveResult.Boundary => "boundary",
+                    ManualOrderMoveResult.NonContiguousSelection => "nonContiguous",
+                    _ => "invalid"
+                },
+                moved = result == ManualOrderMoveResult.Moved,
+                count = selected.Length
+            };
+        }
+    }
+
+    /// <summary>
+    /// Kończy Ctrl+X/Ctrl+V, wstawiając stacje bezpośrednio przed wskazanym
+    /// elementem w jednej transakcji SQLite.
+    /// </summary>
+    public object PlaceRadioCollectionItemsBefore(
+        string requestedView,
+        IReadOnlyList<string> selectedItemIds,
+        IReadOnlyList<string> visibleItemIds,
+        string targetItemId)
+    {
+        var (view, table) = RadioCustomOrder(requestedView);
+        var selected = CleanDistinctIds(
+            selectedItemIds,
+            "Wybierz stację do przeniesienia.");
+        var visible = CleanDistinctIds(
+            visibleItemIds,
+            "Lista stacji jest pusta.");
+        var target = CleanRequiredText(
+            targetItemId,
+            "Wybierz stację, przed którą chcesz przenieść zaznaczenie.");
+        if (selected.Length > 10_000 || visible.Length > 10_000)
+            throw new LiteRequestException("Lista może zawierać najwyżej 10000 stacji.");
+
+        EnsureMayWrite();
+        lock (_gate)
+        {
+            using var connection = OpenDatabase(_libraryDatabasePath);
+            using var transaction = connection.BeginTransaction();
+            var order = ReadOrder(connection, transaction, table, "radio");
+            foreach (var itemId in visible)
+                SetOrderedMembership(order, itemId, true);
+            var result = LocalLibraryManualOrder.PlaceItemsBefore(
+                order,
+                selected,
+                target);
+            if (result == ManualOrderPlacementResult.Moved)
+            {
+                RewriteOrder(connection, transaction, table, "radio", order);
+                TouchMetadata(connection, transaction);
+            }
+            transaction.Commit();
+            return new
+            {
+                view,
+                status = result switch
+                {
+                    ManualOrderPlacementResult.Moved => "moved",
+                    ManualOrderPlacementResult.TargetInSelection => "targetInSelection",
+                    ManualOrderPlacementResult.TargetMissing => "targetMissing",
+                    ManualOrderPlacementResult.Unchanged => "unchanged",
+                    _ => "invalid"
+                },
+                moved = result == ManualOrderPlacementResult.Moved,
+                count = selected.Length
+            };
+        }
+    }
+
+    private static (string View, string Table) RadioCustomOrder(
+        string requestedView) => requestedView.Trim().ToLowerInvariant() switch
+        {
+            "library" => ("library", "library_custom_order"),
+            "favorites" => ("favorites", "favorite_order"),
+            _ => throw new LiteRequestException(
+                "Ręczna kolejność jest dostępna w Bibliotece i Ulubionych Radia.")
+        };
+
     private object ToggleLocalFavorites(
         IReadOnlyList<string> itemIds,
         IReadOnlyList<string>? sourcePaths)
