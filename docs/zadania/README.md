@@ -224,13 +224,15 @@ zmian, wymagający korekty użytkownika:
   o dobrowolnych wpłatach. Szczegóły:
   [LIC-001-radio-browser-bass-darowizny.md](LIC-001-radio-browser-bass-darowizny.md).
 - `REL-001` — **W trakcie; lokalny formularz, klient HTTPS, Worker i samodzielna
-  bramka wdrożenia są gotowe, a aktywacja czeka na osobny token GitHuba i
-  odbiór** — menu, F1 i paleta prowadzą do dostępnego formularza z pełnym
+  bramka wdrożenia są gotowe; nieaktywny bootstrap istnieje, a aktywacja czeka
+  na subdomenę `workers.dev`, osobny token GitHuba i odbiór** — menu, F1 i
+  paleta prowadzą do dostępnego formularza z pełnym
   podglądem, domyślnie wyłączonym logiem, redakcją danych oraz kopiowaniem lub
   atomowym zapisem w magazynie profilu. Po zweryfikowanym endpointcie ten sam
   formularz wysyła dokładnie widoczny raport w tle. Worker ma drugą redakcję,
   limit, idempotencję i rozdziela prywatną treść od publicznego issue; nie
-  został jeszcze wdrożony i nie utworzył prawdziwego zgłoszenia. Zależności
+  został wdrożony wyłącznie jako bootstrap bez sekretu i nie utworzył
+  prawdziwego zgłoszenia. Zależności
   Workera są przypięte, a skrypt wdrożenia wykonuje testy oraz dwa pakowania
   `--dry-run`. Jawny bootstrap przygotowuje migrację Durable Object bez sekretu,
   ustawienie tokenu i właściwe wdrożenie są osobnymi etapami, a skrypt nigdy sam

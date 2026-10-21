@@ -316,15 +316,21 @@ repozytorium, kanałami wydań i polityką prywatności.
   `REPORT_COORDINATORS`, limiter i zmienne, niczego nie wdrażając.
 - Odczytowe `wrangler whoami` potwierdziło aktywną sesję Cloudflare dla
   właściwego konta. Osobny odczyt po nazwie potwierdził, że Worker
-  `amc-sygnalista` jeszcze nie istnieje. Nie utworzono zasobu zdalnego, nie
-  ustawiono sekretu, nie aktywowano endpointu i nie utworzono próbnego issue.
+  `amc-sygnalista` jeszcze nie istniał przed bootstrapem.
+- Jawny bootstrap utworzył i w 100% wdrożył nieaktywną wersję Workera
+  `087e988f-3096-4e8b-b1df-ddff1f63bc2d` wraz z bindingami Durable Object i
+  limitera. Odczyt zwrotny potwierdził pustą listę sekretów. Próba HTTPS nie
+  przeszła, ponieważ konto Cloudflare nie ma jeszcze zarejestrowanej subdomeny
+  `workers.dev`; TLS zwraca błąd uzgadniania. Endpoint AMC pozostał wyłączony,
+  tokenu nie ustawiono i nie utworzono próbnego issue.
 
 ## Znane ograniczenia
 
 - Jest gotowy kod internetowego transportu, Workera i powtarzalnej bramki, ale
-  nie ma jeszcze wdrożonego Workera, prawdziwego endpointu, zdalnego Durable
-  Object ani limitera. Prywatne repozytorium raportów i etykiety już istnieją. Zbudowane
-  obecnie wydanie nadal pozostaje w trybie lokalnym i nie tworzy GitHub Issues.
+  zdalny Worker jest na razie tylko nieaktywnym bootstrapem. Nie ma jeszcze
+  działającej trasy HTTPS, sekretu GitHuba ani zweryfikowanego endpointu AMC.
+  Prywatne repozytorium raportów i etykiety już istnieją. Zbudowane obecnie
+  wydanie nadal pozostaje w trybie lokalnym i nie tworzy GitHub Issues.
 - Prawdziwe uruchomienie wymaga świadomego logowania do właściwego konta
   Cloudflare, ustawienia ograniczonego tokenu GitHuba w sekrecie Workera i
   kontrolowanego raportu próbnego. Sesja Cloudflare jest już potwierdzona;
@@ -333,6 +339,10 @@ repozytorium, kanałami wydań i polityką prywatności.
   bezpiecznie przygotować ignorowany `wrangler.jsonc`, wykonać migrację Durable
   Object i odczytać adres `workers.dev`. Brak autoryzacji lub nazwy sekretu
   zatrzymuje właściwe wdrożenie przed aktywacją endpointu.
+- Przed ustawieniem sekretu użytkownik musi jednorazowo wybrać subdomenę konta
+  na stronie Cloudflare `Workers & Pages`. Po propagacji adresu trzeba
+  potwierdzić bezpieczne `503` z `/health`, a dopiero potem wykonać osobny etap
+  `-SetGitHubToken`.
 - Przy niejednoznacznym błędzie transportu po wysłaniu żądania do GitHuba
   koordynator celowo zatrzymuje automatyczne ponowienie, ponieważ issue mogło
   już powstać. W takim przypadku opiekun musi sprawdzić oba repozytoria i
@@ -366,6 +376,10 @@ repozytorium, kanałami wydań i polityką prywatności.
   przez ten przebieg w `D:\Projekty Codex\AMC - integracja wxPython\.test-tmp`
   (łącznie 22 911 bajtów). Odzyskano około 172,55 MiB. Dane są odtwarzalne;
   nie ruszono żadnych zastanych katalogów ani niepewnych wyników testów.
+- Po bootstrapie usunięto kolejną odtwarzalną kopię `node_modules` z tego
+  samego katalogu Workera (180 906 567 bajtów, około 172,53 MiB). Zachowano
+  ignorowany `wrangler.jsonc`, ponieważ nie zawiera sekretu i jest potrzebny
+  do następnych jawnych etapów. Usunięte zależności odtworzy `npm ci`.
 
 ## Wersja i commit
 
@@ -411,6 +425,8 @@ repozytorium, kanałami wydań i polityką prywatności.
   Dzisiejszy etap zmienił wyłącznie narzędzia wdrożeniowe Workera i dokumentację,
   więc nie przebudowywano ani nie restartowano aplikacji bez działającego endpointu.
 - Publikacja: nie wykonano.
+- Infrastruktura: wykonano wyłącznie nieaktywny bootstrap Cloudflare Workera;
+  nie jest to publikacja AMC ani aktywacja internetowego formularza.
 
 ## Poza zakresem
 
