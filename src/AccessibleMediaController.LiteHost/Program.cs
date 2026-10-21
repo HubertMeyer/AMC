@@ -66,6 +66,25 @@ internal static class Program
 
         var timeshiftMinutes = ReadTimeshiftMinutes(args);
 
+        // Swiezy publiczny AMC dostaje od frontendu poprawne, lecz jeszcze
+        // nieistniejace sciezki. Zanim zarejestrujemy operacje edycji,
+        // przygotowujemy caly profil aktualnym ConfigurationStore. Bez tego
+        // Ctrl+Shift+L i import playlisty byly dostepne, ale pierwszy zapis
+        // konczyl sie komunikatem o brakujacym profilu albo bazie.
+        try
+        {
+            EnsureFreshProfileInitialized(args);
+        }
+        catch (Exception exception)
+        {
+            DiagnosticLog.Error("profile", "Nie udało się przygotować profilu AMC.", exception);
+            Console.Error.WriteLine(
+                "[amc-lite-host] Nie udało się przygotować profilu AMC: "
+                + exception.Message);
+            Console.SetOut(standardOutput);
+            return 2;
+        }
+
         // TRWALOSC kolejki. Dwie jawne decyzje, obie z wiersza polecen:
         //   --profile-dir <sciezka>  ktora KOPIA profilu,
         //   --queue-write            czy ten host jest wlascicielem zapisu.
@@ -354,6 +373,15 @@ internal static class Program
         return library is not null && podcasts is not null && state is not null
             ? new LiteProfileMutationStore(library, podcasts, state)
             : null;
+    }
+
+    private static void EnsureFreshProfileInitialized(string[] args)
+    {
+        var library = ReadArgumentPath(args, "--library-db");
+        var podcasts = ReadArgumentPath(args, "--podcasts-db");
+        var state = ReadArgumentPath(args, "--state-json");
+        if (library is null || podcasts is null || state is null) return;
+        LiteFreshProfileInitializer.EnsureInitialized(library, podcasts, state);
     }
 
     private static LiteCommonDataSnapshotCoordinator? OpenCommonDataSnapshot(string[] args)

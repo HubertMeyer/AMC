@@ -19,6 +19,7 @@ internal static class Program
         ("--bookmarks", BookmarkStoreTests.Run),
         ("--radio-library", RadioLibraryMutationTests.Run),
         ("--podcast-progress", PodcastProgressStoreTests.Run),
+        ("--fresh-profile", FreshProfileInitializationTests.Run),
         ("--tidal-catalog", TidalCatalogContractTests.Run),
         ("--spotify-catalog", SpotifyCatalogContractTests.Run),
         ("--youtube-account", YouTubeAccountContractTests.Run),
