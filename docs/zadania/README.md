@@ -141,9 +141,10 @@ zmian, wymagający korekty użytkownika:
   Bieżący zapis realizacji:
   [AMC09-menedzer-sesji.md](AMC09-menedzer-sesji.md).
 - `AMC12` — **Gotowe lokalnie do odbioru. Publiczny AMC jest budowany z tego
-  samego kodu co AMC Test; zgodnie z korektą użytkownika z 21.10.2026 zawiera
-  Sonosa, a wyłącza TIDAL i Spotify. Niedokończona sprzętowo sesja Frontier
-  Smart pozostaje tylko w AMC Test do czasu odbioru. Publiczny
+  samego kodu co AMC Test; zgodnie z korektą użytkownika z 21.10.2026 wyłącza
+  wyłącznie niedopracowane funkcje streamingowe, a wszystkie ukończone funkcje,
+  w tym Sonosa, zachowuje. Obecnie TIDAL, Spotify i nieodebrana jeszcze
+  integracja Frontier Smart pozostają tylko w AMC Test. Publiczny
   `0.1.0-alpha.427` z rewizji `3be68067` i paczki `dc9821e2` został zbudowany,
   zainstalowany w `D:\Projekty Codex\AMC Public` oraz przeszedł pełną kontrolę
   1075 plików i kontrolowany start interfejsu z hostem. Poprawka zachowuje

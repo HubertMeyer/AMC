@@ -5,12 +5,21 @@
 **Gotowe lokalnie do odbioru — publiczny AMC `0.1.0-alpha.427` z rewizji
 `3be68067` został zbudowany, zainstalowany w `D:\Projekty Codex\AMC Public`
 i przeszedł pełną kontrolę integralności oraz kontrolowany start interfejsu z
-hostem. Publiczny profil jest kopią gotowego do wydania AMC Test z wyjątkiem
-TIDAL-a i Spotify oraz niezaakceptowanej jeszcze sprzętowo sesji Frontier
-Smart; zawiera Sonosa. Import playlisty Radia zachowuje kolejność pliku,
+hostem. Publiczny profil jest kopią gotowego do wydania AMC Test, z której
+wyłączone są wyłącznie niedopracowane jeszcze funkcje streamingowe; zawiera
+Sonosa. Import playlisty Radia zachowuje kolejność pliku,
 `Alt+1–3` sortują Bibliotekę i Ulubione, `Ctrl+Shift+U` zmienia Ulubione, a
 `Ctrl+Shift+L` rzeczywiście zmienia członkostwo w Bibliotece. Publikacji
 zdalnej nie wykonano.**
+
+### Korekta użytkownika z 21.10.2026
+
+Ta decyzja zastępuje wcześniejsze opisy o stałym, ogólnym ograniczaniu profilu
+publicznego do wybranej listy usług. Kryterium jest dojrzałość funkcji:
+publiczny AMC ma być kopią AMC Test i nie zawierać wyłącznie tych funkcji
+streamingowych, które nie są jeszcze dopracowane. Ukończone funkcje — w tym
+Sonos — pozostają dostępne. Obecnie wyłączone pozostają TIDAL, Spotify i
+nieodebrana jeszcze integracja Frontier Smart.
 
 Źródłowa, zatwierdzona specyfikacja pozostaje w pliku tylko do odczytu:
 `D:\Projekty Codex\Accessible Multimedia Controller\AMC12_PROFILE_WYDANIA_PUBLICZNEGO_I_TESTOWEGO_2026-10-18.md`.
@@ -24,8 +33,8 @@ zdalnej nie wykonano.**
 - Obecny AMC Test zachowuje istniejące katalogi, więc ten etap nie przenosi i
   nie zeruje danych użytkownika.
 - Publiczny AMC ma od początku osobne katalogi. Funkcjonalnie odpowiada
-  wydawanej wersji AMC Test; wyłączone są wyłącznie niedopuszczone jeszcze
-  TIDAL i Spotify. Sonos oraz każda inna ukończona wspólna sesja pozostają
+  wydawanej wersji AMC Test; wyłączone są wyłącznie niedopracowane funkcje
+  streamingowe. Sonos oraz każda inna ukończona wspólna sesja pozostają
   dostępne tak samo jak w AMC Test.
 - Ten sam model możliwości filtruje kolejność `Ctrl+1–9`, Menedżer sesji,
   menu, pomoc `Ctrl+F1`, pełną pomoc klawiatury, paletę `Ctrl+Shift+K`,
@@ -48,7 +57,8 @@ i zachowuje wszystkie sesje prywatne oraz funkcje przeznaczone do prób. Słowo
 „Test” określa kanał dystrybucji, a nie niesprawny prototyp. **AMC** jest nazwą
 wydania przeznaczonego dla wszystkich.
 Publiczny AMC pokazuje te same ukończone funkcje co AMC Test, w tym Sonosa.
-Jedynymi wyłączonymi usługami są obecnie TIDAL i Spotify. Nie ma ich ani w
+Wyłączone są tylko niedopracowane funkcje streamingowe; obecnie dotyczy to
+TIDAL-a, Spotify i nieodebranej integracji Frontier Smart. Nie ma ich ani w
 Menedżerze sesji, ani w menu, pomocy `Ctrl+F1`, pełnej pomocy klawiatury i
 palecie `Ctrl+Shift+K`; ich stare skróty również ich nie uruchomią.
 
