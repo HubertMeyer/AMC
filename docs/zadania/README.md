@@ -239,16 +239,17 @@ zmian, wymagający korekty użytkownika:
 - `LIC-001` — **Oczekuje** — Radio Browser, licencja BASS i bezpieczna decyzja
   o dobrowolnych wpłatach. Szczegóły:
   [LIC-001-radio-browser-bass-darowizny.md](LIC-001-radio-browser-bass-darowizny.md).
-- `REL-001` — **W trakcie; lokalny formularz jest w AMC Test, a klient HTTPS i
-  własny Worker są gotowe w kodzie oraz testach, lecz czekają na infrastrukturę
-  i odbiór** — menu, F1 i paleta prowadzą do dostępnego formularza z pełnym
+- `REL-001` — **W trakcie; lokalny formularz, klient HTTPS, Worker i samodzielna
+  bramka wdrożenia są gotowe, a aktywacja czeka na świadomą autoryzację
+  Cloudflare i odbiór** — menu, F1 i paleta prowadzą do dostępnego formularza z pełnym
   podglądem, domyślnie wyłączonym logiem, redakcją danych oraz kopiowaniem lub
   atomowym zapisem w magazynie profilu. Po zweryfikowanym endpointcie ten sam
   formularz wysyła dokładnie widoczny raport w tle. Worker ma drugą redakcję,
   limit, idempotencję i rozdziela prywatną treść od publicznego issue; nie
   został jeszcze wdrożony i nie utworzył prawdziwego zgłoszenia. Zależności
-  Workera są przypięte, a skrypt wdrożenia działa domyślnie tylko jako lokalna
-  bramka i nigdy sam nie rozpoczyna logowania. Prywatne
+  Workera są przypięte, a skrypt wdrożenia wykonuje testy i pakowanie `--dry-run`,
+  automatycznie przygotowuje KV dopiero przy jawnym wdrożeniu i nigdy sam nie
+  rozpoczyna logowania. Odczyt potwierdził brak sesji Cloudflare. Prywatne
   repozytorium intake i wymagane etykiety są już utworzone. Lokalna bramka
   publikacji instalatora sprawdza profil, rewizję, rozmiar, SHA-256 i wynik
   odczytany z GitHuba, ale bez jawnego `-Publish` niczego nie wysyła. Czysta

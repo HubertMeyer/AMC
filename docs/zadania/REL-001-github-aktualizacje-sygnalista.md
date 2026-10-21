@@ -1,6 +1,6 @@
 # REL-001 — GitHub Releases, aktualizacje i Sygnalista
 
-- Status: `W trakcie — transport i Worker gotowe lokalnie; czekają na infrastrukturę i odbiór`
+- Status: `W trakcie — transport, Worker i bramka wdrożenia gotowe lokalnie; aktywacja czeka na świadomą autoryzację Cloudflare i odbiór`
 - Utworzono: 18 października 2026
 - Obszar: wydania, aktualizator i dostępne zgłoszenia
 - Polecenie uruchamiające: `Uruchom zadanie REL-001`
@@ -192,6 +192,22 @@ repozytorium, kanałami wydań i polityką prywatności.
 - Możliwość lokalnego formularza jest częścią zamkniętego manifestu zarówno
   Python, jak i uruchamiacza .NET. Rozbieżność tych list zatrzymuje testy przed
   instalacją zamiast tworzyć paczkę, której uruchamiacz później odmówi.
+- Korekta użytkownika z 21 października 2026: internetowy Sygnalista ma być
+  domknięty przed rozpoczęciem widocznego logowania YouTube przez Google.
+  Dlatego nie kontynuowano YT-001, a w REL-001 usunięto ręczne przygotowywanie
+  KV i ręczne przepisywanie zwykłego adresu `workers.dev`.
+- Zgodnie z bieżącym kontraktem Wranglera brak identyfikatora w powiązaniu KV
+  oznacza kontrolowane automatyczne utworzenie zasobu przy pierwszym jawnym
+  wdrożeniu. Wersjonowany wzór nie zawiera identyfikatora konta, a utworzony
+  lokalnie `wrangler.jsonc` pozostaje ignorowany przez Git.
+- Bramka lokalna nie wymaga adresu serwera: wykonuje czyste odtworzenie
+  zależności, testy i rzeczywiste pakowanie `--dry-run` w jednorazowym katalogu.
+  Przy wdrożeniu skrypt odczytuje standardowy adres `workers.dev` z
+  potwierdzenia Wranglera, sprawdza go, weryfikuje `/health` i dopiero wtedy
+  może atomowo włączyć endpoint w źródłach AMC.
+- Nie użyto istniejącego logowania GitHub jako sekretu Workera. Sygnalista ma
+  otrzymać osobny token o minimalnym zakresie tylko do Issues w dwóch
+  wskazanych repozytoriach; brak takiego sekretu jest twardą bramką.
 
 ## Testy i wynik
 
@@ -277,19 +293,29 @@ repozytorium, kanałami wydań i polityką prywatności.
   zaliczonych** dla baz, bibliotek, historii, profili, transportu i pakowania.
   Pięć skryptów PowerShell oraz trzy skrypty Bash przeszły kontrolę składni.
   Pominięcia są platformowe i zastane; zestaw zakończył się kodem 0.
+- Etap z 21 października: **45 zaliczonych testów Python** dla formularza,
+  transportu, pakowania endpointu i nowej bramki wdrożenia; parser PowerShell
+  nie zgłosił błędu. Osobna rzeczywista bramka wykonała `npm ci`, **8/8 testów
+  Workera** oraz pakowanie Wranglera `--dry-run` z kompletem KV, limitera i
+  zmiennych, bez wysyłania kodu.
+- Odczytowe `wrangler whoami` potwierdziło, że na tym komputerze nie ma
+  autoryzowanej sesji Cloudflare. Nie rozpoczęto logowania, nie utworzono
+  zasobu zdalnego, nie ustawiono sekretu, nie aktywowano endpointu i nie
+  utworzono próbnego issue.
 
 ## Znane ograniczenia
 
-- Jest gotowy kod internetowego transportu i Workera, ale nie ma jeszcze
-  wdrożonego Workera, prawdziwego endpointu, Cloudflare KV, limitera ani
-  prywatnego repozytorium raportów. Dlatego zbudowane obecnie wydanie nadal
-  pozostaje w trybie lokalnym i nie tworzy GitHub Issues.
+- Jest gotowy kod internetowego transportu, Workera i powtarzalnej bramki, ale
+  nie ma jeszcze wdrożonego Workera, prawdziwego endpointu, Cloudflare KV ani
+  limitera. Prywatne repozytorium raportów i etykiety już istnieją. Zbudowane
+  obecnie wydanie nadal pozostaje w trybie lokalnym i nie tworzy GitHub Issues.
 - Prawdziwe uruchomienie wymaga świadomego logowania do właściwego konta
-  Cloudflare, utworzenia prywatnego `amc-support-intake`, etykiet, ograniczonego
-  tokenu GitHuba w sekrecie Workera i kontrolowanego raportu próbnego.
-- Skrypt wdrożenia nie może sam utworzyć konta, przestrzeni KV ani sekretu;
-  zatrzymuje się bez gotowego `wrangler.jsonc` i istniejącej sesji. To celowa
-  bramka wymagająca obecności użytkownika.
+  Cloudflare, ustawienia ograniczonego tokenu GitHuba w sekrecie Workera i
+  kontrolowanego raportu próbnego. Bieżący odczyt potwierdził brak sesji.
+- Skrypt nie może sam utworzyć konta Cloudflare ani sekretu. Potrafi natomiast
+  bezpiecznie przygotować ignorowany `wrangler.jsonc`, zlecić Wranglerowi
+  automatyczne utworzenie KV i odczytać adres `workers.dev`. Brak autoryzacji
+  lub nazwy sekretu zatrzymuje wdrożenie przed aktywacją endpointu.
 - Publiczny snapshot źródeł pozostaje lokalny do czasu odbioru zainstalowanego
   kandydata. Samo jego utworzenie nie jest kopią zdalną ani publikacją.
 - Zapisany raport pozostaje plikiem lokalnym; AMC nie otwiera przeglądarki.
@@ -308,6 +334,11 @@ repozytorium, kanałami wydań i polityką prywatności.
 - Zachowano jedyną zweryfikowaną paczkę publiczną, instalator, całe zastane
   `.test-output` i `.test-tmp`, źródła, dokumentację, ustawienia oraz dane
   użytkownika.
+- Po zaliczeniu bramki usunięto utworzony w tym etapie odtwarzalny katalog
+  `D:\Projekty Codex\AMC - integracja wxPython\deploy\amc-sygnalista-worker\node_modules`
+  o rozmiarze 180 906 448 bajtów, około 172,53 MiB. Nie jest odzyskiwany z
+  Kosza; dokładną zawartość odtworzy przypięte `npm ci`. Zachowano zastane
+  `.test-output`, `.test-tmp` i wszystkie źródła.
 
 ## Wersja i commit
 
@@ -339,8 +370,16 @@ repozytorium, kanałami wydań i polityką prywatności.
 - Wymagany sekret, `workers.dev`, systemowy magazyn logowania i ochrona plików
   lokalnych: `94d6a0f7` — `fix(rel): utwardz wdrozenie Workera`; 8/8 testów
   Workera zaliczone.
+- Samodzielna lokalna bramka oraz automatyczne przygotowanie KV: `05741a4e` —
+  `fix(rel): uprosc przygotowanie Workera Sygnalisty`.
+- Odczyt standardowego adresu z potwierdzonego wdrożenia: `c1554642` —
+  `fix(rel): odczytaj adres wdrozonego Workera`.
 - Instalacja: `2026.10.19-fb9ba25fe0680cf7bf5435d53eb5b073de091cca-0debb6aa`;
   manifest 1665 plików, pełna integralność i uruchomienie zweryfikowane.
+- Bieżąca uruchomiona instalacja AMC Test ma źródło `b258fb69fef580f7899c30abd0d48e6b877119be`
+  i build `2026.10.21-b258fb69fef580f7899c30abd0d48e6b877119be-726f0791`.
+  Dzisiejszy etap zmienił wyłącznie narzędzia wdrożeniowe Workera i dokumentację,
+  więc nie przebudowywano ani nie restartowano aplikacji bez działającego endpointu.
 - Publikacja: nie wykonano.
 
 ## Poza zakresem
@@ -353,7 +392,7 @@ repozytorium, kanałami wydań i polityką prywatności.
 
 ## Wynik wykonania
 
-- Data lokalnego etapu: 19–20 października 2026.
+- Data lokalnego etapu: 19–21 października 2026.
 - Repozytorium i kanały: profile i kanały są rozdzielone przez AMC12. GitHub
   został użyty wyłącznie do utworzenia i zweryfikowania prywatnego repozytorium
   intake oraz etykiet; nie wysłano kodu, instalatora, wydania ani zgłoszenia.
