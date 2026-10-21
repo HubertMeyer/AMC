@@ -1,6 +1,8 @@
 # FRONTIER-001 — Frontier Smart przez FSAPI
 
-Status: **W trakcie — poprawione, zweryfikowane z Teufel RADIO 3SIXTY, zainstalowane i uruchomione w AMC Test; czeka na odbiór NVDA**
+Status: **W trakcie — po drugim odbiorze NVDA radio najprawdopodobniej jest
+wykrywane, ale fokus i komunikaty pierwszego połączenia wymagają korekty;
+wznowienie zaplanowane na tydzień od 28.10.2026**
 
 Data rozpoczęcia: 2026-10-21
 
@@ -94,6 +96,37 @@ z WiiM, Sonosem i Folderami Biblioteki:
 
 Opis `Ctrl+F5` w menu, pomocy kontekstowej, pełnej pomocy i palecie brzmi:
 „Pokaż zapisane urządzenia Frontier Smart i opcjonalnie wyszukaj nowe”.
+
+## Drugi odbiór NVDA i punkt wznowienia — 21.10.2026
+
+Użytkownik sprawdził świeżą, nadal pustą sesję w zainstalowanym AMC Test:
+
+- wejście bezpośrednim skrótem sesji nie otworzyło konfiguracji; dopiero
+  `Ctrl+F5` otworzył okno urządzeń. Nie jest to obecnie priorytet, ale
+  obserwacja pozostaje zapisana do porównania z pierwszym włączeniem przez
+  Menedżer sesji;
+- podczas automatycznego skanowania fokus trafił na „Anuluj”/„Zamknij”. Jest to
+  błąd dostępności: użytkownik powinien otrzymać jednoznaczny stan wykrywania,
+  a fokus nie może sugerować, że jedyną dostępną czynnością jest anulowanie;
+- po krótkiej chwili fokus przeszedł do pola PIN, natomiast lista zapisanych
+  urządzeń nadal była pusta. W obecnej implementacji taki przebieg następuje
+  tylko po otrzymaniu co najmniej jednego wyniku wykrywania; przy zerowym
+  wyniku fokus trafia na „Wpisz adres ręcznie”. Jest to więc silna przesłanka,
+  że Teufel RADIO 3SIXTY został wykryty, lecz nie był jeszcze uwierzytelniony
+  PIN-em i zapisany w AMC;
+- rozdzielenie listy zapisanych urządzeń od chwilowego wyniku wykrywania jest
+  technicznie poprawne, ale użytkowo niejasne. Następna korekta ma wyraźnie
+  ogłosić nazwę wykrytego urządzenia, wyjaśnić, że wpisanie PIN-u kończy jego
+  dodawanie, oraz zachować przewidywalny fokus;
+- różne pasma Wi-Fi 2,4 GHz i 5 GHz przy tym samym SSID mogą wymagać kontroli
+  izolacji klientów i multicastu w routerze, ale opisane przejście do PIN-u nie
+  wygląda jak całkowity brak wykrycia. Nie należy przedwcześnie przypisywać
+  problemu pasmom sieci bez ponownego pomiaru.
+
+Nie wprowadzono kolejnej poprawki kodu podczas tego odbioru. Prace mają zostać
+wznowione w tygodniu rozpoczynającym się 28.10.2026 od odtworzenia dokładnego
+przebiegu, korekty fokusu w czasie skanowania i jednoznacznego komunikatu po
+wykryciu urządzenia.
 
 ## Różnice względem WiiM
 
@@ -220,6 +253,10 @@ Opis `Ctrl+F5` w menu, pomocy kontekstowej, pełnej pomocy i palecie brzmi:
   i prawidłowy PIN, Enter oraz dwuklik na liście urządzeń, powrót fokusu po
   Zamknij, ponowne otwarcie, odtwarzanie, głośność, wyciszenie, tryby i presety
   z NVDA.
+- Drugi odbiór ujawnił, że podczas skanowania pustej sesji fokus trafia na
+  przycisk zamknięcia, a wykryty, lecz jeszcze niezapisany wynik nie jest
+  dostatecznie odróżniony od pustej listy zapisanych urządzeń. Te dwa punkty
+  są następną korektą odbiorczą; zainstalowany kod nie został jeszcze zmieniony.
 
 ## Migracja, wersja i commit
 
