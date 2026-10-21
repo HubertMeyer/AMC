@@ -45,10 +45,11 @@ zmian, wymagający korekty użytkownika:
   harmonogramu nagrywania, zgodność listy `Alt+R` z blokadą zamknięcia oraz
   zachowanie niepustego pliku domkniętego przed awarią odbioru. Szczegóły:
   [REC-001-harmonogram-alt-r-zamykanie.md](REC-001-harmonogram-alt-r-zamykanie.md).
-- `AMC02` — **Korekta odczytu jednego aktywnego nagrania zainstalowana w
-  publicznym AMC `alpha.429`; czeka na odbiór NVDA** — `Alt+R` po
-  odświeżeniu listy mówi „Nagrywane, X z X, nazwa pliku”, a
-  `Alt+Shift+R` „Nagrane, X z X”; same wiersze zaczynają się od nazwy pliku.
+- `AMC02` — **Następca `alpha.429` przygotowywany do odbioru NVDA** — `Alt+R`
+  i `Alt+Shift+R` przy jednym wpisie podają widok, pozycję oraz nazwę pliku.
+  `Ctrl+H` zapisuje od teraz potwierdzony start Radia, pliku i podcastu, a
+  pojedynczy wpis Historii jest nazwany niezależnie od zdarzenia fokusu;
+  wcześniejszych niezapisanych odtworzeń nie da się odtworzyć wstecz.
   Zachowano osobną pamięć zaznaczenia oraz bitrate, wielkość i folder pod lewą
   strzałką także w `Ctrl+H`. Bieżący zapis realizacji:
   [AMC02-listy-nagrywania-i-historii.md](AMC02-listy-nagrywania-i-historii.md).

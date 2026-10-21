@@ -4,6 +4,20 @@ Status: **Korekta odczytu jednego aktywnego nagrania jest zbudowana i
 zainstalowana w publicznym AMC `0.1.0-alpha.429`. Integralność i kontrolowany
 start są zaliczone; pozostaje ręczny odbiór wypowiedzi w NVDA**.
 
+### Korekta użytkownika z 21.10.2026 — pojedynczy wiersz i `Ctrl+H`
+
+Ta korekta zastępuje wcześniejszy opis, według którego `Alt+Shift+R` kończył
+komunikat na „Nagrane, 1 z 1”. Przy jednym wpisie ma podać także użytkową nazwę
+pliku, dokładnie jak poprawione `Alt+R`. Wspólna reguła obejmuje również
+pojedynczy wpis `Ctrl+H` oraz `Ctrl+I`; nie obejmuje list wieloelementowych,
+które nadal korzystają ze zwykłej mowy fokusu kontrolki.
+
+Przyczyną pustego `Ctrl+H` w publicznym `alpha.429` nie była pusta prezentacja,
+lecz brak zapisu potwierdzonego startu odtwarzania w warstwie wxPython.
+Naprawa zapisuje Radio, lokalne pliki i podcasty ze zdarzenia rzeczywistego
+startu silnika. Nie rekonstruuje wstecz odtworzeń, których wcześniejsza wersja
+nie zachowała.
+
 ## Zakres
 
 Zadanie porządkuje dwa równorzędne podglądy:
@@ -231,6 +245,10 @@ zgodność nazw i skrótów wykonania, pomocy i palety.
   `d94ccecf` — `fix(amc02): odczytaj pojedyncze aktywne nagranie`. Jest to
   stan źródeł i testów; nie jest jeszcze dowodem nowej kompilacji ani
   instalacji.
+- Uogólnienie na `Alt+Shift+R`, `Ctrl+H` i `Ctrl+I` oraz rzeczywisty zapis
+  Historii ze zdarzenia startu silnika: commit `d94b4303` — `fix(amc): zapisz
+  historie i nazwij pojedyncze podglady`. Nowy kod i testy są wspólne dla AMC
+  Test i Public; instalacja następcy pozostaje osobnym krokiem.
 - Kandydat instalacyjny tej korekty otrzymuje numer `0.1.0-alpha.429`, aby nie
   nadpisywać nieodróżnialnym plikiem odebranego wcześniej `alpha.428`.
 - Zainstalowana paczka `alpha.429`: rewizja `ed5db3679d046a6861283a7a98952396deef2663`,

@@ -29,6 +29,46 @@ streamingowych, które nie są jeszcze dopracowane. Ukończone funkcje — w tym
 Sonos — pozostają dostępne. Obecnie wyłączone pozostają TIDAL, Spotify i
 nieodebrana jeszcze integracja Frontier Smart.
 
+### Korekta odbiorcza z 21.10.2026 — Historia i pojedynczy element
+
+Ta decyzja zastępuje wcześniejsze założenie, że puste `Ctrl+H` po działającym
+Radiu oznacza wyłącznie pusty profil publiczny. Odczyt bazy potwierdził 0
+wpisów, ale przegląd drogi wykonania wykazał też brak zapisu Historii w
+warstwie wxPython. Pełne AMC WPF wywoływało `PlaybackHistory.Record`, natomiast
+LiteHost uruchamiał dźwięk bez odpowiednika tej operacji.
+
+#### Zachowanie widoczne dla użytkownika
+
+- Host zapisuje wpis dopiero ze zdarzenia `PlaybackStarted` prawdziwego
+  silnika. Radio trafia do sesji `radio`, zwykły plik do `local`, a odcinek do
+  `podcasts`; automatyczne przejście kolejki korzysta z tego samego zdarzenia.
+- Ponowne odtworzenie przesuwa wpis na początek bez duplikatu. Każda sesja ma
+  własną listę do 500 pozycji.
+- Błąd zapisu Historii nie jest błędem odtwarzania: dźwięk pozostaje aktywny,
+  NVDA mówi tylko „Odtwarzanie działa, ale nie udało się zapisać pozycji w
+  Historii odtwarzania”, a techniczna przyczyna trafia wyłącznie do logu.
+- Przy jednym elemencie `Alt+R`, `Alt+Shift+R`, `Ctrl+H` i `Ctrl+I` synchronizują
+  listę, po czym podają wspólnie kontekst oraz użytkową nazwę wybranego wiersza.
+  Identyfikator techniczny nie trafia do mowy. Przy wielu elementach pozostaje
+  zwykła mowa natywnej listy.
+- Starego zera w publicznym profilu nie da się uzupełnić wstecz: wcześniejsza
+  wersja nie zapisała danych, z których można byłoby odtworzyć Historię.
+
+#### Implementacja i testy źródłowe
+
+- Jedynym pisarzem `library.db` pozostaje host C#. Atomowa mutacja przepisuje
+  wyłącznie jedną sesję `playback_history` i aktualizuje metadane w tej samej
+  transakcji.
+- Commit zachowania i testów: `d94b4303` — `fix(amc): zapisz historie i nazwij
+  pojedyncze podglady`.
+- Testy celowane interfejsu: 129 zaliczonych; osobny test komunikatu błędu i
+  źródła zdarzenia: 5 zaliczonych.
+- Pełna regresja przed dopisaniem ostatniego świadectwa strukturalnego: 1951
+  zaliczonych, 110 pominiętych i 11 podtestów zaliczonych. Pełne 26 zestawów
+  protokołu C# przeszło, w tym nowy test kolejności, deduplikacji, rozdzielenia
+  sesji i limitu 500.
+- Jest to dowód źródeł i testów, nie jeszcze buildu ani instalacji `alpha.430`.
+
 ### Korekta odbiorcza z 21.10.2026 — `alpha.428`
 
 Ta korekta zastępuje wcześniejsze założenie, że po fizycznym usunięciu pliku
