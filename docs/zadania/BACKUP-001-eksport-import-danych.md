@@ -61,6 +61,12 @@ opublikowany.
 - 2026-10-21: użytkownik poprosił o eksport i import wszystkiego oraz osobno
   konfiguracji, Radia, harmonogramów, Biblioteki i playlist. Wskazał
   historyczne AMC jako możliwe źródło wcześniejszego rozwiązania.
+- 2026-10-21, korekta użytkownika: zastępuje każde wcześniejsze założenie, że
+  rozwiązanie mogłoby być rozwijane również w starym AMC WPF. Stary program
+  jest odtąd wyłącznie materiałem porównawczym i źródłem rozwiązań, które
+  można przenieść. Wszystkie nowe funkcje i poprawki trafiają tylko do wersji
+  Python, czyli AMC Test. Przeniesienie do wersji publicznej nastąpi później,
+  jako osobny, świadomie rozpoczęty etap.
 - Zachowujemy osobny eksport playlist pojedynczej sesji. Kopia działu
   „Playlisty AMC” zabezpiecza wszystkie lokalne kontenery playlist programu;
   nie kopiuje plików audio ani zdalnych playlist należących do konta usługi.
