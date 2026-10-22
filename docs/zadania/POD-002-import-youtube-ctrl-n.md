@@ -67,6 +67,10 @@ potwierdzany komunikatem o dodaniu i zapisaniu źródła.
   pełna regresja Pythona **1983 zaliczone, 111 pominiętych i 11 podtestów
   zaliczonych**, kompilacje Release bez ostrzeżeń i błędów, kontrolowany start
   kandydata oraz zainstalowanej kopii: OK.
+- Ponowna promocja najnowszego `HEAD` `1badabbe` zawierała wyłącznie dwa
+  późniejsze commity dokumentacyjne. Niezmienionych testów nie uruchamiano
+  ponownie; trzy składniki Release zbudowano od nowa, a kandydat i stała
+  instalacja ponownie zaliczyły pełną integralność oraz kontrolowany start.
 
 ## Znane ograniczenia
 
@@ -84,10 +88,10 @@ potwierdzany komunikatem o dodaniu i zapisaniu źródła.
 - Commit poprawki źródeł i testów:
   `7f4a7d156cc05d90005f78d613c224a21d663160`.
 - Zainstalowany kandydat zawierający poprawkę:
-  `2026.10.23-c4a4c214e7e5bdc05fddc02c1dc644806d94490e-7353e273`,
+  `2026.10.23-1badabbeeacde3d8853457683ef750d558b3f1fd-7353e273`,
   1670 plików.
 - Stała lokalizacja: `D:\Projekty Codex\AMC Python`.
-- Potwierdzony tytuł: `AMC Test — 23.10.2026, 00:16`.
+- Potwierdzony tytuł: `AMC Test — 23.10.2026, 00:22`.
 - AMC Public, instalator i publikacja: bez zmian.
 
 ## Materiał do dokumentacji użytkownika

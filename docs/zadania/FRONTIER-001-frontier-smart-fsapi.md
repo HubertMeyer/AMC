@@ -322,6 +322,10 @@ nowych urządzeń”.
   zaliczyły pełną integralność i kontrolowany start. Zainstalowano kompilację
   `2026.10.23-c4a4c214e7e5bdc05fddc02c1dc644806d94490e-7353e273`,
   1670 plików; uruchomione okno ma tytuł „AMC Test — 23.10.2026, 00:16”.
+- Późniejszy `HEAD` `1badabbe` zmieniał wyłącznie dokumentację. Ponowna
+  promocja zbudowała trzy składniki Release, zachowała identyczne sumy plików
+  wykonywalnych i ponownie zaliczyła pełną integralność oraz kontrolowany start
+  przed i po instalacji. Niezmienionych testów nie uruchamiano drugi raz.
 
 ## Znane ograniczenia i dalszy odbiór
 
@@ -360,6 +364,6 @@ pustej i zapisanej listy: `86727573` —
 `fix(frontier): skanuj automatycznie tylko pusta sesje`. Korekta po trzecim
 odbiorze: `3ce574a6` — `fix(frontier): popraw pierwsze wykrywanie urządzenia`.
 Zainstalowana kompilacja AMC Test:
-`2026.10.23-c4a4c214e7e5bdc05fddc02c1dc644806d94490e-7353e273`.
+`2026.10.23-1badabbeeacde3d8853457683ef750d558b3f1fd-7353e273`.
 Nie publikować ani nie promować do profilu publicznego bez nowej zgody
 użytkownika.
