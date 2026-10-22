@@ -74,18 +74,24 @@ internal sealed class LitePodcastRefreshCoordinator : IDisposable
                 {
                     requested = 0,
                     succeeded = 0,
+                    partial = 0,
                     failed = 0,
                     addedEpisodes = 0,
                     retainedArchivedEpisodes = 0,
-                    inboxCount = _podcasts.GetInboxCount()
+                    inboxCount = _podcasts.GetInboxCount(),
+                    failures = Array.Empty<PodcastRefreshIssue>(),
+                    partialSources = Array.Empty<PodcastRefreshIssue>()
                 };
             }
 
             var succeeded = 0;
+            var partial = 0;
             var failed = 0;
             var addedEpisodes = 0;
             var retainedArchivedEpisodes = 0;
             var inboxCount = _podcasts.GetInboxCount();
+            var failures = new List<PodcastRefreshIssue>();
+            var partialSources = new List<PodcastRefreshIssue>();
             foreach (var target in targets)
             {
                 try
@@ -105,7 +111,17 @@ internal sealed class LitePodcastRefreshCoordinator : IDisposable
                     {
                         result = _podcasts.ApplyRefresh(target.SubscriptionId, feed);
                     }
-                    succeeded++;
+                    if (feed.EpisodesTruncated)
+                    {
+                        partial++;
+                        partialSources.Add(new PodcastRefreshIssue(
+                            UserFacingTitle(target.Title),
+                            $"wczytano pierwsze {PodcastFeedParser.MaximumEpisodes} odcinków; kanał zawiera więcej pozycji"));
+                    }
+                    else
+                    {
+                        succeeded++;
+                    }
                     addedEpisodes += result.AddedEpisodes;
                     retainedArchivedEpisodes += result.RetainedEpisodesAbsentFromFeed;
                     inboxCount = result.InboxCount;
@@ -119,9 +135,10 @@ internal sealed class LitePodcastRefreshCoordinator : IDisposable
                     or TimeoutException)
                 {
                     failed++;
+                    var issue = FailureIssue(target, exception);
+                    failures.Add(issue);
                     Console.Error.WriteLine(
-                        $"[lite-host] nie odświeżono źródła „{target.Title}”: "
-                        + exception.GetType().Name);
+                        $"[lite-host] nie odświeżono źródła „{issue.Title}”: {issue.Reason}");
                 }
             }
 
@@ -129,10 +146,13 @@ internal sealed class LitePodcastRefreshCoordinator : IDisposable
             {
                 requested = targets.Count,
                 succeeded,
+                partial,
                 failed,
                 addedEpisodes,
                 retainedArchivedEpisodes,
-                inboxCount
+                inboxCount,
+                failures,
+                partialSources
             };
         }
         finally
@@ -158,6 +178,40 @@ internal sealed class LitePodcastRefreshCoordinator : IDisposable
                 "Publiczne medium internetowe jest sprawdzane ponownie przy każdym odtwarzaniu.")
         };
     }
+
+    private static PodcastRefreshIssue FailureIssue(
+        PodcastRefreshTarget target,
+        Exception exception) => new(
+            UserFacingTitle(target.Title),
+            exception switch
+            {
+                OperationCanceledException or TimeoutException =>
+                    "przekroczono czas oczekiwania na odpowiedź",
+                HttpRequestException { StatusCode: { } status } =>
+                    $"serwer źródła zwrócił kod {(int)status}",
+                HttpRequestException => "nie udało się połączyć z serwerem źródła",
+                System.Xml.XmlException => "kanał zawiera nieprawidłowy dokument RSS lub Atom",
+                ArgumentException => "zapisany adres źródła jest nieprawidłowy",
+                InvalidDataException or NotSupportedException => UserFacingReason(exception.Message),
+                _ => "nie udało się odczytać źródła"
+            });
+
+    private static string UserFacingTitle(string? value)
+    {
+        var normalized = string.Join(' ', (value ?? string.Empty)
+            .Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+        return normalized.Length == 0 ? "Źródło bez nazwy" : normalized[..Math.Min(160, normalized.Length)];
+    }
+
+    private static string UserFacingReason(string? value)
+    {
+        var normalized = string.Join(' ', (value ?? string.Empty)
+            .Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+        if (normalized.Length == 0) return "nie udało się odczytać źródła";
+        return normalized[..Math.Min(240, normalized.Length)].TrimEnd('.', ' ', ';');
+    }
+
+    private sealed record PodcastRefreshIssue(string Title, string Reason);
 
     public void Dispose() => _rssClient?.Dispose();
 }

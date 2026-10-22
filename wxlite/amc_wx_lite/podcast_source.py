@@ -84,6 +84,7 @@ class PodcastEpisodePage:
     has_more: bool
     order_matches_amc: bool = True
     sort_mode: str | None = None
+    total_count: int = 0
 
 
 @dataclass(frozen=True, slots=True)
@@ -770,7 +771,8 @@ class PodcastSource:
                 records = connection.execute(
                     f"""
                     SELECT id, title, published_utc_ticks, is_new, is_started,
-                           is_played, download_path, payload_json
+                           is_played, download_path, payload_json,
+                           COUNT(*) OVER() AS total_count
                     FROM podcast_episodes
                     WHERE subscription_id = ?
                     ORDER BY {order}
@@ -783,6 +785,7 @@ class PodcastSource:
                 f"Nie można odczytać odcinków: {error}"
             ) from error
 
+        total_count = _as_int(records[0]["total_count"]) if records else 0
         has_more = len(records) > requested
         visible = records[:requested]
         rows: list[Row] = []
@@ -826,14 +829,23 @@ class PodcastSource:
             ))
 
         if has_more:
+            next_count = min(PAGE_SIZE, max(0, total_count - len(visible)))
             rows.append(Row(
                 item_id=f"podcast-load-more:{subscription_id}:{requested}",
                 title="Załaduj więcej odcinków",
                 kind="loadMore",
-                detail="kolejne 150 odcinków",
+                detail=(
+                    f"wczytano {len(visible)} z {total_count}; "
+                    f"Enter ładuje kolejne odcinki, najwyżej {next_count}"
+                ),
                 show_kind=False,
             ))
-        return PodcastEpisodePage(rows, len(visible), has_more)
+        return PodcastEpisodePage(
+            rows,
+            len(visible),
+            has_more,
+            total_count=total_count,
+        )
 
     def search_rows(self) -> list[Row]:
         """All locally cached sources and episodes, without paging markers.

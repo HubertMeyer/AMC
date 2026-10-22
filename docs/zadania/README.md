@@ -95,6 +95,11 @@ zmian, wymagający korekty użytkownika:
   uruchomieniem `yt-dlp`. Normalizacja jest teraz idempotentna, a Enter nadal
   wykonuje sprawdzenie i zapis bez drugiego przycisku. Szczegóły:
   [POD-002-import-youtube-ctrl-n.md](POD-002-import-youtube-ctrl-n.md).
+- `POD-003` — **Zrobione w źródłach i testach automatycznych; bez instalacji,
+  ręczny odbiór NVDA pozostaje** — naprawa niejawnego ucinania dużych kanałów
+  RSS, uczciwy wynik pełny/częściowy/błędny oraz jawne stronicowanie `wczytano
+  N z całości` z zachowaniem fokusu. Szczegóły:
+  [POD-003-niezawodnosc-odswiezania-i-duze-kanaly.md](POD-003-niezawodnosc-odswiezania-i-duze-kanaly.md).
 - `AMC04` — **Rozdziały podcastów oraz zakładki i rozdziały Spotify
   zweryfikowane automatycznie, zainstalowane i uruchomione w AMC Test; czekają
   na ręczny odbiór NVDA** — przeniesiony do głównego AMC

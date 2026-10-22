@@ -2627,6 +2627,7 @@ class Navigator:
         rows: list[Row],
         *,
         preferred_id: str | None = None,
+        total_count: int | None = None,
     ) -> list[object]:
         """Apply one podcast/channel while remembering the exact parent row."""
         state = self.sessions[SessionId.PODCASTS]
@@ -2641,10 +2642,14 @@ class Navigator:
         state.model.replace(rows, preferred_id=preferred_id or remembered)
         state.view = View.LIST
         count = sum(1 for row in rows if row.kind == "episode")
-        return [Announce(
-            f"{subscription_title}, {count} {_items_word(count)}"
-            if count else f"{subscription_title}, pusto"
-        )]
+        if count and total_count is not None and total_count > count:
+            message = f"{subscription_title}, wczytano {count} z {total_count} odcinków"
+        else:
+            message = (
+                f"{subscription_title}, {count} {_items_word(count)}"
+                if count else f"{subscription_title}, pusto"
+            )
+        return [Announce(message)]
 
     def apply_podcast_aggregate(
         self,

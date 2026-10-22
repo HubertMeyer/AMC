@@ -583,6 +583,66 @@ def _append_frontend_log(store: StateStore, message: str) -> None:
         pass
 
 
+def _podcast_refresh_issue_texts(payload: dict, key: str) -> list[str]:
+    """Return bounded, intentional labels; never stringify protocol objects."""
+
+    value = payload.get(key)
+    if not isinstance(value, list):
+        return []
+    labels: list[str] = []
+    for item in value:
+        if not isinstance(item, dict):
+            continue
+        raw_title = item.get("title") or item.get("Title")
+        raw_reason = item.get("reason") or item.get("Reason")
+        title = " ".join(raw_title.split())[:160] if isinstance(raw_title, str) else ""
+        reason = " ".join(raw_reason.split())[:240] if isinstance(raw_reason, str) else ""
+        if not title:
+            title = "Źródło bez nazwy"
+        if not reason:
+            reason = "brak szczegółów"
+        labels.append(f"{title} — {reason}")
+    return labels
+
+
+def podcast_refresh_message(payload: dict) -> str:
+    """Build one honest full, partial or failed refresh announcement."""
+
+    requested = max(0, int(payload.get("requested") or 0))
+    succeeded = max(0, int(payload.get("succeeded") or 0))
+    partial = max(0, int(payload.get("partial") or 0))
+    failed = max(0, int(payload.get("failed") or 0))
+    added = max(0, int(payload.get("addedEpisodes") or 0))
+    inbox = max(0, int(payload.get("inboxCount") or 0))
+    if partial == 0 and failed == 0:
+        return (
+            f"Odświeżono źródła: {succeeded} z {requested}. "
+            f"Nowe teraz: {added}. W skrzynce: {inbox}."
+        )
+
+    parts = [f"Odświeżono w całości: {succeeded} z {requested}."]
+    if partial:
+        issues = _podcast_refresh_issue_texts(payload, "partialSources")
+        detail = "; ".join(issues[:3])
+        if len(issues) > 3:
+            detail += f"; i {len(issues) - 3} dalszych"
+        parts.append(
+            f"Częściowo odświeżono: {partial}."
+            + (f" {detail}." if detail else "")
+        )
+    if failed:
+        issues = _podcast_refresh_issue_texts(payload, "failures")
+        detail = "; ".join(issues[:3])
+        if len(issues) > 3:
+            detail += f"; i {len(issues) - 3} dalszych"
+        parts.append(
+            f"Nie odświeżono: {failed}."
+            + (f" {detail}." if detail else "")
+        )
+    parts.append(f"Nowe teraz: {added}. W skrzynce: {inbox}.")
+    return " ".join(parts)
+
+
 def radio_timeshift_label(minutes: int) -> str:
     """Pelna, jednoznaczna etykieta bufora dla kontrolki i NVDA."""
     storage = "w pamięci" if minutes <= 24 else "na dysku"
@@ -17389,6 +17449,7 @@ class LiteFrame(wx.Frame):
                 subscription.title,
                 page.rows,
                 preferred_id=preferred,
+                total_count=page.total_count,
             )
             if completion_message:
                 self._sync_views()
@@ -18557,11 +18618,13 @@ class LiteFrame(wx.Frame):
             return
 
         self._podcast_refresh_pending = True
-        self.status_bar.show(
+        waiting_message = (
             "Odświeżanie wszystkich źródeł podcastów"
             if refresh_all
             else "Odświeżanie wybranego źródła podcastów"
         )
+        self.status_bar.show(waiting_message)
+        self.announcer.say(waiting_message)
 
         def work() -> dict:
             result = client.refresh_podcasts(subscription_id)
@@ -18569,14 +18632,7 @@ class LiteFrame(wx.Frame):
 
         def done(payload: dict) -> None:
             self._podcast_refresh_pending = False
-            requested = max(0, int(payload.get("requested") or 0))
-            succeeded = max(0, int(payload.get("succeeded") or 0))
-            added = max(0, int(payload.get("addedEpisodes") or 0))
-            inbox = max(0, int(payload.get("inboxCount") or 0))
-            message = (
-                f"Odświeżono źródła: {succeeded} z {requested}. "
-                f"Nowe teraz: {added}. W skrzynce: {inbox}."
-            )
+            message = podcast_refresh_message(payload)
             self.status_bar.show(message)
 
             # Tak jak w glownym AMC wynik nie wyrywa uzytkownika z odtwarzacza

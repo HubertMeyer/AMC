@@ -1260,6 +1260,28 @@ static void TestPodcastFeedParsing()
     Equal(TimeSpan.FromSeconds(3723), atomFeed.Episodes[0].Duration);
     Equal(new Uri("https://example.test/feed/media/atom.m4a"), atomFeed.Episodes[0].MediaUri);
 
+    var largeRss = new StringBuilder("<rss><channel><title>Duży kanał</title>");
+    for (var index = 0; index < 2904; index++)
+    {
+        largeRss.Append($"<item><guid>duzy-{index}</guid><title>Odcinek {index}</title>"
+            + $"<enclosure url='https://cdn.example.test/{index}.mp3' type='audio/mpeg'/></item>");
+    }
+    largeRss.Append("</channel></rss>");
+    var largeFeed = PodcastFeedParser.Parse(largeRss.ToString(), feedUri);
+    Equal(2904, largeFeed.Episodes.Count);
+    Equal(false, largeFeed.EpisodesTruncated);
+
+    var limitedRss = new StringBuilder("<rss><channel><title>Kanał ponad limit</title>");
+    for (var index = 0; index <= PodcastFeedParser.MaximumEpisodes; index++)
+    {
+        limitedRss.Append($"<item><guid>limit-{index}</guid><title>Odcinek {index}</title>"
+            + $"<enclosure url='https://cdn.example.test/limit-{index}.mp3' type='audio/mpeg'/></item>");
+    }
+    limitedRss.Append("</channel></rss>");
+    var limitedFeed = PodcastFeedParser.Parse(limitedRss.ToString(), feedUri);
+    Equal(PodcastFeedParser.MaximumEpisodes, limitedFeed.Episodes.Count);
+    Equal(true, limitedFeed.EpisodesTruncated);
+
     var rejectedDtd = false;
     try
     {
@@ -1872,6 +1894,41 @@ static void TestPodcastLibraryUpdate()
     Equal("Zmieniony starszy odcinek", settings.Episodes.Single(item => item.Id == "episode-1").Title);
     Equal(TimeSpan.FromMinutes(5).Ticks, settings.Episodes.Single(item => item.Id == "episode-1").ResumePositionTicks);
     Equal(true, settings.Episodes.Single(item => item.Id == "episode-1").IsPlayed);
+
+    // Enlarging the parser window may reveal an old archive behind a known
+    // episode.  Only entries before the first known boundary are new; the
+    // historical backfill must not flood the inbox.
+    var expanded = third with
+    {
+        Episodes =
+        [
+            second.Episodes[0] with
+            {
+                Id = "episode-3",
+                SourceIdentifier = "guid-3",
+                Title = "Najnowszy odcinek",
+                Published = new DateTimeOffset(2026, 9, 3, 12, 0, 0, TimeSpan.Zero),
+                MediaUri = new Uri("https://cdn.example.test/3.mp3")
+            },
+            second.Episodes[0],
+            first.Episodes[0] with
+            {
+                Id = "episode-0",
+                SourceIdentifier = "guid-0",
+                Title = "Odcinek z archiwum",
+                Published = new DateTimeOffset(2026, 8, 1, 12, 0, 0, TimeSpan.Zero),
+                MediaUri = new Uri("https://cdn.example.test/0.mp3")
+            }
+        ]
+    };
+    var expandedResult = PodcastLibraryUpdater.Apply(
+        settings,
+        expanded,
+        null,
+        DateTime.UtcNow.AddMinutes(3));
+    Equal(2, expandedResult.AddedEpisodes);
+    Equal(true, settings.Episodes.Single(item => item.Id == "episode-3").IsNew);
+    Equal(false, settings.Episodes.Single(item => item.Id == "episode-0").IsNew);
 
     var youtubeSettings = new PodcastSettings();
     var youtubeFeed = first with

@@ -314,6 +314,7 @@ def test_rss_episodes_follow_date_order_and_expose_resume_state() -> None:
         page = PodcastSource(private_sandbox(base)).episodes("rss-id")
 
         assert [row.title for row in page.rows] == ["Nowszy", "Starszy"]
+        assert page.total_count == 2
         first = page.rows[0]
         assert first.position_seconds == 90.0
         assert "1 godz. 5 min" in first.detail
@@ -348,9 +349,15 @@ def test_youtube_episodes_follow_feed_order_and_page_explicitly() -> None:
         expanded = source.episodes("yt-id", loaded_count=PAGE_SIZE * 2)
 
         assert first.loaded_count == PAGE_SIZE and first.has_more
+        assert first.total_count == PAGE_SIZE + 1
         assert first.rows[-1].title == "Załaduj więcej odcinków"
+        assert first.rows[-1].detail == (
+            f"wczytano {PAGE_SIZE} z {PAGE_SIZE + 1}; "
+            "Enter ładuje kolejne odcinki, najwyżej 1"
+        )
         assert first.rows[0].title == "Materiał 0"
         assert expanded.loaded_count == PAGE_SIZE + 1 and not expanded.has_more
+        assert expanded.total_count == PAGE_SIZE + 1
         assert all(row.kind == "episode" for row in expanded.rows)
 
 

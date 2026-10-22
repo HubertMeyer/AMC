@@ -129,7 +129,7 @@ def test_f5_refreshes_the_current_source_and_reopens_the_same_episode_view() -> 
     assert message == (
         "Odświeżono źródła: 1 z 1. Nowe teraz: 2. W skrzynce: 7."
     )
-    assert frame.spoken == []
+    assert frame.spoken == ["Odświeżanie wybranego źródła podcastów"]
     assert "subscription-private-id" not in " ".join(frame.statuses)
 
 
@@ -149,6 +149,73 @@ def test_second_refresh_is_refused_while_the_first_is_running() -> None:
 
     assert frame.calls == []
     assert frame.spoken == ["Odświeżanie źródeł już trwa"]
+
+
+def test_partial_refresh_names_failed_source_and_reopens_with_focus() -> None:
+    frame = _frame()
+    frame.client.refresh_podcasts = lambda _subscription_id: {
+        "requested": 1,
+        "succeeded": 0,
+        "partial": 0,
+        "failed": 1,
+        "addedEpisodes": 0,
+        "inboxCount": 7,
+        "failures": [{
+            "title": "TyfloPodcast",
+            "reason": "przekroczono czas oczekiwania na odpowiedź",
+        }],
+        "partialSources": [],
+    }
+
+    gui.LiteFrame._refresh_podcasts(frame, refresh_all=False)
+
+    assert frame.spoken == ["Odświeżanie wybranego źródła podcastów"]
+    intent, message = frame.reopened[0]
+    assert intent.preferred_id == "episode-1"
+    assert message == (
+        "Odświeżono w całości: 0 z 1. Nie odświeżono: 1. "
+        "TyfloPodcast — przekroczono czas oczekiwania na odpowiedź. "
+        "Nowe teraz: 0. W skrzynce: 7."
+    )
+    assert "subscription-private-id" not in message
+
+
+def test_truncated_feed_is_reported_as_partial_not_full_success() -> None:
+    message = gui.podcast_refresh_message({
+        "requested": 1,
+        "succeeded": 0,
+        "partial": 1,
+        "failed": 0,
+        "addedEpisodes": 25,
+        "inboxCount": 9,
+        "partialSources": [{
+            "Title": "Duży podcast",
+            "Reason": "wczytano pierwsze 5000 odcinków; kanał zawiera więcej pozycji",
+        }],
+    })
+
+    assert message == (
+        "Odświeżono w całości: 0 z 1. Częściowo odświeżono: 1. "
+        "Duży podcast — wczytano pierwsze 5000 odcinków; kanał zawiera więcej pozycji. "
+        "Nowe teraz: 25. W skrzynce: 9."
+    )
+
+
+def test_refresh_message_never_stringifies_protocol_objects() -> None:
+    marker = SimpleNamespace(secret="technical-record")
+    message = gui.podcast_refresh_message({
+        "requested": 1,
+        "succeeded": 0,
+        "partial": 0,
+        "failed": 1,
+        "addedEpisodes": 0,
+        "inboxCount": 0,
+        "failures": [{"title": marker, "reason": marker}],
+    })
+
+    assert "SimpleNamespace" not in message
+    assert "technical-record" not in message
+    assert "Źródło bez nazwy — brak szczegółów" in message
 
 
 def test_automatic_refresh_waits_until_due_and_stays_silent() -> None:
