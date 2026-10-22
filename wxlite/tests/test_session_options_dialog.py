@@ -44,8 +44,7 @@ class FakeChoice:
         self.name = name
 
     def Bind(self, event, handler) -> None:  # noqa: N802 - API wx
-        # Wybor sesji do edycji reaguje na zmiane: dialog podmienia wtedy
-        # widoczne wartosci na draft innej sesji.
+        # Atrapa zachowuje zwykle powiazania list wyboru.
         self.handler = handler
 
     def GetName(self) -> str:  # noqa: N802 - API wx
@@ -123,7 +122,7 @@ def _build(session: SessionId, options: Options, overrides, *, exercise=None) ->
             pass
 
         def Layout(self) -> None:  # noqa: N802 - API wx
-            # Przebudowa pol po zmianie edytowanej sesji przelicza uklad.
+            # Budowa pol przelicza uklad dialogu.
             pass
 
     wx.Dialog = FakeDialog
@@ -259,7 +258,7 @@ def test_predkosc_sesji_ma_jawne_etykiety_i_model_numeryczny():
         SessionId.PODCASTS, Options(), session_options.SessionPlaybackOverrides()
     )
     assert dialog.rate.name == "Domyślna prędkość odtwarzania w tej sesji"
-    assert dialog.rate.choices[0].startswith("Jak ustawienie ogólne")
+    assert dialog.rate.choices[0] == "Jak ustawienie ogólne"
     assert "1,00 razy — normalna prędkość" in dialog.rate.choices
     assert "0,75 razy — wolniej" in dialog.rate.choices
     assert "1,25 razy — szybciej" in dialog.rate.choices
@@ -335,54 +334,26 @@ def test_kontrolki_maja_nazwy_bez_znakow_akceleratora():
         assert not control.name.endswith(":")
 
 
-def test_lista_sesji_ma_tylko_jawne_nazwy_uzytkowe():
+def test_dialog_nie_ma_zbiorczego_wyboru_sesji():
     dialog = _build(
         SessionId.FILES, Options(), session_options.SessionPlaybackOverrides()
     )
-    assert dialog.session_choice.name == "Konfigurowana sesja"
-    assert dialog.session_choice.choices == [
-        "Pliki lokalne",
-        "Radio",
-        "Podcasty i YouTube",
-        "TIDAL",
-        "Spotify",
-        "Sonos",
-        "Frontier Smart",
-    ]
-    assert all("SessionId" not in label and "{" not in label for label in dialog.session_choice.choices)
-
-
-def test_zmiana_sesji_zachowuje_draft_i_buduje_wlasciwe_pola():
-    observed = {}
-
-    def exercise(dialog):
-        dialog.resume.SetSelection(dialog.resume._amc_values.index(False))
-        dialog.rate.SetSelection(dialog.rate._amc_values.index(1.5))
-
-        dialog.session_choice.SetSelection(dialog._sessions.index(SessionId.RADIO))
-        dialog._on_session_changed(None)
-        observed["radio"] = (
-            dialog.session,
-            dialog.resume,
-            dialog.rate,
-            dialog.pause,
-        )
-
-        dialog.session_choice.SetSelection(dialog._sessions.index(SessionId.FILES))
-        dialog._on_session_changed(None)
-        observed["files"] = dialog.overrides
-
-    _build(
-        SessionId.FILES,
-        Options(),
-        session_options.SessionPlaybackOverrides(),
-        exercise=exercise,
+    assert dialog.session is SessionId.FILES
+    assert not hasattr(dialog, "session_choice"), (
+        "Ctrl+Alt+Enter konfiguruje aktywna sesje bez drugiego pola wyboru"
     )
-    assert observed["radio"][0] is SessionId.RADIO
-    assert observed["radio"][1] is None and observed["radio"][2] is None
-    assert observed["radio"][3] is not None
-    assert observed["files"].remember_playback_position is False
-    assert observed["files"].playback_rate == 1.5
+
+
+def test_dziedziczona_predkosc_nie_dopowiada_globalnej_wartosci():
+    options = Options()
+    options.rate = 2.0
+    dialog = _build(
+        SessionId.PODCASTS,
+        options,
+        session_options.SessionPlaybackOverrides(playback_rate=None),
+    )
+    assert dialog.rate.choices[0] == "Jak ustawienie ogólne"
+    assert "2,00" not in dialog.rate.choices[0]
 
 
 def test_dialog_ma_zapisz_i_anuluj():

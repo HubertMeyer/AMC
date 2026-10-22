@@ -5027,7 +5027,7 @@ class SessionSelectionDialog(wx.Dialog):
 
 
 class SessionOptionsDialog(wx.Dialog):
-    """Opcje sesji. Pokazuje WYLACZNIE opcje, ktore ta sesja umie wykonac.
+    """Opcje AKTYWNEJ sesji, bez zbiorczego wyboru innej sesji.
 
     Port ``SessionPlaybackOptionsEditor.CreateDialog`` (cs:33-70). Dwie
     rzeczy przeniesione z oryginalu swiadomie:
@@ -5040,6 +5040,8 @@ class SessionOptionsDialog(wx.Dialog):
       modelu ``None``, a nie falsz. Bez tego nie dalo by sie WROCIC do
       dziedziczenia po jednorazowym wyborze.
 
+    Sesje wybiera sie w glownym oknie AMC. ``Ctrl+Alt+Enter`` jest poleceniem
+    kontekstowym: tytul i zestaw pol wynikaja wylacznie z aktywnej sesji.
     Wszystkie kontrolki sa ZWYKLE natywne wx (``wx.Choice``) -- czytnik
     nazywa je sam, bez naszych komunikatow.
     """
@@ -5059,7 +5061,6 @@ class SessionOptionsDialog(wx.Dialog):
         options,
         overrides,
         *,
-        drafts=None,
         remember_local_playback_positions: bool = True,
     ) -> None:
         super().__init__(parent, title=session_options.dialog_title(session))
@@ -5067,21 +5068,7 @@ class SessionOptionsDialog(wx.Dialog):
         self._remember_local_playback_positions = bool(
             remember_local_playback_positions
         )
-        # Drafty WSZYSTKICH sesji: przelaczenie konfigurowanej sesji nie moze
-        # zgubic tego, co uzytkownik juz wybral dla poprzedniej. Kontrakt:
-        # Zapisz utrwala kazdy zmieniony draft, Anuluj zaden.
-        self._drafts: dict = {
-            SessionId.FILES: session_options.SessionPlaybackOverrides(),
-            SessionId.RADIO: session_options.SessionPlaybackOverrides(),
-            SessionId.PODCASTS: session_options.SessionPlaybackOverrides(),
-            SessionId.TIDAL: session_options.SessionPlaybackOverrides(),
-            SessionId.SPOTIFY: session_options.SessionPlaybackOverrides(),
-            SessionId.SONOS: session_options.SessionPlaybackOverrides(),
-            SessionId.FRONTIER_SMART: session_options.SessionPlaybackOverrides(),
-        }
-        if drafts:
-            self._drafts.update(drafts)
-        self._drafts[session] = overrides
+        self._overrides = overrides
         self._session = session
         self._caps = session_options.capabilities_for(session)
         panel = wx.Panel(self)
@@ -5089,40 +5076,8 @@ class SessionOptionsDialog(wx.Dialog):
         outer = wx.BoxSizer(wx.VERTICAL)
         self._outer = outer
 
-        # WYBOR KONFIGUROWANEJ SESJI. Sam tytul okna nie jest wyborem: bez tej
-        # kontrolki dialog konfigurowal WYLACZNIE sesje, ktora wlasnie gra, a
-        # wymaganie jest odwrotne -- skonfigurowac druga sesje BEZ przelaczenia
-        # odsluchu. Dialog nie dotyka ani ``_switch_session``, ani transportu.
-        sessions = [
-            item
-            for item in (
-                SessionId.FILES,
-                SessionId.RADIO,
-                SessionId.PODCASTS,
-                SessionId.TIDAL,
-                SessionId.SPOTIFY,
-                SessionId.SONOS,
-                SessionId.FRONTIER_SMART,
-            )
-            if session_options.capabilities_for(item).has_options
-        ]
-        self._sessions = sessions
-        row = wx.BoxSizer(wx.HORIZONTAL)
-        label = wx.StaticText(panel, label="Konfigurowana &sesja:")
-        self.session_choice = wx.Choice(
-            panel,
-            choices=[session_options.session_display_name(item) for item in sessions],
-        )
-        self.session_choice.SetName("Konfigurowana sesja")
-        self.session_choice.SetSelection(sessions.index(session))
-        self.session_choice.Bind(wx.EVT_CHOICE, self._on_session_changed)
-        row.Add(label, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 8)
-        row.Add(self.session_choice, 1, wx.EXPAND)
-        outer.Add(row, 0, wx.ALL | wx.EXPAND, 12)
-
-        # Pola opcji siedza w WYMIENIANYM kontenerze: zdolnosci sesji decyduja
-        # o tym, ktore kontrolki istnieja, wiec przelaczenie sesji buduje je od
-        # nowa (ukryta kontrolka nadal siedzi w kolejnosci Tab u czytnika).
+        # Zdolnosci aktywnej sesji decyduja o tym, ktore kontrolki istnieja.
+        # Nie tworzymy kontrolek ukrytych, bo nadal trafialyby do kolejnosci Tab.
         self._fields_panel: wx.Panel | None = None
         self._fields_slot = wx.BoxSizer(wx.VERTICAL)
         outer.Add(self._fields_slot, 1, wx.EXPAND)
@@ -5140,28 +5095,12 @@ class SessionOptionsDialog(wx.Dialog):
 
     @property
     def session(self):
-        """Sesja AKTUALNIE konfigurowana w dialogu."""
+        """Aktywna sesja konfigurowana przez ten dialog."""
         return self._session
 
-    def _on_session_changed(self, _event) -> None:
-        """Przelaczenie konfigurowanej sesji. NIE zmienia odsluchu.
-
-        Wybory biezacej sesji ida do draftu, zeby wrocily po powrocie.
-        """
-        index = self.session_choice.GetSelection()
-        if index < 0:
-            return
-        wanted = self._sessions[index]
-        if wanted is self._session:
-            return
-        self._drafts[self._session] = self._collect()
-        self._session = wanted
-        self._caps = session_options.capabilities_for(wanted)
-        self._build_fields()
-
     def _build_fields(self) -> None:
-        """Zbuduj pola opcji dla BIEZACEJ sesji z jej draftu."""
-        overrides = self._drafts[self._session]
+        """Zbuduj pola opcji dla aktywnej sesji."""
+        overrides = self._overrides
         options = self._options
         if self._fields_panel is not None:
             self._fields_slot.Clear(True)
@@ -5199,15 +5138,8 @@ class SessionOptionsDialog(wx.Dialog):
             )
 
         if self._caps.supports_playback_rate:
-            inherited_rate = session_options.resolve_playback_rate(
-                options, session_options.SessionPlaybackOverrides()
-            )
             rate_choices: tuple[tuple[str, float | None], ...] = (
-                (
-                    "Jak ustawienie ogólne — "
-                    + playback_rate_choice_label(inherited_rate),
-                    None,
-                ),
+                ("Jak ustawienie ogólne", None),
             ) + tuple(
                 (playback_rate_choice_label(value), value)
                 for value in PLAYBACK_RATES
@@ -5313,19 +5245,8 @@ class SessionOptionsDialog(wx.Dialog):
 
     @property
     def overrides(self):
-        """Wybory dla sesji aktualnie pokazanej w dialogu."""
+        """Wybory dla aktywnej sesji."""
         return self._collect()
-
-    @property
-    def drafts(self) -> dict:
-        """Wybory KAZDEJ edytowanej sesji. Zapisz utrwala wszystkie.
-
-        Bez tego skonfigurowanie drugiej sesji i zatwierdzenie przepadlo by:
-        handler widzialby tylko sesje pokazana na koniec.
-        """
-        result = dict(self._drafts)
-        result[self._session] = self._collect()
-        return result
 
 
 class AudioClipExportDialog(wx.Dialog):
@@ -23828,46 +23749,33 @@ class LiteFrame(wx.Frame):
         }
 
     def _show_session_options(self) -> None:
-        """Opcje sesji: dialog, wybor sesji, Zapisz/Anuluj, zapis i SKUTEK.
+        """Opcje aktywnej sesji: Zapisz/Anuluj, zapis i skutek.
 
-        Sesje otwarcia bierzemy z nawigatora, ale KONFIGUROWANA sesja pochodzi
-        z dialogu -- wymaganie jest takie, by dalo sie ustawic druga sesje BEZ
-        przelaczenia odsluchu. Dialog oddaje ``drafts``: wybory kazdej sesji,
-        ktorej uzytkownik dotknal.
+        ``Ctrl+Alt+Enter`` jest kontekstowe. Sesje zmienia sie w glownym oknie,
+        a dialog nie zawiera drugiego, konkurencyjnego wyboru sesji.
 
         Anuluj, Escape i krzyzyk konczy sie TUTAJ: poza ``wx.ID_OK`` nie
         wolamy ani zapisu, ani silnika. Fokus wraca PO ``Destroy``, bo przed
         nim wx oddal by go z powrotem oknu modalnemu.
         """
-        opened = self.navigator.active
-        initial = (
-            opened
-            if session_options.capabilities_for(opened).has_options
-            else SessionId.FILES
-        )
-        supported_sessions = tuple(
-            session
-            for session in SessionId
-            if session_options.capabilities_for(session).has_options
-        )
-        drafts = {
-            session: session_options.effective_overrides(self.state, session)
-            for session in supported_sessions
-        }
+        current = self.navigator.active
+        if not session_options.capabilities_for(current).has_options:
+            self.announcer.say("Bieżąca sesja nie ma opcji sesji.")
+            return
+        current_overrides = session_options.effective_overrides(self.state, current)
         dialog = SessionOptionsDialog(
             self,
-            initial,
+            current,
             self.options,
-            drafts[initial],
-            drafts=drafts,
+            current_overrides,
             remember_local_playback_positions=getattr(
                 self, "_remember_local_playback_positions", True
             ),
         )
-        chosen: dict | None = None
+        chosen = None
         try:
             if dialog.ShowModal() == wx.ID_OK:
-                chosen = dialog.drafts
+                chosen = dialog.overrides
         finally:
             dialog.Destroy()
 
@@ -23875,11 +23783,11 @@ class LiteFrame(wx.Frame):
             self._restore_focus_after_dialog()
             return
 
-        self._apply_session_option_drafts(chosen)
+        self._apply_session_option_drafts({current: chosen})
         self._restore_focus_after_dialog()
 
     def _apply_session_option_drafts(self, drafts: dict) -> None:
-        """Zatwierdz wybory ze wszystkich edytowanych sesji.
+        """Zatwierdz przekazane wybory sesji.
 
         SILNIK IDZIE PRZEZ TASKRUNNER. ``audio.configure`` to wywolanie
         procesu hosta z wlasnym timeoutem; na watku GUI zawieszalo by okno i

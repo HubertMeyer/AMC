@@ -8,7 +8,7 @@ i tutaj jej nie powtarzamy. Sprawdzamy to, czego ta warstwa nie dowodzi:
 * czy akcja jest NAPRAWDE obslugiwana w ``gui._dispatch``,
 * czy Zapisz wysyla do silnika payload sesji, a Anuluj NIE wysyla nic,
 * czy odmowa silnika nie konczy sie slowem "zapisano",
-* czy wybor sesji w dialogu nie przestawia TEGO, co aktualnie gra.
+* czy dialog zapisuje tylko sesje aktywna w chwili otwarcia.
 """
 
 from __future__ import annotations
@@ -203,6 +203,11 @@ def _run_handler(modal_result, *, session=SessionId.FILES, state=None, client=No
 
     from amc_wx_lite import gui
 
+    # Inny test mogl juz zaladowac ``gui`` ze starsza instancja atrapy wx.
+    # Handler porownuje identyfikator z ``gui.wx``, wiec test musi uzyc tego
+    # samego obiektu zamiast nowo wstawionego ``sys.modules['wx']``.
+    wx = gui.wx
+
     state = state if state is not None else LiteState(options=Options())
     client = client if client is not None else FakeClient()
     saved: list[bool] = []
@@ -213,16 +218,15 @@ def _run_handler(modal_result, *, session=SessionId.FILES, state=None, client=No
             pass
 
         def ShowModal(self):  # noqa: N802 - API wx
-            return modal_result
+            # Test przekazuje znaczenie, a nie techniczny obiekt atrapy wx.
+            return wx.ID_OK if modal_result == "ok" else modal_result
 
         def Destroy(self) -> None:  # noqa: N802 - API wx
             pass
 
         @property
-        def drafts(self):
-            # Dialog oddaje wybory per SESJA: wymaganiem bylo ustawienie
-            # drugiej sesji bez przelaczania odsluchu.
-            return {session: SessionPlaybackOverrides(loudness_normalization=True)}
+        def overrides(self):
+            return SessionPlaybackOverrides(loudness_normalization=True)
 
     class FakeNavigator:
         active = session
@@ -275,7 +279,7 @@ def test_zapisz_wykonuje_pelny_pion_az_do_profilu():
     """Zatwierdzenie: silnik + utrwalenie + komunikat. Przeciwienstwo Anuluj."""
     import wx
 
-    out = _run_handler(wx.ID_OK)
+    out = _run_handler("ok")
     assert len(out["client"].calls) == 1, "silnik wywolany dokladnie raz"
     assert out["state"].session_overrides["files"].loudness_normalization is True
     assert out["saved"] == [True], "zapis profilu nastepuje po zgodzie silnika"
@@ -289,7 +293,7 @@ def test_odmowa_silnika_w_oknie_nie_utrwala_profilu():
     """Silnik odmawia -> brak 'zapisano' i brak zapisu na dysk."""
     import wx
 
-    out = _run_handler(wx.ID_OK, client=FakeClient(fail=True))
+    out = _run_handler("ok", client=FakeClient(fail=True))
     assert out["saved"] == [], "odmowa silnika nie zapisuje profilu"
     assert out["spoken"] and "zapisano" not in out["spoken"][0].lower()
     assert out["state"].session_overrides == {}
@@ -311,8 +315,8 @@ def test_odmowa_silnika_nie_daje_slowa_zapisano_ani_nie_utrwala():
     assert state.session_overrides == {}, "odrzucony wybor nie moze zostac w stanie"
 
 
-def test_wybor_sesji_radio_nie_przestawia_przetwarzania_plikow():
-    """Dialog wybiera KONFIGUROWANA sesje, nie przelacza odsluchu.
+def test_opcje_radia_nie_przestawiaja_przetwarzania_plikow():
+    """Opcje aktywnego Radia nie zmieniaja ustawien Plikow lokalnych.
 
     Radio nie ma przetwarzania dzwieku, wiec jego Opcje sesji nie moga wyslac
     pol, ktore konfiguruja wyjscie plikow lokalnych.
@@ -418,7 +422,7 @@ def test_potwierdzenie_zapisu_jest_krotkie_i_mowi_zakres():
     assert "sesj" in wynik.message.lower()
 
 
-def test_tytul_dialogu_nazywa_konfigurowana_sesje():
+def test_tytul_dialogu_nazywa_aktywna_sesje():
     for session, nazwa in ((SessionId.FILES, "Pliki lokalne"), (SessionId.RADIO, "Radio")):
         tytul = session_options.dialog_title(session)
         assert "Opcje sesji" in tytul

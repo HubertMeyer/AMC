@@ -16,7 +16,7 @@ Pieciu brakow pilnuja grupy:
    wraca z dysku bez skutku w silniku,
 4. ``resolve_pause_on_player_exit`` musi miec PRODUKCYJNEGO wolacza i naprawde
    wstrzymywac po wyjsciu z odtwarzacza -- bez ruszania cudzej grajacej sesji,
-5. dialog musi pozwolic WYBRAC konfigurowana sesje bez przelaczania odsluchu.
+5. dialog nie moze byc zbiorczym edytorem: zapisuje tylko aktywna sesje.
 """
 
 from __future__ import annotations
@@ -209,10 +209,6 @@ def test_fokus_wraca_po_zniszczeniu_dialogu_nie_przed():
         def overrides(self):
             return SessionPlaybackOverrides()
 
-        @property
-        def drafts(self):
-            return {}
-
     frame = SimpleNamespace(
         state=state,
         options=state.options,
@@ -265,10 +261,6 @@ def _handler_with_disk(refusal: bool, *, client=None, state=None):
         @property
         def overrides(self):
             return SessionPlaybackOverrides(loudness_normalization=True)
-
-        @property
-        def drafts(self):
-            return {SessionId.FILES: SessionPlaybackOverrides(loudness_normalization=True)}
 
     frame = SimpleNamespace(
         state=state,
@@ -708,33 +700,25 @@ def test_polityka_pauzy_nie_czysci_filtra_ani_listy():
         )
 
 
-# -------------------------------------- 5. wybor sesji bez zmiany odsluchu
+# -------------------------------------------- 5. aktywna sesja bez agregatora
 
 
-def test_dialog_pozwala_wybrac_konfigurowana_sesje():
-    """Sam tytul okna nie jest wyborem -- musi byc kontrolka wyboru sesji."""
+def test_dialog_nie_pozwala_wybrac_innej_sesji():
+    """Ctrl+Alt+Enter dotyczy aktywnej sesji, nie zbiorczego edytora."""
     dialog = next(
         node
         for node in _TREE.body
         if isinstance(node, ast.ClassDef) and node.name == "SessionOptionsDialog"
     )
     tresc = ast.unparse(dialog)
-    assert "session_choice" in tresc, (
-        "dialog musi miec kontrolke wyboru konfigurowanej sesji"
+    assert "session_choice" not in tresc
+    assert "_on_session_changed" not in tresc
+    assert "drafts" not in tresc, (
+        "dialog nie przechowuje ustawien innych sesji"
     )
-    init = next(
-        item
-        for item in dialog.body
-        if isinstance(item, ast.FunctionDef) and item.name == "__init__"
-    )
-    assert "drafts" in ast.unparse(dialog), (
-        "wybory kazdej sesji musza przetrwac przelaczenie w dialogu"
-    )
-    assert init is not None
 
 
-def test_wybor_sesji_w_dialogu_nie_przelacza_odsluchu():
-    """Zmiana konfigurowanej sesji NIE moze wolac ``_switch_session``."""
+def test_dialog_sesji_nie_dotyka_odsluchu():
     dialog = next(
         node
         for node in _TREE.body
@@ -747,8 +731,7 @@ def test_wybor_sesji_w_dialogu_nie_przelacza_odsluchu():
         )
 
 
-def test_handler_zapisuje_kazda_edytowana_sesje():
-    """Kontrakt draftu: Zapisz utrwala wszystkie zmienione sesje, Anuluj zadnej."""
+def test_handler_zapisuje_tylko_aktywna_sesje():
     state = LiteState(options=Options())
     client = FakeClient()
     spoken: list[str] = []
@@ -764,15 +747,8 @@ def test_handler_zapisuje_kazda_edytowana_sesje():
             pass
 
         @property
-        def session(self):
-            return SessionId.RADIO
-
-        @property
-        def drafts(self):
-            return {
-                SessionId.FILES: SessionPlaybackOverrides(loudness_normalization=True),
-                SessionId.RADIO: SessionPlaybackOverrides(pause_on_player_exit=False),
-            }
+        def overrides(self):
+            return SessionPlaybackOverrides(pause_on_player_exit=False)
 
     frame = SimpleNamespace(
         state=state,
@@ -791,13 +767,11 @@ def test_handler_zapisuje_kazda_edytowana_sesje():
         "_show_session_options",
         {"SessionOptionsDialog": Dialog, "wx": SimpleNamespace(ID_OK=5100)},
     )(frame)
-    assert state.session_overrides["files"].loudness_normalization is True, (
-        f"edycja drugiej sesji musi sie zapisac: {state.session_overrides}"
-    )
     assert state.session_overrides["radio"].pause_on_player_exit is False
+    assert "files" not in state.session_overrides
 
 
-def test_anuluj_nie_zapisuje_zadnej_z_edytowanych_sesji():
+def test_anuluj_nie_zapisuje_aktywnej_sesji():
     state = LiteState(options=Options())
     client = FakeClient()
     spoken: list[str] = []
@@ -813,15 +787,8 @@ def test_anuluj_nie_zapisuje_zadnej_z_edytowanych_sesji():
             pass
 
         @property
-        def session(self):
-            return SessionId.FILES
-
-        @property
-        def drafts(self):
-            return {
-                SessionId.FILES: SessionPlaybackOverrides(loudness_normalization=True),
-                SessionId.RADIO: SessionPlaybackOverrides(pause_on_player_exit=False),
-            }
+        def overrides(self):
+            return SessionPlaybackOverrides(loudness_normalization=True)
 
     frame = SimpleNamespace(
         state=state,
