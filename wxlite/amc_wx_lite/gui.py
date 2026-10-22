@@ -2672,7 +2672,8 @@ class PodcastSourceDialog(wx.Dialog):
         help_text = (
             "Wpisz adres kanału RSS lub Atom, kanału albo playlisty YouTube, "
             "lub pojedynczego publicznego materiału YouTube. Po zatwierdzeniu "
-            "AMC sprawdzi adres i doda źródło do Biblioteki."
+            "AMC sprawdzi adres i doda źródło do Biblioteki. Adres kanału "
+            "może mieć postać https://www.youtube.com/@NazwaKanału."
         )
         help_label = wx.StaticText(panel, label=help_text)
         help_label.SetName(help_text)
@@ -4559,9 +4560,9 @@ class FrontierSmartDevicesDialog(wx.Dialog):
         self.address_label = wx.StaticText(self, label="&Lokalny adres IP:")
         self.address = wx.TextCtrl(self)
         self.address.SetName("Lokalny adres IP urządzenia")
-        pin_label = wx.StaticText(self, label="&PIN urządzenia:")
+        self.pin_label = wx.StaticText(self, label="&PIN urządzenia:")
         self.pin = wx.TextCtrl(self, style=wx.TE_PASSWORD)
-        self.pin.SetName("PIN urządzenia, pole chronione")
+        self.pin.SetName("PIN urządzenia Frontier Smart, pole chronione")
 
         self.status = wx.StaticText(self, label="Gotowe")
         self.status.SetName("Stan konfiguracji: Gotowe")
@@ -4575,12 +4576,13 @@ class FrontierSmartDevicesDialog(wx.Dialog):
         self.remove_button = wx.Button(self, label="&Usuń z AMC")
         self.close_button = wx.Button(self, wx.ID_CANCEL, "&Zamknij")
         self.SetEscapeId(wx.ID_CANCEL)
+        self.save_button.MoveAfterInTabOrder(self.pin)
 
         fields = wx.FlexGridSizer(cols=2, hgap=8, vgap=6)
         fields.AddGrowableCol(1, 1)
         fields.Add(self.address_label, 0, wx.ALIGN_CENTER_VERTICAL)
         fields.Add(self.address, 1, wx.EXPAND)
-        fields.Add(pin_label, 0, wx.ALIGN_CENTER_VERTICAL)
+        fields.Add(self.pin_label, 0, wx.ALIGN_CENTER_VERTICAL)
         fields.Add(self.pin, 1, wx.EXPAND)
 
         buttons = wx.BoxSizer(wx.HORIZONTAL)
@@ -4603,7 +4605,7 @@ class FrontierSmartDevicesDialog(wx.Dialog):
         self.SetSizerAndFit(layout)
         self.SetMinSize((650, 430))
 
-        self.Bind(wx.EVT_SHOW, self._on_show)
+        self.Bind(wx.EVT_INIT_DIALOG, self._on_init_dialog)
         self.Bind(wx.EVT_CHAR_HOOK, self._on_key)
         self.devices.Bind(wx.EVT_LISTBOX, self._on_selection)
         self.devices.Bind(wx.EVT_LISTBOX_DCLICK, self._on_select)
@@ -4614,6 +4616,8 @@ class FrontierSmartDevicesDialog(wx.Dialog):
         self.remove_button.Bind(wx.EVT_BUTTON, self._on_remove)
         self.address_label.Hide()
         self.address.Hide()
+        self.pin_label.Hide()
+        self.pin.Hide()
         self.apply_payload(payload)
 
     @property
@@ -4694,8 +4698,9 @@ class FrontierSmartDevicesDialog(wx.Dialog):
         self._busy = False
         self._update_buttons()
         if not choices:
+            result = message.strip() or "Nie wykryto urządzeń."
             self.set_status(
-                message + " Wybierz Wpisz adres ręcznie, jeżeli znasz adres radia.",
+                result + " Wybierz Wpisz adres ręcznie, jeżeli znasz adres radia.",
                 announce=True,
             )
             self.manual_button.SetFocus()
@@ -4713,14 +4718,23 @@ class FrontierSmartDevicesDialog(wx.Dialog):
                     self.discover_button.SetFocus()
                     return
                 index = dialog.GetSelection()
-        self.address.SetValue(choices[index][0])
+        address, device_label = choices[index]
+        self.address.SetValue(address)
+        self._show_pin_field(device_label)
         self.set_status(
-            message + " " + choices[index][1]
-            + ". Wpisz PIN urządzenia i wybierz Połącz i zapisz.",
+            f"Wykryto urządzenie {device_label}. "
+            "Wpisz jego PIN, a następnie wybierz Połącz i zapisz.",
             announce=True,
         )
         self._update_buttons()
         self.pin.SetFocus()
+
+    def _show_pin_field(self, device_label: str = "Frontier Smart") -> None:
+        label = device_label.strip() or "Frontier Smart"
+        self.pin.SetName(f"PIN urządzenia {label}, pole chronione")
+        self.pin_label.Show()
+        self.pin.Show()
+        self.Layout()
 
     def _update_buttons(self) -> None:
         selected = self.selected_device_id is not None
@@ -4733,15 +4747,20 @@ class FrontierSmartDevicesDialog(wx.Dialog):
         self.remove_button.Enable(not self._busy and selected)
         self.close_button.Enable(True)
 
-    def _on_show(self, event: wx.ShowEvent) -> None:
+    def _on_init_dialog(self, event: wx.InitDialogEvent) -> None:
         event.Skip()
-        if event.IsShown():
-            wx.CallAfter(
-                self.devices.SetFocus if self._devices else self.close_button.SetFocus
-            )
-            if self._auto_discover and not self._automatic_discovery_started:
-                self._automatic_discovery_started = True
-                wx.CallAfter(self._start_discovery)
+        wx.CallAfter(self._begin_initial_flow)
+
+    def _begin_initial_flow(self) -> None:
+        if self._devices:
+            self.devices.SetFocus()
+            return
+        if self._auto_discover and not self._automatic_discovery_started:
+            self._automatic_discovery_started = True
+            self.devices.SetFocus()
+            self._start_discovery()
+            return
+        self.discover_button.SetFocus()
 
     def _on_selection(self, event: wx.CommandEvent) -> None:
         self._update_buttons()
@@ -4776,7 +4795,7 @@ class FrontierSmartDevicesDialog(wx.Dialog):
             self._manual_address_visible = True
             self.address_label.Show()
             self.address.Show()
-            self.Layout()
+        self._show_pin_field()
         self.set_status(
             "Wpisz lokalny adres IP radia, następnie PIN i wybierz Połącz i zapisz.",
             announce=True,
@@ -15263,7 +15282,10 @@ class LiteFrame(wx.Frame):
         elif session_id is SessionId.FRONTIER_SMART:
             state = self.navigator.sessions[SessionId.FRONTIER_SMART]
             if not state.model.rows:
-                self._load_frontier_smart_devices(preferred_id=state.list_anchor_id)
+                self._load_frontier_smart_devices(
+                    preferred_id=state.list_anchor_id,
+                    configure_if_empty=True,
+                )
         elif session_id is SessionId.SONOS:
             state = self.navigator.sessions[SessionId.SONOS]
             if not state.model.rows:
@@ -16019,6 +16041,8 @@ class LiteFrame(wx.Frame):
     def _load_frontier_smart_devices(
         self,
         preferred_id: str | None = None,
+        *,
+        configure_if_empty: bool = False,
     ) -> None:
         client = self.client
         if client is None:
@@ -16027,9 +16051,17 @@ class LiteFrame(wx.Frame):
 
         def done(payload: object) -> None:
             try:
+                empty = frontier_smart_should_auto_discover(payload)
                 self._apply_frontier_smart_devices_payload(payload, preferred_id)
             except FrontierSmartPayloadError as error:
                 self.announcer.say(str(error))
+                return
+            if (
+                configure_if_empty
+                and empty
+                and self.navigator.active is SessionId.FRONTIER_SMART
+            ):
+                wx.CallAfter(self._show_frontier_smart_devices, payload)
 
         self.runner.submit(
             "frontier-smart-devices",
@@ -16040,19 +16072,30 @@ class LiteFrame(wx.Frame):
             ),
         )
 
-    def _show_frontier_smart_devices(self) -> None:
+    def _show_frontier_smart_devices(
+        self,
+        initial_payload: object | None = None,
+    ) -> None:
         """Otwórz konfigurację dopiero po odczycie hosta poza wątkiem GUI."""
+        if getattr(self, "_frontier_smart_configuration_active", False):
+            return
         client = self.client
         if client is None:
             self.announcer.say("Silnik nie jest gotowy")
             return
-        self.announcer.say("Wczytuję urządzenia Frontier Smart")
+        self._frontier_smart_configuration_active = True
+        if initial_payload is None:
+            self.announcer.say("Wczytuję urządzenia Frontier Smart")
+
+        def release_with_error(message: str) -> None:
+            self._frontier_smart_configuration_active = False
+            self.announcer.say(message)
 
         def ready(initial_payload: object) -> None:
             try:
                 self._apply_frontier_smart_devices_payload(initial_payload)
             except FrontierSmartPayloadError as error:
-                self.announcer.say(str(error))
+                release_with_error(str(error))
                 return
 
             def alive(dialog: FrontierSmartDevicesDialog) -> bool:
@@ -16147,26 +16190,32 @@ class LiteFrame(wx.Frame):
                     lambda error: failed(error, dialog),
                 )
 
-            with FrontierSmartDevicesDialog(
-                self,
-                initial_payload,
-                discover=discover,
-                save=save,
-                remove=remove,
-                select=select,
-                announce=self.announcer.say,
-                auto_discover=frontier_smart_should_auto_discover(
-                    initial_payload
-                ),
-            ) as dialog:
-                dialog.ShowModal()
-            self._restore_focus_after_dialog()
+            try:
+                with FrontierSmartDevicesDialog(
+                    self,
+                    initial_payload,
+                    discover=discover,
+                    save=save,
+                    remove=remove,
+                    select=select,
+                    announce=self.announcer.say,
+                    auto_discover=frontier_smart_should_auto_discover(
+                        initial_payload
+                    ),
+                ) as dialog:
+                    dialog.ShowModal()
+            finally:
+                self._frontier_smart_configuration_active = False
+                self._restore_focus_after_dialog()
 
+        if initial_payload is not None:
+            ready(initial_payload)
+            return
         self.runner.submit(
             "frontier-smart-configure",
             client.frontier_smart_devices,
             ready,
-            lambda error: self.announcer.say(
+            lambda error: release_with_error(
                 f"Nie udało się otworzyć konfiguracji Frontier Smart: {error}"
             ),
         )
