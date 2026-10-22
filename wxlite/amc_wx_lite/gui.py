@@ -21413,7 +21413,19 @@ class LiteFrame(wx.Frame):
             SessionId.PODCASTS.value,
             SessionId.SPOTIFY.value,
         ) and chapter_key not in prepared_items:
-            self.announcer.say("Sprawdzanie rozdziałów")
+            if self.navigator.active is SessionId.SPOTIFY:
+                self.announcer.say(
+                    "Sprawdzanie rozdziałów użytkownika"
+                    + (
+                        " i znaczników czasu w opisie odcinka"
+                        if chapter_item_id.casefold().startswith(
+                            "spotify:episode:"
+                        )
+                        else ""
+                    )
+                )
+            else:
+                self.announcer.say("Sprawdzanie rozdziałów")
 
         def done(payload: dict) -> None:
             if session_id in (
@@ -21480,7 +21492,19 @@ class LiteFrame(wx.Frame):
             SessionId.PODCASTS.value,
             SessionId.SPOTIFY.value,
         ) and chapter_key not in prepared_items:
-            self.announcer.say("Sprawdzanie rozdziałów")
+            if self.navigator.active is SessionId.SPOTIFY:
+                self.announcer.say(
+                    "Sprawdzanie rozdziałów użytkownika"
+                    + (
+                        " i znaczników czasu w opisie odcinka"
+                        if chapter_item_id.casefold().startswith(
+                            "spotify:episode:"
+                        )
+                        else ""
+                    )
+                )
+            else:
+                self.announcer.say("Sprawdzanie rozdziałów")
 
         def load_chapters() -> dict:
             if session_id in (
@@ -21513,7 +21537,19 @@ class LiteFrame(wx.Frame):
                         continue
                     choices.append((f"{name}, {format_duration(position)}", position))
             if not choices:
-                self.announcer.say("Ten materiał nie ma rozdziałów")
+                if self.navigator.active is SessionId.SPOTIFY:
+                    self.announcer.say(
+                        "Brak rozdziałów użytkownika"
+                        + (
+                            " i znaczników czasu w opisie odcinka Spotify"
+                            if chapter_item_id.casefold().startswith(
+                                "spotify:episode:"
+                            )
+                            else " tego utworu Spotify"
+                        )
+                    )
+                else:
+                    self.announcer.say("Ten materiał nie ma rozdziałów")
                 return
             current = float(result.get("currentPositionSeconds") or 0.0)
             selected = max(

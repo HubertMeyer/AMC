@@ -31,6 +31,10 @@ internal static class SpotifyCatalogContractTests
         CoordinatorUsesCachedCollectionWithoutAConnection();
         CoordinatorUsesPopulatedCacheImmediatelyWhenConnected();
         CoordinatorRefreshesOnlyAlbumsToFillDurations();
+        CoordinatorRefreshesPodcastsWithPopulatedOtherCacheExactlyOnce();
+        CoordinatorClearsStalePodcastsAfterSuccessfulEmptyRefresh();
+        CoordinatorKeepsPodcastCacheWhenOnlyPartOfRefreshSucceeds();
+        CoordinatorLoginInvalidatesPreviousPodcastSnapshot();
         CoordinatorRedactsBackendFailures();
         CoordinatorSearchesExactlyOnceWithoutMutatingAnything();
         CoordinatorReadsOneDescriptionWithoutMutation();
@@ -424,6 +428,8 @@ internal static class SpotifyCatalogContractTests
             "prywatny uchwyt odtwarzania wyciekł do DTO");
         Check(row.PublicUri == "https://open.spotify.com/track/abc123",
             "jawny publiczny adres nie pozostał oddzielnym polem modelu");
+        Check(result.Warning.Contains("10 wyników każdego rodzaju", StringComparison.Ordinal),
+            "wynik wyszukiwania nie ujawnia aktualnego limitu dostawcy");
     }
 
     private static void ContainerRequestAcceptsOnlyMatchingSpotifyIdentity()
@@ -605,6 +611,125 @@ internal static class SpotifyCatalogContractTests
         Check(first.Items.Single().DurationTicks == TimeSpan.FromMinutes(38).Ticks
             && second.Items.Single().DurationTicks == TimeSpan.FromMinutes(38).Ticks,
             "czas odświeżonego albumu nie trafił do wiersza listy");
+    }
+
+    private static void CoordinatorRefreshesPodcastsWithPopulatedOtherCacheExactlyOnce()
+    {
+        using var backend = new FakeBackend
+        {
+            Cached =
+            [
+                Item(MediaItemKind.Track, "track123", "Utwór", favorite: true),
+                Item(MediaItemKind.Podcast, "old-show", "Nieaktualny podcast", library: true)
+            ],
+            RefreshedPodcasts =
+            [
+                Item(MediaItemKind.Podcast, "show123", "Podcast z konta", library: true),
+                Item(MediaItemKind.Episode, "episode123", "Zapisany odcinek", favorite: true)
+            ]
+        };
+        using var coordinator = new LiteSpotifyCatalogCoordinator(backend);
+        using var podcasts = JsonDocument.Parse(
+            """{"view":"podcasts","loadedCount":150}""");
+        using var episodes = JsonDocument.Parse(
+            """{"view":"episodes","loadedCount":150}""");
+
+        var first = (LiteSpotifyItemsResult)coordinator.CollectionView(
+            podcasts.RootElement);
+        var second = (LiteSpotifyItemsResult)coordinator.CollectionView(
+            episodes.RootElement);
+        var reopened = (LiteSpotifyItemsResult)coordinator.CollectionView(
+            podcasts.RootElement);
+
+        Check(backend.PodcastRefreshCalls == 1 && backend.RefreshCalls == 0,
+            "podcasty odświeżyły się wielokrotnie albo uruchomiły pełną synchronizację");
+        Check(first.Items.Single().Title == "Podcast z konta"
+              && second.Items.Single().Title == "Zapisany odcinek"
+              && reopened.Items.Single().Title == "Podcast z konta",
+            "wąskie odświeżenie nie zastąpiło starego podcastu albo nie objęło odcinków");
+    }
+
+    private static void CoordinatorKeepsPodcastCacheWhenOnlyPartOfRefreshSucceeds()
+    {
+        using var backend = new FakeBackend
+        {
+            Cached =
+            [
+                Item(MediaItemKind.Podcast, "oldshow123", "Podcast z zapisu", library: true),
+                Item(MediaItemKind.Episode, "oldepisode123", "Odcinek z zapisu", favorite: true)
+            ],
+            RefreshedPodcasts =
+            [
+                Item(MediaItemKind.Episode, "newepisode123", "Nowy odcinek", favorite: true)
+            ],
+            PodcastRefreshWarnings = true
+        };
+        using var coordinator = new LiteSpotifyCatalogCoordinator(backend);
+        using var podcasts = JsonDocument.Parse("""{"view":"podcasts"}""");
+
+        var result = (LiteSpotifyItemsResult)coordinator.CollectionView(
+            podcasts.RootElement);
+
+        Check(result.Items.Single().Title == "Podcast z zapisu",
+            "częściowe odświeżenie usunęło ostatni poprawny zapis podcastów");
+        Check(result.Warning.Contains("Nie wszystkie podcasty", StringComparison.Ordinal)
+              && result.Warning.Contains("ostatni zapis", StringComparison.Ordinal),
+            "częściowy wynik nie ma uczciwego komunikatu dla użytkownika");
+    }
+
+    private static void CoordinatorClearsStalePodcastsAfterSuccessfulEmptyRefresh()
+    {
+        using var backend = new FakeBackend
+        {
+            Cached =
+            [
+                Item(MediaItemKind.Track, "track123", "Utwór", favorite: true),
+                Item(MediaItemKind.Podcast, "oldshow123", "Stary podcast", library: true),
+                Item(MediaItemKind.Episode, "oldepisode123", "Stary odcinek", favorite: true)
+            ],
+            RefreshedPodcasts = []
+        };
+        using var coordinator = new LiteSpotifyCatalogCoordinator(backend);
+        using var podcasts = JsonDocument.Parse("""{"view":"podcasts"}""");
+        using var episodes = JsonDocument.Parse("""{"view":"episodes"}""");
+
+        var shows = (LiteSpotifyItemsResult)coordinator.CollectionView(
+            podcasts.RootElement);
+        var savedEpisodes = (LiteSpotifyItemsResult)coordinator.CollectionView(
+            episodes.RootElement);
+
+        Check(shows.Items.Count == 0 && savedEpisodes.Items.Count == 0,
+            "pełny pusty wynik pozostawił nieaktualny podcast albo odcinek");
+        Check(backend.PodcastRefreshCalls == 1
+              && string.IsNullOrEmpty(shows.Warning),
+            "pełny pusty wynik został błędnie uznany za awarię lub powtórzony");
+    }
+
+    private static void CoordinatorLoginInvalidatesPreviousPodcastSnapshot()
+    {
+        using var backend = new WritableFakeBackend
+        {
+            RefreshedPodcasts =
+            [
+                Item(MediaItemKind.Podcast, "oldshow123", "Podcast sprzed logowania", library: true)
+            ]
+        };
+        using var coordinator = new LiteSpotifyCatalogCoordinator(backend);
+        using var view = JsonDocument.Parse("""{"view":"podcasts"}""");
+        var before = (LiteSpotifyItemsResult)coordinator.CollectionView(view.RootElement);
+
+        backend.RefreshedPodcasts =
+        [
+            Item(MediaItemKind.Podcast, "newshow123", "Podcast po logowaniu", library: true)
+        ];
+        _ = coordinator.Login();
+        var after = (LiteSpotifyItemsResult)coordinator.CollectionView(view.RootElement);
+
+        Check(backend.LoginCalls == 1 && backend.PodcastRefreshCalls == 2,
+            "ponowne logowanie nie wymusiło świeżego odczytu podcastów");
+        Check(before.Items.Single().Title == "Podcast sprzed logowania"
+              && after.Items.Single().Title == "Podcast po logowaniu",
+            "widok podcastów zachował migawkę sprzed logowania");
     }
 
     private static void CoordinatorRedactsBackendFailures()
@@ -802,6 +927,8 @@ internal static class SpotifyCatalogContractTests
         public IReadOnlyList<MediaItem> SearchItems { get; set; } = [];
         public IReadOnlyList<MediaItem> RefreshedItems { get; set; } = [];
         public IReadOnlyList<MediaItem>? RefreshedAlbums { get; set; }
+        public IReadOnlyList<MediaItem> RefreshedPodcasts { get; set; } = [];
+        public bool PodcastRefreshWarnings { get; set; }
         public IReadOnlyList<MediaItem> ContainerItems { get; set; } = [];
         public string? Description { get; set; }
         public Exception? SearchFailure { get; set; }
@@ -811,6 +938,7 @@ internal static class SpotifyCatalogContractTests
         public Exception? AccountFailure { get; set; }
         public int RefreshCalls { get; private set; }
         public int AlbumRefreshCalls { get; private set; }
+        public int PodcastRefreshCalls { get; private set; }
         public int SearchCalls { get; private set; }
         public int ContainerCalls { get; private set; }
         public int DescriptionCalls { get; private set; }
@@ -842,6 +970,15 @@ internal static class SpotifyCatalogContractTests
                 RefreshedAlbums ?? Cached.Where(item =>
                     item.Kind == MediaItemKind.Album).ToArray(),
                 false));
+        }
+
+        public Task<LiteSpotifyCollectionRefresh> RefreshPodcastsAsync(
+            CancellationToken cancellationToken)
+        {
+            PodcastRefreshCalls++;
+            return Task.FromResult(new LiteSpotifyCollectionRefresh(
+                RefreshedPodcasts,
+                PodcastRefreshWarnings));
         }
 
         public Task<IReadOnlyList<MediaItem>> SearchAsync(
@@ -883,7 +1020,9 @@ internal static class SpotifyCatalogContractTests
         public int RefreshCalls { get; private set; }
         public int PlaylistTargetCalls { get; private set; }
         public int LoginCalls { get; private set; }
+        public int PodcastRefreshCalls { get; private set; }
         public IReadOnlyList<SpotifyPlaylistTarget> PlaylistTargets { get; set; } = [];
+        public IReadOnlyList<MediaItem> RefreshedPodcasts { get; set; } = [];
 
         public IReadOnlyList<MediaItem> CachedCollection => [];
 
@@ -900,6 +1039,15 @@ internal static class SpotifyCatalogContractTests
         public Task<LiteSpotifyCollectionRefresh> RefreshAlbumsAsync(
             CancellationToken cancellationToken) =>
             Task.FromResult(new LiteSpotifyCollectionRefresh([], false));
+
+        public Task<LiteSpotifyCollectionRefresh> RefreshPodcastsAsync(
+            CancellationToken cancellationToken)
+        {
+            PodcastRefreshCalls++;
+            return Task.FromResult(new LiteSpotifyCollectionRefresh(
+                RefreshedPodcasts,
+                false));
+        }
 
         public Task<IReadOnlyList<MediaItem>> SearchAsync(
             string query,

@@ -110,6 +110,34 @@ internal sealed class LiteSpotifyWindowsCatalogBackend :
         }
     }
 
+    public async Task<LiteSpotifyCollectionRefresh> RefreshPodcastsAsync(
+        CancellationToken cancellationToken)
+    {
+        EnsureCatalogReady();
+        try
+        {
+            var credentials = await _integration
+                .GetPlaybackCredentialsAsync(cancellationToken)
+                .ConfigureAwait(false);
+            var result = await _api.GetSavedPodcastsAsync(
+                    credentials.AccessToken,
+                    cancellationToken)
+                .ConfigureAwait(false);
+            if (result is null)
+            {
+                throw new InvalidOperationException(
+                    "Nie udało się pobrać podcastów ani zapisanych odcinków Spotify.");
+            }
+            return new LiteSpotifyCollectionRefresh(
+                [.. result.Shows, .. result.Episodes],
+                result.Warnings.Count > 0);
+        }
+        catch (Exception exception)
+        {
+            throw Translate(exception, cancellationToken);
+        }
+    }
+
     public async Task<IReadOnlyList<MediaItem>> SearchAsync(
         string query,
         CancellationToken cancellationToken)
