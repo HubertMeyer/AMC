@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import sqlite3
 import tempfile
 import threading
@@ -13,6 +14,10 @@ from pathlib import Path
 
 from amc_wx_lite.host_client import LiteHostClient
 from test_podcast_download_host_e2e import _create_database
+
+
+WIENIAWSKI_CHANNEL = "https://www.youtube.com/@WieniawskiSociety"
+WIENIAWSKI_NORMALIZED = "https://www.youtube.com/%40WieniawskiSociety/videos"
 
 
 class _FeedHandler(BaseHTTPRequestHandler):
@@ -103,3 +108,65 @@ def test_real_host_adds_rss_source_and_preserves_user_facing_title() -> None:
             server.shutdown()
             server.server_close()
             thread.join(timeout=5)
+
+
+def test_real_host_adds_youtube_handle_when_live_test_is_enabled() -> None:
+    """Opcjonalny odbiór sieciowy dokładnej drogi Ctrl+N przez LiteHost.
+
+    Deterministyczna regresja normalizacji jest w teście C#. Tutaj środowisko
+    ``AMC_LIVE_YOUTUBE_ADDRESS`` jawnie zezwala na rzeczywiste wywołanie
+    publicznego YouTube i yt-dlp bez dotykania profilu użytkownika.
+    """
+
+    address = os.environ.get("AMC_LIVE_YOUTUBE_ADDRESS", "").strip()
+    if not address:
+        raise unittest.SkipTest(
+            "ustaw AMC_LIVE_YOUTUBE_ADDRESS, aby wykonać odczytowy test YouTube"
+        )
+    assert address == WIENIAWSKI_CHANNEL
+
+    root = Path(__file__).resolve().parents[2]
+    host = (
+        root
+        / "src"
+        / "AccessibleMediaController.LiteHost"
+        / "bin"
+        / "Release"
+        / "net8.0-windows10.0.19041.0"
+        / "amc_lite_host.exe"
+    )
+    if not host.is_file():
+        raise unittest.SkipTest("najpierw zbuduj host AMC-wx-Lite w konfiguracji Release")
+
+    temporary_root = root / ".tmp-tests"
+    temporary_root.mkdir(exist_ok=True)
+    with tempfile.TemporaryDirectory(
+        prefix="podcast-add-youtube-", dir=temporary_root
+    ) as directory:
+        temp = Path(directory)
+        database = temp / "podcasts.db"
+        _create_database(
+            database,
+            media_url="https://example.invalid/already-there.mp3",
+            downloads=temp / "Pobrane",
+        )
+        client = LiteHostClient(host, podcasts_db=database)
+        try:
+            client.start()
+            result = client.add_podcast_source(address)
+            assert result["sourceKind"] == "youtubeChannel"
+            assert result["sourceLabel"] == "kanał YouTube"
+            assert result["itemCount"] > 0
+            assert "Wieniawski Society" in result["title"]
+
+            with closing(sqlite3.connect(database)) as connection:
+                row = connection.execute(
+                    "SELECT title, is_in_library FROM podcast_subscriptions "
+                    "WHERE feed_url = ?",
+                    (WIENIAWSKI_NORMALIZED,),
+                ).fetchone()
+            assert row is not None
+            assert row[1] == 1
+            assert "Wieniawski Society" in row[0]
+        finally:
+            client.close()

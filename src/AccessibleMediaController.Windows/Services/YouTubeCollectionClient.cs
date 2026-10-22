@@ -158,8 +158,16 @@ internal sealed class YouTubeCollectionClient
             return true;
         }
 
+        // ``Uri.AbsolutePath`` zachowuje kodowanie procentowe. Pierwsze
+        // rozpoznanie uchwytu @ zwraca stabilny adres z ``%40``; FetchAsync
+        // celowo normalizuje go ponownie przed uruchomieniem yt-dlp. Segmenty
+        // muszą więc zostać odkodowane przed walidacją, aby normalizacja była
+        // idempotentna. Walidatory poniżej nadal odrzucają odkodowane ukośniki,
+        // znaki zapytania i pozostałe znaki spoza bezpiecznego alfabetu.
         var segments = address.AbsolutePath
-            .Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            .Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(Uri.UnescapeDataString)
+            .ToArray();
         if (segments.Length == 0) return false;
         var first = segments[0];
         var channelAddress = first.StartsWith('@')

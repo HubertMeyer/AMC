@@ -63,6 +63,11 @@ if (args.Contains("--youtube-source-resolver-only", StringComparer.Ordinal))
     TestYouTubeSourceResolver();
     return 0;
 }
+if (args.Contains("--youtube-collection-normalization", StringComparer.Ordinal))
+{
+    TestYouTubeCollectionResults();
+    return 0;
+}
 if (args.Contains("--youtube-credential-boundary", StringComparer.Ordinal))
 {
     YouTubeCredentialBoundaryTests.Run();
@@ -2754,6 +2759,25 @@ static void TestLiveYouTubeSearch(string query)
 
 static void TestYouTubeCollectionResults()
 {
+    const string wieniawskiAddress = "https://www.youtube.com/@WieniawskiSociety";
+    const string normalizedWieniawskiAddress =
+        "https://www.youtube.com/%40WieniawskiSociety/videos";
+    Assert(
+        YouTubeCollectionClient.TryNormalizeCollectionAddress(
+            new Uri(wieniawskiAddress),
+            out var firstWieniawskiNormalization,
+            out var firstWieniawskiKind)
+        && firstWieniawskiKind == PodcastSourceKind.YouTubeChannel
+        && firstWieniawskiNormalization.AbsoluteUri == normalizedWieniawskiAddress,
+        "Kanał Wieniawski Society z uchwytem @ nie ma stabilnego adresu filmów.");
+    Assert(
+        YouTubeCollectionClient.TryNormalizeCollectionAddress(
+            firstWieniawskiNormalization,
+            out var secondWieniawskiNormalization,
+            out var secondWieniawskiKind)
+        && secondWieniawskiKind == PodcastSourceKind.YouTubeChannel
+        && secondWieniawskiNormalization.AbsoluteUri == normalizedWieniawskiAddress,
+        "Ponowne sprawdzenie adresu z %40 odrzuca prawidłowy kanał przed uruchomieniem yt-dlp.");
     Assert(
         YouTubeCollectionClient.TryNormalizeCollectionAddress(
             new Uri("https://www.youtube.com/@TyfloPodcast"),

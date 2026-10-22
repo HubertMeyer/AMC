@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import inspect
 import sys
 from pathlib import Path
 from types import SimpleNamespace
@@ -120,3 +121,9 @@ def test_empty_address_is_rejected_before_host_call() -> None:
 
     assert frame.calls == []
     assert frame.spoken == ["Wpisz adres źródła"]
+
+
+def test_dialog_help_names_supported_youtube_handle_address() -> None:
+    source = inspect.getsource(gui.PodcastSourceDialog)
+    assert "https://www.youtube.com/@NazwaKanału" in source
+    assert 'add_button.SetName("Sprawdź i dodaj źródło")' in source
