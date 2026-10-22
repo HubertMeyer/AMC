@@ -1,8 +1,8 @@
 # FRONTIER-001 — Frontier Smart przez FSAPI
 
-Status: **W trakcie — poprawka po trzecim odbiorze NVDA została zbudowana,
-zainstalowana i uruchomiona w zbiorczym AMC Test 2026-10-23; czeka na ponowny
-odbiór wejścia do pustej sesji, wykrywania, fokusu i komunikatu przed PIN-em**
+Status: **W trakcie — czwarta korekta źródłowa po zgłoszeniu z 23.10.2026
+została przetestowana i zbudowana, ale nie była instalowana ani uruchamiana;
+czeka na sprzętowy odbiór z Teufelem i NVDA 24.10.2026**
 
 Data rozpoczęcia: 2026-10-21
 
@@ -209,6 +209,121 @@ nowych urządzeń”.
   ustawia fokus na właściwym polu.
 - Zapisane urządzenia otwierają się ponownie bez automatycznego skanowania.
 
+## Czwarte zgłoszenie użytkownika i korekta nadrzędna — 23.10.2026
+
+Użytkownik jednoznacznie odrzucił przebieg, w którym `Ctrl+8` i `Ctrl+F5`
+prowadziły różnymi drogami, a pole PIN pojawiało się po samym odebraniu pakietu
+SSDP. Ta decyzja zastępuje wcześniejsze założenie, że obecność adresu
+`LOCATION` oznacza już wykrycie konkretnego radia. Zainstalowana korekta z
+22.10.2026 nie została uznana za zakończoną.
+
+### Przyczyna i decyzje
+
+- LiteHost uznawał dowolną odpowiedź SSDP z nagłówkiem `LOCATION` za urządzenie
+  i sam tworzył etykietę z adresem IP, bez pobrania opisu `/device` i bez
+  potwierdzenia użytkowej nazwy radia.
+- Parser akceptował odpowiedź bez nagłówka `ST`, więc niezwiązana usługa mogła
+  zostać potraktowana jak Frontier Smart.
+- Interfejs przechodził z chwilowego wyniku prosto do pola PIN. Ręczny adres
+  również pokazywał PIN przed identyfikacją urządzenia.
+- `Ctrl+F5` mógł najpierw uruchomić automatyczną konfigurację z przełączenia
+  sesji, a następnie otworzyć zarządzanie jeszcze raz. Powstawały dwie
+  konkurujące ścieżki zamiast jednego modelu stanu.
+
+Nowy kontrakt jest wspólny dla `Ctrl+8`, `Ctrl+F5` i ręcznego adresu:
+
+- skanowanie wysyła zapytania dla obu używanych usług,
+  `fs_reference:fsapi:1` oraz `undok:fsapi:1`, na wszystkich aktywnych
+  interfejsach IPv4;
+- wynik SSDP musi mieć zgodny nagłówek `ST`, a wskazany opis XML musi zawierać
+  `netRemote`, użytkową `friendlyName` i lokalny adres `webfsapi` na tym samym
+  hoście; dopiero taki wynik jest konkretnym urządzeniem;
+- adres IP pozostaje wartością modelu. NVDA otrzymuje wyłącznie nazwę radia;
+- stany `pusto`, `zapisane urządzenia`, `wykrywanie`, `wyniki`, `brak wyników`,
+  `błąd`, `ręczny adres`, `identyfikowanie` i `oczekiwanie na PIN` są jawne i
+  przechodzą przez jeden model konfiguracji;
+- pole PIN istnieje w przebiegu dopiero po potwierdzeniu konkretnego urządzenia
+  i jego użytkowej nazwy. Ręczny adres najpierw wykonuje bezpinową identyfikację
+  `/device`;
+- brak wyniku lub błąd nie pokazuje PIN-u. Komunikat prowadzi do ponownego
+  wyszukania albo ręcznego adresu, a fokus trafia na działającą czynność;
+- błąd jednego interfejsu sieciowego nie przekreśla wyników z pozostałych.
+  Wspólny limit czasu, anulowanie użytkownika i ponowne otwarcie są rozróżnione;
+- `Ctrl+8` przy pustej sesji otwiera jeden przebieg pierwszej konfiguracji.
+  `Ctrl+F5` otwiera jeden przebieg zarządzania: przy pustej liście może szukać,
+  a przy zapisanym urządzeniu pokazuje listę bez automatycznego skanowania.
+
+### Testy i rzeczywiste wyniki korekty z 23.10.2026
+
+- `wxlite/tests/test_frontier_smart_session.py` oraz testy klienta hosta:
+  **16/16 zaliczonych**. Fikcyjne odpowiedzi obejmują osobne stany, pusty
+  wynik, błąd i fokus, ręczną identyfikację przed PIN-em, `Ctrl+8`, pojedynczy
+  przebieg `Ctrl+F5`, zapisane urządzenie i odrzucenie starej etykiety z IP.
+- Izolowany `wxlite/tests/test_gui_logic.py`: **36/36 zaliczonych**.
+- Izolowana regresja sesji, palety, menu, kolejności, skrótów, profili i haka
+  klawiatury odtwarzacza: **156/156 zaliczonych**.
+- Łączny przebieg dwóch grup wxPython w jednym procesie dał **178 zaliczonych
+  i 14 błędów**. Błędy wynikały z kolejności importu: prawdziwy moduł `wx`
+  został załadowany przed atrapą używaną przez `test_gui_logic.py`. Obie grupy
+  uruchomione we właściwej izolacji przeszły; wynik 178/14 nie jest
+  przedstawiany jako zaliczona pełna regresja.
+- Ukierunkowany zestaw kontraktu Frontier Smart LiteHost: **1/1 zaliczony**.
+  Pełny projekt testów protokołu LiteHost: **27/27 zestawów zaliczonych**.
+  Obejmuje dwa warianty `ST`, brak `ST`, bezpieczny opis urządzenia, odrzucenie
+  DTD i obcego hosta `webfsapi`, kilka interfejsów, częściowy błąd, limit czasu
+  oraz zewnętrzne anulowanie.
+- Kompilacja Release `AccessibleMediaController.LiteHost` z lokalnego źródła
+  NuGet zakończyła się z **0 ostrzeżeń i 0 błędów**. Pierwsza próba
+  `--no-restore` nie była testem kodu: zatrzymała się na braku
+  `obj\project.assets.json`; po odtworzeniu zależności offline kompilacja
+  przeszła.
+
+Nie wykonywano skanowania żywej sieci, nie używano prawdziwego PIN-u, nie
+uruchamiano AMC, nie instalowano ani nie pakowano AMC Test lub AMC Public i nie
+publikowano niczego w GitHubie. Testy sieciowe korzystały wyłącznie z atrap.
+
+### Materiał do dokumentacji użytkownika — projekt
+
+Przy pierwszym wejściu do pustej sesji skrótem `Ctrl+8` AMC wyszukuje radio.
+Pole PIN pojawia się dopiero wtedy, gdy AMC potwierdzi opis urządzenia i poda
+jego zwykłą nazwę, na przykład „Teufel RADIO 3SIXTY”. Sam adres sieciowy nie
+jest urządzeniem i nie jest czytany jako jego nazwa. Jeśli nic nie znaleziono
+albo wystąpił błąd, AMC nie pyta o PIN: pozwala ponowić wyszukiwanie lub
+sprawdzić ręcznie wpisany adres. `Ctrl+F5` używa tego samego przebiegu, a po
+zapisaniu radia otwiera jego listę bez nowego skanowania.
+
+### Projekt listy zmian
+
+- Weryfikacja opisu radia przed pokazaniem pola PIN.
+- Obsługa obu wariantów SSDP Frontier Smart/UNDOK na wielu interfejsach.
+- Jeden jawny model stanów dla `Ctrl+8`, `Ctrl+F5` i ręcznego adresu.
+- Jednoznaczne komunikaty i fokus dla wykrywania, braku wyniku i błędu.
+- Adres IP pozostaje poza zwykłą nazwą czytaną przez NVDA.
+
+### Plan odbioru sprzętowego — 24.10.2026
+
+Na rzeczywistym Teufel RADIO 3SIXTY z NVDA trzeba sprawdzić:
+
+1. `Ctrl+8` w pustej sesji rozpoczyna wykrywanie, a fokus pozostaje na
+   sensownej kontrolce.
+2. Brak wyniku pokazuje komunikat i fokus na ponowieniu lub ręcznym adresie,
+   bez pola PIN.
+3. Wykrycie Teufela ogłasza dokładną nazwę użytkową i dopiero potem pokazuje
+   chronione pole PIN.
+4. `Ctrl+F5` przy pustej konfiguracji korzysta z tego samego modelu, a przy
+   zapisanym urządzeniu skupia listę bez skanowania.
+5. Anulowanie, zamknięcie, powrót fokusu i ponowne otwarcie są przewidywalne.
+
+Do czasu tego odbioru nie ma potwierdzenia, że nowy przebieg działa z
+rzeczywistym radiem i bieżącą konfiguracją sieciową użytkownika.
+
+### Wersja i commit korekty z 23.10.2026
+
+Zmiana źródłowa i testy są w commicie
+`b11fd8bbc2de6a8f23746e5f2ec437b021f86762` —
+`fix(frontier): potwierdzaj radio przed pytaniem o PIN`. Commit nie został
+zainstalowany, uruchomiony, spakowany ani opublikowany.
+
 ## Różnice względem WiiM
 
 - Frontier Smart używa lokalnego XML FSAPI i PIN-u, a WiiM własnego protokołu
@@ -348,7 +463,8 @@ nowych urządzeń”.
 - Drugi i trzeci odbiór ujawniły, że podczas skanowania pustej sesji fokus
   trafiał na przycisk zamknięcia, a wykryty, lecz jeszcze niezapisany wynik
   nie był dostatecznie odróżniony od pustej listy zapisanych urządzeń.
-  Poprawka jest już zainstalowana; oba punkty wymagają ponownego odbioru NVDA.
+  Zainstalowana wtedy poprawka nie wystarczyła. Zastępuje ją nieinstalowana
+  korekta źródłowa `b11fd8bb`, wymagająca odbioru sprzętowego 24.10.2026.
 
 ## Migracja, wersja i commit
 
@@ -363,6 +479,9 @@ odbiorze urządzenia: `19ae6089` —
 pustej i zapisanej listy: `86727573` —
 `fix(frontier): skanuj automatycznie tylko pusta sesje`. Korekta po trzecim
 odbiorze: `3ce574a6` — `fix(frontier): popraw pierwsze wykrywanie urządzenia`.
+Korekta po czwartym zgłoszeniu: `b11fd8bbc2de6a8f23746e5f2ec437b021f86762`
+— `fix(frontier): potwierdzaj radio przed pytaniem o PIN`; ten commit nie był
+instalowany ani uruchamiany.
 Zainstalowana kompilacja AMC Test:
 `2026.10.23-1badabbeeacde3d8853457683ef750d558b3f1fd-7353e273`.
 Nie publikować ani nie promować do profilu publicznego bez nowej zgody
