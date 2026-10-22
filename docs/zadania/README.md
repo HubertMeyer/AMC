@@ -291,6 +291,12 @@ zmian, wymagający korekty użytkownika:
   badanie oficjalnych API i warunków, później ewentualny profil testowy.
   Szczegóły:
   [STR-001-tidal-apple-music-laboratorium.md](STR-001-tidal-apple-music-laboratorium.md).
+- `BLUOS-001` — **Oczekuje; opracowanie źródłowe jest gotowe, a pierwszy etap
+  wymaga pomiaru na Playerze użytkownika** — osobna lokalna sesja BluOS do
+  sterowania Playerami, grupami, kolejką, presetami i katalogiem udostępnionym
+  przez urządzenie. Nie jest to bezpośrednie API Apple Music ani TIDAL-a.
+  Szczegóły:
+  [BLUOS-001-sesja-bluos.md](BLUOS-001-sesja-bluos.md).
 
 ## Krótkie polecenia użytkownika
 
