@@ -144,6 +144,8 @@
          ograniczonych klientów sieciowych co główne AMC. -->
     <Compile Include="..\AccessibleMediaController.Windows\Services\PodcastFeedClient.cs"
              Link="Engine\PodcastFeedClient.cs" />
+    <Compile Include="..\AccessibleMediaController.Windows\Services\PodcastChapterClient.cs"
+             Link="Engine\PodcastChapterClient.cs" />
     <Compile Include="..\AccessibleMediaController.Windows\Services\YouTubeChannelFeedClient.cs"
              Link="Engine\YouTubeChannelFeedClient.cs" />
     <Compile Include="..\AccessibleMediaController.Windows\Services\YouTubeCollectionClient.cs"

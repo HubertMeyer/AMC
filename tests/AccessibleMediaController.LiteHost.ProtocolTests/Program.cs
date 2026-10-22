@@ -20,6 +20,7 @@ internal static class Program
         ("--playback-history", PlaybackHistoryMutationTests.Run),
         ("--radio-library", RadioLibraryMutationTests.Run),
         ("--podcast-progress", PodcastProgressStoreTests.Run),
+        ("--podcast-chapters", PodcastChapterCoordinatorTests.Run),
         ("--fresh-profile", FreshProfileInitializationTests.Run),
         ("--tidal-catalog", TidalCatalogContractTests.Run),
         ("--spotify-catalog", SpotifyCatalogContractTests.Run),

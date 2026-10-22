@@ -1,5 +1,22 @@
 # AMC12 — profile wydania publicznego i testowego
 
+## Nadrzędna korekta nazewnictwa z 22.10.2026
+
+Nazwy widoczne dla użytkownika mają od tej chwili postać
+`AMC Test — dd.mm.rrrr, gg:mm` oraz `AMC Public — dd.mm.rrrr, gg:mm`.
+Przyszły plik instalatora ma nazywać się na przykład
+`AMC-Public-2026-10-22-2125.exe`, bez widocznego numeru `alpha`. Commit,
+`bundleId`, techniczny `AppVersion` i tag mogą pozostać wewnętrznymi
+identyfikatorami kontroli oraz publikacji.
+
+`AMC Public` oznacza paczkę zweryfikowaną i gotową do samodzielnego wysłania
+innej osobie. Nie oznacza automatycznie, że paczka jest już na GitHubie;
+gotowość lokalna, instalacja, ręczny odbiór i publikacja zdalna nadal są
+osobnymi, jawnie raportowanymi stanami. Ta korekta zastępuje wcześniejsze
+propozycje nazw użytkowych `AMC`, `alpha.4xx`, „kompilacja 4xx” i długich
+etykiet BUILD. Występujące niżej stare nazwy plików pozostają wyłącznie
+historycznym zapisem artefaktów, które rzeczywiście wtedy powstały.
+
 ## Punkt wznowienia po odnowieniu limitu — 21.10.2026
 
 Nie rozpoczynać ponownej analizy architektury ani odtwarzania wcześniejszych

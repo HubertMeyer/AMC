@@ -9,12 +9,11 @@ Dialog pokazuje opcje, ktore MA KTO WYKONAC w silniku tej sesji. Oryginal
 liczy to w ``SessionPlaybackOptionsEditor.Describe`` (cs:18-31):
 
     SupportsAudioProcessing: local || podcasts
-    SupportsPlaybackRate:    false            (zawsze, dla kazdej sesji)
+    SupportsPlaybackRate:    false            (dawne pole bylo martwe)
     SupportsPlayerExitPause: known && id != "wiim"
     SupportsResumePosition:  local || podcasts || spotify
 
-Przełożenie na port, który ma trzy sesje (``files``, ``radio`` i
-``podcasts``):
+Przełożenie na bieżący port wielosesyjny:
 
 * ``files`` to odpowiednik ``local``: ``LiteEngineHandlers`` woła
   ``_files.ConfigureAudioProcessing(settings)``, czyli ``WindowsMediaOutput``
@@ -30,16 +29,15 @@ Przełożenie na port, który ma trzy sesje (``files``, ``radio`` i
 * Wstrzymanie po wyjsciu z odtwarzacza dziala na POZIOMIE OKNA (Escape wola
   ``transport.pauseResume``), nie w silniku, wiec maja je wszystkie sesje -- tak
   jak w oryginale, gdzie wyjatkiem jest tylko obce urzadzenie ``wiim``.
-* ``SupportsPlaybackRate`` jest w oryginale ZAWSZE falszem: dialog sesji nie
-  zapisuje wyboru predkosci, a algorytm tempa zostaje osobna funkcja (menu
-  Dzwiek). Dlatego ten port tez go tu nie zapisuje -- dwa miejsca ustawiajace
-  to samo pole silnika rozjechalyby sie przy pierwszej rozbieznosci.
-* ``SupportsResumePosition`` NIE jest tu portowany: port nie ma jeszcze
-  znacznika pozycji ani ``ResumePositionPolicy``. Pole bez wykonawcy to
-  martwa kontrolka, wiec zostaje na nastepny etap (patrz IMPLEMENTACJA.md).
+* Historyczne pole predkosci bylo martwe. Biezacy port ma jednak wykonawce:
+  ``files.play``, ``media.play`` i ``queue.playAt`` przyjmuja ``rate``. Dlatego
+  Pliki i Podcasty maja teraz prawdziwa, trwala domyslna predkosc sesji.
+* Wznowienie jest wykonywane przez hosta z zachowaniem hierarchii element,
+  folder/podcast, sesja, ustawienie ogolne. Nie wystawiamy go sesjom, ktore nie
+  maja takiego wykonawcy.
 
-ZAKRES W SILNIKU (dlaczego protokol zostaje bez zmian)
-------------------------------------------------------
+ZAKRES W SILNIKU
+----------------
 ``ConfigureAudio`` jednym wywołaniem ustawia wspólne wyjście plików i
 podcastów. Rozdział następuje tuż przed świadomym startem: ``_play_track`` i
 drogi kolejki podają bazę sesji Pliki, a ``_play_media`` bazę sesji Podcasty;
@@ -48,6 +46,8 @@ algorytm tempa. Dlatego:
 
 * nie dodajemy ``sessionId`` do ``audio.configure`` -- byla by to zmiana
   protokolu bez pokrycia w zachowaniu, a starsi klienci musieliby ja znac;
+* istniejace ``local.resumeConfigure`` przyjmuje dodatkowo dwa opcjonalne tryby
+  sesji; starszy klient, ktory ich nie wysyla, zachowuje dziedziczenie;
 * ``scope_for_session`` nazywa zakres JAWNIE, a odtwarzacz wybiera bazę przed
   każdym startem zamiast pozostawiać ustawienia poprzedniej sesji.
 """
@@ -55,9 +55,11 @@ algorytm tempa. Dlatego:
 from __future__ import annotations
 
 from dataclasses import dataclass, fields
+import math
 from typing import TYPE_CHECKING
 
 from .navigation import SessionId
+from .transport_parity import PLAYBACK_RATES, clamp_playback_rate
 
 if TYPE_CHECKING:  # pragma: no cover - tylko dla kontroli typow
     from .state_store import Options
@@ -93,12 +95,18 @@ class SessionCapabilities:
 
     supports_audio_processing: bool
     supports_playback_rate: bool
+    supports_resume_position: bool
     supports_player_exit_pause: bool
 
     @property
     def has_options(self) -> bool:
         """Port ``SessionPlaybackCapabilities.HasOptions`` (cs:12)."""
-        return self.supports_audio_processing or self.supports_player_exit_pause
+        return any((
+            self.supports_audio_processing,
+            self.supports_playback_rate,
+            self.supports_resume_position,
+            self.supports_player_exit_pause,
+        ))
 
 
 #: Zdolnosci obu sesji, ktore port ma DZISIAJ. Tabela jest jawna, zeby nowa
@@ -107,14 +115,15 @@ _CAPABILITIES: dict[SessionId, SessionCapabilities] = {
     SessionId.FILES: SessionCapabilities(
         # LiteEngineHandlers.cs:770 -- _files.ConfigureAudioProcessing(settings)
         supports_audio_processing=True,
-        # Jak w oryginale (cs:28): dialog sesji nie zapisuje predkosci.
-        supports_playback_rate=False,
+        supports_playback_rate=True,
+        supports_resume_position=True,
         supports_player_exit_pause=True,
     ),
     SessionId.RADIO: SessionCapabilities(
         # RadioMediaOutput ma tylko ConfigureTempoAlgorithm -- brak wykonawcy.
         supports_audio_processing=False,
         supports_playback_rate=False,
+        supports_resume_position=False,
         # Wstrzymanie jest na poziomie okna, wiec radio tez je ma.
         supports_player_exit_pause=True,
     ),
@@ -122,9 +131,18 @@ _CAPABILITIES: dict[SessionId, SessionCapabilities] = {
         # Przed ``media.play`` frontend ustawia bazę tej sesji, a host nakłada
         # nadpisania podcastu i odcinka przed wywołaniem WindowsMediaOutput.
         supports_audio_processing=True,
-        supports_playback_rate=False,
+        supports_playback_rate=True,
+        supports_resume_position=True,
         supports_player_exit_pause=True,
     ),
+    # Dla sesji wykonywanych przez zewnetrzne uslugi dialog udostepnia tylko
+    # zachowanie okna. Nie obiecujemy DSP ani predkosci, ktorych adapter nie ma.
+    SessionId.TIDAL: SessionCapabilities(False, False, False, True),
+    SessionId.SPOTIFY: SessionCapabilities(False, False, False, True),
+    SessionId.SONOS: SessionCapabilities(False, False, False, True),
+    SessionId.FRONTIER_SMART: SessionCapabilities(False, False, False, True),
+    # WiiM odtwarza na urzadzeniu i historycznie nie mial pauzy po wyjsciu.
+    SessionId.WIIM: SessionCapabilities(False, False, False, False),
 }
 
 
@@ -135,6 +153,7 @@ def capabilities_for(session: SessionId) -> SessionCapabilities:
         SessionCapabilities(
             supports_audio_processing=False,
             supports_playback_rate=False,
+            supports_resume_position=False,
             supports_player_exit_pause=False,
         ),
     )
@@ -158,6 +177,8 @@ class SessionPlaybackOverrides:
     decyzje, ktorej nikt nie wykonuje.
     """
 
+    remember_playback_position: bool | None = None
+    playback_rate: float | None = None
     loudness_normalization: bool | None = None
     smooth_track_transitions: bool | None = None
     inter_track_silence_ms: int | None = None
@@ -188,10 +209,22 @@ class SessionPlaybackOverrides:
         result = SessionPlaybackOverrides()
         if not isinstance(raw, dict):
             return result
-        for name in ("loudness_normalization", "smooth_track_transitions", "pause_on_player_exit"):
+        for name in (
+            "remember_playback_position",
+            "loudness_normalization",
+            "smooth_track_transitions",
+            "pause_on_player_exit",
+        ):
             value = raw.get(name)
             if type(value) is bool:
                 setattr(result, name, value)
+        rate = raw.get("playback_rate")
+        if (
+            type(rate) in (int, float)
+            and math.isfinite(float(rate))
+            and any(abs(float(rate) - allowed) < 0.001 for allowed in PLAYBACK_RATES)
+        ):
+            result.playback_rate = float(rate)
         silence = raw.get("inter_track_silence_ms")
         # Silnik odrzuca nieobslugiwana dlugosc (LiteAudioSettings.cs:15-16),
         # wiec wartosc spoza listy nie moze wejsc do stanu okna.
@@ -207,6 +240,10 @@ class SessionPlaybackOverrides:
         prywatny nie ma skad wziac starej wartosci spoza zdolnosci sesji.
         """
         return SessionPlaybackOverrides(
+            remember_playback_position=self.remember_playback_position
+            if caps.supports_resume_position
+            else None,
+            playback_rate=self.playback_rate if caps.supports_playback_rate else None,
             loudness_normalization=self.loudness_normalization
             if caps.supports_audio_processing
             else None,
@@ -225,11 +262,62 @@ class SessionPlaybackOverrides:
 #: Identyfikatory opcji, ktore dialog MOZE pokazac. Test pilnuje, zeby nie
 #: wjechalo tu pole bez wykonawcy (np. ``tempo_algorithm``).
 SESSION_OPTION_IDS: tuple[str, ...] = (
+    "remember_playback_position",
+    "playback_rate",
     "loudness_normalization",
     "smooth_track_transitions",
     "inter_track_silence_ms",
     "pause_on_player_exit",
 )
+
+
+def resolve_playback_rate(
+    options: "Options", overrides: SessionPlaybackOverrides
+) -> float:
+    """Domysl uruchomienia: jawna sesja, potem ustawienie ogolne."""
+    if overrides.playback_rate is not None:
+        return clamp_playback_rate(overrides.playback_rate)
+    return clamp_playback_rate(options.rate)
+
+
+def resolve_remember_position(
+    session: SessionId,
+    overrides: SessionPlaybackOverrides,
+    *,
+    remember_local_globally: bool = True,
+) -> bool:
+    """Efektywna decyzja sesji, zanim host nalozy element lub kontener."""
+    if overrides.remember_playback_position is not None:
+        return overrides.remember_playback_position
+    if session is SessionId.PODCASTS:
+        return True
+    return bool(remember_local_globally)
+
+
+def resume_mode_value(overrides: SessionPlaybackOverrides) -> int:
+    """Wartosc protokolu: 0 dziedzicz, 1 pamietaj, 2 od poczatku."""
+    if overrides.remember_playback_position is True:
+        return 1
+    if overrides.remember_playback_position is False:
+        return 2
+    return 0
+
+
+def configure_resume_preferences(
+    client,
+    state,
+    remember_local_globally: bool,
+):
+    """Jedno wywolanie protokolu dla ustawienia ogolnego i obu sesji."""
+    return client.configure_local_resume(
+        bool(remember_local_globally),
+        local_resume_mode=resume_mode_value(
+            effective_overrides(state, SessionId.FILES)
+        ),
+        podcast_resume_mode=resume_mode_value(
+            effective_overrides(state, SessionId.PODCASTS)
+        ),
+    )
 
 
 def resolve_audio_payload(options: "Options", overrides: SessionPlaybackOverrides) -> dict:
@@ -411,7 +499,14 @@ def apply_session_options(
     if deferred_until_playback:
         needs_engine = False
 
-    applies_next = deferred_until_playback
+    applies_next = deferred_until_playback or any((
+        caps.supports_playback_rate
+        and effective.playback_rate
+        != effective_overrides(state, session).playback_rate,
+        caps.supports_resume_position
+        and effective.remember_playback_position
+        != effective_overrides(state, session).remember_playback_position,
+    ))
     if needs_engine:
         if client is None:
             return ApplyResult(
@@ -460,7 +555,7 @@ def _choice(value: bool | None, *, yes: str, no: str) -> str:
         return yes
     if value is False:
         return no
-    return "według ustawienia ogólnego"
+    return "jak ogólne"
 
 
 def describe_pause_mode(options: "Options", overrides: SessionPlaybackOverrides) -> str:
@@ -474,9 +569,9 @@ def describe_pause_mode(options: "Options", overrides: SessionPlaybackOverrides)
     if overrides.pause_on_player_exit is False:
         return "Odtwarzaj dalej po wyjściu z odtwarzacza"
     return (
-        "Jak ustawienie ogólne: wstrzymuj po wyjściu z odtwarzacza"
+        "wyjście: jak ogólne — pauza"
         if options.pause_on_player_exit
-        else "Jak ustawienie ogólne: odtwarzaj dalej po wyjściu"
+        else "po wyjściu: jak ogólne — odtwarzaj dalej"
     )
 
 
@@ -490,13 +585,30 @@ def describe_session_options(
     """
     caps = capabilities_for(session)
     parts: list[str] = []
+    if caps.supports_resume_position:
+        if overrides.remember_playback_position is True:
+            parts.append("pozycja pamiętana")
+        elif overrides.remember_playback_position is False:
+            parts.append("odtwarzanie zawsze od początku")
+        elif session is SessionId.PODCASTS:
+            parts.append("pozycja: domyślnie pamiętana")
+        else:
+            parts.append("pozycja: jak ogólne")
+    if caps.supports_playback_rate:
+        rate = resolve_playback_rate(options, overrides)
+        value = f"{rate:.2f}".replace(".", ",")
+        meaning = (
+            "normalna" if rate == 1.0 else ("wolniej" if rate < 1.0 else "szybciej")
+        )
+        prefix = "prędkość" if overrides.playback_rate is not None else "prędkość ogólna"
+        parts.append(f"{prefix}: {value}, {meaning}")
     if caps.supports_audio_processing:
         parts.append(
             "normalizacja "
             + _choice(overrides.loudness_normalization, yes="włączona", no="wyłączona")
         )
         parts.append(
-            "łagodne przejścia "
+            "przejścia "
             + _choice(overrides.smooth_track_transitions, yes="włączone", no="wyłączone")
         )
         parts.append(
@@ -504,7 +616,7 @@ def describe_session_options(
             + (
                 inter_track_silence_label(overrides.inter_track_silence_ms)
                 if overrides.inter_track_silence_ms is not None
-                else "według ustawienia ogólnego"
+                else "jak ogólne"
             )
         )
     if caps.supports_player_exit_pause:

@@ -30,6 +30,13 @@ jawnym poleceniu użytkownika albo przez osobno uzgodniony harmonogram.
 
 ## Zadania
 
+- `SESSION-001` — **W trakcie; źródła, pełna regresja Pythona, 27 zestawów
+  protokołu i pełny build są zaliczone; czeka na zbiorczą instalację AMC Test
+  oraz ręczny odbiór NVDA** —
+  pełne, wykonywalne opcje sesji z historycznego AMC oraz nowa domyślna
+  prędkość osobno dla Plików i Podcastów. Szczegóły:
+  [SESSION-001-opcje-sesji-i-predkosc.md](SESSION-001-opcje-sesji-i-predkosc.md).
+
 Roboczy indeks materiału z nocnych etapów do przyszłej instrukcji i opisu
 zmian, wymagający korekty użytkownika:
 [INDEKS-MATERIALU-INSTRUKCJA-I-ZMIANY-2026-10-19.md](INDEKS-MATERIALU-INSTRUKCJA-I-ZMIANY-2026-10-19.md).
@@ -82,8 +89,10 @@ zmian, wymagający korekty użytkownika:
   zbiorczej Biblioteki podcastów, kanałów YouTube i „Media internetowe”,
   prywatna trwałość wyboru i zachowanie zaznaczenia po stabilnym ID. Szczegóły:
   [POD-001-sortowanie-biblioteki-zrodel.md](POD-001-sortowanie-biblioteki-zrodel.md).
-- `AMC04` — **Wdrożone i zainstalowane w AMC Test; czeka na ręczny odbiór
-  NVDA** — przeniesiony do bieżącego AMC Test zatwierdzony model skrótów
+- `AMC04` — **Rozdziały podcastów oraz zakładki i rozdziały Spotify
+  zweryfikowane automatycznie; czekają na zbiorczą instalację AMC Test i
+  ręczny odbiór NVDA** — przeniesiony do głównego AMC
+  Test/Python zatwierdzony model skrótów
   zakładek, nazwanych zakładek, rozdziałów, historii widoków i historii
   odtwarzanych elementów. Bieżący zapis realizacji:
   [AMC04-nawigacja-zakladki-rozdzialy-historia.md](AMC04-nawigacja-zakladki-rozdzialy-historia.md).
@@ -227,8 +236,9 @@ zmian, wymagający korekty użytkownika:
   polecenie użytkownika; nic nie loguje konta ani nie otwiera przeglądarki.
   Szczegóły:
   [YT-001-konto-youtube-i-synchronizacja.md](YT-001-konto-youtube-i-synchronizacja.md).
-- `NAME-001` — **Zrobione** — zmiana widocznej nazwy prywatnej wersji z
-  „AMC Python” na „AMC Test”, bez zmiany technicznej tożsamości instalacji.
+- `NAME-001` — **Kod i testy gotowe; bez nowego pakietu ani instalatora** —
+  krótkie nazwy `AMC Test — data, godzina` i `AMC Public — data, godzina`,
+  z technicznymi identyfikatorami pozostawionymi poza zwykłą nazwą.
   Szczegóły: [NAME-001-amc-test.md](NAME-001-amc-test.md).
 - `FRONTIER-001` — **Po drugim odbiorze NVDA radio najprawdopodobniej jest
   wykrywane, ale fokus podczas skanowania i komunikat przed wpisaniem PIN-u

@@ -127,7 +127,11 @@ zainstalowana próba ecc9ab68 nie zawiera tego przyrostu do osobnej dostawy.
 
 Stan historyczny sprzed dostawy ecc9ab68 (nie bieżąca instalacja): odebrany kod: `4fbc49b085a2fffa72a28d3aef7b5e19cf496d6c`. Dostarczona paczka na głównym pozostaje oparta na `5e1f2d4ed07503f7b9399f89aaf7143f5e5a1b71`, wraz ze statusem i schowkiem z `96b04131`. **To nadal rozwijany pełny interfejs równoległy, nie ukończony odpowiednik 1:1.** Nazwa katalogów `wxlite` jest pozostałością wcześniejszego prototypu. Nowsza dokumentacja nie zmienia SHA odebranego kodu ani gotowej paczki.
 
-## Opcje sesji — kandydat bezokienny (ten przyrost)
+## Opcje sesji — rozszerzenie 2026-10-22
+
+Poniższy opis zastępuje wcześniejszą decyzję o celowym pominięciu pozycji i
+prędkości sesji. Historyczna sekcja pozostawała poprawna dla wcześniejszego
+kandydata, ale nie opisuje już bieżących źródeł.
 
 Wspólne wejście do opcji odtwarzania **wybranej sesji**: pozycja
 `Dźwięk → Opcje sesji…` i `Ctrl+Alt+Enter` (lista i odtwarzacz).
@@ -135,17 +139,22 @@ Dialog pokazuje WYŁĄCZNIE opcje, które dana sesja naprawdę wykona:
 
 | Opcja | Pliki lokalne | Radio | Podcasty i YouTube | Dlaczego |
 |---|---|---|---|---|
+| Pozycja odtwarzania | tak | **nie** | tak | host zachowuje hierarchię element/kontener → sesja → ustawienie ogólne |
+| Domyślna prędkość | tak | **nie** | tak | start materiału przyjmuje bazę sesji; podcast/odcinek może ją nadpisać |
 | Normalizacja głośności | tak | **nie** | tak | `RadioMediaOutput` nie ma wykonawcy |
 | Łagodne przejścia | tak | **nie** | tak | to samo |
 | Cisza między utworami | tak | **nie** | tak | radio nie ma granicy utworów |
 | Po wyjściu z odtwarzacza | tak | tak | tak | polityka okna, nie wyjścia audio |
 
-Radio dostaje więc jedną kontrolkę, a nie cztery z trzema martwymi.
-Podcasty mają wykonawczy tor plikowy, dlatego dostają te same cztery pola co
-Pliki lokalne. Indywidualne tempo i pozycja startowa są w osobnym dialogu
-elementu opisanym wyżej, nie w opcjach całej sesji.
-Tempo/wysokość i pozycja startowa **nie** są tu wystawione — port nie ma
-dla nich wykonawcy per sesja.
+Radio nadal dostaje jedną kontrolkę, a nie sześć z pięcioma martwymi.
+Podcasty mają wykonawczy tor plikowy, dlatego dostają te same sześć pól co
+Pliki lokalne. Indywidualne ustawienie podcastu lub odcinka ma pierwszeństwo
+przed domyślną pozycją i prędkością sesji. Wartość `1,00 razy` jest jawnie
+nazwana normalną, mniejsze wolniejszymi, a większe szybszymi.
+
+TIDAL, Spotify, Sonos i Frontier Smart mogą ustawić zachowanie po wyjściu z
+odtwarzacza. WiiM nie dostaje martwych opcji. Wyjście audio pozostaje osobnym,
+działającym wyborem pod `Shift+A`; nie wraca jako nieaktywne pole dialogu.
 
 Każde pole ma wariant „Jak ustawienie ogólne”, więc wybór jest odwracalny;
 dziedziczenie to `None`, nie fałsz. Wariant dziedziczony przy wstrzymaniu

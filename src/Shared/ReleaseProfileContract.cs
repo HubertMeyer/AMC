@@ -77,7 +77,7 @@ internal static class ReleaseProfileContract
     internal static readonly ReleaseProfileDescriptor Public = new(
         "public",
         "org.accessible-media-controller.public",
-        "AMC",
+        "AMC Public",
         "AMC.Public.win-x64",
         "stable",
         "AMC/ui",
@@ -93,7 +93,7 @@ internal static class ReleaseProfileContract
         "AMC/Updater",
         "AMC-Updater",
         "AMC",
-        ["AMC"]);
+        ["AMC Public", "AMC"]);
 
     internal static ReleaseProfileDescriptor Validate(
         int schema,
@@ -166,7 +166,7 @@ internal static class ReleaseProfileContract
         if (schema != SupportedSchema
             || !string.Equals(expected.ProfileId, profileId, StringComparison.Ordinal)
             || !string.Equals(expected.ProductId, productId, StringComparison.Ordinal)
-            || !string.Equals(expected.DisplayName, displayName, StringComparison.Ordinal)
+            || !expected.AcceptedWindowTitles.Contains(displayName, StringComparer.Ordinal)
             || !string.Equals(expected.InstallId, installId, StringComparison.Ordinal)
             || !string.Equals(expected.UpdateChannel, updateChannel, StringComparison.Ordinal)
             || !string.Equals(expected.UiStateFolder, uiStateFolder, StringComparison.Ordinal)

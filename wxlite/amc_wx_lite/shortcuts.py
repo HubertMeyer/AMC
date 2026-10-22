@@ -610,6 +610,16 @@ SPOTIFY_SUPPORTED_ACTIONS = frozenset({
     Action.TIME_ELAPSED,
     Action.TIME_REMAINING,
     Action.TIME_TOTAL,
+    Action.ADD_BOOKMARK,
+    Action.ADD_NAMED_BOOKMARK,
+    Action.PREVIOUS_BOOKMARK,
+    Action.NEXT_BOOKMARK,
+    Action.PREVIOUS_NAMED_BOOKMARK,
+    Action.NEXT_NAMED_BOOKMARK,
+    Action.VIEW_CHAPTERS,
+    Action.ADD_NAMED_CHAPTER,
+    Action.PREVIOUS_CHAPTER,
+    Action.NEXT_CHAPTER,
     Action.SELECT_AUDIO_OUTPUT,
     Action.PREVIOUS_AUDIO_OUTPUT,
     Action.NEXT_AUDIO_OUTPUT,
@@ -775,6 +785,7 @@ SONOS_SUPPORTED_ACTIONS = frozenset({
     Action.PREVIOUS_SESSION,
     Action.NEXT_SESSION,
     Action.COMMAND_PALETTE,
+    Action.SESSION_OPTIONS,
     Action.SELECT_SONOS_TARGET,
     Action.ACTIVATE,
     Action.PARENT_FOLDER,
@@ -885,6 +896,7 @@ FRONTIER_SMART_SUPPORTED_ACTIONS = frozenset({
     Action.PREVIOUS_SESSION,
     Action.NEXT_SESSION,
     Action.COMMAND_PALETTE,
+    Action.SESSION_OPTIONS,
     Action.ACTIVATE,
     Action.CLOSE_LIST_PREVIEW,
     Action.SHOW_PLAYER,
@@ -1920,8 +1932,8 @@ def _help_entries() -> list[tuple[str, str, Action]]:
         # Pomoc mowi WPROST, ze zakres to sesja, a nie zaznaczony plik -- bez
         # tego uzytkownik nie wie, czego dotkna zmiany.
         Action.SESSION_OPTIONS: (
-            "Opcje odtwarzania tej sesji: dialog pokazuje tylko opcje, "
-            "ktore sesja umie wykonac"
+            "Opcje odtwarzania sesji: pozycja, domyślna prędkość, dźwięk "
+            "i zachowanie po wyjściu, zależnie od możliwości sesji"
         ),
         Action.SELECT_AUDIO_OUTPUT: (
             "Wybierz urządzenie audio dla bieżącej sesji"

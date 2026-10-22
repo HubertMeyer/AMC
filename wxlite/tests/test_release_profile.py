@@ -58,7 +58,7 @@ def _with_release_profile(profile_id: str):
 
 def test_profiles_have_distinct_identity_storage_channel_and_credentials() -> None:
     assert TEST_PROFILE.display_name == "AMC Test"
-    assert PUBLIC_PROFILE.display_name == "AMC"
+    assert PUBLIC_PROFILE.display_name == "AMC Public"
     assert TEST_PROFILE.product_id != PUBLIC_PROFILE.product_id
     assert TEST_PROFILE.install_id != PUBLIC_PROFILE.install_id
     assert TEST_PROFILE.update_channel != PUBLIC_PROFILE.update_channel
@@ -275,8 +275,9 @@ def test_window_identity_uses_user_facing_name_of_selected_profile() -> None:
     try:
         with _with_release_profile("public"):
             public_version = importlib.reload(version_info)
-            assert public_version.PRODUCT_NAME == "AMC"
-            assert public_version.window_title().startswith("AMC — ")
+            assert public_version.PRODUCT_NAME == "AMC Public"
+            assert public_version.window_title().startswith("AMC Public — ")
+            assert public_version.is_main_window_title("AMC Public — wersja 1")
             assert public_version.is_main_window_title("AMC — wersja 1")
             assert not public_version.is_main_window_title("AMC Test — wersja 1")
     finally:

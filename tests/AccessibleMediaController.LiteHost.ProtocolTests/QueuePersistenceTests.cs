@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text.Json;
+using AccessibleMediaController.Core.Configuration;
 using AccessibleMediaController.Core.Playback;
 using AccessibleMediaController.Core.Sessions;
 using AccessibleMediaController.LiteHost.Protocol;
@@ -117,6 +118,7 @@ internal static class QueuePersistenceTests
             BezposredniPlikZapisujeIWznawiaPoSciezce();
             BezposredniNaturalnyKoniecZerujePozycje();
             NadpisanieGlobalneWxPythonWylaczaBezposrednieWznowienie();
+            NadpisanieSesjiWxPythonMaPierwszenstwoPrzedGlobalnym();
             JawnyTrybPozycjiWygrywaZNadpisaniemWxPython();
             NadpisanieWxPythonPrzeliczaJuzWczytanaKolejke();
             CheckpointPozycjiNIEruszaPOZOSTALYCHtabel();
@@ -1338,6 +1340,28 @@ internal static class QueuePersistenceTests
         var target = queue.PrepareDirectResume("file:C", path, restorePosition: true);
         Assert.True(target.Position == TimeSpan.Zero,
             "jawne ustawienie wxPython wylacza dziedziczaca pozycje");
+    }
+
+    private static void NadpisanieSesjiWxPythonMaPierwszenstwoPrzedGlobalnym()
+    {
+        var profile = NewProfile("bezposredni-sesja-wxpython");
+        var path = MediaPath(profile, "C");
+
+        using var store = LiteQueueStore.Open(profile, writable: true);
+        var queue = new LiteQueueCoordinator(new SilentOutput(), store);
+        queue.ConfigureResumePreferences(true, ResumePositionMode.StartFromBeginning);
+        queue.SaveDirectResume("file:C", path, TimeSpan.FromSeconds(21));
+        Assert.True(
+            queue.PrepareDirectResume("file:C", path, restorePosition: true).Position
+                == TimeSpan.Zero,
+            "jawny tryb sesji wxPython uruchamia plik od poczatku");
+
+        queue.ConfigureResumePreferences(false, ResumePositionMode.Remember);
+        queue.SaveDirectResume("file:C", path, TimeSpan.FromSeconds(12));
+        Assert.True(Math.Abs(
+            queue.PrepareDirectResume("file:C", path, restorePosition: true)
+                .Position.TotalSeconds - 12d) < 0.01,
+            "jawne pamietanie sesji wygrywa z wylaczonym ustawieniem ogolnym");
     }
 
     private static void JawnyTrybPozycjiWygrywaZNadpisaniemWxPython()

@@ -12,8 +12,23 @@ def test_window_title_identifies_the_exact_bundle(tmp_path) -> None:
     revision = "591ea346a3c455ca3d71397e6f3f39240369280a"
     label = f"2026.10.14-{revision}-a9a96007"
     created = "2026-10-14T16:39:56+00:00"
+    display_version = "14.10.2026, 18:39"
     (tmp_path / "bundle-manifest.json").write_text(
-        json.dumps({"buildLabel": label, "created": created}),
+        json.dumps({
+            "buildLabel": label,
+            "created": created,
+            "displayVersion": display_version,
+        }),
+        encoding="utf-8",
+    )
+
+    assert window_title(tmp_path) == "AMC Test — 14.10.2026, 18:39"
+
+
+def test_legacy_manifest_uses_local_created_time(tmp_path) -> None:
+    created = "2026-10-14T16:39:56+00:00"
+    (tmp_path / "bundle-manifest.json").write_text(
+        json.dumps({"created": created}),
         encoding="utf-8",
     )
 
@@ -33,7 +48,8 @@ def test_legacy_short_build_label_remains_readable(tmp_path) -> None:
 
 def test_invalid_manifest_never_leaks_technical_content(tmp_path) -> None:
     (tmp_path / "bundle-manifest.json").write_text(
-        '{"buildLabel":"RuntimeObject { Id = tajne }"}',
+        '{"buildLabel":"RuntimeObject { Id = tajne }",'
+        '"displayVersion":"RuntimeObject { Id = tajne }"}',
         encoding="utf-8",
     )
 

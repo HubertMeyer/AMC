@@ -108,7 +108,9 @@ internal static class PodcastProgressStoreTests
                     && podcastOptions.PlaybackRateOverride == 1.25d
                     && podcastOptions.TempoAlgorithmOverride == PlaybackTempoAlgorithm.Speech
                     && podcastOptions.RefreshIntervalMinutes == 30
-                    && !podcastOptions.ShouldRememberPosition,
+                    && !podcastOptions.ShouldRememberPosition
+                    && podcastOptions.ResolvedResumePositionMode
+                        == ResumePositionMode.StartFromBeginning,
                     "opcje calego podcastu wracaja po zapisie bez utraty wartosci");
                 Assert.True(
                     ReadSubscription(database, "sub-1").TempoAlgorithmOverride
@@ -122,7 +124,9 @@ internal static class PodcastProgressStoreTests
                     && inheritedEpisodeOptions.ResolvedPlaybackRateOverride == 1.25d
                     && inheritedEpisodeOptions.ResolvedTempoAlgorithmOverride
                         == PlaybackTempoAlgorithm.Speech
-                    && !inheritedEpisodeOptions.ShouldRememberPosition,
+                    && !inheritedEpisodeOptions.ShouldRememberPosition
+                    && inheritedEpisodeOptions.ResolvedResumePositionMode
+                        == ResumePositionMode.StartFromBeginning,
                     "odcinek dziedziczy rozstrzygniete opcje podcastu bez udawania wlasnych");
                 var episodeOptions = store.SetPlaybackOptions(
                     PodcastPlaybackOptionsTarget.Episode,
@@ -138,6 +142,7 @@ internal static class PodcastProgressStoreTests
                         null));
                 Assert.True(
                     episodeOptions.ShouldRememberPosition
+                    && episodeOptions.ResolvedResumePositionMode == ResumePositionMode.Remember
                     && episodeOptions.ResolvedPlaybackRateOverride == 0.75d
                     && episodeOptions.ResolvedTempoAlgorithmOverride
                         == PlaybackTempoAlgorithm.Music,

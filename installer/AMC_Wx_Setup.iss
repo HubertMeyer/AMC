@@ -15,31 +15,39 @@
 #ifndef Profil
   #define Profil "public"
 #endif
+#ifndef EtykietaUzytkowa
+  #error "Podaj /DEtykietaUzytkowa=<data i godzina paczki>"
+#endif
+#ifndef EtykietaPliku
+  #error "Podaj /DEtykietaPliku=<bezpieczna data i godzina pliku>"
+#endif
 
 #if Profil == "public"
-  #define Produkt "Accessible Multimedia Controller"
-  #define KrotkaNazwa "AMC"
+  #define Produkt "AMC Public"
+  #define KrotkaNazwa "AMC Public"
   #define AppIdentity "{{1E437448-30B4-4E4A-BCA1-CDA114B096A9}"
   #define FolderProgramu "AMC"
-  #define NazwaWyjscia "AMC-" + Wersja + "-win-x64"
+  #define NazwaWyjscia "AMC-Public-" + EtykietaPliku
   #define AppPathName "AMC.exe"
   #define ExpectedInstallId "AMC.Public.win-x64"
   #define LauncherMutex "Local\AccessibleMultimediaController.PythonLauncher.Public.SingleInstance"
   #define ShellProfileKey "Public"
-  #define ShellApplicationName "Accessible Multimedia Controller"
-  #define ShellOpenLabel "Otwórz w AMC"
-  #define ShellQueueLabel "Dodaj do kolejki AMC"
+  #define ShellRegisteredApplication "Accessible Multimedia Controller"
+  #define ShellDisplayName "AMC Public"
+  #define ShellOpenLabel "Otwórz w AMC Public"
+  #define ShellQueueLabel "Dodaj do kolejki AMC Public"
 #elif Profil == "test"
-  #define Produkt "Accessible Multimedia Controller — Test"
+  #define Produkt "AMC Test"
   #define KrotkaNazwa "AMC Test"
   #define AppIdentity "{{0B807571-BDC5-4287-BD7C-4F4A7C71438F}"
   #define FolderProgramu "AMC Test"
-  #define NazwaWyjscia "AMC-Test-" + Wersja + "-win-x64"
+  #define NazwaWyjscia "AMC-Test-" + EtykietaPliku
   #define AppPathName "AMC-Test.exe"
   #define ExpectedInstallId "AMC.Test.win-x64"
   #define LauncherMutex "Local\AccessibleMultimediaController.PythonLauncher.SingleInstance"
   #define ShellProfileKey "Test"
-  #define ShellApplicationName "Accessible Multimedia Controller — Test"
+  #define ShellRegisteredApplication "Accessible Multimedia Controller — Test"
+  #define ShellDisplayName "AMC Test"
   #define ShellOpenLabel "Otwórz w AMC Test"
   #define ShellQueueLabel "Dodaj do kolejki AMC Test"
 #else
@@ -50,7 +58,7 @@
 AppId={#AppIdentity}
 AppName={#Produkt}
 AppVersion={#Wersja}
-AppVerName={#Produkt} {#Wersja}
+AppVerName={#KrotkaNazwa} — {#EtykietaUzytkowa}
 AppPublisher=Michał Kasperczak
 DefaultDirName={localappdata}\Programs\{#FolderProgramu}
 DefaultGroupName={#KrotkaNazwa}
@@ -139,7 +147,7 @@ const
     '.3gpp|.m3u|.m3u8|.pls|.xspf|.amc-partial';
   ShellClassesRoot = 'Software\Classes\';
   ShellCapabilitiesRoot = 'Software\AccessibleMultimediaController\{#ShellProfileKey}\Capabilities';
-  ShellRegisteredApplication = '{#ShellApplicationName}';
+  ShellRegisteredApplication = '{#ShellRegisteredApplication}';
   ShellClassPrefix = 'AccessibleMediaController.{#ShellProfileKey}.';
   ShellVerbPrefix = 'AccessibleMediaController.{#ShellProfileKey}.';
 
@@ -256,7 +264,7 @@ begin
       HKA,
       ShellCapabilitiesRoot,
       'ApplicationName',
-      ShellRegisteredApplication);
+      '{#ShellDisplayName}');
     RegWriteStringValue(
       HKA,
       ShellCapabilitiesRoot,

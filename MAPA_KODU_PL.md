@@ -3,8 +3,9 @@
 ## Opcje sesji wx — końcowe podłączenie
 
 `session_options.engine_audio_payload` łączy prywatne nadpisania plików
-z globalnym algorytmem przy starcie i przy zmianie algorytmu. Dialog edytuje
-lokalne kopie dwóch sesji. Handler zapisuje dopiero po odpowiedzi hosta,
+z globalnym algorytmem przy starcie i przy zmianie algorytmu. Ten sam moduł
+rozstrzyga domyślną prędkość oraz tryb wznowienia Plików i Podcastów. Dialog
+edytuje lokalne kopie wszystkich sesji z wykonywalnymi opcjami. Handler zapisuje dopiero po odpowiedzi hosta,
 przy odmowie przywraca RAM i ustawienia silnika; `_save_state` zwraca wynik.
 `_leave_player_to_list` wykonuje politykę pauzy tylko odtwarzanej sesji.
 Ctrl+Alt+Enter jest natywnym akceleratorem menu, a pole filtra ma tę samą
@@ -105,7 +106,7 @@ Odbiór rodzica: `live-queue-after-native-lists/parent-speech-full-profile/`. Pe
 
 - `src/AccessibleMediaController.LiteHost`: bezokienny host JSON-lines, linkujący istniejące silniki plików/radia i trzy adaptery tempa; bez `MainWindow` i `UseWPF`. `Protocol/LiteAudioSettings.cs` waliduje wybór algorytmu na rzeczywistym modelu Core; `LiteEngineHandlers.ConfigureAudio` przekazuje go do plików i radia. Brak biblioteki natywnej daje odmowę wyboru, nie ciche potwierdzenie.
 - `wxlite/amc_wx_lite/gui.py`: ZWYKŁA natywna lista Windows (`LC_REPORT`, bez `LC_VIRTUAL`) z aktualizacją tylko faktycznie zmienionych wierszy i pól przez `list_sync`; nawigacja lokalne/radio, menu Dźwięk → Algorytm przyspieszania. Wybór jest zapisywany po odpowiedzi hosta; opis mówi o zastosowaniu po ponownym otwarciu materiału. `state_store.Options` zapisuje wybór i tworzy wspólny payload startu/zmiany.
-- `wxlite/amc_wx_lite/session_options.py`: **Opcje sesji** portu Python — zdolności per sesja (`capabilities_for`), wybory trójstanowe (`SessionPlaybackOverrides`, `None` = dziedzicz), złożenie payloadu (`resolve_audio_payload`) i jedyne miejsce zapisu ze skutkiem (`apply_session_options`). Żadnego `import wx`, więc logika jest mierzalna bezokiennie. Radio NIE dostaje normalizacji/przejść/ciszy, bo `RadioMediaOutput` nie ma dla nich wykonawcy — kontrolki nie powstają, zamiast być ukrywane. Odmowa silnika nie zostawia wpisu ani słowa „zapisano”.
+- `wxlite/amc_wx_lite/session_options.py`: **Opcje sesji** portu Python — zdolności per sesja (`capabilities_for`), wybory dziedziczone (`SessionPlaybackOverrides`, `None` = dziedzicz), złożenie payloadu audio, domyślnej prędkości i polityki wznowienia oraz jedyne miejsce zapisu ze skutkiem (`apply_session_options`). Żadnego `import wx`, więc logika jest mierzalna bezokiennie. Radio NIE dostaje pozycji, prędkości, normalizacji, przejść ani ciszy, bo nie ma dla nich wykonawcy — kontrolki nie powstają, zamiast być ukrywane. Odmowa silnika nie zostawia wpisu ani słowa „zapisano”.
 - `wxlite/amc_wx_lite/gui.py` → `SessionOptionsDialog` + `LiteFrame._show_session_options`: wejście z `Dźwięk → Opcje sesji…` i `Ctrl+Alt+Enter` (lista i odtwarzacz). Sesja brana **z chwili otwarcia**, więc przełączenie w trakcie nie zapisuje pod obcą sesję. Poza `wx.ID_OK` handler nie rusza ani stanu, ani silnika. Zapis prywatnego profilu dopiero po zgodzie silnika.
 - `wxlite/amc_wx_lite/state_store.py`: `LiteState.session_overrides` — **prywatna** trwałość per sesja (wspólny profil AMC pozostaje read-only). Czytanie jest obronne: obce nazwy sesji, złe typy i cisza spoza reguł silnika wracają do dziedziczenia; stary plik bez tej sekcji wczytuje się bez zmian.
 - `wxlite/tools/dump_session_option_payloads.py` + `tests/.../SessionOptionsPayloadTests.cs`: 378 payloadów **wygenerowanych przez port** czytanych prawdziwym `LiteAudioSettings.Read`. Bez zmiennej `AMC_SESSION_OPTIONS_PAYLOADS` zestaw mówi, że pominął — nie udaje zaliczenia.

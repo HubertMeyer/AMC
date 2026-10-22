@@ -38,6 +38,7 @@ internal static class Program
         ("aktualizator wykrywa żywy proces z instalacji", UpdaterFindsRunningInstalledProcess),
         ("aktualizator zamyka tylko właściwe okno AMC", UpdaterTargetsOnlyInstalledAmcWindow),
         ("aktualizator przyjmuje zgodny profil", UpdaterAcceptsMatchingProfile),
+        ("aktualizator przyjmuje starszą nazwę AMC Public", UpdaterAcceptsLegacyPublicName),
         ("aktualizator przyjmuje starszy zakres tego samego profilu", UpdaterAcceptsKnownProfileExpansion),
         ("aktualizator odrzuca nieznany zakres starego profilu", UpdaterRejectsUnknownInstalledCapability),
         ("aktualizator odrzuca obcy profil", UpdaterRejectsDifferentProfile),
@@ -78,7 +79,7 @@ internal static class Program
         using var fixture = BundleFixture.Create(profile: ReleaseProfileContract.Public);
         var verified = BundleVerifier.Verify(fixture.Root);
         Equal("public", verified.Profile.ProfileId);
-        Equal("AMC", verified.Profile.DisplayName);
+        Equal("AMC Public", verified.Profile.DisplayName);
     }
 
     private static void TamperedProfileIsRejected()
@@ -342,6 +343,8 @@ internal static class Program
         Equal(false, ProductIdentity.IsMainWindowTitle(ReleaseProfileContract.Test,
             "AMC — 18.10.2026, 13:29"));
         Equal(true, ProductIdentity.IsMainWindowTitle(ReleaseProfileContract.Public,
+            "AMC Public — 18.10.2026, 13:30"));
+        Equal(true, ProductIdentity.IsMainWindowTitle(ReleaseProfileContract.Public,
             "AMC — 18.10.2026, 13:29"));
         Equal(false, ProductIdentity.IsMainWindowTitle(ReleaseProfileContract.Public,
             "AMC Test — 18.10.2026, 13:30"));
@@ -489,6 +492,19 @@ internal static class Program
             ReleaseProfileContract.Public);
         Equal("public", manifest.ReleaseProfile);
         Equal("stable", manifest.UpdateChannel);
+    }
+
+    private static void UpdaterAcceptsLegacyPublicName()
+    {
+        using var source = BundleFixture.Create(profile: ReleaseProfileContract.Public);
+        using var target = BundleFixture.Create(
+            profile: ReleaseProfileContract.Public,
+            displayNameOverride: "AMC");
+        var manifest = AccessibleMediaController.PythonUpdater.Program.LoadAndVerify(
+            source.Root,
+            target.Root,
+            ReleaseProfileContract.Public);
+        Equal("public", manifest.ReleaseProfile);
     }
 
     private static void UpdaterRejectsDifferentProfile()

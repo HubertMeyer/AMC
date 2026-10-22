@@ -549,6 +549,18 @@ def add_file_integrity(manifest: dict, target: Path) -> None:
     }
 
 
+def build_time_fields(moment: datetime | None = None) -> dict[str, str]:
+    """Zapisz razem techniczny czas UTC i stałą etykietę użytkową."""
+
+    local_moment = moment if moment is not None else datetime.now().astimezone()
+    if local_moment.tzinfo is None:
+        raise ValueError("Czas paczki musi zawierać strefę czasową")
+    return {
+        "created": local_moment.astimezone(timezone.utc).isoformat(timespec="seconds"),
+        "displayVersion": local_moment.strftime("%d.%m.%Y, %H:%M"),
+    }
+
+
 def initial_manifest(
     profile: ReleaseProfile,
     source_revision: str,
@@ -565,7 +577,6 @@ def initial_manifest(
         "application": "AMC Python",
         "entryPoint": "AMC.exe",
         "pythonModule": "amc_wx_lite",
-        "created": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "note": (
             "Pakiet AMC bez danych użytkownika. Zawartość runtime zależy od "
             "wskazanego źródła; publikacja wymaga sprawdzenia licencji."
@@ -574,6 +585,7 @@ def initial_manifest(
         "sourceDirty": source_dirty,
         "files": [],
     }
+    manifest.update(build_time_fields())
     manifest.update(profile.manifest_fields())
     return manifest
 
@@ -645,7 +657,7 @@ def main() -> int:
         files += copy_launcher(target, args.launcher)
         files += copy_updater(target, args.updater)
         source_revision, source_dirty = git_source_identity()
-        manifest["created"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
+        manifest.update(build_time_fields())
         manifest["files"] = [
             relative
             for relative in dict.fromkeys(files)

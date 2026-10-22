@@ -50,6 +50,21 @@ if ([string]$manifest.releaseProfile -ne $Profile) {
 if ([bool]$manifest.sourceDirty) {
     throw "Instalator nie może powstać z niezapisanych źródeł roboczych."
 }
+$displayVersion = [string]$manifest.displayVersion
+$displayVersionMatch = [Regex]::Match(
+    $displayVersion,
+    '^(?<day>\d{2})\.(?<month>\d{2})\.(?<year>\d{4}), (?<hour>\d{2}):(?<minute>\d{2})$'
+)
+if (-not $displayVersionMatch.Success) {
+    throw "Manifest nie zawiera czytelnej daty i godziny wersji użytkowej."
+}
+$fileTimestamp = (
+    $displayVersionMatch.Groups["year"].Value + "-" +
+    $displayVersionMatch.Groups["month"].Value + "-" +
+    $displayVersionMatch.Groups["day"].Value + "-" +
+    $displayVersionMatch.Groups["hour"].Value +
+    $displayVersionMatch.Groups["minute"].Value
+)
 
 $launcherVersion = [string](Get-Item -LiteralPath $launcher).VersionInfo.ProductVersion
 $launcherVersion = ($launcherVersion -split '\+', 2)[0]
@@ -104,6 +119,8 @@ $compile = Start-Process -FilePath $IsccPath `
     -ArgumentList @(
         "/DProfil=$Profile",
         "/DWersja=$Version",
+        ('/DEtykietaUzytkowa="{0}"' -f $displayVersion),
+        "/DEtykietaPliku=$fileTimestamp",
         ('/DZrodlo="{0}"' -f $bundle),
         ('/DWyjscie="{0}"' -f $output),
         ('"{0}"' -f $installerScript)
@@ -120,9 +137,9 @@ finally {
 }
 
 $baseName = if ($Profile -eq "public") {
-    "AMC-$Version-win-x64.exe"
+    "AMC-Public-$fileTimestamp.exe"
 } else {
-    "AMC-Test-$Version-win-x64.exe"
+    "AMC-Test-$fileTimestamp.exe"
 }
 $installer = Join-Path $output $baseName
 if (-not (Test-Path -LiteralPath $installer -PathType Leaf)) {
@@ -133,6 +150,7 @@ $integrity = [ordered]@{
     schemaVersion = 1
     profile = $Profile
     version = $Version
+    displayVersion = $displayVersion
     fileName = $baseName
     bytes = (Get-Item -LiteralPath $installer).Length
     sha256 = (Get-FileHash -LiteralPath $installer -Algorithm SHA256).Hash.ToLowerInvariant()

@@ -1,4 +1,4 @@
-"""Czytelna tozsamosc uruchomionej paczki AMC Test.
+"""Czytelna tozsamosc uruchomionej paczki AMC Test albo AMC Public.
 
 Numer kompilacji pochodzi z podpisanego sumami manifestu paczki.  Nie
 pokazujemy sciezek, obiektow ani surowych bledow parsera w tytule okna.
@@ -15,8 +15,11 @@ from . import __version__
 from .release_profile import current_profile
 
 
-PRODUCT_NAME = current_profile().display_name
-LEGACY_PRODUCT_NAME = "AMC Python"
+_PROFILE = current_profile()
+PRODUCT_NAME = _PROFILE.display_name
+LEGACY_PRODUCT_NAMES = (
+    ("AMC Python",) if _PROFILE.profile_id == "test" else ("AMC",)
+)
 
 
 _BUILD_LABEL = re.compile(
@@ -24,6 +27,11 @@ _BUILD_LABEL = re.compile(
     r"(?:(?:-[0-9a-f]{7,12}){0,2}|-[0-9a-f]{40}-[0-9a-f]{8})"
     r"(?:-robocza)?$",
     re.IGNORECASE,
+)
+_DISPLAY_VERSION = re.compile(
+    r"^(?:0[1-9]|[12]\d|3[01])\."
+    r"(?:0[1-9]|1[0-2])\.\d{4}, "
+    r"(?:[01]\d|2[0-3]):[0-5]\d$"
 )
 
 
@@ -53,7 +61,7 @@ def read_build_label(root: str | Path | None = None) -> str:
 
 
 def read_build_time_label(root: str | Path | None = None) -> str:
-    """Zwróć lokalną datę i godzinę paczki bez szczegółów technicznych."""
+    """Zwróć stałą datę i godzinę paczki bez szczegółów technicznych."""
 
     base = Path(root) if root is not None else package_root()
     manifest = base / "bundle-manifest.json"
@@ -63,7 +71,17 @@ def read_build_time_label(root: str | Path | None = None) -> str:
         payload = json.loads(manifest.read_text(encoding="utf-8"))
     except (OSError, UnicodeError, json.JSONDecodeError):
         return ""
-    created = payload.get("created") if isinstance(payload, dict) else None
+    if not isinstance(payload, dict):
+        return ""
+    display_version = payload.get("displayVersion")
+    if isinstance(display_version, str):
+        display_version = display_version.strip()
+        if _DISPLAY_VERSION.fullmatch(display_version):
+            return display_version
+
+    # Zgodność ze starszymi paczkami: przed wprowadzeniem stałej etykiety
+    # użytkowej manifest zawierał wyłącznie czas UTC.
+    created = payload.get("created")
     if not isinstance(created, str):
         return ""
     try:
@@ -91,5 +109,5 @@ def is_main_window_title(title: str) -> bool:
 
     return any(
         title == name or title.startswith(name + " — ")
-        for name in (PRODUCT_NAME, LEGACY_PRODUCT_NAME)
+        for name in (PRODUCT_NAME, *LEGACY_PRODUCT_NAMES)
     )

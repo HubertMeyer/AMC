@@ -68,12 +68,13 @@ def test_playback_menu_exposes_bookmark_navigation_for_stable_timeline_sessions(
     assert "Shift+Page Down" in following.label.replace("&", "")
     assert previous.needs_playback and not previous.needs_files_session
     assert following.needs_playback and not following.needs_files_session
-    assert previous.visible_sessions == (SessionId.FILES, SessionId.PODCASTS)
-    assert following.visible_sessions == (SessionId.FILES, SessionId.PODCASTS)
+    stable = (SessionId.FILES, SessionId.PODCASTS, SessionId.SPOTIFY)
+    assert previous.visible_sessions == stable
+    assert following.visible_sessions == stable
     named = entries[Action.ADD_NAMED_BOOKMARK]
     assert named.shortcut == "Ctrl+Shift+B"
     assert named.needs_playback and not named.needs_files_session
-    assert named.visible_sessions == (SessionId.FILES, SessionId.PODCASTS)
+    assert named.visible_sessions == stable
 
 
 def test_host_receives_library_database_without_queue_write() -> None:

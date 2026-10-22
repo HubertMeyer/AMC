@@ -179,11 +179,17 @@ def test_play_file_distinguishes_missing_position_from_explicit_zero() -> None:
 def test_local_resume_uses_named_configuration_and_checkpoint_operations() -> None:
     client = make_client()
     try:
-        configured = client.configure_local_resume(False)
+        configured = client.configure_local_resume(
+            False, local_resume_mode=1, podcast_resume_mode=2
+        )
         checkpoint = client.checkpoint_local()
         assert configured == {
             "op": "local.resumeConfigure",
-            "args": {"remember": False},
+            "args": {
+                "remember": False,
+                "localResumeMode": 1,
+                "podcastResumeMode": 2,
+            },
         }
         assert checkpoint == {"op": "local.checkpoint", "args": {}}
     finally:

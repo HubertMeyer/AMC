@@ -25,10 +25,10 @@ GUI = (ROOT / "wxlite" / "amc_wx_lite" / "gui.py").read_text(encoding="utf-8")
 
 def test_installer_profiles_have_separate_ids_names_folders_and_mutexes() -> None:
     for required in (
-        "Accessible Multimedia Controller",
-        "Accessible Multimedia Controller — Test",
-        "AMC-\" + Wersja + \"-win-x64",
-        "AMC-Test-\" + Wersja + \"-win-x64",
+        'Produkt "AMC Public"',
+        'Produkt "AMC Test"',
+        'NazwaWyjscia "AMC-Public-" + EtykietaPliku',
+        'NazwaWyjscia "AMC-Test-" + EtykietaPliku',
         "1E437448-30B4-4E4A-BCA1-CDA114B096A9",
         "0B807571-BDC5-4287-BD7C-4F4A7C71438F",
         "PythonLauncher.Public.SingleInstance",
@@ -40,15 +40,17 @@ def test_installer_profiles_have_separate_ids_names_folders_and_mutexes() -> Non
 
 
 def test_shell_integration_is_available_and_isolated_for_both_profiles() -> None:
-    """AMC oraz AMC Test mogą współistnieć w powłoce bez wspólnych wpisów."""
+    """AMC Public i AMC Test mogą współistnieć w powłoce bez wspólnych wpisów."""
     for required in (
         'ShellProfileKey "Public"',
         'ShellProfileKey "Test"',
-        'ShellApplicationName "Accessible Multimedia Controller"',
-        'ShellApplicationName "Accessible Multimedia Controller — Test"',
-        'ShellOpenLabel "Otwórz w AMC"',
+        'ShellRegisteredApplication "Accessible Multimedia Controller"',
+        'ShellRegisteredApplication "Accessible Multimedia Controller — Test"',
+        'ShellDisplayName "AMC Public"',
+        'ShellDisplayName "AMC Test"',
+        'ShellOpenLabel "Otwórz w AMC Public"',
         'ShellOpenLabel "Otwórz w AMC Test"',
-        'ShellQueueLabel "Dodaj do kolejki AMC"',
+        'ShellQueueLabel "Dodaj do kolejki AMC Public"',
         'ShellQueueLabel "Dodaj do kolejki AMC Test"',
         "ShellCapabilitiesRoot = 'Software\\AccessibleMultimediaController\\{#ShellProfileKey}\\Capabilities'",
         "ShellClassPrefix = 'AccessibleMediaController.{#ShellProfileKey}.'",
@@ -130,6 +132,11 @@ def test_build_helper_verifies_profile_clean_source_and_full_bundle() -> None:
     assert "Get-FileHash" in BUILD
     assert "sha256" in BUILD
     assert "bytes" in BUILD
+    assert "manifest.displayVersion" in BUILD
+    assert '"AMC-Public-$fileTimestamp.exe"' in BUILD
+    assert '"AMC-Test-$fileTimestamp.exe"' in BUILD
+    assert "/DEtykietaUzytkowa" in BUILD
+    assert "AppVerName={#KrotkaNazwa} — {#EtykietaUzytkowa}" in ISS
     assert '$env:LOCALAPPDATA "Programs\\Inno Setup 6\\ISCC.exe"' in BUILD
 
 

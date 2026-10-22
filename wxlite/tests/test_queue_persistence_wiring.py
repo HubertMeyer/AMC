@@ -254,6 +254,8 @@ def test_manual_queue_result_reports_refused_save() -> None:
     for action in ("set", "at", "next"):
         frame: Any = gui.LiteFrame.__new__(gui.LiteFrame)
         frame.options = Options()
+        frame.state = SimpleNamespace(session_overrides={})
+        frame._remember_local_playback_positions = True
         frame.navigator = Navigator()
         frame._queue_write_requested = True
         frame._last_persist_error = None
@@ -264,6 +266,9 @@ def test_manual_queue_result_reports_refused_save() -> None:
         payload = {"persistError": "test odmowy", "moved": False}
         frame.client = SimpleNamespace(
             configure_audio=lambda **k: {},
+            configure_local_resume=lambda remember, **modes: {
+                "remember": remember, **modes
+            },
             queue_set=lambda *a, **k: payload,
             queue_play_at=lambda *a, **k: payload,
             queue_next=lambda **k: payload,

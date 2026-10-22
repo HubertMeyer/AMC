@@ -61,6 +61,12 @@ public sealed class PodcastLibraryMutationStore(string databasePath)
         IReadOnlyCollection<string> episodeIds) =>
         _database.GetDownloadTargets(episodeIds);
 
+    public PodcastChapterTarget? GetChapterTarget(string episodeId) =>
+        _database.GetChapterTarget(episodeId);
+
+    public bool MarkProviderChaptersLoaded(string episodeId, string providerChaptersUrl) =>
+        _database.MarkProviderChaptersLoaded(episodeId, providerChaptersUrl);
+
     public PodcastDownloadPathResult SaveDownloadPath(
         string episodeId,
         string downloadPath) =>
@@ -139,6 +145,19 @@ public sealed record PodcastDownloadTarget(
     string? DownloadPath,
     string? ConfiguredDownloadsFolder);
 
+/// <summary>
+/// Minimalny opis odcinka potrzebny do wykrycia rozdziałów na wyraźne
+/// żądanie użytkownika. Surowy rekord bazy i pozostałe ustawienia profilu nie
+/// opuszczają warstwy konfiguracji.
+/// </summary>
+public sealed record PodcastChapterTarget(
+    string EpisodeId,
+    string Title,
+    string Description,
+    string? ProviderChaptersUrl,
+    string? ProviderChaptersLoadedUrl,
+    string? PageUrl);
+
 public sealed record PodcastDownloadPathResult(
     string EpisodeId,
     string DownloadPath,
@@ -187,6 +206,7 @@ public sealed record PodcastPlaybackOptionsSnapshot(
     int? RefreshIntervalMinutes,
     string? DownloadsFolder,
     bool ShouldRememberPosition,
+    ResumePositionMode ResolvedResumePositionMode,
     double? ResolvedPlaybackRateOverride,
     bool? ResolvedLoudnessNormalizationOverride,
     bool? ResolvedSmoothTrackTransitionsOverride,

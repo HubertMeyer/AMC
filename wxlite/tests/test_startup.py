@@ -291,7 +291,7 @@ def test_engine_handshake_is_deferred_to_background(tmp_path):
         def configure_audio(self, **options):
             calls.append(options)
             return options
-        def configure_local_resume(self, remember):
+        def configure_local_resume(self, remember, **_modes):
             calls.append(("local-resume", remember))
             return {"remember": remember}
         def close(self):
@@ -377,7 +377,7 @@ def test_optional_profile_sync_failure_does_not_disable_the_audio_engine(tmp_pat
             calls.append("audio")
             return options
 
-        def configure_local_resume(self, remember):
+        def configure_local_resume(self, remember, **_modes):
             calls.append("local-resume")
             return {"remember": remember}
 

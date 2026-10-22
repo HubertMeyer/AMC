@@ -5033,9 +5033,21 @@ class SessionOptionsDialog(wx.Dialog):
         ("Wyłączone", False),
     )
 
-    def __init__(self, parent: wx.Window, session, options, overrides, *, drafts=None) -> None:
+    def __init__(
+        self,
+        parent: wx.Window,
+        session,
+        options,
+        overrides,
+        *,
+        drafts=None,
+        remember_local_playback_positions: bool = True,
+    ) -> None:
         super().__init__(parent, title=session_options.dialog_title(session))
         self._options = options
+        self._remember_local_playback_positions = bool(
+            remember_local_playback_positions
+        )
         # Drafty WSZYSTKICH sesji: przelaczenie konfigurowanej sesji nie moze
         # zgubic tego, co uzytkownik juz wybral dla poprzedniej. Kontrakt:
         # Zapisz utrwala kazdy zmieniony draft, Anuluj zaden.
@@ -5043,6 +5055,10 @@ class SessionOptionsDialog(wx.Dialog):
             SessionId.FILES: session_options.SessionPlaybackOverrides(),
             SessionId.RADIO: session_options.SessionPlaybackOverrides(),
             SessionId.PODCASTS: session_options.SessionPlaybackOverrides(),
+            SessionId.TIDAL: session_options.SessionPlaybackOverrides(),
+            SessionId.SPOTIFY: session_options.SessionPlaybackOverrides(),
+            SessionId.SONOS: session_options.SessionPlaybackOverrides(),
+            SessionId.FRONTIER_SMART: session_options.SessionPlaybackOverrides(),
         }
         if drafts:
             self._drafts.update(drafts)
@@ -5058,7 +5074,19 @@ class SessionOptionsDialog(wx.Dialog):
         # kontrolki dialog konfigurowal WYLACZNIE sesje, ktora wlasnie gra, a
         # wymaganie jest odwrotne -- skonfigurowac druga sesje BEZ przelaczenia
         # odsluchu. Dialog nie dotyka ani ``_switch_session``, ani transportu.
-        sessions = [SessionId.FILES, SessionId.RADIO, SessionId.PODCASTS]
+        sessions = [
+            item
+            for item in (
+                SessionId.FILES,
+                SessionId.RADIO,
+                SessionId.PODCASTS,
+                SessionId.TIDAL,
+                SessionId.SPOTIFY,
+                SessionId.SONOS,
+                SessionId.FRONTIER_SMART,
+            )
+            if session_options.capabilities_for(item).has_options
+        ]
         self._sessions = sessions
         row = wx.BoxSizer(wx.HORIZONTAL)
         label = wx.StaticText(panel, label="Konfigurowana &sesja:")
@@ -5128,6 +5156,51 @@ class SessionOptionsDialog(wx.Dialog):
         self.transitions = None
         self.silence = None
         self.pause = None
+        self.resume = None
+        self.rate = None
+
+        if self._caps.supports_resume_position:
+            if self._session is SessionId.PODCASTS:
+                inherited_resume = "Domyślnie dla podcastów — pamiętaj pozycję"
+            elif self._remember_local_playback_positions:
+                inherited_resume = "Jak ustawienie ogólne — pamiętaj pozycję"
+            else:
+                inherited_resume = "Jak ustawienie ogólne — zawsze od początku"
+            self.resume = self._add_choice(
+                panel,
+                grid,
+                "&Pozycja odtwarzania w tej sesji:",
+                "Pozycja odtwarzania w tej sesji",
+                (
+                    (inherited_resume, None),
+                    ("Pamiętaj pozycję odtwarzania", True),
+                    ("Zawsze od początku", False),
+                ),
+                overrides.remember_playback_position,
+            )
+
+        if self._caps.supports_playback_rate:
+            inherited_rate = session_options.resolve_playback_rate(
+                options, session_options.SessionPlaybackOverrides()
+            )
+            rate_choices: tuple[tuple[str, float | None], ...] = (
+                (
+                    "Jak ustawienie ogólne — "
+                    + playback_rate_choice_label(inherited_rate),
+                    None,
+                ),
+            ) + tuple(
+                (playback_rate_choice_label(value), value)
+                for value in PLAYBACK_RATES
+            )
+            self.rate = self._add_choice(
+                panel,
+                grid,
+                "Domyślna &prędkość odtwarzania:",
+                "Domyślna prędkość odtwarzania w tej sesji",
+                rate_choices,
+                overrides.playback_rate,
+            )
 
         if self._caps.supports_audio_processing:
             self.loudness = self._add_choice(
@@ -5211,6 +5284,8 @@ class SessionOptionsDialog(wx.Dialog):
     def _collect(self):
         """Wybory UZYTKOWNIKA dla BIEZACEJ sesji. Bez skutku ubocznego."""
         return session_options.SessionPlaybackOverrides(
+            remember_playback_position=self._value(self.resume),
+            playback_rate=self._value(self.rate),
             loudness_normalization=self._value(self.loudness),
             smooth_track_transitions=self._value(self.transitions),
             inter_track_silence_ms=self._value(self.silence),
@@ -6986,7 +7061,7 @@ class LiteFrame(wx.Frame):
         )
         self.rate_choice.SetName("Prędkość odtwarzania")
         self.rate_choice.SetSelection(PLAYBACK_RATES.index(
-            clamp_playback_rate(self.options.rate)
+            self._session_default_rate(self.navigator.active)
         ))
 
         player_sizer = wx.BoxSizer(wx.VERTICAL)
@@ -9610,8 +9685,8 @@ class LiteFrame(wx.Frame):
                         lambda: client.configure_nvda_bridge(nvda_window_handle),
                     )
                 result = client.configure_audio(**settings)
-                client.configure_local_resume(
-                    self._remember_local_playback_positions
+                session_options.configure_resume_preferences(
+                    client, self.state, self._remember_local_playback_positions
                 )
                 for session_id, device_id in output_devices.items():
                     optional_step(
@@ -9645,7 +9720,7 @@ class LiteFrame(wx.Frame):
                     and not layout.may_write_profile
                 ):
                     optional_step(
-                        "migawkę danych dla publicznego AMC",
+                        "migawkę danych dla AMC Public",
                         lambda: client.export_common_data_snapshot(
                             self.state.search_history
                         ),
@@ -12031,9 +12106,13 @@ class LiteFrame(wx.Frame):
         elif action is Action.RATE_UP:
             # Drabina predkosci z oryginalu, nie plaskie +/- 0,1
             # (MainWindow.xaml.cs:16090-16115).
-            self._set_rate(next_playback_rate(self.options.rate, +1))
+            self._set_rate(next_playback_rate(
+                self._session_default_rate(self.navigator.active), +1
+            ))
         elif action is Action.RATE_DOWN:
-            self._set_rate(next_playback_rate(self.options.rate, -1))
+            self._set_rate(next_playback_rate(
+                self._session_default_rate(self.navigator.active), -1
+            ))
         elif action is Action.RATE_RESET:
             self._set_rate(1.0)
         elif action in (Action.TIME_ELAPSED, Action.TIME_REMAINING, Action.TIME_TOTAL):
@@ -12359,7 +12438,7 @@ class LiteFrame(wx.Frame):
             "ready": "dane gotowe do odświeżenia",
             "imported": "dane odświeżone",
             "current": "dane są aktualne",
-            "conflict": "publiczne AMC ma własne zmiany",
+            "conflict": "AMC Public ma własne zmiany",
         }.get(state, "stan danych odczytany")
         ticks = int(data.get("createdUtcTicks") or 0)
         created = ""
@@ -12397,7 +12476,7 @@ class LiteFrame(wx.Frame):
 
     def _refresh_common_data_from_test(self) -> None:
         if current_profile().profile_id != "public":
-            self.announcer.say("Dane z AMC Test odświeża publiczne AMC")
+            self.announcer.say("Dane z AMC Test odświeża AMC Public")
             return
         client = self._profile_edit_client()
         if client is None:
@@ -12414,7 +12493,7 @@ class LiteFrame(wx.Frame):
                 return
             if state == "conflict":
                 answer = wx.MessageBox(
-                    "Publiczne AMC ma własne zmiany od poprzedniego odświeżenia. "
+                    "AMC Public ma własne zmiany od poprzedniego odświeżenia. "
                     "Czy zastąpić zgodne dane danymi z AMC Test? Ustawienia, "
                     "konta i bieżący widok pozostaną bez zmian.",
                     "Odśwież dane z AMC Test",
@@ -12423,7 +12502,7 @@ class LiteFrame(wx.Frame):
                 )
                 self._restore_focus_after_dialog()
                 if answer != wx.YES:
-                    self.announcer.say("Zachowano dane publicznego AMC")
+                    self.announcer.say("Zachowano dane AMC Public")
                     return
                 self._import_common_data(accept_test_data=True)
                 return
@@ -15155,6 +15234,11 @@ class LiteFrame(wx.Frame):
         ):
             self._spotify_navigation_version += 1
         self._run(self.navigator.switch_session(session_id))
+        rate_choice = getattr(self, "rate_choice", None)
+        if rate_choice is not None:
+            rate_choice.SetSelection(PLAYBACK_RATES.index(
+                self._session_default_rate(session_id)
+            ))
         if session_id is SessionId.PODCASTS:
             state = self.navigator.sessions[SessionId.PODCASTS]
             if not state.model.rows:
@@ -20481,6 +20565,18 @@ class LiteFrame(wx.Frame):
 
     # ----------------------------------------------------------- odtwarzanie
 
+    def _session_default_rate(self, session: SessionId) -> float:
+        """Biezace tempo sesji albo jej trwala baza; element moze je nadpisac."""
+        runtime = getattr(self, "_runtime_rate_by_session", None)
+        if not isinstance(runtime, dict):
+            runtime = {}
+        if session in runtime:
+            return runtime[session]
+        return session_options.resolve_playback_rate(
+            self.options,
+            session_options.effective_overrides(self.state, session),
+        )
+
     def _play_track(self, intent: PlayTrack) -> None:
         client = self.client
         if client is None:
@@ -20489,6 +20585,9 @@ class LiteFrame(wx.Frame):
         self._pending_playback_session = SessionId.FILES
 
         def work() -> dict:
+            session_options.configure_resume_preferences(
+                client, self.state, self._remember_local_playback_positions
+            )
             client.configure_audio(
                 **session_options.resolve_audio_payload(
                     self.options,
@@ -20501,7 +20600,7 @@ class LiteFrame(wx.Frame):
                 intent.path,
                 item_id=intent.item_id,
                 volume=self.options.volume,
-                rate=self.options.rate,
+                rate=self._session_default_rate(SessionId.FILES),
                 title=intent.title,
                 # Skok zakladki jedzie Z TYM SAMYM zadaniem, nie osobnym seek.
                 position_seconds=intent.position_seconds,
@@ -20532,6 +20631,9 @@ class LiteFrame(wx.Frame):
         self._pending_playback_session = SessionId.PODCASTS
 
         def work() -> dict:
+            session_options.configure_resume_preferences(
+                client, self.state, self._remember_local_playback_positions
+            )
             # Jeden WindowsMediaOutput obsługuje Pliki i Podcasty. Przed
             # każdym startem ustawiamy bazę WŁAŚCIWEJ sesji; host nakłada na
             # nią jeszcze nadpisania podcastu i odcinka z podcasts.db.
@@ -20548,7 +20650,7 @@ class LiteFrame(wx.Frame):
                 item_id=intent.item_id,
                 title=intent.title,
                 volume=self.options.volume,
-                rate=self.options.rate,
+                rate=self._session_default_rate(SessionId.PODCASTS),
                 position_seconds=intent.position_seconds,
             )
 
@@ -21040,7 +21142,11 @@ class LiteFrame(wx.Frame):
         if self.navigator.active is SessionId.RADIO:
             self._add_radio_recording_bookmark(named=named)
             return
-        if self.navigator.active not in (SessionId.FILES, SessionId.PODCASTS):
+        if self.navigator.active not in (
+            SessionId.FILES,
+            SessionId.PODCASTS,
+            SessionId.SPOTIFY,
+        ):
             self.announcer.say(
                 "Zakładki w tej sesji nie są jeszcze dostępne w tej wersji"
             )
@@ -21070,7 +21176,7 @@ class LiteFrame(wx.Frame):
                 field_name="Nazwa zakładki",
                 value="",
                 help_text=(
-                    "Nazwa opisuje bieżące miejsce w odtwarzanym pliku."
+                    "Nazwa opisuje bieżące miejsce w odtwarzanym materiale."
                 ),
             ) as dialog:
                 if dialog.ShowModal() != wx.ID_OK:
@@ -21193,9 +21299,13 @@ class LiteFrame(wx.Frame):
         named_only: bool = False,
     ) -> None:
         """Nawigacja po wszystkich albo tylko nazwanych zakładkach."""
-        if self.navigator.active not in (SessionId.FILES, SessionId.PODCASTS):
+        if self.navigator.active not in (
+            SessionId.FILES,
+            SessionId.PODCASTS,
+            SessionId.SPOTIFY,
+        ):
             self.announcer.say(
-                "Nawigacja po zakładkach jest dostępna dla plików lokalnych i podcastów"
+                "Nawigacja po zakładkach jest dostępna dla plików lokalnych, podcastów i Spotify"
             )
             return
         client = self.client
@@ -21207,7 +21317,6 @@ class LiteFrame(wx.Frame):
 
         direction = 1 if forward else -1
         session_id = self.navigator.active.value
-
         def done(payload: dict) -> None:
             result = payload or {}
             if not result.get("found"):
@@ -21258,9 +21367,13 @@ class LiteFrame(wx.Frame):
         )
 
     def _add_named_chapter(self) -> None:
-        if self.navigator.active not in (SessionId.FILES, SessionId.PODCASTS):
+        if self.navigator.active not in (
+            SessionId.FILES,
+            SessionId.PODCASTS,
+            SessionId.SPOTIFY,
+        ):
             self.announcer.say(
-                "Rozdziały są dostępne dla plików lokalnych i podcastów"
+                "Rozdziały są dostępne dla plików lokalnych, podcastów i Spotify"
             )
             return
         client = self.client
@@ -21303,9 +21416,13 @@ class LiteFrame(wx.Frame):
         )
 
     def _navigate_chapter(self, forward: bool) -> None:
-        if self.navigator.active not in (SessionId.FILES, SessionId.PODCASTS):
+        if self.navigator.active not in (
+            SessionId.FILES,
+            SessionId.PODCASTS,
+            SessionId.SPOTIFY,
+        ):
             self.announcer.say(
-                "Rozdziały są dostępne dla plików lokalnych i podcastów"
+                "Rozdziały są dostępne dla plików lokalnych, podcastów i Spotify"
             )
             return
         client = self.client
@@ -21314,8 +21431,29 @@ class LiteFrame(wx.Frame):
             return
         direction = 1 if forward else -1
         session_id = self.navigator.active.value
+        chapter_item_id = (
+            self.navigator.session.current_material_id
+            or self.navigator.session.pending_material_id
+            or self.navigator.session.now_playing_id
+            or ""
+        )
+        chapter_key = (session_id, chapter_item_id)
+        prepared_items = getattr(self, "_prepared_chapter_items", set())
+        if session_id in (
+            SessionId.PODCASTS.value,
+            SessionId.SPOTIFY.value,
+        ) and chapter_key not in prepared_items:
+            self.announcer.say("Sprawdzanie rozdziałów")
 
         def done(payload: dict) -> None:
+            if session_id in (
+                SessionId.PODCASTS.value,
+                SessionId.SPOTIFY.value,
+            ):
+                self._prepared_chapter_items = getattr(
+                    self, "_prepared_chapter_items", set()
+                )
+                self._prepared_chapter_items.add(chapter_key)
             result = payload or {}
             if not result.get("found"):
                 self.announcer.say(
@@ -21328,9 +21466,17 @@ class LiteFrame(wx.Frame):
             name = str(result.get("name") or "Rozdział").strip() or "Rozdział"
             self.announcer.say(f"{name}, {format_duration(position)}")
 
+        def navigate() -> dict:
+            if session_id in (
+                SessionId.PODCASTS.value,
+                SessionId.SPOTIFY.value,
+            ):
+                client.prepare_chapters(session_id=session_id)
+            return client.navigate_chapter(direction, session_id=session_id)
+
         self.runner.submit(
             "chapter-navigation",
-            lambda: client.navigate_chapter(direction, session_id=session_id),
+            navigate,
             done,
             lambda error: self.announcer.say(
                 f"Nie można przejść do rozdziału: {error}"
@@ -21338,9 +21484,13 @@ class LiteFrame(wx.Frame):
         )
 
     def _show_chapters(self) -> None:
-        if self.navigator.active not in (SessionId.FILES, SessionId.PODCASTS):
+        if self.navigator.active not in (
+            SessionId.FILES,
+            SessionId.PODCASTS,
+            SessionId.SPOTIFY,
+        ):
             self.announcer.say(
-                "Rozdziały są dostępne dla plików lokalnych i podcastów"
+                "Rozdziały są dostępne dla plików lokalnych, podcastów i Spotify"
             )
             return
         client = self.client
@@ -21348,8 +21498,37 @@ class LiteFrame(wx.Frame):
             self.announcer.say("Silnik nie działa, lista rozdziałów jest niedostępna")
             return
         session_id = self.navigator.active.value
+        chapter_item_id = (
+            self.navigator.session.current_material_id
+            or self.navigator.session.pending_material_id
+            or self.navigator.session.now_playing_id
+            or ""
+        )
+        chapter_key = (session_id, chapter_item_id)
+        prepared_items = getattr(self, "_prepared_chapter_items", set())
+        if session_id in (
+            SessionId.PODCASTS.value,
+            SessionId.SPOTIFY.value,
+        ) and chapter_key not in prepared_items:
+            self.announcer.say("Sprawdzanie rozdziałów")
+
+        def load_chapters() -> dict:
+            if session_id in (
+                SessionId.PODCASTS.value,
+                SessionId.SPOTIFY.value,
+            ):
+                client.prepare_chapters(session_id=session_id)
+            return client.list_chapters(session_id=session_id)
 
         def done(payload: dict) -> None:
+            if session_id in (
+                SessionId.PODCASTS.value,
+                SessionId.SPOTIFY.value,
+            ):
+                self._prepared_chapter_items = getattr(
+                    self, "_prepared_chapter_items", set()
+                )
+                self._prepared_chapter_items.add(chapter_key)
             result = payload or {}
             raw = result.get("chapters")
             choices: list[tuple[str, float]] = []
@@ -21405,7 +21584,7 @@ class LiteFrame(wx.Frame):
 
         self.runner.submit(
             "chapter-list",
-            lambda: client.list_chapters(session_id=session_id),
+            load_chapters,
             done,
             lambda error: self.announcer.say(
                 f"Nie można otworzyć listy rozdziałów: {error}"
@@ -22292,8 +22471,13 @@ class LiteFrame(wx.Frame):
                 )
             )
             client.queue_set(items, order=order)
+            session_options.configure_resume_preferences(
+                client, self.state, self._remember_local_playback_positions
+            )
             return client.queue_play_at(
-                intent.item_id, volume=self.options.volume, rate=self.options.rate
+                intent.item_id,
+                volume=self.options.volume,
+                rate=self._session_default_rate(SessionId.FILES),
             )
 
         def done(payload: dict) -> None:
@@ -22977,8 +23161,13 @@ class LiteFrame(wx.Frame):
                     ),
                 )
             )
+            session_options.configure_resume_preferences(
+                client, self.state, self._remember_local_playback_positions
+            )
             return client.queue_play_at(
-                intent.item_id, volume=self.options.volume, rate=self.options.rate
+                intent.item_id,
+                volume=self.options.volume,
+                rate=self._session_default_rate(SessionId.FILES),
             )
 
         def done(payload: dict) -> None:
@@ -23025,7 +23214,13 @@ class LiteFrame(wx.Frame):
         call = client.queue_next if forward else client.queue_previous
 
         def work() -> dict:
-            return call(volume=self.options.volume, rate=self.options.rate)
+            session_options.configure_resume_preferences(
+                client, self.state, self._remember_local_playback_positions
+            )
+            return call(
+                volume=self.options.volume,
+                rate=self._session_default_rate(SessionId.FILES),
+            )
 
         def done(payload: dict) -> None:
             # Mowimy to, co host NAPRAWDE zaczal grac, a nie to, o co prosilismy.
@@ -23502,8 +23697,8 @@ class LiteFrame(wx.Frame):
             except Exception:
                 warnings.append("ustawienia dźwięku")
             try:
-                client.configure_local_resume(
-                    self._remember_local_playback_positions
+                session_options.configure_resume_preferences(
+                    client, self.state, self._remember_local_playback_positions
                 )
             except Exception:
                 warnings.append("zapamiętywanie pozycji lokalnych plików")
@@ -23596,18 +23791,29 @@ class LiteFrame(wx.Frame):
         nim wx oddal by go z powrotem oknu modalnemu.
         """
         opened = self.navigator.active
-        if not session_options.capabilities_for(opened).has_options:
-            self.announcer.say(
-                f"Sesja {session_options.session_display_name(opened)} nie ma jeszcze "
-                "opcji wykonywanych przez ten interfejs"
-            )
-            return
+        initial = (
+            opened
+            if session_options.capabilities_for(opened).has_options
+            else SessionId.FILES
+        )
+        supported_sessions = tuple(
+            session
+            for session in SessionId
+            if session_options.capabilities_for(session).has_options
+        )
         drafts = {
             session: session_options.effective_overrides(self.state, session)
-            for session in (SessionId.FILES, SessionId.RADIO, SessionId.PODCASTS)
+            for session in supported_sessions
         }
         dialog = SessionOptionsDialog(
-            self, opened, self.options, drafts[opened], drafts=drafts
+            self,
+            initial,
+            self.options,
+            drafts[initial],
+            drafts=drafts,
+            remember_local_playback_positions=getattr(
+                self, "_remember_local_playback_positions", True
+            ),
         )
         chosen: dict | None = None
         try:
@@ -23639,7 +23845,7 @@ class LiteFrame(wx.Frame):
         """
         poprzednie = {
             session: session_options.effective_overrides(self.state, session)
-            for session in (SessionId.FILES, SessionId.RADIO, SessionId.PODCASTS)
+            for session in drafts
         }
         zmienione = [
             session
@@ -23675,11 +23881,23 @@ class LiteFrame(wx.Frame):
                         self.state, session, poprzednie[session], client=self.client
                     )
                 return
+            runtime_rates = getattr(self, "_runtime_rate_by_session", None)
+            if isinstance(runtime_rates, dict):
+                for session in zmienione:
+                    if (
+                        drafts[session].playback_rate
+                        != poprzednie[session].playback_rate
+                    ):
+                        runtime_rates.pop(session, None)
+                if self.navigator.active in zmienione:
+                    self.rate_choice.SetSelection(PLAYBACK_RATES.index(
+                        self._session_default_rate(self.navigator.active)
+                    ))
             tresc = " ".join(item.message for item in results)
             if any(item.applies_on_next_playback for item in results):
                 # Prawda komunikatu: host zwrocil ``appliesOnNextPlayback``,
                 # wiec biezace granie zostaje po staremu.
-                tresc += " Przetwarzanie dźwięku zmieni się przy następnym uruchomieniu materiału."
+                tresc += " Ustawienia odtwarzania zadziałają przy następnym uruchomieniu materiału."
             self.announcer.say(tresc)
 
         def failed(error: Exception) -> None:
@@ -23907,7 +24125,12 @@ class LiteFrame(wx.Frame):
             self._transport_status_by_session[SessionId.RADIO] = updated
             if self.navigator.active is SessionId.RADIO:
                 self._last_status = updated
-                self.options.rate = 1.0
+                self._runtime_rate_by_session = getattr(
+                    self, "_runtime_rate_by_session", None
+                )
+                if not isinstance(self._runtime_rate_by_session, dict):
+                    self._runtime_rate_by_session = {}
+                self._runtime_rate_by_session[SessionId.RADIO] = 1.0
                 rate_choice = getattr(self, "rate_choice", None)
                 if rate_choice is not None:
                     rate_choice.SetSelection(PLAYBACK_RATES.index(1.0))
@@ -24103,7 +24326,12 @@ class LiteFrame(wx.Frame):
         # Przyciecie jak SetPlaybackRate (DemoMediaSession.cs:381): do
         # NAJBLIZSZEGO szczebla drabiny, nie do dowolnej wartosci z suwaka.
         value = clamp_playback_rate(value)
-        self.options.rate = value
+        self._runtime_rate_by_session = getattr(
+            self, "_runtime_rate_by_session", None
+        )
+        if not isinstance(self._runtime_rate_by_session, dict):
+            self._runtime_rate_by_session = {}
+        self._runtime_rate_by_session[self.navigator.active] = value
         self.rate_choice.SetSelection(PLAYBACK_RATES.index(value))
         # Format jak w oryginale: "1,25x" (MainWindow.xaml.cs:16122), a nie
         # "Tempo 125 procent".

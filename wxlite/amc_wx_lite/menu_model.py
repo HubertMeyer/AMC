@@ -162,7 +162,11 @@ SEPARATOR = MenuItem(is_separator=True)
 FILES_ONLY = (SessionId.FILES,)
 PODCASTS_ONLY = (SessionId.PODCASTS,)
 RADIO_ONLY = (SessionId.RADIO,)
-STABLE_TIMELINE_SESSIONS = (SessionId.FILES, SessionId.PODCASTS)
+STABLE_TIMELINE_SESSIONS = (
+    SessionId.FILES,
+    SessionId.PODCASTS,
+    SessionId.SPOTIFY,
+)
 PLAYBACK_HISTORY_SESSIONS = (
     SessionId.FILES,
     SessionId.RADIO,

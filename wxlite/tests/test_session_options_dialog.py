@@ -80,6 +80,9 @@ class FakeSizer:
     def AddGrowableCol(self, *args, **kwargs) -> None:  # noqa: N802 - API wx
         pass
 
+    def Clear(self, delete_windows=False) -> None:  # noqa: N802 - API wx
+        self.items.clear()
+
 
 class FakePanel:
     def __init__(self, parent, **kwargs) -> None:
@@ -89,7 +92,7 @@ class FakePanel:
         pass
 
 
-def _build(session: SessionId, options: Options, overrides) -> object:
+def _build(session: SessionId, options: Options, overrides, *, exercise=None) -> object:
     """Zbuduj dialog na atrapach i zwroc gotowy obiekt."""
     saved = {name: getattr(wx, name, None) for name in
              ("Choice", "StaticText", "FlexGridSizer", "BoxSizer", "Panel", "Dialog",
@@ -131,7 +134,10 @@ def _build(session: SessionId, options: Options, overrides) -> object:
 
     importlib.reload(gui)
     try:
-        return gui.SessionOptionsDialog(None, session, options, overrides)
+        dialog = gui.SessionOptionsDialog(None, session, options, overrides)
+        if exercise is not None:
+            exercise(dialog)
+        return dialog
     finally:
         for name, value in saved.items():
             if value is not None:
@@ -140,6 +146,8 @@ def _build(session: SessionId, options: Options, overrides) -> object:
 
 def _controls(dialog) -> dict:
     return {
+        "resume": dialog.resume,
+        "rate": dialog.rate,
         "loudness": dialog.loudness,
         "transitions": dialog.transitions,
         "silence": dialog.silence,
@@ -155,7 +163,7 @@ def test_pliki_lokalne_dostaja_wszystkie_wykonalne_kontrolki():
         SessionId.FILES, Options(), session_options.SessionPlaybackOverrides()
     )
     controls = _controls(dialog)
-    for name in ("loudness", "transitions", "silence", "pause"):
+    for name in ("resume", "rate", "loudness", "transitions", "silence", "pause"):
         assert controls[name] is not None, f"Pliki lokalne wykonuja {name}"
 
 
@@ -172,6 +180,8 @@ def test_radio_nie_dostaje_kontrolek_ktorych_nie_wykona():
     assert controls["loudness"] is None, "Radio nie ma normalizacji"
     assert controls["transitions"] is None, "Radio nie ma przejsc miedzy utworami"
     assert controls["silence"] is None, "Radio nie ma ciszy miedzy utworami"
+    assert controls["resume"] is None, "Radio na żywo nie wznawia materiału"
+    assert controls["rate"] is None, "Radio startuje na żywo z normalnym tempem"
     assert controls["pause"] is not None, "wyjscie z odtwarzacza dotyczy obu sesji"
 
 
@@ -180,7 +190,7 @@ def test_podcasty_dostaja_kontrolki_dsp_ktore_maja_wykonawce():
         SessionId.PODCASTS, Options(), session_options.SessionPlaybackOverrides()
     )
     controls = _controls(dialog)
-    for name in ("loudness", "transitions", "silence", "pause"):
+    for name in ("resume", "rate", "loudness", "transitions", "silence", "pause"):
         assert controls[name] is not None, f"Podcasty wykonuja {name}"
 
 
@@ -193,6 +203,8 @@ def test_liczba_kontrolek_zgadza_sie_ze_zdolnosciami():
         created = sum(1 for value in _controls(dialog).values() if value is not None)
         expected = (3 if caps.supports_audio_processing else 0) + (
             1 if caps.supports_player_exit_pause else 0
+        ) + (1 if caps.supports_resume_position else 0) + (
+            1 if caps.supports_playback_rate else 0
         )
         assert created == expected, f"{session.value}: {created} != {expected}"
 
@@ -242,9 +254,24 @@ def test_predkosc_elementu_wyjasnia_wartosc_normalna_wolniejsza_i_szybsza():
     ]
 
 
+def test_predkosc_sesji_ma_jawne_etykiety_i_model_numeryczny():
+    dialog = _build(
+        SessionId.PODCASTS, Options(), session_options.SessionPlaybackOverrides()
+    )
+    assert dialog.rate.name == "Domyślna prędkość odtwarzania w tej sesji"
+    assert dialog.rate.choices[0].startswith("Jak ustawienie ogólne")
+    assert "1,00 razy — normalna prędkość" in dialog.rate.choices
+    assert "0,75 razy — wolniej" in dialog.rate.choices
+    assert "1,25 razy — szybciej" in dialog.rate.choices
+    assert dialog.rate._amc_values[0] is None
+    assert 1.5 in dialog.rate._amc_values
+
+
 def test_otwarcie_pokazuje_ZAPISANY_wybor_a_nie_domysl():
     """Dialog otwarty po zapisie musi pokazac to, co uzytkownik wybral."""
     overrides = session_options.SessionPlaybackOverrides(
+        remember_playback_position=False,
+        playback_rate=1.5,
         loudness_normalization=True,
         smooth_track_transitions=False,
         inter_track_silence_ms=3000,
@@ -274,6 +301,8 @@ def test_radio_nie_zwraca_wyborow_ktorych_nie_ma():
     assert result.loudness_normalization is None
     assert result.smooth_track_transitions is None
     assert result.inter_track_silence_ms is None
+    assert result.remember_playback_position is None
+    assert result.playback_rate is None
 
 
 # --------------------------------------------------------- mowa i obsluga
@@ -306,6 +335,56 @@ def test_kontrolki_maja_nazwy_bez_znakow_akceleratora():
         assert not control.name.endswith(":")
 
 
+def test_lista_sesji_ma_tylko_jawne_nazwy_uzytkowe():
+    dialog = _build(
+        SessionId.FILES, Options(), session_options.SessionPlaybackOverrides()
+    )
+    assert dialog.session_choice.name == "Konfigurowana sesja"
+    assert dialog.session_choice.choices == [
+        "Pliki lokalne",
+        "Radio",
+        "Podcasty i YouTube",
+        "TIDAL",
+        "Spotify",
+        "Sonos",
+        "Frontier Smart",
+    ]
+    assert all("SessionId" not in label and "{" not in label for label in dialog.session_choice.choices)
+
+
+def test_zmiana_sesji_zachowuje_draft_i_buduje_wlasciwe_pola():
+    observed = {}
+
+    def exercise(dialog):
+        dialog.resume.SetSelection(dialog.resume._amc_values.index(False))
+        dialog.rate.SetSelection(dialog.rate._amc_values.index(1.5))
+
+        dialog.session_choice.SetSelection(dialog._sessions.index(SessionId.RADIO))
+        dialog._on_session_changed(None)
+        observed["radio"] = (
+            dialog.session,
+            dialog.resume,
+            dialog.rate,
+            dialog.pause,
+        )
+
+        dialog.session_choice.SetSelection(dialog._sessions.index(SessionId.FILES))
+        dialog._on_session_changed(None)
+        observed["files"] = dialog.overrides
+
+    _build(
+        SessionId.FILES,
+        Options(),
+        session_options.SessionPlaybackOverrides(),
+        exercise=exercise,
+    )
+    assert observed["radio"][0] is SessionId.RADIO
+    assert observed["radio"][1] is None and observed["radio"][2] is None
+    assert observed["radio"][3] is not None
+    assert observed["files"].remember_playback_position is False
+    assert observed["files"].playback_rate == 1.5
+
+
 def test_dialog_ma_zapisz_i_anuluj():
     dialog = _build(
         SessionId.FILES, Options(), session_options.SessionPlaybackOverrides()
@@ -322,7 +401,7 @@ def test_fokus_startuje_na_pierwszej_kontrolce():
     )
     focused = [c for c in _controls(dialog).values() if c is not None and c.focused]
     assert len(focused) == 1, "dokladnie jedna kontrolka dostaje fokus na start"
-    assert focused[0] is dialog.loudness
+    assert focused[0] is dialog.resume
 
 
 def test_wariant_dziedziczony_mowi_co_z_niego_wynika():

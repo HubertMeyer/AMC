@@ -280,8 +280,8 @@ def test_zapisz_wykonuje_pelny_pion_az_do_profilu():
     assert out["state"].session_overrides["files"].loudness_normalization is True
     assert out["saved"] == [True], "zapis profilu nastepuje po zgodzie silnika"
     assert out["spoken"] and "apisano" in out["spoken"][0]
-    assert "Przetwarzanie dźwięku" in out["spoken"][0], (
-        "Odroczony skutek dotyczy audio, nie od razu działającej polityki pauzy"
+    assert "Ustawienia odtwarzania" in out["spoken"][0], (
+        "Komunikat obejmuje audio, pozycję i prędkość stosowane przy starcie"
     )
 
 

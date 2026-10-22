@@ -1,9 +1,16 @@
+import ast
 from pathlib import Path
 
 from amc_wx_lite.host_client import LiteHostClient
-from amc_wx_lite.menu_model import build_menus
+from amc_wx_lite.menu_model import build_menus, menus_for_session
 from amc_wx_lite.navigation import Navigator, SessionId, View
-from amc_wx_lite.shortcuts import Action, Chord, describe_action, resolve
+from amc_wx_lite.shortcuts import (
+    SPOTIFY_SUPPORTED_ACTIONS,
+    Action,
+    Chord,
+    describe_action,
+    resolve,
+)
 
 
 def _resolved(chord: Chord, *, player: bool) -> Action | None:
@@ -73,6 +80,7 @@ def test_protocol_keeps_session_and_navigation_mode_explicit() -> None:
     )
     client.navigate_bookmark(1, session_id="podcasts", named_only=True)
     client.add_chapter("Wstęp", session_id="files")
+    client.prepare_chapters(session_id="podcasts")
     client.list_chapters(session_id="podcasts")
     client.navigate_chapter(-1, session_id="files")
 
@@ -93,9 +101,39 @@ def test_protocol_keeps_session_and_navigation_mode_explicit() -> None:
             15.0,
         ),
         ("chapter.add", {"sessionId": "files", "name": "Wstęp"}, 20.0),
+        ("chapter.prepare", {"sessionId": "podcasts"}, 40.0),
         ("chapter.list", {"sessionId": "podcasts"}, 15.0),
         ("chapter.navigate", {"sessionId": "files", "direction": -1}, 15.0),
     ]
+
+
+def test_podcast_chapter_actions_prepare_sources_before_using_the_index() -> None:
+    source = (
+        Path(__file__).parents[1] / "amc_wx_lite" / "gui.py"
+    ).read_text(encoding="utf-8")
+    tree = ast.parse(source)
+    methods = {
+        node.name: node
+        for node in ast.walk(tree)
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+    }
+
+    def call_lines(method: str, attribute: str) -> list[int]:
+        return sorted(
+            node.lineno
+            for node in ast.walk(methods[method])
+            if isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Attribute)
+            and node.func.attr == attribute
+        )
+
+    navigate_prepare = call_lines("_navigate_chapter", "prepare_chapters")
+    navigate_use = call_lines("_navigate_chapter", "navigate_chapter")
+    list_prepare = call_lines("_show_chapters", "prepare_chapters")
+    list_use = call_lines("_show_chapters", "list_chapters")
+    assert navigate_prepare and navigate_use and navigate_prepare[0] < navigate_use[0]
+    assert list_prepare and list_use and list_prepare[0] < list_use[0]
+    assert source.count('self.announcer.say("Sprawdzanie rozdziałów")') >= 2
 
 
 def test_help_and_menu_use_user_labels_for_every_new_action() -> None:
@@ -122,6 +160,29 @@ def test_help_and_menu_use_user_labels_for_every_new_action() -> None:
         label = describe_action(action)
         assert label and label != "Polecenie AMC"
         assert action.name not in label and action.value not in label
+
+
+def test_spotify_exposes_bookmarks_and_chapters_through_every_command_surface() -> None:
+    actions = {
+        Action.ADD_BOOKMARK,
+        Action.ADD_NAMED_BOOKMARK,
+        Action.PREVIOUS_BOOKMARK,
+        Action.NEXT_BOOKMARK,
+        Action.PREVIOUS_NAMED_BOOKMARK,
+        Action.NEXT_NAMED_BOOKMARK,
+        Action.VIEW_CHAPTERS,
+        Action.ADD_NAMED_CHAPTER,
+        Action.PREVIOUS_CHAPTER,
+        Action.NEXT_CHAPTER,
+    }
+    assert actions <= SPOTIFY_SUPPORTED_ACTIONS
+    spotify_menu_actions = {
+        item.action
+        for menu in menus_for_session(SessionId.SPOTIFY)
+        for item in menu.items
+        if item.action is not None
+    }
+    assert actions <= spotify_menu_actions
 
 
 def test_transient_snapshot_roundtrip_preserves_navigation_not_playback() -> None:

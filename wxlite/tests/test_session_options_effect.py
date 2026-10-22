@@ -80,9 +80,10 @@ class FakeClient:
             raise RuntimeError("Nieobsługiwana długość ciszy między utworami.")
         return {"appliesOnNextPlayback": True}
 
-    def configure_local_resume(self, remember: bool):
-        self.calls.append(("local.resumeConfigure", {"remember": remember}))
-        return {"remember": remember}
+    def configure_local_resume(self, remember: bool, **modes):
+        payload = {"remember": remember, **modes}
+        self.calls.append(("local.resumeConfigure", payload))
+        return payload
 
     def pause_resume(self, session_id=None):
         args = {"sessionId": session_id} if session_id else {}
@@ -867,11 +868,49 @@ def test_operacja_silnika_idzie_przez_runner_a_nie_synchronicznie():
     )
 
 
-def test_bez_nowych_opcji_w_dialogu():
-    """Zakres przyrostu: zadnej nowej opcji odtwarzania poza uzgodnionymi."""
+def test_dialog_ma_pelny_uzgodniony_zakres_opcji():
     assert set(session_options.SESSION_OPTION_IDS) == {
+        "remember_playback_position",
+        "playback_rate",
         "loudness_normalization",
         "smooth_track_transitions",
         "inter_track_silence_ms",
         "pause_on_player_exit",
     }
+
+
+def test_kazda_droga_startu_bierze_predkosc_wlasciwej_sesji():
+    methods = {
+        item.name: ast.unparse(item)
+        for item in _FRAME.body
+        if isinstance(item, ast.FunctionDef)
+        and item.name in {
+            "_play_track",
+            "_play_media",
+            "_play_from_queue",
+            "_play_queue_at",
+            "_queue_step",
+        }
+    }
+    assert "_session_default_rate(SessionId.FILES)" in methods["_play_track"]
+    assert "_session_default_rate(SessionId.PODCASTS)" in methods["_play_media"]
+    for name in ("_play_from_queue", "_play_queue_at", "_queue_step"):
+        assert "_session_default_rate(SessionId.FILES)" in methods[name]
+
+
+def test_biezace_tempo_jest_osobne_dla_pliki_i_podcasty():
+    state = LiteState(options=Options())
+    state.options.rate = 0.75
+    state.session_overrides = {
+        "files": SessionPlaybackOverrides(playback_rate=1.5),
+        "podcasts": SessionPlaybackOverrides(playback_rate=1.25),
+    }
+    frame = SimpleNamespace(
+        state=state,
+        options=state.options,
+        _runtime_rate_by_session={SessionId.PODCASTS: 1.75},
+    )
+    method = real_method("_session_default_rate")
+    assert method(frame, SessionId.FILES) == 1.5
+    assert method(frame, SessionId.PODCASTS) == 1.75
+    assert state.options.rate == 0.75, "sesje nie przepisuja ustawienia ogolnego"

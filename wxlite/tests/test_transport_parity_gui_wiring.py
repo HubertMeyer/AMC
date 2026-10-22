@@ -295,7 +295,8 @@ def test_tidal_mowi_tylko_czas_udostepniony_przez_oryginalna_aplikacje() -> None
 def test_predkosc_idzie_po_drabinie_oryginalu_i_mowi_jak_oryginal() -> None:
     frame, spoken, seeks = make_frame()
     frame._dispatch(Action.RATE_UP)
-    assert frame.options.rate == 1.25
+    assert frame.options.rate == 1.0, "biezace tempo nie zmienia domyslu ogolnego"
+    assert frame._runtime_rate_by_session[SessionId.FILES] == 1.25
     assert spoken == ["Prędkość 1,25 razy"]
     assert {"rate": 1.25} in seeks
 
@@ -304,7 +305,8 @@ def test_predkosc_normalna_wraca_na_jeden() -> None:
     frame, spoken, _ = make_frame()
     frame.options.rate = 1.75
     frame._dispatch(Action.RATE_RESET)
-    assert frame.options.rate == 1.0
+    assert frame.options.rate == 1.75, "reset biezacego tempa nie zmienia domyslu"
+    assert frame._runtime_rate_by_session[SessionId.FILES] == 1.0
     assert spoken == ["Prędkość normalna"]
 
 

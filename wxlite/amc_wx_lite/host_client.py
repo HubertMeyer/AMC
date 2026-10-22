@@ -404,9 +404,22 @@ class LiteHostClient:
             args["positionSeconds"] = float(position_seconds)
         return self.call("files.play", args, timeout=60.0)
 
-    def configure_local_resume(self, remember: bool) -> Any:
-        """Ustaw globalna warstwe polityki wznowienia lokalnych plikow."""
-        return self.call("local.resumeConfigure", {"remember": bool(remember)})
+    def configure_local_resume(
+        self,
+        remember: bool,
+        *,
+        local_resume_mode: int = 0,
+        podcast_resume_mode: int = 0,
+    ) -> Any:
+        """Ustaw globalna i sesyjne warstwy polityki wznowienia."""
+        return self.call(
+            "local.resumeConfigure",
+            {
+                "remember": bool(remember),
+                "localResumeMode": int(local_resume_mode),
+                "podcastResumeMode": int(podcast_resume_mode),
+            },
+        )
 
     def checkpoint_local(self) -> Any:
         """Utrwal pozycje bezposrednio granego lokalnego pliku."""
@@ -1596,6 +1609,13 @@ class LiteHostClient:
             "chapter.add",
             {"sessionId": session_id, "name": name},
             timeout=20.0,
+        )
+
+    def prepare_chapters(self, *, session_id: str) -> Any:
+        return self.call(
+            "chapter.prepare",
+            {"sessionId": session_id},
+            timeout=40.0,
         )
 
     def list_chapters(self, *, session_id: str) -> Any:

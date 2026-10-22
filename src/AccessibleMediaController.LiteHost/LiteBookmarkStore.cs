@@ -627,6 +627,21 @@ internal sealed class LiteBookmarkStore
             utcNow,
             name));
 
+    public int ReplaceProviderChapters(
+        string sessionId,
+        string sessionName,
+        MediaItem item,
+        string sourceFamily,
+        IEnumerable<ProviderChapterPoint> chapters,
+        DateTime utcNow) =>
+        MutateBookmarks(settings => new ChapterIndex(settings).ReplaceProviderChapters(
+            sessionId,
+            sessionName,
+            item,
+            sourceFamily,
+            chapters,
+            utcNow));
+
     public ChapterSegment? FindChapter(
         string sessionId,
         string itemId,

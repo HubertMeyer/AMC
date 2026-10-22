@@ -797,10 +797,8 @@ def test_playback_and_view_menus_do_not_mix_foreign_sessions() -> None:
         Action.MANAGE_PLAYLIST_MEMBERSHIP,
     }.isdisjoint(sonos_library)
 
-    assert all(
-        menu.title != "Dźwię&k"
-        for menu in menu_model.menus_for_session(menu_model.SessionId.SONOS)
-    )
+    sonos_audio = actions(menu_model.SessionId.SONOS, "Dźwię&k")
+    assert sonos_audio == {Action.SESSION_OPTIONS}
 
 
 def test_every_session_has_the_accessible_session_list_command() -> None:

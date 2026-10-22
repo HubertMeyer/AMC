@@ -189,10 +189,12 @@ internal sealed class LiteQueueCoordinator
     /// <summary>
     /// Jawny wybor z ustawien samodzielnego interfejsu wxPython. <c>null</c>
     /// zachowuje migracyjne dziedziczenie z profilu glownego AMC. Nadpisujemy
-    /// tylko warstwe GLOBALNA; jawny tryb pozycji, folderu albo sesji nadal ma
+    /// warstwe GLOBALNA i, gdy podano, warstwe SESJI; jawny tryb pozycji lub
+    /// folderu nadal ma
     /// pierwszenstwo zgodnie z <see cref="ResumePositionPolicy"/>.
     /// </summary>
     private bool? _rememberGloballyOverride;
+    private ResumePositionMode? _sessionModeOverride;
 
     public LiteQueueCoordinator(IMediaOutput output, LiteQueueStore? store = null)
     {
@@ -318,10 +320,17 @@ internal sealed class LiteQueueCoordinator
 
     /// <summary>Ustaw globalna warstwe polityki wznowienia dla wxPython.</summary>
     public void ConfigureRememberGlobally(bool remember)
+        => ConfigureResumePreferences(remember, null);
+
+    /// <summary>Ustaw globalna i sesyjna warstwe polityki wxPython.</summary>
+    public void ConfigureResumePreferences(
+        bool remember,
+        ResumePositionMode? sessionMode)
     {
         lock (_gate)
         {
             _rememberGloballyOverride = remember;
+            _sessionModeOverride = sessionMode;
             var session = _session;
             var resume = _restoredResume;
             if (session is null || resume is null) return;
@@ -614,7 +623,7 @@ internal sealed class LiteQueueCoordinator
             item.Source,
             resume?.FolderPlaybackOptions,
             resume?.FolderSources,
-            profile.SessionMode,
+            _sessionModeOverride ?? profile.SessionMode,
             _rememberGloballyOverride ?? profile.RememberGlobally);
     }
 

@@ -190,6 +190,10 @@ internal static class Program
                 LitePodcastDownloadCoordinator.SaveAsOperation,
                 // Sprawdzenie nowego źródła również wykonuje sieć lub yt-dlp.
                 LitePodcastAddCoordinator.Operation,
+                // Pobranie Podcasting 2.0 JSON albo strony odcinka może trwać
+                // kilkanaście sekund. Samo przejście po gotowym indeksie
+                // pozostaje w szeregowej kolejce transportu.
+                LitePodcastChapterCoordinator.Operation,
                 // Publiczne katalogi Apple Podcasts, Spreaker i YouTube są
                 // niezależne od transportu; wolna odpowiedź nie zatrzymuje
                 // radia, nagrywania ani pauzy.

@@ -16,13 +16,14 @@ POWERSHELL = shutil.which("pwsh") or shutil.which("powershell")
 
 def _fixture(tmp_path: Path, *, profile: str = "public", sha: str | None = None):
     version = "0.1.0-alpha.999"
-    installer = tmp_path / f"AMC-{version}-win-x64.exe"
+    installer = tmp_path / "AMC-Public-2026-10-22-2125.exe"
     installer.write_bytes(b"syntetyczny instalator publiczny")
     digest = hashlib.sha256(installer.read_bytes()).hexdigest()
     integrity = {
         "schemaVersion": 1,
         "profile": profile,
         "version": version,
+        "displayVersion": "22.10.2026, 21:25",
         "fileName": installer.name,
         "bytes": installer.stat().st_size,
         "sha256": sha or digest,
@@ -75,7 +76,7 @@ def test_prepare_only_rejects_private_profile_and_changed_hash(tmp_path: Path) -
     version, _installer, _digest = _fixture(tmp_path, profile="test")
     private_result = _run(tmp_path, version)
     assert private_result.returncode != 0
-    assert "profilu public" in (private_result.stdout + private_result.stderr)
+    assert "AMC Public" in (private_result.stdout + private_result.stderr)
 
     for child in tmp_path.iterdir():
         child.unlink()
@@ -92,6 +93,7 @@ def test_publish_path_requires_remote_commit_and_verifies_uploaded_assets() -> N
     assert 'gh api "repos/$Repository/commits/$sourceRevision"' in source
     assert 'gh release create' not in source
     assert '"release", "create", $tag' in source
+    assert '"--title", "AMC Public — $displayVersion"' in source
     assert "Wydanie $tag już istnieje" in source
     assert "asset.size" in source
     assert "integrityAsset.state" in source

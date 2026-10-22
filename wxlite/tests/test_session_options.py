@@ -30,10 +30,13 @@ from amc_wx_lite.session_options import (
     SessionPlaybackOverrides,
     INTER_TRACK_SILENCE_CHOICES,
     capabilities_for,
+    configure_resume_preferences,
     inter_track_silence_label,
     describe_session_options,
     resolve_audio_payload,
     resolve_pause_on_player_exit,
+    resolve_playback_rate,
+    resolve_remember_position,
     scope_for_session,
 )
 from amc_wx_lite.state_store import LiteState, Options, StateStore
@@ -69,15 +72,15 @@ def test_podcasty_dostaja_wlasne_przetwarzanie_dzwieku_przed_startem():
     assert podcasts.has_options is True
 
 
-def test_sesja_nie_zapisuje_algorytmu_tempa_ani_predkosci():
-    """SessionPlaybackOptionsEditor.cs:28 -- SupportsPlaybackRate: false.
-
-    Algorytm tempa zostaje OSOBNA funkcja (menu Dzwiek, globalnie). Gdyby
-    sesja go zapisywala, dwa miejsca ustawialyby to samo pole silnika.
-    """
-    for session in (SessionId.FILES, SessionId.RADIO, SessionId.PODCASTS):
+def test_predkosc_i_wznowienie_maja_tylko_sesje_z_wykonawca():
+    for session in (SessionId.FILES, SessionId.PODCASTS):
         caps = capabilities_for(session)
-        assert caps.supports_playback_rate is False
+        assert caps.supports_playback_rate is True
+        assert caps.supports_resume_position is True
+    assert capabilities_for(SessionId.RADIO).supports_playback_rate is False
+    assert capabilities_for(SessionId.RADIO).supports_resume_position is False
+    assert "playback_rate" in SESSION_OPTION_IDS
+    assert "remember_playback_position" in SESSION_OPTION_IDS
     assert "tempo_algorithm" not in SESSION_OPTION_IDS
     assert not hasattr(SessionPlaybackOverrides(), "tempo_algorithm")
 
@@ -87,6 +90,50 @@ def test_nie_ma_martwych_pol_wyszukiwania_ani_automatycznego_dodawania():
     overrides = SessionPlaybackOverrides()
     for dead in ("auto_add", "search_enter", "resume_mode", "output_device"):
         assert not hasattr(overrides, dead), f"pole bez wykonawcy: {dead}"
+
+
+def test_predkosc_sesji_i_wznowienie_nadpisuja_domyslne():
+    options = Options()
+    options.rate = 0.75
+    assert resolve_playback_rate(options, SessionPlaybackOverrides()) == 0.75
+    assert resolve_playback_rate(
+        options, SessionPlaybackOverrides(playback_rate=1.5)
+    ) == 1.5
+    assert resolve_remember_position(
+        SessionId.FILES,
+        SessionPlaybackOverrides(),
+        remember_local_globally=False,
+    ) is False
+
+
+def test_uszkodzona_predkosc_sesji_nie_jest_cicho_zaokraglana():
+    for invalid in (True, False, "1.5", 1.33, float("nan"), float("inf"), -1):
+        parsed = SessionPlaybackOverrides.from_payload({"playback_rate": invalid})
+        assert parsed.playback_rate is None
+
+
+def test_host_dostaje_obie_polityki_wznowienia_w_jednym_wywolaniu():
+    calls: list[tuple[bool, dict]] = []
+
+    class Client:
+        def configure_local_resume(self, remember, **modes):
+            calls.append((remember, modes))
+            return modes
+
+    state = LiteState()
+    state.session_overrides = {
+        "files": SessionPlaybackOverrides(remember_playback_position=True),
+        "podcasts": SessionPlaybackOverrides(remember_playback_position=False),
+    }
+    configure_resume_preferences(Client(), state, False)
+    assert calls == [(False, {"local_resume_mode": 1, "podcast_resume_mode": 2})]
+    assert resolve_remember_position(
+        SessionId.PODCASTS, SessionPlaybackOverrides()
+    ) is True
+    assert resolve_remember_position(
+        SessionId.PODCASTS,
+        SessionPlaybackOverrides(remember_playback_position=False),
+    ) is False
 
 
 # ------------------------------------------------------- dziedziczenie
@@ -163,7 +210,10 @@ def test_zapisany_wybor_sesji_wraca_po_ponownym_wczytaniu():
         store = StateStore(folder)
         state = LiteState()
         state.session_overrides["files"] = SessionPlaybackOverrides(
-            loudness_normalization=True, inter_track_silence_ms=1000
+            remember_playback_position=False,
+            playback_rate=1.5,
+            loudness_normalization=True,
+            inter_track_silence_ms=1000,
         )
         state.session_overrides["radio"] = SessionPlaybackOverrides(
             pause_on_player_exit=False
@@ -173,6 +223,8 @@ def test_zapisany_wybor_sesji_wraca_po_ponownym_wczytaniu():
         wczytany = store.load()
         files = wczytany.session_overrides["files"]
         assert files.loudness_normalization is True
+        assert files.remember_playback_position is False
+        assert files.playback_rate == 1.5
         assert files.inter_track_silence_ms == 1000
         assert files.smooth_track_transitions is None, "brak wyboru zostaje brakiem"
         assert wczytany.session_overrides["radio"].pause_on_player_exit is False
@@ -200,7 +252,12 @@ def test_uszkodzony_wpis_sesji_nie_blokuje_startu_ani_pozostalych():
         Path(store.path).write_text(
             json.dumps({
                 "session_overrides": {
-                    "files": {"loudness_normalization": "tak", "inter_track_silence_ms": 777},
+                    "files": {
+                        "remember_playback_position": "tak",
+                        "playback_rate": 1.33,
+                        "loudness_normalization": "tak",
+                        "inter_track_silence_ms": 777,
+                    },
                     "radio": {"pause_on_player_exit": False},
                     "obca-sesja": {"loudness_normalization": True},
                     "zly-ksztalt": ["lista"],
@@ -213,6 +270,8 @@ def test_uszkodzony_wpis_sesji_nie_blokuje_startu_ani_pozostalych():
         assert state.session_overrides.get("files", SessionPlaybackOverrides()).loudness_normalization is None
         # 777 ms nie jest wartoscia z PlaybackAudioSettingsRules.
         assert state.session_overrides.get("files", SessionPlaybackOverrides()).inter_track_silence_ms is None
+        assert state.session_overrides.get("files", SessionPlaybackOverrides()).remember_playback_position is None
+        assert state.session_overrides.get("files", SessionPlaybackOverrides()).playback_rate is None
         assert state.session_overrides["radio"].pause_on_player_exit is False
         assert "obca-sesja" not in state.session_overrides, "tylko sesje, ktore port ma"
         assert "zly-ksztalt" not in state.session_overrides

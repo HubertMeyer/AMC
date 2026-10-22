@@ -7,7 +7,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 path = Path(__file__).resolve().parents[1] / "tools" / "build_bundle.py"
 spec = importlib.util.spec_from_file_location("lite_bundle_under_test", path)
@@ -144,7 +144,8 @@ def test_bundle_manifest_profile_is_explicit_and_public_is_restricted():
 
     assert manifest["releaseProfileSchema"] == 1
     assert manifest["releaseProfile"] == "public"
-    assert manifest["displayName"] == "AMC"
+    assert manifest["displayName"] == "AMC Public"
+    assert "displayVersion" in manifest
     assert manifest["installId"] == "AMC.Public.win-x64"
     assert manifest["updateChannel"] == "stable"
     assert manifest["sessions"] == [
@@ -217,6 +218,17 @@ def test_build_label_is_user_facing_date_and_source_revision():
     assert label == (
         "2026.10.13-7c246dba1234567890abcdef1234567890abcdef-a1b2c3d4"
     )
+
+
+def test_build_time_keeps_one_stable_user_facing_local_label():
+    fields = bundle.build_time_fields(
+        datetime(2026, 10, 22, 21, 25, 43, tzinfo=timezone(timedelta(hours=2)))
+    )
+
+    assert fields == {
+        "created": "2026-10-22T19:25:43+00:00",
+        "displayVersion": "22.10.2026, 21:25",
+    }
 
 
 def test_source_identity_marks_untracked_source_as_working_copy():
@@ -305,6 +317,7 @@ def test_refresh_mode_updates_the_visible_build_identity():
     source = path.read_text(encoding="utf-8")
     assert 'manifest["bundleId"] = bundle_identity(manifest["fileHashes"])' in source
     assert 'manifest["buildLabel"] = build_label(' in source
+    assert "manifest.update(build_time_fields())" in source
 
 
 def test_promotion_verifies_full_candidate_and_installed_package():

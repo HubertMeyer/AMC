@@ -14,11 +14,19 @@
   przejściową używaną podczas rozwoju i nie oznacza pobocznego prototypu ani
   nakładki na historyczny program. Źródła są w tym repozytorium, a bieżąca
   instalacja użytkowa znajduje się w `D:\Projekty Codex\AMC Python`.
-- Docelowo obecny, pełny profil AMC Python otrzyma nazwę użytkową **AMC Test**.
-  Publiczne **AMC** powstanie z dokładnie tej samej bazy kodu i tego samego
-  procesu wydania, ale z ograniczonym profilem możliwości. Nie utrzymujemy
-  osobnego starego programu jako publicznego AMC i nie rozwijamy dwóch
-  rozchodzących się implementacji.
+- Obecny, pełny profil AMC Python ma nazwę użytkową **AMC Test**. Wydanie
+  gotowe do niezależnego przekazania innej osobie ma nazwę **AMC Public** i
+  powstaje z dokładnie tej samej bazy kodu oraz tego samego procesu wydania,
+  ale z ograniczonym profilem możliwości. Nie utrzymujemy osobnego starego
+  programu jako AMC Public i nie rozwijamy dwóch rozchodzących się
+  implementacji.
+- Użytkowa nazwa wersji ma zawsze krótki format `AMC Test — dd.mm.rrrr, gg:mm`
+  albo `AMC Public — dd.mm.rrrr, gg:mm`. Pełny commit, identyfikator paczki,
+  semantyczny numer techniczny i inne długie etykiety pozostają w manifeście,
+  integralności oraz diagnostyce, nie w zwykłej nazwie programu. Nazwa pliku
+  przyszłego instalatora zawiera profil, datę i godzinę zamiast numeru
+  `alpha`. `Public` oznacza gotowość paczki do samodzielnego przekazania;
+  publikacja na GitHubie jest osobną, późniejszą czynnością.
 - Funkcje niedopuszczone do publicznego AMC mają być wyłączone profilem
   możliwości także w interfejsie, pomocy, zależnościach, logowaniu i pakiecie,
   a nie tylko wizualnie ukryte. `AMC Test` może zawierać funkcje eksperymentalne

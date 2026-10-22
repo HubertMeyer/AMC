@@ -17,34 +17,48 @@ $ErrorActionPreference = "Stop"
 
 $repositoryRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot ".."))
 $artifacts = [IO.Path]::GetFullPath($ArtifactsDirectory)
-$baseName = "AMC-$Version-win-x64.exe"
-$installerPath = Join-Path $artifacts $baseName
-$integrityPath = $installerPath + ".integrity.json"
 $preparedNotesPath = Join-Path $artifacts ("release-notes-$Version.md")
 $preparedManifestPath = Join-Path $artifacts ("release-ready-$Version.json")
 
 if (-not (Test-Path -LiteralPath $artifacts -PathType Container)) {
     throw "Nie istnieje katalog artefaktów: $artifacts"
 }
+$matchingIntegrity = @(
+    foreach ($candidatePath in Get-ChildItem -LiteralPath $artifacts -File -Filter "*.exe.integrity.json") {
+        try {
+            $candidate = Get-Content -LiteralPath $candidatePath.FullName -Raw | ConvertFrom-Json
+        }
+        catch {
+            continue
+        }
+        if ([int]$candidate.schemaVersion -eq 1 -and
+            [string]$candidate.profile -eq "public" -and
+            [string]$candidate.version -eq $Version) {
+            [pscustomobject]@{ Path = $candidatePath.FullName; Data = $candidate }
+        }
+    }
+)
+if ($matchingIntegrity.Count -ne 1) {
+    throw "Oczekiwano dokładnie jednego pliku integralności AMC Public dla wersji $Version."
+}
+$integrityPath = [string]$matchingIntegrity[0].Path
+$integrity = $matchingIntegrity[0].Data
+$baseName = [string]$integrity.fileName
+if ([string]::IsNullOrWhiteSpace($baseName) -or
+    [IO.Path]::GetFileName($baseName) -cne $baseName -or
+    -not $baseName.EndsWith(".exe", [StringComparison]::OrdinalIgnoreCase)) {
+    throw "Plik integralności zawiera nieprawidłową nazwę instalatora."
+}
+$installerPath = Join-Path $artifacts $baseName
 if (-not (Test-Path -LiteralPath $installerPath -PathType Leaf)) {
     throw "Brak oczekiwanego instalatora: $baseName"
 }
-if (-not (Test-Path -LiteralPath $integrityPath -PathType Leaf)) {
-    throw "Brak pliku integralności: $([IO.Path]::GetFileName($integrityPath))"
-}
-
-$integrity = Get-Content -LiteralPath $integrityPath -Raw | ConvertFrom-Json
-if ([int]$integrity.schemaVersion -ne 1) {
-    throw "Nieobsługiwana wersja pliku integralności."
-}
-if ([string]$integrity.profile -ne "public") {
-    throw "Do publicznego wydania wolno użyć tylko instalatora profilu public."
-}
-if ([string]$integrity.version -ne $Version) {
-    throw "Wersja pliku integralności nie zgadza się z wersją wydania."
-}
 if ([string]$integrity.fileName -ne $baseName) {
     throw "Nazwa instalatora nie zgadza się z plikiem integralności."
+}
+$displayVersion = [string]$integrity.displayVersion
+if ($displayVersion -notmatch '^\d{2}\.\d{2}\.\d{4}, \d{2}:\d{2}$') {
+    throw "Plik integralności nie zawiera czytelnej daty i godziny AMC Public."
 }
 
 $installer = Get-Item -LiteralPath $installerPath
@@ -82,6 +96,8 @@ $prepared = [ordered]@{
     repository = $Repository
     tag = "v$Version"
     version = $Version
+    displayName = "AMC Public"
+    displayVersion = $displayVersion
     profile = "public"
     installer = $baseName
     bytes = $installer.Length
@@ -123,7 +139,7 @@ $releaseArguments = @(
     "release", "create", $tag,
     "--repo", $Repository,
     "--target", $sourceRevision,
-    "--title", "AMC $Version",
+    "--title", "AMC Public — $displayVersion",
     "--notes-file", $preparedNotesPath
 )
 if ($Version.Contains("-")) {

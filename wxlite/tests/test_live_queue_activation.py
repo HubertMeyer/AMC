@@ -145,6 +145,9 @@ def _recording_frame():
             # dźwięku jest celowo wykonana, ale nie trafia do listy payloadów.
             return {"ok": True}
 
+        def configure_local_resume(self, remember, **_modes):
+            return {"remember": remember}
+
         def queue_set(self, items, *, session_id="local", order=None):
             sent.append({"items": items, "sessionId": session_id, "order": order})
             return {"ok": True}
@@ -167,6 +170,7 @@ def _recording_frame():
         },
     )
     frame.state = SimpleNamespace(session_overrides={})
+    frame._remember_local_playback_positions = True
     frame.announcer = SimpleNamespace(say=lambda *a, **k: None)
     # Runner wykonuje zadanie NATYCHMIAST i w tym samym watku: chcemy zmierzyc
     # payload, a nie polityke watkow (ta ma swoje testy).

@@ -121,23 +121,69 @@ internal sealed class LiteSpotifyPlaybackCoordinator : IDisposable
         var absolute = LiteArgs.ReadDouble(
             args, "positionSeconds", double.NaN, 0d, 86_400d);
         SpotifyLibrespotMediaOutput target;
-        lock (gate)
-        {
-            if (currentItem is null)
-                throw new LiteRequestException("Najpierw uruchom materiał w Spotify.");
-            target = EnsureOutputLocked();
-        }
+        lock (gate) target = RequireCurrentOutputLocked();
         var position = !double.IsNaN(absolute)
             ? TimeSpan.FromSeconds(absolute)
             : target.Position + TimeSpan.FromSeconds(double.IsNaN(delta) ? 0d : delta);
-        if (position < TimeSpan.Zero) position = TimeSpan.Zero;
-        target.Seek(position);
+        position = SeekTo(position);
         return new
         {
             engine = SessionId,
             sessionId = SessionId,
             positionSeconds = position.TotalSeconds
         };
+    }
+
+    /// <summary>
+    /// Migawka stabilnej osi czasu Spotify. Id zapisu nie zawiera sufiksu
+    /// wystąpienia z playlisty, dzięki czemu ten sam odcinek lub utwór ma te
+    /// same zakładki niezależnie od listy, z której został uruchomiony.
+    /// </summary>
+    internal LiteSpotifyTimelineSnapshot Timeline()
+    {
+        MediaItem item;
+        SpotifyLibrespotMediaOutput target;
+        lock (gate)
+        {
+            target = RequireCurrentOutputLocked();
+            item = currentItem!;
+        }
+        var serviceType = item.Kind switch
+        {
+            MediaItemKind.Track => "track",
+            MediaItemKind.Episode => "episode",
+            _ => throw new LiteRequestException(
+                "Zakładki i rozdziały Spotify dotyczą utworów i odcinków.")
+        };
+        var externalId = item.ExternalId?.Trim();
+        if (string.IsNullOrWhiteSpace(externalId))
+            throw new LiteRequestException(
+                "Bieżący materiał Spotify nie ma trwałego identyfikatora.");
+        var stored = new MediaItem
+        {
+            Id = $"spotify:{serviceType}:{externalId}",
+            Title = item.Title,
+            Artist = item.Artist,
+            Kind = item.Kind,
+            ExternalId = externalId,
+            Source = $"spotify:{serviceType}:{externalId}",
+            Duration = item.Duration,
+            IsAvailable = item.IsAvailable
+        };
+        return new LiteSpotifyTimelineSnapshot(
+            item.Id,
+            stored,
+            target.Position,
+            item.Duration);
+    }
+
+    internal TimeSpan SeekTo(TimeSpan position)
+    {
+        SpotifyLibrespotMediaOutput target;
+        lock (gate) target = RequireCurrentOutputLocked();
+        if (position < TimeSpan.Zero) position = TimeSpan.Zero;
+        target.Seek(position);
+        return position;
     }
 
     internal object SetVolume(JsonElement args)
@@ -312,6 +358,13 @@ internal sealed class LiteSpotifyPlaybackCoordinator : IDisposable
         return output;
     }
 
+    private SpotifyLibrespotMediaOutput RequireCurrentOutputLocked()
+    {
+        if (currentItem is null)
+            throw new LiteRequestException("Najpierw uruchom materiał w Spotify.");
+        return EnsureOutputLocked();
+    }
+
     private void OnPlaybackPreparing(object? sender, MediaPlaybackPreparingEventArgs e)
     {
         lock (gate)
@@ -423,3 +476,9 @@ internal sealed record LiteSpotifyOutputChoice(
     [property: JsonPropertyName("id")] string? Id,
     [property: JsonPropertyName("name")] string Name,
     [property: JsonPropertyName("available")] bool Available);
+
+internal sealed record LiteSpotifyTimelineSnapshot(
+    string PlaybackItemId,
+    MediaItem Item,
+    TimeSpan Position,
+    TimeSpan Duration);

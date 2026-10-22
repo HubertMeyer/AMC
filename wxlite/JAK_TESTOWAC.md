@@ -565,6 +565,23 @@ pakietu; nie wolno zamykać działającego okna podczas nagrywania tylko po to,
 
 ## Opcje sesji — jak to sprawdzić (ten przyrost)
 
+Aktualizacja 2026-10-22 zastępuje wcześniejszy scenariusz czterech pól.
+W Plikach lokalnych i Podcastach i YouTube oczekiwane jest sześć pól:
+pozycja, domyślna prędkość, normalizacja, przejścia, cisza oraz zachowanie po
+wyjściu. Radio ma wyłącznie zachowanie po wyjściu. `1,00 razy` musi być
+odczytane jako normalna prędkość, wartości niższe jako wolniejsze, a wyższe
+jako szybsze. Po Zapisz zamknij i otwórz dialog ponownie, sprawdź zachowanie
+strzałek/Home/End oraz powrót fokusu po Zapisz i Anuluj. Następny materiał ma
+ruszyć z domyślną prędkością sesji, chyba że plik, podcast lub odcinek ma
+własne ustawienie. Opcja „Zawsze od początku” nie może unieważnić jawnego
+ustawienia bardziej szczegółowego.
+
+Wynik automatyczny bieżących źródeł z 2026-10-22: pełny zestaw Pythona
+`1977 passed, 110 skipped, 11 subtests passed`; 27 zestawów protokołu C#
+zaliczonych; 378 payloadów Pythona przyjętych przez parser C#; pełny build
+Debug bez ostrzeżeń i błędów. Jest to dowód źródeł i kompilacji, nie odbiór
+żywego NVDA ani instalacji AMC Test.
+
 Testy bezokienne (wszystko, co zmierzone):
 
 ```bash

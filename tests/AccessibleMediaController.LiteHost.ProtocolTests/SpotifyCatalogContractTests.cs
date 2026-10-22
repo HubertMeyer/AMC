@@ -34,6 +34,7 @@ internal static class SpotifyCatalogContractTests
         CoordinatorRedactsBackendFailures();
         CoordinatorSearchesExactlyOnceWithoutMutatingAnything();
         CoordinatorReadsOneDescriptionWithoutMutation();
+        CoordinatorReadsEpisodeChaptersFromDescriptionWithoutMutation();
         CoordinatorShowsConfirmedCreatedPlaylistInCollectionImmediately();
         CoordinatorRefreshesPlaylistViewOnceWithoutFullCollectionSync();
         CoordinatorLoginInvalidatesPreviousPlaylistSnapshot();
@@ -662,6 +663,27 @@ internal static class SpotifyCatalogContractTests
             && backend.DescriptionCalls == 1
             && backend.MutationCalls == 0,
             "Alt+D nie wykonało dokładnie jednego bezpiecznego odczytu opisu");
+    }
+
+    private static void CoordinatorReadsEpisodeChaptersFromDescriptionWithoutMutation()
+    {
+        using var backend = new FakeBackend
+        {
+            Description = "00:00 Wstęp\n05:30 Temat główny"
+        };
+        using var coordinator = new LiteSpotifyCatalogCoordinator(backend);
+        var episode = Item(MediaItemKind.Episode, "episode123", "Odcinek");
+
+        var chapters = coordinator.ReadEpisodeChapterPoints(
+            episode,
+            TimeSpan.FromMinutes(20));
+
+        Check(chapters.Count == 2
+            && chapters[0].Name == "Wstęp"
+            && chapters[1].Start == TimeSpan.FromMinutes(5.5)
+            && backend.DescriptionCalls == 1
+            && backend.MutationCalls == 0,
+            "rozdziały odcinka Spotify nie powstały z jednego bezpiecznego odczytu opisu");
     }
 
     private static void CoordinatorShowsConfirmedCreatedPlaylistInCollectionImmediately()

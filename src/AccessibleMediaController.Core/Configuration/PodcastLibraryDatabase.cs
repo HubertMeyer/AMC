@@ -786,6 +786,10 @@ internal sealed class PodcastLibraryDatabase(string databasePath)
             ? subscription.TempoAlgorithmOverride
             : episode.TempoAlgorithmOverride;
 
+        var resolvedResume = episode?.ResumePositionMode ?? ResumePositionMode.Inherit;
+        if (resolvedResume == ResumePositionMode.Inherit)
+            resolvedResume = subscription.ResumePositionMode;
+
         return new PodcastPlaybackOptionsSnapshot(
             target,
             itemId,
@@ -804,6 +808,7 @@ internal sealed class PodcastLibraryDatabase(string databasePath)
                 : null,
             PodcastPlaybackSettingsResolver.ShouldRememberPosition(
                 episode, subscription),
+            resolvedResume,
             episode?.PlaybackRateOverride ?? subscription.PlaybackRateOverride,
             episode?.LoudnessNormalizationOverride
                 ?? subscription.LoudnessNormalizationOverride,
@@ -943,6 +948,105 @@ internal sealed class PodcastLibraryDatabase(string databasePath)
                         subscription)));
             }
             return result;
+        }
+    }
+
+    public PodcastChapterTarget? GetChapterTarget(string episodeId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(episodeId);
+        lock (_gate)
+        {
+            using var connection = OpenConnection();
+            EnsureSchema(connection);
+            using var command = connection.CreateCommand();
+            command.CommandText =
+                "SELECT payload_json FROM podcast_episodes WHERE id = $id;";
+            command.Parameters.AddWithValue("$id", episodeId);
+            var payload = command.ExecuteScalar() as string;
+            if (string.IsNullOrWhiteSpace(payload)) return null;
+            var episode = JsonSerializer.Deserialize<PodcastEpisodeSettings>(
+                payload,
+                PayloadJsonOptions)
+                ?? throw new InvalidDataException(
+                    "Nie można odczytać zapisanego stanu odcinka.");
+            return new PodcastChapterTarget(
+                episode.Id,
+                episode.Title,
+                episode.Description,
+                episode.ProviderChaptersUrl,
+                episode.ProviderChaptersLoadedUrl,
+                episode.PageUrl);
+        }
+    }
+
+    public bool MarkProviderChaptersLoaded(
+        string episodeId,
+        string providerChaptersUrl)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(episodeId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(providerChaptersUrl);
+        lock (_gate)
+        {
+            using var connection = OpenConnection();
+            EnsureSchema(connection);
+            using var transaction = connection.BeginTransaction();
+            PodcastEpisodeSettings episode;
+            using (var read = connection.CreateCommand())
+            {
+                read.Transaction = transaction;
+                read.CommandText =
+                    "SELECT payload_json FROM podcast_episodes WHERE id = $id;";
+                read.Parameters.AddWithValue("$id", episodeId);
+                var payload = read.ExecuteScalar() as string;
+                if (string.IsNullOrWhiteSpace(payload)) return false;
+                episode = JsonSerializer.Deserialize<PodcastEpisodeSettings>(
+                    payload,
+                    PayloadJsonOptions)
+                    ?? throw new InvalidDataException(
+                        "Nie można odczytać zapisanego stanu odcinka.");
+            }
+
+            // Wynik pobrania wolno przypisać wyłącznie do dokładnie tego URL,
+            // który nadal jest aktualny w rekordzie odcinka. Odświeżenie RSS
+            // może w międzyczasie podać nowszy plik rozdziałów.
+            if (!string.Equals(
+                    episode.ProviderChaptersUrl,
+                    providerChaptersUrl,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+            if (string.Equals(
+                    episode.ProviderChaptersLoadedUrl,
+                    providerChaptersUrl,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            episode.ProviderChaptersLoadedUrl = episode.ProviderChaptersUrl;
+            Execute(
+                connection,
+                transaction,
+                """
+                UPDATE podcast_episodes SET
+                    content_hash = $hash,
+                    payload_json = $payload
+                WHERE id = $id;
+                """,
+                ("$hash", Fingerprint(episode)),
+                ("$payload", JsonSerializer.Serialize(episode, PayloadJsonOptions)),
+                ("$id", episode.Id));
+            Execute(
+                connection,
+                transaction,
+                """
+                INSERT INTO metadata(key, value) VALUES('last_saved_utc', $value)
+                ON CONFLICT(key) DO UPDATE SET value = excluded.value;
+                """,
+                ("$value", DateTime.UtcNow.ToString("O", CultureInfo.InvariantCulture)));
+            transaction.Commit();
+            return true;
         }
     }
 

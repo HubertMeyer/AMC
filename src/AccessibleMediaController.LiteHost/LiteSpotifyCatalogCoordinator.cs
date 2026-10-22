@@ -1,4 +1,6 @@
 using System.Text.Json;
+using AccessibleMediaController.Core.Configuration;
+using AccessibleMediaController.Core.Podcasts;
 using AccessibleMediaController.Core.Sessions;
 using AccessibleMediaController.Core.Spotify;
 using AccessibleMediaController.LiteHost.Protocol;
@@ -325,6 +327,44 @@ internal sealed class LiteSpotifyCatalogCoordinator(
                 .GetAwaiter()
                 .GetResult();
             return LiteSpotifyCatalogContract.CreateDescriptionResult(description);
+        }
+        catch (Exception exception)
+        {
+            throw SafeRequestException(
+                exception,
+                LiteSpotifyCatalogContract.DescriptionOperation);
+        }
+    }
+
+    /// <summary>
+    /// Spotify nie publikuje osobnego kontraktu rozdziałów podcastu. Jeżeli
+    /// wydawca umieścił spis z czasami w opisie odcinka, wykorzystujemy ten
+    /// sam ostrożny parser, co dla kanałów RSS.
+    /// </summary>
+    internal IReadOnlyList<ProviderChapterPoint> ReadEpisodeChapterPoints(
+        MediaItem item,
+        TimeSpan duration)
+    {
+        ArgumentNullException.ThrowIfNull(item);
+        if (item.Kind != MediaItemKind.Episode
+            || string.IsNullOrWhiteSpace(item.ExternalId))
+        {
+            return [];
+        }
+        EnsureCatalogReady();
+        try
+        {
+            var request = new LiteSpotifyDescriptionRequest(
+                MediaItemKind.Episode,
+                item.ExternalId.Trim());
+            var description = backend.GetDescriptionAsync(
+                    request,
+                    CancellationToken.None)
+                .GetAwaiter()
+                .GetResult();
+            return PodcastDescriptionChapterParser.Parse(
+                LiteSpotifyCatalogContract.CleanDescription(description),
+                duration);
         }
         catch (Exception exception)
         {

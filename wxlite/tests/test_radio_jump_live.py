@@ -101,7 +101,8 @@ def test_gui_completion_resets_visible_rate_and_announces_live() -> None:
     LiteFrame._jump_radio_live(frame)
 
     assert runner.name == "radio-jump-live"
-    assert frame.options.rate == 1.0
+    assert frame.options.rate == 1.5, "Radio nie zmienia domyslu innych sesji"
+    assert frame._runtime_rate_by_session[SessionId.RADIO] == 1.0
     assert choice.selection == PLAYBACK_RATES.index(1.0)
     assert frame._last_status["rate"] == 1.0
     assert statuses[-1]["behindLiveSeconds"] == 0.0

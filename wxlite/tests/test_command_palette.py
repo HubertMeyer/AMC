@@ -10,6 +10,7 @@ from amc_wx_lite.command_palette import (
 )
 from amc_wx_lite.navigation import SessionId
 from amc_wx_lite import menu_model
+from amc_wx_lite import session_options
 from amc_wx_lite.search_catalog import SESSION_LABELS
 from amc_wx_lite.shortcuts import (
     Action,
@@ -62,6 +63,43 @@ def test_palette_can_follow_current_view_availability() -> None:
         Action.QUICK_INFORMATION,
     }
     assert len(result) == 2
+
+
+def test_opcje_sesji_maja_jeden_kontrakt_menu_pomocy_i_palety() -> None:
+    expected = (
+        "Opcje odtwarzania sesji: pozycja, domyślna prędkość, dźwięk "
+        "i zachowanie po wyjściu, zależnie od możliwości sesji"
+    )
+    chord = Chord("Return", ctrl=True, alt=True)
+    assert resolve(chord, player_view=False, radio_session=False) is Action.SESSION_OPTIONS
+    assert dict(describe(SESSION_LABELS[SessionId.FILES], {Action.SESSION_OPTIONS}))[
+        "Ctrl+Alt+Enter"
+    ] == expected
+    assert keyboard_help_announcement(
+        chord, Action.SESSION_OPTIONS, SESSION_LABELS[SessionId.FILES]
+    ) == f"Ctrl+Alt+Enter. {expected}. {SESSION_LABELS[SessionId.FILES]}"
+
+    for session in SessionId:
+        if not session_options.capabilities_for(session).has_options:
+            assert not any(
+                item.action is Action.SESSION_OPTIONS
+                for item in entries_for_session(session)
+            )
+            continue
+        menu_entry = next(
+            item
+            for menu in menu_model.menus_for_session(session)
+            for item in menu.items
+            if item.action is Action.SESSION_OPTIONS
+        )
+        palette_entry = next(
+            item
+            for item in entries_for_session(session)
+            if item.action is Action.SESSION_OPTIONS
+        )
+        assert menu_entry.shortcut == "Ctrl+Alt+Return"
+        assert palette_entry.shortcut == "Ctrl+Alt+Enter"
+        assert palette_entry.name == "Opcje sesji…"
 
 
 def test_palette_count_labels_are_intentional_polish_text() -> None:

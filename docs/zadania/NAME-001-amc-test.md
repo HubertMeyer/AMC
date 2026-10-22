@@ -1,45 +1,125 @@
-# NAME-001 — widoczna nazwa AMC Test
+# NAME-001 — widoczne nazwy AMC Test i AMC Public
 
 ## Status
 
-Zrobione.
+Kod i testy gotowe 22 października 2026. Nie zbudowano paczki ani instalatora,
+nie zmieniono żadnej instalacji i niczego nie opublikowano.
 
 ## Cel
 
-Prywatna, pełna wersja rozwijana z AMC Python ma być widoczna dla użytkownika
-i NVDA jako `AMC Test`. Przyszły profil publiczny będzie widoczny jako `AMC`.
+Obie bieżące odmiany mają mieć krótką, rozpoznawalną nazwę użytkową:
 
-## Zakres bieżącej zmiany
+- `AMC Test — dd.mm.rrrr, gg:mm` dla głównej wersji roboczej właściciela;
+- `AMC Public — dd.mm.rrrr, gg:mm` dla paczki gotowej do niezależnego
+  przekazania innej osobie.
 
-- tytuł głównego okna i nazwa aplikacji wx: `AMC Test`;
-- komunikaty uruchamiania, diagnostyki, bezpiecznego zamykania i aktualizacji:
-  `AMC Test`;
-- launcher i aktualizator rozpoznają jednocześnie okna `AMC Test` oraz starsze
-  `AMC Python`, aby pierwsza aktualizacja była bezpieczna;
-- techniczny katalog `D:\Projekty Codex\AMC Python`, identyfikator jednej
-  instancji, nazwy plików i wartość `application` w manifeście pozostają teraz
-  bez zmian. Ich przemianowanie wymaga osobnej migracji instalatora i skrótów.
+Commit, identyfikator zawartości, numer techniczny i kanał aktualizacji nadal
+są przechowywane do diagnostyki i kontroli integralności, lecz nie są zwykłą
+nazwą czytaną przez NVDA.
 
-## Kryteria akceptacji
+## Nadrzędna korekta użytkownika z 22.10.2026
 
-- NVDA po wejściu do głównego okna mówi `AMC Test`, nie `AMC Python`.
-- Druga instancja nie uruchamia się obok pierwszej także w czasie przejścia ze
-  starej nazwy.
-- Aktualizator potrafi bezpiecznie poprosić o zamknięcie zarówno starego, jak i
-  nowego tytułu i nadal respektuje blokadę podczas nagrywania.
-- Testy Pythona i .NET obejmują obecną oraz starszą nazwę.
+Ta decyzja zastępuje wcześniejszy zapis, według którego publiczny profil miał
+być widoczny jako samo `AMC`, oraz wcześniejsze propozycje nazw zawierających
+`alpha`, numer kompilacji albo długi identyfikator BUILD.
 
-## Prace i weryfikacja
+`AMC Test` jest główną rozwijaną wersją produktu, a nie bocznym repozytorium.
+`AMC Public` oznacza wersję, którą można już samodzielnie wysłać innej osobie.
+Nie zależy to od tego, czy ta sama paczka została już umieszczona na GitHubie;
+lokalna gotowość do przekazania i publikacja zdalna są osobnymi stanami.
 
-- Data rozpoczęcia: 18 października 2026
-- Data zakończenia: 18 października 2026.
-- Zmienione pliki: `wxlite/amc_wx_lite/gui.py`,
-  `wxlite/amc_wx_lite/__main__.py`, launcher i aktualizator .NET, skrypt
-  promocji kompilacji oraz testy nazwy i bezpiecznego przejścia.
-- Testy: pełny zestaw `1723 passed, 110 skipped, 11 subtests passed`;
-  kompilacja projektów .NET bez ostrzeżeń i błędów. Po instalacji potwierdzono
-  jedną instancję oraz tytuł okna `AMC Test — 18.10.2026, 21:57`.
-- Commit: `42f0bf57`.
-- Zainstalowana kompilacja:
-  `2026.10.18-74cab87ec05e2f25e45e253f0fceae93efdcaff3-a3214a5e`, uruchomiona z
-  `D:\Projekty Codex\AMC Python\AMC.exe`.
+## Zachowanie widoczne dla użytkownika
+
+- Tytuł głównego okna oraz polecenie `Pomoc > Wersja programu` używają tej
+  samej nazwy z datą i godziną utworzenia paczki.
+- Manifest zapisuje stałą etykietę czasu powstałą na komputerze budującym.
+  Po przekazaniu paczki do innej strefy czasowej jej nazwa nie zmienia się.
+- Przyszłe pliki instalatorów otrzymają nazwy w rodzaju
+  `AMC-Test-2026-10-22-2125.exe` i `AMC-Public-2026-10-22-2125.exe`.
+- Kreator instalacji, skróty, lista aplikacji i integracja z Eksploratorem
+  używają odpowiednio nazw `AMC Test` i `AMC Public`.
+- Starsze okno `AMC Python` jest nadal rozpoznawane jako poprzednik AMC Test,
+  a starsze okno `AMC` jako poprzednik AMC Public. Aktualizacja nie traci więc
+  możliwości odnalezienia bezpiecznie działającej starszej wersji.
+
+## Komunikaty i etykiety dla NVDA
+
+Zwykła informacja o wersji ma być krótka, na przykład:
+
+- `AMC Test — 22.10.2026, 21:25`;
+- `AMC Public — 22.10.2026, 21:25`.
+
+Pełny hash źródeł i identyfikator paczki są dozwolone w raporcie technicznym
+otwieranym świadomie przez użytkownika, ale nie w tytule okna, nazwie skrótu,
+menu systemowym ani zwykłym komunikacie czytnika ekranu.
+
+## Uzasadnienie i decyzje
+
+- Data i godzina odpowiadają sposobowi, w jaki użytkownik zapamiętuje kolejne
+  próby i łatwiej odróżniają paczki niż numer `alpha.4xx` związany historycznie
+  także ze starym AMC WPF.
+- Techniczny `AppVersion`, commit, `bundleId` i podpis integralności pozostają
+  niezmienione w swojej roli, dlatego krótka nazwa nie osłabia identyfikacji
+  pliku ani możliwości przeprowadzenia aktualizacji.
+- Tag GitHuba może nadal używać technicznego numeru, ale tytuł przyszłego
+  wydania i nazwa załącznika mają używać `AMC Public` oraz daty i godziny.
+
+## Zmienione miejsca
+
+- wspólny model profilu Python i .NET;
+- tytuł okna i okno `Wersja programu`;
+- zgodność launchera oraz aktualizatora ze starszymi nazwami;
+- manifest paczki i skrypty budowy przyszłych instalatorów;
+- nazwy kreatora, skrótów i integracji z Eksploratorem;
+- przygotowanie i publikacja przyszłego AMC Public;
+- testy Pythona, PowerShell i .NET oraz dokumentacja projektu.
+
+## Testy i wynik
+
+- Testy Pythona dotyczące wersji, profili, układu paczki, instalatora i
+  publikacji: **63 zaliczone**. Z tego 62 wykonano w interpreterze systemowym,
+  a test importu GUI wykonano osobno w prywatnym runtime AMC zawierającym
+  wxPython. Pierwszy przebieg w sandboxie zatrzymał część przypadków na braku
+  prawa zapisu do systemowego katalogu tymczasowego; powtórzenie poza tym
+  ograniczeniem wykazało jeden brak zależności `wx`, po czym ten sam test
+  przeszedł w właściwym runtime.
+- Testy launchera i aktualizatora .NET: **30 z 30 zaliczonych**.
+- Analiza składni skryptów `Build-AMCInstaller.ps1` i
+  `Publish-AMCPublicRelease.ps1`: oba bez błędów parsera.
+- Nie kompilowano Inno Setup, ponieważ użytkownik wyraźnie poprosił, by na tym
+  etapie nie budować nowego instalatora.
+
+## Znane ograniczenia
+
+- Obecnie zainstalowane kopie zachowują stare nazwy do czasu następnej
+  świadomie zbudowanej i zainstalowanej paczki.
+- Zachowane historyczne instalatory `alpha.4xx` nie są przemianowywane; ich
+  dotychczasowe nazwy pozostają dowodem tego, co rzeczywiście zbudowano.
+- Nie wykonano jeszcze ręcznego odbioru nowych etykiet z NVDA ani wizualnego
+  odbioru przyszłego kreatora, bo nie powstała nowa paczka.
+
+## Wersja i commit
+
+- Stan bazowy repozytorium podczas zmiany: `b9cedf7641c2`.
+- Zmiany są lokalne i nie mają jeszcze osobnego commita.
+- Paczka: nie zbudowana.
+- Instalacja: nie wykonana.
+- Publikacja: nie wykonana.
+
+## Materiał do dokumentacji użytkownika
+
+### Projekt instrukcji
+
+W tytule okna i w poleceniu `Pomoc > Wersja programu` AMC podaje nazwę
+odmiany oraz datę i godzinę przygotowania paczki. `AMC Test` jest główną,
+pełną wersją używaną do codziennej pracy i prób. `AMC Public` jest wersją
+przygotowaną do przekazania innym osobom. Obecność albo brak tej paczki na
+GitHubie nie zmienia jej nazwy.
+
+### Projekt listy zmian
+
+- Uproszczono widoczną nazwę wersji do `AMC Test — data, godzina` albo
+  `AMC Public — data, godzina`.
+- Usunięto z przyszłych nazw użytkowych numery `alpha` i długie identyfikatory
+  BUILD, pozostawiając je w bezpiecznych danych technicznych.
+- Zachowano zgodność aktualizacji ze starszymi nazwami `AMC Python` i `AMC`.
