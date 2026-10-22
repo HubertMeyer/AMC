@@ -246,10 +246,9 @@ zmian, wymagający korekty użytkownika:
   krótkie nazwy `AMC Test — data, godzina` i `AMC Public — data, godzina`,
   z technicznymi identyfikatorami pozostawionymi poza zwykłą nazwą.
   Szczegóły: [NAME-001-amc-test.md](NAME-001-amc-test.md).
-- `FRONTIER-001` — **Po drugim odbiorze NVDA radio najprawdopodobniej jest
-  wykrywane, ale fokus podczas skanowania i komunikat przed wpisaniem PIN-u
-  wymagają korekty; wznowienie od 28.10.2026** — pusta sesja automatycznie
-  szuka pierwszego urządzenia
+- `FRONTIER-001` — **Po trzecim odbiorze NVDA poprawiono w źródłach wejście
+  `Ctrl+8`, automatyczne wykrywanie, fokus oraz komunikat przed PIN-em; bez
+  nowej paczki i instalacji** — pusta sesja automatycznie szuka pierwszego urządzenia
   FSAPI/UNDOK. Po zapisaniu urządzenia `Ctrl+F5` pokazuje listę bez ponownego
   skanowania, a osobny przycisk pozwala szukać nowych urządzeń; ręczny adres
   jest opcją awaryjną. Bezpieczny PIN, transport, tryby i presety pozostają

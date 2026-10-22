@@ -1,8 +1,8 @@
 # FRONTIER-001 — Frontier Smart przez FSAPI
 
-Status: **W trakcie — po drugim odbiorze NVDA radio najprawdopodobniej jest
-wykrywane, ale fokus i komunikaty pierwszego połączenia wymagają korekty;
-wznowienie zaplanowane na tydzień od 28.10.2026**
+Status: **W trakcie — po trzecim odbiorze NVDA poprawiono w źródłach wejście
+do pustej sesji, automatyczne wykrywanie, fokus oraz komunikat przed PIN-em;
+poprawka nie została jeszcze zbudowana ani zainstalowana do odbioru**
 
 Data rozpoczęcia: 2026-10-21
 
@@ -127,6 +127,87 @@ Nie wprowadzono kolejnej poprawki kodu podczas tego odbioru. Prace mają zostać
 wznowione w tygodniu rozpoczynającym się 28.10.2026 od odtworzenia dokładnego
 przebiegu, korekty fokusu w czasie skanowania i jednoznacznego komunikatu po
 wykryciu urządzenia.
+
+## Trzeci odbiór NVDA i korekta nadrzędna — 22.10.2026
+
+Użytkownik sprawdził zainstalowane `AMC Test — 22.10.2026, 22:48` z rewizji
+`6ce22410`. Wejście skrótem `Ctrl+8` nadal tylko pokazywało pustą sesję. Trzeba
+było użyć `Ctrl+F5`, a następnie przejść do wykrywania. Podczas pracy fokus
+znajdował się w okolicy przycisku „Zamknij”, a dopiero dalsza nawigacja
+prowadziła do pola PIN. Ta obserwacja zastępuje wcześniejsze przypuszczenie,
+że sam istniejący kod automatycznego wykrywania zapewnia poprawny przebieg.
+
+Przyczyna została potwierdzona w kodzie wxPython:
+
+- `Ctrl+8` wczytywał pustą listę urządzeń, ale nie przechodził do pierwszej
+  konfiguracji;
+- dialog pustej sesji ustawiał początkowy fokus na „Zamknij”, po czym osobno
+  planował automatyczne wykrywanie;
+- pole PIN było widoczne jeszcze przed wyborem wykrytego urządzenia, a jego
+  nazwa dostępnościowa nie wskazywała, którego radia dotyczy.
+
+Poprawka źródłowa z 22.10.2026 wprowadza następujący kontrakt:
+
+- `Ctrl+8` przy pustej sesji otwiera pierwszą konfigurację i samoczynnie
+  rozpoczyna wykrywanie; użytkownik nie musi wcześniej naciskać `Ctrl+F5` ani
+  przycisku wyszukiwania;
+- podczas wykrywania fokus pozostaje na jednoznacznie nazwanej liście
+  „Zapisane urządzenia Frontier Smart”, a NVDA ogłasza „Wykrywanie urządzeń w
+  sieci lokalnej”; fokus nie trafia na „Zamknij”;
+- po wykryciu jednego radia AMC ogłasza „Wykryto urządzenie [nazwa]. Wpisz jego
+  PIN, a następnie wybierz Połącz i zapisz”, pokazuje dopiero wtedy pole PIN i
+  ustawia na nim fokus;
+- nazwa dostępnościowa pola zawiera użytkową nazwę radia, na przykład „PIN
+  urządzenia Teufel RADIO 3SIXTY, pole chronione”, ale nie adres IP ani
+  identyfikator techniczny;
+- `Tab` z pola PIN prowadzi do „Połącz i zapisz”;
+- ponowne wejście do sesji z zapisanym urządzeniem skupia listę i nie uruchamia
+  wykrywania. `Ctrl+F5` zachowuje rolę zarządzania istniejącą konfiguracją.
+
+### Testy i wynik korekty z 22.10.2026
+
+- przed zmianą: `wxlite/tests/test_frontier_smart_session.py` — **8/8
+  zaliczonych**, co potwierdziło, że dotychczasowe testy nie odtwarzały błędu
+  zgłoszonego przez użytkownika;
+- po zmianie: ten sam moduł — **12/12 zaliczonych**; nowe testy obejmują
+  wejście do pustej sesji, automatyczne wykrywanie bez fokusu na zamknięciu,
+  nazwę i fokus pola PIN oraz ponowne otwarcie zapisanej listy bez skanowania;
+- regresja powierzchni poleceń, Menedżera sesji, skrótów, menu, pomocy i palety
+  — **116/116 zaliczonych**;
+- sprawdzono w przypiętym środowisku wxPython 4.3.1, że użyte zdarzenie
+  inicjalizacji dialogu i sterowanie kolejnością `Tab` są dostępne;
+- dodatkowy, szerszy przebieg zatrzymał się na zastanym teście zapisu opcji
+  sesji (`test_zapisz_wykonuje_pelny_pion_az_do_profilu`): 11 wcześniejszych
+  testów w tym module przeszło, a awaria dotyczyła braku wywołania klienta
+  opcji sesji i nie przecina zmienionych miejsc Frontier Smart. Nie jest to
+  dowód pełnej regresji.
+
+### Wersja, instalacja i publikacja korekty z 22.10.2026
+
+Zmiana jest zapisana w repozytorium
+`D:\Projekty Codex\AMC - integracja wxPython` w commicie `3ce574a6` —
+`fix(frontier): popraw pierwsze wykrywanie urządzenia`. Nie powstał jeszcze
+pakiet ani instalator. Nie zmieniono działającego
+`D:\Projekty Codex\AMC Python`, nie uruchomiono nowej wersji i nie zbudowano
+ani nie zainstalowano AMC Public.
+
+### Materiał do dokumentacji użytkownika — projekt
+
+Przy pierwszym wejściu do włączonej sesji Frontier Smart skrótem `Ctrl+8` AMC
+sam wyszukuje radio w sieci lokalnej. W czasie wyszukiwania można czekać bez
+przechodzenia po przyciskach. Po znalezieniu radia NVDA podaje jego nazwę i
+ustawia fokus w chronionym polu PIN. Po wpisaniu PIN-u należy nacisnąć `Tab`,
+wybrać „Połącz i zapisz” i zatwierdzić. Późniejsze `Ctrl+F5` pokazuje zapisane
+urządzenia; nowego skanowania używa się tylko przez osobny przycisk „Szukaj
+nowych urządzeń”.
+
+### Projekt listy zmian
+
+- Pusta sesja Frontier Smart rozpoczyna pierwszą konfigurację już po `Ctrl+8`.
+- Fokus podczas wykrywania nie trafia na przycisk zamknięcia.
+- Po znalezieniu radia AMC podaje jego nazwę, wyjaśnia czynność z PIN-em i
+  ustawia fokus na właściwym polu.
+- Zapisane urządzenia otwierają się ponownie bez automatycznego skanowania.
 
 ## Różnice względem WiiM
 
