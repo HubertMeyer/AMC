@@ -23,6 +23,7 @@ from amc_wx_lite.host_client import (
     HostUnavailable,
     LiteHostClient,
     Response,
+    _hidden_process_options,
     classify,
     decode_line,
 )
@@ -75,6 +76,27 @@ def make_client(**kwargs) -> LiteHostClient:
     client = LiteHostClient(sys.executable, spawn=spawn, **kwargs)
     client.start()
     return client
+
+
+def test_windows_host_process_has_two_independent_no_window_barriers() -> None:
+    class StartupInfo:
+        def __init__(self) -> None:
+            self.dwFlags = 0
+            self.wShowWindow = -1
+
+    class ProcessModule:
+        CREATE_NO_WINDOW = 0x08000000
+        STARTF_USESHOWWINDOW = 0x00000001
+        SW_HIDE = 0
+        STARTUPINFO = StartupInfo
+
+    options = _hidden_process_options("nt", ProcessModule)
+
+    assert options["creationflags"] == ProcessModule.CREATE_NO_WINDOW
+    startup = options["startupinfo"]
+    assert startup.dwFlags & ProcessModule.STARTF_USESHOWWINDOW
+    assert startup.wShowWindow == ProcessModule.SW_HIDE
+    assert _hidden_process_options("posix", ProcessModule) == {}
 
 
 # ------------------------------------------------------------- parsowanie

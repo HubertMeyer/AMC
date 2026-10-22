@@ -26,8 +26,6 @@ internal static class ExternalToolProcess
         var start = new ProcessStartInfo
         {
             FileName = executablePath,
-            UseShellExecute = false,
-            CreateNoWindow = true,
             RedirectStandardInput = true,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
@@ -45,6 +43,15 @@ internal static class ExternalToolProcess
     /// </summary>
     internal static void ApplySafeEnvironment(ProcessStartInfo start, string executablePath)
     {
+        // Dwie niezalezne bariery Windows. CreateNoWindow nie przydziela
+        // konsoli procesowi potomnemu, a Hidden ustawia STARTUPINFO tak, aby
+        // program konsolowy nie mogl pokazac ani aktywowac okna przejsciowego.
+        // To jest istotne dla NVDA: nawet bardzo krotkie okno narzedzia nie
+        // moze przejac fokusu i zostac wypowiedziane jako obiekt Win32.
+        start.UseShellExecute = false;
+        start.CreateNoWindow = true;
+        start.WindowStyle = ProcessWindowStyle.Hidden;
+
         var directories = new List<string>();
 
         var toolDirectory = Path.GetDirectoryName(Path.GetFullPath(executablePath));

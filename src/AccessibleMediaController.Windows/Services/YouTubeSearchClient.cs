@@ -48,17 +48,7 @@ internal sealed class YouTubeSearchClient
         var executable = YouTubeSourceResolver.FindExecutable()
             ?? throw new NotSupportedException(
                 "Wyszukiwanie YouTube wymaga składnika yt-dlp. Wybierz Pomoc, Sprawdź składniki: FFmpeg i yt-dlp.");
-        var start = new ProcessStartInfo
-        {
-            FileName = executable,
-            UseShellExecute = false,
-            CreateNoWindow = true,
-            RedirectStandardInput = true,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            StandardOutputEncoding = Encoding.UTF8,
-            StandardErrorEncoding = Encoding.UTF8
-        };
+        var start = ExternalToolProcess.Create(executable);
         foreach (var argument in new[]
         {
             "--ignore-config",
