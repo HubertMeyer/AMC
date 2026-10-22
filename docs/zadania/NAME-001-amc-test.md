@@ -2,8 +2,9 @@
 
 ## Status
 
-Kod i testy gotowe 22 października 2026. Nie zbudowano paczki ani instalatora,
-nie zmieniono żadnej instalacji i niczego nie opublikowano.
+Kod, testy, paczka AMC Test, instalacja i uruchomienie gotowe 22 października
+2026. Potwierdzono tytuł `AMC Test — 22.10.2026, 22:48`. Nie zbudowano nowego
+instalatora AMC Public i niczego nie opublikowano.
 
 ## Cel
 
@@ -91,20 +92,25 @@ menu systemowym ani zwykłym komunikacie czytnika ekranu.
 
 ## Znane ograniczenia
 
-- Obecnie zainstalowane kopie zachowują stare nazwy do czasu następnej
-  świadomie zbudowanej i zainstalowanej paczki.
+- AMC Test ma już nową nazwę. Zainstalowany wcześniej AMC Public zachowuje
+  dotychczasową nazwę do czasu osobnej, świadomej promocji publicznej.
 - Zachowane historyczne instalatory `alpha.4xx` nie są przemianowywane; ich
   dotychczasowe nazwy pozostają dowodem tego, co rzeczywiście zbudowano.
-- Nie wykonano jeszcze ręcznego odbioru nowych etykiet z NVDA ani wizualnego
-  odbioru przyszłego kreatora, bo nie powstała nowa paczka.
+- Nie wykonano jeszcze ręcznego odbioru polecenia `Wersja programu` z NVDA ani
+  odbioru przyszłego kreatora AMC Public. Tytuł głównego okna AMC Test został
+  potwierdzony automatycznie po uruchomieniu.
 
 ## Wersja i commit
 
 - Stan bazowy repozytorium podczas zmiany: `b9cedf7641c2`.
-- Zmiany są lokalne i nie mają jeszcze osobnego commita.
-- Paczka: nie zbudowana.
-- Instalacja: nie wykonana.
-- Publikacja: nie wykonana.
+- Wspólny commit wdrożeniowy:
+  `6ce22410bb80ac867504d15d17d890e9774d929e`.
+- Paczka AMC Test:
+  `2026.10.22-6ce22410bb80ac867504d15d17d890e9774d929e-f3e80d2d`,
+  1670 plików.
+- Instalacja: `D:\Projekty Codex\AMC Python`; integralność i kontrolowany
+  start zaliczone, uruchomiony tytuł `AMC Test — 22.10.2026, 22:48`.
+- AMC Public i publikacja: bez zmian; nie budowano instalatora.
 
 ## Materiał do dokumentacji użytkownika
 

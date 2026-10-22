@@ -1,8 +1,8 @@
 # AMC04 — zakładki, rozdziały i historia nawigacji
 
 - Status: **Rozdziały podcastów oraz zakładki i rozdziały Spotify są
-  zweryfikowane automatycznie; czekają na zbiorczą instalację AMC Test i
-  ręczny odbiór NVDA**
+  zweryfikowane automatycznie, zainstalowane i uruchomione w AMC Test;
+  czekają na ręczny odbiór NVDA**
 - Data rozpoczęcia w AMC Test: 2026-10-19
 - Repozytorium wykonawcze: `D:\Projekty Codex\AMC - integracja wxPython`
 - Materiał historyczny, tylko do odczytu:
@@ -266,9 +266,23 @@ Weryfikacja rozszerzenia Spotify/Librespot z 2026-10-22:
 - pełna regresja wxPython: **1978 zaliczonych, 110 pominiętych i 11 podtestów
   zaliczonych** w 133,05 s;
 - testy launchera i aktualizatora: **30 z 30 zaliczonych**;
-- na tym etapie źródła są gotowe do wspólnej promocji AMC Test razem z
-  opcjami sesji i pozostałymi dzisiejszymi zmianami; instalacja jest osobnym
-  następnym krokiem.
+- wspólna promocja AMC Test razem z opcjami sesji i pozostałymi zmianami
+  zakończyła się instalacją opisaną poniżej.
+
+Instalacja zbiorcza AMC Test z 2026-10-22:
+
+- kandydat powstał z czystej rewizji
+  `6ce22410bb80ac867504d15d17d890e9774d929e` i ma identyfikator
+  `f3e80d2d` oraz 1670 plików;
+- pełna regresja przed utworzeniem kandydata: **1978 zaliczonych, 110
+  pominiętych i 11 podtestów zaliczonych**; testy launchera i aktualizatora:
+  **30 z 30 zaliczonych**; pełna kompilacja Release: 0 ostrzeżeń i 0 błędów;
+- aktualizator zakończył instalację do `D:\Projekty Codex\AMC Python`
+  kodem 0. Kontrola integralności zainstalowanej kopii zwróciła kod 0,
+  a kontrolowany start interfejsu i hosta został zaliczony;
+- uruchomiono jedną instancję ze stałej ścieżki. Potwierdzony tytuł okna:
+  `AMC Test — 22.10.2026, 22:48`;
+- nie budowano instalatora AMC Public i niczego nie publikowano.
 
 ## Szkic instrukcji i changelogu do zatwierdzenia
 
@@ -291,8 +305,8 @@ odcinka Spotify. Tekst jest szkicem i nie został opublikowany.
 
 ## Znane ograniczenia
 
-- Ręczny odbiór na żywym NVDA pozostaje do wykonania po instalacji nowszej
-  paczki: początkowy fokus listy rozdziałów, strzałki, Enter, Escape, powrót
+- Ręczny odbiór na żywym NVDA pozostaje do wykonania na zainstalowanej
+  paczce: początkowy fokus listy rozdziałów, strzałki, Enter, Escape, powrót
   fokusu, ponowne otwarcie oraz kolejność komunikatów.
 - Zakładki i rozdziały nie są reklamowane dla TIDAL, WiiM i Sonosa, ponieważ
   te sesje nie zapewniają w tym kontrakcie wspólnej trwałej osi czasu.
@@ -314,6 +328,10 @@ odcinka Spotify. Tekst jest szkicem i nie został opublikowany.
 - Instalacja: `2026.10.19-ca7dfa167728317728be534da7a71f8484ebe573-b9d47b3d`,
   manifest, sumy i uruchomienie zweryfikowane 19 października 2026.
 - Publikacja: nie wykonano; brak wysyłania do GitHuba i brak wydania publicznego.
-- Naprawa rozdziałów RSS/Podcasting 2.0 oraz rozszerzenie Spotify z 2026-10-22:
-  zmiany robocze na bazie `b9cedf7641c2`; identyfikator wspólnego commitu i
-  paczki zostanie dopisany po zakończeniu promocji AMC Test. Bez publikacji.
+- Naprawa rozdziałów RSS/Podcasting 2.0, rozszerzenie Spotify i wspólna
+  integracja zmian z 2026-10-22: commit
+  `6ce22410bb80ac867504d15d17d890e9774d929e`.
+- Zainstalowana paczka AMC Test:
+  `2026.10.22-6ce22410bb80ac867504d15d17d890e9774d929e-f3e80d2d`,
+  1670 plików, tytuł `AMC Test — 22.10.2026, 22:48`.
+- Publikacja: nie wykonano; brak wysyłania do GitHuba i brak nowego AMC Public.

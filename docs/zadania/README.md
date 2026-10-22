@@ -31,8 +31,8 @@ jawnym poleceniu użytkownika albo przez osobno uzgodniony harmonogram.
 ## Zadania
 
 - `SESSION-001` — **W trakcie; źródła, pełna regresja Pythona, 27 zestawów
-  protokołu i pełny build są zaliczone; czeka na zbiorczą instalację AMC Test
-  oraz ręczny odbiór NVDA** —
+  protokołu, build, instalacja i uruchomienie AMC Test są zaliczone; czeka na
+  ręczny odbiór NVDA** —
   pełne, wykonywalne opcje sesji z historycznego AMC oraz nowa domyślna
   prędkość osobno dla Plików i Podcastów. Szczegóły:
   [SESSION-001-opcje-sesji-i-predkosc.md](SESSION-001-opcje-sesji-i-predkosc.md).
@@ -89,9 +89,14 @@ zmian, wymagający korekty użytkownika:
   zbiorczej Biblioteki podcastów, kanałów YouTube i „Media internetowe”,
   prywatna trwałość wyboru i zachowanie zaznaczenia po stabilnym ID. Szczegóły:
   [POD-001-sortowanie-biblioteki-zrodel.md](POD-001-sortowanie-biblioteki-zrodel.md).
+- `POD-002` — **Jednoetapowy import publicznego linku YouTube pod `Ctrl+N`
+  jest zweryfikowany, zainstalowany i uruchomiony w AMC Test; czeka na ręczny
+  odbiór NVDA z prawdziwym adresem** — Enter wykonuje sprawdzenie i zapis bez
+  drugiego przycisku. Szczegóły:
+  [POD-002-import-youtube-ctrl-n.md](POD-002-import-youtube-ctrl-n.md).
 - `AMC04` — **Rozdziały podcastów oraz zakładki i rozdziały Spotify
-  zweryfikowane automatycznie; czekają na zbiorczą instalację AMC Test i
-  ręczny odbiór NVDA** — przeniesiony do głównego AMC
+  zweryfikowane automatycznie, zainstalowane i uruchomione w AMC Test; czekają
+  na ręczny odbiór NVDA** — przeniesiony do głównego AMC
   Test/Python zatwierdzony model skrótów
   zakładek, nazwanych zakładek, rozdziałów, historii widoków i historii
   odtwarzanych elementów. Bieżący zapis realizacji:
@@ -236,7 +241,8 @@ zmian, wymagający korekty użytkownika:
   polecenie użytkownika; nic nie loguje konta ani nie otwiera przeglądarki.
   Szczegóły:
   [YT-001-konto-youtube-i-synchronizacja.md](YT-001-konto-youtube-i-synchronizacja.md).
-- `NAME-001` — **Kod i testy gotowe; bez nowego pakietu ani instalatora** —
+- `NAME-001` — **Kod, testy, paczka, instalacja i uruchomienie AMC Test gotowe;
+  bez nowego instalatora AMC Public** —
   krótkie nazwy `AMC Test — data, godzina` i `AMC Public — data, godzina`,
   z technicznymi identyfikatorami pozostawionymi poza zwykłą nazwą.
   Szczegóły: [NAME-001-amc-test.md](NAME-001-amc-test.md).

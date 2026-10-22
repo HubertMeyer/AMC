@@ -2,9 +2,8 @@
 
 ## Status
 
-W trakcie — źródła i testy automatyczne ukończone 2026-10-22; zgodnie z
-decyzją użytkownika zadanie czeka na zbiorczą instalację AMC Test i ręczny
-odbiór NVDA razem z pozostałymi nocnymi zmianami.
+W trakcie — źródła, testy, kompilacja, instalacja i uruchomienie AMC Test
+ukończone 2026-10-22; pozostaje ręczny odbiór NVDA.
 
 ## Zakres
 
@@ -55,12 +54,11 @@ wyborem pod `Shift+A`.
   Controller"`. W tym zadaniu nie zmieniano instalatora.
 - `ruff` nie był dostępny w przypiętym środowisku testowym; nie instalowano
   nowych narzędzi z sieci.
-- Próba z prawdziwym NVDA: odłożona do zbiorczej instalacji kandydata.
+- Próba z prawdziwym NVDA: pozostaje do wykonania na zainstalowanym kandydacie.
 
 ## Znane ograniczenia
 
-- Ręczny odbiór z NVDA zostanie wykonany dopiero po zbiorczej instalacji
-  kandydata AMC Test, zgodnie z decyzją użytkownika.
+- Ręczny odbiór z NVDA pozostaje osobnym etapem po zakończonej instalacji.
 - Wznowienie Spotify z historycznego WPF nie jest pokazane w bieżącym
   adapterze, ponieważ nowy wykonawca Spotify nie ma jeszcze bezpiecznej drogi
   sesyjnego wznowienia. Nie dodano martwej kontrolki.
@@ -90,13 +88,16 @@ wyborem pod `Shift+A`.
 
 ## Wersja i commit
 
-- Źródła: praca rozpoczęta na `b9cedf76`.
-- Commit: zmiany lokalne, bez commitu i bez publikacji.
-- Build: pełne rozwiązanie Debug zbudowane pomyślnie; nie jest to pakiet
-  wydaniowy.
-- Instalacja AMC Test: nie wykonano — świadomie odłożona do zbiorczej
-  aktualizacji.
-- Instalator i publikacja: nie wykonano.
+- Źródła: praca rozpoczęta na `b9cedf76`; wspólny commit wdrożeniowy:
+  `6ce22410bb80ac867504d15d17d890e9774d929e`.
+- Build: pełne rozwiązanie Release zbudowane pomyślnie, 0 ostrzeżeń i
+  0 błędów.
+- Instalacja AMC Test:
+  `2026.10.22-6ce22410bb80ac867504d15d17d890e9774d929e-f3e80d2d`,
+  1670 plików. Aktualizator i kontrola integralności zakończyły się kodem 0;
+  kontrolowany start przeszedł, a uruchomione okno ma tytuł
+  `AMC Test — 22.10.2026, 22:48`.
+- Instalator AMC Public i publikacja: nie wykonano.
 
 ## Projekt wpisu do listy zmian
 
