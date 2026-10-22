@@ -2,7 +2,9 @@
 
 - Status: **Rozdziały podcastów oraz zakładki i rozdziały Spotify są
   zweryfikowane automatycznie, zainstalowane i uruchomione w AMC Test;
-  czekają na ręczny odbiór NVDA**
+  czekają na ręczny odbiór NVDA. Korekta źródeł z 23.10.2026 doprecyzowuje,
+  że Spotify nie przekazuje AMC natywnych rozdziałów podcastu; kod i testy są
+  gotowe, lecz tej korekty nie instalowano ani nie uruchamiano.**
 - Data rozpoczęcia w AMC Test: 2026-10-19
 - Repozytorium wykonawcze: `D:\Projekty Codex\AMC - integracja wxPython`
 - Materiał historyczny, tylko do odczytu:
@@ -43,6 +45,12 @@ działają:
 - `Ctrl+Alt+Shift+B` — pyta o nazwę i dodaje rozdział użytkownika;
 - `Alt+strzałka w dół` — przechodzi do starszego odtwarzanego elementu;
 - `Alt+strzałka w górę` — przechodzi do nowszego odtwarzanego elementu.
+
+W Spotify lista i nawigacja obejmują rozdziały utworzone przez użytkownika,
+a w odcinku także co najmniej dwa poprawne znaczniki czasu znalezione w jego
+opisie. Nie jest to natywny spis rozdziałów podcastu ze Spotify. Dla utworu
+AMC sprawdza tylko rozdziały użytkownika. Te same precyzyjne nazwy są używane
+w menu, `Ctrl+F1`, pełnej pomocy i palecie `Ctrl+Shift+K`.
 
 `Alt+strzałka w lewo` wraca do poprzedniego widoku, a `Alt+strzałka w prawo`
 idzie ponownie do następnego widoku. Historia widoków zachowuje sesję, rodzaj
@@ -169,6 +177,36 @@ użytkownika. Automatyczny import Podcasting 2.0 JSON i rozdziałów z kanału R
 pozostaje właściwością sesji Podcasty i YouTube; Spotify nie udostępnia AMC
 adresu RSS ani podcastowego JSON-a rozdziałów.
 
+### Korekta zakresu Spotify z 2026-10-23
+
+Ta korekta zastępuje każde wcześniejsze sformułowanie, które mogło sugerować,
+że Librespot albo Web API przekazuje AMC natywne rozdziały podcastu Spotify.
+Przypięty host Librespot `0.8.0`, rewizja
+`d36f9f1907e8cc9d68a93f8ebc6b627b1bf7267d`, przyjmuje w AMC wyłącznie
+odtwarzanie `spotify:track:…` i `spotify:episode:…` oraz sterowanie transportem:
+Play, pauzę, wznowienie, Stop, Seek i głośność. Nie ma komendy rozdziałów ani
+segmentów. Katalog, programy, odcinki i opisy pochodzą z oficjalnego Web API,
+nie z Librespota.
+
+Oficjalny obiekt odcinka zawiera opis, lecz nie pole z listą rozdziałów
+podcastu. Endpoint Web API nazwany „Chapter” dotyczy rozdziału audiobooka.
+Dlatego rzeczywisty zakres AMC to:
+
+- rozdziały użytkownika dla utworu i odcinka Spotify;
+- dla odcinka dodatkowo znaczniki czasu z opisu, jeżeli parser znajdzie co
+  najmniej dwa poprawne punkty;
+- brak obietnicy natywnych rozdziałów Spotify, Podcasting 2.0 albo RSS.
+
+Komunikaty NVDA rozróżniają teraz utwór od odcinka. Dla odcinka mówią o
+sprawdzaniu rozdziałów użytkownika i znaczników czasu z opisu, a dla utworu
+wyłącznie o rozdziałach użytkownika. Pusty wynik jest komunikowany wprost.
+Zmiana nie dodaje nowego okna ani kontrolki; istniejąca lista rozdziałów nadal
+ustawia wybór przy bieżącej pozycji i po zamknięciu przywraca fokus.
+
+Źródła zewnętrzne sprawdzone 23.10.2026:
+[obiekt odcinka Spotify](https://developer.spotify.com/documentation/web-api/reference/get-an-episode)
+oraz [rozdział audiobooka Spotify](https://developer.spotify.com/documentation/web-api/reference/get-a-chapter).
+
 Osobno sprawdzono publiczną paczkę `alpha.433` utworzoną 2026-10-21 około
 21:25. Zawiera skrót `B`, wspólną akcję `ADD_BOOKMARK`, obsługę w GUI oraz
 możliwości `bookmarks` i `chapters`. Wywołanie z kodu zainstalowanej paczki
@@ -269,6 +307,24 @@ Weryfikacja rozszerzenia Spotify/Librespot z 2026-10-22:
 - wspólna promocja AMC Test razem z opcjami sesji i pozostałymi zmianami
   zakończyła się instalacją opisaną poniżej.
 
+Korekta zakresu Spotify z 2026-10-23:
+
+- ukierunkowane moduły wxPython dla rozdziałów, wspólnego modelu poleceń,
+  katalogu Spotify i GUI: **93 zaliczone**; osobny moduł dialogu playlist z
+  przewidzianą atrapą wx: **6 zaliczonych**;
+- test parytetu potwierdza tę samą uczciwą nazwę w menu, `Ctrl+F1`, pełnej
+  pomocy i palecie `Ctrl+Shift+K`; sprawdzono też oddzielne komunikaty pustego
+  wyniku dla utworu i odcinka;
+- test protokołu Spotify: **1/1 zestaw zaliczony**; test atrap
+  Spotify/Librespot potwierdził pełne stronicowanie programów i odcinków oraz
+  przekazanie `spotify:episode:…` do hosta odtwarzania;
+- LiteHost Release: kompilacja zaliczona, **0 ostrzeżeń i 0 błędów**;
+- nie użyto prawdziwego konta ani tokenu, nie uruchomiono aplikacji, nie
+  zbudowano instalatora, nie zmieniono AMC Test/Public i niczego nie
+  opublikowano;
+- ręczne sprawdzenie NVDA początkowego fokusu, strzałek, Entera, Escape,
+  powrotu fokusu i ponownego otwarcia pozostaje etapem po przyszłej instalacji.
+
 Instalacja zbiorcza AMC Test z 2026-10-22:
 
 - kandydat powstał z czystej rewizji
@@ -314,6 +370,8 @@ odcinka Spotify. Tekst jest szkicem i nie został opublikowany.
   Automatyczne rozdziały odcinka powstają tylko wtedy, gdy jego opis zawiera
   co najmniej dwa poprawne znaczniki czasu; oficjalne API nie przekazuje
   osobnego spisu rozdziałów podcastu.
+- Korekta nazw i komunikatów z 23.10.2026 istnieje tylko w źródłach gałęzi
+  `task/spotify-rozdzialy`; nie jest dowodem nowej instalacji ani odbioru NVDA.
 - Rozdziały dostawcy są teraz przygotowywane na żądanie dla podcastów z JSON,
   opisu RSS albo strony odcinka. Odcinek bez danych rozdziałów nadal jest
   komunikowany wprost.
@@ -331,6 +389,10 @@ odcinka Spotify. Tekst jest szkicem i nie został opublikowany.
 - Naprawa rozdziałów RSS/Podcasting 2.0, rozszerzenie Spotify i wspólna
   integracja zmian z 2026-10-22: commit
   `6ce22410bb80ac867504d15d17d890e9774d929e`.
+- Uczciwy zakres rozdziałów Spotify, komunikaty NVDA i testy parytetu:
+  commit `d646bdf20c0b5f050620637bdf4ae73529bcc6a4` —
+  `fix(spotify): odswiez podcasty i opisz rozdzialy`. Kompilacja i testy
+  źródeł zaliczone; instalacji, uruchomienia i publikacji nie wykonano.
 - Zainstalowana paczka AMC Test:
   `2026.10.22-6ce22410bb80ac867504d15d17d890e9774d929e-f3e80d2d`,
   1670 plików, tytuł `AMC Test — 22.10.2026, 22:48`.
