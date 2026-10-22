@@ -30,6 +30,13 @@ jawnym poleceniu użytkownika albo przez osobno uzgodniony harmonogram.
 
 ## Zadania
 
+- `STAB-001` — **Zrobione; zniknięcie i powrót okna z 23.10.2026 były
+  kontrolowaną promocją AMC Test, nie awarią Pythona** — korelacja manifestu,
+  procesów, logu hosta i dzienników Windows oraz izolowane testy operacji
+  asynchronicznych, launchera i kolejki hosta. Nie zmieniono źródeł ani
+  instalacji. Szczegóły:
+  [STAB-001-stabilnosc-okna-po-operacjach-sieciowych.md](STAB-001-stabilnosc-okna-po-operacjach-sieciowych.md).
+
 - `SESSION-001` — **W trakcie; korekta po odbiorze NVDA ma 76/76 testów
   celowanych, pełną regresję Pythona 1983/1983 i została zainstalowana w
   zbiorczym AMC Test; czeka na ponowny odbiór NVDA** —
