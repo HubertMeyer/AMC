@@ -89,11 +89,13 @@ zmian, wymagający korekty użytkownika:
   zbiorczej Biblioteki podcastów, kanałów YouTube i „Media internetowe”,
   prywatna trwałość wyboru i zachowanie zaznaczenia po stabilnym ID. Szczegóły:
   [POD-001-sortowanie-biblioteki-zrodel.md](POD-001-sortowanie-biblioteki-zrodel.md).
-- `POD-002` — **Poprawka importu kanałów z uchwytem `@` jest zweryfikowana na
-  prawdziwym kanale i zainstalowana w zbiorczym AMC Test; czeka na ponowny
-  odbiór NVDA** — wcześniejsza wersja odrzucała stabilny adres z `%40` przed
-  uruchomieniem `yt-dlp`. Normalizacja jest teraz idempotentna, a Enter nadal
-  wykonuje sprawdzenie i zapis bez drugiego przycisku. Szczegóły:
+- `POD-002` — **Korekta fokusu, blokady drugiego Entera i ukrywania procesów po
+  zgłoszeniu NVDA z 2026-10-23 jest zweryfikowana automatycznie tylko na gałęzi;
+  nie została zainstalowana ani uruchomiona jako AMC Test** — formularz
+  `Ctrl+N` pozostaje otwarty przez oczekiwanie, procesy pomocnicze nie tworzą
+  okna, a zwykła mowa nie ujawnia „Windows 32”, terminala, ścieżek ani nazw
+  technicznych. Wcześniejszy AMC Test zawiera poprawkę `%40`, lecz nie tę
+  korektę. AMC Public, instalator i GitHub bez zmian. Szczegóły:
   [POD-002-import-youtube-ctrl-n.md](POD-002-import-youtube-ctrl-n.md).
 - `AMC04` — **Rozdziały podcastów oraz zakładki i rozdziały Spotify
   zweryfikowane automatycznie, zainstalowane i uruchomione w AMC Test; czekają
