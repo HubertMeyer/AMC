@@ -131,7 +131,8 @@ spowodowała awarię albo samoczynny restart AMC.
 - Kompilacja działająca po incydencie:
   `2026.10.23-1badabbeeacde3d8853457683ef750d558b3f1fd-7353e273`.
 - Zmiany źródeł: brak. Zmieniono wyłącznie tę kartę i rejestr zadań.
-- Commit dokumentacji diagnozy zostanie zapisany w końcowym raporcie zadania.
+- Commit dokumentacji diagnozy:
+  `e68fbffeb3907f7755ac39e293be4bbafd83b875`.
 - AMC Test, AMC Public, instalator i publikacja: bez zmian.
 
 ## Materiał do dokumentacji użytkownika
