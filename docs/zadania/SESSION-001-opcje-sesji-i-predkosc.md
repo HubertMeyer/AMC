@@ -83,6 +83,16 @@ pod `Shift+A`.
   aktualizatora, pełna regresja Pythona **1983 zaliczone, 111 pominiętych i
   11 podtestów zaliczonych**, kompilacje Release bez ostrzeżeń i błędów,
   kontrolowany start kandydata oraz stałej instalacji: OK.
+- Bramka bezpieczeństwa przed podmianą: 16/16 skonfigurowanych lokalizacji
+  nagrań było dostępnych; 21 zachowanych plików `.amc-partial` nie zmieniło
+  rozmiaru ani czasu zapisu w dwóch pomiarach; nie było aktywnego okna planu
+  ani terminu w ciągu 10 minut. Działające AMC przyjęło zwykłe zamknięcie,
+  po czym interfejs, host i launcher zakończyły się bez wymuszania.
+- Niezależna kontrola po instalacji: pełna integralność zwróciła kod 0;
+  SHA-256 manifestu to
+  `8AF4281576A4AF82EE475D0A1E97C70BBF2B8BCEE6165260D6007D2CACE2352D`.
+  Pozostały dokładnie trzy właściwe procesy ze stałego katalogu instalacji:
+  launcher, runtime interfejsu i LiteHost.
 
 ## Znane ograniczenia
 
