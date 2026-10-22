@@ -565,7 +565,15 @@ pakietu; nie wolno zamykać działającego okna podczas nagrywania tylko po to,
 
 ## Opcje sesji — jak to sprawdzić (ten przyrost)
 
-Aktualizacja 2026-10-22 zastępuje wcześniejszy scenariusz czterech pól.
+Korekta 2026-10-23 zastępuje wcześniejszy scenariusz zbiorczego wyboru sesji.
+Przejdź do wybranej sesji w głównym oknie i naciśnij `Ctrl+Alt+Enter`.
+Tytuł i pola mają dotyczyć wyłącznie tej aktywnej sesji; w dialogu nie może
+być pola „Konfigurowana sesja”. Po zmianie ustawienia i zapisaniu sprawdź, że
+ustawienia pozostałych sesji nie zmieniły się. Dla domyślnej prędkości wariant
+dziedziczony ma być czytany dokładnie „Jak ustawienie ogólne”, bez dopowiedzenia
+na przykład „2,00 razy — szybciej”.
+
+Aktualizacja 2026-10-22 zastąpiła wcześniejszy scenariusz czterech pól.
 W Plikach lokalnych i Podcastach i YouTube oczekiwane jest sześć pól:
 pozycja, domyślna prędkość, normalizacja, przejścia, cisza oraz zachowanie po
 wyjściu. Radio ma wyłącznie zachowanie po wyjściu. `1,00 razy` musi być
@@ -576,11 +584,12 @@ ruszyć z domyślną prędkością sesji, chyba że plik, podcast lub odcinek ma
 własne ustawienie. Opcja „Zawsze od początku” nie może unieważnić jawnego
 ustawienia bardziej szczegółowego.
 
-Wynik automatyczny bieżących źródeł z 2026-10-22: pełny zestaw Pythona
-`1977 passed, 110 skipped, 11 subtests passed`; 27 zestawów protokołu C#
-zaliczonych; 378 payloadów Pythona przyjętych przez parser C#; pełny build
-Debug bez ostrzeżeń i błędów. Jest to dowód źródeł i kompilacji, nie odbiór
-żywego NVDA ani instalacji AMC Test.
+Wynik automatyczny bieżących źródeł po korekcie z 2026-10-23: pełny zestaw
+Pythona `1983 passed, 111 skipped, 11 subtests passed`; celowane testy opcji
+sesji `76 passed`. Wcześniejszy etap zaliczył 27 zestawów protokołu C#, przyjął
+378 payloadów Pythona w parserze C# i zbudował Debug bez ostrzeżeń i błędów;
+korekta z 2026-10-23 nie zmienia kodu C#. Jest to dowód źródeł i kompilacji,
+nie nowej instalacji AMC Test ani ponownego odbioru żywego NVDA.
 
 Testy bezokienne (wszystko, co zmierzone):
 

@@ -2,8 +2,10 @@
 
 ## Status
 
-W trakcie — źródła, testy, kompilacja, instalacja i uruchomienie AMC Test
-ukończone 2026-10-22; pozostaje ręczny odbiór NVDA.
+W trakcie — odbiór NVDA 2026-10-23 wykazał, że zainstalowany kandydat
+nieprawidłowo otwiera zbiorczy edytor wielu sesji. Korekta kontekstowego okna
+jest ukończona w źródłach i ma zaliczoną pełną regresję Pythona; czeka na
+zbiorczy build, instalację AMC Test i ponowny odbiór NVDA.
 
 ## Zakres
 
@@ -14,14 +16,19 @@ i Podcastów i YouTube oraz zachować wspólny kontrakt menu, skrótu
 
 ## Materiał do dokumentacji użytkownika
 
-Projekt roboczy. Okno **Opcje sesji** otwiera się skrótem `Ctrl+Alt+Enter`.
+Projekt roboczy. Okno **Opcje sesji** otwiera się skrótem `Ctrl+Alt+Enter`
+i zawsze dotyczy sesji aktywnej w chwili otwarcia. Nie zawiera dodatkowego
+pola wyboru innej sesji. Aby zmienić opcje innej sesji, najpierw przejdź do
+niej w głównym oknie AMC, a następnie użyj `Ctrl+Alt+Enter`.
 Pliki lokalne oraz Podcasty i YouTube mają osobne ustawienia pozycji
 odtwarzania, domyślnej prędkości, normalizacji głośności, łagodnych przejść,
 ciszy między utworami i zachowania po wyjściu z odtwarzacza. Wartość `1,00`
 jest nazwana normalną prędkością, mniejsze wartości są opisane jako wolniejsze,
-a większe jako szybsze. Radio i sesje zewnętrzne pokazują wyłącznie opcje,
-które ich wykonawca rzeczywiście obsługuje. Urządzenie audio pozostaje osobnym
-wyborem pod `Shift+A`.
+a większe jako szybsze. Wariant dziedziczący prędkość jest czytany wyłącznie
+jako „Jak ustawienie ogólne”; nie dokleja wartości bieżącego ustawienia
+ogólnego. Radio i sesje zewnętrzne pokazują wyłącznie opcje, które ich
+wykonawca rzeczywiście obsługuje. Urządzenie audio pozostaje osobnym wyborem
+pod `Shift+A`.
 
 ## Uzasadnienie i decyzje
 
@@ -31,16 +38,30 @@ wyborem pod `Shift+A`.
 - 2026-10-22: decyzja z wcześniejszej mapy portu o pominięciu prędkości sesji
   zostaje zastąpiona poleceniem użytkownika. Prędkość ma być zapisywana i
   rzeczywiście stosowana od następnego uruchomienia materiału.
+- 2026-10-23: korekta użytkownika zastępuje wcześniejszy projekt zbiorczego
+  wyboru „Konfigurowana sesja”. `Ctrl+Alt+Enter` jest selektywne i zawsze
+  edytuje tylko aktywną sesję. Zapis nie może zmienić ustawień innej sesji.
+- 2026-10-23: wariant dziedziczonej prędkości ma etykietę wyłącznie
+  „Jak ustawienie ogólne”. Tekst typu „Jak ustawienie ogólne — 2,00 razy —
+  szybciej” był poprawny obliczeniowo, lecz mylący jako nazwa wyboru i zostaje
+  zastąpiony krótką etykietą stanu dziedziczenia.
 - Ustawienie odcinka lub podcastu zachowuje pierwszeństwo przed ustawieniem
-  sesji. Brak jawnego wyboru sesji oznacza dziedziczenie ustawienia ogólnego.
+  sesji. Brak jawnej wartości w polu sesji oznacza dziedziczenie ustawienia
+  ogólnego.
 - Zapis opcji nie przestawia w locie materiału grającego we współdzielonym
   silniku Plików i Podcastów.
 
 ## Testy i wynik
 
-- Pełna regresja Pythona po połączeniu z rozdziałami Spotify:
-  `1978 passed, 110 skipped, 11 subtests passed`.
+- Korekta z 2026-10-23: `76 passed` w trzech zestawach dialogu, skutku i
+  podłączenia. Obejmuje brak zbiorczego pola sesji, zapis tylko sesji aktywnej,
+  dokładną etykietę dziedziczenia prędkości, początkowy fokus, Anuluj, zapis,
+  odmowę silnika, trwałość profilu, menu, pomoc i skrót.
+- Pełna regresja Pythona po korekcie:
+  `1983 passed, 111 skipped, 11 subtests passed`.
   Pominięcia są oznaczonymi zależnościami opcjonalnymi, nie błędami.
+- Poniższe testy C# i build były zaliczone przed korektą wyłącznie w Pythonie;
+  sama korekta nie zmienia hosta ani protokołu.
 - Wszystkie 27 zestawów protokołu LiteHost: zaliczone.
 - Testy launchera i aktualizatora: `30/30` zaliczone.
 - Krzyżowy test parsera: 378 payloadów wygenerowanych przez Python przyjętych
@@ -54,11 +75,16 @@ wyborem pod `Shift+A`.
   Controller"`. W tym zadaniu nie zmieniano instalatora.
 - `ruff` nie był dostępny w przypiętym środowisku testowym; nie instalowano
   nowych narzędzi z sieci.
-- Próba z prawdziwym NVDA: pozostaje do wykonania na zainstalowanym kandydacie.
+- Próba z prawdziwym NVDA 2026-10-23: niezaliczona dla zainstalowanego
+  kandydata. Użytkownik potwierdził mylące zbiorcze pole sesji i etykietę
+  „Jak ustawienie ogólne — 2,00 razy — szybciej”. Oba problemy poprawiono
+  w źródłach; ponowna próba wymaga nowej instalacji.
 
 ## Znane ograniczenia
 
-- Ręczny odbiór z NVDA pozostaje osobnym etapem po zakończonej instalacji.
+- Ponowny ręczny odbiór z NVDA pozostaje osobnym etapem po nowej zbiorczej
+  instalacji. Bieżąca zainstalowana wersja nadal ma zachowanie odrzucone
+  2026-10-23.
 - Wznowienie Spotify z historycznego WPF nie jest pokazane w bieżącym
   adapterze, ponieważ nowy wykonawca Spotify nie ma jeszcze bezpiecznej drogi
   sesyjnego wznowienia. Nie dodano martwej kontrolki.
@@ -88,15 +114,19 @@ wyborem pod `Shift+A`.
 
 ## Wersja i commit
 
-- Źródła: praca rozpoczęta na `b9cedf76`; wspólny commit wdrożeniowy:
+- Pierwszy wspólny commit wdrożeniowy:
   `6ce22410bb80ac867504d15d17d890e9774d929e`.
+- Korekta z 2026-10-23: commit źródeł i testów
+  `d941c5212126c6d3ab5f8ed7a36e261ca05d9bd4`, przygotowany na bazie
+  `b57ade090f3807f53dca9686a90f6e623e189ea6` wraz z poprawką YouTube.
 - Build: pełne rozwiązanie Release zbudowane pomyślnie, 0 ostrzeżeń i
   0 błędów.
 - Instalacja AMC Test:
   `2026.10.22-6ce22410bb80ac867504d15d17d890e9774d929e-f3e80d2d`,
   1670 plików. Aktualizator i kontrola integralności zakończyły się kodem 0;
   kontrolowany start przeszedł, a uruchomione okno ma tytuł
-  `AMC Test — 22.10.2026, 22:48`.
+  `AMC Test — 22.10.2026, 22:48`. Ta instalacja nie zawiera korekty
+  kontekstowego okna z 2026-10-23.
 - Instalator AMC Public i publikacja: nie wykonano.
 
 ## Projekt wpisu do listy zmian
@@ -106,8 +136,10 @@ wyborem pod `Shift+A`.
 - Ustawienie podcastu lub odcinka nadal ma pierwszeństwo przed ustawieniem
   całej sesji.
 - Bieżąca zmiana tempa nie przecieka już do domyślnego tempa innej sesji.
-- Lista sesji i wszystkie wartości mają jawne etykiety użytkowe dla NVDA;
-  `1,00 razy` jest nazwane normalną prędkością.
+- `Ctrl+Alt+Enter` edytuje wyłącznie aktywną sesję, bez dodatkowego pola
+  „Konfigurowana sesja”.
+- Wariant dziedziczonej prędkości brzmi tylko „Jak ustawienie ogólne”, a jawna
+  wartość `1,00 razy` pozostaje nazwana normalną prędkością.
 - Urządzenie audio pozostaje osobnym wyborem `Shift+A`; nie przywrócono dawnej
   nieaktywnej kontrolki.
 

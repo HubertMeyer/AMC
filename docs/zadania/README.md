@@ -30,9 +30,9 @@ jawnym poleceniu użytkownika albo przez osobno uzgodniony harmonogram.
 
 ## Zadania
 
-- `SESSION-001` — **W trakcie; źródła, pełna regresja Pythona, 27 zestawów
-  protokołu, build, instalacja i uruchomienie AMC Test są zaliczone; czeka na
-  ręczny odbiór NVDA** —
+- `SESSION-001` — **W trakcie; korekta po odbiorze NVDA jest gotowa w źródłach,
+  ma 76/76 testów celowanych i pełną regresję Pythona 1983/1983; czeka na
+  zbiorczy build, instalację AMC Test i ponowny odbiór NVDA** —
   pełne, wykonywalne opcje sesji z historycznego AMC oraz nowa domyślna
   prędkość osobno dla Plików i Podcastów. Szczegóły:
   [SESSION-001-opcje-sesji-i-predkosc.md](SESSION-001-opcje-sesji-i-predkosc.md).
@@ -89,10 +89,11 @@ zmian, wymagający korekty użytkownika:
   zbiorczej Biblioteki podcastów, kanałów YouTube i „Media internetowe”,
   prywatna trwałość wyboru i zachowanie zaznaczenia po stabilnym ID. Szczegóły:
   [POD-001-sortowanie-biblioteki-zrodel.md](POD-001-sortowanie-biblioteki-zrodel.md).
-- `POD-002` — **Jednoetapowy import publicznego linku YouTube pod `Ctrl+N`
-  jest zweryfikowany, zainstalowany i uruchomiony w AMC Test; czeka na ręczny
-  odbiór NVDA z prawdziwym adresem** — Enter wykonuje sprawdzenie i zapis bez
-  drugiego przycisku. Szczegóły:
+- `POD-002` — **Poprawka importu kanałów z uchwytem `@` jest zbudowana i
+  zweryfikowana na prawdziwym kanale, ale jeszcze niezainstalowana** — ręczny
+  odbiór ujawnił, że AMC Test z 22.10.2026, 22:48 odrzucał stabilny adres z
+  `%40` przed uruchomieniem `yt-dlp`. Normalizacja jest teraz idempotentna, a
+  Enter nadal wykonuje sprawdzenie i zapis bez drugiego przycisku. Szczegóły:
   [POD-002-import-youtube-ctrl-n.md](POD-002-import-youtube-ctrl-n.md).
 - `AMC04` — **Rozdziały podcastów oraz zakładki i rozdziały Spotify
   zweryfikowane automatycznie, zainstalowane i uruchomione w AMC Test; czekają

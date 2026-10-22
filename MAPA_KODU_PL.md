@@ -5,7 +5,8 @@
 `session_options.engine_audio_payload` łączy prywatne nadpisania plików
 z globalnym algorytmem przy starcie i przy zmianie algorytmu. Ten sam moduł
 rozstrzyga domyślną prędkość oraz tryb wznowienia Plików i Podcastów. Dialog
-edytuje lokalne kopie wszystkich sesji z wykonywalnymi opcjami. Handler zapisuje dopiero po odpowiedzi hosta,
+edytuje wyłącznie kopię ustawień aktywnej sesji i nie zawiera drugiego wyboru
+sesji. Handler zapisuje dopiero po odpowiedzi hosta,
 przy odmowie przywraca RAM i ustawienia silnika; `_save_state` zwraca wynik.
 `_leave_player_to_list` wykonuje politykę pauzy tylko odtwarzanej sesji.
 Ctrl+Alt+Enter jest natywnym akceleratorem menu, a pole filtra ma tę samą

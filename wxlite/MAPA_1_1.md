@@ -103,11 +103,12 @@ Prawdziwe ukryte okno wxPython na Windows potwierdziło pierwszy fokus,
 celowe nazwy kontrolek, zmianę wyboru i ponowne otwarcie. Żywy odbiór NVDA
 pozostaje do wykonania w pakiecie testowym.
 
-## 07.10 — Opcje sesji: domknięty przyrost, przed dostawą
+## 07.10 — Opcje sesji: historyczny przyrost, zastąpiony 23.10
 
 Kod bbe40bcd i końcowa korekta rodzica w tym commicie. Wspólne wejście
-Dźwięk → Opcje sesji oraz Ctrl+Alt+Enter. Wybór konfigurowanej sesji
-nie przełącza odsłuchu. Pliki: normalizacja, przejścia, cisza i zachowanie
+Dźwięk → Opcje sesji oraz Ctrl+Alt+Enter. Ówczesny wybór konfigurowanej sesji
+nie przełączał odsłuchu, lecz został usunięty po odbiorze NVDA 2026-10-23.
+Pliki: normalizacja, przejścia, cisza i zachowanie
 po wyjściu z odtwarzacza; Radio: tylko zachowanie po wyjściu.
 
 Rodzic potwierdził na pełnej prywatnej kopii (11207 rekordów) i żywym NVDA:
@@ -129,11 +130,16 @@ Stan historyczny sprzed dostawy ecc9ab68 (nie bieżąca instalacja): odebrany ko
 
 ## Opcje sesji — rozszerzenie 2026-10-22
 
+Korekta użytkownika z 2026-10-23 zastępuje projekt zbiorczego edytora:
+`Ctrl+Alt+Enter` zawsze dotyczy aktywnej sesji i nie pokazuje dodatkowego pola
+wyboru sesji. Dziedziczona prędkość ma etykietę wyłącznie „Jak ustawienie
+ogólne”, bez dopisywania obliczonej wartości ogólnej.
+
 Poniższy opis zastępuje wcześniejszą decyzję o celowym pominięciu pozycji i
 prędkości sesji. Historyczna sekcja pozostawała poprawna dla wcześniejszego
 kandydata, ale nie opisuje już bieżących źródeł.
 
-Wspólne wejście do opcji odtwarzania **wybranej sesji**: pozycja
+Wspólne wejście do opcji odtwarzania **aktywnej sesji**: pozycja
 `Dźwięk → Opcje sesji…` i `Ctrl+Alt+Enter` (lista i odtwarzacz).
 Dialog pokazuje WYŁĄCZNIE opcje, które dana sesja naprawdę wykona:
 
@@ -157,6 +163,7 @@ odtwarzacza. WiiM nie dostaje martwych opcji. Wyjście audio pozostaje osobnym,
 działającym wyborem pod `Shift+A`; nie wraca jako nieaktywne pole dialogu.
 
 Każde pole ma wariant „Jak ustawienie ogólne”, więc wybór jest odwracalny;
+przy prędkości wariant ten nie dopowiada bieżącej wartości ogólnej.
 dziedziczenie to `None`, nie fałsz. Wariant dziedziczony przy wstrzymaniu
 mówi wprost, co z niego wynika (port `PlayerExitPausePolicy`).
 
