@@ -1,4 +1,6 @@
 using System.Text.Json;
+using System.Net;
+using System.Net.Sockets;
 using AccessibleMediaController.Core.Devices.FrontierSmart;
 using AccessibleMediaController.LiteHost.Protocol;
 
@@ -10,6 +12,9 @@ internal static class FrontierSmartContractTests
     {
         AddressPolicyAcceptsOnlyLocalIpAddresses();
         DiscoveryAcceptsLegacyAndUndokServiceTypes();
+        DiscoveryRequiresVerifiedDescriptionAndUserFacingName();
+        DiscoveryUsesAllInterfacesAndSurvivesPartialFailure();
+        DiscoveryHonorsTimeoutAndCancellation();
         SnapshotFallsBackWhenDeviceRejectsGetMultiple();
         XmlParserReadsTypedValuesAndRejectsDtd();
         ListsUseOnlyIntentionalLabels();
@@ -59,6 +64,114 @@ internal static class FrontierSmartContractTests
         Check(!FrontierSmartDiscoveryService.TryParseResponse(
                 unrelated, out _),
             "wykrywanie przyjęło niezwiązany renderer UPnP");
+
+        const string missingServiceType =
+            "HTTP/1.1 200 OK\r\n"
+            + "LOCATION: http://192.168.0.132:80/device\r\n\r\n";
+        Check(!FrontierSmartDiscoveryService.TryParseResponse(
+                missingServiceType, out _),
+            "wykrywanie przyjęło odpowiedź bez potwierdzonego typu usługi");
+    }
+
+    private static void DiscoveryRequiresVerifiedDescriptionAndUserFacingName()
+    {
+        const string description =
+            "<netRemote><friendlyName>Teufel RADIO 3SIXTY</friendlyName>"
+            + "<version>ir-mmi-FS2026-0500-088</version>"
+            + "<webfsapi>http://192.168.0.132:80/fsapi</webfsapi></netRemote>";
+        Check(FrontierSmartDiscoveryService.TryParseDescription(
+                description, "192.168.0.132", out var device)
+              && device?.DisplayName == "Teufel RADIO 3SIXTY"
+              && device.FirmwareVersion == "ir-mmi-FS2026-0500-088",
+            "opis urządzenia nie zwrócił użytkowej nazwy i firmware");
+
+        const string wrongAddress =
+            "<netRemote><friendlyName>Fałszywe radio</friendlyName>"
+            + "<webfsapi>http://192.168.0.200/fsapi</webfsapi></netRemote>";
+        Check(!FrontierSmartDiscoveryService.TryParseDescription(
+                wrongAddress, "192.168.0.132", out _),
+            "opis z obcą bazą FSAPI został uznany za wykryte urządzenie");
+
+        const string withDtd =
+            "<!DOCTYPE x [<!ENTITY y SYSTEM \"file:///C:/Windows/win.ini\">]>"
+            + "<netRemote><friendlyName>&y;</friendlyName>"
+            + "<webfsapi>http://192.168.0.132/fsapi</webfsapi></netRemote>";
+        Check(!FrontierSmartDiscoveryService.TryParseDescription(
+                withDtd, "192.168.0.132", out _),
+            "parser opisu urządzenia przyjął DTD");
+
+        var json = JsonSerializer.Serialize(
+            LiteFrontierSmartContract.CreateDiscoveryResult(
+                [device!], "Wykryto urządzenie Teufel RADIO 3SIXTY."));
+        using var payload = JsonDocument.Parse(json);
+        var item = payload.RootElement.GetProperty("items")[0];
+        Check(item.GetProperty("label").GetString() == "Teufel RADIO 3SIXTY"
+              && !item.GetProperty("label").GetString()!.Contains("192.168."),
+            "etykieta wyniku wykrywania zawiera adres zamiast użytkowej nazwy");
+    }
+
+    private static void DiscoveryUsesAllInterfacesAndSurvivesPartialFailure()
+    {
+        var first = IPAddress.Parse("192.168.10.2");
+        var second = IPAddress.Parse("192.168.20.2");
+        var calls = new List<IPAddress>();
+        using var discovery = new FrontierSmartDiscoveryService(
+            () => [first, second],
+            (address, _) =>
+            {
+                calls.Add(address);
+                if (address.Equals(first)) throw new SocketException();
+                IReadOnlyList<string> responses =
+                [
+                    "HTTP/1.1 200 OK\r\n"
+                    + "LOCATION: http://192.168.20.50/device\r\n"
+                    + $"ST: {FrontierSmartDiscoveryService.UndokServiceType}\r\n\r\n"
+                ];
+                return Task.FromResult(responses);
+            },
+            new DeviceDescriptionHandler());
+
+        var devices = discovery.DiscoverDevicesAsync(TimeSpan.FromMilliseconds(50))
+            .GetAwaiter().GetResult();
+
+        Check(calls.Count == 2 && calls.Contains(first) && calls.Contains(second),
+            "wykrywanie nie użyło wszystkich aktywnych interfejsów");
+        Check(devices.Count == 1
+              && devices[0].DisplayName == "Radio z drugiego interfejsu",
+            "awaria jednego interfejsu zgubiła prawidłowy wynik drugiego");
+    }
+
+    private static void DiscoveryHonorsTimeoutAndCancellation()
+    {
+        static async Task<IReadOnlyList<string>> WaitForCancellation(
+            IPAddress _, CancellationToken cancellationToken)
+        {
+            await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+            return [];
+        }
+
+        using var discovery = new FrontierSmartDiscoveryService(
+            () => [IPAddress.Parse("192.168.30.2")],
+            WaitForCancellation,
+            new DeviceDescriptionHandler());
+        var timedOut = discovery.DiscoverDevicesAsync(
+            TimeSpan.FromMilliseconds(20)).GetAwaiter().GetResult();
+        Check(timedOut.Count == 0,
+            "ograniczony timeout wykrywania nie zwrócił pustego wyniku");
+
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+        try
+        {
+            discovery.DiscoverDevicesAsync(
+                TimeSpan.FromSeconds(1), cancellation.Token)
+                .GetAwaiter().GetResult();
+            throw new InvalidOperationException(
+                "anulowane wykrywanie zakończyło się jak zwykły pusty wynik");
+        }
+        catch (OperationCanceledException)
+        {
+        }
     }
 
     private static void AddressPolicyAcceptsOnlyLocalIpAddresses()
@@ -205,6 +318,26 @@ internal static class FrontierSmartContractTests
     private static void Check(bool condition, string message)
     {
         if (!condition) throw new InvalidOperationException(message);
+    }
+
+    private sealed class DeviceDescriptionHandler : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken)
+        {
+            var address = request.RequestUri?.Host ?? "192.168.20.50";
+            var name = address == "192.168.20.50"
+                ? "Radio z drugiego interfejsu"
+                : "Radio testowe";
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(
+                    $"<netRemote><friendlyName>{name}</friendlyName>"
+                    + "<version>firmware-test</version>"
+                    + $"<webfsapi>http://{address}/fsapi</webfsapi></netRemote>")
+            });
+        }
     }
 
     private sealed class GetMultipleRejectedHandler : HttpMessageHandler

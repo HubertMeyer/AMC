@@ -6,7 +6,11 @@ from types import MethodType, SimpleNamespace
 import amc_wx_lite.gui as gui_module
 from amc_wx_lite.command_palette import entries_for_session
 from amc_wx_lite.frontier_smart_source import (
+    FrontierSmartConfigurationPhase,
+    configuration_state,
     device_rows,
+    discovery_finished,
+    discovery_started,
     mode_choices,
     now_playing_label,
     preset_choices,
@@ -123,6 +127,7 @@ def test_frontier_smart_host_client_uses_narrow_named_operations() -> None:
 
     client.frontier_smart_devices()
     client.frontier_smart_discover()
+    client.frontier_smart_identify("192.168.1.55")
     client.frontier_smart_add("192.168.1.55", "1234")
     client.frontier_smart_select("device-1")
     client.frontier_smart_snapshot("device-1")
@@ -136,6 +141,7 @@ def test_frontier_smart_host_client_uses_narrow_named_operations() -> None:
     assert calls == [
         ("frontierSmart.devices", None, 15.0),
         ("frontierSmart.discover", None, 15.0),
+        ("frontierSmart.identify", {"address": "192.168.1.55"}, 15.0),
         ("frontierSmart.add", {"address": "192.168.1.55", "pin": "1234"}, 30.0),
         ("frontierSmart.select", {"deviceId": "device-1"}, 15.0),
         ("frontierSmart.snapshot", {"deviceId": "device-1"}, 30.0),
@@ -223,6 +229,7 @@ def test_frontier_smart_device_dialog_has_explicit_names_and_keyboard_contract()
     )
     assert "self.Bind(wx.EVT_CHAR_HOOK, self._on_key)" in dialog
     assert "self.devices.Bind(wx.EVT_LISTBOX_DCLICK, self._on_select)" in dialog
+    assert "self.address.Bind(wx.EVT_TEXT, self._on_address_changed)" in dialog
     assert "self.devices.HasFocus()" in dialog
     assert "event.HasAnyModifiers()" in dialog
     assert "self.save_button.SetDefault()" not in dialog
@@ -237,6 +244,8 @@ def test_frontier_smart_device_dialog_has_explicit_names_and_keyboard_contract()
     assert "self.save_button.MoveAfterInTabOrder(self.pin)" in dialog
     assert "self.manual_button.SetFocus()" in dialog
     assert "self.pin.SetFocus()" in dialog
+    assert 'self.save_button.SetLabel("&Sprawdź urządzenie")' in dialog
+    assert "if not self._state.pin_allowed:" in dialog
     assert "close_after=True" not in dialog
 
 
@@ -244,20 +253,37 @@ class _FakeControl:
     def __init__(self) -> None:
         self.focused = False
         self.shown = False
+        self.hidden = False
+        self.enabled = True
         self.value = ""
         self.name = ""
+        self.label = ""
 
     def SetFocus(self) -> None:
         self.focused = True
 
     def Show(self) -> None:
         self.shown = True
+        self.hidden = False
+
+    def Hide(self) -> None:
+        self.hidden = True
+        self.shown = False
 
     def SetValue(self, value: str) -> None:
         self.value = value
 
     def SetName(self, name: str) -> None:
         self.name = name
+
+    def GetValue(self) -> str:
+        return self.value
+
+    def SetLabel(self, label: str) -> None:
+        self.label = label
+
+    def Enable(self, enabled: bool) -> None:
+        self.enabled = enabled
 
 
 def test_frontier_smart_empty_session_starts_discovery_without_focusing_close() -> None:
@@ -266,7 +292,7 @@ def test_frontier_smart_empty_session_starts_discovery_without_focusing_close() 
     started: list[bool] = []
     dialog = SimpleNamespace(
         _devices=[],
-        _auto_discover=True,
+        _state=configuration_state({"items": []}),
         _automatic_discovery_started=False,
         devices=devices,
         discover_button=discover,
@@ -287,7 +313,13 @@ def test_frontier_smart_reopening_saved_devices_focuses_list_without_discovery()
     started: list[bool] = []
     dialog = SimpleNamespace(
         _devices=[("radio-1", "Radio w salonie")],
-        _auto_discover=False,
+        _state=configuration_state({
+            "items": [{
+                "itemId": "frontier:radio-1",
+                "deviceId": "radio-1",
+                "title": "Radio w salonie",
+            }]
+        }),
         _automatic_discovery_started=False,
         devices=devices,
         discover_button=discover,
@@ -305,12 +337,25 @@ def test_frontier_smart_discovery_announces_device_before_pin_and_focuses_pin() 
     address = _FakeControl()
     pin = _FakeControl()
     pin_label = _FakeControl()
+    save_button = _FakeControl()
     statuses: list[tuple[str, bool]] = []
+    state = discovery_finished(
+        discovery_started(configuration_state({"items": []})),
+        {
+            "items": [{
+                "address": "192.168.1.55",
+                "label": "Teufel RADIO 3SIXTY",
+            }],
+            "message": "Wykryto urządzenie Teufel RADIO 3SIXTY.",
+        },
+    )
     dialog = SimpleNamespace(
         _busy=True,
+        _state=state,
         address=address,
         pin=pin,
         pin_label=pin_label,
+        save_button=save_button,
         Layout=lambda: None,
         _update_buttons=lambda: None,
         set_status=lambda message, announce=False: statuses.append(
@@ -322,12 +367,13 @@ def test_frontier_smart_discovery_announces_device_before_pin_and_focuses_pin() 
         dialog,
     )
 
-    FrontierSmartDevicesDialog.use_discovered(
+    FrontierSmartDevicesDialog._accept_identified_device(
         dialog,
-        (("192.168.1.55", "Teufel RADIO 3SIXTY"),),
-        "Znaleziono jedno urządzenie.",
+        "192.168.1.55",
+        "Teufel RADIO 3SIXTY",
     )
 
+    assert dialog._state.phase is FrontierSmartConfigurationPhase.WAITING_FOR_PIN
     assert address.value == "192.168.1.55"
     assert pin_label.shown is True
     assert pin.shown is True
@@ -339,6 +385,129 @@ def test_frontier_smart_discovery_announces_device_before_pin_and_focuses_pin() 
         True,
     )]
     assert "192.168.1.55" not in statuses[0][0]
+
+
+def test_frontier_smart_empty_result_has_no_pin_and_focuses_retry() -> None:
+    pin = _FakeControl()
+    pin_label = _FakeControl()
+    discover = _FakeControl()
+    save_button = _FakeControl()
+    statuses: list[tuple[str, bool]] = []
+    dialog = SimpleNamespace(
+        _state=discovery_started(configuration_state({"items": []})),
+        _busy=True,
+        _manual_address_visible=False,
+        pin=pin,
+        pin_label=pin_label,
+        discover_button=discover,
+        save_button=save_button,
+        Layout=lambda: None,
+        _update_buttons=lambda: None,
+        set_status=lambda message, announce=False: statuses.append(
+            (message, announce)
+        ),
+    )
+    dialog._hide_pin_field = MethodType(
+        FrontierSmartDevicesDialog._hide_pin_field,
+        dialog,
+    )
+
+    FrontierSmartDevicesDialog.use_discovered(
+        dialog,
+        {
+            "items": [],
+            "message": "Nie wykryto potwierdzonego urządzenia.",
+        },
+    )
+
+    assert dialog._state.phase is FrontierSmartConfigurationPhase.EMPTY_RESULT
+    assert pin.shown is False
+    assert pin.hidden is True
+    assert discover.focused is True
+    assert "aby ponowić" in statuses[0][0]
+
+
+def test_frontier_smart_discovery_error_has_no_pin_and_focuses_retry() -> None:
+    address = _FakeControl()
+    pin = _FakeControl()
+    pin_label = _FakeControl()
+    discover = _FakeControl()
+    save_button = _FakeControl()
+    statuses: list[tuple[str, bool]] = []
+    dialog = SimpleNamespace(
+        _state=discovery_started(configuration_state({"items": []})),
+        _busy=True,
+        _manual_address_visible=False,
+        address=address,
+        pin=pin,
+        pin_label=pin_label,
+        discover_button=discover,
+        save_button=save_button,
+        Layout=lambda: None,
+        _update_buttons=lambda: None,
+        set_status=lambda message, announce=False: statuses.append(
+            (message, announce)
+        ),
+    )
+    dialog._hide_pin_field = MethodType(
+        FrontierSmartDevicesDialog._hide_pin_field,
+        dialog,
+    )
+
+    FrontierSmartDevicesDialog.discovery_failed(
+        dialog,
+        "Nie udało się wykryć urządzeń.",
+    )
+
+    assert dialog._state.phase is FrontierSmartConfigurationPhase.ERROR
+    assert pin.hidden is True
+    assert discover.focused is True
+    assert statuses[0][1] is True
+
+
+def test_frontier_smart_manual_address_is_verified_before_pin() -> None:
+    address = _FakeControl()
+    address_label = _FakeControl()
+    pin = _FakeControl()
+    pin_label = _FakeControl()
+    save_button = _FakeControl()
+    identify_calls: list[str] = []
+    busy_messages: list[str] = []
+    dialog = SimpleNamespace(
+        _state=configuration_state({"items": []}),
+        _busy=False,
+        _manual_address_visible=False,
+        address=address,
+        address_label=address_label,
+        pin=pin,
+        pin_label=pin_label,
+        save_button=save_button,
+        Layout=lambda: None,
+        set_status=lambda *_args, **_kwargs: None,
+        _update_buttons=lambda: None,
+        set_busy=lambda message: busy_messages.append(message),
+        _identify=lambda value, _dialog: identify_calls.append(value),
+    )
+    dialog._hide_pin_field = MethodType(
+        FrontierSmartDevicesDialog._hide_pin_field,
+        dialog,
+    )
+
+    FrontierSmartDevicesDialog._on_manual(dialog, None)
+
+    assert dialog._state.phase is FrontierSmartConfigurationPhase.MANUAL_ADDRESS
+    assert address.focused is True
+    assert pin.shown is False
+    assert pin.hidden is True
+    assert save_button.label == "&Sprawdź urządzenie"
+
+    address.SetValue("192.168.1.55")
+    FrontierSmartDevicesDialog._on_save(dialog, None)
+
+    assert dialog._state.phase is FrontierSmartConfigurationPhase.IDENTIFYING
+    assert identify_calls == ["192.168.1.55"]
+    assert busy_messages == ["Sprawdzanie urządzenia pod podanym adresem"]
+    assert pin.shown is False
 
 
 def test_frontier_smart_session_entry_opens_first_configuration_only_when_empty(
@@ -395,6 +564,33 @@ def test_frontier_smart_session_entry_opens_first_configuration_only_when_empty(
     assert "configure_if_empty=True" in switch
 
 
+def test_frontier_smart_ctrl_f5_uses_management_flow_without_second_auto_open(
+    monkeypatch,
+) -> None:
+    switched: list[tuple[SessionId, bool]] = []
+    opened: list[bool] = []
+    monkeypatch.setattr(
+        gui_module.wx,
+        "CallAfter",
+        lambda callback, *args: callback(*args),
+    )
+    frame = SimpleNamespace(
+        options=SimpleNamespace(
+            session_order=[session.value for session in SessionId]
+        ),
+        announcer=SimpleNamespace(say=lambda _message: None),
+        _switch_session=lambda session, *, configure_frontier_if_empty=True: (
+            switched.append((session, configure_frontier_if_empty))
+        ),
+        _show_frontier_smart_devices=lambda: opened.append(True),
+    )
+
+    LiteFrame._configure_session(frame, SessionId.FRONTIER_SMART)
+
+    assert switched == [(SessionId.FRONTIER_SMART, False)]
+    assert opened == [True]
+
+
 def test_frontier_smart_auto_discovers_only_without_saved_devices() -> None:
     assert should_auto_discover_devices({"items": []}) is True
     assert should_auto_discover_devices({
@@ -408,15 +604,28 @@ def test_frontier_smart_auto_discovers_only_without_saved_devices() -> None:
         ]
     }) is False
 
+    old_false_result = discovery_finished(
+        discovery_started(configuration_state({"items": []})),
+        {
+            "items": [{
+                "address": "192.168.1.55",
+                "label": (
+                    "Wykryte urządzenie Frontier Smart, adres 192.168.1.55"
+                ),
+            }]
+        },
+    )
+    assert old_false_result.phase is FrontierSmartConfigurationPhase.EMPTY_RESULT
+    assert old_false_result.discovered_devices == ()
+
     source = (
         Path(__file__).parents[1] / "amc_wx_lite" / "gui.py"
     ).read_text(encoding="utf-8")
     flow = source[source.index("    def _show_frontier_smart_devices") :]
     flow = flow[:flow.index("    def _activate_frontier_smart_device")]
-    assert (
-        "auto_discover=frontier_smart_should_auto_discover("
-        in flow
-    )
+    assert "auto_discover=" not in flow
+    assert "with FrontierSmartDevicesDialog(" in flow
+    assert "self._state = frontier_smart_configuration_state(payload)" in source
     assert 'label="&Szukaj nowych urządzeń"' in source
 
 
@@ -431,3 +640,5 @@ def test_frontier_smart_success_closes_configuration_and_returns_to_device_list(
     assert "lambda payload: finish(payload, dialog, close_after=True)" in flow
     assert "close_after=True" in flow
     assert "dialog.fail(str(error), focus_pin=focus_pin)" in flow
+    assert "return not dialog.IsBeingDeleted()" in flow
+    assert "self._restore_focus_after_dialog()" in flow

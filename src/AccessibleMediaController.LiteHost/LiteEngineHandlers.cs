@@ -507,6 +507,8 @@ internal sealed class LiteEngineHandlers : IDisposable
                 RequireFrontierSmart().ListDevices(),
             [LiteFrontierSmartContract.DiscoverOperation] = (_, _) =>
                 RequireFrontierSmart().Discover(),
+            [LiteFrontierSmartContract.IdentifyOperation] = (request, _) =>
+                RequireFrontierSmart().Identify(request.Args),
             [LiteFrontierSmartContract.AddOperation] = (request, _) =>
                 RequireFrontierSmart().AddOrUpdate(request.Args),
             [LiteFrontierSmartContract.RemoveOperation] = (request, _) =>

@@ -44,26 +44,37 @@ internal sealed class LiteFrontierSmartCoordinator : IDisposable
     {
         try
         {
-            var addresses = discovery.DiscoverAddressesAsync(TimeSpan.FromSeconds(5))
+            var devices = discovery.DiscoverDevicesAsync(TimeSpan.FromSeconds(5))
                 .GetAwaiter().GetResult();
-            return new
-            {
-                items = addresses.Select(address => new
-                {
-                    address,
-                    label = "Wykryte urządzenie Frontier Smart, adres " + address
-                }).ToArray(),
-                message = addresses.Count == 0
-                    ? "Nie wykryto urządzenia. Możesz wpisać lokalny adres IP ręcznie."
-                    : addresses.Count == 1
-                        ? "Wykryto jedno urządzenie."
-                        : $"Wykryto urządzenia: {addresses.Count}."
-            };
+            var message = devices.Count == 0
+                ? "Nie wykryto potwierdzonego urządzenia. Możesz wyszukać ponownie albo wpisać lokalny adres IP ręcznie."
+                : devices.Count == 1
+                    ? $"Wykryto urządzenie {devices[0].DisplayName}."
+                    : $"Wykryto urządzenia: {devices.Count}.";
+            return LiteFrontierSmartContract.CreateDiscoveryResult(devices, message);
         }
         catch (Exception exception) when (IsExpectedFailure(exception))
         {
             throw new LiteRequestException(
                 "Nie udało się wykryć urządzeń. Wpisz lokalny adres IP ręcznie.");
+        }
+    }
+
+    public object Identify(JsonElement args)
+    {
+        try
+        {
+            var device = discovery.IdentifyAddressAsync(
+                LiteFrontierSmartContract.ReadAddress(args))
+                .GetAwaiter().GetResult();
+            return LiteFrontierSmartContract.CreateDiscoveryResult(
+                [device],
+                $"Potwierdzono urządzenie {device.DisplayName}.");
+        }
+        catch (Exception exception) when (IsExpectedFailure(exception))
+        {
+            throw new LiteRequestException(
+                "Nie udało się potwierdzić urządzenia pod podanym adresem. Sprawdź adres albo wyszukaj ponownie.");
         }
     }
 
@@ -592,5 +603,9 @@ internal sealed class LiteFrontierSmartCoordinator : IDisposable
         return false;
     }
 
-    public void Dispose() => client.Dispose();
+    public void Dispose()
+    {
+        client.Dispose();
+        discovery.Dispose();
+    }
 }
