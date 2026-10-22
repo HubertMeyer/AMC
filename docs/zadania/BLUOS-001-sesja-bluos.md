@@ -126,4 +126,5 @@ klawiaturę, menu, `Ctrl+F1`, pełną pomoc, paletę poleceń i dokumentację.
 ## Wersja i commit
 
 - Wersja źródeł AMC: bez zmiany.
-- Commit zapisu karty: do wpisania po utworzeniu pierwszego commitu dokumentacji.
+- Commit zapisu karty i wpisu w rejestrze: `dded0666`
+  (`docs(bluos): zapisz plan osobnej sesji`).
