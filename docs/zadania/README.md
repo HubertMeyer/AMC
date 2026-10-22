@@ -30,9 +30,9 @@ jawnym poleceniu użytkownika albo przez osobno uzgodniony harmonogram.
 
 ## Zadania
 
-- `SESSION-001` — **W trakcie; korekta po odbiorze NVDA jest gotowa w źródłach,
-  ma 76/76 testów celowanych i pełną regresję Pythona 1983/1983; czeka na
-  zbiorczy build, instalację AMC Test i ponowny odbiór NVDA** —
+- `SESSION-001` — **W trakcie; korekta po odbiorze NVDA ma 76/76 testów
+  celowanych, pełną regresję Pythona 1983/1983 i została zainstalowana w
+  zbiorczym AMC Test; czeka na ponowny odbiór NVDA** —
   pełne, wykonywalne opcje sesji z historycznego AMC oraz nowa domyślna
   prędkość osobno dla Plików i Podcastów. Szczegóły:
   [SESSION-001-opcje-sesji-i-predkosc.md](SESSION-001-opcje-sesji-i-predkosc.md).
@@ -89,11 +89,11 @@ zmian, wymagający korekty użytkownika:
   zbiorczej Biblioteki podcastów, kanałów YouTube i „Media internetowe”,
   prywatna trwałość wyboru i zachowanie zaznaczenia po stabilnym ID. Szczegóły:
   [POD-001-sortowanie-biblioteki-zrodel.md](POD-001-sortowanie-biblioteki-zrodel.md).
-- `POD-002` — **Poprawka importu kanałów z uchwytem `@` jest zbudowana i
-  zweryfikowana na prawdziwym kanale, ale jeszcze niezainstalowana** — ręczny
-  odbiór ujawnił, że AMC Test z 22.10.2026, 22:48 odrzucał stabilny adres z
-  `%40` przed uruchomieniem `yt-dlp`. Normalizacja jest teraz idempotentna, a
-  Enter nadal wykonuje sprawdzenie i zapis bez drugiego przycisku. Szczegóły:
+- `POD-002` — **Poprawka importu kanałów z uchwytem `@` jest zweryfikowana na
+  prawdziwym kanale i zainstalowana w zbiorczym AMC Test; czeka na ponowny
+  odbiór NVDA** — wcześniejsza wersja odrzucała stabilny adres z `%40` przed
+  uruchomieniem `yt-dlp`. Normalizacja jest teraz idempotentna, a Enter nadal
+  wykonuje sprawdzenie i zapis bez drugiego przycisku. Szczegóły:
   [POD-002-import-youtube-ctrl-n.md](POD-002-import-youtube-ctrl-n.md).
 - `AMC04` — **Rozdziały podcastów oraz zakładki i rozdziały Spotify
   zweryfikowane automatycznie, zainstalowane i uruchomione w AMC Test; czekają
@@ -247,9 +247,9 @@ zmian, wymagający korekty użytkownika:
   krótkie nazwy `AMC Test — data, godzina` i `AMC Public — data, godzina`,
   z technicznymi identyfikatorami pozostawionymi poza zwykłą nazwą.
   Szczegóły: [NAME-001-amc-test.md](NAME-001-amc-test.md).
-- `FRONTIER-001` — **Po trzecim odbiorze NVDA poprawiono w źródłach wejście
-  `Ctrl+8`, automatyczne wykrywanie, fokus oraz komunikat przed PIN-em; bez
-  nowej paczki i instalacji** — pusta sesja automatycznie szuka pierwszego urządzenia
+- `FRONTIER-001` — **Poprawka po trzecim odbiorze NVDA została zbudowana,
+  zainstalowana i uruchomiona w zbiorczym AMC Test; czeka na ponowny odbiór
+  `Ctrl+8`, automatycznego wykrywania, fokusu i komunikatu przed PIN-em** — pusta sesja automatycznie szuka pierwszego urządzenia
   FSAPI/UNDOK. Po zapisaniu urządzenia `Ctrl+F5` pokazuje listę bez ponownego
   skanowania, a osobny przycisk pozwala szukać nowych urządzeń; ręczny adres
   jest opcją awaryjną. Bezpieczny PIN, transport, tryby i presety pozostają

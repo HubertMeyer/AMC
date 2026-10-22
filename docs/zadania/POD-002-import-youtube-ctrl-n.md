@@ -2,13 +2,12 @@
 
 ## Status
 
-Poprawka w źródłach, zbudowana i zweryfikowana 2026-10-22; **niezainstalowana**.
-Ręczny odbiór z prawdziwym adresem ujawnił błąd w zainstalowanym AMC Test:
+Poprawka jest zbudowana, zweryfikowana i zainstalowana w zbiorczym AMC Test
+2026-10-23; czeka na ponowny ręczny odbiór NVDA z prawdziwym adresem.
+Wcześniejszy odbiór ujawnił błąd w AMC Test z 2026-10-22:
 `https://www.youtube.com/@WieniawskiSociety` kończył się komunikatem
 „Nie można dodać źródła: Adres YouTube nie prowadzi do publicznego kanału ani
-playlisty.” Zainstalowana wersja `AMC Test — 22.10.2026, 22:48` nadal zawiera
-ten błąd, dopóki użytkownik osobno nie zleci przygotowania i instalacji nowej
-kompilacji.
+playlisty.” Nowa instalacja zawiera poprawkę idempotentnej normalizacji `%40`.
 
 ## Zachowanie widoczne dla użytkownika
 
@@ -64,12 +63,16 @@ potwierdzany komunikatem o dodaniu i zapisaniu źródła.
 - Osobne odczytowe uruchomienie zarządzanego składnika `yt-dlp` na stabilnym
   adresie zwróciło materiał kanału. Potwierdza to, że wcześniejszy błąd
   występował przed uruchomieniem `yt-dlp`, a nie w odpowiedzi YouTube.
+- Zbiorcza promocja 2026-10-23: **30/30** testów launchera i aktualizatora,
+  pełna regresja Pythona **1983 zaliczone, 111 pominiętych i 11 podtestów
+  zaliczonych**, kompilacje Release bez ostrzeżeń i błędów, kontrolowany start
+  kandydata oraz zainstalowanej kopii: OK.
 
 ## Znane ograniczenia
 
-- Poprawiona kompilacja nie została jeszcze zainstalowana ani odebrana ręcznie
-  z NVDA. Dotychczasowy ręczny odbiór dotyczył wersji z błędem i jest dowodem
-  regresji, nie zaliczeniem poprawki.
+- Poprawiona kompilacja została zainstalowana, ale nie została jeszcze odebrana
+  ręcznie z NVDA. Dotychczasowy ręczny odbiór dotyczył wersji z błędem i jest
+  dowodem regresji, nie zaliczeniem poprawki.
 - Rzeczywisty import zależy od dostępności publicznego materiału i odpowiedzi
   YouTube oraz `yt-dlp`. Materiał prywatny albo wymagający logowania nie jest
   traktowany jako publiczne źródło.
@@ -80,11 +83,11 @@ potwierdzany komunikatem o dodaniu i zapisaniu źródła.
   `b94805a51dda69ec6bf52d5d776fa6d0693aa188`.
 - Commit poprawki źródeł i testów:
   `7f4a7d156cc05d90005f78d613c224a21d663160`.
-- Zainstalowany kandydat **niezawierający jeszcze tej poprawki**:
-  `2026.10.22-6ce22410bb80ac867504d15d17d890e9774d929e-f3e80d2d`,
+- Zainstalowany kandydat zawierający poprawkę:
+  `2026.10.23-c4a4c214e7e5bdc05fddc02c1dc644806d94490e-7353e273`,
   1670 plików.
 - Stała lokalizacja: `D:\Projekty Codex\AMC Python`.
-- Potwierdzony tytuł: `AMC Test — 22.10.2026, 22:48`.
+- Potwierdzony tytuł: `AMC Test — 23.10.2026, 00:16`.
 - AMC Public, instalator i publikacja: bez zmian.
 
 ## Materiał do dokumentacji użytkownika

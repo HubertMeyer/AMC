@@ -2,10 +2,10 @@
 
 ## Status
 
-W trakcie — odbiór NVDA 2026-10-23 wykazał, że zainstalowany kandydat
-nieprawidłowo otwiera zbiorczy edytor wielu sesji. Korekta kontekstowego okna
-jest ukończona w źródłach i ma zaliczoną pełną regresję Pythona; czeka na
-zbiorczy build, instalację AMC Test i ponowny odbiór NVDA.
+W trakcie — korekta po odbiorze NVDA jest zbudowana, zainstalowana i
+uruchomiona w zbiorczym AMC Test 2026-10-23; czeka na ponowny ręczny odbiór
+NVDA. `Ctrl+Alt+Enter` edytuje teraz tylko aktywną sesję, a dziedziczona
+prędkość ma krótką etykietę „Jak ustawienie ogólne”.
 
 ## Zakres
 
@@ -78,13 +78,18 @@ pod `Shift+A`.
 - Próba z prawdziwym NVDA 2026-10-23: niezaliczona dla zainstalowanego
   kandydata. Użytkownik potwierdził mylące zbiorcze pole sesji i etykietę
   „Jak ustawienie ogólne — 2,00 razy — szybciej”. Oba problemy poprawiono
-  w źródłach; ponowna próba wymaga nowej instalacji.
+  w źródłach.
+- Zbiorcza promocja poprawki 2026-10-23: **30/30** testów launchera i
+  aktualizatora, pełna regresja Pythona **1983 zaliczone, 111 pominiętych i
+  11 podtestów zaliczonych**, kompilacje Release bez ostrzeżeń i błędów,
+  kontrolowany start kandydata oraz stałej instalacji: OK.
 
 ## Znane ograniczenia
 
-- Ponowny ręczny odbiór z NVDA pozostaje osobnym etapem po nowej zbiorczej
-  instalacji. Bieżąca zainstalowana wersja nadal ma zachowanie odrzucone
-  2026-10-23.
+- Ponowny ręczny odbiór z NVDA pozostaje osobnym etapem. Bieżąca instalacja
+  zawiera korektę, ale wynik automatyczny nie zastępuje odsłuchu początkowej
+  wartości, przejścia po polach, Zapisz, Anuluj, powrotu fokusu i ponownego
+  otwarcia.
 - Wznowienie Spotify z historycznego WPF nie jest pokazane w bieżącym
   adapterze, ponieważ nowy wykonawca Spotify nie ma jeszcze bezpiecznej drogi
   sesyjnego wznowienia. Nie dodano martwej kontrolki.
@@ -127,6 +132,11 @@ pod `Shift+A`.
   kontrolowany start przeszedł, a uruchomione okno ma tytuł
   `AMC Test — 22.10.2026, 22:48`. Ta instalacja nie zawiera korekty
   kontekstowego okna z 2026-10-23.
+- Zbiorcza instalacja zawierająca korektę:
+  `2026.10.23-c4a4c214e7e5bdc05fddc02c1dc644806d94490e-7353e273`,
+  1670 plików, czyste źródło `c4a4c214e7e5bdc05fddc02c1dc644806d94490e`.
+  Manifest, wszystkie sumy, kontrolowany start przed i po instalacji oraz
+  uruchomione okno `AMC Test — 23.10.2026, 00:16` zostały potwierdzone.
 - Instalator AMC Public i publikacja: nie wykonano.
 
 ## Projekt wpisu do listy zmian

@@ -1,8 +1,8 @@
 # FRONTIER-001 — Frontier Smart przez FSAPI
 
-Status: **W trakcie — po trzecim odbiorze NVDA poprawiono w źródłach wejście
-do pustej sesji, automatyczne wykrywanie, fokus oraz komunikat przed PIN-em;
-poprawka nie została jeszcze zbudowana ani zainstalowana do odbioru**
+Status: **W trakcie — poprawka po trzecim odbiorze NVDA została zbudowana,
+zainstalowana i uruchomiona w zbiorczym AMC Test 2026-10-23; czeka na ponowny
+odbiór wejścia do pustej sesji, wykrywania, fokusu i komunikatu przed PIN-em**
 
 Data rozpoczęcia: 2026-10-21
 
@@ -186,10 +186,10 @@ Poprawka źródłowa z 22.10.2026 wprowadza następujący kontrakt:
 
 Zmiana jest zapisana w repozytorium
 `D:\Projekty Codex\AMC - integracja wxPython` w commicie `3ce574a6` —
-`fix(frontier): popraw pierwsze wykrywanie urządzenia`. Nie powstał jeszcze
-pakiet ani instalator. Nie zmieniono działającego
-`D:\Projekty Codex\AMC Python`, nie uruchomiono nowej wersji i nie zbudowano
-ani nie zainstalowano AMC Public.
+`fix(frontier): popraw pierwsze wykrywanie urządzenia`. Historycznie po tym
+commicie nie było jeszcze nowej paczki. Zbiorcza promocja 2026-10-23 z czystej
+rewizji `c4a4c214e7e5bdc05fddc02c1dc644806d94490e` zainstalowała poprawkę w
+`D:\Projekty Codex\AMC Python`. Nie zbudowano ani nie zainstalowano AMC Public.
 
 ### Materiał do dokumentacji użytkownika — projekt
 
@@ -315,6 +315,13 @@ nowych urządzeń”.
   Manifest stałej instalacji potwierdza commit `86727573`, pakiet `e97b3868`
   i 1670 plików. Kontrola instalatora potwierdziła okno „AMC Test —
   21.10.2026, 21:29” oraz właściwy runtime ze stałego katalogu instalacji.
+- Zbiorcza promocja korekty z commitu `3ce574a6` 2026-10-23 przeszła
+  **30/30 testów launchera i aktualizatora**, pełną regresję Pythona
+  **1983 zaliczone, 111 pominiętych i 11 podtestów zaliczonych** oraz
+  kompilacje Release bez ostrzeżeń i błędów. Kandydat i stała instalacja
+  zaliczyły pełną integralność i kontrolowany start. Zainstalowano kompilację
+  `2026.10.23-c4a4c214e7e5bdc05fddc02c1dc644806d94490e-7353e273`,
+  1670 plików; uruchomione okno ma tytuł „AMC Test — 23.10.2026, 00:16”.
 
 ## Znane ograniczenia i dalszy odbiór
 
@@ -334,10 +341,10 @@ nowych urządzeń”.
   i prawidłowy PIN, Enter oraz dwuklik na liście urządzeń, powrót fokusu po
   Zamknij, ponowne otwarcie, odtwarzanie, głośność, wyciszenie, tryby i presety
   z NVDA.
-- Drugi odbiór ujawnił, że podczas skanowania pustej sesji fokus trafia na
-  przycisk zamknięcia, a wykryty, lecz jeszcze niezapisany wynik nie jest
-  dostatecznie odróżniony od pustej listy zapisanych urządzeń. Te dwa punkty
-  są następną korektą odbiorczą; zainstalowany kod nie został jeszcze zmieniony.
+- Drugi i trzeci odbiór ujawniły, że podczas skanowania pustej sesji fokus
+  trafiał na przycisk zamknięcia, a wykryty, lecz jeszcze niezapisany wynik
+  nie był dostatecznie odróżniony od pustej listy zapisanych urządzeń.
+  Poprawka jest już zainstalowana; oba punkty wymagają ponownego odbioru NVDA.
 
 ## Migracja, wersja i commit
 
@@ -350,8 +357,9 @@ poprawki zgodnej migracji profilu: `63b30444` —
 odbiorze urządzenia: `19ae6089` —
 `fix(frontier): wykryj radio UNDOK i uprosc konfiguracje`. Poprawka zachowania
 pustej i zapisanej listy: `86727573` —
-`fix(frontier): skanuj automatycznie tylko pusta sesje`. Zainstalowana
-kompilacja AMC Test:
-`2026.10.21-8672757327c7bc5ae1995e47753f3976f2399600-e97b3868`.
+`fix(frontier): skanuj automatycznie tylko pusta sesje`. Korekta po trzecim
+odbiorze: `3ce574a6` — `fix(frontier): popraw pierwsze wykrywanie urządzenia`.
+Zainstalowana kompilacja AMC Test:
+`2026.10.23-c4a4c214e7e5bdc05fddc02c1dc644806d94490e-7353e273`.
 Nie publikować ani nie promować do profilu publicznego bez nowej zgody
 użytkownika.
