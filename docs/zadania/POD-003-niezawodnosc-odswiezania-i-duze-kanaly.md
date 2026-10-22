@@ -108,8 +108,7 @@ dostępną część, ale wyraźnie nazywa wynik częściowym zamiast pełnym suk
 
 - Bazowy commit gałęzi roboczej: `609aa644`.
 - Gałąź: `task/podcasty-tyflo`.
-- Commit kodu, testów i pierwszego zapisu dokumentacji: zostanie wpisany po
-  utworzeniu commita; jego pełny hash znajdzie się także w podsumowaniu zadania.
+- Commit kodu, testów i pierwszego zapisu dokumentacji: `405267f7`.
 - Build źródeł: wykonany pomyślnie dla Core SmokeTests i LiteHost, bez
   ostrzeżeń i błędów.
 - Instalacja AMC Test/Public: niewykonana i niedozwolona w tym zadaniu.
