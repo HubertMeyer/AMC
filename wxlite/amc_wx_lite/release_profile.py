@@ -105,6 +105,7 @@ TEST_PROFILE = ReleaseProfile(
         "session.tidal",
         "session.frontier-smart",
         "spotify.playlists",
+        "youtube.account.readonly",
     ),
 )
 

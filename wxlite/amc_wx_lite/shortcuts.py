@@ -322,6 +322,7 @@ class Action(Enum):
     IMPORT_PODCAST_OPML = "podcasts.opml.import"
     EXPORT_PODCAST_OPML = "podcasts.opml.export"
     EXPORT_YOUTUBE_SUBSCRIPTIONS = "podcasts.youtube.export"
+    YOUTUBE_ACCOUNT = "youtube.account.manage"
     REFRESH_PODCAST = "podcasts.refresh.current"
     REFRESH_PODCAST_LIBRARY = "podcasts.refresh.all"
     DOWNLOAD_PODCAST_EPISODES = "podcasts.download.selected"
@@ -1749,6 +1750,7 @@ def _help_entries() -> list[tuple[str, str, Action]]:
         Action.IMPORT_PODCAST_OPML: "Importuj podcasty z OPML",
         Action.EXPORT_PODCAST_OPML: "Eksportuj bibliotekę podcastów do OPML",
         Action.EXPORT_YOUTUBE_SUBSCRIPTIONS: "Eksportuj kanały i playlisty YouTube",
+        Action.YOUTUBE_ACCOUNT: "Konto YouTube i synchronizacja subskrypcji",
         Action.REFRESH_PODCAST: "Odśwież wybrany podcast, kanał lub playlistę",
         Action.REFRESH_PODCAST_LIBRARY: "Odśwież wszystkie źródła podcastów",
         Action.DOWNLOAD_PODCAST_EPISODES: "Pobierz zaznaczone odcinki podcastów",
@@ -2041,6 +2043,7 @@ def _help_entries() -> list[tuple[str, str, Action]]:
         Action.SESSION_ENABLE,
         Action.SESSION_DISABLE_CURRENT,
         Action.SESSION_CONFIGURE_CURRENT,
+        Action.YOUTUBE_ACCOUNT,
         Action.FRONTIER_SMART_SELECT_MODE,
         Action.REFRESH_COMMON_DATA,
         Action.COMMON_DATA_STATUS,

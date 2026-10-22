@@ -88,6 +88,7 @@ def test_public_manifest_exposes_only_approved_sessions_and_test_has_all() -> No
         if "spotify" not in capability.casefold()
         and "tidal" not in capability.casefold()
         and "frontier-smart" not in capability.casefold()
+        and "youtube.account" not in capability.casefold()
     )
 
 

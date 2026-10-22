@@ -8,6 +8,7 @@ internal static class LiteYouTubeAccountContract
     internal const string CapabilitiesOperation = "youtube.accountCapabilities";
     internal const string StatusOperation = "youtube.accountStatus";
     internal const string LoginOperation = "youtube.accountLogin";
+    internal const string CancelLoginOperation = "youtube.accountCancelLogin";
     internal const string LogoutOperation = "youtube.accountLogout";
     internal const string SyncPreviewOperation = "youtube.subscriptionSyncPreview";
     internal const string SyncApplyOperation = "youtube.subscriptionSyncApply";
