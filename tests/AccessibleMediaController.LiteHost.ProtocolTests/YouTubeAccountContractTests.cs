@@ -14,7 +14,8 @@ internal static class YouTubeAccountContractTests
         RestoreChoiceMustBeBoolean();
         BackendFailuresAreRedacted();
         KnownQuotaFailureRemainsSpecific();
-        Console.WriteLine("OK: bezpieczny kontrakt konta YouTube (5 scenariuszy)");
+        ActiveLoginCanBeCancelledWithoutLeakingTechnicalData();
+        Console.WriteLine("OK: bezpieczny kontrakt konta YouTube (6 scenariuszy)");
     }
 
     private static void AccountSurfaceNeverReturnsSecretsOrTechnicalIds()
@@ -147,6 +148,28 @@ internal static class YouTubeAccountContractTests
         }
     }
 
+    private static void ActiveLoginCanBeCancelledWithoutLeakingTechnicalData()
+    {
+        using var backend = new FakeBackend { WaitForCancellation = true };
+        using var coordinator = new LiteYouTubeAccountCoordinator(backend);
+        var login = Task.Run(() => Invoke(
+            coordinator,
+            LiteYouTubeAccountContract.LoginOperation));
+        Check(backend.LoginStarted.Wait(TimeSpan.FromSeconds(2)),
+            "Testowe logowanie nie rozpoczęło oczekiwania.");
+
+        var cancelled = Invoke(
+            coordinator,
+            LiteYouTubeAccountContract.CancelLoginOperation);
+        Check(login.Wait(TimeSpan.FromSeconds(2)),
+            "Anulowane logowanie nie zakończyło oczekiwania.");
+        var json = LiteJson.Serialize(new[] { cancelled, login.Result });
+        Check(json.Contains("Anulowano oczekiwanie", StringComparison.Ordinal)
+              && !json.Contains("CancellationToken", StringComparison.Ordinal)
+              && !json.Contains("TaskCanceled", StringComparison.Ordinal),
+            "Anulowanie ujawniło techniczny stan albo nie ma użytkowego opisu.");
+    }
+
     private static object Invoke(
         LiteYouTubeAccountCoordinator coordinator,
         string operation,
@@ -170,6 +193,8 @@ internal static class YouTubeAccountContractTests
         internal int PreviewCalls { get; private set; }
         internal int ApplyCalls { get; private set; }
         internal Exception? Failure { get; init; }
+        internal bool WaitForCancellation { get; init; }
+        internal ManualResetEventSlim LoginStarted { get; } = new(false);
         internal YouTubeSubscriptionSyncPlan Preview { get; init; } = new([], 0, 0, 0, 0);
         internal YouTubeSubscriptionSyncApplyResult Applied { get; init; } = new(0, 0, 0, 0, 0, 0);
 
@@ -179,6 +204,14 @@ internal static class YouTubeAccountContractTests
         public Task<YouTubeAccountOperationResult> LoginAsync(CancellationToken cancellationToken)
         {
             LoginCalls++;
+            LoginStarted.Set();
+            if (WaitForCancellation)
+                return Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken)
+                    .ContinueWith<YouTubeAccountOperationResult>(
+                        _ => throw new OperationCanceledException(cancellationToken),
+                        CancellationToken.None,
+                        TaskContinuationOptions.ExecuteSynchronously,
+                        TaskScheduler.Default);
             return Task.FromResult(new YouTubeAccountOperationResult(true, "Zalogowano do YouTube."));
         }
 
@@ -208,6 +241,7 @@ internal static class YouTubeAccountContractTests
 
         public void Dispose()
         {
+            LoginStarted.Dispose();
         }
     }
 }

@@ -52,6 +52,8 @@ internal sealed class LiteYouTubeAccountCoordinator(
 
     private readonly ILiteYouTubeAccountBackend _backend = backend
         ?? throw new ArgumentNullException(nameof(backend));
+    private readonly object _loginGate = new();
+    private CancellationTokenSource? _loginCancellation;
 
     internal IReadOnlyDictionary<string, Func<LiteRequest, LiteEventSink, object?>> Handlers() =>
         new Dictionary<string, Func<LiteRequest, LiteEventSink, object?>>(StringComparer.Ordinal)
@@ -64,6 +66,7 @@ internal sealed class LiteYouTubeAccountCoordinator(
                     "Konto YouTube jest dostępne tylko do odczytu."),
             [LiteYouTubeAccountContract.StatusOperation] = (_, _) => Status(),
             [LiteYouTubeAccountContract.LoginOperation] = (_, _) => Login(),
+            [LiteYouTubeAccountContract.CancelLoginOperation] = (_, _) => CancelLogin(),
             [LiteYouTubeAccountContract.LogoutOperation] = (_, _) => Logout(),
             [LiteYouTubeAccountContract.SyncPreviewOperation] = (request, _) =>
                 Preview(request.Args),
@@ -88,16 +91,56 @@ internal sealed class LiteYouTubeAccountCoordinator(
 
     private object Login()
     {
+        CancellationTokenSource cancellation;
+        lock (_loginGate)
+        {
+            if (_loginCancellation is not null)
+                return new LiteYouTubeAccountActionResult(
+                    false,
+                    "Logowanie YouTube już trwa.");
+            cancellation = new CancellationTokenSource();
+            _loginCancellation = cancellation;
+        }
         try
         {
-            var result = _backend.LoginAsync(CancellationToken.None)
+            var result = _backend.LoginAsync(cancellation.Token)
                 .GetAwaiter().GetResult();
             return new LiteYouTubeAccountActionResult(result.Succeeded, result.Message);
+        }
+        catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+        {
+            return new LiteYouTubeAccountActionResult(
+                false,
+                "Anulowano oczekiwanie na logowanie YouTube.");
         }
         catch (Exception exception)
         {
             throw SafeFailure(exception, "Nie udało się zalogować do YouTube.");
         }
+        finally
+        {
+            lock (_loginGate)
+            {
+                if (ReferenceEquals(_loginCancellation, cancellation))
+                    _loginCancellation = null;
+            }
+            cancellation.Dispose();
+        }
+    }
+
+    private object CancelLogin()
+    {
+        CancellationTokenSource? cancellation;
+        lock (_loginGate)
+            cancellation = _loginCancellation;
+        if (cancellation is null)
+            return new LiteYouTubeAccountActionResult(
+                false,
+                "Logowanie YouTube nie jest teraz aktywne.");
+        cancellation.Cancel();
+        return new LiteYouTubeAccountActionResult(
+            true,
+            "Anulowano oczekiwanie na logowanie YouTube.");
     }
 
     private object Logout()
@@ -156,5 +199,10 @@ internal sealed class LiteYouTubeAccountCoordinator(
         return new LiteRequestException(fallback);
     }
 
-    public void Dispose() => _backend.Dispose();
+    public void Dispose()
+    {
+        lock (_loginGate)
+            _loginCancellation?.Cancel();
+        _backend.Dispose();
+    }
 }

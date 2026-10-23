@@ -201,6 +201,8 @@ PLAYER_SESSIONS = (
 def menus_for_session(
     session_id: SessionId,
     session_order: object = None,
+    *,
+    youtube_account_available: bool = False,
 ) -> tuple[Menu, ...]:
     """Menu bez polecen nalezacych do innej sesji.
 
@@ -216,7 +218,10 @@ def menus_for_session(
         SessionId.FRONTIER_SMART: FRONTIER_SMART_SUPPORTED_ACTIONS,
     }.get(session_id)
     menus: list[Menu] = []
-    for described in build_menus(session_order):
+    for described in build_menus(
+        session_order,
+        youtube_account_available=youtube_account_available,
+    ):
         items: list[MenuItem] = []
         for entry in described.items:
             if entry.visible_sessions and session_id not in entry.visible_sessions:
@@ -290,7 +295,11 @@ def menus_for_session(
     return tuple(menus)
 
 
-def build_menus(session_order: object = None) -> tuple[Menu, ...]:
+def build_menus(
+    session_order: object = None,
+    *,
+    youtube_account_available: bool = False,
+) -> tuple[Menu, ...]:
     """Pelny opis paska menu. Kolejnosc jak w pelnym AMC: Pliki, Radio, Widok."""
     ordered_sessions = session_order_model.normalize(session_order)
     session_items = tuple(
@@ -426,6 +435,18 @@ def build_menus(session_order: object = None) -> tuple[Menu, ...]:
                 Action.EXPORT_YOUTUBE_SUBSCRIPTIONS,
                 needs_podcast_session=True,
                 visible_sessions=PODCASTS_ONLY,
+            ),
+            *(
+                (
+                    MenuItem(
+                        "Konto YouTube i &synchronizacja subskrypcji…",
+                        Action.YOUTUBE_ACCOUNT,
+                        needs_podcast_session=True,
+                        visible_sessions=PODCASTS_ONLY,
+                    ),
+                )
+                if youtube_account_available
+                else ()
             ),
             MenuItem(
                 "Odśwież wybrane źródło pod&castów",

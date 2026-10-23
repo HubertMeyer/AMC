@@ -75,6 +75,12 @@ from .command_palette import (
 )
 from .host_client import HostError, HostUnavailable, LiteHostClient, default_host_path
 from .release_profile import current_profile
+from .youtube_account import (
+    account_connected as youtube_account_connected,
+    resolve_youtube_client_id,
+    safe_message as youtube_safe_message,
+    sync_preview as youtube_sync_preview,
+)
 from .item_information import item_properties_text
 from . import nvda_bridge
 from .library_source import LibrarySnapshot, LibrarySource, degradation_notice
@@ -4228,6 +4234,236 @@ class ServiceAccountDialog(wx.Dialog):
         self.login_button.SetFocus()
 
 
+class YouTubeAccountDialog(wx.Dialog):
+    """Konto Google tylko do odczytu i jawna synchronizacja do Biblioteki."""
+
+    def __init__(
+        self,
+        parent: wx.Window,
+        payload: object,
+        *,
+        run_action: Callable[[str, "YouTubeAccountDialog"], None],
+    ) -> None:
+        super().__init__(
+            parent,
+            title="Konto YouTube i subskrypcje",
+            style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER,
+        )
+        self.SetName("Konto YouTube i subskrypcje")
+        self._run_action = run_action
+        self._connected = False
+        self._preview_ready = False
+        self._preview_restore = False
+        self._busy_action: str | None = None
+
+        heading = wx.StaticText(self, label="Konto YouTube i subskrypcje")
+        heading.SetName("Konto YouTube i subskrypcje")
+        explanation = wx.StaticText(
+            self,
+            label=(
+                "AMC prosi Google wyłącznie o odczyt listy subskrypcji YouTube. "
+                "Hasło wpisujesz tylko na oficjalnej stronie Google w domyślnej "
+                "przeglądarce. Najpierw sprawdzasz plan zmian, a zapis do "
+                "Biblioteki AMC wykonujesz osobnym przyciskiem."
+            ),
+        )
+        explanation.Wrap(760)
+        self.status = wx.StaticText(self, label="")
+        self.status.SetName("Stan konta YouTube")
+        preview_heading = wx.StaticText(
+            self,
+            label="Kanały planowane do zapisania w Bibliotece AMC",
+        )
+        preview_heading.SetName("Kanały planowane do zapisania w Bibliotece AMC")
+        self.preview_list = wx.ListBox(self, choices=[])
+        self.preview_list.SetName(
+            "Kanały planowane do zapisania w Bibliotece AMC"
+        )
+        self.restore_suppressed = wx.CheckBox(
+            self,
+            label="Przywróć kanały wcześniej usunięte z Biblioteki AMC",
+        )
+        self.restore_suppressed.SetName(
+            "Przywróć kanały wcześniej usunięte z Biblioteki AMC"
+        )
+
+        self.login_button = wx.Button(
+            self, label="Zaloguj przez Google w przeglądarce"
+        )
+        self.preview_button = wx.Button(self, label="Sprawdź subskrypcje")
+        self.apply_button = wx.Button(
+            self, label="Zapisz subskrypcje w Bibliotece AMC"
+        )
+        self.logout_button = wx.Button(self, label="Wyloguj z YouTube w AMC")
+        self.cancel_login_button = wx.Button(self, label="Anuluj logowanie")
+        self.close_button = wx.Button(self, wx.ID_CANCEL, "Zamknij")
+        for button, name in (
+            (self.login_button, "Zaloguj konto YouTube przez Google w przeglądarce"),
+            (self.preview_button, "Sprawdź subskrypcje YouTube bez zapisywania"),
+            (self.apply_button, "Zapisz sprawdzone subskrypcje w Bibliotece AMC"),
+            (self.logout_button, "Wyloguj konto YouTube tylko w AMC"),
+            (self.cancel_login_button, "Anuluj oczekiwanie na logowanie YouTube"),
+            (self.close_button, "Zamknij okno konta YouTube"),
+        ):
+            button.SetName(name)
+
+        buttons = wx.WrapSizer(wx.HORIZONTAL)
+        for button in (
+            self.login_button,
+            self.preview_button,
+            self.apply_button,
+            self.logout_button,
+            self.cancel_login_button,
+            self.close_button,
+        ):
+            buttons.Add(button, 0, wx.RIGHT | wx.BOTTOM, 8)
+
+        layout = wx.BoxSizer(wx.VERTICAL)
+        layout.Add(heading, 0, wx.ALL, 12)
+        layout.Add(explanation, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM | wx.EXPAND, 12)
+        layout.Add(self.status, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM | wx.EXPAND, 12)
+        layout.Add(preview_heading, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 12)
+        layout.Add(self.preview_list, 1, wx.LEFT | wx.RIGHT | wx.BOTTOM | wx.EXPAND, 12)
+        layout.Add(
+            self.restore_suppressed,
+            0,
+            wx.LEFT | wx.RIGHT | wx.BOTTOM | wx.EXPAND,
+            12,
+        )
+        layout.Add(buttons, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM | wx.EXPAND, 12)
+        self.SetSizerAndFit(layout)
+        self.SetMinSize((800, 520))
+
+        for button, action in (
+            (self.login_button, "login"),
+            (self.preview_button, "preview"),
+            (self.apply_button, "apply"),
+            (self.logout_button, "logout"),
+            (self.cancel_login_button, "cancelLogin"),
+        ):
+            button.Bind(
+                wx.EVT_BUTTON,
+                lambda _event, selected=action: self._on_action(selected),
+            )
+        self.restore_suppressed.Bind(wx.EVT_CHECKBOX, self._on_restore_changed)
+        self.Bind(wx.EVT_CLOSE, self._on_close)
+        self.apply_status(payload, focus=True)
+
+    @property
+    def restore_deleted_channels(self) -> bool:
+        return bool(self.restore_suppressed.GetValue())
+
+    def _set_status(self, message: str) -> None:
+        self.status.SetLabel(message)
+        self.status.SetName(f"Stan konta YouTube: {message}")
+        self.Layout()
+
+    def apply_status(self, payload: object, *, focus: bool = False) -> None:
+        self._connected = youtube_account_connected(payload)
+        self._set_status(
+            youtube_safe_message(
+                payload,
+                "Nie można teraz odczytać stanu konta YouTube.",
+            )
+        )
+        self._refresh_buttons()
+        if focus:
+            target = self.preview_button if self._connected else self.login_button
+            wx.CallAfter(target.SetFocus)
+
+    def _refresh_buttons(self) -> None:
+        idle = self._busy_action is None
+        self.login_button.Enable(idle)
+        self.preview_button.Enable(idle and self._connected)
+        self.apply_button.Enable(
+            idle
+            and self._connected
+            and self._preview_ready
+            and self._preview_restore == self.restore_deleted_channels
+        )
+        self.logout_button.Enable(idle and self._connected)
+        self.restore_suppressed.Enable(idle)
+        cancelling = self._busy_action == "login"
+        self.cancel_login_button.Show(cancelling)
+        self.cancel_login_button.Enable(cancelling)
+        self.close_button.Enable(True)
+        self.Layout()
+
+    def set_busy(self, action: str | None) -> None:
+        self._busy_action = action
+        self._refresh_buttons()
+
+    def finish(self, action: str, result: object, status: object) -> None:
+        if action == "preview":
+            preview = youtube_sync_preview(result)
+            if preview is None:
+                self.fail("Nie udało się odczytać podglądu subskrypcji YouTube.")
+                return
+            self._preview_ready = True
+            self._preview_restore = self.restore_deleted_channels
+            labels = list(preview.labels) or ["Brak kanałów do zapisania"]
+            self.preview_list.Set(labels)
+            if labels:
+                self.preview_list.SetSelection(0)
+        elif action in {"apply", "logout", "cancelLogin"}:
+            self._preview_ready = False
+            self.preview_list.Set([])
+        self.set_busy(None)
+        self.apply_status(status)
+        self._set_status(
+            youtube_safe_message(result, self.status.GetLabel())
+        )
+        focus = {
+            "preview": self.apply_button if self._preview_ready else self.preview_button,
+            "apply": self.preview_button,
+            "logout": self.login_button,
+            "cancelLogin": self.login_button,
+            "login": self.preview_button if self._connected else self.login_button,
+        }.get(action, self.close_button)
+        wx.CallAfter(focus.SetFocus)
+
+    def fail(self, message: str) -> None:
+        previous = self._busy_action
+        self.set_busy(None)
+        self._set_status(message)
+        target = self.login_button if previous in {"login", "cancelLogin"} else self.close_button
+        wx.CallAfter(target.SetFocus)
+
+    def _on_restore_changed(self, _event: wx.CommandEvent) -> None:
+        if self._preview_ready:
+            self._preview_ready = False
+            self.preview_list.Set([])
+            self._set_status(
+                "Zmieniono zakres synchronizacji. Sprawdź subskrypcje ponownie."
+            )
+        self._refresh_buttons()
+
+    def _on_action(self, action: str) -> None:
+        if self._busy_action is not None and action != "cancelLogin":
+            return
+        self.set_busy(action)
+        messages = {
+            "login": "Otwieranie oficjalnego logowania Google w przeglądarce.",
+            "cancelLogin": "Anulowanie oczekiwania na logowanie YouTube.",
+            "preview": "Sprawdzanie subskrypcji YouTube bez zapisywania zmian.",
+            "apply": "Zapisywanie sprawdzonego planu w Bibliotece AMC.",
+            "logout": "Usuwanie połączenia YouTube z bieżącego profilu AMC.",
+        }
+        self._set_status(messages[action])
+        self._run_action(action, self)
+
+    def _on_close(self, event: wx.CloseEvent) -> None:
+        if self._busy_action == "login":
+            self._on_action("cancelLogin")
+            event.Veto()
+            return
+        if self._busy_action is not None:
+            self._set_status("Poczekaj na zakończenie bieżącej operacji YouTube.")
+            event.Veto()
+            return
+        event.Skip()
+
+
 class SonosAccountDialog(wx.Dialog):
     """Dostępne konto Sonos; adres logowania powstaje wyłącznie w C#."""
 
@@ -7015,6 +7251,9 @@ class LiteFrame(wx.Frame):
         self._quick_info_cache = QuickInfoMemoryCache()
 
         self.client: LiteHostClient | None = None
+        # Dopiero potwierdzona konfiguracja hosta dodaje polecenie do menu,
+        # palety i pomocy. Brak identyfikatora Google nie tworzy martwej opcji.
+        self._youtube_account_available = False
         self._last_status: dict = {}
         self._transport_status_by_session: dict[SessionId, dict] = {}
         self._radio_transport_status_poll_pending = False
@@ -7373,6 +7612,7 @@ class LiteFrame(wx.Frame):
         for described in menu_model.menus_for_session(
             self.navigator.active,
             self.options.session_order,
+            youtube_account_available=self._youtube_account_available,
         ):
             native = wx.Menu()
             for entry in described.items:
@@ -9744,10 +9984,20 @@ class LiteFrame(wx.Frame):
         library_db = getattr(layout, "library_db", None)
         podcasts_db = getattr(layout, "podcasts_db", None)
         state_json = getattr(layout, "state_json", None)
+        # Lekkie testy wykonują samą metodę bez importów całego modułu GUI.
+        # Produkcja zawsze ma resolver; brak w izolowanym teście oznacza po
+        # prostu niewłączone konto, nigdy zastępczy identyfikator.
+        youtube_client_id_resolver = globals().get("resolve_youtube_client_id")
+        youtube_client_id = (
+            youtube_client_id_resolver()
+            if callable(youtube_client_id_resolver)
+            else None
+        )
         client = LiteHostClient(
             default_host_path(),
             timeshift_minutes=self.options.timeshift_minutes,
             release_profile=current_profile().profile_id,
+            youtube_client_id=youtube_client_id,
             common_data_snapshot=common_data_snapshot_path(),
             # Odczyt list nadal nalezy do Pythona w trybie ro. Sciezka daje
             # hostowi C# wyłącznie możliwość wykonania wąskiej, transakcyjnej
@@ -9824,6 +10074,7 @@ class LiteFrame(wx.Frame):
             else None
         )
         schedule_status_after_sync: list[object] = []
+        youtube_capabilities_after_start: list[object] = []
         podcast_values = (
             self.options.podcast_downloads_folder,
             self.options.podcast_rss_refresh_interval_minutes,
@@ -9868,6 +10119,13 @@ class LiteFrame(wx.Frame):
             try:
                 client.start()
                 client.hello()
+                if youtube_client_id is not None:
+                    optional_step(
+                        "sprawdzenie dostępności konta YouTube",
+                        lambda: youtube_capabilities_after_start.append(
+                            client.youtube_account_capabilities()
+                        ),
+                    )
                 if nvda_window_handle > 0:
                     optional_step(
                         "połączenie z dodatkiem NVDA",
@@ -9920,6 +10178,16 @@ class LiteFrame(wx.Frame):
                 raise
 
         def done(_result: dict) -> None:
+            youtube_available = bool(
+                youtube_capabilities_after_start
+                and isinstance(youtube_capabilities_after_start[-1], dict)
+                and youtube_capabilities_after_start[-1].get("available") is True
+            )
+            if youtube_available != bool(
+                getattr(self, "_youtube_account_available", False)
+            ):
+                self._youtube_account_available = youtube_available
+                self._build_menu()
             if schedule_status_after_sync and not LiteFrame._persist_radio_schedule_status(
                 self, schedule_status_after_sync[-1]
             ):
@@ -12403,6 +12671,8 @@ class LiteFrame(wx.Frame):
             self._export_podcast_opml()
         elif action is Action.EXPORT_YOUTUBE_SUBSCRIPTIONS:
             self._export_youtube_subscriptions()
+        elif action is Action.YOUTUBE_ACCOUNT:
+            self._show_youtube_account()
         elif action is Action.VIEW_PODCAST_INBOX:
             self._show_podcast_inbox()
         elif action is Action.VIEW_PODCAST_DOWNLOADS:
@@ -15826,6 +16096,110 @@ class LiteFrame(wx.Frame):
             dialog.ShowModal()
         self._restore_focus_after_dialog()
 
+    def _show_youtube_account(self) -> None:
+        client = self.client
+        if client is None:
+            self.announcer.say("Silnik nie jest gotowy")
+            return
+        if not self._youtube_account_available:
+            self.announcer.say(
+                "Logowanie YouTube nie jest skonfigurowane w tej wersji AMC Test"
+            )
+            return
+        try:
+            initial_status = client.youtube_account_status()
+        except (HostError, HostUnavailable) as error:
+            initial_status = {"message": str(error), "connected": False}
+        except Exception:
+            initial_status = {
+                "message": "Nie można teraz odczytać stanu konta YouTube.",
+                "connected": False,
+            }
+
+        def run_action(action: str, dialog: YouTubeAccountDialog) -> None:
+            if action == "logout":
+                with wx.MessageDialog(
+                    dialog,
+                    (
+                        "Wylogować konto YouTube z AMC? Zapisane połączenie "
+                        "zostanie usunięte tylko z bieżącego profilu AMC. "
+                        "Nie zmienia to hasła ani konta Google i YouTube."
+                    ),
+                    "Wylogowanie YouTube z AMC",
+                    wx.YES_NO | wx.NO_DEFAULT | wx.ICON_WARNING,
+                ) as confirm:
+                    if confirm.ShowModal() != wx.ID_YES:
+                        dialog.set_busy(None)
+                        dialog.logout_button.SetFocus()
+                        return
+
+            restore_deleted = dialog.restore_deleted_channels
+
+            def work() -> tuple[object, object]:
+                if action == "login":
+                    result = client.youtube_account_login()
+                elif action == "cancelLogin":
+                    result = client.youtube_account_cancel_login()
+                elif action == "logout":
+                    result = client.youtube_account_logout()
+                elif action == "preview":
+                    result = client.youtube_subscription_sync_preview(
+                        restore_suppressed=restore_deleted
+                    )
+                elif action == "apply":
+                    result = client.youtube_subscription_sync_apply(
+                        restore_suppressed=restore_deleted
+                    )
+                else:
+                    raise ValueError("Nieobsługiwana operacja konta YouTube")
+                return result, client.youtube_account_status()
+
+            def done(payload: tuple[object, object]) -> None:
+                result, status = payload
+                message = youtube_safe_message(
+                    result,
+                    "Zakończono operację konta YouTube.",
+                )
+                if not dialog.IsBeingDeleted():
+                    dialog.finish(action, result, status)
+                if action == "apply" and self.navigator.active is SessionId.PODCASTS:
+                    self._refresh_profile_view()
+                self.announcer.say(message)
+
+            def failed(error: Exception) -> None:
+                message = (
+                    str(error)
+                    if isinstance(error, (HostError, HostUnavailable))
+                    else "Operacja konta YouTube nie powiodła się."
+                )
+                if not dialog.IsBeingDeleted():
+                    dialog.fail(message)
+                self.announcer.say(message)
+
+            # Jedna nazwa strumienia unieważnia spóźniony wynik logowania,
+            # gdy użytkownik naciśnie Anuluj. Sam host kończy wtedy pętlę OAuth.
+            self.runner.submit(
+                "youtube-account-operation",
+                work,
+                done,
+                failed,
+            )
+
+        with YouTubeAccountDialog(
+            self,
+            initial_status,
+            run_action=run_action,
+        ) as dialog:
+            wx.CallAfter(
+                self.announcer.say,
+                youtube_safe_message(
+                    initial_status,
+                    "Nie można teraz odczytać stanu konta YouTube.",
+                ),
+            )
+            dialog.ShowModal()
+        self._restore_focus_after_dialog()
+
     @staticmethod
     def _sonos_account_message(payload: object) -> str:
         if not isinstance(payload, dict):
@@ -15973,6 +16347,7 @@ class LiteFrame(wx.Frame):
         entries = command_entries_for_session(
             self.navigator.active,
             self.options.session_order,
+            youtube_account_available=self._youtube_account_available,
         )
         entries = available_command_entries(entries, available_actions)
         with CommandPaletteDialog(self, entries) as dialog:

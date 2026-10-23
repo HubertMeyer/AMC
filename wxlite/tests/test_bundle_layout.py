@@ -102,6 +102,57 @@ def test_missing_problem_report_endpoint_removes_stale_packaged_resource():
         assert "app/amc_wx_lite/problem-report-endpoint.txt" not in copied
 
 
+def test_youtube_oauth_client_id_is_validated_and_test_only():
+    with tempfile.TemporaryDirectory() as folder:
+        root = Path(folder)
+        source = root / "source"
+        source_package = source / "amc_wx_lite"
+        source_package.mkdir(parents=True)
+        (source_package / "__init__.py").write_text("", encoding="utf-8")
+        client_id = "123456789012-example.apps.googleusercontent.com"
+        (source_package / bundle.YOUTUBE_OAUTH_CLIENT_ID_RESOURCE).write_text(
+            client_id + "\n",
+            encoding="utf-8",
+        )
+
+        test_target = root / "test"
+        copied = bundle.copy_python_code(
+            test_target,
+            bundle.profile_from_id("test"),
+            source,
+        )
+        relative = "app/amc_wx_lite/youtube-oauth-client-id.txt"
+        assert relative in copied
+        assert (test_target / relative).read_text(encoding="utf-8") == client_id + "\n"
+
+        public_target = root / "public"
+        copied = bundle.copy_python_code(
+            public_target,
+            bundle.profile_from_id("public"),
+            source,
+        )
+        assert relative not in copied
+        assert not (public_target / relative).exists()
+
+        (source_package / bundle.YOUTUBE_OAUTH_CLIENT_ID_RESOURCE).write_text(
+            "nieprawidłowy identyfikator ze spacją\n",
+            encoding="utf-8",
+        )
+        bundle.copy_python_code(
+            root / "public-invalid-youtube",
+            bundle.profile_from_id("public"),
+            source,
+        )
+        try:
+            bundle.copy_python_code(root / "invalid-youtube", source_wxlite=source)
+        except SystemExit as error:
+            assert "nieprawidłowy format" in str(error)
+        else:
+            raise AssertionError(
+                "Nieprawidłowy identyfikator OAuth nie może trafić do paczki"
+            )
+
+
 def test_public_gui_imports_without_private_service_modules():
     with tempfile.TemporaryDirectory() as folder:
         target = Path(folder)

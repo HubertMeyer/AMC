@@ -66,6 +66,7 @@ internal static class ReleaseProfileContract
             "session.tidal",
             "session.frontier-smart",
             "spotify.playlists",
+            "youtube.account.readonly",
         ]).ToArray(),
         @"Local\AccessibleMultimediaController.PythonLauncher.SingleInstance",
         @"Local\AccessibleMultimediaController.PythonUpdater.Test.SingleInstance",

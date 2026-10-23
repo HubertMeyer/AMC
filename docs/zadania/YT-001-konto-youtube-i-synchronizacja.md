@@ -1,7 +1,8 @@
 # YT-001 — konto YouTube i synchronizacja
 
-- Status: `W trakcie — bezpieczny fundament OAuth, atomowy zapis i chroniony protokół hosta gotowe, brak jeszcze klienta Google i interfejsu wx`
+- Status: `W trakcie — interfejs wx, anulowanie i synchronizacja gotowe w źródle; brak własnego klienta Google AMC oraz odbioru na prawdziwym koncie z NVDA`
 - Utworzono: 18 października 2026
+- Ostatnia aktualizacja: 23 października 2026
 - Obszar: YouTube, OAuth, Biblioteka, wyszukiwanie i bezpieczne poświadczenia
 - Polecenie uruchamiające: `Uruchom zadanie YT-001`
 
@@ -179,12 +180,14 @@ Automatyczne usuwanie po obu stronach jest wykluczone.
 
 ## Materiał do dokumentacji użytkownika
 
-Logowanie do YouTube nie jest jeszcze widoczne w AMC. Przygotowany mechanizm
-ma docelowo otworzyć oficjalną stronę Google w zwykłej przeglądarce i wrócić
-do AMC przez lokalny adres na komputerze. AMC nie poprosi o hasło Google i nie
-wyświetli pola na sekret aplikacji. Pierwsza wersja poprosi wyłącznie o odczyt
-subskrypcji i playlist; zwykłe wyszukiwanie oraz pobieranie pozostaną dostępne
-bez konta.
+Logowanie do YouTube jest przygotowane w źródle AMC Test, lecz polecenie
+pojawia się dopiero w kompilacji z prawidłowym identyfikatorem OAuth AMC.
+Otwiera oficjalną stronę Google w zwykłej przeglądarce i wraca do AMC przez
+lokalny adres na komputerze. AMC nie prosi o hasło Google ani o sekret
+aplikacji. Pierwsza wersja prosi wyłącznie o odczyt subskrypcji; zwykłe
+wyszukiwanie, odtwarzanie i pobieranie pozostają dostępne bez konta. Najpierw
+użytkownik sprawdza plan zmian, a dopiero osobnym przyciskiem zapisuje kanały
+w Bibliotece AMC.
 
 ## Uzasadnienie i decyzje
 
@@ -196,9 +199,10 @@ bez konta.
 - Akceptowany jest wyłącznie `http://127.0.0.1` z jawnie przydzielonym portem.
   `localhost`, zdalny host, HTTPS udające lokalny odbiornik i port domyślny są
   odrzucane przed rozpoczęciem logowania.
-- Nie tworzymy jeszcze polecenia w menu, pomocy ani palecie. Bez identyfikatora
-  klienta Google byłoby to martwe polecenie sprzeczne ze wspólnym katalogiem
-  możliwości AMC.
+- Polecenie ma jeden wpis w menu, palecie i pełnej pomocy, ale trafia do tych
+  powierzchni dopiero po potwierdzeniu możliwości przez uruchomiony host.
+  Bez identyfikatora klienta Google pozostaje niewidoczne, więc nie tworzy
+  martwej funkcji.
 - Wymiana kodu i odświeżenie korzystają wyłącznie z oficjalnego punktu tokenów
   Google. Nie wysyłają `client_secret`, a odświeżenie nie prosi po cichu o
   szerszy zakres.
@@ -261,9 +265,10 @@ Cztery scenariusze prawdziwej tymczasowej bazy SQLite potwierdziły atomowy
 zapis pustych źródeł oczekujących na odświeżenie, idempotentne ponowienie,
 ochronę świadomie usuniętego kanału, jawne przywrócenie istniejącego rekordu,
 brak usuwania przy pustej odpowiedzi oraz brak częściowego zapisu przy kolizji.
-Pięć scenariuszy protokołu potwierdziło oddzielenie podglądu od zapisu, brak
+Sześć scenariuszy protokołu potwierdziło oddzielenie podglądu od zapisu, brak
 sekretów i technicznych identyfikatorów w JSON, jednoznaczny wybór przywracania,
-redakcję nieznanego błędu oraz zachowanie konkretnego komunikatu o limicie.
+redakcję nieznanego błędu, zachowanie konkretnego komunikatu o limicie oraz
+jawne anulowanie trwającego logowania bez technicznego tekstu wyjątku.
 Wspólna regresja pustego profilu, katalogu i nawigacji wyszukiwania zakończyła
 się wynikiem 88/88. Kompilacja Release uruchamiacza, aktualizatora i LiteHosta
 zakończyła się bez błędów; złożony pakiet miał 1668 plików, a odizolowany start
@@ -272,19 +277,89 @@ przeszedł przed i po atomowej instalacji.
 ## Znane ograniczenia
 
 - Brak jeszcze przydzielonego identyfikatora aplikacji Google dla AMC.
-- Nie ma jeszcze interfejsu wx. Koordynator, lokalny odbiornik, transport
-  tokenów, odczyt API, plan, wykonanie planu, protokół hosta i chroniony,
-  profilowo rozdzielony magazyn są gotowe, ale nie są jeszcze połączone z
-  widocznym poleceniem ani z identyfikatorem aplikacji Google.
-- Przed dodaniem widocznego polecenia trzeba połączyć magazyn z profilem hosta
-  i dodać testy parytetu Ctrl+F1, Ctrl+Shift+K i menu.
+- Interfejs wx i wspólny katalog menu, palety oraz pomocy są gotowe, ale bez
+  prawidłowego identyfikatora aplikacji polecenie celowo pozostaje niewidoczne.
+- Nie wykonano jeszcze prawdziwego logowania, odmowy na stronie Google,
+  synchronizacji konta użytkownika ani ręcznego przejścia fokusu i mowy NVDA.
+  Te próby wymagają klienta Google AMC i obecności użytkownika.
 - Profil publiczny wymaga osobnej decyzji po konfiguracji i weryfikacji Google.
 
 ## Wersja i commit
 
 Kod źródłowy i testy są zapisane w lokalnych commitach `ce723bff`, `0c15fbcb`,
 `cbd2a5d3`, `161cb856`, `86309bb0`, `436c5e3d`, `904c8011` oraz `8f0c1341`.
+Interfejs wx, wspólny model poleceń, anulowanie logowania i pakowanie lokalnej
+konfiguracji testowej zapisano w commicie `40ad286c`.
 Zainstalowany AMC Test pochodzi z rewizji
 `b258fb69fef580f7899c30abd0d48e6b877119be`, paczki `726f0791`; publikacji
-nie wykonywano. Widoczny interfejs i identyfikator klienta Google nadal nie
-istnieją, więc nie jest to jeszcze funkcja gotowa do odbioru użytkowego.
+nie wykonywano. Nowego źródła nie instalowano i nie budowano instalatora.
+Brak identyfikatora klienta Google nadal blokuje odbiór użytkowy.
+
+## Aktualizacja implementacyjna — 23 października 2026
+
+Ta aktualizacja zastępuje zapis z 21 października mówiący, że interfejs wx
+jeszcze nie istnieje. Fundament hosta pozostał bez zmian zakresu uprawnień,
+a nowa warstwa użytkowa jest nadal ograniczona do `AMC Test`.
+
+### Zachowanie widoczne dla użytkownika
+
+- Po prawidłowym skonfigurowaniu klienta Google sesja `Podcasty i YouTube`
+  otrzymuje polecenie `Konto YouTube i synchronizacja subskrypcji…` w menu
+  Pliki, palecie `Ctrl+Shift+K` i pełnej pomocy `F1`. Bez konfiguracji nie ma
+  go w żadnej z tych powierzchni.
+- Okno rozpoczyna fokus od `Zaloguj konto YouTube przez Google w przeglądarce`
+  albo, gdy konto jest połączone, od `Sprawdź subskrypcje YouTube bez
+  zapisywania`.
+- Lista ma jawną nazwę dostępnościową `Kanały planowane do zapisania w
+  Bibliotece AMC`; zawiera wyłącznie oczyszczone nazwy kanałów, nigdy rekord,
+  identyfikator kanału ani adres.
+- `Zapisz sprawdzone subskrypcje w Bibliotece AMC` jest niedostępne przed
+  świeżym podglądem. Zmiana pola `Przywróć kanały wcześniej usunięte z
+  Biblioteki AMC` unieważnia podgląd i wymaga ponownego sprawdzenia.
+- Zamknięcie okna podczas logowania najpierw anuluje lokalne oczekiwanie.
+  Wylogowanie ma osobne potwierdzenie wyjaśniające, że usuwa tylko połączenie
+  z bieżącego profilu AMC i nie zmienia hasła ani konta Google.
+
+### Kod, tryby i konfiguracja
+
+- Interfejs: `wxlite/amc_wx_lite/gui.py`; bezpieczne parsowanie etykiet i
+  konfiguracji: `wxlite/amc_wx_lite/youtube_account.py`; klient protokołu:
+  `wxlite/amc_wx_lite/host_client.py`.
+- Jedno polecenie `Action.YOUTUBE_ACCOUNT` zasila menu, paletę, pomoc i ten sam
+  dispatcher. Jego widoczność pochodzi z odpowiedzi
+  `youtube.accountCapabilities`, nie z oddzielnych stałych GUI.
+- `AMC Test` ma możliwość `youtube.account.readonly`; `AMC Public` jej nie ma.
+  Publiczny pakiet nie kopiuje zasobu klienta Google, nawet gdy leży on w
+  źródłach testowych.
+- Lokalny identyfikator aplikacji komputerowej należy umieścić w ignorowanym
+  pliku `wxlite/amc_wx_lite/youtube-oauth-client-id.txt`. Builder waliduje
+  format i kopiuje go tylko do paczki testowej. Zmienna
+  `AMC_YOUTUBE_CLIENT_ID` służy wyłącznie do uruchomień deweloperskich.
+- Identyfikator klienta nie jest sekretem aplikacji komputerowej. Tokeny,
+  kody, stan OAuth i dane konta nadal należą wyłącznie do hosta C# i magazynu
+  poświadczeń Windows.
+
+### Testy i rzeczywiste wyniki
+
+- Python: 66/66 testów klienta, profili, palety i kontraktu YouTube; szersza
+  regresja menu, GUI i startu: najpierw 150/152, następnie po poprawie izolacji
+  importu 15/15; końcowy zestaw konfiguracji, pakowania, startu i powierzchni
+  poleceń: 103/103.
+- Końcowa pełna regresja Python po poprawce i zbudowaniu LiteHosta Release:
+  1961 zaliczonych, 139 kontrolowanie pominiętych i 11 zaliczonych podtestów;
+  bez błędów. LiteHost zbudował się w Release bez ostrzeżeń i błędów.
+- C# ProtocolTests: wszystkie 27 zestawów, w tym sześć scenariuszy konta
+  YouTube. Składnia Python i `git diff --check` również zaliczone.
+- Nie użyto prawdziwego konta, sieci Google ani przeglądarki. Nie zbudowano i
+  nie uruchomiono instalatora, nie zainstalowano nowej wersji i niczego nie
+  opublikowano.
+
+### Odbiór i migracja
+
+Nie ma migracji danych ani automatycznego włączenia funkcji. Do odbioru trzeba
+utworzyć własny klient OAuth typu Desktop dla AMC, dodać konto testowe w
+ekranie zgody Google, zapisać identyfikator w zasobie testowym, zbudować nową
+paczkę `AMC Test`, a potem ręcznie przejść z NVDA: stan początkowy, logowanie,
+anulowanie, odmowę, powrót fokusu, podgląd, zmianę pola przywracania, zapis,
+wylogowanie i ponowne otwarcie okna. Dopiero ten odbiór rozstrzyga o instalacji
+aktualizacji; profil publiczny pozostaje poza zakresem.

@@ -121,6 +121,7 @@ class LiteHostClient:
         podcasts_db: str | Path | None = None,
         state_json: str | Path | None = None,
         release_profile: str | None = None,
+        youtube_client_id: str | None = None,
         common_data_snapshot: str | Path | None = None,
         on_event: Callable[[str, dict], None] | None = None,
         on_stderr: Callable[[str], None] | None = None,
@@ -141,6 +142,9 @@ class LiteHostClient:
         self.podcasts_db = str(podcasts_db) if podcasts_db else None
         self.state_json = str(state_json) if state_json else None
         self.release_profile = str(release_profile).strip() if release_profile else None
+        self.youtube_client_id = (
+            str(youtube_client_id).strip() if youtube_client_id else None
+        )
         self.common_data_snapshot = (
             str(common_data_snapshot) if common_data_snapshot else None
         )
@@ -183,6 +187,8 @@ class LiteHostClient:
             command += ["--state-json", self.state_json]
         if self.release_profile is not None:
             command += ["--release-profile", self.release_profile]
+        if self.youtube_client_id is not None:
+            command += ["--youtube-client-id", self.youtube_client_id]
         if self.common_data_snapshot is not None:
             command += ["--common-data-snapshot", self.common_data_snapshot]
         return command
@@ -551,6 +557,44 @@ class LiteHostClient:
     def spotify_capabilities(self) -> Any:
         """Read the supported Spotify surface without starting authentication."""
         return self.call("spotify.capabilities", timeout=15.0)
+
+    def youtube_account_capabilities(self) -> Any:
+        """Sprawdź dostępność bez uruchamiania logowania ani sieci."""
+        return self.call("youtube.accountCapabilities", timeout=15.0)
+
+    def youtube_account_status(self) -> Any:
+        """Odczytaj wyłącznie użytkowy stan zapisanej sesji YouTube."""
+        return self.call("youtube.accountStatus", timeout=15.0)
+
+    def youtube_account_login(self) -> Any:
+        """Uruchom OAuth dopiero po jawnym poleceniu w oknie konta."""
+        return self.call("youtube.accountLogin", timeout=360.0)
+
+    def youtube_account_cancel_login(self) -> Any:
+        """Przerwij lokalne oczekiwanie na wynik otwartej strony Google."""
+        return self.call("youtube.accountCancelLogin", timeout=15.0)
+
+    def youtube_account_logout(self) -> Any:
+        """Usuń zapisane połączenie wyłącznie z bieżącego profilu AMC."""
+        return self.call("youtube.accountLogout", timeout=30.0)
+
+    def youtube_subscription_sync_preview(
+        self, *, restore_suppressed: bool = False
+    ) -> Any:
+        return self.call(
+            "youtube.subscriptionSyncPreview",
+            {"restoreSuppressed": bool(restore_suppressed)},
+            timeout=180.0,
+        )
+
+    def youtube_subscription_sync_apply(
+        self, *, restore_suppressed: bool = False
+    ) -> Any:
+        return self.call(
+            "youtube.subscriptionSyncApply",
+            {"restoreSuppressed": bool(restore_suppressed)},
+            timeout=90.0,
+        )
 
     def spotify_account_status(self) -> Any:
         """Read the separate catalogue and playback connection states."""
