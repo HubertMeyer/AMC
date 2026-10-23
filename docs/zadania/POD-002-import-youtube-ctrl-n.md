@@ -177,6 +177,8 @@ obiektu.
   `609aa64447c6eb2c8775341157ef243952b61942`.
 - Commit bieżącej poprawki źródeł i testów:
   `f6d3389f2e240aa7e7fe63f4378f6d8121c0d5c3`.
+- Commit dokumentujący ręczny odbiór użytkownika:
+  `60bc7b476bd598af878e72d26cb1a4e60b573ec1`.
 - Gałąź: `task/youtube-import-nvda`; wyłączny worktree:
   `D:\Projekty Codex\AMC worktrees\youtube-import-nvda`.
 - Wcześniejszy zainstalowany kandydat `%40`:
