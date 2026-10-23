@@ -1,10 +1,9 @@
 # FRONTIER-001 — Frontier Smart przez FSAPI
 
-Status: **W trakcie — odbiór instalacji 16:30 potwierdził wykrywanie Teufela,
-ale ujawnił automatyczne przejście z jednego wyniku prosto do PIN-u. Piąta
-korekta źródłowa w commicie `3e57b686` zawsze wymaga jawnego wyboru wykrytego
-urządzenia; przeszła testy, lecz nie została jeszcze zbudowana ani
-zainstalowana.**
+Status: **W trakcie — odbiór potwierdził wykrywanie Teufela, listę wyboru i
+prawidłowy fokus pola PIN. Wyjaśnienie PIN-u NetRemote oraz piąta korekta
+wyboru urządzenia są zainstalowane w AMC Test 23.10.2026, 22:20. Pozostało
+ręczne połączenie kodem fabrycznym `1234` i odbiór dalszej nawigacji NVDA.**
 
 **Korekta nadrzędna z 23.10.2026, późny odbiór:** AMC znalazł Teufel RADIO
 3SIXTY, pokazał listę wyboru i po Enterze prawidłowo skupił pole PIN. To
@@ -15,8 +14,8 @@ Wi-Fi; wartość fabryczna to `1234`, a ustawienie znajduje się w radiu pod
 `Ustawienia systemowe → Sieć → Ustawienia NetRemote PIN`:
 <https://cdn.teufelaudio.com/products/Radio_3sixty/ECN/Teufel-Radio_3sixty_UM_V5.0_PL_web>.
 Kod AMC Test zawiera teraz tę informację w komunikacie po wykryciu Teufela i w
-nazwie dostępnościowej pola. Zmiana ma testy źródłowe, ale czeka na nową
-instalację i ręczne połączenie PIN-em `1234`.
+nazwie dostępnościowej pola. Zmiana ma testy źródłowe, została zainstalowana w
+pakiecie `53e3d987` i czeka na ręczne połączenie PIN-em `1234`.
 
 **Korekta użytkownika z 23.10.2026 po odbiorze instalacji 11:24:** podczas
 wyszukiwania urządzeń fokus przechodził na przycisk „Zamknij” albo „Wstecz”,
@@ -523,6 +522,16 @@ Teufela wymaga nowej instalacji AMC Test; AMC Public pozostaje bez tej sesji.
 
 ## Migracja, wersja i commit
 
+**Korekta nadrzędna z 23.10.2026, instalacja 22:20:** piąta poprawka oraz
+wyjaśnienie PIN-u NetRemote zostały zbudowane, atomowo zainstalowane i
+uruchomione w AMC Test z rewizji
+`591322e2f85c0a07634733c6164fa4cc6a336595`, pakiet `53e3d987`. Kontrola
+potwierdziła odpowiadające okno „AMC Test — 23.10.2026, 22:20” z właściwego
+katalogu `D:\Projekty Codex\AMC Python`. Wcześniejsze wzmianki, że poprawka
+`3e57b686` albo informacja o PIN-ie nie są zainstalowane, są historyczne i
+zastąpione przez ten zapis. Odbiór samego połączenia z radiem nadal pozostaje
+do wykonania przez użytkownika.
+
 Nowa sekcja konfiguracji jest opcjonalna i nie wymaga migracji istniejących
 profili. Profil publiczny nie otrzymuje możliwości `session.frontier-smart`.
 Commit źródłowy implementacji i testów: `412adf67` —
@@ -537,9 +546,8 @@ odbiorze: `3ce574a6` — `fix(frontier): popraw pierwsze wykrywanie urządzenia`
 Korekta po czwartym zgłoszeniu: `b11fd8bbc2de6a8f23746e5f2ec437b021f86762`
 — `fix(frontier): potwierdzaj radio przed pytaniem o PIN`. Piąta korekta
 wyboru także dla jednego wyniku: `3e57b68656ee06c1742a3775bac3d810f792646f`
-— `fix(amc): domknij OAuth YouTube i wybor Frontier`; nie została jeszcze
-zbudowana ani zainstalowana.
+— `fix(amc): domknij OAuth YouTube i wybor Frontier`.
 Zainstalowana kompilacja AMC Test:
-`2026.10.23-1badabbeeacde3d8853457683ef750d558b3f1fd-7353e273`.
+`2026.10.23-591322e2f85c0a07634733c6164fa4cc6a336595-53e3d987`.
 Nie publikować ani nie promować do profilu publicznego bez nowej zgody
 użytkownika.

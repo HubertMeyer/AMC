@@ -1,8 +1,8 @@
 # SPOT-001 — prędkość odtwarzania Spotify
 
-Status: **W trakcie — kod, testy natywnego silnika, testy interfejsu i pełna
-kompilacja Release są zaliczone. Przypięty host AMC Test jest zbudowany, ale
-nowy pakiet nie został jeszcze zainstalowany ani odebrany słuchowo.**
+Status: **W trakcie — kod, testy natywnego silnika, testy interfejsu, pełna
+kompilacja Release, atomowa instalacja i uruchomienie AMC Test są zaliczone.
+Pozostał ręczny odsłuch Spotify oraz odbiór komunikatów NVDA.**
 
 Data rozpoczęcia: 2026-10-23
 
@@ -72,6 +72,11 @@ została dodana do AMC Public.
 - Całe rozwiązanie `AccessibleMediaController.sln` zbudowano w Release:
   **0 ostrzeżeń, 0 błędów**. Cel MSBuild zaakceptował nową przypiętą sumę
   hosta.
+- Kandydat i stała instalacja przeszły kontrolę integralności oraz kontrolowany
+  start interfejsu i hosta. Zainstalowana kopia ma rewizję `591322e2`, pakiet
+  `53e3d987` i działa z `D:\Projekty Codex\AMC Python`; potwierdzony proces
+  interfejsu to `runtime\python.exe`, a okno „AMC Test — 23.10.2026, 22:20”
+  odpowiada.
 - Szeroki Windows SmokeTests przeszedł przez zmienione testy Spotify, lecz
   później zatrzymał się na dwóch zastanych problemach niezwiązanych z tym
   zadaniem: kontroli rozdzielenia nazw instalatora AMC/AMC Test oraz chwilowej
@@ -92,7 +97,11 @@ została dodana do AMC Public.
 
 - Kod źródłowy: `4505f325d5eec7df6f520ee156ee79214882df38` —
   `feat(spotify): dodaj sterowanie prędkością Librespot`.
+- Przypięcie zbudowanego hosta i kontraktu paczki:
+  `591322e2f85c0a07634733c6164fa4cc6a336595` —
+  `build(spotify): przypnij host z obsługą tempa`.
 - Lokalny host Release AMC Test: 6 595 072 B, SHA-256
   `0fde62641c16de6e35ac25962b756f868dd7fd36643e71661f849c231d55c15a`.
-- Pakiet AMC Test: jeszcze nie zbudowany ani zainstalowany.
+- Zainstalowany pakiet AMC Test:
+  `2026.10.23-591322e2f85c0a07634733c6164fa4cc6a336595-53e3d987`.
 - AMC Public i GitHub: bez zmian; niczego nie opublikowano.
