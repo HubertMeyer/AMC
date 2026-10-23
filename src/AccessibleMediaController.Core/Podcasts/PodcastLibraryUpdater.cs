@@ -75,13 +75,50 @@ public static class PodcastLibraryUpdater
         // Some publishers expose only their newest few episodes.  Refreshing
         // therefore merges the current feed into AMC's durable catalogue and
         // must never prune an episode merely because it is absent today.
-        var knownEpisodeIds = settings.Episodes
+        var existingSubscriptionEpisodes = settings.Episodes
             .Where(episode => string.Equals(
                 episode.SubscriptionId,
                 subscription.Id,
                 StringComparison.Ordinal))
+            .ToArray();
+        var knownEpisodeIds = existingSubscriptionEpisodes
             .Select(episode => episode.Id)
             .ToHashSet(StringComparer.Ordinal);
+        var episodesById = new Dictionary<string, PodcastEpisodeSettings>(StringComparer.Ordinal);
+        foreach (var episode in settings.Episodes)
+            episodesById.TryAdd(episode.Id, episode);
+        var episodesBySourceIdentifier = new Dictionary<string, PodcastEpisodeSettings>(StringComparer.Ordinal);
+        var episodesByMediaUrl = new Dictionary<string, PodcastEpisodeSettings>(StringComparer.OrdinalIgnoreCase);
+        foreach (var episode in existingSubscriptionEpisodes)
+        {
+            if (!string.IsNullOrWhiteSpace(episode.SourceIdentifier))
+                episodesBySourceIdentifier.TryAdd(episode.SourceIdentifier, episode);
+            if (!string.IsNullOrWhiteSpace(episode.MediaUrl))
+                episodesByMediaUrl.TryAdd(episode.MediaUrl, episode);
+        }
+
+        PodcastEpisodeSettings? FindExisting(PodcastFeedEpisode source)
+        {
+            if (episodesById.TryGetValue(source.Id, out var byId)) return byId;
+            if (!string.IsNullOrWhiteSpace(source.SourceIdentifier)
+                && episodesBySourceIdentifier.TryGetValue(source.SourceIdentifier, out var bySource))
+                return bySource;
+            return episodesByMediaUrl.TryGetValue(source.MediaUri.AbsoluteUri, out var byMedia)
+                ? byMedia
+                : null;
+        }
+
+        // Feeds are normally newest-first.  Entries before the first known one
+        // are genuinely new; unseen entries after that boundary are historical
+        // backfill.  This prevents a newly enlarged parser window from flooding
+        // the inbox with thousands of old TyfloPodcast episodes.
+        var firstKnownFeedOrdinal = -1;
+        for (var index = 0; index < feed.Episodes.Count; index++)
+        {
+            if (FindExisting(feed.Episodes[index]) is null) continue;
+            firstKnownFeedOrdinal = index;
+            break;
+        }
         var matchedKnownEpisodeIds = new HashSet<string>(StringComparer.Ordinal);
         var addedEpisodes = 0;
         var updatedEpisodes = 0;
@@ -89,18 +126,7 @@ public static class PodcastLibraryUpdater
         var sourceOrdinal = 0;
         foreach (var source in feed.Episodes)
         {
-            var episode = settings.Episodes.FirstOrDefault(candidate =>
-                    string.Equals(candidate.Id, source.Id, StringComparison.Ordinal))
-                ?? settings.Episodes.FirstOrDefault(candidate =>
-                    string.Equals(candidate.SubscriptionId, subscription.Id, StringComparison.Ordinal)
-                    && !string.IsNullOrWhiteSpace(source.SourceIdentifier)
-                    && string.Equals(
-                        candidate.SourceIdentifier,
-                        source.SourceIdentifier,
-                        StringComparison.Ordinal))
-                ?? settings.Episodes.FirstOrDefault(candidate =>
-                    string.Equals(candidate.SubscriptionId, subscription.Id, StringComparison.Ordinal)
-                    && string.Equals(candidate.MediaUrl, source.MediaUri.AbsoluteUri, StringComparison.OrdinalIgnoreCase));
+            var episode = FindExisting(source);
             if (episode is null)
             {
                 episode = new PodcastEpisodeSettings
@@ -112,10 +138,15 @@ public static class PodcastLibraryUpdater
                     // useful as an immediately visible confirmation that the
                     // subscription works. Later refreshes mark every newly
                     // discovered episode as new.
-                    IsNew = !addedSubscription
-                        || string.Equals(source.Id, initialInboxEpisodeId, StringComparison.Ordinal)
+                    IsNew = addedSubscription
+                        ? string.Equals(source.Id, initialInboxEpisodeId, StringComparison.Ordinal)
+                        : firstKnownFeedOrdinal < 0 || sourceOrdinal < firstKnownFeedOrdinal
                 };
                 settings.Episodes.Add(episode);
+                episodesById.TryAdd(episode.Id, episode);
+                if (!string.IsNullOrWhiteSpace(source.SourceIdentifier))
+                    episodesBySourceIdentifier.TryAdd(source.SourceIdentifier, episode);
+                episodesByMediaUrl.TryAdd(source.MediaUri.AbsoluteUri, episode);
                 addedEpisodes++;
             }
             else

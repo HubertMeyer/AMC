@@ -83,6 +83,31 @@ def test_load_more_is_navigation_not_fake_playback() -> None:
     assert not any(isinstance(effect, PlayMedia) for effect in effects)
 
 
+def test_large_podcast_announces_loaded_count_without_exposing_identifiers() -> None:
+    nav = Navigator()
+    nav.switch_session(SessionId.PODCASTS)
+    rows = [
+        _episode(f"episode-{number}")
+        for number in range(150)
+    ]
+    rows.append(Row(
+        "technical-load-more-id",
+        "Załaduj więcej odcinków",
+        "loadMore",
+        detail="wczytano 150 z 1023; Enter ładuje kolejne odcinki, najwyżej 150",
+    ))
+
+    events = nav.apply_podcast_episodes(
+        "technical-subscription-id",
+        "TyfloPodcast",
+        rows,
+        total_count=1023,
+    )
+
+    assert events[0].text == "TyfloPodcast, wczytano 150 z 1023 odcinków"
+    assert "technical" not in events[0].text
+
+
 def test_page_down_uses_the_episode_source_not_the_local_file_queue() -> None:
     nav = Navigator()
     nav.switch_session(SessionId.PODCASTS)

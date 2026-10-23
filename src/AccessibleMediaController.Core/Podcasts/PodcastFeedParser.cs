@@ -16,7 +16,8 @@ public sealed record PodcastFeedDocument(
     string Description,
     Uri FeedUri,
     Uri? HomepageUri,
-    IReadOnlyList<PodcastFeedEpisode> Episodes);
+    IReadOnlyList<PodcastFeedEpisode> Episodes,
+    bool EpisodesTruncated = false);
 
 public sealed record PodcastFeedEpisode(
     string Id,
@@ -41,7 +42,11 @@ public sealed record PodcastFeedEpisode(
 public static partial class PodcastFeedParser
 {
     public const long MaximumXmlCharacters = 5L * 1024 * 1024;
-    public const int MaximumEpisodes = 1000;
+    // Public feeds can legitimately contain several thousand entries.  TyfloPodcast
+    // exceeded the old 1000-entry ceiling, which silently hid most of its archive.
+    // The XML response is independently bounded to 5 MiB, so this higher ceiling
+    // remains finite while covering large real-world feeds.
+    public const int MaximumEpisodes = 5000;
 
     public static PodcastFeedDocument Parse(string xml, Uri feedUri)
     {
@@ -112,15 +117,12 @@ public static partial class PodcastFeedParser
         var itemElements = channel.Elements().Any(element => IsNamed(element, "item"))
             ? channel.Elements().Where(element => IsNamed(element, "item"))
             : root.Elements().Where(element => IsNamed(element, "item"));
-        var episodes = itemElements
+        var episodes = LimitEpisodes(itemElements
             .Select(element => ParseRssEpisode(
                 element,
                 feedUri,
                 string.IsNullOrWhiteSpace(author) ? title : author))
-            .Where(episode => episode is not null)
-            .Select(episode => episode!)
-            .Take(MaximumEpisodes)
-            .ToArray();
+        );
         return new PodcastFeedDocument(
             StableId("podcast", feedUri.AbsoluteUri),
             title,
@@ -128,7 +130,8 @@ public static partial class PodcastFeedParser
             description,
             feedUri,
             homepage,
-            episodes);
+            episodes.Items,
+            episodes.Truncated);
     }
 
     private static PodcastFeedEpisode? ParseRssEpisode(XElement item, Uri feedUri, string defaultAuthor)
@@ -173,16 +176,13 @@ public static partial class PodcastFeedParser
         var homepage = AtomLink(root, feedUri, "alternate") ?? FirstUri(root, feedUri, "link");
         var feedIdentifier = TextOfAny(root, "id");
         if (string.IsNullOrWhiteSpace(feedIdentifier)) feedIdentifier = feedUri.AbsoluteUri;
-        var episodes = root.Elements()
+        var episodes = LimitEpisodes(root.Elements()
             .Where(element => IsNamed(element, "entry"))
             .Select(element => ParseAtomEpisode(
                 element,
                 feedUri,
                 string.IsNullOrWhiteSpace(author) ? title : author))
-            .Where(episode => episode is not null)
-            .Select(episode => episode!)
-            .Take(MaximumEpisodes)
-            .ToArray();
+        );
         return new PodcastFeedDocument(
             StableId("podcast", $"{feedUri.AbsoluteUri}\n{feedIdentifier}"),
             title,
@@ -190,7 +190,23 @@ public static partial class PodcastFeedParser
             description,
             feedUri,
             homepage,
-            episodes);
+            episodes.Items,
+            episodes.Truncated);
+    }
+
+    private static (PodcastFeedEpisode[] Items, bool Truncated) LimitEpisodes(
+        IEnumerable<PodcastFeedEpisode?> candidates)
+    {
+        // Read one extra valid entry so a safety limit is never mistaken for a
+        // complete feed.  Callers can then report an honest partial result.
+        var bounded = candidates
+            .Where(episode => episode is not null)
+            .Select(episode => episode!)
+            .Take(MaximumEpisodes + 1)
+            .ToArray();
+        return (
+            bounded.Take(MaximumEpisodes).ToArray(),
+            bounded.Length > MaximumEpisodes);
     }
 
     private static PodcastFeedEpisode? ParseAtomEpisode(XElement entry, Uri feedUri, string defaultAuthor)
