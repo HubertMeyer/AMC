@@ -265,14 +265,15 @@ zmian, wymagający korekty użytkownika:
   [AMC14-foldery-i-integracja-powloki.md](AMC14-foldery-i-integracja-powloki.md).
   Zatwierdzona specyfikacja:
   `D:\Projekty Codex\Accessible Multimedia Controller\AMC14_FOLDERY_I_INTEGRACJA_POWLOKI_2026-10-18.md`.
-- `YT-001` — **W trakcie — bezpieczny fundament OAuth, lokalny odbiornik,
-  transport tokenów, koordynator, odczyt, niedestrukcyjny plan oraz atomowy
-  zapis subskrypcji, chroniony protokół hosta i osobne magazyny poświadczeń
-  AMC Test/AMC oraz interfejs wx są zainstalowane w AMC Test 23.10.2026,
-  11:24; brak publicznego identyfikatora aplikacji Google i odbioru konta** — oficjalne logowanie do
+- `YT-001` — **W trakcie odbioru — bezpieczny fundament OAuth, lokalny
+  odbiornik, transport tokenów, koordynator, odczyt, niedestrukcyjny plan,
+  atomowy zapis subskrypcji, interfejs wx oraz klient Desktop OAuth są
+  zainstalowane w AMC Test 23.10.2026, 15:14; pozostało prawdziwe logowanie i
+  ręczny odbiór NVDA** — oficjalne logowanie do
   konta YouTube, synchronizacja subskrypcji i zwykłych playlist oraz bezpieczny
   zakres czynności konta. Etap rozpoczęto 21 października 2026 na nowe jawne
-  polecenie użytkownika; nic nie loguje konta ani nie otwiera przeglądarki.
+  polecenie użytkownika; sam start nadal nie loguje konta ani nie otwiera
+  przeglądarki. Profil publiczny pozostaje wyłączony.
   Szczegóły:
   [YT-001-konto-youtube-i-synchronizacja.md](YT-001-konto-youtube-i-synchronizacja.md).
 - `NAME-001` — **Kod, testy, paczka, instalacja i uruchomienie AMC Test gotowe;

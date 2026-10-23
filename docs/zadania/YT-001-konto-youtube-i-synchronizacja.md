@@ -1,6 +1,6 @@
 # YT-001 — konto YouTube i synchronizacja
 
-- Status: `W trakcie — interfejs wx, anulowanie i synchronizacja są zainstalowane w AMC Test 23.10.2026, 11:24; ustalono model jednego klienta Desktop OAuth należącego do AMC, ale brak jeszcze identyfikatora klienta Google AMC oraz odbioru na prawdziwym koncie z NVDA`. Zapis instalacji: [AMC-TEST-2026-10-23-1124-instalacja-zbiorcza.md](AMC-TEST-2026-10-23-1124-instalacja-zbiorcza.md).
+- Status: `W trakcie odbioru — klient Desktop OAuth, zakres tylko do odczytu i zasób profilu testowego są skonfigurowane; AMC Test 23.10.2026, 15:14 jest zainstalowany i uruchomiony, a do wykonania pozostało prawdziwe logowanie oraz ręczny odbiór NVDA`. Zapis instalacji: [AMC-TEST-2026-10-23-1514-youtube-oauth.md](AMC-TEST-2026-10-23-1514-youtube-oauth.md).
 - Utworzono: 18 października 2026
 - Ostatnia aktualizacja: 23 października 2026
 - Obszar: YouTube, OAuth, Biblioteka, wyszukiwanie i bezpieczne poświadczenia
@@ -302,12 +302,12 @@ przeszedł przed i po atomowej instalacji.
 
 ## Znane ograniczenia
 
-- Brak jeszcze przydzielonego identyfikatora aplikacji Google dla AMC.
-- Interfejs wx i wspólny katalog menu, palety oraz pomocy są gotowe, ale bez
-  prawidłowego identyfikatora aplikacji polecenie celowo pozostaje niewidoczne.
 - Nie wykonano jeszcze prawdziwego logowania, odmowy na stronie Google,
   synchronizacji konta użytkownika ani ręcznego przejścia fokusu i mowy NVDA.
-  Te próby wymagają klienta Google AMC i obecności użytkownika.
+  Klient Google jest już gotowy; te próby wymagają obecności użytkownika i
+  świadomego wyboru konta na stronie Google.
+- Projekt Google pozostaje w trybie Testing. Działa tylko dla wpisanych
+  użytkowników testowych, a zgoda testowa może wygasać po siedmiu dniach.
 - Profil publiczny wymaga osobnej decyzji po konfiguracji i weryfikacji Google.
 
 ## Wersja i commit
@@ -317,9 +317,10 @@ Kod źródłowy i testy są zapisane w lokalnych commitach `ce723bff`, `0c15fbcb
 Interfejs wx, wspólny model poleceń, anulowanie logowania i pakowanie lokalnej
 konfiguracji testowej zapisano w commicie `40ad286c`.
 Zainstalowany AMC Test pochodzi z rewizji
-`b258fb69fef580f7899c30abd0d48e6b877119be`, paczki `726f0791`; publikacji
-nie wykonywano. Nowego źródła nie instalowano i nie budowano instalatora.
-Brak identyfikatora klienta Google nadal blokuje odbiór użytkowy.
+`eea8e9f50fc39e64542ed59119cf7c6273dcae7f`, paczki `cd5a4c27`; publikacji
+nie wykonywano. Lokalny, ignorowany przez Git zasób identyfikatora OAuth jest
+częścią wyłącznie tej paczki testowej. Odbiór użytkowy blokuje już tylko
+prawdziwe logowanie i ręczne sprawdzenie NVDA, a nie brak konfiguracji.
 
 ## Aktualizacja implementacyjna — 23 października 2026
 
@@ -389,3 +390,92 @@ paczkę `AMC Test`, a potem ręcznie przejść z NVDA: stan początkowy, logowan
 anulowanie, odmowę, powrót fokusu, podgląd, zmianę pola przywracania, zapis,
 wylogowanie i ponowne otwarcie okna. Dopiero ten odbiór rozstrzyga o instalacji
 aktualizacji; profil publiczny pozostaje poza zakresem.
+
+## Aktualizacja odbiorcza — 23 października 2026, 15:14
+
+Ta aktualizacja zastępuje wcześniejszą informację, że brakuje identyfikatora
+klienta Google i że nie zbudowano wersji do odbioru.
+
+### Zachowanie widoczne dla użytkownika
+
+- W projekcie Google Cloud `AMC Test YouTube` utworzono klienta OAuth typu
+  aplikacja komputerowa pod nazwą `AMC Test Windows`.
+- Zakres zgody pozostał ograniczony do
+  `https://www.googleapis.com/auth/youtube.readonly`; na ekranie zgody jest
+  jeden nazwany użytkownik testowy.
+- Pole `Aplikacja działa jako agent wykorzystujący AI` pozostawiono wyłączone.
+  AMC jest zwykłą aplikacją komputerową wykonującą jawne polecenia użytkownika,
+  a nie autonomicznym agentem działającym w jego imieniu.
+- W `AMC Test` polecenie `Konto YouTube i synchronizacja subskrypcji…` może
+  pojawić się w menu Plik, palecie `Ctrl+Shift+K` i pełnej pomocy. Sam start
+  programu nadal nie otwiera przeglądarki i nie łączy konta.
+- W profilu publicznym polecenie oraz zasób klienta pozostają wyłączone.
+
+### Dokładna konfiguracja i lokalizacja
+
+- Publiczny identyfikator klienta zapisano bez sekretu w lokalnym, ignorowanym
+  przez Git pliku
+  `wxlite/amc_wx_lite/youtube-oauth-client-id.txt`.
+- Builder zwalidował końcówkę `.apps.googleusercontent.com`, brak białych
+  znaków oraz długość, po czym skopiował zasób tylko do
+  `app/amc_wx_lite/youtube-oauth-client-id.txt` paczki testowej.
+- Sekret klienta nie został pobrany, zapisany ani dodany do repozytorium.
+  Token użytkownika nadal ma trafić wyłącznie do chronionego magazynu Windows.
+- Kanoniczna instalacja pozostaje w `D:\Projekty Codex\AMC Python`; nie
+  utworzono instalatora ani wydania publicznego.
+
+### Komunikaty i odbiór NVDA
+
+Po wejściu do okna fokus ma rozpocząć się od `Zaloguj konto YouTube przez
+Google w przeglądarce`. Po zalogowaniu stan ma zostać wypowiedziany tekstem
+użytkowym, a lista ma nazywać się `Kanały planowane do zapisania w Bibliotece
+AMC`. Ręczny odbiór ma objąć początkowy fokus, Tab i Shift+Tab, anulowanie,
+odmowę Google, powrót fokusu, podgląd subskrypcji, zmianę pola przywracania,
+zapis, wylogowanie i ponowne otwarcie okna. Nie wolno wypowiadać identyfikatora
+klienta, kanału, nazwy typu ani surowej odpowiedzi protokołu.
+
+### Uzasadnienie i decyzje
+
+- Identyfikator klienta aplikacji komputerowej jest publiczną konfiguracją,
+  dlatego może być dołączony do paczki testowej; nie jest hasłem ani sekretem.
+- Tryb Google Testing wystarcza do prywatnego odbioru, lecz nie jest modelem
+  dystrybucji publicznej. Publiczne AMC będzie wymagać odrębnej decyzji,
+  projektu produkcyjnego, polityki prywatności i ewentualnej weryfikacji Google.
+- Pierwsza próba instalacji nie naruszyła starej instalacji: aktualizator
+  odmówił podmiany, gdy po bezpiecznym zamknięciu nadal istniały procesy AMC.
+  Nie trwało nagrywanie. Frontend zapisał stan, a aktywna operacja sieciowa
+  rozpoznawania utworu zakończyła się po limicie; procesy zamknęły się
+  samodzielnie bez wymuszonego zabicia. Dopiero wtedy ponowiono atomową
+  instalację zweryfikowanego kandydata.
+
+### Testy i wynik
+
+- Testy launchera i aktualizatora: 30/30 zaliczonych.
+- Kompilacja serwera testowego protokołu i LiteHosta: 0 ostrzeżeń, 0 błędów.
+- Pełna regresja Python/wx: 2014 zaliczonych, 111 kontrolowanie pominiętych,
+  11 zaliczonych podtestów w 142,89 s.
+- Kandydat: 1672 pliki, pełna tożsamość `cd5a4c27`, kontrolowany start
+  interfejsu i hosta zaliczony.
+- Instalacja: atomowa podmiana zakończona, szybka i pełna kontrola integralności
+  zainstalowanej paczki zaliczone, ponowny kontrolowany start zaliczony.
+- Uruchomiona aplikacja: `AMC Test — 23.10.2026, 15:14`, proces Pythona z
+  `D:\Projekty Codex\AMC Python\runtime\python.exe`.
+- Nie wykonano jeszcze prawdziwego żądania OAuth ani synchronizacji danych;
+  wymagają ręcznej czynności użytkownika w przeglądarce i odbioru NVDA.
+
+### Znane ograniczenia
+
+- Logowanie zadziała tylko dla kont dodanych do użytkowników testowych projektu
+  Google, dopóki aplikacja pozostaje w trybie Testing.
+- Zgoda testowa może wygasać po siedmiu dniach i wymagać ponownego logowania.
+- Nie potwierdzono jeszcze komunikatów ekranu zgody Google ani powrotu fokusu
+  na prawdziwym koncie.
+- Funkcja nie jest częścią AMC Public i nie została opublikowana.
+
+### Wersja i commit
+
+Zainstalowana paczka ma etykietę
+`2026.10.23-eea8e9f50fc39e64542ed59119cf7c6273dcae7f-cd5a4c27`,
+rewizję źródła `eea8e9f50fc39e64542ed59119cf7c6273dcae7f` i identyfikator
+zawartości `cd5a4c27`. Dokumentację odbioru zapisano po instalacji, dlatego
+jej późniejszy commit nie zmienia tożsamości już zainstalowanej paczki.
