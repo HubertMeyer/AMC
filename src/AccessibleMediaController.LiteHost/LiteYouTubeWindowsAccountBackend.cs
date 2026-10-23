@@ -22,6 +22,7 @@ internal sealed class LiteYouTubeWindowsAccountBackend : ILiteYouTubeAccountBack
 
     internal LiteYouTubeWindowsAccountBackend(
         string clientId,
+        string clientSecret,
         string releaseProfile,
         string podcastsDatabasePath)
     {
@@ -29,6 +30,7 @@ internal sealed class LiteYouTubeWindowsAccountBackend : ILiteYouTubeAccountBack
             Path.GetFullPath(podcastsDatabasePath));
         _account = new YouTubeAccountCoordinator(
             clientId,
+            clientSecret,
             YouTubeCredentialStore.ForReleaseProfile(releaseProfile),
             new YouTubeOAuthTokenClient(),
             OpenAuthorizationPageAsync);

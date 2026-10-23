@@ -79,6 +79,7 @@ from .youtube_account import (
     account_connected as youtube_account_connected,
     capability_available as youtube_capability_available,
     resolve_youtube_client_id,
+    resolve_youtube_client_secret_file,
     safe_message as youtube_safe_message,
     sync_preview as youtube_sync_preview,
 )
@@ -4445,9 +4446,13 @@ class YouTubeAccountDialog(wx.Dialog):
             self.preview_list.Set([])
         self.set_busy(None)
         self.apply_status(status)
-        self._set_status(
-            youtube_safe_message(result, self.status.GetLabel())
-        )
+        result_message = youtube_safe_message(result, self.status.GetLabel())
+        self._set_status(result_message)
+        if action == "login" and not self._connected:
+            self.login_button.SetName(
+                "Zaloguj konto YouTube przez Google w przeglądarce. "
+                f"Ostatni wynik: {result_message[:300]}"
+            )
         focus = {
             "preview": self.apply_button if self._preview_ready else self.preview_button,
             "apply": self.preview_button,
@@ -4462,6 +4467,11 @@ class YouTubeAccountDialog(wx.Dialog):
         self.set_busy(None)
         self._set_status(message)
         target = self.login_button if previous in {"login", "cancelLogin"} else self.close_button
+        if target is self.login_button:
+            self.login_button.SetName(
+                "Zaloguj konto YouTube przez Google w przeglądarce. "
+                f"Ostatni wynik: {message[:300]}"
+            )
         wx.CallAfter(target.SetFocus)
 
     def _on_restore_changed(self, _event: wx.CommandEvent) -> None:
@@ -5154,19 +5164,29 @@ class FrontierSmartDevicesDialog(wx.Dialog):
             )
             self.discover_button.SetFocus()
             return
-        index = 0
-        if len(choices) > 1:
-            with wx.SingleChoiceDialog(
-                self,
-                "Wybierz wykryte urządzenie. Po wyborze wpisz jego PIN.",
-                "Wykryte urządzenia Frontier Smart",
-                [label for _address, label in choices],
-            ) as dialog:
-                dialog.SetName("Wykryte urządzenia Frontier Smart")
-                if dialog.ShowModal() != wx.ID_OK:
-                    self.discover_button.SetFocus()
-                    return
-                index = dialog.GetSelection()
+        self.set_status(
+            (self._state.message or "Wykryto urządzenie Frontier Smart.")
+            + " Wybierz urządzenie i naciśnij Enter, aby przejść do wpisania PIN-u.",
+            announce=True,
+        )
+        # Nawet jeden wynik wymaga świadomego wyboru. Automatyczne przejście
+        # z zakończonego skanowania prosto do pola PIN wyglądało w NVDA jak
+        # błędny fokus i nie pozwalało potwierdzić, które radio wykryto.
+        with wx.SingleChoiceDialog(
+            self,
+            "Wybierz wykryte urządzenie. Dopiero po zatwierdzeniu wpiszesz jego PIN.",
+            "Wykryte urządzenia Frontier Smart",
+            [label for _address, label in choices],
+        ) as dialog:
+            dialog.SetName("Wykryte urządzenia Frontier Smart")
+            dialog.SetSelection(0)
+            if dialog.ShowModal() != wx.ID_OK:
+                self.discover_button.SetFocus()
+                return
+            index = dialog.GetSelection()
+        if index < 0 or index >= len(choices):
+            self.discover_button.SetFocus()
+            return
         address, device_label = choices[index]
         self._accept_identified_device(address, device_label)
 
@@ -10059,11 +10079,26 @@ class LiteFrame(wx.Frame):
             if callable(youtube_client_id_resolver)
             else None
         )
+        youtube_client_secret_resolver = globals().get(
+            "resolve_youtube_client_secret_file"
+        )
+        youtube_client_secret_file = (
+            youtube_client_secret_resolver()
+            if callable(youtube_client_secret_resolver)
+            else None
+        )
+        # Konto jest dostępne wyłącznie przy kompletnej parze konfiguracji.
+        # Nigdy nie uruchamiamy ponownie wariantu z samym identyfikatorem,
+        # który kończył zgodę Google bez zapisania konta w AMC.
+        if youtube_client_id is None or youtube_client_secret_file is None:
+            youtube_client_id = None
+            youtube_client_secret_file = None
         client = LiteHostClient(
             default_host_path(),
             timeshift_minutes=self.options.timeshift_minutes,
             release_profile=current_profile().profile_id,
             youtube_client_id=youtube_client_id,
+            youtube_client_secret_file=youtube_client_secret_file,
             common_data_snapshot=common_data_snapshot_path(),
             # Odczyt list nadal nalezy do Pythona w trybie ro. Sciezka daje
             # hostowi C# wyłącznie możliwość wykonania wąskiej, transakcyjnej
@@ -16292,6 +16327,10 @@ class LiteFrame(wx.Frame):
                     dialog.finish(action, result, status)
                     if action == "login" and youtube_account_connected(status):
                         dialog._set_status(message)
+                _append_frontend_log(
+                    self.store,
+                    f"Konto YouTube, operacja {action}: {message}",
+                )
                 if action == "apply" and self.navigator.active is SessionId.PODCASTS:
                     self._refresh_profile_view()
                 self.announcer.say(message)
@@ -16304,6 +16343,10 @@ class LiteFrame(wx.Frame):
                 )
                 if not dialog.IsBeingDeleted():
                     dialog.fail(message)
+                _append_frontend_log(
+                    self.store,
+                    f"Konto YouTube, operacja {action}: {message}",
+                )
                 self.announcer.say(message)
 
             # Jedna nazwa strumienia unieważnia spóźniony wynik logowania,

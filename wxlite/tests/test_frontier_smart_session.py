@@ -418,6 +418,164 @@ def test_frontier_smart_discovery_announces_device_before_pin_and_focuses_pin() 
     assert "192.168.1.55" not in statuses[0][0]
 
 
+def test_frontier_smart_single_discovery_requires_explicit_choice() -> None:
+    pin = _FakeControl()
+    pin_label = _FakeControl()
+    discover = _FakeControl()
+    save_button = _FakeControl()
+    statuses: list[tuple[str, bool]] = []
+    accepted: list[tuple[str, str]] = []
+    shown: list[tuple[str, list[str], int]] = []
+
+    class ChoiceDialog:
+        def __init__(self, _parent, _message, title, choices) -> None:
+            self.title = title
+            self.choices = list(choices)
+            self.selection = -1
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args) -> None:
+            return None
+
+        def SetName(self, name: str) -> None:
+            assert name == "Wykryte urządzenia Frontier Smart"
+
+        def SetSelection(self, selection: int) -> None:
+            self.selection = selection
+
+        def ShowModal(self) -> int:
+            shown.append((self.title, self.choices, self.selection))
+            return gui_module.wx.ID_CANCEL
+
+        def GetSelection(self) -> int:
+            return self.selection
+
+    original_choice_dialog = getattr(gui_module.wx, "SingleChoiceDialog", None)
+    gui_module.wx.SingleChoiceDialog = ChoiceDialog
+    dialog = SimpleNamespace(
+        _state=discovery_started(configuration_state({"items": []})),
+        _busy=True,
+        _manual_address_visible=False,
+        pin=pin,
+        pin_label=pin_label,
+        discover_button=discover,
+        save_button=save_button,
+        Layout=lambda: None,
+        _update_buttons=lambda: None,
+        set_status=lambda message, announce=False: statuses.append(
+            (message, announce)
+        ),
+        _accept_identified_device=lambda address, label: accepted.append(
+            (address, label)
+        ),
+    )
+    dialog._hide_pin_field = MethodType(
+        FrontierSmartDevicesDialog._hide_pin_field,
+        dialog,
+    )
+
+    try:
+        FrontierSmartDevicesDialog.use_discovered(
+            dialog,
+            {
+                "items": [{
+                    "address": "192.168.1.55",
+                    "label": "Teufel RADIO 3SIXTY",
+                }],
+                "message": "Wykryto urządzenie Teufel RADIO 3SIXTY.",
+            },
+        )
+    finally:
+        if original_choice_dialog is None:
+            delattr(gui_module.wx, "SingleChoiceDialog")
+        else:
+            gui_module.wx.SingleChoiceDialog = original_choice_dialog
+
+    assert shown == [(
+        "Wykryte urządzenia Frontier Smart",
+        ["Teufel RADIO 3SIXTY"],
+        0,
+    )]
+    assert accepted == []
+    assert pin.shown is False and pin.hidden is True
+    assert discover.focused is True
+    assert statuses[-1][1] is True
+    assert "naciśnij Enter" in statuses[-1][0]
+
+
+def test_frontier_smart_confirmed_choice_enters_pin_step() -> None:
+    pin = _FakeControl()
+    pin_label = _FakeControl()
+    discover = _FakeControl()
+    save_button = _FakeControl()
+    accepted: list[tuple[str, str]] = []
+
+    class ChoiceDialog:
+        def __init__(self, _parent, _message, _title, choices) -> None:
+            assert list(choices) == ["Radio w kuchni"]
+            self.selection = -1
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args) -> None:
+            return None
+
+        def SetName(self, _name: str) -> None:
+            pass
+
+        def SetSelection(self, selection: int) -> None:
+            self.selection = selection
+
+        def ShowModal(self) -> int:
+            return gui_module.wx.ID_OK
+
+        def GetSelection(self) -> int:
+            return self.selection
+
+    original_choice_dialog = getattr(gui_module.wx, "SingleChoiceDialog", None)
+    gui_module.wx.SingleChoiceDialog = ChoiceDialog
+    dialog = SimpleNamespace(
+        _state=discovery_started(configuration_state({"items": []})),
+        _busy=True,
+        _manual_address_visible=False,
+        pin=pin,
+        pin_label=pin_label,
+        discover_button=discover,
+        save_button=save_button,
+        Layout=lambda: None,
+        _update_buttons=lambda: None,
+        set_status=lambda _message, announce=False: None,
+        _accept_identified_device=lambda address, label: accepted.append(
+            (address, label)
+        ),
+    )
+    dialog._hide_pin_field = MethodType(
+        FrontierSmartDevicesDialog._hide_pin_field,
+        dialog,
+    )
+
+    try:
+        FrontierSmartDevicesDialog.use_discovered(
+            dialog,
+            {
+                "items": [{
+                    "address": "192.168.1.77",
+                    "label": "Radio w kuchni",
+                }],
+            },
+        )
+    finally:
+        if original_choice_dialog is None:
+            delattr(gui_module.wx, "SingleChoiceDialog")
+        else:
+            gui_module.wx.SingleChoiceDialog = original_choice_dialog
+
+    assert accepted == [("192.168.1.77", "Radio w kuchni")]
+
+
 def test_frontier_smart_empty_result_has_no_pin_and_focuses_retry() -> None:
     pin = _FakeControl()
     pin_label = _FakeControl()

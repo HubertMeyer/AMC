@@ -11,6 +11,7 @@ node_modules/
 *.amcsettings.json
 *.amcbackup.json
 youtube-oauth-client-id.txt
+youtube-oauth-client-secret.txt
 AMC-NVDA-*.nvda-addon
 __pycache__/
 .smoke-out/

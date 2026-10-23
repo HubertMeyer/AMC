@@ -22,6 +22,7 @@ public sealed record YouTubeAccountOperationResult(bool Succeeded, string Messag
 public sealed class YouTubeAccountCoordinator : IDisposable
 {
     private readonly string _clientId;
+    private readonly string _clientSecret;
     private readonly IYouTubeCredentialStore _store;
     private readonly YouTubeOAuthTokenClient _tokenClient;
     private readonly Func<Uri, CancellationToken, Task<bool>> _openAuthorizationPage;
@@ -32,6 +33,7 @@ public sealed class YouTubeAccountCoordinator : IDisposable
 
     public YouTubeAccountCoordinator(
         string clientId,
+        string clientSecret,
         IYouTubeCredentialStore store,
         YouTubeOAuthTokenClient tokenClient,
         Func<Uri, CancellationToken, Task<bool>> openAuthorizationPage,
@@ -40,8 +42,10 @@ public sealed class YouTubeAccountCoordinator : IDisposable
     {
         // Walidacja korzysta z tego samego kontraktu co rzeczywiste żądanie,
         // bez uruchamiania sieci i bez przechowywania osobnego wariantu reguł.
-        _ = YouTubeOAuthProtocol.CreateRefreshFields(clientId, "validation-only");
+        _ = YouTubeOAuthProtocol.CreateRefreshFields(
+            clientId, clientSecret, "validation-only");
         _clientId = clientId.Trim();
+        _clientSecret = clientSecret.Trim();
         _store = store ?? throw new ArgumentNullException(nameof(store));
         _tokenClient = tokenClient ?? throw new ArgumentNullException(nameof(tokenClient));
         _openAuthorizationPage = openAuthorizationPage
@@ -91,6 +95,7 @@ public sealed class YouTubeAccountCoordinator : IDisposable
 
             var tokens = await _tokenClient.ExchangeCodeAsync(
                 _clientId,
+                _clientSecret,
                 receiver.RedirectUri,
                 callback.Code,
                 request.CodeVerifier,
@@ -116,7 +121,7 @@ public sealed class YouTubeAccountCoordinator : IDisposable
             if (tokens.ExpiresAtUtc > _now().AddMinutes(2)) return tokens.AccessToken;
 
             var refreshed = await _tokenClient.RefreshAsync(
-                tokens, _now(), cancellationToken).ConfigureAwait(false);
+                tokens, _clientSecret, _now(), cancellationToken).ConfigureAwait(false);
             _store.Write(refreshed);
             return refreshed.AccessToken;
         }

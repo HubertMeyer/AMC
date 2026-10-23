@@ -22,6 +22,7 @@ public sealed class YouTubeOAuthTokenClient : IDisposable
 
     public async Task<YouTubeTokenSet> ExchangeCodeAsync(
         string clientId,
+        string clientSecret,
         Uri redirectUri,
         string code,
         string codeVerifier,
@@ -29,19 +30,20 @@ public sealed class YouTubeOAuthTokenClient : IDisposable
         CancellationToken cancellationToken)
     {
         var fields = YouTubeOAuthProtocol.CreateCodeExchangeFields(
-            clientId, redirectUri, code, codeVerifier);
+            clientId, clientSecret, redirectUri, code, codeVerifier);
         return await SendAsync(
             fields, clientId, now, null, null, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<YouTubeTokenSet> RefreshAsync(
         YouTubeTokenSet current,
+        string clientSecret,
         DateTimeOffset now,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(current);
         var fields = YouTubeOAuthProtocol.CreateRefreshFields(
-            current.ClientId, current.RefreshToken);
+            current.ClientId, clientSecret, current.RefreshToken);
         return await SendAsync(
             fields,
             current.ClientId,

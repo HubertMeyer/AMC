@@ -443,12 +443,37 @@ internal static class Program
     {
         var profile = ReadArgumentText(args, "--release-profile")?.ToLowerInvariant();
         var clientId = ReadArgumentText(args, "--youtube-client-id");
+        var clientSecretFile = ReadArgumentPath(args, "--youtube-client-secret-file");
+        var clientSecret = ReadYouTubeClientSecret(clientSecretFile);
         var podcasts = ReadArgumentPath(args, "--podcasts-db");
         // Pierwszy odbiór jest wyłącznie w AMC Test. Publiczny profil pozostaje
         // wyłączony do czasu weryfikacji ekranu zgody i polityki Google.
-        if (profile != "test" || clientId is null || podcasts is null) return null;
+        if (profile != "test" || clientId is null || clientSecret is null || podcasts is null)
+            return null;
         return new LiteYouTubeAccountCoordinator(
-            new LiteYouTubeWindowsAccountBackend(clientId, profile, podcasts));
+            new LiteYouTubeWindowsAccountBackend(
+                clientId, clientSecret, profile, podcasts));
+    }
+
+    private static string? ReadYouTubeClientSecret(string? path)
+    {
+        if (path is null) return null;
+        try
+        {
+            var file = new FileInfo(path);
+            if (!file.Exists || file.Length is < 8 or > 2048) return null;
+            var value = File.ReadAllText(file.FullName).Trim();
+            if (value.Length is < 8 or > 512
+                || value.Any(character => char.IsWhiteSpace(character) || char.IsControl(character)))
+                return null;
+            return value;
+        }
+        catch (Exception exception) when (exception is IOException
+            or UnauthorizedAccessException
+            or System.Security.SecurityException)
+        {
+            return null;
+        }
     }
 
     private static string? ReadArgumentPath(string[] values, string name)

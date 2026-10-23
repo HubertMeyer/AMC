@@ -12,15 +12,18 @@ from amc_wx_lite.release_profile import PUBLIC_PROFILE, TEST_PROFILE
 from amc_wx_lite.shortcuts import Action, describe
 from amc_wx_lite.youtube_account import (
     CLIENT_ID_ENVIRONMENT,
+    CLIENT_SECRET_FILE_ENVIRONMENT,
     account_connected,
     capability_available,
     resolve_youtube_client_id,
+    resolve_youtube_client_secret_file,
     safe_message,
     sync_preview,
 )
 
 
 CLIENT_ID = "123456789012-example.apps.googleusercontent.com"
+CLIENT_SECRET = "syntetyczny-sekret-klienta"
 
 
 def test_oauth_configuration_is_test_only_and_validated(tmp_path: Path) -> None:
@@ -41,6 +44,23 @@ def test_oauth_configuration_is_test_only_and_validated(tmp_path: Path) -> None:
     assert resolve_youtube_client_id(
         {}, profile=TEST_PROFILE, resource_path=resource
     ) == CLIENT_ID
+
+    secret = tmp_path / "youtube-oauth-client-secret.txt"
+    secret.write_text(CLIENT_SECRET + "\n", encoding="utf-8")
+    assert resolve_youtube_client_secret_file(
+        {}, profile=TEST_PROFILE, resource_path=secret
+    ) == secret.resolve()
+    assert resolve_youtube_client_secret_file(
+        {CLIENT_SECRET_FILE_ENVIRONMENT: str(secret)}, profile=TEST_PROFILE
+    ) == secret.resolve()
+    assert resolve_youtube_client_secret_file(
+        {CLIENT_SECRET_FILE_ENVIRONMENT: str(secret)}, profile=PUBLIC_PROFILE
+    ) is None
+
+    secret.write_text("sekret ze spacją\n", encoding="utf-8")
+    assert resolve_youtube_client_secret_file(
+        {}, profile=TEST_PROFILE, resource_path=secret
+    ) is None
 
 
 def test_protocol_payload_never_becomes_object_representation() -> None:
@@ -101,10 +121,21 @@ def test_pascal_case_payload_from_real_dotnet_host_is_supported() -> None:
     assert preview.labels == ("Kanał Pierwszy", "Kanał Drugi")
 
 
-def test_host_client_has_explicit_youtube_operations_and_public_client_id() -> None:
-    client = LiteHostClient(Path("host.exe"), youtube_client_id=CLIENT_ID)
+def test_host_client_passes_secret_path_not_secret_value() -> None:
+    secret_file = Path("lokalna-konfiguracja") / "youtube-secret.txt"
+    client = LiteHostClient(
+        Path("host.exe"),
+        youtube_client_id=CLIENT_ID,
+        youtube_client_secret_file=secret_file,
+    )
     command = client._command()
-    assert command[-2:] == ["--youtube-client-id", CLIENT_ID]
+    assert command[-4:] == [
+        "--youtube-client-id",
+        CLIENT_ID,
+        "--youtube-client-secret-file",
+        str(secret_file),
+    ]
+    assert CLIENT_SECRET not in command
 
     calls: list[tuple[str, object, float]] = []
 

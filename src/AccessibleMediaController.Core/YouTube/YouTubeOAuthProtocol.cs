@@ -68,11 +68,13 @@ public static class YouTubeOAuthProtocol
 
     public static IReadOnlyDictionary<string, string> CreateCodeExchangeFields(
         string clientId,
+        string clientSecret,
         Uri redirectUri,
         string code,
         string codeVerifier)
     {
         var normalizedClientId = ValidateClientId(clientId);
+        var normalizedClientSecret = ValidateClientSecret(clientSecret);
         ValidateRedirectUri(redirectUri);
         if (string.IsNullOrWhiteSpace(code))
             throw new ArgumentException("Google nie przekazał kodu logowania.", nameof(code));
@@ -80,6 +82,7 @@ public static class YouTubeOAuthProtocol
         return new Dictionary<string, string>
         {
             ["client_id"] = normalizedClientId,
+            ["client_secret"] = normalizedClientSecret,
             ["code"] = code.Trim(),
             ["code_verifier"] = codeVerifier,
             ["grant_type"] = "authorization_code",
@@ -89,14 +92,17 @@ public static class YouTubeOAuthProtocol
 
     public static IReadOnlyDictionary<string, string> CreateRefreshFields(
         string clientId,
+        string clientSecret,
         string refreshToken)
     {
         var normalizedClientId = ValidateClientId(clientId);
+        var normalizedClientSecret = ValidateClientSecret(clientSecret);
         if (string.IsNullOrWhiteSpace(refreshToken))
             throw new ArgumentException("Brak zapisanego odświeżenia logowania YouTube.", nameof(refreshToken));
         return new Dictionary<string, string>
         {
             ["client_id"] = normalizedClientId,
+            ["client_secret"] = normalizedClientSecret,
             ["refresh_token"] = refreshToken,
             ["grant_type"] = "refresh_token"
         };
@@ -169,6 +175,18 @@ public static class YouTubeOAuthProtocol
         {
             throw new InvalidOperationException(
                 "Logowanie YouTube nie jest jeszcze skonfigurowane dla tej wersji AMC.");
+        }
+        return normalized;
+    }
+
+    private static string ValidateClientSecret(string clientSecret)
+    {
+        var normalized = clientSecret?.Trim() ?? string.Empty;
+        if (normalized.Length is < 8 or > 512
+            || normalized.Any(character => char.IsWhiteSpace(character) || char.IsControl(character)))
+        {
+            throw new InvalidOperationException(
+                "Logowanie YouTube nie jest jeszcze w pełni skonfigurowane dla tej wersji AMC.");
         }
         return normalized;
     }

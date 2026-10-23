@@ -5,12 +5,13 @@ internal static class YouTubeOAuthFoundationTests
 {
     private const string ClientId =
         "1234567890-example.apps.googleusercontent.com";
+    private const string ClientSecret = "syntetyczny-sekret-klienta";
 
     internal static void Run()
     {
         BuildsReadOnlyPkceRequestWithoutSecret();
         RejectsUnsafeCallbackAddresses();
-        BuildsTokenRequestsWithoutClientSecret();
+        BuildsTokenRequestsWithRequiredClientSecret();
         PreservesRefreshTokenAndScope();
         DoesNotEchoMalformedResponse();
         ExchangesCodeThroughOfficialEndpoint();
@@ -75,21 +76,23 @@ internal static class YouTubeOAuthFoundationTests
         }
     }
 
-    private static void BuildsTokenRequestsWithoutClientSecret()
+    private static void BuildsTokenRequestsWithRequiredClientSecret()
     {
         var callback = new Uri("http://127.0.0.1:49321/youtube/callback/");
         var verifier = Convert.ToBase64String(new byte[32]).TrimEnd('=').Replace('+', '-').Replace('/', '_');
         var exchange = YouTubeOAuthProtocol.CreateCodeExchangeFields(
-            ClientId, callback, "syntetyczny-kod", verifier);
-        var refresh = YouTubeOAuthProtocol.CreateRefreshFields(ClientId, "syntetyczne-odswiezenie");
+            ClientId, ClientSecret, callback, "syntetyczny-kod", verifier);
+        var refresh = YouTubeOAuthProtocol.CreateRefreshFields(
+            ClientId, ClientSecret, "syntetyczne-odswiezenie");
 
         Assert(exchange.GetValueOrDefault("grant_type") == "authorization_code"
                && exchange.GetValueOrDefault("code_verifier") == verifier,
             "Wymiana kodu nie zachowuje PKCE.");
         Assert(refresh.GetValueOrDefault("grant_type") == "refresh_token",
             "Odświeżenie ma nieprawidłowy rodzaj żądania.");
-        Assert(!exchange.ContainsKey("client_secret") && !refresh.ContainsKey("client_secret"),
-            "Klient desktop próbowałby wysłać sekret klienta.");
+        Assert(exchange.GetValueOrDefault("client_secret") == ClientSecret
+               && refresh.GetValueOrDefault("client_secret") == ClientSecret,
+            "Punkt tokenów nie dostał sekretu wymaganego przez tego klienta desktopowego.");
     }
 
     private static void PreservesRefreshTokenAndScope()
@@ -134,7 +137,7 @@ internal static class YouTubeOAuthFoundationTests
         var verifier = Convert.ToBase64String(new byte[32]).TrimEnd('=').Replace('+', '-').Replace('/', '_');
         var callback = new Uri("http://127.0.0.1:49321/youtube/callback/");
         var tokens = client.ExchangeCodeAsync(
-                ClientId, callback, "syntetyczny-kod", verifier,
+                ClientId, ClientSecret, callback, "syntetyczny-kod", verifier,
                 new DateTimeOffset(2026, 10, 21, 12, 0, 0, TimeSpan.Zero),
                 CancellationToken.None)
             .GetAwaiter().GetResult();
@@ -145,7 +148,8 @@ internal static class YouTubeOAuthFoundationTests
         Assert(form.GetValueOrDefault("code") == "syntetyczny-kod"
                && form.GetValueOrDefault("code_verifier") == verifier,
             "Transport nie przekazał kodu i weryfikatora PKCE.");
-        Assert(!form.ContainsKey("client_secret"), "Transport wysłał sekret klienta.");
+        Assert(form.GetValueOrDefault("client_secret") == ClientSecret,
+            "Transport nie wysłał sekretu wymaganego przez klienta Google.");
         Assert(tokens.RefreshToken == "syntetyczny-refresh", "Nie odczytano refresh tokenu.");
     }
 
@@ -158,7 +162,8 @@ internal static class YouTubeOAuthFoundationTests
         var current = new YouTubeTokenSet(
             "stary-access", "trwale-odswiezenie", DateTimeOffset.UtcNow.AddMinutes(-1),
             YouTubeOAuthProtocol.ReadOnlyScope, ClientId);
-        var refreshed = client.RefreshAsync(current, DateTimeOffset.UtcNow, CancellationToken.None)
+        var refreshed = client.RefreshAsync(
+                current, ClientSecret, DateTimeOffset.UtcNow, CancellationToken.None)
             .GetAwaiter().GetResult();
         var form = ParseQuery(handler.Body);
 
@@ -182,7 +187,8 @@ internal static class YouTubeOAuthFoundationTests
             YouTubeOAuthProtocol.ReadOnlyScope, ClientId);
         try
         {
-            client.RefreshAsync(current, DateTimeOffset.UtcNow, CancellationToken.None)
+            client.RefreshAsync(
+                    current, ClientSecret, DateTimeOffset.UtcNow, CancellationToken.None)
                 .GetAwaiter().GetResult();
             throw new InvalidOperationException("Odrzucona odpowiedź została przyjęta.");
         }
@@ -214,6 +220,7 @@ internal static class YouTubeOAuthFoundationTests
             {
                 client.ExchangeCodeAsync(
                         ClientId,
+                        ClientSecret,
                         new Uri("http://127.0.0.1:49321/youtube/callback/"),
                         "kod",
                         verifier,

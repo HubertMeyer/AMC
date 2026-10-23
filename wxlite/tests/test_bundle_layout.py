@@ -114,6 +114,11 @@ def test_youtube_oauth_client_id_is_validated_and_test_only():
             client_id + "\n",
             encoding="utf-8",
         )
+        client_secret = "syntetyczny-sekret-klienta"
+        (source_package / bundle.YOUTUBE_OAUTH_CLIENT_SECRET_RESOURCE).write_text(
+            client_secret + "\n",
+            encoding="utf-8",
+        )
 
         test_target = root / "test"
         copied = bundle.copy_python_code(
@@ -122,8 +127,13 @@ def test_youtube_oauth_client_id_is_validated_and_test_only():
             source,
         )
         relative = "app/amc_wx_lite/youtube-oauth-client-id.txt"
+        secret_relative = "app/amc_wx_lite/youtube-oauth-client-secret.txt"
         assert relative in copied
+        assert secret_relative in copied
         assert (test_target / relative).read_text(encoding="utf-8") == client_id + "\n"
+        assert (test_target / secret_relative).read_text(encoding="utf-8") == (
+            client_secret + "\n"
+        )
 
         public_target = root / "public"
         copied = bundle.copy_python_code(
@@ -132,7 +142,9 @@ def test_youtube_oauth_client_id_is_validated_and_test_only():
             source,
         )
         assert relative not in copied
+        assert secret_relative not in copied
         assert not (public_target / relative).exists()
+        assert not (public_target / secret_relative).exists()
 
         (source_package / bundle.YOUTUBE_OAUTH_CLIENT_ID_RESOURCE).write_text(
             "nieprawidłowy identyfikator ze spacją\n",
@@ -151,6 +163,37 @@ def test_youtube_oauth_client_id_is_validated_and_test_only():
             raise AssertionError(
                 "Nieprawidłowy identyfikator OAuth nie może trafić do paczki"
             )
+
+
+def test_incomplete_youtube_oauth_configuration_is_not_packaged():
+    with tempfile.TemporaryDirectory() as folder:
+        root = Path(folder)
+        source = root / "source"
+        source_package = source / "amc_wx_lite"
+        source_package.mkdir(parents=True)
+        (source_package / "__init__.py").write_text("", encoding="utf-8")
+        (source_package / bundle.YOUTUBE_OAUTH_CLIENT_ID_RESOURCE).write_text(
+            "123456789012-example.apps.googleusercontent.com\n",
+            encoding="utf-8",
+        )
+
+        target = root / "test"
+        copied = bundle.copy_python_code(
+            target,
+            bundle.profile_from_id("test"),
+            source,
+        )
+
+        assert not any("youtube-oauth-client" in item for item in copied)
+        assert not (
+            target / "app" / "amc_wx_lite" / bundle.YOUTUBE_OAUTH_CLIENT_ID_RESOURCE
+        ).exists()
+        assert not (
+            target
+            / "app"
+            / "amc_wx_lite"
+            / bundle.YOUTUBE_OAUTH_CLIENT_SECRET_RESOURCE
+        ).exists()
 
 
 def test_public_gui_imports_without_private_service_modules():

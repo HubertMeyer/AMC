@@ -4,6 +4,7 @@ using AccessibleMediaController.Core.YouTube;
 internal static class YouTubeAccountCoordinatorTests
 {
     private const string ClientId = "1234567890-example.apps.googleusercontent.com";
+    private const string ClientSecret = "syntetyczny-sekret-klienta";
     private static readonly DateTimeOffset Now =
         new(2026, 10, 21, 15, 0, 0, TimeSpan.Zero);
 
@@ -25,6 +26,7 @@ internal static class YouTubeAccountCoordinatorTests
         using var tokenClient = new YouTubeOAuthTokenClient(new HttpClient(handler));
         using var coordinator = new YouTubeAccountCoordinator(
             ClientId,
+            ClientSecret,
             store,
             tokenClient,
             async (authorizationUri, cancellationToken) =>
@@ -62,6 +64,7 @@ internal static class YouTubeAccountCoordinatorTests
         using var tokenClient = new YouTubeOAuthTokenClient(new HttpClient(handler));
         using var coordinator = new YouTubeAccountCoordinator(
             ClientId,
+            ClientSecret,
             store,
             tokenClient,
             (authorizationUri, cancellationToken) =>
@@ -131,7 +134,13 @@ internal static class YouTubeAccountCoordinatorTests
     private static YouTubeAccountCoordinator Coordinator(
         MemoryStore store,
         YouTubeOAuthTokenClient tokenClient) =>
-        new(ClientId, store, tokenClient, (_, _) => Task.FromResult(false), () => Now);
+        new(
+            ClientId,
+            ClientSecret,
+            store,
+            tokenClient,
+            (_, _) => Task.FromResult(false),
+            () => Now);
 
     private static YouTubeTokenSet Tokens(string access, string refresh, DateTimeOffset expires) =>
         new(access, refresh, expires, YouTubeOAuthProtocol.ReadOnlyScope, ClientId);
