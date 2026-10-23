@@ -5,6 +5,18 @@ przetrwać między rozmowami i być czytelne zarówno dla Codexa, jak i Hermesa.
 Rejestr nie uruchamia pracy samodzielnie. Zadanie rozpoczyna się dopiero po
 jawnym poleceniu użytkownika albo przez osobno uzgodniony harmonogram.
 
+## Bieżący punkt wznowienia
+
+Sesja rozwojowa AMC Test z 23–24.10.2026 została bezpiecznie zamknięta.
+Najnowsza instalacja, dokładny stan wdrożeń, plan ręcznego odbioru, ustalenia
+dotyczące dynamicznego radia i przyszłego `Ctrl+Shift+I` oraz tematy przekazane
+do osobnych zadań Sonos i Apple Music są zapisane w:
+[AMC-TEST-2026-10-24-ZAMKNIECIE-SESJI-23-24.md](AMC-TEST-2026-10-24-ZAMKNIECIE-SESJI-23-24.md).
+
+Nie rozpoczynać automatycznie tematów z tego dokumentu. Użytkownik sprawdzi
+przygotowane funkcje 24.10.2026 i wskaże ewentualne korekty. Bieżący AMC Test
+pozostaje w `D:\Projekty Codex\AMC Python`; AMC Public pozostaje bez zmian.
+
 ## Zasady prowadzenia
 
 - Każde większe zadanie ma stały identyfikator i osobny plik o nazwie

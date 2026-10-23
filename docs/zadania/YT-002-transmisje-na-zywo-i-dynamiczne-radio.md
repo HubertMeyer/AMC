@@ -150,3 +150,38 @@ Zainstalowana wersja to `AMC Test — 24.10.2026, 00:21`, commit
 regresja wxPython: 2029 zaliczonych, 111 kontrolowanie pominiętych i 13
 podtestów zaliczonych. Szczegóły promocji:
 [AMC-TEST-2026-10-24-0021-youtube-refresh-shortcuts.md](AMC-TEST-2026-10-24-0021-youtube-refresh-shortcuts.md).
+
+## Decyzja o widoku zbiorczym i nagrywaniu — 24.10.2026
+
+Użytkownik zaakceptował `Ctrl+Shift+I` jako skrót przyszłej zbiorczej listy
+transmisji trwających i zaplanowanych. Zastępuje to wcześniejsze luźne
+rozważania o nieustalonym skrócie. `Ctrl+I` pozostaje skrzynką nowych
+materiałów. Nowa funkcja nie jest częścią bieżącej instalacji 00:21.
+
+Widok ma obejmować tylko kanały świadomie wybrane przez użytkownika, a nie
+automatycznie wszystkie subskrypcje. Powodem jest koszt oficjalnych zapytań
+API. Pierwsze uruchomienie bez wyboru powinno otworzyć dostępny selektor
+kanałów. Menu kontekstowe kanału ma udostępnić jawne polecenie włączenia lub
+wyłączenia go w widoku zbiorczym. Lista ma pokazywać najpierw transmisje
+trwające, następnie zaplanowane chronologicznie, a każdy wiersz ma zawierać
+wyłącznie użytkowe dane: kanał, tytuł, stan i czas.
+
+Enter, `Ctrl+Shift+C`, `F5` i Backspace mają zachować kontrakt istniejącej
+listy jednego kanału. `Ctrl+R` na trwającej transmisji może rozpocząć
+nagrywanie teraz. `Shift+R` na trwającej albo zaplanowanej pozycji powinien
+otworzyć wstępnie uzupełniony jednorazowy harmonogram, który przechowuje
+stabilny adres `/live` kanału, a nie wygasający adres filmu. Cotygodniowe
+audycje lepiej zapisywać jako dynamiczną stację z harmonogramem cyklicznym;
+pojedyncze wydarzenia można planować bezpośrednio z przyszłej listy.
+
+Bieżące Radio już rozróżnia `Ctrl+R` — nagranie teraz — od `Shift+R` —
+harmonogram. Dynamiczna stacja jest chwilowo niedostępna, gdy kanał nie
+nadaje, i rozwiązuje nowy adres przy kolejnej próbie. Kod harmonogramu ponawia
+połączenie w aktywnym oknie, lecz pełny rzeczywisty scenariusz „brak live na
+początku, późniejszy start, automatyczne złapanie nagrania” pozostaje do
+ręcznego odbioru 24.10.2026.
+
+Implementacja `Ctrl+Shift+I` musi w jednym zadaniu uzupełnić wspólny model
+poleceń, klawiaturę, menu, menu kontekstowe, paletę `Ctrl+Shift+K`, pomoc
+`Ctrl+F1`, pełną pomoc, dokumentację i testy parytetu oraz NVDA. Nie należy
+zaczynać stałego monitoringu wszystkich kanałów w tle.
