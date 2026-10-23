@@ -36,6 +36,29 @@ class HostUnavailable(RuntimeError):
     """Hosta nie da sie uruchomic albo juz nie zyje."""
 
 
+def _hidden_process_options(
+    platform_name: str | None = None,
+    process_module: Any = subprocess,
+) -> dict[str, Any]:
+    """Opcje Windows, które nie pozwalają hostowi przejąć fokusu.
+
+    ``CREATE_NO_WINDOW`` nie przydziela konsoli, a ``STARTUPINFO`` z
+    ``SW_HIDE`` jest drugą, niezależną barierą dla krótkiego okna startowego.
+    Zależności są parametrami wyłącznie po to, aby kontrakt dało się sprawdzić
+    deterministycznie także poza Windows bez uruchamiania prawdziwego AMC.
+    """
+
+    if (platform_name or os.name) != "nt":
+        return {}
+    startup_info = process_module.STARTUPINFO()
+    startup_info.dwFlags |= process_module.STARTF_USESHOWWINDOW
+    startup_info.wShowWindow = process_module.SW_HIDE
+    return {
+        "creationflags": process_module.CREATE_NO_WINDOW,
+        "startupinfo": startup_info,
+    }
+
+
 @dataclass(slots=True)
 class Response:
     # Identyfikator jest NAPISEM, bo host C# zapisuje "id" jako string
@@ -178,10 +201,6 @@ class LiteHostClient:
                 f"Nie znaleziono silnika: {self.executable}. "
                 "Zbuduj go albo wskaz sciezke zmienna AMC_LITE_HOST."
             )
-        creation = 0
-        if os.name == "nt":
-            # Bez tego Windows pokazuje czarne okno konsoli hosta.
-            creation = getattr(subprocess, "CREATE_NO_WINDOW", 0)
         self._process = self._spawn(
             self._command(),
             stdin=subprocess.PIPE,
@@ -195,7 +214,7 @@ class LiteHostClient:
             # komunikacja z silnikiem nie moga przez to zginac.
             errors="replace",
             bufsize=1,
-            creationflags=creation,
+            **_hidden_process_options(),
         )
         self._reader = threading.Thread(target=self._read_loop, daemon=True)
         self._reader.start()

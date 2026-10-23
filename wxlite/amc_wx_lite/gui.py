@@ -2718,6 +2718,29 @@ class RenameItemDialog(wx.Dialog):
         return self.field.GetValue().strip()
 
 
+_PODCAST_ADD_TECHNICAL_ERROR = re.compile(
+    r"(?:\b(?:windows?\s*32|win32|process(?:startinfo)?|subprocess|"
+    r"proces(?:u|em|ie|owi|y|ów)?|terminal|system\.diagnostics|"
+    r"exception|traceback|typename|"
+    r"amc_lite_host|podcast\.add|yt-dlp(?:\.exe)?|ffmpeg(?:\.exe)?)\b|"
+    r"[A-Za-z]:[\\/]|\\\\|[<{][^>}\n]{1,200}[>}])",
+    re.IGNORECASE,
+)
+
+
+def podcast_add_error_message(error: Exception) -> str:
+    """Zwróć wyłącznie komunikat bezpieczny dla zwykłej mowy NVDA."""
+
+    if isinstance(error, HostError):
+        message = str(error).strip()
+        if message and not _PODCAST_ADD_TECHNICAL_ERROR.search(message):
+            return message
+    return (
+        "Nie udało się dodać źródła. Spróbuj ponownie; jeśli błąd się "
+        "powtórzy, sprawdź składniki multimedialne w menu Pomoc"
+    )
+
+
 class PodcastSourceDialog(wx.Dialog):
     """Natywny formularz dodawania źródła Podcastów i YouTube."""
 
@@ -2751,16 +2774,20 @@ class PodcastSourceDialog(wx.Dialog):
         self.title_field.SetName("Własna nazwa, opcjonalnie")
         layout.Add(title_label, 0, wx.LEFT | wx.RIGHT | wx.TOP, 10)
         layout.Add(self.title_field, 0, wx.ALL | wx.EXPAND, 10)
+
+        self.status_label = wx.StaticText(panel, label="Gotowe do sprawdzenia")
+        self.status_label.SetName("Gotowe do sprawdzenia")
+        layout.Add(self.status_label, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 10)
         panel.SetSizer(layout)
 
         buttons = wx.StdDialogButtonSizer()
-        add_button = wx.Button(self, wx.ID_OK, label="&Sprawdź i dodaj")
-        add_button.SetName("Sprawdź i dodaj źródło")
-        add_button.SetDefault()
-        cancel = wx.Button(self, wx.ID_CANCEL, label="&Anuluj")
-        cancel.SetName("Anuluj dodawanie źródła")
-        buttons.AddButton(add_button)
-        buttons.AddButton(cancel)
+        self.add_button = wx.Button(self, wx.ID_OK, label="&Sprawdź i dodaj")
+        self.add_button.SetName("Sprawdź i dodaj źródło")
+        self.add_button.SetDefault()
+        self.cancel_button = wx.Button(self, wx.ID_CANCEL, label="&Anuluj")
+        self.cancel_button.SetName("Anuluj dodawanie źródła")
+        buttons.AddButton(self.add_button)
+        buttons.AddButton(self.cancel_button)
         buttons.Realize()
 
         outer = wx.BoxSizer(wx.VERTICAL)
@@ -2769,11 +2796,67 @@ class PodcastSourceDialog(wx.Dialog):
         self.SetSizer(outer)
         self.SetMinSize((620, 360))
         self.Fit()
+        self._busy = False
+        self._submit: Callable[[str, str], None] | None = None
+        self._payload: dict = {}
+        self.add_button.Bind(wx.EVT_BUTTON, self._on_add)
+        self.Bind(wx.EVT_CLOSE, self._on_close)
         self.address_field.SetFocus()
 
     @property
     def values(self) -> tuple[str, str]:
         return self.address_field.GetValue().strip(), self.title_field.GetValue().strip()
+
+    @property
+    def payload(self) -> dict:
+        return dict(self._payload)
+
+    def run_modal(self, submit: Callable[[str, str], None]) -> int:
+        """Pozostaw formularz otwarty przez cały asynchroniczny import."""
+
+        self._submit = submit
+        return self.ShowModal()
+
+    def show_waiting(self, message: str) -> None:
+        self._busy = True
+        self.status_label.SetLabel(message)
+        self.status_label.SetName(message)
+        self.address_field.SetEditable(False)
+        self.title_field.SetEditable(False)
+        self.add_button.Enable(False)
+        self.cancel_button.Enable(False)
+        # Fokus zostaje w przewidywalnym, nazwanym polu formularza. Nie może
+        # przejść do procesu potomnego ani wrócić na listę głównego okna.
+        self.address_field.SetFocus()
+        self.Layout()
+
+    def show_error(self, message: str) -> None:
+        self._busy = False
+        self.status_label.SetLabel(message)
+        self.status_label.SetName(message)
+        self.address_field.SetEditable(True)
+        self.title_field.SetEditable(True)
+        self.add_button.Enable(True)
+        self.cancel_button.Enable(True)
+        self.address_field.SetFocus()
+        self.address_field.SelectAll()
+        self.Layout()
+
+    def finish(self, payload: dict) -> None:
+        self._payload = dict(payload)
+        self._busy = False
+        self.EndModal(wx.ID_OK)
+
+    def _on_add(self, _event: wx.CommandEvent) -> None:
+        if self._busy or self._submit is None:
+            return
+        self._submit(*self.values)
+
+    def _on_close(self, event: wx.CloseEvent) -> None:
+        if self._busy:
+            event.Veto()
+            return
+        event.Skip()
 
 
 class PodcastOpmlImportDialog(wx.Dialog):
@@ -18291,69 +18374,76 @@ class LiteFrame(wx.Frame):
             self.announcer.say("Silnik nie działa, nie mogę dodać źródła")
             return
 
+        title = ""
         with PodcastSourceDialog(self) as dialog:
-            if dialog.ShowModal() != wx.ID_OK:
+            def submit(address: str, requested_title: str) -> None:
+                nonlocal title
+                if not address:
+                    message = "Wpisz adres źródła"
+                    dialog.show_error(message)
+                    self.announcer.say(message)
+                    return
+                if self._podcast_add_pending:
+                    self.announcer.say("Dodawanie źródła już trwa")
+                    return
+
+                title = requested_title
+                self._podcast_add_pending = True
+                started = "Sprawdzanie i dodawanie źródła. Czekaj"
+                dialog.show_waiting(started)
+                self.status_field.SetLabel(started)
+                self.status_bar.show(started)
+                self.announcer.say(started)
+
+                def work() -> dict:
+                    result = client.add_podcast_source(address, requested_title)
+                    return result if isinstance(result, dict) else {}
+
+                def done(payload: dict) -> None:
+                    self._podcast_add_pending = False
+                    dialog.finish(payload)
+
+                def failed(error: Exception) -> None:
+                    self._podcast_add_pending = False
+                    message = podcast_add_error_message(error)
+                    self.status_field.SetLabel(message)
+                    self.status_bar.show(message)
+                    dialog.show_error(message)
+                    self.announcer.say(message)
+
+                self.runner.submit("podcast-add", work, done, failed)
+
+            if dialog.run_modal(submit) != wx.ID_OK:
                 return
-            address, title = dialog.values
-        if not address:
-            self.announcer.say("Wpisz adres źródła")
+            payload = dialog.payload
+
+        source_title = str(payload.get("title") or title or "źródło").strip()
+        source_label = str(payload.get("sourceLabel") or "źródło").strip()
+        count = max(0, int(payload.get("itemCount") or 0))
+        if bool(payload.get("added")):
+            change = "Dodano"
+        elif bool(payload.get("restored")):
+            change = "Ponownie dodano"
+        else:
+            change = "Zaktualizowano"
+        message = f"{change}: {source_label}: {source_title}. Pozycji: {count}"
+        self.status_field.SetLabel(message)
+        self.status_bar.show(message)
+
+        subscription_id = str(payload.get("subscriptionId") or "").strip()
+        state = self.navigator.sessions[SessionId.PODCASTS]
+        if (
+            subscription_id
+            and self.navigator.active is SessionId.PODCASTS
+            and state.view is View.LIST
+            and state.library_view is LibraryView.PODCAST_LIBRARY
+        ):
+            self._open_podcast_library(
+                preferred_id=subscription_id,
+                completion_message=message,
+            )
             return
-
-        self._podcast_add_pending = True
-        started = "Sprawdzanie i dodawanie źródła"
-        self.status_field.SetLabel(started)
-        self.status_bar.show(started)
-        self.announcer.say(started)
-
-        def work() -> dict:
-            result = client.add_podcast_source(address, title)
-            return result if isinstance(result, dict) else {}
-
-        def done(payload: dict) -> None:
-            self._podcast_add_pending = False
-            source_title = str(payload.get("title") or title or "źródło").strip()
-            source_label = str(payload.get("sourceLabel") or "źródło").strip()
-            count = max(0, int(payload.get("itemCount") or 0))
-            if bool(payload.get("added")):
-                change = "Dodano"
-            elif bool(payload.get("restored")):
-                change = "Ponownie dodano"
-            else:
-                change = "Zaktualizowano"
-            message = (
-                f"{change}: {source_label}: {source_title}. "
-                f"Pozycji: {count}"
-            )
-            self.status_field.SetLabel(message)
-            self.status_bar.show(message)
-
-            subscription_id = str(payload.get("subscriptionId") or "").strip()
-            state = self.navigator.sessions[SessionId.PODCASTS]
-            if (
-                subscription_id
-                and self.navigator.active is SessionId.PODCASTS
-                and state.view is View.LIST
-                and state.library_view is LibraryView.PODCAST_LIBRARY
-            ):
-                self._open_podcast_library(
-                    preferred_id=subscription_id,
-                    completion_message=message,
-                )
-                return
-            self.announcer.say(message)
-
-        def failed(error: Exception) -> None:
-            self._podcast_add_pending = False
-            message = (
-                str(error)
-                if isinstance(error, (HostError, HostUnavailable))
-                else "Nie udało się dodać źródła"
-            )
-            self.status_field.SetLabel(message)
-            self.status_bar.show(message)
-            self.announcer.say(message)
-
-        self.runner.submit("podcast-add", work, done, failed)
+        self.announcer.say(message)
 
     def _import_podcast_opml(self) -> None:
         """Ctrl+O w sesji podcastów: sprawdź OPML, wybierz i zaimportuj RSS."""

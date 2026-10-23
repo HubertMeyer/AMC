@@ -151,6 +151,7 @@ internal static class Program
             Equal(Path.Combine(fixture.Root, "runtime", "python.exe"), plan.StartInfo.FileName);
             Equal(false, plan.StartInfo.UseShellExecute);
             Equal(true, plan.StartInfo.CreateNoWindow);
+            Equal(ProcessWindowStyle.Hidden, plan.StartInfo.WindowStyle);
             Equal(true, plan.StartInfo.RedirectStandardOutput);
             Equal(true, plan.StartInfo.RedirectStandardError);
             Equal(false, plan.ShowCapturedOutput);

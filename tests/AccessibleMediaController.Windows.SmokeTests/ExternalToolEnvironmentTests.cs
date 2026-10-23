@@ -16,10 +16,49 @@ internal static class ExternalToolEnvironmentTests
 {
     internal static void Run()
     {
+        TestProcesMaDwieBarieryUkryciaOkna();
+        TestRzeczywistyProcesNieMaOknaGlownego();
         TestObcyWpisNiePrzechodzi();
         TestKatalogSkladnikaZostaje();
         TestNieistniejacyKatalogOdpada();
         TestPathExtMaWartosciDomyslne();
+    }
+
+    private static void TestProcesMaDwieBarieryUkryciaOkna()
+    {
+        var narzedzie = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.System),
+            "where.exe");
+        var start = ExternalToolProcess.Create(narzedzie);
+        Check(!start.UseShellExecute,
+            "Skladnik nie moze korzystac z powloki systemowej");
+        Check(start.CreateNoWindow,
+            "Skladnik nie ma przydzielac konsoli Windows");
+        Check(start.WindowStyle == ProcessWindowStyle.Hidden,
+            "Skladnik musi miec ukryte okno startowe");
+        Check(start.RedirectStandardInput
+              && start.RedirectStandardOutput
+              && start.RedirectStandardError,
+            "Strumienie skladnika musza pozostac pod kontrola AMC");
+    }
+
+    private static void TestRzeczywistyProcesNieMaOknaGlownego()
+    {
+        if (!OperatingSystem.IsWindows()) return;
+        var command = Environment.GetEnvironmentVariable("ComSpec")
+            ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "cmd.exe");
+        var start = ExternalToolProcess.Create(command);
+        start.ArgumentList.Add("/d");
+        start.ArgumentList.Add("/c");
+        start.ArgumentList.Add("ping -n 2 127.0.0.1 > nul");
+        using var process = Process.Start(start)
+            ?? throw new Exception("Nie uruchomiono atrapy procesu skladnika");
+        process.StandardInput.Close();
+        process.Refresh();
+        Check(process.MainWindowHandle == IntPtr.Zero,
+            "Atrapa skladnika utworzyla okno, ktore mogloby przejac fokus NVDA");
+        process.WaitForExit(5_000);
+        Check(process.HasExited, "Atrapa procesu skladnika nie zakonczyla sie");
     }
 
     // Rdzen poprawki: cokolwiek obcego siedzi w PATH systemu, skladnik tego

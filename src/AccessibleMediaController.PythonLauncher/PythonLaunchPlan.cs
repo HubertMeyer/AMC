@@ -27,6 +27,7 @@ internal sealed record PythonLaunchPlan(ProcessStartInfo StartInfo, bool ShowCap
             WorkingDirectory = bundle.Root,
             UseShellExecute = false,
             CreateNoWindow = true,
+            WindowStyle = ProcessWindowStyle.Hidden,
             RedirectStandardInput = true,
             RedirectStandardOutput = true,
             RedirectStandardError = true,

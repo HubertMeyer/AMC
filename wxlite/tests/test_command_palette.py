@@ -201,6 +201,48 @@ def test_ctrl_f5_has_one_precise_contextual_contract_on_every_surface() -> None:
             SESSION_LABELS[session],
         ) == f"Ctrl+F5. {description}. {SESSION_LABELS[session]}"
 
+
+def test_podcast_ctrl_n_has_one_command_contract_on_every_surface() -> None:
+    expected = "Dodaj podcast, kanał YouTube lub medium internetowe"
+    chord = Chord("N", ctrl=True)
+    assert resolve(
+        chord,
+        player_view=False,
+        radio_session=False,
+        podcast_session=True,
+    ) is Action.ADD_PODCAST_SOURCE
+
+    menu_entry = next(
+        item
+        for menu in menu_model.menus_for_session(SessionId.PODCASTS)
+        for item in menu.items
+        if item.action is Action.ADD_PODCAST_SOURCE
+    )
+    palette_entry = next(
+        item
+        for item in entries_for_session(SessionId.PODCASTS)
+        if item.action is Action.ADD_PODCAST_SOURCE
+    )
+    assert menu_entry.label.replace("&", "") == expected
+    assert menu_entry.shortcut == palette_entry.shortcut == "Ctrl+N"
+    assert palette_entry.name == expected
+    assert dict(describe("Podcasty i YouTube", {Action.ADD_PODCAST_SOURCE}))[
+        "Ctrl+N"
+    ] == expected
+    assert keyboard_help_announcement(
+        chord,
+        Action.ADD_PODCAST_SOURCE,
+        "Podcasty i YouTube",
+    ) == f"Ctrl+N. {expected}. Podcasty i YouTube"
+    assert all(
+        not any(
+            item.action is Action.ADD_PODCAST_SOURCE
+            for item in entries_for_session(session)
+        )
+        for session in SessionId
+        if session is not SessionId.PODCASTS
+    )
+
 def test_recording_views_have_one_user_facing_command_contract() -> None:
     entries = {entry.action: entry for entry in entries_for_session(SessionId.RADIO)}
 

@@ -72,18 +72,7 @@ internal static class YouTubeSourceResolver
                 "Odtwarzanie publicznego materiału YouTube wymaga składnika yt-dlp. Wybierz Pomoc, Sprawdź składniki: FFmpeg i yt-dlp.");
         }
 
-        var start = new ProcessStartInfo
-        {
-            FileName = executable,
-            UseShellExecute = false,
-            CreateNoWindow = true,
-            RedirectStandardInput = true,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            StandardOutputEncoding = Encoding.UTF8,
-            StandardErrorEncoding = Encoding.UTF8
-        };
-        ExternalToolProcess.ApplySafeEnvironment(start, executable);
+        var start = ExternalToolProcess.Create(executable);
         foreach (var argument in new[]
         {
             "--ignore-config",
@@ -203,18 +192,7 @@ internal static class YouTubeSourceResolver
         string expiredVideoUrl,
         CancellationToken cancellationToken)
     {
-        var start = new ProcessStartInfo
-        {
-            FileName = executable,
-            UseShellExecute = false,
-            CreateNoWindow = true,
-            RedirectStandardInput = true,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            StandardOutputEncoding = Encoding.UTF8,
-            StandardErrorEncoding = Encoding.UTF8
-        };
-        ExternalToolProcess.ApplySafeEnvironment(start, executable);
+        var start = ExternalToolProcess.Create(executable);
         foreach (var argument in new[]
         {
             "--ignore-config",

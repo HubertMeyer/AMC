@@ -42,18 +42,7 @@ internal static class YouTubeMediaDownloader
         var outputTemplate = stagingBase + ".%(ext)s";
         var expectedStagingPath = stagingBase + ".mp3";
 
-        var start = new ProcessStartInfo
-        {
-            FileName = ytDlp,
-            UseShellExecute = false,
-            CreateNoWindow = true,
-            RedirectStandardInput = true,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            StandardOutputEncoding = Encoding.UTF8,
-            StandardErrorEncoding = Encoding.UTF8
-        };
-        ExternalToolProcess.ApplySafeEnvironment(start, ytDlp);
+        var start = ExternalToolProcess.Create(ytDlp);
         foreach (var argument in new[]
         {
             "--ignore-config",

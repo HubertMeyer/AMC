@@ -2,12 +2,22 @@
 
 ## Status
 
-Poprawka jest zbudowana, zweryfikowana i zainstalowana w zbiorczym AMC Test
-2026-10-23; czeka na ponowny ręczny odbiór NVDA z prawdziwym adresem.
-Wcześniejszy odbiór ujawnił błąd w AMC Test z 2026-10-22:
-`https://www.youtube.com/@WieniawskiSociety` kończył się komunikatem
-„Nie można dodać źródła: Adres YouTube nie prowadzi do publicznego kanału ani
-playlisty.” Nowa instalacja zawiera poprawkę idempotentnej normalizacji `%40`.
+**Korekta z 2026-10-23 po ręcznym zgłoszeniu NVDA jest gotowa w źródłach,
+zbudowana i zweryfikowana automatycznie na gałęzi
+`task/youtube-import-nvda`. Nie została zainstalowana ani uruchomiona jako
+AMC Test. AMC Public, instalator i GitHub również pozostały bez zmian.**
+
+Zgłoszenie potwierdziło, że kanał Wieniawski został dodany, ale podczas
+oczekiwania NVDA wypowiedział techniczny komunikat przypominający „Windows 32”
+i uruchamianie terminala, po czym użytkownik znów znalazł się na ekranie AMC.
+Nowa korekta utrzymuje formularz modalny przez całą operację, stabilizuje fokus,
+blokuje ponowne zatwierdzenie, ukrywa procesy potomne dwiema niezależnymi
+barierami Windows i nie przekazuje technicznych szczegółów do zwykłej mowy.
+
+Wcześniejsza instalacja AMC Test z 2026-10-23 zawierała wyłącznie poprawkę
+idempotentnej normalizacji `%40`. Jej status „zainstalowana i czeka tylko na
+odbiór” zostaje zastąpiony przez niniejszy zapis, ponieważ nie zawierała nowej
+korekty formularza, fokusu i procesów potomnych.
 
 ## Zachowanie widoczne dla użytkownika
 
@@ -21,9 +31,22 @@ Obsługiwany jest również zwykły adres kanału z uchwytem, na przykład
 `https://www.youtube.com/@NazwaKanału`. Pomoc w formularzu podaje ten format
 wprost.
 
-Podczas operacji przycisk jest zablokowany, aby drugi Enter nie uruchomił
-duplikatu. Błąd pozostawia formularz otwarty do poprawienia adresu. Sukces jest
-potwierdzany komunikatem o dodaniu i zapisaniu źródła.
+Po pierwszym Enterze formularz pozostaje otwarty. Pola adresu i nazwy stają się
+tylko do odczytu, fokus pozostaje w nazwanym polu adresu, a przyciski
+**Sprawdź i dodaj** oraz **Anuluj** są zablokowane. Status i mowa podają
+„Sprawdzanie i dodawanie źródła. Czekaj”. Drugi Enter jest ignorowany i nie
+może przejść do listy głównego okna.
+
+Po błędzie ten sam formularz nadal jest otwarty, pole adresu znów jest
+edytowalne, zaznaczone i ma fokus. Po sukcesie formularz zamyka się dokładnie
+raz, Biblioteka zostaje otwarta na zapisanym źródle, a NVDA podaje wynik bez
+prywatnego identyfikatora. Ponowne `Ctrl+N` tworzy świeży formularz z początkowym
+fokusem w polu adresu.
+
+Procesy hosta, `yt-dlp`, FFmpeg i pakietowego Pythona nie mogą tworzyć ani
+aktywować okna konsoli. Komunikat błędu przeznaczony do zwykłej mowy nie ujawnia
+nazwy procesu, terminala, `Win32` lub „Windows 32”, ścieżki ani reprezentacji
+obiektu.
 
 ## Uzasadnienie i decyzje
 
@@ -42,66 +65,115 @@ potwierdzany komunikatem o dodaniu i zapisaniu źródła.
   jest idempotentna: adres użytkownika i jego stabilna postać `%40…/videos`
   prowadzą do tego samego kanału. Odkodowane ukośniki i inne znaki spoza
   bezpiecznego alfabetu nadal są odrzucane.
+- **Korekta użytkownika z 2026-10-23 zastępuje wcześniejszą ocenę, że po
+  poprawce `%40` przebieg wymaga już tylko powtórnego odbioru.** Formularz
+  korzystał z modalnego wyniku `wx.ID_OK`, dlatego pierwszy Enter zamykał go
+  przed rozpoczęciem pracy asynchronicznej. Użytkownik widział ponownie główne
+  okno, a drugi Enter mógł trafić na jego kontrolkę. Operacja działała, lecz jej
+  stan nie miał już własnego, stabilnego miejsca fokusu.
+- Formularz posiada teraz własny stan oczekiwania i kończy modal dopiero po
+  sukcesie. W trakcie pracy nie można zatwierdzić ani zamknąć formularza;
+  niepowodzenie przywraca edycję i fokus bez tworzenia kolejnego okna.
+- Samo `CreateNoWindow` nie jest jedyną barierą. Wspólna fabryka procesów C#
+  ustawia również ukryty styl okna, klient hosta Python przekazuje
+  `STARTUPINFO` z `SW_HIDE`, a launcher pakietowego Pythona stosuje tę samą
+  politykę. Audyt objął wszystkie uruchomienia `yt-dlp`, FFmpeg, LiteHosta i
+  pakietowego Pythona; wywołania narzędzi C# dziedziczą politykę z jednego
+  miejsca.
+- Techniczny tekst wyjątku jest oddzielony od komunikatu dla użytkownika.
+  Bezpieczny opis domenowy hosta może pozostać, lecz ścieżki, nazwy procesów,
+  terminal, `Win32`/„Windows 32” i reprezentacje obiektów są zastępowane
+  neutralną instrukcją dalszego działania.
 - Polecenie, skrót i menu pozostają filtrowane przez sesję. `Ctrl+N` w innych
-  sesjach może oznaczać inną, kontekstową czynność.
+  sesjach może oznaczać inną, kontekstową czynność. Test parytetu porównuje
+  resolver skrótu, menu, paletę poleceń, pomoc kontekstową i pełną pomoc
+  klawiatury.
 
 ## Testy i wynik
 
-- Dodano deterministyczną regresję dokładnego adresu
-  `https://www.youtube.com/@WieniawskiSociety` oraz ponownej normalizacji
-  `https://www.youtube.com/%40WieniawskiSociety/videos`.
-- Ukierunkowana kompilacja testów C# Release: **0 ostrzeżeń, 0 błędów**.
+### Korekta fokusu i procesów z 2026-10-23
+
+- Celowane testy formularza, klienta hosta, menu, skrótu i palety w
+  udokumentowanym środowisku `uv`: **145 zaliczonych, 0 nieudanych**.
+- Pełna regresja wxLite: **1961 zaliczonych, 139 pominiętych i 11 podtestów
+  zaliczonych** w 3 min 19 s. Testy pominięte wymagają opcjonalnych usług,
+  składników lub jawnych zmiennych środowiskowych.
+- Po doprecyzowaniu filtra dokładnej formy „Windows 32” ponownie uruchomiono
+  testy formularza: **7 zaliczonych, 0 nieudanych**.
+- Rzeczywisty LiteHost Release z lokalnym serwerem RSS i tymczasową bazą:
+  **1 zaliczony, 1 prawidłowo pominięty**. Pominięto tylko opcjonalny test
+  sieciowy YouTube, ponieważ `AMC_LIVE_YOUTUBE_ADDRESS` był jawnie usunięty.
+- Testy launchera i aktualizatora: **30/30 zaliczonych**. Sprawdzają także
+  `CreateNoWindow` i ukryty styl startowy pakietowego Pythona.
+- Testy protokołu LiteHosta: **27/27 zestawów zaliczonych**. Wypisany stos
+  kontrolowanego wyjątku pochodził z testu zamiany awarii handlera na odpowiedź,
+  a nie z niepowodzenia zestawu.
+- Kompilacja Release testów Windows: **0 ostrzeżeń, 0 błędów**. Izolowany test
+  uruchomił atrapę procesu przez wspólną fabrykę, potwierdził brak głównego
+  okna i zakończył się kodem 0. Test pozostał częścią zwykłego zestawu smoke.
 - Ukierunkowany test `--youtube-collection-normalization`: **zaliczony**.
-- Kompilacja LiteHost Release używanego przez AMC Test: **0 ostrzeżeń,
-  0 błędów**.
-- Testy formularza, skrótu, menu, klienta hosta i lokalnego RSS:
-  **6 zaliczonych, 0 nieudanych, 1 prawidłowo pominięty test sieciowy**.
-- Jawnie włączony test sieciowy rzeczywistego LiteHosta z tymczasową bazą:
-  **2 zaliczone, 0 nieudanych, 0 pominiętych**. Kanał został rozpoznany jako
-  `UCpFEKtbJxKnsOcraylnuNsA`, miał nazwę „Wieniawski Society - Videos” i został
-  zapisany pod stabilnym adresem `%40…/videos`.
-- Osobne odczytowe uruchomienie zarządzanego składnika `yt-dlp` na stabilnym
-  adresie zwróciło materiał kanału. Potwierdza to, że wcześniejszy błąd
-  występował przed uruchomieniem `yt-dlp`, a nie w odpowiedzi YouTube.
-- Zbiorcza promocja 2026-10-23: **30/30** testów launchera i aktualizatora,
-  pełna regresja Pythona **1983 zaliczone, 111 pominiętych i 11 podtestów
-  zaliczonych**, kompilacje Release bez ostrzeżeń i błędów, kontrolowany start
-  kandydata oraz zainstalowanej kopii: OK.
-- Ponowna promocja najnowszego `HEAD` `1badabbe` zawierała wyłącznie dwa
-  późniejsze commity dokumentacyjne. Niezmienionych testów nie uruchamiano
-  ponownie; trzy składniki Release zbudowano od nowa, a kandydat i stała
-  instalacja ponownie zaliczyły pełną integralność oraz kontrolowany start.
+- Kompilacja LiteHost Release: **0 ostrzeżeń, 0 błędów**.
+- `git diff --check`: **bez błędów**.
+- Pierwsza próba przez systemowy Python nie była miarodajną regresją: wykonała
+  **198 testów poprawnie i 2 pominęła**, po czym 6 modułów nie zaimportowało się
+  z powodu braku pakietu `pytest`. Wszystkie właściwe wyniki powyżej pochodzą z
+  wymaganego środowiska `uv --with pytest --with wxpython`.
+- Nie uruchamiano żywego AMC, instalatora ani sieciowego importu YouTube. Nie
+  użyto biblioteki użytkownika; testy korzystały z atrap i katalogów
+  tymczasowych.
+
+### Wcześniejsza weryfikacja poprawki `%40`
+
+- Deterministyczna regresja obejmuje dokładny adres
+  `https://www.youtube.com/@WieniawskiSociety` oraz ponowną normalizację
+  `https://www.youtube.com/%40WieniawskiSociety/videos`.
+- Wcześniejszy, jawnie włączony test sieciowy rozpoznał kanał jako
+  `UCpFEKtbJxKnsOcraylnuNsA`, nazwę „Wieniawski Society - Videos” i stabilny
+  adres `%40…/videos`. Ten historyczny wynik nie zastępuje ręcznego odbioru ani
+  nie dowodzi zachowania nowej korekty fokusu i procesów.
+- Wcześniejsza instalacja `1badabbe` przeszła pełną integralność i kontrolowany
+  start, lecz nie zawiera commita bieżącej korekty.
 
 ## Znane ograniczenia
 
-- Poprawiona kompilacja została zainstalowana, ale nie została jeszcze odebrana
-  ręcznie z NVDA. Dotychczasowy ręczny odbiór dotyczył wersji z błędem i jest
-  dowodem regresji, nie zaliczeniem poprawki.
+- Bieżąca korekta nie została zainstalowana ani uruchomiona jako AMC. Wymaga
+  ręcznego odbioru NVDA obejmującego początkowy fokus, stan oczekiwania, drugi
+  Enter, błąd, sukces, powrót fokusu i ponowne otwarcie formularza.
+- Automaty sprawdzają nazwy dostępności, stany kontrolek, routing polecenia i
+  parametry tworzenia procesów, ale nie zastępują rzeczywistej mowy NVDA ani
+  obserwacji krótkiego przejęcia fokusu na komputerze użytkownika.
+- Sieciowego importu YouTube nie powtarzano dla tej korekty. Poprzedni wynik
+  prawdziwego kanału potwierdza normalizację i usługę, nie nową obsługę okna.
 - Rzeczywisty import zależy od dostępności publicznego materiału i odpowiedzi
   YouTube oraz `yt-dlp`. Materiał prywatny albo wymagający logowania nie jest
   traktowany jako publiczne źródło.
+- Pliki `bin` i `obj` powstałe podczas weryfikacji pozostają w worktree do
+  akceptacji wyniku; nie są instalacją ani paczką wydania.
 
 ## Wersja i commit
 
-- Bazowy commit roboczego repozytorium podczas poprawki:
-  `b94805a51dda69ec6bf52d5d776fa6d0693aa188`.
-- Commit poprawki źródeł i testów:
-  `7f4a7d156cc05d90005f78d613c224a21d663160`.
-- Zainstalowany kandydat zawierający poprawkę:
-  `2026.10.23-1badabbeeacde3d8853457683ef750d558b3f1fd-7353e273`,
-  1670 plików.
-- Stała lokalizacja: `D:\Projekty Codex\AMC Python`.
-- Potwierdzony tytuł: `AMC Test — 23.10.2026, 00:22`.
-- AMC Public, instalator i publikacja: bez zmian.
+- Bazowy commit bieżącej korekty:
+  `609aa64447c6eb2c8775341157ef243952b61942`.
+- Commit bieżącej poprawki źródeł i testów:
+  `f6d3389f2e240aa7e7fe63f4378f6d8121c0d5c3`.
+- Gałąź: `task/youtube-import-nvda`; wyłączny worktree:
+  `D:\Projekty Codex\AMC worktrees\youtube-import-nvda`.
+- Wcześniejszy zainstalowany kandydat `%40`:
+  `2026.10.23-1badabbeeacde3d8853457683ef750d558b3f1fd-7353e273`.
+  Nie zawiera bieżącego commita.
+- Bieżąca korekta: bez instalacji, bez uruchomienia żywego AMC, bez zmiany AMC
+  Test, AMC Public, instalatora i GitHub.
 
 ## Materiał do dokumentacji użytkownika
 
 W sesji **Podcasty i YouTube** naciśnij `Ctrl+N`, wpisz pełny publiczny adres,
 na przykład `https://www.youtube.com/@NazwaKanału`, i naciśnij Enter na
-przycisku **Sprawdź i dodaj**. AMC sam rozpoznaje kanał, uruchamia `yt-dlp`,
-pobiera najwyżej 100 najnowszych materiałów i zapisuje kanał w Bibliotece.
-Podczas operacji drugi Enter nie uruchamia duplikatu. Po powodzeniu NVDA podaje
-rodzaj źródła, nazwę i liczbę pozycji. Błąd pozostawia formularz do poprawienia.
+przycisku **Sprawdź i dodaj**. AMC sam rozpoznaje źródło, pobiera najwyżej 100
+najnowszych materiałów i zapisuje je w Bibliotece. Formularz pozostaje otwarty,
+a NVDA mówi „Sprawdzanie i dodawanie źródła. Czekaj”. Podczas operacji drugi
+Enter nie uruchamia duplikatu. Po powodzeniu NVDA podaje rodzaj źródła, nazwę i
+liczbę pozycji, a fokus przechodzi do zapisanego źródła w Bibliotece. Błąd
+pozostawia formularz do poprawienia z fokusem i zaznaczeniem w polu adresu.
 Funkcja działa bez logowania i bez cookies; kanały prywatne lub wymagające
 logowania nie są obsługiwane.
 
@@ -110,3 +182,9 @@ logowania nie są obsługiwane.
 - Naprawiono import kanałów YouTube z adresów zawierających uchwyt `@` pod
   `Ctrl+N`. Stabilny, zakodowany adres `%40…/videos` może być ponownie
   sprawdzony bez błędnego odrzucenia kanału przed uruchomieniem `yt-dlp`.
+- Po zgłoszeniu NVDA z 2026-10-23 formularz `Ctrl+N` pozostaje otwarty przez
+  całe sprawdzanie, blokuje drugi Enter, zachowuje przewidywalny fokus i kończy
+  się dopiero sukcesem. Błąd przywraca pole adresu. Procesy pomocnicze są
+  uruchamiane bez okna, a zwykła mowa nie ujawnia terminala, `Win32`, ścieżek
+  ani nazw technicznych. Korekta jest tylko na gałęzi i nie została
+  zainstalowana.
