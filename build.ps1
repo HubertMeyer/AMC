@@ -108,7 +108,7 @@ if ($Publish) {
         if (-not (Test-Path -LiteralPath $librespotHostBinary)) {
             throw "Brak natywnego hosta Librespot: $librespotHostBinary"
         }
-        $librespotHostExpectedSha256 = "f5b614f01d8943b5872d9a2bb86658761198b763bb25c1647aa79268a2473c8e"
+        $librespotHostExpectedSha256 = "0fde62641c16de6e35ac25962b756f868dd7fd36643e71661f849c231d55c15a"
         $librespotHostActualSha256 = (Get-FileHash -LiteralPath $librespotHostBinary -Algorithm SHA256).Hash.ToLowerInvariant()
         if ($librespotHostActualSha256 -ne $librespotHostExpectedSha256) {
             throw "Spakowany host Librespot nie jest binarka z proweniencji. Oczekiwano $librespotHostExpectedSha256, jest $librespotHostActualSha256."

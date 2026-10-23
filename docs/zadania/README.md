@@ -52,6 +52,14 @@ jawnym poleceniu użytkownika albo przez osobno uzgodniony harmonogram.
   prędkość osobno dla Plików i Podcastów. Szczegóły:
   [SESSION-001-opcje-sesji-i-predkosc.md](SESSION-001-opcje-sesji-i-predkosc.md).
 
+- `SPOT-001` — **W trakcie; kod, testy natywnego DSP, 204 testy interfejsu i
+  pełna kompilacja Release są zaliczone; przypięty host AMC Test jest gotowy,
+  lecz nowy pakiet nie został jeszcze zainstalowany ani odebrany słuchowo** —
+  prawdziwa prędkość `0,5–2,0x` w wewnętrznym odtwarzaczu Spotify, wspólne
+  skróty `Shift+,`, `Shift+.` i `Ctrl+.`, menu, pomoc, paleta oraz dostępne
+  etykiety wartości. Szczegóły:
+  [SPOT-001-predkosc-odtwarzania.md](SPOT-001-predkosc-odtwarzania.md).
+
 Roboczy indeks materiału z nocnych etapów do przyszłej instrukcji i opisu
 zmian, wymagający korekty użytkownika:
 [INDEKS-MATERIALU-INSTRUKCJA-I-ZMIANY-2026-10-19.md](INDEKS-MATERIALU-INSTRUKCJA-I-ZMIANY-2026-10-19.md).

@@ -6,6 +6,18 @@ korekta źródłowa w commicie `3e57b686` zawsze wymaga jawnego wyboru wykrytego
 urządzenia; przeszła testy, lecz nie została jeszcze zbudowana ani
 zainstalowana.**
 
+**Korekta nadrzędna z 23.10.2026, późny odbiór:** AMC znalazł Teufel RADIO
+3SIXTY, pokazał listę wyboru i po Enterze prawidłowo skupił pole PIN. To
+zastępuje wcześniejsze przypuszczenie, że wykrywanie sprzętu nadal nie działa.
+Użytkownik zatrzymał próbę, ponieważ nie wiedział, jaki kod wpisać. Oficjalna
+instrukcja Teufela wyjaśnia, że jest to czterocyfrowy PIN NetRemote, nie hasło
+Wi-Fi; wartość fabryczna to `1234`, a ustawienie znajduje się w radiu pod
+`Ustawienia systemowe → Sieć → Ustawienia NetRemote PIN`:
+<https://cdn.teufelaudio.com/products/Radio_3sixty/ECN/Teufel-Radio_3sixty_UM_V5.0_PL_web>.
+Kod AMC Test zawiera teraz tę informację w komunikacie po wykryciu Teufela i w
+nazwie dostępnościowej pola. Zmiana ma testy źródłowe, ale czeka na nową
+instalację i ręczne połączenie PIN-em `1234`.
+
 **Korekta użytkownika z 23.10.2026 po odbiorze instalacji 11:24:** podczas
 wyszukiwania urządzeń fokus przechodził na przycisk „Zamknij” albo „Wstecz”,
 przez co interfejs sprawiał wrażenie niezmienionego. Przyczyną było wyłączenie

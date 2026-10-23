@@ -536,7 +536,7 @@ def test_pinned_librespot_source_matches_local_provenance_and_license_inventory(
     assert provenance["sha256"] == bundle.LIBRESPOT_HOST_SHA256
     assert provenance["amcCommit"] == bundle.LIBRESPOT_AMC_COMMIT
     assert provenance["librespotRev"] == bundle.LIBRESPOT_REVISION
-    assert provenance["runUrl"] == bundle.LIBRESPOT_RUN_URL
+    assert provenance["build"] == bundle.LIBRESPOT_BUILD
 
 
 def test_librespot_provenance_mismatch_refuses_before_writing_package():

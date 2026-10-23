@@ -15,12 +15,12 @@ pobiera nic z sieci.
 | Pole | Wartość |
 | --- | --- |
 | Nazwa pliku | `amc_spotify_librespot_host.exe` |
-| Rozmiar | 6 541 312 B |
-| SHA-256 | `f5b614f01d8943b5872d9a2bb86658761198b763bb25c1647aa79268a2473c8e` |
+| Rozmiar | 6 595 072 B |
+| SHA-256 | `0fde62641c16de6e35ac25962b756f868dd7fd36643e71661f849c231d55c15a` |
 | Cel kompilacji | `x86_64-pc-windows-msvc`, statyczny CRT |
 | librespot | 0.8.0, rewizja `d36f9f1907e8cc9d68a93f8ebc6b627b1bf7267d` |
-| Rewizja AMC | `791c8dbf2b3279f1bb8fee9220bf95d714168c96` |
-| Kompilacja | GitHub Actions, przebieg [35381167099](https://github.com/michalkasperczak/AMC/actions/runs/35381167099) |
+| Rewizja AMC | `4505f325d5eec7df6f520ee156ee79214882df38` |
+| Kompilacja | Lokalna przypięta kompilacja Release offline dla AMC Test; bez publikacji |
 | `rustc` | 1.98.1 (48a229cea 2026-09-01) |
 
 Pełny odczyt z kompilacji leży obok binarki w `win-x64/provenance-amc-host.json`
@@ -74,7 +74,8 @@ scripts/test-pakowanie-librespot.sh <katalog-publikacji>
 
 ## Aktualizacja binarki
 
-1. Zbuduj hosta w CI (nie ręcznie) i zapisz przebieg oraz rewizje.
+1. Dla AMC Public zbuduj hosta w CI. Lokalny kandydat AMC Test może powstać w
+   przypiętym środowisku offline, jeżeli proweniencja jasno odróżnia go od CI.
 2. Podmień plik, `provenance-amc-host.json` i tabelę wyżej.
 3. Zaktualizuj `LibrespotHostExpectedSha256` w `csproj` oraz `EXPECTED_SHA`
    i `EXPECTED_SIZE` w skrypcie testu — inaczej budowanie odmówi.

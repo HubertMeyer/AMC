@@ -73,13 +73,13 @@ LIBRESPOT_LICENSES_SOURCE = REPO / "licenses"
 LIBRESPOT_HOST_BINARY = "amc_spotify_librespot_host.exe"
 LIBRESPOT_HOST_PROVENANCE = "provenance-amc-host.json"
 LIBRESPOT_HOST_SHA256 = (
-    "f5b614f01d8943b5872d9a2bb86658761198b763bb25c1647aa79268a2473c8e"
+    "0fde62641c16de6e35ac25962b756f868dd7fd36643e71661f849c231d55c15a"
 )
-LIBRESPOT_HOST_SIZE = 6_541_312
-LIBRESPOT_AMC_COMMIT = "791c8dbf2b3279f1bb8fee9220bf95d714168c96"
+LIBRESPOT_HOST_SIZE = 6_595_072
+LIBRESPOT_AMC_COMMIT = "4505f325d5eec7df6f520ee156ee79214882df38"
 LIBRESPOT_REVISION = "d36f9f1907e8cc9d68a93f8ebc6b627b1bf7267d"
-LIBRESPOT_RUN_URL = (
-    "https://github.com/michalkasperczak/AMC/actions/runs/35381167099"
+LIBRESPOT_BUILD = (
+    "lokalna przypięta kompilacja Release offline dla AMC Test; bez publikacji"
 )
 PROFILE_GATED_SERVICE_MODULES = {
     "frontier_smart_source.py": "session.frontier-smart",
@@ -428,7 +428,7 @@ def validate_librespot_package_source(
         "protocolVersion": 1,
         "sessionId": "spotifyLibrespot",
         "amcCommit": LIBRESPOT_AMC_COMMIT,
-        "runUrl": LIBRESPOT_RUN_URL,
+        "build": LIBRESPOT_BUILD,
         "rustc": "rustc 1.98.1 (48a229cea 2026-09-01)",
     }
     mismatches = [

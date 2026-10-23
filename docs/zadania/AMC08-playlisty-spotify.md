@@ -494,3 +494,20 @@ jest potwierdzony na tym komputerze. Pozostaje ręczny odsłuch pierwszego
 odtworzenia Spotify i odbiór jednorazowego komunikatu NVDA. Publikacji nie
 wykonano. Pełny zapis:
 [AMC-TEST-2026-10-23-1630-spotify-output-youtube-oauth.md](AMC-TEST-2026-10-23-1630-spotify-output-youtube-oauth.md).
+
+## Późny odbiór Spotify — 23 października 2026
+
+Użytkownik potwierdził prawidłowe wczytanie 150 odcinków Tyflo Podcast oraz
+ich odtwarzanie. Natywne rozdziały Spotify nadal nie działają; na wyraźną
+decyzję użytkownika pozostają bez dalszej zmiany i nie wolno przedstawiać ich
+jako ukończonych.
+
+Druga próba po odłączeniu Denona nie rozstrzygnęła działania fallbacku. Start
+dźwięku mógł być opóźniony przez pobieranie odcinka, dlatego nie cofamy
+wcześniejszej korekty i nie uznajemy jej też za odebraną. Ręczny test powinien
+zostać powtórzony po zimnym starcie AMC Test, z nieobecnym Denonem i krótkim,
+wcześniej odtwarzanym materiałem; trzeba sprawdzić pierwsze odtworzenie,
+rzeczywiście użyte urządzenie oraz jednorazowy komunikat NVDA.
+
+Prędkość odtwarzania wewnętrznego silnika Spotify została wydzielona do
+zadania [SPOT-001-predkosc-odtwarzania.md](SPOT-001-predkosc-odtwarzania.md).
