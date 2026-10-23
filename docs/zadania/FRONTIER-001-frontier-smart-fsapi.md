@@ -537,8 +537,10 @@ przerywa operację bez usunięcia urządzenia z profilu i bez komunikatu sukcesu
 
 Ukierunkowany zestaw kontraktu Frontier Smart przeszedł **1/1**. Kompilacja
 LiteHost Release przeszła z **0 ostrzeżeń i 0 błędów**. Jest to na razie
-zweryfikowana i skompilowana zmiana źródłowa; ręczny odbiór usuwania oraz nowa
-instalacja AMC Test nie zostały jeszcze wykonane.
+zweryfikowana zmiana źródłowa. Późniejsza promocja tego samego dnia zbudowała
+i atomowo zainstalowała dokładny commit `9e8d3eab` jako AMC Test 22:41;
+kontrolowany start został zaliczony. Ręczny odbiór usuwania nadal pozostaje do
+wykonania.
 
 ## Migracja, wersja i commit
 
@@ -569,7 +571,7 @@ wyboru także dla jednego wyniku: `3e57b68656ee06c1742a3775bac3d810f792646f`
 — `fix(amc): domknij OAuth YouTube i wybor Frontier`.
 Korekta obsługi błędu usuwania PIN-u: `9e8d3eab643b579215719bc52ac77b215f0c6fea`
 — `fix(amc-test): dopracuj PIN Frontier i start Spotify`.
-Zainstalowana kompilacja AMC Test:
-`2026.10.23-591322e2f85c0a07634733c6164fa4cc6a336595-53e3d987`.
+Najnowsza zainstalowana kompilacja AMC Test:
+`2026.10.23-9e8d3eab643b579215719bc52ac77b215f0c6fea-ce7898a4`.
 Nie publikować ani nie promować do profilu publicznego bez nowej zgody
 użytkownika.

@@ -54,12 +54,14 @@ jawnym poleceniu użytkownika albo przez osobno uzgodniony harmonogram.
 
 - `SPOT-001` — **W trakcie; kod, testy natywnego DSP, 204 testy interfejsu,
   pełna kompilacja Release, atomowa instalacja i uruchomienie AMC Test 22:20
-  są zaliczone. Późniejszy komunikat przygotowania po Enter ma 33/33 testy,
-  lecz czeka na instalację; pozostał ręczny odsłuch i odbiór NVDA** —
+  są zaliczone. Późniejszy komunikat przygotowania po Enter ma 33/33 testy i
+  jest zainstalowany w AMC Test 22:41; pozostał ręczny odsłuch i odbiór NVDA** —
   prawdziwa prędkość `0,5–2,0x` w wewnętrznym odtwarzaczu Spotify, wspólne
   skróty `Shift+,`, `Shift+.` i `Ctrl+.`, menu, pomoc, paleta oraz dostępne
   etykiety wartości. Szczegóły:
   [SPOT-001-predkosc-odtwarzania.md](SPOT-001-predkosc-odtwarzania.md).
+  Bieżąca instalacja:
+  [AMC-TEST-2026-10-23-2241-frontier-pin-spotify-start.md](AMC-TEST-2026-10-23-2241-frontier-pin-spotify-start.md).
 
 Roboczy indeks materiału z nocnych etapów do przyszłej instrukcji i opisu
 zmian, wymagający korekty użytkownika:
@@ -306,8 +308,8 @@ zmian, wymagający korekty użytkownika:
 - `FRONTIER-001` — **Odbiór potwierdził wykrywanie Teufela, listę wyboru i
   fokus pola PIN. Poprawka wyjaśniająca PIN NetRemote (`1234` fabrycznie) jest
   zainstalowana w AMC Test 23.10.2026, 22:20. Późniejsza korekta nieudanej
-  operacji usuwania PIN-u ma test kontraktu i kompilację Release, lecz czeka na
-  instalację; pozostało ręczne połączenie i odbiór dalszej nawigacji NVDA** —
+  operacji usuwania PIN-u ma test kontraktu, kompilację Release i instalację
+  AMC Test 22:41; pozostało ręczne połączenie i odbiór dalszej nawigacji NVDA** —
   `Ctrl+8`, `Ctrl+F5` i ręczny adres korzystają z jednego modelu stanów.
   AMC wymaga potwierdzonego opisu FSAPI/UNDOK i użytkowej nazwy urządzenia,
   zanim pokaże pole PIN. Brak wyniku i błąd nie prowadzą do PIN-u. Po zapisaniu
@@ -316,7 +318,7 @@ zmian, wymagający korekty użytkownika:
   Szczegóły:
   [FRONTIER-001-frontier-smart-fsapi.md](FRONTIER-001-frontier-smart-fsapi.md).
   Bieżąca instalacja:
-  [AMC-TEST-2026-10-23-2220-spotify-tempo-frontier-pin.md](AMC-TEST-2026-10-23-2220-spotify-tempo-frontier-pin.md).
+  [AMC-TEST-2026-10-23-2241-frontier-pin-spotify-start.md](AMC-TEST-2026-10-23-2241-frontier-pin-spotify-start.md).
 - `ARC-001` — **Oczekuje** — wspólny rdzeń poleceń dla GUI, palety, NVDA,
   przyszłego CLI i lokalnego sterowania AI. Szczegóły:
   [ARC-001-wspolny-rdzen-polecen-cli-ai.md](ARC-001-wspolny-rdzen-polecen-cli-ai.md).

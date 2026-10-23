@@ -102,8 +102,9 @@ dopiero zdarzenie `playback.started`. Dzięki temu kilkusekundowe pobieranie i
 rozruch nie wyglądają dla użytkownika NVDA jak zawieszenie programu.
 
 Ukierunkowane testy interfejsu Spotify przeszły **33/33**. Korekta jest w
-commicie `9e8d3eab643b579215719bc52ac77b215f0c6fea`. Jest to na razie zmiana
-źródłowa po testach; nie została jeszcze zainstalowana w AMC Test.
+commicie `9e8d3eab643b579215719bc52ac77b215f0c6fea`. Późniejsza promocja tego
+samego dnia zbudowała i atomowo zainstalowała dokładnie ten commit jako AMC
+Test 22:41; integralność oraz kontrolowany start zostały zaliczone.
 
 Rozdziałów nie rozszerzono. Obiekt odcinka używany przez bieżący katalog i
 przypięty silnik nie dostarczają natywnej listy rozdziałów. AMC nadal może je
@@ -124,5 +125,5 @@ kontraktu i nie odzyskałoby brakujących danych.
 - Lokalny host Release AMC Test: 6 595 072 B, SHA-256
   `0fde62641c16de6e35ac25962b756f868dd7fd36643e71661f849c231d55c15a`.
 - Zainstalowany pakiet AMC Test:
-  `2026.10.23-591322e2f85c0a07634733c6164fa4cc6a336595-53e3d987`.
+  `2026.10.23-9e8d3eab643b579215719bc52ac77b215f0c6fea-ce7898a4`.
 - AMC Public i GitHub: bez zmian; niczego nie opublikowano.
