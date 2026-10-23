@@ -2088,6 +2088,19 @@ def describe_action(action: Action, session_label: str | None = None) -> str:
     ctrl_f5 = ctrl_f5_presentation(session_label)
     if ctrl_f5 is not None and ctrl_f5.action is action:
         return ctrl_f5.description
+    if (session_label or "").casefold() == "spotify":
+        spotify_chapter_labels = {
+            Action.VIEW_CHAPTERS:
+                "Pokaż rozdziały użytkownika oraz, w odcinku, znaczniki czasu z opisu",
+            Action.ADD_NAMED_CHAPTER:
+                "Dodaj nazwany rozdział użytkownika w bieżącym miejscu",
+            Action.PREVIOUS_CHAPTER:
+                "Poprzedni rozdział użytkownika albo, w odcinku, znacznik czasu z opisu",
+            Action.NEXT_CHAPTER:
+                "Następny rozdział użytkownika albo, w odcinku, znacznik czasu z opisu",
+        }
+        if action in spotify_chapter_labels:
+            return spotify_chapter_labels[action]
     if (
         action is Action.MANAGE_PLAYLIST_MEMBERSHIP
         and (session_label or "").casefold() == "spotify"

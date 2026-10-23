@@ -2,13 +2,16 @@ import ast
 from pathlib import Path
 
 from amc_wx_lite.host_client import LiteHostClient
+from amc_wx_lite.command_palette import entries_for_session
 from amc_wx_lite.menu_model import build_menus, menus_for_session
 from amc_wx_lite.navigation import Navigator, SessionId, View
 from amc_wx_lite.shortcuts import (
     SPOTIFY_SUPPORTED_ACTIONS,
     Action,
     Chord,
+    describe,
     describe_action,
+    keyboard_help_announcement,
     resolve,
 )
 
@@ -134,6 +137,8 @@ def test_podcast_chapter_actions_prepare_sources_before_using_the_index() -> Non
     assert navigate_prepare and navigate_use and navigate_prepare[0] < navigate_use[0]
     assert list_prepare and list_use and list_prepare[0] < list_use[0]
     assert source.count('self.announcer.say("Sprawdzanie rozdziałów")') >= 2
+    assert source.count("Sprawdzanie rozdziałów użytkownika") >= 2
+    assert source.count('"spotify:episode:"') >= 3
 
 
 def test_help_and_menu_use_user_labels_for_every_new_action() -> None:
@@ -183,6 +188,38 @@ def test_spotify_exposes_bookmarks_and_chapters_through_every_command_surface() 
         if item.action is not None
     }
     assert actions <= spotify_menu_actions
+
+
+def test_spotify_chapter_scope_is_honest_and_shared_by_command_surfaces() -> None:
+    action = Action.VIEW_CHAPTERS
+    expected = (
+        "Pokaż rozdziały użytkownika oraz, w odcinku, "
+        "znaczniki czasu z opisu"
+    )
+    assert describe_action(action, "Spotify") == expected
+
+    menu_item = next(
+        item
+        for menu in menus_for_session(SessionId.SPOTIFY)
+        for item in menu.items
+        if item.action is action
+    )
+    assert expected in menu_item.label.replace("&", "")
+
+    palette_entry = next(
+        entry
+        for entry in entries_for_session(SessionId.SPOTIFY)
+        if entry.action is action
+    )
+    assert expected in palette_entry.name
+
+    full_help = dict(describe("Spotify", {action}))
+    assert list(full_help.values()) == [expected]
+    assert expected in keyboard_help_announcement(
+        Chord("B", ctrl=True, alt=True),
+        action,
+        "Spotify",
+    )
 
 
 def test_transient_snapshot_roundtrip_preserves_navigation_not_playback() -> None:

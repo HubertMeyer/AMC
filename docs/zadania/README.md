@@ -102,7 +102,9 @@ zmian, wymagający korekty użytkownika:
   [POD-003-niezawodnosc-odswiezania-i-duze-kanaly.md](POD-003-niezawodnosc-odswiezania-i-duze-kanaly.md).
 - `AMC04` — **Rozdziały podcastów oraz zakładki i rozdziały Spotify
   zweryfikowane automatycznie, zainstalowane i uruchomione w AMC Test; czekają
-  na ręczny odbiór NVDA** — przeniesiony do głównego AMC
+  na ręczny odbiór NVDA; korekta źródeł z 23.10.2026 uczciwie ogranicza
+  automatyczne rozdziały Spotify do znaczników czasu z opisu odcinka i nie
+  była instalowana** — przeniesiony do głównego AMC
   Test/Python zatwierdzony model skrótów
   zakładek, nazwanych zakładek, rozdziałów, historii widoków i historii
   odtwarzanych elementów. Bieżący zapis realizacji:
@@ -137,7 +139,9 @@ zmian, wymagający korekty użytkownika:
   przez użytkownika; korekta mowy `Ctrl+F5` i widoczności pod `Ctrl+P`
   playlist istniejących oraz nowych jest zainstalowana w AMC Test; również
   czyszczenie migawki po ponownym logowaniu jest zbudowane i zainstalowane,
-  całość czeka na ręczny odbiór NVDA**
+  całość czeka na ręczny odbiór NVDA; źródłowa korekta z 23.10.2026 naprawia
+  jednorazowe pełne odświeżenie zapisanych podcastów i odcinków, lecz nie była
+  instalowana ani uruchamiana**
   — natywne playlisty
   Spotify w AMC Test: `Ctrl+P`, `Ctrl+Shift+P`, pobranie katalogu raz na
   uruchomienie, natychmiastowa widoczność nowej playlisty i zapamiętanie

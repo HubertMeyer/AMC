@@ -5,7 +5,9 @@ playlist Spotify. Korekta jawnej mowy stanu konta oraz widoczności pod
 `Ctrl+P` playlist istniejących i właśnie utworzonych jest zainstalowana w AMC
 Test; czeka na ręczny odbiór NVDA. Dodatkowa korekta unieważnienia migawki po
 ponownym logowaniu także jest zbudowana, zainstalowana i uruchomiona; czeka na
-ręczny odbiór NVDA na prawdziwym koncie.**
+ręczny odbiór NVDA na prawdziwym koncie. Korekta źródeł z 23.10.2026 naprawia
+odświeżanie zapisanych podcastów i odcinków oraz opisuje granice pełnego
+ładowania; nie była instalowana ani uruchamiana.**
 
 Źródło decyzji: zatwierdzona analiza historyczna tylko do odczytu
 `D:\Projekty Codex\Accessible Multimedia Controller\AMC08_PLAYLISTY_SPOTIFY_2026-10-18.md`.
@@ -47,6 +49,18 @@ ręczny odbiór NVDA na prawdziwym koncie.**
 - Po udanym ponownym logowaniu następne `Ctrl+P` pobiera playlisty bieżącego
   konta od nowa dokładnie raz. AMC nie pokazuje wtedy migawki sprzed logowania
   ani playlist poprzedniego konta.
+- Pierwsze wejście w „Podcasty Spotify” albo „Zapisane odcinki Spotify” w
+  danym uruchomieniu pobiera oba zbiory z konta. Następne otwarcia korzystają
+  z jednej migawki. Prawidłowy pusty wynik usuwa stare wpisy; przy częściowej
+  awarii AMC zachowuje ostatni zapis brakującej części i czyta ostrzeżenie.
+- Kolekcje są pobierane z Web API po stronach po 50 pozycji aż do braku adresu
+  `next`, a interfejs odsłania migawkę narastająco po 150 pozycji przez
+  „Załaduj więcej”. Otwarcie programu pobiera wszystkie strony jego odcinków
+  przed pokazaniem listy. Bezpiecznik klienta kończy odczyt po 400 stronach;
+  nie wolno opisywać tego jako listy bez technicznej granicy.
+- Wyszukiwanie Spotify pozostaje podglądem: jedno zapytanie pokazuje najwyżej
+  10 wyników każdego rodzaju. Interfejs mówi o tym w ostrzeżeniu; AMC nie
+  przedstawia tego podglądu jako kompletnego wyniku wyszukiwania.
 - Lista odczytywana przez NVDA zawiera tylko nazwę, widoczność, informację o
   współdzieleniu i właścicielu oraz stan zaznaczenia. Identyfikatory playlist,
   adresy i `snapshot_id` pozostają niewidocznymi danymi modelu.
@@ -62,6 +76,43 @@ ręczny odbiór NVDA na prawdziwym koncie.**
   celów nawet przy takich samych nazwach lub identyfikatorach.
 
 ## Uzasadnienie i decyzje
+
+### Audyt podcastów, odcinków i pełnego ładowania — 23.10.2026
+
+Odpowiedzialności są rozdzielone. Oficjalne Web API zasila katalog przez
+`/me/shows`, `/me/episodes` i `/shows/{id}/episodes`; przypięty Librespot służy
+wyłącznie do odtwarzania utworu lub odcinka i transportu. Brak podcastu na
+liście nie jest zatem ograniczeniem Librespota.
+
+Audyt znalazł błąd AMC: koordynator używał niepustej trwałej migawki od razu.
+Jeżeli zawierała na przykład utwór albo album, wejście w podcasty nie
+uruchamiało synchronizacji i mogło do końca procesu pokazywać niepełną starą
+listę. Naprawa wykonuje jeden wąski odczyt programów i zapisanych odcinków przy
+pierwszym wejściu w jeden z tych widoków, nawet gdy inne kategorie są już w
+cache. Ponowne otwarcie nie dubluje sieci, a udane logowanie unieważnia tę
+migawkę.
+
+Zachowanie błędów jest jawne:
+
+- pełny sukces zastępuje oba zbiory, również prawidłowym pustym wynikiem;
+- częściowy sukces scala nowe dane z ostatnim zapisem i oznajmia, że jednej
+  części nie udało się odświeżyć;
+- pełna awaria zostawia ostatni zapis i podaje bezpieczny komunikat bez tokenu,
+  adresu ani szczegółów wyjątku.
+
+Klient API wysyła `limit=50` i podąża za dokładnym adresem `next`. Dotyczy to
+zapisanych programów, zapisanych odcinków oraz odcinków otwartego programu.
+Wewnętrzny limit bezpieczeństwa wynosi 400 stron. Widoki głównych kolekcji
+wykonują następnie lokalne, narastające porcje po 150. Wyszukiwanie nie jest
+pełną kolekcją: po zmianie Spotify z lutego 2026 limit jednego żądania wynosi
+10 na rodzaj, a AMC obecnie nie stronicuje wyszukiwania; dlatego wynik dostał
+jawne ostrzeżenie.
+
+Oficjalne źródła sprawdzone 23.10.2026:
+[zapisane programy](https://developer.spotify.com/documentation/web-api/reference/get-users-saved-shows),
+[zapisane odcinki](https://developer.spotify.com/documentation/web-api/reference/get-users-saved-episodes),
+[odcinki programu](https://developer.spotify.com/documentation/web-api/reference/get-a-shows-episodes)
+oraz [zmiana limitu wyszukiwania z lutego 2026](https://developer.spotify.com/documentation/web-api/tutorials/february-2026-migration-guide).
 
 - **Korekta użytkownika z 21 października 2026 uzupełnia wcześniejszy odbiór
   logowania i `Ctrl+P`.** Sukces OAuth unieważnia teraz migawkę kolekcji oraz
@@ -144,6 +195,23 @@ ręczny odbiór NVDA na prawdziwym koncie.**
   przez świeżą walidację adaptera konkretnej usługi.
 
 ## Testy i wynik
+
+- 23 października 2026 ukierunkowany kontrakt Spotify przeszedł **1/1**.
+  Nowe scenariusze obejmują niepusty cache innej kategorii, wspólny odczyt
+  programów i odcinków dokładnie raz, ponowne otwarcie, prawidłowy pusty
+  wynik, częściową odpowiedź z zachowaniem cache oraz unieważnienie po
+  logowaniu.
+- Test atrap rzeczywistego `SpotifyApiClient` i adaptera Librespot zaliczony:
+  oba zapisane zbiory i odcinki programu podążają za `next`, a odcinek dochodzi
+  do hosta jako `spotify:episode:…`. Test nie używa konta ani prawdziwego
+  tokenu i nie dowodzi obecności natywnych rozdziałów.
+- Sześć modułów wxPython: **93 zaliczone**; moduł dialogu playlist uruchomiony
+  oddzielnie z przewidzianą atrapą wx: **6 zaliczonych**. Wspólny przebieg z
+  prawdziwym wxPython nie jest liczony jako regresja, ponieważ jedna próba
+  dialogu celowo wymaga atrapy i kolidowała ze wcześniej załadowanym wx.
+- LiteHost Release: kompilacja zaliczona, **0 ostrzeżeń i 0 błędów**.
+- Nie wykonano prawdziwego OAuth, odczytu konta, instalacji, uruchomienia AMC,
+  budowy instalatora ani publikacji.
 
 - 21 października 2026 ukierunkowane zestawy protokołu Spotify oraz YouTube
   przeszły 2 z 2. Nowy scenariusz otworzył `Ctrl+P` przed logowaniem, zmienił
@@ -253,6 +321,18 @@ ręczny odbiór NVDA na prawdziwym koncie.**
 
 ## Znane ograniczenia
 
+- Wyszukiwanie Spotify pokazuje obecnie najwyżej 10 wyników każdego rodzaju
+  dla jednego zapytania i nie ma „Załaduj więcej”. Jest to jawnie opisany
+  podgląd, nie pełny wynik.
+- Odczyt kolekcji i zawartości programu podąża za `next`, lecz ma bezpiecznik
+  400 stron. Gdyby konto lub program przekroczyły tę granicę, wynik nie byłby
+  kompletny; obecny kontrakt nie ma osobnego komunikatu o osiągnięciu tego
+  bezpiecznika.
+- Korekta podcastów i odcinków z 23.10.2026 jest zweryfikowanym kodem
+  źródłowym, nie zainstalowanym AMC Test. Ręczny odbiór NVDA pustej i
+  częściowej listy, fokusu oraz ponownego otwarcia pozostaje do wykonania po
+  przyszłej instalacji.
+
 - Ponowne logowanie i rzeczywiste dodawanie do playlisty zostały odebrane
   przez użytkownika. Jawna mowa aktualnego stanu konta po `Ctrl+F5` oraz
   odświeżony widok `Ctrl+P` są już zainstalowane, ale wymagają ręcznego odbioru
@@ -329,6 +409,11 @@ ręczny odbiór NVDA na prawdziwym koncie.**
   `fix(spotify): refresh playlist view after login`. Ukierunkowane testy
   Spotify i YouTube zaliczone: 2/2 zestawy protokołu. Wspólna bramka
   wyszukiwania i świeżego profilu: 88/88. Właściwy host skompilowano w Release.
+- Jednorazowe pełne odświeżenie podcastów i zapisanych odcinków, zachowanie
+  częściowego cache oraz jawne granice rozdziałów i wyszukiwania: commit
+  `d646bdf20c0b5f050620637bdf4ae73529bcc6a4` —
+  `fix(spotify): odswiez podcasty i opisz rozdzialy`. Kod, testy i build
+  Release zaliczone; instalacji, uruchomienia i publikacji nie wykonano.
 - Zainstalowany i uruchomiony AMC Test: rewizja `b258fb69fef580f7899c30abd0d48e6b877119be`,
   paczka `726f0791`, 1668 plików, etykieta
   `2026.10.21-b258fb69fef580f7899c30abd0d48e6b877119be-726f0791`.

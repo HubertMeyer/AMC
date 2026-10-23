@@ -361,7 +361,10 @@ public static class LiteSpotifyCatalogContract
         string? description) => new(CleanDescription(description));
 
     public static LiteSpotifyItemsResult CreateSearchResult(IReadOnlyList<MediaItem> items) =>
-        CreateItemsResult("Wyniki wyszukiwania Spotify", items);
+        CreateItemsResult(
+            "Wyniki wyszukiwania Spotify",
+            items,
+            warning: "Spotify pokazuje najwyżej 10 wyników każdego rodzaju dla jednego wyszukiwania.");
 
     public static LiteSpotifyItemsResult CreateCollectionViewResult(
         string view,

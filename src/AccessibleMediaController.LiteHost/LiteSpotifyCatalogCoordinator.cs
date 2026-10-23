@@ -19,6 +19,7 @@ internal sealed class LiteSpotifyCatalogCoordinator(
     private IReadOnlyList<MediaItem> _collectionSnapshot = backend.CachedCollection;
     private bool _collectionRefreshAttempted;
     private bool _albumRefreshAttempted;
+    private bool _podcastRefreshAttempted;
     private bool _playlistRefreshAttempted;
 
     public object Capabilities() => LiteSpotifyCatalogContract.CreateCapabilities(
@@ -64,6 +65,7 @@ internal sealed class LiteSpotifyCatalogCoordinator(
                 _collectionSnapshot = [];
                 _collectionRefreshAttempted = false;
                 _albumRefreshAttempted = false;
+                _podcastRefreshAttempted = false;
                 _playlistRefreshAttempted = false;
             }
             return LiteSpotifyCatalogContract.CreateLoginResult(
@@ -107,6 +109,7 @@ internal sealed class LiteSpotifyCatalogCoordinator(
             if (!_collectionRefreshAttempted
                 && _collectionSnapshot.Count == 0
                 && account.CatalogConnected == true
+                && view is not ("podcasts" or "episodes")
                 && !(view == "playlists" && backend is ILiteSpotifyWriteBackend))
             {
                 _collectionRefreshAttempted = true;
@@ -138,6 +141,44 @@ internal sealed class LiteSpotifyCatalogCoordinator(
             else if (account.CatalogConnected is null)
             {
                 warning = "Nie można sprawdzić połączenia katalogu Spotify. Pokazano ostatni zapis.";
+            }
+
+            // Podcasty i zapisane odcinki mają dwa małe, stronicowane
+            // endpointy. Odświeżamy je razem przy pierwszym wejściu w jeden
+            // z tych widoków, także wtedy, gdy cache innych kategorii nie jest
+            // pusty. Wcześniej taki cache blokował odczyt podcastów do końca
+            // procesu i wyglądał jak ograniczenie Librespota.
+            if (view is "podcasts" or "episodes"
+                && !_podcastRefreshAttempted
+                && account.CatalogConnected == true)
+            {
+                _podcastRefreshAttempted = true;
+                try
+                {
+                    var refreshed = backend.RefreshPodcastsAsync(CancellationToken.None)
+                        .GetAwaiter()
+                        .GetResult();
+                    _collectionSnapshot = MergeRefreshedPodcasts(
+                        _collectionSnapshot,
+                        refreshed.Items,
+                        keepMissing: refreshed.HadWarnings);
+                    if (refreshed.HadWarnings)
+                    {
+                        warning = JoinWarnings(
+                            warning,
+                            "Nie wszystkie podcasty i zapisane odcinki Spotify udało się odświeżyć. "
+                                + "Pokazano dostępne dane i ostatni zapis brakującej części.");
+                    }
+                }
+                catch (Exception exception)
+                {
+                    warning = JoinWarnings(
+                        warning,
+                        SafeFailure(
+                            exception,
+                            LiteSpotifyCatalogContract.CollectionViewOperation)
+                        + " Pokazano ostatni zapis podcastów i odcinków.");
+                }
             }
 
             // Lista playlist ma własny, mały endpoint /me/playlists. Dzięki
@@ -261,6 +302,54 @@ internal sealed class LiteSpotifyCatalogCoordinator(
         merged.AddRange(refreshedAlbums.Where(item =>
             item.Kind == MediaItemKind.Album
             && !used.Contains(NormalizeExternalId(item.ExternalId))));
+        return merged;
+    }
+
+    private static IReadOnlyList<MediaItem> MergeRefreshedPodcasts(
+        IReadOnlyList<MediaItem> snapshot,
+        IReadOnlyList<MediaItem> refreshedPodcasts,
+        bool keepMissing)
+    {
+        static bool IsPodcastItem(MediaItem item) =>
+            item.Kind is MediaItemKind.Podcast or MediaItemKind.Episode;
+
+        if (!keepMissing)
+        {
+            return snapshot
+                .Where(item => !IsPodcastItem(item))
+                .Concat(refreshedPodcasts.Where(IsPodcastItem))
+                .ToArray();
+        }
+
+        var byIdentity = refreshedPodcasts
+            .Where(IsPodcastItem)
+            .GroupBy(
+                item => $"{item.Kind}:{NormalizeExternalId(item.ExternalId)}",
+                StringComparer.Ordinal)
+            .ToDictionary(
+                group => group.Key,
+                group => group.First(),
+                StringComparer.Ordinal);
+        var merged = new List<MediaItem>(snapshot.Count + refreshedPodcasts.Count);
+        var used = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var item in snapshot)
+        {
+            var identity = $"{item.Kind}:{NormalizeExternalId(item.ExternalId)}";
+            if (IsPodcastItem(item)
+                && byIdentity.TryGetValue(identity, out var replacement))
+            {
+                merged.Add(replacement);
+                used.Add(identity);
+            }
+            else
+            {
+                merged.Add(item);
+            }
+        }
+        merged.AddRange(refreshedPodcasts.Where(item =>
+            IsPodcastItem(item)
+            && !used.Contains(
+                $"{item.Kind}:{NormalizeExternalId(item.ExternalId)}")));
         return merged;
     }
 
@@ -676,6 +765,9 @@ internal interface ILiteSpotifyReadOnlyBackend : IDisposable
         CancellationToken cancellationToken);
 
     Task<LiteSpotifyCollectionRefresh> RefreshAlbumsAsync(
+        CancellationToken cancellationToken);
+
+    Task<LiteSpotifyCollectionRefresh> RefreshPodcastsAsync(
         CancellationToken cancellationToken);
 
     Task<IReadOnlyList<MediaItem>> SearchAsync(

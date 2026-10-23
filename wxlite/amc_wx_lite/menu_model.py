@@ -39,6 +39,7 @@ from .shortcuts import (
     TIDAL_SUPPORTED_ACTIONS,
     WIIM_SUPPORTED_ACTIONS,
     ctrl_f5_presentation,
+    describe_action,
 )
 
 
@@ -257,6 +258,29 @@ def menus_for_session(
                     label=label,
                     shortcut=ctrl_f5.shortcut,
                     accelerator=False,
+                )
+            if session_id is SessionId.SPOTIFY and entry.action in {
+                Action.VIEW_CHAPTERS,
+                Action.ADD_NAMED_CHAPTER,
+                Action.PREVIOUS_CHAPTER,
+                Action.NEXT_CHAPTER,
+            }:
+                number = {
+                    Action.VIEW_CHAPTERS: "5",
+                    Action.ADD_NAMED_CHAPTER: "6",
+                    Action.PREVIOUS_CHAPTER: "7",
+                    Action.NEXT_CHAPTER: "8",
+                }[entry.action]
+                suffix = "…" if entry.action in {
+                    Action.VIEW_CHAPTERS,
+                    Action.ADD_NAMED_CHAPTER,
+                } else ""
+                entry = replace(
+                    entry,
+                    label=(
+                        f"&{number}. "
+                        f"{describe_action(entry.action, 'Spotify')}{suffix}"
+                    ),
                 )
             items.append(entry)
         while items and items[-1].is_separator:
