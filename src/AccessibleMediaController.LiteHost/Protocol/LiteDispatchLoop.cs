@@ -28,6 +28,10 @@ public static class LiteJson
         // Polskie znaki musza wyjsc jako UTF-8, nie jako \uXXXX: frontend
         // wyswietla je prosto w kontrolkach dla czytnika ekranu.
         Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+        // Kontrakt JSON hosta używa lowerCamelCase. Anonimowe DTO zwykle już
+        // miały takie nazwy, ale rekord bez JsonPropertyName wychodził jako
+        // PascalCase i znikał dla klienta Pythona bez jawnego błędu.
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         WriteIndented = false
     };
 

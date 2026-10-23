@@ -13,6 +13,7 @@ internal static class DispatchLoopTests
         EndOfInputEndsTheLoop();
         StdoutCarriesOnlyProtocolLines();
         EventsAreWrittenAsOwnLines();
+        TypedResultsUseCamelCaseOnTheWire();
         HandlerFailureBecomesResponseNotCrash();
         SlowQuickInformationDoesNotBlockTransport();
         SlowQuickInformationDoesNotBlockTransport(LiteDispatchLoop.MaxConcurrentOperations + 1);
@@ -20,6 +21,30 @@ internal static class DispatchLoopTests
         ConcurrentOperationFinishesBeforeRunReturns();
         ConcurrencyIsBoundedNotOnePerRequest();
         Console.WriteLine("DispatchLoopTests: OK");
+    }
+
+    private sealed record WireNamingProbe(bool Available, string ChannelLabel);
+
+    private static void TypedResultsUseCamelCaseOnTheWire()
+    {
+        var handlers = new Dictionary<string, Func<LiteRequest, LiteEventSink, object?>>(StringComparer.Ordinal)
+        {
+            ["wire.naming"] = (_, _) => new WireNamingProbe(true, "Kanał próbny")
+        };
+        using var reader = new StringReader("{\"id\":\"naming\",\"op\":\"wire.naming\"}\n");
+        var output = new StringWriter();
+
+        new LiteDispatchLoop(handlers).Run(reader, output);
+
+        using var document = JsonDocument.Parse(output.ToString().Trim());
+        var result = document.RootElement.GetProperty("result");
+        Assert.True(result.GetProperty("available").GetBoolean(),
+            "rekord odpowiedzi ma lowerCamelCase oczekiwany przez klienta Python");
+        Assert.Equal("Kanał próbny", result.GetProperty("channelLabel").GetString(),
+            "drugie pole rekordu także zachowuje kontrakt lowerCamelCase");
+        Assert.True(!result.TryGetProperty("Available", out _)
+                    && !result.TryGetProperty("ChannelLabel", out _),
+            "PascalCase nie może wyciec do publicznego protokołu hosta");
     }
 
     /// <summary>

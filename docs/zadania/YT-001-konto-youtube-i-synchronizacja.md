@@ -1,6 +1,6 @@
 # YT-001 — konto YouTube i synchronizacja
 
-- Status: `W trakcie odbioru — klient Desktop OAuth, zakres tylko do odczytu i zasób profilu testowego są skonfigurowane; AMC Test 23.10.2026, 15:14 jest zainstalowany i uruchomiony, a do wykonania pozostało prawdziwe logowanie oraz ręczny odbiór NVDA`. Zapis instalacji: [AMC-TEST-2026-10-23-1514-youtube-oauth.md](AMC-TEST-2026-10-23-1514-youtube-oauth.md).
+- Status: `W trakcie korekty odbiorczej — klient Desktop OAuth, zakres tylko do odczytu i zasób profilu testowego są skonfigurowane; ręczny odbiór wersji 15:14 wykazał brak polecenia konta wskutek niezgodności nazw pól C#–Python. Źródła i test rzeczywistego protokołu są poprawione, a nowa kompilacja AMC Test czeka na promocję`. Zapis odrzuconej instalacji: [AMC-TEST-2026-10-23-1514-youtube-oauth.md](AMC-TEST-2026-10-23-1514-youtube-oauth.md).
 - Utworzono: 18 października 2026
 - Ostatnia aktualizacja: 23 października 2026
 - Obszar: YouTube, OAuth, Biblioteka, wyszukiwanie i bezpieczne poświadczenia
@@ -479,3 +479,23 @@ Zainstalowana paczka ma etykietę
 rewizję źródła `eea8e9f50fc39e64542ed59119cf7c6273dcae7f` i identyfikator
 zawartości `cd5a4c27`. Dokumentację odbioru zapisano po instalacji, dlatego
 jej późniejszy commit nie zmienia tożsamości już zainstalowanej paczki.
+
+## Korekta po ręcznym odbiorze — 23 października 2026
+
+Ta informacja zastępuje wcześniejsze założenie, że po instalacji 15:14 można
+od razu rozpocząć logowanie. Użytkownik potwierdził, że polecenia nie ma w
+palecie `Ctrl+Shift+K`. Rzeczywisty host zwracał typowany wynik z nazwami
+`Available`, `Connected` i `Message`, podczas gdy Python oczekiwał wariantu
+`available`, `connected` i `message`. W efekcie możliwość była dostępna, lecz
+interfejs odczytywał ją jako niedostępną i prawidłowo — na podstawie błędnej
+wartości — ukrywał polecenie na wszystkich powierzchniach.
+
+Poprawka wymusza `camelCase` w serializerze całego protokołu LiteHost, nadaje
+jawne nazwy przewodowe wszystkim wynikom konta YouTube i pozostawia po stronie
+Pythona zgodność przejściową z obydwoma wariantami. Testy obejmują teraz
+prawdziwy proces C# i klienta Python, a nie tylko ręcznie zbudowany słownik.
+Wynik przed promocją: 22/22 testy celowane, 2016 testów Python zaliczonych,
+111 kontrolowanie pominiętych, 11 podtestów zaliczonych, 27/27 zestawów
+protokołu oraz 30/30 testów launchera i aktualizatora. Całe rozwiązanie
+zbudowało się bez ostrzeżeń i błędów. Nowa paczka i ponowny odbiór NVDA są
+jeszcze wymagane.

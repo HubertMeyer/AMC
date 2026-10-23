@@ -10,12 +10,34 @@ internal static class YouTubeAccountContractTests
     internal static void Run()
     {
         AccountSurfaceNeverReturnsSecretsOrTechnicalIds();
+        WirePayloadUsesNamesExpectedByPythonClient();
         PreviewAndApplyRemainSeparateExplicitOperations();
         RestoreChoiceMustBeBoolean();
         BackendFailuresAreRedacted();
         KnownQuotaFailureRemainsSpecific();
         ActiveLoginCanBeCancelledWithoutLeakingTechnicalData();
-        Console.WriteLine("OK: bezpieczny kontrakt konta YouTube (6 scenariuszy)");
+        Console.WriteLine("OK: bezpieczny kontrakt konta YouTube (7 scenariuszy)");
+    }
+
+    private static void WirePayloadUsesNamesExpectedByPythonClient()
+    {
+        using var backend = new FakeBackend();
+        using var coordinator = new LiteYouTubeAccountCoordinator(backend);
+        var capabilities = Invoke(
+            coordinator,
+            LiteYouTubeAccountContract.CapabilitiesOperation);
+        var json = LiteJson.Serialize(new LiteResultEnvelope("youtube", capabilities));
+        using var document = JsonDocument.Parse(json);
+        var result = document.RootElement.GetProperty("result");
+
+        Check(result.GetProperty("available").GetBoolean()
+              && result.GetProperty("readOnly").GetBoolean()
+              && result.GetProperty("separateProfileCredentials").GetBoolean(),
+            "Nazwy możliwości konta YouTube nie odpowiadają klientowi Python.");
+        Check(result.TryGetProperty("message", out _)
+              && !result.TryGetProperty("Available", out _)
+              && !result.TryGetProperty("Message", out _),
+            "PascalCase wyciekł do publicznej odpowiedzi konta YouTube.");
     }
 
     private static void AccountSurfaceNeverReturnsSecretsOrTechnicalIds()

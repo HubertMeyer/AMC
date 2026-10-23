@@ -13,6 +13,7 @@ from amc_wx_lite.shortcuts import Action, describe
 from amc_wx_lite.youtube_account import (
     CLIENT_ID_ENVIRONMENT,
     account_connected,
+    capability_available,
     resolve_youtube_client_id,
     safe_message,
     sync_preview,
@@ -68,6 +69,38 @@ def test_protocol_payload_never_becomes_object_representation() -> None:
     assert safe_message(object(), "Bezpieczny komunikat") == "Bezpieczny komunikat"
 
 
+def test_pascal_case_payload_from_real_dotnet_host_is_supported() -> None:
+    capabilities = {
+        "Available": True,
+        "ReadOnly": True,
+        "SeparateProfileCredentials": True,
+        "Message": "Konto YouTube jest dostępne tylko do odczytu.",
+    }
+    status = {"Connected": True, "Message": "YouTube: zalogowano"}
+    preview_payload = {
+        "Additions": 2,
+        "Restores": 1,
+        "AlreadyPresent": 4,
+        "Suppressed": 3,
+        "ChannelLabels": ["Kanał Pierwszy", "Kanał Drugi"],
+        "Message": "Sprawdzono subskrypcje YouTube.",
+    }
+
+    assert capability_available(capabilities) is True
+    assert safe_message(capabilities, "brak") == (
+        "Konto YouTube jest dostępne tylko do odczytu."
+    )
+    assert account_connected(status) is True
+    assert safe_message(status, "brak") == "YouTube: zalogowano"
+    preview = sync_preview(preview_payload)
+    assert preview is not None
+    assert preview.additions == 2
+    assert preview.restores == 1
+    assert preview.already_present == 4
+    assert preview.suppressed == 3
+    assert preview.labels == ("Kanał Pierwszy", "Kanał Drugi")
+
+
 def test_host_client_has_explicit_youtube_operations_and_public_client_id() -> None:
     client = LiteHostClient(Path("host.exe"), youtube_client_id=CLIENT_ID)
     command = client._command()
@@ -102,10 +135,11 @@ def test_host_client_has_explicit_youtube_operations_and_public_client_id() -> N
 
 
 def test_runtime_capability_controls_menu_palette_and_help_together() -> None:
+    host_confirmed = capability_available({"Available": True})
     hidden = menu_model.menus_for_session(SessionId.PODCASTS)
     visible = menu_model.menus_for_session(
         SessionId.PODCASTS,
-        youtube_account_available=True,
+        youtube_account_available=host_confirmed,
     )
     assert not any(
         item.action is Action.YOUTUBE_ACCOUNT
@@ -125,7 +159,7 @@ def test_runtime_capability_controls_menu_palette_and_help_together() -> None:
         item
         for item in entries_for_session(
             SessionId.PODCASTS,
-            youtube_account_available=True,
+            youtube_account_available=host_confirmed,
         )
         if item.action is Action.YOUTUBE_ACCOUNT
     )

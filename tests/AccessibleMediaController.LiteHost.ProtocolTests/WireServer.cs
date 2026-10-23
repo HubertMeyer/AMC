@@ -75,6 +75,12 @@ internal static class WireServer
             },
             ["bigPayload"] = (_, _) => new { text = new string('x', 100_000) },
             ["utf8"] = (request, _) => new { text = LiteArgs.ReadText(request.Args, "text") },
+            [LiteYouTubeAccountContract.CapabilitiesOperation] = (_, _) =>
+                new LiteYouTubeAccountCapabilities(
+                    true,
+                    true,
+                    true,
+                    "Konto YouTube jest dostępne tylko do odczytu."),
             // LEWA STRZALKA: zlozenie komunikatu PRAWDZIWYM formatterem Core.
             // Pomiaru silnika (NAudio, atrybuty chmury) w WSL nie ma, wiec
             // wynik sondy wchodzi tu Z ZADANIA -- to pozwala zmierzyc, ze

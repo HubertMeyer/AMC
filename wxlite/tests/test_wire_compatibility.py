@@ -121,6 +121,26 @@ def test_status_payload_has_fields_the_player_view_needs() -> None:
         client.close()
 
 
+def test_youtube_capability_crosses_the_real_csharp_python_boundary() -> None:
+    from amc_wx_lite.youtube_account import capability_available, safe_message
+
+    client = make_client()
+    try:
+        payload = client.youtube_account_capabilities()
+        assert capability_available(payload) is True
+        assert safe_message(payload, "brak") == (
+            "Konto YouTube jest dostępne tylko do odczytu."
+        )
+        assert set(payload) == {
+            "available",
+            "readOnly",
+            "separateProfileCredentials",
+            "message",
+        }
+    finally:
+        client.close()
+
+
 # ------------------------------------------------------------ granice i bledy
 
 

@@ -1,18 +1,38 @@
 # AMC Test 23.10.2026, 15:14 — klient OAuth YouTube
 
-- Status: `Zbudowane, zainstalowane i uruchomione; czeka na prawdziwe logowanie oraz ręczny odbiór NVDA`.
+- Status: `Zbudowane, zainstalowane i uruchomione, lecz odrzucone w ręcznym odbiorze: polecenie konta nie było widoczne w palecie ani w menu`.
 - Data instalacji: 23 października 2026
 - Obszar: YT-001, Google OAuth, profil AMC Test
 - Instalacja: `D:\Projekty Codex\AMC Python`
 
+## Korekta odbioru — 23 października 2026
+
+Ta korekta zastępuje wcześniejsze stwierdzenie, że kompilacja 15:14 była
+gotowa do prawdziwego logowania. Użytkownik sprawdził `Ctrl+Shift+K` w sesji
+`Podcasty i YouTube`; polecenia konta nie było pod pełną nazwą ani po
+wyszukaniu słów `konto` i `YouTube`.
+
+Przyczyną była niezgodność na prawdziwej granicy procesu: typowane rekordy C#
+zwracały pola `Available`, `Connected` i `Message`, a interfejs Python
+sprawdzał wyłącznie `available`, `connected` i `message`. Konfiguracja klienta
+OAuth i możliwość hosta były obecne, lecz fałszywie odczytany brak możliwości
+ukrywał wspólne polecenie w menu, palecie i pomocy. Automatyczne testy
+używały wcześniej ręcznie przygotowanych słowników w zapisie małą literą,
+więc nie mierzyły rzeczywistej odpowiedzi .NET.
+
+Źródła zostały poprawione tak, aby host wymuszał `camelCase` dla wszystkich
+typowanych wyników, rekordy YouTube miały jawne nazwy przewodowe, a klient
+przejściowo przyjmował oba warianty. Dodano test rzeczywistej rozmowy C#–Python
+oraz test wspólnej powierzchni menu–paleta–pomoc. Ta poprawka należy do
+następnej kompilacji AMC Test; nie zmienia wstecz zawartości wersji 15:14.
+
 ## Zachowanie widoczne dla użytkownika
 
-AMC Test ma teraz lokalną konfigurację klienta Google dla aplikacji
-komputerowej. W sesji `Podcasty i YouTube` polecenie `Konto YouTube i
-synchronizacja subskrypcji…` jest zasilane tym samym modelem w menu Plik,
-palecie `Ctrl+Shift+K` i pełnej pomocy. Samo uruchomienie programu nie otwiera
-strony Google. Przeglądarka ma zostać użyta dopiero po jawnym wybraniu
-przycisku `Zaloguj konto YouTube przez Google w przeglądarce`.
+AMC Test 15:14 ma lokalną konfigurację klienta Google dla aplikacji
+komputerowej, ale wskutek opisanej wyżej usterki polecenie `Konto YouTube i
+synchronizacja subskrypcji…` było ukryte. Zamierzony wspólny model menu Plik,
+palety `Ctrl+Shift+K` i pełnej pomocy nie był więc osiągalny dla użytkownika.
+Samo uruchomienie programu nie otwierało strony Google.
 
 Profil AMC Public nie został zbudowany, zainstalowany ani opublikowany i nie
 otrzymał tego zasobu.
@@ -76,7 +96,8 @@ wymuszonego kończenia procesów.
 - Uruchomiony plik runtime:
   `D:\Projekty Codex\AMC Python\runtime\python.exe`.
 
-Nie wykonano jeszcze prawdziwego logowania Google ani synchronizacji konta.
+Nie wykonano prawdziwego logowania Google ani synchronizacji konta, ponieważ
+usterka widoczności polecenia blokowała rozpoczęcie odbioru.
 
 ## Znane ograniczenia i migracja
 

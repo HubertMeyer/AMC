@@ -120,11 +120,12 @@ zmian, wymagający korekty użytkownika:
   RSS, uczciwy wynik pełny/częściowy/błędny oraz jawne stronicowanie `wczytano
   N z całości` z zachowaniem fokusu. Szczegóły:
   [POD-003-niezawodnosc-odswiezania-i-duze-kanaly.md](POD-003-niezawodnosc-odswiezania-i-duze-kanaly.md).
-- `AMC04` — **Rozdziały podcastów oraz zakładki i rozdziały Spotify
-  zweryfikowane automatycznie, zainstalowane i uruchomione w AMC Test; czekają
-  na ręczny odbiór NVDA; korekta źródeł z 23.10.2026 uczciwie ogranicza
-  automatyczne rozdziały Spotify do znaczników czasu z opisu odcinka i została
-  zainstalowana w AMC Test 23.10.2026, 11:24** — przeniesiony do głównego AMC
+- `AMC04` — **Ręczny odbiór 23.10.2026 potwierdził, że odtwarzanie dużego
+  podcastu Spotify działa, ale rozdziały w Spotify nadal nie działają.
+  Obecny kod potrafi tworzyć rozdziały tylko ze znaczników czasu w opisie;
+  nie należy przedstawiać natywnych rozdziałów Spotify jako wdrożonych.
+  Zakładki i rozdziały zwykłych podcastów pozostają osobnym, wcześniej
+  zaimplementowanym zakresem** — przeniesiony do głównego AMC
   Test/Python zatwierdzony model skrótów
   zakładek, nazwanych zakładek, rozdziałów, historii widoków i historii
   odtwarzanych elementów. Bieżący zapis realizacji:
@@ -169,7 +170,11 @@ zmian, wymagający korekty użytkownika:
   — natywne playlisty
   Spotify w AMC Test: `Ctrl+P`, `Ctrl+Shift+P`, pobranie katalogu raz na
   uruchomienie, natychmiastowa widoczność nowej playlisty i zapamiętanie
-  ostatnich celów. Mechanizm ma partycje usług i kont, aby kolejne integracje
+  ostatnich celów. Ręczny test z odłączonym interfejsem Denon USB wykazał, że
+  Spotify nadal próbował użyć zapamiętanego, niedostępnego wyjścia;
+  automatyczny powrót do domyślnego urządzenia Windows pozostaje więc zadaniem
+  otwartym mimo obecności wcześniejszego kodu i testów jednostkowych. Mechanizm
+  ma partycje usług i kont, aby kolejne integracje
   używały tego samego kontraktu bez kopiowania kodu Spotify. Przebieg:
   `AMC08-playlisty-spotify.md`. Zatwierdzona specyfikacja:
   `D:\Projekty Codex\Accessible Multimedia Controller\AMC08_PLAYLISTY_SPOTIFY_2026-10-18.md`.
@@ -265,11 +270,11 @@ zmian, wymagający korekty użytkownika:
   [AMC14-foldery-i-integracja-powloki.md](AMC14-foldery-i-integracja-powloki.md).
   Zatwierdzona specyfikacja:
   `D:\Projekty Codex\Accessible Multimedia Controller\AMC14_FOLDERY_I_INTEGRACJA_POWLOKI_2026-10-18.md`.
-- `YT-001` — **W trakcie odbioru — bezpieczny fundament OAuth, lokalny
-  odbiornik, transport tokenów, koordynator, odczyt, niedestrukcyjny plan,
-  atomowy zapis subskrypcji, interfejs wx oraz klient Desktop OAuth są
-  zainstalowane w AMC Test 23.10.2026, 15:14; pozostało prawdziwe logowanie i
-  ręczny odbiór NVDA** — oficjalne logowanie do
+- `YT-001` — **W trakcie korekty odbiorczej — ręczny test wersji 15:14
+  wykazał brak polecenia konta z powodu niezgodności nazw pól C#–Python.
+  Serializer całego protokołu, zgodność klienta oraz test prawdziwej granicy
+  procesów są poprawione; nowa paczka AMC Test czeka na promocję i ponowny
+  odbiór NVDA** — oficjalne logowanie do
   konta YouTube, synchronizacja subskrypcji i zwykłych playlist oraz bezpieczny
   zakres czynności konta. Etap rozpoczęto 21 października 2026 na nowe jawne
   polecenie użytkownika; sam start nadal nie loguje konta ani nie otwiera
@@ -281,12 +286,11 @@ zmian, wymagający korekty użytkownika:
   krótkie nazwy `AMC Test — data, godzina` i `AMC Public — data, godzina`,
   z technicznymi identyfikatorami pozostawionymi poza zwykłą nazwą.
   Szczegóły: [NAME-001-amc-test.md](NAME-001-amc-test.md).
-- `FRONTIER-001` — **Po odbiorze instalacji 11:24 znaleziono zmianę fokusu na
-  „Zamknij” podczas skanowania. Nowa korekta utrzymuje fokus i nazwany stan na
-  aktywnym przycisku wyszukiwania; pełna regresja, budowa i instalacja AMC Test
-  12:56 są zaliczone. Czwarta korekta po zgłoszeniu z 23.10.2026 ma zaliczone
-  testy i kompilację Release, została zainstalowana i uruchomiona w AMC Test
-  23.10.2026, 11:24; czeka na sprzętowy odbiór Teufela z NVDA 24.10.2026** —
+- `FRONTIER-001` — **Kod korekt fokusu i skanowania jest obecny w gałęzi oraz
+  przeszedł testy automatyczne, ale ręczny odbiór 23.10.2026 nie wykazał
+  poprawy: wejście nadal prowadziło do pola PIN, a po uruchomieniu wyszukiwania
+  fokus trafiał na przycisk zamknięcia lub powrotu. Zadanie pozostaje otwarte
+  i nie wolno przedstawiać go jako naprawionego na podstawie samych testów** —
   `Ctrl+8`, `Ctrl+F5` i ręczny adres korzystają z jednego modelu stanów.
   AMC wymaga potwierdzonego opisu FSAPI/UNDOK i użytkowej nazwy urządzenia,
   zanim pokaże pole PIN. Brak wyniku i błąd nie prowadzą do PIN-u. Po zapisaniu

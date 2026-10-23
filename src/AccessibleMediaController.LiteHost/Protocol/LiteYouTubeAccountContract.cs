@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using AccessibleMediaController.Core.YouTube;
 
 namespace AccessibleMediaController.LiteHost.Protocol;
@@ -81,34 +82,34 @@ internal static class LiteYouTubeAccountContract
 }
 
 internal sealed record LiteYouTubeAccountCapabilities(
-    bool Available,
-    bool ReadOnly,
-    bool SeparateProfileCredentials,
-    string Message);
+    [property: JsonPropertyName("available")] bool Available,
+    [property: JsonPropertyName("readOnly")] bool ReadOnly,
+    [property: JsonPropertyName("separateProfileCredentials")] bool SeparateProfileCredentials,
+    [property: JsonPropertyName("message")] string Message);
 
 internal sealed record LiteYouTubeAccountState(
-    bool Connected,
-    string Message);
+    [property: JsonPropertyName("connected")] bool Connected,
+    [property: JsonPropertyName("message")] string Message);
 
 internal sealed record LiteYouTubeAccountActionResult(
-    bool Succeeded,
-    string Message);
+    [property: JsonPropertyName("succeeded")] bool Succeeded,
+    [property: JsonPropertyName("message")] string Message);
 
 internal sealed record LiteYouTubeSyncPreviewResult(
-    int Additions,
-    int Restores,
-    int AlreadyPresent,
-    int Suppressed,
-    int Duplicates,
-    int Invalid,
-    IReadOnlyList<string> ChannelLabels,
-    string Message);
+    [property: JsonPropertyName("additions")] int Additions,
+    [property: JsonPropertyName("restores")] int Restores,
+    [property: JsonPropertyName("alreadyPresent")] int AlreadyPresent,
+    [property: JsonPropertyName("suppressed")] int Suppressed,
+    [property: JsonPropertyName("duplicates")] int Duplicates,
+    [property: JsonPropertyName("invalid")] int Invalid,
+    [property: JsonPropertyName("channelLabels")] IReadOnlyList<string> ChannelLabels,
+    [property: JsonPropertyName("message")] string Message);
 
 internal sealed record LiteYouTubeSyncApplyResult(
-    int Added,
-    int Restored,
-    int AlreadyPresent,
-    int Suppressed,
-    int Duplicates,
-    int Invalid,
-    string Message);
+    [property: JsonPropertyName("added")] int Added,
+    [property: JsonPropertyName("restored")] int Restored,
+    [property: JsonPropertyName("alreadyPresent")] int AlreadyPresent,
+    [property: JsonPropertyName("suppressed")] int Suppressed,
+    [property: JsonPropertyName("duplicates")] int Duplicates,
+    [property: JsonPropertyName("invalid")] int Invalid,
+    [property: JsonPropertyName("message")] string Message);

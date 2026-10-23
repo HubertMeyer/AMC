@@ -25,6 +25,22 @@ CLIENT_ID_RESOURCE = "youtube-oauth-client-id.txt"
 YOUTUBE_ACCOUNT_CAPABILITY = "youtube.account.readonly"
 
 
+def _payload_field(payload: Mapping[str, object], name: str) -> object:
+    """Odczytaj pole JSON niezależnie od zapisu camelCase/PascalCase.
+
+    Host .NET mógł dotąd zwracać publiczne rekordy protokołu z nazwami
+    ``Available`` i ``Connected``, natomiast lekkie atrapy Pythona używały
+    ``available`` i ``connected``.  Pierwszy wariant ma pierwszeństwo tylko
+    wtedy, gdy wariantu protokołowego Pythona w ogóle nie ma; sprzeczna para
+    nie może po cichu nadpisać jawnej wartości camelCase.
+    """
+
+    if name in payload:
+        return payload[name]
+    pascal_name = name[:1].upper() + name[1:]
+    return payload.get(pascal_name)
+
+
 def _valid_client_id(value: object) -> str | None:
     if not isinstance(value, str):
         return None
@@ -65,8 +81,8 @@ def resolve_youtube_client_id(
 def safe_message(payload: object, fallback: str) -> str:
     """Odczytaj wyłącznie jawny komunikat użytkowy z odpowiedzi hosta."""
 
-    if isinstance(payload, dict):
-        value = payload.get("message")
+    if isinstance(payload, Mapping):
+        value = _payload_field(payload, "message")
         if isinstance(value, str):
             normalized = " ".join(value.split()).strip()
             if normalized:
@@ -75,7 +91,19 @@ def safe_message(payload: object, fallback: str) -> str:
 
 
 def account_connected(payload: object) -> bool:
-    return isinstance(payload, dict) and payload.get("connected") is True
+    return (
+        isinstance(payload, Mapping)
+        and _payload_field(payload, "connected") is True
+    )
+
+
+def capability_available(payload: object) -> bool:
+    """Czy rzeczywisty host potwierdził możliwość obsługi konta YouTube."""
+
+    return (
+        isinstance(payload, Mapping)
+        and _payload_field(payload, "available") is True
+    )
 
 
 @dataclass(frozen=True, slots=True)
@@ -88,17 +116,17 @@ class YouTubeSyncPreview:
     message: str
 
 
-def _safe_count(payload: dict, name: str) -> int:
-    value = payload.get(name)
+def _safe_count(payload: Mapping[str, object], name: str) -> int:
+    value = _payload_field(payload, name)
     return value if isinstance(value, int) and not isinstance(value, bool) and value >= 0 else 0
 
 
 def sync_preview(payload: object) -> YouTubeSyncPreview | None:
     """Zbuduj model listy wyłącznie z etykiet i liczników publicznego DTO."""
 
-    if not isinstance(payload, dict):
+    if not isinstance(payload, Mapping):
         return None
-    raw_labels = payload.get("channelLabels")
+    raw_labels = _payload_field(payload, "channelLabels")
     labels: list[str] = []
     if isinstance(raw_labels, list):
         for value in raw_labels[:200]:

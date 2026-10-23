@@ -77,6 +77,7 @@ from .host_client import HostError, HostUnavailable, LiteHostClient, default_hos
 from .release_profile import current_profile
 from .youtube_account import (
     account_connected as youtube_account_connected,
+    capability_available as youtube_capability_available,
     resolve_youtube_client_id,
     safe_message as youtube_safe_message,
     sync_preview as youtube_sync_preview,
@@ -10235,8 +10236,9 @@ class LiteFrame(wx.Frame):
         def done(_result: dict) -> None:
             youtube_available = bool(
                 youtube_capabilities_after_start
-                and isinstance(youtube_capabilities_after_start[-1], dict)
-                and youtube_capabilities_after_start[-1].get("available") is True
+                and youtube_capability_available(
+                    youtube_capabilities_after_start[-1]
+                )
             )
             if youtube_available != bool(
                 getattr(self, "_youtube_account_available", False)
