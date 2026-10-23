@@ -122,6 +122,7 @@ class Action(Enum):
     SHOW_PLAYER = "view.player"
     SHOW_LIST = "view.list"
     PLAY_PAUSE = "transport.playPause"
+    TOGGLE_SHUFFLE = "transport.shuffle.toggle"
     TOGGLE_MUTE = "transport.toggleMute"
     # Zmiana utworu W KOLEJCE. Nastepstwo liczy zywa kolejka hosta, wiec te
     # akcje maja sens tylko wtedy, gdy kolejka naprawde prowadzi odtwarzanie.
@@ -581,6 +582,7 @@ SPOTIFY_SUPPORTED_ACTIONS = frozenset({
     Action.SHOW_PLAYER,
     Action.SHOW_LIST,
     Action.PLAY_PAUSE,
+    Action.TOGGLE_SHUFFLE,
     Action.TOGGLE_MUTE,
     Action.QUEUE_NEXT,
     Action.QUEUE_PREVIOUS,
@@ -1177,6 +1179,9 @@ PLAYER_VIEW: dict[str, Action] = {
     "Shift+F6": Action.SHOW_LIST,
     "F6": Action.SHOW_LIST,
     "Space": Action.PLAY_PAUSE,
+    # Losowanie jest kontekstowe: Radio rozstrzyga R wcześniej jako
+    # nagrywanie, a obce odtwarzacze sieciowe jawnie go nie przejmuja.
+    "R": Action.TOGGLE_SHUFFLE,
     "Ctrl+M": Action.TOGGLE_MUTE,
     # Skróty istnieją także w tablicy odtwarzacza pełnego AMC, lecz sama
     # komenda odpowiada wtedy jasno: wyszukiwanie jest dostępne na listach.
@@ -1639,6 +1644,12 @@ def resolve(
         )
     if not player_view and radio_session and canonical in RADIO_LIST_VIEW:
         return RADIO_LIST_VIEW[canonical]
+    if (
+        player_view
+        and canonical == "R"
+        and (tidal_session or wiim_session or sonos_session or frontier_smart_session)
+    ):
+        return None
     return table.get(canonical)
 
 
@@ -1678,6 +1689,7 @@ def _help_entries() -> list[tuple[str, str, Action]]:
         Action.SHOW_PLAYER: "Widok odtwarzacza",
         Action.SHOW_LIST: "Powrot na liste",
         Action.PLAY_PAUSE: "Pauza albo wznowienie",
+        Action.TOGGLE_SHUFFLE: "Włącz lub wyłącz odtwarzanie losowe",
         Action.TOGGLE_MUTE: "Wycisz albo włącz dźwięk bieżącej sesji",
         Action.QUEUE_NEXT: "Nastepny utwor kolejki",
         Action.QUEUE_PREVIOUS: "Poprzedni utwor kolejki",

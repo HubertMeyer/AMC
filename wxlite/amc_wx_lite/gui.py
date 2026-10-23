@@ -495,6 +495,7 @@ _PLAYER_CONTEXT_ACTION_GROUPS: tuple[tuple[Action, ...], ...] = (
         Action.QUEUE_PREVIOUS,
         Action.QUEUE_NEXT,
         Action.TOGGLE_MUTE,
+        Action.TOGGLE_SHUFFLE,
     ),
     (
         Action.WIIM_PREVIOUS_SOURCE,
@@ -7226,6 +7227,16 @@ class LiteFrame(wx.Frame):
             "favorites": SORT_ADDED_NEWEST,
         }
         self.navigator.restore(state.navigation)
+        for shuffle_session in (
+            SessionId.FILES,
+            SessionId.PODCASTS,
+            SessionId.SPOTIFY,
+        ):
+            self.navigator.set_shuffle_enabled(
+                shuffle_session,
+                state.shuffle_enabled_by_session.get(shuffle_session.value)
+                is True,
+            )
         active_sessions = session_order.normalize(
             getattr(self.options, "session_order", None)
         )
@@ -8158,6 +8169,8 @@ class LiteFrame(wx.Frame):
                 native_label = self._menu_native_label(entry, label)
                 if item.GetItemLabel() != native_label:
                     item.SetItemLabel(native_label)
+            elif entry.checkable and entry.action is Action.TOGGLE_SHUFFLE:
+                item.Check(session.shuffle_enabled)
             elif entry.checkable and entry.action is Action.KEYBOARD_HELP:
                 item.Check(self._keyboard_help_active)
 
@@ -10437,11 +10450,39 @@ class LiteFrame(wx.Frame):
             # Przy ZYWEJ kolejce koniec utworu nie jest koncem sluchania: host
             # zaraz przysle ``queue.advanced``. Mowienie "Koniec utworu" przed
             # nazwa nastepnego byloby tylko halasem, dlatego milczymy i czekamy.
-            if not data.get("queueContinues"):
-                self.announcer.say("Koniec utworu")
+            engine = str(data.get("engine") or "")
             playing_sessions = getattr(self, "_playing_sessions", set())
             if not isinstance(playing_sessions, set):
                 playing_sessions = set()
+            ended_session: SessionId | None = None
+            if engine == "spotify":
+                ended_session = SessionId.SPOTIFY
+            elif engine == "files":
+                candidate = getattr(self, "_playing_session", None)
+                if candidate in (SessionId.FILES, SessionId.PODCASTS):
+                    ended_session = candidate
+                elif SessionId.PODCASTS in playing_sessions:
+                    ended_session = SessionId.PODCASTS
+                else:
+                    ended_session = SessionId.FILES
+            if not data.get("queueContinues") and ended_session is not None:
+                continue_shuffled = getattr(
+                    getattr(self, "navigator", None),
+                    "continue_shuffled_after_end",
+                    None,
+                )
+                continuation = (
+                    continue_shuffled(ended_session)
+                    if callable(continue_shuffled)
+                    else []
+                )
+                if continuation:
+                    # Nie czyścimy stanu transportu pomiędzy dwoma elementami.
+                    # Nowy start zostanie potwierdzony zwykłym playback.started.
+                    self._run(continuation)
+                    return
+            if not data.get("queueContinues"):
+                self.announcer.say("Koniec utworu")
             ended_podcast = SessionId.PODCASTS in playing_sessions
             if data.get("engine") == "files" and not data.get("queueContinues"):
                 playing_sessions.discard(SessionId.FILES)
@@ -12469,6 +12510,8 @@ class LiteFrame(wx.Frame):
             self._play_pause()
         elif action is Action.TOGGLE_MUTE:
             self._toggle_mute()
+        elif action is Action.TOGGLE_SHUFFLE:
+            self._toggle_playback_shuffle()
         elif action is Action.ADD_BOOKMARK:
             self._add_bookmark()
         elif action is Action.ADD_NAMED_BOOKMARK:
@@ -24677,6 +24720,37 @@ class LiteFrame(wx.Frame):
             lambda session_id=session.value: client.toggle_mute(session_id),
             done,
             lambda error: self.announcer.say(f"Błąd: {error}"),
+        )
+
+    def _toggle_playback_shuffle(self) -> None:
+        """R: jeden trwały przełącznik dla plików, podcastów i Spotify."""
+
+        session_id = self.navigator.active
+        if not self.navigator.supports_shuffle(session_id):
+            self.announcer.say(
+                "Odtwarzanie losowe nie jest dostępne w tej sesji"
+            )
+            return
+        state = self.navigator.sessions[session_id]
+        previous = state.shuffle_enabled
+        enabled = self.navigator.toggle_shuffle(session_id)
+        if enabled is None:
+            return
+        previous_saved = dict(self.state.shuffle_enabled_by_session)
+        if enabled:
+            self.state.shuffle_enabled_by_session[session_id.value] = True
+        else:
+            self.state.shuffle_enabled_by_session.pop(session_id.value, None)
+        if not self._save_state():
+            self.state.shuffle_enabled_by_session = previous_saved
+            self.navigator.set_shuffle_enabled(session_id, previous)
+            self._refresh_menu_state()
+            return
+        self._refresh_menu_state()
+        self.announcer.say(
+            "Odtwarzanie losowe włączone"
+            if enabled
+            else "Odtwarzanie losowe wyłączone"
         )
 
     def _set_transport_label(self, *, playing: bool, preparing: bool = False) -> None:

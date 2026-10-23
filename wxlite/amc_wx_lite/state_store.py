@@ -500,6 +500,9 @@ class LiteState:
     options: Options = field(default_factory=Options)
     stations: list[Station] = field(default_factory=list)
     navigation: dict = field(default_factory=dict)
+    #: Prywatny, trwaly przelacznik losowania dla sesji, ktore faktycznie
+    #: maja w AMC Test wspierany tor nastepstwa. Brak klucza oznacza wylaczone.
+    shuffle_enabled_by_session: dict[str, bool] = field(default_factory=dict)
     #: Opcje sesji: wybory uzytkownika per sesja (``files`` / ``radio``).
     #: Pusty slownik = kazda sesja dziedziczy ustawienia ogolne, czyli
     #: zachowanie sprzed tego przyrostu.
@@ -596,6 +599,19 @@ def _read_session_overrides(raw: object) -> dict:
         if not overrides.is_empty:
             result[key] = overrides
     return result
+
+
+def _read_shuffle_enabled(raw: object) -> dict[str, bool]:
+    """Przepusc tylko trzy wspierane sesje i wylacznie jawne ``true``."""
+
+    if not isinstance(raw, dict):
+        return {}
+    supported = {"files", "podcasts", "spotify"}
+    return {
+        key: True
+        for key, value in raw.items()
+        if key in supported and value is True
+    }
 
 
 def _read_recording_history(raw: object) -> list[dict]:
@@ -749,6 +765,9 @@ class StateStore:
             options=options,
             stations=stations,
             navigation=navigation if isinstance(navigation, dict) else {},
+            shuffle_enabled_by_session=_read_shuffle_enabled(
+                raw.get("shuffle_enabled_by_session")
+            ),
             session_overrides=_read_session_overrides(raw.get("session_overrides")),
             audio_output_device_ids_by_session=read_output_overrides(
                 raw.get("audio_output_device_ids_by_session")
@@ -807,6 +826,9 @@ class StateStore:
             "options": asdict(state.options),
             "stations": [asdict(station) for station in state.stations],
             "navigation": state.navigation,
+            "shuffle_enabled_by_session": _read_shuffle_enabled(
+                state.shuffle_enabled_by_session
+            ),
             # Puste wpisy sa USUWANE (jak cs:93): w pliku nie moga zostawac
             # wartosci nieodroznialne od braku decyzji uzytkownika.
             "session_overrides": {

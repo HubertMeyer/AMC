@@ -831,13 +831,26 @@ def test_player_context_exposes_queue_navigation_with_readable_shortcuts() -> No
         for item in menu.items
         if item.action is Action.PLAY_PAUSE
     )
+    shuffle = next(
+        item
+        for menu in menu_model.menus_for_session(SessionId.SPOTIFY)
+        for item in menu.items
+        if item.action is Action.TOGGLE_SHUFFLE
+    )
 
     class Native:
+        def __init__(self, label: str, checked: bool = False) -> None:
+            self.label = label
+            self.checked = checked
+
         def IsEnabled(self):  # noqa: N802 - wx API
             return True
 
         def GetItemLabel(self):  # noqa: N802 - wx API
-            return "&Pauza albo wznowienie (Spacja)"
+            return self.label
+
+        def IsChecked(self):  # noqa: N802 - wx API
+            return self.checked
 
     frame = object.__new__(LiteFrame)
     frame.navigator = types.SimpleNamespace(
@@ -846,7 +859,10 @@ def test_player_context_exposes_queue_navigation_with_readable_shortcuts() -> No
             model=types.SimpleNamespace(selected_row=None),
         ),
     )
-    frame._menu_items = [(Native(), play_pause)]
+    frame._menu_items = [
+        (Native("&Pauza albo wznowienie (Spacja)"), play_pause),
+        (Native("Odtwa&rzaj losowo (R)", checked=True), shuffle),
+    ]
     frame._refresh_menu_state = lambda: None
     frame._action_available_in_active_session = lambda _action: True
 
@@ -859,6 +875,15 @@ def test_player_context_exposes_queue_navigation_with_readable_shortcuts() -> No
 
     assert labels[Action.QUEUE_PREVIOUS] == "Poprzedni utwór kolejki (Page Up)"
     assert labels[Action.QUEUE_NEXT] == "Następny utwór kolejki (Page Down)"
+    assert labels[Action.TOGGLE_SHUFFLE] == "Odtwarzaj losowo (R)"
+    shuffle_command = next(
+        command
+        for group in groups
+        for command in group
+        if command.action is Action.TOGGLE_SHUFFLE
+    )
+    assert shuffle_command.checkable is True
+    assert shuffle_command.checked is True
 
 
 def test_shift_f6_returns_to_the_list() -> None:

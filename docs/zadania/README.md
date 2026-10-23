@@ -30,6 +30,13 @@ jawnym poleceniu użytkownika albo przez osobno uzgodniony harmonogram.
 
 ## Zadania
 
+- `PLAY-001` — **W trakcie; kod i pełna regresja 2010/2010 są gotowe, czeka na
+  instalację zbiorczego AMC Test i ręczny odbiór NVDA** — trwałe
+  `Odtwarzaj losowo (R)` w odtwarzaczach Plików, Podcastów i Spotify, również
+  w menu kontekstowym, palecie i pomocy; jawne kolejki zachowują własny porządek.
+  Szczegóły:
+  [PLAY-001-odtwarzanie-losowe-r.md](PLAY-001-odtwarzanie-losowe-r.md).
+
 - `STAB-001` — **Zrobione; zniknięcie i powrót okna z 23.10.2026 były
   kontrolowaną promocją AMC Test, nie awarią Pythona** — korelacja manifestu,
   procesów, logu hosta i dzienników Windows oraz izolowane testy operacji

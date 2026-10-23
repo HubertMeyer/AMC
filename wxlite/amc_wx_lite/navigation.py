@@ -9,6 +9,8 @@ CommandIds.cs), nie wymyslona - patrz mapa w shortcuts.py.
 
 from __future__ import annotations
 
+import random
+
 from dataclasses import dataclass, field
 from enum import Enum
 
@@ -226,6 +228,12 @@ class SessionState:
     #: kolejce. Trzymamy wiersze osobno, bo po uruchomieniu uzytkownik moze
     #: otworzyc inny widok, a nastepny element nadal ma pochodzic ze zrodla.
     playback_source_rows: tuple[Row, ...] = ()
+    #: Nielosowa migawka tego samego zrodla. Po wylaczeniu losowania wracamy
+    #: do porzadku katalogu, nie do przypadkowej kolejnosci z pamieci.
+    unshuffled_playback_source_rows: tuple[Row, ...] = ()
+    #: Stan odtwarzania losowego nalezy do sesji, a nie do aktualnego widoku.
+    #: W GUI jest zapisywany w prywatnym stanie AMC Test.
+    shuffle_enabled: bool = False
     #: ``True`` tylko wtedy, gdy odtwarzanie rzeczywiscie prowadzi kolejka
     #: hosta (Zapisana kolejka albo Zywa kolejka). Zwykly plik, zakladka i
     #: stacja nie moga pytac ``queue.previous``/``queue.next``.
@@ -736,6 +744,9 @@ class Navigator:
             SessionId.FRONTIER_SMART: SessionState(SessionId.FRONTIER_SMART),
         }
         self.active = SessionId.FILES
+        # Osobny punkt podmiany pozwala testom sprawdzic dokladna kolejnosc
+        # bez uzalezniania ich od globalnego generatora liczb losowych.
+        self._shuffle_rows = random.shuffle
 
     @property
     def session(self) -> SessionState:
@@ -744,6 +755,145 @@ class Navigator:
     @property
     def view(self) -> View:
         return self.session.view
+
+    @staticmethod
+    def supports_shuffle(session_id: SessionId) -> bool:
+        return session_id in {
+            SessionId.FILES,
+            SessionId.PODCASTS,
+            SessionId.SPOTIFY,
+        }
+
+    def _shuffled_source(
+        self,
+        rows: tuple[Row, ...],
+        current_id: str | None,
+    ) -> tuple[Row, ...]:
+        """Losuj bez gubienia biezacego elementu i bez duplikatow."""
+
+        current = next(
+            (row for row in rows if row.item_id == current_id),
+            None,
+        )
+        remaining = [
+            row for row in rows
+            if current is None or row.item_id != current.item_id
+        ]
+        self._shuffle_rows(remaining)
+        return tuple(([current] if current is not None else []) + remaining)
+
+    def _set_playback_source(
+        self,
+        state: SessionState,
+        rows: tuple[Row, ...],
+        *,
+        uses_queue: bool = False,
+    ) -> None:
+        """Ustaw jedno zrodlo dla Enter, Page Up/Down i losowania."""
+
+        normalized = tuple(rows)
+        state.unshuffled_playback_source_rows = normalized
+        state.playback_uses_queue = uses_queue
+        state.playback_source_rows = (
+            self._shuffled_source(normalized, state.now_playing_id)
+            if state.shuffle_enabled and not uses_queue
+            else normalized
+        )
+
+    def set_shuffle_enabled(
+        self,
+        session_id: SessionId,
+        enabled: bool,
+    ) -> bool | None:
+        """Przelacz losowanie jednej wspieranej sesji bez ruszania kolejki."""
+
+        if not self.supports_shuffle(session_id):
+            return None
+        state = self.sessions[session_id]
+        enabled = bool(enabled)
+        if state.shuffle_enabled == enabled:
+            return enabled
+        state.shuffle_enabled = enabled
+        if state.playback_uses_queue:
+            # Jawna kolejka (w tym blok „odtworz nastepne”) ma pierwszenstwo.
+            return enabled
+        base = (
+            state.unshuffled_playback_source_rows
+            or state.playback_source_rows
+        )
+        state.unshuffled_playback_source_rows = tuple(base)
+        state.playback_source_rows = (
+            self._shuffled_source(tuple(base), state.now_playing_id)
+            if enabled
+            else tuple(base)
+        )
+        return enabled
+
+    def toggle_shuffle(self, session_id: SessionId) -> bool | None:
+        state = self.sessions[session_id]
+        return self.set_shuffle_enabled(session_id, not state.shuffle_enabled)
+
+    def continue_shuffled_after_end(
+        self,
+        session_id: SessionId,
+    ) -> list[object] | None:
+        """Po naturalnym koncu uruchom kolejny element losowej sekwencji.
+
+        Funkcja dostaje sesje zdarzenia, a nie aktualnie ogladana sesje.
+        Dzieki temu muzyka moze kontynuowac w tle bez przenoszenia fokusu.
+        ``None`` oznacza: losowanie nie prowadzi tego transportu albo sekwencja
+        sie skonczyla i zwykly komunikat konca ma zostac zachowany.
+        """
+
+        if not self.supports_shuffle(session_id):
+            return None
+        state = self.sessions[session_id]
+        if (
+            not state.shuffle_enabled
+            or state.playback_uses_queue
+            or not state.playback_source_rows
+            or not state.now_playing_id
+        ):
+            return None
+        current_index = next(
+            (
+                index for index, row in enumerate(state.playback_source_rows)
+                if row.item_id == state.now_playing_id
+            ),
+            -1,
+        )
+        target_index = current_index + 1
+        if current_index < 0 or target_index >= len(state.playback_source_rows):
+            return None
+        target = state.playback_source_rows[target_index]
+        previous_title = state.now_playing_title
+        state.now_playing_id = target.item_id
+        state.now_playing_title = target.title
+        if session_id is SessionId.SPOTIFY:
+            intent = self._spotify_play_intent(target)
+            if isinstance(intent, Announce):
+                return [intent]
+            intent.previous_item_id = state.current_material_id
+            intent.previous_title = previous_title
+            intent.preserve_navigation = True
+            state.pending_material_id = target.item_id
+            return [intent, Announce(target.title)]
+        if session_id is SessionId.PODCASTS:
+            state.pending_material_id = target.item_id
+            return [
+                PlayMedia(
+                    target.path or "",
+                    target.item_id,
+                    target.title,
+                    position_seconds=target.position_seconds,
+                ),
+                Announce(target.title),
+            ]
+        state.pending_material_id = profile_material_id(target.item_id)
+        return [
+            PlayTrack(target.path or "", target.item_id, target.title),
+            Announce(target.title),
+        ]
 
     # ---------------------------------------------------------------- sesje
 
@@ -1282,12 +1432,14 @@ class Navigator:
                 state.now_playing_id = row.item_id
                 state.now_playing_title = row.title
                 state.pending_material_id = row.item_id
-                state.playback_source_rows = tuple(
-                    candidate for candidate in state.model.rows
-                    if candidate.kind in ("track", "episode")
-                    and not candidate.activation_message
+                self._set_playback_source(
+                    state,
+                    tuple(
+                        candidate for candidate in state.model.rows
+                        if candidate.kind in ("track", "episode")
+                        and not candidate.activation_message
+                    ),
                 )
-                state.playback_uses_queue = False
                 # Pierwszy etap Spotify jest jawnie tylko do odczytu. Zamiar
                 # zachowujemy dla przyszłego kontrolera, ale lista nie może
                 # odsłonić pozornego odtwarzacza, którego host jeszcze nie ma.
@@ -1364,11 +1516,13 @@ class Navigator:
             state.now_playing_id = row.item_id
             state.now_playing_title = row.title
             state.pending_material_id = row.item_id
-            state.playback_source_rows = tuple(
-                candidate for candidate in state.model.rows
-                if candidate.kind == "episode" and candidate.path
+            self._set_playback_source(
+                state,
+                tuple(
+                    candidate for candidate in state.model.rows
+                    if candidate.kind == "episode" and candidate.path
+                ),
             )
-            state.playback_uses_queue = False
             state.view = View.PLAYER
             return [
                 PlayMedia(
@@ -1403,11 +1557,13 @@ class Navigator:
         state.now_playing_id = row.item_id
         state.now_playing_title = row.title
         state.pending_material_id = profile_material_id(row.item_id)
-        state.playback_source_rows = tuple(
-            candidate for candidate in state.model.rows
-            if candidate.kind == "track" and candidate.path
+        self._set_playback_source(
+            state,
+            tuple(
+                candidate for candidate in state.model.rows
+                if candidate.kind == "track" and candidate.path
+            ),
         )
-        state.playback_uses_queue = False
         state.view = View.PLAYER
         return [PlayTrack(row.path, row.item_id, row.title), Announce(row.title)]
 
@@ -1707,8 +1863,7 @@ class Navigator:
         state.now_playing_id = row.item_id
         state.now_playing_title = row.title
         state.pending_material_id = profile_material_id(row.item_id)
-        state.playback_source_rows = ()
-        state.playback_uses_queue = True
+        self._set_playback_source(state, (), uses_queue=True)
         state.view = View.PLAYER
         # Czlonkostwo bierzemy z ODCZYTU profilu. Wiersz bez wpisu w mapie to
         # starszy zapis (``legacyRegularQueue``): jest w kolejce zwyklej, nie w
@@ -1736,8 +1891,7 @@ class Navigator:
         state.now_playing_id = row.item_id
         state.now_playing_title = row.title
         state.pending_material_id = profile_material_id(row.item_id)
-        state.playback_source_rows = ()
-        state.playback_uses_queue = True
+        self._set_playback_source(state, (), uses_queue=True)
         state.view = View.PLAYER
         return [PlayQueueAt(row.item_id, row.title), Announce(row.title)]
 
@@ -1788,8 +1942,7 @@ class Navigator:
         )
         # Zakladka uruchamia jeden konkretny material. Nie podpinamy pod nia
         # przypadkowo listy zakladek (jej wiersze nie sa plikami) ani kolejki.
-        state.playback_source_rows = ()
-        state.playback_uses_queue = False
+        self._set_playback_source(state, ())
         state.view = View.PLAYER
         return [
             PlayTrack(path, f"file:{path}", title, position_seconds=position_seconds),
@@ -1863,8 +2016,7 @@ class Navigator:
         state.now_playing_id = target.item_id
         state.now_playing_title = target.title
         state.pending_material_id = profile_material_id(target.item_id)
-        state.playback_source_rows = (target,)
-        state.playback_uses_queue = False
+        self._set_playback_source(state, (target,))
         if was_player or open_player:
             state.view = View.PLAYER
         return [PlayTrack(target.path, target.item_id, target.title), Announce(target.title)]
@@ -2150,8 +2302,7 @@ class Navigator:
         intent.preserve_navigation = True
         intent.success_announcement = announcement or row.title
         state.pending_material_id = row.item_id
-        state.playback_source_rows = source_rows or (row,)
-        state.playback_uses_queue = False
+        self._set_playback_source(state, source_rows or (row,))
         return intent
 
     def restore_spotify_playback_after_failed_handoff(
@@ -2966,8 +3117,7 @@ class Navigator:
             state.now_playing_id = row.item_id
             state.now_playing_title = row.title
             state.pending_material_id = row.item_id
-            state.playback_source_rows = (row,)
-            state.playback_uses_queue = False
+            self._set_playback_source(state, (row,))
             state.view = View.LIST
             return [intent]
         return [Announce("Nie można otworzyć tego wyniku Spotify")]

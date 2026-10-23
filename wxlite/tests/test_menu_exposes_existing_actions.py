@@ -237,7 +237,7 @@ def test_no_duplicate_labels_or_shortcuts() -> None:
             "Ctrl+Shift+U", "Ctrl+Shift+P",
         "B", "Shift+B", "Ctrl+Shift+B", "Ctrl+X", "Ctrl+V",
         "Alt+Up", "Alt+Down", "F2", "Delete",
-        "Ctrl+U", "Ctrl+P", "I", "O", "S", "T"
+        "Ctrl+U", "Ctrl+P", "I", "O", "R", "S", "T"
     }, duplicates
     for chord in ("Ctrl+U", "Ctrl+P"):
         for item in duplicates.get(chord, []):

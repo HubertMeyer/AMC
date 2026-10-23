@@ -278,8 +278,11 @@ def test_recording_shortcuts_have_the_scope_of_full_amc() -> None:
     assert resolve(Chord("T"), player_view=True, radio_session=True) is Action.RECORD_SPLIT
     assert resolve(Chord("R"), player_view=False, radio_session=True) is None
     assert resolve(Chord("T"), player_view=False, radio_session=True) is None
-    # W plikach zadna litera nie uruchamia nagrania.
-    assert resolve(Chord("R"), player_view=True, radio_session=False) is None
+    # W plikach R steruje losowaniem, ale nigdy nie uruchamia nagrania.
+    assert (
+        resolve(Chord("R"), player_view=True, radio_session=False)
+        is Action.TOGGLE_SHUFFLE
+    )
     assert resolve(Chord("T"), player_view=True, radio_session=False) is None
 
 

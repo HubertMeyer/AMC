@@ -316,6 +316,7 @@ _TOP_LEVEL_SECTIONS = {
     "navigation": CONFIGURATION,
     "session_overrides": CONFIGURATION,
     "audio_output_device_ids_by_session": CONFIGURATION,
+    "shuffle_enabled_by_session": CONFIGURATION,
     "preset_overrides": CONFIGURATION,
     "search_history": CONFIGURATION,
     "clip_selections": LIBRARY,

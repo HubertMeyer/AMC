@@ -168,6 +168,11 @@ STABLE_TIMELINE_SESSIONS = (
     SessionId.PODCASTS,
     SessionId.SPOTIFY,
 )
+SHUFFLE_SESSIONS = (
+    SessionId.FILES,
+    SessionId.PODCASTS,
+    SessionId.SPOTIFY,
+)
 PLAYBACK_HISTORY_SESSIONS = (
     SessionId.FILES,
     SessionId.RADIO,
@@ -1029,6 +1034,16 @@ def build_menus(
                 visible_sessions=MUTE_SESSIONS,
             ),
             MenuItem(
+                "Odtwa&rzaj losowo",
+                Action.TOGGLE_SHUFFLE,
+                shortcut="R",
+                accelerator=False,
+                checkable=True,
+                needs_playback=True,
+                needs_player_view=True,
+                visible_sessions=SHUFFLE_SESSIONS,
+            ),
+            MenuItem(
                 "Wybierz &tryb Frontier Smart…",
                 Action.FRONTIER_SMART_SELECT_MODE,
                 needs_playback=True,
@@ -1320,7 +1335,7 @@ def build_menus(
             MenuItem("&Szybciej", Action.RATE_UP, shortcut="Shift+.",
                      accelerator=False, needs_playback=True,
                      visible_sessions=LOCAL_MEDIA),
-            MenuItem("Prędkość no&rmalna", Action.RATE_RESET, shortcut="Ctrl+.",
+            MenuItem("Prędkoś&ć normalna", Action.RATE_RESET, shortcut="Ctrl+.",
                      needs_playback=True, visible_sessions=LOCAL_MEDIA),
             SEPARATOR,
             # Skroty poprawione na te z oryginalu: Ctrl+SHIFT+E/R/T
