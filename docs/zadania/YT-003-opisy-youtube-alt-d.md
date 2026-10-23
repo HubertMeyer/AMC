@@ -1,7 +1,8 @@
 # YT-003 — opisy YouTube pod Alt+D
 
-- Status: **kod, testy i kompilacje zaliczone; przygotowywana scalona paczka
-  AMC Test do ręcznego odbioru NVDA**.
+- Status: **wdrożone do ręcznego odbioru — kod, testy, pełna regresja
+  wxPython, kompilacje, kontrola nagrywania, atomowa instalacja, kontrolowany
+  start i dwie próby publicznego YouTube są zaliczone**.
 - Utworzono: 23 października 2026.
 - Ostatnia aktualizacja: 23 października 2026.
 - Obszar: Podcasty i YouTube, opisy kanałów, playlist i materiałów, NVDA.
@@ -78,7 +79,7 @@ tego samego wiersza listy; ponowne otwarcie wykonuje ten sam kontrakt.
   [playlists](https://developers.google.com/youtube/v3/docs/playlists) i
   [videos](https://developers.google.com/youtube/data/reference/rest/v3/videos).
 
-## Testy i rzeczywiste wyniki przed scaleniem
+## Testy i rzeczywiste wyniki
 
 - Ukierunkowane testy wxPython: **115/115 zaliczonych**. Obejmują opis zapisany,
   pobranie starego publicznego opisu bez argumentów logowania, komunikat przy
@@ -94,6 +95,12 @@ tego samego wiersza listy; ponowne otwarcie wykonuje ten sam kontrakt.
   odstępów.
 - Kompilacje Release Core, LiteHost, ProtocolTests i Windows SmokeTests:
   **0 ostrzeżeń, 0 błędów**.
+- Końcowa promocja ponownie zaliczyła **30/30 testów launchera i
+  aktualizatora**, pełne **2029 testów wxPython**, 111 kontrolowanie
+  pominiętych i 13 podtestów oraz kompilacje wymaganych składników.
+- Próba zainstalowanego hosta bez argumentów konta Google odczytała przez
+  zarządzany `yt-dlp 2026.08.19` prawdziwy publiczny opis filmu, **2362 znaki**,
+  oraz opis kanału, **79 znaków**. Filmów ani kolekcji nie pobierano.
 - Szeroki Core SmokeTests przeszedł nowe testy YouTube, lecz później zatrzymał
   się na zastanym, niezwiązanym z YT-003 teście nazwy powłoki instalatora:
   `ShellApplicationName "Accessible Multimedia Controller"`. Ten przebieg nie
@@ -101,9 +108,9 @@ tego samego wiersza listy; ponowne otwarcie wykonuje ten sam kontrakt.
 
 ## Znane ograniczenia i ręczny odbiór
 
-- Nie wykonano automatycznego testu na żywej stronie YouTube. Na komputerze nie
-  ma obecnie składnika `yt-dlp` w zarządzanym katalogu AMC, dlatego przed próbą
-  starszego publicznego wpisu może być potrzebne polecenie `Pomoc → Sprawdź
+- Na tym komputerze zarządzany składnik `yt-dlp 2026.08.19` jest obecny i
+  zaliczył próbę filmu oraz kanału. Na innym profilu, gdy składnika zabraknie,
+  przed próbą starszego publicznego wpisu trzeba użyć `Pomoc → Sprawdź
   składniki: FFmpeg i yt-dlp`. Nowe opisy playlist konta przychodzą z
   oficjalnego API i nie zależą od tego składnika.
 - Opis może być pusty, jeżeli autor go nie podał, film został usunięty albo
@@ -116,8 +123,21 @@ tego samego wiersza listy; ponowne otwarcie wykonuje ten sam kontrakt.
 
 ## Wersja, commit, instalacja i publikacja
 
-Źródła są przygotowane w gałęzi zadania `task/youtube-descriptions`. Dokładny
-commit, tożsamość pakietu, liczba plików, wynik kontroli nagrywania i stała
-instalacja zostaną dopisane po scaleniu oraz promocji. Sam kod i testy nie są
-jeszcze dowodem instalacji. AMC Public, instalator publiczny i GitHub nie
-zostały zmienione.
+Implementacja i testy mają commit
+`f8668937659a518770fa598934082c11a3f7cf47` —
+`feat(youtube): dodaj opisy pod Alt+D`. Zainstalowany pakiet AMC Test ma
+identyfikator `3c2a9986`, etykietę
+`2026.10.23-f8668937659a518770fa598934082c11a3f7cf47-3c2a9986` i **1674
+pliki**. Przed promocją pięciosekundowa bramka sprawdziła skonfigurowany katalog
+nagrań: 0 plików `.amc-partial` przed i po pomiarze oraz 0 plików rosnących.
+Aktualizator zachował dodatkową żywą blokadę zamknięcia podczas nagrywania.
+
+Kandydat i stała instalacja przeszły kontrolę manifestu, sum, odizolowany start
+oraz kontrolowany start po podmianie. Potwierdzone okno to `AMC Test —
+23.10.2026, 23:13`, proces interfejsu pochodzi z
+`D:\Projekty Codex\AMC Python\runtime\python.exe`, a stała instalacja znajduje
+się w `D:\Projekty Codex\AMC Python`. Promocję ukończono 23.10.2026 o 23:15
+czasu lokalnego.
+
+Ten późniejszy zapis dokumentacyjny nie zmienia rewizji zainstalowanego źródła.
+AMC Public, instalator publiczny i GitHub nie zostały zmienione.

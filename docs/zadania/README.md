@@ -300,12 +300,12 @@ zmian, wymagający korekty użytkownika:
   wewnętrznym silniku, kopiowanie adresu, F5 i Backspace oraz dynamiczna stacja
   Radia oparta na stałym adresie kanału `/live`. Szczegóły:
   [YT-002-transmisje-na-zywo-i-dynamiczne-radio.md](YT-002-transmisje-na-zywo-i-dynamiczne-radio.md).
-- `YT-003` — **Kod, pełna regresja wxPython, ukierunkowane testy .NET i
-  kompilacje Release są zaliczone; przygotowywana jest scalona instalacja AMC
-  Test do ręcznego odbioru NVDA** — `Alt+D` pokazuje opisy kanałów, playlist i
-  materiałów YouTube, zapisuje nowe opisy z importu i synchronizacji oraz
-  odczytuje na żądanie brakujący opis starszego publicznego wpisu bez logowania
-  Google. Szczegóły:
+- `YT-003` — **Wdrożone do ręcznego odbioru — pełna regresja 2029 testów
+  wxPython, testy .NET, build, atomowa instalacja, kontrolowany start AMC Test
+  23.10.2026, 23:13 oraz żywe publiczne próby filmu i kanału są zaliczone** —
+  `Alt+D` pokazuje opisy kanałów, playlist i materiałów YouTube, zapisuje nowe
+  opisy z importu i synchronizacji oraz odczytuje na żądanie brakujący opis
+  starszego publicznego wpisu bez logowania Google. Szczegóły:
   [YT-003-opisy-youtube-alt-d.md](YT-003-opisy-youtube-alt-d.md).
 - `NAME-001` — **Kod, testy, paczka, instalacja i uruchomienie AMC Test gotowe;
   bez nowego instalatora AMC Public** —
