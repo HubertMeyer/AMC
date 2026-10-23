@@ -603,3 +603,57 @@ równoległych wywołań Core chwilowo zderzyło się o wspólny plik `obj`; po
 uruchomieniu sekwencyjnym oba zestawy przeszły. Nie zbudowano ani nie
 zainstalowano nowej paczki, ponieważ na komputerze nie ma jeszcze pliku z
 sekretem klienta. AMC Public nadal nie zawiera tej możliwości.
+
+## Instalacja kompletnego klienta OAuth — 23 października 2026, 19:28
+
+Ta informacja zastępuje końcowe zdanie poprzedniej sekcji o braku lokalnego
+sekretu i paczki. Google nie udostępnia już pobrania ani ponownego wyświetlenia
+istniejącego sekretu. Po osobnym potwierdzeniu użytkownika utworzono drugi
+sekret w istniejącym kliencie `AMC Test Windows`, pobrano JSON i porównano jego
+identyfikator klienta z lokalną konfiguracją AMC. Sekret zapisano w ignorowanym
+pliku testowym; nie trafił do Git, dokumentacji, argumentów procesu ani logu.
+
+### Materiał do dokumentacji użytkownika
+
+- W AMC Test 19:28 można otworzyć `Konto YouTube i synchronizacja
+  subskrypcji…` z menu Plik, palety `Ctrl+Shift+K` albo pełnej pomocy.
+- `Zaloguj konto YouTube przez Google w przeglądarce` rozpoczyna jawny OAuth.
+  Samo uruchomienie AMC nie otwiera strony ani nie zmienia Biblioteki.
+- Dopiero stan `YouTube: zalogowano` potwierdza zakończenie. Strona powrotu
+  oznacza wyłącznie przekazanie zgody do AMC.
+- `Sprawdź subskrypcje YouTube bez zapisywania` tworzy podgląd. Osobne
+  `Zapisz sprawdzone subskrypcje w Bibliotece AMC` scala zatwierdzony plan z
+  bieżącą sesją `Podcasty i YouTube`.
+
+### Uzasadnienie i decyzje
+
+Pakiet zawiera konfigurację tylko w profilu AMC Test. AMC Public nadal nie ma
+tej możliwości ani zasobów klienta. Przed promocją wykryto aktywne nagranie i
+odłożono kompilację oraz instalację do jego naturalnego zakończenia o 19:25.
+Nie przerywano nagrania ani działającego hosta.
+
+### Testy i wynik
+
+- Konfiguracja YouTube i układ pakietu: 37/37 zaliczonych.
+- Launcher i aktualizator: 30/30 zaliczonych.
+- Pełna regresja wxPython: 2019 zaliczonych, 111 kontrolowanie pominiętych,
+  11 zaliczonych podtestów.
+- Build C#: bez ostrzeżeń i błędów. Kandydat: 1673 pliki.
+- Kontrolowany start kandydata oraz zainstalowanej kopii: zaliczony.
+- Instalacja atomowa: zaliczona. Uruchomiony proces pochodzi z
+  `D:\Projekty Codex\AMC Python\runtime\python.exe`.
+
+### Znane ograniczenia
+
+Nie wykonano jeszcze prawdziwego OAuth na nowym sekrecie, podglądu ani zapisu
+subskrypcji i ręcznego odbioru NVDA. Dwie pobrane kopie JSON pozostają w
+niestandardowym, synchronizowanym katalogu pobierania Chrome do czasu
+potwierdzenia działania. Po odbiorze należy je usunąć i osobno wyłączyć stary,
+utracony sekret w konsoli Google.
+
+### Wersja i commit
+
+Zainstalowano `AMC Test — 23.10.2026, 19:28`, rewizja
+`b162b4d113acd3de7c6ad7370428e16d80a972f0`, identyfikator paczki
+`892705d2`. Publikacji, instalatora AMC Public ani wysłania do GitHuba nie
+wykonywano.
