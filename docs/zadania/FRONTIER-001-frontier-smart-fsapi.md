@@ -13,8 +13,11 @@ wszystkich kontrolek poza zamknięciem na czas skanowania; Windows przenosił
 fokus na jedyny aktywny przycisk. Nowa korekta utrzymuje fokus na nazwanym
 przycisku „Wyszukiwanie urządzeń, czekaj”, a ponowne naciśnięcie tylko oznajmia,
 że wyszukiwanie już trwa. Początkowy przepływ również zaczyna się na tym
-przycisku, a nie na pustej liście. Kod i testy celowane są gotowe; instalacja
-nowego AMC Test zostanie zapisana po promocji. AMC Public pozostaje bez zmian.
+przycisku, a nie na pustej liście. Kod, pełna regresja, budowa i instalacja są
+gotowe w AMC Test `23.10.2026, 12:56`; uruchomiona paczka ma rewizję
+`65b11661` i identyfikator `94b08d59`. Szczegóły:
+[AMC-TEST-2026-10-23-1256-korekta-spotify-youtube-frontier.md](AMC-TEST-2026-10-23-1256-korekta-spotify-youtube-frontier.md).
+AMC Public pozostaje bez zmian.
 
 Wejście do pola PIN po wybraniu rzeczywiście rozpoznanego urządzenia jest
 zamierzonym następnym krokiem. W bieżącej próbie sieciowej urządzenie nie było

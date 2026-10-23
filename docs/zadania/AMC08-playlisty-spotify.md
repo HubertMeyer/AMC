@@ -24,8 +24,11 @@ Nowa korekta pomija wyłącznie puste rekordy i odsłania odcinki programu
 narastająco po 150 przez pozycję „Załaduj więcej”, zamiast blokować interfejs
 pełnym odczytem kilku tysięcy pozycji. Rzeczywisty odczyt z konta, bez zmiany
 danych użytkownika, zwrócił pierwsze 150 odcinków, `hasMore=true`, w 3,38 s.
-Kod i testy celowane są gotowe; poniższy status instalacji zostanie uzupełniony
-po zbudowaniu i promocji nowego AMC Test. AMC Public pozostaje bez zmian.
+Kod, pełna regresja, budowa i instalacja są gotowe w AMC Test
+`23.10.2026, 12:56`; uruchomiona paczka ma rewizję `65b11661` i identyfikator
+`94b08d59`. Szczegóły:
+[AMC-TEST-2026-10-23-1256-korekta-spotify-youtube-frontier.md](AMC-TEST-2026-10-23-1256-korekta-spotify-youtube-frontier.md).
+AMC Public pozostaje bez zmian.
 
 Źródło decyzji: zatwierdzona analiza historyczna tylko do odczytu
 `D:\Projekty Codex\Accessible Multimedia Controller\AMC08_PLAYLISTY_SPOTIFY_2026-10-18.md`.

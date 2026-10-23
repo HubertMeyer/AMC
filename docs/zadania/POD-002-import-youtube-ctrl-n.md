@@ -15,9 +15,12 @@ powoduje krótkie przymrożenie. Formularz nie przechwytywał własnego wklejani
 zdarzenie mogło jeszcze trafić do globalnego `Ctrl+V` listy, zanim fokus pola
 edycyjnego ustabilizował się po otwarciu modalu. Nowa korekta wiąże `Ctrl+V`
 bezpośrednio z polem adresu lub nazwy i odkłada samo wklejenie o jedną kolejkę
-zdarzeń interfejsu. Nie dodaje nowego polecenia ani skrótu aplikacji. Kod i
-testy celowane są gotowe; instalacja nowego AMC Test zostanie zapisana po
-promocji. AMC Public pozostaje bez zmian.
+zdarzeń interfejsu. Nie dodaje nowego polecenia ani skrótu aplikacji. Kod,
+pełna regresja, budowa i instalacja są gotowe w AMC Test
+`23.10.2026, 12:56`; uruchomiona paczka ma rewizję `65b11661` i identyfikator
+`94b08d59`. Szczegóły:
+[AMC-TEST-2026-10-23-1256-korekta-spotify-youtube-frontier.md](AMC-TEST-2026-10-23-1256-korekta-spotify-youtube-frontier.md).
+AMC Public pozostaje bez zmian.
 
 Zgłoszenie potwierdziło, że kanał Wieniawski został dodany, ale podczas
 oczekiwania NVDA wypowiedział techniczny komunikat przypominający „Windows 32”

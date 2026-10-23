@@ -1,6 +1,6 @@
 # YT-001 — konto YouTube i synchronizacja
 
-- Status: `W trakcie — interfejs wx, anulowanie i synchronizacja są zainstalowane w AMC Test 23.10.2026, 11:24; brak publicznego identyfikatora klienta Google AMC oraz odbioru na prawdziwym koncie z NVDA`. Zapis instalacji: [AMC-TEST-2026-10-23-1124-instalacja-zbiorcza.md](AMC-TEST-2026-10-23-1124-instalacja-zbiorcza.md).
+- Status: `W trakcie — interfejs wx, anulowanie i synchronizacja są zainstalowane w AMC Test 23.10.2026, 11:24; ustalono model jednego klienta Desktop OAuth należącego do AMC, ale brak jeszcze identyfikatora klienta Google AMC oraz odbioru na prawdziwym koncie z NVDA`. Zapis instalacji: [AMC-TEST-2026-10-23-1124-instalacja-zbiorcza.md](AMC-TEST-2026-10-23-1124-instalacja-zbiorcza.md).
 - Utworzono: 18 października 2026
 - Ostatnia aktualizacja: 23 października 2026
 - Obszar: YouTube, OAuth, Biblioteka, wyszukiwanie i bezpieczne poświadczenia
@@ -104,6 +104,32 @@ Automatyczne usuwanie po obu stronach jest wykluczone.
 - Publiczny użytkownik nie może być zmuszony do tworzenia własnego projektu
   deweloperskiego, chyba że Google rzeczywiście nie pozwala na wspólnego
   klienta AMC; wtedy potrzebny jest osobny dostępny kreator i jawna decyzja.
+
+### Decyzja o identyfikatorze Google — 23.10.2026
+
+Użytkownik końcowy nie ma tworzyć własnego identyfikatora. Aplikacja
+komputerowa jest publicznym klientem OAuth i nie potrafi bezpiecznie ukryć
+sekretu; AMC potrzebuje jednego klienta typu „Desktop app” w projekcie Google
+Cloud należącym do opiekuna AMC, z włączonym YouTube Data API, PKCE i
+minimalnym zakresem `youtube.readonly`. Identyfikator klienta może być częścią
+aplikacji, natomiast token użytkownika pozostaje chronionym poświadczeniem
+lokalnym.
+
+Dla AMC Test ekran zgody może działać w trybie Testing, a konto użytkownika
+zostanie dodane jako nazwany test user. Google ogranicza taki tryb do 100
+użytkowników, a autoryzacja testowa wygasa po 7 dniach. Dlatego nie jest to
+model końcowy. AMC Public powinien używać osobnego projektu produkcyjnego i
+przejść wymaganą weryfikację marki oraz zakresu, aby zwykły użytkownik jedynie
+wybrał konto Google. Na tym etapie użytkownik nie ma przekazywać tokenu,
+sekretu ani własnego identyfikatora. Potrzebna będzie później wyłącznie decyzja,
+które konto opiekuna ma być właścicielem projektu Google Cloud oraz dodanie
+konta odbiorcy do listy testowej.
+
+Oficjalne źródła sprawdzone 23.10.2026:
+[OAuth dla aplikacji zainstalowanych](https://developers.google.com/youtube/data/guides/auth/installed-apps),
+[gotowość produkcyjna i zgodność](https://developers.google.com/identity/protocols/oauth2/production-readiness/policy-compliance),
+[weryfikacja zakresów](https://developers.google.com/identity/protocols/oauth2/production-readiness/sensitive-scope-verification)
+oraz [tryb Testing](https://support.google.com/cloud/answer/15549945?hl=en).
 
 ## Kryteria akceptacji
 

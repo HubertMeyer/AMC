@@ -106,8 +106,8 @@ zmian, wymagający korekty użytkownika:
   [POD-001-sortowanie-biblioteki-zrodel.md](POD-001-sortowanie-biblioteki-zrodel.md).
 - `POD-002` — **Po odbiorze instalacji 11:24 dodano kolejną korektę szybkiego
   `Ctrl+V`: wklejanie jest przechwytywane przez modal i odłożone o jedną
-  kolejkę zdarzeń; kod i testy są gotowe, nowa instalacja AMC Test oczekuje na
-  promocję. Wcześniejsza korekta fokusu, blokady drugiego Entera i ukrywania procesów po
+  kolejkę zdarzeń; pełna regresja, budowa i instalacja AMC Test 12:56 są
+  zaliczone. Wcześniejsza korekta fokusu, blokady drugiego Entera i ukrywania procesów po
   zgłoszeniu NVDA z 2026-10-23 jest zainstalowana i uruchomiona w zbiorczym
   AMC Test 23.10.2026, 11:24; czeka na ponowny odbiór NVDA** — formularz
   `Ctrl+N` pozostaje otwarty przez oczekiwanie, procesy pomocnicze nie tworzą
@@ -158,8 +158,8 @@ zmian, wymagający korekty użytkownika:
 - `AMC08` — **Po odbiorze instalacji 11:24 znaleziono i naprawiono rzeczywistą
   przyczynę pustego Tyflo Podcast: 10 rekordów `null` w 2873 elementach
   przerywało parser. Odcinki programu są teraz ładowane narastająco po 150;
-  prawdziwy odczyt zwrócił pierwszą porcję w 3,38 s. Kod i testy są gotowe,
-  nowa instalacja AMC Test oczekuje na promocję. Prawdziwe OAuth i dodawanie do playlist zostały potwierdzone
+  prawdziwy odczyt zwrócił pierwszą porcję w 3,38 s. Pełna regresja, budowa i
+  instalacja AMC Test 12:56 są zaliczone. Prawdziwe OAuth i dodawanie do playlist zostały potwierdzone
   przez użytkownika; korekta mowy `Ctrl+F5` i widoczności pod `Ctrl+P`
   playlist istniejących oraz nowych jest zainstalowana w AMC Test; również
   czyszczenie migawki po ponownym logowaniu jest zbudowane i zainstalowane,
@@ -282,8 +282,8 @@ zmian, wymagający korekty użytkownika:
   Szczegóły: [NAME-001-amc-test.md](NAME-001-amc-test.md).
 - `FRONTIER-001` — **Po odbiorze instalacji 11:24 znaleziono zmianę fokusu na
   „Zamknij” podczas skanowania. Nowa korekta utrzymuje fokus i nazwany stan na
-  aktywnym przycisku wyszukiwania; kod i testy są gotowe, instalacja AMC Test
-  oczekuje na promocję. Czwarta korekta po zgłoszeniu z 23.10.2026 ma zaliczone
+  aktywnym przycisku wyszukiwania; pełna regresja, budowa i instalacja AMC Test
+  12:56 są zaliczone. Czwarta korekta po zgłoszeniu z 23.10.2026 ma zaliczone
   testy i kompilację Release, została zainstalowana i uruchomiona w AMC Test
   23.10.2026, 11:24; czeka na sprzętowy odbiór Teufela z NVDA 24.10.2026** —
   `Ctrl+8`, `Ctrl+F5` i ręczny adres korzystają z jednego modelu stanów.
