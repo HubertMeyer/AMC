@@ -4398,6 +4398,16 @@ class YouTubeAccountDialog(wx.Dialog):
 
     def _refresh_buttons(self) -> None:
         idle = self._busy_action is None
+        if self._connected:
+            self.login_button.SetLabel("Zaloguj ponownie przez Google")
+            self.login_button.SetName(
+                "Zaloguj ponownie konto YouTube przez Google w przeglądarce"
+            )
+        else:
+            self.login_button.SetLabel("Zaloguj przez Google w przeglądarce")
+            self.login_button.SetName(
+                "Zaloguj konto YouTube przez Google w przeglądarce"
+            )
         self.login_button.Enable(idle)
         self.preview_button.Enable(idle and self._connected)
         self.apply_button.Enable(
@@ -16272,8 +16282,16 @@ class LiteFrame(wx.Frame):
                     result,
                     "Zakończono operację konta YouTube.",
                 )
+                if action == "login" and youtube_account_connected(status):
+                    message = (
+                        "Zalogowano do YouTube. Teraz wybierz Sprawdź subskrypcje; "
+                        "lista nie zmieni Biblioteki, dopóki osobno nie wybierzesz "
+                        "Zapisz subskrypcje w Bibliotece AMC."
+                    )
                 if not dialog.IsBeingDeleted():
                     dialog.finish(action, result, status)
+                    if action == "login" and youtube_account_connected(status):
+                        dialog._set_status(message)
                 if action == "apply" and self.navigator.active is SessionId.PODCASTS:
                     self._refresh_profile_view()
                 self.announcer.say(message)

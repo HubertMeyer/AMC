@@ -77,6 +77,12 @@ public sealed class YouTubeOAuthTokenClient : IDisposable
             return "Kod lub zapisane logowanie YouTube straciło ważność. Zaloguj się ponownie.";
         if (string.Equals(code, "invalid_client", StringComparison.OrdinalIgnoreCase))
             return "Ta wersja AMC nie ma prawidłowo skonfigurowanego logowania YouTube.";
+        if (string.Equals(code, "unauthorized_client", StringComparison.OrdinalIgnoreCase))
+            return "Klient OAuth YouTube ma niewłaściwy typ. Utwórz w Google klienta typu Aplikacja komputerowa.";
+        if (string.Equals(code, "invalid_request", StringComparison.OrdinalIgnoreCase))
+            return "Google odrzucił dane logowania YouTube. Sprawdź konfigurację klienta typu Aplikacja komputerowa.";
+        if (string.Equals(code, "redirect_uri_mismatch", StringComparison.OrdinalIgnoreCase))
+            return "Adres powrotu logowania YouTube nie pasuje do klienta OAuth. Użyj klienta typu Aplikacja komputerowa.";
         if (string.Equals(code, "access_denied", StringComparison.OrdinalIgnoreCase))
             return "Logowanie YouTube zostało anulowane na stronie Google.";
         if (statusCode == HttpStatusCode.TooManyRequests)

@@ -458,6 +458,58 @@ internal sealed class SpotifyLibrespotMediaOutput : IMediaOutput, IDisposable
     }
 
     /// <summary>
+    /// Sprawdza zapamiętane wyjście jeszcze podczas konfiguracji startowej,
+    /// bez logowania do Spotify. Gdy endpoint zniknął, bieżący proces zostaje
+    /// jawnie przygotowany do użycia urządzenia domyślnego. Sama preferencja
+    /// pozostaje w profilu interfejsu i będzie ponownie sprawdzona po następnym
+    /// uruchomieniu AMC.
+    /// </summary>
+    /// <returns>
+    /// Nazwa niedostępnego wyjścia, gdy użyto fallbacku; w przeciwnym razie
+    /// <see langword="null"/>.
+    /// </returns>
+    internal async Task<string?> PrepareConfiguredOutputAsync(
+        CancellationToken cancellationToken = default)
+    {
+        string? requested;
+        lock (stateGate)
+        {
+            ObjectDisposedException.ThrowIf(disposed, this);
+            requested = desiredDeviceName;
+        }
+        if (string.IsNullOrWhiteSpace(requested)) return null;
+
+        var devices = await GetOutputDevicesAsync(cancellationToken).ConfigureAwait(false);
+        if (devices.Any(device => string.Equals(
+                device.Name, requested, StringComparison.Ordinal)))
+        {
+            return null;
+        }
+        if (!devices.Any(device => device.IsDefault))
+        {
+            throw new LibrespotHostException(
+                LibrespotHostErrorCodes.NoAudioDevice,
+                "Host Librespot nie zgłasza działającego urządzenia domyślnego.");
+        }
+
+        lock (stateGate)
+        {
+            ObjectDisposedException.ThrowIf(disposed, this);
+            // W czasie odczytu listy użytkownik mógł już wybrać inne wyjście.
+            // Wtedy stary wynik nie ma prawa nadpisać nowszej decyzji.
+            if (!string.Equals(desiredDeviceName, requested, StringComparison.Ordinal))
+                return null;
+            desiredDeviceName = null;
+            defaultOutputFallbackDeviceName = requested;
+            defaultOutputFallbackNoticePending = true;
+        }
+        DiagnosticLog.Info(
+            "spotify-librespot",
+            "Zapamiętane wyjście jest niedostępne; bieżąca sesja użyje urządzenia domyślnego.");
+        return requested;
+    }
+
+    /// <summary>
     /// Przelacza wyjscie na DOKLADNA nazwe z <see cref="GetOutputDevicesAsync"/>
     /// (null znaczy domyslne). Gdy host jeszcze nie ma konta, wybor jest tylko
     /// zapamietany i uzyty przy pierwszym logowaniu. Gdy host gra, wyjscie
@@ -497,7 +549,12 @@ internal sealed class SpotifyLibrespotMediaOutput : IMediaOutput, IDisposable
             {
                 // Konta jeszcze nie ma: nie ma czego przelaczac i nie wolno tu
                 // logowac. Zapamietujemy wybor na pierwsze "initialize".
-                lock (stateGate) desiredDeviceName = deviceName;
+                lock (stateGate)
+                {
+                    desiredDeviceName = deviceName;
+                    defaultOutputFallbackDeviceName = null;
+                    defaultOutputFallbackNoticePending = false;
+                }
                 return true;
             }
 
@@ -683,8 +740,15 @@ internal sealed class SpotifyLibrespotMediaOutput : IMediaOutput, IDisposable
                     clientInitialized = true;
                     var usedFallback = !string.IsNullOrWhiteSpace(device)
                         && effectiveDevice is null;
-                    defaultOutputFallbackDeviceName = usedFallback ? device : null;
-                    defaultOutputFallbackNoticePending = usedFallback;
+                    if (usedFallback)
+                    {
+                        defaultOutputFallbackDeviceName = device;
+                        defaultOutputFallbackNoticePending = true;
+                    }
+                    else if (!defaultOutputFallbackNoticePending)
+                    {
+                        defaultOutputFallbackDeviceName = null;
+                    }
                 }
             }
             return new HostLease(existing, generation);
@@ -857,7 +921,11 @@ internal sealed class SpotifyLibrespotMediaOutput : IMediaOutput, IDisposable
             item = currentItem;
         }
         if (item is null) return;
-        HandleFailure(e.PlayId, item, FriendlyTrackFailure(e.Code));
+        HandleFailure(
+            e.PlayId,
+            item,
+            FriendlyTrackFailure(e.Code),
+            SafeTrackFailureCode(e.Code));
     }
 
     private void OnHostFailed(object? sender, LibrespotHostFailureEventArgs e)
@@ -907,7 +975,11 @@ internal sealed class SpotifyLibrespotMediaOutput : IMediaOutput, IDisposable
     private bool IsCurrentSenderLocked(object? sender) =>
         !disposed && (sender is null || ReferenceEquals(sender, client));
 
-    private void HandleFailure(long playId, MediaItem item, string message)
+    private void HandleFailure(
+        long playId,
+        MediaItem item,
+        string message,
+        string? safeCode = null)
     {
         long generation;
         lock (stateGate)
@@ -920,7 +992,10 @@ internal sealed class SpotifyLibrespotMediaOutput : IMediaOutput, IDisposable
         }
         DiagnosticLog.Warning(
             "spotify-librespot",
-            $"Odtwarzanie nie powiodło się; element: {item.ExternalId ?? item.Id}.");
+            safeCode is null
+                ? $"Odtwarzanie nie powiodło się; element: {item.ExternalId ?? item.Id}."
+                : $"Odtwarzanie nie powiodło się; kod: {safeCode}; "
+                    + $"element: {item.ExternalId ?? item.Id}.");
         RaiseOnUi(generation, () => PlaybackFailed?.Invoke(this, new MediaOutputFailedEventArgs(item, message)));
     }
 
@@ -963,15 +1038,31 @@ internal sealed class SpotifyLibrespotMediaOutput : IMediaOutput, IDisposable
 
     internal static string FriendlyTrackFailure(string code) => code switch
     {
-        "premium_required" =>
+        "premium_required" or "premiumRequired" =>
             "Sesja Spotify — Librespot wymaga konta Premium. To konto nie zagra w AMC.",
-        "invalid_token" or "token_expired" =>
+        "invalid_token" or "invalidToken" or "token_expired" or "tokenExpired" =>
             "Logowanie do Spotify wygasło. Otwórz okno konta Spotify i zaloguj się ponownie.",
-        "track_unavailable" =>
+        "track_unavailable" or "trackUnavailable" =>
             "Spotify nie udostępnia tego utworu na tym koncie lub w tym kraju.",
-        "audio_device_lost" or "audio_device_unavailable" =>
+        "audio_device_lost" or "audioDeviceLost"
+            or "audio_device_unavailable" or "audioDeviceUnavailable" =>
             "Wybrane wyjście dźwięku przestało być dostępne. Wybierz inne wyjście w opcjach sesji.",
         _ => "Nie udało się odtworzyć tego utworu w sesji Spotify — Librespot."
+    };
+
+    /// <summary>
+    /// Do dziennika trafia wyłącznie zamknięty, znany kod protokołu. Host nie
+    /// może w ten sposób przemycić treści błędu ani poświadczenia.
+    /// </summary>
+    internal static string SafeTrackFailureCode(string code) => code switch
+    {
+        "premium_required" or "premiumRequired" => "premiumRequired",
+        "invalid_token" or "invalidToken" => "invalidToken",
+        "token_expired" or "tokenExpired" => "tokenExpired",
+        "track_unavailable" or "trackUnavailable" => "trackUnavailable",
+        "audio_device_lost" or "audioDeviceLost" => "audioDeviceLost",
+        "audio_device_unavailable" or "audioDeviceUnavailable" => "audioDeviceUnavailable",
+        _ => "unknown"
     };
 
     private void RaiseOnUi(Action action) => uiInvoker(action);

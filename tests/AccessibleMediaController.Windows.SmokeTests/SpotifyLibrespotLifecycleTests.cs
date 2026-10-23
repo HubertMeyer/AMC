@@ -35,7 +35,9 @@ internal static partial class SpotifyLibrespotLifecycleTests
         Task.Run(async () =>
         {
             await ListaUrzadzenBezKonta();
+            KodyHostaMajaZgodnaPisownieIKomunikaty();
             await PierwszyPlayLogujeRazZWybranymWyjsciem();
+            await NieobecneWyjscieJestRozwiazywanePrzedLogowaniem();
             await NieobecneZapamietaneWyjscieUzywaDomyslnego();
             await ZmianaWyjsciaWTrakcieOdtwarzaRealnyNowyProces();
             await ZmianaWyjsciaWPauzieNieWlaczaDzwieku();
@@ -53,7 +55,61 @@ internal static partial class SpotifyLibrespotLifecycleTests
             + " straż przygotowania, brak samoczynnej pętli logowania)");
     }
 
+    /// <summary>
+    /// Produkcyjny LiteHost dostaje zapamiętane wyjście przy starcie programu,
+    /// zanim użytkownik naciśnie Enter. Nieobecny Denon ma zostać rozpoznany
+    /// wtedy, bez tokenu i bez initialize, a pierwszy Play musi już dostać
+    /// jawne device=null. To odtwarza przypadek z odłączonym USB bez zmiany
+    /// prawdziwego profilu użytkownika.
+    /// </summary>
+    private static async Task NieobecneWyjscieJestRozwiazywanePrzedLogowaniem()
+    {
+        const string denon = "Cyfrowy interfejs audio (PMA-1700NE)";
+        using var scena = Scena.Nowa(device: denon);
+
+        var fallback = await scena.Output.PrepareConfiguredOutputAsync();
+        var host = scena.Hosts.Single();
+        Check(fallback == denon,
+            "Konfiguracja startowa musi rozpoznać nazwę nieobecnego Denona");
+        Check(scena.Output.SelectedOutputDeviceName is null,
+            "Bieżąca sesja musi przed Play przejść na urządzenie domyślne");
+        Check(host.Names().Contains("devices"),
+            "Startowa weryfikacja musi użyć rzeczywistej listy hosta");
+        Check(!host.Names().Contains("initialize"),
+            "Sprawdzenie wyjścia przed Play nie może logować konta Spotify");
+        Check(host.Tokens() == 0,
+            "Sprawdzenie wyjścia przed Play nie może przesłać tokenu");
+
+        scena.Output.Play(Utwor("A"), TimeSpan.Zero, 44, 1d);
+        await scena.Output.PendingPlaybackStart.WaitAsync(TimeSpan.FromSeconds(5));
+
+        var initialize = host.Commands("initialize").Single();
+        Check(initialize["device"] is null,
+            "Pierwszy initialize po starcie musi już wskazywać urządzenie domyślne");
+        Check(host.Commands("play").Count == 1,
+            "Startowy fallback nie może wymagać ręcznego drugiego Play");
+        Check(scena.Output.TakeDefaultOutputFallbackNotice() == denon,
+            "Komunikat po starcie dźwięku musi wymienić niedostępne wyjście");
+        Check(scena.Failed.Count == 0,
+            $"Startowy fallback nie może kończyć odtwarzania błędem: {scena.Blad}");
+    }
+
     // ---------- Mierzone zachowania ----------
+
+    private static void KodyHostaMajaZgodnaPisownieIKomunikaty()
+    {
+        Check(
+            SpotifyLibrespotMediaOutput.FriendlyTrackFailure("trackUnavailable")
+                == "Spotify nie udostępnia tego utworu na tym koncie lub w tym kraju.",
+            "Kod trackUnavailable z rzeczywistego hosta musi mieć właściwy komunikat");
+        Check(
+            SpotifyLibrespotMediaOutput.SafeTrackFailureCode("trackUnavailable")
+                == "trackUnavailable",
+            "Dziennik musi zachować bezpieczny kod trackUnavailable");
+        Check(
+            SpotifyLibrespotMediaOutput.SafeTrackFailureCode("sekret-z-hosta") == "unknown",
+            "Nieznany tekst hosta nie może trafić do dziennika jako kod");
+    }
 
     /// <summary>Lista wyjsc musi dojsc bez konta: proces wstaje, initialize NIE idzie.</summary>
     private static async Task ListaUrzadzenBezKonta()

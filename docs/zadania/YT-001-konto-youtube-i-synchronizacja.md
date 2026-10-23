@@ -509,3 +509,44 @@ próba nowego `amc_lite_host.exe` zwróciła wyłącznie oczekiwane nazwy
 zainstalowany runtime utworzył jeden wpis `Konto YouTube i synchronizacja
 subskrypcji…` w palecie. Program działa jako `AMC Test — 23.10.2026, 15:42`.
 Prawdziwy przepływ Google i mowa NVDA pozostają do ręcznego odbioru.
+
+## Korekta po pierwszym prawdziwym OAuth — 23 października 2026, 16:04
+
+Ta informacja zastępuje wcześniejsze oczekiwanie, że strona w przeglądarce z
+tekstem `Logowanie zakończone` dowodzi zapisanego konta w AMC. O 15:49:18
+Google przekazał kod do lokalnego odbiornika i przeglądarka pokazała stronę
+AMC, lecz późniejsza wymiana kodu na token została odrzucona. Dziennik hosta
+zapisał użytkowy błąd `Google odrzucił logowanie YouTube`, a magazyn
+`AccessibleMediaController/test/YouTube` nie powstał. Konto nie było więc
+zalogowane, mimo mylącego tekstu w karcie przeglądarki.
+
+### Poprawione zachowanie i organizacja biblioteki
+
+- Strona powrotu mówi teraz: `Google przekazał zgodę do AMC. AMC jeszcze kończy
+  logowanie. Możesz zamknąć tę kartę i sprawdzić wynik w aplikacji.` Nie ogłasza
+  sukcesu przed odpowiedzią punktu tokenów.
+- Znane bezpieczne błędy konfiguracji Google rozróżniają niewłaściwy typ klienta,
+  nieprawidłowe żądanie i niezgodny adres powrotu. Surowy opis odpowiedzi Google,
+  kod autoryzacyjny i token nadal nie trafiają do komunikatu ani dziennika.
+- Po faktycznym sukcesie stan ma powiedzieć `YouTube: zalogowano`, przycisk ma
+  nazwę `Zaloguj ponownie konto YouTube przez Google w przeglądarce`, a NVDA
+  otrzymuje instrukcję wybrania `Sprawdź subskrypcje`.
+- Samo logowanie niczego nie nadpisuje i nie pobiera kanałów do Biblioteki.
+  `Sprawdź subskrypcje` tworzy tylko plan i pokazuje wyłącznie kanały nowe lub
+  możliwe do przywrócenia. `Zapisz subskrypcje w Bibliotece AMC` osobno scala
+  zatwierdzony plan z istniejącymi podcastami i kanałami. Nie ma odrębnego trybu
+  widoku: zapisane kanały trafiają do tej samej sesji `Podcasty i YouTube`.
+
+### Testy i stan
+
+- Fundament OAuth: 11/11 scenariuszy, w tym komunikat strony pośredniej i trzy
+  bezpieczne diagnozy konfiguracji klienta.
+- Kontrakt konta YouTube: 7/7 scenariuszy. Interfejs YouTube razem z komunikatem
+  Spotify: 38/38 testów.
+- Pełna regresja wxPython: 2016 zaliczonych, 111 kontrolowanie pominiętych, 11
+  podtestów zaliczonych. Pełny protokół: 27/27 zestawów. Build Release: bez
+  ostrzeżeń i błędów.
+- Nie ma jeszcze udanego prawdziwego tokenu ani pobranej listy subskrypcji.
+  Po instalacji poprawionej wersji należy ponowić logowanie; nowy komunikat ma
+  wskazać konkretną klasę błędu konfiguracji, jeżeli Google ponownie odrzuci
+  wymianę kodu.

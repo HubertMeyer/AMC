@@ -16,9 +16,10 @@ internal static class YouTubeOAuthFoundationTests
         ExchangesCodeThroughOfficialEndpoint();
         RefreshesWithoutLosingRefreshToken();
         SanitizesTokenEndpointErrors();
+        ExplainsDesktopClientConfigurationErrors();
         ReceivesValidLoopbackCallbackWithoutEchoingCode();
         RejectsWrongLoopbackState();
-        Console.WriteLine("OK: bezpieczny fundament oficjalnego logowania YouTube (10 scenariuszy)");
+        Console.WriteLine("OK: bezpieczny fundament oficjalnego logowania YouTube (11 scenariuszy)");
     }
 
     private static void BuildsReadOnlyPkceRequestWithoutSecret()
@@ -194,6 +195,43 @@ internal static class YouTubeOAuthFoundationTests
         }
     }
 
+    private static void ExplainsDesktopClientConfigurationErrors()
+    {
+        foreach (var (code, expected) in new[]
+                 {
+                     ("unauthorized_client", "Aplikacja komputerowa"),
+                     ("invalid_request", "Aplikacja komputerowa"),
+                     ("redirect_uri_mismatch", "Aplikacja komputerowa")
+                 })
+        {
+            var handler = new TokenHandler(
+                HttpStatusCode.BadRequest,
+                $"{{\"error\":\"{code}\",\"error_description\":\"SEKRET\"}}");
+            using var client = new YouTubeOAuthTokenClient(new HttpClient(handler));
+            var verifier = Convert.ToBase64String(new byte[32])
+                .TrimEnd('=').Replace('+', '-').Replace('/', '_');
+            try
+            {
+                client.ExchangeCodeAsync(
+                        ClientId,
+                        new Uri("http://127.0.0.1:49321/youtube/callback/"),
+                        "kod",
+                        verifier,
+                        DateTimeOffset.UtcNow,
+                        CancellationToken.None)
+                    .GetAwaiter().GetResult();
+                throw new InvalidOperationException("Odrzucona konfiguracja została przyjęta.");
+            }
+            catch (InvalidOperationException exception)
+            {
+                Assert(exception.Message.Contains(expected, StringComparison.Ordinal),
+                    $"Kod {code} nie wyjaśnia wymaganego typu klienta.");
+                Assert(!exception.ToString().Contains("SEKRET", StringComparison.Ordinal),
+                    $"Kod {code} ujawnił opis odpowiedzi Google.");
+            }
+        }
+    }
+
     private static void ReceivesValidLoopbackCallbackWithoutEchoingCode()
     {
         using var receiver = YouTubeOAuthLoopbackReceiver.Start();
@@ -213,7 +251,8 @@ internal static class YouTubeOAuthFoundationTests
         Assert(callback.Succeeded && callback.Code == code,
             "Lokalny odbiornik nie przekazał prawidłowego kodu hostowi.");
         Assert(!page.Contains(code, StringComparison.Ordinal)
-               && page.Contains("wrócić do AMC", StringComparison.Ordinal),
+               && page.Contains("AMC jeszcze kończy logowanie", StringComparison.Ordinal)
+               && page.Contains("sprawdzić wynik w aplikacji", StringComparison.Ordinal),
             "Strona powrotu ujawniła kod albo nie podała użytkowej instrukcji.");
         Assert(response.Headers.CacheControl?.NoStore == true,
             "Strona powrotu mogłaby zostać zapisana w pamięci podręcznej.");

@@ -443,3 +443,43 @@ oraz [zmiana limitu wyszukiwania z lutego 2026](https://developer.spotify.com/do
   zaliczone. Pełnego zestawu wxPython nie powtarzano: wcześniejszy wspólny
   stan miał 1910 zaliczonych testów, a bieżący przyrost sprawdzono testami
   ukierunkowanymi. Publikacji nie wykonywano.
+
+## Korekta po ręcznym odbiorze wyjścia USB — 23 października 2026, 16:04
+
+Ta korekta zastępuje wcześniejsze założenie, że sam fallback wykonywany dopiero
+przy pierwszym `Play` wystarczająco obsługuje nieobecne zapamiętane urządzenie.
+Użytkownik odłączył interfejs `Cyfrowy interfejs audio (PMA-1700NE)` i stwierdził,
+że Spotify nadal wskazuje niedostępne wyjście, a dźwięk pojawił się dopiero po
+ręcznym wybraniu urządzenia domyślnego pod `Shift+A`.
+
+### Zachowanie widoczne dla użytkownika
+
+- Podczas startowej konfiguracji sesji Spotify nazwane wyjście jest teraz
+  sprawdzane przez rzeczywistą listę hosta Librespot, jeszcze bez logowania do
+  konta.
+- Gdy zapamiętanego Denona nie ma, bieżąca sesja przechodzi jawnie na domyślne
+  urządzenie Windows przed pierwszym Enterem. Preferencja pozostaje w profilu,
+  więc po kolejnym uruchomieniu może zostać sprawdzona ponownie.
+- Po potwierdzonym starcie dźwięku NVDA ma jednorazowo usłyszeć:
+  `Zapamiętane urządzenie audio Cyfrowy interfejs audio (PMA-1700NE) jest
+  niedostępne. Spotify odtwarza na domyślnym urządzeniu systemowym`.
+- Rzeczywisty host zwraca kod `trackUnavailable`; interfejs rozpoznaje teraz
+  tę pisownię, a bezpieczny dziennik zapisuje kod, dzięki czemu błąd utworu nie
+  jest już mylony z błędem wyjścia audio.
+
+### Testy i wynik przed instalacją
+
+- Izolowana scena odtwarza dokładnie przypadek `zapisany Denon → na liście tylko
+  domyślne Realtek → pierwszy Play`, bez konta Spotify i bez modyfikowania
+  prawdziwego profilu użytkownika. Potwierdza brak tokenu podczas sprawdzania,
+  `device=null` w pierwszym `initialize`, pojedynczy `play` i jednorazowy
+  komunikat fallbacku.
+- `--librespot-lifecycle`, `--librespot-output-smoke` i
+  `--spotify-native-startup`: zaliczone. Trzeci test powtórzono osobno w Release,
+  ponieważ pierwsza równoległa próba zderzyła się na wspólnych plikach
+  pośrednich WPF; nie był to wynik testu produktu.
+- Pełna regresja wxPython: 2016 zaliczonych, 111 kontrolowanie pominiętych i 11
+  podtestów zaliczonych. Pełne 27 zestawów protokołu LiteHost zaliczone.
+- Całe rozwiązanie zbudowane w Release: 0 ostrzeżeń, 0 błędów.
+- Na tym etapie jest to zmiana źródła z testami i kompilacją. Instalacja AMC
+  Test oraz ręczne potwierdzenie dźwięku pozostają odrębnymi faktami.

@@ -304,21 +304,42 @@ internal sealed class LiteSpotifyPlaybackCoordinator : IDisposable
             selectedDeviceName = deviceName;
             target = output;
             active = currentItem is not null && (playing || paused || preparing);
-            // Konfiguracja startowa zachowuje leniwy proces: dokładnie tak jak
-            // konstruktor starego AMC, który tylko zapamiętuje nazwę urządzenia.
+            // Dla wyjścia domyślnego konfiguracja startowa pozostaje całkiem
+            // leniwa. Nazwane wyjście trzeba jednak sprawdzić przed Play:
+            // inaczej nieobecny endpoint był zwracany jako available=true, a
+            // dopiero pierwsze odtwarzanie próbowało ratować sesję.
             if (!restart && target is null)
             {
-                return new
+                if (string.IsNullOrWhiteSpace(deviceName))
                 {
-                    sessionId = SessionId,
-                    deviceId = deviceName,
-                    available = true,
-                    active = false,
-                    rebuilt = false,
-                    usingDefault = string.IsNullOrWhiteSpace(deviceName)
-                };
+                    return new
+                    {
+                        sessionId = SessionId,
+                        deviceId = deviceName,
+                        available = true,
+                        active = false,
+                        rebuilt = false,
+                        usingDefault = true
+                    };
+                }
+                target = EnsureOutputLocked();
             }
             target ??= EnsureOutputLocked();
+        }
+
+        if (!restart && !string.IsNullOrWhiteSpace(deviceName))
+        {
+            var unavailableDevice = target.PrepareConfiguredOutputAsync()
+                .GetAwaiter().GetResult();
+            return new
+            {
+                sessionId = SessionId,
+                deviceId = deviceName,
+                available = unavailableDevice is null,
+                active = false,
+                rebuilt = false,
+                usingDefault = unavailableDevice is not null
+            };
         }
 
         var changed = target.TrySetOutputDeviceAsync(deviceName)

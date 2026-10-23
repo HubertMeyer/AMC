@@ -170,10 +170,12 @@ zmian, wymagający korekty użytkownika:
   — natywne playlisty
   Spotify w AMC Test: `Ctrl+P`, `Ctrl+Shift+P`, pobranie katalogu raz na
   uruchomienie, natychmiastowa widoczność nowej playlisty i zapamiętanie
-  ostatnich celów. Ręczny test z odłączonym interfejsem Denon USB wykazał, że
-  Spotify nadal próbował użyć zapamiętanego, niedostępnego wyjścia;
-  automatyczny powrót do domyślnego urządzenia Windows pozostaje więc zadaniem
-  otwartym mimo obecności wcześniejszego kodu i testów jednostkowych. Mechanizm
+  ostatnich celów. Ręczny test z odłączonym interfejsem Denon USB ujawnił, że
+  wcześniejszy fallback następował za późno. Korekta z 23.10.2026 sprawdza
+  nazwane wyjście przy konfiguracji sesji bez logowania, przełącza bieżący tor
+  na urządzenie domyślne przed pierwszym Play i rozróżnia kod
+  `trackUnavailable`; kod, testy i build Release są zaliczone, a instalacja i
+  ręczny odbiór dźwięku pozostają do wykonania. Mechanizm
   ma partycje usług i kont, aby kolejne integracje
   używały tego samego kontraktu bez kopiowania kodu Spotify. Przebieg:
   `AMC08-playlisty-spotify.md`. Zatwierdzona specyfikacja:

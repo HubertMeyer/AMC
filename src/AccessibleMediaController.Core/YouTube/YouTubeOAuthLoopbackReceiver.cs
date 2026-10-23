@@ -141,7 +141,8 @@ public sealed class YouTubeOAuthLoopbackReceiver : IDisposable
         CancellationToken cancellationToken)
     {
         var message = success
-            ? "Logowanie zakończone. Możesz zamknąć tę kartę i wrócić do AMC."
+            ? "Google przekazał zgodę do AMC. AMC jeszcze kończy logowanie. "
+                + "Możesz zamknąć tę kartę i sprawdzić wynik w aplikacji."
             : "Logowanie nie zostało ukończone. Wróć do AMC i spróbuj ponownie.";
         var body = "<!doctype html><html lang=\"pl\"><meta charset=\"utf-8\">"
             + "<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; style-src 'unsafe-inline'\">"
