@@ -13,6 +13,8 @@ internal static class LiteYouTubeAccountContract
     internal const string LogoutOperation = "youtube.accountLogout";
     internal const string SyncPreviewOperation = "youtube.subscriptionSyncPreview";
     internal const string SyncApplyOperation = "youtube.subscriptionSyncApply";
+    internal const string PlaylistPreviewOperation = "youtube.playlistSyncPreview";
+    internal const string PlaylistApplyOperation = "youtube.playlistSyncApply";
     internal const string BroadcastsOperation = "youtube.channelBroadcasts";
 
     internal static LiteYouTubeBroadcastRequest ReadBroadcastRequest(JsonElement args)
@@ -94,6 +96,53 @@ internal static class LiteYouTubeAccountContract
             message);
     }
 
+    internal static LiteYouTubePlaylistSyncPreviewResult CreatePlaylistPreview(
+        YouTubePlaylistSyncPlan plan)
+    {
+        ArgumentNullException.ThrowIfNull(plan);
+        var labels = plan.Actions
+            .Select(action => CleanLabel(action.Label, "Playlista YouTube"))
+            .Take(200)
+            .ToArray();
+        var message = plan.Actions.Count == 0
+            ? "Playlisty YouTube są już zgodne z Biblioteką AMC."
+            : $"Do zapisania: nowe playlisty {plan.Additions}, przywracane {plan.Restores}, aktualizowane {plan.Updates}.";
+        if (plan.Truncated > 0)
+            message += $" Ograniczenie do pierwszych 100 materiałów dotyczy playlist: {plan.Truncated}.";
+        return new LiteYouTubePlaylistSyncPreviewResult(
+            plan.Additions,
+            plan.Restores,
+            plan.Updates,
+            plan.Suppressed,
+            plan.Duplicates,
+            plan.Invalid,
+            plan.Truncated,
+            labels,
+            message);
+    }
+
+    internal static LiteYouTubePlaylistSyncApplyResult CreatePlaylistApply(
+        YouTubePlaylistSyncApplyResult result)
+    {
+        ArgumentNullException.ThrowIfNull(result);
+        var message = result.Changed == 0
+            ? "Biblioteka AMC nie wymagała zmian playlist."
+            : $"Zapisano playlisty YouTube: nowe {result.Added}, przywrócone {result.Restored}, zaktualizowane {result.Updated}; nowe materiały {result.AddedVideos}.";
+        if (result.Truncated > 0)
+            message += $" Ograniczenie do pierwszych 100 materiałów dotyczy playlist: {result.Truncated}.";
+        return new LiteYouTubePlaylistSyncApplyResult(
+            result.Added,
+            result.Restored,
+            result.Updated,
+            result.AddedVideos,
+            result.UpdatedVideos,
+            result.Suppressed,
+            result.Duplicates,
+            result.Invalid,
+            result.Truncated,
+            message);
+    }
+
     internal static LiteYouTubeBroadcastList CreateBroadcasts(
         IReadOnlyList<YouTubeBroadcast> rows)
     {
@@ -111,11 +160,11 @@ internal static class LiteYouTubeAccountContract
                 : $"Transmisje: {rows.Count}.");
     }
 
-    private static string CleanLabel(string? value)
+    private static string CleanLabel(string? value, string fallback = "Kanał YouTube")
     {
         var normalized = string.Join(' ', (value ?? string.Empty)
             .Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
-        if (normalized.Length == 0) return "Kanał YouTube";
+        if (normalized.Length == 0) return fallback;
         return normalized.Length <= 500 ? normalized : normalized[..500].Trim();
     }
 }
@@ -151,6 +200,29 @@ internal sealed record LiteYouTubeSyncApplyResult(
     [property: JsonPropertyName("suppressed")] int Suppressed,
     [property: JsonPropertyName("duplicates")] int Duplicates,
     [property: JsonPropertyName("invalid")] int Invalid,
+    [property: JsonPropertyName("message")] string Message);
+
+internal sealed record LiteYouTubePlaylistSyncPreviewResult(
+    [property: JsonPropertyName("additions")] int Additions,
+    [property: JsonPropertyName("restores")] int Restores,
+    [property: JsonPropertyName("updates")] int Updates,
+    [property: JsonPropertyName("suppressed")] int Suppressed,
+    [property: JsonPropertyName("duplicates")] int Duplicates,
+    [property: JsonPropertyName("invalid")] int Invalid,
+    [property: JsonPropertyName("truncated")] int Truncated,
+    [property: JsonPropertyName("playlistLabels")] IReadOnlyList<string> PlaylistLabels,
+    [property: JsonPropertyName("message")] string Message);
+
+internal sealed record LiteYouTubePlaylistSyncApplyResult(
+    [property: JsonPropertyName("added")] int Added,
+    [property: JsonPropertyName("restored")] int Restored,
+    [property: JsonPropertyName("updated")] int Updated,
+    [property: JsonPropertyName("addedVideos")] int AddedVideos,
+    [property: JsonPropertyName("updatedVideos")] int UpdatedVideos,
+    [property: JsonPropertyName("suppressed")] int Suppressed,
+    [property: JsonPropertyName("duplicates")] int Duplicates,
+    [property: JsonPropertyName("invalid")] int Invalid,
+    [property: JsonPropertyName("truncated")] int Truncated,
     [property: JsonPropertyName("message")] string Message);
 
 internal sealed record LiteYouTubeBroadcastRequest(

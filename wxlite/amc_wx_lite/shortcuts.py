@@ -1779,7 +1779,7 @@ def _help_entries() -> list[tuple[str, str, Action]]:
         Action.IMPORT_PODCAST_OPML: "Importuj podcasty z OPML",
         Action.EXPORT_PODCAST_OPML: "Eksportuj bibliotekę podcastów do OPML",
         Action.EXPORT_YOUTUBE_SUBSCRIPTIONS: "Eksportuj kanały i playlisty YouTube",
-        Action.YOUTUBE_ACCOUNT: "Konto YouTube i synchronizacja subskrypcji",
+        Action.YOUTUBE_ACCOUNT: "Konto YouTube, subskrypcje i playlisty",
         Action.YOUTUBE_BROADCASTS: "Pokaż transmisje na żywo i zaplanowane kanału YouTube",
         Action.REFRESH_YOUTUBE_BROADCASTS: "Odśwież transmisje kanału YouTube",
         Action.ADD_YOUTUBE_LIVE_STATION: "Dodaj kanał jako dynamiczną stację YouTube na żywo",

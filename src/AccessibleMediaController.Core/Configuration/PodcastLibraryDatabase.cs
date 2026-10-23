@@ -1291,6 +1291,40 @@ internal sealed class PodcastLibraryDatabase(string databasePath)
         }
     }
 
+    public YouTubePlaylistSyncApplyResult ApplyYouTubePlaylists(
+        IEnumerable<YouTubeAccountPlaylist> remotePlaylists,
+        bool restoreSuppressed)
+    {
+        ArgumentNullException.ThrowIfNull(remotePlaylists);
+        lock (_gate)
+        {
+            var settings = new PodcastSettings();
+            LoadInto(settings);
+            var result = YouTubePlaylistSyncApplier.Apply(
+                remotePlaylists,
+                settings,
+                restoreSuppressed);
+            if (result.Changed > 0) Save(settings);
+            return result;
+        }
+    }
+
+    public YouTubePlaylistSyncPlan PreviewYouTubePlaylists(
+        IEnumerable<YouTubeAccountPlaylist> remotePlaylists,
+        bool restoreSuppressed)
+    {
+        ArgumentNullException.ThrowIfNull(remotePlaylists);
+        lock (_gate)
+        {
+            var settings = new PodcastSettings();
+            LoadInto(settings);
+            return YouTubePlaylistSyncPlanner.Create(
+                remotePlaylists,
+                settings,
+                restoreSuppressed);
+        }
+    }
+
     public PodcastRefreshResult ApplyRefresh(
         string subscriptionId,
         PodcastFeedDocument feed,

@@ -12,12 +12,13 @@ internal static class YouTubeAccountContractTests
         AccountSurfaceNeverReturnsSecretsOrTechnicalIds();
         WirePayloadUsesNamesExpectedByPythonClient();
         PreviewAndApplyRemainSeparateExplicitOperations();
+        PlaylistPreviewAndApplyExposeLabelsWithoutIdentifiers();
         RestoreChoiceMustBeBoolean();
         BackendFailuresAreRedacted();
         KnownQuotaFailureRemainsSpecific();
         ActiveLoginCanBeCancelledWithoutLeakingTechnicalData();
         BroadcastListUsesPublicLabelsAndUrlsOnly();
-        Console.WriteLine("OK: bezpieczny kontrakt konta YouTube (8 scenariuszy)");
+        Console.WriteLine("OK: bezpieczny kontrakt konta YouTube (9 scenariuszy)");
     }
 
     private static void WirePayloadUsesNamesExpectedByPythonClient()
@@ -128,6 +129,68 @@ internal static class YouTubeAccountContractTests
             Check(exception.Message.Contains("tak albo nie", StringComparison.Ordinal),
                 "Odmowa nie ma użytkowego opisu.");
         }
+    }
+
+    private static void PlaylistPreviewAndApplyExposeLabelsWithoutIdentifiers()
+    {
+        var playlist = new YouTubeAccountPlaylist(
+            "PL-TECHNICZNE",
+            "  Muzyka\r\nspokojna  ",
+            "Kanał",
+            "private",
+            140,
+            [],
+            VideosTruncated: true);
+        using var backend = new FakeBackend
+        {
+            PlaylistPreview = new YouTubePlaylistSyncPlan(
+                [new YouTubePlaylistSyncAction(
+                    YouTubePlaylistSyncActionKind.Add,
+                    playlist,
+                    null,
+                    "Muzyka spokojna; prywatna; pierwsze 100 z 140 materiałów")],
+                Additions: 1,
+                Restores: 0,
+                Updates: 0,
+                Suppressed: 0,
+                Duplicates: 0,
+                Invalid: 0,
+                Truncated: 1),
+            PlaylistApplied = new YouTubePlaylistSyncApplyResult(
+                Added: 1,
+                Restored: 0,
+                Updated: 0,
+                AddedVideos: 100,
+                UpdatedVideos: 0,
+                Suppressed: 0,
+                Duplicates: 0,
+                Invalid: 0,
+                Truncated: 1)
+        };
+        using var coordinator = new LiteYouTubeAccountCoordinator(backend);
+        using var args = JsonDocument.Parse("""{"restoreSuppressed":false}""");
+
+        var preview = Invoke(
+            coordinator,
+            LiteYouTubeAccountContract.PlaylistPreviewOperation,
+            args.RootElement);
+        var json = LiteJson.Serialize(preview);
+        Check(backend.PlaylistPreviewCalls == 1 && backend.PlaylistApplyCalls == 0
+              && json.Contains("Muzyka spokojna", StringComparison.Ordinal)
+              && json.Contains("prywatna", StringComparison.Ordinal)
+              && !json.Contains("PL-TECHNICZNE", StringComparison.Ordinal)
+              && !json.Contains("youtube.com", StringComparison.OrdinalIgnoreCase),
+            "Podgląd playlist ujawnił identyfikator albo nie ma bezpiecznej etykiety.");
+
+        var applied = Invoke(
+            coordinator,
+            LiteYouTubeAccountContract.PlaylistApplyOperation,
+            args.RootElement);
+        Check(backend.PlaylistApplyCalls == 1
+              && applied is LiteYouTubePlaylistSyncApplyResult result
+              && result.Added == 1
+              && result.AddedVideos == 100,
+            "Jawny zapis playlist nie pozostał osobną operacją protokołu.");
     }
 
     private static void BackendFailuresAreRedacted()
@@ -250,6 +313,8 @@ internal static class YouTubeAccountContractTests
         internal int LogoutCalls { get; private set; }
         internal int PreviewCalls { get; private set; }
         internal int ApplyCalls { get; private set; }
+        internal int PlaylistPreviewCalls { get; private set; }
+        internal int PlaylistApplyCalls { get; private set; }
         internal int BroadcastCalls { get; private set; }
         internal string LastBroadcastSubscriptionId { get; private set; } = string.Empty;
         internal bool LastBroadcastForceRefresh { get; private set; }
@@ -258,6 +323,10 @@ internal static class YouTubeAccountContractTests
         internal ManualResetEventSlim LoginStarted { get; } = new(false);
         internal YouTubeSubscriptionSyncPlan Preview { get; init; } = new([], 0, 0, 0, 0);
         internal YouTubeSubscriptionSyncApplyResult Applied { get; init; } = new(0, 0, 0, 0, 0, 0);
+        internal YouTubePlaylistSyncPlan PlaylistPreview { get; init; } =
+            new([], 0, 0, 0, 0, 0, 0, 0);
+        internal YouTubePlaylistSyncApplyResult PlaylistApplied { get; init; } =
+            new(0, 0, 0, 0, 0, 0, 0, 0, 0);
         internal IReadOnlyList<YouTubeBroadcast> Broadcasts { get; init; } = [];
 
         public YouTubeAccountStatus GetStatus() =>
@@ -299,6 +368,24 @@ internal static class YouTubeAccountContractTests
             ApplyCalls++;
             if (Failure is not null) throw Failure;
             return Task.FromResult(Applied);
+        }
+
+        public Task<YouTubePlaylistSyncPlan> PreviewPlaylistsAsync(
+            bool restoreSuppressed,
+            CancellationToken cancellationToken)
+        {
+            PlaylistPreviewCalls++;
+            if (Failure is not null) throw Failure;
+            return Task.FromResult(PlaylistPreview);
+        }
+
+        public Task<YouTubePlaylistSyncApplyResult> ApplyPlaylistsAsync(
+            bool restoreSuppressed,
+            CancellationToken cancellationToken)
+        {
+            PlaylistApplyCalls++;
+            if (Failure is not null) throw Failure;
+            return Task.FromResult(PlaylistApplied);
         }
 
         public Task<IReadOnlyList<YouTubeBroadcast>> ReadBroadcastsAsync(

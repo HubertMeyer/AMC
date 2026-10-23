@@ -52,6 +52,11 @@ if (args.Length == 1 && args[0] == "--youtube-subscriptions")
     try { YouTubeSubscriptionClientTests.Run(); return 0; }
     catch (Exception exception) { Console.Error.WriteLine(exception); return 1; }
 }
+if (args.Length == 1 && args[0] == "--youtube-playlists")
+{
+    try { YouTubePlaylistClientTests.Run(); return 0; }
+    catch (Exception exception) { Console.Error.WriteLine(exception); return 1; }
+}
 if (args.Length == 1 && args[0] == "--youtube-broadcasts")
 {
     try { YouTubeBroadcastClientTests.Run(); return 0; }
@@ -65,6 +70,11 @@ if (args.Length == 1 && args[0] == "--youtube-subscription-sync-plan")
 if (args.Length == 1 && args[0] == "--youtube-subscription-sync-apply")
 {
     try { YouTubeSubscriptionSyncApplyTests.Run(); return 0; }
+    catch (Exception exception) { Console.Error.WriteLine(exception); return 1; }
+}
+if (args.Length == 1 && args[0] == "--youtube-playlist-sync")
+{
+    try { YouTubePlaylistSyncTests.Run(); return 0; }
     catch (Exception exception) { Console.Error.WriteLine(exception); return 1; }
 }
 if (args.Length == 1 && args[0] == "--audio-edit-renames")
