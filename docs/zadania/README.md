@@ -269,11 +269,10 @@ zmian, wymagający korekty użytkownika:
   [AMC14-foldery-i-integracja-powloki.md](AMC14-foldery-i-integracja-powloki.md).
   Zatwierdzona specyfikacja:
   `D:\Projekty Codex\Accessible Multimedia Controller\AMC14_FOLDERY_I_INTEGRACJA_POWLOKI_2026-10-18.md`.
-- `YT-001` — **W trakcie — użytkownik potwierdził ponowny prawdziwy OAuth,
-  odczyt kanałów i zapis subskrypcji do Biblioteki w AMC Test 23.10.2026,
-  20:14. Logowanie i synchronizacja kanałów są odebrane; do domknięcia
-  pierwotnego zakresu pozostają zwykłe playlisty konta oraz końcowa korekta
-  dokumentacji**
+- `YT-001` — **Wdrożone do ręcznego odbioru — logowanie i subskrypcje są
+  odebrane; zwykłe playlisty konta, pełna regresja 2025 testów wxPython,
+  testy .NET, build, atomowa instalacja i kontrolowany start AMC Test
+  23.10.2026, 22:35 są zaliczone. Pozostaje próba prawdziwej playlisty i NVDA**
   — oficjalne logowanie do
   konta YouTube, synchronizacja subskrypcji i zwykłych playlist oraz bezpieczny
   zakres czynności konta. Etap rozpoczęto 21 października 2026 na nowe jawne
