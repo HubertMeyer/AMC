@@ -1,10 +1,11 @@
 # YT-003 — opisy YouTube pod Alt+D
 
-- Status: **wdrożone do ręcznego odbioru — kod, testy, pełna regresja
-  wxPython, kompilacje, kontrola nagrywania, atomowa instalacja, kontrolowany
-  start i dwie próby publicznego YouTube są zaliczone**.
+- Status: **Zrobione w zakresie opisów — użytkownik potwierdził działanie
+  `Alt+D`; kod, testy, pełna regresja wxPython, kompilacje, kontrola
+  nagrywania, atomowa instalacja, kontrolowany start i dwie próby publicznego
+  YouTube są zaliczone**.
 - Utworzono: 23 października 2026.
-- Ostatnia aktualizacja: 23 października 2026.
+- Ostatnia aktualizacja: 24 października 2026.
 - Obszar: Podcasty i YouTube, opisy kanałów, playlist i materiałów, NVDA.
 - Profil: wyłącznie AMC Test. AMC Public i GitHub pozostają bez zmian.
 
@@ -108,6 +109,11 @@ tego samego wiersza listy; ponowne otwarcie wykonuje ten sam kontrakt.
 
 ## Znane ograniczenia i ręczny odbiór
 
+Korekta z 24.10.2026 zastępuje wcześniejszy zapis o braku ręcznego odbioru:
+użytkownik potwierdził, że opisy YouTube pod `Alt+D` działają. To potwierdzenie
+nie oznacza, że każdy film ma opis — pusty wynik nadal może być prawidłową
+treścią zwróconą przez autora lub YouTube.
+
 - Na tym komputerze zarządzany składnik `yt-dlp 2026.08.19` jest obecny i
   zaliczył próbę filmu oraz kanału. Na innym profilu, gdy składnika zabraknie,
   przed próbą starszego publicznego wpisu trzeba użyć `Pomoc → Sprawdź
@@ -116,9 +122,9 @@ tego samego wiersza listy; ponowne otwarcie wykonuje ten sam kontrakt.
 - Opis może być pusty, jeżeli autor go nie podał, film został usunięty albo
   YouTube ogranicza jego widoczność. AMC nie zgaduje i nie pokazuje identyfikatora
   jako zastępczej treści.
-- Trzeba ręcznie sprawdzić z NVDA: kanał, playlistę i film z opisem; starszy
-  film bez zapisanego opisu; brak opisu; brak składnika; anulowanie, powrót
-  fokusu i ponowne otwarcie.
+- Podstawowy odczyt `Alt+D` został przyjęty przez użytkownika. Nietypowe
+  przypadki braku opisu, braku składnika i starszego wpisu pozostają pokryte
+  automatycznymi testami, ale nie były osobno odtwarzane ręcznie.
 - Opisy nie są tłumaczone i nie są pobierane w tle dla całej Biblioteki.
 
 ## Wersja, commit, instalacja i publikacja

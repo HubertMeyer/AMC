@@ -1,11 +1,11 @@
 # YT-002 — transmisje YouTube na żywo i dynamiczne radio
 
-- Status: `W trakcie — źródła, kontrakt, pełna regresja wxPython 2024/2024,
-  testy .NET, build, atomowa instalacja i kontrolowany start AMC Test 21:25 są
-  zaliczone; przed zmianą na Zrobione pozostaje ręczny odbiór prawdziwego
-  kanału i NVDA`
+- Status: `W trakcie — źródła, kontrakt, skróty Ctrl+T i Ctrl+Y, pełna
+  regresja wxPython 2029/2029, testy .NET, build, atomowa instalacja i
+  kontrolowany start AMC Test 24.10.2026, 00:21 są zaliczone; przed zmianą na
+  Zrobione pozostaje ręczny odbiór prawdziwego kanału i NVDA`
 - Utworzono: 23 października 2026
-- Ostatnia aktualizacja: 23 października 2026
+- Ostatnia aktualizacja: 24 października 2026
 - Obszar: YouTube, Podcasty i YouTube, Radio, nawigacja, NVDA
 - Polecenie użytkownika: śledzenie trwających i zaplanowanych transmisji
   zapisanych kanałów oraz radio automatycznie odnajdujące zmienny link live
@@ -23,8 +23,11 @@ trzeba ręcznie podmieniać wygasającego adresu `watch`.
 
 1. W sesji `Podcasty i YouTube` ustaw fokus na źródle typu `kanał YouTube`.
 2. Menu Plik, menu kontekstowe `Shift+F10` i paleta `Ctrl+Shift+K` udostępniają:
-   - `Transmisje na żywo i zaplanowane kanału…`;
-   - `Dodaj kanał jako dynamiczne radio YouTube na żywo…`.
+   - `Transmisje na żywo i zaplanowane kanału…` — `Ctrl+T`;
+   - `Dodaj kanał jako dynamiczne radio YouTube na żywo…` — `Ctrl+Y`.
+   Skróty działają wyłącznie wtedy, gdy na liście jest zaznaczony kanał
+   YouTube. `Ctrl+T` wymaga dostępnego konta YouTube, natomiast `Ctrl+Y`
+   korzysta z publicznego adresu kanału i nie wymaga logowania.
 3. Pierwsze polecenie otwiera listę `Transmisje YouTube na żywo i
    zaplanowane`. Wiersz mówi nazwę i jeden świadomie przygotowany stan:
    `na żywo`, `na żywo dzisiaj o GG:MM`, `zaplanowana` albo
@@ -132,3 +135,18 @@ Projekt opisu zmian:
   `41544`, dokładny plik:
   `D:\Projekty Codex\AMC Python\runtime\python.exe`.
 - GitHub i AMC Public: bez zmian.
+
+### Korekta skrótów i bieżąca instalacja — 24.10.2026
+
+Korekta użytkownika dodaje kontekstowe `Ctrl+T` i `Ctrl+Y`. Oba skróty są
+zdefiniowane w tym samym modelu, z którego korzystają wykonanie, menu, menu
+kontekstowe, paleta `Ctrl+Shift+K`, pomoc `Ctrl+F1` i pełna pomoc. Nie działają
+na odcinku, playliście, kanale RSS ani w odtwarzaczu. Testy sprawdzają również
+brak technicznych nazw obiektów w etykietach oraz ukrycie `Ctrl+T`, gdy konto
+YouTube jest niedostępne.
+
+Zainstalowana wersja to `AMC Test — 24.10.2026, 00:21`, commit
+`05621539cba449a06986e3544557d7d039b0e2d9`, pakiet `0ca58fd4`. Pełna
+regresja wxPython: 2029 zaliczonych, 111 kontrolowanie pominiętych i 13
+podtestów zaliczonych. Szczegóły promocji:
+[AMC-TEST-2026-10-24-0021-youtube-refresh-shortcuts.md](AMC-TEST-2026-10-24-0021-youtube-refresh-shortcuts.md).

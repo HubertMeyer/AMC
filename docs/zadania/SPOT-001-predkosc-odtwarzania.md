@@ -1,8 +1,8 @@
 # SPOT-001 — prędkość odtwarzania Spotify
 
-Status: **W trakcie — kod, testy natywnego silnika, testy interfejsu, pełna
-kompilacja Release, atomowa instalacja i uruchomienie AMC Test są zaliczone.
-Pozostał ręczny odsłuch Spotify oraz odbiór komunikatów NVDA.**
+Status: **Zrobione w zakresie prędkości — użytkownik potwierdził działanie
+przyspieszania Spotify. Kod, testy natywnego silnika, testy interfejsu, pełna
+kompilacja Release, atomowa instalacja i uruchomienie AMC Test są zaliczone.**
 
 Data rozpoczęcia: 2026-10-23
 
@@ -84,8 +84,15 @@ została dodana do AMC Public.
 
 ## Znane ograniczenia
 
-- Nie wykonano jeszcze ręcznego odsłuchu na prawdziwym koncie Spotify ani
-  kontroli mowy NVDA w zainstalowanym AMC Test.
+Korekta z 24.10.2026 zastępuje wcześniejszy zapis o braku ręcznego odsłuchu:
+użytkownik potwierdził, że przyspieszanie Spotify działa. Dłuższy komunikat
+`Przygotowywanie odtwarzania Spotify` może odpowiadać rzeczywistemu pobraniu i
+przygotowaniu materiału. Rozdziały Spotify nadal pozostają osobnym,
+niewdrożonym zakresem.
+
+- Nie wykonano osobnego odbioru każdego komunikatu NVDA dla pauzy, wznowienia
+  i zmiany wyjścia; podstawowe odtwarzanie i przyspieszanie użytkownik
+  potwierdził na prawdziwym koncie Spotify.
 - Zatrzymanie i pauza domykają bufor procesora, a wznowienie zaczyna nowy
   strumień DSP. Automatyczne testy pilnują danych i kolejności poleceń, ale
   ewentualne krótkie przejście dźwięku wymaga odbioru słuchowego.

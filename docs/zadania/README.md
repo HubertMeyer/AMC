@@ -52,16 +52,15 @@ jawnym poleceniu użytkownika albo przez osobno uzgodniony harmonogram.
   prędkość osobno dla Plików i Podcastów. Szczegóły:
   [SESSION-001-opcje-sesji-i-predkosc.md](SESSION-001-opcje-sesji-i-predkosc.md).
 
-- `SPOT-001` — **W trakcie; kod, testy natywnego DSP, 204 testy interfejsu,
-  pełna kompilacja Release, atomowa instalacja i uruchomienie AMC Test 22:20
-  są zaliczone. Późniejszy komunikat przygotowania po Enter ma 33/33 testy i
-  jest zainstalowany w AMC Test 22:41; pozostał ręczny odsłuch i odbiór NVDA** —
+- `SPOT-001` — **Zrobione w zakresie prędkości; użytkownik potwierdził
+  działanie przyspieszania. Kod, natywny DSP, komunikat przygotowania, testy,
+  build i bieżąca instalacja AMC Test są zaliczone** —
   prawdziwa prędkość `0,5–2,0x` w wewnętrznym odtwarzaczu Spotify, wspólne
   skróty `Shift+,`, `Shift+.` i `Ctrl+.`, menu, pomoc, paleta oraz dostępne
   etykiety wartości. Szczegóły:
   [SPOT-001-predkosc-odtwarzania.md](SPOT-001-predkosc-odtwarzania.md).
   Bieżąca instalacja:
-  [AMC-TEST-2026-10-23-2241-frontier-pin-spotify-start.md](AMC-TEST-2026-10-23-2241-frontier-pin-spotify-start.md).
+  [AMC-TEST-2026-10-24-0021-youtube-refresh-shortcuts.md](AMC-TEST-2026-10-24-0021-youtube-refresh-shortcuts.md).
 
 Roboczy indeks materiału z nocnych etapów do przyszłej instrukcji i opisu
 zmian, wymagający korekty użytkownika:
@@ -280,11 +279,10 @@ zmian, wymagający korekty użytkownika:
   [AMC14-foldery-i-integracja-powloki.md](AMC14-foldery-i-integracja-powloki.md).
   Zatwierdzona specyfikacja:
   `D:\Projekty Codex\Accessible Multimedia Controller\AMC14_FOLDERY_I_INTEGRACJA_POWLOKI_2026-10-18.md`.
-- `YT-001` — **Wdrożone częściowo do ręcznego odbioru — logowanie i
-  subskrypcje są odebrane, ale kontrola z 23.10.2026 wykazała, że pięć kanałów
-  bez standardowej karty Filmy blokuje kolejkę pozostałych 153 pustych kanałów.
-  Duplikatów kanałów ani filmów nie wykryto; potrzebna jest poprawka uczciwego
-  ponawiania i obsługi innych kart kanału**
+- `YT-001` — **Wdrożone do ręcznego odbioru — logowanie, subskrypcje i opisy
+  są odebrane; trwałe respektowanie usunięć, uczciwe ponawianie oraz obsługa
+  kanałów bez standardowej karty Filmy są zbudowane, zainstalowane i działają
+  na rzeczywistej bazie. Duplikatów kanałów ani filmów nie wykryto**
   — oficjalne logowanie do
   konta YouTube, synchronizacja subskrypcji i zwykłych playlist oraz bezpieczny
   zakres czynności konta. Etap rozpoczęto 21 października 2026 na nowe jawne
@@ -293,17 +291,17 @@ zmian, wymagający korekty użytkownika:
   Szczegóły:
   [YT-001-konto-youtube-i-synchronizacja.md](YT-001-konto-youtube-i-synchronizacja.md).
   Bieżąca instalacja:
-  [AMC-TEST-2026-10-23-1630-spotify-output-youtube-oauth.md](AMC-TEST-2026-10-23-1630-spotify-output-youtube-oauth.md).
-- `YT-002` — **W trakcie — źródła, bezpieczny kontrakt, pełna regresja
-  wxPython 2024/2024, testy .NET, build, atomowa instalacja i kontrolowany start
-  AMC Test 23.10.2026, 21:25 są zaliczone; czeka wyłącznie na ręczny odbiór
-  prawdziwego kanału i NVDA** — lista transmisji live/upcoming zapisanego kanału, Enter w
+  [AMC-TEST-2026-10-24-0021-youtube-refresh-shortcuts.md](AMC-TEST-2026-10-24-0021-youtube-refresh-shortcuts.md).
+- `YT-002` — **W trakcie — źródła, bezpieczny kontrakt, skróty `Ctrl+T` i
+  `Ctrl+Y`, pełna regresja wxPython 2029/2029, testy .NET, build, atomowa
+  instalacja i kontrolowany start AMC Test 24.10.2026, 00:21 są zaliczone;
+  czeka wyłącznie na ręczny odbiór prawdziwego kanału i NVDA** — lista transmisji live/upcoming zapisanego kanału, Enter w
   wewnętrznym silniku, kopiowanie adresu, F5 i Backspace oraz dynamiczna stacja
   Radia oparta na stałym adresie kanału `/live`. Szczegóły:
   [YT-002-transmisje-na-zywo-i-dynamiczne-radio.md](YT-002-transmisje-na-zywo-i-dynamiczne-radio.md).
-- `YT-003` — **Wdrożone do ręcznego odbioru — pełna regresja 2029 testów
-  wxPython, testy .NET, build, atomowa instalacja, kontrolowany start AMC Test
-  23.10.2026, 23:13 oraz żywe publiczne próby filmu i kanału są zaliczone** —
+- `YT-003` — **Zrobione w zakresie opisów — użytkownik potwierdził działanie
+  `Alt+D`; pełna regresja 2029 testów wxPython, testy .NET, build, atomowa
+  instalacja, kontrolowany start i żywe publiczne próby są zaliczone** —
   `Alt+D` pokazuje opisy kanałów, playlist i materiałów YouTube, zapisuje nowe
   opisy z importu i synchronizacji oraz odczytuje na żądanie brakujący opis
   starszego publicznego wpisu bez logowania Google. Szczegóły:

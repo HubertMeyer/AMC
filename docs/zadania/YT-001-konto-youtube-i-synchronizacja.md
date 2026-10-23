@@ -1,14 +1,13 @@
 # YT-001 — konto YouTube i synchronizacja
 
-- Status: `Wdrożone częściowo do ręcznego odbioru — logowanie i odczyt opisów
-  zostały przyjęte przez użytkownika; zwykłe playlisty
-  konta, pełna regresja, build, atomowa instalacja i kontrolowany start AMC Test
-  są zaliczone. Odbiór z 23.10.2026 ujawnił jednak blokowanie automatycznego
-  napełniania nowych kanałów YouTube przez pierwsze pięć nieudanych źródeł;
-  wymaga osobnej poprawki przed zamknięciem YT-001`. Zapis wcześniejszej
-  diagnozy: [AMC-TEST-2026-10-23-youtube-secret-frontier-choice.md](AMC-TEST-2026-10-23-youtube-secret-frontier-choice.md).
+- Status: `Wdrożone do ręcznego odbioru — logowanie, kanały i opisy zostały
+  przyjęte przez użytkownika; playlisty, trwałe respektowanie usunięć,
+  uczciwa kolejka odświeżania, build, atomowa instalacja i kontrolowany start
+  AMC Test są zaliczone. Pozostaje sprawdzenie z NVDA pustych kanałów po
+  napełnieniu kolejki oraz zwykłej playlisty konta`. Bieżąca instalacja:
+  [AMC-TEST-2026-10-24-0021-youtube-refresh-shortcuts.md](AMC-TEST-2026-10-24-0021-youtube-refresh-shortcuts.md).
 - Utworzono: 18 października 2026
-- Ostatnia aktualizacja: 23 października 2026
+- Ostatnia aktualizacja: 24 października 2026
 - Obszar: YouTube, OAuth, Biblioteka, wyszukiwanie i bezpieczne poświadczenia
 - Polecenie uruchamiające: `Uruchom zadanie YT-001`
 
@@ -886,13 +885,45 @@ dwa problemy:
 2. zapisywać osobny czas nieudanej próby i stosować uczciwą kolejkę z
    odroczeniem, bez fałszywego oznaczania źródła jako poprawnie odświeżonego.
 
-Potrzebne testy regresji mają objąć pięć kolejnych błędów, przejście do
-szóstego źródła, ponowienie po odroczeniu, kanał wyłącznie z Shorts lub
-transmisjami, prawdziwie pusty kanał, komunikat użytkowy NVDA i brak technicznej
-nazwy karty w zwykłym interfejsie. Ta diagnoza nie jest jeszcze implementacją,
-buildem ani instalacją poprawki.
+Potrzebne testy regresji miały objąć pięć kolejnych błędów, przejście do
+szóstego źródła, ponowienie po odroczeniu, kanał bez standardowej karty
+`Filmy`, komunikat użytkowy NVDA i brak technicznej nazwy karty w zwykłym
+interfejsie. Poniższa korekta z 24.10.2026 zastępuje zdanie, że diagnoza nie
+była jeszcze implementacją, buildem ani instalacją.
 
-### Wersja, commit i publikacja
+### Naprawa kolejki i trwałość usunięć — 24.10.2026
+
+- Schemat bazy Podcastów ma wersję 3 i osobno zapisuje czas każdej próby
+  automatycznego odświeżenia. Nieudane źródło czeka własny skonfigurowany
+  odstęp, a kolejna porcja dostaje swoją kolejkę. Udanej próby nie udajemy,
+  więc czas ostatniego poprawnego odświeżenia zachowuje dotychczasowe
+  znaczenie. Ręczne `F5` pozostaje dostępne bez tego odroczenia.
+- Jeżeli publiczny kanał nie ma standardowej karty `/videos`, AMC próbuje
+  dokładnie raz jego publiczną stronę główną. Obejście nie jest stosowane do
+  playlist, błędów sieci ani innych błędów YouTube.
+- Sam start AMC i samo logowanie do Google nie synchronizują ani nie
+  przywracają Biblioteki. Kanał usunięty lokalnie ma `IsInLibrary=false` i
+  pozostaje ukryty po restarcie oraz kolejnej synchronizacji. Wraca wyłącznie
+  po jawnym zaznaczeniu pola przywracania w oknie konta.
+- Pojedynczy usunięty film ma trwały wpis usunięcia w
+  `podcast_removed_episodes`; kolejne odświeżenie tego samego kanału nie dodaje
+  go ponownie. Usunięcie kanału i usunięcie filmu są więc chronione osobno.
+- Okno konta wyjaśnia te zasady zwykłym tekstem dostępnym dla NVDA.
+
+Test trwałości ponownie otworzył prawdziwą tymczasową bazę, wykonał kolejną
+synchronizację i potwierdził, że usunięty kanał nie wrócił. Test kolejki
+oznaczył pięć nieudanych prób, ponownie otworzył bazę, przekazał kolejkę
+szóstemu źródłu, zachował ręczne odświeżanie i po 60 minutach wrócił do
+najstarszej porcji. Po instalacji rzeczywista baza użytkownika przeszła do
+schematu 3; pierwszy automatyczny przebieg zapisał pięć osobnych prób, z czego
+trzy zakończyły się poprawnym odświeżeniem, a dwie zachowały brak czasu
+sukcesu. To potwierdza działanie nowego rozdzielenia próby od sukcesu na
+zainstalowanej kopii. Kolejne minuty zwiększyły licznik do 13 różnych prób,
+zamiast wracać do pierwszej piątki; liczba kanałów w Bibliotece, które nigdy
+nie były odświeżone, spadła z 96 do 86. Wszystkie 123 kanały usunięte lokalnie
+pozostały poza Biblioteką.
+
+### Historia wersji, commit i publikacja
 
 Korekta z 23.10.2026: opisy playlist i materiałów zwracane przez oficjalne API
 są teraz zapisywane podczas synchronizacji. Wspólne zachowanie `Alt+D`, w tym
@@ -908,3 +939,8 @@ ostateczną scaloną wersję `AMC Test — 23.10.2026, 22:41`, rewizja źródło
 Uruchomione procesy `AMC.exe`, `python.exe` i `amc_lite_host.exe` pochodzą z
 `D:\Projekty Codex\AMC Python`. AMC Public, instalator i GitHub pozostają bez
 zmian.
+
+Korekta z 24.10.2026 zastępuje tę pozycję jako bieżącą instalację: commit
+`05621539cba449a06986e3544557d7d039b0e2d9`, pakiet `0ca58fd4`, okno
+`AMC Test — 24.10.2026, 00:21`. Szczegóły zawiera
+[AMC-TEST-2026-10-24-0021-youtube-refresh-shortcuts.md](AMC-TEST-2026-10-24-0021-youtube-refresh-shortcuts.md).
