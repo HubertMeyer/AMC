@@ -154,6 +154,17 @@ class YouTubeSyncPreview:
     message: str
 
 
+@dataclass(frozen=True, slots=True)
+class YouTubePlaylistSyncPreview:
+    additions: int
+    restores: int
+    updates: int
+    suppressed: int
+    truncated: int
+    labels: tuple[str, ...]
+    message: str
+
+
 def _safe_count(payload: Mapping[str, object], name: str) -> int:
     value = _payload_field(payload, name)
     return value if isinstance(value, int) and not isinstance(value, bool) and value >= 0 else 0
@@ -182,5 +193,33 @@ def sync_preview(payload: object) -> YouTubeSyncPreview | None:
         message=safe_message(
             payload,
             "Sprawdzono subskrypcje YouTube. Przejrzyj listę przed zapisem.",
+        ),
+    )
+
+
+def playlist_sync_preview(payload: object) -> YouTubePlaylistSyncPreview | None:
+    """Zbuduj bezpieczny model playlist bez technicznych identyfikatorów."""
+
+    if not isinstance(payload, Mapping):
+        return None
+    raw_labels = _payload_field(payload, "playlistLabels")
+    labels: list[str] = []
+    if isinstance(raw_labels, list):
+        for value in raw_labels[:200]:
+            if not isinstance(value, str):
+                continue
+            label = " ".join(value.split()).strip()
+            if label:
+                labels.append(label[:500])
+    return YouTubePlaylistSyncPreview(
+        additions=_safe_count(payload, "additions"),
+        restores=_safe_count(payload, "restores"),
+        updates=_safe_count(payload, "updates"),
+        suppressed=_safe_count(payload, "suppressed"),
+        truncated=_safe_count(payload, "truncated"),
+        labels=tuple(labels),
+        message=safe_message(
+            payload,
+            "Sprawdzono playlisty YouTube. Przejrzyj listę przed zapisem.",
         ),
     )

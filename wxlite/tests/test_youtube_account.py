@@ -15,6 +15,7 @@ from amc_wx_lite.youtube_account import (
     CLIENT_SECRET_FILE_ENVIRONMENT,
     account_connected,
     capability_available,
+    playlist_sync_preview,
     resolve_youtube_client_id,
     resolve_youtube_client_secret_file,
     safe_message,
@@ -88,6 +89,24 @@ def test_protocol_payload_never_becomes_object_representation() -> None:
     assert "UC-TAJNY" not in " ".join(preview.labels)
     assert safe_message(object(), "Bezpieczny komunikat") == "Bezpieczny komunikat"
 
+    playlist = playlist_sync_preview(
+        {
+            "playlistLabels": [
+                " Muzyka\r\nspokojna; prywatna; 12 materiałów ",
+                {"playlistId": "PL-TAJNY"},
+            ],
+            "additions": 1,
+            "updates": 2,
+            "truncated": 1,
+            "playlistId": "PL-TAJNY",
+        }
+    )
+    assert playlist is not None
+    assert playlist.labels == ("Muzyka spokojna; prywatna; 12 materiałów",)
+    assert playlist.additions == 1 and playlist.updates == 2
+    assert playlist.truncated == 1
+    assert "PL-TAJNY" not in " ".join(playlist.labels)
+
 
 def test_pascal_case_payload_from_real_dotnet_host_is_supported() -> None:
     capabilities = {
@@ -151,6 +170,8 @@ def test_host_client_passes_secret_path_not_secret_value() -> None:
     client.youtube_account_logout()
     client.youtube_subscription_sync_preview(restore_suppressed=True)
     client.youtube_subscription_sync_apply(restore_suppressed=False)
+    client.youtube_playlist_sync_preview(restore_suppressed=True)
+    client.youtube_playlist_sync_apply(restore_suppressed=False)
 
     assert [entry[0] for entry in calls] == [
         "youtube.accountCapabilities",
@@ -160,7 +181,11 @@ def test_host_client_passes_secret_path_not_secret_value() -> None:
         "youtube.accountLogout",
         "youtube.subscriptionSyncPreview",
         "youtube.subscriptionSyncApply",
+        "youtube.playlistSyncPreview",
+        "youtube.playlistSyncApply",
     ]
+    assert calls[-4][1] == {"restoreSuppressed": True}
+    assert calls[-3][1] == {"restoreSuppressed": False}
     assert calls[-2][1] == {"restoreSuppressed": True}
     assert calls[-1][1] == {"restoreSuppressed": False}
     assert calls[2][2] == 960.0
@@ -195,9 +220,9 @@ def test_runtime_capability_controls_menu_palette_and_help_together() -> None:
         )
         if item.action is Action.YOUTUBE_ACCOUNT
     )
-    assert entry.name == "Konto YouTube i synchronizacja subskrypcji…"
+    assert entry.name == "Konto YouTube, subskrypcje i playlisty…"
     assert dict(describe("Podcasty i YouTube", {Action.YOUTUBE_ACCOUNT})) == {
-        "Bez skrótu": "Konto YouTube i synchronizacja subskrypcji"
+        "Bez skrótu": "Konto YouTube, subskrypcje i playlisty"
     }
 
 
@@ -212,6 +237,10 @@ def test_dialog_source_has_intentional_accessible_labels() -> None:
     for label in (
         "Stan konta YouTube",
         "Kanały planowane do zapisania w Bibliotece AMC",
+        "Playlisty planowane do zapisania w Bibliotece AMC",
+        "Sprawdź playlisty YouTube bez zapisywania",
+        "Zapisz sprawdzone playlisty w Bibliotece AMC",
+        "Przywróć kanały i playlisty wcześniej usunięte z Biblioteki AMC",
         "Zaloguj konto YouTube przez Google w przeglądarce",
         "Anuluj oczekiwanie na logowanie YouTube",
         "Zamknij okno konta YouTube",

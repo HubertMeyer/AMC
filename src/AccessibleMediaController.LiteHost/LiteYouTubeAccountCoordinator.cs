@@ -15,6 +15,12 @@ internal interface ILiteYouTubeAccountBackend : IDisposable
     Task<YouTubeSubscriptionSyncApplyResult> ApplyAsync(
         bool restoreSuppressed,
         CancellationToken cancellationToken);
+    Task<YouTubePlaylistSyncPlan> PreviewPlaylistsAsync(
+        bool restoreSuppressed,
+        CancellationToken cancellationToken);
+    Task<YouTubePlaylistSyncApplyResult> ApplyPlaylistsAsync(
+        bool restoreSuppressed,
+        CancellationToken cancellationToken);
     Task<IReadOnlyList<YouTubeBroadcast>> ReadBroadcastsAsync(
         string subscriptionId,
         bool forceRefresh,
@@ -32,6 +38,7 @@ internal sealed class LiteYouTubeAccountCoordinator(
     {
         "Najpierw zaloguj się do YouTube.",
         "Najpierw sprawdź aktualne subskrypcje YouTube i zatwierdź ten sam zakres zmian.",
+        "Najpierw sprawdź aktualne playlisty YouTube i zatwierdź ten sam zakres zmian.",
         "Logowanie YouTube straciło ważność. Zaloguj się ponownie.",
         "Kod lub zapisane logowanie YouTube straciło ważność. Zaloguj się ponownie.",
         "To konto Google nie ma jeszcze kanału YouTube.",
@@ -43,6 +50,15 @@ internal sealed class LiteYouTubeAccountCoordinator(
         "YouTube zwrócił powtarzającą się stronę subskrypcji.",
         "YouTube zwrócił nieprawidłowy znacznik strony subskrypcji.",
         "YouTube zwrócił nieczytelną listę subskrypcji.",
+        "YouTube odmówił dostępu do playlist tego konta.",
+        "Nie udało się pobrać playlist YouTube.",
+        "Lista playlist YouTube jest zbyt duża, aby bezpiecznie pobrać ją w jednym przebiegu.",
+        "YouTube zwrócił powtarzającą się stronę playlist.",
+        "YouTube zwrócił powtarzającą się stronę materiałów playlisty.",
+        "YouTube zwrócił nieprawidłowy znacznik strony playlist.",
+        "YouTube zwrócił nieprawidłowy znacznik strony materiałów playlisty.",
+        "YouTube zwrócił nieczytelną listę playlist.",
+        "YouTube zwrócił nieczytelną zawartość playlisty.",
         "Tego kanału YouTube nie ma już w Bibliotece.",
         "To źródło nie jest kanałem YouTube.",
         "Ten kanał YouTube nie ma stabilnego identyfikatora potrzebnego do odczytu transmisji.",
@@ -62,7 +78,9 @@ internal sealed class LiteYouTubeAccountCoordinator(
         "Google odrzucił logowanie YouTube. Spróbuj zalogować się ponownie.",
         "Nie udało się połączyć z usługą logowania YouTube.",
         "Biblioteka zawiera sprzeczny rekord kanału YouTube. Nie zapisano synchronizacji.",
-        "Biblioteka zmieniła się przed przywróceniem kanału YouTube. Nie zapisano synchronizacji."
+        "Biblioteka zmieniła się przed przywróceniem kanału YouTube. Nie zapisano synchronizacji.",
+        "Biblioteka zawiera sprzeczny rekord playlisty YouTube. Nie zapisano synchronizacji.",
+        "Biblioteka zmieniła się przed zapisem playlisty YouTube. Nie zapisano synchronizacji."
     };
 
     private readonly ILiteYouTubeAccountBackend _backend = backend
@@ -87,6 +105,10 @@ internal sealed class LiteYouTubeAccountCoordinator(
                 Preview(request.Args),
             [LiteYouTubeAccountContract.SyncApplyOperation] = (request, _) =>
                 Apply(request.Args),
+            [LiteYouTubeAccountContract.PlaylistPreviewOperation] = (request, _) =>
+                PreviewPlaylists(request.Args),
+            [LiteYouTubeAccountContract.PlaylistApplyOperation] = (request, _) =>
+                ApplyPlaylists(request.Args),
             [LiteYouTubeAccountContract.BroadcastsOperation] = (request, _) =>
                 Broadcasts(request.Args)
         };
@@ -201,6 +223,36 @@ internal sealed class LiteYouTubeAccountCoordinator(
         catch (Exception exception)
         {
             throw SafeFailure(exception, "Nie udało się zapisać subskrypcji YouTube.");
+        }
+    }
+
+    private object PreviewPlaylists(JsonElement args)
+    {
+        var restore = LiteYouTubeAccountContract.ReadRestoreSuppressed(args);
+        try
+        {
+            var plan = _backend.PreviewPlaylistsAsync(restore, CancellationToken.None)
+                .GetAwaiter().GetResult();
+            return LiteYouTubeAccountContract.CreatePlaylistPreview(plan);
+        }
+        catch (Exception exception)
+        {
+            throw SafeFailure(exception, "Nie udało się sprawdzić playlist YouTube.");
+        }
+    }
+
+    private object ApplyPlaylists(JsonElement args)
+    {
+        var restore = LiteYouTubeAccountContract.ReadRestoreSuppressed(args);
+        try
+        {
+            var result = _backend.ApplyPlaylistsAsync(restore, CancellationToken.None)
+                .GetAwaiter().GetResult();
+            return LiteYouTubeAccountContract.CreatePlaylistApply(result);
+        }
+        catch (Exception exception)
+        {
+            throw SafeFailure(exception, "Nie udało się zapisać playlist YouTube.");
         }
     }
 

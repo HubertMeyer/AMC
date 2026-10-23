@@ -1,9 +1,10 @@
 # YT-001 — konto YouTube i synchronizacja
 
-- Status: `W trakcie — użytkownik potwierdził prawdziwy OAuth, odczyt kanałów
-  i zapis subskrypcji do Biblioteki w AMC Test 23.10.2026, 20:14. Logowanie i
-  synchronizacja kanałów są odebrane; do pierwotnego zakresu pozostają zwykłe
-  playlisty konta oraz końcowa korekta dokumentacji`. Zapis wcześniejszej
+- Status: `Wdrożone do ręcznego odbioru — logowanie i subskrypcje zostały
+  wcześniej przyjęte przez użytkownika; zwykłe playlisty konta, pełna regresja,
+  build, atomowa instalacja i kontrolowany start AMC Test 23.10.2026, 22:35 są
+  zaliczone. Pozostaje wyłącznie próba prawdziwej playlisty i NVDA przez
+  użytkownika`. Zapis wcześniejszej
   diagnozy: [AMC-TEST-2026-10-23-youtube-secret-frontier-choice.md](AMC-TEST-2026-10-23-youtube-secret-frontier-choice.md).
 - Utworzono: 18 października 2026
 - Ostatnia aktualizacja: 23 października 2026
@@ -759,3 +760,99 @@ Można je bezpiecznie zamknąć przyciskiem `Zamknij`.
 - Zapis kanałów do Biblioteki AMC: zaliczony przez użytkownika.
 - Zwykłe playlisty konta nie są jeszcze częścią działającego kontraktu;
   dlatego YT-001 pozostaje `W trakcie`, mimo że logowanie i kanały działają.
+
+## Synchronizacja zwykłych playlist konta — 23 października 2026, 22:35
+
+Ta sekcja zastępuje ostatnie ograniczenie powyżej. Zwykłe playlisty konta są
+już częścią kontraktu AMC Test. Kod, testy, build, instalacja i kontrolowany
+start są zakończone; do zamknięcia YT-001 pozostaje ręczny odbiór prawdziwej
+playlisty i nawigacji NVDA przez użytkownika.
+
+### Materiał do dokumentacji użytkownika — wersja robocza
+
+- Polecenie ma wspólną nazwę `Konto YouTube, subskrypcje i playlisty…` w menu,
+  palecie `Ctrl+Shift+K` i pomocy. Nie ma osobnego skrótu klawiszowego.
+- Jeżeli stan brzmi `YouTube: zalogowano`, nie trzeba logować się ponownie.
+  AMC używa chronionego lokalnie tokenu odświeżania. Ponowne logowanie jest
+  potrzebne po wylogowaniu, cofnięciu zgody, unieważnieniu dostępu albo po
+  wygaśnięciu autoryzacji testowej Google.
+- `Sprawdź playlisty YouTube bez zapisywania` pobiera własne playlisty konta i
+  pokazuje wyłącznie użytkowe etykiety: nazwa, dostępność oraz liczba materiałów.
+  Techniczny identyfikator playlisty i token nie są czytane przez NVDA.
+- `Zapisz sprawdzone playlisty w Bibliotece AMC` jest osobnym poleceniem.
+  Dopiero ono dodaje nowe playlisty, przywraca jawnie wybrane usunięte
+  playlisty i aktualizuje zawartość istniejących.
+- Pole wyboru nazywa się `Przywróć kanały i playlisty wcześniej usunięte z
+  Biblioteki AMC`. Zmiana tego wyboru unieważnia wcześniejszy podgląd i wymaga
+  ponownego sprawdzenia.
+- Podgląd playlist kieruje fokus na przycisk ich zapisu; po zapisie fokus wraca
+  na `Sprawdź playlisty`. Zamknięcie okna oddaje fokus do głównej listy.
+- Zapis działa tylko w kierunku YouTube → AMC. Nie tworzy, nie usuwa i nie
+  zmienia playlist na koncie Google ani YouTube.
+
+### Zachowanie danych i uzasadnienie
+
+- Klient używa oficjalnych, autoryzowanych metod `playlists.list(mine=true)` i
+  `playlistItems.list` z zakresem `youtube.readonly`; wszystkie żądania są GET.
+- Podgląd nie zapisuje bazy. Zapis przyjmuje tylko podgląd młodszy niż dziesięć
+  minut i dokładnie ten sam wybór przywracania.
+- Nieobecność playlisty w późniejszej odpowiedzi YouTube nie usuwa jej z AMC.
+  Playlista wcześniej usunięta lokalnie nie wraca bez jawnego zaznaczenia.
+- Istniejąca lokalna nazwa własna, historia odtwarzania, pozycje, stan nowych
+  materiałów i lokalne archiwum są scalane przez wspólny mechanizm Biblioteki.
+- Nie zmieniono schematu bazy danych. Nie jest potrzebna migracja profilu.
+- Profil AMC Public nadal nie udostępnia konta YouTube; zmiana jest aktywna
+  wyłącznie w AMC Test.
+
+### Komunikaty dostępnościowe
+
+- Podczas odczytu: `Sprawdzanie playlist YouTube bez zapisywania zmian.`
+- Pusta lista: `Brak playlist do zapisania`.
+- Przed zapisem lista ma nazwę `Playlisty planowane do zapisania w Bibliotece
+  AMC`.
+- Podsumowanie rozróżnia nowe, przywracane i aktualizowane playlisty oraz mówi,
+  ile playlist objął limit pierwszych 100 materiałów.
+- Błędy logowania, limitu API, odmowy dostępu, nieczytelnej odpowiedzi i
+  nieaktualnego podglądu mają zamknięty zestaw komunikatów użytkowych. Surowa
+  odpowiedź serwera, identyfikator i reprezentacja obiektu nie wychodzą do GUI.
+
+### Testy i rzeczywiste wyniki
+
+- Nowy klient oficjalnego API playlist: 3/3 scenariusze.
+- Atomowa synchronizacja playlist: 4/4 scenariusze, w tym brak mutacji w
+  podglądzie, zachowanie lokalnej nazwy, jawne przywracanie i brak usuwania przy
+  nieobecności po stronie YouTube.
+- Cała ukierunkowana regresja Core YouTube: 41/41 scenariuszy; obejmuje OAuth,
+  konto, subskrypcje, playlisty oraz transmisje live/upcoming.
+- Kontrakt konta LiteHost: 9/9 scenariuszy. Etykiety playlist nie zawierają ID
+  ani adresów technicznych.
+- Okno konta YouTube: 6/6 testów; wspólne menu, paleta, pomoc i skróty: 127/127.
+- Pełna regresja wxPython: 2025 zaliczonych, 111 kontrolowanie pominiętych,
+  13 podtestów zaliczonych. Launcher i aktualizator: 30/30.
+- Kompilacja Core, LiteHost i testów protokołu: 0 błędów i 0 ostrzeżeń.
+- Czysty kandydat zawierał 1672 pliki. Integralność i kontrolowany start
+  kandydata oraz zainstalowanej kopii przeszły przed widocznym uruchomieniem.
+- Instalacja atomowa i ponowny start zostały wykonane dopiero po potwierdzeniu,
+  że żaden plik roboczy nagrania AMC nie jest aktywnie zapisywany.
+
+### Znane ograniczenia i ręczny odbiór
+
+- AMC zapisuje najwyżej pierwszych 100 pozycji każdej playlisty i mówi o tym w
+  podsumowaniu. Dalsze pozycje nie są w tej wersji pobierane.
+- Materiał usunięty albo niedostępny dla API może zostać pominięty. Prywatność
+  samej playlisty jest odczytywana, lecz OAuth Data API nie jest przekazywany
+  do odtwarzacza; możliwość odtworzenia prywatnego filmu nadal zależy od
+  publicznego toru medialnego YouTube.
+- Oficjalne API nie udostępnia w ten sposób systemowej listy `Do obejrzenia`
+  ani historii oglądania. AMC ich nie obiecuje.
+- Użytkownik ma jeszcze sprawdzić z NVDA: ponowne otwarcie okna bez logowania,
+  `Sprawdź playlisty`, strzałki po liście, zapis, powrót fokusu, ponowne
+  otwarcie oraz widok playlisty w Bibliotece.
+
+### Wersja, commit i publikacja
+
+Zainstalowano i uruchomiono `AMC Test — 23.10.2026, 22:35`, rewizja źródłowa
+`0e8d219f5c759b28183063cefd8d9cedde06de19`, identyfikator paczki `d8cceab5`.
+Uruchomione procesy `AMC.exe`, `python.exe` i `amc_lite_host.exe` pochodzą z
+`D:\Projekty Codex\AMC Python`. AMC Public, instalator i GitHub pozostają bez
+zmian.

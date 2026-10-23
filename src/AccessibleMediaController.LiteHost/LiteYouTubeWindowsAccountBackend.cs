@@ -8,7 +8,7 @@ namespace AccessibleMediaController.LiteHost;
 /// <summary>
 /// Produkcyjny właściciel tokenu i świeżego podglądu. Zapis jest możliwy tylko
 /// po podglądzie nie starszym niż dziesięć minut i dla tego samego wyboru
-/// jawnego przywracania usuniętych kanałów.
+/// jawnego przywracania usuniętych kanałów lub playlist.
 /// </summary>
 internal sealed class LiteYouTubeWindowsAccountBackend : ILiteYouTubeAccountBackend
 {
@@ -16,10 +16,12 @@ internal sealed class LiteYouTubeWindowsAccountBackend : ILiteYouTubeAccountBack
     private static readonly TimeSpan BroadcastCacheLifetime = TimeSpan.FromMinutes(5);
     private readonly YouTubeAccountCoordinator _account;
     private readonly YouTubeSubscriptionClient _subscriptions = new();
+    private readonly YouTubePlaylistClient _playlists = new();
     private readonly YouTubeBroadcastClient _broadcasts = new();
     private readonly PodcastLibraryMutationStore _podcasts;
     private readonly SemaphoreSlim _gate = new(1, 1);
     private PreviewSnapshot? _preview;
+    private PlaylistPreviewSnapshot? _playlistPreview;
     private readonly Dictionary<string, BroadcastSnapshot> _broadcastCache =
         new(StringComparer.Ordinal);
     private bool _disposed;
@@ -52,6 +54,7 @@ internal sealed class LiteYouTubeWindowsAccountBackend : ILiteYouTubeAccountBack
             if (result.Succeeded)
             {
                 _preview = null;
+                _playlistPreview = null;
                 _broadcastCache.Clear();
             }
             return result;
@@ -70,6 +73,7 @@ internal sealed class LiteYouTubeWindowsAccountBackend : ILiteYouTubeAccountBack
         {
             var result = await _account.LogoutAsync(cancellationToken).ConfigureAwait(false);
             _preview = null;
+            _playlistPreview = null;
             _broadcastCache.Clear();
             return result;
         }
@@ -121,6 +125,56 @@ internal sealed class LiteYouTubeWindowsAccountBackend : ILiteYouTubeAccountBack
                 preview.Subscriptions,
                 restoreSuppressed);
             _preview = null;
+            return result;
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    public async Task<YouTubePlaylistSyncPlan> PreviewPlaylistsAsync(
+        bool restoreSuppressed,
+        CancellationToken cancellationToken)
+    {
+        await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            var token = await _account.GetAccessTokenAsync(cancellationToken)
+                .ConfigureAwait(false);
+            var remote = await _playlists.ReadAllAsync(token, cancellationToken)
+                .ConfigureAwait(false);
+            var plan = _podcasts.PreviewYouTubePlaylists(remote, restoreSuppressed);
+            _playlistPreview = new PlaylistPreviewSnapshot(
+                remote.ToArray(),
+                restoreSuppressed,
+                DateTimeOffset.UtcNow);
+            return plan;
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    public async Task<YouTubePlaylistSyncApplyResult> ApplyPlaylistsAsync(
+        bool restoreSuppressed,
+        CancellationToken cancellationToken)
+    {
+        await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            if (_playlistPreview is not { } preview
+                || preview.RestoreSuppressed != restoreSuppressed
+                || DateTimeOffset.UtcNow - preview.CreatedAtUtc > PreviewLifetime)
+            {
+                throw new InvalidOperationException(
+                    "Najpierw sprawdź aktualne playlisty YouTube i zatwierdź ten sam zakres zmian.");
+            }
+            var result = _podcasts.ApplyYouTubePlaylists(
+                preview.Playlists,
+                restoreSuppressed);
+            _playlistPreview = null;
             return result;
         }
         finally
@@ -225,15 +279,22 @@ internal sealed class LiteYouTubeWindowsAccountBackend : ILiteYouTubeAccountBack
         if (_disposed) return;
         _disposed = true;
         _preview = null;
+        _playlistPreview = null;
         _broadcastCache.Clear();
         _gate.Dispose();
         _broadcasts.Dispose();
+        _playlists.Dispose();
         _subscriptions.Dispose();
         _account.Dispose();
     }
 
     private sealed record PreviewSnapshot(
         IReadOnlyList<YouTubeSubscription> Subscriptions,
+        bool RestoreSuppressed,
+        DateTimeOffset CreatedAtUtc);
+
+    private sealed record PlaylistPreviewSnapshot(
+        IReadOnlyList<YouTubeAccountPlaylist> Playlists,
         bool RestoreSuppressed,
         DateTimeOffset CreatedAtUtc);
 

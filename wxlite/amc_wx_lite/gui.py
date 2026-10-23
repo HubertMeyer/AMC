@@ -81,6 +81,7 @@ from .youtube_account import (
     resolve_youtube_client_id,
     resolve_youtube_client_secret_file,
     safe_message as youtube_safe_message,
+    playlist_sync_preview as youtube_playlist_sync_preview,
     sync_preview as youtube_sync_preview,
 )
 from .youtube_live import (
@@ -4281,23 +4282,25 @@ class YouTubeAccountDialog(wx.Dialog):
     ) -> None:
         super().__init__(
             parent,
-            title="Konto YouTube i subskrypcje",
+            title="Konto YouTube, subskrypcje i playlisty",
             style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER,
         )
-        self.SetName("Konto YouTube i subskrypcje")
+        self.SetName("Konto YouTube, subskrypcje i playlisty")
         self._run_action = run_action
         self._connected = False
         self._preview_ready = False
         self._preview_restore = False
+        self._preview_kind: str | None = None
         self._busy_action: str | None = None
         self._close_after_cancel = False
 
-        heading = wx.StaticText(self, label="Konto YouTube i subskrypcje")
-        heading.SetName("Konto YouTube i subskrypcje")
+        heading = wx.StaticText(self, label="Konto YouTube, subskrypcje i playlisty")
+        heading.SetName("Konto YouTube, subskrypcje i playlisty")
         explanation = wx.StaticText(
             self,
             label=(
-                "AMC prosi Google wyłącznie o odczyt listy subskrypcji YouTube. "
+                "AMC prosi Google wyłącznie o odczyt listy subskrypcji i własnych "
+                "playlist YouTube. "
                 "Hasło wpisujesz tylko na oficjalnej stronie Google w domyślnej "
                 "przeglądarce. Najpierw sprawdzasz plan zmian, a zapis do "
                 "Biblioteki AMC wykonujesz osobnym przyciskiem."
@@ -4306,21 +4309,21 @@ class YouTubeAccountDialog(wx.Dialog):
         explanation.Wrap(760)
         self.status = wx.StaticText(self, label="")
         self.status.SetName("Stan konta YouTube")
-        preview_heading = wx.StaticText(
+        self.preview_heading = wx.StaticText(
             self,
             label="Kanały planowane do zapisania w Bibliotece AMC",
         )
-        preview_heading.SetName("Kanały planowane do zapisania w Bibliotece AMC")
+        self.preview_heading.SetName("Kanały planowane do zapisania w Bibliotece AMC")
         self.preview_list = wx.ListBox(self, choices=[])
         self.preview_list.SetName(
             "Kanały planowane do zapisania w Bibliotece AMC"
         )
         self.restore_suppressed = wx.CheckBox(
             self,
-            label="Przywróć kanały wcześniej usunięte z Biblioteki AMC",
+            label="Przywróć kanały i playlisty wcześniej usunięte z Biblioteki AMC",
         )
         self.restore_suppressed.SetName(
-            "Przywróć kanały wcześniej usunięte z Biblioteki AMC"
+            "Przywróć kanały i playlisty wcześniej usunięte z Biblioteki AMC"
         )
 
         self.login_button = wx.Button(
@@ -4330,6 +4333,10 @@ class YouTubeAccountDialog(wx.Dialog):
         self.apply_button = wx.Button(
             self, label="Zapisz subskrypcje w Bibliotece AMC"
         )
+        self.playlist_preview_button = wx.Button(self, label="Sprawdź playlisty")
+        self.playlist_apply_button = wx.Button(
+            self, label="Zapisz playlisty w Bibliotece AMC"
+        )
         self.logout_button = wx.Button(self, label="Wyloguj z YouTube w AMC")
         self.cancel_login_button = wx.Button(self, label="Anuluj logowanie")
         self.close_button = wx.Button(self, wx.ID_CANCEL, "Zamknij")
@@ -4337,6 +4344,8 @@ class YouTubeAccountDialog(wx.Dialog):
             (self.login_button, "Zaloguj konto YouTube przez Google w przeglądarce"),
             (self.preview_button, "Sprawdź subskrypcje YouTube bez zapisywania"),
             (self.apply_button, "Zapisz sprawdzone subskrypcje w Bibliotece AMC"),
+            (self.playlist_preview_button, "Sprawdź playlisty YouTube bez zapisywania"),
+            (self.playlist_apply_button, "Zapisz sprawdzone playlisty w Bibliotece AMC"),
             (self.logout_button, "Wyloguj konto YouTube tylko w AMC"),
             (self.cancel_login_button, "Anuluj oczekiwanie na logowanie YouTube"),
             (self.close_button, "Zamknij okno konta YouTube"),
@@ -4348,6 +4357,8 @@ class YouTubeAccountDialog(wx.Dialog):
             self.login_button,
             self.preview_button,
             self.apply_button,
+            self.playlist_preview_button,
+            self.playlist_apply_button,
             self.logout_button,
             self.cancel_login_button,
             self.close_button,
@@ -4358,7 +4369,7 @@ class YouTubeAccountDialog(wx.Dialog):
         layout.Add(heading, 0, wx.ALL, 12)
         layout.Add(explanation, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM | wx.EXPAND, 12)
         layout.Add(self.status, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM | wx.EXPAND, 12)
-        layout.Add(preview_heading, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 12)
+        layout.Add(self.preview_heading, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 12)
         layout.Add(self.preview_list, 1, wx.LEFT | wx.RIGHT | wx.BOTTOM | wx.EXPAND, 12)
         layout.Add(
             self.restore_suppressed,
@@ -4374,6 +4385,8 @@ class YouTubeAccountDialog(wx.Dialog):
             (self.login_button, "login"),
             (self.preview_button, "preview"),
             (self.apply_button, "apply"),
+            (self.playlist_preview_button, "previewPlaylists"),
+            (self.playlist_apply_button, "applyPlaylists"),
             (self.logout_button, "logout"),
             (self.cancel_login_button, "cancelLogin"),
         ):
@@ -4422,10 +4435,19 @@ class YouTubeAccountDialog(wx.Dialog):
             )
         self.login_button.Enable(idle)
         self.preview_button.Enable(idle and self._connected)
+        self.playlist_preview_button.Enable(idle and self._connected)
         self.apply_button.Enable(
             idle
             and self._connected
             and self._preview_ready
+            and self._preview_kind == "subscriptions"
+            and self._preview_restore == self.restore_deleted_channels
+        )
+        self.playlist_apply_button.Enable(
+            idle
+            and self._connected
+            and self._preview_ready
+            and self._preview_kind == "playlists"
             and self._preview_restore == self.restore_deleted_channels
         )
         self.logout_button.Enable(idle and self._connected)
@@ -4447,13 +4469,33 @@ class YouTubeAccountDialog(wx.Dialog):
                 self.fail("Nie udało się odczytać podglądu subskrypcji YouTube.")
                 return
             self._preview_ready = True
+            self._preview_kind = "subscriptions"
             self._preview_restore = self.restore_deleted_channels
             labels = list(preview.labels) or ["Brak kanałów do zapisania"]
             self.preview_list.Set(labels)
             if labels:
                 self.preview_list.SetSelection(0)
-        elif action in {"apply", "logout", "cancelLogin"}:
+            self.preview_heading.SetLabel("Kanały planowane do zapisania w Bibliotece AMC")
+            self.preview_heading.SetName("Kanały planowane do zapisania w Bibliotece AMC")
+            self.preview_list.SetName("Kanały planowane do zapisania w Bibliotece AMC")
+        elif action == "previewPlaylists":
+            preview = youtube_playlist_sync_preview(result)
+            if preview is None:
+                self.fail("Nie udało się odczytać podglądu playlist YouTube.")
+                return
+            self._preview_ready = True
+            self._preview_kind = "playlists"
+            self._preview_restore = self.restore_deleted_channels
+            labels = list(preview.labels) or ["Brak playlist do zapisania"]
+            self.preview_list.Set(labels)
+            if labels:
+                self.preview_list.SetSelection(0)
+            self.preview_heading.SetLabel("Playlisty planowane do zapisania w Bibliotece AMC")
+            self.preview_heading.SetName("Playlisty planowane do zapisania w Bibliotece AMC")
+            self.preview_list.SetName("Playlisty planowane do zapisania w Bibliotece AMC")
+        elif action in {"login", "apply", "applyPlaylists", "logout", "cancelLogin"}:
             self._preview_ready = False
+            self._preview_kind = None
             self.preview_list.Set([])
         self.set_busy(None)
         self.apply_status(status)
@@ -4469,7 +4511,9 @@ class YouTubeAccountDialog(wx.Dialog):
             self._close_after_cancel = False
         focus = {
             "preview": self.apply_button if self._preview_ready else self.preview_button,
+            "previewPlaylists": self.playlist_apply_button if self._preview_ready else self.playlist_preview_button,
             "apply": self.preview_button,
+            "applyPlaylists": self.playlist_preview_button,
             "logout": self.login_button,
             "cancelLogin": self.login_button,
             "login": self.preview_button if self._connected else self.login_button,
@@ -4496,9 +4540,10 @@ class YouTubeAccountDialog(wx.Dialog):
     def _on_restore_changed(self, _event: wx.CommandEvent) -> None:
         if self._preview_ready:
             self._preview_ready = False
+            self._preview_kind = None
             self.preview_list.Set([])
             self._set_status(
-                "Zmieniono zakres synchronizacji. Sprawdź subskrypcje ponownie."
+                "Zmieniono zakres synchronizacji. Sprawdź subskrypcje albo playlisty ponownie."
             )
         self._refresh_buttons()
 
@@ -4515,6 +4560,8 @@ class YouTubeAccountDialog(wx.Dialog):
             "cancelLogin": "Anulowanie oczekiwania na logowanie YouTube.",
             "preview": "Sprawdzanie subskrypcji YouTube bez zapisywania zmian.",
             "apply": "Zapisywanie sprawdzonego planu w Bibliotece AMC.",
+            "previewPlaylists": "Sprawdzanie playlist YouTube bez zapisywania zmian.",
+            "applyPlaylists": "Zapisywanie sprawdzonych playlist w Bibliotece AMC.",
             "logout": "Usuwanie połączenia YouTube z bieżącego profilu AMC.",
         }
         self._set_status(messages[action])
@@ -16371,6 +16418,14 @@ class LiteFrame(wx.Frame):
                     result = client.youtube_subscription_sync_apply(
                         restore_suppressed=restore_deleted
                     )
+                elif action == "previewPlaylists":
+                    result = client.youtube_playlist_sync_preview(
+                        restore_suppressed=restore_deleted
+                    )
+                elif action == "applyPlaylists":
+                    result = client.youtube_playlist_sync_apply(
+                        restore_suppressed=restore_deleted
+                    )
                 else:
                     raise ValueError("Nieobsługiwana operacja konta YouTube")
                 return result, client.youtube_account_status()
@@ -16383,9 +16438,9 @@ class LiteFrame(wx.Frame):
                 )
                 if action == "login" and youtube_account_connected(status):
                     message = (
-                        "Zalogowano do YouTube. Teraz wybierz Sprawdź subskrypcje; "
-                        "lista nie zmieni Biblioteki, dopóki osobno nie wybierzesz "
-                        "Zapisz subskrypcje w Bibliotece AMC."
+                        "Zalogowano do YouTube. Wybierz Sprawdź subskrypcje albo "
+                        "Sprawdź playlisty. Podgląd nie zmieni Biblioteki, dopóki "
+                        "osobno nie wybierzesz odpowiedniego przycisku Zapisz."
                     )
                 if not dialog.IsBeingDeleted():
                     dialog.finish(action, result, status)
@@ -16395,7 +16450,7 @@ class LiteFrame(wx.Frame):
                     self.store,
                     f"Konto YouTube, operacja {action}: {message}",
                 )
-                if action == "apply" and self.navigator.active is SessionId.PODCASTS:
+                if action in {"apply", "applyPlaylists"} and self.navigator.active is SessionId.PODCASTS:
                     self._refresh_profile_view()
                 self.announcer.say(message)
 

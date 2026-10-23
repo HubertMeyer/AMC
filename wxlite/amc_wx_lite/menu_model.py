@@ -449,7 +449,7 @@ def build_menus(
             *(
                 (
                     MenuItem(
-                        "Konto YouTube i &synchronizacja subskrypcji…",
+                        "Konto YouTube, &subskrypcje i playlisty…",
                         Action.YOUTUBE_ACCOUNT,
                         needs_podcast_session=True,
                         visible_sessions=PODCASTS_ONLY,

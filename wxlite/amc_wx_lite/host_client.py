@@ -607,6 +607,24 @@ class LiteHostClient:
             timeout=90.0,
         )
 
+    def youtube_playlist_sync_preview(
+        self, *, restore_suppressed: bool = False
+    ) -> Any:
+        return self.call(
+            "youtube.playlistSyncPreview",
+            {"restoreSuppressed": bool(restore_suppressed)},
+            timeout=300.0,
+        )
+
+    def youtube_playlist_sync_apply(
+        self, *, restore_suppressed: bool = False
+    ) -> Any:
+        return self.call(
+            "youtube.playlistSyncApply",
+            {"restoreSuppressed": bool(restore_suppressed)},
+            timeout=120.0,
+        )
+
     def youtube_channel_broadcasts(
         self,
         subscription_id: str,
