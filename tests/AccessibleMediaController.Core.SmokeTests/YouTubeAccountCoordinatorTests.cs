@@ -15,7 +15,8 @@ internal static class YouTubeAccountCoordinatorTests
         ExpiredTokenRefreshesAndIsStored();
         FreshTokenDoesNotUseNetwork();
         LogoutDeletesOnlyThisStore();
-        Console.WriteLine("OK: koordynator konta YouTube (5 scenariuszy)");
+        DefaultLoginWindowSupportsAccessibleFlow();
+        Console.WriteLine("OK: koordynator konta YouTube (6 scenariuszy)");
     }
 
     private static void LoginStoresTokensOnlyAfterConfirmedCallback()
@@ -129,6 +130,15 @@ internal static class YouTubeAccountCoordinatorTests
         Assert(result.Succeeded && store.Deletes == 1 && store.Current is null,
             "Wylogowanie nie usunęło dokładnie bieżącego magazynu.");
         Assert(!coordinator.GetStatus().Connected, "Po wylogowaniu konto nadal jest przedstawiane jako połączone.");
+    }
+
+    private static void DefaultLoginWindowSupportsAccessibleFlow()
+    {
+        Assert(YouTubeAccountCoordinator.DefaultLoginTimeout >= TimeSpan.FromMinutes(15),
+            "Domyślne okno logowania jest zbyt krótkie dla dostępnego przepływu Google.");
+        Assert(YouTubeAccountCoordinator.DefaultLoginTimeout
+               <= YouTubeAccountCoordinator.MaximumLoginTimeout,
+            "Domyślne okno logowania przekracza dozwoloną granicę bezpieczeństwa.");
     }
 
     private static YouTubeAccountCoordinator Coordinator(

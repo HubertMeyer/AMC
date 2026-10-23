@@ -21,6 +21,9 @@ public sealed record YouTubeAccountOperationResult(bool Succeeded, string Messag
 /// </summary>
 public sealed class YouTubeAccountCoordinator : IDisposable
 {
+    internal static TimeSpan DefaultLoginTimeout { get; } = TimeSpan.FromMinutes(15);
+    internal static TimeSpan MaximumLoginTimeout { get; } = TimeSpan.FromMinutes(30);
+
     private readonly string _clientId;
     private readonly string _clientSecret;
     private readonly IYouTubeCredentialStore _store;
@@ -51,8 +54,8 @@ public sealed class YouTubeAccountCoordinator : IDisposable
         _openAuthorizationPage = openAuthorizationPage
             ?? throw new ArgumentNullException(nameof(openAuthorizationPage));
         _now = now ?? (() => DateTimeOffset.UtcNow);
-        _loginTimeout = loginTimeout ?? TimeSpan.FromMinutes(5);
-        if (_loginTimeout <= TimeSpan.Zero || _loginTimeout > TimeSpan.FromMinutes(10))
+        _loginTimeout = loginTimeout ?? DefaultLoginTimeout;
+        if (_loginTimeout <= TimeSpan.Zero || _loginTimeout > MaximumLoginTimeout)
             throw new ArgumentOutOfRangeException(nameof(loginTimeout));
     }
 

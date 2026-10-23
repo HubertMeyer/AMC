@@ -163,6 +163,7 @@ def test_host_client_passes_secret_path_not_secret_value() -> None:
     ]
     assert calls[-2][1] == {"restoreSuppressed": True}
     assert calls[-1][1] == {"restoreSuppressed": False}
+    assert calls[2][2] == 960.0
 
 
 def test_runtime_capability_controls_menu_palette_and_help_together() -> None:
@@ -214,7 +215,10 @@ def test_dialog_source_has_intentional_accessible_labels() -> None:
         "Zaloguj konto YouTube przez Google w przeglądarce",
         "Anuluj oczekiwanie na logowanie YouTube",
         "Zamknij okno konta YouTube",
+        "AMC będzie czekać do 15 minut",
     ):
         assert label in dialog
+    assert "self.close_button.Bind(wx.EVT_BUTTON, self._on_close_button)" in dialog
+    assert "self._close_after_cancel = True" in dialog
     assert "str(payload)" not in dialog
     assert "repr(" not in dialog

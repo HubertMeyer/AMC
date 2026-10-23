@@ -4281,6 +4281,7 @@ class YouTubeAccountDialog(wx.Dialog):
         self._preview_ready = False
         self._preview_restore = False
         self._busy_action: str | None = None
+        self._close_after_cancel = False
 
         heading = wx.StaticText(self, label="Konto YouTube i subskrypcje")
         heading.SetName("Konto YouTube i subskrypcje")
@@ -4372,6 +4373,7 @@ class YouTubeAccountDialog(wx.Dialog):
                 lambda _event, selected=action: self._on_action(selected),
             )
         self.restore_suppressed.Bind(wx.EVT_CHECKBOX, self._on_restore_changed)
+        self.close_button.Bind(wx.EVT_BUTTON, self._on_close_button)
         self.Bind(wx.EVT_CLOSE, self._on_close)
         self.apply_status(payload, focus=True)
 
@@ -4453,6 +4455,9 @@ class YouTubeAccountDialog(wx.Dialog):
                 "Zaloguj konto YouTube przez Google w przeglądarce. "
                 f"Ostatni wynik: {result_message[:300]}"
             )
+        close_after_cancel = action == "cancelLogin" and self._close_after_cancel
+        if close_after_cancel:
+            self._close_after_cancel = False
         focus = {
             "preview": self.apply_button if self._preview_ready else self.preview_button,
             "apply": self.preview_button,
@@ -4460,10 +4465,15 @@ class YouTubeAccountDialog(wx.Dialog):
             "cancelLogin": self.login_button,
             "login": self.preview_button if self._connected else self.login_button,
         }.get(action, self.close_button)
-        wx.CallAfter(focus.SetFocus)
+        if close_after_cancel:
+            wx.CallAfter(self.EndModal, wx.ID_CANCEL)
+        else:
+            wx.CallAfter(focus.SetFocus)
 
     def fail(self, message: str) -> None:
         previous = self._busy_action
+        if previous == "cancelLogin":
+            self._close_after_cancel = False
         self.set_busy(None)
         self._set_status(message)
         target = self.login_button if previous in {"login", "cancelLogin"} else self.close_button
@@ -4488,7 +4498,11 @@ class YouTubeAccountDialog(wx.Dialog):
             return
         self.set_busy(action)
         messages = {
-            "login": "Otwieranie oficjalnego logowania Google w przeglądarce.",
+            "login": (
+                "Oczekiwanie na zakończenie logowania Google w przeglądarce. "
+                "AMC będzie czekać do 15 minut. Możesz wybrać Anuluj logowanie "
+                "albo Zamknij, aby bezpiecznie przerwać oczekiwanie."
+            ),
             "cancelLogin": "Anulowanie oczekiwania na logowanie YouTube.",
             "preview": "Sprawdzanie subskrypcji YouTube bez zapisywania zmian.",
             "apply": "Zapisywanie sprawdzonego planu w Bibliotece AMC.",
@@ -4497,13 +4511,22 @@ class YouTubeAccountDialog(wx.Dialog):
         self._set_status(messages[action])
         self._run_action(action, self)
 
-    def _on_close(self, event: wx.CloseEvent) -> None:
+    def _on_close_button(self, _event: wx.CommandEvent) -> None:
+        if self._request_close():
+            self.EndModal(wx.ID_CANCEL)
+
+    def _request_close(self) -> bool:
         if self._busy_action == "login":
+            self._close_after_cancel = True
             self._on_action("cancelLogin")
-            event.Veto()
-            return
+            return False
         if self._busy_action is not None:
             self._set_status("Poczekaj na zakończenie bieżącej operacji YouTube.")
+            return False
+        return True
+
+    def _on_close(self, event: wx.CloseEvent) -> None:
+        if not self._request_close():
             event.Veto()
             return
         event.Skip()

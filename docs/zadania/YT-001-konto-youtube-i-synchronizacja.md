@@ -657,3 +657,57 @@ Zainstalowano `AMC Test — 23.10.2026, 19:28`, rewizja
 `b162b4d113acd3de7c6ad7370428e16d80a972f0`, identyfikator paczki
 `892705d2`. Publikacji, instalatora AMC Public ani wysłania do GitHuba nie
 wykonywano.
+
+## Korekta po pierwszym OAuth z kompletnym klientem — 23 października 2026
+
+Ta sekcja zastępuje wcześniejsze ograniczenie mówiące, że prawdziwego OAuth na
+nowym sekrecie jeszcze nie wykonano. Użytkownik ukończył zgodę Google, lecz
+Chrome pokazał `ERR_CONNECTION_REFUSED` dla lokalnego adresu powrotu, a AMC
+sprawiał wrażenie zawieszonego. Prywatny dziennik frontendu rozstrzygnął
+przyczynę bez odczytywania kodu autoryzacyjnego: dokładnie o 19:40:22 zapisano
+`Upłynął czas oczekiwania na logowanie YouTube.`. Pięciominutowy odbiornik
+został zamknięty przed powrotem z dostępnego przepływu Google; konfiguracja
+klienta, zakres i przekazanie zgody działały.
+
+### Materiał do dokumentacji użytkownika
+
+- Po wybraniu `Zaloguj konto YouTube przez Google w przeglądarce` AMC czeka na
+  powrót z Google do 15 minut i mówi o tym w stanie okna.
+- Podczas oczekiwania można wybrać `Anuluj oczekiwanie na logowanie YouTube`
+  albo `Zamknij okno konta YouTube`. Zamknięcie najpierw bezpiecznie zatrzymuje
+  lokalny odbiornik, a potem oddaje fokus do głównego okna.
+- Błąd strony `127.0.0.1` po upływie limitu nie oznacza problemu z hasłem ani
+  kontem. Należy rozpocząć nowe logowanie; kod z poprzedniego adresu jest
+  jednorazowy i nie powinien być kopiowany do AMC.
+- Dopiero komunikat `YouTube: zalogowano` jest potwierdzeniem. Następne jawne
+  kroki pozostają bez zmian: `Sprawdź subskrypcje`, a potem osobno `Zapisz
+  subskrypcje w Bibliotece AMC`.
+
+### Uzasadnienie i decyzje
+
+Domyślny czas hosta zmieniono z 5 na 15 minut, a limit klienta protokołu z 6 na
+16 minut, tak aby klient nie zakończył oczekiwania przed hostem. Górna granica
+hosta pozostaje kontrolowana i wynosi 30 minut. Przycisk `Zamknij` dostał jawny
+handler: nie może już zniszczyć modalnego okna i zostawić działającego odbiornika
+w tle. W trakcie anulowania wynik starszego logowania nadal jest odrzucany przez
+wspólną bramę generacji.
+
+### Testy i wynik
+
+- Koordynator konta YouTube: 6/6 scenariuszy zaliczonych, w tym minimalne
+  piętnastominutowe okno dostępnego logowania.
+- Testy Python kontraktu konta i etykiet okna: 6/6 zaliczonych.
+- Pierwsze uruchomienie testów w zainstalowanym runtime nie było testem kodu:
+  ten runtime celowo nie zawiera `pytest`. Test powtórzono w istniejącym
+  środowisku testowym projektu, bez instalowania zależności globalnych.
+
+### Znane ograniczenia
+
+To jest na razie zmiana źródłowa z zaliczonymi testami ukierunkowanymi. Nie
+zbudowano jeszcze pakietu, nie zainstalowano poprawionej wersji i nie wykonano
+ponownego prawdziwego OAuth ani podglądu subskrypcji.
+
+### Wersja i commit
+
+Wersja i commit zostaną wpisane po zbudowaniu, instalacji i weryfikacji
+konkretnego kandydata AMC Test. AMC Public i GitHub pozostają bez zmian.

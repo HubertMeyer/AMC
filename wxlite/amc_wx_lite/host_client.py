@@ -577,7 +577,9 @@ class LiteHostClient:
 
     def youtube_account_login(self) -> Any:
         """Uruchom OAuth dopiero po jawnym poleceniu w oknie konta."""
-        return self.call("youtube.accountLogin", timeout=360.0)
+        # Host czeka do 15 minut, aby dostępny przepływ Google nie kończył
+        # lokalnego odbiornika, gdy użytkownik potrzebuje więcej czasu.
+        return self.call("youtube.accountLogin", timeout=960.0)
 
     def youtube_account_cancel_login(self) -> Any:
         """Przerwij lokalne oczekiwanie na wynik otwartej strony Google."""

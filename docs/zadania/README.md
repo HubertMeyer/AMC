@@ -272,10 +272,11 @@ zmian, wymagający korekty użytkownika:
   [AMC14-foldery-i-integracja-powloki.md](AMC14-foldery-i-integracja-powloki.md).
   Zatwierdzona specyfikacja:
   `D:\Projekty Codex\Accessible Multimedia Controller\AMC14_FOLDERY_I_INTEGRACJA_POWLOKI_2026-10-18.md`.
-- `YT-001` — **W trakcie — kompletną parę klienta Google zapisano lokalnie,
-  poprawkę `3e57b686` zbudowano i zainstalowano jako AMC Test 23.10.2026,
-  19:28. Testy automatyczne i kontrolowany start przeszły; pozostał prawdziwy
-  OAuth oraz ręczny odbiór NVDA** — oficjalne logowanie do
+- `YT-001` — **W trakcie — pierwszy prawdziwy OAuth z kompletną parą klienta
+  ujawnił zbyt krótki, pięciominutowy czas lokalnego odbiornika. Źródłowa
+  korekta wydłuża go do 15 minut, bezpiecznie anuluje oczekiwanie przy
+  zamykaniu okna i przeszła testy ukierunkowane; pozostały build, instalacja,
+  ponowny prawdziwy OAuth oraz ręczny odbiór NVDA** — oficjalne logowanie do
   konta YouTube, synchronizacja subskrypcji i zwykłych playlist oraz bezpieczny
   zakres czynności konta. Etap rozpoczęto 21 października 2026 na nowe jawne
   polecenie użytkownika; sam start nadal nie loguje konta ani nie otwiera
