@@ -2,12 +2,21 @@
 
 ## Status
 
-**Korekta z 2026-10-23 po ręcznym zgłoszeniu NVDA jest gotowa w źródłach,
-zbudowana, zweryfikowana automatycznie, zainstalowana i uruchomiona w zbiorczym
-AMC Test `23.10.2026, 11:24`; czeka na ponowny odbiór NVDA. Ten zapis zastępuje
-niższe historyczne stwierdzenia „nie została zainstalowana”. AMC Public,
-instalator publiczny i GitHub pozostały bez zmian. Szczegóły instalacji:
+**Zrobione i przyjęte przez użytkownika 23.10.2026. Korekta po ręcznym
+zgłoszeniu NVDA została zbudowana, zweryfikowana automatycznie, zainstalowana
+i uruchomiona w AMC Test, a użytkownik przyjął działanie `Ctrl+N` w sesji
+`Podcasty i YouTube`. Ten zapis zastępuje niższe historyczne stwierdzenia
+„nie została zainstalowana” oraz „czeka na ponowny odbiór NVDA”. AMC Public,
+instalator publiczny i GitHub pozostały bez zmian. Szczegóły pierwszej
+instalacji korekty:
 [AMC-TEST-2026-10-23-1124-instalacja-zbiorcza.md](AMC-TEST-2026-10-23-1124-instalacja-zbiorcza.md).**
+
+## Odbiór użytkownika — 23 października 2026
+
+Użytkownik przyjął przepływ `Ctrl+N` w sesji `Podcasty i YouTube`. Odbiór
+zamyka oczekiwanie na ponowne sprawdzenie tej funkcji z NVDA. Transmisje na
+żywo, logowanie Google i inne zadania YouTube zachowują własne, niezależne
+statusy i nie są domyślnie uznane za odebrane przez tę decyzję.
 
 **Korekta użytkownika z 23.10.2026 po odbiorze instalacji 11:24:** dodanie
 kanału kończy się powodzeniem, lecz bardzo szybkie `Ctrl+V` zaraz po `Ctrl+N`
@@ -151,12 +160,9 @@ obiektu.
 
 ## Znane ograniczenia
 
-- Bieżąca korekta nie została zainstalowana ani uruchomiona jako AMC. Wymaga
-  ręcznego odbioru NVDA obejmującego początkowy fokus, stan oczekiwania, drugi
-  Enter, błąd, sukces, powrót fokusu i ponowne otwarcie formularza.
-- Automaty sprawdzają nazwy dostępności, stany kontrolek, routing polecenia i
-  parametry tworzenia procesów, ale nie zastępują rzeczywistej mowy NVDA ani
-  obserwacji krótkiego przejęcia fokusu na komputerze użytkownika.
+- Ręczny odbiór podstawowego przepływu `Ctrl+N` został przyjęty przez
+  użytkownika. Szczegółowe ścieżki awarii sieciowej i niedostępnego materiału
+  pozostają dodatkowo chronione testami automatycznymi.
 - Sieciowego importu YouTube nie powtarzano dla tej korekty. Poprzedni wynik
   prawdziwego kanału potwierdza normalizację i usługę, nie nową obsługę okna.
 - Rzeczywisty import zależy od dostępności publicznego materiału i odpowiedzi
@@ -176,8 +182,10 @@ obiektu.
 - Wcześniejszy zainstalowany kandydat `%40`:
   `2026.10.23-1badabbeeacde3d8853457683ef750d558b3f1fd-7353e273`.
   Nie zawiera bieżącego commita.
-- Bieżąca korekta: bez instalacji, bez uruchomienia żywego AMC, bez zmiany AMC
-  Test, AMC Public, instalatora i GitHub.
+- Korekta została później scalona do gałęzi integracyjnej i znajduje się
+  również w przyjętym AMC Test `23.10.2026, 21:25`, którego rewizją źródłową
+  jest `4119476314529741741639de6ee662951e656092`. AMC Public, instalator
+  publiczny i GitHub pozostały bez zmian.
 
 ## Materiał do dokumentacji użytkownika
 
@@ -201,5 +209,5 @@ logowania nie są obsługiwane.
   całe sprawdzanie, blokuje drugi Enter, zachowuje przewidywalny fokus i kończy
   się dopiero sukcesem. Błąd przywraca pole adresu. Procesy pomocnicze są
   uruchamiane bez okna, a zwykła mowa nie ujawnia terminala, `Win32`, ścieżek
-  ani nazw technicznych. Korekta jest tylko na gałęzi i nie została
-  zainstalowana.
+  ani nazw technicznych. Korekta została zainstalowana w AMC Test i przyjęta
+  przez użytkownika 23.10.2026.

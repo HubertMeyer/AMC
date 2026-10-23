@@ -104,16 +104,13 @@ zmian, wymagający korekty użytkownika:
   zbiorczej Biblioteki podcastów, kanałów YouTube i „Media internetowe”,
   prywatna trwałość wyboru i zachowanie zaznaczenia po stabilnym ID. Szczegóły:
   [POD-001-sortowanie-biblioteki-zrodel.md](POD-001-sortowanie-biblioteki-zrodel.md).
-- `POD-002` — **Po odbiorze instalacji 11:24 dodano kolejną korektę szybkiego
-  `Ctrl+V`: wklejanie jest przechwytywane przez modal i odłożone o jedną
-  kolejkę zdarzeń; pełna regresja, budowa i instalacja AMC Test 12:56 są
-  zaliczone. Wcześniejsza korekta fokusu, blokady drugiego Entera i ukrywania procesów po
-  zgłoszeniu NVDA z 2026-10-23 jest zainstalowana i uruchomiona w zbiorczym
-  AMC Test 23.10.2026, 11:24; czeka na ponowny odbiór NVDA** — formularz
+- `POD-002` — **Zrobione i przyjęte przez użytkownika 23.10.2026 w AMC Test;
+  odbiór obejmuje `Ctrl+N` w sesji `Podcasty i YouTube`. Poprawki szybkiego
+  `Ctrl+V`, fokusu, blokady drugiego Entera i ukrywania procesów są scalone
+  oraz znajdują się również w bieżącej instalacji 21:25** — formularz
   `Ctrl+N` pozostaje otwarty przez oczekiwanie, procesy pomocnicze nie tworzą
   okna, a zwykła mowa nie ujawnia „Windows 32”, terminala, ścieżek ani nazw
-  technicznych. Wcześniejszy AMC Test zawiera poprawkę `%40`, lecz nie tę
-  korektę. AMC Public, instalator i GitHub bez zmian. Szczegóły:
+  technicznych. AMC Public, instalator i GitHub bez zmian. Szczegóły:
   [POD-002-import-youtube-ctrl-n.md](POD-002-import-youtube-ctrl-n.md).
 - `POD-003` — **Zrobione, zainstalowane i uruchomione w AMC Test 23.10.2026,
   11:24; ręczny odbiór NVDA pozostaje** — naprawa niejawnego ucinania dużych kanałów
