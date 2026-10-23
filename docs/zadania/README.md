@@ -270,11 +270,11 @@ zmian, wymagający korekty użytkownika:
   [AMC14-foldery-i-integracja-powloki.md](AMC14-foldery-i-integracja-powloki.md).
   Zatwierdzona specyfikacja:
   `D:\Projekty Codex\Accessible Multimedia Controller\AMC14_FOLDERY_I_INTEGRACJA_POWLOKI_2026-10-18.md`.
-- `YT-001` — **W trakcie korekty odbiorczej — ręczny test wersji 15:14
-  wykazał brak polecenia konta z powodu niezgodności nazw pól C#–Python.
-  Serializer całego protokołu, zgodność klienta oraz test prawdziwej granicy
-  procesów są poprawione; nowa paczka AMC Test czeka na promocję i ponowny
-  odbiór NVDA** — oficjalne logowanie do
+- `YT-001` — **W trakcie odbioru — brak polecenia z wersji 15:14 został
+  naprawiony na granicy C#–Python. AMC Test 23.10.2026, 15:42 jest zbudowany,
+  zainstalowany i uruchomiony; zainstalowany host zwraca poprawne `camelCase`,
+  a runtime tworzy jeden wpis konta w palecie. Pozostało prawdziwe logowanie i
+  ręczny odbiór NVDA** — oficjalne logowanie do
   konta YouTube, synchronizacja subskrypcji i zwykłych playlist oraz bezpieczny
   zakres czynności konta. Etap rozpoczęto 21 października 2026 na nowe jawne
   polecenie użytkownika; sam start nadal nie loguje konta ani nie otwiera

@@ -1,6 +1,6 @@
 # YT-001 — konto YouTube i synchronizacja
 
-- Status: `W trakcie korekty odbiorczej — klient Desktop OAuth, zakres tylko do odczytu i zasób profilu testowego są skonfigurowane; ręczny odbiór wersji 15:14 wykazał brak polecenia konta wskutek niezgodności nazw pól C#–Python. Źródła i test rzeczywistego protokołu są poprawione, a nowa kompilacja AMC Test czeka na promocję`. Zapis odrzuconej instalacji: [AMC-TEST-2026-10-23-1514-youtube-oauth.md](AMC-TEST-2026-10-23-1514-youtube-oauth.md).
+- Status: `W trakcie odbioru — niezgodność nazw pól C#–Python jest poprawiona; AMC Test 23.10.2026, 15:42 został zbudowany, zainstalowany i uruchomiony, a zainstalowany host oraz wpis palety przeszły niezależną kontrolę. Pozostało prawdziwe logowanie i ręczny odbiór NVDA`. Zapis bieżącej instalacji: [AMC-TEST-2026-10-23-1542-youtube-command-wire-fix.md](AMC-TEST-2026-10-23-1542-youtube-command-wire-fix.md). Zapis odrzuconej wersji 15:14: [AMC-TEST-2026-10-23-1514-youtube-oauth.md](AMC-TEST-2026-10-23-1514-youtube-oauth.md).
 - Utworzono: 18 października 2026
 - Ostatnia aktualizacja: 23 października 2026
 - Obszar: YouTube, OAuth, Biblioteka, wyszukiwanie i bezpieczne poświadczenia
@@ -497,5 +497,15 @@ prawdziwy proces C# i klienta Python, a nie tylko ręcznie zbudowany słownik.
 Wynik przed promocją: 22/22 testy celowane, 2016 testów Python zaliczonych,
 111 kontrolowanie pominiętych, 11 podtestów zaliczonych, 27/27 zestawów
 protokołu oraz 30/30 testów launchera i aktualizatora. Całe rozwiązanie
-zbudowało się bez ostrzeżeń i błędów. Nowa paczka i ponowny odbiór NVDA są
-jeszcze wymagane.
+zbudowało się bez ostrzeżeń i błędów. Był to wynik przed promocją opisaną
+poniżej; ponowny ręczny odbiór NVDA jest nadal wymagany.
+
+## Promocja poprawki — 23 października 2026, 15:42
+
+Poprawkę zainstalowano atomowo w `D:\Projekty Codex\AMC Python`. Kandydat i
+zainstalowana kopia przeszły integralność oraz kontrolowany start. Bezpośrednia
+próba nowego `amc_lite_host.exe` zwróciła wyłącznie oczekiwane nazwy
+`available`, `readOnly`, `separateProfileCredentials` i `message`, a
+zainstalowany runtime utworzył jeden wpis `Konto YouTube i synchronizacja
+subskrypcji…` w palecie. Program działa jako `AMC Test — 23.10.2026, 15:42`.
+Prawdziwy przepływ Google i mowa NVDA pozostają do ręcznego odbioru.
