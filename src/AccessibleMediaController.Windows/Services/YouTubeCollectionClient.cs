@@ -216,7 +216,7 @@ internal sealed class YouTubeCollectionClient
                     ? "Kanał YouTube"
                     : "Playlista YouTube";
             }
-            var description = CleanText(ReadString(root, "description"), 4000);
+            var description = CleanDescription(ReadString(root, "description"), 20_000);
             var homepage = sourceKind == PodcastSourceKind.YouTubeChannel
                 ? TryReadHttpUri(root, "channel_url")
                     ?? TryReadHttpUri(root, "webpage_url")
@@ -236,6 +236,7 @@ internal sealed class YouTubeCollectionClient
                 var episodeAuthor = CleanText(
                     FirstNonEmpty(ReadString(entry, "channel"), ReadString(entry, "uploader"), author),
                     300);
+                var episodeDescription = CleanDescription(ReadString(entry, "description"), 20_000);
                 var durationSeconds = ReadNumber(entry, "duration");
                 var duration = durationSeconds is > 0 and < 365 * 24 * 60 * 60
                     ? TimeSpan.FromSeconds(durationSeconds.Value)
@@ -245,7 +246,7 @@ internal sealed class YouTubeCollectionClient
                     videoId,
                     episodeTitle,
                     episodeAuthor,
-                    string.Empty,
+                    episodeDescription,
                     ReadPublished(entry),
                     duration,
                     pageUri,
@@ -378,6 +379,23 @@ internal sealed class YouTubeCollectionClient
             (char[]?)null,
             StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
         return normalized.Length <= maximumLength ? normalized : normalized[..maximumLength].Trim();
+    }
+
+    private static string CleanDescription(string value, int maximumLength)
+    {
+        var normalized = value
+            .Replace("\0", " ", StringComparison.Ordinal)
+            .Replace("\r\n", "\n", StringComparison.Ordinal)
+            .Replace('\r', '\n');
+        var lines = normalized.Split('\n')
+            .Select(line => string.Join(' ', line.Split(
+                (char[]?)null,
+                StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)))
+            .ToList();
+        while (lines.Count > 0 && lines[0].Length == 0) lines.RemoveAt(0);
+        while (lines.Count > 0 && lines[^1].Length == 0) lines.RemoveAt(lines.Count - 1);
+        var result = string.Join('\n', lines);
+        return result.Length <= maximumLength ? result : result[..maximumLength].TrimEnd();
     }
 
     private static string FirstNonEmpty(params string[] values) =>

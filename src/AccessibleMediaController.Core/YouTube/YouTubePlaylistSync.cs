@@ -258,9 +258,11 @@ public static class YouTubePlaylistSyncApplier
         var playlistUri = new Uri(
             "https://www.youtube.com/playlist?list=" + Uri.EscapeDataString(playlist.PlaylistId));
         var id = "youtube-playlist:" + playlist.PlaylistId;
-        var description = playlist.PrivacyStatus == "private"
-            ? "Prywatna playlista zalogowanego konta YouTube. Dostępność odtwarzania poszczególnych materiałów zależy od YouTube."
-            : "Playlista pobrana z zalogowanego konta YouTube.";
+        var description = string.IsNullOrWhiteSpace(playlist.Description)
+            ? playlist.PrivacyStatus == "private"
+                ? "Prywatna playlista zalogowanego konta YouTube. Dostępność odtwarzania poszczególnych materiałów zależy od YouTube."
+                : "Playlista pobrana z zalogowanego konta YouTube."
+            : playlist.Description;
         return new PodcastFeedDocument(
             id,
             playlist.Title,
@@ -277,7 +279,7 @@ public static class YouTubePlaylistSyncApplier
                     video.VideoId,
                     video.Title,
                     video.ChannelTitle,
-                    string.Empty,
+                    video.Description,
                     video.Published,
                     TimeSpan.Zero,
                     page,

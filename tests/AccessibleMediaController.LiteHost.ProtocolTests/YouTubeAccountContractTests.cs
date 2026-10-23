@@ -137,6 +137,7 @@ internal static class YouTubeAccountContractTests
             "PL-TECHNICZNE",
             "  Muzyka\r\nspokojna  ",
             "Kanał",
+            "Opis playlisty",
             "private",
             140,
             [],

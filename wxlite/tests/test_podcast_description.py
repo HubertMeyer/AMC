@@ -20,6 +20,7 @@ from amc_wx_lite.podcast_source import (  # noqa: E402
     PodcastDescription,
     PodcastSubscription,
 )
+from amc_wx_lite.host_client import HostUnavailable, LiteHostClient  # noqa: E402
 
 
 def _sync_submit(_name, work, done, failed):
@@ -107,6 +108,148 @@ def test_alt_d_reports_an_empty_episode_description_in_plain_language() -> None:
     gui.LiteFrame._show_podcast_description(frame)
 
     assert spoken == ["Ten odcinek nie zawiera opisu"]
+
+
+def test_alt_d_fetches_missing_public_youtube_description_without_login() -> None:
+    row = Row("private-youtube-id", "Materiał YouTube", "episode")
+    state = _state(row)
+    shown: list[PodcastDescription] = []
+    calls: list[tuple[str, str]] = []
+    information = PodcastDescription(
+        window_title="Opis materiału YouTube",
+        text="YouTube nie udostępnia opisu tego materiału.\n\nMateriał YouTube",
+        initial_focus_name="YouTube nie udostępnia opisu tego materiału.",
+        metadata_text="Materiał YouTube\nTytuł: Materiał YouTube",
+        youtube_address="https://www.youtube.com/watch?v=PublicVideo1",
+        youtube_kind="video",
+        youtube_fallback="YouTube nie udostępnia opisu tego materiału.",
+    )
+
+    class Dialog:
+        def __init__(self, _parent, received, _copy_text):
+            shown.append(received)
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return False
+
+        def ShowModal(self):  # noqa: N802 - wx API
+            return gui.wx.ID_CANCEL
+
+    client = SimpleNamespace(
+        youtube_description=lambda *, address, kind: (
+            calls.append((address, kind))
+            or {"description": "Pełny opis z YouTube.\nDrugi akapit."}
+        )
+    )
+    frame = SimpleNamespace(
+        navigator=SimpleNamespace(
+            active=SessionId.PODCASTS,
+            sessions={SessionId.PODCASTS: state},
+        ),
+        podcasts=SimpleNamespace(description=lambda *_args: information),
+        runner=SimpleNamespace(submit=_sync_submit),
+        announcer=SimpleNamespace(say=lambda _message: None),
+        client=client,
+        _to_clipboard=lambda _text: True,
+    )
+    original = gui.PodcastDescriptionDialog
+    gui.PodcastDescriptionDialog = Dialog
+    try:
+        gui.LiteFrame._show_podcast_description(frame)
+    finally:
+        gui.PodcastDescriptionDialog = original
+
+    assert calls == [("https://www.youtube.com/watch?v=PublicVideo1", "video")]
+    assert shown[0].window_title == "Opis materiału YouTube"
+    assert shown[0].text.startswith(
+        "Pełny opis z YouTube.\nDrugi akapit.\n\nMateriał YouTube"
+    )
+    assert shown[0].initial_focus_name == "Pełny opis z YouTube. Drugi akapit."
+    assert "private-youtube-id" not in shown[0].text
+
+
+def test_youtube_description_client_uses_public_read_without_google_login() -> None:
+    calls: list[tuple[str, dict | None, float]] = []
+    client = LiteHostClient(Path("host.exe"))
+    client.call = lambda op, args=None, *, timeout=20.0: (
+        calls.append((op, args, timeout)) or {"description": "Opis"}
+    )
+
+    result = client.youtube_description(
+        address="https://www.youtube.com/watch?v=PublicVideo1",
+        kind="video",
+    )
+
+    assert result == {"description": "Opis"}
+    assert calls == [(
+        "youtube.description",
+        {
+            "address": "https://www.youtube.com/watch?v=PublicVideo1",
+            "kind": "video",
+        },
+        55.0,
+    )]
+    serialized = repr(calls).casefold()
+    assert "login" not in serialized and "token" not in serialized
+
+
+def test_alt_d_hides_technical_operation_when_youtube_host_is_unavailable() -> None:
+    row = Row("private-youtube-id", "Materiał YouTube", "episode")
+    state = _state(row)
+    shown: list[PodcastDescription] = []
+    information = PodcastDescription(
+        window_title="Opis materiału YouTube",
+        text="YouTube nie udostępnia opisu tego materiału.",
+        initial_focus_name="YouTube nie udostępnia opisu tego materiału.",
+        metadata_text="Materiał YouTube\nTytuł: Materiał YouTube",
+        youtube_address="https://www.youtube.com/watch?v=PublicVideo1",
+        youtube_kind="video",
+        youtube_fallback="YouTube nie udostępnia opisu tego materiału.",
+    )
+
+    class Dialog:
+        def __init__(self, _parent, received, _copy_text):
+            shown.append(received)
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return False
+
+        def ShowModal(self):  # noqa: N802 - wx API
+            return gui.wx.ID_CANCEL
+
+    def unavailable(**_kwargs):
+        raise HostUnavailable(
+            "Silnik nie odpowiedział w 55 s na youtube.description."
+        )
+
+    frame = SimpleNamespace(
+        navigator=SimpleNamespace(
+            active=SessionId.PODCASTS,
+            sessions={SessionId.PODCASTS: state},
+        ),
+        podcasts=SimpleNamespace(description=lambda *_args: information),
+        runner=SimpleNamespace(submit=_sync_submit),
+        announcer=SimpleNamespace(say=lambda _message: None),
+        client=SimpleNamespace(youtube_description=unavailable),
+        _to_clipboard=lambda _text: True,
+    )
+    original = gui.PodcastDescriptionDialog
+    gui.PodcastDescriptionDialog = Dialog
+    try:
+        gui.LiteFrame._show_podcast_description(frame)
+    finally:
+        gui.PodcastDescriptionDialog = original
+
+    exposed = shown[0].text.casefold()
+    assert "silnik amc nie odpowiedział" in exposed
+    assert "youtube.description" not in exposed
+    assert "private-youtube-id" not in exposed
 
 
 def test_okno_alt_d_uzywa_poczatku_opisu_zamiast_ogolnego_tytulu() -> None:

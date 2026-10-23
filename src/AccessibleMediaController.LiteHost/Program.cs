@@ -190,6 +190,9 @@ internal static class Program
                 LitePodcastDownloadCoordinator.SaveAsOperation,
                 // Sprawdzenie nowego źródła również wykonuje sieć lub yt-dlp.
                 LitePodcastAddCoordinator.Operation,
+                // Alt+D pobiera brakujący opis publicznego materiału lub
+                // kolekcji bez logowania Google i bez blokowania transportu.
+                LiteYouTubeDescriptionCoordinator.Operation,
                 // Pobranie Podcasting 2.0 JSON albo strony odcinka może trwać
                 // kilkanaście sekund. Samo przejście po gotowym indeksie
                 // pozostaje w szeregowej kolejce transportu.

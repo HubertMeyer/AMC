@@ -9,12 +9,14 @@ public sealed record YouTubePlaylistVideo(
     string VideoId,
     string Title,
     string ChannelTitle,
+    string Description,
     DateTimeOffset? Published);
 
 public sealed record YouTubeAccountPlaylist(
     string PlaylistId,
     string Title,
     string ChannelTitle,
+    string Description,
     string PrivacyStatus,
     int TotalItemCount,
     IReadOnlyList<YouTubePlaylistVideo> Videos,
@@ -84,6 +86,7 @@ public sealed class YouTubePlaylistClient : IDisposable
                 playlist.PlaylistId,
                 playlist.Title,
                 playlist.ChannelTitle,
+                playlist.Description,
                 playlist.PrivacyStatus,
                 playlist.TotalItemCount,
                 videos.Items,
@@ -172,12 +175,16 @@ public sealed class YouTubePlaylistClient : IDisposable
                 if (!IsSafeIdentifier(id, 160)) continue;
                 var title = CleanText(ReadNestedString(item, "snippet", "title"), 500);
                 var channel = CleanText(ReadNestedString(item, "snippet", "channelTitle"), 300);
+                var description = CleanDescription(
+                    ReadNestedString(item, "snippet", "description"),
+                    20_000);
                 var privacy = CleanText(ReadNestedString(item, "status", "privacyStatus"), 40);
                 var itemCount = ReadNonNegativeInt(item, "contentDetails", "itemCount");
                 result.Add(new PlaylistMetadata(
                     id,
                     title.Length > 0 ? title : "Playlista YouTube",
                     channel.Length > 0 ? channel : "YouTube",
+                    description,
                     NormalizePrivacy(privacy),
                     itemCount));
             }
@@ -207,6 +214,9 @@ public sealed class YouTubePlaylistClient : IDisposable
                 var channel = CleanText(
                     ReadNestedString(item, "snippet", "videoOwnerChannelTitle"),
                     300);
+                var description = CleanDescription(
+                    ReadNestedString(item, "snippet", "description"),
+                    20_000);
                 var published = DateTimeOffset.TryParse(
                     ReadNestedString(item, "snippet", "publishedAt"),
                     CultureInfo.InvariantCulture,
@@ -218,6 +228,7 @@ public sealed class YouTubePlaylistClient : IDisposable
                     id,
                     title.Length > 0 ? title : "Materiał YouTube",
                     channel.Length > 0 ? channel : "YouTube",
+                    description,
                     published));
             }
             return new VideoPage(result, next);
@@ -296,6 +307,23 @@ public sealed class YouTubePlaylistClient : IDisposable
         return normalized.Length <= maximumLength ? normalized : normalized[..maximumLength].Trim();
     }
 
+    private static string CleanDescription(string value, int maximumLength)
+    {
+        var normalized = value
+            .Replace("\0", " ", StringComparison.Ordinal)
+            .Replace("\r\n", "\n", StringComparison.Ordinal)
+            .Replace('\r', '\n');
+        var lines = normalized.Split('\n')
+            .Select(line => string.Join(' ', line.Split(
+                (char[]?)null,
+                StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)))
+            .ToList();
+        while (lines.Count > 0 && lines[0].Length == 0) lines.RemoveAt(0);
+        while (lines.Count > 0 && lines[^1].Length == 0) lines.RemoveAt(lines.Count - 1);
+        var result = string.Join('\n', lines);
+        return result.Length <= maximumLength ? result : result[..maximumLength].TrimEnd();
+    }
+
     private static void ValidateToken(string accessToken)
     {
         if (string.IsNullOrWhiteSpace(accessToken) || accessToken.Length > 8192)
@@ -349,6 +377,7 @@ public sealed class YouTubePlaylistClient : IDisposable
         string PlaylistId,
         string Title,
         string ChannelTitle,
+        string Description,
         string PrivacyStatus,
         int TotalItemCount);
     private sealed record PlaylistPage(IReadOnlyList<PlaylistMetadata> Items, string? NextPageToken);

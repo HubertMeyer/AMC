@@ -2807,11 +2807,13 @@ static void TestYouTubeCollectionResults()
       "id": "UCTDeBXfyjT_O5xjF_H14V3A",
       "title": "TyfloPodcast - Videos",
       "channel": "TyfloPodcast",
+      "description": "Opis kanału.\nDrugi akapit.",
       "channel_url": "https://www.youtube.com/channel/UCTDeBXfyjT_O5xjF_H14V3A",
       "entries": [
         {
           "id": "AbCdEf12345",
           "title": " Pierwszy   materiał ",
+          "description": "Opis materiału.\nDalsza część.",
           "duration": 125,
           "timestamp": 1788739200,
           "url": "https://www.youtube.com/watch?v=AbCdEf12345"
@@ -2835,10 +2837,12 @@ static void TestYouTubeCollectionResults()
         collection.SourceKind == PodcastSourceKind.YouTubeChannel
         && collection.Feed.Title == "TyfloPodcast"
         && collection.Feed.Author == "TyfloPodcast"
+        && collection.Feed.Description == "Opis kanału.\nDrugi akapit."
         && collection.Feed.Episodes.Count == 2,
         "Kanał YouTube nie ma czytelnej nazwy albo ograniczonej listy materiałów.");
     Assert(
         collection.Feed.Episodes[0].Title == "Pierwszy materiał"
+        && collection.Feed.Episodes[0].Description == "Opis materiału.\nDalsza część."
         && collection.Feed.Episodes[0].MediaUri.AbsoluteUri == "https://www.youtube.com/watch?v=AbCdEf12345"
         && collection.Feed.Episodes[0].MediaType == "video/youtube"
         && collection.Feed.Episodes[0].Published is not null
@@ -2852,6 +2856,11 @@ static void TestYouTubeCollectionResults()
         playlist.Feed.Title == "TyfloPodcast - Videos"
         && playlist.Feed.HomepageUri == playlistAddress,
         "Playlista YouTube nie zachowuje własnego stabilnego adresu strony.");
+    var directDescription = YouTubeDescriptionClient.ParseResult(
+        "{\"description\":\"  Pełny opis.\\r\\nDrugi   akapit.  \"}");
+    Assert(
+        directDescription.Description == "Pełny opis.\nDrugi akapit.",
+        "Odczyt Alt+D nie zachowuje akapitów albo nie usuwa przypadkowych odstępów.");
     Console.WriteLine("OK: ograniczone kanały i playlisty publicznego YouTube");
 }
 

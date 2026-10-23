@@ -431,6 +431,8 @@ internal sealed class LiteEngineHandlers : IDisposable
                 PodcastDownloadSaveAs(request.Args, events),
             [LitePodcastAddCoordinator.Operation] = (request, _) =>
                 AddPodcastSource(request.Args),
+            [LiteYouTubeDescriptionCoordinator.Operation] = (request, _) =>
+                LiteYouTubeDescriptionCoordinator.Read(request.Args),
             [LitePodcastDirectorySearchCoordinator.Operation] = (request, _) =>
                 _podcastDirectorySearch.Search(request.Args),
             [LiteRadioDirectorySearchCoordinator.Operation] = (request, _) =>

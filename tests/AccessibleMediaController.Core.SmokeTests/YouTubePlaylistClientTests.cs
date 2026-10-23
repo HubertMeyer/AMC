@@ -18,7 +18,8 @@ internal static class YouTubePlaylistClientTests
         var secondVideos = string.Join(',', Enumerable.Range(51, 50).Select(Video));
         var handler = new PagesHandler(
             Json("{\"items\":[{\"id\":\"PL-PIERWSZA\",\"snippet\":{" +
-                "\"title\":\" Moja  playlista \",\"channelTitle\":\"Kanał\"}," +
+                "\"title\":\" Moja  playlista \",\"channelTitle\":\"Kanał\"," +
+                "\"description\":\"Opis playlisty.\\nDrugi akapit.\"}," +
                 "\"status\":{\"privacyStatus\":\"private\"}," +
                 "\"contentDetails\":{\"itemCount\":101}}]}"),
             Json("{\"nextPageToken\":\"DRUGA\",\"items\":[" + firstVideos + "]}"),
@@ -32,6 +33,8 @@ internal static class YouTubePlaylistClientTests
                && playlist.PrivacyStatus == "private"
                && playlist.TotalItemCount == 101
                && playlist.Videos.Count == 100
+               && playlist.Description == "Opis playlisty.\nDrugi akapit."
+               && playlist.Videos[0].Description == "Opis materiału 1.\nDalsza część."
                && playlist.VideosTruncated,
             "Klient nie zachował metadanych albo limitu pierwszych 100 materiałów.");
         Assert(handler.Requests.Count == 3
@@ -91,7 +94,9 @@ internal static class YouTubePlaylistClientTests
     {
         var id = $"Video{ordinal:000000}";
         return "{\"snippet\":{\"title\":\"Materiał " + ordinal +
-               "\",\"videoOwnerChannelTitle\":\"Kanał\",\"publishedAt\":\"2026-10-23T12:00:00Z\"}," +
+               "\",\"videoOwnerChannelTitle\":\"Kanał\"," +
+               "\"description\":\"Opis materiału " + ordinal + ".\\nDalsza część.\"," +
+               "\"publishedAt\":\"2026-10-23T12:00:00Z\"}," +
                "\"contentDetails\":{\"videoId\":\"" + id + "\"}}";
     }
 

@@ -883,6 +883,50 @@ def test_empty_description_and_archived_parent_are_reported_without_guessing() -
         assert source.related_podcast("archived-episode") is None
 
 
+def test_youtube_without_saved_description_requests_public_alt_d_metadata() -> None:
+    with _temporary_folder() as folder:
+        base = Path(folder)
+        path = _database(base)
+        _insert_episode(
+            path,
+            item_id="youtube-video-id",
+            subscription_id="yt-id",
+            title="Materiał bez zapisanego opisu",
+            ordinal=0,
+            published=638_900_000_000_000_000,
+        )
+        connection = sqlite3.connect(path)
+        payload = json.loads(connection.execute(
+            "SELECT payload_json FROM podcast_episodes WHERE id = ?",
+            ("youtube-video-id",),
+        ).fetchone()[0])
+        payload["MediaUrl"] = "https://www.youtube.com/watch?v=PublicVideo1"
+        payload["PageUrl"] = payload["MediaUrl"]
+        connection.execute(
+            "UPDATE podcast_episodes SET payload_json = ? WHERE id = ?",
+            (json.dumps(payload), "youtube-video-id"),
+        )
+        connection.commit()
+        connection.close()
+
+        source = PodcastSource(private_sandbox(base))
+        channel = source.description("yt-id", "podcast")
+        video = source.description("youtube-video-id", "episode")
+
+        assert channel is not None and video is not None
+        assert channel.window_title == "Opis kanału YouTube"
+        assert channel.youtube_kind == "collection"
+        assert channel.youtube_address == "https://youtube.invalid/channel"
+        assert channel.text.startswith("YouTube nie udostępnia opisu tego kanału.")
+        assert "Kanał: Kanał autora" in channel.text
+        assert video.window_title == "Opis materiału YouTube"
+        assert video.youtube_kind == "video"
+        assert video.youtube_address == "https://www.youtube.com/watch?v=PublicVideo1"
+        assert video.text.startswith("YouTube nie udostępnia opisu tego materiału.")
+        assert "Materiał YouTube" in video.metadata_text
+        assert "youtube-video-id" not in channel.text + video.text
+
+
 def test_related_podcast_returns_only_user_facing_parent_data() -> None:
     with _temporary_folder() as folder:
         base = Path(folder)

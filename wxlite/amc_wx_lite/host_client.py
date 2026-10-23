@@ -706,6 +706,14 @@ class LiteHostClient:
             timeout=30.0,
         )
 
+    def youtube_description(self, *, address: str, kind: str) -> Any:
+        """Read one public YouTube description without starting Google login."""
+        return self.call(
+            "youtube.description",
+            {"address": address, "kind": kind},
+            timeout=55.0,
+        )
+
     def spotify_collection_membership(
         self,
         items: list[dict[str, Any]],

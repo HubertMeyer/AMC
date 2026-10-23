@@ -30,7 +30,9 @@ internal static class YouTubePlaylistSyncTests
             database.LoadInto(settings);
             Assert(settings.Subscriptions.Single().SourceKind == PodcastSourceKind.YouTubePlaylist
                    && settings.Subscriptions.Single().IsInLibrary
+                   && settings.Subscriptions.Single().Description == "Opis playlisty z YouTube."
                    && settings.Episodes.Single().SourceIdentifier == "Film0000001"
+                   && settings.Episodes.Single().Description == "Pełny opis materiału."
                    && settings.Episodes.Single().MediaType == "video/youtube",
                 "Playlista nie została zapisana jako dostępne źródło YouTube.");
         });
@@ -102,10 +104,10 @@ internal static class YouTubePlaylistSyncTests
         string id,
         string title,
         params YouTubePlaylistVideo[] videos) =>
-        new(id, title, "Kanał", "public", videos.Length, videos, false);
+        new(id, title, "Kanał", "Opis playlisty z YouTube.", "public", videos.Length, videos, false);
 
     private static YouTubePlaylistVideo Video(string id, string title) =>
-        new(id, title, "Kanał", DateTimeOffset.Parse("2026-10-23T12:00:00Z"));
+        new(id, title, "Kanał", "Pełny opis materiału.", DateTimeOffset.Parse("2026-10-23T12:00:00Z"));
 
     private static void WithDatabase(
         PodcastSettings initial,

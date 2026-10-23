@@ -261,6 +261,7 @@ from .podcast_source import (
     SORT_ADDED_NEWEST,
     SORT_ALPHABETICAL,
     SORT_CUSTOM,
+    complete_youtube_description,
     subscription_rows,
 )
 from .paging import load_more_row, requested_count
@@ -19941,7 +19942,40 @@ class LiteFrame(wx.Frame):
         requested_kind = row.kind
 
         def work() -> PodcastDescription | None:
-            return self.podcasts.description(requested_id, requested_kind)
+            information = self.podcasts.description(requested_id, requested_kind)
+            if (
+                information is None
+                or not information.youtube_address
+                or not information.youtube_kind
+            ):
+                return information
+            client = self.client
+            if client is None:
+                return complete_youtube_description(
+                    information,
+                    None,
+                    error_message="Silnik AMC nie jest uruchomiony.",
+                )
+            try:
+                payload = client.youtube_description(
+                    address=information.youtube_address,
+                    kind=information.youtube_kind,
+                )
+            except HostUnavailable:
+                return complete_youtube_description(
+                    information,
+                    None,
+                    error_message=(
+                        "Silnik AMC nie odpowiedział. Powtórz Alt+D za chwilę."
+                    ),
+                )
+            except HostError as error:
+                return complete_youtube_description(
+                    information,
+                    None,
+                    error_message=str(error),
+                )
+            return complete_youtube_description(information, payload)
 
         def done(information: PodcastDescription | None) -> None:
             current = LiteFrame._description_target_row(self, SessionId.PODCASTS)

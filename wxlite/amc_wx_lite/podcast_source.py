@@ -116,6 +116,10 @@ class PodcastDescription:
     window_title: str
     text: str
     initial_focus_name: str
+    metadata_text: str = ""
+    youtube_address: str | None = None
+    youtube_kind: str | None = None
+    youtube_fallback: str = ""
 
 
 @dataclass(frozen=True, slots=True)
@@ -235,6 +239,39 @@ def _initial_focus_name(description: str) -> str:
     if word_end < 1:
         word_end = 500
     return normalized[:word_end].rstrip() + "…"
+
+
+def complete_youtube_description(
+    information: PodcastDescription,
+    payload: object,
+    *,
+    error_message: str = "",
+) -> PodcastDescription:
+    """Complete an Alt+D value without exposing a model value or account.
+
+    The host returns only a public description string.  Technical identifiers
+    remain in the request and never become the dialog's accessible name.
+    """
+
+    description = ""
+    if isinstance(payload, dict):
+        description = _long_text(payload.get("description", ""))
+    if description:
+        body = description
+    elif error_message:
+        readable_error = _clean_text(error_message, "")[:500].rstrip()
+        body = (
+            "Nie udało się teraz pobrać opisu z YouTube."
+            + (f" {readable_error}" if readable_error else "")
+        )
+    else:
+        body = information.youtube_fallback or "YouTube nie udostępnia opisu tego elementu."
+    return PodcastDescription(
+        window_title=information.window_title,
+        text=_description_text(body, [information.metadata_text]),
+        initial_focus_name=_initial_focus_name(body),
+        metadata_text=information.metadata_text,
+    )
 
 
 def _payload(raw: object) -> dict:
@@ -615,12 +652,12 @@ class PodcastSource:
             return None
 
         payload = _payload(record["payload_json"])
-        description = _long_text(_get(payload, "Description", ""))
-        if not description:
-            return None
         source_kind = _source_kind(payload)
         internet_media = source_kind == 1
         youtube = source_kind in (2, 3)
+        description = _long_text(_get(payload, "Description", ""))
+        if not description and not youtube:
+            return None
         title = _clean_text(record["title"], "Podcast bez nazwy")
         author = _author_label(_get(payload, "Author", ""))
         feed_url = str(record["feed_url"] or "").strip()
@@ -632,7 +669,7 @@ class PodcastSource:
             f"Nazwa: {title}",
         ]
         if author:
-            details.append(f"Autor: {author}")
+            details.append(f"{'Kanał' if youtube else 'Autor'}: {author}")
         details.append(
             f"{'Materiały' if internet_media or youtube else 'Odcinki'}: "
             f"{max(0, _as_int(record['episode_count']))}"
@@ -652,10 +689,25 @@ class PodcastSource:
             )
         if homepage:
             details.append(f"Strona: {homepage}")
+        metadata_text = _description_text("", details)
+        fallback = (
+            "YouTube nie udostępnia opisu tego kanału."
+            if source_kind == 2
+            else "YouTube nie udostępnia opisu tej playlisty."
+        )
+        body = description or fallback
         return PodcastDescription(
-            window_title="Opis podcastu",
-            text=_description_text(description, details),
-            initial_focus_name=_initial_focus_name(description),
+            window_title=(
+                "Opis kanału YouTube"
+                if source_kind == 2
+                else "Opis playlisty YouTube" if source_kind == 3 else "Opis podcastu"
+            ),
+            text=_description_text(body, details),
+            initial_focus_name=_initial_focus_name(body),
+            metadata_text=metadata_text,
+            youtube_address=(homepage or feed_url) if youtube and not description else None,
+            youtube_kind="collection" if youtube and not description else None,
+            youtube_fallback=fallback if youtube and not description else "",
         )
 
     def _episode_description(self, item_id: str) -> PodcastDescription | None:
@@ -681,14 +733,14 @@ class PodcastSource:
         if record is None:
             return None
 
-        payload = _payload(record["payload_json"])
-        description = _long_text(_get(payload, "Description", ""))
-        if not description:
-            return None
         parent_payload = _payload(record["parent_payload_json"])
         source_kind = _source_kind(parent_payload)
         internet_media = source_kind == 1
         youtube = source_kind in (2, 3)
+        payload = _payload(record["payload_json"])
+        description = _long_text(_get(payload, "Description", ""))
+        if not description and not youtube:
+            return None
         title = _clean_text(record["title"], "Odcinek bez nazwy")
         parent_title = _clean_text(record["parent_title"], "")
         author = _clean_text(_get(payload, "Author", ""), "")
@@ -745,10 +797,17 @@ class PodcastSource:
                 f"{'Strona kanału' if youtube else 'Strona podcastu'}: {homepage}"
             )
 
+        metadata_text = _description_text("", details)
+        fallback = "YouTube nie udostępnia opisu tego materiału."
+        body = description or fallback
         return PodcastDescription(
-            window_title="Opis odcinka",
-            text=_description_text(description, details),
-            initial_focus_name=_initial_focus_name(description),
+            window_title="Opis materiału YouTube" if youtube else "Opis odcinka",
+            text=_description_text(body, details),
+            initial_focus_name=_initial_focus_name(body),
+            metadata_text=metadata_text,
+            youtube_address=(page_url or media_url) if youtube and not description else None,
+            youtube_kind="video" if youtube and not description else None,
+            youtube_fallback=fallback if youtube and not description else "",
         )
 
     def episodes(self, subscription_id: str, *, loaded_count: int = PAGE_SIZE) -> PodcastEpisodePage:

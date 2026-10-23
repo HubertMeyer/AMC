@@ -851,6 +851,13 @@ playlisty i nawigacji NVDA przez użytkownika.
 
 ### Wersja, commit i publikacja
 
+Korekta z 23.10.2026: opisy playlist i materiałów zwracane przez oficjalne API
+są teraz zapisywane podczas synchronizacji. Wspólne zachowanie `Alt+D`, w tym
+obsługa starszych publicznych importów bez ponownego logowania, jest opisane w
+[YT-003-opisy-youtube-alt-d.md](YT-003-opisy-youtube-alt-d.md). Ta korekta
+uzupełnia wcześniejszy zapis playlist; nie zmienia zakresu OAuth ani zasad
+ponownego logowania.
+
 Implementacja playlist ma commit
 `0e8d219f5c759b28183063cefd8d9cedde06de19`. Zainstalowano i uruchomiono
 ostateczną scaloną wersję `AMC Test — 23.10.2026, 22:41`, rewizja źródłowa
