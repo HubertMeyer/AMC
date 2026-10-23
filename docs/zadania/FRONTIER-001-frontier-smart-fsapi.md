@@ -520,6 +520,26 @@ wyniku ukierunkowana bramka Python przeszła. Zestaw protokołu Frontier Smart
 również przeszedł podczas kompilacji LiteHosta. Rzeczywisty odbiór NVDA i
 Teufela wymaga nowej instalacji AMC Test; AMC Public pozostaje bez tej sesji.
 
+## Szósty audyt bezpieczeństwa PIN-u — 23.10.2026
+
+PIN wymagany przez AMC jest PIN-em NetRemote do lokalnych poleceń FSAPI/UNDOK,
+a nie hasłem Wi-Fi ani kodem konta. Dla Teufel RADIO 3SIXTY wartość fabryczna
+to `1234`; można ją sprawdzić lub zmienić w radiu w `Ustawienia systemowe →
+Sieć → Ustawienia NetRemote PIN`. Po poprawnym sprawdzeniu AMC przechowuje PIN
+wyłącznie w Menedżerze poświadczeń Windows, w przestrzeni oddzielonej dla AMC
+Test. Zwykła lista urządzeń ani komunikaty NVDA nie ujawniają PIN-u i adresu.
+
+Audyt wykrył jedną usterkę usuwania urządzenia: wynik `CredDelete` był
+ignorowany, więc przy odmowie Windows interfejs mógł niesłusznie ogłosić
+usunięcie, pozostawiając poświadczenie. Commit `9e8d3eab` usuwa najpierw PIN,
+toleruje wyłącznie stan „poświadczenia już nie ma”, a każdy inny błąd Windows
+przerywa operację bez usunięcia urządzenia z profilu i bez komunikatu sukcesu.
+
+Ukierunkowany zestaw kontraktu Frontier Smart przeszedł **1/1**. Kompilacja
+LiteHost Release przeszła z **0 ostrzeżeń i 0 błędów**. Jest to na razie
+zweryfikowana i skompilowana zmiana źródłowa; ręczny odbiór usuwania oraz nowa
+instalacja AMC Test nie zostały jeszcze wykonane.
+
 ## Migracja, wersja i commit
 
 **Korekta nadrzędna z 23.10.2026, instalacja 22:20:** piąta poprawka oraz
@@ -547,6 +567,8 @@ Korekta po czwartym zgłoszeniu: `b11fd8bbc2de6a8f23746e5f2ec437b021f86762`
 — `fix(frontier): potwierdzaj radio przed pytaniem o PIN`. Piąta korekta
 wyboru także dla jednego wyniku: `3e57b68656ee06c1742a3775bac3d810f792646f`
 — `fix(amc): domknij OAuth YouTube i wybor Frontier`.
+Korekta obsługi błędu usuwania PIN-u: `9e8d3eab643b579215719bc52ac77b215f0c6fea`
+— `fix(amc-test): dopracuj PIN Frontier i start Spotify`.
 Zainstalowana kompilacja AMC Test:
 `2026.10.23-591322e2f85c0a07634733c6164fa4cc6a336595-53e3d987`.
 Nie publikować ani nie promować do profilu publicznego bez nowej zgody

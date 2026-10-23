@@ -93,6 +93,24 @@ została dodana do AMC Public.
   rozdziały tylko ze znaczników czasu w opisie, nie z natywnego katalogu
   rozdziałów dostawcy.
 
+## Korekta informacji podczas pierwszego odtwarzania — 23.10.2026
+
+Po Enter AMC od razu ogłasza `Przygotowywanie odtwarzania Spotify`, zanim
+asynchronicznie uruchomi lub przygotuje wewnętrzny silnik. Komunikat nie
+twierdzi jeszcze, że dźwięk działa; właściwy stan odtwarzania nadal zatwierdza
+dopiero zdarzenie `playback.started`. Dzięki temu kilkusekundowe pobieranie i
+rozruch nie wyglądają dla użytkownika NVDA jak zawieszenie programu.
+
+Ukierunkowane testy interfejsu Spotify przeszły **33/33**. Korekta jest w
+commicie `9e8d3eab643b579215719bc52ac77b215f0c6fea`. Jest to na razie zmiana
+źródłowa po testach; nie została jeszcze zainstalowana w AMC Test.
+
+Rozdziałów nie rozszerzono. Obiekt odcinka używany przez bieżący katalog i
+przypięty silnik nie dostarczają natywnej listy rozdziałów. AMC nadal może je
+utworzyć tylko wtedy, gdy opis zawiera co najmniej dwa rozpoznawalne znaczniki
+czasu. Dodanie samego komunikatu diagnostycznego wymagałoby osobnej zmiany
+kontraktu i nie odzyskałoby brakujących danych.
+
 ## Wersja i commit
 
 - Kod źródłowy: `4505f325d5eec7df6f520ee156ee79214882df38` —
@@ -100,6 +118,9 @@ została dodana do AMC Public.
 - Przypięcie zbudowanego hosta i kontraktu paczki:
   `591322e2f85c0a07634733c6164fa4cc6a336595` —
   `build(spotify): przypnij host z obsługą tempa`.
+- Komunikat przygotowania pierwszego odtwarzania:
+  `9e8d3eab643b579215719bc52ac77b215f0c6fea` —
+  `fix(amc-test): dopracuj PIN Frontier i start Spotify`.
 - Lokalny host Release AMC Test: 6 595 072 B, SHA-256
   `0fde62641c16de6e35ac25962b756f868dd7fd36643e71661f849c231d55c15a`.
 - Zainstalowany pakiet AMC Test:
