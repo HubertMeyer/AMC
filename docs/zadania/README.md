@@ -280,10 +280,11 @@ zmian, wymagający korekty użytkownika:
   [AMC14-foldery-i-integracja-powloki.md](AMC14-foldery-i-integracja-powloki.md).
   Zatwierdzona specyfikacja:
   `D:\Projekty Codex\Accessible Multimedia Controller\AMC14_FOLDERY_I_INTEGRACJA_POWLOKI_2026-10-18.md`.
-- `YT-001` — **Wdrożone do ręcznego odbioru — logowanie i subskrypcje są
-  odebrane; zwykłe playlisty konta, pełna regresja 2025 testów wxPython,
-  testy .NET, build, atomowa instalacja i kontrolowany start AMC Test
-  23.10.2026, 22:41 są zaliczone. Pozostaje próba prawdziwej playlisty i NVDA**
+- `YT-001` — **Wdrożone częściowo do ręcznego odbioru — logowanie i
+  subskrypcje są odebrane, ale kontrola z 23.10.2026 wykazała, że pięć kanałów
+  bez standardowej karty Filmy blokuje kolejkę pozostałych 153 pustych kanałów.
+  Duplikatów kanałów ani filmów nie wykryto; potrzebna jest poprawka uczciwego
+  ponawiania i obsługi innych kart kanału**
   — oficjalne logowanie do
   konta YouTube, synchronizacja subskrypcji i zwykłych playlist oraz bezpieczny
   zakres czynności konta. Etap rozpoczęto 21 października 2026 na nowe jawne

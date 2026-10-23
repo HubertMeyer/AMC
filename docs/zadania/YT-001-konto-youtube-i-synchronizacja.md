@@ -1,10 +1,11 @@
 # YT-001 — konto YouTube i synchronizacja
 
-- Status: `Wdrożone do ręcznego odbioru — logowanie i subskrypcje zostały
-  wcześniej przyjęte przez użytkownika; zwykłe playlisty konta, pełna regresja,
-  build, atomowa instalacja i kontrolowany start AMC Test 23.10.2026, 22:41 są
-  zaliczone. Pozostaje wyłącznie próba prawdziwej playlisty i NVDA przez
-  użytkownika`. Zapis wcześniejszej
+- Status: `Wdrożone częściowo do ręcznego odbioru — logowanie i odczyt opisów
+  zostały przyjęte przez użytkownika; zwykłe playlisty
+  konta, pełna regresja, build, atomowa instalacja i kontrolowany start AMC Test
+  są zaliczone. Odbiór z 23.10.2026 ujawnił jednak blokowanie automatycznego
+  napełniania nowych kanałów YouTube przez pierwsze pięć nieudanych źródeł;
+  wymaga osobnej poprawki przed zamknięciem YT-001`. Zapis wcześniejszej
   diagnozy: [AMC-TEST-2026-10-23-youtube-secret-frontier-choice.md](AMC-TEST-2026-10-23-youtube-secret-frontier-choice.md).
 - Utworzono: 18 października 2026
 - Ostatnia aktualizacja: 23 października 2026
@@ -848,6 +849,48 @@ playlisty i nawigacji NVDA przez użytkownika.
 - Użytkownik ma jeszcze sprawdzić z NVDA: ponowne otwarcie okna bez logowania,
   `Sprawdź playlisty`, strzałki po liście, zapis, powrót fokusu, ponowne
   otwarcie oraz widok playlisty w Bibliotece.
+
+### Korekta po odbiorze: puste kanały z konta — 23.10.2026
+
+Użytkownik potwierdził działanie przyspieszania Spotify oraz opisów `Alt+D`,
+ale zgłosił dużą liczbę materiałów i puste kanały, których wcześniej nie było
+w lokalnej Bibliotece. Wykonano wyłącznie diagnostykę tylko do odczytu; bazy i
+ustawień nie zmieniano.
+
+Rzeczywisty stan `podcasts.db`:
+
+- 421 źródeł typu kanał YouTube i 23 406 zapisanych materiałów;
+- 86 wcześniejszych publicznych importów — wszystkie zawierają materiały;
+- 335 źródeł utworzonych z subskrypcji konta, z czego 315 pozostaje w
+  Bibliotece;
+- 162 kanały konta zostały odświeżone, natomiast 153 kanały pozostające w
+  Bibliotece są puste i mają zerowy czas ostatniego odświeżenia;
+- kontrola po stabilnym identyfikatorze kanału, znormalizowanym adresie oraz
+  identyfikatorze filmu wykazała 0 podwójnych kanałów, 0 dodatkowych kopii
+  filmu między kanałami i 0 powtórzeń filmu wewnątrz jednego kanału.
+
+Przyczyna jest potwierdzona. Automatyczne odświeżanie wybiera co minutę pięć
+źródeł o najstarszym czasie poprawnego odświeżenia. Pierwsze pięć źródeł z
+czasem zero nie ma standardowej karty `/videos`; `yt-dlp` kończy każde z nich
+błędem `This channel does not have a videos tab`. Nieudana próba nie zapisuje
+osobnego czasu próby ani odroczenia. Następna minuta wybiera więc ponownie te
+same pięć źródeł i pozostałe 153 kanały nie dostają swojej kolejki.
+
+Publiczna próba stron głównych tych samych pięciu kanałów przeszła bez
+logowania: trzy zwróciły co najmniej jeden materiał z innej karty, dwa
+poprawnie odpowiedziały pustą listą. Oznacza to, że naprawa powinna rozdzielić
+dwa problemy:
+
+1. po braku karty `Filmy` sprawdzić bezpieczny publiczny widok kanału lub
+   obsługiwane karty, zamiast zawsze wymuszać `/videos`;
+2. zapisywać osobny czas nieudanej próby i stosować uczciwą kolejkę z
+   odroczeniem, bez fałszywego oznaczania źródła jako poprawnie odświeżonego.
+
+Potrzebne testy regresji mają objąć pięć kolejnych błędów, przejście do
+szóstego źródła, ponowienie po odroczeniu, kanał wyłącznie z Shorts lub
+transmisjami, prawdziwie pusty kanał, komunikat użytkowy NVDA i brak technicznej
+nazwy karty w zwykłym interfejsie. Ta diagnoza nie jest jeszcze implementacją,
+buildem ani instalacją poprawki.
 
 ### Wersja, commit i publikacja
 
