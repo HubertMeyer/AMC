@@ -176,6 +176,43 @@ def test_dialog_help_names_supported_youtube_handle_address() -> None:
     source = inspect.getsource(gui.PodcastSourceDialog)
     assert "https://www.youtube.com/@NazwaKanału" in source
     assert 'add_button.SetName("Sprawdź i dodaj źródło")' in source
+    assert "self.Bind(wx.EVT_CHAR_HOOK, self._on_key)" in source
+    assert 'canonical == "Ctrl+V"' in source
+    assert "wx.CallAfter(target.Paste)" in source
+
+
+def test_ctrl_v_is_deferred_to_the_modal_address_field(monkeypatch) -> None:
+    calls = []
+
+    class Field:
+        def SetFocus(self):
+            calls.append("focus")
+
+        def Paste(self):
+            calls.append("paste")
+
+    class Event:
+        def Skip(self):
+            calls.append("skip")
+
+    address = Field()
+    title = Field()
+    dialog = SimpleNamespace(
+        _busy=False,
+        address_field=address,
+        title_field=title,
+    )
+    monkeypatch.setattr(
+        gui,
+        "chord_from_event",
+        lambda _event: SimpleNamespace(canonical="Ctrl+V"),
+    )
+    monkeypatch.setattr(gui.wx.Window, "FindFocus", lambda: None, raising=False)
+    monkeypatch.setattr(gui.wx, "CallAfter", lambda callback: callback())
+
+    gui.PodcastSourceDialog._on_key(dialog, Event())
+
+    assert calls == ["focus", "paste"]
 
 
 def test_waiting_state_blocks_second_enter_and_keeps_named_field_focused() -> None:

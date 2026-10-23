@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import random
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from enum import Enum
 
 from .list_model import ListModel, Row
@@ -409,6 +409,7 @@ class OpenSpotifyContainer:
     artist: str = ""
     public_uri: str | None = None
     section: str | None = None
+    load_more: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -1411,6 +1412,8 @@ class Navigator:
                         context.title,
                         load_more=True,
                     )]
+                if isinstance(context, OpenSpotifyContainer):
+                    return [replace(context, load_more=True)]
                 return [Announce("Nie wiadomo, dla którego widoku wczytać elementy")]
             collection = self._spotify_collection_target_from_row(row)
             if collection is not None:
@@ -2987,17 +2990,19 @@ class Navigator:
         """Apply one verified result and retain the exact parent focus."""
 
         state = self.sessions[SessionId.SPOTIFY]
-        state.spotify_history.append(self._spotify_snapshot(state))
+        if not intent.load_more:
+            state.spotify_history.append(self._spotify_snapshot(state))
         state.library_view = LibraryView.SPOTIFY_CONTAINER
         state.library_playlist_id = None
         state.library_return_view = heading
         state.spotify_heading = heading
-        state.spotify_context = intent
+        state.spotify_context = replace(intent, load_more=False)
         state.model.replace(rows, preferred_id=preferred_id)
         state.view = View.LIST
+        count = sum(row.kind != "loadMore" for row in rows)
         return [Announce(
-            f"{heading}, {len(rows)} {_items_word(len(rows))}"
-            if rows else f"{heading}, pusto"
+            f"{heading}, {count} {_items_word(count)}"
+            if count else f"{heading}, pusto"
         )]
 
     def apply_spotify_collection_view(

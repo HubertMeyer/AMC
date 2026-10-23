@@ -12,6 +12,21 @@ odświeżanie zapisanych podcastów i odcinków oraz opisująca granice pełnego
 instalacji. Zapis:
 [AMC-TEST-2026-10-23-1124-instalacja-zbiorcza.md](AMC-TEST-2026-10-23-1124-instalacja-zbiorcza.md).**
 
+**Korekta użytkownika z 23.10.2026, po instalacji 11:24:** otwarcie programu
+„TyfloPodcast” nadal kończyło się bez listy i bez odtwarzania. Ten wynik
+zastępuje wcześniejsze założenie, że odświeżenie kolekcji rozwiązało również
+otwieranie dużego programu. Log AMC potwierdził wykonanie właściwego polecenia
+`spotify.containerItems`, więc problem nie dotyczył klawisza Enter ani starej
+instalacji. Rzeczywiste Web API zwróciło 2873 rekordy, w tym 10 wartości
+`null`; parser próbował czytać je jak odcinki i przerywał całe żądanie.
+
+Nowa korekta pomija wyłącznie puste rekordy i odsłania odcinki programu
+narastająco po 150 przez pozycję „Załaduj więcej”, zamiast blokować interfejs
+pełnym odczytem kilku tysięcy pozycji. Rzeczywisty odczyt z konta, bez zmiany
+danych użytkownika, zwrócił pierwsze 150 odcinków, `hasMore=true`, w 3,38 s.
+Kod i testy celowane są gotowe; poniższy status instalacji zostanie uzupełniony
+po zbudowaniu i promocji nowego AMC Test. AMC Public pozostaje bez zmian.
+
 Źródło decyzji: zatwierdzona analiza historyczna tylko do odczytu
 `D:\Projekty Codex\Accessible Multimedia Controller\AMC08_PLAYLISTY_SPOTIFY_2026-10-18.md`.
 
@@ -58,8 +73,9 @@ instalacji. Zapis:
   awarii AMC zachowuje ostatni zapis brakującej części i czyta ostrzeżenie.
 - Kolekcje są pobierane z Web API po stronach po 50 pozycji aż do braku adresu
   `next`, a interfejs odsłania migawkę narastająco po 150 pozycji przez
-  „Załaduj więcej”. Otwarcie programu pobiera wszystkie strony jego odcinków
-  przed pokazaniem listy. Bezpiecznik klienta kończy odczyt po 400 stronach;
+  „Załaduj więcej”. Otwarcie programu pobiera tylko tyle stron jego odcinków,
+  ile potrzeba do bieżącej porcji 150 pozycji. Bezpiecznik klienta kończy
+  pojedynczy pełny odczyt po 400 stronach;
   nie wolno opisywać tego jako listy bez technicznej granicy.
 - Wyszukiwanie Spotify pozostaje podglądem: jedno zapytanie pokazuje najwyżej
   10 wyników każdego rodzaju. Interfejs mówi o tym w ostrzeżeniu; AMC nie

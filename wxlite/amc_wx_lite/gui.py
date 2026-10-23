@@ -2813,6 +2813,7 @@ class PodcastSourceDialog(wx.Dialog):
         self._submit: Callable[[str, str], None] | None = None
         self._payload: dict = {}
         self.add_button.Bind(wx.EVT_BUTTON, self._on_add)
+        self.Bind(wx.EVT_CHAR_HOOK, self._on_key)
         self.Bind(wx.EVT_CLOSE, self._on_close)
         self.address_field.SetFocus()
 
@@ -2864,6 +2865,28 @@ class PodcastSourceDialog(wx.Dialog):
         if self._busy or self._submit is None:
             return
         self._submit(*self.values)
+
+    def _on_key(self, event: wx.KeyEvent) -> None:
+        """Keep Ctrl+V inside the modal text fields.
+
+        The main window also owns a contextual Ctrl+V command. On Windows a
+        very quick paste immediately after Ctrl+N can arrive before the modal
+        field has settled its focus and briefly run that unrelated command.
+        Consuming it here and deferring the native TextCtrl paste by one UI
+        turn keeps the dialog responsive and inserts the clipboard only once.
+        """
+
+        if chord_from_event(event).canonical == "Ctrl+V" and not self._busy:
+            focused = wx.Window.FindFocus()
+            target = (
+                focused
+                if focused in (self.address_field, self.title_field)
+                else self.address_field
+            )
+            target.SetFocus()
+            wx.CallAfter(target.Paste)
+            return
+        event.Skip()
 
     def _on_close(self, event: wx.CloseEvent) -> None:
         if self._busy:
@@ -5189,7 +5212,23 @@ class FrontierSmartDevicesDialog(wx.Dialog):
                 FrontierSmartConfigurationPhase.ERROR,
             )
         )
-        self.discover_button.Enable(not self._busy)
+        discovering = (
+            self._busy
+            and self._state.phase is FrontierSmartConfigurationPhase.DISCOVERING
+        )
+        self.discover_button.SetLabel(
+            "&Wyszukiwanie urządzeń, czekaj"
+            if discovering
+            else "&Szukaj nowych urządzeń"
+        )
+        self.discover_button.SetName(
+            "Wyszukiwanie urządzeń w sieci lokalnej, czekaj"
+            if discovering
+            else "Szukaj nowych urządzeń w sieci lokalnej"
+        )
+        # Podczas wykrywania przycisk zachowuje fokus i pełni rolę czytelnego
+        # stanu operacji. Ponowne uruchomienie nie startuje drugiego skanowania.
+        self.discover_button.Enable(discovering or not self._busy)
         self.manual_button.Enable(not self._busy)
         self.save_button.Enable(
             not self._busy
@@ -5213,7 +5252,7 @@ class FrontierSmartDevicesDialog(wx.Dialog):
             and not self._automatic_discovery_started
         ):
             self._automatic_discovery_started = True
-            self.devices.SetFocus()
+            self.discover_button.SetFocus()
             self._start_discovery()
             return
         self.discover_button.SetFocus()
@@ -5239,6 +5278,8 @@ class FrontierSmartDevicesDialog(wx.Dialog):
 
     def _on_discover(self, _event: wx.CommandEvent) -> None:
         if self._busy:
+            if self._state.phase is FrontierSmartConfigurationPhase.DISCOVERING:
+                self._announce("Wyszukiwanie urządzeń już trwa")
             return
         self._start_discovery()
 
@@ -5253,6 +5294,7 @@ class FrontierSmartDevicesDialog(wx.Dialog):
         self._hide_pin_field()
         self.save_button.SetLabel("&Połącz i zapisz")
         self.set_busy(self._state.message)
+        self.discover_button.SetFocus()
         self._discover(self)
 
     def _on_manual(self, _event: wx.CommandEvent) -> None:
@@ -11521,6 +11563,18 @@ class LiteFrame(wx.Frame):
             return
         self._spotify_navigation_version += 1
         version = self._spotify_navigation_version
+        scope = (
+            f"container:{intent.kind}:{intent.service_id}:"
+            f"{intent.section or ''}"
+        )
+        loaded_counts = getattr(self, "_spotify_loaded_counts", None)
+        if loaded_counts is None:
+            loaded_counts = self._spotify_loaded_counts = {}
+        previous_count = loaded_counts.get(scope, 0)
+        requested = requested_count(
+            previous_count,
+            load_more=intent.load_more,
+        )
 
         def work():
             return spotify_container_result_from_payload(
@@ -11530,6 +11584,7 @@ class LiteFrame(wx.Frame):
                     kind=intent.kind,
                     artist=intent.artist,
                     artist_section=intent.section,
+                    loaded_count=requested,
                 )
             )
 
@@ -11550,14 +11605,26 @@ class LiteFrame(wx.Frame):
                     or "Spotify nie udostępnił zawartości tego elementu."
                 )
                 return
+            rows = list(result.rows)
+            loaded_count = len(rows)
+            loaded_counts[scope] = loaded_count
+            preferred_id = None
+            if intent.load_more and previous_count < loaded_count:
+                preferred_id = rows[previous_count].item_id
+            if result.has_more and intent.kind == "podcast":
+                rows.append(load_more_row(
+                    "spotify-podcast",
+                    loaded_count,
+                ))
             self._run(self.navigator.apply_spotify_container(
                 intent,
                 result.heading,
-                list(result.rows),
+                rows,
+                preferred_id=preferred_id,
             ))
             if result.warning:
                 self.announcer.say(result.warning)
-            if result.has_more:
+            if result.has_more and intent.kind != "podcast":
                 self.announcer.say(
                     "Spotify ma więcej wyników; dalsze strony nie są jeszcze dostępne"
                 )

@@ -6,6 +6,21 @@ przetestowana, zbudowana, zainstalowana i uruchomiona w zbiorczym AMC Test
 Ten zapis zastępuje niższe historyczne stwierdzenia o braku instalacji.
 Szczegóły: [AMC-TEST-2026-10-23-1124-instalacja-zbiorcza.md](AMC-TEST-2026-10-23-1124-instalacja-zbiorcza.md).**
 
+**Korekta użytkownika z 23.10.2026 po odbiorze instalacji 11:24:** podczas
+wyszukiwania urządzeń fokus przechodził na przycisk „Zamknij” albo „Wstecz”,
+przez co interfejs sprawiał wrażenie niezmienionego. Przyczyną było wyłączenie
+wszystkich kontrolek poza zamknięciem na czas skanowania; Windows przenosił
+fokus na jedyny aktywny przycisk. Nowa korekta utrzymuje fokus na nazwanym
+przycisku „Wyszukiwanie urządzeń, czekaj”, a ponowne naciśnięcie tylko oznajmia,
+że wyszukiwanie już trwa. Początkowy przepływ również zaczyna się na tym
+przycisku, a nie na pustej liście. Kod i testy celowane są gotowe; instalacja
+nowego AMC Test zostanie zapisana po promocji. AMC Public pozostaje bez zmian.
+
+Wejście do pola PIN po wybraniu rzeczywiście rozpoznanego urządzenia jest
+zamierzonym następnym krokiem. W bieżącej próbie sieciowej urządzenie nie było
+dostępne: host zwrócił 0 urządzeń w 5,04 s. Nie jest to dowód działania ani
+awarii ścieżki sprzętowej, dlatego nadal wymaga ona ręcznego odbioru z Teufelem.
+
 Data rozpoczęcia: 2026-10-21
 
 ## Polecenie użytkownika i źródła

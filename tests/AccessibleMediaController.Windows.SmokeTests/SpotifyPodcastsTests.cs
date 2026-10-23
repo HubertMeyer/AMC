@@ -153,6 +153,16 @@ internal static class SpotifyPodcastsTests
         Check(api.PodcastDescriptions.TryGetValue("spotify:show:show1", out var opis)
             && opis.Length > 0,
             "Otwarcie podcastu musi oddac takze jego wlasny opis");
+
+        using var batchHandler = new AtrapaSpotify();
+        using var batchHttp = new HttpClient(batchHandler);
+        using var batchApi = new SpotifyApiClient(batchHttp);
+        var pierwszaPorcja = await batchApi.GetShowEpisodesBatchAsync(
+            FikcyjnyToken, "show1", 2, CancellationToken.None);
+        Check(pierwszaPorcja.Items?.Count == 2 && pierwszaPorcja.HasMore,
+            "Pierwsza porcja odcinkow nie zatrzymala sie na jawnym limicie");
+        Check(!batchHandler.Urls.Contains(AtrapaSpotify.NextShowEpisodes),
+            "Pierwsza porcja niepotrzebnie pobrala dalsza strone podcastu");
     }
 
     // ---------- 3: widok zapisanych podcastow i odcinkow ----------
@@ -405,7 +415,7 @@ internal static class SpotifyPodcastsTests
                 _ when url.EndsWith("/shows/show1", StringComparison.Ordinal) =>
                     """{"id":"show1","name":"Tyflopodcast","publisher":"Tyflopodcast","description":"Podcast o technologiach dla niewidomych","type":"show"}""",
                 _ when url.Contains("/shows/show1/episodes", StringComparison.Ordinal) => Strona(
-                    """{"id":"ep10","name":"Odcinek dziesiaty","description":"Opis dziesiatego","duration_ms":600000,"type":"episode"},"""
+                    """null,{"id":"ep10","name":"Odcinek dziesiaty","description":"Opis dziesiatego","duration_ms":600000,"type":"episode"},"""
                     + """{"id":"ep11","name":"Odcinek jedenasty","description":"Opis jedenastego","duration_ms":900000,"type":"episode"}""",
                     NextShowEpisodes),
                 _ => null

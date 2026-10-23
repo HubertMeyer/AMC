@@ -81,6 +81,7 @@ def test_spotify_container_matches_the_csharp_contract_exactly() -> None:
             "externalId": "artist123",
             "title": "Wykonawca",
             "kind": "artist",
+            "loadedCount": 150,
             "artist": "Wykonawca",
             "artistSection": "tracks",
         },
@@ -107,6 +108,7 @@ def test_spotify_container_omits_empty_optional_fields() -> None:
         "externalId": "album123",
         "title": "Album",
         "kind": "album",
+        "loadedCount": 150,
     }
 
 

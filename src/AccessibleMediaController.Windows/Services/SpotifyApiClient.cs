@@ -60,6 +60,15 @@ internal sealed record SpotifyArtistTracksBatch(
         new([], null, string.Empty, failure);
 }
 
+/// <summary>
+/// Kumulatywna porcja odcinkow jednego podcastu. Spotify potrafi zwracac
+/// elementy null w tablicy <c>items</c>; nie sa one odcinkami i nie moga
+/// zatrzymac calego widoku.
+/// </summary>
+internal sealed record SpotifyShowEpisodesBatch(
+    IReadOnlyList<MediaItem>? Items,
+    bool HasMore);
+
 internal sealed class SpotifyApiException(string message, HttpStatusCode statusCode)
     : Exception(message)
 {
@@ -402,6 +411,27 @@ internal sealed class SpotifyApiClient(HttpClient? httpClient = null) : IDisposa
         string showId,
         CancellationToken cancellationToken)
     {
+        var batch = await GetShowEpisodesBatchAsync(
+                accessToken,
+                showId,
+                int.MaxValue,
+                cancellationToken)
+            .ConfigureAwait(false);
+        return batch.Items;
+    }
+
+    /// <summary>
+    /// Odcinki podcastu pobierane kumulatywnie do jawnego limitu widoku.
+    /// Dzięki temu podcast z kilkoma tysiącami odcinków pokazuje pierwszą
+    /// porcję, zamiast blokować nawigację do czasu pobrania całego archiwum.
+    /// </summary>
+    public async Task<SpotifyShowEpisodesBatch> GetShowEpisodesBatchAsync(
+        string accessToken,
+        string showId,
+        int maximumItems,
+        CancellationToken cancellationToken)
+    {
+        maximumItems = Math.Max(1, maximumItems);
         string? nazwaPodcastu = null;
         try
         {
@@ -418,7 +448,7 @@ internal sealed class SpotifyApiClient(HttpClient? httpClient = null) : IDisposa
         catch (SpotifyApiException exception) when (exception.StatusCode == HttpStatusCode.NotFound
             || exception.StatusCode == HttpStatusCode.Forbidden)
         {
-            return null;
+            return new(null, HasMore: false);
         }
 
         var items = new List<MediaItem>();
@@ -434,7 +464,9 @@ internal sealed class SpotifyApiClient(HttpClient? httpClient = null) : IDisposa
             catch (SpotifyApiException exception) when (exception.StatusCode == HttpStatusCode.NotFound
                 || exception.StatusCode == HttpStatusCode.Forbidden)
             {
-                return items.Count > 0 ? items : null;
+                return items.Count > 0
+                    ? new(items, HasMore: false)
+                    : new(null, HasMore: false);
             }
             using (document)
             {
@@ -463,9 +495,16 @@ internal sealed class SpotifyApiClient(HttpClient? httpClient = null) : IDisposa
                 next = root.TryGetProperty("next", out var nextElement) && nextElement.ValueKind == JsonValueKind.String
                     ? nextElement.GetString()
                     : null;
+                if (items.Count >= maximumItems)
+                {
+                    var hasMore = items.Count > maximumItems || !string.IsNullOrEmpty(next);
+                    if (items.Count > maximumItems)
+                        items.RemoveRange(maximumItems, items.Count - maximumItems);
+                    return new(items, hasMore);
+                }
             }
         }
-        return items;
+        return new(items, HasMore: false);
     }
 
     /// <summary>
@@ -1073,6 +1112,10 @@ internal sealed class SpotifyApiClient(HttpClient? httpClient = null) : IDisposa
 
     private MediaItem? ReadEpisode(JsonElement odcinek)
     {
+        // Spotify zwraca null dla części wycofanych odcinków. TryGetProperty
+        // rzuca dla JsonValueKind.Null, więc taki wpis trzeba odrzucić przed
+        // odczytem pól. Prawdziwy TyfloPodcast zawiera wiele takich pozycji.
+        if (odcinek.ValueKind != JsonValueKind.Object) return null;
         var id = Tekst(odcinek, "id");
         var nazwa = Tekst(odcinek, "name");
         if (string.IsNullOrWhiteSpace(id) || string.IsNullOrWhiteSpace(nazwa)) return null;

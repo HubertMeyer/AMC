@@ -301,8 +301,8 @@ def test_frontier_smart_empty_session_starts_discovery_without_focusing_close() 
 
     FrontierSmartDevicesDialog._begin_initial_flow(dialog)
 
-    assert devices.focused is True
-    assert discover.focused is False
+    assert devices.focused is False
+    assert discover.focused is True
     assert dialog._automatic_discovery_started is True
     assert started == [True]
 
@@ -331,6 +331,37 @@ def test_frontier_smart_reopening_saved_devices_focuses_list_without_discovery()
     assert devices.focused is True
     assert discover.focused is False
     assert started == []
+
+
+def test_frontier_smart_discovery_keeps_a_named_focus_target_enabled() -> None:
+    discover = _FakeControl()
+    manual = _FakeControl()
+    save = _FakeControl()
+    select = _FakeControl()
+    remove = _FakeControl()
+    close = _FakeControl()
+    address = _FakeControl()
+    dialog = SimpleNamespace(
+        selected_device_id=None,
+        _busy=True,
+        _manual_address_visible=False,
+        _state=discovery_started(configuration_state({"items": []})),
+        address=address,
+        discover_button=discover,
+        manual_button=manual,
+        save_button=save,
+        select_button=select,
+        remove_button=remove,
+        close_button=close,
+    )
+
+    FrontierSmartDevicesDialog._update_buttons(dialog)
+
+    assert discover.enabled is True
+    assert discover.label == "&Wyszukiwanie urządzeń, czekaj"
+    assert discover.name == "Wyszukiwanie urządzeń w sieci lokalnej, czekaj"
+    assert manual.enabled is False
+    assert close.enabled is True
 
 
 def test_frontier_smart_discovery_announces_device_before_pin_and_focuses_pin() -> None:

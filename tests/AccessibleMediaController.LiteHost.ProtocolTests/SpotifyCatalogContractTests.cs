@@ -440,12 +440,15 @@ internal static class SpotifyCatalogContractTests
           "title":"Album próby",
           "artist":"Wykonawca",
           "kind":"album",
+          "loadedCount":300,
           "token":"sekret",
           "source":"prywatny uchwyt"
         }
         """);
         var request = LiteSpotifyCatalogContract.ReadContainerRequest(good.RootElement);
-        Check(request.ExternalId == "album123" && request.Kind == MediaItemKind.Album,
+        Check(request.ExternalId == "album123"
+            && request.Kind == MediaItemKind.Album
+            && request.LoadedCount == 300,
             "poprawny kontener nie został znormalizowany");
 
         using var wrong = JsonDocument.Parse("""

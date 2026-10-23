@@ -195,7 +195,13 @@ public static class LiteSpotifyCatalogContract
             normalizedId,
             title,
             CleanText(LiteArgs.ReadText(args, "artist") ?? string.Empty),
-            artistSection);
+            artistSection,
+            LiteArgs.ReadInt(
+                args,
+                "loadedCount",
+                CollectionPageSize,
+                CollectionPageSize,
+                int.MaxValue));
     }
 
     public static LiteSpotifyDescriptionRequest ReadDescriptionRequest(JsonElement args)
@@ -689,7 +695,8 @@ public sealed record LiteSpotifyContainerRequest(
     string ExternalId,
     string Title,
     string Artist,
-    string? ArtistSection);
+    string? ArtistSection,
+    int LoadedCount = LiteSpotifyCatalogContract.CollectionPageSize);
 
 public sealed record LiteSpotifyDescriptionRequest(
     MediaItemKind Kind,

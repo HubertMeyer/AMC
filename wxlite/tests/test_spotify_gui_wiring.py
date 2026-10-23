@@ -672,7 +672,65 @@ def test_spotify_artist_section_uses_the_read_only_container_contract() -> None:
         "kind": "artist",
         "artist": "",
         "artist_section": "tracks",
+        "loaded_count": 150,
     }]
+
+
+def test_spotify_podcast_load_more_requests_300_and_focuses_first_new_episode() -> None:
+    calls = []
+    intent = OpenSpotifyContainer(
+        "private-podcast-row",
+        "privatepodcast",
+        "Podcast",
+        "podcast",
+        load_more=True,
+    )
+    items = [
+        {
+            "id": f"private-episode-row-{index}",
+            "externalId": f"episode{index}",
+            "title": f"Odcinek {index}",
+            "kind": "episode",
+        }
+        for index in range(151)
+    ]
+    scope = "container:podcast:privatepodcast:"
+    frame = SimpleNamespace(
+        client=SimpleNamespace(
+            spotify_container_items=lambda **values: (
+                calls.append(("host", values))
+                or {
+                    "heading": "Podcast, Podcast",
+                    "items": items,
+                    "warning": "",
+                    "hasMore": False,
+                }
+            )
+        ),
+        _spotify_navigation_version=0,
+        _spotify_loaded_counts={scope: 150},
+        navigator=SimpleNamespace(
+            active=SessionId.SPOTIFY,
+            apply_spotify_container=(
+                lambda received, heading, rows, preferred_id=None: (
+                    calls.append(("apply", received, heading, rows, preferred_id))
+                    or []
+                )
+            ),
+        ),
+        runner=ImmediateRunner(),
+        announcer=SimpleNamespace(say=lambda message: calls.append(("say", message))),
+        _run=lambda events: calls.append(("run", events)),
+    )
+
+    LiteFrame._open_spotify_container(frame, intent)
+
+    assert calls[0][0] == "host"
+    assert calls[0][1]["loaded_count"] == 300
+    assert calls[1][0:3] == ("apply", intent, "Podcast, Podcast")
+    assert len(calls[1][3]) == 151
+    assert calls[1][4] == "private-episode-row-150"
+    assert frame._spotify_loaded_counts == {scope: 151}
 
 
 def test_unavailable_spotify_playlist_stays_on_the_current_list() -> None:

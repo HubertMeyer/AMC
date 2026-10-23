@@ -301,10 +301,11 @@ internal sealed class LiteSpotifyWindowsCatalogBackend :
                             request.ExternalId,
                             cancellationToken)
                         .ConfigureAwait(false)),
-                MediaItemKind.Podcast => FromOptionalItems(
-                    await _api.GetShowEpisodesAsync(
+                MediaItemKind.Podcast => FromPodcastEpisodes(
+                    await _api.GetShowEpisodesBatchAsync(
                             credentials.AccessToken,
                             request.ExternalId,
+                            request.LoadedCount,
                             cancellationToken)
                         .ConfigureAwait(false)),
                 MediaItemKind.Artist when request.ArtistSection == "tracks" =>
@@ -351,6 +352,11 @@ internal sealed class LiteSpotifyWindowsCatalogBackend :
         SpotifyArtistTracksBatch batch) => batch.Failure is null
         ? new(batch.Items, Available: true, HasMore: batch.HasMore)
         : new([], Available: false);
+
+    private static LiteSpotifyContainerBackendResult FromPodcastEpisodes(
+        SpotifyShowEpisodesBatch batch) => batch.Items is null
+        ? new([], Available: false)
+        : new(batch.Items, Available: true, HasMore: batch.HasMore);
 
     private static SpotifySettings ReadSettings(string statePath)
     {

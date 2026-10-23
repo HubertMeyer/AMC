@@ -634,12 +634,14 @@ class LiteHostClient:
         kind: str,
         artist: str = "",
         artist_section: str | None = None,
+        loaded_count: int = 150,
     ) -> Any:
         """Read a Spotify container without exposing credentials or sources."""
         args: dict[str, Any] = {
             "externalId": external_id,
             "title": title,
             "kind": kind,
+            "loadedCount": max(150, int(loaded_count)),
         }
         if artist:
             args["artist"] = artist

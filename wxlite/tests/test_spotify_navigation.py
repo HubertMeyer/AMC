@@ -246,6 +246,46 @@ def test_collection_load_more_stays_on_level_and_does_not_duplicate_history() ->
     assert nav.session.model.selected_row == root
 
 
+def test_podcast_container_load_more_stays_on_level_and_keeps_back_target() -> None:
+    nav = Navigator()
+    nav.active = SessionId.SPOTIFY
+    podcast = Row(
+        "private-podcast", "Podcast", "podcast",
+        service_id="spotify:show:secret", service_kind="podcast",
+    )
+    nav.apply_spotify_view("Biblioteka Spotify", [podcast])
+    intent = nav.activate_selected()[0]
+    first_page = [Row(
+        "private-episode-1", "Odcinek 1", "episode",
+        service_id="spotify:episode:first", service_kind="episode",
+    ), Row(
+        "load-more:spotify-podcast:1", "Załaduj więcej", "loadMore",
+        detail="następne 150 elementów",
+    )]
+    nav.apply_spotify_container(intent, "Podcast, Podcast", first_page)
+    nav.session.model.select_id(first_page[-1].item_id)
+
+    load_more = nav.activate_selected()[0]
+
+    assert isinstance(load_more, OpenSpotifyContainer)
+    assert load_more.load_more is True
+    assert len(nav.session.spotify_history) == 1
+    second_page = [first_page[0], Row(
+        "private-episode-2", "Odcinek 2", "episode",
+        service_id="spotify:episode:second", service_kind="episode",
+    )]
+    nav.apply_spotify_container(
+        load_more,
+        "Podcast, Podcast",
+        second_page,
+        preferred_id=second_page[1].item_id,
+    )
+    assert len(nav.session.spotify_history) == 1
+    assert nav.session.model.selected_row == second_page[1]
+    assert nav.go_to_parent() == []
+    assert nav.session.model.selected_row == podcast
+
+
 def test_collection_sort_refresh_stays_on_level_and_preserves_focus() -> None:
     nav = Navigator()
     nav.active = SessionId.SPOTIFY

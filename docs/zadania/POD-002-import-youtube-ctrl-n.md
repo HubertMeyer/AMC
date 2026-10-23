@@ -9,6 +9,16 @@ niższe historyczne stwierdzenia „nie została zainstalowana”. AMC Public,
 instalator publiczny i GitHub pozostały bez zmian. Szczegóły instalacji:
 [AMC-TEST-2026-10-23-1124-instalacja-zbiorcza.md](AMC-TEST-2026-10-23-1124-instalacja-zbiorcza.md).**
 
+**Korekta użytkownika z 23.10.2026 po odbiorze instalacji 11:24:** dodanie
+kanału kończy się powodzeniem, lecz bardzo szybkie `Ctrl+V` zaraz po `Ctrl+N`
+powoduje krótkie przymrożenie. Formularz nie przechwytywał własnego wklejania;
+zdarzenie mogło jeszcze trafić do globalnego `Ctrl+V` listy, zanim fokus pola
+edycyjnego ustabilizował się po otwarciu modalu. Nowa korekta wiąże `Ctrl+V`
+bezpośrednio z polem adresu lub nazwy i odkłada samo wklejenie o jedną kolejkę
+zdarzeń interfejsu. Nie dodaje nowego polecenia ani skrótu aplikacji. Kod i
+testy celowane są gotowe; instalacja nowego AMC Test zostanie zapisana po
+promocji. AMC Public pozostaje bez zmian.
+
 Zgłoszenie potwierdziło, że kanał Wieniawski został dodany, ale podczas
 oczekiwania NVDA wypowiedział techniczny komunikat przypominający „Windows 32”
 i uruchamianie terminala, po czym użytkownik znów znalazł się na ekranie AMC.
