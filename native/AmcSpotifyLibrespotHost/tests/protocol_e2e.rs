@@ -202,6 +202,7 @@ fn commands_before_initialize_are_refused_not_silently_ignored() {
         ("stop", serde_json::json!({})),
         ("seek", serde_json::json!({"positionMs":1000})),
         ("volume", serde_json::json!({"volume":50})),
+        ("speed", serde_json::json!({"value":1.5})),
         (
             "play",
             serde_json::json!({"uri":"spotify:track:4cOdK2wGLETKBW3PvgPWqT","positionMs":0,"playId":1}),
@@ -220,13 +221,13 @@ fn commands_before_initialize_are_refused_not_silently_ignored() {
 }
 
 #[test]
-fn speed_change_is_refused_instead_of_faked() {
+fn invalid_speed_is_refused_before_audio_initialization() {
     let mut host = Host::start();
     assert_eq!(host.recv()["type"], "ready");
-    host.send(&cmd("speed", 11, serde_json::json!({"value":1.5})));
+    host.send(&cmd("speed", 11, serde_json::json!({"value":2.5})));
     let err = host.recv();
     assert_eq!(err["type"], "error");
-    assert_eq!(err["code"], "speedControlUnsupported");
+    assert_eq!(err["code"], "badRange");
 }
 
 #[test]

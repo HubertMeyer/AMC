@@ -136,9 +136,10 @@ _CAPABILITIES: dict[SessionId, SessionCapabilities] = {
         supports_player_exit_pause=True,
     ),
     # Dla sesji wykonywanych przez zewnetrzne uslugi dialog udostepnia tylko
-    # zachowanie okna. Nie obiecujemy DSP ani predkosci, ktorych adapter nie ma.
+    # zachowanie okna. Spotify jest wyjątkiem: własny adapter nad Librespotem
+    # stosuje przypięte silniki AMC i naprawdę obsługuje prędkość 0,5..2,0x.
     SessionId.TIDAL: SessionCapabilities(False, False, False, True),
-    SessionId.SPOTIFY: SessionCapabilities(False, False, False, True),
+    SessionId.SPOTIFY: SessionCapabilities(False, True, False, True),
     SessionId.SONOS: SessionCapabilities(False, False, False, True),
     SessionId.FRONTIER_SMART: SessionCapabilities(False, False, False, True),
     # WiiM odtwarza na urzadzeniu i historycznie nie mial pauzy po wyjsciu.

@@ -832,7 +832,7 @@ def test_current_session_mute_is_an_audio_checkable_playback_command() -> None:
     assert not item.accelerator
 
 
-def test_spotify_gets_embedded_player_commands_but_not_tempo_controls() -> None:
+def test_spotify_gets_embedded_player_commands_and_real_tempo_controls() -> None:
     actions = {
         item.action
         for menu in menu_model.menus_for_session(menu_model.SessionId.SPOTIFY)
@@ -851,10 +851,10 @@ def test_spotify_gets_embedded_player_commands_but_not_tempo_controls() -> None:
         Action.TIME_REMAINING,
         Action.TIME_TOTAL,
         Action.SELECT_AUDIO_OUTPUT,
+        Action.RATE_DOWN,
+        Action.RATE_UP,
+        Action.RATE_RESET,
     } <= actions
-    assert Action.RATE_DOWN not in actions
-    assert Action.RATE_UP not in actions
-    assert Action.RATE_RESET not in actions
 
 
 def test_file_menu_uses_the_active_session_instead_of_mixing_sources() -> None:

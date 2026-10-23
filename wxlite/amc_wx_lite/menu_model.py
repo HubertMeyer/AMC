@@ -189,6 +189,7 @@ SONOS_ONLY = (SessionId.SONOS,)
 SPOTIFY_ONLY = (SessionId.SPOTIFY,)
 FRONTIER_SMART_ONLY = (SessionId.FRONTIER_SMART,)
 LOCAL_MEDIA = (SessionId.FILES, SessionId.PODCASTS)
+PLAYBACK_RATE_SESSIONS = (*LOCAL_MEDIA, SessionId.SPOTIFY)
 QUEUE_SESSIONS = (SessionId.FILES, SessionId.PODCASTS, SessionId.TIDAL)
 PLAY_NEXT_SESSIONS = (SessionId.FILES, SessionId.PODCASTS)
 LOCAL_AUDIO = (SessionId.FILES, SessionId.RADIO, SessionId.PODCASTS)
@@ -1355,12 +1356,12 @@ def build_menus(
             # Ctrl+. zmierzone osobno jako nieszkodliwe i zostaje z podpisem.
             MenuItem("Wol&niej", Action.RATE_DOWN, shortcut="Shift+,",
                      accelerator=False, needs_playback=True,
-                     visible_sessions=LOCAL_MEDIA),
+                     visible_sessions=PLAYBACK_RATE_SESSIONS),
             MenuItem("&Szybciej", Action.RATE_UP, shortcut="Shift+.",
                      accelerator=False, needs_playback=True,
-                     visible_sessions=LOCAL_MEDIA),
+                     visible_sessions=PLAYBACK_RATE_SESSIONS),
             MenuItem("Prędkoś&ć normalna", Action.RATE_RESET, shortcut="Ctrl+.",
-                     needs_playback=True, visible_sessions=LOCAL_MEDIA),
+                     needs_playback=True, visible_sessions=PLAYBACK_RATE_SESSIONS),
             SEPARATOR,
             # Skroty poprawione na te z oryginalu: Ctrl+SHIFT+E/R/T
             # (MainWindow.xaml.cs:21674-21676). Menu obiecywalo stare Ctrl+E/R/T,

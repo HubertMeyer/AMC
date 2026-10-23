@@ -31,8 +31,7 @@ pub mod code {
     pub const AUTH_TIMEOUT: &str = "authTimeout";
     pub const UNSUPPORTED: &str = "unsupported";
     pub const INTERNAL: &str = "internal";
-    /// Zwracany, gdy ktoś prosi o zmianę prędkości odtwarzania.
-    pub const NO_SPEED_CONTROL: &str = "speedControlUnsupported";
+    pub const TEMPO_UNAVAILABLE: &str = "tempoEngineUnavailable";
     pub const TRACK_UNAVAILABLE: &str = "trackUnavailable";
 }
 
@@ -59,6 +58,9 @@ pub enum Command {
     },
     Volume {
         volume: u8,
+    },
+    Speed {
+        value: f32,
     },
     Shutdown,
 }
@@ -187,13 +189,6 @@ pub fn parse_line(line: &str) -> Result<Request, Rejection> {
         "resume" => Command::Resume,
         "stop" => Command::Stop,
         "shutdown" => Command::Shutdown,
-        "speed" | "setSpeed" | "playbackRate" => {
-            return Err(Rejection::new(
-                rid,
-                code::NO_SPEED_CONTROL,
-                "Librespot nie udostępnia zmiany prędkości odtwarzania; AMC nie może tego udawać",
-            ))
-        }
         "initialize" => {
             let access_token = match obj.get("accessToken").and_then(Value::as_str) {
                 Some(t) if !t.trim().is_empty() => t.to_string(),
@@ -337,6 +332,30 @@ pub fn parse_line(line: &str) -> Result<Request, Rejection> {
                 }
             };
             Command::Volume { volume }
+        }
+        "speed" | "setSpeed" | "playbackRate" => {
+            let value = match obj.get("value") {
+                Some(v) => match v.as_f64() {
+                    Some(n) if n.is_finite() && (0.5..=2.0).contains(&n) => n as f32,
+                    Some(_) => {
+                        return Err(Rejection::new(
+                            rid,
+                            code::BAD_RANGE,
+                            "value prędkości musi mieścić się w zakresie 0.5..2.0",
+                        ))
+                    }
+                    None => {
+                        return Err(Rejection::new(
+                            rid,
+                            code::BAD_TYPE,
+                            "value prędkości musi być liczbą",
+                        ))
+                    }
+                },
+                None => return Err(Rejection::new(
+                    rid, code::MISSING_FIELD, "brak pola value prędkości")),
+            };
+            Command::Speed { value }
         }
         other => {
             return Err(Rejection::new(
@@ -528,12 +547,25 @@ mod tests {
     }
 
     #[test]
-    fn speed_is_refused_not_faked() {
-        let e = parse_line(&line(
+    fn speed_accepts_supported_range_and_rejects_bad_values() {
+        let accepted = parse_line(&line(
             json!({"command":"speed","requestId":9,"sessionId":SESSION_ID,"value":1.5}),
         ))
+        .unwrap();
+        assert_eq!(accepted.command, Command::Speed { value: 1.5 });
+
+        for value in [json!(0.49), json!(2.01)] {
+            let error = parse_line(&line(json!({
+                "command":"speed","requestId":10,"sessionId":SESSION_ID,"value":value
+            })))
+            .unwrap_err();
+            assert_eq!(error.code, code::BAD_RANGE);
+        }
+        let wrong_type = parse_line(&line(json!({
+            "command":"speed","requestId":11,"sessionId":SESSION_ID,"value":"1.5"
+        })))
         .unwrap_err();
-        assert_eq!(e.code, code::NO_SPEED_CONTROL);
+        assert_eq!(wrong_type.code, code::BAD_TYPE);
     }
 
     #[test]

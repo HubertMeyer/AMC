@@ -91,6 +91,7 @@ internal static class SpotifyCatalogContractTests
           "kind":"track",
           "volume":41,
           "positionSeconds":12.5,
+          "playbackRate":1.25,
           "token":"nie może przejść"
         }
         """);
@@ -100,7 +101,8 @@ internal static class SpotifyCatalogContractTests
             && request.Item.Source == "spotify:track:abc123"
             && request.Item.Title == "Utwórpróby"
             && request.Volume == 41
-            && request.Position == TimeSpan.FromSeconds(12.5),
+            && request.Position == TimeSpan.FromSeconds(12.5)
+            && Math.Abs(request.PlaybackRate - 1.25d) < 0.001d,
             "poprawny utwór nie został bezpiecznie przygotowany do Librespota");
 
         using var container = JsonDocument.Parse("""

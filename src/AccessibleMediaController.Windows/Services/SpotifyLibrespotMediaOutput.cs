@@ -62,6 +62,7 @@ internal sealed class SpotifyLibrespotMediaOutput : IMediaOutput, IDisposable
     private long currentPlayId;
     private long preparationVersion;
     private int lastVolume = 100;
+    private double playbackRate = 1d;
     private bool isPreparing;
     private bool playbackStarted;
     private bool pausedIntent;
@@ -171,14 +172,24 @@ internal sealed class SpotifyLibrespotMediaOutput : IMediaOutput, IDisposable
         }
     }
 
-    /// <summary>Host Librespot nie zmienia tempa odtwarzania, tak jak sesja SDK.</summary>
-    public bool SupportsPlaybackRate => false;
+    /// <summary>Host stosuje silnik mowy dla odcinków i muzyki dla utworów.</summary>
+    public bool SupportsPlaybackRate => true;
 
     internal Task PendingPlaybackStart { get; private set; } = Task.CompletedTask;
 
     public void SetPlaybackRate(double playbackRate)
     {
-        // Host Librespot nie ma zmiany tempa odtwarzania. Swiadomie nic nie robimy.
+        var clamped = Math.Clamp(playbackRate, 0.5d, 2d);
+        LibrespotHostClient? current;
+        lock (stateGate)
+        {
+            this.playbackRate = clamped;
+            current = ReadyClientLocked();
+        }
+        // Przed zalogowaniem zapisujemy zamiar; StartAsync wyśle ostatnią
+        // wartość po initialize, jeszcze przed play.
+        if (current is null) return;
+        _ = ForwardAsync(current.SetPlaybackRateAsync(clamped));
     }
 
     public void Play(MediaItem item, TimeSpan position, int volume, double playbackRate)
@@ -211,6 +222,7 @@ internal sealed class SpotifyLibrespotMediaOutput : IMediaOutput, IDisposable
             loadedItemId = item.Id;
             this.position = start;
             lastVolume = Math.Clamp(volume, 0, 100);
+            this.playbackRate = Math.Clamp(playbackRate, 0.5d, 2d);
             isPreparing = true;
             playbackStarted = false;
             pausedIntent = false;
@@ -237,14 +249,17 @@ internal sealed class SpotifyLibrespotMediaOutput : IMediaOutput, IDisposable
             // wiec przestarzale - bierzemy OSTATNI zamiar, inaczej SetVolume(0)
             // albo Seek w czasie logowania ginely bez sladu.
             int wysylanaGlosnosc;
+            double wysylanaPredkosc;
             TimeSpan wysylanyStart;
             lock (stateGate)
             {
                 if (IsStaleLocked(playId, version, lease.Generation)) return;
                 wysylanaGlosnosc = lastVolume;
+                wysylanaPredkosc = playbackRate;
                 wysylanyStart = position;
             }
             await lease.Client.SetVolumeAsync(wysylanaGlosnosc).ConfigureAwait(false);
+            await lease.Client.SetPlaybackRateAsync(wysylanaPredkosc).ConfigureAwait(false);
             Task<LibrespotPlayOutcome> play;
             lock (stateGate)
             {
@@ -378,6 +393,7 @@ internal sealed class SpotifyLibrespotMediaOutput : IMediaOutput, IDisposable
         MediaItem? item;
         TimeSpan resumeAt;
         int volume;
+        double rate;
         bool reload;
         LibrespotHostClient? current;
         lock (stateGate)
@@ -385,6 +401,7 @@ internal sealed class SpotifyLibrespotMediaOutput : IMediaOutput, IDisposable
             item = currentItem;
             resumeAt = position;
             volume = lastVolume;
+            rate = playbackRate;
             reload = resumeNeedsReload;
             resumeNeedsReload = false;
             pausedIntent = false;
@@ -394,7 +411,7 @@ internal sealed class SpotifyLibrespotMediaOutput : IMediaOutput, IDisposable
         {
             // Wyjscie zmienilo sie w pauzie: nowy proces nie ma jeszcze utworu.
             // Dzwiek wraca TERAZ, na zadanie uzytkownika, a nie wcześniej.
-            Play(item, resumeAt, volume, 1d);
+            Play(item, resumeAt, volume, rate);
             return;
         }
         if (current is null) return;
@@ -609,6 +626,7 @@ internal sealed class SpotifyLibrespotMediaOutput : IMediaOutput, IDisposable
         MediaItem? item;
         TimeSpan resumeAt;
         int volume;
+        double rate;
         bool wasPlaying;
         LibrespotHostClient? old;
         lock (stateGate)
@@ -616,6 +634,7 @@ internal sealed class SpotifyLibrespotMediaOutput : IMediaOutput, IDisposable
             item = currentItem;
             resumeAt = position;
             volume = lastVolume;
+            rate = playbackRate;
             wasPlaying = playbackStarted && !pausedIntent;
             old = client;
             // Nowa generacja OD RAZU: zdarzenia konczacego sie procesu (i te
@@ -640,7 +659,7 @@ internal sealed class SpotifyLibrespotMediaOutput : IMediaOutput, IDisposable
         // Utwor wraca od zapamietanej pozycji na NOWYM wyjsciu. To zwykla droga
         // Play, wiec idzie przez to samo logowanie, te sama straz generacji i
         // ten sam limit przygotowania.
-        Play(item, resumeAt, volume, 1d);
+        Play(item, resumeAt, volume, rate);
         await PendingPlaybackStart.ConfigureAwait(false);
     }
 

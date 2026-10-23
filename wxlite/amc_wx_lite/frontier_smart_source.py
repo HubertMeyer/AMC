@@ -155,12 +155,24 @@ def waiting_for_pin(
         raise FrontierSmartPayloadError(
             "Nie udało się potwierdzić użytkowej nazwy urządzenia Frontier Smart"
         )
+    if "teufel" in safe_label.casefold() and "3sixty" in safe_label.casefold():
+        pin_help = (
+            "Wpisz czterocyfrowy PIN NetRemote, nie hasło Wi-Fi. "
+            "W Teufel RADIO 3SIXTY ustawienie fabryczne to 1234; "
+            "można je sprawdzić w menu radia: Ustawienia systemowe, Sieć, "
+            "Ustawienia NetRemote PIN."
+        )
+    else:
+        pin_help = (
+            "Wpisz PIN NetRemote, nie hasło Wi-Fi. Sprawdź go w ustawieniach "
+            "sieciowych urządzenia."
+        )
     return replace(
         state,
         phase=FrontierSmartConfigurationPhase.WAITING_FOR_PIN,
         message=(
-            f"Wykryto urządzenie {safe_label}. Wpisz jego PIN, "
-            "a następnie wybierz Połącz i zapisz."
+            f"Wykryto urządzenie {safe_label}. {pin_help} "
+            "Następnie wybierz Połącz i zapisz."
         ),
         target_address=safe_address,
         target_label=safe_label,

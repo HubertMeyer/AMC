@@ -72,11 +72,14 @@ def test_podcasty_dostaja_wlasne_przetwarzanie_dzwieku_przed_startem():
     assert podcasts.has_options is True
 
 
-def test_predkosc_i_wznowienie_maja_tylko_sesje_z_wykonawca():
+def test_predkosc_i_wznowienie_odpowiadaja_realnym_mozliwosciom_sesji():
     for session in (SessionId.FILES, SessionId.PODCASTS):
         caps = capabilities_for(session)
         assert caps.supports_playback_rate is True
         assert caps.supports_resume_position is True
+    spotify = capabilities_for(SessionId.SPOTIFY)
+    assert spotify.supports_playback_rate is True
+    assert spotify.supports_resume_position is False
     assert capabilities_for(SessionId.RADIO).supports_playback_rate is False
     assert capabilities_for(SessionId.RADIO).supports_resume_position is False
     assert "playback_rate" in SESSION_OPTION_IDS

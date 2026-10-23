@@ -495,6 +495,21 @@ public sealed class LibrespotHostClient : IAsyncDisposable, IDisposable
         lock (stateGate) hostVolume = clamped;
     }
 
+    /// <summary>
+    /// Ustawia prawdziwe tempo hosta 0,5..2,0x. Host zachowuje wysokość głosu
+    /// przez wspólne silniki AMC, więc to nie jest samo przestrojenie próbek.
+    /// </summary>
+    public Task SetPlaybackRateAsync(
+        double playbackRate,
+        CancellationToken cancellationToken = default)
+    {
+        var clamped = Math.Clamp(playbackRate, 0.5d, 2d);
+        return SendAsync(
+            LibrespotHostContract.CommandSpeed,
+            new JsonObject { ["value"] = clamped },
+            cancellationToken);
+    }
+
     /// <summary>Prosi host o zamkniecie i czeka do limitu; potem ubija proces.</summary>
     public async Task ShutdownAsync(CancellationToken cancellationToken = default)
     {

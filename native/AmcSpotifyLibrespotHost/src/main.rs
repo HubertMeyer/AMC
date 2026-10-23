@@ -4,8 +4,8 @@
 //! (jedna linia = jedno zdarzenie). Nic innego na stdout nie trafia - logi idą na stderr.
 //!
 //! Świadome granice (nie udajemy ich obsługi):
-//! * brak sterowania prędkością odtwarzania - komenda `speed` jest odrzucana kodem
-//!   `speedControlUnsupported`, bo Librespot 0.8.0 tego nie ma;
+//! * prędkość 0,5..2,0x realizuje własny adapter AMC nad wyjściem Librespota:
+//!   Speedy/Sonic dla odcinków i Signalsmith Stretch dla muzyki;
 //! * brak discovery/Spirc i brak otwierania przeglądarki - wrapper steruje `Player`
 //!   bezpośrednio, token dostaje wyłącznie po stdin;
 //! * `ready` mówi tylko o wersji protokołu i NIE oznacza zalogowania;
@@ -14,6 +14,7 @@
 //!   faktyczny start AMC rozpoznaje po `state` z `isPlaying: true`.
 
 mod protocol;
+mod tempo_sink;
 mod tracker;
 
 use std::sync::Arc;
@@ -33,6 +34,7 @@ use librespot_playback::mixer::{softmixer::SoftMixer, Mixer, MixerConfig};
 use librespot_playback::player::{Player, PlayerEvent};
 
 use protocol::{code, Command, Rejection, Request};
+use tempo_sink::{TempoControl, TempoSink};
 use tracker::{Incoming, PlayTracker};
 
 /// Ile najdłużej czekamy na `Session::connect`. Po tym czasie jest błąd, nigdy fałszywe ready.
@@ -81,6 +83,7 @@ struct Engine {
     mixer: Arc<dyn Mixer>,
     #[allow(dead_code)]
     session: Session,
+    tempo: TempoControl,
 }
 
 impl Engine {
@@ -144,16 +147,19 @@ impl Engine {
             ..PlayerConfig::default()
         };
 
+        let tempo = TempoControl::new();
         let sink_builder = audio_backend::find(Some("rodio".to_string()))
             .ok_or_else(|| (code::INTERNAL, "brak backendu audio rodio w tym buildzie".to_string()))?;
         // Jawny format wyjściowy zamiast domyślnego S16. To dotyczy TYLKO ścieżki
         // wyjściowej do WASAPI - o kodeku źródłowym ani o "lossless" nic nie mówi.
         let format = AudioFormat::F32;
+        let tempo_for_sink = tempo.clone();
         let player = Player::new(
             player_config,
             session.clone(),
             mixer.get_soft_volume(),
-            move || sink_builder(device, format),
+            move || Box::new(TempoSink::new(
+                sink_builder(device, format), tempo_for_sink)),
         );
 
         // Przepompowanie zdarzeń Librespota do naszej pętli.
@@ -170,6 +176,7 @@ impl Engine {
             player,
             mixer,
             session,
+            tempo,
         })
     }
 }
@@ -296,9 +303,18 @@ async fn main() {
             maybe_event = event_rx.recv() => {
                 match maybe_event {
                     Some(event) => {
+                        let ended = matches!(event, PlayerEvent::EndOfTrack { .. });
                         if let Some(incoming) = normalize(event) {
                             for out in playtracker.handle(incoming) {
                                 emit(&out);
+                            }
+                        }
+                        // Naturalny koniec nie wywołuje Sink::stop w Librespot.
+                        // Robimy to jawnie po zdarzeniu, aby adapter tempa
+                        // wypchnął ogon już zdekodowanych próbek.
+                        if ended {
+                            if let Some(eng) = engine.as_ref() {
+                                eng.player.stop();
                             }
                         }
                     }
@@ -376,6 +392,7 @@ async fn main() {
                         // Najpierw wiążemy playId, POTEM ładujemy - inaczej pierwsze
                         // PlayRequestIdChanged mogłoby przyjść przed dowiązaniem.
                         playtracker.begin_play(play_id, &uri, position_ms);
+                        eng.tempo.begin_track(uri.starts_with("spotify:episode:"));
                         eng.player.load(parsed, true, position_ms);
                         // ack = komenda zakolejkowana, nie "leci dźwięk".
                         emit(&protocol::ack_event(request_id));
@@ -394,6 +411,7 @@ async fn main() {
                     Command::Stop => match engine.as_ref() {
                         Some(eng) => {
                             playtracker.request_stop();
+                            eng.tempo.reset_stream();
                             eng.player.stop();
                             emit(&protocol::ack_event(request_id));
                         }
@@ -401,7 +419,11 @@ async fn main() {
                     },
 
                     Command::Seek { position_ms } => match engine.as_ref() {
-                        Some(eng) => { eng.player.seek(position_ms); emit(&protocol::ack_event(request_id)); }
+                        Some(eng) => {
+                            eng.tempo.reset_stream();
+                            eng.player.seek(position_ms);
+                            emit(&protocol::ack_event(request_id));
+                        }
                         None => emit(&protocol::error_event(Some(request_id), code::NOT_INITIALIZED, "najpierw initialize")),
                     },
 
@@ -411,6 +433,19 @@ async fn main() {
                             emit(&protocol::ack_event(request_id));
                         }
                         None => emit(&protocol::error_event(Some(request_id), code::NOT_INITIALIZED, "najpierw initialize")),
+                    },
+
+                    Command::Speed { value } => match engine.as_ref() {
+                        Some(eng) => match eng.tempo.set_rate(value) {
+                            Ok(()) => emit(&protocol::ack_event(request_id)),
+                            Err(message) => emit(&protocol::error_event(
+                                Some(request_id),
+                                code::TEMPO_UNAVAILABLE,
+                                &message,
+                            )),
+                        },
+                        None => emit(&protocol::error_event(
+                            Some(request_id), code::NOT_INITIALIZED, "najpierw initialize")),
                     },
 
                     Command::Shutdown => {

@@ -38,6 +38,7 @@ cpal = "0.16"
 serde_json = "1"
 log = "0.4"
 env_logger = { version = "0.11", default-features = false, features = ["humantime"] }
+windows-sys = { version = "0.61.2", features = ["Win32_Foundation", "Win32_System_LibraryLoader"] }
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "time", "io-std", "io-util"] }
 
 # Wymuszenie wersji, którą upstream librespot v0.8.0 ma w swoim Cargo.lock.

@@ -32,6 +32,7 @@ public static class LibrespotHostContract
     public const string CommandStop = "stop";
     public const string CommandSeek = "seek";
     public const string CommandVolume = "volume";
+    public const string CommandSpeed = "speed";
     public const string CommandShutdown = "shutdown";
 }
 

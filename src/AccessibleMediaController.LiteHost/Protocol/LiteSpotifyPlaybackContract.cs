@@ -39,6 +39,8 @@ internal static class LiteSpotifyPlaybackContract
         var position = LiteArgs.ReadDouble(
             args, "positionSeconds", 0d, 0d, 86_400d);
         var volume = LiteArgs.ReadInt(args, "volume", 35, 0, 100);
+        var playbackRate = LiteArgs.ReadDouble(
+            args, "playbackRate", 1d, 0.5d, 2d);
         var serviceType = kind == MediaItemKind.Episode ? "episode" : "track";
         return new LiteSpotifyPlayRequest(
             new MediaItem
@@ -53,11 +55,13 @@ internal static class LiteSpotifyPlaybackContract
                 IsAvailable = true
             },
             TimeSpan.FromSeconds(position),
-            volume);
+            volume,
+            playbackRate);
     }
 }
 
 internal sealed record LiteSpotifyPlayRequest(
     MediaItem Item,
     TimeSpan Position,
-    int Volume);
+    int Volume,
+    double PlaybackRate);

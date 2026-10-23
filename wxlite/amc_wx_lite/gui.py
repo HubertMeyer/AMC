@@ -5014,7 +5014,8 @@ class FrontierSmartDevicesDialog(wx.Dialog):
                     else "Wybierz zapisane urządzenie albo wyszukaj nowe. "
                 )
                 + "Ręczny adres jest dostępny jako opcja awaryjna. "
-                "PIN zostanie zapisany bezpiecznie w Menedżerze poświadczeń Windows."
+                "PIN NetRemote, czyli kod zdalnego sterowania sieciowego, "
+                "zostanie zapisany bezpiecznie w Menedżerze poświadczeń Windows."
             ),
         )
         self.devices = wx.ListBox(self)
@@ -5023,9 +5024,9 @@ class FrontierSmartDevicesDialog(wx.Dialog):
         self.address_label = wx.StaticText(self, label="&Lokalny adres IP:")
         self.address = wx.TextCtrl(self)
         self.address.SetName("Lokalny adres IP urządzenia")
-        self.pin_label = wx.StaticText(self, label="&PIN urządzenia:")
+        self.pin_label = wx.StaticText(self, label="&PIN NetRemote urządzenia:")
         self.pin = wx.TextCtrl(self, style=wx.TE_PASSWORD)
-        self.pin.SetName("PIN urządzenia Frontier Smart, pole chronione")
+        self.pin.SetName("PIN NetRemote urządzenia Frontier Smart, pole chronione")
 
         self.status = wx.StaticText(self, label="Gotowe")
         self.status.SetName("Stan konfiguracji: Gotowe")
@@ -5253,7 +5254,7 @@ class FrontierSmartDevicesDialog(wx.Dialog):
         if not self._state.pin_allowed:
             return
         self.pin.SetName(
-            f"PIN urządzenia {self._state.target_label}, pole chronione"
+            f"PIN NetRemote urządzenia {self._state.target_label}, pole chronione"
         )
         self.pin_label.Show()
         self.pin.Show()
@@ -11856,6 +11857,7 @@ class LiteFrame(wx.Frame):
                 "external_id": intent.service_id,
                 "kind": intent.kind,
                 "volume": self.options.volume,
+                "playback_rate": self._session_default_rate(SessionId.SPOTIFY),
                 **({"artist": intent.artist} if intent.artist else {}),
             }),
             done,

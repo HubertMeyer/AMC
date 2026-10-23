@@ -31,6 +31,29 @@ class ImmediateRunner:
             failed(error)
 
 
+def test_spotify_rate_command_reaches_the_embedded_engine() -> None:
+    calls = []
+    selections = []
+    spoken = []
+    frame = SimpleNamespace(
+        navigator=SimpleNamespace(active=SessionId.SPOTIFY),
+        _runtime_rate_by_session={},
+        rate_choice=SimpleNamespace(SetSelection=selections.append),
+        announcer=SimpleNamespace(say=spoken.append),
+        client=SimpleNamespace(
+            set_rate=lambda value, session_id: calls.append((value, session_id))
+        ),
+        runner=ImmediateRunner(),
+    )
+
+    LiteFrame._set_rate(frame, 1.25)
+
+    assert calls == [(1.25, "spotify")]
+    assert selections
+    assert spoken == ["Prędkość 1,25 razy"]
+    assert frame._runtime_rate_by_session[SessionId.SPOTIFY] == 1.25
+
+
 def test_deferred_spotify_feedback_outlasts_native_focus_speech(monkeypatch) -> None:
     scheduled = []
     shown = []
@@ -993,6 +1016,7 @@ def test_spotify_playback_is_handed_to_librespot_without_committing_early() -> N
         announcer=SimpleNamespace(say=messages.append),
         runner=ImmediateRunner(),
         options=SimpleNamespace(volume=37),
+        _session_default_rate=lambda _session: 1.5,
         _pending_spotify_playback=None,
         _pending_playback_session=None,
         _refresh_status=lambda: refreshed.append(True),
@@ -1010,6 +1034,7 @@ def test_spotify_playback_is_handed_to_librespot_without_committing_early() -> N
         "external_id": "private",
         "kind": "track",
         "volume": 37,
+        "playback_rate": 1.5,
     }]
     assert frame._pending_spotify_playback is intent
     assert frame._pending_playback_session is SessionId.SPOTIFY

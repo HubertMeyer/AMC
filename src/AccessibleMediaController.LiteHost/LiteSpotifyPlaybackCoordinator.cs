@@ -22,6 +22,7 @@ internal sealed class LiteSpotifyPlaybackCoordinator : IDisposable
     private MediaItem? currentItem;
     private string? selectedDeviceName;
     private int volume = 35;
+    private double playbackRate = 1d;
     private bool muted;
     private bool paused;
     private bool playing;
@@ -39,6 +40,7 @@ internal sealed class LiteSpotifyPlaybackCoordinator : IDisposable
             events = eventSink;
             currentItem = request.Item;
             volume = request.Volume;
+            playbackRate = request.PlaybackRate;
             paused = false;
             playing = false;
             preparing = true;
@@ -49,7 +51,7 @@ internal sealed class LiteSpotifyPlaybackCoordinator : IDisposable
             request.Item,
             request.Position,
             effectiveVolume,
-            playbackRate: 1d);
+            request.PlaybackRate);
         return new
         {
             ok = true,
@@ -208,6 +210,27 @@ internal sealed class LiteSpotifyPlaybackCoordinator : IDisposable
         };
     }
 
+    internal object SetRate(JsonElement args)
+    {
+        SpotifyLibrespotMediaOutput? target;
+        double rate;
+        lock (gate)
+        {
+            rate = LiteArgs.ReadDouble(
+                args, "rate", playbackRate, 0.5d, 2d);
+            playbackRate = rate;
+            target = output;
+        }
+        target?.SetPlaybackRate(rate);
+        return new
+        {
+            rate,
+            engine = SessionId,
+            sessionId = SessionId,
+            queue = false
+        };
+    }
+
     internal object ToggleMute()
     {
         SpotifyLibrespotMediaOutput? target;
@@ -239,6 +262,7 @@ internal sealed class LiteSpotifyPlaybackCoordinator : IDisposable
         bool isMuted;
         bool isPreparing;
         int currentVolume;
+        double currentRate;
         lock (gate)
         {
             item = currentItem;
@@ -248,6 +272,7 @@ internal sealed class LiteSpotifyPlaybackCoordinator : IDisposable
             isMuted = muted;
             isPreparing = preparing;
             currentVolume = volume;
+            currentRate = playbackRate;
         }
         return new
         {
@@ -262,7 +287,7 @@ internal sealed class LiteSpotifyPlaybackCoordinator : IDisposable
             positionSeconds = target?.Position.TotalSeconds ?? 0d,
             durationSeconds = item?.Duration.TotalSeconds ?? 0d,
             volume = currentVolume,
-            rate = 1d,
+            rate = currentRate,
             bufferedSeconds = 0d,
             behindLiveSeconds = 0d
         };

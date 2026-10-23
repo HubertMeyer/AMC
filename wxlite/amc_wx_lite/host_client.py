@@ -740,6 +740,7 @@ class LiteHostClient:
         volume: int,
         artist: str = "",
         position_seconds: float = 0.0,
+        playback_rate: float = 1.0,
     ) -> Any:
         """Play one catalogue item without moving credentials through Python."""
         return self.call(
@@ -752,6 +753,7 @@ class LiteHostClient:
                 "artist": artist,
                 "volume": volume,
                 "positionSeconds": max(0.0, float(position_seconds)),
+                "playbackRate": min(2.0, max(0.5, float(playback_rate))),
             },
             timeout=60.0,
         )

@@ -2909,8 +2909,7 @@ internal sealed class LiteEngineHandlers : IDisposable
         var target = ResolveTransportTarget(args);
         if (target.Engine == "spotify")
         {
-            throw new LiteRequestException(
-                "Natywna sesja Spotify nie obsługuje zmiany prędkości odtwarzania.");
+            return RequireSpotifyPlayback().SetRate(args);
         }
         double current;
         lock (_gate) current = target.Engine == "radio" ? _radioRate : _filesRate;

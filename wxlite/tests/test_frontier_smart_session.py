@@ -219,7 +219,7 @@ def test_frontier_smart_device_dialog_has_explicit_names_and_keyboard_contract()
     assert 'self.devices.SetName("Zapisane urządzenia Frontier Smart")' in dialog
     assert 'self.address.SetName("Lokalny adres IP urządzenia")' in dialog
     assert (
-        'self.pin.SetName("PIN urządzenia Frontier Smart, pole chronione")'
+        'self.pin.SetName("PIN NetRemote urządzenia Frontier Smart, pole chronione")'
         in dialog
     )
     assert 'self.manual_button.SetName("Wpisz lokalny adres IP ręcznie")' in dialog
@@ -409,10 +409,13 @@ def test_frontier_smart_discovery_announces_device_before_pin_and_focuses_pin() 
     assert pin_label.shown is True
     assert pin.shown is True
     assert pin.focused is True
-    assert pin.name == "PIN urządzenia Teufel RADIO 3SIXTY, pole chronione"
+    assert pin.name == "PIN NetRemote urządzenia Teufel RADIO 3SIXTY, pole chronione"
     assert statuses == [(
         "Wykryto urządzenie Teufel RADIO 3SIXTY. "
-        "Wpisz jego PIN, a następnie wybierz Połącz i zapisz.",
+        "Wpisz czterocyfrowy PIN NetRemote, nie hasło Wi-Fi. "
+        "W Teufel RADIO 3SIXTY ustawienie fabryczne to 1234; można je "
+        "sprawdzić w menu radia: Ustawienia systemowe, Sieć, Ustawienia "
+        "NetRemote PIN. Następnie wybierz Połącz i zapisz.",
         True,
     )]
     assert "192.168.1.55" not in statuses[0][0]

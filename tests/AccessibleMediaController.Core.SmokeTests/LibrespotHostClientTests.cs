@@ -331,16 +331,27 @@ internal static class LibrespotHostClientTests
         client.SeekAsync(TimeSpan.FromSeconds(90)).GetAwaiter().GetResult();
         client.PlayAsync("spotify:track:HHH", TimeSpan.FromSeconds(30), 70)
             .GetAwaiter().GetResult();
+        client.SetPlaybackRateAsync(1.75d).GetAwaiter().GetResult();
 
         var commands = host.WrittenCommands();
-        Check(commands[0]["volume"]!.GetValue<int>() == 100, "Głośność musi być ograniczona do 100");
-        Check(commands[1]["positionMs"]!.GetValue<long>() == 0,
+        var volume = commands.Single(command =>
+            command["command"]!.GetValue<string>() == LibrespotHostContract.CommandVolume);
+        var seeks = commands.Where(command =>
+            command["command"]!.GetValue<string>() == LibrespotHostContract.CommandSeek).ToArray();
+        var play = commands.Single(command =>
+            command["command"]!.GetValue<string>() == LibrespotHostContract.CommandPlay);
+        var speed = commands.Single(command =>
+            command["command"]!.GetValue<string>() == LibrespotHostContract.CommandSpeed);
+        Check(volume["volume"]!.GetValue<int>() == 100, "Głośność musi być ograniczona do 100");
+        Check(seeks[0]["positionMs"]!.GetValue<long>() == 0,
             "Ujemna pozycja przewijania musi być ścięta do zera");
-        Check(commands[2]["positionMs"]!.GetValue<long>() == 90_000,
+        Check(seeks[1]["positionMs"]!.GetValue<long>() == 90_000,
             "Przewijanie musi realnie przejść do hosta w milisekundach");
-        Check(commands[3]["positionMs"]!.GetValue<long>() == 30_000,
+        Check(play["positionMs"]!.GetValue<long>() == 30_000,
             "Pozycja startowa utworu musi realnie przejść do hosta");
-        Check(commands[3]["playId"]!.GetValue<long>() == 70, "playId nadaje AMC, nie host");
+        Check(play["playId"]!.GetValue<long>() == 70, "playId nadaje AMC, nie host");
+        Check(Math.Abs(speed["value"]!.GetValue<double>() - 1.75d) < 0.001d,
+            "Prędkość musi realnie przejść do hosta jako polecenie speed");
         Check(client.HostVolume == 100, "Klient musi pamiętać głośność przekazaną hostowi");
 
         var durations = new List<TimeSpan>();

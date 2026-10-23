@@ -193,6 +193,7 @@ def test_spotify_play_sends_only_safe_item_identity_and_playback_values() -> Non
         artist="Wykonawca",
         volume=37,
         position_seconds=12.5,
+        playback_rate=1.25,
     )
 
     assert calls == [(
@@ -205,6 +206,7 @@ def test_spotify_play_sends_only_safe_item_identity_and_playback_values() -> Non
             "artist": "Wykonawca",
             "volume": 37,
             "positionSeconds": 12.5,
+            "playbackRate": 1.25,
         },
         60.0,
     )]

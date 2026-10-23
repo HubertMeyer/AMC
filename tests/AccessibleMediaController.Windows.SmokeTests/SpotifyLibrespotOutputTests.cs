@@ -9,7 +9,7 @@ using AccessibleMediaController.Windows.Services;
 ///
 /// Mierzone sa te zachowania, ktore uzytkownik z czytnikiem ekranu uslyszy:
 /// zdarzenia Preparing/Started/Duration/Ended/Failed takie jak w sesji SDK,
-/// IsPreparing, brak zmiany tempa, realne przejscie glosnosci/czasu/przewijania
+/// IsPreparing, realna zmiana tempa oraz przejscie glosnosci/czasu/przewijania
 /// do hosta oraz to, ze pauza i zatrzymanie w trakcie przygotowania NIE wlaczaja
 /// pozniej muzyki.
 ///
@@ -28,7 +28,7 @@ internal static class SpotifyLibrespotOutputTests
         StopWPrzygotowaniuNieWlaczaMuzyki();
         StanStaregoPlayIdWOknieBezTransportu();
         GlosnoscCzasIPrzewijanieIdaDoHosta();
-        TempoOdtwarzaniaNieJestObslugiwane();
+        TempoOdtwarzaniaIdzieDoHosta();
         KontenerNieJestOdtwarzany();
         BladUtworuJestPowiedzianyWprost();
         AwariaHostaJestPowiedzianaWprost();
@@ -284,15 +284,20 @@ internal static class SpotifyLibrespotOutputTests
             "Po przewinięciu pozycja czytana użytkownikowi musi się zgadzać");
     }
 
-    private static void TempoOdtwarzaniaNieJestObslugiwane()
+    private static void TempoOdtwarzaniaIdzieDoHosta()
     {
         using var scena = Scena.Nowa();
-        Check(!scena.Output.SupportsPlaybackRate,
-            "Sesja Librespot nie obsługuje zmiany tempa, tak jak sesja SDK");
+        Check(scena.Output.SupportsPlaybackRate,
+            "Sesja Librespot musi ujawniać prawdziwą obsługę prędkości");
+        scena.Output.Play(Utwor(), TimeSpan.Zero, 60, 1.25d);
+        scena.Host.Settle();
         scena.Output.SetPlaybackRate(1.5d);
         scena.Host.Settle();
-        Check(scena.Host.CommandNames().All(name => name != "playbackRate"),
-            "Brak obsługi tempa nie może wysyłać do hosta nieistniejącego polecenia");
+        var predkosci = scena.Host.Commands("speed", minimum: 2);
+        Check(Math.Abs(predkosci[0].Raw["value"]!.GetValue<double>() - 1.25d) < 0.001d,
+            "Prędkość startowa musi dojść do hosta przed odtwarzaniem");
+        Check(Math.Abs(predkosci[^1].Raw["value"]!.GetValue<double>() - 1.5d) < 0.001d,
+            "Zmiana prędkości w trakcie odtwarzania musi dojść do hosta");
     }
 
     private static void KontenerNieJestOdtwarzany()
