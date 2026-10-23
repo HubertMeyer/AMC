@@ -1039,7 +1039,7 @@ def test_spotify_playback_is_handed_to_librespot_without_committing_early() -> N
     assert frame._pending_spotify_playback is intent
     assert frame._pending_playback_session is SessionId.SPOTIFY
     assert restored == []
-    assert messages == []
+    assert messages == ["Przygotowywanie odtwarzania Spotify"]
     assert refreshed == [True]
 
 

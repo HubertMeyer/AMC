@@ -9,6 +9,7 @@ internal sealed class LiteFrontierSmartPinStore(string releaseProfile)
 {
     private const uint GenericCredential = 1;
     private const uint PersistLocalMachine = 2;
+    private const int ErrorNotFound = 1168;
     private readonly string profile = SafeProfile(releaseProfile);
 
     internal string TargetName(string deviceId)
@@ -80,8 +81,21 @@ internal sealed class LiteFrontierSmartPinStore(string releaseProfile)
         }
     }
 
-    public void Delete(string deviceId) =>
-        _ = CredDelete(TargetName(deviceId), GenericCredential, 0);
+    public void Delete(string deviceId)
+    {
+        var deleted = CredDelete(TargetName(deviceId), GenericCredential, 0);
+        var errorCode = deleted ? 0 : Marshal.GetLastWin32Error();
+        ThrowIfDeleteFailed(deleted, errorCode);
+    }
+
+    internal static void ThrowIfDeleteFailed(bool deleted, int errorCode)
+    {
+        if (deleted || errorCode == ErrorNotFound)
+            return;
+        throw new Win32Exception(
+            errorCode,
+            "Nie udało się bezpiecznie usunąć PIN-u urządzenia.");
+    }
 
     private static string SafeProfile(string value)
     {

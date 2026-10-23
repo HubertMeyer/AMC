@@ -155,6 +155,7 @@ internal sealed class LiteFrontierSmartCoordinator : IDisposable
         {
             var settings = ReadSettings();
             var device = ResolveDevice(settings, deviceId);
+            pins.Delete(device.Id);
             settings.Devices.Remove(device);
             if (string.Equals(
                     settings.SelectedDeviceId, device.Id, StringComparison.OrdinalIgnoreCase))
@@ -162,7 +163,6 @@ internal sealed class LiteFrontierSmartCoordinator : IDisposable
                 settings.SelectedDeviceId = settings.Devices.FirstOrDefault()?.Id;
             }
             WriteSettings(settings);
-            pins.Delete(device.Id);
             return LiteFrontierSmartContract.CreateDevicesResult(
                 settings,
                 $"Usunięto urządzenie {UserTitle(device)} z AMC.");

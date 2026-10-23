@@ -26,6 +26,8 @@
              Link="PodcastChapterClient.cs" />
     <Compile Include="..\..\src\AccessibleMediaController.LiteHost\LiteFreshProfileInitializer.cs"
              Link="LiteFreshProfileInitializer.cs" />
+    <Compile Include="..\..\src\AccessibleMediaController.LiteHost\LiteFrontierSmartPinStore.cs"
+             Link="LiteFrontierSmartPinStore.cs" />
     <Compile Include="..\..\src\AccessibleMediaController.LiteHost\LitePlaybackHistoryMutation.cs"
              Link="LitePlaybackHistoryMutation.cs" />
     <Compile Include="..\..\src\AccessibleMediaController.LiteHost\LiteRadioLibraryMutation.cs"

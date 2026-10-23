@@ -11873,6 +11873,7 @@ class LiteFrame(wx.Frame):
             return
         self._pending_spotify_playback = intent
         self._pending_playback_session = SessionId.SPOTIFY
+        self.announcer.say("Przygotowywanie odtwarzania Spotify")
 
         def done(_payload: dict) -> None:
             # Przyjęcie polecenia nie znaczy jeszcze, że słychać dźwięk.

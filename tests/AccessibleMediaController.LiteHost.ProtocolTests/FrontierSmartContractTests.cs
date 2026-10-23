@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.ComponentModel;
 using System.Net;
 using System.Net.Sockets;
 using AccessibleMediaController.Core.Devices.FrontierSmart;
@@ -20,6 +21,30 @@ internal static class FrontierSmartContractTests
         ListsUseOnlyIntentionalLabels();
         DeviceAndSnapshotResultsDoNotExposeAddressOrRuntimeTypes();
         TransportAndNumericArgumentsAreStrict();
+        PinDeletionFailsClosedExceptWhenCredentialIsAlreadyMissing();
+    }
+
+    private static void PinDeletionFailsClosedExceptWhenCredentialIsAlreadyMissing()
+    {
+        LiteFrontierSmartPinStore.ThrowIfDeleteFailed(true, 5);
+        LiteFrontierSmartPinStore.ThrowIfDeleteFailed(false, 1168);
+
+        Win32Exception? failure = null;
+        try
+        {
+            LiteFrontierSmartPinStore.ThrowIfDeleteFailed(false, 5);
+        }
+        catch (Win32Exception error)
+        {
+            failure = error;
+        }
+
+        Check(failure is not null && failure.NativeErrorCode == 5,
+            "błąd usunięcia poświadczenia został zignorowany");
+        Check(failure!.Message.StartsWith(
+                "Nie udało się bezpiecznie usunąć PIN-u urządzenia.",
+                StringComparison.Ordinal),
+            "błąd usunięcia PIN-u nie ma bezpiecznego komunikatu użytkowego");
     }
 
     private static void SnapshotFallsBackWhenDeviceRejectsGetMultiple()
