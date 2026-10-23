@@ -258,13 +258,14 @@ zmian, wymagający korekty użytkownika:
   krótkie nazwy `AMC Test — data, godzina` i `AMC Public — data, godzina`,
   z technicznymi identyfikatorami pozostawionymi poza zwykłą nazwą.
   Szczegóły: [NAME-001-amc-test.md](NAME-001-amc-test.md).
-- `FRONTIER-001` — **Poprawka po trzecim odbiorze NVDA została zbudowana,
-  zainstalowana i uruchomiona w zbiorczym AMC Test; czeka na ponowny odbiór
-  `Ctrl+8`, automatycznego wykrywania, fokusu i komunikatu przed PIN-em** — pusta sesja automatycznie szuka pierwszego urządzenia
-  FSAPI/UNDOK. Po zapisaniu urządzenia `Ctrl+F5` pokazuje listę bez ponownego
-  skanowania, a osobny przycisk pozwala szukać nowych urządzeń; ręczny adres
-  jest opcją awaryjną. Bezpieczny PIN, transport, tryby i presety pozostają
-  dostępne wyłącznie w AMC Test.
+- `FRONTIER-001` — **Czwarta korekta źródłowa po zgłoszeniu z 23.10.2026 ma
+  zaliczone testy i kompilację Release, ale nie została zainstalowana ani
+  uruchomiona; czeka na sprzętowy odbiór Teufela z NVDA 24.10.2026** —
+  `Ctrl+8`, `Ctrl+F5` i ręczny adres korzystają z jednego modelu stanów.
+  AMC wymaga potwierdzonego opisu FSAPI/UNDOK i użytkowej nazwy urządzenia,
+  zanim pokaże pole PIN. Brak wyniku i błąd nie prowadzą do PIN-u. Po zapisaniu
+  urządzenia `Ctrl+F5` pokazuje listę bez ponownego skanowania. Funkcja nadal
+  pozostaje wyłącznie w profilu AMC Test.
   Szczegóły:
   [FRONTIER-001-frontier-smart-fsapi.md](FRONTIER-001-frontier-smart-fsapi.md).
 - `ARC-001` — **Oczekuje** — wspólny rdzeń poleceń dla GUI, palety, NVDA,

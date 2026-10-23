@@ -8,6 +8,7 @@ public static class LiteFrontierSmartContract
 {
     public const string DevicesOperation = "frontierSmart.devices";
     public const string DiscoverOperation = "frontierSmart.discover";
+    public const string IdentifyOperation = "frontierSmart.identify";
     public const string AddOperation = "frontierSmart.add";
     public const string RemoveOperation = "frontierSmart.remove";
     public const string SelectOperation = "frontierSmart.select";
@@ -83,6 +84,24 @@ public static class LiteFrontierSmartContract
             })
             .ToArray();
         return new { items, selectedDeviceId = selected ?? string.Empty, message = message ?? string.Empty };
+    }
+
+    public static object CreateDiscoveryResult(
+        IReadOnlyList<FrontierSmartDiscoveredDevice> devices,
+        string message)
+    {
+        var items = devices
+            .Where(device => FrontierSmartAddressPolicy.TryNormalize(
+                device.Address, out _)
+                && Clean(device.DisplayName).Length > 0)
+            .Select(device => new
+            {
+                address = device.Address,
+                label = Clean(device.DisplayName),
+                firmware = Clean(device.FirmwareVersion)
+            })
+            .ToArray();
+        return new { items, message = Clean(message) };
     }
 
     public static object CreateSnapshotResult(

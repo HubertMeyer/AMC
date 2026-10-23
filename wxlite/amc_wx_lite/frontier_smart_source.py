@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
+from enum import Enum
 
 from .list_model import Row
 
@@ -24,6 +25,160 @@ class FrontierSmartModeChoice:
     label: str
     selected: bool
     enabled: bool
+
+
+class FrontierSmartConfigurationPhase(str, Enum):
+    """Jawny stan pierwszej konfiguracji i późniejszego zarządzania."""
+
+    EMPTY = "empty"
+    SAVED_DEVICES = "saved_devices"
+    DISCOVERING = "discovering"
+    DISCOVERY_RESULTS = "discovery_results"
+    EMPTY_RESULT = "empty_result"
+    ERROR = "error"
+    MANUAL_ADDRESS = "manual_address"
+    IDENTIFYING = "identifying"
+    WAITING_FOR_PIN = "waiting_for_pin"
+
+
+@dataclass(frozen=True, slots=True)
+class FrontierSmartConfigurationState:
+    saved_devices: tuple[Row, ...]
+    selected_device_id: str
+    phase: FrontierSmartConfigurationPhase
+    message: str = ""
+    discovered_devices: tuple[tuple[str, str], ...] = ()
+    target_address: str = ""
+    target_label: str = ""
+
+    @property
+    def should_auto_discover(self) -> bool:
+        return self.phase is FrontierSmartConfigurationPhase.EMPTY
+
+    @property
+    def pin_allowed(self) -> bool:
+        return (
+            self.phase is FrontierSmartConfigurationPhase.WAITING_FOR_PIN
+            and bool(self.target_address)
+            and bool(self.target_label)
+        )
+
+
+def configuration_state(payload: object) -> FrontierSmartConfigurationState:
+    rows = device_rows(payload)
+    selected_device_id, message = device_list_state(payload)
+    return FrontierSmartConfigurationState(
+        saved_devices=rows,
+        selected_device_id=selected_device_id,
+        phase=(
+            FrontierSmartConfigurationPhase.SAVED_DEVICES
+            if rows
+            else FrontierSmartConfigurationPhase.EMPTY
+        ),
+        message=message,
+    )
+
+
+def discovery_started(
+    state: FrontierSmartConfigurationState,
+) -> FrontierSmartConfigurationState:
+    return replace(
+        state,
+        phase=FrontierSmartConfigurationPhase.DISCOVERING,
+        message="Wykrywanie urządzeń w sieci lokalnej",
+        discovered_devices=(),
+        target_address="",
+        target_label="",
+    )
+
+
+def discovery_finished(
+    state: FrontierSmartConfigurationState,
+    payload: object,
+) -> FrontierSmartConfigurationState:
+    choices = discovered_devices(payload)
+    message = payload_message(payload)
+    return replace(
+        state,
+        phase=(
+            FrontierSmartConfigurationPhase.DISCOVERY_RESULTS
+            if choices
+            else FrontierSmartConfigurationPhase.EMPTY_RESULT
+        ),
+        message=message,
+        discovered_devices=choices,
+        target_address="",
+        target_label="",
+    )
+
+
+def manual_address_started(
+    state: FrontierSmartConfigurationState,
+) -> FrontierSmartConfigurationState:
+    return replace(
+        state,
+        phase=FrontierSmartConfigurationPhase.MANUAL_ADDRESS,
+        message=(
+            "Wpisz lokalny adres IP radia, a następnie wybierz "
+            "Sprawdź urządzenie."
+        ),
+        discovered_devices=(),
+        target_address="",
+        target_label="",
+    )
+
+
+def identifying_started(
+    state: FrontierSmartConfigurationState,
+) -> FrontierSmartConfigurationState:
+    return replace(
+        state,
+        phase=FrontierSmartConfigurationPhase.IDENTIFYING,
+        message="Sprawdzanie urządzenia pod podanym adresem",
+        target_address="",
+        target_label="",
+    )
+
+
+def waiting_for_pin(
+    state: FrontierSmartConfigurationState,
+    address: str,
+    label: str,
+) -> FrontierSmartConfigurationState:
+    safe_address = _text(address)
+    safe_label = _text(label)
+    if (
+        not safe_address
+        or not safe_label
+        or safe_address.casefold() in safe_label.casefold()
+    ):
+        raise FrontierSmartPayloadError(
+            "Nie udało się potwierdzić użytkowej nazwy urządzenia Frontier Smart"
+        )
+    return replace(
+        state,
+        phase=FrontierSmartConfigurationPhase.WAITING_FOR_PIN,
+        message=(
+            f"Wykryto urządzenie {safe_label}. Wpisz jego PIN, "
+            "a następnie wybierz Połącz i zapisz."
+        ),
+        target_address=safe_address,
+        target_label=safe_label,
+    )
+
+
+def configuration_failed(
+    state: FrontierSmartConfigurationState,
+    message: str,
+) -> FrontierSmartConfigurationState:
+    return replace(
+        state,
+        phase=FrontierSmartConfigurationPhase.ERROR,
+        message=_text(message) or "Nie udało się wykonać operacji.",
+        discovered_devices=(),
+        target_address="",
+        target_label="",
+    )
 
 
 def device_rows(payload: object) -> tuple[Row, ...]:
@@ -61,7 +216,7 @@ def device_rows(payload: object) -> tuple[Row, ...]:
 def should_auto_discover_devices(payload: object) -> bool:
     """Szukaj samoczynnie wyłącznie przy pustej, nieskonfigurowanej sesji."""
 
-    return not device_rows(payload)
+    return configuration_state(payload).should_auto_discover
 
 
 def device_list_state(payload: object) -> tuple[str, str]:
@@ -84,7 +239,12 @@ def discovered_devices(payload: object) -> tuple[tuple[str, str], ...]:
             continue
         address = _text(raw.get("address"))
         label = _text(raw.get("label"))
-        if not address or not label or address in seen:
+        if (
+            not address
+            or not label
+            or address in seen
+            or address.casefold() in label.casefold()
+        ):
             continue
         seen.add(address)
         result.append((address, label))

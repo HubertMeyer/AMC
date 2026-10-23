@@ -815,6 +815,11 @@ class LiteHostClient:
     def frontier_smart_discover(self) -> Any:
         return self.call("frontierSmart.discover", timeout=15.0)
 
+    def frontier_smart_identify(self, address: str) -> Any:
+        return self.call(
+            "frontierSmart.identify", {"address": address}, timeout=15.0
+        )
+
     def frontier_smart_add(self, address: str, pin: str) -> Any:
         return self.call(
             "frontierSmart.add",
