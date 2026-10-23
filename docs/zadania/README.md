@@ -281,7 +281,7 @@ zmian, wymagający korekty użytkownika:
 - `YT-001` — **Wdrożone do ręcznego odbioru — logowanie i subskrypcje są
   odebrane; zwykłe playlisty konta, pełna regresja 2025 testów wxPython,
   testy .NET, build, atomowa instalacja i kontrolowany start AMC Test
-  23.10.2026, 22:35 są zaliczone. Pozostaje próba prawdziwej playlisty i NVDA**
+  23.10.2026, 22:41 są zaliczone. Pozostaje próba prawdziwej playlisty i NVDA**
   — oficjalne logowanie do
   konta YouTube, synchronizacja subskrypcji i zwykłych playlist oraz bezpieczny
   zakres czynności konta. Etap rozpoczęto 21 października 2026 na nowe jawne

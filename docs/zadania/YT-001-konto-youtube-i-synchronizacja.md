@@ -2,7 +2,7 @@
 
 - Status: `Wdrożone do ręcznego odbioru — logowanie i subskrypcje zostały
   wcześniej przyjęte przez użytkownika; zwykłe playlisty konta, pełna regresja,
-  build, atomowa instalacja i kontrolowany start AMC Test 23.10.2026, 22:35 są
+  build, atomowa instalacja i kontrolowany start AMC Test 23.10.2026, 22:41 są
   zaliczone. Pozostaje wyłącznie próba prawdziwej playlisty i NVDA przez
   użytkownika`. Zapis wcześniejszej
   diagnozy: [AMC-TEST-2026-10-23-youtube-secret-frontier-choice.md](AMC-TEST-2026-10-23-youtube-secret-frontier-choice.md).
@@ -761,7 +761,7 @@ Można je bezpiecznie zamknąć przyciskiem `Zamknij`.
 - Zwykłe playlisty konta nie są jeszcze częścią działającego kontraktu;
   dlatego YT-001 pozostaje `W trakcie`, mimo że logowanie i kanały działają.
 
-## Synchronizacja zwykłych playlist konta — 23 października 2026, 22:35
+## Synchronizacja zwykłych playlist konta — 23 października 2026, 22:41
 
 Ta sekcja zastępuje ostatnie ograniczenie powyżej. Zwykłe playlisty konta są
 już częścią kontraktu AMC Test. Kod, testy, build, instalacja i kontrolowany
@@ -830,7 +830,7 @@ playlisty i nawigacji NVDA przez użytkownika.
 - Pełna regresja wxPython: 2025 zaliczonych, 111 kontrolowanie pominiętych,
   13 podtestów zaliczonych. Launcher i aktualizator: 30/30.
 - Kompilacja Core, LiteHost i testów protokołu: 0 błędów i 0 ostrzeżeń.
-- Czysty kandydat zawierał 1672 pliki. Integralność i kontrolowany start
+- Ostateczny scalony kandydat zawierał 1674 pliki. Integralność i kontrolowany start
   kandydata oraz zainstalowanej kopii przeszły przed widocznym uruchomieniem.
 - Instalacja atomowa i ponowny start zostały wykonane dopiero po potwierdzeniu,
   że żaden plik roboczy nagrania AMC nie jest aktywnie zapisywany.
@@ -851,8 +851,10 @@ playlisty i nawigacji NVDA przez użytkownika.
 
 ### Wersja, commit i publikacja
 
-Zainstalowano i uruchomiono `AMC Test — 23.10.2026, 22:35`, rewizja źródłowa
-`0e8d219f5c759b28183063cefd8d9cedde06de19`, identyfikator paczki `d8cceab5`.
+Implementacja playlist ma commit
+`0e8d219f5c759b28183063cefd8d9cedde06de19`. Zainstalowano i uruchomiono
+ostateczną scaloną wersję `AMC Test — 23.10.2026, 22:41`, rewizja źródłowa
+`9e8d3eab643b579215719bc52ac77b215f0c6fea`, identyfikator paczki `ce7898a4`.
 Uruchomione procesy `AMC.exe`, `python.exe` i `amc_lite_host.exe` pochodzą z
 `D:\Projekty Codex\AMC Python`. AMC Public, instalator i GitHub pozostają bez
 zmian.
