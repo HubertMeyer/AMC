@@ -275,8 +275,9 @@ zmian, wymagający korekty użytkownika:
 - `YT-001` — **W trakcie — pierwszy prawdziwy OAuth z kompletną parą klienta
   ujawnił zbyt krótki, pięciominutowy czas lokalnego odbiornika. Źródłowa
   korekta wydłuża go do 15 minut, bezpiecznie anuluje oczekiwanie przy
-  zamykaniu okna i przeszła testy ukierunkowane; pozostały build, instalacja,
-  ponowny prawdziwy OAuth oraz ręczny odbiór NVDA** — oficjalne logowanie do
+  zamykaniu okna i jest zainstalowana jako AMC Test 23.10.2026, 20:14 po
+  pełnej regresji; pozostały ponowny prawdziwy OAuth oraz ręczny odbiór NVDA**
+  — oficjalne logowanie do
   konta YouTube, synchronizacja subskrypcji i zwykłych playlist oraz bezpieczny
   zakres czynności konta. Etap rozpoczęto 21 października 2026 na nowe jawne
   polecenie użytkownika; sam start nadal nie loguje konta ani nie otwiera

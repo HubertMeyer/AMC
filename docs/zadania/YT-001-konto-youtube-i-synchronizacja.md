@@ -697,17 +697,35 @@ wspólną bramę generacji.
 - Koordynator konta YouTube: 6/6 scenariuszy zaliczonych, w tym minimalne
   piętnastominutowe okno dostępnego logowania.
 - Testy Python kontraktu konta i etykiet okna: 6/6 zaliczonych.
+- Fundament OAuth: 11/11 scenariuszy; protokół LiteHost: 27/27 zestawów.
+- Pełna regresja wxPython: 2019 zaliczonych, 111 kontrolowanie pominiętych,
+  11 zaliczonych podtestów. Testy launchera i aktualizatora: 30/30.
+- Kompilacja składników .NET: bez ostrzeżeń i błędów. Kandydat: 1673 pliki;
+  integralność i kontrolowany start zaliczone przed instalacją.
 - Pierwsze uruchomienie testów w zainstalowanym runtime nie było testem kodu:
   ten runtime celowo nie zawiera `pytest`. Test powtórzono w istniejącym
   środowisku testowym projektu, bez instalowania zależności globalnych.
 
+Pierwsza próba instalacji została bezpiecznie zatrzymana przez aktualizator:
+po ręcznym zamknięciu okna pozostał proces starego AMC Test PID 3284. Proces
+pochodził dokładnie z `D:\Projekty Codex\AMC Python\runtime\python.exe`, nie
+miał już potomnego silnika ani aktywnego nagrywania. Zwykłe zamknięcie zostało
+odrzucone, więc zakończono tylko ten jeden potwierdzony PID. Ponowiona atomowa
+instalacja przeszła, a ponieważ aktualizator kończy kopiowanie w osobnym
+procesie, zaczekano na jego rzeczywiste zakończenie i dopiero wtedy odczytano
+nowy manifest. Integralność i kontrolowany start zainstalowanej kopii przeszły.
+
 ### Znane ograniczenia
 
-To jest na razie zmiana źródłowa z zaliczonymi testami ukierunkowanymi. Nie
-zbudowano jeszcze pakietu, nie zainstalowano poprawionej wersji i nie wykonano
-ponownego prawdziwego OAuth ani podglądu subskrypcji.
+Nie wykonano jeszcze ponownego prawdziwego OAuth w poprawionej instalacji ani
+podglądu subskrypcji. Dwie pobrane kopie konfiguracji Google pozostają
+zachowane do potwierdzenia działania; potem należy je usunąć i osobno wyłączyć
+stary, utracony sekret w konsoli Google.
 
 ### Wersja i commit
 
-Wersja i commit zostaną wpisane po zbudowaniu, instalacji i weryfikacji
-konkretnego kandydata AMC Test. AMC Public i GitHub pozostają bez zmian.
+Zainstalowano i uruchomiono `AMC Test — 23.10.2026, 20:14`, rewizja
+`4fc7abfe281b919b0a68eba3ae7334d74ba85b2b`, identyfikator paczki `5810063c`.
+Potwierdzony proces PID 18752 pochodzi z
+`D:\Projekty Codex\AMC Python\runtime\python.exe`. AMC Public i GitHub
+pozostają bez zmian.
