@@ -18,6 +18,15 @@ zamyka oczekiwanie na ponowne sprawdzenie tej funkcji z NVDA. Transmisje na
 żywo, logowanie Google i inne zadania YouTube zachowują własne, niezależne
 statusy i nie są domyślnie uznane za odebrane przez tę decyzję.
 
+## Porządek po odbiorze — 23 października 2026
+
+Po przyjęciu etapu usunięto 13 odtwarzalnych katalogów `bin`, `obj` i
+`.pytest_cache` wyłącznie z
+`D:\Projekty Codex\AMC worktrees\youtube-import-nvda`. Zwolniono około
+292 MiB. Usunięcie nie jest odwracalne, ale całą zawartość można ponownie
+wytworzyć przez build i testy. Nie usunięto źródeł, historii Git,
+dokumentacji, instalacji AMC ani danych użytkownika.
+
 **Korekta użytkownika z 23.10.2026 po odbiorze instalacji 11:24:** dodanie
 kanału kończy się powodzeniem, lecz bardzo szybkie `Ctrl+V` zaraz po `Ctrl+N`
 powoduje krótkie przymrożenie. Formularz nie przechwytywał własnego wklejania;
