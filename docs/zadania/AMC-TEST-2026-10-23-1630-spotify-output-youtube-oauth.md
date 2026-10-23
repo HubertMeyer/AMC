@@ -104,6 +104,13 @@ Google odrzucił późniejszą wymianę na token. Po tej instalacji trzeba ponow
 logowanie. Dopiero wynik w AMC rozstrzygnie, czy konfiguracja klienta Google
 wymaga dalszej korekty.
 
+Korekta po ręcznym odbiorze później tego samego dnia: ponowne logowanie również
+nie utworzyło poświadczenia. Bezpieczna diagnoza oficjalnego punktu tokenów
+wykazała, że konkretny klient desktopowy wymaga `client_secret`; instalacja
+16:30 zawierała wyłącznie identyfikator klienta. Stwierdzenie powyżej, że samo
+ponowienie rozstrzygnie konfigurację, jest więc historyczne. Poprawka istnieje
+w źródle jako `3e57b686`, ale ta instalacja nadal jej nie zawiera.
+
 Ręczny test fizycznego dźwięku Spotify nadal jest potrzebny. Automatyczny test
 potwierdza wybór urządzenia i pierwszą komendę hosta, ale nie zastępuje odsłuchu
 na komputerze użytkownika. Nie utworzono instalatora AMC Public, nie wykonano

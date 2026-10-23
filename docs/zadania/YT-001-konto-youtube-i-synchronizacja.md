@@ -1,6 +1,6 @@
 # YT-001 — konto YouTube i synchronizacja
 
-- Status: `W trakcie odbioru — po pierwszej prawdziwej próbie OAuth poprawiono przedwczesny komunikat strony powrotu i dodano bezpieczne rozróżnienie błędów konfiguracji Google. AMC Test 23.10.2026, 16:30 został zbudowany, zainstalowany i uruchomiony; zainstalowany host potwierdza dostępność konta tylko do odczytu. Pozostało ponowne prawdziwe logowanie i ręczny odbiór NVDA`. Zapis bieżącej instalacji: [AMC-TEST-2026-10-23-1630-spotify-output-youtube-oauth.md](AMC-TEST-2026-10-23-1630-spotify-output-youtube-oauth.md). Wcześniejsza instalacja 15:42: [AMC-TEST-2026-10-23-1542-youtube-command-wire-fix.md](AMC-TEST-2026-10-23-1542-youtube-command-wire-fix.md).
+- Status: `W trakcie — odbiór instalacji 16:30 potwierdził, że Google przekazuje zgodę, lecz utworzony klient desktopowy wymaga także client_secret przy wymianie kodu. Poprawka źródłowa 3e57b686 jest przetestowana; nowa paczka czeka na lokalne zapisanie sekretu tego samego klienta OAuth, potem na instalację i prawdziwy odbiór NVDA`. Zapis bieżącej, jeszcze niepoprawionej instalacji: [AMC-TEST-2026-10-23-1630-spotify-output-youtube-oauth.md](AMC-TEST-2026-10-23-1630-spotify-output-youtube-oauth.md). Bieżąca diagnoza: [AMC-TEST-2026-10-23-youtube-secret-frontier-choice.md](AMC-TEST-2026-10-23-youtube-secret-frontier-choice.md).
 - Utworzono: 18 października 2026
 - Ostatnia aktualizacja: 23 października 2026
 - Obszar: YouTube, OAuth, Biblioteka, wyszukiwanie i bezpieczne poświadczenia
@@ -115,15 +115,21 @@ minimalnym zakresem `youtube.readonly`. Identyfikator klienta może być częśc
 aplikacji, natomiast token użytkownika pozostaje chronionym poświadczeniem
 lokalnym.
 
+Korekta z 23.10.2026: konkretny klient utworzony w Google Cloud ma również
+`client_secret` i punkt tokenów odrzuca żądanie bez tej wartości. W aplikacji
+komputerowej nie jest to sekret, który da się kryptograficznie ukryć przed
+właścicielem komputera, ale nadal nie wolno umieszczać go w Git, logu, nazwie
+dostępnościowej ani wierszu poleceń procesu.
+
 Dla AMC Test ekran zgody może działać w trybie Testing, a konto użytkownika
 zostanie dodane jako nazwany test user. Google ogranicza taki tryb do 100
 użytkowników, a autoryzacja testowa wygasa po 7 dniach. Dlatego nie jest to
 model końcowy. AMC Public powinien używać osobnego projektu produkcyjnego i
 przejść wymaganą weryfikację marki oraz zakresu, aby zwykły użytkownik jedynie
-wybrał konto Google. Na tym etapie użytkownik nie ma przekazywać tokenu,
-sekretu ani własnego identyfikatora. Potrzebna będzie później wyłącznie decyzja,
-które konto opiekuna ma być właścicielem projektu Google Cloud oraz dodanie
-konta odbiorcy do listy testowej.
+wybrał konto Google. Użytkownik końcowy nie przekazuje tokenu ani własnego
+identyfikatora. Dla bieżącego prototypu opiekun projektu musi jednak jednorazowo
+zapisać lokalnie sekret tego samego klienta desktopowego; ta korekta z
+23.10.2026 zastępuje wcześniejsze założenie, że sam identyfikator wystarczy.
 
 Oficjalne źródła sprawdzone 23.10.2026:
 [OAuth dla aplikacji zainstalowanych](https://developers.google.com/youtube/data/guides/auth/installed-apps),
@@ -151,8 +157,10 @@ oraz [tryb Testing](https://support.google.com/cloud/answer/15549945?hl=en).
 - Data rozpoczęcia: 21 października 2026 — na nowe jawne polecenie użytkownika.
 - Decyzja o kliencie Google i weryfikacji: aplikacja komputerowa, zwykła
   przeglądarka systemowa, Authorization Code z PKCE S256 i odpowiedź na
-  losowym porcie `127.0.0.1`. Nie używamy osadzonej przeglądarki, wycofanego
-  przepisywania kodu OOB ani sekretu klienta w instalatorze. Oficjalne źródła:
+  losowym porcie `127.0.0.1`. Nie używamy osadzonej przeglądarki ani wycofanego
+  przepisywania kodu OOB. AMC Test otrzymuje dane konkretnego klienta z dwóch
+  lokalnych zasobów ignorowanych przez Git; do procesu potomnego przekazuje
+  tylko ścieżkę pliku sekretu. Oficjalne źródła:
   [OAuth dla aplikacji komputerowych](https://developers.google.com/identity/protocols/oauth2/native-app),
   [autoryzacja YouTube Data API](https://developers.google.com/youtube/data/guides/auth/installed-apps),
   [wycofanie OOB](https://developers.google.com/identity/protocols/oauth2/resources/oob-migration).
@@ -209,8 +217,9 @@ oraz [tryb Testing](https://support.google.com/cloud/answer/15549945?hl=en).
 Logowanie do YouTube jest przygotowane w źródle AMC Test, lecz polecenie
 pojawia się dopiero w kompilacji z prawidłowym identyfikatorem OAuth AMC.
 Otwiera oficjalną stronę Google w zwykłej przeglądarce i wraca do AMC przez
-lokalny adres na komputerze. AMC nie prosi o hasło Google ani o sekret
-aplikacji. Pierwsza wersja prosi wyłącznie o odczyt subskrypcji; zwykłe
+lokalny adres na komputerze. AMC nie prosi użytkownika końcowego o hasło Google
+ani o sekret aplikacji; dane klienta przygotowuje opiekun kompilacji. Pierwsza
+wersja prosi wyłącznie o odczyt subskrypcji; zwykłe
 wyszukiwanie, odtwarzanie i pobieranie pozostają dostępne bez konta. Najpierw
 użytkownik sprawdza plan zmian, a dopiero osobnym przyciskiem zapisuje kanały
 w Bibliotece AMC.
@@ -230,8 +239,10 @@ w Bibliotece AMC.
   Bez identyfikatora klienta Google pozostaje niewidoczne, więc nie tworzy
   martwej funkcji.
 - Wymiana kodu i odświeżenie korzystają wyłącznie z oficjalnego punktu tokenów
-  Google. Nie wysyłają `client_secret`, a odświeżenie nie prosi po cichu o
-  szerszy zakres.
+  Google. Po korekcie z 23.10.2026 wysyłają wymagany przez tego klienta
+  `client_secret` tylko w treści żądania do punktu tokenów; wartość nie trafia
+  do adresu logowania, wiersza poleceń, logu ani UI. Odświeżenie nie prosi po
+  cichu o szerszy zakres.
 - Poświadczenia AMC Test i publicznego AMC mają różne cele w Menedżerze
   poświadczeń Windows. Nie są częścią migawki wspólnych danych i nie mogą
   przejść z profilu testowego do publicznego.
@@ -413,7 +424,8 @@ klienta Google i że nie zbudowano wersji do odbioru.
 
 ### Dokładna konfiguracja i lokalizacja
 
-- Publiczny identyfikator klienta zapisano bez sekretu w lokalnym, ignorowanym
+- Stan historyczny instalacji 15:14: publiczny identyfikator klienta zapisano
+  bez sekretu w lokalnym, ignorowanym
   przez Git pliku
   `wxlite/amc_wx_lite/youtube-oauth-client-id.txt`.
 - Builder zwalidował końcówkę `.apps.googleusercontent.com`, brak białych
@@ -560,3 +572,34 @@ start, a lokalna sonda zainstalowanego hosta zwróciła `available=true`,
 istnieje: należy ponowić logowanie, a o wyniku rozstrzyga stan w AMC, nie sama
 strona powrotu w przeglądarce. Publikacji nie wykonano. Pełny zapis:
 [AMC-TEST-2026-10-23-1630-spotify-output-youtube-oauth.md](AMC-TEST-2026-10-23-1630-spotify-output-youtube-oauth.md).
+
+## Korekta po drugim prawdziwym OAuth — 23 października 2026
+
+Użytkownik ponowił logowanie w instalacji 16:30. Strona powrotu podała już
+prawidłowy komunikat pośredni, lecz AMC pozostał niezalogowany: przycisk
+logowania nadal był dostępny, podgląd i zapis pozostawały nieaktywne, a lista
+była pusta. To zastępuje wcześniejsze założenie, że ponowienie na samym
+identyfikatorze klienta może zakończyć konfigurację.
+
+Bezpieczna sonda oficjalnego punktu tokenów, z błędnym kodem testowym i bez
+danych konta, zwróciła `invalid_request`; klasyfikacja opisu wskazała wyłącznie
+brak `client_secret`. Kod AMC rzeczywiście wysyłał identyfikator, kod, PKCE,
+adres powrotu i rodzaj żądania, ale pomijał sekret klienta. Przyczyna nie leżała
+w koncie użytkownika, zgodzie, zakresie ani obsłudze NVDA.
+
+Commit `3e57b68656ee06c1742a3775bac3d810f792646f` dodaje kompletną parę
+konfiguracji tylko do AMC Test. Sekret pozostaje w ignorowanym pliku
+`wxlite/amc_wx_lite/youtube-oauth-client-secret.txt`; Python przekazuje
+LiteHostowi wyłącznie ścieżkę, a wartość odczytuje C# i wysyła tylko do
+oficjalnego punktu tokenów. Niepełna para powoduje ukrycie całej możliwości,
+zamiast wystawienia martwego logowania. Wynik operacji jest zapisywany w
+prywatnym `frontend.log`, a po błędzie fokus wraca na przycisk, którego nazwa
+zawiera bezpieczny ostatni wynik dla NVDA.
+
+Testy źródła: 12 ukierunkowanych testów Python, 11 scenariuszy fundamentu
+OAuth, 5 scenariuszy koordynatora oraz zestaw protokołu konta YouTube przeszły.
+Kompilacja LiteHosta przeszła przez projekt testów protokołu. Pierwsze z dwóch
+równoległych wywołań Core chwilowo zderzyło się o wspólny plik `obj`; po
+uruchomieniu sekwencyjnym oba zestawy przeszły. Nie zbudowano ani nie
+zainstalowano nowej paczki, ponieważ na komputerze nie ma jeszcze pliku z
+sekretem klienta. AMC Public nadal nie zawiera tej możliwości.

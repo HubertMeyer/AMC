@@ -272,11 +272,10 @@ zmian, wymagający korekty użytkownika:
   [AMC14-foldery-i-integracja-powloki.md](AMC14-foldery-i-integracja-powloki.md).
   Zatwierdzona specyfikacja:
   `D:\Projekty Codex\Accessible Multimedia Controller\AMC14_FOLDERY_I_INTEGRACJA_POWLOKI_2026-10-18.md`.
-- `YT-001` — **W trakcie odbioru — po pierwszym prawdziwym OAuth poprawiono
-  przedwczesny komunikat strony powrotu i bezpieczną diagnozę odrzuconej
-  wymiany tokenu. AMC Test 23.10.2026, 16:30 jest zbudowany, zainstalowany i
-  uruchomiony; zainstalowany host potwierdza konto tylko do odczytu. Pozostało
-  ponowne prawdziwe logowanie i ręczny odbiór NVDA** — oficjalne logowanie do
+- `YT-001` — **W trakcie — drugi prawdziwy OAuth potwierdził, że klient Google
+  wymaga `client_secret`. Poprawka `3e57b686` jest w źródle i przeszła testy,
+  lecz nowy AMC Test czeka na lokalny plik sekretu tego samego klienta, budowę,
+  instalację i ręczny odbiór NVDA** — oficjalne logowanie do
   konta YouTube, synchronizacja subskrypcji i zwykłych playlist oraz bezpieczny
   zakres czynności konta. Etap rozpoczęto 21 października 2026 na nowe jawne
   polecenie użytkownika; sam start nadal nie loguje konta ani nie otwiera
@@ -290,11 +289,10 @@ zmian, wymagający korekty użytkownika:
   krótkie nazwy `AMC Test — data, godzina` i `AMC Public — data, godzina`,
   z technicznymi identyfikatorami pozostawionymi poza zwykłą nazwą.
   Szczegóły: [NAME-001-amc-test.md](NAME-001-amc-test.md).
-- `FRONTIER-001` — **Kod korekt fokusu i skanowania jest obecny w gałęzi oraz
-  przeszedł testy automatyczne, ale ręczny odbiór 23.10.2026 nie wykazał
-  poprawy: wejście nadal prowadziło do pola PIN, a po uruchomieniu wyszukiwania
-  fokus trafiał na przycisk zamknięcia lub powrotu. Zadanie pozostaje otwarte
-  i nie wolno przedstawiać go jako naprawionego na podstawie samych testów** —
+- `FRONTIER-001` — **Odbiór instalacji 16:30 potwierdził wykrywanie, ale jeden
+  wynik był automatycznie przyjmowany i prowadził prosto do PIN-u. Poprawka
+  `3e57b686` zawsze pokazuje listę wyboru, przeszła testy, lecz nie została
+  jeszcze zbudowana ani zainstalowana** —
   `Ctrl+8`, `Ctrl+F5` i ręczny adres korzystają z jednego modelu stanów.
   AMC wymaga potwierdzonego opisu FSAPI/UNDOK i użytkowej nazwy urządzenia,
   zanim pokaże pole PIN. Brak wyniku i błąd nie prowadzą do PIN-u. Po zapisaniu

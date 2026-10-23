@@ -1,10 +1,10 @@
 # FRONTIER-001 — Frontier Smart przez FSAPI
 
-Status: **W trakcie — czwarta korekta po zgłoszeniu z 23.10.2026 została
-przetestowana, zbudowana, zainstalowana i uruchomiona w zbiorczym AMC Test
-`23.10.2026, 11:24`; czeka na sprzętowy odbiór z Teufelem i NVDA 24.10.2026.
-Ten zapis zastępuje niższe historyczne stwierdzenia o braku instalacji.
-Szczegóły: [AMC-TEST-2026-10-23-1124-instalacja-zbiorcza.md](AMC-TEST-2026-10-23-1124-instalacja-zbiorcza.md).**
+Status: **W trakcie — odbiór instalacji 16:30 potwierdził wykrywanie Teufela,
+ale ujawnił automatyczne przejście z jednego wyniku prosto do PIN-u. Piąta
+korekta źródłowa w commicie `3e57b686` zawsze wymaga jawnego wyboru wykrytego
+urządzenia; przeszła testy, lecz nie została jeszcze zbudowana ani
+zainstalowana.**
 
 **Korekta użytkownika z 23.10.2026 po odbiorze instalacji 11:24:** podczas
 wyszukiwania urządzeń fokus przechodził na przycisk „Zamknij” albo „Wstecz”,
@@ -486,6 +486,29 @@ zainstalowany, uruchomiony, spakowany ani opublikowany.
   Zainstalowana wtedy poprawka nie wystarczyła. Zastępuje ją nieinstalowana
   korekta źródłowa `b11fd8bb`, wymagająca odbioru sprzętowego 24.10.2026.
 
+## Piąty odbiór i korekta wyboru urządzenia — 23.10.2026
+
+Użytkownik potwierdził, że automatyczne i ręczne wyszukiwanie rzeczywiście
+znajduje urządzenie, lecz po zakończeniu oba warianty nadal przenoszą fokus do
+pola PIN. Przyczyną nie jest teraz SSDP ani fałszywy wynik. Metoda
+`use_discovered` miała celową gałąź: przy dokładnie jednym potwierdzonym
+urządzeniu pomijała okno wyboru i od razu wywoływała etap PIN; listę wyboru
+pokazywała dopiero dla co najmniej dwóch urządzeń.
+
+Decyzja użytkowa zastępująca wcześniejszy kontrakt: każde udane wyszukiwanie,
+także z jednym wynikiem, pokazuje listę `Wykryte urządzenia Frontier Smart`.
+Pierwszy wynik jest zaznaczony. Enter lub OK świadomie wybiera radio i dopiero
+wtedy ujawnia oraz skupia pole PIN. Escape anuluje wybór, pozostawia PIN ukryty
+i zwraca fokus do `Szukaj nowych urządzeń`.
+
+Poprawka jest w commicie
+`3e57b68656ee06c1742a3775bac3d810f792646f`. Dwa nowe testy wykonują oba
+warianty dla pojedynczego wyniku: anulowanie bez PIN-u oraz zatwierdzenie
+przechodzące do następnego kroku. Łącznie z testami nazw, komunikatów i pustego
+wyniku ukierunkowana bramka Python przeszła. Zestaw protokołu Frontier Smart
+również przeszedł podczas kompilacji LiteHosta. Rzeczywisty odbiór NVDA i
+Teufela wymaga nowej instalacji AMC Test; AMC Public pozostaje bez tej sesji.
+
 ## Migracja, wersja i commit
 
 Nowa sekcja konfiguracji jest opcjonalna i nie wymaga migracji istniejących
@@ -500,8 +523,10 @@ pustej i zapisanej listy: `86727573` —
 `fix(frontier): skanuj automatycznie tylko pusta sesje`. Korekta po trzecim
 odbiorze: `3ce574a6` — `fix(frontier): popraw pierwsze wykrywanie urządzenia`.
 Korekta po czwartym zgłoszeniu: `b11fd8bbc2de6a8f23746e5f2ec437b021f86762`
-— `fix(frontier): potwierdzaj radio przed pytaniem o PIN`; ten commit nie był
-instalowany ani uruchamiany.
+— `fix(frontier): potwierdzaj radio przed pytaniem o PIN`. Piąta korekta
+wyboru także dla jednego wyniku: `3e57b68656ee06c1742a3775bac3d810f792646f`
+— `fix(amc): domknij OAuth YouTube i wybor Frontier`; nie została jeszcze
+zbudowana ani zainstalowana.
 Zainstalowana kompilacja AMC Test:
 `2026.10.23-1badabbeeacde3d8853457683ef750d558b3f1fd-7353e273`.
 Nie publikować ani nie promować do profilu publicznego bez nowej zgody
