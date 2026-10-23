@@ -1,6 +1,6 @@
 # YT-001 — konto YouTube i synchronizacja
 
-- Status: `W trakcie — interfejs wx, anulowanie i synchronizacja gotowe w źródle; brak własnego klienta Google AMC oraz odbioru na prawdziwym koncie z NVDA`
+- Status: `W trakcie — interfejs wx, anulowanie i synchronizacja są zainstalowane w AMC Test 23.10.2026, 11:24; brak publicznego identyfikatora klienta Google AMC oraz odbioru na prawdziwym koncie z NVDA`. Zapis instalacji: [AMC-TEST-2026-10-23-1124-instalacja-zbiorcza.md](AMC-TEST-2026-10-23-1124-instalacja-zbiorcza.md).
 - Utworzono: 18 października 2026
 - Ostatnia aktualizacja: 23 października 2026
 - Obszar: YouTube, OAuth, Biblioteka, wyszukiwanie i bezpieczne poświadczenia

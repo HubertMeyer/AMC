@@ -3,9 +3,11 @@
 ## Status
 
 **Korekta z 2026-10-23 po ręcznym zgłoszeniu NVDA jest gotowa w źródłach,
-zbudowana i zweryfikowana automatycznie na gałęzi
-`task/youtube-import-nvda`. Nie została zainstalowana ani uruchomiona jako
-AMC Test. AMC Public, instalator i GitHub również pozostały bez zmian.**
+zbudowana, zweryfikowana automatycznie, zainstalowana i uruchomiona w zbiorczym
+AMC Test `23.10.2026, 11:24`; czeka na ponowny odbiór NVDA. Ten zapis zastępuje
+niższe historyczne stwierdzenia „nie została zainstalowana”. AMC Public,
+instalator publiczny i GitHub pozostały bez zmian. Szczegóły instalacji:
+[AMC-TEST-2026-10-23-1124-instalacja-zbiorcza.md](AMC-TEST-2026-10-23-1124-instalacja-zbiorcza.md).**
 
 Zgłoszenie potwierdziło, że kanał Wieniawski został dodany, ale podczas
 oczekiwania NVDA wypowiedział techniczny komunikat przypominający „Windows 32”

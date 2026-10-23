@@ -30,8 +30,9 @@ jawnym poleceniu użytkownika albo przez osobno uzgodniony harmonogram.
 
 ## Zadania
 
-- `PLAY-001` — **W trakcie; kod i pełna regresja 2010/2010 są gotowe, czeka na
-  instalację zbiorczego AMC Test i ręczny odbiór NVDA** — trwałe
+- `PLAY-001` — **W trakcie; kod, pełna regresja 2010/2010, instalacja i
+  uruchomienie AMC Test 23.10.2026, 11:24 są gotowe; czeka na ręczny odbiór
+  NVDA** — trwałe
   `Odtwarzaj losowo (R)` w odtwarzaczach Plików, Podcastów i Spotify, również
   w menu kontekstowym, palecie i pomocy; jawne kolejki zachowują własny porządek.
   Szczegóły:
@@ -104,23 +105,23 @@ zmian, wymagający korekty użytkownika:
   prywatna trwałość wyboru i zachowanie zaznaczenia po stabilnym ID. Szczegóły:
   [POD-001-sortowanie-biblioteki-zrodel.md](POD-001-sortowanie-biblioteki-zrodel.md).
 - `POD-002` — **Korekta fokusu, blokady drugiego Entera i ukrywania procesów po
-  zgłoszeniu NVDA z 2026-10-23 jest zweryfikowana automatycznie tylko na gałęzi;
-  nie została zainstalowana ani uruchomiona jako AMC Test** — formularz
+  zgłoszeniu NVDA z 2026-10-23 jest zainstalowana i uruchomiona w zbiorczym
+  AMC Test 23.10.2026, 11:24; czeka na ponowny odbiór NVDA** — formularz
   `Ctrl+N` pozostaje otwarty przez oczekiwanie, procesy pomocnicze nie tworzą
   okna, a zwykła mowa nie ujawnia „Windows 32”, terminala, ścieżek ani nazw
   technicznych. Wcześniejszy AMC Test zawiera poprawkę `%40`, lecz nie tę
   korektę. AMC Public, instalator i GitHub bez zmian. Szczegóły:
   [POD-002-import-youtube-ctrl-n.md](POD-002-import-youtube-ctrl-n.md).
-- `POD-003` — **Zrobione w źródłach i testach automatycznych; bez instalacji,
-  ręczny odbiór NVDA pozostaje** — naprawa niejawnego ucinania dużych kanałów
+- `POD-003` — **Zrobione, zainstalowane i uruchomione w AMC Test 23.10.2026,
+  11:24; ręczny odbiór NVDA pozostaje** — naprawa niejawnego ucinania dużych kanałów
   RSS, uczciwy wynik pełny/częściowy/błędny oraz jawne stronicowanie `wczytano
   N z całości` z zachowaniem fokusu. Szczegóły:
   [POD-003-niezawodnosc-odswiezania-i-duze-kanaly.md](POD-003-niezawodnosc-odswiezania-i-duze-kanaly.md).
 - `AMC04` — **Rozdziały podcastów oraz zakładki i rozdziały Spotify
   zweryfikowane automatycznie, zainstalowane i uruchomione w AMC Test; czekają
   na ręczny odbiór NVDA; korekta źródeł z 23.10.2026 uczciwie ogranicza
-  automatyczne rozdziały Spotify do znaczników czasu z opisu odcinka i nie
-  była instalowana** — przeniesiony do głównego AMC
+  automatyczne rozdziały Spotify do znaczników czasu z opisu odcinka i została
+  zainstalowana w AMC Test 23.10.2026, 11:24** — przeniesiony do głównego AMC
   Test/Python zatwierdzony model skrótów
   zakładek, nazwanych zakładek, rozdziałów, historii widoków i historii
   odtwarzanych elementów. Bieżący zapis realizacji:
@@ -155,9 +156,9 @@ zmian, wymagający korekty użytkownika:
   przez użytkownika; korekta mowy `Ctrl+F5` i widoczności pod `Ctrl+P`
   playlist istniejących oraz nowych jest zainstalowana w AMC Test; również
   czyszczenie migawki po ponownym logowaniu jest zbudowane i zainstalowane,
-  całość czeka na ręczny odbiór NVDA; źródłowa korekta z 23.10.2026 naprawia
-  jednorazowe pełne odświeżenie zapisanych podcastów i odcinków, lecz nie była
-  instalowana ani uruchamiana**
+  całość czeka na ręczny odbiór NVDA; korekta z 23.10.2026 naprawiająca
+  jednorazowe pełne odświeżenie zapisanych podcastów i odcinków została
+  zainstalowana i uruchomiona w AMC Test 23.10.2026, 11:24**
   — natywne playlisty
   Spotify w AMC Test: `Ctrl+P`, `Ctrl+Shift+P`, pobranie katalogu raz na
   uruchomienie, natychmiastowa widoczność nowej playlisty i zapamiętanie
@@ -260,8 +261,8 @@ zmian, wymagający korekty użytkownika:
 - `YT-001` — **W trakcie — bezpieczny fundament OAuth, lokalny odbiornik,
   transport tokenów, koordynator, odczyt, niedestrukcyjny plan oraz atomowy
   zapis subskrypcji, chroniony protokół hosta i osobne magazyny poświadczeń
-  AMC Test/AMC są zbudowane i obecne niewidocznie w AMC Test; brak
-  identyfikatora aplikacji Google i interfejsu wx** — oficjalne logowanie do
+  AMC Test/AMC oraz interfejs wx są zainstalowane w AMC Test 23.10.2026,
+  11:24; brak publicznego identyfikatora aplikacji Google i odbioru konta** — oficjalne logowanie do
   konta YouTube, synchronizacja subskrypcji i zwykłych playlist oraz bezpieczny
   zakres czynności konta. Etap rozpoczęto 21 października 2026 na nowe jawne
   polecenie użytkownika; nic nie loguje konta ani nie otwiera przeglądarki.
@@ -272,9 +273,9 @@ zmian, wymagający korekty użytkownika:
   krótkie nazwy `AMC Test — data, godzina` i `AMC Public — data, godzina`,
   z technicznymi identyfikatorami pozostawionymi poza zwykłą nazwą.
   Szczegóły: [NAME-001-amc-test.md](NAME-001-amc-test.md).
-- `FRONTIER-001` — **Czwarta korekta źródłowa po zgłoszeniu z 23.10.2026 ma
-  zaliczone testy i kompilację Release, ale nie została zainstalowana ani
-  uruchomiona; czeka na sprzętowy odbiór Teufela z NVDA 24.10.2026** —
+- `FRONTIER-001` — **Czwarta korekta po zgłoszeniu z 23.10.2026 ma zaliczone
+  testy i kompilację Release, została zainstalowana i uruchomiona w AMC Test
+  23.10.2026, 11:24; czeka na sprzętowy odbiór Teufela z NVDA 24.10.2026** —
   `Ctrl+8`, `Ctrl+F5` i ręczny adres korzystają z jednego modelu stanów.
   AMC wymaga potwierdzonego opisu FSAPI/UNDOK i użytkowej nazwy urządzenia,
   zanim pokaże pole PIN. Brak wyniku i błąd nie prowadzą do PIN-u. Po zapisaniu

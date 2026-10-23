@@ -2,9 +2,11 @@
 
 - Status: **Rozdziały podcastów oraz zakładki i rozdziały Spotify są
   zweryfikowane automatycznie, zainstalowane i uruchomione w AMC Test;
-  czekają na ręczny odbiór NVDA. Korekta źródeł z 23.10.2026 doprecyzowuje,
-  że Spotify nie przekazuje AMC natywnych rozdziałów podcastu; kod i testy są
-  gotowe, lecz tej korekty nie instalowano ani nie uruchamiano.**
+  czekają na ręczny odbiór NVDA. Korekta z 23.10.2026 doprecyzowująca, że
+  Spotify nie przekazuje AMC natywnych rozdziałów podcastu, również została
+  zainstalowana i uruchomiona w zbiorczym AMC Test `23.10.2026, 11:24`.
+  Zastępuje to niższe historyczne stwierdzenia o braku instalacji. Zapis:
+  [AMC-TEST-2026-10-23-1124-instalacja-zbiorcza.md](AMC-TEST-2026-10-23-1124-instalacja-zbiorcza.md).**
 - Data rozpoczęcia w AMC Test: 2026-10-19
 - Repozytorium wykonawcze: `D:\Projekty Codex\AMC - integracja wxPython`
 - Materiał historyczny, tylko do odczytu:

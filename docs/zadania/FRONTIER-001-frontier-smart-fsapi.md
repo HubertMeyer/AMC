@@ -1,8 +1,10 @@
 # FRONTIER-001 — Frontier Smart przez FSAPI
 
-Status: **W trakcie — czwarta korekta źródłowa po zgłoszeniu z 23.10.2026
-została przetestowana i zbudowana, ale nie była instalowana ani uruchamiana;
-czeka na sprzętowy odbiór z Teufelem i NVDA 24.10.2026**
+Status: **W trakcie — czwarta korekta po zgłoszeniu z 23.10.2026 została
+przetestowana, zbudowana, zainstalowana i uruchomiona w zbiorczym AMC Test
+`23.10.2026, 11:24`; czeka na sprzętowy odbiór z Teufelem i NVDA 24.10.2026.
+Ten zapis zastępuje niższe historyczne stwierdzenia o braku instalacji.
+Szczegóły: [AMC-TEST-2026-10-23-1124-instalacja-zbiorcza.md](AMC-TEST-2026-10-23-1124-instalacja-zbiorcza.md).**
 
 Data rozpoczęcia: 2026-10-21
 

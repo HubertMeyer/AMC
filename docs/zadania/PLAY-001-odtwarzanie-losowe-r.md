@@ -2,9 +2,9 @@
 
 ## Status
 
-**W trakcie.** Kod i automatyczna regresja są gotowe. Zadanie czeka na
-zbudowanie i kontrolowaną instalację zbiorczego AMC Test oraz ręczny odbiór z
-NVDA.
+**W trakcie.** Kod, automatyczna regresja, instalacja i uruchomienie zbiorczego
+AMC Test są gotowe. Pozostaje ręczny odbiór z NVDA. Zapis instalacji:
+[AMC-TEST-2026-10-23-1124-instalacja-zbiorcza.md](AMC-TEST-2026-10-23-1124-instalacja-zbiorcza.md).
 
 ## Zakres i zachowanie użytkowe
 
@@ -105,7 +105,8 @@ oznacza wyłączone losowanie. Pełna kopia konfiguracji rozpoznaje nowe pole.
 
 ## Wersja i commit
 
-- Commit funkcji: do uzupełnienia po zatwierdzeniu spójnego przyrostu.
-- Zainstalowany AMC Test: do uzupełnienia po kontrolowanej promocji.
+- Commit funkcji: `12747221ba764681b15e93257b14f9d6d712a6b8`.
+- Zainstalowany AMC Test: `AMC Test — 23.10.2026, 11:24`, paczka `95c15869`,
+  stały plik `D:\Projekty Codex\AMC Python\AMC.exe`.
 - AMC Public i publiczny instalator: bez zmian.
 

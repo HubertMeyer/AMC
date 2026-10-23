@@ -5,9 +5,12 @@ playlist Spotify. Korekta jawnej mowy stanu konta oraz widoczności pod
 `Ctrl+P` playlist istniejących i właśnie utworzonych jest zainstalowana w AMC
 Test; czeka na ręczny odbiór NVDA. Dodatkowa korekta unieważnienia migawki po
 ponownym logowaniu także jest zbudowana, zainstalowana i uruchomiona; czeka na
-ręczny odbiór NVDA na prawdziwym koncie. Korekta źródeł z 23.10.2026 naprawia
-odświeżanie zapisanych podcastów i odcinków oraz opisuje granice pełnego
-ładowania; nie była instalowana ani uruchamiana.**
+ręczny odbiór NVDA na prawdziwym koncie. Korekta z 23.10.2026 naprawiająca
+odświeżanie zapisanych podcastów i odcinków oraz opisująca granice pełnego
+ładowania została zainstalowana i uruchomiona w zbiorczym AMC Test
+`23.10.2026, 11:24`; zastępuje to niższe historyczne informacje o braku
+instalacji. Zapis:
+[AMC-TEST-2026-10-23-1124-instalacja-zbiorcza.md](AMC-TEST-2026-10-23-1124-instalacja-zbiorcza.md).**
 
 Źródło decyzji: zatwierdzona analiza historyczna tylko do odczytu
 `D:\Projekty Codex\Accessible Multimedia Controller\AMC08_PLAYLISTY_SPOTIFY_2026-10-18.md`.

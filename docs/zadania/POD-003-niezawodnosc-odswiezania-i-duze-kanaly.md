@@ -2,8 +2,11 @@
 
 ## Status
 
-Zrobione w źródłach i testach automatycznych. Nie instalowano ani nie
-uruchamiano AMC; ręczny odbiór NVDA pozostaje do wykonania.
+Zrobione w źródłach i testach automatycznych, zainstalowane i uruchomione w
+zbiorczym AMC Test `23.10.2026, 11:24`; ręczny odbiór NVDA pozostaje do
+wykonania. Ten zapis zastępuje niższe historyczne informacje o braku instalacji.
+Szczegóły:
+[AMC-TEST-2026-10-23-1124-instalacja-zbiorcza.md](AMC-TEST-2026-10-23-1124-instalacja-zbiorcza.md).
 
 ## Zgłoszenie użytkownika
 
