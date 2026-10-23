@@ -74,6 +74,9 @@ class PodcastSubscription:
             detail=self.kind_label,
             show_kind=False,
             artist_name=self.author,
+            service_kind={2: "youtubeChannel", 3: "youtubePlaylist"}.get(
+                self.source_kind
+            ),
         )
 
 

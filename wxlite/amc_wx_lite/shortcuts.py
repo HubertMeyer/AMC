@@ -324,6 +324,9 @@ class Action(Enum):
     EXPORT_PODCAST_OPML = "podcasts.opml.export"
     EXPORT_YOUTUBE_SUBSCRIPTIONS = "podcasts.youtube.export"
     YOUTUBE_ACCOUNT = "youtube.account.manage"
+    YOUTUBE_BROADCASTS = "youtube.broadcasts.open"
+    REFRESH_YOUTUBE_BROADCASTS = "youtube.broadcasts.refresh"
+    ADD_YOUTUBE_LIVE_STATION = "youtube.liveStation.add"
     REFRESH_PODCAST = "podcasts.refresh.current"
     REFRESH_PODCAST_LIBRARY = "podcasts.refresh.all"
     DOWNLOAD_PODCAST_EPISODES = "podcasts.download.selected"
@@ -1340,6 +1343,10 @@ PODCAST_LIBRARY_LIST_VIEW: dict[str, Action] = {
     "Alt+3": Action.SORT_PODCAST_LIBRARY_CUSTOM,
 }
 
+YOUTUBE_BROADCASTS_LIST_VIEW: dict[str, Action] = {
+    "F5": Action.REFRESH_YOUTUBE_BROADCASTS,
+}
+
 # Kontekst sesji, niezaleznie od listy/odtwarzacza. F5 w skrzynce jest
 # przesloniete powyzej, dokladnie jak w glownym AMC.
 PODCAST_SESSION_VIEW: dict[str, Action] = {
@@ -1507,6 +1514,7 @@ def resolve(
     radio_recording_context: bool = False,
     podcast_inbox: bool = False,
     podcast_library: bool = False,
+    youtube_broadcasts: bool = False,
     podcast_session: bool = False,
     files_session: bool = False,
     tidal_session: bool = False,
@@ -1560,6 +1568,12 @@ def resolve(
         # F5 w globalnej skrzynce odświeża wszystkie źródła. Alt+1/2/3 są już
         # rozstrzygnięte wyżej, lecz pozostają w tej samej tabeli poleceń.
         return PODCAST_INBOX_LIST_VIEW[canonical]
+    if (
+        not player_view
+        and youtube_broadcasts
+        and canonical in YOUTUBE_BROADCASTS_LIST_VIEW
+    ):
+        return YOUTUBE_BROADCASTS_LIST_VIEW[canonical]
     if files_session and canonical in FILES_SESSION_VIEW:
         return FILES_SESSION_VIEW[canonical]
     # Parity z głównym AMC: Ctrl+F5 zawsze odświeża wszystkie źródła sesji,
@@ -1763,6 +1777,9 @@ def _help_entries() -> list[tuple[str, str, Action]]:
         Action.EXPORT_PODCAST_OPML: "Eksportuj bibliotekę podcastów do OPML",
         Action.EXPORT_YOUTUBE_SUBSCRIPTIONS: "Eksportuj kanały i playlisty YouTube",
         Action.YOUTUBE_ACCOUNT: "Konto YouTube i synchronizacja subskrypcji",
+        Action.YOUTUBE_BROADCASTS: "Pokaż transmisje na żywo i zaplanowane kanału YouTube",
+        Action.REFRESH_YOUTUBE_BROADCASTS: "Odśwież transmisje kanału YouTube",
+        Action.ADD_YOUTUBE_LIVE_STATION: "Dodaj kanał jako dynamiczną stację YouTube na żywo",
         Action.REFRESH_PODCAST: "Odśwież wybrany podcast, kanał lub playlistę",
         Action.REFRESH_PODCAST_LIBRARY: "Odśwież wszystkie źródła podcastów",
         Action.DOWNLOAD_PODCAST_EPISODES: "Pobierz zaznaczone odcinki podcastów",
@@ -1984,6 +2001,7 @@ def _help_entries() -> list[tuple[str, str, Action]]:
         FILES_SESSION_VIEW,
         PODCAST_LIBRARY_LIST_VIEW,
         PODCAST_INBOX_LIST_VIEW,
+        YOUTUBE_BROADCASTS_LIST_VIEW,
         PODCAST_SESSION_VIEW,
         TIDAL_SESSION_VIEW,
         TIDAL_LIST_VIEW,
@@ -2056,6 +2074,8 @@ def _help_entries() -> list[tuple[str, str, Action]]:
         Action.SESSION_DISABLE_CURRENT,
         Action.SESSION_CONFIGURE_CURRENT,
         Action.YOUTUBE_ACCOUNT,
+        Action.YOUTUBE_BROADCASTS,
+        Action.ADD_YOUTUBE_LIVE_STATION,
         Action.FRONTIER_SMART_SELECT_MODE,
         Action.REFRESH_COMMON_DATA,
         Action.COMMON_DATA_STATUS,

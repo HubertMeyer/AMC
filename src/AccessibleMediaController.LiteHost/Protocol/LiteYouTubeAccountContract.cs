@@ -13,6 +13,28 @@ internal static class LiteYouTubeAccountContract
     internal const string LogoutOperation = "youtube.accountLogout";
     internal const string SyncPreviewOperation = "youtube.subscriptionSyncPreview";
     internal const string SyncApplyOperation = "youtube.subscriptionSyncApply";
+    internal const string BroadcastsOperation = "youtube.channelBroadcasts";
+
+    internal static LiteYouTubeBroadcastRequest ReadBroadcastRequest(JsonElement args)
+    {
+        if (args.ValueKind != JsonValueKind.Object
+            || !args.TryGetProperty("subscriptionId", out var idValue)
+            || idValue.ValueKind != JsonValueKind.String)
+            throw new LiteRequestException("Wybierz kanał YouTube z Biblioteki.");
+        var subscriptionId = idValue.GetString()?.Trim() ?? string.Empty;
+        if (subscriptionId.Length is < 1 or > 512)
+            throw new LiteRequestException("Wybierz kanał YouTube z Biblioteki.");
+        var forceRefresh = false;
+        if (args.TryGetProperty("refresh", out var refresh))
+            forceRefresh = refresh.ValueKind switch
+            {
+                JsonValueKind.True => true,
+                JsonValueKind.False => false,
+                _ => throw new LiteRequestException(
+                    "Wybór odświeżenia transmisji musi mieć wartość tak albo nie.")
+            };
+        return new LiteYouTubeBroadcastRequest(subscriptionId, forceRefresh);
+    }
 
     internal static bool ReadRestoreSuppressed(JsonElement args)
     {
@@ -72,6 +94,23 @@ internal static class LiteYouTubeAccountContract
             message);
     }
 
+    internal static LiteYouTubeBroadcastList CreateBroadcasts(
+        IReadOnlyList<YouTubeBroadcast> rows)
+    {
+        ArgumentNullException.ThrowIfNull(rows);
+        return new LiteYouTubeBroadcastList(
+            rows.Select(row => new LiteYouTubeBroadcast(
+                CleanLabel(row.Title),
+                CleanLabel(row.ChannelTitle),
+                row.PageUri.AbsoluteUri,
+                row.State == YouTubeBroadcastState.Live ? "live" : "upcoming",
+                row.ScheduledStartUtc,
+                row.ActualStartUtc)).ToArray(),
+            rows.Count == 0
+                ? "Brak trwających i zaplanowanych transmisji."
+                : $"Transmisje: {rows.Count}.");
+    }
+
     private static string CleanLabel(string? value)
     {
         var normalized = string.Join(' ', (value ?? string.Empty)
@@ -113,3 +152,19 @@ internal sealed record LiteYouTubeSyncApplyResult(
     [property: JsonPropertyName("duplicates")] int Duplicates,
     [property: JsonPropertyName("invalid")] int Invalid,
     [property: JsonPropertyName("message")] string Message);
+
+internal sealed record LiteYouTubeBroadcastRequest(
+    string SubscriptionId,
+    bool ForceRefresh);
+
+internal sealed record LiteYouTubeBroadcastList(
+    [property: JsonPropertyName("items")] IReadOnlyList<LiteYouTubeBroadcast> Items,
+    [property: JsonPropertyName("message")] string Message);
+
+internal sealed record LiteYouTubeBroadcast(
+    [property: JsonPropertyName("title")] string Title,
+    [property: JsonPropertyName("channelTitle")] string ChannelTitle,
+    [property: JsonPropertyName("pageUrl")] string PageUrl,
+    [property: JsonPropertyName("state")] string State,
+    [property: JsonPropertyName("scheduledStartUtc")] DateTimeOffset? ScheduledStartUtc,
+    [property: JsonPropertyName("actualStartUtc")] DateTimeOffset? ActualStartUtc);

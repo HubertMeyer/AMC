@@ -13,11 +13,15 @@ namespace AccessibleMediaController.LiteHost;
 internal sealed class LiteYouTubeWindowsAccountBackend : ILiteYouTubeAccountBackend
 {
     private static readonly TimeSpan PreviewLifetime = TimeSpan.FromMinutes(10);
+    private static readonly TimeSpan BroadcastCacheLifetime = TimeSpan.FromMinutes(5);
     private readonly YouTubeAccountCoordinator _account;
     private readonly YouTubeSubscriptionClient _subscriptions = new();
+    private readonly YouTubeBroadcastClient _broadcasts = new();
     private readonly PodcastLibraryMutationStore _podcasts;
     private readonly SemaphoreSlim _gate = new(1, 1);
     private PreviewSnapshot? _preview;
+    private readonly Dictionary<string, BroadcastSnapshot> _broadcastCache =
+        new(StringComparer.Ordinal);
     private bool _disposed;
 
     internal LiteYouTubeWindowsAccountBackend(
@@ -45,7 +49,11 @@ internal sealed class LiteYouTubeWindowsAccountBackend : ILiteYouTubeAccountBack
         try
         {
             var result = await _account.LoginAsync(cancellationToken).ConfigureAwait(false);
-            if (result.Succeeded) _preview = null;
+            if (result.Succeeded)
+            {
+                _preview = null;
+                _broadcastCache.Clear();
+            }
             return result;
         }
         finally
@@ -62,6 +70,7 @@ internal sealed class LiteYouTubeWindowsAccountBackend : ILiteYouTubeAccountBack
         {
             var result = await _account.LogoutAsync(cancellationToken).ConfigureAwait(false);
             _preview = null;
+            _broadcastCache.Clear();
             return result;
         }
         finally
@@ -120,6 +129,77 @@ internal sealed class LiteYouTubeWindowsAccountBackend : ILiteYouTubeAccountBack
         }
     }
 
+    public async Task<IReadOnlyList<YouTubeBroadcast>> ReadBroadcastsAsync(
+        string subscriptionId,
+        bool forceRefresh,
+        CancellationToken cancellationToken)
+    {
+        subscriptionId = subscriptionId?.Trim() ?? string.Empty;
+        await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            if (!forceRefresh
+                && _broadcastCache.TryGetValue(subscriptionId, out var cached)
+                && DateTimeOffset.UtcNow - cached.CreatedAtUtc <= BroadcastCacheLifetime)
+                return cached.Rows;
+
+            var target = _podcasts.GetRefreshTargets(subscriptionId).Single();
+            if (target.SourceKind != PodcastSourceKind.YouTubeChannel)
+                throw new InvalidOperationException("To źródło nie jest kanałem YouTube.");
+            if (!TryReadChannelId(target.FeedUrl, target.SubscriptionId, out var channelId))
+                throw new InvalidDataException(
+                    "Ten kanał YouTube nie ma stabilnego identyfikatora potrzebnego do odczytu transmisji.");
+
+            var token = await _account.GetAccessTokenAsync(cancellationToken)
+                .ConfigureAwait(false);
+            var rows = await _broadcasts.ReadChannelAsync(token, channelId, cancellationToken)
+                .ConfigureAwait(false);
+            var snapshot = new BroadcastSnapshot(rows.ToArray(), DateTimeOffset.UtcNow);
+            _broadcastCache[subscriptionId] = snapshot;
+            return snapshot.Rows;
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    private static bool TryReadChannelId(
+        string source,
+        string subscriptionId,
+        out string channelId)
+    {
+        channelId = string.Empty;
+        string? candidate = null;
+        if (Uri.TryCreate(source, UriKind.Absolute, out var uri)
+            && (uri.Host.Equals("youtube.com", StringComparison.OrdinalIgnoreCase)
+                || uri.Host.EndsWith(".youtube.com", StringComparison.OrdinalIgnoreCase)))
+        {
+            var segments = uri.AbsolutePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
+            if (segments.Length >= 2
+                && segments[0].Equals("channel", StringComparison.OrdinalIgnoreCase))
+                candidate = Uri.UnescapeDataString(segments[1]).Trim();
+        }
+        const string subscriptionPrefix = "youtube-channel:";
+        if (candidate is null
+            && subscriptionId.StartsWith(subscriptionPrefix, StringComparison.Ordinal))
+        {
+            var storedIdentity = subscriptionId[subscriptionPrefix.Length..].Trim();
+            // Prawdziwe identyfikatory kanałów YouTube zaczynają się od UC.
+            // Odrzuca to lokalny skrót-hash używany tylko awaryjnie przez
+            // publiczny parser kolekcji, który nie jest identyfikatorem API.
+            if (storedIdentity.StartsWith("UC", StringComparison.Ordinal))
+                candidate = storedIdentity;
+        }
+        if (candidate is null
+            || candidate.Length is < 2 or > 256
+            || candidate.Any(character => !char.IsAsciiLetterOrDigit(character)
+                                          && character is not '-' and not '_'))
+            return false;
+        channelId = candidate;
+        return true;
+    }
+
     private static Task<bool> OpenAuthorizationPageAsync(
         Uri address,
         CancellationToken cancellationToken)
@@ -145,7 +225,9 @@ internal sealed class LiteYouTubeWindowsAccountBackend : ILiteYouTubeAccountBack
         if (_disposed) return;
         _disposed = true;
         _preview = null;
+        _broadcastCache.Clear();
         _gate.Dispose();
+        _broadcasts.Dispose();
         _subscriptions.Dispose();
         _account.Dispose();
     }
@@ -153,5 +235,9 @@ internal sealed class LiteYouTubeWindowsAccountBackend : ILiteYouTubeAccountBack
     private sealed record PreviewSnapshot(
         IReadOnlyList<YouTubeSubscription> Subscriptions,
         bool RestoreSuppressed,
+        DateTimeOffset CreatedAtUtc);
+
+    private sealed record BroadcastSnapshot(
+        IReadOnlyList<YouTubeBroadcast> Rows,
         DateTimeOffset CreatedAtUtc);
 }

@@ -34,6 +34,9 @@ NEW_ACTIONS = (
     Action.SORT_PODCAST_INBOX_ADDED,
     Action.SORT_PODCAST_INBOX_ALPHABETICAL,
     Action.SORT_PODCAST_INBOX_BY_PODCAST,
+    Action.YOUTUBE_BROADCASTS,
+    Action.REFRESH_YOUTUBE_BROADCASTS,
+    Action.ADD_YOUTUBE_LIVE_STATION,
 )
 
 
@@ -80,6 +83,9 @@ _NON_SQLITE_VIEWS = (
     LibraryView.PODCAST_DOWNLOADS,
     LibraryView.PODCAST_PLAYLISTS,
     LibraryView.PODCAST_PLAYLIST_CONTENTS,
+    # Transmisje pochodzą z oficjalnego API przez host C# i krótką pamięć
+    # backendu, nie z lokalnej bazy plików ani podcasts.db.
+    LibraryView.YOUTUBE_BROADCASTS,
     # Pierwsze widoki TIDAL czytaja state.json przez osobny TidalSource.
     # Nie wolno kierowac ich do lokalnego LibrarySource/library.db.
     LibraryView.TIDAL_LIBRARY,

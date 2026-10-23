@@ -1,6 +1,10 @@
 # YT-001 — konto YouTube i synchronizacja
 
-- Status: `W trakcie — odbiór instalacji 16:30 potwierdził, że Google przekazuje zgodę, lecz utworzony klient desktopowy wymaga także client_secret przy wymianie kodu. Poprawka źródłowa 3e57b686 jest przetestowana; nowa paczka czeka na lokalne zapisanie sekretu tego samego klienta OAuth, potem na instalację i prawdziwy odbiór NVDA`. Zapis bieżącej, jeszcze niepoprawionej instalacji: [AMC-TEST-2026-10-23-1630-spotify-output-youtube-oauth.md](AMC-TEST-2026-10-23-1630-spotify-output-youtube-oauth.md). Bieżąca diagnoza: [AMC-TEST-2026-10-23-youtube-secret-frontier-choice.md](AMC-TEST-2026-10-23-youtube-secret-frontier-choice.md).
+- Status: `W trakcie — użytkownik potwierdził prawdziwy OAuth, odczyt kanałów
+  i zapis subskrypcji do Biblioteki w AMC Test 23.10.2026, 20:14. Logowanie i
+  synchronizacja kanałów są odebrane; do pierwotnego zakresu pozostają zwykłe
+  playlisty konta oraz końcowa korekta dokumentacji`. Zapis wcześniejszej
+  diagnozy: [AMC-TEST-2026-10-23-youtube-secret-frontier-choice.md](AMC-TEST-2026-10-23-youtube-secret-frontier-choice.md).
 - Utworzono: 18 października 2026
 - Ostatnia aktualizacja: 23 października 2026
 - Obszar: YouTube, OAuth, Biblioteka, wyszukiwanie i bezpieczne poświadczenia
@@ -729,3 +733,29 @@ Zainstalowano i uruchomiono `AMC Test — 23.10.2026, 20:14`, rewizja
 Potwierdzony proces PID 18752 pochodzi z
 `D:\Projekty Codex\AMC Python\runtime\python.exe`. AMC Public i GitHub
 pozostają bez zmian.
+
+## Wynik ponownego prawdziwego OAuth — 23 października 2026
+
+Ta korekta zastępuje ograniczenie z poprzedniej sekcji, według którego nie
+wykonano jeszcze ponownego prawdziwego OAuth ani podglądu subskrypcji.
+Użytkownik potwierdził komunikat poprawnego zakończenia logowania, następnie
+zobaczył własne kanały i zapisał je do Biblioteki AMC. Okno konta pozostało
+otwarte po zapisie; było to zachowanie modalnego menedżera, a nie brak zapisu.
+Można je bezpiecznie zamknąć przyciskiem `Zamknij`.
+
+### Materiał do dokumentacji użytkownika
+
+- `Sprawdź subskrypcje YouTube bez zapisywania` pokazuje plan zmian.
+- `Zapisz sprawdzone subskrypcje w Bibliotece AMC` zapisuje kanały, ale nie
+  zamyka automatycznie menedżera konta. Stan i wynik pozostają dostępne do
+  odczytu; `Zamknij` wraca do głównego okna.
+- Zapis nie zastępuje ręcznie dodanych podcastów ani kanałów. Scala nowe
+  subskrypcje z Biblioteką i respektuje wcześniej świadomie usunięte kanały.
+
+### Test rzeczywisty i ograniczenia
+
+- Prawdziwy OAuth z klientem `Aplikacja komputerowa`: zaliczony.
+- Odczyt listy subskrypcji konta: zaliczony.
+- Zapis kanałów do Biblioteki AMC: zaliczony przez użytkownika.
+- Zwykłe playlisty konta nie są jeszcze częścią działającego kontraktu;
+  dlatego YT-001 pozostaje `W trakcie`, mimo że logowanie i kanały działają.

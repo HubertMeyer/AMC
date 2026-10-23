@@ -52,6 +52,11 @@ if (args.Length == 1 && args[0] == "--youtube-subscriptions")
     try { YouTubeSubscriptionClientTests.Run(); return 0; }
     catch (Exception exception) { Console.Error.WriteLine(exception); return 1; }
 }
+if (args.Length == 1 && args[0] == "--youtube-broadcasts")
+{
+    try { YouTubeBroadcastClientTests.Run(); return 0; }
+    catch (Exception exception) { Console.Error.WriteLine(exception); return 1; }
+}
 if (args.Length == 1 && args[0] == "--youtube-subscription-sync-plan")
 {
     try { YouTubeSubscriptionSyncPlannerTests.Run(); return 0; }
@@ -279,6 +284,7 @@ var tests = new (string Name, Action Test)[]
     ("Bezpieczny fundament oficjalnego logowania YouTube", YouTubeOAuthFoundationTests.Run),
     ("Koordynator konta YouTube bez ujawniania tokenów", YouTubeAccountCoordinatorTests.Run),
     ("Oficjalny odczyt wszystkich subskrypcji YouTube", YouTubeSubscriptionClientTests.Run),
+    ("Transmisje YouTube na żywo i zaplanowane", YouTubeBroadcastClientTests.Run),
     ("Niedestrukcyjny plan synchronizacji YouTube do AMC", YouTubeSubscriptionSyncPlannerTests.Run),
     ("Atomowy zapis subskrypcji YouTube do AMC", YouTubeSubscriptionSyncApplyTests.Run),
     ("Transport osobnego procesu hosta Librespot", LibrespotHostClientTests.Run),

@@ -16,7 +16,8 @@ internal static class YouTubeAccountContractTests
         BackendFailuresAreRedacted();
         KnownQuotaFailureRemainsSpecific();
         ActiveLoginCanBeCancelledWithoutLeakingTechnicalData();
-        Console.WriteLine("OK: bezpieczny kontrakt konta YouTube (7 scenariuszy)");
+        BroadcastListUsesPublicLabelsAndUrlsOnly();
+        Console.WriteLine("OK: bezpieczny kontrakt konta YouTube (8 scenariuszy)");
     }
 
     private static void WirePayloadUsesNamesExpectedByPythonClient()
@@ -192,6 +193,41 @@ internal static class YouTubeAccountContractTests
             "Anulowanie ujawniło techniczny stan albo nie ma użytkowego opisu.");
     }
 
+    private static void BroadcastListUsesPublicLabelsAndUrlsOnly()
+    {
+        using var backend = new FakeBackend
+        {
+            Broadcasts =
+            [
+                new YouTubeBroadcast(
+                    "TECHNICZNE-ID",
+                    "  Msza\r\nna żywo  ",
+                    "Parafia",
+                    new Uri("https://www.youtube.com/watch?v=PublicznyAdres"),
+                    YouTubeBroadcastState.Live,
+                    null,
+                    DateTimeOffset.Parse("2026-10-23T16:00:00Z"))
+            ]
+        };
+        using var coordinator = new LiteYouTubeAccountCoordinator(backend);
+        using var args = JsonDocument.Parse(
+            """{"subscriptionId":"wewnetrzne-zrodlo","refresh":true}""");
+
+        var result = Invoke(
+            coordinator,
+            LiteYouTubeAccountContract.BroadcastsOperation,
+            args.RootElement);
+        var json = LiteJson.Serialize(result);
+        Check(backend.BroadcastCalls == 1
+              && backend.LastBroadcastSubscriptionId == "wewnetrzne-zrodlo"
+              && backend.LastBroadcastForceRefresh
+              && json.Contains("Msza na żywo", StringComparison.Ordinal)
+              && json.Contains("https://www.youtube.com/watch?v=PublicznyAdres", StringComparison.Ordinal)
+              && json.Contains("\"state\":\"live\"", StringComparison.Ordinal)
+              && !json.Contains("TECHNICZNE-ID", StringComparison.Ordinal),
+            "Lista transmisji zgubiła jawne dane albo ujawniła techniczne ID filmu.");
+    }
+
     private static object Invoke(
         LiteYouTubeAccountCoordinator coordinator,
         string operation,
@@ -214,11 +250,15 @@ internal static class YouTubeAccountContractTests
         internal int LogoutCalls { get; private set; }
         internal int PreviewCalls { get; private set; }
         internal int ApplyCalls { get; private set; }
+        internal int BroadcastCalls { get; private set; }
+        internal string LastBroadcastSubscriptionId { get; private set; } = string.Empty;
+        internal bool LastBroadcastForceRefresh { get; private set; }
         internal Exception? Failure { get; init; }
         internal bool WaitForCancellation { get; init; }
         internal ManualResetEventSlim LoginStarted { get; } = new(false);
         internal YouTubeSubscriptionSyncPlan Preview { get; init; } = new([], 0, 0, 0, 0);
         internal YouTubeSubscriptionSyncApplyResult Applied { get; init; } = new(0, 0, 0, 0, 0, 0);
+        internal IReadOnlyList<YouTubeBroadcast> Broadcasts { get; init; } = [];
 
         public YouTubeAccountStatus GetStatus() =>
             new(true, "YouTube: zalogowano", DateTimeOffset.UtcNow.AddHours(1));
@@ -259,6 +299,18 @@ internal static class YouTubeAccountContractTests
             ApplyCalls++;
             if (Failure is not null) throw Failure;
             return Task.FromResult(Applied);
+        }
+
+        public Task<IReadOnlyList<YouTubeBroadcast>> ReadBroadcastsAsync(
+            string subscriptionId,
+            bool forceRefresh,
+            CancellationToken cancellationToken)
+        {
+            BroadcastCalls++;
+            LastBroadcastSubscriptionId = subscriptionId;
+            LastBroadcastForceRefresh = forceRefresh;
+            if (Failure is not null) throw Failure;
+            return Task.FromResult(Broadcasts);
         }
 
         public void Dispose()

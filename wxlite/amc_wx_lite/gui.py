@@ -83,6 +83,11 @@ from .youtube_account import (
     safe_message as youtube_safe_message,
     sync_preview as youtube_sync_preview,
 )
+from .youtube_live import (
+    YouTubeLivePayloadError,
+    broadcast_rows as youtube_broadcast_rows,
+    dynamic_live_url as youtube_dynamic_live_url,
+)
 from .item_information import item_properties_text
 from . import nvda_bridge
 from .library_source import LibrarySnapshot, LibrarySource, degradation_notice
@@ -147,6 +152,7 @@ from .navigation import (
     OpenWiiMNetworkStreams,
     OpenPodcastPlaylistView,
     OpenPodcastView,
+    OpenYouTubeBroadcasts,
     OpenQueueView,
     OpenSpotifyCollectionView,
     OpenSpotifyContainer,
@@ -433,6 +439,9 @@ _LIST_CONTEXT_ACTION_GROUPS: tuple[tuple[Action, ...], ...] = (
     ),
     (
         Action.REFRESH_PODCAST,
+        Action.YOUTUBE_BROADCASTS,
+        Action.REFRESH_YOUTUBE_BROADCASTS,
+        Action.ADD_YOUTUBE_LIVE_STATION,
         Action.DOWNLOAD_PODCAST_EPISODES,
         Action.SAVE_PODCAST_EPISODE_AS,
         Action.SHOW_PODCAST_DESCRIPTION,
@@ -7853,6 +7862,11 @@ class LiteFrame(wx.Frame):
             and session.view is View.LIST
             and session.library_view is LibraryView.PODCAST_LIBRARY
         )
+        youtube_broadcasts = (
+            podcasts
+            and session.view is View.LIST
+            and session.library_view is LibraryView.YOUTUBE_BROADCASTS
+        )
         radio_scope = (
             "library"
             if radio and session.view is View.LIST and session.library_view is None
@@ -8043,6 +8057,15 @@ class LiteFrame(wx.Frame):
             if entry.needs_podcast_inbox and not podcast_inbox:
                 enabled = False
             if entry.needs_podcast_library and not podcast_library:
+                enabled = False
+            if entry.needs_youtube_channel and not (
+                podcasts
+                and selected_row is not None
+                and selected_kind == "podcast"
+                and selected_row.service_kind == "youtubeChannel"
+            ):
+                enabled = False
+            if entry.needs_youtube_broadcasts and not youtube_broadcasts:
                 enabled = False
             if entry.needs_tidal_collection and not tidal_collection:
                 enabled = False
@@ -12272,6 +12295,12 @@ class LiteFrame(wx.Frame):
             and self.navigator.active is SessionId.PODCASTS
             and self.navigator.session.library_view is LibraryView.PODCAST_LIBRARY
         )
+        youtube_broadcasts = (
+            not player
+            and self.navigator.active is SessionId.PODCASTS
+            and self.navigator.session.library_view
+            is LibraryView.YOUTUBE_BROADCASTS
+        )
         tidal_collection = (
             not player
             and self.navigator.active is SessionId.TIDAL
@@ -12355,6 +12384,7 @@ class LiteFrame(wx.Frame):
             ),
             podcast_inbox=podcast_inbox,
             podcast_library=podcast_library,
+            youtube_broadcasts=youtube_broadcasts,
             podcast_session=self.navigator.active is SessionId.PODCASTS,
             files_session=self.navigator.active is SessionId.FILES,
             tidal_session=self.navigator.active is SessionId.TIDAL,
@@ -12853,6 +12883,12 @@ class LiteFrame(wx.Frame):
             self._export_youtube_subscriptions()
         elif action is Action.YOUTUBE_ACCOUNT:
             self._show_youtube_account()
+        elif action is Action.YOUTUBE_BROADCASTS:
+            self._run(self.navigator.open_youtube_broadcasts())
+        elif action is Action.REFRESH_YOUTUBE_BROADCASTS:
+            self._run(self.navigator.open_youtube_broadcasts(force_refresh=True))
+        elif action is Action.ADD_YOUTUBE_LIVE_STATION:
+            self._add_selected_youtube_live_station()
         elif action is Action.VIEW_PODCAST_INBOX:
             self._show_podcast_inbox()
         elif action is Action.VIEW_PODCAST_DOWNLOADS:
@@ -13494,6 +13530,8 @@ class LiteFrame(wx.Frame):
                 self._open_queue_view()
             elif isinstance(intent, OpenPodcastView):
                 self._open_podcast_view(intent)
+            elif isinstance(intent, OpenYouTubeBroadcasts):
+                self._open_youtube_broadcasts(intent)
             elif isinstance(intent, OpenPodcastAggregateView):
                 self._open_podcast_aggregate(intent)
             elif isinstance(intent, OpenPodcastPlaylistView):
@@ -13651,6 +13689,7 @@ class LiteFrame(wx.Frame):
             LibraryView.SPOTIFY_LIBRARY: "Biblioteka Spotify",
             LibraryView.SPOTIFY_CONTAINER: session.spotify_heading,
             LibraryView.SPOTIFY_HISTORY: "Spotify — Historia odtwarzania",
+            LibraryView.YOUTUBE_BROADCASTS: "Transmisje YouTube na żywo i zaplanowane",
             LibraryView.SERVICE_HISTORY: (
                 f"{SESSION_LABELS[self.navigator.active]} — Historia odtwarzania"
             ),
@@ -18258,6 +18297,81 @@ class LiteFrame(wx.Frame):
                                    else "Nie udało się odczytać odcinków")
 
         self.runner.submit("podcast-view", work, done, failed)
+
+    def _open_youtube_broadcasts(self, intent: OpenYouTubeBroadcasts) -> None:
+        """Load live/upcoming items through the token-owning C# host."""
+
+        client = self.client
+        if client is None:
+            self.announcer.say("Silnik nie działa. Nie można pobrać transmisji YouTube")
+            return
+        subscription_id = intent.subscription_id
+
+        def work() -> object:
+            return client.youtube_channel_broadcasts(
+                subscription_id,
+                refresh=intent.force_refresh,
+            )
+
+        def done(payload: object) -> None:
+            state = self.navigator.sessions[SessionId.PODCASTS]
+            if self.navigator.active is not SessionId.PODCASTS:
+                return
+            if state.library_view not in (
+                LibraryView.PODCAST_LIBRARY,
+                LibraryView.YOUTUBE_BROADCASTS,
+            ):
+                return
+            if (
+                state.library_view is LibraryView.YOUTUBE_BROADCASTS
+                and state.library_playlist_id != subscription_id
+            ):
+                return
+            try:
+                rows = youtube_broadcast_rows(
+                    payload,
+                    subscription_id=subscription_id,
+                )
+            except YouTubeLivePayloadError as error:
+                self.announcer.say(str(error))
+                return
+            events = self.navigator.apply_youtube_broadcasts(
+                subscription_id,
+                intent.subscription_title,
+                rows,
+                preferred_id=intent.preferred_id,
+            )
+            self._apply_podcast_result(events)
+
+        def failed(error: Exception) -> None:
+            if self.navigator.active is SessionId.PODCASTS:
+                message = str(error).strip() if isinstance(error, HostError) else ""
+                self.announcer.say(
+                    message or "Nie udało się pobrać transmisji YouTube"
+                )
+
+        self.runner.submit("youtube-broadcasts", work, done, failed)
+
+    def _add_selected_youtube_live_station(self) -> None:
+        row = self.navigator.session.model.selected_row
+        if (
+            self.navigator.active is not SessionId.PODCASTS
+            or row is None
+            or row.kind != "podcast"
+            or row.service_kind != "youtubeChannel"
+        ):
+            self.announcer.say("Wybierz kanał YouTube z Biblioteki")
+            return
+        try:
+            address = youtube_dynamic_live_url(row.url or "")
+        except YouTubeLivePayloadError as error:
+            self.announcer.say(str(error))
+            return
+        self._station_add(
+            default_name=f"{row.title} — YouTube na żywo",
+            default_url=address,
+            dialog_title="Dodaj dynamiczną stację YouTube",
+        )
 
     def _show_podcast_inbox(self) -> None:
         """Ctrl+I: global preview that Escape restores exactly."""
@@ -27596,12 +27710,24 @@ class LiteFrame(wx.Frame):
             self.radio.save(self._radio_snapshot)
         self._run(self.navigator.apply_stations(rows, preferred_id=preferred_id))
 
-    def _station_add(self) -> None:
-        self._switch_session(SessionId.RADIO)
-        with StationDialog(self, "Dodaj stacje") as dialog:
+    def _station_add(
+        self,
+        *,
+        default_name: str = "",
+        default_url: str = "",
+        dialog_title: str = "Dodaj stacje",
+    ) -> None:
+        with StationDialog(
+            self,
+            dialog_title,
+            default_name,
+            default_url,
+        ) as dialog:
             if dialog.ShowModal() != wx.ID_OK:
+                self._restore_focus_after_dialog()
                 return
             name, url = dialog.values
+        self._switch_session(SessionId.RADIO)
         if not self.radio.may_edit:
             client = self._profile_edit_client()
             if client is None:
@@ -27866,6 +27992,11 @@ class LiteFrame(wx.Frame):
                 not player
                 and self.navigator.active is SessionId.PODCASTS
                 and session.library_view is LibraryView.PODCAST_LIBRARY
+            ),
+            youtube_broadcasts=(
+                not player
+                and self.navigator.active is SessionId.PODCASTS
+                and session.library_view is LibraryView.YOUTUBE_BROADCASTS
             ),
             podcast_session=self.navigator.active is SessionId.PODCASTS,
             files_session=self.navigator.active is SessionId.FILES,

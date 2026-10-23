@@ -80,6 +80,9 @@ class LibraryView(Enum):
     #: ujawniania technicznego Id podcastu w nazwie dostepnej.
     PODCAST_LIBRARY = "podcastLibrary"
     PODCAST_EPISODES = "podcastEpisodes"
+    #: Chwilowa lista trwających i zaplanowanych transmisji jednego kanału
+    #: YouTube. Oddzielna od zwykłych filmów kanału, bo ma inny cykl życia.
+    YOUTUBE_BROADCASTS = "youtubeBroadcasts"
     #: Wspólny widok Ctrl+U: ulubione źródła oraz ulubione odcinki.
     PODCAST_FAVORITES = "podcastFavorites"
     PODCAST_HISTORY = "podcastHistory"
@@ -320,6 +323,16 @@ class OpenPodcastView:
     subscription_title: str = ""
     preferred_id: str | None = None
     load_more: bool = False
+
+
+@dataclass(slots=True)
+class OpenYouTubeBroadcasts:
+    """Load public live/upcoming broadcasts for one saved YouTube channel."""
+
+    subscription_id: str
+    subscription_title: str
+    preferred_id: str | None = None
+    force_refresh: bool = False
 
 
 @dataclass(slots=True)
@@ -2040,6 +2053,7 @@ class Navigator:
             if state.library_view in (
                 LibraryView.PODCAST_EPISODES,
                 LibraryView.PODCAST_PLAYLIST_CONTENTS,
+                LibraryView.YOUTUBE_BROADCASTS,
             ):
                 return self._leave_library_view()
             return []
@@ -2586,6 +2600,8 @@ class Navigator:
         if state.session_id is SessionId.PODCASTS:
             if state.library_view is LibraryView.PODCAST_EPISODES:
                 return [OpenPodcastView(preferred_id=state.library_return_id)]
+            if state.library_view is LibraryView.YOUTUBE_BROADCASTS:
+                return [OpenPodcastView(preferred_id=state.library_return_id)]
             if state.library_view is LibraryView.PODCAST_PLAYLIST_CONTENTS:
                 return [OpenPodcastPlaylistView(
                     preferred_id=state.library_return_id,
@@ -2802,6 +2818,67 @@ class Navigator:
             message = (
                 f"{subscription_title}, {count} {_items_word(count)}"
                 if count else f"{subscription_title}, pusto"
+            )
+        return [Announce(message)]
+
+    def open_youtube_broadcasts(
+        self,
+        *,
+        force_refresh: bool = False,
+    ) -> list[object]:
+        """Open or refresh broadcasts without exposing a channel identifier."""
+
+        state = self.session
+        if state.session_id is not SessionId.PODCASTS:
+            return [Announce("Transmisje YouTube są dostępne w sesji Podcasty i YouTube")]
+        if state.library_view is LibraryView.YOUTUBE_BROADCASTS:
+            if not state.library_playlist_id:
+                return [Announce("Nie wiadomo, dla którego kanału odświeżyć transmisje")]
+            return [OpenYouTubeBroadcasts(
+                state.library_playlist_id,
+                state.library_return_view or "Kanał YouTube",
+                preferred_id=state.model.selected_id,
+                force_refresh=force_refresh,
+            )]
+        row = state.model.selected_row
+        if row is None or row.kind != "podcast" or row.service_kind != "youtubeChannel":
+            return [Announce("Wybierz kanał YouTube z Biblioteki")]
+        state.library_return_id = row.item_id
+        return [OpenYouTubeBroadcasts(
+            row.item_id,
+            row.title,
+            force_refresh=force_refresh,
+        )]
+
+    def apply_youtube_broadcasts(
+        self,
+        subscription_id: str,
+        subscription_title: str,
+        rows: list[Row],
+        *,
+        preferred_id: str | None = None,
+    ) -> list[object]:
+        """Show a dedicated live/upcoming list and preserve Backspace target."""
+
+        state = self.sessions[SessionId.PODCASTS]
+        if state.library_view is LibraryView.PODCAST_LIBRARY:
+            state.library_return_id = state.model.selected_id or subscription_id
+        state.library_view = LibraryView.YOUTUBE_BROADCASTS
+        state.library_playlist_id = subscription_id
+        state.library_return_view = subscription_title
+        remembered = state.view_selected_ids.get(f"youtube-live:{subscription_id}")
+        state.model.replace(rows, preferred_id=preferred_id or remembered)
+        state.view = View.LIST
+        live_count = sum(1 for row in rows if row.service_kind == "youtubeLive")
+        upcoming_count = sum(
+            1 for row in rows if row.service_kind == "youtubeUpcoming"
+        )
+        if not rows:
+            message = f"Transmisje kanału {subscription_title}, brak trwających i zaplanowanych transmisji"
+        else:
+            message = (
+                f"Transmisje kanału {subscription_title}, "
+                f"na żywo {live_count}, zaplanowane {upcoming_count}"
             )
         return [Announce(message)]
 

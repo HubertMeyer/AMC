@@ -607,6 +607,22 @@ class LiteHostClient:
             timeout=90.0,
         )
 
+    def youtube_channel_broadcasts(
+        self,
+        subscription_id: str,
+        *,
+        refresh: bool = False,
+    ) -> Any:
+        """Odczytaj publiczne transmisje kanału; token zostaje w hoście C#."""
+        return self.call(
+            "youtube.channelBroadcasts",
+            {
+                "subscriptionId": subscription_id,
+                "refresh": bool(refresh),
+            },
+            timeout=120.0,
+        )
+
     def spotify_account_status(self) -> Any:
         """Read the separate catalogue and playback connection states."""
         return self.call("spotify.accountStatus", timeout=15.0)

@@ -15,6 +15,10 @@ internal interface ILiteYouTubeAccountBackend : IDisposable
     Task<YouTubeSubscriptionSyncApplyResult> ApplyAsync(
         bool restoreSuppressed,
         CancellationToken cancellationToken);
+    Task<IReadOnlyList<YouTubeBroadcast>> ReadBroadcastsAsync(
+        string subscriptionId,
+        bool forceRefresh,
+        CancellationToken cancellationToken);
 }
 
 /// <summary>
@@ -39,6 +43,14 @@ internal sealed class LiteYouTubeAccountCoordinator(
         "YouTube zwrócił powtarzającą się stronę subskrypcji.",
         "YouTube zwrócił nieprawidłowy znacznik strony subskrypcji.",
         "YouTube zwrócił nieczytelną listę subskrypcji.",
+        "Tego kanału YouTube nie ma już w Bibliotece.",
+        "To źródło nie jest kanałem YouTube.",
+        "Ten kanał YouTube nie ma stabilnego identyfikatora potrzebnego do odczytu transmisji.",
+        "Wyczerpano dzienny limit wyszukiwania transmisji YouTube. Spróbuj później.",
+        "YouTube odmówił dostępu do transmisji tego kanału.",
+        "Nie udało się pobrać transmisji YouTube.",
+        "YouTube zwrócił nieczytelną listę transmisji.",
+        "YouTube zwrócił nieczytelne szczegóły transmisji.",
         "Google zwrócił niepełne dane logowania YouTube.",
         "Google zwrócił nieczytelną odpowiedź logowania YouTube.",
         "Ta wersja AMC nie ma prawidłowo skonfigurowanego logowania YouTube.",
@@ -74,7 +86,9 @@ internal sealed class LiteYouTubeAccountCoordinator(
             [LiteYouTubeAccountContract.SyncPreviewOperation] = (request, _) =>
                 Preview(request.Args),
             [LiteYouTubeAccountContract.SyncApplyOperation] = (request, _) =>
-                Apply(request.Args)
+                Apply(request.Args),
+            [LiteYouTubeAccountContract.BroadcastsOperation] = (request, _) =>
+                Broadcasts(request.Args)
         };
 
     private object Status()
@@ -187,6 +201,28 @@ internal sealed class LiteYouTubeAccountCoordinator(
         catch (Exception exception)
         {
             throw SafeFailure(exception, "Nie udało się zapisać subskrypcji YouTube.");
+        }
+    }
+
+    private object Broadcasts(JsonElement args)
+    {
+        var request = LiteYouTubeAccountContract.ReadBroadcastRequest(args);
+        try
+        {
+            var rows = _backend.ReadBroadcastsAsync(
+                    request.SubscriptionId,
+                    request.ForceRefresh,
+                    CancellationToken.None)
+                .GetAwaiter().GetResult();
+            return LiteYouTubeAccountContract.CreateBroadcasts(rows);
+        }
+        catch (KeyNotFoundException)
+        {
+            throw new LiteRequestException("Tego kanału YouTube nie ma już w Bibliotece.");
+        }
+        catch (Exception exception)
+        {
+            throw SafeFailure(exception, "Nie udało się pobrać transmisji YouTube.");
         }
     }
 

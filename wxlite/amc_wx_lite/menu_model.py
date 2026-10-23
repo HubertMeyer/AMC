@@ -81,6 +81,10 @@ class MenuItem:
     #: Te trzy pozycje są aktywne tylko na głównej liście źródeł Podcastów i
     #: YouTube, nie wewnątrz kanału, playlisty ani zbiorczego widoku odcinków.
     needs_podcast_library: bool = False
+    #: Wymaga zaznaczonego źródła będącego kanałem YouTube, nie playlistą.
+    needs_youtube_channel: bool = False
+    #: Aktywna tylko w dedykowanej liście transmisji jednego kanału.
+    needs_youtube_broadcasts: bool = False
     #: Aktywna wyłącznie w jednym z trzech głównych widoków kolekcji TIDAL.
     needs_tidal_collection: bool = False
     #: Aktywna wyłącznie w jednym z sześciu głównych widoków Spotify.
@@ -449,9 +453,29 @@ def build_menus(
                         needs_podcast_session=True,
                         visible_sessions=PODCASTS_ONLY,
                     ),
+                    MenuItem(
+                        "Transmisje na żywo i &zaplanowane kanału…",
+                        Action.YOUTUBE_BROADCASTS,
+                        needs_youtube_channel=True,
+                        visible_sessions=PODCASTS_ONLY,
+                    ),
+                    MenuItem(
+                        "Odśwież transmisje kanału YouTube",
+                        Action.REFRESH_YOUTUBE_BROADCASTS,
+                        shortcut="F5",
+                        accelerator=False,
+                        needs_youtube_broadcasts=True,
+                        visible_sessions=PODCASTS_ONLY,
+                    ),
                 )
                 if youtube_account_available
                 else ()
+            ),
+            MenuItem(
+                "Dodaj kanał jako dynamiczne &radio YouTube na żywo…",
+                Action.ADD_YOUTUBE_LIVE_STATION,
+                needs_youtube_channel=True,
+                visible_sessions=PODCASTS_ONLY,
             ),
             MenuItem(
                 "Odśwież wybrane źródło pod&castów",

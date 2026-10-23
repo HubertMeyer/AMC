@@ -272,11 +272,11 @@ zmian, wymagający korekty użytkownika:
   [AMC14-foldery-i-integracja-powloki.md](AMC14-foldery-i-integracja-powloki.md).
   Zatwierdzona specyfikacja:
   `D:\Projekty Codex\Accessible Multimedia Controller\AMC14_FOLDERY_I_INTEGRACJA_POWLOKI_2026-10-18.md`.
-- `YT-001` — **W trakcie — pierwszy prawdziwy OAuth z kompletną parą klienta
-  ujawnił zbyt krótki, pięciominutowy czas lokalnego odbiornika. Źródłowa
-  korekta wydłuża go do 15 minut, bezpiecznie anuluje oczekiwanie przy
-  zamykaniu okna i jest zainstalowana jako AMC Test 23.10.2026, 20:14 po
-  pełnej regresji; pozostały ponowny prawdziwy OAuth oraz ręczny odbiór NVDA**
+- `YT-001` — **W trakcie — użytkownik potwierdził ponowny prawdziwy OAuth,
+  odczyt kanałów i zapis subskrypcji do Biblioteki w AMC Test 23.10.2026,
+  20:14. Logowanie i synchronizacja kanałów są odebrane; do domknięcia
+  pierwotnego zakresu pozostają zwykłe playlisty konta oraz końcowa korekta
+  dokumentacji**
   — oficjalne logowanie do
   konta YouTube, synchronizacja subskrypcji i zwykłych playlist oraz bezpieczny
   zakres czynności konta. Etap rozpoczęto 21 października 2026 na nowe jawne
@@ -286,6 +286,12 @@ zmian, wymagający korekty użytkownika:
   [YT-001-konto-youtube-i-synchronizacja.md](YT-001-konto-youtube-i-synchronizacja.md).
   Bieżąca instalacja:
   [AMC-TEST-2026-10-23-1630-spotify-output-youtube-oauth.md](AMC-TEST-2026-10-23-1630-spotify-output-youtube-oauth.md).
+- `YT-002` — **W trakcie — źródła, bezpieczny kontrakt, pełna regresja
+  wxPython 2024/2024, testy .NET i build LiteHosta są zaliczone; czeka na
+  instalację AMC Test i ręczny odbiór NVDA** — lista transmisji live/upcoming zapisanego kanału, Enter w
+  wewnętrznym silniku, kopiowanie adresu, F5 i Backspace oraz dynamiczna stacja
+  Radia oparta na stałym adresie kanału `/live`. Szczegóły:
+  [YT-002-transmisje-na-zywo-i-dynamiczne-radio.md](YT-002-transmisje-na-zywo-i-dynamiczne-radio.md).
 - `NAME-001` — **Kod, testy, paczka, instalacja i uruchomienie AMC Test gotowe;
   bez nowego instalatora AMC Public** —
   krótkie nazwy `AMC Test — data, godzina` i `AMC Public — data, godzina`,
