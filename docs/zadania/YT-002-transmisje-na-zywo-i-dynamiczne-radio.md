@@ -1,8 +1,9 @@
 # YT-002 — transmisje YouTube na żywo i dynamiczne radio
 
 - Status: `W trakcie — źródła, kontrakt, pełna regresja wxPython 2024/2024,
-  testy .NET i build LiteHosta są zaliczone; przed zmianą na Zrobione pozostają
-  instalacja AMC Test i ręczny odbiór NVDA`
+  testy .NET, build, atomowa instalacja i kontrolowany start AMC Test 21:25 są
+  zaliczone; przed zmianą na Zrobione pozostaje ręczny odbiór prawdziwego
+  kanału i NVDA`
 - Utworzono: 23 października 2026
 - Ostatnia aktualizacja: 23 października 2026
 - Obszar: YouTube, Podcasty i YouTube, Radio, nawigacja, NVDA
@@ -78,6 +79,12 @@ Stan z 23 października 2026 przed pełną promocją:
   Enter/Backspace/F5 oraz parytet menu–kontekst–paleta–pomoc.
 - `dotnet build AccessibleMediaController.LiteHost.csproj --no-restore`:
   sukces, 0 ostrzeżeń, 0 błędów.
+- Procedura promocji powtórzyła pełną regresję: 2024 zaliczone, 111 pominiętych,
+  13 podtestów; launcher i aktualizator 30/30, buildy .NET po 0 ostrzeżeń i 0
+  błędów.
+- Kandydat miał 1674 pliki. Integralność, kontrolowany start kandydata,
+  atomowa instalacja, integralność zainstalowanej kopii i jej kontrolowany
+  start: zaliczone.
 - Ręczny odbiór NVDA i prawdziwy odczyt transmisji z konta: jeszcze nie
   wykonane w chwili tego zapisu.
 
@@ -118,6 +125,10 @@ Projekt opisu zmian:
 ## Wersja i commit
 
 - Gałąź: `integration/amc-test-20261023-late`.
-- Commit źródłowy: do wpisania po bezpiecznym commicie.
-- Instalacja AMC Test: jeszcze nie wykonana dla YT-002.
+- Commit źródłowy: `4119476314529741741639de6ee662951e656092`.
+- Zainstalowano i uruchomiono `AMC Test — 23.10.2026, 21:25` w
+  `D:\Projekty Codex\AMC Python`.
+- Identyfikator paczki: `dd5f80fc`; uruchomiony PID w chwili weryfikacji:
+  `41544`, dokładny plik:
+  `D:\Projekty Codex\AMC Python\runtime\python.exe`.
 - GitHub i AMC Public: bez zmian.

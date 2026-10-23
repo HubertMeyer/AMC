@@ -287,8 +287,9 @@ zmian, wymagający korekty użytkownika:
   Bieżąca instalacja:
   [AMC-TEST-2026-10-23-1630-spotify-output-youtube-oauth.md](AMC-TEST-2026-10-23-1630-spotify-output-youtube-oauth.md).
 - `YT-002` — **W trakcie — źródła, bezpieczny kontrakt, pełna regresja
-  wxPython 2024/2024, testy .NET i build LiteHosta są zaliczone; czeka na
-  instalację AMC Test i ręczny odbiór NVDA** — lista transmisji live/upcoming zapisanego kanału, Enter w
+  wxPython 2024/2024, testy .NET, build, atomowa instalacja i kontrolowany start
+  AMC Test 23.10.2026, 21:25 są zaliczone; czeka wyłącznie na ręczny odbiór
+  prawdziwego kanału i NVDA** — lista transmisji live/upcoming zapisanego kanału, Enter w
   wewnętrznym silniku, kopiowanie adresu, F5 i Backspace oraz dynamiczna stacja
   Radia oparta na stałym adresie kanału `/live`. Szczegóły:
   [YT-002-transmisje-na-zywo-i-dynamiczne-radio.md](YT-002-transmisje-na-zywo-i-dynamiczne-radio.md).
