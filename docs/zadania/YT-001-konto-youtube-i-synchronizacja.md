@@ -1,6 +1,6 @@
 # YT-001 — konto YouTube i synchronizacja
 
-- Status: `W trakcie odbioru — niezgodność nazw pól C#–Python jest poprawiona; AMC Test 23.10.2026, 15:42 został zbudowany, zainstalowany i uruchomiony, a zainstalowany host oraz wpis palety przeszły niezależną kontrolę. Pozostało prawdziwe logowanie i ręczny odbiór NVDA`. Zapis bieżącej instalacji: [AMC-TEST-2026-10-23-1542-youtube-command-wire-fix.md](AMC-TEST-2026-10-23-1542-youtube-command-wire-fix.md). Zapis odrzuconej wersji 15:14: [AMC-TEST-2026-10-23-1514-youtube-oauth.md](AMC-TEST-2026-10-23-1514-youtube-oauth.md).
+- Status: `W trakcie odbioru — po pierwszej prawdziwej próbie OAuth poprawiono przedwczesny komunikat strony powrotu i dodano bezpieczne rozróżnienie błędów konfiguracji Google. AMC Test 23.10.2026, 16:30 został zbudowany, zainstalowany i uruchomiony; zainstalowany host potwierdza dostępność konta tylko do odczytu. Pozostało ponowne prawdziwe logowanie i ręczny odbiór NVDA`. Zapis bieżącej instalacji: [AMC-TEST-2026-10-23-1630-spotify-output-youtube-oauth.md](AMC-TEST-2026-10-23-1630-spotify-output-youtube-oauth.md). Wcześniejsza instalacja 15:42: [AMC-TEST-2026-10-23-1542-youtube-command-wire-fix.md](AMC-TEST-2026-10-23-1542-youtube-command-wire-fix.md).
 - Utworzono: 18 października 2026
 - Ostatnia aktualizacja: 23 października 2026
 - Obszar: YouTube, OAuth, Biblioteka, wyszukiwanie i bezpieczne poświadczenia
@@ -550,3 +550,13 @@ zalogowane, mimo mylącego tekstu w karcie przeglądarki.
   Po instalacji poprawionej wersji należy ponowić logowanie; nowy komunikat ma
   wskazać konkretną klasę błędu konfiguracji, jeżeli Google ponownie odrzuci
   wymianę kodu.
+
+## Instalacja diagnozy OAuth — 23 października 2026, 16:30
+
+Poprawioną wersję zainstalowano po naturalnym zakończeniu wszystkich aktywnych
+nagrań. Kandydat i instalacja `c57a249b` przeszły integralność oraz kontrolowany
+start, a lokalna sonda zainstalowanego hosta zwróciła `available=true`,
+`readOnly=true` i osobne poświadczenia testowe. Prawdziwy token nadal nie
+istnieje: należy ponowić logowanie, a o wyniku rozstrzyga stan w AMC, nie sama
+strona powrotu w przeglądarce. Publikacji nie wykonano. Pełny zapis:
+[AMC-TEST-2026-10-23-1630-spotify-output-youtube-oauth.md](AMC-TEST-2026-10-23-1630-spotify-output-youtube-oauth.md).

@@ -174,8 +174,8 @@ zmian, wymagający korekty użytkownika:
   wcześniejszy fallback następował za późno. Korekta z 23.10.2026 sprawdza
   nazwane wyjście przy konfiguracji sesji bez logowania, przełącza bieżący tor
   na urządzenie domyślne przed pierwszym Play i rozróżnia kod
-  `trackUnavailable`; kod, testy i build Release są zaliczone, a instalacja i
-  ręczny odbiór dźwięku pozostają do wykonania. Mechanizm
+  `trackUnavailable`; kod, testy, build Release oraz instalacja AMC Test 16:30
+  są zaliczone, a ręczny odbiór dźwięku pozostaje do wykonania. Mechanizm
   ma partycje usług i kont, aby kolejne integracje
   używały tego samego kontraktu bez kopiowania kodu Spotify. Przebieg:
   `AMC08-playlisty-spotify.md`. Zatwierdzona specyfikacja:
@@ -272,17 +272,19 @@ zmian, wymagający korekty użytkownika:
   [AMC14-foldery-i-integracja-powloki.md](AMC14-foldery-i-integracja-powloki.md).
   Zatwierdzona specyfikacja:
   `D:\Projekty Codex\Accessible Multimedia Controller\AMC14_FOLDERY_I_INTEGRACJA_POWLOKI_2026-10-18.md`.
-- `YT-001` — **W trakcie odbioru — brak polecenia z wersji 15:14 został
-  naprawiony na granicy C#–Python. AMC Test 23.10.2026, 15:42 jest zbudowany,
-  zainstalowany i uruchomiony; zainstalowany host zwraca poprawne `camelCase`,
-  a runtime tworzy jeden wpis konta w palecie. Pozostało prawdziwe logowanie i
-  ręczny odbiór NVDA** — oficjalne logowanie do
+- `YT-001` — **W trakcie odbioru — po pierwszym prawdziwym OAuth poprawiono
+  przedwczesny komunikat strony powrotu i bezpieczną diagnozę odrzuconej
+  wymiany tokenu. AMC Test 23.10.2026, 16:30 jest zbudowany, zainstalowany i
+  uruchomiony; zainstalowany host potwierdza konto tylko do odczytu. Pozostało
+  ponowne prawdziwe logowanie i ręczny odbiór NVDA** — oficjalne logowanie do
   konta YouTube, synchronizacja subskrypcji i zwykłych playlist oraz bezpieczny
   zakres czynności konta. Etap rozpoczęto 21 października 2026 na nowe jawne
   polecenie użytkownika; sam start nadal nie loguje konta ani nie otwiera
   przeglądarki. Profil publiczny pozostaje wyłączony.
   Szczegóły:
   [YT-001-konto-youtube-i-synchronizacja.md](YT-001-konto-youtube-i-synchronizacja.md).
+  Bieżąca instalacja:
+  [AMC-TEST-2026-10-23-1630-spotify-output-youtube-oauth.md](AMC-TEST-2026-10-23-1630-spotify-output-youtube-oauth.md).
 - `NAME-001` — **Kod, testy, paczka, instalacja i uruchomienie AMC Test gotowe;
   bez nowego instalatora AMC Public** —
   krótkie nazwy `AMC Test — data, godzina` i `AMC Public — data, godzina`,

@@ -483,3 +483,14 @@ ręcznym wybraniu urządzenia domyślnego pod `Shift+A`.
 - Całe rozwiązanie zbudowane w Release: 0 ostrzeżeń, 0 błędów.
 - Na tym etapie jest to zmiana źródła z testami i kompilacją. Instalacja AMC
   Test oraz ręczne potwierdzenie dźwięku pozostają odrębnymi faktami.
+
+## Instalacja korekty wyjścia — 23 października 2026, 16:30
+
+Korektę z commita `cfe4f432` zainstalowano atomowo w bieżącym AMC Test po
+naturalnym zakończeniu wszystkich aktywnych nagrań. Paczka `c57a249b` ma 1672
+pliki; kandydat i instalacja przeszły kontrolę integralności oraz startu.
+Rzeczywisty host widzi obecnie tylko domyślne głośniki Realtek, więc brak Denona
+jest potwierdzony na tym komputerze. Pozostaje ręczny odsłuch pierwszego
+odtworzenia Spotify i odbiór jednorazowego komunikatu NVDA. Publikacji nie
+wykonano. Pełny zapis:
+[AMC-TEST-2026-10-23-1630-spotify-output-youtube-oauth.md](AMC-TEST-2026-10-23-1630-spotify-output-youtube-oauth.md).
