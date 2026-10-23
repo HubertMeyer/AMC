@@ -51,6 +51,43 @@ internal sealed class YouTubeCollectionClient
         var executable = YouTubeSourceResolver.FindExecutable()
             ?? throw new NotSupportedException(
                 "Kanały i playlisty YouTube wymagają składnika yt-dlp. Wybierz Pomoc, Sprawdź składniki: FFmpeg i yt-dlp.");
+        try
+        {
+            var result = await RunYtDlpAsync(executable, normalizedAddress, cancellationToken)
+                .ConfigureAwait(false);
+            if (result.ExitCode != 0
+                && TryBuildChannelFallbackAddress(
+                    normalizedAddress,
+                    sourceKind,
+                    result.Error,
+                    out var fallbackAddress))
+            {
+                result = await RunYtDlpAsync(executable, fallbackAddress, cancellationToken)
+                    .ConfigureAwait(false);
+            }
+            if (result.ExitCode != 0)
+                throw new InvalidDataException("YouTube nie udostępnił obecnie tej publicznej kolekcji.");
+            if (result.Output.Length == 0 || result.Output.Length > MaximumJsonCharacters)
+                throw new InvalidDataException("YouTube zwrócił nieprawidłowe dane kolekcji.");
+            var document = ParseResult(normalizedAddress, sourceKind, result.Output);
+            return await CompleteFromChannelFeedAsync(document, cancellationToken)
+                .ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            throw new TimeoutException("YouTube nie odpowiedział w bezpiecznym czasie.");
+        }
+        catch (Win32Exception exception)
+        {
+            throw new InvalidDataException("Nie udało się uruchomić składnika yt-dlp.", exception);
+        }
+    }
+
+    private static async Task<YtDlpResult> RunYtDlpAsync(
+        string executable,
+        Uri address,
+        CancellationToken cancellationToken)
+    {
         var start = ExternalToolProcess.Create(executable);
         foreach (var argument in new[]
         {
@@ -69,58 +106,62 @@ internal sealed class YouTubeCollectionClient
             "--extractor-args", "youtubetab:approximate_date;lang=pl",
             "--dump-single-json",
             "--",
-            normalizedAddress.AbsoluteUri
+            address.AbsoluteUri
         })
         {
             start.ArgumentList.Add(argument);
         }
 
-        Process? process = null;
-        try
-        {
-            process = Process.Start(start)
-                ?? throw new InvalidDataException("Nie udało się uruchomić składnika yt-dlp.");
-            process.StandardInput.Close();
-            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            timeout.CancelAfter(TimeSpan.FromSeconds(60));
-            using var termination = timeout.Token.Register(
-                static state =>
+        using var process = Process.Start(start)
+            ?? throw new InvalidDataException("Nie udało się uruchomić składnika yt-dlp.");
+        process.StandardInput.Close();
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeout.CancelAfter(TimeSpan.FromSeconds(60));
+        using var termination = timeout.Token.Register(
+            static state =>
+            {
+                try
                 {
-                    try
-                    {
-                        var running = (Process)state!;
-                        if (!running.HasExited) running.Kill(entireProcessTree: true);
-                    }
-                    catch (Exception)
-                    {
-                    }
-                },
-                process);
-            var outputTask = process.StandardOutput.ReadToEndAsync(timeout.Token);
-            var errorTask = process.StandardError.ReadToEndAsync(timeout.Token);
-            await process.WaitForExitAsync(timeout.Token).ConfigureAwait(false);
-            var output = await outputTask.ConfigureAwait(false);
-            _ = await errorTask.ConfigureAwait(false);
-            if (process.ExitCode != 0)
-                throw new InvalidDataException("YouTube nie udostępnił obecnie tej publicznej kolekcji.");
-            if (output.Length == 0 || output.Length > MaximumJsonCharacters)
-                throw new InvalidDataException("YouTube zwrócił nieprawidłowe dane kolekcji.");
-            var document = ParseResult(normalizedAddress, sourceKind, output);
-            return await CompleteFromChannelFeedAsync(document, cancellationToken)
-                .ConfigureAwait(false);
-        }
-        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+                    var running = (Process)state!;
+                    if (!running.HasExited) running.Kill(entireProcessTree: true);
+                }
+                catch (Exception)
+                {
+                }
+            },
+            process);
+        var outputTask = process.StandardOutput.ReadToEndAsync(timeout.Token);
+        var errorTask = process.StandardError.ReadToEndAsync(timeout.Token);
+        await process.WaitForExitAsync(timeout.Token).ConfigureAwait(false);
+        return new YtDlpResult(
+            process.ExitCode,
+            await outputTask.ConfigureAwait(false),
+            await errorTask.ConfigureAwait(false));
+    }
+
+    internal static bool TryBuildChannelFallbackAddress(
+        Uri normalizedAddress,
+        PodcastSourceKind sourceKind,
+        string error,
+        out Uri fallbackAddress)
+    {
+        fallbackAddress = null!;
+        const string videosSuffix = "/videos";
+        if (sourceKind != PodcastSourceKind.YouTubeChannel
+            || !normalizedAddress.AbsolutePath.EndsWith(videosSuffix, StringComparison.OrdinalIgnoreCase)
+            || !error.Contains("does not have a videos tab", StringComparison.OrdinalIgnoreCase))
         {
-            throw new TimeoutException("YouTube nie odpowiedział w bezpiecznym czasie.");
+            return false;
         }
-        catch (Win32Exception exception)
+
+        var builder = new UriBuilder(normalizedAddress)
         {
-            throw new InvalidDataException("Nie udało się uruchomić składnika yt-dlp.", exception);
-        }
-        finally
-        {
-            process?.Dispose();
-        }
+            Path = normalizedAddress.AbsolutePath[..^videosSuffix.Length].TrimEnd('/') + "/",
+            Query = string.Empty,
+            Fragment = string.Empty
+        };
+        fallbackAddress = builder.Uri;
+        return true;
     }
 
     internal static bool TryNormalizeCollectionAddress(
@@ -179,6 +220,8 @@ internal sealed class YouTubeCollectionClient
         sourceKind = PodcastSourceKind.YouTubeChannel;
         return true;
     }
+
+    private sealed record YtDlpResult(int ExitCode, string Output, string Error);
 
     internal static YouTubeCollectionDocument ParseResult(
         Uri normalizedAddress,

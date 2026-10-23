@@ -47,15 +47,18 @@ internal sealed class LitePodcastRefreshCoordinator : IDisposable
     public object Refresh(JsonElement args) => RefreshCore(
         () => _podcasts.GetRefreshTargets(
             LiteArgs.ReadText(args, "subscriptionId")),
-        emptyIsError: true);
+        emptyIsError: true,
+        automatic: false);
 
     public object RefreshAutomatic() => RefreshCore(
         _podcasts.GetDueRefreshTargets,
-        emptyIsError: false);
+        emptyIsError: false,
+        automatic: true);
 
     private object RefreshCore(
         Func<IReadOnlyList<PodcastRefreshTarget>> readTargets,
-        bool emptyIsError)
+        bool emptyIsError,
+        bool automatic)
     {
         if (Interlocked.CompareExchange(ref _refreshInProgress, 1, 0) != 0)
             throw new LiteRequestException("Odświeżanie źródeł już trwa.");
@@ -96,6 +99,7 @@ internal sealed class LitePodcastRefreshCoordinator : IDisposable
             {
                 try
                 {
+                    if (automatic) _podcasts.MarkRefreshAttempt(target.SubscriptionId);
                     var feed = _fetch(target).GetAwaiter().GetResult();
                     PodcastRefreshResult result;
                     if (_bookmarks is not null

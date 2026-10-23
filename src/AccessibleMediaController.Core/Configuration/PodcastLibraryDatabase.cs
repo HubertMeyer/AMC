@@ -16,7 +16,7 @@ namespace AccessibleMediaController.Core.Configuration;
 /// </summary>
 internal sealed class PodcastLibraryDatabase(string databasePath)
 {
-    private const int DatabaseSchemaVersion = 2;
+    private const int DatabaseSchemaVersion = 3;
     private readonly object _gate = new();
     private static readonly JsonSerializerOptions PayloadJsonOptions = new();
 
@@ -271,6 +271,13 @@ internal sealed class PodcastLibraryDatabase(string databasePath)
         }
         DeleteMissing(connection, transaction, "podcast_episodes", episodeHashes.Keys);
         DeleteMissing(connection, transaction, "podcast_subscriptions", subscriptionHashes.Keys);
+        Execute(
+            connection,
+            transaction,
+            """
+            DELETE FROM podcast_refresh_attempts
+            WHERE subscription_id NOT IN (SELECT id FROM podcast_subscriptions);
+            """);
 
         Execute(
             connection,
@@ -501,21 +508,62 @@ internal sealed class PodcastLibraryDatabase(string databasePath)
         {
             var settings = new PodcastSettings();
             LoadInto(settings);
+            using var connection = OpenConnection();
+            EnsureSchema(connection);
+            var refreshAttempts = ReadRefreshAttempts(connection);
             return settings.Subscriptions
                 .Where(subscription =>
                     subscription.IsInLibrary
                     && IsRefreshable(subscription.SourceKind)
                     && subscription.RefreshIntervalMinutes > 0)
-                .Where(subscription =>
-                    subscription.LastRefreshUtcTicks <= 0
-                    || subscription.LastRefreshUtcTicks > now.Ticks
-                    || now.Ticks - subscription.LastRefreshUtcTicks
+                .Select(subscription => new
+                {
+                    Subscription = subscription,
+                    LastActivityUtcTicks = Math.Max(
+                        subscription.LastRefreshUtcTicks,
+                        refreshAttempts.GetValueOrDefault(subscription.Id))
+                })
+                .Where(item =>
+                    item.LastActivityUtcTicks <= 0
+                    || item.LastActivityUtcTicks > now.Ticks
+                    || now.Ticks - item.LastActivityUtcTicks
                         >= TimeSpan.FromMinutes(
-                            subscription.RefreshIntervalMinutes).Ticks)
-                .OrderBy(subscription => subscription.LastRefreshUtcTicks)
+                            item.Subscription.RefreshIntervalMinutes).Ticks)
+                .OrderBy(item => item.LastActivityUtcTicks)
                 .Take(Math.Max(1, settings.AutomaticRefreshBatchSize))
-                .Select(ToRefreshTarget)
+                .Select(item => ToRefreshTarget(item.Subscription))
                 .ToArray();
+        }
+    }
+
+    public void MarkRefreshAttempt(string subscriptionId, DateTime utcNow)
+    {
+        if (string.IsNullOrWhiteSpace(subscriptionId))
+            throw new ArgumentException("Nie wskazano źródła do odświeżenia.", nameof(subscriptionId));
+        var now = utcNow.Kind == DateTimeKind.Utc
+            ? utcNow
+            : utcNow.ToUniversalTime();
+        lock (_gate)
+        {
+            using var connection = OpenConnection();
+            EnsureSchema(connection);
+            using (var probe = connection.CreateCommand())
+            {
+                probe.CommandText = "SELECT 1 FROM podcast_subscriptions WHERE id = $id;";
+                probe.Parameters.AddWithValue("$id", subscriptionId);
+                if (probe.ExecuteScalar() is null)
+                    throw new KeyNotFoundException("Nie znaleziono wybranego źródła.");
+            }
+            using var command = connection.CreateCommand();
+            command.CommandText = """
+                INSERT INTO podcast_refresh_attempts(subscription_id, last_attempt_utc_ticks)
+                VALUES($id, $ticks)
+                ON CONFLICT(subscription_id) DO UPDATE SET
+                    last_attempt_utc_ticks = excluded.last_attempt_utc_ticks;
+                """;
+            command.Parameters.AddWithValue("$id", subscriptionId);
+            command.Parameters.AddWithValue("$ticks", now.Ticks);
+            command.ExecuteNonQuery();
         }
     }
 
@@ -1533,6 +1581,12 @@ internal sealed class PodcastLibraryDatabase(string databasePath)
                 ON podcast_subscriptions(is_in_library, title COLLATE NOCASE);
             CREATE INDEX IF NOT EXISTS ix_podcast_subscriptions_feed
                 ON podcast_subscriptions(feed_url COLLATE NOCASE);
+            CREATE TABLE IF NOT EXISTS podcast_refresh_attempts (
+                subscription_id TEXT PRIMARY KEY,
+                last_attempt_utc_ticks INTEGER NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS ix_podcast_refresh_attempts_time
+                ON podcast_refresh_attempts(last_attempt_utc_ticks);
             CREATE TABLE IF NOT EXISTS podcast_episodes (
                 id TEXT PRIMARY KEY,
                 ordinal INTEGER NOT NULL,
@@ -1564,7 +1618,7 @@ internal sealed class PodcastLibraryDatabase(string databasePath)
                 id TEXT PRIMARY KEY,
                 removed_utc_ticks INTEGER NOT NULL
             );
-            PRAGMA user_version = 2;
+            PRAGMA user_version = 3;
             """;
         command.ExecuteNonQuery();
 
@@ -1606,6 +1660,19 @@ internal sealed class PodcastLibraryDatabase(string databasePath)
         using var command = connection.CreateCommand();
         command.CommandText = $"SELECT COUNT(*) FROM {table};";
         return Convert.ToInt32(command.ExecuteScalar(), CultureInfo.InvariantCulture);
+    }
+
+    private static Dictionary<string, long> ReadRefreshAttempts(SqliteConnection connection)
+    {
+        var attempts = new Dictionary<string, long>(StringComparer.Ordinal);
+        using var command = connection.CreateCommand();
+        command.CommandText = """
+            SELECT subscription_id, last_attempt_utc_ticks
+            FROM podcast_refresh_attempts;
+            """;
+        using var reader = command.ExecuteReader();
+        while (reader.Read()) attempts[reader.GetString(0)] = reader.GetInt64(1);
+        return attempts;
     }
 
     private static void ValidateIntegrity(SqliteConnection connection)

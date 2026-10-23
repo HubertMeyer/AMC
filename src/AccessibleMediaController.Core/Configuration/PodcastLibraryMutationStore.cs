@@ -25,6 +25,9 @@ public sealed class PodcastLibraryMutationStore(string databasePath)
     public IReadOnlyList<PodcastRefreshTarget> GetDueRefreshTargets(DateTime utcNow) =>
         _database.GetDueRefreshTargets(utcNow);
 
+    public void MarkRefreshAttempt(string subscriptionId, DateTime utcNow) =>
+        _database.MarkRefreshAttempt(subscriptionId, utcNow);
+
     public PodcastGlobalSettingsSnapshot GetGlobalSettings() =>
         _database.GetGlobalSettings();
 

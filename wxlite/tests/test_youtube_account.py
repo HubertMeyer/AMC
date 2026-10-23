@@ -245,6 +245,8 @@ def test_dialog_source_has_intentional_accessible_labels() -> None:
         "Anuluj oczekiwanie na logowanie YouTube",
         "Zamknij okno konta YouTube",
         "AMC będzie czekać do 15 minut",
+        "uruchomienie AMC ani logowanie nie przywraca usuniętych kanałów",
+        "Przywracanie wcześniej usuniętych kanałów wymaga",
     ):
         assert label in dialog
     assert "self.close_button.Bind(wx.EVT_BUTTON, self._on_close_button)" in dialog

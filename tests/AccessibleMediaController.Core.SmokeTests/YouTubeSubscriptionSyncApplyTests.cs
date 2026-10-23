@@ -9,7 +9,8 @@ internal static class YouTubeSubscriptionSyncApplyTests
         KeepsSuppressedUntilExplicitRestore();
         RemoteAbsenceDoesNotRemoveLocalSource();
         ConflictDoesNotPartiallyMutateDatabase();
-        Console.WriteLine("OK: atomowy zapis subskrypcji YouTube (4 scenariusze)");
+        KeepsFailedAutomaticRefreshFairAndPersistent();
+        Console.WriteLine("OK: atomowy zapis subskrypcji YouTube (5 scenariuszy)");
     }
 
     private static void AddsShellsForBoundedRefreshAndIsIdempotent()
@@ -57,7 +58,7 @@ internal static class YouTubeSubscriptionSyncApplyTests
                 }
             ]
         };
-        WithDatabase(settings, (_, store) =>
+        WithDatabase(settings, (database, store) =>
         {
             var ordinary = store.ApplyYouTubeSubscriptions(
                 [Remote("UC-USUNIETY", "Nazwa z YouTube")]);
@@ -66,12 +67,19 @@ internal static class YouTubeSubscriptionSyncApplyTests
             Assert(store.GetRefreshTargets().Count == 0,
                 "Usunięty kanał wrócił do aktywnych źródeł.");
 
-            var restored = store.ApplyYouTubeSubscriptions(
+            var reopened = new PodcastLibraryMutationStore(database.Path);
+            var afterRestart = reopened.ApplyYouTubeSubscriptions(
+                [Remote("UC-USUNIETY", "Nazwa z YouTube")]);
+            Assert(afterRestart.Changed == 0 && afterRestart.Suppressed == 1
+                   && reopened.GetRefreshTargets().Count == 0,
+                "Ponowne uruchomienie albo synchronizacja przywróciły usunięty kanał.");
+
+            var restored = reopened.ApplyYouTubeSubscriptions(
                 [Remote("UC-USUNIETY", "Nazwa z YouTube")],
                 restoreSuppressed: true);
             Assert(restored.Restored == 1 && restored.Added == 0,
                 "Jawne przywrócenie nie użyło istniejącego rekordu.");
-            var target = store.GetRefreshTargets().Single();
+            var target = reopened.GetRefreshTargets().Single();
             Assert(target.SubscriptionId == "stary-kanal" && target.Title == "Nazwa z YouTube",
                 "Przywrócenie zgubiło tożsamość albo aktualną nazwę kanału.");
         });
@@ -131,6 +139,51 @@ internal static class YouTubeSubscriptionSyncApplyTests
             var targets = store.GetRefreshTargets();
             Assert(targets.Count == 1 && targets[0].SourceKind == PodcastSourceKind.Rss,
                 "Błąd w połowie planu pozostawił częściowy zapis.");
+        });
+    }
+
+    private static void KeepsFailedAutomaticRefreshFairAndPersistent()
+    {
+        var start = new DateTime(2026, 10, 23, 18, 0, 0, DateTimeKind.Utc);
+        var settings = new PodcastSettings
+        {
+            AutomaticRefreshBatchSize = 5,
+            YouTubeRefreshIntervalMinutes = 60,
+            Subscriptions = Enumerable.Range(1, 6)
+                .Select(number => new PodcastSubscriptionSettings
+                {
+                    Id = $"kanał-{number}",
+                    Title = $"Kanał {number}",
+                    FeedUrl = $"https://www.youtube.com/channel/UC-KANAL-{number}/videos",
+                    SourceKind = PodcastSourceKind.YouTubeChannel,
+                    IsInLibrary = true,
+                    RefreshIntervalMinutes = 60
+                })
+                .ToList()
+        };
+        WithDatabase(settings, (database, store) =>
+        {
+            var firstBatch = store.GetDueRefreshTargets(start);
+            Assert(firstBatch.Count == 5,
+                "Pierwszy przebieg nie zachował ustawionego rozmiaru porcji.");
+            foreach (var target in firstBatch)
+                store.MarkRefreshAttempt(target.SubscriptionId, start);
+
+            var reopened = new PodcastLibraryMutationStore(database.Path);
+            var secondBatch = reopened.GetDueRefreshTargets(start.AddMinutes(1));
+            Assert(secondBatch.Count == 1 && secondBatch[0].SubscriptionId == "kanał-6",
+                "Nieudana porcja zablokowała następny kanał albo nie przetrwała ponownego otwarcia bazy.");
+            reopened.MarkRefreshAttempt(secondBatch[0].SubscriptionId, start.AddMinutes(1));
+
+            Assert(reopened.GetDueRefreshTargets(start.AddMinutes(2)).Count == 0,
+                "Automat ponowił nieudane źródła bez zachowania odstępu.");
+            Assert(reopened.GetRefreshTargets().Count == 6,
+                "Odstęp automatu zablokował ręczne odświeżanie F5.");
+
+            var retry = reopened.GetDueRefreshTargets(start.AddMinutes(61));
+            Assert(retry.Count == 5
+                   && retry.All(target => target.SubscriptionId != "kanał-6"),
+                "Po upływie odstępu automat nie wrócił do najstarszej nieudanej porcji.");
         });
     }
 

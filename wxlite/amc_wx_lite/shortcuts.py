@@ -1350,6 +1350,16 @@ YOUTUBE_BROADCASTS_LIST_VIEW: dict[str, Action] = {
     "F5": Action.REFRESH_YOUTUBE_BROADCASTS,
 }
 
+# Polecenia dotyczą zaznaczonego kanału YouTube, nie całej sesji Podcastów.
+# Osobna tabela zapobiega przejęciu Ctrl+T/Ctrl+Y na odcinku, playliście,
+# kanale RSS albo w odtwarzaczu. Ctrl+T było wcześniej słusznie usunięte z
+# globalnej tabeli transportu; tutaj otrzymuje nowe, jawnie kontekstowe
+# znaczenie zaakceptowane przez użytkownika 24.10.2026.
+YOUTUBE_CHANNEL_LIST_VIEW: dict[str, Action] = {
+    "Ctrl+T": Action.YOUTUBE_BROADCASTS,
+    "Ctrl+Y": Action.ADD_YOUTUBE_LIVE_STATION,
+}
+
 # Kontekst sesji, niezaleznie od listy/odtwarzacza. F5 w skrzynce jest
 # przesloniete powyzej, dokladnie jak w glownym AMC.
 PODCAST_SESSION_VIEW: dict[str, Action] = {
@@ -1518,6 +1528,8 @@ def resolve(
     podcast_inbox: bool = False,
     podcast_library: bool = False,
     youtube_broadcasts: bool = False,
+    youtube_channel: bool = False,
+    youtube_account_available: bool = False,
     podcast_session: bool = False,
     files_session: bool = False,
     tidal_session: bool = False,
@@ -1577,6 +1589,15 @@ def resolve(
         and canonical in YOUTUBE_BROADCASTS_LIST_VIEW
     ):
         return YOUTUBE_BROADCASTS_LIST_VIEW[canonical]
+    if (
+        not player_view
+        and youtube_channel
+        and canonical in YOUTUBE_CHANNEL_LIST_VIEW
+    ):
+        action = YOUTUBE_CHANNEL_LIST_VIEW[canonical]
+        if action is Action.YOUTUBE_BROADCASTS and not youtube_account_available:
+            return None
+        return action
     if files_session and canonical in FILES_SESSION_VIEW:
         return FILES_SESSION_VIEW[canonical]
     # Parity z głównym AMC: Ctrl+F5 zawsze odświeża wszystkie źródła sesji,
@@ -2004,6 +2025,7 @@ def _help_entries() -> list[tuple[str, str, Action]]:
         FILES_SESSION_VIEW,
         PODCAST_LIBRARY_LIST_VIEW,
         PODCAST_INBOX_LIST_VIEW,
+        YOUTUBE_CHANNEL_LIST_VIEW,
         YOUTUBE_BROADCASTS_LIST_VIEW,
         PODCAST_SESSION_VIEW,
         TIDAL_SESSION_VIEW,

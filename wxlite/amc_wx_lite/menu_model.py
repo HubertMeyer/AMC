@@ -457,6 +457,8 @@ def build_menus(
                     MenuItem(
                         "Transmisje na żywo i &zaplanowane kanału…",
                         Action.YOUTUBE_BROADCASTS,
+                        shortcut="Ctrl+T",
+                        accelerator=False,
                         needs_youtube_channel=True,
                         visible_sessions=PODCASTS_ONLY,
                     ),
@@ -475,6 +477,8 @@ def build_menus(
             MenuItem(
                 "Dodaj kanał jako dynamiczne &radio YouTube na żywo…",
                 Action.ADD_YOUTUBE_LIVE_STATION,
+                shortcut="Ctrl+Y",
+                accelerator=False,
                 needs_youtube_channel=True,
                 visible_sessions=PODCASTS_ONLY,
             ),

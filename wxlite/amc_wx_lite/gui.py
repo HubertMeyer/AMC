@@ -4304,7 +4304,10 @@ class YouTubeAccountDialog(wx.Dialog):
                 "playlist YouTube. "
                 "Hasło wpisujesz tylko na oficjalnej stronie Google w domyślnej "
                 "przeglądarce. Najpierw sprawdzasz plan zmian, a zapis do "
-                "Biblioteki AMC wykonujesz osobnym przyciskiem."
+                "Biblioteki AMC wykonujesz osobnym przyciskiem. Samo ponowne "
+                "uruchomienie AMC ani logowanie nie przywraca usuniętych kanałów "
+                "lub filmów. Przywracanie wcześniej usuniętych kanałów wymaga "
+                "jawnego zaznaczenia pola poniżej."
             ),
         )
         explanation.Wrap(760)
@@ -7777,7 +7780,9 @@ class LiteFrame(wx.Frame):
         for described in menu_model.menus_for_session(
             self.navigator.active,
             self.options.session_order,
-            youtube_account_available=self._youtube_account_available,
+            youtube_account_available=getattr(
+                self, "_youtube_account_available", False
+            ),
         ):
             native = wx.Menu()
             for entry in described.items:
@@ -12241,6 +12246,8 @@ class LiteFrame(wx.Frame):
                 "Ctrl+Shift+Return",
                 "Ctrl+Shift+H",
                 "Ctrl+R",
+                "Ctrl+T",
+                "Ctrl+Y",
                 "Shift+R",
                 "Ctrl+Alt+S",
                 "Ctrl+Alt+Shift+S",
@@ -12352,6 +12359,14 @@ class LiteFrame(wx.Frame):
             and self.navigator.session.library_view
             is LibraryView.YOUTUBE_BROADCASTS
         )
+        selected_row = self.navigator.session.model.selected_row
+        youtube_channel = (
+            not player
+            and self.navigator.active is SessionId.PODCASTS
+            and selected_row is not None
+            and selected_row.kind == "podcast"
+            and selected_row.service_kind == "youtubeChannel"
+        )
         tidal_collection = (
             not player
             and self.navigator.active is SessionId.TIDAL
@@ -12436,6 +12451,10 @@ class LiteFrame(wx.Frame):
             podcast_inbox=podcast_inbox,
             podcast_library=podcast_library,
             youtube_broadcasts=youtube_broadcasts,
+            youtube_channel=youtube_channel,
+            youtube_account_available=getattr(
+                self, "_youtube_account_available", False
+            ),
             podcast_session=self.navigator.active is SessionId.PODCASTS,
             files_session=self.navigator.active is SessionId.FILES,
             tidal_session=self.navigator.active is SessionId.TIDAL,
@@ -28045,6 +28064,9 @@ class LiteFrame(wx.Frame):
     def _shortcut_action_for_help(self, chord: Chord) -> Action | None:
         player = self.navigator.view is View.PLAYER
         session = self.navigator.sessions[self.navigator.active]
+        selected_row = getattr(
+            getattr(session, "model", None), "selected_row", None
+        )
         if (
             chord.ctrl
             and not chord.alt
@@ -28089,6 +28111,16 @@ class LiteFrame(wx.Frame):
                 not player
                 and self.navigator.active is SessionId.PODCASTS
                 and session.library_view is LibraryView.YOUTUBE_BROADCASTS
+            ),
+            youtube_channel=(
+                not player
+                and self.navigator.active is SessionId.PODCASTS
+                and selected_row is not None
+                and selected_row.kind == "podcast"
+                and selected_row.service_kind == "youtubeChannel"
+            ),
+            youtube_account_available=getattr(
+                self, "_youtube_account_available", False
             ),
             podcast_session=self.navigator.active is SessionId.PODCASTS,
             files_session=self.navigator.active is SessionId.FILES,

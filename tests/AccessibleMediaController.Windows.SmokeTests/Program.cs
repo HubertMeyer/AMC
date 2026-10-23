@@ -68,6 +68,14 @@ if (args.Contains("--youtube-collection-normalization", StringComparer.Ordinal))
     TestYouTubeCollectionResults();
     return 0;
 }
+if (args.FirstOrDefault(argument =>
+        argument.StartsWith("--youtube-collection-only-url=", StringComparison.OrdinalIgnoreCase))
+    is { } youtubeCollectionArgument)
+{
+    TestLiveYouTubeCollection(
+        youtubeCollectionArgument["--youtube-collection-only-url=".Length..]);
+    return 0;
+}
 if (args.Contains("--youtube-credential-boundary", StringComparer.Ordinal))
 {
     YouTubeCredentialBoundaryTests.Run();
@@ -2787,6 +2795,21 @@ static void TestYouTubeCollectionResults()
         && channelAddress.AbsoluteUri == "https://www.youtube.com/%40TyfloPodcast/videos",
         "Publiczny kanał YouTube nie jest normalizowany do listy filmów.");
     Assert(
+        YouTubeCollectionClient.TryBuildChannelFallbackAddress(
+            channelAddress,
+            PodcastSourceKind.YouTubeChannel,
+            "ERROR: This channel does not have a videos tab",
+            out var channelFallback)
+        && channelFallback.AbsoluteUri == "https://www.youtube.com/%40TyfloPodcast/",
+        "Kanał bez zakładki Filmy nie wraca bezpiecznie do publicznej strony kanału.");
+    Assert(
+        !YouTubeCollectionClient.TryBuildChannelFallbackAddress(
+            channelAddress,
+            PodcastSourceKind.YouTubeChannel,
+            "ERROR: chwilowy błąd sieci",
+            out _),
+        "Ogólny błąd YouTube uruchomił nieuzasadnione obejście adresu kanału.");
+    Assert(
         YouTubeCollectionClient.TryNormalizeCollectionAddress(
             new Uri("https://www.youtube.com/watch?v=AbCdEf12345&list=PL_test-123"),
             out var playlistAddress,
@@ -2794,6 +2817,13 @@ static void TestYouTubeCollectionResults()
         && playlistKind == PodcastSourceKind.YouTubePlaylist
         && playlistAddress.AbsoluteUri == "https://www.youtube.com/playlist?list=PL_test-123",
         "Publiczna playlista YouTube nie ma stabilnego adresu.");
+    Assert(
+        !YouTubeCollectionClient.TryBuildChannelFallbackAddress(
+            playlistAddress,
+            PodcastSourceKind.YouTubePlaylist,
+            "ERROR: This channel does not have a videos tab",
+            out _),
+        "Obejście kanału zostało błędnie zastosowane do playlisty.");
     Assert(
         !YouTubeCollectionClient.TryNormalizeCollectionAddress(
             new Uri("https://www.youtube.com/watch?v=AbCdEf12345"),

@@ -13,7 +13,7 @@ from amc_wx_lite.navigation import (
     PlayMedia,
     SessionId,
 )
-from amc_wx_lite.shortcuts import Action, Chord, describe_action, resolve
+from amc_wx_lite.shortcuts import Action, Chord, describe, describe_action, resolve
 from amc_wx_lite.youtube_live import (
     YouTubeLivePayloadError,
     broadcast_rows,
@@ -116,6 +116,46 @@ class YouTubeLiveTests(unittest.TestCase):
     def test_f5_and_command_surfaces_share_one_contract(self) -> None:
         self.assertIs(
             resolve(
+                Chord("T", ctrl=True),
+                player_view=False,
+                radio_session=False,
+                podcast_session=True,
+                youtube_channel=True,
+                youtube_account_available=True,
+            ),
+            Action.YOUTUBE_BROADCASTS,
+        )
+        self.assertIs(
+            resolve(
+                Chord("Y", ctrl=True),
+                player_view=False,
+                radio_session=False,
+                podcast_session=True,
+                youtube_channel=True,
+            ),
+            Action.ADD_YOUTUBE_LIVE_STATION,
+        )
+        self.assertIsNone(
+            resolve(
+                Chord("T", ctrl=True),
+                player_view=False,
+                radio_session=False,
+                podcast_session=True,
+                youtube_channel=True,
+                youtube_account_available=False,
+            )
+        )
+        self.assertIsNone(
+            resolve(
+                Chord("Y", ctrl=True),
+                player_view=False,
+                radio_session=False,
+                podcast_session=True,
+                youtube_channel=False,
+            )
+        )
+        self.assertIs(
+            resolve(
                 Chord("F5"),
                 player_view=False,
                 radio_session=False,
@@ -160,6 +200,25 @@ class YouTubeLiveTests(unittest.TestCase):
         self.assertEqual(
             menu_items[Action.REFRESH_YOUTUBE_BROADCASTS].shortcut,
             palette[Action.REFRESH_YOUTUBE_BROADCASTS].shortcut,
+        )
+        self.assertEqual(
+            menu_items[Action.YOUTUBE_BROADCASTS].shortcut,
+            palette[Action.YOUTUBE_BROADCASTS].shortcut,
+        )
+        self.assertEqual(
+            menu_items[Action.ADD_YOUTUBE_LIVE_STATION].shortcut,
+            palette[Action.ADD_YOUTUBE_LIVE_STATION].shortcut,
+        )
+        self.assertEqual(menu_items[Action.YOUTUBE_BROADCASTS].shortcut, "Ctrl+T")
+        self.assertEqual(menu_items[Action.ADD_YOUTUBE_LIVE_STATION].shortcut, "Ctrl+Y")
+        help_entries = dict(describe("Podcasty i YouTube", actions))
+        self.assertEqual(
+            help_entries["Ctrl+T"],
+            "Pokaż transmisje na żywo i zaplanowane kanału YouTube",
+        )
+        self.assertEqual(
+            help_entries["Ctrl+Y"],
+            "Dodaj kanał jako dynamiczną stację YouTube na żywo",
         )
         for action in actions:
             self.assertNotIn("Action.", palette[action].label)

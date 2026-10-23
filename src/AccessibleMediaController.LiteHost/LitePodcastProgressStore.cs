@@ -144,6 +144,25 @@ internal sealed class LitePodcastProgressStore : IDisposable
         }
     }
 
+    public void MarkRefreshAttempt(string subscriptionId)
+    {
+        EnsureFullAmcIsClosed(
+            "Zamknij najpierw główne AMC. Równoczesne odświeżanie z dwóch wersji mogłoby utracić dane.");
+        try
+        {
+            _store.MarkRefreshAttempt(subscriptionId, DateTime.UtcNow);
+        }
+        catch (Exception exception) when (exception is ArgumentException or KeyNotFoundException)
+        {
+            throw new LiteRequestException(exception.Message);
+        }
+        catch (Exception exception) when (IsDatabaseFailure(exception))
+        {
+            Console.Error.WriteLine("[lite-host] zapis próby odświeżenia źródła: " + exception);
+            throw new LiteRequestException("Baza Podcastów jest chwilowo niedostępna.");
+        }
+    }
+
     public PodcastGlobalSettingsSnapshot GetGlobalSettings()
     {
         try
