@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import unittest
+from types import SimpleNamespace
 
 from amc_wx_lite import menu_model
 from amc_wx_lite.command_palette import entries_for_session
+from amc_wx_lite.gui import LiteFrame
 from amc_wx_lite.list_model import ListModel, Row
 from amc_wx_lite.navigation import (
     LibraryView,
@@ -23,6 +25,61 @@ from amc_wx_lite.youtube_live import (
 
 
 class YouTubeLiveTests(unittest.TestCase):
+    def test_aggregate_scan_blocks_duplicate_requests_and_releases_guard(self) -> None:
+        messages: list[str] = []
+        submitted: list[tuple] = []
+
+        class Runner:
+            def submit(self, *request) -> None:
+                submitted.append(request)
+
+        podcast_state = SimpleNamespace(
+            library_view=LibraryView.YOUTUBE_BROADCASTS_AGGREGATE,
+            library_playlist_id=None,
+            library_return_view="",
+            model=SimpleNamespace(selected_id=None),
+            view=None,
+        )
+        frame = SimpleNamespace(
+            _youtube_live_scan_pending=False,
+            _youtube_live_scan_version=0,
+            _youtube_account_available=True,
+            _youtube_live_channels_by_id={},
+            announcer=SimpleNamespace(say=messages.append),
+            client=object(),
+            state=SimpleNamespace(youtube_live_channel_ids=["channel-one"]),
+            navigator=SimpleNamespace(
+                active=SessionId.PODCASTS,
+                session=podcast_state,
+                sessions={SessionId.PODCASTS: podcast_state},
+            ),
+            runner=Runner(),
+            _sync_views=lambda: None,
+        )
+
+        LiteFrame._show_youtube_live_aggregate(frame)
+        self.assertTrue(frame._youtube_live_scan_pending)
+        self.assertEqual(len(submitted), 1)
+
+        LiteFrame._show_youtube_live_aggregate(frame, force_refresh=True)
+        self.assertEqual(len(submitted), 1)
+        self.assertEqual(
+            messages[-1],
+            "Sprawdzanie transmisji wybranych kanałów YouTube już trwa",
+        )
+
+        # Zmiana widoku przed końcem nie może pozostawić trwałej blokady.
+        podcast_state.library_view = LibraryView.PODCAST_LIBRARY
+        submitted[0][2](([], [], [], 0))
+        self.assertFalse(frame._youtube_live_scan_pending)
+
+        podcast_state.library_view = LibraryView.YOUTUBE_BROADCASTS_AGGREGATE
+        LiteFrame._show_youtube_live_aggregate(frame)
+        self.assertTrue(frame._youtube_live_scan_pending)
+        submitted[1][3](RuntimeError("awaria"))
+        self.assertFalse(frame._youtube_live_scan_pending)
+        self.assertEqual(messages[-1], "Nie udało się sprawdzić transmisji YouTube")
+
     def test_dynamic_station_accepts_channel_id_and_handle(self) -> None:
         self.assertEqual(
             dynamic_live_url("https://www.youtube.com/channel/UC_test-123/videos"),

@@ -7536,6 +7536,7 @@ class LiteFrame(wx.Frame):
         # palety i pomocy. Brak identyfikatora Google nie tworzy martwej opcji.
         self._youtube_account_available = False
         self._youtube_live_scan_version = 0
+        self._youtube_live_scan_pending = False
         self._youtube_live_channels_by_id: dict[str, object] = {}
         self._last_status: dict = {}
         self._transport_status_by_session: dict[SessionId, dict] = {}
@@ -18831,6 +18832,11 @@ class LiteFrame(wx.Frame):
     def _show_youtube_live_aggregate(self, *, force_refresh: bool = False) -> None:
         """Ctrl+Shift+I: ręczny skan wybranych kanałów z bezpiecznym powrotem."""
 
+        if self._youtube_live_scan_pending:
+            self.announcer.say(
+                "Sprawdzanie transmisji wybranych kanałów YouTube już trwa"
+            )
+            return
         client = self.client
         if not getattr(self, "_youtube_account_available", False):
             self.announcer.say(
@@ -18876,6 +18882,13 @@ class LiteFrame(wx.Frame):
         )
         self._youtube_live_scan_version += 1
         version = self._youtube_live_scan_version
+        self._youtube_live_scan_pending = True
+
+        def finish_current_scan() -> bool:
+            if version != self._youtube_live_scan_version:
+                return False
+            self._youtube_live_scan_pending = False
+            return True
 
         def work():
             channels = self._youtube_channel_subscriptions()
@@ -18896,7 +18909,7 @@ class LiteFrame(wx.Frame):
             return channels, chosen, payloads, failures
 
         def done(result) -> None:
-            if version != self._youtube_live_scan_version:
+            if not finish_current_scan():
                 return
             state = self.navigator.sessions[SessionId.PODCASTS]
             if (
@@ -18937,7 +18950,7 @@ class LiteFrame(wx.Frame):
             self._apply_podcast_result(events)
 
         def failed(error: Exception) -> None:
-            if version != self._youtube_live_scan_version:
+            if not finish_current_scan():
                 return
             self.announcer.say(
                 str(error)
@@ -18945,7 +18958,11 @@ class LiteFrame(wx.Frame):
                 else "Nie udało się sprawdzić transmisji YouTube"
             )
 
-        self.runner.submit("youtube-live-aggregate", work, done, failed)
+        try:
+            self.runner.submit("youtube-live-aggregate", work, done, failed)
+        except Exception:
+            self._youtube_live_scan_pending = False
+            raise
 
     def _selected_youtube_live_station(self, *, stable: bool) -> Station | None:
         state = self.navigator.sessions[SessionId.PODCASTS]
