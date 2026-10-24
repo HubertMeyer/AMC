@@ -615,6 +615,14 @@ migracji.
 
 ## Wersja i commit
 
+- Publiczny origin i włączenie logowania wyłącznie w źródłach AMC Test:
+  commit `bf0925d566079359caa8c2d9fae785a361c59f34` —
+  `feat(amc10): przygotuj AMC Test na publiczny broker`.
+- Klawiaturowy dostęp do instrukcji i stanu oraz poprawiony fokus okna konta:
+  commit `5b43ce95161f55ffc6dcbee7a119b857d18cb826` —
+  `fix(amc10): udostepnij stan logowania Sonos`.
+- Bieżący kandydat jest wyłącznie stanem źródeł. Nie powstał jeszcze pakiet,
+  instalacja ani uruchomienie AMC Test; nie wykonano publikacji GitHub.
 - Przekazanie systemd/Cloudflare, pakowanie `linux-x64`, ochrona logów i testy
   20/20: commit `bc56ce577bfac4d86c68ecc4f6f90a56a6c22e7a` —
   `build(amc10): przygotuj przekazanie brokera dla systemd`.
@@ -674,6 +682,12 @@ migracji.
 
 ## Porządek dysku
 
+- 2026-10-25: po zakończeniu regresji usunięto wyłącznie utworzony w tym etapie
+  katalog tymczasowy
+  `D:\Projekty Codex\AMC worktrees\sonos-broker-handoff-20261024\.test-tmp\sonos-ui-20261025`
+  o rozmiarze 188 326 bajtów, około 184 KiB. Zawierał odtwarzalne pliki
+  tymczasowe pytest; nie podlega odzyskaniu. Źródła, wyniki w dokumentacji,
+  kompilacje Release i instalacja użytkowa pozostały nietknięte.
 - 2026-10-24: po pozytywnej kontroli usunięto wyłącznie brudny pakiet próbny,
   rozpakowaną kopię finalnego ZIP-a i drugi katalog weryfikacyjny. Ostatnie dwa
   katalogi zajmowały łącznie 1 627 287 bajtów, około 1,55 MiB; wcześniejszy
