@@ -663,3 +663,39 @@ Powyższe wyniki dowodzą zmiany źródłowej i budowalności, nie działania na
 prawdziwym Teufelu. Numer commitu, paczki i wynik instalacji należy dopisać po
 ich rzeczywistym wykonaniu. Po instalacji konieczny jest odbiór `Ctrl+Alt+M`,
 `Ctrl+Alt+P`, początkowego fokusu, Escape i uruchomienia presetu z NVDA.
+
+## Dziewiąty odbiór: Teufel nie zgłasza udokumentowanej gotowości — 24.10.2026
+
+Użytkownik potwierdził na zainstalowanej paczce `8af5940f`, że `Ctrl+Alt+M`
+ostatecznie działa, ale odpowiedź potrafi trwać około trzech lub czterech
+sekund. `Ctrl+Alt+P` nadal kończy się komunikatem
+`Urządzenie zbyt długo przygotowuje listę presetów.` Log z 14:55:38
+potwierdził, że błąd pochodzi z oczekiwania klienta FSAPI na gotowość
+nawigacji, a nie z obsługi klawiatury albo fokusu.
+
+Ta obserwacja zastępuje wcześniejsze założenie, że każde zgodne urządzenie
+przejdzie na udokumentowaną wartość `netRemote.nav.status=1`. Firmware Teufela
+może pozostawiać inną wartość statusu, chociaż właściwa lista presetów stanie
+się dostępna. Poprawiony klient traktuje więc wynik
+`LIST_GET_NEXT netRemote.nav.presets` jako rozstrzygający sygnał gotowości:
+włącza nawigację, ponawia sam odczyt listy po przejściowej blokadzie węzła, a
+status obserwuje wyłącznie do wewnętrznej diagnostyki. Techniczne wartości nie
+są wypowiadane przez NVDA. Uruchomienie presetu ma analogiczne krótkie
+ponowienia po `FS_NODE_BLOCKED`.
+
+Wybór trybu nie pobiera już pełnego zrzutu stanu radia. Odczytuje tylko bieżący
+klucz trybu i listę trybów, a AMC natychmiast mówi `Pobieram tryby Frontier
+Smart`, żeby kilkusekundowe oczekiwanie nie wyglądało jak martwy skrót.
+
+Rzeczywiste wyniki fazy źródłowej:
+
+- kontrakt Frontier Smart: **1/1 zestaw zaliczony**;
+- test sesji Frontier Smart wxPython: **20 zaliczonych**;
+- kompilacja LiteHost Release: **0 ostrzeżeń i 0 błędów**.
+
+Test kontraktu odtwarza wariant Teufela: pierwsze pobranie listy jest
+zablokowane, `nav.status` pozostaje równy `4`, a następne pobranie listy działa.
+Instalacja i ponowne uruchomienie AMC Test są celowo odłożone do zakończenia
+aktywnego nagrania rozpoczętego o 15:06. Wyniki pełnej regresji, commit, numer
+paczki i ręczny odbiór na prawdziwym radiu należy dopisać po wykonaniu tych
+etapów. Sam pozytywny test źródeł nie jest jeszcze dowodem instalacji.

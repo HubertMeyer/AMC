@@ -14355,6 +14355,7 @@ class LiteFrame(wx.Frame):
             return
         device_id, _title = context
         self._frontier_smart_active_device_id = device_id
+        self.announcer.say("Pobieram tryby Frontier Smart")
 
         def done(payload: object) -> None:
             try:

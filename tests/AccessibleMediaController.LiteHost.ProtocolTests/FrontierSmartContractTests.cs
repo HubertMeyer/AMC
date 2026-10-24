@@ -17,7 +17,8 @@ internal static class FrontierSmartContractTests
         DiscoveryUsesAllInterfacesAndSurvivesPartialFailure();
         DiscoveryHonorsTimeoutAndCancellation();
         SnapshotFallsBackWhenDeviceRejectsGetMultiple();
-        PresetsEnableNavigationAndWaitUntilItIsReady();
+        ModeSelectionDoesNotReadAFullSnapshot();
+        PresetsUseTheListAsTheReadinessSignal();
         XmlParserReadsTypedValuesAndRejectsDtd();
         ListsUseOnlyIntentionalLabels();
         DeviceAndSnapshotResultsDoNotExposeAddressOrRuntimeTypes();
@@ -64,7 +65,27 @@ internal static class FrontierSmartContractTests
             "fallback pojedynczych GET zgubił nazwę urządzenia");
     }
 
-    private static void PresetsEnableNavigationAndWaitUntilItIsReady()
+    private static void ModeSelectionDoesNotReadAFullSnapshot()
+    {
+        var handler = new ModeSelectionHandler();
+        using var client = new FrontierSmartClient(handler);
+
+        var selection = client.ReadModeSelectionAsync("192.168.0.132", "1234")
+            .GetAwaiter().GetResult();
+
+        Check(selection.SelectedKey == 2,
+            "wybór trybu zgubił bieżący klucz");
+        Check(selection.Modes.Count == 1 && selection.Modes[0].DisplayName == "FM",
+            "wybór trybu zgubił listę trybów");
+        Check(handler.Paths.SequenceEqual(new[]
+            {
+                "/fsapi/GET/netRemote.sys.mode",
+                "/fsapi/LIST_GET_NEXT/netRemote.sys.caps.validModes/-1"
+            }),
+            "okno trybów pobrało pełną migawkę zamiast bieżącego klucza");
+    }
+
+    private static void PresetsUseTheListAsTheReadinessSignal()
     {
         var handler = new NavigationRequiredPresetHandler();
         using var client = new FrontierSmartClient(handler);
@@ -78,11 +99,11 @@ internal static class FrontierSmartContractTests
             {
                 "/fsapi/GET/netRemote.nav.state",
                 "/fsapi/SET/netRemote.nav.state",
-                "/fsapi/GET/netRemote.nav.status",
+                "/fsapi/LIST_GET_NEXT/netRemote.nav.presets/-1",
                 "/fsapi/GET/netRemote.nav.status",
                 "/fsapi/LIST_GET_NEXT/netRemote.nav.presets/-1"
             }),
-            "lista presetów została pobrana przed włączeniem i przygotowaniem nawigacji");
+            "lista presetów nie rozstrzygała gotowości nawigacji");
         Check(handler.NavigationEnableHadValueOne,
             "włączenie nawigacji nie przekazało wartości 1");
     }
@@ -421,7 +442,7 @@ internal static class FrontierSmartContractTests
 
     private sealed class NavigationRequiredPresetHandler : HttpMessageHandler
     {
-        private int statusReads;
+        private int presetReads;
 
         public List<string> Paths { get; } = [];
         public bool NavigationEnableHadValueOne { get; private set; }
@@ -449,16 +470,18 @@ internal static class FrontierSmartContractTests
             else if (uri.AbsolutePath.EndsWith(
                          "/GET/netRemote.nav.status", StringComparison.Ordinal))
             {
-                statusReads++;
-                body = statusReads >= 2
-                    ? Value("1")
-                    : "<fsapiResponse><status>FS_NODE_BLOCKED</status></fsapiResponse>";
+                // Teufel potrafi pozostawić wartość inną niż dokumentowane 1,
+                // mimo że lista presetów po chwili jest już dostępna.
+                body = Value("4");
             }
             else if (uri.AbsolutePath.EndsWith(
                          "/LIST_GET_NEXT/netRemote.nav.presets/-1",
                          StringComparison.Ordinal))
             {
-                body = """<fsapiResponse><status>FS_OK</status><item key="0"><field name="name"><c8_array>Trójka</c8_array></field></item></fsapiResponse>""";
+                presetReads++;
+                body = presetReads >= 2
+                    ? """<fsapiResponse><status>FS_OK</status><item key="0"><field name="name"><c8_array>Trójka</c8_array></field></item></fsapiResponse>"""
+                    : "<fsapiResponse><status>FS_NODE_BLOCKED</status></fsapiResponse>";
             }
             else
             {
@@ -475,5 +498,27 @@ internal static class FrontierSmartContractTests
 
         private static string Status() =>
             "<fsapiResponse><status>FS_OK</status></fsapiResponse>";
+    }
+
+    private sealed class ModeSelectionHandler : HttpMessageHandler
+    {
+        public List<string> Paths { get; } = [];
+
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken)
+        {
+            var uri = request.RequestUri
+                ?? throw new InvalidOperationException("Żądanie testowe nie ma adresu.");
+            Paths.Add(uri.AbsolutePath);
+            var body = uri.AbsolutePath.EndsWith(
+                "/GET/netRemote.sys.mode", StringComparison.Ordinal)
+                ? "<fsapiResponse><status>FS_OK</status><value><u32>2</u32></value></fsapiResponse>"
+                : """<fsapiResponse><status>FS_OK</status><item key="2"><field name="id"><c8_array>FM</c8_array></field><field name="label"><c8_array>FM</c8_array></field><field name="selectable"><u8>1</u8></field><field name="streamable"><u8>1</u8></field><field name="modetype"><u32>0</u32></field></item></fsapiResponse>""";
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(body)
+            });
+        }
     }
 }

@@ -146,7 +146,7 @@ public static class LiteFrontierSmartContract
 
     public static object CreateModesResult(
         FrontierSmartDeviceSettings device,
-        FrontierSmartSnapshot snapshot,
+        uint? selectedKey,
         IReadOnlyList<FrontierSmartMode> modes)
     {
         var items = modes.Select(mode => new
@@ -154,14 +154,14 @@ public static class LiteFrontierSmartContract
             key = mode.Key,
             value = mode.Key.ToString(CultureInfo.InvariantCulture),
             label = Clean(mode.AccessibleLabel),
-            selected = snapshot.ModeIndex == mode.Key,
+            selected = selectedKey == mode.Key,
             enabled = mode.Selectable
         }).ToArray();
         return new
         {
             deviceId = device.Id,
             deviceTitle = UserTitle(device),
-            selectedKey = snapshot.ModeIndex,
+            selectedKey,
             items
         };
     }

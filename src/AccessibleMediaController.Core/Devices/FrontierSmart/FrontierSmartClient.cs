@@ -9,6 +9,10 @@ namespace AccessibleMediaController.Core.Devices.FrontierSmart;
 public sealed class FrontierSmartClient : IDisposable
 {
     private const int MaximumResponseBytes = 1024 * 1024;
+    private const int PresetReadinessAttempts = 21;
+    private const int PresetActivationAttempts = 7;
+    private static readonly TimeSpan PresetOperationRetryDelay =
+        TimeSpan.FromMilliseconds(150);
     private static readonly string[] SnapshotNodes =
     [
         FrontierSmartNodes.FriendlyName,
@@ -139,18 +143,30 @@ public sealed class FrontierSmartClient : IDisposable
         return FrontierSmartXmlParser.ParseModes(xml);
     }
 
+    public async Task<(uint? SelectedKey, IReadOnlyList<FrontierSmartMode> Modes)>
+        ReadModeSelectionAsync(
+            string address,
+            string pin,
+            CancellationToken cancellationToken = default)
+    {
+        // Okno wyboru trybu potrzebuje tylko bieżącego klucza i listy trybów.
+        // Pełna migawka kilkunastu węzłów wyraźnie spowalnia część odbiorników.
+        var current = await GetAsync(address, pin, FrontierSmartNodes.Mode, cancellationToken)
+            .ConfigureAwait(false);
+        var modes = await ReadModesAsync(address, pin, cancellationToken)
+            .ConfigureAwait(false);
+        return (current.Success ? current.AsUInt32() : null, modes);
+    }
+
     public async Task<IReadOnlyList<FrontierSmartPreset>> ReadPresetsAsync(
         string address,
         string pin,
         CancellationToken cancellationToken = default)
     {
-        await EnsureNavigationReadyAsync(address, pin, cancellationToken)
+        await EnsureNavigationEnabledAsync(address, pin, cancellationToken)
             .ConfigureAwait(false);
-        var xml = await SendAsync(
-                CreateListUri(address, pin, FrontierSmartNodes.Presets, -1, 100),
-                cancellationToken)
+        return await ReadPresetsWhenAvailableAsync(address, pin, cancellationToken)
             .ConfigureAwait(false);
-        return FrontierSmartXmlParser.ParsePresets(xml);
     }
 
     public async Task<FrontierSmartValue> GetAsync(
@@ -223,14 +239,34 @@ public sealed class FrontierSmartClient : IDisposable
         uint presetKey,
         CancellationToken cancellationToken = default)
     {
-        await EnsureNavigationReadyAsync(address, pin, cancellationToken)
+        await EnsureNavigationEnabledAsync(address, pin, cancellationToken)
             .ConfigureAwait(false);
-        await SetAsync(
-            address,
-            pin,
-            FrontierSmartNodes.SelectPreset,
-            presetKey.ToString(CultureInfo.InvariantCulture),
-            cancellationToken).ConfigureAwait(false);
+        for (var attempt = 0; attempt < PresetActivationAttempts; attempt++)
+        {
+            try
+            {
+                await SetAsync(
+                        address,
+                        pin,
+                        FrontierSmartNodes.SelectPreset,
+                        presetKey.ToString(CultureInfo.InvariantCulture),
+                        cancellationToken)
+                    .ConfigureAwait(false);
+                return;
+            }
+            catch (FrontierSmartProtocolException exception) when (
+                exception.Status?.Equals("FS_NODE_BLOCKED", StringComparison.Ordinal) == true)
+            {
+                if (attempt + 1 >= PresetActivationAttempts)
+                    break;
+                await Task.Delay(PresetOperationRetryDelay, cancellationToken)
+                    .ConfigureAwait(false);
+            }
+        }
+
+        throw new FrontierSmartProtocolException(
+            "Urządzenie nie przygotowało presetu do uruchomienia.",
+            "FS_NODE_BLOCKED");
     }
 
     public async Task SetAsync(
@@ -350,7 +386,7 @@ public sealed class FrontierSmartClient : IDisposable
         }
     }
 
-    private async Task EnsureNavigationReadyAsync(
+    private async Task EnsureNavigationEnabledAsync(
         string address,
         string pin,
         CancellationToken cancellationToken)
@@ -369,8 +405,7 @@ public sealed class FrontierSmartClient : IDisposable
                 "Urządzenie nie pozwoliło przygotować listy presetów.", state.Status);
         }
 
-        var navigationWasEnabled = state.AsInt32() == 1;
-        if (!navigationWasEnabled)
+        if (state.AsInt32() != 1)
         {
             await SetAsync(
                     address,
@@ -380,53 +415,74 @@ public sealed class FrontierSmartClient : IDisposable
                     cancellationToken)
                 .ConfigureAwait(false);
         }
+    }
 
-        // Zmiana trybu wyłącza nawigację FSAPI. Teufel potrzebuje po jej
-        // ponownym włączeniu chwili na przygotowanie list; odczyt wykonany od
-        // razu kończy się FS_NODE_BLOCKED mimo dostępnych presetów.
-        for (var attempt = 0; attempt < 21; attempt++)
+    private async Task<IReadOnlyList<FrontierSmartPreset>> ReadPresetsWhenAvailableAsync(
+        string address,
+        string pin,
+        CancellationToken cancellationToken)
+    {
+        string? navigationObservation = null;
+        string? listStatus = null;
+        for (var attempt = 0; attempt < PresetReadinessAttempts; attempt++)
+        {
+            try
+            {
+                var xml = await SendAsync(
+                        CreateListUri(address, pin, FrontierSmartNodes.Presets, -1, 100),
+                        cancellationToken)
+                    .ConfigureAwait(false);
+                return FrontierSmartXmlParser.ParsePresets(xml);
+            }
+            catch (FrontierSmartProtocolException exception) when (
+                exception.Status?.Equals("FS_NODE_BLOCKED", StringComparison.Ordinal) == true)
+            {
+                listStatus = exception.Status;
+            }
+
+            // Niektóre firmware (w tym warianty Teufela) nie przechodzą na
+            // udokumentowaną wartość nav.status=1, mimo że sama lista staje się
+            // dostępna. Dlatego o gotowości rozstrzyga LIST_GET_NEXT, a status
+            // służy wyłącznie do bezpiecznej diagnostyki po pierwszej blokadzie.
+            if (attempt == 0 || attempt + 1 == PresetReadinessAttempts)
+                navigationObservation = await ObserveNavigationStatusAsync(
+                        address, pin, cancellationToken)
+                    .ConfigureAwait(false);
+            if (attempt + 1 < PresetReadinessAttempts)
+                await Task.Delay(PresetOperationRetryDelay, cancellationToken)
+                    .ConfigureAwait(false);
+        }
+
+        var failure = new FrontierSmartProtocolException(
+            "Urządzenie zbyt długo przygotowuje listę presetów.");
+        failure.Data["FrontierSmart.NavigationStatus"] =
+            navigationObservation ?? "brak odpowiedzi";
+        failure.Data["FrontierSmart.PresetListStatus"] =
+            listStatus ?? "brak odpowiedzi";
+        throw failure;
+    }
+
+    private async Task<string> ObserveNavigationStatusAsync(
+        string address,
+        string pin,
+        CancellationToken cancellationToken)
+    {
+        try
         {
             var status = await GetAsync(
                     address, pin, FrontierSmartNodes.NavigationStatus, cancellationToken)
                 .ConfigureAwait(false);
-            if (!status.Success)
-            {
-                if (status.Status.Equals(
-                        "FS_NODE_DOES_NOT_EXIST", StringComparison.Ordinal))
-                {
-                    if (!navigationWasEnabled)
-                    {
-                        await Task.Delay(
-                                TimeSpan.FromMilliseconds(750), cancellationToken)
-                            .ConfigureAwait(false);
-                    }
-                    return;
-                }
-                if (status.Status.Equals(
-                        "FS_NODE_BLOCKED", StringComparison.Ordinal))
-                {
-                    if (attempt < 20)
-                    {
-                        await Task.Delay(
-                                TimeSpan.FromMilliseconds(150), cancellationToken)
-                            .ConfigureAwait(false);
-                        continue;
-                    }
-                    break;
-                }
-                throw new FrontierSmartProtocolException(
-                    "Urządzenie nie przygotowało listy presetów.", status.Status);
-            }
-            if (status.AsInt32() == 1) return;
-            if (attempt < 20)
-            {
-                await Task.Delay(TimeSpan.FromMilliseconds(150), cancellationToken)
-                    .ConfigureAwait(false);
-            }
+            return status.Success
+                ? status.Value ?? "FS_OK bez wartości"
+                : status.Status;
         }
-
-        throw new TimeoutException(
-            "Urządzenie zbyt długo przygotowuje listę presetów.");
+        catch (Exception exception) when (
+            !cancellationToken.IsCancellationRequested
+            && exception is HttpRequestException
+                or IOException or FormatException or TaskCanceledException)
+        {
+            return "błąd odczytu " + exception.GetType().Name;
+        }
     }
 
     private static async Task<string> ReadBoundedResponseAsync(

@@ -8,6 +8,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using AccessibleMediaController.Core.Devices.FrontierSmart;
 using AccessibleMediaController.LiteHost.Protocol;
+using AccessibleMediaController.Windows.Services;
 
 namespace AccessibleMediaController.LiteHost;
 
@@ -242,10 +243,10 @@ internal sealed class LiteFrontierSmartCoordinator : IDisposable
                 ReadSettings(), LiteFrontierSmartContract.ReadDeviceId(args));
             try
             {
-                var snapshot = ReadSnapshot(device, pin);
-                var modes = client.ReadModesAsync(device.Address, pin)
+                var selection = client.ReadModeSelectionAsync(device.Address, pin)
                     .GetAwaiter().GetResult();
-                return LiteFrontierSmartContract.CreateModesResult(device, snapshot, modes);
+                return LiteFrontierSmartContract.CreateModesResult(
+                    device, selection.SelectedKey, selection.Modes);
             }
             catch (LiteRequestException)
             {
@@ -308,6 +309,19 @@ internal sealed class LiteFrontierSmartCoordinator : IDisposable
             catch (LiteRequestException)
             {
                 throw;
+            }
+            catch (FrontierSmartProtocolException exception)
+            {
+                var navigationStatus = exception.Data[
+                    "FrontierSmart.NavigationStatus"] as string ?? "brak";
+                var listStatus = exception.Data[
+                    "FrontierSmart.PresetListStatus"] as string
+                    ?? exception.Status
+                    ?? "brak";
+                DiagnosticLog.Info(
+                    "frontier-smart",
+                    $"Presety: stan nawigacji={navigationStatus}; status listy={listStatus}.");
+                throw new LiteRequestException(exception.Message);
             }
             catch (Exception exception) when (IsExpectedFailure(exception))
             {

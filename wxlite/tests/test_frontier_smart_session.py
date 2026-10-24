@@ -236,6 +236,13 @@ def test_frontier_smart_commands_have_menu_help_palette_and_execution_route() ->
     LiteFrame._dispatch(frame, Action.FRONTIER_SMART_SELECT_MODE)
     assert calls == ["mode-picker"]
 
+    source = (
+        Path(__file__).parents[1] / "amc_wx_lite" / "gui.py"
+    ).read_text(encoding="utf-8")
+    mode_picker = source[source.index("def _show_frontier_smart_modes") :]
+    mode_picker = mode_picker[:mode_picker.index("def _show_frontier_smart_presets")]
+    assert 'self.announcer.say("Pobieram tryby Frontier Smart")' in mode_picker
+
 
 def test_frontier_smart_device_dialog_has_explicit_names_and_keyboard_contract() -> None:
     source = (

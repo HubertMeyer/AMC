@@ -244,3 +244,32 @@ zainstalowano paczkę `8bce7f95` o etykiecie
 `2026.10.24-fe281d31af2c5328f1ada1c3668a587feefbcf80-8bce7f95` w
 `D:\Projekty Codex\AMC Python`. Potwierdzone okno:
 `AMC Test — 24.10.2026, 13:33`. AMC Public i GitHub pozostają bez zmian.
+
+## Odbiór i los zakończonych transmisji — 24.10.2026
+
+Użytkownik potwierdził, że wybór kanałów i `Ctrl+Shift+I` działają, choć przy
+pierwszym użyciu spodziewał się automatycznego przejścia z zapisu wyboru do
+wyniku skanowania. Wynik pojawił się po ponownym użyciu skrótu. Do osobnego
+sprawdzenia pozostaje, czy po zapisie wyboru należy od razu rozpocząć skan,
+bez ponownego skrótu. Nie należy w tym celu wykonywać dwóch równoległych
+odświeżeń ani zużywać ponownie limitu API.
+
+`Ctrl+Shift+I` jest bieżącym widokiem transmisji **trwających i
+zaplanowanych**, a nie archiwum. Host pyta YouTube osobno o stany `live` oraz
+`upcoming`, a wynik przechowuje tylko w krótkim, pięciominutowym cache. Po
+zakończeniu Teleexpressu albo programu `19:30` pozycja przestaje spełniać te
+warunki i przy następnym odświeżeniu znika z widoku transmisji.
+
+Zwykła lista materiałów kanału jest niezależna i pochodzi z publicznego kanału
+Atom YouTube. Zakończona transmisja pojawi się tam tylko wtedy, gdy właściciel
+kanału pozostawi ją jako publiczne archiwalne nagranie i YouTube umieści je w
+tym kanale. Materiał usunięty, prywatny, niepubliczny albo niewystawiony w
+kanale nie może zostać pokazany przez AMC. Bieżąca implementacja celowo nie
+dopisuje wcześniej zauważonych transmisji do zwykłej listy kanału.
+
+Nagranie zaplanowane lub wykonane przez AMC jest osobnym bytem: jego plik i
+historia nagrań pozostają dostępne niezależnie od późniejszego zniknięcia
+pozycji z YouTube. Harmonogram przechowuje stabilny adres `/live` kanału i przy
+starcie rozwiązuje aktualną transmisję, więc nie zależy od wygasającego adresu
+konkretnego filmu. Ewentualna nowa funkcja `Historia zauważonych transmisji`
+wymaga osobnej decyzji; nie należy mylić jej ze zwykłą listą filmów kanału.
