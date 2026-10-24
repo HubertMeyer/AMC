@@ -4730,18 +4730,37 @@ class SonosAccountDialog(wx.Dialog):
 
         heading = wx.StaticText(self, label="Konto Sonos")
         heading.SetName("Konto Sonos")
-        explanation = wx.StaticText(
+        self.instructions = wx.TextCtrl(
             self,
-            label=(
+            value=(
                 "Logujesz się zwykłym kontem na oficjalnej stronie Sonos. "
                 "Hasło wpisujesz wyłącznie w przeglądarce; AMC go nie widzi. "
                 "Rozpoczęcie logowania przygotuje adres, ale nie otworzy strony "
                 "bez Twojego polecenia."
             ),
+            style=(
+                wx.TE_READONLY
+                | wx.TE_MULTILINE
+                | wx.TE_WORDWRAP
+                | wx.BORDER_NONE
+            ),
         )
-        explanation.Wrap(700)
-        self.status = wx.StaticText(self, label="")
+        self.instructions.SetName("Instrukcja logowania Sonos")
+        self.instructions.SetHelpText(
+            "Pole tylko do odczytu. Użyj strzałek, aby przeczytać instrukcję, "
+            "a klawisza Tab, aby przejść do stanu konta i dostępnych czynności."
+        )
+        self.instructions.SetMinSize((-1, 78))
+        self.status = wx.TextCtrl(
+            self,
+            value="",
+            style=wx.TE_READONLY | wx.BORDER_NONE,
+        )
         self.status.SetName("Stan konta Sonos")
+        self.status.SetHelpText(
+            "Bieżący stan konta Sonos. Pole tylko do odczytu; Tab przechodzi "
+            "do następnej dostępnej czynności."
+        )
         self.address = wx.TextCtrl(self, style=wx.TE_READONLY)
         self.address.SetName("Adres logowania Sonos")
         self.address.SetHelpText(
@@ -4791,7 +4810,12 @@ class SonosAccountDialog(wx.Dialog):
 
         layout = wx.BoxSizer(wx.VERTICAL)
         layout.Add(heading, 0, wx.ALL, 12)
-        layout.Add(explanation, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM | wx.EXPAND, 12)
+        layout.Add(
+            self.instructions,
+            0,
+            wx.LEFT | wx.RIGHT | wx.BOTTOM | wx.EXPAND,
+            12,
+        )
         layout.Add(self.status, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM | wx.EXPAND, 12)
         layout.Add(self.address, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM | wx.EXPAND, 12)
         layout.Add(buttons, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM | wx.EXPAND, 12)
@@ -4833,8 +4857,7 @@ class SonosAccountDialog(wx.Dialog):
             "message",
             self._text(payload, "label", "Nie można teraz odczytać stanu konta Sonos."),
         )
-        self.status.SetLabel(label)
-        self.status.SetName(f"Stan konta Sonos: {label}")
+        self._set_status(label)
         connected = isinstance(payload, dict) and bool(payload.get("connected"))
         awaiting = isinstance(payload, dict) and bool(payload.get("awaitingBrowser"))
         can_login = not isinstance(payload, dict) or payload.get("canLogin") is not False
@@ -4866,13 +4889,37 @@ class SonosAccountDialog(wx.Dialog):
         self.Fit()
 
         if focus:
-            target = (
-                self.check_button if awaiting
-                else self.targets_button if connected
-                else self.login_button if can_login
-                else self.close_button
-            )
+            controls = {
+                "check": self.check_button,
+                "targets": self.targets_button,
+                "login": self.login_button,
+                "status": self.status,
+            }
+            target = controls[self._initial_focus_key(
+                awaiting=awaiting,
+                connected=connected,
+                can_login=can_login,
+            )]
             wx.CallAfter(target.SetFocus)
+
+    @staticmethod
+    def _initial_focus_key(
+        *,
+        awaiting: bool,
+        connected: bool,
+        can_login: bool,
+    ) -> str:
+        if awaiting:
+            return "check"
+        if connected:
+            return "targets"
+        if can_login:
+            return "login"
+        return "status"
+
+    def _set_status(self, message: str) -> None:
+        self.status.ChangeValue(message)
+        self.status.SetInsertionPoint(0)
 
     def _set_action_buttons_enabled(self, enabled: bool) -> None:
         for button in (
@@ -4901,9 +4948,9 @@ class SonosAccountDialog(wx.Dialog):
 
     def fail(self, message: str) -> None:
         self.set_busy(False)
-        self.status.SetLabel(message)
-        self.status.SetName(f"Stan konta Sonos: {message}")
+        self._set_status(message)
         self.Layout()
+        wx.CallAfter(self.status.SetFocus)
 
     def _on_action(self, action: str) -> None:
         if self._busy:
@@ -4919,8 +4966,7 @@ class SonosAccountDialog(wx.Dialog):
 
     def _on_copy(self, _event: wx.CommandEvent) -> None:
         if self._authorize_url and self._copy_address(self._authorize_url):
-            self.status.SetLabel("Skopiowano adres logowania Sonos.")
-            self.status.SetName("Stan konta Sonos: Skopiowano adres logowania Sonos.")
+            self._set_status("Skopiowano adres logowania Sonos.")
 
     def _on_targets(self, _event: wx.CommandEvent) -> None:
         self.open_targets = True

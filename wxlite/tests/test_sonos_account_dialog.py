@@ -6,7 +6,7 @@ from test_gui_logic import install_wx_stub
 
 install_wx_stub()
 
-from amc_wx_lite.gui import LiteFrame
+from amc_wx_lite.gui import LiteFrame, SonosAccountDialog
 
 
 SOURCE = Path(__file__).parents[1] / "amc_wx_lite" / "gui.py"
@@ -32,6 +32,12 @@ def test_sonos_dialog_has_explicit_labels_and_never_opens_browser_on_start() -> 
     dialog = source[source.index("class SonosAccountDialog") :]
     dialog = dialog[:dialog.index("class LibraryFoldersDialog")]
     assert 'SetName("Konto Sonos")' in dialog
+    assert 'SetName("Instrukcja logowania Sonos")' in dialog
+    assert 'SetName("Stan konta Sonos")' in dialog
+    assert "self.instructions = wx.TextCtrl" in dialog
+    assert "self.status = wx.TextCtrl" in dialog
+    assert "wx.TE_READONLY" in dialog
+    assert "wx.TE_MULTILINE" in dialog
     assert 'SetName("Adres logowania Sonos")' in dialog
     assert 'label="Rozpocznij logowanie"' in dialog
     assert 'label="Sprawdź logowanie"' in dialog
@@ -45,12 +51,21 @@ def test_sonos_dialog_hides_login_when_public_service_is_unavailable() -> None:
     dialog = dialog[:dialog.index("class LibraryFoldersDialog")]
     assert 'payload.get("canLogin") is not False' in dialog
     assert "self.login_button.Show(can_login)" in dialog
-    assert "else self.close_button" in dialog
+    assert 'return "status"' in dialog
     assert "wx.LaunchDefaultBrowser" in dialog
     start_handler = dialog[dialog.index("    def _on_action") :]
     start_handler = start_handler[:start_handler.index("    def _on_open")]
     assert "LaunchDefaultBrowser" not in start_handler
     assert "str(payload)" not in dialog
+
+
+def test_sonos_dialog_focuses_a_meaningful_control_for_every_account_state() -> None:
+    focus = SonosAccountDialog._initial_focus_key
+
+    assert focus(awaiting=True, connected=False, can_login=True) == "check"
+    assert focus(awaiting=False, connected=True, can_login=True) == "targets"
+    assert focus(awaiting=False, connected=False, can_login=True) == "login"
+    assert focus(awaiting=False, connected=False, can_login=False) == "status"
 
 
 def test_configure_sonos_opens_account_surface_not_a_spoken_dead_end() -> None:

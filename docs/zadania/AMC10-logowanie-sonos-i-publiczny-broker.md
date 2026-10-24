@@ -17,6 +17,15 @@ prawie gotowe. Ten etap nie zmienia adapterów, list, transportu ani WiiM.
 
 ## Korekty użytkownika
 
+- 2026-10-25: podczas ręcznego odbioru zainstalowanego AMC Test użytkownik
+  otworzył sesję Sonos i nacisnął `Ctrl+F5`. W oknie dostępny klawiaturą był
+  tylko przycisk „Zamknij”, a instrukcję dało się odczytać dopiero kursorem
+  myszy. Jest to dowód działania starszej instalacji z `canLogin=false`, ale
+  także rzeczywista wada dostępności: instrukcja i stan były statycznymi
+  napisami poza kolejnością Tab. Zastępuje to wcześniejsze założenie, że samo
+  wypowiedzenie stanu przy otwarciu wystarcza. Użytkownik polecił poprawić
+  interfejs wyłącznie AMC Test i zgodził się dodać nowy callback Sonosa.
+
 - 2026-10-25: użytkownik przekazał raport operatora z działającego publicznego
   brokera. Zastępuje on stan „broker nie został wdrożony”. Operator podał
   17/17 kontroli publicznych, 20/20 testów źródeł, prawidłowy limit per klient,
@@ -119,6 +128,12 @@ Po otwarciu okna konta AMC jawnie wypowiada aktualny stan Sonosa, mimo że fokus
 trafia na przycisk. Gdy `Ctrl+F5` wykryje już połączone konto, mówi „Konto
 Sonos jest połączone. Wczytuję głośniki i grupy”, a następnie otwiera listę.
 Nie uruchamia ponownie logowania i nie wysyła polecenia do głośnika.
+
+Instrukcja logowania oraz bieżący stan konta są także polami tylko do odczytu
+w kolejności Tab. Można wejść do nich klawiaturą i czytać je strzałkami. Gdy
+logowanie jest dostępne, początkowy fokus trafia na „Rozpocznij logowanie”. Gdy
+usługa jest niedostępna, fokus trafia na pole stanu z wyjaśnieniem zamiast na
+sam przycisk „Zamknij”. Błąd operacji również przenosi fokus na czytelny stan.
 
 Jeżeli skonfigurowany host odpowiada, ale nie ma pod nim uruchomionej usługi
 logowania AMC, po wybraniu „Rozpocznij logowanie” program mówi: „Usługa
@@ -519,12 +534,21 @@ Kontrakt sprawdzono 2026-10-19 z aktualną oficjalną dokumentacją Sonosa:
   odnowienie 58/58, koordynator konta 37/37 oraz parytet routera, katalogu i
   palety 6/6. Kompilacja Release projektu testów okien Windows zakończyła się
   bez ostrzeżeń i błędów.
-- Pełnego uruchomienia testów okien, protokołu oraz wxPython nie zalicza się
-  jeszcze do wyniku: pierwsza równoległa próba spowodowała kolizję pliku
-  kompilacji, a pytest uruchomiony z katalogu repozytorium nie odnalazł pakietu
-  `amc_wx_lite`. Zostaną powtórzone kolejno z właściwego katalogu roboczego.
+- Kompilacja Release projektu testów okien Windows oraz późniejsza kompilacja
+  LiteHosta zakończyły się bez ostrzeżeń i błędów. Pierwsza równoległa próba
+  testów spowodowała kolizję pliku kompilacji, dlatego nie jest zaliczana;
+  kolejne kompilacje wykonano pojedynczo.
 - Nie wykonano instalacji, uruchomienia AMC Test, prawdziwego logowania,
   polecenia do głośnika ani publikacji GitHub.
+- Po ręcznym zgłoszeniu poprawiono źródła okna konta AMC Test: instrukcja i
+  stan są klawiaturowymi polami tylko do odczytu, a stan bez dostępnego
+  logowania przejmuje początkowy fokus. Ukierunkowane testy okna, sesji i
+  palety zaliczyły 48/48 przypadków. Pełna regresja wxPython po skierowaniu
+  katalogu tymczasowego do worktree zaliczyła 1996 przypadków, 147 pominęła
+  zgodnie z warunkami i zatrzymała dwa testy wymagające wcześniej zbudowanego
+  LiteHosta; po jego poprawnej kompilacji oba pozostałe testy zaliczyły 2/2.
+  Zmiana czeka na bezpieczną instalację i ręczny odbiór NVDA; zainstalowany
+  program nie jest jeszcze jej dowodem.
 
 ## Znane ograniczenia
 

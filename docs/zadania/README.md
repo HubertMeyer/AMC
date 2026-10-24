@@ -253,14 +253,16 @@ zmian, wymagający korekty użytkownika:
   [AMC12-profile-wydania-publicznego-i-testowego.md](AMC12-profile-wydania-publicznego-i-testowego.md).
   Zatwierdzona specyfikacja:
   `D:\Projekty Codex\Accessible Multimedia Controller\AMC12_PROFILE_WYDANIA_PUBLICZNEGO_I_TESTOWEGO_2026-10-18.md`.
-- `AMC10` — **W trakcie; operator przygotował Ubuntu 24.04, .NET 8, usługę
-  systemd, Cloudflare Tunnel i origin `https://sonos.stareaudycje.pl/`, a sekret
-  jest przekazywany przez `LoadCredential`. Z czystego commitu `bc56ce57`
-  zbudowano bezsekretny pakiet `linux-x64` ze źródłami, manifestem i 20/20
-  zaliczonymi testami. Czeka na przekazanie oraz raport z rzeczywistego
-  wdrożenia. Autor musi jeszcze dodać nowy callback w istniejącej integracji,
-  bez usuwania Hermesa i bez rotacji sekretu. Do czasu raportu serwerowego i
-  świadomego odbioru nie zmieniać originu ani instalacji AMC Test** — działające
+- `AMC10` — **W trakcie; publiczny broker działa pod
+  `https://sonos.stareaudycje.pl/`, a operator potwierdził testy pakietu i
+  17/17 kontroli publicznych bez logowania. Źródła AMC Test mają już docelowy
+  origin i włączoną możliwość logowania. Autor musi jeszcze dodać callback
+  `https://sonos.stareaudycje.pl/login/callback`, pozostawiając stary adres i
+  sekret bez zmian. Ręczny odbiór ujawnił ponadto, że starsza instalacja z
+  wyłączonym brokerem zostawia klawiaturze tylko „Zamknij”; przygotowywana
+  poprawka udostępnia instrukcję i stan w kolejności Tab oraz kieruje fokus na
+  sensowną czynność albo wyjaśnienie. Instalacja i prawdziwy odbiór pozostają
+  do wykonania wyłącznie w AMC Test** — działające
   sterowanie Sonosem i WiiM jest już przepisane i
   nie wymaga ponownej implementacji. `Ctrl+F5` wybiera dom i grupę, a przy braku
   połączenia prowadzi do konta zamiast kończyć się błędem. Okno udostępnia
@@ -269,9 +271,7 @@ zmian, wymagający korekty użytkownika:
   Pythona i bez samoczynnego otwierania przeglądarki. Dodano wcześniej serwerowy
   kontrakt logowania, PKCE, jednorazowe sesje, odnowienie, ograniczenie tempa,
   bezpieczne logowanie oraz ścisłą obsługę zakończenia TLS przez jawnie zaufane
-  reverse proxy. Do czasu prawdziwego publicznego wdrożenia przycisk logowania
-  jest ukryty, stan ma jawną etykietę i nie wykonuje żądania sieciowego.
-  Publiczny Sonos nadal jest ukryty.
+  reverse proxy. AMC Public pozostaje bez zmian.
   Bieżący zapis realizacji:
   [AMC10-logowanie-sonos-i-publiczny-broker.md](AMC10-logowanie-sonos-i-publiczny-broker.md).
   Zatwierdzona specyfikacja:
