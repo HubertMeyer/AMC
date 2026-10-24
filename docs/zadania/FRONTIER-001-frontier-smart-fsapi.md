@@ -691,11 +691,32 @@ Rzeczywiste wyniki fazy źródłowej:
 
 - kontrakt Frontier Smart: **1/1 zestaw zaliczony**;
 - test sesji Frontier Smart wxPython: **20 zaliczonych**;
+- komplet kontraktów LiteHost: **27/27 zestawów zaliczonych**;
+- ukierunkowana bramka Frontier, menu, palety i parytetu klawiszy:
+  **99 zaliczonych**;
+- pełna regresja wxPython na ostatecznym commicie: **2033 zaliczone, 111
+  kontrolowanie pominiętych i 13 zaliczonych podtestów**;
+- testy launchera i aktualizatora: **30/30 zaliczonych**;
 - kompilacja LiteHost Release: **0 ostrzeżeń i 0 błędów**.
 
 Test kontraktu odtwarza wariant Teufela: pierwsze pobranie listy jest
 zablokowane, `nav.status` pozostaje równy `4`, a następne pobranie listy działa.
-Instalacja i ponowne uruchomienie AMC Test są celowo odłożone do zakończenia
-aktywnego nagrania rozpoczętego o 15:06. Wyniki pełnej regresji, commit, numer
-paczki i ręczny odbiór na prawdziwym radiu należy dopisać po wykonaniu tych
-etapów. Sam pozytywny test źródeł nie jest jeszcze dowodem instalacji.
+Ukierunkowane uruchomienie testów ujawniło również niezależną, wcześniejszą
+zależność siedmiu atrap okna od kolejności pełnego zestawu. Atrapy otrzymały
+jawny model aktywnej sesji i komunikatów; od tej chwili ta sama bramka przechodzi
+zarówno osobno, jak i w pełnej regresji.
+
+Kod funkcji zapisano w commicie `fa05111ae793a6874761c1ac73ab57eea4765e24`
+— `fix(frontier): stabilizuj tryby i presety Teufel`. Naprawa izolacji testów
+jest w osobnym commicie `42c1edb30854323ef3f9cf850727b0d31bea4264` —
+`test(wx): izoluj testy parytetu klawiszy`.
+
+Złożono odizolowaną paczkę kandydującą `b9b8c0f2` z 1674 plikami. Jej pełna
+tożsamość to
+`2026.10.24-42c1edb30854323ef3f9cf850727b0d31bea4264-b9b8c0f2`;
+integralność i start na odizolowanym profilu są zaliczone. Nie jest to jeszcze
+zainstalowana wersja. O 15:19 użytkownik rozpoczął dodatkowe ręczne nagrywanie,
+dlatego podmiana i ponowny start AMC Test pozostają wstrzymane do jawnego
+potwierdzenia zakończenia wszystkich nagrań. Bieżąca instalacja nadal ma paczkę
+`8af5940f`. Po instalacji konieczny jest odbiór `Ctrl+Alt+M`, `Ctrl+Alt+P`,
+początkowego fokusu, Escape i uruchomienia presetu z NVDA.

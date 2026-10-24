@@ -331,10 +331,13 @@ zmian, wymagający korekty użytkownika:
   Szczegóły: [NAME-001-amc-test.md](NAME-001-amc-test.md).
 - `FRONTIER-001` — **W trakcie — użytkownik potwierdził wykrywanie, połączenie
   i odczyt odtwarzanego radia z Teufela. Odbiór 24.10.2026 ujawnił groźną
-  kolejkę szybkich zmian głośności; źródła scalają teraz serię do jednego
-  bieżącego i ostatniego oczekującego żądania, a pełna regresja wxPython
-  2032/2032, build, integralność, instalacja i start AMC Test 13:33 są
-  zaliczone. Pozostaje ponowny odbiór na urządzeniu** —
+  kolejkę szybkich zmian głośności, a następnie niedziałające presety i wolny
+  wybór trybu. Commity `fa05111a` i `42c1edb3` mają pełną regresję wxPython
+  2033/2033, kontrakty 27/27 i testy aktualizatora 30/30. Kandydat `b9b8c0f2`
+  przeszedł integralność i odizolowany start, lecz instalacja jest wstrzymana,
+  ponieważ o 15:19 rozpoczęło się nowe ręczne nagranie. Zainstalowana pozostaje
+  paczka `8af5940f`; po bezpiecznej podmianie potrzebny jest odbiór na
+  urządzeniu** —
   `Ctrl+8`, `Ctrl+F5` i ręczny adres korzystają z jednego modelu stanów.
   AMC wymaga potwierdzonego opisu FSAPI/UNDOK i użytkowej nazwy urządzenia,
   zanim pokaże pole PIN. Brak wyniku i błąd nie prowadzą do PIN-u. Po zapisaniu
