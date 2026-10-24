@@ -834,3 +834,64 @@ def test_frontier_smart_success_closes_configuration_and_returns_to_device_list(
     assert "dialog.fail(str(error), focus_pin=focus_pin)" in flow
     assert "return not dialog.IsBeingDeleted()" in flow
     assert "self._restore_focus_after_dialog()" in flow
+
+
+def test_frontier_smart_volume_keeps_only_the_latest_waiting_value() -> None:
+    submissions: list[tuple[object, object, object]] = []
+    sent: list[int] = []
+    slider_values: list[int] = []
+    applied: list[tuple[int | None, bool]] = []
+
+    class DeferredRunner:
+        @staticmethod
+        def submit(_name, work, done, failed) -> None:
+            submissions.append((work, done, failed))
+
+    def transport(_device_id, _command, *, volume=None):
+        sent.append(volume)
+        return {
+            "deviceId": "radio-1",
+            "deviceTitle": "Teufel",
+            "title": "Radio Poznań",
+            "playbackState": "odtwarzanie",
+            "volume": volume,
+        }
+
+    frame = SimpleNamespace(
+        client=SimpleNamespace(frontier_smart_transport=transport),
+        _frontier_smart_active_device_id="radio-1",
+        _frontier_smart_request_pending=False,
+        _frontier_smart_volume_pending=None,
+        _frontier_smart_requested_volume=20,
+        _frontier_smart_snapshot={"volume": 20},
+        volume_slider=SimpleNamespace(SetValue=slider_values.append),
+        announcer=SimpleNamespace(say=lambda _message: None),
+        navigator=SimpleNamespace(active=SessionId.FRONTIER_SMART),
+        runner=DeferredRunner(),
+        _apply_frontier_smart_snapshot=lambda state, *, announce=False: (
+            applied.append((state.get("volume"), announce))
+        ),
+    )
+    frame._queue_frontier_smart_volume = MethodType(
+        LiteFrame._queue_frontier_smart_volume,
+        frame,
+    )
+
+    frame._queue_frontier_smart_volume(25)
+    frame._queue_frontier_smart_volume(30)
+    frame._queue_frontier_smart_volume(35)
+    assert len(submissions) == 1
+    assert frame._frontier_smart_volume_pending == 35
+    assert slider_values[-1] == 35
+
+    work, done, _failed = submissions.pop(0)
+    done(work())
+    assert sent == [25]
+    assert len(submissions) == 1
+
+    work, done, _failed = submissions.pop(0)
+    done(work())
+    assert sent == [25, 35]
+    assert frame._frontier_smart_request_pending is False
+    assert frame._frontier_smart_volume_pending is None
+    assert applied[-1] == (35, True)

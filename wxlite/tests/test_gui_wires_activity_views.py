@@ -37,6 +37,12 @@ NEW_ACTIONS = (
     Action.YOUTUBE_BROADCASTS,
     Action.REFRESH_YOUTUBE_BROADCASTS,
     Action.ADD_YOUTUBE_LIVE_STATION,
+    Action.VIEW_YOUTUBE_LIVE_AGGREGATE,
+    Action.CONFIGURE_YOUTUBE_LIVE_CHANNELS,
+    Action.TOGGLE_YOUTUBE_LIVE_AGGREGATE_CHANNEL,
+    Action.REFRESH_YOUTUBE_LIVE_AGGREGATE,
+    Action.RECORD_YOUTUBE_LIVE_NOW,
+    Action.SCHEDULE_YOUTUBE_LIVE,
 )
 
 
@@ -86,6 +92,7 @@ _NON_SQLITE_VIEWS = (
     # Transmisje pochodzą z oficjalnego API przez host C# i krótką pamięć
     # backendu, nie z lokalnej bazy plików ani podcasts.db.
     LibraryView.YOUTUBE_BROADCASTS,
+    LibraryView.YOUTUBE_BROADCASTS_AGGREGATE,
     # Pierwsze widoki TIDAL czytaja state.json przez osobny TidalSource.
     # Nie wolno kierowac ich do lokalnego LibrarySource/library.db.
     LibraryView.TIDAL_LIBRARY,

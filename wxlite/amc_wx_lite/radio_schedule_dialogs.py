@@ -348,6 +348,7 @@ class RadioScheduleEditorDialog(wx.Dialog):
         global_wake: bool,
         existing: Mapping | None = None,
         preferred_station_id: str | None = None,
+        initial_start: datetime | None = None,
     ) -> None:
         title = (
             "Edytuj plan nagrywania" if existing is not None else "Nowy plan nagrywania"
@@ -397,12 +398,17 @@ class RadioScheduleEditorDialog(wx.Dialog):
             str((self._existing or {}).get("name") or ""),
         )
 
-        initial = (
-            local_start_from_utc_ticks(self._existing["nextStartUtcTicks"])
-            if self._existing is not None
-            else datetime.now().astimezone().replace(second=0, microsecond=0)
-            + timedelta(minutes=5)
-        )
+        if self._existing is not None:
+            initial = local_start_from_utc_ticks(
+                self._existing["nextStartUtcTicks"]
+            )
+        elif initial_start is not None:
+            initial = initial_start.astimezone().replace(second=0, microsecond=0)
+        else:
+            initial = (
+                datetime.now().astimezone().replace(second=0, microsecond=0)
+                + timedelta(minutes=5)
+            )
         self.start_date = self._add_segmented_date(
             scroll,
             grid,

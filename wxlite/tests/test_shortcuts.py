@@ -142,7 +142,7 @@ def test_station_management_only_in_the_radio_session() -> None:
         assert resolve(chord, player_view=False, radio_session=False) is not expected
 
 
-def test_ctrl_i_is_global_ctrl_shift_i_is_free_and_radio_import_uses_ctrl_o() -> None:
+def test_ctrl_i_and_ctrl_shift_i_are_global_and_radio_import_uses_ctrl_o() -> None:
     ctrl_i = Chord("I", ctrl=True)
     ctrl_shift_i = Chord("I", ctrl=True, shift=True)
     for player in (False, True):
@@ -151,7 +151,16 @@ def test_ctrl_i_is_global_ctrl_shift_i_is_free_and_radio_import_uses_ctrl_o() ->
                 ctrl_i, player_view=player, radio_session=radio
             ) is Action.VIEW_PODCAST_INBOX
             assert resolve(
-                ctrl_shift_i, player_view=player, radio_session=radio
+                ctrl_shift_i,
+                player_view=player,
+                radio_session=radio,
+                youtube_account_available=True,
+            ) is Action.VIEW_YOUTUBE_LIVE_AGGREGATE
+            assert resolve(
+                ctrl_shift_i,
+                player_view=player,
+                radio_session=radio,
+                youtube_account_available=False,
             ) is None
     assert resolve(
         Chord("O", ctrl=True), player_view=False, radio_session=True

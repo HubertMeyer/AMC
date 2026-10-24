@@ -327,6 +327,12 @@ class Action(Enum):
     YOUTUBE_BROADCASTS = "youtube.broadcasts.open"
     REFRESH_YOUTUBE_BROADCASTS = "youtube.broadcasts.refresh"
     ADD_YOUTUBE_LIVE_STATION = "youtube.liveStation.add"
+    VIEW_YOUTUBE_LIVE_AGGREGATE = "youtube.broadcasts.aggregate.open"
+    CONFIGURE_YOUTUBE_LIVE_CHANNELS = "youtube.broadcasts.aggregate.configure"
+    TOGGLE_YOUTUBE_LIVE_AGGREGATE_CHANNEL = "youtube.broadcasts.aggregate.channel.toggle"
+    REFRESH_YOUTUBE_LIVE_AGGREGATE = "youtube.broadcasts.aggregate.refresh"
+    RECORD_YOUTUBE_LIVE_NOW = "youtube.broadcasts.aggregate.recordNow"
+    SCHEDULE_YOUTUBE_LIVE = "youtube.broadcasts.aggregate.schedule"
     REFRESH_PODCAST = "podcasts.refresh.current"
     REFRESH_PODCAST_LIBRARY = "podcasts.refresh.all"
     DOWNLOAD_PODCAST_EPISODES = "podcasts.download.selected"
@@ -553,6 +559,7 @@ TIDAL_SUPPORTED_ACTIONS = frozenset({
     Action.VIEW_RECORDED_RADIO_FILES,
     Action.MANAGE_RADIO_SCHEDULES,
     Action.VIEW_PODCAST_INBOX,
+    Action.VIEW_YOUTUBE_LIVE_AGGREGATE,
     Action.HELP,
     Action.KEYBOARD_HELP,
     Action.UPDATE_MEDIA_COMPONENTS,
@@ -681,6 +688,7 @@ SPOTIFY_SUPPORTED_ACTIONS = frozenset({
     Action.SORT_SPOTIFY_COLLECTION_ALPHABETICAL,
     Action.SORT_SPOTIFY_COLLECTION_CATALOG,
     Action.SHOW_PODCAST_DESCRIPTION,
+    Action.VIEW_YOUTUBE_LIVE_AGGREGATE,
     Action.HELP,
     Action.KEYBOARD_HELP,
     Action.UPDATE_MEDIA_COMPONENTS,
@@ -768,6 +776,7 @@ WIIM_SUPPORTED_ACTIONS = frozenset({
     Action.VIEW_RECORDED_RADIO_FILES,
     Action.MANAGE_RADIO_SCHEDULES,
     Action.VIEW_PODCAST_INBOX,
+    Action.VIEW_YOUTUBE_LIVE_AGGREGATE,
     Action.HELP,
     Action.KEYBOARD_HELP,
     Action.UPDATE_MEDIA_COMPONENTS,
@@ -879,6 +888,7 @@ SONOS_SUPPORTED_ACTIONS = frozenset({
     Action.VIEW_RECORDED_RADIO_FILES,
     Action.MANAGE_RADIO_SCHEDULES,
     Action.VIEW_PODCAST_INBOX,
+    Action.VIEW_YOUTUBE_LIVE_AGGREGATE,
     Action.HELP,
     Action.KEYBOARD_HELP,
     Action.UPDATE_MEDIA_COMPONENTS,
@@ -932,6 +942,7 @@ FRONTIER_SMART_SUPPORTED_ACTIONS = frozenset({
     Action.ITEM_PROPERTIES,
     Action.COPY_NAME,
     Action.FOCUS_FILTER,
+    Action.VIEW_YOUTUBE_LIVE_AGGREGATE,
     Action.HELP,
     Action.KEYBOARD_HELP,
     Action.UPDATE_MEDIA_COMPONENTS,
@@ -1316,6 +1327,7 @@ GLOBAL_VIEW_SHORTCUTS: dict[str, Action] = {
     "Alt+R": Action.VIEW_ACTIVE_RECORDINGS,
     "Alt+Shift+R": Action.VIEW_RECORDED_RADIO_FILES,
     "Ctrl+I": Action.VIEW_PODCAST_INBOX,
+    "Ctrl+Shift+I": Action.VIEW_YOUTUBE_LIVE_AGGREGATE,
     "Ctrl+H": Action.VIEW_HISTORY,
     "Ctrl+L": Action.VIEW_LIBRARY,
 }
@@ -1348,6 +1360,12 @@ PODCAST_LIBRARY_LIST_VIEW: dict[str, Action] = {
 
 YOUTUBE_BROADCASTS_LIST_VIEW: dict[str, Action] = {
     "F5": Action.REFRESH_YOUTUBE_BROADCASTS,
+}
+
+YOUTUBE_BROADCASTS_AGGREGATE_LIST_VIEW: dict[str, Action] = {
+    "F5": Action.REFRESH_YOUTUBE_LIVE_AGGREGATE,
+    "Ctrl+R": Action.RECORD_YOUTUBE_LIVE_NOW,
+    "Shift+R": Action.SCHEDULE_YOUTUBE_LIVE,
 }
 
 # Polecenia dotyczą zaznaczonego kanału YouTube, nie całej sesji Podcastów.
@@ -1528,6 +1546,7 @@ def resolve(
     podcast_inbox: bool = False,
     podcast_library: bool = False,
     youtube_broadcasts: bool = False,
+    youtube_broadcasts_aggregate: bool = False,
     youtube_channel: bool = False,
     youtube_account_available: bool = False,
     podcast_session: bool = False,
@@ -1548,7 +1567,13 @@ def resolve(
     table = PLAYER_VIEW if player_view else LIST_VIEW
     canonical = chord.canonical
     if canonical in GLOBAL_VIEW_SHORTCUTS:
-        return GLOBAL_VIEW_SHORTCUTS[canonical]
+        action = GLOBAL_VIEW_SHORTCUTS[canonical]
+        if (
+            action is Action.VIEW_YOUTUBE_LIVE_AGGREGATE
+            and not youtube_account_available
+        ):
+            return None
+        return action
     if not player_view and service_history and canonical == "Delete":
         return Action.REMOVE_SELECTED
     if radio_session and canonical in RADIO_COLLECTION_LIST_VIEW:
@@ -1583,6 +1608,12 @@ def resolve(
         # F5 w globalnej skrzynce odświeża wszystkie źródła. Alt+1/2/3 są już
         # rozstrzygnięte wyżej, lecz pozostają w tej samej tabeli poleceń.
         return PODCAST_INBOX_LIST_VIEW[canonical]
+    if (
+        not player_view
+        and youtube_broadcasts_aggregate
+        and canonical in YOUTUBE_BROADCASTS_AGGREGATE_LIST_VIEW
+    ):
+        return YOUTUBE_BROADCASTS_AGGREGATE_LIST_VIEW[canonical]
     if (
         not player_view
         and youtube_broadcasts
@@ -1804,6 +1835,12 @@ def _help_entries() -> list[tuple[str, str, Action]]:
         Action.YOUTUBE_BROADCASTS: "Pokaż transmisje na żywo i zaplanowane kanału YouTube",
         Action.REFRESH_YOUTUBE_BROADCASTS: "Odśwież transmisje kanału YouTube",
         Action.ADD_YOUTUBE_LIVE_STATION: "Dodaj kanał jako dynamiczną stację YouTube na żywo",
+        Action.VIEW_YOUTUBE_LIVE_AGGREGATE: "Pokaż transmisje wybranych kanałów YouTube",
+        Action.CONFIGURE_YOUTUBE_LIVE_CHANNELS: "Wybierz kanały zbiorczej listy transmisji YouTube",
+        Action.TOGGLE_YOUTUBE_LIVE_AGGREGATE_CHANNEL: "Uwzględniaj kanał na zbiorczej liście transmisji",
+        Action.REFRESH_YOUTUBE_LIVE_AGGREGATE: "Odśwież transmisje wybranych kanałów YouTube",
+        Action.RECORD_YOUTUBE_LIVE_NOW: "Rozpocznij albo zatrzymaj nagrywanie transmisji YouTube",
+        Action.SCHEDULE_YOUTUBE_LIVE: "Zaplanuj nagranie transmisji YouTube",
         Action.REFRESH_PODCAST: "Odśwież wybrany podcast, kanał lub playlistę",
         Action.REFRESH_PODCAST_LIBRARY: "Odśwież wszystkie źródła podcastów",
         Action.DOWNLOAD_PODCAST_EPISODES: "Pobierz zaznaczone odcinki podcastów",
@@ -2027,6 +2064,7 @@ def _help_entries() -> list[tuple[str, str, Action]]:
         PODCAST_INBOX_LIST_VIEW,
         YOUTUBE_CHANNEL_LIST_VIEW,
         YOUTUBE_BROADCASTS_LIST_VIEW,
+        YOUTUBE_BROADCASTS_AGGREGATE_LIST_VIEW,
         PODCAST_SESSION_VIEW,
         TIDAL_SESSION_VIEW,
         TIDAL_LIST_VIEW,
@@ -2101,6 +2139,8 @@ def _help_entries() -> list[tuple[str, str, Action]]:
         Action.YOUTUBE_ACCOUNT,
         Action.YOUTUBE_BROADCASTS,
         Action.ADD_YOUTUBE_LIVE_STATION,
+        Action.CONFIGURE_YOUTUBE_LIVE_CHANNELS,
+        Action.TOGGLE_YOUTUBE_LIVE_AGGREGATE_CHANNEL,
         Action.FRONTIER_SMART_SELECT_MODE,
         Action.REFRESH_COMMON_DATA,
         Action.COMMON_DATA_STATUS,

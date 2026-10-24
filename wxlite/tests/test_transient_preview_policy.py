@@ -39,7 +39,7 @@ def test_global_preview_shortcuts_reach_dispatch_from_native_lists() -> None:
     frame_hook = inspect.getsource(LiteFrame._on_player_shortcut_hook)
     list_hook = inspect.getsource(LiteFrame._on_list_shortcut_hook)
     assert set(GLOBAL_VIEW_SHORTCUTS) == {
-        "Ctrl+I", "Alt+R", "Alt+Shift+R", "Ctrl+H", "Ctrl+L",
+        "Ctrl+I", "Ctrl+Shift+I", "Alt+R", "Alt+Shift+R", "Ctrl+H", "Ctrl+L",
     }
     # Obie bramki korzystaja z jednej tabeli zamiast kopiowac gesty do
     # adapterow. Sama nazwa tabeli w kodzie jest kontraktem tej sciezki.

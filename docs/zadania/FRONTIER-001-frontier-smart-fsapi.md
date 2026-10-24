@@ -575,3 +575,45 @@ Najnowsza zainstalowana kompilacja AMC Test:
 `2026.10.23-9e8d3eab643b579215719bc52ac77b215f0c6fea-ce7898a4`.
 Nie publikować ani nie promować do profilu publicznego bez nowej zgody
 użytkownika.
+
+## Siódmy odbiór: kolejka głośności i zawieszenie radia — 24.10.2026
+
+Użytkownik potwierdził, że połączenie z Teufel RADIO 3SIXTY działa, AMC pokazał
+bieżące `Radio Poznań`, a zmiany głośności ostatecznie docierały do urządzenia.
+Szybka seria poleceń była jednak wykonywana z bardzo dużym opóźnieniem. Po
+około dwóch minutach radio nadal realizowało wcześniejsze zmiany, interfejs
+AMC przestał odpowiadać przewidywalnie, a chwilowo nie dało się ściszyć radia
+również sprzętowo. Anulowanie i ponowne wejście nie przywróciły od razu
+odtwarzacza. Ta obserwacja zastępuje wcześniejsze założenie, że sama
+serializacja hosta wystarcza do bezpiecznej regulacji.
+
+Przyczyną była różnica między odrzuceniem spóźnionego wyniku a anulowaniem
+pracy. Bramka `BackgroundRunner` nie pokazywała starych odpowiedzi, lecz każde
+naciśnięcie nadal uruchamiało rzeczywiste żądanie FSAPI. Koordynator C#
+wykonywał je kolejno, więc szybkie klawisze tworzyły długą kolejkę po stronie
+radia.
+
+Poprawiony kontrakt:
+
+- AMC wysyła najwyżej jedno polecenie głośności naraz;
+- podczas jego wykonywania zapamiętuje tylko najnowszą wartość docelową;
+- seria `25, 30, 35` wysyła `25`, a następnie `35`, bez pośredniego `30`;
+- inne polecenie transportu nie nakłada się na trwające; NVDA mówi
+  `Poprzednie polecenie Frontier Smart jeszcze trwa`;
+- cichy timer stanu nie odpytuje radia w czasie aktywnego polecenia;
+- po błędzie suwak wraca do ostatniej potwierdzonej wartości i AMC prosi o
+  odczekanie przed ponowieniem;
+- zmiana aktywnego urządzenia usuwa oczekującą wartość głośności.
+
+Automatyczny test odtwarza szybką serię trzech zmian i potwierdza dokładnie dwa
+wywołania transportu: pierwszą oraz ostatnią wartość. Zmiana przeszła także
+pełną regresję wxPython: **2032 zaliczone, 111 kontrolowanie pominiętych i 13
+zaliczonych podtestów**, zero błędów. Rzeczywisty odbiór na Teufelu pozostaje
+obowiązkowy, ponieważ testy nie mogą zasymulować opóźnień konkretnego firmware
+ani jego interakcji z przyciskami sprzętowymi.
+
+Źródła i test są gotowe na gałęzi
+`integration/amc-test-20261023-late` po bazowym commicie
+`044c9a5ce5146145c9429eb9755ccaf7bed6dd5f`. Dokładny commit i wersja
+zainstalowanego AMC Test zostaną dopisane po kontrolowanej promocji. AMC
+Public pozostaje bez zmian.

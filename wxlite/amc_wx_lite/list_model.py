@@ -95,6 +95,10 @@ class Row:
     # nawigacyjnego, np. folderu „Albumy” wykonawcy TIDAL.
     service_id: str | None = None
     service_kind: str | None = None
+    # Czas źródłowy transmisji lub innego zdalnego zdarzenia. Pozostaje
+    # wyłącznie danymi modelu: lista i UI Automation dostają przygotowany
+    # tekst ``detail``, nigdy surowy znacznik czasu ani nazwę tego pola.
+    service_start_utc: str | None = None
     # Logiczne identyfikatory członków zdalnej grupy (obecnie Sonos). Służą
     # wyłącznie do bezpiecznego rozpoznania stałego celu presetu. Nigdy nie są
     # tekstem kolumny, nazwą dostępną ani opisem dla czytnika ekranu.

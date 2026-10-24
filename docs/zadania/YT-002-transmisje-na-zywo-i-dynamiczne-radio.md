@@ -185,3 +185,60 @@ Implementacja `Ctrl+Shift+I` musi w jednym zadaniu uzupełnić wspólny model
 poleceń, klawiaturę, menu, menu kontekstowe, paletę `Ctrl+Shift+K`, pomoc
 `Ctrl+F1`, pełną pomoc, dokumentację i testy parytetu oraz NVDA. Nie należy
 zaczynać stałego monitoringu wszystkich kanałów w tle.
+
+## Implementacja zbiorczej listy — 24.10.2026
+
+Powyższy projekt został wdrożony w źródłach AMC Test. `Ctrl+Shift+I` jest
+globalnym poleceniem `Transmisje wybranych kanałów YouTube` i jest dostępne
+również w menu Widok, menu kontekstowym, palecie `Ctrl+Shift+K`, pomocy
+`Ctrl+F1` i pełnej pomocy. Gdy nie wybrano jeszcze kanałów, pierwsze użycie
+otwiera natywne okno `Kanały zbiorczej listy transmisji` z listą pól wyboru.
+Okno zapamiętuje zaznaczenia, przy ponownym otwarciu ustawia fokus na pierwszym
+zaznaczonym kanale i pozwala wybrać najwyżej 20 kanałów. Lista i komunikaty
+podają wyłącznie nazwy użytkowe; identyfikatory pozostają w modelu.
+
+Ten sam wybór można zmienić na zaznaczonym kanale przez polecenie
+`Uwzględniaj kanał na zbiorczej liście transmisji`. Właściwy skan wykonuje
+oficjalne zapytania kolejno, a nie równolegle. Wynik pokazuje najpierw pozycje
+`na żywo`, a potem transmisje zaplanowane chronologicznie. Każdy wiersz zawiera
+nazwę kanału, tytuł, stan i czas. Częściowy błąd jednego kanału nie usuwa
+wyników pozostałych, lecz jest jawnie podany w komunikacie.
+
+Polecenia widoku:
+
+- `Enter` — odtwarzanie istniejącą drogą AMC;
+- `Ctrl+Shift+C` — skopiowanie publicznego adresu;
+- `F5` — wymuszone ponowne sprawdzenie wybranych kanałów;
+- `Ctrl+R` — rozpoczęcie albo zatrzymanie nagrywania pozycji już trwającej;
+- `Shift+R` — otwarcie edytora harmonogramu dla pozycji trwającej lub
+  zaplanowanej; przyszły termin jest wstępnie uzupełniany, a użytkownik nadal
+  wybiera czas trwania;
+- `Backspace` albo `Escape` — powrót do dokładnego wcześniejszego widoku i
+  fokusu. Spóźniony wynik po wyjściu nie otwiera listy ponownie.
+
+Nagranie uruchamiane teraz używa dokładnego adresu bieżącego filmu. Harmonogram
+przechowuje stabilny adres kanału `/live`, aby nie przywiązywać się do
+wygasającego linku `watch`. Wybór kanałów jest prywatny dla profilu AMC Test i
+wchodzi do pełnej kopii danych w sekcji Podcasty. Host C# pozostaje jedynym
+właścicielem tokenu Google.
+
+### Testy i stan instalacji
+
+- celowana bramka po zsynchronizowaniu z repozytorium: **273 zaliczone testy i
+  2 zaliczone podtesty**;
+- pełna regresja wxPython: **2032 zaliczone, 111 kontrolowanie pominiętych i
+  13 zaliczonych podtestów**, zero błędów, czas 153,04 s;
+- `git diff --check`: bez błędów; ostrzeżenia dotyczyły wyłącznie normalizacji
+  końców linii w trzech istniejących plikach;
+- ręczny odbiór okna wyboru, mowy NVDA, prawdziwych transmisji oraz nagrywania
+  pozostaje do wykonania po instalacji nowego AMC Test;
+- stały monitoring w tle nie został dodany. Skan odbywa się tylko na jawne
+  polecenie użytkownika i obejmuje najwyżej 20 świadomie wybranych kanałów.
+
+### Wersja i commit
+
+Gałąź: `integration/amc-test-20261023-late`. W chwili tego zapisu kod i testy
+są gotowe w drzewie roboczym po commicie bazowym
+`044c9a5ce5146145c9429eb9755ccaf7bed6dd5f`; dokładny commit, identyfikator
+paczki i wersja instalacji zostaną dopisane po zatwierdzeniu zmiany i
+kontrolowanej promocji. AMC Public i GitHub pozostają bez zmian.

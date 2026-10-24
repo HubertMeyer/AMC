@@ -85,6 +85,10 @@ class MenuItem:
     needs_youtube_channel: bool = False
     #: Aktywna tylko w dedykowanej liście transmisji jednego kanału.
     needs_youtube_broadcasts: bool = False
+    #: Aktywna tylko na zbiorczej liście transmisji wybranych kanałów.
+    needs_youtube_live_aggregate: bool = False
+    #: Wymaga trwającej, a nie dopiero zaplanowanej transmisji zbiorczej.
+    needs_youtube_live_now: bool = False
     #: Aktywna wyłącznie w jednym z trzech głównych widoków kolekcji TIDAL.
     needs_tidal_collection: bool = False
     #: Aktywna wyłącznie w jednym z sześciu głównych widoków Spotify.
@@ -468,6 +472,44 @@ def build_menus(
                         shortcut="F5",
                         accelerator=False,
                         needs_youtube_broadcasts=True,
+                        visible_sessions=PODCASTS_ONLY,
+                    ),
+                    MenuItem(
+                        "Wybierz &kanały zbiorczej listy transmisji…",
+                        Action.CONFIGURE_YOUTUBE_LIVE_CHANNELS,
+                        needs_podcast_session=True,
+                        visible_sessions=PODCASTS_ONLY,
+                    ),
+                    MenuItem(
+                        "Uwzględniaj kanał na &zbiorczej liście transmisji",
+                        Action.TOGGLE_YOUTUBE_LIVE_AGGREGATE_CHANNEL,
+                        needs_youtube_channel=True,
+                        checkable=True,
+                        visible_sessions=PODCASTS_ONLY,
+                    ),
+                    MenuItem(
+                        "Odśwież zbiorczą listę transmisji",
+                        Action.REFRESH_YOUTUBE_LIVE_AGGREGATE,
+                        shortcut="F5",
+                        accelerator=False,
+                        needs_youtube_live_aggregate=True,
+                        visible_sessions=PODCASTS_ONLY,
+                    ),
+                    MenuItem(
+                        "&Nagrywaj transmisję teraz",
+                        Action.RECORD_YOUTUBE_LIVE_NOW,
+                        shortcut="Ctrl+R",
+                        accelerator=False,
+                        needs_youtube_live_now=True,
+                        visible_sessions=PODCASTS_ONLY,
+                    ),
+                    MenuItem(
+                        "Zaplanuj nagranie &transmisji…",
+                        Action.SCHEDULE_YOUTUBE_LIVE,
+                        shortcut="Shift+R",
+                        accelerator=False,
+                        needs_youtube_live_aggregate=True,
+                        needs_selection=True,
                         visible_sessions=PODCASTS_ONLY,
                     ),
                 )
@@ -1422,6 +1464,17 @@ def build_menus(
             MenuItem("&Nowe odcinki i materiały", Action.VIEW_PODCAST_INBOX,
                      shortcut="Ctrl+I",
                      visible_sessions=(SessionId.PODCASTS,)),
+            *(
+                (
+                    MenuItem(
+                        "Transmisje wybranych kanałów &YouTube",
+                        Action.VIEW_YOUTUBE_LIVE_AGGREGATE,
+                        shortcut="Ctrl+Shift+I",
+                    ),
+                )
+                if youtube_account_available
+                else ()
+            ),
             MenuItem("Po&brane", Action.VIEW_PODCAST_DOWNLOADS,
                      needs_podcast_session=True,
                      visible_sessions=(SessionId.PODCASTS,)),

@@ -9,7 +9,7 @@ jawnym poleceniu użytkownika albo przez osobno uzgodniony harmonogram.
 
 Sesja rozwojowa AMC Test z 23–24.10.2026 została bezpiecznie zamknięta.
 Najnowsza instalacja, dokładny stan wdrożeń, plan ręcznego odbioru, ustalenia
-dotyczące dynamicznego radia i przyszłego `Ctrl+Shift+I` oraz tematy przekazane
+dotyczące dynamicznego radia i pierwotnego projektu `Ctrl+Shift+I` oraz tematy przekazane
 do osobnych zadań Sonos i Apple Music są zapisane w:
 [AMC-TEST-2026-10-24-ZAMKNIECIE-SESJI-23-24.md](AMC-TEST-2026-10-24-ZAMKNIECIE-SESJI-23-24.md).
 
@@ -304,10 +304,11 @@ zmian, wymagający korekty użytkownika:
   [YT-001-konto-youtube-i-synchronizacja.md](YT-001-konto-youtube-i-synchronizacja.md).
   Bieżąca instalacja:
   [AMC-TEST-2026-10-24-0021-youtube-refresh-shortcuts.md](AMC-TEST-2026-10-24-0021-youtube-refresh-shortcuts.md).
-- `YT-002` — **W trakcie — źródła, bezpieczny kontrakt, skróty `Ctrl+T` i
-  `Ctrl+Y`, pełna regresja wxPython 2029/2029, testy .NET, build, atomowa
-  instalacja i kontrolowany start AMC Test 24.10.2026, 00:21 są zaliczone;
-  czeka wyłącznie na ręczny odbiór prawdziwego kanału i NVDA** — lista transmisji live/upcoming zapisanego kanału, Enter w
+- `YT-002` — **W trakcie — dotychczasowy zakres jednego kanału jest
+  zainstalowany, a 24.10.2026 wdrożono źródła zbiorczej listy wybranych
+  kanałów pod `Ctrl+Shift+I`; pełna regresja wxPython 2032/2032 jest zaliczona,
+  trwa budowa i instalacja nowego AMC Test, po której pozostanie ręczny odbiór
+  NVDA i prawdziwego konta** — lista transmisji live/upcoming zapisanego kanału, Enter w
   wewnętrznym silniku, kopiowanie adresu, F5 i Backspace oraz dynamiczna stacja
   Radia oparta na stałym adresie kanału `/live`. Szczegóły:
   [YT-002-transmisje-na-zywo-i-dynamiczne-radio.md](YT-002-transmisje-na-zywo-i-dynamiczne-radio.md).
@@ -323,11 +324,12 @@ zmian, wymagający korekty użytkownika:
   krótkie nazwy `AMC Test — data, godzina` i `AMC Public — data, godzina`,
   z technicznymi identyfikatorami pozostawionymi poza zwykłą nazwą.
   Szczegóły: [NAME-001-amc-test.md](NAME-001-amc-test.md).
-- `FRONTIER-001` — **Odbiór potwierdził wykrywanie Teufela, listę wyboru i
-  fokus pola PIN. Poprawka wyjaśniająca PIN NetRemote (`1234` fabrycznie) jest
-  zainstalowana w AMC Test 23.10.2026, 22:20. Późniejsza korekta nieudanej
-  operacji usuwania PIN-u ma test kontraktu, kompilację Release i instalację
-  AMC Test 22:41; pozostało ręczne połączenie i odbiór dalszej nawigacji NVDA** —
+- `FRONTIER-001` — **W trakcie — użytkownik potwierdził wykrywanie, połączenie
+  i odczyt odtwarzanego radia z Teufela. Odbiór 24.10.2026 ujawnił groźną
+  kolejkę szybkich zmian głośności; źródła scalają teraz serię do jednego
+  bieżącego i ostatniego oczekującego żądania, a pełna regresja wxPython
+  2032/2032 jest zaliczona. Trwa budowa i instalacja do ponownego odbioru na
+  urządzeniu** —
   `Ctrl+8`, `Ctrl+F5` i ręczny adres korzystają z jednego modelu stanów.
   AMC wymaga potwierdzonego opisu FSAPI/UNDOK i użytkowej nazwy urządzenia,
   zanim pokaże pole PIN. Brak wyniku i błąd nie prowadzą do PIN-u. Po zapisaniu

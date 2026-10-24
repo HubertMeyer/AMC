@@ -763,3 +763,19 @@ def test_navigation_snapshot_survives_round_trip() -> None:
     fresh = Navigator()
     fresh.restore(store.load().navigation)
     assert fresh.sessions[SessionId.FILES].folder_path == "/m/muzyka"
+
+
+def test_youtube_live_channel_selection_is_unique_bounded_and_persistent() -> None:
+    store, _ = temp_store()
+    store.save(LiteState(
+        youtube_live_channel_ids=[
+            " kanał-1 ",
+            "kanał-1",
+            *[f"kanał-{index}" for index in range(2, 30)],
+            "",
+        ]
+    ))
+    loaded = store.load()
+    assert loaded.youtube_live_channel_ids[0] == "kanał-1"
+    assert len(loaded.youtube_live_channel_ids) == 20
+    assert len(set(loaded.youtube_live_channel_ids)) == 20

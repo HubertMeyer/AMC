@@ -16,6 +16,7 @@ from amc_wx_lite.navigation import (
 from amc_wx_lite.shortcuts import Action, Chord, describe, describe_action, resolve
 from amc_wx_lite.youtube_live import (
     YouTubeLivePayloadError,
+    aggregate_broadcast_rows,
     broadcast_rows,
     dynamic_live_url,
 )
@@ -113,6 +114,57 @@ class YouTubeLiveTests(unittest.TestCase):
         self.assertIsInstance(back, OpenPodcastView)
         self.assertEqual(back.preferred_id, "subscription-one")
 
+    def test_aggregate_labels_sort_and_navigation_hide_channel_ids(self) -> None:
+        rows = aggregate_broadcast_rows([
+            (
+                "wewnetrzny-kanal-b",
+                "Kanał B",
+                {"items": [{
+                    "title": "Jutro",
+                    "pageUrl": "https://www.youtube.com/watch?v=jutro",
+                    "state": "upcoming",
+                    "scheduledStartUtc": "2026-10-26T10:00:00Z",
+                }]},
+            ),
+            (
+                "wewnetrzny-kanal-a",
+                "Kanał A",
+                {"items": [
+                    {
+                        "title": "Teraz",
+                        "pageUrl": "https://www.youtube.com/watch?v=teraz",
+                        "state": "live",
+                        "actualStartUtc": "2026-10-24T10:00:00Z",
+                    },
+                    {
+                        "title": "Wcześniej",
+                        "pageUrl": "https://www.youtube.com/watch?v=wczesniej",
+                        "state": "upcoming",
+                        "scheduledStartUtc": "2026-10-25T10:00:00Z",
+                    },
+                ]},
+            ),
+        ])
+        self.assertEqual([row.title for row in rows], ["Teraz", "Wcześniej", "Jutro"])
+        self.assertTrue(rows[0].detail.startswith("Kanał A, na żywo"))
+        self.assertIsNotNone(rows[1].service_start_utc)
+        spoken = " ".join(
+            ListModel(rows).text_for(index, column)
+            for index in range(len(rows))
+            for column in range(3)
+        )
+        self.assertNotIn("wewnetrzny-kanal", spoken)
+
+        navigator = Navigator()
+        events = navigator.apply_youtube_broadcasts_aggregate(
+            rows, checked_channels=2
+        )
+        self.assertEqual(
+            navigator.sessions[SessionId.PODCASTS].library_view,
+            LibraryView.YOUTUBE_BROADCASTS_AGGREGATE,
+        )
+        self.assertIn("na żywo 1", events[0].text)
+
     def test_f5_and_command_surfaces_share_one_contract(self) -> None:
         self.assertIs(
             resolve(
@@ -177,6 +229,12 @@ class YouTubeLiveTests(unittest.TestCase):
             Action.YOUTUBE_BROADCASTS,
             Action.REFRESH_YOUTUBE_BROADCASTS,
             Action.ADD_YOUTUBE_LIVE_STATION,
+            Action.VIEW_YOUTUBE_LIVE_AGGREGATE,
+            Action.CONFIGURE_YOUTUBE_LIVE_CHANNELS,
+            Action.TOGGLE_YOUTUBE_LIVE_AGGREGATE_CHANNEL,
+            Action.REFRESH_YOUTUBE_LIVE_AGGREGATE,
+            Action.RECORD_YOUTUBE_LIVE_NOW,
+            Action.SCHEDULE_YOUTUBE_LIVE,
         }
         menu_items = {
             item.action: item
@@ -211,6 +269,35 @@ class YouTubeLiveTests(unittest.TestCase):
         )
         self.assertEqual(menu_items[Action.YOUTUBE_BROADCASTS].shortcut, "Ctrl+T")
         self.assertEqual(menu_items[Action.ADD_YOUTUBE_LIVE_STATION].shortcut, "Ctrl+Y")
+        self.assertEqual(
+            menu_items[Action.VIEW_YOUTUBE_LIVE_AGGREGATE].shortcut,
+            "Ctrl+Shift+I",
+        )
+        self.assertIs(
+            resolve(
+                Chord("I", ctrl=True, shift=True),
+                player_view=False,
+                radio_session=False,
+                youtube_account_available=True,
+            ),
+            Action.VIEW_YOUTUBE_LIVE_AGGREGATE,
+        )
+        for chord, action in (
+            (Chord("F5"), Action.REFRESH_YOUTUBE_LIVE_AGGREGATE),
+            (Chord("R", ctrl=True), Action.RECORD_YOUTUBE_LIVE_NOW),
+            (Chord("R", shift=True), Action.SCHEDULE_YOUTUBE_LIVE),
+        ):
+            self.assertIs(
+                resolve(
+                    chord,
+                    player_view=False,
+                    radio_session=False,
+                    podcast_session=True,
+                    youtube_broadcasts_aggregate=True,
+                    youtube_account_available=True,
+                ),
+                action,
+            )
         help_entries = dict(describe("Podcasty i YouTube", actions))
         self.assertEqual(
             help_entries["Ctrl+T"],

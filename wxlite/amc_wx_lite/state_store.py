@@ -45,6 +45,7 @@ _TIDAL_SORT_VIEWS = {"library", "favorites", "playlists"}
 _SPOTIFY_SORT_VIEWS = {
     "liked", "albums", "artists", "playlists", "podcasts", "episodes",
 }
+YOUTUBE_LIVE_CHANNEL_LIMIT = 20
 
 
 def _read_service_picker_destination_ids(
@@ -68,6 +69,26 @@ def _read_podcast_inbox_sort_mode(raw: object) -> str | None:
 def _read_podcast_library_sort_mode(raw: object) -> str | None:
     """Validate the private main-library mode without exposing model text."""
     return raw if isinstance(raw, str) and raw in _COLLECTION_SORT_MODES else None
+
+
+def normalize_youtube_live_channel_ids(raw: object) -> list[str]:
+    """Zachowaj najwyżej 20 stabilnych identyfikatorów wybranych kanałów."""
+
+    if not isinstance(raw, list):
+        return []
+    result: list[str] = []
+    seen: set[str] = set()
+    for value in raw:
+        if not isinstance(value, str):
+            continue
+        channel_id = value.strip()
+        if not channel_id or channel_id in seen:
+            continue
+        seen.add(channel_id)
+        result.append(channel_id)
+        if len(result) >= YOUTUBE_LIVE_CHANNEL_LIMIT:
+            break
+    return result
 
 
 def _read_tidal_sort_modes(raw: object) -> dict[str, str]:
@@ -544,6 +565,11 @@ class LiteState:
     #: Media internetowe. ``None`` zachowuje dotychczasową kolejność własną z
     #: bazy, a jawny wybór przeżywa restart wyłącznie w magazynie AMC Test.
     podcast_library_sort_mode: str | None = None
+    #: Kanały jawnie wybrane do zbiorczego sprawdzania transmisji. Lista jest
+    #: prywatna dla profilu AMC Test; host C# nadal jest jedynym właścicielem
+    #: tokenu Google. Limit chroni dzienny limit API przed skanem całej
+    #: biblioteki po każdym Ctrl+Shift+I.
+    youtube_live_channel_ids: list[str] = field(default_factory=list)
     #: Prywatna kolejka utworów przekazywanych do oryginalnego TIDALa.
     #: Nie zapisujemy jej do wspólnego state.json, aby dwa programy nie
     #: ścigały się o profil. Pola techniczne pozostają wyłącznie modelem.
@@ -791,6 +817,9 @@ class StateStore:
             podcast_library_sort_mode=_read_podcast_library_sort_mode(
                 raw.get("podcast_library_sort_mode")
             ),
+            youtube_live_channel_ids=normalize_youtube_live_channel_ids(
+                raw.get("youtube_live_channel_ids")
+            ),
             tidal_queue_items=_read_tidal_queue(raw.get("tidal_queue_items")),
             tidal_sort_modes=_read_tidal_sort_modes(raw.get("tidal_sort_modes")),
             spotify_sort_modes=_read_spotify_sort_modes(
@@ -869,6 +898,11 @@ class StateStore:
         )
         if podcast_library_sort_mode is not None:
             payload["podcast_library_sort_mode"] = podcast_library_sort_mode
+        youtube_live_channel_ids = normalize_youtube_live_channel_ids(
+            state.youtube_live_channel_ids
+        )
+        if youtube_live_channel_ids:
+            payload["youtube_live_channel_ids"] = youtube_live_channel_ids
         payload["tidal_queue_items"] = _read_tidal_queue(state.tidal_queue_items)
         tidal_sort_modes = _read_tidal_sort_modes(state.tidal_sort_modes)
         if tidal_sort_modes:

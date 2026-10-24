@@ -7,8 +7,9 @@ tytuł, stan, publiczny adres filmu i daty przeznaczone do pokazania użytkownik
 from __future__ import annotations
 
 import hashlib
+from dataclasses import replace
 from datetime import datetime
-from typing import Mapping
+from typing import Mapping, Sequence
 from urllib.parse import unquote, urlsplit, urlunsplit
 
 from .list_model import Row
@@ -88,8 +89,52 @@ def broadcast_rows(
             show_kind=False,
             parent_id=subscription_id,
             service_kind="youtubeLive" if state == "live" else "youtubeUpcoming",
+            service_start_utc=(moment.isoformat() if moment is not None else None),
         ))
     return rows
+
+
+def aggregate_broadcast_rows(
+    channels: Sequence[tuple[str, str, object]],
+) -> list[Row]:
+    """Połącz wyniki wybranych kanałów w jedną dostępną listę.
+
+    ``subscription_id`` pozostaje polem modelu. Czytnik otrzymuje nazwę
+    kanału, stan i czas, dzięki czemu dwie transmisje o tym samym tytule nie
+    są nierozróżnialne. Trwające transmisje są pierwsze, a zaplanowane dalej
+    chronologicznie.
+    """
+
+    rows: list[Row] = []
+    seen_urls: set[str] = set()
+    for subscription_id, channel_title, payload in channels:
+        safe_channel_title = _text(channel_title, "Kanał YouTube")
+        for row in broadcast_rows(payload, subscription_id=subscription_id):
+            if not row.url or row.url in seen_urls:
+                continue
+            seen_urls.add(row.url)
+            rows.append(replace(
+                row,
+                detail=f"{safe_channel_title}, {row.detail}",
+                service_section=safe_channel_title,
+            ))
+
+    def sort_key(row: Row) -> tuple[object, ...]:
+        live_priority = 0 if row.service_kind == "youtubeLive" else 1
+        moment = _read_time(row.service_start_utc)
+        moment_key = moment.timestamp() if moment is not None else float("inf")
+        # Dla trwających materiałów najważniejsza jest czytelna, stabilna
+        # kolejność kanał/tytuł. Zaplanowane porządkujemy po terminie.
+        if live_priority == 0:
+            moment_key = 0.0
+        return (
+            live_priority,
+            moment_key,
+            row.service_section.casefold() if row.service_section else "",
+            row.title.casefold(),
+        )
+
+    return sorted(rows, key=sort_key)
 
 
 def _text(value: object, fallback: str) -> str:

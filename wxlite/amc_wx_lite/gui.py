@@ -86,6 +86,7 @@ from .youtube_account import (
 )
 from .youtube_live import (
     YouTubeLivePayloadError,
+    aggregate_broadcast_rows as youtube_aggregate_broadcast_rows,
     broadcast_rows as youtube_broadcast_rows,
     dynamic_live_url as youtube_dynamic_live_url,
 )
@@ -362,7 +363,14 @@ from .radio_recording import (
     recent_recording_history,
     station_activity_rows,
 )
-from .state_store import LiteState, Station, StationList, StateStore
+from .state_store import (
+    YOUTUBE_LIVE_CHANNEL_LIMIT,
+    LiteState,
+    Station,
+    StationList,
+    StateStore,
+    normalize_youtube_live_channel_ids,
+)
 if "session.spotify" in _RELEASE_PROFILE.capabilities:
     from .spotify_source import (
         SpotifyContainerPayloadError,
@@ -444,6 +452,10 @@ _LIST_CONTEXT_ACTION_GROUPS: tuple[tuple[Action, ...], ...] = (
         Action.YOUTUBE_BROADCASTS,
         Action.REFRESH_YOUTUBE_BROADCASTS,
         Action.ADD_YOUTUBE_LIVE_STATION,
+        Action.TOGGLE_YOUTUBE_LIVE_AGGREGATE_CHANNEL,
+        Action.REFRESH_YOUTUBE_LIVE_AGGREGATE,
+        Action.RECORD_YOUTUBE_LIVE_NOW,
+        Action.SCHEDULE_YOUTUBE_LIVE,
         Action.DOWNLOAD_PODCAST_EPISODES,
         Action.SAVE_PODCAST_EPISODE_AS,
         Action.SHOW_PODCAST_DESCRIPTION,
@@ -4271,6 +4283,107 @@ class ServiceAccountDialog(wx.Dialog):
         self.login_button.SetFocus()
 
 
+class YouTubeLiveChannelPickerDialog(wx.Dialog):
+    """Jawny wybór kanałów do oszczędnego skanu Ctrl+Shift+I."""
+
+    def __init__(
+        self,
+        parent: wx.Window,
+        channels,
+        selected_ids: list[str],
+    ) -> None:
+        super().__init__(
+            parent,
+            title="Kanały zbiorczej listy transmisji",
+            style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER,
+        )
+        self.SetName("Kanały zbiorczej listy transmisji")
+        self._channel_ids = [channel.subscription_id for channel in channels]
+        selected = set(selected_ids)
+        self.result_ids: list[str] | None = None
+
+        explanation = wx.StaticText(
+            self,
+            label=(
+                "Zaznacz kanały sprawdzane po Ctrl+Shift+I. AMC nie skanuje "
+                "automatycznie całej biblioteki, aby chronić limit YouTube. "
+                f"Możesz wybrać najwyżej {YOUTUBE_LIVE_CHANNEL_LIMIT} kanałów."
+            ),
+        )
+        explanation.SetName(
+            "Informacja o zbiorczej liście transmisji YouTube"
+        )
+        explanation.Wrap(650)
+        self.channels = wx.CheckListBox(
+            self,
+            choices=[channel.title for channel in channels],
+            style=wx.LB_SINGLE,
+        )
+        self.channels.SetName("Kanały YouTube do sprawdzania transmisji")
+        for index, channel_id in enumerate(self._channel_ids):
+            self.channels.Check(index, channel_id in selected)
+
+        self.status = wx.StaticText(self, label="")
+        self.status.SetName("Stan wyboru kanałów")
+        save = wx.Button(self, wx.ID_OK, "Zapisz")
+        save.SetName("Zapisz wybór kanałów")
+        cancel = wx.Button(self, wx.ID_CANCEL, "Anuluj")
+        cancel.SetName("Anuluj wybór kanałów")
+        buttons = wx.StdDialogButtonSizer()
+        buttons.AddButton(save)
+        buttons.AddButton(cancel)
+        buttons.Realize()
+
+        layout = wx.BoxSizer(wx.VERTICAL)
+        layout.Add(explanation, 0, wx.ALL | wx.EXPAND, 12)
+        layout.Add(self.channels, 1, wx.LEFT | wx.RIGHT | wx.EXPAND, 12)
+        layout.Add(self.status, 0, wx.ALL | wx.EXPAND, 12)
+        layout.Add(buttons, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM | wx.ALIGN_RIGHT, 12)
+        self.SetSizer(layout)
+        self.SetMinSize((700, 460))
+        self.SetSize((760, 560))
+
+        self.channels.Bind(wx.EVT_CHECKLISTBOX, self._on_checked)
+        save.Bind(wx.EVT_BUTTON, self._on_save)
+        if self._channel_ids:
+            first_checked = next(
+                (
+                    index
+                    for index in range(len(self._channel_ids))
+                    if self.channels.IsChecked(index)
+                ),
+                0,
+            )
+            self.channels.SetSelection(first_checked)
+            wx.CallAfter(self.channels.SetFocus)
+        else:
+            save.Enable(False)
+            self.status.SetLabel("W Bibliotece nie ma kanałów YouTube")
+            wx.CallAfter(cancel.SetFocus)
+
+    def _on_checked(self, event: wx.CommandEvent) -> None:
+        checked = list(self.channels.GetCheckedItems())
+        if len(checked) <= YOUTUBE_LIVE_CHANNEL_LIMIT:
+            self.status.SetLabel(
+                f"Wybrano kanałów: {len(checked)} z {YOUTUBE_LIVE_CHANNEL_LIMIT}"
+            )
+            return
+        index = int(event.GetInt())
+        if 0 <= index < len(self._channel_ids):
+            self.channels.Check(index, False)
+        self.status.SetLabel(
+            f"Możesz wybrać najwyżej {YOUTUBE_LIVE_CHANNEL_LIMIT} kanałów"
+        )
+
+    def _on_save(self, _event: wx.CommandEvent) -> None:
+        self.result_ids = [
+            self._channel_ids[index]
+            for index in self.channels.GetCheckedItems()
+            if 0 <= index < len(self._channel_ids)
+        ]
+        self.EndModal(wx.ID_OK)
+
+
 class YouTubeAccountDialog(wx.Dialog):
     """Konto Google tylko do odczytu i jawna synchronizacja do Biblioteki."""
 
@@ -7422,6 +7535,8 @@ class LiteFrame(wx.Frame):
         # Dopiero potwierdzona konfiguracja hosta dodaje polecenie do menu,
         # palety i pomocy. Brak identyfikatora Google nie tworzy martwej opcji.
         self._youtube_account_available = False
+        self._youtube_live_scan_version = 0
+        self._youtube_live_channels_by_id: dict[str, object] = {}
         self._last_status: dict = {}
         self._transport_status_by_session: dict[SessionId, dict] = {}
         self._radio_transport_status_poll_pending = False
@@ -7495,6 +7610,12 @@ class LiteFrame(wx.Frame):
         self._frontier_smart_snapshot: dict = {}
         self._frontier_smart_active_device_id = ""
         self._frontier_smart_status_poll_pending = False
+        # Frontier/FSAPI potrafi odpowiadać przez kilka sekund. Szybkie
+        # klawisze głośności nie mogą tworzyć osobnych równoległych żądań:
+        # zapamiętujemy wyłącznie ostatnią wartość i wysyłamy ją po bieżącej.
+        self._frontier_smart_request_pending = False
+        self._frontier_smart_volume_pending: int | None = None
+        self._frontier_smart_requested_volume: int | None = None
         self._sonos_snapshot: dict = {}
         self._sonos_active_household_id = ""
         self._sonos_active_group_id = ""
@@ -7921,6 +8042,12 @@ class LiteFrame(wx.Frame):
             and session.view is View.LIST
             and session.library_view is LibraryView.YOUTUBE_BROADCASTS
         )
+        youtube_live_aggregate = (
+            podcasts
+            and session.view is View.LIST
+            and session.library_view
+            is LibraryView.YOUTUBE_BROADCASTS_AGGREGATE
+        )
         radio_scope = (
             "library"
             if radio and session.view is View.LIST and session.library_view is None
@@ -8120,6 +8247,17 @@ class LiteFrame(wx.Frame):
             ):
                 enabled = False
             if entry.needs_youtube_broadcasts and not youtube_broadcasts:
+                enabled = False
+            if (
+                entry.needs_youtube_live_aggregate
+                and not youtube_live_aggregate
+            ):
+                enabled = False
+            if entry.needs_youtube_live_now and not (
+                youtube_live_aggregate
+                and selected_row is not None
+                and selected_row.service_kind == "youtubeLive"
+            ):
                 enabled = False
             if entry.needs_tidal_collection and not tidal_collection:
                 enabled = False
@@ -8342,6 +8480,16 @@ class LiteFrame(wx.Frame):
                 native_label = self._menu_native_label(entry, label)
                 if item.GetItemLabel() != native_label:
                     item.SetItemLabel(native_label)
+            elif (
+                entry.checkable
+                and entry.action
+                is Action.TOGGLE_YOUTUBE_LIVE_AGGREGATE_CHANNEL
+            ):
+                item.Check(
+                    selected_row is not None
+                    and selected_row.item_id
+                    in set(self.state.youtube_live_channel_ids)
+                )
             elif entry.checkable and entry.action is Action.TOGGLE_SHUFFLE:
                 item.Check(session.shuffle_enabled)
             elif entry.checkable and entry.action is Action.KEYBOARD_HELP:
@@ -12359,6 +12507,12 @@ class LiteFrame(wx.Frame):
             and self.navigator.session.library_view
             is LibraryView.YOUTUBE_BROADCASTS
         )
+        youtube_broadcasts_aggregate = (
+            not player
+            and self.navigator.active is SessionId.PODCASTS
+            and self.navigator.session.library_view
+            is LibraryView.YOUTUBE_BROADCASTS_AGGREGATE
+        )
         selected_row = self.navigator.session.model.selected_row
         youtube_channel = (
             not player
@@ -12451,6 +12605,7 @@ class LiteFrame(wx.Frame):
             podcast_inbox=podcast_inbox,
             podcast_library=podcast_library,
             youtube_broadcasts=youtube_broadcasts,
+            youtube_broadcasts_aggregate=youtube_broadcasts_aggregate,
             youtube_channel=youtube_channel,
             youtube_account_available=getattr(
                 self, "_youtube_account_available", False
@@ -12959,6 +13114,18 @@ class LiteFrame(wx.Frame):
             self._run(self.navigator.open_youtube_broadcasts(force_refresh=True))
         elif action is Action.ADD_YOUTUBE_LIVE_STATION:
             self._add_selected_youtube_live_station()
+        elif action is Action.VIEW_YOUTUBE_LIVE_AGGREGATE:
+            self._show_youtube_live_aggregate()
+        elif action is Action.CONFIGURE_YOUTUBE_LIVE_CHANNELS:
+            self._configure_youtube_live_channels()
+        elif action is Action.TOGGLE_YOUTUBE_LIVE_AGGREGATE_CHANNEL:
+            self._toggle_youtube_live_aggregate_channel()
+        elif action is Action.REFRESH_YOUTUBE_LIVE_AGGREGATE:
+            self._show_youtube_live_aggregate(force_refresh=True)
+        elif action is Action.RECORD_YOUTUBE_LIVE_NOW:
+            self._toggle_youtube_live_recording()
+        elif action is Action.SCHEDULE_YOUTUBE_LIVE:
+            self._schedule_youtube_live_recording()
         elif action is Action.VIEW_PODCAST_INBOX:
             self._show_podcast_inbox()
         elif action is Action.VIEW_PODCAST_DOWNLOADS:
@@ -13760,6 +13927,9 @@ class LiteFrame(wx.Frame):
             LibraryView.SPOTIFY_CONTAINER: session.spotify_heading,
             LibraryView.SPOTIFY_HISTORY: "Spotify — Historia odtwarzania",
             LibraryView.YOUTUBE_BROADCASTS: "Transmisje YouTube na żywo i zaplanowane",
+            LibraryView.YOUTUBE_BROADCASTS_AGGREGATE: (
+                "Transmisje wybranych kanałów YouTube"
+            ),
             LibraryView.SERVICE_HISTORY: (
                 f"{SESSION_LABELS[self.navigator.active]} — Historia odtwarzania"
             ),
@@ -17122,6 +17292,8 @@ class LiteFrame(wx.Frame):
             return
         self._frontier_smart_active_device_id = intent.device_id
         self._frontier_smart_snapshot = {}
+        self._frontier_smart_volume_pending = None
+        self._frontier_smart_requested_volume = None
         self.now_playing.SetLabel(intent.title)
         self._set_transport_label(playing=False, preparing=True)
 
@@ -17173,6 +17345,11 @@ class LiteFrame(wx.Frame):
         if self.time_label.GetLabel() != time_label:
             self.time_label.SetLabel(time_label)
         volume = state.get("volume")
+        if (
+            isinstance(volume, int)
+            and not getattr(self, "_frontier_smart_request_pending", False)
+        ):
+            self._frontier_smart_requested_volume = volume
         if isinstance(volume, int) and self.volume_slider.GetValue() != volume:
             self.volume_slider.SetValue(volume)
         self.volume_slider.Enable(isinstance(volume, int))
@@ -17197,8 +17374,40 @@ class LiteFrame(wx.Frame):
                 "Naciśnij Enter na urządzeniu"
             )
             return
+        if command in {
+            "setVolume", "volumeUp5", "volumeDown5", "volumeUp1", "volumeDown1"
+        }:
+            if command == "setVolume" and volume is not None:
+                target = volume
+            else:
+                delta = {
+                    "volumeUp5": 5,
+                    "volumeDown5": -5,
+                    "volumeUp1": 1,
+                    "volumeDown1": -1,
+                }.get(command, 0)
+                current = self._frontier_smart_requested_volume
+                if not isinstance(current, int):
+                    current = self._frontier_smart_snapshot.get("volume")
+                if not isinstance(current, int):
+                    self.announcer.say(
+                        "Urządzenie nie podało bieżącej głośności"
+                    )
+                    return
+                target = current + delta
+            self._queue_frontier_smart_volume(target)
+            return
+        if getattr(self, "_frontier_smart_request_pending", False):
+            self.announcer.say(
+                "Poprzednie polecenie Frontier Smart jeszcze trwa"
+            )
+            return
+        self._frontier_smart_request_pending = True
 
         def done(payload: object) -> None:
+            pending_volume = self._frontier_smart_volume_pending
+            self._frontier_smart_request_pending = False
+            self._frontier_smart_volume_pending = None
             try:
                 state = frontier_smart_snapshot(payload)
             except FrontierSmartPayloadError as error:
@@ -17209,6 +17418,15 @@ class LiteFrame(wx.Frame):
             self._frontier_smart_snapshot = state
             if self.navigator.active is SessionId.FRONTIER_SMART:
                 self._apply_frontier_smart_snapshot(state, announce=True)
+            if isinstance(pending_volume, int):
+                self._queue_frontier_smart_volume(pending_volume)
+
+        def failed(error: Exception) -> None:
+            self._frontier_smart_request_pending = False
+            self._frontier_smart_volume_pending = None
+            self.announcer.say(
+                f"Nie udało się sterować urządzeniem Frontier Smart: {error}"
+            )
 
         self.runner.submit(
             "frontier-smart-transport",
@@ -17218,9 +17436,77 @@ class LiteFrame(wx.Frame):
                 volume=volume,
             ),
             done,
-            lambda error: self.announcer.say(
-                f"Nie udało się sterować urządzeniem Frontier Smart: {error}"
+            failed,
+        )
+
+    def _queue_frontier_smart_volume(self, value: int) -> None:
+        """Scal serię klawiszy do najwyżej jednego oczekującego polecenia."""
+
+        client = self.client
+        device_id = self._frontier_smart_active_device_id
+        if client is None or not device_id:
+            self.announcer.say(
+                "Brak aktywnego urządzenia Frontier Smart. "
+                "Naciśnij Enter na urządzeniu"
+            )
+            return
+        target = max(0, min(100, int(value)))
+        self._frontier_smart_requested_volume = target
+        self.volume_slider.SetValue(target)
+        if getattr(self, "_frontier_smart_request_pending", False):
+            self._frontier_smart_volume_pending = target
+            return
+        self._frontier_smart_request_pending = True
+        self._frontier_smart_volume_pending = None
+
+        def done(payload: object) -> None:
+            try:
+                state = frontier_smart_snapshot(payload)
+            except FrontierSmartPayloadError as error:
+                failed(error)
+                return
+            if state.get("deviceId") != self._frontier_smart_active_device_id:
+                self._frontier_smart_request_pending = False
+                self._frontier_smart_volume_pending = None
+                return
+            self._frontier_smart_snapshot = state
+            pending = self._frontier_smart_volume_pending
+            self._frontier_smart_request_pending = False
+            self._frontier_smart_volume_pending = None
+            if isinstance(pending, int) and pending != target:
+                self._apply_frontier_smart_snapshot(state, announce=False)
+                self._queue_frontier_smart_volume(pending)
+                return
+            confirmed = state.get("volume")
+            self._frontier_smart_requested_volume = (
+                confirmed if isinstance(confirmed, int) else target
+            )
+            if self.navigator.active is SessionId.FRONTIER_SMART:
+                self._apply_frontier_smart_snapshot(state, announce=True)
+
+        def failed(error: Exception) -> None:
+            self._frontier_smart_request_pending = False
+            self._frontier_smart_volume_pending = None
+            confirmed = self._frontier_smart_snapshot.get("volume")
+            self._frontier_smart_requested_volume = (
+                confirmed if isinstance(confirmed, int) else None
+            )
+            if isinstance(confirmed, int):
+                self.volume_slider.SetValue(confirmed)
+            self.announcer.say(
+                "Nie udało się zmienić głośności Frontier Smart. "
+                "Odczekaj chwilę i spróbuj ponownie"
+            )
+
+        self.runner.submit(
+            "frontier-smart-volume",
+            lambda: client.frontier_smart_transport(
+                device_id,
+                "setVolume",
+                volume=target,
             ),
+            done,
+            failed,
         )
 
     # ---------------------------------------------------------------- Sonos
@@ -18449,6 +18735,286 @@ class LiteFrame(wx.Frame):
             default_name=f"{row.title} — YouTube na żywo",
             default_url=address,
             dialog_title="Dodaj dynamiczną stację YouTube",
+        )
+
+    def _youtube_channel_subscriptions(self):
+        return [
+            subscription
+            for subscription in self.podcasts.subscriptions()
+            if subscription.source_kind == 2
+        ]
+
+    def _save_youtube_live_channel_ids(self, channel_ids: object) -> bool:
+        normalized = normalize_youtube_live_channel_ids(channel_ids)
+        previous = list(self.state.youtube_live_channel_ids)
+        self.state.youtube_live_channel_ids = normalized
+        if self._save_state():
+            return True
+        self.state.youtube_live_channel_ids = previous
+        return False
+
+    def _configure_youtube_live_channels(
+        self,
+        *,
+        open_after_save: bool = False,
+    ) -> None:
+        """Natywny selektor: tytuły kanałów, jawny zapis i powrót fokusu."""
+
+        def done(channels) -> None:
+            self._youtube_live_channels_by_id = {
+                channel.subscription_id: channel for channel in channels
+            }
+            with YouTubeLiveChannelPickerDialog(
+                self,
+                channels,
+                list(self.state.youtube_live_channel_ids),
+            ) as dialog:
+                accepted = dialog.ShowModal() == wx.ID_OK
+                result_ids = dialog.result_ids
+            if not accepted or result_ids is None:
+                self._restore_focus_after_dialog()
+                return
+            if not self._save_youtube_live_channel_ids(result_ids):
+                self._restore_focus_after_dialog()
+                return
+            count = len(self.state.youtube_live_channel_ids)
+            self._refresh_menu_state()
+            if count:
+                self.announcer.say(f"Zapisano kanały transmisji: {count}")
+            else:
+                self.announcer.say("Wyczyszczono wybór kanałów transmisji")
+            if open_after_save and count:
+                self._show_youtube_live_aggregate()
+            else:
+                self._restore_focus_after_dialog()
+
+        self.runner.submit(
+            "youtube-live-channel-picker",
+            self._youtube_channel_subscriptions,
+            done,
+            lambda error: self.announcer.say(
+                str(error)
+                if isinstance(error, PodcastProfileError)
+                else "Nie udało się odczytać kanałów YouTube"
+            ),
+        )
+
+    def _toggle_youtube_live_aggregate_channel(self) -> None:
+        row = self.navigator.session.model.selected_row
+        if (
+            self.navigator.active is not SessionId.PODCASTS
+            or self.navigator.session.library_view is not LibraryView.PODCAST_LIBRARY
+            or row is None
+            or row.kind != "podcast"
+            or row.service_kind != "youtubeChannel"
+        ):
+            self.announcer.say("Wybierz kanał YouTube z Biblioteki")
+            return
+        channel_ids = list(self.state.youtube_live_channel_ids)
+        if row.item_id in channel_ids:
+            channel_ids.remove(row.item_id)
+            message = (
+                f"Kanał {row.title} nie będzie sprawdzany na zbiorczej liście"
+            )
+        else:
+            if len(channel_ids) >= YOUTUBE_LIVE_CHANNEL_LIMIT:
+                self.announcer.say(
+                    f"Możesz wybrać najwyżej {YOUTUBE_LIVE_CHANNEL_LIMIT} kanałów"
+                )
+                return
+            channel_ids.append(row.item_id)
+            message = f"Kanał {row.title} będzie sprawdzany na zbiorczej liście"
+        if self._save_youtube_live_channel_ids(channel_ids):
+            self._refresh_menu_state()
+            self.announcer.say(message)
+
+    def _show_youtube_live_aggregate(self, *, force_refresh: bool = False) -> None:
+        """Ctrl+Shift+I: ręczny skan wybranych kanałów z bezpiecznym powrotem."""
+
+        client = self.client
+        if not getattr(self, "_youtube_account_available", False):
+            self.announcer.say(
+                "Najpierw skonfiguruj konto YouTube w menu Plik"
+            )
+            return
+        if client is None:
+            self.announcer.say("Silnik nie działa. Nie można pobrać transmisji YouTube")
+            return
+        selected_ids = normalize_youtube_live_channel_ids(
+            self.state.youtube_live_channel_ids
+        )
+        if not selected_ids:
+            self.announcer.say(
+                "Najpierw wybierz kanały zbiorczej listy transmisji"
+            )
+            self._configure_youtube_live_channels(open_after_save=True)
+            return
+
+        already_open = (
+            self.navigator.active is SessionId.PODCASTS
+            and self.navigator.session.library_view
+            is LibraryView.YOUTUBE_BROADCASTS_AGGREGATE
+        )
+        preferred_id = (
+            self.navigator.session.model.selected_id if already_open else None
+        )
+        if not already_open:
+            self._begin_transient_preview()
+            self.navigator.active = SessionId.PODCASTS
+        podcast_state = self.navigator.sessions[SessionId.PODCASTS]
+        podcast_state.library_view = LibraryView.YOUTUBE_BROADCASTS_AGGREGATE
+        podcast_state.library_playlist_id = None
+        podcast_state.library_return_view = (
+            "Transmisje wybranych kanałów YouTube"
+        )
+        podcast_state.view = View.LIST
+        self._sync_views()
+        self.announcer.say(
+            "Odświeżam transmisje wybranych kanałów YouTube"
+            if force_refresh
+            else "Sprawdzam transmisje wybranych kanałów YouTube"
+        )
+        self._youtube_live_scan_version += 1
+        version = self._youtube_live_scan_version
+
+        def work():
+            channels = self._youtube_channel_subscriptions()
+            by_id = {channel.subscription_id: channel for channel in channels}
+            chosen = [by_id[channel_id] for channel_id in selected_ids if channel_id in by_id]
+            payloads: list[tuple[str, str, object]] = []
+            failures = 0
+            for channel in chosen:
+                try:
+                    payload = client.youtube_channel_broadcasts(
+                        channel.subscription_id,
+                        refresh=force_refresh,
+                    )
+                except (HostError, HostUnavailable, OSError):
+                    failures += 1
+                    continue
+                payloads.append((channel.subscription_id, channel.title, payload))
+            return channels, chosen, payloads, failures
+
+        def done(result) -> None:
+            if version != self._youtube_live_scan_version:
+                return
+            state = self.navigator.sessions[SessionId.PODCASTS]
+            if (
+                self.navigator.active is not SessionId.PODCASTS
+                or state.library_view
+                is not LibraryView.YOUTUBE_BROADCASTS_AGGREGATE
+            ):
+                return
+            channels, chosen, payloads, failures = result
+            self._youtube_live_channels_by_id = {
+                channel.subscription_id: channel for channel in channels
+            }
+            remaining_ids = [
+                channel_id
+                for channel_id in selected_ids
+                if channel_id in self._youtube_live_channels_by_id
+            ]
+            if remaining_ids != selected_ids:
+                self._save_youtube_live_channel_ids(remaining_ids)
+            if not chosen:
+                self._restore_transient_preview(announce=False, force=True)
+                self.announcer.say(
+                    "Wybrane wcześniej kanały nie są już w Bibliotece"
+                )
+                self._configure_youtube_live_channels(open_after_save=True)
+                return
+            try:
+                rows = youtube_aggregate_broadcast_rows(payloads)
+            except YouTubeLivePayloadError as error:
+                self.announcer.say(str(error))
+                return
+            events = self.navigator.apply_youtube_broadcasts_aggregate(
+                rows,
+                checked_channels=len(payloads),
+                failed_channels=failures,
+                preferred_id=preferred_id,
+            )
+            self._apply_podcast_result(events)
+
+        def failed(error: Exception) -> None:
+            if version != self._youtube_live_scan_version:
+                return
+            self.announcer.say(
+                str(error)
+                if isinstance(error, PodcastProfileError)
+                else "Nie udało się sprawdzić transmisji YouTube"
+            )
+
+        self.runner.submit("youtube-live-aggregate", work, done, failed)
+
+    def _selected_youtube_live_station(self, *, stable: bool) -> Station | None:
+        state = self.navigator.sessions[SessionId.PODCASTS]
+        row = state.model.selected_row
+        if (
+            self.navigator.active is not SessionId.PODCASTS
+            or state.library_view is not LibraryView.YOUTUBE_BROADCASTS_AGGREGATE
+            or row is None
+            or row.service_kind not in {"youtubeLive", "youtubeUpcoming"}
+            or not row.parent_id
+        ):
+            self.announcer.say("Wybierz transmisję ze zbiorczej listy")
+            return None
+        channel = self._youtube_live_channels_by_id.get(row.parent_id)
+        if channel is None:
+            self.announcer.say("Nie można odnaleźć kanału tej transmisji")
+            return None
+        try:
+            url = (
+                youtube_dynamic_live_url(channel.feed_url)
+                if stable
+                else str(row.url or "").strip()
+            )
+        except YouTubeLivePayloadError as error:
+            self.announcer.say(str(error))
+            return None
+        if not url:
+            self.announcer.say("Ta transmisja nie ma adresu do nagrywania")
+            return None
+        return Station(
+            id=(
+                f"youtube-live:{row.parent_id}"
+                if stable
+                else f"youtube-broadcast:{row.item_id}"
+            ),
+            name=(
+                f"{channel.title} — YouTube na żywo"
+                if stable
+                else row.title
+            ),
+            url=url,
+        )
+
+    def _toggle_youtube_live_recording(self) -> None:
+        row = self.navigator.session.model.selected_row
+        if row is None or row.service_kind != "youtubeLive":
+            self.announcer.say("Ta transmisja jeszcze nie jest na żywo")
+            return
+        station = self._selected_youtube_live_station(stable=False)
+        if station is not None:
+            self._toggle_recording_for_station(station)
+
+    def _schedule_youtube_live_recording(self) -> None:
+        row = self.navigator.session.model.selected_row
+        station = self._selected_youtube_live_station(stable=True)
+        if row is None or station is None:
+            return
+        initial_start = None
+        if row.service_kind == "youtubeUpcoming" and row.service_start_utc:
+            try:
+                initial_start = datetime.fromisoformat(
+                    row.service_start_utc.replace("Z", "+00:00")
+                ).astimezone()
+            except ValueError:
+                initial_start = None
+        self._show_radio_schedules(
+            create_for_selected=True,
+            selected_station_override=station,
+            initial_start=initial_start,
         )
 
     def _show_podcast_inbox(self) -> None:
@@ -25920,6 +26486,7 @@ class LiteFrame(wx.Frame):
             or not device_id
             or self.navigator.active is not SessionId.FRONTIER_SMART
             or getattr(self, "_frontier_smart_status_poll_pending", False)
+            or getattr(self, "_frontier_smart_request_pending", False)
         ):
             return
         self._frontier_smart_status_poll_pending = True
@@ -27267,9 +27834,17 @@ class LiteFrame(wx.Frame):
         self._restore_focus_after_dialog()
 
     def _toggle_radio_recording(self) -> None:
-        client = self.client
         station = self._recording_station()
-        if client is None or station is None:
+        if station is None:
+            return
+        LiteFrame._toggle_recording_for_station(self, station)
+
+    def _toggle_recording_for_station(self, station: Station) -> None:
+        """Wspólny tor nagrania stacji Radia i trwającej transmisji YouTube."""
+
+        client = self.client
+        if client is None:
+            self.announcer.say("Silnik odtwarzania jest niedostępny")
             return
 
         # Ustawienia mogly zostac zmienione w glownym AMC juz po starcie wx.
@@ -27625,14 +28200,24 @@ class LiteFrame(wx.Frame):
 
         self.runner.submit("radio-recording-history", work, done, failed)
 
-    def _show_radio_schedules(self, *, create_for_selected: bool = False) -> None:
+    def _show_radio_schedules(
+        self,
+        *,
+        create_for_selected: bool = False,
+        selected_station_override: Station | None = None,
+        initial_start: datetime | None = None,
+    ) -> None:
         """Ctrl+Shift+H: natywne zarzadzanie planami wykonywanymi przez host."""
         client = self.client
         if client is None:
             self.announcer.say("Silnik odtwarzania jest niedostępny")
             return
         previous = self._radio_snapshot
-        selected_station = self._selected_station() if create_for_selected else None
+        selected_station = (
+            selected_station_override
+            if selected_station_override is not None
+            else self._selected_station() if create_for_selected else None
+        )
         if create_for_selected and selected_station is None:
             self.announcer.say("Zaznacz stację, dla której chcesz zaplanować nagranie")
             return
@@ -27721,6 +28306,7 @@ class LiteFrame(wx.Frame):
                     schedules=schedules,
                     wake=wake,
                     selected_station=selected_station,
+                    initial_start=initial_start,
                     commit=commit,
                 )
                 return
@@ -27757,6 +28343,7 @@ class LiteFrame(wx.Frame):
         schedules: list[dict],
         wake: bool,
         selected_station: Station,
+        initial_start: datetime | None = None,
         commit,
     ) -> None:
         """Shift+R: od razu formularz nowego planu dla wskazanej stacji.
@@ -27775,6 +28362,7 @@ class LiteFrame(wx.Frame):
             recording=snapshot.recording,
             global_wake=wake,
             preferred_station_id=selected_station.id,
+            initial_start=initial_start,
         ) as dialog:
             if dialog.ShowModal() == wx.ID_OK:
                 schedule = dialog.result_schedule
@@ -28111,6 +28699,12 @@ class LiteFrame(wx.Frame):
                 not player
                 and self.navigator.active is SessionId.PODCASTS
                 and session.library_view is LibraryView.YOUTUBE_BROADCASTS
+            ),
+            youtube_broadcasts_aggregate=(
+                not player
+                and self.navigator.active is SessionId.PODCASTS
+                and session.library_view
+                is LibraryView.YOUTUBE_BROADCASTS_AGGREGATE
             ),
             youtube_channel=(
                 not player

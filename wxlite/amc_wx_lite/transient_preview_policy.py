@@ -13,6 +13,7 @@ TRANSIENT_PREVIEW_ACTIONS = frozenset({
     Action.VIEW_ACTIVE_RECORDINGS,
     Action.VIEW_RECORDED_RADIO_FILES,
     Action.VIEW_PODCAST_INBOX,
+    Action.VIEW_YOUTUBE_LIVE_AGGREGATE,
     Action.VIEW_HISTORY,
 })
 
@@ -75,5 +76,10 @@ def transient_preview_unavailable_message(action: Action) -> str:
         return (
             "Nowe odcinki i materiały są dostępne w sesji Podcasty i YouTube."
             + suffix
+        )
+    if action is Action.VIEW_YOUTUBE_LIVE_AGGREGATE:
+        return (
+            "Transmisje wybranych kanałów są dostępne w sesji Podcasty "
+            "i YouTube." + suffix
         )
     return ""

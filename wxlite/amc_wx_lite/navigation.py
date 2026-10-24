@@ -83,6 +83,10 @@ class LibraryView(Enum):
     #: Chwilowa lista trwających i zaplanowanych transmisji jednego kanału
     #: YouTube. Oddzielna od zwykłych filmów kanału, bo ma inny cykl życia.
     YOUTUBE_BROADCASTS = "youtubeBroadcasts"
+    #: Globalny, chwilowy widok transmisji wyłącznie z kanałów jawnie
+    #: wybranych przez użytkownika. Nie skanuje całej biblioteki ani nie
+    #: zmienia subskrypcji Google.
+    YOUTUBE_BROADCASTS_AGGREGATE = "youtubeBroadcastsAggregate"
     #: Wspólny widok Ctrl+U: ulubione źródła oraz ulubione odcinki.
     PODCAST_FAVORITES = "podcastFavorites"
     PODCAST_HISTORY = "podcastHistory"
@@ -2054,6 +2058,7 @@ class Navigator:
                 LibraryView.PODCAST_EPISODES,
                 LibraryView.PODCAST_PLAYLIST_CONTENTS,
                 LibraryView.YOUTUBE_BROADCASTS,
+                LibraryView.YOUTUBE_BROADCASTS_AGGREGATE,
             ):
                 return self._leave_library_view()
             return []
@@ -2602,6 +2607,8 @@ class Navigator:
                 return [OpenPodcastView(preferred_id=state.library_return_id)]
             if state.library_view is LibraryView.YOUTUBE_BROADCASTS:
                 return [OpenPodcastView(preferred_id=state.library_return_id)]
+            if state.library_view is LibraryView.YOUTUBE_BROADCASTS_AGGREGATE:
+                return [OpenPodcastView()]
             if state.library_view is LibraryView.PODCAST_PLAYLIST_CONTENTS:
                 return [OpenPodcastPlaylistView(
                     preferred_id=state.library_return_id,
@@ -2879,6 +2886,44 @@ class Navigator:
             message = (
                 f"Transmisje kanału {subscription_title}, "
                 f"na żywo {live_count}, zaplanowane {upcoming_count}"
+            )
+        return [Announce(message)]
+
+    def apply_youtube_broadcasts_aggregate(
+        self,
+        rows: list[Row],
+        *,
+        checked_channels: int,
+        failed_channels: int = 0,
+        preferred_id: str | None = None,
+    ) -> list[object]:
+        """Pokaż globalny podgląd bez ujawniania identyfikatorów kanałów."""
+
+        state = self.sessions[SessionId.PODCASTS]
+        state.library_view = LibraryView.YOUTUBE_BROADCASTS_AGGREGATE
+        state.library_playlist_id = None
+        state.library_return_view = "Transmisje wybranych kanałów YouTube"
+        remembered = state.view_selected_ids.get("youtube-live:aggregate")
+        state.model.replace(rows, preferred_id=preferred_id or remembered)
+        state.view = View.LIST
+        live_count = sum(1 for row in rows if row.service_kind == "youtubeLive")
+        upcoming_count = sum(
+            1 for row in rows if row.service_kind == "youtubeUpcoming"
+        )
+        if rows:
+            message = (
+                "Transmisje wybranych kanałów YouTube, "
+                f"na żywo {live_count}, zaplanowane {upcoming_count}"
+            )
+        else:
+            message = (
+                "Transmisje wybranych kanałów YouTube, "
+                "brak trwających i zaplanowanych transmisji"
+            )
+        if failed_channels:
+            message += (
+                f". Sprawdzono {checked_channels} kanałów; "
+                f"nie udało się sprawdzić {failed_channels}"
             )
         return [Announce(message)]
 

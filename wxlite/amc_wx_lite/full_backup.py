@@ -329,6 +329,7 @@ _TOP_LEVEL_SECTIONS = {
     "radio_schedule_wake_override": RADIO_SCHEDULES,
     "podcast_inbox_sort_mode": PODCASTS,
     "podcast_library_sort_mode": PODCASTS,
+    "youtube_live_channel_ids": PODCASTS,
     "tidal_queue_items": SERVICES,
     "tidal_sort_modes": SERVICES,
     "spotify_sort_modes": SERVICES,
