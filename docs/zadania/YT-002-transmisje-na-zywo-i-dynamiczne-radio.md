@@ -1,9 +1,9 @@
 # YT-002 — transmisje YouTube na żywo i dynamiczne radio
 
-- Status: `W trakcie — źródła, kontrakt, skróty Ctrl+T i Ctrl+Y, pełna
-  regresja wxPython 2029/2029, testy .NET, build, atomowa instalacja i
-  kontrolowany start AMC Test 24.10.2026, 00:21 są zaliczone; przed zmianą na
-  Zrobione pozostaje ręczny odbiór prawdziwego kanału i NVDA`
+- Status: `Zrobione w AMC Test — import i parsowanie kanałów, Ctrl+I,
+  Ctrl+T, Ctrl+Shift+I, dynamiczne radio /live, odtwarzanie oraz nagrywanie
+  ręczne i z harmonogramu zostały sprawdzone; korekta zakończonych transmisji
+  czeka na instalację paczki z 24.10.2026`
 - Utworzono: 23 października 2026
 - Ostatnia aktualizacja: 24 października 2026
 - Obszar: YouTube, Podcasty i YouTube, Radio, nawigacja, NVDA
@@ -356,3 +356,57 @@ pozycji po połączeniu obu kart.
 Gałąź `integration/amc-test-20261023-late`. Kod i testy: commit `921b784e`
 (`fix(youtube): pokaz zakonczone transmisje w kanale`). Paczka i instalacja nie
 zostały jeszcze wykonane; nie opublikowano wydania.
+
+## Zbiorcze podsumowanie i odbiór użytkownika — 24.10.2026
+
+Poniższy zapis scala prace z 23 i 24 października 2026. Zastępuje wcześniejsze
+oznaczenie, że ręczny odbiór prawdziwych transmisji nie został wykonany.
+
+### Zakres użytkowy
+
+- `Ctrl+N` przyjmuje publiczny adres filmu, playlisty albo kanału, w tym
+  uchwyty `@nazwa`; formularz nie gubi fokusu przy szybkim wklejeniu i nie
+  uruchamia dwóch równoległych importów;
+- odświeżanie zapisanych kanałów rozpoznaje różne postacie adresu i łączy
+  zwykłe filmy z publicznymi, zakończonymi transmisjami z karty `/streams`;
+  identyczny film nie jest powielany;
+- `Ctrl+I` pozostaje skrzynką nowych materiałów z Podcastów i YouTube. Nie jest
+  osobnym skanerem transmisji, ale korzysta z poprawionych danych odświeżonych
+  kanałów, więc nowe publiczne archiwa mogą trafić do niej tak jak inne nowe
+  materiały;
+- `Ctrl+T` na jednym kanale pokazuje jego transmisje trwające i zaplanowane;
+- `Ctrl+Shift+I` pokazuje wspólną listę transmisji trwających i zaplanowanych
+  z maksymalnie 20 świadomie wybranych kanałów. Wybór można zmienić w menu
+  Plik albo w menu kontekstowym kanału. Ponowne użycie skrótu lub `F5` podczas
+  trwającego skanu nie rozpoczyna drugiego odpytywania i nie zużywa ponownie
+  limitu API;
+- Enter odtwarza znalezioną transmisję wewnętrznym silnikiem AMC,
+  `Ctrl+Shift+C` kopiuje jej publiczny adres, `Ctrl+R` nagrywa transmisję
+  trwającą, a `Shift+R` otwiera harmonogram;
+- dynamiczna stacja Radia zapamiętuje stały adres kanału `/live`. Przy każdym
+  odtworzeniu albo rozpoczęciu nagrania AMC rozwiązuje aktualny, zmienny adres
+  filmu. Gdy kanał niczego nie nadaje, stacja jest chwilowo niedostępna bez
+  utraty konfiguracji;
+- zakończona transmisja znika z bieżącej listy `Ctrl+Shift+I`, lecz może
+  pozostać na zwykłej liście kanału jako publiczne archiwum. Plik nagrany przez
+  AMC pozostaje niezależnie w Historii nagrywania.
+
+### Potwierdzony odbiór
+
+Użytkownik potwierdził, że harmonogram prawidłowo rozpoznał i nagrał transmisje
+`Dominikanie Poznań` oraz `Teleexpress`. Następne transmisje na 25 października
+zostały odnalezione i przygotowane do nagrania. Oznacza to zaliczony ręczny
+odbiór rzeczywistego wyszukiwania, stabilnego adresu `/live`, harmonogramu i
+utworzenia plików nagrań. Po zainstalowaniu najnowszej paczki pozostaje ręcznie
+sprawdzić wyłącznie nową korektę widoczności zakończonych transmisji na zwykłej
+liście kanału.
+
+### Kandydat do wersji publicznej
+
+Mechanizm publicznych adresów kanału, dynamicznego radia i parsowania
+zakończonych transmisji nie wymaga prywatnych danych użytkownika. Lista
+transmisji z konta i wybranych kanałów wymaga natomiast poprawnie przygotowanej
+konfiguracji Google OAuth. Cały zakres jest kandydatem do przyszłego
+aktualizatora publicznego po domknięciu konfiguracji Google, osobnym odbiorze
+profilu publicznego i jawnej decyzji o publikacji. W tym zadaniu nie zbudowano
+ani nie opublikowano wersji publicznej.
