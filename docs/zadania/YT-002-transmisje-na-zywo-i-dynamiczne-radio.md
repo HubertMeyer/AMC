@@ -283,3 +283,76 @@ YouTube. Jeśli AMC wykonało nagranie, pozostaje ono w historii nagrań.
 `Ctrl+Shift+I` nadal ma być małym, bieżącym widokiem transmisji trwających i
 zaplanowanych, bez lokalnego archiwizowania znalezionych pozycji i bez nowego
 polecenia, skrótu, menu ani widoku.
+
+## Korekta: zakończone transmisje na zwykłej liście kanału — 24.10.2026
+
+Użytkownik wskazał kanał Dominikanie Poznań, na którym codzienna Msza o 17:00
+po zakończeniu pozostaje publicznym nagraniem, lecz nie była widoczna po
+otwarciu kanału z Biblioteki AMC. Rzeczywista próba wykazała, że YouTube
+utrzymuje osobne karty `Filmy` (`/videos`) i `Transmisje` (`/streams`). Każda
+Msza ma inny adres `watch?v=…`; po zakończeniu ten sam adres konkretnej Mszy
+pozostaje nagraniem ze stanem `was_live`. Stały adres kanału `/live` nadal
+służy wyłącznie do odnajdywania transmisji bieżącej.
+
+Ta korekta zastępuje wcześniejsze uproszczenie, że zwykła lista kanału pochodzi
+z Atom i zakończony stream pojawi się tam automatycznie. W rzeczywistości AMC
+pobierało wyłącznie kartę `/videos` przez yt-dlp, a Atom tylko poprawiał tytuły
+i daty pozycji już znalezionych. Dlatego publiczne archiwa z `/streams` mogły
+pozostawać niewidoczne.
+
+### Uzasadnienie i decyzje
+
+- istniejąca lista kanału łączy teraz zwykłe filmy i publiczne, zakończone
+  transmisje; nie powstaje osobna historia ani nowy widok;
+- lekki publiczny feed Atom najpierw sprawdza, czy zawiera identyfikatory
+  nieobecne na karcie `Filmy`; dopiero wtedy AMC uruchamia dodatkowy odczyt
+  `/streams`, więc kanały bez rozdzielonej zawartości nie płacą kosztu drugiego
+  skanu;
+- z karty transmisji do zwykłej listy trafiają tylko pozycje zakończone ze
+  stanem `was_live`; trwające i zaplanowane nadal należą do `Ctrl+Shift+I`;
+- wyniki są łączone według identyfikatora filmu, bez duplikatów, porządkowane
+  po dokładnych datach z Atom i ograniczone do 100 najnowszych pozycji;
+- brak albo chwilowy błąd karty `Transmisje` nie usuwa zwykłych filmów i nie
+  powoduje niepowodzenia całego odświeżenia kanału.
+
+### Materiał do dokumentacji użytkownika
+
+Po odświeżeniu kanału YouTube w Bibliotece jego zwykła lista może zawierać
+zarówno filmy, jak i dostępne publicznie nagrania wcześniejszych transmisji.
+Nie trzeba otwierać dodatkowej historii. Enter, wyszukiwanie, kopiowanie,
+usuwanie pojedynczego materiału i pozostałe polecenia listy działają tak samo
+jak wcześniej. `Ctrl+Shift+I` nadal pokazuje tylko transmisje trwające i
+zaplanowane, a dynamiczna stacja `/live` służy do odtwarzania lub nagrywania
+tego, co kanał nadaje w danej chwili.
+
+### Testy i wynik
+
+- izolowany test `--youtube-collection-normalization`: zaliczony; obejmuje
+  budowę `/streams`, odrzucanie transmisji trwających i zaplanowanych,
+  wykrywanie potrzeby drugiego skanu, usuwanie duplikatów oraz ponowne
+  sortowanie po uzupełnieniu dokładnych dat;
+- celowane testy interfejsu wxPython dla YouTube, konta Google i komunikacji z
+  hostem: 52 zaliczone; nie uruchamiano ponownie niezwiązanych testów Sonosa;
+- build `AccessibleMediaController.LiteHost` w konfiguracji `Release`:
+  zaliczony, 0 ostrzeżeń i 0 błędów; wszystkie 27 testów protokołu LiteHost:
+  zaliczone;
+- rzeczywisty kanał Dominikanie Poznań: 100 połączonych materiałów, pierwsze
+  trzy pozycje to Msze z 23, 22 i 21 października 2026;
+- rzeczywiste kanały Dominikanie we Wrocławiu, Dominikanie Freta i Dominikanie
+  Szczecin: każdy zwrócił 100 materiałów, a zakończone Msze znalazły się na
+  początku listy;
+- testy były wykonane na źródłach AMC Test; na tym etapie nie zbudowano ani
+  nie zainstalowano nowej paczki i nie opublikowano wydania.
+
+### Znane ograniczenia
+
+AMC może pokazać tylko transmisję pozostawioną przez właściciela jako
+publiczne nagranie. Materiał usunięty, prywatny albo niepubliczny nie trafi do
+listy. Kanał z bardzo częstymi publikacjami jest ograniczony do 100 najnowszych
+pozycji po połączeniu obu kart.
+
+### Wersja i commit
+
+Gałąź `integration/amc-test-20261023-late`. Kod i testy: commit `921b784e`
+(`fix(youtube): pokaz zakonczone transmisje w kanale`). Paczka i instalacja nie
+zostały jeszcze wykonane; nie opublikowano wydania.

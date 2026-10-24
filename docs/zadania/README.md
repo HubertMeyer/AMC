@@ -315,7 +315,13 @@ zmian, wymagający korekty użytkownika:
   przeszła build, integralność i kontrolowany start, została atomowo
   zainstalowana i uruchomiona jako `AMC Test — 24.10.2026, 14:48`** — lista transmisji live/upcoming zapisanego kanału, Enter w
   wewnętrznym silniku, kopiowanie adresu, F5 i Backspace oraz dynamiczna stacja
-  Radia oparta na stałym adresie kanału `/live`. Szczegóły:
+  Radia oparta na stałym adresie kanału `/live`. Tego samego dnia rozpoczęto
+  poprawkę zwykłej listy kanału: łączy ona kartę `Filmy` z publicznymi,
+  zakończonymi transmisjami, bez osobnej historii i bez duplikatów. Test
+  syntetyczny oraz rzeczywiste kanały Dominikanie Poznań, Wrocław, Freta i
+  Szczecin są zaliczone; build źródeł i 52 celowane testy wxPython także są
+  zaliczone. Kod jest w commicie `921b784e`; nowa paczka nie została jeszcze
+  zbudowana ani zainstalowana. Szczegóły:
   [YT-002-transmisje-na-zywo-i-dynamiczne-radio.md](YT-002-transmisje-na-zywo-i-dynamiczne-radio.md).
 - `YT-003` — **Zrobione w zakresie opisów — użytkownik potwierdził działanie
   `Alt+D`; pełna regresja 2029 testów wxPython, testy .NET, build, atomowa
