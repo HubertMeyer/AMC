@@ -308,7 +308,11 @@ zmian, wymagający korekty użytkownika:
   zainstalowany, a 24.10.2026 wdrożono źródła zbiorczej listy wybranych
   kanałów pod `Ctrl+Shift+I`; pełna regresja wxPython 2032/2032, build,
   integralność, atomowa instalacja i start AMC Test 24.10.2026, 13:33 są
-  zaliczone. Pozostaje ręczny odbiór NVDA i prawdziwego konta** — lista transmisji live/upcoming zapisanego kanału, Enter w
+  zaliczone. Rzeczywisty odbiór potwierdził listę i ujawnił nieczytelne
+  oczekiwanie; commit `efb8c090` blokuje powtórne `Ctrl+Shift+I` i `F5`
+  podczas trwającego skanu. Pełna regresja po poprawce: 2033 zaliczone,
+  111 pominiętych i 13 podtestów; nowy pakiet jeszcze oczekuje na build i
+  instalację** — lista transmisji live/upcoming zapisanego kanału, Enter w
   wewnętrznym silniku, kopiowanie adresu, F5 i Backspace oraz dynamiczna stacja
   Radia oparta na stałym adresie kanału `/live`. Szczegóły:
   [YT-002-transmisje-na-zywo-i-dynamiczne-radio.md](YT-002-transmisje-na-zywo-i-dynamiczne-radio.md).

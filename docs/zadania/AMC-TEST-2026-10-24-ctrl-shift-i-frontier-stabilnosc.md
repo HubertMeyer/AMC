@@ -73,11 +73,36 @@ Chroni to przed wygaśnięciem zaplanowanego linku, lecz przy kilku równoległy
 transmisjach kanału YouTube może wybrać inną transmisję aktywną w chwili
 startu. Wynik tego przypadku wymaga odbioru po wykonaniu harmonogramu.
 
+## Blokada nakładających się skanów — 24.10.2026
+
+Na kolejne polecenie użytkownika dodano jedną bramę trwającego skanu.
+Jeżeli sprawdzanie wybranych kanałów już trwa, ponowne `Ctrl+Shift+I` ani
+`F5` nie rozpoczyna drugiej serii zapytań do YouTube i nie unieważnia wyniku
+pierwszej. NVDA otrzymuje komunikat:
+`Sprawdzanie transmisji wybranych kanałów YouTube już trwa`.
+
+Blokada jest zwalniana po powodzeniu, po błędzie i wtedy, gdy użytkownik
+opuści widok przed nadejściem wyniku. Nazwa, skrót, widoczność i wykonanie
+polecenia nadal pochodzą z dotychczasowego wspólnego katalogu poleceń; nie
+powstała osobna droga klawiaturowa.
+
+Diagnoza zakończonych transmisji: zbiorcza lista wykonuje wyłącznie oficjalne
+zapytania o stany `live` i `upcoming`. Zwykły zsynchronizowany kanał AMC czyta
+kartę `/videos`, a nie kartę archiwalnych transmisji `/streams`. Po końcu
+wydarzenie wypada więc ze zbiorczej listy. Jeżeli nadawca zachowa publiczną
+powtórkę wyłącznie na karcie transmisji, bieżący zwykły widok kanału AMC jej
+nie zaimportuje. Materiał ukryty, niepubliczny albo usunięty przez nadawcę nie
+jest dostępny żadną z tych dróg. Ewentualny widok zakończonych transmisji jest
+osobnym przyszłym zakresem, a nie częścią tej blokady.
+
 ## Testy i rzeczywiste wyniki
 
 - celowany zestaw po synchronizacji: **273 zaliczone testy i 2 podtesty**;
 - pełna regresja `wxlite`: **2032 zaliczone, 111 pominiętych, 13 podtestów
   zaliczonych**, zero błędów, 153,04 s;
+- po dodaniu blokady: testy powiązane **78 zaliczonych i 2 podtesty**, a pełna
+  regresja **2033 zaliczone, 111 pominiętych i 13 podtestów**, zero błędów,
+  204,07 s;
 - `git diff --check`: bez błędów;
 - test Frontier potwierdza, że seria `25, 30, 35` wysyła tylko `25` i `35`;
 - testy parytetu potwierdzają wspólne nazwy, skróty i widoczność w menu,
@@ -97,6 +122,11 @@ startu. Wynik tego przypadku wymaga odbioru po wykonaniu harmonogramu.
 - sześć modułów testowych — widok, trwałość, parytet i Frontier.
 
 ## Wersja, commit i instalacja
+
+- Blokada ponownego skanu: commit `efb8c090` —
+  `fix(youtube): blokuj nakladajace sie skany live`; kod i testy są gotowe,
+  natomiast w chwili tego zapisu nowy pakiet nie był jeszcze zbudowany ani
+  zainstalowany.
 
 - Commit źródłowy: `fe281d31af2c5328f1ada1c3668a587feefbcf80` —
   `feat: dodaj zbiorcze transmisje i ustabilizuj Frontier`.
@@ -124,7 +154,9 @@ startu. Wynik tego przypadku wymaga odbioru po wykonaniu harmonogramu.
 
 > `Ctrl+Shift+I` pokazuje transmisje na żywo i zaplanowane z wybranych kanałów
 > YouTube. Przy pierwszym użyciu wybierz kanały. Enter odtwarza, F5 odświeża,
-> Ctrl+R nagrywa trwającą transmisję, a Shift+R otwiera harmonogram.
+> Ctrl+R nagrywa trwającą transmisję, a Shift+R otwiera harmonogram. Gdy
+> sprawdzanie już trwa, kolejne Ctrl+Shift+I lub F5 nie zużywa następnych
+> zapytań i informuje, że skan jest w toku.
 
 > Regulacja głośności Frontier Smart nie wysyła już długiej kolejki zmian do
 > radia. AMC zachowuje tylko ostatnią wartość wybraną podczas oczekiwania na
