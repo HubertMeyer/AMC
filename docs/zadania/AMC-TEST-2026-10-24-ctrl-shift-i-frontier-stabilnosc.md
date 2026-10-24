@@ -48,6 +48,31 @@ niesterowalne.
 - Stabilność Frontier wymaga ponownego testu na prawdziwym Teufelu; test
   automatyczny potwierdza algorytm, ale nie zachowanie firmware.
 
+## Korekta po rzeczywistym odbiorze NVDA — 24.10.2026
+
+Wcześniejszy opis zakładał, że po pierwszym `Ctrl+Shift+I`, wybraniu
+kanałów i zatwierdzeniu selektora wynik będzie od razu jednoznacznie
+widoczny. Rzeczywisty odbiór użytkownika wykazał, że lista pojawiła się
+dopiero po dłuższym oczekiwaniu i sprawiała wrażenie uruchomionej dopiero
+ponownym `Ctrl+Shift+I`. Kod rozpoczyna skan automatycznie po zapisie, ale
+sprawdza kanały kolejno i po zamknięciu selektora nie przekazuje dostatecznie
+czytelnego, trwałego stanu oczekiwania. Ponowne naciśnięcie skrótu nie jest
+warunkiem pobrania i może rozpocząć drugi skan.
+
+Do dalszej poprawy pozostaje natychmiastowy, dostępny komunikat lub wiersz
+`Trwa sprawdzanie kanałów`, końcowy komunikat po zapełnieniu listy oraz
+ochrona przed ponownym uruchomieniem tego samego skanu. Wybór kanałów można
+już zmieniać przez `Pliki` → `Wybierz kanały zbiorczej listy transmisji…`
+albo pojedynczo na kanale poleceniem `Uwzględniaj kanał na zbiorczej liście
+transmisji`.
+
+Potwierdzono także zapis jednorazowego harmonogramu dla `TVP Info — YouTube na
+żywo` na 24.10.2026, godz. 17:00 czasu polskiego, przez 30 minut. Harmonogram
+przechowuje dynamiczny adres kanału `/live`, a nie adres konkretnego filmu.
+Chroni to przed wygaśnięciem zaplanowanego linku, lecz przy kilku równoległych
+transmisjach kanału YouTube może wybrać inną transmisję aktywną w chwili
+startu. Wynik tego przypadku wymaga odbioru po wykonaniu harmonogramu.
+
 ## Testy i rzeczywiste wyniki
 
 - celowany zestaw po synchronizacji: **273 zaliczone testy i 2 podtesty**;
