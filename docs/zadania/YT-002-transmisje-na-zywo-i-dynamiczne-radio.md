@@ -410,3 +410,18 @@ konfiguracji Google OAuth. Cały zakres jest kandydatem do przyszłego
 aktualizatora publicznego po domknięciu konfiguracji Google, osobnym odbiorze
 profilu publicznego i jawnej decyzji o publikacji. W tym zadaniu nie zbudowano
 ani nie opublikowano wersji publicznej.
+
+### Kandydat AMC Test i wstrzymana podmiana — 24.10.2026
+
+Z dokumentacyjnego commita
+`ae843a499b5a94c63dc41d43bbe97bba5544c01b` zbudowano paczkę AMC Test
+`5b3ac88c` o etykiecie
+`2026.10.24-ae843a499b5a94c63dc41d43bbe97bba5544c01b-5b3ac88c`.
+Paczka ma 1674 kontrolowane pliki; pełny manifest, sumy SHA-256 i kontrolowany
+start interfejsu oraz hosta na odizolowanym profilu są zaliczone.
+
+Aktualizator prawidłowo odmówił podmiany, ponieważ poprzedni AMC Test nadal
+działał z `D:\Projekty Codex\AMC Python`. Zwykłe polecenie zamknięcia okna
+zostało przyjęte, lecz odpowiadający proces nie zakończył się w ciągu 30
+sekund. Nie użyto wymuszonego zatrzymania. Kandydat pozostaje zachowany w
+`.test-output`; instalacja czeka na ręczne, czyste zamknięcie starego okna.
