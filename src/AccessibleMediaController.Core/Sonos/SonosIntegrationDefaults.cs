@@ -9,14 +9,12 @@ namespace AccessibleMediaController.Core.Sonos;
 public static class SonosIntegrationDefaults
 {
     /// <summary>
-    /// Bezpieczny, nieroutowalny placeholder wymagany przez kontrakt magazynu.
-    /// Nie jest celem sieciowym: <see cref="BrokerAvailable"/> blokuje operacje
-    /// przed utworzeniem klienta HTTP. Prawdziwy adres wolno wprowadzić dopiero
-    /// razem z działającą publiczną usługą i odbiorem integracji Sonos.
+    /// Stały publiczny origin wspólnego brokera AMC. Sekret integracji pozostaje
+    /// wyłącznie na serwerze; klient zna tylko origin i publiczny klucz Control API.
     /// </summary>
-    public const string BrokerOrigin = "https://sonos-login-not-configured.invalid/";
+    public const string BrokerOrigin = "https://sonos.stareaudycje.pl/";
 
-    public const bool BrokerAvailable = false;
+    public const bool BrokerAvailable = true;
 
     public const string BrokerUnavailableMessage =
         "Publiczna usługa logowania Sonos nie jest jeszcze skonfigurowana w tej wersji AMC.";
