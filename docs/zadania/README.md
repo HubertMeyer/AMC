@@ -323,10 +323,10 @@ zmian, wymagający korekty użytkownika:
   zaliczone. Użytkownik potwierdził również prawidłowe rozpoznanie i nagranie
   z harmonogramu transmisji Dominikanie Poznań i Teleexpress oraz przygotowanie
   następnych transmisji na 25.10.2026. Kod jest w commicie `921b784e`; nowa
-  paczka AMC Test `5b3ac88c` została zbudowana, sprawdzona i uruchomiona na
-  odizolowanym profilu. Instalacja jest bezpiecznie wstrzymana, ponieważ stare
-  okno AMC Test nie zakończyło się po zwykłym poleceniu zamknięcia; procesu nie
-  wymuszono. Szczegóły:
+  paczka AMC Test `5b3ac88c` została zbudowana, sprawdzona, atomowo
+  zainstalowana i uruchomiona jako `AMC Test — 24.10.2026, 21:20`. Pełna
+  integralność zainstalowanej kopii i kontrolowany start są zaliczone. AMC
+  Public i GitHub pozostały bez zmian. Szczegóły:
   [YT-002-transmisje-na-zywo-i-dynamiczne-radio.md](YT-002-transmisje-na-zywo-i-dynamiczne-radio.md).
 - `YT-003` — **Zrobione w zakresie opisów — użytkownik potwierdził działanie
   `Alt+D`; pełna regresja 2029 testów wxPython, testy .NET, build, atomowa

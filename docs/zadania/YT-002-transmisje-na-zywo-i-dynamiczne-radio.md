@@ -3,7 +3,7 @@
 - Status: `Zrobione w AMC Test — import i parsowanie kanałów, Ctrl+I,
   Ctrl+T, Ctrl+Shift+I, dynamiczne radio /live, odtwarzanie oraz nagrywanie
   ręczne i z harmonogramu zostały sprawdzone; korekta zakończonych transmisji
-  czeka na instalację paczki z 24.10.2026`
+  została zbudowana, atomowo zainstalowana i uruchomiona 24.10.2026 o 21:20`
 - Utworzono: 23 października 2026
 - Ostatnia aktualizacja: 24 października 2026
 - Obszar: YouTube, Podcasty i YouTube, Radio, nawigacja, NVDA
@@ -425,3 +425,27 @@ działał z `D:\Projekty Codex\AMC Python`. Zwykłe polecenie zamknięcia okna
 zostało przyjęte, lecz odpowiadający proces nie zakończył się w ciągu 30
 sekund. Nie użyto wymuszonego zatrzymania. Kandydat pozostaje zachowany w
 `.test-output`; instalacja czeka na ręczne, czyste zamknięcie starego okna.
+
+### Korekta późniejszego stanu: instalacja zakończona — 24.10.2026
+
+Powyższy zapis o oczekującej instalacji opisuje pierwszą, bezpiecznie
+zatrzymaną próbę. Użytkownik następnie ręcznie zamknął okno i potwierdził
+gotowość do aktualizacji. Cztery osierocone procesy starej instalacji nadal
+pozostały w tle; po dwóch próbach zwykłego zamknięcia, potwierdzonym braku
+aktywnego nagrywania i ręcznym zamknięciu interfejsu zakończono wyłącznie te
+procesy należące do `D:\Projekty Codex\AMC Python`.
+
+Zweryfikowana paczka `5b3ac88c` została następnie atomowo zainstalowana.
+Manifest zainstalowanej kopii potwierdza:
+
+- źródło: `ae843a499b5a94c63dc41d43bbe97bba5544c01b`;
+- 1674 pliki kontrolowane i `sourceDirty: false`;
+- pełna kontrola manifestu i sum SHA-256: kod 0;
+- kontrolowany start z dokładnego katalogu instalacji: zaliczony;
+- widoczne okno: `AMC Test — 24.10.2026, 21:20`, frontend PID `12068`;
+- host: PID `46984`; frontend i host pochodzą z
+  `D:\Projekty Codex\AMC Python`.
+
+AMC Public, instalator publiczny, aktualizator publiczny i GitHub pozostały bez
+zmian. Do ręcznego odbioru w nowej paczce pozostaje zwykła lista kanału z
+zakończonymi transmisjami oraz poprawki Frontier Smart.
