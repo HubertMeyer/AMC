@@ -253,18 +253,15 @@ zmian, wymagający korekty użytkownika:
   [AMC12-profile-wydania-publicznego-i-testowego.md](AMC12-profile-wydania-publicznego-i-testowego.md).
   Zatwierdzona specyfikacja:
   `D:\Projekty Codex\Accessible Multimedia Controller\AMC12_PROFILE_WYDANIA_PUBLICZNEGO_I_TESTOWEGO_2026-10-18.md`.
-- `AMC10` — **W trakcie; zainstalowany AMC Test ma prawidłowo zapisane konto i
-  działające sterowanie, grupowanie oraz treści Sonos. Polecenia idą bezpośrednio
-  do Sonos Control API, natomiast broker na Hermesie obsługuje w tej instalacji
-  wyłącznie logowanie i odnowienie tokenu. Niezależny broker ma czysty,
-  sprawdzony pakiet Docker Compose z Caddy i własnym HTTPS, ale nie został
-  jeszcze uruchomiony publicznie. Odczytowy audyt potwierdził zgodny identyfikator
-  istniejącej integracji, obecność chronionego sekretu oraz działające dawne
-  usługi; nie trzeba tworzyć nowej integracji ani przepisywać sterowania.
-  Pakiet zawiera teraz bezprzerwową instrukcję przejścia z zachowaniem starego
-  callbacku do czasu odbioru następcy. Bieżących źródeł z wyłączonym brokerem nie
-  należy instalować przed zapewnieniem następcy albo bezpiecznej ciągłości
-  konta autora** — działające sterowanie Sonosem i WiiM jest już przepisane i
+- `AMC10` — **W trakcie; operator przygotował Ubuntu 24.04, .NET 8, usługę
+  systemd, Cloudflare Tunnel i origin `https://sonos.stareaudycje.pl/`, a sekret
+  jest przekazywany przez `LoadCredential`. Z czystego commitu `bc56ce57`
+  zbudowano bezsekretny pakiet `linux-x64` ze źródłami, manifestem i 20/20
+  zaliczonymi testami. Czeka na przekazanie oraz raport z rzeczywistego
+  wdrożenia. Autor musi jeszcze dodać nowy callback w istniejącej integracji,
+  bez usuwania Hermesa i bez rotacji sekretu. Do czasu raportu serwerowego i
+  świadomego odbioru nie zmieniać originu ani instalacji AMC Test** — działające
+  sterowanie Sonosem i WiiM jest już przepisane i
   nie wymaga ponownej implementacji. `Ctrl+F5` wybiera dom i grupę, a przy braku
   połączenia prowadzi do konta zamiast kończyć się błędem. Okno udostępnia
   rozpoczęcie, jawne

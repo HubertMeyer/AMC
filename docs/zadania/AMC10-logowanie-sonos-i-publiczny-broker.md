@@ -2,23 +2,26 @@
 
 ## Status
 
-**W trakcie — zainstalowany AMC Test ma działające konto Sonos i kompletną
-obsługę sterowania, grupowania oraz treści. Jego broker na Hermesie uczestniczy
-tylko w logowaniu i odnawianiu tokenu; polecenia wykonuje bezpośrednio oficjalne
-Sonos Control API. Niezależny broker ma gotowy i sprawdzony pakiet wdrożeniowy
-Docker Compose z własnym HTTPS, ale nie został jeszcze uruchomiony publicznie.
-Bieżąca integracja, identyfikator klienta i chroniony sekret zostały
-potwierdzone odczytowym audytem Hermesa i mogą zostać wykorzystane przez
-następcę bez tworzenia nowej integracji.
-Bieżące, jeszcze niezainstalowane źródła są odłączone od Hermesa i pozostają w
-stanie „publiczny broker nieskonfigurowany”. Przed ich instalacją trzeba
-uruchomić nowy broker albo przygotować bezpieczne zachowanie dotychczasowego
-konta autora.**
+**W trakcie — operator przygotował niezależny serwer Ubuntu, publiczny origin
+`https://sonos.stareaudycje.pl/`, Cloudflare Tunnel, usługę systemd i sekret
+przez `LoadCredential`. Zweryfikowany bezsekretny pakiet `linux-x64` został
+zbudowany z czystego commitu `bc56ce57` i czeka na przekazanie operatorowi.
+Broker nie został jeszcze wdrożony ani uruchomiony publicznie. Autor musi
+dodać nowy callback w istniejącej integracji Sonos, nie usuwając Hermesa i nie
+rotując sekretu. Dopiero po raporcie serwerowym i odbiorze logowania można
+zmienić origin w AMC Test.**
 
 Sterowanie Sonosem i WiiM było już przeszczepione i użytkownik ocenił je jako
 prawie gotowe. Ten etap nie zmienia adapterów, list, transportu ani WiiM.
 
 ## Korekty użytkownika
+
+- 2026-10-24: użytkownik przekazał odpowiedź operatora serwera. Zastępuje ona
+  wcześniejsze ograniczenia o braku hostingu, domeny i znanego reverse proxy.
+  Gotowe są Ubuntu 24.04, ASP.NET Core Runtime 8.0.32, systemd, Cloudflare
+  Tunnel do `127.0.0.1:5080`, origin `https://sonos.stareaudycje.pl/`,
+  chroniony plik sekretu oraz zaufane proxy `127.0.0.1`. Blokadą był brak
+  dostępnego kodu brokera; przygotowano wariant B, bez publikacji repozytorium.
 
 - 2026-10-18: ustalenie, że Sonos i WiiM już działają; zastępuje wcześniejsze
   szerokie rozumienie AMC10. Zakres to wyłącznie proste logowanie Sonos i
@@ -81,6 +84,12 @@ prawie gotowe. Ten etap nie zmienia adapterów, list, transportu ani WiiM.
   obecność niepustego sekretu i obsługę odnowienia bez ujawnienia wartości.
 
 ## Materiał do dokumentacji użytkownika
+
+Etap z 24.10.2026 przygotował wyłącznie sprawdzony pakiet serwerowy do
+zewnętrznego wdrożenia. Nie zmienił zainstalowanego AMC Test, jego menu,
+skrótów ani komunikatów NVDA. Adres `sonos.stareaudycje.pl` nie zostanie
+wpisany do aplikacji przed potwierdzonym uruchomieniem brokera i pakietem
+zwrotnym operatora.
 
 W AMC Test polecenie „Konfiguruj…” w Menedżerze sesji otwiera okno „Konto
 Sonos”. Pokazuje ono wyłącznie informacje potrzebne użytkownikowi i przyciski
@@ -277,6 +286,31 @@ Kontrakt sprawdzono 2026-10-19 z aktualną oficjalną dokumentacją Sonosa:
 
 ## Testy i wynik
 
+- 2026-10-24: bazowy broker zaliczył 18/18 testów. Dodano kontrolę, że
+  zaufany `X-Forwarded-For` rozdziela limity dwóch klientów, oraz kontrolę
+  filtrów logowania przy globalnym Debug/Trace. Rozszerzony zestaw zaliczył
+  **20/20** testów zarówno w repozytorium, jak i ponownie ze źródeł
+  rozpakowanych z finalnego ZIP-a. Testy używały atrap Sonosa i lokalnego
+  portu; nie otwierały przeglądarki, nie logowały konta i nie sterowały
+  głośnikami.
+- Skrypt pakowania odtworzył zależności, wykonał testy, opublikował
+  framework-dependent `net8.0` dla `linux-x64` bez apphosta oraz dołączył
+  minimalny snapshot źródeł i testów. Manifest finalnego ZIP-a obejmuje 22
+  pliki; wszystkie rozmiary i SHA-256 sprawdzono ponownie bez rozbieżności.
+  Manifest ma `workingTreeClean=true`, `runtimeIdentifier=linux-x64`,
+  `includesSecrets=false` i `includesSource=true`.
+- Finalny ZIP ma 63 404 bajty i SHA-256
+  `fdf9cb33560d80403ecdaa3991244a44567417a0f7f82d14ed7ef7f37e9a1e18`.
+  Skan nie znalazł kluczy prywatnych, `.p8`, JWT, tokenów GitHub/AWS,
+  `sonos_client_secret.txt`, symboli PDB ani wykonywalnego apphosta.
+- Kontrolny proces Release na Windows odpowiedział `200` z `/health/ready`.
+  Pięć próbek wskazało 48,59–50,26 MiB working set i 40,39–40,96 MiB private
+  memory. Jest to pomiar orientacyjny; operator ma zwrócić `MemoryCurrent` i
+  `MemoryPeak` z docelowego Ubuntu.
+- Kod, testy i pakiet zostały przygotowane. Nie wykonano publikacji GitHub,
+  instalacji na serwerze, wpisu w portalu Sonos, prawdziwego logowania ani
+  zmiany i instalacji AMC Test.
+
 - `dotnet build src/AccessibleMediaController.SonosBroker/AccessibleMediaController.SonosBroker.csproj -c Release --no-restore`
   — sukces, 0 ostrzeżeń, 0 błędów.
 - `dotnet run --project tests/AccessibleMediaController.SonosBroker.SmokeTests/AccessibleMediaController.SonosBroker.SmokeTests.csproj -c Release`
@@ -457,18 +491,17 @@ Kontrakt sprawdzono 2026-10-19 z aktualną oficjalną dokumentacją Sonosa:
 
 ## Znane ograniczenia
 
-- Brak publicznej domeny, certyfikatu niezależnego serwera i nowego wpisu
-  callbacku w portalu Sonos. Tych danych nie wolno wymyślać ani zapisywać w Git.
-- Przygotowano techniczny wariant pojedynczego serwera Linux, ale nie ma jeszcze
-  konkretnego publicznego serwera, nazwy DNS ani sposobu opłacenia i utrzymania
-  hostingu. Hermes nie jest rozwiązaniem tego ograniczenia ani częścią obecnej
-  architektury.
+- Serwer, domena i TLS przez Cloudflare Tunnel są przygotowane, ale broker nie
+  został jeszcze wdrożony. Brakuje wpisu callbacku w portalu Sonos, publicznych
+  testów operatora oraz pakietu zwrotnego z raportem i wycofaniem.
+- Docelowy wariant to pojedyncza usługa systemd na Mikrusie srv28 z Ubuntu
+  24.04 i ASP.NET Core Runtime 8.0.32. Docker i Caddy pozostają wariantem
+  referencyjnym, a nie sposobem tego wdrożenia.
 - Magazyn sesji jest pamięciowy i przeznaczony dla jednej instancji. Skalowanie
   na wiele replik wymaga wspólnego atomowego magazynu.
-- Nadal trzeba znać dokładne adresy reverse proxy wybranego hostingu. Jeżeli
-  hosting zmienia je dynamicznie i nie gwarantuje stałej listy, należy użyć
-  bezpośredniego HTTPS w Kestrel albo wybrać inny sposób wdrożenia; nie wolno
-  omijać tej ochrony przez zaufanie wszystkim klientom.
+- Znanym i jedynym zaufanym peerem jest lokalny `cloudflared` pod
+  `127.0.0.1`. Operator musi potwierdzić na docelowym Ubuntu, że przekazuje
+  symetryczne `X-Forwarded-For` i `X-Forwarded-Proto: https`.
 - Nie wykonano ręcznego odbioru NVDA istniejącego okna konta ani prawdziwego
   odnowienia tokenu. Potrzebna jest obecność użytkownika.
 - Nowe okno konta jest zainstalowane w użytkowym AMC Test. Nadal wymaga
@@ -487,9 +520,9 @@ Kontrakt sprawdzono 2026-10-19 z aktualną oficjalną dokumentacją Sonosa:
 - Bezpieczny stan „publiczny broker nieskonfigurowany” jest potwierdzony w
   źródłach i testach, ale nie został jeszcze zainstalowany. Zainstalowany AMC
   Test nadal zawiera wcześniejszą wersję i nie jest dowodem tej korekty.
-- Nie ma jeszcze niezależnego hostingu, domeny ani certyfikatu. Produkcyjna
-  integracja Sonos istnieje i może zostać ponownie wykorzystana, ale do czasu
-  uruchomienia następcy logowanie w nowych źródłach jest celowo niedostępne.
+- Produkcyjna integracja Sonos istnieje i może zostać ponownie wykorzystana,
+  ale do uruchomienia następcy i wpisania callbacku logowanie w nowych
+  źródłach pozostaje celowo niedostępne.
 - Nie znaleziono na komputerze Docker Engine, Azure CLI, narzędzi Fly.io,
   Cloudflare, Google Cloud ani zmiennych `SONOS_*`. Nie ma więc lokalnego dowodu
   dostępu do zewnętrznego hostingu lub sekretu integracji. Publicznego
@@ -521,7 +554,18 @@ migracji.
 
 ## Wersja i commit
 
-- Wersja kodu AMC: `0.1.0-alpha.422`.
+- Przekazanie systemd/Cloudflare, pakowanie `linux-x64`, ochrona logów i testy
+  20/20: commit `bc56ce577bfac4d86c68ecc4f6f90a56a6c22e7a` —
+  `build(amc10): przygotuj przekazanie brokera dla systemd`.
+- Finalny pakiet:
+  `AMC-Sonos-Deployment-0.1.0-alpha.433-bc56ce577bfa.zip`, 63 404 bajty,
+  SHA-256 `fdf9cb33560d80403ecdaa3991244a44567417a0f7f82d14ed7ef7f37e9a1e18`.
+  Lokalizacja przekazania:
+  `D:\Projekty Codex\AMC - pakiety do weryfikacji\Sonos\2026-10-24\do-operatora`.
+- Gałąź `integration/sonos-broker-20261024` pozostaje lokalna. Publikacji
+  GitHub nie wykonano, ponieważ wymaga osobnej zgody na konkretny stan.
+- Wersja finalnego pakietu brokera: `0.1.0-alpha.433`. Wcześniejsze wpisy
+  `alpha.422` poniżej opisują historyczne pakiety z etapu 20.10.2026.
 - Commit źródeł, testów i pierwszego zapisu dokumentacji: `97a29c09`.
 - Commit bezpiecznego reverse proxy i testów 16/16: `1db05e74`.
 - Commit okna konta Sonos, bramki `Ctrl+F5`, testów i zapisu realizacji:
@@ -569,6 +613,12 @@ migracji.
 
 ## Porządek dysku
 
+- 2026-10-24: po pozytywnej kontroli usunięto wyłącznie brudny pakiet próbny,
+  rozpakowaną kopię finalnego ZIP-a i drugi katalog weryfikacyjny. Ostatnie dwa
+  katalogi zajmowały łącznie 1 627 287 bajtów, około 1,55 MiB; wcześniejszy
+  brudny pakiet zajmował 223 381 bajtów. Są odtwarzalne i nie podlegają
+  odzyskaniu. Zachowano finalny ZIP, plik jego sumy, odpowiedź dla operatora,
+  źródła, commit oraz pliki kompilacji do czasu odbioru etapu.
 - Po pomyślnej weryfikacji usunięto wyłącznie odtwarzalny dziennik diagnostyczny
   `D:\Projekty Codex\AMC - integracja wxPython\.test-output\sonos-windows-build.log`
   o rozmiarze 1 402 075 bajtów, czyli około 1,34 MiB. Plik nie jest możliwy do
