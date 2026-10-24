@@ -103,6 +103,9 @@ osobnym przyszłym zakresem, a nie częścią tej blokady.
 - po dodaniu blokady: testy powiązane **78 zaliczonych i 2 podtesty**, a pełna
   regresja **2033 zaliczone, 111 pominiętych i 13 podtestów**, zero błędów,
   204,07 s;
+- oficjalna bramka promocji powtórzyła **30/30** testów launchera i
+  aktualizatora, pełną regresję **2033 zaliczone, 111 pominiętych i 13
+  podtestów** w 163,56 s oraz trzy buildy .NET bez ostrzeżeń i błędów;
 - `git diff --check`: bez błędów;
 - test Frontier potwierdza, że seria `25, 30, 35` wysyła tylko `25` i `35`;
 - testy parytetu potwierdzają wspólne nazwy, skróty i widoczność w menu,
@@ -124,9 +127,20 @@ osobnym przyszłym zakresem, a nie częścią tej blokady.
 ## Wersja, commit i instalacja
 
 - Blokada ponownego skanu: commit `efb8c090` —
-  `fix(youtube): blokuj nakladajace sie skany live`; kod i testy są gotowe,
-  natomiast w chwili tego zapisu nowy pakiet nie był jeszcze zbudowany ani
-  zainstalowany.
+  `fix(youtube): blokuj nakladajace sie skany live`.
+- Zbudowana i zainstalowana paczka pochodzi z dokumentacyjnego commita
+  `81a1e4c507000dee2fcf1ba60d93b059adcad0be`, ma identyfikator `8af5940f`
+  i etykietę
+  `2026.10.24-81a1e4c507000dee2fcf1ba60d93b059adcad0be-8af5940f`.
+- Pełna integralność zainstalowanej kopii i jej odizolowany start są
+  zaliczone. Potwierdzone okno użytkowe: `AMC Test — 24.10.2026, 14:48` z
+  `D:\Projekty Codex\AMC Python\AMC.exe`; frontend i host odpowiadają.
+- Pierwsza próba instalacji bezpiecznie zatrzymała się, gdy działające AMC
+  zapisywało nagranie Poznań rozpoczęte o 14:43. Plik roboczy urósł z 0 do
+  około 3,7 MB, a następnie został prawidłowo domknięty jako
+  `D:\iCloudDrive\iCloud~co~supertop~castro\Sideloads\YouTubeAudio\Poznań - 2026-10-24 14-43-28.mp3`
+  o rozmiarze 6 341 039 bajtów. Dopiero po zniknięciu procesów i pliku
+  częściowego wykonano atomową podmianę.
 
 - Commit źródłowy: `fe281d31af2c5328f1ada1c3668a587feefbcf80` —
   `feat: dodaj zbiorcze transmisje i ustabilizuj Frontier`.
