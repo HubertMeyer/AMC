@@ -65,13 +65,65 @@ internal sealed class YouTubeCollectionClient
                 result = await RunYtDlpAsync(executable, fallbackAddress, cancellationToken)
                     .ConfigureAwait(false);
             }
+            YouTubeCollectionDocument? document = null;
+            InvalidDataException? primaryFailure = null;
             if (result.ExitCode != 0)
-                throw new InvalidDataException("YouTube nie udostępnił obecnie tej publicznej kolekcji.");
-            if (result.Output.Length == 0 || result.Output.Length > MaximumJsonCharacters)
-                throw new InvalidDataException("YouTube zwrócił nieprawidłowe dane kolekcji.");
-            var document = ParseResult(normalizedAddress, sourceKind, result.Output);
-            return await CompleteFromChannelFeedAsync(document, cancellationToken)
-                .ConfigureAwait(false);
+            {
+                primaryFailure = new InvalidDataException(
+                    "YouTube nie udostępnił obecnie tej publicznej kolekcji.");
+            }
+            else if (result.Output.Length == 0 || result.Output.Length > MaximumJsonCharacters)
+            {
+                primaryFailure = new InvalidDataException(
+                    "YouTube zwrócił nieprawidłowe dane kolekcji.");
+            }
+            else
+            {
+                try
+                {
+                    document = ParseResult(normalizedAddress, sourceKind, result.Output);
+                }
+                catch (InvalidDataException exception)
+                {
+                    primaryFailure = exception;
+                }
+            }
+
+            IReadOnlyDictionary<string, YouTubeFeedEntry> feedEntries =
+                new Dictionary<string, YouTubeFeedEntry>(StringComparer.Ordinal);
+            var feedRead = false;
+            if (document is not null)
+            {
+                feedEntries = await FetchChannelFeedEntriesAsync(document, cancellationToken)
+                    .ConfigureAwait(false);
+                feedRead = true;
+            }
+
+            if (sourceKind == PodcastSourceKind.YouTubeChannel
+                && (document is null || ShouldFetchArchivedStreams(document, feedEntries)))
+            {
+                var archivedStreams = await TryFetchArchivedStreamsAsync(
+                        executable,
+                        normalizedAddress,
+                        cancellationToken)
+                    .ConfigureAwait(false);
+                document = document is null
+                    ? archivedStreams
+                    : archivedStreams is null
+                        ? document
+                        : MergeChannelDocuments(document, archivedStreams);
+            }
+
+            if (document is null)
+                throw primaryFailure
+                    ?? new InvalidDataException(
+                        "Kanał albo playlista YouTube nie zawiera dostępnych materiałów.");
+            if (!feedRead)
+            {
+                feedEntries = await FetchChannelFeedEntriesAsync(document, cancellationToken)
+                    .ConfigureAwait(false);
+            }
+            return CompleteFromChannelFeed(document, feedEntries);
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
@@ -139,6 +191,40 @@ internal sealed class YouTubeCollectionClient
             await errorTask.ConfigureAwait(false));
     }
 
+    private static async Task<YouTubeCollectionDocument?> TryFetchArchivedStreamsAsync(
+        string executable,
+        Uri normalizedAddress,
+        CancellationToken cancellationToken)
+    {
+        if (!TryBuildChannelStreamsAddress(
+                normalizedAddress,
+                PodcastSourceKind.YouTubeChannel,
+                out var streamsAddress))
+            return null;
+        try
+        {
+            var result = await RunYtDlpAsync(executable, streamsAddress, cancellationToken)
+                .ConfigureAwait(false);
+            if (result.ExitCode != 0
+                || result.Output.Length == 0
+                || result.Output.Length > MaximumJsonCharacters)
+                return null;
+            return ParseResult(
+                normalizedAddress,
+                PodcastSourceKind.YouTubeChannel,
+                result.Output,
+                archivedLiveStreamsOnly: true);
+        }
+        catch (InvalidDataException)
+        {
+            return null;
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            return null;
+        }
+    }
+
     internal static bool TryBuildChannelFallbackAddress(
         Uri normalizedAddress,
         PodcastSourceKind sourceKind,
@@ -161,6 +247,32 @@ internal sealed class YouTubeCollectionClient
             Fragment = string.Empty
         };
         fallbackAddress = builder.Uri;
+        return true;
+    }
+
+    internal static bool TryBuildChannelStreamsAddress(
+        Uri normalizedAddress,
+        PodcastSourceKind sourceKind,
+        out Uri streamsAddress)
+    {
+        streamsAddress = null!;
+        const string videosSuffix = "/videos";
+        if (sourceKind != PodcastSourceKind.YouTubeChannel
+            || !normalizedAddress.AbsolutePath.EndsWith(
+                videosSuffix,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        var builder = new UriBuilder(normalizedAddress)
+        {
+            Path = normalizedAddress.AbsolutePath[..^videosSuffix.Length].TrimEnd('/')
+                + "/streams",
+            Query = string.Empty,
+            Fragment = string.Empty
+        };
+        streamsAddress = builder.Uri;
         return true;
     }
 
@@ -226,7 +338,8 @@ internal sealed class YouTubeCollectionClient
     internal static YouTubeCollectionDocument ParseResult(
         Uri normalizedAddress,
         PodcastSourceKind sourceKind,
-        string json)
+        string json,
+        bool archivedLiveStreamsOnly = false)
     {
         if (sourceKind is not (PodcastSourceKind.YouTubeChannel or PodcastSourceKind.YouTubePlaylist))
             throw new ArgumentOutOfRangeException(nameof(sourceKind));
@@ -271,6 +384,12 @@ internal sealed class YouTubeCollectionClient
             foreach (var entry in entries.EnumerateArray())
             {
                 if (episodes.Count >= MaximumItems || entry.ValueKind != JsonValueKind.Object) break;
+                if (archivedLiveStreamsOnly
+                    && !string.Equals(
+                        ReadString(entry, "live_status"),
+                        "was_live",
+                        StringComparison.OrdinalIgnoreCase))
+                    continue;
                 var videoId = ReadString(entry, "id").Trim();
                 if (!IsSafeIdentifier(videoId, 64) || !knownVideoIds.Add(videoId)) continue;
                 var pageUri = new Uri($"https://www.youtube.com/watch?v={videoId}", UriKind.Absolute);
@@ -316,27 +435,79 @@ internal sealed class YouTubeCollectionClient
         }
     }
 
+    internal static YouTubeCollectionDocument MergeChannelDocuments(
+        YouTubeCollectionDocument standardVideos,
+        YouTubeCollectionDocument archivedStreams)
+    {
+        if (standardVideos.SourceKind != PodcastSourceKind.YouTubeChannel
+            || archivedStreams.SourceKind != PodcastSourceKind.YouTubeChannel)
+            throw new ArgumentException("Scalanie dotyczy wyłącznie kanałów YouTube.");
+
+        var merged = OrderChannelEpisodes(archivedStreams.Feed.Episodes
+            .Concat(standardVideos.Feed.Episodes)
+            .GroupBy(episode => episode.SourceIdentifier, StringComparer.Ordinal)
+            .Select(group => group.First()));
+
+        return new YouTubeCollectionDocument(
+            standardVideos.Feed with { Episodes = merged },
+            PodcastSourceKind.YouTubeChannel);
+    }
+
+    private static PodcastFeedEpisode[] OrderChannelEpisodes(
+        IEnumerable<PodcastFeedEpisode> episodes) =>
+        episodes
+            .Select((episode, index) => new { Episode = episode, Index = index })
+            .OrderByDescending(item => item.Episode.Published.HasValue)
+            .ThenByDescending(item => item.Episode.Published)
+            .ThenBy(item => item.Index)
+            .Take(MaximumItems)
+            .Select(item => item.Episode)
+            .ToArray();
+
     /// <summary>
     /// Replaces the approximate publication date and the possibly translated
     /// title with the exact values published in the channel feed. Materials
     /// missing from the feed, and every feed failure, leave the yt-dlp data
     /// untouched.
     /// </summary>
-    private async Task<YouTubeCollectionDocument> CompleteFromChannelFeedAsync(
+    private async Task<IReadOnlyDictionary<string, YouTubeFeedEntry>>
+        FetchChannelFeedEntriesAsync(
         YouTubeCollectionDocument document,
         CancellationToken cancellationToken)
     {
         var separator = document.Feed.Id.IndexOf(':');
-        if (separator < 0 || separator + 1 >= document.Feed.Id.Length) return document;
+        if (separator < 0 || separator + 1 >= document.Feed.Id.Length)
+            return new Dictionary<string, YouTubeFeedEntry>(StringComparer.Ordinal);
         var sourceIdentifier = document.Feed.Id[(separator + 1)..];
         var feedAddress = YouTubeChannelFeedClient.TryBuildFeedAddress(
             sourceIdentifier,
             document.SourceKind == PodcastSourceKind.YouTubeChannel);
-        if (feedAddress is null) return document;
+        if (feedAddress is null)
+            return new Dictionary<string, YouTubeFeedEntry>(StringComparer.Ordinal);
 
-        var feedEntries = await channelFeed
+        return await channelFeed
             .FetchEntriesAsync(feedAddress, cancellationToken)
             .ConfigureAwait(false);
+    }
+
+    internal static bool ShouldFetchArchivedStreams(
+        YouTubeCollectionDocument document,
+        IReadOnlyDictionary<string, YouTubeFeedEntry> feedEntries)
+    {
+        if (document.SourceKind != PodcastSourceKind.YouTubeChannel)
+            return false;
+        if (feedEntries.Count == 0)
+            return true;
+        var known = document.Feed.Episodes
+            .Select(episode => episode.SourceIdentifier)
+            .ToHashSet(StringComparer.Ordinal);
+        return feedEntries.Keys.Any(videoId => !known.Contains(videoId));
+    }
+
+    internal static YouTubeCollectionDocument CompleteFromChannelFeed(
+        YouTubeCollectionDocument document,
+        IReadOnlyDictionary<string, YouTubeFeedEntry> feedEntries)
+    {
         if (feedEntries.Count == 0) return document;
 
         var completed = new List<PodcastFeedEpisode>(document.Feed.Episodes.Count);
@@ -359,8 +530,11 @@ internal sealed class YouTubeCollectionClient
             });
         }
 
+        var result = document.SourceKind == PodcastSourceKind.YouTubeChannel
+            ? OrderChannelEpisodes(completed)
+            : completed.ToArray();
         return new YouTubeCollectionDocument(
-            document.Feed with { Episodes = completed },
+            document.Feed with { Episodes = result },
             document.SourceKind);
     }
 

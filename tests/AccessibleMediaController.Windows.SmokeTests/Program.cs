@@ -2810,6 +2810,13 @@ static void TestYouTubeCollectionResults()
             out _),
         "Ogólny błąd YouTube uruchomił nieuzasadnione obejście adresu kanału.");
     Assert(
+        YouTubeCollectionClient.TryBuildChannelStreamsAddress(
+            channelAddress,
+            PodcastSourceKind.YouTubeChannel,
+            out var streamsAddress)
+        && streamsAddress.AbsoluteUri == "https://www.youtube.com/%40TyfloPodcast/streams",
+        "Kanał YouTube nie ma stabilnego adresu zakończonych transmisji.");
+    Assert(
         YouTubeCollectionClient.TryNormalizeCollectionAddress(
             new Uri("https://www.youtube.com/watch?v=AbCdEf12345&list=PL_test-123"),
             out var playlistAddress,
@@ -2824,6 +2831,12 @@ static void TestYouTubeCollectionResults()
             "ERROR: This channel does not have a videos tab",
             out _),
         "Obejście kanału zostało błędnie zastosowane do playlisty.");
+    Assert(
+        !YouTubeCollectionClient.TryBuildChannelStreamsAddress(
+            playlistAddress,
+            PodcastSourceKind.YouTubePlaylist,
+            out _),
+        "Karta transmisji kanału została błędnie zastosowana do playlisty.");
     Assert(
         !YouTubeCollectionClient.TryNormalizeCollectionAddress(
             new Uri("https://www.youtube.com/watch?v=AbCdEf12345"),
@@ -2878,6 +2891,86 @@ static void TestYouTubeCollectionResults()
         && collection.Feed.Episodes[0].Published is not null
         && collection.Feed.Episodes.Select(episode => episode.Id).Distinct(StringComparer.Ordinal).Count() == 2,
         "Materiały kanału YouTube nie mają stabilnych adresów, dat albo identyfikatorów.");
+    var matchingFeed = new Dictionary<string, YouTubeFeedEntry>(StringComparer.Ordinal)
+    {
+        ["AbCdEf12345"] = new(
+            new DateTimeOffset(2026, 9, 7, 0, 0, 0, TimeSpan.Zero),
+            "Pierwszy materiał"),
+        ["LiveId_9876"] = new(
+            new DateTimeOffset(2026, 10, 1, 0, 0, 0, TimeSpan.Zero),
+            "Drugi materiał")
+    };
+    Assert(
+        !YouTubeCollectionClient.ShouldFetchArchivedStreams(collection, matchingFeed),
+        "Kanał bez osobnej zawartości transmisji niepotrzebnie uruchamia drugi skan.");
+    var preciselyDatedCollection = YouTubeCollectionClient.CompleteFromChannelFeed(
+        collection,
+        matchingFeed);
+    Assert(
+        preciselyDatedCollection.Feed.Episodes[0].SourceIdentifier == "LiveId_9876",
+        "Dokładne daty z feedu nie poprawiły kolejności materiałów kanału.");
+    var splitFeed = new Dictionary<string, YouTubeFeedEntry>(matchingFeed, StringComparer.Ordinal)
+    {
+        ["Archived_2026"] = new(null, "Transmisja zakończona")
+    };
+    Assert(
+        YouTubeCollectionClient.ShouldFetchArchivedStreams(collection, splitFeed),
+        "Kanał z transmisją nieobecną na karcie Filmy nie uruchamia odczytu karty Transmisje.");
+    const string streamsJson = """
+    {
+      "_type": "playlist",
+      "id": "UCTDeBXfyjT_O5xjF_H14V3A",
+      "title": "TyfloPodcast - Streams",
+      "channel": "TyfloPodcast",
+      "entries": [
+        {
+          "id": "Archived_2026",
+          "title": "Transmisja zakończona",
+          "live_status": "was_live",
+          "timestamp": 1792800000
+        },
+        {
+          "id": "Current_Live",
+          "title": "Transmisja trwająca",
+          "live_status": "is_live",
+          "timestamp": 1792886400
+        },
+        {
+          "id": "Future_Live",
+          "title": "Transmisja zaplanowana",
+          "live_status": "is_upcoming",
+          "timestamp": 1792972800
+        },
+        {
+          "id": "AbCdEf12345",
+          "title": "Duplikat z karty transmisji",
+          "live_status": "was_live",
+          "timestamp": 1788739200
+        }
+      ]
+    }
+    """;
+    var archivedStreams = YouTubeCollectionClient.ParseResult(
+        channelAddress,
+        PodcastSourceKind.YouTubeChannel,
+        streamsJson,
+        archivedLiveStreamsOnly: true);
+    Assert(
+        archivedStreams.Feed.Episodes.Count == 2
+        && archivedStreams.Feed.Episodes.All(episode =>
+            episode.SourceIdentifier is "Archived_2026" or "AbCdEf12345"),
+        "Lista kanału nie oddziela zakończonych transmisji od trwających i zaplanowanych.");
+    var mergedChannel = YouTubeCollectionClient.MergeChannelDocuments(
+        collection,
+        archivedStreams);
+    Assert(
+        mergedChannel.Feed.Episodes.Count == 3
+        && mergedChannel.Feed.Episodes[0].SourceIdentifier == "Archived_2026"
+        && mergedChannel.Feed.Episodes.Count(episode =>
+            episode.SourceIdentifier == "AbCdEf12345") == 1
+        && mergedChannel.Feed.Episodes.All(episode =>
+            episode.SourceIdentifier is not ("Current_Live" or "Future_Live")),
+        "Filmy i zakończone transmisje kanału nie zostały poprawnie scalone lub odfiltrowane.");
     var playlist = YouTubeCollectionClient.ParseResult(
         playlistAddress,
         PodcastSourceKind.YouTubePlaylist,
@@ -2906,8 +2999,12 @@ static void TestLiveYouTubeCollection(string address)
     Assert(result.Feed.Episodes.All(episode =>
             YouTubeSourceResolver.IsYouTubeUrl(episode.MediaUri.AbsoluteUri)),
         "Publiczna kolekcja YouTube zawiera niestabilny adres materiału.");
+    var sampleTitles = string.Join(
+        " | ",
+        result.Feed.Episodes.Take(3).Select(episode => episode.Title));
     Console.WriteLine(
-        $"OK: kolekcja YouTube na żywo — {result.Feed.Title}, materiały: {result.Feed.Episodes.Count}");
+        $"OK: kolekcja YouTube na żywo — {result.Feed.Title}, materiały: {result.Feed.Episodes.Count}; "
+        + $"pierwsze: {sampleTitles}");
 }
 
 static void TestLiveYouTubeSeek(string address)
