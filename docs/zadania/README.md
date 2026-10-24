@@ -306,9 +306,9 @@ zmian, wymagający korekty użytkownika:
   [AMC-TEST-2026-10-24-0021-youtube-refresh-shortcuts.md](AMC-TEST-2026-10-24-0021-youtube-refresh-shortcuts.md).
 - `YT-002` — **W trakcie — dotychczasowy zakres jednego kanału jest
   zainstalowany, a 24.10.2026 wdrożono źródła zbiorczej listy wybranych
-  kanałów pod `Ctrl+Shift+I`; pełna regresja wxPython 2032/2032 jest zaliczona,
-  trwa budowa i instalacja nowego AMC Test, po której pozostanie ręczny odbiór
-  NVDA i prawdziwego konta** — lista transmisji live/upcoming zapisanego kanału, Enter w
+  kanałów pod `Ctrl+Shift+I`; pełna regresja wxPython 2032/2032, build,
+  integralność, atomowa instalacja i start AMC Test 24.10.2026, 13:33 są
+  zaliczone. Pozostaje ręczny odbiór NVDA i prawdziwego konta** — lista transmisji live/upcoming zapisanego kanału, Enter w
   wewnętrznym silniku, kopiowanie adresu, F5 i Backspace oraz dynamiczna stacja
   Radia oparta na stałym adresie kanału `/live`. Szczegóły:
   [YT-002-transmisje-na-zywo-i-dynamiczne-radio.md](YT-002-transmisje-na-zywo-i-dynamiczne-radio.md).
@@ -328,8 +328,8 @@ zmian, wymagający korekty użytkownika:
   i odczyt odtwarzanego radia z Teufela. Odbiór 24.10.2026 ujawnił groźną
   kolejkę szybkich zmian głośności; źródła scalają teraz serię do jednego
   bieżącego i ostatniego oczekującego żądania, a pełna regresja wxPython
-  2032/2032 jest zaliczona. Trwa budowa i instalacja do ponownego odbioru na
-  urządzeniu** —
+  2032/2032, build, integralność, instalacja i start AMC Test 13:33 są
+  zaliczone. Pozostaje ponowny odbiór na urządzeniu** —
   `Ctrl+8`, `Ctrl+F5` i ręczny adres korzystają z jednego modelu stanów.
   AMC wymaga potwierdzonego opisu FSAPI/UNDOK i użytkowej nazwy urządzenia,
   zanim pokaże pole PIN. Brak wyniku i błąd nie prowadzą do PIN-u. Po zapisaniu

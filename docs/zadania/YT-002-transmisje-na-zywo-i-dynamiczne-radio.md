@@ -237,8 +237,10 @@ właścicielem tokenu Google.
 
 ### Wersja i commit
 
-Gałąź: `integration/amc-test-20261023-late`. W chwili tego zapisu kod i testy
-są gotowe w drzewie roboczym po commicie bazowym
-`044c9a5ce5146145c9429eb9755ccaf7bed6dd5f`; dokładny commit, identyfikator
-paczki i wersja instalacji zostaną dopisane po zatwierdzeniu zmiany i
-kontrolowanej promocji. AMC Public i GitHub pozostają bez zmian.
+Gałąź: `integration/amc-test-20261023-late`. Commit źródłowy:
+`fe281d31af2c5328f1ada1c3668a587feefbcf80` —
+`feat: dodaj zbiorcze transmisje i ustabilizuj Frontier`. Zbudowano i
+zainstalowano paczkę `8bce7f95` o etykiecie
+`2026.10.24-fe281d31af2c5328f1ada1c3668a587feefbcf80-8bce7f95` w
+`D:\Projekty Codex\AMC Python`. Potwierdzone okno:
+`AMC Test — 24.10.2026, 13:33`. AMC Public i GitHub pozostają bez zmian.

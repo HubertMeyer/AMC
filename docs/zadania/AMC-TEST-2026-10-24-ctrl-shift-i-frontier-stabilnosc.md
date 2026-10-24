@@ -1,8 +1,8 @@
 # AMC Test — zbiorcze transmisje YouTube i stabilność Frontier Smart
 
 - Data: 24 października 2026
-- Status: źródła i pełna regresja zaliczone; trwa kontrolowana budowa i
-  instalacja AMC Test
+- Status: zbudowane, atomowo zainstalowane i uruchomione; automatyczne bramki
+  zaliczone, czeka na ręczny odbiór NVDA, YouTube i Teufela
 - Gałąź: `integration/amc-test-20261023-late`
 - Baza przed zmianą: `044c9a5ce5146145c9429eb9755ccaf7bed6dd5f`
 - AMC Public i GitHub: bez zmian
@@ -73,9 +73,27 @@ niesterowalne.
 
 ## Wersja, commit i instalacja
 
-Dokładny commit, wersja, identyfikator paczki, wynik kontroli procesów i ścieżka
-instalacji zostaną dopisane po zakończeniu kontrolowanej promocji. Samo
-przejście testów nie jest przedstawiane jako dowód zbudowania ani instalacji.
+- Commit źródłowy: `fe281d31af2c5328f1ada1c3668a587feefbcf80` —
+  `feat: dodaj zbiorcze transmisje i ustabilizuj Frontier`.
+- Pakiet: `8bce7f95`; etykieta:
+  `2026.10.24-fe281d31af2c5328f1ada1c3668a587feefbcf80-8bce7f95`.
+- Instalacja: `D:\Projekty Codex\AMC Python`; 1674 pliki, wszystkie sumy
+  SHA-256 zgodne z manifestem kandydata.
+- Bramka promocji: 30/30 testów launchera i aktualizatora, pełna regresja
+  2032 zaliczone, 111 pominiętych, 13 podtestów zaliczonych oraz buildy .NET
+  bez ostrzeżeń i błędów.
+- Kandydat i stała instalacja zaliczyły odizolowany start interfejsu i hosta.
+- Potwierdzone widoczne okno: `AMC Test — 24.10.2026, 13:33`, PID interfejsu
+  7068, właściwy host PID 34048 i launcher PID 44992 w chwili weryfikacji.
+- Pierwsza próba podmiany bezpiecznie odmówiła, ponieważ stary host nie
+  odpowiadał po rzeczywistym przeciążeniu kolejką Frontier. Przed dalszym
+  działaniem sprawdzono dwukrotnie foldery nagrań i pobrań, brak aktywnych
+  `.amc-partial` i brak procesów kodera. Zatrzymano wyłącznie dokładny proces
+  hosta AMC Test, po czym interfejs zamknął się zwykłą ścieżką z zapisem stanu.
+  NVDA zdążył ponownie uruchomić starą instalację, dlatego końcową podmianę
+  wykonano aktualizatorem oczekującym na rzeczywisty kod końcowy. Kod 0 i
+  manifest nowej instalacji zostały potwierdzone przed uruchomieniem.
+- AMC Public, instalator publiczny i GitHub: bez zmian.
 
 ## Materiał do instrukcji i listy zmian — projekt
 

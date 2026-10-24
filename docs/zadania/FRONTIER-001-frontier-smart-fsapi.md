@@ -612,8 +612,9 @@ zaliczonych podtestów**, zero błędów. Rzeczywisty odbiór na Teufelu pozosta
 obowiązkowy, ponieważ testy nie mogą zasymulować opóźnień konkretnego firmware
 ani jego interakcji z przyciskami sprzętowymi.
 
-Źródła i test są gotowe na gałęzi
-`integration/amc-test-20261023-late` po bazowym commicie
-`044c9a5ce5146145c9429eb9755ccaf7bed6dd5f`. Dokładny commit i wersja
-zainstalowanego AMC Test zostaną dopisane po kontrolowanej promocji. AMC
-Public pozostaje bez zmian.
+Zmiana jest w commicie `fe281d31af2c5328f1ada1c3668a587feefbcf80` —
+`feat: dodaj zbiorcze transmisje i ustabilizuj Frontier`. Została zbudowana,
+atomowo zainstalowana i uruchomiona jako paczka `8bce7f95` w
+`D:\Projekty Codex\AMC Python`; potwierdzone okno ma tytuł
+`AMC Test — 24.10.2026, 13:33`. AMC Public pozostaje bez zmian. Po instalacji
+pozostaje ręczny test szybkiej serii głośności na Teufelu.
