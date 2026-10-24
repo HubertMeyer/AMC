@@ -36,7 +36,7 @@ from amc_wx_lite import gui, menu_model  # noqa: E402
 from amc_wx_lite.audio_clip import AudioClipContext, AudioClipSelection  # noqa: E402
 from amc_wx_lite.gui import chord_from_event  # noqa: E402
 from amc_wx_lite.library_source import LibrarySnapshot, Row  # noqa: E402
-from amc_wx_lite.navigation import View  # noqa: E402
+from amc_wx_lite.navigation import SessionId, View  # noqa: E402
 from amc_wx_lite.shortcuts import Action, describe, resolve  # noqa: E402
 from amc_wx_lite.transport_parity import MessagePolicy  # noqa: E402
 
@@ -65,6 +65,14 @@ class FakeRunner:
         done(wynik if self.payload is FakeRunner._BRAK else self.payload)
 
 
+def _new_frame() -> gui.LiteFrame:
+    """Minimalna ramka ma własny, jawny kontekst zamiast stanu innych testów."""
+    frame = gui.LiteFrame.__new__(gui.LiteFrame)
+    frame.navigator = SimpleNamespace(active=SessionId.FILES)
+    frame.messages = MessagePolicy()
+    return frame
+
+
 # =========================================================== PUNKT 1: Ctrl+O
 
 
@@ -75,7 +83,7 @@ def test_ctrl_o_siega_po_dialog_plikow_a_nie_folderow() -> None:
     ``menu_model.py:77-78``), wiec test napisow by tego nie wylapal -- byly
     spojnie zle. Dlatego mierzymy wywolanie.
     """
-    frame = gui.LiteFrame.__new__(gui.LiteFrame)
+    frame = _new_frame()
     called: list[str] = []
     frame._choose_file = lambda: called.append("plik")
     frame._choose_folder = lambda: called.append("folder")
@@ -158,7 +166,7 @@ def test_otwarcie_biblioteki_nie_zapowiada_wczytywania() -> None:
     (nie atrapy pol), zeby test szedl ta sama droga, co okno -- razem z
     ``degradation_notice``.
     """
-    frame = gui.LiteFrame.__new__(gui.LiteFrame)
+    frame = _new_frame()
     powiedziane: list[str] = []
     frame.announcer = SimpleNamespace(say=powiedziane.append)
     zdrowa = LibrarySnapshot(
@@ -180,7 +188,7 @@ def test_otwarcie_biblioteki_nie_zapowiada_wczytywania() -> None:
 
 def test_blad_wczytania_biblioteki_nadal_mowi() -> None:
     """Usuwamy SZUM, nie diagnostyke: blad musi zostac slyszalny."""
-    frame = gui.LiteFrame.__new__(gui.LiteFrame)
+    frame = _new_frame()
     powiedziane: list[str] = []
     frame.announcer = SimpleNamespace(say=powiedziane.append)
 
@@ -194,7 +202,7 @@ def test_blad_wczytania_biblioteki_nadal_mowi() -> None:
 
 
 def test_pusta_biblioteka_nadal_mowi() -> None:
-    frame = gui.LiteFrame.__new__(gui.LiteFrame)
+    frame = _new_frame()
     powiedziane: list[str] = []
     frame.announcer = SimpleNamespace(say=powiedziane.append)
     frame.library = SimpleNamespace(load=lambda folder: SimpleNamespace(is_empty=True))
@@ -232,7 +240,7 @@ def test_end_skacze_dziesiec_sekund_przed_koniec_nie_na_sam_koniec() -> None:
     Skok na 100% zatrzymalby utwor natychmiast. Oryginal celowo zostawia
     dziesiec sekund, zeby bylo czego posluchac.
     """
-    frame = gui.LiteFrame.__new__(gui.LiteFrame)
+    frame = _new_frame()
     powiedziane: list[str] = []
     frame.announcer = SimpleNamespace(say=powiedziane.append)
     frame.messages = MessagePolicy()
@@ -249,7 +257,7 @@ def test_end_skacze_dziesiec_sekund_przed_koniec_nie_na_sam_koniec() -> None:
 
 def test_end_potem_o_ustawia_granice_na_dokladnym_koncu_pliku() -> None:
     """End daje 10 sekund odsłuchu, ale zapamiętuje intencję prawdziwego końca."""
-    frame = gui.LiteFrame.__new__(gui.LiteFrame)
+    frame = _new_frame()
     powiedziane: list[str] = []
     frame.announcer = SimpleNamespace(say=powiedziane.append)
     frame.messages = MessagePolicy()
@@ -289,7 +297,7 @@ def test_end_potem_o_ustawia_granice_na_dokladnym_koncu_pliku() -> None:
 
 def test_end_w_krotkim_utworze_nie_schodzi_pod_zero() -> None:
     """``Max(TimeSpan.Zero, ...)`` z cs:321 -- utwor krotszy niz 10 s."""
-    frame = gui.LiteFrame.__new__(gui.LiteFrame)
+    frame = _new_frame()
     frame.announcer = SimpleNamespace(say=lambda _text: None)
     frame.messages = MessagePolicy(enabled=False)
     frame._last_status = {"durationSeconds": 4.0}
@@ -301,7 +309,7 @@ def test_end_w_krotkim_utworze_nie_schodzi_pod_zero() -> None:
 
 
 def test_home_w_odtwarzaczu_idzie_na_zero() -> None:
-    frame = gui.LiteFrame.__new__(gui.LiteFrame)
+    frame = _new_frame()
     powiedziane: list[str] = []
     frame.announcer = SimpleNamespace(say=powiedziane.append)
     frame.messages = MessagePolicy()
@@ -317,7 +325,7 @@ def test_home_w_odtwarzaczu_idzie_na_zero() -> None:
 
 def test_track_end_milczy_przy_wylaczonych_komunikatach() -> None:
     """cs:323 pyta o ``SeekMessages && ArrowSeekMessages`` -- jak strzalki."""
-    frame = gui.LiteFrame.__new__(gui.LiteFrame)
+    frame = _new_frame()
     powiedziane: list[str] = []
     frame.announcer = SimpleNamespace(say=powiedziane.append)
     frame.messages = MessagePolicy(arrow_seek_messages=False)
@@ -331,7 +339,7 @@ def test_track_end_milczy_przy_wylaczonych_komunikatach() -> None:
 def test_brak_czasu_trwania_mowi_zamiast_milczec() -> None:
     """Bez ``durationSeconds`` nie da sie policzyc konca -- gest nie moze
     wygladac na zepsuty, wiec mowimy o tym zawsze (jak cs:546-551 przy %)."""
-    frame = gui.LiteFrame.__new__(gui.LiteFrame)
+    frame = _new_frame()
     powiedziane: list[str] = []
     frame.announcer = SimpleNamespace(say=powiedziane.append)
     frame.messages = MessagePolicy()
@@ -343,7 +351,7 @@ def test_brak_czasu_trwania_mowi_zamiast_milczec() -> None:
 
 
 def test_home_i_end_nie_ruszaja_gdy_nie_ma_silnika() -> None:
-    frame = gui.LiteFrame.__new__(gui.LiteFrame)
+    frame = _new_frame()
     frame.announcer = SimpleNamespace(say=lambda _text: None)
     frame.messages = MessagePolicy()
     frame._last_status = {"durationSeconds": 600.0}
@@ -393,7 +401,7 @@ def test_pole_filtra_zachowuje_wlasny_escape_i_home() -> None:
     ``_on_filter_key``, wiec nowy wpis Escape w ``LIST_VIEW`` nie moze tego
     przeciac.
     """
-    frame = gui.LiteFrame.__new__(gui.LiteFrame)
+    frame = _new_frame()
     wyczyszczone: list[bool] = []
     frame._clear_filter_and_return = lambda: wyczyszczone.append(True)
     frame._focus_filter_results = lambda: None
