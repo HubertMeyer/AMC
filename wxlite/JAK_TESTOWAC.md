@@ -1124,3 +1124,21 @@ python3 mk_receipt.py <kwit> <speech.txt> receipt.json
 - **Nie licz pierwszego snapshotu.** Pierwsze ujęcie pada przed załadowaniem
   wierszy; jego `model_count=0` opisuje sondę, nie profil. Bierz maksimum z
   przebiegu.
+## Frontier Smart: tryby i presety
+
+1. Włącz sesję Frontier Smart i wejdź Enterem na zapisane urządzenie, aby
+   otworzyć odtwarzacz. `Ctrl+Alt+M` ma otworzyć listę trybów tego urządzenia.
+   Ten sam skrót musi być podany przy `Odtwarzanie → Wybierz tryb Frontier
+   Smart…`, w `Ctrl+F1` i w palecie `Ctrl+Shift+K`.
+2. Na liście trybów sprawdź początkowe zaznaczenie, strzałki, Enter, Escape,
+   powrót fokusu oraz ponowne otwarcie. NVDA ma czytać wyłącznie nazwy trybów,
+   bez klucza liczbowego, identyfikatora i reprezentacji obiektu.
+3. `Ctrl+Alt+P` ma w razie potrzeby włączyć nawigację urządzenia, poczekać na
+   jej gotowość i otworzyć listę rzeczywiście dostępnych presetów. Pierwsza
+   próba po przełączeniu trybu nie może kończyć się samą techniczną blokadą
+   węzła. Brak presetów w trybie, który naprawdę ich nie obsługuje, nadal jest
+   poprawnym wynikiem.
+4. Na liście presetów sprawdź początkowe zaznaczenie, odczyt nazwy i numeru,
+   strzałki, Enter, Escape, powrót fokusu oraz ponowne otwarcie. Uruchomienie
+   presetu ma przełączyć radio i zaktualizować odtwarzacz bez ujawniania PIN-u,
+   adresu IP ani nazw węzłów FSAPI.

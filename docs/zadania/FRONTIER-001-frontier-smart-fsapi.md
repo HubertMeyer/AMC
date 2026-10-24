@@ -1,9 +1,10 @@
 # FRONTIER-001 — Frontier Smart przez FSAPI
 
-Status: **W trakcie — odbiór potwierdził wykrywanie Teufela, listę wyboru i
-prawidłowy fokus pola PIN. Wyjaśnienie PIN-u NetRemote oraz piąta korekta
-wyboru urządzenia są zainstalowane w AMC Test 23.10.2026, 22:20. Pozostało
-ręczne połączenie kodem fabrycznym `1234` i odbiór dalszej nawigacji NVDA.**
+Status: **W trakcie — rzeczywisty Teufel RADIO 3SIXTY łączy się i pokazuje
+bieżące odtwarzanie. Stabilizacja kolejki głośności jest zainstalowana.
+24.10.2026 odbiór ujawnił brak skrótu do wyboru trybu i blokadę presetów,
+ponieważ AMC nie włączał nawigacji FSAPI przed pobraniem listy. Korekta
+źródłowa jest przygotowywana i wymaga nowej instalacji oraz odbioru NVDA.**
 
 **Korekta nadrzędna z 23.10.2026, późny odbiór:** AMC znalazł Teufel RADIO
 3SIXTY, pokazał listę wyboru i po Enterze prawidłowo skupił pole PIN. To
@@ -618,3 +619,47 @@ atomowo zainstalowana i uruchomiona jako paczka `8bce7f95` w
 `D:\Projekty Codex\AMC Python`; potwierdzone okno ma tytuł
 `AMC Test — 24.10.2026, 13:33`. AMC Public pozostaje bez zmian. Po instalacji
 pozostaje ręczny test szybkiej serii głośności na Teufelu.
+
+## Ósmy odbiór: skrót trybu i przygotowanie presetów — 24.10.2026
+
+Użytkownik ocenił zachowanie Frontier Smart jako stabilniejsze i nie zgłosił
+nowego wyniku regulacji głośności. Potwierdził natomiast dwa niezależne błędy:
+
+- pozycja `Odtwarzanie → Wybierz tryb Frontier Smart…` nie miała skrótu;
+- `Ctrl+Alt+P` kończył się komunikatem
+  `Nie udało się odczytać presetów Frontier Smart: Urządzenie nie udostępniło presetów w bieżącym trybie.`
+
+Log z 13:43:44 potwierdził, że drugi błąd pochodził z operacji
+`frontierSmart.presets`, a nie z listy lub fokusu wxPython. AMC wysyłał od razu
+`LIST_GET_NEXT netRemote.nav.presets`. Protokół FSAPI po zmianie trybu wyłącza
+jednak `netRemote.nav.state`; urządzenie może wtedy zwrócić blokadę węzła mimo
+istniejących presetów. Poprawiony klient najpierw odczytuje stan nawigacji,
+w razie potrzeby ustawia go na `1`, czeka aż `netRemote.nav.status` zgłosi
+gotowość i dopiero pobiera listę. Ten sam warunek poprzedza uruchomienie
+wybranego presetu. Starsze urządzenie bez węzła stanu zachowuje zgodny,
+bezpośredni wariant odczytu.
+
+Polecenie wyboru trybu otrzymuje kontekstowy skrót `Ctrl+Alt+M` w sesji
+Frontier Smart. Ta sama kombinacja ma być widoczna i wykonywać tę samą akcję w
+menu Odtwarzanie, pełnej i kontekstowej pomocy oraz palecie poleceń. Nie jest
+rejestrowana jako niezależny akcelerator menu, dzięki czemu wykonanie nadal
+przechodzi przez wspólny router i jego warunki dostępności.
+
+Automatyczna bramka obejmuje kolejność żądań FSAPI: stan nawigacji, włączenie,
+przejściową odpowiedź `FS_NODE_BLOCKED`, oczekiwanie na gotowość i dopiero
+listę presetów. Test powierzchni poleceń sprawdza wykonanie `Ctrl+Alt+M`, skrót
+w menu, opis w pomocy oraz nazwę i skrót w palecie.
+
+Rzeczywiste wyniki fazy źródłowej:
+
+- ukierunkowane testy wxPython: **106 zaliczonych**;
+- ukierunkowany kontrakt Frontier Smart: **1/1 zestaw zaliczony**;
+- komplet kontraktów LiteHost: **27/27 zestawów zaliczonych**;
+- pełna regresja wxPython: **2032 zaliczone, 111 kontrolowanie pominiętych i
+  13 zaliczonych podtestów**;
+- kompilacja LiteHost Release: **0 ostrzeżeń i 0 błędów**.
+
+Powyższe wyniki dowodzą zmiany źródłowej i budowalności, nie działania na
+prawdziwym Teufelu. Numer commitu, paczki i wynik instalacji należy dopisać po
+ich rzeczywistym wykonaniu. Po instalacji konieczny jest odbiór `Ctrl+Alt+M`,
+`Ctrl+Alt+P`, początkowego fokusu, Escape i uruchomienia presetu z NVDA.

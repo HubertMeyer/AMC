@@ -144,6 +144,8 @@ public sealed class FrontierSmartClient : IDisposable
         string pin,
         CancellationToken cancellationToken = default)
     {
+        await EnsureNavigationReadyAsync(address, pin, cancellationToken)
+            .ConfigureAwait(false);
         var xml = await SendAsync(
                 CreateListUri(address, pin, FrontierSmartNodes.Presets, -1, 100),
                 cancellationToken)
@@ -215,17 +217,21 @@ public sealed class FrontierSmartClient : IDisposable
             cancellationToken);
     }
 
-    public Task ActivatePresetAsync(
+    public async Task ActivatePresetAsync(
         string address,
         string pin,
         uint presetKey,
-        CancellationToken cancellationToken = default) =>
-        SetAsync(
+        CancellationToken cancellationToken = default)
+    {
+        await EnsureNavigationReadyAsync(address, pin, cancellationToken)
+            .ConfigureAwait(false);
+        await SetAsync(
             address,
             pin,
             FrontierSmartNodes.SelectPreset,
             presetKey.ToString(CultureInfo.InvariantCulture),
-            cancellationToken);
+            cancellationToken).ConfigureAwait(false);
+    }
 
     public async Task SetAsync(
         string address,
@@ -342,6 +348,85 @@ public sealed class FrontierSmartClient : IDisposable
             return await GetAsync(address, pin, node, cancellationToken)
                 .ConfigureAwait(false);
         }
+    }
+
+    private async Task EnsureNavigationReadyAsync(
+        string address,
+        string pin,
+        CancellationToken cancellationToken)
+    {
+        var state = await GetAsync(
+                address, pin, FrontierSmartNodes.NavigationState, cancellationToken)
+            .ConfigureAwait(false);
+        if (!state.Success)
+        {
+            // Najstarsze odmiany FSAPI potrafią udostępniać listę presetów bez
+            // osobnego węzła stanu nawigacji. Zachowujemy dla nich dotychczasowy
+            // bezpośredni odczyt listy zamiast blokować zgodne urządzenie.
+            if (state.Status.Equals("FS_NODE_DOES_NOT_EXIST", StringComparison.Ordinal))
+                return;
+            throw new FrontierSmartProtocolException(
+                "Urządzenie nie pozwoliło przygotować listy presetów.", state.Status);
+        }
+
+        var navigationWasEnabled = state.AsInt32() == 1;
+        if (!navigationWasEnabled)
+        {
+            await SetAsync(
+                    address,
+                    pin,
+                    FrontierSmartNodes.NavigationState,
+                    "1",
+                    cancellationToken)
+                .ConfigureAwait(false);
+        }
+
+        // Zmiana trybu wyłącza nawigację FSAPI. Teufel potrzebuje po jej
+        // ponownym włączeniu chwili na przygotowanie list; odczyt wykonany od
+        // razu kończy się FS_NODE_BLOCKED mimo dostępnych presetów.
+        for (var attempt = 0; attempt < 21; attempt++)
+        {
+            var status = await GetAsync(
+                    address, pin, FrontierSmartNodes.NavigationStatus, cancellationToken)
+                .ConfigureAwait(false);
+            if (!status.Success)
+            {
+                if (status.Status.Equals(
+                        "FS_NODE_DOES_NOT_EXIST", StringComparison.Ordinal))
+                {
+                    if (!navigationWasEnabled)
+                    {
+                        await Task.Delay(
+                                TimeSpan.FromMilliseconds(750), cancellationToken)
+                            .ConfigureAwait(false);
+                    }
+                    return;
+                }
+                if (status.Status.Equals(
+                        "FS_NODE_BLOCKED", StringComparison.Ordinal))
+                {
+                    if (attempt < 20)
+                    {
+                        await Task.Delay(
+                                TimeSpan.FromMilliseconds(150), cancellationToken)
+                            .ConfigureAwait(false);
+                        continue;
+                    }
+                    break;
+                }
+                throw new FrontierSmartProtocolException(
+                    "Urządzenie nie przygotowało listy presetów.", status.Status);
+            }
+            if (status.AsInt32() == 1) return;
+            if (attempt < 20)
+            {
+                await Task.Delay(TimeSpan.FromMilliseconds(150), cancellationToken)
+                    .ConfigureAwait(false);
+            }
+        }
+
+        throw new TimeoutException(
+            "Urządzenie zbyt długo przygotowuje listę presetów.");
     }
 
     private static async Task<string> ReadBoundedResponseAsync(

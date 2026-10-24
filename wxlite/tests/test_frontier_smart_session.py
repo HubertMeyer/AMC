@@ -169,6 +169,12 @@ def test_frontier_smart_commands_have_menu_help_palette_and_execution_route() ->
         radio_session=False,
         frontier_smart_session=True,
     ) is Action.SESSION_CONFIGURE_CURRENT
+    assert resolve(
+        Chord("M", ctrl=True, alt=True),
+        player_view=True,
+        radio_session=False,
+        frontier_smart_session=True,
+    ) is Action.FRONTIER_SMART_SELECT_MODE
 
     actions = {
         item.action
@@ -186,6 +192,15 @@ def test_frontier_smart_commands_have_menu_help_palette_and_execution_route() ->
     assert Action.RECORD_TOGGLE not in actions
     assert Action.SELECT_AUDIO_OUTPUT not in actions
 
+    mode_item = next(
+        item
+        for menu in menus_for_session(SessionId.FRONTIER_SMART)
+        for item in menu.items
+        if item.action is Action.FRONTIER_SMART_SELECT_MODE
+    )
+    assert mode_item.shortcut == "Ctrl+Alt+M"
+    assert not mode_item.accelerator
+
     help_entries = describe(
         "Frontier Smart",
         available_actions=set(FRONTIER_SMART_SUPPORTED_ACTIONS),
@@ -193,20 +208,33 @@ def test_frontier_smart_commands_have_menu_help_palette_and_execution_route() ->
     assert dict(help_entries)["Ctrl+F5"] == (
         "Pokaż zapisane urządzenia Frontier Smart i opcjonalnie wyszukaj nowe"
     )
-    assert any(
-        "tryb urządzenia Frontier Smart" in label
-        for _shortcut, label in help_entries
+    assert dict(help_entries)["Ctrl+Alt+M"] == (
+        "Wybierz tryb urządzenia Frontier Smart"
     )
 
-    palette_actions = {
-        entry.action
-        for entry in entries_for_session(
-            SessionId.FRONTIER_SMART,
-            [session.value for session in SessionId],
-        )
-    }
+    palette = entries_for_session(
+        SessionId.FRONTIER_SMART,
+        [session.value for session in SessionId],
+    )
+    palette_actions = {entry.action for entry in palette}
     assert Action.SESSION_CONFIGURE_CURRENT in palette_actions
     assert Action.FRONTIER_SMART_SELECT_MODE in palette_actions
+    mode_entry = next(
+        entry
+        for entry in palette
+        if entry.action is Action.FRONTIER_SMART_SELECT_MODE
+    )
+    assert mode_entry.name == "Wybierz tryb Frontier Smart…"
+    assert mode_entry.shortcut == "Ctrl+Alt+M"
+
+    calls: list[str] = []
+    frame = SimpleNamespace(
+        navigator=SimpleNamespace(active=SessionId.FRONTIER_SMART),
+        announcer=SimpleNamespace(say=lambda _message: None),
+        _show_frontier_smart_modes=lambda: calls.append("mode-picker"),
+    )
+    LiteFrame._dispatch(frame, Action.FRONTIER_SMART_SELECT_MODE)
+    assert calls == ["mode-picker"]
 
 
 def test_frontier_smart_device_dialog_has_explicit_names_and_keyboard_contract() -> None:

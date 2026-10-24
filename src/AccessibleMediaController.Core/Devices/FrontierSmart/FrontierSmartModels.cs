@@ -21,6 +21,8 @@ public static class FrontierSmartNodes
     public const string PlayAlbum = "netRemote.play.info.album";
     public const string PlayDuration = "netRemote.play.info.duration";
     public const string PlayPosition = "netRemote.play.position";
+    public const string NavigationState = "netRemote.nav.state";
+    public const string NavigationStatus = "netRemote.nav.status";
     public const string Presets = "netRemote.nav.presets";
     public const string SelectPreset = "netRemote.nav.action.selectPreset";
 }

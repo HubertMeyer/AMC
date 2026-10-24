@@ -17,6 +17,7 @@ internal static class FrontierSmartContractTests
         DiscoveryUsesAllInterfacesAndSurvivesPartialFailure();
         DiscoveryHonorsTimeoutAndCancellation();
         SnapshotFallsBackWhenDeviceRejectsGetMultiple();
+        PresetsEnableNavigationAndWaitUntilItIsReady();
         XmlParserReadsTypedValuesAndRejectsDtd();
         ListsUseOnlyIntentionalLabels();
         DeviceAndSnapshotResultsDoNotExposeAddressOrRuntimeTypes();
@@ -61,6 +62,29 @@ internal static class FrontierSmartContractTests
             "odmowa GET_MULTIPLE nie uruchomiła pojedynczych GET");
         Check(snapshot.DisplayName == "Radio testowe",
             "fallback pojedynczych GET zgubił nazwę urządzenia");
+    }
+
+    private static void PresetsEnableNavigationAndWaitUntilItIsReady()
+    {
+        var handler = new NavigationRequiredPresetHandler();
+        using var client = new FrontierSmartClient(handler);
+
+        var presets = client.ReadPresetsAsync("192.168.0.132", "1234")
+            .GetAwaiter().GetResult();
+
+        Check(presets.Count == 1 && presets[0].DisplayName == "Trójka",
+            "odczyt po przygotowaniu nawigacji zgubił preset");
+        Check(handler.Paths.SequenceEqual(new[]
+            {
+                "/fsapi/GET/netRemote.nav.state",
+                "/fsapi/SET/netRemote.nav.state",
+                "/fsapi/GET/netRemote.nav.status",
+                "/fsapi/GET/netRemote.nav.status",
+                "/fsapi/LIST_GET_NEXT/netRemote.nav.presets/-1"
+            }),
+            "lista presetów została pobrana przed włączeniem i przygotowaniem nawigacji");
+        Check(handler.NavigationEnableHadValueOne,
+            "włączenie nawigacji nie przekazało wartości 1");
     }
 
     private static void DiscoveryAcceptsLegacyAndUndokServiceTypes()
@@ -393,5 +417,63 @@ internal static class FrontierSmartContractTests
                     $"<fsapiResponse><status>FS_OK</status><value><c8_array>{value}</c8_array></value></fsapiResponse>")
             });
         }
+    }
+
+    private sealed class NavigationRequiredPresetHandler : HttpMessageHandler
+    {
+        private int statusReads;
+
+        public List<string> Paths { get; } = [];
+        public bool NavigationEnableHadValueOne { get; private set; }
+
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken)
+        {
+            var uri = request.RequestUri
+                ?? throw new InvalidOperationException("Żądanie testowe nie ma adresu.");
+            Paths.Add(uri.AbsolutePath);
+            string body;
+            if (uri.AbsolutePath.EndsWith(
+                    "/GET/netRemote.nav.state", StringComparison.Ordinal))
+            {
+                body = Value("0");
+            }
+            else if (uri.AbsolutePath.EndsWith(
+                         "/SET/netRemote.nav.state", StringComparison.Ordinal))
+            {
+                NavigationEnableHadValueOne = uri.Query.Contains(
+                    "value=1", StringComparison.Ordinal);
+                body = Status();
+            }
+            else if (uri.AbsolutePath.EndsWith(
+                         "/GET/netRemote.nav.status", StringComparison.Ordinal))
+            {
+                statusReads++;
+                body = statusReads >= 2
+                    ? Value("1")
+                    : "<fsapiResponse><status>FS_NODE_BLOCKED</status></fsapiResponse>";
+            }
+            else if (uri.AbsolutePath.EndsWith(
+                         "/LIST_GET_NEXT/netRemote.nav.presets/-1",
+                         StringComparison.Ordinal))
+            {
+                body = """<fsapiResponse><status>FS_OK</status><item key="0"><field name="name"><c8_array>Trójka</c8_array></field></item></fsapiResponse>""";
+            }
+            else
+            {
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
+            }
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(body)
+            });
+        }
+
+        private static string Value(string value) =>
+            $"<fsapiResponse><status>FS_OK</status><value><u8>{value}</u8></value></fsapiResponse>";
+
+        private static string Status() =>
+            "<fsapiResponse><status>FS_OK</status></fsapiResponse>";
     }
 }

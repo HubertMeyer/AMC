@@ -1490,6 +1490,7 @@ WIIM_SESSION_VIEW: dict[str, Action] = {
 
 FRONTIER_SMART_SESSION_VIEW: dict[str, Action] = {
     "Ctrl+F5": Action.SESSION_CONFIGURE_CURRENT,
+    "Ctrl+Alt+M": Action.FRONTIER_SMART_SELECT_MODE,
 }
 
 

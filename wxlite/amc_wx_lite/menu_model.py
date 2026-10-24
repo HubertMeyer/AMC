@@ -1117,6 +1117,8 @@ def build_menus(
             MenuItem(
                 "Wybierz &tryb Frontier Smart…",
                 Action.FRONTIER_SMART_SELECT_MODE,
+                shortcut="Ctrl+Alt+M",
+                accelerator=False,
                 needs_playback=True,
                 needs_player_view=True,
                 visible_sessions=FRONTIER_SMART_ONLY,
