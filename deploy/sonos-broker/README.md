@@ -4,10 +4,14 @@ Ten katalog uruchamia jedną instancję brokera AMC za Caddy. Caddy obsługuje
 publiczny HTTPS, a broker nie publikuje własnego portu. Rozwiązanie nie korzysta
 z Hermesa i nie przechowuje tokenów użytkowników na dysku.
 
-Samodzielny ZIP do przekazania na serwer, bez źródeł i bez sekretów, buduje
-`scripts/Build-SonosBrokerDeploymentBundle.ps1`. W takim ZIP-ie `Dockerfile`
-korzysta z gotowych plików z katalogu `app`; zwykły plik repozytoryjny buduje
-je bezpośrednio ze źródeł.
+Samodzielny ZIP do przekazania operatorowi, bez sekretów, buduje
+`scripts/Build-SonosBrokerDeploymentBundle.ps1`. Zawiera gotowe pliki
+`linux-x64` w katalogu `app` oraz minimalny snapshot źródeł i testów do
+niezależnej kontroli. W takim ZIP-ie `Dockerfile` korzysta z gotowych plików z
+katalogu `app`; zwykły plik repozytoryjny buduje je bezpośrednio ze źródeł.
+
+Bezkontenerowe wdrożenie jako usługa systemd za Cloudflare Tunnel opisuje
+`SYSTEMD_CLOUDFLARE_HANDOFF.md`.
 
 Przejście z działającej integracji autora opisuje
 `MIGRATION_FROM_LEGACY.md`. Migracja zachowuje stary broker do czasu odbioru

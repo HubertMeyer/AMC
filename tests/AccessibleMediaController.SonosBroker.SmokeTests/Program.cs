@@ -8,6 +8,8 @@ using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 var tests = new (string Name, Func<Task> Run)[]
 {
@@ -28,7 +30,9 @@ var tests = new (string Name, Func<Task> Run)[]
     ("Odmowa odnowienia wymaga ponownego logowania", RefreshInvalidGrantIsNamed),
     ("Endpointy start, odmowa i jednorazowy wynik są zgodne z klientem AMC", EndpointsMatchClientContract),
     ("Nagłówek HTTPS od niezaufanego proxy jest ignorowany", UntrustedProxyCannotClaimHttps),
-    ("Jawnie zaufane proxy może bezpiecznie zakończyć TLS", TrustedProxyCanTerminateTls)
+    ("Jawnie zaufane proxy może bezpiecznie zakończyć TLS", TrustedProxyCanTerminateTls),
+    ("Limiter używa adresu klienta przekazanego przez zaufane proxy", TrustedProxyProvidesRateLimitAddress),
+    ("Tryb Debug i Trace nie włącza logów żądań zawierających poświadczenia", LoggingRulesProtectCredentials)
 };
 
 var failed = new List<string>();
@@ -368,6 +372,83 @@ static async Task TrustedProxyCanTerminateTls()
     using var document = JsonDocument.Parse(await response.Content.ReadAsByteArrayAsync());
     Assert(document.RootElement.GetProperty("status").GetString() == "ready",
         "gotowy broker nie zwrócił stanu ready za zaufanym proxy");
+}
+
+static async Task TrustedProxyProvidesRateLimitAddress()
+{
+    var args = new[]
+    {
+        "--environment", "Production",
+        "--SONOS_BROKER_PUBLIC_ORIGIN", "https://sonos.example.test/",
+        "--SONOS_CLIENT_ID", "client-id",
+        "--SONOS_CLIENT_SECRET", "client-secret",
+        "--SONOS_REDIRECT_URI", "https://sonos.example.test/login/callback",
+        "--SONOS_TRUSTED_PROXIES", "127.0.0.1"
+    };
+    await using var app = SonosBrokerApplication.Build(args);
+    app.Urls.Add("http://127.0.0.1:0");
+    await app.StartAsync();
+    try
+    {
+        var address = app.Services.GetRequiredService<IServer>()
+            .Features.Get<IServerAddressesFeature>()!.Addresses.Single();
+        using var client = new HttpClient { BaseAddress = new Uri(address) };
+        var (_, challenge) = Pkce();
+
+        for (var attempt = 0; attempt < 10; attempt++)
+        {
+            using var response = await SendStart(client, challenge, "198.51.100.10");
+            Assert(response.StatusCode == HttpStatusCode.OK,
+                "zaufany adres klienta przed limitem nie otrzymał 200");
+        }
+
+        using var limited = await SendStart(client, challenge, "198.51.100.10");
+        Assert(limited.StatusCode == HttpStatusCode.TooManyRequests,
+            "jeden klient nie otrzymał własnego limitu 10 prób na minutę");
+
+        using var otherClient = await SendStart(client, challenge, "198.51.100.11");
+        Assert(otherClient.StatusCode == HttpStatusCode.OK,
+            "limit pierwszego klienta został błędnie zastosowany do drugiego adresu");
+    }
+    finally
+    {
+        await app.StopAsync();
+    }
+}
+
+static Task LoggingRulesProtectCredentials()
+{
+    var args = new[]
+    {
+        "--environment", "Development",
+        "--Logging:LogLevel:Default", "Trace"
+    };
+    using var app = SonosBrokerApplication.Build(args);
+    var rules = app.Services.GetRequiredService<IOptions<LoggerFilterOptions>>().Value.Rules;
+    Assert(rules.Any(rule =>
+            string.Equals(rule.CategoryName, "Microsoft.AspNetCore.Hosting.Diagnostics", StringComparison.Ordinal)
+            && rule.LogLevel == LogLevel.None),
+        "globalny Trace ponownie włączył log żądania z query callbacku");
+    Assert(rules.Any(rule =>
+            string.Equals(rule.CategoryName, "System.Net.Http.HttpClient.sonos-oauth", StringComparison.Ordinal)
+            && rule.LogLevel == LogLevel.Warning),
+        "globalny Trace ponownie włączył diagnostykę klienta OAuth");
+    return Task.CompletedTask;
+}
+
+static Task<HttpResponseMessage> SendStart(HttpClient client, string challenge, string clientAddress)
+{
+    var request = new HttpRequestMessage(HttpMethod.Post, "/login/start")
+    {
+        Content = JsonContent.Create(new
+        {
+            code_challenge = challenge,
+            code_challenge_method = "S256"
+        })
+    };
+    request.Headers.TryAddWithoutValidation("X-Forwarded-For", clientAddress);
+    request.Headers.TryAddWithoutValidation("X-Forwarded-Proto", "https");
+    return client.SendAsync(request);
 }
 
 static async Task<HttpResponseMessage> ProductionHealthRequest(bool trustedProxy)

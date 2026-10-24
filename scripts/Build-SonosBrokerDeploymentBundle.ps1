@@ -1,6 +1,8 @@
 [CmdletBinding()]
 param(
     [string]$OutputRoot,
+    [ValidatePattern('^[a-z0-9]+-[a-z0-9]+$')]
+    [string]$RuntimeIdentifier = 'linux-x64',
     [switch]$KeepSymbols
 )
 
@@ -9,6 +11,7 @@ $ErrorActionPreference = 'Stop'
 $scriptDirectory = Split-Path -Parent $PSCommandPath
 $repositoryRoot = [System.IO.Path]::GetFullPath((Join-Path $scriptDirectory '..'))
 $projectPath = Join-Path $repositoryRoot 'src\AccessibleMediaController.SonosBroker\AccessibleMediaController.SonosBroker.csproj'
+$testProjectPath = Join-Path $repositoryRoot 'tests\AccessibleMediaController.SonosBroker.SmokeTests\AccessibleMediaController.SonosBroker.SmokeTests.csproj'
 $propsPath = Join-Path $repositoryRoot 'Directory.Build.props'
 $deploymentSource = Join-Path $repositoryRoot 'deploy\sonos-broker'
 
@@ -19,13 +22,15 @@ $OutputRoot = [System.IO.Path]::GetFullPath($OutputRoot)
 
 foreach ($required in @(
     $projectPath,
+    $testProjectPath,
     $propsPath,
     (Join-Path $deploymentSource 'compose.yaml'),
     (Join-Path $deploymentSource 'Caddyfile'),
     (Join-Path $deploymentSource 'Dockerfile.runtime'),
     (Join-Path $deploymentSource '.env.example'),
     (Join-Path $deploymentSource 'README.md'),
-    (Join-Path $deploymentSource 'MIGRATION_FROM_LEGACY.md')
+    (Join-Path $deploymentSource 'MIGRATION_FROM_LEGACY.md'),
+    (Join-Path $deploymentSource 'SYSTEMD_CLOUDFLARE_HANDOFF.md')
 )) {
     if (-not (Test-Path -LiteralPath $required -PathType Leaf)) {
         throw "Brakuje pliku wdrożenia: $required"
@@ -64,10 +69,26 @@ New-Item -ItemType Directory -Path $stagePath | Out-Null
 $applicationPath = Join-Path $stagePath 'app'
 New-Item -ItemType Directory -Path $applicationPath | Out-Null
 
+& dotnet restore $testProjectPath
+if ($LASTEXITCODE -ne 0) {
+    throw "Odtworzenie zależności testów brokera Sonos nie powiodło się. Katalog diagnostyczny pozostawiono: $stagePath"
+}
+
+& dotnet run --project $testProjectPath --configuration Release --no-restore
+if ($LASTEXITCODE -ne 0) {
+    throw "Testy brokera Sonos nie powiodły się. Katalog diagnostyczny pozostawiono: $stagePath"
+}
+
+& dotnet restore $projectPath --runtime $RuntimeIdentifier
+if ($LASTEXITCODE -ne 0) {
+    throw "Odtworzenie zależności publikacji brokera Sonos nie powiodło się. Katalog diagnostyczny pozostawiono: $stagePath"
+}
+
 & dotnet publish $projectPath `
     --configuration Release `
+    --runtime $RuntimeIdentifier `
     --no-restore `
-    --no-self-contained `
+    --self-contained false `
     --output $applicationPath `
     -p:UseAppHost=false
 if ($LASTEXITCODE -ne 0) {
@@ -85,6 +106,27 @@ Copy-Item -LiteralPath (Join-Path $deploymentSource '.env.example') -Destination
 Copy-Item -LiteralPath (Join-Path $deploymentSource 'README.md') -Destination $stagePath
 Copy-Item -LiteralPath (Join-Path $deploymentSource 'MIGRATION_FROM_LEGACY.md') `
     -Destination $stagePath
+Copy-Item -LiteralPath (Join-Path $deploymentSource 'SYSTEMD_CLOUDFLARE_HANDOFF.md') `
+    -Destination $stagePath
+
+$sourceRoot = Join-Path $stagePath 'source'
+$sourceFiles = @(& git -C $repositoryRoot ls-files -- `
+    'Directory.Build.props' `
+    'src/AccessibleMediaController.SonosBroker' `
+    'tests/AccessibleMediaController.SonosBroker.SmokeTests')
+if ($LASTEXITCODE -ne 0 -or $sourceFiles.Count -eq 0) {
+    throw 'Nie odczytano minimalnego zestawu źródeł brokera i testów.'
+}
+foreach ($relativePath in $sourceFiles) {
+    $sourceFile = Join-Path $repositoryRoot $relativePath
+    if (-not (Test-Path -LiteralPath $sourceFile -PathType Leaf)) {
+        throw "Brakuje śledzonego pliku źródłowego: $relativePath"
+    }
+
+    $destination = Join-Path $sourceRoot $relativePath
+    New-Item -ItemType Directory -Path (Split-Path -Parent $destination) -Force | Out-Null
+    Copy-Item -LiteralPath $sourceFile -Destination $destination
+}
 
 $composeText = Get-Content -Raw -LiteralPath (Join-Path $deploymentSource 'compose.yaml')
 $composeText = $composeText.Replace('context: ../..', 'context: .')
@@ -129,8 +171,12 @@ $manifest = [ordered]@{
     sourceCommit = $commit
     workingTreeClean = $workingTreeClean
     targetFramework = 'net8.0'
+    runtimeIdentifier = $RuntimeIdentifier
     selfContained = $false
     includesSecrets = $false
+    includesSource = $true
+    smokeTestCommand = 'dotnet run --project source/tests/AccessibleMediaController.SonosBroker.SmokeTests/AccessibleMediaController.SonosBroker.SmokeTests.csproj --configuration Release'
+    expectedSmokeTests = 20
     createdUtc = [DateTime]::UtcNow.ToString('O')
     files = @($manifestFiles)
 }
@@ -141,12 +187,19 @@ $manifest = [ordered]@{
 
 Move-Item -LiteralPath $stagePath -Destination $bundlePath
 Compress-Archive -Path (Join-Path $bundlePath '*') -DestinationPath $archivePath -CompressionLevel Optimal
+$archiveSha256 = (Get-FileHash -LiteralPath $archivePath -Algorithm SHA256).Hash.ToLowerInvariant()
+$checksumPath = $archivePath + '.sha256.txt'
+[System.IO.File]::WriteAllText(
+    $checksumPath,
+    "$archiveSha256  $([System.IO.Path]::GetFileName($archivePath))`n",
+    [System.Text.UTF8Encoding]::new($false))
 
 [pscustomobject]@{
     BundlePath = $bundlePath
     ArchivePath = $archivePath
     ArchiveSize = (Get-Item -LiteralPath $archivePath).Length
-    ArchiveSha256 = (Get-FileHash -LiteralPath $archivePath -Algorithm SHA256).Hash.ToLowerInvariant()
+    ArchiveSha256 = $archiveSha256
+    ChecksumPath = $checksumPath
     SourceCommit = $commit
     WorkingTreeClean = $workingTreeClean
 }

@@ -69,14 +69,15 @@ i lokalnego portu HTTP wyłącznie w środowisku `Development`.
 Na komputerze deweloperskim pakiet bez sekretów przygotowuje polecenie:
 
 ```powershell
-pwsh -File scripts/Build-SonosBrokerBundle.ps1
+pwsh -File scripts/Build-SonosBrokerDeploymentBundle.ps1
 ```
 
-Skrypt publikuje framework-dependent aplikację `net8.0`, tworzy manifest
-każdego pliku z rozmiarem i SHA-256, a następnie zapisuje katalog oraz ZIP pod
-`.test-output\sonos-broker`. Nazwa zawiera wersję i commit źródeł. Jeżeli
-śledzone pliki repozytorium są zmienione, pakiet otrzymuje oznaczenie `dirty`
-i nie powinien być wdrażany produkcyjnie.
+Skrypt publikuje domyślnie framework-dependent aplikację `net8.0` dla
+`linux-x64`, dołącza minimalny snapshot źródeł i testów, tworzy manifest
+każdego pliku z rozmiarem i SHA-256 oraz osobny plik sumy ZIP-a. Katalog i ZIP
+trafiają pod `.test-output\sonos-deployment`. Nazwa zawiera wersję i commit
+źródeł. Jeżeli śledzone pliki repozytorium są zmienione, pakiet otrzymuje
+oznaczenie `dirty` i nie powinien być wdrażany produkcyjnie.
 
 ZIP nie zawiera konfiguracji ani sekretów. Na serwerze nadal trzeba zapewnić
 .NET 8 ASP.NET Core Runtime, pojedynczą instancję procesu, cztery wymagane

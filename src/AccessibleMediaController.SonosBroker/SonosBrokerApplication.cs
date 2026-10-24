@@ -16,7 +16,11 @@ internal static class SonosBrokerApplication
         // Standardowy log żądania ASP.NET zawiera cały query string. Callback
         // Sonosa niesie w nim krótkotrwały kod autoryzacyjny i state, dlatego
         // nie wolno emitować tych wpisów nawet przy zwykłym poziomie Info.
-        builder.Logging.AddFilter("Microsoft.AspNetCore.Hosting.Diagnostics", LogLevel.Warning);
+        builder.Logging.AddFilter("Microsoft.AspNetCore.Hosting.Diagnostics", LogLevel.None);
+        // Klient OAuth wysyła kod, refresh token i nagłówek Basic w żądaniu POST.
+        // Nawet po globalnym włączeniu Debug/Trace nie emitujemy diagnostyki
+        // żądań HttpClient dla tego nazwanego klienta.
+        builder.Logging.AddFilter("System.Net.Http.HttpClient.sonos-oauth", LogLevel.Warning);
 
         var configuration = SonosBrokerOptions.Load(builder.Configuration);
         var sessionOptions = configuration.Options;
