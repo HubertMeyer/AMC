@@ -271,5 +271,15 @@ Nagranie zaplanowane lub wykonane przez AMC jest osobnym bytem: jego plik i
 historia nagrań pozostają dostępne niezależnie od późniejszego zniknięcia
 pozycji z YouTube. Harmonogram przechowuje stabilny adres `/live` kanału i przy
 starcie rozwiązuje aktualną transmisję, więc nie zależy od wygasającego adresu
-konkretnego filmu. Ewentualna nowa funkcja `Historia zauważonych transmisji`
-wymaga osobnej decyzji; nie należy mylić jej ze zwykłą listą filmów kanału.
+konkretnego filmu.
+
+### Decyzja: bez osobnej historii transmisji — 24.10.2026
+
+Użytkownik zdecydował, że nie należy wdrażać osobnej funkcji `Historia
+zauważonych transmisji`. Ta decyzja zastępuje powyższą możliwość pozostawioną
+do rozważenia. Jeśli zakończony materiał nadal istnieje publicznie, można go
+odnaleźć przez wyszukiwanie albo zwykłą listę kanału udostępnianą przez
+YouTube. Jeśli AMC wykonało nagranie, pozostaje ono w historii nagrań.
+`Ctrl+Shift+I` nadal ma być małym, bieżącym widokiem transmisji trwających i
+zaplanowanych, bez lokalnego archiwizowania znalezionych pozycji i bez nowego
+polecenia, skrótu, menu ani widoku.
