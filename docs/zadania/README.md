@@ -255,16 +255,19 @@ zmian, wymagający korekty użytkownika:
   `D:\Projekty Codex\Accessible Multimedia Controller\AMC12_PROFILE_WYDANIA_PUBLICZNEGO_I_TESTOWEGO_2026-10-18.md`.
 - `AMC10` — **W trakcie odbioru użytkownika; publiczny broker działa pod
   `https://sonos.stareaudycje.pl/`, callback jest zapisany w portalu Sonos, a
-  paczka AMC Test `a537c97b` została zbudowana, atomowo zainstalowana i
+  paczka AMC Test `0423232e` z commita `8f42e319` została zbudowana, atomowo zainstalowana i
   uruchomiona z `D:\Projekty Codex\AMC Python`. Rozłączona sesja ma jeden
   wiersz logowania, Enter otwiera konto z jednym polem informacji, a
   `Rozpocznij logowanie` automatycznie otwiera oficjalną stronę i zamyka modal.
+  Ponowne otwarcie konta zachowuje w pamięci pierwotny adres tej samej próby i
+  udostępnia „Otwórz stronę ponownie” oraz „Kopiuj adres logowania”.
   Po powrocie główne okno pozostaje dostępne, a jeden wiersz `Sprawdź logowanie
   do Sonos` prowadzi do następnego kroku. `Ctrl+Alt+Shift+R` zatrzymuje
   nagrania globalnie także z Sonosa i pozostałych sesji. Pierwsza wcześniejsza
   próba dotarła do oficjalnego wyboru
-  gospodarstwa domowego, lecz Sonos zwrócił błąd przed callbackiem. Pozostają
-  ponowna próba na koncie przypisanym do systemu, udane logowanie, odmowa,
+  gospodarstwa domowego, lecz Sonos zwrócił błąd przed callbackiem. Próba w
+  oknie prywatnym wymaga powtórzenia z poprawnie skopiowanego adresu startowego.
+  Pozostają ponowna próba na koncie przypisanym do systemu, udane logowanie, odmowa,
   odnowienie, sprzęt i NVDA. GitHub i AMC Public pozostają bez zmian** — działające
   sterowanie Sonosem i WiiM jest już przepisane i
   nie wymaga ponownej implementacji. `Ctrl+F5` wybiera dom i grupę, a przy braku

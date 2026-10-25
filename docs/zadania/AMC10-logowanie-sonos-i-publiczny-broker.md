@@ -222,15 +222,17 @@ oficjalnej stronie Sonosa.
 
 Przyciski okna zależą od stanu. Przed rozpoczęciem dostępne są „Rozpocznij
 logowanie” i „Zamknij”. Po przygotowaniu adresu dostępne są „Otwórz stronę
-logowania”, „Kopiuj adres logowania”, „Sprawdź logowanie”, „Anuluj logowanie” i
-„Zamknij”, a początkowy fokus trafia na otwarcie strony. „Wyloguj konto” i
+ponownie”, „Kopiuj adres logowania”, „Sprawdź logowanie”, „Anuluj logowanie” i
+„Zamknij”, a po ponownym otwarciu fokus trafia na „Sprawdź logowanie”. „Wyloguj konto” i
 „Głośniki i grupy Sonos” pojawiają się dopiero po połączeniu konta.
 
 „Rozpocznij logowanie” przygotowuje adres, automatycznie otwiera oficjalną
 stronę Sonosa w domyślnej przeglądarce i zamyka modal konta. Po ukończeniu
 logowania użytkownik wraca do aktywnego okna AMC i wybiera w sesji „Sprawdź
 logowanie do Sonos”. Ponowne otwarcie strony i skopiowanie adresu są dostępne
-awaryjnie po wejściu do oczekującego logowania. `Ctrl+F5` nadal oznacza
+awaryjnie po wejściu do oczekującego logowania. Adres pozostaje dostępny tylko
+w pamięci bieżącego procesu i znika po anulowaniu, powodzeniu albo zakończeniu
+AMC. `Ctrl+F5` nadal oznacza
 „Głośniki i grupy Sonos”. Gdy konto jest połączone, otwiera wybór domu i grupy;
 gdy konto nie jest gotowe, prowadzi do okna konta zamiast kończyć się niejasnym
 błędem.
@@ -456,6 +458,20 @@ Kontrakt sprawdzono 2026-10-19 z aktualną oficjalną dokumentacją Sonosa:
 - `docs/zadania/README.md`
 
 ## Testy i wynik
+
+- 2026-10-25: poprawka ponownego udostępniania adresu oczekującej sesji
+  zaliczyła **38/38** testów koordynatora konta Sonos, **1/1** zestaw kontraktu
+  protokołu i **8/8** testów okna konta wxPython. Ukierunkowane kompilacje Core,
+  ProtocolTests i właściwego LiteHosta zakończyły się z 0 ostrzeżeń i 0 błędów.
+- Pełna bramka paczki `8f42e319` zaliczyła **30/30** testów launchera i
+  aktualizatora, obie kompilacje .NET z 0 ostrzeżeń i 0 błędów oraz regresję
+  interfejsu: **2042 zaliczone**, 111 pominiętych i 13 podtestów zaliczonych.
+  Kandydat przeszedł integralność i kontrolowany start. Po atomowej instalacji
+  pierwsza kontrola stałego katalogu zostawiła osierocony launcher
+  diagnostyczny `AMC.exe`; bramka nie ogłosiła sukcesu. Po zakończeniu wyłącznie
+  tego procesu identyczna kontrola z `D:\Projekty Codex\AMC Python` przeszła,
+  a zwykły start potwierdził dokładnie jedno odpowiadające okno, jeden launcher
+  i jeden LiteHost z katalogu instalacji.
 
 - 2026-10-24: bazowy broker zaliczył 18/18 testów. Dodano kontrolę, że
   zaufany `X-Forwarded-For` rozdziela limity dwóch klientów, oraz kontrolę
@@ -778,13 +794,15 @@ niezależnie od bieżącej sesji.
 - Użytkownik wykonał wstępny odbiór NVDA starszego układu: pola instrukcji i
   stanu były czytelne, a nadmiarowe przyciski oraz niewłaściwy fokus zostały
   wykryte. Nowsza korekta zamykania modala i pojedynczego pola jest już
-  zainstalowana w paczce `a537c97b`, lecz jej ręczny odbiór NVDA pozostaje do
+  zainstalowana w paczce `0423232e`, lecz jej ręczny odbiór NVDA pozostaje do
   wykonania. Udane logowanie, odmowa i odnowienie nadal wymagają obecności
   użytkownika.
 - Prawdziwe rozpoczęcie logowania i otwarcie oficjalnej strony wykonano
   świadomie. Próba zakończyła się po „Kontynuuj” w wyborze gospodarstwa
   domowego Sonos, przed callbackiem. Odczytu grup i polecenia do głośnika nie
-  wykonano.
+  wykonano. Próba w oknie prywatnym nie była miarodajna, ponieważ użyła adresu
+  skopiowanego z już otwartej strony Sonosa. Należy ją powtórzyć od oryginalnego
+  adresu udostępnionego przez poprawioną paczkę AMC Test.
 - Nie potwierdzono regresji pozostawiającej fałszywe aktywne nagranie. Bramka
   instalacji widziała równoległe, rzeczywiste nagrania, których nie obejmowała
   początkowa kontrola samych plików harmonogramowych. Kolejne bramki muszą więc
@@ -845,8 +863,16 @@ migracji.
   wyjaśnia teraz, że AMC go nie używa i że nie blokuje on nowego logowania.
 - Weryfikacja źródłowa poprawki: koordynator konta Sonos **38/38**, kontrakt
   protokołu Sonos **1/1**, okno konta wxPython **8/8**; obie ukierunkowane
-  kompilacje .NET zakończone z 0 ostrzeżeń i 0 błędów. Instalacja i ręczna próba
-  prywatna są osobnymi, jeszcze niewykonanymi etapami.
+  kompilacje .NET zakończone z 0 ostrzeżeń i 0 błędów. Ręczna próba prywatna
+  pozostaje osobnym, jeszcze niewykonanym etapem.
+- Poprawka jest w lokalnym commicie `8f42e319453164779a0ff2c3ab574998f4694a76`
+  — `fix(amc10): zachowaj adres logowania Sonos`. Zbudowano, atomowo
+  zainstalowano i uruchomiono paczkę AMC Test
+  `2026.10.25-8f42e319453164779a0ff2c3ab574998f4694a76-0423232e`.
+  Manifest ma `sourceDirty=false`, identyfikator zawartości `0423232e` i 1672
+  pliki. O 21:06 potwierdzono launcher, LiteHost i dokładnie jedno odpowiadające
+  okno `AMC Test — 25.10.2026, 21:04`, wszystkie wyłącznie z
+  `D:\Projekty Codex\AMC Python`. AMC Public i GitHub pozostają bez zmian.
 
 - Podpowiedź dla oczekującego logowania oraz zapis porównania z archiwalnym AMC:
   commit `af731db1` — `fix(amc10): wyjasnij oczekujace logowanie Sonos`.
