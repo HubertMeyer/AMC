@@ -89,7 +89,7 @@ public static class SonosAccountMessages
             [SonosAccountIssue.InvalidStoredRecord] =
                 "Zapisane logowanie Sonos jest nieczytelne lub w nieobsługiwanym formacie; nie zostało usunięte.",
             [SonosAccountIssue.BrokerMismatch] =
-                "Zapisane logowanie Sonos należy do innego serwera logowania; nie zostało usunięte.",
+                "Zachowano poprzednie logowanie powiązane ze starym serwerem. AMC go nie używa i nie blokuje ono nowego logowania.",
             [SonosAccountIssue.WriteFailure] =
                 "Nowe logowanie Sonos działa, ale nie udało się go zapisać. Możesz ponowić sam zapis.",
             [SonosAccountIssue.InvalidRecord] =

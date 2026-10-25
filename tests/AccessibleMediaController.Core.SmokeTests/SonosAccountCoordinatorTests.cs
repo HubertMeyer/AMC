@@ -55,6 +55,7 @@ internal static class SonosAccountCoordinatorTests
             ("Samo rozpoczecie i anulowanie logowania nie porzuca odnowienia konta",
                 TestLogowanieNiePorzucaOdnowienia),
             ("Odnowienie nie ukrywa niezakończonej próby logowania", SonosAccountCoordinatorStateTests.RefreshPreservesPendingLogin),
+            ("Ponowne otwarcie konta zachowuje adres oczekującego logowania", SonosAccountCoordinatorStateTests.PendingLoginAddressSurvivesReopen),
             ("Przejściowy błąd odbioru można ponowić bez nowego logowania", SonosAccountCoordinatorStateTests.TemporaryFetchFailureCanBeRetried),
             ("Origin koordynatora jest zgodny z konfiguracją klienta i magazynu", SonosAccountCoordinatorStateTests.BrokerOriginMatchesAcceptedConfiguration),
             ("Odczyt obcego brokera nie zmienia magazynu", SonosAccountCoordinatorStateTests.RestoreBrokerMismatchDoesNotMutateStore),

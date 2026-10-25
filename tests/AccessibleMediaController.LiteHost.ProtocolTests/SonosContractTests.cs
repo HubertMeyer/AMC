@@ -10,6 +10,7 @@ internal static class SonosContractTests
     public static void Run()
     {
         AccountStatusUsesOnlyExplicitUserFacingFields();
+        PendingAccountStatusReturnsOnlyATrustedAuthorizeUrl();
         MissingPublicLoginServiceIsExplicitAndCannotStartLogin();
         PendingLoginExplainsTheHouseholdAccountMismatch();
         TargetLabelsNeverUseTechnicalIdentifiers();
@@ -70,6 +71,76 @@ internal static class SonosContractTests
               && !json.Contains("broker", StringComparison.OrdinalIgnoreCase)
               && !json.Contains("SonosAccountState", StringComparison.Ordinal),
             "stan konta ujawnił token, brokera albo nazwę typu");
+    }
+
+    private static void PendingAccountStatusReturnsOnlyATrustedAuthorizeUrl()
+    {
+        var gateway = new PendingGateway();
+        using var coordinator = new SonosAccountCoordinator(
+            gateway,
+            new EmptyStore(),
+            "https://broker-testowy.invalid/");
+        coordinator.RestoreOnce();
+        var started = coordinator.BeginLoginAsync(default).GetAwaiter().GetResult();
+        var snapshot = coordinator.ReadLoginStatus(out var address);
+
+        using var trustedPayload = JsonDocument.Parse(JsonSerializer.Serialize(
+            LiteSonosContract.CreateAccountStatusResult(snapshot, address)));
+        Check(trustedPayload.RootElement.GetProperty("awaitingBrowser").GetBoolean()
+              && trustedPayload.RootElement.GetProperty("authorizeUrl").GetString()
+                 == started.AuthorizeUri?.AbsoluteUri,
+            "ponowne otwarcie konta zgubiło bezpieczny adres oczekującego logowania");
+
+        using var untrustedPayload = JsonDocument.Parse(JsonSerializer.Serialize(
+            LiteSonosContract.CreateAccountStatusResult(
+                snapshot, new Uri("https://example.invalid/phishing"))));
+        Check(untrustedPayload.RootElement.GetProperty("authorizeUrl").ValueKind
+              == JsonValueKind.Null,
+            "stan konta ujawnił adres spoza zaufanej domeny Sonos");
+    }
+
+    private sealed class PendingGateway : ISonosLoginGateway
+    {
+        public Task<SonosLoginStartOutcome> StartAsync(CancellationToken cancellationToken)
+        {
+            const string body = "{\"session_id\":\"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"authorize_url\":\"https://api.sonos.com/login/v3/oauth?client_id=synthetic&response_type=code\",\"expires_in\":600}";
+            SonosLoginBrokerConfiguration.TryCreate(
+                "https://broker-testowy.invalid/", out var configuration);
+            using var client = new SonosLoginClient(
+                configuration!,
+                new StaticHandler(body));
+            return client.StartAsync(cancellationToken);
+        }
+
+        public Task<SonosLoginResultOutcome> FetchResultAsync(
+            SonosLoginSession session, CancellationToken cancellationToken) =>
+            throw new NotSupportedException("Ten test nie odbiera wyniku logowania.");
+
+        public Task<SonosRefreshOutcome> RefreshAsync(
+            string? refreshToken, CancellationToken cancellationToken) =>
+            throw new NotSupportedException("Ten test nie odnawia tokenu.");
+    }
+
+    private sealed class StaticHandler(string body) : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request, CancellationToken cancellationToken) =>
+            Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.OK)
+            {
+                RequestMessage = request,
+                Content = new StringContent(body, System.Text.Encoding.UTF8, "application/json")
+            });
+    }
+
+    private sealed class EmptyStore : ISonosCredentialStore
+    {
+        public SonosCredentialReadOutcome Read() =>
+            SonosCredentialReadOutcome.Failure(SonosCredentialReadStatus.Missing);
+
+        public SonosCredentialWriteOutcome Write(SonosStoredCredentials credentials) =>
+            SonosCredentialWriteOutcome.Failure(SonosCredentialWriteStatus.WriteFailure);
+
+        public bool Delete() => true;
     }
 
     private static void LibraryAndMaterialLabelsNeverExposeIds()

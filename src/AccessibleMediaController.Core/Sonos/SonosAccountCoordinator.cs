@@ -142,6 +142,23 @@ public sealed partial class SonosAccountCoordinator : IDisposable
         }
     }
 
+    /// <summary>
+    /// Zwraca bezpieczną migawkę oraz adres oficjalnej strony Sonos należący
+    /// wyłącznie do aktualnie oczekującej próby. Odczyt obu wartości odbywa się
+    /// pod tą samą blokadą, aby interfejs nie połączył adresu starej próby ze
+    /// stanem nowszej. Adres pozostaje tylko w pamięci procesu.
+    /// </summary>
+    public SonosAccountSnapshot ReadLoginStatus(out Uri? pendingAuthorizeUri)
+    {
+        lock (gate)
+        {
+            pendingAuthorizeUri = awaitingBrowser
+                ? pendingSession?.AuthorizeUri
+                : null;
+            return CreateSnapshot();
+        }
+    }
+
     // ================= 1. odtworzenie z magazynu =================
 
     /// <summary>

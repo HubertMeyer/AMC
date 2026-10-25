@@ -828,6 +828,26 @@ migracji.
 
 ## Wersja i commit
 
+- Korekta diagnostyczna z 25.10.2026: użytkownik nie pominął przycisku.
+  Po automatycznym przekazaniu logowania do przeglądarki AMC zamykał modal,
+  lecz ponowny `sonos.accountStatus` zwracał tylko stan oczekiwania, bez
+  zapamiętanego w procesie adresu tej samej próby. Dlatego przy ponownym
+  otwarciu konta znikały „Otwórz stronę ponownie” i „Kopiuj adres logowania”.
+  Skopiowanie adresu z już otwartej strony Sonosa nie stanowi czystej próby w
+  oknie prywatnym, ponieważ mógł to być adres pośredni zależny od sesji
+  przeglądarki. Ta korekta zastępuje wcześniejsze uznanie próby prywatnej za
+  miarodajne powtórzenie błędu.
+- Poprawka utrzymuje pierwotny, zweryfikowany adres autoryzacji wyłącznie w
+  pamięci bieżącego procesu i zwraca go razem z atomowo odczytaną migawką tylko
+  wtedy, gdy ta sama próba nadal oczekuje. Anulowanie, sukces albo stan
+  końcowy usuwają adres. Protokół ponownie sprawdza host i ścieżkę Sonosa przed
+  przekazaniem adresu do wxPython. Zmieniono również opis starego zapisu:
+  wyjaśnia teraz, że AMC go nie używa i że nie blokuje on nowego logowania.
+- Weryfikacja źródłowa poprawki: koordynator konta Sonos **38/38**, kontrakt
+  protokołu Sonos **1/1**, okno konta wxPython **8/8**; obie ukierunkowane
+  kompilacje .NET zakończone z 0 ostrzeżeń i 0 błędów. Instalacja i ręczna próba
+  prywatna są osobnymi, jeszcze niewykonanymi etapami.
+
 - Podpowiedź dla oczekującego logowania oraz zapis porównania z archiwalnym AMC:
   commit `af731db1` — `fix(amc10): wyjasnij oczekujace logowanie Sonos`.
   Ukierunkowane testy: 36/36 klienta logowania Sonos oraz 1/1 zestaw protokołu

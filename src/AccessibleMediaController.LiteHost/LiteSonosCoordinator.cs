@@ -9,7 +9,7 @@ namespace AccessibleMediaController.LiteHost;
 
 internal interface ILiteSonosAccountBackend
 {
-    SonosAccountSnapshot ReadAccountSnapshot();
+    SonosAccountSnapshot ReadAccountSnapshot(out Uri? pendingAuthorizeUri);
 
     Task<SonosAccountLoginStartResult> BeginLoginAsync(
         CancellationToken cancellationToken);
@@ -54,11 +54,16 @@ internal sealed class LiteSonosCoordinator(
         lock (gate) return ReadTargets();
     }
 
-    public object AccountStatus() =>
-        loginBrokerAvailable
-            ? LiteSonosContract.CreateAccountStatusResult(
-                RequireAccountBackend().ReadAccountSnapshot())
-            : LiteSonosContract.CreateBrokerUnavailableResult();
+    public object AccountStatus()
+    {
+        if (!loginBrokerAvailable)
+            return LiteSonosContract.CreateBrokerUnavailableResult();
+
+        var snapshot = RequireAccountBackend()
+            .ReadAccountSnapshot(out var pendingAuthorizeUri);
+        return LiteSonosContract.CreateAccountStatusResult(
+            snapshot, pendingAuthorizeUri);
+    }
 
     public object BeginAccountLogin() =>
         loginBrokerAvailable

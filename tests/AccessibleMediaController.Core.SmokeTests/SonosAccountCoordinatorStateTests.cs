@@ -41,6 +41,24 @@ internal static class SonosAccountCoordinatorStateTests
         Assert(done.Connected && !c.Snapshot.IsAwaitingBrowser, "Kontrola: nadal można zakończyć tę samą próbę logowania.");
     }
 
+    public static void PendingLoginAddressSurvivesReopen()
+    {
+        var g = new Gateway(); var s = new Store(); using var c = Coordinator(g, s);
+        c.RestoreOnce();
+        var started = Wait(c.BeginLoginAsync(default));
+        var reopened = c.ReadLoginStatus(out var pendingAddress);
+
+        Assert(started.Started && started.AuthorizeUri is not null,
+            "Kontrola: rozpoczęcie zwraca oficjalny adres logowania.");
+        Assert(reopened.IsAwaitingBrowser && pendingAddress == started.AuthorizeUri,
+            "Ponowne otwarcie konta musi zwrócić adres tej samej oczekującej próby.");
+
+        c.CancelPendingLogin();
+        var canceled = c.ReadLoginStatus(out var addressAfterCancel);
+        Assert(!canceled.IsAwaitingBrowser && addressAfterCancel is null,
+            "Po anulowaniu adres oczekującej próby nie może pozostać dostępny.");
+    }
+
     public static void TemporaryFetchFailureCanBeRetried()
     {
         var g = new Gateway(); var s = new Store(); using var c = Coordinator(g, s);

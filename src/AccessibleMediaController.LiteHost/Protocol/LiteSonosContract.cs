@@ -34,8 +34,16 @@ public static class LiteSonosContract
     public const string PlaceOwnStreamsOperation = "sonos.ownStreamPlace";
     public const string ExportOwnStreamsOperation = "sonos.ownStreamExport";
 
-    public static object CreateAccountStatusResult(SonosAccountSnapshot snapshot) =>
-        CreateAccountActionResult(snapshot, DescribeAccountSnapshot(snapshot));
+    public static object CreateAccountStatusResult(
+        SonosAccountSnapshot snapshot,
+        Uri? pendingAuthorizeUri = null)
+    {
+        var authorizeUrl = snapshot.IsAwaitingBrowser
+            ? TrustedAuthorizeUrl(pendingAuthorizeUri)
+            : null;
+        return CreateAccountActionResult(
+            snapshot, DescribeAccountSnapshot(snapshot), authorizeUrl);
+    }
 
     public static object CreateBrokerUnavailableResult() => new
     {
@@ -54,10 +62,7 @@ public static class LiteSonosContract
         SonosAccountLoginStartResult result)
     {
         var authorizeUrl = result.Started
-            && result.AuthorizeUri is not null
-            && SonosAuthorizeUrlPolicy.IsTrustedAuthorizeUrl(
-                result.AuthorizeUri.AbsoluteUri)
-            ? result.AuthorizeUri.AbsoluteUri
+            ? TrustedAuthorizeUrl(result.AuthorizeUri)
             : null;
         var message = authorizeUrl is not null
             ? "Adres logowania Sonos jest gotowy. Otwórz go i zaloguj się, a potem wybierz Sprawdź logowanie."
@@ -139,6 +144,12 @@ public static class LiteSonosContract
             parts.Add("Konto działa, ale nie zostało zapisane. Możesz ponowić sam zapis.");
         return string.Join(" ", parts.Where(part => !string.IsNullOrWhiteSpace(part)));
     }
+
+    private static string? TrustedAuthorizeUrl(Uri? authorizeUri) =>
+        authorizeUri is not null
+        && SonosAuthorizeUrlPolicy.IsTrustedAuthorizeUrl(authorizeUri.AbsoluteUri)
+            ? authorizeUri.AbsoluteUri
+            : null;
 
     public static LiteSonosTargetRequest ReadTarget(JsonElement args) => new(
         LiteArgs.RequireText(args, "householdId").Trim(),

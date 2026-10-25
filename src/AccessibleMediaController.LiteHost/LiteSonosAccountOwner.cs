@@ -35,8 +35,8 @@ internal sealed class LiteSonosAccountOwner :
         }
     }
 
-    public SonosAccountSnapshot ReadAccountSnapshot() =>
-        EnsureCoordinator().Snapshot;
+    public SonosAccountSnapshot ReadAccountSnapshot(out Uri? pendingAuthorizeUri) =>
+        EnsureCoordinator().ReadLoginStatus(out pendingAuthorizeUri);
 
     public Task<SonosAccountLoginStartResult> BeginLoginAsync(
         CancellationToken cancellationToken) =>
