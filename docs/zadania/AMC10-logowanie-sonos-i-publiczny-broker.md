@@ -21,6 +21,19 @@ prawie gotowe. Ten etap nie zmienia adapterów, list, transportu ani WiiM.
 
 ## Korekty użytkownika
 
+- 2026-10-25: użytkownik przekazał dokładny tekst końcowej strony Sonosa:
+  „Oops, there was a problem. There seems to be a problem. Please restart the
+  account linking process from the beginning to try again.” Wyszukiwanie
+  oficjalnej dokumentacji i pomocy Sonosa nie znalazło opisu tego konkretnego
+  komunikatu. Strona pozostaje po stronie Sonosa, przed callbackiem, więc tekst
+  nie pochodzi z AMC ani brokera. Przygotowano bezsekretowy raport po polsku i
+  gotową część angielską dla Sonos Developer Support:
+  `D:\Projekty Codex\AMC - pakiety do weryfikacji\Sonos\2026-10-25\SONOS_OAUTH_BLAD_SELECTHOUSEHOLD_DO_WYSLANIA_2026-10-25.md`,
+  4791 bajtów, SHA-256
+  `93c9521fb6651f0baa62e5edb75c7d2735233b613941dcde136da587903924fa`.
+  Raport prosi operatora wyłącznie o potwierdzenie obecności callbacku bez
+  ujawniania query stringu, kodu, `state`, tokenu ani sekretu.
+
 - 2026-10-25: użytkownik potwierdził, że w zwykłej aplikacji Sonos jest
   zalogowany na właściwe konto i widzi swój system. Ponowna bezsekretowa próba
   `/login/start` potwierdziła zarazem, że publiczny broker używa dokładnie tego
