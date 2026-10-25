@@ -665,6 +665,12 @@ testy uruchomione ponownie z dostępem wyłącznie do `127.0.0.1` zaliczyły 4/4
 Na tym etapie są to dowody kodu i testów; nowa paczka, instalacja oraz ręczny
 odbiór NVDA są zapisywane osobno po rzeczywistym wykonaniu.
 
+Reguły zostały też utrwalone jako kontrakt, a nie jednorazowy wyjątek: projektowy
+`AGENTS.md` wymaga zwalniania rodzica po przekazaniu do przeglądarki i wspólnego
+zakresu poleceń ratunkowych. Wspólny skill `accessible-desktop-contracts`,
+używany również przez inne projekty, zawiera odtąd te same wymagania w
+`command-surfaces.md` i `service-pickers.md`.
+
 ### Materiał do dokumentacji użytkownika — projekt
 
 W rozłączonej sesji Sonos wybierz `Rozpocznij logowanie`. AMC otworzy oficjalną
@@ -689,10 +695,10 @@ niezależnie od bieżącej sesji.
   operatora. Zmiana topologii proxy wymaga ponownego audytu zaufanych peerów.
 - Użytkownik wykonał wstępny odbiór NVDA starszego układu: pola instrukcji i
   stanu były czytelne, a nadmiarowe przyciski oraz niewłaściwy fokus zostały
-  wykryte. Jeszcze nowsza korekta zamykania modala i pojedynczego pola ma
-  zaliczone testy źródłowe, ale do czasu osobnego potwierdzenia instalacji i
-  ręcznego odbioru NVDA nie jest stanem użytkowym. Udane logowanie, odmowa i
-  odnowienie nadal wymagają obecności użytkownika.
+  wykryte. Nowsza korekta zamykania modala i pojedynczego pola jest już
+  zainstalowana w paczce `a537c97b`, lecz jej ręczny odbiór NVDA pozostaje do
+  wykonania. Udane logowanie, odmowa i odnowienie nadal wymagają obecności
+  użytkownika.
 - Prawdziwe rozpoczęcie logowania i otwarcie oficjalnej strony wykonano
   świadomie. Próba zakończyła się po „Kontynuuj” w wyborze gospodarstwa
   domowego Sonos, przed callbackiem. Odczytu grup i polecenia do głośnika nie
@@ -745,8 +751,21 @@ migracji.
   `9d6cf642` — `fix(amc10): zwolnij AMC po otwarciu Sonosa`. Testy źródłowe:
   151/151 ukierunkowanych oraz pełna regresja 2038 zaliczonych, 111 pominiętych
   i 13 podtestów; cztery testy lokalnego HTTP zablokowane w piaskownicy
-  zaliczyły 4/4 po kontrolowanym powtórzeniu na `127.0.0.1`. Na tym wpisie nie
-  należy jeszcze opierać twierdzenia o nowej instalacji ani odbiorze NVDA.
+  zaliczyły 4/4 po kontrolowanym powtórzeniu na `127.0.0.1`. Późniejsza paczka
+  `a537c97b` zawiera ten commit; ręczny odbiór NVDA nadal pozostaje osobną
+  bramką.
+- Zbudowana, atomowo zainstalowana i uruchomiona paczka AMC Test:
+  `2026.10.25-f283950e218008a54b89a03f4aede25f2dca27b8-a537c97b`.
+  Manifest ma `sourceDirty=false`, identyfikator zawartości `a537c97b` i 1672
+  pliki. Bramka promocji zaliczyła testy launchera i aktualizatora 30/30,
+  obie kompilacje .NET z 0 ostrzeżeń i 0 błędów, pełną regresję 2042
+  zaliczonych, 111 pominiętych i 13 podtestów, integralność oraz kontrolowany
+  start kandydata i instalacji. O 20:06 potwierdzono dokładnie jedną instancję
+  interfejsu, proces launchera i LiteHosta z `D:\Projekty Codex\AMC Python`;
+  główne okno `AMC Test — 25.10.2026, 20:05` odpowiada i jest włączone.
+  Pierwsza próba promocji w piaskownicy została przerwana przed budową po dwóch
+  blokadach testów procesów Windows; identyczna bramka poza piaskownicą
+  zaliczyła 30/30. Publikacji GitHub ani AMC Public nie wykonano.
 - Uproszczenie rozłączonej sesji i okna konta Sonos: commit
   `5867ba4826ec6def767367fd146c5d4a38c8eb7b` —
   `fix(amc10): uprosc logowanie Sonos`.

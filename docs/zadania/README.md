@@ -255,10 +255,14 @@ zmian, wymagający korekty użytkownika:
   `D:\Projekty Codex\Accessible Multimedia Controller\AMC12_PROFILE_WYDANIA_PUBLICZNEGO_I_TESTOWEGO_2026-10-18.md`.
 - `AMC10` — **W trakcie odbioru użytkownika; publiczny broker działa pod
   `https://sonos.stareaudycje.pl/`, callback jest zapisany w portalu Sonos, a
-  poprawiony AMC Test został zbudowany, zainstalowany i uruchomiony z
-  `D:\Projekty Codex\AMC Python`. Rozłączona sesja ma jeden wiersz logowania,
-  Enter otwiera konto, czynności są filtrowane według stanu, a po rozpoczęciu
-  fokus trafia na otwarcie strony. Pierwsza próba dotarła do oficjalnego wyboru
+  paczka AMC Test `a537c97b` została zbudowana, atomowo zainstalowana i
+  uruchomiona z `D:\Projekty Codex\AMC Python`. Rozłączona sesja ma jeden
+  wiersz logowania, Enter otwiera konto z jednym polem informacji, a
+  `Rozpocznij logowanie` automatycznie otwiera oficjalną stronę i zamyka modal.
+  Po powrocie główne okno pozostaje dostępne, a jeden wiersz `Sprawdź logowanie
+  do Sonos` prowadzi do następnego kroku. `Ctrl+Alt+Shift+R` zatrzymuje
+  nagrania globalnie także z Sonosa i pozostałych sesji. Pierwsza wcześniejsza
+  próba dotarła do oficjalnego wyboru
   gospodarstwa domowego, lecz Sonos zwrócił błąd przed callbackiem. Pozostają
   ponowna próba na koncie przypisanym do systemu, udane logowanie, odmowa,
   odnowienie, sprzęt i NVDA. GitHub i AMC Public pozostają bez zmian** — działające
@@ -267,7 +271,7 @@ zmian, wymagający korekty użytkownika:
   połączenia prowadzi do konta zamiast kończyć się błędem. Okno udostępnia
   rozpoczęcie, jawne
   sprawdzenie, anulowanie i odświeżenie logowania bez przekazywania tokenów do
-  Pythona i bez samoczynnego otwierania przeglądarki. Dodano wcześniej serwerowy
+  Pythona. Dodano wcześniej serwerowy
   kontrakt logowania, PKCE, jednorazowe sesje, odnowienie, ograniczenie tempa,
   bezpieczne logowanie oraz ścisłą obsługę zakończenia TLS przez jawnie zaufane
   reverse proxy. AMC Public pozostaje bez zmian.
