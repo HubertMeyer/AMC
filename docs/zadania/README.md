@@ -336,15 +336,13 @@ zmian, wymagający korekty użytkownika:
   krótkie nazwy `AMC Test — data, godzina` i `AMC Public — data, godzina`,
   z technicznymi identyfikatorami pozostawionymi poza zwykłą nazwą.
   Szczegóły: [NAME-001-amc-test.md](NAME-001-amc-test.md).
-- `FRONTIER-001` — **W trakcie — użytkownik potwierdził wykrywanie, połączenie
-  i odczyt odtwarzanego radia z Teufela. Odbiór 24.10.2026 ujawnił groźną
-  kolejkę szybkich zmian głośności, a następnie niedziałające presety i wolny
-  wybór trybu. Commity `fa05111a` i `42c1edb3` mają pełną regresję wxPython
-  2033/2033, kontrakty 27/27 i testy aktualizatora 30/30. Kandydat `b9b8c0f2`
-  przeszedł integralność i odizolowany start, lecz instalacja jest wstrzymana,
-  ponieważ o 15:19 rozpoczęło się nowe ręczne nagranie. Zainstalowana pozostaje
-  paczka `8af5940f`; po bezpiecznej podmianie potrzebny jest odbiór na
-  urządzeniu** —
+- `FRONTIER-001` — **W trakcie — użytkownik potwierdził 25.10.2026 na bieżącym
+  AMC Test, że `Ctrl+Alt+M` i wybór trybów znacznie przyspieszyły, presety
+  działają, AMC widzi pełną listę 30 pozycji, a skróty obsługują pierwszych 12.
+  Ustalono, że nie powstaną osobne skróty dla Spotify, USB, FM, DAB+ ani
+  Bluetooth. Następny osobny etap ma rozważyć pod `Ctrl+L` dwie pozycje:
+  `Tryby urządzenia` i `Presety urządzenia`, bez udawanych Ulubionych. Tego
+  rozszerzenia jeszcze nie zaimplementowano** —
   `Ctrl+8`, `Ctrl+F5` i ręczny adres korzystają z jednego modelu stanów.
   AMC wymaga potwierdzonego opisu FSAPI/UNDOK i użytkowej nazwy urządzenia,
   zanim pokaże pole PIN. Brak wyniku i błąd nie prowadzą do PIN-u. Po zapisaniu

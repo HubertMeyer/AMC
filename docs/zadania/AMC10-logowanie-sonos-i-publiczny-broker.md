@@ -614,6 +614,66 @@ nie należy jej czytać jako bieżącego stanu programu.
   Późniejsza instalacja jest zapisana osobno i nie zmienia historycznego wyniku
   tej wcześniejszej bramki.
 
+## Korekta odbioru NVDA i globalnych poleceń — 25.10.2026
+
+Użytkownik wrócił z przeglądarki po rozpoczęciu logowania Sonos i zastał
+główne okno AMC Test jako `niedostępne`; nie działały `Ctrl+1`, `Ctrl+2` ani
+inne polecenia. Odczyt UI Automation potwierdził, że proces odpowiadał, lecz
+okno główne było wyłączone przez nadal otwarty modal `Konto Sonos`. Nie było to
+zawieszenie silnika ani skutek odtwarzania YouTube. Za zgodą użytkownika
+zamknięto dokładnie ten modal i przywrócono dostęp do okna głównego.
+
+Ta obserwacja zastępuje wcześniejszy projekt, w którym po `Rozpocznij
+logowanie` okno konta pozostawało otwarte na przycisku `Sprawdź logowanie`.
+Poprawiony kontrakt źródłowy:
+
+- okno ma jedno pole tylko do odczytu `Informacje o logowaniu Sonos`, zamiast
+  dwóch pól z powtarzającą się treścią;
+- `Rozpocznij logowanie` przygotowuje próbę i automatycznie otwiera oficjalną
+  stronę w domyślnej przeglądarce;
+- po udanym otwarciu modal jest zamykany, więc główne okno AMC nie pozostaje
+  wyłączone;
+- zwykły widok Sonosa zawiera wtedy jeden wiersz `Sprawdź logowanie do Sonos`;
+  Enter ponownie otwiera konto z fokusem na `Sprawdź logowanie`;
+- `Otwórz stronę ponownie` i kopiowanie adresu pozostają awaryjnymi
+  czynnościami stanu oczekiwania;
+- błąd otwarcia przeglądarki nie zamyka modala: komunikat pozostaje w
+  klawiaturowo czytelnym polu stanu i tam trafia fokus.
+
+Podczas tego samego odbioru wykryto drugi błąd: globalny skrót
+`Ctrl+Alt+Shift+R` był rozpoznawany w Sonosie, ale później odrzucał go filtr
+dozwolonych akcji sesji. Dlatego zatrzymanie wszystkich nagrań wymagało
+przełączenia do Radia. Od tej korekty polecenie ma jeden jawny zakres globalny,
+dziedziczony przez TIDAL, Spotify, WiiM, Sonos i Frontier Smart. Pozycja menu,
+paleta, `Ctrl+F1`, pełna pomoc, skrót i dispatcher korzystają z tego samego
+modelu.
+
+Rzeczywiste działania ochronne przed pracą źródłową i instalacją:
+
+- o 19:42–19:44 zakończono nagrania `Jarosław`, `Tarnobrzeg` i `TVP Info`;
+- po ponownej kontroli wykryto dwa później uruchomione nagrania: `Tarnobrzeg —
+  YouTube na żywo` zakończył się sam po 60 sekundach, a `Kramer` został jawnie
+  zatrzymany poleceniem aplikacji o 19:56:13; wynik `Completed`, 689,2 s, jeden
+  plik o rozmiarze 10 987 823 bajty;
+- zachowano starszy plik `.amc-partial`, ponieważ nie pochodzi z bieżącego
+  zakończenia i nie wolno go usuwać bez osobnej oceny.
+
+Testy źródłowe: 151/151 ukierunkowanych zaliczonych. Pełna regresja dała 2038
+zaliczonych, 111 kontrolowanie pominiętych i 13 zaliczonych podtestów; cztery
+przypadki lokalnego HTTP zostały zablokowane przez piaskownicę. Te same cztery
+testy uruchomione ponownie z dostępem wyłącznie do `127.0.0.1` zaliczyły 4/4.
+Na tym etapie są to dowody kodu i testów; nowa paczka, instalacja oraz ręczny
+odbiór NVDA są zapisywane osobno po rzeczywistym wykonaniu.
+
+### Materiał do dokumentacji użytkownika — projekt
+
+W rozłączonej sesji Sonos wybierz `Rozpocznij logowanie`. AMC otworzy oficjalną
+stronę Sonos i zamknie okno konta, dlatego można bezpiecznie wrócić Alt+Tabem do
+działającego okna AMC. W sesji pozostaje jeden wiersz `Sprawdź logowanie do
+Sonos`; naciśnij Enter po zakończeniu albo odmowie w przeglądarce. `Ctrl+F5`
+otwiera zarządzanie kontem, a `Ctrl+Alt+Shift+R` zatrzymuje wszystkie nagrania
+niezależnie od bieżącej sesji.
+
 ## Znane ograniczenia
 
 - Broker, domena, TLS, testy operatora i callback są gotowe. Nadal nie
@@ -629,8 +689,10 @@ nie należy jej czytać jako bieżącego stanu programu.
   operatora. Zmiana topologii proxy wymaga ponownego audytu zaufanych peerów.
 - Użytkownik wykonał wstępny odbiór NVDA starszego układu: pola instrukcji i
   stanu były czytelne, a nadmiarowe przyciski oraz niewłaściwy fokus zostały
-  wykryte. Poprawiona paczka jest zainstalowana, ale jej końcowy odbiór NVDA,
-  udane logowanie, odmowa i odnowienie nadal wymagają obecności użytkownika.
+  wykryte. Jeszcze nowsza korekta zamykania modala i pojedynczego pola ma
+  zaliczone testy źródłowe, ale do czasu osobnego potwierdzenia instalacji i
+  ręcznego odbioru NVDA nie jest stanem użytkowym. Udane logowanie, odmowa i
+  odnowienie nadal wymagają obecności użytkownika.
 - Prawdziwe rozpoczęcie logowania i otwarcie oficjalnej strony wykonano
   świadomie. Próba zakończyła się po „Kontynuuj” w wyborze gospodarstwa
   domowego Sonos, przed callbackiem. Odczytu grup i polecenia do głośnika nie
@@ -678,6 +740,13 @@ migracji.
 
 ## Wersja i commit
 
+- Zamykanie modala po przekazaniu do przeglądarki, jeden wiersz powrotu,
+  pojedyncze pole informacji oraz globalny zakres zatrzymania nagrań: commit
+  `9d6cf642` — `fix(amc10): zwolnij AMC po otwarciu Sonosa`. Testy źródłowe:
+  151/151 ukierunkowanych oraz pełna regresja 2038 zaliczonych, 111 pominiętych
+  i 13 podtestów; cztery testy lokalnego HTTP zablokowane w piaskownicy
+  zaliczyły 4/4 po kontrolowanym powtórzeniu na `127.0.0.1`. Na tym wpisie nie
+  należy jeszcze opierać twierdzenia o nowej instalacji ani odbiorze NVDA.
 - Uproszczenie rozłączonej sesji i okna konta Sonos: commit
   `5867ba4826ec6def767367fd146c5d4a38c8eb7b` —
   `fix(amc10): uprosc logowanie Sonos`.

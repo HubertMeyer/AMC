@@ -720,3 +720,36 @@ dlatego podmiana i ponowny start AMC Test pozostają wstrzymane do jawnego
 potwierdzenia zakończenia wszystkich nagrań. Bieżąca instalacja nadal ma paczkę
 `8af5940f`. Po instalacji konieczny jest odbiór `Ctrl+Alt+M`, `Ctrl+Alt+P`,
 początkowego fokusu, Escape i uruchomienia presetu z NVDA.
+
+## Dziesiąty odbiór: szybkie tryby i pełna lista presetów — 25.10.2026
+
+Użytkownik potwierdził na bieżącym AMC Test rzeczywistą poprawę działania
+Frontier Smart:
+
+- `Ctrl+Alt+M` działa, a lista trybów otwiera się znacznie szybciej;
+- AMC widzi i uruchamia presety Teufela;
+- dostępna jest pełna lista 30 presetów, mimo że fizyczne przyciski radia
+  obejmują tylko cztery;
+- skróty presetów `Ctrl+Shift+1`–`Ctrl+Shift+0`, `Ctrl+Shift+-` i
+  `Ctrl+Shift+=` działają użytecznie dla dwunastu pierwszych pozycji.
+
+Korekta projektu na dalszy etap, nadrzędna wobec pomysłu dodawania kolejnych
+skrótów: nie przypisywać osobnych kombinacji trybom takim jak Spotify, USB,
+FM, DAB+ ani Bluetooth. Zachować `Ctrl+Alt+M` jako szybki wybór trybu. Rozważyć
+pod `Ctrl+L` bibliotekę źródeł Frontier Smart z dwiema użytkowymi pozycjami:
+`Tryby urządzenia` oraz `Presety urządzenia`. Enter otwierałby odpowiednio
+dynamiczną listę trybów albo istniejącą pełną listę 30 presetów. Nie tworzyć
+pozornych `Ulubionych`, dopóki API konkretnego urządzenia nie udostępnia takiej
+funkcji.
+
+To jest zaakceptowany kierunek projektu, a nie jeszcze zmiana kodu. Wdrożenie
+wymaga osobnego etapu z aktualizacją `Ctrl+L`, menu, `Ctrl+F1`, pełnej pomocy,
+palety, dokumentacji oraz testów początkowego fokusu, Enter, Escape, powrotu i
+ponownego otwarcia. Nie rozpoczęto go w trakcie domykania poprawki Sonosa.
+
+### Materiał do dokumentacji użytkownika — projekt
+
+`Ctrl+Alt+M` otwiera szybki wybór trybu Frontier Smart. Skróty presetów
+uruchamiają pierwszych dwanaście pozycji, a pełna lista urządzenia udostępnia
+wszystkie 30. Planowany `Ctrl+L` ma grupować `Tryby urządzenia` i `Presety
+urządzenia`, bez osobnych skrótów dla nazw zależnych od modelu radia.

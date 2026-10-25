@@ -1167,3 +1167,27 @@ python3 mk_receipt.py <kwit> <speech.txt> receipt.json
    strzałki, Enter, Escape, powrót fokusu oraz ponowne otwarcie. Uruchomienie
    presetu ma przełączyć radio i zaktualizować odtwarzacz bez ujawniania PIN-u,
    adresu IP ani nazw węzłów FSAPI.
+
+## Sonos: przekazanie do przeglądarki i powrót bez niedostępnego okna
+
+1. W rozłączonej sesji Sonos sprawdź, że zwykła lista zawiera jeden wiersz
+   `Rozpocznij logowanie do Sonos`. Enter otwiera `Konto Sonos`, w którym jest
+   jedno wielowierszowe pole `Informacje o logowaniu Sonos`; nie mogą być dwa
+   pola powtarzające tę samą instrukcję.
+2. `Rozpocznij logowanie` ma przygotować próbę i automatycznie otworzyć
+   oficjalną stronę w domyślnej przeglądarce. Po udanym otwarciu modal znika.
+   Po Alt+Tab do AMC okno główne musi być dostępne, a lista zawierać jeden
+   wiersz `Sprawdź logowanie do Sonos`. `Ctrl+1`, `Ctrl+2` i pozostałe globalne
+   polecenia nie mogą być blokowane przez ukryty modal.
+3. Enter na `Sprawdź logowanie do Sonos` ponownie otwiera konto i ustawia fokus
+   na `Sprawdź logowanie`. Sprawdź też `Otwórz stronę ponownie`, kopiowanie
+   adresu, `Anuluj logowanie`, Escape, ponowne otwarcie i przewidywalny powrót
+   fokusu. AMC nie może automatycznie rozpoczynać drugiej próby OAuth.
+4. Zasymulowany błąd otwarcia przeglądarki pozostawia modal otwarty, podaje
+   użytkowy komunikat i ustawia fokus w czytelnym polu informacji. Nie może
+   ogłosić sukcesu ani pozostawić wyłączonego okna bez drogi powrotu.
+5. W Sonosie, WiiM, TIDAL-u, Spotify i Frontier Smart naciśnij
+   `Ctrl+Alt+Shift+R`. Polecenie ma wykonać globalne zatrzymanie nagrań Radia
+   albo uczciwie powiedzieć, że nic nie jest nagrywane; nie może wymagać
+   wcześniejszego przełączenia do sesji Radia. Ta sama nazwa i skrót muszą być
+   widoczne w menu, `Ctrl+F1`, pełnej pomocy i palecie `Ctrl+Shift+K`.

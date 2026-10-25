@@ -149,6 +149,11 @@
 
 ## Skróty globalne
 
+- Polecenie chroniące pracę całej aplikacji, na przykład zatrzymanie wszystkich
+  trwających nagrań, ma jawny zakres globalny w jednym modelu poleceń. Filtry
+  sesji, dostawcy i widoku muszą ten zakres dziedziczyć; nie wolno wymagać
+  przełączenia do Radia, aby zatrzymać nagrania działające w tle. Testuj skrót,
+  menu, pomoc, paletę i rzeczywiste wykonanie z każdej reprezentatywnej sesji.
 - `Ctrl+F1`, pełna pomoc klawiatury, paleta poleceń `Ctrl+Shift+K`, właściwe
   menu oraz wykonanie polecenia muszą korzystać z jednego wspólnego katalogu
   poleceń i tego samego modelu możliwości sesji. Nie utrzymuj ręcznie kilku
@@ -176,6 +181,13 @@
 
 ## Stanowe zarządzanie kontami, urządzeniami i źródłami
 
+- Modalne okno, które otwiera przeglądarkę lub inną aplikację zewnętrzną, nie
+  może pozostawiać wyłączonego okna głównego jako jedynego miejsca powrotu.
+  Po udanym otwarciu zamknij modal i pokaż w zwykłym widoku jeden nazwany krok
+  oczekujący, na przykład `Sprawdź logowanie`. Po błędzie otwarcia pozostaw
+  modal, czytelny komunikat i fokus w polu stanu. Testuj udane przekazanie,
+  błąd, anulowanie, Escape, powrót, ponowne otwarcie i brak kradzieży fokusu
+  przeglądarce.
 - `Ctrl+F5` i „Konfiguruj…” otwierają zarządzanie bieżącą sesją, a nie zawsze
   powtarzają jej pierwszą konfigurację. Zasada obejmuje konta Spotify, TIDAL i
   Sonos, urządzenia WiiM i Frontier Smart oraz Foldery Biblioteki i przyszłe
