@@ -1,6 +1,8 @@
 # STR-001 — laboratorium TIDAL i Apple Music
 
-- Status: `Oczekuje`
+- Status: `W trakcie — Apple Music ma bezsekretny prototyp serwerowy, ale
+  prawdziwe wdrożenie jest wstrzymane do rozstrzygnięcia własności zespołu
+  Apple Developer i próby MusicKit/WebView2/NVDA`
 - Utworzono: 18 października 2026
 - Obszar: usługi strumieniowe i profil testowy
 - Polecenie uruchamiające: `Uruchom zadanie STR-001`
@@ -31,6 +33,76 @@ może zapaść osobna decyzja o wdrożeniu.
   nie przez odtwarzanie przechwyconych adresów multimediów. Natywny macOS może
   korzystać z MusicKit dla Swift, ale jest to osobny adapter platformy.
 
+## Korekty użytkownika
+
+- 2026-10-25: użytkownik uruchomił równoległą pracę nad Sonosem i Apple Music
+  oraz dopuścił użycie tego samego publicznego serwera. Następnie ustalił, że
+  posiadany przez znajomego klucz należy do obcego zespołu Apple Developer, a
+  zakup własnego członkostwa bez dowodu działania byłby ryzykiem. Zastępuje to
+  założenie, że sam istniejący token można po prostu podłączyć do publicznego
+  AMC. Dalsze prawdziwe wdrożenie jest wstrzymane; dopuszczalny pozostaje
+  laboratoryjny test pod świadomą kontrolą właściciela klucza.
+
+## Wynik badania Apple Music z 25.10.2026
+
+Oficjalny kontrakt Apple potwierdza:
+
+- każde żądanie Apple Music API wymaga developer tokenu podpisanego ES256;
+- token zawiera Team ID jako `iss`, Key ID w nagłówku `kid`, czas wydania i
+  wygaśnięcia; Apple dopuszcza najwyżej sześć miesięcy, ale laboratorium AMC
+  ogranicza własne tokeny do 5–1440 minut, domyślnie jednej godziny;
+- dla klienta webowego Apple zaleca claim `origin`; prototyp AMC wydaje token
+  tylko dla jednego wcześniej dozwolonego originu HTTPS;
+- MusicKit on the Web sam zarządza Music User Tokenem po zgodzie użytkownika.
+  Prywatna Biblioteka, playlisty i historia wymagają tej zgody;
+- MusicKit on the Web oficjalnie obsługuje odtwarzanie muzyki, teledysków i
+  radia w przeglądarce. Nadal trzeba osobno potwierdzić zachowanie w WebView2,
+  kontrolę z natywnego interfejsu AMC i pełną dostępność z NVDA;
+- Apple Music API udostępnia katalog, wyszukiwanie, Bibliotekę, playlisty,
+  ostatnio odtwarzane elementy, rekomendacje i oceny. Nie znaleziono
+  oficjalnego kontraktu pobierania chronionych plików do własnego odtwarzacza;
+  AMC nie będzie przechwytywał adresów mediów ani budował pobierania offline;
+- członkostwo Apple Developer Program kosztuje obecnie 99 USD rocznie lub
+  równowartość lokalną. Samo bezpłatne konto nie daje potrzebnego zestawu
+  Media ID i klucza do tej publicznej integracji.
+
+Źródła oficjalne, sprawdzone 25.10.2026:
+
+- https://developer.apple.com/documentation/applemusicapi/generating-developer-tokens
+- https://developer.apple.com/documentation/applemusicapi/user-authentication-for-musickit
+- https://developer.apple.com/musickit/
+- https://developer.apple.com/help/account/capabilities/create-a-media-identifier-and-private-key
+- https://developer.apple.com/help/account/membership/program-enrollment
+
+## Prototyp bez sekretów
+
+Powstała osobna usługa `AccessibleMediaController.AppleMusicTokenBroker`.
+Czyta prywatny klucz wyłącznie z pliku na serwerze, sprawdza klucz EC P-256,
+wydaje krótki token ES256, wymaga dokładnego originu HTTPS, stosuje wąski CORS,
+limit osobno dla klienta, kontrolę zaufanego reverse proxy i bezpieczne
+endpointy stanu. Nie zawiera prawdziwego Team ID, Key ID, Media ID, klucza,
+developer tokenu ani Music User Tokenu.
+
+Testy laboratoryjne zaliczyły 12/12 przypadków: konfigurację, origin, zakres
+czasu, walidację klucza, podpis i claimy JWT, endpoint, CORS, HTTPS, zaufane
+proxy, limit per klient oraz brak identyfikatorów w stanie usługi.
+
+Prototyp nie został spakowany, wdrożony ani podłączony do AMC. Nie dowodzi
+jeszcze logowania użytkownika, odtwarzania, zgodności terytorialnej ani NVDA.
+
+## Najtańsza bramka decyzji
+
+1. Właściciel istniejącego zespołu Apple Developer potwierdza, czy zgadza się
+   na krótką, niepubliczną próbę pod swoim Media ID. Nie przekazuje pliku `.p8`;
+   sam umieszcza go na kontrolowanym serwerze.
+2. Osobny host testowy wydaje token tylko dla jednego testowego originu i na
+   najwyżej godzinę. Nie udostępnia publicznej sesji Apple Music w AMC.
+3. W odizolowanym profilu sprawdzamy logowanie użytkownika, pełny utwór,
+   pauzę, przewijanie, zmianę pozycji, odnowienie sesji oraz cały przebieg NVDA.
+4. Dopiero po pozytywnym wyniku użytkownik decyduje, czy kupuje własne
+   członkostwo i przenosi integrację do własnego zespołu. Negatywny wynik nie
+   powoduje kosztu 99 USD po stronie użytkownika.
+
 ## Organizacja pracy
 
 - Badanie może zostać wykonane w osobnym zadaniu Codex albo przez Hermesa,
@@ -57,9 +129,48 @@ może zapaść osobna decyzja o wdrożeniu.
 
 Do uzupełnienia po pracy:
 
-- Data zakończenia:
+- Data etapu: 25 października 2026
 - Wersje API i warunków:
-- Wynik TIDAL:
-- Wynik Apple Music:
-- Rekomendacja:
+- Apple Music API i MusicKit on the Web v3 według dokumentacji dostępnej
+  25.10.2026; członkostwo 99 USD/rok według strony Apple.
+- Wynik TIDAL: nie był przedmiotem tego etapu.
+- Wynik Apple Music: architektura i podpisywanie tokenu są wykonalne, lecz
+  brakuje dowodu realnego MusicKit/WebView2/NVDA i stabilnego właściciela
+  zespołu deweloperskiego.
+- Rekomendacja: pozostawić w laboratorium; wykonać kontrolowany prototyp pod
+  istniejącym zespołem znajomego tylko za jego wyraźną zgodą, a własne
+  członkostwo kupować dopiero po pozytywnym odbiorze technicznym.
+
+## Materiał do dokumentacji użytkownika
+
+Apple Music nie jest jeszcze sesją AMC Test ani AMC Public. Żaden przycisk,
+skrót ani ekran logowania nie został dodany. Użytkownik nie przekazuje AMC
+hasła Apple ani prywatnego klucza deweloperskiego. Przyszłe logowanie będzie
+odbywać się wyłącznie w oficjalnym MusicKit, a odtwarzanie na Windows pozostanie
+w oficjalnym odtwarzaczu webowym Apple sterowanym przez dostępny interfejs AMC.
+
+## Uzasadnienie i decyzje
+
+- Ten sam fizyczny serwer może później utrzymywać Sonosa i Apple Music, lecz
+  będą to osobne procesy, sekrety, limity, hosty i procedury wycofania.
+- Obcy klucz nie jest importowany do repozytorium ani komputera użytkownika.
+- Brak realnej próby oznacza brak obietnicy publicznego Apple Music.
+
+## Testy i wynik
+
+- `dotnet run --project tests/AccessibleMediaController.AppleMusicTokenBroker.SmokeTests/AccessibleMediaController.AppleMusicTokenBroker.SmokeTests.csproj -c Release`
+  — 12/12 zaliczone 25.10.2026.
+
+## Znane ograniczenia
+
+- brak prawdziwego klucza i realnego developer tokenu;
+- brak próby Music User Token i konta subskrybenta;
+- brak hosta HTTPS, strony odtwarzacza, WebView2 i sterowania z AMC;
+- brak ręcznego testu NVDA;
+- brak decyzji o docelowym właścicielu Apple Developer Team.
+
+## Wersja i commit
+
+Kod laboratoryjny powstał lokalnie 25.10.2026. Commit zostanie wpisany po
+utworzeniu spójnego punktu kontrolnego. Nie wykonano instalacji ani publikacji.
 

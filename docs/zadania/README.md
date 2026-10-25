@@ -386,8 +386,11 @@ zmian, wymagający korekty użytkownika:
   bez publikowania roboczej historii i bez przełączania bieżącej gałęzi.
   Szczegóły:
   [REL-001-github-aktualizacje-sygnalista.md](REL-001-github-aktualizacje-sygnalista.md).
-- `STR-001` — **Oczekuje** — osobne laboratorium TIDAL i Apple Music, najpierw
-  badanie oficjalnych API i warunków, później ewentualny profil testowy.
+- `STR-001` — **W trakcie; bezsekretny prototyp wydawania tokenów Apple Music
+  ma 12/12 testów, ale prawdziwe wdrożenie jest wstrzymane do próby
+  MusicKit/WebView2/NVDA i decyzji o właścicielu Apple Developer Team** —
+  osobne laboratorium TIDAL i Apple Music; Apple Music nie jest jeszcze sesją
+  AMC Test ani AMC Public.
   Szczegóły:
   [STR-001-tidal-apple-music-laboratorium.md](STR-001-tidal-apple-music-laboratorium.md).
 - `BLUOS-001` — **Oczekuje; opracowanie źródłowe jest gotowe, a pierwszy etap
