@@ -2,20 +2,49 @@
 
 ## Status
 
-**W trakcie — niezależny broker działa publicznie pod
-`https://sonos.stareaudycje.pl/`. Operator zaliczył 17/17 kontroli publicznych
-bez logowania oraz potwierdził 20/20 testów pakietu, bez sekretów w źródłach i
-logach. Źródła AMC są lokalnie przygotowane do użycia nowego originu, ale nie
-zostały zainstalowane ani opublikowane. Autor musi jeszcze dodać nowy callback
-w istniejącej integracji Sonos, nie usuwając Hermesa i nie rotując sekretu,
-a następnie wykonać z użytkownikiem prawdziwe logowanie, odmowę, odnowienie,
-odbiór sprzętu i NVDA. Pakiet zwrotny operatora nie został jeszcze odnaleziony
-na tym komputerze, więc jego treść i suma pozostają do lokalnej weryfikacji.**
+**W trakcie odbioru użytkownika — niezależny broker działa publicznie pod
+`https://sonos.stareaudycje.pl/`, a callback
+`https://sonos.stareaudycje.pl/login/callback` jest zapisany w Sonos
+Integration Manager. Poprawiony AMC Test został zbudowany, atomowo
+zainstalowany i uruchomiony z `D:\Projekty Codex\AMC Python`. Pierwsza prawdziwa
+próba dotarła do oficjalnej strony Sonosa, lecz po wybraniu „Kontynuuj” Sonos
+zwrócił błąd na etapie wyboru gospodarstwa domowego, przed powrotem do brokera.
+Do zakończenia pozostają: ponowienie na koncie przypisanym do systemu Sonos,
+udane logowanie, odmowa, odnowienie, odbiór sprzętu i NVDA. Pakiet zwrotny
+operatora nie został jeszcze odnaleziony na tym komputerze, więc jego treść i
+suma pozostają do lokalnej weryfikacji. Nie wykonano publikacji GitHub ani
+wydania AMC Public.**
 
 Sterowanie Sonosem i WiiM było już przeszczepione i użytkownik ocenił je jako
 prawie gotowe. Ten etap nie zmienia adapterów, list, transportu ani WiiM.
 
 ## Korekty użytkownika
+
+- 2026-10-25: po pierwszej próbie OAuth użytkownik doprecyzował, że nacisnął
+  „Kontynuuj”, a dopiero potem zobaczył stronę błędu Sonos. Przeglądarka była
+  nadal w oficjalnym kroku `selectHousehold`; nie nastąpił powrót na callback
+  brokera. Zastępuje to robocze podejrzenie błędu samego przycisku albo
+  callbacku. Najbardziej prawdopodobna przyczyna to konto bez gospodarstwa
+  domowego używanego przez ten system Sonos; jest to wniosek do potwierdzenia
+  przez ponowną próbę na właściwym zwykłym koncie, bez ujawniania loginu lub
+  hasła.
+
+- 2026-10-25: użytkownik wskazał nadmiarowy, dwuetapowy interfejs. W stanie
+  rozłączonym sesja ma zawierać jeden wiersz „Rozpocznij logowanie do Sonos”,
+  uruchamiany Enterem. Okno konta pokazuje tylko czynności właściwe dla stanu:
+  przed rozpoczęciem „Rozpocznij logowanie”, podczas oczekiwania otwarcie,
+  kopiowanie, sprawdzenie i anulowanie, a „Wyloguj konto” dopiero po faktycznym
+  połączeniu. Po rozpoczęciu fokus ma trafić na „Otwórz stronę logowania”.
+  Zastępuje to wcześniejszy układ, w którym „Wyloguj konto” było widoczne bez
+  połączonego konta, a fokus zaczynał od „Sprawdź logowanie”.
+
+- 2026-10-25: portal Sonos dla tej integracji udostępnił jedno pole adresu
+  powrotu, a nie listę callbacków. Za jawną zgodą użytkownika zapisano w nim
+  `https://sonos.stareaudycje.pl/login/callback`; po ponownym otwarciu
+  integracji wartość nadal była obecna. Zastępuje to wcześniejszy plan
+  równoległego pozostawienia callbacku Hermesa w tym samym kluczu. Hermes nie
+  uczestniczy już w zwykłej ścieżce nowego logowania; pozostaje wyłącznie
+  historycznym punktem odniesienia i możliwym ręcznym planem powrotu.
 
 - 2026-10-25: podczas ręcznego odbioru zainstalowanego AMC Test użytkownik
   otworzył sesję Sonos i nacisnął `Ctrl+F5`. W oknie dostępny klawiaturą był
@@ -106,16 +135,21 @@ prawie gotowe. Ten etap nie zmienia adapterów, list, transportu ani WiiM.
 ## Materiał do dokumentacji użytkownika
 
 Etap z 24.10.2026 przygotował sprawdzony pakiet serwerowy do zewnętrznego
-wdrożenia. Raport z 25.10.2026 potwierdza działanie serwera i pozwala wpisać
-`sonos.stareaudycje.pl` do źródeł AMC Test. Nie zmieniono jeszcze zainstalowanej
-aplikacji, jej menu, skrótów ani komunikatów NVDA. Instalacja pozostaje za bramą
-callbacku Sonosa, lokalnej weryfikacji pakietu zwrotnego oraz testów.
+wdrożenia. Raport z 25.10.2026 potwierdził działanie serwera. Tego samego dnia
+callback zapisano w Sonos Integration Manager, a AMC Test z publicznym originem
+i uproszczonym logowaniem zainstalowano lokalnie. Zmiana pozostaje wyłącznie w
+AMC Test; AMC Public, GitHub i publiczne wydanie nie zostały zmienione.
 
-W AMC Test polecenie „Konfiguruj…” w Menedżerze sesji otwiera okno „Konto
-Sonos”. Pokazuje ono wyłącznie informacje potrzebne użytkownikowi i przyciski
-właściwe dla bieżącego stanu: rozpoczęcie i sprawdzenie logowania, anulowanie,
-odświeżenie dostępu, ponowienie zapisu, wylogowanie oraz przejście do listy
-głośników i grup. Hasło podaje się tylko na oficjalnej stronie Sonosa.
+W rozłączonej sesji Sonos AMC Test pokazuje jeden dostępny wiersz „Rozpocznij
+logowanie do Sonos”. Enter otwiera okno „Konto Sonos”. To samo okno można
+otworzyć poleceniem „Konfiguruj…” w Menedżerze sesji. Hasło podaje się tylko na
+oficjalnej stronie Sonosa.
+
+Przyciski okna zależą od stanu. Przed rozpoczęciem dostępne są „Rozpocznij
+logowanie” i „Zamknij”. Po przygotowaniu adresu dostępne są „Otwórz stronę
+logowania”, „Kopiuj adres logowania”, „Sprawdź logowanie”, „Anuluj logowanie” i
+„Zamknij”, a początkowy fokus trafia na otwarcie strony. „Wyloguj konto” i
+„Głośniki i grupy Sonos” pojawiają się dopiero po połączeniu konta.
 
 „Rozpocznij logowanie” przygotowuje adres. AMC nie otwiera wtedy przeglądarki
 samoczynnie: adres można skopiować albo jawnie wybrać „Otwórz stronę
@@ -140,10 +174,11 @@ logowania AMC, po wybraniu „Rozpocznij logowanie” program mówi: „Usługa
 logowania Sonos nie jest uruchomiona pod skonfigurowanym adresem”. Ten stan
 nie jest mylony z odmową Sonosa ani z oczekiwaniem na przeglądarkę.
 
-W przygotowanych źródłach publiczny broker jest dostępny, więc okno „Konto
-Sonos” pokazuje przycisk rozpoczęcia logowania. Zainstalowany AMC Test nie został
-jeszcze zmieniony. Do czasu dodania callbacku w Sonos Integration Manager nie
-należy w nim uruchamiać prawdziwej próby na nowym brokerze.
+Zainstalowany AMC Test używa publicznego brokera i ma zapisany właściwy callback.
+Pierwsza próba potwierdziła otwarcie oficjalnego logowania Sonos, lecz nie
+dotarła do callbacku, ponieważ Sonos zakończył ją błędem po wyborze kontynuacji
+na etapie gospodarstwa domowego. Następna próba musi użyć tego samego zwykłego
+konta, które w aplikacji Sonos widzi system użytkownika.
 
 Jeżeli użytkownik wybierze „Sprawdź logowanie” przed powrotem z Sonosa, broker
 odpowiada technicznym kodem `unknown_session`, ale AMC nie wypowiada tego kodu.
@@ -156,11 +191,11 @@ sekretu ani serwera. Użytkownik wybierze logowanie, otrzyma adres oficjalnej
 strony Sonosa, zaloguje się tam i wróci do AMC, aby sprawdzić wynik. Sekret
 integracji pozostaje tylko na wspólnym serwerze AMC.
 
-Podczas przejścia na niezależny serwer nowy adres powrotu zostanie dodany do
-tej samej integracji Sonos obok działającego adresu Hermesa. Stary broker
-pozostanie czynny do czasu sprawdzenia nowego HTTPS, świeżego logowania,
-odnowienia tokenu oraz AMC Test z NVDA. Zwykły użytkownik nie zobaczy tego
-etapu migracji.
+Portal tej integracji udostępnił jedno pole adresu powrotu. Nowy callback
+zastąpił w nim historyczną wartość za zgodą użytkownika. Stary broker może
+pozostać uruchomiony jako niezależny punkt powrotu, ale bieżący klucz i AMC Test
+korzystają z `sonos.stareaudycje.pl`; Hermes nie jest potrzebny w normalnym
+przebiegu.
 
 Istniejące konto autora jest prawidłowo połączone z Sonosem i obsługuje
 sterowanie oraz grupowanie w zainstalowanym AMC Test. Zaszyfrowany rekord jest
@@ -174,10 +209,34 @@ pozostają wyłącznie w procesie C# i w istniejącym lokalnym magazynie chronio
 systemem Windows; interfejs wxPython otrzymuje tylko stan, komunikaty i zaufany
 adres autoryzacji.
 
-Publiczny Sonos nie jest jeszcze widoczny. Pozostanie ukryty, dopóki broker nie
-będzie działał pod stałym adresem HTTPS i nie przejdzie świadomego odbioru na
-zewnętrznym koncie. Broker nie będzie usługą Hermesa. WiiM nie zależy od tego
-brokera.
+Sonos z publicznym brokerem jest widoczny wyłącznie w AMC Test. Do AMC Public
+trafi dopiero po świadomym odbiorze konta, odnowienia, sprzętu i NVDA. Broker
+nie jest usługą Hermesa. WiiM nie zależy od tego brokera.
+
+## Robocza instrukcja użytkownika po tym etapie
+
+1. W AMC Test naciśnij `Ctrl+6` i wybierz Enterem „Rozpocznij logowanie do
+   Sonos”.
+2. W oknie konta wybierz „Rozpocznij logowanie”. Po przygotowaniu adresu fokus
+   przejdzie na „Otwórz stronę logowania”.
+3. Zaloguj się na oficjalnej stronie tym samym zwykłym kontem, które w aplikacji
+   Sonos widzi Twój system. AMC nie otrzymuje hasła.
+4. Po powrocie wybierz „Sprawdź logowanie”. Po powodzeniu wybierz „Głośniki i
+   grupy Sonos” albo użyj `Ctrl+F5`.
+
+To jest projekt instrukcji do odbioru i korekty użytkownika, nie opublikowana
+instrukcja wydania.
+
+## Roboczy changelog po tym etapie
+
+- uproszczono widok rozłączonego Sonosa do jednego wiersza logowania;
+- Enter na tym wierszu otwiera konto Sonos;
+- ukryto czynności niepasujące do bieżącego stanu konta;
+- po rozpoczęciu logowania fokus trafia na otwarcie oficjalnej strony;
+- błąd braku konta pokazuje drogę do logowania, ale zwykły błąd sieci nie jest
+  mylnie nazywany brakiem konta.
+
+To jest projekt changelogu; nie został opublikowany.
 
 ## Uzasadnienie i decyzje
 
@@ -522,6 +581,10 @@ Kontrakt sprawdzono 2026-10-19 z aktualną oficjalną dokumentacją Sonosa:
 
 ## Wynik przygotowania klienta 25.10.2026
 
+Poniższa lista zachowuje wynik pośredni sprzed instalacji. Została zastąpiona
+przez późniejszą paczkę `5867ba48-3b26879e` opisaną w sekcji „Wersja i commit”;
+nie należy jej czytać jako bieżącego stanu programu.
+
 - Zmieniono wyłącznie źródła kandydata **AMC Test**: domyślny origin to
   `https://sonos.stareaudycje.pl/`, a publiczna możliwość logowania jest
   włączona. Stary AMC, jego instalacja, poświadczenia i broker nie zostały
@@ -538,8 +601,8 @@ Kontrakt sprawdzono 2026-10-19 z aktualną oficjalną dokumentacją Sonosa:
   LiteHosta zakończyły się bez ostrzeżeń i błędów. Pierwsza równoległa próba
   testów spowodowała kolizję pliku kompilacji, dlatego nie jest zaliczana;
   kolejne kompilacje wykonano pojedynczo.
-- Nie wykonano instalacji, uruchomienia AMC Test, prawdziwego logowania,
-  polecenia do głośnika ani publikacji GitHub.
+- Na tym pośrednim etapie nie wykonano jeszcze instalacji, uruchomienia AMC
+  Test, prawdziwego logowania, polecenia do głośnika ani publikacji GitHub.
 - Po ręcznym zgłoszeniu poprawiono źródła okna konta AMC Test: instrukcja i
   stan są klawiaturowymi polami tylko do odczytu, a stan bez dostępnego
   logowania przejmuje początkowy fokus. Ukierunkowane testy okna, sesji i
@@ -547,43 +610,41 @@ Kontrakt sprawdzono 2026-10-19 z aktualną oficjalną dokumentacją Sonosa:
   katalogu tymczasowego do worktree zaliczyła 1996 przypadków, 147 pominęła
   zgodnie z warunkami i zatrzymała dwa testy wymagające wcześniej zbudowanego
   LiteHosta; po jego poprawnej kompilacji oba pozostałe testy zaliczyły 2/2.
-  Zmiana czeka na bezpieczną instalację i ręczny odbiór NVDA; zainstalowany
-  program nie jest jeszcze jej dowodem.
+  W tym momencie zmiana czekała na bezpieczną instalację i ręczny odbiór NVDA.
+  Późniejsza instalacja jest zapisana osobno i nie zmienia historycznego wyniku
+  tej wcześniejszej bramki.
 
 ## Znane ograniczenia
 
-- Serwer, domena i TLS przez Cloudflare Tunnel są przygotowane, ale broker nie
-  został jeszcze wdrożony. Brakuje wpisu callbacku w portalu Sonos, publicznych
-  testów operatora oraz pakietu zwrotnego z raportem i wycofaniem.
+- Broker, domena, TLS, testy operatora i callback są gotowe. Nadal nie
+  odnaleziono lokalnie pakietu zwrotnego operatora, więc jego manifest i
+  podana suma nie mają niezależnego potwierdzenia na tym komputerze.
 - Docelowy wariant to pojedyncza usługa systemd na Mikrusie srv28 z Ubuntu
   24.04 i ASP.NET Core Runtime 8.0.32. Docker i Caddy pozostają wariantem
   referencyjnym, a nie sposobem tego wdrożenia.
 - Magazyn sesji jest pamięciowy i przeznaczony dla jednej instancji. Skalowanie
   na wiele replik wymaga wspólnego atomowego magazynu.
 - Znanym i jedynym zaufanym peerem jest lokalny `cloudflared` pod
-  `127.0.0.1`. Operator musi potwierdzić na docelowym Ubuntu, że przekazuje
-  symetryczne `X-Forwarded-For` i `X-Forwarded-Proto: https`.
-- Nie wykonano ręcznego odbioru NVDA istniejącego okna konta ani prawdziwego
-  odnowienia tokenu. Potrzebna jest obecność użytkownika.
-- Nowe okno konta jest zainstalowane w użytkowym AMC Test. Nadal wymaga
-  ręcznego odbioru NVDA i świadomej próby prawdziwego logowania.
-- Prawdziwe rozpoczęcie logowania, otwarcie przeglądarki, sprawdzenie konta i
-  odczyt grup nie były automatyzowane. Wymagają świadomego odbioru użytkownika;
-  żadne polecenie nie zostało wysłane do głośnika.
+  `127.0.0.1`; działanie publicznej ścieżki zostało potwierdzone przez
+  operatora. Zmiana topologii proxy wymaga ponownego audytu zaufanych peerów.
+- Użytkownik wykonał wstępny odbiór NVDA starszego układu: pola instrukcji i
+  stanu były czytelne, a nadmiarowe przyciski oraz niewłaściwy fokus zostały
+  wykryte. Poprawiona paczka jest zainstalowana, ale jej końcowy odbiór NVDA,
+  udane logowanie, odmowa i odnowienie nadal wymagają obecności użytkownika.
+- Prawdziwe rozpoczęcie logowania i otwarcie oficjalnej strony wykonano
+  świadomie. Próba zakończyła się po „Kontynuuj” w wyborze gospodarstwa
+  domowego Sonos, przed callbackiem. Odczytu grup i polecenia do głośnika nie
+  wykonano.
 - Nie potwierdzono regresji pozostawiającej fałszywe aktywne nagranie. Bramka
   instalacji widziała równoległe, rzeczywiste nagrania, których nie obejmowała
   początkowa kontrola samych plików harmonogramowych. Kolejne bramki muszą więc
   nadal łączyć stan hosta z kontrolą wszystkich jawnych folderów nagrań.
-- Jawne oznajmienie stanu konta z 20 października jest potwierdzone w kodzie i
-  testach, ale nie zostało jeszcze zainstalowane ani odebrane z NVDA.
-- Rozpoznanie nieuruchomionej usługi brokera jest potwierdzone w kodzie,
-  kompilacji i testach, lecz nie zostało jeszcze zainstalowane w AMC Test.
-- Bezpieczny stan „publiczny broker nieskonfigurowany” jest potwierdzony w
-  źródłach i testach, ale nie został jeszcze zainstalowany. Zainstalowany AMC
-  Test nadal zawiera wcześniejszą wersję i nie jest dowodem tej korekty.
-- Produkcyjna integracja Sonos istnieje i może zostać ponownie wykorzystana,
-  ale do uruchomienia następcy i wpisania callbacku logowanie w nowych
-  źródłach pozostaje celowo niedostępne.
+- Oznajmienie stanu, rozpoznanie niedostępnej usługi i bezpieczny stan
+  nieskonfigurowanego brokera są obecne w zainstalowanej paczce. Końcowe
+  potwierdzenie ich kolejności fokusu i mowy należy do odbioru NVDA.
+- Produkcyjna integracja Sonos jest ponownie użyta, a nowy callback jest w niej
+  zapisany. Portal pokazał jedno pole adresu powrotu; przywrócenie Hermesa
+  wymagałoby świadomej ręcznej zmiany tego pola.
 - Nie znaleziono na komputerze Docker Engine, Azure CLI, narzędzi Fly.io,
   Cloudflare, Google Cloud ani zmiennych `SONOS_*`. Nie ma więc lokalnego dowodu
   dostępu do zewnętrznego hostingu lub sekretu integracji. Publicznego
@@ -604,25 +665,43 @@ migracji.
 
 ## Brama publicznego udostępnienia
 
-1. Wybrać stałą domenę i hosting obsługujący prawdziwy HTTPS.
-2. Dodać do istniejącej integracji Sonos dokładny callback nowego brokera
-   `/login/callback`, pozostawiając dotychczasowy callback Hermesa.
-3. Wprowadzić sekrety poza repozytorium i sprawdzić `/health/ready`.
-4. Z użytkownikiem wykonać logowanie, odmowę, odnowienie oraz ponowne
+1. [Zaliczone] Stała domena i hosting obsługują prawdziwy HTTPS.
+2. [Zaliczone] W integracji Sonos zapisano dokładny callback nowego brokera
+   `/login/callback`. Portal udostępnił jedno pole, więc zastąpił on historyczny
+   callback za zgodą użytkownika.
+3. [Zaliczone przez operatora] Sekrety są poza repozytorium, a
+   `/health/ready` odpowiada stanem gotowości.
+4. [W trakcie] Z użytkownikiem wykonać logowanie, odmowę, odnowienie oraz ponowne
    uruchomienie brokera.
-5. Dopiero wtedy dodać publiczny origin do profilu wydania, wykonać testy
+5. Dopiero wtedy przenieść funkcję z AMC Test do profilu publicznego, wykonać testy
    parytetu możliwości/pomocy/palety i rozważyć odsłonięcie Sonosa w AMC.
 
 ## Wersja i commit
 
+- Uproszczenie rozłączonej sesji i okna konta Sonos: commit
+  `5867ba4826ec6def767367fd146c5d4a38c8eb7b` —
+  `fix(amc10): uprosc logowanie Sonos`.
+- Zbudowana i zainstalowana paczka AMC Test:
+  `2026.10.25-5867ba4826ec6def767367fd146c5d4a38c8eb7b-3b26879e`,
+  identyfikator zawartości `3b26879e`, 1672 pliki, `sourceDirty=false`.
+  Instalacja i uruchomienie z
+  `D:\Projekty Codex\AMC Python` są potwierdzone 25.10.2026 o 19:32; tytuł
+  okna: `AMC Test — 25.10.2026, 19:30`.
+- Przed instalacją zaliczono 117/117 testów ukierunkowanych. Bramka promocji
+  zaliczyła 30/30 testów launchera i aktualizatora, obie kompilacje kontrolne z
+  0 ostrzeżeń i 0 błędów, pełną regresję interfejsu 2037 zaliczonych, 111
+  pominiętych i 13 zaliczonych podtestów, integralność paczki oraz odizolowany
+  start kandydata i instalacji. Pokwitowanie ma `tests: zaliczone`.
+- Pierwsza prawdziwa próba OAuth doszła do oficjalnego wyboru gospodarstwa
+  domowego Sonos, ale zakończyła się błędem przed callbackiem. Nie dowodzi to
+  błędu brokera; odbiór prawdziwego połączenia pozostaje otwarty.
 - Publiczny origin i włączenie logowania wyłącznie w źródłach AMC Test:
   commit `bf0925d566079359caa8c2d9fae785a361c59f34` —
   `feat(amc10): przygotuj AMC Test na publiczny broker`.
 - Klawiaturowy dostęp do instrukcji i stanu oraz poprawiony fokus okna konta:
   commit `5b43ce95161f55ffc6dcbee7a119b857d18cb826` —
   `fix(amc10): udostepnij stan logowania Sonos`.
-- Bieżący kandydat jest wyłącznie stanem źródeł. Nie powstał jeszcze pakiet,
-  instalacja ani uruchomienie AMC Test; nie wykonano publikacji GitHub.
+- Publikacji GitHub ani wydania AMC Public nie wykonano.
 - Przekazanie systemd/Cloudflare, pakowanie `linux-x64`, ochrona logów i testy
   20/20: commit `bc56ce577bfac4d86c68ecc4f6f90a56a6c22e7a` —
   `build(amc10): przygotuj przekazanie brokera dla systemd`.

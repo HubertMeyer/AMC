@@ -253,16 +253,15 @@ zmian, wymagający korekty użytkownika:
   [AMC12-profile-wydania-publicznego-i-testowego.md](AMC12-profile-wydania-publicznego-i-testowego.md).
   Zatwierdzona specyfikacja:
   `D:\Projekty Codex\Accessible Multimedia Controller\AMC12_PROFILE_WYDANIA_PUBLICZNEGO_I_TESTOWEGO_2026-10-18.md`.
-- `AMC10` — **W trakcie; publiczny broker działa pod
-  `https://sonos.stareaudycje.pl/`, a operator potwierdził testy pakietu i
-  17/17 kontroli publicznych bez logowania. Źródła AMC Test mają już docelowy
-  origin i włączoną możliwość logowania. Autor musi jeszcze dodać callback
-  `https://sonos.stareaudycje.pl/login/callback`, pozostawiając stary adres i
-  sekret bez zmian. Ręczny odbiór ujawnił ponadto, że starsza instalacja z
-  wyłączonym brokerem zostawia klawiaturze tylko „Zamknij”; przygotowywana
-  poprawka udostępnia instrukcję i stan w kolejności Tab oraz kieruje fokus na
-  sensowną czynność albo wyjaśnienie. Instalacja i prawdziwy odbiór pozostają
-  do wykonania wyłącznie w AMC Test** — działające
+- `AMC10` — **W trakcie odbioru użytkownika; publiczny broker działa pod
+  `https://sonos.stareaudycje.pl/`, callback jest zapisany w portalu Sonos, a
+  poprawiony AMC Test został zbudowany, zainstalowany i uruchomiony z
+  `D:\Projekty Codex\AMC Python`. Rozłączona sesja ma jeden wiersz logowania,
+  Enter otwiera konto, czynności są filtrowane według stanu, a po rozpoczęciu
+  fokus trafia na otwarcie strony. Pierwsza próba dotarła do oficjalnego wyboru
+  gospodarstwa domowego, lecz Sonos zwrócił błąd przed callbackiem. Pozostają
+  ponowna próba na koncie przypisanym do systemu, udane logowanie, odmowa,
+  odnowienie, sprzęt i NVDA. GitHub i AMC Public pozostają bez zmian** — działające
   sterowanie Sonosem i WiiM jest już przepisane i
   nie wymaga ponownej implementacji. `Ctrl+F5` wybiera dom i grupę, a przy braku
   połączenia prowadzi do konta zamiast kończyć się błędem. Okno udostępnia

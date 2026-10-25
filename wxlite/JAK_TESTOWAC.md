@@ -281,6 +281,31 @@ pozostałe opcje sprzętowe WiiM.
 
 Sonos:
 
+Odbiór logowania z publicznym brokerem w AMC Test:
+
+1. Sprawdź, że tytuł okna to `AMC Test — 25.10.2026, 19:30`, a następnie
+   naciśnij `Ctrl+6` przy rozłączonym koncie.
+2. Lista ma zawierać jeden wiersz „Rozpocznij logowanie do Sonos”. NVDA ma
+   przeczytać wyłącznie tę nazwę i użytkowy opis „Enter otwiera konto Sonos”,
+   bez nazwy klasy, identyfikatora lub rekordu. Enter otwiera okno konta.
+3. Przed rozpoczęciem logowania okno ma udostępniać „Rozpocznij logowanie” i
+   „Zamknij”. Nie może pokazywać „Wyloguj konto”. Instrukcja i stan pozostają
+   polami tylko do odczytu w kolejności Tab.
+4. Po wybraniu „Rozpocznij logowanie” fokus ma trafić na „Otwórz stronę
+   logowania”. Dalej dostępne są: otwarcie, kopiowanie adresu, sprawdzenie,
+   anulowanie i zamknięcie. Nie może być przycisku wylogowania.
+5. Po anulowaniu i ponownym otwarciu sprawdź ten sam stan początkowy oraz
+   prawidłowy powrót fokusu. Zwykły błąd sieci nie może zmienić listy w
+   komunikat o brakującym koncie.
+6. Na oficjalnej stronie użyj tego samego zwykłego konta, które w aplikacji
+   Sonos widzi system. Nie zapisuj loginu ani hasła w raporcie. Jeżeli Sonos
+   ponownie pokaże błąd po „Kontynuuj” na wyborze gospodarstwa domowego, zapisz
+   tylko etap i tekst użytkowy; nie traktuj tego jako dowodu wywołania callbacku.
+7. Po powodzeniu wróć do AMC i wybierz „Sprawdź logowanie”. Dopiero po
+   połączeniu mają pojawić się „Wyloguj konto” oraz „Głośniki i grupy Sonos”.
+
+Odbiór sterowania po połączeniu konta:
+
 1. Obudź głośniki i naciśnij `Ctrl+6`.
 2. Lista ma czytać wyłącznie nazwy grup i stan użytkowy. Enter wybiera grupę,
    pozostaje na liście i po odczycie pokazuje Bibliotekę Sonos. Sam wybór grupy
