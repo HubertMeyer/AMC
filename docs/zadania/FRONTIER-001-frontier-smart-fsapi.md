@@ -735,12 +735,19 @@ Frontier Smart:
 
 Korekta projektu na dalszy etap, nadrzędna wobec pomysłu dodawania kolejnych
 skrótów: nie przypisywać osobnych kombinacji trybom takim jak Spotify, USB,
-FM, DAB+ ani Bluetooth. Zachować `Ctrl+Alt+M` jako szybki wybór trybu. Rozważyć
-pod `Ctrl+L` bibliotekę źródeł Frontier Smart z dwiema użytkowymi pozycjami:
+FM, DAB+ ani Bluetooth. Użytkownik rozważył polskie `Ctrl+T` od `Tryb`, ale ta
+kombinacja jest już poleceniem `Transmisje YouTube` w sesji Podcastów i YouTube.
+Kontekstowe ponowne użycie byłoby technicznie możliwe, lecz utrwaliłoby problem
+różnych znaczeń tego samego skrótu między sesjami.
+
+Preferowany najprostszy kierunek to `Ctrl+L` z dwiema użytkowymi pozycjami:
 `Tryby urządzenia` oraz `Presety urządzenia`. Enter otwierałby odpowiednio
-dynamiczną listę trybów albo istniejącą pełną listę 30 presetów. Nie tworzyć
-pozornych `Ulubionych`, dopóki API konkretnego urządzenia nie udostępnia takiej
-funkcji.
+dynamiczną listę trybów albo istniejącą pełną listę 30 presetów. Taki układ może
+całkowicie wystarczyć bez nowego skrótu trybu. Istniejącego, odebranego
+`Ctrl+Alt+M` nie usuwać ani nie przemianowywać przed osobną decyzją w etapie
+wdrożenia `Ctrl+L`, żeby dyskusja projektowa nie stała się niezamierzoną
+regresją. Nie tworzyć pozornych `Ulubionych`, dopóki API konkretnego urządzenia
+nie udostępnia takiej funkcji.
 
 To jest zaakceptowany kierunek projektu, a nie jeszcze zmiana kodu. Wdrożenie
 wymaga osobnego etapu z aktualizacją `Ctrl+L`, menu, `Ctrl+F1`, pełnej pomocy,
@@ -749,7 +756,9 @@ ponownego otwarcia. Nie rozpoczęto go w trakcie domykania poprawki Sonosa.
 
 ### Materiał do dokumentacji użytkownika — projekt
 
-`Ctrl+Alt+M` otwiera szybki wybór trybu Frontier Smart. Skróty presetów
-uruchamiają pierwszych dwanaście pozycji, a pełna lista urządzenia udostępnia
-wszystkie 30. Planowany `Ctrl+L` ma grupować `Tryby urządzenia` i `Presety
-urządzenia`, bez osobnych skrótów dla nazw zależnych od modelu radia.
+Skróty presetów uruchamiają pierwszych dwanaście pozycji, a pełna lista
+urządzenia udostępnia wszystkie 30. Planowany `Ctrl+L` ma grupować `Tryby
+urządzenia` i `Presety urządzenia`, bez osobnych skrótów dla nazw zależnych od
+modelu radia. `Ctrl+T` pozostaje w Podcastach i YouTube skrótem Transmisji.
+Obecny `Ctrl+Alt+M` nadal działa do czasu osobnej decyzji o jego pozostawieniu
+albo usunięciu po wdrożeniu biblioteki źródeł.
