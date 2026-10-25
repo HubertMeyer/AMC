@@ -672,6 +672,7 @@ def test_radio_items_declare_they_need_the_radio_session() -> None:
     """Polecenia stacji sa radiowe; wspolne podglady sa globalne jak w AMC."""
     radio = next(m for m in menu_model.build_menus() if "Radio" in m.title)
     global_previews = {
+        Action.RECORD_STOP_ALL,
         Action.VIEW_ACTIVE_RECORDINGS,
         Action.VIEW_RECORDED_RADIO_FILES,
         Action.MANAGE_RADIO_SCHEDULES,

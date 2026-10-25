@@ -1085,6 +1085,28 @@ class Navigator:
             "Naciśnij Enter, aby się zalogować"
         )]
 
+    def apply_sonos_account_pending_prompt(self) -> list[object]:
+        """Po przejściu do przeglądarki zostaw dostępny punkt powrotu."""
+
+        state = self.sessions[SessionId.SONOS]
+        state.sonos_target_rows = ()
+        state.library_view = None
+        state.library_item_id = None
+        state.model.replace([
+            Row(
+                "sonos:account-check",
+                "Sprawdź logowanie do Sonos",
+                "sonosAccount",
+                detail="Enter otwiera konto Sonos",
+                service_kind="sonosAccount",
+            )
+        ])
+        state.view = View.LIST
+        return [Announce(
+            "Strona logowania Sonos została otwarta. Po powrocie naciśnij "
+            "Enter, aby sprawdzić wynik"
+        )]
+
     def apply_sonos_library(
         self,
         rows: list[Row],

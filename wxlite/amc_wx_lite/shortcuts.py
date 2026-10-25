@@ -483,10 +483,19 @@ def ctrl_f5_presentation(session_label: str | None) -> CommandPresentation | Non
     return _CTRL_F5_PRESENTATIONS.get((session_label or "").strip().casefold())
 
 
+# Polecenia ratunkowe i porzadkowe, ktore dotycza calej aplikacji, a nie
+# aktualnie wybranego dostawcy. Kazda restrykcyjna lista sesji dziedziczy ten
+# jeden zbior, zeby skrot, menu, paleta, pomoc i dispatcher nie rozjechaly sie.
+SESSION_INDEPENDENT_ACTIONS = frozenset({
+    Action.RECORD_STOP_ALL,
+})
+
+
 # TIDAL ma osobny tor: katalog czyta oficjalne API, a dzwiek odtwarza oryginalna
 # aplikacja TIDAL. Jawna lista obslugiwanych polecen jest celowo restrykcyjna:
 # nowy skrot nie moze przypadkiem trafic do lokalnego silnika AMC.
 TIDAL_SUPPORTED_ACTIONS = frozenset({
+    *SESSION_INDEPENDENT_ACTIONS,
     Action.SESSION_FILES,
     Action.SESSION_RADIO,
     Action.SESSION_PODCASTS,
@@ -571,6 +580,7 @@ TIDAL_SUPPORTED_ACTIONS = frozenset({
 # Czysty kontrakt jednej sesji Spotify. Jawna lista blokuje przypadkowe
 # skierowanie operacji lokalnych plików albo innej usługi do jej kontrolera.
 SPOTIFY_SUPPORTED_ACTIONS = frozenset({
+    *SESSION_INDEPENDENT_ACTIONS,
     Action.SESSION_FILES,
     Action.SESSION_RADIO,
     Action.SESSION_PODCASTS,
@@ -700,6 +710,7 @@ SPOTIFY_SUPPORTED_ACTIONS = frozenset({
 # WiiM jest autonomicznym odtwarzaczem sieciowym. Dopoki polecenie nie ma
 # jawnej drogi ``wiim.*`` w hoscie, nie moze trafic do lokalnego silnika audio.
 WIIM_SUPPORTED_ACTIONS = frozenset({
+    *SESSION_INDEPENDENT_ACTIONS,
     Action.SESSION_FILES,
     Action.SESSION_RADIO,
     Action.SESSION_PODCASTS,
@@ -788,6 +799,7 @@ WIIM_SUPPORTED_ACTIONS = frozenset({
 # Sonos jest autonomicznym odtwarzaczem sieciowym. Polecenia spoza tej listy
 # nie mogą przypadkiem trafić do lokalnego silnika plików.
 SONOS_SUPPORTED_ACTIONS = frozenset({
+    *SESSION_INDEPENDENT_ACTIONS,
     Action.SESSION_FILES,
     Action.SESSION_RADIO,
     Action.SESSION_PODCASTS,
@@ -900,6 +912,7 @@ SONOS_SUPPORTED_ACTIONS = frozenset({
 # Frontier Smart jest autonomicznym radiem. Jawna lista chroni przed
 # skierowaniem polecenia lokalnego silnika albo innej usługi do FSAPI.
 FRONTIER_SMART_SUPPORTED_ACTIONS = frozenset({
+    *SESSION_INDEPENDENT_ACTIONS,
     Action.SESSION_FILES,
     Action.SESSION_RADIO,
     Action.SESSION_PODCASTS,

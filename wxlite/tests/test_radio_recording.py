@@ -37,7 +37,17 @@ from amc_wx_lite.radio_recording import (
     station_activity_rows,
 )
 from amc_wx_lite.radio_source import RadioSource
-from amc_wx_lite.shortcuts import Action, Chord, resolve
+from amc_wx_lite.shortcuts import (
+    Action,
+    Chord,
+    FRONTIER_SMART_SUPPORTED_ACTIONS,
+    SESSION_INDEPENDENT_ACTIONS,
+    SONOS_SUPPORTED_ACTIONS,
+    SPOTIFY_SUPPORTED_ACTIONS,
+    TIDAL_SUPPORTED_ACTIONS,
+    WIIM_SUPPORTED_ACTIONS,
+    resolve,
+)
 from amc_wx_lite.state_store import Station
 
 
@@ -284,6 +294,52 @@ def test_recording_shortcuts_have_the_scope_of_full_amc() -> None:
         is Action.TOGGLE_SHUFFLE
     )
     assert resolve(Chord("T"), player_view=True, radio_session=False) is None
+
+
+def test_stop_all_recordings_is_global_in_surfaces_and_execution() -> None:
+    from amc_wx_lite import menu_model
+
+    assert SESSION_INDEPENDENT_ACTIONS == frozenset({Action.RECORD_STOP_ALL})
+    for supported in (
+        TIDAL_SUPPORTED_ACTIONS,
+        SPOTIFY_SUPPORTED_ACTIONS,
+        WIIM_SUPPORTED_ACTIONS,
+        SONOS_SUPPORTED_ACTIONS,
+        FRONTIER_SMART_SUPPORTED_ACTIONS,
+    ):
+        assert Action.RECORD_STOP_ALL in supported
+
+    for session in (
+        SessionId.RADIO,
+        SessionId.TIDAL,
+        SessionId.SPOTIFY,
+        SessionId.WIIM,
+        SessionId.SONOS,
+        SessionId.FRONTIER_SMART,
+    ):
+        navigator = Navigator()
+        navigator.active = session
+        calls: list[str] = []
+        messages: list[str] = []
+        frame = SimpleNamespace(
+            navigator=navigator,
+            announcer=SimpleNamespace(say=messages.append),
+            _stop_all_radio_recordings=lambda: calls.append("stop"),
+            _global_transient_previews=True,
+            messages=SimpleNamespace(custom_seek_seconds=60),
+        )
+        LiteFrame._dispatch(frame, Action.RECORD_STOP_ALL)
+        assert calls == ["stop"], session
+        assert messages == [], session
+
+        menu_item = next(
+            entry
+            for menu in menu_model.menus_for_session(session)
+            for entry in menu.items
+            if entry.action is Action.RECORD_STOP_ALL
+        )
+        assert menu_item.shortcut == "Ctrl+Alt+Shift+R"
+        assert menu_item.needs_radio_session is False
 
 
 def test_recording_bookmark_shortcuts_do_not_steal_letter_navigation() -> None:

@@ -102,6 +102,42 @@ def test_opcje_sesji_maja_jeden_kontrakt_menu_pomocy_i_palety() -> None:
         assert palette_entry.name == "Opcje sesji…"
 
 
+def test_global_stop_recordings_has_one_contract_in_every_session() -> None:
+    expected = "Zatrzymaj wszystkie nagrania radia"
+    chord = Chord("R", ctrl=True, alt=True, shift=True)
+
+    for session in SessionId:
+        assert resolve(
+            chord,
+            player_view=False,
+            radio_session=session is SessionId.RADIO,
+        ) is Action.RECORD_STOP_ALL
+
+        menu_entry = next(
+            item
+            for menu in menu_model.menus_for_session(session)
+            for item in menu.items
+            if item.action is Action.RECORD_STOP_ALL
+        )
+        palette_entry = next(
+            item
+            for item in entries_for_session(session)
+            if item.action is Action.RECORD_STOP_ALL
+        )
+        assert menu_entry.shortcut == "Ctrl+Alt+Shift+R"
+        assert palette_entry.shortcut == "Ctrl+Alt+Shift+R"
+        assert palette_entry.name == "Zatrzymaj wszystkie nagrania"
+        assert dict(describe(
+            SESSION_LABELS[session],
+            {Action.RECORD_STOP_ALL},
+        ))["Ctrl+Alt+Shift+R"] == expected
+        assert keyboard_help_announcement(
+            chord,
+            Action.RECORD_STOP_ALL,
+            SESSION_LABELS[session],
+        ) == f"Ctrl+Alt+Shift+R. {expected}. {SESSION_LABELS[session]}"
+
+
 def test_palette_count_labels_are_intentional_polish_text() -> None:
     assert count_label(0) == "Brak pasujących poleceń"
     assert count_label(1) == "1 polecenie"

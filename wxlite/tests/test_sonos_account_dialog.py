@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 from pathlib import Path
+from types import SimpleNamespace
 
 from test_gui_logic import install_wx_stub
 
 install_wx_stub()
 
+from amc_wx_lite import gui as gui_module
 from amc_wx_lite.gui import LiteFrame, SonosAccountDialog
+from amc_wx_lite.navigation import Navigator, SessionId, View
 
 
 SOURCE = Path(__file__).parents[1] / "amc_wx_lite" / "gui.py"
@@ -27,19 +30,19 @@ def test_sonos_account_message_uses_only_explicit_labels() -> None:
     )
 
 
-def test_sonos_dialog_has_explicit_labels_and_never_opens_browser_on_start() -> None:
+def test_sonos_dialog_has_one_explicit_information_field() -> None:
     source = SOURCE.read_text(encoding="utf-8")
     dialog = source[source.index("class SonosAccountDialog") :]
     dialog = dialog[:dialog.index("class LibraryFoldersDialog")]
     assert 'SetName("Konto Sonos")' in dialog
-    assert 'SetName("Instrukcja logowania Sonos")' in dialog
-    assert 'SetName("Stan konta Sonos")' in dialog
-    assert "self.instructions = wx.TextCtrl" in dialog
+    assert 'SetName("Informacje o logowaniu Sonos")' in dialog
+    assert "self.instructions = wx.TextCtrl" not in dialog
     assert "self.status = wx.TextCtrl" in dialog
     assert "wx.TE_READONLY" in dialog
     assert "wx.TE_MULTILINE" in dialog
     assert 'SetName("Adres logowania Sonos")' in dialog
     assert 'label="Rozpocznij logowanie"' in dialog
+    assert 'label="Otwórz stronę ponownie"' in dialog
     assert 'label="Sprawdź logowanie"' in dialog
     assert 'label="Odśwież dostęp"' in dialog
     assert 'label="Głośniki i grupy Sonos"' in dialog
@@ -57,9 +60,13 @@ def test_sonos_dialog_hides_login_when_public_service_is_unavailable() -> None:
     assert "self.disconnect_button.Show(connected and can_disconnect)" in dialog
     assert 'return "status"' in dialog
     assert "wx.LaunchDefaultBrowser" in dialog
-    start_handler = dialog[dialog.index("    def _on_action") :]
-    start_handler = start_handler[:start_handler.index("    def _on_open")]
-    assert "LaunchDefaultBrowser" not in start_handler
+    assert 'open_browser=action == "loginStart"' in source
+    finish = dialog[dialog.index("    def finish") :]
+    finish = finish[:finish.index("    def fail")]
+    assert "wx.LaunchDefaultBrowser(self._authorize_url)" in finish
+    assert "self.check_button.SetFocus()" in finish
+    assert "self.browser_opened = True" in finish
+    assert "self.EndModal(wx.ID_OK)" in finish
     assert "str(payload)" not in dialog
 
 
@@ -67,19 +74,16 @@ def test_sonos_dialog_focuses_a_meaningful_control_for_every_account_state() -> 
     focus = SonosAccountDialog._initial_focus_key
 
     assert focus(
-        awaiting=True, connected=False, can_login=True, has_address=True
-    ) == "open"
-    assert focus(
-        awaiting=True, connected=False, can_login=True, has_address=False
+        awaiting=True, connected=False, can_login=True
     ) == "check"
     assert focus(
-        awaiting=False, connected=True, can_login=True, has_address=False
+        awaiting=False, connected=True, can_login=True
     ) == "targets"
     assert focus(
-        awaiting=False, connected=False, can_login=True, has_address=False
+        awaiting=False, connected=False, can_login=True
     ) == "login"
     assert focus(
-        awaiting=False, connected=False, can_login=False, has_address=False
+        awaiting=False, connected=False, can_login=False
     ) == "status"
 
 
@@ -91,3 +95,93 @@ def test_configure_sonos_opens_account_surface_not_a_spoken_dead_end() -> None:
     assert "self._show_sonos_account()" in section
     assert 'SessionId.SONOS: "Wybierz dom i grupę Sonos"' not in section
     assert "elif isinstance(intent, OpenSonosAccount):" in source
+
+
+def test_browser_handoff_closes_modal_and_leaves_one_pending_row() -> None:
+    source = SOURCE.read_text(encoding="utf-8")
+    show = source[source.index("    def _show_sonos_account") :]
+    show = show[:show.index("    def _show_session_list")]
+    assert "browser_opened = dialog.browser_opened" in show
+    assert "self.navigator.apply_sonos_account_pending_prompt()" in show
+    assert "if browser_opened and self.navigator.active is SessionId.SONOS" in show
+
+    navigator = Navigator()
+    navigator.active = SessionId.SONOS
+    events = navigator.apply_sonos_account_pending_prompt()
+
+    state = navigator.sessions[SessionId.SONOS]
+    assert state.view is View.LIST
+    assert len(state.model.rows) == 1
+    row = state.model.rows[0]
+    assert row.title == "Sprawdź logowanie do Sonos"
+    assert row.detail == "Enter otwiera konto Sonos"
+    assert row.kind == "sonosAccount"
+    assert row.service_kind == "sonosAccount"
+    assert "Po powrocie" in events[0].text
+
+
+def test_successful_browser_launch_releases_modal_parent() -> None:
+    calls: list[object] = []
+    original_launch = getattr(gui_module.wx, "LaunchDefaultBrowser", None)
+    gui_module.wx.LaunchDefaultBrowser = lambda address: calls.append(address) or True
+    dialog = SimpleNamespace(
+        set_busy=lambda busy: calls.append(("busy", busy)),
+        apply_payload=lambda payload, focus: calls.append(("payload", payload, focus)),
+        _authorize_url="https://example.invalid/authorize",
+        status=SimpleNamespace(SetFocus=lambda: calls.append("status-focus")),
+        check_button=SimpleNamespace(
+            IsShown=lambda: True,
+            SetFocus=lambda: calls.append("check-focus"),
+        ),
+        fail=lambda message: calls.append(("fail", message)),
+        browser_opened=False,
+        EndModal=lambda result: calls.append(("end", result)),
+    )
+    try:
+        SonosAccountDialog.finish(dialog, {"awaitingBrowser": True}, open_browser=True)
+    finally:
+        if original_launch is None:
+            delattr(gui_module.wx, "LaunchDefaultBrowser")
+        else:
+            gui_module.wx.LaunchDefaultBrowser = original_launch
+
+    assert dialog.browser_opened is True
+    assert "https://example.invalid/authorize" in calls
+    assert ("end", gui_module.wx.ID_OK) in calls
+    assert not any(isinstance(call, tuple) and call[0] == "fail" for call in calls)
+
+
+def test_failed_browser_launch_keeps_modal_and_focuses_readable_status() -> None:
+    calls: list[object] = []
+    original_launch = getattr(gui_module.wx, "LaunchDefaultBrowser", None)
+    gui_module.wx.LaunchDefaultBrowser = lambda address: calls.append(address) or False
+
+    def fail(message: str) -> None:
+        calls.append(("fail", message))
+        calls.append("status-focus")
+
+    dialog = SimpleNamespace(
+        set_busy=lambda busy: calls.append(("busy", busy)),
+        apply_payload=lambda payload, focus: calls.append(("payload", payload, focus)),
+        _authorize_url="https://example.invalid/authorize",
+        status=SimpleNamespace(SetFocus=lambda: calls.append("status-focus")),
+        check_button=SimpleNamespace(
+            IsShown=lambda: True,
+            SetFocus=lambda: calls.append("check-focus"),
+        ),
+        fail=fail,
+        browser_opened=False,
+        EndModal=lambda result: calls.append(("end", result)),
+    )
+    try:
+        SonosAccountDialog.finish(dialog, {"awaitingBrowser": True}, open_browser=True)
+    finally:
+        if original_launch is None:
+            delattr(gui_module.wx, "LaunchDefaultBrowser")
+        else:
+            gui_module.wx.LaunchDefaultBrowser = original_launch
+
+    assert dialog.browser_opened is False
+    assert "status-focus" in calls
+    assert any(isinstance(call, tuple) and call[0] == "fail" for call in calls)
+    assert not any(isinstance(call, tuple) and call[0] == "end" for call in calls)

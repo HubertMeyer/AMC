@@ -4709,6 +4709,13 @@ class YouTubeAccountDialog(wx.Dialog):
 class SonosAccountDialog(wx.Dialog):
     """Dostępne konto Sonos; adres logowania powstaje wyłącznie w C#."""
 
+    _LOGIN_GUIDANCE = (
+        "Logujesz się zwykłym kontem na oficjalnej stronie Sonos. "
+        "Hasło wpisujesz wyłącznie w przeglądarce; AMC go nie widzi. "
+        "Rozpoczęcie logowania otworzy oficjalną stronę w domyślnej "
+        "przeglądarce."
+    )
+
     def __init__(
         self,
         parent: wx.Window,
@@ -4728,17 +4735,13 @@ class SonosAccountDialog(wx.Dialog):
         self._authorize_url = ""
         self._busy = False
         self.open_targets = False
+        self.browser_opened = False
 
         heading = wx.StaticText(self, label="Konto Sonos")
         heading.SetName("Konto Sonos")
-        self.instructions = wx.TextCtrl(
+        self.status = wx.TextCtrl(
             self,
-            value=(
-                "Logujesz się zwykłym kontem na oficjalnej stronie Sonos. "
-                "Hasło wpisujesz wyłącznie w przeglądarce; AMC go nie widzi. "
-                "Rozpoczęcie logowania przygotuje adres, ale nie otworzy strony "
-                "bez Twojego polecenia."
-            ),
+            value="",
             style=(
                 wx.TE_READONLY
                 | wx.TE_MULTILINE
@@ -4746,22 +4749,12 @@ class SonosAccountDialog(wx.Dialog):
                 | wx.BORDER_NONE
             ),
         )
-        self.instructions.SetName("Instrukcja logowania Sonos")
-        self.instructions.SetHelpText(
-            "Pole tylko do odczytu. Użyj strzałek, aby przeczytać instrukcję, "
-            "a klawisza Tab, aby przejść do stanu konta i dostępnych czynności."
-        )
-        self.instructions.SetMinSize((-1, 78))
-        self.status = wx.TextCtrl(
-            self,
-            value="",
-            style=wx.TE_READONLY | wx.BORDER_NONE,
-        )
-        self.status.SetName("Stan konta Sonos")
+        self.status.SetName("Informacje o logowaniu Sonos")
         self.status.SetHelpText(
-            "Bieżący stan konta Sonos. Pole tylko do odczytu; Tab przechodzi "
-            "do następnej dostępnej czynności."
+            "Bieżący stan konta i krótka instrukcja. Pole tylko do odczytu; "
+            "użyj strzałek do czytania, a Tab przechodzi do czynności."
         )
+        self.status.SetMinSize((-1, 118))
         self.address = wx.TextCtrl(self, style=wx.TE_READONLY)
         self.address.SetName("Adres logowania Sonos")
         self.address.SetHelpText(
@@ -4770,7 +4763,7 @@ class SonosAccountDialog(wx.Dialog):
         )
 
         self.login_button = wx.Button(self, label="Rozpocznij logowanie")
-        self.open_button = wx.Button(self, label="Otwórz stronę logowania")
+        self.open_button = wx.Button(self, label="Otwórz stronę ponownie")
         self.copy_button = wx.Button(self, label="Kopiuj adres logowania")
         self.check_button = wx.Button(self, label="Sprawdź logowanie")
         self.cancel_login_button = wx.Button(self, label="Anuluj logowanie")
@@ -4782,7 +4775,7 @@ class SonosAccountDialog(wx.Dialog):
 
         for button, name in (
             (self.login_button, "Rozpocznij logowanie do konta Sonos"),
-            (self.open_button, "Otwórz stronę logowania Sonos"),
+            (self.open_button, "Otwórz ponownie stronę logowania Sonos"),
             (self.copy_button, "Kopiuj adres logowania Sonos"),
             (self.check_button, "Sprawdź wynik logowania Sonos"),
             (self.cancel_login_button, "Anuluj logowanie Sonos"),
@@ -4811,17 +4804,11 @@ class SonosAccountDialog(wx.Dialog):
 
         layout = wx.BoxSizer(wx.VERTICAL)
         layout.Add(heading, 0, wx.ALL, 12)
-        layout.Add(
-            self.instructions,
-            0,
-            wx.LEFT | wx.RIGHT | wx.BOTTOM | wx.EXPAND,
-            12,
-        )
         layout.Add(self.status, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM | wx.EXPAND, 12)
         layout.Add(self.address, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM | wx.EXPAND, 12)
         layout.Add(buttons, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM | wx.EXPAND, 12)
         self.SetSizerAndFit(layout)
-        self.SetMinSize((760, 360))
+        self.SetMinSize((760, 320))
 
         for button, action in (
             (self.login_button, "loginStart"),
@@ -4901,7 +4888,6 @@ class SonosAccountDialog(wx.Dialog):
                 awaiting=awaiting,
                 connected=connected,
                 can_login=can_login,
-                has_address=has_address,
             )]
             wx.CallAfter(target.SetFocus)
 
@@ -4911,10 +4897,7 @@ class SonosAccountDialog(wx.Dialog):
         awaiting: bool,
         connected: bool,
         can_login: bool,
-        has_address: bool,
     ) -> str:
-        if awaiting and has_address:
-            return "open"
         if awaiting:
             return "check"
         if connected:
@@ -4924,7 +4907,7 @@ class SonosAccountDialog(wx.Dialog):
         return "status"
 
     def _set_status(self, message: str) -> None:
-        self.status.ChangeValue(message)
+        self.status.ChangeValue(f"{message}\n\n{self._LOGIN_GUIDANCE}")
         self.status.SetInsertionPoint(0)
 
     def _set_action_buttons_enabled(self, enabled: bool) -> None:
@@ -4948,9 +4931,21 @@ class SonosAccountDialog(wx.Dialog):
         self._busy = bool(busy)
         self._set_action_buttons_enabled(not self._busy)
 
-    def finish(self, payload: object) -> None:
+    def finish(self, payload: object, *, open_browser: bool = False) -> None:
         self.set_busy(False)
-        self.apply_payload(payload, focus=True)
+        self.apply_payload(payload, focus=not open_browser)
+        if not open_browser:
+            return
+        if not self._authorize_url:
+            wx.CallAfter(self.status.SetFocus)
+            return
+        if self.check_button.IsShown():
+            self.check_button.SetFocus()
+        if not wx.LaunchDefaultBrowser(self._authorize_url):
+            self.fail("Nie udało się otworzyć strony logowania Sonos.")
+            return
+        self.browser_opened = True
+        self.EndModal(wx.ID_OK)
 
     def fail(self, message: str) -> None:
         self.set_busy(False)
@@ -4967,6 +4962,8 @@ class SonosAccountDialog(wx.Dialog):
     def _on_open(self, _event: wx.CommandEvent) -> None:
         if not self._authorize_url:
             return
+        if self.check_button.IsShown():
+            self.check_button.SetFocus()
         if not wx.LaunchDefaultBrowser(self._authorize_url):
             self.fail("Nie udało się otworzyć strony logowania Sonos.")
 
@@ -16805,7 +16802,10 @@ class LiteFrame(wx.Frame):
                     self._sonos_browse_household_id = None
                 message = self._sonos_account_message(result)
                 if not dialog.IsBeingDeleted():
-                    dialog.finish(result)
+                    dialog.finish(
+                        result,
+                        open_browser=action == "loginStart",
+                    )
                 self.announcer.say(message)
 
             def failed(error: Exception) -> None:
@@ -16837,7 +16837,11 @@ class LiteFrame(wx.Frame):
             )
             dialog.ShowModal()
             open_targets = dialog.open_targets
-        self._restore_focus_after_dialog()
+            browser_opened = dialog.browser_opened
+        if browser_opened and self.navigator.active is SessionId.SONOS:
+            self._run(self.navigator.apply_sonos_account_pending_prompt())
+        else:
+            self._restore_focus_after_dialog()
         if open_targets:
             wx.CallAfter(
                 self._load_sonos_targets,
