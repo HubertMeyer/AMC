@@ -24,6 +24,9 @@ def main() -> int:
     )
     dialog.SetPosition((-30000, -30000))
     dialog.Show()
+    dialog.Raise()
+    dialog.focus_primary_action()
+    wx.Yield()
     wx.Yield()
     try:
         if not parent.IsEnabled():
@@ -32,6 +35,10 @@ def main() -> int:
         if not dialog.IsShown():
             print("ACCOUNT_WINDOW_HIDDEN")
             return 3
+        if wx.Window.FindFocus() is not dialog.login_button:
+            focused = wx.Window.FindFocus()
+            print(f"WRONG_FOCUS:{focused.GetName() if focused else 'NONE'}")
+            return 4
         print("MODELLESS_OK")
         return 0
     finally:

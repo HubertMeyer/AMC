@@ -4943,6 +4943,10 @@ class SonosAccountDialog(wx.Dialog):
             self.status,
         ):
             if control.IsShown() and control.IsEnabled():
+                # Pierwsze ustawienie działa w bieżącym cyklu po Show/Raise,
+                # drugie broni się przed późnym zdarzeniem aktywacji Windows,
+                # które potrafi przenieść fokus z przycisku na samo okno.
+                control.SetFocus()
                 wx.CallAfter(control.SetFocus)
                 return
 
