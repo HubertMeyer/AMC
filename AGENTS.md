@@ -181,13 +181,22 @@
 
 ## Stanowe zarządzanie kontami, urządzeniami i źródłami
 
-- Modalne okno, które otwiera przeglądarkę lub inną aplikację zewnętrzną, nie
-  może pozostawiać wyłączonego okna głównego jako jedynego miejsca powrotu.
-  Po udanym otwarciu zamknij modal i pokaż w zwykłym widoku jeden nazwany krok
+- Długotrwałe okno zarządzania kontem, które zawiera kilka działań albo otwiera
+  przeglądarkę lub inną aplikację zewnętrzną, od pierwszego pokazania jest
+  niemodalne. Okno główne musi pozostać włączone także przed uruchomieniem
+  przeglądarki. Ponowne wywołanie podnosi ten sam egzemplarz, przywraca fokus na
+  właściwym działaniu i nie tworzy duplikatu. Zamknięcie, Escape, powrót do AMC
+  oraz wyjście z aplikacji nie mogą pozostawić aktywnej pułapki fokusu ani
+  spóźnionego wywołania do zniszczonego okna.
+- Krótkie pytanie atomowe, na przykład potwierdzenie wylogowania, może pozostać
+  modalne, ale musi mieć jednoznaczne przyciski, czytelny fokus i bezpieczny
+  Escape. Nie wolno używać modala jako całego wieloetapowego panelu konta.
+- Po udanym otwarciu przeglądarki pokaż w zwykłym widoku jeden nazwany krok
   oczekujący, na przykład `Sprawdź logowanie`. Po błędzie otwarcia pozostaw
-  modal, czytelny komunikat i fokus w polu stanu. Testuj udane przekazanie,
-  błąd, anulowanie, Escape, powrót, ponowne otwarcie i brak kradzieży fokusu
-  przeglądarce.
+  czytelny komunikat i fokus w polu stanu. Testuj udane przekazanie, błąd,
+  anulowanie, Escape, powrót, ponowne otwarcie i brak kradzieży fokusu
+  przeglądarce. Test UI Automation lub rzeczywistego frameworka ma dodatkowo
+  potwierdzać, że okno główne pozostaje włączone, a aktywne okno ma fokus.
 - `Ctrl+F5` i „Konfiguruj…” otwierają zarządzanie bieżącą sesją, a nie zawsze
   powtarzają jej pierwszą konfigurację. Zasada obejmuje konta Spotify, TIDAL i
   Sonos, urządzenia WiiM i Frontier Smart oraz Foldery Biblioteki i przyszłe

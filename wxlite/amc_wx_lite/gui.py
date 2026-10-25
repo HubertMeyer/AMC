@@ -4825,6 +4825,8 @@ class SonosAccountDialog(wx.Dialog):
         self.open_button.Bind(wx.EVT_BUTTON, self._on_open)
         self.copy_button.Bind(wx.EVT_BUTTON, self._on_copy)
         self.targets_button.Bind(wx.EVT_BUTTON, self._on_targets)
+        self.close_button.Bind(wx.EVT_BUTTON, self._on_close_request)
+        self.SetEscapeId(wx.ID_CANCEL)
         self.apply_payload(payload, focus=True)
 
     @staticmethod
@@ -4931,6 +4933,19 @@ class SonosAccountDialog(wx.Dialog):
         self._busy = bool(busy)
         self._set_action_buttons_enabled(not self._busy)
 
+    def focus_primary_action(self) -> None:
+        """Przywróć fokus po ponownym wywołaniu już otwartego okna."""
+
+        for control in (
+            self.check_button,
+            self.targets_button,
+            self.login_button,
+            self.status,
+        ):
+            if control.IsShown() and control.IsEnabled():
+                wx.CallAfter(control.SetFocus)
+                return
+
     def finish(self, payload: object, *, open_browser: bool = False) -> None:
         self.set_busy(False)
         self.apply_payload(payload, focus=not open_browser)
@@ -4945,7 +4960,7 @@ class SonosAccountDialog(wx.Dialog):
             self.fail("Nie udało się otworzyć strony logowania Sonos.")
             return
         self.browser_opened = True
-        self.EndModal(wx.ID_OK)
+        self.Close()
 
     def fail(self, message: str) -> None:
         self.set_busy(False)
@@ -4973,7 +4988,10 @@ class SonosAccountDialog(wx.Dialog):
 
     def _on_targets(self, _event: wx.CommandEvent) -> None:
         self.open_targets = True
-        self.EndModal(wx.ID_OK)
+        self.Close()
+
+    def _on_close_request(self, _event: wx.CommandEvent) -> None:
+        self.Close()
 
 
 class LibraryFoldersDialog(wx.Dialog):
@@ -7581,6 +7599,9 @@ class LiteFrame(wx.Frame):
         self._quick_info_cache = QuickInfoMemoryCache()
 
         self.client: LiteHostClient | None = None
+        # Zarządzanie kontem Sonos jest celowo modeless. Główne okno nie może
+        # zostać wyłączone, gdy Windows albo czytnik ekranu zgubi fokus dziecka.
+        self._sonos_account_dialog: SonosAccountDialog | None = None
         # Dopiero potwierdzona konfiguracja hosta dodaje polecenie do menu,
         # palety i pomocy. Brak identyfikatora Google nie tworzy martwej opcji.
         self._youtube_account_available = False
@@ -16747,6 +16768,19 @@ class LiteFrame(wx.Frame):
         return "Nie można teraz odczytać stanu konta Sonos."
 
     def _show_sonos_account(self, initial_payload: object | None = None) -> None:
+        existing = self._sonos_account_dialog
+        if existing is not None:
+            try:
+                if not existing.IsBeingDeleted():
+                    existing.Show()
+                    existing.Raise()
+                    existing.focus_primary_action()
+                    return
+            except RuntimeError:
+                # Obiekt wx może być już zniszczony pomiędzy zdarzeniami.
+                pass
+            self._sonos_account_dialog = None
+
         client = self.client
         if client is None:
             self.announcer.say("Silnik nie jest gotowy")
@@ -16801,7 +16835,10 @@ class LiteFrame(wx.Frame):
                     self._sonos_active_group_id = None
                     self._sonos_browse_household_id = None
                 message = self._sonos_account_message(result)
-                if not dialog.IsBeingDeleted():
+                if (
+                    self._sonos_account_dialog is dialog
+                    and not dialog.IsBeingDeleted()
+                ):
                     dialog.finish(
                         result,
                         open_browser=action == "loginStart",
@@ -16814,7 +16851,10 @@ class LiteFrame(wx.Frame):
                     if isinstance(error, (HostError, HostUnavailable))
                     else "Operacja konta Sonos nie powiodła się."
                 )
-                if not dialog.IsBeingDeleted():
+                if (
+                    self._sonos_account_dialog is dialog
+                    and not dialog.IsBeingDeleted()
+                ):
                     dialog.fail(message)
                 self.announcer.say(message)
 
@@ -16825,28 +16865,44 @@ class LiteFrame(wx.Frame):
                 failed,
             )
 
-        with SonosAccountDialog(
+        dialog = SonosAccountDialog(
             self,
             initial_payload,
             run_action=run_action,
             copy_address=lambda address: self._to_clipboard(address),
-        ) as dialog:
-            wx.CallAfter(
-                self.announcer.say,
-                LiteFrame._sonos_account_message(initial_payload),
-            )
-            dialog.ShowModal()
+        )
+        self._sonos_account_dialog = dialog
+        closed = False
+
+        def close_account(_event: wx.CloseEvent) -> None:
+            nonlocal closed
+            if closed:
+                return
+            closed = True
+            if self._sonos_account_dialog is dialog:
+                self._sonos_account_dialog = None
             open_targets = dialog.open_targets
             browser_opened = dialog.browser_opened
-        if browser_opened and self.navigator.active is SessionId.SONOS:
-            self._run(self.navigator.apply_sonos_account_pending_prompt())
-        else:
-            self._restore_focus_after_dialog()
-        if open_targets:
-            wx.CallAfter(
-                self._load_sonos_targets,
-                self.navigator.sessions[SessionId.SONOS].list_anchor_id,
-            )
+            dialog.Hide()
+            wx.CallAfter(dialog.Destroy)
+            if browser_opened and self.navigator.active is SessionId.SONOS:
+                self._run(self.navigator.apply_sonos_account_pending_prompt())
+            else:
+                wx.CallAfter(self._restore_focus_after_dialog)
+            if open_targets:
+                wx.CallAfter(
+                    self._load_sonos_targets,
+                    self.navigator.sessions[SessionId.SONOS].list_anchor_id,
+                )
+
+        dialog.Bind(wx.EVT_CLOSE, close_account)
+        wx.CallAfter(
+            self.announcer.say,
+            LiteFrame._sonos_account_message(initial_payload),
+        )
+        dialog.Show()
+        dialog.Raise()
+        dialog.focus_primary_action()
 
     def _show_session_list(self, *, focus_inactive: bool = False) -> None:
         """Ctrl+Shift+S i dodatek NVDA: jeden Menedżer sesji."""
@@ -29006,6 +29062,18 @@ class LiteFrame(wx.Frame):
                 _present_main_window(self)
                 return
         self.timer.Stop()
+        account_dialog = self._sonos_account_dialog
+        self._sonos_account_dialog = None
+        if account_dialog is not None:
+            try:
+                if not account_dialog.IsBeingDeleted():
+                    account_dialog.Hide()
+                    account_dialog.Destroy()
+            except RuntimeError:
+                # Dziecko mogło zostać zniszczone przez Windows tuż przed
+                # zamknięciem ramki. Wyzerowane odwołanie blokuje spóźnione
+                # odpowiedzi asynchroniczne przed dotknięciem starego okna.
+                pass
         # Dlugie operacje fragmentu sa jawnie anulowane przed EOF hosta.
         # Edytory C# usuwaja swoje pliki techniczne i nie dotykaja oryginalu
         # przed zweryfikowanym, atomowym etapem podmiany.

@@ -1,7 +1,12 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
+import subprocess
+import sys
 from types import SimpleNamespace
+
+import pytest
 
 from test_gui_logic import install_wx_stub
 
@@ -66,7 +71,8 @@ def test_sonos_dialog_hides_login_when_public_service_is_unavailable() -> None:
     assert "wx.LaunchDefaultBrowser(self._authorize_url)" in finish
     assert "self.check_button.SetFocus()" in finish
     assert "self.browser_opened = True" in finish
-    assert "self.EndModal(wx.ID_OK)" in finish
+    assert "self.Close()" in finish
+    assert "self.EndModal" not in dialog
     assert "str(payload)" not in dialog
 
 
@@ -97,11 +103,15 @@ def test_configure_sonos_opens_account_surface_not_a_spoken_dead_end() -> None:
     assert "elif isinstance(intent, OpenSonosAccount):" in source
 
 
-def test_browser_handoff_closes_modal_and_leaves_one_pending_row() -> None:
+def test_sonos_account_window_is_modeless_reusable_and_leaves_one_pending_row() -> None:
     source = SOURCE.read_text(encoding="utf-8")
     show = source[source.index("    def _show_sonos_account") :]
     show = show[:show.index("    def _show_session_list")]
-    assert "browser_opened = dialog.browser_opened" in show
+    assert "self._sonos_account_dialog" in show
+    assert "existing.Raise()" in show
+    assert "dialog.Bind(wx.EVT_CLOSE, close_account)" in show
+    assert "dialog.Show()" in show
+    assert "dialog.ShowModal()" not in show
     assert "self.navigator.apply_sonos_account_pending_prompt()" in show
     assert "if browser_opened and self.navigator.active is SessionId.SONOS" in show
 
@@ -120,6 +130,15 @@ def test_browser_handoff_closes_modal_and_leaves_one_pending_row() -> None:
     assert "Po powrocie" in events[0].text
 
 
+def test_main_close_releases_modeless_sonos_window_before_async_shutdown() -> None:
+    source = SOURCE.read_text(encoding="utf-8")
+    close = source[source.rindex("    def _on_close(self, event: wx.CloseEvent)") :]
+    close = close[: close.index("\n\n\nclass LiteApp")]
+    assert "account_dialog = self._sonos_account_dialog" in close
+    assert "self._sonos_account_dialog = None" in close
+    assert "account_dialog.Destroy()" in close
+
+
 def test_successful_browser_launch_releases_modal_parent() -> None:
     calls: list[object] = []
     original_launch = getattr(gui_module.wx, "LaunchDefaultBrowser", None)
@@ -135,7 +154,7 @@ def test_successful_browser_launch_releases_modal_parent() -> None:
         ),
         fail=lambda message: calls.append(("fail", message)),
         browser_opened=False,
-        EndModal=lambda result: calls.append(("end", result)),
+        Close=lambda: calls.append("close"),
     )
     try:
         SonosAccountDialog.finish(dialog, {"awaitingBrowser": True}, open_browser=True)
@@ -147,7 +166,7 @@ def test_successful_browser_launch_releases_modal_parent() -> None:
 
     assert dialog.browser_opened is True
     assert "https://example.invalid/authorize" in calls
-    assert ("end", gui_module.wx.ID_OK) in calls
+    assert "close" in calls
     assert not any(isinstance(call, tuple) and call[0] == "fail" for call in calls)
 
 
@@ -171,7 +190,7 @@ def test_failed_browser_launch_keeps_modal_and_focuses_readable_status() -> None
         ),
         fail=fail,
         browser_opened=False,
-        EndModal=lambda result: calls.append(("end", result)),
+        Close=lambda: calls.append("close"),
     )
     try:
         SonosAccountDialog.finish(dialog, {"awaitingBrowser": True}, open_browser=True)
@@ -184,4 +203,23 @@ def test_failed_browser_launch_keeps_modal_and_focuses_readable_status() -> None
     assert dialog.browser_opened is False
     assert "status-focus" in calls
     assert any(isinstance(call, tuple) and call[0] == "fail" for call in calls)
-    assert not any(isinstance(call, tuple) and call[0] == "end" for call in calls)
+    assert "close" not in calls
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="Wymaga rzeczywistego wxPython na Windows")
+def test_real_wx_modeless_sonos_window_keeps_parent_enabled() -> None:
+    probe = Path(__file__).with_name("fixtures") / "sonos_modeless_probe.py"
+    environment = dict(os.environ)
+    environment["PYTHONPATH"] = str(SOURCE.parents[1])
+    completed = subprocess.run(
+        [sys.executable, str(probe)],
+        cwd=SOURCE.parents[1],
+        env=environment,
+        text=True,
+        capture_output=True,
+        timeout=20,
+        check=False,
+        creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+    )
+    assert completed.returncode == 0, completed.stdout + completed.stderr
+    assert "MODELLESS_OK" in completed.stdout
