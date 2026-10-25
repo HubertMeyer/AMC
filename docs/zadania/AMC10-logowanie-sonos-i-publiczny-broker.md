@@ -21,6 +21,20 @@ prawie gotowe. Ten etap nie zmienia adapterów, list, transportu ani WiiM.
 
 ## Korekty użytkownika
 
+- 2026-10-25: użytkownik potwierdził, że w zwykłej aplikacji Sonos jest
+  zalogowany na właściwe konto i widzi swój system. Ponowna bezsekretowa próba
+  `/login/start` potwierdziła zarazem, że publiczny broker używa dokładnie tego
+  samego jawnego klucza integracji co pakiet wdrożeniowy i klient sterowania
+  AMC; zgadzają się również `playback-control-all`, oficjalny endpoint
+  autoryzacji oraz callback `https://sonos.stareaudycje.pl/login/callback`.
+  Oficjalna strona stanu Sonosa oznaczała konto i usługi Sonos jako działające
+  i nie podawała incydentu 25.10.2026. Zastępuje to hipotezy o niewłaściwym
+  koncie, innym kluczu na serwerze albo ogólnej awarii. Pozostaje błąd strony
+  autoryzacji tej integracji na etapie wyboru gospodarstwa, przed callbackiem;
+  następna użyteczna próba to czysta sesja prywatna przeglądarki, a przy tym
+  samym wyniku zgłoszenie do Sonos z godziną próby i kluczem integracji, bez
+  przekazywania `state`, tokenów lub sekretu.
+
 - 2026-10-25: po instalacji kompilacji `af731db1` użytkownik zauważył przed
   logowaniem i ponownie po nieudanej próbie komunikat: „Konto Sonos wymaga
   ponownego zalogowania. Zapisane logowanie Sonos należy do innego serwera
