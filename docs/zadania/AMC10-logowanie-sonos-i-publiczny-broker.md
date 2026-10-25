@@ -21,6 +21,22 @@ prawie gotowe. Ten etap nie zmienia adapterów, list, transportu ani WiiM.
 
 ## Korekty użytkownika
 
+- 2026-10-25: na prośbę użytkownika ponownie porównano tylko do odczytu
+  archiwalne, nierozwijane AMC WPF z bieżącym AMC Test. Historyczne
+  `SonosAccountCoordinator.cs` jest identyczne z obecnym, a klient logowania
+  różni się tylko późniejszym rozpoznawaniem braku endpointu. Archiwum nie
+  zawiera źródeł osobnego brokera ani innego mechanizmu OAuth do przeniesienia;
+  wskazuje wyłącznie dawny origin Hermesa i callback `/sonos/callback`.
+  Historyczne raporty `TESTY_SONOS_KONTO_PL.md` i
+  `review/sonos-login-client/REPORT.md` jawnie rozróżniają próby syntetyczne od
+  prawdziwego logowania i nie stanowią dowodu ukończonego E2E. Jednocześnie na
+  komputerze nadal istnieje chroniony przez Windows rekord
+  `%LOCALAPPDATA%\AccessibleMediaController\credentials\sonos.bin`, 518 bajtów,
+  zapisany 20.10.2026. Potwierdza to zapisane poświadczenie historycznej
+  instalacji, ale nie upoważnia do odczytu, kopiowania ani migracji tokenu do
+  nowego brokera. Wniosek: nie ma poprawki ze starego klienta do skopiowania;
+  trzeba dokończyć świeże logowanie na koncie przypisanym do systemu Sonos.
+
 - 2026-10-25: użytkownik doprecyzował, że publiczny serwer i wdrożenie brokera
   przygotował **Michał Dziwisz**. Określenia „Hermes” nie wolno używać jako nazwy
   tej osoby ani bieżącego serwera; Hermes oznacza wyłącznie wcześniejsze
@@ -171,12 +187,14 @@ logowania”, „Kopiuj adres logowania”, „Sprawdź logowanie”, „Anuluj 
 „Zamknij”, a początkowy fokus trafia na otwarcie strony. „Wyloguj konto” i
 „Głośniki i grupy Sonos” pojawiają się dopiero po połączeniu konta.
 
-„Rozpocznij logowanie” przygotowuje adres. AMC nie otwiera wtedy przeglądarki
-samoczynnie: adres można skopiować albo jawnie wybrać „Otwórz stronę
-logowania”. Po ukończeniu logowania użytkownik wraca do okna i wybiera
-„Sprawdź logowanie”. `Ctrl+F5` nadal oznacza „Głośniki i grupy Sonos”. Gdy konto
-jest połączone, otwiera wybór domu i grupy; gdy konto nie jest gotowe, prowadzi
-do okna konta zamiast kończyć się niejasnym błędem.
+„Rozpocznij logowanie” przygotowuje adres, automatycznie otwiera oficjalną
+stronę Sonosa w domyślnej przeglądarce i zamyka modal konta. Po ukończeniu
+logowania użytkownik wraca do aktywnego okna AMC i wybiera w sesji „Sprawdź
+logowanie do Sonos”. Ponowne otwarcie strony i skopiowanie adresu są dostępne
+awaryjnie po wejściu do oczekującego logowania. `Ctrl+F5` nadal oznacza
+„Głośniki i grupy Sonos”. Gdy konto jest połączone, otwiera wybór domu i grupy;
+gdy konto nie jest gotowe, prowadzi do okna konta zamiast kończyć się niejasnym
+błędem.
 
 Po otwarciu okna konta AMC jawnie wypowiada aktualny stan Sonosa, mimo że fokus
 trafia na przycisk. Gdy `Ctrl+F5` wykryje już połączone konto, mówi „Konto
@@ -202,8 +220,12 @@ konta, które w aplikacji Sonos widzi system użytkownika.
 
 Jeżeli użytkownik wybierze „Sprawdź logowanie” przed powrotem z Sonosa, broker
 odpowiada technicznym kodem `unknown_session`, ale AMC nie wypowiada tego kodu.
-Program mówi, że logowanie jeszcze trwa, zachowuje rozpoczętą próbę i pozwala
-sprawdzić ponownie. Istniejące testy obejmują kolejno oczekiwanie oraz udany
+Program mówi, że logowanie nie jest jeszcze zakończone i pozwala sprawdzić
+ponownie. Jeżeli oficjalna strona Sonosa pokazała błąd po wybraniu
+„Kontynuuj”, komunikat poleca sprawdzić, czy przeglądarka używa tego samego
+konta, które w aplikacji Sonos widzi system, a następnie rozpocząć próbę od
+nowa. Nie wypowiada technicznych nazw callbacku, brokera ani etapu
+`selectHousehold`. Istniejące testy obejmują kolejno oczekiwanie oraz udany
 drugi odczyt tej samej próby.
 
 Wydanie publiczne nie będzie wymagało od zwykłego użytkownika własnego klucza,

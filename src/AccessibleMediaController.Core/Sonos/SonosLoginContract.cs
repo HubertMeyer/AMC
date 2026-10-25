@@ -240,11 +240,17 @@ public enum SonosLoginStatus
 /// </summary>
 public static class SonosLoginMessages
 {
+    public const string PendingGuidance =
+        "Logowanie Sonos nie jest jeszcze zakończone. Dokończ je w przeglądarce. "
+        + "Jeśli Sonos pokazał błąd po wybraniu „Kontynuuj”, sprawdź, czy w przeglądarce "
+        + "używasz tego samego konta, które w aplikacji Sonos widzi Twój system, "
+        + "a następnie rozpocznij logowanie ponownie.";
+
     private static readonly IReadOnlyDictionary<SonosLoginStatus, string> Texts =
         new Dictionary<SonosLoginStatus, string>
         {
             [SonosLoginStatus.Success] = "Logowanie Sonos zakończone.",
-            [SonosLoginStatus.Pending] = "Logowanie Sonos jeszcze nie zostało ukończone w przeglądarce.",
+            [SonosLoginStatus.Pending] = PendingGuidance,
             [SonosLoginStatus.Expired] = "Sesja logowania Sonos wygasła. Rozpocznij logowanie ponownie.",
             [SonosLoginStatus.Denied] = "Sonos nie przyznał dostępu. Logowanie zostało odrzucone.",
             [SonosLoginStatus.ProofMismatch] =

@@ -75,11 +75,7 @@ public static class LiteSonosContract
                 ? "Ta próba logowania Sonos została zastąpiona nowszą."
                 : result.Connected
                     ? "Konto Sonos zostało połączone."
-                    : result.StillWaiting
-                        ? result.LoginStatus == SonosLoginStatus.Pending
-                            ? "Logowanie Sonos nie jest jeszcze zakończone. Dokończ je w przeglądarce i sprawdź ponownie."
-                            : result.Message
-                        : result.Message;
+                    : result.Message;
         return CreateAccountActionResult(result.Snapshot, message);
     }
 

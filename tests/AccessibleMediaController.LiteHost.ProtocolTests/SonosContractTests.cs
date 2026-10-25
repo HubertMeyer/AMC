@@ -11,11 +11,28 @@ internal static class SonosContractTests
     {
         AccountStatusUsesOnlyExplicitUserFacingFields();
         MissingPublicLoginServiceIsExplicitAndCannotStartLogin();
+        PendingLoginExplainsTheHouseholdAccountMismatch();
         TargetLabelsNeverUseTechnicalIdentifiers();
         SnapshotUsesOnlyExplicitUserFacingFields();
         TransportAcceptsOnlyTheNarrowAllowlist();
         LibraryAndMaterialLabelsNeverExposeIds();
         MaterialRequestsAcceptOnlyKnownKinds();
+    }
+
+    private static void PendingLoginExplainsTheHouseholdAccountMismatch()
+    {
+        var message = SonosLoginMessages.Describe(SonosLoginStatus.Pending);
+
+        Check(message == SonosLoginMessages.PendingGuidance,
+            "oczekujące logowanie nie używa wspólnej instrukcji dla użytkownika");
+        Check(message.Contains("tego samego konta", StringComparison.Ordinal)
+              && message.Contains("aplikacji Sonos", StringComparison.Ordinal)
+              && message.Contains("rozpocznij logowanie ponownie", StringComparison.Ordinal),
+            "komunikat nie wyjaśnia błędu po wyborze gospodarstwa domowego");
+        Check(!message.Contains("selectHousehold", StringComparison.Ordinal)
+              && !message.Contains("callback", StringComparison.OrdinalIgnoreCase)
+              && !message.Contains("broker", StringComparison.OrdinalIgnoreCase),
+            "komunikat dostępny ujawnił techniczny etap logowania");
     }
 
     private static void MissingPublicLoginServiceIsExplicitAndCannotStartLogin()
