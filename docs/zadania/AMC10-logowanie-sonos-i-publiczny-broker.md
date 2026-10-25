@@ -21,6 +21,18 @@ prawie gotowe. Ten etap nie zmienia adapterów, list, transportu ani WiiM.
 
 ## Korekty użytkownika
 
+- 2026-10-25: po instalacji kompilacji `af731db1` użytkownik zauważył przed
+  logowaniem i ponownie po nieudanej próbie komunikat: „Konto Sonos wymaga
+  ponownego zalogowania. Zapisane logowanie Sonos należy do innego serwera
+  logowania; nie zostało usunięte”. Kontrola kodu potwierdziła, że ten zapis
+  nie uczestniczy w rozpoczęciu nowej próby: `BeginLoginAsync` czyści wyłącznie
+  ewentualną oczekującą sesję i wywołuje `/login/start` bieżącego publicznego
+  brokera. Stary rekord pozostaje nietknięty do czasu udanego callbacku i
+  przyjęcia nowych tokenów. Ponieważ Sonos ponownie zakończył próbę przed
+  callbackiem, nie było czym zastąpić rekordu i ten sam komunikat pojawił się
+  ponownie. Jest to skutek nieukończonego OAuth, nie przyczyna błędu Sonosa ani
+  dowód użycia Hermesa.
+
 - 2026-10-25: na prośbę użytkownika ponownie porównano tylko do odczytu
   archiwalne, nierozwijane AMC WPF z bieżącym AMC Test. Historyczne
   `SonosAccountCoordinator.cs` jest identyczne z obecnym, a klient logowania
