@@ -50,7 +50,11 @@ def test_sonos_dialog_hides_login_when_public_service_is_unavailable() -> None:
     dialog = source[source.index("class SonosAccountDialog") :]
     dialog = dialog[:dialog.index("class LibraryFoldersDialog")]
     assert 'payload.get("canLogin") is not False' in dialog
-    assert "self.login_button.Show(can_login)" in dialog
+    assert (
+        "self.login_button.Show(can_login and not awaiting and not connected)"
+        in dialog
+    )
+    assert "self.disconnect_button.Show(connected and can_disconnect)" in dialog
     assert 'return "status"' in dialog
     assert "wx.LaunchDefaultBrowser" in dialog
     start_handler = dialog[dialog.index("    def _on_action") :]
@@ -62,10 +66,21 @@ def test_sonos_dialog_hides_login_when_public_service_is_unavailable() -> None:
 def test_sonos_dialog_focuses_a_meaningful_control_for_every_account_state() -> None:
     focus = SonosAccountDialog._initial_focus_key
 
-    assert focus(awaiting=True, connected=False, can_login=True) == "check"
-    assert focus(awaiting=False, connected=True, can_login=True) == "targets"
-    assert focus(awaiting=False, connected=False, can_login=True) == "login"
-    assert focus(awaiting=False, connected=False, can_login=False) == "status"
+    assert focus(
+        awaiting=True, connected=False, can_login=True, has_address=True
+    ) == "open"
+    assert focus(
+        awaiting=True, connected=False, can_login=True, has_address=False
+    ) == "check"
+    assert focus(
+        awaiting=False, connected=True, can_login=True, has_address=False
+    ) == "targets"
+    assert focus(
+        awaiting=False, connected=False, can_login=True, has_address=False
+    ) == "login"
+    assert focus(
+        awaiting=False, connected=False, can_login=False, has_address=False
+    ) == "status"
 
 
 def test_configure_sonos_opens_account_surface_not_a_spoken_dead_end() -> None:
@@ -75,3 +90,4 @@ def test_configure_sonos_opens_account_surface_not_a_spoken_dead_end() -> None:
     assert "if session_id is SessionId.SONOS:" in section
     assert "self._show_sonos_account()" in section
     assert 'SessionId.SONOS: "Wybierz dom i grupę Sonos"' not in section
+    assert "elif isinstance(intent, OpenSonosAccount):" in source

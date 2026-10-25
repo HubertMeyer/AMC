@@ -12,6 +12,7 @@ from amc_wx_lite.navigation import (
     ActivateSonosGroup,
     LibraryView,
     Navigator,
+    OpenSonosAccount,
     OpenSonosView,
     PlaySonosMaterial,
     SessionId,
@@ -286,6 +287,77 @@ def test_sonos_activation_separates_labels_from_internal_ids() -> None:
     assert "technical" not in row.title
     assert "technical" not in row.detail
     assert nav.view is View.LIST
+
+
+def test_empty_sonos_session_exposes_one_login_row_for_enter() -> None:
+    nav = Navigator()
+    nav.switch_session(SessionId.SONOS)
+
+    announcements = nav.apply_sonos_account_prompt()
+
+    row = nav.sessions[SessionId.SONOS].model.selected_row
+    assert row is not None
+    assert row.title == "Rozpocznij logowanie do Sonos"
+    assert row.detail == "Enter otwiera konto Sonos"
+    assert row.kind_label == ""
+    assert "Naciśnij Enter" in announcements[0].text
+    intents = nav.activate_selected()
+    assert len(intents) == 1
+    assert isinstance(intents[0], OpenSonosAccount)
+
+
+def test_sonos_target_failure_replaces_empty_list_with_login_row() -> None:
+    spoken: list[str] = []
+    applied: list[list[object]] = []
+    navigator = SimpleNamespace(
+        active=SessionId.SONOS,
+        apply_sonos_account_prompt=lambda: ["login-prompt"],
+    )
+    frame = SimpleNamespace(
+        client=SimpleNamespace(sonos_targets=lambda: None),
+        navigator=navigator,
+        announcer=SimpleNamespace(say=spoken.append),
+        runner=SimpleNamespace(
+            submit=lambda _name, _work, _done, failed: failed(
+                RuntimeError("Nie ma połączonego konta Sonos")
+            )
+        ),
+        _run=applied.append,
+    )
+
+    LiteFrame._load_sonos_targets(frame)
+
+    assert spoken == [
+        "Nie udało się odczytać grup Sonos: Nie ma połączonego konta Sonos"
+    ]
+    assert applied == [["login-prompt"]]
+
+
+def test_sonos_target_failure_does_not_call_network_error_a_missing_account() -> None:
+    spoken: list[str] = []
+    applied: list[list[object]] = []
+    navigator = SimpleNamespace(
+        active=SessionId.SONOS,
+        apply_sonos_account_prompt=lambda: ["login-prompt"],
+    )
+    frame = SimpleNamespace(
+        client=SimpleNamespace(sonos_targets=lambda: None),
+        navigator=navigator,
+        announcer=SimpleNamespace(say=spoken.append),
+        runner=SimpleNamespace(
+            submit=lambda _name, _work, _done, failed: failed(
+                RuntimeError("Brak połączenia z usługą Sonos")
+            )
+        ),
+        _run=applied.append,
+    )
+
+    LiteFrame._load_sonos_targets(frame)
+
+    assert spoken == [
+        "Nie udało się odczytać grup Sonos: Brak połączenia z usługą Sonos"
+    ]
+    assert applied == []
 
 
 def test_sonos_material_uses_shared_stay_on_list_preference() -> None:

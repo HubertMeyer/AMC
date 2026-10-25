@@ -161,6 +161,7 @@ from .navigation import (
     OpenSpotifyView,
     OpenTidalContainer,
     OpenTidalView,
+    OpenSonosAccount,
     OpenSonosView,
     PlayFromQueue,
     PlayQueueAt,
@@ -4875,14 +4876,14 @@ class SonosAccountDialog(wx.Dialog):
         has_address = bool(self._authorize_url)
 
         self.address.Show(has_address)
-        self.login_button.Show(can_login)
+        self.login_button.Show(can_login and not awaiting and not connected)
         self.open_button.Show(has_address)
         self.copy_button.Show(has_address)
         self.check_button.Show(awaiting)
         self.cancel_login_button.Show(awaiting)
         self.refresh_button.Show(can_refresh)
         self.retry_button.Show(can_retry)
-        self.disconnect_button.Show(can_disconnect)
+        self.disconnect_button.Show(connected and can_disconnect)
         self.targets_button.Show(connected)
         self._set_action_buttons_enabled(not self._busy)
         self.Layout()
@@ -4891,6 +4892,7 @@ class SonosAccountDialog(wx.Dialog):
         if focus:
             controls = {
                 "check": self.check_button,
+                "open": self.open_button,
                 "targets": self.targets_button,
                 "login": self.login_button,
                 "status": self.status,
@@ -4899,6 +4901,7 @@ class SonosAccountDialog(wx.Dialog):
                 awaiting=awaiting,
                 connected=connected,
                 can_login=can_login,
+                has_address=has_address,
             )]
             wx.CallAfter(target.SetFocus)
 
@@ -4908,7 +4911,10 @@ class SonosAccountDialog(wx.Dialog):
         awaiting: bool,
         connected: bool,
         can_login: bool,
+        has_address: bool,
     ) -> str:
+        if awaiting and has_address:
+            return "open"
         if awaiting:
             return "check"
         if connected:
@@ -13832,6 +13838,8 @@ class LiteFrame(wx.Frame):
                 self._open_tidal_container(intent)
             elif isinstance(intent, OpenSonosView):
                 self._open_sonos_view(intent)
+            elif isinstance(intent, OpenSonosAccount):
+                self._show_sonos_account()
             elif isinstance(intent, ShowTidalRelations):
                 self._show_tidal_relations(intent)
             elif isinstance(intent, ShowSpotifyRelations):
@@ -17621,13 +17629,29 @@ class LiteFrame(wx.Frame):
             else:
                 self._sync_views()
 
+        def failed(error: Exception) -> None:
+            self.announcer.say(f"Nie udało się odczytać grup Sonos: {error}")
+            if (
+                self.navigator.active is SessionId.SONOS
+                and LiteFrame._sonos_error_requires_login(error)
+            ):
+                self._run(self.navigator.apply_sonos_account_prompt())
+
         self.runner.submit(
             "sonos-targets",
             client.sonos_targets,
             done,
-            lambda error: self.announcer.say(
-                f"Nie udało się odczytać grup Sonos: {error}"
-            ),
+            failed,
+        )
+
+    @staticmethod
+    def _sonos_error_requires_login(error: Exception) -> bool:
+        """Rozpoznaj wyłącznie użytkowy stan braku połączonego konta."""
+
+        message = str(error).casefold()
+        return (
+            "nie ma połączonego konta sonos" in message
+            or "konto sonos nie jest połączone" in message
         )
 
     def _activate_sonos_group(

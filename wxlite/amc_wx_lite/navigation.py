@@ -606,6 +606,11 @@ class ActivateSonosGroup:
 
 
 @dataclass(slots=True)
+class OpenSonosAccount:
+    """Otwórz konto Sonos z celowego wiersza pustej sesji."""
+
+
+@dataclass(slots=True)
 class OpenSonosView:
     """Otwórz korzeń Biblioteki albo jedną listę materiałów Sonosa."""
 
@@ -1058,6 +1063,28 @@ class Navigator:
             else "Sonos, brak dostępnych grup"
         )]
 
+    def apply_sonos_account_prompt(self) -> list[object]:
+        """Zostaw w pustej sesji jedną dostępną drogę do logowania."""
+
+        state = self.sessions[SessionId.SONOS]
+        state.sonos_target_rows = ()
+        state.library_view = None
+        state.library_item_id = None
+        state.model.replace([
+            Row(
+                "sonos:account-login",
+                "Rozpocznij logowanie do Sonos",
+                "sonosAccount",
+                detail="Enter otwiera konto Sonos",
+                service_kind="sonosAccount",
+            )
+        ])
+        state.view = View.LIST
+        return [Announce(
+            "Sonos. Konto nie jest połączone. "
+            "Naciśnij Enter, aby się zalogować"
+        )]
+
     def apply_sonos_library(
         self,
         rows: list[Row],
@@ -1335,6 +1362,8 @@ class Navigator:
             # samego tytułu zaobserwowanego na urządzeniu.
             if row.activation_message:
                 return [Announce(row.activation_message)]
+            if row.kind == "sonosAccount" and row.service_kind == "sonosAccount":
+                return [OpenSonosAccount()]
             if (
                 row.kind == "sonosCategory"
                 and row.parent_id
