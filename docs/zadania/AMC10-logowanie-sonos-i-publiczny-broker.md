@@ -12,13 +12,33 @@ zwrócił błąd na etapie wyboru gospodarstwa domowego, przed powrotem do broke
 Do zakończenia pozostają: ponowienie na koncie przypisanym do systemu Sonos,
 udane logowanie, odmowa, odnowienie, odbiór sprzętu i NVDA. Pakiet zwrotny
 operatora nie został jeszcze odnaleziony na tym komputerze, więc jego treść i
-suma pozostają do lokalnej weryfikacji. Nie wykonano publikacji GitHub ani
-wydania AMC Public.**
+suma pozostają do lokalnej weryfikacji; nie blokuje to obecnej diagnozy błędu,
+który wystąpił po stronie Sonosa przed callbackiem. Nie wykonano publikacji
+GitHub ani wydania AMC Public.**
 
 Sterowanie Sonosem i WiiM było już przeszczepione i użytkownik ocenił je jako
 prawie gotowe. Ten etap nie zmienia adapterów, list, transportu ani WiiM.
 
 ## Korekty użytkownika
+
+- 2026-10-25: użytkownik doprecyzował, że publiczny serwer i wdrożenie brokera
+  przygotował **Michał Dziwisz**. Określenia „Hermes” nie wolno używać jako nazwy
+  tej osoby ani bieżącego serwera; Hermes oznacza wyłącznie wcześniejsze
+  środowisko i materiały historyczne. Brak lokalnej kopii pakietu zwrotnego od
+  Michała Dziwisza nie jest potrzebny do ustalenia bieżącego miejsca awarii:
+  publiczne endpointy brokera odpowiadają, a próba OAuth nie dotarła do
+  callbacku. Pakiet pozostaje potrzebny tylko do niezależnego sprawdzenia jego
+  manifestu i podanej sumy kontrolnej.
+
+- 2026-10-25: ponowne sprawdzenie publiczne bez logowania i bez ujawniania
+  parametrów sesji potwierdziło `200 {"status":"ok"}` dla `/health/live`,
+  `200 {"status":"ready","sonos_configured":true}` dla `/health/ready` oraz
+  przyjęcie świeżej sesji przez `/login/start` na 600 sekund. W zwróconym adresie
+  sprawdzono wyłącznie zgodność pól: oficjalny host i ścieżka Sonosa,
+  `response_type=code`, `scope=playback-control-all`, obecność Client ID i state
+  oraz dokładny callback `https://sonos.stareaudycje.pl/login/callback`.
+  Wszystkie kontrole przeszły. To wyklucza bieżącą awarię konfiguracji brokera;
+  nie wyklucza problemu konta lub gospodarstwa domowego po stronie Sonosa.
 
 - 2026-10-25: po pierwszej próbie OAuth użytkownik doprecyzował, że nacisnął
   „Kontynuuj”, a dopiero potem zobaczył stronę błędu Sonos. Przeglądarka była
@@ -682,9 +702,10 @@ niezależnie od bieżącej sesji.
 
 ## Znane ograniczenia
 
-- Broker, domena, TLS, testy operatora i callback są gotowe. Nadal nie
+- Broker, domena, TLS, testy Michała Dziwisza i callback są gotowe. Nadal nie
   odnaleziono lokalnie pakietu zwrotnego operatora, więc jego manifest i
-  podana suma nie mają niezależnego potwierdzenia na tym komputerze.
+  podana suma nie mają niezależnego potwierdzenia na tym komputerze. Nie blokuje
+  to diagnozy aktualnego błędu OAuth, który wystąpił przed callbackiem.
 - Docelowy wariant to pojedyncza usługa systemd na Mikrusie srv28 z Ubuntu
   24.04 i ASP.NET Core Runtime 8.0.32. Docker i Caddy pozostają wariantem
   referencyjnym, a nie sposobem tego wdrożenia.
