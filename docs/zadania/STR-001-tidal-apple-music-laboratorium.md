@@ -1,8 +1,8 @@
 # STR-001 — laboratorium TIDAL i Apple Music
 
-- Status: `W trakcie — Apple Music ma bezsekretny prototyp serwerowy, ale
-  prawdziwe wdrożenie jest wstrzymane do rozstrzygnięcia własności zespołu
-  Apple Developer i próby MusicKit/WebView2/NVDA`
+- Status: `Wstrzymane — Apple Music ma bezsekretny prototyp serwerowy, ale
+  prawdziwy test i wdrożenie wymagają własnego zespołu Apple Developer
+  należącego do właściciela AMC`
 - Utworzono: 18 października 2026
 - Obszar: usługi strumieniowe i profil testowy
 - Polecenie uruchamiające: `Uruchom zadanie STR-001`
@@ -42,6 +42,14 @@ może zapaść osobna decyzja o wdrożeniu.
   założenie, że sam istniejący token można po prostu podłączyć do publicznego
   AMC. Dalsze prawdziwe wdrożenie jest wstrzymane; dopuszczalny pozostaje
   laboratoryjny test pod świadomą kontrolą właściciela klucza.
+- 2026-10-25, korekta późniejsza: po sprawdzeniu aktualnej umowy Apple Developer
+  Program License Agreement wycofano także propozycję rzeczywistego testu na
+  koncie znajomego. Zastępuje ona ostatnie zdanie poprzedniej korekty. Sama
+  zgoda znajomego ani prywatny charakter próby nie czynią AMC jego aplikacją i
+  nie spełniają warunku pracy wykonawcy wyłącznie w jego imieniu. Projekt nie
+  poprosi znajomego o plik `.p8`, developer token, dostęp do konta ani
+  uruchomienie brokera dla AMC. To ostrożna decyzja projektowa na podstawie
+  bieżącego tekstu umowy, a nie porada prawna.
 
 ## Wynik badania Apple Music z 25.10.2026
 
@@ -68,6 +76,8 @@ Oficjalny kontrakt Apple potwierdza:
 
 Źródła oficjalne, sprawdzone 25.10.2026:
 
+- https://developer.apple.com/support/terms/
+- https://developer.apple.com/fr/support/terms/apple-developer-program-license-agreement/
 - https://developer.apple.com/documentation/applemusicapi/generating-developer-tokens
 - https://developer.apple.com/documentation/applemusicapi/user-authentication-for-musickit
 - https://developer.apple.com/musickit/
@@ -90,18 +100,22 @@ proxy, limit per klient oraz brak identyfikatorów w stanie usługi.
 Prototyp nie został spakowany, wdrożony ani podłączony do AMC. Nie dowodzi
 jeszcze logowania użytkownika, odtwarzania, zgodności terytorialnej ani NVDA.
 
-## Najtańsza bramka decyzji
+## Najtańsza zgodna bramka decyzji
 
-1. Właściciel istniejącego zespołu Apple Developer potwierdza, czy zgadza się
-   na krótką, niepubliczną próbę pod swoim Media ID. Nie przekazuje pliku `.p8`;
-   sam umieszcza go na kontrolowanym serwerze.
-2. Osobny host testowy wydaje token tylko dla jednego testowego originu i na
-   najwyżej godzinę. Nie udostępnia publicznej sesji Apple Music w AMC.
-3. W odizolowanym profilu sprawdzamy logowanie użytkownika, pełny utwór,
-   pauzę, przewijanie, zmianę pozycji, odnowienie sesji oraz cały przebieg NVDA.
-4. Dopiero po pozytywnym wyniku użytkownik decyduje, czy kupuje własne
-   członkostwo i przenosi integrację do własnego zespołu. Negatywny wynik nie
-   powoduje kosztu 99 USD po stronie użytkownika.
+1. Nie używamy konta, klucza ani tokenu znajomego — ani publicznie, ani do
+   rzeczywistej prywatnej próby AMC.
+2. Bez konta Apple wolno kontynuować jedynie lokalne testy naszej architektury:
+   konfiguracji, podpisu testowym kluczem, CORS, limitów i dostępnego interfejsu
+   na danych pozorowanych. Nie nazywamy tego testem integracji z Apple Music.
+3. Kasperczak albo formalny właściciel AMC, na przykład FIRR, ustala kto ma być
+   właścicielem produktu i zespołu Apple Developer. Dopiero ten podmiot może
+   rozważyć własne członkostwo i zaakceptować aktualne warunki Apple.
+4. Dopiero na własnym zespole powstaje osobny Media ID i klucz. Pierwszym
+   etapem jest niepubliczny pilot: logowanie użytkownika, pełny utwór, pauza,
+   przewijanie, zmiana pozycji, odnowienie sesji i cały przebieg NVDA.
+5. Publikacja następuje tylko po udanym pilocie, sprawdzeniu aktualnej umowy,
+   wytycznych marki i ustaleniu modelu utrzymania. Sam prywatny zasięg nie
+   pozwala użyć poświadczeń zespołu, do którego AMC nie należy.
 
 ## Organizacja pracy
 
@@ -137,9 +151,10 @@ Do uzupełnienia po pracy:
 - Wynik Apple Music: architektura i podpisywanie tokenu są wykonalne, lecz
   brakuje dowodu realnego MusicKit/WebView2/NVDA i stabilnego właściciela
   zespołu deweloperskiego.
-- Rekomendacja: pozostawić w laboratorium; wykonać kontrolowany prototyp pod
-  istniejącym zespołem znajomego tylko za jego wyraźną zgodą, a własne
-  członkostwo kupować dopiero po pozytywnym odbiorze technicznym.
+- Rekomendacja: pozostawić w laboratorium bez połączenia z Apple. Nie używać
+  zespołu znajomego nawet do rzeczywistego testu. Wrócić do pilota dopiero po
+  wskazaniu właściciela AMC i założeniu przez niego własnego zespołu Apple
+  Developer; przed kosztem można nadal oceniać makietę interfejsu i dostępność.
 
 ## Materiał do dokumentacji użytkownika
 
@@ -153,7 +168,7 @@ w oficjalnym odtwarzaczu webowym Apple sterowanym przez dostępny interfejs AMC.
 
 - Ten sam fizyczny serwer może później utrzymywać Sonosa i Apple Music, lecz
   będą to osobne procesy, sekrety, limity, hosty i procedury wycofania.
-- Obcy klucz nie jest importowany do repozytorium ani komputera użytkownika.
+- Obcy klucz i token nie są importowane, używane ani uruchamiane dla AMC.
 - Brak realnej próby oznacza brak obietnicy publicznego Apple Music.
 
 ## Testy i wynik
@@ -171,6 +186,8 @@ w oficjalnym odtwarzaczu webowym Apple sterowanym przez dostępny interfejs AMC.
 
 ## Wersja i commit
 
-Kod laboratoryjny powstał lokalnie 25.10.2026. Commit zostanie wpisany po
-utworzeniu spójnego punktu kontrolnego. Nie wykonano instalacji ani publikacji.
+Kod laboratoryjny powstał lokalnie 25.10.2026 w commicie
+`8655c063353ac4ffe8803f3da9adb0e691885d40`. Późniejsza korekta tego samego
+dnia wycofuje zawartą w nim propozycję testu na koncie znajomego. Nie wykonano
+instalacji, publikacji ani prawdziwego połączenia z Apple.
 
