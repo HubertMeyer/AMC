@@ -789,6 +789,20 @@ migracji.
 
 ## Wersja i commit
 
+- Podpowiedź dla oczekującego logowania oraz zapis porównania z archiwalnym AMC:
+  commit `af731db1` — `fix(amc10): wyjasnij oczekujace logowanie Sonos`.
+  Ukierunkowane testy: 36/36 klienta logowania Sonos oraz 1/1 zestaw protokołu
+  LiteHost. Następnie pełna bramka promocji zaliczyła 30/30 testów launchera i
+  aktualizatora, obie kompilacje .NET z 0 ostrzeżeń i 0 błędów oraz pełną
+  regresję 2042 zaliczonych, 111 pominiętych i 13 podtestów.
+- Zbudowana, atomowo zainstalowana i uruchomiona paczka AMC Test:
+  `2026.10.25-af731db1de8269e9223c1e11e4cc8a9f8abf2f6c-4be5eba1`.
+  Manifest ma `sourceDirty=false`, identyfikator zawartości `4be5eba1` i 1672
+  pliki. Kandydat i stała instalacja przeszły pełną kontrolę integralności oraz
+  kontrolowany start. O 20:26 potwierdzono odpowiadające okno
+  `AMC Test — 25.10.2026, 20:25` i trzy składniki uruchomione wyłącznie z
+  `D:\Projekty Codex\AMC Python`. AMC Public, instalatora publicznego ani
+  publikacji GitHub nie wykonano.
 - Zamykanie modala po przekazaniu do przeglądarki, jeden wiersz powrotu,
   pojedyncze pole informacji oraz globalny zakres zatrzymania nagrań: commit
   `9d6cf642` — `fix(amc10): zwolnij AMC po otwarciu Sonosa`. Testy źródłowe:
