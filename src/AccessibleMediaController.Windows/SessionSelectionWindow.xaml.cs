@@ -12,22 +12,19 @@ public partial class SessionSelectionWindow : Window
 {
     private readonly SessionManager _sessions;
     private readonly ObservableCollection<SessionRow> _rows = [];
+    private readonly Func<Window, Task<SessionCreationResult>>? _createSession;
+    private bool _creatingSession;
 
-    public SessionSelectionWindow(SessionManager sessions)
+    public SessionSelectionWindow(
+        SessionManager sessions,
+        Func<Window, Task<SessionCreationResult>>? createSession = null)
     {
         InitializeComponent();
         _sessions = sessions;
-        foreach (var pair in sessions.SessionSlots.OrderBy(pair => pair.Key))
-        {
-            _rows.Add(new SessionRow(
-                pair.Key,
-                pair.Value,
-                sessions.Sessions.FirstOrDefault(session => session.Id == pair.Value)?.DisplayName ?? "nieprzypisana"));
-        }
+        _createSession = createSession;
+        CreateSessionButton.Visibility = createSession is null ? Visibility.Collapsed : Visibility.Visible;
+        ReloadRows(sessions.Current.Id);
         SessionList.ItemsSource = _rows;
-        var currentIndex = _rows.ToList().FindIndex(row =>
-            string.Equals(row.SessionId, sessions.Current.Id, StringComparison.Ordinal));
-        SessionList.SelectedIndex = currentIndex >= 0 ? currentIndex : 0;
         Loaded += (_, _) =>
         {
             SessionList.UpdateLayout();
@@ -55,6 +52,45 @@ public partial class SessionSelectionWindow : Window
 
     private void Select_Click(object sender, RoutedEventArgs e) => Select();
     private void SessionList_MouseDoubleClick(object sender, MouseButtonEventArgs e) => Select();
+
+    private async void CreateSession_Click(object sender, RoutedEventArgs e)
+    {
+        if (_createSession is null || _creatingSession) return;
+        _creatingSession = true;
+        CreateSessionButton.IsEnabled = false;
+        try
+        {
+            var result = await _createSession(this);
+            if (!result.Created)
+            {
+                FocusSelectedItem();
+                return;
+            }
+            ReloadRows(result.SessionId);
+            SessionOrderStatus.Announce(result.Announcement);
+            FocusSelectedItem();
+        }
+        finally
+        {
+            _creatingSession = false;
+            CreateSessionButton.IsEnabled = true;
+        }
+    }
+
+    private void ReloadRows(string? preferredSessionId)
+    {
+        _rows.Clear();
+        foreach (var pair in _sessions.SessionSlots.OrderBy(pair => pair.Key))
+        {
+            _rows.Add(new SessionRow(
+                pair.Key,
+                pair.Value,
+                _sessions.Sessions.FirstOrDefault(session => session.Id == pair.Value)?.DisplayName ?? "nieprzypisana"));
+        }
+        var index = _rows.ToList().FindIndex(row =>
+            string.Equals(row.SessionId, preferredSessionId, StringComparison.Ordinal));
+        SessionList.SelectedIndex = index >= 0 ? index : (_rows.Count > 0 ? 0 : -1);
+    }
 
     public bool MoveSelectedSession(int direction)
     {
@@ -157,3 +193,8 @@ public partial class SessionSelectionWindow : Window
         public override string ToString() => Label;
     }
 }
+
+public sealed record SessionCreationResult(
+    bool Created,
+    string? SessionId = null,
+    string Announcement = "Nie utworzono sesji");

@@ -2,8 +2,8 @@
 //
 //  a) Po Ctrl+X i przeniesieniu pliku POZA AMC w Historii nagrywania nadal stoi
 //     wiersz „Nagrano <nazwa>”, a Enter na nim wskazuje martwa stara sciezke.
-//  b) Wiersz historii ma sie czytac: uzyteczna nazwa, czas/data, a na KONCU
-//     folder, do ktorego nagranie zapisano - bez kopiowania sciezki Ctrl+C.
+//  b) Wiersz historii ma sie czytac krotko: stan i nazwa pliku. Stacja,
+//     harmonogram, data i folder nie moga powtarzac sie przy kazdej strzalce.
 //
 // Test mierzy RZECZYWISTE pliki w katalogu tymczasowym (rename/delete), nie
 // same napisy. Logika siedzi w Core, wiec da sie ja zmierzyc bez WPF.
@@ -14,7 +14,7 @@ internal static class RecordingMoveAndFolderRowTests
 {
     internal static void Run()
     {
-        FolderIsReadLastAndNotDuplicated();
+        RecordingRowsAreConciseAndNotDuplicated();
         MissingFileIsNotReadAsReady();
         RenameRewritesHistoryPathWithoutDuplicate();
         ExternalMoveWithKnownDestinationIsAdopted();
@@ -23,7 +23,7 @@ internal static class RecordingMoveAndFolderRowTests
         ProbeDoesNotTouchWholeLibraryAndCachesFrames();
         DatesStayLocalAndOrderedAfterMove();
         Console.WriteLine(
-            "OK: po przeniesieniu nagrania listy nie pokazuja martwej sciezki, a wiersz czyta folder na koncu");
+            "OK: nagrania zachowuja spojnosc plikow, a wiersze czytaja tylko stan i nazwe");
     }
 
     private static string NewDirectory(string tag)
@@ -52,9 +52,9 @@ internal static class RecordingMoveAndFolderRowTests
 
     private static readonly DateTime Teraz = new(2026, 9, 16, 9, 0, 0, DateTimeKind.Utc);
 
-    // ---- a) folder na koncu wiersza ------------------------------------
+    // ---- a) krotka etykieta wiersza ------------------------------------
 
-    private static void FolderIsReadLastAndNotDuplicated()
+    private static void RecordingRowsAreConciseAndNotDuplicated()
     {
         var root = NewDirectory("folder");
         try
@@ -65,37 +65,29 @@ internal static class RecordingMoveAndFolderRowTests
             File.WriteAllBytes(plik, new byte[64]);
 
             var wpis = Entry("a", "Trójka", plik);
+            wpis.ScheduleName = "Poranek";
             var wiersz = RadioRecordingRowLabels.DescribeHistoryRow(wpis, Teraz, fileMissing: false);
 
-            Check(wiersz.StartsWith("Nagrane", StringComparison.Ordinal),
-                $"Skutek musi byc czytany pierwszy: {wiersz}");
-            Check(wiersz.Contains("Trójka", StringComparison.Ordinal),
-                $"Wiersz musi podac stacje: {wiersz}");
-            Check(wiersz.Contains("trojka-2026-09-15", StringComparison.Ordinal),
-                $"Wiersz musi podac uzyteczna nazwe pliku: {wiersz}");
-            Check(wiersz.TrimEnd().EndsWith("folder Nagrania", StringComparison.Ordinal),
-                $"Folder docelowy musi byc czytany na samym koncu wiersza: {wiersz}");
-            // Data/czas przed folderem, nie po nim.
-            Check(wiersz.IndexOf("15 września", StringComparison.Ordinal)
-                    < wiersz.IndexOf("folder Nagrania", StringComparison.Ordinal),
-                $"Czas/data musi poprzedzac folder: {wiersz}");
-            Check(CountOccurrences(wiersz, "folder ") == 1,
-                $"Folder nie moze byc czytany dwa razy: {wiersz}");
-            Check(!wiersz.Contains(nagrania, StringComparison.Ordinal),
-                $"Wiersz ma czytac NAZWE folderu, nie pelna sciezke: {wiersz}");
+            Check(wiersz == "Nagrane, trojka-2026-09-15",
+                $"Wiersz ma zawierac tylko stan i nazwe pliku: {wiersz}");
+            Check(!wiersz.Contains("Trójka", StringComparison.Ordinal)
+                  && !wiersz.Contains("Poranek", StringComparison.Ordinal)
+                  && !wiersz.Contains("15 września", StringComparison.Ordinal)
+                  && !wiersz.Contains("folder", StringComparison.OrdinalIgnoreCase),
+                $"Wiersz powtarza stacje, harmonogram, date albo folder: {wiersz}");
             Check(CountOccurrences(wiersz, "trojka-2026-09-15") == 1,
                 $"Nazwa pliku nie moze dublowac sie w wierszu: {wiersz}");
 
-            // Wiersz pliku z biblioteki: etykieta jest gotowa, folder dopisujemy
-            // na koncu i NIE powtarzamy, gdy juz tam jest.
-            var zBiblioteki = RadioRecordingRowLabels.AppendFolder(
-                "trojka-2026-09-15, 59 min, Trójka", plik);
-            Check(zBiblioteki.EndsWith("folder Nagrania", StringComparison.Ordinal),
-                $"Wiersz pliku z biblioteki musi konczyc sie folderem: {zBiblioteki}");
-            Check(RadioRecordingRowLabels.AppendFolder(zBiblioteki, plik) == zBiblioteki,
-                "Powtorne dopisanie folderu nie moze dublowac tekstu.");
+            Check(RadioRecordingRowLabels.DescribeRecordedFile(plik, "Trójka") == wiersz,
+                "Plik biblioteczny i wpis historii maja miec ten sam krotki opis.");
+            Check(RadioRecordingRowLabels.DescribeActiveRow(plik, "Trójka")
+                    == "Nagrywane, trojka-2026-09-15",
+                "Alt+R nie podaje stanu i nazwy biezacego pliku.");
+            Check(RadioRecordingRowLabels.DescribeActiveRow(null, "Trójka") == "Nagrywane, Trójka",
+                "Przygotowywane nagranie nie ma czytelnego opisu awaryjnego.");
 
-            // Pusta sciezka (nagranie nieudane) nie dopisuje zadnego folderu.
+            // Narzedzia szczegolow nadal potrafia nazwac folder, ale zwykly
+            // wiersz listy z nich nie korzysta.
             Check(RadioRecordingRowLabels.AppendFolder("Nieudane, Dwójka", string.Empty)
                     == "Nieudane, Dwójka",
                 "Brak sciezki nie moze dopisywac slowa „folder”.");
@@ -240,8 +232,8 @@ internal static class RecordingMoveAndFolderRowTests
                 "Wiersz musi czytac NOWY folder docelowy.");
             Check(RadioRecordingRowLabels
                     .DescribeHistoryRow(historia[0], Teraz, fileMissing: false)
-                    .TrimEnd().EndsWith("folder Archiwum", StringComparison.Ordinal),
-                "Po przejeciu wiersz czyta nowy folder na koncu.");
+                    == "Nagrane, trojka",
+                "Po przejeciu wiersz ma nadal czytac tylko stan i nazwe pliku.");
 
             // Samo Created i brak oryginału NIE dowodzą przeniesienia.
             // Kontrolę cudzej zawartości o tej samej nazwie wykonuje
@@ -275,8 +267,10 @@ internal static class RecordingMoveAndFolderRowTests
                 historia[0], Teraz, probe.IsMissing(plik));
             Check(wiersz.Contains("brak pliku", StringComparison.OrdinalIgnoreCase),
                 $"Bez znanego celu wiersz musi byc uczciwy, a nie „gotowy”: {wiersz}");
-            Check(wiersz.Contains("Trójka", StringComparison.Ordinal),
-                "Wpis musi dalej podawac stacje i czas.");
+            Check(wiersz.Contains("trojka", StringComparison.Ordinal),
+                "Wpis musi dalej podawac nazwe brakujacego pliku.");
+            Check(!wiersz.Contains("Trójka", StringComparison.Ordinal),
+                "Zwykly wiersz nie powinien powtarzac nazwy stacji.");
             Check(wiersz.TrimEnd().EndsWith("folder", StringComparison.Ordinal) == false,
                 "Slowo „folder” nie moze zostac bez nazwy.");
             Check(!RadioRecordingRowLabels.IsPlayableNow(historia[0], fileMissing: true),
@@ -310,8 +304,8 @@ internal static class RecordingMoveAndFolderRowTests
             $"Nieudane nagranie musi pozostac nieudane: {opisNieudanego}");
         Check(opisNieudanego.Contains("Zerwane połączenie ze stacją", StringComparison.Ordinal),
             "Powod niepowodzenia nie moze zniknac.");
-        Check(opisNieudanego.Contains("harmonogram Poranek", StringComparison.Ordinal),
-            "Wpis z harmonogramu musi dalej podawac harmonogram.");
+        Check(!opisNieudanego.Contains("harmonogram", StringComparison.OrdinalIgnoreCase),
+            "Zwykly wiersz nie powinien podawac nazwy harmonogramu.");
         Check(!opisNieudanego.Contains("brak pliku", StringComparison.OrdinalIgnoreCase),
             $"Nieudane nagranie nigdy nie mialo pliku - nie dopisuj mu „brak pliku”: {opisNieudanego}");
         Check(RadioRecordingRowLabels.DescribeHistoryRow(przerwane, Teraz, fileMissing: true)
@@ -397,11 +391,10 @@ internal static class RecordingMoveAndFolderRowTests
                     == new DateTime(2026, 9, 15, 10, 0, 0, DateTimeKind.Utc).Ticks,
                 "Przeniesienie pliku nie moze zmieniac czasu nagrania.");
 
-            var lokalny = new DateTime(historia[0].FinishedUtcTicks, DateTimeKind.Utc).ToLocalTime();
             var wiersz = RadioRecordingRowLabels.DescribeHistoryRow(
                 historia[0], Teraz, fileMissing: false);
-            Check(wiersz.Contains(lokalny.ToString("HH:mm"), StringComparison.Ordinal),
-                $"Wiersz musi czytac czas LOKALNY: {wiersz} (oczekiwano {lokalny:HH:mm})");
+            Check(wiersz == "Nagrane, przeniesiony",
+                $"Data i folder nie powinny zagluszac nazwy pliku: {wiersz}");
 
             var posortowane = historia
                 .OrderByDescending(entry => entry.FinishedUtcTicks)

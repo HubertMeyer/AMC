@@ -1,5 +1,23 @@
 # Accessible Media Controller — Windows prototype
 
+## Pending after alpha425: YouTube video downloads
+
+In **Podcasts and YouTube**, `Ctrl+Shift+D` downloads video for one or more
+selected YouTube items into the configured podcast download folder. The command
+is exposed in the list, player, search results, context menus, command palette,
+and keyboard help only when the complete selection is eligible. `Ctrl+D` keeps
+its audio-download meaning. `Ctrl+S` remains the one-item Save As command, but
+is now contextual: it saves audio for an ordinary episode and opens video Save
+As for a YouTube item, with a one-time MP4 or original/best-format choice.
+
+**Settings > Podcasts** offers **MP4 — default and most compatible** or
+**Original/best available — do not force MP4**. MP4 prefers H.264 video and AAC
+audio and lets yt-dlp/FFmpeg merge or remux them; the other mode may produce
+WebM, MKV, or another best available container. The completed quick-download
+file is published under a safe unique name; Save As publishes it under the name
+chosen in the system dialog, adjusted to the actual container extension. This
+is a source change after alpha425, not an installed or released build.
+
 ## Pending after alpha415: copy addresses without titles
 
 `Ctrl+Shift+C` in media lists, the player, search results and presets copies only locations, one per line, without item titles. Podcast direct audio/feed addresses and the existing YouTube item URL selection are unchanged; this does not create a new raw audio stream URL or guarantee external-speaker playback. Local file-drop data and full paths are preserved, as is ordinary `Ctrl+C` name/description copying. A WiiM hardware preset without a URL no longer substitutes its name. Older name-and-link descriptions below are historical. Windows/NVDA acceptance and release are still pending.
@@ -148,9 +166,11 @@ In Podcasts, `Ctrl+N` now also accepts a public YouTube video or live page.
 The item is stored under **Internet media** without account sign-in, account
 synchronisation, or browser cookies. AMC persists the stable page URL and
 resolves a temporary audio URL only when playback starts. A finite item uses
-the shared seeking, speed, History, Queue, and playlist features; `Ctrl+D` and
-`Ctrl+S` save its audio as MP3 through isolated, updateable `yt-dlp` and FFmpeg
-components. RSS/Atom remains independent and does not require either component.
+the shared seeking, speed, History, Queue, and playlist features; in
+`alpha.294`, `Ctrl+D` and `Ctrl+S` saved its audio as MP3 through isolated,
+updateable `yt-dlp` and FFmpeg components. The pending `Ctrl+S` correction is
+described at the top of this document. RSS/Atom remains independent and does
+not require either component.
 
 Version `alpha.293` accepts a public URL of a currently live YouTube broadcast
 in the Radio session. The stable page URL is stored like a station, while AMC
@@ -478,6 +498,8 @@ Starting with `alpha.115`, **Internet Radio** on the default `Ctrl+5` slot is AM
 Starting with `alpha.116`, radio recordings are stored as MP3 instead of WAV. The target quality is 192 kbps; for an unusual sample rate the system selects the nearest supported bitrate. AMC encodes the decoded audio through Windows Media Foundation, so source MP3, AAC, OGG and other streams supported by the player follow one path without installing FFmpeg or a global codec pack. Recording first writes an AMC temporary file and publishes the `.mp3` name only after successful finalisation. Stop, station changes and application shutdown finalise the file; an encoder failure removes incomplete data without stopping radio playback.
 
 Starting with `alpha.117`, legacy Shoutcast and Icecast servers which answer with `ICY 200 OK` have a bounded MP3 compatibility path. AMC keeps the normal system decoder as its first choice and reconnects through a small protocol client plus the managed NLayer decoder only when that path rejects the stream. This is not a station-specific exception: it also covers older direct Polish Radio endpoints, keeps normal HTTPS certificate validation, and strips ICY metadata from audio if a server sends it despite the request.
+
+In the current **AMC Test** sources, radio import can complete missing station names in simple M3U playlists which contain URLs only. A name supplied by `#EXTINF`, PLS, XSPF or JSON always takes precedence. Only an unnamed entry receives a time-bounded Icecast/Shoutcast header request, and AMC accepts the user-facing `icy-name` value without waiting for audio or a current-track title. At most 64 entries are checked automatically, with up to six concurrent requests, a four-second per-station limit and a twelve-second total import limit. An unavailable name keeps a readable host label instead of exposing the full raw URL. NVDA receives a progress announcement before probing and the final message reports server-derived and fallback-name counts.
 
 Starting with `alpha.120`, the legacy MP3 radio decoder correctly joins partial TCP reads. A network-packet boundary may occur inside an MP3 frame and does not mean that the station has ended. The regression test deliberately splits frames into small fragments, while live checks require multiple consecutive reads from Polish Radio One, Programme 2, Programme 4 and PR24. This prevents AMC from announcing that reception has started and then mistaking an ordinary packet boundary for the end of the broadcast a few milliseconds later.
 
@@ -1088,3 +1110,12 @@ Starting with `alpha.286`, the Radio `Recording` view no longer repeats the
 obvious “Internet Radio” session name whenever focus enters the list. A session
 switch announces the slot, view, station and recording state. Other Radio views
 retain the full session name where it remains useful context.
+
+## Stream and output details for active recordings
+
+The `Recording` view separates two kinds of information. Left Arrow continues
+to announce the incoming radio
+stream parameters. Right Arrow announces the saved output concisely, for
+example `192 kb/s, file programme.mp3, default folder`. A non-default recording
+folder is spoken as its full path. Right Arrow in the Radio recording schedule
+uses the same order and no longer begins with “Source” or the station URL.

@@ -112,6 +112,7 @@ public partial class MainWindow
         _ = RunTidalDesktopPlaybackAsync(request!, allowRestartPrompt, isPreset, result =>
         {
             if (isPreset && !result.WasAlreadyCurrent) CaptureContext();
+            RecordTidalDesktopPlayback(track);
             afterPlay?.Invoke(result);
         });
     }
@@ -320,8 +321,16 @@ public partial class MainWindow
         DiagnosticLog.Info("tidal-desktop",
             $"Kolejka AMC: {(forward ? "następny" : "poprzedni")} to \"{track.Title}\", numer {_tidalTrackQueue.HumanPosition} z {_tidalTrackQueue.Count}.");
 
-        await RunTidalDesktopPlaybackAsync(request!).ConfigureAwait(true);
+        await RunTidalDesktopPlaybackAsync(
+            request!,
+            afterPlay: _ => RecordTidalDesktopPlayback(track)).ConfigureAwait(true);
         return true;
+    }
+
+    private void RecordTidalDesktopPlayback(MediaItem track)
+    {
+        if (_sessions.FindSession("tidal") is { } tidal)
+            RecordPlayback(tidal, track);
     }
 
     /// <summary>

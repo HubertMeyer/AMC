@@ -58,13 +58,41 @@ if (args.Length == 1 && args[0].StartsWith("--smoke-runner-failure=", StringComp
     SmokeTestRunnerTests.SimulateFailure(args[0]["--smoke-runner-failure=".Length..]);
     throw new InvalidOperationException("Symulowane niepowodzenie nie zostało zgłoszone.");
 }
+if (args.Length == 2 && args[0] == "--radio-playlist-import-live")
+{
+    ProbeRadioPlaylistImportLive(args[1]);
+    return 0;
+}
+if (args.Contains("--radio-playlist-import", StringComparer.Ordinal))
+{
+    TestRadioPlaylistImport();
+    return 0;
+}
 if (args.Contains("--spotify-account-routing-gui", StringComparer.Ordinal))
 {
     SpotifyAccountRoutingTests.ShowForNvda(); return 0;
 }
+if (args.Contains("--apple-music-ui", StringComparer.Ordinal))
+{
+    AppleMusicPrototypeUiTests.Run(); return 0;
+}
+if (args.Contains("--youtube-google-ui", StringComparer.Ordinal))
+{
+    YouTubeGoogleLoginUiTests.Run(); return 0;
+}
 if (args.Contains("--clipboard-locations-ui", StringComparer.Ordinal))
 {
     SonosFavoritePlayRealOwnerTests.RunClipboardLocations(); return 0;
+}
+if (args.Contains("--recognition-history-ui", StringComparer.Ordinal))
+{
+    TestRadioRecognitionSettingAccessibility();
+    TestRadioRecognitionHistoryFilterAccessibility();
+    TestRecognitionStreamingResolver();
+    TestRecognitionSearchLinks();
+    TestAppleMusicRecognitionLinks();
+    Console.WriteLine("OK: izolowany kontrakt historii rozpoznawania — ustawienia, klawiatura, oba menu, fokus, łącza i cache");
+    return 0;
 }
 if (args.Length == 2 && args[0] == "--sonos-final-gui")
 {
@@ -306,6 +334,14 @@ if (args.Contains("--status-read-once", StringComparer.Ordinal))
     try { TestAccessiblePlaybackStatusStrip(); return 0; }
     catch (Exception exception) { Console.Error.WriteLine(exception); return 1; }
 }
+if (args.Contains("--player-accessibility", StringComparer.Ordinal))
+{
+    PlayerAccessibilityTests.Run(); return 0;
+}
+if (args.Contains("--playback-shuffle-ui", StringComparer.Ordinal))
+{
+    PlaybackShuffleUiTests.Run(); return 0;
+}
 if (args.Contains("--spotify-engine-settings", StringComparer.Ordinal))
 {
     try { SpotifyEngineSettingsTests.Run(); return 0; }
@@ -363,6 +399,12 @@ if (args.Length == 2 && args[0] == "--schedule-copy-nvda")
 if (args.Contains("--schedule-copy", StringComparer.Ordinal))
 {
     RadioScheduleCopyTests.Run(); return 0;
+}
+if (args.Contains("--active-recording-output", StringComparer.Ordinal))
+{
+    TestActiveRadioRecordingFocusContext();
+    ActiveRecordingArrowTests.Run();
+    return 0;
 }
 if (args.Contains("--spotify-relations", StringComparer.Ordinal))
 {
@@ -445,6 +487,11 @@ if (args.Contains("--podcast-session-resume-capture", StringComparer.Ordinal))
     try { PodcastSessionResumeCaptureTests.Run(); return 0; }
     catch (Exception exception) { Console.Error.WriteLine(exception); return 1; }
 }
+if (args.Contains("--podcast-source-window", StringComparer.Ordinal))
+{
+    try { PodcastSourceWindowTests.Run(); return 0; }
+    catch (Exception exception) { Console.Error.WriteLine(exception); return 1; }
+}
 if (args.Contains("--session-options-consumer", StringComparer.Ordinal))
 {
     SessionOptionsInSettingsTests.RunConsumer();
@@ -504,6 +551,21 @@ if (args.Contains("--librespot-auth", StringComparer.Ordinal))
 {
     try { SpotifyLibrespotAuthenticationTests.Run(); return 0; }
     catch (Exception exception) { Console.Error.WriteLine(exception); return 1; }
+}
+if (args.Contains("--youtube-video-download", StringComparer.Ordinal))
+{
+    try
+    {
+        TestPodcastEpisodeFileActionKeyboardMap();
+        TestYouTubeVideoDownloadArguments();
+        TestPodcastDownloadSettingsAccessibility();
+        return 0;
+    }
+    catch (Exception exception)
+    {
+        Console.Error.WriteLine(exception);
+        return 1;
+    }
 }
 if (args.Contains("--librespot-lifecycle", StringComparer.Ordinal))
 {
@@ -590,6 +652,10 @@ var tests = new (string Name, Action Test)[]
     ("Schowek: lokalizacje bez nazw w rzeczywistych handlerach", SonosFavoritePlayRealOwnerTests.RunClipboardLocations),
     ("Normalizacja osi czasu fragmentu OGG/Vorbis", () => TestNormalizedVorbisTimeline(VorbisFixtureBase64, VorbisLiveStreamSampleOffset)),
     ("Accessible Playback Status Strip", TestAccessiblePlaybackStatusStrip),
+    ("Odtwarzacz: jednoznaczna głośność, prędkość i zamknięta tabulacja", PlayerAccessibilityTests.Run),
+    ("Odtwarzacz: losowanie R, menu, kontekst i etykiety NVDA", PlaybackShuffleUiTests.Run),
+    ("Apple Music: konto, Ctrl+F5, ukryty MusicKit i etykiety NVDA", AppleMusicPrototypeUiTests.Run),
+    ("YouTube: konto Google, import, Ctrl+F5 i etykiety NVDA", YouTubeGoogleLoginUiTests.Run),
     ("Editable Field Replacement", TestEditableFieldReplacement),
     ("Global Prefix Capture", TestGlobalPrefixCapture),
     ("Menu Accessibility", TestMenuAccessibility),
@@ -602,14 +668,17 @@ var tests = new (string Name, Action Test)[]
     ("Radio Recognition Scheduling Policy", TestRadioRecognitionSchedulingPolicy),
     ("Radio Recognition Setting Accessibility", TestRadioRecognitionSettingAccessibility),
     ("Radio Recognition History Filter Accessibility", TestRadioRecognitionHistoryFilterAccessibility),
+    ("Radio Recognition Streaming Resolver", TestRecognitionStreamingResolver),
     ("Playback Audio Setting Accessibility", TestPlaybackAudioSettingAccessibility),
     ("Audio Output Device Accessibility", TestAudioOutputDeviceAccessibility),
     ("Wii M Device Manager Accessibility", TestWiiMDeviceManagerAccessibility),
     ("Nazwa odtwarzacza radia dla czytnika", TestRadioPlayerControlName),
     ("Podcast Episode File Action Keyboard Map", TestPodcastEpisodeFileActionKeyboardMap),
+    ("YouTube Video Download Arguments", TestYouTubeVideoDownloadArguments),
     ("Audio Output Pause Race Guard", TestAudioOutputPauseRaceGuard),
     ("Track Change Silences Previous Pipeline", TestTrackChangeSilencesPreviousPipeline),
     ("Podcast Network Source Policy", TestPodcastNetworkSourcePolicy),
+    ("Ctrl+N Podcasty i YouTube: jeden Enter sprawdza, dodaje i zapisuje", PodcastSourceWindowTests.Run),
     ("Komunikat oczekiwania na premierę YouTube", YouTubePremiereTests.Run),
     ("You Tube Channel Feed Addresses", TestYouTubeChannelFeedAddresses),
     ("You Tube Channel Feed Parsing", TestYouTubeChannelFeedParsing),
@@ -661,6 +730,7 @@ var tests = new (string Name, Action Test)[]
     ("Czas z oryginalnego TIDALa mowiony sama liczba", TestTidalDesktopCzasMowiSamaLiczbe),
     ("Player Departure Playback Policy", TestPlayerDeparturePlaybackPolicy),
     ("Active Radio Recording Focus Context", TestActiveRadioRecordingFocusContext),
+    ("Lewa i prawa strzałka na liście aktywnych nagrań", ActiveRecordingArrowTests.Run),
     ("Search Navigation", TestSearchNavigation),
     ("Podcast Directory Search Merge", TestPodcastDirectorySearchMerge),
     ("Canonical Membership Resolution", TestCanonicalMembershipResolution),
@@ -707,6 +777,7 @@ var tests = new (string Name, Action Test)[]
     ("Scheduled Radio Recording Interruption Tracker", TestScheduledRadioRecordingInterruptionTracker),
     ("Shazam Fingerprint", TestShazamFingerprint),
     ("Recognition Search Links", TestRecognitionSearchLinks),
+    ("Apple Music public recognition links", TestAppleMusicRecognitionLinks),
     ("Radio MP3 Recording", TestRadioMp3Recording),
     ("Legacy ICY MP3 Stream", TestLegacyIcyMp3Stream),
     ("Legacy ICY Cancellation", TestLegacyIcyCancellation),
@@ -1516,6 +1587,33 @@ static void TestPlayerDeparturePlaybackPolicy()
 
 static void TestActiveRadioRecordingFocusContext()
 {
+    var recordingArrowHelp = ShortcutHelpCatalog.Create(KeyboardProfile.CreateDefault(), new AppSettings())
+        .SelectMany(section => section.Entries)
+        .Where(entry => entry.Shortcut == "Strzałka w prawo"
+            && entry.DisplayName.Contains("folder zapisu", StringComparison.Ordinal))
+        .ToArray();
+    Assert(recordingArrowHelp.Length == 2
+           && recordingArrowHelp.Any(entry => entry.Context.Contains("Nagrywane", StringComparison.Ordinal))
+           && recordingArrowHelp.Any(entry => entry.Context.Contains("Harmonogram", StringComparison.Ordinal)),
+        "Pełna pomoc nie opisuje prawej strzałki w obu kontekstach nagrywania.");
+    Assert(
+        RadioRecordingOutputDescription.Format(
+            RadioRecordingFormat.Mp3,
+            192,
+            @"D:\Nagrania\audycja.mp3",
+            @"D:\Nagrania",
+            usesDefaultFolder: true)
+        == "192 kb/s, plik audycja.mp3, folder domyślny",
+        "Prawa strzałka nie buduje zwięzłego opisu domyślnego miejsca zapisu.");
+    Assert(
+        RadioRecordingOutputDescription.Format(
+            RadioRecordingFormat.Flac,
+            192,
+            null,
+            @"D:\Archiwum radia",
+            usesDefaultFolder: false)
+        == @"FLAC, plik przygotowywany, D:\Archiwum radia",
+        "Opis aktywnego nagrania gubi format, stan pliku albo własną ścieżkę.");
     Assert(
         MainWindowNavigationPolicy.FormatSessionSwitchFocusContext(
             "2, Radio internetowe",
@@ -1543,7 +1641,7 @@ static void TestActiveRadioRecordingFocusContext()
             "Ulubione",
             "Multimedia") == "1, Pliki lokalne, Ulubione",
         "Skrócenie aktywnych nagrań zmieniło inne sesje albo widoki.");
-    Console.WriteLine("OK: zwięzły kontekst widoku aktywnych nagrań radia");
+    Console.WriteLine("OK: zwięzły kontekst i opis zapisu aktywnych nagrań radia");
 }
 
 static void TestSearchNavigation()
@@ -3334,6 +3432,7 @@ static void TestRadioRecognitionSettingAccessibility()
             state.Radio.AutomaticTrackRecognitionEnabled = true;
             state.Radio.AutomaticTrackRecognitionScope =
                 RadioRecognitionScope.CurrentAndRecordingStations;
+            state.Radio.DefaultRecognizedTrackService = RecognizedTrackStreamingService.Tidal;
             var store = new ConfigurationStore(
                 Path.Combine(directory, "state.json"),
                 Path.Combine(directory, "library.db"));
@@ -3367,6 +3466,18 @@ static void TestRadioRecognitionSettingAccessibility()
                     !(AutomationProperties.GetName(item) ?? item.Content?.ToString() ?? string.Empty)
                         .Contains('{', StringComparison.Ordinal)),
                 "Wariant zakresu ujawnia techniczny zapis obiektu.");
+            var serviceCombo = (ComboBox)window.FindName("RecognizedTrackDefaultServiceCombo");
+            Assert((serviceCombo.SelectedItem as ComboBoxItem)?.Tag?.ToString()
+                    == nameof(RecognizedTrackStreamingService.Tidal),
+                "Pole domyślnej usługi nie wczytuje TIDAL.");
+            Assert(AutomationProperties.GetName(serviceCombo)
+                    == "Domyślna usługa dla rozpoznanych utworów",
+                "Pole domyślnej usługi nie ma jednoznacznej nazwy dla NVDA.");
+            Assert(serviceCombo.Items.OfType<ComboBoxItem>()
+                    .Select(AutomationProperties.GetName)
+                    .All(name => !string.IsNullOrWhiteSpace(name)
+                        && !name.Contains('{', StringComparison.Ordinal)),
+                "Usługa rozpoznanego utworu ujawnia techniczny zapis obiektu.");
         }
         catch (Exception exception)
         {
@@ -3400,6 +3511,36 @@ static void TestRadioRecognitionSettingAccessibility()
 
 static void TestRadioRecognitionHistoryFilterAccessibility()
 {
+    Assert(MainWindowShortcutRouter.ResolveRadioRecognition(
+               Key.S,
+               ModifierKeys.Control | ModifierKeys.Alt,
+               "radio",
+               playerActive: false) == CommandIds.ViewRadioRecognitionHistory,
+        "Ctrl+Alt+S nie otwiera historii rozpoznań z głównej listy Radia.");
+    Assert(MainWindowShortcutRouter.ResolveRadioRecognition(
+               Key.S,
+               ModifierKeys.Control | ModifierKeys.Alt | ModifierKeys.Shift,
+               "radio",
+               playerActive: false) == CommandIds.ToggleRadioRecognitionAnnouncements,
+        "Ctrl+Alt+Shift+S nie przełącza oznajmiania z głównej listy Radia.");
+    Assert(MainWindowShortcutRouter.ResolveRadioRecognition(
+               Key.S,
+               ModifierKeys.None,
+               "radio",
+               playerActive: false) is null
+           && MainWindowShortcutRouter.ResolveRadioRecognition(
+               Key.S,
+               ModifierKeys.None,
+               "radio",
+               playerActive: true) == CommandIds.RecognizeRadioTrack,
+        "S nie zachowuje ograniczenia ręcznego rozpoznawania do odtwarzacza Radia.");
+    Assert(MainWindowShortcutRouter.ResolveRadioRecognition(
+               Key.S,
+               ModifierKeys.Control | ModifierKeys.Alt,
+               "podcasts",
+               playerActive: false) is null,
+        "Ctrl+Alt+S przejął obcą sesję zamiast pozostać skrótem Radia.");
+
     Exception? failure = null;
     var thread = new Thread(() =>
     {
@@ -3422,10 +3563,19 @@ static void TestRadioRecognitionHistoryFilterAccessibility()
                     StationId = "station-two",
                     StationName = "Radio Dwa",
                     Title = "Drugi utwór",
+                    Artist = "Drugi wykonawca",
+                    Album = "Drugi album",
                     RecognizedUtcTicks = DateTime.UtcNow.AddMinutes(-1).Ticks
                 }
             };
-            window = new RadioRecognitionHistoryWindow(entries);
+            var resolver = new RecognitionStreamingResolver(
+                _ => true,
+                (_, _, _) => Task.FromResult<IReadOnlyList<MediaItem>>([]));
+            window = new RadioRecognitionHistoryWindow(
+                entries,
+                RecognizedTrackStreamingService.Spotify,
+                resolver,
+                null);
             var combo = (ComboBox)window.FindName("StationFilterCombo");
             var filters = combo.Items.OfType<RecognitionStationFilter>().ToArray();
             Assert(filters.Length == 3 && filters[0].Label == "Wszystkie stacje",
@@ -3441,6 +3591,48 @@ static void TestRadioRecognitionHistoryFilterAccessibility()
             Assert(list.Items.Count == 1
                    && list.Items.OfType<RecognitionHistoryRow>().Single().Entry.StationName == "Radio Dwa",
                 "Wybranie stacji nie ograniczyło listy historii.");
+            Assert(RecognitionHistoryCommands.Definitions.Count == 9
+                   && RecognitionHistoryCommands.Definitions
+                       .Select(command => command.Shortcut)
+                       .Distinct(StringComparer.Ordinal).Count() == 9,
+                "Model poleceń historii ma brakujące albo zdublowane skróty.");
+            Assert(RecognitionHistoryCommandCatalog.Resolve(Key.C, ModifierKeys.Control)?.Id
+                    == RecognitionHistoryCommandId.CopyDescription
+                   && RecognitionHistoryCommandCatalog.Resolve(
+                       Key.C, ModifierKeys.Control | ModifierKeys.Shift)?.Id
+                    == RecognitionHistoryCommandId.CopyTrackLink,
+                "Router klawiatury nie korzysta z modelu poleceń historii.");
+            Assert(RecognitionHistoryCommandCatalog.Resolve(Key.Enter, ModifierKeys.Control)?.Id
+                    == RecognitionHistoryCommandId.OpenAlbum,
+                "Ctrl+Enter nie jest jednoznacznie przypisany do albumu w usłudze domyślnej.");
+            var instructions = RecognitionHistoryCommandCatalog.Instructions(
+                RecognizedTrackStreamingService.Spotify);
+            Assert(instructions.Contains(
+                       "Ctrl+Enter: pokaż album w Spotify w AMC i ustaw fokus na rozpoznanym utworze",
+                       StringComparison.Ordinal)
+                   && instructions.Contains(
+                       "Strzałka w prawo: pokaż najważniejsze działania",
+                       StringComparison.Ordinal),
+                "Instrukcja okna nie rozróżnia Ctrl+Enter od krótkiej listy prawej strzałki.");
+            var selectedRow = list.Items.OfType<RecognitionHistoryRow>().Single();
+            var quickActions = window.BuildRecognitionActions(
+                selectedRow, RecognitionActionMenuScope.Quick);
+            var fullActions = window.BuildRecognitionActions(
+                selectedRow, RecognitionActionMenuScope.Full);
+            Assert(quickActions.Count == 7
+                   && quickActions.Any(action => action.Label == "Spotify — pokaż utwór w AMC"
+                       && action.Kind == RecognitionHistoryRequestKind.ShowTrackInAmc)
+                   && quickActions.Any(action => action.Label == "TIDAL — pokaż utwór w AMC"
+                       && action.Kind == RecognitionHistoryRequestKind.ShowTrackInAmc)
+                   && quickActions.All(action => !action.Label.Contains("Discogs", StringComparison.Ordinal))
+                   && fullActions.Count > quickActions.Count
+                   && fullActions.Any(action => action.Label.Contains("Discogs", StringComparison.Ordinal)),
+                "Prawa strzałka nie jest krótką projekcją pełnej listy z menu kontekstowego.");
+            var copied = list.Items.OfType<RecognitionHistoryRow>().Single().CopyText;
+            Assert(copied.Contains("Apple Music: https://music.apple.com/search?term=", StringComparison.Ordinal)
+                   && copied.Contains("Spotify: https://open.spotify.com/search/", StringComparison.Ordinal)
+                   && copied.Contains("MusicBrainz: https://musicbrainz.org/search?", StringComparison.Ordinal),
+                "Pełny opis Ctrl+C nie zawiera jawnych łączy katalogowych.");
         }
         catch (Exception exception)
         {
@@ -3458,6 +3650,73 @@ static void TestRadioRecognitionHistoryFilterAccessibility()
         throw new InvalidOperationException("Test filtra historii rozpoznawania nie powiódł się.", failure);
 
     Console.WriteLine("OK: dostępny filtr historii rozpoznawania według stacji");
+}
+
+static void TestRecognitionStreamingResolver()
+{
+    var searches = 0;
+    var entry = new RadioRecognizedTrackSettings
+    {
+        Title = "Kto Dał Nam Deszcz (1980)",
+        Artist = "Krystyna Prońko",
+        Album = "Osobista Kolekcja 2"
+    };
+    var resolver = new RecognitionStreamingResolver(
+        _ => true,
+        (_, _, _) =>
+        {
+            searches++;
+            return Task.FromResult<IReadOnlyList<MediaItem>>
+            ([
+                new MediaItem
+                {
+                    Id = "wrong",
+                    Kind = MediaItemKind.Track,
+                    Title = "Kto Dał Nam Deszcz (1980)",
+                    Artist = "Inny wykonawca",
+                    ExternalId = "tracks:wrong",
+                    PublicUri = "https://tidal.com/browse/track/wrong"
+                },
+                new MediaItem
+                {
+                    Id = "right",
+                    Kind = MediaItemKind.Track,
+                    Title = "Kto Dał Nam Deszcz (1980)",
+                    Artist = "Krystyna Pronko",
+                    ExternalId = "tracks:123",
+                    PublicUri = "https://tidal.com/browse/track/123",
+                    RelatedAlbumExternalId = "albums:456",
+                    RelatedAlbumTitle = "Osobista Kolekcja 2",
+                    RelatedArtistExternalId = "artists:789",
+                    RelatedArtistName = "Krystyna Prońko"
+                }
+            ]);
+        });
+
+    var first = resolver.ResolveAsync(
+        entry, RecognizedTrackStreamingService.Tidal, CancellationToken.None)
+        .GetAwaiter().GetResult();
+    var second = resolver.ResolveAsync(
+        entry, RecognizedTrackStreamingService.Tidal, CancellationToken.None)
+        .GetAwaiter().GetResult();
+    Assert(searches == 1 && first.CacheChanged && !second.CacheChanged,
+        "Ponowne działanie nie użyło trwałego cache dopasowania.");
+    Assert(first.Track.ExternalId == "tracks:123"
+           && first.Album?.PublicUri == "https://tidal.com/browse/album/456"
+           && first.Artist?.PublicUri == "https://tidal.com/browse/artist/789",
+        "Resolver nie utworzył poprawnych celów utworu, albumu i wykonawcy.");
+    Assert(entry.TidalMatch?.TrackExternalId == "tracks:123",
+        "Resolver nie zapisał stabilnego identyfikatora w rekordzie historii.");
+
+    var cachedOffline = new RecognitionStreamingResolver(
+        _ => false,
+        (_, _, _) => throw new InvalidOperationException("Sieć nie powinna być użyta"));
+    var cached = cachedOffline.ResolveAsync(
+        entry, RecognizedTrackStreamingService.Tidal, CancellationToken.None)
+        .GetAwaiter().GetResult();
+    Assert(cached.Track.ExternalId == "tracks:123",
+        "Zapisane dopasowanie nie działa bez nowego zapytania do usługi.");
+    Console.WriteLine("OK: rozwiązywanie na żądanie i trwały cache Spotify/TIDAL");
 }
 
 static void TestPlaybackAudioSettingAccessibility()
@@ -3601,9 +3860,9 @@ static void TestRecognitionSearchLinks()
     };
     var links = new[]
     {
-        RecognitionLinks.AppleMusic(entry),
-        RecognitionLinks.Spotify(entry),
-        RecognitionLinks.Tidal(entry),
+        RecognitionLinks.SpotifyTrackOrSearch(entry),
+        RecognitionLinks.TidalTrackOrSearch(entry),
+        RecognitionLinks.AppleMusicTrackOrSearch(entry),
         RecognitionLinks.YouTubeMusic(entry),
         RecognitionLinks.Discogs(entry),
         RecognitionLinks.MusicBrainz(entry)
@@ -3614,7 +3873,68 @@ static void TestRecognitionSearchLinks()
         "Różne usługi otrzymały to samo łącze wyszukiwania.");
     Assert(links.All(link => !link.Contains(' ')),
         "Zapytanie do katalogu nie zostało prawidłowo zakodowane.");
+    Assert(links.Any(link => link.Contains("music.apple.com/search", StringComparison.OrdinalIgnoreCase)),
+        "Historia rozpoznawania nie udostępnia wyszukiwania Apple Music.");
     Console.WriteLine("OK: łącza rozpoznania do usług i katalogów muzycznych");
+}
+
+static void TestAppleMusicRecognitionLinks()
+{
+    const string json = """
+        {
+          "resultCount": 2,
+          "results": [
+            {
+              "wrapperType": "track",
+              "kind": "song",
+              "artistId": 1,
+              "collectionId": 2,
+              "trackId": 3,
+              "artistName": "Inny wykonawca",
+              "collectionName": "Inny album",
+              "trackName": "Kto Dał Nam Deszcz (1980)",
+              "artistViewUrl": "https://music.apple.com/pl/artist/inny/1",
+              "collectionViewUrl": "https://music.apple.com/pl/album/inny/2",
+              "trackViewUrl": "https://music.apple.com/pl/album/inny/2?i=3"
+            },
+            {
+              "wrapperType": "track",
+              "kind": "song",
+              "artistId": 10,
+              "collectionId": 20,
+              "trackId": 30,
+              "artistName": "Krystyna Pronko",
+              "collectionName": "Osobista Kolekcja 2",
+              "trackName": "Kto Dał Nam Deszcz (1980)",
+              "artistViewUrl": "https://music.apple.com/pl/artist/krystyna-pronko/10",
+              "collectionViewUrl": "https://music.apple.com/pl/album/osobista-kolekcja-2/20",
+              "trackViewUrl": "https://music.apple.com/pl/album/osobista-kolekcja-2/20?i=30"
+            }
+          ]
+        }
+        """;
+    var handler = new FixedJsonHandler(json);
+    var resolver = new AppleMusicRecognitionLinkResolver(new HttpClient(handler), "pl");
+    var entry = new RadioRecognizedTrackSettings
+    {
+        Title = "Kto Dał Nam Deszcz (1980)",
+        Artist = "Krystyna Prońko",
+        Album = "Osobista Kolekcja 2"
+    };
+
+    var first = resolver.ResolveAsync(entry, CancellationToken.None).GetAwaiter().GetResult();
+    var second = resolver.ResolveAsync(entry, CancellationToken.None).GetAwaiter().GetResult();
+    Assert(handler.RequestCount == 1 && first.CacheChanged && !second.CacheChanged,
+        "Apple Music nie użyło trwałego cache po pierwszym dopasowaniu.");
+    Assert(first.TrackLink.EndsWith("/20?i=30", StringComparison.Ordinal)
+           && first.AlbumLink?.EndsWith("/20", StringComparison.Ordinal) == true,
+        "Apple Music nie zwróciło dokładnych łączy utworu i albumu.");
+    Assert(entry.AppleMusicMatch?.TrackExternalId == "30"
+           && entry.AppleMusicMatch.AlbumExternalId == "20",
+        "Dopasowanie Apple Music nie zapisało publicznych identyfikatorów.");
+    Assert(handler.LastRequestUri?.Query.Contains("country=PL", StringComparison.Ordinal) == true,
+        "Publiczne wyszukiwanie Apple Music nie użyło właściwego kraju.");
+    Console.WriteLine("OK: Apple Music rozwiązuje publiczne łącza na żądanie i używa cache");
 }
 
 static void TestRadioPlayerControlName()
@@ -4033,6 +4353,38 @@ static void TestMainWindowDigitShortcutRouting()
             textEditing: false,
             menuActive: true) is null,
         "Ctrl+Alt+B ma odzyskiwać listę rozdziałów również po wycieku fokusu do filtra, ale nie w menu ani bez elementu multimedialnego.");
+    Assert(
+        MainWindowShortcutRouter.ResolveBookmarkNavigation(
+            Key.PageUp,
+            ModifierKeys.Shift,
+            playerActive: true,
+            menuActive: false) == CommandIds.PreviousBookmark
+        && MainWindowShortcutRouter.ResolveBookmarkNavigation(
+            Key.PageDown,
+            ModifierKeys.Shift,
+            playerActive: true,
+            menuActive: false) == CommandIds.NextBookmark
+        && MainWindowShortcutRouter.ResolveBookmarkNavigation(
+            Key.PageUp,
+            ModifierKeys.Control | ModifierKeys.Shift,
+            playerActive: true,
+            menuActive: false) == CommandIds.PreviousNamedBookmark
+        && MainWindowShortcutRouter.ResolveBookmarkNavigation(
+            Key.PageDown,
+            ModifierKeys.Control | ModifierKeys.Shift,
+            playerActive: true,
+            menuActive: false) == CommandIds.NextNamedBookmark
+        && MainWindowShortcutRouter.ResolveBookmarkNavigation(
+            Key.PageUp,
+            ModifierKeys.Control | ModifierKeys.Shift,
+            playerActive: false,
+            menuActive: false) is null
+        && MainWindowShortcutRouter.ResolveBookmarkNavigation(
+            Key.PageDown,
+            ModifierKeys.Control | ModifierKeys.Shift,
+            playerActive: true,
+            menuActive: true) is null,
+        "Nawigacja po wszystkich i tylko nazwanych zakładkach nie jest poprawnie rozdzielona albo wycieka poza odtwarzacz.");
     Assert(
         MainWindowShortcutRouter.ResolveChapterNavigation(
             Key.Left,
@@ -4744,6 +5096,55 @@ static void TestRadioPlaylistImport()
         var m3uResult = RadioPlaylistImporter.Import(m3u);
         Assert(m3uResult.Stations.Count == 2, "Nie zaimportowano obu wpisów M3U.");
         Assert(m3uResult.Stations[0].Name == "Radio Pierwsze", "Nie zachowano nazwy stacji M3U.");
+        Assert(m3uResult.Stations.All(station => station.HasDescriptiveName),
+            "Nazwy EXTINF nie zostały oznaczone jako opisowe.");
+
+        var unnamedM3u = Path.Combine(directory, "stacje-bez-nazw.m3u");
+        File.WriteAllText(unnamedM3u,
+            "#EXTM3U\nhttps://stream.example/unnamed\n#EXTINF:-1,Nazwa z pliku\nhttps://stream.example/named\n");
+        var unnamedResult = RadioPlaylistImporter.Import(unnamedM3u);
+        Assert(unnamedResult.Stations[0].Name == "stream.example"
+               && !unnamedResult.Stations[0].HasDescriptiveName,
+            "Importer nie rozpoznał hosta jako tymczasowej nazwy wpisu bez EXTINF.");
+        Assert(unnamedResult.Stations[1].Name == "Nazwa z pliku"
+               && unnamedResult.Stations[1].HasDescriptiveName,
+            "Importer utracił pierwszeństwo nazwy podanej w EXTINF.");
+
+        using (var response = new HttpResponseMessage(HttpStatusCode.OK))
+        {
+            response.Headers.TryAddWithoutValidation("icy-name", "  Radio z serwera  ");
+            Assert(RadioStationNameProbe.ReadNameFromHeaders(response) == "Radio z serwera",
+                "Sonda nie odczytała użytkowej nazwy ICY z nagłówka serwera.");
+        }
+        using (var technicalResponse = new HttpResponseMessage(HttpStatusCode.OK))
+        {
+            technicalResponse.Headers.TryAddWithoutValidation("icy-name", "https://stream.example/live");
+            Assert(RadioStationNameProbe.ReadNameFromHeaders(technicalResponse) is null,
+                "Techniczny URL z icy-name wyciekł jako dostępna nazwa stacji.");
+        }
+
+        var probedUrls = new List<string>();
+        var enriched = RadioPlaylistNameEnricher.EnrichAsync(
+                unnamedResult,
+                TimeSpan.FromSeconds(1),
+                (url, _) =>
+                {
+                    probedUrls.Add(url);
+                    return Task.FromResult<string?>("Radio odczytane z serwera");
+                },
+                maximumProbes: 64,
+                maximumConcurrency: 2)
+            .GetAwaiter().GetResult();
+        Assert(probedUrls.SequenceEqual(["https://stream.example/unnamed"]),
+            "Sonda pytała także o wpis mający już nazwę z playlisty.");
+        Assert(enriched.Playlist.Stations[0].Name == "Radio odczytane z serwera"
+               && enriched.Playlist.Stations[0].HasDescriptiveName
+               && enriched.Playlist.Stations[1].Name == "Nazwa z pliku",
+            "Uzupełnianie ICY nie zachowało nazw playlisty albo nie zastąpiło technicznego hosta.");
+        Assert(enriched.NamesReadFromServers == 1
+               && enriched.NamesWithoutDescription == 0
+               && enriched.NamesNotProbed == 0,
+            "Uzupełnianie nazw podało nieprawidłowe liczniki.");
 
         var catalogStation = new AccessibleMediaController.Core.Sessions.MediaItem
         {
@@ -4760,7 +5161,6 @@ static void TestRadioPlaylistImport()
         Assert(catalogStation.IsInLibrary && catalogStation.Title == "Pełna nazwa katalogowa"
                && catalogStation.BitrateKbps == 192,
             "Scalenie importu utraciło nazwę albo parametry istniejącej stacji.");
-
         var pls = Path.Combine(directory, "stacje.pls");
         File.WriteAllText(pls, "[playlist]\nFile1=https://radio.example/live\nTitle1=Radio PLS\nNumberOfEntries=1\n");
         var plsResult = RadioPlaylistImporter.Import(pls);
@@ -4798,6 +5198,20 @@ static void TestRadioPlaylistImport()
     finally
     {
         Directory.Delete(directory, true);
+    }
+}
+
+static void ProbeRadioPlaylistImportLive(string path)
+{
+    var parsed = RadioPlaylistImporter.Import(path);
+    var enriched = RadioPlaylistNameEnricher.EnrichAsync(parsed, TimeSpan.FromSeconds(12))
+        .GetAwaiter().GetResult();
+    Console.WriteLine(
+        $"Wpisy: {enriched.Playlist.Stations.Count}; nazwy z serwerów: {enriched.NamesReadFromServers}; "
+        + $"nazwy zastępcze: {enriched.NamesWithoutDescription}; nie sprawdzono: {enriched.NamesNotProbed}.");
+    foreach (var station in enriched.Playlist.Stations)
+    {
+        Console.WriteLine(station.Name);
     }
 }
 
@@ -6335,10 +6749,138 @@ static void TestPodcastEpisodeFileActionKeyboardMap()
             Key.D,
             ModifierKeys.Control | ModifierKeys.Shift,
             "podcasts",
+            itemContext: true) == CommandIds.DownloadYouTubeVideo,
+        "Ctrl+Shift+D nie uruchamia pobierania wideo w Podcastach.");
+    Assert(
+        MainWindowShortcutRouter.ResolvePodcastEpisodeFileAction(
+            Key.D,
+            ModifierKeys.Control | ModifierKeys.Shift,
+            "radio",
             itemContext: true) is null,
-        "Ctrl+Shift+D nie może zostać pomylone z pobieraniem odcinka.");
+        "Ctrl+Shift+D nie może pobierać wideo w innej sesji.");
 
     Console.WriteLine("OK: skróty pobierania i zapisu odcinków Podcastów");
+}
+
+static void TestYouTubeVideoDownloadArguments()
+{
+    const string outputTemplate = "C:\\staging\\media.%(ext)s";
+    const string ffmpeg = "C:\\tools\\ffmpeg.exe";
+    const string pageUrl = "https://www.youtube.com/watch?v=abcdefghijk";
+    var item = new MediaItem
+    {
+        Id = "youtube-video",
+        Title = "Materiał testowy",
+        Kind = MediaItemKind.Episode,
+        Source = "https://temporary.example.test/audio.m4a",
+        PublicUri = pageUrl
+    };
+    Assert(YouTubeVideoDownloadPolicy.TryResolvePageUrl(item, episode: null, out var resolvedPageUrl)
+           && resolvedPageUrl == pageUrl,
+        "Wspólna reguła dostępności nie rozpoznaje publicznej strony YouTube.");
+    item.PublicUri = "https://example.test/video";
+    Assert(!YouTubeVideoDownloadPolicy.TryResolvePageUrl(item, episode: null, out _),
+        "Wspólna reguła dostępności zaakceptowała obcą stronę jako YouTube.");
+    var episode = new PodcastEpisodeSettings
+    {
+        Id = item.Id,
+        SubscriptionId = "internet-media:saved",
+        SourceIdentifier = pageUrl,
+        Title = item.Title,
+        MediaUrl = "C:\\Podcasty\\Materiał testowy.mp3",
+        PageUrl = pageUrl
+    };
+    Assert(YouTubeVideoDownloadPolicy.TryResolvePageUrl(item, episode, out resolvedPageUrl)
+           && resolvedPageUrl == pageUrl,
+        "Pobrane wcześniej audio ukryło trwałą stronę YouTube potrzebną do pobrania wideo.");
+    Assert(YouTubeVideoDownloadPolicy.SaveAsLabel(isYouTubeVideo: true) == "Zapisz wideo jako"
+           && YouTubeVideoDownloadPolicy.SaveAsLabel(isYouTubeVideo: false) == "Zapisz odcinek audio jako",
+        "Wspólna etykieta Ctrl+S nie rozróżnia wideo YouTube i odcinka audio.");
+
+    Assert(
+        YouTubeMediaDownloader.ResolveSaveAsDestination(
+            "C:\\Podcasty\\Materiał testowy",
+            ".webm",
+            YouTubeVideoDownloadFormat.Original) == "C:\\Podcasty\\Materiał testowy.webm",
+        "Zapis oryginalnego formatu bez rozszerzenia nie otrzymał rozszerzenia wyniku.");
+    Assert(
+        YouTubeMediaDownloader.ResolveSaveAsDestination(
+            "C:\\Podcasty\\Materiał testowy.mp4",
+            ".webm",
+            YouTubeVideoDownloadFormat.Original) == "C:\\Podcasty\\Materiał testowy.webm",
+        "Zapis oryginalnego formatu nie zastąpił proponowanego rozszerzenia kontenera.");
+    Assert(
+        YouTubeMediaDownloader.ResolveSaveAsDestination(
+            "C:\\Podcasty\\Materiał wersja 1.2",
+            ".mkv",
+            YouTubeVideoDownloadFormat.Original) == "C:\\Podcasty\\Materiał wersja 1.2.mkv",
+        "Kropka w nazwie została błędnie potraktowana jak znane rozszerzenie wideo.");
+    Assert(
+        YouTubeMediaDownloader.ResolveSaveAsDestination(
+            "C:\\Podcasty\\Materiał testowy.webm",
+            ".webm",
+            YouTubeVideoDownloadFormat.Mp4) == "C:\\Podcasty\\Materiał testowy.mp4",
+        "Tryb MP4 nie wymusił rozszerzenia MP4 dla Zapisz jako.");
+
+    var mp4 = YouTubeMediaDownloader.BuildVideoArguments(
+        outputTemplate,
+        ffmpeg,
+        YouTubeVideoDownloadFormat.Mp4,
+        pageUrl);
+    var original = YouTubeMediaDownloader.BuildVideoArguments(
+        outputTemplate,
+        ffmpeg,
+        YouTubeVideoDownloadFormat.Original,
+        pageUrl);
+
+    Assert(ArgumentValue(mp4, "--format") == "bv*+ba/b",
+        "Pobieranie wideo nie wybiera najlepszej pary obrazu i dźwięku.");
+    Assert(ArgumentValue(mp4, "--merge-output-format") == "mp4"
+           && ArgumentValue(mp4, "--remux-video") == "mp4"
+           && ArgumentValue(mp4, "--format-sort")?.Contains("vcodec:h264", StringComparison.Ordinal) == true,
+        "Tryb MP4 nie wymusza zgodnego kontenera oraz preferowanych kodeków.");
+    Assert(!original.Contains("--merge-output-format", StringComparer.Ordinal)
+           && !original.Contains("--remux-video", StringComparer.Ordinal)
+           && !original.Contains("--format-sort", StringComparer.Ordinal),
+        "Tryb oryginalny nie może wymuszać MP4 ani preferencji kodeków.");
+    Assert(mp4.Contains("--no-playlist", StringComparer.Ordinal)
+           && mp4.Contains(pageUrl, StringComparer.Ordinal),
+        "Pobieranie wideo nie ogranicza działania do jednego materiału YouTube.");
+
+    var directory = Path.Combine(Path.GetTempPath(), $"amc-youtube-video-{Guid.NewGuid():N}");
+    Directory.CreateDirectory(directory);
+    try
+    {
+        var completed = Path.Combine(directory, "media.webm");
+        File.WriteAllText(completed, "wideo");
+        Assert(string.Equals(
+                completed,
+                YouTubeMediaDownloader.ResolveCompletedVideoPath(directory, completed),
+                StringComparison.OrdinalIgnoreCase),
+            "Ścieżka ukończonego pliku wideo nie została rozpoznana.");
+        File.WriteAllText(Path.Combine(directory, "media.part"), "część");
+        Assert(string.Equals(
+                completed,
+                YouTubeMediaDownloader.ResolveCompletedVideoPath(directory, string.Empty),
+                StringComparison.OrdinalIgnoreCase),
+            "Plik częściowy został potraktowany jak ukończone wideo.");
+    }
+    finally
+    {
+        Directory.Delete(directory, recursive: true);
+    }
+
+    Console.WriteLine("OK: argumenty pobierania wideo YouTube");
+
+    static string? ArgumentValue(IReadOnlyList<string> arguments, string name)
+    {
+        for (var index = 0; index + 1 < arguments.Count; index++)
+        {
+            if (string.Equals(arguments[index], name, StringComparison.Ordinal))
+                return arguments[index + 1];
+        }
+        return null;
+    }
 }
 
 static void TestPodcastDownloadSettingsAccessibility()
@@ -6353,6 +6895,7 @@ static void TestPodcastDownloadSettingsAccessibility()
         {
             var state = ConfigurationStore.CreateDefaultState();
             state.Podcasts.DownloadsFolder = Path.Combine(directory, "Podcasty");
+            state.Podcasts.YouTubeVideoDownloadFormat = YouTubeVideoDownloadFormat.Original;
             state.Radio.UsePodcastDownloadsFolderForRecordings = true;
             var store = new ConfigurationStore(
                 Path.Combine(directory, "state.json"),
@@ -6365,6 +6908,12 @@ static void TestPodcastDownloadSettingsAccessibility()
             Assert(AutomationProperties.GetName(folder) == "Domyślny folder pobierania podcastów"
                    && AutomationProperties.GetName(browse) == "Wybierz domyślny folder pobierania podcastów",
                 "Kontrolki folderu pobierania podcastów nie mają stabilnych etykiet dla NVDA.");
+            var videoFormat = (ComboBox)window.FindName("YouTubeVideoDownloadFormatCombo");
+            Assert((videoFormat.SelectedItem as ComboBoxItem)?.Tag?.ToString() == "Original"
+                   && AutomationProperties.GetName(videoFormat) == "Domyślny format pobieranego wideo z YouTube"
+                   && videoFormat.Items.OfType<ComboBoxItem>().All(item =>
+                       !string.IsNullOrWhiteSpace(AutomationProperties.GetName(item))),
+                "Format wideo YouTube nie ma trwałego wyboru i jawnych etykiet dla NVDA.");
             var radioFolderMode = (ComboBox)window.FindName("RadioRecordingsFolderModeCombo");
             var radioFolder = (TextBox)window.FindName("RadioRecordingsFolderBox");
             Assert((radioFolderMode.SelectedItem as ComboBoxItem)?.Tag?.ToString() == "Podcasts"
@@ -6585,6 +7134,13 @@ static void TestApplePodcastPageLookupAndSourceAccessibility()
                    && results.SelectedItem?.ToString() == spoken
                    && !spoken.Contains("SearchResultRow", StringComparison.Ordinal),
                 "Wiersz Apple Podcasts ujawnia typ obiektu zamiast jawnej etykiety wyniku dla NVDA.");
+            searchWindow.UpdatePodcastMembership(directoryResult.Source!, inLibrary: true);
+            var spokenAfterLibraryChange = System.Windows.Automation.Peers.UIElementAutomationPeer
+                .CreatePeerForElement(row!)!.GetName();
+            Assert(directoryResult.IsInLibrary
+                   && spokenAfterLibraryChange.Contains("w Bibliotece", StringComparison.Ordinal)
+                   && !spokenAfterLibraryChange.Contains("SearchResultRow", StringComparison.Ordinal),
+                "Zmiana Biblioteki w wyszukiwaniu nie odświeża użytkowej etykiety wiersza dla NVDA.");
         }
         catch (Exception exception)
         {
@@ -7961,12 +8517,14 @@ sealed class BlockingWaveStream : WaveStream
 sealed class FixedJsonHandler(string json) : HttpMessageHandler
 {
     public Uri? LastRequestUri { get; private set; }
+    public int RequestCount { get; private set; }
 
     protected override Task<HttpResponseMessage> SendAsync(
         HttpRequestMessage request,
         CancellationToken cancellationToken)
     {
         LastRequestUri = request.RequestUri;
+        RequestCount++;
         return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
         {
             Content = new StringContent(json, System.Text.Encoding.UTF8, "application/json"),

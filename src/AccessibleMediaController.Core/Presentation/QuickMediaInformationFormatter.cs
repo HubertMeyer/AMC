@@ -17,7 +17,8 @@ public static class QuickMediaInformationFormatter
         long? sizeBytes = null,
         bool mayRequireCloudDownload = false,
         string? unavailableFormatMessage = null,
-        CultureInfo? culture = null)
+        CultureInfo? culture = null,
+        string? supplementaryLabel = null)
     {
         ArgumentNullException.ThrowIfNull(item);
         culture ??= CultureInfo.CurrentCulture;
@@ -40,6 +41,7 @@ public static class QuickMediaInformationFormatter
         AddDistinct(parts, item.Country);
         AddDistinct(parts, item.Language);
         if (mayRequireCloudDownload) parts.Add("plik w chmurze, pobierany przy odtwarzaniu");
+        AddDistinct(parts, supplementaryLabel);
 
         return parts.Count == 0
             ? "Brak zapisanych informacji uzupełniających"

@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using AccessibleMediaController.Core.Commands;
+using AccessibleMediaController.Core.Devices.FrontierSmart;
 using AccessibleMediaController.Core.Devices.WiiM;
 using AccessibleMediaController.Core.Input;
 using AccessibleMediaController.Core.LocalMedia;
@@ -16,7 +17,7 @@ namespace AccessibleMediaController.Core.Configuration;
 
 public sealed class ConfigurationStore
 {
-    public const int CurrentSchemaVersion = 54;
+    public const int CurrentSchemaVersion = 57;
     private const string Version1DefaultPrefix = "Ctrl+Alt+Space";
     private const string Version2DefaultPrefix = "Ctrl+Alt+Windows+Enter";
     private const string CurrentDefaultPrefix = "Ctrl+Alt+Windows+F12";
@@ -179,6 +180,7 @@ public sealed class ConfigurationStore
         NormalizeRadio(state);
         NormalizePodcasts(state);
         NormalizeWiiM(state);
+        NormalizeFrontierSmart(state);
         NormalizeSonos(state);
         NormalizeTidal(state);
         ValidateState(state);
@@ -304,6 +306,7 @@ public sealed class ConfigurationStore
         LocalMedia = includeLibraryPayload ? state.LocalMedia : new(),
         Radio = state.Radio,
         WiiM = state.WiiM,
+        FrontierSmart = state.FrontierSmart,
         Sonos = state.Sonos,
         Tidal = state.Tidal,
         Spotify = state.Spotify,
@@ -311,6 +314,7 @@ public sealed class ConfigurationStore
         Podcasts = new PodcastSettings
         {
             DownloadsFolder = state.Podcasts.DownloadsFolder,
+            YouTubeVideoDownloadFormat = state.Podcasts.YouTubeVideoDownloadFormat,
             CurrentItemId = state.Podcasts.CurrentItemId,
             Volume = state.Podcasts.Volume,
             PlaybackRate = state.Podcasts.PlaybackRate,
@@ -439,6 +443,7 @@ public sealed class ConfigurationStore
         NormalizeRadio(state);
         NormalizePodcasts(state);
         NormalizeWiiM(state);
+        NormalizeFrontierSmart(state);
         NormalizeSonos(state);
         MigrateLegacyWiiMNetworkStreamOrder(state, sourceSchemaVersion);
         MigrateLegacyPodcastInbox(state, sourceSchemaVersion);
@@ -541,6 +546,41 @@ public sealed class ConfigurationStore
                 StringComparison.OrdinalIgnoreCase)))
         {
             state.WiiM.SelectedDeviceId = state.WiiM.Devices.FirstOrDefault()?.Id;
+        }
+    }
+
+    private static void NormalizeFrontierSmart(PersistedState state)
+    {
+        state.FrontierSmart ??= new FrontierSmartSettings();
+        state.FrontierSmart.Devices = (state.FrontierSmart.Devices ?? [])
+            .Where(device => device is not null
+                && FrontierSmartAddressPolicy.TryNormalize(device.Address, out _))
+            .Select(device =>
+            {
+                FrontierSmartAddressPolicy.TryNormalize(device.Address, out var normalizedAddress);
+                device.Address = normalizedAddress;
+                device.Id = string.IsNullOrWhiteSpace(device.Id)
+                    ? $"frontier:{normalizedAddress}"
+                    : device.Id.Trim();
+                device.DisplayName = string.IsNullOrWhiteSpace(device.DisplayName)
+                    ? $"Frontier Smart {normalizedAddress}"
+                    : device.DisplayName.Trim();
+                device.Firmware = device.Firmware?.Trim() ?? string.Empty;
+                device.LastSeenUtcTicks = device.LastSeenUtcTicks > 0
+                    && device.LastSeenUtcTicks <= DateTime.MaxValue.Ticks
+                        ? device.LastSeenUtcTicks
+                        : 0;
+                return device;
+            })
+            .DistinctBy(device => device.Id, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        if (string.IsNullOrWhiteSpace(state.FrontierSmart.SelectedDeviceId)
+            || state.FrontierSmart.Devices.All(device => !string.Equals(
+                device.Id,
+                state.FrontierSmart.SelectedDeviceId,
+                StringComparison.OrdinalIgnoreCase)))
+        {
+            state.FrontierSmart.SelectedDeviceId = state.FrontierSmart.Devices.FirstOrDefault()?.Id;
         }
     }
 
@@ -840,6 +880,8 @@ public sealed class ConfigurationStore
         state.Radio.RecordingsFolder = state.Radio.RecordingsFolder?.Trim() ?? string.Empty;
         if (!Enum.IsDefined(state.Radio.AutomaticTrackRecognitionScope))
             state.Radio.AutomaticTrackRecognitionScope = RadioRecognitionScope.CurrentStation;
+        if (!Enum.IsDefined(state.Radio.DefaultRecognizedTrackService))
+            state.Radio.DefaultRecognizedTrackService = RecognizedTrackStreamingService.Spotify;
         if (!Enum.IsDefined(state.Radio.RecordingFormat))
             state.Radio.RecordingFormat = RadioRecordingFormat.Mp3;
         state.Radio.RecordingBitrateKbps = NormalizeRadioRecordingBitrate(
@@ -966,6 +1008,9 @@ public sealed class ConfigurationStore
                 entry.ProviderUri = string.IsNullOrWhiteSpace(entry.ProviderUri)
                     ? null
                     : entry.ProviderUri.Trim();
+                entry.SpotifyMatch = NormalizeRecognizedTrackMatch(entry.SpotifyMatch);
+                entry.TidalMatch = NormalizeRecognizedTrackMatch(entry.TidalMatch);
+                entry.AppleMusicMatch = NormalizeRecognizedTrackMatch(entry.AppleMusicMatch);
                 if (entry.RecognizedUtcTicks <= DateTime.UnixEpoch.Ticks
                     || entry.RecognizedUtcTicks > DateTime.UtcNow.AddDays(1).Ticks)
                 {
@@ -975,7 +1020,6 @@ public sealed class ConfigurationStore
             })
             .GroupBy(entry => entry.Id, StringComparer.Ordinal)
             .Select(group => group.First())
-            .OrderByDescending(entry => entry.RecognizedUtcTicks)
             .Take(2_000)
             .ToList();
         state.Radio.RecordingHistory = state.Radio.RecordingHistory
@@ -1021,6 +1065,40 @@ public sealed class ConfigurationStore
             state.Radio.CurrentItemId = null;
         }
     }
+
+    private static RadioRecognizedTrackMatchSettings? NormalizeRecognizedTrackMatch(
+        RadioRecognizedTrackMatchSettings? match)
+    {
+        if (match is null || string.IsNullOrWhiteSpace(match.TrackExternalId)) return null;
+        match.TrackExternalId = match.TrackExternalId.Trim();
+        match.TrackPublicUri = NormalizePublicRecognitionUri(match.TrackPublicUri) ?? string.Empty;
+        if (match.TrackPublicUri.Length == 0) return null;
+        match.AlbumExternalId = EmptyToNull(match.AlbumExternalId);
+        match.AlbumTitle = EmptyToNull(match.AlbumTitle);
+        match.AlbumPublicUri = NormalizePublicRecognitionUri(match.AlbumPublicUri);
+        match.ArtistExternalId = EmptyToNull(match.ArtistExternalId);
+        match.ArtistName = EmptyToNull(match.ArtistName);
+        match.ArtistPublicUri = NormalizePublicRecognitionUri(match.ArtistPublicUri);
+        if (match.ResolvedUtcTicks <= DateTime.UnixEpoch.Ticks
+            || match.ResolvedUtcTicks > DateTime.UtcNow.AddDays(1).Ticks)
+        {
+            match.ResolvedUtcTicks = DateTime.UtcNow.Ticks;
+        }
+        return match;
+    }
+
+    private static string? NormalizePublicRecognitionUri(string? value)
+    {
+        if (!Uri.TryCreate(value?.Trim(), UriKind.Absolute, out var uri)
+            || uri.Scheme is not ("http" or "https"))
+        {
+            return null;
+        }
+        return uri.AbsoluteUri;
+    }
+
+    private static string? EmptyToNull(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
     private static void NormalizeSessionNavigation(PersistedState state)
     {
@@ -1417,6 +1495,13 @@ public sealed class ConfigurationStore
                 pair => pair.Key.Trim(),
                 _ => true,
                 StringComparer.OrdinalIgnoreCase);
+        settings.ShuffleEnabledBySession =
+            (settings.ShuffleEnabledBySession ?? new Dictionary<string, bool>())
+            .Where(pair => pair.Value && PlaybackShufflePolicy.SupportsSession(pair.Key))
+            .ToDictionary(
+                pair => pair.Key.Trim(),
+                _ => true,
+                StringComparer.OrdinalIgnoreCase);
         settings.PrefixChord = NormalizePrefixChord(settings.PrefixChord);
         if (schemaVersion < 17 && IsLegacyDefaultSessionOrder(settings.SessionSlots))
         {
@@ -1564,6 +1649,11 @@ public sealed class ConfigurationStore
         {
             throw new InvalidDataException("Zapamiętane wyciszenia sesji są nieprawidłowe.");
         }
+        if (settings.ShuffleEnabledBySession.Any(pair =>
+                !pair.Value || !PlaybackShufflePolicy.SupportsSession(pair.Key)))
+        {
+            throw new InvalidDataException("Zapamiętane ustawienia odtwarzania losowego są nieprawidłowe.");
+        }
 
         var expectedFields = Enum.GetValues<MediaItemField>();
         var fieldOrder = settings.Lists?.FieldOrder;
@@ -1599,6 +1689,8 @@ public sealed class ConfigurationStore
             : NormalizeFilePath(state.Podcasts.DownloadsFolder);
         if (state.Podcasts.DownloadsFolder?.Length == 0)
             state.Podcasts.DownloadsFolder = null;
+        if (!Enum.IsDefined(state.Podcasts.YouTubeVideoDownloadFormat))
+            state.Podcasts.YouTubeVideoDownloadFormat = YouTubeVideoDownloadFormat.Mp4;
         state.Podcasts.Volume = Math.Clamp(state.Podcasts.Volume, 0, 100);
         state.Podcasts.PlaybackRate = Math.Clamp(state.Podcasts.PlaybackRate, 0.50d, 2.00d);
 

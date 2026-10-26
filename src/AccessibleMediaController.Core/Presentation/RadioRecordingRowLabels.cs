@@ -3,17 +3,10 @@ using AccessibleMediaController.Core.Configuration;
 namespace AccessibleMediaController.Core.Presentation;
 
 /// <summary>
-/// Wiersz Historii nagrywania czytany przy zwyklym przechodzeniu strzalkami.
-///
-/// Wymaganie historii nagrań: wiersz ma podac
-/// uzyteczna nazwe, czas/date, a NA KONCU folder, do ktorego nagranie zapisano.
-/// Wczesniej folder dawalo sie poznac tylko przez skopiowanie sciezki (Ctrl+C)
-/// albo wejscie we wlasciwosci - czyli nie przy zwyklej nawigacji.
-///
-/// Folder idzie na KONIEC, bo to informacja pomocnicza: przy szybkim
-/// przegladaniu czytnik ma najpierw powiedziec, co to za nagranie i kiedy
-/// powstalo. Czytamy sama NAZWE folderu, nie pelna sciezke - pelna sciezka
-/// zaglusza wiersz i powtarza te same nadrzedne katalogi w kazdym wpisie.
+/// Krotkie etykiety list „Nagrywane” i „Historia nagrywania”. Przy zwyklej
+/// nawigacji NVDA ma slyszec stan oraz nazwe pliku, bez powtarzania stacji,
+/// harmonogramu, daty i folderu. Pelna sciezka oraz folder nadal sa dostepne
+/// w szczegolach i komunikatach bledu, ale nie zagluszaja kazdego wiersza.
 ///
 /// Druga czesc zgloszenia (punkt3): po przeniesieniu pliku poza AMC wiersz
 /// nadal mowil „Nagrano”, a Enter szedl w martwa sciezke. Dlatego stan
@@ -83,6 +76,17 @@ public static class RadioRecordingRowLabels
     }
 
     /// <summary>
+    /// Wiersz Alt+R. Dopoki zapisywany plik nie ma jeszcze sciezki, uzywa
+    /// nazwy stacji zamiast technicznej wartosci lub pustego wiersza.
+    /// </summary>
+    public static string DescribeActiveRow(string? path, string? fallbackName) =>
+        $"Nagrywane, {ResolveRecordingName(path, fallbackName, "plik jest przygotowywany")}";
+
+    /// <summary>Gotowy plik w Historii nagrywania: tylko stan i nazwa.</summary>
+    public static string DescribeRecordedFile(string? path, string? fallbackName) =>
+        $"Nagrane, {ResolveRecordingName(path, fallbackName, "nieznany plik")}";
+
+    /// <summary>
     /// Czy Enter ma czego odtworzyc TERAZ. <paramref name="fileMissing"/> pochodzi
     /// z obserwacji folderu albo z walidacji przy aktywacji - nie ze skanu
     /// biblioteki. Dzieki temu wpis po przeniesieniu pliku nie udaje gotowego.
@@ -114,11 +118,10 @@ public static class RadioRecordingRowLabels
     }
 
     /// <summary>
-    /// Pelny wiersz Historii nagrywania: skutek, stacja, nazwa pliku, czas/data,
-    /// ewentualny powod, a na samym koncu folder docelowy.
-    ///
-    /// Kolejnosc jest celowa i wynika ze zgloszenia: skutek pierwszy (czytnik od
-    /// razu odrozni gotowe od przerwanego), potem co i kiedy, na koncu gdzie.
+    /// Krotki wiersz Historii nagrywania: skutek i nazwa pliku. Stacje oraz
+    /// powod dodajemy tylko wtedy, gdy proba nie utworzyla zadnego pliku i bez
+    /// tych informacji dwa bledy bylyby nierozroznialne. Harmonogram, data i
+    /// folder nie sa czescia zwyklej nawigacji po liscie.
     /// </summary>
     public static string DescribeHistoryRow(
         RadioRecordingHistorySettings entry,
@@ -126,28 +129,37 @@ public static class RadioRecordingRowLabels
         bool fileMissing, bool fileUnavailable = false)
     {
         ArgumentNullException.ThrowIfNull(entry);
+        _ = nowUtc; // Zachowane w sygnaturze dla zgodnosci wywolan i testow.
 
-        // Baza z istniejacej reguly: skutek, stacja, czas/data, harmonogram,
-        // liczba plikow, powod. Nie powtarzamy tu tych pol wlasnym kodem, zeby
-        // nie rozjechac sie z reszta programu.
-        var label = RadioRecordingHistoryLabels.Describe(entry, nowUtc, fileMissing, fileUnavailable);
+        var outcome = RadioRecordingHistoryLabels.OutcomeLabel(entry.Outcome);
+        if (fileMissing && RadioRecordingHistoryLabels.HasPlayableFile(entry))
+            outcome = entry.Outcome == RadioRecordingOutcome.Completed
+                ? "Brak pliku nagrania"
+                : $"{outcome}, brak pliku nagrania";
+        if (fileUnavailable && RadioRecordingHistoryLabels.HasPlayableFile(entry))
+            outcome = entry.Outcome == RadioRecordingOutcome.Completed
+                ? "Plik nagrania niedostępny"
+                : $"{outcome}, plik nagrania niedostępny";
 
-        // Uzyteczna nazwa pliku. Wchodzi ZA stacja i PRZED czasem, ale tylko
-        // wtedy, gdy nie powtarza nazwy stacji ani calego wiersza - Michal
-        // wyraznie prosil, by nie dublowac pol.
         var name = FileNameLabel(entry.Path);
-        if (name is not null && !label.Contains(name, StringComparison.Ordinal))
+        if (name is not null)
         {
-            var station = string.IsNullOrWhiteSpace(entry.StationName)
-                ? "Nieznana stacja"
-                : entry.StationName;
-            var anchor = $", {station},";
-            var at = label.IndexOf(anchor, StringComparison.Ordinal);
-            label = at >= 0
-                ? label.Insert(at + anchor.Length, $" {name},")
-                : $"{label}, {name}";
+            return $"{outcome}, {name}";
         }
 
-        return AppendFolder(label, entry.Path);
+        var parts = new List<string> { outcome };
+        if (!string.IsNullOrWhiteSpace(entry.StationName))
+            parts.Add(entry.StationName.Trim());
+        if (!string.IsNullOrWhiteSpace(entry.Reason))
+            parts.Add(entry.Reason.Trim().TrimEnd('.'));
+        if (parts.Count == 1) parts.Add("nieznane nagranie");
+        return string.Join(", ", parts);
     }
+
+    private static string ResolveRecordingName(
+        string? path,
+        string? fallbackName,
+        string emptyName) =>
+        FileNameLabel(path)
+        ?? (string.IsNullOrWhiteSpace(fallbackName) ? emptyName : fallbackName.Trim());
 }

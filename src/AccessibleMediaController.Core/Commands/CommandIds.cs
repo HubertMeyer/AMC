@@ -11,6 +11,7 @@ public static class CommandIds
     public const string ActivateSelected = "transport.activateSelected";
     public const string Previous = "transport.previous";
     public const string Next = "transport.next";
+    public const string ToggleShuffle = "transport.shuffle.toggle";
     public const string SeekBackward10 = "transport.seekBackward10";
     public const string SeekForward10 = "transport.seekForward10";
     public const string SeekBackward30 = "transport.seekBackward30";
@@ -88,8 +89,14 @@ public static class CommandIds
     public const string RefreshLocalLibrary = "local.library.refresh";
     public const string ManageLocalSources = "local.library.manageSources";
     public const string ManageWiiMDevices = "wiim.devices.manage";
+    public const string ManageFrontierSmartDevices = "frontierSmart.devices.manage";
+    public const string RefreshFrontierSmartDevices = "frontierSmart.devices.refresh";
+    public const string ViewFrontierSmartModes = "frontierSmart.modes.view";
+    public const string ViewFrontierSmartPresets = "frontierSmart.presets.view";
     public const string ManageTidalConnection = "tidal.connection.manage";
     public const string ManageSpotifyConnection = "spotify.connection.manage";
+    public const string ManageAppleMusicConnection = "appleMusic.connection.manage";
+    public const string ManageYouTubeConnection = "youtube.connection.manage";
 
     /// <summary>
     /// Konto Sonos. Na tym przyroscie to TYLKO logowanie: nie ma sesji Sonos,
@@ -185,6 +192,8 @@ public static class CommandIds
     public const string AddNamedBookmark = "action.bookmark.addNamed";
     public const string PreviousBookmark = "transport.bookmark.previous";
     public const string NextBookmark = "transport.bookmark.next";
+    public const string PreviousNamedBookmark = "transport.bookmark.named.previous";
+    public const string NextNamedBookmark = "transport.bookmark.named.next";
     public const string ViewChapters = "view.chapters";
     public const string AddNamedChapter = "action.chapter.addNamed";
     public const string PreviousChapter = "transport.chapter.previous";
@@ -197,6 +206,7 @@ public static class CommandIds
     public const string DownloadInService = "action.download.inService";
     public const string DownloadToDisk = "action.download.toDisk";
     public const string SavePodcastAs = "podcast.episode.saveAs";
+    public const string DownloadYouTubeVideo = "podcast.youtube.downloadVideo";
     public const string CheckApplicationUpdates = "application.checkUpdates";
     public const string Help = "view.help";
     // Pomoc kontekstowa: sekcja pasujaca do biezacego widoku idzie pierwsza.
@@ -223,6 +233,7 @@ public static class CommandIds
     public const string SettingsPrefix = "settings.prefix";
     public const string SettingsPrefixTimeout = "settings.prefixTimeout";
     public const string SettingsRadioRecognitionScope = "settings.radio.recognitionScope";
+    public const string SettingsYouTubeVideoDownloadFormat = "settings.podcasts.youtubeVideoDownloadFormat";
     public const string SettingsKeyboardProfile = "settings.keyboardProfile";
     public const string SettingsActivateKeyboardProfile = "settings.keyboardProfile.activate";
     public const string SettingsDuplicateKeyboardProfile = "settings.keyboardProfile.duplicate";

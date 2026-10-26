@@ -27,6 +27,16 @@ if (args.Length == 1 && args[0] == "--spotify-membership")
     try { SpotifyMembershipWriteTests.Run(); return 0; }
     catch (Exception exception) { Console.Error.WriteLine(exception); return 1; }
 }
+if (args.Length == 1 && args[0] == "--apple-music-prototype")
+{
+    try { AppleMusicPrototypeTests.Run(); return 0; }
+    catch (Exception exception) { Console.Error.WriteLine(exception); return 1; }
+}
+if (args.Length == 1 && args[0] == "--playback-shuffle")
+{
+    try { PlaybackShuffleTests.Run(); return 0; }
+    catch (Exception exception) { Console.Error.WriteLine(exception); return 1; }
+}
 if (args.Length == 1 && args[0] == "--spotify-migration-review")
 {
     try { SpotifyMigrationReviewTests.Run(); return 0; }
@@ -172,9 +182,26 @@ if (args.Length == 1 && args[0] == "--installer-offline")
     try { InstallerOfflineContractTests.Run(); return 0; }
     catch (Exception exception) { Console.Error.WriteLine(exception); return 1; }
 }
+if (args.Length == 1 && args[0] == "--youtube-video-download")
+{
+    try
+    {
+        TestCommandCatalog();
+        TestCommandPalette();
+        TestShortcutHelpCatalog();
+        return 0;
+    }
+    catch (Exception exception)
+    {
+        Console.Error.WriteLine(exception);
+        return 1;
+    }
+}
 
 var tests = new (string Name, Action Test)[]
 {
+    ("Apple Music: katalog, relacje, biblioteka, ulubione i playlisty", AppleMusicPrototypeTests.Run),
+    ("Odtwarzanie losowe: kolejność, kolejka, trwałość i powierzchnie poleceń", PlaybackShuffleTests.Run),
     ("Sonos: presety sesji - model, trwałość i zasady stałego celu", SonosPresetModelTests.Run),
     ("Sonos: zasady powrotu do podlisty po przełączeniu sesji", SonosSublistReturnPolicyTests.Run),
     ("Własne stacje Sonosa: zapis i biblioteka", SonosOwnStreamsPersistenceTests.Run),
@@ -221,8 +248,9 @@ var tests = new (string Name, Action Test)[]
     ("Trwały i odporny harmonogram radia", TestRadioRecordingSchedule),
     ("Szablony nazw zaplanowanych nagrań", TestRadioRecordingFileNameTemplate),
     ("Trwałe ustawienia i historia rozpoznawania utworów", TestRadioRecognitionHistoryPersistence),
+    ("Pewne dopasowanie i fokus rozpoznanego utworu", TestRecognizedTrackMatchSelection),
     ("Historia nagrywania radia z próbami nieudanymi", TestRadioRecordingHistory),
-    ("Przeniesienie nagrania: odświeżenie list i folder w wierszu",
+    ("Przeniesienie nagrania: odświeżenie list i krótki wiersz",
         RecordingMoveAndFolderRowTests.Run),
     ("Trwałe presety wszystkich sesji", TestSessionPresetPersistence),
     ("Bezpieczne ustawienia i PKCE TIDAL", TestTidalIntegrationFoundation),
@@ -1494,6 +1522,7 @@ static void TestPodcastStatePersistence()
             Path.Combine(directory, "library.db"));
         var state = ConfigurationStore.CreateDefaultState();
         state.Podcasts.DownloadsFolder = Path.Combine(directory, "pobrane");
+        state.Podcasts.YouTubeVideoDownloadFormat = YouTubeVideoDownloadFormat.Original;
         state.Podcasts.Volume = 44;
         state.Podcasts.PlaybackRate = 1.25d;
         state.Podcasts.Subscriptions.Add(new PodcastSubscriptionSettings
@@ -1538,6 +1567,7 @@ static void TestPodcastStatePersistence()
         Equal(44, loaded.Podcasts.Volume);
         Equal(1.25d, loaded.Podcasts.PlaybackRate);
         Equal(Path.Combine(directory, "pobrane"), loaded.Podcasts.DownloadsFolder);
+        Equal(YouTubeVideoDownloadFormat.Original, loaded.Podcasts.YouTubeVideoDownloadFormat);
         Equal(1, loaded.Podcasts.Subscriptions.Count);
         Equal(PodcastSourceKind.PublicInternetMedia, loaded.Podcasts.Subscriptions[0].SourceKind);
         Equal(null, loaded.Podcasts.Subscriptions[0].HomepageUrl);
@@ -1684,6 +1714,12 @@ static void TestPodcastDownloadNaming()
         PodcastDownloadNaming.ResolveExtension(
             "https://cdn.example.test/media/episode.OGG?token=abc",
             "audio/mpeg"));
+    Equal(
+        "Rozmowa - specjalna",
+        PodcastDownloadNaming.SuggestedVideoBaseName("Rozmowa : specjalna?"));
+    Equal(
+        "Wideo YouTube",
+        PodcastDownloadNaming.SuggestedVideoBaseName("\"'..."));
 
     var directory = Path.Combine(Path.GetTempPath(), $"amc-podcast-name-{Guid.NewGuid():N}");
     Directory.CreateDirectory(directory);
@@ -2708,7 +2744,12 @@ static void TestCommandCatalog()
     Equal("Eksportuj ulubione stacje do playlisty", CommandCatalog.GetDisplayName(CommandIds.ExportRadioFavorites));
     Equal("Pokaż nowe odcinki podcastów", CommandCatalog.GetDisplayName(CommandIds.ViewPodcastInbox));
     Equal("Pokaż rozpoczęte odcinki podcastów", CommandCatalog.GetDisplayName(CommandIds.ViewPodcastInProgress));
-    Equal("Pokaż aktualnie nagrywane stacje", CommandCatalog.GetDisplayName(CommandIds.ViewActiveRadioRecordings));
+    Equal("Zapisz odcinek audio lub wideo jako", CommandCatalog.GetDisplayName(CommandIds.SavePodcastAs));
+    Equal("Pobierz wideo z YouTube", CommandCatalog.GetDisplayName(CommandIds.DownloadYouTubeVideo));
+    Equal(
+        "Ustawienia: format pobieranego wideo z YouTube",
+        CommandCatalog.GetDisplayName(CommandIds.SettingsYouTubeVideoDownloadFormat));
+    Equal("Pokaż aktualnie nagrywane pliki", CommandCatalog.GetDisplayName(CommandIds.ViewActiveRadioRecordings));
     // Widok pokazuje teraz takze proby nieudane, nie tylko gotowe pliki -
     // nazwa polecenia idzie za trescia widoku, zeby paleta polecen nie
     // obiecywala czegos innego, niz uzytkownik tam znajdzie.
@@ -3086,6 +3127,7 @@ static void TestRadioRecognitionHistoryPersistence()
         state.Radio.AutomaticTrackRecognitionEnabled = true;
         state.Radio.AutomaticTrackRecognitionScope =
             RadioRecognitionScope.CurrentAndRecordingStations;
+        state.Radio.DefaultRecognizedTrackService = RecognizedTrackStreamingService.Tidal;
         state.Radio.RecognizedTracks =
         [
             new RadioRecognizedTrackSettings
@@ -3098,7 +3140,34 @@ static void TestRadioRecognitionHistoryPersistence()
                 Album = "Album",
                 ReleaseDate = "2025",
                 ProviderUri = "https://example.test/result",
-                RecognizedUtcTicks = new DateTime(2026, 8, 30, 18, 0, 0, DateTimeKind.Utc).Ticks
+                RecognizedUtcTicks = new DateTime(2026, 8, 30, 18, 0, 0, DateTimeKind.Utc).Ticks,
+                TidalMatch = new RadioRecognizedTrackMatchSettings
+                {
+                    TrackExternalId = "tracks:123",
+                    TrackPublicUri = "https://tidal.com/browse/track/123",
+                    AlbumExternalId = "albums:456",
+                    AlbumTitle = "Album",
+                    AlbumPublicUri = "https://tidal.com/browse/album/456",
+                    ResolvedUtcTicks = new DateTime(2026, 8, 30, 18, 1, 0, DateTimeKind.Utc).Ticks
+                },
+                AppleMusicMatch = new RadioRecognizedTrackMatchSettings
+                {
+                    TrackExternalId = "30",
+                    TrackPublicUri = "https://music.apple.com/pl/album/utwor/20?i=30",
+                    AlbumExternalId = "20",
+                    AlbumTitle = "Album",
+                    AlbumPublicUri = "https://music.apple.com/pl/album/album/20",
+                    ResolvedUtcTicks = new DateTime(2026, 8, 30, 18, 2, 0, DateTimeKind.Utc).Ticks
+                }
+            },
+            new RadioRecognizedTrackSettings
+            {
+                Id = "recognized-newer",
+                StationId = "station-b",
+                StationName = "Radio B",
+                Title = "Nowszy utwór",
+                Artist = "Inny wykonawca",
+                RecognizedUtcTicks = new DateTime(2026, 8, 30, 19, 0, 0, DateTimeKind.Utc).Ticks
             },
             new RadioRecognizedTrackSettings
             {
@@ -3112,13 +3181,15 @@ static void TestRadioRecognitionHistoryPersistence()
         Equal(true, loaded.Radio.AutomaticTrackRecognitionEnabled);
         Equal(RadioRecognitionScope.CurrentAndRecordingStations,
             loaded.Radio.AutomaticTrackRecognitionScope);
+        Equal(RecognizedTrackStreamingService.Tidal,
+            loaded.Radio.DefaultRecognizedTrackService);
         Equal(true, RadioRecognitionScopeRules.IncludesCurrentStation(
             loaded.Radio.AutomaticTrackRecognitionScope));
         Equal(true, RadioRecognitionScopeRules.IncludesRecordingStations(
             loaded.Radio.AutomaticTrackRecognitionScope));
         Equal("aktualnie odtwarzana stacja i wszystkie stacje nagrywane w tle",
             RadioRecognitionScopeRules.GetLabel(loaded.Radio.AutomaticTrackRecognitionScope));
-        Equal(1, loaded.Radio.RecognizedTracks.Count);
+        Equal(2, loaded.Radio.RecognizedTracks.Count);
         var entry = loaded.Radio.RecognizedTracks[0];
         Equal("recognized-a", entry.Id);
         Equal("Radio A", entry.StationName);
@@ -3127,12 +3198,57 @@ static void TestRadioRecognitionHistoryPersistence()
         Equal("Album", entry.Album);
         Equal("2025", entry.ReleaseDate);
         Equal("https://example.test/result", entry.ProviderUri);
+        Equal("tracks:123", entry.TidalMatch?.TrackExternalId);
+        Equal("https://tidal.com/browse/album/456", entry.TidalMatch?.AlbumPublicUri);
+        Equal("30", entry.AppleMusicMatch?.TrackExternalId);
+        Equal("https://music.apple.com/pl/album/album/20", entry.AppleMusicMatch?.AlbumPublicUri);
+        Equal("recognized-newer", loaded.Radio.RecognizedTracks[1].Id);
         Equal(ConfigurationStore.CurrentSchemaVersion, loaded.SchemaVersion);
     }
     finally
     {
         Directory.Delete(directory, true);
     }
+}
+
+static void TestRecognizedTrackMatchSelection()
+{
+    var recognized = new RadioRecognizedTrackSettings
+    {
+        Title = "Kto Dał Nam Deszcz (1980)",
+        Artist = "Krystyna Prońko",
+        Album = "Osobista Kolekcja 2"
+    };
+    var wrongFirst = new MediaItem
+    {
+        Id = "wrong",
+        Kind = MediaItemKind.Track,
+        Title = "Kto Dał Nam Deszcz",
+        Artist = "Zupełnie inny wykonawca",
+        ExternalId = "wrong"
+    };
+    var exact = new MediaItem
+    {
+        Id = "exact",
+        Kind = MediaItemKind.Track,
+        Title = "Kto Dał Nam Deszcz (1980)",
+        Artist = "Krystyna Pronko",
+        ExternalId = "track-123",
+        RelatedAlbumTitle = "Osobista Kolekcja 2"
+    };
+    var selected = RecognizedTrackMatchSelector.SelectBest(recognized, [wrongFirst, exact]);
+    Equal("exact", selected?.Id);
+    Equal(null, RecognizedTrackMatchSelector.SelectBest(recognized, [wrongFirst]));
+    Equal("exact", RecognizedTrackNavigationPolicy.PreferredItemId(
+        [wrongFirst, exact], "track-123"));
+    Equal(null, RecognizedTrackNavigationPolicy.PreferredItemId(
+        [wrongFirst, exact], "missing"));
+
+    var shortcuts = RecognitionHistoryCommands.Definitions
+        .Select(command => command.Shortcut)
+        .ToArray();
+    Equal(shortcuts.Length, shortcuts.Distinct(StringComparer.Ordinal).Count());
+    Equal(9, RecognitionHistoryCommands.Definitions.Count);
 }
 
 static void TestSessionPresetPersistence()
@@ -4374,6 +4490,17 @@ static void TestQuickMediaInformationFormatting()
             10 * 1024 * 1024,
             culture: polish));
 
+    var recordedFile = new MediaItem { BitrateKbps = 192 };
+    Equal(
+        "MP3, 192 kb/s, 5 MB, folder Nagrania próby",
+        QuickMediaInformationFormatter.Format(
+            recordedFile,
+            "mp3",
+            5 * 1024 * 1024,
+            culture: polish,
+            supplementaryLabel: RadioRecordingRowLabels.FolderLabel(
+                @"D:\Nagrania próby\audycja.mp3")));
+
     var videoWithAudio = new MediaItem { Codec = "AAC", Duration = TimeSpan.FromSeconds(90) };
     Equal(
         "MP4, AAC, 1:30",
@@ -5566,6 +5693,39 @@ static void TestPlaybackHistory()
     Equal("stream-1", history.GetItemIds("tidal")[0]);
     history.Record("local", "b");
 
+    var tidalItem = new MediaItem
+    {
+        Id = "stream-1",
+        Title = "Utwór z TIDAL",
+        Artist = "Wykonawca",
+        Kind = MediaItemKind.Track,
+        Source = "tidal:track:123",
+        ExternalId = "123",
+        Duration = TimeSpan.FromMinutes(4)
+    };
+    True(history.Record("tidal", tidalItem),
+        "Historia TIDAL powinna zachować dane pozycji spoza bieżącego katalogu.");
+    var tidalHistoryItems = history.GetItems("tidal", []);
+    Equal(1, tidalHistoryItems.Count);
+    Equal("Utwór z TIDAL", tidalHistoryItems[0].Title);
+    True(history.CanReplay("tidal", "stream-1", []),
+        "Lokalny wpis TIDAL powinien pozostać możliwy do ponownego uruchomienia.");
+
+    var sonosId = PlaybackHistory.CreateObservedItemId("sonos", "utwór", "wykonawca");
+    Equal(sonosId, PlaybackHistory.CreateObservedItemId("sonos", "utwór", "wykonawca"));
+    True(sonosId != PlaybackHistory.CreateObservedItemId("sonos", "inny utwór", "wykonawca"),
+        "Różne pozycje urządzenia nie mogą dostać tego samego identyfikatora historii.");
+    history.Record("sonos", new MediaItem
+    {
+        Id = sonosId,
+        Title = "Utwór odczytany z Sonos",
+        Artist = "Wykonawca",
+        Kind = MediaItemKind.Track
+    }, replaySupported: false);
+    Equal("Utwór odczytany z Sonos", history.GetItems("sonos", [])[0].Title);
+    True(!history.CanReplay("sonos", sonosId, []),
+        "Zaobserwowany wpis Sonos nie może udawać bezpiecznego celu odtwarzania.");
+
     var directory = Path.Combine(Path.GetTempPath(), $"amc-playback-history-tests-{Guid.NewGuid():N}");
     Directory.CreateDirectory(directory);
     try
@@ -5580,9 +5740,14 @@ static void TestPlaybackHistory()
         state.PlaybackHistory = settings;
         store.Save(state);
         var loaded = store.LoadOrCreate();
-        var loadedHistory = new PlaybackHistory(loaded.PlaybackHistory).GetItemIds("local");
+        var restoredHistory = new PlaybackHistory(loaded.PlaybackHistory);
+        var loadedHistory = restoredHistory.GetItemIds("local");
         Equal(1, loadedHistory.Count);
         Equal("b", loadedHistory[0]);
+        Equal("Utwór z TIDAL", restoredHistory.GetItems("tidal", [])[0].Title);
+        Equal("Utwór odczytany z Sonos", restoredHistory.GetItems("sonos", [])[0].Title);
+        True(!restoredHistory.CanReplay("sonos", sonosId, []),
+            "SQLite powinien zachować ograniczenie ponownego odtwarzania wpisu Sonos.");
     }
     finally
     {
@@ -5616,6 +5781,8 @@ static void TestBookmarks()
     Equal("Ważny fragment", named.Entry.Name);
     var sameName = index.Add("local", "Pliki lokalne", item, TimeSpan.FromMinutes(25), now.AddMinutes(4), "Ważny fragment");
     True(!sameName.NameChanged, "Ponowne zapisanie tej samej nazwy nie powinno zgłaszać zmiany.");
+    var laterNamed = index.Add("local", "Pliki lokalne", item, TimeSpan.FromMinutes(40), now.AddMinutes(5), "Podsumowanie");
+    True(!laterNamed.Added && laterNamed.NameChanged, "Nazwanie późniejszej zakładki nie powinno tworzyć nowego punktu.");
     Equal(3, index.GetForItem("local", item.Id).Count);
     Equal(first.Entry.Id, index.FindRelative("local", item.Id, TimeSpan.FromMinutes(20), -1)?.Id);
     Equal(second.Entry.Id, index.FindRelative("local", item.Id, TimeSpan.FromMinutes(20), 1)?.Id);
@@ -5625,6 +5792,13 @@ static void TestBookmarks()
     Equal(third.Entry.Id, index.FindAdjacent("local", item.Id, second.Entry.Id, 1)?.Id);
     Equal(null, index.FindAdjacent("local", item.Id, first.Entry.Id, -1)?.Id);
     Equal(null, index.FindAdjacent("local", item.Id, third.Entry.Id, 1)?.Id);
+    Equal(2, index.GetNamedForItem("local", item.Id).Count);
+    Equal(second.Entry.Id, index.FindNamedRelative("local", item.Id, TimeSpan.FromMinutes(20), 1)?.Id);
+    Equal(third.Entry.Id, index.FindNamedRelative("local", item.Id, TimeSpan.FromMinutes(26), 1)?.Id);
+    Equal(null, index.FindNamedAdjacent("local", item.Id, second.Entry.Id, -1)?.Id);
+    Equal(third.Entry.Id, index.FindNamedAdjacent("local", item.Id, second.Entry.Id, 1)?.Id);
+    Equal(second.Entry.Id, index.FindNamedAdjacent("local", item.Id, third.Entry.Id, -1)?.Id);
+    Equal(null, index.FindNamedAdjacent("local", item.Id, third.Entry.Id, 1)?.Id);
     Equal(third.Entry.Id, index.GetAll()[0].Id);
 
     var early = index.Add("local", "Pliki lokalne", item, TimeSpan.FromMinutes(5), now.AddMinutes(5));
@@ -6325,7 +6499,8 @@ static void TestCommandPalette()
     Equal("Ctrl+Shift+O (WiiM)", entries.Single(entry => entry.CommandId == CommandIds.ImportWiiMNetworkStreams).LocalShortcut);
     Equal("Ctrl+E (WiiM)", entries.Single(entry => entry.CommandId == CommandIds.ExportWiiMNetworkStreams).LocalShortcut);
     Equal("F5 (Podcasty i YouTube)", entries.Single(entry => entry.CommandId == CommandIds.RefreshPodcast).LocalShortcut);
-    Equal("Ctrl+F5 (Podcasty i YouTube)", entries.Single(entry => entry.CommandId == CommandIds.RefreshPodcastLibrary).LocalShortcut);
+    Equal("Ctrl+Windows+F5 (globalnie) lub menu Plik", entries.Single(entry => entry.CommandId == CommandIds.RefreshPodcastLibrary).LocalShortcut);
+    Equal("Ctrl+F5 (Podcasty i YouTube)", entries.Single(entry => entry.CommandId == CommandIds.ManageYouTubeConnection).LocalShortcut);
     Equal("Ctrl+I", entries.Single(entry => entry.CommandId == CommandIds.ViewPodcastInbox).LocalShortcut);
     Equal("Ctrl+Shift+I (Podcasty i YouTube)", entries.Single(entry => entry.CommandId == CommandIds.ViewPodcastInProgress).LocalShortcut);
     True(entries.Any(entry => entry.CommandId == CommandIds.ViewFolders), "Paleta powinna zawierać widok folderów.");
@@ -6341,6 +6516,8 @@ static void TestCommandPalette()
     Equal("Ctrl+Shift+B (odtwarzacz)", entries.Single(entry => entry.CommandId == CommandIds.AddNamedBookmark).LocalShortcut);
     Equal("Shift+PageUp (odtwarzacz)", entries.Single(entry => entry.CommandId == CommandIds.PreviousBookmark).LocalShortcut);
     Equal("Shift+PageDown (odtwarzacz)", entries.Single(entry => entry.CommandId == CommandIds.NextBookmark).LocalShortcut);
+    Equal("Ctrl+Shift+PageUp (odtwarzacz)", entries.Single(entry => entry.CommandId == CommandIds.PreviousNamedBookmark).LocalShortcut);
+    Equal("Ctrl+Shift+PageDown (odtwarzacz)", entries.Single(entry => entry.CommandId == CommandIds.NextNamedBookmark).LocalShortcut);
     Equal("Alt+PageUp (odtwarzacz lokalnego pliku)", entries.Single(entry => entry.CommandId == CommandIds.PreviousClipBoundary).LocalShortcut);
     Equal("Alt+PageDown (odtwarzacz lokalnego pliku)", entries.Single(entry => entry.CommandId == CommandIds.NextClipBoundary).LocalShortcut);
     Equal("Ctrl+X (odtwarzacz lokalnego pliku)", entries.Single(entry => entry.CommandId == CommandIds.RemoveClipFromOriginal).LocalShortcut);
@@ -6396,6 +6573,12 @@ static void TestCommandPalette()
     Equal("Ctrl+F5", entries.Single(entry => entry.CommandId == CommandIds.ManageLocalSources).LocalShortcut);
     Equal("F2 (Biblioteka lokalna, Radio lub Podcasty i YouTube)", entries.Single(entry => entry.CommandId == CommandIds.RenameLibraryItem).LocalShortcut);
     Equal("Shift+F2 (lista lokalna)", entries.Single(entry => entry.CommandId == CommandIds.RenameLocalFile).LocalShortcut);
+    Equal(
+        "Ctrl+S (jeden odcinek audio lub materiał YouTube)",
+        entries.Single(entry => entry.CommandId == CommandIds.SavePodcastAs).LocalShortcut);
+    Equal(
+        "Ctrl+Shift+D (materiały YouTube)",
+        entries.Single(entry => entry.CommandId == CommandIds.DownloadYouTubeVideo).LocalShortcut);
     Equal("Ctrl+F1", entries.Single(entry => entry.CommandId == CommandIds.KeyboardHelp).LocalShortcut);
 
     var remaining = CommandPaletteSearch.Filter(entries, "czas pozostaly");
@@ -6554,6 +6737,18 @@ static void TestShortcutHelpCatalog()
         "Okno Pomocy nie powinno otwierać samo siebie.");
     True(entries.Any(entry => entry.Shortcut == "Ctrl+C"), "Spis powinien obejmować bezpieczne kopiowanie nazw.");
     True(entries.Any(entry => entry.Shortcut == "Shift+Delete"), "Spis powinien wyjaśniać osobną operację Kosza.");
+    var saveAsHelp = entries.Single(entry => entry.CommandId == CommandIds.SavePodcastAs);
+    Equal("Ctrl+S", saveAsHelp.Shortcut);
+    True(saveAsHelp.DisplayName.Contains("audio lub wideo", StringComparison.Ordinal)
+         && saveAsHelp.Context.Contains("materiał YouTube", StringComparison.Ordinal),
+        "Spis skrótów powinien wyjaśniać kontekstowe zapisywanie audio lub wideo.");
+    var videoDownloadHelp = entries.Single(entry => entry.CommandId == CommandIds.DownloadYouTubeVideo);
+    Equal("Ctrl+Shift+D", videoDownloadHelp.Shortcut);
+    True(videoDownloadHelp.Context.Contains("YouTube", StringComparison.Ordinal),
+        "Spis skrótów powinien ograniczać pobieranie wideo do materiałów YouTube.");
+    True(sections.Single(section => section.Entries.Contains(videoDownloadHelp))
+            .Label.Contains("Podcast", StringComparison.Ordinal),
+        "Polecenie pobierania wideo powinno należeć do sekcji Podcastów i YouTube.");
     Equal("Ctrl+Shift+S lub Ctrl+0; po prefiksie 0",
         entries.Single(entry => entry.CommandId == CommandIds.SessionList).Shortcut);
     var normalizationHelp = entries.Single(entry => entry.CommandId == CommandIds.ToggleLoudnessNormalization);
@@ -7174,6 +7369,8 @@ static void TestTimeCommands()
     Equal("Usunięto z następnych: Pierwszy utwór demonstracyjny", sink.LastMessage);
     router.Execute(CommandIds.CommandPalette);
     True(actions.CommandPaletteShown, "Router powinien otworzyć paletę poleceń przez interfejs aplikacji.");
+    router.Execute(CommandIds.ManageYouTubeConnection);
+    True(actions.YouTubeAccountManagerCalls == 1, "Router powinien otworzyć konto YouTube przez interfejs aplikacji.");
     router.Execute(CommandIds.RefreshLocalLibrary);
     True(actions.LocalLibraryRefreshed, "Router powinien przekazać ręczne odświeżenie lokalnej biblioteki.");
     router.Execute(CommandIds.ManageLocalSources);
@@ -7200,6 +7397,10 @@ static void TestTimeCommands()
     True(actions.RelatedPodcastShown, "Router powinien przekazać przejście do podcastu nadrzędnego.");
     router.Execute(CommandIds.AddNamedBookmark);
     True(actions.NamedBookmarkAdded, "Router powinien przekazać dodanie nazwanej zakładki do aplikacji.");
+    router.Execute(CommandIds.PreviousNamedBookmark);
+    Equal(-1, actions.NamedBookmarkNavigationDirection);
+    router.Execute(CommandIds.NextNamedBookmark);
+    Equal(1, actions.NamedBookmarkNavigationDirection);
     router.Execute(CommandIds.SettingsMessageTemplates);
     Equal(SettingsTarget.MessageTemplates, actions.LastSettingsTarget);
     router.Execute(CommandIds.SettingsPercentageSeekAnnouncement);
@@ -7480,9 +7681,14 @@ static void TestStrzalkaWPrawoSpotifyMenuPowiazan()
         "private void MediaList_PreviewKeyDown", StringComparison.Ordinal);
     if (poczatekKlawiszy < 0)
         throw new Exception("Nie znaleziono MediaList_PreviewKeyDown w MainWindow.xaml.cs.");
+    var koniecKlawiszy = okno.IndexOf(
+        "private void ShowTidalRelationsMenu", poczatekKlawiszy,
+        StringComparison.Ordinal);
+    if (koniecKlawiszy < 0)
+        throw new Exception("Nie znaleziono końca MediaList_PreviewKeyDown w MainWindow.xaml.cs.");
     var fragmentKlawiszy = okno.Substring(
         poczatekKlawiszy,
-        Math.Min(4000, okno.Length - poczatekKlawiszy));
+        koniecKlawiszy - poczatekKlawiszy);
     if (!fragmentKlawiszy.Contains("ShowSpotifyRelationsMenu", StringComparison.Ordinal))
     {
         throw new Exception(
@@ -8346,6 +8552,7 @@ sealed class FakeActions(MediaItem selectedItem, IReadOnlyList<MediaItem>? actio
     public bool LocalFileRenameShown { get; private set; }
     public int LocalLibraryMoveDirection { get; private set; }
     public int BookmarkNavigationDirection { get; private set; }
+    public int NamedBookmarkNavigationDirection { get; private set; }
     public bool ChaptersShown { get; private set; }
     public bool NamedChapterAdded { get; private set; }
     public int ChapterNavigationDirection { get; private set; }
@@ -8387,6 +8594,10 @@ sealed class FakeActions(MediaItem selectedItem, IReadOnlyList<MediaItem>? actio
 
     public int SpotifyAccountManagerCalls { get; private set; }
     public void ShowSpotifyAccountManager() => SpotifyAccountManagerCalls++;
+    public int AppleMusicAccountManagerCalls { get; private set; }
+    public void ShowAppleMusicAccountManager() => AppleMusicAccountManagerCalls++;
+    public int YouTubeAccountManagerCalls { get; private set; }
+    public void ShowYouTubeAccountManager() => YouTubeAccountManagerCalls++;
     public void ShowSpotifyPodcasts() { }
     public void RefreshWiiMDevices() { }
     public void RenameLibraryItem() => LibraryItemRenameShown = true;
@@ -8397,6 +8608,7 @@ sealed class FakeActions(MediaItem selectedItem, IReadOnlyList<MediaItem>? actio
     public void AddBookmark() => BookmarkAdded = true;
     public void AddNamedBookmark() => NamedBookmarkAdded = true;
     public void NavigateBookmark(int direction) => BookmarkNavigationDirection = direction;
+    public void NavigateNamedBookmark(int direction) => NamedBookmarkNavigationDirection = direction;
     public void ShowChapters() => ChaptersShown = true;
     public void AddNamedChapter() => NamedChapterAdded = true;
     public void NavigateChapter(int direction) => ChapterNavigationDirection = direction;

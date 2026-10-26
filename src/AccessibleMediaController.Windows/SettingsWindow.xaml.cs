@@ -105,6 +105,7 @@ public partial class SettingsWindow : Window
             SettingsTarget.RadioAutomaticTrackRecognition => (RadioTab, AutomaticTrackRecognitionCheck),
             SettingsTarget.RadioRecognitionScope => (RadioTab, RadioRecognitionScopeCombo),
             SettingsTarget.PodcastDownloadsFolder => (PodcastsTab, PodcastDownloadsFolderBox),
+            SettingsTarget.YouTubeVideoDownloadFormat => (PodcastsTab, YouTubeVideoDownloadFormatCombo),
             SettingsTarget.KeyboardProfile => (KeyboardProfilesTab, ProfileCombo),
             SettingsTarget.ActivateKeyboardProfile => (KeyboardProfilesTab, ActivateProfileButton),
             SettingsTarget.DuplicateKeyboardProfile => (KeyboardProfilesTab, DuplicateProfileButton),
@@ -179,6 +180,9 @@ public partial class SettingsWindow : Window
             RadioRecognitionScopeCombo,
             _workingState.Radio.AutomaticTrackRecognitionScope.ToString());
         SelectComboByTag(
+            RecognizedTrackDefaultServiceCombo,
+            _workingState.Radio.DefaultRecognizedTrackService.ToString());
+        SelectComboByTag(
             RadioTimeshiftMinutesCombo,
             _workingState.Radio.TimeshiftMinutes.ToString(CultureInfo.InvariantCulture));
         UpdateRadioTimeshiftWarning();
@@ -187,6 +191,9 @@ public partial class SettingsWindow : Window
         PodcastDownloadsFolderBox.Text = string.IsNullOrWhiteSpace(_workingState.Podcasts.DownloadsFolder)
             ? PodcastDownloadFolderResolver.DefaultFolder()
             : _workingState.Podcasts.DownloadsFolder;
+        SelectComboByTag(
+            YouTubeVideoDownloadFormatCombo,
+            _workingState.Podcasts.YouTubeVideoDownloadFormat.ToString());
         RssRefreshIntervalBox.Text = _workingState.Podcasts.RssRefreshIntervalMinutes
             .ToString(CultureInfo.CurrentCulture);
         YouTubeRefreshIntervalBox.Text = _workingState.Podcasts.YouTubeRefreshIntervalMinutes
@@ -326,6 +333,14 @@ public partial class SettingsWindow : Window
         {
             _workingState.Radio.AutomaticTrackRecognitionScope = recognitionScope;
         }
+        if (Enum.TryParse<RecognizedTrackStreamingService>(
+                SelectedTag(
+                    RecognizedTrackDefaultServiceCombo,
+                    nameof(RecognizedTrackStreamingService.Spotify)),
+                out var recognizedTrackService))
+        {
+            _workingState.Radio.DefaultRecognizedTrackService = recognizedTrackService;
+        }
         if (!int.TryParse(
                 SelectedTag(RadioTimeshiftMinutesCombo, "10"),
                 NumberStyles.Integer,
@@ -339,6 +354,17 @@ public partial class SettingsWindow : Window
         if (string.IsNullOrWhiteSpace(podcastFolder) || !Path.IsPathFullyQualified(podcastFolder))
             throw new InvalidDataException("Domyślny folder pobierania podcastów musi zawierać pełną ścieżkę.");
         _workingState.Podcasts.DownloadsFolder = Path.GetFullPath(podcastFolder);
+        if (Enum.TryParse<YouTubeVideoDownloadFormat>(
+                SelectedTag(YouTubeVideoDownloadFormatCombo, nameof(YouTubeVideoDownloadFormat.Mp4)),
+                out var youtubeVideoFormat)
+            && Enum.IsDefined(youtubeVideoFormat))
+        {
+            _workingState.Podcasts.YouTubeVideoDownloadFormat = youtubeVideoFormat;
+        }
+        else
+        {
+            _workingState.Podcasts.YouTubeVideoDownloadFormat = YouTubeVideoDownloadFormat.Mp4;
+        }
         if (!int.TryParse(RssRefreshIntervalBox.Text.Trim(), out var rssInterval)
             || rssInterval is < 0 or > 10080)
         {

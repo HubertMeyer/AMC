@@ -4,6 +4,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using AccessibleMediaController.Core.Configuration;
+using AccessibleMediaController.Core.Presentation;
 using AccessibleMediaController.Core.Sessions;
 
 namespace AccessibleMediaController.Windows;
@@ -157,6 +158,36 @@ public partial class RadioSchedulesWindow : Window
                 ? paucal
                 : plural;
         return $"{value} {unit}";
+    }
+
+    internal string BuildRecordingOutputDescription(RadioRecordingScheduleSettings schedule)
+    {
+        var format = schedule.RecordingFormat ?? _defaultRecordingFormat;
+        var bitrateKbps = schedule.RecordingBitrateKbps ?? _defaultRecordingBitrateKbps;
+        var utc = new DateTime(schedule.NextStartUtcTicks, DateTimeKind.Utc);
+        var zone = RadioScheduleCalculator.ResolveTimeZone(schedule.TimeZoneId);
+        var local = TimeZoneInfo.ConvertTimeFromUtc(utc, zone);
+        var baseName = RadioRecordingFileNameTemplate.Expand(
+            schedule.FileNameTemplate,
+            schedule.StationName,
+            local,
+            partNumber: 1);
+        var fileName = RadioRecordingOutputDescription.ExampleFileName(baseName, format);
+
+        var outputFolder = schedule.OutputFolder?.Trim();
+        if (string.IsNullOrWhiteSpace(outputFolder)
+            && _stationRecordingFolders.TryGetValue(schedule.StationId, out var stationFolder)
+            && !string.IsNullOrWhiteSpace(stationFolder))
+        {
+            outputFolder = stationFolder.Trim();
+        }
+        var usesDefaultFolder = string.IsNullOrWhiteSpace(outputFolder);
+        return RadioRecordingOutputDescription.Format(
+            format,
+            bitrateKbps,
+            fileName,
+            outputFolder ?? _defaultRecordingsFolder,
+            usesDefaultFolder);
     }
 
     private static string BuildLastFailureLabel(
@@ -345,7 +376,12 @@ public partial class RadioSchedulesWindow : Window
         }
         if (Keyboard.Modifiers != ModifierKeys.None) return;
         var key = e.Key == Key.System ? e.SystemKey : e.Key;
-        if (key == Key.Enter)
+        if (key == Key.Right && SchedulesList.SelectedItem is ScheduleRow outputRow)
+        {
+            ScheduleStatus.Announce(BuildRecordingOutputDescription(outputRow.Schedule));
+            e.Handled = true;
+        }
+        else if (key == Key.Enter)
         {
             EditSelected();
             e.Handled = true;

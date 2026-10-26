@@ -1,5 +1,78 @@
 # Zadania testowe AMC
 
+## Wspólny kontrakt kont, urządzeń i folderów
+
+### AMC-ACCOUNT-01 — pierwsze i ponowne otwarcie
+
+Dla TIDAL-a, Spotify, Sonosa, Frontier Smart, WiiM i Folderów Biblioteki
+porównaj pierwsze otwarcie z dwoma kolejnymi otwarciami `Ctrl+F5`.
+
+Oczekiwane: pierwsze otwarcie może prowadzić do logowania, wykrywania albo
+dodania. Po zapisaniu stanu każde kolejne otwarcie natychmiast pokazuje konto,
+urządzenia lub foldery. Nie uruchamia samo przeglądarki, ponownego logowania,
+parowania ani skanu. Fokus trafia do zapisanej pozycji albo pierwszej
+użytecznej kontrolki, nigdy do przypadkowego Zamknij lub Anuluj.
+
+### AMC-ACCOUNT-02 — rozdzielone skutki usunięcia
+
+Na stanie syntetycznym sprawdź kolejno: **Odłącz konto** TIDAL/Spotify/Sonos,
+**Usuń urządzenie** Frontier Smart/WiiM oraz **Odłącz folder** Biblioteki.
+Najpierw anuluj potwierdzenie, potem zatwierdź.
+
+Oczekiwane: Anuluj nie zmienia stanu i przywraca fokus. Wylogowanie usuwa tylko
+lokalne poświadczenie oraz jasno opisaną pamięć zależną od konta, bez usuwania
+konta u dostawcy. Usunięcie urządzenia nie zmienia jego konfiguracji, a
+odłączenie folderu nie usuwa plików. Żadna kontrolka ani komunikat nie używa
+identyfikatora technicznego lub reprezentacji obiektu.
+
+### AMC-ACCOUNT-03 — sesja nie jest kontem
+
+Wyłącz albo usuń sesję z Menedżera, uruchom AMC ponownie i włącz ją ponownie.
+
+Oczekiwane: sama zmiana listy sesji nie wylogowuje konta, nie usuwa urządzenia
+i nie odłącza folderu. Jeżeli poświadczenie lub urządzenie nadal istnieje,
+ponowne wejście pokazuje zapisany stan bez nowego logowania lub skanu.
+
+## Frontier Smart — automatyczne pierwsze wykrywanie
+
+Automatycznie: uruchom projekty
+`AccessibleMediaController.FrontierSmart.SmokeTests` i
+`AccessibleMediaController.FrontierSmart.Windows.SmokeTests`. Oczekiwane:
+13/13 testów protokołu oraz 6/6 grup WPF, kod wyjścia 0. WPF korzysta z
+syntetycznego wykrywania i nie łączy się z prywatną siecią ani Menedżerem
+poświadczeń użytkownika.
+
+### AMC-FRONTIER-01 — pierwsza nowa sesja
+
+Otwórz `Ctrl+Shift+S`, wybierz **Nowa sesja Frontier Smart…** i niczego nie
+naciskaj podczas pierwszego skanu.
+
+Oczekiwane: skan rozpoczyna się sam. Fokus pozostaje na liście urządzeń, a nie
+na **Zamknij**, PIN-ie ani polu adresu. Po znalezieniu radio pojawia się jako
+wykryte i wymagające PIN-u. Wpisz PIN, wybierz **Połącz i dodaj**, a dopiero po
+potwierdzeniu użyj **Utwórz sesję**. PIN nie jest wypowiadany ani zapisywany w
+pliku ustawień.
+
+### AMC-FRONTIER-02 — ponowne Ctrl+F5
+
+Po utworzeniu sesji zamknij okno, wejdź do Frontier Smart i dwukrotnie otwórz
+`Ctrl+F5`.
+
+Oczekiwane: od razu pojawia się lista zapisanych urządzeń z fokusem na aktywnym
+wierszu. Samo otwarcie nie rozpoczyna nowego skanu. Dostępne są odświeżenie,
+zmiana aktywnego urządzenia i usunięcie; nowy skan następuje tylko po użyciu
+**Wykryj nowe urządzenia**.
+
+### AMC-FRONTIER-03 — brak wyniku i dodawanie ręczne
+
+Jeżeli SSDP niczego nie znajdzie, przeczytaj komunikat wyniku, rozwiń
+**Dodawanie ręczne po adresie IP**, wpisz lokalny adres radia i PIN, a następnie
+użyj **Dodaj i sprawdź**. Powtórz raz z błędnym PIN-em.
+
+Oczekiwane: brak wyniku nie przenosi sam fokusu do formularza. Błędny PIN daje
+jednoznaczny komunikat i wraca do pola PIN. Błąd adresu lub połączenia pozostawia
+formularz do poprawy; program nie wraca w kółko do pustej listy bez wyjaśnienia.
+
 ## Sonos po415 i lokalizacje w schowku
 
 - `--sonos-navigation-ux`: rzeczywiste kategorie korzenia, powrót listy/odtwarzacza i celu, spóźniona topologia, Enter, własny/obcy/nieznany foreground, F2/Delete.
@@ -8357,3 +8430,78 @@ dosłowny adres. Dla stacji bez zapisanego adresu słyszysz „Ta stacja nie ma
 zapisanego adresu”, a dla ulubionego bez adresu „Sonos nie podał adresu tego
 ulubionego” — i schowek zostaje NIETKNIĘTY (poprzednia zawartość zachowana).
 W polach tekstowych oba skróty działają jak zwykła edycja tekstu.
+
+## AMC — rozpoznane utwory: interakcje usług i publicznych łączy
+
+### REC-01 — lista, kopiowanie i odczyt
+
+Otwórz `Ctrl+Alt+S`, przejdź strzałkami po kilku wpisach, naciśnij lewą
+strzałkę, `Ctrl+C` i `Ctrl+Shift+C`. Oczekiwane: zwykła nawigacja czyta krótki
+wiersz; lewa strzałka podaje szybkie szczegóły; `Ctrl+C` kopiuje pełny opis;
+`Ctrl+Shift+C` po ewentualnym jednorazowym wyszukiwaniu kopiuje dokładne łącze
+w domyślnej usłudze.
+
+### REC-02 — album i fokus rozpoznanego utworu
+
+Ustaw kolejno Spotify i TIDAL jako usługę domyślną. Na rekordzie mającym album
+naciśnij `Ctrl+Enter`. Oczekiwane: AMC otwiera właściwy album w danej usłudze,
+a zaznaczenie i fokus listy trafiają na rozpoznany utwór, nie na pierwszy
+utwór albumu.
+
+### REC-03 — menu prawej strzałki
+
+Naciśnij prawą strzałkę. Oczekiwane: menu zawiera tylko dostępne, zalogowane
+Spotify/TIDAL, działania wykonawcy i albumu w usłudze domyślnej, osobne
+„pokaż utwór w AMC” i otwarcie oryginalnej aplikacji oraz publiczny utwór
+Apple Music. Pierwsza pozycja otrzymuje fokus.
+`Ctrl+C` kopiuje nazwę, `Ctrl+Shift+C` właściwe łącze, Escape wraca na ten sam
+rekord. Żaden wiersz nie mówi nazwy klasy, enumu, właściwości ani dumpu obiektu.
+
+### REC-04 — kolejność i NVDA
+
+Przenieś pojedynczy wpis oraz kilka zaznaczonych wpisów przez
+`Alt+Strzałka w górę/dół`, zamknij i ponownie otwórz historię oraz uruchom AMC
+ponownie. Oczekiwane: kolejność pozostaje zachowana, zaznaczenie nie ginie, a
+NVDA mówi `Nad …` albo `Pod …` bez zbędnego słowa „Przeniesiono”.
+
+### REC-05 — zapytanie na żądanie i cache
+
+Na nowym rekordzie wykonaj działanie Spotify lub TIDAL, potem powtórz je.
+Oczekiwane: pierwsze działanie może ogłosić wyszukiwanie, a następne używa
+zapisanego trafienia bez ponownego pytania katalogu. Brak logowania i brak
+wystarczająco pewnego dopasowania dają jednoznaczny komunikat i nie otwierają
+przypadkowego pierwszego wyniku.
+
+### REC-06 — pełne menu kontekstowe i Apple Music
+
+Otwórz menu kontekstowe rekordu i rozwiń **Usługi, łącza i powiązania**.
+Oczekiwane: pełna lista zawiera wszystkie dostępne warianty Spotify i TIDAL,
+dokładny utwór i album Apple Music, zawsze dostępne wyszukiwanie Apple Music,
+YouTube Music, Discogs, MusicBrainz oraz wynik Shazama, jeżeli istnieje.
+Dokładne łącza Apple Music są pobierane dopiero po Enterze albo
+`Ctrl+Shift+C`; powtórzenie korzysta z cache. Nie pojawia się logowanie Apple,
+prośba o token ani Apple Music w polu usługi domyślnej. Escape zamyka tylko
+bieżący poziom i zwraca fokus na ten sam rekord; ponowne otwarcie daje te same
+użytkowe etykiety.
+
+## Nagrywane i Harmonogram — rozdzielenie strumienia od zapisu
+
+### REC-ARROW-01 — lewa i prawa strzałka w widoku Nagrywane
+
+Rozpocznij nagrywanie stacji do MP3 192 kb/s i otwórz `Nagrywane` przez
+`Alt+R`. Na zapisywanym pliku naciśnij kolejno lewą i prawą strzałkę.
+
+Oczekiwane: lewa strzałka podaje parametry odbieranego strumienia, a prawa
+ustawienia zapisu, na przykład `192 kb/s, plik nazwa.mp3, folder domyślny`.
+Komunikaty nie zamieniają bitrate strumienia z bitrate pliku. Fokus pozostaje
+na tym samym wierszu.
+
+### REC-ARROW-02 — folder niestandardowy i Harmonogram
+
+Ustaw dla nagrania lub planu niestandardowy folder, otwórz Harmonogram i
+naciśnij prawą strzałkę na planie.
+
+Oczekiwane: komunikat zaczyna się od bitrate albo rodzaju zapisu, następnie
+podaje przykładową nazwę pliku i kończy się samą pełną ścieżką. Nie zaczyna się
+od słowa `Źródło`, nazwy stacji ani adresu internetowego. Po ponownym otwarciu
+okna zachowanie jest identyczne.

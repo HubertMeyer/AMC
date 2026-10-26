@@ -30,7 +30,8 @@ public sealed class SessionManager
         IMediaOutput? tidalOutput = null,
         IMediaOutput? spotifyOutput = null,
         DemoMediaSession? existingSpotifySession = null,
-        IMediaOutput? spotifyLibrespotOutput = null)
+        IMediaOutput? spotifyLibrespotOutput = null,
+        IMediaOutput? appleMusicOutput = null)
     {
         if (existingSpotifySession is not null && existingSpotifySession.Id != "spotify")
             throw new ArgumentException("Oczekiwano sesji Spotify.", nameof(existingSpotifySession));
@@ -63,12 +64,21 @@ public sealed class SessionManager
         ActiveSpotifyEngine = faktyczny;
         existingSpotifySession?.ConfigureRememberPositionPolicy(
             item => Spotify.SpotifyPlaybackSettingsResolver.ShouldRemember(settings, item));
-        _sessions = CreateDemoSessions(settings, tidalOutput, activeSpotifyOutput, existingSpotifySession).ToList();
+        _sessions = CreateDemoSessions(
+            settings,
+            tidalOutput,
+            activeSpotifyOutput,
+            existingSpotifySession,
+            appleMusicOutput).ToList();
         _sessionSlots = SessionSlotOrder.Normalize(settings.SessionSlots);
         settings.SessionSlots = new Dictionary<int, string>(_sessionSlots);
         ReorderSessionsBySlots();
         AllSessionsMuted = settings.Audio.AllSessionsMuted;
-        foreach (var session in _sessions) ApplyRememberedMute(session);
+        foreach (var session in _sessions)
+        {
+            ApplyRememberedMute(session);
+            ApplyRememberedShuffle(session);
+        }
         var remembered = Sessions.FirstOrDefault(session => session.Id == settings.LastSessionId);
         Current = remembered ?? Sessions[0];
         if (remembered is null) _settings.LastSessionId = Current.Id;
@@ -94,6 +104,17 @@ public sealed class SessionManager
         var muted = Current.ToggleMute();
         RememberSessionMute(Current);
         return muted;
+    }
+
+    public bool? ToggleCurrentSessionShuffle()
+    {
+        if (!PlaybackShufflePolicy.SupportsSession(Current.Id)) return null;
+        var enabled = Current.ToggleShuffle();
+        if (enabled)
+            _settings.ShuffleEnabledBySession[Current.Id] = true;
+        else
+            _settings.ShuffleEnabledBySession.Remove(Current.Id);
+        return enabled;
     }
 
     public void CaptureMuteStates()
@@ -191,6 +212,7 @@ public sealed class SessionManager
                 playbackRateOverride,
                 volumeOverride);
             ApplyRememberedMute(session);
+            ApplyRememberedShuffle(session);
             _sessions.Add(session);
         }
         else
@@ -240,6 +262,7 @@ public sealed class SessionManager
 
         _sessions.Insert(Math.Clamp(registration.Index, 0, _sessions.Count), registration.Session);
         ApplyRememberedMute(registration.Session);
+        ApplyRememberedShuffle(registration.Session);
         ReorderSessionsBySlots();
         if (makeCurrent || registration.WasCurrent)
         {
@@ -253,6 +276,13 @@ public sealed class SessionManager
     {
         session.SetSessionMute(_settings.Audio.SessionMutedById.GetValueOrDefault(session.Id));
         session.SetGlobalMute(AllSessionsMuted);
+    }
+
+    private void ApplyRememberedShuffle(DemoMediaSession session)
+    {
+        session.SetShuffleEnabled(
+            PlaybackShufflePolicy.SupportsSession(session.Id)
+            && _settings.ShuffleEnabledBySession.GetValueOrDefault(session.Id));
     }
 
     private void RememberSessionMute(DemoMediaSession session)
@@ -284,12 +314,13 @@ public sealed class SessionManager
         AppSettings settings,
         IMediaOutput? tidalOutput,
         IMediaOutput? spotifyOutput = null,
-        DemoMediaSession? existingSpotifySession = null)
+        DemoMediaSession? existingSpotifySession = null,
+        IMediaOutput? appleMusicOutput = null)
     {
         return
         [
             new DemoMediaSession("tidal", "TIDAL", CreateDemonstrationItems("tidal"), tidalOutput),
-            new DemoMediaSession("appleMusic", "Apple Music", CreateDemonstrationItems("apple")),
+            new DemoMediaSession("appleMusic", "Apple Music", CreateDemonstrationItems("apple"), appleMusicOutput),
             new DemoMediaSession("wiim", "WiiM", []),
             // Spotify na KONCU listy celowo. Kolejnosc tej tablicy wyznacza
             // porzadek przechodzenia miedzy sesjami (MoveSession), wiec wstawiona

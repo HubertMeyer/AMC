@@ -186,6 +186,15 @@
                                     <ComboBoxItem Tag="CurrentAndRecordingStations"
                                                   automation:AutomationProperties.Name="Aktualnie odtwarzana stacja i wszystkie stacje nagrywane w tle">Aktualnie odtwarzana stacja i wszystkie stacje nagrywane w tle</ComboBoxItem>
                                 </ComboBox>
+                                <Label Margin="0,10,0,0" Target="{Binding ElementName=RecognizedTrackDefaultServiceCombo}">_Domyślna usługa dla rozpoznanych utworów:</Label>
+                                <ComboBox x:Name="RecognizedTrackDefaultServiceCombo" Width="430" HorizontalAlignment="Left"
+                                          automation:AutomationProperties.Name="Domyślna usługa dla rozpoznanych utworów"
+                                          automation:AutomationProperties.HelpText="Określa usługę używaną przez Enter, Ctrl+Enter i Ctrl+Shift+C w historii rozpoznanych utworów. Usługa musi być zalogowana w AMC.">
+                                    <ComboBoxItem Tag="Spotify"
+                                                  automation:AutomationProperties.Name="Spotify">Spotify</ComboBoxItem>
+                                    <ComboBoxItem Tag="Tidal"
+                                                  automation:AutomationProperties.Name="TIDAL">TIDAL</ComboBoxItem>
+                                </ComboBox>
                                 <TextBlock Margin="0,8,0,0" TextWrapping="Wrap"
                                            Text="Shift+S w odtwarzaczu radia włącza lub wyłącza obserwowanie dla wybranego tutaj zakresu. Ręczne S zawsze rozpoznaje wyłącznie słuchaną stację. Ctrl+Alt+Shift+S niezależnie przełącza oznajmianie wyników; po jego wyłączeniu wyniki nadal trafiają do jednej historii, którą można filtrować według stacji." />
                             </StackPanel>
@@ -291,7 +300,7 @@
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel Margin="12">
                         <TextBlock Margin="0,0,0,12" TextWrapping="Wrap"
-                                   Text="Ctrl+D pobiera zaznaczone odcinki bez dodatkowych pytań do poniższego folderu. Ctrl+S zapisuje jeden odcinek pod wybraną nazwą i w wybranym miejscu." />
+                                   Text="Ctrl+D pobiera dźwięk zaznaczonych odcinków bez dodatkowych pytań do poniższego folderu. Ctrl+S zapisuje jeden plik audio pod wybraną nazwą, a na materiale YouTube otwiera zapis wideo z wyborem MP4 albo formatu oryginalnego. Ctrl+Shift+D pobiera wideo z zaznaczonych materiałów YouTube w formacie ustawionym poniżej." />
                         <GroupBox Header="Domyślny folder pobierania">
                             <StackPanel Margin="8">
                                 <Grid>
@@ -310,10 +319,26 @@
                             </StackPanel>
                         </GroupBox>
 
+                        <GroupBox Header="Pobieranie wideo z YouTube" Margin="0,12,0,0">
+                            <StackPanel Margin="8">
+                                <Label Target="{Binding ElementName=YouTubeVideoDownloadFormatCombo}">Domyślny _format wideo:</Label>
+                                <ComboBox x:Name="YouTubeVideoDownloadFormatCombo" Width="430" HorizontalAlignment="Left"
+                                          automation:AutomationProperties.Name="Domyślny format pobieranego wideo z YouTube"
+                                          automation:AutomationProperties.HelpText="MP4 jest ustawieniem domyślnym i najbardziej zgodnym. Format oryginalny zachowuje najlepszy dostępny kontener wybrany przez YouTube i yt-dlp.">
+                                    <ComboBoxItem Tag="Mp4"
+                                                  automation:AutomationProperties.Name="MP4, domyślny i najbardziej zgodny">MP4 — domyślny i najbardziej zgodny</ComboBoxItem>
+                                    <ComboBoxItem Tag="Original"
+                                                  automation:AutomationProperties.Name="Oryginalny lub najlepszy dostępny format, bez wymuszania MP4">Oryginalny lub najlepszy dostępny — bez wymuszania MP4</ComboBoxItem>
+                                </ComboBox>
+                                <TextBlock Margin="0,8,0,0" TextWrapping="Wrap"
+                                           Text="MP4 wybiera zgodne strumienie obrazu i dźwięku oraz łączy je bez ponownego kodowania, gdy to możliwe. Opcja oryginalna nie wymusza kontenera; plik może mieć na przykład rozszerzenie WebM albo MKV. Oba tryby wymagają składników yt-dlp i FFmpeg." />
+                            </StackPanel>
+                        </GroupBox>
+
                         <GroupBox Header="Automatyczne sprawdzanie nowych odcinków" Margin="0,12,0,0">
                             <StackPanel Margin="8">
                                 <TextBlock Margin="0,0,0,8" TextWrapping="Wrap"
-                                           Text="Program sam sprawdza źródła w bibliotece. Odstęp podawaj w minutach; zero wyłącza automatyczne sprawdzanie danego rodzaju źródeł. Ctrl+F5 w sesji Podcasty oraz Ctrl+Windows+F5 z dowolnego programu sprawdzają wszystko od razu, niezależnie od tych ustawień." />
+                                           Text="Program sam sprawdza źródła w bibliotece. Odstęp podawaj w minutach; zero wyłącza automatyczne sprawdzanie danego rodzaju źródeł. Ctrl+Windows+F5 z dowolnego programu oraz pozycja Odśwież wszystkie źródła w menu Plik sprawdzają wszystko od razu, niezależnie od tych ustawień. Ctrl+F5 w sesji Podcasty i YouTube otwiera konto YouTube." />
                                 <Label Target="{Binding ElementName=RssRefreshIntervalBox}">Odstęp dla _podcastów w minutach:</Label>
                                 <TextBox x:Name="RssRefreshIntervalBox" Width="90" HorizontalAlignment="Left"
                                          automation:AutomationProperties.Name="Odstęp automatycznego sprawdzania podcastów w minutach"

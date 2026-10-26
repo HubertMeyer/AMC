@@ -74,7 +74,7 @@ internal sealed class PodcastLibraryDatabase(string databasePath)
                 command.CommandText = """
                     SELECT downloads_folder, current_item_id, volume, playback_rate,
                            rss_refresh_interval_minutes, youtube_refresh_interval_minutes,
-                           automatic_refresh_batch_size
+                           automatic_refresh_batch_size, youtube_video_download_format
                     FROM podcast_state WHERE singleton = 1;
                     """;
                 using var reader = command.ExecuteReader();
@@ -87,6 +87,11 @@ internal sealed class PodcastLibraryDatabase(string databasePath)
                     settings.RssRefreshIntervalMinutes = reader.GetInt32(4);
                     settings.YouTubeRefreshIntervalMinutes = reader.GetInt32(5);
                     settings.AutomaticRefreshBatchSize = reader.GetInt32(6);
+                    settings.YouTubeVideoDownloadFormat =
+                        Enum.TryParse<YouTubeVideoDownloadFormat>(reader.GetString(7), out var videoFormat)
+                        && Enum.IsDefined(videoFormat)
+                            ? videoFormat
+                            : YouTubeVideoDownloadFormat.Mp4;
                 }
             }
 
@@ -130,8 +135,8 @@ internal sealed class PodcastLibraryDatabase(string databasePath)
             INSERT INTO podcast_state(
                 singleton, downloads_folder, current_item_id, volume, playback_rate,
                 rss_refresh_interval_minutes, youtube_refresh_interval_minutes,
-                automatic_refresh_batch_size)
-            VALUES(1, $downloads, $current, $volume, $rate, $rssInterval, $youTubeInterval, $batch)
+                automatic_refresh_batch_size, youtube_video_download_format)
+            VALUES(1, $downloads, $current, $volume, $rate, $rssInterval, $youTubeInterval, $batch, $videoFormat)
             ON CONFLICT(singleton) DO UPDATE SET
                 downloads_folder = excluded.downloads_folder,
                 current_item_id = excluded.current_item_id,
@@ -139,7 +144,8 @@ internal sealed class PodcastLibraryDatabase(string databasePath)
                 playback_rate = excluded.playback_rate,
                 rss_refresh_interval_minutes = excluded.rss_refresh_interval_minutes,
                 youtube_refresh_interval_minutes = excluded.youtube_refresh_interval_minutes,
-                automatic_refresh_batch_size = excluded.automatic_refresh_batch_size;
+                automatic_refresh_batch_size = excluded.automatic_refresh_batch_size,
+                youtube_video_download_format = excluded.youtube_video_download_format;
             """,
             ("$downloads", settings.DownloadsFolder),
             ("$current", settings.CurrentItemId),
@@ -147,7 +153,8 @@ internal sealed class PodcastLibraryDatabase(string databasePath)
             ("$rate", settings.PlaybackRate),
             ("$rssInterval", settings.RssRefreshIntervalMinutes),
             ("$youTubeInterval", settings.YouTubeRefreshIntervalMinutes),
-            ("$batch", settings.AutomaticRefreshBatchSize));
+            ("$batch", settings.AutomaticRefreshBatchSize),
+            ("$videoFormat", settings.YouTubeVideoDownloadFormat.ToString()));
 
         var subscriptionHashes = ReadHashes(connection, transaction, "podcast_subscriptions");
         for (var ordinal = 0; ordinal < settings.Subscriptions.Count; ordinal++)
@@ -432,6 +439,7 @@ internal sealed class PodcastLibraryDatabase(string databasePath)
         EnsurePodcastStateColumn(connection, "rss_refresh_interval_minutes", "INTEGER NOT NULL DEFAULT 60");
         EnsurePodcastStateColumn(connection, "youtube_refresh_interval_minutes", "INTEGER NOT NULL DEFAULT 60");
         EnsurePodcastStateColumn(connection, "automatic_refresh_batch_size", "INTEGER NOT NULL DEFAULT 4");
+        EnsurePodcastStateColumn(connection, "youtube_video_download_format", "TEXT NOT NULL DEFAULT 'Mp4'");
 
         using var metadata = connection.CreateCommand();
         metadata.CommandText = """

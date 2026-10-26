@@ -110,6 +110,18 @@ internal static class MainWindowShortcutRouter
             modifiers,
             playerActive);
 
+    public static string? ResolvePlayerShuffle(
+        Key key,
+        ModifierKeys modifiers,
+        bool playerActive,
+        string? sessionId) =>
+        playerActive
+        && key == Key.R
+        && modifiers == ModifierKeys.None
+        && PlaybackShufflePolicy.SupportsSession(sessionId)
+            ? CommandIds.ToggleShuffle
+            : null;
+
     public static bool IsSessionListShortcut(Key key, ModifierKeys modifiers) =>
         key == Key.S && modifiers == (ModifierKeys.Control | ModifierKeys.Shift);
 
@@ -184,6 +196,23 @@ internal static class MainWindowShortcutRouter
         };
     }
 
+    public static string? ResolveBookmarkNavigation(
+        Key key,
+        ModifierKeys modifiers,
+        bool playerActive,
+        bool menuActive)
+    {
+        if (!playerActive || menuActive) return null;
+        return (modifiers, key) switch
+        {
+            (ModifierKeys.Shift, Key.PageUp) => CommandIds.PreviousBookmark,
+            (ModifierKeys.Shift, Key.PageDown) => CommandIds.NextBookmark,
+            (ModifierKeys.Control | ModifierKeys.Shift, Key.PageUp) => CommandIds.PreviousNamedBookmark,
+            (ModifierKeys.Control | ModifierKeys.Shift, Key.PageDown) => CommandIds.NextNamedBookmark,
+            _ => null
+        };
+    }
+
     public static string? ResolvePodcastEpisodeFileAction(
         Key key,
         ModifierKeys modifiers,
@@ -191,16 +220,16 @@ internal static class MainWindowShortcutRouter
         bool itemContext)
     {
         if (!itemContext
-            || !string.Equals(sessionId, "podcasts", StringComparison.Ordinal)
-            || modifiers != ModifierKeys.Control)
+            || !string.Equals(sessionId, "podcasts", StringComparison.Ordinal))
         {
             return null;
         }
 
-        return key switch
+        return (modifiers, key) switch
         {
-            Key.D => CommandIds.DownloadInService,
-            Key.S => CommandIds.SavePodcastAs,
+            (ModifierKeys.Control, Key.D) => CommandIds.DownloadInService,
+            (ModifierKeys.Control, Key.S) => CommandIds.SavePodcastAs,
+            (ModifierKeys.Control | ModifierKeys.Shift, Key.D) => CommandIds.DownloadYouTubeVideo,
             _ => null
         };
     }
@@ -237,6 +266,37 @@ internal static class MainWindowShortcutRouter
         {
             ModifierKeys.None => CommandIds.AddBookmark,
             ModifierKeys.Shift => CommandIds.AddNamedBookmark,
+            _ => null
+        };
+    }
+
+    /// <summary>
+    /// Jedna mapa skrótów rozpoznawania dla głównej listy, odtwarzacza i
+    /// pomocy klawiatury. Wywołujący musi przekazać znormalizowany klawisz
+    /// (dla gestów z Altem WPF umieszcza literę w SystemKey).
+    /// </summary>
+    public static string? ResolveRadioRecognition(
+        Key key,
+        ModifierKeys modifiers,
+        string sessionId,
+        bool playerActive)
+    {
+        if (!string.Equals(sessionId, "radio", StringComparison.Ordinal)
+            || key != Key.S)
+        {
+            return null;
+        }
+
+        return modifiers switch
+        {
+            ModifierKeys.Control | ModifierKeys.Alt | ModifierKeys.Shift =>
+                CommandIds.ToggleRadioRecognitionAnnouncements,
+            ModifierKeys.Control | ModifierKeys.Alt =>
+                CommandIds.ViewRadioRecognitionHistory,
+            ModifierKeys.Shift when playerActive =>
+                CommandIds.ToggleRadioRecognitionMonitoring,
+            ModifierKeys.None when playerActive =>
+                CommandIds.RecognizeRadioTrack,
             _ => null
         };
     }

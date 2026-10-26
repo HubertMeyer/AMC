@@ -13,3 +13,6 @@ node_modules/
 AMC-NVDA-*.nvda-addon
 __pycache__/
 .smoke-out/
+*.p8
+*.jwt
+client_secret*.json

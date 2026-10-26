@@ -1,4 +1,5 @@
 using AccessibleMediaController.Core.Commands;
+using AccessibleMediaController.Core.AppleMusic;
 using AccessibleMediaController.Core.Presentation;
 using AccessibleMediaController.Core.Sessions;
 using AccessibleMediaController.Core.Spotify;
@@ -30,6 +31,8 @@ public partial class MainWindow
     private static IReadOnlyList<ArtistBrowseSection> ArtistSectionsForSession(string sessionId) =>
         SpotifyPlaybackSettingsResolver.IsSpotifySession(sessionId) ? SpotifyArtistSections
             : string.Equals(sessionId, "tidal", StringComparison.Ordinal) ? TidalArtistSections
+            : string.Equals(sessionId, "appleMusic", StringComparison.Ordinal)
+                ? AppleMusicCapabilities.SupportedArtistSections
             : [];
 
     /// <summary>Czy biezacy widok to przeglad wykonawcy - w dowolnej usludze.</summary>
@@ -42,6 +45,8 @@ public partial class MainWindow
                 return _tidalContainerViews.TryGetValue(_currentView, out var tidal) && tidal.IsArtistOverview;
             if (SpotifyPlaybackSettingsResolver.IsSpotifySession(_sessions.Current.Id))
                 return _spotifyContainerViews.TryGetValue(_currentView, out var spotify) && spotify.IsArtistOverview;
+            if (string.Equals(_sessions.Current.Id, "appleMusic", StringComparison.Ordinal))
+                return _appleMusicContainerViews.TryGetValue(_currentView, out var apple) && apple.IsArtistOverview;
             return false;
         }
     }
@@ -61,6 +66,10 @@ public partial class MainWindow
     private static string SpotifySectionViewName(
         string sessionId, MediaItem container, ArtistBrowseSection? section) =>
         AppendSectionSuffix(SpotifyContainerViewName(sessionId, container), section);
+
+    private static string AppleMusicSectionViewName(
+        MediaItem container, ArtistBrowseSection? section) =>
+        AppendSectionSuffix(AppleMusicContentsView(container), section);
 
     private static string AppendSectionSuffix(string viewName, ArtistBrowseSection? section) =>
         section is null ? viewName : $"{viewName}:section:{section}";
@@ -92,6 +101,16 @@ public partial class MainWindow
     {
         var view = TidalContentsView(artist);
         _tidalContainerViews[view] = new TidalContainerViewState(artist, [], IsArtistOverview: true);
+        NavigateTo(view);
+        PrepareViewFocusContext($"Wykonawca, {artist.Title}");
+        FocusMediaList();
+    }
+
+    private void OpenAppleMusicArtistOverview(MediaItem artist)
+    {
+        var view = AppleMusicContentsView(artist);
+        _appleMusicContainerViews[view] =
+            new AppleMusicContainerViewState(artist, [], IsArtistOverview: true);
         NavigateTo(view);
         PrepareViewFocusContext($"Wykonawca, {artist.Title}");
         FocusMediaList();
@@ -136,6 +155,22 @@ public partial class MainWindow
                     _ = OpenSpotifyContainerAsync(spotifyView.Container, spotifyView.ArtistSection);
                     return true;
                 }
+            }
+            if (string.Equals(_sessions.Current.Id, "appleMusic", StringComparison.Ordinal)
+                && _appleMusicContainerViews.TryGetValue(_currentView, out var appleMusicView))
+            {
+                if (appleMusicView.IsArtistOverview)
+                {
+                    var category = SelectedArtistSection?.Label();
+                    Announce(category is null
+                        ? $"Lista kategorii wykonawcy {appleMusicView.Container.Title} jest gotowa"
+                        : $"Pozostajesz na kategorii {category}");
+                    return true;
+                }
+                _ = OpenAppleMusicContainerAsync(
+                    appleMusicView.Container,
+                    appleMusicView.ArtistSection);
+                return true;
             }
         }
         if (!IsArtistOverviewView) return false;

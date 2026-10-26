@@ -27,7 +27,7 @@ internal static class RecordingFilesAcceptanceTests
     {
         var tests = new (string Name, Action<Fixture> Test)[] {
             ("podmiana audio nie przepisuje wykluczeń ani historii na kopię", BackupRenameDoesNotChangeReferences),
-            ("wiersz nagrania zawiera czas i folder na końcu", LibraryRowIncludesTime),
+            ("wiersz nagrania zawiera tylko stan i nazwę pliku", LibraryRowIsConcise),
             ("obcy plik o tej samej nazwie nie przejmuje historii", SameNameDoesNotProveMove),
             ("obserwator usuwa plik przez kolejkę UI", WatcherUsesUiThread),
             ("prawdziwy błąd nagrania nie znika przy deduplikacji", FailedRecordingSurvivesLibraryRow),
@@ -241,7 +241,7 @@ internal static class RecordingFilesAcceptanceTests
         var probe = (AccessibleMediaController.Core.Presentation.RecordingPathProbe)typeof(MainWindow)
             .GetField("_recordingPathProbe", Private)!.GetValue(fixture.Window)!;
         Check(probe.IsMissing(alias), "Obserwator zapisał brak pod innym kluczem cache");
-        Check(row.ToString()!.EndsWith("folder Nagrania próby", StringComparison.Ordinal), "Alias ścieżki zniekształcił nazwę folderu: " + row);
+        Check(row.ToString() == "Brak pliku nagrania, audycja", "Alias ścieżki zniekształcił nazwę pliku: " + row);
     }
 
     private static void UnavailableFolderRetainsRecording(Fixture fixture)
@@ -268,7 +268,7 @@ internal static class RecordingFilesAcceptanceTests
         Dispatcher.CurrentDispatcher.Invoke(() => { }, DispatcherPriority.ContextIdle);
         row = fixture.Window.MediaList.Items.Cast<object>().Single();
         item = (AccessibleMediaController.Core.Sessions.MediaItem)row.GetType().GetProperty("Item")!.GetValue(row)!;
-        Check(item.IsAvailable && row.ToString()!.Contains("Audycja próby", StringComparison.Ordinal), "Powrót folderu nie przywrócił nagrania");
+        Check(item.IsAvailable && row.ToString() == "Nagrane, audycja", "Powrót folderu nie przywrócił nagrania");
         Check(fixture.Store.LoadOrCreate().Radio.RecordingHistory.Count == 0, "Podgląd utworzył nieistniejący zapis historyczny");
     }
 
@@ -319,8 +319,8 @@ internal static class RecordingFilesAcceptanceTests
         Check(loaded.LocalMedia.Items.Single().Path == movedPath, "Biblioteka nie zachowała nowej ścieżki");
         Call(fixture.Window, "ShowRecordedRadioFiles");
         var rows = fixture.Window.MediaList.Items.Cast<object>().ToArray();
-        Check(rows.Length == 1 && rows[0].ToString()!.EndsWith("folder Archiwum próby", StringComparison.Ordinal),
-            "Restart zgubił nagranie lub pozostawił stary folder");
+        Check(rows.Length == 1 && rows[0].ToString() == "Nagrane, przeniesiona-audycja",
+            "Restart zgubił nagranie lub nazwę przeniesionego pliku");
         File.Delete(movedPath);
         Task.Run(() => Call(fixture.Window, "LocalSourceWatcher_Changed", fixture.Window,
             new FileSystemEventArgs(WatcherChangeTypes.Deleted, destination, Path.GetFileName(movedPath))))
@@ -346,7 +346,7 @@ internal static class RecordingFilesAcceptanceTests
         var row = fixture.Window.MediaList.Items.Cast<object>().Single();
         var label = row.ToString()!;
         Check(label.StartsWith("Brak pliku nagrania", StringComparison.Ordinal), "Usunięty plik nadal wygląda na gotowy: " + label);
-        Check(label.EndsWith("folder Nagrania próby", StringComparison.Ordinal), "Folder musi pozostać na końcu");
+        Check(label == "Brak pliku nagrania, audycja", "Wiersz brakującego pliku zawiera zbędne metadane: " + label);
         var item = (AccessibleMediaController.Core.Sessions.MediaItem)row.GetType().GetProperty("Item")!.GetValue(row)!;
         Check(!item.IsAvailable, "Wiersz nadal deklaruje dostępność pliku");
     }
@@ -361,7 +361,7 @@ internal static class RecordingFilesAcceptanceTests
         });
         Call(fixture.Window, "ShowRecordedRadioFiles");
         var labels = fixture.Window.MediaList.Items.Cast<object>().Select(row => row.ToString()!).ToArray();
-        Check(labels.Any(label => label.StartsWith("Nieudane", StringComparison.Ordinal) && label.Contains("Nieudana próba", StringComparison.Ordinal)),
+        Check(labels.Any(label => label == "Nieudane, audycja"),
             "Wiersz biblioteki usunął z widoku prawdziwy nieudany wpis: " + string.Join(" | ", labels));
         Check(labels.Length == 2, "Powinny pozostać jeden plik i jeden błąd; nie trzeci duplikat udanego nagrania");
     }
@@ -396,15 +396,17 @@ internal static class RecordingFilesAcceptanceTests
             "Sama nazwa obcego pliku zmieniła powiązanie historii");
     }
 
-    private static void LibraryRowIncludesTime(Fixture fixture)
+    private static void LibraryRowIsConcise(Fixture fixture)
     {
         Call(fixture.Window, "ShowRecordedRadioFiles");
         var rows = fixture.Window.MediaList.Items.Cast<object>().Select(row => row.ToString()!).ToArray();
         Check(rows.Length == 1, "Kontrolka: historia powinna mieć jeden deduplikowany wpis");
         var label = rows[0];
-        Check(label.Contains("Audycja próby", StringComparison.Ordinal), "Brak nazwy nagrania: " + label);
-        Check(label.Contains(RecordedUtc.ToLocalTime().ToString("HH:mm"), StringComparison.Ordinal), "Brak czasu nagrania: " + label);
-        Check(label.EndsWith("folder Nagrania próby", StringComparison.Ordinal), "Folder nie jest na końcu: " + label);
+        Check(label == "Nagrane, audycja", "Wiersz ma zawierać tylko stan i nazwę pliku: " + label);
+        Check(!label.Contains("Stacja próby", StringComparison.Ordinal)
+              && !label.Contains(RecordedUtc.ToLocalTime().ToString("HH:mm"), StringComparison.Ordinal)
+              && !label.Contains("folder", StringComparison.OrdinalIgnoreCase),
+            "Wiersz powtarza stację, czas albo folder: " + label);
     }
 
     private static object? Call(MainWindow window, string name, params object?[] args) => typeof(MainWindow).GetMethod(name, Private)!.Invoke(window, args);

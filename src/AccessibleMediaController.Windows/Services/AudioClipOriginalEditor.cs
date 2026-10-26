@@ -143,16 +143,22 @@ internal static class AudioClipOriginalEditor
                 BuildConcatList(parts),
                 new UTF8Encoding(encoderShouldEmitUTF8Identifier: false),
                 cancellationToken).ConfigureAwait(false);
+            var expectedDuration = sourceTimelineDuration - (effectiveEnd - request.Start);
             await ConcatenateAsync(
                 executable,
                 sourcePath,
                 listPath,
                 resultPath,
+                expectedDuration,
                 progress,
                 cancellationToken).ConfigureAwait(false);
 
-            var expectedDuration = sourceTimelineDuration - (effectiveEnd - request.Start);
-            var metadata = await VerifyResultAsync(executable, resultPath, expectedDuration, cancellationToken)
+            var metadata = await VerifyResultAsync(
+                    executable,
+                    resultPath,
+                    expectedDuration,
+                    progress,
+                    cancellationToken)
                 .ConfigureAwait(false);
             cancellationToken.ThrowIfCancellationRequested();
             await WaitForExclusiveAccessAsync(sourcePath, FileReleaseTimeout, cancellationToken)
@@ -232,6 +238,7 @@ internal static class AudioClipOriginalEditor
         string sourcePath,
         string listPath,
         string destinationPath,
+        TimeSpan expectedDuration,
         IProgress<double>? progress,
         CancellationToken cancellationToken)
     {
@@ -256,10 +263,10 @@ internal static class AudioClipOriginalEditor
         start.ArgumentList.Add(destinationPath);
         await RunAsync(
             start,
-            duration: null,
-            value => progress?.Report(0.8d + 0.15d * value),
+            expectedDuration,
+            value => progress?.Report(0.8d + 0.12d * value),
             cancellationToken).ConfigureAwait(false);
-        progress?.Report(0.95d);
+        progress?.Report(0.92d);
     }
 
     private static async Task RunAsync(
@@ -309,6 +316,7 @@ internal static class AudioClipOriginalEditor
         string executable,
         string path,
         TimeSpan expectedDuration,
+        IProgress<double>? progress,
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -326,6 +334,8 @@ internal static class AudioClipOriginalEditor
         var packetTimelineDuration = await ReadPacketTimelineDurationAsync(
                 executable,
                 path,
+                expectedDuration,
+                progress,
                 cancellationToken)
             .ConfigureAwait(false);
         if (!DurationMatches(expectedDuration, packetTimelineDuration))
@@ -351,6 +361,19 @@ internal static class AudioClipOriginalEditor
     private static async Task<TimeSpan> ReadPacketTimelineDurationAsync(
         string executable,
         string path,
+        CancellationToken cancellationToken)
+        => await ReadPacketTimelineDurationAsync(
+            executable,
+            path,
+            expectedDuration: null,
+            progress: null,
+            cancellationToken).ConfigureAwait(false);
+
+    private static async Task<TimeSpan> ReadPacketTimelineDurationAsync(
+        string executable,
+        string path,
+        TimeSpan? expectedDuration,
+        IProgress<double>? progress,
         CancellationToken cancellationToken)
     {
         var start = CreateProcess(executable);
@@ -386,7 +409,16 @@ internal static class AudioClipOriginalEditor
         while (await process.StandardOutput.ReadLineAsync(cancellationToken).ConfigureAwait(false) is { } line)
         {
             var microseconds = ParseProgressMicroseconds(line);
-            if (microseconds.HasValue) lastMicroseconds = microseconds;
+            if (!microseconds.HasValue) continue;
+            lastMicroseconds = microseconds;
+            if (expectedDuration is { } expected && expected > TimeSpan.Zero)
+            {
+                var fraction = Math.Clamp(
+                    TimeSpan.FromTicks(microseconds.Value * 10).TotalSeconds / expected.TotalSeconds,
+                    0d,
+                    1d);
+                progress?.Report(0.92d + 0.07d * fraction);
+            }
         }
         await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
         var error = await errorTask.ConfigureAwait(false);

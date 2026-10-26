@@ -158,7 +158,9 @@ public partial class MainWindow
     /// bo uzytkownik ma wybrac, czy chce wydania czy utwory.
     /// </summary>
     private async Task OpenSpotifyContainerAsync(
-        MediaItem container, ArtistBrowseSection? artistSection = null)
+        MediaItem container,
+        ArtistBrowseSection? artistSection = null,
+        string? preferredExternalId = null)
     {
         if (!CanOpenSpotifyContainer(container))
         {
@@ -256,6 +258,14 @@ public partial class MainWindow
                 DiagnosticLog.Info("spotify-navigation",
                     $"Zachowano dane bez zmiany widoku; żądanie: {startContext.NavigationVersion}; elementów: {items.Count}.");
                 return;
+            }
+
+            var preferredItemId = RecognizedTrackNavigationPolicy.PreferredItemId(
+                items, preferredExternalId);
+            if (preferredItemId is not null)
+            {
+                GetSessionNavigationState(sessionAtStart)
+                    .SelectedItemIds[viewName] = preferredItemId;
             }
 
             if (items.Count == 0)

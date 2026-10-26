@@ -5,6 +5,10 @@ w pliku [`INSTRUKCJA_LOGOWANIA_TIDAL_PL.md`](INSTRUKCJA_LOGOWANIA_TIDAL_PL.md).
 
 ## Cel i granice
 
+### Profil wydania (decyzja 2026-10-18)
+
+TIDAL pozostaje wyłącznie w prywatnym `AMC Test`. Publiczny profil `AMC` nie pokazuje sesji, konta, pomocy, palety ani pozycji `Niedostępne`. API katalogu, biblioteki i synchronizacji jest użyteczne dla właściciela i może być dalej rozwijane prywatnie, ale integracja odtwarzania jest zbyt nieprzewidywalna i zbyt złożona, aby należała do pierwszego publicznego instalatora. Ta decyzja nie usuwa kodu ani danych TIDAL-u z `AMC Test`.
+
 ### Wynik testu Embed i logowania (2026-09-09, po przygotowaniu 335)
 
 Pełne odtwarzanie **nadal nie jest potwierdzone w AMC**. W oficjalnym
@@ -253,10 +257,11 @@ Windows pod nazwą `AccessibleMediaController/TIDAL`. Nie trafiają do
 `state.json`, logów, eksportu konfiguracji ani pełnej kopii AMC. Odłączenie
 konta usuwa je z Menedżera poświadczeń.
 
-Wersja deweloperska może korzystać z Client ID właściciela projektu. Przed
-publicznym wydaniem AMC trzeba zarejestrować oddzielną aplikację produkcyjną i
-sprawdzić jej poziom dostępu; wymaganie, aby każdy użytkownik sam zakładał
-aplikację deweloperską, nie jest docelowym interfejsem instalatora.
+`AMC Test` może korzystać z Client ID właściciela projektu. Bieżący profil
+publiczny w ogóle nie zawiera TIDAL-u. Ewentualna przyszła ponowna decyzja
+publiczna wymagałaby oddzielnej aplikacji produkcyjnej i sprawdzenia jej poziomu
+dostępu; wymaganie, aby każdy użytkownik sam zakładał aplikację deweloperską,
+nie może stać się interfejsem publicznego instalatora.
 
 ## Własność danych i synchronizacja
 

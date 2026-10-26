@@ -58,6 +58,8 @@ strzałką; brak relacji ukrywa polecenie zamiast wyświetlać niedziałającą 
 Od `alpha.309` szósta sesja ma nazwę **Podcasty i YouTube**, zachowując
 identyfikator `podcasts` i skrót `Ctrl+6`. `Ctrl+N` rozpoznaje RSS/Atom,
 pojedynczy publiczny materiał YouTube oraz publiczny kanał albo playlistę.
+Okno używa jednej akcji **Dodaj**: Enter automatycznie sprawdza adres i po
+powodzeniu kontynuuje import, bez osobnego zatwierdzania wyniku sprawdzenia.
 Kanały i playlisty są trwałymi źródłami Biblioteki, mają limit 100 pozycji na
 odświeżenie i domyślny interwał 60 minut. Automatyczny przebieg odświeża
 najwyżej cztery zaległe źródła, aby praca sieciowa i `yt-dlp` nie blokowały
@@ -121,7 +123,7 @@ Pierwsze planowane integracje:
 - Apple Music;
 - WiiM.
 
-W dalszej kolejności planowane są Spotify, Sonos, Bluesound/BluOS oraz urządzenia korzystające z platformy Frontier Smart. Architektura ma również przewidywać radio internetowe i lokalne multimedia. Standardowe odtwarzanie lokalne nie będzie wymagać foobar2000; później może powstać jego opcjonalny adapter dla wyspecjalizowanych formatów, DSP lub urządzeń. Rozwiązania Free Radio mogą posłużyć jako materiał i mechanizm odniesienia po sprawdzeniu kodu oraz licencji.
+W dalszej kolejności planowane są kolejne rozwinięcia Spotify, Sonos i Bluesound/BluOS. Frontier Smart ma już eksperymentalny adapter lokalnego FSAPI opisany w sekcji 7.32; wymaga on potwierdzenia na prawdziwym radiu. Architektura przewiduje również radio internetowe i lokalne multimedia. Standardowe odtwarzanie lokalne nie wymaga foobar2000; później może powstać jego opcjonalny adapter dla wyspecjalizowanych formatów, DSP lub urządzeń. Rozwiązania Free Radio mogą posłużyć jako materiał i mechanizm odniesienia po sprawdzeniu kodu oraz licencji.
 
 Program nie będzie zależny od NVDA. Pierwsza wersja okna powstaje dla Windows w WPF i ma działać przez UI Automation z NVDA, JAWS-em oraz Narratorem. Opcjonalna wtyczka NVDA zostanie zbudowana później jako mały klient, a nie jako miejsce wykonywania logiki usług.
 
@@ -809,10 +811,10 @@ Kolejność najbliższych rzeczywistych integracji po ustabilizowaniu lokalnego 
 
 - **YouTube**: pierwszy adapter działa na żądanie i nie synchronizuje konta. Publiczne wyszukiwanie filmów, transmisji i playlist korzysta z YouTube Data API oraz klucza projektu. Lokalna Biblioteka YouTube w AMC nie jest kopią serwisu: zawiera pozycje świadomie dodane do Ulubionych, własne lokalne playlisty oraz lokalną historię odtwarzania. Te dane wystarczają do podstawowej pracy bez logowania. OAuth pozostaje opcjonalnym późniejszym rozszerzeniem, uruchamianym tylko wtedy, gdy użytkownik świadomie zechce pobrać subskrypcje, playlisty lub polubienia z konta; brak logowania nie ogranicza podstawowego adaptera. Odtwarzanie i sterowanie transportem korzysta z widocznego oficjalnego IFrame Player API. AMC przedstawia metadane, wyniki i polecenia w dostępnym interfejsie przypominającym podcasty, ale nie ukrywa odtwarzacza w tle. Zgodnie z zasadami API oficjalny adapter nie pobiera materiałów, nie oddziela dźwięku i nie nagrywa fragmentów filmów ani transmisji. Nagrywanie pozostaje funkcją źródeł, które jawnie na to pozwalają, np. bezpośredniego strumienia radiowego lub własnego pliku. [YouTube Data API](https://developers.google.com/youtube/v3/getting-started), [YouTube IFrame Player API](https://developers.google.com/youtube/iframe_api_reference), [YouTube API Services Developer Policies](https://developers.google.com/youtube/terms/developer-policies).
 
-  Narzędzia ekstrakcyjne, takie jak yt-dlp, nie stają się oficjalnym adapterem katalogowym YouTube ani obowiązkową zależnością wewnątrz procesu AMC. Ich obsługa YouTube wymaga częstych poprawek wskutek zmian odtwarzacza, JavaScriptu i tokenów PO, może tracić formaty bez ostrzeżenia i przy użyciu ciasteczek konta niesie ryzyko ograniczenia konta. Od `alpha.293` Radio może użyć opcjonalnego, osobno aktualizowanego procesu yt-dlp dla jawnie podanego, publicznego i aktualnie nadawanego źródła. Nie otrzymuje on tokenów OAuth, profilu ani ciasteczek przeglądarki, a czasowy podpisany adres audio pozostaje w pamięci. Ten wąski resolver Radia jest oddzielony od przyszłego modułu katalogowego i pobierania Media internetowe. [Kanały wydań yt-dlp](https://github.com/yt-dlp/yt-dlp/blob/master/README.md#update-channels), [uwagi o ekstraktorze YouTube](https://github.com/yt-dlp/yt-dlp/wiki/Extractors).
+  Narzędzia ekstrakcyjne, takie jak yt-dlp, nie stają się oficjalnym adapterem katalogowym YouTube ani obowiązkową zależnością wewnątrz procesu AMC. Ich obsługa YouTube wymaga częstych poprawek wskutek zmian odtwarzacza, JavaScriptu i tokenów PO, może tracić formaty bez ostrzeżenia i przy użyciu ciasteczek konta niesie ryzyko ograniczenia konta. Od `alpha.293` Radio może użyć opcjonalnego, osobno aktualizowanego procesu yt-dlp dla jawnie podanego, publicznego i aktualnie nadawanego źródła. Nie otrzymuje on tokenów OAuth, profilu ani ciasteczek przeglądarki, a czasowy podpisany adres audio pozostaje w pamięci. Korekta z 25 października 2026 dopuszcza też jawne lokalne pobranie zaznaczonego publicznego materiału w sesji Podcasty i YouTube; funkcja pozostaje oddzielona od oficjalnego adaptera katalogowego, nie dostaje konta ani ciasteczek przeglądarki i nigdy nie pobiera automatycznie. [Kanały wydań yt-dlp](https://github.com/yt-dlp/yt-dlp/blob/master/README.md#update-channels), [uwagi o ekstraktorze YouTube](https://github.com/yt-dlp/yt-dlp/wiki/Extractors).
 
 - **Sonos**: chmurowe Control API z OAuth pozwala odkrywać gospodarstwa domowe, grupy i odtwarzacze, odczytywać stan, sterować transportem, przewijaniem i głośnością oraz uruchamiać Sonos Favorites i playlisty Sonos. Nie zastępuje katalogowego API istniejących usług muzycznych, wymaga publicznego zwrotnego adresu HTTPS i ma większy koszt integracyjny. Sonos pozostaje w planie, ale po WiiM, Spotify, TIDAL, BluOS, Apple Music, radiu i multimediach lokalnych. [Sonos Control API](https://docs.sonos.com/reference/about-control-api), [Sonos authorization](https://docs.sonos.com/docs/authorize).
-- **Frontier Smart**: producent potwierdza NetRemote API, SDK i możliwość budowania własnych aplikacji przez partnerów sprzętowych, ale nie publikuje kompletnej wspieranej dokumentacji konsumenckiej. Stabilny adapter wymaga dostępu partnerskiego; ewentualny adapter społecznościowy musi być osobno oznaczony jako eksperymentalny i nie może być podstawą pierwszego wydania. [Frontier AURIA](https://www.frontiersmart.com/product/auria/), [Frontier customer area](https://www.frontiersmart.com/customer-area/).
+- **Frontier Smart**: korekta z 21 października 2026 r. zastępuje wcześniejsze założenie, że każdy adapter musi czekać na dostęp partnerski. Społecznościowa dokumentacja lokalnego FSAPI opisuje wystarczający kontrakt HTTP/XML, PIN, SSDP, odczyt, zapis i listy, aby zbudować w AMC eksperymentalny adapter urządzenia bez modyfikowania firmware'u. Adapter sonduje możliwości konkretnego modelu, pokazuje wyłącznie potwierdzone funkcje i nie udaje oficjalnie wspieranego rozwiązania producenta. Szczegółowy zakres, bezpieczeństwo, zachowanie z UNDOK i testy opisuje `PROJEKT_FRONTIER_SMART_PL.md`. [Opis protokołu FSAPI](https://github.com/flammy/fsapi/blob/master/FSAPI.md), [narzędzia fsapi-tools](https://github.com/MatrixEditor/fsapi-tools), [archiwum firmware'ów](https://github.com/cweiske/frontier-silicon-firmwares/).
 
 Adapter deklaruje osobno co najmniej: zakres wyszukiwania, politykę prezentacji wyników, odczyt i zapis Ulubionych, Bibliotekę, playlisty, możliwość odtworzenia, możliwości kolejki, cele odtwarzania, transport, przewijanie, głośność, wejścia, presety, grupy, pobieranie offline wewnątrz usługi oraz legalny eksport. Interfejs nie zgaduje brakujących możliwości.
 
@@ -827,6 +829,8 @@ Radio internetowe jest osobnym adapterem rdzenia i korzysta z tych samych sesji,
 Stan `alpha.117`: bezpośredni strumień MP3 może używać współczesnej odpowiedzi HTTP albo starszego wiersza stanu Shoutcast/Icecast `ICY 200 OK`. Dekoder systemowy pozostaje pierwszym wyborem. Dopiero gdy odrzuci połączenie, ograniczony klient zgodności nawiązuje je ponownie, przyjmuje wyłącznie prawidłową odpowiedź audio, ogranicza rozmiar nagłówków i czas łączenia, usuwa bloki metadanych ICY, a ramki MP3 dekoduje zarządzanym NLayer. Nie istnieje lista wyjątków dla konkretnych stacji. HTTPS zachowuje zwykłą walidację certyfikatu, a nieobsługiwane kodowanie fragmentowe nie jest zgadywane.
 
 Stan `alpha.118`: polecenia plikowe są zależne od adaptera. Sesja lokalna udostępnia otwieranie plików, folderów i zarządzanie Folderami Biblioteki. Sesja Radia zamiast nich pokazuje **Importuj stacje z playlisty…** i **Dodaj stację radiową…**. `Ctrl+O` zachowuje znaczenie „otwórz dane dla bieżącej sesji”: lokalnie wybiera audio, a w Radiu importuje lokalny M3U/M3U8, PLS, XSPF lub eksport Ulubionych VRadio JSON. Parser ma limit 4 MiB i 5000 pozycji, przyjmuje wyłącznie bezwzględne HTTP/HTTPS, normalizuje etykiety, usuwa duplikaty i nigdy nie loguje odrzuconego URL ani surowego JSON. Import nie uruchamia stacji. Każda nowa próba odtwarzania unieważnia i anuluje poprzednie rozwiązywanie playlisty oraz połączenie ICY, dzięki czemu szybka nawigacja nie zostawia równoległych, starych gniazd. Limit 25 sekund nadal kończy próbę komunikatem bez technicznego wyjątku. Ścieżka NLayer jest jawnie ograniczona do MIME MP3; AAC/AAC+ i OGG nie mogą zostać błędnie ogłoszone jako rozpoczęty MP3. HLS i stare ICY AAC wymagają właściwego dekodera tych formatów, a nie zgadywania ramek MP3.
+
+Bieżący stan **AMC Test**: po lokalnym parsowaniu import radia rozróżnia nazwę opisową od technicznej nazwy zastępczej. `#EXTINF`, tytuł PLS/XSPF i nazwa JSON są nadrzędne i nie uruchamiają sieci. Dla wpisów zawierających wyłącznie URL osobna sonda pobiera tylko nagłówki odpowiedzi i przyjmuje znormalizowane `icy-name`, `ice-name` albo `x-audiocast-name`; odrzuca pustą wartość, pojedynczy myślnik, pełny adres HTTP/HTTPS, znaki sterujące i długość ponad 200 znaków. Operacja obejmuje najwyżej 64 wpisy, sześć połączeń równolegle, 4 sekundy na stację i 12 sekund łącznie. Awaria, przekroczenie czasu lub brak nazwy nie przerywa prawidłowego importu i pozostawia nazwę hosta. Log oraz komunikat NVDA zawierają wyłącznie liczniki, nigdy adresy ani podpisane parametry. Import nie pobiera dźwięku i nie myli nazwy stacji z dynamicznym `StreamTitle` audycji lub utworu.
 
 Stan `alpha.119`: transmisje OGG/Vorbis otrzymują sekwencyjny dekoder sieciowy niezależny od lokalnej osi czasu pliku; test na żywym Radio Emaus potwierdza 48 kHz stereo. Starszy MP3 ICY buforuje najwyżej 8 KiB początku i rozpoczyna NLayer dopiero przy dwóch kolejnych zgodnych ramkach. Jest to ochrona przed rozpoczęciem połączenia w połowie ramki oraz fałszywymi synchronizacjami w losowych bajtach. Resolver może podać kontrolowany wariant zgodności przed źródłem katalogowym: dotyczy znanych portów MP3 Programu 1, Programu 2, Czwórki i PR24 oraz bezpośredniego MP3 dla nieaktualnego manifestu Eski. Nie jest to ogólny mechanizm zgadywania adresów; mapowanie jest ograniczone do rozpoznanych dostawców i ma test regresji. Nieznane HLS i ICY AAC pozostają jawnie nieobsługiwane do czasu wdrożenia osobnego, aktualizowalnego komponentu dekodera. Próba nie przechodzi przez blokujący dekoder surowego AAC i nie może zatrzymać interfejsu.
 
@@ -1293,7 +1297,7 @@ Planowana kolejność dalszych etapów:
 10. BluOS/Bluesound jako rozbudowany adapter urządzenia i źródeł skonfigurowanych na odtwarzaczu.
 11. Apple Music i natywna ścieżka MusicKit dla macOS.
 12. Natywny prototyp macOS w Swift/AppKit po ustabilizowaniu kontraktu i zachowania wersji Windows.
-13. Frontier Smart po uzyskaniu wspieranego API; Sonos jako późniejsza, osobna integracja chmurowa.
+13. Eksperymentalny adapter Frontier Smart przez lokalne FSAPI według `PROJEKT_FRONTIER_SMART_PL.md`; integracja nie czeka już na partnerskie SDK, ale wymaga testu na prawdziwym radiu i nie obejmuje instalowania firmware'u. Sonos pozostaje osobną integracją chmurową.
 
 ## 15. Otwarte decyzje
 
@@ -2049,10 +2053,30 @@ Od `alpha.233` oba skróty są obsługiwane bezpośrednio przez główną warstw
 klawiatury listy i odtwarzacza. Wcześniejsza wersja miała gotowy mechanizm
 pobierania oraz pozycje menu, lecz nie przekazywała `Ctrl+D` i `Ctrl+S` z tych
 dwóch miejsc do odpowiednich poleceń. Rozdzielenie pozostaje ścisłe:
-`Ctrl+D` oznacza pobranie do folderu domyślnego, `Ctrl+S` oznacza jednorazowe
-**Zapisz jako**, `Ctrl+Shift+D` zachowuje odrębne przyszłe znaczenie, a
+`Ctrl+D` oznacza pobranie audio do folderu domyślnego, `Ctrl+S` oznacza jednorazowe
+**Zapisz jako**, `Ctrl+Shift+D` pobiera wideo z materiału YouTube w formacie
+wybranym w Ustawieniach Podcastów, a
 `Ctrl+Shift+S` otwiera listę sesji. W Radiu i pozostałych sesjach skróty nie
 udają pobierania odcinka.
+
+Korekta z 25 października 2026 zastępuje wcześniejszą decyzję, że
+`Ctrl+Shift+D` ma tylko „przyszłe znaczenie”. Polecenie jest teraz wspólną
+funkcją listy, odtwarzacza i wyników wyszukiwania oraz pojawia się w menu
+kontekstowym, palecie i Pomocy wyłącznie dla materiałów YouTube. Ustawienie
+formatu rozdziela zgodny tryb MP4 od najlepszego dostępnego kontenera bez
+wymuszania MP4. Wideo nie jest wpisywane do widoku **Pobrane**, bo ten widok i
+pole `DownloadPath` nadal opisują lokalną kopię audio używaną do odtwarzania
+odcinka.
+
+Druga korekta z 25 października 2026 zastępuje wcześniejsze założenie, że
+`Ctrl+S` w tej funkcji dotyczy wyłącznie audio. Skrót nadal wymaga dokładnie
+jednego odcinka, lecz rozpoznaje jego rodzaj: zwykły odcinek otwiera dotychczasowe
+**Zapisz audio jako**, a materiał YouTube otwiera **Zapisz wideo jako**. W oknie
+można jednorazowo wybrać MP4 albo oryginalny/najlepszy dostępny format; ustawienie
+Podcastów nadal wyznacza format szybkiego pobrania przez `Ctrl+Shift+D`.
+Kontekstowa nazwa jest wspólna dla menu Plik, menu listy, odtwarzacza i wyników
+wyszukiwania, a paleta i Pomoc opisują oba warianty bez ujawniania wartości
+modelu.
 
 ### 7.17. Trwałe archiwum metadanych Podcastów
 
@@ -2561,6 +2585,16 @@ sesję; sama nawigacja strzałkami nie przełącza sesji i nie zmienia kolejnoś
 Każdy wiersz ma jawną nazwę użytkową dla UI Automation, bez identyfikatorów
 technicznych i reprezentacji obiektów.
 
+Stały kontrakt zarządzania integracjami od 22 października 2026 r. rozdziela
+sesję od zapisanego konta albo urządzenia. Pierwsze wejście może uruchomić
+logowanie lub wykrywanie, natomiast późniejsze `Ctrl+F5` pokazuje zapisany stan
+bez automatycznego powtarzania tej operacji. TIDAL, Spotify i Sonos udostępniają
+jawne, potwierdzane **Odłącz konto** albo **Wyloguj**. Operacja usuwa lokalne
+poświadczenie, nie konto ani dane na serwerze dostawcy. Frontier Smart i WiiM
+używają **Usuń urządzenie**, a Foldery Biblioteki — **Odłącz folder**. Samo
+wyłączenie sesji nie wykonuje żadnej z tych operacji. Późniejsze uproszczenie
+interfejsu może zmienić układ, ale wymaga osobnej korekty tej zasady.
+
 ### 7.31. Oficjalny tor odtwarzania TIDAL
 
 Od `alpha.332` utwory i materiały wideo TIDAL są przekazywane do oficjalnego
@@ -2584,3 +2618,52 @@ konta i poziomu dostępu aplikacji. Player może zwrócić próbkę mimo aktywne
 subskrypcji użytkownika. Program wtedy podaje jeden jasny komunikat i nie próbuje
 obchodzić ograniczenia przez wydobywanie chronionego adresu. Pierwszy etap
 korzysta z domyślnego urządzenia Windows obsługiwanego przez WebView2.
+
+### 7.32. Tworzenie sesji Frontier Smart w Menedżerze sesji
+
+Pierwsza eksperymentalna integracja Frontier Smart korzysta z istniejącego
+**Menedżera sesji** pod `Ctrl+Shift+S` i `Ctrl+0`. Przycisk **Nowa sesja
+Frontier Smart…** otwiera dostępny kreator i przy pustej konfiguracji od razu
+rozpoczyna wykrywanie SSDP. Wykrywanie nie wymaga PIN-u: najpierw zapełnia
+listę kandydatów, a dopiero po wybraniu urządzenia użytkownik podaje PIN i
+potwierdza połączenie. Ręczny lokalny adres IP pozostaje opcją w zwiniętej
+sekcji. Fokus podczas pierwszego skanu jest na liście, nie na zamknięciu ani
+formularzu. Sesja nie pojawia się automatycznie po aktualizacji. Jest dodawana
+dopiero po poprawnym odczycie urządzenia i otrzymuje pierwszy wolny skrót
+`Ctrl+1–9`, preferencyjnie `Ctrl+9`.
+
+Po zapisaniu co najmniej jednego urządzenia `Ctrl+F5` natychmiast pokazuje
+zapamiętaną listę i nie uruchamia skanu przy każdym otwarciu. Użytkownik może
+odświeżyć, ustawić aktywne lub usunąć urządzenie, a jawny przycisk **Wykryj
+nowe urządzenia** rozpoczyna kolejny skan. Wykryte, lecz jeszcze niepołączone
+adresy są pamiętane tylko w bieżącym uruchomieniu i nigdy nie stają się sesją
+bez poprawnego PIN-u.
+
+W sesji `Ctrl+F5` otwiera urządzenia, `F5` odświeża stan, a `Ctrl+Alt+P`
+otwiera sprzętowe presety bieżącego trybu. Tryby są dostępne w menu Widok.
+Spacja, Page Up, Page Down, strzałki głośności i `Ctrl+M` korzystają ze
+standardowych poleceń AMC tylko wtedy, gdy urządzenie potwierdza odpowiadającą
+funkcję. Presety urządzenia są zależne od trybu i pozostają odrębne od
+lokalnych presetów AMC.
+
+PIN jest zapisany osobno dla urządzenia w Menedżerze poświadczeń Windows; nie
+trafia do stanu JSON, kopii ustawień, schowka ani komunikatów. AMC wysyła
+zwykłe żądania FSAPI z PIN-em, bez `CREATE_SESSION` i `GET_NOTIFIES`, aby nie
+unieważniać sterowania UNDOK. Integracja nie zmienia sieci, PIN-u ani
+firmware'u urządzenia. Szczegółowe wyniki testów, ograniczenia i instrukcja
+pierwszego testu radia znajdują się w `PROJEKT_FRONTIER_SMART_PL.md`.
+
+## Rozpoznane utwory — działania Spotify i TIDAL
+
+`Ctrl+Alt+S` otwiera trwałą historię rozpoznań. Wiersz pozostaje krótki, a
+`Ctrl+C` kopiuje pełny opis. `Enter` odtwarza utwór w domyślnej usłudze,
+`Ctrl+Enter` otwiera jego album i ustawia fokus na tym utworze,
+`Ctrl+Shift+C` kopiuje dokładne łącze, lewa strzałka odczytuje szczegóły, a
+prawa pokazuje dostępne powiązania i katalogi. `Alt+Strzałka w górę` oraz
+`Alt+Strzałka w dół` zmieniają zapamiętaną kolejność.
+
+Domyślną usługę Spotify albo TIDAL wybiera się w ustawieniach rozpoznawania.
+Katalog jest pytany dopiero po jawnym działaniu użytkownika. Pewne trafienie
+jest zapisywane jako stabilne identyfikatory i publiczne łącza, dlatego kolejne
+otwarcie nie powtarza wyszukiwania. Apple Music celowo nie jest oferowane;
+wróci dopiero razem z kompletną, testowalną integracją całej usługi.

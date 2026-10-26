@@ -15,7 +15,7 @@ public partial class PodcastSourceWindow : Window
     private readonly Func<Uri, CancellationToken, Task<YouTubeCollectionDocument>> _fetchYouTubeCollection;
     private readonly Func<string, CancellationToken, Task<ResolvedYouTubeAudioSource>> _resolveInternetMedia;
     private CancellationTokenSource? _checkCancellation;
-    private string? _checkedAddress;
+    private bool _isBusy;
 
     internal PodcastSourceWindow(
         Func<Uri, CancellationToken, Task<PodcastFeedDocument>> fetch,
@@ -30,7 +30,6 @@ public partial class PodcastSourceWindow : Window
         _resolveInternetMedia = resolveInternetMedia;
         InitializeComponent();
         Title = "Nowy podcast, kanał YouTube lub medium internetowe";
-        FeedBox.TextChanged += (_, _) => InvalidateCheckedFeed();
         Loaded += (_, _) =>
         {
             FeedBox.Focus();
@@ -43,14 +42,18 @@ public partial class PodcastSourceWindow : Window
     internal ResolvedYouTubeAudioSource? InternetMedia { get; private set; }
     public string CustomTitle => NameBox.Text.Trim();
 
-    private async void Check_Click(object sender, RoutedEventArgs e)
+    private async void Add_Click(object sender, RoutedEventArgs e)
     {
+        if (_isBusy) return;
         if (!TryGetFeedUri(out var address)) return;
         _checkCancellation?.Cancel();
         _checkCancellation?.Dispose();
         _checkCancellation = new CancellationTokenSource();
+        Feed = null;
+        SourceKind = PodcastSourceKind.Rss;
+        InternetMedia = null;
         SetBusy(true);
-        StatusText.Text = "Sprawdzanie adresu…";
+        StatusText.Text = "Sprawdzanie adresu i dodawanie źródła…";
         try
         {
             if (YouTubeSourceResolver.IsYouTubeUrl(address.AbsoluteUri))
@@ -66,40 +69,35 @@ public partial class PodcastSourceWindow : Window
                     Feed = collection.Feed;
                     SourceKind = collection.SourceKind;
                     InternetMedia = null;
-                    _checkedAddress = FeedBox.Text.Trim();
-                    AddButton.IsEnabled = true;
                     var collectionKindLabel = collection.SourceKind == PodcastSourceKind.YouTubeChannel
                         ? "Kanał YouTube"
                         : "Playlista YouTube";
-                    StatusText.Text = $"{collectionKindLabel} działa. {collection.Feed.Title}. Materiały: {collection.Feed.Episodes.Count}.";
-                    AddButton.Focus();
-                    Keyboard.Focus(AddButton);
+                    DiagnosticLog.Info(
+                        "podcast-source",
+                        $"Sprawdzono i zatwierdzono dodanie {collectionKindLabel.ToLowerInvariant()}: {collection.Feed.Title}; materiały: {collection.Feed.Episodes.Count}.");
+                    AcceptSourceAndClose(
+                        $"{collectionKindLabel} działa. Dodawanie: {collection.Feed.Title}. Materiały: {collection.Feed.Episodes.Count}.");
                     return;
                 }
                 var media = await _resolveInternetMedia(address.AbsoluteUri, _checkCancellation.Token);
                 InternetMedia = media;
                 Feed = null;
                 SourceKind = PodcastSourceKind.PublicInternetMedia;
-                _checkedAddress = FeedBox.Text.Trim();
-                AddButton.IsEnabled = true;
                 var kind = media.IsLive ? "transmisja na żywo" : "materiał";
                 var channel = string.IsNullOrWhiteSpace(media.Channel)
                     ? string.Empty
                     : $", kanał: {media.Channel}";
-                StatusText.Text = $"Publiczny {kind} działa. {media.Title}{channel}.";
-                AddButton.Focus();
-                Keyboard.Focus(AddButton);
+                AcceptSourceAndClose($"Publiczny {kind} działa. Dodawanie: {media.Title}{channel}.");
                 return;
             }
             var feed = await _fetch(address, _checkCancellation.Token);
             Feed = feed;
             SourceKind = PodcastSourceKind.Rss;
             InternetMedia = null;
-            _checkedAddress = FeedBox.Text.Trim();
             var author = string.IsNullOrWhiteSpace(feed.Author) ? string.Empty : $", autor: {feed.Author}";
             if (feed.Episodes.Count == 0)
             {
-                AddButton.IsEnabled = false;
+                Feed = null;
                 StatusText.Text = $"Kanał {feed.Title}{author} nie zawiera odtwarzalnych odcinków audio ani wideo.";
                 FeedBox.Focus();
                 Keyboard.Focus(FeedBox);
@@ -107,15 +105,12 @@ public partial class PodcastSourceWindow : Window
             }
             else
             {
-                AddButton.IsEnabled = true;
-                StatusText.Text = $"Kanał działa. {feed.Title}{author}. Odcinki: {feed.Episodes.Count}.";
-                AddButton.Focus();
-                Keyboard.Focus(AddButton);
+                AcceptSourceAndClose($"Kanał działa. Dodawanie: {feed.Title}{author}. Odcinki: {feed.Episodes.Count}.");
             }
         }
         catch (OperationCanceledException)
         {
-            StatusText.Text = "Sprawdzanie kanału anulowano.";
+            if (IsVisible) StatusText.Text = "Dodawanie źródła anulowano.";
         }
         catch (Exception exception) when (exception is HttpRequestException
             or InvalidDataException
@@ -131,19 +126,8 @@ public partial class PodcastSourceWindow : Window
         }
         finally
         {
-            SetBusy(false);
+            if (IsVisible) SetBusy(false);
         }
-    }
-
-    private void Add_Click(object sender, RoutedEventArgs e)
-    {
-        if (Feed is null && InternetMedia is null
-            || !string.Equals(_checkedAddress, FeedBox.Text.Trim(), StringComparison.Ordinal))
-        {
-            StatusText.Text = "Najpierw sprawdź aktualny adres kanału.";
-            return;
-        }
-        DialogResult = true;
     }
 
     private bool TryGetFeedUri(out Uri address)
@@ -163,22 +147,22 @@ public partial class PodcastSourceWindow : Window
         return false;
     }
 
-    private void InvalidateCheckedFeed()
-    {
-        if (string.Equals(_checkedAddress, FeedBox.Text.Trim(), StringComparison.Ordinal)) return;
-        Feed = null;
-        SourceKind = PodcastSourceKind.Rss;
-        InternetMedia = null;
-        _checkedAddress = null;
-        AddButton.IsEnabled = false;
-    }
-
     private void SetBusy(bool busy)
     {
-        CheckButton.IsEnabled = !busy;
+        _isBusy = busy;
+        AddButton.IsEnabled = !busy;
+        AddButton.IsDefault = !busy;
         FeedBox.IsEnabled = !busy;
         NameBox.IsEnabled = !busy;
-        if (busy) AddButton.IsEnabled = false;
+    }
+
+    private void AcceptSourceAndClose(string status)
+    {
+        StatusText.Text = status;
+        DiagnosticLog.Info(
+            "podcast-source",
+            $"Zatwierdzono jednoetapowe dodanie: {Feed?.Title ?? InternetMedia?.Title ?? "publiczne medium"}.");
+        DialogResult = true;
     }
 
     private void Window_Closing(object? sender, CancelEventArgs e)

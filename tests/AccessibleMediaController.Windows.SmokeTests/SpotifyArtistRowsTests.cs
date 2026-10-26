@@ -642,7 +642,7 @@ internal static class SpotifyArtistRowsTests
                 // --- Kategoria Utwory: PIERWSZA partia + wiersz doladowania ---
                 Pompuj(okno, typeof(MainWindow)
                     .GetMethod("OpenSpotifyContainerAsync", Priv)!
-                    .Invoke(okno, [artysta, ArtistBrowseSection.Tracks]) as Task);
+                    .Invoke(okno, [artysta, ArtistBrowseSection.Tracks, null]) as Task);
 
                 var lista = (ListBox)typeof(MainWindow).GetField("MediaList",
                     BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Public)!
@@ -727,7 +727,7 @@ internal static class SpotifyArtistRowsTests
                 // --- F5 na PRZEGLADZIE kategorii: fokus i kategoria zostaja ---
                 Pompuj(okno, typeof(MainWindow)
                     .GetMethod("OpenSpotifyContainerAsync", Priv)!
-                    .Invoke(okno, [artysta, null]) as Task);
+                    .Invoke(okno, [artysta, null, null]) as Task);
                 var przeglad = Wiersze(lista);
                 Check(przeglad.Count >= 2, "Przeglad wykonawcy nie pokazal kategorii.");
                 lista.SelectedIndex = 1;                       // Utwory
@@ -751,7 +751,7 @@ internal static class SpotifyArtistRowsTests
                 // --- Spozniona odpowiedz po Back: nie przestawia widoku ---
                 Pompuj(okno, typeof(MainWindow)
                     .GetMethod("OpenSpotifyContainerAsync", Priv)!
-                    .Invoke(okno, [artysta, ArtistBrowseSection.Tracks]) as Task);
+                    .Invoke(okno, [artysta, ArtistBrowseSection.Tracks, null]) as Task);
                 var wolnaAtrapa = new WolnaOdpowiedzHandler();
                 typeof(MainWindow).GetProperty("SpotifyHttpClientForTests", Priv)!
                     .SetValue(okno, new HttpClient(wolnaAtrapa));
@@ -773,7 +773,7 @@ internal static class SpotifyArtistRowsTests
                 // null i przepuszczal odpowiedz po przejsciu na inna kategorie.
                 Pompuj(okno, typeof(MainWindow)
                     .GetMethod("OpenSpotifyContainerAsync", Priv)!
-                    .Invoke(okno, [artysta, null]) as Task);
+                    .Invoke(okno, [artysta, null, null]) as Task);
                 var kategorie = Wiersze(lista);
                 lista.SelectedIndex = 1;
                 var przechwyt = typeof(MainWindow).GetMethod(
@@ -802,7 +802,7 @@ internal static class SpotifyArtistRowsTests
                     .SetValue(okno, new HttpClient(new OdmowaHandler(HttpStatusCode.TooManyRequests)));
                 Pompuj(okno, typeof(MainWindow)
                     .GetMethod("OpenSpotifyContainerAsync", Priv)!
-                    .Invoke(okno, [artysta, ArtistBrowseSection.Tracks]) as Task);
+                    .Invoke(okno, [artysta, ArtistBrowseSection.Tracks, null]) as Task);
                 Check(Wiersze(lista).All(w => LoadMoreNazwa(w) is null),
                     "Po odmowie Spotify (429) na liscie zostal wiersz doladowania, ktory nie ma "
                     + "czego wczytac - martwy wiersz dla czytnika.");

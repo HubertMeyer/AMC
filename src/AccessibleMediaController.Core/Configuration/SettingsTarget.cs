@@ -25,6 +25,7 @@ public enum SettingsTarget
     RadioAutomaticTrackRecognition,
     RadioRecognitionScope,
     PodcastDownloadsFolder,
+    YouTubeVideoDownloadFormat,
     KeyboardProfile,
     ActivateKeyboardProfile,
     DuplicateKeyboardProfile,

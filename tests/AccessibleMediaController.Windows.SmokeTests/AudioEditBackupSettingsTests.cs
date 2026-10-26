@@ -272,8 +272,9 @@ internal static class AudioEditBackupSettingsTests
             try
             {
                 var help=AutomationProperties.GetHelpText((TextBox)window.FindName("TargetPathBox"));
-                var rules=Walk(window).OfType<TextBox>().Single(x=>AutomationProperties.GetName(x)=="Zasady dopisywania i kopii zapasowej").Text;
-                foreach(var text in new[]{help,rules})
+                var rules=Walk(window).OfType<TextBlock>().Single(x=>AutomationProperties.GetName(x)=="Zasady dopisywania i kopii zapasowej").Text;
+                var actionHelp=AutomationProperties.GetHelpText((Button)window.FindName("AppendButton"));
+                foreach(var text in new[]{help,rules,actionHelp})
                 {
                     Check(text.Contains(keep?"pozostanie":"usunięta po sprawdzeniu",StringComparison.OrdinalIgnoreCase),
                         "Opis przed dopisaniem obiecuje niewłaściwy los kopii (keep="+keep+"): "+text);

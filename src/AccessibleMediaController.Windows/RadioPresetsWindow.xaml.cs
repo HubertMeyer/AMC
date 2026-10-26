@@ -1,4 +1,3 @@
-using System.Collections.Specialized;
 using System.IO;
 using System.Windows;
 using System.Windows.Input;
@@ -158,9 +157,7 @@ public partial class RadioPresetsWindow : AccessibleWindow
                 .ToArray();
             if (paths.Length > 0)
             {
-                var fileDropList = new StringCollection();
-                fileDropList.AddRange(paths);
-                data.SetFileDropList(fileDropList);
+                data.SetData(DataFormats.FileDrop, paths, autoConvert: false);
             }
         }
         if (!ClipboardRetry.TrySetDataObject(data, out var error))

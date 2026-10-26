@@ -13,8 +13,10 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Threading;
+using AccessibleMediaController.Core.AppleMusic;
 using AccessibleMediaController.Core.Commands;
 using AccessibleMediaController.Core.Configuration;
+using AccessibleMediaController.Core.Devices.FrontierSmart;
 using AccessibleMediaController.Core.Devices.WiiM;
 using AccessibleMediaController.Core.Input;
 using AccessibleMediaController.Core.LocalMedia;
@@ -61,6 +63,7 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
     private const string PodcastContentsViewPrefix = "Podcast:";
     private const string PodcastLoadMoreRowPrefix = "podcast-load-more:";
     private const string TidalContentsViewPrefix = "TIDAL:";
+    private const string AppleMusicContentsViewPrefix = "Apple Music:";
     private const string FolderViewName = "Foldery";
     private const string AllLocalFilesViewName = "Wszystkie pliki";
     private const string CustomLocalOrderViewName = "Kolejność własna";
@@ -127,11 +130,18 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
         new(StringComparer.Ordinal);
     private readonly TidalIntegrationService _tidalIntegration;
     private readonly SpotifyIntegrationService _spotifyIntegration;
+    private readonly AppleMusicIntegrationService _appleMusicIntegration;
     private readonly List<MediaItem> _spotifyItems = [];
+    private readonly List<MediaItem> _appleMusicItems = [];
+    private readonly Dictionary<string, AppleMusicContainerViewState> _appleMusicContainerViews =
+        new(StringComparer.Ordinal);
     private readonly TidalMediaOutput _tidalOutput;
     private readonly SpotifyMediaOutput _spotifyOutput;
+    private readonly AppleMusicMediaOutput _appleMusicOutput;
     private readonly CancellationTokenSource _tidalCancellation = new();
+    private readonly CancellationTokenSource _appleMusicCancellation = new();
     private long _tidalNavigationVersion;
+    private long _appleMusicNavigationVersion;
     private readonly ListSelectionRefresh _mediaSelectionRefresh = new();
     /// <summary>
     /// Serializuje zapis kolekcji Spotify RAZEM z nalozeniem skutku na
@@ -140,6 +150,7 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
     /// </summary>
     private readonly SemaphoreSlim _spotifyMembershipUiGate = new(1, 1);
     private readonly SemaphoreSlim _tidalMembershipUiGate = new(1, 1);
+    private readonly SemaphoreSlim _appleMusicMembershipUiGate = new(1, 1);
     private bool _tidalCatalogSynchronized;
     private bool _tidalCollectionOrderSnapshotComplete;
     private readonly Dictionary<string, WiiMDeviceSnapshot> _wiiMSnapshots =
@@ -208,6 +219,12 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
         IReadOnlyList<string> ItemIds);
 
     private sealed record TidalContainerViewState(
+        MediaItem Container,
+        IReadOnlyList<MediaItem> Items,
+        ArtistBrowseSection? ArtistSection = null,
+        bool IsArtistOverview = false);
+
+    private sealed record AppleMusicContainerViewState(
         MediaItem Container,
         IReadOnlyList<MediaItem> Items,
         ArtistBrowseSection? ArtistSection = null,
@@ -357,6 +374,7 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
         _sonosAccount = new SonosAccountOwner();
         _tidalIntegration = new TidalIntegrationService(_state.Tidal);
         _spotifyIntegration = new SpotifyIntegrationService(_state.Spotify);
+        _appleMusicIntegration = new AppleMusicIntegrationService();
         _tidalOutput = new TidalMediaOutput(_tidalIntegration, TidalPlayerWebView);
         _tidalOutput.DurationAvailable += TidalOutput_DurationAvailable;
         _tidalOutput.PlaybackFailed += TidalOutput_PlaybackFailed;
@@ -370,6 +388,12 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
         _spotifyOutput.PlaybackEnded += SpotifyOutput_PlaybackEnded;
         _spotifyOutput.PlaybackPreparing += SpotifyOutput_PlaybackPreparing;
         _spotifyOutput.PlaybackStarted += SpotifyOutput_PlaybackStarted;
+        _appleMusicOutput = new AppleMusicMediaOutput(_appleMusicIntegration, AppleMusicPlayerWebView);
+        _appleMusicOutput.DurationAvailable += AppleMusicOutput_DurationAvailable;
+        _appleMusicOutput.PlaybackFailed += AppleMusicOutput_PlaybackFailed;
+        _appleMusicOutput.PlaybackEnded += AppleMusicOutput_PlaybackEnded;
+        _appleMusicOutput.PlaybackPreparing += AppleMusicOutput_PlaybackPreparing;
+        _appleMusicOutput.PlaybackStarted += AppleMusicOutput_PlaybackStarted;
         // Druga, niezalezna sesja Spotify (Librespot). Powstaje TERAZ, zeby
         // RebuildCore mial czym ja zarejestrowac, ale host procesu NIE startuje:
         // adapter tworzy transport leniwie, przy pierwszym uzyciu.
@@ -414,6 +438,7 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
         LoadPersistedRadio();
         LoadPersistedPodcasts();
         LoadPersistedWiiM();
+        LoadPersistedFrontierSmart();
         RestoreLastActivatedWiiMPresets();
         NormalizeRadioSchedulesAtStartup();
         DiagnosticLog.Info("startup", $"Odtworzono w pamięci {state.LocalMedia.Items.Count} rekordów Biblioteki.");
@@ -452,6 +477,12 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
         {
             Dispatcher.BeginInvoke(
                 () => _ = RefreshTidalSessionAsync(announceResult: false),
+                DispatcherPriority.Background);
+        }
+        if (_appleMusicIntegration.IsConfigured && _appleMusicIntegration.HasStoredLogin)
+        {
+            Dispatcher.BeginInvoke(
+                () => _ = RefreshAppleMusicSessionAsync(announceResult: false),
                 DispatcherPriority.Background);
         }
         if (_state.Settings.Updates.CheckAutomatically)
@@ -858,6 +889,14 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
                         explicitLibraryRequest: false));
                 return;
             }
+            if (string.Equals(result.SessionId, "sonos", StringComparison.OrdinalIgnoreCase)
+                && dialog.SelectedAction == SearchResultAction.Open
+                && _state.Sonos.OwnStreams.Any(stream =>
+                    string.Equals(stream.Id, result.Item.Id, StringComparison.Ordinal)))
+            {
+                ShowSonosOwnStreams(result.Item.Id);
+                return;
+            }
             var originalSelectedResults = dialog.SelectedResults.ToArray();
             var effectiveResults = originalSelectedResults
                 .Select(selected => MaterializeYouTubeSearchResult(selected))
@@ -953,7 +992,13 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
 
     private DemoMediaSession? SelectSearchResultBrowserItem(SearchWindow.SearchResult result)
     {
+        var resultSession = _sessions.FindSession(result.SessionId);
+        var historyOnly = resultSession is not null
+            && _playbackHistory.Contains(result.SessionId, result.Item.Id)
+            && resultSession.Items.All(item =>
+                !string.Equals(item.Id, result.Item.Id, StringComparison.Ordinal));
         if (string.Equals(result.SessionId, "tidal", StringComparison.OrdinalIgnoreCase)
+            && !historyOnly
             && _sessions.FindSession("tidal") is { } tidal
             && tidal.Items.All(item => !string.Equals(item.Id, result.Item.Id, StringComparison.Ordinal)))
         {
@@ -967,13 +1012,25 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
         // zamknieciu okna. Cache biblioteki (CachedCollectionItems) tego NIE
         // dotyczy - pozycja z katalogu nie jest czescia konta.
         if (SpotifyPlaybackSettingsResolver.IsSpotifySession(result.SessionId)
+            && !historyOnly
             && _sessions.FindSession(result.SessionId) is { } spotify
             && spotify.Items.All(item => !string.Equals(item.Id, result.Item.Id, StringComparison.Ordinal)))
         {
             spotify.AddItems([result.Item]);
         }
+        if (string.Equals(result.SessionId, "appleMusic", StringComparison.OrdinalIgnoreCase)
+            && !historyOnly
+            && _sessions.FindSession("appleMusic") is { } appleMusic
+            && appleMusic.Items.All(item => !string.Equals(item.Id, result.Item.Id, StringComparison.Ordinal)))
+        {
+            appleMusic.AddItems([result.Item]);
+        }
         string? targetView = null;
-        if (string.Equals(result.SessionId, "podcasts", StringComparison.OrdinalIgnoreCase))
+        if (historyOnly)
+        {
+            targetView = "Historia odtwarzania";
+        }
+        else if (string.Equals(result.SessionId, "podcasts", StringComparison.OrdinalIgnoreCase))
         {
             targetView = MainWindowNavigationPolicy.ResolvePodcastSearchLandingView(
                 result.Item,
@@ -984,6 +1041,11 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
         else if (string.Equals(result.SessionId, "radio", StringComparison.OrdinalIgnoreCase))
         {
             targetView = MainWindowNavigationPolicy.ResolveRadioSearchLandingView(result.Item);
+        }
+        else if (string.Equals(result.SessionId, "wiim", StringComparison.OrdinalIgnoreCase)
+                 && IsWiiMNetworkStream(result.Item))
+        {
+            targetView = "Biblioteka";
         }
 
         return SelectSessionBrowserItem(result.SessionId, result.Item.Id, targetView);
@@ -2069,7 +2131,7 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
         }
     }
 
-    private async void RemoveClipFromOriginal()
+    private void RemoveClipFromOriginal()
     {
         if (_audioClipEditInProgress)
         {
@@ -2115,105 +2177,80 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
         var start = _audioClipSelection.Start!.Value;
         var end = _audioClipSelection.End!.Value;
         var keepBackup = _state.Settings.KeepAudioEditBackups;
-        var backupNotice = keepBackup
-            ? "Kopia bezpieczeństwa zostanie zachowana po edycji. "
-            : "Kopia bezpieczeństwa zostanie usunięta po sprawdzeniu zapisanego pliku. Nie będzie można z niej cofnąć cięcia. ";
-        var confirmation = AccessibleMediaController.Windows.Services.AccessibleDialog.Show(
-            this,
-            $"Czy usunąć z oryginalnego pliku fragment od {FormatClipTime(start)} do {FormatClipTime(end)}?\n\n"
-            + "AMC zatrzyma odtwarzanie i zachowa jakość bez ponownej kompresji. "
-            + backupNotice
-            + "W formatach stratnych granice mogą zostać dopasowane do najbliższej ramki kodeka.",
-            "Usuń fragment z oryginalnego pliku",
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Warning,
-            MessageBoxResult.No);
-        FocusPlayerView();
-        if (confirmation != MessageBoxResult.Yes) return;
+        var dialog = new AudioClipRemovalWindow(
+            path,
+            item.Title,
+            start,
+            end,
+            item.Duration,
+            keepBackup,
+            () =>
+            {
+                session.StopPlayback();
+                UpdatePlayerView();
+                UpdatePlaybackStatusBar();
+                AnnounceEssential("Usuwanie fragmentu. Odtwarzanie zatrzymano");
+            })
+        {
+            Owner = this
+        };
 
         _audioClipEditInProgress = true;
-        var progress = new Progress<double>(value =>
-        {
-            var percent = Math.Clamp((int)Math.Round(value * 100d), 0, 100);
-            var status = $"Usuwanie fragmentu: {percent}%";
-            _playbackStatusBar.SpokenText = status;
-            _playbackStatusLabel.Text = status;
-            _playbackStatusLabel.AccessibleName = status;
-        });
+        bool removed;
         try
         {
-            session.StopPlayback();
-            UpdatePlayerView();
-            UpdatePlaybackStatusBar();
-            AnnounceEssential("Usuwanie fragmentu. Odtwarzanie zatrzymano");
-            var result = await AudioClipOriginalEditor.RemoveAsync(
-                new AudioClipRemovalRequest(path, start, end, item.Duration),
-                progress,
-                CancellationToken.None,
-                keepBackup: keepBackup);
-
-            item.Duration = result.Duration;
-            item.SampleRateHz = result.SampleRateHz > 0 ? result.SampleRateHz : item.SampleRateHz;
-            item.BitrateKbps = LocalAudioFileDiscovery.IsVideoFile(path)
-                ? null
-                : LocalAudioFileDiscovery.EstimateBitrateKbps(new FileInfo(path).Length, result.Duration);
-            item.IsBitrateEstimated = item.BitrateKbps.HasValue;
-            var nextPosition = start < result.Duration ? start : result.Duration;
-            session.SetRememberedPosition(item.Id, nextPosition);
-            _audioClipSelection.Clear();
-            if (FindLocalItemSettings(item) is { } saved)
-            {
-                var fingerprint = GetFileFingerprint(path);
-                saved.ClipStartTicks = null;
-                saved.ClipEndTicks = null;
-                saved.ResumePositionTicks = Math.Max(0, nextPosition.Ticks);
-                saved.DurationTicks = result.Duration.Ticks;
-                saved.BitrateKbps = item.BitrateKbps;
-                saved.IsBitrateEstimated = item.IsBitrateEstimated;
-                saved.SampleRateHz = item.SampleRateHz;
-                saved.FileLength = fingerprint.FileLength;
-                saved.LastWriteUtcTicks = fingerprint.LastWriteUtcTicks;
-            }
-            TrySaveLocalMediaState(true);
-            RefreshCurrentView(preferredItemId: item.Id);
-            UpdatePlayerView(true);
-            UpdatePlaybackStatusBar();
-            UpdateWindowTitle();
-            FocusPlayerView();
-            var backupLog = string.IsNullOrEmpty(result.BackupPath)
-                ? "usunięta po sprawdzeniu zapisanego pliku"
-                : result.BackupPath;
-            DiagnosticLog.Info(
-                "audio-clip",
-                $"Usunięto fragment z oryginału: {path}; od {start} do {end}; kopia: {backupLog}.");
-            var backupMessage = AudioClipAppendWindow.DescribeBackupOutcome(keepBackup, result.BackupPath);
-            if (!string.IsNullOrEmpty(result.BackupPath)) backupMessage += " " + Path.GetFileName(result.BackupPath);
-            AnnounceEssential($"Fragment usunięty. {backupMessage}");
-        }
-        catch (Exception exception) when (exception is IOException
-            or UnauthorizedAccessException
-            or InvalidDataException
-            or InvalidOperationException
-            or NotSupportedException
-            or ArgumentException)
-        {
-            DiagnosticLog.Error("audio-clip", "Nie udało się usunąć fragmentu z oryginalnego pliku.", exception);
-            UpdatePlaybackStatusBar();
-            FocusPlayerView();
-            AccessibleMediaController.Windows.Services.AccessibleDialog.Show(
-                this,
-                exception.Message,
-                "Nie udało się usunąć fragmentu",
-                MessageBoxButton.OK,
-                MessageBoxImage.Error);
-            FocusPlayerView();
-            AnnounceEssential(exception.Message);
+            removed = dialog.ShowDialog() == true;
         }
         finally
         {
             _audioClipEditInProgress = false;
             UpdatePlaybackStatusBar();
+            FocusPlayerView();
         }
+
+        if (!removed || dialog.Result is not { } result)
+        {
+            if (dialog.OperationStarted) Announce("Usuwanie fragmentu anulowane");
+            return;
+        }
+
+        item.Duration = result.Duration;
+        item.SampleRateHz = result.SampleRateHz > 0 ? result.SampleRateHz : item.SampleRateHz;
+        item.BitrateKbps = LocalAudioFileDiscovery.IsVideoFile(path)
+            ? null
+            : LocalAudioFileDiscovery.EstimateBitrateKbps(new FileInfo(path).Length, result.Duration);
+        item.IsBitrateEstimated = item.BitrateKbps.HasValue;
+        var nextPosition = start < result.Duration ? start : result.Duration;
+        session.SetRememberedPosition(item.Id, nextPosition);
+        _audioClipSelection.Clear();
+        if (FindLocalItemSettings(item) is { } saved)
+        {
+            var fingerprint = GetFileFingerprint(path);
+            saved.ClipStartTicks = null;
+            saved.ClipEndTicks = null;
+            saved.ResumePositionTicks = Math.Max(0, nextPosition.Ticks);
+            saved.DurationTicks = result.Duration.Ticks;
+            saved.BitrateKbps = item.BitrateKbps;
+            saved.IsBitrateEstimated = item.IsBitrateEstimated;
+            saved.SampleRateHz = item.SampleRateHz;
+            saved.FileLength = fingerprint.FileLength;
+            saved.LastWriteUtcTicks = fingerprint.LastWriteUtcTicks;
+        }
+        TrySaveLocalMediaState(true);
+        RefreshCurrentView(preferredItemId: item.Id);
+        UpdatePlayerView(true);
+        UpdatePlaybackStatusBar();
+        UpdateWindowTitle();
+        FocusPlayerView();
+        var backupLog = string.IsNullOrEmpty(result.BackupPath)
+            ? "usunięta po sprawdzeniu zapisanego pliku"
+            : result.BackupPath;
+        DiagnosticLog.Info(
+            "audio-clip",
+            $"Usunięto fragment z oryginału: {path}; od {start} do {end}; kopia: {backupLog}.");
+        var backupMessage = AudioClipAppendWindow.DescribeBackupOutcome(keepBackup, result.BackupPath);
+        if (!string.IsNullOrEmpty(result.BackupPath)) backupMessage += " " + Path.GetFileName(result.BackupPath);
+        AnnounceEssential($"Fragment usunięty. {backupMessage}");
     }
 
     private bool TryGetLocalClipContext(
@@ -2265,11 +2302,17 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
             ? value.ToString(@"h\:mm\:ss\.fff", CultureInfo.CurrentCulture)
             : value.ToString(@"m\:ss\.fff", CultureInfo.CurrentCulture);
 
-    public void NavigateBookmark(int direction)
+    public void NavigateBookmark(int direction) => NavigateBookmark(direction, namedOnly: false);
+
+    public void NavigateNamedBookmark(int direction) => NavigateBookmark(direction, namedOnly: true);
+
+    private void NavigateBookmark(int direction, bool namedOnly)
     {
         if ((!_playerViewActive && !NvdaBackgroundScope.IsActive) || !_sessions.Current.HasCurrentItem)
         {
-            Announce("Nawigacja po zakładkach działa w otwartym odtwarzaczu");
+            Announce(namedOnly
+                ? "Nawigacja po nazwanych zakładkach działa w otwartym odtwarzaczu"
+                : "Nawigacja po zakładkach działa w otwartym odtwarzaczu");
             return;
         }
 
@@ -2280,19 +2323,28 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
         if (_bookmarkNavigationCursor is { } cursor
             && string.Equals(cursor.SessionId, session.Id, StringComparison.OrdinalIgnoreCase)
             && string.Equals(cursor.ItemId, itemId, StringComparison.Ordinal)
+            && cursor.NamedOnly == namedOnly
             && now - cursor.LastNavigationUtc <= BookmarkNavigationContinuationWindow)
         {
-            bookmark = _bookmarkIndex.FindAdjacent(session.Id, itemId, cursor.BookmarkId, direction);
+            bookmark = namedOnly
+                ? _bookmarkIndex.FindNamedAdjacent(session.Id, itemId, cursor.BookmarkId, direction)
+                : _bookmarkIndex.FindAdjacent(session.Id, itemId, cursor.BookmarkId, direction);
         }
         else
         {
-            bookmark = _bookmarkIndex.FindRelative(session.Id, itemId, session.Position, direction);
+            bookmark = namedOnly
+                ? _bookmarkIndex.FindNamedRelative(session.Id, itemId, session.Position, direction)
+                : _bookmarkIndex.FindRelative(session.Id, itemId, session.Position, direction);
         }
         if (bookmark is null)
         {
-            Announce(direction < 0
-                ? "Brak poprzedniej zakładki w tym materiale"
-                : "Brak następnej zakładki w tym materiale");
+            Announce(namedOnly
+                ? direction < 0
+                    ? "Brak poprzedniej nazwanej zakładki w tym materiale"
+                    : "Brak następnej nazwanej zakładki w tym materiale"
+                : direction < 0
+                    ? "Brak poprzedniej zakładki w tym materiale"
+                    : "Brak następnej zakładki w tym materiale");
             return;
         }
 
@@ -2301,6 +2353,7 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
             session.Id,
             itemId,
             bookmark.Id,
+            namedOnly,
             now);
         session.SetPosition(position);
         UpdatePlayerView();
@@ -2468,10 +2521,16 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
     {
         if (!_playerViewActive) return;
         var session = _sessions.Current;
+        UpdatePlayerShufflePresentation(session);
         var item = session.CurrentItem;
         if (string.Equals(session.Id, "wiim", StringComparison.Ordinal))
         {
             UpdateWiiMPlayerView(item, updateAccessibleName);
+            return;
+        }
+        if (IsFrontierSmartSession(session.Id))
+        {
+            UpdateFrontierSmartPlayerView(item, updateAccessibleName);
             return;
         }
         if (IsSonosSession(session.Id))
@@ -2488,7 +2547,9 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
                 ? _podcastOutput.IsPreparing
                 : string.Equals(session.Id, "tidal", StringComparison.Ordinal)
                     ? _tidalOutput.IsPreparing
-                    : isRadio && _radioOutput.IsPreparing;
+                    : string.Equals(session.Id, "appleMusic", StringComparison.Ordinal)
+                        ? _appleMusicOutput.IsPreparing
+                        : isRadio && _radioOutput.IsPreparing;
         var state = preparing
             ? (_cloudPreparingItemId is null ? "Otwieranie" : "Pobieranie z chmury")
             : session.IsPlaying ? "Odtwarzanie" : "Pauza";
@@ -2507,10 +2568,11 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
             ?? (string.IsNullOrWhiteSpace(item.Artist) ? item.KindLabel : item.Artist);
         PlayerSessionText.Text = session.DisplayName;
         PlayerStateText.Text = state;
+        UpdatePlayerVolumePresentation(session.Volume);
         PlayerSpeedText.Visibility = session.SupportsPlaybackRate
             ? Visibility.Visible
             : Visibility.Collapsed;
-        PlayerSpeedText.Text = $"Prędkość: {FormatPlaybackRateMultiplier(session.PlaybackRate)}";
+        PlayerSpeedText.Text = $"Prędkość: {FormatPlaybackRateDescription(session.PlaybackRate)}";
         PlayerPreviousButton.Content = isRadio
             ? "Poprzednia stacja"
             : item.Kind == MediaItemKind.Episode
@@ -2577,11 +2639,11 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
                 RadioRecordingStateLabel(item))
             : focusContext is null
                 ? session.SupportsPlaybackRate
-                    ? $"Odtwarzacz, {item.Title}, {artist}, {session.DisplayName}, {state}, prędkość {FormatPlaybackRateMultiplier(session.PlaybackRate)}. {action}"
-                    : $"Odtwarzacz, {item.Title}, {artist}, {session.DisplayName}, {state}. {action}"
+                    ? $"Odtwarzacz, {item.Title}, {artist}, {session.DisplayName}, {state}, głośność {session.Volume} procent, prędkość {FormatPlaybackRateDescription(session.PlaybackRate)}. {action}"
+                    : $"Odtwarzacz, {item.Title}, {artist}, {session.DisplayName}, {state}, głośność {session.Volume} procent. {action}"
                 : session.SupportsPlaybackRate
-                    ? $"{focusContext}, Odtwarzacz, {item.Title}, {artist}, {state}, prędkość {FormatPlaybackRateMultiplier(session.PlaybackRate)}. {action}"
-                    : $"{focusContext}, Odtwarzacz, {item.Title}, {artist}, {state}. {action}";
+                    ? $"{focusContext}, Odtwarzacz, {item.Title}, {artist}, {state}, głośność {session.Volume} procent, prędkość {FormatPlaybackRateDescription(session.PlaybackRate)}. {action}"
+                    : $"{focusContext}, Odtwarzacz, {item.Title}, {artist}, {state}, głośność {session.Volume} procent. {action}";
         AutomationProperties.SetName(
             PlayerPlayPauseButton,
             isRadio && focusContext is not null ? $"{focusContext}, {name}" : name);
@@ -2621,6 +2683,23 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
             PlayerPlayPauseButton,
             _state.Settings.Messages.DetailedHints ? PlayerKeyboardHelpText() : string.Empty);
 
+    internal void UpdatePlayerShufflePresentation(DemoMediaSession session)
+    {
+        var supported = PlaybackShufflePolicy.SupportsSession(session.Id);
+        var visibility = supported ? Visibility.Visible : Visibility.Collapsed;
+        PlayerShuffleButton.Visibility = visibility;
+        PlaybackShuffleMenuItem.Visibility = visibility;
+        PlayerShuffleMenuItem.Visibility = visibility;
+        if (!supported) return;
+        var label = PlaybackShufflePolicy.GetActionLabel(session.IsShuffleEnabled);
+        PlayerShuffleButton.Content = label;
+        AutomationProperties.SetName(PlayerShuffleButton, label);
+        PlaybackShuffleMenuItem.IsChecked = session.IsShuffleEnabled;
+        PlayerShuffleMenuItem.IsChecked = session.IsShuffleEnabled;
+        MenuAccessibility.SetPresentation(PlaybackShuffleMenuItem, label);
+        SetContextMenuItemPresentation(PlayerShuffleMenuItem, label, "R");
+    }
+
     private void UpdateWiiMPlayerView(MediaItem deviceItem, bool updateAccessibleName)
     {
         _wiiMSnapshots.TryGetValue(deviceItem.Id, out var snapshot);
@@ -2644,6 +2723,7 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
         PlayerArtistText.Text = artist;
         PlayerSessionText.Text = $"WiiM, {deviceItem.Title}";
         PlayerStateText.Text = state;
+        UpdatePlayerVolumePresentation(playback?.Volume);
         PlayerSpeedText.Visibility = Visibility.Collapsed;
         PlayerPreviousButton.Content = "Poprzedni element";
         PlayerNextButton.Content = "Następny element";
@@ -2799,10 +2879,14 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
         var speedHelp = _sessions?.Current.SupportsPlaybackRate == true
             ? "Shift+przecinek zwalnia, Shift+kropka przyspiesza, Ctrl+kropka przywraca normalną prędkość. "
             : string.Empty;
+        var shuffleHelp = PlaybackShufflePolicy.SupportsSession(_sessions?.Current.Id)
+            ? "R włącza lub wyłącza odtwarzanie losowe. "
+            : string.Empty;
         return "Strzałki sterują czasem i głośnością. Page Up i Page Down wybierają poprzedni lub następny utwór. "
-            + "B dodaje szybką zakładkę, Ctrl+Shift+B dodaje nazwaną, a Shift+Page Up i Shift+Page Down przechodzą po zakładkach. "
+            + "B dodaje szybką zakładkę, a Ctrl+Shift+B dodaje nazwaną. Shift+Page Up i Shift+Page Down przechodzą po wszystkich zakładkach, Ctrl+Shift+Page Up i Ctrl+Shift+Page Down tylko po nazwanych, a Ctrl+Shift+strzałka w lewo i w prawo po rozdziałach. "
             + "I ustawia początek fragmentu, O koniec, Shift+I i Shift+O wracają bezpośrednio do tych punktów, a Alt+Page Up i Alt+Page Down przechodzą do poprzedniej lub następnej granicy. X zapisuje fragment do nowego pliku, Ctrl+X usuwa go z oryginału po potwierdzeniu i z kopią bezpieczeństwa, a Shift+X czyści zaznaczenie. "
             + speedHelp
+            + shuffleHelp
             + exit;
     }
 
@@ -3180,12 +3264,21 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
 
     private void ShowRadioRecognitionHistory()
     {
-        var dialog = new RadioRecognitionHistoryWindow(_state.Radio.RecognizedTracks)
+        var dialog = new RadioRecognitionHistoryWindow(
+            _state.Radio.RecognizedTracks,
+            _state.Radio.DefaultRecognizedTrackService,
+            CreateRecognitionStreamingResolver(),
+            new AppleMusicRecognitionLinkResolver())
         {
             Owner = this
         };
         dialog.ShowDialog();
         if (dialog.Changed) QueueStateSave();
+        if (dialog.RequestedAction is { } request)
+        {
+            _ = ExecuteRecognitionHistoryRequestAsync(request);
+            return;
+        }
         Activate();
         if (_playerViewActive)
         {
@@ -3222,7 +3315,9 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
                 ? _podcastOutput.IsPreparing
                 : string.Equals(session.Id, "tidal", StringComparison.Ordinal)
                     ? _tidalOutput.IsPreparing
-                    : isRadio && _radioOutput.IsPreparing;
+                    : string.Equals(session.Id, "appleMusic", StringComparison.Ordinal)
+                        ? _appleMusicOutput.IsPreparing
+                        : isRadio && _radioOutput.IsPreparing;
         var state = preparing
             ? (_cloudPreparingItemId is null ? "Otwieranie" : "Pobieranie z chmury")
             : session.IsPlaying ? "Odtwarzanie" : "Pauza";
@@ -3281,6 +3376,41 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
 
     private static string FormatPlaybackRateMultiplier(double playbackRate) =>
         $"{playbackRate.ToString("0.00", CultureInfo.CurrentCulture)} razy";
+
+    internal static string FormatPlaybackRateDescription(double playbackRate)
+    {
+        var multiplier = FormatPlaybackRateMultiplier(playbackRate);
+        if (Math.Abs(playbackRate - 1d) < 0.001d)
+            return $"{multiplier} — normalna prędkość";
+        return playbackRate < 1d
+            ? $"{multiplier} — wolniej niż normalnie"
+            : $"{multiplier} — szybciej niż normalnie";
+    }
+
+    internal static string FormatPlayerVolumeText(int? volume) => volume is null
+        ? "Głośność: brak informacji"
+        : $"Głośność: {Math.Clamp(volume.Value, 0, 100)}%";
+
+    internal void UpdatePlayerVolumePresentation(int? volume)
+    {
+        var visibleText = FormatPlayerVolumeText(volume);
+        var spokenValue = volume is null
+            ? "obecna głośność jest nieznana"
+            : $"obecna głośność {Math.Clamp(volume.Value, 0, 100)} procent";
+        PlayerVolumeText.Visibility = Visibility.Visible;
+        PlayerVolumeText.Text = visibleText;
+        AutomationProperties.SetName(
+            PlayerVolumeText,
+            volume is null
+                ? visibleText
+                : $"Głośność: {Math.Clamp(volume.Value, 0, 100)} procent");
+        AutomationProperties.SetName(
+            PlayerVolumeDownButton,
+            $"Ciszej, {spokenValue}; zmniejsza o 5 punktów procentowych");
+        AutomationProperties.SetName(
+            PlayerVolumeUpButton,
+            $"Głośniej, {spokenValue}; zwiększa o 5 punktów procentowych");
+    }
 
     public void ShowSeekToTime()
     {
@@ -3344,7 +3474,7 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
 
     public void ShowSessionList()
     {
-        var dialog = new SessionSelectionWindow(_sessions) { Owner = this };
+        var dialog = new SessionSelectionWindow(_sessions, CreateFrontierSmartSessionAsync) { Owner = this };
         dialog.OrderChangedCommitted += (_, _) => QueueStateSave(announceFailure: true);
         if (dialog.ShowDialog() == true && dialog.SelectedSlot is int slot)
         {
@@ -3603,6 +3733,11 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
 
     private void ActivatePreset(int slot, bool useDirectShortcutLabel = false, bool fromGlobalShortcut = false)
     {
+        if (IsFrontierSmartSession())
+        {
+            _ = ActivateFrontierSmartPresetNumberAsync(slot);
+            return;
+        }
         var announcementSlotLabel = useDirectShortcutLabel
             ? RadioPresetKeyMap.DirectShortcutLabel(slot)
             : null;
@@ -4093,10 +4228,26 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
         var local = string.Equals(_sessions.Current.Id, "local", StringComparison.Ordinal);
         var podcasts = string.Equals(_sessions.Current.Id, "podcasts", StringComparison.Ordinal);
         var wiiM = string.Equals(_sessions.Current.Id, "wiim", StringComparison.Ordinal);
+        var frontierSmart = IsFrontierSmartSession();
         var tidal = string.Equals(_sessions.Current.Id, "tidal", StringComparison.Ordinal);
         var spotify = SpotifyPlaybackSettingsResolver.IsSpotifySession(_sessions.Current.Id);
+        var appleMusic = string.Equals(_sessions.Current.Id, "appleMusic", StringComparison.Ordinal);
+        if (commandId == CommandIds.ToggleShuffle)
+            return PlaybackShufflePolicy.SupportsSession(_sessions.Current.Id);
         if (commandId == CommandIds.ManageTidalConnection) return tidal;
         if (commandId == CommandIds.ManageSpotifyConnection) return spotify;
+        if (commandId == CommandIds.ManageAppleMusicConnection) return appleMusic;
+        if (commandId == CommandIds.ManageYouTubeConnection) return podcasts;
+        if (commandId == CommandIds.SavePodcastAs)
+            return podcasts
+                && ActionItems.Count == 1
+                && ActionItems[0].Kind == MediaItemKind.Episode;
+        if (commandId == CommandIds.DownloadInService)
+            return podcasts
+                && ActionItems.Count > 0
+                && ActionItems.All(item => item.Kind == MediaItemKind.Episode);
+        if (commandId == CommandIds.DownloadYouTubeVideo)
+            return podcasts && CanDownloadSelectedYouTubeVideos(ActionItems);
         // Konto Sonos nie ma jeszcze sesji, wiec nie da sie go ograniczyc do
         // sesji. Jest dostepne wszedzie - jak sama pozycja w menu Plik.
         if (commandId == CommandIds.ManageSonosConnection) return true;
@@ -4111,6 +4262,7 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
         if (commandId == CommandIds.ViewSpotifyPodcasts) return spotify;
         if (!tidal && commandId.StartsWith("tidal.", StringComparison.Ordinal)) return false;
         if (!spotify && commandId.StartsWith("spotify.", StringComparison.Ordinal)) return false;
+        if (!appleMusic && commandId.StartsWith("appleMusic.", StringComparison.Ordinal)) return false;
         if (IsTransientPreviewCommand(commandId)) return IsTransientPreviewAvailable(commandId);
         if (commandId == CommandIds.OpenOnWiiM)
             return ActionItems.Count == 1 && TryGetWiiMPlayableUri(ActionItem, out _);
@@ -4121,12 +4273,19 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
             or CommandIds.ImportWiiMNetworkStreams
             or CommandIds.ExportWiiMNetworkStreams)
             return wiiM;
+        if (commandId is CommandIds.ManageFrontierSmartDevices
+            or CommandIds.RefreshFrontierSmartDevices
+            or CommandIds.ViewFrontierSmartModes
+            or CommandIds.ViewFrontierSmartPresets)
+            return frontierSmart;
         if (commandId == CommandIds.CurrentBroadcastInformation)
-            return radio || wiiM;
+            return radio || wiiM || frontierSmart;
         if (commandId == CommandIds.AssignRadioPreset && wiiM)
             return true;
         if (!wiiM && commandId.StartsWith("wiim.", StringComparison.Ordinal)) return false;
         if (wiiM) return CommandAvailableInWiiM(commandId);
+        if (!frontierSmart && commandId.StartsWith("frontierSmart.", StringComparison.Ordinal)) return false;
+        if (frontierSmart) return CommandAvailableInFrontierSmart(commandId);
         if (commandId is CommandIds.SortCollectionByAdded
             or CommandIds.SortCollectionAlphabetically
             or CommandIds.SortCollectionCustom)
@@ -4210,6 +4369,8 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
             or CommandIds.AddNamedBookmark
             or CommandIds.PreviousBookmark
             or CommandIds.NextBookmark
+            or CommandIds.PreviousNamedBookmark
+            or CommandIds.NextNamedBookmark
             or CommandIds.SeekToTime
             or CommandIds.SeekToPercentage
             or CommandIds.PlaybackRateDown
@@ -5436,7 +5597,10 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
         _ => null
     };
 
-    private string BuildQuickMediaInformation(MediaItem item)
+    private string BuildQuickMediaInformation(MediaItem item) =>
+        BuildQuickMediaInformation(item, supplementaryLabel: null);
+
+    private string BuildQuickMediaInformation(MediaItem item, string? supplementaryLabel)
     {
         var isLocal = TryGetLocalPath(item.Source, out var localPath);
         var podcastEpisode = item.Kind == MediaItemKind.Episode
@@ -5493,10 +5657,11 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
             sizeBytes,
             mayRequireCloudDownload,
             isTidalPlayableItem ? "format nieudostępniony przez katalog TIDAL" : null,
-            CultureInfo.CurrentCulture);
+            CultureInfo.CurrentCulture,
+            supplementaryLabel);
     }
 
-    private async void AnnounceQuickMediaInformation(MediaItem item)
+    private async void AnnounceQuickMediaInformation(MediaItem item, bool includeLocalFolder = false)
     {
         var requestVersion = Interlocked.Increment(ref _quickInformationRequestVersion);
         if (TryGetLocalPath(item.Source, out var localPath)
@@ -5551,7 +5716,11 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
                 UpdatePlaybackStatusBar();
             }
         }
-        Announce(BuildQuickMediaInformation(item));
+        var folderLabel = includeLocalFolder
+            && TryGetLocalPath(item.Source, out var quickInformationPath)
+            ? RadioRecordingRowLabels.FolderLabel(quickInformationPath)
+            : null;
+        Announce(BuildQuickMediaInformation(item, folderLabel));
     }
 
     public void OpenOfficialApplication()
@@ -5847,7 +6016,7 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
             "U otwiera Ulubione, Shift+U zmienia stan ulubionych, B otwiera Zakładki, Shift+B dodaje zakładkę w odtwarzaczu, A otwiera Albumy, P otwiera Playlisty. " +
             "K filtruje bieżącą listę, F wyszukuje w bieżącej usłudze; warianty z Shift otwierają " +
             "paletę poleceń i wyszukiwanie globalne.\n\n" +
-            "W aktywnym oknie: Ctrl+1–9 wybiera sesję bez prefiksu, Ctrl+Shift+S otwiera listę sesji, a Ctrl+0 pozostaje zgodnym aliasem. Kolejność można zmienić w Ustawieniach Ogólnych. " +
+            "W aktywnym oknie: Ctrl+1–9 wybiera sesję bez prefiksu, Ctrl+Shift+S otwiera Menedżer sesji, a Ctrl+0 pozostaje zgodnym aliasem. Menedżer pozwala też utworzyć sesję Frontier Smart. Kolejność można zmienić w Ustawieniach Ogólnych. " +
             "Ctrl+Page Up i Ctrl+Page Down zmieniają sesję. " +
             "Ctrl+O dodaje lokalne pliki multimedialne, a Ctrl+Shift+O dodaje do Biblioteki synchronizowany folder wraz z podfolderami. Pliki wideo są odtwarzane jako dźwięk bez otwierania obrazu. " +
             "W lokalnej Bibliotece Alt+1 pokazuje Foldery, Alt+2 Wszystkie pliki alfabetycznie, a Alt+3 Kolejność własną. W Kolejności własnej Alt+strzałka w górę lub w dół przenosi jeden element albo ciągły zaznaczony blok; aktywny filtr trzeba wcześniej wyczyścić. F5 odświeża Foldery Biblioteki, a Ctrl+F5 otwiera ich ustawienia. Enter wchodzi do folderu, a Backspace wraca o poziom wyżej. Na wierszu folderu Shift+Enter, Ctrl+Shift+Enter, Ctrl+Shift+U i Ctrl+Shift+P działają rekurencyjnie na jego zaindeksowanych plikach, nigdy na samym technicznym kontenerze. Żadne z tych poleceń nie uruchamia dźwięku automatycznie. " +
@@ -5870,7 +6039,7 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
             "Alt+Enter otwiera jedno dostępne okno Właściwości i informacje. " +
             "Ctrl+K, Ctrl+F i Ctrl+Shift+F nie opuszczają odtwarzacza; wyszukiwanie jest dostępne po powrocie do listy. " +
             "Skróty widoków opuszczają odtwarzacz, a F6 wraca do niego. " +
-            "Ctrl+C kopiuje nazwy wszystkich zaznaczonych elementów, po jednej w wierszu; Ctrl+Shift+C kopiuje pełne ścieżki i fizyczne pliki lokalne, a dla radia i innych źródeł same łącza, bez nazw, po jednym w wierszu. W Podcastach Ctrl+C kopiuje nazwę, opis i publiczną stronę każdego zaznaczonego odcinka, a Ctrl+Shift+C wyłącznie bezpośrednie adresy audio. Ctrl+D pobiera zaznaczone odcinki do domyślnego folderu Podcastów, a Ctrl+S zapisuje jeden odcinek pod wskazaną nazwą. " +
+            "Ctrl+C kopiuje nazwy wszystkich zaznaczonych elementów, po jednej w wierszu; Ctrl+Shift+C kopiuje pełne ścieżki i fizyczne pliki lokalne, a dla radia i innych źródeł same łącza, bez nazw, po jednym w wierszu. W Podcastach Ctrl+C kopiuje nazwę, opis i publiczną stronę każdego zaznaczonego odcinka, a Ctrl+Shift+C wyłącznie bezpośrednie adresy audio. Ctrl+D pobiera zaznaczone odcinki do domyślnego folderu Podcastów. Ctrl+S zapisuje jeden odcinek audio pod wskazaną nazwą, a na materiale YouTube otwiera zapis wideo z wyborem MP4 albo formatu oryginalnego. Ctrl+Shift+D pobiera wideo z zaznaczonych materiałów YouTube w formacie wybranym w ustawieniach Podcastów. " +
             "Delete usuwa z bieżącego widoku. W Historii odtwarzania usuwa tylko wpis Historii, bez zmiany Biblioteki i pliku. W lokalnej Bibliotece i na pliku w widoku Foldery usuwa tylko wpis z Biblioteki AMC, a plik pozostawia na dysku; na wierszu folderu nie usuwa niczego. W odtwarzaczu lokalnym Delete również usuwa tylko wpis z AMC i pozostawia plik na dysku. Shift+Delete działa wyłącznie na listach i po potwierdzeniu przenosi zaznaczone pliki do systemowego Kosza. Backspace nigdy nie usuwa: wraca do poziomu nadrzędnego, a w polu tekstowym kasuje znak. " +
             "Alt+strzałka w lewo i w prawo przechodzi po osobnej historii widoków. " +
             "Ctrl+Z cofa ostatnią zmianę Ulubionych, Biblioteki lub Kolejki. " +
@@ -6018,9 +6187,18 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
         }
 
         RadioPlaylistImportResult import;
+        RadioPlaylistNameEnrichmentResult? nameEnrichment = null;
         try
         {
             import = await Task.Run(() => RadioPlaylistImporter.Import(dialog.FileName));
+            if (import.Stations.Any(station => !station.HasDescriptiveName))
+            {
+                AnnounceEssential("Odczytuję nazwy stacji z serwerów");
+                nameEnrichment = await RadioPlaylistNameEnricher.EnrichAsync(
+                    import,
+                    TimeSpan.FromSeconds(12));
+                import = nameEnrichment.Playlist;
+            }
         }
         catch (Exception exception) when (exception is IOException
             or UnauthorizedAccessException
@@ -6070,8 +6248,14 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
         RestoreMediaListFocusAfterRefresh();
         DiagnosticLog.Info(
             "radio-import",
-            $"Dodano {added.Count} nowych stacji; włączono w Bibliotece {promoted.Count}; zachowano dotychczasowe nazwy; pominięto {skipped} pozycji.");
+            $"Dodano {added.Count} nowych stacji; włączono w Bibliotece {promoted.Count}; zachowano dotychczasowe nazwy; "
+            + $"nazwy odczytane z serwerów {nameEnrichment?.NamesReadFromServers ?? 0}; "
+            + $"nazwy zastępcze {nameEnrichment?.NamesWithoutDescription ?? 0}; pominięto {skipped} pozycji.");
         var message = $"Dodano nowe stacje: {added.Count}. Włączono istniejące w Bibliotece: {promoted.Count}. Zachowano dotychczasowe nazwy";
+        if (nameEnrichment?.NamesReadFromServers > 0)
+            message += $". Nazwy odczytane z serwerów: {nameEnrichment.NamesReadFromServers}";
+        if (nameEnrichment?.NamesWithoutDescription > 0)
+            message += $". Nazwy zastępcze: {nameEnrichment.NamesWithoutDescription}";
         if (skipped > 0) message += $". Pominięto: {skipped}";
         _ = Dispatcher.BeginInvoke(() => AnnounceEssential(message), DispatcherPriority.ContextIdle);
     }
@@ -6443,7 +6627,10 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
         var radio = string.Equals(_sessions.Current.Id, "radio", StringComparison.Ordinal);
         var podcasts = string.Equals(_sessions.Current.Id, "podcasts", StringComparison.Ordinal);
         var wiiM = string.Equals(_sessions.Current.Id, "wiim", StringComparison.Ordinal);
+        var frontierSmart = IsFrontierSmartSession();
+        var remoteDeviceSession = wiiM || frontierSmart;
         var tidal = string.Equals(_sessions.Current.Id, "tidal", StringComparison.Ordinal);
+        var appleMusic = string.Equals(_sessions.Current.Id, "appleMusic", StringComparison.Ordinal);
         // Pozycja mowi WPROST, co zrobi Enter - a nie "wycisz lub przywroc"
         // razem ze stanem pola wyboru. Michal 15.09.2026: przy czytniku ekranu
         // nazwa opisujaca oba kierunki naraz plus "nieoznaczone" nie mowi nic
@@ -6461,6 +6648,7 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
         MenuAccessibility.SetPresentation(
             AudioOutputDeviceMenuItem,
             $"Wybierz urządzenie audio dla sesji {_sessions.Current.DisplayName}");
+        UpdatePlayerShufflePresentation(_sessions.Current);
         var openOnWiiMAvailable = ActionItems.Count == 1
             && TryGetWiiMPlayableUri(ActionItem, out _);
         OpenOnWiiMMainMenuItem.Visibility = openOnWiiMAvailable
@@ -6540,6 +6728,7 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
         OpenLocalFolderMenuItem.Visibility = local ? Visibility.Visible : Visibility.Collapsed;
         ManageLocalSourcesMenuItem.Visibility = local ? Visibility.Visible : Visibility.Collapsed;
         ManageWiiMDevicesMenuItem.Visibility = wiiM ? Visibility.Visible : Visibility.Collapsed;
+        ManageFrontierSmartDevicesMenuItem.Visibility = frontierSmart ? Visibility.Visible : Visibility.Collapsed;
         // Odswiezanie grup istnieje TYLKO w sesji Sonos. Konto Sonos zostaje
         // dostepne wszedzie - tego nie ruszamy.
         RefreshSonosGroupsMenuItem.Visibility = IsSonosSession(_sessions.Current.Id)
@@ -6557,6 +6746,12 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
         ManageSpotifyConnectionMenuItem.Visibility =            SpotifyPlaybackSettingsResolver.IsSpotifySession(_sessions.Current.Id)
                 ? Visibility.Visible
                 : Visibility.Collapsed;
+        ManageAppleMusicConnectionMenuItem.Visibility = appleMusic
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+        ManageYouTubeConnectionMenuItem.Visibility = podcasts
+            ? Visibility.Visible
+            : Visibility.Collapsed;
         SpotifyPodcastsMenuItem.Visibility =
             SpotifyPlaybackSettingsResolver.IsSpotifySession(_sessions.Current.Id)
                 ? Visibility.Visible
@@ -6589,9 +6784,16 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
             && ActionItems.Count == 1
                 ? Visibility.Visible
                 : Visibility.Collapsed;
+        if (SavePodcastEpisodeAsMainMenuItem.Visibility == Visibility.Visible)
+        {
+            SetContextMenuItemPresentation(
+                SavePodcastEpisodeAsMainMenuItem,
+                YouTubeVideoDownloadPolicy.SaveAsLabel(CanDownloadSelectedYouTubeVideos(ActionItems)),
+                "Ctrl+S");
+        }
         OpenStreamMenuItem.Visibility = radio ? Visibility.Visible : Visibility.Collapsed;
         FileActionsSeparator.Visibility = radio ? Visibility.Visible : Visibility.Collapsed;
-        FileSettingsSeparator.Visibility = local || radio || podcasts || wiiM || tidal || _sessions.Current.Id == "spotify"
+        FileSettingsSeparator.Visibility = local || radio || podcasts || remoteDeviceSession || tidal || _sessions.Current.Id == "spotify"
             ? Visibility.Visible : Visibility.Collapsed;
         var collectionSorting = CurrentViewSupportsCollectionSorting();
         var localLibraryLayouts = local && !collectionSorting;
@@ -6659,11 +6861,11 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
             && descriptionItem?.Kind is MediaItemKind.Podcast or MediaItemKind.Episode
                 ? Visibility.Visible
                 : Visibility.Collapsed;
-        PlaybackCurrentBroadcastInformationMenuItem.Visibility = radio || wiiM
+        PlaybackCurrentBroadcastInformationMenuItem.Visibility = radio || remoteDeviceSession
             ? Visibility.Visible
             : Visibility.Collapsed;
         var tidalRefresh = tidal && _tidalContainerViews.ContainsKey(_currentView);
-        RefreshLocalLibraryMenuItem.Visibility = local || podcasts || wiiM || tidalRefresh ? Visibility.Visible : Visibility.Collapsed;
+        RefreshLocalLibraryMenuItem.Visibility = local || podcasts || remoteDeviceSession || tidalRefresh ? Visibility.Visible : Visibility.Collapsed;
         if (tidalRefresh)
         {
             MenuAccessibility.SetPresentation(RefreshLocalLibraryMenuItem, "Odśwież zawartość TIDAL");
@@ -6671,6 +6873,10 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
         else if (wiiM)
         {
             MenuAccessibility.SetPresentation(RefreshLocalLibraryMenuItem, "Odśwież urządzenia WiiM");
+        }
+        else if (frontierSmart)
+        {
+            MenuAccessibility.SetPresentation(RefreshLocalLibraryMenuItem, "Odśwież urządzenia Frontier Smart");
         }
         else if (podcasts)
         {
@@ -6698,7 +6904,7 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
         AutomationProperties.SetAcceleratorKey(
             LibraryViewMenuItem,
             "Ctrl+L");
-        LibraryViewMenuItem.Visibility = wiiM ? Visibility.Collapsed : Visibility.Visible;
+        LibraryViewMenuItem.Visibility = remoteDeviceSession ? Visibility.Collapsed : Visibility.Visible;
         MenuAccessibility.SetPresentation(
             RenameLibraryItemMainMenuItem,
             radio
@@ -6716,9 +6922,9 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
         MoveItemUpMainMenuItem.Visibility = movableView ? Visibility.Visible : Visibility.Collapsed;
         MoveItemDownMainMenuItem.Visibility = movableView ? Visibility.Visible : Visibility.Collapsed;
 
-        NowPlayingViewMenuItem.Visibility = wiiM ? Visibility.Collapsed : Visibility.Visible;
-        FavoritesViewMenuItem.Visibility = wiiM ? Visibility.Collapsed : Visibility.Visible;
-        PlaylistsViewMenuItem.Visibility = wiiM ? Visibility.Collapsed : Visibility.Visible;
+        NowPlayingViewMenuItem.Visibility = remoteDeviceSession ? Visibility.Collapsed : Visibility.Visible;
+        FavoritesViewMenuItem.Visibility = remoteDeviceSession ? Visibility.Collapsed : Visibility.Visible;
+        PlaylistsViewMenuItem.Visibility = remoteDeviceSession ? Visibility.Collapsed : Visibility.Visible;
         // Skrotu NIE doklejamy do AutomationProperties.Name: czytnik czyta go sam
         // z AcceleratorKey, wiec doklejony wychodzil drugi raz ("Ctrl+P ... Ctrl+ P").
         // Zgloszenie Michala 19.09.2026: normalizacja w konstruktorze czyscila
@@ -6727,14 +6933,21 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
         SetMenuItemNameAndShortcut(PlaylistsViewMenuItem, "Playlisty", "Ctrl+P");
         var presetsAvailable = CurrentSessionSupportsPresets();
         RadioPresetsViewMenuItem.Visibility = presetsAvailable ? Visibility.Visible : Visibility.Collapsed;
-        RadioPresetsViewMenuItem.Header = wiiM ? "Presety urządzenia WiiM…" : "Presety…";
+        RadioPresetsViewMenuItem.Header = wiiM
+            ? "Presety urządzenia WiiM…"
+            : frontierSmart
+                ? "Presety urządzenia Frontier Smart…"
+                : "Presety…";
         SetMenuItemNameAndShortcut(
             RadioPresetsViewMenuItem,
             wiiM
                 ? "Presety urządzenia WiiM"
-                : $"Presety, {_sessions.Current.DisplayName}",
+                : frontierSmart
+                    ? "Presety urządzenia Frontier Smart"
+                    : $"Presety, {_sessions.Current.DisplayName}",
             "Ctrl+Alt+P");
-        RadioAssignPresetMenuItem.Visibility = presetsAvailable ? Visibility.Visible : Visibility.Collapsed;
+        FrontierSmartModesMenuItem.Visibility = frontierSmart ? Visibility.Visible : Visibility.Collapsed;
+        RadioAssignPresetMenuItem.Visibility = presetsAvailable && !frontierSmart ? Visibility.Visible : Visibility.Collapsed;
         RadioAssignPresetMenuItem.Header = wiiM
             ? "Przypisz skrót AMC do gotowego presetu WiiM…"
             : "Utwórz lub przypisz preset…";
@@ -6744,16 +6957,20 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
                 ? "Przypisz skrót AMC do gotowego presetu WiiM"
                 : $"Utwórz lub przypisz preset, {_sessions.Current.DisplayName}",
             "Ctrl+Alt+Shift+P");
-        AlbumsViewMenuItem.Visibility = radio || podcasts || wiiM ? Visibility.Collapsed : Visibility.Visible;
-        QueueViewMenuItem.Visibility = radio || wiiM ? Visibility.Collapsed : Visibility.Visible;
-        HistoryViewMenuItem.Visibility = wiiM ? Visibility.Collapsed : Visibility.Visible;
-        BookmarksViewMenuItem.Visibility = radio || wiiM ? Visibility.Collapsed : Visibility.Visible;
-        BrowserPlaybackButton.Content = wiiM ? "_Wybierz urządzenie i otwórz sterowanie" : "Odtwórz lub _wstrzymaj";
+        AlbumsViewMenuItem.Visibility = radio || podcasts || remoteDeviceSession ? Visibility.Collapsed : Visibility.Visible;
+        QueueViewMenuItem.Visibility = radio || remoteDeviceSession ? Visibility.Collapsed : Visibility.Visible;
+        HistoryViewMenuItem.Visibility = remoteDeviceSession ? Visibility.Collapsed : Visibility.Visible;
+        BookmarksViewMenuItem.Visibility = radio || remoteDeviceSession ? Visibility.Collapsed : Visibility.Visible;
+        BrowserPlaybackButton.Content = remoteDeviceSession ? "_Wybierz urządzenie i otwórz sterowanie" : "Odtwórz lub _wstrzymaj";
         AutomationProperties.SetName(
             BrowserPlaybackButton,
-            wiiM ? "Wybierz urządzenie WiiM i otwórz sterowanie, Enter" : "Odtwórz lub wstrzymaj");
-        BrowserFavoriteButton.Visibility = wiiM ? Visibility.Collapsed : Visibility.Visible;
-        BrowserPlaylistsButton.Visibility = wiiM ? Visibility.Collapsed : Visibility.Visible;
+            wiiM
+                ? "Wybierz urządzenie WiiM i otwórz sterowanie, Enter"
+                : frontierSmart
+                    ? "Wybierz urządzenie Frontier Smart i otwórz sterowanie, Enter"
+                    : "Odtwórz lub wstrzymaj");
+        BrowserFavoriteButton.Visibility = remoteDeviceSession ? Visibility.Collapsed : Visibility.Visible;
+        BrowserPlaylistsButton.Visibility = remoteDeviceSession ? Visibility.Collapsed : Visibility.Visible;
         BrowserPlaylistsButton.Content = tidal ? "Dodaj do _playlisty TIDAL…" : "Zmień _playlisty…";
         AutomationProperties.SetName(
             BrowserPlaylistsButton,
@@ -6834,8 +7051,11 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
             PlaybackAddNamedBookmarkMenuItem,
             radio ? "Dodaj nazwaną zakładkę w nagrywanym pliku" : "Dodaj nazwaną zakładkę",
             radio ? "Shift+B" : "Ctrl+Shift+B");
-        PlaybackPreviousBookmarkMenuItem.Visibility = radio ? Visibility.Collapsed : Visibility.Visible;
-        PlaybackNextBookmarkMenuItem.Visibility = radio ? Visibility.Collapsed : Visibility.Visible;
+        var bookmarkNavigationVisibility = radio || wiiM ? Visibility.Collapsed : Visibility.Visible;
+        PlaybackPreviousBookmarkMenuItem.Visibility = bookmarkNavigationVisibility;
+        PlaybackNextBookmarkMenuItem.Visibility = bookmarkNavigationVisibility;
+        PlaybackPreviousNamedBookmarkMenuItem.Visibility = bookmarkNavigationVisibility;
+        PlaybackNextNamedBookmarkMenuItem.Visibility = bookmarkNavigationVisibility;
         PlaybackBeforeSeekSeparator.Visibility = radio ? Visibility.Collapsed : Visibility.Visible;
         PlaybackSeekTimeMenuItem.Visibility = radio ? Visibility.Collapsed : Visibility.Visible;
         PlaybackSeekPercentageMenuItem.Visibility = radio ? Visibility.Collapsed : Visibility.Visible;
@@ -8375,7 +8595,7 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
         }
     }
 
-    private void AddPodcastSubscription()
+    private async void AddPodcastSubscription()
     {
         if (!string.Equals(_sessions.Current.Id, "podcasts", StringComparison.Ordinal))
         {
@@ -8418,7 +8638,7 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
                 DefaultRefreshIntervalMinutes(dialog.SourceKind);
         }
         ReloadPodcastSessionItems();
-        QueueStateSave(announceFailure: true);
+        var saveQueued = QueueStateSave(announceFailure: true);
         OpenPodcast(result.Subscription.Id, result.Subscription.Title);
         var sourceLabel = PodcastContainerLabel(dialog.SourceKind);
         var change = result.AddedSubscription
@@ -8431,6 +8651,34 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
             : "Odcinki";
         PrepareViewFocusContext($"{change}: {result.Subscription.Title}. {itemKindLabel}: {dialog.Feed!.Episodes.Count}");
         RestoreMediaListFocusAfterRefresh();
+
+        DiagnosticLog.Info(
+            "podcast-import",
+            $"{change}: {result.Subscription.Title}; {itemKindLabel.ToLowerInvariant()}: {dialog.Feed.Episodes.Count}; zapis zakolejkowany: {saveQueued}.");
+        if (!saveQueued) return;
+
+        var persistence = await Task.Run(() =>
+        {
+            var completed = _statePersistence.WaitForIdle(TimeSpan.FromSeconds(30), out var failure);
+            return (Completed: completed, Failure: failure);
+        }).ConfigureAwait(true);
+        if (_isClosing) return;
+        if (persistence.Completed)
+        {
+            DiagnosticLog.Info(
+                "podcast-import",
+                $"Utrwalono w Bibliotece: {sourceLabel}; {result.Subscription.Title}.");
+            Announce($"{change}: {result.Subscription.Title}. Zapisano w Bibliotece.");
+            return;
+        }
+
+        var reason = persistence.Failure?.Message ?? "zapis nie zakończył się w wymaganym czasie";
+        DiagnosticLog.Error(
+            "podcast-import",
+            $"Dodano do bieżącej sesji, ale nie utrwalono: {sourceLabel}; {result.Subscription.Title}.",
+            persistence.Failure ?? new TimeoutException(reason));
+        AnnounceEssential(
+            $"{sourceLabel} {result.Subscription.Title} jest widoczny w bieżącej sesji, ale nie został zapisany w Bibliotece: {reason}");
     }
 
     private async Task<PodcastFeedDocument> FetchPodcastSourceAsync(
@@ -9153,6 +9401,299 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
         EnsureQueueOrder(session);
     }
 
+    private bool TryResolveYouTubeVideoDownload(
+        MediaItem? item,
+        out PodcastEpisodeSettings episode,
+        out string pageUrl)
+    {
+        episode = null!;
+        pageUrl = string.Empty;
+        if (item?.Kind != MediaItemKind.Episode) return false;
+
+        var resolvedEpisode = FindPodcastEpisodeSettings(item);
+        if (resolvedEpisode is null) return false;
+        if (!YouTubeVideoDownloadPolicy.TryResolvePageUrl(
+                item,
+                resolvedEpisode,
+                out var resolvedPageUrl)) return false;
+
+        episode = resolvedEpisode;
+        pageUrl = resolvedPageUrl;
+        return true;
+    }
+
+    private bool CanDownloadSelectedYouTubeVideos(IReadOnlyList<MediaItem> items) =>
+        items.Count > 0 && items.All(item => TryResolveYouTubeVideoDownload(item, out _, out _));
+
+    private async Task DownloadYouTubeVideosAsync(
+        IReadOnlyList<MediaItem> requestedItems,
+        bool restoreListFocus)
+    {
+        var wasPlayerActive = _playerViewActive;
+        var videos = requestedItems
+            .DistinctBy(item => item.Id, StringComparer.Ordinal)
+            .Select(item => TryResolveYouTubeVideoDownload(item, out var episode, out var pageUrl)
+                ? (Episode: episode, PageUrl: pageUrl)
+                : ((PodcastEpisodeSettings Episode, string PageUrl)?)null)
+            .ToArray();
+        if (videos.Length == 0 || videos.Any(video => video is null))
+        {
+            AnnounceEssential("Pobieranie wideo jest dostępne tylko dla materiałów YouTube");
+            RestorePodcastDownloadFocus(wasPlayerActive, restoreListFocus);
+            return;
+        }
+
+        var resolvedVideos = videos.Select(video => video!.Value).ToArray();
+        var formatLabel = _state.Podcasts.YouTubeVideoDownloadFormat == YouTubeVideoDownloadFormat.Mp4
+            ? "MP4"
+            : "oryginalnym lub najlepszym dostępnym formacie";
+        if (restoreListFocus)
+        {
+            AnnounceEssential(resolvedVideos.Length == 1
+                ? $"Rozpoczęto pobieranie wideo w formacie {formatLabel}"
+                : $"Rozpoczęto pobieranie {resolvedVideos.Length} plików wideo w formacie {formatLabel}");
+        }
+
+        var downloadedPaths = new List<string>();
+        var failed = 0;
+        for (var index = 0; index < resolvedVideos.Length; index++)
+        {
+            var (episode, pageUrl) = resolvedVideos[index];
+            var operationId = $"youtube-video:{episode.Id}";
+            if (!_podcastDownloadsInProgress.Add(operationId))
+            {
+                failed++;
+                continue;
+            }
+
+            try
+            {
+                var destinationFolder = PodcastDownloadFolderResolver.Resolve(
+                    ResolveConfiguredPodcastDownloadFolder(episode));
+                StatusText.Text = resolvedVideos.Length == 1
+                    ? $"Pobieranie wideo: {episode.Title}"
+                    : $"Pobieranie wideo {index + 1} z {resolvedVideos.Length}: {episode.Title}";
+                var result = await YouTubeMediaDownloader.DownloadVideoAsync(
+                    pageUrl,
+                    destinationFolder,
+                    episode.Title,
+                    _state.Podcasts.YouTubeVideoDownloadFormat,
+                    _podcastCancellation.Token);
+                downloadedPaths.Add(result.Path);
+                DiagnosticLog.Info(
+                    "youtube-video-download",
+                    $"Zapisano wideo {episode.Id}; bajty {result.BytesWritten}; format {_state.Podcasts.YouTubeVideoDownloadFormat}.");
+            }
+            catch (OperationCanceledException) when (_isClosing || _podcastCancellation.IsCancellationRequested)
+            {
+                return;
+            }
+            catch (OperationCanceledException)
+            {
+                failed++;
+                DiagnosticLog.Warning(
+                    "youtube-video-download",
+                    $"Pobieranie wideo {episode.Id} przekroczyło czas oczekiwania.");
+                if (resolvedVideos.Length == 1)
+                    AnnounceEssential("Nie można pobrać wideo: przekroczono czas oczekiwania");
+            }
+            catch (Exception exception) when (exception is HttpRequestException
+                or IOException
+                or UnauthorizedAccessException
+                or InvalidDataException
+                or ArgumentException
+                or NotSupportedException
+                or TimeoutException)
+            {
+                failed++;
+                DiagnosticLog.Warning(
+                    "youtube-video-download",
+                    $"Nie udało się pobrać wideo {episode.Id}; błąd {exception.GetType().Name}.");
+                if (resolvedVideos.Length == 1)
+                    AnnounceEssential($"Nie można pobrać wideo: {exception.Message}");
+            }
+            finally
+            {
+                _podcastDownloadsInProgress.Remove(operationId);
+            }
+        }
+
+        if (resolvedVideos.Length > 1)
+        {
+            var parts = new List<string> { $"Pobrano wideo: {downloadedPaths.Count}" };
+            if (failed > 0) parts.Add($"niepowodzenia: {failed}");
+            AnnounceEssential(string.Join(". ", parts));
+        }
+        else if (downloadedPaths.Count == 1)
+        {
+            AnnounceEssential($"Pobrano wideo: {Path.GetFileName(downloadedPaths[0])}");
+        }
+
+        RestorePodcastDownloadFocus(wasPlayerActive, restoreListFocus);
+    }
+
+    private async Task SaveYouTubeVideoAsAsync(MediaItem? item, bool restoreListFocus)
+    {
+        var wasPlayerActive = _playerViewActive;
+        if (!TryResolveYouTubeVideoDownload(item, out var episode, out var pageUrl))
+        {
+            AnnounceEssential("Zapis wideo jako jest dostępny tylko dla jednego materiału YouTube");
+            RestorePodcastDownloadFocus(wasPlayerActive, restoreListFocus);
+            return;
+        }
+
+        string initialFolder;
+        try
+        {
+            initialFolder = PodcastDownloadFolderResolver.ResolveDialogInitialFolder(
+                ResolveConfiguredPodcastDownloadFolder(episode));
+        }
+        catch (Exception exception) when (exception is IOException
+            or UnauthorizedAccessException
+            or ArgumentException
+            or NotSupportedException)
+        {
+            AnnounceEssential($"Nie można użyć folderu zapisu wideo: {exception.Message}");
+            RestorePodcastDownloadFocus(wasPlayerActive, restoreListFocus);
+            return;
+        }
+
+        var defaultFormat = _state.Podcasts.YouTubeVideoDownloadFormat;
+        var suggestedBaseName = PodcastDownloadNaming.SuggestedVideoBaseName(episode.Title);
+        var dialog = new SaveFileDialog
+        {
+            Title = "Zapisz wideo z YouTube jako",
+            InitialDirectory = initialFolder,
+            FileName = defaultFormat == YouTubeVideoDownloadFormat.Mp4
+                ? suggestedBaseName + ".mp4"
+                : suggestedBaseName,
+            AddExtension = false,
+            CheckPathExists = true,
+            OverwritePrompt = true,
+            ValidateNames = true,
+            Filter = "Wideo MP4 (*.mp4)|*.mp4|Oryginalny lub najlepszy dostępny format (*.webm;*.mkv;*.mp4)|*.webm;*.mkv;*.mp4|Wszystkie pliki (*.*)|*.*",
+            FilterIndex = defaultFormat == YouTubeVideoDownloadFormat.Mp4 ? 1 : 2
+        };
+        if (dialog.ShowDialog(this) != true)
+        {
+            RestorePodcastDownloadFocus(wasPlayerActive, restoreListFocus);
+            return;
+        }
+
+        var selectedFormat = dialog.FilterIndex == 1
+            ? YouTubeVideoDownloadFormat.Mp4
+            : YouTubeVideoDownloadFormat.Original;
+        string requestedPath;
+        try
+        {
+            requestedPath = Path.GetFullPath(dialog.FileName);
+        }
+        catch (Exception exception) when (exception is IOException
+            or UnauthorizedAccessException
+            or ArgumentException
+            or NotSupportedException)
+        {
+            AnnounceEssential($"Nie można użyć wskazanej nazwy pliku: {exception.Message}");
+            RestorePodcastDownloadFocus(wasPlayerActive, restoreListFocus);
+            return;
+        }
+        var operationId = $"youtube-video:{episode.Id}";
+        if (!_podcastDownloadsInProgress.Add(operationId))
+        {
+            AnnounceEssential("Pobieranie tego wideo już trwa");
+            RestorePodcastDownloadFocus(wasPlayerActive, restoreListFocus);
+            return;
+        }
+
+        var temporaryDirectory = Path.Combine(
+            Path.GetTempPath(),
+            "AccessibleMediaController",
+            "save-video-as",
+            Guid.NewGuid().ToString("N"));
+        try
+        {
+            Directory.CreateDirectory(temporaryDirectory);
+            StatusText.Text = $"Zapisywanie wideo jako: {episode.Title}";
+            var downloaded = await YouTubeMediaDownloader.DownloadVideoAsync(
+                pageUrl,
+                temporaryDirectory,
+                episode.Title,
+                selectedFormat,
+                _podcastCancellation.Token);
+            var destinationPath = YouTubeMediaDownloader.ResolveSaveAsDestination(
+                requestedPath,
+                Path.GetExtension(downloaded.Path),
+                selectedFormat);
+            var targetExists = File.Exists(destinationPath);
+            var nativeDialogConfirmedSameTarget = string.Equals(
+                requestedPath,
+                destinationPath,
+                StringComparison.OrdinalIgnoreCase);
+            if (targetExists
+                && !nativeDialogConfirmedSameTarget
+                && AccessibleDialog.Show(
+                    $"Plik „{Path.GetFileName(destinationPath)}” już istnieje. Zastąpić go?",
+                    "Zapisz wideo jako",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Question,
+                    MessageBoxResult.No) != MessageBoxResult.Yes)
+            {
+                AnnounceEssential("Nie zapisano wideo. Istniejący plik pozostał bez zmian");
+                return;
+            }
+
+            await YouTubeMediaDownloader.PublishCompletedFileAsync(
+                downloaded.Path,
+                destinationPath,
+                overwrite: targetExists,
+                _podcastCancellation.Token);
+            DiagnosticLog.Info(
+                "youtube-video-save-as",
+                $"Zapisano wideo {episode.Id}; bajty {downloaded.BytesWritten}; format {selectedFormat}.");
+            AnnounceEssential($"Zapisano wideo jako: {Path.GetFileName(destinationPath)}");
+        }
+        catch (OperationCanceledException) when (_isClosing || _podcastCancellation.IsCancellationRequested)
+        {
+            return;
+        }
+        catch (OperationCanceledException)
+        {
+            AnnounceEssential("Nie można zapisać wideo: przekroczono czas oczekiwania");
+        }
+        catch (Exception exception) when (exception is HttpRequestException
+            or IOException
+            or UnauthorizedAccessException
+            or InvalidDataException
+            or ArgumentException
+            or NotSupportedException
+            or TimeoutException)
+        {
+            DiagnosticLog.Warning(
+                "youtube-video-save-as",
+                $"Nie udało się zapisać wideo {episode.Id}; błąd {exception.GetType().Name}.");
+            AnnounceEssential($"Nie można zapisać wideo: {exception.Message}");
+        }
+        finally
+        {
+            _podcastDownloadsInProgress.Remove(operationId);
+            try
+            {
+                if (Directory.Exists(temporaryDirectory))
+                    Directory.Delete(temporaryDirectory, recursive: true);
+            }
+            catch (Exception exception) when (exception is IOException
+                or UnauthorizedAccessException
+                or ArgumentException
+                or NotSupportedException)
+            {
+                DiagnosticLog.Warning(
+                    "youtube-video-save-as",
+                    $"Nie udało się usunąć katalogu roboczego; błąd {exception.GetType().Name}.");
+            }
+            RestorePodcastDownloadFocus(wasPlayerActive, restoreListFocus);
+        }
+    }
+
     private async Task DownloadPodcastEpisodesAsync(
         IReadOnlyList<MediaItem> requestedItems,
         bool saveAs,
@@ -9565,19 +10106,28 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
         bool resetHistoryNavigation = true)
     {
         if (resetHistoryNavigation) _playbackHistoryCursors.Remove(session.Id);
-        if (!_playbackHistory.Record(session.Id, item.Id)) return;
+        if (!_playbackHistory.Record(session.Id, item)) return;
+        QueueStateSave();
+    }
+
+    private void RecordPlaybackSnapshot(
+        string sessionId,
+        MediaItem item,
+        bool replaySupported)
+    {
+        _playbackHistoryCursors.Remove(sessionId);
+        if (!_playbackHistory.Record(sessionId, item, replaySupported)) return;
         QueueStateSave();
     }
 
     private void NavigatePlaybackHistory(int direction)
     {
         var session = _sessions.Current;
-        var itemsById = session.Items.ToDictionary(item => item.Id, StringComparer.Ordinal);
+        var historyItems = _playbackHistory.GetItems(session.Id, session.Items);
+        var itemsById = historyItems.ToDictionary(item => item.Id, StringComparer.Ordinal);
         if (!_playbackHistoryCursors.TryGetValue(session.Id, out var cursor))
         {
-            var itemIds = _playbackHistory.GetItemIds(session.Id)
-                .Where(itemsById.ContainsKey)
-                .ToArray();
+            var itemIds = historyItems.Select(item => item.Id).ToArray();
             var currentIndex = Array.FindIndex(
                 itemIds,
                 itemId => string.Equals(itemId, session.CurrentItem.Id, StringComparison.Ordinal));
@@ -9595,7 +10145,11 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
             : cursor.Index + Math.Sign(direction);
         while (targetIndex >= 0
                && targetIndex < cursor.ItemIds.Count
-               && !itemsById.ContainsKey(cursor.ItemIds[targetIndex]))
+               && (!itemsById.ContainsKey(cursor.ItemIds[targetIndex])
+                   || !_playbackHistory.CanReplay(
+                       session.Id,
+                       cursor.ItemIds[targetIndex],
+                       session.Items)))
         {
             targetIndex += Math.Sign(direction);
         }
@@ -9609,6 +10163,8 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
 
         cursor.Index = targetIndex;
         var target = itemsById[cursor.ItemIds[targetIndex]];
+        if (session.Items.All(item => !string.Equals(item.Id, target.Id, StringComparison.Ordinal)))
+            session.AddItems([target]);
         session.Play(target);
         RecordPlayback(session, target, resetHistoryNavigation: false);
         RefreshPlaybackIndicators();
@@ -9920,12 +10476,22 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
         var previousWiiMItemId = previousWiiM?.HasCurrentItem == true
             ? previousWiiM.CurrentItem.Id
             : null;
+        var previousFrontierSmart = _sessions?.FindSession(FrontierSmartSessionId);
+        var previousFrontierSmartItemId = previousFrontierSmart?.HasCurrentItem == true
+            ? previousFrontierSmart.CurrentItem.Id
+            : null;
         var previousTidal = _sessions?.FindSession("tidal");
         var previousTidalItemId = previousTidal?.HasCurrentItem == true
             ? previousTidal.CurrentItem.Id
             : null;
         var previousTidalPosition = previousTidal?.Position ?? TimeSpan.Zero;
         var previousTidalWasPlaying = previousTidal?.IsPlaying == true;
+        var previousAppleMusic = _sessions?.FindSession("appleMusic");
+        var previousAppleMusicItemId = previousAppleMusic?.HasCurrentItem == true
+            ? previousAppleMusic.CurrentItem.Id
+            : null;
+        var previousAppleMusicPosition = previousAppleMusic?.Position ?? TimeSpan.Zero;
+        var previousAppleMusicWasPlaying = previousAppleMusic?.IsPlaying == true;
         _membershipHistory.Clear();
         _localCatalogHistory.Clear();
         _playlistHistory.Clear();
@@ -9940,7 +10506,8 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
             _tidalOutput,
             _spotifyOutput,
             previousSpotify,
-            _spotifyLibrespotOutput);
+            _spotifyLibrespotOutput,
+            _appleMusicOutput);
         if (_sessions.FindSession("tidal") is { } tidalSession
             && _tidalIntegration.IsConfigured
             && (_tidalIntegration.HasStoredLogin || _tidalItems.Count > 0))
@@ -9964,6 +10531,21 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
             DiagnosticLog.Info(
                 "queue",
                 $"Przygotowano kolejkę TIDAL przed synchronizacją: {initialTidalItems.Count(item => item.IsInQueue || item.IsPlayNext)} elementów.");
+        }
+        if (_sessions.FindSession("appleMusic") is { } appleMusicSession
+            && _appleMusicIntegration.IsConfigured)
+        {
+            appleMusicSession.ReplaceItems(_appleMusicItems);
+            var restoredAppleMusicItem = appleMusicSession.Items.FirstOrDefault(item =>
+                string.Equals(item.Id, previousAppleMusicItemId, StringComparison.Ordinal));
+            if (restoredAppleMusicItem is not null)
+            {
+                appleMusicSession.SelectItem(restoredAppleMusicItem);
+                appleMusicSession.SetPosition(previousAppleMusicPosition);
+            }
+            appleMusicSession.SetVolume(previousAppleMusic?.Volume ?? 50);
+            if (previousAppleMusicWasPlaying && restoredAppleMusicItem is not null)
+                appleMusicSession.Play(restoredAppleMusicItem);
         }
         // Spotify: zapamietana biblioteka wraca do sesji zaraz po utworzeniu
         // sesji, zeby po uruchomieniu programu nie bylo pustej listy do czasu
@@ -10101,6 +10683,11 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
                 string.Equals(item.Id, restoredWiiMId, StringComparison.OrdinalIgnoreCase));
             if (restoredWiiM is not null) wiiM.SelectItem(restoredWiiM);
         }
+        if (_state.FrontierSmart.SessionEnabled)
+        {
+            RegisterFrontierSmartSession(
+                previousFrontierSmartItemId ?? _state.FrontierSmart.SelectedDeviceId);
+        }
         if (string.Equals(desiredSessionId, "local", StringComparison.Ordinal))
         {
             _sessions.SelectSession("local");
@@ -10112,6 +10699,10 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
         else if (string.Equals(desiredSessionId, "podcasts", StringComparison.Ordinal))
         {
             _sessions.SelectSession("podcasts");
+        }
+        else if (string.Equals(desiredSessionId, FrontierSmartSessionId, StringComparison.Ordinal))
+        {
+            _sessions.SelectSession(FrontierSmartSessionId);
         }
         _router = new CommandRouter(_sessions, _state.Settings, this, this);
         foreach (var session in _sessions.Sessions.Where(session =>
@@ -10390,6 +10981,63 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
         string? sessionId = null)
     {
         var currentId = sessionId ?? _sessions.Current.Id;
+        if (allServices)
+        {
+            var searches = new List<Task<IReadOnlyList<SearchWindow.SearchResult>>>
+            {
+                RunGlobalSearchSourceAsync(
+                    "radio",
+                    async () =>
+                    {
+                        await PrepareRadioSearchAsync(query, cancellationToken);
+                        return [];
+                    },
+                    cancellationToken),
+                RunGlobalSearchSourceAsync(
+                    "podcasts",
+                    async () =>
+                    {
+                        var directory = await PreparePodcastDirectorySearchAsync(query, cancellationToken);
+                        return directory
+                            .Concat(SearchPodcastArchive(query))
+                            .DistinctBy(item => item.Id, StringComparer.Ordinal)
+                            .Select(item => new SearchWindow.SearchResult("podcasts", item))
+                            .ToArray();
+                    },
+                    cancellationToken)
+            };
+            if (_tidalIntegration.IsConfigured && _tidalIntegration.HasStoredLogin)
+            {
+                searches.Add(RunGlobalSearchSourceAsync(
+                    "tidal",
+                    async () => (await _tidalIntegration.SearchAsync(query, cancellationToken))
+                        .Select(item => new SearchWindow.SearchResult("tidal", item))
+                        .ToArray(),
+                    cancellationToken));
+            }
+            if (_spotifyIntegration.IsConfigured && _spotifyIntegration.HasStoredLogin)
+            {
+                searches.Add(RunGlobalSearchSourceAsync(
+                    "spotify",
+                    () => PrepareSpotifySearchAsync("spotify", query, cancellationToken),
+                    cancellationToken));
+            }
+            if (_appleMusicIntegration.IsConfigured)
+            {
+                searches.Add(RunGlobalSearchSourceAsync(
+                    "appleMusic",
+                    async () => (await _appleMusicIntegration.SearchAsync(query, cancellationToken))
+                        .Select(item => new SearchWindow.SearchResult("appleMusic", item))
+                        .ToArray(),
+                    cancellationToken));
+            }
+
+            var remote = await Task.WhenAll(searches);
+            return remote
+                .SelectMany(results => results)
+                .Concat(SearchGlobalKnownMedia(query))
+                .ToArray();
+        }
         if (!allServices && string.Equals(currentId, "tidal", StringComparison.Ordinal))
         {
             var tidalResults = await _tidalIntegration.SearchAsync(query, cancellationToken);
@@ -10397,10 +11045,14 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
                 .Select(item => new SearchWindow.SearchResult("tidal", item))
                 .ToArray();
         }
+        if (!allServices && string.Equals(currentId, "appleMusic", StringComparison.Ordinal))
+        {
+            var appleMusicResults = await _appleMusicIntegration.SearchAsync(query, cancellationToken);
+            return appleMusicResults
+                .Select(item => new SearchWindow.SearchResult("appleMusic", item))
+                .ToArray();
+        }
         // Spotify jak TIDAL: katalog serwisu zamiast katalogow publicznych.
-        // Wyszukiwanie "we wszystkich serwisach" (Ctrl+Shift+F) celowo go NIE
-        // wola - odpowiedz wymaga waznego logowania konta, wiec wygasly token
-        // psulby wynik wspolny dla wszystkich sesji.
         if (!allServices && SpotifyPlaybackSettingsResolver.IsSpotifySession(currentId))
             return await PrepareSpotifySearchAsync(currentId, query, cancellationToken);
         Task radioSearch = Task.CompletedTask;
@@ -10419,6 +11071,57 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
             .DistinctBy(item => item.Id, StringComparer.Ordinal)
             .Select(item => new SearchWindow.SearchResult("podcasts", item))
             .ToArray();
+    }
+
+    private async Task<IReadOnlyList<SearchWindow.SearchResult>> RunGlobalSearchSourceAsync(
+        string source,
+        Func<Task<IReadOnlyList<SearchWindow.SearchResult>>> search,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await search();
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            DiagnosticLog.Warning(
+                "global-search",
+                $"Źródło {source} nie odpowiedziało; pozostałe wyniki zostają dostępne: {exception.GetType().Name}.");
+            return [];
+        }
+    }
+
+    private IReadOnlyList<SearchWindow.SearchResult> SearchGlobalKnownMedia(string query)
+    {
+        var results = new List<SearchWindow.SearchResult>();
+        foreach (var session in _sessions.Sessions)
+        {
+            results.AddRange(_playbackHistory
+                .GetItems(session.Id, session.Items)
+                .Where(item => MediaCatalogSearch.Matches(session.DisplayName, item, query))
+                .Select(item => new SearchWindow.SearchResult(session.Id, item)));
+        }
+
+        if (_sessions.FindSession("sonos") is { } sonos)
+        {
+            results.AddRange(_state.Sonos.OwnStreams
+                .Select(stream => new MediaItem
+                {
+                    Id = stream.Id,
+                    Title = stream.Name,
+                    Kind = MediaItemKind.Station,
+                    Source = stream.StreamUrl,
+                    PublicUri = stream.StreamUrl,
+                    IsAvailable = true
+                })
+                .Where(item => MediaCatalogSearch.Matches(sonos.DisplayName, item, query))
+                .Select(item => new SearchWindow.SearchResult(sonos.Id, item)));
+        }
+        return results;
     }
 
     private IReadOnlyList<MediaItem> SearchPodcastArchive(string query)
@@ -10658,6 +11361,10 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
                 : PodcastMembershipCollection.Favorites);
         ReloadPodcastSessionItems();
         QueueStateSave(announceFailure: true);
+        foreach (var subscription in subscriptions)
+            _activeSearchWindow?.UpdatePodcastMembership(
+                subscription.FeedUrl,
+                subscription.IsInLibrary);
         if (string.Equals(_sessions.Current.Id, "podcasts", StringComparison.Ordinal))
             RefreshCurrentView(preferredItemId: subscriptions[0].Id);
 
@@ -10674,13 +11381,18 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
         bool markFavorite,
         bool addToLibrary = true)
     {
+        var searchWindow = _activeSearchWindow;
+        var youtubeChannel = YouTubeSearchClient.IsChannelSearchResult(item);
         if (!Uri.TryCreate(item.Source, UriKind.Absolute, out var feedUri))
         {
-            AnnounceEssential("Wynik katalogu nie zawiera prawidłowego adresu kanału podcastu");
+            AnnouncePodcastDirectoryCompletion(
+                searchWindow,
+                youtubeChannel
+                    ? "Wynik wyszukiwania nie zawiera prawidłowego adresu kanału YouTube"
+                    : "Wynik katalogu nie zawiera prawidłowego adresu kanału podcastu");
             return;
         }
 
-        var youtubeChannel = YouTubeSearchClient.IsChannelSearchResult(item);
         StatusText.Text = youtubeChannel
             ? $"Dodawanie kanału YouTube: {item.Title}"
             : $"Dodawanie podcastu: {item.Title}";
@@ -10723,7 +11435,8 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
                 RefreshCurrentView(preferredItemId: result.Subscription.Id);
             }
             var itemLabel = youtubeChannel ? "kanał YouTube" : "podcast";
-            AnnounceEssential(markFavorite
+            searchWindow?.UpdatePodcastMembership(feedUri.AbsoluteUri, result.Subscription.IsInLibrary);
+            AnnouncePodcastDirectoryCompletion(searchWindow, markFavorite
                 ? $"Dodano {itemLabel} do ulubionych: {result.Subscription.Title}"
                 : addToLibrary
                     ? $"Dodano {itemLabel} do Biblioteki: {result.Subscription.Title}"
@@ -10739,9 +11452,28 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
         {
             if (exception is OperationCanceledException && _isClosing) return;
             DiagnosticLog.Warning("podcast-directory", $"Nie udało się dodać podcastu {item.Title}: {exception.Message}");
-            AnnounceEssential($"Nie udało się dodać podcastu: {exception.Message}");
-            RestoreMediaListFocusAfterRefresh();
+            AnnouncePodcastDirectoryCompletion(
+                searchWindow,
+                $"Nie udało się dodać {(youtubeChannel ? "kanału YouTube" : "podcastu")}: {exception.Message}");
+            if (searchWindow is null
+                || !ReferenceEquals(_activeSearchWindow, searchWindow)
+                || !searchWindow.IsActive)
+            {
+                RestoreMediaListFocusAfterRefresh();
+            }
         }
+    }
+
+    private void AnnouncePodcastDirectoryCompletion(SearchWindow? searchWindow, string message)
+    {
+        if (searchWindow is not null
+            && ReferenceEquals(_activeSearchWindow, searchWindow)
+            && searchWindow.IsActive)
+        {
+            searchWindow.AnnounceActionCompletion(message, restoreResultFocus: false);
+            return;
+        }
+        AnnounceEssential(message);
     }
 
     private void PodcastOutput_PlaybackFailed(object? sender, MediaOutputFailedEventArgs e)
@@ -10845,6 +11577,9 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
     private void SpotifyOutput_DurationAvailable(object? sender, MediaDurationAvailableEventArgs e)
         => StreamingOutput_DurationAvailable("spotify", e);
 
+    private void AppleMusicOutput_DurationAvailable(object? sender, MediaDurationAvailableEventArgs e)
+        => StreamingOutput_DurationAvailable("appleMusic", e);
+
     // Obsluga zdarzen odtwarzania jest wspolna dla sesji streamingowych. Kazdy
     // nowy serwis (Spotify, Apple Music) ma zachowywac sie DOKLADNIE tak jak
     // TIDAL, ktory Michal ma wyuczony - dublowanie tego kodu konczylo sie
@@ -10866,6 +11601,9 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
 
     private void SpotifyOutput_PlaybackFailed(object? sender, MediaOutputFailedEventArgs e)
         => StreamingOutput_PlaybackFailed("spotify", "Spotify", _spotifyOutput.Position, e);
+
+    private void AppleMusicOutput_PlaybackFailed(object? sender, MediaOutputFailedEventArgs e)
+        => StreamingOutput_PlaybackFailed("appleMusic", "Apple Music", _appleMusicOutput.Position, e);
 
     private void StreamingOutput_PlaybackFailed(
         string sessionId,
@@ -10893,6 +11631,9 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
     private void SpotifyOutput_PlaybackPreparing(object? sender, MediaPlaybackPreparingEventArgs e)
         => StreamingOutput_PlaybackPreparing("spotify", e);
 
+    private void AppleMusicOutput_PlaybackPreparing(object? sender, MediaPlaybackPreparingEventArgs e)
+        => StreamingOutput_PlaybackPreparing("appleMusic", e);
+
     private void StreamingOutput_PlaybackPreparing(
         string sessionId,
         MediaPlaybackPreparingEventArgs e)
@@ -10915,6 +11656,9 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
 
     private void SpotifyOutput_PlaybackStarted(object? sender, MediaPlaybackStartedEventArgs e)
         => StreamingOutput_PlaybackStarted("spotify", e);
+
+    private void AppleMusicOutput_PlaybackStarted(object? sender, MediaPlaybackStartedEventArgs e)
+        => StreamingOutput_PlaybackStarted("appleMusic", e);
 
     private void StreamingOutput_PlaybackStarted(
         string sessionId,
@@ -10942,6 +11686,9 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
 
     private void SpotifyOutput_PlaybackEnded(object? sender, MediaPlaybackEndedEventArgs e)
         => StreamingOutput_PlaybackEnded("spotify", e);
+
+    private void AppleMusicOutput_PlaybackEnded(object? sender, MediaPlaybackEndedEventArgs e)
+        => StreamingOutput_PlaybackEnded("appleMusic", e);
 
     private void StreamingOutput_PlaybackEnded(string sessionId, MediaPlaybackEndedEventArgs e)
     {
@@ -11286,6 +12033,28 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
             if (message is not null) Announce(message);
             return new CommandExecutionResult(true);
         }
+        if (string.Equals(_sessions.Current.Id, "appleMusic", StringComparison.Ordinal)
+            && commandId == CommandIds.ActivateSelected
+            && ActionItem?.ExternalId is { Length: > 0 }
+            && ActionItem.Kind is MediaItemKind.Album or MediaItemKind.Playlist or MediaItemKind.Artist)
+        {
+            _ = OpenAppleMusicContainerAsync(ActionItem);
+            return new CommandExecutionResult(true);
+        }
+        if (string.Equals(_sessions.Current.Id, "appleMusic", StringComparison.Ordinal)
+            && commandId is CommandIds.ToggleFavorite or CommandIds.ToggleLibrary
+            && ActionItems.Any(item => item.ExternalId is { Length: > 0 }))
+        {
+            var appleMusicItems = ActionItems
+                .Where(item => item.ExternalId is { Length: > 0 })
+                .DistinctBy(item => item.Id, StringComparer.Ordinal)
+                .ToArray();
+            var message = BeginAppleMusicCollectionAdd(
+                appleMusicItems,
+                commandId == CommandIds.ToggleFavorite);
+            if (message is not null) Announce(message);
+            return new CommandExecutionResult(true);
+        }
         if (SpotifyPlaybackSettingsResolver.IsSpotifySession(_sessions.Current.Id)
             && (commandId is CommandIds.ToggleFavorite or CommandIds.ToggleLibrary))
         {
@@ -11342,6 +12111,71 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
         {
             ExportRadioFavorites();
             return new CommandExecutionResult(true);
+        }
+        if (commandId == CommandIds.ManageFrontierSmartDevices)
+        {
+            ShowFrontierSmartDeviceManager();
+            return new CommandExecutionResult(true);
+        }
+        if (IsFrontierSmartSession())
+        {
+            if (commandId == CommandIds.ActivateSelected)
+            {
+                var selectedDevice = ActionItem
+                    ?? (_sessions.Current.HasCurrentItem ? _sessions.Current.CurrentItem : null);
+                if (selectedDevice is null)
+                {
+                    Announce("Brak wybranego urządzenia Frontier Smart. Ctrl+F5 otwiera wykrywanie i dodawanie urządzeń");
+                    return new CommandExecutionResult(false);
+                }
+                _ = ActivateFrontierSmartDeviceAsync(selectedDevice);
+                return new CommandExecutionResult(true);
+            }
+            if (commandId == CommandIds.RefreshFrontierSmartDevices)
+            {
+                RefreshFrontierSmartDevices();
+                return new CommandExecutionResult(true);
+            }
+            if (commandId == CommandIds.ViewFrontierSmartModes)
+            {
+                _ = ShowFrontierSmartModesAsync();
+                return new CommandExecutionResult(true);
+            }
+            if (commandId is CommandIds.ViewFrontierSmartPresets or CommandIds.ViewRadioPresets)
+            {
+                _ = ShowFrontierSmartPresetsAsync();
+                return new CommandExecutionResult(true);
+            }
+            if (CommandIds.TryParseRadioPreset(commandId, out var frontierPresetSlot))
+            {
+                _ = ActivateFrontierSmartPresetNumberAsync(frontierPresetSlot);
+                return new CommandExecutionResult(true);
+            }
+            if (commandId == CommandIds.SelectAudioOutput)
+            {
+                ShowFrontierSmartDeviceManager();
+                return new CommandExecutionResult(true);
+            }
+            if (IsFrontierSmartTransportCommand(commandId))
+            {
+                _ = ExecuteFrontierSmartTransportCommandAsync(commandId);
+                return new CommandExecutionResult(true);
+            }
+            if (commandId is CommandIds.TimeElapsed or CommandIds.TimeRemaining or CommandIds.TimeTotal)
+            {
+                AnnounceFrontierSmartTime(commandId);
+                return new CommandExecutionResult(true);
+            }
+            if (commandId is CommandIds.ItemProperties or CommandIds.CurrentBroadcastInformation)
+            {
+                AnnounceFrontierSmartInformation();
+                return new CommandExecutionResult(true);
+            }
+            if (!CommandAvailableInFrontierSmart(commandId))
+            {
+                Announce("To polecenie nie jest dostępne w sesji Frontier Smart");
+                return new CommandExecutionResult(false);
+            }
         }
         if (IsSonosSession(_sessions.Current.Id))
         {
@@ -11684,7 +12518,25 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
         }
         if (commandId == CommandIds.SavePodcastAs)
         {
-            _ = DownloadPodcastEpisodesAsync(ActionItems, saveAs: true, restoreListFocus: true);
+            if (!string.Equals(_sessions.Current.Id, "podcasts", StringComparison.Ordinal))
+            {
+                AnnounceEssential("Zapis odcinka audio lub wideo jest dostępny w sesji Podcasty i YouTube");
+                return new CommandExecutionResult(true);
+            }
+            if (ActionItems.Count == 1 && CanDownloadSelectedYouTubeVideos(ActionItems))
+                _ = SaveYouTubeVideoAsAsync(ActionItems[0], restoreListFocus: true);
+            else
+                _ = DownloadPodcastEpisodesAsync(ActionItems, saveAs: true, restoreListFocus: true);
+            return new CommandExecutionResult(true);
+        }
+        if (commandId == CommandIds.DownloadYouTubeVideo)
+        {
+            if (!string.Equals(_sessions.Current.Id, "podcasts", StringComparison.Ordinal))
+            {
+                AnnounceEssential("Pobieranie wideo jest dostępne w sesji Podcasty i YouTube");
+                return new CommandExecutionResult(true);
+            }
+            _ = DownloadYouTubeVideosAsync(ActionItems, restoreListFocus: true);
             return new CommandExecutionResult(true);
         }
         if (commandId == CommandIds.ViewPodcastInbox)
@@ -11903,6 +12755,8 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
             else if (commandId is CommandIds.ViewBookmarks
                 or CommandIds.PreviousBookmark
                 or CommandIds.NextBookmark
+                or CommandIds.PreviousNamedBookmark
+                or CommandIds.NextNamedBookmark
                 or CommandIds.SeekToTime
                 or CommandIds.SeekToPercentage)
             {
@@ -11940,7 +12794,10 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
                 return new CommandExecutionResult(true);
             }
         }
-        if (commandId is not CommandIds.PreviousBookmark and not CommandIds.NextBookmark)
+        if (commandId is not CommandIds.PreviousBookmark
+            and not CommandIds.NextBookmark
+            and not CommandIds.PreviousNamedBookmark
+            and not CommandIds.NextNamedBookmark)
         {
             _bookmarkNavigationCursor = null;
         }
@@ -12149,6 +13006,12 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
                     () => _ = RefreshActiveWiiMDeviceOnEntryAsync(),
                     DispatcherPriority.Background);
             }
+            if (IsFrontierSmartSession())
+            {
+                Dispatcher.BeginInvoke(
+                    () => _ = RefreshActiveFrontierSmartDeviceOnEntryAsync(),
+                    DispatcherPriority.Background);
+            }
             // JAWNE wejscie do sesji Sonos - tu wolno obudzic wlasciciela konta.
             // Wyjscie z sesji uniewaznia WLASNE oczekujace wyniki, ale nie wysyla
             // zadnego POST: muzyka gra dalej.
@@ -12245,6 +13108,11 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
         if (commandId is CommandIds.ToggleMuteCurrentSession or CommandIds.ToggleMuteAllSessions)
         {
             _sessions.CaptureMuteStates();
+            QueueStateSave();
+            UpdateFileMenuForCurrentSession();
+        }
+        else if (commandId == CommandIds.ToggleShuffle && result.Handled)
+        {
             QueueStateSave();
             UpdateFileMenuForCurrentSession();
         }
@@ -12495,6 +13363,14 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
             currentNavigation.CurrentView = _currentView;
             RestoreFilterForCurrentView(currentNavigation);
         }
+        if (string.Equals(_sessions.Current.Id, "appleMusic", StringComparison.Ordinal)
+            && IsAppleMusicContentsView(_currentView)
+            && !_appleMusicContainerViews.ContainsKey(_currentView))
+        {
+            _currentView = "Biblioteka";
+            currentNavigation.CurrentView = _currentView;
+            RestoreFilterForCurrentView(currentNavigation);
+        }
         preferredItemId ??= SelectedItem?.Id;
         UpdateFileMenuForCurrentSession();
         SessionHeading.Text = string.Equals(_currentView, BookmarkViewName, StringComparison.Ordinal)
@@ -12547,6 +13423,30 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
                     .ThenBy(item => item.Id, StringComparer.Ordinal)
                 : tidalContainer.Items;
             _unfilteredItems = tidalItems
+                .Select(item => new MediaItemRow(item, FormatListItem(item), item.PrimaryText))
+                .ToList();
+            ApplyFilter(preferredItemId, fallbackIndex);
+            return;
+        }
+        if (string.Equals(_sessions.Current.Id, "appleMusic", StringComparison.Ordinal)
+            && _appleMusicContainerViews.TryGetValue(_currentView, out var appleMusicContainer))
+        {
+            if (appleMusicContainer.IsArtistOverview)
+            {
+                _unfilteredItems = CreateArtistSectionRows(
+                    appleMusicContainer.Container,
+                    ArtistSectionsForSession(_sessions.Current.Id));
+                ApplyFilter(preferredItemId, fallbackIndex);
+                return;
+            }
+            IEnumerable<MediaItem> appleMusicItems =
+                CurrentCollectionSortMode() == CollectionSortMode.Alphabetical
+                    ? appleMusicContainer.Items
+                        .OrderBy(
+                            item => NavigationTextForItem(item),
+                            StringComparer.CurrentCultureIgnoreCase)
+                    : appleMusicContainer.Items;
+            _unfilteredItems = appleMusicItems
                 .Select(item => new MediaItemRow(item, FormatListItem(item), item.PrimaryText))
                 .ToList();
             ApplyFilter(preferredItemId, fallbackIndex);
@@ -12879,11 +13779,7 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
         if (_currentView == "Albumy") items = items.Where(item => item.Kind == MediaItemKind.Album);
         if (_currentView == "Historia odtwarzania")
         {
-            var itemsById = _sessions.Current.Items.ToDictionary(item => item.Id, StringComparer.Ordinal);
-            items = _playbackHistory.GetItemIds(_sessions.Current.Id)
-                .Select(itemId => itemsById.GetValueOrDefault(itemId))
-                .Where(item => item is not null)
-                .Select(item => item!);
+            items = _playbackHistory.GetItems(_sessions.Current.Id, _sessions.Current.Items);
         }
         _unfilteredItems = items
             .Select(item => new MediaItemRow(item, FormatListItem(item), item.PrimaryText))
@@ -12893,11 +13789,26 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
 
     private List<MediaItemRow> CreateActiveRadioRecordingRows()
     {
-        var stationKeys = _activeManualRadioRecordings.Values
-            .Select(active => (active.StationId, active.StationName, active.StreamUrl, active.RequestedUtc))
+        var recordingSources = _activeManualRadioRecordings.Values
+            .Select(active => (
+                active.StationId,
+                active.StationName,
+                active.StreamUrl,
+                StartedUtc: active.RequestedUtc,
+                CurrentPath: active.Control.CurrentPath ?? active.Path,
+                active.RecordingFormat,
+                active.RecordingBitrateKbps,
+                active.RequestedOutputFolder))
             .Concat(_activeScheduledRadioRecordings.Values.Select(active =>
-                (active.StationId, active.StationName, active.StreamUrl, active.StartedUtc)))
-            .OrderBy(entry => entry.Item4)
+                (active.StationId,
+                 active.StationName,
+                 active.StreamUrl,
+                 StartedUtc: active.StartedUtc,
+                 CurrentPath: active.Control.CurrentPath,
+                 active.RecordingFormat,
+                 active.RecordingBitrateKbps,
+                 active.RequestedOutputFolder)))
+            .OrderBy(entry => entry.StartedUtc)
             .GroupBy(entry => string.IsNullOrWhiteSpace(entry.StationId)
                 ? entry.StreamUrl
                 : entry.StationId,
@@ -12905,7 +13816,7 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
             .Select(group => group.First())
             .ToArray();
         var radioItems = _sessions.Current.Items.ToArray();
-        return stationKeys.Select(entry =>
+        return recordingSources.Select(entry =>
         {
             var item = radioItems.FirstOrDefault(candidate =>
                     string.Equals(candidate.Id, entry.StationId, StringComparison.Ordinal)
@@ -12921,8 +13832,27 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
                     IsAvailable = true,
                     IsInLibrary = false
                 };
-            return new MediaItemRow(item, FormatListItem(item), item.PrimaryText);
+            var label = RadioRecordingRowLabels.DescribeActiveRow(entry.CurrentPath, item.Title);
+            var outputDescription = RadioRecordingOutputDescription.Format(
+                entry.RecordingFormat,
+                entry.RecordingBitrateKbps,
+                entry.CurrentPath,
+                entry.RequestedOutputFolder,
+                SameRecordingFolder(entry.RequestedOutputFolder, ResolveRadioRecordingsFolder()));
+            return new MediaItemRow(
+                item,
+                label,
+                item.Title,
+                recordingOutputDescription: outputDescription);
         }).ToList();
+    }
+
+    private static bool SameRecordingFolder(string? first, string? second)
+    {
+        if (string.IsNullOrWhiteSpace(first) || string.IsNullOrWhiteSpace(second)) return false;
+        var firstNormalized = first.Trim().TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        var secondNormalized = second.Trim().TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        return string.Equals(firstNormalized, secondNormalized, StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>
@@ -12980,18 +13910,13 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
                     Id = item.Id, StationName = item.PrimaryText, Path = item.Source ?? string.Empty,
                     Outcome = RadioRecordingOutcome.Completed, FinishedUtcTicks = ticks
                 };
-                rows.Add((ticks, CreateRecordingHistoryRowWithFolder(entry, nowUtc)));
+                rows.Add((ticks, CreateConciseRecordingHistoryRow(entry, nowUtc)));
                 continue;
             }
-            // Folder docelowy na koncu takze dla pliku z biblioteki, zeby wpis
-            // biblioteczny i historyczny czytaly sie spojnie (zgloszenie punkt4).
-            rows.Add((
-                ticks,
-                AppendRecordingFolderToRow(
-                    new MediaItemRow(item, FormatListItem(item), item.PrimaryText), ticks, nowUtc)));
+            rows.Add((ticks, CreateConciseRecordedFileRow(item)));
         }
         foreach (var (entry, ticks) in historyRows)
-            rows.Add((ticks, CreateRecordingHistoryRowWithFolder(entry, nowUtc)));
+            rows.Add((ticks, CreateConciseRecordingHistoryRow(entry, nowUtc)));
 
         return rows
             .OrderByDescending(row => row.Ticks)
@@ -13005,12 +13930,12 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
     /// czytany PIERWSZY, zeby czytnik ekranu od razu odroznil nagranie gotowe
     /// od przerwanego, bez dosluchiwania do konca wiersza.
     ///
-    /// Folder docelowy i uczciwy stan brakujacego pliku dokleja
-    /// <see cref="CreateRecordingHistoryRowWithFolder"/> w MainWindow.RecordingFiles.cs.
+    /// Uczciwy stan brakujacego pliku dodaje
+    /// <see cref="CreateConciseRecordingHistoryRow"/> w MainWindow.RecordingFiles.cs.
     /// </summary>
     private MediaItemRow CreateRecordingHistoryRow(
         RadioRecordingHistorySettings entry,
-        DateTime nowUtc) => CreateRecordingHistoryRowWithFolder(entry, nowUtc);
+        DateTime nowUtc) => CreateConciseRecordingHistoryRow(entry, nowUtc);
 
     private void ShowRecordedRadioFiles()
     {
@@ -13032,8 +13957,8 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
         navigation.PlayerActive = false;
         RestoreFilterForCurrentView(navigation);
         RefreshCurrentView(preferredItemId: navigation.SelectedItemIds.GetValueOrDefault(_currentView));
-        PrepareViewFocusContext($"{RecordedRadioFilesViewName}, Pliki lokalne");
-        RestoreMediaListFocusAfterRefresh();
+        PrepareRecordingPreviewFocusContext(RecordedRadioFilesViewName, prefixSelectedItem: true);
+        RestoreRecordingPreviewFocusAfterRefresh();
         QueueStateSave();
     }
 
@@ -13394,7 +14319,9 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
             or CommandIds.PreviousClipBoundary
             or CommandIds.NextClipBoundary
             or CommandIds.PreviousBookmark
-            or CommandIds.NextBookmark;
+            or CommandIds.NextBookmark
+            or CommandIds.PreviousNamedBookmark
+            or CommandIds.NextNamedBookmark;
 
     internal static bool IsChapterPlanPreservingSeekCommand(string commandId) =>
         commandId is CommandIds.SeekBackward10
@@ -13995,6 +14922,84 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
         Dispatcher.BeginInvoke(FocusMediaList, DispatcherPriority.Loaded);
     }
 
+    /// <summary>
+    /// Przy Alt+R i Alt+Shift+R fokus trafia od razu do konkretnego wiersza.
+    /// Nie ustawiamy go przejsciowo na ListBox, bo wtedy NVDA najpierw czyta
+    /// samo „X elementow”, a dopiero pozniej nazwe pliku.
+    /// </summary>
+    private void RestoreRecordingPreviewFocusAfterRefresh()
+    {
+        if (NvdaBackgroundScope.IsActive || _nvdaRemoteCommandActive && !IsActive) return;
+        if (_playerViewActive)
+        {
+            FocusPlayerView();
+            return;
+        }
+        if (MediaList.Items.Count == 0)
+        {
+            MediaList.Focus();
+            Keyboard.Focus(MediaList);
+            return;
+        }
+        if (MediaList.SelectedIndex < 0) MediaList.SelectedIndex = 0;
+
+        var expectedView = _currentView;
+        var expectedItemId = SelectedItem?.Id;
+        if (TryFocusSelectedRecordingPreviewRow()) return;
+
+        Dispatcher.BeginInvoke(
+            () =>
+            {
+                if (!IsCurrentRecordingPreviewFocusTarget(expectedView, expectedItemId)) return;
+                if (TryFocusSelectedRecordingPreviewRow()) return;
+                Dispatcher.BeginInvoke(
+                    () =>
+                    {
+                        if (!IsCurrentRecordingPreviewFocusTarget(expectedView, expectedItemId)) return;
+                        if (!TryFocusSelectedRecordingPreviewRow())
+                        {
+                            DiagnosticLog.Warning(
+                                "recording-preview-focus",
+                                "Nie utworzono zaznaczonego wiersza podglądu nagrań.");
+                        }
+                    },
+                    DispatcherPriority.ContextIdle);
+            },
+            DispatcherPriority.Loaded);
+    }
+
+    private bool IsCurrentRecordingPreviewFocusTarget(string viewName, string? itemId) =>
+        !_isClosing
+        && !_playerViewActive
+        && string.Equals(_currentView, viewName, StringComparison.Ordinal)
+        && string.Equals(SelectedItem?.Id, itemId, StringComparison.Ordinal);
+
+    private bool TryFocusSelectedRecordingPreviewRow()
+    {
+        if (MediaList.SelectedItem is null) return false;
+        MediaList.ScrollIntoView(MediaList.SelectedItem);
+        MediaList.UpdateLayout();
+        if (MediaList.ItemContainerGenerator.ContainerFromItem(MediaList.SelectedItem) is not ListBoxItem row)
+            return false;
+        ApplyFocusContext(row);
+        row.Focus();
+        Keyboard.Focus(row);
+        return true;
+    }
+
+    private void PrepareRecordingPreviewFocusContext(string viewName, bool prefixSelectedItem)
+    {
+        if (prefixSelectedItem)
+        {
+            PrepareViewFocusContext(viewName);
+            return;
+        }
+
+        ClearFocusContext();
+        if (SelectedItem is null)
+            AutomationProperties.SetName(MediaList, $"{viewName}, lista pusta");
+    }
+
     private void Window_ContentRendered(object? sender, EventArgs e)
     {
         if (_initialFocusApplied) return;
@@ -14208,6 +15213,12 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
                 _ = OpenSpotifyContainerAsync(spotifyArtistView.Container, artistSection);
                 return;
             }
+            if (string.Equals(_sessions.Current.Id, "appleMusic", StringComparison.Ordinal)
+                && _appleMusicContainerViews.TryGetValue(_currentView, out var appleMusicArtistView))
+            {
+                _ = OpenAppleMusicContainerAsync(appleMusicArtistView.Container, artistSection);
+                return;
+            }
             Announce("Tej kategorii wykonawcy nie można teraz otworzyć");
             return;
         }
@@ -14253,6 +15264,17 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
 
         var item = row?.Item;
         if (item is null) return;
+        if (string.Equals(_currentView, "Historia odtwarzania", StringComparison.Ordinal)
+            && _sessions.Current.Items.All(candidate =>
+                !string.Equals(candidate.Id, item.Id, StringComparison.Ordinal)))
+        {
+            if (!_playbackHistory.CanReplay(_sessions.Current.Id, item.Id, _sessions.Current.Items))
+            {
+                Announce("Ten wpis Historii odtwarzania jest zapisem tego, co grało na urządzeniu. Nie można go ponownie uruchomić z AMC");
+                return;
+            }
+            _sessions.Current.AddItems([item]);
+        }
         // KORZEN TRESCI SONOSA: Enter na wierszu kategorii wchodzi w jej liste.
         // Bez tego Enter spadalby na NavigateTo(item.Title) i dawal pusty widok
         // o nazwie "Ulubione Sonos" - czyli nazwe bez zawartosci.
@@ -14292,6 +15314,13 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
             }
 
         }
+        if (string.Equals(_sessions.Current.Id, "appleMusic", StringComparison.Ordinal)
+            && item.ExternalId is { Length: > 0 }
+            && item.Kind is MediaItemKind.Album or MediaItemKind.Playlist or MediaItemKind.Artist)
+        {
+            _ = OpenAppleMusicContainerAsync(item);
+            return;
+        }
         // ZGLOSZENIE Michala 18.09.2026: "enter na albumie srednio dziala, cos mi
         // strzalka w prawo odtworzyla".  Przyczyna: sesja Spotify NIE MIALA tu
         // wlasnej galezi, jaka ma TIDAL wyzej.  Album, playlista, wykonawca i
@@ -14315,7 +15344,9 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
             OpenPodcast(item.Id, item.Title);
             return;
         }
-        if (item.Kind is MediaItemKind.Track or MediaItemKind.Station or MediaItemKind.Episode)
+        if (item.Kind is MediaItemKind.Track or MediaItemKind.Station or MediaItemKind.Episode
+            || string.Equals(_sessions.Current.Id, "appleMusic", StringComparison.Ordinal)
+                && item.Kind == MediaItemKind.Video)
         {
             var session = _sessions.Current;
             // ZWYKLY Enter na utworze jest NOWSZA decyzja niz czekajace
@@ -14532,6 +15563,164 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
 
     private bool CanPresentTidalResponse => CanPresentServiceResponse;
 
+    private string? BeginAppleMusicCollectionAdd(
+        IReadOnlyList<MediaItem> items,
+        bool favorites)
+    {
+        if (items.Count == 0) return "Brak elementu Apple Music do zmiany";
+        var compatible = items.All(item => item.ExternalId is { Length: > 0 }
+            && (favorites
+                ? AppleMusicCapabilities.CanAddToFavorites(item.Kind)
+                : AppleMusicCapabilities.CanAddToLibrary(item.Kind)));
+        if (!compatible)
+        {
+            return favorites
+                ? AppleMusicCapabilities.FavoriteUnavailableReason(alreadyFavorite: false)
+                : AppleMusicCapabilities.LibraryUnavailableReason(alreadyInLibrary: false);
+        }
+        if (favorites && items.Any(item => item.IsFavorite))
+            return AppleMusicCapabilities.FavoriteUnavailableReason(alreadyFavorite: true);
+        if (!favorites && items.Any(item => item.IsInLibrary))
+            return AppleMusicCapabilities.LibraryUnavailableReason(alreadyInLibrary: true);
+
+        _ = AddAppleMusicCollectionMembershipAsync(items, favorites);
+        return null;
+    }
+
+    private async Task AddAppleMusicCollectionMembershipAsync(
+        IReadOnlyList<MediaItem> items,
+        bool favorites)
+    {
+        var ownsGate = false;
+        try
+        {
+            await _appleMusicMembershipUiGate.WaitAsync(_appleMusicCancellation.Token);
+            ownsGate = true;
+            if (favorites)
+                await _appleMusicIntegration.AddToFavoritesAsync(items, _appleMusicCancellation.Token);
+            else
+                await _appleMusicIntegration.AddToLibraryAsync(items, _appleMusicCancellation.Token);
+            if (_isClosing) return;
+
+            ApplyAppleMusicMembership(items, favorites);
+            QueueStateSave();
+            if (string.Equals(_sessions.Current.Id, "appleMusic", StringComparison.Ordinal))
+                RefreshCurrentView();
+            var subject = items.Count == 1 ? items[0].Title : FormatItemCount(items.Count);
+            Announce(favorites
+                ? $"Dodano do ulubionych Apple Music: {subject}"
+                : $"Dodano do biblioteki Apple Music: {subject}");
+        }
+        catch (OperationCanceledException) when (_appleMusicCancellation.IsCancellationRequested)
+        {
+        }
+        catch (Exception exception)
+        {
+            DiagnosticLog.Error(
+                "apple-music-collection",
+                "Nie zapisano zmiany kolekcji Apple Music.",
+                exception);
+            if (!_isClosing) Announce($"Nie zapisano zmiany w Apple Music. {exception.Message}");
+        }
+        finally
+        {
+            if (ownsGate) _appleMusicMembershipUiGate.Release();
+        }
+    }
+
+    private void ApplyAppleMusicMembership(
+        IReadOnlyList<MediaItem> changedItems,
+        bool favorites)
+    {
+        var keys = changedItems
+            .Where(item => item.ExternalId is { Length: > 0 })
+            .Select(item => (item.Kind, item.ExternalId!))
+            .ToHashSet();
+        var known = _appleMusicItems
+            .Concat(_appleMusicContainerViews.Values.SelectMany(view =>
+                view.Items.Prepend(view.Container)))
+            .Concat(_sessions.FindSession("appleMusic")?.Items ?? [])
+            .Concat(changedItems)
+            .Distinct();
+        foreach (var item in known)
+        {
+            if (item.ExternalId is not { Length: > 0 }
+                || !keys.Contains((item.Kind, item.ExternalId))) continue;
+            if (favorites) item.IsFavorite = true;
+            else item.IsInLibrary = true;
+        }
+    }
+
+    private async Task OpenAppleMusicContainerAsync(
+        MediaItem container,
+        ArtistBrowseSection? artistSection = null)
+    {
+        if (container.ExternalId is not { Length: > 0 }) return;
+        if (container.Kind == MediaItemKind.Artist && artistSection is null)
+        {
+            OpenAppleMusicArtistOverview(container);
+            return;
+        }
+
+        _appleMusicNavigationVersion++;
+        var context = CaptureServiceInteractionContext(_appleMusicNavigationVersion);
+        var label = artistSection?.Label() ?? AppleMusicContainerLabel(container.Kind);
+        try
+        {
+            var items = await _appleMusicIntegration.GetContainerItemsAsync(
+                container,
+                artistSection,
+                _appleMusicCancellation.Token);
+            if (_isClosing) return;
+
+            foreach (var item in items)
+            {
+                if (container.Kind == MediaItemKind.Album
+                    && item.Kind is MediaItemKind.Track or MediaItemKind.Video)
+                {
+                    item.RelatedAlbumExternalId = container.ExternalId;
+                    item.RelatedAlbumTitle = container.Title;
+                }
+                if (container.Kind == MediaItemKind.Artist
+                    && item.Kind is MediaItemKind.Album or MediaItemKind.Track or MediaItemKind.Video
+                    && string.IsNullOrWhiteSpace(item.RelatedArtistExternalId))
+                {
+                    item.RelatedArtistExternalId = container.ExternalId;
+                    item.RelatedArtistName = container.Title;
+                }
+            }
+
+            var viewName = AppleMusicSectionViewName(container, artistSection);
+            _appleMusicContainerViews[viewName] =
+                new AppleMusicContainerViewState(container, items, artistSection);
+            _sessions.FindSession("appleMusic")?.AddItemsById(items);
+            if (!context.CanPresent(
+                    CaptureServiceInteractionContext(_appleMusicNavigationVersion),
+                    CanPresentServiceResponse))
+            {
+                return;
+            }
+
+            NavigateTo(viewName);
+            PrepareViewFocusContext($"{label}, {container.Title}");
+            FocusMediaList();
+            if (items.Count == 0)
+                Announce($"{label} {container.Title} nie zawiera dostępnych elementów");
+        }
+        catch (OperationCanceledException) when (_appleMusicCancellation.IsCancellationRequested)
+        {
+        }
+        catch (Exception exception)
+        {
+            DiagnosticLog.Error(
+                "apple-music-container",
+                $"Nie otwarto elementu Apple Music {container.ExternalId}.",
+                exception);
+            if (!_isClosing)
+                Announce($"Nie udało się otworzyć: {label}, {container.Title}. {exception.Message}");
+        }
+    }
+
     private string? BeginTidalCollectionToggle(IReadOnlyList<MediaItem> items, bool favorites)
     {
         var compatible = items.Count > 0 && items.All(item => item.ExternalId is { Length: > 0 }
@@ -14547,7 +15736,10 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
         return null;
     }
 
-    private async Task OpenTidalContainerAsync(MediaItem container, ArtistBrowseSection? artistSection = null)
+    private async Task OpenTidalContainerAsync(
+        MediaItem container,
+        ArtistBrowseSection? artistSection = null,
+        string? preferredExternalId = null)
     {
         if (container.ExternalId is not { Length: > 0 }) return;
         if (container.Kind == MediaItemKind.Artist && artistSection is null)
@@ -14611,6 +15803,14 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
                     + $"zgodny widok: {context.View == current.View}; zgodny element: {context.ItemId == current.ItemId}; "
                     + $"zgodny odtwarzacz: {context.PlayerActive == current.PlayerActive}; okno dostępne: {CanPresentTidalResponse}.");
                 return;
+            }
+
+            var preferredItemId = RecognizedTrackNavigationPolicy.PreferredItemId(
+                items, preferredExternalId);
+            if (preferredItemId is not null)
+            {
+                GetSessionNavigationState("tidal")
+                    .SelectedItemIds[viewName] = preferredItemId;
             }
 
             if (items.Count == 0)
@@ -14801,6 +16001,20 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
         _ => "Element TIDAL"
     };
 
+    private static string AppleMusicContentsView(MediaItem container) =>
+        $"{AppleMusicContentsViewPrefix}{container.ExternalId}";
+
+    private static bool IsAppleMusicContentsView(string viewName) =>
+        viewName.StartsWith(AppleMusicContentsViewPrefix, StringComparison.Ordinal);
+
+    private static string AppleMusicContainerLabel(MediaItemKind kind) => kind switch
+    {
+        MediaItemKind.Album => "Album Apple Music",
+        MediaItemKind.Playlist => "Playlista Apple Music",
+        MediaItemKind.Artist => "Wykonawca Apple Music",
+        _ => "Element Apple Music"
+    };
+
     private bool TryResolveSelectedPlaylistContents(out PlaylistContentsActionContext context)
     {
         context = null!;
@@ -14921,6 +16135,23 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
             Announce("Dla tego elementu TIDAL nie znaleziono powiązanego albumu");
             return;
         }
+        if (string.Equals(ActionSession.Id, "appleMusic", StringComparison.Ordinal))
+        {
+            if (ActionItem is { Kind: MediaItemKind.Artist, ExternalId: { Length: > 0 } } appleArtist)
+            {
+                OpenAppleMusicArtistOverview(appleArtist);
+                SelectMediaItem(ArtistSectionRowId(appleArtist, ArtistBrowseSection.Albums));
+                _ = OpenAppleMusicContainerAsync(appleArtist, ArtistBrowseSection.Albums);
+                return;
+            }
+            if (CreateRelatedAppleMusicContainer(ActionItem, MediaItemKind.Album) is { } appleAlbum)
+            {
+                _ = OpenAppleMusicContainerAsync(appleAlbum);
+                return;
+            }
+            Announce("Dla tego elementu Apple Music nie znaleziono powiązanego albumu");
+            return;
+        }
         // Spotify ma te same powiazania co TIDAL (ustawiane przy otwieraniu
         // albumu i wykonawcy), wiec przejscie dziala tak samo. Bez tej galezi
         // polecenie szukalo albumu w LOKALNEJ bibliotece i mowilo, ze nie ma.
@@ -14960,6 +16191,16 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
                 return;
             }
             Announce("Dla tego elementu TIDAL nie znaleziono powiązanego wykonawcy");
+            return;
+        }
+        if (string.Equals(ActionSession.Id, "appleMusic", StringComparison.Ordinal))
+        {
+            if (CreateRelatedAppleMusicContainer(ActionItem, MediaItemKind.Artist) is { } appleArtist)
+            {
+                _ = OpenAppleMusicContainerAsync(appleArtist);
+                return;
+            }
+            Announce("Dla tego elementu Apple Music nie znaleziono powiązanego wykonawcy");
             return;
         }
         if (SpotifyPlaybackSettingsResolver.IsSpotifySession(ActionSession.Id))
@@ -16577,6 +17818,7 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
         var id = Guid.NewGuid().ToString("N");
         var cancellation = new CancellationTokenSource();
         var control = new RadioRecordingControl();
+        var requestedOutputFolder = ResolveRadioRecordingsFolder(station);
         var active = new ActiveManualRadioRecording(
             id,
             station.Id,
@@ -16585,6 +17827,7 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
             DateTime.UtcNow,
             _state.Radio.RecordingFormat,
             _state.Radio.RecordingBitrateKbps,
+            requestedOutputFolder,
             cancellation,
             control);
         _activeManualRadioRecordings[id] = active;
@@ -16592,8 +17835,8 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
         active.Task = Task.Run(() => ManualRadioRecorder.RecordAsync(
             station,
             // Wlasny folder TEJ stacji, gdy ustawiony w Opcjach strumienia.
-            ResolveRadioRecordingsFolder(station),
-            ResolveRadioRecordingsFolder(station),
+            requestedOutputFolder,
+            requestedOutputFolder,
             ResolveSystemRadioRecordingsFolder(),
             active.RecordingFormat,
             active.RecordingBitrateKbps,
@@ -18358,6 +19601,12 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
             return $"{spotifyView.ArtistSection?.Label() ?? SpotifyContainerLabel(spotifyView.Container.Kind)}"
                 + $" — {spotifyView.Container.Title}";
         }
+        if (string.Equals(_sessions.Current.Id, "appleMusic", StringComparison.Ordinal)
+            && _appleMusicContainerViews.TryGetValue(_currentView, out var appleMusicView))
+        {
+            return $"{appleMusicView.ArtistSection?.Label() ?? AppleMusicContainerLabel(appleMusicView.Container.Kind)}"
+                + $" — {appleMusicView.Container.Title}";
+        }
         return BaseCurrentViewDisplayName();
     }
 
@@ -18425,6 +19674,33 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
             Artist = kind == MediaItemKind.Artist ? string.Empty : item.Artist,
             Kind = kind,
             Source = $"tidal:{externalId}"
+        };
+    }
+
+    private static MediaItem? CreateRelatedAppleMusicContainer(
+        MediaItem? item,
+        MediaItemKind kind)
+    {
+        if (item is null || kind is not (MediaItemKind.Album or MediaItemKind.Artist)) return null;
+        var externalId = kind == MediaItemKind.Album
+            ? item.RelatedAlbumExternalId
+            : item.RelatedArtistExternalId;
+        if (string.IsNullOrWhiteSpace(externalId) || item.Kind == kind) return null;
+        var title = kind == MediaItemKind.Album
+            ? item.RelatedAlbumTitle
+            : item.RelatedArtistName;
+        if (string.IsNullOrWhiteSpace(title))
+            title = kind == MediaItemKind.Album ? "Powiązany album" : item.Artist;
+        return new MediaItem
+        {
+            Id = $"appleMusic:{externalId}",
+            ExternalId = externalId,
+            Title = string.IsNullOrWhiteSpace(title)
+                ? kind == MediaItemKind.Album ? "Powiązany album" : "Powiązany wykonawca"
+                : title,
+            Artist = kind == MediaItemKind.Artist ? string.Empty : item.Artist,
+            Kind = kind,
+            Source = $"appleMusic:{externalId}"
         };
     }
 
@@ -18516,6 +19792,47 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
             _ = Dispatcher.BeginInvoke(FocusPlayerView, DispatcherPriority.ContextIdle);
         }
         else
+        {
+            RestoreMediaListFocusAfterRefresh();
+        }
+    }
+
+    public void ShowAppleMusicAccountManager()
+    {
+        var returnToPlayer = _playerViewActive;
+        var dialog = new AppleMusicAccountWindow(
+            _appleMusicIntegration,
+            _appleMusicOutput,
+            () => RefreshAppleMusicSessionAsync(announceResult: true))
+        {
+            Owner = this
+        };
+        dialog.ShowDialog();
+
+        if (!_appleMusicIntegration.IsConfigured)
+        {
+            _appleMusicItems.Clear();
+            _appleMusicContainerViews.Clear();
+            _sessions.FindSession("appleMusic")?.ReplaceItems(
+                SessionManager.CreateDemonstrationItems("apple"));
+            if (string.Equals(_sessions.Current.Id, "appleMusic", StringComparison.Ordinal))
+                RefreshCurrentView();
+        }
+        else if (!_appleMusicIntegration.HasStoredLogin)
+        {
+            _appleMusicItems.Clear();
+            _appleMusicContainerViews.Clear();
+            _sessions.FindSession("appleMusic")?.ReplaceItems([]);
+            if (string.Equals(_sessions.Current.Id, "appleMusic", StringComparison.Ordinal))
+                RefreshCurrentView();
+        }
+
+        if (returnToPlayer && _playerViewActive && _sessions.Current.HasCurrentItem && IsActive)
+        {
+            UpdatePlayerView(true);
+            FocusPlayerView();
+        }
+        else if (IsActive)
         {
             RestoreMediaListFocusAfterRefresh();
         }
@@ -18682,6 +19999,50 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
             DiagnosticLog.Error("tidal-sync", "Automatyczna synchronizacja TIDAL nie powiodła się.", exception);
             if (announceResult) Announce(exception.Message);
         }
+    }
+
+    private async Task RefreshAppleMusicSessionAsync(bool announceResult)
+    {
+        try
+        {
+            var items = await _appleMusicIntegration.SynchronizeLibraryAsync(
+                _appleMusicCancellation.Token);
+            if (_isClosing) return;
+            ApplyAppleMusicItems(items);
+            if (announceResult)
+                Announce($"Zsynchronizowano Apple Music: {items.Count} elementów");
+        }
+        catch (OperationCanceledException) when (_appleMusicCancellation.IsCancellationRequested)
+        {
+        }
+        catch (Exception exception)
+        {
+            DiagnosticLog.Error(
+                "apple-music-sync",
+                "Synchronizacja biblioteki Apple Music nie powiodła się.",
+                exception);
+            if (announceResult) Announce(exception.Message);
+        }
+    }
+
+    private void ApplyAppleMusicItems(IReadOnlyList<MediaItem> items)
+    {
+        _appleMusicItems.Clear();
+        _appleMusicItems.AddRange(items.DistinctBy(item => item.Id, StringComparer.Ordinal));
+        if (_sessions.FindSession("appleMusic") is not { } session) return;
+
+        var queued = session.Items
+            .Where(item => item.IsInQueue || item.IsPlayNext)
+            .ToArray();
+        var combined = _appleMusicItems
+            .Concat(queued)
+            .DistinctBy(item => item.Id, StringComparer.Ordinal)
+            .ToArray();
+        session.ReplaceItems(combined);
+        EnsureQueueOrder(session);
+        QueueStateSave();
+        if (string.Equals(_sessions.Current.Id, "appleMusic", StringComparison.Ordinal))
+            RefreshCurrentView();
     }
 
     /// <summary>
@@ -20237,10 +21598,53 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
             matchedNetworkStream?.Id,
             resolvedPreset is not null,
             _state.WiiM.NetworkStreams.Select(stream => stream.Id));
+        RecordObservedWiiMPlayback(snapshot, matchedNetworkStream);
         _wiiMSnapshots[device.Id] = snapshot;
         _state.WiiM.SelectedDeviceId = device.Id;
         RefreshWiiMSessionItems(device.Id);
         _nextWiiMPlayerRefreshUtc = DateTime.UtcNow.AddSeconds(3);
+    }
+
+    private void RecordObservedWiiMPlayback(
+        WiiMDeviceSnapshot snapshot,
+        WiiMNetworkStreamSettings? matchedNetworkStream)
+    {
+        if (!string.Equals(snapshot.Playback.State, "odtwarzanie", StringComparison.OrdinalIgnoreCase)) return;
+        if (matchedNetworkStream is not null)
+        {
+            var station = BuildWiiMNetworkStreamMediaItem(matchedNetworkStream);
+            RecordPlaybackSnapshot("wiim", station, replaySupported: true);
+            return;
+        }
+
+        var title = new[] { snapshot.Track.Title, snapshot.Track.Subtitle }
+            .FirstOrDefault(value => !string.IsNullOrWhiteSpace(value))
+            ?.Trim();
+        if (string.IsNullOrWhiteSpace(title)) return;
+        var item = new MediaItem
+        {
+            Id = PlaybackHistory.CreateObservedItemId(
+                "wiim",
+                snapshot.Playback.ContentUri,
+                title,
+                snapshot.Track.Artist,
+                snapshot.Track.Album,
+                snapshot.Playback.Source),
+            Title = title,
+            Artist = snapshot.Track.Artist,
+            Kind = snapshot.Playback.Duration > TimeSpan.Zero
+                ? MediaItemKind.Track
+                : MediaItemKind.Station,
+            Duration = snapshot.Playback.Duration,
+            BitrateKbps = snapshot.Track.BitrateKbps,
+            SampleRateHz = snapshot.Track.SampleRateHz,
+            Source = snapshot.Playback.ContentUri,
+            Tags = string.Join(", ", new[] { snapshot.Track.Album, snapshot.Playback.Source }
+                .Where(value => !string.IsNullOrWhiteSpace(value))
+                .Distinct(StringComparer.CurrentCultureIgnoreCase)),
+            IsAvailable = true
+        };
+        RecordPlaybackSnapshot("wiim", item, replaySupported: false);
     }
 
     private void RestoreLastActivatedWiiMPresets()
@@ -20718,6 +22122,17 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
             e.Handled = true;
             return;
         }
+        var bookmarkNavigationCommand = MainWindowShortcutRouter.ResolveBookmarkNavigation(
+            windowKey,
+            effectiveModifiers,
+            _playerViewActive,
+            IsMenuInteractionActive(Keyboard.FocusedElement));
+        if (bookmarkNavigationCommand is not null)
+        {
+            ExecuteCommand(bookmarkNavigationCommand);
+            e.Handled = true;
+            return;
+        }
         var chapterNavigationCommand = MainWindowShortcutRouter.ResolveChapterNavigation(
             windowKey,
             effectiveModifiers,
@@ -20918,6 +22333,18 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
             return;
         }
 
+        var radioRecognitionCommand = MainWindowShortcutRouter.ResolveRadioRecognition(
+            windowKey,
+            Keyboard.Modifiers,
+            _sessions.Current.Id,
+            playerActive: false);
+        if (radioRecognitionCommand is not null)
+        {
+            ExecuteCommand(radioRecognitionCommand);
+            e.Handled = true;
+            return;
+        }
+
         if (MediaList.IsKeyboardFocusWithin
             && string.Equals(_sessions.Current.Id, "radio", StringComparison.Ordinal)
             && Keyboard.Modifiers == ModifierKeys.Control
@@ -21039,15 +22466,6 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
         if (openDataCommand is not null)
         {
             ExecuteCommand(openDataCommand);
-            e.Handled = true;
-            return;
-        }
-
-        if (Keyboard.Modifiers == (ModifierKeys.Control | ModifierKeys.Alt)
-            && e.Key == Key.S
-            && string.Equals(_sessions.Current.Id, "radio", StringComparison.Ordinal))
-        {
-            ShowRadioRecognitionHistory();
             e.Handled = true;
             return;
         }
@@ -21379,6 +22797,16 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
             commandId = audioOutputCommand;
             return true;
         }
+        var bookmarkNavigationCommand = MainWindowShortcutRouter.ResolveBookmarkNavigation(
+            key,
+            modifiers,
+            _playerViewActive,
+            IsMenuInteractionActive(Keyboard.FocusedElement));
+        if (bookmarkNavigationCommand is not null)
+        {
+            commandId = bookmarkNavigationCommand;
+            return true;
+        }
         var chapterNavigationCommand = MainWindowShortcutRouter.ResolveChapterNavigation(
             key,
             modifiers,
@@ -21458,34 +22886,14 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
             commandId = CommandIds.ManageRadioSchedules;
             return true;
         }
-        if (key == Key.S
-            && modifiers == (ModifierKeys.Control | ModifierKeys.Alt | ModifierKeys.Shift)
-            && string.Equals(_sessions.Current.Id, "radio", StringComparison.Ordinal))
+        var radioRecognitionCommand = MainWindowShortcutRouter.ResolveRadioRecognition(
+            key,
+            modifiers,
+            _sessions.Current.Id,
+            _playerViewActive);
+        if (radioRecognitionCommand is not null)
         {
-            commandId = CommandIds.ToggleRadioRecognitionAnnouncements;
-            return true;
-        }
-        if (key == Key.S
-            && modifiers == (ModifierKeys.Control | ModifierKeys.Alt)
-            && string.Equals(_sessions.Current.Id, "radio", StringComparison.Ordinal))
-        {
-            commandId = CommandIds.ViewRadioRecognitionHistory;
-            return true;
-        }
-        if (key == Key.S
-            && modifiers == ModifierKeys.None
-            && _playerViewActive
-            && string.Equals(_sessions.Current.Id, "radio", StringComparison.Ordinal))
-        {
-            commandId = CommandIds.RecognizeRadioTrack;
-            return true;
-        }
-        if (key == Key.S
-            && modifiers == ModifierKeys.Shift
-            && _playerViewActive
-            && string.Equals(_sessions.Current.Id, "radio", StringComparison.Ordinal))
-        {
-            commandId = CommandIds.ToggleRadioRecognitionMonitoring;
+            commandId = radioRecognitionCommand;
             return true;
         }
         if (string.Equals(_sessions.Current.Id, "wiim", StringComparison.Ordinal)
@@ -21503,6 +22911,7 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
             return true;
         }
         if (CurrentSessionSupportsPresets()
+            && !IsFrontierSmartSession()
             && key == Key.P
             && modifiers == (ModifierKeys.Control | ModifierKeys.Alt | ModifierKeys.Shift))
         {
@@ -21585,6 +22994,11 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
                 commandId = CommandIds.SavePodcastAs;
                 return true;
             }
+            if (modifiers == (ModifierKeys.Control | ModifierKeys.Shift) && key == Key.D)
+            {
+                commandId = CommandIds.DownloadYouTubeVideo;
+                return true;
+            }
         }
 
         if (TryResolvePodcastDescriptionShortcut(
@@ -21617,6 +23031,16 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
                 };
                 if (commandId.Length > 0) return true;
             }
+            var shuffleCommand = MainWindowShortcutRouter.ResolvePlayerShuffle(
+                key,
+                modifiers,
+                playerActive: true,
+                _sessions.Current.Id);
+            if (shuffleCommand is not null)
+            {
+                commandId = shuffleCommand;
+                return true;
+            }
             if (modifiers == ModifierKeys.None && TryGetDigitKey(key, out var digit))
             {
                 commandId = CommandIds.SeekPercent(digit * 10);
@@ -21634,8 +23058,6 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
                 (ModifierKeys.Alt, Key.PageDown) => CommandIds.NextClipBoundary,
                 (ModifierKeys.Control, Key.X) => CommandIds.RemoveClipFromOriginal,
                 (ModifierKeys.Shift, Key.X) => CommandIds.ClearClipSelection,
-                (ModifierKeys.Shift, Key.PageUp) => CommandIds.PreviousBookmark,
-                (ModifierKeys.Shift, Key.PageDown) => CommandIds.NextBookmark,
                 (ModifierKeys.Control | ModifierKeys.Alt | ModifierKeys.Shift, Key.B) => CommandIds.AddNamedChapter,
                 (ModifierKeys.Control | ModifierKeys.Shift, Key.Left) => CommandIds.PreviousChapter,
                 (ModifierKeys.Control | ModifierKeys.Shift, Key.Right) => CommandIds.NextChapter,
@@ -21715,7 +23137,8 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
             (ModifierKeys.Control, Key.U) => CommandIds.ViewFavorites,
             (ModifierKeys.Control, Key.P) => CommandIds.ViewPlaylists,
             (ModifierKeys.Control, Key.L)
-                when !string.Equals(_sessions.Current.Id, "wiim", StringComparison.Ordinal) =>
+                when !string.Equals(_sessions.Current.Id, "wiim", StringComparison.Ordinal)
+                     && !IsFrontierSmartSession() =>
                     CommandIds.ViewLibrary,
             (ModifierKeys.Control, Key.Q) => CommandIds.ViewQueue,
             (ModifierKeys.Control, Key.H) => CommandIds.ViewHistory,
@@ -21743,14 +23166,19 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
             (ModifierKeys.Control, Key.OemComma) => CommandIds.SettingsGeneral,
             (ModifierKeys.Control | ModifierKeys.Alt, Key.Enter) => CommandIds.SessionPlaybackOptions,
             (ModifierKeys.Control, Key.F5) when string.Equals(_sessions.Current.Id, "local", StringComparison.Ordinal) => CommandIds.ManageLocalSources,
+            (ModifierKeys.Control, Key.F5) when string.Equals(_sessions.Current.Id, "tidal", StringComparison.Ordinal) => CommandIds.ManageTidalConnection,
+            (ModifierKeys.Control, Key.F5) when SpotifyPlaybackSettingsResolver.IsSpotifySession(_sessions.Current.Id) => CommandIds.ManageSpotifyConnection,
+            (ModifierKeys.Control, Key.F5) when string.Equals(_sessions.Current.Id, "appleMusic", StringComparison.Ordinal) => CommandIds.ManageAppleMusicConnection,
+            (ModifierKeys.Control, Key.F5) when string.Equals(_sessions.Current.Id, "podcasts", StringComparison.Ordinal) => CommandIds.ManageYouTubeConnection,
+            (ModifierKeys.Control, Key.F5) when IsFrontierSmartSession() => CommandIds.ManageFrontierSmartDevices,
             // Ctrl+F5 w sesji Sonos prowadzi teraz do WYBORU CELU STEROWANIA, bo
             // Ctrl+L pokazuje material (ulubione, playlisty), a nie glosniki.
             // Polecenie "Konto Sonos" NIE ginie - zostaje w menu i w palecie.
             (ModifierKeys.Control, Key.F5) when IsSonosSession(_sessions.Current.Id) => CommandIds.ChooseSonosTarget,
-            (ModifierKeys.Control, Key.F5) when string.Equals(_sessions.Current.Id, "podcasts", StringComparison.Ordinal) => CommandIds.RefreshPodcastLibrary,
             (ModifierKeys.None, Key.F5) when string.Equals(_sessions.Current.Id, "podcasts", StringComparison.Ordinal)
                 && string.Equals(_currentView, PodcastInboxViewName, StringComparison.Ordinal) => CommandIds.RefreshPodcastLibrary,
             (ModifierKeys.None, Key.F5) when string.Equals(_sessions.Current.Id, "podcasts", StringComparison.Ordinal) => CommandIds.RefreshPodcast,
+            (ModifierKeys.None, Key.F5) when IsFrontierSmartSession() => CommandIds.RefreshFrontierSmartDevices,
             (ModifierKeys.None, Key.F5) => CommandIds.RefreshLocalLibrary,
             (ModifierKeys.None, Key.F2) => CommandIds.RenameLibraryItem,
             (ModifierKeys.Shift, Key.F2) => CommandIds.RenameLocalFile,
@@ -21768,6 +23196,8 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
             && TryGetRadioPresetSlot(key, out var presetSlot))
             description = string.Equals(_sessions.Current.Id, "wiim", StringComparison.Ordinal)
                 ? $"uruchom preset {RadioPresetSlots.Label(presetSlot)} urządzenia WiiM"
+                : IsFrontierSmartSession()
+                    ? $"uruchom preset {RadioPresetSlots.Label(presetSlot)} urządzenia Frontier Smart"
                 : $"uruchom preset {RadioPresetSlots.Label(presetSlot)} aktywnej sesji";
         else if (modifiers == ModifierKeys.Alt && key == Key.F4)
             description = "zamknij aplikację";
@@ -21794,7 +23224,13 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
         else if (string.Equals(_sessions.Current.Id, "podcasts", StringComparison.Ordinal)
                  && (_playerViewActive || MediaList.IsKeyboardFocusWithin)
                  && modifiers == ModifierKeys.Control && key == Key.S)
-            description = "zapisz jeden odcinek podcastu jako";
+        {
+            if (ActionItems.Count != 1 || ActionItems[0].Kind != MediaItemKind.Episode)
+                return false;
+            description = CanDownloadSelectedYouTubeVideos(ActionItems)
+                ? "zapisz wideo jako, z wyborem formatu MP4 albo oryginalnego"
+                : "zapisz jeden odcinek audio jako";
+        }
         else if ((_playerViewActive || MediaList.IsKeyboardFocusWithin)
                  && modifiers == ModifierKeys.Control && key == Key.C)
             description = "kopiuj nazwy zaznaczonych elementów";
@@ -21813,8 +23249,31 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
             description = "po potwierdzeniu przenieś zaznaczone lokalne pliki do Kosza";
         else if (MediaList.IsKeyboardFocusWithin && modifiers == ModifierKeys.None && key == Key.Delete)
             description = "usuń zaznaczone elementy tylko z bieżącego widoku";
+        else if (MediaList.IsKeyboardFocusWithin
+                 && modifiers == ModifierKeys.None
+                 && key == Key.Left
+                 && string.Equals(_sessions.Current.Id, "radio", StringComparison.Ordinal)
+                 && string.Equals(_currentView, ActiveRadioRecordingsViewName, StringComparison.Ordinal))
+            description = "oznajmia parametry strumienia nagrywanej stacji";
+        else if (MediaList.IsKeyboardFocusWithin
+                 && modifiers == ModifierKeys.None
+                 && key == Key.Left
+                 && string.Equals(_sessions.Current.Id, "local", StringComparison.Ordinal)
+                 && string.Equals(_currentView, RecordedRadioFilesViewName, StringComparison.Ordinal))
+            description = "oznajmia bitrate, wielkość i folder nagranego pliku";
+        else if (MediaList.IsKeyboardFocusWithin
+                 && modifiers == ModifierKeys.None
+                 && key == Key.Left
+                 && string.Equals(_currentView, "Historia odtwarzania", StringComparison.Ordinal))
+            description = "oznajmia format, bitrate, wielkość i folder lokalnego pliku, jeśli jest dostępny";
         else if (MediaList.IsKeyboardFocusWithin && modifiers == ModifierKeys.None && key == Key.Left)
             description = "oznajmia format, bitrate, wielkość i inne dostępne parametry elementu";
+        else if (MediaList.IsKeyboardFocusWithin
+                 && modifiers == ModifierKeys.None
+                 && key == Key.Right
+                 && string.Equals(_sessions.Current.Id, "radio", StringComparison.Ordinal)
+                 && string.Equals(_currentView, ActiveRadioRecordingsViewName, StringComparison.Ordinal))
+            description = "oznajmia bitrate, nazwę pliku i folder zapisu nagrania";
         else if (MediaList.IsKeyboardFocusWithin
                  && modifiers == ModifierKeys.None
                  && key == Key.Right
@@ -21825,6 +23284,11 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
                  && key == Key.Right
                  && SpotifyPlaybackSettingsResolver.IsSpotifySession(_sessions.Current.Id))
             description = "otwiera zawartość albumu, playlisty lub wykonawcy Spotify";
+        else if (MediaList.IsKeyboardFocusWithin
+                 && modifiers == ModifierKeys.None
+                 && key == Key.Right
+                 && string.Equals(_sessions.Current.Id, "appleMusic", StringComparison.Ordinal))
+            description = "otwiera menu albumów, utworów, podobnych wykonawców lub powiązań Apple Music";
         else if (MediaList.IsKeyboardFocusWithin && modifiers == ModifierKeys.None && key is Key.Up or Key.Down)
             description = "przejdź do poprzedniego lub następnego elementu listy";
         else if (MediaList.IsKeyboardFocusWithin && modifiers == ModifierKeys.Shift && key is Key.Up or Key.Down)
@@ -21862,6 +23326,10 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
             description = "szybko przejdź do elementu zaczynającego się od wpisanych liter";
         else if (modifiers == ModifierKeys.Alt && key is Key.Left or Key.Right)
             description = key == Key.Left ? "poprzedni widok" : "następny widok";
+        else if (key == Key.D
+                 && modifiers == (ModifierKeys.Control | ModifierKeys.Shift)
+                 && string.Equals(_sessions.Current.Id, "podcasts", StringComparison.Ordinal))
+            description = "pobierz zaznaczone wideo z YouTube w formacie wybranym w ustawieniach";
 
         return description.Length > 0;
     }
@@ -21874,8 +23342,22 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
             or CommandIds.GoToAlbum or CommandIds.GoToArtist
             or CommandIds.AddRadioSchedule
             or CommandIds.AddBookmark or CommandIds.AddNamedBookmark
-            or CommandIds.PreviousBookmark or CommandIds.NextBookmark;
+            or CommandIds.PreviousBookmark or CommandIds.NextBookmark
+            or CommandIds.PreviousNamedBookmark or CommandIds.NextNamedBookmark;
         if (needsItem && ActionItem is null) return "brak wybranego lub odtwarzanego elementu";
+        if (commandId == CommandIds.SavePodcastAs
+            && (!string.Equals(_sessions.Current.Id, "podcasts", StringComparison.Ordinal)
+                || ActionItems.Count != 1
+                || ActionItems[0].Kind != MediaItemKind.Episode))
+            return "wybierz jeden odcinek audio albo materiał YouTube";
+        if (commandId == CommandIds.DownloadInService
+            && (!string.Equals(_sessions.Current.Id, "podcasts", StringComparison.Ordinal)
+                || ActionItems.Count == 0
+                || ActionItems.Any(item => item.Kind != MediaItemKind.Episode)))
+            return "wybierz co najmniej jeden odcinek";
+        if (commandId == CommandIds.DownloadYouTubeVideo
+            && !CanDownloadSelectedYouTubeVideos(ActionItems))
+            return "wybrany element nie jest materiałem YouTube";
         if (commandId == CommandIds.SplitRadioRecording
             && ResolveRadioRecordingsForSplit().Count == 0)
             return "brak nagrania do podziału";
@@ -22003,10 +23485,14 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
                 ExecuteCommand(CommandIds.ManageLocalSources);
             else if (string.Equals(_sessions.Current.Id, "wiim", StringComparison.Ordinal))
                 ExecuteCommand(CommandIds.ManageWiiMDevices);
+            else if (IsFrontierSmartSession())
+                ExecuteCommand(CommandIds.ManageFrontierSmartDevices);
             else if (string.Equals(_sessions.Current.Id, "podcasts", StringComparison.Ordinal))
-                ExecuteCommand(CommandIds.RefreshPodcastLibrary);
+                ExecuteCommand(CommandIds.ManageYouTubeConnection);
             else if (string.Equals(_sessions.Current.Id, "tidal", StringComparison.Ordinal))
                 ExecuteCommand(CommandIds.ManageTidalConnection);
+            else if (string.Equals(_sessions.Current.Id, "appleMusic", StringComparison.Ordinal))
+                ExecuteCommand(CommandIds.ManageAppleMusicConnection);
             else if (SpotifyPlaybackSettingsResolver.IsSpotifySession(_sessions.Current.Id))
                 ExecuteCommand(CommandIds.ManageSpotifyConnection);
             else if (IsSonosSession(_sessions.Current.Id))
@@ -22060,7 +23546,8 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
                 // Biblioteki lokalnej. Stad zgloszona niekonsekwencja wobec
                 // menu Plik.
                 || IsSonosSession(_sessions.Current.Id)
-                || string.Equals(_sessions.Current.Id, "wiim", StringComparison.Ordinal)))
+                || string.Equals(_sessions.Current.Id, "wiim", StringComparison.Ordinal)
+                || IsFrontierSmartSession()))
         {
             // DOKLADNIE to samo istniejace polecenie, co menu Plik i paleta -
             // nie druga droga odswiezania.
@@ -22068,6 +23555,8 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
                 ? CommandIds.RefreshSonosGroups
                 : string.Equals(_sessions.Current.Id, "wiim", StringComparison.Ordinal)
                 ? CommandIds.RefreshWiiMDevices
+                : IsFrontierSmartSession()
+                ? CommandIds.RefreshFrontierSmartDevices
                 : string.Equals(_sessions.Current.Id, "podcasts", StringComparison.Ordinal)
                 ? string.Equals(_currentView, PodcastInboxViewName, StringComparison.Ordinal)
                     ? CommandIds.RefreshPodcastLibrary
@@ -22172,7 +23661,7 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
                 {
                     if (_keyboardHelpActive)
                     {
-                        AnnounceEssential($"Ctrl+Shift+S: otwórz listę sesji. Kontekst: {KeyboardHelpContext()}");
+                        AnnounceEssential($"Ctrl+Shift+S: otwórz Menedżer sesji. Kontekst: {KeyboardHelpContext()}");
                         return;
                     }
                     ExecuteCommand(CommandIds.SessionList);
@@ -22239,7 +23728,7 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
             (ModifierKeys.Control | ModifierKeys.Alt, Key.P)
                 when CurrentSessionSupportsPresets() => CommandIds.ViewRadioPresets,
             (ModifierKeys.Control | ModifierKeys.Alt | ModifierKeys.Shift, Key.P)
-                when CurrentSessionSupportsPresets() => CommandIds.AssignRadioPreset,
+                when CurrentSessionSupportsPresets() && !IsFrontierSmartSession() => CommandIds.AssignRadioPreset,
             (ModifierKeys.Control, Key.U) => CommandIds.ViewFavorites,
             (ModifierKeys.Control, Key.P) => CommandIds.ViewPlaylists,
             (ModifierKeys.Control | ModifierKeys.Shift, Key.P) => CommandIds.ManagePlaylists,
@@ -22330,6 +23819,16 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
                 return true;
             }
         }
+        var shuffleCommand = MainWindowShortcutRouter.ResolvePlayerShuffle(
+            key,
+            effectiveModifiers,
+            playerActive: true,
+            _sessions.Current.Id);
+        if (shuffleCommand is not null)
+        {
+            ExecuteCommand(shuffleCommand);
+            return true;
+        }
         var audioCommand = MainWindowShortcutRouter.ResolvePlayerAudioProcessing(
             key,
             effectiveModifiers,
@@ -22370,32 +23869,14 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
             AddRadioScheduleForCurrentContext();
             return true;
         }
-        if (string.Equals(_sessions.Current.Id, "radio", StringComparison.Ordinal)
-            && effectiveModifiers == ModifierKeys.None
-            && key == Key.S)
+        var radioRecognitionCommand = MainWindowShortcutRouter.ResolveRadioRecognition(
+            key,
+            effectiveModifiers,
+            _sessions.Current.Id,
+            playerActive: true);
+        if (radioRecognitionCommand is not null)
         {
-            _ = RecognizeCurrentRadioTrackAsync(automatic: false);
-            return true;
-        }
-        if (string.Equals(_sessions.Current.Id, "radio", StringComparison.Ordinal)
-            && effectiveModifiers == ModifierKeys.Shift
-            && key == Key.S)
-        {
-            ToggleRadioRecognitionMonitoring();
-            return true;
-        }
-        if (string.Equals(_sessions.Current.Id, "radio", StringComparison.Ordinal)
-            && effectiveModifiers == (ModifierKeys.Control | ModifierKeys.Alt | ModifierKeys.Shift)
-            && key == Key.S)
-        {
-            ToggleRadioRecognitionAnnouncements();
-            return true;
-        }
-        if (string.Equals(_sessions.Current.Id, "radio", StringComparison.Ordinal)
-            && effectiveModifiers == (ModifierKeys.Control | ModifierKeys.Alt)
-            && key == Key.S)
-        {
-            ShowRadioRecognitionHistory();
+            ExecuteCommand(radioRecognitionCommand);
             return true;
         }
         if (effectiveModifiers == ModifierKeys.Control
@@ -22445,8 +23926,6 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
             (ModifierKeys.Alt, Key.PageDown) => CommandIds.NextClipBoundary,
             (ModifierKeys.Control, Key.X) => CommandIds.RemoveClipFromOriginal,
             (ModifierKeys.Shift, Key.X) => CommandIds.ClearClipSelection,
-            (ModifierKeys.Shift, Key.PageUp) => CommandIds.PreviousBookmark,
-            (ModifierKeys.Shift, Key.PageDown) => CommandIds.NextBookmark,
             (ModifierKeys.Control | ModifierKeys.Alt | ModifierKeys.Shift, Key.B) => CommandIds.AddNamedChapter,
             (ModifierKeys.Control | ModifierKeys.Alt, Key.B) => CommandIds.ViewChapters,
             (ModifierKeys.Control | ModifierKeys.Shift, Key.Left) => CommandIds.PreviousChapter,
@@ -22488,7 +23967,7 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
     {
         if (!_playerViewActive && !MediaList.IsKeyboardFocusWithin) return false;
 
-        var modifiers = Keyboard.Modifiers;
+        var modifiers = ReadEffectiveModifierKeys();
         var key = e.Key == Key.System ? e.SystemKey : e.Key;
         var podcastFileAction = MainWindowShortcutRouter.ResolvePodcastEpisodeFileAction(
             key,
@@ -23001,6 +24480,7 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
                 or SearchResultAction.Queue
                 or SearchResultAction.Favorite
                 or SearchResultAction.Download
+                or SearchResultAction.DownloadVideo
                 or SearchResultAction.SaveAs)
         {
             // Materializacja jest tylko PODGLADEM. Decyzje o dodaniu do
@@ -23013,6 +24493,29 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
                 .Select(selected => MaterializeYouTubeSearchResult(selected))
                 .ToArray();
             visibleResults = results;
+        }
+        if (action == SearchResultAction.SaveAs
+            && results.Count == 1
+            && string.Equals(results[0].SessionId, "podcasts", StringComparison.OrdinalIgnoreCase)
+            && CanDownloadSelectedYouTubeVideos([results[0].Item]))
+        {
+            _ = SaveYouTubeVideoAsAsync(results[0].Item, restoreListFocus: false);
+            return "Wybierz nazwę i format zapisu wideo";
+        }
+        if (action == SearchResultAction.DownloadVideo)
+        {
+            var videos = results
+                .Where(result => string.Equals(result.SessionId, "podcasts", StringComparison.OrdinalIgnoreCase))
+                .Select(result => result.Item)
+                .Where(item => item.Kind == MediaItemKind.Episode)
+                .DistinctBy(item => item.Id, StringComparer.Ordinal)
+                .ToArray();
+            if (videos.Length != results.Count || !CanDownloadSelectedYouTubeVideos(videos))
+                return "Pobieranie wideo jest dostępne tylko dla materiałów YouTube";
+            _ = DownloadYouTubeVideosAsync(videos, restoreListFocus: false);
+            return videos.Length == 1
+                ? "Rozpoczęto pobieranie wideo z YouTube"
+                : $"Rozpoczęto pobieranie wideo z YouTube: {videos.Length}";
         }
         if (action is SearchResultAction.Download or SearchResultAction.SaveAs)
         {
@@ -23054,6 +24557,12 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
             _ = AddPodcastDirectoryResultsAsync(
                 results.Select(result => result.Item).ToArray(),
                 markFavorite: action == SearchResultAction.Favorite);
+            if (results.All(result => YouTubeSearchClient.IsChannelSearchResult(result.Item)))
+            {
+                return results.Count == 1
+                    ? $"Dodawanie kanału YouTube: {results[0].Item.Title}"
+                    : $"Dodawanie kanałów YouTube: {results.Count}";
+            }
             var directoryNames = results
                 .Select(result => MainWindowNavigationPolicy.TryGetPodcastDirectoryLabel(result.Item, out var label)
                     ? label
@@ -23283,7 +24792,30 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
             if ((MediaList.SelectedItem as MediaItemRow)?.FolderPath is { } folderPath)
                 Announce($"{item.Title}: {folderPath}");
             else
-                AnnounceQuickMediaInformation(item);
+                AnnounceQuickMediaInformation(
+                    item,
+                    includeLocalFolder: string.Equals(
+                        _currentView,
+                        "Historia odtwarzania",
+                        StringComparison.Ordinal)
+                    || (string.Equals(
+                            _sessions.Current.Id,
+                            "local",
+                            StringComparison.Ordinal)
+                        && string.Equals(
+                            _currentView,
+                            RecordedRadioFilesViewName,
+                            StringComparison.Ordinal)));
+            e.Handled = true;
+            return;
+        }
+        if (Keyboard.Modifiers == ModifierKeys.None
+            && key == Key.Right
+            && string.Equals(_sessions.Current.Id, "radio", StringComparison.Ordinal)
+            && string.Equals(_currentView, ActiveRadioRecordingsViewName, StringComparison.Ordinal)
+            && MediaList.SelectedItem is MediaItemRow { RecordingOutputDescription: { } outputDescription })
+        {
+            Announce(outputDescription);
             e.Handled = true;
             return;
         }
@@ -23313,6 +24845,16 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
             && HasSpotifyRelations(spotifyItem))
         {
             ShowSpotifyRelationsMenu(spotifyItem);
+            e.Handled = true;
+            return;
+        }
+        if (Keyboard.Modifiers == ModifierKeys.None
+            && key == Key.Right
+            && string.Equals(_sessions.Current.Id, "appleMusic", StringComparison.Ordinal)
+            && SelectedItem is { } appleMusicItem
+            && HasAppleMusicRelations(appleMusicItem))
+        {
+            ShowAppleMusicRelationsMenu(appleMusicItem);
             e.Handled = true;
             return;
         }
@@ -23428,6 +24970,49 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
         }
 
         ShowRelationsMenu("Powiązania Spotify", actions);
+    }
+
+    private static bool HasAppleMusicRelations(MediaItem? item) =>
+        item is not null
+        && (item.Kind is MediaItemKind.Artist or MediaItemKind.Album or MediaItemKind.Playlist
+            || TidalNavigationPolicy.CanOpenRelatedAlbum(item)
+            || TidalNavigationPolicy.CanOpenRelatedArtist(item));
+
+    private void ShowAppleMusicRelationsMenu(MediaItem item)
+    {
+        var actions = new List<(string Label, Action Invoke)>();
+        if (item.Kind == MediaItemKind.Artist)
+        {
+            actions.Add(("Albumy",
+                () => _ = OpenAppleMusicContainerAsync(item, ArtistBrowseSection.Albums)));
+            actions.Add(("Utwory",
+                () => _ = OpenAppleMusicContainerAsync(item, ArtistBrowseSection.Tracks)));
+            actions.Add(("Podobni wykonawcy",
+                () => _ = OpenAppleMusicContainerAsync(item, ArtistBrowseSection.SimilarArtists)));
+        }
+        else if (item.Kind is MediaItemKind.Album or MediaItemKind.Playlist)
+        {
+            actions.Add((item.Kind == MediaItemKind.Album
+                    ? "Pokaż zawartość albumu"
+                    : "Pokaż zawartość playlisty",
+                () => _ = OpenAppleMusicContainerAsync(item)));
+        }
+        if (TidalNavigationPolicy.CanOpenRelatedAlbum(item))
+            actions.Add(("Przejdź do albumu", () => ExecuteCommand(CommandIds.GoToAlbum)));
+        if (TidalNavigationPolicy.CanOpenRelatedArtist(item))
+            actions.Add(("Przejdź do wykonawcy", () => ExecuteCommand(CommandIds.GoToArtist)));
+
+        if (actions.Count == 0)
+        {
+            Announce("Ten element Apple Music nie ma dostępnych powiązań");
+            return;
+        }
+        if (actions.Count == 1)
+        {
+            actions[0].Invoke();
+            return;
+        }
+        ShowRelationsMenu("Powiązania Apple Music", actions);
     }
 
     /// <summary>
@@ -23591,7 +25176,9 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
         _trackRecognitionCancellation.Cancel();
         _podcastCancellation.Cancel();
         _wiiMCancellation.Cancel();
+        _frontierSmartCancellation.Cancel();
         _tidalCancellation.Cancel();
+        _appleMusicCancellation.Cancel();
         // Odczyt katalogu Spotify z doladowywaniem stron jest dluga sciezka -
         // przy zamykaniu okna nie moze zostac wiecznie pracujace zadanie.
         CancelSpotifyWork();
@@ -23678,10 +25265,14 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
         _radioOutput.Dispose();
         _tidalOutput.Dispose();
         _spotifyOutput.Dispose();
+        _appleMusicOutput.Dispose();
         _spotifyLibrespotOutput.Dispose();
         _spotifyLibrespotAuthentication.Dispose();
         _wiiMClient.Dispose();
         _wiiMCancellation.Dispose();
+        _frontierSmartClient.Dispose();
+        _frontierSmartCancellation.Dispose();
+        _frontierSmartOperationGate.Dispose();
         // FAKTYCZNE zakonczenie wlasciciela konta Sonos. Jest tu, a nie w
         // bramce potwierdzenia nagrywania: ANULOWANE zamykanie AMC nie dochodzi
         // do tego miejsca, wiec nie zwalnia tokenow konta.
@@ -23691,6 +25282,10 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
         _sonosAccount.Dispose();
         _tidalIntegration.Dispose();
         _tidalCancellation.Dispose();
+        _appleMusicIntegration.Dispose();
+        _appleMusicCancellation.Dispose();
+        _appleMusicMembershipUiGate.Dispose();
+        _youTubeGoogleIntegration.Dispose();
         _radioCatalog.Dispose();
         _applePodcastDirectory.Dispose();
         _spreakerPodcastDirectory.Dispose();
@@ -23751,6 +25346,7 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
     private void PlayerPlayPause_Click(object sender, RoutedEventArgs e) => ExecuteCommand(CommandIds.PlayPause);
     private void PlayerPrevious_Click(object sender, RoutedEventArgs e) => ExecuteCommand(CommandIds.Previous);
     private void PlayerNext_Click(object sender, RoutedEventArgs e) => ExecuteCommand(CommandIds.Next);
+    private void PlayerShuffle_Click(object sender, RoutedEventArgs e) => ExecuteCommand(CommandIds.ToggleShuffle);
     private void PlayerBackward_Click(object sender, RoutedEventArgs e) => ExecuteCommand(CommandIds.SeekBackward10);
     private void PlayerForward_Click(object sender, RoutedEventArgs e) => ExecuteCommand(CommandIds.SeekForward10);
     private void PlayerVolumeDown_Click(object sender, RoutedEventArgs e) => ExecuteCommand(CommandIds.VolumeDown5);
@@ -23806,6 +25402,8 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
     private void BookmarksView_Click(object sender, RoutedEventArgs e) => ExecuteCommand(CommandIds.ViewBookmarks);
     private void PreviousBookmark_Click(object sender, RoutedEventArgs e) => ExecuteCommand(CommandIds.PreviousBookmark);
     private void NextBookmark_Click(object sender, RoutedEventArgs e) => ExecuteCommand(CommandIds.NextBookmark);
+    private void PreviousNamedBookmark_Click(object sender, RoutedEventArgs e) => ExecuteCommand(CommandIds.PreviousNamedBookmark);
+    private void NextNamedBookmark_Click(object sender, RoutedEventArgs e) => ExecuteCommand(CommandIds.NextNamedBookmark);
     private void ToggleSelectedPlayback_Click(object sender, RoutedEventArgs e)
     {
         if (SelectedBookmark is not null
@@ -23892,6 +25490,8 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
     private void RefreshPodcast_Click(object sender, RoutedEventArgs e) => ExecuteCommand(CommandIds.RefreshPodcast);
     private void DownloadPodcastEpisode_Click(object sender, RoutedEventArgs e) =>
         ExecuteCommand(CommandIds.DownloadInService);
+    private void DownloadYouTubeVideo_Click(object sender, RoutedEventArgs e) =>
+        ExecuteCommand(CommandIds.DownloadYouTubeVideo);
     private void SavePodcastEpisodeAs_Click(object sender, RoutedEventArgs e) =>
         ExecuteCommand(CommandIds.SavePodcastAs);
     private void FileMenuItem_SubmenuOpened(object sender, RoutedEventArgs e) =>
@@ -23953,8 +25553,18 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
         var localSession = string.Equals(_sessions.Current.Id, "local", StringComparison.Ordinal);
         var podcastSession = string.Equals(_sessions.Current.Id, "podcasts", StringComparison.Ordinal);
         var wiiMSession = string.Equals(_sessions.Current.Id, "wiim", StringComparison.Ordinal);
+        var frontierSmartSession = IsFrontierSmartSession();
+        var remoteDeviceSession = wiiMSession || frontierSmartSession;
+        UpdatePlayerShufflePresentation(_sessions.Current);
         var tidalSession = string.Equals(_sessions.Current.Id, "tidal", StringComparison.Ordinal);
-        WiiMDevicePresetsMenuItem.Visibility = wiiMSession ? Visibility.Visible : Visibility.Collapsed;
+        WiiMDevicePresetsMenuItem.Visibility = remoteDeviceSession ? Visibility.Visible : Visibility.Collapsed;
+        if (remoteDeviceSession)
+        {
+            SetContextMenuItemPresentation(
+                WiiMDevicePresetsMenuItem,
+                frontierSmartSession ? "Presety urządzenia Frontier Smart" : "Presety urządzenia WiiM",
+                "Ctrl+Alt+P");
+        }
         var openOnWiiMAvailable = !wiiMSession
             && items.Count == 1
             && TryGetWiiMPlayableUri(actionItem, out _);
@@ -23987,6 +25597,9 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
         var podcastEpisodes = podcastSession
             && items.Count > 0
             && items.All(item => item.Kind == MediaItemKind.Episode);
+        var youtubeVideoEpisode = podcastEpisode
+            && items.Count == 1
+            && CanDownloadSelectedYouTubeVideos(items);
         var wiiMNetworkStream = wiiMSession && IsWiiMNetworkStream(actionItem);
         var membershipItems = playlistContext?.Items
             ?? (folderNavigationRow
@@ -24003,6 +25616,8 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
             ? "Otwórz podcast"
             : wiiMNetworkStream
             ? "Otwórz strumień w WiiM"
+            : frontierSmartSession
+            ? "Wybierz urządzenie Frontier Smart i otwórz sterowanie"
             : actionItem is not null
             && string.Equals(actionItem.Id, _sessions.Current.CurrentItem.Id, StringComparison.Ordinal)
             && _sessions.Current.IsPlaying
@@ -24020,9 +25635,20 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
         DownloadPodcastEpisodeMenuItem.Visibility = podcastEpisodes
             ? Visibility.Visible
             : Visibility.Collapsed;
+        DownloadYouTubeVideoMenuItem.Visibility = podcastEpisodes
+            && CanDownloadSelectedYouTubeVideos(items)
+                ? Visibility.Visible
+                : Visibility.Collapsed;
         SavePodcastEpisodeAsMenuItem.Visibility = podcastEpisode && items.Count == 1
             ? Visibility.Visible
             : Visibility.Collapsed;
+        if (SavePodcastEpisodeAsMenuItem.Visibility == Visibility.Visible)
+        {
+            SetContextMenuItemPresentation(
+                SavePodcastEpisodeAsMenuItem,
+                YouTubeVideoDownloadPolicy.SaveAsLabel(youtubeVideoEpisode),
+                "Ctrl+S");
+        }
         var radioStationSelected = radioSession
             && actionItem?.Kind == MediaItemKind.Station
             && !playlistContainer;
@@ -24082,7 +25708,7 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
         PodcastDescriptionMenuItem.Visibility = podcastHeader || podcastEpisode
             ? Visibility.Visible
             : Visibility.Collapsed;
-        CurrentBroadcastInformationMenuItem.Visibility = radioSession || wiiMSession
+        CurrentBroadcastInformationMenuItem.Visibility = radioSession || remoteDeviceSession
             ? Visibility.Visible
             : Visibility.Collapsed;
         GoToPodcastMenuItem.Visibility = CanGoToRelatedPodcast(actionItem)
@@ -24165,7 +25791,7 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
         RenamePlaylistMenuItem.Visibility = playlistContainer ? Visibility.Visible : Visibility.Collapsed;
         DeletePlaylistMenuItem.Visibility = playlistContainer ? Visibility.Visible : Visibility.Collapsed;
         PlayNextMenuItem.Visibility = radioSession
-            || wiiMSession
+            || remoteDeviceSession
             || podcastHeader
             || localAlbumContainer
             || (playlistContainer && membershipItems.Count == 0)
@@ -24173,14 +25799,14 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
             ? Visibility.Collapsed
             : Visibility.Visible;
         QueueMenuItem.Visibility = radioSession
-            || wiiMSession
+            || remoteDeviceSession
             || podcastHeader
             || localAlbumContainer
             || (playlistContainer && membershipItems.Count == 0)
             || (folderNavigationRow && membershipItems.Count == 0)
             ? Visibility.Collapsed
             : Visibility.Visible;
-        FavoriteMenuItem.Visibility = wiiMSession
+        FavoriteMenuItem.Visibility = remoteDeviceSession
             || localAlbumContainer
             || (playlistContainer && membershipItems.Count == 0)
             || (folderNavigationRow && membershipItems.Count == 0)
@@ -24188,7 +25814,7 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
                 || membershipItems.Any(item => !TidalCollectionSemantics.UsesFavorites(item.Kind)))
             ? Visibility.Collapsed
             : Visibility.Visible;
-        LibraryMenuItem.Visibility = wiiMSession
+        LibraryMenuItem.Visibility = remoteDeviceSession
             || localAlbumContainer
             || folderNavigationRow
             || podcastEpisode
@@ -24197,7 +25823,7 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
                 || membershipItems.Any(item => !TidalCollectionSemantics.UsesLibrary(item.Kind)))
             ? Visibility.Collapsed
             : Visibility.Visible;
-        PlaylistMembershipMenuItem.Visibility = wiiMSession
+        PlaylistMembershipMenuItem.Visibility = remoteDeviceSession
             || playlistContainer
             || localAlbumContainer
             || podcastHeader
@@ -24210,7 +25836,7 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
                 ? "Dodaj do playlisty TIDAL"
                 : "Zmień przynależność do playlist",
             "Ctrl+Shift+P");
-        var presetTargetAvailable = CurrentSessionSupportsPresets()
+        var presetTargetAvailable = !frontierSmartSession && CurrentSessionSupportsPresets()
             && TryGetSessionPresetTarget(out _, out _, out _, out _);
         RadioPresetMembershipMenuItem.Visibility = presetTargetAvailable
                 ? Visibility.Visible
@@ -24219,8 +25845,9 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
             RadioPresetMembershipMenuItem,
             "Utwórz lub przypisz preset",
             "Ctrl+Alt+Shift+P");
-        CopyLocationMenuItem.Visibility = localAlbumContainer || playlistContainer ? Visibility.Collapsed : Visibility.Visible;
-        ItemPlaybackOptionsMenuItem.Visibility = wiiMSession
+        CopyLocationMenuItem.Visibility = localAlbumContainer || playlistContainer || frontierSmartSession
+            ? Visibility.Collapsed : Visibility.Visible;
+        ItemPlaybackOptionsMenuItem.Visibility = remoteDeviceSession
             || playlistContainer
             || SelectedBookmark is null
                && actionItem?.Kind == MediaItemKind.Station
@@ -24399,6 +26026,8 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
     {
         var item = _sessions.Current.CurrentItem;
         var wiiMSession = string.Equals(_sessions.Current.Id, "wiim", StringComparison.Ordinal);
+        var frontierSmartSession = IsFrontierSmartSession();
+        var remoteDeviceSession = wiiMSession || frontierSmartSession;
         var playerOpenOnWiiMAvailable = !wiiMSession && TryGetWiiMPlayableUri(item, out _);
         PlayerOpenOnWiiMMenuItem.Visibility = playerOpenOnWiiMAvailable
             ? Visibility.Visible
@@ -24411,7 +26040,14 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
                     ? $"Otwórz w {playbackTarget.DisplayName}"
                     : "Otwórz w WiiM");
         }
-        PlayerWiiMDevicePresetsMenuItem.Visibility = wiiMSession ? Visibility.Visible : Visibility.Collapsed;
+        PlayerWiiMDevicePresetsMenuItem.Visibility = remoteDeviceSession ? Visibility.Visible : Visibility.Collapsed;
+        if (remoteDeviceSession)
+        {
+            SetContextMenuItemPresentation(
+                PlayerWiiMDevicePresetsMenuItem,
+                frontierSmartSession ? "Presety urządzenia Frontier Smart" : "Presety urządzenia WiiM",
+                "Ctrl+Alt+P");
+        }
         PlayerWiiMPreviousPresetMenuItem.Visibility = wiiMSession ? Visibility.Visible : Visibility.Collapsed;
         PlayerWiiMNextPresetMenuItem.Visibility = wiiMSession ? Visibility.Visible : Visibility.Collapsed;
         PlayerWiiMInputMenuItem.Visibility = wiiMSession ? Visibility.Visible : Visibility.Collapsed;
@@ -24425,11 +26061,13 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
             : Visibility.Collapsed;
         // Skrot idzie WYLACZNIE do AcceleratorKey/InputGestureText - dopisany do
         // Name wychodzil u czytnika drugi raz ("Shift+A ... Shift+ A").
-        if (wiiMSession)
+        if (remoteDeviceSession)
         {
             SetContextMenuItemPresentation(
                 PlayerAudioOutputDeviceMenuItem,
-                "Wybierz aktywne urządzenie WiiM",
+                frontierSmartSession
+                    ? "Wybierz aktywne urządzenie Frontier Smart"
+                    : "Wybierz aktywne urządzenie WiiM",
                 "Shift+A");
         }
         else
@@ -24447,7 +26085,7 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
                     ? "Wstrzymaj"
                     : _sessions.Current.IsPlaying ? "Wstrzymaj" : "Odtwórz",
             "Spacja");
-        if (wiiMSession)
+        if (remoteDeviceSession)
         {
             PlayerAudioOutputDeviceMenuItem.Visibility = Visibility.Visible;
             PlayerAudioProcessingSeparator.Visibility = Visibility.Collapsed;
@@ -24458,6 +26096,10 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
             PlayerAddBookmarkMenuItem.Visibility = Visibility.Collapsed;
             PlayerAddNamedBookmarkMenuItem.Visibility = Visibility.Collapsed;
             PlayerBookmarksMenuItem.Visibility = Visibility.Collapsed;
+            PlayerPreviousBookmarkMenuItem.Visibility = Visibility.Collapsed;
+            PlayerNextBookmarkMenuItem.Visibility = Visibility.Collapsed;
+            PlayerPreviousNamedBookmarkMenuItem.Visibility = Visibility.Collapsed;
+            PlayerNextNamedBookmarkMenuItem.Visibility = Visibility.Collapsed;
             PlayerBeforeChaptersSeparator.Visibility = Visibility.Collapsed;
             PlayerChaptersMenuItem.Visibility = Visibility.Collapsed;
             PlayerAddNamedChapterMenuItem.Visibility = Visibility.Collapsed;
@@ -24487,20 +26129,26 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
             PlayerFavoriteMenuItem.Visibility = Visibility.Collapsed;
             PlayerLibraryMenuItem.Visibility = Visibility.Collapsed;
             PlayerPlaylistMembershipMenuItem.Visibility = Visibility.Collapsed;
-            PlayerRadioPresetMembershipMenuItem.Visibility = Visibility.Visible;
-            SetContextMenuItemPresentation(
-                PlayerRadioPresetMembershipMenuItem,
-                "Przypisz skrót AMC do gotowego presetu WiiM",
-                "Ctrl+Alt+Shift+P");
+            PlayerRadioPresetMembershipMenuItem.Visibility = wiiMSession
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+            if (wiiMSession)
+            {
+                SetContextMenuItemPresentation(
+                    PlayerRadioPresetMembershipMenuItem,
+                    "Przypisz skrót AMC do gotowego presetu WiiM",
+                    "Ctrl+Alt+Shift+P");
+            }
             PlayerPodcastDescriptionMenuItem.Visibility = Visibility.Collapsed;
             PlayerCurrentBroadcastInformationMenuItem.Visibility = Visibility.Visible;
             PlayerGoToPodcastMenuItem.Visibility = Visibility.Collapsed;
             PlayerDownloadPodcastEpisodeMenuItem.Visibility = Visibility.Collapsed;
+            PlayerDownloadYouTubeVideoMenuItem.Visibility = Visibility.Collapsed;
             PlayerSavePodcastEpisodeAsMenuItem.Visibility = Visibility.Collapsed;
             PlayerGoToAlbumMenuItem.Visibility = Visibility.Collapsed;
             PlayerGoToArtistMenuItem.Visibility = Visibility.Collapsed;
             PlayerCopyNameMenuItem.Visibility = Visibility.Visible;
-            PlayerCopyLocationMenuItem.Visibility = Visibility.Visible;
+            PlayerCopyLocationMenuItem.Visibility = wiiMSession ? Visibility.Visible : Visibility.Collapsed;
             SetContextMenuItemPresentation(PlayerCopyNameMenuItem, "Kopiuj nazwę urządzenia", "Ctrl+C");
             SetContextMenuItemPresentation(PlayerCopyLocationMenuItem, "Kopiuj adres IP urządzenia", "Ctrl+Shift+C");
             PlayerShowLocalFileInFolderMenuItem.Visibility = Visibility.Collapsed;
@@ -24583,6 +26231,10 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
             radioSession ? "Dodaj nazwaną zakładkę w nagrywanym pliku" : "Dodaj nazwaną zakładkę",
             radioSession ? "Shift+B" : "Ctrl+Shift+B");
         PlayerBookmarksMenuItem.Visibility = radioSession ? Visibility.Collapsed : Visibility.Visible;
+        PlayerPreviousBookmarkMenuItem.Visibility = radioSession ? Visibility.Collapsed : Visibility.Visible;
+        PlayerNextBookmarkMenuItem.Visibility = radioSession ? Visibility.Collapsed : Visibility.Visible;
+        PlayerPreviousNamedBookmarkMenuItem.Visibility = radioSession ? Visibility.Collapsed : Visibility.Visible;
+        PlayerNextNamedBookmarkMenuItem.Visibility = radioSession ? Visibility.Collapsed : Visibility.Visible;
         PlayerPodcastDescriptionMenuItem.Visibility = string.Equals(_sessions.Current.Id, "podcasts", StringComparison.Ordinal)
             && item.Kind is MediaItemKind.Podcast or MediaItemKind.Episode
                 ? Visibility.Visible
@@ -24598,9 +26250,21 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
         PlayerDownloadPodcastEpisodeMenuItem.Visibility = podcastEpisode
             ? Visibility.Visible
             : Visibility.Collapsed;
+        PlayerDownloadYouTubeVideoMenuItem.Visibility = podcastEpisode
+            && TryResolveYouTubeVideoDownload(item, out _, out _)
+                ? Visibility.Visible
+                : Visibility.Collapsed;
         PlayerSavePodcastEpisodeAsMenuItem.Visibility = podcastEpisode
             ? Visibility.Visible
             : Visibility.Collapsed;
+        if (podcastEpisode)
+        {
+            SetContextMenuItemPresentation(
+                PlayerSavePodcastEpisodeAsMenuItem,
+                YouTubeVideoDownloadPolicy.SaveAsLabel(
+                    TryResolveYouTubeVideoDownload(item, out _, out _)),
+                "Ctrl+S");
+        }
         if (radioSession)
         {
             SetContextMenuItemPresentation(
@@ -24849,11 +26513,9 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
             .ToArray();
         if (localPaths.Length == items.Count)
         {
-            var fileDropList = new StringCollection();
-            fileDropList.AddRange(localPaths);
             var data = new System.Windows.DataObject();
-            data.SetData(DataFormats.UnicodeText, string.Join(Environment.NewLine, localPaths));
-            data.SetFileDropList(fileDropList);
+            data.SetData(DataFormats.UnicodeText, string.Join(Environment.NewLine, localPaths), autoConvert: false);
+            data.SetData(DataFormats.FileDrop, localPaths, autoConvert: false);
             if (!ClipboardRetry.TrySetDataObject(data, out var fileClipboardError)) return fileClipboardError;
             return localPaths.Length == 1
                 ? "Skopiowano plik i pełną ścieżkę"
@@ -24865,11 +26527,9 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
             entries.Select(entry => entry.LocalPath ?? entry.ShareableLocation!));
         if (localPaths.Length > 0)
         {
-            var fileDropList = new StringCollection();
-            fileDropList.AddRange(localPaths);
             var data = new System.Windows.DataObject();
-            data.SetData(DataFormats.UnicodeText, text);
-            data.SetFileDropList(fileDropList);
+            data.SetData(DataFormats.UnicodeText, text, autoConvert: false);
+            data.SetData(DataFormats.FileDrop, localPaths, autoConvert: false);
             if (!ClipboardRetry.TrySetDataObject(data, out var mixedClipboardError)) return mixedClipboardError;
         }
         else if (!ClipboardRetry.TrySetText(text, out var uriClipboardError))
@@ -24931,11 +26591,9 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
 
         if (localPaths.Length > 0)
         {
-            var fileDropList = new StringCollection();
-            fileDropList.AddRange(localPaths);
             var data = new System.Windows.DataObject();
-            data.SetData(DataFormats.UnicodeText, text);
-            data.SetFileDropList(fileDropList);
+            data.SetData(DataFormats.UnicodeText, text, autoConvert: false);
+            data.SetData(DataFormats.FileDrop, localPaths, autoConvert: false);
             if (!ClipboardRetry.TrySetDataObject(data, out var fileClipboardError)) return fileClipboardError;
         }
         else
@@ -25319,11 +26977,9 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
         RemoveLocalExclusions(audioPaths);
         RefreshLocalSessionItems();
         _pendingExternalMoves.Clear();
-        var copiedFiles = new StringCollection();
-        copiedFiles.AddRange(audioPaths);
         var copiedData = new System.Windows.DataObject();
-        copiedData.SetData(DataFormats.UnicodeText, string.Join(Environment.NewLine, audioPaths));
-        copiedData.SetFileDropList(copiedFiles);
+        copiedData.SetData(DataFormats.UnicodeText, string.Join(Environment.NewLine, audioPaths), autoConvert: false);
+        copiedData.SetData(DataFormats.FileDrop, audioPaths, autoConvert: false);
         var clipboardRefreshError = ClipboardRetry.TrySetDataObject(copiedData, out var refreshError)
             ? string.Empty
             : $" {refreshError}";
@@ -25369,12 +27025,10 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
             .Select(entry => entry.Path!)
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
-        var fileDropList = new StringCollection();
-        fileDropList.AddRange(paths);
         var data = new System.Windows.DataObject();
-        data.SetData(DataFormats.UnicodeText, string.Join(Environment.NewLine, paths));
-        data.SetFileDropList(fileDropList);
-        data.SetData("Preferred DropEffect", new MemoryStream(BitConverter.GetBytes(2)));
+        data.SetData(DataFormats.UnicodeText, string.Join(Environment.NewLine, paths), autoConvert: false);
+        data.SetData(DataFormats.FileDrop, paths, autoConvert: false);
+        data.SetData("Preferred DropEffect", BitConverter.GetBytes(2), autoConvert: false);
         if (!ClipboardRetry.TrySetDataObject(data, out var clipboardError)) return clipboardError;
         _pendingExternalMoves.Clear();
         foreach (var entry in localFiles)
@@ -25469,7 +27123,9 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
     private void PlaylistsView_Click(object sender, RoutedEventArgs e) =>
         ExecuteCommand(CommandIds.ViewPlaylists);
     private void WiiMDevicePresets_Click(object sender, RoutedEventArgs e) =>
-        ExecuteCommand(CommandIds.ViewWiiMDevicePresets);
+        ExecuteCommand(IsFrontierSmartSession()
+            ? CommandIds.ViewFrontierSmartPresets
+            : CommandIds.ViewWiiMDevicePresets);
     private void WiiMPreviousPreset_Click(object sender, RoutedEventArgs e) =>
         ExecuteCommand(CommandIds.PreviousWiiMDevicePreset);
     private void WiiMNextPreset_Click(object sender, RoutedEventArgs e) =>
@@ -25489,7 +27145,11 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
     private void RadioPresetsView_Click(object sender, RoutedEventArgs e) =>
         ExecuteCommand(string.Equals(_sessions.Current.Id, "wiim", StringComparison.Ordinal)
             ? CommandIds.ViewWiiMDevicePresets
+            : IsFrontierSmartSession()
+                ? CommandIds.ViewFrontierSmartPresets
             : CommandIds.ViewRadioPresets);
+    private void FrontierSmartModes_Click(object sender, RoutedEventArgs e) =>
+        ExecuteCommand(CommandIds.ViewFrontierSmartModes);
     private void RadioAssignPreset_Click(object sender, RoutedEventArgs e) =>
         ExecuteCommand(CommandIds.AssignRadioPreset);
     private void LibraryView_Click(object sender, RoutedEventArgs e) => ExecuteCommand(CommandIds.ViewLibrary);
@@ -25505,6 +27165,8 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
     private void RefreshLocalLibrary_Click(object sender, RoutedEventArgs e) =>
         ExecuteCommand(string.Equals(_sessions.Current.Id, "wiim", StringComparison.Ordinal)
             ? CommandIds.RefreshWiiMDevices
+            : IsFrontierSmartSession()
+            ? CommandIds.RefreshFrontierSmartDevices
             : string.Equals(_sessions.Current.Id, "podcasts", StringComparison.Ordinal)
             ? string.Equals(_currentView, PodcastInboxViewName, StringComparison.Ordinal)
                 ? CommandIds.RefreshPodcastLibrary
@@ -25512,9 +27174,15 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
             : CommandIds.RefreshLocalLibrary);
     private void ManageLocalSources_Click(object sender, RoutedEventArgs e) => ExecuteCommand(CommandIds.ManageLocalSources);
     private void ManageWiiMDevices_Click(object sender, RoutedEventArgs e) => ExecuteCommand(CommandIds.ManageWiiMDevices);
+    private void ManageFrontierSmartDevices_Click(object sender, RoutedEventArgs e) =>
+        ExecuteCommand(CommandIds.ManageFrontierSmartDevices);
     private void ManageTidalConnection_Click(object sender, RoutedEventArgs e) => ExecuteCommand(CommandIds.ManageTidalConnection);
 
     private void ManageSpotifyConnection_Click(object sender, RoutedEventArgs e) => ExecuteCommand(CommandIds.ManageSpotifyConnection);
+    private void ManageAppleMusicConnection_Click(object sender, RoutedEventArgs e) =>
+        ExecuteCommand(CommandIds.ManageAppleMusicConnection);
+    private void ManageYouTubeConnection_Click(object sender, RoutedEventArgs e) =>
+        ExecuteCommand(CommandIds.ManageYouTubeConnection);
     private void ManageSonosConnection_Click(object sender, RoutedEventArgs e) => ExecuteCommand(CommandIds.ManageSonosConnection);
 
     private void RefreshSonosGroups_Click(object sender, RoutedEventArgs e) => ExecuteCommand(CommandIds.RefreshSonosGroups);
@@ -25631,7 +27299,8 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
         string? loadMorePodcastViewName = null,
         string? loadMoreSpotifyTracksViewName = null,
         ArtistBrowseSection? artistSection = null,
-        RadioRecordingHistorySettings? recordingHistoryEntry = null) : INotifyPropertyChanged
+        RadioRecordingHistorySettings? recordingHistoryEntry = null,
+        string? recordingOutputDescription = null) : INotifyPropertyChanged
     {
         public MediaItem Item { get; } = item;
         public MediaItem ActionItem { get; } = actionItem ?? item;
@@ -25654,6 +27323,7 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
         /// co sie stalo, zamiast milczec.
         /// </summary>
         public RadioRecordingHistorySettings? RecordingHistoryEntry { get; } = recordingHistoryEntry;
+        public string? RecordingOutputDescription { get; } = recordingOutputDescription;
         public string Label { get; private set; } = label;
         public string NavigationText { get; } = navigationText;
 
@@ -25715,6 +27385,7 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
         DateTime requestedUtc,
         RadioRecordingFormat recordingFormat,
         int recordingBitrateKbps,
+        string requestedOutputFolder,
         CancellationTokenSource cancellation,
         RadioRecordingControl control)
     {
@@ -25727,6 +27398,7 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
         public string? Path { get; set; }
         public RadioRecordingFormat RecordingFormat { get; } = recordingFormat;
         public int RecordingBitrateKbps { get; } = recordingBitrateKbps;
+        public string RequestedOutputFolder { get; } = requestedOutputFolder;
         public CancellationTokenSource Cancellation { get; } = cancellation;
         public RadioRecordingControl Control { get; } = control;
         public Task<ManualRadioRecordingResult>? Task { get; set; }
@@ -25761,6 +27433,7 @@ public partial class MainWindow : AccessibleWindow, IAnnouncementSink, IApplicat
         string SessionId,
         string ItemId,
         string BookmarkId,
+        bool NamedOnly,
         DateTime LastNavigationUtc);
 
     private sealed record BookmarkReturnContext(

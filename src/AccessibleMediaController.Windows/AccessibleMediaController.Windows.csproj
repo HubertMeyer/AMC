@@ -132,6 +132,16 @@
           CopyToOutputDirectory="PreserveNewest"
           CopyToPublishDirectory="PreserveNewest"
           ExcludeFromSingleFile="true" />
+    <None Include="AppleMusicPlayerHost\index.html"
+          Link="apple-music-player\index.html"
+          CopyToOutputDirectory="PreserveNewest"
+          CopyToPublishDirectory="PreserveNewest"
+          ExcludeFromSingleFile="true" />
+    <None Include="AppleMusicPlayerHost\bridge.js"
+          Link="apple-music-player\bridge.js"
+          CopyToOutputDirectory="PreserveNewest"
+          CopyToPublishDirectory="PreserveNewest"
+          ExcludeFromSingleFile="true" />
     <!-- Drugi silnik Spotify: natywny host Librespot. Istnieje OBOK mostka SDK
          wyzej, nie zamiast niego - uzytkownik wybiera silnik, a paczka musi
          zawierac oba. Fabryka szuka dokladnie

@@ -513,23 +513,23 @@ internal static partial class SonosFavoritePlayRealOwnerTests
     /// </summary>
     private static string? ReadClipboard()
     {
-        for (var attempt = 0; attempt < 10; attempt++)
+        for (var attempt = 0; attempt < 30; attempt++)
         {
             try { return Clipboard.ContainsText() ? Clipboard.GetText() : null; }
-            catch (COMException) { Thread.Sleep(30); }
-            catch (ExternalException) { Thread.Sleep(30); }
+            catch (COMException) { Thread.Sleep(100); }
+            catch (ExternalException) { Thread.Sleep(100); }
         }
 
-        throw new Exception("Nie udało się odczytać schowka Windows po 10 próbach.");
+        throw new Exception("Nie udało się odczytać schowka Windows po 30 próbach.");
     }
 
     private static bool ClipboardSetWithRetry(string text)
     {
-        for (var attempt = 0; attempt < 10; attempt++)
+        for (var attempt = 0; attempt < 30; attempt++)
         {
             try { Clipboard.SetText(text); return true; }
-            catch (COMException) { Thread.Sleep(30); }
-            catch (ExternalException) { Thread.Sleep(30); }
+            catch (COMException) { Thread.Sleep(100); }
+            catch (ExternalException) { Thread.Sleep(100); }
         }
 
         return false;

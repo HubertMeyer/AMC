@@ -1,5 +1,49 @@
 # AMC — mapa kodu
 
+## Wspólny kontrakt kont, urządzeń i folderów — korekta 22.10.2026
+
+- Pierwsze wejście może uruchomić dodanie, wykrywanie lub logowanie. Kolejne
+  `Ctrl+F5` pokazuje zapisany stan albo listę bez automatycznego ponawiania tej
+  operacji; nowy skan, synchronizacja, parowanie lub logowanie są jawne.
+- `TidalAccountWindow`, `SpotifyAccountWindow` i okno konta Sonos mają jawną,
+  potwierdzaną akcję odłączenia konta. Usuwa ona lokalne poświadczenie, nie
+  konto użytkownika u dostawcy. Wyłączenie sesji jest osobną operacją i nie
+  może udawać wylogowania.
+- `FrontierSmartDevicesWindow` i menedżer WiiM używają semantyki **Usuń
+  urządzenie**, a menedżer Folderów Biblioteki — **Odłącz folder**. Wspólna
+  zasada nie zmienia różnych skutków tych działań w jedną techniczną operację.
+- Późniejsze uproszczenie może zmienić liczbę okien i przycisków, lecz wymaga
+  jawnej korekty kontraktu, pomocy, palety, menu, dokumentacji i testów. Do tego
+  czasu aktualne zachowanie pozostaje wiążące.
+
+## Frontier Smart po korekcie pierwszego uruchomienia
+
+- `Core/Devices/FrontierSmart/FrontierSmartDiscoveryService.cs` — wykrywanie
+  SSDP jest oddzielone od autoryzacji PIN-em. Pierwszy przebieg wysyła kilka
+  zapytań dla usługi FSAPI i `ssdp:all` na każdej aktywnej karcie IPv4; awaria
+  jednej karty nie kasuje odpowiedzi z pozostałych. Odpowiedź bez `LOCATION`
+  może użyć lokalnego adresu nadawcy, ale tylko gdy `ST` albo `USN` jawnie
+  identyfikuje usługę Frontier Smart.
+- `FrontierSmartClient.ReadIdentityAsync` potwierdza urządzenie minimalnym
+  zestawem pól po wpisaniu PIN-u. Pełny stan jest drugim krokiem; jego brak nie
+  usuwa już wcześniej potwierdzonego radia. Starsze firmware odpowiadające na
+  `GET_MULTIPLE` zwykłym błędem XML przechodzi na pojedyncze `GET` tak samo jak
+  wariant z HTTP 404.
+- `FrontierSmartDevicesWindow` — pusta pierwsza konfiguracja zaczyna skan sama,
+  z fokusem na liście. Wykryty adres jest czytelnym kandydatem wymagającym
+  PIN-u; pole adresu IP pozostaje w zwiniętym dodawaniu ręcznym. Ponowne
+  otwarcie używa kandydatów z pamięci, a po zapisaniu radia `Ctrl+F5` otwiera
+  od razu listę bez automatycznego skanowania. Jawny przycisk **Wykryj nowe
+  urządzenia** nadal pozwala poszukać kolejnego odbiornika.
+- `MainWindow.FrontierSmart.cs` przechowuje wyłącznie nietrwałą migawkę
+  wykrytych, jeszcze niepołączonych adresów. Potwierdzone urządzenia i wybrany
+  cel pozostają w istniejącym `FrontierSmartSettings`, a PIN wyłącznie w
+  Menedżerze poświadczeń Windows.
+- Testy są osobnymi projektami Core i WPF, dodanymi do rozwiązania oraz
+  `build.ps1`: 13 przypadków protokołu i 6 grup interfejsu. Test okna mierzy
+  pierwszy skan, brak ponownego skanu, pusty i wypełniony stan, etykiety,
+  zwinięte dodawanie ręczne oraz fokus listy zamiast przycisku zamknięcia.
+
 ## Sonos po416: odbiór powrotu do podlist
 
 - `SonosSublistReturnPolicy.ShouldLeaveSublistForSlot`: przed zamknięciem listy odrzuca slot pusty i już aktywny.

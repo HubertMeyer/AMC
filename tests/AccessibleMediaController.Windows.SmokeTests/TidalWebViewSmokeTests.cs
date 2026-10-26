@@ -71,6 +71,8 @@ internal static class TidalWebViewSmokeTests
             var environment = await CoreWebView2Environment.CreateAsync(userDataFolder: profile,
                 options: enableHostPlayback ? TidalWebViewPolicy.CreateOptions() : new CoreWebView2EnvironmentOptions());
             await view.EnsureCoreWebView2Async(environment);
+            if (enableHostPlayback)
+                await HeadlessPlaybackWebViewPolicy.ApplyAsync(view.CoreWebView2);
             var navigation = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
             view.CoreWebView2.NavigationCompleted += (_, e) => navigation.TrySetResult(e.IsSuccess);
             // Silent PCM but NOT a muted element: muted autoplay would hide the defect.

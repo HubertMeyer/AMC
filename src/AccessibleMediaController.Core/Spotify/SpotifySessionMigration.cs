@@ -528,6 +528,24 @@ public static class SpotifySessionMigration
             }
         }
 
+        playback.ItemsBySession ??= new Dictionary<string, List<PlaybackHistoryItemSettings>>(StringComparer.OrdinalIgnoreCase);
+        if (playback.ItemsBySession.TryGetValue(LegacySessionId, out var legacyItems) && legacyItems is not null)
+        {
+            playback.ItemsBySession.Remove(LegacySessionId);
+            var canonicalItems = playback.ItemsBySession.TryGetValue(CanonicalSessionId, out var existingItems)
+                && existingItems is not null
+                    ? existingItems
+                    : playback.ItemsBySession[CanonicalSessionId] = [];
+            var knownItems = canonicalItems.Select(item => item.Id).ToHashSet(StringComparer.Ordinal);
+            foreach (var item in legacyItems)
+            {
+                var canonicalId = remapItemId(item.Id);
+                if (canonicalId.Length == 0 || !knownItems.Add(canonicalId)) continue;
+                item.Id = canonicalId;
+                canonicalItems.Add(item);
+            }
+        }
+
         var search = state.SearchHistory ??= new SearchHistorySettings();
         search.Entries ??= new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
         if (search.Entries.TryGetValue(LegacySessionId, out var legacySearch) && legacySearch is not null)

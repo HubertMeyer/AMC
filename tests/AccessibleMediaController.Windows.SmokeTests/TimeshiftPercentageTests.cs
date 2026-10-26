@@ -123,10 +123,34 @@ internal static class TimeshiftPercentageTests
                 panel.Children.Remove(edit); window.PlayerPlayPauseButton.Focus(); Pump();
                 SendDigit(window, System.Windows.Input.Key.D9, System.Windows.Input.ModifierKeys.Control);
                 AssertNear(fixture.Radio.Position.TotalSeconds, 25, "Ctrl+cyfra nie przewija bufora");
+
+                // Regresja AMC13: zwykly End w odtwarzaczu radia ma trafic do
+                // RadioJumpLive, nigdy do ogolnego konca materialu o nieznanej
+                // dlugosci. NVDA+End pozostaje natomiast poleceniem czytnika.
+                fixture.Radio.Seek(TimeSpan.Zero);
+                fixture.Radio.SetPlaybackRate(1.25d);
+                window.ScreenReaderModifierDownForTests = false;
+                if (!SendDigit(window, System.Windows.Input.Key.End))
+                    throw new Exception("End nie zostal obsluzony przez odtwarzacz radia");
+                if (fixture.Radio.BehindLive > TimeSpan.FromSeconds(0.5))
+                    throw new Exception($"End nie wrocil na zywo: opoznienie {fixture.Radio.BehindLive}");
+                AssertNear(fixture.Radio.PlaybackRate, 1d, "End przywraca normalne tempo na zywo");
+
+                fixture.Radio.Seek(TimeSpan.Zero);
+                var beforeReaderEnd = fixture.Radio.Position;
+                window.ScreenReaderModifierDownForTests = true;
+                if (SendDigit(window, System.Windows.Input.Key.End))
+                    throw new Exception("AMC przejelo NVDA+End");
+                AssertNear(
+                    fixture.Radio.Position.TotalSeconds,
+                    beforeReaderEnd.TotalSeconds,
+                    "NVDA+End nie zmienia pozycji Time Shiftu");
+                window.ScreenReaderModifierDownForTests = null;
+
                 sessions.SelectSession("radio");
                 type.GetMethod("ShowPlayerView", flags)!.Invoke(window, null); Pump();
                 window.PlayerPlayPauseButton.Focus(); Pump();
-                Console.WriteLine($"OK: {checkedKeys} skoków cyframi w oknie, partial/wrap/live, NumPad5, edycja i Ctrl+cyfra");
+                Console.WriteLine($"OK: {checkedKeys} skoków cyframi w oknie, partial/wrap/live, NumPad5, edycja, Ctrl+cyfra, End i NVDA+End");
                 if (liveDirectory is not null)
                 {
                     Directory.CreateDirectory(liveDirectory);

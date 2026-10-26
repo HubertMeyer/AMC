@@ -28,6 +28,7 @@ internal static class AudioClipAppendTests
             ("MP3 zachowuje format i kolejność dźwięku", r=>AppendsToOtherContainerFormat(r,".mp3",string.Empty)),
             ("M4A zachowuje format i kolejność dźwięku", r=>AppendsToOtherContainerFormat(r,".m4a","ftyp")),
             ("Ogg zachowuje format i kolejność dźwięku", r=>AppendsToOtherContainerFormat(r,".ogg","OggS")),
+            ("Ponowne kodowanie zgłasza postęp łączenia i sprawdzania", ReportsAllLongRunningPhases),
             ("Podmiana tej samej wielkości i daty nie nadpisuje nowej treści", DetectsSameMetadataReplacement),
             ("Plik tylko do odczytu pozostaje nietknięty", RejectsReadOnlyTarget),
             ("Zajęty plik pozostaje nietknięty", RejectsLockedTarget),
@@ -111,6 +112,35 @@ internal static class AudioClipAppendTests
             Check(result.TargetDurationAfter>TimeSpan.FromSeconds(4.7),"Korzeń ze zmiennej OneDrive zablokował lokalną edycję");
         }
         finally {Environment.SetEnvironmentVariable("OneDrive",previous);}
+    }
+
+    private static void ReportsAllLongRunningPhases(string root)
+    {
+        if (!AudioClipExporter.IsFfmpegAvailable) return;
+        var source = Path.Combine(root, "źródło.wav");
+        var targetWave = Path.Combine(root, "cel-źródłowy.wav");
+        var target = Path.Combine(root, "cel.flac");
+        WriteTone(source, TimeSpan.FromSeconds(4), 1200);
+        WriteTone(targetWave, TimeSpan.FromSeconds(3), 220);
+        Wait(AudioClipAppender.EncodeRangeAsync(
+            targetWave,
+            target,
+            TimeSpan.Zero,
+            TimeSpan.FromSeconds(3),
+            CancellationToken.None));
+
+        var reports = new List<double>();
+        Wait(AudioClipAppender.AppendAsync(
+            new AudioClipAppendRequest(source, target, TimeSpan.Zero, TimeSpan.FromSeconds(2)),
+            new InlineProgress(value => reports.Add(value)),
+            CancellationToken.None));
+
+        Check(reports.Any(value => value >= 0.35d && value < 0.85d),
+            "Brak mierzalnego postępu podczas łączenia plików.");
+        Check(reports.Any(value => value >= 0.85d && value < 0.999d),
+            "Postęp przeskoczył z przygotowania fragmentu prosto do końca bez etapu sprawdzania.");
+        Check(reports.Count > 0 && reports[^1] == 1d,
+            "Operacja nie zgłosiła zakończenia po sprawdzeniu pliku.");
     }
 
     private static void RefusesTargetWithoutLocalData(string root)

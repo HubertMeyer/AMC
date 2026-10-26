@@ -22,15 +22,19 @@ function Remove-GeneratedNuGetSyncDuplicates {
 }
 
 Remove-GeneratedNuGetSyncDuplicates
-dotnet restore AccessibleMediaController.sln --runtime win-x64 -p:NuGetAudit=false --disable-build-servers
+dotnet restore AccessibleMediaController.sln --runtime win-x64 -p:NuGetAudit=false --disable-build-servers -m:1
 if ($LASTEXITCODE -ne 0) { throw "Nie udało się przywrócić składników projektu." }
 Remove-GeneratedNuGetSyncDuplicates
-dotnet build AccessibleMediaController.sln --configuration Release --no-restore --disable-build-servers
+dotnet build AccessibleMediaController.sln --configuration Release --no-restore --disable-build-servers -m:1
 if ($LASTEXITCODE -ne 0) { throw "Nie udało się skompilować projektu." }
 dotnet run --project tests/AccessibleMediaController.Core.SmokeTests --configuration Release --no-build --disable-build-servers
 if ($LASTEXITCODE -ne 0) { throw "Testy kontrolne nie powiodły się." }
 dotnet run --project tests/AccessibleMediaController.Windows.SmokeTests --configuration Release --no-build --disable-build-servers
 if ($LASTEXITCODE -ne 0) { throw "Test odtwarzania OGG nie powiódł się." }
+dotnet run --project tests/AccessibleMediaController.FrontierSmart.SmokeTests --configuration Release --no-build --disable-build-servers
+if ($LASTEXITCODE -ne 0) { throw "Testy protokołu Frontier Smart nie powiodły się." }
+dotnet run --project tests/AccessibleMediaController.FrontierSmart.Windows.SmokeTests --configuration Release --no-build --disable-build-servers
+if ($LASTEXITCODE -ne 0) { throw "Testy interfejsu Frontier Smart nie powiodły się." }
 
 if ($Publish) {
     [xml]$buildProperties = Get-Content -LiteralPath (Join-Path $root "Directory.Build.props")
@@ -60,6 +64,7 @@ if ($Publish) {
             --self-contained true `
             --no-restore `
             --disable-build-servers `
+            -m:1 `
             --output $staging `
             -p:PublishSingleFile=true `
             -p:IncludeNativeLibrariesForSelfExtract=true `
@@ -97,6 +102,15 @@ if ($Publish) {
             throw "Brak modułu odtwarzacza Spotify."
         }
         Copy-Item -LiteralPath $spotifyPlayerDirectory -Destination (Join-Path $packageDirectory "spotify-player") -Recurse -Force
+        # Oficjalny MusicKit on the Web jest osobnym, lokalnym hostem WebView2.
+        # Bez tego katalogu sesja Apple Music zachowalaby menu i bibliotekę,
+        # ale logowanie użytkownika i odtwarzanie kończyłyby się na brakującej
+        # stronie. Traktujemy go więc jak obowiązkowe hosty TIDAL i Spotify.
+        $appleMusicPlayerDirectory = Join-Path $staging "apple-music-player"
+        if (-not (Test-Path -LiteralPath $appleMusicPlayerDirectory)) {
+            throw "Brak modułu odtwarzacza Apple Music."
+        }
+        Copy-Item -LiteralPath $appleMusicPlayerDirectory -Destination (Join-Path $packageDirectory "apple-music-player") -Recurse -Force
         # Drugi silnik Spotify: natywny host Librespot. Paczka kopiuje wybrane
         # skladniki, wiec bez tego bloku plik zostaje w katalogu przejsciowym i
         # wydanie wychodzi bez silnika - dokladnie tak, jak wcześniej wyszlo bez

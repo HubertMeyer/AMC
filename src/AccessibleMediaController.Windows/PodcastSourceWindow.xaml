@@ -15,15 +15,14 @@
         <Label Target="{Binding ElementName=FeedBox}">Adres kanału _RSS, Atom, strony Apple Podcasts, YouTube lub publicznego medium:</Label>
         <TextBox x:Name="FeedBox" Margin="0,0,0,10"
                  automation:AutomationProperties.Name="Adres kanału RSS, Atom, strony Apple Podcasts, kanału lub playlisty YouTube albo publicznego filmu lub transmisji YouTube"
-                 automation:AutomationProperties.HelpText="Pełny publiczny adres rozpoczynający się od http:// albo https://; Apple Podcasts działa przez publiczny kanał i nie obejmuje płatnych treści dostępnych wyłącznie po zalogowaniu" />
+                 automation:AutomationProperties.HelpText="Pełny publiczny adres rozpoczynający się od http:// albo https://. Naciśnij Enter, aby AMC sprawdził adres i dodał źródło. Apple Podcasts działa przez publiczny kanał i nie obejmuje płatnych treści dostępnych wyłącznie po zalogowaniu" />
         <TextBlock x:Name="StatusText" MinHeight="48" Margin="0,0,0,12" TextWrapping="Wrap"
-                   automation:AutomationProperties.Name="Wynik sprawdzania kanału"
+                   automation:AutomationProperties.Name="Stan dodawania źródła"
                    automation:AutomationProperties.LiveSetting="Assertive" />
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-            <Button x:Name="CheckButton" Width="110" Margin="0,0,8,0" Content="_Sprawdź"
-                    Click="Check_Click" />
-            <Button x:Name="AddButton" Width="105" Margin="0,0,8,0" Content="_Dodaj"
-                    IsDefault="True" IsEnabled="False" Click="Add_Click" />
+            <Button x:Name="AddButton" Width="110" Margin="0,0,8,0" Content="_Dodaj"
+                    IsDefault="True" Click="Add_Click"
+                    automation:AutomationProperties.Name="Dodaj źródło" />
             <Button Width="95" Content="_Anuluj" IsCancel="True" />
         </StackPanel>
     </StackPanel>

@@ -33,6 +33,11 @@
                       Focusable="False" IsHitTestVisible="False"
                       KeyboardNavigation.IsTabStop="False"
                       automation:AutomationProperties.Name="" />
+        <wv2:WebView2 x:Name="AppleMusicPlayerWebView" DockPanel.Dock="Top"
+                      Width="1" Height="1"
+                      Focusable="False" IsHitTestVisible="False"
+                      KeyboardNavigation.IsTabStop="False"
+                      automation:AutomationProperties.Name="" />
 
         <DockPanel Margin="12">
         <Menu x:Name="MainMenu" DockPanel.Dock="Top" Margin="0,0,0,8"
@@ -56,6 +61,11 @@
                           automation:AutomationProperties.AcceleratorKey="Ctrl+F5"
                           Visibility="Collapsed"
                           Click="ManageWiiMDevices_Click" />
+                <MenuItem x:Name="ManageFrontierSmartDevicesMenuItem" Header="Urządzenia _Frontier Smart…" InputGestureText="Ctrl+F5"
+                          automation:AutomationProperties.Name="Urządzenia Frontier Smart, Ctrl+F5"
+                          automation:AutomationProperties.AcceleratorKey="Ctrl+F5"
+                          Visibility="Collapsed"
+                          Click="ManageFrontierSmartDevices_Click" />
                 <MenuItem x:Name="ManageTidalConnectionMenuItem" Header="_Konto i synchronizacja TIDAL…" InputGestureText="Ctrl+F5"
                           automation:AutomationProperties.Name="Konto i synchronizacja TIDAL, Ctrl+F5"
                           automation:AutomationProperties.AcceleratorKey="Ctrl+F5"
@@ -66,6 +76,16 @@
                           automation:AutomationProperties.AcceleratorKey="Ctrl+F5"
                           Visibility="Collapsed"
                           Click="ManageSpotifyConnection_Click" />
+                <MenuItem x:Name="ManageAppleMusicConnectionMenuItem" Header="Konto _Apple Music…" InputGestureText="Ctrl+F5"
+                          automation:AutomationProperties.Name="Konto Apple Music, Ctrl+F5"
+                          automation:AutomationProperties.AcceleratorKey="Ctrl+F5"
+                          Visibility="Collapsed"
+                          Click="ManageAppleMusicConnection_Click" />
+                <MenuItem x:Name="ManageYouTubeConnectionMenuItem" Header="Konto _YouTube i import z Google…" InputGestureText="Ctrl+F5"
+                          automation:AutomationProperties.Name="Konto YouTube i import z Google, Ctrl+F5"
+                          automation:AutomationProperties.AcceleratorKey="Ctrl+F5"
+                          Visibility="Collapsed"
+                          Click="ManageYouTubeConnection_Click" />
                 <!-- Konto Sonos: JAWNA pozycja bez skrotu i bez litery dostepu.
                      Do tej pozycji dochodzi sie strzalkami; kolejna zajeta litera
                      w Plik byloby kosztem bez zysku, a Ctrl+F5 nalezy do sesji,
@@ -142,16 +162,16 @@
                 <MenuItem x:Name="ExportYouTubeSubscriptionsMenuItem" Header="Eksportuj _kanały YouTube do playlisty…"
                           automation:AutomationProperties.Name="Eksportuj kanały i playlisty YouTube do pliku subskrypcji YouTube albo do OPML"
                           Visibility="Collapsed" Click="ExportYouTubeSubscriptions_Click" />
-                <MenuItem x:Name="RefreshAllPodcastsMenuItem" Header="Odśwież _wszystkie źródła" InputGestureText="Ctrl+F5"
-                          automation:AutomationProperties.Name="Odśwież wszystkie podcasty, kanały i playlisty, Ctrl+F5"
-                          automation:AutomationProperties.AcceleratorKey="Ctrl+F5"
+                <MenuItem x:Name="RefreshAllPodcastsMenuItem" Header="Odśwież _wszystkie źródła" InputGestureText="Ctrl+Windows+F5"
+                          automation:AutomationProperties.Name="Odśwież wszystkie podcasty, kanały i playlisty, Ctrl+Windows+F5"
+                          automation:AutomationProperties.AcceleratorKey="Ctrl+Windows+F5"
                            Visibility="Collapsed" Click="RefreshAllPodcasts_Click" />
                 <MenuItem x:Name="DownloadPodcastEpisodeMainMenuItem" Header="_Pobierz odcinek" InputGestureText="Ctrl+D"
                           automation:AutomationProperties.Name="Pobierz zaznaczone odcinki do domyślnego folderu podcastów, Ctrl+D"
                           automation:AutomationProperties.AcceleratorKey="Ctrl+D"
                           Visibility="Collapsed" Click="DownloadPodcastEpisode_Click" />
-                <MenuItem x:Name="SavePodcastEpisodeAsMainMenuItem" Header="_Zapisz odcinek jako…" InputGestureText="Ctrl+S"
-                          automation:AutomationProperties.Name="Zapisz jeden odcinek podcastu jako, Ctrl+S"
+                <MenuItem x:Name="SavePodcastEpisodeAsMainMenuItem" Header="_Zapisz odcinek lub wideo jako…" InputGestureText="Ctrl+S"
+                          automation:AutomationProperties.Name="Zapisz jeden odcinek audio lub materiał wideo jako, Ctrl+S"
                           automation:AutomationProperties.AcceleratorKey="Ctrl+S"
                           Visibility="Collapsed" Click="SavePodcastEpisodeAs_Click" />
                 <Separator x:Name="FileActionsSeparator" />
@@ -185,8 +205,8 @@
                           Click="MoveLocalItemDown_Click" />
             </MenuItem>
             <MenuItem Header="_Sesja">
-                <MenuItem Header="_Lista sesji" InputGestureText="Ctrl+Shift+S"
-                          automation:AutomationProperties.Name="Lista sesji"
+                <MenuItem Header="_Menedżer sesji" InputGestureText="Ctrl+Shift+S"
+                          automation:AutomationProperties.Name="Menedżer sesji"
                           automation:AutomationProperties.AcceleratorKey="Ctrl+Shift+S"
                           Click="Sessions_Click" />
                 <MenuItem Header="Poprzednia sesja" InputGestureText="Ctrl+Page Up" Click="PreviousSession_Click" />
@@ -208,6 +228,14 @@
                           automation:AutomationProperties.Name="Wybierz urządzenie audio dla bieżącej sesji"
                           automation:AutomationProperties.AcceleratorKey="Shift+A"
                           Click="AudioOutputDevice_Click" />
+                <MenuItem x:Name="PlaybackShuffleMenuItem"
+                          Header="Włącz odtwarzanie losowe"
+                          InputGestureText="R"
+                          IsCheckable="True"
+                          Visibility="Collapsed"
+                          automation:AutomationProperties.Name="Włącz odtwarzanie losowe"
+                          automation:AutomationProperties.AcceleratorKey="R"
+                          Click="PlayerShuffle_Click" />
                 <MenuItem x:Name="OpenOnWiiMMainMenuItem"
                           Header="Otwórz element w _WiiM…"
                           InputGestureText="Ctrl+Alt+W"
@@ -320,6 +348,14 @@
                 <MenuItem x:Name="PlaybackNextBookmarkMenuItem" Header="Następna zakładka" InputGestureText="Shift+Page Down"
                           automation:AutomationProperties.Name="Następna zakładka, Shift+Page Down, tylko w odtwarzaczu"
                           Click="NextBookmark_Click" />
+                <MenuItem x:Name="PlaybackPreviousNamedBookmarkMenuItem" Header="Poprzednia nazwana zakładka" InputGestureText="Ctrl+Shift+Page Up"
+                          automation:AutomationProperties.Name="Poprzednia nazwana zakładka, tylko w odtwarzaczu"
+                          automation:AutomationProperties.AcceleratorKey="Ctrl+Shift+PageUp"
+                          Click="PreviousNamedBookmark_Click" />
+                <MenuItem x:Name="PlaybackNextNamedBookmarkMenuItem" Header="Następna nazwana zakładka" InputGestureText="Ctrl+Shift+Page Down"
+                          automation:AutomationProperties.Name="Następna nazwana zakładka, tylko w odtwarzaczu"
+                          automation:AutomationProperties.AcceleratorKey="Ctrl+Shift+PageDown"
+                          Click="NextNamedBookmark_Click" />
                 <Separator x:Name="PlaybackBeforeChaptersSeparator" />
                 <MenuItem x:Name="PlaybackChaptersMenuItem" Header="_Rozdziały…" InputGestureText="Ctrl+Alt+B"
                           automation:AutomationProperties.Name="Pokaż rozdziały bieżącego materiału, Ctrl+Alt+B"
@@ -429,6 +465,9 @@
                           automation:AutomationProperties.Name="Presety aktywnej sesji, Ctrl+Alt+P"
                           automation:AutomationProperties.AcceleratorKey="Ctrl+Alt+P"
                           Visibility="Collapsed" Click="RadioPresetsView_Click" />
+                <MenuItem x:Name="FrontierSmartModesMenuItem" Header="_Tryby urządzenia Frontier Smart…"
+                          automation:AutomationProperties.Name="Tryby urządzenia Frontier Smart"
+                          Visibility="Collapsed" Click="FrontierSmartModes_Click" />
                 <MenuItem x:Name="RadioAssignPresetMenuItem" Header="_Utwórz lub przypisz preset…" InputGestureText="Ctrl+Alt+Shift+P"
                           automation:AutomationProperties.Name="Utwórz lub przypisz preset aktywnej sesji, Ctrl+Alt+Shift+P"
                           automation:AutomationProperties.AcceleratorKey="Ctrl+Alt+Shift+P"
@@ -478,7 +517,7 @@
                           automation:AutomationProperties.AcceleratorKey="Alt+3"
                           Click="CollectionSortCustom_Click" />
                 <MenuItem x:Name="ActiveRadioRecordingsViewMenuItem" Header="_Nagrywane" InputGestureText="Alt+R" Click="ActiveRadioRecordingsView_Click"
-                          automation:AutomationProperties.Name="Aktualnie nagrywane stacje"
+                          automation:AutomationProperties.Name="Aktualnie nagrywane pliki"
                           automation:AutomationProperties.HelpText="Podgląd dostępny ze wszystkich sesji. Escape wraca tam, skąd go otwarto."
                           automation:AutomationProperties.AcceleratorKey="Alt+R" Visibility="Collapsed" />
                 <MenuItem x:Name="RecordedRadioFilesViewMenuItem" Header="_Historia nagrywania" InputGestureText="Alt+Shift+R" Click="RecordedRadioFilesView_Click"
@@ -582,8 +621,12 @@
                               automation:AutomationProperties.Name="Pobierz zaznaczone odcinki do domyślnego folderu podcastów, Ctrl+D"
                               automation:AutomationProperties.AcceleratorKey="Ctrl+D"
                               Visibility="Collapsed" Click="DownloadPodcastEpisode_Click" />
-                    <MenuItem x:Name="SavePodcastEpisodeAsMenuItem" Header="Zapisz odcinek jako…" InputGestureText="Ctrl+S"
-                              automation:AutomationProperties.Name="Zapisz jeden odcinek podcastu jako, Ctrl+S"
+                    <MenuItem x:Name="DownloadYouTubeVideoMenuItem" Header="Pobierz wideo z YouTube" InputGestureText="Ctrl+Shift+D"
+                              automation:AutomationProperties.Name="Pobierz zaznaczone wideo z YouTube do domyślnego folderu, Ctrl+Shift+D"
+                              automation:AutomationProperties.AcceleratorKey="Ctrl+Shift+D"
+                              Visibility="Collapsed" Click="DownloadYouTubeVideo_Click" />
+                    <MenuItem x:Name="SavePodcastEpisodeAsMenuItem" Header="Zapisz odcinek lub wideo jako…" InputGestureText="Ctrl+S"
+                              automation:AutomationProperties.Name="Zapisz jeden odcinek audio lub materiał wideo jako, Ctrl+S"
                               automation:AutomationProperties.AcceleratorKey="Ctrl+S"
                               Visibility="Collapsed" Click="SavePodcastEpisodeAs_Click" />
                     <MenuItem x:Name="SelectedRadioAddScheduleMenuItem" Header="Zaplanuj nagranie tej stacji…" InputGestureText="Shift+R"
@@ -714,6 +757,7 @@
 
         <Border x:Name="PlayerPanel" Visibility="Collapsed"
                 BorderThickness="1" BorderBrush="Gray" Padding="18"
+                KeyboardNavigation.TabNavigation="Cycle"
                 automation:AutomationProperties.Name="Odtwarzacz">
             <Border.ContextMenu>
                 <ContextMenu Opened="PlayerContextMenu_Opened" Closed="PlayerContextMenu_Closed">
@@ -726,6 +770,14 @@
                     <MenuItem Header="Następny utwór" InputGestureText="Page Down"
                               automation:AutomationProperties.Name="Następny utwór, Page Down"
                               Click="PlayerNext_Click" />
+                    <MenuItem x:Name="PlayerShuffleMenuItem"
+                              Header="Włącz odtwarzanie losowe"
+                              InputGestureText="R"
+                              IsCheckable="True"
+                              Visibility="Collapsed"
+                              automation:AutomationProperties.Name="Włącz odtwarzanie losowe"
+                              automation:AutomationProperties.AcceleratorKey="R"
+                              Click="PlayerShuffle_Click" />
                     <MenuItem x:Name="PlayerWiiMDevicePresetsMenuItem" Header="Presety urządzenia WiiM…" InputGestureText="Ctrl+Alt+P"
                               automation:AutomationProperties.Name="Presety urządzenia WiiM, Ctrl+Alt+P"
                               automation:AutomationProperties.AcceleratorKey="Ctrl+Alt+P"
@@ -831,6 +883,22 @@
                     <MenuItem x:Name="PlayerBookmarksMenuItem" Header="Pokaż zakładki" InputGestureText="Ctrl+B"
                               automation:AutomationProperties.Name="Pokaż zakładki, Ctrl+B"
                               Click="BookmarksView_Click" />
+                    <MenuItem x:Name="PlayerPreviousBookmarkMenuItem" Header="Poprzednia zakładka" InputGestureText="Shift+Page Up"
+                              automation:AutomationProperties.Name="Poprzednia zakładka"
+                              automation:AutomationProperties.AcceleratorKey="Shift+PageUp"
+                              Click="PreviousBookmark_Click" />
+                    <MenuItem x:Name="PlayerNextBookmarkMenuItem" Header="Następna zakładka" InputGestureText="Shift+Page Down"
+                              automation:AutomationProperties.Name="Następna zakładka"
+                              automation:AutomationProperties.AcceleratorKey="Shift+PageDown"
+                              Click="NextBookmark_Click" />
+                    <MenuItem x:Name="PlayerPreviousNamedBookmarkMenuItem" Header="Poprzednia nazwana zakładka" InputGestureText="Ctrl+Shift+Page Up"
+                              automation:AutomationProperties.Name="Poprzednia nazwana zakładka"
+                              automation:AutomationProperties.AcceleratorKey="Ctrl+Shift+PageUp"
+                              Click="PreviousNamedBookmark_Click" />
+                    <MenuItem x:Name="PlayerNextNamedBookmarkMenuItem" Header="Następna nazwana zakładka" InputGestureText="Ctrl+Shift+Page Down"
+                              automation:AutomationProperties.Name="Następna nazwana zakładka"
+                              automation:AutomationProperties.AcceleratorKey="Ctrl+Shift+PageDown"
+                              Click="NextNamedBookmark_Click" />
                     <Separator x:Name="PlayerBeforeChaptersSeparator" />
                     <MenuItem x:Name="PlayerChaptersMenuItem" Header="Pokaż rozdziały…" InputGestureText="Ctrl+Alt+B"
                               automation:AutomationProperties.Name="Pokaż rozdziały bieżącego materiału, Ctrl+Alt+B"
@@ -961,8 +1029,12 @@
                               automation:AutomationProperties.Name="Pobierz odcinek do domyślnego folderu podcastów, Ctrl+D"
                               automation:AutomationProperties.AcceleratorKey="Ctrl+D"
                               Visibility="Collapsed" Click="DownloadPodcastEpisode_Click" />
-                    <MenuItem x:Name="PlayerSavePodcastEpisodeAsMenuItem" Header="Zapisz odcinek jako…" InputGestureText="Ctrl+S"
-                              automation:AutomationProperties.Name="Zapisz odcinek podcastu jako, Ctrl+S"
+                    <MenuItem x:Name="PlayerDownloadYouTubeVideoMenuItem" Header="Pobierz wideo z YouTube" InputGestureText="Ctrl+Shift+D"
+                              automation:AutomationProperties.Name="Pobierz bieżące wideo z YouTube do domyślnego folderu, Ctrl+Shift+D"
+                              automation:AutomationProperties.AcceleratorKey="Ctrl+Shift+D"
+                              Visibility="Collapsed" Click="DownloadYouTubeVideo_Click" />
+                    <MenuItem x:Name="PlayerSavePodcastEpisodeAsMenuItem" Header="Zapisz odcinek lub wideo jako…" InputGestureText="Ctrl+S"
+                              automation:AutomationProperties.Name="Zapisz odcinek audio lub materiał wideo jako, Ctrl+S"
                               automation:AutomationProperties.AcceleratorKey="Ctrl+S"
                               Visibility="Collapsed" Click="SavePodcastEpisodeAs_Click" />
                     <MenuItem x:Name="PlayerGoToAlbumMenuItem" Header="Przejdź do albumu"
@@ -996,6 +1068,7 @@
                            TextWrapping="Wrap" />
                 <TextBlock x:Name="PlayerSessionText" Margin="0,5,0,0" />
                 <TextBlock x:Name="PlayerStateText" Margin="0,12,0,0" FontWeight="SemiBold" />
+                <TextBlock x:Name="PlayerVolumeText" Margin="0,4,0,0" />
                 <TextBlock x:Name="PlayerSpeedText" Margin="0,4,0,0" />
                 <TextBlock x:Name="PlayerTimeText" Margin="0,4,0,14" FontSize="16" />
                 <WrapPanel>
@@ -1007,13 +1080,19 @@
                     <Button x:Name="PlayerNextButton" MinWidth="145" Margin="0,0,8,8" Content="Następny utwór"
                             automation:AutomationProperties.AcceleratorKey="Page Down"
                             Click="PlayerNext_Click" />
+                    <Button x:Name="PlayerShuffleButton" MinWidth="185" Margin="0,0,8,8"
+                            Content="Włącz odtwarzanie losowe"
+                            Visibility="Collapsed"
+                            automation:AutomationProperties.Name="Włącz odtwarzanie losowe"
+                            automation:AutomationProperties.AcceleratorKey="R"
+                            Click="PlayerShuffle_Click" />
                     <Button MinWidth="135" Margin="0,0,8,8" Content="Cofnij 10 sekund"
                             Click="PlayerBackward_Click" />
                     <Button MinWidth="145" Margin="0,0,8,8" Content="Przewiń 10 sekund"
                             Click="PlayerForward_Click" />
-                    <Button MinWidth="125" Margin="0,0,8,8" Content="Ciszej"
+                    <Button x:Name="PlayerVolumeDownButton" MinWidth="125" Margin="0,0,8,8" Content="Ciszej"
                             Click="PlayerVolumeDown_Click" />
-                    <Button MinWidth="125" Margin="0,0,8,8" Content="Głośniej"
+                    <Button x:Name="PlayerVolumeUpButton" MinWidth="125" Margin="0,0,8,8" Content="Głośniej"
                             Click="PlayerVolumeUp_Click" />
                     <Button x:Name="PlayerRateDownButton" MinWidth="125" Margin="0,0,8,8" Content="Wolniej"
                             automation:AutomationProperties.AcceleratorKey="Shift+,"

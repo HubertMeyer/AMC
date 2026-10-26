@@ -712,6 +712,7 @@ public partial class MainWindow
             _sonosMetadata = metadata.Succeeded ? metadata.Value : null;
             _sonosVolume = volume.Succeeded ? volume.Value : null;
             _sonosReadUtc = DateTime.UtcNow;
+            RecordObservedSonosPlayback();
             // PELNY odczyt to WSZYSTKIE trzy czesci. Metadane byly wczesniej
             // pominiete w tej decyzji, wiec brak tytulu przy udanym stanie
             // planowal zwykly termin i udawal potwierdzony odczyt. Czesciowe
@@ -733,6 +734,74 @@ public partial class MainWindow
             // filtrze powyzej, a wyjatek leci dalej do obserwujacego zadania.
             throw;
         }
+    }
+
+    private void RecordObservedSonosPlayback()
+    {
+        if (_sonosPlayback?.PlaybackState is not (SonosPlaybackState.Playing or SonosPlaybackState.Buffering)
+            || _sonosMetadata is not { } metadata)
+        {
+            return;
+        }
+
+        var track = metadata.CurrentTrack;
+        var title = new[]
+            {
+                track?.Name,
+                metadata.CurrentShowName,
+                metadata.StreamInfo,
+                metadata.Container?.Name
+            }
+            .FirstOrDefault(value => !string.IsNullOrWhiteSpace(value))
+            ?.Trim();
+        if (string.IsNullOrWhiteSpace(title)) return;
+
+        var artist = new[]
+            {
+                track?.ArtistName,
+                track?.AlbumArtistName,
+                track?.Service?.Name,
+                metadata.Container?.Service?.Name
+            }
+            .FirstOrDefault(value => !string.IsNullOrWhiteSpace(value))
+            ?.Trim() ?? string.Empty;
+        var item = new MediaItem
+        {
+            Id = PlaybackHistory.CreateObservedItemId(
+                "sonos",
+                metadata.CurrentItem?.Id,
+                track?.MediaUrl,
+                title,
+                artist,
+                track?.AlbumName,
+                metadata.Container?.Name),
+            Title = title,
+            Artist = artist,
+            Kind = metadata.Container?.IsStation == true
+                ? MediaItemKind.Station
+                : MediaItemKind.Track,
+            Duration = track?.DurationMillis is > 0 and var duration
+                ? TimeSpan.FromMilliseconds(duration)
+                : TimeSpan.Zero,
+            SampleRateHz = track?.Quality?.SampleRateHz,
+            Source = track?.MediaUrl,
+            PublicUri = track?.MediaUrl,
+            Tags = string.Join(", ", new[]
+                {
+                    track?.AlbumName,
+                    metadata.Container?.Name,
+                    track?.Service?.Name ?? metadata.Container?.Service?.Name
+                }
+                .Where(value => !string.IsNullOrWhiteSpace(value))
+                .Distinct(StringComparer.CurrentCultureIgnoreCase)),
+            Codec = track?.Quality?.Codec ?? track?.ContentType,
+            IsAvailable = true
+        };
+        _playbackHistoryCursors.Remove("sonos");
+        if (!_playbackHistory.Record("sonos", item, replaySupported: false)) return;
+        _ = Dispatcher.BeginInvoke(
+            () => QueueStateSave(),
+            System.Windows.Threading.DispatcherPriority.ApplicationIdle);
     }
 
     /// <summary>
@@ -789,6 +858,7 @@ public partial class MainWindow
             ? "Sonos, brak aktywnej grupy"
             : "Sonos, " + group.Name;
         PlayerStateText.Text = view.StateText + ". " + view.VolumeText + ". " + view.PositionText;
+        UpdatePlayerVolumePresentation(_sonosVolume?.Volume);
         // POMIAR B3: te kontrolki NIE byly tu ustawiane, wiec po wejsciu z
         // odtwarzacza innej sesji zostawal w nich JEJ czas, predkosc i etykieta
         // przycisku. Niewidomy uzytkownik slyszal wtedy dane cudzej sesji jako

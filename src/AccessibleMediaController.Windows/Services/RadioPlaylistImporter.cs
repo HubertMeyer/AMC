@@ -6,7 +6,10 @@ using System.Xml.Linq;
 
 namespace AccessibleMediaController.Windows.Services;
 
-internal sealed record ImportedRadioStation(string Name, string StreamUrl);
+internal sealed record ImportedRadioStation(
+    string Name,
+    string StreamUrl,
+    bool HasDescriptiveName);
 
 internal sealed record RadioPlaylistImportResult(
     IReadOnlyList<ImportedRadioStation> Stations,
@@ -55,9 +58,11 @@ internal static class RadioPlaylistImporter
                 continue;
             }
 
+            var suppliedName = NormalizeSuppliedName(name);
             stations.Add(new ImportedRadioStation(
-                NormalizeName(name, normalizedUrl),
-                normalizedUrl));
+                suppliedName ?? NameFromStreamUrl(normalizedUrl),
+                normalizedUrl,
+                suppliedName is not null));
         }
         return new RadioPlaylistImportResult(stations, skipped);
     }
@@ -194,7 +199,7 @@ internal static class RadioPlaylistImporter
         return true;
     }
 
-    private static string NormalizeName(string? value, string streamUrl)
+    internal static string? NormalizeSuppliedName(string? value)
     {
         var builder = new StringBuilder();
         var previousWasSpace = false;
@@ -212,7 +217,17 @@ internal static class RadioPlaylistImporter
             if (builder.Length >= MaximumStationNameLength) break;
         }
         var name = builder.ToString().Trim();
-        if (name.Length > 0) return name;
+        if (name.Length == 0 || name == "-") return null;
+        if (Uri.TryCreate(name, UriKind.Absolute, out var nameUri)
+            && nameUri.Scheme is "http" or "https")
+        {
+            return null;
+        }
+        return name;
+    }
+
+    private static string NameFromStreamUrl(string streamUrl)
+    {
         return Uri.TryCreate(streamUrl, UriKind.Absolute, out var uri) && uri.Host.Length > 0
             ? uri.Host
             : "Stacja radiowa";

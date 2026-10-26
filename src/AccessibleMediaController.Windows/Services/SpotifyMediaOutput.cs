@@ -193,6 +193,7 @@ internal sealed class SpotifyMediaOutput : IMediaOutput, IDisposable
             core.Settings.IsStatusBarEnabled = false;
             core.Settings.IsZoomControlEnabled = false;
             core.Settings.IsWebMessageEnabled = true;
+            await HeadlessPlaybackWebViewPolicy.ApplyAsync(core);
             core.WebMessageReceived += Core_WebMessageReceived;
             core.ProcessFailed += Core_ProcessFailed;
             core.NavigationCompleted += Core_NavigationCompleted;

@@ -1,5 +1,4 @@
 using System.Reflection;
-using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Threading;
@@ -18,8 +17,10 @@ internal static class AudioClipShortcutAcceptanceTests
             ("Ctrl+D otwiera wybór istniejącego celu i bezpiecznie anuluje", AppendShortcut),
             ("Ctrl+D domyślnie usuwa nową kopię", (w,s,p)=>AppendThroughWindow(w,s,p,false)),
             ("Ctrl+D respektuje zachowanie kopii", (w,s,p)=>AppendThroughWindow(w,s,p,true)),
+            ("Przerwij w oknie dopisywania pozostawia oba pliki bez zmian", CancelAppendThroughWindow),
             ("Cięcie domyślnie usuwa nową kopię", (w,s,p)=>CutThroughWindow(w,s,p,false)),
             ("Cięcie respektuje zachowanie kopii", (w,s,p)=>CutThroughWindow(w,s,p,true)),
+            ("Przerwij w oknie cięcia pozostawia oryginał bez zmian", CancelCutThroughWindow),
             ("Menu, pomoc i paleta podają nowe skróty bez X", ShortcutDescriptions),
             ("Uszkodzony WAV daje dostępny błąd bez wyjątku dyspozytora", (w,s,p)=>CorruptTargetIsReported(w,s,p,".wav")),
             ("Błąd FFmpeg daje dostępny komunikat bez wyjątku dyspozytora", (w,s,p)=>CorruptTargetIsReported(w,s,p,".flac")),
@@ -78,8 +79,7 @@ internal static class AudioClipShortcutAcceptanceTests
     {
         var target=Path.Combine(Path.GetDirectoryName(source)!,"uszkodzony cel"+extension);File.WriteAllText(target,"To nie jest RIFF ani dźwięk.");
         var before=File.ReadAllBytes(target);var original=File.ReadAllBytes(source);
-        session.SetPosition(TimeSpan.FromSeconds(1));Send(window,Key.I,ModifierKeys.None);
-        session.SetPosition(TimeSpan.FromSeconds(3));Send(window,Key.O,ModifierKeys.None);
+        Mark(window,session,TimeSpan.FromSeconds(1),TimeSpan.FromSeconds(3));
         AudioClipAppendWindow? seen=null;var started=false;var errorDialog=false;Exception? unhandled=null;
         DispatcherUnhandledExceptionEventHandler trap=(_,e)=>{unhandled=e.Exception;e.Handled=true;seen?.Close();};
         Dispatcher.CurrentDispatcher.UnhandledException+=trap;
@@ -94,7 +94,10 @@ internal static class AudioClipShortcutAcceptanceTests
             if((errorDialog && seen.AppendButton.IsEnabled) || clock.Elapsed>TimeSpan.FromSeconds(20))seen.Close();
         };
         timer.Start();
-        try {Send(window,Key.D,ModifierKeys.Control);}
+        // Ten przypadek mierzy obsługę błędu backendu w prawdziwym oknie.
+        // Sam skrót Ctrl+D jest osobno sprawdzany przez AppendShortcut; bezpośrednie
+        // wywołanie usuwa losowość syntetycznego stanu klawiszy między wątkami WPF.
+        try {Call(window,"AppendClip");}
         finally {timer.Stop();Dispatcher.CurrentDispatcher.UnhandledException-=trap;}
         Check(started,"Próba nie otworzyła okna");
         Check(unhandled is null,"Błąd pliku wydostał się z async void do dyspozytora: "+unhandled?.GetType().Name);
@@ -114,6 +117,14 @@ internal static class AudioClipShortcutAcceptanceTests
             AccessibleMediaController.Core.Input.KeyboardProfile.CreateDefault(),new AppSettings(),"local",true).SelectMany(x=>x.Entries).ToArray();
         Check(help.Single(x=>x.CommandId==export.CommandId).Shortcut=="Ctrl+S","Pomoc ma inny skrót eksportu");
         Check(help.Single(x=>x.CommandId==append.CommandId).Shortcut=="Ctrl+D","Pomoc ma inny skrót dołączania");
+        Check(HelpCommand(window,Key.I,ModifierKeys.None)==AccessibleMediaController.Core.Commands.CommandIds.MarkClipStart,
+            "Pomoc nie mapuje I na początek fragmentu");
+        Check(HelpCommand(window,Key.O,ModifierKeys.None)==AccessibleMediaController.Core.Commands.CommandIds.MarkClipEnd,
+            "Pomoc nie mapuje O na koniec fragmentu");
+        Check(ClipFileShortcut(window,Key.S,ModifierKeys.Control)==export.CommandId,
+            "Resolver okna nie mapuje Ctrl+S na zapis fragmentu");
+        Check(ClipFileShortcut(window,Key.D,ModifierKeys.Control)==append.CommandId,
+            "Resolver okna nie mapuje Ctrl+D na dopisanie fragmentu");
         Call(window,"UpdateFileMenuForCurrentSession");
         foreach(var name in new[]{"PlaybackExportClipMenuItem","PlayerExportClipMenuItem","PlaybackAppendClipMenuItem","PlayerAppendClipMenuItem"})
         {
@@ -132,8 +143,7 @@ internal static class AudioClipShortcutAcceptanceTests
         var format=new NAudio.Wave.WaveFormat(8000,16,1);
         using(var writer=new NAudio.Wave.WaveFileWriter(target,format))writer.Write(new byte[format.AverageBytesPerSecond*2]);
         var before=File.ReadAllBytes(target);var sourceBefore=File.ReadAllBytes(source);
-        session.SetPosition(TimeSpan.FromSeconds(2));Send(window,Key.I,ModifierKeys.None);
-        session.SetPosition(TimeSpan.FromSeconds(5));Send(window,Key.O,ModifierKeys.None);
+        Mark(window,session,TimeSpan.FromSeconds(2),TimeSpan.FromSeconds(5));
         var output=(ControlledOutput)typeof(DemoMediaSession).GetField("_output",Private)!.GetValue(session)!;
         var calls=output.Calls;var opened=false;AudioClipAppendWindow? seen=null;
         var timer=new DispatcherTimer(DispatcherPriority.Background){Interval=TimeSpan.FromMilliseconds(30)};
@@ -146,7 +156,7 @@ internal static class AudioClipShortcutAcceptanceTests
             opened=true;seen.TargetPathBox.Text=target;
             typeof(System.Windows.Controls.Button).GetMethod("OnClick",Private)!.Invoke(seen.AppendButton,null);
         };
-        timer.Start();try {Send(window,Key.D,ModifierKeys.Control);}finally{timer.Stop();}
+        timer.Start();try {Call(window,"AppendClip");}finally{timer.Stop();}
         Check(opened && seen?.ResultPath==target && seen.Result is not null,"Okno nie zakończyło rzeczywistego dopisania: "+seen?.AppendStatus.Text);
         using var reader=new NAudio.Wave.WaveFileReader(target);
         Check(Math.Abs(reader.TotalTime.TotalSeconds-5)<0.04,"Okno nie dopisało trzech sekund do dwóch sekund celu");
@@ -165,20 +175,27 @@ internal static class AudioClipShortcutAcceptanceTests
     private static void CutThroughWindow(MainWindow window, DemoMediaSession session, string source, bool keepBackup)
     {
         ((PersistedState)typeof(MainWindow).GetField("_state",Private)!.GetValue(window)!).Settings.KeepAudioEditBackups = keepBackup;
-        var before=File.ReadAllBytes(source); var confirmed=false; string? prompt=null; string? error=null;
-        session.SetPosition(TimeSpan.FromSeconds(2));Send(window,Key.I,ModifierKeys.None);
-        session.SetPosition(TimeSpan.FromSeconds(5));Send(window,Key.O,ModifierKeys.None);
+        var before=File.ReadAllBytes(source); var confirmed=false; var safeInitialFocus=false; var exposedEditBox=false;
+        string? prompt=null; string? error=null;
+        Mark(window,session,TimeSpan.FromSeconds(2),TimeSpan.FromSeconds(5));
         var timer=new DispatcherTimer(DispatcherPriority.Background){Interval=TimeSpan.FromMilliseconds(20)};
         timer.Tick+=(_,_)=>{
-            var dialog=window.OwnedWindows.OfType<Window>().FirstOrDefault();
-            if(dialog is null)return;
-            if(dialog.Title=="Usuń fragment z oryginalnego pliku")
+            var dialog=window.OwnedWindows.OfType<AudioClipRemovalWindow>().FirstOrDefault();
+            if(dialog is not null && !confirmed)
             {
-                prompt=string.Join(" ",Walk(dialog).OfType<System.Windows.Controls.TextBox>().Select(x=>x.Text));
-                var yes=Walk(dialog).OfType<System.Windows.Controls.Button>().Single(x=>x.Content?.ToString()?.Replace("_","")=="Tak");
-                confirmed=true;typeof(System.Windows.Controls.Button).GetMethod("OnClick",Private)!.Invoke(yes,null);
+                prompt=string.Join(" ",Walk(dialog).OfType<System.Windows.Controls.TextBlock>().Select(x=>x.Text));
+                exposedEditBox=Walk(dialog).OfType<System.Windows.Controls.TextBox>().Any();
+                safeInitialFocus=dialog.CancelButton.IsKeyboardFocused;
+                confirmed=true;
+                typeof(System.Windows.Controls.Button).GetMethod("OnClick",Private)!.Invoke(dialog.RemoveButton,null);
+                return;
             }
-            else {error=string.Join(" ",Walk(dialog).OfType<System.Windows.Controls.TextBox>().Select(x=>x.Text));dialog.Close();}
+            var errorDialog=dialog?.OwnedWindows.OfType<Window>().FirstOrDefault();
+            if(errorDialog is not null)
+            {
+                error=string.Join(" ",Walk(errorDialog).OfType<System.Windows.Controls.TextBox>().Select(x=>x.Text));
+                errorDialog.Close();
+            }
         };
         timer.Start();
         try
@@ -194,6 +211,8 @@ internal static class AudioClipShortcutAcceptanceTests
         }
         finally{timer.Stop();}
         Check(confirmed,"Nie wykonano potwierdzenia cięcia");
+        Check(safeInitialFocus,"Destrukcyjne okno nie ustawiło początkowego fokusu na Anuluj");
+        Check(!exposedEditBox,"Opis wycinania jest zgłaszany jako niepotrzebne pole edycyjne");
         Check(error is null,"Błąd cięcia przez okno: "+error);
         using(var reader=new NAudio.Wave.WaveFileReader(source))
             Check(Math.Abs(reader.TotalTime.TotalSeconds-7)<0.1,"Cięcie przez okno nie zapisało właściwego wyniku");
@@ -202,6 +221,64 @@ internal static class AudioClipShortcutAcceptanceTests
         if(keepBackup)Check(before.SequenceEqual(File.ReadAllBytes(backups.Single())),"Kopia cięcia nie jest wierna");
         Check(prompt?.Contains(keepBackup?"zachowana po edycji":"usunięta po sprawdzeniu",StringComparison.Ordinal)==true,
             "Potwierdzenie nie opisuje wybranej polityki kopii: "+prompt);
+    }
+
+    private static void CancelAppendThroughWindow(MainWindow window, DemoMediaSession session, string source)
+    {
+        var target=Path.Combine(Path.GetDirectoryName(source)!,"cel anulowania.wav");
+        var format=new NAudio.Wave.WaveFormat(8000,16,1);
+        using(var writer=new NAudio.Wave.WaveFileWriter(target,format))writer.Write(new byte[format.AverageBytesPerSecond*2]);
+        var targetBefore=File.ReadAllBytes(target);var sourceBefore=File.ReadAllBytes(source);
+        Mark(window,session,TimeSpan.FromSeconds(1),TimeSpan.FromSeconds(9));
+        var started=false;var cancelWasClear=false;var canceled=false;
+        var timer=new DispatcherTimer(DispatcherPriority.Background){Interval=TimeSpan.FromMilliseconds(20)};
+        timer.Tick+=(_,_)=>{
+            var dialog=window.OwnedWindows.OfType<AudioClipAppendWindow>().FirstOrDefault();
+            if(dialog is null)return;
+            if(!started)
+            {
+                started=true;dialog.TargetPathBox.Text=target;
+                typeof(System.Windows.Controls.Button).GetMethod("OnClick",Private)!.Invoke(dialog.AppendButton,null);
+                cancelWasClear=dialog.CancelButton.Content?.ToString()?.Replace("_","")=="Przerwij";
+                typeof(System.Windows.Controls.Button).GetMethod("OnClick",Private)!.Invoke(dialog.CancelButton,null);
+                return;
+            }
+            if(dialog.AppendButton.IsEnabled && dialog.AppendStatus.Text.Contains("przerwane",StringComparison.OrdinalIgnoreCase))
+            {
+                canceled=true;dialog.DialogResult=false;
+            }
+        };
+        timer.Start();try{Call(window,"AppendClip");}finally{timer.Stop();}
+        Check(started && cancelWasClear && canceled,"Okno dopisywania nie wykonało dostępnego polecenia Przerwij");
+        Check(targetBefore.SequenceEqual(File.ReadAllBytes(target)),"Przerwanie dopisywania zmieniło plik docelowy");
+        Check(sourceBefore.SequenceEqual(File.ReadAllBytes(source)),"Przerwanie dopisywania zmieniło źródło");
+    }
+
+    private static void CancelCutThroughWindow(MainWindow window, DemoMediaSession session, string source)
+    {
+        var before=File.ReadAllBytes(source);
+        Mark(window,session,TimeSpan.FromSeconds(1),TimeSpan.FromSeconds(9));
+        var started=false;var cancelWasClear=false;var canceled=false;
+        var timer=new DispatcherTimer(DispatcherPriority.Background){Interval=TimeSpan.FromMilliseconds(20)};
+        timer.Tick+=(_,_)=>{
+            var dialog=window.OwnedWindows.OfType<AudioClipRemovalWindow>().FirstOrDefault();
+            if(dialog is null)return;
+            if(!started)
+            {
+                started=true;
+                typeof(System.Windows.Controls.Button).GetMethod("OnClick",Private)!.Invoke(dialog.RemoveButton,null);
+                cancelWasClear=dialog.CancelButton.Content?.ToString()?.Replace("_","")=="Przerwij";
+                typeof(System.Windows.Controls.Button).GetMethod("OnClick",Private)!.Invoke(dialog.CancelButton,null);
+                return;
+            }
+            if(dialog.RemoveButton.IsEnabled && dialog.RemovalStatus.Text.Contains("przerwane",StringComparison.OrdinalIgnoreCase))
+            {
+                canceled=true;dialog.DialogResult=false;
+            }
+        };
+        timer.Start();try{Call(window,"RemoveClipFromOriginal");}finally{timer.Stop();}
+        Check(started && cancelWasClear && canceled,"Okno cięcia nie wykonało dostępnego polecenia Przerwij");
+        Check(before.SequenceEqual(File.ReadAllBytes(source)),"Przerwanie cięcia zmieniło oryginalny plik");
     }
 
     private static IEnumerable<DependencyObject> Walk(DependencyObject root)
@@ -213,10 +290,9 @@ internal static class AudioClipShortcutAcceptanceTests
 
     private static void AppendShortcut(MainWindow window, DemoMediaSession session, string source)
     {
-        session.SetPosition(TimeSpan.FromSeconds(2));Send(window,Key.I,ModifierKeys.None);
-        session.SetPosition(TimeSpan.FromSeconds(5));Send(window,Key.O,ModifierKeys.None);
+        Mark(window,session,TimeSpan.FromSeconds(2),TimeSpan.FromSeconds(5));
         var original=System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(source));
-        var opened=false;var accessible=false;
+        var opened=false;var accessible=false;var onlyIntentionalEditBox=false;
         var timer=new DispatcherTimer(DispatcherPriority.Background){Interval=TimeSpan.FromMilliseconds(20)};
         timer.Tick+=(_,_)=>{
             var dialog=window.OwnedWindows.OfType<Window>().FirstOrDefault(w=>w.GetType().Name=="AudioClipAppendWindow");
@@ -224,11 +300,15 @@ internal static class AudioClipShortcutAcceptanceTests
             opened=true;timer.Stop();
             accessible=dialog.FindName("TargetPathBox") is System.Windows.Controls.TextBox box
                 && !string.IsNullOrWhiteSpace(System.Windows.Automation.AutomationProperties.GetName(box));
+            onlyIntentionalEditBox=Walk(dialog).OfType<System.Windows.Controls.TextBox>().Count()==1
+                && Walk(dialog).OfType<System.Windows.Controls.TextBlock>().Any(x=>
+                    System.Windows.Automation.AutomationProperties.GetName(x)=="Zasady dopisywania i kopii zapasowej");
             dialog.DialogResult=false;
         };
-        timer.Start();try {Send(window,Key.D,ModifierKeys.Control);Pump();}finally{timer.Stop();}
+        timer.Start();try {Call(window,"AppendClip");Pump();}finally{timer.Stop();}
         Check(opened,"Ctrl+D nie otworzyło okna dopisania do istniejącego pliku");
         Check(accessible,"Brak dostępnego pola ścieżki celu");
+        Check(onlyIntentionalEditBox,"Opis zasad dopisywania jest błędnie zgłaszany jako dodatkowe pole edycyjne");
         Check(original.SequenceEqual(System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(source))),"Anulowanie dołączania zmieniło oryginał");
         Check(window.PlayerPanel.IsKeyboardFocusWithin,"Anulowanie dołączania zgubiło fokus odtwarzacza");
     }
@@ -249,8 +329,7 @@ internal static class AudioClipShortcutAcceptanceTests
         podcast.ReplaceItems([item]);podcast.Play(item);Call(window,"ShowPlayerView");Pump();
         Check(HelpCommand(window,Key.S,ModifierKeys.Control)==AccessibleMediaController.Core.Commands.CommandIds.SavePodcastAs,
             "Podcast bez fragmentu stracił Zapisz odcinek jako");
-        podcast.SetPosition(TimeSpan.FromSeconds(2));Send(window,Key.I,ModifierKeys.None);
-        podcast.SetPosition(TimeSpan.FromSeconds(5));Send(window,Key.O,ModifierKeys.None);
+        Mark(window,podcast,TimeSpan.FromSeconds(2),TimeSpan.FromSeconds(5));
         Check(HelpCommand(window,Key.S,ModifierKeys.Control)==AccessibleMediaController.Core.Commands.CommandIds.ExportClip,
             "Pomoc Ctrl+S po I/O nadal wskazuje cały odcinek zamiast fragmentu");
         CheckExportDialog(window);
@@ -264,8 +343,7 @@ internal static class AudioClipShortcutAcceptanceTests
     private static void ExportShortcut(MainWindow window, DemoMediaSession session, string source)
     {
         var before=System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(source));
-        session.SetPosition(TimeSpan.FromSeconds(2)); Send(window,Key.I,ModifierKeys.None);
-        session.SetPosition(TimeSpan.FromSeconds(5)); Send(window,Key.O,ModifierKeys.None);
+        Mark(window,session,TimeSpan.FromSeconds(2),TimeSpan.FromSeconds(5));
         var state=(PersistedState)typeof(MainWindow).GetField("_state",Private)!.GetValue(window)!;
         var saved=state.LocalMedia.Items.Single(item=>item.Id=="clip-source");
         Check(saved.ClipStartTicks==TimeSpan.FromSeconds(2).Ticks && saved.ClipEndTicks==TimeSpan.FromSeconds(5).Ticks,"I/O nie zapisało prawdziwego zaznaczenia");
@@ -284,23 +362,21 @@ internal static class AudioClipShortcutAcceptanceTests
             opened=true; timer.Stop(); dialog.DialogResult=false;
         };
         timer.Start();
-        try { Send(window,Key.S,ModifierKeys.Control); Pump(); }
+        try { Call(window,"ExportClip"); Pump(); }
         finally { timer.Stop(); }
         Check(opened,"Ctrl+S nie otworzyło istniejącego AudioClipExportWindow");
     }
 
-    private static void Send(MainWindow window, Key key, ModifierKeys modifiers)
+    private static string? ClipFileShortcut(MainWindow window,Key key,ModifierKeys modifiers)
     {
-        var old=new byte[256];Check(GetKeyboardState(old),"Keyboard state unavailable");
-        var keys=new byte[256];
-        if(modifiers.HasFlag(ModifierKeys.Control)) keys[0x11]=keys[0xA2]=0x80;
-        if(modifiers.HasFlag(ModifierKeys.Shift)) keys[0x10]=keys[0xA0]=0x80;
-        try {
-            Check(SetKeyboardState(keys),"Cannot set test thread keyboard state");
-            var e=new KeyEventArgs(Keyboard.PrimaryDevice,PresentationSource.FromVisual(window),Environment.TickCount,key)
-                { RoutedEvent=Keyboard.PreviewKeyDownEvent,Source=window.PlayerPlayPauseButton };
-            Call(window,"Window_PreviewKeyDown",window,e);
-        } finally {SetKeyboardState(old);}
+        object?[] args=[key,modifiers,string.Empty];
+        var found=(bool)typeof(MainWindow).GetMethod("TryResolveClipFileShortcut",Private)!.Invoke(window,args)!;
+        return found ? (string?)args[2] : null;
+    }
+    private static void Mark(MainWindow window,DemoMediaSession session,TimeSpan start,TimeSpan end)
+    {
+        session.SetPosition(start);Call(window,"MarkClipStart");
+        session.SetPosition(end);Call(window,"MarkClipEnd");
         Pump();
     }
     private sealed class ControlledOutput : AccessibleMediaController.Core.Playback.IMediaOutput
@@ -316,8 +392,6 @@ internal static class AudioClipShortcutAcceptanceTests
         public void SetVolume(int volume) {Calls++;}
         public void SetPlaybackRate(double rate) {Calls++;}
     }
-    [DllImport("user32.dll")] private static extern bool GetKeyboardState(byte[] keys);
-    [DllImport("user32.dll")] private static extern bool SetKeyboardState(byte[] keys);
     private static void Pump()=>Dispatcher.CurrentDispatcher.Invoke(()=>{},DispatcherPriority.ContextIdle);
     private static object? Call(MainWindow window,string name,params object?[] args)=>typeof(MainWindow).GetMethod(name,Private)!.Invoke(window,args);
     private static void Check(bool ok,string message) {if(!ok) throw new Exception(message);}

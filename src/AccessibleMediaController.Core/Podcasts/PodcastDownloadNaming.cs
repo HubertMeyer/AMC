@@ -28,6 +28,9 @@ public static class PodcastDownloadNaming
         return baseName + ResolveExtension(mediaUrl, mediaType);
     }
 
+    public static string SuggestedVideoBaseName(string? title) =>
+        SanitizeBaseName(title, "Wideo YouTube");
+
     public static string UniquePath(string folder, string fileName)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(folder);
@@ -67,9 +70,9 @@ public static class PodcastDownloadNaming
         };
     }
 
-    private static string SanitizeBaseName(string? title)
+    private static string SanitizeBaseName(string? title, string fallback = "Odcinek podcastu")
     {
-        var value = string.IsNullOrWhiteSpace(title) ? "Odcinek podcastu" : title.Trim();
+        var value = string.IsNullOrWhiteSpace(title) ? fallback : title.Trim();
         try
         {
             value = value.Normalize(NormalizationForm.FormC);
@@ -125,7 +128,7 @@ public static class PodcastDownloadNaming
             if (char.IsHighSurrogate(value[length - 1])) length--;
             value = value[..length].TrimEnd('.', ' ', '-');
         }
-        if (value.Length == 0) value = "Odcinek podcastu";
+        if (value.Length == 0) value = fallback;
         if (IsReservedBaseName(value)) value = $"_{value}";
         return value;
     }

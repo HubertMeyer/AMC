@@ -232,8 +232,9 @@ public partial class MainWindow
         BeginTransientPreview(TransientPreviewKind.ActiveRadioRecordings);
         if (!SwitchToPreviewHostSession(TransientPreviewPolicy.ActiveRadioRecordingsHomeSession)) return;
         NavigateTo(ActiveRadioRecordingsViewName);
-        PrepareViewFocusContext(ActiveRadioRecordingsViewName);
-        RestoreMediaListFocusAfterRefresh();
+        // Sam wiersz zaczyna sie od „Nagrywane”, wiec nie dublujemy naglowka.
+        PrepareRecordingPreviewFocusContext(ActiveRadioRecordingsViewName, prefixSelectedItem: false);
+        RestoreRecordingPreviewFocusAfterRefresh();
     }
 
     /// <summary>
@@ -306,7 +307,7 @@ public partial class MainWindow
         description = kind switch
         {
             TransientPreviewKind.ActiveRadioRecordings =>
-                "pokaż aktualnie nagrywane stacje; Escape wraca tutaj",
+                "pokaż aktualnie nagrywane pliki; Escape wraca tutaj",
             TransientPreviewKind.RecordedRadioFiles =>
                 "pokaż historię nagrywania; Escape wraca tutaj",
             TransientPreviewKind.PodcastInbox =>

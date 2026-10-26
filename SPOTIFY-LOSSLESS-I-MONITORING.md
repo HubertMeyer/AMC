@@ -84,3 +84,9 @@ Monitoring: zadanie18380ffea4c7 jest włączone co poniedziałek o10:00; najbli�
 - https://developer.spotify.com/documentation/web-api/reference/get-information-about-the-users-current-playback
 - https://developer.spotify.com/documentation/web-api/reference/get-a-users-available-devices
 - https://developer.spotify.com/documentation/web-api/references/changes/february-2026
+
+## Raport monitoringu — 12.10.2026
+
+Pełny odczyt zapisano w [docs/monitoring-spotify/2026-10-12-RAPORT.md](docs/monitoring-spotify/2026-10-12-RAPORT.md).
+
+Wynik: brak zmiany wymagającej automatycznej aktualizacji lub działania w AMC. Przypięty host pozostaje na Librespot v0.8.0; nowsze, nieopublikowane zmiany gałęzi `dev` nie zostały włączone. Osobnym, zaplanowanym przyrostem pozostaje przejście od przestarzałego pola playlist `tracks` do `items`; raport nie jest dowodem działania na koncie ani odtwarzania.

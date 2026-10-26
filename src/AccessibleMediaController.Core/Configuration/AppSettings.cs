@@ -38,6 +38,22 @@ public enum RadioRecognitionScope
     CurrentAndRecordingStations
 }
 
+public enum RecognizedTrackStreamingService
+{
+    Spotify,
+    Tidal
+}
+
+public static class RecognizedTrackStreamingServiceRules
+{
+    public static string GetLabel(RecognizedTrackStreamingService service) => service switch
+    {
+        RecognizedTrackStreamingService.Spotify => "Spotify",
+        RecognizedTrackStreamingService.Tidal => "TIDAL",
+        _ => "serwis streamingowy"
+    };
+}
+
 public static class RadioRecognitionScopeRules
 {
     public static bool IncludesCurrentStation(RadioRecognitionScope scope) =>
@@ -148,6 +164,8 @@ public sealed class AppSettings
     /// więc dotychczasowe konfiguracje działają bez zmian.
     /// </summary>
     public Dictionary<string, ResumePositionMode> ResumePositionModeBySession { get; set; } =
+        new(StringComparer.OrdinalIgnoreCase);
+    public Dictionary<string, bool> ShuffleEnabledBySession { get; set; } =
         new(StringComparer.OrdinalIgnoreCase);
     public PlaybackAudioSettings Audio { get; set; } = new();
 
@@ -449,6 +467,8 @@ public static class SessionSlotOrder
     public static string GetDisplayName(string sessionId) =>
         string.Equals(sessionId, "spotifyLibrespot", StringComparison.OrdinalIgnoreCase)
             ? "Spotify — Librespot"
+            : string.Equals(sessionId, "frontierSmart", StringComparison.OrdinalIgnoreCase)
+                ? "Frontier Smart"
             : KnownSessions.FirstOrDefault(session =>
             string.Equals(session.Id, sessionId, StringComparison.OrdinalIgnoreCase)).DisplayName
         ?? sessionId;
@@ -559,6 +579,7 @@ public sealed class PersistedState
     public RadioSettings Radio { get; set; } = new();
     public PodcastSettings Podcasts { get; set; } = new();
     public WiiMSettings WiiM { get; set; } = new();
+    public FrontierSmartSettings FrontierSmart { get; set; } = new();
     public SonosSessionSettings Sonos { get; set; } = new();
     public TidalSettings Tidal { get; set; } = new();
     public SpotifySettings Spotify { get; set; } = new();
@@ -924,6 +945,27 @@ public sealed class WiiMDeviceSettings
     public string? LastActivatedNetworkStreamId { get; set; }
 }
 
+/// <summary>
+/// Ustawienia sesji urządzeń opartych na platformie Frontier Silicon.
+/// PIN-y nie trafiają do tego modelu ani do pliku stanu. Windows przechowuje
+/// je osobno w Menedżerze poświadczeń dla bieżącego użytkownika.
+/// </summary>
+public sealed class FrontierSmartSettings
+{
+    public bool SessionEnabled { get; set; }
+    public List<FrontierSmartDeviceSettings> Devices { get; set; } = [];
+    public string? SelectedDeviceId { get; set; }
+}
+
+public sealed class FrontierSmartDeviceSettings
+{
+    public string Id { get; set; } = string.Empty;
+    public string Address { get; set; } = string.Empty;
+    public string DisplayName { get; set; } = string.Empty;
+    public string Firmware { get; set; } = string.Empty;
+    public long LastSeenUtcTicks { get; set; }
+}
+
 public sealed class PlaybackVolumeMemorySettings
 {
     public List<PlaybackVolumeMemoryEntry> Entries { get; set; } = [];
@@ -942,6 +984,7 @@ public sealed class PodcastSettings
     public List<PodcastSubscriptionSettings> Subscriptions { get; set; } = [];
     public List<PodcastEpisodeSettings> Episodes { get; set; } = [];
     public string? DownloadsFolder { get; set; }
+    public YouTubeVideoDownloadFormat YouTubeVideoDownloadFormat { get; set; } = YouTubeVideoDownloadFormat.Mp4;
     public string? CurrentItemId { get; set; }
     public int Volume { get; set; } = 35;
     public double PlaybackRate { get; set; } = 1d;
@@ -993,6 +1036,12 @@ public sealed class PodcastSettings
     /// przed dluga kolejka yt-dlp; pozostale zrodla biora kolejne przebiegi.
     /// </summary>
     public int AutomaticRefreshBatchSize { get; set; } = 4;
+}
+
+public enum YouTubeVideoDownloadFormat
+{
+    Mp4,
+    Original
 }
 
 public enum PodcastSourceKind
@@ -1100,6 +1149,91 @@ public sealed class PlaybackHistorySettings
 {
     public Dictionary<string, List<string>> ItemIdsBySession { get; set; } =
         new(StringComparer.OrdinalIgnoreCase);
+
+    public Dictionary<string, List<PlaybackHistoryItemSettings>> ItemsBySession { get; set; } =
+        new(StringComparer.OrdinalIgnoreCase);
+}
+
+public sealed class PlaybackHistoryItemSettings
+{
+    public string Id { get; set; } = string.Empty;
+    public string Title { get; set; } = string.Empty;
+    public string Artist { get; set; } = string.Empty;
+    public MediaItemKind Kind { get; set; } = MediaItemKind.Track;
+    public long DurationTicks { get; set; }
+    public int? BitrateKbps { get; set; }
+    public bool IsBitrateEstimated { get; set; }
+    public int? SampleRateHz { get; set; }
+    public string? Source { get; set; }
+    public string? PublicUri { get; set; }
+    public string? HomepageUri { get; set; }
+    public string? Country { get; set; }
+    public string? Language { get; set; }
+    public string? Tags { get; set; }
+    public string? Codec { get; set; }
+    public string? ExternalId { get; set; }
+    public string? RelatedAlbumExternalId { get; set; }
+    public string? RelatedAlbumTitle { get; set; }
+    public string? RelatedArtistExternalId { get; set; }
+    public string? RelatedArtistName { get; set; }
+    public bool IsAvailable { get; set; } = true;
+    public bool ReplaySupported { get; set; } = true;
+    public long ObservedUtcTicks { get; set; }
+
+    public static PlaybackHistoryItemSettings FromMediaItem(
+        MediaItem item,
+        bool replaySupported,
+        DateTime observedUtc) => new()
+    {
+        Id = item.Id,
+        Title = item.Title,
+        Artist = item.Artist,
+        Kind = item.Kind,
+        DurationTicks = Math.Max(0, item.Duration.Ticks),
+        BitrateKbps = item.BitrateKbps,
+        IsBitrateEstimated = item.IsBitrateEstimated,
+        SampleRateHz = item.SampleRateHz,
+        Source = item.Source,
+        PublicUri = item.PublicUri,
+        HomepageUri = item.HomepageUri,
+        Country = item.Country,
+        Language = item.Language,
+        Tags = item.Tags,
+        Codec = item.Codec,
+        ExternalId = item.ExternalId,
+        RelatedAlbumExternalId = item.RelatedAlbumExternalId,
+        RelatedAlbumTitle = item.RelatedAlbumTitle,
+        RelatedArtistExternalId = item.RelatedArtistExternalId,
+        RelatedArtistName = item.RelatedArtistName,
+        IsAvailable = item.IsAvailable,
+        ReplaySupported = replaySupported,
+        ObservedUtcTicks = observedUtc.ToUniversalTime().Ticks
+    };
+
+    public MediaItem ToMediaItem() => new()
+    {
+        Id = Id,
+        Title = Title,
+        Artist = Artist,
+        Kind = Kind,
+        Duration = TimeSpan.FromTicks(Math.Clamp(DurationTicks, 0, TimeSpan.MaxValue.Ticks)),
+        BitrateKbps = BitrateKbps,
+        IsBitrateEstimated = IsBitrateEstimated,
+        SampleRateHz = SampleRateHz,
+        Source = Source,
+        PublicUri = PublicUri,
+        HomepageUri = HomepageUri,
+        Country = Country,
+        Language = Language,
+        Tags = Tags,
+        Codec = Codec,
+        ExternalId = ExternalId,
+        RelatedAlbumExternalId = RelatedAlbumExternalId,
+        RelatedAlbumTitle = RelatedAlbumTitle,
+        RelatedArtistExternalId = RelatedArtistExternalId,
+        RelatedArtistName = RelatedArtistName,
+        IsAvailable = IsAvailable
+    };
 }
 
 public sealed class BookmarkSettings
@@ -1313,6 +1447,8 @@ public sealed class RadioSettings
     public bool AutomaticTrackRecognitionEnabled { get; set; }
     public RadioRecognitionScope AutomaticTrackRecognitionScope { get; set; } =
         RadioRecognitionScope.CurrentStation;
+    public RecognizedTrackStreamingService DefaultRecognizedTrackService { get; set; } =
+        RecognizedTrackStreamingService.Spotify;
     public List<RadioRecordingScheduleSettings> RecordingSchedules { get; set; } = [];
     public List<RadioRecognizedTrackSettings> RecognizedTracks { get; set; } = [];
     public List<RadioRecordingHistorySettings> RecordingHistory { get; set; } = [];
@@ -1364,6 +1500,27 @@ public sealed class RadioRecognizedTrackSettings
     public string ReleaseDate { get; set; } = string.Empty;
     public string? ProviderUri { get; set; }
     public long RecognizedUtcTicks { get; set; } = DateTime.UtcNow.Ticks;
+    public RadioRecognizedTrackMatchSettings? SpotifyMatch { get; set; }
+    public RadioRecognizedTrackMatchSettings? TidalMatch { get; set; }
+    public RadioRecognizedTrackMatchSettings? AppleMusicMatch { get; set; }
+}
+
+/// <summary>
+/// Trwały, niesekretny wynik rozstrzygnięcia utworu w katalogu usługi.
+/// Przechowujemy wyłącznie stabilne identyfikatory i publiczne adresy, nigdy
+/// tokeny ani surowe odpowiedzi dostawcy.
+/// </summary>
+public sealed class RadioRecognizedTrackMatchSettings
+{
+    public string TrackExternalId { get; set; } = string.Empty;
+    public string TrackPublicUri { get; set; } = string.Empty;
+    public string? AlbumExternalId { get; set; }
+    public string? AlbumTitle { get; set; }
+    public string? AlbumPublicUri { get; set; }
+    public string? ArtistExternalId { get; set; }
+    public string? ArtistName { get; set; }
+    public string? ArtistPublicUri { get; set; }
+    public long ResolvedUtcTicks { get; set; } = DateTime.UtcNow.Ticks;
 }
 
 public enum RadioRecordingFormat

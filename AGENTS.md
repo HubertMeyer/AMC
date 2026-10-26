@@ -1,6 +1,16 @@
 # AMC — ustalenia projektu
 
 - Kanoniczne repozytorium: `D:\Projekty Codex\Accessible Multimedia Controller`.
+- Korekta użytkownika z 24 października 2026 r. zastępuje wcześniejszy model,
+  w którym publiczne AMC i `AMC Test` miały być rozwijane jako niezależne bazy.
+  Bieżące źródła oraz działający profil `AMC Test` są zawsze bazą następnego
+  instalatora publicznego. Nie wolno budować wydania z dawnej publicznej wersji
+  ani pomijać nowszych, sprawdzonych zmian tylko dlatego, że powstały w AMC
+  Test. Publiczny wariant zachowuje zgodność z istniejącym profilem użytkownika,
+  żeby można było szybko sprawdzić go na rzeczywistych danych; z pakietu
+  odfiltrowuje się wyłącznie wskazane funkcje niepewne lub niegotowe do
+  publikacji. Lista wyłączeń jest decyzją konkretnego wydania, a nie osobną
+  linią rozwoju.
 - Użytkownik 9 września 2026 r. udzielił stałej zgody na publikowanie zmian
   AMC i przygotowanych wydań w `michalkasperczak/AMC` na GitHubie. Kolejne
   zwykłe publikacje w tym repozytorium nie wymagają ponownego pytania.

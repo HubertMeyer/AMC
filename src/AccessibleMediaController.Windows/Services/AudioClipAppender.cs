@@ -86,6 +86,7 @@ internal static class AudioClipAppender
         await WaitForExclusiveAccessAsync(targetPath, cancellationToken).ConfigureAwait(false);
 
         var identityBefore = await ReadIdentityAsync(targetPath, cancellationToken).ConfigureAwait(false);
+        progress?.Report(0.02d);
         var operationId = Guid.NewGuid().ToString("N");
         var prefix = Path.Combine(
             directory,
@@ -114,6 +115,7 @@ internal static class AudioClipAppender
                     targetPath,
                     clipPath,
                     resultPath,
+                    progress,
                     cancellationToken);
             }
             else
@@ -132,7 +134,15 @@ internal static class AudioClipAppender
                     clipPath,
                     progress,
                     cancellationToken).ConfigureAwait(false);
-                await ConcatenateAsync(executable, targetPath, clipPath, listPath, resultPath, cancellationToken)
+                await ConcatenateAsync(
+                        executable,
+                        targetPath,
+                        clipPath,
+                        listPath,
+                        resultPath,
+                        targetBefore + appended,
+                        progress,
+                        cancellationToken)
                     .ConfigureAwait(false);
                 reencoded = true;
                 // Whether a backup still exists is only known after the commit,
@@ -146,7 +156,8 @@ internal static class AudioClipAppender
 
             cancellationToken.ThrowIfCancellationRequested();
             var expected = targetBefore + appended;
-            var actual = await VerifyResultAsync(resultPath, expected, cancellationToken).ConfigureAwait(false);
+            var actual = await VerifyResultAsync(resultPath, expected, progress, cancellationToken)
+                .ConfigureAwait(false);
 
             await WaitForExclusiveAccessAsync(targetPath, cancellationToken).ConfigureAwait(false);
             if (!string.Equals(await ReadIdentityAsync(targetPath, cancellationToken).ConfigureAwait(false), identityBefore, StringComparison.Ordinal))
@@ -157,6 +168,7 @@ internal static class AudioClipAppender
             }
 
             cancellationToken.ThrowIfCancellationRequested();
+            progress?.Report(0.99d);
             var backupPath = AudioClipOriginalEditor.BuildBackupPath(targetPath);
             var keptBackupPath = await AudioEditBackupRetention.CommitAsync(
                     resultPath,
@@ -188,11 +200,14 @@ internal static class AudioClipAppender
         }
     }
 
-    private sealed class ScaledProgress(IProgress<double> target, double scale) : IProgress<double>
+    private sealed class RangedProgress(
+        IProgress<double> target,
+        double offset,
+        double range) : IProgress<double>
     {
         // Caller owns dispatching (e.g. Progress<T> on UI). Do not post a second
         // asynchronous callback that could outlive the operation it describes.
-        public void Report(double value) => target.Report(scale * value);
+        public void Report(double value) => target.Report(offset + range * Math.Clamp(value, 0d, 1d));
     }
 
     private static async Task ExportClipAsync(
@@ -203,13 +218,14 @@ internal static class AudioClipAppender
         CancellationToken cancellationToken) =>
         await AudioClipExporter.ExportAsync(
             new AudioClipExportRequest(request.SourcePath, clipPath, request.Start, request.End, format),
-            progress is null ? null : new ScaledProgress(progress, 0.7d),
+            progress is null ? null : new RangedProgress(progress, 0.02d, 0.33d),
             cancellationToken).ConfigureAwait(false);
 
     private static (TimeSpan TargetBefore, TimeSpan Appended, string? Warning) BuildWaveResult(
         string targetPath,
         string clipPath,
         string resultPath,
+        IProgress<double>? progress,
         CancellationToken cancellationToken)
     {
         using var target = new WaveFileReader(targetPath);
@@ -228,8 +244,19 @@ internal static class AudioClipAppender
         try
         {
             using var writer = new WaveFileWriter(resultPath, target.WaveFormat);
-            Copy(target, writer, cancellationToken);
-            Copy(clipContent, writer, cancellationToken);
+            var targetBytes = Math.Max(1L, target.Length);
+            var clipBytes = Math.Max(
+                1L,
+                (long)Math.Ceiling(appended.TotalSeconds * target.WaveFormat.AverageBytesPerSecond));
+            var totalBytes = targetBytes + clipBytes;
+            long copiedBytes = 0;
+            void ReportCopied(int bytes)
+            {
+                copiedBytes += bytes;
+                progress?.Report(0.35d + 0.5d * Math.Clamp((double)copiedBytes / totalBytes, 0d, 1d));
+            }
+            Copy(target, writer, cancellationToken, ReportCopied);
+            Copy(clipContent, writer, cancellationToken, ReportCopied);
         }
         finally
         {
@@ -239,7 +266,11 @@ internal static class AudioClipAppender
         return (targetBefore, appended, warning);
     }
 
-    private static void Copy(IWaveProvider content, WaveFileWriter writer, CancellationToken cancellationToken)
+    private static void Copy(
+        IWaveProvider content,
+        WaveFileWriter writer,
+        CancellationToken cancellationToken,
+        Action<int>? reportCopied = null)
     {
         var buffer = new byte[128 * 1024];
         while (true)
@@ -248,6 +279,7 @@ internal static class AudioClipAppender
             var read = content.Read(buffer, 0, buffer.Length);
             if (read <= 0) return;
             writer.Write(buffer, 0, read);
+            reportCopied?.Invoke(read);
         }
     }
 
@@ -293,7 +325,7 @@ internal static class AudioClipAppender
             request.Start,
             request.End,
             shape,
-            progress,
+            progress is null ? null : new RangedProgress(progress, 0.02d, 0.33d),
             cancellationToken).ConfigureAwait(false);
         return await ReadTimelineDurationAsync(executable, clipPath, cancellationToken).ConfigureAwait(false);
     }
@@ -333,7 +365,7 @@ internal static class AudioClipAppender
         await RunAsync(
             start,
             duration,
-            value => progress?.Report(0.7d * value),
+            value => progress?.Report(value),
             "Nie udało się przygotować dołączanego fragmentu. Plik docelowy nie został zmieniony.",
             cancellationToken).ConfigureAwait(false);
     }
@@ -344,6 +376,8 @@ internal static class AudioClipAppender
         string clipPath,
         string listPath,
         string resultPath,
+        TimeSpan expectedDuration,
+        IProgress<double>? progress,
         CancellationToken cancellationToken)
     {
         await File.WriteAllTextAsync(
@@ -379,8 +413,8 @@ internal static class AudioClipAppender
         start.ArgumentList.Add(resultPath);
         await RunAsync(
             start,
-            duration: null,
-            report: null,
+            expectedDuration,
+            value => progress?.Report(0.35d + 0.5d * value),
             "Nie udało się dołączyć fragmentu na koniec pliku. Plik docelowy nie został zmieniony.",
             cancellationToken).ConfigureAwait(false);
     }
@@ -388,6 +422,7 @@ internal static class AudioClipAppender
     private static async Task<TimeSpan> VerifyResultAsync(
         string resultPath,
         TimeSpan expected,
+        IProgress<double>? progress,
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -401,8 +436,11 @@ internal static class AudioClipAppender
             : await ReadTimelineDurationAsync(
                     FfmpegRadioWaveProvider.FindExecutable()!,
                     resultPath,
+                    expected,
+                    progress is null ? null : new RangedProgress(progress, 0.85d, 0.12d),
                     cancellationToken)
                 .ConfigureAwait(false);
+        if (IsWave(resultPath)) progress?.Report(0.97d);
         if (!AudioClipOriginalEditor.DurationMatches(expected, actual))
         {
             throw new InvalidDataException(
@@ -484,6 +522,19 @@ internal static class AudioClipAppender
     private static async Task<TimeSpan> ReadTimelineDurationAsync(
         string executable,
         string path,
+        CancellationToken cancellationToken) =>
+        await ReadTimelineDurationAsync(
+            executable,
+            path,
+            expectedDuration: null,
+            progress: null,
+            cancellationToken).ConfigureAwait(false);
+
+    private static async Task<TimeSpan> ReadTimelineDurationAsync(
+        string executable,
+        string path,
+        TimeSpan? expectedDuration,
+        IProgress<double>? progress,
         CancellationToken cancellationToken)
     {
         var start = CreateProcess(executable);
@@ -498,8 +549,8 @@ internal static class AudioClipAppender
         long? last = null;
         await RunAsync(
             start,
-            duration: null,
-            report: null,
+            expectedDuration,
+            value => progress?.Report(value),
             "Nie można sprawdzić osi czasu pliku. Plik docelowy nie został zmieniony.",
             cancellationToken,
             line =>

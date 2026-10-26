@@ -48,7 +48,7 @@ The first planned integrations are:
 - Apple Music;
 - WiiM.
 
-Spotify, Sonos, Bluesound/BluOS and devices based on Frontier Smart are planned for later stages. The architecture will also accommodate internet radio and local media. Standard local playback will not require foobar2000; an optional adapter may later expose its specialised formats, DSP or hardware support. Free Radio may be used as a design and implementation reference after its code and licence have been reviewed.
+Further Spotify, Sonos and Bluesound/BluOS work is planned for later stages. Frontier Smart now has the experimental local-FSAPI adapter described in section 7.32; it still requires confirmation on real hardware. The architecture also accommodates internet radio and local media. Standard local playback does not require foobar2000; an optional adapter may later expose its specialised formats, DSP or hardware support. Free Radio may be used as a design and implementation reference after its code and licence have been reviewed.
 
 The program will not depend on NVDA. The first windowed version targets Windows using WPF and UI Automation and must work with NVDA, JAWS and Narrator. An optional NVDA add-on will be built later as a small client rather than as the home of service logic.
 
@@ -722,10 +722,10 @@ After the local interface is stable, the next real integrations are **WiiM** as 
 
 - **YouTube**: the first adapter is on demand and does not synchronise an account. Public video, live-stream and playlist search uses the YouTube Data API with a project key. AMC's local YouTube Library is not a copy of the service: it contains items deliberately added to Favorites, local AMC playlists and local playback history. These are sufficient for basic use without login. OAuth remains an optional later extension, started only when the user deliberately wants account subscriptions, playlists or likes; lack of login does not restrict the basic adapter. Playback and transport use the visible official IFrame Player API. AMC presents metadata, results and commands in a podcast-like accessible interface but does not hide the player in the background. Under the API policies, the official adapter does not download content, separate audio, or record parts of videos or live streams. Recording remains limited to sources that explicitly permit it, such as a direct radio stream or a user-owned local file. [YouTube Data API](https://developers.google.com/youtube/v3/getting-started), [YouTube IFrame Player API](https://developers.google.com/youtube/iframe_api_reference), [YouTube API Services Developer Policies](https://developers.google.com/youtube/terms/developer-policies).
 
-  Extraction tools such as yt-dlp do not become the official YouTube catalogue adapter or a required in-process dependency. Their YouTube support needs frequent fixes as the player, JavaScript and PO-token requirements change; formats may disappear without warning, and account cookies can expose an account to restrictions. Starting with `alpha.293`, Radio may use an optional, separately updated yt-dlp process for an explicitly supplied, public, currently live source. It receives no OAuth tokens, browser profile or cookies, and the temporary signed audio address remains in memory. This narrow Radio resolver is separate from the future Internet Media catalogue and download module. [yt-dlp update channels](https://github.com/yt-dlp/yt-dlp/blob/master/README.md#update-channels), [YouTube extractor notes](https://github.com/yt-dlp/yt-dlp/wiki/Extractors).
+  Extraction tools such as yt-dlp do not become the official YouTube catalogue adapter or a required in-process dependency. Their YouTube support needs frequent fixes as the player, JavaScript and PO-token requirements change; formats may disappear without warning, and account cookies can expose an account to restrictions. Starting with `alpha.293`, Radio may use an optional, separately updated yt-dlp process for an explicitly supplied, public, currently live source. It receives no OAuth tokens, browser profile or cookies, and the temporary signed audio address remains in memory. The 25 October 2026 correction also permits an explicit local download command for a selected public item in Podcasts and YouTube; it remains separate from the official catalogue adapter, receives no account or browser cookies, and never downloads automatically. [yt-dlp update channels](https://github.com/yt-dlp/yt-dlp/blob/master/README.md#update-channels), [YouTube extractor notes](https://github.com/yt-dlp/yt-dlp/wiki/Extractors).
 
 - **Sonos**: its OAuth cloud Control API discovers households, groups and players, reports state, controls playback, seek and volume, and loads Sonos Favorites and playlists. It does not replace catalogue APIs for existing music services, needs a public HTTPS callback and has a higher integration cost. It stays in scope after WiiM, Spotify, TIDAL, BluOS, Apple Music, radio and local media. [Sonos Control API](https://docs.sonos.com/reference/about-control-api), [Sonos authorization](https://docs.sonos.com/docs/authorize).
-- **Frontier Smart**: the manufacturer confirms NetRemote API and SDK access for hardware partners but does not publish a complete supported consumer integration reference. A stable adapter requires partner access; any community adapter is explicitly experimental. [Frontier AURIA](https://www.frontiersmart.com/product/auria/), [Frontier customer area](https://www.frontiersmart.com/customer-area/).
+- **Frontier Smart**: the 21 October 2026 correction replaces the earlier assumption that every adapter must wait for partner access. Community documentation of the local FSAPI provides a sufficient HTTP/XML, PIN, SSDP, read, write and list contract for AMC to build an experimental device adapter without modifying firmware. The adapter probes each model's capabilities, exposes only confirmed functions and does not present itself as an officially supported manufacturer integration. The detailed scope, security model, UNDOK coexistence and tests are recorded in `PROJEKT_FRONTIER_SMART_PL.md`. [FSAPI protocol description](https://github.com/flammy/fsapi/blob/master/FSAPI.md), [fsapi-tools](https://github.com/MatrixEditor/fsapi-tools), [firmware archive](https://github.com/cweiske/frontier-silicon-firmwares/).
 
 Each adapter separately declares search scope, result-presentation policy, Favorites read/write, Library, playlists, playback, queue operations, playback targets, transport, seek, volume, inputs, presets, groups, in-service offline storage and legal export. The UI never guesses unavailable capabilities.
 
@@ -1175,7 +1175,7 @@ Planned sequence of later stages:
 10. Add BluOS/Bluesound as a richer adapter for devices and player-configured sources.
 11. Add Apple Music and the native MusicKit path for macOS.
 12. Build a native Swift/AppKit macOS prototype after the contract and Windows behaviour have stabilised.
-13. Add Frontier Smart after supported API access; keep Sonos as a later standalone cloud integration.
+13. Add an experimental Frontier Smart adapter through the local FSAPI as specified in `PROJEKT_FRONTIER_SMART_PL.md`; it no longer waits for the partner SDK, but it does require real-radio testing and does not install firmware. Keep Sonos as a separate cloud integration.
 
 ## 15. Open decisions
 
@@ -1674,6 +1674,49 @@ uses modifiers that are physically down rather than a cached hook state, so a
 missed Alt key-up after focus movement cannot turn a later plain digit into a
 view command or a session change.
 
+### 7.14. Recognized-track actions for Spotify and TIDAL
+
+`Ctrl+Alt+S` opens the persistent recognition history. Rows remain concise and
+`Ctrl+C` copies the full description. `Enter` plays a track in the configured
+default service, `Ctrl+Enter` opens its album with focus on that track,
+`Ctrl+Shift+C` copies the exact track link, Left Arrow reads quick details and
+Right Arrow opens the available relationships and external catalogues.
+`Alt+Up/Down` changes the persistent history order.
+
+Spotify or TIDAL can be selected as the default recognition service in Radio
+settings. The remote catalogue is queried only after an explicit action. A
+confident result is cached as stable IDs and public links so later actions do
+not repeat the search. Apple Music is deliberately excluded until AMC has a
+complete, testable integration for that service.
+
+### 7.32. Creating a Frontier Smart session in Session Manager
+
+The first experimental Frontier Smart integration extends the existing
+**Session Manager** opened with `Ctrl+Shift+S` or `Ctrl+0`. **New Frontier
+Smart session…** starts SSDP discovery automatically and keeps focus on the
+device list. A detected address is shown before authentication; the PIN is a
+second step used to confirm the selected device. Manual local-IP entry remains
+available in a collapsed fallback section. Updating AMC does not add the
+session automatically. It is registered only after a successful device read
+and receives the first free `Ctrl+1–9` shortcut, preferring `Ctrl+9`.
+
+Within the session, `Ctrl+F5` opens the saved-device manager without starting
+another scan automatically; **Detect new devices** starts one explicitly.
+`F5` refreshes state,
+and `Ctrl+Alt+P` opens the hardware presets for the current device mode. Modes
+are available from the View menu. Space, Page Up, Page Down, volume arrows and
+`Ctrl+M` use the shared AMC commands only when the device confirms the
+corresponding capability. Device presets depend on the current mode and remain
+separate from AMC-owned presets.
+
+The PIN is stored per device in Windows Credential Manager; it is not written
+to JSON state, settings backups, the clipboard or user messages. AMC uses
+PIN-authenticated FSAPI requests without `CREATE_SESSION` or `GET_NOTIFIES` so
+that it does not invalidate UNDOK control. The integration does not modify the
+device network, PIN or firmware. The technical record, test results, known
+limits and first-hardware-test instructions are in
+`PROJEKT_FRONTIER_SMART_PL.md`.
+
 ### 7.14. Transactional audio-editing files
 
 Starting with `alpha.301`, internal `.amc-cut-*` before, after, and result
@@ -1813,6 +1856,21 @@ artwork. The subscription itself remains stored; if its current feed exposes
 no playable audio or video, AMC reports that condition explicitly.
 
 ### 7.26. Portable podcast filenames
+
+The 25 October 2026 correction adds a separate YouTube video action in the
+Podcasts session. `Ctrl+Shift+D` downloads video from eligible YouTube items in
+the list, player, or search results; its context-menu, command-palette, and help
+entries share the same availability rule. Settings select either compatible
+MP4 (H.264/AAC preference with merge/remux) or the best available container
+without forcing MP4. `Ctrl+D` still downloads audio and the Downloaded view
+still means the local audio copy.
+
+A later correction on the same date replaces the earlier audio-only reading of
+`Ctrl+S`. The command still requires one episode, but is contextual: an ordinary
+episode opens audio Save As, while a YouTube item opens video Save As with a
+one-time MP4 or original/best-format choice. The Podcasts setting continues to
+control the quick `Ctrl+Shift+D` path. File, list, player, search, palette, and
+keyboard-help surfaces now describe the same command and availability.
 
 Automatic `Ctrl+D` downloads and the filename proposed by the `Ctrl+S` dialog
 must use the same generator. It normalises Unicode without stripping Polish or

@@ -121,25 +121,75 @@ public partial class SearchWindow : Window
         {
             TidalCollectionSemantics.ApplyMembership(row.Item,
                 row.Item.ExternalId is { } id && externalIds.Contains(id));
-            row.UpdateLabel(_allServices
-                ? $"{_formatItem(row.Item)}, {_sourceSessions.FirstOrDefault(session => session.Id == row.SessionId)?.DisplayName ?? "TIDAL"}"
-                : _formatItem(row.Item));
+            UpdateRowLabel(row);
         }
     }
 
-    internal void AnnounceActionCompletion(string announcement, bool restoreResultFocus = true)
+    internal void UpdatePodcastMembership(string feedAddress, bool inLibrary)
+    {
+        if (string.IsNullOrWhiteSpace(feedAddress)) return;
+        var normalizedAddress = NormalizeSearchAddress(feedAddress);
+        foreach (var row in ResultsList.Items.OfType<SearchResultRow>()
+                     .Where(row => string.Equals(row.SessionId, "podcasts", StringComparison.OrdinalIgnoreCase)
+                         && string.Equals(
+                             NormalizeSearchAddress(row.Item.Source),
+                             normalizedAddress,
+                             StringComparison.OrdinalIgnoreCase)))
+        {
+            row.Item.IsInLibrary = inLibrary;
+            UpdateRowLabel(row);
+        }
+    }
+
+    internal void AnnounceActionCompletion(
+        string announcement,
+        bool restoreResultFocus = true,
+        bool deferUntilInputIdle = false)
     {
         if (!Dispatcher.CheckAccess())
         {
             _ = Dispatcher.BeginInvoke(
-                () => AnnounceActionCompletion(announcement, restoreResultFocus),
+                () => AnnounceActionCompletion(announcement, restoreResultFocus, deferUntilInputIdle),
                 DispatcherPriority.ContextIdle);
             return;
         }
         if (!IsVisible) return;
-        SearchStatus.Announce(announcement);
-        if (restoreResultFocus)
-            _ = Dispatcher.BeginInvoke(FocusSelectedResult, DispatcherPriority.ContextIdle);
+
+        void Announce() => SearchStatus.Announce(announcement);
+        if (restoreResultFocus && !ResultsList.IsKeyboardFocusWithin)
+        {
+            _ = Dispatcher.BeginInvoke(() =>
+            {
+                FocusSelectedResult();
+                _ = Dispatcher.BeginInvoke(
+                    Announce,
+                    deferUntilInputIdle
+                        ? DispatcherPriority.ApplicationIdle
+                        : DispatcherPriority.Background);
+            }, DispatcherPriority.ContextIdle);
+            return;
+        }
+
+        if (deferUntilInputIdle)
+            _ = Dispatcher.BeginInvoke(Announce, DispatcherPriority.ApplicationIdle);
+        else
+            Announce();
+    }
+
+    private void UpdateRowLabel(SearchResultRow row)
+    {
+        row.UpdateLabel(_allServices
+            ? $"{_formatItem(row.Item)}, {_sourceSessions.FirstOrDefault(session => session.Id == row.SessionId)?.DisplayName ?? "Nieznana usługa"}"
+            : _formatItem(row.Item));
+    }
+
+    private static string NormalizeSearchAddress(string? address) =>
+        string.IsNullOrWhiteSpace(address) ? string.Empty : address.Trim().TrimEnd('/');
+
+    private void RestoreSelectedResultFocusIfNeeded()
+    {
+        if (ResultsList.IsKeyboardFocusWithin) return;
+        _ = Dispatcher.BeginInvoke(FocusSelectedResult, DispatcherPriority.ContextIdle);
     }
 
     private async void RunSearch()
@@ -288,8 +338,7 @@ public partial class SearchWindow : Window
             && GetSelectedResults().Any(selected =>
                 string.Equals(selected.SessionId, "radio", StringComparison.OrdinalIgnoreCase)))
         {
-            SearchStatus.Announce("Ta funkcja nie jest dostępna w Radiu internetowym");
-            Dispatcher.BeginInvoke(FocusSelectedResult, DispatcherPriority.ContextIdle);
+            AnnounceActionCompletion("Ta funkcja nie jest dostępna w Radiu internetowym");
             return;
         }
         if (!ReturnsSelectedActionToMainWindow(action))
@@ -297,6 +346,7 @@ public partial class SearchWindow : Window
             var results = action is SearchResultAction.CopyName
                 or SearchResultAction.CopyLocation
                 or SearchResultAction.Download
+                or SearchResultAction.DownloadVideo
                 or SearchResultAction.SaveAs
                 or SearchResultAction.PlayNext
                 or SearchResultAction.Queue
@@ -313,8 +363,7 @@ public partial class SearchWindow : Window
                     .Skip(1)
                     .Any())
             {
-                SearchStatus.Announce("Dla jednego działania wybierz wyniki z tej samej usługi");
-                Dispatcher.BeginInvoke(FocusSelectedResult, DispatcherPriority.ContextIdle);
+                AnnounceActionCompletion("Dla jednego działania wybierz wyniki z tej samej usługi");
                 return;
             }
             var visibleResults = ResultsList.Items
@@ -329,8 +378,17 @@ public partial class SearchWindow : Window
             {
                 LastDirectActionResult = result;
             }
-            if (!string.IsNullOrWhiteSpace(announcement)) SearchStatus.Announce(announcement);
-            Dispatcher.BeginInvoke(FocusSelectedResult, DispatcherPriority.ContextIdle);
+            if (!string.IsNullOrWhiteSpace(announcement))
+            {
+                AnnounceActionCompletion(
+                    announcement,
+                    deferUntilInputIdle: action is SearchResultAction.CopyName
+                        or SearchResultAction.CopyLocation);
+            }
+            else
+            {
+                RestoreSelectedResultFocusIfNeeded();
+            }
             return;
         }
 
@@ -343,8 +401,7 @@ public partial class SearchWindow : Window
                 .Skip(1)
                 .Any())
         {
-            SearchStatus.Announce("Do jednej playlisty wybierz wyniki z tej samej usługi");
-            Dispatcher.BeginInvoke(FocusSelectedResult, DispatcherPriority.ContextIdle);
+            AnnounceActionCompletion("Do jednej playlisty wybierz wyniki z tej samej usługi");
             return;
         }
         SelectedResults = selectedResults;
@@ -468,10 +525,9 @@ public partial class SearchWindow : Window
         }
         if (modifiers == ModifierKeys.Control && key is Key.X or Key.V)
         {
-            SearchStatus.Announce(key == Key.X
+            AnnounceActionCompletion(key == Key.X
                 ? "Wycinanie plików nie działa na liście wyników wyszukiwania"
                 : "Wklejanie plików nie działa na liście wyników wyszukiwania");
-            Dispatcher.BeginInvoke(FocusSelectedResult, DispatcherPriority.ContextIdle);
             e.Handled = true;
             return;
         }
@@ -479,17 +535,25 @@ public partial class SearchWindow : Window
             && key == Key.Left
             && ResultsList.SelectedItem is SearchResultRow selectedRow)
         {
-            SearchStatus.Announce(_formatQuickInformation(selectedRow.Item));
-            Dispatcher.BeginInvoke(FocusSelectedResult, DispatcherPriority.ContextIdle);
+            AnnounceActionCompletion(_formatQuickInformation(selectedRow.Item));
             e.Handled = true;
             return;
         }
         if (modifiers == ModifierKeys.None
             && key == Key.Right
-            && ResultsList.SelectedItem is SearchResultRow tidalRow
-            && string.Equals(tidalRow.SessionId, "tidal", StringComparison.OrdinalIgnoreCase))
+            && ResultsList.SelectedItem is SearchResultRow rightArrowRow)
         {
-            ShowTidalRelationsMenu(tidalRow);
+            if (string.Equals(rightArrowRow.SessionId, "tidal", StringComparison.OrdinalIgnoreCase))
+            {
+                ShowTidalRelationsMenu(rightArrowRow);
+            }
+            else
+            {
+                var information = _formatQuickInformation(rightArrowRow.Item);
+                AnnounceActionCompletion(string.IsNullOrWhiteSpace(information)
+                    ? rightArrowRow.Label
+                    : information);
+            }
             e.Handled = true;
             return;
         }
@@ -519,6 +583,8 @@ public partial class SearchWindow : Window
             action = SearchResultAction.CopyLocation;
         else if (key == Key.D && modifiers == ModifierKeys.Control)
             action = SearchResultAction.Download;
+        else if (key == Key.D && modifiers == (ModifierKeys.Control | ModifierKeys.Shift))
+            action = SearchResultAction.DownloadVideo;
         else if (key == Key.S && modifiers == ModifierKeys.Control)
             action = SearchResultAction.SaveAs;
 
@@ -544,8 +610,7 @@ public partial class SearchWindow : Window
         }
         if (actions.Count == 0)
         {
-            SearchStatus.Announce("Ten wynik nie ma dostępnego albumu ani wykonawcy nadrzędnego");
-            Dispatcher.BeginInvoke(FocusSelectedResult, DispatcherPriority.ContextIdle);
+            AnnounceActionCompletion("Ten wynik nie ma dostępnego albumu ani wykonawcy nadrzędnego");
             return;
         }
 
@@ -576,7 +641,7 @@ public partial class SearchWindow : Window
         {
             if (IsVisible)
             {
-                Dispatcher.BeginInvoke(FocusSelectedResult, DispatcherPriority.ContextIdle);
+                RestoreSelectedResultFocusIfNeeded();
             }
         };
         MenuAccessibility.UpdateVisibleItemSetMetadata(menu);
@@ -639,6 +704,7 @@ public partial class SearchWindow : Window
     private void CopyName_Click(object sender, RoutedEventArgs e) => CompleteSelected(SearchResultAction.CopyName);
     private void CopyLocation_Click(object sender, RoutedEventArgs e) => CompleteSelected(SearchResultAction.CopyLocation);
     private void DownloadPodcast_Click(object sender, RoutedEventArgs e) => CompleteSelected(SearchResultAction.Download);
+    private void DownloadYouTubeVideo_Click(object sender, RoutedEventArgs e) => CompleteSelected(SearchResultAction.DownloadVideo);
     private void SavePodcastAs_Click(object sender, RoutedEventArgs e) => CompleteSelected(SearchResultAction.SaveAs);
     private void ResultsList_MouseDoubleClick(object sender, MouseButtonEventArgs e) => CompleteSelected(SearchResultAction.Open);
 
@@ -675,9 +741,28 @@ public partial class SearchWindow : Window
         SearchDownloadPodcastMenuItem.Visibility = podcastEpisodesOnly
             ? Visibility.Visible
             : Visibility.Collapsed;
+        SearchDownloadYouTubeVideoMenuItem.Visibility = podcastEpisodesOnly
+            && selected.All(result => YouTubeVideoDownloadPolicy.TryResolvePageUrl(
+                result.Item,
+                episode: null,
+                out _))
+                ? Visibility.Visible
+                : Visibility.Collapsed;
         SearchSavePodcastAsMenuItem.Visibility = podcastEpisodesOnly && selected.Length == 1
             ? Visibility.Visible
             : Visibility.Collapsed;
+        if (SearchSavePodcastAsMenuItem.Visibility == Visibility.Visible)
+        {
+            MenuAccessibility.SetPresentation(
+                SearchSavePodcastAsMenuItem,
+                YouTubeVideoDownloadPolicy.SaveAsLabel(
+                    YouTubeVideoDownloadPolicy.TryResolvePageUrl(
+                        selected[0].Item,
+                        episode: null,
+                        out _)));
+            SearchSavePodcastAsMenuItem.InputGestureText = "Ctrl+S";
+            AutomationProperties.SetAcceleratorKey(SearchSavePodcastAsMenuItem, "Ctrl+S");
+        }
         MenuAccessibility.SetPresentation(
             SearchPlaylistMenuItem,
             tidalOnly ? "Dodaj do playlisty TIDAL" : "Zarządzaj playlistami");
@@ -717,7 +802,7 @@ public partial class SearchWindow : Window
 
     private void ResultsContextMenu_Closed(object sender, RoutedEventArgs e)
     {
-        Dispatcher.BeginInvoke(FocusSelectedResult, DispatcherPriority.ContextIdle);
+        RestoreSelectedResultFocusIfNeeded();
     }
 
     public sealed record SearchResult(string SessionId, MediaItem Item);
@@ -762,5 +847,6 @@ public enum SearchResultAction
     CopyName,
     CopyLocation,
     Download,
+    DownloadVideo,
     SaveAs
 }

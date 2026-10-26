@@ -72,8 +72,12 @@
                               automation:AutomationProperties.Name="Pobierz zaznaczone odcinki do domyślnego folderu podcastów, Ctrl+D"
                               automation:AutomationProperties.AcceleratorKey="Control+D"
                               Visibility="Collapsed" Click="DownloadPodcast_Click" />
-                    <MenuItem x:Name="SearchSavePodcastAsMenuItem" Header="_Zapisz odcinek jako…" InputGestureText="Ctrl+S"
-                              automation:AutomationProperties.Name="Zapisz jeden odcinek podcastu jako, Ctrl+S"
+                    <MenuItem x:Name="SearchDownloadYouTubeVideoMenuItem" Header="Pobierz _wideo z YouTube" InputGestureText="Ctrl+Shift+D"
+                              automation:AutomationProperties.Name="Pobierz zaznaczone wideo z YouTube do domyślnego folderu, Ctrl+Shift+D"
+                              automation:AutomationProperties.AcceleratorKey="Control+Shift+D"
+                              Visibility="Collapsed" Click="DownloadYouTubeVideo_Click" />
+                    <MenuItem x:Name="SearchSavePodcastAsMenuItem" Header="_Zapisz odcinek lub wideo jako…" InputGestureText="Ctrl+S"
+                              automation:AutomationProperties.Name="Zapisz jeden odcinek audio lub materiał wideo jako, Ctrl+S"
                               automation:AutomationProperties.AcceleratorKey="Control+S"
                               Visibility="Collapsed" Click="SavePodcastAs_Click" />
                     <MenuItem Header="_Informacje" InputGestureText="Alt+Enter"

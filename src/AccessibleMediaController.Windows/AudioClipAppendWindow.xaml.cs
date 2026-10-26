@@ -20,6 +20,8 @@ public partial class AudioClipAppendWindow : Controls.AccessibleWindow
     private CancellationTokenSource? _cancellation;
     private bool _working;
     private bool _allowClose;
+    private int _lastAnnouncedPercent = -10;
+    private string _lastProgressPhase = string.Empty;
 
     public AudioClipAppendWindow(
         string sourcePath,
@@ -40,6 +42,7 @@ public partial class AudioClipAppendWindow : Controls.AccessibleWindow
         BackupRulesText.Text = "Dopisanie zachowuje dotychczasowy dźwięk na początku pliku. WAV i FLAC są bezstratne. "
             + "W formatach MP3, M4A, AAC, Ogg i Opus całość zostanie ponownie skompresowana; "
             + "przed rozpoczęciem pojawi się pytanie o zgodę. " + _backupPolicyNotice;
+        System.Windows.Automation.AutomationProperties.SetHelpText(AppendButton, BackupRulesText.Text);
         SelectionText.Text = $"{sourceTitle}. Fragment od {start:c} do {end:c}.";
         System.Windows.Automation.AutomationProperties.SetName(SelectionText, SelectionText.Text);
     }
@@ -93,12 +96,29 @@ public partial class AudioClipAppendWindow : Controls.AccessibleWindow
             TargetPathBox.IsEnabled = BrowseButton.IsEnabled = AppendButton.IsEnabled = false;
             AppendProgress.Value = 0; AppendProgress.Visibility = Visibility.Visible;
             AppendStatus.Text = "Przygotowywanie fragmentu…";
+            _lastAnnouncedPercent = -10;
+            _lastProgressPhase = string.Empty;
             CancelButton.Content = "_Przerwij";
             _cancellation = new CancellationTokenSource();
             var progress = new Progress<double>(value => {
                 if (!_working) return;
                 AppendProgress.Value = Math.Clamp(value * 100d, 0d, 100d);
-                AppendStatus.Text = $"Przygotowano {Math.Round(AppendProgress.Value):0}%.";
+                var percent = Math.Clamp((int)Math.Round(AppendProgress.Value), 0, 100);
+                var phase = percent switch
+                {
+                    < 5 => "Sprawdzanie plików",
+                    < 35 => "Przygotowywanie fragmentu",
+                    < 85 => "Łączenie plików",
+                    < 100 => "Sprawdzanie gotowego pliku",
+                    _ => "Kończenie dopisywania"
+                };
+                if (!string.Equals(phase, _lastProgressPhase, StringComparison.Ordinal)
+                    || percent >= _lastAnnouncedPercent + 10)
+                {
+                    AppendStatus.Text = $"{phase}: {percent}%.";
+                    _lastProgressPhase = phase;
+                    _lastAnnouncedPercent = percent;
+                }
             });
             var request = new AudioClipAppendRequest(_sourcePath, target, _start, _end);
             var token = _cancellation.Token;

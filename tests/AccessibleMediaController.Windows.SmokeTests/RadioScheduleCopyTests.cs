@@ -22,6 +22,7 @@ internal static class RadioScheduleCopyTests
             ("Enter edytuje nazwę, dni i czas kopii niezależnie od oryginału", (w,s)=>MainWindowRoundtripCore(w,s,true)),
             ("Usuwanie pyta o nazwę kopii, a anulowanie zachowuje oba plany", DeleteNamesCopy),
             ("Brak zaznaczenia nie tworzy planu, Spacja włącza tylko kopię", SelectionAndEnable),
+            ("Prawa strzałka podaje zwięźle bitrate, plik i folder bez źródła", RightArrowOutputDescription),
             ("Celowo usunięta kopia nie wraca po ponownym starcie", (w,s)=>MainWindowRoundtripCore(w,s,false,true)),
         };
         var failed=0;
@@ -273,6 +274,29 @@ internal static class RadioScheduleCopyTests
         Send(window,Key.Space,ModifierKeys.None);
         Check(window.ResultSchedules.Single(x=>x.Id!=original.Id).Enabled,"Spacja nie włączyła kopii");
         Check(window.ResultSchedules.Single(x=>x.Id==original.Id).Enabled==original.Enabled,"Spacja na kopii zmieniła oryginał");
+    }
+    private static void RightArrowOutputDescription(RadioSchedulesWindow window,RadioRecordingScheduleSettings original)
+    {
+        var row=window.SchedulesList.SelectedItem!;
+        var schedule=(RadioRecordingScheduleSettings)row.GetType().GetProperty("Schedule")!.GetValue(row)!;
+        schedule.OutputFolder=string.Empty;
+        Send(window,Key.Right,ModifierKeys.None);
+        var defaultFolder=window.ScheduleStatus.Text;
+        Check(defaultFolder.StartsWith("192 kb/s, plik Stacja próby-",StringComparison.Ordinal),
+            "Komunikat nie zaczyna się od bitrate i pliku: "+defaultFolder);
+        Check(defaultFolder.EndsWith(", folder domyślny",StringComparison.Ordinal),
+            "Brak zwięzłej nazwy folderu domyślnego: "+defaultFolder);
+        Check(!defaultFolder.Contains("Źródło",StringComparison.OrdinalIgnoreCase)
+              && !defaultFolder.Contains("https://",StringComparison.OrdinalIgnoreCase),
+            "Komunikat nadal zaczyna się od źródła: "+defaultFolder);
+
+        schedule.OutputFolder=@"D:\Nagrania prób";
+        Send(window,Key.Right,ModifierKeys.None);
+        var customFolder=window.ScheduleStatus.Text;
+        Check(customFolder.EndsWith(@", D:\Nagrania prób",StringComparison.Ordinal),
+            "Niestandardowy folder nie jest podany samą ścieżką: "+customFolder);
+        Check(!customFolder.Contains("folder:",StringComparison.OrdinalIgnoreCase),
+            "Przed ścieżką pozostała zbędna etykieta folderu: "+customFolder);
     }
     private static void CopyNames(RadioSchedulesWindow window,RadioRecordingScheduleSettings original)
     {

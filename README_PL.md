@@ -1,5 +1,26 @@
 # Dostępny kontroler multimedialny — prototyp dla Windows
 
+## Przygotowywana zmiana po alfa425: pobieranie wideo z YouTube
+
+W sesji **Podcasty i YouTube** skrót `Ctrl+Shift+D` pobiera wideo z jednego lub
+wielu zaznaczonych materiałów YouTube do tego samego domyślnego folderu, którego
+używa pobieranie podcastów. Polecenie jest dostępne na liście, w odtwarzaczu,
+wynikach wyszukiwania, menu kontekstowym, palecie poleceń i Pomocy tylko wtedy,
+gdy cały wybór można pobrać jako wideo YouTube. `Ctrl+D` nadal pobiera audio.
+`Ctrl+S` pozostaje jednorazowym **Zapisz jako**, ale działa kontekstowo: dla
+zwykłego odcinka zapisuje audio, a dla materiału YouTube otwiera zapis wideo i
+pozwala wybrać MP4 albo oryginalny/najlepszy dostępny format.
+
+W **Ustawienia > Podcasty** można wybrać domyślny format: **MP4 — domyślny i
+najbardziej zgodny** albo **Oryginalny lub najlepszy dostępny — bez wymuszania
+MP4**. MP4 preferuje obraz H.264 i dźwięk AAC, a następnie scala lub przepakowuje
+plik przez yt-dlp i FFmpeg. Drugi tryb pozostawia yt-dlp wybór najlepszego
+dostępnego kontenera, dlatego wynikiem może być między innymi WebM albo MKV.
+Gotowy plik otrzymuje bezpieczną nazwę dopiero po ukończeniu pobierania; kolizja
+nazw tworzy kolejny numer. Wariant `Ctrl+S` publikuje wynik dokładnie pod nazwą
+wybraną w systemowym oknie, po uwzględnieniu rzeczywistego rozszerzenia
+kontenera. To zmiana źródłowa po alfa425, jeszcze nie instalator.
+
 ## Przygotowywana zmiana po alfa415: kopiowanie samych adresów
 
 `Ctrl+Shift+C` na listach, w odtwarzaczu, wynikach wyszukiwania oraz presetach kopiuje same łącza, bez nazwy elementu; przy wielu pozycjach po jednym adresie w wierszu. Dla podcastów zachowany jest bezpośredni adres audio lub kanału, a dla YouTube dotychczasowy adres materiału — nie powstaje przez to nowy adres strumienia audio ani gwarancja odtwarzania na zewnętrznym głośniku. Lokalne pliki nadal są kopiowane jako pliki i pełne ścieżki. `Ctrl+C` zachowuje dotychczasowe nazwy/opisy. Preset urządzenia WiiM bez adresu nie kopiuje nazwy w zastępstwie łącza. Starsze opisy par „nazwa i łącze” poniżej są historią. Ta poprawka wymaga jeszcze odbioru Windows/NVDA i wydania.
@@ -7,6 +28,7 @@
 ## Aktualny stan i dokumentacja rozwoju
 
 - [Wydania i opisy zmian](https://github.com/michalkasperczak/AMC/releases).
+- [Zmiany alfa423 — edycja audio, porządek w odtwarzaczu i Apple Podcasts](ZMIANY_0.1.0-alpha.423_PL.md).
 - [Przygotowywane alfa414 — odtwarzacz i sterowanie Sonosem](ZMIANY_0.1.0-alpha.414_PL.md).
 - [Zmiany alfa413 — lista głośników i grup Sonos](ZMIANY_0.1.0-alpha.413_PL.md).
 - [Zmiany alfa412 — obsługa konta Sonos](ZMIANY_0.1.0-alpha.412_PL.md).
@@ -14,6 +36,28 @@
 - [Zasady projektu](AGENTS.md), [scenariusze testów](TESTY_ZADANIA_PL.md) i [rejestr ryzyk](REJESTR_RYZYK_I_NIEJEDNOZNACZNOSCI_PL.md).
 
 Opisy starszych wersji poniżej są historią tych wydań, nie samodzielną informacją o obecnym stanie każdej funkcji. Prace oznaczone jako niewydane nie są jeszcze dostępne w instalatorze.
+
+## Korekta edycji fragmentów audio w alfa423
+
+Usuwanie zaznaczonego fragmentu z oryginału ma teraz własne modalne okno
+potwierdzenia i postępu. Podczas pracy fokus nie wraca już do pola czasu ani
+przycisku odtwarzania, więc „Wstrzymaj” nie jest mylony z kontrolą cięcia.
+Początkowy fokus znajduje się na bezpiecznym przycisku **Anuluj**; po rozpoczęciu
+operacji zmienia się on w **Przerwij**. Przerwanie kończy proces FFmpeg, sprząta
+pliki robocze i nie podmienia oryginału.
+
+Okno dopisywania pozostawia tylko jedno rzeczywiste pole edycyjne — ścieżkę
+pliku docelowego. Zasady operacji są zwykłym opisem oraz tekstem pomocy
+przycisku **Dopisz**, a nie drugim polem edycyjnym. Postęp obejmuje już
+przygotowanie fragmentu, łączenie lub ponowne kodowanie oraz kontrolę gotowego
+pliku; nie zatrzymuje się pozornie na 70%. Komunikaty etapów są ograniczone,
+aby NVDA nie odczytywał każdej drobnej aktualizacji procentowej.
+
+Widok odtwarzacza nie wpuszcza już Tab do dwóch technicznych elementów
+`video-one` i `video-two`, które biblioteka TIDAL tworzy do odtwarzania bez
+przerw. Nie są to dwa ustawienia AMC. Głośność jest teraz jawnie opisana jako
+wartość procentowa, a prędkość `1,00 razy` jako normalna; pozostałe wartości
+mówią wprost, czy są wolniejsze, czy szybsze od normalnej.
 
 
 ## Zachowuj kopie po edycji
@@ -401,8 +445,9 @@ transmisji YouTube. Materiał trafia do kolekcji **Media internetowe**, bez
 logowania, synchronizacji konta i cookies przeglądarki. AMC przechowuje trwały
 adres strony, a bezpośredni adres audio wyznacza ponownie dopiero podczas
 odtwarzania. Skończony materiał korzysta ze wspólnego przewijania, prędkości,
-Historii, Kolejki i playlist; `Ctrl+D` oraz `Ctrl+S` zapisują dźwięk jako MP3
-przez odseparowane, aktualizowane składniki `yt-dlp` i FFmpeg. RSS/Atom nadal
+Historii, Kolejki i playlist; w `alpha.294` `Ctrl+D` oraz `Ctrl+S` zapisywały
+dźwięk jako MP3 przez odseparowane, aktualizowane składniki `yt-dlp` i FFmpeg.
+Bieżąca przygotowywana korekta `Ctrl+S` jest opisana na początku dokumentu. RSS/Atom nadal
 działa niezależnie i nie wymaga tych składników.
 
 Wersja `alpha.293` przyjmuje w module Radia publiczny adres trwającej
@@ -840,6 +885,10 @@ W sesji Podcasty `Ctrl+N` sprawdza i dodaje bezpośredni kanał RSS/Atom,
 wraca, Delete wypisuje, `Ctrl+C` kopiuje nazwę i publiczną stronę, jeśli kanał
 ją podaje, a `Ctrl+Shift+C` nazwę i bezpośredni adres. Klient ogranicza czas, przekierowania i rozmiar odpowiedzi,
 nie przyjmuje niebezpiecznego XML i podczas odświeżania nie pobiera audio.
+W oknie `Ctrl+N` jedno domyślne **Dodaj** wykonuje cały import: Enter sprawdza
+adres, dodaje poprawne źródło i czeka na potwierdzenie trwałego zapisu. Nie ma
+osobnego kroku **Sprawdź**. Po błędzie AMC zaznacza adres do poprawienia, a
+podczas oczekiwania blokuje ponowny Enter, aby nie uruchomić drugiego importu.
 Enter na odcinku odtwarza skończony materiał HTTP/HTTPS we wspólnym
 odtwarzaczu, który zachowuje pozycję, prędkość, Historię i Zakładki.
 
@@ -951,6 +1000,8 @@ Od `alpha.116` nagranie radia jest zapisywane jako MP3 zamiast WAV; docelowa jak
 Od `alpha.117` starsze serwery Shoutcast i Icecast zwracające odpowiedź `ICY 200 OK` mają bezpieczną ścieżkę zgodności MP3. AMC najpierw zachowuje zwykły dekoder systemowy, a po odrzuceniu takiego strumienia ponawia połączenie własnym ograniczonym klientem i zarządzanym dekoderem NLayer. Rozwiązanie nie jest wyjątkiem dla jednej stacji; obejmuje między innymi starsze bezpośrednie adresy anten Polskiego Radia, nie obniża kontroli certyfikatów HTTPS i usuwa metadane ICY z toru audio, jeśli serwer je mimo wszystko przesyła.
 
 Od `alpha.118` menu **Plik** odpowiada bieżącej sesji. W **Plikach lokalnych** pokazuje otwieranie plików, folderów i Foldery Biblioteki, a w **Radiu internetowym** — **Importuj stacje z playlisty…** oraz **Nowa stacja radiowa…**. `Ctrl+O` otwiera pliki w sesji lokalnej, lecz w Radiu importuje wiele stacji z lokalnego M3U/M3U8, PLS, XSPF albo eksportu VRadio JSON. Import odrzuca wpisy niebędące prawidłowymi adresami HTTP/HTTPS, duplikaty i nadmiernie duże pola, a do logu zapisuje tylko liczby — nie treść wadliwych wpisów. Szybkie przełączenie stacji anuluje poprzednią próbę połączenia. Awaryjny dekoder ICY MP3 sprawdza MIME i nie próbuje już odtwarzać AAC/AAC+ lub OGG jako fałszywego MP3.
+
+W bieżących źródłach **AMC Test** import radia potrafi uzupełnić brakujące nazwy prostych playlist M3U, które zawierają same adresy. Nazwa zapisana w `#EXTINF`, PLS, XSPF albo JSON zawsze ma pierwszeństwo. Tylko dla wpisu bez takiej nazwy AMC wykonuje ograniczony czasowo odczyt nagłówków serwera Icecast/Shoutcast i przyjmuje użytkową wartość `icy-name`; nie czeka na dźwięk ani tytuł bieżącego utworu. Automatycznie sprawdzane są najwyżej 64 wpisy, do sześciu równolegle, przez najwyżej 4 sekundy na stację i 12 sekund na cały import. Brak odpowiedzi pozostawia czytelną nazwę hosta zamiast surowego pełnego adresu. NVDA najpierw słyszy „Odczytuję nazwy stacji z serwerów”, a komunikat końcowy podaje liczbę nazw odczytanych i zastępczych.
 
 Od `alpha.119` bezpośrednie transmisje OGG/Vorbis, w tym Radio Emaus, mają osobny sekwencyjny dekoder radiowy. Starszy strumień ICY MP3 jest wyrównywany dopiero do dwóch kolejnych zgodnych ramek, dzięki czemu przypadkowe dane ze środka pierwszej ramki nie są uznawane za początek dźwięku. Dla znanych starych adresów AAC/HLS Programu 1, Programu 2, Czwórki i PR24 oraz nieaktualnego wpisu Eski AMC najpierw próbuje zgodnego wariantu MP3; testy sieciowe obejmują Program 2, Czwórkę, PR24, Eskę i Radio Emaus. Nieznane HLS i ICY AAC bez zgodnego wariantu nadal kończą się kontrolowanym komunikatem i wymagają planowanego dodatkowego komponentu dekodera — nie są zgadywane ani otwierane ścieżką, która mogłaby zawiesić aplikację.
 
@@ -1797,3 +1848,26 @@ Od `alpha.286` widok `Nagrywane` w Radiu nie powtarza przy każdym wejściu
 oczywistej nazwy sesji „Radio internetowe”. Po przełączeniu sesji NVDA czyta
 numer sesji, nazwę widoku, stację i stan nagrywania. Pełna nazwa sesji pozostaje
 w pozostałych widokach, gdzie pomaga rozpoznać bieżący kontekst.
+
+## Parametry strumienia i zapisu aktywnego nagrania
+
+Widok `Nagrywane` rozdziela dwa rodzaje informacji. `Strzałka w lewo` nadal
+podaje parametry odbieranego
+strumienia stacji. `Strzałka w prawo` podaje parametry zapisywanego pliku w
+zwięzłej postaci, na przykład `192 kb/s, plik audycja.mp3, folder domyślny`.
+Jeżeli nagranie trafia do innego folderu, komunikat kończy się pełną ścieżką.
+W oknie Harmonogramu prawa strzałka używa tej samej kolejności i nie zaczyna
+od słowa „Źródło” ani adresu stacji.
+
+Historia rozpoznanych utworów pod `Ctrl+Alt+S` zachowuje krótkie
+wiersze podczas zwykłej nawigacji, a pełny opis z łączami kopiuje dopiero
+`Ctrl+C`. `Ctrl+Shift+C` kopiuje dokładne publiczne łącze utworu w wybranej w
+ustawieniach usłudze Spotify albo TIDAL. `Ctrl+Enter` pokazuje album w tej
+usłudze wewnątrz AMC i ustawia fokus na rozpoznanym utworze. Prawa strzałka
+otwiera krótką listę najważniejszych działań, natomiast menu kontekstowe ma
+pełną rozwijaną pozycję **Usługi, łącza i powiązania**; obie listy powstają z
+jednego modelu działań. Pozycje „pokaż utwór w AMC” tylko przechodzą do sesji i
+ustawiają fokus. Osobne pozycje otwierają oryginalne aplikacje, a odtwarzanie
+TIDAL nadal korzysta z oryginalnego TIDALa. Publiczne łącza Apple Music do
+utworu i albumu są rozwiązywane na żądanie i zapamiętywane bez Apple ID,
+developer tokenu ani Music User Tokenu; Apple Music nie jest usługą domyślną.

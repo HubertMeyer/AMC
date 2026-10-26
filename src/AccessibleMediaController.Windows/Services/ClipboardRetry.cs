@@ -9,23 +9,39 @@ internal static class ClipboardRetry
 
     public static bool TrySetText(string text, out string errorMessage)
     {
-        var data = new DataObject();
-        data.SetData(DataFormats.UnicodeText, text);
-        return TrySetDataObject(data, out errorMessage);
+        ArgumentNullException.ThrowIfNull(text);
+        // Text is a native clipboard format. The dedicated WPF API avoids the
+        // generic object-serialization path, which can attempt BinaryFormatter
+        // after earlier multi-format clipboard operations in the same process.
+        return TrySetWithRetry(
+            () => Clipboard.SetText(text, TextDataFormat.UnicodeText),
+            DataFormats.UnicodeText,
+            out errorMessage);
     }
 
     public static bool TrySetDataObject(object data, out string errorMessage)
     {
         ArgumentNullException.ThrowIfNull(data);
-        Exception? lastError = null;
         var dataDescription = DescribeData(data);
+        return TrySetWithRetry(
+            () => Clipboard.SetDataObject(data, true),
+            dataDescription,
+            out errorMessage);
+    }
+
+    private static bool TrySetWithRetry(
+        Action write,
+        string dataDescription,
+        out string errorMessage)
+    {
+        Exception? lastError = null;
         for (var attempt = 0; attempt < RetryDelaysMilliseconds.Length; attempt++)
         {
             var delay = RetryDelaysMilliseconds[attempt];
             if (delay > 0) Thread.Sleep(delay);
             try
             {
-                Clipboard.SetDataObject(data, true);
+                write();
                 DiagnosticLog.Info(
                     "clipboard",
                     attempt == 0
@@ -34,7 +50,8 @@ internal static class ClipboardRetry
                 errorMessage = string.Empty;
                 return true;
             }
-            catch (Exception exception) when (exception is ExternalException or InvalidOperationException)
+            catch (Exception exception) when (
+                exception is ExternalException or InvalidOperationException or NotSupportedException)
             {
                 lastError = exception;
             }
@@ -43,7 +60,9 @@ internal static class ClipboardRetry
         var code = lastError is ExternalException external
             ? $" Kod 0x{external.ErrorCode:X8}."
             : string.Empty;
-        errorMessage = $"Schowek jest zajęty przez inną aplikację. Spróbuj ponownie.{code}";
+        errorMessage = lastError is NotSupportedException
+            ? "Nie udało się zapisać danych w bezpiecznym formacie schowka. Spróbuj ponownie."
+            : $"Schowek jest zajęty przez inną aplikację. Spróbuj ponownie.{code}";
         DiagnosticLog.Error(
             "clipboard",
             $"Nie udało się zapisać schowka po {RetryDelaysMilliseconds.Length} próbach: {dataDescription}.",

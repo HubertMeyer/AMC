@@ -830,7 +830,24 @@ internal static class ApplicationUpdateManager
             # zapisywalnym dla uzytkownika - pobranie go kiedys nie dowodzi, ze
             # to nadal ten sam plik.
             if ($ExpectedSha256) {
-                $policzona = (Get-FileHash -LiteralPath $Installer -Algorithm SHA256).Hash
+                # Nie polegamy na automatycznym ladowaniu modulu
+                # Microsoft.PowerShell.Utility. Pomocnik moze odziedziczyc
+                # ograniczony PSModulePath z programu uruchamiajacego, a suma
+                # nadal musi zostac sprawdzona przed instalatorem.
+                $strumien = [System.IO.File]::OpenRead($Installer)
+                try {
+                    $sha256 = [System.Security.Cryptography.SHA256]::Create()
+                    try {
+                        $bajtySumy = $sha256.ComputeHash($strumien)
+                        $policzona = [System.BitConverter]::ToString($bajtySumy).Replace('-', '')
+                    }
+                    finally {
+                        $sha256.Dispose()
+                    }
+                }
+                finally {
+                    $strumien.Dispose()
+                }
                 if ($policzona -ne $ExpectedSha256.ToUpperInvariant()) {
                     Zapisz "Suma SHA-256 instalatora nie zgadza sie (jest $policzona, oczekiwano $ExpectedSha256). NIE uruchamiam."
                     exit 4

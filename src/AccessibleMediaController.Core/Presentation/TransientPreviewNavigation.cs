@@ -108,7 +108,7 @@ public static class TransientPreviewPolicy
     public static string DescribeUnavailable(TransientPreviewKind kind) => kind switch
     {
         TransientPreviewKind.ActiveRadioRecordings =>
-            "Widok nagrywanych stacji jest dostępny w sesji Radio internetowe. "
+            "Widok nagrywanych plików jest dostępny w sesji Radio internetowe. "
             + "Wspólne podglądy ze wszystkich sesji włączysz w Ustawieniach",
         TransientPreviewKind.RecordedRadioFiles =>
             "Historia nagrywania jest dostępna w sesjach Radio internetowe i Pliki lokalne. "

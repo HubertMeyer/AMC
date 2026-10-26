@@ -6,14 +6,14 @@ using AccessibleMediaController.Core.Sessions;
 namespace AccessibleMediaController.Windows;
 
 /// <summary>
-/// Odswiezanie list po RZECZYWISTYM przeniesieniu nagrania i folder docelowy w
-/// odczycie wiersza.
+/// Odswiezanie list po RZECZYWISTYM przeniesieniu nagrania oraz krotkie,
+/// jednoznaczne etykiety plikow w zwyklej nawigacji.
 ///
 /// Wymaganie historii nagrań:
 ///  * po Ctrl+X i wklejeniu pliku poza AMC w Historii nagrywania nadal stalo
 ///    „Nagrano nazwa”, a Enter szedl w martwa stara sciezke,
-///  * w wierszu chcial nazwe pliku, czas/date, a NA KONCU folder docelowy -
-///    bez wchodzenia we wlasciwosci i bez Ctrl+C sciezki.
+///  * wiersz ma podawac tylko stan i nazwe pliku. Stacja, harmonogram, data i
+///    folder nie moga powtarzac sie przy kazdym ruchu strzalka.
 ///
 /// Osobny plik partial, zeby nie rozlewac tego po 25 tysiacach linii
 /// MainWindow.xaml.cs. Sama logika (etykiety, przepisywanie sciezek, tania
@@ -31,11 +31,10 @@ public partial class MainWindow
     private readonly RecordingPathProbe _recordingPathProbe = new(File.Exists, Directory.Exists);
 
     /// <summary>
-    /// Wiersz Historii nagrywania: skutek, stacja, nazwa pliku, czas/data, a na
-    /// koncu folder docelowy. Stan brakujacego pliku bierze sie z taniej
-    /// obserwacji, nie ze skanu biblioteki.
+    /// Wiersz Historii nagrywania: skutek i nazwa pliku. Stan brakujacego pliku
+    /// bierze sie z taniej obserwacji, nie ze skanu biblioteki.
     /// </summary>
-    private MediaItemRow CreateRecordingHistoryRowWithFolder(
+    private MediaItemRow CreateConciseRecordingHistoryRow(
         RadioRecordingHistorySettings entry,
         DateTime nowUtc)
     {
@@ -58,20 +57,15 @@ public partial class MainWindow
     }
 
     /// <summary>
-    /// Folder docelowy na koncu wiersza pliku nagrania z biblioteki, zeby wpis
-    /// biblioteczny i wpis historyczny czytaly sie SPOJNIE. Nie dotyka wierszy
-    /// innych widokow.
+    /// Zwykly plik nagrania z biblioteki. FormatListItem zawiera stacje,
+    /// wykonawce, folder i inne metadane potrzebne w pozostalych widokach;
+    /// Historia nagrywania celowo ich nie dziedziczy.
     /// </summary>
-    private static MediaItemRow AppendRecordingFolderToRow(MediaItemRow row, long completedUtcTicks, DateTime nowUtc)
+    private static MediaItemRow CreateConciseRecordedFileRow(MediaItem item)
     {
-        var label = row.Label;
-        if (completedUtcTicks > 0 && completedUtcTicks <= DateTime.MaxValue.Ticks)
-        {
-            label += ", " + RadioRecordingHistoryLabels.FormatWhen(
-                new DateTime(completedUtcTicks, DateTimeKind.Utc).ToLocalTime(), nowUtc.ToLocalTime());
-        }
-        label = RadioRecordingRowLabels.AppendFolder(label, row.Item.Source);
-        return new MediaItemRow(row.Item, label, row.NavigationText);
+        var name = RadioRecordingRowLabels.FileNameLabel(item.Source) ?? item.Title;
+        var label = RadioRecordingRowLabels.DescribeRecordedFile(item.Source, item.Title);
+        return new MediaItemRow(item, label, name);
     }
 
     /// <summary>

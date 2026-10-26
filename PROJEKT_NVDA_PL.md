@@ -4,6 +4,19 @@
 
 NVDA jest cienkim klientem AMC, nie osobnym odtwarzaczem Free Radio. Prefiks AMC pozostaje. Od 0.2.1 jest 65 dozwolonych poleceń i 65 domyślnych gestów Ctrl+Windows. Pełna aktualna mapa: [INSTRUKCJA_NVDA_PL.md](INSTRUKCJA_NVDA_PL.md); ta sama mapa jest w pomocy HTML paczki dodatku. Własne przypisania NVDA nie są modyfikowane.
 
+## Docelowy interfejs wxPython
+
+Dodatek NVDA pozostaje niewidzialnym interfejsem napisanym w Pythonie, ale nie
+zastępuje widocznego interfejsu wxPython ani jego lokalnego routera klawiatury.
+Obie warstwy wywołują te same stabilne komendy bezokiennego hosta .NET.
+
+Standardowych poleceń czytnika, w szczególności `NVDA+strzałka w górę` oraz
+`NVDA+End`, dodatek ani router AMC nie mogą przejmować. Pierwsze ma odczytać
+rzeczywiście fokusowany element, drugie natywny pasek stanu. Użytkownik
+potwierdził, że próba wxPython usuwała wcześniejsze mylenie tych dwóch odczytów
+w interfejsie WPF. Pełny zakres decyzji, testów klawiatury, aktualizacji i
+zgłoszeń opisuje [projekt interfejsu wxPython](PROJEKT_WXPYTHON_PL.md).
+
 Wymagane AMC alpha 342 i NVDA 2026.1. Stary podzbiór 14 poleceń zachowuje zgodność z AMC 339–340. Nowe polecenia nie zmieniają wersji protokołu: stary serwer bezpiecznie odmawia nieznanej komendy. Użytkownik zaakceptował wersję do publikacji 11 września 2026 r. Dalsze audyty innych modeli powinny uwzględniać poniższe granice testów; publikacja nie oznacza kompletnej weryfikacji mowy, urządzeń i usług.
 
 ## Semantyka

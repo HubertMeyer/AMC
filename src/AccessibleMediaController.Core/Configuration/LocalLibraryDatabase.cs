@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text.Json;
 using AccessibleMediaController.Core.LocalMedia;
 using Microsoft.Data.Sqlite;
 
@@ -11,7 +12,7 @@ namespace AccessibleMediaController.Core.Configuration;
 /// </summary>
 internal sealed class LocalLibraryDatabase(string databasePath)
 {
-    private const int DatabaseSchemaVersion = 9;
+    private const int DatabaseSchemaVersion = 10;
     private readonly object _gate = new();
 
     public string Path { get; } = databasePath;
@@ -210,7 +211,7 @@ internal sealed class LocalLibraryDatabase(string databasePath)
             state.PlaybackHistory = new PlaybackHistorySettings();
             using (var command = connection.CreateCommand())
             {
-                command.CommandText = "SELECT session_id, item_id FROM playback_history ORDER BY session_id, ordinal;";
+                command.CommandText = "SELECT session_id, item_id, item_json FROM playback_history ORDER BY session_id, ordinal;";
                 using var reader = command.ExecuteReader();
                 while (reader.Read())
                 {
@@ -220,7 +221,26 @@ internal sealed class LocalLibraryDatabase(string databasePath)
                         ids = [];
                         state.PlaybackHistory.ItemIdsBySession[sessionId] = ids;
                     }
-                    ids.Add(reader.GetString(1));
+                    var itemId = reader.GetString(1);
+                    ids.Add(itemId);
+                    if (reader.IsDBNull(2)) continue;
+                    try
+                    {
+                        var snapshot = JsonSerializer.Deserialize<PlaybackHistoryItemSettings>(reader.GetString(2));
+                        if (snapshot is null || string.IsNullOrWhiteSpace(snapshot.Title)) continue;
+                        snapshot.Id = itemId;
+                        if (!state.PlaybackHistory.ItemsBySession.TryGetValue(sessionId, out var items))
+                        {
+                            items = [];
+                            state.PlaybackHistory.ItemsBySession[sessionId] = items;
+                        }
+                        items.Add(snapshot);
+                    }
+                    catch (JsonException)
+                    {
+                        // Zachowujemy starszy identyfikator historii nawet wtedy,
+                        // gdy pojedyncza kopia danych opisowych jest uszkodzona.
+                    }
                 }
             }
 
@@ -433,6 +453,7 @@ internal sealed class LocalLibraryDatabase(string databasePath)
                 session_id TEXT NOT NULL,
                 ordinal INTEGER NOT NULL,
                 item_id TEXT NOT NULL,
+                item_json TEXT NULL,
                 PRIMARY KEY(session_id, ordinal)
             );
             CREATE INDEX IF NOT EXISTS ix_playback_history_item ON playback_history(session_id, item_id);
@@ -509,6 +530,7 @@ internal sealed class LocalLibraryDatabase(string databasePath)
         EnsureColumn(connection, "bookmarks", "purpose", "INTEGER NOT NULL DEFAULT 1");
         EnsureColumn(connection, "bookmarks", "chapter_origin", "INTEGER NOT NULL DEFAULT 0");
         EnsureColumn(connection, "bookmarks", "chapter_source_id", "TEXT NULL");
+        EnsureColumn(connection, "playback_history", "item_json", "TEXT NULL");
         EnsureColumn(connection, "folder_playback_options", "loudness_normalization_override", "INTEGER NULL");
         EnsureColumn(connection, "folder_playback_options", "smooth_track_transitions_override", "INTEGER NULL");
         EnsureColumn(connection, "folder_playback_options", "inter_track_silence_ms_override", "INTEGER NULL");
@@ -639,11 +661,19 @@ internal sealed class LocalLibraryDatabase(string databasePath)
 
         foreach (var pair in state.PlaybackHistory.ItemIdsBySession)
         {
+            var snapshots = state.PlaybackHistory.ItemsBySession.TryGetValue(pair.Key, out var items)
+                ? items.GroupBy(item => item.Id, StringComparer.Ordinal)
+                    .ToDictionary(group => group.Key, group => group.First(), StringComparer.Ordinal)
+                : new Dictionary<string, PlaybackHistoryItemSettings>(StringComparer.Ordinal);
             for (var index = 0; index < pair.Value.Count; index++)
             {
+                var itemId = pair.Value[index];
+                var itemJson = snapshots.TryGetValue(itemId, out var snapshot)
+                    ? JsonSerializer.Serialize(snapshot)
+                    : null;
                 Execute(connection, transaction,
-                    "INSERT INTO playback_history(session_id, ordinal, item_id) VALUES($session, $ordinal, $item);",
-                    ("$session", pair.Key), ("$ordinal", index), ("$item", pair.Value[index]));
+                    "INSERT INTO playback_history(session_id, ordinal, item_id, item_json) VALUES($session, $ordinal, $item, $json);",
+                    ("$session", pair.Key), ("$ordinal", index), ("$item", itemId), ("$json", itemJson));
             }
         }
 

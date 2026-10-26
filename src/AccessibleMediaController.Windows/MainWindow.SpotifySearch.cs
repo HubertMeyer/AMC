@@ -31,17 +31,19 @@ public partial class MainWindow
         || string.Equals(sessionId, "radio", StringComparison.Ordinal)
         || string.Equals(sessionId, "podcasts", StringComparison.Ordinal)
         || string.Equals(sessionId, "tidal", StringComparison.Ordinal)
+        || string.Equals(sessionId, "appleMusic", StringComparison.Ordinal)
         || SpotifyPlaybackSettingsResolver.IsSpotifySession(sessionId);
 
     /// <summary>
     /// Nazwa katalogu czytana przez czytnik ekranu ("Wyszukiwanie w ...").
     /// </summary>
     internal static string RemoteSearchLabel(string sessionId, bool allServices) => allServices
-        ? "katalogach radia, podcastów i YouTube"
+        ? "katalogach radia, podcastów, YouTube, TIDAL, Spotify i Apple Music"
         : sessionId switch
         {
             "podcasts" => "katalogach Apple Podcasts, Spreaker i YouTube",
             "tidal" => "katalogu TIDAL",
+            "appleMusic" => "katalogu Apple Music",
             "spotify" or "spotifyLibrespot" => "katalogu Spotify",
             _ => "katalogu radia"
         };

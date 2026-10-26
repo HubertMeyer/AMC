@@ -35,6 +35,11 @@ public sealed class BookmarkIndex(BookmarkSettings settings)
         .ThenBy(entry => entry.CreatedUtcTicks)
         .ToArray();
 
+    public IReadOnlyList<BookmarkEntry> GetNamedForItem(string sessionId, string itemId) =>
+        GetForItem(sessionId, itemId)
+            .Where(entry => !string.IsNullOrWhiteSpace(entry.Name))
+            .ToArray();
+
     public BookmarkAddResult Add(
         string sessionId,
         string sessionName,
@@ -92,23 +97,47 @@ public sealed class BookmarkIndex(BookmarkSettings settings)
         string sessionId,
         string itemId,
         TimeSpan currentPosition,
-        int direction)
-    {
-        if (direction == 0) return null;
-        var entries = GetForItem(sessionId, itemId);
-        return direction > 0
-            ? entries.FirstOrDefault(entry => entry.PositionTicks > currentPosition.Ticks + NavigationTolerance.Ticks)
-            : entries.LastOrDefault(entry => entry.PositionTicks < currentPosition.Ticks - NavigationTolerance.Ticks);
-    }
+        int direction) =>
+        FindRelative(GetForItem(sessionId, itemId), currentPosition, direction);
+
+    public BookmarkEntry? FindNamedRelative(
+        string sessionId,
+        string itemId,
+        TimeSpan currentPosition,
+        int direction) =>
+        FindRelative(GetNamedForItem(sessionId, itemId), currentPosition, direction);
 
     public BookmarkEntry? FindAdjacent(
         string sessionId,
         string itemId,
         string anchorBookmarkId,
+        int direction) =>
+        FindAdjacent(GetForItem(sessionId, itemId), anchorBookmarkId, direction);
+
+    public BookmarkEntry? FindNamedAdjacent(
+        string sessionId,
+        string itemId,
+        string anchorBookmarkId,
+        int direction) =>
+        FindAdjacent(GetNamedForItem(sessionId, itemId), anchorBookmarkId, direction);
+
+    private static BookmarkEntry? FindRelative(
+        IReadOnlyList<BookmarkEntry> entries,
+        TimeSpan currentPosition,
+        int direction)
+    {
+        if (direction == 0) return null;
+        return direction > 0
+            ? entries.FirstOrDefault(entry => entry.PositionTicks > currentPosition.Ticks + NavigationTolerance.Ticks)
+            : entries.LastOrDefault(entry => entry.PositionTicks < currentPosition.Ticks - NavigationTolerance.Ticks);
+    }
+
+    private static BookmarkEntry? FindAdjacent(
+        IReadOnlyList<BookmarkEntry> entries,
+        string anchorBookmarkId,
         int direction)
     {
         if (direction == 0 || string.IsNullOrWhiteSpace(anchorBookmarkId)) return null;
-        var entries = GetForItem(sessionId, itemId);
         var anchorIndex = -1;
         for (var index = 0; index < entries.Count; index++)
         {

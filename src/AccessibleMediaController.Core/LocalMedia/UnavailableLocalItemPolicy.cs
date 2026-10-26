@@ -55,6 +55,11 @@ public static class UnavailableLocalItemPolicy
             history.RemoveAll(removedIds.Contains);
             if (history.Count == 0) state.PlaybackHistory.ItemIdsBySession.Remove("local");
         }
+        if (state.PlaybackHistory.ItemsBySession.TryGetValue("local", out var historyItems))
+        {
+            historyItems.RemoveAll(item => removedIds.Contains(item.Id));
+            if (historyItems.Count == 0) state.PlaybackHistory.ItemsBySession.Remove("local");
+        }
         RemoveFromOrder(state.CollectionOrders.FavoriteItemIdsBySession, removedIds);
         RemoveFromOrder(state.CollectionOrders.QueueItemIdsBySession, removedIds);
         RemoveFromOrder(state.CollectionOrders.QueueRegularItemIdsBySession, removedIds);

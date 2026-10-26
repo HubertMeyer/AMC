@@ -191,7 +191,8 @@ public static class ShortcutHelpCatalog
             || commandId.StartsWith("information.time", StringComparison.Ordinal)
             || commandId is CommandIds.ViewNowPlaying or CommandIds.AddBookmark
                 or CommandIds.AddNamedBookmark or CommandIds.PreviousBookmark
-                or CommandIds.NextBookmark or CommandIds.ViewChapters
+                or CommandIds.NextBookmark or CommandIds.PreviousNamedBookmark
+                or CommandIds.NextNamedBookmark or CommandIds.ViewChapters
                 or CommandIds.AddNamedChapter or CommandIds.PreviousChapter
                 or CommandIds.NextChapter)
         {
@@ -274,8 +275,18 @@ public static class ShortcutHelpCatalog
         yield return Info("radio", "Dodaj nazwaną zakładkę do zapisywanego pliku", "Shift+B", "odtwarzacz radia w trakcie nagrywania");
         yield return Info("radio", "Rozpocznij lub zakończ nagrywanie", "Ctrl+R", "lista lub odtwarzacz radia");
         yield return Info("radio", "Wstrzymaj lub wznów wybrane nagranie", "Shift+Spacja", "nagrywana stacja na liście lub w odtwarzaczu radia");
-        yield return Info("radio", "Pokaż aktualnie nagrywane stacje; Escape wraca do wcześniejszego widoku", "Alt+R", "lista radia internetowego");
+        yield return Info("radio", "Pokaż aktualnie nagrywane pliki; każdy wiersz podaje stan i nazwę pliku; Escape wraca do wcześniejszego widoku", "Alt+R", "lista radia internetowego");
+        yield return Info("radio", "Odczytaj bitrate, nazwę pliku i folder zapisu aktywnego nagrania", "Strzałka w prawo", "lista Nagrywane");
+        yield return Info("radio", "Odczytaj bitrate, przykładową nazwę pliku i folder zapisu planu", "Strzałka w prawo", "okno Harmonogram nagrywania radia");
         yield return Info("radio", "Pokaż historię nagrywania: nagrania gotowe oraz próby nieudane z powodem", "Alt+Shift+R", "Pliki lokalne lub Radio internetowe");
+        foreach (var command in RecognitionHistoryCommands.Definitions)
+        {
+            yield return Info(
+                "radio",
+                $"{command.Name}: {command.Description}",
+                command.Shortcut,
+                "okno Rozpoznane utwory");
+        }
         yield return Info("collections", "Pokaż presety aktywnej sesji", "Ctrl+Alt+P", "Pliki lokalne lub Radio; skrót zarezerwowany także dla przyszłych usług");
         yield return Info("collections", "Utwórz albo przypisz preset; w WiiM przypisz lokalny skrót do gotowego presetu urządzenia", "Ctrl+Alt+Shift+P", "Sesja obsługująca presety");
     }

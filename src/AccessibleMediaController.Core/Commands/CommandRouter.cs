@@ -46,6 +46,8 @@ public interface IApplicationActions
     void ShowWiiMDeviceManager();
     void ShowTidalAccountManager();
     void ShowSpotifyAccountManager();
+    void ShowAppleMusicAccountManager();
+    void ShowYouTubeAccountManager();
 
     /// <summary>
     /// Okno konta Sonos. OSOBNA metoda, nie gałąź konta innej usługi: konto
@@ -64,6 +66,7 @@ public interface IApplicationActions
     void AddBookmark();
     void AddNamedBookmark();
     void NavigateBookmark(int direction);
+    void NavigateNamedBookmark(int direction);
     void ShowChapters();
     void AddNamedChapter();
     void NavigateChapter(int direction);
@@ -157,6 +160,12 @@ public sealed class CommandRouter(
             case CommandIds.ManageSpotifyConnection:
                 application.ShowSpotifyAccountManager();
                 return new(true);
+            case CommandIds.ManageAppleMusicConnection:
+                application.ShowAppleMusicAccountManager();
+                return new(true);
+            case CommandIds.ManageYouTubeConnection:
+                application.ShowYouTubeAccountManager();
+                return new(true);
             case CommandIds.ManageSonosConnection:
                 application.ShowSonosAccountManager();
                 return new(true);
@@ -195,6 +204,12 @@ public sealed class CommandRouter(
                 return new(true);
             case CommandIds.NextBookmark:
                 application.NavigateBookmark(1);
+                return new(true);
+            case CommandIds.PreviousNamedBookmark:
+                application.NavigateNamedBookmark(-1);
+                return new(true);
+            case CommandIds.NextNamedBookmark:
+                application.NavigateNamedBookmark(1);
                 return new(true);
             case CommandIds.ViewChapters:
                 application.ShowChapters();
@@ -274,6 +289,17 @@ public sealed class CommandRouter(
                     return new(false);
                 }
                 announcements.Announce(FormatRelativeJump(current));
+                return new(true);
+            case CommandIds.ToggleShuffle:
+                var shuffleEnabled = sessions.ToggleCurrentSessionShuffle();
+                if (shuffleEnabled is null)
+                {
+                    announcements.Announce("Odtwarzanie losowe nie jest dostępne w tej sesji");
+                    return new(false);
+                }
+                announcements.Announce(shuffleEnabled.Value
+                    ? $"Odtwarzanie losowe włączone: {current.DisplayName}"
+                    : $"Odtwarzanie losowe wyłączone: {current.DisplayName}");
                 return new(true);
             case CommandIds.SeekBackward10: return Seek(current, -10);
             case CommandIds.SeekForward10: return Seek(current, 10);
@@ -378,7 +404,10 @@ public sealed class CommandRouter(
                 announcements.Announce("Pobieranie wewnątrz usługi nie jest jeszcze dostępne w tym prototypie");
                 return new(true);
             case CommandIds.SavePodcastAs:
-                announcements.Announce("Zapisywanie materiału jest dostępne w sesji Podcasty i YouTube");
+                announcements.Announce("Ctrl+S zapisuje odcinek audio jako, a na materiale YouTube zapisuje wideo jako");
+                return new(true);
+            case CommandIds.DownloadYouTubeVideo:
+                announcements.Announce("Pobieranie wideo jest dostępne dla materiałów YouTube w sesji Podcasty i YouTube");
                 return new(true);
             case CommandIds.DownloadToDisk:
                 announcements.Announce("Pobieranie na dysk nie jest jeszcze dostępne w tym prototypie");
@@ -447,6 +476,7 @@ public sealed class CommandRouter(
         {
             CommandIds.SettingsGeneral => SettingsTarget.General,
             CommandIds.SettingsRadioRecognitionScope => SettingsTarget.RadioRecognitionScope,
+            CommandIds.SettingsYouTubeVideoDownloadFormat => SettingsTarget.YouTubeVideoDownloadFormat,
             CommandIds.SettingsLanguage => SettingsTarget.Language,
             CommandIds.SettingsStartupTarget => SettingsTarget.StartupTarget,
             CommandIds.SettingsSessionOrder => SettingsTarget.SessionOrder,

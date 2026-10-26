@@ -154,8 +154,8 @@ internal static class SpotifySearchTests
         Check(MainWindow.RemoteSearchLabel("radio", allServices: false) == "katalogu radia",
             "Opis katalogu radia zmienil sie");
         Check(MainWindow.RemoteSearchLabel("spotify", allServices: true)
-            == "katalogach radia, podcastów i YouTube",
-            "Wyszukiwanie we wszystkich serwisach opisuje sie katalogiem Spotify");
+            == "katalogach radia, podcastów, YouTube, TIDAL, Spotify i Apple Music",
+            "Wyszukiwanie we wszystkich usługach nie wymienia pełnego zdalnego zakresu");
         Check(!MainWindow.SessionHasRemoteSearch("local", allServices: false),
             "Sesja lokalna probuje szukac w sieci");
     }

@@ -1,0 +1,24 @@
+<controls:AccessibleWindow x:Class="AccessibleMediaController.Windows.AudioClipRemovalWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="clr-namespace:AccessibleMediaController.Windows.Controls"
+    Title="Usuń fragment z oryginalnego pliku" Width="680" SizeToContent="Height"
+    WindowStartupLocation="CenterOwner" ResizeMode="CanMinimize"
+    Loaded="Window_Loaded" Closing="Window_Closing">
+    <StackPanel Margin="18">
+        <TextBlock x:Name="SelectionText" TextWrapping="Wrap" Margin="0,0,0,12" />
+        <TextBlock x:Name="RemovalRulesText" TextWrapping="Wrap" Margin="0,0,0,12" />
+        <ProgressBar x:Name="RemovalProgress" Minimum="0" Maximum="100" Height="22"
+                     Visibility="Collapsed"
+                     AutomationProperties.Name="Postęp usuwania fragmentu" />
+        <TextBlock x:Name="RemovalStatus" TextWrapping="Wrap" Margin="0,8,0,12"
+                   AutomationProperties.Name="Stan usuwania fragmentu"
+                   AutomationProperties.LiveSetting="Polite" />
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button x:Name="RemoveButton" Content="_Usuń fragment" MinWidth="130" Margin="0,0,8,0"
+                    Click="Remove_Click" />
+            <Button x:Name="CancelButton" Content="_Anuluj" IsCancel="True" IsDefault="True"
+                    MinWidth="110" Click="Cancel_Click" />
+        </StackPanel>
+    </StackPanel>
+</controls:AccessibleWindow>

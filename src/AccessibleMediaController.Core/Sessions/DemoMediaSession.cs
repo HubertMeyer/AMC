@@ -29,6 +29,8 @@ public sealed class DemoMediaSession
     private bool _queueNavigationActive;
     private bool _playbackContextIsQueue;
     private List<string> _playbackContextItemIds;
+    private List<string> _unshuffledPlaybackContextItemIds;
+    private readonly Random _shuffleRandom;
     private readonly Func<MediaItem, double?> _playbackRateOverride;
     private readonly Func<MediaItem, int?> _volumeOverride;
     private readonly MediaItem _emptyItem;
@@ -41,13 +43,16 @@ public sealed class DemoMediaSession
         IMediaOutput? output = null,
         Func<MediaItem, bool>? rememberPosition = null,
         Func<MediaItem, double?>? playbackRateOverride = null,
-        Func<MediaItem, int?>? volumeOverride = null)
+        Func<MediaItem, int?>? volumeOverride = null,
+        Random? shuffleRandom = null)
     {
         Id = id;
         DisplayName = displayName;
         Items = items.ToList();
         _hasCurrentItem = Items.Count > 0;
         _playbackContextItemIds = Items.Select(item => item.Id).ToList();
+        _unshuffledPlaybackContextItemIds = _playbackContextItemIds.ToList();
+        _shuffleRandom = shuffleRandom ?? Random.Shared;
         _emptyItem = new MediaItem
         {
             Id = $"{id}-empty",
@@ -70,6 +75,7 @@ public sealed class DemoMediaSession
     public bool HasCurrentItem => HasItems && _hasCurrentItem;
     public MediaItem CurrentItem => HasCurrentItem ? Items[_currentIndex] : _emptyItem;
     public bool IsPlaying { get; private set; }
+    public bool IsShuffleEnabled { get; private set; }
 
     /// <summary>
     /// Prawda tylko wtedy, gdy odtwarzanie zostało WSTRZYMANE przez użytkownika
@@ -178,6 +184,7 @@ public sealed class DemoMediaSession
         ResetQueueDiversion();
         RestoreExplicitQueueNavigation();
         if (!SelectItem(item)) return false;
+        RebuildShuffledPlaybackContext();
         ApplyPlaybackRateForItem(CurrentItem);
         ApplyVolumeForItem(CurrentItem);
         IsPlaying = true;
@@ -207,6 +214,7 @@ public sealed class DemoMediaSession
         RememberCurrentPosition();
         _currentIndex = index;
         _hasCurrentItem = true;
+        RebuildShuffledPlaybackContext();
         _position = RememberedPosition(item);
         ApplyPlaybackRateForItem(CurrentItem);
         ApplyVolumeForItem(CurrentItem);
@@ -409,7 +417,10 @@ public sealed class DemoMediaSession
         {
             normalized.AddRange(Items.Select(item => item.Id));
         }
-        _playbackContextItemIds = normalized;
+        _unshuffledPlaybackContextItemIds = normalized;
+        _playbackContextItemIds = IsShuffleEnabled
+            ? CreateShuffledPlaybackContext(_unshuffledPlaybackContextItemIds)
+            : _unshuffledPlaybackContextItemIds.ToList();
         _playbackContextIsQueue = isQueueContext;
         ResetQueueDiversion();
         RestoreExplicitQueueNavigation();
@@ -427,7 +438,6 @@ public sealed class DemoMediaSession
         {
             if (item.Source is { Length: > 0 } source && !knownSources.Add(source)) continue;
             Items.Add(item);
-            if (contextWasWholeCatalog) _playbackContextItemIds.Add(item.Id);
         }
         if (selectFirstAddedItem && Items.Count > 0)
         {
@@ -435,6 +445,7 @@ public sealed class DemoMediaSession
             _hasCurrentItem = true;
             _position = RememberedPosition(CurrentItem);
         }
+        RebuildPlaybackContextAfterCatalogChange(contextWasWholeCatalog);
     }
 
     public void AddItemsById(IEnumerable<MediaItem> items)
@@ -447,7 +458,6 @@ public sealed class DemoMediaSession
         {
             if (!knownIds.Add(item.Id)) continue;
             Items.Add(item);
-            if (contextWasWholeCatalog) _playbackContextItemIds.Add(item.Id);
         }
         if (selectFirstAddedItem && Items.Count > 0)
         {
@@ -455,6 +465,7 @@ public sealed class DemoMediaSession
             _hasCurrentItem = true;
             _position = RememberedPosition(CurrentItem);
         }
+        RebuildPlaybackContextAfterCatalogChange(contextWasWholeCatalog);
     }
 
     public MediaReplacementResult ReplaceItems(IEnumerable<MediaItem> items)
@@ -478,16 +489,19 @@ public sealed class DemoMediaSession
         Items.Clear();
         Items.AddRange(replacement);
         var knownIds = Items.Select(item => item.Id).ToHashSet(StringComparer.Ordinal);
-        _playbackContextItemIds = contextWasWholeCatalog
+        _unshuffledPlaybackContextItemIds = contextWasWholeCatalog
             ? Items.Select(item => item.Id).ToList()
-            : _playbackContextItemIds
+            : _unshuffledPlaybackContextItemIds
                 .Where(knownIds.Contains)
                 .Distinct(StringComparer.Ordinal)
                 .ToList();
-        if (_playbackContextItemIds.Count == 0 && previousCurrentId is null && !catalogPreviouslyHadItems)
+        if (_unshuffledPlaybackContextItemIds.Count == 0 && previousCurrentId is null && !catalogPreviouslyHadItems)
         {
-            _playbackContextItemIds.AddRange(Items.Select(item => item.Id));
+            _unshuffledPlaybackContextItemIds.AddRange(Items.Select(item => item.Id));
         }
+        _playbackContextItemIds = IsShuffleEnabled
+            ? CreateShuffledPlaybackContext(_unshuffledPlaybackContextItemIds)
+            : _unshuffledPlaybackContextItemIds.ToList();
         _queueNavigationItemIds.RemoveAll(itemId => !knownIds.Contains(itemId));
         if (_queueNavigationItemIds.Count == 0) _queueNavigationActive = false;
         if (!HasItems)
@@ -563,7 +577,7 @@ public sealed class DemoMediaSession
             .Where(entry => ids.Contains(entry.Item.Id))
             .Select(entry => entry with
             {
-                PlaybackContextIndex = _playbackContextItemIds.FindIndex(itemId =>
+                PlaybackContextIndex = _unshuffledPlaybackContextItemIds.FindIndex(itemId =>
                     string.Equals(itemId, entry.Item.Id, StringComparison.Ordinal)) is var contextIndex
                     && contextIndex >= 0
                         ? contextIndex
@@ -591,6 +605,8 @@ public sealed class DemoMediaSession
         {
             Items.RemoveAt(entry.Index);
             _playbackContextItemIds.RemoveAll(itemId =>
+                string.Equals(itemId, entry.Item.Id, StringComparison.Ordinal));
+            _unshuffledPlaybackContextItemIds.RemoveAll(itemId =>
                 string.Equals(itemId, entry.Item.Id, StringComparison.Ordinal));
             _playedQueueItemIds.Remove(entry.Item.Id);
             _queueNavigationItemIds.RemoveAll(itemId =>
@@ -653,10 +669,10 @@ public sealed class DemoMediaSession
         {
             Items.Insert(Math.Clamp(entry.Index, 0, Items.Count), entry.Item);
             if (entry.PlaybackContextIndex is int contextIndex
-                && !_playbackContextItemIds.Contains(entry.Item.Id, StringComparer.Ordinal))
+                && !_unshuffledPlaybackContextItemIds.Contains(entry.Item.Id, StringComparer.Ordinal))
             {
-                _playbackContextItemIds.Insert(
-                    Math.Clamp(contextIndex, 0, _playbackContextItemIds.Count),
+                _unshuffledPlaybackContextItemIds.Insert(
+                    Math.Clamp(contextIndex, 0, _unshuffledPlaybackContextItemIds.Count),
                     entry.Item.Id);
             }
         }
@@ -665,7 +681,22 @@ public sealed class DemoMediaSession
             : Items.FindIndex(item => string.Equals(item.Id, currentId, StringComparison.Ordinal));
         if (_currentIndex < 0) _currentIndex = 0;
         if (currentId is null && Items.Count > 0) _hasCurrentItem = true;
+        _playbackContextItemIds = IsShuffleEnabled
+            ? CreateShuffledPlaybackContext(_unshuffledPlaybackContextItemIds)
+            : _unshuffledPlaybackContextItemIds.ToList();
     }
+
+    public bool SetShuffleEnabled(bool enabled)
+    {
+        if (IsShuffleEnabled == enabled) return IsShuffleEnabled;
+        IsShuffleEnabled = enabled;
+        _playbackContextItemIds = enabled
+            ? CreateShuffledPlaybackContext(_unshuffledPlaybackContextItemIds)
+            : _unshuffledPlaybackContextItemIds.ToList();
+        return IsShuffleEnabled;
+    }
+
+    public bool ToggleShuffle() => SetShuffleEnabled(!IsShuffleEnabled);
 
     public void MarkPlaybackEnded()
     {
@@ -954,6 +985,48 @@ public sealed class DemoMediaSession
         if (_playbackContextItemIds.Count != Items.Count) return false;
         var contextIds = _playbackContextItemIds.ToHashSet(StringComparer.Ordinal);
         return Items.All(item => contextIds.Contains(item.Id));
+    }
+
+    private void RebuildPlaybackContextAfterCatalogChange(bool contextWasWholeCatalog)
+    {
+        var knownIds = Items.Select(item => item.Id).ToHashSet(StringComparer.Ordinal);
+        _unshuffledPlaybackContextItemIds = contextWasWholeCatalog
+            ? Items.Select(item => item.Id).ToList()
+            : _unshuffledPlaybackContextItemIds
+                .Where(knownIds.Contains)
+                .Distinct(StringComparer.Ordinal)
+                .ToList();
+        _playbackContextItemIds = IsShuffleEnabled
+            ? CreateShuffledPlaybackContext(_unshuffledPlaybackContextItemIds)
+            : _unshuffledPlaybackContextItemIds.ToList();
+    }
+
+    private void RebuildShuffledPlaybackContext()
+    {
+        if (!IsShuffleEnabled) return;
+        _playbackContextItemIds = CreateShuffledPlaybackContext(_unshuffledPlaybackContextItemIds);
+    }
+
+    private List<string> CreateShuffledPlaybackContext(IEnumerable<string> itemIds)
+    {
+        var knownIds = Items.Select(item => item.Id).ToHashSet(StringComparer.Ordinal);
+        var normalized = itemIds
+            .Where(knownIds.Contains)
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+        var currentId = HasCurrentItem ? CurrentItem.Id : null;
+        if (currentId is not null) normalized.Remove(currentId);
+        for (var index = normalized.Count - 1; index > 0; index--)
+        {
+            var target = _shuffleRandom.Next(index + 1);
+            (normalized[index], normalized[target]) = (normalized[target], normalized[index]);
+        }
+        if (currentId is not null
+            && _unshuffledPlaybackContextItemIds.Contains(currentId, StringComparer.Ordinal))
+        {
+            normalized.Insert(0, currentId);
+        }
+        return normalized;
     }
 
     private void ApplyPlaybackRateForItem(MediaItem item)
