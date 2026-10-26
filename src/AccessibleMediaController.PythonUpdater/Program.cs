@@ -37,14 +37,18 @@ internal static class Program
             {
                 if (!silentRequested)
                 {
-                    Show(null, "Podaj folder przygotowanej aktualizacji i folder programu.\n\n"
-                         + "AMC-Python-Updater.exe --source KATALOG --target KATALOG "
-                         + "[--wait-pid NUMER] [--launch PLIK] [--silent]", true);
+                    Show(null, "Podaj źródło aktualizacji i folder programu.\n\n"
+                         + "Paczka lokalna: AMC-Python-Updater.exe --source KATALOG "
+                         + "--target KATALOG [--cleanup-source]\n"
+                         + "Pełny instalator: AMC-Python-Updater.exe --installer PLIK.EXE "
+                         + "--installer-sha256 SUMA --target KATALOG "
+                         + "[--cleanup-installer]\n"
+                         + "Opcjonalnie: [--wait-pid NUMER] [--launch PLIK] [--silent]", true);
                 }
                 return BadArguments;
             }
 
-            profile = LoadReleaseProfile(options.Source);
+            profile = LoadReleaseProfile(options.Source ?? options.Target);
 
             // Windows nie pozwala niezawodnie podmienić uruchomionego pliku
             // wykonywalnego. Gdy aktualizator startuje z katalogu AMC, najpierw
@@ -81,7 +85,15 @@ internal static class Program
 
             // Najpierw sprawdzamy całą paczkę. Wadliwa albo niezgodna
             // aktualizacja nie może bez potrzeby zamknąć działającego AMC.
-            var manifest = LoadAndVerify(options.Source, options.Target, profile);
+            Manifest? manifest = null;
+            if (options.Source is not null)
+                manifest = LoadAndVerify(options.Source, options.Target, profile);
+            else
+                VerifyInstaller(
+                    options.Installer!,
+                    options.InstallerSha256!,
+                    options.Target,
+                    profile);
 
             // Zwykłe WM_CLOSE uruchamia tę samą ścieżkę co Alt+F4. Interfejs
             // sprawdza żywy stan nagrywania i może bezpiecznie odmówić. Nigdy
@@ -125,7 +137,18 @@ internal static class Program
                 }
                 return AppStillRunning;
             }
-            ApplyPackage(options.Source, options.Target, manifest.Files);
+            if (options.Source is not null)
+            {
+                ApplyPackage(options.Source, options.Target, manifest!.Files);
+                if (options.CleanupSource)
+                    CleanupSourceBestEffort(options.Source, options.Target);
+            }
+            else
+            {
+                RunInstaller(options.Installer!, options.Target);
+                if (options.CleanupInstaller)
+                    CleanupInstallerBestEffort(options.Installer!, options.Target);
+            }
 
             if (!string.IsNullOrWhiteSpace(options.Launch))
             {
@@ -163,6 +186,63 @@ internal static class Program
                     + exception.Message,
                     true);
             return InstallFailed;
+        }
+    }
+
+    private static void CleanupSourceBestEffort(string source, string target)
+    {
+        // Tylko jawny, zweryfikowany katalog źródłowy. Nigdy nie sprzątamy
+        // katalogu instalacji ani jego rodzica. Niepowodzenie porządkowe nie
+        // odwraca już poprawnie zastosowanej aktualizacji.
+        try
+        {
+            var resolvedSource = Path.GetFullPath(source);
+            var resolvedTarget = Path.GetFullPath(target);
+            if (string.Equals(
+                    resolvedSource.TrimEnd(Path.DirectorySeparatorChar),
+                    resolvedTarget.TrimEnd(Path.DirectorySeparatorChar),
+                    StringComparison.OrdinalIgnoreCase)
+                || IsInside(resolvedSource, resolvedTarget)
+                || IsInside(resolvedTarget, resolvedSource))
+                return;
+            Directory.Delete(resolvedSource, recursive: true);
+        }
+        catch (Exception exception) when (
+            exception is IOException
+                or UnauthorizedAccessException
+                or DirectoryNotFoundException)
+        {
+            Console.Error.WriteLine(
+                "Nie udało się usunąć katalogu przygotowanej aktualizacji: "
+                + exception.Message);
+        }
+    }
+
+    private static void CleanupInstallerBestEffort(string installer, string target)
+    {
+        // Usuwamy wyłącznie jeden, wcześniej zweryfikowany plik instalatora.
+        // Katalogu pamięci podręcznej nie kasujemy rekurencyjnie: może zawierać
+        // inną rozpoczętą aktualizację, której ten proces nie jest właścicielem.
+        try
+        {
+            var resolvedInstaller = Path.GetFullPath(installer);
+            if (IsInside(target, resolvedInstaller))
+                return;
+            File.Delete(resolvedInstaller);
+            var parent = Path.GetDirectoryName(resolvedInstaller);
+            if (!string.IsNullOrWhiteSpace(parent)
+                && Directory.Exists(parent)
+                && !Directory.EnumerateFileSystemEntries(parent).Any())
+                Directory.Delete(parent);
+        }
+        catch (Exception exception) when (
+            exception is IOException
+                or UnauthorizedAccessException
+                or DirectoryNotFoundException)
+        {
+            Console.Error.WriteLine(
+                "Nie udało się usunąć użytego instalatora aktualizacji: "
+                + exception.Message);
         }
     }
 
@@ -334,6 +414,73 @@ internal static class Program
             _ = ResolveInside(target, relative, mustExist: false);
         }
         return manifest;
+    }
+
+    internal static void VerifyInstaller(
+        string installer,
+        string expectedSha256,
+        string target,
+        ReleaseProfileDescriptor expectedProfile)
+    {
+        installer = Path.GetFullPath(installer);
+        target = Path.GetFullPath(target);
+        if (!Directory.Exists(target) || !File.Exists(Path.Combine(target, "AMC.exe")))
+            throw new InvalidDataException(
+                $"folder docelowy nie zawiera {expectedProfile.DisplayName}");
+        if (!File.Exists(installer) || IsInside(target, installer))
+            throw new InvalidDataException("brak bezpiecznego pliku instalatora");
+        if (!string.Equals(Path.GetExtension(installer), ".exe", StringComparison.OrdinalIgnoreCase))
+            throw new InvalidDataException("aktualizacja nie jest instalatorem EXE");
+
+        var expectedPrefix = expectedProfile.ProfileId == "test"
+            ? "AMC-Test-"
+            : "AMC-Public-";
+        if (!Path.GetFileName(installer).StartsWith(expectedPrefix, StringComparison.Ordinal))
+            throw new InvalidDataException("instalator jest przeznaczony dla innego wydania AMC");
+        if (expectedSha256.Length != 64
+            || expectedSha256.Any(character => !Uri.IsHexDigit(character)))
+            throw new InvalidDataException("nieprawidłowa suma SHA-256 instalatora");
+
+        ValidateInstalledProfile(target, expectedProfile);
+        using var input = new FileStream(
+            installer,
+            FileMode.Open,
+            FileAccess.Read,
+            FileShare.Read);
+        var actual = Convert.ToHexString(SHA256.HashData(input));
+        if (!string.Equals(actual, expectedSha256, StringComparison.OrdinalIgnoreCase))
+            throw new InvalidDataException("niezgodna suma SHA-256 instalatora");
+    }
+
+    private static void RunInstaller(string installer, string target)
+    {
+        var start = new ProcessStartInfo
+        {
+            FileName = installer,
+            WorkingDirectory = Path.GetDirectoryName(installer)!,
+            UseShellExecute = false,
+        };
+        foreach (var argument in new[]
+                 {
+                     "/VERYSILENT",
+                     "/SUPPRESSMSGBOXES",
+                     "/NORESTART",
+                     "/SP-",
+                     "/LANG=polski",
+                     "/DIR=" + target,
+                 })
+            start.ArgumentList.Add(argument);
+
+        using var process = Process.Start(start)
+            ?? throw new IOException("nie udało się uruchomić instalatora");
+        if (!process.WaitForExit((int)TimeSpan.FromMinutes(15).TotalMilliseconds))
+            throw new IOException("instalator nie zakończył się w wyznaczonym czasie");
+        if (process.ExitCode != 0)
+            throw new IOException(
+                $"instalator zakończył się kodem {process.ExitCode}");
+        if (!File.Exists(Path.Combine(target, "AMC.exe"))
+            || !File.Exists(Path.Combine(target, "bundle-manifest.json")))
+            throw new IOException("instalator nie pozostawił kompletnej instalacji AMC");
     }
 
     private static void ValidateInstalledProfile(
@@ -581,20 +728,28 @@ internal static class Program
     }
 
     private sealed record Options(
-        string Source,
+        string? Source,
+        string? Installer,
+        string? InstallerSha256,
         string Target,
         int? WaitPid,
         int? WaitUpdaterPid,
         string? Launch,
+        bool CleanupSource,
+        bool CleanupInstaller,
         bool Silent)
     {
         public static Options? Parse(string[] args)
         {
             string? source = null;
+            string? installer = null;
+            string? installerSha256 = null;
             string? target = null;
             string? launch = null;
             int? waitPid = null;
             int? waitUpdaterPid = null;
+            var cleanupSource = false;
+            var cleanupInstaller = false;
             var silent = false;
             for (var index = 0; index < args.Length; index++)
             {
@@ -602,6 +757,12 @@ internal static class Program
                 {
                     case "--source" when index + 1 < args.Length:
                         source = args[++index];
+                        break;
+                    case "--installer" when index + 1 < args.Length:
+                        installer = args[++index];
+                        break;
+                    case "--installer-sha256" when index + 1 < args.Length:
+                        installerSha256 = args[++index];
                         break;
                     case "--target" when index + 1 < args.Length:
                         target = args[++index];
@@ -617,6 +778,12 @@ internal static class Program
                     case "--launch" when index + 1 < args.Length:
                         launch = args[++index];
                         break;
+                    case "--cleanup-source":
+                        cleanupSource = true;
+                        break;
+                    case "--cleanup-installer":
+                        cleanupInstaller = true;
+                        break;
                     case "--silent":
                         silent = true;
                         break;
@@ -624,13 +791,25 @@ internal static class Program
                         return null;
                 }
             }
-            return source is not null && target is not null
+            var packageMode = source is not null
+                && installer is null
+                && installerSha256 is null
+                && !cleanupInstaller;
+            var installerMode = source is null
+                && installer is not null
+                && installerSha256 is not null
+                && !cleanupSource;
+            return target is not null && (packageMode || installerMode)
                 ? new Options(
-                    Path.GetFullPath(source),
+                    source is null ? null : Path.GetFullPath(source),
+                    installer is null ? null : Path.GetFullPath(installer),
+                    installerSha256?.Trim(),
                     Path.GetFullPath(target),
                     waitPid,
                     waitUpdaterPid,
                     launch,
+                    cleanupSource,
+                    cleanupInstaller,
                     silent)
                 : null;
         }

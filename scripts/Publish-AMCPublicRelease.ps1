@@ -8,6 +8,7 @@ param(
     [string]$ArtifactsDirectory,
 
     [string]$NotesPath = "",
+    [string]$SummaryPath = "",
     [string]$Repository = "michalkasperczak/AMC",
     [switch]$Publish
 )
@@ -19,6 +20,7 @@ $arguments = @{
     Version = $Version
     ArtifactsDirectory = $ArtifactsDirectory
     NotesPath = $NotesPath
+    SummaryPath = $SummaryPath
     Repository = $Repository
 }
 if ($Publish) {

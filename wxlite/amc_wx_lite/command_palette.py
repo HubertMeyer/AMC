@@ -13,7 +13,7 @@ from . import menu_model
 from . import session_order as session_order_model
 from .navigation import SessionId
 from .search_catalog import normalize_search_text, query_words
-from .shortcuts import Action, ctrl_f5_presentation
+from .shortcuts import Action, command_presentation, ctrl_f5_presentation
 
 
 @dataclass(frozen=True, slots=True)
@@ -73,9 +73,12 @@ def entries_for_session(
             ctrl_f5 = ctrl_f5_presentation(
                 session_order_model.SESSION_NAMES[session]
             )
+            shared = command_presentation(item.action)
             name = (
                 ctrl_f5.name
                 if ctrl_f5 is not None and item.action is ctrl_f5.action
+                else shared.name
+                if shared is not None
                 else _plain_label(item.label)
             )
             if not name:

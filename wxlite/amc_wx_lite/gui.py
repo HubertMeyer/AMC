@@ -38,6 +38,15 @@ from typing import Callable
 
 import wx
 
+from .application_update import (
+    ApplicationUpdateCheck,
+    PreparedApplicationUpdate,
+    check_for_application_update,
+    launch_prepared_application_update,
+    prepare_application_update,
+    user_facing_update_error,
+)
+from .application_update_dialog import ApplicationUpdateDialog
 from .async_gate import BackgroundRunner, StaleResultGate
 from .audio_clip import (
     AudioEditSettingsReadError,
@@ -8088,6 +8097,7 @@ class LiteFrame(wx.Frame):
         self._radio_search_action_pending = False
         self._podcast_opml_pending = False
         self._playlist_membership_pending = False
+        self._application_update_pending = False
         self._component_update_pending = False
         # Zdalne listy wyboru używają jednego mechanizmu, ale osobnych partycji
         # usługi i konta. Cache przyspiesza dialog; nie zatwierdza zapisu.
@@ -13825,6 +13835,8 @@ class LiteFrame(wx.Frame):
             self._show_help()
         elif action is Action.KEYBOARD_HELP:
             self._toggle_keyboard_help()
+        elif action is Action.CHECK_APPLICATION_UPDATE:
+            self._check_application_update()
         elif action is Action.UPDATE_MEDIA_COMPONENTS:
             self._update_media_components()
         elif action is Action.REPORT_PROBLEM:
@@ -13837,6 +13849,80 @@ class LiteFrame(wx.Frame):
                 self,
             )
             self._restore_focus_after_dialog()
+
+    def _check_application_update(self) -> None:
+        if self._application_update_pending:
+            self.announcer.say("Sprawdzanie lub pobieranie aktualizacji już trwa")
+            return
+
+        self._application_update_pending = True
+        self.announcer.say("Sprawdzanie aktualizacji AMC")
+
+        def done(check: ApplicationUpdateCheck) -> None:
+            self._application_update_pending = False
+            dialog = ApplicationUpdateDialog(self, check)
+            try:
+                decision = dialog.ShowModal()
+            finally:
+                dialog.Destroy()
+                self._restore_focus_after_dialog()
+            if decision == wx.ID_OK and check.available:
+                self._download_application_update(check)
+
+        def failed(error: Exception) -> None:
+            self._application_update_pending = False
+            _append_frontend_log(
+                self.store,
+                "Sprawdzanie aktualizacji AMC nie powiodło się: "
+                f"{type(error).__name__}: {error}",
+            )
+            self.announcer.say(user_facing_update_error(error))
+
+        self.runner.submit(
+            "application-update-check",
+            check_for_application_update,
+            done,
+            failed,
+        )
+
+    def _download_application_update(self, check: ApplicationUpdateCheck) -> None:
+        if self._application_update_pending:
+            self.announcer.say("Sprawdzanie lub pobieranie aktualizacji już trwa")
+            return
+
+        self._application_update_pending = True
+        self.announcer.say("Pobieranie i sprawdzanie aktualizacji AMC")
+
+        def work() -> object:
+            return prepare_application_update(check)
+
+        def done(prepared: PreparedApplicationUpdate) -> None:
+            self._application_update_pending = False
+            try:
+                launch_prepared_application_update(prepared)
+            except Exception as error:  # noqa: BLE001 - szczegoly tylko do logu
+                _append_frontend_log(
+                    self.store,
+                    "Uruchomienie aktualizatora AMC nie powiodło się: "
+                    f"{type(error).__name__}: {error}",
+                )
+                self.announcer.say(user_facing_update_error(error))
+                return
+            self.announcer.say(
+                "Aktualizacja jest gotowa. AMC zamknie się bezpiecznie, "
+                "zainstaluje nową wersję i uruchomi ponownie"
+            )
+
+        def failed(error: Exception) -> None:
+            self._application_update_pending = False
+            _append_frontend_log(
+                self.store,
+                "Pobieranie aktualizacji AMC nie powiodło się: "
+                f"{type(error).__name__}: {error}",
+            )
+            self.announcer.say(user_facing_update_error(error))
+
+        self.runner.submit("application-update-download", work, done, failed)
 
     def _update_media_components(self, *, automatic: bool = False) -> None:
         if self._component_update_pending:
@@ -13889,7 +13975,8 @@ class LiteFrame(wx.Frame):
             )
             if not automatic:
                 self.announcer.say(
-                    f"Nie udało się zaktualizować składników: {error}"
+                    "Nie udało się bezpiecznie zaktualizować składników. "
+                    "Szczegóły zapisano w dzienniku AMC"
                 )
 
         self.runner.submit("component-update", work, done, failed)

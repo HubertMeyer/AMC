@@ -48,9 +48,10 @@ do kontrolowanej archiwizacji opisanej w REL-003.
 
 ## Zadania
 
-- `REL-002` — **W trakcie; decyzje i bezpieczna kolejność migracji zapisane,
-  dzisiejszy AMC Test zainstalowany, 16 z 18 pozostałych gałęzi lokalnych
-  usunięto, lecz GitHub i instalatory systemowe jeszcze niezmienione** — jedna
+- `REL-002` — **W trakcie; aktualizacja z programu i pełny instalator są
+  zaimplementowane i przetestowane automatycznie, trwa budowa pierwszego
+  kandydata AMC Test do ręcznego odbioru NVDA; GitHub Release jeszcze nie
+  powstał** — jedna
   kanoniczna linia AMC Python,
   wydania AMC Test i AMC Public z tego samego commitu, dwa kanały aktualizacji,
   standardowa instalacja Windows oraz kontrolowane uporządkowanie starego C#,

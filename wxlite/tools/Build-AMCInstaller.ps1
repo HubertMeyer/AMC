@@ -50,6 +50,9 @@ if ([string]$manifest.releaseProfile -ne $Profile) {
 if ([bool]$manifest.sourceDirty) {
     throw "Instalator nie może powstać z niezapisanych źródeł roboczych."
 }
+if ([string]$manifest.sourceRevision -cne $installerSourceRevision) {
+    throw "Paczka i instalator muszą pochodzić z tego samego commitu."
+}
 
 # Lokalny plik używany podczas rozwoju nie może stać się artefaktem GitHub
 # ani instalatora. Sprawdzamy zarówno deklarację manifestu, jak i rzeczywisty

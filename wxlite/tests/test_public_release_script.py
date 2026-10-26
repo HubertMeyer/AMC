@@ -79,6 +79,14 @@ def test_prepare_only_verifies_installer_and_does_not_publish(tmp_path: Path) ->
     assert ready["prerelease"] is False
     assert ready["published"] is False
     assert ready["sha256"] == digest
+    update_manifest = json.loads(
+        (tmp_path / "amc-update-public.json").read_text(encoding="utf-8-sig")
+    )
+    assert update_manifest["profile"] == "public"
+    assert update_manifest["updateChannel"] == "stable"
+    assert update_manifest["installer"]["fileName"] == installer.name
+    assert update_manifest["installer"]["sha256"] == digest
+    assert "package" not in update_manifest
 
 
 def test_prepare_only_rejects_private_profile_and_changed_hash(tmp_path: Path) -> None:
@@ -121,6 +129,9 @@ def test_publish_path_requires_remote_commit_and_verifies_uploaded_assets() -> N
     assert "Wydanie $tag już istnieje" in source
     assert "asset.size" in source
     assert "integrityAsset.state" in source
+    assert "updateManifestAsset.state" in source
+    assert "updatePackageHash" not in source
+    assert "installer = [ordered]" in source
     assert "release.body.Contains($actualHash)" in source
 
 
@@ -173,6 +184,14 @@ def test_shared_gate_prepares_test_channel_as_prerelease(tmp_path: Path) -> None
     assert ready["updateChannel"] == "test"
     assert ready["prerelease"] is True
     assert ready["published"] is False
+    update_manifest = json.loads(
+        (tmp_path / "amc-update-test.json").read_text(encoding="utf-8-sig")
+    )
+    assert update_manifest["profile"] == "test"
+    assert update_manifest["updateChannel"] == "test"
+    assert update_manifest["prerelease"] is True
+    assert update_manifest["installer"]["fileName"] == installer.name
+    assert update_manifest["installer"]["sha256"] == digest
 
 
 def test_public_wrapper_delegates_to_shared_profiled_gate() -> None:

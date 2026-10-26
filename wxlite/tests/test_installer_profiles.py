@@ -21,6 +21,9 @@ PYTHON_MAIN = (ROOT / "wxlite" / "amc_wx_lite" / "__main__.py").read_text(
     encoding="utf-8"
 )
 GUI = (ROOT / "wxlite" / "amc_wx_lite" / "gui.py").read_text(encoding="utf-8")
+UPDATER = (
+    ROOT / "src" / "AccessibleMediaController.PythonUpdater" / "Program.cs"
+).read_text(encoding="utf-8")
 
 
 def test_installer_profiles_have_separate_ids_names_folders_and_mutexes() -> None:
@@ -131,6 +134,7 @@ def test_build_helper_verifies_profile_clean_source_and_full_bundle() -> None:
     assert "manifest.sourceDirty" in BUILD
     assert "git status --porcelain --untracked-files=no" in BUILD
     assert "installerSourceRevision" in BUILD
+    assert "Paczka i instalator muszą pochodzić z tego samego commitu" in BUILD
     assert ".VersionInfo.ProductVersion" in BUILD
     assert "$launcherVersion -ne $Version" in BUILD
     assert "Numer instalatora $Version nie zgadza się" in BUILD
@@ -143,6 +147,8 @@ def test_build_helper_verifies_profile_clean_source_and_full_bundle() -> None:
     assert "manifest.displayVersion" in BUILD
     assert '"AMC-Public-$fileTimestamp.exe"' in BUILD
     assert '"AMC-Test-$fileTimestamp.exe"' in BUILD
+    assert "CreateFromDirectory" not in BUILD
+    assert "updatePackageSha256" not in BUILD
     assert "/DEtykietaUzytkowa" in BUILD
     assert "AppVerName={#KrotkaNazwa} — {#EtykietaUzytkowa}" in ISS
     assert '$env:LOCALAPPDATA "Programs\\Inno Setup 6\\ISCC.exe"' in BUILD
@@ -151,6 +157,47 @@ def test_build_helper_verifies_profile_clean_source_and_full_bundle() -> None:
 def test_test_build_promotion_runs_launcher_and_updater_contracts() -> None:
     assert "AccessibleMediaController.PythonLauncher.Tests.csproj" in PROMOTE_TEST
     assert '"Testy launchera i aktualizatora"' in PROMOTE_TEST
+
+
+def test_application_updater_can_remove_only_verified_staging_after_success() -> None:
+    assert 'case "--cleanup-source":' in UPDATER
+    assert "ApplyPackage(options.Source, options.Target, manifest!.Files);" in UPDATER
+    assert "CleanupSourceBestEffort(options.Source, options.Target);" in UPDATER
+    assert UPDATER.index("ApplyPackage(options.Source") < UPDATER.index(
+        "CleanupSourceBestEffort(options.Source"
+    )
+    assert "Directory.Delete(resolvedSource, recursive: true)" in UPDATER
+    assert "IsInside(resolvedSource, resolvedTarget)" in UPDATER
+    assert "IsInside(resolvedTarget, resolvedSource)" in UPDATER
+
+
+def test_application_updater_runs_the_verified_full_installer() -> None:
+    for required in (
+        'case "--installer"',
+        'case "--installer-sha256"',
+        'case "--cleanup-installer":',
+        '"/VERYSILENT"',
+        '"/SUPPRESSMSGBOXES"',
+        '"/NORESTART"',
+        '"/DIR=" + target',
+        "VerifyInstaller(",
+        "RunInstaller(options.Installer!",
+    ):
+        assert required in UPDATER
+    assert UPDATER.index("VerifyInstaller(") < UPDATER.index(
+        "SafeApplicationStop.RequestAndWait"
+    )
+    assert UPDATER.index("RunInstaller(options.Installer!") < UPDATER.index(
+        "CleanupInstallerBestEffort(options.Installer!"
+    )
+    assert "File.Delete(resolvedInstaller)" in UPDATER
+    assert "Directory.Delete(parent)" in UPDATER
+    assert "recursive: true" not in UPDATER[
+        UPDATER.index("private static void CleanupInstallerBestEffort") :
+        UPDATER.index("private static bool RelaunchOutsideInstallation")
+    ]
+    assert "UsePreviousAppDir=yes" in ISS
+    assert "UsePreviousTasks=yes" in ISS
 
 
 def test_bundle_builder_embeds_dotnet_and_private_python_runtime() -> None:

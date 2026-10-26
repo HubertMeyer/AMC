@@ -2,12 +2,11 @@
 
 ## Status
 
-W trakcie. Decyzje i kolejność migracji są zapisane. Dzisiejszy AMC Test jest
-zbudowany, zainstalowany i uruchomiony. Pierwszy etap źródłowy rozdziela
-docelowe katalogi instalacji, blokuje sekret w instalatorze i przygotowuje
-wspólną bramkę publikacji Test/Public. Nie wykonano jeszcze publikacji,
-przepisania zdalnej gałęzi `main`, usuwania gałęzi, wydań, worktree ani starej
-instalacji WPF.
+W trakcie. Mechanizm aktualizacji z programu, pełny instalator oraz wspólna
+bramka wydań Test/Public są zaimplementowane i przeszły automatyczne testy.
+Trwa przygotowanie pierwszego instalatora AMC Test do ręcznego odbioru z NVDA.
+Publikacja pierwszego wydania Python nastąpi dopiero po sprawdzeniu tego
+kandydata; kod, build, instalacja i GitHub Release pozostają osobnymi faktami.
 
 ## Nadrzędna korekta użytkownika z 26.10.2026
 
@@ -190,6 +189,57 @@ skompilował.
   automatycznego usuwania została zatrzymana, ponieważ mogłaby przerwać
   logowanie YouTube przed gotową migracją.
 
+## Wykonany etap 2 — aktualizacja z poziomu programu
+
+### Zachowanie użytkowe
+
+- W menu `Pomoc` działa nowe polecenie `Sprawdź aktualizację AMC…`. Ta sama
+  nazwa i akcja występują w palecie `Ctrl+Shift+K`, pomocy kontekstowej
+  `Ctrl+F1` oraz pełnej pomocy klawiatury; polecenie nie ma osobnego skrótu.
+- Po sprawdzeniu otwiera się dostępne okno. Początkowy fokus trafia do pola
+  tylko do odczytu `Informacje o aktualizacji AMC`, zawierającego wersję i
+  krótkie podsumowanie zmian. Dalej znajduje się `Aktualizuj AMC` albo, gdy
+  nie ma nowej wersji, tylko `Zamknij okno aktualizacji`.
+- Nie ma wyboru kanału. Profil Test przyjmuje wyłącznie prerelease z tagiem
+  `test-YYYY.MM.DD.HHMM`, a Public wyłącznie stabilne wydanie z tagiem
+  `public-YYYY.MM.DD.HHMM`. Obcy profil, kanał, produkt, InstallId, nazwa
+  instalatora, rozmiar albo SHA-256 są odrzucane przed zamknięciem AMC.
+- Aktualizacja pobiera ten sam pełny instalator EXE, który służy nowemu
+  użytkownikowi. Pomocnik prosi AMC o zwykłe, bezpieczne zamknięcie, odmawia
+  podmiany przy nagrywaniu albo żywym składniku instalacji, uruchamia Inno
+  Setup bez dodatkowych pytań i po sukcesie ponownie otwiera AMC.
+- Cichy przebieg instalatora zachowuje wcześniejszy katalog oraz zadania Inno
+  Setup, między innymi decyzję o skrócie pulpitu i integracji Eksploratora.
+  Windows dostaje poprawny nowy AppVersion i stan deinstalatora; aktualizacja
+  nie omija instalatora przez prostą podmianę plików.
+
+### Kontrakt wydania
+
+- `Publish-AMCRelease.ps1` tworzy `amc-update-test.json` albo
+  `amc-update-public.json` z profilem, kanałem, wersją użytkową, commitem,
+  krótkim opisem oraz nazwą, rozmiarem i SHA-256 pełnego instalatora.
+- Wydanie GitHub zawiera instalator, manifest kanału i plik integralności.
+  Oddzielny ZIP aktualizacyjny nie jest potrzebny i nie jest publikowany.
+- Budowa instalatora wymaga czystych źródeł oraz zgodności commitu paczki z
+  commitem instalatora. Pełna paczka nadal zawiera prywatny runtime Python,
+  samowystarczalny LiteHost, launcher i helper aktualizacji; nowy komputer nie
+  musi mieć zainstalowanego Pythona ani .NET.
+
+### Sprawdzenie aktualizacji składników
+
+- Droga `Pomoc > Sprawdź i zaktualizuj składniki: FFmpeg i yt-dlp` nadal
+  prowadzi przez wspólną akcję do LiteHosta. Testy potwierdzają menu, paletę,
+  pomoc, dispatcher, tryb automatyczny oraz bezpieczny komunikat błędu bez
+  ujawniania ścieżek.
+- Zainstalowane składniki zostały rzeczywiście uruchomione: FFmpeg zgłosił
+  `n9.0.2-29-g6dfaba896f-20261020`, a yt-dlp `2026.08.19`; suma pliku yt-dlp
+  zgadza się z zapisanym stanem.
+- Pełne sieciowe pobranie w piaskownicy doszło do uruchomieniowej kontroli
+  nowego yt-dlp, lecz system testowy zablokował wykonanie pobranego EXE.
+  Próba zmiany współdzielonych składników poza piaskownicą nie otrzymała zgody
+  bezpieczeństwa. Rzeczywista kontrola sieciowa z menu pozostaje więc punktem
+  ręcznego odbioru, a nie zaliczonym testem aktualizacji dostawcy.
+
 ## Kolejność porządkowania
 
 1. Zamrozić dzisiejszy commit jako pierwszy kandydat kanoniczny i dokończyć
@@ -241,11 +291,21 @@ tych samych plików profilu.
 - Atomowa instalacja pakietu `39f0d3f2`: zaliczona.
 - Kontrolowany start: zaliczony.
 - Ręczny odbiór czterech nowych zakresów z NVDA: oczekuje.
-- Instalator systemowy Python na C: jeszcze nie zbudowany w tym etapie.
-- Aktualizacja z GitHuba: jeszcze niezaimplementowana i nietestowana.
+- Kod mechanizmu aktualizacji z GitHuba: zaimplementowany; profil, kanał,
+  manifest, rozmiar i SHA-256 są sprawdzane przed zamknięciem aplikacji.
+- Ukierunkowane testy Pythona mechanizmu, instalatora, publikacji i składników:
+  **80 zaliczonych**.
+- Pełna regresja wxPython: **2075 zaliczonych, 111 pominiętych i 13 podtestów
+  zaliczonych**.
+- Testy launchera i aktualizatora .NET: **33 z 33 zaliczone**, w tym przyjęcie
+  pełnego instalatora właściwego profilu i odrzucenie obcego profilu oraz
+  niezgodnej sumy.
+- LiteHost Release: build zaliczony, 0 ostrzeżeń i 0 błędów.
+- Instalator systemowy Python na C: kandydat jeszcze nie został zbudowany w
+  chwili tego zapisu.
+- Aktualizacja z prawdziwego GitHub Release: oczekuje na publikację pierwszego
+  odebranego wydania AMC Test.
 - Publikacja GitHub bieżącego Python: niewykonana.
-- Testy kontraktu instalatora i publikacji: `22 passed`.
-- Testy składu paczek i profili wydania: `42 passed`.
 
 ## Znane ograniczenia
 
@@ -261,8 +321,11 @@ tych samych plików profilu.
 
 ## Wersja i commit
 
-- Kod: `bba5e92d687ade1998e79c88656e1a5d545abcf2`.
-- Pakiet: `39f0d3f2`.
+- Wersja techniczna przygotowywanego kandydata: `0.1.0-alpha.434`.
+- Bazowy stan przed zmianą: `73279fbb15a1cd34c6813f24e097e0467889a197`.
+- Commit mechanizmu i dokładna rewizja pakietu: do uzupełnienia po zapisaniu
+  czystego stanu i zbudowaniu kandydata.
 - Instalacja: `D:\Projekty Codex\AMC Python`.
 - Publikacja: brak.
-- Commit etapu źródłowego: `d87a27f6` (`build(release): rozdziel kanały Test i Public`).
+- Wcześniejszy commit etapu źródłowego: `d87a27f6`
+  (`build(release): rozdziel kanały Test i Public`).
