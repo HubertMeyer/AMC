@@ -3,7 +3,7 @@
 - Data decyzji użytkownika: 26 października 2026
 - Repozytorium kanoniczne: `D:\Projekty Codex\AMC - integracja wxPython`
 - Worktree wykonawczy: `D:\Projekty Codex\AMC worktrees\sonos-broker-handoff-20261024`
-- Status: stara instalacja WPF usunięta; źródła historyczne zachowane do archiwizacji
+- Status: stara instalacja i artefakty WPF usunięte; źródła historyczne zachowane do archiwizacji
 
 ## Decyzja użytkownika
 
@@ -14,6 +14,14 @@ niezweryfikowane źródła i historia mają zostać zachowane do czasu bezpieczn
 archiwizacji.
 
 Ta decyzja uzupełnia REL-002. Nie zmienia rozdzielenia kanałów Test i Public.
+
+### Korekta decyzji z 26 października 2026
+
+Po pierwszym bezpiecznym zatrzymaniu użytkownik jawnie zatwierdził usunięcie
+lokalnych instalatorów 424–427 oraz oczyszczenie gałęzi. Ta późniejsza decyzja
+zastępuje wcześniejsze tymczasowe ustalenie, aby zachować katalog `publish` do
+potwierdzenia zdalnego archiwum. Nadal nie obejmuje kasowania gałęzi z
+unikalnymi commitami ani worktree należących do innych zadań bez ich kontroli.
 
 ## Bieżący AMC Test
 
@@ -54,11 +62,14 @@ odtwarzalnych katalogów `bin`, `obj` i `wyniki-testow\temp-alpha424`.
 
 - odzyskano 822 774 251 bajtów;
 - zachowano źródła i katalog `.git`;
-- zachowano katalog `publish` o rozmiarze 1 783 765 696 bajtów, ponieważ zawiera
-  jedyne lokalne instalatory 425–427, a ich archiwum zdalne nie zostało jeszcze
-  potwierdzone;
+- po późniejszej jawnej zgodzie użytkownika trwale usunięto katalog `publish`
+  z instalatorami 424–427 i odzyskano dalsze 1 783 765 696 bajtów;
 - usuniętych katalogów kompilacji i testów nie można odzyskać, ale można je
   odtworzyć ze źródeł.
+
+Z kanonicznego repozytorium usunięto również trzy czyste, odłączone worktree
+testowe alpha 425 spod `.test-tmp`, odzyskując 132 014 259 bajtów. Łącznie ze
+starą instalacją WPF wszystkie operacje REL-003 odzyskały 3 016 118 180 bajtów.
 
 Nie usunięto całego starego repozytorium. Kontrola wykazała:
 
@@ -71,6 +82,34 @@ Nie usunięto całego starego repozytorium. Kontrola wykazała:
 Przed usunięciem repozytorium potrzebna jest jawna archiwizacja lub
 udokumentowane odrzucenie tych różnic. Nie wolno usuwać ich zbiorczo jako
 „już przepisanych”, dopóki nie zostanie to udowodnione dla każdej grupy.
+
+## Oczyszczenie lokalnych gałęzi AMC Python
+
+Punktem odniesienia był commit `24615e0a89d590ecaca06b2831719a1e612a7c81`
+gałęzi `integration/sonos-broker-20261024`.
+
+Usunięto cztery nieużywane gałęzie, których końce są przodkami bieżącej linii:
+
+- `hermes/wx-session-options-final-20261007` — `ec1d9ffc`;
+- `integracja/sonos-wiim-20261014` — `17901f41`;
+- `integracja/wxpython-sonos-tidal-20261008` — `dcd37ffd`;
+- `task/youtube-descriptions` — `f8668937`.
+
+Usunięto sześć nieużywanych gałęzi rozbieżnych topologicznie, dla których
+`git cherry` potwierdził brak choćby jednego unikalnego patcha względem
+bieżącej linii:
+
+- `task-development-dependencies` — `d591f8d1`;
+- `task-development-spotify-bundle` — `a03cdb0a`;
+- `task-shift-f2-real-rename` — `45cbaeb3`;
+- `task-speaker-navigation-search` — `a6adc391`;
+- `task-spotify-readonly-litehost` — `134c0657`;
+- `task-spotify-session-model` — `22631499`.
+
+Pozostało 18 lokalnych gałęzi. Każda jest bieżącą linią, jest nadal otwarta w
+worktree albo ma co najmniej jeden commit/patch wymagający osobnego rozliczenia.
+Nie zmieniono żadnej gałęzi zdalnej na GitHubie, ponieważ kanoniczna linia
+Pythona nie została jeszcze tam opublikowana.
 
 ## YouTube bez ponownego logowania Google
 
@@ -100,11 +139,12 @@ pozostaje osobnym przyszłym zadaniem.
 
 ## Następny bezpieczny etap
 
-1. Sporządzić dokładną listę lokalnych i zdalnych gałęzi WPF.
-2. Oddzielić źródła warte archiwizacji od tymczasowych wyników.
+1. Rozliczyć unikalne commity pozostałych 18 lokalnych gałęzi i czynne worktree.
+2. Oddzielić źródła starego WPF warte archiwizacji od zmian, które mają
+   potwierdzone odpowiedniki w Pythonie.
 3. Przeskanować planowaną paczkę archiwalną pod kątem sekretów i danych
    użytkownika.
 4. Utworzyć i zweryfikować archiwalny punkt na GitHubie.
-5. Dopiero po weryfikacji nazwy, rozmiaru i sum kontrolnych archiwum usunąć
-   lokalne instalatory oraz repozytorium WPF.
+5. Opublikować kanoniczną linię Pythona, a dopiero potem usuwać stare gałęzie
+   zdalne i repozytorium źródłowe WPF.
 
