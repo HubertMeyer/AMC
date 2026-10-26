@@ -84,6 +84,27 @@ def test_installer_shortcuts_are_optional_and_noicons_is_effective() -> None:
     assert "Tasks: desktopicon" in ISS
 
 
+def test_test_installer_offers_verified_quick_app_switcher_without_silent_install() -> None:
+    for required in (
+        "#ifdef NvdaAddonPath",
+        'Source: "{#NvdaAddonPath}"; DestDir: "{tmp}"',
+        'Filename: "{tmp}\\{#NvdaAddonFileName}"',
+        "Uruchom instalację dodatku NVDA Quick App Switcher {#NvdaAddonVersion}",
+        "Flags: shellexec postinstall skipifsilent",
+        "Check: ShouldOfferNvdaAddon",
+        "InstalledQuickAppSwitcherVersion",
+        "CompareDottedVersions",
+        "{userappdata}\\nvda\\addons\\quickAppSwitcher\\manifest.ini",
+    ):
+        assert required in ISS
+
+    run_section = ISS[ISS.index("[Run]") : ISS.index("[Code]")]
+    addon_run = run_section.index('Filename: "{tmp}\\{#NvdaAddonFileName}"')
+    app_run = run_section.index('Filename: "{app}\\AMC.exe"')
+    assert addon_run < app_run
+    assert "restartreplace" not in run_section[addon_run:app_run]
+
+
 def test_installer_performs_full_post_install_integrity_check() -> None:
     assert "--sprawdz-pakiet-pelny-cicho" in ISS
     assert "--sprawdz-start-cicho" in ISS
@@ -152,6 +173,24 @@ def test_build_helper_verifies_profile_clean_source_and_full_bundle() -> None:
     assert "/DEtykietaUzytkowa" in BUILD
     assert "AppVerName={#KrotkaNazwa} — {#EtykietaUzytkowa}" in ISS
     assert '$env:LOCALAPPDATA "Programs\\Inno Setup 6\\ISCC.exe"' in BUILD
+
+
+def test_test_installer_requires_and_validates_quick_app_switcher_package() -> None:
+    for required in (
+        '[string]$NvdaAddonPath = ""',
+        '$Profile -eq "test"',
+        "Instalator AMC Test wymaga paczki Quick App Switcher",
+        '[IO.Compression.ZipFile]::OpenRead($resolvedAddon)',
+        '"manifest.ini"',
+        '"quickAppSwitcher"',
+        '"quickAppSwitcher-$addonVersion.nvda-addon"',
+        "Get-FileHash -LiteralPath $resolvedAddon -Algorithm SHA256",
+        "/DNvdaAddonPath=",
+        "/DNvdaAddonFileName=",
+        "/DNvdaAddonVersion=",
+        "nvdaAddon = $nvdaAddon",
+    ):
+        assert required in BUILD
 
 
 def test_test_build_promotion_runs_launcher_and_updater_contracts() -> None:

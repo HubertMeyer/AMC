@@ -34,6 +34,15 @@ instalować Pythona ani .NET. Instalator tworzy wpis odinstalowania Windows i
 pozwala wybrać opcjonalny skrót pulpitu oraz integrację obsługiwanych plików z
 Eksploratorem.
 
+Instalator AMC Test zawiera również sprawdzoną paczkę dodatku NVDA Quick App
+Switcher. Jeżeli dodatku nie ma albo jest starszy, końcowa strona instalatora
+proponuje `Uruchom instalację dodatku NVDA Quick App Switcher <wersja>`.
+Odznaczenie tej opcji nie wpływa na instalację AMC. Po jej wybraniu uruchamia
+się zwykły instalator dodatków NVDA, który ponownie prosi o potwierdzenie.
+Instalator AMC sam nie modyfikuje NVDA i nie restartuje czytnika ekranu. Jeżeli
+ta sama albo nowsza wersja Quick App Switchera jest już zainstalowana,
+propozycja się nie pojawia.
+
 ## Aktualizacja FFmpeg i yt-dlp
 
 Aktualizacja całego AMC i aktualizacja składników multimedialnych są osobnymi
@@ -63,7 +72,9 @@ po nowym wydaniu należy wykonać ręcznie poza piaskownicą testową.
 1. Zbudować profil `test` albo `public` z czystego, zapisanego commitu przez
    `wxlite/tools/Build-AMCBundle.ps1`.
 2. Z tego samego commitu utworzyć pełny instalator przez
-   `wxlite/tools/Build-AMCInstaller.ps1`.
+   `wxlite/tools/Build-AMCInstaller.ps1`. Dla profilu Test przekazać
+   zweryfikowaną paczkę Quick App Switchera parametrem `-NvdaAddonPath`; brak
+   paczki zatrzymuje budowę instalatora.
 3. Przygotować krótki plik podsumowania zmian i najpierw uruchomić
    `scripts/Publish-AMCRelease.ps1` bez `-Publish`. Sprawdzić powstałe pliki
    integralności, opisu, gotowości i `amc-update-<profil>.json`.

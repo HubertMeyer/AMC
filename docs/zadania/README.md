@@ -50,8 +50,11 @@ do kontrolowanej archiwizacji opisanej w REL-003.
 
 - `REL-002` — **W trakcie; aktualizacja z programu i pełny instalator są
   zaimplementowane, a pierwszy kompletny kandydat AMC Test przeszedł
-  integralność i kontrolowany start; oczekuje na ręczny odbiór instalatora i
-  NVDA, GitHub Release jeszcze nie powstał** — jedna
+  integralność i kontrolowany start; następny instalator Test ma obowiązkowo
+  zawierać i dostępnie proponować zweryfikowany Quick App Switcher, a kontrakt
+  przeszedł test strukturalny i kompilację Inno; oczekuje na zbudowanie oraz
+  ręczny odbiór rzeczywistego instalatora i NVDA, GitHub Release jeszcze nie
+  powstał** — jedna
   kanoniczna linia AMC Python,
   wydania AMC Test i AMC Public z tego samego commitu, dwa kanały aktualizacji,
   standardowa instalacja Windows oraz kontrolowane uporządkowanie starego C#,

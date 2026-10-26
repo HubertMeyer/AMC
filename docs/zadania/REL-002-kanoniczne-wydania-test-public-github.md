@@ -240,6 +240,34 @@ skompilował.
   bezpieczeństwa. Rzeczywista kontrola sieciowa z menu pozostaje więc punktem
   ręcznego odbioru, a nie zaliczonym testem aktualizacji dostawcy.
 
+## Korekta użytkownika z 26.10.2026 — Quick App Switcher w instalatorze
+
+Ta decyzja zastępuje rozpoczęty wariant, w którym klient aktualizacji AMC miał
+osobno pobierać dodatek NVDA i pytać o niego po aktualizacji programu.
+
+- Nowy instalator AMC Test musi zawierać zweryfikowaną paczkę dodatku NVDA
+  `Quick App Switcher`.
+- Na końcowej stronie interaktywnego instalatora pojawia się jednoznaczna,
+  domyślnie zaznaczona propozycja `Uruchom instalację dodatku NVDA Quick App
+  Switcher <wersja>` tylko wtedy, gdy dodatku nie ma albo zainstalowana wersja
+  jest starsza.
+- Sam instalator AMC nie modyfikuje katalogu dodatków NVDA i nie restartuje
+  czytnika. Po zgodzie uruchamia standardową paczkę `.nvda-addon`; NVDA nadal
+  pokazuje własne potwierdzenie instalacji i ewentualnego restartu.
+- Cicha aktualizacja AMC nie uruchamia instalatora dodatku. Dzięki temu
+  aktualizator programu nie wyświetla nieoczekiwanego okna ani nie restartuje
+  NVDA. Dodatek jest proponowany przy ręcznym uruchomieniu nowego instalatora.
+- Budowa instalatora AMC Test zatrzymuje się, jeśli nie otrzyma paczki Quick
+  App Switchera. Skrypt sprawdza nazwę dodatku i wersję z `manifest.ini`, nazwę
+  pliku, rozmiar oraz SHA-256, a metadane zapisuje w pliku integralności
+  instalatora.
+
+Pierwszą przewidzianą paczką jest `quickAppSwitcher-0.1.6.nvda-addon`: 17 920
+bajtów, SHA-256
+`16dc660e6b3fece58af8ccb84ccc43824bcb7744e1f18a37ffa629685349a61f`.
+Na bieżącym komputerze wersja 0.1.6 jest już zainstalowana, więc instalator nie
+powinien proponować jej ponownie.
+
 ## Kolejność porządkowania
 
 1. Zamrozić dzisiejszy commit jako pierwszy kandydat kanoniczny i dokończyć
@@ -317,6 +345,12 @@ tych samych plików profilu.
   `amc-update-test.json`. Instalator nie został uruchomiony ani zainstalowany.
 - Aktualizacja z prawdziwego GitHub Release: oczekuje na publikację pierwszego
   odebranego wydania AMC Test.
+- Kontrakt nowego instalatora z Quick App Switcherem: zaimplementowany w
+  źródłach; celowany test strukturalny ma wynik **20 zaliczonych**, a Inno
+  Setup 7.1.0 poprawnie skompilował mały instalator kontrolny z prawdziwą
+  paczką 0.1.6. Kontrolnego EXE nie uruchomiono i po teście usunięto.
+- Nie zbudowano jeszcze następnego rzeczywistego instalatora AMC, nie
+  zainstalowano nowej wersji programu i niczego nie opublikowano na GitHubie.
 - Zweryfikowana gałąź źródłowa została wysłana bez przepisywania historii jako
   `github/integration/sonos-broker-20261024`; GitHub potwierdził jej zdalny
   koniec. Nie zmieniono `main`.
