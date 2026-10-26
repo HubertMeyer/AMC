@@ -48,13 +48,12 @@ do kontrolowanej archiwizacji opisanej w REL-003.
 
 ## Zadania
 
-- `REL-002` — **W trakcie; aktualizacja z programu i pełny instalator są
-  zaimplementowane, a pierwszy kompletny kandydat AMC Test przeszedł
-  integralność i kontrolowany start; następny instalator Test ma obowiązkowo
-  zawierać i dostępnie proponować zweryfikowany Quick App Switcher, a kontrakt
-  przeszedł test strukturalny i kompilację Inno; oczekuje na zbudowanie oraz
-  ręczny odbiór rzeczywistego instalatora i NVDA, GitHub Release jeszcze nie
-  powstał** — jedna
+- `REL-002` — **W trakcie; pierwsze wydanie kanału Test
+  `test-2026.10.26.1954` zostało opublikowane i odczytowo zweryfikowane na
+  GitHubie. Stanowi bazę przyszłych aktualizacji z programu. Późniejszy
+  kontrakt dołączania Quick App Switchera przeszedł testy, ale wymaga jeszcze
+  następnego pełnego instalatora i wydania; rzeczywista aktualizacja z menu
+  zostanie sprawdzona przy następnej wersji** — jedna
   kanoniczna linia AMC Python,
   wydania AMC Test i AMC Public z tego samego commitu, dwa kanały aktualizacji,
   standardowa instalacja Windows oraz kontrolowane uporządkowanie starego C#,

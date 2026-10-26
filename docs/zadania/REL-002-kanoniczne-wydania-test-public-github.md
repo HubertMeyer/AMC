@@ -2,11 +2,12 @@
 
 ## Status
 
-W trakcie. Mechanizm aktualizacji z programu, pełny instalator oraz wspólna
-bramka wydań Test/Public są zaimplementowane i przeszły automatyczne testy.
-Trwa przygotowanie pierwszego instalatora AMC Test do ręcznego odbioru z NVDA.
-Publikacja pierwszego wydania Python nastąpi dopiero po sprawdzeniu tego
-kandydata; kod, build, instalacja i GitHub Release pozostają osobnymi faktami.
+W trakcie. Pierwsze wydanie AMC Test w kanale testowym zostało opublikowane
+26.10.2026 jako `test-2026.10.26.1954`; GitHub potwierdził instalator, manifest
+aktualizacji, plik integralności oraz ich sumy. Tag wskazuje dokładną rewizję
+`251e163a`. Późniejszy kontrakt dołączania Quick App Switchera jest zapisany w
+commicie `781f8283`, ale nie powstał jeszcze z niego następny pełny instalator.
+Rzeczywista aktualizacja z programu zostanie sprawdzona przy kolejnym wydaniu.
 
 ## Nadrzędna korekta użytkownika z 26.10.2026
 
@@ -343,14 +344,20 @@ tych samych plików profilu.
   wydania potwierdziła zgodność profilu Test, kanału Test, prerelease, nazwy,
   rozmiaru, commitu i SHA-256 między instalatorem, plikiem integralności i
   `amc-update-test.json`. Instalator nie został uruchomiony ani zainstalowany.
-- Aktualizacja z prawdziwego GitHub Release: oczekuje na publikację pierwszego
-  odebranego wydania AMC Test.
+- Pierwsze prawdziwe wydanie GitHub kanału Test zostało opublikowane jako
+  `test-2026.10.26.1954`. GitHub potwierdził profil prerelease, tag na commicie
+  `251e163a`, instalator 134 236 985 bajtów oraz zgodne z lokalnymi plikami
+  sumy SHA-256 instalatora, manifestu aktualizacji i pliku integralności.
+- Rzeczywista aktualizacja z programu oczekuje na następną wersję wyższą niż
+  zainstalowane `0.1.0-alpha.434`; pierwsze wydanie stanowi bazę kanału.
 - Kontrakt nowego instalatora z Quick App Switcherem: zaimplementowany w
   źródłach; celowany test strukturalny ma wynik **20 zaliczonych**, a Inno
   Setup 7.1.0 poprawnie skompilował mały instalator kontrolny z prawdziwą
   paczką 0.1.6. Kontrolnego EXE nie uruchomiono i po teście usunięto.
-- Nie zbudowano jeszcze następnego rzeczywistego instalatora AMC, nie
-  zainstalowano nowej wersji programu i niczego nie opublikowano na GitHubie.
+- Kontrakt Quick App Switchera został zapisany po zbudowaniu instalatora
+  `AMC-Test-2026-10-26-1954.exe`. To opublikowane pierwsze wydanie nie zawiera
+  jeszcze dodatku; następny instalator Test ma powstać z commitu zawierającego
+  kontrakt i zapisać dane dodatku w pliku integralności.
 - Zweryfikowana gałąź źródłowa została wysłana bez przepisywania historii jako
   `github/integration/sonos-broker-20261024`; GitHub potwierdził jej zdalny
   koniec. Nie zmieniono `main`.
@@ -379,9 +386,12 @@ tych samych plików profilu.
 - SHA-256 instalatora:
   `b8a411799beb086fb17f0f1dfaca795fd37ee211fd12fde352fa309984554b8e`.
 - Instalacja: `D:\Projekty Codex\AMC Python`.
-- Instalacja kandydata: niewykonana; oczekuje na ręczny odbiór.
-- Publikacja GitHub Release: brak; lokalny manifest przewiduje tag
-  `test-2026.10.26.1954`.
+- Instalacja kandydata: użytkownik potwierdził odbiór przed publikacją.
+- Publikacja GitHub Release: wykonana 26.10.2026; wydanie wstępne
+  `test-2026.10.26.1954`, tag i źródła na
+  `251e163afd1fe7697c3efe525f1fa284050cfebb`.
+- Adres wydania:
+  `https://github.com/michalkasperczak/AMC/releases/tag/test-2026.10.26.1954`.
 - Wcześniejszy commit etapu źródłowego: `d87a27f6`
   (`build(release): rozdziel kanały Test i Public`).
 - Commit kontraktu Quick App Switchera w instalatorze: `781f8283`
