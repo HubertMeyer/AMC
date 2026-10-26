@@ -5,9 +5,12 @@
 W trakcie. Pierwsze wydanie AMC Test w kanale testowym zostało opublikowane
 26.10.2026 jako `test-2026.10.26.1954`; GitHub potwierdził instalator, manifest
 aktualizacji, plik integralności oraz ich sumy. Tag wskazuje dokładną rewizję
-`251e163a`. Późniejszy kontrakt dołączania Quick App Switchera jest zapisany w
-commicie `781f8283`, ale nie powstał jeszcze z niego następny pełny instalator.
-Rzeczywista aktualizacja z programu zostanie sprawdzona przy kolejnym wydaniu.
+`251e163a`. Domyślna gałąź `main` została następnie przeniesiona zwykłym
+fast-forwardem z historycznego WPF `1f5dccb6` na kanoniczną linię AMC Python
+`219062c8`, bez przepisywania historii. Późniejszy kontrakt dołączania Quick App
+Switchera jest zapisany w commicie `781f8283`, ale nie powstał jeszcze z niego
+następny pełny instalator. Rzeczywista aktualizacja z programu zostanie
+sprawdzona przy kolejnym wydaniu.
 
 ## Nadrzędna korekta użytkownika z 26.10.2026
 
@@ -360,7 +363,12 @@ tych samych plików profilu.
   kontrakt i zapisać dane dodatku w pliku integralności.
 - Zweryfikowana gałąź źródłowa została wysłana bez przepisywania historii jako
   `github/integration/sonos-broker-20261024`; GitHub potwierdził jej zdalny
-  koniec. Nie zmieniono `main`.
+  koniec.
+- Po ponownym powiązaniu działającego procesu, manifestu instalacji, instalatora
+  i commitu użytkownik polecił opublikować tę linię jako kod bieżącego AMC.
+  26.10.2026 zdalny `main` przesunięto zwykłym fast-forwardem z `1f5dccb6` na
+  `219062c8`. Domyślną gałęzią repozytorium pozostał `main`; nie wykonano
+  force-pusha ani usunięcia historii WPF.
 
 ## Znane ograniczenia
 
@@ -371,8 +379,9 @@ tych samych plików profilu.
   migracja OAuth musi zachować lub uczciwie wyłączyć logowanie YouTube.
 - Historyczny WPF `alpha.427` został dziś zainstalowany przez równoległe
   zadanie. Nie jest dowodem aktualności AMC i nie może zastąpić Python.
-- Publiczny GitHub pokazuje obecnie historię WPF; zmiana `main` jest osobną,
-  jeszcze niewykonaną operacją.
+- Tag wydania `test-2026.10.26.1954` wskazuje dokładny kod zainstalowanej wersji
+  `0.1.0-alpha.434`, natomiast ruchome `main` zawiera także późniejsze commity
+  dokumentacyjne i kontrakt następnego instalatora z Quick App Switcherem.
 
 ## Wersja i commit
 
@@ -390,6 +399,9 @@ tych samych plików profilu.
 - Publikacja GitHub Release: wykonana 26.10.2026; wydanie wstępne
   `test-2026.10.26.1954`, tag i źródła na
   `251e163afd1fe7697c3efe525f1fa284050cfebb`.
+- Pierwszy punkt migracji zdalnego `main` na kanoniczną linię Python:
+  `219062c81e2526131e5bc76846ecac06cf5ea06d`; poprzedni punkt `main`
+  `1f5dccb6` pozostaje w historii oraz w zweryfikowanym archiwum WPF.
 - Adres wydania:
   `https://github.com/michalkasperczak/AMC/releases/tag/test-2026.10.26.1954`.
 - Wcześniejszy commit etapu źródłowego: `d87a27f6`
