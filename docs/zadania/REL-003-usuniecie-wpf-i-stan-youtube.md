@@ -174,6 +174,27 @@ Pozostały dokładnie dwie gałęzie lokalne:
 Żadna z tych dwóch gałęzi nie ma upstreamu, tagu ani kopii zawierającej jej
 koniec na GitHubie. Nie zmieniono żadnej gałęzi zdalnej.
 
+### Usunięcie starych kandydatów Frontier z 26.10.2026
+
+Na życzenie użytkownika sprawdzono dwa odłączone worktree utworzone podczas
+wcześniejszego odbioru Frontier:
+
+- `D:\Projekty Codex\AMC - kandydat Frontier` — commit `19ae6089`,
+  `fix(frontier): wykryj radio UNDOK i uprosc konfiguracje` z 21.10.2026;
+- `D:\Projekty Codex\AMC - kandydat Frontier CtrlF5` — commit `86727573`,
+  `fix(frontier): skanuj automatycznie tylko pusta sesje` z 21.10.2026.
+
+Oba commity są przodkami bieżącej linii i nie mają wobec niej unikalnych
+commitów. Worktree nie zawierały zmian śledzonych, a jedynymi nieśledzonymi
+pozycjami były odtwarzalne katalogi `.test-output`. Uruchomiony AMC Test został
+niezależnie zidentyfikowany pod `D:\Projekty Codex\AMC Python`, więc nie
+korzystał z żadnego kandydata.
+
+Oba worktree trwale usunięto i wykonano `git worktree prune`. Odzyskano około
+728 MiB. Łącznie audyt pozostałych gałęzi i kandydatów odzyskał około 4931 MiB,
+czyli 4,8 GiB. Nie zmieniono kodu Frontier, instalacji AMC Test ani danych
+urządzenia.
+
 ## YouTube bez ponownego logowania Google
 
 W kodzie istnieją dwa niezależne mechanizmy:
