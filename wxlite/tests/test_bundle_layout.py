@@ -102,7 +102,7 @@ def test_missing_problem_report_endpoint_removes_stale_packaged_resource():
         assert "app/amc_wx_lite/problem-report-endpoint.txt" not in copied
 
 
-def test_youtube_oauth_client_id_is_validated_and_test_only():
+def test_local_youtube_oauth_configuration_is_never_packaged():
     with tempfile.TemporaryDirectory() as folder:
         root = Path(folder)
         source = root / "source"
@@ -120,49 +120,29 @@ def test_youtube_oauth_client_id_is_validated_and_test_only():
             encoding="utf-8",
         )
 
-        test_target = root / "test"
-        copied = bundle.copy_python_code(
-            test_target,
-            bundle.profile_from_id("test"),
-            source,
-        )
         relative = "app/amc_wx_lite/youtube-oauth-client-id.txt"
         secret_relative = "app/amc_wx_lite/youtube-oauth-client-secret.txt"
-        assert relative in copied
-        assert secret_relative in copied
-        assert (test_target / relative).read_text(encoding="utf-8") == client_id + "\n"
-        assert (test_target / secret_relative).read_text(encoding="utf-8") == (
-            client_secret + "\n"
-        )
-
-        public_target = root / "public"
-        copied = bundle.copy_python_code(
-            public_target,
-            bundle.profile_from_id("public"),
-            source,
-        )
-        assert relative not in copied
-        assert secret_relative not in copied
-        assert not (public_target / relative).exists()
-        assert not (public_target / secret_relative).exists()
-
-        (source_package / bundle.YOUTUBE_OAUTH_CLIENT_ID_RESOURCE).write_text(
-            "nieprawidłowy identyfikator ze spacją\n",
-            encoding="utf-8",
-        )
-        bundle.copy_python_code(
-            root / "public-invalid-youtube",
-            bundle.profile_from_id("public"),
-            source,
-        )
-        try:
-            bundle.copy_python_code(root / "invalid-youtube", source_wxlite=source)
-        except SystemExit as error:
-            assert "nieprawidłowy format" in str(error)
-        else:
-            raise AssertionError(
-                "Nieprawidłowy identyfikator OAuth nie może trafić do paczki"
+        for profile_id in ("test", "public"):
+            target = root / profile_id
+            package = target / "app" / "amc_wx_lite"
+            package.mkdir(parents=True)
+            (package / bundle.YOUTUBE_OAUTH_CLIENT_ID_RESOURCE).write_text(
+                "stary-identyfikator\n", encoding="utf-8"
             )
+            (package / bundle.YOUTUBE_OAUTH_CLIENT_SECRET_RESOURCE).write_text(
+                "stary-sekret\n", encoding="utf-8"
+            )
+
+            copied = bundle.copy_python_code(
+                target,
+                bundle.profile_from_id(profile_id),
+                source,
+            )
+
+            assert relative not in copied
+            assert secret_relative not in copied
+            assert not (target / relative).exists()
+            assert not (target / secret_relative).exists()
 
 
 def test_incomplete_youtube_oauth_configuration_is_not_packaged():

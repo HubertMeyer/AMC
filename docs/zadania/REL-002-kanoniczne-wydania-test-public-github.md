@@ -370,6 +370,24 @@ tych samych plików profilu.
   `219062c8`. Domyślną gałęzią repozytorium pozostał `main`; nie wykonano
   force-pusha ani usunięcia historii WPF.
 
+## Korekta 27.10.2026 — konfiguracja OAuth poza wydaniem
+
+- Ta decyzja zastępuje zapis z 23.10.2026 w zadaniu
+  `AMC-TEST-2026-10-23-youtube-secret-frontier-choice.md`, według którego
+  builder dołączał lokalną parę OAuth do paczki AMC Test.
+- Bramka instalatora prawidłowo zatrzymała kandydata `0.1.0-alpha.435`, gdy
+  manifest zawierał `youtube-oauth-client-secret.txt`; instalator nie powstał,
+  a żaden taki plik nie został wysłany na GitHub.
+- `build_bundle.py` usuwa teraz identyfikator i sekret OAuth YouTube z każdej
+  publikowanej paczki, także gdy istnieją w lokalnym katalogu deweloperskim.
+  Istniejącej, niezarządzanej konfiguracji w zainstalowanym AMC aktualizator
+  nie usuwa. Czysta instalacja ukrywa konto YouTube do czasu wdrożenia PKCE bez
+  sekretu albo bezsekretnego brokera.
+- Testy ochrony paczki i kontraktu instalatora po korekcie: **51 zaliczonych**.
+- Źródła, testy i pomyślna budowa są oddzielnymi faktami; pełna paczka,
+  instalator i publikacja nowego wydania wymagają ponownego wykonania po
+  commicie tej korekty.
+
 ## Znane ograniczenia
 
 - Bieżąca instalacja na D nadal używa pozostawionego ze starszego builda,

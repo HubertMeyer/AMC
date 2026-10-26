@@ -203,43 +203,6 @@ def _read_optional_problem_report_endpoint(source_wxlite: Path) -> str | None:
     return endpoint
 
 
-def _read_optional_youtube_oauth_client_id(source_wxlite: Path) -> str | None:
-    source = source_wxlite / "amc_wx_lite" / YOUTUBE_OAUTH_CLIENT_ID_RESOURCE
-    if not source.is_file():
-        return None
-    if source.stat().st_size > 2048:
-        raise SystemExit("Identyfikator OAuth YouTube jest zbyt długi.")
-    try:
-        client_id = source.read_text(encoding="utf-8").strip()
-    except (OSError, UnicodeError) as error:
-        raise SystemExit("Nie można odczytać identyfikatora OAuth YouTube.") from error
-    if (
-        not 20 <= len(client_id) <= 512
-        or not client_id.endswith(".apps.googleusercontent.com")
-        or any(character.isspace() or ord(character) < 32 for character in client_id)
-    ):
-        raise SystemExit("Identyfikator OAuth YouTube ma nieprawidłowy format.")
-    return client_id
-
-
-def _read_optional_youtube_oauth_client_secret(source_wxlite: Path) -> str | None:
-    source = source_wxlite / "amc_wx_lite" / YOUTUBE_OAUTH_CLIENT_SECRET_RESOURCE
-    if not source.is_file():
-        return None
-    if source.stat().st_size > 2048:
-        raise SystemExit("Sekret klienta OAuth YouTube jest zbyt długi.")
-    try:
-        client_secret = source.read_text(encoding="utf-8").strip()
-    except (OSError, UnicodeError) as error:
-        raise SystemExit("Nie można odczytać sekretu klienta OAuth YouTube.") from error
-    if (
-        not 8 <= len(client_secret) <= 512
-        or any(character.isspace() or ord(character) < 32 for character in client_secret)
-    ):
-        raise SystemExit("Sekret klienta OAuth YouTube ma nieprawidłowy format.")
-    return client_secret
-
-
 def copy_python_code(
     target: Path,
     profile: ReleaseProfile | None = None,
@@ -255,23 +218,6 @@ def copy_python_code(
 
     selected_profile = profile or profile_from_id(TEST_PROFILE_ID)
     report_endpoint = _read_optional_problem_report_endpoint(source_wxlite)
-    youtube_enabled = "youtube.account.readonly" in selected_profile.capabilities
-    youtube_client_id = (
-        _read_optional_youtube_oauth_client_id(source_wxlite)
-        if youtube_enabled
-        else None
-    )
-    youtube_client_secret = (
-        _read_optional_youtube_oauth_client_secret(source_wxlite)
-        if youtube_enabled
-        else None
-    )
-    # Nie twórz paczki, która pokazuje konto, przyjmuje zgodę Google, a potem
-    # nie potrafi jej zakończyć. Niepełna lokalna konfiguracja wyłącza całą
-    # powierzchnię konta; AMC Public nie odczytuje żadnego z tych zasobów.
-    if youtube_client_id is None or youtube_client_secret is None:
-        youtube_client_id = None
-        youtube_client_secret = None
     package = target / "app" / "amc_wx_lite"
     package.mkdir(parents=True, exist_ok=True)
     copied = []
@@ -294,27 +240,17 @@ def copy_python_code(
     else:
         endpoint_destination.write_text(report_endpoint + "\n", encoding="utf-8")
         copied.append(f"app/amc_wx_lite/{PROBLEM_REPORT_ENDPOINT_RESOURCE}")
-    youtube_destination = package / YOUTUBE_OAUTH_CLIENT_ID_RESOURCE
-    if (
-        youtube_client_id is None
-        or "youtube.account.readonly" not in selected_profile.capabilities
+    # Konfiguracja OAuth z katalogu deweloperskiego nigdy nie trafia do
+    # publikowanej paczki. Do czasu przejścia na PKCE bez sekretu albo broker
+    # czysta instalacja uczciwie ukrywa konto YouTube; aktualizacja nie usuwa
+    # jednak niezarządzanej lokalnej konfiguracji z istniejącej instalacji.
+    for resource in (
+        YOUTUBE_OAUTH_CLIENT_ID_RESOURCE,
+        YOUTUBE_OAUTH_CLIENT_SECRET_RESOURCE,
     ):
-        if youtube_destination.is_file():
-            youtube_destination.unlink()
-    else:
-        youtube_destination.write_text(youtube_client_id + "\n", encoding="utf-8")
-        copied.append(f"app/amc_wx_lite/{YOUTUBE_OAUTH_CLIENT_ID_RESOURCE}")
-    youtube_secret_destination = package / YOUTUBE_OAUTH_CLIENT_SECRET_RESOURCE
-    if youtube_client_secret is None or not youtube_enabled:
-        if youtube_secret_destination.is_file():
-            youtube_secret_destination.unlink()
-    else:
-        youtube_secret_destination.write_text(
-            youtube_client_secret + "\n", encoding="utf-8"
-        )
-        copied.append(
-            f"app/amc_wx_lite/{YOUTUBE_OAUTH_CLIENT_SECRET_RESOURCE}"
-        )
+        destination = package / resource
+        if destination.is_file():
+            destination.unlink()
     # AMC-wx-Lite.cmd zostaje w repo jako narzedzie deweloperskie. Nie wolno
     # go dokladac do paczki uzytkownika, bo moglby wybrac obcy interpreter.
     for name in ("requirements-win64.txt", "JAK_TESTOWAC.md"):
