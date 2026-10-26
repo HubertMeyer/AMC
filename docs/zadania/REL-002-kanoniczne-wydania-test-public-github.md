@@ -317,7 +317,9 @@ tych samych plików profilu.
   `amc-update-test.json`. Instalator nie został uruchomiony ani zainstalowany.
 - Aktualizacja z prawdziwego GitHub Release: oczekuje na publikację pierwszego
   odebranego wydania AMC Test.
-- Publikacja GitHub bieżącego Python: niewykonana.
+- Zweryfikowana gałąź źródłowa została wysłana bez przepisywania historii jako
+  `github/integration/sonos-broker-20261024`; GitHub potwierdził jej zdalny
+  koniec. Nie zmieniono `main`.
 
 ## Znane ograniczenia
 
