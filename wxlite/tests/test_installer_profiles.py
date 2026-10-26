@@ -33,7 +33,7 @@ def test_installer_profiles_have_separate_ids_names_folders_and_mutexes() -> Non
         "0B807571-BDC5-4287-BD7C-4F4A7C71438F",
         "PythonLauncher.Public.SingleInstance",
         "PythonLauncher.SingleInstance",
-        "FolderProgramu \"AMC\"",
+        "FolderProgramu \"AMC Public\"",
         "FolderProgramu \"AMC Test\"",
     ):
         assert required in ISS
@@ -115,6 +115,14 @@ def test_public_update_removes_modules_disabled_for_that_profile() -> None:
         assert stale_name.removesuffix(".py") + ".*.pyc" in install_delete
 
     assert "sonos_source" not in install_delete
+
+
+def test_installer_refuses_local_oauth_secrets() -> None:
+    assert "forbiddenBundleFiles" in BUILD
+    assert "youtube-oauth-client-secret.txt" in BUILD
+    assert "sonos_client_secret.txt" in BUILD
+    assert "Instalator nie może zawierać sekretu" in BUILD
+    assert 'secretScan = "passed"' in BUILD
 
 
 def test_build_helper_verifies_profile_clean_source_and_full_bundle() -> None:

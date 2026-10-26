@@ -11,6 +11,7 @@ from pathlib import Path
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = REPOSITORY_ROOT / "scripts" / "Publish-AMCPublicRelease.ps1"
+SHARED_SCRIPT = REPOSITORY_ROOT / "scripts" / "Publish-AMCRelease.ps1"
 POWERSHELL = shutil.which("pwsh") or shutil.which("powershell")
 
 
@@ -29,6 +30,7 @@ def _fixture(tmp_path: Path, *, profile: str = "public", sha: str | None = None)
         "sha256": sha or digest,
         "bundleId": "synthetic",
         "sourceRevision": "1" * 40,
+        "secretScan": "passed",
     }
     (tmp_path / f"{installer.name}.integrity.json").write_text(
         json.dumps(integrity), encoding="utf-8"
@@ -61,13 +63,20 @@ def test_prepare_only_verifies_installer_and_does_not_publish(tmp_path: Path) ->
 
     assert result.returncode == 0, result.stderr
     assert "Niczego nie opublikowano" in result.stdout
-    notes = (tmp_path / f"release-notes-{version}.md").read_text(encoding="utf-8")
+    notes = (tmp_path / f"release-notes-public-{version}.md").read_text(
+        encoding="utf-8"
+    )
     assert installer.name in notes
     assert digest in notes
     ready = json.loads(
-        (tmp_path / f"release-ready-{version}.json").read_text(encoding="utf-8-sig")
+        (tmp_path / f"release-ready-public-{version}.json").read_text(
+            encoding="utf-8-sig"
+        )
     )
     assert ready["profile"] == "public"
+    assert ready["tag"] == "public-2026.10.22.2125"
+    assert ready["updateChannel"] == "stable"
+    assert ready["prerelease"] is False
     assert ready["published"] is False
     assert ready["sha256"] == digest
 
@@ -86,15 +95,87 @@ def test_prepare_only_rejects_private_profile_and_changed_hash(tmp_path: Path) -
     assert "SHA-256" in (changed_result.stdout + changed_result.stderr)
 
 
+def test_prepare_only_rejects_artifact_without_secret_scan(tmp_path: Path) -> None:
+    version, installer, _digest = _fixture(tmp_path)
+    integrity_path = tmp_path / f"{installer.name}.integrity.json"
+    integrity = json.loads(integrity_path.read_text(encoding="utf-8"))
+    integrity.pop("secretScan")
+    integrity_path.write_text(json.dumps(integrity), encoding="utf-8")
+
+    result = _run(tmp_path, version)
+    assert result.returncode != 0
+    assert "potwierdzonej kontroli sekret" in (result.stdout + result.stderr)
+
+
 def test_publish_path_requires_remote_commit_and_verifies_uploaded_assets() -> None:
-    source = SCRIPT.read_text(encoding="utf-8")
+    source = SHARED_SCRIPT.read_text(encoding="utf-8")
+    assert '[ValidateSet("public", "test")]' in source
     assert "[switch]$Publish" in source
     assert "--untracked-files=no" in source
     assert 'gh api "repos/$Repository/commits/$sourceRevision"' in source
     assert 'gh release create' not in source
     assert '"release", "create", $tag' in source
-    assert '"--title", "AMC Public — $displayVersion"' in source
+    assert '"--title", "$displayName — $displayVersion"' in source
+    assert 'if ($isPrerelease)' in source
+    assert '"--prerelease"' in source
     assert "Wydanie $tag już istnieje" in source
     assert "asset.size" in source
     assert "integrityAsset.state" in source
     assert "release.body.Contains($actualHash)" in source
+
+
+def test_shared_gate_prepares_test_channel_as_prerelease(tmp_path: Path) -> None:
+    version = "0.1.0-alpha.999"
+    installer = tmp_path / "AMC-Test-2026-10-22-2125.exe"
+    installer.write_bytes(b"syntetyczny instalator test")
+    digest = hashlib.sha256(installer.read_bytes()).hexdigest()
+    integrity = {
+        "schemaVersion": 1,
+        "profile": "test",
+        "version": version,
+        "displayVersion": "22.10.2026, 21:25",
+        "fileName": installer.name,
+        "bytes": installer.stat().st_size,
+        "sha256": digest,
+        "bundleId": "synthetic",
+        "sourceRevision": "2" * 40,
+        "secretScan": "passed",
+    }
+    (tmp_path / f"{installer.name}.integrity.json").write_text(
+        json.dumps(integrity), encoding="utf-8"
+    )
+
+    assert POWERSHELL is not None
+    result = subprocess.run(
+        [
+            POWERSHELL,
+            "-NoProfile",
+            "-File",
+            str(SHARED_SCRIPT),
+            "-Profile",
+            "test",
+            "-Version",
+            version,
+            "-ArtifactsDirectory",
+            str(tmp_path),
+        ],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    ready = json.loads(
+        (tmp_path / f"release-ready-test-{version}.json").read_text(
+            encoding="utf-8-sig"
+        )
+    )
+    assert ready["tag"] == "test-2026.10.22.2125"
+    assert ready["updateChannel"] == "test"
+    assert ready["prerelease"] is True
+    assert ready["published"] is False
+
+
+def test_public_wrapper_delegates_to_shared_profiled_gate() -> None:
+    source = SCRIPT.read_text(encoding="utf-8")
+    assert 'Profile = "public"' in source
+    assert "Publish-AMCRelease.ps1" in source

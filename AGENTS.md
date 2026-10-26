@@ -46,11 +46,19 @@
 - Użytkownik 9 października
   2026 r. wyraził stałą zgodę na pracę w tym katalogu także po wznowieniu
   zadania; nie pytaj ponownie o wybór katalogu roboczego.
-- Zmiany z aktywnego katalogu integracji wxPython pozostają lokalne. Nie
-  wysyłaj ich do GitHuba bez osobnej, aktualnej zgody użytkownika na publikację.
-- Historyczna zgoda z 9 września 2026 r. na publikowanie starego AMC nie jest
-  bieżącą zgodą na publikację nowego AMC Python. Dla tego projektu zawsze
-  wymagana jest osobna decyzja dotycząca konkretnego przygotowanego stanu.
+- Korekta użytkownika z 26 października 2026 r. zastępuje wcześniejszy wymóg
+  osobnej zgody dla każdego przygotowanego stanu AMC Python. Każde faktyczne,
+  zweryfikowane wydanie AMC Python ma trafić do `michalkasperczak/AMC` na
+  GitHubie: AMC Test jako wydanie wstępne kanału `test`, a AMC Public jako
+  zwykłe wydanie kanału `stable`. Zwykła lokalna kompilacja, kandydat albo
+  instalacja do ręcznego odbioru nie są jeszcze wydaniem i nie są publikowane
+  automatycznie.
+- Stała zgoda obejmuje publikację sprawdzonych źródeł i odpowiadających im
+  artefaktów w tym jednym repozytorium. Nie obejmuje publikowania sekretów,
+  danych użytkownika ani poświadczeń, innych repozytoriów, kontaktowania osób
+  zewnętrznych, przepisywania zdalnej historii lub kasowania gałęzi i wydań bez
+  wcześniejszego zapisania i zweryfikowania dokładnej listy celów. Szczegóły
+  migracji i porządków: `docs/zadania/REL-002-kanoniczne-wydania-test-public-github.md`.
 - Przed publikacją sprawdzaj zakres zmian i zawartość pakietu. Nie publikuj
   poświadczeń, danych kont, lokalnych kolekcji, prywatnych nagrań ani logów
   użytkownika. Zgoda nie obejmuje innych repozytoriów ani kontaktowania

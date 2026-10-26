@@ -50,6 +50,26 @@ if ([string]$manifest.releaseProfile -ne $Profile) {
 if ([bool]$manifest.sourceDirty) {
     throw "Instalator nie może powstać z niezapisanych źródeł roboczych."
 }
+
+# Lokalny plik używany podczas rozwoju nie może stać się artefaktem GitHub
+# ani instalatora. Sprawdzamy zarówno deklarację manifestu, jak i rzeczywisty
+# katalog, aby dodatkowy niezarządzany plik nie ominął kontroli sum pakietu.
+$forbiddenBundleFiles = @(
+    "app/amc_wx_lite/youtube-oauth-client-secret.txt",
+    "app/amc_wx_lite/sonos_client_secret.txt",
+    "deploy/sonos-broker/secrets/sonos_client_secret.txt"
+)
+$manifestFiles = @($manifest.files | ForEach-Object {
+    ([string]$_).Replace("\", "/").ToLowerInvariant()
+})
+foreach ($relative in $forbiddenBundleFiles) {
+    $normalized = $relative.ToLowerInvariant()
+    $actualPath = Join-Path $bundle ($relative.Replace("/", [IO.Path]::DirectorySeparatorChar))
+    if ($manifestFiles -contains $normalized -or (Test-Path -LiteralPath $actualPath)) {
+        throw "Instalator nie może zawierać sekretu ani lokalnego pliku poświadczeń: $relative"
+    }
+}
+
 $displayVersion = [string]$manifest.displayVersion
 $displayVersionMatch = [Regex]::Match(
     $displayVersion,
@@ -157,6 +177,7 @@ $integrity = [ordered]@{
     bundleId = [string]$manifest.bundleId
     sourceRevision = [string]$manifest.sourceRevision
     installerSourceRevision = $installerSourceRevision
+    secretScan = "passed"
 }
 $integrityPath = Join-Path $output ($baseName + ".integrity.json")
 $integrity | ConvertTo-Json | Set-Content -LiteralPath $integrityPath -Encoding utf8

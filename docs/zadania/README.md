@@ -7,15 +7,18 @@ jawnym poleceniu użytkownika albo przez osobno uzgodniony harmonogram.
 
 ## Bieżący punkt wznowienia
 
-Sesja rozwojowa AMC Test z 23–24.10.2026 została bezpiecznie zamknięta.
-Najnowsza instalacja, dokładny stan wdrożeń, plan ręcznego odbioru, ustalenia
-dotyczące dynamicznego radia i pierwotnego projektu `Ctrl+Shift+I` oraz tematy przekazane
-do osobnych zadań Sonos i Apple Music są zapisane w:
-[AMC-TEST-2026-10-24-ZAMKNIECIE-SESJI-23-24.md](AMC-TEST-2026-10-24-ZAMKNIECIE-SESJI-23-24.md).
+Najnowszą bazą wszystkich dalszych prac jest AMC Test z commitu
+`bba5e92d687ade1998e79c88656e1a5d545abcf2`, pakiet `39f0d3f2`, zbudowany,
+atomowo zainstalowany i uruchomiony 26.10.2026 o 13:34 w
+`D:\Projekty Codex\AMC Python`. Raport promocji potwierdza zaliczone testy i
+tytuł okna `AMC Test — 26.10.2026, 13:32`. Pozostaje ręczny odbiór funkcji
+z czterech najnowszych zadań.
 
-Nie rozpoczynać automatycznie tematów z tego dokumentu. Użytkownik sprawdzi
-przygotowane funkcje 24.10.2026 i wskaże ewentualne korekty. Bieżący AMC Test
-pozostaje w `D:\Projekty Codex\AMC Python`; AMC Public pozostaje bez zmian.
+Nadrzędny plan uporządkowania jednej linii źródeł, instalatorów, aktualizacji,
+GitHuba, profili danych oraz historycznego AMC WPF jest w:
+[REL-002-kanoniczne-wydania-test-public-github.md](REL-002-kanoniczne-wydania-test-public-github.md).
+Nie budować ani nie instalować kolejnej użytkowej wersji ze starego repozytorium
+WPF `D:\Projekty Codex\Accessible Multimedia Controller`.
 
 ## Zasady prowadzenia
 
@@ -41,6 +44,14 @@ pozostaje w `D:\Projekty Codex\AMC Python`; AMC Public pozostaje bez zmian.
 - Nie zapisuj tu haseł, tokenów, danych kont ani prywatnych logów użytkownika.
 
 ## Zadania
+
+- `REL-002` — **W trakcie; decyzje i bezpieczna kolejność migracji zapisane,
+  dzisiejszy AMC Test zainstalowany, lecz GitHub, instalatory systemowe i
+  porządki gałęzi jeszcze niezmienione** — jedna kanoniczna linia AMC Python,
+  wydania AMC Test i AMC Public z tego samego commitu, dwa kanały aktualizacji,
+  standardowa instalacja Windows oraz kontrolowane uporządkowanie starego C#,
+  gałęzi lokalnych i GitHuba. Szczegóły:
+  [REL-002-kanoniczne-wydania-test-public-github.md](REL-002-kanoniczne-wydania-test-public-github.md).
 
 - `RECOG-001` — **W trakcie; kod, pełna regresja, build i instalacja AMC Test
   26.10.2026, 13:32 są gotowe; pozostaje ręczny odbiór NVDA** — krótka lista

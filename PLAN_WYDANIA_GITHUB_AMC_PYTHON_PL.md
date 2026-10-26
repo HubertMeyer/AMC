@@ -1,9 +1,11 @@
 # AMC Python — plan przed pierwszym wydaniem przez GitHub
 
-Ten dokument zapisuje etap planowany po ukończeniu głównych funkcji programu,
-orientacyjnie przed przekazaniem AMC Python szerszej grupie testerów. Nie jest
-zgodą na obecną publikację. Każde wysłanie źródeł albo plików wydania wymaga
-osobnej decyzji użytkownika dotyczącej przygotowanego stanu.
+Ten dokument zapisuje pierwotny plan przygotowany przed decyzją wydawniczą.
+Korekta użytkownika z 26 października 2026 r. zastępuje wcześniejszy wymóg
+osobnej zgody dla każdego stanu: każde faktyczne, zweryfikowane wydanie ma
+trafić na GitHub. Bieżący model dwóch kanałów, kolejność migracji i bramki
+bezpieczeństwa są nadrzędnie opisane w
+`docs/zadania/REL-002-kanoniczne-wydania-test-public-github.md`.
 
 ## Cel
 

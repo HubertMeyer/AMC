@@ -26,7 +26,7 @@
   #define Produkt "AMC Public"
   #define KrotkaNazwa "AMC Public"
   #define AppIdentity "{{1E437448-30B4-4E4A-BCA1-CDA114B096A9}"
-  #define FolderProgramu "AMC"
+  #define FolderProgramu "AMC Public"
   #define NazwaWyjscia "AMC-Public-" + EtykietaPliku
   #define AppPathName "AMC.exe"
   #define ExpectedInstallId "AMC.Public.win-x64"
