@@ -39,6 +39,7 @@ from .shortcuts import (
     SPOTIFY_SUPPORTED_ACTIONS,
     TIDAL_SUPPORTED_ACTIONS,
     WIIM_SUPPORTED_ACTIONS,
+    command_presentation,
     ctrl_f5_presentation,
     describe_action,
     normalize_shortcut_overrides,
@@ -1779,6 +1780,10 @@ def build_menus(
         ),
     )
 
+    application_update = command_presentation(Action.CHECK_APPLICATION_UPDATE)
+    if application_update is None or application_update.menu_label is None:
+        raise RuntimeError("Brak prezentacji polecenia aktualizacji AMC")
+
     help_menu = Menu(
         "Pomo&c",
         (
@@ -1791,6 +1796,10 @@ def build_menus(
                 checkable=True,
             ),
             SEPARATOR,
+            MenuItem(
+                application_update.menu_label,
+                Action.CHECK_APPLICATION_UPDATE,
+            ),
             MenuItem(
                 "Sprawdź i zaktualizuj składniki: FFmpeg i &yt-dlp",
                 Action.UPDATE_MEDIA_COMPONENTS,

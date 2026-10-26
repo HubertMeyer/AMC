@@ -42,6 +42,9 @@ internal static class Program
         ("aktualizator przyjmuje starszy zakres tego samego profilu", UpdaterAcceptsKnownProfileExpansion),
         ("aktualizator odrzuca nieznany zakres starego profilu", UpdaterRejectsUnknownInstalledCapability),
         ("aktualizator odrzuca obcy profil", UpdaterRejectsDifferentProfile),
+        ("aktualizator przyjmuje pełny instalator właściwego profilu", UpdaterAcceptsMatchingInstaller),
+        ("aktualizator odrzuca instalator innego profilu", UpdaterRejectsForeignInstaller),
+        ("aktualizator odrzuca instalator o innej sumie", UpdaterRejectsInstallerWithWrongHash),
     ];
 
     public static int Main()
@@ -549,6 +552,63 @@ internal static class Program
                 source.Root,
                 target.Root,
                 ReleaseProfileContract.Test));
+    }
+
+    private static void UpdaterAcceptsMatchingInstaller()
+    {
+        using var target = BundleFixture.Create(profile: ReleaseProfileContract.Test);
+        WithInstaller("AMC-Test-2026-10-27-0900.exe", (installer, sha256) =>
+            AccessibleMediaController.PythonUpdater.Program.VerifyInstaller(
+                installer,
+                sha256,
+                target.Root,
+                ReleaseProfileContract.Test));
+    }
+
+    private static void UpdaterRejectsForeignInstaller()
+    {
+        using var target = BundleFixture.Create(profile: ReleaseProfileContract.Test);
+        WithInstaller("AMC-Public-2026-10-27-0900.exe", (installer, sha256) =>
+            Throws(
+                "innego wydania",
+                () => AccessibleMediaController.PythonUpdater.Program.VerifyInstaller(
+                    installer,
+                    sha256,
+                    target.Root,
+                    ReleaseProfileContract.Test)));
+    }
+
+    private static void UpdaterRejectsInstallerWithWrongHash()
+    {
+        using var target = BundleFixture.Create(profile: ReleaseProfileContract.Test);
+        WithInstaller("AMC-Test-2026-10-27-0900.exe", (installer, _) =>
+            Throws(
+                "niezgodna suma",
+                () => AccessibleMediaController.PythonUpdater.Program.VerifyInstaller(
+                    installer,
+                    new string('0', 64),
+                    target.Root,
+                    ReleaseProfileContract.Test)));
+    }
+
+    private static void WithInstaller(string fileName, Action<string, string> action)
+    {
+        var directory = Path.Combine(
+            Path.GetTempPath(),
+            "amc-updater-installer-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        try
+        {
+            var installer = Path.Combine(directory, fileName);
+            File.WriteAllText(installer, "syntetyczny instalator");
+            var sha256 = Convert.ToHexString(
+                SHA256.HashData(File.ReadAllBytes(installer)));
+            action(installer, sha256);
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+        }
     }
 
     private static void Throws(string expected, Action action)

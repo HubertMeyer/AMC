@@ -56,17 +56,20 @@ do kontrolowanej archiwizacji opisanej w REL-003.
   [KEY-001-konfigurowalne-skroty-klawiaturowe.md](KEY-001-konfigurowalne-skroty-klawiaturowe.md).
 
 - `SET-001` — **W trakcie; kod priorytetów 1–3, 172 testy szerszej regresji i
-  build LiteHosta są zweryfikowane; nowa paczka oraz instalator czekają na
-  zakończenie równoległego zadania, potem pozostanie ręczny odbiór NVDA** —
+  build LiteHosta są zweryfikowane; wspólna paczka i instalator są przygotowywane,
+  potem pozostanie ręczny odbiór NVDA** —
   naprawa osiągalności pól domyślnych folderów przez Tab, przegląd nazw
   kontrolek, dostępna karta integracji z Windows, nowa karta Aktualizacje oraz
-  karta Dostępność i komunikaty. Wcześniejsza paczka v2 nie zawiera dwóch
-  ostatnich zmian. Szczegóły:
+  karta Dostępność i komunikaty. Szczegóły:
   [SET-001-audyt-ustawien-dostepnosc-integracja-windows.md](SET-001-audyt-ustawien-dostepnosc-integracja-windows.md).
 
-- `REL-002` — **W trakcie; decyzje i bezpieczna kolejność migracji zapisane,
-  dzisiejszy AMC Test zainstalowany, 16 z 18 pozostałych gałęzi lokalnych
-  usunięto, lecz GitHub i instalatory systemowe jeszcze niezmienione** — jedna
+- `REL-002` — **W trakcie; pierwsze wydanie kanału Test
+  `test-2026.10.26.1954` zostało opublikowane i odczytowo zweryfikowane na
+  GitHubie, a domyślne `main` przeniesiono fast-forwardem na kanoniczną linię
+  AMC Python. Wydanie stanowi bazę przyszłych aktualizacji z programu.
+  Późniejszy kontrakt dołączania Quick App Switchera przeszedł testy, ale
+  wymaga jeszcze następnego pełnego instalatora i wydania; rzeczywista
+  aktualizacja z menu zostanie sprawdzona przy następnym wydaniu** — jedna
   kanoniczna linia AMC Python,
   wydania AMC Test i AMC Public z tego samego commitu, dwa kanały aktualizacji,
   standardowa instalacja Windows oraz kontrolowane uporządkowanie starego C#,

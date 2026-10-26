@@ -2,12 +2,15 @@
 
 ## Status
 
-W trakcie. Decyzje i kolejność migracji są zapisane. Dzisiejszy AMC Test jest
-zbudowany, zainstalowany i uruchomiony. Pierwszy etap źródłowy rozdziela
-docelowe katalogi instalacji, blokuje sekret w instalatorze i przygotowuje
-wspólną bramkę publikacji Test/Public. Nie wykonano jeszcze publikacji,
-przepisania zdalnej gałęzi `main`, usuwania gałęzi, wydań, worktree ani starej
-instalacji WPF.
+W trakcie. Pierwsze wydanie AMC Test w kanale testowym zostało opublikowane
+26.10.2026 jako `test-2026.10.26.1954`; GitHub potwierdził instalator, manifest
+aktualizacji, plik integralności oraz ich sumy. Tag wskazuje dokładną rewizję
+`251e163a`. Domyślna gałąź `main` została następnie przeniesiona zwykłym
+fast-forwardem z historycznego WPF `1f5dccb6` na kanoniczną linię AMC Python
+`219062c8`, bez przepisywania historii. Późniejszy kontrakt dołączania Quick App
+Switchera jest zapisany w commicie `781f8283`, ale nie powstał jeszcze z niego
+następny pełny instalator. Rzeczywista aktualizacja z programu zostanie
+sprawdzona przy kolejnym wydaniu.
 
 ## Nadrzędna korekta użytkownika z 26.10.2026
 
@@ -190,6 +193,85 @@ skompilował.
   automatycznego usuwania została zatrzymana, ponieważ mogłaby przerwać
   logowanie YouTube przed gotową migracją.
 
+## Wykonany etap 2 — aktualizacja z poziomu programu
+
+### Zachowanie użytkowe
+
+- W menu `Pomoc` działa nowe polecenie `Sprawdź aktualizację AMC…`. Ta sama
+  nazwa i akcja występują w palecie `Ctrl+Shift+K`, pomocy kontekstowej
+  `Ctrl+F1` oraz pełnej pomocy klawiatury; polecenie nie ma osobnego skrótu.
+- Po sprawdzeniu otwiera się dostępne okno. Początkowy fokus trafia do pola
+  tylko do odczytu `Informacje o aktualizacji AMC`, zawierającego wersję i
+  krótkie podsumowanie zmian. Dalej znajduje się `Aktualizuj AMC` albo, gdy
+  nie ma nowej wersji, tylko `Zamknij okno aktualizacji`.
+- Nie ma wyboru kanału. Profil Test przyjmuje wyłącznie prerelease z tagiem
+  `test-YYYY.MM.DD.HHMM`, a Public wyłącznie stabilne wydanie z tagiem
+  `public-YYYY.MM.DD.HHMM`. Obcy profil, kanał, produkt, InstallId, nazwa
+  instalatora, rozmiar albo SHA-256 są odrzucane przed zamknięciem AMC.
+- Aktualizacja pobiera ten sam pełny instalator EXE, który służy nowemu
+  użytkownikowi. Pomocnik prosi AMC o zwykłe, bezpieczne zamknięcie, odmawia
+  podmiany przy nagrywaniu albo żywym składniku instalacji, uruchamia Inno
+  Setup bez dodatkowych pytań i po sukcesie ponownie otwiera AMC.
+- Cichy przebieg instalatora zachowuje wcześniejszy katalog oraz zadania Inno
+  Setup, między innymi decyzję o skrócie pulpitu i integracji Eksploratora.
+  Windows dostaje poprawny nowy AppVersion i stan deinstalatora; aktualizacja
+  nie omija instalatora przez prostą podmianę plików.
+
+### Kontrakt wydania
+
+- `Publish-AMCRelease.ps1` tworzy `amc-update-test.json` albo
+  `amc-update-public.json` z profilem, kanałem, wersją użytkową, commitem,
+  krótkim opisem oraz nazwą, rozmiarem i SHA-256 pełnego instalatora.
+- Wydanie GitHub zawiera instalator, manifest kanału i plik integralności.
+  Oddzielny ZIP aktualizacyjny nie jest potrzebny i nie jest publikowany.
+- Budowa instalatora wymaga czystych źródeł oraz zgodności commitu paczki z
+  commitem instalatora. Pełna paczka nadal zawiera prywatny runtime Python,
+  samowystarczalny LiteHost, launcher i helper aktualizacji; nowy komputer nie
+  musi mieć zainstalowanego Pythona ani .NET.
+
+### Sprawdzenie aktualizacji składników
+
+- Droga `Pomoc > Sprawdź i zaktualizuj składniki: FFmpeg i yt-dlp` nadal
+  prowadzi przez wspólną akcję do LiteHosta. Testy potwierdzają menu, paletę,
+  pomoc, dispatcher, tryb automatyczny oraz bezpieczny komunikat błędu bez
+  ujawniania ścieżek.
+- Zainstalowane składniki zostały rzeczywiście uruchomione: FFmpeg zgłosił
+  `n9.0.2-29-g6dfaba896f-20261020`, a yt-dlp `2026.08.19`; suma pliku yt-dlp
+  zgadza się z zapisanym stanem.
+- Pełne sieciowe pobranie w piaskownicy doszło do uruchomieniowej kontroli
+  nowego yt-dlp, lecz system testowy zablokował wykonanie pobranego EXE.
+  Próba zmiany współdzielonych składników poza piaskownicą nie otrzymała zgody
+  bezpieczeństwa. Rzeczywista kontrola sieciowa z menu pozostaje więc punktem
+  ręcznego odbioru, a nie zaliczonym testem aktualizacji dostawcy.
+
+## Korekta użytkownika z 26.10.2026 — Quick App Switcher w instalatorze
+
+Ta decyzja zastępuje rozpoczęty wariant, w którym klient aktualizacji AMC miał
+osobno pobierać dodatek NVDA i pytać o niego po aktualizacji programu.
+
+- Nowy instalator AMC Test musi zawierać zweryfikowaną paczkę dodatku NVDA
+  `Quick App Switcher`.
+- Na końcowej stronie interaktywnego instalatora pojawia się jednoznaczna,
+  domyślnie zaznaczona propozycja `Uruchom instalację dodatku NVDA Quick App
+  Switcher <wersja>` tylko wtedy, gdy dodatku nie ma albo zainstalowana wersja
+  jest starsza.
+- Sam instalator AMC nie modyfikuje katalogu dodatków NVDA i nie restartuje
+  czytnika. Po zgodzie uruchamia standardową paczkę `.nvda-addon`; NVDA nadal
+  pokazuje własne potwierdzenie instalacji i ewentualnego restartu.
+- Cicha aktualizacja AMC nie uruchamia instalatora dodatku. Dzięki temu
+  aktualizator programu nie wyświetla nieoczekiwanego okna ani nie restartuje
+  NVDA. Dodatek jest proponowany przy ręcznym uruchomieniu nowego instalatora.
+- Budowa instalatora AMC Test zatrzymuje się, jeśli nie otrzyma paczki Quick
+  App Switchera. Skrypt sprawdza nazwę dodatku i wersję z `manifest.ini`, nazwę
+  pliku, rozmiar oraz SHA-256, a metadane zapisuje w pliku integralności
+  instalatora.
+
+Pierwszą przewidzianą paczką jest `quickAppSwitcher-0.1.6.nvda-addon`: 17 920
+bajtów, SHA-256
+`16dc660e6b3fece58af8ccb84ccc43824bcb7744e1f18a37ffa629685349a61f`.
+Na bieżącym komputerze wersja 0.1.6 jest już zainstalowana, więc instalator nie
+powinien proponować jej ponownie.
+
 ## Kolejność porządkowania
 
 1. Zamrozić dzisiejszy commit jako pierwszy kandydat kanoniczny i dokończyć
@@ -241,11 +323,52 @@ tych samych plików profilu.
 - Atomowa instalacja pakietu `39f0d3f2`: zaliczona.
 - Kontrolowany start: zaliczony.
 - Ręczny odbiór czterech nowych zakresów z NVDA: oczekuje.
-- Instalator systemowy Python na C: jeszcze nie zbudowany w tym etapie.
-- Aktualizacja z GitHuba: jeszcze niezaimplementowana i nietestowana.
-- Publikacja GitHub bieżącego Python: niewykonana.
-- Testy kontraktu instalatora i publikacji: `22 passed`.
-- Testy składu paczek i profili wydania: `42 passed`.
+- Kod mechanizmu aktualizacji z GitHuba: zaimplementowany; profil, kanał,
+  manifest, rozmiar i SHA-256 są sprawdzane przed zamknięciem aplikacji.
+- Ukierunkowane testy Pythona mechanizmu, instalatora, publikacji i składników:
+  **80 zaliczonych**.
+- Pełna regresja wxPython: **2075 zaliczonych, 111 pominiętych i 13 podtestów
+  zaliczonych**.
+- Testy launchera i aktualizatora .NET: **33 z 33 zaliczone**, w tym przyjęcie
+  pełnego instalatora właściwego profilu i odrzucenie obcego profilu oraz
+  niezgodnej sumy.
+- LiteHost Release: build zaliczony, 0 ostrzeżeń i 0 błędów.
+- Pierwsza próba pakowania wykryła wyścig kontrolowanego startu: interfejs
+  zapisywał `READY`, lecz natychmiastowe `ExitMainLoop` mogło ominąć oczekujące
+  zdarzenie zniszczenia ramki i pozostawić procesy testowe. Wyjście jest teraz
+  planowane przez `wx.CallAfter` po `Close`; bramka nadal wymaga naturalnego
+  zakończenia wszystkich procesów i niczego nie zabija. Testy ukierunkowane po
+  tej korekcie: **38 zaliczonych**.
+- Pełna paczka kandydata: **2135 plików**, pełna kontrola integralności i
+  kontrolowany start interfejsu oraz hosta zaliczone; po teście nie pozostał
+  żaden proces paczki.
+- Instalator systemowy AMC Test został zbudowany jako
+  `AMC-Test-2026-10-26-1954.exe` (134 236 985 bajtów). Lokalna sucha próba
+  wydania potwierdziła zgodność profilu Test, kanału Test, prerelease, nazwy,
+  rozmiaru, commitu i SHA-256 między instalatorem, plikiem integralności i
+  `amc-update-test.json`. Instalator nie został uruchomiony ani zainstalowany.
+- Pierwsze prawdziwe wydanie GitHub kanału Test zostało opublikowane jako
+  `test-2026.10.26.1954`. GitHub potwierdził profil prerelease, tag na commicie
+  `251e163a`, instalator 134 236 985 bajtów oraz zgodne z lokalnymi plikami
+  sumy SHA-256 instalatora, manifestu aktualizacji i pliku integralności.
+- Rzeczywista aktualizacja z programu oczekuje na następną wersję wyższą niż
+  zainstalowane `0.1.0-alpha.434`; pierwsze wydanie stanowi bazę kanału.
+- Kontrakt nowego instalatora z Quick App Switcherem: zaimplementowany w
+  źródłach; celowany test strukturalny ma wynik **20 zaliczonych**, a Inno
+  Setup 7.1.0 poprawnie skompilował mały instalator kontrolny z prawdziwą
+  paczką 0.1.6. Kontrolnego EXE nie uruchomiono i po teście usunięto.
+- Kontrakt Quick App Switchera został zapisany po zbudowaniu instalatora
+  `AMC-Test-2026-10-26-1954.exe`. To opublikowane pierwsze wydanie nie zawiera
+  jeszcze dodatku; następny instalator Test ma powstać z commitu zawierającego
+  kontrakt i zapisać dane dodatku w pliku integralności.
+- Zweryfikowana gałąź źródłowa została wysłana bez przepisywania historii jako
+  `github/integration/sonos-broker-20261024`; GitHub potwierdził jej zdalny
+  koniec.
+- Po ponownym powiązaniu działającego procesu, manifestu instalacji, instalatora
+  i commitu użytkownik polecił opublikować tę linię jako kod bieżącego AMC.
+  26.10.2026 zdalny `main` przesunięto zwykłym fast-forwardem z `1f5dccb6` na
+  `219062c8`. Domyślną gałęzią repozytorium pozostał `main`; nie wykonano
+  force-pusha ani usunięcia historii WPF.
 
 ## Znane ograniczenia
 
@@ -256,13 +379,32 @@ tych samych plików profilu.
   migracja OAuth musi zachować lub uczciwie wyłączyć logowanie YouTube.
 - Historyczny WPF `alpha.427` został dziś zainstalowany przez równoległe
   zadanie. Nie jest dowodem aktualności AMC i nie może zastąpić Python.
-- Publiczny GitHub pokazuje obecnie historię WPF; zmiana `main` jest osobną,
-  jeszcze niewykonaną operacją.
+- Tag wydania `test-2026.10.26.1954` wskazuje dokładny kod zainstalowanej wersji
+  `0.1.0-alpha.434`, natomiast ruchome `main` zawiera także późniejsze commity
+  dokumentacyjne i kontrakt następnego instalatora z Quick App Switcherem.
 
 ## Wersja i commit
 
-- Kod: `bba5e92d687ade1998e79c88656e1a5d545abcf2`.
-- Pakiet: `39f0d3f2`.
+- Wersja techniczna przygotowywanego kandydata: `0.1.0-alpha.434`.
+- Bazowy stan przed zmianą: `73279fbb15a1cd34c6813f24e097e0467889a197`.
+- Commit mechanizmu aktualizacji: `66118f651309efc711c2f090c2e0e4c42e37a80c`.
+- Dokładna rewizja paczki i instalatora:
+  `251e163afd1fe7697c3efe525f1fa284050cfebb`.
+- Kandydat instalatora:
+  `D:\Projekty Codex\AMC aktualizacje\AMC Test 0.1.0-alpha.434 kandydat 2026-10-26\instalator\AMC-Test-2026-10-26-1954.exe`.
+- SHA-256 instalatora:
+  `b8a411799beb086fb17f0f1dfaca795fd37ee211fd12fde352fa309984554b8e`.
 - Instalacja: `D:\Projekty Codex\AMC Python`.
-- Publikacja: brak.
-- Commit etapu źródłowego: `d87a27f6` (`build(release): rozdziel kanały Test i Public`).
+- Instalacja kandydata: użytkownik potwierdził odbiór przed publikacją.
+- Publikacja GitHub Release: wykonana 26.10.2026; wydanie wstępne
+  `test-2026.10.26.1954`, tag i źródła na
+  `251e163afd1fe7697c3efe525f1fa284050cfebb`.
+- Pierwszy punkt migracji zdalnego `main` na kanoniczną linię Python:
+  `219062c81e2526131e5bc76846ecac06cf5ea06d`; poprzedni punkt `main`
+  `1f5dccb6` pozostaje w historii oraz w zweryfikowanym archiwum WPF.
+- Adres wydania:
+  `https://github.com/michalkasperczak/AMC/releases/tag/test-2026.10.26.1954`.
+- Wcześniejszy commit etapu źródłowego: `d87a27f6`
+  (`build(release): rozdziel kanały Test i Public`).
+- Commit kontraktu Quick App Switchera w instalatorze: `781f8283`
+  (`feat(installer): offer Quick App Switcher with AMC Test`).

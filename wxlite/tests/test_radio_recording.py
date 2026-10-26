@@ -299,7 +299,7 @@ def test_recording_shortcuts_have_the_scope_of_full_amc() -> None:
 def test_stop_all_recordings_is_global_in_surfaces_and_execution() -> None:
     from amc_wx_lite import menu_model
 
-    assert SESSION_INDEPENDENT_ACTIONS == frozenset({Action.RECORD_STOP_ALL})
+    assert Action.RECORD_STOP_ALL in SESSION_INDEPENDENT_ACTIONS
     for supported in (
         TIDAL_SUPPORTED_ACTIONS,
         SPOTIFY_SUPPORTED_ACTIONS,

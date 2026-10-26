@@ -409,6 +409,7 @@ class Action(Enum):
     SESSION_OPTIONS = "session.options"
     HELP = "help"
     KEYBOARD_HELP = "keyboard.help"
+    CHECK_APPLICATION_UPDATE = "help.checkApplicationUpdate"
     UPDATE_MEDIA_COMPONENTS = "help.updateMediaComponents"
     REPORT_PROBLEM = "help.reportProblem"
     VERSION_INFO = "help.version"
@@ -427,6 +428,24 @@ class CommandPresentation:
     name: str
     description: str
     shortcut: str
+    menu_label: str | None = None
+
+
+_STATIC_COMMAND_PRESENTATIONS: dict[Action, CommandPresentation] = {
+    Action.CHECK_APPLICATION_UPDATE: CommandPresentation(
+        Action.CHECK_APPLICATION_UPDATE,
+        "Sprawdź aktualizację AMC",
+        "Sprawdź i zainstaluj najnowsze wydanie z kanału przypisanego do tej wersji AMC",
+        "",
+        "Sprawdź &aktualizację AMC…",
+    ),
+}
+
+
+def command_presentation(action: Action) -> CommandPresentation | None:
+    """Jedna nazwa, opis i etykieta menu dla polecenia aplikacji."""
+
+    return _STATIC_COMMAND_PRESENTATIONS.get(action)
 
 
 _CTRL_F5_PRESENTATIONS: dict[str, CommandPresentation] = {
@@ -492,6 +511,7 @@ def ctrl_f5_presentation(session_label: str | None) -> CommandPresentation | Non
 # jeden zbior, zeby skrot, menu, paleta, pomoc i dispatcher nie rozjechaly sie.
 SESSION_INDEPENDENT_ACTIONS = frozenset({
     Action.RECORD_STOP_ALL,
+    Action.CHECK_APPLICATION_UPDATE,
 })
 
 
@@ -2340,6 +2360,9 @@ def _help_entries() -> list[tuple[str, str, Action]]:
         ),
         Action.HELP: "Ta pomoc",
         Action.KEYBOARD_HELP: "Włącz lub wyłącz Pomoc klawiatury",
+        Action.CHECK_APPLICATION_UPDATE: _STATIC_COMMAND_PRESENTATIONS[
+            Action.CHECK_APPLICATION_UPDATE
+        ].description,
         Action.UPDATE_MEDIA_COMPONENTS: (
             "Sprawdź, pobierz i zweryfikuj składniki FFmpeg i yt-dlp"
         ),
@@ -2478,6 +2501,7 @@ def _help_entries() -> list[tuple[str, str, Action]]:
         Action.EXPORT_BACKUP,
         Action.IMPORT_BACKUP,
         Action.OPEN_CONTAINING_FOLDER,
+        Action.CHECK_APPLICATION_UPDATE,
         Action.UPDATE_MEDIA_COMPONENTS,
         Action.REPORT_PROBLEM,
     ):

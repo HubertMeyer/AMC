@@ -223,3 +223,39 @@ def test_host_client_uses_narrow_status_and_update_contract() -> None:
             1_200.0,
         ),
     ]
+
+
+def test_component_update_failure_does_not_speak_technical_exception(
+    tmp_path: Path,
+) -> None:
+    announcements: list[str] = []
+
+    class Client:
+        alive = True
+
+        @staticmethod
+        def update_media_components(*, automatic: bool = False) -> dict:
+            raise RuntimeError(r"C:\sekretna-sciezka\ffmpeg.exe: błąd 500")
+
+    class Runner:
+        @staticmethod
+        def submit(_stream, work, _done, failed):
+            try:
+                work()
+            except Exception as error:
+                failed(error)
+
+    frame = type("Frame", (), {})()
+    frame.client = Client()
+    frame.runner = Runner()
+    frame.store = type("Store", (), {"directory": tmp_path})()
+    frame._component_update_pending = False
+    frame.announcer = type("Announcer", (), {"say": staticmethod(announcements.append)})()
+
+    gui.LiteFrame._update_media_components(frame)
+
+    assert announcements[-1] == (
+        "Nie udało się bezpiecznie zaktualizować składników. "
+        "Szczegóły zapisano w dzienniku AMC"
+    )
+    assert "sekretna-sciezka" not in announcements[-1]

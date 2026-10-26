@@ -4,6 +4,7 @@ param(
     [Parameter(Mandatory)] [string]$BundleRoot,
     [Parameter(Mandatory)] [ValidatePattern('^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$')] [string]$Version,
     [Parameter(Mandatory)] [string]$OutputDirectory,
+    [string]$NvdaAddonPath = "",
     [string]$IsccPath = ""
 )
 
@@ -17,6 +18,7 @@ $installerScript = Join-Path $repositoryRoot "installer\AMC_Wx_Setup.iss"
 $startupSmokeTool = Join-Path $repositoryRoot "wxlite\tools\Test-AMCBundleStartup.ps1"
 $manifestPath = Join-Path $bundle "bundle-manifest.json"
 $launcher = Join-Path $bundle "AMC.exe"
+$nvdaAddon = $null
 
 Push-Location $repositoryRoot
 try {
@@ -49,6 +51,77 @@ if ([string]$manifest.releaseProfile -ne $Profile) {
 }
 if ([bool]$manifest.sourceDirty) {
     throw "Instalator nie może powstać z niezapisanych źródeł roboczych."
+}
+if ([string]$manifest.sourceRevision -cne $installerSourceRevision) {
+    throw "Paczka i instalator muszą pochodzić z tego samego commitu."
+}
+
+# Najbliższy instalator AMC Test ma zawierać sprawdzoną paczkę Quick App
+# Switchera. Inno Setup jedynie proponuje uruchomienie standardowego
+# instalatora NVDA; bez zgody użytkownika nie instaluje dodatku ani nie
+# restartuje czytnika ekranu.
+if ($Profile -eq "test" -and [string]::IsNullOrWhiteSpace($NvdaAddonPath)) {
+    throw "Instalator AMC Test wymaga paczki Quick App Switcher przekazanej przez -NvdaAddonPath."
+}
+if (-not [string]::IsNullOrWhiteSpace($NvdaAddonPath)) {
+    $resolvedAddon = [IO.Path]::GetFullPath($NvdaAddonPath)
+    if (-not (Test-Path -LiteralPath $resolvedAddon -PathType Leaf) -or
+        [IO.Path]::GetExtension($resolvedAddon) -cne ".nvda-addon") {
+        throw "Nie znaleziono prawidłowej paczki .nvda-addon."
+    }
+    $addonFile = Get-Item -LiteralPath $resolvedAddon
+    if ($addonFile.Length -le 0 -or $addonFile.Length -gt 64MB) {
+        throw "Paczka dodatku NVDA ma nieprawidłowy rozmiar."
+    }
+
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
+    $archive = [IO.Compression.ZipFile]::OpenRead($resolvedAddon)
+    try {
+        $addonManifestEntry = @($archive.Entries | Where-Object {
+            $_.FullName.Replace("\", "/") -ceq "manifest.ini"
+        })
+        if ($addonManifestEntry.Count -ne 1 -or
+            $addonManifestEntry[0].Length -le 0 -or
+            $addonManifestEntry[0].Length -gt 256KB) {
+            throw "Paczka dodatku NVDA nie zawiera jednoznacznego manifest.ini."
+        }
+        $reader = [IO.StreamReader]::new(
+            $addonManifestEntry[0].Open(),
+            [Text.UTF8Encoding]::new($false, $true),
+            $true)
+        try {
+            $addonManifest = $reader.ReadToEnd()
+        }
+        finally {
+            $reader.Dispose()
+        }
+    }
+    finally {
+        $archive.Dispose()
+    }
+    $addonNameMatch = [Regex]::Match(
+        $addonManifest,
+        '(?m)^name\s*=\s*(?<value>[^\r\n]+)\s*$')
+    $addonVersionMatch = [Regex]::Match(
+        $addonManifest,
+        '(?m)^version\s*=\s*(?<value>\d+(?:\.\d+){1,3})\s*$')
+    if (-not $addonNameMatch.Success -or
+        $addonNameMatch.Groups["value"].Value.Trim() -cne "quickAppSwitcher" -or
+        -not $addonVersionMatch.Success) {
+        throw "Paczka NVDA nie jest dodatkiem Quick App Switcher z prawidłową wersją."
+    }
+    $addonVersion = $addonVersionMatch.Groups["value"].Value.Trim()
+    $expectedAddonFileName = "quickAppSwitcher-$addonVersion.nvda-addon"
+    if ($addonFile.Name -cne $expectedAddonFileName) {
+        throw "Nazwa paczki dodatku NVDA nie zgadza się z wersją w manifest.ini."
+    }
+    $nvdaAddon = [ordered]@{
+        displayName = "Quick App Switcher"
+        version = $addonVersion
+        fileName = $addonFile.Name
+        bytes = $addonFile.Length
+        sha256 = (Get-FileHash -LiteralPath $resolvedAddon -Algorithm SHA256).Hash.ToLowerInvariant()
+    }
 }
 
 # Lokalny plik używany podczas rozwoju nie może stać się artefaktem GitHub
@@ -135,16 +208,24 @@ if ([string]::IsNullOrWhiteSpace($IsccPath) -or
 }
 
 New-Item -ItemType Directory -Path $output -Force | Out-Null
+$compileArguments = @(
+    "/DProfil=$Profile",
+    "/DWersja=$Version",
+    ('/DEtykietaUzytkowa="{0}"' -f $displayVersion),
+    "/DEtykietaPliku=$fileTimestamp",
+    ('/DZrodlo="{0}"' -f $bundle),
+    ('/DWyjscie="{0}"' -f $output)
+)
+if ($null -ne $nvdaAddon) {
+    $compileArguments += @(
+        ('/DNvdaAddonPath="{0}"' -f $resolvedAddon),
+        ('/DNvdaAddonFileName="{0}"' -f $nvdaAddon.fileName),
+        ('/DNvdaAddonVersion="{0}"' -f $nvdaAddon.version)
+    )
+}
+$compileArguments += ('"{0}"' -f $installerScript)
 $compile = Start-Process -FilePath $IsccPath `
-    -ArgumentList @(
-        "/DProfil=$Profile",
-        "/DWersja=$Version",
-        ('/DEtykietaUzytkowa="{0}"' -f $displayVersion),
-        "/DEtykietaPliku=$fileTimestamp",
-        ('/DZrodlo="{0}"' -f $bundle),
-        ('/DWyjscie="{0}"' -f $output),
-        ('"{0}"' -f $installerScript)
-    ) `
+    -ArgumentList $compileArguments `
     -WorkingDirectory $repositoryRoot `
     -Wait -PassThru -WindowStyle Hidden
 try {
@@ -178,6 +259,7 @@ $integrity = [ordered]@{
     sourceRevision = [string]$manifest.sourceRevision
     installerSourceRevision = $installerSourceRevision
     secretScan = "passed"
+    nvdaAddon = $nvdaAddon
 }
 $integrityPath = Join-Path $output ($baseName + ".integrity.json")
 $integrity | ConvertTo-Json | Set-Content -LiteralPath $integrityPath -Encoding utf8

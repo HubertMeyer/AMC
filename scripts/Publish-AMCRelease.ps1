@@ -12,6 +12,7 @@ param(
     [string]$ArtifactsDirectory,
 
     [string]$NotesPath = "",
+    [string]$SummaryPath = "",
     [string]$Repository = "michalkasperczak/AMC",
     [switch]$Publish
 )
@@ -22,9 +23,16 @@ $ErrorActionPreference = "Stop"
 $repositoryRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot ".."))
 $artifacts = [IO.Path]::GetFullPath($ArtifactsDirectory)
 $displayName = if ($Profile -eq "test") { "AMC Test" } else { "AMC Public" }
+$productId = if ($Profile -eq "test") {
+    "org.accessible-media-controller.test"
+} else {
+    "org.accessible-media-controller.public"
+}
+$installId = if ($Profile -eq "test") { "AMC.Test.win-x64" } else { "AMC.Public.win-x64" }
 $expectedInstallerPrefix = if ($Profile -eq "test") { "AMC-Test-" } else { "AMC-Public-" }
 $preparedNotesPath = Join-Path $artifacts ("release-notes-$Profile-$Version.md")
 $preparedManifestPath = Join-Path $artifacts ("release-ready-$Profile-$Version.json")
+$updateManifestPath = Join-Path $artifacts ("amc-update-$Profile.json")
 
 if (-not (Test-Path -LiteralPath $artifacts -PathType Container)) {
     throw "Nie istnieje katalog artefaktów: $artifacts"
@@ -97,14 +105,33 @@ if ($sourceRevision -notmatch '^[0-9a-f]{40}$') {
     throw "Plik integralności nie zawiera pełnej rewizji źródeł."
 }
 
+$releaseNotesText = ""
 $notes = New-Object System.Collections.Generic.List[string]
 if (-not [string]::IsNullOrWhiteSpace($NotesPath)) {
     $resolvedNotes = [IO.Path]::GetFullPath($NotesPath)
     if (-not (Test-Path -LiteralPath $resolvedNotes -PathType Leaf)) {
         throw "Nie istnieje plik opisu wydania: $resolvedNotes"
     }
-    $notes.Add((Get-Content -LiteralPath $resolvedNotes -Raw).TrimEnd())
+    $releaseNotesText = (Get-Content -LiteralPath $resolvedNotes -Raw).Trim()
+    $notes.Add($releaseNotesText)
     $notes.Add("")
+}
+$summary = ""
+if (-not [string]::IsNullOrWhiteSpace($SummaryPath)) {
+    $resolvedSummary = [IO.Path]::GetFullPath($SummaryPath)
+    if (-not (Test-Path -LiteralPath $resolvedSummary -PathType Leaf)) {
+        throw "Nie istnieje plik krótkiego podsumowania: $resolvedSummary"
+    }
+    $summary = (Get-Content -LiteralPath $resolvedSummary -Raw).Trim()
+}
+elseif (-not [string]::IsNullOrWhiteSpace($releaseNotesText)) {
+    $summary = $releaseNotesText
+}
+else {
+    $summary = "Poprawki działania, dostępności i zgodności AMC."
+}
+if ([string]::IsNullOrWhiteSpace($summary) -or $summary.Length -gt 6000) {
+    throw "Krótkie podsumowanie aktualizacji musi mieć od 1 do 6000 znaków."
 }
 $notes.Add("## Sumy kontrolne SHA-256")
 $notes.Add("")
@@ -114,6 +141,30 @@ $notes.Add("")
 $notes.Add("Źródła: $sourceRevision")
 [IO.File]::WriteAllLines($preparedNotesPath, $notes, [Text.UTF8Encoding]::new($false))
 
+$updateChannel = if ($Profile -eq "test") { "test" } else { "stable" }
+$updateManifest = [ordered]@{
+    schemaVersion = 1
+    repository = $Repository
+    tag = $tag
+    version = $Version
+    displayName = $displayName
+    displayVersion = $displayVersion
+    profile = $Profile
+    productId = $productId
+    installId = $installId
+    updateChannel = $updateChannel
+    prerelease = $isPrerelease
+    sourceRevision = $sourceRevision
+    summary = $summary
+    installer = [ordered]@{
+        fileName = $baseName
+        bytes = $installer.Length
+        sha256 = $actualHash
+    }
+}
+$updateManifest | ConvertTo-Json -Depth 4 | Set-Content `
+    -LiteralPath $updateManifestPath -Encoding utf8
+
 $prepared = [ordered]@{
     schemaVersion = 1
     repository = $Repository
@@ -122,11 +173,12 @@ $prepared = [ordered]@{
     displayName = $displayName
     displayVersion = $displayVersion
     profile = $Profile
-    updateChannel = if ($Profile -eq "test") { "test" } else { "stable" }
+    updateChannel = $updateChannel
     prerelease = $isPrerelease
     installer = $baseName
     bytes = $installer.Length
     sha256 = $actualHash
+    updateManifestFile = [IO.Path]::GetFileName($updateManifestPath)
     sourceRevision = $sourceRevision
     integrityFile = [IO.Path]::GetFileName($integrityPath)
     notesFile = [IO.Path]::GetFileName($preparedNotesPath)
@@ -137,6 +189,7 @@ $prepared | ConvertTo-Json | Set-Content -LiteralPath $preparedManifestPath -Enc
 if (-not $Publish) {
     Write-Output "Weryfikacja $displayName zakończona. Niczego nie opublikowano."
     Write-Output "Opis wydania: $preparedNotesPath"
+    Write-Output "Manifest aktualizacji: $updateManifestPath"
     Write-Output "Manifest gotowości: $preparedManifestPath"
     return
 }
@@ -169,7 +222,11 @@ $releaseArguments = @(
 if ($isPrerelease) {
     $releaseArguments += "--prerelease"
 }
-$releaseArguments += @($installerPath, $integrityPath)
+$releaseArguments += @(
+    $installerPath,
+    $updateManifestPath,
+    $integrityPath
+)
 & gh @releaseArguments
 if ($LASTEXITCODE -ne 0) {
     throw "GitHub nie potwierdził utworzenia wydania."
@@ -187,15 +244,22 @@ $asset = @($release.assets) | Where-Object { [string]$_.name -eq $baseName } | S
 $integrityAsset = @($release.assets) | Where-Object {
     [string]$_.name -eq [IO.Path]::GetFileName($integrityPath)
 } | Select-Object -First 1
+$updateManifestAsset = @($release.assets) | Where-Object {
+    [string]$_.name -eq [IO.Path]::GetFileName($updateManifestPath)
+} | Select-Object -First 1
 if ($null -eq $asset -or [long]$asset.size -ne $installer.Length -or [string]$asset.state -ne "uploaded") {
     throw "Opublikowany instalator nie przeszedł kontroli nazwy, rozmiaru i stanu."
 }
 if ($null -eq $integrityAsset -or [string]$integrityAsset.state -ne "uploaded") {
     throw "GitHub nie potwierdził pliku integralności."
 }
+if ($null -eq $updateManifestAsset -or
+    [string]$updateManifestAsset.state -ne "uploaded") {
+    throw "GitHub nie potwierdził manifestu kanału aktualizacji."
+}
 if (-not [string]$release.body.Contains($baseName) -or
     -not [string]$release.body.Contains($actualHash)) {
-    throw "Opis opublikowanego wydania nie zawiera nazwy i SHA-256 instalatora."
+    throw "Opis opublikowanego wydania nie zawiera nazwy i sumy SHA-256 instalatora."
 }
 
 $prepared.published = $true
