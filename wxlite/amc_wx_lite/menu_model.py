@@ -26,6 +26,7 @@ Czego tu NIE MA i dlaczego:
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
+from typing import Mapping
 
 from .navigation import SessionId
 from . import session_order as session_order_model
@@ -40,6 +41,8 @@ from .shortcuts import (
     WIIM_SUPPORTED_ACTIONS,
     ctrl_f5_presentation,
     describe_action,
+    normalize_shortcut_overrides,
+    readable_shortcut,
 )
 
 
@@ -225,6 +228,7 @@ def menus_for_session(
     session_order: object = None,
     *,
     youtube_account_available: bool = False,
+    shortcut_overrides: Mapping[Action, str] | None = None,
 ) -> tuple[Menu, ...]:
     """Menu bez polecen nalezacych do innej sesji.
 
@@ -232,6 +236,7 @@ def menus_for_session(
     grup na poczatku, koncu ani dwoch separatorow obok siebie.
     """
 
+    overrides = normalize_shortcut_overrides(shortcut_overrides)
     supported = {
         SessionId.TIDAL: TIDAL_SUPPORTED_ACTIONS,
         SessionId.WIIM: WIIM_SUPPORTED_ACTIONS,
@@ -308,6 +313,13 @@ def menus_for_session(
                         f"&{number}. "
                         f"{describe_action(entry.action, 'Spotify')}{suffix}"
                     ),
+                )
+            if entry.action in overrides:
+                custom = overrides[entry.action]
+                entry = replace(
+                    entry,
+                    shortcut=readable_shortcut(custom) if custom else None,
+                    accelerator=False,
                 )
             items.append(entry)
         while items and items[-1].is_separator:
@@ -1749,7 +1761,7 @@ def build_menus(
         "&Ustawienia",
         (
             MenuItem(
-                "&Interfejs i zachowanie odtwarzania…",
+                "&Ustawienia programu…",
                 Action.GENERAL_SETTINGS,
                 shortcut="Ctrl+,",
                 accelerator=False,

@@ -147,9 +147,15 @@ const
     '.3gpp|.m3u|.m3u8|.pls|.xspf|.amc-partial';
   ShellClassesRoot = 'Software\Classes\';
   ShellCapabilitiesRoot = 'Software\AccessibleMultimediaController\{#ShellProfileKey}\Capabilities';
+  ShellSettingsRoot = 'Software\AccessibleMultimediaController\{#ShellProfileKey}\ShellIntegration';
   ShellRegisteredApplication = '{#ShellRegisteredApplication}';
   ShellClassPrefix = 'AccessibleMediaController.{#ShellProfileKey}.';
   ShellVerbPrefix = 'AccessibleMediaController.{#ShellProfileKey}.';
+
+var
+  SelectedShellExtensions: string;
+  ShellContextEnabled: Boolean;
+  ShellOpenWithEnabled: Boolean;
 
 function DirectoryHasEntries(const Directory: string): Boolean;
 var
@@ -222,6 +228,45 @@ begin
   Result := ShellClassPrefix + Copy(Extension, 2, Length(Extension) - 1);
 end;
 
+procedure LoadShellIntegrationSelection;
+var
+  Managed, ContextValue, OpenWithValue: Cardinal;
+  StoredExtensions: string;
+begin
+  { Po pierwszym zapisie z Ustawień to aplikacja jest źródłem zamiaru
+    użytkownika. Aktualizacja instalatora nie może z powrotem włączyć 48
+    rozszerzeń tylko dlatego, że zapamiętała starszy zestaw zadań. }
+  if RegQueryDWordValue(HKA, ShellSettingsRoot, 'ManagedByApplication', Managed)
+     and (Managed = 1) then
+  begin
+    ShellContextEnabled :=
+      RegQueryDWordValue(HKA, ShellSettingsRoot, 'ContextMenuEnabled', ContextValue)
+      and (ContextValue = 1);
+    ShellOpenWithEnabled :=
+      RegQueryDWordValue(HKA, ShellSettingsRoot, 'OpenWithEnabled', OpenWithValue)
+      and (OpenWithValue = 1);
+    if not RegQueryStringValue(
+         HKA, ShellSettingsRoot, 'SelectedExtensions', StoredExtensions) then
+      StoredExtensions := '';
+    SelectedShellExtensions := StoredExtensions;
+  end
+  else
+  begin
+    ShellContextEnabled := WizardIsTaskSelected('shellcontext');
+    ShellOpenWithEnabled := WizardIsTaskSelected('shellopenwith');
+    SelectedShellExtensions := ShellExtensions;
+  end;
+end;
+
+function ShellExtensionSelected(const Extension: string): Boolean;
+begin
+  { Rejestr może zmienić także inny program. Iterujemy zawsze po zamkniętym
+    katalogu instalatora, więc obcy tekst nie stanie się nazwą klucza. }
+  Result := Pos(
+    '|' + Lowercase(Extension) + '|',
+    '|' + Lowercase(SelectedShellExtensions) + '|') > 0;
+end;
+
 procedure RemoveShellIntegration;
 var
   Remaining, Extension, ClassName, AssociationRoot: string;
@@ -253,7 +298,7 @@ begin
   Executable := ExpandConstant('{app}\AMC.exe');
   Remaining := ShellExtensions;
 
-  if WizardIsTaskSelected('shellopenwith') then
+  if ShellOpenWithEnabled and (SelectedShellExtensions <> '') then
   begin
     RegWriteStringValue(
       HKA,
@@ -275,12 +320,14 @@ begin
   while Remaining <> '' do
   begin
     Extension := PopShellExtension(Remaining);
+    if not ShellExtensionSelected(Extension) then
+      Continue;
     ClassName := ShellClassFor(Extension);
     ClassRoot := ShellClassesRoot + ClassName;
     AssociationRoot := ShellClassesRoot + 'SystemFileAssociations\' + Extension +
       '\shell\' + ShellVerbPrefix;
 
-    if WizardIsTaskSelected('shellcontext') then
+    if ShellContextEnabled then
     begin
       RegWriteStringValue(HKA, AssociationRoot + 'open', '', '{#ShellOpenLabel}');
       RegWriteStringValue(HKA, AssociationRoot + 'open', 'Icon', Executable + ',0');
@@ -292,7 +339,7 @@ begin
       RegWriteStringValue(HKA, AssociationRoot + 'queue\command', '', Command);
     end;
 
-    if WizardIsTaskSelected('shellopenwith') then
+    if ShellOpenWithEnabled then
     begin
       RegWriteStringValue(
         HKA,
@@ -342,6 +389,7 @@ begin
     { Dopiero zweryfikowana instalacja zmienia wpisy TEGO profilu.
       Odznaczenie zadania jest dzięki temu prawdziwym wyłączeniem, nie tylko
       brakiem nowych wpisów. }
+    LoadShellIntegrationSelection;
     RemoveShellIntegration;
     RegisterShellIntegration;
   end;

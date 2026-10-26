@@ -35,6 +35,7 @@ from .service_picker import (
     normalize_destination_ids,
     normalize_remembered_destinations,
 )
+from .shortcuts import normalize_shortcut_overrides, serialize_shortcut_overrides
 from .transport_parity import (
     normalize_custom_seek_seconds,
     normalize_message_templates,
@@ -330,6 +331,11 @@ class Options:
     #: Prywatne teksty komunikatow. Klucze sa filtrowane do zamknietego
     #: katalogu, a pusty tekst pozostaje swiadomym wylaczeniem zdarzenia.
     message_templates: dict[str, str] | None = None
+    #: Prywatne nadpisania polityki aktualizacji składników. ``None`` oznacza
+    #: dziedziczenie dotychczasowego wyboru z profilu głównego AMC do
+    #: pierwszego zapisu karty Aktualizacje.
+    component_check_automatically: bool | None = None
+    component_download_automatically: bool | None = None
     #: Prywatne nadpisania ustawien nagrywania. ``None`` oznacza dalsze
     #: dziedziczenie wartosci z profilu glownego AMC; pusty folder oznacza
     #: swiadomy wybor systemowego folderu domyslnego hosta.
@@ -455,6 +461,13 @@ class Options:
             self.message_templates = normalize_message_templates(
                 self.message_templates
             )
+        for name in (
+            "component_check_automatically",
+            "component_download_automatically",
+        ):
+            value = getattr(self, name)
+            if value is not None and type(value) is not bool:
+                setattr(self, name, None)
         if self.radio_recording_format is not None:
             formats = ("Mp3", "Aac", "Flac", "Original", "Wav")
             value = str(self.radio_recording_format).strip().casefold()
@@ -531,6 +544,9 @@ class LiteState:
     options: Options = field(default_factory=Options)
     stations: list[Station] = field(default_factory=list)
     navigation: dict = field(default_factory=dict)
+    #: Prywatne, użytkowe skróty AMC Python. Klucze techniczne nie trafiają
+    #: do kontrolek; interfejs zawsze mapuje je na jawne nazwy poleceń.
+    shortcut_overrides: dict[str, str] = field(default_factory=dict)
     #: Prywatny, trwaly przelacznik losowania dla sesji, ktore faktycznie
     #: maja w AMC Test wspierany tor nastepstwa. Brak klucza oznacza wylaczone.
     shuffle_enabled_by_session: dict[str, bool] = field(default_factory=dict)
@@ -801,6 +817,9 @@ class StateStore:
             options=options,
             stations=stations,
             navigation=navigation if isinstance(navigation, dict) else {},
+            shortcut_overrides=serialize_shortcut_overrides(
+                normalize_shortcut_overrides(raw.get("shortcut_overrides"))
+            ),
             shuffle_enabled_by_session=_read_shuffle_enabled(
                 raw.get("shuffle_enabled_by_session")
             ),
@@ -865,6 +884,9 @@ class StateStore:
             "options": asdict(state.options),
             "stations": [asdict(station) for station in state.stations],
             "navigation": state.navigation,
+            "shortcut_overrides": serialize_shortcut_overrides(
+                normalize_shortcut_overrides(state.shortcut_overrides)
+            ),
             "shuffle_enabled_by_session": _read_shuffle_enabled(
                 state.shuffle_enabled_by_session
             ),

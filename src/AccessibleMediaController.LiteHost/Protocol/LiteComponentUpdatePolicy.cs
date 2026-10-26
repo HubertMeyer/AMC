@@ -39,6 +39,14 @@ internal sealed record LiteComponentUpdatePolicy(
         }
     }
 
+    internal static LiteComponentUpdatePolicy Resolve(string? statePath, JsonElement args)
+    {
+        var inherited = Read(statePath);
+        return new LiteComponentUpdatePolicy(
+            LiteArgs.ReadBool(args, "checkAutomatically", inherited.CheckAutomatically),
+            LiteArgs.ReadBool(args, "downloadAutomatically", inherited.DownloadAutomatically));
+    }
+
     internal static bool IsDue(DateTimeOffset? checkedAtUtc, DateTimeOffset nowUtc) =>
         checkedAtUtc is not { } checkedAt
         || checkedAt < nowUtc.Subtract(TimeSpan.FromHours(24));

@@ -38,6 +38,7 @@ from typing import Callable
 
 import wx
 
+from .accessible_controls import FocusableReadOnlyTextCtrl
 from .async_gate import BackgroundRunner, StaleResultGate
 from .audio_clip import (
     AudioEditSettingsReadError,
@@ -192,10 +193,16 @@ from .shortcuts import (
     TIDAL_SUPPORTED_ACTIONS,
     SONOS_SUPPORTED_ACTIONS,
     WIIM_SUPPORTED_ACTIONS,
+    configurable_shortcuts,
     describe,
     keyboard_help_announcement,
+    normalize_shortcut_overrides,
     preset_slot,
+    readable_shortcut,
     resolve,
+    serialize_shortcut_overrides,
+    shortcut_conflict,
+    validate_custom_shortcut,
 )
 if "session.frontier-smart" in _RELEASE_PROFILE.capabilities:
     from .frontier_smart_source import (
@@ -441,7 +448,11 @@ def _instance_checker_name() -> str:
         f"{INSTANCE_CHECKER_NAME}-{current_profile().product_id}-"
         f"{wx.GetUserId()}"
     )
-TEMPO_LABELS = {1: "Mowa – Speedy", 2: "Muzyka – Signalsmith", 0: "Dotychczasowy – SoundTouch"}
+TEMPO_LABELS = {
+    1: "Najlepsza czytelność mowy",
+    2: "Najlepsza jakość muzyki",
+    0: "Tryb zgodności",
+}
 
 
 @dataclass(frozen=True, slots=True)
@@ -6863,6 +6874,17 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
         remember_local_playback_positions: bool,
         detailed_hints: bool,
         message_policy: MessagePolicy,
+        component_updates: dict[str, object],
+        update_channel_label: str,
+        check_media_components: Callable[
+            [Callable[[dict[str, object]], None]], bool
+        ],
+        shell_integration: dict[str, object],
+        open_windows_default_apps: Callable[[], object],
+        default_radio_recordings_folder: str,
+        default_podcast_downloads_folder: str,
+        shortcut_overrides: dict[str, str],
+        announce: Callable[[str], None],
     ) -> None:
         super().__init__(parent, title="Ustawienia", size=(720, 620))
         self.notebook = wx.Notebook(self)
@@ -7197,13 +7219,16 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
             configured_folder = recording.default_folder
         configured_folder = configured_folder or ""
         self._recording_folder_value = str(configured_folder).strip()
-        self.recording_folder = wx.TextCtrl(
+        self._default_recording_folder = str(
+            default_radio_recordings_folder
+        ).strip()
+        self.recording_folder = FocusableReadOnlyTextCtrl(
             radio,
             value=(
                 self._recording_folder_value
+                or self._default_recording_folder
                 or "Domyślny folder nagrywania AMC"
             ),
-            style=wx.TE_READONLY,
         )
         self.recording_folder.SetName("Domyślny folder nagrywania radia")
         folder_buttons = wx.BoxSizer(wx.HORIZONTAL)
@@ -7302,33 +7327,37 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
         podcasts_layout = wx.BoxSizer(wx.VERTICAL)
 
         podcast_folder_label = wx.StaticText(
-            podcasts, label="Domyślny &folder pobierania podcastów:"
+            podcasts,
+            label="Domyślny &folder zapisu podcastów i dźwięku YouTube:",
         )
         configured_podcast_folder = options.podcast_downloads_folder
         if configured_podcast_folder is None:
             configured_podcast_folder = podcast_settings.downloads_folder
         self._podcast_folder_value = str(configured_podcast_folder).strip()
-        self.podcast_folder = wx.TextCtrl(
+        self._default_podcast_folder = str(
+            default_podcast_downloads_folder
+        ).strip()
+        self.podcast_folder = FocusableReadOnlyTextCtrl(
             podcasts,
             value=(
                 self._podcast_folder_value
+                or self._default_podcast_folder
                 or "Domyślny folder pobierania AMC"
             ),
-            style=wx.TE_READONLY,
         )
         self.podcast_folder.SetName(
-            "Domyślny folder pobierania podcastów"
+            "Domyślny folder zapisu pobranych podcastów i dźwięku YouTube"
         )
         podcast_folder_buttons = wx.BoxSizer(wx.HORIZONTAL)
         self.browse_podcast_folder = wx.Button(podcasts, label="&Wybierz…")
         self.browse_podcast_folder.SetName(
-            "Wybierz domyślny folder pobierania podcastów"
+            "Wybierz domyślny folder zapisu podcastów i dźwięku YouTube"
         )
         self.default_podcast_folder = wx.Button(
             podcasts, label="Użyj folderu &domyślnego AMC"
         )
         self.default_podcast_folder.SetName(
-            "Użyj domyślnego folderu pobierania AMC"
+            "Użyj domyślnego folderu zapisu podcastów i dźwięku YouTube w AMC"
         )
         self.browse_podcast_folder.Bind(
             wx.EVT_BUTTON, self._on_browse_podcast_folder
@@ -7415,6 +7444,350 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
             podcasts_layout.Add(label, 0, wx.BOTTOM, 4)
             podcasts_layout.Add(control, 0, wx.BOTTOM | wx.EXPAND, 10)
         podcasts.SetSizer(podcasts_layout)
+
+        integration = wx.ScrolledWindow(self.notebook)
+        integration.SetScrollRate(0, 12)
+        integration_layout = wx.BoxSizer(wx.VERTICAL)
+        self._open_windows_default_apps = open_windows_default_apps
+        self._shell_integration_available = bool(
+            shell_integration.get("available", False)
+        )
+        shell_display_name = str(
+            shell_integration.get("displayName") or current_profile().display_name
+        )
+        shell_message = str(
+            shell_integration.get("message")
+            or "Nie udało się odczytać integracji z Windows."
+        )
+        self.shell_status = wx.StaticText(integration, label=shell_message)
+        self.shell_status.SetName(
+            "Stan integracji z Windows. " + shell_message
+        )
+        integration_layout.Add(
+            self.shell_status, 0, wx.BOTTOM | wx.EXPAND, 12
+        )
+
+        self.shell_context_menu = wx.CheckBox(
+            integration,
+            label=(
+                f"Pokaż polecenia Otwórz w {shell_display_name} i Dodaj do "
+                f"kolejki {shell_display_name} w &menu kontekstowym"
+            ),
+        )
+        self.shell_context_menu.SetName(
+            f"Pokaż polecenia Otwórz w {shell_display_name} i Dodaj do kolejki "
+            f"{shell_display_name} w menu kontekstowym"
+        )
+        self.shell_context_menu.SetValue(
+            bool(shell_integration.get("contextMenuEnabled", False))
+        )
+        self.shell_open_with = wx.CheckBox(
+            integration,
+            label=(
+                f"Pokaż {shell_display_name} na liście &Otwórz za pomocą i w "
+                "ustawieniach aplikacji domyślnych Windows"
+            ),
+        )
+        self.shell_open_with.SetName(
+            f"Pokaż {shell_display_name} na liście Otwórz za pomocą i w "
+            "ustawieniach aplikacji domyślnych Windows"
+        )
+        self.shell_open_with.SetValue(
+            bool(shell_integration.get("openWithEnabled", False))
+        )
+        integration_layout.Add(
+            self.shell_context_menu, 0, wx.BOTTOM | wx.EXPAND, 10
+        )
+        integration_layout.Add(
+            self.shell_open_with, 0, wx.BOTTOM | wx.EXPAND, 12
+        )
+
+        groups_heading = wx.StaticText(
+            integration,
+            label="Udostępniaj AMC dla następujących &typów plików:",
+        )
+        groups_heading.SetName(
+            "Udostępniaj AMC dla następujących typów plików"
+        )
+        integration_layout.Add(groups_heading, 0, wx.BOTTOM | wx.EXPAND, 8)
+        self._shell_group_controls: list[tuple[str, wx.CheckBox]] = []
+        raw_groups = shell_integration.get("groups")
+        for raw_group in raw_groups if isinstance(raw_groups, list) else []:
+            if not isinstance(raw_group, dict):
+                continue
+            group_id = str(raw_group.get("id") or "").strip()
+            group_name = str(raw_group.get("name") or "").strip()
+            if not group_id or not group_name:
+                continue
+            control = wx.CheckBox(integration, label=group_name)
+            control.SetName(group_name)
+            description = str(raw_group.get("description") or "").strip()
+            raw_extensions = raw_group.get("extensions")
+            extensions = [
+                str(value)
+                for value in raw_extensions
+                if isinstance(raw_extensions, list) and isinstance(value, str)
+            ] if isinstance(raw_extensions, list) else []
+            help_parts = [description] if description else []
+            if extensions:
+                help_parts.append("Rozszerzenia: " + ", ".join(extensions) + ".")
+            if help_parts:
+                control.SetHelpText(" ".join(help_parts))
+            control.SetValue(bool(raw_group.get("selected", False)))
+            self._shell_group_controls.append((group_id, control))
+            integration_layout.Add(control, 0, wx.BOTTOM | wx.EXPAND, 8)
+
+        self.open_default_apps = wx.Button(
+            integration,
+            label="Otwórz ustawienia aplikacji &domyślnych Windows…",
+        )
+        self.open_default_apps.SetName(
+            "Otwórz ustawienia aplikacji domyślnych Windows"
+        )
+        self.open_default_apps.Bind(
+            wx.EVT_BUTTON, self._on_open_windows_default_apps
+        )
+        integration_layout.Add(
+            self.open_default_apps, 0, wx.TOP | wx.BOTTOM | wx.EXPAND, 8
+        )
+        if not self._shell_integration_available:
+            self.shell_context_menu.Disable()
+            self.shell_open_with.Disable()
+            for _group_id, control in self._shell_group_controls:
+                control.Disable()
+        integration.SetSizer(integration_layout)
+
+        updates = wx.ScrolledWindow(self.notebook)
+        updates.SetScrollRate(0, 12)
+        updates_layout = wx.BoxSizer(wx.VERTICAL)
+        self._check_media_components = check_media_components
+        self._component_updates_available = bool(
+            component_updates.get("available", False)
+        )
+
+        update_channel_heading = wx.StaticText(
+            updates, label="&Kanał aktualizacji programu:"
+        )
+        self.update_channel = FocusableReadOnlyTextCtrl(
+            updates, value=update_channel_label
+        )
+        self.update_channel.SetName("Kanał aktualizacji programu")
+        self.update_channel.SetHelpText(
+            "Kanał wynika z zainstalowanej wersji AMC i nie jest zmieniany w tym oknie."
+        )
+        updates_layout.Add(update_channel_heading, 0, wx.BOTTOM, 4)
+        updates_layout.Add(
+            self.update_channel, 0, wx.BOTTOM | wx.EXPAND, 12
+        )
+
+        self.component_check_automatically = wx.CheckBox(
+            updates,
+            label=(
+                "Automatycznie &sprawdzaj aktualizacje składników FFmpeg "
+                "i yt-dlp przy uruchamianiu AMC"
+            ),
+        )
+        self.component_check_automatically.SetName(
+            "Automatycznie sprawdzaj aktualizacje składników FFmpeg i yt-dlp przy uruchamianiu AMC"
+        )
+        self.component_check_automatically.SetHelpText(
+            "Sprawdzanie odbywa się najwyżej raz na 24 godziny."
+        )
+        self.component_check_automatically.SetValue(
+            bool(component_updates.get("checkAutomatically", True))
+        )
+        self.component_download_automatically = wx.CheckBox(
+            updates,
+            label=(
+                "Automatycznie &pobieraj i instaluj zweryfikowane "
+                "aktualizacje składników"
+            ),
+        )
+        self.component_download_automatically.SetName(
+            "Automatycznie pobieraj i instaluj zweryfikowane aktualizacje składników"
+        )
+        self.component_download_automatically.SetHelpText(
+            "To ustawienie działa podczas automatycznego sprawdzania przy uruchamianiu AMC."
+        )
+        self.component_download_automatically.SetValue(
+            bool(component_updates.get("downloadAutomatically", True))
+        )
+        updates_layout.Add(
+            self.component_check_automatically,
+            0,
+            wx.BOTTOM | wx.EXPAND,
+            10,
+        )
+        updates_layout.Add(
+            self.component_download_automatically,
+            0,
+            wx.BOTTOM | wx.EXPAND,
+            12,
+        )
+
+        ffmpeg_heading = wx.StaticText(updates, label="Stan składnika &FFmpeg:")
+        self.component_ffmpeg_status = FocusableReadOnlyTextCtrl(
+            updates,
+            value=str(
+                component_updates.get("ffmpeg")
+                or "Stan składnika FFmpeg jest niedostępny"
+            ),
+        )
+        self.component_ffmpeg_status.SetName("Stan składnika FFmpeg")
+        yt_dlp_heading = wx.StaticText(updates, label="Stan składnika &yt-dlp:")
+        self.component_yt_dlp_status = FocusableReadOnlyTextCtrl(
+            updates,
+            value=str(
+                component_updates.get("ytDlp")
+                or "Stan składnika yt-dlp jest niedostępny"
+            ),
+        )
+        self.component_yt_dlp_status.SetName("Stan składnika yt-dlp")
+        for heading, control in (
+            (ffmpeg_heading, self.component_ffmpeg_status),
+            (yt_dlp_heading, self.component_yt_dlp_status),
+        ):
+            updates_layout.Add(heading, 0, wx.BOTTOM, 4)
+            updates_layout.Add(control, 0, wx.BOTTOM | wx.EXPAND, 10)
+
+        component_message = str(
+            component_updates.get("message")
+            or "Stan aktualizacji składników jest niedostępny."
+        )
+        self.component_update_status = wx.StaticText(
+            updates, label=component_message
+        )
+        self.component_update_status.SetName(
+            "Stan aktualizacji składników. " + component_message
+        )
+        updates_layout.Add(
+            self.component_update_status, 0, wx.BOTTOM | wx.EXPAND, 10
+        )
+        self.check_components_now = wx.Button(
+            updates,
+            label="Sprawdź, &pobierz i zweryfikuj składniki FFmpeg i yt-dlp",
+        )
+        self.check_components_now.SetName(
+            "Sprawdź, pobierz i zweryfikuj składniki FFmpeg i yt-dlp"
+        )
+        self.check_components_now.SetHelpText(
+            "To samo polecenie jest dostępne w menu Narzędzia i w palecie poleceń."
+        )
+        self.check_components_now.Bind(
+            wx.EVT_BUTTON, self._on_check_media_components
+        )
+        self.check_components_now.Enable(self._component_updates_available)
+        updates_layout.Add(
+            self.check_components_now, 0, wx.BOTTOM | wx.EXPAND, 8
+        )
+        updates.SetSizer(updates_layout)
+
+        keyboard = wx.Panel(self.notebook)
+        keyboard_layout = wx.BoxSizer(wx.VERTICAL)
+        self._announce_shortcut_change = announce
+        self._shortcut_overrides = normalize_shortcut_overrides(
+            shortcut_overrides
+        )
+        self._shortcut_definitions = list(configurable_shortcuts())
+        self._visible_shortcut_definitions = list(self._shortcut_definitions)
+
+        keyboard_explanation = wx.StaticText(
+            keyboard,
+            label=(
+                "Wybierz polecenie, przejdź do pola nowego skrótu i naciśnij "
+                "kombinację. Zmiana jest widoczna od razu na tej karcie, "
+                "ale zacznie działać dopiero po wybraniu Zapisz."
+            ),
+        )
+        keyboard_explanation.SetName(
+            "Instrukcja zmiany skrótów. Zmiany działają dopiero po zapisaniu ustawień"
+        )
+        keyboard_layout.Add(
+            keyboard_explanation, 0, wx.BOTTOM | wx.EXPAND, 10
+        )
+
+        shortcut_filter_label = wx.StaticText(
+            keyboard, label="&Filtruj polecenia:"
+        )
+        self.shortcut_filter = wx.TextCtrl(keyboard)
+        self.shortcut_filter.SetName("Filtruj polecenia klawiatury")
+        self.shortcut_filter.Bind(wx.EVT_TEXT, self._on_shortcut_filter)
+        keyboard_layout.Add(shortcut_filter_label, 0, wx.BOTTOM, 4)
+        keyboard_layout.Add(
+            self.shortcut_filter, 0, wx.BOTTOM | wx.EXPAND, 10
+        )
+
+        shortcut_list_label = wx.StaticText(
+            keyboard, label="&Polecenia i przypisane skróty:"
+        )
+        self.shortcut_list = wx.ListBox(keyboard)
+        self.shortcut_list.SetName("Polecenia i przypisane skróty")
+        self.shortcut_list.Bind(wx.EVT_LISTBOX, self._on_shortcut_selection)
+        keyboard_layout.Add(shortcut_list_label, 0, wx.BOTTOM, 4)
+        keyboard_layout.Add(
+            self.shortcut_list, 1, wx.BOTTOM | wx.EXPAND, 10
+        )
+
+        shortcut_capture_label = wx.StaticText(
+            keyboard, label="&Nowy skrót dla wybranego polecenia:"
+        )
+        self.shortcut_capture = FocusableReadOnlyTextCtrl(keyboard)
+        self.shortcut_capture.SetName(
+            "Nowy skrót dla wybranego polecenia"
+        )
+        self.shortcut_capture.SetHelpText(
+            "Naciśnij nową kombinację. Tab przechodzi dalej, a Escape anuluje ustawienia."
+        )
+        self.shortcut_capture.Bind(
+            wx.EVT_CHAR_HOOK, self._on_shortcut_capture
+        )
+        keyboard_layout.Add(shortcut_capture_label, 0, wx.BOTTOM, 4)
+        keyboard_layout.Add(
+            self.shortcut_capture, 0, wx.BOTTOM | wx.EXPAND, 10
+        )
+
+        shortcut_buttons = wx.BoxSizer(wx.HORIZONTAL)
+        self.remove_shortcut = wx.Button(keyboard, label="&Usuń skrót")
+        self.remove_shortcut.SetName("Usuń skrót wybranego polecenia")
+        self.remove_shortcut.Bind(
+            wx.EVT_BUTTON, self._on_remove_shortcut
+        )
+        self.restore_shortcut = wx.Button(
+            keyboard, label="Przywróć &domyślny"
+        )
+        self.restore_shortcut.SetName(
+            "Przywróć domyślny skrót wybranego polecenia"
+        )
+        self.restore_shortcut.Bind(
+            wx.EVT_BUTTON, self._on_restore_shortcut
+        )
+        self.restore_all_shortcuts = wx.Button(
+            keyboard, label="Przywróć &wszystkie domyślne"
+        )
+        self.restore_all_shortcuts.SetName(
+            "Przywróć wszystkie domyślne skróty"
+        )
+        self.restore_all_shortcuts.Bind(
+            wx.EVT_BUTTON, self._on_restore_all_shortcuts
+        )
+        for control in (
+            self.remove_shortcut,
+            self.restore_shortcut,
+            self.restore_all_shortcuts,
+        ):
+            shortcut_buttons.Add(control, 0, wx.RIGHT, 8)
+        keyboard_layout.Add(shortcut_buttons, 0, wx.BOTTOM, 10)
+
+        self.shortcut_status = wx.StaticText(
+            keyboard,
+            label="Zmiany skrótów oczekują na zapisanie ustawień.",
+        )
+        self.shortcut_status.SetName(
+            "Stan zmiany skrótu. Zmiany oczekują na zapisanie ustawień"
+        )
+        keyboard_layout.Add(self.shortcut_status, 0, wx.EXPAND)
+        keyboard.SetSizer(keyboard_layout)
+        self._refresh_shortcut_list()
 
         messages = wx.ScrolledWindow(self.notebook)
         messages.SetScrollRate(0, 12)
@@ -7658,9 +8031,12 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
         messages.SetSizer(messages_layout)
 
         self.notebook.AddPage(general, "Ogólne", select=True)
+        self.notebook.AddPage(keyboard, "Klawiatura")
         self.notebook.AddPage(radio, "Radio i nagrywanie")
         self.notebook.AddPage(podcasts, "Podcasty i YouTube")
-        self.notebook.AddPage(messages, "Komunikaty")
+        self.notebook.AddPage(integration, "Integracja z Windows")
+        self.notebook.AddPage(updates, "Aktualizacje")
+        self.notebook.AddPage(messages, "Dostępność i komunikaty")
 
         buttons = self.CreateStdDialogButtonSizer(wx.OK | wx.CANCEL)
         save = self.FindWindowById(wx.ID_OK)
@@ -7668,6 +8044,9 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
             save.SetLabel("&Zapisz")
             save.SetName("Zapisz ustawienia")
             save.SetDefault()
+        cancel = self.FindWindowById(wx.ID_CANCEL)
+        if cancel is not None:
+            cancel.SetName("Anuluj ustawienia")
         self.Bind(wx.EVT_BUTTON, self._on_save, id=wx.ID_OK)
         outer = wx.BoxSizer(wx.VERTICAL)
         outer.Add(self.notebook, 1, wx.ALL | wx.EXPAND, 12)
@@ -7681,7 +8060,9 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
         dialog = wx.DirDialog(
             self,
             message="Wybierz domyślny folder nagrywania radia",
-            defaultPath=self._recording_folder_value,
+            defaultPath=(
+                self._recording_folder_value or self._default_recording_folder
+            ),
         )
         try:
             if dialog.ShowModal() != wx.ID_OK:
@@ -7691,6 +8072,227 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
         finally:
             dialog.Destroy()
         self.recording_folder.SetFocus()
+
+    def _set_component_update_status(self, message: str) -> None:
+        self.component_update_status.SetLabel(message)
+        self.component_update_status.SetName(
+            "Stan aktualizacji składników. " + message
+        )
+
+    def _on_check_media_components(self, _event: wx.CommandEvent) -> None:
+        self.check_components_now.Disable()
+        self._set_component_update_status(
+            "Trwa sprawdzanie składników FFmpeg i yt-dlp."
+        )
+
+        def completed(payload: dict[str, object]) -> None:
+            try:
+                if not self:
+                    return
+                ffmpeg = str(payload.get("ffmpeg") or "").strip()
+                yt_dlp = str(payload.get("ytDlp") or "").strip()
+                if ffmpeg:
+                    self.component_ffmpeg_status.ChangeValue(ffmpeg)
+                if yt_dlp:
+                    self.component_yt_dlp_status.ChangeValue(yt_dlp)
+                message = str(payload.get("message") or "").strip()
+                if not message:
+                    message = (
+                        "Zakończono sprawdzanie składników."
+                        if payload.get("success")
+                        else "Nie udało się sprawdzić składników."
+                    )
+                self._set_component_update_status(message)
+                self.check_components_now.Enable(
+                    self._component_updates_available
+                )
+            except RuntimeError:
+                # Okno mogło zostać zamknięte przed zakończeniem pracy hosta.
+                return
+
+        if not self._check_media_components(completed):
+            self.check_components_now.Enable(
+                self._component_updates_available
+            )
+
+    def _effective_shortcut(self, definition) -> str:
+        return self._shortcut_overrides.get(
+            definition.action, definition.default_shortcut
+        )
+
+    def _shortcut_row_label(self, definition) -> str:
+        shortcut = self._effective_shortcut(definition)
+        suffix = (
+            ""
+            if definition.action in self._shortcut_overrides
+            else " (domyślny)"
+        )
+        return (
+            f"{definition.name}; skrót: {readable_shortcut(shortcut)}{suffix}"
+        )
+
+    def _selected_shortcut_definition(self):
+        index = self.shortcut_list.GetSelection()
+        if 0 <= index < len(self._visible_shortcut_definitions):
+            return self._visible_shortcut_definitions[index]
+        return None
+
+    def _refresh_shortcut_list(self, selected_action: Action | None = None) -> None:
+        if selected_action is None:
+            selected = self._selected_shortcut_definition()
+            selected_action = selected.action if selected is not None else None
+        query = self.shortcut_filter.GetValue().strip().casefold()
+        self._visible_shortcut_definitions = [
+            definition
+            for definition in self._shortcut_definitions
+            if not query or query in definition.name.casefold()
+        ]
+        self.shortcut_list.Clear()
+        for definition in self._visible_shortcut_definitions:
+            self.shortcut_list.Append(self._shortcut_row_label(definition))
+        selection = -1
+        if self._visible_shortcut_definitions:
+            selection = next((
+                index
+                for index, definition in enumerate(
+                    self._visible_shortcut_definitions
+                )
+                if definition.action is selected_action
+            ), 0)
+            self.shortcut_list.SetSelection(selection)
+        self._update_shortcut_selection()
+
+    def _update_shortcut_selection(self) -> None:
+        definition = self._selected_shortcut_definition()
+        available = definition is not None
+        self.remove_shortcut.Enable(available)
+        self.restore_shortcut.Enable(
+            available and definition.action in self._shortcut_overrides
+        )
+        if definition is None:
+            self.shortcut_capture.ChangeValue("Brak wybranego polecenia")
+            return
+        self.shortcut_capture.ChangeValue(
+            readable_shortcut(self._effective_shortcut(definition))
+        )
+
+    def _set_shortcut_status(self, message: str) -> None:
+        self.shortcut_status.SetLabel(message)
+        self.shortcut_status.SetName("Stan zmiany skrótu. " + message)
+        self._announce_shortcut_change(message)
+
+    def _show_shortcut_problem(self, message: str) -> None:
+        wx.MessageBox(
+            message,
+            "Nie zmieniono skrótu",
+            wx.OK | wx.ICON_WARNING,
+            parent=self,
+        )
+        self.shortcut_capture.SetFocus()
+
+    def _apply_pending_shortcut(
+        self, definition, shortcut: str | None
+    ) -> bool:
+        candidate = shortcut or ""
+        trial = dict(self._shortcut_overrides)
+        if candidate == definition.default_shortcut:
+            trial.pop(definition.action, None)
+        else:
+            trial[definition.action] = candidate
+        conflict = shortcut_conflict(definition.action, candidate, trial)
+        if conflict is not None:
+            _conflicting_action, conflicting_name = conflict
+            self._show_shortcut_problem(
+                f"Skrót {readable_shortcut(candidate)} jest już używany przez "
+                f"polecenie: {conflicting_name}."
+            )
+            return False
+        self._shortcut_overrides = trial
+        self._refresh_shortcut_list(definition.action)
+        message = (
+            f"{definition.name}: {readable_shortcut(candidate)}. "
+            "Zmiana zacznie działać po zapisaniu ustawień"
+        )
+        self._set_shortcut_status(message)
+        self.shortcut_capture.SetFocus()
+        return True
+
+    def _on_shortcut_filter(self, event: wx.CommandEvent) -> None:
+        self._refresh_shortcut_list()
+        event.Skip()
+
+    def _on_shortcut_selection(self, event: wx.CommandEvent) -> None:
+        self._update_shortcut_selection()
+        event.Skip()
+
+    def _on_shortcut_capture(self, event: wx.KeyEvent) -> None:
+        chord = chord_from_event(event)
+        if chord.key == "Tab" or chord.canonical == "Escape":
+            event.Skip()
+            return
+        if event.GetKeyCode() in {
+            getattr(wx, "WXK_CONTROL", -1),
+            getattr(wx, "WXK_SHIFT", -2),
+            getattr(wx, "WXK_ALT", -3),
+            getattr(wx, "WXK_RAW_CONTROL", -4),
+        }:
+            return
+        definition = self._selected_shortcut_definition()
+        if definition is None:
+            self._show_shortcut_problem("Najpierw wybierz polecenie z listy.")
+            return
+        problem = validate_custom_shortcut(chord.canonical)
+        if problem is not None:
+            self._show_shortcut_problem(problem)
+            return
+        self._apply_pending_shortcut(definition, chord.canonical)
+
+    def _on_remove_shortcut(self, _event: wx.CommandEvent) -> None:
+        definition = self._selected_shortcut_definition()
+        if definition is not None:
+            self._apply_pending_shortcut(definition, "")
+
+    def _on_restore_shortcut(self, _event: wx.CommandEvent) -> None:
+        definition = self._selected_shortcut_definition()
+        if definition is not None:
+            self._apply_pending_shortcut(
+                definition, definition.default_shortcut
+            )
+
+    def _on_restore_all_shortcuts(self, _event: wx.CommandEvent) -> None:
+        self._shortcut_overrides.clear()
+        self._refresh_shortcut_list()
+        self._set_shortcut_status(
+            "Przywrócono wszystkie skróty domyślne. Zmiana zacznie działać "
+            "po zapisaniu ustawień"
+        )
+        self.restore_all_shortcuts.SetFocus()
+
+    def _on_open_windows_default_apps(self, _event: wx.CommandEvent) -> None:
+        try:
+            raw_result = self._open_windows_default_apps()
+        except Exception:
+            raw_result = {
+                "success": False,
+                "message": (
+                    "Nie udało się otworzyć ustawień aplikacji domyślnych Windows."
+                ),
+            }
+        result = raw_result if isinstance(raw_result, dict) else {}
+        message = str(
+            result.get("message")
+            or "Nie udało się otworzyć ustawień aplikacji domyślnych Windows."
+        )
+        self.shell_status.SetLabel(message)
+        self.shell_status.SetName("Stan integracji z Windows. " + message)
+        if not bool(result.get("success", False)):
+            wx.MessageBox(
+                message,
+                "Integracja z Windows",
+                wx.OK | wx.ICON_WARNING,
+                parent=self,
+            )
+            self.open_default_apps.SetFocus()
 
     def _on_save(self, event: wx.CommandEvent) -> None:
         parsed = parse_custom_seek_length(self.custom_seek.GetValue())
@@ -7711,7 +8313,9 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
 
     def _on_default_recording_folder(self, _event: wx.CommandEvent) -> None:
         self._recording_folder_value = ""
-        self.recording_folder.SetValue("Domyślny folder nagrywania AMC")
+        self.recording_folder.SetValue(
+            self._default_recording_folder or "Domyślny folder nagrywania AMC"
+        )
         self.recording_folder.SetFocus()
 
     def _on_recording_folder_mode(self, _event: wx.CommandEvent) -> None:
@@ -7734,8 +8338,10 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
     def _on_browse_podcast_folder(self, _event: wx.CommandEvent) -> None:
         dialog = wx.DirDialog(
             self,
-            message="Wybierz domyślny folder pobierania podcastów",
-            defaultPath=self._podcast_folder_value,
+            message="Wybierz domyślny folder zapisu podcastów i dźwięku YouTube",
+            defaultPath=(
+                self._podcast_folder_value or self._default_podcast_folder
+            ),
         )
         try:
             if dialog.ShowModal() != wx.ID_OK:
@@ -7748,7 +8354,9 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
 
     def _on_default_podcast_folder(self, _event: wx.CommandEvent) -> None:
         self._podcast_folder_value = ""
-        self.podcast_folder.SetValue("Domyślny folder pobierania AMC")
+        self.podcast_folder.SetValue(
+            self._default_podcast_folder or "Domyślny folder pobierania AMC"
+        )
         self.podcast_folder.SetFocus()
 
     def _store_message_template_text(self) -> None:
@@ -7774,6 +8382,9 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
     def values(self) -> dict[str, object]:
         self._store_message_template_text()
         return {
+            "shortcut_overrides": serialize_shortcut_overrides(
+                self._shortcut_overrides
+            ),
             "startup_target": self._startup_target_values[
                 max(0, self.startup_target.GetSelection())
             ],
@@ -7811,6 +8422,12 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
                 max(0, self.message_percent_announcement.GetSelection())
             ].value,
             "message_templates": dict(self._message_template_values),
+            "component_check_automatically": (
+                self.component_check_automatically.GetValue()
+            ),
+            "component_download_automatically": (
+                self.component_download_automatically.GetValue()
+            ),
             "loudness_normalization": self.loudness.GetValue(),
             "smooth_track_transitions": self.smooth.GetValue(),
             "inter_track_silence_ms": self._silence_values[
@@ -7873,6 +8490,19 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
             "podcast_automatic_refresh_batch_size": (
                 self.podcast_refresh_batch.GetValue()
             ),
+            "shell_integration": (
+                {
+                    "context_menu_enabled": self.shell_context_menu.GetValue(),
+                    "open_with_enabled": self.shell_open_with.GetValue(),
+                    "group_ids": [
+                        group_id
+                        for group_id, control in self._shell_group_controls
+                        if control.GetValue()
+                    ],
+                }
+                if self._shell_integration_available
+                else None
+            ),
         }
 
 
@@ -7885,6 +8515,9 @@ class LiteFrame(wx.Frame):
         self.store = store
         self.state = state
         self.options = state.options
+        self.shortcut_overrides = normalize_shortcut_overrides(
+            state.shortcut_overrides
+        )
         # Stacje: w trybie wspolnego profilu zrodlem jest state.json AMC
         # (radio.stations), a nie prywatna kopia -- inaczej Radio bylo puste.
         # Uklad rozstrzygamy RAZ: ten sam obiekt decyduje tez o tym, czy host
@@ -8423,6 +9056,7 @@ class LiteFrame(wx.Frame):
             youtube_account_available=getattr(
                 self, "_youtube_account_available", False
             ),
+            shortcut_overrides=getattr(self, "shortcut_overrides", {}),
         ):
             native = wx.Menu()
             for entry in described.items:
@@ -13140,6 +13774,7 @@ class LiteFrame(wx.Frame):
             chord,
             player_view=player,
             radio_session=radio,
+            shortcut_overrides=getattr(self, "shortcut_overrides", {}),
             radio_collection=radio_collection,
             radio_playlist_contents=radio_playlist_contents,
             radio_recording_context=(
@@ -13838,25 +14473,55 @@ class LiteFrame(wx.Frame):
             )
             self._restore_focus_after_dialog()
 
-    def _update_media_components(self, *, automatic: bool = False) -> None:
+    def _update_media_components(
+        self,
+        *,
+        automatic: bool = False,
+        on_complete: Callable[[dict[str, object]], None] | None = None,
+    ) -> bool:
         if self._component_update_pending:
             if not automatic:
                 self.announcer.say("Aktualizacja składników już trwa")
-            return
+            if on_complete is not None:
+                on_complete({
+                    "success": False,
+                    "message": "Aktualizacja składników już trwa.",
+                })
+            return False
         client = self.client
         if client is None or not client.alive:
             if not automatic:
                 self.announcer.say(
                     "Silnik nie działa, nie mogę zaktualizować składników"
                 )
-            return
+            if on_complete is not None:
+                on_complete({
+                    "success": False,
+                    "message": (
+                        "Silnik AMC nie działa, dlatego nie można sprawdzić "
+                        "składników."
+                    ),
+                })
+            return False
 
         self._component_update_pending = True
         if not automatic:
             self.announcer.say("Sprawdzanie składników FFmpeg i yt-dlp")
 
         def work() -> object:
-            return client.update_media_components(automatic=automatic)
+            kwargs: dict[str, object] = {"automatic": automatic}
+            options = getattr(self, "options", None)
+            check_automatically = getattr(
+                options, "component_check_automatically", None
+            )
+            download_automatically = getattr(
+                options, "component_download_automatically", None
+            )
+            if check_automatically is not None:
+                kwargs["check_automatically"] = check_automatically
+            if download_automatically is not None:
+                kwargs["download_automatically"] = download_automatically
+            return client.update_media_components(**kwargs)
 
         def done(payload: object) -> None:
             self._component_update_pending = False
@@ -13866,6 +14531,8 @@ class LiteFrame(wx.Frame):
             changed = bool(data.get("changed"))
             complete = bool(data.get("complete"))
             message = str(data.get("message") or "").strip()
+            if on_complete is not None:
+                on_complete(data)
             if automatic and not performed:
                 return
             if automatic and success and complete and not changed:
@@ -13891,8 +14558,14 @@ class LiteFrame(wx.Frame):
                 self.announcer.say(
                     f"Nie udało się zaktualizować składników: {error}"
                 )
+            if on_complete is not None:
+                on_complete({
+                    "success": False,
+                    "message": f"Nie udało się sprawdzić składników: {error}",
+                })
 
         self.runner.submit("component-update", work, done, failed)
+        return True
 
     @staticmethod
     def _common_data_summary(payload: object) -> str:
@@ -17432,6 +18105,7 @@ class LiteFrame(wx.Frame):
             self.navigator.active,
             self.options.session_order,
             youtube_account_available=self._youtube_account_available,
+            shortcut_overrides=getattr(self, "shortcut_overrides", {}),
         )
         entries = available_command_entries(entries, available_actions)
         with CommandPaletteDialog(self, entries) as dialog:
@@ -26059,6 +26733,110 @@ class LiteFrame(wx.Frame):
             self.options.detailed_hints,
             self._detailed_hints,
         )
+        engine_for_settings = self.client
+        engine_available = bool(
+            engine_for_settings is not None
+            and getattr(engine_for_settings, "alive", True)
+        )
+        component_updates: dict[str, object] = {
+            "available": engine_available,
+            "checkAutomatically": True,
+            "downloadAutomatically": True,
+            "ffmpeg": "Stan składnika FFmpeg jest niedostępny",
+            "ytDlp": "Stan składnika yt-dlp jest niedostępny",
+            "message": (
+                "Stan składników jest niedostępny, ponieważ silnik AMC nie "
+                "jest uruchomiony."
+            ),
+        }
+        release_profile = current_profile()
+        update_channel_label = {
+            "test": "Testowy — wydania wstępne AMC Test",
+            "stable": "Stabilny — publiczne wydania AMC",
+        }.get(
+            release_profile.update_channel,
+            "Kanał przypisany do tej wersji AMC",
+        )
+        shell_integration: dict[str, object] = {
+            "available": False,
+            "displayName": current_profile().display_name,
+            "message": (
+                "Integracja z Windows jest niedostępna, ponieważ silnik AMC "
+                "nie jest uruchomiony."
+            ),
+            "groups": [],
+        }
+        default_radio_recordings_folder = ""
+        default_podcast_downloads_folder = ""
+        if engine_for_settings is not None:
+            if engine_available:
+                try:
+                    raw_component_updates = (
+                        engine_for_settings.component_update_status()
+                    )
+                    if isinstance(raw_component_updates, dict):
+                        component_updates.update(raw_component_updates)
+                        component_updates["available"] = True
+                except (HostError, HostUnavailable, OSError):
+                    component_updates["message"] = (
+                        "Nie udało się odczytać stanu składników. "
+                        "Można spróbować sprawdzić je ręcznie."
+                    )
+            try:
+                raw_shell_integration = engine_for_settings.shell_integration_status()
+                if isinstance(raw_shell_integration, dict):
+                    shell_integration = raw_shell_integration
+            except (HostError, HostUnavailable, OSError):
+                shell_integration["message"] = (
+                    "Nie udało się odczytać integracji z Windows. "
+                    "Pozostałe ustawienia są dostępne."
+                )
+            try:
+                raw_defaults = engine_for_settings.general_settings_defaults()
+                if isinstance(raw_defaults, dict):
+                    default_radio_recordings_folder = str(
+                        raw_defaults.get("radioRecordingsFolder") or ""
+                    ).strip()
+                    default_podcast_downloads_folder = str(
+                        raw_defaults.get("podcastDownloadsFolder") or ""
+                    ).strip()
+            except (HostError, HostUnavailable, OSError):
+                pass
+
+        if self.options.component_check_automatically is not None:
+            component_updates["checkAutomatically"] = (
+                self.options.component_check_automatically
+            )
+        if self.options.component_download_automatically is not None:
+            component_updates["downloadAutomatically"] = (
+                self.options.component_download_automatically
+            )
+
+        def open_windows_default_apps() -> object:
+            engine = self.client
+            if engine is None:
+                return {
+                    "success": False,
+                    "message": (
+                        "Nie udało się otworzyć ustawień aplikacji domyślnych "
+                        "Windows, ponieważ silnik AMC nie jest uruchomiony."
+                    ),
+                }
+            try:
+                return engine.open_windows_default_apps()
+            except (HostError, HostUnavailable, OSError):
+                return {
+                    "success": False,
+                    "message": (
+                        "Nie udało się otworzyć ustawień aplikacji domyślnych Windows."
+                    ),
+                }
+
+        def check_media_components(
+            on_complete: Callable[[dict[str, object]], None],
+        ) -> bool:
+            return self._update_media_components(on_complete=on_complete)
+
         dialog = GeneralPlaybackOptionsDialog(
             self,
             self.options,
@@ -26071,6 +26849,15 @@ class LiteFrame(wx.Frame):
             remember_local_playback_positions,
             detailed_hints,
             self.messages,
+            component_updates,
+            update_channel_label,
+            check_media_components,
+            shell_integration,
+            open_windows_default_apps,
+            default_radio_recordings_folder,
+            default_podcast_downloads_folder,
+            self.state.shortcut_overrides,
+            self.announcer.say,
         )
         chosen: dict[str, object] | None = None
         try:
@@ -26083,17 +26870,27 @@ class LiteFrame(wx.Frame):
             return
 
         chosen_wake = bool(chosen.pop("radio_schedule_wake_override"))
+        chosen_shell_integration = chosen.pop("shell_integration", None)
+        chosen_shortcuts = normalize_shortcut_overrides(
+            chosen.pop("shortcut_overrides", {})
+        )
         previous = {name: getattr(self.options, name) for name in chosen}
         previous_wake = self.state.radio_schedule_wake_override
+        previous_shortcuts = dict(self.state.shortcut_overrides)
         for name, value in chosen.items():
             setattr(self.options, name, value)
         self.state.radio_schedule_wake_override = chosen_wake
+        self.state.shortcut_overrides = serialize_shortcut_overrides(
+            chosen_shortcuts
+        )
         if not self._save_state():
             for name, value in previous.items():
                 setattr(self.options, name, value)
             self.state.radio_schedule_wake_override = previous_wake
+            self.state.shortcut_overrides = previous_shortcuts
             self.state.options = self.options
             return
+        self.shortcut_overrides = chosen_shortcuts
         self._radio_snapshot = LiteFrame._with_radio_recording_options(
             self, self._radio_snapshot
         )
@@ -26153,6 +26950,8 @@ class LiteFrame(wx.Frame):
         if client is None:
             return
 
+        shell_confirmation: list[str] = []
+
         def apply_to_host() -> list[str]:
             warnings: list[str] = []
             try:
@@ -26181,9 +26980,37 @@ class LiteFrame(wx.Frame):
                     client.configure_podcast_global_settings(**podcast_payload)
                 except Exception:
                     warnings.append("ustawienia Podcastów i YouTube")
+            if isinstance(chosen_shell_integration, dict):
+                try:
+                    shell_result = client.apply_shell_integration(
+                        context_menu_enabled=bool(
+                            chosen_shell_integration.get(
+                                "context_menu_enabled", False
+                            )
+                        ),
+                        open_with_enabled=bool(
+                            chosen_shell_integration.get("open_with_enabled", False)
+                        ),
+                        group_ids=[
+                            str(value)
+                            for value in chosen_shell_integration.get("group_ids", [])
+                        ],
+                    )
+                    if not isinstance(shell_result, dict) or not bool(
+                        shell_result.get("success", False)
+                    ):
+                        warnings.append("integracja z Windows")
+                    else:
+                        message = str(shell_result.get("message") or "").strip()
+                        if message:
+                            shell_confirmation.append(message)
+                except Exception:
+                    warnings.append("integracja z Windows")
             return warnings
 
         def applied_to_host(warnings: list[str]) -> None:
+            if shell_confirmation:
+                self.announcer.say(shell_confirmation[-1])
             if warnings:
                 self.announcer.say(
                     "Po ponownym uruchomieniu programu zostaną zastosowane: "
@@ -29665,6 +30492,7 @@ class LiteFrame(wx.Frame):
             chord,
             player_view=player,
             radio_session=self.navigator.active is SessionId.RADIO,
+            shortcut_overrides=getattr(self, "shortcut_overrides", {}),
             radio_collection=(
                 not player
                 and self.navigator.active is SessionId.RADIO
@@ -29835,13 +30663,14 @@ class LiteFrame(wx.Frame):
             for item, entry in getattr(self, "_menu_items", ())
             if entry.action is not None and item.IsEnabled()
         }
-        shortcut_overrides = {
+        shortcut_overrides = dict(getattr(self, "shortcut_overrides", {}))
+        shortcut_overrides.update({
             session_order.SESSION_ACTIONS[session]: f"Ctrl+{slot}"
             for slot, session in enumerate(
                 session_order.normalize(self.options.session_order),
                 start=1,
             )
-        }
+        })
         lines = [
             f"{chord}\t{label}"
             for chord, label in describe(

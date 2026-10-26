@@ -7,7 +7,7 @@ Każdy wpis prowadzi do istniejącej :class:`Action`, tej samej co menu i skrót
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Iterable
+from typing import Iterable, Mapping
 
 from . import menu_model
 from . import session_order as session_order_model
@@ -57,6 +57,7 @@ def entries_for_session(
     session_order: object = None,
     *,
     youtube_account_available: bool = False,
+    shortcut_overrides: Mapping[Action, str] | None = None,
 ) -> tuple[CommandPaletteEntry, ...]:
     """Zbuduj po jednym użytkowym wpisie na akcję widoczną w tej sesji."""
 
@@ -66,6 +67,7 @@ def entries_for_session(
         session,
         session_order,
         youtube_account_available=youtube_account_available,
+        shortcut_overrides=shortcut_overrides,
     ):
         for item in menu.items:
             if item.is_separator or item.action is None or item.action in seen:

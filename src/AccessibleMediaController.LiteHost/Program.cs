@@ -125,6 +125,8 @@ internal static class Program
         using var frontierSmart = OpenFrontierSmart(args);
         var componentUpdates = new LiteComponentUpdateCoordinator(
             ReadArgumentPath(args, "--state-json"));
+        var shellIntegration = new LiteShellIntegrationCoordinator(
+            ReadArgumentText(args, "--release-profile"));
         using var sonos = new LiteSonosCoordinator(
             new LiteSonosAccountOwner(),
             ReadArgumentPath(args, "--state-json"),
@@ -152,6 +154,9 @@ internal static class Program
         foreach (var entry in nvdaRelay.Handlers()) registeredHandlers.Add(entry.Key, entry.Value);
         foreach (var entry in nvdaBridge.Handlers()) registeredHandlers.Add(entry.Key, entry.Value);
         foreach (var entry in componentUpdates.Handlers()) registeredHandlers.Add(entry.Key, entry.Value);
+        foreach (var entry in shellIntegration.Handlers()) registeredHandlers.Add(entry.Key, entry.Value);
+        foreach (var entry in LiteGeneralSettingsCoordinator.Handlers())
+            registeredHandlers.Add(entry.Key, entry.Value);
         if (youtubeAccount is not null)
         {
             foreach (var entry in youtubeAccount.Handlers())

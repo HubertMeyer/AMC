@@ -42,6 +42,7 @@ def _source_state() -> LiteState:
             session_order=["files", "radio"],
             timeshift_minutes=47,
         ),
+        shortcut_overrides={"settings.general": "Ctrl+Alt+G"},
         stations=[Station("radio-1", "Radio Źródłowe", "https://radio.invalid")],
         search_history={"global": ["Dominikanie Rzeszów"]},
         radio_schedule_overrides=[_schedule("schedule-1", "Poranek")],
@@ -96,6 +97,7 @@ def test_full_backup_combines_core_and_sanitized_ui_state(tmp_path: Path) -> Non
     restored = build_imported_ui_state(plan, restored_store)
     assert plan.has_ui_state is True
     assert restored.options.volume == 61
+    assert restored.shortcut_overrides == {"settings.general": "Ctrl+Alt+G"}
     assert restored.search_history == {"global": ["Dominikanie Rzeszów"]}
     assert restored.stations[0].name == "Radio Źródłowe"
     assert restored.radio_schedule_overrides is not None
@@ -135,6 +137,7 @@ def test_partial_configuration_import_preserves_radio_and_schedules(
     assert plan.included_sections == (CONFIGURATION,)
     assert restored.options.volume == 61
     assert restored.options.timeshift_minutes == 12
+    assert restored.shortcut_overrides == {"settings.general": "Ctrl+Alt+G"}
     assert restored.stations[0].name == "Radio Bieżące"
     assert restored.radio_schedule_overrides is not None
     assert restored.radio_schedule_overrides[0]["id"] == "current-schedule"

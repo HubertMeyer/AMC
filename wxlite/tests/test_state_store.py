@@ -206,6 +206,25 @@ def test_invalid_message_overrides_return_to_inherited_values() -> None:
     assert options.message_percent_announcement is None
 
 
+def test_component_update_choices_round_trip_and_invalid_values_inherit() -> None:
+    store, _ = temp_store()
+    store.save(LiteState(options=Options(
+        component_check_automatically=False,
+        component_download_automatically=True,
+    )))
+
+    loaded = store.load().options
+    assert loaded.component_check_automatically is False
+    assert loaded.component_download_automatically is True
+
+    invalid = Options(
+        component_check_automatically="nie",  # type: ignore[arg-type]
+        component_download_automatically=1,  # type: ignore[arg-type]
+    ).clamp()
+    assert invalid.component_check_automatically is None
+    assert invalid.component_download_automatically is None
+
+
 def test_message_templates_round_trip_empty_text_and_reject_unknown_values() -> None:
     store, directory = temp_store()
     store.save(LiteState(options=Options(message_templates={

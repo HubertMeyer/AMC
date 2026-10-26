@@ -7,6 +7,8 @@ from amc_wx_lite.command_palette import entries_for_session
 from amc_wx_lite.menu_model import menus_for_session
 from amc_wx_lite.navigation import SessionId
 from amc_wx_lite.shortcuts import Action, describe
+from amc_wx_lite.state_store import Options
+from amc_wx_lite.host_client import LiteHostClient
 
 
 def test_component_update_command_has_menu_palette_help_and_dispatch_parity() -> None:
@@ -107,3 +109,117 @@ def test_automatic_recent_check_stays_quiet() -> None:
 
     assert announcements == []
     assert not frame._component_update_pending
+
+
+def test_automatic_update_passes_private_policy_overrides_to_host() -> None:
+    calls: list[dict[str, object]] = []
+
+    class Client:
+        alive = True
+
+        @staticmethod
+        def update_media_components(**kwargs) -> dict:
+            calls.append(kwargs)
+            return {
+                "success": True,
+                "performed": False,
+                "changed": False,
+                "complete": True,
+            }
+
+    class Runner:
+        @staticmethod
+        def submit(_stream, work, done, _failed):
+            done(work())
+
+    frame = type("Frame", (), {})()
+    frame.client = Client()
+    frame.runner = Runner()
+    frame.store = None
+    frame.options = Options(
+        component_check_automatically=False,
+        component_download_automatically=True,
+    )
+    frame._component_update_pending = False
+    frame.announcer = type("Announcer", (), {"say": staticmethod(lambda _value: None)})()
+
+    gui.LiteFrame._update_media_components(frame, automatic=True)
+
+    assert calls == [{
+        "automatic": True,
+        "check_automatically": False,
+        "download_automatically": True,
+    }]
+
+
+def test_settings_completion_callback_receives_the_same_result() -> None:
+    completed: list[dict[str, object]] = []
+
+    class Client:
+        alive = True
+
+        @staticmethod
+        def update_media_components(*, automatic: bool = False) -> dict:
+            return {
+                "success": True,
+                "performed": True,
+                "changed": False,
+                "complete": True,
+                "ffmpeg": "FFmpeg jest gotowy",
+                "ytDlp": "yt-dlp jest gotowy",
+                "message": "Składniki są aktualne.",
+            }
+
+    class Runner:
+        @staticmethod
+        def submit(_stream, work, done, _failed):
+            done(work())
+
+    frame = type("Frame", (), {})()
+    frame.client = Client()
+    frame.runner = Runner()
+    frame.store = None
+    frame._component_update_pending = False
+    frame.announcer = type("Announcer", (), {"say": staticmethod(lambda _value: None)})()
+
+    started = gui.LiteFrame._update_media_components(
+        frame, on_complete=completed.append
+    )
+
+    assert started is True
+    assert completed == [{
+        "success": True,
+        "performed": True,
+        "changed": False,
+        "complete": True,
+        "ffmpeg": "FFmpeg jest gotowy",
+        "ytDlp": "yt-dlp jest gotowy",
+        "message": "Składniki są aktualne.",
+    }]
+
+
+def test_host_client_uses_narrow_status_and_update_contract() -> None:
+    calls: list[tuple[str, dict | None, float]] = []
+    client = LiteHostClient(Path("host.exe"))
+    client.call = lambda op, args=None, *, timeout=20.0: (
+        calls.append((op, args, timeout)) or {"success": True}
+    )
+
+    client.component_update_status()
+    client.update_media_components(
+        automatic=True,
+        check_automatically=False,
+        download_automatically=True,
+    )
+
+    assert calls == [
+        ("components.status", None, 20.0),
+        (
+            "components.updateAutomatic",
+            {
+                "checkAutomatically": False,
+                "downloadAutomatically": True,
+            },
+            1_200.0,
+        ),
+    ]

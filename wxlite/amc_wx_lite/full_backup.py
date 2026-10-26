@@ -314,6 +314,7 @@ def build_imported_ui_state(
 
 _TOP_LEVEL_SECTIONS = {
     "navigation": CONFIGURATION,
+    "shortcut_overrides": CONFIGURATION,
     "session_overrides": CONFIGURATION,
     "audio_output_device_ids_by_session": CONFIGURATION,
     "shuffle_enabled_by_session": CONFIGURATION,

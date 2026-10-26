@@ -25,18 +25,23 @@ internal sealed class LiteComponentUpdateCoordinator
     internal IReadOnlyDictionary<string, Func<LiteRequest, LiteEventSink, object?>> Handlers() =>
         new Dictionary<string, Func<LiteRequest, LiteEventSink, object?>>(StringComparer.Ordinal)
         {
-            [StatusOperation] = (_, _) => Status(performed: false, changed: false, success: true,
+            [StatusOperation] = (_, _) => Status(
+                LiteComponentUpdatePolicy.Read(_statePath),
+                performed: false,
+                changed: false,
+                success: true,
                 "Odczytano stan składników."),
-            [UpdateOperation] = (_, _) => Update(manual: true),
-            [AutomaticOperation] = (_, _) => Update(manual: false)
+            [UpdateOperation] = (request, _) => Update(request.Args, manual: true),
+            [AutomaticOperation] = (request, _) => Update(request.Args, manual: false)
         };
 
-    private object Update(bool manual)
+    private object Update(System.Text.Json.JsonElement args, bool manual)
     {
-        var policy = LiteComponentUpdatePolicy.Read(_statePath);
+        var policy = LiteComponentUpdatePolicy.Resolve(_statePath, args);
         if (!manual && !policy.CheckAutomatically)
         {
             return Status(
+                policy,
                 performed: false,
                 changed: false,
                 success: true,
@@ -51,6 +56,7 @@ internal sealed class LiteComponentUpdateCoordinator
         if (!checkFfmpeg && !checkYtDlp)
         {
             return Status(
+                policy,
                 performed: false,
                 changed: false,
                 success: true,
@@ -80,13 +86,19 @@ internal sealed class LiteComponentUpdateCoordinator
         var messages = new[] { ffmpegResult?.Message, ytDlpResult?.Message }
             .Where(static message => !string.IsNullOrWhiteSpace(message));
         return Status(
+            policy,
             performed: true,
             changed: (ffmpegResult?.Changed ?? false) || (ytDlpResult?.Changed ?? false),
             success: (ffmpegResult?.Success ?? true) && (ytDlpResult?.Success ?? true),
             string.Join(" ", messages));
     }
 
-    private static object Status(bool performed, bool changed, bool success, string message)
+    private static object Status(
+        LiteComponentUpdatePolicy policy,
+        bool performed,
+        bool changed,
+        bool success,
+        string message)
     {
         var ffmpeg = FfmpegComponentManager.GetStatus();
         var ytDlp = YtDlpComponentManager.GetStatus();
@@ -98,6 +110,8 @@ internal sealed class LiteComponentUpdateCoordinator
             complete = ffmpeg.Installed && ytDlp.Installed,
             ffmpegInstalled = ffmpeg.Installed,
             ytDlpInstalled = ytDlp.Installed,
+            checkAutomatically = policy.CheckAutomatically,
+            downloadAutomatically = policy.DownloadAutomatically,
             ffmpeg = ffmpeg.UserFacingText,
             ytDlp = ytDlp.UserFacingText,
             message

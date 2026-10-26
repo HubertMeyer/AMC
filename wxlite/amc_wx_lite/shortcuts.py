@@ -89,6 +89,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
+from typing import Mapping
 
 
 class Action(Enum):
@@ -989,6 +990,19 @@ class Chord:
         return "+".join(parts)
 
 
+@dataclass(frozen=True, slots=True)
+class ShortcutDefinition:
+    """Jedna edytowalna pozycja karty Klawiatura.
+
+    Model zachowuje ``Action`` jako identyfikator wewnętrzny, ale kontrolki
+    otrzymują wyłącznie ``name`` i jawnie sformatowany skrót.
+    """
+
+    action: Action
+    name: str
+    default_shortcut: str
+
+
 # Skroty dzialajace W WIDOKU LISTY. Strzalki NIE sa tu wpisane - naleza do
 # natywnego ListCtrl, zeby czytnik ekranu i Narrator dzialaly bez dodatku.
 LIST_VIEW: dict[str, Action] = {
@@ -1553,7 +1567,238 @@ SONOS_OWN_STREAMS_VIEW: dict[str, Action] = {
 }
 
 
-def resolve(
+_SHORTCUT_TABLES: tuple[dict[str, Action], ...] = (
+    FILES_SESSION_VIEW,
+    PODCAST_LIBRARY_LIST_VIEW,
+    PODCAST_INBOX_LIST_VIEW,
+    YOUTUBE_CHANNEL_LIST_VIEW,
+    YOUTUBE_BROADCASTS_LIST_VIEW,
+    YOUTUBE_BROADCASTS_AGGREGATE_LIST_VIEW,
+    PODCAST_SESSION_VIEW,
+    TIDAL_SESSION_VIEW,
+    TIDAL_COLLECTION_LIST_VIEW,
+    TIDAL_LIST_VIEW,
+    SPOTIFY_SESSION_VIEW,
+    SPOTIFY_COLLECTION_LIST_VIEW,
+    SPOTIFY_LIST_VIEW,
+    WIIM_SESSION_VIEW,
+    WIIM_PLAYER_VIEW,
+    FRONTIER_SMART_SESSION_VIEW,
+    SONOS_SESSION_VIEW,
+    SONOS_OWN_STREAMS_VIEW,
+    LIST_VIEW,
+    RADIO_COLLECTION_LIST_VIEW,
+    RADIO_LIST_VIEW,
+    RADIO_PLAYER_VIEW,
+    PLAYER_VIEW,
+)
+
+# Te gesty są częścią drogi odzyskania sterowania albo zależą od specjalnej
+# obsługi natywnej. Pozostają stałe, żeby błędna konfiguracja nie odcięła
+# użytkownika od Pomocy klawiatury, listy, sesji lub nagrywania.
+_PROTECTED_SHORTCUT_ACTIONS = frozenset({
+    Action.ACTIVATE,
+    Action.PARENT_FOLDER,
+    Action.CLOSE_LIST_PREVIEW,
+    Action.SHOW_PLAYER,
+    Action.SHOW_LIST,
+    Action.QUEUE_NEXT,
+    Action.QUEUE_PREVIOUS,
+    Action.TIDAL_RELATIONS,
+    Action.HELP,
+    Action.KEYBOARD_HELP,
+    Action.RECORD_STOP_ALL,
+    Action.SESSION_FILES,
+    Action.SESSION_RADIO,
+    Action.SESSION_PODCASTS,
+    Action.SESSION_TIDAL,
+    Action.SESSION_WIIM,
+    Action.SESSION_SONOS,
+    Action.SESSION_SPOTIFY,
+    Action.SESSION_FRONTIER_SMART,
+    Action.SESSION_LIST,
+    Action.PREVIOUS_SESSION,
+    Action.NEXT_SESSION,
+    Action.PRESET_1,
+    Action.PRESET_2,
+    Action.PRESET_3,
+    Action.PRESET_4,
+    Action.PRESET_5,
+    Action.PRESET_6,
+    Action.PRESET_7,
+    Action.PRESET_8,
+    Action.PRESET_9,
+    Action.PRESET_10,
+    Action.PRESET_11,
+    Action.PRESET_12,
+})
+
+_DIRECT_RESERVED_SHORTCUTS: dict[str, str] = {
+    "Alt+F4": "Zamknij program",
+    "Alt+Escape": "Przełączanie okien Windows",
+    "Alt+Tab": "Przełączanie okien Windows",
+    "Ctrl+Escape": "Menu Start Windows",
+    "Ctrl+Alt+Delete": "Ekran zabezpieczeń Windows",
+    "Ctrl+Shift+Escape": "Menedżer zadań Windows",
+    "Ctrl+Return": "Odtwórz kontener TIDAL",
+    **{f"Ctrl+{slot}": "Przełączanie sesji" for slot in range(1, 10)},
+}
+
+
+def chord_from_canonical(value: object) -> Chord | None:
+    """Odczytaj wyłącznie kanoniczny, wspierany zapis skrótu."""
+    if not isinstance(value, str):
+        return None
+    text = value.strip()
+    if not text:
+        return None
+    remaining = text
+    ctrl = remaining.startswith("Ctrl+")
+    if ctrl:
+        remaining = remaining[5:]
+    alt = remaining.startswith("Alt+")
+    if alt:
+        remaining = remaining[4:]
+    shift = remaining.startswith("Shift+")
+    if shift:
+        remaining = remaining[6:]
+    if not remaining or "+" in remaining and remaining != "+":
+        return None
+    chord = Chord(remaining, ctrl=ctrl, alt=alt, shift=shift)
+    return chord if chord.canonical == text else None
+
+
+def readable_shortcut(value: str | None) -> str:
+    """Użytkowa etykieta skrótu do list, menu i pól edycyjnych."""
+    if not value:
+        return "Bez skrótu"
+    chord = chord_from_canonical(value)
+    if chord is None:
+        return "Bez skrótu"
+    text = chord.canonical
+    for internal, spoken in {
+        "Prior": "Page Up",
+        "Next": "Page Down",
+        "Return": "Enter",
+        "Back": "Backspace",
+        "Space": "Spacja",
+        "Left": "strzałka w lewo",
+        "Right": "strzałka w prawo",
+        "Up": "strzałka w górę",
+        "Down": "strzałka w dół",
+    }.items():
+        text = text.replace(internal, spoken)
+    return text
+
+
+def _default_chords_by_action() -> dict[Action, tuple[str, ...]]:
+    collected: dict[Action, list[str]] = {}
+    for table in _SHORTCUT_TABLES:
+        for shortcut, action in table.items():
+            values = collected.setdefault(action, [])
+            if shortcut not in values:
+                values.append(shortcut)
+    return {action: tuple(values) for action, values in collected.items()}
+
+
+def is_configurable_shortcut(action: Action) -> bool:
+    return (
+        action not in _PROTECTED_SHORTCUT_ACTIONS
+        and action in _default_chords_by_action()
+    )
+
+
+def validate_custom_shortcut(value: str) -> str | None:
+    """Zwróć komunikat użytkowy albo ``None`` dla bezpiecznej kombinacji."""
+    chord = chord_from_canonical(value)
+    if chord is None or chord.key.startswith("#"):
+        return "Ten klawisz nie może być użyty jako skrót AMC."
+    function_key = (
+        chord.key.startswith("F")
+        and chord.key[1:].isdigit()
+        and 1 <= int(chord.key[1:]) <= 24
+    )
+    printable_key = len(chord.key) == 1 and 32 < ord(chord.key) < 127
+    special_key = chord.key in {
+        "Return", "Back", "Escape", "Space", "Delete", "Left", "Right",
+        "Up", "Down", "Tab", "Home", "End", "Prior", "Next",
+    }
+    if not (printable_key or special_key or function_key):
+        return "Ten klawisz nie może być użyty jako skrót AMC."
+    if not (chord.ctrl or chord.alt or function_key):
+        return (
+            "Nowy skrót musi zawierać Ctrl lub Alt albo być klawiszem "
+            "funkcyjnym od F1 do F24."
+        )
+    return None
+
+
+def shortcut_conflict(
+    action: Action,
+    candidate: str,
+    overrides: Mapping[Action, str] | None = None,
+) -> tuple[Action | None, str] | None:
+    """Wykryj konflikt z efektywnym skrótem innego polecenia."""
+    if not candidate:
+        return None
+    pending = dict(overrides or {})
+    defaults = _default_chords_by_action()
+    for other, shortcuts in defaults.items():
+        if other is action:
+            continue
+        effective = (
+            (pending[other],)
+            if other in pending and pending[other]
+            else () if other in pending else shortcuts
+        )
+        if candidate in effective:
+            return other, describe_action(other)
+    reserved = _DIRECT_RESERVED_SHORTCUTS.get(candidate)
+    if reserved is not None:
+        return None, reserved
+    return None
+
+
+def normalize_shortcut_overrides(raw: object) -> dict[Action, str]:
+    """Wczytaj prywatny stan bez przepuszczania obcych identyfikatorów."""
+    if not isinstance(raw, Mapping):
+        return {}
+    candidates: dict[Action, str] = {}
+    for raw_action, raw_shortcut in raw.items():
+        if not isinstance(raw_shortcut, str):
+            continue
+        if isinstance(raw_action, Action):
+            action = raw_action
+        elif isinstance(raw_action, str):
+            try:
+                action = Action(raw_action)
+            except ValueError:
+                continue
+        else:
+            continue
+        shortcut = raw_shortcut.strip()
+        if not is_configurable_shortcut(action):
+            continue
+        if shortcut and validate_custom_shortcut(shortcut) is not None:
+            continue
+        candidates[action] = shortcut
+    return {
+        action: shortcut
+        for action, shortcut in candidates.items()
+        if shortcut_conflict(action, shortcut, candidates) is None
+    }
+
+
+def serialize_shortcut_overrides(
+    overrides: Mapping[Action, str] | None,
+) -> dict[str, str]:
+    return {
+        action.value: shortcut
+        for action, shortcut in normalize_shortcut_overrides(overrides).items()
+    }
+
+
+def _resolve_default(
     chord: Chord,
     *,
     player_view: bool,
@@ -1752,6 +1997,43 @@ def resolve(
     ):
         return None
     return table.get(canonical)
+
+
+def resolve(
+    chord: Chord,
+    *,
+    player_view: bool,
+    radio_session: bool,
+    shortcut_overrides: Mapping[Action, str] | None = None,
+    **context: bool,
+) -> Action | None:
+    """Rozstrzygnij skrót, nakładając zapis użytkownika na wspólny model.
+
+    Nadpisanie akcji wyłącza wszystkie jej dawne aliasy. Nowa kombinacja
+    zachowuje dostępność polecenia: działa tylko w kontekście, w którym co
+    najmniej jeden skrót domyślny prowadziłby do tej samej akcji.
+    """
+    effective = normalize_shortcut_overrides(shortcut_overrides)
+    arguments = {
+        "player_view": player_view,
+        "radio_session": radio_session,
+        **context,
+    }
+    if effective:
+        for action, custom in effective.items():
+            if not custom or custom != chord.canonical:
+                continue
+            for default_shortcut in _default_chords_by_action().get(action, ()):
+                default_chord = chord_from_canonical(default_shortcut)
+                if default_chord is not None and _resolve_default(
+                    default_chord, **arguments
+                ) is action:
+                    return action
+        default_action = _resolve_default(chord, **arguments)
+        if default_action in effective:
+            return None
+        return default_action
+    return _resolve_default(chord, **arguments)
 
 
 def _help_entries() -> list[tuple[str, str, Action]]:
@@ -2078,7 +2360,7 @@ def _help_entries() -> list[tuple[str, str, Action]]:
         Action.NEXT_AUDIO_OUTPUT: (
             "Następne dostępne urządzenie audio bieżącej sesji"
         ),
-        Action.GENERAL_SETTINGS: "Ustawienia interfejsu i odtwarzania",
+        Action.GENERAL_SETTINGS: "Ustawienia programu",
         Action.REFRESH_COMMON_DATA: "Odśwież dane z AMC Test",
         Action.COMMON_DATA_STATUS: "Stan synchronizacji danych z AMC Test",
         Action.EXPORT_BACKUP: "Eksportuj dane AMC",
@@ -2215,15 +2497,16 @@ def describe(
     AMC przekazuje ją zawsze, dzięki czemu polecenia kontekstowe mają ten sam
     opis co menu, Ctrl+F1 i paleta.
     """
-    overrides = shortcut_overrides or {}
+    overrides = dict(shortcut_overrides or {})
     ctrl_f5 = ctrl_f5_presentation(session_label)
     return [
         (
-            overrides.get(
-                action,
-                ctrl_f5.shortcut
+            (
+                readable_shortcut(overrides[action])
+                if action in overrides
+                else ctrl_f5.shortcut
                 if ctrl_f5 is not None and ctrl_f5.action is action
-                else chord,
+                else chord
             ),
             describe_action(action, session_label),
         )
@@ -2259,6 +2542,24 @@ def describe_action(action: Action, session_label: str | None = None) -> str:
         if candidate is action:
             return label
     return "Polecenie AMC"
+
+
+def configurable_shortcuts() -> tuple[ShortcutDefinition, ...]:
+    """Zwróć stabilną, użytkową listę pozycji karty Klawiatura."""
+    defaults = _default_chords_by_action()
+    definitions = [
+        ShortcutDefinition(
+            action=action,
+            name=describe_action(action),
+            default_shortcut=shortcuts[0],
+        )
+        for action, shortcuts in defaults.items()
+        if shortcuts and is_configurable_shortcut(action)
+    ]
+    return tuple(sorted(
+        definitions,
+        key=lambda item: (item.name.casefold(), item.default_shortcut),
+    ))
 
 
 def readable_chord(chord: Chord) -> str:

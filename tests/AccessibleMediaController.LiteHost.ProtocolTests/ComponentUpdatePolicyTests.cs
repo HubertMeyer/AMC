@@ -8,8 +8,31 @@ internal static class ComponentUpdatePolicyTests
     {
         MissingProfileUsesSafeDefaults();
         SavedChoicesAreReadWithoutMigratingTheProfile();
+        ExplicitOverridesWinWithoutWritingTheProfile();
         CheckIsDueAfterTwentyFourHours();
         Console.WriteLine("ComponentUpdatePolicyTests: OK");
+    }
+
+    private static void ExplicitOverridesWinWithoutWritingTheProfile()
+    {
+        using var document = System.Text.Json.JsonDocument.Parse("""
+            {
+              "checkAutomatically": false,
+              "downloadAutomatically": true
+            }
+            """);
+        var policy = LiteComponentUpdatePolicy.Resolve(null, document.RootElement);
+        Assert.True(!policy.CheckAutomatically, "jawny wybór wxPython wyłącza sprawdzanie");
+        Assert.True(policy.DownloadAutomatically, "jawny wybór wxPython włącza pobieranie");
+
+        using var invalid = System.Text.Json.JsonDocument.Parse("""
+            {
+              "checkAutomatically": "false"
+            }
+            """);
+        var inherited = LiteComponentUpdatePolicy.Resolve(null, invalid.RootElement);
+        Assert.True(inherited.CheckAutomatically, "nieprawidłowy typ nie zmienia wartości odziedziczonej");
+        Assert.True(inherited.DownloadAutomatically, "brak pola zachowuje wartość odziedziczoną");
     }
 
     private static void MissingProfileUsesSafeDefaults()

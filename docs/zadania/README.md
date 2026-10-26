@@ -48,6 +48,22 @@ do kontrolowanej archiwizacji opisanej w REL-003.
 
 ## Zadania
 
+- `KEY-001` — **W trakcie; kod, pełna regresja i samowystarczalna paczka
+  testowa v2 są zweryfikowane; instalacja oraz ręczny odbiór NVDA pozostają** — osobna
+  karta **Klawiatura** z filtrem poleceń, podglądem zmiany przed zapisem,
+  wykrywaniem konfliktów, usuwaniem i przywracaniem skrótów oraz jednym
+  kontraktem menu, palety i pomocy. Szczegóły:
+  [KEY-001-konfigurowalne-skroty-klawiaturowe.md](KEY-001-konfigurowalne-skroty-klawiaturowe.md).
+
+- `SET-001` — **W trakcie; kod priorytetów 1–3, 172 testy szerszej regresji i
+  build LiteHosta są zweryfikowane; nowa paczka oraz instalator czekają na
+  zakończenie równoległego zadania, potem pozostanie ręczny odbiór NVDA** —
+  naprawa osiągalności pól domyślnych folderów przez Tab, przegląd nazw
+  kontrolek, dostępna karta integracji z Windows, nowa karta Aktualizacje oraz
+  karta Dostępność i komunikaty. Wcześniejsza paczka v2 nie zawiera dwóch
+  ostatnich zmian. Szczegóły:
+  [SET-001-audyt-ustawien-dostepnosc-integracja-windows.md](SET-001-audyt-ustawien-dostepnosc-integracja-windows.md).
+
 - `REL-002` — **W trakcie; decyzje i bezpieczna kolejność migracji zapisane,
   dzisiejszy AMC Test zainstalowany, 16 z 18 pozostałych gałęzi lokalnych
   usunięto, lecz GitHub i instalatory systemowe jeszcze niezmienione** — jedna

@@ -46,25 +46,30 @@ public static class ShellIntegrationRules
     public static readonly IReadOnlyList<ShellIntegrationGroup> Groups =
     [
         new(
+            "common-audio",
             "Muzyka i nagrania",
             "Najczęstsze formaty dźwiękowe. To zwykle jedyna grupa, którą warto włączyć.",
             [".mp3", ".m4a", ".aac", ".flac", ".wav", ".ogg", ".oga", ".opus", ".wma"]),
         new(
+            "other-audio",
             "Rzadsze formaty dźwiękowe",
             "Formaty spotykane w nagraniach studyjnych, radiu i na starszych płytach.",
             [".mp2", ".wave", ".rf64", ".bwf", ".adts", ".asf", ".aif", ".aiff", ".aifc",
              ".mka", ".ac3", ".eac3", ".ec3", ".amr"]),
         new(
+            "video",
             "Filmy i pojemniki wideo",
             "Włącz, jeśli AMC ma otwierać także filmy. Dźwięk z nich odtwarza tak samo.",
             [".mkv", ".webm", ".mp4", ".m4v", ".mov", ".ogv", ".avi", ".wmv",
              ".mpeg", ".mpg", ".mpe", ".ts", ".mts", ".m2ts", ".vob", ".flv",
              ".3gp", ".3g2", ".3gp2", ".3gpp"]),
         new(
+            "playlists",
             "Playlisty",
             "Listy odtwarzania i zapisane stacje radiowe.",
             [".m3u", ".m3u8", ".pls", ".xspf"]),
         new(
+            "partial-recordings",
             "Niedokończone nagrania AMC",
             "Pliki przerwanych nagrań, które AMC umie odzyskać. Żaden inny program ich nie otworzy.",
             [".amc-partial"])
@@ -78,6 +83,16 @@ public static class ShellIntegrationRules
 
     /// <summary>Grupa domyslnie zaznaczona przy pierwszej instalacji.</summary>
     public const string DefaultGroupName = "Muzyka i nagrania";
+
+    /// <summary>
+    /// Tożsamość wpisów powłoki jest osobna dla wydania testowego i
+    /// publicznego. Ustawienia oraz host korzystają z tego samego kontraktu,
+    /// zamiast składać techniczne nazwy kluczy z napisów widocznych w UI.
+    /// </summary>
+    public static ShellIntegrationProfile ProfileFor(string? profileId) =>
+        string.Equals(profileId, "public", StringComparison.OrdinalIgnoreCase)
+            ? ShellIntegrationProfile.Public
+            : ShellIntegrationProfile.Test;
 
     /// <summary>
     /// Nazwa klasy rejestru dla rozszerzenia, np. ".mp3" -> "AccessibleMediaController.mp3".
@@ -237,9 +252,51 @@ public static class ShellIntegrationRules
 
 /// <summary>Grupa rozszerzen proponowana uzytkownikowi jako jedna pozycja.</summary>
 public sealed record ShellIntegrationGroup(
+    string Id,
     string Name,
     string Description,
     IReadOnlyList<string> Extensions);
+
+/// <summary>Stała, profilowa tożsamość integracji z Eksploratorem Windows.</summary>
+public sealed record ShellIntegrationProfile(
+    string Id,
+    string RegistryKey,
+    string DisplayName,
+    string RegisteredApplication,
+    string OpenLabel,
+    string QueueLabel)
+{
+    public static ShellIntegrationProfile Test { get; } = new(
+        "test",
+        "Test",
+        "AMC Test",
+        "Accessible Multimedia Controller — Test",
+        "Otwórz w AMC Test",
+        "Dodaj do kolejki AMC Test");
+
+    public static ShellIntegrationProfile Public { get; } = new(
+        "public",
+        "Public",
+        "AMC Public",
+        "Accessible Multimedia Controller",
+        "Otwórz w AMC Public",
+        "Dodaj do kolejki AMC Public");
+
+    public string ClassPrefix => $"AccessibleMediaController.{RegistryKey}.";
+    public string VerbPrefix => ClassPrefix;
+    public string CapabilitiesPath =>
+        $@"Software\AccessibleMultimediaController\{RegistryKey}\Capabilities";
+    public string SettingsPath =>
+        $@"Software\AccessibleMultimediaController\{RegistryKey}\ShellIntegration";
+
+    public string ClassNameFor(string extension)
+    {
+        var normalized = ShellIntegrationRules.NormalizeExtension(extension)
+            ?? throw new ArgumentException(
+                $"Nieprawidłowe rozszerzenie: {extension}", nameof(extension));
+        return ClassPrefix + normalized[1..];
+    }
+}
 
 /// <summary>Polecenie w menu kontekstowym Eksploratora.</summary>
 public sealed record ShellVerb(string Key, string Label, string ArgumentTemplate);

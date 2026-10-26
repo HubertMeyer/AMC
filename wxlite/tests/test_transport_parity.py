@@ -775,7 +775,7 @@ def test_ctrl_comma_otwiera_ustawienia_z_listy_i_odtwarzacza() -> None:
     chord = Chord(",", ctrl=True)
     assert resolve(chord, player_view=False, radio_session=False) is Action.GENERAL_SETTINGS
     assert resolve(chord, player_view=True, radio_session=False) is Action.GENERAL_SETTINGS
-    assert dict(describe())["Ctrl+,"] == "Ustawienia interfejsu i odtwarzania"
+    assert dict(describe())["Ctrl+,"] == "Ustawienia programu"
 
 
 def test_shift_r_nie_jest_polykany_przez_wylaczony_akcelerator_menu() -> None:

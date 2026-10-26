@@ -109,13 +109,14 @@ public static class InstallerOfflineContractTests
                  {
                      "ShellProfileKey \"Public\"",
                      "ShellProfileKey \"Test\"",
-                     "ShellApplicationName \"Accessible Multimedia Controller\"",
-                     "ShellApplicationName \"Accessible Multimedia Controller — Test\"",
-                     "ShellOpenLabel \"Otwórz w AMC\"",
+                     "ShellRegisteredApplication \"Accessible Multimedia Controller\"",
+                     "ShellRegisteredApplication \"Accessible Multimedia Controller — Test\"",
+                     "ShellOpenLabel \"Otwórz w AMC Public\"",
                      "ShellOpenLabel \"Otwórz w AMC Test\"",
-                     "ShellQueueLabel \"Dodaj do kolejki AMC\"",
+                     "ShellQueueLabel \"Dodaj do kolejki AMC Public\"",
                      "ShellQueueLabel \"Dodaj do kolejki AMC Test\"",
                      "Software\\AccessibleMultimediaController\\{#ShellProfileKey}\\Capabilities",
+                     "Software\\AccessibleMultimediaController\\{#ShellProfileKey}\\ShellIntegration",
                      "AccessibleMediaController.{#ShellProfileKey}.",
                  })
         {
@@ -140,6 +141,33 @@ public static class InstallerOfflineContractTests
         Check(
             installerExtensions.SetEquals(ShellIntegrationRules.AllExtensions),
             "Rozszerzenia instalatora i katalogu Core nie sa identyczne.");
+        foreach (var wymagane in new[]
+                 {
+                     "ManagedByApplication",
+                     "ContextMenuEnabled",
+                     "OpenWithEnabled",
+                     "SelectedExtensions",
+                     "LoadShellIntegrationSelection",
+                 })
+        {
+            Check(
+                iss.Contains(wymagane, StringComparison.Ordinal),
+                $"Aktualizacja instalatora nie zachowuje wyboru Ustawien: {wymagane}.");
+        }
+
+        var groupIds = ShellIntegrationRules.Groups
+            .Select(group => group.Id)
+            .ToHashSet(StringComparer.Ordinal);
+        Check(
+            groupIds.Count == ShellIntegrationRules.Groups.Count
+                && groupIds.All(id => !string.IsNullOrWhiteSpace(id)),
+            "Grupy integracji nie maja unikatowych, stabilnych identyfikatorow.");
+        Check(
+            ShellIntegrationRules.ProfileFor("test").RegisteredApplication
+                == "Accessible Multimedia Controller — Test"
+                && ShellIntegrationRules.ProfileFor("public").RegisteredApplication
+                == "Accessible Multimedia Controller",
+            "Profile Core stracily osobne tozsamosci integracji z Windows.");
 
         Console.WriteLine(
             "OK: instalator nie pobiera ani nie instaluje zewnetrznego .NET "

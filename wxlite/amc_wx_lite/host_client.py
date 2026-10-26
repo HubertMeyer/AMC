@@ -1600,12 +1600,58 @@ class LiteHostClient:
         """Stan migawki bez modyfikowania zadnego profilu."""
         return self.call("profile.commonDataStatus", timeout=60.0)
 
-    def update_media_components(self, *, automatic: bool = False) -> Any:
+    def component_update_status(self) -> Any:
+        """Odczytaj stan składników i odziedziczoną politykę aktualizacji."""
+        return self.call("components.status", timeout=20.0)
+
+    def update_media_components(
+        self,
+        *,
+        automatic: bool = False,
+        check_automatically: bool | None = None,
+        download_automatically: bool | None = None,
+    ) -> Any:
         """Sprawdź wspólne, zweryfikowane składniki FFmpeg i yt-dlp."""
+        args: dict[str, bool] = {}
+        if check_automatically is not None:
+            args["checkAutomatically"] = bool(check_automatically)
+        if download_automatically is not None:
+            args["downloadAutomatically"] = bool(download_automatically)
         return self.call(
             "components.updateAutomatic" if automatic else "components.update",
+            args,
             timeout=1_200.0,
         )
+
+    def shell_integration_status(self) -> Any:
+        """Odczytaj faktyczny stan integracji bieżącego profilu z Windows."""
+        return self.call("shellIntegration.status", timeout=20.0)
+
+    def general_settings_defaults(self) -> Any:
+        """Odczytaj pełne systemowe ścieżki pokazywane w Ustawieniach."""
+        return self.call("settings.defaults", timeout=20.0)
+
+    def apply_shell_integration(
+        self,
+        *,
+        context_menu_enabled: bool,
+        open_with_enabled: bool,
+        group_ids: list[str],
+    ) -> Any:
+        """Zastosuj wyłącznie znane hostowi grupy typów plików."""
+        return self.call(
+            "shellIntegration.apply",
+            {
+                "contextMenuEnabled": bool(context_menu_enabled),
+                "openWithEnabled": bool(open_with_enabled),
+                "groupIds": list(dict.fromkeys(str(value) for value in group_ids)),
+            },
+            timeout=30.0,
+        )
+
+    def open_windows_default_apps(self) -> Any:
+        """Otwórz systemową stronę legalnego wyboru aplikacji domyślnych."""
+        return self.call("shellIntegration.openDefaultApps", timeout=20.0)
 
     def import_common_data_snapshot(self, *, accept_test_data: bool = False) -> Any:
         """Publiczne AMC: odswiez dane; konflikt wymaga jawnej decyzji."""
