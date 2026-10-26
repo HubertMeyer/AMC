@@ -60,8 +60,8 @@ do kontrolowanej archiwizacji opisanej w REL-003.
 - `REL-003` — **W trakcie; instalacja WPF, stare instalatory, artefakty
   kompilacji, trzy worktree alpha 425, dwa stare kandydaty Frontier, 26
   zbędnych gałęzi lokalnych i dziesięć powiązanych worktree usunięte; dwie
-  gałęzie robocze oraz niezweryfikowane źródła zachowane do dalszego
-  rozliczenia** — potwierdza
+  gałęzie robocze pozostały, a końcowy snapshot źródeł WPF zarchiwizowano na
+  GitHubie bez zmiany `main`** — potwierdza
   niezależne od logowania Google odświeżanie już zapisanych kanałów YouTube i
   dokumentuje bezpieczny zakres dalszego porządkowania starego repozytorium.
   Szczegóły:

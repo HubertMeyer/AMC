@@ -195,6 +195,34 @@ Oba worktree trwale usunięto i wykonano `git worktree prune`. Odzyskano około
 czyli 4,8 GiB. Nie zmieniono kodu Frontier, instalacji AMC Test ani danych
 urządzenia.
 
+## Archiwizacja źródeł WPF na GitHubie
+
+26.10.2026 użytkownik zdecydował o zachowaniu starego WPF wyłącznie jako
+archiwum możliwe do wyjątkowego odkopania. W repozytorium
+`https://github.com/michalkasperczak/AMC` opublikowano:
+
+- gałąź `archive/wpf-final-20261026`;
+- oznaczony tag `archive-wpf-final-20261026`;
+- końcowy commit `c59cfc6c56deb8b4b2c43ec2f8e048558123e46f`.
+
+Snapshot objął jeden wcześniejszy lokalny commit oraz 181 przygotowanych
+ścieżek: 84 zmodyfikowane, 96 wcześniej nieśledzonych i nową notę archiwalną.
+Przed publikacją sklasyfikowano pliki, sprawdzono wzorce sekretów oraz
+potwierdzono brak kluczy prywatnych, nowych tokenów i plików poświadczeń.
+Pliki `.p8`, `.jwt` i `client_secret*.json` są ignorowane i nie występowały w
+snapshotcie.
+
+Zdalny `main` przed i po operacji pozostał na commicie
+`1f5dccb6e0e14fab31d3d492459b820eed157456`. Gałąź i rozwinięty tag zweryfikowano
+na GitHubie jako wskazujące dokładnie commit `c59cfc6c`. Nie utworzono pull
+requesta ani wydania GitHub Releases.
+
+Nie wykonano nowej kompilacji, testów ani instalacji WPF. Publikacja potwierdza
+jedynie kompletne archiwum źródeł; nie jest dowodem działającego wydania.
+Lokalny katalog repozytorium WPF pozostaje na razie zachowany. Bieżąca
+instalacja AMC Test i równoległe zadanie mechanizmu aktualizacji nie zostały
+zmienione.
+
 ## YouTube bez ponownego logowania Google
 
 W kodzie istnieją dwa niezależne mechanizmy:
@@ -226,11 +254,8 @@ pozostaje osobnym przyszłym zadaniem.
 1. Rozstrzygnąć, czy z jednej tymczasowej gałęzi wyszukiwania należy odzyskać
    pojedyncze rozwiązania, czy świadomie usunąć ją po opublikowaniu bieżącej
    linii.
-2. Oddzielić źródła starego WPF warte archiwizacji od zmian, które mają
-   potwierdzone odpowiedniki w Pythonie.
-3. Przeskanować planowaną paczkę archiwalną pod kątem sekretów i danych
-   użytkownika.
-4. Utworzyć i zweryfikować archiwalny punkt na GitHubie.
-5. Opublikować kanoniczną linię Pythona, a dopiero potem usuwać stare gałęzie
-   zdalne i repozytorium źródłowe WPF.
+2. Po ostatecznej decyzji usunąć lokalny katalog WPF, korzystając z
+   zweryfikowanej gałęzi i tagu GitHub jako punktu odzyskania.
+3. Opublikować kanoniczną linię Pythona, nie zmieniając archiwalnego WPF w
+   równoległą linię rozwoju.
 
