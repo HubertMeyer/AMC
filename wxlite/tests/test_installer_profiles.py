@@ -269,6 +269,10 @@ def test_startup_smoke_is_isolated_and_cannot_activate_an_existing_instance() ->
     assert 'frame.Hide()' in GUI
     assert 'AMC_STARTUP_SMOKE_READY' in GUI
     assert 'self._startup_smoke_ready = True' in GUI
+    assert "wx.CallAfter(self.ExitMainLoop)" in GUI
+    assert GUI.index("frame.Close(force=True)") < GUI.index(
+        "wx.CallAfter(self.ExitMainLoop)"
+    )
     assert 'if not _startup_smoke_mode()' in GUI
     activation_handler = GUI[GUI.index("def _on_window_activate"):]
     activation_handler = activation_handler[: activation_handler.index("def ", 4)]

@@ -301,6 +301,12 @@ tych samych plików profilu.
   pełnego instalatora właściwego profilu i odrzucenie obcego profilu oraz
   niezgodnej sumy.
 - LiteHost Release: build zaliczony, 0 ostrzeżeń i 0 błędów.
+- Pierwsza próba pakowania wykryła wyścig kontrolowanego startu: interfejs
+  zapisywał `READY`, lecz natychmiastowe `ExitMainLoop` mogło ominąć oczekujące
+  zdarzenie zniszczenia ramki i pozostawić procesy testowe. Wyjście jest teraz
+  planowane przez `wx.CallAfter` po `Close`; bramka nadal wymaga naturalnego
+  zakończenia wszystkich procesów i niczego nie zabija. Testy ukierunkowane po
+  tej korekcie: **38 zaliczonych**.
 - Instalator systemowy Python na C: kandydat jeszcze nie został zbudowany w
   chwili tego zapisu.
 - Aktualizacja z prawdziwego GitHub Release: oczekuje na publikację pierwszego
@@ -323,8 +329,9 @@ tych samych plików profilu.
 
 - Wersja techniczna przygotowywanego kandydata: `0.1.0-alpha.434`.
 - Bazowy stan przed zmianą: `73279fbb15a1cd34c6813f24e097e0467889a197`.
-- Commit mechanizmu i dokładna rewizja pakietu: do uzupełnienia po zapisaniu
-  czystego stanu i zbudowaniu kandydata.
+- Commit mechanizmu aktualizacji: `66118f651309efc711c2f090c2e0e4c42e37a80c`.
+- Dokładna rewizja paczki będzie zapisana automatycznie w jej
+  `bundle-manifest.json` oraz pliku integralności instalatora.
 - Instalacja: `D:\Projekty Codex\AMC Python`.
 - Publikacja: brak.
 - Wcześniejszy commit etapu źródłowego: `d87a27f6`

@@ -30068,7 +30068,11 @@ class LiteApp(wx.App):
         else:
             print(f"AMC_STARTUP_SMOKE_FAILED: {message}", file=sys.stderr, flush=True)
         frame.Close(force=True)
-        self.ExitMainLoop()
+        # ``Close`` pozostawia w kolejce wx zdarzenie zniszczenia ramki.
+        # Natychmiastowe przerwanie MainLoop potrafiło ominąć tę kolejkę:
+        # znacznik READY był zapisany, ale Python i host pozostawały żywe.
+        # Kończymy pętlę dopiero w następnym obrocie, po obsłudze zamknięcia.
+        wx.CallAfter(self.ExitMainLoop)
 
     def _poll_startup_smoke(self, frame: LiteFrame, deadline: float) -> None:
         if getattr(frame, "_startup_smoke_ready", False):
