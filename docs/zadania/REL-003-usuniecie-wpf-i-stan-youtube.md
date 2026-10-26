@@ -141,7 +141,7 @@ jego `.test-output` i `.test-tmp`; odłączono go tylko od usuniętej gałęzi i
 ustawiono na commit `404b6919`. Bieżąca instalacja `D:\Projekty Codex\AMC Python`,
 profil użytkownika, biblioteki i poświadczenia nie były celem operacji.
 
-Pozostały dokładnie trzy gałęzie lokalne:
+Po pierwszym etapie pozostały dokładnie trzy gałęzie lokalne:
 
 - `integration/sonos-broker-20261024` — bieżąca linia AMC Test;
 - `integracja/search-completion-20261014` — tymczasowe zabezpieczenie starszych
@@ -151,7 +151,27 @@ Pozostały dokładnie trzy gałęzie lokalne:
   linii; dalszego rozstrzygnięcia wymagają przede wszystkim nieprzeniesione
   warianty obsługi playlist TIDAL i identyfikacji uruchomionej kompilacji.
 
-Żadna z tych trzech gałęzi nie ma upstreamu, tagu ani kopii zawierającej jej
+### Korekta późniejsza z 26.10.2026: usunięcie gałęzi Shift+F2
+
+Po wyjaśnieniu, że wszystkie poprawki samego Shift+F2 działają już w bieżącej
+aplikacji, użytkownik zdecydował o usunięciu również
+`local/shift-f2-release-20261015`. Ta decyzja zastępuje wcześniejsze tymczasowe
+zachowanie tej gałęzi wraz ze starszymi eksperymentami playlist TIDAL i
+identyfikacji uruchomionej kompilacji.
+
+Przed usunięciem ponownie potwierdzono brak zmian śledzonych. Powiązany worktree
+`D:\Projekty Codex\AMC worktrees\shift-f2-release-20261015` zawierał wyłącznie
+odtwarzalne `.test-output` i `.test-tmp`; jego usunięcie odzyskało około
+1239,5 MiB. Łącznie dziesięć worktree usuniętych podczas audytu 18 gałęzi
+zajmowało około 4203 MiB, czyli 4,1 GiB.
+
+Pozostały dokładnie dwie gałęzie lokalne:
+
+- `integration/sonos-broker-20261024` — bieżąca linia AMC Test;
+- `integracja/search-completion-20261014` — tymczasowe zabezpieczenie starszych
+  wariantów wyszukiwania i aktualizacji.
+
+Żadna z tych dwóch gałęzi nie ma upstreamu, tagu ani kopii zawierającej jej
 koniec na GitHubie. Nie zmieniono żadnej gałęzi zdalnej.
 
 ## YouTube bez ponownego logowania Google
@@ -182,8 +202,9 @@ pozostaje osobnym przyszłym zadaniem.
 
 ## Następny bezpieczny etap
 
-1. Rozstrzygnąć, czy z dwóch tymczasowych gałęzi należy odzyskać pojedyncze
-   rozwiązania, czy świadomie usunąć je po opublikowaniu bieżącej linii.
+1. Rozstrzygnąć, czy z jednej tymczasowej gałęzi wyszukiwania należy odzyskać
+   pojedyncze rozwiązania, czy świadomie usunąć ją po opublikowaniu bieżącej
+   linii.
 2. Oddzielić źródła starego WPF warte archiwizacji od zmian, które mają
    potwierdzone odpowiedniki w Pythonie.
 3. Przeskanować planowaną paczkę archiwalną pod kątem sekretów i danych

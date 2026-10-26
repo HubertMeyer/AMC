@@ -49,7 +49,7 @@ do kontrolowanej archiwizacji opisanej w REL-003.
 ## Zadania
 
 - `REL-002` — **W trakcie; decyzje i bezpieczna kolejność migracji zapisane,
-  dzisiejszy AMC Test zainstalowany, 15 z 18 pozostałych gałęzi lokalnych
+  dzisiejszy AMC Test zainstalowany, 16 z 18 pozostałych gałęzi lokalnych
   usunięto, lecz GitHub i instalatory systemowe jeszcze niezmienione** — jedna
   kanoniczna linia AMC Python,
   wydania AMC Test i AMC Public z tego samego commitu, dwa kanały aktualizacji,
@@ -58,8 +58,8 @@ do kontrolowanej archiwizacji opisanej w REL-003.
   [REL-002-kanoniczne-wydania-test-public-github.md](REL-002-kanoniczne-wydania-test-public-github.md).
 
 - `REL-003` — **W trakcie; instalacja WPF, stare instalatory, artefakty
-  kompilacji, trzy worktree alpha 425, 25 zbędnych gałęzi lokalnych i dziewięć
-  powiązanych worktree usunięte; trzy gałęzie robocze oraz niezweryfikowane
+  kompilacji, trzy worktree alpha 425, 26 zbędnych gałęzi lokalnych i dziesięć
+  powiązanych worktree usunięte; dwie gałęzie robocze oraz niezweryfikowane
   źródła zachowane do dalszego rozliczenia** — potwierdza
   niezależne od logowania Google odświeżanie już zapisanych kanałów YouTube i
   dokumentuje bezpieczny zakres dalszego porządkowania starego repozytorium.
