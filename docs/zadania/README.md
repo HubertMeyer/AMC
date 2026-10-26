@@ -42,6 +42,24 @@ pozostaje w `D:\Projekty Codex\AMC Python`; AMC Public pozostaje bez zmian.
 
 ## Zadania
 
+- `RECOG-001` — **W trakcie; kod, pełna regresja, build i instalacja AMC Test
+  26.10.2026, 13:32 są gotowe; pozostaje ręczny odbiór NVDA** — krótka lista
+  działań pod prawą strzałką, pełne podmenu `Usługi, łącza i powiązania`,
+  Spotify i TIDAL w AMC z fokusem utworu, oryginalne aplikacje oraz publiczne
+  łącza Apple Music rozwiązywane na żądanie. Szczegóły:
+  [RECOG-001-interakcje-z-rozpoznanymi-utworami.md](RECOG-001-interakcje-z-rozpoznanymi-utworami.md).
+
+- `REC-002` — **Zrobione i zainstalowane w AMC Test 26.10.2026, 13:32** —
+  prawa strzałka w widoku `Nagrywane` i harmonogramach podaje format, nazwę
+  pliku oraz folder bez powtarzania stacji i adresu. Szczegóły:
+  [REC-002-prawa-strzalka-nagrywane-pliki.md](REC-002-prawa-strzalka-nagrywane-pliki.md).
+
+- `YT-004` — **W trakcie; kod, pełna regresja, build i instalacja AMC Test są
+  gotowe; pozostaje ręczny odbiór prawdziwego pobrania i NVDA** — pobieranie
+  filmów YouTube pod `Ctrl+Shift+D`, pojedyncze `Zapisz jako` pod `Ctrl+S` oraz
+  domyślny wybór MP4 albo najlepszego oryginalnego formatu. Szczegóły:
+  [YT-004-pobieranie-wideo-youtube.md](YT-004-pobieranie-wideo-youtube.md).
+
 - `PLAY-001` — **W trakcie; kod, pełna regresja 2010/2010, instalacja i
   uruchomienie AMC Test 23.10.2026, 11:24 są gotowe; czeka na ręczny odbiór
   NVDA** — trwałe
