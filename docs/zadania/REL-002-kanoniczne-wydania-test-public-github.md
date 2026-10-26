@@ -265,4 +265,4 @@ tych samych plików profilu.
 - Pakiet: `39f0d3f2`.
 - Instalacja: `D:\Projekty Codex\AMC Python`.
 - Publikacja: brak.
-- Commit etapu źródłowego: do uzupełnienia po zapisaniu zmian w Git.
+- Commit etapu źródłowego: `d87a27f6` (`build(release): rozdziel kanały Test i Public`).
