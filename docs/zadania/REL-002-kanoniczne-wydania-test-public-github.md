@@ -384,3 +384,5 @@ tych samych plików profilu.
   `test-2026.10.26.1954`.
 - Wcześniejszy commit etapu źródłowego: `d87a27f6`
   (`build(release): rozdziel kanały Test i Public`).
+- Commit kontraktu Quick App Switchera w instalatorze: `781f8283`
+  (`feat(installer): offer Quick App Switcher with AMC Test`).
