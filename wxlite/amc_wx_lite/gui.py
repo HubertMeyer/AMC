@@ -6222,8 +6222,8 @@ class AudioOutputDeviceDialog(wx.Dialog):
         return self._choices[index] if 0 <= index < len(self._choices) else None
 
 
-class RecognitionActionsDialog(wx.Dialog):
-    """Short Right-Arrow list derived from the shared recognition model."""
+class RecognitionActionsWindow(wx.Frame):
+    """Concise Right-Arrow list matching Spotify and TIDAL navigation."""
 
     def __init__(
         self,
@@ -6235,14 +6235,27 @@ class RecognitionActionsDialog(wx.Dialog):
         announce: Callable[[str], None],
         resolve_action,
         execute_action,
+        detailed_hints: bool,
+        finished: Callable[[bool], None],
     ) -> None:
-        super().__init__(parent, title="Działania dla rozpoznanego utworu", size=(620, 390))
+        style = (
+            wx.DEFAULT_FRAME_STYLE
+            | wx.FRAME_FLOAT_ON_PARENT
+            | wx.FRAME_NO_TASKBAR
+        ) & ~(wx.RESIZE_BORDER | wx.MAXIMIZE_BOX | wx.MINIMIZE_BOX)
+        super().__init__(
+            parent,
+            title="Działania dla rozpoznanego utworu",
+            style=style,
+        )
         self._entry = entry
         self._actions = actions
         self._copy_to_clipboard = copy_to_clipboard
         self._announce = announce
         self._resolve_action = resolve_action
         self._execute_action = execute_action
+        self._finished = finished
+        self._closing = False
 
         panel = wx.Panel(self)
         layout = wx.BoxSizer(wx.VERTICAL)
@@ -6250,28 +6263,43 @@ class RecognitionActionsDialog(wx.Dialog):
             "Enter wykonuje działanie. Ctrl+C kopiuje nazwę działania, "
             "Ctrl+Shift+C kopiuje jego łącze. Strzałka w lewo lub Escape wraca."
         )
-        help_label = wx.StaticText(panel, label=hint)
-        help_label.SetName(hint)
-        help_label.Wrap(560)
-        layout.Add(help_label, 0, wx.ALL | wx.EXPAND, 10)
         self.actions = wx.ListBox(panel, choices=[action.label for action in actions])
         self.actions.SetName("Najważniejsze działania dla rozpoznanego utworu")
-        layout.Add(self.actions, 1, wx.LEFT | wx.RIGHT | wx.BOTTOM | wx.EXPAND, 10)
+        self.actions.SetHelpText(hint if detailed_hints else "")
+        layout.Add(self.actions, 1, wx.ALL | wx.EXPAND, 10)
         self.status = wx.StaticText(panel, label="")
         self.status.SetName("Stan działania")
         layout.Add(self.status, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM | wx.EXPAND, 10)
         panel.SetSizer(layout)
-        close = wx.Button(self, wx.ID_CANCEL, label="&Wróć")
-        close.SetName("Wróć do rozpoznanych utworów")
         outer = wx.BoxSizer(wx.VERTICAL)
         outer.Add(panel, 1, wx.EXPAND)
-        outer.Add(close, 0, wx.ALL | wx.ALIGN_RIGHT, 10)
         self.SetSizer(outer)
+        self.SetMinSize((620, 260))
+        self.Fit()
+        self.CentreOnParent()
         if actions:
             self.actions.SetSelection(0)
         self.actions.Bind(wx.EVT_CHAR_HOOK, self._on_key)
         self.actions.Bind(wx.EVT_LISTBOX_DCLICK, self._on_activate)
+        self.Bind(wx.EVT_CLOSE, self._on_close)
+
+    def show_for_keyboard(self) -> None:
+        self.Show()
+        self.Raise()
         wx.CallAfter(self.actions.SetFocus)
+
+    def _finish(self, executed: bool) -> None:
+        if self._closing:
+            return
+        self._closing = True
+        callback = self._finished
+        self._finished = lambda _executed: None
+        self.Hide()
+        self.Destroy()
+        callback(executed)
+
+    def _on_close(self, _event: wx.CloseEvent) -> None:
+        self._finish(False)
 
     def _set_status(self, text: str) -> None:
         self.status.SetLabel(text)
@@ -6283,6 +6311,8 @@ class RecognitionActionsDialog(wx.Dialog):
         return self._actions[index] if 0 <= index < len(self._actions) else None
 
     def _failure(self, action: RecognitionAction, _error: Exception) -> None:
+        if self._closing:
+            return
         self._set_status(
             f"Nie znaleziono dokładnego łącza w {recognition_service_label(action.service)}"
         )
@@ -6294,10 +6324,17 @@ class RecognitionActionsDialog(wx.Dialog):
             self._set_status("Brak wybranego działania")
             return
         self._set_status("Sprawdzam dostępność działania")
+
+        def ready(match: dict | None) -> None:
+            if self._closing:
+                return
+            self._finish(True)
+            self._execute_action(self._entry, action, match)
+
         self._resolve_action(
             self._entry,
             action,
-            lambda match: self._execute_action(self._entry, action, match),
+            ready,
             lambda error: self._failure(action, error),
         )
 
@@ -6314,6 +6351,8 @@ class RecognitionActionsDialog(wx.Dialog):
         self._set_status("Sprawdzam dokładne łącze")
 
         def ready(match: dict | None) -> None:
+            if self._closing:
+                return
             link = recognition_action_url(action, match)
             if link and self._copy_to_clipboard(link):
                 self._set_status("Skopiowano łącze")
@@ -6337,7 +6376,7 @@ class RecognitionActionsDialog(wx.Dialog):
         elif chord == "Return":
             self._activate()
         elif chord in ("Left", "Escape"):
-            self.EndModal(wx.ID_CANCEL)
+            self._finish(False)
         else:
             event.Skip()
 
@@ -6358,6 +6397,7 @@ class RadioRecognitionHistoryDialog(wx.Dialog):
         default_service: str,
         submit,
         resolve_match,
+        detailed_hints: bool,
     ) -> None:
         super().__init__(parent, title="Rozpoznane utwory", size=(760, 540))
         self._entries = entries
@@ -6366,6 +6406,8 @@ class RadioRecognitionHistoryDialog(wx.Dialog):
         self._default_service = normalize_recognition_default_service(default_service)
         self._submit = submit
         self._resolve_match = resolve_match
+        self._detailed_hints = detailed_hints
+        self._actions_window: RecognitionActionsWindow | None = None
         self._visible: list[dict] = []
         self._filter_keys: list[str | None] = []
         self.changed = False
@@ -6622,12 +6664,28 @@ class RadioRecognitionHistoryDialog(wx.Dialog):
             self._set_status("Brak wybranego wpisu")
             return
 
+        previous = self._actions_window
+        if previous is not None:
+            try:
+                previous.Destroy()
+            except (AttributeError, RuntimeError):
+                pass
+            self._actions_window = None
+
+        actions_window: RecognitionActionsWindow | None = None
+
+        def finished(executed: bool) -> None:
+            if self._actions_window is actions_window:
+                self._actions_window = None
+            if not executed:
+                wx.CallAfter(self.history.SetFocus)
+
         def execute(selected_entry, action, match) -> None:
             self.requested_action = selected_entry, action, match
-            if actions_dialog.IsModal():
-                actions_dialog.EndModal(wx.ID_OK)
+            if self.IsModal():
+                self.EndModal(wx.ID_OK)
 
-        with RecognitionActionsDialog(
+        actions_window = RecognitionActionsWindow(
             self,
             entry,
             recognition_quick_actions(entry, self._default_service),
@@ -6635,12 +6693,11 @@ class RadioRecognitionHistoryDialog(wx.Dialog):
             announce=self._announce,
             resolve_action=self._resolve_action,
             execute_action=execute,
-        ) as actions_dialog:
-            actions_dialog.ShowModal()
-        if self.requested_action is not None and self.IsModal():
-            self.EndModal(wx.ID_OK)
-        else:
-            self.history.SetFocus()
+            detailed_hints=self._detailed_hints,
+            finished=finished,
+        )
+        self._actions_window = actions_window
+        actions_window.show_for_keyboard()
 
     def _move(self, direction: int) -> None:
         entry = self._selected_entry()
@@ -28580,6 +28637,7 @@ class LiteFrame(wx.Frame):
             default_service=self.options.radio_recognition_default_service,
             submit=self.runner.submit,
             resolve_match=self._resolve_recognition_match,
+            detailed_hints=self._detailed_hints,
         )
         changed = False
         requested_action = None

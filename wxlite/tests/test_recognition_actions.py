@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import io
 import json
+from pathlib import Path
 
 from amc_wx_lite import apple_music_links, radio_recognition
 from amc_wx_lite.list_model import Row
@@ -18,6 +19,9 @@ from amc_wx_lite.recognition_actions import (
     store_match,
 )
 from amc_wx_lite.state_store import LiteState, Options, StateStore
+
+
+GUI_SOURCE = Path(__file__).parents[1] / "amc_wx_lite" / "gui.py"
 
 
 def _entry() -> dict:
@@ -59,6 +63,24 @@ def test_shared_action_model_keeps_right_arrow_short_and_context_complete() -> N
     assert "Spotify — pokaż utwór w AMC" in labels
     assert "TIDAL — pokaż utwór w AMC" in labels
     assert "Apple Music — wyszukaj w przeglądarce" in labels
+
+
+def test_right_arrow_actions_match_concise_spotify_tidal_window_contract() -> None:
+    source = GUI_SOURCE.read_text(encoding="utf-8")
+    window = source.split("class RecognitionActionsWindow", 1)[1].split(
+        "class RadioRecognitionHistoryDialog", 1
+    )[0]
+    assert "(wx.Frame):" in window
+    assert "wx.CallAfter(self.actions.SetFocus)" in window
+    assert 'self.actions.SetHelpText(hint if detailed_hints else "")' in window
+    assert "wx.StaticText(panel, label=hint)" not in window
+    assert "ShowModal" not in window
+
+    history = source.split("class RadioRecognitionHistoryDialog", 1)[1].split(
+        "class GeneralPlaybackOptionsDialog", 1
+    )[0]
+    assert "detailed_hints=self._detailed_hints" in history
+    assert "actions_window.show_for_keyboard()" in history
 
 
 def test_catalogue_match_is_conservative_and_diacritic_tolerant() -> None:
