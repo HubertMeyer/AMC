@@ -864,6 +864,38 @@ def test_full_description_starts_with_content_and_never_exposes_ids() -> None:
         assert "private-episode-id" not in spoken and "rss-id" not in spoken
 
 
+def test_long_multi_paragraph_description_is_not_shortened_for_nvda() -> None:
+    with _temporary_folder() as folder:
+        base = Path(folder)
+        path = _database(base)
+        final_paragraph = "Końcowy akapit musi zostać przeczytany automatycznie."
+        description = (
+            ("Pierwszy akapit jest celowo długi. " * 20).strip()
+            + "\n\n"
+            + final_paragraph
+        )
+        connection = sqlite3.connect(path)
+        payload = {
+            "SourceKind": 0,
+            "Description": description,
+        }
+        connection.execute(
+            "UPDATE podcast_subscriptions SET payload_json = ? WHERE id = ?",
+            (json.dumps(payload), "rss-id"),
+        )
+        connection.commit()
+        connection.close()
+
+        information = PodcastSource(private_sandbox(base)).description(
+            "rss-id", "podcast"
+        )
+
+        assert information is not None
+        assert len(information.initial_focus_name) > 500
+        assert information.initial_focus_name.endswith(final_paragraph)
+        assert "\n" not in information.initial_focus_name
+
+
 def test_empty_description_and_archived_parent_are_reported_without_guessing() -> None:
     with _temporary_folder() as folder:
         base = Path(folder)

@@ -85,6 +85,30 @@ def test_gui_speaks_only_the_host_user_facing_text() -> None:
     assert spoken == ["Program Trzeci, 192 kb/s, Serwis informacyjny"]
 
 
+def test_radio_alt_d_does_not_shorten_multiline_host_text() -> None:
+    spoken: list[str] = []
+    complete = (
+        "Pierwszy akapit bieżącej audycji.\n\n"
+        "Drugi akapit pozostaje w automatycznej wypowiedzi."
+    )
+
+    class Runner:
+        @staticmethod
+        def submit(_name, work, done, _failed) -> None:
+            done(work())
+
+    frame = gui.LiteFrame.__new__(gui.LiteFrame)
+    frame.client = SimpleNamespace(
+        current_radio_broadcast_information=lambda: {"text": complete}
+    )
+    frame.runner = Runner()
+    frame.announcer = SimpleNamespace(say=spoken.append)
+
+    frame._announce_current_radio_broadcast_information()
+
+    assert spoken == [complete]
+
+
 def test_nvda_end_receives_the_same_user_facing_broadcast_text() -> None:
     shown: list[str] = []
     frame = gui.LiteFrame.__new__(gui.LiteFrame)

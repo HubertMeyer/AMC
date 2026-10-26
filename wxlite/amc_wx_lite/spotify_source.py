@@ -427,12 +427,10 @@ def description_from_payload(
     ).strip()
     if not description:
         return None
+    # This text becomes the accessible name announced when the native Alt+D
+    # dialog opens.  Keep the complete, already sanitised description: a
+    # 500-character preview made NVDA stop before later paragraphs.
     normalized = " ".join(description.split())
-    if len(normalized) > 500:
-        word_end = normalized.rfind(" ", 0, 500)
-        if word_end < 1:
-            word_end = 500
-        normalized = normalized[:word_end].rstrip() + "…"
     return PodcastDescription(
         window_title=(
             "Opis podcastu Spotify"

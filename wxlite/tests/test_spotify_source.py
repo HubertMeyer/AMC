@@ -174,6 +174,28 @@ def test_spotify_description_has_only_deliberate_user_text() -> None:
     assert "InternalKind" not in result.text
 
 
+def test_spotify_long_description_is_complete_in_nvda_accessible_name() -> None:
+    row = Row(
+        "private-row",
+        "Odcinek",
+        "episode",
+        service_id="private-service",
+    )
+    final_paragraph = "Ostatni akapit opisu Spotify."
+    description = (
+        ("Długi pierwszy akapit. " * 30).strip()
+        + "\n\n"
+        + final_paragraph
+    )
+
+    result = description_from_payload({"description": description}, row)
+
+    assert result is not None
+    assert len(result.initial_focus_name) > 500
+    assert result.initial_focus_name.endswith(final_paragraph)
+    assert "\n" not in result.initial_focus_name
+
+
 def test_malformed_payload_has_one_short_user_facing_error() -> None:
     for payload, message in (
         ([], "Katalog Spotify zwrócił nieprawidłową odpowiedź"),

@@ -227,19 +227,16 @@ def _description_text(description: str, details: list[str]) -> str:
 
 
 def _initial_focus_name(description: str) -> str:
-    normalized = " ".join(description.split())
-    if len(normalized) <= 500:
-        return normalized
-    sentence_end = max(
-        (index + 1 for index, character in enumerate(normalized[:500]) if character in ".!?"),
-        default=0,
-    )
-    if sentence_end >= 40:
-        return normalized[:sentence_end]
-    word_end = normalized.rfind(" ", 0, 500)
-    if word_end < 1:
-        word_end = 500
-    return normalized[:word_end].rstrip() + "…"
+    """Expose the complete description when NVDA focuses the native dialog.
+
+    The 500-character preview previously used here became the accessible name
+    of the dialog and its text field.  NVDA therefore stopped automatically
+    after that preview even though the complete description remained visible.
+    Source import already applies explicit size and control-character limits,
+    so this presentation layer must not shorten the user-facing text again.
+    """
+
+    return " ".join(description.split())
 
 
 def complete_youtube_description(
