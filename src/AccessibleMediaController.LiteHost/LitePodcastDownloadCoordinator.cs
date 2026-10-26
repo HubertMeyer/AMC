@@ -15,6 +15,9 @@ internal sealed class LitePodcastDownloadCoordinator : IDisposable
     public const string Operation = "podcast.download";
     public const string SaveAsInfoOperation = "podcast.downloadSaveAsInfo";
     public const string SaveAsOperation = "podcast.downloadSaveAs";
+    public const string VideoOperation = "podcast.videoDownload";
+    public const string VideoSaveAsInfoOperation = "podcast.videoSaveAsInfo";
+    public const string VideoSaveAsOperation = "podcast.videoSaveAs";
     private const int MaximumBatchSize = 100;
 
     private readonly LitePodcastProgressStore _podcasts;
@@ -266,6 +269,176 @@ internal sealed class LitePodcastDownloadCoordinator : IDisposable
         {
             Volatile.Write(ref _downloadInProgress, 0);
         }
+    }
+
+    public object DownloadVideos(JsonElement args, LiteEventSink events)
+    {
+        if (Interlocked.CompareExchange(ref _downloadInProgress, 1, 0) != 0)
+            throw new LiteRequestException("Pobieranie odcinków lub wideo już trwa.");
+        try
+        {
+            var episodeIds = ReadEpisodeIds(args);
+            var format = ReadVideoFormat(args);
+            var targets = _podcasts.GetDownloadTargets(episodeIds)
+                .ToDictionary(target => target.EpisodeId, StringComparer.Ordinal);
+            var downloaded = 0;
+            var failed = 0;
+            string? firstFailure = null;
+            string? fileName = null;
+            for (var index = 0; index < episodeIds.Length; index++)
+            {
+                if (!targets.TryGetValue(episodeIds[index], out var target))
+                {
+                    failed++;
+                    firstFailure ??= "Materiału nie ma już w bibliotece Podcastów i YouTube.";
+                    continue;
+                }
+                try
+                {
+                    RequireYouTubeTarget(target);
+                    var folder = PodcastDownloadFolderResolver.Resolve(
+                        target.ConfiguredDownloadsFolder);
+                    PublishProgress(events, target, index, episodeIds.Length, percent: 0);
+                    var result = YouTubeMediaDownloader.DownloadVideoAsync(
+                            target.MediaUrl,
+                            folder,
+                            target.Title,
+                            format,
+                            _cancellation.Token)
+                        .GetAwaiter()
+                        .GetResult();
+                    downloaded++;
+                    fileName ??= Path.GetFileName(result.Path);
+                    PublishProgress(events, target, index, episodeIds.Length, percent: 100);
+                }
+                catch (OperationCanceledException)
+                {
+                    throw;
+                }
+                catch (Exception exception) when (exception is HttpRequestException
+                    or IOException
+                    or UnauthorizedAccessException
+                    or InvalidDataException
+                    or ArgumentException
+                    or NotSupportedException
+                    or TimeoutException)
+                {
+                    failed++;
+                    firstFailure ??= exception.Message;
+                    Console.Error.WriteLine(
+                        $"[lite-host] nie pobrano wideo; blad {exception.GetType().Name}");
+                }
+            }
+            return new
+            {
+                requested = episodeIds.Length,
+                downloaded,
+                failed,
+                firstFailure,
+                fileName
+            };
+        }
+        finally
+        {
+            Volatile.Write(ref _downloadInProgress, 0);
+        }
+    }
+
+    public object VideoSaveAsInfo(JsonElement args)
+    {
+        var target = GetSingleTarget(args);
+        RequireYouTubeTarget(target);
+        return new
+        {
+            title = target.Title,
+            suggestedBaseName = PodcastDownloadNaming.SuggestedVideoBaseName(target.Title),
+            initialFolder = PodcastDownloadFolderResolver.ResolveDialogInitialFolder(
+                target.ConfiguredDownloadsFolder)
+        };
+    }
+
+    public object SaveVideoAs(JsonElement args, LiteEventSink events)
+    {
+        if (Interlocked.CompareExchange(ref _downloadInProgress, 1, 0) != 0)
+            throw new LiteRequestException("Pobieranie odcinków lub wideo już trwa.");
+        var temporaryDirectory = Path.Combine(
+            Path.GetTempPath(),
+            "AccessibleMediaController",
+            "save-video-as",
+            Guid.NewGuid().ToString("N"));
+        try
+        {
+            var target = GetSingleTarget(args);
+            RequireYouTubeTarget(target);
+            var format = ReadVideoFormat(args);
+            var requestedPath = NormalizeDestination(LiteArgs.RequirePath(args, "path"));
+            Directory.CreateDirectory(temporaryDirectory);
+            PublishProgress(events, target, 0, 1, percent: 0);
+            var downloaded = YouTubeMediaDownloader.DownloadVideoAsync(
+                    target.MediaUrl,
+                    temporaryDirectory,
+                    target.Title,
+                    format,
+                    _cancellation.Token)
+                .GetAwaiter()
+                .GetResult();
+            var destination = YouTubeMediaDownloader.ResolveSaveAsDestination(
+                requestedPath,
+                Path.GetExtension(downloaded.Path),
+                format);
+            YouTubeMediaDownloader.PublishCompletedFileAsync(
+                    downloaded.Path,
+                    destination,
+                    overwrite: true,
+                    _cancellation.Token)
+                .GetAwaiter()
+                .GetResult();
+            PublishProgress(events, target, 0, 1, percent: 100);
+            return new
+            {
+                title = target.Title,
+                fileName = Path.GetFileName(destination),
+                bytesWritten = downloaded.BytesWritten
+            };
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception exception) when (exception is HttpRequestException
+            or IOException
+            or UnauthorizedAccessException
+            or InvalidDataException
+            or ArgumentException
+            or NotSupportedException
+            or TimeoutException)
+        {
+            throw new LiteRequestException("Nie można pobrać wideo: " + exception.Message);
+        }
+        finally
+        {
+            try { Directory.Delete(temporaryDirectory, recursive: true); }
+            catch (Exception exception) when (exception is IOException
+                or UnauthorizedAccessException
+                or ArgumentException
+                or NotSupportedException) { }
+            Volatile.Write(ref _downloadInProgress, 0);
+        }
+    }
+
+    private static YouTubeVideoDownloadFormat ReadVideoFormat(JsonElement args)
+    {
+        var value = LiteArgs.ReadText(args, "format") ?? "mp4";
+        return value.Equals("original", StringComparison.OrdinalIgnoreCase)
+            ? YouTubeVideoDownloadFormat.Original
+            : YouTubeVideoDownloadFormat.Mp4;
+    }
+
+    private static void RequireYouTubeTarget(PodcastDownloadTarget target)
+    {
+        if (!YouTubeSourceResolver.IsYouTubeUrl(target.MediaUrl))
+            throw new LiteRequestException(
+                "Pobieranie wideo jest dostępne tylko dla materiałów YouTube.");
     }
 
     private PodcastDownloadTarget GetSingleTarget(JsonElement args)

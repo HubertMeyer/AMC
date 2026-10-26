@@ -429,6 +429,12 @@ internal sealed class LiteEngineHandlers : IDisposable
                 PodcastDownloadSaveAsInfo(request.Args),
             [LitePodcastDownloadCoordinator.SaveAsOperation] = (request, events) =>
                 PodcastDownloadSaveAs(request.Args, events),
+            [LitePodcastDownloadCoordinator.VideoOperation] = (request, events) =>
+                PodcastVideoDownload(request.Args, events),
+            [LitePodcastDownloadCoordinator.VideoSaveAsInfoOperation] = (request, _) =>
+                PodcastVideoSaveAsInfo(request.Args),
+            [LitePodcastDownloadCoordinator.VideoSaveAsOperation] = (request, events) =>
+                PodcastVideoSaveAs(request.Args, events),
             [LitePodcastAddCoordinator.Operation] = (request, _) =>
                 AddPodcastSource(request.Args),
             [LiteYouTubeDescriptionCoordinator.Operation] = (request, _) =>
@@ -3267,6 +3273,18 @@ internal sealed class LiteEngineHandlers : IDisposable
     private object PodcastDownloadSaveAs(JsonElement args, LiteEventSink events) =>
         (_podcastDownloads ?? throw new LiteRequestException(
             "Host nie ma dostępu do bazy Podcastów i YouTube.")).SaveAs(args, events);
+
+    private object PodcastVideoDownload(JsonElement args, LiteEventSink events) =>
+        (_podcastDownloads ?? throw new LiteRequestException(
+            "Host nie ma dostępu do bazy Podcastów i YouTube.")).DownloadVideos(args, events);
+
+    private object PodcastVideoSaveAsInfo(JsonElement args) =>
+        (_podcastDownloads ?? throw new LiteRequestException(
+            "Host nie ma dostępu do bazy Podcastów i YouTube.")).VideoSaveAsInfo(args);
+
+    private object PodcastVideoSaveAs(JsonElement args, LiteEventSink events) =>
+        (_podcastDownloads ?? throw new LiteRequestException(
+            "Host nie ma dostępu do bazy Podcastów i YouTube.")).SaveVideoAs(args, events);
 
     private object PodcastOpmlImport(JsonElement args) =>
         (_podcastOpml ?? throw new LiteRequestException(

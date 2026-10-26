@@ -13,7 +13,8 @@ import uuid
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from urllib.parse import quote, quote_plus
+
+from .recognition_actions import cached_matches, search_links
 
 
 CURRENT_STATION = "CurrentStation"
@@ -79,7 +80,7 @@ def read_tracks(raw: object) -> list[dict]:
         if isinstance(ticks, bool) or not isinstance(ticks, int) or ticks <= 0:
             continue
         seen.add(entry_id)
-        result.append({
+        entry = {
             "id": entry_id,
             "stationId": _text(candidate.get("stationId")),
             "stationName": _text(candidate.get("stationName")) or "Nieznana stacja",
@@ -89,8 +90,15 @@ def read_tracks(raw: object) -> list[dict]:
             "releaseDate": _text(candidate.get("releaseDate")),
             "providerUri": _provider_uri(candidate.get("providerUri")),
             "recognizedUtcTicks": ticks,
-        })
-    return sorted(result, key=lambda item: item["recognizedUtcTicks"], reverse=True)
+        }
+        matches = cached_matches(candidate)
+        if matches:
+            entry["serviceMatches"] = matches
+        result.append(entry)
+    # The order is user data: Alt+Up/Down may deliberately differ from the
+    # recognition timestamp.  New recognitions are inserted at the front by
+    # ``merge_host_result`` and older state files were already newest-first.
+    return result
 
 
 def tracks_from_amc_state(raw: object) -> tuple[dict, ...]:
@@ -225,21 +233,16 @@ def copy_text(entry: dict) -> str:
 
 
 def service_links(entry: dict) -> dict[str, str]:
-    query_text = " ".join(
-        value for value in (_text(entry.get("artist")), _text(entry.get("title"))) if value
-    )
-    query = quote_plus(query_text)
-    path_query = quote(query_text, safe="")
-    return {
-        "Apple Music": f"https://music.apple.com/search?term={query}",
-        "Spotify": f"https://open.spotify.com/search/{path_query}",
-        "Tidal": f"https://listen.tidal.com/search?q={query}",
-        "YouTube Music": f"https://music.youtube.com/search?q={query}",
-        "Discogs": f"https://www.discogs.com/search/?q={query}&type=all",
-        "MusicBrainz": (
-            f"https://musicbrainz.org/search?query={query}&type=recording&method=indexed"
-        ),
-    }
+    links = search_links(entry)
+    # Exact links are resolved only after a deliberate user action.  Once
+    # cached, copy/export prefers the exact public track without changing the
+    # always-available search destinations for the other services.
+    matches = cached_matches(entry)
+    for service, label in (("appleMusic", "Apple Music"), ("spotify", "Spotify"), ("tidal", "TIDAL")):
+        match = matches.get(service)
+        if match and match.get("publicUrl"):
+            links[label] = match["publicUrl"]
+    return links
 
 
 def rich_text(entry: dict) -> str:
@@ -258,7 +261,7 @@ def export_history(path: str | Path, entries: list[dict]) -> None:
             writer = csv.writer(stream, delimiter=";")
             writer.writerow((
                 "data", "stacja", "tytuł", "wykonawca", "album", "wydanie",
-                "Apple Music", "Spotify", "Tidal", "YouTube Music", "Discogs", "MusicBrainz",
+                "Apple Music", "Spotify", "TIDAL", "YouTube Music", "Discogs", "MusicBrainz",
             ))
             for entry in ordered:
                 links = service_links(entry)
@@ -270,7 +273,7 @@ def export_history(path: str | Path, entries: list[dict]) -> None:
                     _text(entry.get("album")),
                     _text(entry.get("releaseDate")),
                     *(links[name] for name in (
-                        "Apple Music", "Spotify", "Tidal", "YouTube Music", "Discogs", "MusicBrainz"
+                        "Apple Music", "Spotify", "TIDAL", "YouTube Music", "Discogs", "MusicBrainz"
                     )),
                 ))
         return
@@ -288,7 +291,7 @@ def export_history(path: str | Path, entries: list[dict]) -> None:
             "serviceSearch": {
                 "appleMusic": links["Apple Music"],
                 "spotify": links["Spotify"],
-                "tidal": links["Tidal"],
+                "tidal": links["TIDAL"],
                 "youtubeMusic": links["YouTube Music"],
             },
             "catalogueSearch": {

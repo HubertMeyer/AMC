@@ -24,6 +24,7 @@ from .profile_presets import read_preset_overrides
 from .playback_history import normalize_histories
 from .radio_activity import normalize_state_position
 from .radio_recognition import normalize_scope, read_tracks
+from .recognition_actions import normalize_default_service
 from .radio_schedule_settings import read_schedule_overrides
 from .release_profile import current_profile, profile_directory
 from .session_order import (
@@ -289,6 +290,9 @@ class Options:
     radio_recognition_monitoring: bool = False
     radio_recognition_scope: str = "CurrentStation"
     radio_recognition_announcements: bool = True
+    #: Service used by Enter, Ctrl+Enter and Ctrl+Shift+C in recognized tracks.
+    #: Apple Music deliberately stays link-only and is never a default.
+    radio_recognition_default_service: str = "spotify"
     #: Po odłączeniu wybranego wyjścia Radio przechodzi na domyślne. Ten
     #: przełącznik decyduje, czy nowy tor ma pozostać w pauzie. Domyślne False
     #: zachowuje dotychczasowe zachowanie AMC do świadomej zmiany ustawienia.
@@ -341,6 +345,7 @@ class Options:
     podcast_rss_refresh_interval_minutes: int | None = None
     podcast_youtube_refresh_interval_minutes: int | None = None
     podcast_automatic_refresh_batch_size: int | None = None
+    podcast_youtube_video_format: str = "mp4"
 
     def audio_payload(self) -> dict:
         return {
@@ -392,6 +397,9 @@ class Options:
         )
         if type(self.radio_recognition_announcements) is not bool:
             self.radio_recognition_announcements = True
+        self.radio_recognition_default_service = normalize_default_service(
+            self.radio_recognition_default_service
+        )
         if type(self.pause_on_audio_output_fallback) is not bool:
             self.pause_on_audio_output_fallback = False
         if (
@@ -513,6 +521,8 @@ class Options:
                     )
                 except (TypeError, ValueError, OverflowError):
                     self.podcast_automatic_refresh_batch_size = None
+        if self.podcast_youtube_video_format not in ("mp4", "original"):
+            self.podcast_youtube_video_format = "mp4"
         return self
 
 

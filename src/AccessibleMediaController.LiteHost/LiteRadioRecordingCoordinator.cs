@@ -525,6 +525,8 @@ internal sealed partial class LiteRadioRecordingCoordinator : IDisposable
         canPause = active.Control.CanPause,
         durationSeconds = active.Control.CaptureBookmarkTarget()?.Position.TotalSeconds ?? 0d,
         path = active.Control.CurrentPath ?? active.Path,
+        outputFolder = active.OutputFolder,
+        defaultFolder = active.DefaultFolder,
         completedFileCount = active.Control.CompletedPaths.Count,
         scheduleId = active.ScheduleId,
         scheduleName = active.ScheduleName,

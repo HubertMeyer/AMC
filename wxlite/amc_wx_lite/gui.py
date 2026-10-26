@@ -264,6 +264,7 @@ from .podcast_source import (
     SORT_ALPHABETICAL,
     SORT_CUSTOM,
     complete_youtube_description,
+    is_youtube_video_row,
     subscription_rows,
 )
 from .paging import load_more_row, requested_count
@@ -313,6 +314,24 @@ from .radio_activity import (
     state_position_value,
 )
 from . import radio_recognition
+from . import apple_music_links
+from .recognition_actions import (
+    APPLE_MUSIC,
+    SPOTIFY,
+    TIDAL,
+    RecognitionAction,
+    action_url as recognition_action_url,
+    all_actions as recognition_all_actions,
+    cached_matches as recognition_cached_matches,
+    match_from_row as recognition_match_from_row,
+    normalize_default_service as normalize_recognition_default_service,
+    quick_actions as recognition_quick_actions,
+    quick_information as recognition_quick_information,
+    row_from_match as recognition_row_from_match,
+    select_catalog_match as select_recognition_match,
+    service_label as recognition_service_label,
+    store_match as store_recognition_match,
+)
 from .transport_parity import (
     DEFAULT_TEMPLATES,
     PLAYBACK_RATES,
@@ -361,6 +380,7 @@ from .radio_recording import (
     recording_history_from_amc_state,
     recording_history_payload_from_event,
     recording_history_rows,
+    recording_output_description,
     recent_recording_history,
     station_activity_rows,
 )
@@ -459,10 +479,13 @@ _LIST_CONTEXT_ACTION_GROUPS: tuple[tuple[Action, ...], ...] = (
         Action.SCHEDULE_YOUTUBE_LIVE,
         Action.DOWNLOAD_PODCAST_EPISODES,
         Action.SAVE_PODCAST_EPISODE_AS,
+        Action.DOWNLOAD_YOUTUBE_VIDEOS,
+        Action.SAVE_YOUTUBE_VIDEO_AS,
         Action.SHOW_PODCAST_DESCRIPTION,
         Action.GO_TO_RELATED_PODCAST,
         Action.PODCAST_PLAYBACK_OPTIONS,
         Action.CURRENT_RADIO_BROADCAST_INFORMATION,
+        Action.RECORDING_OUTPUT_INFORMATION,
         Action.RECOGNIZE_RADIO_TRACK,
         Action.RECORD_TOGGLE,
         Action.RECORD_PAUSE,
@@ -6199,8 +6222,131 @@ class AudioOutputDeviceDialog(wx.Dialog):
         return self._choices[index] if 0 <= index < len(self._choices) else None
 
 
+class RecognitionActionsDialog(wx.Dialog):
+    """Short Right-Arrow list derived from the shared recognition model."""
+
+    def __init__(
+        self,
+        parent: wx.Window,
+        entry: dict,
+        actions: tuple[RecognitionAction, ...],
+        *,
+        copy_to_clipboard: Callable[[str], bool],
+        announce: Callable[[str], None],
+        resolve_action,
+        execute_action,
+    ) -> None:
+        super().__init__(parent, title="Działania dla rozpoznanego utworu", size=(620, 390))
+        self._entry = entry
+        self._actions = actions
+        self._copy_to_clipboard = copy_to_clipboard
+        self._announce = announce
+        self._resolve_action = resolve_action
+        self._execute_action = execute_action
+
+        panel = wx.Panel(self)
+        layout = wx.BoxSizer(wx.VERTICAL)
+        hint = (
+            "Enter wykonuje działanie. Ctrl+C kopiuje nazwę działania, "
+            "Ctrl+Shift+C kopiuje jego łącze. Strzałka w lewo lub Escape wraca."
+        )
+        help_label = wx.StaticText(panel, label=hint)
+        help_label.SetName(hint)
+        help_label.Wrap(560)
+        layout.Add(help_label, 0, wx.ALL | wx.EXPAND, 10)
+        self.actions = wx.ListBox(panel, choices=[action.label for action in actions])
+        self.actions.SetName("Najważniejsze działania dla rozpoznanego utworu")
+        layout.Add(self.actions, 1, wx.LEFT | wx.RIGHT | wx.BOTTOM | wx.EXPAND, 10)
+        self.status = wx.StaticText(panel, label="")
+        self.status.SetName("Stan działania")
+        layout.Add(self.status, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM | wx.EXPAND, 10)
+        panel.SetSizer(layout)
+        close = wx.Button(self, wx.ID_CANCEL, label="&Wróć")
+        close.SetName("Wróć do rozpoznanych utworów")
+        outer = wx.BoxSizer(wx.VERTICAL)
+        outer.Add(panel, 1, wx.EXPAND)
+        outer.Add(close, 0, wx.ALL | wx.ALIGN_RIGHT, 10)
+        self.SetSizer(outer)
+        if actions:
+            self.actions.SetSelection(0)
+        self.actions.Bind(wx.EVT_CHAR_HOOK, self._on_key)
+        self.actions.Bind(wx.EVT_LISTBOX_DCLICK, self._on_activate)
+        wx.CallAfter(self.actions.SetFocus)
+
+    def _set_status(self, text: str) -> None:
+        self.status.SetLabel(text)
+        self.status.SetName(text)
+        self._announce(text)
+
+    def _selected_action(self) -> RecognitionAction | None:
+        index = self.actions.GetSelection()
+        return self._actions[index] if 0 <= index < len(self._actions) else None
+
+    def _failure(self, action: RecognitionAction, _error: Exception) -> None:
+        self._set_status(
+            f"Nie znaleziono dokładnego łącza w {recognition_service_label(action.service)}"
+        )
+        self.actions.SetFocus()
+
+    def _activate(self) -> None:
+        action = self._selected_action()
+        if action is None:
+            self._set_status("Brak wybranego działania")
+            return
+        self._set_status("Sprawdzam dostępność działania")
+        self._resolve_action(
+            self._entry,
+            action,
+            lambda match: self._execute_action(self._entry, action, match),
+            lambda error: self._failure(action, error),
+        )
+
+    def _copy_name(self) -> None:
+        action = self._selected_action()
+        if action is not None and self._copy_to_clipboard(action.label):
+            self._set_status("Skopiowano nazwę działania")
+
+    def _copy_link(self) -> None:
+        action = self._selected_action()
+        if action is None:
+            self._set_status("Brak wybranego działania")
+            return
+        self._set_status("Sprawdzam dokładne łącze")
+
+        def ready(match: dict | None) -> None:
+            link = recognition_action_url(action, match)
+            if link and self._copy_to_clipboard(link):
+                self._set_status("Skopiowano łącze")
+            else:
+                self._set_status("To działanie nie ma łącza do skopiowania")
+            self.actions.SetFocus()
+
+        self._resolve_action(
+            self._entry,
+            action,
+            ready,
+            lambda error: self._failure(action, error),
+        )
+
+    def _on_key(self, event: wx.KeyEvent) -> None:
+        chord = chord_from_event(event).canonical
+        if chord == "Ctrl+Shift+C":
+            self._copy_link()
+        elif chord == "Ctrl+C":
+            self._copy_name()
+        elif chord == "Return":
+            self._activate()
+        elif chord in ("Left", "Escape"):
+            self.EndModal(wx.ID_CANCEL)
+        else:
+            event.Skip()
+
+    def _on_activate(self, _event: wx.CommandEvent) -> None:
+        self._activate()
+
+
 class RadioRecognitionHistoryDialog(wx.Dialog):
-    """Natywna, trwala historia wynikow rozpoznawania Radia."""
+    """Native persistent history with one shared keyboard/menu action model."""
 
     def __init__(
         self,
@@ -6209,21 +6355,29 @@ class RadioRecognitionHistoryDialog(wx.Dialog):
         *,
         copy_to_clipboard: Callable[[str], bool],
         announce: Callable[[str], None],
+        default_service: str,
+        submit,
+        resolve_match,
     ) -> None:
         super().__init__(parent, title="Rozpoznane utwory", size=(760, 540))
         self._entries = entries
         self._copy_to_clipboard = copy_to_clipboard
         self._announce = announce
+        self._default_service = normalize_recognition_default_service(default_service)
+        self._submit = submit
+        self._resolve_match = resolve_match
         self._visible: list[dict] = []
         self._filter_keys: list[str | None] = []
         self.changed = False
+        self.requested_action: tuple[dict, RecognitionAction, dict | None] | None = None
 
         panel = wx.Panel(self)
         layout = wx.BoxSizer(wx.VERTICAL)
         help_text = (
-            "Rozpoznane utwory, od najnowszego. Ctrl+C kopiuje opis, "
-            "Ctrl+Shift+C kopiuje opis i łącza. Enter otwiera wynik "
-            "dostawcy, Delete usuwa wybrane wpisy."
+            "Rozpoznane utwory. Enter otwiera utwór, Ctrl+Enter album w usłudze "
+            "domyślnej, prawa strzałka pokazuje działania, lewa podaje krótką "
+            "informację. Ctrl+C kopiuje opis, Ctrl+Shift+C dokładne łącze. "
+            "Alt+strzałka w górę lub w dół zmienia kolejność, Delete usuwa."
         )
         help_label = wx.StaticText(panel, label=help_text)
         help_label.SetName(help_text)
@@ -6268,6 +6422,7 @@ class RadioRecognitionHistoryDialog(wx.Dialog):
         self.station_filter.Bind(wx.EVT_CHOICE, self._on_filter)
         self.history.Bind(wx.EVT_CHAR_HOOK, self._on_key)
         self.history.Bind(wx.EVT_LISTBOX_DCLICK, self._on_open)
+        self.history.Bind(wx.EVT_CONTEXT_MENU, self._on_context_menu)
         copy_button.Bind(wx.EVT_BUTTON, self._on_copy)
         export_button.Bind(wx.EVT_BUTTON, self._on_export)
         delete_button.Bind(wx.EVT_BUTTON, self._on_delete)
@@ -6305,7 +6460,7 @@ class RadioRecognitionHistoryDialog(wx.Dialog):
             selection = 0
         self.station_filter.SetSelection(selection)
 
-    def _refresh_rows(self, fallback_index: int = 0) -> None:
+    def _refresh_rows(self, fallback_index: int = 0, preferred_id: str | None = None) -> None:
         filter_index = self.station_filter.GetSelection()
         filter_key = (
             self._filter_keys[filter_index]
@@ -6313,28 +6468,25 @@ class RadioRecognitionHistoryDialog(wx.Dialog):
             else None
         )
         self._visible = [
-            entry for entry in sorted(
-                self._entries,
-                key=lambda item: int(item.get("recognizedUtcTicks") or 0),
-                reverse=True,
-            )
+            entry for entry in self._entries
             if filter_key is None or self._station_key(entry) == filter_key
         ]
-        self.history.Set([
-            radio_recognition.track_label(entry) for entry in self._visible
-        ])
+        self.history.Set([radio_recognition.track_label(entry) for entry in self._visible])
         if self._visible:
-            self.history.SetSelection(
-                max(0, min(fallback_index, len(self._visible) - 1))
-            )
+            selection = max(0, min(fallback_index, len(self._visible) - 1))
+            if preferred_id:
+                selection = next(
+                    (
+                        index for index, entry in enumerate(self._visible)
+                        if str(entry.get("id") or "") == preferred_id
+                    ),
+                    selection,
+                )
+            self.history.SetSelection(selection)
             filter_label = self.station_filter.GetStringSelection()
             text = f"Wpisów: {len(self._visible)}, {filter_label}"
         else:
-            text = (
-                "Historia jest pusta"
-                if filter_key is None
-                else "Brak wpisów dla wybranej stacji"
-            )
+            text = "Historia jest pusta" if filter_key is None else "Brak wpisów dla wybranej stacji"
         self.status.SetLabel(text)
         self.status.SetName(text)
 
@@ -6345,27 +6497,173 @@ class RadioRecognitionHistoryDialog(wx.Dialog):
             if 0 <= index < len(self._visible)
         ]
 
+    def _selected_entry(self) -> dict | None:
+        selected = self._selected_entries()
+        if selected:
+            return selected[0]
+        index = self.history.GetSelection()
+        return self._visible[index] if 0 <= index < len(self._visible) else None
+
     def _set_status(self, text: str) -> None:
         self.status.SetLabel(text)
         self.status.SetName(text)
         self._announce(text)
 
-    def _copy(self, *, links: bool) -> None:
+    def _resolve_action(self, entry, action, ready, failed) -> None:
+        if not action.needs_match:
+            ready(None)
+            return
+        cached = recognition_cached_matches(entry).get(action.service)
+        if cached is not None:
+            ready(cached)
+            return
+
+        def done(match: dict | None) -> None:
+            if match is None:
+                failed(LookupError("no exact match"))
+                return
+            if store_recognition_match(entry, match):
+                self.changed = True
+            ready(match)
+
+        self._submit(
+            "recognition-service-link",
+            lambda: self._resolve_match(entry, action.service),
+            done,
+            failed,
+        )
+
+    def _copy(self) -> None:
         selected = self._selected_entries()
         if not selected:
             self._set_status("Brak wybranego wpisu")
             return
-        formatter = radio_recognition.rich_text if links else radio_recognition.copy_text
-        text = "\n\n".join(formatter(entry) for entry in selected)
-        success_message = (
-            "Skopiowano opis i łącza" if links and len(selected) == 1
-            else "Skopiowano opis" if len(selected) == 1
-            else f"Skopiowano opisy i łącza: {len(selected)}" if links
-            else f"Skopiowano opisy: {len(selected)}"
+        text = "\n\n".join(radio_recognition.copy_text(entry) for entry in selected)
+        if self._copy_to_clipboard(text):
+            self._set_status(
+                "Skopiowano opis" if len(selected) == 1 else f"Skopiowano opisy: {len(selected)}"
+            )
+
+    def _copy_track_link(self) -> None:
+        entry = self._selected_entry()
+        if entry is None:
+            self._set_status("Brak wybranego wpisu")
+            return
+        action = RecognitionAction(
+            "default.track.copy",
+            "Kopiuj łącze do utworu",
+            "copy_link",
+            self._default_service,
+            "track",
+        )
+        self._set_status("Sprawdzam dokładne łącze do utworu")
+
+        def ready(match: dict | None) -> None:
+            link = recognition_action_url(action, match)
+            if link and self._copy_to_clipboard(link):
+                self._set_status(
+                    f"Skopiowano łącze do utworu w {recognition_service_label(action.service)}"
+                )
+            else:
+                self._set_status("Nie znaleziono dokładnego łącza do utworu")
+            self.history.SetFocus()
+
+        self._resolve_action(
+            entry,
+            action,
+            ready,
+            lambda _error: self._set_status(
+                f"Nie znaleziono dokładnego utworu w {recognition_service_label(action.service)}"
+            ),
         )
 
-        if self._copy_to_clipboard(text):
-            self._set_status(success_message)
+    def _request_action(self, action: RecognitionAction) -> None:
+        entry = self._selected_entry()
+        if entry is None:
+            self._set_status("Brak wybranego wpisu")
+            return
+        self._set_status("Sprawdzam dostępność działania")
+
+        def ready(match: dict | None) -> None:
+            self.requested_action = entry, action, match
+            if self.IsModal():
+                self.EndModal(wx.ID_OK)
+
+        self._resolve_action(
+            entry,
+            action,
+            ready,
+            lambda _error: self._set_status(
+                f"Nie znaleziono dokładnego utworu w {recognition_service_label(action.service)}"
+            ),
+        )
+
+    def _play_default(self) -> None:
+        self._request_action(RecognitionAction(
+            "default.track.play",
+            "Otwórz utwór",
+            "play_default",
+            self._default_service,
+            "track",
+        ))
+
+    def _show_default_album(self) -> None:
+        self._request_action(RecognitionAction(
+            "default.album.show",
+            "Pokaż album",
+            "show_amc",
+            self._default_service,
+            "album",
+        ))
+
+    def _show_actions(self) -> None:
+        entry = self._selected_entry()
+        if entry is None:
+            self._set_status("Brak wybranego wpisu")
+            return
+
+        def execute(selected_entry, action, match) -> None:
+            self.requested_action = selected_entry, action, match
+            if actions_dialog.IsModal():
+                actions_dialog.EndModal(wx.ID_OK)
+
+        with RecognitionActionsDialog(
+            self,
+            entry,
+            recognition_quick_actions(entry, self._default_service),
+            copy_to_clipboard=self._copy_to_clipboard,
+            announce=self._announce,
+            resolve_action=self._resolve_action,
+            execute_action=execute,
+        ) as actions_dialog:
+            actions_dialog.ShowModal()
+        if self.requested_action is not None and self.IsModal():
+            self.EndModal(wx.ID_OK)
+        else:
+            self.history.SetFocus()
+
+    def _move(self, direction: int) -> None:
+        entry = self._selected_entry()
+        if entry is None:
+            self._set_status("Brak wybranego wpisu")
+            return
+        visible_index = self._visible.index(entry)
+        neighbor_index = visible_index + direction
+        if not 0 <= neighbor_index < len(self._visible):
+            self._set_status("To już pierwszy element" if direction < 0 else "To już ostatni element")
+            return
+        neighbor = self._visible[neighbor_index]
+        master_index = self._entries.index(entry)
+        master_neighbor = self._entries.index(neighbor)
+        self._entries[master_index], self._entries[master_neighbor] = (
+            self._entries[master_neighbor], self._entries[master_index]
+        )
+        self.changed = True
+        entry_id = str(entry.get("id") or "")
+        self._refresh_rows(preferred_id=entry_id)
+        self.history.SetFocus()
+        relation = "Nad" if direction < 0 else "Pod"
+        self._set_status(f"{relation} {radio_recognition.recognition_label(neighbor)}")
 
     def _delete(self) -> None:
         selected = self._selected_entries()
@@ -6375,8 +6673,7 @@ class RadioRecognitionHistoryDialog(wx.Dialog):
         fallback = self.history.GetSelection()
         ids = {str(entry.get("id") or "") for entry in selected}
         self._entries[:] = [
-            entry for entry in self._entries
-            if str(entry.get("id") or "") not in ids
+            entry for entry in self._entries if str(entry.get("id") or "") not in ids
         ]
         self.changed = True
         self._refresh_filters()
@@ -6388,14 +6685,41 @@ class RadioRecognitionHistoryDialog(wx.Dialog):
             else f"Usunięto wpisy z historii rozpoznawania: {len(selected)}"
         )
 
-    def _open_provider(self) -> None:
-        selected = self._selected_entries()
-        uri = str(selected[0].get("providerUri") or "") if selected else ""
-        if not uri:
-            self._set_status("Ten wynik nie zawiera łącza dostawcy rozpoznawania")
+    def _show_context_menu(self) -> None:
+        entry = self._selected_entry()
+        if entry is None:
+            self._set_status("Brak wybranego wpisu")
             return
-        if not wx.LaunchDefaultBrowser(uri):
-            self._set_status("Nie udało się otworzyć łącza")
+        menu = wx.Menu()
+
+        def add(label: str, handler) -> None:
+            item_id = int(wx.NewIdRef())
+            menu.Append(item_id, label)
+            menu.Bind(wx.EVT_MENU, handler, id=item_id)
+
+        add("Otwórz utwór\tEnter", lambda _event: self._play_default())
+        add("Pokaż album\tCtrl+Enter", lambda _event: self._show_default_album())
+        menu.AppendSeparator()
+        add("Kopiuj opis\tCtrl+C", lambda _event: self._copy())
+        add("Kopiuj łącze do utworu\tCtrl+Shift+C", lambda _event: self._copy_track_link())
+        services = wx.Menu()
+        for action in recognition_all_actions(entry, self._default_service):
+            item_id = int(wx.NewIdRef())
+            services.Append(item_id, action.label)
+            services.Bind(
+                wx.EVT_MENU,
+                lambda _event, selected=action: self._request_action(selected),
+                id=item_id,
+            )
+        menu.AppendSubMenu(services, "Usługi, łącza i powiązania")
+        menu.AppendSeparator()
+        add("Usuń z historii\tDelete", lambda _event: self._delete())
+        try:
+            self.PopupMenu(menu)
+        finally:
+            menu.Destroy()
+            if self.requested_action is None:
+                wx.CallAfter(self.history.SetFocus)
 
     def _on_filter(self, _event: wx.CommandEvent) -> None:
         self._refresh_rows()
@@ -6404,27 +6728,39 @@ class RadioRecognitionHistoryDialog(wx.Dialog):
     def _on_key(self, event: wx.KeyEvent) -> None:
         chord = chord_from_event(event).canonical
         if chord == "Ctrl+Shift+C":
-            self._copy(links=True)
-            return
-        if chord == "Ctrl+C":
-            self._copy(links=False)
-            return
-        if chord == "Delete":
+            self._copy_track_link()
+        elif chord == "Ctrl+C":
+            self._copy()
+        elif chord == "Alt+Up":
+            self._move(-1)
+        elif chord == "Alt+Down":
+            self._move(1)
+        elif chord == "Delete":
             self._delete()
-            return
-        if chord == "Return":
-            self._open_provider()
-            return
-        if chord == "Escape":
+        elif chord == "Ctrl+Return":
+            self._show_default_album()
+        elif chord == "Return":
+            self._play_default()
+        elif chord == "Right":
+            self._show_actions()
+        elif chord == "Left":
+            entry = self._selected_entry()
+            self._set_status(
+                recognition_quick_information(entry) if entry is not None else "Brak wybranego wpisu"
+            )
+        elif chord == "Escape":
             self.EndModal(wx.ID_CANCEL)
-            return
-        event.Skip()
+        else:
+            event.Skip()
 
     def _on_open(self, _event: wx.CommandEvent) -> None:
-        self._open_provider()
+        self._play_default()
+
+    def _on_context_menu(self, _event: wx.ContextMenuEvent) -> None:
+        self._show_context_menu()
 
     def _on_copy(self, _event: wx.CommandEvent) -> None:
-        self._copy(links=False)
+        self._copy()
 
     def _on_delete(self, _event: wx.CommandEvent) -> None:
         self._delete()
@@ -6747,6 +7083,28 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
         radio_layout.Add(
             self.recognition_scope, 0, wx.BOTTOM | wx.EXPAND, 10
         )
+        recognition_service_label = wx.StaticText(
+            radio, label="Domyślna &usługa rozpoznanych utworów:"
+        )
+        self._recognition_service_values = [SPOTIFY, TIDAL]
+        self.recognition_default_service = wx.Choice(
+            radio,
+            choices=["Spotify", "TIDAL"],
+        )
+        self.recognition_default_service.SetName(
+            "Domyślna usługa dla rozpoznanych utworów"
+        )
+        self.recognition_default_service.SetSelection(
+            self._recognition_service_values.index(
+                normalize_recognition_default_service(
+                    options.radio_recognition_default_service
+                )
+            )
+        )
+        radio_layout.Add(recognition_service_label, 0, wx.BOTTOM, 4)
+        radio_layout.Add(
+            self.recognition_default_service, 0, wx.BOTTOM | wx.EXPAND, 10
+        )
 
         folder_mode_label = wx.StaticText(
             radio, label="&Położenie nagrań Radia:"
@@ -6957,6 +7315,26 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
         self.podcast_youtube_interval.SetName(
             "Odstęp automatycznego sprawdzania kanałów YouTube w minutach; zero wyłącza"
         )
+        youtube_video_format_label = wx.StaticText(
+            podcasts, label="Format pobieranego &wideo z YouTube:"
+        )
+        self._youtube_video_format_values = ["mp4", "original"]
+        self.youtube_video_format = wx.Choice(
+            podcasts,
+            choices=[
+                "MP4, domyślny i najbardziej zgodny",
+                "Oryginalny lub najlepszy dostępny format, bez wymuszania MP4",
+            ],
+        )
+        self.youtube_video_format.SetName("Format pobieranego wideo z YouTube")
+        self.youtube_video_format.SetSelection(
+            self._youtube_video_format_values.index(
+                options.podcast_youtube_video_format
+                if options.podcast_youtube_video_format
+                in self._youtube_video_format_values
+                else "mp4"
+            )
+        )
         batch_label = wx.StaticText(
             podcasts, label="Liczba źródeł sprawdzanych &jednocześnie:"
         )
@@ -6974,6 +7352,7 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
         for label, control in (
             (rss_label, self.podcast_rss_interval),
             (youtube_label, self.podcast_youtube_interval),
+            (youtube_video_format_label, self.youtube_video_format),
             (batch_label, self.podcast_refresh_batch),
         ):
             podcasts_layout.Add(label, 0, wx.BOTTOM, 4)
@@ -7400,6 +7779,11 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
             "radio_recognition_announcements": (
                 self.recognition_announcements.GetValue()
             ),
+            "radio_recognition_default_service": (
+                self._recognition_service_values[
+                    max(0, self.recognition_default_service.GetSelection())
+                ]
+            ),
             "timeshift_minutes": self._timeshift_values[
                 max(0, self.timeshift.GetSelection())
             ],
@@ -7426,6 +7810,9 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
             "podcast_youtube_refresh_interval_minutes": (
                 self.podcast_youtube_interval.GetValue()
             ),
+            "podcast_youtube_video_format": self._youtube_video_format_values[
+                max(0, self.youtube_video_format.GetSelection())
+            ],
             "podcast_automatic_refresh_batch_size": (
                 self.podcast_refresh_batch.GetValue()
             ),
@@ -8159,6 +8546,11 @@ class LiteFrame(wx.Frame):
             else None
         )
         spotify_collection = spotify_scope is not None
+        active_radio_recording_view = (
+            radio
+            and session.view is View.LIST
+            and session.library_view is LibraryView.ACTIVE_RADIO_RECORDINGS
+        )
         has_row = session.model.selected_row is not None
         has_information_item = (
             LiteFrame._description_target_row(self, self.navigator.active)
@@ -8176,6 +8568,13 @@ class LiteFrame(wx.Frame):
             selected_row.kind
             if selected_row is not None
             else ""
+        )
+        selected_action_rows = self._selected_action_rows() if podcasts else []
+        youtube_video_items = bool(selected_action_rows) and all(
+            is_youtube_video_row(row) for row in selected_action_rows
+        )
+        single_youtube_video_item = (
+            len(selected_action_rows) == 1 and youtube_video_items
         )
         recording_status = getattr(self, "_last_recording_status", {}) or {}
         active_recordings = recording_status.get("recordings") or []
@@ -8308,6 +8707,11 @@ class LiteFrame(wx.Frame):
                 enabled = False
             if entry.needs_radio_recording and not radio_recording:
                 enabled = False
+            if (
+                entry.needs_active_radio_recording_view
+                and not active_radio_recording_view
+            ):
+                enabled = False
             if entry.needs_podcast_session and not podcasts:
                 enabled = False
             if entry.needs_podcast_inbox and not podcast_inbox:
@@ -8333,6 +8737,15 @@ class LiteFrame(wx.Frame):
                 and selected_row is not None
                 and selected_row.service_kind == "youtubeLive"
             ):
+                enabled = False
+            if entry.needs_youtube_video_item and not youtube_video_items:
+                enabled = False
+            if (
+                entry.needs_single_youtube_video_item
+                and not single_youtube_video_item
+            ):
+                enabled = False
+            if entry.excludes_youtube_video_item and youtube_video_items:
                 enabled = False
             if entry.needs_tidal_collection and not tidal_collection:
                 enabled = False
@@ -11694,6 +12107,7 @@ class LiteFrame(wx.Frame):
                 intent,
                 result.heading,
                 list(result.rows),
+                preferred_id=intent.preferred_id,
             ))
 
         def failed(error: Exception) -> None:
@@ -11978,7 +12392,7 @@ class LiteFrame(wx.Frame):
             rows = list(result.rows)
             loaded_count = len(rows)
             loaded_counts[scope] = loaded_count
-            preferred_id = None
+            preferred_id = intent.preferred_id
             if intent.load_more and previous_count < loaded_count:
                 preferred_id = rows[previous_count].item_id
             if result.has_more and intent.kind == "podcast":
@@ -12686,6 +13100,10 @@ class LiteFrame(wx.Frame):
                 self, "_youtube_account_available", False
             ),
             podcast_session=self.navigator.active is SessionId.PODCASTS,
+            youtube_video_selection=(
+                self.navigator.active is SessionId.PODCASTS
+                and is_youtube_video_row(self.navigator.session.model.selected_row)
+            ),
             files_session=self.navigator.active is SessionId.FILES,
             tidal_session=self.navigator.active is SessionId.TIDAL,
             tidal_collection=tidal_collection,
@@ -13167,6 +13585,8 @@ class LiteFrame(wx.Frame):
             self._stop_all_radio_recordings()
         elif action is Action.VIEW_ACTIVE_RECORDINGS:
             self._show_active_radio_recordings()
+        elif action is Action.RECORDING_OUTPUT_INFORMATION:
+            self._announce_recording_output_information()
         elif action is Action.VIEW_RECORDED_RADIO_FILES:
             self._show_radio_recording_history()
         elif action is Action.ADD_RADIO_SCHEDULE:
@@ -13243,6 +13663,10 @@ class LiteFrame(wx.Frame):
             self._download_podcast_episodes()
         elif action is Action.SAVE_PODCAST_EPISODE_AS:
             self._save_podcast_episode_as()
+        elif action is Action.DOWNLOAD_YOUTUBE_VIDEOS:
+            self._download_youtube_videos()
+        elif action is Action.SAVE_YOUTUBE_VIDEO_AS:
+            self._save_youtube_video_as()
         elif action is Action.SHOW_PODCAST_DESCRIPTION:
             self._show_podcast_description()
         elif action is Action.CURRENT_RADIO_BROADCAST_INFORMATION:
@@ -20477,6 +20901,172 @@ class LiteFrame(wx.Frame):
 
         self.runner.submit("podcast-download", work, done, failed)
 
+    def _download_youtube_videos(self) -> None:
+        """Ctrl+Shift+D: download selected public YouTube items as video."""
+
+        if self.navigator.active is not SessionId.PODCASTS:
+            self.announcer.say("Pobieranie wideo jest dostępne w sesji Podcasty i YouTube")
+            return
+        if self._podcast_download_pending:
+            self.announcer.say("Pobieranie odcinków lub wideo już trwa")
+            return
+        client = self.client
+        if client is None:
+            self.announcer.say("Silnik nie działa, nie mogę pobrać wideo")
+            return
+        rows: list[Row] = []
+        seen: set[str] = set()
+        for row in self._selected_action_rows():
+            if row.item_id in seen or not is_youtube_video_row(row):
+                continue
+            seen.add(row.item_id)
+            rows.append(row)
+        selected_count = len(self._selected_action_rows())
+        if not rows or len(rows) != selected_count:
+            self.announcer.say(
+                "Pobieranie wideo jest dostępne tylko dla materiałów YouTube"
+            )
+            return
+        video_format = self.options.podcast_youtube_video_format
+        format_label = (
+            "MP4" if video_format == "mp4"
+            else "oryginalnym lub najlepszym dostępnym formacie"
+        )
+        self._podcast_download_pending = True
+        self.announcer.say(
+            f"Rozpoczęto pobieranie wideo w formacie {format_label}"
+            if len(rows) == 1
+            else f"Rozpoczęto pobieranie {len(rows)} plików wideo w formacie {format_label}"
+        )
+
+        def work() -> dict:
+            result = client.download_youtube_videos(
+                [row.item_id for row in rows], video_format
+            )
+            return result if isinstance(result, dict) else {}
+
+        def done(payload: dict) -> None:
+            self._podcast_download_pending = False
+            downloaded = max(0, int(payload.get("downloaded") or 0))
+            failed_count = max(0, int(payload.get("failed") or 0))
+            if len(rows) > 1:
+                parts = [f"Pobrano wideo: {downloaded}"]
+                if failed_count:
+                    parts.append(f"niepowodzenia: {failed_count}")
+                message = ". ".join(parts)
+            elif downloaded:
+                file_name = str(payload.get("fileName") or rows[0].title).strip()
+                message = f"Pobrano wideo: {file_name}"
+            else:
+                detail = str(payload.get("firstFailure") or "").strip()
+                message = (
+                    f"Nie można pobrać wideo: {detail}"
+                    if detail else "Nie udało się pobrać wideo"
+                )
+            self.status_field.SetLabel(message)
+            self.status_bar.show(message)
+            self.announcer.say(message)
+
+        def failed(error: Exception) -> None:
+            self._podcast_download_pending = False
+            message = (
+                str(error)
+                if isinstance(error, (HostError, HostUnavailable))
+                else "Nie udało się pobrać wideo"
+            )
+            self.status_field.SetLabel(message)
+            self.status_bar.show(message)
+            self.announcer.say(message)
+
+        self.runner.submit("youtube-video-download", work, done, failed)
+
+    def _save_youtube_video_as(self) -> None:
+        """Ctrl+S on one YouTube item: choose path and one-time format."""
+
+        if self.navigator.active is not SessionId.PODCASTS:
+            self.announcer.say("Zapis wideo jest dostępny w sesji Podcasty i YouTube")
+            return
+        if self._podcast_download_pending:
+            self.announcer.say("Pobieranie odcinków lub wideo już trwa")
+            return
+        rows = [row for row in self._selected_action_rows() if is_youtube_video_row(row)]
+        if len(rows) != 1 or len(self._selected_action_rows()) != 1:
+            self.announcer.say(
+                "Zapis wideo jako jest dostępny tylko dla jednego materiału YouTube"
+            )
+            return
+        client = self.client
+        if client is None:
+            self.announcer.say("Silnik nie działa, nie mogę zapisać wideo")
+            return
+        row = rows[0]
+        default_format = self.options.podcast_youtube_video_format
+        self._podcast_download_pending = True
+        self.status_bar.show("Przygotowywanie zapisu wideo")
+
+        def prepare() -> dict:
+            result = client.youtube_video_save_as_info(row.item_id)
+            return result if isinstance(result, dict) else {}
+
+        def prepared(info: dict) -> None:
+            base_name = str(info.get("suggestedBaseName") or "Wideo YouTube").strip()
+            initial_folder = str(info.get("initialFolder") or "").strip()
+            default_file = base_name + ".mp4" if default_format == "mp4" else base_name
+            with wx.FileDialog(
+                self,
+                message="Zapisz wideo z YouTube jako",
+                defaultDir=initial_folder,
+                defaultFile=default_file,
+                wildcard=(
+                    "Wideo MP4 (*.mp4)|*.mp4|"
+                    "Oryginalny lub najlepszy dostępny format (*.webm;*.mkv;*.mp4)|*.webm;*.mkv;*.mp4|"
+                    "Wszystkie pliki (*.*)|*.*"
+                ),
+                style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT,
+            ) as picker:
+                picker.SetFilterIndex(0 if default_format == "mp4" else 1)
+                if picker.ShowModal() != wx.ID_OK:
+                    self._podcast_download_pending = False
+                    self._restore_focus_after_dialog()
+                    return
+                destination = picker.GetPath()
+                selected_format = "mp4" if picker.GetFilterIndex() == 0 else "original"
+
+            self.status_field.SetLabel(f"Zapisywanie wideo jako: {row.title}")
+            self.status_bar.show(f"Zapisywanie wideo jako: {row.title}")
+            self.announcer.say("Pobieranie wideo")
+
+            def work() -> dict:
+                result = client.save_youtube_video_as(
+                    row.item_id, destination, selected_format
+                )
+                return result if isinstance(result, dict) else {}
+
+            def done(payload: dict) -> None:
+                self._podcast_download_pending = False
+                file_name = str(
+                    payload.get("fileName") or Path(destination).name
+                ).strip()
+                message = f"Zapisano wideo jako: {file_name}"
+                self.status_field.SetLabel(message)
+                self.status_bar.show(message)
+                self.announcer.say(message)
+
+            self.runner.submit("youtube-video-save-as", work, done, failed)
+
+        def failed(error: Exception) -> None:
+            self._podcast_download_pending = False
+            message = (
+                str(error)
+                if isinstance(error, (HostError, HostUnavailable))
+                else "Nie udało się zapisać wideo"
+            )
+            self.status_field.SetLabel(message)
+            self.status_bar.show(message)
+            self.announcer.say(message)
+
+        self.runner.submit("youtube-video-save-as-info", prepare, prepared, failed)
+
     def _save_podcast_episode_as(self) -> None:
         """Ctrl+S: jedna jawnie nazwana kopia, bez zmiany pola Pobrane."""
         if self.navigator.active is not SessionId.PODCASTS:
@@ -21455,9 +22045,22 @@ class LiteFrame(wx.Frame):
             # Testy czystej logiki oraz widok odtwarzacza nie musza miec
             # zbudowanej natywnej kontrolki.
             rows = []
+        if not isinstance(rows, (list, tuple)):
+            # Obiekty wx nieutworzone w testach czystej logiki potrafią oddać
+            # znacznik ``typing.Any`` zamiast kolekcji. Nie wolno przekazać go
+            # dalej do ``all`` ani ujawnić jako element interfejsu.
+            rows = []
         if rows:
-            return rows
-        row = self.navigator.session.model.selected_row
+            return list(rows)
+        session = getattr(self.navigator, "session", None)
+        if session is None:
+            sessions = getattr(self.navigator, "sessions", {})
+            session = sessions.get(getattr(self.navigator, "active", None))
+        row = (
+            getattr(getattr(session, "model", None), "selected_row", None)
+            if session is not None
+            else None
+        )
         return [] if row is None else [row]
 
     def _clear_pending_external_moves(self) -> None:
@@ -27974,15 +28577,185 @@ class LiteFrame(wx.Frame):
             self.state.recognized_tracks,
             copy_to_clipboard=self._to_clipboard,
             announce=self.announcer.say,
+            default_service=self.options.radio_recognition_default_service,
+            submit=self.runner.submit,
+            resolve_match=self._resolve_recognition_match,
         )
         changed = False
+        requested_action = None
         try:
             dialog.ShowModal()
             changed = dialog.changed
+            requested_action = dialog.requested_action
         finally:
             dialog.Destroy()
         if changed:
             self._save_state()
+        if requested_action is None:
+            self._restore_focus_after_dialog()
+            return
+        entry, action, match = requested_action
+        self._execute_recognition_action(entry, action, match)
+
+    @staticmethod
+    def _recognition_query(entry: dict) -> str:
+        return " ".join(
+            str(entry.get(key) or "").strip()
+            for key in ("artist", "title")
+            if str(entry.get(key) or "").strip()
+        )
+
+    def _resolve_recognition_match(self, entry: dict, service: str) -> dict | None:
+        """Resolve one exact public/catalogue identity only on user request."""
+
+        cached = recognition_cached_matches(entry).get(service)
+        if cached is not None:
+            return cached
+        if service == APPLE_MUSIC:
+            return apple_music_links.resolve_public_links(entry)
+        client = self.client
+        if client is None:
+            raise HostUnavailable("Silnik nie jest gotowy")
+        query = self._recognition_query(entry)
+        if not query:
+            return None
+        if service == SPOTIFY:
+            result = spotify_container_result_from_payload(
+                client.spotify_search(query)
+            )
+        elif service == TIDAL:
+            result = container_result_from_host(client.tidal_search(query))
+        else:
+            return None
+        candidates: list[dict] = []
+        for row in result.rows:
+            if row.kind != "track":
+                continue
+            candidate = recognition_match_from_row(service, row)
+            if not candidate:
+                continue
+            candidate["album"] = candidate.get("albumTitle", "")
+            candidates.append(candidate)
+        return select_recognition_match(entry, candidates)
+
+    @staticmethod
+    def _recognition_artist_row(match: dict) -> Row | None:
+        service_id = str(match.get("artistServiceId") or "").strip()
+        title = str(
+            match.get("artistName") or match.get("artist") or ""
+        ).strip()
+        if not service_id or not title:
+            return None
+        return Row(
+            item_id=f"recognition:{match.get('service')}:artist:{service_id}",
+            title=title,
+            kind="artist",
+            url=str(match.get("artistUrl") or "") or None,
+            service_id=service_id,
+            service_kind="artist",
+        )
+
+    def _show_recognition_match_in_amc(
+        self,
+        action: RecognitionAction,
+        match: dict,
+    ) -> None:
+        service = action.service
+        track = recognition_row_from_match(match)
+        if track is None:
+            self.announcer.say("Nie można otworzyć tego wyniku w AMC")
+            self._restore_focus_after_dialog()
+            return
+        session_id = SessionId.SPOTIFY if service == SPOTIFY else SessionId.TIDAL
+        if action.entity == "artist":
+            artist = self._recognition_artist_row(match)
+            if artist is None:
+                self.announcer.say("Usługa nie podała wykonawcy tego utworu")
+                self._restore_focus_after_dialog()
+                return
+            entry = SearchEntry(session_id, artist)
+            if service == SPOTIFY:
+                self._open_spotify_search_result(entry, relations=False)
+            else:
+                self._open_tidal_search_result(entry, relations=False)
+            return
+        album_id = str(match.get("albumServiceId") or "").strip()
+        album_title = str(match.get("albumTitle") or "Album").strip() or "Album"
+        if not album_id:
+            self.announcer.say("Usługa nie podała albumu tego utworu")
+            self._restore_focus_after_dialog()
+            return
+        self._switch_session(session_id)
+        if service == SPOTIFY:
+            self._open_spotify_container(OpenSpotifyContainer(
+                item_id=f"{track.item_id}:recognized-album",
+                service_id=album_id,
+                title=album_title,
+                kind="album",
+                artist=track.artist_name,
+                public_uri=str(match.get("albumUrl") or "") or None,
+                preferred_id=track.item_id,
+            ))
+        else:
+            self._open_tidal_container(OpenTidalContainer(
+                item_id=f"{track.item_id}:recognized-album",
+                service_id=album_id,
+                title=album_title,
+                kind="album",
+                artist=track.artist_name,
+                public_uri=str(match.get("albumUrl") or "") or None,
+                preferred_id=track.item_id,
+            ))
+
+    def _execute_recognition_action(
+        self,
+        entry: dict,
+        action: RecognitionAction,
+        match: dict | None,
+    ) -> None:
+        """Execute the same recognized-track command from every UI surface."""
+
+        if action.operation == "open_url":
+            if action.url and wx.LaunchDefaultBrowser(action.url):
+                self._restore_focus_after_dialog()
+            else:
+                self.announcer.say("Nie udało się otworzyć łącza")
+                self._restore_focus_after_dialog()
+            return
+        if match is None:
+            self.announcer.say("Nie znaleziono dokładnego wyniku w wybranej usłudze")
+            self._restore_focus_after_dialog()
+            return
+        if action.operation == "show_amc":
+            self._show_recognition_match_in_amc(action, match)
+            return
+        row = recognition_row_from_match(match)
+        if action.operation == "play_default" and row is not None:
+            session_id = SessionId.SPOTIFY if action.service == SPOTIFY else SessionId.TIDAL
+            search_entry = SearchEntry(session_id, row)
+            if action.service == SPOTIFY:
+                self._open_spotify_search_result(search_entry, relations=False)
+            else:
+                # TIDAL intentionally follows AMC's existing hand-off to the
+                # original application.  There is no second internal player.
+                self._open_tidal_search_result(search_entry, relations=False)
+            return
+        if action.operation == "open_external":
+            if action.service == TIDAL and action.entity == "track" and row is not None:
+                self._open_tidal_search_result(SearchEntry(SessionId.TIDAL, row), relations=False)
+                return
+            address = recognition_action_url(action, match)
+            if action.service == SPOTIFY and action.entity == "track":
+                address = str(match.get("appUri") or address)
+            try:
+                if not address:
+                    raise OSError("missing public link")
+                os.startfile(address)
+            except OSError:
+                self.announcer.say("Nie udało się otworzyć oryginalnej aplikacji")
+            self._restore_focus_after_dialog()
+            return
+        self.announcer.say("To działanie nie jest dostępne")
         self._restore_focus_after_dialog()
 
     def _toggle_radio_recording(self) -> None:
@@ -28144,6 +28917,7 @@ class LiteFrame(wx.Frame):
         def done(payload: dict) -> None:
             if announce and self._transient_preview_return is None:
                 return
+            self._active_radio_recordings_payload = payload
             rows = active_recording_rows(payload)
             events = self.navigator.apply_radio_view(
                 LibraryView.ACTIVE_RADIO_RECORDINGS,
@@ -28178,6 +28952,18 @@ class LiteFrame(wx.Frame):
             done,
             failed,
         )
+
+    def _announce_recording_output_information(self) -> None:
+        row = self.navigator.sessions[SessionId.RADIO].model.selected_row
+        payload = getattr(self, "_active_radio_recordings_payload", {})
+        entries = payload.get("recordings") if isinstance(payload, dict) else None
+        selected = next((
+            entry for entry in (entries if isinstance(entries, list) else [])
+            if isinstance(entry, dict)
+            and row is not None
+            and str(entry.get("stationId") or "") == row.item_id
+        ), None)
+        self.announcer.say(recording_output_description(selected))
 
     def _remember_recording_result(self, payload: object) -> bool:
         """Utrwal wynik w prywatnym stanie bez zmiany profilu pelnego AMC."""
@@ -28869,6 +29655,10 @@ class LiteFrame(wx.Frame):
                 self, "_youtube_account_available", False
             ),
             podcast_session=self.navigator.active is SessionId.PODCASTS,
+            youtube_video_selection=(
+                self.navigator.active is SessionId.PODCASTS
+                and is_youtube_video_row(selected_row)
+            ),
             files_session=self.navigator.active is SessionId.FILES,
             tidal_session=self.navigator.active is SessionId.TIDAL,
             tidal_collection=(

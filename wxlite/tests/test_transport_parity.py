@@ -823,6 +823,28 @@ def test_menu_shortcut_labels_still_tell_the_truth() -> None:
     ):
         for chord, action in table.items():
             real.setdefault(chord, set()).add(action)
+    # Te dwie komendy współdzielą klawisz z inną operacją i są wybierane przez
+    # jeden resolver zależnie od bieżącego widoku oraz rodzaju zaznaczenia.
+    # Testujemy zatem również reprezentatywne stany dynamiczne, a nie tylko
+    # statyczne słowniki skrótów.
+    dynamic_actions = {
+        "Ctrl+S": resolve(
+            Chord("S", ctrl=True),
+            player_view=False,
+            radio_session=False,
+            podcast_session=True,
+            youtube_video_selection=True,
+        ),
+        "Right": resolve(
+            Chord("Right"),
+            player_view=False,
+            radio_session=True,
+            radio_recording_context=True,
+        ),
+    }
+    for chord, action in dynamic_actions.items():
+        assert action is not None
+        real.setdefault(chord, set()).add(action)
     for menu in menu_model.build_menus():
         for item in menu.items:
             if item.is_separator or not item.shortcut or item.action is None:

@@ -15,6 +15,7 @@ from contextlib import closing
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from urllib.parse import urlparse
 
 from .collation import (
     COLLATION_TITLE_IGNORE_CASE,
@@ -391,10 +392,28 @@ def _episode_row(record: _EpisodeRecord, *, aggregate: bool) -> Row:
         ),
         parent_id=record.subscription_id,
         artist_name=author,
+        service_kind=(
+            "youtubeVideo" if record.source_kind in (2, 3) else None
+        ),
         duration_ticks=duration_ticks,
         podcast_media_length=media_length if media_length > 0 else None,
         podcast_media_type=media_type or None,
     )
+
+
+def is_youtube_video_row(row: Row | None) -> bool:
+    """Whether an episode is a public YouTube video, without exposing its URL."""
+
+    if row is None or getattr(row, "kind", "") != "episode":
+        return False
+    if getattr(row, "service_kind", "") == "youtubeVideo":
+        return True
+    address = str(getattr(row, "url", "") or "").strip()
+    try:
+        host = (urlparse(address).hostname or "").casefold()
+    except ValueError:
+        return False
+    return host in ("youtu.be", "youtube.com") or host.endswith(".youtube.com")
 
 
 def _materialize_episode(record: sqlite3.Row) -> _EpisodeRecord:

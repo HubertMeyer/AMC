@@ -45,6 +45,8 @@ from amc_wx_lite.shortcuts import (
     SONOS_SESSION_VIEW,
     SONOS_OWN_STREAMS_VIEW,
     Action,
+    Chord,
+    resolve,
 )
 
 
@@ -184,6 +186,23 @@ def test_shortcut_shown_in_menu_is_the_shortcut_that_really_works() -> None:
         if not item.shortcut or item.action is None:
             continue
         assert item.shortcut in real, f"{item.label}: skrot {item.shortcut} nie istnieje"
+        if item.action is Action.SAVE_YOUTUBE_VIDEO_AS:
+            assert resolve(
+                Chord("S", ctrl=True),
+                player_view=False,
+                radio_session=False,
+                podcast_session=True,
+                youtube_video_selection=True,
+            ) is item.action
+            continue
+        if item.action is Action.RECORDING_OUTPUT_INFORMATION:
+            assert resolve(
+                Chord("Right"),
+                player_view=False,
+                radio_session=True,
+                radio_recording_context=True,
+            ) is item.action
+            continue
         assert item.action in real[item.shortcut], (
             f"{item.label}: {item.shortcut} nie robi nigdzie {item.action}, "
             f"tylko {real[item.shortcut]}"
@@ -242,7 +261,7 @@ def test_no_duplicate_labels_or_shortcuts() -> None:
         "Alt+1", "Alt+2", "Alt+3", "Alt+D", "F5", "Ctrl+F5", "Ctrl+Shift+L",
             "Ctrl+Shift+U", "Ctrl+Shift+P",
         "B", "Shift+B", "Ctrl+Shift+B", "Ctrl+X", "Ctrl+V",
-        "Alt+Up", "Alt+Down", "F2", "Delete",
+        "Alt+Up", "Alt+Down", "F2", "Delete", "Right",
         "Ctrl+U", "Ctrl+P", "I", "O", "R", "S", "T"
     }, duplicates
     for chord in ("Ctrl+U", "Ctrl+P"):

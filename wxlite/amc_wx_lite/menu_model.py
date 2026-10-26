@@ -74,6 +74,8 @@ class MenuItem:
     needs_files_session: bool = False
     #: Dostępna tylko dla wskazanej stacji, która ma aktywny tor nagrywania.
     needs_radio_recording: bool = False
+    #: Dostępna tylko w równorzędnym widoku „Nagrywane”.
+    needs_active_radio_recording_view: bool = False
     #: Widok dostepny wylacznie wewnatrz sesji Podcasty i YouTube.
     needs_podcast_session: bool = False
     #: Te trzy pozycje sa aktywne tylko w zbiorczym widoku Nowych odcinkow.
@@ -89,6 +91,12 @@ class MenuItem:
     needs_youtube_live_aggregate: bool = False
     #: Wymaga trwającej, a nie dopiero zaplanowanej transmisji zbiorczej.
     needs_youtube_live_now: bool = False
+    #: Wymaga jednego albo wielu zaznaczonych materiałów YouTube.
+    needs_youtube_video_item: bool = False
+    #: Wymaga dokładnie jednego materiału YouTube.
+    needs_single_youtube_video_item: bool = False
+    #: Polecenie audio pod Ctrl+S ustępuje zapisowi wideo dla YouTube.
+    excludes_youtube_video_item: bool = False
     #: Aktywna wyłącznie w jednym z trzech głównych widoków kolekcji TIDAL.
     needs_tidal_collection: bool = False
     #: Aktywna wyłącznie w jednym z sześciu głównych widoków Spotify.
@@ -555,6 +563,27 @@ def build_menus(
                 shortcut="Ctrl+S",
                 accelerator=False,
                 needs_podcast_session=True,
+                needs_selection=True,
+                excludes_youtube_video_item=True,
+                visible_sessions=PODCASTS_ONLY,
+            ),
+            MenuItem(
+                "Pobierz zaznaczone materiały jako wi&deo",
+                Action.DOWNLOAD_YOUTUBE_VIDEOS,
+                shortcut="Ctrl+Shift+D",
+                accelerator=False,
+                needs_podcast_session=True,
+                needs_youtube_video_item=True,
+                visible_sessions=PODCASTS_ONLY,
+            ),
+            MenuItem(
+                "Zapisz wideo z YouTube j&ako…",
+                Action.SAVE_YOUTUBE_VIDEO_AS,
+                shortcut="Ctrl+S",
+                accelerator=False,
+                needs_podcast_session=True,
+                needs_youtube_video_item=True,
+                needs_single_youtube_video_item=True,
                 needs_selection=True,
                 visible_sessions=PODCASTS_ONLY,
             ),
@@ -1036,6 +1065,15 @@ def build_menus(
                      accelerator=False),
             MenuItem("Pokaż aktualnie n&agrywane pliki", Action.VIEW_ACTIVE_RECORDINGS,
                      shortcut="Alt+R"),
+            MenuItem(
+                "Ustawienia p&liku nagrania",
+                Action.RECORDING_OUTPUT_INFORMATION,
+                shortcut="Right",
+                accelerator=False,
+                needs_radio_session=True,
+                needs_active_radio_recording_view=True,
+                needs_selection=True,
+            ),
             MenuItem("&Historia nagrywania", Action.VIEW_RECORDED_RADIO_FILES,
                      shortcut="Alt+Shift+R"),
             MenuItem("Za&planuj nagranie wybranej stacji…",

@@ -90,7 +90,7 @@ def test_schedule_context_menu_contains_the_same_actions_as_keyboard() -> None:
         def Destroy(self) -> None:
             return None
 
-    dialog = object.__new__(RadioSchedulesDialog)
+    dialog = RadioSchedulesDialog.__new__(RadioSchedulesDialog)
     dialog.schedule_list = type("ScheduleList", (), {"SetFocus": lambda self: focus.append(True)})()
     dialog._selected_schedule = lambda: {"id": "plan-1"}
     dialog.PopupMenu = lambda _menu: shown.append(True)
@@ -114,7 +114,7 @@ def test_schedule_context_menu_contains_the_same_actions_as_keyboard() -> None:
         ("Powiel plan (Ctrl+D)", True),
         ("Włącz lub wyłącz plan (Spacja)", True),
         ("Krótka informacja (strzałka w lewo)", True),
-        ("Pełne szczegóły (strzałka w prawo)", True),
+        ("Ustawienia pliku (strzałka w prawo)", True),
         ("Usuń plan (Delete)", True),
     ]
 
@@ -124,7 +124,7 @@ def test_shift_f10_opens_schedule_context_menu_before_modifier_filter() -> None:
 
     calls: list[object] = []
     schedule_list = object()
-    dialog = object.__new__(RadioSchedulesDialog)
+    dialog = RadioSchedulesDialog.__new__(RadioSchedulesDialog)
     dialog.schedule_list = schedule_list
     dialog._show_context_menu = calls.append
 
@@ -163,7 +163,7 @@ def test_schedule_list_left_and_right_have_read_only_information_actions() -> No
     assert "focus_on_list and code == wx.WXK_LEFT" in source
     assert "_short_schedule_information(selected)" in source
     assert "focus_on_list and code == wx.WXK_RIGHT" in source
-    assert "_full_schedule_information(selected)" in source
+    assert "_full_schedule_information(selected, self._recording)" in source
 
 
 def test_ctrl_enter_is_not_reassigned_and_ctrl_d_opens_disabled_copy_editor() -> None:

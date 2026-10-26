@@ -39,6 +39,7 @@ from .schedule_segments import (
     duration_from_fields,
 )
 from .state_store import Station
+from .radio_recording import scheduled_recording_output_description
 
 _RECURRENCE_CHOICES = (
     ("Jednorazowo", "Once"),
@@ -304,7 +305,9 @@ def _short_schedule_information(schedule: Mapping) -> str:
     return f"{state}, {date_text}, {time_text}"
 
 
-def _full_schedule_information(schedule: Mapping) -> str:
+def _full_schedule_information(schedule: Mapping, recording=None) -> str:
+    if recording is not None:
+        return scheduled_recording_output_description(schedule, recording)
     recurrence = str(schedule.get("recurrence") or "Once")
     if recurrence == "Daily":
         recurrence_text = "codziennie"
@@ -924,7 +927,7 @@ class RadioSchedulesDialog(wx.Dialog):
             "Insert dodaje plan. Ctrl+D powiela wybrany plan jako wyłączoną kopię. "
             "Enter edytuje. Spacja włącza lub wyłącza. Delete usuwa. "
             "Strzałka w lewo powtarza stan i termin, a strzałka w prawo czyta "
-            "pozostałe szczegóły bez powtarzania terminu. "
+            "format, nazwę przygotowywanego pliku i folder docelowy. "
             "Shift+F10 albo klawisz menu otwiera te same polecenia. "
             "Każda zapisana zmiana jest stosowana od razu."
         )
@@ -936,7 +939,7 @@ class RadioSchedulesDialog(wx.Dialog):
         self.schedule_list.SetName("Zaplanowane nagrania radia")
         self.schedule_list.SetToolTip(
             "Góra i dół wybierają plan. Lewo powtarza stan i termin, prawo "
-            "czyta pozostałe szczegóły. "
+            "czyta ustawienia pliku. "
             "Enter edytuje, Spacja włącza lub wyłącza."
         )
         layout.Add(self.schedule_list, 1, wx.LEFT | wx.RIGHT | wx.EXPAND, 12)
@@ -1014,7 +1017,7 @@ class RadioSchedulesDialog(wx.Dialog):
     def _announce_full_information(self, _event: object | None = None) -> None:
         selected = self._selected_schedule()
         self._announce(
-            _full_schedule_information(selected)
+            _full_schedule_information(selected, self._recording)
             if selected is not None
             else "Nie wybrano planu nagrywania"
         )
@@ -1035,7 +1038,7 @@ class RadioSchedulesDialog(wx.Dialog):
                 selected,
             ),
             (
-                "Pełne szczegóły (strzałka w prawo)",
+                "Ustawienia pliku (strzałka w prawo)",
                 self._announce_full_information,
                 selected,
             ),

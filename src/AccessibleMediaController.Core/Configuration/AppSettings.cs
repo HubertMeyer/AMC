@@ -1046,6 +1046,12 @@ public sealed class PodcastSettings
     public int AutomaticRefreshBatchSize { get; set; } = 4;
 }
 
+public enum YouTubeVideoDownloadFormat
+{
+    Mp4,
+    Original
+}
+
 public enum PodcastSourceKind
 {
     Rss,

@@ -2,6 +2,8 @@
 using System.Diagnostics;
 using System.IO;
 using System.Text;
+using AccessibleMediaController.Core.Configuration;
+using AccessibleMediaController.Core.Podcasts;
 
 namespace AccessibleMediaController.Windows.Services;
 
@@ -13,6 +15,10 @@ namespace AccessibleMediaController.Windows.Services;
 internal static class YouTubeMediaDownloader
 {
     private const int PublishRetryCount = 20;
+    private static readonly HashSet<string> KnownVideoExtensions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ".mp4", ".m4v", ".webm", ".mkv", ".mov", ".avi", ".ogv", ".ts"
+    };
 
     internal static async Task<PodcastDownloadResult> DownloadMp3Async(
         string pageUrl,
@@ -121,6 +127,199 @@ internal static class YouTubeMediaDownloader
         }
     }
 
+    internal static async Task<PodcastDownloadResult> DownloadVideoAsync(
+        string pageUrl,
+        string destinationFolder,
+        string? title,
+        YouTubeVideoDownloadFormat format,
+        CancellationToken cancellationToken)
+    {
+        if (!YouTubeSourceResolver.IsYouTubeUrl(pageUrl))
+            throw new ArgumentException("Adres nie prowadzi do YouTube.", nameof(pageUrl));
+        if (!Enum.IsDefined(format))
+            throw new ArgumentOutOfRangeException(nameof(format));
+        var ytDlp = YouTubeSourceResolver.FindExecutable()
+            ?? throw new NotSupportedException(
+                "Pobieranie z YouTube wymaga składnika yt-dlp. Wybierz Pomoc, Sprawdź składniki: FFmpeg i yt-dlp.");
+        var ffmpeg = FfmpegComponentManager.FindInstalledExecutable()
+            ?? throw new NotSupportedException(
+                "Pobieranie wideo z YouTube wymaga składnika FFmpeg. Wybierz Pomoc, Sprawdź składniki: FFmpeg i yt-dlp.");
+
+        var fullDestinationFolder = Path.GetFullPath(destinationFolder);
+        Directory.CreateDirectory(fullDestinationFolder);
+        var stagingDirectory = CreateStagingDirectory();
+        var outputTemplate = Path.Combine(stagingDirectory, "media.%(ext)s");
+        var start = ExternalToolProcess.Create(ytDlp);
+        foreach (var argument in BuildVideoArguments(outputTemplate, ffmpeg, format, pageUrl))
+            start.ArgumentList.Add(argument);
+
+        Process? process = null;
+        try
+        {
+            process = Process.Start(start)
+                ?? throw new InvalidDataException("Nie udało się uruchomić składnika yt-dlp.");
+            process.StandardInput.Close();
+            using var termination = cancellationToken.Register(
+                static state =>
+                {
+                    try
+                    {
+                        var running = (Process)state!;
+                        if (!running.HasExited) running.Kill(entireProcessTree: true);
+                    }
+                    catch (Exception)
+                    {
+                    }
+                },
+                process);
+            var outputTask = process.StandardOutput.ReadToEndAsync(cancellationToken);
+            var errorTask = process.StandardError.ReadToEndAsync(cancellationToken);
+            await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
+            var output = await outputTask.ConfigureAwait(false);
+            var error = await errorTask.ConfigureAwait(false);
+            var completedPath = ResolveCompletedVideoPath(stagingDirectory, output);
+            if (process.ExitCode != 0 || completedPath is null)
+            {
+                DiagnosticLog.Warning(
+                    "youtube-video-download",
+                    $"yt-dlp zakończył pobieranie wideo kodem {process.ExitCode}; komunikat: {TrimDiagnostic(error)}");
+                throw new InvalidDataException(
+                    YouTubeErrorTranslator.DescribePremiere(error)
+                    ?? "YouTube nie udostępnił materiału do zapisania jako wideo.");
+            }
+
+            var extension = Path.GetExtension(completedPath).ToLowerInvariant();
+            if (format == YouTubeVideoDownloadFormat.Mp4
+                && !extension.Equals(".mp4", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidDataException("Nie udało się przygotować pliku wideo MP4.");
+            }
+            if (string.IsNullOrWhiteSpace(extension))
+                throw new InvalidDataException("Pobrany plik wideo nie ma rozpoznawalnego formatu.");
+            var length = new FileInfo(completedPath).Length;
+            if (length <= 0) throw new InvalidDataException("Pobrany plik wideo jest pusty.");
+
+            var destinationPath = PodcastDownloadNaming.UniquePath(
+                fullDestinationFolder,
+                PodcastDownloadNaming.SuggestedVideoBaseName(title) + extension);
+            await PublishCompletedFileAsync(
+                completedPath,
+                destinationPath,
+                overwrite: false,
+                cancellationToken).ConfigureAwait(false);
+            return new PodcastDownloadResult(destinationPath, length);
+        }
+        catch (Win32Exception exception)
+        {
+            throw new InvalidDataException("Nie udało się uruchomić składnika yt-dlp.", exception);
+        }
+        finally
+        {
+            process?.Dispose();
+            CleanupStagingDirectory(stagingDirectory);
+        }
+    }
+
+    internal static IReadOnlyList<string> BuildVideoArguments(
+        string outputTemplate,
+        string ffmpeg,
+        YouTubeVideoDownloadFormat format,
+        string pageUrl)
+    {
+        var arguments = new List<string>
+        {
+            "--ignore-config",
+            "--no-playlist",
+            "--no-warnings",
+            "--no-progress",
+            "--force-ipv4",
+            "--socket-timeout", "20",
+            "--retries", "3",
+            "--fragment-retries", "3",
+            "--extractor-retries", "2",
+            "--format", "bv*+ba/b",
+            "--extractor-args", "youtube:lang=pl"
+        };
+        if (format == YouTubeVideoDownloadFormat.Mp4)
+        {
+            arguments.AddRange([
+                "--format-sort", "vcodec:h264,lang,quality,res,fps,hdr:12,acodec:aac",
+                "--merge-output-format", "mp4",
+                "--remux-video", "mp4"]);
+        }
+        arguments.AddRange([
+            "--ffmpeg-location", ffmpeg,
+            "--print", "after_move:filepath",
+            "--output", outputTemplate,
+            "--force-overwrites",
+            "--",
+            pageUrl.Trim()]);
+        return arguments;
+    }
+
+    internal static string? ResolveCompletedVideoPath(
+        string stagingDirectory,
+        string standardOutput)
+    {
+        var fullStagingDirectory = Path.GetFullPath(stagingDirectory);
+        foreach (var line in standardOutput.Split(
+                     ['\r', '\n'],
+                     StringSplitOptions.RemoveEmptyEntries).Reverse())
+        {
+            var candidate = line.Trim().Trim('"');
+            if (IsCompletedStagingFile(fullStagingDirectory, candidate))
+                return Path.GetFullPath(candidate);
+        }
+        return Directory.EnumerateFiles(
+                fullStagingDirectory,
+                "media.*",
+                SearchOption.TopDirectoryOnly)
+            .Where(path => IsCompletedStagingFile(fullStagingDirectory, path))
+            .OrderByDescending(path => new FileInfo(path).Length)
+            .FirstOrDefault();
+    }
+
+    private static bool IsCompletedStagingFile(
+        string fullStagingDirectory,
+        string candidate)
+    {
+        if (string.IsNullOrWhiteSpace(candidate) || !File.Exists(candidate)) return false;
+        var fullCandidate = Path.GetFullPath(candidate);
+        var relative = Path.GetRelativePath(fullStagingDirectory, fullCandidate);
+        if (Path.IsPathRooted(relative)
+            || relative.Equals("..", StringComparison.Ordinal)
+            || relative.StartsWith($"..{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
+        {
+            return false;
+        }
+        var extension = Path.GetExtension(fullCandidate);
+        return extension is not (".part" or ".ytdl" or ".tmp");
+    }
+
+    internal static string ResolveSaveAsDestination(
+        string requestedPath,
+        string actualExtension,
+        YouTubeVideoDownloadFormat format)
+    {
+        var fullRequestedPath = Path.GetFullPath(requestedPath);
+        var normalizedExtension = actualExtension.StartsWith('.')
+            ? actualExtension.ToLowerInvariant()
+            : $".{actualExtension.ToLowerInvariant()}";
+        if (normalizedExtension.Length < 2
+            || normalizedExtension.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+        {
+            throw new InvalidDataException("Pobrany plik wideo nie ma prawidłowego rozszerzenia.");
+        }
+        if (format == YouTubeVideoDownloadFormat.Mp4)
+            return Path.ChangeExtension(fullRequestedPath, ".mp4");
+        var requestedExtension = Path.GetExtension(fullRequestedPath);
+        if (string.IsNullOrWhiteSpace(requestedExtension))
+            return fullRequestedPath + normalizedExtension;
+        if (KnownVideoExtensions.Contains(requestedExtension))
+            return Path.ChangeExtension(fullRequestedPath, normalizedExtension);
+        return fullRequestedPath + normalizedExtension;
+    }
+
     private static string CreateStagingDirectory()
     {
         var localData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
@@ -133,7 +332,7 @@ internal static class YouTubeMediaDownloader
         return directory;
     }
 
-    private static async Task PublishCompletedFileAsync(
+    internal static async Task PublishCompletedFileAsync(
         string source,
         string destination,
         bool overwrite,

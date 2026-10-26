@@ -361,6 +361,7 @@ class OpenTidalContainer:
     artist: str = ""
     public_uri: str | None = None
     artist_section: str | None = None
+    preferred_id: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -427,6 +428,7 @@ class OpenSpotifyContainer:
     public_uri: str | None = None
     section: str | None = None
     load_more: bool = False
+    preferred_id: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -3547,6 +3549,8 @@ class Navigator:
         intent: OpenTidalContainer,
         heading: str,
         rows: list[Row],
+        *,
+        preferred_id: str | None = None,
     ) -> list[object]:
         """Apply one verified online result and retain an exact Backspace path."""
         state = self.sessions[SessionId.TIDAL]
@@ -3556,7 +3560,7 @@ class Navigator:
         state.library_return_view = heading
         state.tidal_heading = heading
         state.tidal_context = intent
-        state.model.replace(rows)
+        state.model.replace(rows, preferred_id=preferred_id)
         state.view = View.LIST
         message = (
             f"{heading}, {len(rows)} {_items_word(len(rows))}"

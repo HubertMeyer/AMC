@@ -188,6 +188,8 @@ internal static class Program
                 // transportu ani zapisu postepu odtwarzania.
                 LitePodcastDownloadCoordinator.Operation,
                 LitePodcastDownloadCoordinator.SaveAsOperation,
+                LitePodcastDownloadCoordinator.VideoOperation,
+                LitePodcastDownloadCoordinator.VideoSaveAsOperation,
                 // Sprawdzenie nowego źródła również wykonuje sieć lub yt-dlp.
                 LitePodcastAddCoordinator.Operation,
                 // Alt+D pobiera brakujący opis publicznego materiału lub

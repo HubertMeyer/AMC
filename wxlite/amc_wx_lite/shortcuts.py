@@ -299,6 +299,7 @@ class Action(Enum):
     RECORD_SPLIT = "radio.recording.split"
     RECORD_STOP_ALL = "radio.recording.stopAll"
     VIEW_ACTIVE_RECORDINGS = "radio.recording.activeView"
+    RECORDING_OUTPUT_INFORMATION = "radio.recording.outputInformation"
     VIEW_RECORDED_RADIO_FILES = "radio.recording.completedView"
     ADD_RADIO_SCHEDULE = "radio.recording.schedule.add"
     MANAGE_RADIO_SCHEDULES = "radio.recording.schedules"
@@ -337,6 +338,8 @@ class Action(Enum):
     REFRESH_PODCAST_LIBRARY = "podcasts.refresh.all"
     DOWNLOAD_PODCAST_EPISODES = "podcasts.download.selected"
     SAVE_PODCAST_EPISODE_AS = "podcasts.download.saveAs"
+    DOWNLOAD_YOUTUBE_VIDEOS = "podcasts.youtube.video.download"
+    SAVE_YOUTUBE_VIDEO_AS = "podcasts.youtube.video.saveAs"
     SHOW_PODCAST_DESCRIPTION = "podcasts.description"
     CURRENT_RADIO_BROADCAST_INFORMATION = "radio.currentBroadcastInformation"
     RECOGNIZE_RADIO_TRACK = "radio.recognition.now"
@@ -1405,6 +1408,7 @@ PODCAST_SESSION_VIEW: dict[str, Action] = {
     # odtwarzaczu bieżący odcinek. Ma pierwszeństwo przed plikowym dopisywaniem
     # fragmentu, które pod Ctrl+D pozostaje w sesji Plików lokalnych.
     "Ctrl+D": Action.DOWNLOAD_PODCAST_EPISODES,
+    "Ctrl+Shift+D": Action.DOWNLOAD_YOUTUBE_VIDEOS,
     "Ctrl+S": Action.SAVE_PODCAST_EPISODE_AS,
     # Pełny AMC udostępnia pełny opis podcastu lub odcinka pod Alt+D zarówno
     # z listy, jak i z odtwarzacza. Sam opis pozostaje zwykłym tekstem tylko
@@ -1564,6 +1568,7 @@ def resolve(
     youtube_channel: bool = False,
     youtube_account_available: bool = False,
     podcast_session: bool = False,
+    youtube_video_selection: bool = False,
     files_session: bool = False,
     tidal_session: bool = False,
     tidal_collection: bool = False,
@@ -1648,6 +1653,12 @@ def resolve(
     # Parity z głównym AMC: Ctrl+F5 zawsze odświeża wszystkie źródła sesji,
     # F5 w skrzynce robi to samo, a F5 w pozostałych widokach odświeża źródło
     # bieżącego podcastu lub odcinka.
+    if (
+        podcast_session
+        and canonical == "Ctrl+S"
+        and youtube_video_selection
+    ):
+        return Action.SAVE_YOUTUBE_VIDEO_AS
     if podcast_session and canonical in PODCAST_SESSION_VIEW:
         return PODCAST_SESSION_VIEW[canonical]
     # Alt+1/2/3 w TIDAL sortuja tylko trzy rownorzedne korzenie kolekcji.
@@ -1714,6 +1725,13 @@ def resolve(
         return RADIO_PLAYER_VIEW[canonical]
     # Na zwyklej liscie gola litera B pozostaje wyszukiwaniem przyrostowym.
     # Zakladke nagrania przejmujemy tylko w rownorzednym widoku Nagrywane.
+    if (
+        not player_view
+        and radio_session
+        and radio_recording_context
+        and canonical == "Right"
+    ):
+        return Action.RECORDING_OUTPUT_INFORMATION
     if (
         not player_view
         and radio_session
@@ -1859,6 +1877,10 @@ def _help_entries() -> list[tuple[str, str, Action]]:
         Action.REFRESH_PODCAST_LIBRARY: "Odśwież wszystkie źródła podcastów",
         Action.DOWNLOAD_PODCAST_EPISODES: "Pobierz zaznaczone odcinki podcastów",
         Action.SAVE_PODCAST_EPISODE_AS: "Zapisz jeden odcinek podcastu jako plik",
+        Action.DOWNLOAD_YOUTUBE_VIDEOS: (
+            "Pobierz zaznaczone materiały YouTube jako wideo"
+        ),
+        Action.SAVE_YOUTUBE_VIDEO_AS: "Zapisz jedno wideo z YouTube jako plik",
         Action.SHOW_PODCAST_DESCRIPTION: "Pokaż pełny opis podcastu lub odcinka",
         Action.CURRENT_RADIO_BROADCAST_INFORMATION: (
             "Informacje o bieżącym odtwarzaniu"
@@ -1870,7 +1892,10 @@ def _help_entries() -> list[tuple[str, str, Action]]:
         Action.TOGGLE_RADIO_RECOGNITION_ANNOUNCEMENTS: (
             "Włącz lub wyłącz oznajmianie rozpoznanych utworów"
         ),
-        Action.VIEW_RADIO_RECOGNITION_HISTORY: "Pokaż rozpoznane utwory",
+        Action.VIEW_RADIO_RECOGNITION_HISTORY: (
+            "Pokaż rozpoznane utwory; Enter otwiera utwór, Ctrl+Enter album, "
+            "a prawa strzałka najważniejsze działania"
+        ),
         Action.GO_TO_RELATED_PODCAST: "Przejdź do podcastu wybranego odcinka",
         Action.TOGGLE_PODCAST_FAVORITE: (
             "Dodaj zaznaczone podcasty lub odcinki do ulubionych albo je usuń"
@@ -1925,6 +1950,9 @@ def _help_entries() -> list[tuple[str, str, Action]]:
         Action.RECORD_SPLIT: "Zapisz biezaca czesc i rozpocznij nowa",
         Action.RECORD_STOP_ALL: "Zatrzymaj wszystkie nagrania radia",
         Action.VIEW_ACTIVE_RECORDINGS: "Pokaż aktualnie nagrywane pliki",
+        Action.RECORDING_OUTPUT_INFORMATION: (
+            "Podaj format, nazwę pliku i folder bieżącego nagrania"
+        ),
         Action.VIEW_RECORDED_RADIO_FILES: "Historia nagrywania",
         Action.ADD_RADIO_SCHEDULE: "Zaplanuj nagranie wybranej stacji",
         Action.MANAGE_RADIO_SCHEDULES: "Harmonogram nagrywania",
@@ -2144,6 +2172,13 @@ def _help_entries() -> list[tuple[str, str, Action]]:
             # czytnika. Brak etykiety jest defektem katalogu, ale bezpieczny
             # tekst użytkowy nadal nie ujawnia ``action.value``.
             out.append((label, labels.get(action, "Polecenie AMC"), action))
+    for chord, action in (
+        ("Ctrl+S (materiał YouTube)", Action.SAVE_YOUTUBE_VIDEO_AS),
+        ("Strzałka w prawo (Nagrywane)", Action.RECORDING_OUTPUT_INFORMATION),
+    ):
+        if action not in seen:
+            seen.add(action)
+            out.append((chord, labels[action], action))
     # Polecenia bez własnego skrótu nadal należą do pełnej pomocy i palety.
     # Tekst „Bez skrótu” jest celową etykietą użytkową, nie identyfikatorem.
     for action in (

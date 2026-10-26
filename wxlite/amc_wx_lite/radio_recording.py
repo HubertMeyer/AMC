@@ -309,6 +309,78 @@ def active_recording_rows(payload: object) -> list[Row]:
     return rows
 
 
+def _same_windows_path(left: object, right: object) -> bool:
+    if not isinstance(left, str) or not isinstance(right, str):
+        return False
+    if not left.strip() or not right.strip():
+        return False
+    return ntpath.normcase(ntpath.normpath(left.strip())) == ntpath.normcase(
+        ntpath.normpath(right.strip())
+    )
+
+
+def _recording_format_description(format_value: object, bitrate: object) -> str:
+    normalized = str(format_value or "Mp3").strip().casefold()
+    if normalized in ("mp3", "aac"):
+        try:
+            value = int(bitrate)
+        except (TypeError, ValueError, OverflowError):
+            value = 192
+        return f"{value} kb/s"
+    return {
+        "flac": "FLAC",
+        "wav": "WAV",
+        "original": "Oryginalny strumień",
+    }.get(normalized, "MP3")
+
+
+def recording_output_description(entry: object) -> str:
+    """Right Arrow in ``Nagrywane``: format, file and destination only."""
+
+    if not isinstance(entry, dict):
+        return "Brak informacji o pliku nagrania"
+    format_text = _recording_format_description(
+        entry.get("format"), entry.get("bitrateKbps")
+    )
+    path = str(entry.get("path") or "").strip()
+    file_text = f"plik {ntpath.basename(path)}" if path else "plik przygotowywany"
+    output_folder = str(entry.get("outputFolder") or "").strip()
+    if not output_folder and path:
+        output_folder = ntpath.dirname(path)
+    default_folder = str(entry.get("defaultFolder") or "").strip()
+    folder_text = (
+        "folder domyślny"
+        if not output_folder or _same_windows_path(output_folder, default_folder)
+        else output_folder
+    )
+    return f"{format_text}, {file_text}, {folder_text}"
+
+
+def scheduled_recording_output_description(schedule: object, recording) -> str:
+    """Right Arrow in schedules, using effective recording defaults."""
+
+    if not isinstance(schedule, dict):
+        try:
+            schedule = dict(schedule)
+        except (TypeError, ValueError):
+            return "Brak informacji o pliku nagrania"
+    format_value = str(schedule.get("recordingFormat") or "").strip() or getattr(
+        recording, "format", "Mp3"
+    )
+    bitrate = schedule.get("recordingBitrateKbps")
+    if bitrate in (None, ""):
+        bitrate = getattr(recording, "bitrate_kbps", 192)
+    output_folder = str(schedule.get("outputFolder") or "").strip()
+    default_folder = str(getattr(recording, "default_folder", "") or "").strip()
+    return recording_output_description({
+        "format": format_value,
+        "bitrateKbps": bitrate,
+        "path": "",
+        "outputFolder": output_folder,
+        "defaultFolder": default_folder,
+    })
+
+
 def station_activity_rows(
     rows: Sequence[Row],
     *,

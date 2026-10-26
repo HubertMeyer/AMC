@@ -1360,6 +1360,40 @@ class LiteHostClient:
             timeout=24 * 3600.0,
         )
 
+    def download_youtube_videos(
+        self,
+        episode_ids: list[str],
+        video_format: str,
+    ) -> Any:
+        """Pobierz publiczne materiały YouTube jako wideo."""
+        return self.call(
+            "podcast.videoDownload",
+            {
+                "episodeIds": list(dict.fromkeys(episode_ids)),
+                "format": video_format,
+            },
+            timeout=24 * 3600.0,
+        )
+
+    def youtube_video_save_as_info(self, episode_id: str) -> Any:
+        return self.call(
+            "podcast.videoSaveAsInfo",
+            {"episodeId": episode_id},
+            timeout=20.0,
+        )
+
+    def save_youtube_video_as(
+        self,
+        episode_id: str,
+        path: str,
+        video_format: str,
+    ) -> Any:
+        return self.call(
+            "podcast.videoSaveAs",
+            {"episodeId": episode_id, "path": path, "format": video_format},
+            timeout=24 * 3600.0,
+        )
+
     def add_podcast_source(self, address: str, title: str = "") -> Any:
         """Sprawdź i dodaj RSS, kolekcję YouTube albo publiczne medium."""
         return self.call(
