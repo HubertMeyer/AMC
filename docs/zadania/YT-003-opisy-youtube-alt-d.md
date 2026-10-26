@@ -1,11 +1,11 @@
 # YT-003 — opisy YouTube pod Alt+D
 
-- Status: **Zrobione w zakresie opisów — użytkownik potwierdził działanie
-  `Alt+D`; kod, testy, pełna regresja wxPython, kompilacje, kontrola
-  nagrywania, atomowa instalacja, kontrolowany start i dwie próby publicznego
-  YouTube są zaliczone**.
+- Status: **Podstawowy zakres opisów jest zainstalowany i wcześniej odebrany;
+  korekta pełnego automatycznego odczytu z 27 października 2026 r. jest
+  zapisana w źródłach i testach, lecz czeka na następną paczkę AMC Test,
+  instalację oraz ręczny odsłuch NVDA**.
 - Utworzono: 23 października 2026.
-- Ostatnia aktualizacja: 24 października 2026.
+- Ostatnia aktualizacja: 27 października 2026.
 - Obszar: Podcasty i YouTube, opisy kanałów, playlist i materiałów, NVDA.
 - Profil: wyłącznie AMC Test. AMC Public i GitHub pozostają bez zmian.
 
@@ -147,3 +147,70 @@ czasu lokalnego.
 
 Ten późniejszy zapis dokumentacyjny nie zmienia rewizji zainstalowanego źródła.
 AMC Public, instalator publiczny i GitHub nie zostały zmienione.
+
+## Korekta pełnego automatycznego odczytu — 27 października 2026
+
+Użytkownik stwierdził na rzeczywistych opisach odcinków i materiałów YouTube,
+że po otwarciu `Alt+D` NVDA automatycznie czyta tylko początek, odbierany jak
+pierwszy akapit, mimo że dalsza treść pozostaje widoczna w polu tekstowym.
+Poprosił o automatyczny odczyt całego opisu. Ta decyzja zastępuje wcześniejszą
+decyzję prezentacyjną, która ograniczała dostępną nazwę okna do około 500
+znaków w obawie przed zbyt długą wypowiedzią.
+
+### Materiał do dokumentacji użytkownika
+
+- `Alt+D` w Podcastach i YouTube oraz przy podcastach Spotify ma automatycznie
+  odczytać wszystkie akapity opisu, nie tylko jego początek.
+- Pole nadal rozpoczyna się na początku treści. Można poruszać się po nim
+  klawiaturą, przerwać długą mowę zwykłym poleceniem NVDA, użyć przycisku
+  `Kopiuj wszystko` albo zamknąć okno klawiszem `Escape`.
+- Nie zmieniły się nazwa polecenia, skrót, menu, `Ctrl+F1`, pełna pomoc ani
+  paleta `Ctrl+Shift+K`; wszystkie te powierzchnie nadal prowadzą do jednego
+  polecenia `Opis`.
+- Radio już przekazywało do dostępnego regionu całą odpowiedź hosta bez limitu
+  500 znaków. Dodany test chroni również wieloakapitowy tekst Radia.
+
+### Uzasadnienie i decyzje
+
+- Pełny opis był obecny w natywnym polu tekstowym, ale dostępna nazwa okna i
+  pola powstawała z osobnej, skróconej reprezentacji. NVDA automatycznie
+  wypowiadał właśnie tę reprezentację i kończył przed dalszymi akapitami.
+- Usunięto tylko wtórny limit 500 znaków w warstwie prezentacji dla RSS,
+  YouTube i Spotify. Nadal obowiązują limity rozmiaru, czyszczenie znaków
+  sterujących i filtrowanie danych na wejściu, więc modelowe identyfikatory,
+  reprezentacje obiektów ani nieograniczony surowy tekst nie trafiają do mowy.
+- Nie zmieniano pobierania danych, logowania Google, odtwarzania, fokusu po
+  zamknięciu ani mechanizmu Radia.
+
+### Testy i wynik
+
+- Sześć dokładnie wybranych testów pełnego odczytu RSS, YouTube, Spotify,
+  wspólnego okna `Alt+D` i Radia: **6/6 zaliczonych**.
+- Wszystkie samowystarczalne testy w pięciu zmienionych obszarach:
+  **88/88 zaliczonych**. Jeden zastany test Spotify wymagający fixture
+  `monkeypatch` nie był częścią tego przebiegu.
+- Projektowy runner wykonał dodatkowo **89 testów poprawnie**, ale cały przebieg
+  nie jest raportowany jako zaliczony: lokalny Python nie zawiera `pytest`, więc
+  osiem niezwiązanych modułów nie dało się zaimportować, a zastany runner nie
+  obsługuje fixture `monkeypatch` w dziewiątym przypadku.
+- Kontrola składni zmienionych modułów i testów: zaliczona. `git diff --check`:
+  bez błędów; pozostało jedynie informacyjne ostrzeżenie o przyszłej
+  normalizacji końców linii jednego pliku testowego.
+- Nie budowano paczki, nie instalowano programu i nie wykonywano ręcznej próby
+  z NVDA. Te etapy pozostają osobne od zaliczonych testów źródłowych.
+
+### Znane ograniczenia
+
+- Bardzo długi opis da teraz odpowiednio długą automatyczną wypowiedź. Użytkownik
+  może ją przerwać i czytać pole ręcznie; nie wprowadzono dzielenia treści na
+  osobne, potencjalnie gubione komunikaty.
+- Rzeczywisty odsłuch musi po instalacji sprawdzić opis RSS, materiał YouTube i
+  podcast Spotify z co najmniej dwoma akapitami, a także `Escape`, powrót fokusu
+  i ponowne otwarcie.
+
+### Wersja i commit
+
+- Źródła i testy: commit `a4471493` —
+  `fix(accessibility): czytaj pelne opisy pod Alt+D`.
+- Nowa paczka, build, instalacja, ręczny odbiór NVDA i publikacja GitHub: **nie
+  wykonano**. Poprawka ma wejść do następnej zbiorczej wersji AMC Test.

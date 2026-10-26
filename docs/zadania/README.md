@@ -395,12 +395,15 @@ zmian, wymagający korekty użytkownika:
   integralność zainstalowanej kopii i kontrolowany start są zaliczone. AMC
   Public i GitHub pozostały bez zmian. Szczegóły:
   [YT-002-transmisje-na-zywo-i-dynamiczne-radio.md](YT-002-transmisje-na-zywo-i-dynamiczne-radio.md).
-- `YT-003` — **Zrobione w zakresie opisów — użytkownik potwierdził działanie
-  `Alt+D`; pełna regresja 2029 testów wxPython, testy .NET, build, atomowa
-  instalacja, kontrolowany start i żywe publiczne próby są zaliczone** —
-  `Alt+D` pokazuje opisy kanałów, playlist i materiałów YouTube, zapisuje nowe
-  opisy z importu i synchronizacji oraz odczytuje na żądanie brakujący opis
-  starszego publicznego wpisu bez logowania Google. Szczegóły:
+- `YT-003` — **Podstawowy zakres opisów jest zainstalowany i odebrany; korekta
+  z 27.10.2026 pełnego automatycznego odczytu wszystkich akapitów ma commit
+  `a4471493` i 88/88 samowystarczalnych testów, lecz czeka na następną paczkę,
+  instalację i ręczny odsłuch NVDA** — `Alt+D` pokazuje opisy kanałów, playlist
+  i materiałów YouTube, zapisuje nowe opisy z importu i synchronizacji oraz
+  odczytuje na żądanie brakujący opis starszego publicznego wpisu bez logowania
+  Google. Limit 500 znaków w automatycznej mowie został usunięty również dla
+  RSS i Spotify; Radio nie skracało tej odpowiedzi i otrzymało test ochronny.
+  GitHub pozostał bez zmian. Szczegóły:
   [YT-003-opisy-youtube-alt-d.md](YT-003-opisy-youtube-alt-d.md).
 - `NAME-001` — **Kod, testy, paczka, instalacja i uruchomienie AMC Test gotowe;
   bez nowego instalatora AMC Public** —
