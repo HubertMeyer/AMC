@@ -106,10 +106,53 @@ bieżącej linii:
 - `task-spotify-readonly-litehost` — `134c0657`;
 - `task-spotify-session-model` — `22631499`.
 
-Pozostało 18 lokalnych gałęzi. Każda jest bieżącą linią, jest nadal otwarta w
-worktree albo ma co najmniej jeden commit/patch wymagający osobnego rozliczenia.
-Nie zmieniono żadnej gałęzi zdalnej na GitHubie, ponieważ kanoniczna linia
-Pythona nie została jeszcze tam opublikowana.
+### Korekta z 26.10.2026: audyt i decyzja dotycząca pozostałych gałęzi
+
+Ten wpis zastępuje wcześniejsze ustalenie, że wszystkie pozostałe 18 gałęzi
+wymagają dalszego zachowania. Porównano je z commitem
+`404b6919a019eb50206b4f55557bafdaebc57e48`, sprawdzono unikalne patche,
+odpowiedniki funkcjonalne w bieżącej linii, stan worktree oraz obecność kopii
+zdalnych. Użytkownik jawnie wskazał do usunięcia 15 pozycji:
+
+- `codex/item-actions-20261016` — `b43163f1`;
+- `integracja/sonos-wiim-parity-20261014` — `b0311bdb`;
+- `integration/amc-test-20261023-late` — `aadfb4ca`;
+- `local/update-build-identity-20261014` — `bd6e76ca`;
+- `public/release-line` — `670870d4`;
+- `task-global-shortcuts-history` — `56e4296a`;
+- `task/frontier-odkrywanie` — `bd92d123`;
+- `task/podcasty-tyflo` — `357fccbf`;
+- `task/spotify-rozdzialy` — `719e57ed`;
+- `task/stabilnosc-okna` — `e932e418`;
+- `task/youtube-google-login` — `879aa355`;
+- `task/youtube-import-nvda` — `a1581e35`;
+- `task/youtube-playlists` — `e0d4f931`;
+- `task/youtube-refresh-fairness` — `05621539`;
+- `youtube/audit-fixes-20261014` — `2d632946`.
+
+Przed usunięciem potwierdzono brak zmian śledzonych we wszystkich powiązanych
+worktree. Dziewięć starych worktree usunięto. Trzy z nich zawierały wyłącznie
+odtwarzalne katalogi `.test-output`; łącznie usunięte katalogi zajmowały około
+2964 MiB. Nie zostały przeniesione do Kosza i nie można ich odzyskać zwykłym
+przywróceniem, ale wyniki kompilacji można ponownie wytworzyć ze źródeł.
+
+Główny katalog `D:\Projekty Codex\AMC - integracja wxPython` zachowano wraz z
+jego `.test-output` i `.test-tmp`; odłączono go tylko od usuniętej gałęzi i
+ustawiono na commit `404b6919`. Bieżąca instalacja `D:\Projekty Codex\AMC Python`,
+profil użytkownika, biblioteki i poświadczenia nie były celem operacji.
+
+Pozostały dokładnie trzy gałęzie lokalne:
+
+- `integration/sonos-broker-20261024` — bieżąca linia AMC Test;
+- `integracja/search-completion-20261014` — tymczasowe zabezpieczenie starszych
+  wariantów wyszukiwania i aktualizacji;
+- `local/shift-f2-release-20261015` — tymczasowe zabezpieczenie kilku
+  niezależnych eksperymentów. Samo Shift+F2 ma już odpowiedniki w bieżącej
+  linii; dalszego rozstrzygnięcia wymagają przede wszystkim nieprzeniesione
+  warianty obsługi playlist TIDAL i identyfikacji uruchomionej kompilacji.
+
+Żadna z tych trzech gałęzi nie ma upstreamu, tagu ani kopii zawierającej jej
+koniec na GitHubie. Nie zmieniono żadnej gałęzi zdalnej.
 
 ## YouTube bez ponownego logowania Google
 
@@ -139,7 +182,8 @@ pozostaje osobnym przyszłym zadaniem.
 
 ## Następny bezpieczny etap
 
-1. Rozliczyć unikalne commity pozostałych 18 lokalnych gałęzi i czynne worktree.
+1. Rozstrzygnąć, czy z dwóch tymczasowych gałęzi należy odzyskać pojedyncze
+   rozwiązania, czy świadomie usunąć je po opublikowaniu bieżącej linii.
 2. Oddzielić źródła starego WPF warte archiwizacji od zmian, które mają
    potwierdzone odpowiedniki w Pythonie.
 3. Przeskanować planowaną paczkę archiwalną pod kątem sekretów i danych
