@@ -20,6 +20,8 @@ GitHuba, profili danych oraz historycznego AMC WPF jest w:
 [REL-002-kanoniczne-wydania-test-public-github.md](REL-002-kanoniczne-wydania-test-public-github.md).
 Nie budować ani nie instalować kolejnej użytkowej wersji ze starego repozytorium
 WPF `D:\Projekty Codex\Accessible Multimedia Controller`.
+Stara instalacja WPF na dysku C została usunięta; repozytorium źródłowe pozostaje
+do kontrolowanej archiwizacji opisanej w REL-003.
 
 ## Zasady prowadzenia
 
@@ -53,6 +55,13 @@ WPF `D:\Projekty Codex\Accessible Multimedia Controller`.
   standardowa instalacja Windows oraz kontrolowane uporządkowanie starego C#,
   gałęzi lokalnych i GitHuba. Szczegóły:
   [REL-002-kanoniczne-wydania-test-public-github.md](REL-002-kanoniczne-wydania-test-public-github.md).
+
+- `REL-003` — **W trakcie; instalacja WPF usunięta, artefakty kompilacji
+  oczyszczone, źródła i instalatory zachowane do archiwizacji** — potwierdza
+  niezależne od logowania Google odświeżanie już zapisanych kanałów YouTube i
+  dokumentuje bezpieczny zakres dalszego porządkowania starego repozytorium.
+  Szczegóły:
+  [REL-003-usuniecie-wpf-i-stan-youtube.md](REL-003-usuniecie-wpf-i-stan-youtube.md).
 
 - `RECOG-001` — **W trakcie; kod, pełna regresja, build i instalacja AMC Test
   26.10.2026, 14:01 są gotowe; pozostaje ręczny odbiór NVDA** — prawa
