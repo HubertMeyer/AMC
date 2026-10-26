@@ -49,9 +49,9 @@ do kontrolowanej archiwizacji opisanej w REL-003.
 ## Zadania
 
 - `REL-002` — **W trakcie; aktualizacja z programu i pełny instalator są
-  zaimplementowane i przetestowane automatycznie, trwa budowa pierwszego
-  kandydata AMC Test do ręcznego odbioru NVDA; GitHub Release jeszcze nie
-  powstał** — jedna
+  zaimplementowane, a pierwszy kompletny kandydat AMC Test przeszedł
+  integralność i kontrolowany start; oczekuje na ręczny odbiór instalatora i
+  NVDA, GitHub Release jeszcze nie powstał** — jedna
   kanoniczna linia AMC Python,
   wydania AMC Test i AMC Public z tego samego commitu, dwa kanały aktualizacji,
   standardowa instalacja Windows oraz kontrolowane uporządkowanie starego C#,

@@ -307,8 +307,14 @@ tych samych plików profilu.
   planowane przez `wx.CallAfter` po `Close`; bramka nadal wymaga naturalnego
   zakończenia wszystkich procesów i niczego nie zabija. Testy ukierunkowane po
   tej korekcie: **38 zaliczonych**.
-- Instalator systemowy Python na C: kandydat jeszcze nie został zbudowany w
-  chwili tego zapisu.
+- Pełna paczka kandydata: **2135 plików**, pełna kontrola integralności i
+  kontrolowany start interfejsu oraz hosta zaliczone; po teście nie pozostał
+  żaden proces paczki.
+- Instalator systemowy AMC Test został zbudowany jako
+  `AMC-Test-2026-10-26-1954.exe` (134 236 985 bajtów). Lokalna sucha próba
+  wydania potwierdziła zgodność profilu Test, kanału Test, prerelease, nazwy,
+  rozmiaru, commitu i SHA-256 między instalatorem, plikiem integralności i
+  `amc-update-test.json`. Instalator nie został uruchomiony ani zainstalowany.
 - Aktualizacja z prawdziwego GitHub Release: oczekuje na publikację pierwszego
   odebranego wydania AMC Test.
 - Publikacja GitHub bieżącego Python: niewykonana.
@@ -330,9 +336,15 @@ tych samych plików profilu.
 - Wersja techniczna przygotowywanego kandydata: `0.1.0-alpha.434`.
 - Bazowy stan przed zmianą: `73279fbb15a1cd34c6813f24e097e0467889a197`.
 - Commit mechanizmu aktualizacji: `66118f651309efc711c2f090c2e0e4c42e37a80c`.
-- Dokładna rewizja paczki będzie zapisana automatycznie w jej
-  `bundle-manifest.json` oraz pliku integralności instalatora.
+- Dokładna rewizja paczki i instalatora:
+  `251e163afd1fe7697c3efe525f1fa284050cfebb`.
+- Kandydat instalatora:
+  `D:\Projekty Codex\AMC aktualizacje\AMC Test 0.1.0-alpha.434 kandydat 2026-10-26\instalator\AMC-Test-2026-10-26-1954.exe`.
+- SHA-256 instalatora:
+  `b8a411799beb086fb17f0f1dfaca795fd37ee211fd12fde352fa309984554b8e`.
 - Instalacja: `D:\Projekty Codex\AMC Python`.
-- Publikacja: brak.
+- Instalacja kandydata: niewykonana; oczekuje na ręczny odbiór.
+- Publikacja GitHub Release: brak; lokalny manifest przewiduje tag
+  `test-2026.10.26.1954`.
 - Wcześniejszy commit etapu źródłowego: `d87a27f6`
   (`build(release): rozdziel kanały Test i Public`).
