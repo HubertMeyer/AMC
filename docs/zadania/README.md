@@ -8,11 +8,12 @@ jawnym poleceniu użytkownika albo przez osobno uzgodniony harmonogram.
 ## Bieżący punkt wznowienia
 
 Najnowszą bazą wszystkich dalszych prac jest AMC Test z commitu
-`bba5e92d687ade1998e79c88656e1a5d545abcf2`, pakiet `39f0d3f2`, zbudowany,
-atomowo zainstalowany i uruchomiony 26.10.2026 o 13:34 w
-`D:\Projekty Codex\AMC Python`. Raport promocji potwierdza zaliczone testy i
-tytuł okna `AMC Test — 26.10.2026, 13:32`. Pozostaje ręczny odbiór funkcji
-z czterech najnowszych zadań.
+`4c8fceda738afd0163040a400150007d16f8409c`, pakiet `faef4e7f`, zbudowany,
+atomowo zainstalowany i uruchomiony 26.10.2026 o 14:03 w
+`D:\Projekty Codex\AMC Python`. Raport promocji potwierdza 2062 zaliczone
+testy, 111 kontrolowanie pominiętych i 13 zaliczonych podtestów oraz tytuł
+okna `AMC Test — 26.10.2026, 14:01`. Pozostaje ręczny odbiór funkcji z
+czterech najnowszych zadań.
 
 Nadrzędny plan uporządkowania jednej linii źródeł, instalatorów, aktualizacji,
 GitHuba, profili danych oraz historycznego AMC WPF jest w:
@@ -54,10 +55,12 @@ WPF `D:\Projekty Codex\Accessible Multimedia Controller`.
   [REL-002-kanoniczne-wydania-test-public-github.md](REL-002-kanoniczne-wydania-test-public-github.md).
 
 - `RECOG-001` — **W trakcie; kod, pełna regresja, build i instalacja AMC Test
-  26.10.2026, 13:32 są gotowe; pozostaje ręczny odbiór NVDA** — krótka lista
-  działań pod prawą strzałką, pełne podmenu `Usługi, łącza i powiązania`,
-  Spotify i TIDAL w AMC z fokusem utworu, oryginalne aplikacje oraz publiczne
-  łącza Apple Music rozwiązywane na żądanie. Szczegóły:
+  26.10.2026, 14:01 są gotowe; pozostaje ręczny odbiór NVDA** — prawa
+  strzałka od razu fokusuje i odczytuje pierwsze działanie, a instrukcję
+  udostępnia tylko przy rozszerzonych komunikatach; pełne podmenu `Usługi,
+  łącza i powiązania`, Spotify i TIDAL w AMC z fokusem utworu, oryginalne
+  aplikacje oraz publiczne łącza Apple Music rozwiązywane na żądanie.
+  Szczegóły:
   [RECOG-001-interakcje-z-rozpoznanymi-utworami.md](RECOG-001-interakcje-z-rozpoznanymi-utworami.md).
 
 - `REC-002` — **Zrobione i zainstalowane w AMC Test 26.10.2026, 13:32** —

@@ -16,9 +16,13 @@ podczas chodzenia strzałkami.
   TIDAL używa istniejącego przekazania do oryginalnej aplikacji.
 - `Ctrl+Enter` otwiera album w domyślnej usłudze wewnątrz AMC i ustawia fokus
   na rozpoznanym utworze.
-- `Strzałka w prawo` pokazuje krótką listę najważniejszych działań. `Strzałka
-  w lewo` podaje krótko album, wydanie i stację. `Escape` wraca z zachowaniem
-  fokusu.
+- `Strzałka w prawo` pokazuje lekką, krótką listę najważniejszych działań i
+  od razu ustawia fokus na pierwszym działaniu, zgodnie z listami relacji
+  Spotify i TIDAL. W zwykłym trybie NVDA nie otrzymuje wcześniej nagłówka ani
+  instrukcji klawiszy. Opis `Enter`, `Ctrl+C`, `Ctrl+Shift+C`, lewej strzałki
+  i `Escape` jest pomocą kontrolki wyłącznie po włączeniu rozszerzonych
+  komunikatów programu. `Strzałka w lewo` na liście głównej podaje krótko
+  album, wydanie i stację, a `Escape` zachowuje fokus po powrocie.
 - Menu kontekstowe zawiera pełny zestaw w podmenu `Usługi, łącza i
   powiązania`. Obie powierzchnie korzystają z tego samego modelu działań.
 - `Ctrl+C` na liście głównej kopiuje dotychczasowy wielowierszowy opis.
@@ -47,6 +51,9 @@ nie wykonywało zapytań sieciowych.
   integracji Apple Music: obecny etap obejmuje wyłącznie publiczne łącza.
 - Korekta użytkownika z 26.10.2026 zastępuje pomysł czytania pełnego rekordu
   na liście: długi opis pochodził ze schowka i ma tam pozostać.
+- Korekta użytkownika z 26.10.2026 zastępuje modalny dialog prawej strzałki z
+  zawsze czytanym tytułem i instrukcją: zwykły tryb przechodzi bezpośrednio na
+  pierwszy wiersz, a instrukcja pozostaje tylko w rozszerzonych komunikatach.
 - Krótka lista pod prawą strzałką i pełne menu nie są dwiema implementacjami;
   są dwoma widokami jednego katalogu działań.
 - Dokładne wyniki są pobierane dopiero po działaniu użytkownika i buforowane.
@@ -54,12 +61,14 @@ nie wykonywało zapytań sieciowych.
 
 ## Testy i wynik
 
-- Pełna regresja wxPython podczas promocji: **2057 zaliczonych, 111
+- Pełna regresja wxPython podczas promocji: **2062 zaliczone, 111
   kontrolowanie pominiętych, 13 podtestów zaliczonych**.
-- Końcowy zestaw nowych poleceń, menu, skrótów i pomocy: **106/106**.
+- Celowany zestaw rozpoznawania, ustawień, menu, skrótów, palety i zgodności
+  ze Spotify/TIDAL: **182/182**.
 - Testy obejmują wspólny model krótkiej i pełnej listy, konserwatywne
   dopasowanie katalogowe, publiczne Apple Music bez nagłówka autoryzacji,
-  trwały cache, domyślną usługę oraz niezmieniony wielowierszowy `Ctrl+C`.
+  trwały cache, domyślną usługę, niezmieniony wielowierszowy `Ctrl+C` oraz
+  zwięzłe okno prawej strzałki bez stałej instrukcji.
 - Automatyczna kontrola paczki, sum i izolowany start interfejsu oraz hosta:
   zaliczone.
 
@@ -70,9 +79,10 @@ nie wykonywało zapytań sieciowych.
 - TIDAL nie ma drugiego wewnętrznego odtwarzacza. Odtwarzanie rozpoznanego
   utworu kończy się w oryginalnej aplikacji TIDAL.
 - Do ręcznego odbioru z NVDA pozostają: fokus początkowy, prawa i lewa
-  strzałka, Escape, ponowne otwarcie, `Ctrl+C`, `Ctrl+Shift+C`, `Ctrl+Enter`,
-  oba kierunki przenoszenia oraz fokus utworu po otwarciu albumu w Spotify i
-  TIDAL.
+  strzałka, brak wstępnego nagłówka i instrukcji w zwykłym trybie, opis przy
+  rozszerzonych komunikatach, Escape, ponowne otwarcie, `Ctrl+C`,
+  `Ctrl+Shift+C`, `Ctrl+Enter`, oba kierunki przenoszenia oraz fokus utworu po
+  otwarciu albumu w Spotify i TIDAL.
 
 ## Materiał do dokumentacji użytkownika
 
@@ -90,10 +100,12 @@ nie wykonywało zapytań sieciowych.
 
 ## Wersja i commit
 
-- Commit źródłowy: `bba5e92d687ade1998e79c88656e1a5d545abcf2` —
-  `feat(amc-test): rozbuduj rozpoznane utwory i pobieranie wideo`.
-- Pakiet: `39f0d3f2`.
-- Etykieta: `2026.10.26-bba5e92d687ade1998e79c88656e1a5d545abcf2-39f0d3f2`.
-- Okno: `AMC Test — 26.10.2026, 13:32`.
-- Promocja zakończona 26.10.2026 o 13:34 czasu lokalnego.
+- Commit źródłowy: `4c8fceda738afd0163040a400150007d16f8409c` —
+  `fix(amc-test): skroc mowe listy rozpoznanych utworow`.
+- Zmienione pliki źródłowe: `wxlite/amc_wx_lite/gui.py` oraz
+  `wxlite/tests/test_recognition_actions.py`.
+- Pakiet: `faef4e7f`.
+- Etykieta: `2026.10.26-4c8fceda738afd0163040a400150007d16f8409c-faef4e7f`.
+- Okno: `AMC Test — 26.10.2026, 14:01`.
+- Promocja zakończona 26.10.2026 o 14:03 czasu lokalnego.
 - Publikacja: nie wykonywano.
