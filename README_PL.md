@@ -568,6 +568,22 @@ magazynie sesji. Działa to trwale dla Plików lokalnych, Radia i Podcastów.
 Przyszłe adaptery TIDAL, Apple Music, Spotify i WiiM mają stosować ten sam
 kontrakt, ale udostępniać cofnięcie dopiero po potwierdzeniu zapisu przez API.
 
+Zmiana robocza `POD-004` dodaje publiczny Mixcloud do sesji Podcasty i
+YouTube bez logowania i bez klucza API. `Ctrl+F` wyszukuje profile i audycje
+Mixcloud obok Apple Podcasts, Spreakera i YouTube. Wyniki mają jawne rodzaje
+**profil Mixcloud** oraz **audycja Mixcloud**. `Ctrl+Shift+L` zapisuje profil
+jako lokalną subskrypcję AMC albo pojedynczą audycję w **Mediach
+internetowych**; nie obserwuje niczego na koncie Mixcloud. `Ctrl+N` przyjmuje
+pełny publiczny adres profilu lub audycji, a `F5` odświeża zapisany profil.
+Enter na audycji otwiera jej oficjalną stronę w domyślnej przeglądarce bez
+automatycznego zapisu wyniku i pozostawia AMC na liście. Ponieważ publiczne API
+nie udostępnia pliku ani bezpośredniego strumienia audio, pobieranie, **Zapisz
+jako**, Kolejka i **Odtwórz jako następne** są dla takiej audycji niedostępne
+zarówno w menu, jak i w pomocy. Konto Mixcloud ani Google nie jest potrzebne.
+SoundCloud nadal można dodać przez rzeczywisty publiczny RSS; nie dodano
+wyszukiwania ani logowania, ponieważ oficjalna rejestracja aplikacji wymaga
+płatnego konta Artist Pro i sekretu klienta.
+
 Wersja `alpha.242` rozszerza wyszukiwanie Podcastów o drugi publiczny katalog:
 Spreaker. `Ctrl+F` przeszukuje równolegle Apple Podcasts i Spreaker, każdy
 niezapisany wynik podaje nazwę katalogu, a Enter przed dodaniem nadal sprawdza

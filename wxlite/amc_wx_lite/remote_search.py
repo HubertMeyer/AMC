@@ -1,4 +1,4 @@
-"""Bezpieczne wyniki publicznych katalogów podcastów i YouTube.
+"""Bezpieczne wyniki publicznych katalogów podcastów, Mixcloud i YouTube.
 
 Host C# wykonuje sieć i zwraca mały kontrakt. Ten moduł oddziela modelowe
 identyfikatory od etykiet przeznaczonych dla użytkownika, odrzuca niepubliczne
@@ -15,7 +15,13 @@ from .navigation import LibraryView, SessionId
 from .search_catalog import SearchEntry
 
 
-REMOTE_KINDS = frozenset(("rss", "youtubeChannel", "youtubeVideo"))
+REMOTE_KINDS = frozenset((
+    "rss",
+    "youtubeChannel",
+    "youtubeVideo",
+    "mixcloudChannel",
+    "mixcloudShow",
+))
 ROW_KINDS = frozenset(("podcast", "episode"))
 
 
@@ -121,6 +127,7 @@ def entries_from_payload(
                 detail=detail,
                 artist_name=artist,
                 duration_ticks=duration_ticks,
+                service_kind=remote_kind,
             ),
             LibraryView.PODCAST_LIBRARY
             if row_kind == "podcast"

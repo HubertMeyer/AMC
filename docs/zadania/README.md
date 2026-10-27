@@ -48,6 +48,13 @@ do kontrolowanej archiwizacji opisanej w REL-003.
 
 ## Zadania
 
+- `POD-004` — **W trakcie** — publiczne kanały i audycje Mixcloud w sesji
+  Podcasty i YouTube: `Ctrl+N`, wyszukiwanie `Ctrl+F`, lokalna subskrypcja
+  `Ctrl+Shift+L`, odświeżanie i dostępne etykiety bez logowania. SoundCloud
+  pozostaje przy publicznym RSS, ponieważ oficjalny dostęp aplikacyjny wymaga
+  płatnej rejestracji i sekretu. Szczegóły:
+  [POD-004-mixcloud-wyszukiwanie-i-subskrypcje.md](POD-004-mixcloud-wyszukiwanie-i-subskrypcje.md).
+
 - `YT-005` — **W trakcie; kod, 141 testów Pythona, dwie regresje C# oraz
   odczytowe próby biblioteki i yt-dlp są zweryfikowane; paczka, instalacja i ręczny odbiór NVDA
   pozostają** — ponowne `Ctrl+I` w otwartej skrzynce doładowuje następne

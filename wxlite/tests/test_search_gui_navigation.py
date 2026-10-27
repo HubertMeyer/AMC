@@ -1483,6 +1483,127 @@ def test_remote_library_does_not_claim_addition_without_host_confirmation() -> N
     assert not spoken[-1].startswith("Dodano")
 
 
+def test_remote_mixcloud_enter_opens_page_without_implicit_subscription() -> None:
+    opened = []
+    result = SearchEntry(
+        SessionId.PODCASTS,
+        Row(
+            "remote-mixcloud-show",
+            "Nocna audycja",
+            "episode",
+            url="https://www.mixcloud.com/radio/nocna-audycja/",
+            service_kind="mixcloudShow",
+        ),
+        LibraryView.PODCAST_EPISODES,
+        remote_kind="mixcloudShow",
+    )
+    frame = SimpleNamespace(
+        announcer=SimpleNamespace(say=lambda message: pytest.fail(message)),
+        _open_public_media_page=opened.append,
+    )
+
+    LiteFrame._complete_remote_search_result_action(
+        frame,
+        [result],
+        SearchResultAction.OPEN,
+    )
+
+    assert len(opened) == 1
+    assert opened[0].url == result.row.url
+    assert opened[0].title == "Nocna audycja"
+    assert opened[0].provider_label == "Mixcloud"
+
+
+def test_remote_mixcloud_ctrl_shift_l_creates_local_subscription() -> None:
+    calls = []
+    spoken = []
+
+    class Runner:
+        @staticmethod
+        def submit(_name, work, done, _failed):
+            done(work())
+
+    frame = SimpleNamespace(
+        _podcast_add_pending=False,
+        client=SimpleNamespace(
+            add_podcast_source=lambda address, title: (
+                calls.append((address, title))
+                or {
+                    "subscriptionId": "mixcloud:user:saved",
+                    "preferredEpisodeId": None,
+                    "title": title,
+                    "added": True,
+                    "restored": False,
+                }
+            )
+        ),
+        status_field=SimpleNamespace(SetLabel=lambda _value: None),
+        status_bar=SimpleNamespace(show=lambda _value: None),
+        announcer=SimpleNamespace(say=lambda _value: None),
+        runner=Runner(),
+        _refresh_visible_podcast_library_after_search_add=(
+            lambda subscription_id: calls.append(("refresh", subscription_id))
+        ),
+    )
+    result = SearchEntry(
+        SessionId.PODCASTS,
+        Row(
+            "remote-mixcloud-profile",
+            "Radio Nocne",
+            "podcast",
+            url="https://www.mixcloud.com/radionocne/",
+            service_kind="mixcloudChannel",
+        ),
+        LibraryView.PODCAST_LIBRARY,
+        remote_kind="mixcloudChannel",
+    )
+
+    LiteFrame._complete_remote_search_result_action(
+        frame,
+        [result],
+        SearchResultAction.LIBRARY,
+        announce=spoken.append,
+    )
+
+    assert calls[0] == (result.row.url, "Radio Nocne")
+    assert ("refresh", "mixcloud:user:saved") in calls
+    assert spoken == [
+        "Przygotowywanie wyniku katalogu",
+        "Dodano do Biblioteki: Radio Nocne",
+    ]
+    assert frame._podcast_add_pending is False
+
+
+def test_mixcloud_show_hides_unsupported_commands_from_keyboard_help() -> None:
+    nav = Navigator()
+    nav.switch_session(SessionId.PODCASTS)
+    nav.apply_podcast_episodes(
+        "mixcloud-profile",
+        "Radio Nocne",
+        [Row(
+            "mixcloud-show",
+            "Nocna audycja",
+            "episode",
+            path="https://www.mixcloud.com/radio/nocna-audycja/",
+            url="https://www.mixcloud.com/radio/nocna-audycja/",
+            service_kind="mixcloudShow",
+            podcast_media_type="audio/mixcloud",
+        )],
+    )
+    frame = SimpleNamespace(navigator=nav)
+
+    for action in (
+        Action.ADD_TO_QUEUE,
+        Action.TOGGLE_PLAY_NEXT,
+        Action.DOWNLOAD_PODCAST_EPISODES,
+        Action.SAVE_PODCAST_EPISODE_AS,
+    ):
+        assert not LiteFrame._action_available_in_active_session(frame, action)
+    assert LiteFrame._action_available_in_active_session(
+        frame, Action.TOGGLE_FAVORITE
+    )
+
+
 def test_saved_youtube_video_names_its_library_collection() -> None:
     spoken = []
 

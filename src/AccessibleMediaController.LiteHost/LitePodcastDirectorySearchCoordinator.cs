@@ -7,7 +7,7 @@ using AccessibleMediaController.Windows.Services;
 namespace AccessibleMediaController.LiteHost;
 
 /// <summary>
-/// Łączy publiczne wyniki Apple Podcasts, Spreakera i YouTube tą samą drogą,
+/// Łączy publiczne wyniki Apple Podcasts, Spreakera, Mixcloud i YouTube tą samą drogą,
 /// której używa główne AMC. Protokół dostaje tylko celowe etykiety oraz
 /// publiczne adresy HTTP(S); wyjątki, klasy i rekordy klientów nie opuszczają
 /// hosta.
@@ -19,12 +19,14 @@ internal sealed class LitePodcastDirectorySearchCoordinator : IDisposable
 
     private readonly ApplePodcastDirectoryClient _apple;
     private readonly SpreakerPodcastDirectoryClient _spreaker;
+    private readonly MixcloudPublicClient _mixcloud;
     private readonly YouTubeSearchClient _youTube;
 
     public LitePodcastDirectorySearchCoordinator()
     {
         _apple = new ApplePodcastDirectoryClient();
         _spreaker = new SpreakerPodcastDirectoryClient();
+        _mixcloud = new MixcloudPublicClient();
         _youTube = new YouTubeSearchClient();
     }
 
@@ -43,6 +45,9 @@ internal sealed class LitePodcastDirectorySearchCoordinator : IDisposable
                 "Spreaker",
                 token => _spreaker.SearchAsync(query, token)),
             SearchSourceAsync(
+                "Mixcloud",
+                token => _mixcloud.SearchAsync(query, token)),
+            SearchSourceAsync(
                 "YouTube",
                 token => _youTube.SearchAsync(query, token))
         };
@@ -50,7 +55,7 @@ internal sealed class LitePodcastDirectorySearchCoordinator : IDisposable
         if (results.All(result => result.Error is not null))
         {
             throw new LiteRequestException(
-                "Publiczne katalogi podcastów i YouTube są chwilowo niedostępne.");
+                "Publiczne katalogi podcastów, Mixcloud i YouTube są chwilowo niedostępne.");
         }
 
         var knownAddresses = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -99,17 +104,23 @@ internal sealed class LitePodcastDirectorySearchCoordinator : IDisposable
 
     private static object ToPayload(string sourceName, MediaItem item)
     {
-        var remoteKind = YouTubeSearchClient.IsChannelSearchResult(item)
-            ? "youtubeChannel"
-            : YouTubeSearchClient.IsSearchResult(item)
-                ? "youtubeVideo"
-                : "rss";
+        var remoteKind = MixcloudPublicClient.IsChannelSearchResult(item)
+            ? "mixcloudChannel"
+            : MixcloudPublicClient.IsShowSearchResult(item)
+                ? "mixcloudShow"
+                : YouTubeSearchClient.IsChannelSearchResult(item)
+                    ? "youtubeChannel"
+                    : YouTubeSearchClient.IsSearchResult(item)
+                        ? "youtubeVideo"
+                        : "rss";
         var detail = remoteKind switch
         {
             "youtubeChannel" => "kanał YouTube",
             "youtubeVideo" when YouTubeSearchClient.IsLiveSearchResult(item) =>
                 "YouTube, transmisja na żywo",
             "youtubeVideo" => "YouTube",
+            "mixcloudChannel" => "profil Mixcloud",
+            "mixcloudShow" => "audycja Mixcloud",
             _ => sourceName
         };
         return new
@@ -127,11 +138,15 @@ internal sealed class LitePodcastDirectorySearchCoordinator : IDisposable
     }
 
     private static int ResultRank(MediaItem item) =>
-        YouTubeSearchClient.IsChannelSearchResult(item)
+        MixcloudPublicClient.IsChannelSearchResult(item)
             ? 0
-            : YouTubeSearchClient.IsSearchResult(item)
-                ? 2
-                : 1;
+            : YouTubeSearchClient.IsChannelSearchResult(item)
+                ? 0
+                : MixcloudPublicClient.IsShowSearchResult(item)
+                    ? 2
+                    : YouTubeSearchClient.IsSearchResult(item)
+                        ? 2
+                        : 1;
 
     private static string NormalizeQuery(string query)
     {
@@ -172,6 +187,7 @@ internal sealed class LitePodcastDirectorySearchCoordinator : IDisposable
     {
         _apple.Dispose();
         _spreaker.Dispose();
+        _mixcloud.Dispose();
     }
 
     private sealed record SearchSourceResult(

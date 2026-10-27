@@ -234,7 +234,8 @@ poleceń, nie zapisuje tokenów w eksporcie i nie wysyła historii odsłuchu do
 źródeł. Adapter wymagający konta przechowuje poświadczenia w systemowym
 magazynie sekretów i pozostaje niezależny od adapterów publicznych.
 
-Publiczne katalogi Apple i Spreaker służą do wyszukania podcastu i jego kanału,
+Publiczne katalogi Apple, Spreaker i Mixcloud służą do wyszukania podcastu,
+profilu albo audycji,
 a nie do synchronizacji prywatnych kont. Wyniki są buforowane i ograniczane.
 Od `alpha.242` oba adaptery działają równolegle, a awaria jednego nie wyłącza
 drugiego ani lokalnych wyników Biblioteki. Spreaker zwraca stabilny identyfikator
@@ -252,10 +253,23 @@ każda audycja ma kanał w postaci
 
 SoundCloud jest obsługiwany jako dostawca zwykłego publicznego RSS: jego kanał
 można dodać przez `Ctrl+N`, import OPML albo odnaleźć przez inny katalog.
-Przeszukiwanie całego SoundCloud pozostaje osobnym, opcjonalnym adapterem,
-ponieważ oficjalne API wymaga zarejestrowania aplikacji i tokenu. Nie należy
+Przeszukiwanie całego SoundCloud pozostaje poza AMC, ponieważ oficjalna
+rejestracja aplikacji wymaga konta Artist Pro, identyfikatora i sekretu klienta:
+[rejestracja aplikacji SoundCloud](https://developers.soundcloud.com/docs/api/register-app).
+Nie należy
 zastępować go nietrwałym parsowaniem strony ani prywatnym kluczem wbudowanym w
 program.
+
+Mixcloud jest publicznym adapterem bez logowania. Udokumentowane operacje GET
+pozwalają wyszukiwać profile i audycje oraz pobierać listę publicznych audycji
+profilu: [Mixcloud API](https://www.mixcloud.com/developers/). `Ctrl+F`
+pokazuje oba rodzaje wyników, `Ctrl+Shift+L` zapisuje lokalną subskrypcję AMC,
+a `Ctrl+N` przyjmuje pełny publiczny adres profilu lub audycji. Zapis nie
+zmienia konta Mixcloud. REST API nie udostępnia bezpośredniego strumienia
+audio, dlatego Enter otwiera oficjalną stronę Mixcloud, a pobieranie, zapis
+pliku i kolejka odtwarzania AMC są jawnie niedostępne. Nie obiecujemy też
+odpowiednika playlist YouTube, którego publiczny katalog Mixcloud nie
+udostępnia.
 
 Publiczny YouTube jest pierwszym działającym adapterem pojedynczego medium ze
 strony. Jest celowo oddzielony od RSS/Atom i od przyszłego kontowego adaptera

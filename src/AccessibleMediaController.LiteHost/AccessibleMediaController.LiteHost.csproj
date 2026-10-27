@@ -163,6 +163,8 @@
              Link="Engine\ApplePodcastDirectoryClient.cs" />
     <Compile Include="..\AccessibleMediaController.Windows\Services\SpreakerPodcastDirectoryClient.cs"
              Link="Engine\SpreakerPodcastDirectoryClient.cs" />
+    <Compile Include="..\AccessibleMediaController.Windows\Services\MixcloudPublicClient.cs"
+             Link="Engine\MixcloudPublicClient.cs" />
     <Compile Include="..\AccessibleMediaController.Windows\Services\YouTubeSearchClient.cs"
              Link="Engine\YouTubeSearchClient.cs" />
     <Compile Include="..\AccessibleMediaController.Windows\Services\PodcastEpisodeDownloader.cs"

@@ -164,6 +164,7 @@ from .navigation import (
     OpenWiiMNetworkStreams,
     OpenPodcastPlaylistView,
     OpenPodcastView,
+    OpenPublicMediaPage,
     OpenYouTubeBroadcasts,
     OpenQueueView,
     OpenSpotifyCollectionView,
@@ -280,6 +281,7 @@ from .podcast_source import (
     SORT_ALPHABETICAL,
     SORT_CUSTOM,
     complete_youtube_description,
+    is_mixcloud_show_row,
     is_youtube_video_row,
     subscription_rows,
 )
@@ -2824,21 +2826,23 @@ def podcast_add_error_message(error: Exception) -> str:
 
 
 class PodcastSourceDialog(wx.Dialog):
-    """Natywny formularz dodawania źródła Podcastów i YouTube."""
+    """Natywny formularz dodawania podcastu, Mixcloud albo YouTube."""
 
     def __init__(self, parent: wx.Window) -> None:
         super().__init__(
             parent,
-            title="Nowy podcast, kanał YouTube lub medium internetowe",
+            title="Nowy podcast, profil Mixcloud, kanał YouTube lub medium internetowe",
         )
         panel = wx.Panel(self)
         layout = wx.BoxSizer(wx.VERTICAL)
 
         help_text = (
-            "Wpisz adres kanału RSS lub Atom, kanału albo playlisty YouTube, "
-            "lub pojedynczego publicznego materiału YouTube. Po zatwierdzeniu "
+            "Wpisz adres kanału RSS lub Atom, profilu albo audycji Mixcloud, "
+            "kanału albo playlisty YouTube lub pojedynczego publicznego "
+            "materiału YouTube. Po zatwierdzeniu "
             "AMC sprawdzi adres i doda źródło do Biblioteki. Adres kanału "
-            "może mieć postać https://www.youtube.com/@NazwaKanału."
+            "YouTube może mieć postać https://www.youtube.com/@NazwaKanału, "
+            "a profil Mixcloud https://www.mixcloud.com/NazwaProfilu/."
         )
         help_label = wx.StaticText(panel, label=help_text)
         help_label.SetName(help_text)
@@ -9271,6 +9275,9 @@ class LiteFrame(wx.Frame):
             else ""
         )
         selected_action_rows = self._selected_action_rows() if podcasts else []
+        mixcloud_show_items = bool(selected_action_rows) and any(
+            is_mixcloud_show_row(row) for row in selected_action_rows
+        )
         youtube_video_items = bool(selected_action_rows) and all(
             is_youtube_video_row(row) for row in selected_action_rows
         )
@@ -9386,6 +9393,13 @@ class LiteFrame(wx.Frame):
         blocked_sessions = self._sessions_blocked_from_disabling()
         for item, entry in self._menu_items:
             enabled = True
+            if mixcloud_show_items and entry.action in {
+                Action.ADD_TO_QUEUE,
+                Action.TOGGLE_PLAY_NEXT,
+                Action.DOWNLOAD_PODCAST_EPISODES,
+                Action.SAVE_PODCAST_EPISODE_AS,
+            }:
+                enabled = False
             if entry.action is Action.SESSION_ENABLE and (
                 not inactive_sessions
                 or len(active_sessions) >= session_order.MAX_ACTIVE_SESSIONS
@@ -10619,6 +10633,19 @@ class LiteFrame(wx.Frame):
             return
         if action is SearchResultAction.INFORMATION:
             say(lead.accessible_label)
+            return
+        if (
+            action is SearchResultAction.OPEN
+            and lead.remote_kind in {"mixcloudChannel", "mixcloudShow"}
+        ):
+            if len(entries) != 1:
+                say("Aby otworzyć stronę Mixcloud, zaznacz jeden wynik")
+                return
+            self._open_public_media_page(OpenPublicMediaPage(
+                lead.row.url or "",
+                lead.row.title,
+                "Mixcloud",
+            ))
             return
         video_only_actions = {
             SearchResultAction.TOGGLE_PLAYBACK,
@@ -15117,6 +15144,8 @@ class LiteFrame(wx.Frame):
                 self._play_station(intent)
             elif isinstance(intent, PlayMedia):
                 self._play_media(intent)
+            elif isinstance(intent, OpenPublicMediaPage):
+                self._open_public_media_page(intent)
             elif isinstance(intent, PlayTidalTrack):
                 self._play_tidal_track(intent)
             elif isinstance(intent, PlayTidalContainer):
@@ -21230,7 +21259,7 @@ class LiteFrame(wx.Frame):
         return None
 
     def _add_podcast_source(self) -> None:
-        """Ctrl+N: dodaj RSS, kolekcję YouTube albo publiczne medium."""
+        """Ctrl+N: dodaj RSS, Mixcloud, kolekcję YouTube albo publiczne medium."""
         if self.navigator.active is not SessionId.PODCASTS:
             self.announcer.say(
                 "Dodawanie źródła jest dostępne w sesji Podcasty i YouTube"
@@ -21670,6 +21699,12 @@ class LiteFrame(wx.Frame):
         if not rows:
             self.announcer.say("Zaznacz co najmniej jeden odcinek podcastu")
             return
+        if any(is_mixcloud_show_row(row) for row in rows):
+            self.announcer.say(
+                "Audycję Mixcloud otwórz klawiszem Enter na oficjalnej stronie; "
+                "Mixcloud nie udostępnia jej pliku do pobrania"
+            )
+            return
 
         episode_ids = [row.item_id for row in rows]
         preferred_id = rows[0].item_id
@@ -21913,6 +21948,12 @@ class LiteFrame(wx.Frame):
             )
             return
         row = rows[0]
+        if is_mixcloud_show_row(row):
+            self.announcer.say(
+                "Audycję Mixcloud otwórz klawiszem Enter na oficjalnej stronie; "
+                "Mixcloud nie udostępnia jej pliku do zapisania"
+            )
+            return
         self._podcast_download_pending = True
         self.status_bar.show("Przygotowywanie zapisu odcinka")
 
@@ -22433,6 +22474,12 @@ class LiteFrame(wx.Frame):
         ]
         if not rows:
             self.announcer.say("Do kolejki podcastów wybierz odcinek")
+            return
+        if any(is_mixcloud_show_row(row) for row in rows):
+            self.announcer.say(
+                "Audycji Mixcloud nie można dodać do kolejki odtwarzania AMC; "
+                "otwórz ją klawiszem Enter"
+            )
             return
         episode_ids = list(dict.fromkeys(row.item_id for row in rows))
         self._podcast_queue_pending = True
@@ -23866,6 +23913,22 @@ class LiteFrame(wx.Frame):
             ))
 
         self.runner.submit("playback", work, done, failed)
+
+    def _open_public_media_page(self, intent: OpenPublicMediaPage) -> None:
+        """Open a provider page without pretending AMC owns its stream."""
+
+        try:
+            opened = bool(wx.LaunchDefaultBrowser(intent.url))
+        except (OSError, RuntimeError, ValueError):
+            opened = False
+        message = (
+            f"Otwarto oficjalną stronę {intent.provider_label}: {intent.title}"
+            if opened
+            else f"Nie udało się otworzyć oficjalnej strony {intent.provider_label}"
+        )
+        self.status_field.SetLabel(message)
+        self.status_bar.show(message)
+        self.announcer.say(message)
 
     def _play_tidal_track(self, intent: PlayTidalTrack) -> None:
         """Hand one track to original TIDAL; AMC itself plays no audio here."""
@@ -30691,6 +30754,18 @@ class LiteFrame(wx.Frame):
             return target_session in session_order.normalize(
                 self.options.session_order
             )
+        active_state = getattr(self.navigator, "session", None)
+        active_model = getattr(active_state, "model", None)
+        if (
+            is_mixcloud_show_row(getattr(active_model, "selected_row", None))
+            and action in {
+                Action.ADD_TO_QUEUE,
+                Action.TOGGLE_PLAY_NEXT,
+                Action.DOWNLOAD_PODCAST_EPISODES,
+                Action.SAVE_PODCAST_EPISODE_AS,
+            }
+        ):
+            return False
         if (
             self.navigator.active in (SessionId.WIIM, SessionId.SONOS)
             and action is Action.REMOVE_SELECTED

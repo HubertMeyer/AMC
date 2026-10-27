@@ -123,6 +123,50 @@ def test_remote_video_has_episode_semantics_without_speaking_model_kind() -> Non
     )
 
 
+def test_mixcloud_results_have_user_labels_and_explicit_service_kinds() -> None:
+    entries, warnings = entries_from_payload({
+        "items": [
+            {
+                "id": "podcast-directory:mixcloud:private-profile-id",
+                "title": "Radio Nocne",
+                "artist": "",
+                "kind": "podcast",
+                "remoteKind": "mixcloudChannel",
+                "address": "https://www.mixcloud.com/radionocne/",
+                "detail": "profil Mixcloud",
+                "durationTicks": 0,
+            },
+            {
+                "id": "internet-media-search:mixcloud:private-show-id",
+                "title": "Nocna audycja",
+                "artist": "Radio Nocne",
+                "kind": "episode",
+                "remoteKind": "mixcloudShow",
+                "address": "https://www.mixcloud.com/radionocne/nocna-audycja/",
+                "detail": "audycja Mixcloud",
+                "durationTicks": 3600 * 10_000_000,
+            },
+        ],
+        "warnings": [],
+    })
+
+    assert warnings == ()
+    assert [entry.remote_kind for entry in entries] == [
+        "mixcloudChannel", "mixcloudShow"
+    ]
+    assert [entry.row.service_kind for entry in entries] == [
+        "mixcloudChannel", "mixcloudShow"
+    ]
+    assert entries[0].accessible_label == (
+        "Radio Nocne, podcast, profil Mixcloud, Podcasty i YouTube"
+    )
+    assert entries[1].accessible_label == (
+        "Nocna audycja, Radio Nocne, odcinek, audycja Mixcloud, "
+        "Podcasty i YouTube"
+    )
+    assert "private-" not in " ".join(entry.accessible_label for entry in entries)
+
+
 def test_invalid_contract_is_reported_without_object_repr() -> None:
     with pytest.raises(ValueError, match="Nieprawidłowa odpowiedź"):
         entries_from_payload([])

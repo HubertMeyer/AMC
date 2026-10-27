@@ -1176,7 +1176,8 @@ internal sealed class PodcastLibraryDatabase(string databasePath)
         ArgumentNullException.ThrowIfNull(feed);
         if (sourceKind is not (PodcastSourceKind.Rss
             or PodcastSourceKind.YouTubeChannel
-            or PodcastSourceKind.YouTubePlaylist))
+            or PodcastSourceKind.YouTubePlaylist
+            or PodcastSourceKind.MixcloudChannel))
         {
             throw new ArgumentOutOfRangeException(
                 nameof(sourceKind),
@@ -1199,7 +1200,8 @@ internal sealed class PodcastLibraryDatabase(string databasePath)
             {
                 update.Subscription.RefreshIntervalMinutes = sourceKind switch
                 {
-                    PodcastSourceKind.Rss => settings.RssRefreshIntervalMinutes,
+                    PodcastSourceKind.Rss or PodcastSourceKind.MixcloudChannel =>
+                        settings.RssRefreshIntervalMinutes,
                     PodcastSourceKind.YouTubeChannel or PodcastSourceKind.YouTubePlaylist =>
                         settings.YouTubeRefreshIntervalMinutes,
                     _ => 0
@@ -1287,14 +1289,22 @@ internal sealed class PodcastLibraryDatabase(string databasePath)
                 ? media.Title.Trim()
                 : titleOverride.Trim();
             if (episode.Title.Length == 0)
-                episode.Title = media.IsLive ? "YouTube na żywo" : "Materiał YouTube";
+                episode.Title = media.IsLive
+                    ? "YouTube na żywo"
+                    : string.IsNullOrWhiteSpace(media.FallbackTitle)
+                        ? "Medium internetowe"
+                        : media.FallbackTitle.Trim();
             episode.Author = media.Channel.Trim();
-            episode.Description = media.IsLive
-                ? "Publiczna transmisja YouTube. Adres audio jest sprawdzany ponownie przy każdym odtwarzaniu."
-                : "Publiczny materiał YouTube. Adres audio jest sprawdzany ponownie przy każdym odtwarzaniu.";
+            episode.Description = string.IsNullOrWhiteSpace(media.Description)
+                ? media.IsLive
+                    ? "Publiczna transmisja YouTube. Adres audio jest sprawdzany ponownie przy każdym odtwarzaniu."
+                    : "Publiczny materiał YouTube. Adres audio jest sprawdzany ponownie przy każdym odtwarzaniu."
+                : media.Description.Trim();
             episode.MediaUrl = stableAddress;
             episode.PageUrl = stableAddress;
-            episode.MediaType = "video/youtube";
+            episode.MediaType = string.IsNullOrWhiteSpace(media.MediaType)
+                ? "application/octet-stream"
+                : media.MediaType.Trim();
             episode.DurationTicks = Math.Max(0, media.Duration.Ticks);
             Save(settings);
             return new PodcastInternetMediaAddResult(
@@ -1417,7 +1427,8 @@ internal sealed class PodcastLibraryDatabase(string databasePath)
     private static bool IsRefreshable(PodcastSourceKind sourceKind) => sourceKind is
         PodcastSourceKind.Rss
         or PodcastSourceKind.YouTubeChannel
-        or PodcastSourceKind.YouTubePlaylist;
+        or PodcastSourceKind.YouTubePlaylist
+        or PodcastSourceKind.MixcloudChannel;
 
     private static bool TryPublicHttpUri(string? value, out Uri uri)
     {

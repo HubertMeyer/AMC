@@ -77,6 +77,11 @@ if (args.Length == 1 && args[0] == "--youtube-playlist-sync")
     try { YouTubePlaylistSyncTests.Run(); return 0; }
     catch (Exception exception) { Console.Error.WriteLine(exception); return 1; }
 }
+if (args.Length == 1 && args[0] == "--podcast-refresh-defaults")
+{
+    try { TestDefaultRefreshIntervalsRepairRssSources(); return 0; }
+    catch (Exception exception) { Console.Error.WriteLine(exception); return 1; }
+}
 if (args.Length == 1 && args[0] == "--audio-edit-renames")
 {
     try { AudioEditRenameTests.Run(); return 0; }
@@ -7107,6 +7112,14 @@ static void TestDefaultRefreshIntervalsRepairRssSources()
     });
     settings.Subscriptions.Add(new PodcastSubscriptionSettings
     {
+        Id = "mixcloud:user:redakcja",
+        Title = "Profil Mixcloud bez odstepu",
+        IsInLibrary = true,
+        SourceKind = PodcastSourceKind.MixcloudChannel,
+        RefreshIntervalMinutes = 0
+    });
+    settings.Subscriptions.Add(new PodcastSubscriptionSettings
+    {
         Id = "rss-wlasny",
         Title = "Podcast z wlasnym odstepem",
         IsInLibrary = true,
@@ -7122,14 +7135,15 @@ static void TestDefaultRefreshIntervalsRepairRssSources()
         RefreshIntervalMinutes = 0
     });
 
-    Equal(2, settings.ApplyDefaultRefreshIntervals());
+    Equal(3, settings.ApplyDefaultRefreshIntervals());
     Equal(60, settings.Subscriptions[0].RefreshIntervalMinutes);
     Equal(120, settings.Subscriptions[1].RefreshIntervalMinutes);
+    Equal(60, settings.Subscriptions[2].RefreshIntervalMinutes);
     True(
-        settings.Subscriptions[2].RefreshIntervalMinutes == 15,
+        settings.Subscriptions[3].RefreshIntervalMinutes == 15,
         "Swiadomie ustawiony odstep uzytkownika nie moze zostac nadpisany.");
     True(
-        settings.Subscriptions[3].RefreshIntervalMinutes == 0,
+        settings.Subscriptions[4].RefreshIntervalMinutes == 0,
         "Zrodlo poza biblioteka nie jest odswiezane, wiec nie dostaje odstepu.");
 
     // Powtorne wywolanie nie ma juz nic do naprawy - inaczej kazdy start

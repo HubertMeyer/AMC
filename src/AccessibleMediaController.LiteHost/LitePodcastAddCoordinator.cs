@@ -7,7 +7,7 @@ using AccessibleMediaController.Windows.Services;
 namespace AccessibleMediaController.LiteHost;
 
 /// <summary>
-/// Sprawdza i dodaje RSS, kolekcje YouTube albo pojedyncze publiczne medium
+/// Sprawdza i dodaje RSS, Mixcloud, kolekcje YouTube albo publiczne medium
 /// tym samym torem co główne AMC. Do bazy trafia wyłącznie stabilny adres
 /// strony; podpisany adres strumienia z yt-dlp nigdy nie jest zapisywany.
 /// </summary>
@@ -18,6 +18,7 @@ internal sealed class LitePodcastAddCoordinator : IDisposable
     private readonly LitePodcastProgressStore _podcasts;
     private readonly LiteBookmarkStore? _bookmarks;
     private readonly PodcastFeedClient _rssClient = new();
+    private readonly MixcloudPublicClient _mixcloudClient = new();
     private readonly YouTubeCollectionClient _youTubeClient = new();
     private int _addInProgress;
 
@@ -44,6 +45,55 @@ internal sealed class LitePodcastAddCoordinator : IDisposable
             {
                 throw new LiteRequestException(
                     "Wpisz pełny adres HTTP lub HTTPS bez nazwy użytkownika i hasła.");
+            }
+
+            if (MixcloudPublicClient.TryNormalizeAddress(
+                    address,
+                    out var mixcloudKind,
+                    out var mixcloudAddress))
+            {
+                if (mixcloudKind == MixcloudAddressKind.Channel)
+                {
+                    var mixcloudFeed = _mixcloudClient.FetchChannelAsync(
+                            mixcloudAddress,
+                            CancellationToken.None)
+                        .GetAwaiter()
+                        .GetResult();
+                    return SourceResult(AddFeed(
+                        mixcloudFeed,
+                        customTitle,
+                        PodcastSourceKind.MixcloudChannel));
+                }
+
+                var show = _mixcloudClient.FetchShowAsync(
+                        mixcloudAddress,
+                        CancellationToken.None)
+                    .GetAwaiter()
+                    .GetResult();
+                var mixcloudResult = _podcasts.AddInternetMedia(
+                    new PodcastInternetMediaSource(
+                        show.PageUrl,
+                        show.Title,
+                        show.Channel,
+                        show.Duration,
+                        IsLive: false,
+                        MediaType: "audio/mixcloud",
+                        Description: string.IsNullOrWhiteSpace(show.Description)
+                            ? "Publiczna audycja Mixcloud. Enter otwiera oficjalną stronę odtwarzania."
+                            : show.Description,
+                        FallbackTitle: "Audycja Mixcloud"),
+                    customTitle);
+                return new
+                {
+                    subscriptionId = mixcloudResult.SubscriptionId,
+                    preferredEpisodeId = mixcloudResult.EpisodeId,
+                    title = mixcloudResult.Title,
+                    sourceKind = "internetMedia",
+                    sourceLabel = "audycja Mixcloud",
+                    added = mixcloudResult.AddedEpisode,
+                    restored = false,
+                    itemCount = 1
+                };
             }
 
             if (YouTubeSourceResolver.IsYouTubeUrl(addressText))
@@ -145,12 +195,14 @@ internal sealed class LitePodcastAddCoordinator : IDisposable
         {
             PodcastSourceKind.YouTubeChannel => "youtubeChannel",
             PodcastSourceKind.YouTubePlaylist => "youtubePlaylist",
+            PodcastSourceKind.MixcloudChannel => "mixcloudChannel",
             _ => "rss"
         },
         sourceLabel = result.SourceKind switch
         {
             PodcastSourceKind.YouTubeChannel => "kanał YouTube",
             PodcastSourceKind.YouTubePlaylist => "playlista YouTube",
+            PodcastSourceKind.MixcloudChannel => "profil Mixcloud",
             _ => "podcast"
         },
         added = result.AddedSubscription,
@@ -158,5 +210,9 @@ internal sealed class LitePodcastAddCoordinator : IDisposable
         itemCount = result.AvailableEpisodes
     };
 
-    public void Dispose() => _rssClient.Dispose();
+    public void Dispose()
+    {
+        _rssClient.Dispose();
+        _mixcloudClient.Dispose();
+    }
 }

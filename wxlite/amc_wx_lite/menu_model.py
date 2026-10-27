@@ -447,7 +447,7 @@ def build_menus(
                 visible_sessions=SONOS_ONLY,
             ),
             MenuItem(
-                "Dodaj podcast, kanał YouTube lub medium &internetowe",
+                "Dodaj podcast, profil Mixcloud, kanał YouTube lub medium &internetowe",
                 Action.ADD_PODCAST_SOURCE,
                 shortcut="Ctrl+N",
                 accelerator=False,
@@ -549,7 +549,7 @@ def build_menus(
                 visible_sessions=PODCASTS_ONLY,
             ),
             MenuItem(
-                "Odśwież wybrane źródło pod&castów",
+                "Odśwież wybrane źródło &podcastów lub Mixcloud",
                 Action.REFRESH_PODCAST,
                 shortcut="F5",
                 accelerator=False,
