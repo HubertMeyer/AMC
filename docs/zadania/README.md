@@ -116,7 +116,8 @@ do kontrolowanej archiwizacji opisanej w REL-003.
   od razu fokusuje pierwszy element, obie listy potwierdzają kopiowanie przez
   lokalny region aktywny, a historia jest dostępna z listy i odtwarzacza
   Plików lokalnych oraz Radia, lecz nie z pozostałych sesji. Pełne podmenu
-  zachowuje `Usługi, łącza i powiązania`.
+  zachowuje `Usługi, łącza i powiązania`. `Escape` zachowuje sesję, widok,
+  zaznaczony element i wraca fokusem do miejsca wywołania.
   Szczegóły:
   [RECOG-001-interakcje-z-rozpoznanymi-utworami.md](RECOG-001-interakcje-z-rozpoznanymi-utworami.md).
 

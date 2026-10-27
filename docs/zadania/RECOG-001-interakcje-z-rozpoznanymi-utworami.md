@@ -17,7 +17,10 @@ podczas chodzenia strzałkami.
 - `Ctrl+Alt+S` otwiera listę z każdego widoku sesji Pliki lokalne i Radio:
   zarówno z listy, jak i z odtwarzacza. Polecenie nie jest obsługiwane ani
   pokazywane w menu, Pomocy, Pomocy klawiatury i palecie w Podcastach,
-  TIDAL-u, Spotify, WiiM, Sonosie oraz Frontier Smart. `Escape` zamyka okno.
+  TIDAL-u, Spotify, WiiM, Sonosie oraz Frontier Smart. `Escape` zamyka okno
+  i wraca dokładnie do sesji oraz widoku, z którego zostało wywołane: do Radia
+  po wywołaniu w Radiu albo do Plików lokalnych po wywołaniu w Plikach.
+  Zaznaczony element pozostaje ten sam.
 - `Enter` otwiera utwór w domyślnej usłudze. Spotify korzysta z obsługi AMC;
   TIDAL używa istniejącego przekazania do oryginalnej aplikacji.
 - `Ctrl+Enter` otwiera album w domyślnej usłudze wewnątrz AMC i ustawia fokus
@@ -72,6 +75,10 @@ nie wykonywało zapytań sieciowych.
   utworów z samego Radia na wszystkie widoki sesji Pliki lokalne i Radio.
   Nie rozszerza jej na sesje usługowe ani Podcasty i YouTube, które nie są
   źródłem tego podglądu.
+- Doprecyzowanie użytkownika z 27.10.2026 zabrania traktowania historii jako
+  przejścia do sesji Radio. Jest ona nakładką na miejsce wywołania; anulowanie
+  przez `Escape` przywraca fokus dopiero po zamknięciu okna i zachowuje sesję,
+  widok oraz zaznaczony element.
 - Krótka lista pod prawą strzałką i pełne menu nie są dwiema implementacjami;
   są dwoma widokami jednego katalogu działań.
 - Dokładne wyniki są pobierane dopiero po działaniu użytkownika i buforowane.
@@ -99,6 +106,12 @@ nie wykonywało zapytań sieciowych.
   nazwy, skrótu, menu, Pomocy, Pomocy klawiatury i palety poleceń. Kontrola
   składni oraz `git diff --check` także zakończyły się powodzeniem. Pełnej
   regresji ani testów GUI nie uruchamiano.
+- Doprecyzowanie powrotu po `Escape` z 27.10.2026: **34/34 testy celowane
+  rozpoznawania i wspólnego modelu poleceń** oraz **3/3 dodatkowe testy
+  wspólnej drogi przywracania fokusu**. Nowy test obejmuje Pliki lokalne i
+  Radio, osobno listę i odtwarzacz, oraz sprawdza zachowanie sesji, widoku,
+  zaznaczonego elementu i kolejność: zamknięcie okna przed oddaniem fokusu.
+  Testów z widocznym interfejsem ani ręcznego odbioru NVDA nie wykonywano.
 
 ## Znane ograniczenia i ręczny odbiór
 
@@ -133,7 +146,13 @@ nie wykonywało zapytań sieciowych.
 
 ## Wersja i commit
 
-- Najnowsza korekta źródeł: `e16588c0` —
+- Najnowszy test kontraktu i opis w kodzie: `1246fc2d` —
+  `test: preserve recognized history return context`.
+- Zmienione pliki: `wxlite/amc_wx_lite/gui.py` i
+  `wxlite/tests/test_recognition_actions.py`.
+- Stan: zachowanie było już prawidłowe; dodano jawny kontrakt i test regresji.
+  Build, instalacja i publikacja nie były wykonywane.
+- Wcześniejsza korekta źródeł: `e16588c0` —
   `fix: expose recognized tracks in local session`.
 - Zmienione pliki: `wxlite/amc_wx_lite/shortcuts.py`,
   `wxlite/amc_wx_lite/menu_model.py`, `wxlite/amc_wx_lite/gui.py`,
