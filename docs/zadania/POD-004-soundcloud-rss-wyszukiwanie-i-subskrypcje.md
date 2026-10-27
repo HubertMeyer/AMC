@@ -1,6 +1,6 @@
 # POD-004 — SoundCloud jako podcast RSS: wyszukiwanie i subskrypcje
 
-- Status: `Gotowe w źródłach; bez instalacji w tym zadaniu`
+- Status: `Wydane w AMC Test 0.1.0-alpha.436; ręczny test aktualizacji i NVDA pozostaje`
 - Utworzono: 27 października 2026
 - Obszar: Podcasty i YouTube, RSS, pobieranie, dostępność
 
@@ -69,6 +69,12 @@ podany w `Ctrl+N` służy wyłącznie do odkrycia publicznego adresu RSS.
 - Żywa próba pierwszego `enclosure`: HTTP `206`, `Content-Type: audio/mpeg`,
   pobrano jeden bajt.
 - Żywe wyszukiwanie `4th and Long`: znaleziono `2` podcasty SoundCloud.
+- Samowystarczalna paczka AMC Test: `2136` kontrolowanych plików, pełna
+  integralność i odizolowany start interfejsu oraz hosta zaliczone.
+- Instalator `AMC-Test-2026-10-27-0233.exe`: zbudowany, skan sekretów zaliczony,
+  Quick App Switcher `0.1.6` potwierdzony w pliku integralności.
+- GitHub prerelease `test-2026.10.27.0233`: opublikowany i niezależnie
+  zweryfikowany wraz z trzema załącznikami oraz ich sumami SHA-256.
 
 ## Znane ograniczenia
 
@@ -83,9 +89,11 @@ podany w `Ctrl+N` służy wyłącznie do odkrycia publicznego adresu RSS.
 
 ## Wersja, build, instalacja i publikacja
 
-- Kod: gotowy w drzewie źródłowym.
+- Kod: gotowy i opublikowany na GitHubie.
 - Testy: celowane, pełna regresja wxPython i pełne testy Core zaliczone.
-- Build: LiteHost Debug zaliczony.
-- Instalacja: niewykonana i poza zakresem tego zadania.
-- Publikacja: niewykonana i poza zakresem tego zadania.
+- Build: LiteHost Debug oraz pełna samowystarczalna paczka Test zaliczone.
+- Instalator: `AMC-Test-2026-10-27-0233.exe`, 134290393 bajty, SHA-256
+  `1d4fd2ecabe4d358246ae094ebfefdbc19dde7ceade018e6f13bcb5c61beb36a`.
+- Instalacja: świadomie niewykonana; użytkownik sprawdzi aktualizację ręcznie.
+- Publikacja: prerelease `test-2026.10.27.0233`, commit wydania `abfee285`.
 - Commit źródłowy: `ebf9c812` (`fix: use SoundCloud RSS for podcast subscriptions`).

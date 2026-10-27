@@ -2,13 +2,13 @@
 
 ## Status
 
-W trakcie. Drugie wydanie AMC Test w kanale testowym zostało opublikowane
-27.10.2026 jako `test-2026.10.27.0057`; GitHub potwierdził instalator, manifest
+W trakcie. Trzecie wydanie AMC Test w kanale testowym zostało opublikowane
+27.10.2026 jako `test-2026.10.27.0233`; GitHub potwierdził instalator, manifest
 aktualizacji, plik integralności oraz ich sumy. Tag wskazuje dokładną rewizję
-`4cb57da5`. Instalator zawiera Quick App Switcher 0.1.6 i jest pierwszą wersją
-wyższą od opublikowanej bazy `0.1.0-alpha.434`, więc służy do rzeczywistej próby
-aktualizacji. Rzeczywista aktualizacja instalacji przez oficjalny aktualizator
-została zaliczona; ręczny odbiór nowych ekranów z NVDA oczekuje.
+`abfee285`. Instalator zawiera Quick App Switcher 0.1.6, poprawki YouTube i
+SoundCloud RSS. Zgodnie z decyzją użytkownika nie został zainstalowany ani
+uruchomiony; działające `0.1.0-alpha.435` pozostaje bazą jutrzejszej ręcznej
+próby aktualizacji i odbioru z NVDA.
 
 ## Nadrzędna korekta użytkownika z 26.10.2026
 
@@ -441,6 +441,32 @@ tych samych plików profilu.
   bezpiecznego zastosowania pełnego instalatora, zachowanie profilu i ponowny
   start; ręczny odbiór interfejsu aktualizacji pozostaje.
 
+## Trzecie wydanie Test 27.10.2026
+
+- Końcowy, czysty commit źródłowy to
+  `abfee285274810746caedd948aae4d9d7b44aafd`; zdalna gałąź robocza oraz `main`
+  zostały przesunięte do tego commitu bez przepisywania historii.
+- Wydanie zawiera YT-005: doładowanie skrzynki po 150 pozycji przez kolejne
+  `Ctrl+I`, pełny obieg obserwowanych źródeł oraz polskie tytuły YouTube.
+- Wydanie zawiera POD-004: SoundCloud jako zwykły podcast RSS z wyszukiwaniem,
+  lokalną subskrypcją, odtwarzaniem, kolejką, pobieraniem i zapisem pliku.
+  Niespełniający wymagań wariant Mixcloud został wycofany przed wydaniem.
+- Pełna regresja SoundCloud: **2101 zaliczonych, 113 pominiętych i 13
+  podtestów**; końcowe 42 testy, pełne testy Core i rzeczywiste próby RSS,
+  wyszukiwania oraz `audio/mpeg` zaliczone. YT-005 ma 141 zaliczonych testów
+  Pythona, dwie regresje C# i odczytowe próby biblioteki oraz yt-dlp.
+- Samowystarczalna paczka ma identyfikator `adc818de`, 2136 plików,
+  `sourceDirty=false`; pełna integralność i odizolowany start zostały zaliczone.
+- Inno Setup zbudowało `AMC-Test-2026-10-27-0233.exe` o rozmiarze 134290393
+  bajtów i SHA-256
+  `1d4fd2ecabe4d358246ae094ebfefdbc19dde7ceade018e6f13bcb5c61beb36a`.
+  Skan sekretów przeszedł, a integralność potwierdza Quick App Switcher 0.1.6.
+- Sucha próba i publikacja prerelease `test-2026.10.27.0233` przeszły. GitHub
+  potwierdził tag na dokładnym commicie i zgodne sumy trzech załączników.
+- Zgodnie z decyzją użytkownika nie uruchomiono instalatora ani aktualizatora.
+  Działające AMC Test pozostało na `0.1.0-alpha.435`; ręczna aktualizacja z menu
+  zostanie sprawdzona przez użytkownika następnego dnia.
+
 ## Znane ograniczenia
 
 - Bieżąca instalacja na C nie zawiera pliku identyfikatora ani sekretu OAuth
@@ -448,10 +474,10 @@ tych samych plików profilu.
   nie jest obecnie odbierane. Nowy przepływ OAuth wymaga osobnego zadania.
 - Historyczny WPF `alpha.427` został dziś zainstalowany przez równoległe
   zadanie. Nie jest dowodem aktualności AMC i nie może zastąpić Python.
-- Tag pierwszego wydania `test-2026.10.26.1954` nadal wskazuje dokładny kod
-  wersji `0.1.0-alpha.434`. Tag drugiego wydania `test-2026.10.27.0057`
-  wskazuje dokładny kod `0.1.0-alpha.435`; ruchome `main` może zawierać późniejsze
-  commity wyłącznie dokumentacyjne.
+- Tagi `test-2026.10.26.1954`, `test-2026.10.27.0057` i
+  `test-2026.10.27.0233` wskazują dokładny kod wersji odpowiednio
+  `0.1.0-alpha.434`, `0.1.0-alpha.435` i `0.1.0-alpha.436`; ruchome `main` może
+  zawierać późniejsze commity wyłącznie dokumentacyjne.
 
 ## Wersja i commit
 
@@ -490,3 +516,13 @@ tych samych plików profilu.
   integralności, ponowny start i zachowanie 421 kanałów: wykonane 27.10.2026.
 - Kliknięcie polecenia aktualizacji w menu i ręczny odbiór dialogu z NVDA:
   niewykonane z powodu braku sterowania natywnym oknem w sesji automatyzacji.
+- Trzecie wydanie testowe: wersja techniczna `0.1.0-alpha.436`, wersja widoczna
+  dla użytkownika `27.10.2026, 02:33`, tag `test-2026.10.27.0233`.
+- Commit źródłowy trzeciego wydania:
+  `abfee285274810746caedd948aae4d9d7b44aafd`.
+- Kandydat trzeciego instalatora:
+  `D:\Projekty Codex\AMC aktualizacje\AMC Test 0.1.0-alpha.436 kandydat 2026-10-27\instalator\AMC-Test-2026-10-27-0233.exe`.
+- Adres trzeciego wydania:
+  `https://github.com/michalkasperczak/AMC/releases/tag/test-2026.10.27.0233`.
+- Instalacja i aktualizacja lokalna: świadomie niewykonane; użytkownik zachował
+  działające `0.1.0-alpha.435` jako bazę ręcznej próby aktualizacji.

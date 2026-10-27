@@ -48,17 +48,19 @@ do kontrolowanej archiwizacji opisanej w REL-003.
 
 ## Zadania
 
-- `POD-004` — **Gotowe w źródłach; bez instalacji w tym zadaniu** — wyszukiwanie podcastów
-  SoundCloud przez `Ctrl+F`, lokalna subskrypcja przez `Ctrl+Shift+L`, adres
-  profilu lub RSS w `Ctrl+N` oraz zwykłe pliki audio do odtwarzania i
-  pobierania. Korekta zastępuje wcześniejszą webową integrację Mixcloud.
+- `POD-004` — **Wydane w AMC Test `0.1.0-alpha.436`; paczka, instalator i
+  GitHub są zweryfikowane, ręczny test aktualizacji i NVDA pozostaje** —
+  wyszukiwanie podcastów SoundCloud przez `Ctrl+F`, lokalna subskrypcja przez
+  `Ctrl+Shift+L`, adres profilu lub RSS w `Ctrl+N` oraz zwykłe pliki audio do
+  odtwarzania i pobierania. Korekta zastępuje wcześniejszą webową integrację
+  Mixcloud.
   Szczegóły:
   [POD-004-soundcloud-rss-wyszukiwanie-i-subskrypcje.md](POD-004-soundcloud-rss-wyszukiwanie-i-subskrypcje.md).
 
-- `YT-005` — **W trakcie; kod, 141 testów Pythona, dwie regresje C# oraz
-  odczytowe próby biblioteki i yt-dlp są zweryfikowane; paczka, instalacja i ręczny odbiór NVDA
-  pozostają** — ponowne `Ctrl+I` w otwartej skrzynce doładowuje następne
-  150 pozycji, a kolekcje YouTube żądają polskich tytułów przy zachowaniu dat
+- `YT-005` — **Wydane w AMC Test `0.1.0-alpha.436`; kod, testy, paczka,
+  instalator i GitHub są zweryfikowane, ręczny test aktualizacji i NVDA
+  pozostaje** — ponowne `Ctrl+I` w otwartej skrzynce doładowuje następne 150
+  pozycji, a kolekcje YouTube żądają polskich tytułów przy zachowaniu dat
   przybliżonych. Szczegóły:
   [YT-005-skrzynka-ctrl-i-i-tytuly-youtube.md](YT-005-skrzynka-ctrl-i-i-tytuly-youtube.md).
 
@@ -78,13 +80,11 @@ do kontrolowanej archiwizacji opisanej w REL-003.
   karta Dostępność i komunikaty. Szczegóły:
   [SET-001-audyt-ustawien-dostepnosc-integracja-windows.md](SET-001-audyt-ustawien-dostepnosc-integracja-windows.md).
 
-- `REL-002` — **W trakcie; drugie wydanie kanału Test
-  `test-2026.10.27.0057` zostało opublikowane i odczytowo zweryfikowane na
-  GitHubie. Zawiera Quick App Switcher 0.1.6 i jest pierwszą wyższą wersją
-  używaną w rzeczywistej aktualizacji. Oficjalny aktualizator zainstalował ją,
-  potwierdzono integralność, ponowny start i zachowanie 421 zapisanych kanałów
-  YouTube bez uruchamiania logowania Google. Ręczny odbiór dialogu aktualizacji
-  z NVDA pozostaje** — jedna
+- `REL-002` — **W trakcie; trzecie wydanie kanału Test
+  `test-2026.10.27.0233` zostało opublikowane i odczytowo zweryfikowane na
+  GitHubie. Zawiera YouTube YT-005, SoundCloud RSS i Quick App Switcher 0.1.6.
+  Zgodnie z decyzją użytkownika nie zainstalowano go; ręczna aktualizacja z
+  `alpha.435` i odbiór dialogu z NVDA pozostają** — jedna
   kanoniczna linia AMC Python,
   wydania AMC Test i AMC Public z tego samego commitu, dwa kanały aktualizacji,
   standardowa instalacja Windows oraz kontrolowane uporządkowanie starego C#,

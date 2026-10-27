@@ -2,10 +2,10 @@
 
 ## Status
 
-W trakcie. Kod, 141 testów Pythona, dwie regresje C# oraz odczytowe próby
-prawdziwej biblioteki i publicznego YouTube są zweryfikowane. Nie zbudowano
-paczki użytkowej, nie zainstalowano jej i nie wykonano jeszcze ręcznego odbioru
-NVDA.
+Wydane w AMC Test `0.1.0-alpha.436`. Kod, 141 testów Pythona, dwie regresje C#,
+odczytowe próby prawdziwej biblioteki i publicznego YouTube, pełna paczka,
+instalator oraz GitHub prerelease są zweryfikowane. Instalacji nie wykonano;
+ręczny test aktualizacji i odbiór NVDA pozostają.
 
 ## Zgłoszenie użytkownika
 
@@ -156,5 +156,9 @@ Zmiana źródłowa: commit `054240cb` na gałęzi
 Korekta opisu ustawienia i regresja pełnego obiegu automatycznego odświeżania:
 commit `eefb1d71` na tej samej gałęzi.
 
-Wersja użytkowa nie została zbudowana, zainstalowana ani opublikowana. Stan
-zainstalowanego AMC Test nie jest dowodem tej poprawki i nie został zmieniony.
+Wersja użytkowa `0.1.0-alpha.436` została zbudowana i opublikowana jako
+`test-2026.10.27.0233` z commitu `abfee285`. Instalator:
+`AMC-Test-2026-10-27-0233.exe`, 134290393 bajty, SHA-256
+`1d4fd2ecabe4d358246ae094ebfefdbc19dde7ceade018e6f13bcb5c61beb36a`.
+Nie zainstalowano jej ani nie uruchomiono aktualizatora; działające AMC Test
+pozostało na `0.1.0-alpha.435`, aby użytkownik wykonał ręczny test aktualizacji.
