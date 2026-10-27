@@ -376,6 +376,7 @@ internal static class PodcastProgressStoreTests
             }
             Assert.True(configureRefused,
                 "dzialajace glowne AMC musi zablokowac zmiane ustawien podcastow");
+            TestAutomaticRefreshVisitsEveryDueSource(root);
         }
         finally
         {
@@ -446,6 +447,70 @@ internal static class PodcastProgressStoreTests
         command.Parameters.AddWithValue("$ticks", DateTime.UtcNow.Ticks);
         command.ExecuteNonQuery();
         transaction.Commit();
+    }
+
+    private static void TestAutomaticRefreshVisitsEveryDueSource(string root)
+    {
+        var database = Path.Combine(root, "automatic-refresh", "podcasts.db");
+        Directory.CreateDirectory(Path.GetDirectoryName(database)!);
+        CreateDatabase(database);
+        using (var connection = new SqliteConnection($"Data Source={database};Pooling=False"))
+        {
+            connection.Open();
+            using (var clear = connection.CreateCommand())
+            {
+                clear.CommandText = "DELETE FROM podcast_episodes; DELETE FROM podcast_subscriptions;";
+                clear.ExecuteNonQuery();
+            }
+            for (var number = 1; number <= 5; number++)
+            {
+                var subscription = new PodcastSubscriptionSettings
+                {
+                    Id = $"fair-{number}",
+                    Title = $"Źródło {number}",
+                    FeedUrl = $"https://example.invalid/feed-{number}.xml",
+                    IsInLibrary = true,
+                    SourceKind = PodcastSourceKind.Rss,
+                    RefreshIntervalMinutes = 60
+                };
+                using var insert = connection.CreateCommand();
+                insert.CommandText = """
+                    INSERT INTO podcast_subscriptions(
+                        id, ordinal, title, feed_url, is_in_library,
+                        last_refresh_utc_ticks, content_hash, payload_json)
+                    VALUES($id, $ordinal, $title, $feed, 1, 0, $hash, $payload);
+                    """;
+                insert.Parameters.AddWithValue("$id", subscription.Id);
+                insert.Parameters.AddWithValue("$ordinal", number - 1);
+                insert.Parameters.AddWithValue("$title", subscription.Title);
+                insert.Parameters.AddWithValue("$feed", subscription.FeedUrl);
+                insert.Parameters.AddWithValue("$hash", $"fair-{number}");
+                insert.Parameters.AddWithValue(
+                    "$payload", JsonSerializer.Serialize(subscription));
+                insert.ExecuteNonQuery();
+            }
+        }
+
+        using var store = LitePodcastProgressStore.Open(database, () => false);
+        store.ConfigureGlobalSettings(null, 60, 60, 2);
+        var visited = new HashSet<string>(StringComparer.Ordinal);
+        var batchSizes = new List<int>();
+        for (var pass = 0; pass < 3; pass++)
+        {
+            var batch = store.GetDueRefreshTargets();
+            batchSizes.Add(batch.Count);
+            foreach (var target in batch)
+            {
+                Assert.True(visited.Add(target.SubscriptionId),
+                    "automat nie powinien wracac do zrodla przed przejsciem calej kolejki");
+                store.MarkRefreshAttempt(target.SubscriptionId);
+            }
+        }
+
+        Assert.True(batchSizes.SequenceEqual([2, 2, 1]) && visited.Count == 5,
+            "automat powinien przejsc przez wszystkie nalezne zrodla kolejnymi partiami");
+        Assert.True(store.GetDueRefreshTargets().Count == 0,
+            "po pelnym przebiegu zadne swiezo sprawdzone zrodlo nie powinno byc od razu nalezne");
     }
 
     private static void CreateDatabase(string path)

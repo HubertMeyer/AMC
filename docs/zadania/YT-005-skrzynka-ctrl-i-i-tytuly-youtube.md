@@ -2,9 +2,10 @@
 
 ## Status
 
-W trakcie. Kod, 126 testów Pythona, regresja C# oraz odczytowa próba publicznego
-YouTube są zweryfikowane. Nie zbudowano paczki użytkowej, nie zainstalowano jej
-i nie wykonano jeszcze ręcznego odbioru NVDA.
+W trakcie. Kod, 141 testów Pythona, dwie regresje C# oraz odczytowe próby
+prawdziwej biblioteki i publicznego YouTube są zweryfikowane. Nie zbudowano
+paczki użytkowej, nie zainstalowano jej i nie wykonano jeszcze ręcznego odbioru
+NVDA.
 
 ## Zgłoszenie użytkownika
 
@@ -16,6 +17,12 @@ tytułów filmów YouTube ponownie jest wyświetlana po angielsku.
 
 Ta korekta zastępuje wcześniejsze założenie z POD-003, że sam końcowy wiersz
 **Załaduj więcej** wystarcza jako jedyna droga szybkiego doładowania skrzynki.
+
+Późniejsza korekta użytkownika z 27 października 2026 zastępuje zbyt wąskie
+uzasadnienie, według którego porcje po 150 służą tylko ochronie interfejsu.
+Porcja 150 dotyczy prezentacji, natomiast właściwym celem jest także pełny,
+ciągły obieg odświeżania wszystkich obserwowanych źródeł, tak aby materiały z
+całego dnia były zapisane i dostępne do przejrzenia.
 
 ## Diagnoza
 
@@ -33,6 +40,11 @@ Ta korekta zastępuje wcześniejsze założenie z POD-003, że sam końcowy wier
   11 września 2026, według którego dwie opcje `--extractor-args` nie mogły
   działać razem. Oficjalny kontrakt yt-dlp pozwala powtórzyć opcję dla różnych
   ekstraktorów; średnik rozdziela argumenty tylko w obrębie jednego ekstraktora.
+- Odczytowa kontrola bieżącej biblioteki wykazała 523 obserwowane źródła.
+  Odświeżanie było włączone dla 521 z nich, rozmiar partii wynosił 5, a każde z
+  521 aktywnych źródeł miało próbę odświeżenia w ostatnich 3 godzinach. To
+  potwierdza, że automat przechodzi przez kolejne partie zamiast zatrzymywać się
+  na pierwszej.
 
 ## Materiał do dokumentacji użytkownika
 
@@ -50,7 +62,11 @@ odświeżeniu źródła.
 ## Uzasadnienie i decyzje
 
 - Rozmiar porcji pozostaje równy 150, aby bardzo duża skrzynka nie blokowała
-  interfejsu ani czytnika ekranu.
+  interfejsu ani czytnika ekranu. Nie ogranicza liczby materiałów zapisanych
+  przez synchronizację.
+- Automatyczne odświeżanie co minutę zleca następną partię należnych źródeł.
+  Źródła są uporządkowane od najdawniej sprawdzanych, więc kolejne przebiegi
+  domykają całą kolejkę bez głodzenia dalszych źródeł.
 - Powtórne `Ctrl+I` jest drugim wejściem do istniejącej operacji doładowania;
   nie tworzy osobnej listy i nie zmienia zachowania Escape.
 - Nazwa, skrót i opis polecenia pochodzą ze wspólnego modelu używanego przez
@@ -77,6 +93,19 @@ odświeżeniu źródła.
   pytest. Powtórzenie przypiętym środowiskiem projektu dało wynik powyżej.
 - Szerszy plik `test_podcast_source.py` został przerwany po braku postępu w
   piaskownicy; nie jest liczony jako zaliczenie ani jako regresja produktu.
+- Dodano regresję pięciu należnych źródeł przy partii równej 2. Oczekiwane
+  przebiegi mają rozmiary 2, 2 i 1, każde źródło występuje dokładnie raz, a po
+  pełnym obiegu żadne nie jest od razu ponownie należne.
+- `pytest tests/test_general_settings_dialog.py`: **15 zaliczonych w 0,38 s**;
+  kontroluje też zgodny podpis „Liczba źródeł sprawdzanych w jednym przebiegu”.
+- `dotnet run --project
+  tests/AccessibleMediaController.LiteHost.ProtocolTests/AccessibleMediaController.LiteHost.ProtocolTests.csproj
+  -c Release --no-restore --disable-build-servers -- --podcast-progress`:
+  **zaliczony**, komunikat „Wszystkie zestawy przeszły (1)”.
+- Pierwsza kompilacja nowej regresji ujawniła użycie wewnętrznej klasy bazy,
+  niedostępnej dla projektu testowego. Test poprawiono tak, aby przygotowywał
+  własną izolowaną bazę przez publiczną bramę i SQLite; końcowy wynik jest
+  zaliczony i tylko ten wynik stanowi dowód funkcji.
 
 ## Testy NVDA i klawiatury
 
@@ -102,9 +131,12 @@ bez identyfikatora technicznego.
 
 - Zachowanie i wspólny kontrakt polecenia: `gui.py`, `shortcuts.py`,
   `menu_model.py`.
+- Czytelny podpis ustawienia partii: `gui.py`; regresja etykiety:
+  `test_general_settings_dialog.py`.
 - YouTube: `YouTubeCollectionClient.cs`.
 - Regresje: `test_transient_preview_policy.py`, `test_command_palette.py`
-  oraz `AccessibleMediaController.Windows.SmokeTests/Program.cs`.
+  `AccessibleMediaController.Windows.SmokeTests/Program.cs` oraz
+  `PodcastProgressStoreTests.cs`.
 - Dokumentacja: `MEDIA_CONTROLLER_PL.md`, rejestr i ten zapis zadania.
 
 ## Znane ograniczenia
@@ -113,6 +145,9 @@ bez identyfikatora technicznego.
 - Źródło publiczne YouTube nadal ma bezpieczny limit 100 pozycji na jedno
   odświeżenie; limit 150 dotyczy wyłącznie liczby pozycji pokazanych naraz w
   zbiorczym widoku skrzynki.
+- Pełny obieg działa, gdy AMC pozostaje uruchomione. Po zamknięciu programu
+  automat wznawia wybór najdawniej sprawdzanych źródeł przy następnym
+  uruchomieniu.
 
 ## Wersja i commit
 

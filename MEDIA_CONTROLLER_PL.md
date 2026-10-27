@@ -94,6 +94,11 @@ Biblioteki pozostają bez zmian. Pierwsze `Ctrl+I` otwiera skrzynkę i wczytuje
 150 i ustawia fokus na pierwszej nowej pozycji. Ten sam skutek daje Enter na
 końcowym wierszu **Załaduj więcej**. `Ctrl+I` czyta lokalną bibliotekę;
 `F5` stanowi jawne odświeżenie sieciowe wszystkich obserwowanych kanałów.
+Limit 150 dotyczy wyłącznie liczby pozycji pokazanych naraz. Automatyczne
+odświeżanie niezależnie wybiera kolejne należne źródła, zaczynając od najdawniej
+sprawdzanych, i w następnych przebiegach przechodzi przez całą kolejkę. Nowe
+materiały są najpierw zapisywane w bibliotece, a dopiero potem udostępniane w
+stronicowanej skrzynce.
 
 Od `alpha.222` powrót Escape z odtwarzacza zachowuje pozycję w źródłowej
 liście. Program najpierw odnajduje ten sam element, również w wierszu

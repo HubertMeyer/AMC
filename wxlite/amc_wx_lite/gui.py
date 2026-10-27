@@ -7431,7 +7431,7 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
             )
         )
         batch_label = wx.StaticText(
-            podcasts, label="Liczba źródeł sprawdzanych &jednocześnie:"
+            podcasts, label="Liczba źródeł sprawdzanych w &jednym przebiegu:"
         )
         self.podcast_refresh_batch = wx.SpinCtrl(
             podcasts, min=1, max=50,

@@ -161,6 +161,8 @@ def test_update_page_uses_focusable_status_fields_and_the_shared_command() -> No
 
 def test_podcast_settings_reach_the_database_owner_and_automatic_refresh() -> None:
     source = SOURCE.read_text(encoding="utf-8")
+    assert '"Liczba źródeł sprawdzanych w &jednym przebiegu:"' in source
+    assert '"Liczba źródeł sprawdzanych &jednocześnie:"' not in source
     assert "client.configure_podcast_global_settings(" in source
     assert "client.refresh_podcasts_automatically" in source
     assert 'self.runner.submit(\n            "podcast-auto-refresh"' in source
