@@ -14,6 +14,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="..\Shared\ReleaseProfileContract.cs" Link="ReleaseProfileContract.cs" />
+    <Compile Include="..\Shared\PostUpdateLaunchContract.cs" Link="PostUpdateLaunchContract.cs" />
     <Compile Include="..\AccessibleMediaController.Core\ShellIntegration\ShellIntegrationRules.cs"
              Link="ShellIntegrationRules.cs" />
   </ItemGroup>

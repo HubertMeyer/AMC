@@ -11,12 +11,15 @@ internal static class Program
     private const int InvalidBundle = 2;
     private const int StartFailed = 3;
     private const int ExistingWindowWaitMilliseconds = 5_000;
+    private const int PostUpdateWindowWaitMilliseconds = 15_000;
     private const int SafeReplacementWaitMilliseconds = 10_000;
 
     [STAThread]
     private static int Main(string[] args)
     {
         ReleaseProfileDescriptor? profile = null;
+        var postUpdateLaunch = PostUpdateLaunchContract.Parse(args);
+        args = postUpdateLaunch.ForwardedArguments;
         var fullBundleCheck = args.Any(argument =>
             string.Equals(argument, "--sprawdz-pakiet-pelny", StringComparison.OrdinalIgnoreCase)
             || string.Equals(argument, "--sprawdz-pakiet-pelny-cicho", StringComparison.OrdinalIgnoreCase));
@@ -57,7 +60,8 @@ internal static class Program
                     bundle,
                     args,
                     new ShellLaunchRequest([], false),
-                    suppressFailureDialog: true);
+                    suppressFailureDialog: true,
+                    activateAfterStart: false);
             }
 
             var shellRequest = ShellLaunchRequestContract.ParseAndValidate(args);
@@ -124,7 +128,11 @@ internal static class Program
                     }
                 }
 
-                return RunFrontend(bundle, args, shellRequest);
+                return RunFrontend(
+                    bundle,
+                    args,
+                    shellRequest,
+                    activateAfterStart: postUpdateLaunch.ActivateAfterStart);
             }
             finally
             {
@@ -168,11 +176,14 @@ internal static class Program
         VerifiedBundle bundle,
         string[] args,
         ShellLaunchRequest shellRequest,
-        bool suppressFailureDialog = false)
+        bool suppressFailureDialog = false,
+        bool activateAfterStart = false)
     {
         var plan = PythonLaunchPlan.Create(bundle, args);
         using var process = Process.Start(plan.StartInfo)
             ?? throw new InvalidOperationException("nie uruchomiono procesu interfejsu");
+        if (activateAfterStart)
+            AllowForegroundBestEffort(process.Id);
 
         var inputGate = new object();
         void ForwardToFrontend(string payload)
@@ -196,6 +207,14 @@ internal static class Program
         // Przechwycenie stderr zapobiega modalnym alertom pythonw.
         var output = process.StandardOutput.ReadToEndAsync();
         var error = process.StandardError.ReadToEndAsync();
+        if (activateAfterStart)
+        {
+            var window = WaitForMainWindow(
+                bundle.Profile,
+                PostUpdateWindowWaitMilliseconds);
+            if (window is not null)
+                ActivateWindow(window.Value.Handle);
+        }
         process.WaitForExit();
         Task.WaitAll(output, error);
 
@@ -278,6 +297,18 @@ internal static class Program
         ShowWindow(handle, 3); // SW_MAXIMIZE
         BringWindowToTop(handle);
         SetForegroundWindow(handle);
+    }
+
+    private static void AllowForegroundBestEffort(int processId)
+    {
+        try
+        {
+            AllowSetForegroundWindow((uint)processId);
+        }
+        catch
+        {
+            // Główny frontend nadal wykonuje własne Show/Raise/SetForegroundWindow.
+        }
     }
 
     private static ExistingWindow? FindMainWindow(ReleaseProfileDescriptor profile)
@@ -418,6 +449,9 @@ internal static class Program
 
     [DllImport("user32.dll")]
     private static extern bool SetForegroundWindow(IntPtr windowHandle);
+
+    [DllImport("user32.dll")]
+    private static extern bool AllowSetForegroundWindow(uint processId);
 
     [DllImport("user32.dll")]
     private static extern uint GetWindowThreadProcessId(

@@ -14,5 +14,6 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="..\Shared\ReleaseProfileContract.cs" Link="ReleaseProfileContract.cs" />
+    <Compile Include="..\Shared\PostUpdateLaunchContract.cs" Link="PostUpdateLaunchContract.cs" />
   </ItemGroup>
 </Project>

@@ -22,6 +22,7 @@ internal static class Program
         ("wyjście poza katalog", TraversalIsRejected),
         ("prywatny runtime bez PYTHONPATH i bez alertów pythonw", LaunchPlanUsesOnlyPrivateRuntime),
         ("diagnostyka przez python.exe", DiagnosticUsesConsoleRuntime),
+        ("przełącznik startu po aktualizacji jest wewnętrzny", PostUpdateActivationSwitchIsInternal),
         ("frontend odbiera polecenia powłoki przez stdin", FrontendReceivesShellRequestsOnStandardInput),
         ("argumenty powłoki zachowują znaki i tryb kolejki", ShellArgumentsPreservePathsAndQueueMode),
         ("polecenie powłoki ma jednoliniowy JSON", ShellHandoffUsesSingleLineJson),
@@ -183,6 +184,26 @@ internal static class Program
         Equal(true, plan.StartInfo.RedirectStandardOutput);
         Equal(true, plan.StartInfo.RedirectStandardError);
         Equal("--sprawdz", plan.StartInfo.ArgumentList[2]);
+    }
+
+    private static void PostUpdateActivationSwitchIsInternal()
+    {
+        var parsed = PostUpdateLaunchContract.Parse(
+            [PostUpdateLaunchContract.ActivateAfterUpdateSwitch, "plik.mp3"]);
+        Equal(true, parsed.ActivateAfterStart);
+        Equal(1, parsed.ForwardedArguments.Length);
+        Equal("plik.mp3", parsed.ForwardedArguments[0]);
+
+        using var fixture = BundleFixture.Create();
+        var plan = PythonLaunchPlan.Create(
+            BundleVerifier.Verify(fixture.Root),
+            parsed.ForwardedArguments);
+        Equal(false, plan.StartInfo.ArgumentList.Contains(
+            PostUpdateLaunchContract.ActivateAfterUpdateSwitch));
+
+        var ordinary = PostUpdateLaunchContract.Parse(["--sprawdz"]);
+        Equal(false, ordinary.ActivateAfterStart);
+        Equal("--sprawdz", ordinary.ForwardedArguments[0]);
     }
 
     private static void FrontendReceivesShellRequestsOnStandardInput()

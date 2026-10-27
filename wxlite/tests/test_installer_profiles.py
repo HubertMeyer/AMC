@@ -239,6 +239,15 @@ def test_application_updater_runs_the_verified_full_installer() -> None:
     assert "UsePreviousTasks=yes" in ISS
 
 
+def test_successful_update_restarts_without_confirmation_and_requests_foreground() -> None:
+    assert "Aktualizacja {profile.DisplayName} została zainstalowana" not in UPDATER
+    assert "PostUpdateLaunchContract.ActivateAfterUpdateSwitch" in UPDATER
+    assert "AllowForegroundBestEffort(restarted.Id)" in UPDATER
+    assert "PostUpdateLaunchContract.Parse(args)" in LAUNCHER
+    assert "AllowForegroundBestEffort(process.Id)" in LAUNCHER
+    assert "WaitForMainWindow(" in LAUNCHER
+
+
 def test_bundle_builder_embeds_dotnet_and_private_python_runtime() -> None:
     assert "$hostOutput" in BUNDLE_BUILD
     assert "$host =" not in BUNDLE_BUILD

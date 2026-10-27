@@ -153,17 +153,16 @@ internal static class Program
             if (!string.IsNullOrWhiteSpace(options.Launch))
             {
                 var launch = ResolveInside(options.Target, options.Launch, mustExist: true);
-                Process.Start(new ProcessStartInfo
+                var start = new ProcessStartInfo
                 {
                     FileName = launch,
                     WorkingDirectory = options.Target,
                     UseShellExecute = true,
-                });
-            }
-
-            if (!options.Silent)
-            {
-                Show(profile, $"Aktualizacja {profile.DisplayName} została zainstalowana.", false);
+                };
+                start.ArgumentList.Add(PostUpdateLaunchContract.ActivateAfterUpdateSwitch);
+                using var restarted = Process.Start(start);
+                if (restarted is not null)
+                    AllowForegroundBestEffort(restarted.Id);
             }
             return Success;
         }
@@ -698,6 +697,27 @@ internal static class Program
 
     [DllImport("user32.dll", CharSet = CharSet.Unicode)]
     private static extern int MessageBox(IntPtr owner, string text, string caption, uint type);
+
+    private static void AllowForegroundBestEffort(int processId)
+    {
+        try
+        {
+            if (!AllowSetForegroundWindow((uint)processId))
+            {
+                Console.Error.WriteLine(
+                    "Windows nie przekazał launcherowi uprawnienia pierwszego planu.");
+            }
+        }
+        catch (Exception exception)
+        {
+            Console.Error.WriteLine(
+                "Nie udało się przekazać launcherowi uprawnienia pierwszego planu: "
+                + exception.Message);
+        }
+    }
+
+    [DllImport("user32.dll")]
+    private static extern bool AllowSetForegroundWindow(uint processId);
 
     internal sealed class Manifest
     {
