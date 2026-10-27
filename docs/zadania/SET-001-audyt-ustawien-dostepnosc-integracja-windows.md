@@ -1,7 +1,8 @@
 # SET-001 — audyt Ustawień, NVDA i integracja z Windows
 
-Status: **W trakcie — kod priorytetów 1–3 i testy celowane zweryfikowane
-27.10.2026; brak nowej paczki, instalacji i ręcznego odbioru NVDA**
+Status: **W trakcie — kod priorytetów 1–3, pełna regresja, czysta paczka,
+instalator i wydanie GitHub zweryfikowane 27.10.2026; aktualizacja instalacji
+oraz ręczny odbiór NVDA pozostają**
 
 ## Zgłoszenie użytkownika
 
@@ -330,6 +331,21 @@ Weryfikacja rozszerzenia o karty 27.10.2026:
 - nie zbudowano nowej paczki ani instalatora i nie uruchomiono publikacji,
   zgodnie z decyzją o oczekiwaniu na zakończenie równoległego zadania.
 
+Wspólna weryfikacja i publikacja SET-001 oraz KEY-001 27.10.2026:
+
+- pełna regresja wxPython: **2094 zaliczone, 113 kontrolowanie pominiętych i 13
+  zaliczonych podtestów** w 199,80 s;
+- wszystkie **27** zestawów testów protokołu LiteHosta zaliczone;
+- testy Launchera i Updatera: **33 z 33 zaliczone**; pełne testy dymne Core
+  zakończone kodem 0;
+- czysta paczka z commitu `4cb57da5a6bda7bb82696ff426c00f2b9f655704`
+  zawiera 2136 plików, przeszła pełną kontrolę integralności i kontrolowany
+  start;
+- instalator `AMC-Test-2026-10-27-0057.exe` przeszedł skan danych poufnych i
+  zawiera Quick App Switcher 0.1.6;
+- wydanie testowe `test-2026.10.27.0057` opublikowano i odczytowo
+  zweryfikowano na GitHubie wraz z sumami plików.
+
 Najważniejsze użyte polecenia i wejścia kontrolne:
 
 - `uv run --no-project --python 3.14 --with pytest --with wxpython python -B
@@ -357,28 +373,30 @@ Najważniejsze użyte polecenia i wejścia kontrolne:
 - Nie zastosowano wpisów integracji z paczki roboczej, aby audyt nie zmieniał
   rejestru. Ścieżka zapisu jest skompilowana i objęta testami kontraktowymi,
   lecz wymaga odbioru po bezpiecznej instalacji AMC Test.
-- `ISCC.exe` nie jest dostępny na tym komputerze, dlatego nie skompilowano
-  instalatora Inno Setup. Zbudowano i sprawdzono samowystarczalną paczkę, nie
-  instalator.
+- Inno Setup 7 było dostępne podczas końcowej promocji i instalator został
+  zbudowany oraz zweryfikowany. Sam build nie dowodzi jednak poprawnej
+  instalacji ani wypowiedzi NVDA na komputerze użytkownika.
 - Prywatny runtime bieżącej instalacji nie zawiera `pytest`; w pierwszym
   etapie uruchomiono więc 58 testów bezpośrednio. Rozszerzenie kart sprawdzono
-  później w przypiętym środowisku `uv` z pytest i wxPython. Pełna regresja
-  całego projektu nadal pozostaje wymagana przed promocją instalacji.
+  później w przypiętym środowisku `uv` z pytest i wxPython. Przed publikacją
+  wykonano też pełną regresję całego projektu.
 - Samo zgłoszenie rozszerzenia w Windows nie dowodzi, że każdy z 48 formatów
   faktycznie dekoduje się na danej instalacji.
-- Paczka testowa SET-001 v2 powstała przed dodaniem karty **Aktualizacje** i
-  nowej nazwy **Dostępność i komunikaty**. Nie wolno przedstawiać jej jako
-  artefaktu zawierającego ten końcowy etap; potrzebny będzie wspólny build po
-  zakończeniu równoległego zadania.
+- Wcześniejsza paczka testowa SET-001 v2 nie zawierała końcowego etapu. Zastąpił
+  ją wspólny instalator `AMC-Test-2026-10-27-0057.exe`, który zawiera kartę
+  **Aktualizacje**, nazwę **Dostępność i komunikaty** i kartę **Klawiatura**.
 
 ## Wersja i commit
 
-- Zainstalowana aplikacja pozostaje AMC Test z commitu
-  `4c8fceda738afd0163040a400150007d16f8409c`, pakiet `faef4e7f`, zainstalowany
-  26.10.2026 o 14:03.
-- Wcześniejsza paczka robocza v2 bazuje na HEAD `73279fbb`; manifest ma świadomie
-  `sourceDirty=true`, ponieważ zmiany nie zostały jeszcze zacommitowane.
-- Źródła końcowego etapu kart: zmienione. Testy i build LiteHosta: zaliczone.
-  Nowy bundle i instalator: niewykonane. Instalacja: niewykonana. Publikacja i
-  wydanie: niewykonane.
-- Commit realizacji: jeszcze nie utworzony.
+- commit funkcjonalny SET-001 i KEY-001: `d43d24b566a5c31fd1f862fa92ae65b7adbc8c84`;
+- commit źródłowy wydania: `4cb57da5a6bda7bb82696ff426c00f2b9f655704`;
+- wersja techniczna: `0.1.0-alpha.435`; wersja widoczna dla użytkownika:
+  `27.10.2026, 00:57`;
+- czysty manifest paczki: identyfikator `73ec48a6`, profil `test`, 2136 plików,
+  `sourceDirty=false`;
+- instalator: `AMC-Test-2026-10-27-0057.exe`, 134290649 bajtów, SHA-256
+  `a09a957923afd708a78445d4bb9574181d222ce9ee557c776118bb5cb86a2329`;
+- wydanie GitHub: `test-2026.10.27.0057`, opublikowane i odczytowo
+  zweryfikowane;
+- lokalna instalacja i próba aktualizacji z programu: niewykonane; pozostają
+  odbiorem użytkownika razem z ręcznym testem NVDA.

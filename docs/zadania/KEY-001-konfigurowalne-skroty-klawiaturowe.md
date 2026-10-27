@@ -1,7 +1,7 @@
 # KEY-001 — konfigurowalne skróty klawiaturowe
 
-Status: **W trakcie — kod, pełna regresja i samowystarczalna paczka testowa v2
-zweryfikowane; instalacja oraz ręczny odbiór NVDA pozostają**
+Status: **W trakcie — kod, pełna regresja, czysta paczka, instalator i wydanie
+GitHub zweryfikowane; aktualizacja instalacji oraz ręczny odbiór NVDA pozostają**
 
 ## Zgłoszenie użytkownika
 
@@ -102,6 +102,21 @@ nie są przejmowane.
 - budowa samowystarczalnej paczki v2 zakończyła się powodzeniem, a skrypt
   potwierdził integralność i kontrolowany start interfejsu oraz hosta.
 
+Wspólna weryfikacja wydania SET-001 i KEY-001 27.10.2026:
+
+- pełna regresja wxPython: **2094 zaliczone, 113 kontrolowanie pominiętych i 13
+  zaliczonych podtestów** w 199,80 s;
+- wszystkie **27** zestawów testów protokołu LiteHosta zaliczone;
+- testy Launchera i Updatera: **33 z 33 zaliczone**; pełne testy dymne Core
+  zakończone kodem 0;
+- czysta paczka z commitu `4cb57da5a6bda7bb82696ff426c00f2b9f655704`
+  zawiera 2136 plików, przeszła pełną kontrolę integralności i kontrolowany
+  start;
+- instalator `AMC-Test-2026-10-27-0057.exe` przeszedł skan danych poufnych i
+  zawiera Quick App Switcher 0.1.6;
+- wydanie testowe `test-2026.10.27.0057` opublikowano i odczytowo
+  zweryfikowano na GitHubie wraz z sumami plików.
+
 Nie uruchomiono Ruffa, ponieważ moduł nie jest dostępny w przypiętym
 środowisku. Nie jest to przedstawiane jako zaliczony lint.
 
@@ -144,19 +159,19 @@ Projekt do korekty i zatwierdzenia użytkownika:
 ## Wersja i commit
 
 - gałąź robocza: `codex/konfigurowalne-skroty-20261026`;
-- baza rozpoczęcia: `73279fbb`;
-- commit: jeszcze nie utworzony;
-- build: zweryfikowana paczka robocza
-  `D:\Projekty Codex\AMC - integracja wxPython\.test-output\KEY-001-shortcuts-20261027-v2`;
-- manifest: identyfikator `750fae97`, etykieta
-  `2026.10.27-73279fbb15a1cd34c6813f24e097e0467889a197-750fae97-robocza`,
-  profil `test`, 2136 plików, SHA-256 manifestu
-  `B4E4936A1E48D727CF5F723ECF1B81A906F34D9D6605162A94F2402DA46356D4`;
-- źródło paczki jest jawnie oznaczone `sourceDirty: true`; nie jest to build
-  przeznaczony do promocji ani instalacji;
-- instalacja: nie wykonano;
-- wydanie lub publikacja: nie wykonano.
+- commit funkcjonalny SET-001 i KEY-001: `d43d24b566a5c31fd1f862fa92ae65b7adbc8c84`;
+- commit źródłowy wydania: `4cb57da5a6bda7bb82696ff426c00f2b9f655704`;
+- wersja techniczna: `0.1.0-alpha.435`; wersja widoczna dla użytkownika:
+  `27.10.2026, 00:57`;
+- czysty manifest paczki: identyfikator `73ec48a6`, profil `test`, 2136 plików,
+  `sourceDirty=false`;
+- instalator: `AMC-Test-2026-10-27-0057.exe`, 134290649 bajtów, SHA-256
+  `a09a957923afd708a78445d4bb9574181d222ce9ee557c776118bb5cb86a2329`;
+- wydanie GitHub: `test-2026.10.27.0057`, opublikowane i odczytowo
+  zweryfikowane;
+- lokalna instalacja i próba aktualizacji z programu: niewykonane; pozostają
+  odbiorem użytkownika razem z ręcznym testem NVDA.
 
-Instalacji nie wykonano, ponieważ projektowa promocja wymaga czystego commitu,
-a drzewo zawiera równoległe, nieukończone zmiany SET-001. Nie obchodzono tej
-blokady i nie zatrzymywano działającej instalacji AMC Test.
+Wspólny artefakt końcowy powstał z czystego, odizolowanego worktree. Równoległa
+niezwiązana zmiana użytkownika w głównym drzewie roboczym została zachowana i
+nie weszła do wydania.
