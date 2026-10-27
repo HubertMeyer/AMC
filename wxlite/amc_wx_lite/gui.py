@@ -29558,6 +29558,12 @@ class LiteFrame(wx.Frame):
             )
 
     def _show_radio_recognition_history(self) -> None:
+        """Pokaż nakładkę bez zmiany sesji ani widoku miejsca wywołania.
+
+        Anulowanie, w tym Escape, wraca przez wspólną drogę fokusu do listy
+        lub odtwarzacza tej samej sesji. Historia nie jest przejściem do
+        sesji Radio tylko dlatego, że jej dane pochodzą z rozpoznawania Radia.
+        """
         dialog = RadioRecognitionHistoryDialog(
             self,
             self.state.recognized_tracks,

@@ -3,9 +3,12 @@ from __future__ import annotations
 import io
 import json
 from pathlib import Path
+from types import SimpleNamespace
 
-from amc_wx_lite import apple_music_links, radio_recognition
+from amc_wx_lite import apple_music_links, gui as gui_module, radio_recognition
+from amc_wx_lite.gui import LiteFrame
 from amc_wx_lite.list_model import Row
+from amc_wx_lite.navigation import SessionId, View
 from amc_wx_lite.recognition_actions import (
     APPLE_MUSIC,
     SPOTIFY,
@@ -113,6 +116,77 @@ def test_cached_copy_link_does_not_precede_confirmation_with_lookup_message() ->
 
     assert "recognition_cached_matches(self._entry).get(action.service) is None" in window
     assert "recognition_cached_matches(entry).get(action.service) is None" in history
+
+
+def test_escape_returns_to_the_same_session_and_view_that_opened_history() -> None:
+    events: list[str] = []
+
+    class FocusTarget:
+        def __init__(self, name: str) -> None:
+            self.name = name
+
+        def SetFocus(self) -> None:
+            events.append(f"focus:{self.name}")
+
+    class CancelledHistoryDialog:
+        def __init__(self, *_args, **_kwargs) -> None:
+            self.changed = False
+            self.requested_action = None
+
+        def ShowModal(self) -> int:
+            events.append("escape")
+            return 0
+
+        def Destroy(self) -> None:
+            events.append("destroy")
+
+    original = gui_module.RadioRecognitionHistoryDialog
+    gui_module.RadioRecognitionHistoryDialog = CancelledHistoryDialog
+    try:
+        for session, view, focus_name in (
+            (SessionId.FILES, View.LIST, "files"),
+            (SessionId.FILES, View.PLAYER, "player"),
+            (SessionId.RADIO, View.LIST, "radio"),
+            (SessionId.RADIO, View.PLAYER, "player"),
+        ):
+            events.clear()
+            selected_row = object()
+            session_state = SimpleNamespace(
+                view=view,
+                model=SimpleNamespace(selected_row=selected_row),
+            )
+            frame = SimpleNamespace(
+                navigator=SimpleNamespace(
+                    active=session,
+                    session=session_state,
+                ),
+                state=SimpleNamespace(recognized_tracks=[]),
+                options=SimpleNamespace(
+                    radio_recognition_default_service=TIDAL,
+                ),
+                runner=SimpleNamespace(submit=lambda *_args, **_kwargs: None),
+                files_list=FocusTarget("files"),
+                radio_list=FocusTarget("radio"),
+                play_button=FocusTarget("player"),
+                _detailed_hints=False,
+                _to_clipboard=lambda _text: True,
+                _resolve_recognition_match=lambda *_args: None,
+                _save_state=lambda: None,
+                _execute_recognition_action=lambda *_args: None,
+            )
+            frame._active_list = LiteFrame._active_list.__get__(frame, type(frame))
+            frame._restore_focus_after_dialog = (
+                LiteFrame._restore_focus_after_dialog.__get__(frame, type(frame))
+            )
+
+            LiteFrame._show_radio_recognition_history(frame)
+
+            assert frame.navigator.active is session
+            assert frame.navigator.session.view is view
+            assert frame.navigator.session.model.selected_row is selected_row
+            assert events == ["escape", "destroy", f"focus:{focus_name}"]
+    finally:
+        gui_module.RadioRecognitionHistoryDialog = original
 
 
 def test_catalogue_match_is_conservative_and_diacritic_tolerant() -> None:
