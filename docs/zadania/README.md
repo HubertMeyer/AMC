@@ -110,11 +110,13 @@ do kontrolowanej archiwizacji opisanej w REL-003.
   Szczegóły:
   [REL-003-usuniecie-wpf-i-stan-youtube.md](REL-003-usuniecie-wpf-i-stan-youtube.md).
 
-- `RECOG-001` — **W trakcie; korekta oznajmiania `Ctrl+C` i `Ctrl+Shift+C`
-  z 27.10.2026 ma 18/18 testów celowanych, lecz nie została jeszcze zbudowana
-  ani zainstalowana; pozostaje ręczny odbiór NVDA** — prawa strzałka od razu
-  fokusuje pierwszy element, obie listy potwierdzają kopiowanie przez lokalny
-  region aktywny, a pełne podmenu zachowuje `Usługi, łącza i powiązania`.
+- `RECOG-001` — **W trakcie; korekty oznajmiania kopiowania oraz zakresu
+  `Ctrl+Alt+S` z 27.10.2026 mają testy celowane, lecz nie zostały jeszcze
+  zbudowane ani zainstalowane; pozostaje ręczny odbiór NVDA** — prawa strzałka
+  od razu fokusuje pierwszy element, obie listy potwierdzają kopiowanie przez
+  lokalny region aktywny, a historia jest dostępna z listy i odtwarzacza
+  Plików lokalnych oraz Radia, lecz nie z pozostałych sesji. Pełne podmenu
+  zachowuje `Usługi, łącza i powiązania`.
   Szczegóły:
   [RECOG-001-interakcje-z-rozpoznanymi-utworami.md](RECOG-001-interakcje-z-rozpoznanymi-utworami.md).
 

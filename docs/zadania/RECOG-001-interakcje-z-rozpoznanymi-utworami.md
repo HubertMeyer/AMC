@@ -1,8 +1,9 @@
 # RECOG-001 — interakcje z rozpoznanymi utworami
 
-- Status: **W trakcie; korekta oznajmiania kopiowania z 27.10.2026 ma gotowe
-  źródła i 18/18 testów celowanych, ale nie została jeszcze zbudowana ani
-  zainstalowana; pozostaje ręczny odbiór z NVDA**.
+- Status: **W trakcie; korekty oznajmiania kopiowania oraz dostępności
+  `Ctrl+Alt+S` z 27.10.2026 mają gotowe źródła i testy celowane, ale nie
+  zostały jeszcze zbudowane ani zainstalowane; pozostaje ręczny odbiór z
+  NVDA**.
 - Data wdrożenia: 26.10.2026.
 - Instalacja: `D:\Projekty Codex\AMC Python`.
 - Profil: wyłącznie AMC Test. AMC Public i GitHub nie zostały zmienione.
@@ -13,6 +14,10 @@ Lista `Ctrl+Alt+S` zachowuje zwięzłe wiersze. Wielowierszowy tekst z tytułem,
 wykonawcą, albumem, stacją i łączami pozostaje wynikiem `Ctrl+C`, a nie mową
 podczas chodzenia strzałkami.
 
+- `Ctrl+Alt+S` otwiera listę z każdego widoku sesji Pliki lokalne i Radio:
+  zarówno z listy, jak i z odtwarzacza. Polecenie nie jest obsługiwane ani
+  pokazywane w menu, Pomocy, Pomocy klawiatury i palecie w Podcastach,
+  TIDAL-u, Spotify, WiiM, Sonosie oraz Frontier Smart. `Escape` zamyka okno.
 - `Enter` otwiera utwór w domyślnej usłudze. Spotify korzysta z obsługi AMC;
   TIDAL używa istniejącego przekazania do oryginalnej aplikacji.
 - `Ctrl+Enter` otwiera album w domyślnej usłudze wewnątrz AMC i ustawia fokus
@@ -63,6 +68,10 @@ nie wykonywało zapytań sieciowych.
   po kopiowaniu. Potwierdzenie musi wysłać pojedyncze zdarzenie lokalnego
   regionu aktywnego w aktualnym oknie, ponieważ komunikator nieaktywnej ramki
   głównej celowo nie wchodzi NVDA w słowo.
+- Korekta użytkownika z 27.10.2026 rozszerza dostępność historii rozpoznanych
+  utworów z samego Radia na wszystkie widoki sesji Pliki lokalne i Radio.
+  Nie rozszerza jej na sesje usługowe ani Podcasty i YouTube, które nie są
+  źródłem tego podglądu.
 - Krótka lista pod prawą strzałką i pełne menu nie są dwiema implementacjami;
   są dwoma widokami jednego katalogu działań.
 - Dokładne wyniki są pobierane dopiero po działaniu użytkownika i buforowane.
@@ -84,6 +93,12 @@ nie wykonywało zapytań sieciowych.
   interfejsu**. Sprawdzono lokalny region aktywny obu list, cztery komunikaty
   kopiowania oraz brak natychmiast nadpisywanego `Sprawdzam…` przy łączu z
   pamięci podręcznej. Pełnej regresji ani testów GUI nie uruchamiano.
+- Korekta zakresu `Ctrl+Alt+S` z 27.10.2026: **142/142 testy celowane bez
+  widocznego interfejsu**. Sprawdzono wykonanie z listy i odtwarzacza Plików
+  lokalnych oraz Radia, brak polecenia w sześciu pozostałych sesjach i parytet
+  nazwy, skrótu, menu, Pomocy, Pomocy klawiatury i palety poleceń. Kontrola
+  składni oraz `git diff --check` także zakończyły się powodzeniem. Pełnej
+  regresji ani testów GUI nie uruchamiano.
 
 ## Znane ograniczenia i ręczny odbiór
 
@@ -97,8 +112,9 @@ nie wykonywało zapytań sieciowych.
   `Ctrl+Shift+C`, `Ctrl+Enter`, oba kierunki przenoszenia oraz fokus utworu po
   otwarciu albumu w Spotify i TIDAL.
 - Najnowsza korekta oznajmiania nie jest jeszcze zbudowana ani zainstalowana,
-  więc bieżąca instalacja nadal może kopiować poprawnie bez wypowiedzenia
-  potwierdzenia.
+  a korekta zakresu `Ctrl+Alt+S` również pozostaje wyłącznie w źródłach.
+  Bieżąca instalacja może zatem nadal kopiować poprawnie bez wypowiedzenia
+  potwierdzenia i udostępniać historię tylko w dotychczasowym kontekście.
 
 ## Materiał do dokumentacji użytkownika
 
@@ -117,7 +133,15 @@ nie wykonywało zapytań sieciowych.
 
 ## Wersja i commit
 
-- Najnowsza korekta źródeł: `38e0acc8` —
+- Najnowsza korekta źródeł: `e16588c0` —
+  `fix: expose recognized tracks in local session`.
+- Zmienione pliki: `wxlite/amc_wx_lite/shortcuts.py`,
+  `wxlite/amc_wx_lite/menu_model.py`, `wxlite/amc_wx_lite/gui.py`,
+  `wxlite/tests/test_command_palette.py` i
+  `wxlite/tests/test_menu_exposes_existing_actions.py`.
+- Stan korekty zakresu sesji: źródła i 142/142 testy celowane gotowe; build,
+  instalacja i publikacja nie były wykonywane.
+- Wcześniejsza korekta źródeł: `38e0acc8` —
   `fix: announce recognized track copies locally`.
 - Zmienione pliki: `wxlite/amc_wx_lite/gui.py`,
   `wxlite/amc_wx_lite/live_region.py` i
