@@ -533,3 +533,22 @@
   Enter, Escape, strzałki, kopiowanie adresu oraz ponowne otwarcie. Zmiana
   adaptera wymaga też krótkiej próby z NVDA; sam poprawny tekst wizualny nie
   jest wystarczający.
+
+## Nieuciążliwe testowanie
+
+- Korekta użytkownika z 27 października 2026 r.: domyślnie uruchamiaj tylko
+  testy celowane, bez widocznego interfejsu, dotyczące bezpośrednio zmienianego
+  obszaru. Dobieraj ich zakres proporcjonalnie do ryzyka zmiany.
+- Nie uruchamiaj rutynowo pełnej regresji interfejsu, testów otwierających
+  okna, przejmujących fokus lub schowek, testów GUI Sonosa albo WiiM ani
+  szerokiego przeglądu całej aplikacji. Dopracowany interfejs użytkownika nie
+  wymaga takiej regresji przy każdej małej zmianie.
+- Pełną lub uciążliwą regresję wykonuj tylko na wyraźną prośbę użytkownika.
+  Wyjątkowo można ją zaproponować przed istotnym wydaniem albo po zmianie o
+  wysokim ryzyku dla wielu powierzchni, ale przed uruchomieniem opisz wpływ na
+  komputer i uzyskaj zgodę użytkownika.
+- Samo polecenie poprawienia funkcji nie stanowi zgody na uruchomienie
+  aplikacji, instalatora ani widocznych testów interfejsu.
+- W raporcie rozróżniaj testy celowane, testy bez interfejsu, testy GUI,
+  kompilację, instalację i publikację. Nie przedstawiaj jednego jako dowodu
+  wykonania pozostałych.

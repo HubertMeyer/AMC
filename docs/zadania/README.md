@@ -45,6 +45,10 @@ do kontrolowanej archiwizacji opisanej w REL-003.
 - Jeżeli praca utknęła, ustaw `Zablokowane` i opisz konkretną przeszkodę oraz
   najkrótszy sposób wznowienia.
 - Nie zapisuj tu haseł, tokenów, danych kont ani prywatnych logów użytkownika.
+- Korekta użytkownika z 27.10.2026: domyślnie stosuj celowane testy bez
+  widocznego interfejsu. Pełną regresję GUI, Sonosa lub WiiM, testy otwierające
+  okna, przejmujące fokus albo schowek uruchamiaj dopiero na wyraźną prośbę;
+  przed proponowanym testem wydaniowym najpierw opisz wpływ i uzyskaj zgodę.
 
 ## Zadania
 

@@ -2,6 +2,20 @@
 
 To rozwijany równoległy interfejs pełnego AMC. Nie jest jeszcze zamiennikiem wszystkich funkcji programu. Katalog i nazwa uruchamiacza `wxlite` są historyczne; nie oznaczają decyzji o ograniczeniu docelowego zakresu do dwóch sesji.
 
+## Zasada nieuciążliwego testowania
+
+Korekta użytkownika z 27 października 2026: podczas zwykłego rozwoju domyślnie
+uruchamiamy wyłącznie celowane testy bez widocznego interfejsu, związane ze
+zmienianym obszarem. Pełna regresja GUI, testy otwierające okna, przejmujące
+fokus lub schowek oraz szerokie testy interfejsu Sonosa i WiiM nie są rutynowym
+krokiem po małej zmianie.
+
+Taką regresję wykonujemy na wyraźną prośbę użytkownika. Przed istotnym wydaniem
+albo zmianą wysokiego ryzyka można ją zaproponować, ale najpierw trzeba
+uprzedzić o możliwym przeszkadzaniu w pracy i uzyskać zgodę. Build, testy
+celowane, pełna regresja bez interfejsu, testy GUI, instalacja i publikacja są
+osobnymi wynikami i należy je raportować oddzielnie.
+
 ## Start aplikacji i jedna instancja
 
 `AMC-wx-Lite.cmd` jest wyłącznie uruchamiaczem deweloperskim w repozytorium.
