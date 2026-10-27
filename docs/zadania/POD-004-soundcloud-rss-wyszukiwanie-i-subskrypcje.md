@@ -1,6 +1,6 @@
 # POD-004 — SoundCloud jako podcast RSS: wyszukiwanie i subskrypcje
 
-- Status: `Wydane w AMC Test 0.1.0-alpha.436; ręczny test aktualizacji i NVDA pozostaje`
+- Status: `Wydanie alpha.436 istnieje; poprawa polskiego Ctrl+F gotowa w źródłach, bez nowej instalacji i publikacji`
 - Utworzono: 27 października 2026
 - Obszar: Podcasty i YouTube, RSS, pobieranie, dostępność
 
@@ -19,11 +19,28 @@ otwieraniu audycji na stronie WWW. Mixcloud nie dostarczał AMC plików audio,
 więc nie spełniał wymagania podcastu. Rozwiązaniem jest publiczny RSS
 SoundCloud, który rzeczywiście zawiera odcinki audio.
 
+## Korekta wyszukiwania z 27 października 2026
+
+Użytkownik potwierdził, że `Ctrl+F` zwraca głównie zagraniczne wyniki i nie
+znajduje polskich profili dominikańskich. Diagnoza wykazała, że wcześniejsza
+wersja nie przeszukiwała SoundCloud bezpośrednio: rozpoznawała wyłącznie kanały
+SoundCloud obecne w Apple Podcasts. Zapytania o Freta, Służew i Rzeszów nie
+zwracały tam żadnego takiego kanału, mimo że ich publiczne RSS-y zawierają
+odpowiednio 254, 500 i 35 odcinków.
+
+Ta korekta dodaje wydzielony, przeszukiwalny katalog zweryfikowanych profili z
+niepustym RSS. Nie korzysta z konta, sekretu aplikacji ani wewnętrznego klucza
+strony WWW. Profil Jarosław istnieje, lecz jego RSS jest obecnie pusty, dlatego
+nie jest reklamowany jako działający podcast.
+
 ## Zachowanie użytkowe
 
-- `Ctrl+F` korzysta z obecnego publicznego katalogu Apple Podcasts. Wynik,
-  którego kanał znajduje się w `feeds.soundcloud.com`, jest nazwany
-  **podcast SoundCloud**.
+- `Ctrl+F` przeszukuje w pierwszej kolejności zweryfikowany katalog SoundCloud,
+  a następnie pozostałe publiczne katalogi. Pierwsze wpisy to Freta10,
+  Dominikanie Służew i Dominikanie – Rzeszów.
+- Każdy wynik, którego kanał znajduje się w `feeds.soundcloud.com`, jest
+  nazwany **podcast SoundCloud**. Zweryfikowane wyniki SoundCloud są ustawiane
+  przed ogólnymi wynikami katalogowymi.
 - Enter na takim wyniku weryfikuje RSS, zapisuje lokalną subskrypcję i otwiera
   listę odcinków. `Ctrl+Shift+L` zapisuje ją w Bibliotece bez otwierania.
 - `Ctrl+N` przyjmuje `https://soundcloud.com/NazwaProfilu` oraz bezpośredni
@@ -53,9 +70,10 @@ SoundCloud, który rzeczywiście zawiera odcinki audio.
 
 Oficjalne materiały SoundCloud opisują RSS jako sposób dostarczania podcastów.
 Kanał obejmuje publiczne utwory wybrane przez autora do RSS. Wyszukiwanie AMC
-nie używa prywatnego ani przejętego klucza aplikacji SoundCloud: rozpoznaje
-publiczne kanały SoundCloud zwrócone przez katalog Apple Podcasts. Profil
-podany w `Ctrl+N` służy wyłącznie do odkrycia publicznego adresu RSS.
+nie używa prywatnego ani przejętego klucza aplikacji SoundCloud: łączy
+zweryfikowany katalog adresów RSS z publicznymi kanałami zwróconymi przez Apple
+Podcasts. Profil podany w `Ctrl+N` służy wyłącznie do odkrycia publicznego
+adresu RSS.
 
 ## Testy i rzeczywiste wyniki
 
@@ -69,6 +87,27 @@ podany w `Ctrl+N` służy wyłącznie do odkrycia publicznego adresu RSS.
 - Żywa próba pierwszego `enclosure`: HTTP `206`, `Content-Type: audio/mpeg`,
   pobrano jeden bajt.
 - Żywe wyszukiwanie `4th and Long`: znaleziono `2` podcasty SoundCloud.
+- Diagnoza polskich wyników Apple: Freta `0`, Służew `0`, Rzeszów `0`;
+  Jarosław `2` ogólne wyniki, ale `0` kanałów SoundCloud.
+- Żywe RSS-y: Freta10 `254`, Służew `500`, Rzeszów `35`, Jarosław `0`
+  odcinków audio.
+- Kontrolowany test nowego katalogu: zaliczony; polskie znaki i warianty bez
+  znaków działają, a identyfikatory nie wchodzą do etykiety NVDA.
+- Celowany test Windows po korekcie (`--soundcloud-podcast-client`): oba
+  przypadki zaliczone — resolver publicznego profilu oraz wyszukiwanie polskich
+  kanałów przez `Ctrl+F` bez konta.
+- Żywa próba całej drogi wyszukiwania dla `Dominikanie Freta`: źródło
+  SoundCloud zwróciło `1` wynik w `0,0 s`, a `Freta10` było pierwszą pozycją z
+  prawidłowym RSS-em i adresem profilu.
+- Celowane testy wxPython związane z wyszukiwaniem, nawigacją, dodawaniem
+  podcastu i paletą poleceń: `94 passed`.
+- Pełna regresja wxPython po korekcie: `2102 passed, 113 skipped, 13 subtests
+  passed`.
+- Pełna regresja Windows nie jest oznaczona jako zaliczona. Pierwszy przebieg
+  zatrzymał test schowka z powodu braku dostępu piaskownicy; sam ten test po
+  uruchomieniu z dostępem do schowka przeszedł. Powtórzenie poza piaskownicą
+  ujawniło niezależne, niestabilne przypadki czasowe WPF/Sonos oraz błąd
+  serializacji schowka. Celowany test SoundCloud pozostaje zielony.
 - Samowystarczalna paczka AMC Test: `2136` kontrolowanych plików, pełna
   integralność i odizolowany start interfejsu oraz hosta zaliczone.
 - Instalator `AMC-Test-2026-10-27-0233.exe`: zbudowany, skan sekretów zaliczony,
@@ -78,8 +117,9 @@ podany w `Ctrl+N` służy wyłącznie do odkrycia publicznego adresu RSS.
 
 ## Znane ograniczenia
 
-- `Ctrl+F` znajduje podcasty SoundCloud obecne w publicznym katalogu Apple.
-  Profil niezgłoszony do tego katalogu nadal można dodać przez `Ctrl+N`.
+- `Ctrl+F` nie przeszukuje całej platformy SoundCloud. Obejmuje publiczne wpisy
+  Apple oraz jawny katalog profili zweryfikowanych przez projekt. Pozostały
+  profil można dodać przez `Ctrl+N`, jeśli udostępnia niepusty RSS.
 - Autor SoundCloud decyduje, które publiczne utwory umieszcza w swoim RSS.
   AMC nie obchodzi ustawień prywatności i nie zamienia dowolnej playlisty ani
   utworu SoundCloud w podcast.
@@ -89,8 +129,13 @@ podany w `Ctrl+N` służy wyłącznie do odkrycia publicznego adresu RSS.
 
 ## Wersja, build, instalacja i publikacja
 
-- Kod: gotowy i opublikowany na GitHubie.
-- Testy: celowane, pełna regresja wxPython i pełne testy Core zaliczone.
+- Kod wydania alpha.436: gotowy i opublikowany na GitHubie.
+- Korekta polskiego wyszukiwania: gotowa w drzewie źródłowym; jeszcze bez
+  nowego commita, instalacji i publikacji.
+- Testy korekty: celowany zestaw SoundCloud, rzeczywista droga LiteHost oraz
+  pełna regresja wxPython zaliczone. Pełna regresja Windows ma niezależne błędy
+  środowiskowe i czasowe opisane wyżej, dlatego nie jest przedstawiana jako
+  zielona.
 - Build: LiteHost Debug oraz pełna samowystarczalna paczka Test zaliczone.
 - Instalator: `AMC-Test-2026-10-27-0233.exe`, 134290393 bajty, SHA-256
   `1d4fd2ecabe4d358246ae094ebfefdbc19dde7ceade018e6f13bcb5c61beb36a`.

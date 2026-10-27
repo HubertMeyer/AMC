@@ -17,12 +17,14 @@ internal sealed class LitePodcastDirectorySearchCoordinator : IDisposable
     public const string Operation = "podcast.searchDirectories";
     private const int MaximumQueryLength = 300;
 
+    private readonly SoundCloudPodcastDirectoryClient _soundCloud;
     private readonly ApplePodcastDirectoryClient _apple;
     private readonly SpreakerPodcastDirectoryClient _spreaker;
     private readonly YouTubeSearchClient _youTube;
 
     public LitePodcastDirectorySearchCoordinator()
     {
+        _soundCloud = new SoundCloudPodcastDirectoryClient();
         _apple = new ApplePodcastDirectoryClient();
         _spreaker = new SpreakerPodcastDirectoryClient();
         _youTube = new YouTubeSearchClient();
@@ -36,6 +38,9 @@ internal sealed class LitePodcastDirectorySearchCoordinator : IDisposable
 
         var searches = new[]
         {
+            SearchSourceAsync(
+                "SoundCloud",
+                token => _soundCloud.SearchAsync(query, token)),
             SearchSourceAsync(
                 "Apple Podcasts",
                 token => _apple.SearchAsync(query, token)),
@@ -130,11 +135,13 @@ internal sealed class LitePodcastDirectorySearchCoordinator : IDisposable
     }
 
     private static int ResultRank(MediaItem item) =>
-        YouTubeSearchClient.IsChannelSearchResult(item)
+        SoundCloudPodcastClient.IsSoundCloudSearchResult(item)
             ? 0
-            : YouTubeSearchClient.IsSearchResult(item)
-                ? 2
-                : 1;
+            : YouTubeSearchClient.IsChannelSearchResult(item)
+                ? 0
+                : YouTubeSearchClient.IsSearchResult(item)
+                    ? 2
+                    : 1;
 
     private static string NormalizeQuery(string query)
     {

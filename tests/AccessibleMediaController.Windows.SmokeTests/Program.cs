@@ -66,6 +66,7 @@ if (args.Contains("--youtube-source-resolver-only", StringComparer.Ordinal))
 if (args.Contains("--soundcloud-podcast-client", StringComparer.Ordinal))
 {
     TestSoundCloudPodcastClient();
+    TestSoundCloudPodcastDirectoryClient();
     return 0;
 }
 if (args.FirstOrDefault(argument =>
@@ -680,6 +681,7 @@ var tests = new (string Name, Action Test)[]
     ("You Tube Channel Feed Parsing", TestYouTubeChannelFeedParsing),
     ("Podcast Feed Client", TestPodcastFeedClient),
     ("SoundCloud Podcast Client", TestSoundCloudPodcastClient),
+    ("SoundCloud Podcast Directory Client", TestSoundCloudPodcastDirectoryClient),
     ("Podcast Chapter Client", TestPodcastChapterClient),
     ("Podcast Episode Downloader", TestPodcastEpisodeDownloader),
     ("Apple Podcast Directory Client", TestApplePodcastDirectoryClient),
@@ -6634,6 +6636,51 @@ static void TestSoundCloudPodcastClient()
         }),
         "Wynik katalogu z RSS SoundCloud nie dostał jawnego rodzaju źródła.");
     Console.WriteLine("OK: publiczny profil SoundCloud prowadzi do podcastowego RSS");
+}
+
+static void TestSoundCloudPodcastDirectoryClient()
+{
+    var client = new SoundCloudPodcastDirectoryClient();
+    var dominicans = client.SearchAsync("Dominikanie", CancellationToken.None)
+        .GetAwaiter().GetResult();
+    Assert(dominicans.Count == 3,
+        "Katalog SoundCloud nie zwrócił trzech zweryfikowanych polskich podcastów.");
+
+    var freta = client.SearchAsync("Dominikanie Freta", CancellationToken.None)
+        .GetAwaiter().GetResult();
+    var sluzew = client.SearchAsync("dominikanie sluzew", CancellationToken.None)
+        .GetAwaiter().GetResult();
+    var rzeszow = client.SearchAsync("Rzeszów", CancellationToken.None)
+        .GetAwaiter().GetResult();
+    Assert(freta is [{ Title: "Freta10" }]
+           && sluzew is [{ Title: "Dominikanie Służew" }]
+           && rzeszow is [{ Title: "Dominikanie – Rzeszów" }],
+        "Katalog SoundCloud nie wyszukuje polskich znaków albo nazw klasztorów.");
+    Assert(client.SearchAsync("Dominikanie Jarosław", CancellationToken.None)
+            .GetAwaiter().GetResult().Count == 0,
+        "Katalog SoundCloud reklamuje profil bez odcinków w RSS.");
+
+    foreach (var item in dominicans)
+    {
+        Assert(item.Kind == MediaItemKind.Podcast
+               && item.IsAvailable
+               && !item.IsInLibrary
+               && SoundCloudPodcastClient.IsSoundCloudSearchResult(item)
+               && Uri.TryCreate(item.Source, UriKind.Absolute, out var feed)
+               && feed.Host.Equals(
+                   "feeds.soundcloud.com",
+                   StringComparison.OrdinalIgnoreCase)
+               && Uri.TryCreate(item.PublicUri, UriKind.Absolute, out var profile)
+               && profile.Host.Equals(
+                   "soundcloud.com",
+                   StringComparison.OrdinalIgnoreCase),
+            "Wynik polskiego katalogu SoundCloud nie jest zwykłym podcastem RSS.");
+        Assert(!item.AccessibleLabel.Contains(item.ExternalId!, StringComparison.Ordinal)
+               && !item.AccessibleLabel.Contains(item.Id, StringComparison.Ordinal),
+            "Etykieta katalogu SoundCloud ujawnia techniczny identyfikator.");
+    }
+    Console.WriteLine(
+        "OK: Ctrl+F znajduje zweryfikowane polskie podcasty SoundCloud bez konta");
 }
 
 static void TestLiveSoundCloudPodcast(string profileUrl)

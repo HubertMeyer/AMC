@@ -121,7 +121,7 @@ internal sealed partial class SoundCloudPodcastClient : IDisposable
 
     internal static bool IsSoundCloudSearchResult(MediaItem? item) =>
         Uri.TryCreate(item?.Source, UriKind.Absolute, out var address)
-        && TryNormalizeFeedAddress(address, out _);
+        && IsSoundCloudAddress(address);
 
     internal static bool IsSoundCloudAddress(Uri? address) =>
         TryNormalizeFeedAddress(address, out _)

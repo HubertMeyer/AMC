@@ -6,6 +6,10 @@
 4. Enter sprawdza kanał, zapisuje subskrypcję i otwiera odcinki.
 5. `Ctrl+Shift+L` zapisuje zaznaczony wynik w Bibliotece bez otwierania.
 
+Wbudowany katalog rozpoznaje między innymi hasła `Dominikanie Freta`,
+`Dominikanie Służew` i `Dominikanie Rzeszów`, również bez polskich znaków.
+Zweryfikowany wynik SoundCloud pojawia się przed ogólnymi wynikami katalogów.
+
 Możesz również nacisnąć `Ctrl+N` i wkleić adres publicznego profilu, na
 przykład `https://soundcloud.com/NazwaProfilu`, albo pełny adres RSS. AMC
 doda go jako podcast. Odcinki można odtwarzać, dodać do kolejki, pobrać przez

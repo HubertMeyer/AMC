@@ -251,8 +251,10 @@ każda audycja ma kanał w postaci
 `https://www.spreaker.com/show/IDENTYFIKATOR/episodes/feed`.
 
 SoundCloud jest obsługiwany jako dostawca zwykłego publicznego RSS: jego kanał
-można dodać przez `Ctrl+N`, import OPML albo odnaleźć przez inny katalog.
-Przeszukiwanie całego SoundCloud pozostaje osobnym, opcjonalnym adapterem,
+można dodać przez `Ctrl+N`, import OPML, odnaleźć przez inny katalog albo przez
+wbudowany katalog profili, których nie ma w Apple Podcasts. Pierwszy
+zweryfikowany zestaw obejmuje Freta10, Dominikanów Służew i Dominikanów
+Rzeszów. Przeszukiwanie całego SoundCloud pozostaje osobnym adapterem,
 ponieważ oficjalne API wymaga zarejestrowania aplikacji i tokenu. Nie należy
 zastępować go nietrwałym parsowaniem strony ani prywatnym kluczem wbudowanym w
 program.
@@ -340,6 +342,11 @@ nie przez nieograniczone parsowanie dowolnej strony.
    zachowują adresy `enclosure` i cały standardowy kontrakt odtwarzania,
    kolejki, pobierania oraz `Zapisz jako`. Zastępuje to wcześniejszą decyzję o
    webowej integracji Mixcloud, która nie dostarczała plików audio.
+20. Późniejsza korekta z 27 października 2026 — `Ctrl+F` nie polega już
+   wyłącznie na wpisach Apple Podcasts. Przeszukuje także mały, jawny katalog
+   polskich profili SoundCloud, których nie ma w Apple, ale które mają
+   sprawdzony niepusty RSS. Wyniki te używają tego samego Enter,
+   `Ctrl+Shift+L`, odtwarzania i pobierania co pozostałe podcasty.
 
 Pozostała mapa skrótów zostanie ustalona po pierwszym działającym widoku. Nie
 należy rezerwować dalszych klawiszy na podstawie samego dokumentu
@@ -397,8 +404,9 @@ koncepcyjnego.
   zgaduje już, która „domyślna aplikacja” miałaby otworzyć odcinek.
 - `Ctrl+F` otwiera wyszukiwanie w Podcastach. Wyniki mogą zawierać obserwowane
   audycje, zapisane odcinki oraz nieobserwowane audycje z katalogów Apple
-  Podcasts i Spreaker. Wynik Apple wskazujący RSS `feeds.soundcloud.com` jest
-  jawnie nazwany **podcast SoundCloud**. Każdy rodzaj ma jawną etykietę. Podcast ma stan „w
+  Podcasts, Spreaker i zweryfikowanego katalogu SoundCloud. Wynik wskazujący
+  RSS `feeds.soundcloud.com` jest jawnie nazwany **podcast SoundCloud** i
+  pojawia się przed ogólnymi wynikami katalogowymi. Każdy rodzaj ma jawną etykietę. Podcast ma stan „w
   Bibliotece”, „poza Biblioteką”, „katalog Apple Podcasts” albo „katalog
   Spreaker”; odcinek podaje audycję
   nadrzędną i jej stan w Bibliotece.

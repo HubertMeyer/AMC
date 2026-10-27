@@ -569,9 +569,12 @@ Przyszłe adaptery TIDAL, Apple Music, Spotify i WiiM mają stosować ten sam
 kontrakt, ale udostępniać cofnięcie dopiero po potwierdzeniu zapisu przez API.
 
 Korekta z 27 października 2026 dodaje SoundCloud jako prawdziwe źródło
-podcastów, a nie skrót do strony internetowej. `Ctrl+F` oznacza wyniki z
-adresem `feeds.soundcloud.com` jako **podcast SoundCloud**; Enter weryfikuje
-RSS, zapisuje lokalną subskrypcję i otwiera listę odcinków, a
+podcastów, a nie skrót do strony internetowej. `Ctrl+F` przeszukuje najpierw
+wbudowany katalog zweryfikowanych polskich profili z działającym RSS, a także
+oznacza wyniki innych katalogów z adresem `feeds.soundcloud.com` jako
+**podcast SoundCloud**. Pierwszy zestaw obejmuje Freta10, Dominikanów Służew i
+Dominikanów Rzeszów. Enter weryfikuje RSS, zapisuje lokalną subskrypcję i
+otwiera listę odcinków, a
 `Ctrl+Shift+L` zapisuje ją bez otwierania. `Ctrl+N` przyjmuje zarówno pełny
 adres RSS SoundCloud, jak i publiczny adres profilu w postaci
 `https://soundcloud.com/NazwaProfilu`. AMC odczytuje z profilu publiczny
@@ -586,9 +589,11 @@ Spreaker. `Ctrl+F` przeszukuje równolegle Apple Podcasts i Spreaker, każdy
 niezapisany wynik podaje nazwę katalogu, a Enter przed dodaniem nadal sprawdza
 rzeczywisty RSS lub Atom. Awaria jednego katalogu nie ukrywa wyników drugiego
 ani zapisanej Biblioteki. `Ctrl+N` przyjmuje również bezpośrednie, publiczne
-kanały RSS podcastów hostowanych przez SoundCloud i Spreaker. Wyszukiwanie
-SoundCloud korzysta z publicznych wpisów RSS obecnych w katalogu Apple
-Podcasts; AMC nie przejmuje ukrytego klucza aplikacji WWW SoundCloud.
+kanały RSS podcastów hostowanych przez SoundCloud i Spreaker. Pełne
+wyszukiwanie platformy SoundCloud nadal wymaga oficjalnych danych aplikacji.
+AMC zamiast tego łączy sprawdzony lokalny katalog profili z publicznymi wpisami
+RSS obecnymi w Apple Podcasts; nie przejmuje ukrytego klucza aplikacji WWW
+SoundCloud.
 
 Wersja `alpha.241` wprowadza pierwszą działającą obsługę rozdziałów dla plików
 lokalnych i odcinków podcastów. W odtwarzaczu `Ctrl+Alt+Shift+B` tworzy nazwany

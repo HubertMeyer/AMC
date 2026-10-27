@@ -146,6 +146,8 @@
              Link="Engine\PodcastFeedClient.cs" />
     <Compile Include="..\AccessibleMediaController.Windows\Services\SoundCloudPodcastClient.cs"
              Link="Engine\SoundCloudPodcastClient.cs" />
+    <Compile Include="..\AccessibleMediaController.Windows\Services\SoundCloudPodcastDirectoryClient.cs"
+             Link="Engine\SoundCloudPodcastDirectoryClient.cs" />
     <Compile Include="..\AccessibleMediaController.Windows\Services\PodcastChapterClient.cs"
              Link="Engine\PodcastChapterClient.cs" />
     <Compile Include="..\AccessibleMediaController.Windows\Services\YouTubeChannelFeedClient.cs"
