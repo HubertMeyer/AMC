@@ -467,6 +467,35 @@ tych samych plików profilu.
   Działające AMC Test pozostało na `0.1.0-alpha.435`; ręczna aktualizacja z menu
   zostanie sprawdzona przez użytkownika następnego dnia.
 
+## Ręczny odbiór alpha.436 i korekta startu po aktualizacji 27.10.2026
+
+- Użytkownik uruchomił aktualizację z aplikacji, pobrał ją i zainstalował bez
+  pomocy Codexa. Plik zainstalowanego `AMC.exe` wskazuje
+  `0.1.0-alpha.436`. Użytkownik potwierdził, że wszystkie etapy się wykonały,
+  i uznał mechanizm aktualizacji za działający. Ten wynik zastępuje wcześniejszy
+  zapis z sekcji „Trzecie wydanie Test”, według którego ręczna próba pozostawała.
+- Ręczny przebieg ujawnił jedno zbędne zachowanie: po ponownym uruchomieniu
+  aktualizator wyświetlał modalne potwierdzenie „Aktualizacja AMC Test została
+  zainstalowana.” z przyciskiem OK. To okno mogło dodatkowo zasłonić główne
+  okno AMC.
+- Decyzja użytkownika z 27.10.2026: po powodzeniu nie ma być żadnego dialogu
+  potwierdzającego. Komunikaty błędów pozostają jawne. Po starcie z aktualizatora
+  główne okno AMC ma otrzymać jednorazową próbę pierwszego planu; zwykły start
+  i uruchomienie kontrolne nie mogą przejmować tej ścieżki.
+- Commit źródłowy `ae24e9df` usuwa dialog sukcesu. Aktualizator przekazuje
+  launcherowi zamknięty przełącznik wewnętrzny i uprawnienie Windows do
+  pierwszego planu. Launcher nie przekazuje przełącznika do Pythona, udziela
+  tego uprawnienia procesowi interfejsu i przez maksymalnie 15 sekund czeka na
+  właściwe okno profilu, po czym korzysta z istniejącej drogi
+  przywrócenia, maksymalizacji i aktywacji.
+- Testy po zmianie: **34/34** kontrakty Launchera i Updatera oraz **31/31**
+  celowanych testów Pythona. Rzeczywiste projekty `AMC.exe` i
+  `AMC-Python-Updater.exe` zbudowały się w Release bez błędów i ostrzeżeń.
+- Te fakty potwierdzają źródła, testy i build. Nie powstała nowa paczka ani
+  instalator, nie zmieniono działającej instalacji `alpha.436` i nie
+  opublikowano nowego wydania. Zachowanie fokusu po tej korekcie wymaga odbioru
+  przy następnej ręcznej aktualizacji.
+
 ## Znane ograniczenia
 
 - Bieżąca instalacja na C nie zawiera pliku identyfikatora ani sekretu OAuth
@@ -524,5 +553,8 @@ tych samych plików profilu.
   `D:\Projekty Codex\AMC aktualizacje\AMC Test 0.1.0-alpha.436 kandydat 2026-10-27\instalator\AMC-Test-2026-10-27-0233.exe`.
 - Adres trzeciego wydania:
   `https://github.com/michalkasperczak/AMC/releases/tag/test-2026.10.27.0233`.
-- Instalacja i aktualizacja lokalna: świadomie niewykonane; użytkownik zachował
-  działające `0.1.0-alpha.435` jako bazę ręcznej próby aktualizacji.
+- Instalacja i aktualizacja lokalna: wykonane ręcznie przez użytkownika
+  27.10.2026; pobranie, instalacja i start `0.1.0-alpha.436` przeszły, a
+  mechanizm aktualizacji został odebrany jako działający.
+- Następna, nieopublikowana korekta startu po aktualizacji: commit źródłowy
+  `ae24e9df`; testy i build zaliczone, bez instalacji i bez wydania.

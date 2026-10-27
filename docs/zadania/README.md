@@ -49,7 +49,8 @@ do kontrolowanej archiwizacji opisanej w REL-003.
 ## Zadania
 
 - `POD-004` — **Wydane w AMC Test `0.1.0-alpha.436`; paczka, instalator i
-  GitHub są zweryfikowane, ręczny test aktualizacji i NVDA pozostaje** —
+  GitHub są zweryfikowane, aktualizacja przeszła, ręczny odbiór funkcji z NVDA
+  pozostaje** —
   wyszukiwanie podcastów SoundCloud przez `Ctrl+F`, lokalna subskrypcja przez
   `Ctrl+Shift+L`, adres profilu lub RSS w `Ctrl+N` oraz zwykłe pliki audio do
   odtwarzania i pobierania. Korekta zastępuje wcześniejszą webową integrację
@@ -58,7 +59,8 @@ do kontrolowanej archiwizacji opisanej w REL-003.
   [POD-004-soundcloud-rss-wyszukiwanie-i-subskrypcje.md](POD-004-soundcloud-rss-wyszukiwanie-i-subskrypcje.md).
 
 - `YT-005` — **Wydane w AMC Test `0.1.0-alpha.436`; kod, testy, paczka,
-  instalator i GitHub są zweryfikowane, ręczny test aktualizacji i NVDA
+  instalator i GitHub są zweryfikowane, aktualizacja przeszła, ręczny odbiór
+  funkcji z NVDA
   pozostaje** — ponowne `Ctrl+I` w otwartej skrzynce doładowuje następne 150
   pozycji, a kolekcje YouTube żądają polskich tytułów przy zachowaniu dat
   przybliżonych. Szczegóły:
@@ -83,8 +85,10 @@ do kontrolowanej archiwizacji opisanej w REL-003.
 - `REL-002` — **W trakcie; trzecie wydanie kanału Test
   `test-2026.10.27.0233` zostało opublikowane i odczytowo zweryfikowane na
   GitHubie. Zawiera YouTube YT-005, SoundCloud RSS i Quick App Switcher 0.1.6.
-  Zgodnie z decyzją użytkownika nie zainstalowano go; ręczna aktualizacja z
-  `alpha.435` i odbiór dialogu z NVDA pozostają** — jedna
+  Ręczna aktualizacja z `alpha.435` do `alpha.436` przeszła i mechanizm został
+  odebrany. Nieopublikowany commit `ae24e9df` usuwa dialog sukcesu i wzmacnia
+  pierwszy plan po restarcie; testy i build przeszły, odbiór tej korekty
+  pozostaje** — jedna
   kanoniczna linia AMC Python,
   wydania AMC Test i AMC Public z tego samego commitu, dwa kanały aktualizacji,
   standardowa instalacja Windows oraz kontrolowane uporządkowanie starego C#,
