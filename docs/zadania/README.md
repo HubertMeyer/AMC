@@ -391,7 +391,13 @@ zmian, wymagający korekty użytkownika:
   konta YouTube, synchronizacja subskrypcji i zwykłych playlist oraz bezpieczny
   zakres czynności konta. Etap rozpoczęto 21 października 2026 na nowe jawne
   polecenie użytkownika; sam start nadal nie loguje konta ani nie otwiera
-  przeglądarki. Profil publiczny pozostaje wyłączony.
+  przeglądarki. Profil publiczny pozostaje wyłączony. Korekta z 27.10.2026:
+  rzeczywiste ponowne logowanie przez zainstalowany LiteHost i systemową
+  przeglądarkę zakończyło się wynikiem `Zalogowano do YouTube`, a kolejny odczyt
+  potwierdził aktywne połączenie. Nie zmieniano Google Cloud, źródeł, instalacji
+  ani GitHuba. Dla przyszłego AMC Public pozostaje osobny projekt produkcyjny,
+  własna zweryfikowana domena ze stroną programu i polityką prywatności oraz
+  weryfikacja marki i zakresu `youtube.readonly`.
   Szczegóły:
   [YT-001-konto-youtube-i-synchronizacja.md](YT-001-konto-youtube-i-synchronizacja.md).
   Bieżąca instalacja:

@@ -944,3 +944,62 @@ Korekta z 24.10.2026 zastępuje tę pozycję jako bieżącą instalację: commit
 `05621539cba449a06986e3544557d7d039b0e2d9`, pakiet `0ca58fd4`, okno
 `AMC Test — 24.10.2026, 00:21`. Szczegóły zawiera
 [AMC-TEST-2026-10-24-0021-youtube-refresh-shortcuts.md](AMC-TEST-2026-10-24-0021-youtube-refresh-shortcuts.md).
+
+## Ponowne logowanie w zainstalowanym AMC Test — 27 października 2026
+
+Ta korekta odpowiada na pytanie użytkownika, czy przed następnym wydaniem musi
+ponownie tworzyć albo konfigurować projekt Google Cloud. Dla profilu AMC Test
+odpowiedź brzmi: nie. Bieżące źródła oraz zainstalowana paczka zawierają pełną
+parę klienta `Aplikacja komputerowa` w prywatnych zasobach wyłączonych z Git;
+podczas tego odbioru nie zmieniano projektu, ekranu zgody ani klientów w Google
+Cloud.
+
+### Rzeczywisty wynik
+
+- Odczyt tylko do odczytu z Menedżera poświadczeń Windows zwrócił
+  `YouTube: zalogowano`.
+- Ponowne logowanie uruchomiono przez ten sam LiteHost i tę samą konfigurację,
+  które zawiera stała instalacja `D:\Projekty Codex\AMC Python`. Oficjalna
+  strona Google została otwarta w domyślnej przeglądarce, a powrót nastąpił do
+  lokalnego adresu AMC na `127.0.0.1`.
+- Google wykorzystało istniejącą sesję oraz wcześniejszą zgodę, dlatego nie
+  pojawił się ekran wpisywania hasła ani ręcznego wyboru konta. Końcowa strona
+  podała użytkowy komunikat, że zgoda została przekazana do AMC.
+- LiteHost zakończył operację wynikiem `Zalogowano do YouTube`, a bezpośredni
+  odczyt po operacji potwierdził, że konto nadal jest połączone.
+- Próba korzystała z tymczasowej pustej bazy Podcastów, żeby nie otwierać do
+  zapisu żywej bazy używanej przez uruchomione AMC. Katalog tymczasowy został
+  usunięty po wyniku. Nie zmieniano Biblioteki, ustawień ani nagrań.
+
+Ta próba potwierdza prosty przepływ ponownego logowania, lokalny powrót i zapis
+poświadczenia. Nie jest próbą pierwszego logowania obcego konta: nie sprawdza
+ekranu ostrzegawczego aplikacji testowej, dodawania nowego testera ani pierwszej
+zgody. Taki odbiór wymagałby drugiego konta dodanego jako tester albo jawnego
+cofnięcia istniejącej zgody; cofnięcia nie wykonywano.
+
+### Rozdzielenie AMC Test i przyszłego AMC Public
+
+- AMC Test zachowuje obecny projekt testowy. W trybie `Testing` Google dopuszcza
+  maksymalnie 100 jawnie dodanych testerów, a ich autoryzacja wygasa po siedmiu
+  dniach od udzielenia zgody.
+- Dla publicznego wydania Google zaleca osobny projekt produkcyjny. Trzeba w nim
+  włączyć YouTube Data API, utworzyć klienta typu `Aplikacja komputerowa`,
+  ustawić odbiorców zewnętrznych, opublikować nazwę i dane kontaktowe, podać
+  stronę programu oraz politykę prywatności w zweryfikowanej własnej domenie,
+  zadeklarować wyłącznie `youtube.readonly` i przejść weryfikację marki oraz
+  dostępu do zakresu.
+- Po zaakceptowaniu projektu użytkownicy publiczni nie tworzą własnych projektów
+  Google Cloud. W AMC wybierają tylko logowanie przez Google w przeglądarce.
+  Osobny serwer nie jest potrzebny do lokalnego powrotu OAuth; może natomiast
+  udostępniać stronę programu i politykę prywatności wymaganą przy weryfikacji.
+
+### Stan prac i wersja
+
+- Zmiana źródeł: nie wykonano; istniejący mechanizm okazał się wystarczający.
+- Test rzeczywisty OAuth: zaliczony 27.10.2026.
+- Testy automatyczne, build, instalacja i publikacja: nie były częścią tej
+  korekty i nie zostały wykonane ponownie.
+- Sprawdzona stała instalacja: rewizja
+  `4c8fceda738afd0163040a400150007d16f8409c`, pakiet `faef4e7f`, etykieta
+  `2026.10.26-4c8fceda738afd0163040a400150007d16f8409c-faef4e7f`.
+- AMC Public, instalator publiczny i GitHub pozostały bez zmian.
