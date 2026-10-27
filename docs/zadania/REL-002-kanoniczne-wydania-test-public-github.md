@@ -432,8 +432,10 @@ tych samych plików profilu.
   `youtube-oauth-client-secret.txt`. Zgodnie z decyzją użytkownika nie
   uruchamiano logowania Google; test nowego OAuth nastąpi po wdrożeniu zwykłego
   logowania niezależnego od ręcznej konfiguracji Google Cloud.
-- Quick App Switcher 0.1.6 był już zainstalowany, więc cichy instalator nie
-  proponował ponownej instalacji dodatku. To jest prawidłowy wariant kontraktu.
+- Quick App Switcher 0.1.6 pozostał zainstalowany. Aktualizator używa jednak
+  instalatora w trybie cichym, który celowo pomija opcjonalne propozycje po
+  instalacji, więc ten przebieg nie jest żywym testem warunku „brak lub starsza
+  wersja”. Warunek pozostaje pokryty testami kontraktowymi instalatora.
 - Niedostępne sterowanie natywnym oknem nie pozwoliło kliknąć polecenia w menu
   ani odebrać dialogu pobierania z NVDA. Został rzeczywiście sprawdzony etap
   bezpiecznego zastosowania pełnego instalatora, zachowanie profilu i ponowny
