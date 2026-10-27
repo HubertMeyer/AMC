@@ -153,6 +153,8 @@ bez identyfikatora technicznego.
 
 Zmiana źródłowa: commit `054240cb` na gałęzi
 `codex/konfigurowalne-skroty-20261026`.
+Korekta opisu ustawienia i regresja pełnego obiegu automatycznego odświeżania:
+commit `eefb1d71` na tej samej gałęzi.
 
 Wersja użytkowa nie została zbudowana, zainstalowana ani opublikowana. Stan
 zainstalowanego AMC Test nie jest dowodem tej poprawki i nie został zmieniony.
