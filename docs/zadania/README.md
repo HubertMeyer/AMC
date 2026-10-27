@@ -49,8 +49,9 @@ do kontrolowanej archiwizacji opisanej w REL-003.
 ## Zadania
 
 - `POD-004` — **Wydane w AMC Test `0.1.0-alpha.436`; poprawa polskiego
-  wyszukiwania SoundCloud jest zapisana w commicie `11ba6271`, lecz nie ma
-  jeszcze nowej instalacji ani publikacji** —
+  wyszukiwania SoundCloud i parytet globalnego `Ctrl+Shift+F` są zapisane w
+  commitach `11ba6271` i `a8263cc0`, lecz nie ma jeszcze nowej instalacji ani
+  publikacji** —
   wyszukiwanie podcastów SoundCloud przez `Ctrl+F` i globalne `Ctrl+Shift+F`,
   lokalna subskrypcja przez `Ctrl+Shift+L`, adres profilu lub RSS w `Ctrl+N`
   oraz zwykłe pliki audio do odtwarzania i pobierania. Korekta zastępuje
