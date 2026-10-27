@@ -1,6 +1,6 @@
 # POD-004 — Mixcloud w Podcastach: wyszukiwanie i subskrypcje
 
-- Status: `Kod i testy gotowe; przed promocją do AMC Test`
+- Status: `Gotowe w źródłach; instalacja wyłączona z zakresu`
 - Utworzono: 27 października 2026
 - Obszar: Podcasty i YouTube, publiczne katalogi, dostępność
 - Polecenie użytkownika: dodać SoundCloud albo Mixcloud do `Ctrl+N`,
@@ -25,6 +25,12 @@ Wybieramy Mixcloud, ponieważ oficjalne API pozwala bez konta odczytywać i
 wyszukiwać publiczne profile oraz audycje. `Ctrl+Shift+L` zapisuje źródło w
 lokalnej Bibliotece AMC; nie zmienia konta Mixcloud i nie jest przedstawiane
 jako obserwowanie w serwisie.
+
+Późniejsza dyspozycja użytkownika z 27 października 2026 zastępuje wcześniejszy
+plan promocji do lokalnego AMC Test: to zadanie kończy się na kodzie, testach,
+dokumentacji i czystym commicie. Nie instaluje, nie aktualizuje ani nie
+uruchamia nowej wersji AMC Test; osobne zadanie ma zbudować instalator i
+opublikować prerelease w GitHub bez instalowania go na komputerze użytkownika.
 
 ## Zakres etapu
 
@@ -72,6 +78,10 @@ Mixcloud. Żadne konto Mixcloud ani Google nie jest potrzebne.
 - `git diff --check` z regułą `cr-at-eol`: zaliczony.
 - Kontrola działającego AMC Test przed promocją: widok `Nagrywane` pokazał
   `zero elementów`; wcześniejszy widok Radia i fokus zostały przywrócone.
+- Rozpoczęta przed późniejszą korektą zakresu próba skryptu promocji zakończyła
+  się błędem parsera PowerShell przed buildem, instalacją i uruchomieniem nowej
+  wersji. Stara kopia AMC Test została ponownie uruchomiona z niezmienionej
+  lokalizacji `C:\Users\micha\AppData\Local\Programs\AMC Test\AMC.exe`.
 
 ## Znane ograniczenia
 
@@ -86,8 +96,10 @@ Mixcloud. Żadne konto Mixcloud ani Google nie jest potrzebne.
 
 - Kod: gotowy w drzewie źródłowym.
 - Testy: zaliczone; szczegóły powyżej.
-- Build: build LiteHost Debug zaliczony; kandydat instalacyjny jeszcze
-  niewykonany.
-- Instalacja: niewykonana.
-- Publikacja: niewykonana.
-- Commit: do nadania przed promocją.
+- Build: build LiteHost Debug zaliczony; kandydat instalacyjny niewykonany
+  zgodnie z późniejszą korektą zakresu.
+- Instalacja: niewykonana; instalacja na dysku D pozostała przy rewizji
+  `4c8fceda738afd0163040a400150007d16f8409c`.
+- Publikacja: niewykonana; należy do osobnego zadania.
+- Commit funkcji i testów: `bf838c45` —
+  `feat: add public Mixcloud podcast support`.

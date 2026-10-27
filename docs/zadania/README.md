@@ -48,7 +48,8 @@ do kontrolowanej archiwizacji opisanej w REL-003.
 
 ## Zadania
 
-- `POD-004` — **W trakcie** — publiczne kanały i audycje Mixcloud w sesji
+- `POD-004` — **Gotowe w źródłach; bez instalacji w tym zadaniu** — publiczne
+  profile i audycje Mixcloud w sesji
   Podcasty i YouTube: `Ctrl+N`, wyszukiwanie `Ctrl+F`, lokalna subskrypcja
   `Ctrl+Shift+L`, odświeżanie i dostępne etykiety bez logowania. SoundCloud
   pozostaje przy publicznym RSS, ponieważ oficjalny dostęp aplikacyjny wymaga
