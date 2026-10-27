@@ -35,6 +35,9 @@ internal sealed class LiteEngineHandlers : IDisposable
         string SessionName);
 
     private readonly object _gate = new();
+    private readonly object _audioClipEditGate = new();
+    private static readonly TimeSpan AudioClipPlaybackReleaseTimeout = TimeSpan.FromSeconds(15);
+    private bool _audioClipRemovalInProgress;
     private readonly WindowsMediaOutput _files = new();
     private readonly RadioMediaOutput _radio;
     private readonly LiteRadioRecordingCoordinator _recordings;
@@ -251,7 +254,13 @@ internal sealed class LiteEngineHandlers : IDisposable
             MediaItem? next;
             try
             {
-                next = _queue.HandlePlaybackEnded(e.Item.Id);
+                lock (_audioClipEditGate)
+                {
+                    // Spoznione zdarzenie naturalnego konca nie moze ominac
+                    // blokady i uruchomic kolejnego pliku podczas wycinania.
+                    if (_audioClipRemovalInProgress) return;
+                    next = _queue.HandlePlaybackEnded(e.Item.Id);
+                }
             }
             catch (Exception exception)
             {
@@ -381,8 +390,10 @@ internal sealed class LiteEngineHandlers : IDisposable
             [LiteCommonDataSnapshotCoordinator.BackupImportOperation] = (request, _) =>
                 ImportBackup(request.Args),
             ["files.listFolder"] = (request, _) => ListFolder(request.Args),
-            ["files.play"] = (request, events) => PlayFile(request.Args, events),
-            ["media.play"] = (request, events) => PlayMedia(request.Args, events),
+            ["files.play"] = (request, events) =>
+                RunLocalPlaybackStart(() => PlayFile(request.Args, events)),
+            ["media.play"] = (request, events) =>
+                RunLocalPlaybackStart(() => PlayMedia(request.Args, events)),
             ["radio.play"] = (request, events) => PlayStation(request.Args, events),
             ["radio.currentBroadcastInformation"] = (_, _) =>
                 CurrentRadioBroadcastInformation(),
@@ -682,10 +693,31 @@ internal sealed class LiteEngineHandlers : IDisposable
             ["queue.addMembership"] = (request, _) => QueueAddMembership(request.Args),
             ["queue.togglePlayNext"] = (request, _) => QueueToggleMembership(request.Args, playNext: true),
             ["queue.status"] = (_, _) => QueueStatusPayload(),
-            ["queue.playAt"] = (request, events) => QueuePlayAt(request.Args, events),
-            ["queue.next"] = (_, events) => QueueRelative(1, events),
-            ["queue.previous"] = (_, events) => QueueRelative(-1, events)
+            ["queue.playAt"] = (request, events) =>
+                RunLocalPlaybackStart(() => QueuePlayAt(request.Args, events)),
+            ["queue.next"] = (_, events) =>
+                RunLocalPlaybackStart(() => QueueRelative(1, events)),
+            ["queue.previous"] = (_, events) =>
+                RunLocalPlaybackStart(() => QueueRelative(-1, events))
         };
+    }
+
+    private object RunLocalPlaybackStart(Func<object> action)
+    {
+        lock (_audioClipEditGate)
+        {
+            EnsureAudioClipRemovalIsNotInProgressLocked();
+            return action();
+        }
+    }
+
+    private void EnsureAudioClipRemovalIsNotInProgressLocked()
+    {
+        if (_audioClipRemovalInProgress)
+        {
+            throw new LiteRequestException(
+                "Trwa usuwanie fragmentu. Poczekaj na zakończenie edycji przed ponownym odtworzeniem pliku.");
+        }
     }
 
     private LiteCommonDataSnapshotCoordinator RequireCommonDataSnapshot() =>
@@ -1346,59 +1378,87 @@ internal sealed class LiteEngineHandlers : IDisposable
     {
         var requestedPath = LiteArgs.RequirePath(args, "sourcePath");
         string currentId;
-        lock (_gate)
+        lock (_audioClipEditGate)
         {
-            if (_filesItem is null
-                || string.IsNullOrWhiteSpace(_filesItem.Source)
-                || !SameLocalPath(_filesItem.Source, requestedPath))
+            EnsureAudioClipRemovalIsNotInProgressLocked();
+            lock (_gate)
             {
-                throw new LiteRequestException(
-                    "Bieżący plik zmienił się przed rozpoczęciem edycji. Oryginalny plik nie został zmieniony.");
+                if (_filesItem is null
+                    || string.IsNullOrWhiteSpace(_filesItem.Source)
+                    || !SameLocalPath(_filesItem.Source, requestedPath))
+                {
+                    throw new LiteRequestException(
+                        "Bieżący plik zmienił się przed rozpoczęciem edycji. Oryginalny plik nie został zmieniony.");
+                }
+                currentId = _filesItem.Id;
             }
-            currentId = _filesItem.Id;
-        }
 
-        // Zwolnij uchwyt dekodera przed oczekiwaniem na wyłączny dostęp.
-        // Edytor i tak sprawdza dostęp ponownie; ten krok odpowiada kolejności
-        // pełnego AMC i nie pozwala własnemu odtwarzaczowi blokować pliku.
-        StopFilesPlayback();
-        events.Publish("audio.clipRemoveStarted", new
-        {
-            operationId = LiteArgs.ReadText(args, "operationId") ?? string.Empty,
-            name = Path.GetFileName(requestedPath)
-        });
-        var result = LiteAudioClipOperations.Remove(args, events);
-
-        lock (_gate)
-        {
-            if (_filesItem is not null
-                && string.Equals(_filesItem.Id, currentId, StringComparison.Ordinal)
-                && !string.IsNullOrWhiteSpace(_filesItem.Source)
-                && SameLocalPath(_filesItem.Source, result.SourcePath))
+            // Od tego miejsca zadne polecenie lokalnego odtwarzania nie moze
+            // ponownie otworzyc pliku, zanim edytor skonczy lub zglosi blad.
+            _audioClipRemovalInProgress = true;
+            try
             {
-                var duration = TimeSpan.FromSeconds(result.DurationSeconds);
-                _filesItem.Duration = duration;
-                if (result.SampleRateHz > 0) _filesItem.SampleRateHz = result.SampleRateHz;
-                _filesItem.BitrateKbps = LocalAudioFileDiscovery.EstimateBitrateKbps(
-                    new FileInfo(result.SourcePath).Length,
-                    duration);
-                _filesItem.IsBitrateEstimated = _filesItem.BitrateKbps.HasValue;
-                _filesDurationId = currentId;
-                _filesDuration = duration;
-                _filesPaused = false;
+                StopFilesPlayback();
+            }
+            catch
+            {
+                _audioClipRemovalInProgress = false;
+                throw;
             }
         }
 
-        return new
+        try
         {
-            operationId = result.OperationId,
-            path = result.SourcePath,
-            name = result.SourceName,
-            backupPath = result.BackupPath,
-            durationSeconds = result.DurationSeconds,
-            sampleRateHz = result.SampleRateHz,
-            keepBackup = result.KeepBackup
-        };
+            events.Publish("audio.clipRemoveStarted", new
+            {
+                operationId = LiteArgs.ReadText(args, "operationId") ?? string.Empty,
+                name = Path.GetFileName(requestedPath)
+            });
+
+            // StopFilesPlayback wycisza natychmiast, lecz dekoder i uchwyt
+            // pliku sa zwalniane w tle. Przed uruchomieniem FFmpeg czekamy na
+            // faktyczne domkniecie wlasnego toru AMC; edytor nadal wykonuje
+            // niezalezna probe wylacznego dostepu dla obcych procesow.
+            _files.WaitForPendingPipelineDisposalAsync(AudioClipPlaybackReleaseTimeout)
+                .GetAwaiter()
+                .GetResult();
+            var result = LiteAudioClipOperations.Remove(args, events);
+
+            lock (_gate)
+            {
+                if (_filesItem is not null
+                    && string.Equals(_filesItem.Id, currentId, StringComparison.Ordinal)
+                    && !string.IsNullOrWhiteSpace(_filesItem.Source)
+                    && SameLocalPath(_filesItem.Source, result.SourcePath))
+                {
+                    var duration = TimeSpan.FromSeconds(result.DurationSeconds);
+                    _filesItem.Duration = duration;
+                    if (result.SampleRateHz > 0) _filesItem.SampleRateHz = result.SampleRateHz;
+                    _filesItem.BitrateKbps = LocalAudioFileDiscovery.EstimateBitrateKbps(
+                        new FileInfo(result.SourcePath).Length,
+                        duration);
+                    _filesItem.IsBitrateEstimated = _filesItem.BitrateKbps.HasValue;
+                    _filesDurationId = currentId;
+                    _filesDuration = duration;
+                    _filesPaused = false;
+                }
+            }
+
+            return new
+            {
+                operationId = result.OperationId,
+                path = result.SourcePath,
+                name = result.SourceName,
+                backupPath = result.BackupPath,
+                durationSeconds = result.DurationSeconds,
+                sampleRateHz = result.SampleRateHz,
+                keepBackup = result.KeepBackup
+            };
+        }
+        finally
+        {
+            lock (_audioClipEditGate) _audioClipRemovalInProgress = false;
+        }
     }
 
     private object AppendAudioClip(JsonElement args, LiteEventSink events)
@@ -2449,6 +2509,13 @@ internal sealed class LiteEngineHandlers : IDisposable
             lock (_gate) _activeEngine = target.Engine;
             return RequireSpotifyPlayback().PauseResume();
         }
+        return target.Engine == "files"
+            ? RunLocalPlaybackStart(() => PauseResumeResolved(target))
+            : PauseResumeResolved(target);
+    }
+
+    private object PauseResumeResolved(LiteTransportTarget target)
+    {
         // Gdy transport prowadzi KOLEJKA, pauza idzie przez jej sesje: tylko ona
         // zapamietuje pozycje tak, jak reszta AMC. Pytamy PRZED wejsciem w _gate,
         // zeby nie trzymac dwoch blokad naraz.
@@ -3460,6 +3527,13 @@ internal sealed class LiteEngineHandlers : IDisposable
             return RequireSpotifyPlayback().SelectOutput(args);
         if (sessionId is not ("files" or "radio" or "podcasts"))
             throw new LiteRequestException("Ta sesja nie obsługuje wyboru urządzenia audio.");
+        return sessionId is "files" or "podcasts"
+            ? RunLocalPlaybackStart(() => SelectOutputResolved(args, sessionId))
+            : SelectOutputResolved(args, sessionId);
+    }
+
+    private object SelectOutputResolved(JsonElement args, string sessionId)
+    {
         var deviceId = LiteArgs.ReadText(args, "deviceId")?.Trim();
         var restart = LiteArgs.ReadBool(args, "restart", true);
 

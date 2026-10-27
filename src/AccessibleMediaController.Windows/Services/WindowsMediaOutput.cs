@@ -140,6 +140,7 @@ public sealed class WindowsMediaOutput : IMediaOutput, IPlaybackAudioProcessingO
 
     private readonly SynchronizationContext? _synchronizationContext = SynchronizationContext.Current;
     private readonly object _gate = new();
+    private Task _lastPipelineDisposalTask = Task.CompletedTask;
     private readonly HashSet<string> _quarantinedSources = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, RemoteFailureState> _remoteFailures =
         new(StringComparer.OrdinalIgnoreCase);
@@ -1261,6 +1262,29 @@ public sealed class WindowsMediaOutput : IMediaOutput, IPlaybackAudioProcessingO
         if (pipeline is not null) QueuePipelineDisposal(pipeline);
     }
 
+    /// <summary>
+    /// Czeka, az ostatni odczepiony tor faktycznie zwolni dekoder i uchwyt
+    /// pliku. Samo <see cref="Stop"/> zatrzymuje dzwiek od razu, ale celowo
+    /// domyka kosztowne zasoby w tle, zeby nie blokowac watku interfejsu.
+    /// </summary>
+    public async Task WaitForPendingPipelineDisposalAsync(
+        TimeSpan timeout,
+        CancellationToken cancellationToken = default)
+    {
+        Task pending;
+        lock (_gate) pending = _lastPipelineDisposalTask;
+        try
+        {
+            await pending.WaitAsync(timeout, cancellationToken).ConfigureAwait(false);
+        }
+        catch (TimeoutException exception)
+        {
+            throw new IOException(
+                "Odtwarzacz nie zwolnił pliku przed edycją. Oryginalny plik nie został zmieniony.",
+                exception);
+        }
+    }
+
     public void Seek(TimeSpan position)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
@@ -1840,7 +1864,7 @@ public sealed class WindowsMediaOutput : IMediaOutput, IPlaybackAudioProcessingO
             now.AddSeconds(delaySeconds));
     }
 
-    private static void QueuePipelineDisposal(
+    private void QueuePipelineDisposal(
         PlaybackPipeline pipeline,
         TimeSpan delay = default)
     {
@@ -1870,11 +1894,12 @@ public sealed class WindowsMediaOutput : IMediaOutput, IPlaybackAudioProcessingO
             catch (Exception) { }
         }
 
-        _ = Task.Run(async () =>
+        var disposalTask = Task.Run(async () =>
         {
             if (delay > TimeSpan.Zero) await Task.Delay(delay).ConfigureAwait(false);
             DisposePipeline(pipeline);
         });
+        lock (_gate) _lastPipelineDisposalTask = disposalTask;
     }
 
     /// <summary>

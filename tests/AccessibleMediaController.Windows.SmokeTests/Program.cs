@@ -1427,7 +1427,7 @@ static void TestTrackChangeSilencesPreviousPipeline()
     // zdazy sie wykonac.
     var source = ReadRepositoryFile(
         Path.Combine("src", "AccessibleMediaController.Windows", "Services", "WindowsMediaOutput.cs"));
-    var disposalStart = source.IndexOf("private static void QueuePipelineDisposal", StringComparison.Ordinal);
+    var disposalStart = source.IndexOf("private void QueuePipelineDisposal", StringComparison.Ordinal);
     Assert(disposalStart >= 0, "Nie znaleziono kolejkowania zdjecia strumienia audio.");
     var body = source[disposalStart..];
     var bodyEnd = body.IndexOf("internal static bool ShouldSilenceImmediately", StringComparison.Ordinal);
@@ -1440,6 +1440,10 @@ static void TestTrackChangeSilencesPreviousPipeline()
     Assert(backgroundAt >= 0, "Zdjecie strumienia nie zamyka zasobow w tle.");
     Assert(silenceAt < backgroundAt,
         "Wyciszenie poprzedniego pliku wpadlo do tla - nowy plik zdazy zagrac przed cisza.");
+    Assert(source.Contains("WaitForPendingPipelineDisposalAsync", StringComparison.Ordinal),
+        "Silnik nie udostepnia oczekiwania na faktyczne zwolnienie dekodera przed edycja.");
+    Assert(body.Contains("_lastPipelineDisposalTask = disposalTask", StringComparison.Ordinal),
+        "Zadanie domykajace dekoder nie jest sledzone, wiec edycja moze ruszyc za wczesnie.");
 
     Console.WriteLine("OK: zmiana pliku wycisza poprzedni strumien natychmiast");
 }

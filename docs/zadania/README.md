@@ -52,6 +52,13 @@ do kontrolowanej archiwizacji opisanej w REL-003.
 
 ## Zadania
 
+- `EDIT-001` — **Zrobione w źródłach; 3 testy kontraktu, celowany test
+  rzeczywistego wycinania oraz kompilacja LiteHosta są zaliczone; poprawka nie
+  została jeszcze zainstalowana ani wydana** —
+  wycinanie z odtwarzanego pliku czeka na faktyczne zwolnienie dekodera i
+  blokuje ponowne otwarcie lokalnego pliku do końca edycji. Szczegóły:
+  [EDIT-001-zwalnianie-pliku-przed-wycinaniem.md](EDIT-001-zwalnianie-pliku-przed-wycinaniem.md).
+
 - `POD-004` — **Wydane w AMC Test `0.1.0-alpha.436`; poprawa polskiego
   wyszukiwania SoundCloud i parytet globalnego `Ctrl+Shift+F` są zapisane w
   commitach `11ba6271` i `a8263cc0`, lecz nie ma jeszcze nowej instalacji ani
