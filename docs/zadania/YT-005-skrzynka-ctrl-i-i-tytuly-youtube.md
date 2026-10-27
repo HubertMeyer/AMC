@@ -2,7 +2,9 @@
 
 ## Status
 
-W trakcie. Kod i testy są przygotowywane w kanonicznym AMC wxPython.
+W trakcie. Kod, 126 testów Pythona, regresja C# oraz odczytowa próba publicznego
+YouTube są zweryfikowane. Nie zbudowano paczki użytkowej, nie zainstalowano jej
+i nie wykonano jeszcze ręcznego odbioru NVDA.
 
 ## Zgłoszenie użytkownika
 
@@ -59,13 +61,51 @@ odświeżeniu źródła.
 
 ## Testy i wynik
 
-Do uzupełnienia po uruchomieniu regresji.
+- `python -m pytest` dla polityki podglądu, palety poleceń, menu, skrótów i
+  nawigacji Podcastów: **126 zaliczonych w 6,64 s**.
+- `dotnet run --project tests/AccessibleMediaController.Windows.SmokeTests
+  -c Release --no-restore --disable-build-servers --
+  --youtube-collection-normalization`: **zaliczony**, komunikat
+  „OK: ograniczone kanały i playlisty publicznego YouTube”. Polecenie
+  skompilowało cel testowy i jego zależności; nie jest to build paczki AMC.
+- Zainstalowany, zweryfikowany yt-dlp 2026.08.19 otrzymał dwa osobne
+  `--extractor-args` zgodne z kodem i dla trzech pozycji publicznego kanału
+  zwrócił polskie tytuły. Nie pobierano filmów.
+- `git -c core.whitespace=cr-at-eol diff --check`: **bez błędów** przed
+  commitem. Opcja uwzględnia kanoniczne końce CRLF pliku testów C#.
+- Próba systemowym Pythonem nie uruchomiła testów, ponieważ nie miał modułu
+  pytest. Powtórzenie przypiętym środowiskiem projektu dało wynik powyżej.
+- Szerszy plik `test_podcast_source.py` został przerwany po braku postępu w
+  piaskownicy; nie jest liczony jako zaliczenie ani jako regresja produktu.
 
 ## Testy NVDA i klawiatury
 
 Automatyczne testy sprawdzają pierwsze i ponowne `Ctrl+I`, niezmieniony punkt
 powrotu Escape oraz zgodność menu, palety i obu rodzajów pomocy. Ręczny odbiór
 NVDA nowej kompilacji pozostaje do wykonania po zbudowaniu i instalacji.
+
+Przy doładowaniu fokus logiczny trafia na pierwszą nową pozycję. Pomoc i Pomoc
+klawiatury podają: „Otwórz nowe odcinki i materiały; w otwartej skrzynce wczytaj
+kolejne 150 pozycji”. Menu i paleta używają nazwy „Nowe odcinki i materiały”,
+bez identyfikatora technicznego.
+
+## Różnice trybów i migracja
+
+- Pierwsze `Ctrl+I` działa jako dotychczasowy globalny podgląd; Escape wraca
+  do zapamiętanej sesji i pozycji. Doładowanie następuje tylko wtedy, gdy
+  skrzynka jest już otwarta.
+- Pozycja menu i palety pozostaje kontekstowa dla sesji Podcasty i YouTube.
+- Nie ma migracji schematu ani jednorazowej zmiany bazy. Stare tytuły zostaną
+  poprawione przy zwykłym odświeżeniu źródła.
+
+## Zmienione pliki
+
+- Zachowanie i wspólny kontrakt polecenia: `gui.py`, `shortcuts.py`,
+  `menu_model.py`.
+- YouTube: `YouTubeCollectionClient.cs`.
+- Regresje: `test_transient_preview_policy.py`, `test_command_palette.py`
+  oraz `AccessibleMediaController.Windows.SmokeTests/Program.cs`.
+- Dokumentacja: `MEDIA_CONTROLLER_PL.md`, rejestr i ten zapis zadania.
 
 ## Znane ograniczenia
 
@@ -76,5 +116,8 @@ NVDA nowej kompilacji pozostaje do wykonania po zbudowaniu i instalacji.
 
 ## Wersja i commit
 
-Wersja nie została jeszcze zbudowana ani zainstalowana. Commit: jeszcze nie
-utworzono.
+Zmiana źródłowa: commit `054240cb` na gałęzi
+`codex/konfigurowalne-skroty-20261026`.
+
+Wersja użytkowa nie została zbudowana, zainstalowana ani opublikowana. Stan
+zainstalowanego AMC Test nie jest dowodem tej poprawki i nie został zmieniony.
