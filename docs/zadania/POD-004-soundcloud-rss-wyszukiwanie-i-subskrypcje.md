@@ -1,6 +1,6 @@
 # POD-004 — SoundCloud jako podcast RSS: wyszukiwanie i subskrypcje
 
-- Status: `Kod i testy gotowe; przed commitem`
+- Status: `Gotowe w źródłach; bez instalacji w tym zadaniu`
 - Utworzono: 27 października 2026
 - Obszar: Podcasty i YouTube, RSS, pobieranie, dostępność
 
@@ -88,4 +88,4 @@ podany w `Ctrl+N` służy wyłącznie do odkrycia publicznego adresu RSS.
 - Build: LiteHost Debug zaliczony.
 - Instalacja: niewykonana i poza zakresem tego zadania.
 - Publikacja: niewykonana i poza zakresem tego zadania.
-- Commit: do nadania po końcowej kontroli diffu.
+- Commit źródłowy: `ebf9c812` (`fix: use SoundCloud RSS for podcast subscriptions`).

@@ -48,7 +48,7 @@ do kontrolowanej archiwizacji opisanej w REL-003.
 
 ## Zadania
 
-- `POD-004` — **Kod i testy gotowe; commit pozostaje** — wyszukiwanie podcastów
+- `POD-004` — **Gotowe w źródłach; bez instalacji w tym zadaniu** — wyszukiwanie podcastów
   SoundCloud przez `Ctrl+F`, lokalna subskrypcja przez `Ctrl+Shift+L`, adres
   profilu lub RSS w `Ctrl+N` oraz zwykłe pliki audio do odtwarzania i
   pobierania. Korekta zastępuje wcześniejszą webową integrację Mixcloud.
