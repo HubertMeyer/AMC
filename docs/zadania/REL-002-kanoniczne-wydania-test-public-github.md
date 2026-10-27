@@ -2,15 +2,13 @@
 
 ## Status
 
-W trakcie. Pierwsze wydanie AMC Test w kanale testowym zostało opublikowane
-26.10.2026 jako `test-2026.10.26.1954`; GitHub potwierdził instalator, manifest
+W trakcie. Drugie wydanie AMC Test w kanale testowym zostało opublikowane
+27.10.2026 jako `test-2026.10.27.0057`; GitHub potwierdził instalator, manifest
 aktualizacji, plik integralności oraz ich sumy. Tag wskazuje dokładną rewizję
-`251e163a`. Domyślna gałąź `main` została następnie przeniesiona zwykłym
-fast-forwardem z historycznego WPF `1f5dccb6` na kanoniczną linię AMC Python
-`219062c8`, bez przepisywania historii. Późniejszy kontrakt dołączania Quick App
-Switchera jest zapisany w commicie `781f8283`, ale nie powstał jeszcze z niego
-następny pełny instalator. Rzeczywista aktualizacja z programu zostanie
-sprawdzona przy kolejnym wydaniu.
+`4cb57da5`. Instalator zawiera Quick App Switcher 0.1.6 i jest pierwszą wersją
+wyższą od opublikowanej bazy `0.1.0-alpha.434`, więc służy do rzeczywistej próby
+aktualizacji. Rzeczywista aktualizacja instalacji przez oficjalny aktualizator
+została zaliczona; ręczny odbiór nowych ekranów z NVDA oczekuje.
 
 ## Nadrzędna korekta użytkownika z 26.10.2026
 
@@ -384,22 +382,76 @@ tych samych plików profilu.
   nie usuwa. Czysta instalacja ukrywa konto YouTube do czasu wdrożenia PKCE bez
   sekretu albo bezsekretnego brokera.
 - Testy ochrony paczki i kontraktu instalatora po korekcie: **51 zaliczonych**.
-- Źródła, testy i pomyślna budowa są oddzielnymi faktami; pełna paczka,
-  instalator i publikacja nowego wydania wymagają ponownego wykonania po
-  commicie tej korekty.
+- Źródła, testy i pomyślna budowa są oddzielnymi faktami; w chwili tej korekty
+  pełna paczka, instalator i publikacja nowego wydania wymagały ponownego
+  wykonania po commicie. Wynik tej promocji zapisano poniżej.
+
+## Drugie wydanie Test 27.10.2026
+
+- Poprawkę OAuth zapisano przed ponowną promocją; końcowy commit źródłowy to
+  `4cb57da5a6bda7bb82696ff426c00f2b9f655704`, a drzewo źródłowe było czyste.
+- Pełna regresja wxPython: **2094 zaliczone, 113 pominiętych i 13 podtestów**;
+  wszystkie 27 zestawów protokołu LiteHosta, 33 testy Launchera i Updatera oraz
+  pełne testy dymne Core zakończyły się powodzeniem.
+- Końcowa paczka ma identyfikator `73ec48a6`, 2136 plików i nie zawiera żadnego
+  pliku identyfikatora ani sekretu OAuth YouTube. Pełna integralność i
+  kontrolowany start zostały zaliczone.
+- Inno Setup zbudowało `AMC-Test-2026-10-27-0057.exe` o rozmiarze 134290649
+  bajtów i SHA-256
+  `a09a957923afd708a78445d4bb9574181d222ce9ee557c776118bb5cb86a2329`.
+  Plik integralności potwierdza dołączony Quick App Switcher 0.1.6.
+- Sucha próba publikacji, właściwa publikacja oraz odczytowa weryfikacja
+  GitHuba zostały zaliczone. Zdalne sumy instalatora, pliku integralności i
+  manifestu aktualizacji są zgodne z lokalnymi.
+- W chwili publikacji instalatora jeszcze nie uruchomiono ani nie zainstalowano.
+  Późniejszy wynik rzeczywistej aktualizacji zapisano w następnej sekcji.
+
+## Rzeczywista aktualizacja 27.10.2026
+
+- Przed aktualizacją działał AMC Test `26.10.2026, 19:54` z commitu
+  `251e163a` i pakietu `67437118`. Nie działał proces FFmpeg ani nagrywanie;
+  trwał wyłącznie wznawialny, odczytowy proces `yt-dlp` dla zapisanych kanałów.
+- Pierwsze uruchomienie kopii aktualizatora przez powłokę nie zachowało
+  poprawnie ścieżek ze spacjami. Instalacja nie zmieniła się, AMC pozostał
+  uruchomiony, a katalog `.aktualizacja-*` nie powstał. Nie uznano tego za
+  aktualizację.
+- Zweryfikowaną kopię tego samego `AMC-Python-Updater.exe` uruchomiono następnie
+  synchronicznie z pełnymi argumentami. Aktualizator sprawdził SHA-256
+  instalatora, bezpiecznie zamknął AMC, wykonał pełną instalację i uruchomił
+  aplikację ponownie.
+- Po aktualizacji manifest wskazuje `27.10.2026, 00:57`, commit
+  `4cb57da5a6bda7bb82696ff426c00f2b9f655704`, pakiet `73ec48a6` i
+  `sourceDirty=false`. Działa jedna instancja z właściwego katalogu
+  `C:\Users\micha\AppData\Local\Programs\AMC Test`.
+- Pełna cicha kontrola integralności `--sprawdz-pakiet-pelny-cicho` zakończyła
+  się kodem 0.
+- Przed i po aktualizacji baza zawierała dokładnie 421 zapisanych kanałów
+  YouTube; SHA-256 uporządkowanego zestawu ich identyfikatorów i adresów
+  pozostał `b1156375904f699213cc4a8ed6b1fff3869576a9a862f19d5c75ebf7d4c89172`.
+- W instalacji oraz manifeście było 0 plików `youtube-oauth-client-id.txt` i
+  `youtube-oauth-client-secret.txt`. Zgodnie z decyzją użytkownika nie
+  uruchamiano logowania Google; test nowego OAuth nastąpi po wdrożeniu zwykłego
+  logowania niezależnego od ręcznej konfiguracji Google Cloud.
+- Quick App Switcher 0.1.6 pozostał zainstalowany. Aktualizator używa jednak
+  instalatora w trybie cichym, który celowo pomija opcjonalne propozycje po
+  instalacji, więc ten przebieg nie jest żywym testem warunku „brak lub starsza
+  wersja”. Warunek pozostaje pokryty testami kontraktowymi instalatora.
+- Niedostępne sterowanie natywnym oknem nie pozwoliło kliknąć polecenia w menu
+  ani odebrać dialogu pobierania z NVDA. Został rzeczywiście sprawdzony etap
+  bezpiecznego zastosowania pełnego instalatora, zachowanie profilu i ponowny
+  start; ręczny odbiór interfejsu aktualizacji pozostaje.
 
 ## Znane ograniczenia
 
-- Bieżąca instalacja na D nadal używa pozostawionego ze starszego builda,
-  niezarządzanego pliku `youtube-oauth-client-secret.txt`. Dzisiejszy manifest
-  go nie zawiera, ale uruchomiony host odnalazł go w katalogu instalacji.
-  Pliku nie wolno publikować. Nie usuwać go podczas działania programu;
-  migracja OAuth musi zachować lub uczciwie wyłączyć logowanie YouTube.
+- Bieżąca instalacja na C nie zawiera pliku identyfikatora ani sekretu OAuth
+  YouTube. Zapisane publiczne kanały pozostały dostępne, ale logowanie do konta
+  nie jest obecnie odbierane. Nowy przepływ OAuth wymaga osobnego zadania.
 - Historyczny WPF `alpha.427` został dziś zainstalowany przez równoległe
   zadanie. Nie jest dowodem aktualności AMC i nie może zastąpić Python.
-- Tag wydania `test-2026.10.26.1954` wskazuje dokładny kod zainstalowanej wersji
-  `0.1.0-alpha.434`, natomiast ruchome `main` zawiera także późniejsze commity
-  dokumentacyjne i kontrakt następnego instalatora z Quick App Switcherem.
+- Tag pierwszego wydania `test-2026.10.26.1954` nadal wskazuje dokładny kod
+  wersji `0.1.0-alpha.434`. Tag drugiego wydania `test-2026.10.27.0057`
+  wskazuje dokładny kod `0.1.0-alpha.435`; ruchome `main` może zawierać późniejsze
+  commity wyłącznie dokumentacyjne.
 
 ## Wersja i commit
 
@@ -426,3 +478,15 @@ tych samych plików profilu.
   (`build(release): rozdziel kanały Test i Public`).
 - Commit kontraktu Quick App Switchera w instalatorze: `781f8283`
   (`feat(installer): offer Quick App Switcher with AMC Test`).
+- Drugie wydanie testowe: wersja techniczna `0.1.0-alpha.435`, wersja widoczna
+  dla użytkownika `27.10.2026, 00:57`, tag `test-2026.10.27.0057`.
+- Commit źródłowy drugiego wydania:
+  `4cb57da5a6bda7bb82696ff426c00f2b9f655704`.
+- Kandydat drugiego instalatora:
+  `D:\Projekty Codex\AMC aktualizacje\AMC Test 0.1.0-alpha.435 kandydat 2026-10-27\instalator\AMC-Test-2026-10-27-0057.exe`.
+- Adres drugiego wydania:
+  `https://github.com/michalkasperczak/AMC/releases/tag/test-2026.10.27.0057`.
+- Rzeczywista aktualizacja przez oficjalny aktualizator, pełna kontrola
+  integralności, ponowny start i zachowanie 421 kanałów: wykonane 27.10.2026.
+- Kliknięcie polecenia aktualizacji w menu i ręczny odbiór dialogu z NVDA:
+  niewykonane z powodu braku sterowania natywnym oknem w sesji automatyzacji.
