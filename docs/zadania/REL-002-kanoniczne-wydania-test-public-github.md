@@ -7,7 +7,8 @@ W trakcie. Drugie wydanie AMC Test w kanale testowym zostało opublikowane
 aktualizacji, plik integralności oraz ich sumy. Tag wskazuje dokładną rewizję
 `4cb57da5`. Instalator zawiera Quick App Switcher 0.1.6 i jest pierwszą wersją
 wyższą od opublikowanej bazy `0.1.0-alpha.434`, więc służy do rzeczywistej próby
-aktualizacji z programu. Aktualizacja instalacji i ręczny odbiór NVDA oczekują.
+aktualizacji. Rzeczywista aktualizacja instalacji przez oficjalny aktualizator
+została zaliczona; ręczny odbiór nowych ekranów z NVDA oczekuje.
 
 ## Nadrzędna korekta użytkownika z 26.10.2026
 
@@ -402,16 +403,47 @@ tych samych plików profilu.
 - Sucha próba publikacji, właściwa publikacja oraz odczytowa weryfikacja
   GitHuba zostały zaliczone. Zdalne sumy instalatora, pliku integralności i
   manifestu aktualizacji są zgodne z lokalnymi.
-- Instalatora nie uruchomiono ani nie zainstalowano. Rzeczywista aktualizacja
-  bieżącego AMC Test i ręczny odbiór NVDA pozostają próbą użytkownika.
+- W chwili publikacji instalatora jeszcze nie uruchomiono ani nie zainstalowano.
+  Późniejszy wynik rzeczywistej aktualizacji zapisano w następnej sekcji.
+
+## Rzeczywista aktualizacja 27.10.2026
+
+- Przed aktualizacją działał AMC Test `26.10.2026, 19:54` z commitu
+  `251e163a` i pakietu `67437118`. Nie działał proces FFmpeg ani nagrywanie;
+  trwał wyłącznie wznawialny, odczytowy proces `yt-dlp` dla zapisanych kanałów.
+- Pierwsze uruchomienie kopii aktualizatora przez powłokę nie zachowało
+  poprawnie ścieżek ze spacjami. Instalacja nie zmieniła się, AMC pozostał
+  uruchomiony, a katalog `.aktualizacja-*` nie powstał. Nie uznano tego za
+  aktualizację.
+- Zweryfikowaną kopię tego samego `AMC-Python-Updater.exe` uruchomiono następnie
+  synchronicznie z pełnymi argumentami. Aktualizator sprawdził SHA-256
+  instalatora, bezpiecznie zamknął AMC, wykonał pełną instalację i uruchomił
+  aplikację ponownie.
+- Po aktualizacji manifest wskazuje `27.10.2026, 00:57`, commit
+  `4cb57da5a6bda7bb82696ff426c00f2b9f655704`, pakiet `73ec48a6` i
+  `sourceDirty=false`. Działa jedna instancja z właściwego katalogu
+  `C:\Users\micha\AppData\Local\Programs\AMC Test`.
+- Pełna cicha kontrola integralności `--sprawdz-pakiet-pelny-cicho` zakończyła
+  się kodem 0.
+- Przed i po aktualizacji baza zawierała dokładnie 421 zapisanych kanałów
+  YouTube; SHA-256 uporządkowanego zestawu ich identyfikatorów i adresów
+  pozostał `b1156375904f699213cc4a8ed6b1fff3869576a9a862f19d5c75ebf7d4c89172`.
+- W instalacji oraz manifeście było 0 plików `youtube-oauth-client-id.txt` i
+  `youtube-oauth-client-secret.txt`. Zgodnie z decyzją użytkownika nie
+  uruchamiano logowania Google; test nowego OAuth nastąpi po wdrożeniu zwykłego
+  logowania niezależnego od ręcznej konfiguracji Google Cloud.
+- Quick App Switcher 0.1.6 był już zainstalowany, więc cichy instalator nie
+  proponował ponownej instalacji dodatku. To jest prawidłowy wariant kontraktu.
+- Niedostępne sterowanie natywnym oknem nie pozwoliło kliknąć polecenia w menu
+  ani odebrać dialogu pobierania z NVDA. Został rzeczywiście sprawdzony etap
+  bezpiecznego zastosowania pełnego instalatora, zachowanie profilu i ponowny
+  start; ręczny odbiór interfejsu aktualizacji pozostaje.
 
 ## Znane ograniczenia
 
-- Bieżąca instalacja na D nadal używa pozostawionego ze starszego builda,
-  niezarządzanego pliku `youtube-oauth-client-secret.txt`. Dzisiejszy manifest
-  go nie zawiera, ale uruchomiony host odnalazł go w katalogu instalacji.
-  Pliku nie wolno publikować. Nie usuwać go podczas działania programu;
-  migracja OAuth musi zachować lub uczciwie wyłączyć logowanie YouTube.
+- Bieżąca instalacja na C nie zawiera pliku identyfikatora ani sekretu OAuth
+  YouTube. Zapisane publiczne kanały pozostały dostępne, ale logowanie do konta
+  nie jest obecnie odbierane. Nowy przepływ OAuth wymaga osobnego zadania.
 - Historyczny WPF `alpha.427` został dziś zainstalowany przez równoległe
   zadanie. Nie jest dowodem aktualności AMC i nie może zastąpić Python.
 - Tag pierwszego wydania `test-2026.10.26.1954` nadal wskazuje dokładny kod
@@ -452,5 +484,7 @@ tych samych plików profilu.
   `D:\Projekty Codex\AMC aktualizacje\AMC Test 0.1.0-alpha.435 kandydat 2026-10-27\instalator\AMC-Test-2026-10-27-0057.exe`.
 - Adres drugiego wydania:
   `https://github.com/michalkasperczak/AMC/releases/tag/test-2026.10.27.0057`.
-- Instalacja i aktualizacja z programu: niewykonane; publikacja i odczytowa
-  weryfikacja GitHuba: wykonane 27.10.2026.
+- Rzeczywista aktualizacja przez oficjalny aktualizator, pełna kontrola
+  integralności, ponowny start i zachowanie 421 kanałów: wykonane 27.10.2026.
+- Kliknięcie polecenia aktualizacji w menu i ręczny odbiór dialogu z NVDA:
+  niewykonane z powodu braku sterowania natywnym oknem w sesji automatyzacji.

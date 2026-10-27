@@ -49,16 +49,16 @@ do kontrolowanej archiwizacji opisanej w REL-003.
 ## Zadania
 
 - `KEY-001` — **W trakcie; kod, pełna regresja, czysta paczka, instalator i
-  wydanie GitHub są zweryfikowane; aktualizacja instalacji oraz ręczny odbiór
-  NVDA pozostają** — osobna
+  wydanie GitHub oraz rzeczywista aktualizacja instalacji są zweryfikowane;
+  ręczny odbiór NVDA pozostaje** — osobna
   karta **Klawiatura** z filtrem poleceń, podglądem zmiany przed zapisem,
   wykrywaniem konfliktów, usuwaniem i przywracaniem skrótów oraz jednym
   kontraktem menu, palety i pomocy. Szczegóły:
   [KEY-001-konfigurowalne-skroty-klawiaturowe.md](KEY-001-konfigurowalne-skroty-klawiaturowe.md).
 
 - `SET-001` — **W trakcie; kod priorytetów 1–3, pełna regresja, czysta paczka,
-  instalator i wydanie GitHub są zweryfikowane; aktualizacja instalacji oraz
-  ręczny odbiór NVDA pozostają** —
+  instalator, wydanie GitHub i rzeczywista aktualizacja instalacji są
+  zweryfikowane; ręczny odbiór NVDA pozostaje** —
   naprawa osiągalności pól domyślnych folderów przez Tab, przegląd nazw
   kontrolek, dostępna karta integracji z Windows, nowa karta Aktualizacje oraz
   karta Dostępność i komunikaty. Szczegóły:
@@ -67,9 +67,10 @@ do kontrolowanej archiwizacji opisanej w REL-003.
 - `REL-002` — **W trakcie; drugie wydanie kanału Test
   `test-2026.10.27.0057` zostało opublikowane i odczytowo zweryfikowane na
   GitHubie. Zawiera Quick App Switcher 0.1.6 i jest pierwszą wyższą wersją
-  przeznaczoną do rzeczywistej próby aktualizacji z programu. Gałąź `main`
-  wskazywała przy publikacji dokładny commit wydania; instalacja i odbiór
-  aktualizacji pozostają po stronie użytkownika** — jedna
+  używaną w rzeczywistej aktualizacji. Oficjalny aktualizator zainstalował ją,
+  potwierdzono integralność, ponowny start i zachowanie 421 zapisanych kanałów
+  YouTube bez uruchamiania logowania Google. Ręczny odbiór dialogu aktualizacji
+  z NVDA pozostaje** — jedna
   kanoniczna linia AMC Python,
   wydania AMC Test i AMC Public z tego samego commitu, dwa kanały aktualizacji,
   standardowa instalacja Windows oraz kontrolowane uporządkowanie starego C#,

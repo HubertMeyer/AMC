@@ -1,8 +1,8 @@
 # SET-001 — audyt Ustawień, NVDA i integracja z Windows
 
 Status: **W trakcie — kod priorytetów 1–3, pełna regresja, czysta paczka,
-instalator i wydanie GitHub zweryfikowane 27.10.2026; aktualizacja instalacji
-oraz ręczny odbiór NVDA pozostają**
+instalator, wydanie GitHub i rzeczywista aktualizacja instalacji zweryfikowane
+27.10.2026; ręczny odbiór NVDA pozostaje**
 
 ## Zgłoszenie użytkownika
 
@@ -191,8 +191,8 @@ identyfikatora komendy, reprezentacji obiektu ani nazwy klasy wystawionej jako
 zwykła etykieta kontrolki.
 
 Wcześniejszy zapis, że priorytet 3 pozostaje rekomendacją, został zastąpiony
-decyzją użytkownika z 27.10.2026. Karta ma pełny model stanu i testy, ale nie
-weszła jeszcze do zbudowanego instalatora ani zainstalowanej aplikacji.
+decyzją użytkownika z 27.10.2026. Karta ma pełny model stanu i testy oraz weszła
+do instalatora `AMC-Test-2026-10-27-0057.exe` i zaktualizowanej instalacji.
 
 ### Pliki zmienione w zakresie SET-001
 
@@ -346,6 +346,21 @@ Wspólna weryfikacja i publikacja SET-001 oraz KEY-001 27.10.2026:
 - wydanie testowe `test-2026.10.27.0057` opublikowano i odczytowo
   zweryfikowano na GitHubie wraz z sumami plików.
 
+Rzeczywista aktualizacja 27.10.2026:
+
+- oficjalny `AMC-Python-Updater.exe` bezpiecznie zamknął poprzednią instancję,
+  zainstalował pełny instalator i uruchomił AMC Test ponownie;
+- manifest instalacji zmienił wersję z `26.10.2026, 19:54`, commit
+  `251e163a`, na `27.10.2026, 00:57`, commit `4cb57da5`, pakiet `73ec48a6`;
+- pełna kontrola integralności zainstalowanego pakietu zakończyła się kodem 0,
+  a po starcie działała jedna instancja AMC Test;
+- instalacja i manifest nie zawierają plików OAuth YouTube; nie uruchamiano
+  logowania Google;
+- 421 zapisanych kanałów YouTube zachowało identyczny zestaw identyfikatorów i
+  adresów przed oraz po aktualizacji;
+- interfejs natywny sterowania oknem nie był dostępny w sesji automatyzacji,
+  dlatego karty Ustawień nadal wymagają ręcznego odbioru z NVDA.
+
 Najważniejsze użyte polecenia i wejścia kontrolne:
 
 - `uv run --no-project --python 3.14 --with pytest --with wxpython python -B
@@ -398,5 +413,5 @@ Najważniejsze użyte polecenia i wejścia kontrolne:
   `a09a957923afd708a78445d4bb9574181d222ce9ee557c776118bb5cb86a2329`;
 - wydanie GitHub: `test-2026.10.27.0057`, opublikowane i odczytowo
   zweryfikowane;
-- lokalna instalacja i próba aktualizacji z programu: niewykonane; pozostają
-  odbiorem użytkownika razem z ręcznym testem NVDA.
+- lokalna aktualizacja przez oficjalny aktualizator: wykonana i zweryfikowana;
+  ręczny test kart Ustawień z NVDA pozostaje.

@@ -1,7 +1,8 @@
 # KEY-001 — konfigurowalne skróty klawiaturowe
 
-Status: **W trakcie — kod, pełna regresja, czysta paczka, instalator i wydanie
-GitHub zweryfikowane; aktualizacja instalacji oraz ręczny odbiór NVDA pozostają**
+Status: **W trakcie — kod, pełna regresja, czysta paczka, instalator, wydanie
+GitHub i rzeczywista aktualizacja instalacji zweryfikowane; ręczny odbiór NVDA
+pozostaje**
 
 ## Zgłoszenie użytkownika
 
@@ -117,6 +118,17 @@ Wspólna weryfikacja wydania SET-001 i KEY-001 27.10.2026:
 - wydanie testowe `test-2026.10.27.0057` opublikowano i odczytowo
   zweryfikowano na GitHubie wraz z sumami plików.
 
+Rzeczywista aktualizacja 27.10.2026:
+
+- oficjalny `AMC-Python-Updater.exe` bezpiecznie zamknął poprzednią instancję,
+  zainstalował pełny instalator i uruchomił AMC Test ponownie;
+- manifest instalacji zmienił wersję z `26.10.2026, 19:54`, commit
+  `251e163a`, na `27.10.2026, 00:57`, commit `4cb57da5`, pakiet `73ec48a6`;
+- pełna kontrola integralności zainstalowanego pakietu zakończyła się kodem 0,
+  a po starcie działała jedna instancja AMC Test;
+- interfejs natywny sterowania oknem nie był dostępny w sesji automatyzacji,
+  dlatego menedżer skrótów nadal wymaga ręcznego odbioru z NVDA.
+
 Nie uruchomiono Ruffa, ponieważ moduł nie jest dostępny w przypiętym
 środowisku. Nie jest to przedstawiane jako zaliczony lint.
 
@@ -169,8 +181,8 @@ Projekt do korekty i zatwierdzenia użytkownika:
   `a09a957923afd708a78445d4bb9574181d222ce9ee557c776118bb5cb86a2329`;
 - wydanie GitHub: `test-2026.10.27.0057`, opublikowane i odczytowo
   zweryfikowane;
-- lokalna instalacja i próba aktualizacji z programu: niewykonane; pozostają
-  odbiorem użytkownika razem z ręcznym testem NVDA.
+- lokalna aktualizacja przez oficjalny aktualizator: wykonana i zweryfikowana;
+  ręczny test menedżera skrótów z NVDA pozostaje.
 
 Wspólny artefakt końcowy powstał z czystego, odizolowanego worktree. Równoległa
 niezwiązana zmiana użytkownika w głównym drzewie roboczym została zachowana i
