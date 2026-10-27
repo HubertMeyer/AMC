@@ -569,9 +569,10 @@ Przyszłe adaptery TIDAL, Apple Music, Spotify i WiiM mają stosować ten sam
 kontrakt, ale udostępniać cofnięcie dopiero po potwierdzeniu zapisu przez API.
 
 Korekta z 27 października 2026 dodaje SoundCloud jako prawdziwe źródło
-podcastów, a nie skrót do strony internetowej. `Ctrl+F` przeszukuje najpierw
-wbudowany katalog zweryfikowanych polskich profili z działającym RSS, a także
-oznacza wyniki innych katalogów z adresem `feeds.soundcloud.com` jako
+podcastów, a nie skrót do strony internetowej. `Ctrl+F` w Podcastach i
+YouTube oraz globalne `Ctrl+Shift+F` przeszukują wbudowany katalog
+zweryfikowanych polskich profili z działającym RSS, a także oznaczają wyniki
+innych katalogów z adresem `feeds.soundcloud.com` jako
 **podcast SoundCloud**. Pierwszy zestaw obejmuje Freta10, Dominikanów Służew i
 Dominikanów Rzeszów. Enter weryfikuje RSS, zapisuje lokalną subskrypcję i
 otwiera listę odcinków, a

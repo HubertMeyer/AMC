@@ -3,6 +3,8 @@
 - Dodano wyszukiwanie podcastów hostowanych w SoundCloud przez `Ctrl+F`.
 - Dodano jawny katalog polskich profili z niepustym RSS: Freta10, Dominikanie
   Służew i Dominikanie – Rzeszów. Działa również wpisywanie bez polskich znaków.
+- Ten sam katalog działa w `Ctrl+F` w Podcastach i YouTube oraz w globalnym
+  `Ctrl+Shift+F`, niezależnie od sesji, z której otwarto wyszukiwanie.
 - Zweryfikowane wyniki SoundCloud są pokazywane przed ogólnymi wynikami
   katalogowymi.
 - Dodano jawną etykietę **podcast SoundCloud** bez technicznych identyfikatorów.

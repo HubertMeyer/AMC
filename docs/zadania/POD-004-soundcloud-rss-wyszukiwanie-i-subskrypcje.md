@@ -33,11 +33,20 @@ niepustym RSS. Nie korzysta z konta, sekretu aplikacji ani wewnętrznego klucza
 strony WWW. Profil Jarosław istnieje, lecz jego RSS jest obecnie pusty, dlatego
 nie jest reklamowany jako działający podcast.
 
+Późniejsze doprecyzowanie użytkownika z tego samego dnia potwierdziło, że
+globalne `Ctrl+Shift+F` ma honorować tę samą poprawkę. W wxPython oba skróty
+korzystają ze wspólnej funkcji wyszukiwania, a zakres globalny obejmuje sesję
+Podcasty i YouTube niezależnie od sesji początkowej. Dodany test regresyjny
+utrwala ten kontrakt zamiast tworzyć drugi, rozbieżny adapter SoundCloud.
+
 ## Zachowanie użytkowe
 
 - `Ctrl+F` przeszukuje w pierwszej kolejności zweryfikowany katalog SoundCloud,
   a następnie pozostałe publiczne katalogi. Pierwsze wpisy to Freta10,
   Dominikanie Służew i Dominikanie – Rzeszów.
+- `Ctrl+Shift+F` korzysta z tego samego katalogu SoundCloud w wyszukiwaniu
+  wszystkich usług, również gdy okno otwarto z innej sesji niż Podcasty i
+  YouTube.
 - Każdy wynik, którego kanał znajduje się w `feeds.soundcloud.com`, jest
   nazwany **podcast SoundCloud**. Zweryfikowane wyniki SoundCloud są ustawiane
   przed ogólnymi wynikami katalogowymi.
@@ -96,6 +105,11 @@ adresu RSS.
 - Celowany test Windows po korekcie (`--soundcloud-podcast-client`): oba
   przypadki zaliczone — resolver publicznego profilu oraz wyszukiwanie polskich
   kanałów przez `Ctrl+F` bez konta.
+- Test parytetu wyszukiwania globalnego potwierdza, że `Ctrl+Shift+F` wywołuje
+  ten sam katalog i zwraca `Freta10` jako **podcast SoundCloud** z użytkową
+  nazwą sesji, bez technicznego identyfikatora w etykiecie NVDA.
+- Powiązany zestaw wyszukiwania, nawigacji, skrótów i palety poleceń po dodaniu
+  testu parytetu: `116 passed`.
 - Żywa próba całej drogi wyszukiwania dla `Dominikanie Freta`: źródło
   SoundCloud zwróciło `1` wynik w `0,0 s`, a `Freta10` było pierwszą pozycją z
   prawidłowym RSS-em i adresem profilu.

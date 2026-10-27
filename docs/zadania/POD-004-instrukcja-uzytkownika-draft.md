@@ -9,6 +9,8 @@
 Wbudowany katalog rozpoznaje między innymi hasła `Dominikanie Freta`,
 `Dominikanie Służew` i `Dominikanie Rzeszów`, również bez polskich znaków.
 Zweryfikowany wynik SoundCloud pojawia się przed ogólnymi wynikami katalogów.
+Te same wyniki są dostępne w globalnym wyszukiwaniu `Ctrl+Shift+F`, także gdy
+wyszukiwanie otwarto z innej sesji niż Podcasty i YouTube.
 
 Możesz również nacisnąć `Ctrl+N` i wkleić adres publicznego profilu, na
 przykład `https://soundcloud.com/NazwaProfilu`, albo pełny adres RSS. AMC

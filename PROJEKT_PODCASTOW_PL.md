@@ -346,7 +346,9 @@ nie przez nieograniczone parsowanie dowolnej strony.
    wyłącznie na wpisach Apple Podcasts. Przeszukuje także mały, jawny katalog
    polskich profili SoundCloud, których nie ma w Apple, ale które mają
    sprawdzony niepusty RSS. Wyniki te używają tego samego Enter,
-   `Ctrl+Shift+L`, odtwarzania i pobierania co pozostałe podcasty.
+   `Ctrl+Shift+L`, odtwarzania i pobierania co pozostałe podcasty. Globalne
+   `Ctrl+Shift+F` korzysta z dokładnie tego samego katalogu i nie pomija tych
+   wyników, gdy wyszukiwanie rozpoczęto z innej sesji.
 
 Pozostała mapa skrótów zostanie ustalona po pierwszym działającym widoku. Nie
 należy rezerwować dalszych klawiszy na podstawie samego dokumentu

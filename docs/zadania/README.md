@@ -51,10 +51,10 @@ do kontrolowanej archiwizacji opisanej w REL-003.
 - `POD-004` — **Wydane w AMC Test `0.1.0-alpha.436`; poprawa polskiego
   wyszukiwania SoundCloud jest zapisana w commicie `11ba6271`, lecz nie ma
   jeszcze nowej instalacji ani publikacji** —
-  wyszukiwanie podcastów SoundCloud przez `Ctrl+F`, lokalna subskrypcja przez
-  `Ctrl+Shift+L`, adres profilu lub RSS w `Ctrl+N` oraz zwykłe pliki audio do
-  odtwarzania i pobierania. Korekta zastępuje wcześniejszą webową integrację
-  Mixcloud.
+  wyszukiwanie podcastów SoundCloud przez `Ctrl+F` i globalne `Ctrl+Shift+F`,
+  lokalna subskrypcja przez `Ctrl+Shift+L`, adres profilu lub RSS w `Ctrl+N`
+  oraz zwykłe pliki audio do odtwarzania i pobierania. Korekta zastępuje
+  wcześniejszą webową integrację Mixcloud.
   Szczegóły:
   [POD-004-soundcloud-rss-wyszukiwanie-i-subskrypcje.md](POD-004-soundcloud-rss-wyszukiwanie-i-subskrypcje.md).
 

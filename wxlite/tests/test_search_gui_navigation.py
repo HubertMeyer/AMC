@@ -892,6 +892,90 @@ def test_remote_result_uses_materialization_instead_of_local_navigation() -> Non
     assert calls == [([result], SearchResultAction.OPEN)]
 
 
+def test_global_search_includes_verified_soundcloud_directory_result(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    shown: list[tuple[list[SearchEntry], tuple[str, ...]]] = []
+    calls: list[tuple[str, object]] = []
+    monkeypatch.setattr(
+        gui_module.session_order,
+        "available_sessions",
+        lambda: (SessionId.FILES, SessionId.PODCASTS),
+    )
+
+    class Runner:
+        @staticmethod
+        def submit(_name, work, done, _failed):
+            done(work())
+
+    def collect(sessions) -> SearchCollection:
+        calls.append(("collect", tuple(sessions)))
+        return SearchCollection((), ())
+
+    def search_podcast_directories(query: str) -> dict[str, object]:
+        calls.append(("podcast-directories", query))
+        return {
+            "items": [
+                {
+                    "id": "podcast-directory:soundcloud:152970424",
+                    "title": "Freta10",
+                    "artist": "Dominikanie Warszawa-Freta",
+                    "kind": "podcast",
+                    "remoteKind": "soundcloudPodcast",
+                    "address": (
+                        "https://feeds.soundcloud.com/users/"
+                        "soundcloud:users:152970424/sounds.rss"
+                    ),
+                    "pageAddress": "https://soundcloud.com/freta10",
+                    "detail": "podcast SoundCloud",
+                    "durationTicks": 0,
+                }
+            ],
+            "warnings": [],
+        }
+
+    frame = SimpleNamespace(
+        navigator=SimpleNamespace(sessions={}),
+        search_sources=SimpleNamespace(collect=collect),
+        client=SimpleNamespace(
+            search_podcast_directories=search_podcast_directories,
+        ),
+        runner=Runner(),
+        _search_dialog_alive=lambda _dialog: True,
+    )
+    dialog = SimpleNamespace(
+        catalog=None,
+        show_results=lambda entries, warnings: shown.append((entries, warnings)),
+        search_failed=lambda: pytest.fail("wyszukiwanie nie powinno zawieść"),
+    )
+
+    LiteFrame._run_search_query(
+        frame,
+        "Dominikanie Freta",
+        dialog,
+        all_services=True,
+        session_before=SessionId.FILES,
+    )
+
+    assert calls == [
+        ("collect", (SessionId.FILES, SessionId.PODCASTS)),
+        ("podcast-directories", "Dominikanie Freta"),
+    ]
+    entries, warnings = shown[0]
+    assert warnings == ()
+    assert len(entries) == 1
+    result = entries[0]
+    assert result.session_id is SessionId.PODCASTS
+    assert result.remote_kind == "soundcloudPodcast"
+    assert result.row.title == "Freta10"
+    assert result.row.detail == "podcast SoundCloud"
+    assert result.accessible_label == (
+        "Freta10, Dominikanie Warszawa-Freta, podcast, "
+        "podcast SoundCloud, Podcasty i YouTube"
+    )
+    assert "152970424" not in result.accessible_label
+
+
 @pytest.mark.parametrize(
     ("session_id", "remote_kind", "kind"),
     (

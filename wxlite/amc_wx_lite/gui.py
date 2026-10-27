@@ -10285,6 +10285,10 @@ class LiteFrame(wx.Frame):
                             "Nie udało się przeszukać publicznego katalogu "
                             "stacji radiowych"
                         )
+            # Ten sam blok jest kontraktem Ctrl+F w Podcastach i globalnego
+            # Ctrl+Shift+F. Zakres globalny zawiera sesję Podcasty i YouTube,
+            # więc katalogi SoundCloud/Apple/Spreaker/YouTube nie mogą zależeć
+            # od sesji, z której użytkownik otworzył wyszukiwanie.
             if SessionId.PODCASTS in sessions:
                 client = self.client
                 if client is None:
