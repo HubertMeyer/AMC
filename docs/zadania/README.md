@@ -110,12 +110,11 @@ do kontrolowanej archiwizacji opisanej w REL-003.
   Szczegóły:
   [REL-003-usuniecie-wpf-i-stan-youtube.md](REL-003-usuniecie-wpf-i-stan-youtube.md).
 
-- `RECOG-001` — **W trakcie; kod, pełna regresja, build i instalacja AMC Test
-  26.10.2026, 14:01 są gotowe; pozostaje ręczny odbiór NVDA** — prawa
-  strzałka od razu fokusuje i odczytuje pierwsze działanie, a instrukcję
-  udostępnia tylko przy rozszerzonych komunikatach; pełne podmenu `Usługi,
-  łącza i powiązania`, Spotify i TIDAL w AMC z fokusem utworu, oryginalne
-  aplikacje oraz publiczne łącza Apple Music rozwiązywane na żądanie.
+- `RECOG-001` — **W trakcie; korekta oznajmiania `Ctrl+C` i `Ctrl+Shift+C`
+  z 27.10.2026 ma 18/18 testów celowanych, lecz nie została jeszcze zbudowana
+  ani zainstalowana; pozostaje ręczny odbiór NVDA** — prawa strzałka od razu
+  fokusuje pierwszy element, obie listy potwierdzają kopiowanie przez lokalny
+  region aktywny, a pełne podmenu zachowuje `Usługi, łącza i powiązania`.
   Szczegóły:
   [RECOG-001-interakcje-z-rozpoznanymi-utworami.md](RECOG-001-interakcje-z-rozpoznanymi-utworami.md).
 

@@ -1,7 +1,8 @@
 # RECOG-001 — interakcje z rozpoznanymi utworami
 
-- Status: **W trakcie; kod, testy, build i instalacja AMC Test są gotowe,
-  pozostaje ręczny odbiór z NVDA**.
+- Status: **W trakcie; korekta oznajmiania kopiowania z 27.10.2026 ma gotowe
+  źródła i 18/18 testów celowanych, ale nie została jeszcze zbudowana ani
+  zainstalowana; pozostaje ręczny odbiór z NVDA**.
 - Data wdrożenia: 26.10.2026.
 - Instalacja: `D:\Projekty Codex\AMC Python`.
 - Profil: wyłącznie AMC Test. AMC Public i GitHub nie zostały zmienione.
@@ -29,6 +30,10 @@ podczas chodzenia strzałkami.
   `Ctrl+Shift+C` rozwiązuje na żądanie i kopiuje dokładne łącze do utworu w
   usłudze domyślnej. Na krótkiej liście `Ctrl+C` kopiuje nazwę działania, a
   `Ctrl+Shift+C` związane z nim łącze.
+- Po udanym kopiowaniu aktywne okno przekazuje NVDA krótki komunikat:
+  `Skopiowano opis`, `Skopiowano łącze do utworu w Spotify` albo
+  `Skopiowano łącze do utworu w TIDAL` na liście głównej oraz `Skopiowano
+  nazwę działania` lub `Skopiowano łącze` na liście spod prawej strzałki.
 - `Alt+strzałka w górę` i `Alt+strzałka w dół` zmieniają trwałą kolejność.
   NVDA otrzymuje komunikat `Nad …` albo `Pod …` z nazwą sąsiedniego utworu.
 - Ustawienie `Domyślna usługa rozpoznanych utworów` pozwala wybrać Spotify
@@ -54,6 +59,10 @@ nie wykonywało zapytań sieciowych.
 - Korekta użytkownika z 26.10.2026 zastępuje modalny dialog prawej strzałki z
   zawsze czytanym tytułem i instrukcją: zwykły tryb przechodzi bezpośrednio na
   pierwszy wiersz, a instrukcja pozostaje tylko w rozszerzonych komunikatach.
+- Korekta użytkownika z 27.10.2026 zastępuje samo wizualne ustawienie tekstu
+  po kopiowaniu. Potwierdzenie musi wysłać pojedyncze zdarzenie lokalnego
+  regionu aktywnego w aktualnym oknie, ponieważ komunikator nieaktywnej ramki
+  głównej celowo nie wchodzi NVDA w słowo.
 - Krótka lista pod prawą strzałką i pełne menu nie są dwiema implementacjami;
   są dwoma widokami jednego katalogu działań.
 - Dokładne wyniki są pobierane dopiero po działaniu użytkownika i buforowane.
@@ -71,6 +80,10 @@ nie wykonywało zapytań sieciowych.
   zwięzłe okno prawej strzałki bez stałej instrukcji.
 - Automatyczna kontrola paczki, sum i izolowany start interfejsu oraz hosta:
   zaliczone.
+- Korekta oznajmiania z 27.10.2026: **18/18 testów celowanych bez widocznego
+  interfejsu**. Sprawdzono lokalny region aktywny obu list, cztery komunikaty
+  kopiowania oraz brak natychmiast nadpisywanego `Sprawdzam…` przy łączu z
+  pamięci podręcznej. Pełnej regresji ani testów GUI nie uruchamiano.
 
 ## Znane ograniczenia i ręczny odbiór
 
@@ -83,14 +96,18 @@ nie wykonywało zapytań sieciowych.
   rozszerzonych komunikatach, Escape, ponowne otwarcie, `Ctrl+C`,
   `Ctrl+Shift+C`, `Ctrl+Enter`, oba kierunki przenoszenia oraz fokus utworu po
   otwarciu albumu w Spotify i TIDAL.
+- Najnowsza korekta oznajmiania nie jest jeszcze zbudowana ani zainstalowana,
+  więc bieżąca instalacja nadal może kopiować poprawnie bez wypowiedzenia
+  potwierdzenia.
 
 ## Materiał do dokumentacji użytkownika
 
 > Otwórz Rozpoznane utwory skrótem Ctrl+Alt+S. Enter otwiera utwór, Ctrl+Enter
 > jego album, a prawa strzałka pokazuje najważniejsze działania dla Spotify,
 > TIDAL i Apple Music. Ctrl+C kopiuje pełny opis, a Ctrl+Shift+C dokładne
-> łącze w wybranej domyślnej usłudze. Pełny zestaw znajduje się w menu
-> kontekstowym, w pozycji Usługi, łącza i powiązania.
+> łącze w wybranej domyślnej usłudze. Po skopiowaniu NVDA potwierdza, co
+> zostało skopiowane. Pełny zestaw znajduje się w menu kontekstowym, w pozycji
+> Usługi, łącza i powiązania.
 
 ## Projekt opisu zmian
 
@@ -100,12 +117,17 @@ nie wykonywało zapytań sieciowych.
 
 ## Wersja i commit
 
-- Commit źródłowy: `4c8fceda738afd0163040a400150007d16f8409c` —
-  `fix(amc-test): skroc mowe listy rozpoznanych utworow`.
-- Zmienione pliki źródłowe: `wxlite/amc_wx_lite/gui.py` oraz
+- Najnowsza korekta źródeł: `38e0acc8` —
+  `fix: announce recognized track copies locally`.
+- Zmienione pliki: `wxlite/amc_wx_lite/gui.py`,
+  `wxlite/amc_wx_lite/live_region.py` i
   `wxlite/tests/test_recognition_actions.py`.
+- Stan korekty: źródła i testy celowane gotowe; build, instalacja i publikacja
+  nie były wykonywane.
+- Ostatni zainstalowany commit tego zadania: `4c8fceda738afd0163040a400150007d16f8409c` —
+  `fix(amc-test): skroc mowe listy rozpoznanych utworow`.
 - Pakiet: `faef4e7f`.
 - Etykieta: `2026.10.26-4c8fceda738afd0163040a400150007d16f8409c-faef4e7f`.
 - Okno: `AMC Test — 26.10.2026, 14:01`.
 - Promocja zakończona 26.10.2026 o 14:03 czasu lokalnego.
-- Publikacja: nie wykonywano.
+- Publikacja korekty z 27.10.2026: nie wykonywano.
