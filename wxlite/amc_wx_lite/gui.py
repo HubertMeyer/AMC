@@ -105,6 +105,7 @@ from . import nvda_bridge
 from .library_source import LibrarySnapshot, LibrarySource, degradation_notice
 from . import list_sync
 from . import list_filter
+from .live_region import announce_status
 from .list_model import (
     ListModel,
     Row,
@@ -6254,7 +6255,6 @@ class RecognitionActionsWindow(wx.Frame):
         actions: tuple[RecognitionAction, ...],
         *,
         copy_to_clipboard: Callable[[str], bool],
-        announce: Callable[[str], None],
         resolve_action,
         execute_action,
         detailed_hints: bool,
@@ -6273,7 +6273,6 @@ class RecognitionActionsWindow(wx.Frame):
         self._entry = entry
         self._actions = actions
         self._copy_to_clipboard = copy_to_clipboard
-        self._announce = announce
         self._resolve_action = resolve_action
         self._execute_action = execute_action
         self._finished = finished
@@ -6324,9 +6323,7 @@ class RecognitionActionsWindow(wx.Frame):
         self._finish(False)
 
     def _set_status(self, text: str) -> None:
-        self.status.SetLabel(text)
-        self.status.SetName(text)
-        self._announce(text)
+        announce_status(self.status, text)
 
     def _selected_action(self) -> RecognitionAction | None:
         index = self.actions.GetSelection()
@@ -6370,7 +6367,11 @@ class RecognitionActionsWindow(wx.Frame):
         if action is None:
             self._set_status("Brak wybranego działania")
             return
-        self._set_status("Sprawdzam dokładne łącze")
+        if (
+            action.needs_match
+            and recognition_cached_matches(self._entry).get(action.service) is None
+        ):
+            self._set_status("Sprawdzam dokładne łącze")
 
         def ready(match: dict | None) -> None:
             if self._closing:
@@ -6415,7 +6416,6 @@ class RadioRecognitionHistoryDialog(wx.Dialog):
         entries: list[dict],
         *,
         copy_to_clipboard: Callable[[str], bool],
-        announce: Callable[[str], None],
         default_service: str,
         submit,
         resolve_match,
@@ -6424,7 +6424,6 @@ class RadioRecognitionHistoryDialog(wx.Dialog):
         super().__init__(parent, title="Rozpoznane utwory", size=(760, 540))
         self._entries = entries
         self._copy_to_clipboard = copy_to_clipboard
-        self._announce = announce
         self._default_service = normalize_recognition_default_service(default_service)
         self._submit = submit
         self._resolve_match = resolve_match
@@ -6569,9 +6568,7 @@ class RadioRecognitionHistoryDialog(wx.Dialog):
         return self._visible[index] if 0 <= index < len(self._visible) else None
 
     def _set_status(self, text: str) -> None:
-        self.status.SetLabel(text)
-        self.status.SetName(text)
-        self._announce(text)
+        announce_status(self.status, text)
 
     def _resolve_action(self, entry, action, ready, failed) -> None:
         if not action.needs_match:
@@ -6620,7 +6617,11 @@ class RadioRecognitionHistoryDialog(wx.Dialog):
             self._default_service,
             "track",
         )
-        self._set_status("Sprawdzam dokładne łącze do utworu")
+        if (
+            action.needs_match
+            and recognition_cached_matches(entry).get(action.service) is None
+        ):
+            self._set_status("Sprawdzam dokładne łącze do utworu")
 
         def ready(match: dict | None) -> None:
             link = recognition_action_url(action, match)
@@ -6712,7 +6713,6 @@ class RadioRecognitionHistoryDialog(wx.Dialog):
             entry,
             recognition_quick_actions(entry, self._default_service),
             copy_to_clipboard=self._copy_to_clipboard,
-            announce=self._announce,
             resolve_action=self._resolve_action,
             execute_action=execute,
             detailed_hints=self._detailed_hints,
@@ -29561,7 +29561,6 @@ class LiteFrame(wx.Frame):
             self,
             self.state.recognized_tracks,
             copy_to_clipboard=self._to_clipboard,
-            announce=self.announcer.say,
             default_service=self.options.radio_recognition_default_service,
             submit=self.runner.submit,
             resolve_match=self._resolve_recognition_match,

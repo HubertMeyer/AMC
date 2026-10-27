@@ -83,6 +83,38 @@ def test_right_arrow_actions_match_concise_spotify_tidal_window_contract() -> No
     assert "actions_window.show_for_keyboard()" in history
 
 
+def test_copy_confirmations_use_the_active_recognition_window_live_region() -> None:
+    source = GUI_SOURCE.read_text(encoding="utf-8")
+    window = source.split("class RecognitionActionsWindow", 1)[1].split(
+        "class RadioRecognitionHistoryDialog", 1
+    )[0]
+    history = source.split("class RadioRecognitionHistoryDialog", 1)[1].split(
+        "class GeneralPlaybackOptionsDialog", 1
+    )[0]
+
+    for section in (window, history):
+        assert "announce_status(self.status, text)" in section
+        assert "self._announce(text)" not in section
+
+    assert 'self._set_status("Skopiowano nazwę działania")' in window
+    assert 'self._set_status("Skopiowano łącze")' in window
+    assert '"Skopiowano opis" if len(selected) == 1' in history
+    assert 'f"Skopiowano łącze do utworu w {recognition_service_label(action.service)}"' in history
+
+
+def test_cached_copy_link_does_not_precede_confirmation_with_lookup_message() -> None:
+    source = GUI_SOURCE.read_text(encoding="utf-8")
+    window = source.split("class RecognitionActionsWindow", 1)[1].split(
+        "class RadioRecognitionHistoryDialog", 1
+    )[0]
+    history = source.split("class RadioRecognitionHistoryDialog", 1)[1].split(
+        "class GeneralPlaybackOptionsDialog", 1
+    )[0]
+
+    assert "recognition_cached_matches(self._entry).get(action.service) is None" in window
+    assert "recognition_cached_matches(entry).get(action.service) is None" in history
+
+
 def test_catalogue_match_is_conservative_and_diacritic_tolerant() -> None:
     selected = select_catalog_match(_entry(), [
         {"title": "Inny utwór", "artist": "Krystyna Prońko", "album": "Album"},

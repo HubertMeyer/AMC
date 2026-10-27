@@ -1,10 +1,10 @@
-"""Mały wspólny kanał komunikatów z okien modalnych wx.
+"""Mały wspólny kanał komunikatów z aktywnych okien podrzędnych wx.
 
 Zmiana samej etykiety ``StaticText`` nie wywołuje wypowiedzi NVDA.  Okna
-modalne nie mogą też korzystać z announcera głównej ramki, bo podczas ich
-działania ramka jest nieaktywna.  Ten moduł ustawia świadomie przygotowaną
-nazwę użytkową i wysyła dokładnie jedno zdarzenie regionu aktywnego dla
-kontrolki należącej do bieżącego okna.
+modalne i lekkie okna relacji nie mogą też korzystać z announcera głównej
+ramki, bo podczas ich działania ramka jest nieaktywna. Ten moduł ustawia
+świadomie przygotowaną nazwę użytkową i wysyła dokładnie jedno zdarzenie
+regionu aktywnego dla kontrolki należącej do bieżącego okna.
 """
 
 from __future__ import annotations
@@ -29,7 +29,7 @@ def announce_status(
     *,
     notify: Callable[[int, int, int, int], None] = _notify_win_event,
 ) -> str:
-    """Pokaż i wypowiedz jeden gotowy komunikat w aktywnym oknie modalnym."""
+    """Pokaż i wypowiedz jeden komunikat w aktywnym oknie podrzędnym."""
 
     text = (message or "").strip()
     if not text:
