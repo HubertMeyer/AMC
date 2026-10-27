@@ -63,12 +63,11 @@ do kontrolowanej archiwizacji opisanej w REL-003.
   Szczegóły:
   [POD-004-soundcloud-rss-wyszukiwanie-i-subskrypcje.md](POD-004-soundcloud-rss-wyszukiwanie-i-subskrypcje.md).
 
-- `YT-005` — **Wydane w AMC Test `0.1.0-alpha.436`; kod, testy, paczka,
-  instalator i GitHub są zweryfikowane, aktualizacja przeszła, ręczny odbiór
-  funkcji z NVDA
-  pozostaje** — ponowne `Ctrl+I` w otwartej skrzynce doładowuje następne 150
-  pozycji, a kolekcje YouTube żądają polskich tytułów przy zachowaniu dat
-  przybliżonych. Szczegóły:
+- `YT-005` — **Zaakceptowane przez użytkownika i wydane w AMC Test
+  `0.1.0-alpha.436`; kod, testy, paczka, instalator, GitHub oraz ręczny odbiór
+  głównych funkcji są zweryfikowane** — ponowne `Ctrl+I` w otwartej skrzynce
+  doładowuje następne 150 pozycji, a kolekcje YouTube żądają polskich tytułów
+  przy zachowaniu dat przybliżonych. Szczegóły:
   [YT-005-skrzynka-ctrl-i-i-tytuly-youtube.md](YT-005-skrzynka-ctrl-i-i-tytuly-youtube.md).
 
 - `KEY-001` — **W trakcie; kod, pełna regresja, czysta paczka, instalator i

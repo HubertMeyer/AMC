@@ -2,10 +2,12 @@
 
 ## Status
 
-Wydane w AMC Test `0.1.0-alpha.436`. Kod, 141 testów Pythona, dwie regresje C#,
-odczytowe próby prawdziwej biblioteki i publicznego YouTube, pełna paczka,
-instalator oraz GitHub prerelease są zweryfikowane. Instalacji nie wykonano;
-ręczny test aktualizacji i odbiór NVDA pozostają.
+Zaakceptowane przez użytkownika i wydane w AMC Test `0.1.0-alpha.436`. Kod,
+141 testów Pythona, dwie regresje C#, odczytowe próby prawdziwej biblioteki i
+publicznego YouTube, pełna paczka, instalator oraz GitHub prerelease są
+zweryfikowane. Użytkownik ręcznie potwierdził doładowywanie przez `Ctrl+I` i
+polskie tytuły YouTube. Pełny audyt wszystkich ścieżek NVDA pozostaje osobnym
+zadaniem.
 
 ## Zgłoszenie użytkownika
 
@@ -118,6 +120,19 @@ klawiatury podają: „Otwórz nowe odcinki i materiały; w otwartej skrzynce wc
 kolejne 150 pozycji”. Menu i paleta używają nazwy „Nowe odcinki i materiały”,
 bez identyfikatora technicznego.
 
+## Odbiór użytkownika
+
+27 października 2026 użytkownik potwierdził w używanej przez siebie aplikacji,
+że kolejne naciśnięcia `Ctrl+I` prawidłowo dokładają elementy oraz że nie widzi
+już angielskich tytułów filmów YouTube. Na tej podstawie oba zgłoszone problemy
+zostały uznane za rozwiązane. To potwierdzenie zastępuje wcześniejszy zapis, że
+ręczny odbiór podstawowego przebiegu pozostaje do wykonania.
+
+Test nie obejmował osobnego, pełnego audytu wszystkich powierzchni polecenia,
+powrotu fokusu po Escape ani ponownego otwierania pomocy. Nie zapisano też
+niezależnego odczytu numeru zainstalowanej wersji po teście, dlatego odbiór
+funkcji nie jest przedstawiany jako narzędziowa weryfikacja instalacji.
+
 ## Różnice trybów i migracja
 
 - Pierwsze `Ctrl+I` działa jako dotychczasowy globalny podgląd; Escape wraca
@@ -160,5 +175,7 @@ Wersja użytkowa `0.1.0-alpha.436` została zbudowana i opublikowana jako
 `test-2026.10.27.0233` z commitu `abfee285`. Instalator:
 `AMC-Test-2026-10-27-0233.exe`, 134290393 bajty, SHA-256
 `1d4fd2ecabe4d358246ae094ebfefdbc19dde7ceade018e6f13bcb5c61beb36a`.
-Nie zainstalowano jej ani nie uruchomiono aktualizatora; działające AMC Test
-pozostało na `0.1.0-alpha.435`, aby użytkownik wykonał ręczny test aktualizacji.
+Codex nie instalował tej wersji ani nie uruchamiał aktualizatora. W chwili
+publikacji działające AMC Test pozostawało na `0.1.0-alpha.435`; późniejszy
+ręczny odbiór użytkownika potwierdził działanie funkcji, ale numer wersji po
+teście nie został niezależnie odczytany narzędziowo.
