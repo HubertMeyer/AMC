@@ -2767,6 +2767,12 @@ static void TestLiveYouTubeSearch(string query)
 
 static void TestYouTubeCollectionResults()
 {
+    Assert(
+        YouTubeCollectionClient.CollectionDateExtractorArguments
+            == "youtubetab:approximate_date"
+        && YouTubeCollectionClient.CollectionLanguageExtractorArguments
+            == "youtube:lang=pl",
+        "Kolekcja YouTube nie przekazuje polskiego języka do właściwego ekstraktora.");
     const string wieniawskiAddress = "https://www.youtube.com/@WieniawskiSociety";
     const string normalizedWieniawskiAddress =
         "https://www.youtube.com/%40WieniawskiSociety/videos";

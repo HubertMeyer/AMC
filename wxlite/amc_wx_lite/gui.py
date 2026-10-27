@@ -20412,17 +20412,25 @@ class LiteFrame(wx.Frame):
         )
 
     def _show_podcast_inbox(self) -> None:
-        """Ctrl+I: global preview that Escape restores exactly."""
+        """Ctrl+I: otwórz podgląd albo doładuj kolejne 150 pozycji."""
+        podcast_state = self.navigator.sessions[SessionId.PODCASTS]
+        load_more = (
+            self.navigator.active is SessionId.PODCASTS
+            and podcast_state.view is View.LIST
+            and podcast_state.library_view is LibraryView.PODCAST_INBOX
+        )
         self._begin_transient_preview()
         self.navigator.active = SessionId.PODCASTS
         # Oznaczamy widok od razu, zanim watek SQLite odda dane. Escape ma
         # dzialac takze podczas wczytywania, a spozniony wynik po Escape nie
         # moze ponownie otworzyc podgladu.
-        podcast_state = self.navigator.sessions[SessionId.PODCASTS]
         podcast_state.library_view = LibraryView.PODCAST_INBOX
         podcast_state.view = View.LIST
         self._open_podcast_aggregate(
-            OpenPodcastAggregateView(LibraryView.PODCAST_INBOX),
+            OpenPodcastAggregateView(
+                LibraryView.PODCAST_INBOX,
+                load_more=load_more,
+            ),
             announce_single_item=True,
         )
 

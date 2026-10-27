@@ -89,7 +89,10 @@ Od `alpha.223` jednorazowa migracja naprawia skrzynki utworzone przez wczesny
 import OPML. Jeżeli obserwowana audycja nie ma żadnego nowego odcinka, tylko
 jej najnowszy nierozpoczęty odcinek otrzymuje stan „nowy”. Audycje z istniejącą
 nową pozycją, materiały rozpoczęte i odtworzone oraz podcasty usunięte z
-Biblioteki pozostają bez zmian. `Ctrl+I` jest lokalnym wejściem do skrzynki;
+Biblioteki pozostają bez zmian. Pierwsze `Ctrl+I` otwiera skrzynkę i wczytuje
+150 pozycji. Każde kolejne `Ctrl+I` w otwartej skrzynce doładowuje następne
+150 i ustawia fokus na pierwszej nowej pozycji. Ten sam skutek daje Enter na
+końcowym wierszu **Załaduj więcej**. `Ctrl+I` czyta lokalną bibliotekę;
 `F5` stanowi jawne odświeżenie sieciowe wszystkich obserwowanych kanałów.
 
 Od `alpha.222` powrót Escape z odtwarzacza zachowuje pozycję w źródłowej
@@ -1832,7 +1835,9 @@ Od `alpha.214` naprawdę nowy odcinek opuszcza ją po osiągnięciu jednej minut
 trafia do osobnego widoku **W trakcie słuchania** pod `Ctrl+Shift+I`; ukończenie
 oznacza go jako odtworzony. Archiwalny odcinek dodany przy pierwszym imporcie nie
 staje się przez to fałszywie rozpoczęty. Playlista jest ręcznym kontenerem
-użytkownika. `Ctrl+I` otwiera skrzynkę Nowe odcinki. W Podcastach `Ctrl+C` kopiuje
+użytkownika. `Ctrl+I` otwiera skrzynkę Nowe odcinki z pierwszymi 150
+pozycjami; ponowne naciśnięcie w tej skrzynce doładowuje kolejne 150.
+W Podcastach `Ctrl+C` kopiuje
 nazwę, pełny opis i publiczną stronę odcinka lub audycji, `Ctrl+Shift+C`
 wyłącznie bezpośredni adres audio albo RSS, a `Ctrl+D` pobiera świadomie wybrane odcinki.
 Całe archiwum audycji nigdy nie jest pobierane przez skrót bez osobnego zakresu

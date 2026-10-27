@@ -15,6 +15,7 @@ from amc_wx_lite.search_catalog import SESSION_LABELS
 from amc_wx_lite.shortcuts import (
     Action,
     Chord,
+    command_presentation,
     ctrl_f5_presentation,
     describe,
     describe_action,
@@ -300,6 +301,37 @@ def test_recording_views_have_one_user_facing_command_contract() -> None:
         player_view=False,
         radio_session=True,
     ) is Action.VIEW_RECORDED_RADIO_FILES
+
+
+def test_podcast_inbox_command_explains_repeated_ctrl_i_everywhere() -> None:
+    presentation = command_presentation(Action.VIEW_PODCAST_INBOX)
+    assert presentation is not None
+    assert presentation.name == "Nowe odcinki i materiały"
+    assert presentation.shortcut == "Ctrl+I"
+    assert "kolejne 150 pozycji" in presentation.description
+
+    menu_entry = next(
+        item
+        for menu in menu_model.menus_for_session(SessionId.PODCASTS)
+        for item in menu.items
+        if item.action is Action.VIEW_PODCAST_INBOX
+    )
+    palette_entry = next(
+        item
+        for item in entries_for_session(SessionId.PODCASTS)
+        if item.action is Action.VIEW_PODCAST_INBOX
+    )
+    assert menu_entry.label.replace("&", "") == presentation.name
+    assert menu_entry.shortcut == palette_entry.shortcut == presentation.shortcut
+    assert palette_entry.name == presentation.name
+    assert dict(describe("Podcasty i YouTube", {Action.VIEW_PODCAST_INBOX}))[
+        "Ctrl+I"
+    ] == presentation.description
+    assert keyboard_help_announcement(
+        Chord("I", ctrl=True),
+        Action.VIEW_PODCAST_INBOX,
+        "Podcasty i YouTube",
+    ) == f"Ctrl+I. {presentation.description}. Podcasty i YouTube"
 
 
 def test_schedule_manager_name_and_shortcut_match_palette_and_keyboard_help() -> None:

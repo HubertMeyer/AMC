@@ -432,6 +432,16 @@ class CommandPresentation:
 
 
 _STATIC_COMMAND_PRESENTATIONS: dict[Action, CommandPresentation] = {
+    Action.VIEW_PODCAST_INBOX: CommandPresentation(
+        Action.VIEW_PODCAST_INBOX,
+        "Nowe odcinki i materiały",
+        (
+            "Otwórz nowe odcinki i materiały; w otwartej skrzynce "
+            "wczytaj kolejne 150 pozycji"
+        ),
+        "Ctrl+I",
+        "&Nowe odcinki i materiały",
+    ),
     Action.CHECK_APPLICATION_UPDATE: CommandPresentation(
         Action.CHECK_APPLICATION_UPDATE,
         "Sprawdź aktualizację AMC",
@@ -2544,6 +2554,9 @@ def describe_action(action: Action, session_label: str | None = None) -> str:
     ctrl_f5 = ctrl_f5_presentation(session_label)
     if ctrl_f5 is not None and ctrl_f5.action is action:
         return ctrl_f5.description
+    shared = command_presentation(action)
+    if shared is not None:
+        return shared.description
     if (session_label or "").casefold() == "spotify":
         spotify_chapter_labels = {
             Action.VIEW_CHAPTERS:

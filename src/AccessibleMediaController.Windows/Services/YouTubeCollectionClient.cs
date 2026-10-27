@@ -21,6 +21,10 @@ internal sealed record YouTubeCollectionDocument(
 internal sealed class YouTubeCollectionClient
 {
     internal const int MaximumItems = 100;
+    internal const string CollectionDateExtractorArguments =
+        "youtubetab:approximate_date";
+    internal const string CollectionLanguageExtractorArguments =
+        "youtube:lang=pl";
     private const int MaximumJsonCharacters = 16 * 1024 * 1024;
 
     private static readonly HttpClient FeedHttpClient = new()
@@ -150,12 +154,12 @@ internal sealed class YouTubeCollectionClient
             "--socket-timeout", "15",
             "--extractor-retries", "2",
             "--playlist-end", MaximumItems.ToString(CultureInfo.InvariantCulture),
-            // 2026-09-11: ZMIERZONE. Dwa osobne "--extractor-args" NIE dzialaja
-            // razem - kolejne uniewaznia poprzednie, wiec "youtube:lang=pl"
-            // zabijalo "youtubetab:approximate_date" i KAZDY material YouTube
-            // trafial do bazy bez daty publikacji (4645 z 4645 odcinkow).
-            // Oba ustawienia musza byc w JEDNYM argumencie, po sredniku.
-            "--extractor-args", "youtubetab:approximate_date;lang=pl",
+            // Korekta 2026-10-27: oficjalna skladnia wymaga osobnego
+            // KEY:ARGS dla kazdego ekstraktora. Srednik rozdziela argumenty
+            // jednego ekstraktora, nie dwie grupy. youtubetab odpowiada za
+            // daty, a youtube za jezyk metadanych.
+            "--extractor-args", CollectionDateExtractorArguments,
+            "--extractor-args", CollectionLanguageExtractorArguments,
             "--dump-single-json",
             "--",
             address.AbsoluteUri

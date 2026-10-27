@@ -48,6 +48,11 @@ do kontrolowanej archiwizacji opisanej w REL-003.
 
 ## Zadania
 
+- `YT-005` — **W trakcie** — ponowne `Ctrl+I` w otwartej skrzynce doładowuje
+  następne 150 pozycji, a kolekcje YouTube żądają polskich tytułów przy
+  zachowaniu dat przybliżonych. Szczegóły:
+  [YT-005-skrzynka-ctrl-i-i-tytuly-youtube.md](YT-005-skrzynka-ctrl-i-i-tytuly-youtube.md).
+
 - `KEY-001` — **W trakcie; kod, pełna regresja i samowystarczalna paczka
   testowa v2 są zweryfikowane; instalacja oraz ręczny odbiór NVDA pozostają** — osobna
   karta **Klawiatura** z filtrem poleceń, podglądem zmiany przed zapisem,

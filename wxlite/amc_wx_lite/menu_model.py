@@ -336,6 +336,9 @@ def build_menus(
     youtube_account_available: bool = False,
 ) -> tuple[Menu, ...]:
     """Pelny opis paska menu. Kolejnosc jak w pelnym AMC: Pliki, Radio, Widok."""
+    podcast_inbox = command_presentation(Action.VIEW_PODCAST_INBOX)
+    if podcast_inbox is None or podcast_inbox.menu_label is None:
+        raise RuntimeError("Brak prezentacji polecenia nowych odcinków")
     ordered_sessions = session_order_model.normalize(session_order)
     session_items = tuple(
         MenuItem(
@@ -1514,8 +1517,8 @@ def build_menus(
                 visible_sessions=SONOS_ONLY,
             ),
             SEPARATOR,
-            MenuItem("&Nowe odcinki i materiały", Action.VIEW_PODCAST_INBOX,
-                     shortcut="Ctrl+I",
+            MenuItem(podcast_inbox.menu_label, Action.VIEW_PODCAST_INBOX,
+                     shortcut=podcast_inbox.shortcut,
                      visible_sessions=(SessionId.PODCASTS,)),
             *(
                 (

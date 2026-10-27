@@ -157,6 +157,43 @@ def test_ctrl_h_opens_once_and_escape_restores_origin_and_selected_item() -> Non
         assert not LiteFrame._restore_transient_preview(frame, announce=False)
 
 
+def test_repeated_ctrl_i_loads_next_batch_and_preserves_preview_origin() -> None:
+    navigator = Navigator()
+    navigator.active = SessionId.RADIO
+    navigator.session.model.replace(
+        [Row("station", "Wybrana stacja", "station")],
+        preferred_id="station",
+    )
+    opened = []
+    frame = SimpleNamespace(
+        navigator=navigator,
+        _transient_preview_return=None,
+        _sync_views=lambda: None,
+        _open_podcast_aggregate=lambda intent, **_kwargs: opened.append(intent),
+    )
+    frame._begin_transient_preview = (
+        lambda: LiteFrame._begin_transient_preview(frame)
+    )
+
+    LiteFrame._show_podcast_inbox(frame)
+
+    assert len(opened) == 1
+    assert opened[0].view is LibraryView.PODCAST_INBOX
+    assert not opened[0].load_more
+    assert navigator.active is SessionId.PODCASTS
+    assert navigator.session.view is View.LIST
+    assert navigator.session.library_view is LibraryView.PODCAST_INBOX
+    origin = frame._transient_preview_return
+    assert origin is not None
+    assert origin.session_id is SessionId.RADIO
+
+    LiteFrame._show_podcast_inbox(frame)
+
+    assert len(opened) == 2
+    assert opened[1].load_more
+    assert frame._transient_preview_return is origin
+
+
 def test_remote_provider_gates_allow_the_global_history_action() -> None:
     assert Action.VIEW_HISTORY in WIIM_SUPPORTED_ACTIONS
     assert Action.VIEW_HISTORY in SONOS_SUPPORTED_ACTIONS
