@@ -1,4 +1,4 @@
-"""Read-only podcast, Mixcloud and YouTube source for the wxPython interface.
+"""Read-only podcast, SoundCloud and YouTube source for the wxPython interface.
 
 The C# host remains the sole owner of ``podcasts.db``.  This module opens the
 same database with SQLite ``mode=ro`` (without ``immutable=1`` so committed WAL
@@ -61,7 +61,7 @@ class PodcastSubscription:
             1: "media internetowe",
             2: "kanał YouTube",
             3: "playlista YouTube",
-            4: "profil Mixcloud",
+            4: "podcast SoundCloud",
         }.get(self.source_kind, "źródło podcastów")
 
     def as_row(self) -> Row:
@@ -79,7 +79,7 @@ class PodcastSubscription:
             service_kind={
                 2: "youtubeChannel",
                 3: "youtubePlaylist",
-                4: "mixcloudChannel",
+                4: "soundcloudPodcast",
             }.get(self.source_kind),
         )
 
@@ -216,7 +216,7 @@ def _container_label(source_kind: int) -> str:
         1: "Media internetowe",
         2: "Kanał YouTube",
         3: "Playlista YouTube",
-        4: "Profil Mixcloud",
+        4: "Podcast SoundCloud",
     }.get(source_kind, "Podcast")
 
 
@@ -345,7 +345,7 @@ def _source_kind(payload: dict) -> int:
             "publicinternetmedia": 1,
             "youtubechannel": 2,
             "youtubeplaylist": 3,
-            "mixcloudchannel": 4,
+            "soundcloudpodcast": 4,
         }
         return by_name.get(value.replace("_", "").casefold(), 0)
     return _as_int(value)
@@ -371,16 +371,11 @@ def _episode_row(record: _EpisodeRecord, *, aggregate: bool) -> Row:
     ]
     if aggregate and record.parent_title.casefold() != record.title.casefold():
         detail_parts.insert(0, record.parent_title)
-    media_type = str(_get(record.payload, "MediaType", "") or "").strip()
-    mixcloud_show = (
-        record.source_kind == 4 or media_type.casefold() == "audio/mixcloud"
-    )
     if aggregate and record.source_kind in (2, 3):
         detail_parts.append("materiał YouTube")
-    if aggregate and mixcloud_show:
-        detail_parts.append("audycja Mixcloud")
     duration_ticks = max(0, _as_int(_get(record.payload, "DurationTicks", 0)))
     media_length = _as_int(_get(record.payload, "MediaLength", 0))
+    media_type = str(_get(record.payload, "MediaType", "") or "").strip()
     author = _author_label(_get(record.payload, "Author", "")) or record.parent_title
     return Row(
         item_id=record.item_id,
@@ -400,9 +395,7 @@ def _episode_row(record: _EpisodeRecord, *, aggregate: bool) -> Row:
         parent_id=record.subscription_id,
         artist_name=author,
         service_kind=(
-            "mixcloudShow"
-            if mixcloud_show
-            else "youtubeVideo" if record.source_kind in (2, 3) else None
+            "youtubeVideo" if record.source_kind in (2, 3) else None
         ),
         duration_ticks=duration_ticks,
         podcast_media_length=media_length if media_length > 0 else None,
@@ -423,18 +416,6 @@ def is_youtube_video_row(row: Row | None) -> bool:
     except ValueError:
         return False
     return host in ("youtu.be", "youtube.com") or host.endswith(".youtube.com")
-
-
-def is_mixcloud_show_row(row: Row | None) -> bool:
-    """Whether Enter must use Mixcloud's official public player page."""
-
-    if row is None or getattr(row, "kind", "") != "episode":
-        return False
-    return (
-        getattr(row, "service_kind", "") == "mixcloudShow"
-        or str(getattr(row, "podcast_media_type", "") or "").casefold()
-        == "audio/mixcloud"
-    )
 
 
 def _materialize_episode(record: sqlite3.Row) -> _EpisodeRecord:

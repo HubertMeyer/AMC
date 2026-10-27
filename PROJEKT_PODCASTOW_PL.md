@@ -234,8 +234,7 @@ poleceń, nie zapisuje tokenów w eksporcie i nie wysyła historii odsłuchu do
 źródeł. Adapter wymagający konta przechowuje poświadczenia w systemowym
 magazynie sekretów i pozostaje niezależny od adapterów publicznych.
 
-Publiczne katalogi Apple, Spreaker i Mixcloud służą do wyszukania podcastu,
-profilu albo audycji,
+Publiczne katalogi Apple i Spreaker służą do wyszukania podcastu i jego kanału,
 a nie do synchronizacji prywatnych kont. Wyniki są buforowane i ograniczane.
 Od `alpha.242` oba adaptery działają równolegle, a awaria jednego nie wyłącza
 drugiego ani lokalnych wyników Biblioteki. Spreaker zwraca stabilny identyfikator
@@ -253,23 +252,10 @@ każda audycja ma kanał w postaci
 
 SoundCloud jest obsługiwany jako dostawca zwykłego publicznego RSS: jego kanał
 można dodać przez `Ctrl+N`, import OPML albo odnaleźć przez inny katalog.
-Przeszukiwanie całego SoundCloud pozostaje poza AMC, ponieważ oficjalna
-rejestracja aplikacji wymaga konta Artist Pro, identyfikatora i sekretu klienta:
-[rejestracja aplikacji SoundCloud](https://developers.soundcloud.com/docs/api/register-app).
-Nie należy
+Przeszukiwanie całego SoundCloud pozostaje osobnym, opcjonalnym adapterem,
+ponieważ oficjalne API wymaga zarejestrowania aplikacji i tokenu. Nie należy
 zastępować go nietrwałym parsowaniem strony ani prywatnym kluczem wbudowanym w
 program.
-
-Mixcloud jest publicznym adapterem bez logowania. Udokumentowane operacje GET
-pozwalają wyszukiwać profile i audycje oraz pobierać listę publicznych audycji
-profilu: [Mixcloud API](https://www.mixcloud.com/developers/). `Ctrl+F`
-pokazuje oba rodzaje wyników, `Ctrl+Shift+L` zapisuje lokalną subskrypcję AMC,
-a `Ctrl+N` przyjmuje pełny publiczny adres profilu lub audycji. Zapis nie
-zmienia konta Mixcloud. REST API nie udostępnia bezpośredniego strumienia
-audio, dlatego Enter otwiera oficjalną stronę Mixcloud, a pobieranie, zapis
-pliku i kolejka odtwarzania AMC są jawnie niedostępne. Nie obiecujemy też
-odpowiednika playlist YouTube, którego publiczny katalog Mixcloud nie
-udostępnia.
 
 Publiczny YouTube jest pierwszym działającym adapterem pojedynczego medium ze
 strony. Jest celowo oddzielony od RSS/Atom i od przyszłego kontowego adaptera
@@ -348,6 +334,12 @@ nie przez nieograniczone parsowanie dowolnej strony.
    Podcasts, jawne etykiety źródła, deduplikacja według adresu kanału i
    częściowa odporność na awarię katalogu. Publiczne RSS-y SoundCloud i
    Spreaker są obsługiwane bez konta.
+19. Korekta z 27 października 2026 — zrealizowane w źródłach: publiczny profil
+   SoundCloud jest rozwiązywany do jego RSS, a wynik z katalogu Apple mający
+   `feeds.soundcloud.com` dostaje jawny rodzaj **podcast SoundCloud**. Odcinki
+   zachowują adresy `enclosure` i cały standardowy kontrakt odtwarzania,
+   kolejki, pobierania oraz `Zapisz jako`. Zastępuje to wcześniejszą decyzję o
+   webowej integracji Mixcloud, która nie dostarczała plików audio.
 
 Pozostała mapa skrótów zostanie ustalona po pierwszym działającym widoku. Nie
 należy rezerwować dalszych klawiszy na podstawie samego dokumentu
@@ -355,8 +347,10 @@ koncepcyjnego.
 
 ## 7. Dodawanie, import i wyszukiwanie
 
-- `Ctrl+N` otwiera **Nowy podcast lub medium internetowe**. Formularz przyjmuje
-  bezpośredni adres kanału RSS/Atom i opcjonalną nazwę użytkownika. Przycisk
+- `Ctrl+N` otwiera **Nowy podcast, SoundCloud, kanał YouTube lub medium
+  internetowe**. Formularz przyjmuje bezpośredni adres kanału RSS/Atom,
+  publiczny profil SoundCloud i opcjonalną nazwę użytkownika. Profil
+  SoundCloud zostaje najpierw rozwiązany do publicznego RSS. Przycisk
   **Sprawdź** pobiera wyłącznie ograniczone metadane kanału; dopiero aktywny po
   pomyślnej weryfikacji przycisk **Dodaj** zapisuje podcast w Bibliotece. Od
   `alpha.294` ten sam formularz rozpoznaje publiczną stronę YouTube i zapisuje
@@ -403,7 +397,8 @@ koncepcyjnego.
   zgaduje już, która „domyślna aplikacja” miałaby otworzyć odcinek.
 - `Ctrl+F` otwiera wyszukiwanie w Podcastach. Wyniki mogą zawierać obserwowane
   audycje, zapisane odcinki oraz nieobserwowane audycje z katalogów Apple
-  Podcasts i Spreaker, ale każdy rodzaj ma jawną etykietę. Podcast ma stan „w
+  Podcasts i Spreaker. Wynik Apple wskazujący RSS `feeds.soundcloud.com` jest
+  jawnie nazwany **podcast SoundCloud**. Każdy rodzaj ma jawną etykietę. Podcast ma stan „w
   Bibliotece”, „poza Biblioteką”, „katalog Apple Podcasts” albo „katalog
   Spreaker”; odcinek podaje audycję
   nadrzędną i jej stan w Bibliotece.

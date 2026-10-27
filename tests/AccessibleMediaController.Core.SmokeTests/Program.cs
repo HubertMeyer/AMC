@@ -77,11 +77,6 @@ if (args.Length == 1 && args[0] == "--youtube-playlist-sync")
     try { YouTubePlaylistSyncTests.Run(); return 0; }
     catch (Exception exception) { Console.Error.WriteLine(exception); return 1; }
 }
-if (args.Length == 1 && args[0] == "--podcast-refresh-defaults")
-{
-    try { TestDefaultRefreshIntervalsRepairRssSources(); return 0; }
-    catch (Exception exception) { Console.Error.WriteLine(exception); return 1; }
-}
 if (args.Length == 1 && args[0] == "--audio-edit-renames")
 {
     try { AudioEditRenameTests.Run(); return 0; }
@@ -403,7 +398,7 @@ var tests = new (string Name, Action Test)[]
     ("Folder nie staje się fałszywym elementem kolekcji", TestFolderMembershipGuard),
     ("Częściowy stan folderu w kolekcjach", TestFolderContentsMembership),
     ("Eksport kanałów YouTube do subskrypcji i OPML", TestYouTubeSubscriptionsExport),
-    ("Domyślne odstępy odświeżania obejmują też podcasty RSS", TestDefaultRefreshIntervalsRepairRssSources),
+    ("Domyślne odstępy odświeżania obejmują RSS i SoundCloud", TestDefaultRefreshIntervalsRepairRssSources),
     ("Przeskok wtyczką NVDA nie zapowiada stanu wstrzymania", TestRelativeJumpAnnouncementOmitsPlaybackState),
     ("Odcinek podcastu czytany tytułem przed nazwą kanału", TestPodcastEpisodeReadsTitleBeforeChannel),
     ("Krótkie komunikaty czasu", TestTimeCommands),
@@ -7112,10 +7107,10 @@ static void TestDefaultRefreshIntervalsRepairRssSources()
     });
     settings.Subscriptions.Add(new PodcastSubscriptionSettings
     {
-        Id = "mixcloud:user:redakcja",
-        Title = "Profil Mixcloud bez odstepu",
+        Id = "soundcloud:878535568",
+        Title = "Podcast SoundCloud bez odstepu",
         IsInLibrary = true,
-        SourceKind = PodcastSourceKind.MixcloudChannel,
+        SourceKind = PodcastSourceKind.SoundCloudPodcast,
         RefreshIntervalMinutes = 0
     });
     settings.Subscriptions.Add(new PodcastSubscriptionSettings

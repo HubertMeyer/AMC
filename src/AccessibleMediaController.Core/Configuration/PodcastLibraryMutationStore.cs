@@ -245,10 +245,7 @@ public sealed record PodcastInternetMediaSource(
     string Title,
     string Channel,
     TimeSpan Duration,
-    bool IsLive,
-    string MediaType = "video/youtube",
-    string Description = "",
-    string FallbackTitle = "Materiał YouTube");
+    bool IsLive);
 
 public sealed record PodcastInternetMediaAddResult(
     string SubscriptionId,

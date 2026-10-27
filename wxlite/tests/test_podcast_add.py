@@ -175,6 +175,8 @@ def test_empty_address_is_rejected_before_host_call() -> None:
 def test_dialog_help_names_supported_youtube_handle_address() -> None:
     source = inspect.getsource(gui.PodcastSourceDialog)
     assert "https://www.youtube.com/@NazwaKanału" in source
+    assert "https://soundcloud.com/NazwaProfilu" in source
+    assert "możliwymi do pobrania plikami audio" in source
     assert 'add_button.SetName("Sprawdź i dodaj źródło")' in source
     assert "self.Bind(wx.EVT_CHAR_HOOK, self._on_key)" in source
     assert 'canonical == "Ctrl+V"' in source

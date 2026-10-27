@@ -2171,7 +2171,9 @@ def _help_entries() -> list[tuple[str, str, Action]]:
         Action.CLIP_APPEND: "Dopisz zaznaczony fragment na koncu pliku",
         Action.CLIP_CLEAR: "Wyczysc zaznaczenie fragmentu",
         Action.TOGGLE_SEEK_MESSAGES: "Automatyczne komunikaty odtwarzacza",
-        Action.ADD_PODCAST_SOURCE: "Dodaj podcast, profil Mixcloud, kanał YouTube lub medium internetowe",
+        Action.ADD_PODCAST_SOURCE: (
+            "Dodaj podcast, SoundCloud, kanał YouTube lub medium internetowe"
+        ),
         Action.IMPORT_PODCAST_OPML: "Importuj podcasty z OPML",
         Action.EXPORT_PODCAST_OPML: "Eksportuj bibliotekę podcastów do OPML",
         Action.EXPORT_YOUTUBE_SUBSCRIPTIONS: "Eksportuj kanały i playlisty YouTube",
@@ -2185,7 +2187,7 @@ def _help_entries() -> list[tuple[str, str, Action]]:
         Action.REFRESH_YOUTUBE_LIVE_AGGREGATE: "Odśwież transmisje wybranych kanałów YouTube",
         Action.RECORD_YOUTUBE_LIVE_NOW: "Rozpocznij albo zatrzymaj nagrywanie transmisji YouTube",
         Action.SCHEDULE_YOUTUBE_LIVE: "Zaplanuj nagranie transmisji YouTube",
-        Action.REFRESH_PODCAST: "Odśwież wybrany podcast, profil, kanał lub playlistę",
+        Action.REFRESH_PODCAST: "Odśwież wybrany podcast, kanał lub playlistę",
         Action.REFRESH_PODCAST_LIBRARY: "Odśwież wszystkie źródła podcastów",
         Action.DOWNLOAD_PODCAST_EPISODES: "Pobierz zaznaczone odcinki podcastów",
         Action.SAVE_PODCAST_EPISODE_AS: "Zapisz jeden odcinek podcastu jako plik",

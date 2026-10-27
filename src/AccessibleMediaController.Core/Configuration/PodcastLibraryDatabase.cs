@@ -923,7 +923,9 @@ internal sealed class PodcastLibraryDatabase(string databasePath)
             LoadInto(settings);
             var result = new List<PodcastOpmlEntry>();
             foreach (var subscription in settings.Subscriptions.Where(item =>
-                         item.IsInLibrary && item.SourceKind == PodcastSourceKind.Rss))
+                         item.IsInLibrary
+                         && item.SourceKind is PodcastSourceKind.Rss
+                             or PodcastSourceKind.SoundCloudPodcast))
             {
                 if (!TryPublicHttpUri(subscription.FeedUrl, out var feed)) continue;
                 var homepage = TryPublicHttpUri(subscription.HomepageUrl, out var page)
@@ -1175,9 +1177,9 @@ internal sealed class PodcastLibraryDatabase(string databasePath)
     {
         ArgumentNullException.ThrowIfNull(feed);
         if (sourceKind is not (PodcastSourceKind.Rss
+            or PodcastSourceKind.SoundCloudPodcast
             or PodcastSourceKind.YouTubeChannel
-            or PodcastSourceKind.YouTubePlaylist
-            or PodcastSourceKind.MixcloudChannel))
+            or PodcastSourceKind.YouTubePlaylist))
         {
             throw new ArgumentOutOfRangeException(
                 nameof(sourceKind),
@@ -1200,7 +1202,7 @@ internal sealed class PodcastLibraryDatabase(string databasePath)
             {
                 update.Subscription.RefreshIntervalMinutes = sourceKind switch
                 {
-                    PodcastSourceKind.Rss or PodcastSourceKind.MixcloudChannel =>
+                    PodcastSourceKind.Rss or PodcastSourceKind.SoundCloudPodcast =>
                         settings.RssRefreshIntervalMinutes,
                     PodcastSourceKind.YouTubeChannel or PodcastSourceKind.YouTubePlaylist =>
                         settings.YouTubeRefreshIntervalMinutes,
@@ -1289,22 +1291,14 @@ internal sealed class PodcastLibraryDatabase(string databasePath)
                 ? media.Title.Trim()
                 : titleOverride.Trim();
             if (episode.Title.Length == 0)
-                episode.Title = media.IsLive
-                    ? "YouTube na żywo"
-                    : string.IsNullOrWhiteSpace(media.FallbackTitle)
-                        ? "Medium internetowe"
-                        : media.FallbackTitle.Trim();
+                episode.Title = media.IsLive ? "YouTube na żywo" : "Materiał YouTube";
             episode.Author = media.Channel.Trim();
-            episode.Description = string.IsNullOrWhiteSpace(media.Description)
-                ? media.IsLive
-                    ? "Publiczna transmisja YouTube. Adres audio jest sprawdzany ponownie przy każdym odtwarzaniu."
-                    : "Publiczny materiał YouTube. Adres audio jest sprawdzany ponownie przy każdym odtwarzaniu."
-                : media.Description.Trim();
+            episode.Description = media.IsLive
+                ? "Publiczna transmisja YouTube. Adres audio jest sprawdzany ponownie przy każdym odtwarzaniu."
+                : "Publiczny materiał YouTube. Adres audio jest sprawdzany ponownie przy każdym odtwarzaniu.";
             episode.MediaUrl = stableAddress;
             episode.PageUrl = stableAddress;
-            episode.MediaType = string.IsNullOrWhiteSpace(media.MediaType)
-                ? "application/octet-stream"
-                : media.MediaType.Trim();
+            episode.MediaType = "video/youtube";
             episode.DurationTicks = Math.Max(0, media.Duration.Ticks);
             Save(settings);
             return new PodcastInternetMediaAddResult(
@@ -1426,9 +1420,9 @@ internal sealed class PodcastLibraryDatabase(string databasePath)
 
     private static bool IsRefreshable(PodcastSourceKind sourceKind) => sourceKind is
         PodcastSourceKind.Rss
+        or PodcastSourceKind.SoundCloudPodcast
         or PodcastSourceKind.YouTubeChannel
-        or PodcastSourceKind.YouTubePlaylist
-        or PodcastSourceKind.MixcloudChannel;
+        or PodcastSourceKind.YouTubePlaylist;
 
     private static bool TryPublicHttpUri(string? value, out Uri uri)
     {

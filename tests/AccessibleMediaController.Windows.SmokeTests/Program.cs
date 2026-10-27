@@ -63,22 +63,30 @@ if (args.Contains("--youtube-source-resolver-only", StringComparer.Ordinal))
     TestYouTubeSourceResolver();
     return 0;
 }
-if (args.Contains("--youtube-collection-normalization", StringComparer.Ordinal))
+if (args.Contains("--soundcloud-podcast-client", StringComparer.Ordinal))
 {
-    TestYouTubeCollectionResults();
-    return 0;
-}
-if (args.Contains("--mixcloud-public-client", StringComparer.Ordinal))
-{
-    TestMixcloudPublicClient();
+    TestSoundCloudPodcastClient();
     return 0;
 }
 if (args.FirstOrDefault(argument =>
-        argument.StartsWith("--mixcloud-live-query=", StringComparison.OrdinalIgnoreCase))
-    is { } mixcloudQueryArgument)
+        argument.StartsWith("--soundcloud-live-profile=", StringComparison.OrdinalIgnoreCase))
+    is { } soundCloudProfileArgument)
 {
-    TestLiveMixcloudPublicDirectory(
-        mixcloudQueryArgument["--mixcloud-live-query=".Length..]);
+    TestLiveSoundCloudPodcast(
+        soundCloudProfileArgument["--soundcloud-live-profile=".Length..]);
+    return 0;
+}
+if (args.FirstOrDefault(argument =>
+        argument.StartsWith("--soundcloud-search-query=", StringComparison.OrdinalIgnoreCase))
+    is { } soundCloudSearchArgument)
+{
+    TestLiveSoundCloudSearch(
+        soundCloudSearchArgument["--soundcloud-search-query=".Length..]);
+    return 0;
+}
+if (args.Contains("--youtube-collection-normalization", StringComparer.Ordinal))
+{
+    TestYouTubeCollectionResults();
     return 0;
 }
 if (args.FirstOrDefault(argument =>
@@ -671,11 +679,11 @@ var tests = new (string Name, Action Test)[]
     ("You Tube Channel Feed Addresses", TestYouTubeChannelFeedAddresses),
     ("You Tube Channel Feed Parsing", TestYouTubeChannelFeedParsing),
     ("Podcast Feed Client", TestPodcastFeedClient),
+    ("SoundCloud Podcast Client", TestSoundCloudPodcastClient),
     ("Podcast Chapter Client", TestPodcastChapterClient),
     ("Podcast Episode Downloader", TestPodcastEpisodeDownloader),
     ("Apple Podcast Directory Client", TestApplePodcastDirectoryClient),
     ("Spreaker Podcast Directory Client", TestSpreakerPodcastDirectoryClient),
-    ("Mixcloud Public Client", TestMixcloudPublicClient),
     ("Podcast OPML Import Selection Accessibility", TestPodcastOpmlImportSelectionAccessibility),
     ("TIDAL Refresh Request", TestTidalRefreshRequest),
     ("TIDAL Playback Smoke Tests", TidalPlaybackSmokeTests.Run),
@@ -6572,6 +6580,128 @@ static void TestPodcastFeedClient()
     Console.WriteLine("OK: ograniczony klient kanałów podcastów");
 }
 
+static void TestSoundCloudPodcastClient()
+{
+    const string profileHtml = """
+        <html><body><script>
+        window.__sc_hydration = [
+          {"hydratable":"user","data":{
+            "id":878535568,
+            "urn":"soundcloud:users:878535568",
+            "permalink":"redakcja",
+            "username":"Redakcja"
+          }}
+        ];</script></body></html>
+        """;
+    var handler = new PodcastHttpHandler(request =>
+    {
+        Assert(request.RequestUri == new Uri("https://soundcloud.com/redakcja"),
+            "Resolver SoundCloud wysłał żądanie pod nieoczekiwany adres.");
+        return new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(profileHtml, Encoding.UTF8, "text/html")
+        };
+    });
+    using var client = new SoundCloudPodcastClient(handler, TimeSpan.FromSeconds(2));
+    var feed = client.ResolveFeedAddressAsync(
+            new Uri("https://www.soundcloud.com/redakcja/?utm_source=test"),
+            CancellationToken.None)
+        .GetAwaiter().GetResult();
+    Assert(
+        feed == new Uri(
+            "https://feeds.soundcloud.com/users/soundcloud:users:878535568/sounds.rss"),
+        "Profil SoundCloud nie został rozwiązany do publicznego RSS.");
+    Assert(handler.Requests.Count == 1,
+        "Resolver SoundCloud wykonał nieoczekiwaną liczbę żądań.");
+
+    Assert(SoundCloudPodcastClient.TryNormalizeFeedAddress(
+               new Uri("http://feeds.soundcloud.com/users/soundcloud:users:878535568/sounds.rss"),
+               out var normalizedFeed)
+           && normalizedFeed.Scheme == "https",
+        "Bezpośredni RSS SoundCloud nie został rozpoznany i znormalizowany.");
+    Assert(!SoundCloudPodcastClient.IsSoundCloudAddress(
+               new Uri("https://soundcloud.com/redakcja/pojedynczy-utwor"))
+           && !SoundCloudPodcastClient.IsSoundCloudAddress(
+               new Uri("https://soundcloud.com/search?q=redakcja"))
+           && !SoundCloudPodcastClient.IsSoundCloudAddress(
+               new Uri("https://uzytkownik:haslo@soundcloud.com/redakcja")),
+        "Resolver SoundCloud zaakceptował utwór, wyszukiwanie albo dane logowania.");
+    Assert(SoundCloudPodcastClient.IsSoundCloudSearchResult(new MediaItem
+        {
+            Id = "podcast-directory:apple:1",
+            Title = "Podcast SoundCloud",
+            Source = normalizedFeed.AbsoluteUri
+        }),
+        "Wynik katalogu z RSS SoundCloud nie dostał jawnego rodzaju źródła.");
+    Console.WriteLine("OK: publiczny profil SoundCloud prowadzi do podcastowego RSS");
+}
+
+static void TestLiveSoundCloudPodcast(string profileUrl)
+{
+    using var resolver = new SoundCloudPodcastClient();
+    var feedAddress = resolver.ResolveFeedAddressAsync(
+            new Uri(profileUrl, UriKind.Absolute),
+            CancellationToken.None)
+        .GetAwaiter().GetResult();
+    using var feeds = new PodcastFeedClient();
+    var feed = feeds.FetchAsync(feedAddress, CancellationToken.None)
+        .GetAwaiter().GetResult();
+    Assert(feed.Episodes.Count > 0,
+        "Publiczny RSS SoundCloud nie zwrócił odcinków.");
+    Assert(feed.Episodes.All(episode =>
+            episode.MediaUri.IsAbsoluteUri
+            && episode.MediaUri.Scheme is "http" or "https"
+            && (episode.MediaType ?? string.Empty).StartsWith(
+                "audio/",
+                StringComparison.OrdinalIgnoreCase)),
+        "RSS SoundCloud nie zwrócił zwykłych plików audio podcastu.");
+    using var audioClient = new HttpClient(new HttpClientHandler
+    {
+        AllowAutoRedirect = true,
+        AutomaticDecompression = DecompressionMethods.GZip
+            | DecompressionMethods.Deflate
+            | DecompressionMethods.Brotli,
+        UseCookies = false
+    })
+    {
+        Timeout = TimeSpan.FromSeconds(30)
+    };
+    using var audioRequest = new HttpRequestMessage(
+        HttpMethod.Get,
+        feed.Episodes[0].MediaUri);
+    audioRequest.Headers.Range = new System.Net.Http.Headers.RangeHeaderValue(0, 0);
+    using var audioResponse = audioClient.SendAsync(
+            audioRequest,
+            HttpCompletionOption.ResponseHeadersRead,
+            CancellationToken.None)
+        .GetAwaiter().GetResult();
+    Assert(audioResponse.IsSuccessStatusCode
+           && (audioResponse.Content.Headers.ContentType?.MediaType ?? string.Empty)
+               .StartsWith("audio/", StringComparison.OrdinalIgnoreCase),
+        "Bezpośredni adres odcinka SoundCloud nie zwrócił pliku audio.");
+    Console.WriteLine(
+        $"OK: SoundCloud na żywo — {feed.Title}, pliki audio: {feed.Episodes.Count}");
+}
+
+static void TestLiveSoundCloudSearch(string query)
+{
+    using var client = new ApplePodcastDirectoryClient();
+    var results = client.SearchAsync(query, CancellationToken.None)
+        .GetAwaiter().GetResult();
+    var soundCloud = results
+        .Where(SoundCloudPodcastClient.IsSoundCloudSearchResult)
+        .ToArray();
+    Assert(soundCloud.Length > 0,
+        "Publiczny katalog nie zwrócił żadnego podcastu SoundCloud.");
+    Assert(soundCloud.All(item =>
+            Uri.TryCreate(item.Source, UriKind.Absolute, out var address)
+            && SoundCloudPodcastClient.TryNormalizeFeedAddress(address, out _)),
+        "Wynik wyszukiwania SoundCloud nie wskazuje prawidłowego RSS.");
+    Console.WriteLine(
+        $"OK: wyszukiwanie SoundCloud na żywo — wyniki: {soundCloud.Length}");
+    foreach (var result in soundCloud.Take(5)) Console.WriteLine($"  {result.Title}");
+}
+
 static void TestLiveYouTubeRadio(string pageUrl)
 {
     using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(90));
@@ -6852,7 +6982,7 @@ static void TestApplePodcastDirectoryClient()
 {
     const string json = """
         {
-          "resultCount": 3,
+          "resultCount": 4,
           "results": [
             {
               "collectionId": 123,
@@ -6871,6 +7001,13 @@ static void TestApplePodcastDirectoryClient()
               "collectionId": 125,
               "collectionName": "Niebezpieczny",
               "feedUrl": "file:///c:/sekret.xml"
+            },
+            {
+              "collectionId": 126,
+              "collectionName": "Podcast SoundCloud",
+              "artistName": "Autor SoundCloud",
+              "feedUrl": "https://feeds.soundcloud.com/users/soundcloud:users:878535568/sounds.rss",
+              "collectionViewUrl": "https://podcasts.apple.com/pl/podcast/soundcloud/id126"
             }
           ]
         }
@@ -6879,7 +7016,7 @@ static void TestApplePodcastDirectoryClient()
         new FixedJsonHandler(json),
         TimeSpan.FromSeconds(2));
     var results = client.SearchAsync("test", CancellationToken.None).GetAwaiter().GetResult();
-    Assert(results.Count == 1, "Katalog Apple nie odfiltrował duplikatu albo niebezpiecznego adresu kanału.");
+    Assert(results.Count == 2, "Katalog Apple nie odfiltrował duplikatu albo niebezpiecznego adresu kanału.");
     var result = results[0];
     Assert(result.Title == "Podcast Testowy" && result.Artist == "Redakcja",
         "Katalog Apple nie zachował użytkowych metadanych podcastu.");
@@ -6888,6 +7025,9 @@ static void TestApplePodcastDirectoryClient()
         "Katalog Apple pomylił kanał RSS ze stroną podcastu.");
     Assert(result.Kind == MediaItemKind.Podcast && !result.IsInLibrary,
         "Wynik katalogu Apple został błędnie uznany za istniejący element Biblioteki.");
+    Assert(SoundCloudPodcastClient.IsSoundCloudSearchResult(results[1])
+           && results[1].Title == "Podcast SoundCloud",
+        "Katalog Apple nie zachował wyszukiwalnego podcastu SoundCloud.");
     Console.WriteLine("OK: bezpieczne wyszukiwanie katalogu Apple Podcasts");
 }
 
@@ -6933,96 +7073,6 @@ static void TestSpreakerPodcastDirectoryClient()
     Console.WriteLine("OK: bezpieczne wyszukiwanie katalogu Spreaker");
 }
 
-static void TestMixcloudPublicClient()
-{
-    using var client = new MixcloudPublicClient(
-        new PodcastHttpHandler(request =>
-        {
-            var path = request.RequestUri!.AbsolutePath;
-            var query = request.RequestUri.Query;
-            var json = path switch
-            {
-                "/search/" when query.Contains("type=user", StringComparison.Ordinal) =>
-                    """
-                    {"data":[{"name":"Redakcja Mixcloud","username":"redakcja","url":"https://www.mixcloud.com/redakcja/"}],"paging":{}}
-                    """,
-                "/search/" when query.Contains("type=cloudcast", StringComparison.Ordinal) =>
-                    """
-                    {"data":[{"name":"Wieczorna audycja","url":"https://www.mixcloud.com/redakcja/wieczorna-audycja/","audio_length":3600,"user":{"name":"Redakcja Mixcloud","username":"redakcja"}}],"paging":{}}
-                    """,
-                "/redakcja/" =>
-                    """
-                    {"name":"Redakcja Mixcloud","username":"redakcja","url":"https://www.mixcloud.com/redakcja/","biog":"Publiczny opis profilu"}
-                    """,
-                "/redakcja/cloudcasts/" =>
-                    """
-                    {"data":[{"name":"Wieczorna audycja","url":"https://www.mixcloud.com/redakcja/wieczorna-audycja/","description":"Opis audycji","audio_length":3600,"created_time":"2026-10-26T20:00:00Z","user":{"name":"Redakcja Mixcloud","username":"redakcja"}}],"paging":{"next":"https://api.mixcloud.com/redakcja/cloudcasts/?limit=100&offset=100"}}
-                    """,
-                "/redakcja/wieczorna-audycja/" =>
-                    """
-                    {"name":"Wieczorna audycja","url":"https://www.mixcloud.com/redakcja/wieczorna-audycja/","description":"Opis audycji","audio_length":3600,"user":{"name":"Redakcja Mixcloud","username":"redakcja"}}
-                    """,
-                _ => throw new InvalidOperationException("Nieoczekiwany adres testu Mixcloud.")
-            };
-            return new HttpResponseMessage(HttpStatusCode.OK)
-            {
-                Content = new StringContent(json, Encoding.UTF8, "application/json")
-            };
-        }),
-        TimeSpan.FromSeconds(2));
-
-    var results = client.SearchAsync("wieczorna", CancellationToken.None)
-        .GetAwaiter().GetResult();
-    Assert(results.Count == 2
-           && MixcloudPublicClient.IsChannelSearchResult(results[0])
-           && MixcloudPublicClient.IsShowSearchResult(results[1]),
-        "Wyszukiwanie Mixcloud nie rozdzieliło profilu i audycji.");
-    Assert(results[0].Title == "Redakcja Mixcloud"
-           && results[1].Title == "Wieczorna audycja"
-           && results[1].Artist == "Redakcja Mixcloud"
-           && results[1].Duration == TimeSpan.FromHours(1),
-        "Wyszukiwanie Mixcloud nie zachowało użytkowych metadanych.");
-
-    Assert(MixcloudPublicClient.TryNormalizeAddress(
-               new Uri("http://mixcloud.com/redakcja"),
-               out var channelKind,
-               out var channelAddress)
-           && channelKind == MixcloudAddressKind.Channel
-           && channelAddress.AbsoluteUri == "https://www.mixcloud.com/redakcja/",
-        "Publiczny profil Mixcloud nie został znormalizowany.");
-    Assert(!MixcloudPublicClient.TryNormalizeAddress(
-               new Uri("https://user:password@www.mixcloud.com/redakcja/"),
-               out _,
-               out _)
-           && !MixcloudPublicClient.TryNormalizeAddress(
-               new Uri("https://www.mixcloud.com/developers/"),
-               out _,
-               out _),
-        "Klient Mixcloud zaakceptował dane logowania albo stronę techniczną.");
-
-    var feed = client.FetchChannelAsync(channelAddress, CancellationToken.None)
-        .GetAwaiter().GetResult();
-    Assert(feed.Id == "mixcloud:user:redakcja"
-           && feed.Title == "Redakcja Mixcloud"
-           && feed.EpisodesTruncated
-           && feed.Episodes.Count == 1
-           && feed.Episodes[0].MediaType == "audio/mixcloud"
-           && feed.Episodes[0].MediaUri.AbsoluteUri
-               == "https://www.mixcloud.com/redakcja/wieczorna-audycja/",
-        "Profil Mixcloud nie został zbudowany jako bezpieczne źródło podcastów.");
-
-    var show = client.FetchShowAsync(
-            new Uri("https://www.mixcloud.com/redakcja/wieczorna-audycja/"),
-            CancellationToken.None)
-        .GetAwaiter().GetResult();
-    Assert(show.Title == "Wieczorna audycja"
-           && show.Channel == "Redakcja Mixcloud"
-           && show.Description == "Opis audycji"
-           && show.Duration == TimeSpan.FromHours(1),
-        "Pojedyncza audycja Mixcloud nie ma bezpiecznych metadanych.");
-    Console.WriteLine("OK: publiczne wyszukiwanie, profil i audycja Mixcloud bez logowania");
-}
-
 static void TestLiveApplePodcastDirectory(string query)
 {
     using var client = new ApplePodcastDirectoryClient();
@@ -7046,38 +7096,6 @@ static void TestLiveSpreakerPodcastDirectory(string query)
         && Uri.TryCreate(item.Source, UriKind.Absolute, out _)),
         "Odpowiedź katalogu Spreaker zawiera nieprawidłowy wynik.");
     Console.WriteLine($"OK: katalog Spreaker na żywo — wyniki: {results.Count}");
-    foreach (var result in results.Take(5)) Console.WriteLine($"  {result.Title}");
-}
-
-static void TestLiveMixcloudPublicDirectory(string query)
-{
-    using var client = new MixcloudPublicClient();
-    var results = client.SearchAsync(query, CancellationToken.None).GetAwaiter().GetResult();
-    Assert(results.Count > 0, "Publiczny katalog Mixcloud nie zwrócił wyników.");
-    Assert(results.All(item =>
-            (MixcloudPublicClient.IsChannelSearchResult(item)
-             || MixcloudPublicClient.IsShowSearchResult(item))
-            && Uri.TryCreate(item.Source, UriKind.Absolute, out var address)
-            && address.Host.Equals("www.mixcloud.com", StringComparison.OrdinalIgnoreCase)),
-        "Odpowiedź katalogu Mixcloud zawiera nieprawidłowy wynik.");
-    var channel = results.First(MixcloudPublicClient.IsChannelSearchResult);
-    var feed = client.FetchChannelAsync(
-            new Uri(channel.Source!),
-            CancellationToken.None)
-        .GetAwaiter().GetResult();
-    Assert(feed.Title.Length > 0
-           && feed.FeedUri.Host.Equals("www.mixcloud.com", StringComparison.OrdinalIgnoreCase)
-           && feed.Episodes.All(episode => episode.MediaType == "audio/mixcloud"),
-        "Publiczny profil Mixcloud nie został odczytany jako kanał audycji.");
-    var show = results.First(MixcloudPublicClient.IsShowSearchResult);
-    var showDocument = client.FetchShowAsync(
-            new Uri(show.Source!),
-            CancellationToken.None)
-        .GetAwaiter().GetResult();
-    Assert(showDocument.Title.Length > 0
-           && showDocument.PageUrl.StartsWith("https://www.mixcloud.com/", StringComparison.OrdinalIgnoreCase),
-        "Publiczna audycja Mixcloud nie została odczytana po adresie wyniku.");
-    Console.WriteLine($"OK: katalog Mixcloud na żywo — wyniki: {results.Count}");
     foreach (var result in results.Take(5)) Console.WriteLine($"  {result.Title}");
 }
 

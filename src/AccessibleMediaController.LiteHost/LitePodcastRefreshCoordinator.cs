@@ -19,7 +19,6 @@ internal sealed class LitePodcastRefreshCoordinator : IDisposable
     private readonly LitePodcastProgressStore _podcasts;
     private readonly LiteBookmarkStore? _bookmarks;
     private readonly PodcastFeedClient? _rssClient;
-    private readonly MixcloudPublicClient? _mixcloudClient;
     private readonly YouTubeCollectionClient? _youTubeClient;
     private readonly Func<PodcastRefreshTarget, Task<PodcastFeedDocument>> _fetch;
     private int _refreshInProgress;
@@ -31,7 +30,6 @@ internal sealed class LitePodcastRefreshCoordinator : IDisposable
         _podcasts = podcasts ?? throw new ArgumentNullException(nameof(podcasts));
         _bookmarks = bookmarks;
         _rssClient = new PodcastFeedClient();
-        _mixcloudClient = new MixcloudPublicClient();
         _youTubeClient = new YouTubeCollectionClient();
         _fetch = FetchAsync;
     }
@@ -173,16 +171,13 @@ internal sealed class LitePodcastRefreshCoordinator : IDisposable
             throw new InvalidDataException("Zapisany adres kanału jest nieprawidłowy.");
         return target.SourceKind switch
         {
-            PodcastSourceKind.Rss => await _rssClient!
+            PodcastSourceKind.Rss or PodcastSourceKind.SoundCloudPodcast => await _rssClient!
                 .FetchAsync(address, CancellationToken.None)
                 .ConfigureAwait(false),
             PodcastSourceKind.YouTubeChannel or PodcastSourceKind.YouTubePlaylist =>
                 (await _youTubeClient!
                     .FetchAsync(address, CancellationToken.None)
                     .ConfigureAwait(false)).Feed,
-            PodcastSourceKind.MixcloudChannel => await _mixcloudClient!
-                .FetchChannelAsync(address, CancellationToken.None)
-                .ConfigureAwait(false),
             _ => throw new InvalidOperationException(
                 "Publiczne medium internetowe jest sprawdzane ponownie przy każdym odtwarzaniu.")
         };
@@ -222,9 +217,5 @@ internal sealed class LitePodcastRefreshCoordinator : IDisposable
 
     private sealed record PodcastRefreshIssue(string Title, string Reason);
 
-    public void Dispose()
-    {
-        _rssClient?.Dispose();
-        _mixcloudClient?.Dispose();
-    }
+    public void Dispose() => _rssClient?.Dispose();
 }

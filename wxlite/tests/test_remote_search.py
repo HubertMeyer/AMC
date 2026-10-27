@@ -123,48 +123,35 @@ def test_remote_video_has_episode_semantics_without_speaking_model_kind() -> Non
     )
 
 
-def test_mixcloud_results_have_user_labels_and_explicit_service_kinds() -> None:
+def test_soundcloud_directory_result_is_an_explicit_podcast_not_a_web_link() -> None:
     entries, warnings = entries_from_payload({
-        "items": [
-            {
-                "id": "podcast-directory:mixcloud:private-profile-id",
-                "title": "Radio Nocne",
-                "artist": "",
-                "kind": "podcast",
-                "remoteKind": "mixcloudChannel",
-                "address": "https://www.mixcloud.com/radionocne/",
-                "detail": "profil Mixcloud",
-                "durationTicks": 0,
-            },
-            {
-                "id": "internet-media-search:mixcloud:private-show-id",
-                "title": "Nocna audycja",
-                "artist": "Radio Nocne",
-                "kind": "episode",
-                "remoteKind": "mixcloudShow",
-                "address": "https://www.mixcloud.com/radionocne/nocna-audycja/",
-                "detail": "audycja Mixcloud",
-                "durationTicks": 3600 * 10_000_000,
-            },
-        ],
+        "items": [{
+            "id": "podcast-directory:apple:private-id",
+            "title": "Audycja z SoundCloud",
+            "artist": "Redakcja",
+            "kind": "podcast",
+            "remoteKind": "soundcloudPodcast",
+            "address": (
+                "https://feeds.soundcloud.com/users/"
+                "soundcloud:users:878535568/sounds.rss"
+            ),
+            "detail": "podcast SoundCloud",
+            "durationTicks": 0,
+        }],
         "warnings": [],
     })
 
     assert warnings == ()
-    assert [entry.remote_kind for entry in entries] == [
-        "mixcloudChannel", "mixcloudShow"
-    ]
-    assert [entry.row.service_kind for entry in entries] == [
-        "mixcloudChannel", "mixcloudShow"
-    ]
-    assert entries[0].accessible_label == (
-        "Radio Nocne, podcast, profil Mixcloud, Podcasty i YouTube"
-    )
-    assert entries[1].accessible_label == (
-        "Nocna audycja, Radio Nocne, odcinek, audycja Mixcloud, "
+    assert len(entries) == 1
+    result = entries[0]
+    assert result.remote_kind == "soundcloudPodcast"
+    assert result.row.service_kind == "soundcloudPodcast"
+    assert result.source_view is LibraryView.PODCAST_LIBRARY
+    assert result.accessible_label == (
+        "Audycja z SoundCloud, Redakcja, podcast, podcast SoundCloud, "
         "Podcasty i YouTube"
     )
-    assert "private-" not in " ".join(entry.accessible_label for entry in entries)
+    assert "private-id" not in result.accessible_label
 
 
 def test_invalid_contract_is_reported_without_object_repr() -> None:

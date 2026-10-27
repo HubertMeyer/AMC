@@ -7,7 +7,7 @@ using AccessibleMediaController.Windows.Services;
 namespace AccessibleMediaController.LiteHost;
 
 /// <summary>
-/// Sprawdza i dodaje RSS, Mixcloud, kolekcje YouTube albo publiczne medium
+/// Sprawdza i dodaje RSS, podcasty SoundCloud, kolekcje YouTube albo publiczne medium
 /// tym samym torem co główne AMC. Do bazy trafia wyłącznie stabilny adres
 /// strony; podpisany adres strumienia z yt-dlp nigdy nie jest zapisywany.
 /// </summary>
@@ -18,7 +18,7 @@ internal sealed class LitePodcastAddCoordinator : IDisposable
     private readonly LitePodcastProgressStore _podcasts;
     private readonly LiteBookmarkStore? _bookmarks;
     private readonly PodcastFeedClient _rssClient = new();
-    private readonly MixcloudPublicClient _mixcloudClient = new();
+    private readonly SoundCloudPodcastClient _soundCloudClient = new();
     private readonly YouTubeCollectionClient _youTubeClient = new();
     private int _addInProgress;
 
@@ -47,53 +47,32 @@ internal sealed class LitePodcastAddCoordinator : IDisposable
                     "Wpisz pełny adres HTTP lub HTTPS bez nazwy użytkownika i hasła.");
             }
 
-            if (MixcloudPublicClient.TryNormalizeAddress(
-                    address,
-                    out var mixcloudKind,
-                    out var mixcloudAddress))
+            if (SoundCloudPodcastClient.IsSoundCloudAddress(address))
             {
-                if (mixcloudKind == MixcloudAddressKind.Channel)
-                {
-                    var mixcloudFeed = _mixcloudClient.FetchChannelAsync(
-                            mixcloudAddress,
-                            CancellationToken.None)
-                        .GetAwaiter()
-                        .GetResult();
-                    return SourceResult(AddFeed(
-                        mixcloudFeed,
-                        customTitle,
-                        PodcastSourceKind.MixcloudChannel));
-                }
-
-                var show = _mixcloudClient.FetchShowAsync(
-                        mixcloudAddress,
+                var feedAddress = _soundCloudClient.ResolveFeedAddressAsync(
+                        address,
                         CancellationToken.None)
                     .GetAwaiter()
                     .GetResult();
-                var mixcloudResult = _podcasts.AddInternetMedia(
-                    new PodcastInternetMediaSource(
-                        show.PageUrl,
-                        show.Title,
-                        show.Channel,
-                        show.Duration,
-                        IsLive: false,
-                        MediaType: "audio/mixcloud",
-                        Description: string.IsNullOrWhiteSpace(show.Description)
-                            ? "Publiczna audycja Mixcloud. Enter otwiera oficjalną stronę odtwarzania."
-                            : show.Description,
-                        FallbackTitle: "Audycja Mixcloud"),
-                    customTitle);
-                return new
+                var soundCloudFeed = _rssClient.FetchAsync(
+                        feedAddress,
+                        CancellationToken.None)
+                    .GetAwaiter()
+                    .GetResult();
+                if (soundCloudFeed.Episodes.Count == 0)
                 {
-                    subscriptionId = mixcloudResult.SubscriptionId,
-                    preferredEpisodeId = mixcloudResult.EpisodeId,
-                    title = mixcloudResult.Title,
-                    sourceKind = "internetMedia",
-                    sourceLabel = "audycja Mixcloud",
-                    added = mixcloudResult.AddedEpisode,
-                    restored = false,
-                    itemCount = 1
-                };
+                    throw new LiteRequestException(
+                        $"Kanał {soundCloudFeed.Title} nie zawiera odtwarzalnych plików audio.");
+                }
+                return SourceResult(AddFeed(
+                    soundCloudFeed,
+                    customTitle,
+                    PodcastSourceKind.SoundCloudPodcast));
+            }
+            if (SoundCloudPodcastClient.IsSoundCloudHost(address))
+            {
+                throw new LiteRequestException(
+                    "Wpisz adres publicznego profilu SoundCloud albo jego kanału RSS, nie adres pojedynczego utworu lub playlisty.");
             }
 
             if (YouTubeSourceResolver.IsYouTubeUrl(addressText))
@@ -195,14 +174,14 @@ internal sealed class LitePodcastAddCoordinator : IDisposable
         {
             PodcastSourceKind.YouTubeChannel => "youtubeChannel",
             PodcastSourceKind.YouTubePlaylist => "youtubePlaylist",
-            PodcastSourceKind.MixcloudChannel => "mixcloudChannel",
+            PodcastSourceKind.SoundCloudPodcast => "soundcloudPodcast",
             _ => "rss"
         },
         sourceLabel = result.SourceKind switch
         {
             PodcastSourceKind.YouTubeChannel => "kanał YouTube",
             PodcastSourceKind.YouTubePlaylist => "playlista YouTube",
-            PodcastSourceKind.MixcloudChannel => "profil Mixcloud",
+            PodcastSourceKind.SoundCloudPodcast => "podcast SoundCloud",
             _ => "podcast"
         },
         added = result.AddedSubscription,
@@ -213,6 +192,6 @@ internal sealed class LitePodcastAddCoordinator : IDisposable
     public void Dispose()
     {
         _rssClient.Dispose();
-        _mixcloudClient.Dispose();
+        _soundCloudClient.Dispose();
     }
 }

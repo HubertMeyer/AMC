@@ -175,7 +175,6 @@ public static class PodcastLibraryUpdater
             episode.PublishedUtcTicks = source.Published?.UtcDateTime.Ticks ?? 0;
             episode.FeedOrdinal = sourceKind is PodcastSourceKind.YouTubeChannel
                 or PodcastSourceKind.YouTubePlaylist
-                or PodcastSourceKind.MixcloudChannel
                     ? sourceOrdinal
                     : null;
             recordsInCurrentFeedOrder.Add(episode);
@@ -200,9 +199,7 @@ public static class PodcastLibraryUpdater
             if (feedChapters.Count > 0) episode.HasFeedChapters = true;
         }
 
-        if (sourceKind is PodcastSourceKind.YouTubeChannel
-            or PodcastSourceKind.YouTubePlaylist
-            or PodcastSourceKind.MixcloudChannel)
+        if (sourceKind is PodcastSourceKind.YouTubeChannel or PodcastSourceKind.YouTubePlaylist)
         {
             // A flat YouTube response often contains no publication dates. Its
             // entry order is nevertheless meaningful: /videos is newest first,

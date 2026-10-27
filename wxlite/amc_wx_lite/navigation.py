@@ -516,15 +516,6 @@ class PlayMedia:
 
 
 @dataclass(slots=True)
-class OpenPublicMediaPage:
-    """Open a stable provider page without pretending AMC has its stream."""
-
-    url: str
-    title: str
-    provider_label: str
-
-
-@dataclass(slots=True)
 class PlayTidalTrack:
     """Przekaz jeden utwor do oryginalnej aplikacji TIDAL.
 
@@ -1528,16 +1519,6 @@ class Navigator:
                 state.view = View.LIST
                 return [intent]
             return [Announce("Nie można otworzyć tego elementu Spotify")]
-
-        if (
-            state.session_id is SessionId.PODCASTS
-            and row.kind == "episode"
-            and row.service_kind == "mixcloudShow"
-            and row.url
-        ):
-            state.list_anchor_id = row.item_id
-            state.view = View.LIST
-            return [OpenPublicMediaPage(row.url, row.title, "Mixcloud")]
 
         if row.activation_message:
             # Wiersz zostaje zaznaczony i widoczny. Kontenery TIDAL sa

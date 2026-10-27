@@ -1,18 +1,12 @@
-# Projekt changelogu — POD-004 Mixcloud
+# Changelog POD-004 — projekt
 
-Status: projekt do korekty i zatwierdzenia użytkownika. Nie opisuje jeszcze
-zainstalowanego ani opublikowanego wydania.
+- Dodano wyszukiwanie podcastów hostowanych w SoundCloud przez `Ctrl+F`.
+- Dodano jawną etykietę **podcast SoundCloud** bez technicznych identyfikatorów.
+- Dodano lokalną subskrypcję przez `Ctrl+Shift+L`.
+- `Ctrl+N` przyjmuje publiczny profil SoundCloud i pełny RSS.
+- Odcinki zachowują zwykłe adresy plików audio, więc działają odtwarzanie,
+  kolejka, pobieranie i `Zapisz jako`.
+- Nie dodano logowania ani przejętego klucza API SoundCloud.
+- Wycofano webową integrację Mixcloud, która nie spełniała wymagania plików.
 
-- Dodano publiczne wyszukiwanie profili i audycji Mixcloud w `Ctrl+F` sesji
-  Podcasty i YouTube, bez konta i bez klucza API.
-- Dodano lokalne subskrypcje profili Mixcloud przez `Ctrl+Shift+L` oraz
-  bezpośrednie dodawanie profilu lub audycji przez `Ctrl+N`.
-- Zapisane profile można otwierać i odświeżać; poznane wcześniej audycje nie są
-  usuwane tylko dlatego, że wypadły z aktualnego okna publicznego API.
-- Enter na audycji otwiera oficjalną stronę Mixcloud bez niejawnego dodawania
-  wyniku do Biblioteki.
-- Menu, paleta poleceń, pełna pomoc i `Ctrl+F1` używają wspólnego modelu
-  dostępności. Pobieranie, zapis pliku i kolejka są ukryte dla audycji
-  Mixcloud, ponieważ publiczne API nie udostępnia strumienia audio.
-- SoundCloud pozostaje przy publicznym RSS. Nie dodano płatnej rejestracji API,
-  sekretu klienta ani parsowania stron.
+Projekt changelogu wymaga korekty i zatwierdzenia przed publikacją.

@@ -144,6 +144,8 @@
          ograniczonych klientów sieciowych co główne AMC. -->
     <Compile Include="..\AccessibleMediaController.Windows\Services\PodcastFeedClient.cs"
              Link="Engine\PodcastFeedClient.cs" />
+    <Compile Include="..\AccessibleMediaController.Windows\Services\SoundCloudPodcastClient.cs"
+             Link="Engine\SoundCloudPodcastClient.cs" />
     <Compile Include="..\AccessibleMediaController.Windows\Services\PodcastChapterClient.cs"
              Link="Engine\PodcastChapterClient.cs" />
     <Compile Include="..\AccessibleMediaController.Windows\Services\YouTubeChannelFeedClient.cs"
@@ -163,8 +165,6 @@
              Link="Engine\ApplePodcastDirectoryClient.cs" />
     <Compile Include="..\AccessibleMediaController.Windows\Services\SpreakerPodcastDirectoryClient.cs"
              Link="Engine\SpreakerPodcastDirectoryClient.cs" />
-    <Compile Include="..\AccessibleMediaController.Windows\Services\MixcloudPublicClient.cs"
-             Link="Engine\MixcloudPublicClient.cs" />
     <Compile Include="..\AccessibleMediaController.Windows\Services\YouTubeSearchClient.cs"
              Link="Engine\YouTubeSearchClient.cs" />
     <Compile Include="..\AccessibleMediaController.Windows\Services\PodcastEpisodeDownloader.cs"

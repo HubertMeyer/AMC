@@ -14,10 +14,6 @@ from amc_wx_lite.podcast_source import (
     SORT_CUSTOM,
     PodcastProfileError,
     PodcastSource,
-    PodcastSubscription,
-    _EpisodeRecord,
-    _episode_row,
-    is_mixcloud_show_row,
     subscription_rows,
 )
 from amc_wx_lite.profile_layout import private_sandbox
@@ -55,7 +51,12 @@ def _database(base: Path) -> Path:
     subscriptions = [
         ("rss-id", 0, "  Audycja\n tygodnia  ", 0, "https://example.invalid/feed", "© Autor audycji"),
         ("yt-id", 1, "Kanał dostępny", 2, "https://youtube.invalid/channel", "Kanał autora"),
-        ("hidden-id", 2, "Ukryty", 0, "https://example.invalid/hidden", ""),
+        (
+            "soundcloud-id", 2, "Dźwięki dostępne", 4,
+            "https://feeds.soundcloud.com/users/soundcloud:users:878535568/sounds.rss",
+            "Redakcja SoundCloud",
+        ),
+        ("hidden-id", 3, "Ukryty", 0, "https://example.invalid/hidden", ""),
     ]
     for item_id, ordinal, title, kind, feed_url, author in subscriptions:
         connection.execute(
@@ -67,50 +68,6 @@ def _database(base: Path) -> Path:
     connection.commit()
     connection.close()
     return path
-
-
-def test_mixcloud_source_and_show_use_only_user_facing_labels() -> None:
-    subscription = PodcastSubscription(
-        "mixcloud:user:private-id",
-        "Radio Nocne",
-        4,
-        "https://www.mixcloud.com/radionocne/",
-        "Redakcja",
-    )
-    source_row = subscription.as_row()
-    assert subscription.kind_label == "profil Mixcloud"
-    assert source_row.detail == "profil Mixcloud"
-    assert source_row.service_kind == "mixcloudChannel"
-    assert source_row.url == "https://www.mixcloud.com/radionocne/"
-    assert "private-id" not in " ".join((
-        source_row.title, source_row.detail, source_row.artist_name
-    ))
-
-    show_row = _episode_row(_EpisodeRecord(
-        item_id="mixcloud:show:private-id",
-        subscription_id="mixcloud:user:private-id",
-        title="Nocna audycja",
-        parent_title="Radio Nocne",
-        source_kind=4,
-        published_ticks=0,
-        is_new=False,
-        is_started=False,
-        is_played=False,
-        download_path="",
-        payload={
-            "MediaUrl": "https://www.mixcloud.com/radionocne/nocna-audycja/",
-            "MediaType": "audio/mixcloud",
-            "Author": "Redakcja",
-            "DurationTicks": 3600 * 10_000_000,
-        },
-    ), aggregate=True)
-    assert show_row.service_kind == "mixcloudShow"
-    assert show_row.podcast_media_type == "audio/mixcloud"
-    assert "audycja Mixcloud" in show_row.detail
-    assert is_mixcloud_show_row(show_row)
-    assert "private-id" not in " ".join((
-        show_row.title, show_row.detail, show_row.artist_name
-    ))
 
 
 def _episode_payload(
@@ -315,10 +272,17 @@ def test_subscription_rows_use_only_intentional_labels_and_hide_non_members() ->
         subscriptions = source.subscriptions()
         rows = subscription_rows(subscriptions)
 
-        assert [row.title for row in rows] == ["Audycja tygodnia", "Kanał dostępny"]
-        assert [row.detail for row in rows] == ["podcast", "kanał YouTube"]
+        assert [row.title for row in rows] == [
+            "Audycja tygodnia", "Kanał dostępny", "Dźwięki dostępne"
+        ]
+        assert [row.detail for row in rows] == [
+            "podcast", "kanał YouTube", "podcast SoundCloud"
+        ]
+        assert rows[2].service_kind == "soundcloudPodcast"
+        assert rows[2].url.startswith("https://feeds.soundcloud.com/")
         spoken = " ".join(row.title + " " + row.detail for row in rows)
         assert "rss-id" not in spoken and "yt-id" not in spoken
+        assert "soundcloud-id" not in spoken
         assert all(row.kind == "podcast" for row in rows)
         assert rows[0].url == "https://example.invalid/feed"
         assert rows[0].artist_name == "Autor audycji"

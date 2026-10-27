@@ -6,7 +6,6 @@ from amc_wx_lite.navigation import (
     Navigator,
     OpenPodcastAggregateView,
     OpenPodcastView,
-    OpenPublicMediaPage,
     PlayMedia,
     SessionId,
     View,
@@ -49,32 +48,6 @@ def test_enter_opens_subscription_then_plays_episode_at_resume_position() -> Non
     assert play.position_seconds == 75.0
     assert nav.view is View.PLAYER
     assert nav.session.pending_material_id == "episode-one"
-
-
-def test_enter_on_mixcloud_show_opens_official_page_and_stays_on_list() -> None:
-    nav = Navigator()
-    nav.switch_session(SessionId.PODCASTS)
-    row = Row(
-        "mixcloud-show",
-        "Nocna audycja",
-        "episode",
-        path="https://www.mixcloud.com/radio/nocna-audycja/",
-        url="https://www.mixcloud.com/radio/nocna-audycja/",
-        service_kind="mixcloudShow",
-    )
-    nav.apply_podcast_episodes("mixcloud-profile", "Radio", [row])
-
-    effects = nav.activate_selected()
-
-    opened = next(
-        effect for effect in effects if isinstance(effect, OpenPublicMediaPage)
-    )
-    assert opened.url == "https://www.mixcloud.com/radio/nocna-audycja/"
-    assert opened.title == "Nocna audycja"
-    assert opened.provider_label == "Mixcloud"
-    assert not any(isinstance(effect, PlayMedia) for effect in effects)
-    assert nav.view is View.LIST
-    assert nav.session.pending_material_id == ""
 
 
 def test_backspace_from_episodes_returns_to_exact_subscription() -> None:

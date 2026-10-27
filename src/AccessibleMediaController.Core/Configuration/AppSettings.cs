@@ -1026,7 +1026,7 @@ public sealed class PodcastSettings
             if (!subscription.IsInLibrary || subscription.RefreshIntervalMinutes > 0) continue;
             var interval = subscription.SourceKind switch
             {
-                PodcastSourceKind.Rss or PodcastSourceKind.MixcloudChannel =>
+                PodcastSourceKind.Rss or PodcastSourceKind.SoundCloudPodcast =>
                     RssRefreshIntervalMinutes,
                 PodcastSourceKind.YouTubeChannel or PodcastSourceKind.YouTubePlaylist =>
                     YouTubeRefreshIntervalMinutes,
@@ -1059,7 +1059,7 @@ public enum PodcastSourceKind
     PublicInternetMedia,
     YouTubeChannel,
     YouTubePlaylist,
-    MixcloudChannel
+    SoundCloudPodcast
 }
 
 public sealed class PodcastSubscriptionSettings

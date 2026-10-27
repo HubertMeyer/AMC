@@ -568,30 +568,27 @@ magazynie sesji. Działa to trwale dla Plików lokalnych, Radia i Podcastów.
 Przyszłe adaptery TIDAL, Apple Music, Spotify i WiiM mają stosować ten sam
 kontrakt, ale udostępniać cofnięcie dopiero po potwierdzeniu zapisu przez API.
 
-Zmiana robocza `POD-004` dodaje publiczny Mixcloud do sesji Podcasty i
-YouTube bez logowania i bez klucza API. `Ctrl+F` wyszukuje profile i audycje
-Mixcloud obok Apple Podcasts, Spreakera i YouTube. Wyniki mają jawne rodzaje
-**profil Mixcloud** oraz **audycja Mixcloud**. `Ctrl+Shift+L` zapisuje profil
-jako lokalną subskrypcję AMC albo pojedynczą audycję w **Mediach
-internetowych**; nie obserwuje niczego na koncie Mixcloud. `Ctrl+N` przyjmuje
-pełny publiczny adres profilu lub audycji, a `F5` odświeża zapisany profil.
-Enter na audycji otwiera jej oficjalną stronę w domyślnej przeglądarce bez
-automatycznego zapisu wyniku i pozostawia AMC na liście. Ponieważ publiczne API
-nie udostępnia pliku ani bezpośredniego strumienia audio, pobieranie, **Zapisz
-jako**, Kolejka i **Odtwórz jako następne** są dla takiej audycji niedostępne
-zarówno w menu, jak i w pomocy. Konto Mixcloud ani Google nie jest potrzebne.
-SoundCloud nadal można dodać przez rzeczywisty publiczny RSS; nie dodano
-wyszukiwania ani logowania, ponieważ oficjalna rejestracja aplikacji wymaga
-płatnego konta Artist Pro i sekretu klienta.
+Korekta z 27 października 2026 dodaje SoundCloud jako prawdziwe źródło
+podcastów, a nie skrót do strony internetowej. `Ctrl+F` oznacza wyniki z
+adresem `feeds.soundcloud.com` jako **podcast SoundCloud**; Enter weryfikuje
+RSS, zapisuje lokalną subskrypcję i otwiera listę odcinków, a
+`Ctrl+Shift+L` zapisuje ją bez otwierania. `Ctrl+N` przyjmuje zarówno pełny
+adres RSS SoundCloud, jak i publiczny adres profilu w postaci
+`https://soundcloud.com/NazwaProfilu`. AMC odczytuje z profilu publiczny
+identyfikator RSS, po czym używa zwykłych elementów `enclosure` kanału. Odcinki
+można odtwarzać, dodawać do kolejki, zapisywać i pobierać jak każdy inny
+podcast. Konto, logowanie i klucz API SoundCloud nie są potrzebne. Wcześniejszy
+pomysł integracji Mixcloud otwierającej wyłącznie strony WWW został wycofany,
+ponieważ nie spełniał wymagania plików audio.
 
 Wersja `alpha.242` rozszerza wyszukiwanie Podcastów o drugi publiczny katalog:
 Spreaker. `Ctrl+F` przeszukuje równolegle Apple Podcasts i Spreaker, każdy
 niezapisany wynik podaje nazwę katalogu, a Enter przed dodaniem nadal sprawdza
 rzeczywisty RSS lub Atom. Awaria jednego katalogu nie ukrywa wyników drugiego
 ani zapisanej Biblioteki. `Ctrl+N` przyjmuje również bezpośrednie, publiczne
-kanały RSS podcastów hostowanych przez SoundCloud i Spreaker. Pełne
-przeszukiwanie katalogu SoundCloud nie zostało zasymulowane przez odczytywanie
-strony: oficjalne API wyszukiwania wymaga zarejestrowanej aplikacji i tokenu.
+kanały RSS podcastów hostowanych przez SoundCloud i Spreaker. Wyszukiwanie
+SoundCloud korzysta z publicznych wpisów RSS obecnych w katalogu Apple
+Podcasts; AMC nie przejmuje ukrytego klucza aplikacji WWW SoundCloud.
 
 Wersja `alpha.241` wprowadza pierwszą działającą obsługę rozdziałów dla plików
 lokalnych i odcinków podcastów. W odtwarzaczu `Ctrl+Alt+Shift+B` tworzy nazwany
