@@ -49,8 +49,8 @@ do kontrolowanej archiwizacji opisanej w REL-003.
 ## Zadania
 
 - `POD-004` — **Wydane w AMC Test `0.1.0-alpha.436`; poprawa polskiego
-  wyszukiwania SoundCloud jest gotowa w źródłach, lecz nie ma jeszcze nowej
-  instalacji ani publikacji** —
+  wyszukiwania SoundCloud jest zapisana w commicie `11ba6271`, lecz nie ma
+  jeszcze nowej instalacji ani publikacji** —
   wyszukiwanie podcastów SoundCloud przez `Ctrl+F`, lokalna subskrypcja przez
   `Ctrl+Shift+L`, adres profilu lub RSS w `Ctrl+N` oraz zwykłe pliki audio do
   odtwarzania i pobierania. Korekta zastępuje wcześniejszą webową integrację

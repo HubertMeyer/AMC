@@ -1,6 +1,6 @@
 # POD-004 — SoundCloud jako podcast RSS: wyszukiwanie i subskrypcje
 
-- Status: `Wydanie alpha.436 istnieje; poprawa polskiego Ctrl+F gotowa w źródłach, bez nowej instalacji i publikacji`
+- Status: `Wydanie alpha.436 istnieje; poprawa polskiego Ctrl+F zapisana w commicie 11ba6271, bez nowej instalacji i publikacji`
 - Utworzono: 27 października 2026
 - Obszar: Podcasty i YouTube, RSS, pobieranie, dostępność
 
@@ -130,8 +130,8 @@ adresu RSS.
 ## Wersja, build, instalacja i publikacja
 
 - Kod wydania alpha.436: gotowy i opublikowany na GitHubie.
-- Korekta polskiego wyszukiwania: gotowa w drzewie źródłowym; jeszcze bez
-  nowego commita, instalacji i publikacji.
+- Korekta polskiego wyszukiwania: zapisana w commicie `11ba6271`; bez nowej
+  instalacji i publikacji.
 - Testy korekty: celowany zestaw SoundCloud, rzeczywista droga LiteHost oraz
   pełna regresja wxPython zaliczone. Pełna regresja Windows ma niezależne błędy
   środowiskowe i czasowe opisane wyżej, dlatego nie jest przedstawiana jako
@@ -142,3 +142,5 @@ adresu RSS.
 - Instalacja: świadomie niewykonana; użytkownik sprawdzi aktualizację ręcznie.
 - Publikacja: prerelease `test-2026.10.27.0233`, commit wydania `abfee285`.
 - Commit źródłowy: `ebf9c812` (`fix: use SoundCloud RSS for podcast subscriptions`).
+- Commit korekty wyszukiwania: `11ba6271`
+  (`fix: find verified Polish SoundCloud podcasts`).
