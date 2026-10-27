@@ -139,6 +139,78 @@ def test_global_stop_recordings_has_one_contract_in_every_session() -> None:
         ) == f"Ctrl+Alt+Shift+R. {expected}. {SESSION_LABELS[session]}"
 
 
+def test_recognition_history_has_one_contract_in_files_and_radio_only() -> None:
+    expected = (
+        "Pokaż rozpoznane utwory; Enter otwiera utwór, Ctrl+Enter album, "
+        "a prawa strzałka najważniejsze działania"
+    )
+    chord = Chord("S", ctrl=True, alt=True)
+    supported = {SessionId.FILES, SessionId.RADIO}
+
+    for session in SessionId:
+        context = {
+            "radio_session": session is SessionId.RADIO,
+            "files_session": session is SessionId.FILES,
+            "podcast_session": session is SessionId.PODCASTS,
+            "tidal_session": session is SessionId.TIDAL,
+            "spotify_session": session is SessionId.SPOTIFY,
+            "wiim_session": session is SessionId.WIIM,
+            "sonos_session": session is SessionId.SONOS,
+            "frontier_smart_session": session is SessionId.FRONTIER_SMART,
+        }
+        menu_entries = [
+            item
+            for menu in menu_model.menus_for_session(session)
+            for item in menu.items
+            if item.action is Action.VIEW_RADIO_RECOGNITION_HISTORY
+        ]
+        palette_entries = [
+            item
+            for item in entries_for_session(session)
+            if item.action is Action.VIEW_RADIO_RECOGNITION_HISTORY
+        ]
+
+        if session not in supported:
+            assert not menu_entries
+            assert not palette_entries
+            for player_view in (False, True):
+                assert resolve(
+                    chord,
+                    player_view=player_view,
+                    **context,
+                ) is None
+            assert keyboard_help_announcement(
+                chord,
+                None,
+                SESSION_LABELS[session],
+            ) == (
+                f"Ctrl+Alt+S. Brak polecenia w sesji "
+                f"{SESSION_LABELS[session]}"
+            )
+            continue
+
+        assert len(menu_entries) == 1
+        assert len(palette_entries) == 1
+        assert menu_entries[0].shortcut == "Ctrl+Alt+S"
+        assert palette_entries[0].shortcut == "Ctrl+Alt+S"
+        assert palette_entries[0].name == "Rozpoznane utwory…"
+        assert dict(describe(
+            SESSION_LABELS[session],
+            {Action.VIEW_RADIO_RECOGNITION_HISTORY},
+        ))["Ctrl+Alt+S"] == expected
+        assert keyboard_help_announcement(
+            chord,
+            Action.VIEW_RADIO_RECOGNITION_HISTORY,
+            SESSION_LABELS[session],
+        ) == f"Ctrl+Alt+S. {expected}. {SESSION_LABELS[session]}"
+        for player_view in (False, True):
+            assert resolve(
+                chord,
+                player_view=player_view,
+                **context,
+            ) is Action.VIEW_RADIO_RECOGNITION_HISTORY
+
+
 def test_palette_count_labels_are_intentional_polish_text() -> None:
     assert count_label(0) == "Brak pasujących poleceń"
     assert count_label(1) == "1 polecenie"

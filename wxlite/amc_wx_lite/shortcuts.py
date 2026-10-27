@@ -91,6 +91,8 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Mapping
 
+from .navigation import SessionId
+
 
 class Action(Enum):
     SESSION_FILES = "session.files"
@@ -432,6 +434,16 @@ class CommandPresentation:
 
 
 _STATIC_COMMAND_PRESENTATIONS: dict[Action, CommandPresentation] = {
+    Action.VIEW_RADIO_RECOGNITION_HISTORY: CommandPresentation(
+        Action.VIEW_RADIO_RECOGNITION_HISTORY,
+        "Rozpoznane utwory…",
+        (
+            "Pokaż rozpoznane utwory; Enter otwiera utwór, Ctrl+Enter album, "
+            "a prawa strzałka najważniejsze działania"
+        ),
+        "Ctrl+Alt+S",
+        "Rozpoznan&e utwory…",
+    ),
     Action.VIEW_PODCAST_INBOX: CommandPresentation(
         Action.VIEW_PODCAST_INBOX,
         "Nowe odcinki i materiały",
@@ -450,6 +462,12 @@ _STATIC_COMMAND_PRESENTATIONS: dict[Action, CommandPresentation] = {
         "Sprawdź &aktualizację AMC…",
     ),
 }
+
+
+# Historia pochodzi z rozpoznawania Radia, lecz jest trwałym zbiorem i może
+# zostać otwarta także podczas pracy z lokalną Biblioteką. Pozostałe sesje nie
+# dostają skrótu, pozycji menu ani wpisu pomocy/palety.
+RECOGNITION_HISTORY_SESSIONS = (SessionId.FILES, SessionId.RADIO)
 
 
 def command_presentation(action: Action) -> CommandPresentation | None:
@@ -1407,6 +1425,7 @@ PODCAST_INBOX_LIST_VIEW: dict[str, Action] = {
 FILES_SESSION_VIEW: dict[str, Action] = {
     "F5": Action.REFRESH_LOCAL_LIBRARY,
     "Ctrl+F5": Action.MANAGE_LIBRARY_FOLDERS,
+    "Ctrl+Alt+S": Action.VIEW_RADIO_RECOGNITION_HISTORY,
 }
 
 # Główna Biblioteka źródeł ma ten sam układ cyfr, ale osobny model i osobne

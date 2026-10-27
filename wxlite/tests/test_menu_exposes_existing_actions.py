@@ -688,7 +688,7 @@ def test_radio_station_management_stays_in_the_radio_menu() -> None:
 
 
 def test_radio_items_declare_they_need_the_radio_session() -> None:
-    """Polecenia stacji sa radiowe; wspolne podglady sa globalne jak w AMC."""
+    """Polecenia stacji sa radiowe; jawne podglady zachowuja swoj zakres."""
     radio = next(m for m in menu_model.build_menus() if "Radio" in m.title)
     global_previews = {
         Action.RECORD_STOP_ALL,
@@ -696,13 +696,20 @@ def test_radio_items_declare_they_need_the_radio_session() -> None:
         Action.VIEW_RECORDED_RADIO_FILES,
         Action.MANAGE_RADIO_SCHEDULES,
     }
+    local_and_radio = {Action.VIEW_RADIO_RECOGNITION_HISTORY}
     for item in radio.items:
-        if item.is_separator or item.action in global_previews:
+        if item.is_separator or item.action in global_previews | local_and_radio:
             continue
         assert item.needs_radio_session, item.label
     for item in radio.items:
         if item.action in global_previews:
             assert not item.needs_radio_session, item.label
+        if item.action in local_and_radio:
+            assert not item.needs_radio_session, item.label
+            assert item.visible_sessions == (
+                SessionId.FILES,
+                SessionId.RADIO,
+            )
 
 
 def test_no_placeholder_items_for_things_we_do_not_have() -> None:

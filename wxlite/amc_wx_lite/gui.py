@@ -199,6 +199,7 @@ from .shortcuts import (
     FRONTIER_SMART_SUPPORTED_ACTIONS,
     GLOBAL_VIEW_SHORTCUTS,
     PRESET_SHORTCUTS,
+    RECOGNITION_HISTORY_SESSIONS,
     SPOTIFY_SUPPORTED_ACTIONS,
     TIDAL_SUPPORTED_ACTIONS,
     SONOS_SUPPORTED_ACTIONS,
@@ -30687,6 +30688,8 @@ class LiteFrame(wx.Frame):
         )
 
     def _action_available_in_active_session(self, action: Action) -> bool:
+        if action is Action.VIEW_RADIO_RECOGNITION_HISTORY:
+            return self.navigator.active in RECOGNITION_HISTORY_SESSIONS
         target_session = next((
             session
             for session, candidate in session_order.SESSION_ACTIONS.items()

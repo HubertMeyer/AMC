@@ -35,6 +35,7 @@ from .release_profile import PUBLIC_PROFILE_ID, current_profile
 from .shortcuts import (
     Action,
     FRONTIER_SMART_SUPPORTED_ACTIONS,
+    RECOGNITION_HISTORY_SESSIONS,
     SONOS_SUPPORTED_ACTIONS,
     SPOTIFY_SUPPORTED_ACTIONS,
     TIDAL_SUPPORTED_ACTIONS,
@@ -1139,7 +1140,7 @@ def build_menus(
                 Action.VIEW_RADIO_RECOGNITION_HISTORY,
                 shortcut="Ctrl+Alt+S",
                 accelerator=False,
-                needs_radio_session=True,
+                visible_sessions=RECOGNITION_HISTORY_SESSIONS,
             ),
         ),
     )
