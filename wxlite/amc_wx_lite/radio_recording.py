@@ -14,6 +14,7 @@ from dataclasses import dataclass, field, replace
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Callable, Sequence
 
+from . import i18n
 from .state_store import Station
 from .list_model import Row
 from .radio_activity import join_spoken_prefix, normalize_state_position
@@ -28,6 +29,10 @@ _OUTCOMES = ("completed", "stopped", "interrupted", "failed")
 _POLISH_MONTHS = (
     "", "stycznia", "lutego", "marca", "kwietnia", "maja", "czerwca",
     "lipca", "sierpnia", "września", "października", "listopada", "grudnia",
+)
+_ENGLISH_MONTHS = (
+    "", "January", "February", "March", "April", "May", "June", "July",
+    "August", "September", "October", "November", "December",
 )
 
 
@@ -257,13 +262,14 @@ def current_station_recording_label(
     if entry is None:
         return ""
     state = str(entry.get("state") or "").strip().casefold()
+    english = i18n.active_language() == i18n.ENGLISH
     if entry.get("paused") is True or state == "paused":
-        return "nagrywanie wstrzymane"
+        return "recording paused" if english else "nagrywanie wstrzymane"
     if state == "starting":
-        return "przygotowywanie nagrania"
+        return "preparing recording" if english else "przygotowywanie nagrania"
     if state == "stopping":
-        return "zatrzymywanie nagrania"
-    return "nagrywanie"
+        return "stopping recording" if english else "zatrzymywanie nagrania"
+    return "recording" if english else "nagrywanie"
 
 
 def active_recording_rows(payload: object) -> list[Row]:
@@ -330,7 +336,11 @@ def _recording_format_description(format_value: object, bitrate: object) -> str:
     return {
         "flac": "FLAC",
         "wav": "WAV",
-        "original": "Oryginalny strumień",
+        "original": (
+            "Original stream"
+            if i18n.active_language() == i18n.ENGLISH
+            else "Oryginalny strumień"
+        ),
     }.get(normalized, "MP3")
 
 
@@ -338,18 +348,26 @@ def recording_output_description(entry: object) -> str:
     """Right Arrow in ``Nagrywane``: format, file and destination only."""
 
     if not isinstance(entry, dict):
-        return "Brak informacji o pliku nagrania"
+        return (
+            "No recording file information"
+            if i18n.active_language() == i18n.ENGLISH
+            else "Brak informacji o pliku nagrania"
+        )
+    english = i18n.active_language() == i18n.ENGLISH
     format_text = _recording_format_description(
         entry.get("format"), entry.get("bitrateKbps")
     )
     path = str(entry.get("path") or "").strip()
-    file_text = f"plik {ntpath.basename(path)}" if path else "plik przygotowywany"
+    if english:
+        file_text = f"file {ntpath.basename(path)}" if path else "file being prepared"
+    else:
+        file_text = f"plik {ntpath.basename(path)}" if path else "plik przygotowywany"
     output_folder = str(entry.get("outputFolder") or "").strip()
     if not output_folder and path:
         output_folder = ntpath.dirname(path)
     default_folder = str(entry.get("defaultFolder") or "").strip()
     folder_text = (
-        "folder domyślny"
+        ("default folder" if english else "folder domyślny")
         if not output_folder or _same_windows_path(output_folder, default_folder)
         else output_folder
     )
@@ -363,7 +381,11 @@ def scheduled_recording_output_description(schedule: object, recording) -> str:
         try:
             schedule = dict(schedule)
         except (TypeError, ValueError):
-            return "Brak informacji o pliku nagrania"
+            return (
+                "No recording file information"
+                if i18n.active_language() == i18n.ENGLISH
+                else "Brak informacji o pliku nagrania"
+            )
     format_value = str(schedule.get("recordingFormat") or "").strip() or getattr(
         recording, "format", "Mp3"
     )
@@ -589,21 +611,27 @@ def recording_history_payload_from_event(payload: object) -> dict | None:
 
 
 def _when_label(ticks: int, now: datetime) -> str:
+    english = i18n.active_language() == i18n.ENGLISH
     if ticks <= 0:
-        return "nieznany czas"
+        return "unknown time" if english else "nieznany czas"
     try:
         finished = (
             datetime(1, 1, 1, tzinfo=timezone.utc)
             + timedelta(microseconds=ticks // 10)
         ).astimezone()
     except (OverflowError, OSError, ValueError):
-        return "nieznany czas"
+        return "unknown time" if english else "nieznany czas"
     local_now = now.astimezone() if now.tzinfo else now
     if finished.date() == local_now.date():
-        return f"dziś {finished:%H:%M}"
+        return f"today {finished:%H:%M}" if english else f"dziś {finished:%H:%M}"
     if finished.date() == (local_now - timedelta(days=1)).date():
-        return f"wczoraj {finished:%H:%M}"
-    return f"{finished.day} {_POLISH_MONTHS[finished.month]}, {finished:%H:%M}"
+        return (
+            f"yesterday {finished:%H:%M}"
+            if english
+            else f"wczoraj {finished:%H:%M}"
+        )
+    months = _ENGLISH_MONTHS if english else _POLISH_MONTHS
+    return f"{finished.day} {months[finished.month]}, {finished:%H:%M}"
 
 
 def _file_name(path: str) -> str:
@@ -615,7 +643,9 @@ def _folder_label(path: str) -> str:
     if not directory:
         return ""
     name = ntpath.basename(directory.rstrip("\\/")) or directory
-    return f"folder {name}" if name else ""
+    if not name:
+        return ""
+    return f"folder {name}"
 
 
 def _normalized_recording_path(path: str) -> str:
@@ -629,9 +659,17 @@ def _recorded_file_detail(item: "LibraryItem") -> str:
     if item.duration_ticks > 0:
         parts.append(format_duration(item.duration_ticks / 10_000_000))
     if item.is_favorite:
-        parts.append("ulubione")
+        parts.append(
+            "favorite"
+            if i18n.active_language() == i18n.ENGLISH
+            else "ulubione"
+        )
     if not item.is_in_library:
-        parts.append("poza Biblioteką")
+        parts.append(
+            "outside the Library"
+            if i18n.active_language() == i18n.ENGLISH
+            else "poza Biblioteką"
+        )
     return ", ".join(parts)
 
 

@@ -19,13 +19,44 @@ spec.loader.exec_module(bundle)
 def test_python_package_matches_isolated_runtime_app_path():
     with tempfile.TemporaryDirectory() as folder:
         target = Path(folder)
-        bundle.copy_python_code(target)
+        copied = bundle.copy_python_code(target)
         assert (target / "app" / "amc_wx_lite" / "__main__.py").is_file()
         assert (target / "app" / "amc_wx_lite" / "spotify_source.py").is_file()
         assert (target / "app" / "amc_wx_lite" / "tidal_source.py").is_file()
         assert (target / "app" / "amc_wx_lite" / "sonos_source.py").is_file()
         assert (target / "app" / "amc_wx_lite" / "frontier_smart_source.py").is_file()
+        assert (
+            target / "app" / "amc_wx_lite" / "locales" / "en_legacy.json"
+        ).is_file()
+        assert (
+            target / "app" / "amc_wx_lite" / "locales" / "template.json"
+        ).is_file()
+        assert "app/amc_wx_lite/locales/en_legacy.json" in copied
         assert not (target / "AMC-wx-Lite.cmd").exists()
+
+
+def test_python_package_replaces_stale_locale_resources():
+    with tempfile.TemporaryDirectory() as folder:
+        root = Path(folder)
+        source = root / "source"
+        source_package = source / "amc_wx_lite"
+        source_locales = source_package / "locales"
+        source_locales.mkdir(parents=True)
+        (source_package / "__init__.py").write_text("", encoding="utf-8")
+        (source_locales / "en.json").write_text('{"language": "en"}', encoding="utf-8")
+
+        target = root / "bundle"
+        stale = target / "app" / "amc_wx_lite" / "locales" / "stale.json"
+        stale.parent.mkdir(parents=True)
+        stale.write_text("{}", encoding="utf-8")
+
+        copied = bundle.copy_python_code(target, source_wxlite=source)
+
+        assert not stale.exists()
+        assert (stale.parent / "en.json").read_text(encoding="utf-8") == (
+            '{"language": "en"}'
+        )
+        assert "app/amc_wx_lite/locales/en.json" in copied
 
 
 def test_public_python_package_contains_sonos_and_omits_only_disabled_services():

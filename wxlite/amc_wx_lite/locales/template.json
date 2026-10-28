@@ -1,0 +1,2121 @@
+{
+  "_meta": {
+    "language": "language-tag",
+    "name": "Language name shown to users",
+    "instructions": "Fill every value; preserve keys and placeholders in braces."
+  },
+  "ui": {
+    "keyboardHelp.available": "",
+    "keyboardHelp.noCommand": "",
+    "keyboardHelp.unavailable": "",
+    "language.english": "",
+    "language.polish": "",
+    "language.system": "",
+    "palette.count.few": "",
+    "palette.count.many": "",
+    "palette.count.none": "",
+    "palette.count.one": "",
+    "settings.cancel.accessibleName": "",
+    "settings.categories.accessibleName": "",
+    "settings.interfaceLanguage.accessibleName": "",
+    "settings.interfaceLanguage.help": "",
+    "settings.interfaceLanguage.label": "",
+    "settings.messageLanguage.accessibleName": "",
+    "settings.messageLanguage.help": "",
+    "settings.messageLanguage.label": "",
+    "settings.messageTemplates.event.accessibleName": "",
+    "settings.messageTemplates.event.help": "",
+    "settings.messageTemplates.event.label": "",
+    "settings.messageTemplates.explanation": "",
+    "settings.messageTemplates.heading": "",
+    "settings.messageTemplates.heading.accessibleName": "",
+    "settings.messageTemplates.text.accessibleName": "",
+    "settings.messageTemplates.text.help": "",
+    "settings.messageTemplates.text.label": "",
+    "settings.save.accessibleName": "",
+    "settings.save.label": "",
+    "settings.tab.accessibility": "",
+    "settings.tab.general": "",
+    "settings.tab.keyboard": "",
+    "settings.tab.podcasts": "",
+    "settings.tab.radio": "",
+    "settings.tab.updates": "",
+    "settings.tab.windows": "",
+    "settings.title": "",
+    "shortcut.down": "",
+    "shortcut.left": "",
+    "shortcut.right": "",
+    "shortcut.space": "",
+    "shortcut.up": ""
+  },
+  "legacyUi": {
+    "&Adres (http/https):": "",
+    "&Adres źródła:": "",
+    "&Aktualizuj": "",
+    "&Dalej": "",
+    "&Dodaj": "",
+    "&Dodaj folder…": "",
+    "&Edytuj…": "",
+    "&Eksportuj…": "",
+    "&Filtruj playlisty:": "",
+    "&Importuj zaznaczone": "",
+    "&Informacje o aktualizacji:": "",
+    "&Konfiguruj…": "",
+    "&Kopiuj": "",
+    "&Kopiuj wszystko": "",
+    "&Lokalny adres IP:": "",
+    "&Nazwa playlisty:": "",
+    "&Nowa playlista…": "",
+    "&Nowa…": "",
+    "&Nowy…": "",
+    "&Odłącz folder…": "",
+    "&Otwórz": "",
+    "&PIN NetRemote urządzenia:": "",
+    "&Pokaż wpisy:": "",
+    "&Powiel": "",
+    "&Połącz i zapisz": "",
+    "&Przełącz": "",
+    "&Przypisz skrót…": "",
+    "&Sposób zapisu:": "",
+    "&Sprawdź i dodaj": "",
+    "&Sprawdź urządzenie": "",
+    "&Szukaj": "",
+    "&Szukaj nowych urządzeń": "",
+    "&Tekst do wyszukania:": "",
+    "&Uruchom": "",
+    "&Urządzenie audio:": "",
+    "&Usuń": "",
+    "&Usuń playlistę…": "",
+    "&Usuń z AMC": "",
+    "&Użyj wybranego": "",
+    "&Widoczność:": "",
+    "&Wybierz folder…": "",
+    "&Wybierz plik…": "",
+    "&Wykonaj": "",
+    "&Włącz lub wyłącz": "",
+    "&Zamknij": "",
+    "&Zapisz": "",
+    ". Zapis oryginalnego strumienia pozostał aktywny": "",
+    "1 wynik": "",
+    "AMC Public ma własne zmiany od poprzedniego odświeżenia. Czy zastąpić zgodne dane danymi z AMC Test? Ustawienia, konta i bieżący widok pozostaną bez zmian.": "",
+    "AMC prosi Google wyłącznie o odczyt listy subskrypcji i własnych playlist YouTube. Hasło wpisujesz tylko na oficjalnej stronie Google w domyślnej przeglądarce. Najpierw sprawdzasz plan zmian, a zapis do Biblioteki AMC wykonujesz osobnym przyciskiem. Samo ponowne uruchomienie AMC ani logowanie nie przywraca usuniętych kanałów lub filmów. Przywracanie wcześniej usuniętych kanałów wymaga jawnego zaznaczenia pola poniżej.": "",
+    "Adres logowania Sonos": "",
+    "Adres przygotowany przez AMC. Możesz go skopiować albo otworzyć w domyślnej przeglądarce.": "",
+    "Adres źródła": "",
+    "Aktualizacja jest gotowa. AMC zamknie się bezpiecznie, zainstaluje nową wersję i uruchomi ponownie": "",
+    "Aktualizacja składników już trwa": "",
+    "Aktualizuj AMC": "",
+    "Anulowano eksport danych AMC": "",
+    "Anulowano import danych AMC": "",
+    "Anuluj": "",
+    "Anuluj dodawanie do playlist Spotify": "",
+    "Anuluj dodawanie źródła": "",
+    "Anuluj edycję planu nagrywania": "",
+    "Anuluj import podcastów": "",
+    "Anuluj logowanie": "",
+    "Anuluj opcje odtwarzania": "",
+    "Anuluj paletę poleceń": "",
+    "Anuluj przypisanie presetu": "",
+    "Anuluj tworzenie playlisty Spotify": "",
+    "Anuluj wybór kanałów": "",
+    "Bezpieczne odłączenie folderu": "",
+    "Biblioteka bez zmian": "",
+    "Biblioteka jest pusta": "",
+    "Biblioteka stacji jest dostępna w sesji Radio": "",
+    "Bieżąca sesja nie ma opcji sesji.": "",
+    "Bieżący stan konta i krótka instrukcja. Pole tylko do odczytu; użyj strzałek do czytania, a Tab przechodzi do czynności.": "",
+    "Brak aktywnego urządzenia Frontier Smart. Naciśnij Enter na urządzeniu": "",
+    "Brak aktywnego urządzenia WiiM. Naciśnij Enter na urządzeniu": "",
+    "Brak aktywnej grupy Sonos. Naciśnij Enter na grupie": "",
+    "Brak dostępnego sposobu zapisu fragmentu": "",
+    "Brak dostępnych poleceń dla tego miejsca": "",
+    "Brak elementu do usunięcia": "",
+    "Brak kanałów do zapisania": "",
+    "Brak playlist do zapisania": "",
+    "Brak playlisty do zaznaczenia": "",
+    "Brak playlisty do zmiany": "",
+    "Brak pliku do przeniesienia do Kosza": "",
+    "Brak pliku do wycięcia": "",
+    "Brak polecenia do wykonania": "",
+    "Brak trwających nagrań": "",
+    "Brak wpisu Historii Spotify do usunięcia": "",
+    "Brak wpisu Historii odtwarzania do usunięcia": "",
+    "Brak wpisu do usunięcia": "",
+    "Brak wybranego działania": "",
+    "Brak wybranego wpisu": "",
+    "Brak wybranego wyniku": "",
+    "Brak wyników. Zmień wyszukiwany tekst": "",
+    "Brak zajętych presetów urządzenia": "",
+    "Brak zakładki do usunięcia": "",
+    "Brak zapisanego elementu Spotify do usunięcia": "",
+    "Brak zapisanych presetów Frontier Smart": "",
+    "Cyfra wybiera miejsce. Page Up i Page Down przechodzą po zajętych presetach. Enter albo Spacja uruchamia.": "",
+    "Cyfra, minus lub znak równości wybiera miejsce. Enter albo Spacja uruchamia.": "",
+    "Cyfra, minus lub znak równości wybiera miejsce. Enter zapisuje lub zastępuje. Delete przygotowuje usunięcie.": "",
+    "Dane z AMC Test odświeża AMC Public": "",
+    "Dla jednego działania wybierz wyniki z tej samej listy": "",
+    "Dla jednego działania wybierz wyniki z tej samej usługi": "",
+    "Dla jednego działania wybierz wyniki zapisane albo wyniki katalogu": "",
+    "Dla tego elementu nie znaleziono podcastu w Bibliotece": "",
+    "Dni &tygodnia:": "",
+    "Dni tygodnia dla powtarzanego nagrania": "",
+    "Do edycji wybierz jeden strumień WiiM": "",
+    "Do edycji wybierz jedną stację Sonos": "",
+    "Do kolejki TIDAL wybierz utwór, który ma dane albumu": "",
+    "Do kolejki można dodać tylko pliki": "",
+    "Do kolejki podcastów wybierz odcinek": "",
+    "Do playlisty Spotify wybierz utwór albo odcinek": "",
+    "Dodaj do zaznaczonych playlist Spotify": "",
+    "Dodaj folder do Biblioteki": "",
+    "Dodaj nazwany rozdział": "",
+    "Dodaj nazwaną zakładkę": "",
+    "Dodaj nazwaną zakładkę nagrania": "",
+    "Dodaj stację Sonos": "",
+    "Dodaj strumień WiiM": "",
+    "Dodane foldery są skanowane do lokalnej Biblioteki. Odłączenie folderu nie usuwa plików z dysku ani zapisanych danych AMC.": "",
+    "Dodano": "",
+    "Dodawanie stacji już trwa": "",
+    "Dodawanie źródła jest dostępne w sesji Podcasty i YouTube": "",
+    "Dodawanie źródła już trwa": "",
+    "Dokąd przejść": "",
+    "Dopisywanie fragmentu anulowane": "",
+    "Dopisywanie fragmentu rozpoczęte": "",
+    "Dołącz dziennik diagnostyczny po automatycznej redakcji, domyślnie wyłączone": "",
+    "Dołącz ostatnie wpisy dziennika po automatycznej redakcji": "",
+    "Edytuj stację Sonos": "",
+    "Edytuj strumień WiiM": "",
+    "Eksport OPML jest dostępny w sesji Podcasty i YouTube": "",
+    "Eksport kanałów YouTube jest dostępny w sesji Podcasty i YouTube": "",
+    "Eksportowanie biblioteki podcastów do OPML": "",
+    "Eksportowanie kanałów YouTube": "",
+    "Eksportuj Moje stacje Sonosa": "",
+    "Eksportuj bibliotekę podcastów do OPML": "",
+    "Eksportuj dane AMC": "",
+    "Eksportuj historię": "",
+    "Eksportuj rozpoznane utwory": "",
+    "Eksportuj strumienie do WiiM Home": "",
+    "Eksportuj subskrypcje YouTube": "",
+    "Eksportuj ulubione stacje do playlisty": "",
+    "Eksportuję dane AMC": "",
+    "Enter otwiera. Lewa strzałka lub Escape wraca.": "",
+    "Enter przełącza do włączonej sesji. Spacja włącza lub wyłącza. Alt+strzałka w górę lub w dół zmienia kolejność i numery.": "",
+    "Filtr dziala na liscie, nie w odtwarzaczu": "",
+    "Filtr historii według stacji": "",
+    "Filtr poleceń": "",
+    "Filtruj playlisty": "",
+    "Folder pobierania podcastu": "",
+    "Foldery Biblioteki": "",
+    "Frontier Smart nie podał tego czasu": "",
+    "Gotowe do sprawdzenia": "",
+    "Góra i dół wybierają plan. Lewo powtarza stan i termin, prawo czyta ustawienia pliku. Enter edytuje, Spacja włącza lub wyłącza.": "",
+    "Głośniki i grupy Sonos": "",
+    "Historia Spotify bez zmian": "",
+    "Historia bieżącej sesji nagrywania jest chwilowo niedostępna": "",
+    "Historia jest pusta": "",
+    "Historia nie zawiera elementu, który można ponownie odtworzyć": "",
+    "Historia odtwarzania bez zmian": "",
+    "Historia wyszukiwania jest pusta": "",
+    "Import OPML": "",
+    "Import OPML anulowany": "",
+    "Import OPML jest dostępny w sesji Podcasty i YouTube": "",
+    "Import lub eksport OPML już trwa": "",
+    "Import lub eksport źródeł już trwa": "",
+    "Import zakończony": "",
+    "Importuj dane AMC": "",
+    "Importuj playlistę do Moich stacji Sonosa": "",
+    "Importuj podcasty z OPML": "",
+    "Importuj zaznaczone podcasty": "",
+    "Importuję dane AMC": "",
+    "Informacja o zbiorczej liście transmisji YouTube": "",
+    "Informacje o aktualizacji AMC": "",
+    "Informacje o logowaniu Sonos": "",
+    "Insert dodaje plan. Ctrl+D powiela wybrany plan jako wyłączoną kopię. Enter edytuje. Spacja włącza lub wyłącza. Delete usuwa. Strzałka w lewo powtarza stan i termin, a strzałka w prawo czyta format, nazwę przygotowywanego pliku i folder docelowy. Shift+F10 albo klawisz menu otwiera te same polecenia. Każda zapisana zmiana jest stosowana od razu.": "",
+    "Integracja z Windows jest niedostępna, ponieważ silnik AMC nie jest uruchomiony.": "",
+    "Jednocześnie można otworzyć jeden plik": "",
+    "Kanały YouTube do sprawdzania transmisji": "",
+    "Kanały planowane do zapisania w Bibliotece AMC": "",
+    "Kanały zbiorczej listy transmisji": "",
+    "Kilka grup Sonos ma ten sam zestaw głośników, więc wybór nie jest jednoznaczny. Nic nie uruchomiłem": "",
+    "Kolejka bez zmian": "",
+    "Kolejka podcastów bez zmian": "",
+    "Konfiguruj wybrane konto lub urządzenie": "",
+    "Koniec fragmentu musi znajdować się po jego początku": "",
+    "Koniec utworu": "",
+    "Konto Sonos": "",
+    "Konto YouTube, subskrypcje i playlisty": "",
+    "Kopiuj adres logowania": "",
+    "Kopiuj całą treść": "",
+    "Kopiuj opis": "",
+    "Kroki odtworzenia, nieobowiązkowe": "",
+    "Kroki odtworzenia, nieobowiązkowe:": "",
+    "Lista Spotify jest pusta": "",
+    "Lista TIDAL jest pusta": "",
+    "Logowanie YouTube nie jest skonfigurowane w tej wersji AMC Test": "",
+    "Logujesz się zwykłym kontem na oficjalnej stronie Sonos. Hasło wpisujesz wyłącznie w przeglądarce; AMC go nie widzi. Rozpoczęcie logowania otworzy oficjalną stronę w domyślnej przeglądarce.": "",
+    "Lokalny adres IP urządzenia": "",
+    "Losowanie WiiM jest dostępne po otwarciu sterowania urządzeniem": "",
+    "MP4, domyślny i najbardziej zgodny": "",
+    "Miejsca presetów": "",
+    "Na żywo": "",
+    "Nad": "",
+    "Nagranie jest już zatrzymywane": "",
+    "Nagranie jeszcze się uruchamia": "",
+    "Nagranie jeszcze się uruchamia albo trwa zmiana części": "",
+    "Nagrywanie ręczne jest dostępne dla wybranej stacji radia internetowego": "",
+    "Najpierw naciśnij Control X na stacji do przeniesienia": "",
+    "Najpierw naciśnij Control X na strumieniu do przeniesienia": "",
+    "Najpierw skonfiguruj konto YouTube w menu Plik": "",
+    "Najpierw uruchom stację radiową": "",
+    "Najpierw uruchom utwór w oryginalnym TIDALu": "",
+    "Najpierw wybierz grupę Sonos skrótem Control F5": "",
+    "Najpierw wybierz kanały zbiorczej listy transmisji": "",
+    "Najpierw wybierz stację": "",
+    "Najpierw wybierz strumień": "",
+    "Najpierw wybierz urządzenie Frontier Smart": "",
+    "Najpierw wykonaj wyszukiwanie i wybierz wynik": "",
+    "Najpierw włącz tę sesję Spacją w Menedżerze sesji": "",
+    "Najpierw zaznacz element lub grupę skrótem Ctrl+X": "",
+    "Najpierw zaznacz stację lub grupę skrótem Ctrl+X": "",
+    "Najważniejsze działania dla rozpoznanego utworu": "",
+    "Następny utwór kolejki (Page Down)": "",
+    "Nawigacja po historii działa w odtwarzaczu": "",
+    "Nawigacja po zakładkach jest dostępna dla plików lokalnych, podcastów i Spotify": "",
+    "Nazwa playlisty Spotify": "",
+    "Nazwa playlisty jest pusta": "",
+    "Nazwa playlisty może mieć najwyżej 200 znaków": "",
+    "Nazwa playlisty musi mieć od 1 do 100 znaków": "",
+    "Nazwa playlisty nie może być pusta": "",
+    "Nazwa playlisty nie została zmieniona": "",
+    "Nazwa playlisty:": "",
+    "Nazwa rozdziału nie może być pusta": "",
+    "Nazwa w Bibliotece nie została zmieniona": "",
+    "Nazwa zakładki nie może być pusta": "",
+    "Nie ma czego skopiować": "",
+    "Nie ma elementu, którego właściwości można pokazać": "",
+    "Nie ma jeszcze danych z AMC Test": "",
+    "Nie ma teraz grupy Sonos o dokładnie tym zestawie głośników. Zgrupuj je tak jak przy zapisie presetu. Niczego nie uruchomiłem i nie przegrupowałem": "",
+    "Nie można dodać zakładki do bieżącego materiału": "",
+    "Nie można odczytać poprzedniego ustawienia kopii po edycji. Wybrano zachowywanie kopii": "",
+    "Nie można odnaleźć kanału tej transmisji": "",
+    "Nie można otworzyć tego wyniku w AMC": "",
+    "Nie można rozpoznać wybranej playlisty": "",
+    "Nie można sprawdzić możliwości dopisania fragmentu. Pliki nie zostały zmienione": "",
+    "Nie można sprawdzić możliwości edycji pliku. Oryginalny plik nie został zmieniony": "",
+    "Nie można teraz odczytać Folderów Biblioteki": "",
+    "Nie można teraz odczytać stanu konta Sonos.": "",
+    "Nie można teraz odczytać stanu konta YouTube.": "",
+    "Nie udało się bezpiecznie zaktualizować składników. Szczegóły zapisano w dzienniku AMC": "",
+    "Nie udało się odczytać grup Sonos. Nic nie uruchomiłem": "",
+    "Nie udało się odczytać presetu": "",
+    "Nie udało się odczytać presetów": "",
+    "Nie udało się odczytać urządzeń audio": "",
+    "Nie udało się otworzyć katalogu TIDAL": "",
+    "Nie udało się otworzyć oryginalnej aplikacji": "",
+    "Nie udało się otworzyć stacji": "",
+    "Nie udało się otworzyć wyniku katalogu": "",
+    "Nie udało się otworzyć łącza": "",
+    "Nie udało się przygotować przypisania presetu": "",
+    "Nie udało się skopiować do schowka": "",
+    "Nie udało się sprawdzić aktualnego stanu harmonogramu": "",
+    "Nie udało się wykonać wyszukiwania": "",
+    "Nie udało się zapisać aktualnego stanu harmonogramu": "",
+    "Nie udało się zapisać aktualnego terminu harmonogramu": "",
+    "Nie udało się zapisać harmonogramu. Niczego nie zmieniono": "",
+    "Nie udało się zapisać postępu odcinka": "",
+    "Nie udało się zapisać pozycji": "",
+    "Nie udało się zapisać presetów. Niczego nie zmieniono": "",
+    "Nie udało się zapisać przypisania. Niczego nie zmieniono": "",
+    "Nie udało się zmienić głośności Frontier Smart. Odczekaj chwilę i spróbuj ponownie": "",
+    "Nie wybrano głośników Sonos. Nic nie uruchomiłem": "",
+    "Nie wybrano głośników Sonos. Wybierz grupę skrótem Control F5 i spróbuj ponownie. Nic nie uruchomiłem": "",
+    "Nie wybrano miejsca docelowego": "",
+    "Nie wybrano stacji": "",
+    "Nie wybrano żadnego pliku": "",
+    "Nie zmieniono nazwy pliku: silnik nie potwierdził nowego pliku na dysku": "",
+    "Nie znaleziono biblioteki podcastów AMC": "",
+    "Nie znaleziono dokładnego wyniku w wybranej usłudze": "",
+    "Nie znaleziono dokładnego łącza do utworu": "",
+    "Nie znaleziono lokalnego pliku": "",
+    "Nie znam czasu trwania, nie moge skoczyc na koniec": "",
+    "Nieznane ustawienie WiiM": "",
+    "Nowa część nagrania już trwa. Ponowne T pominięte": "",
+    "Nowa nazwa pliku nie może być pusta": "",
+    "Nowa nazwa podcastu lub kanału nie może być pusta": "",
+    "Nowa nazwa w Bibliotece nie może być pusta": "",
+    "Odczytywanie listy podcastów z OPML": "",
+    "Odtwarzanie działa, ale nie udało się zapisać pozycji w Historii odtwarzania": "",
+    "Odtwarzanie losowe nie jest dostępne w tej sesji": "",
+    "Odtwarzanie w oryginalnym TIDALu": "",
+    "Odśwież &wybrany": "",
+    "Odśwież dane z AMC Test": "",
+    "Odśwież dostęp": "",
+    "Odśwież podgląd": "",
+    "Odśwież w&szystkie": "",
+    "Odświeżam zapisane urządzenia WiiM": "",
+    "Odświeżanie Folderów Biblioteki": "",
+    "Odświeżanie stacji Radia": "",
+    "Odświeżanie źródeł jest dostępne w sesji Podcasty i YouTube": "",
+    "Odświeżanie źródeł już trwa": "",
+    "Odświeżono stacje Radia": "",
+    "Opcje odtwarzania są już otwierane": "",
+    "Opcje sesji bez zmian.": "",
+    "Opcje są dostępne dla podcastu albo odcinka": "",
+    "Opis zgłoszenia": "",
+    "Opis:": "",
+    "Oryginalny TIDAL nie podaje czasu całkowitego": "",
+    "Oryginalny TIDAL nie podaje czasu od początku": "",
+    "Oryginalny TIDAL nie podaje czasu pozostałego": "",
+    "Oryginalny TIDAL nie podaje teraz czasu utworu": "",
+    "Oryginalny lub najlepszy dostępny format, bez wymuszania MP4": "",
+    "Otwórz kategorię Moje stacje Sonosa": "",
+    "Otwórz odcinek w jego podcaście lub kanale i naciśnij Delete": "",
+    "Otwórz playlistę lub plik ze strumieniami WiiM": "",
+    "Otwórz stronę ponownie": "",
+    "Otwórz wybrane miejsce": "",
+    "PIN NetRemote urządzenia Frontier Smart, pole chronione": "",
+    "Pełny opis Spotify jest dostępny dla podcastu albo odcinka": "",
+    "Pełny opis jest dostępny dla podcastu albo odcinka": "",
+    "Pełny podgląd zredagowanego raportu": "",
+    "Plan &włączony": "",
+    "Plan włączony": "",
+    "Playlisty": "",
+    "Playlisty AMC nie są dostępne w tej sesji": "",
+    "Playlisty Spotify do dodania": "",
+    "Playlisty planowane do zapisania w Bibliotece AMC": "",
+    "Plik OPML nie zawiera adresów podcastów": "",
+    "Plik źródłowy nigdy nie jest zmieniany. Wynik zostanie zapisany jako nowy plik.": "",
+    "Pobieram playlisty Spotify": "",
+    "Pobieram tryby Frontier Smart": "",
+    "Pobieranie i sprawdzanie aktualizacji AMC": "",
+    "Pobieranie nie jest dostępne dla stacji radiowych": "",
+    "Pobieranie odcinka": "",
+    "Pobieranie odcinków jest dostępne w sesji Podcasty i YouTube": "",
+    "Pobieranie odcinków już trwa": "",
+    "Pobieranie odcinków lub wideo już trwa": "",
+    "Pobieranie wideo": "",
+    "Pobieranie wideo jest dostępne tylko dla materiałów YouTube": "",
+    "Pobieranie wideo jest dostępne w sesji Podcasty i YouTube": "",
+    "Pobrane odcinki są dostępne w sesji Podcasty i YouTube": "",
+    "Poczekaj na zakończenie bieżącej operacji YouTube.": "",
+    "Początek fragmentu musi znajdować się przed jego końcem": "",
+    "Pod": "",
+    "Podcasty do importu": "",
+    "Polecenia": "",
+    "Ponowna kompresja pliku docelowego": "",
+    "Ponownie dodano": "",
+    "Ponów zapis konta": "",
+    "Poprzedni utwór kolejki (Page Up)": "",
+    "Poprzednie polecenie Frontier Smart jeszcze trwa": "",
+    "Potwierdzenie": "",
+    "Potwierdzenie dopisania fragmentu": "",
+    "Potwierdzenie ponownego uruchomienia TIDALa": "",
+    "Potwierdzenie usunięcia fragmentu": "",
+    "Potwierdzenie usunięcia playlisty": "",
+    "Presety urządzenia Frontier Smart": "",
+    "Prywatna (domyślna)": "",
+    "Przechodzenie po źródłach WiiM jest dostępne w odtwarzaczu urządzenia": "",
+    "Przejdź do": "",
+    "Przejście do albumu, wykonawcy lub podcastu jest dostępne dla wyników TIDAL i Spotify": "",
+    "Przenieś pliki do Kosza": "",
+    "Przenoszenie do Kosza jest dostępne tylko dla plików lokalnych": "",
+    "Przenoszenie działa w kolejności własnej. Naciśnij Alt 3": "",
+    "Przenoszenie przed wybrany element działa w otwartej playliście": "",
+    "Przełącz do wybranej sesji": "",
+    "Przygotowywanie odtwarzania Spotify": "",
+    "Przygotowywanie zapisu odcinka": "",
+    "Przygotowywanie zapisu wideo": "",
+    "Przypisz skrót do zaznaczonego presetu": "",
+    "Przywróć kanały i playlisty wcześniej usunięte z Biblioteki AMC": "",
+    "Publiczna": "",
+    "Puste pole wyszukiwania": "",
+    "Rodzaj zgłoszenia": "",
+    "Rodzaj zgłoszenia:": "",
+    "Rozdział": "",
+    "Rozdziały": "",
+    "Rozdziały bieżącego materiału": "",
+    "Rozdziały są dostępne dla plików lokalnych, podcastów i Spotify": "",
+    "Rozpocznij logowanie": "",
+    "Rozpoznaję utwór": "",
+    "Rozpoznane utwory": "",
+    "Rozpoznane utwory. Enter otwiera utwór, Ctrl+Enter album w usłudze domyślnej, prawa strzałka pokazuje działania, lewa podaje krótką informację. Ctrl+C kopiuje opis, Ctrl+Shift+C dokładne łącze. Alt+strzałka w górę lub w dół zmienia kolejność, Delete usuwa.": "",
+    "Rozpoznawanie już trwa": "",
+    "Ręczne przenoszenie działa w Bibliotece i Ulubionych Radia": "",
+    "Ręczne przenoszenie działa w otwartej playliście": "",
+    "Schowek jest zajęty, spróbuj ponownie": "",
+    "Sesje": "",
+    "Silnik nie dziala": "",
+    "Silnik nie dziala, import niedostepny": "",
+    "Silnik nie dziala, nie moge odtworzyc": "",
+    "Silnik nie dziala, nie moge wczytac folderu": "",
+    "Silnik nie działa": "",
+    "Silnik nie działa, eksport niedostępny": "",
+    "Silnik nie działa, lista rozdziałów jest niedostępna": "",
+    "Silnik nie działa, nawigacja po rozdziałach jest niedostępna": "",
+    "Silnik nie działa, nawigacja po zakładkach jest niedostępna": "",
+    "Silnik nie działa, nie mogę dodać rozdziału": "",
+    "Silnik nie działa, nie mogę dodać zakładki": "",
+    "Silnik nie działa, nie mogę dodać zakładki nagrania": "",
+    "Silnik nie działa, nie mogę dodać źródła": "",
+    "Silnik nie działa, nie mogę odtworzyć": "",
+    "Silnik nie działa, nie mogę odtworzyć Spotify": "",
+    "Silnik nie działa, nie mogę odświeżyć źródeł": "",
+    "Silnik nie działa, nie mogę otworzyć opcji": "",
+    "Silnik nie działa, nie mogę otworzyć playlist": "",
+    "Silnik nie działa, nie mogę otworzyć playlist Spotify": "",
+    "Silnik nie działa, nie mogę otworzyć stacji": "",
+    "Silnik nie działa, nie mogę otworzyć wyniku": "",
+    "Silnik nie działa, nie mogę pobrać odcinków": "",
+    "Silnik nie działa, nie mogę pobrać wideo": "",
+    "Silnik nie działa, nie mogę sterować TIDALem": "",
+    "Silnik nie działa, nie mogę wyeksportować kanałów YouTube": "",
+    "Silnik nie działa, nie mogę wyeksportować podcastów": "",
+    "Silnik nie działa, nie mogę zaimportować podcastów": "",
+    "Silnik nie działa, nie mogę zaktualizować składników": "",
+    "Silnik nie działa, nie mogę zapisać odcinka": "",
+    "Silnik nie działa, nie mogę zapisać wideo": "",
+    "Silnik nie działa, nie mogę zmienić Biblioteki": "",
+    "Silnik nie działa, nie mogę zmienić Ulubionych": "",
+    "Silnik nie działa, nie mogę zmienić kolejki": "",
+    "Silnik nie działa, nie mogę zmienić kolekcji Spotify": "",
+    "Silnik nie działa, nie mogę zmienić kolekcji TIDAL": "",
+    "Silnik nie działa, nie mogę zmienić sortowania": "",
+    "Silnik nie działa, nie mogę zmienić ulubionych": "",
+    "Silnik nie działa, wycinanie fragmentu jest niedostępne": "",
+    "Silnik nie działa. Kolejność nie została zmieniona": "",
+    "Silnik nie działa. Nie można pobrać transmisji YouTube": "",
+    "Silnik nie działa. Zmiana nie została zapisana": "",
+    "Silnik nie jest gotowy": "",
+    "Silnik nie jest gotowy.": "",
+    "Silnik odtwarzania jest niedostępny": "",
+    "Skopiowano adres logowania Sonos.": "",
+    "Skopiowano całą treść": "",
+    "Skopiowano nazwę": "",
+    "Skopiowano nazwę działania": "",
+    "Skopiowano właściwości elementu": "",
+    "Skopiowano łącze": "",
+    "Skopiuj adres utworzonego zgłoszenia": "",
+    "Skopiuj adres zgłoszenia": "",
+    "Skopiuj raport": "",
+    "Skroty klawiszowe": "",
+    "Sonos nie podał czasu potrzebnego do skoku procentowego": "",
+    "Sonos nie podał tego czasu": "",
+    "Sonos odtwarza na własnej grupie głośników. Wybierz grupę z listy sesji Sonos": "",
+    "Sortowanie Alt+1, Alt+2 i Alt+3 działa w Bibliotece podcastów i kanałów": "",
+    "Sortowanie Alt+1, Alt+2 i Alt+3 działa w Bibliotece, Ulubionych i Playlistach TIDAL": "",
+    "Sortowanie Alt+1, Alt+2 i Alt+3 działa w Nowych odcinkach": "",
+    "Sortowanie Alt+1, Alt+2 i Alt+3 działa w głównych kolekcjach Spotify": "",
+    "Sortowanie jest dostępne w Bibliotece i Ulubionych Radia": "",
+    "Sposób zapisu fragmentu": "",
+    "Spotify": "",
+    "Spotify ma więcej wyników; dalsze strony nie są jeszcze dostępne": "",
+    "Sprawdzam dokładne łącze": "",
+    "Sprawdzam dokładne łącze do utworu": "",
+    "Sprawdzam dostępność działania": "",
+    "Sprawdzam kopię danych AMC": "",
+    "Sprawdzanie aktualizacji AMC": "",
+    "Sprawdzanie i dodawanie źródła. Czekaj": "",
+    "Sprawdzanie lub pobieranie aktualizacji już trwa": "",
+    "Sprawdzanie rozdziałów": "",
+    "Sprawdzanie składników FFmpeg i yt-dlp": "",
+    "Sprawdzanie transmisji wybranych kanałów YouTube już trwa": "",
+    "Sprawdź i dodaj źródło": "",
+    "Sprawdź logowanie": "",
+    "Sprawdź playlisty": "",
+    "Sprawdź subskrypcje": "",
+    "Stan działania": "",
+    "Stan historii rozpoznawania": "",
+    "Stan konfiguracji: Gotowe": "",
+    "Stan konta YouTube": "",
+    "Stan kopiowania": "",
+    "Stan składnika FFmpeg jest niedostępny": "",
+    "Stan składnika yt-dlp jest niedostępny": "",
+    "Stan składników jest niedostępny, ponieważ silnik AMC nie jest uruchomiony.": "",
+    "Stan wyboru kanałów": "",
+    "Stan wyboru playlist Spotify": "",
+    "Stan wyszukiwania": "",
+    "Strzałki wybierają folder. Przyciski dodają, odświeżają albo bezpiecznie odłączają wybrany folder.": "",
+    "Strzałki wybierają playlistę. Spacja zmienia jej zaznaczenie.": "",
+    "Strzałki wybierają playlistę. Spacja zmienia przynależność zaznaczonych elementów.": "",
+    "Strzałki wybierają polecenie. Enter wykonuje, Escape zamyka paletę.": "",
+    "Szukaj": "",
+    "Szukaj nowych urządzeń w sieci lokalnej": "",
+    "Szukaj we wszystkich usługach": "",
+    "TIDAL": "",
+    "TIDAL korzysta z urządzenia domyślnego swojego odtwarzacza. Osobny wybór urządzenia nie jest jeszcze dostępny": "",
+    "TIDAL korzysta z urządzenia wybranego w oryginalnym odtwarzaczu": "",
+    "TIDAL odtwarza w oryginalnej aplikacji i nie ma odtwarzacza AMC": "",
+    "TIDAL odtwarza w zewnętrznej aplikacji; nawigacja po historii nie jest dostępna": "",
+    "Ta funkcja nie dotyczy odtwarzania w oryginalnym TIDALu": "",
+    "Ta funkcja nie jest dostępna w Radiu": "",
+    "Ta funkcja nie jest jeszcze dostępna w sesji Spotify": "",
+    "Ta transmisja jeszcze nie jest na żywo": "",
+    "Ta transmisja nie ma adresu do nagrywania": "",
+    "Tego wyniku nie ma już na wczytanej liście": "",
+    "Tej playlisty już nie ma": "",
+    "Ten element nie ma lokalnego pliku": "",
+    "Ten materiał nie ma rozdziałów": "",
+    "Ten plik nie ma zaznaczonego fragmentu": "",
+    "Ten widok Sonosa nie jest jeszcze dostępny": "",
+    "Ten widok nie jest dostępny w TIDAL": "",
+    "Ten widok nie jest jeszcze dostępny w Radiu": "",
+    "Ten wynik Spotify można przeglądać albo odtworzyć": "",
+    "Ten wynik TIDAL można otworzyć albo jawnie dodać do kolekcji": "",
+    "Ten wynik nie ma dostępnego albumu, wykonawcy ani podcastu": "",
+    "Ten wynik nie ma dostępnego miejsca docelowego": "",
+    "Ten zapisany wynik jest już w Bibliotece": "",
+    "To działanie jest dostępne dla materiałów YouTube; podcast lub kanał otwórz klawiszem Enter": "",
+    "To działanie nie jest dostępne": "",
+    "To działanie nie ma łącza do skopiowania": "",
+    "To polecenie dotyczy Biblioteki plików": "",
+    "To polecenie dotyczy Biblioteki plików. Do podcastów wrócisz skrótem Ctrl+L": "",
+    "To polecenie nie jest dostępne w sesji Frontier Smart": "",
+    "To polecenie nie jest dostępne w sesji Sonos": "",
+    "To polecenie nie jest dostępne w sesji WiiM": "",
+    "To ustawienie WiiM jest dostępne po otwarciu sterowania urządzeniem": "",
+    "Trwa finalizowanie albo rozpoczynanie części nagrania": "",
+    "Tryby urządzenia Frontier Smart": "",
+    "Tytuł zgłoszenia": "",
+    "Tytuł:": "",
+    "Ulubione bez zmian": "",
+    "Ulubione nie są dostępne w tej sesji": "",
+    "Ulubione podcasty są dostępne w sesji Podcasty i YouTube": "",
+    "Uruchom preset": "",
+    "Urządzenie WiiM nie podało tego czasu": "",
+    "Urządzenie audio": "",
+    "Urządzenie nie podało bieżącej głośności": "",
+    "Usuwanie działa w Historii albo w otwartym widoku zapisanych Spotify": "",
+    "Usuwanie fragmentu. Odtwarzanie zatrzymano": "",
+    "Usuwanie playlist Spotify nie jest dostępne bez dodatkowej zgody konta": "",
+    "Usuń fragment z oryginalnego pliku": "",
+    "Usuń plan nagrywania": "",
+    "Usuń playlistę": "",
+    "Usuń urządzenie Frontier Smart": "",
+    "Usuń z historii": "",
+    "Usługa nie podała albumu tego utworu": "",
+    "Usługa nie podała wykonawcy tego utworu": "",
+    "Utwórz nową playlistę Spotify": "",
+    "Uwaga: zamrozona migawka profilu.": "",
+    "W Bibliotece nie ma kanałów YouTube": "",
+    "Wczytana lista zmieniła się. Wykonaj wyszukiwanie ponownie": "",
+    "Wczytuję urządzenia Frontier Smart": "",
+    "Wczytywanie...": "",
+    "Wersja programu": "",
+    "Widoczność playlisty Spotify": "",
+    "WiiM odtwarza na własnym urządzeniu sieciowym. Wybierz urządzenie z listy sesji WiiM": "",
+    "Wpisuj fragmenty nazwy. Strzałka w dół przechodzi do listy, Enter wykonuje wybrane polecenie, Escape zamyka paletę.": "",
+    "Wpisz adres &ręcznie…": "",
+    "Wpisz adres kanału RSS lub Atom, publicznego profilu SoundCloud, kanału albo playlisty YouTube lub pojedynczego publicznego materiału YouTube. Profil SoundCloud zostanie zapisany jako podcast z odtwarzalnymi i możliwymi do pobrania plikami audio. Adres profilu może mieć postać https://soundcloud.com/NazwaProfilu, a kanału YouTube https://www.youtube.com/@NazwaKanału.": "",
+    "Wpisz adres źródła": "",
+    "Wpisz lokalny adres IP ręcznie": "",
+    "Wpisz nazwę playlisty": "",
+    "Wpisz tekst do wyszukania": "",
+    "Wróć bez przechodzenia": "",
+    "Wskaz liste stacji": "",
+    "Wszystkie podcasty są początkowo zaznaczone. Spacja zmienia stan bieżącej pozycji, Ctrl+A zaznacza wszystkie.": "",
+    "Wybierz co najmniej jedną playlistę": "",
+    "Wybierz element do przeniesienia": "",
+    "Wybierz element, przed którym chcesz przenieść zaznaczenie": "",
+    "Wybierz folder nagrania": "",
+    "Wybierz folder nagrań": "",
+    "Wybierz folder pobierania odcinków tego podcastu": "",
+    "Wybierz folder z muzyka": "",
+    "Wybierz grupę Sonos skrótem Control F5, a potem uruchom materiał ponownie": "",
+    "Wybierz istniejący plik, na końcu którego dopisać fragment": "",
+    "Wybierz kanał YouTube z Biblioteki": "",
+    "Wybierz miejsce docelowe": "",
+    "Wybierz pełną ścieżkę własnego folderu albo użyj folderu ogólnego Podcastów.": "",
+    "Wybierz playlistę do usunięcia": "",
+    "Wybierz playlistę do zmiany nazwy": "",
+    "Wybierz plik": "",
+    "Wybierz plik do przeniesienia": "",
+    "Wybierz podcast lub kanał na głównej liście. Nazwy odcinków pochodzą ze źródła": "",
+    "Wybierz preset zapisany w urządzeniu.": "",
+    "Wybierz rozdział. Enter przechodzi do jego początku.": "",
+    "Wybierz stację Sonos do usunięcia": "",
+    "Wybierz stację do przeniesienia": "",
+    "Wybierz stację radiową": "",
+    "Wybierz stację, przed którą chcesz przenieść zaznaczenie": "",
+    "Wybierz strumień WiiM do usunięcia": "",
+    "Wybierz transmisję ze zbiorczej listy": "",
+    "Wybierz tryb urządzenia.": "",
+    "Wybierz urządzenie Frontier Smart": "",
+    "Wybierz urządzenie WiiM": "",
+    "Wybierz wykryte urządzenie. Dopiero po zatwierdzeniu wpiszesz jego PIN.": "",
+    "Wybierz własny folder pobierania tego podcastu": "",
+    "Wybierz zakres danych. Strzałki zmieniają wybór, Enter zatwierdza, a Escape anuluje.": "",
+    "Wybierz zakres eksportu danych AMC": "",
+    "Wybierz, dokąd przejść. Enter otwiera, strzałka w lewo lub Escape wraca.": "",
+    "Wybrane elementy są już w Bibliotece": "",
+    "Wybrane wcześniej kanały nie są już w Bibliotece": "",
+    "Wybrany algorytm tempa jest niedostępny. Używany SoundTouch.": "",
+    "Wybrany element nie jest plikiem lokalnym": "",
+    "Wybrany preset WiiM nie jest już dostępny": "",
+    "Wycinanie fragmentu jest dostępne dla plików lokalnych i pobranych odcinków podcastów": "",
+    "Wycinanie jest dostępne tylko dla istniejących plików lokalnych": "",
+    "Wycinanie plików nie działa na liście zakładek": "",
+    "Wyczyszczono wybór kanałów transmisji": "",
+    "Wyczyść filtr klawiszem Escape przed przenoszeniem elementów": "",
+    "Wyczyść filtr klawiszem Escape przed przenoszeniem stacji": "",
+    "Wyczyść filtr klawiszem Escape przed zmianą kolejności": "",
+    "Wykonaj polecenie": "",
+    "Wykryte urządzenia Frontier Smart": "",
+    "Wylogowanie Sonos": "",
+    "Wylogować konto Sonos z AMC? Zapisane połączenie zostanie usunięte z tego profilu. Nie zmienia to hasła ani konta na stronie Sonos.": "",
+    "Wyloguj konto": "",
+    "Wynik operacji: Gotowe": "",
+    "Wynik sprawdzenia nazwy playlisty Spotify": "",
+    "Wynik sprawdzenia planu": "",
+    "Wynik zmiany harmonogramu": "",
+    "Wynik zmiany playlist": "",
+    "Wyniki wyszukiwania": "",
+    "Wyszukiwanie": "",
+    "Wyszukiwanie jest dostępne na listach": "",
+    "Wyłączono i zapamiętano obserwowanie rozpoznawania utworów": "",
+    "Wyłączono oznajmianie rozpoznanych utworów. Obserwowanie nadal działa, a wyniki trafiają do historii": "",
+    "Wyłączono oznajmianie rozpoznanych utworów. Obserwowanie pozostaje wyłączone": "",
+    "Wyślij widoczny zredagowany raport": "",
+    "Wyślij zgłoszenie": "",
+    "Własna &nazwa, opcjonalnie:": "",
+    "Własna nazwa, opcjonalnie": "",
+    "Własny f&older pobierania:": "",
+    "Własny folder pobierania tego podcastu": "",
+    "Włącz lub w&yłącz": "",
+    "Włącz lub wyłącz wybraną sesję": "",
+    "Włączono oznajmianie rozpoznanych utworów": "",
+    "Zachowano dane AMC Public": "",
+    "Zakres eksportu danych AMC": "",
+    "Zaktualizowano": "",
+    "Zakładki bez zmian": "",
+    "Zakładki w tej sesji nie są jeszcze dostępne w tej wersji": "",
+    "Zalogowano do YouTube. Wybierz Sprawdź subskrypcje albo Sprawdź playlisty. Podgląd nie zmieni Biblioteki, dopóki osobno nie wybierzesz odpowiedniego przycisku Zapisz.": "",
+    "Zalogowano konto.": "",
+    "Zaloguj konto YouTube przez Google w przeglądarce": "",
+    "Zaloguj ponownie konto YouTube przez Google w przeglądarce": "",
+    "Zaloguj ponownie przez Google": "",
+    "Zaloguj przez Google w przeglądarce": "",
+    "Zaloguj w przeglądarce": "",
+    "Zamknij": "",
+    "Zamknij Menedżer sesji": "",
+    "Zamknij historię": "",
+    "Zamknij listę presetów": "",
+    "Zamknij listę presetów urządzenia": "",
+    "Zamknij okno aktualizacji": "",
+    "Zamknij okno konta": "",
+    "Zapis wideo jako jest dostępny tylko dla jednego materiału YouTube": "",
+    "Zapis wideo jest dostępny w sesji Podcasty i YouTube": "",
+    "Zapisane urządzenia Frontier Smart": "",
+    "Zapisywanie fragmentu już trwa": "",
+    "Zapisywanie odcinka jest dostępne w sesji Podcasty i YouTube": "",
+    "Zapisz": "",
+    "Zapisz jako działa dla jednego materiału": "",
+    "Zapisz jako działa dla jednego odcinka. Wybierz jeden odcinek i spróbuj ponownie": "",
+    "Zapisz odcinek podcastu jako": "",
+    "Zapisz opcje odtwarzania": "",
+    "Zapisz plan nagrywania": "",
+    "Zapisz playlisty w Bibliotece AMC": "",
+    "Zapisz preset": "",
+    "Zapisz raport": "",
+    "Zapisz subskrypcje w Bibliotece AMC": "",
+    "Zapisz wideo z YouTube jako": "",
+    "Zapisz wybór kanałów": "",
+    "Zapisz zaznaczony fragment jako nowy plik": "",
+    "Zaplanowane nagrania radia": "",
+    "Zastosowanie ustawień wymaga ponownego uruchomienia programu": "",
+    "Zatrzymano nagrywanie": "",
+    "Zatrzymano zaplanowane nagrywanie": "",
+    "Zatrzymuję nagrywanie": "",
+    "Zatwierdź nazwę i widoczność playlisty Spotify": "",
+    "Zaznacz co najmniej jeden odcinek podcastu": "",
+    "Zaznacz co najmniej jeden podcast do importu.": "",
+    "Zaznacz początek klawiszem I i koniec klawiszem O": "",
+    "Zaznacz podcast albo odcinek": "",
+    "Zaznacz podcast albo otwórz jego listę odcinków": "",
+    "Zaznacz stację, dla której chcesz zaplanować nagranie": "",
+    "Zaznaczenie fragmentu wyczyszczone": "",
+    "Zmiana Biblioteki już trwa": "",
+    "Zmiana kolejki podcastów już trwa": "",
+    "Zmiana kolejności już trwa": "",
+    "Zmiana kolejności playlisty już trwa": "",
+    "Zmiana kolekcji Spotify już trwa": "",
+    "Zmiana kolekcji TIDAL już trwa": "",
+    "Zmiana nazwy pliku na dysku jest dostępna w Plikach lokalnych": "",
+    "Zmiana nazwy tej playlisty nie jest dostępna": "",
+    "Zmiana playlist Spotify już trwa": "",
+    "Zmiana playlist już trwa": "",
+    "Zmiana stanu ulubionych już trwa": "",
+    "Zmiana została zapisana. Odśwież bieżący widok": "",
+    "Zmien stacje": "",
+    "Zmieniono nazwę pliku, ale nie zapisano nowej ścieżki w historii": "",
+    "Zmieniono zakres synchronizacji. Sprawdź subskrypcje albo playlisty ponownie.": "",
+    "Zmień &nazwę…": "",
+    "Zmień nazwę playlisty": "",
+    "Zmień nazwę pliku na dysku": "",
+    "Zmień nazwę podcastu lub kanału": "",
+    "Zmień nazwę w Bibliotece": "",
+    "nagrać": "",
+    "odcinka": "",
+    "podcastu": "",
+    "prywatna": "",
+    "publiczna": "",
+    "stacji": "",
+    "strumienia": "",
+    "wybrany folder": "",
+    "wykonać zaplanowanego nagrania": "",
+    "zaplanowane ": ""
+  },
+  "legacyTemplates": {
+    "&Nazwa {arg0}:": "",
+    "Adres {arg0}": "",
+    "Automatycznie dodano nowe odcinki: {arg0}": "",
+    "Blad: {arg0}": "",
+    "Brak innego dostępnego urządzenia audio dla sesji {arg0}": "",
+    "Brak sesji pod Ctrl+{arg0}": "",
+    "Brak zapisanych presetów: {arg0}": "",
+    "Błąd: {arg0}": "",
+    "Ctrl+Shift+{arg0} uruchamia preset {arg1}, {arg2}. Ustawienia urządzenia nie zostały zmienione": "",
+    "Do {arg0} wybierz jeden element": "",
+    "Dodaj do playlist Spotify: {arg0}. Spacja zaznacza lub odznacza playlistę. Enter wykonuje zmianę.": "",
+    "Dodaj preset: {arg0}. Nie ma wolnego miejsca. Aby zastąpić zajęty preset, wskaż dwukrotnie to samo miejsce i naciśnij Enter. Escape anuluje.": "",
+    "Dodaj preset: {arg0}. Pierwsze wolne miejsce: preset {arg1}, skrót Ctrl+Shift+{arg2}. Naciśnij cyfrę, minus albo znak równości, a następnie Enter. Escape anuluje.": "",
+    "Dodano do Biblioteki, Media internetowe: {arg0}": "",
+    "Dodano do Biblioteki: {arg0}": "",
+    "Dodano do Biblioteki: {arg0} elementów": "",
+    "Dodano do Biblioteki: {arg0} z {arg1} elementów": "",
+    "Dodano do kolejki: {arg0}": "",
+    "Dodano nowe stacje: {arg0}. Włączono istniejące w Bibliotece: {arg1}. Zachowano dotychczasowe nazwy": "",
+    "Dodano plan {arg0}": "",
+    "Dodano rozdział {arg0}: {arg1}": "",
+    "Dodano zakładkę {arg0}: {arg1}": "",
+    "Dodano zakładkę: {arg0}": "",
+    "Dodano {arg0}": "",
+    "Dopisywanie fragmentu: 0%. {arg0}": "",
+    "Dopisywanie fragmentu: {arg0}%": "",
+    "Eksportuj: {arg0}": "",
+    "Element jest już w Bibliotece: {arg0}": "",
+    "Fragment dopisany na końcu: {arg0}.": "",
+    "Fragment usunięty. {arg0}": "",
+    "Fragment zapisany: {arg0}": "",
+    "Import nieudany: {arg0}": "",
+    "Importowanie podcastów: {arg0}": "",
+    "Kanał {arg0} będzie sprawdzany na zbiorczej liście": "",
+    "Kanał {arg0} nie będzie sprawdzany na zbiorczej liście": "",
+    "Koniec fragmentu: {arg0}": "",
+    "Konto {arg0}": "",
+    "Kopia zawiera: {arg0}. Import zastąpi wyłącznie te dane w bieżącym profilu. Pozostałe dane zostaną zachowane. Hasła i tokeny nie są importowane. Przed zmianą AMC utworzy kopię ratunkową. Po udanym imporcie program zostanie zamknięty; uruchom go ponownie. Czy kontynuować?": "",
+    "Lista {arg0} jest pusta": "",
+    "Materiał jest już w Bibliotece, Media internetowe: {arg0}": "",
+    "Możesz wybrać najwyżej {arg0} kanałów": "",
+    "Nadano nazwę zakładce {arg0}: {arg1}": "",
+    "Nazwa {arg0}": "",
+    "Nie dodano stacji Sonos: {arg0}": "",
+    "Nie dodano stacji: {arg0}": "",
+    "Nie dodano strumienia WiiM: {arg0}": "",
+    "Nie moge odczytac kolejki silnika: {arg0}": "",
+    "Nie moge przewinac: {arg0}": "",
+    "Nie moge wczytac Biblioteki: {arg0}": "",
+    "Nie moge wczytac folderu: {arg0}": "",
+    "Nie moge wczytac widoku: {arg0}": "",
+    "Nie moge zapisac ustawien: {arg0}": "",
+    "Nie moge zmienic utworu: {arg0}": "",
+    "Nie mogę dodać do kolejki: {arg0}": "",
+    "Nie mogę odczytać czasu z oryginalnego TIDALa: {arg0}": "",
+    "Nie mogę odczytać playlist Spotify: {arg0}": "",
+    "Nie mogę odczytać playlist: {arg0}": "",
+    "Nie mogę odczytać zapamiętanego folderu: {arg0}. Pokazuję Bibliotekę od początku.": "",
+    "Nie mogę odczytać zapamiętanego widoku Biblioteki: {arg0}. Pokazuję Foldery.": "",
+    "Nie mogę odświeżyć kolejki: {arg0}": "",
+    "Nie mogę przejść do granicy fragmentu: {arg0}": "",
+    "Nie mogę przewinąć: {arg0}": "",
+    "Nie mogę sterować oryginalnym TIDALem: {arg0}": "",
+    "Nie mogę wczytać listy radia: {arg0}": "",
+    "Nie mogę wrócić do transmisji na żywo: {arg0}": "",
+    "Nie mogę zapisać zaznaczenia fragmentu: {arg0}": "",
+    "Nie mogę zmienić Biblioteki: {arg0}": "",
+    "Nie mogę zmienić Ulubionych: {arg0}": "",
+    "Nie mogę zmienić kolejki: {arg0}": "",
+    "Nie mogę zmienić sortowania Radia: {arg0}": "",
+    "Nie można dodać rozdziału: {arg0}": "",
+    "Nie można dodać zakładki nagrania: {arg0}": "",
+    "Nie można dodać zakładki: {arg0}": "",
+    "Nie można odczytać historii odtwarzania: {arg0}": "",
+    "Nie można odczytać położenia fragmentu: {arg0}": "",
+    "Nie można odczytać stanu danych: {arg0}": "",
+    "Nie można odświeżyć danych: {arg0}": "",
+    "Nie można otworzyć listy rozdziałów: {arg0}": "",
+    "Nie można otworzyć opcji odtwarzania: {arg0}": "",
+    "Nie można podzielić nagrania: {arg0}": "",
+    "Nie można przejść do rozdziału: {arg0}": "",
+    "Nie można przejść do zakładki: {arg0}": "",
+    "Nie można przygotować zapisu fragmentu: {arg0}": "",
+    "Nie można teraz odczytać stanu konta {arg0}.": "",
+    "Nie można wczytać harmonogramu nagrywania: {arg0}": "",
+    "Nie można wczytać historii nagrywania: {arg0}": "",
+    "Nie można wczytać trwających nagrań: {arg0}": "",
+    "Nie można zaimportować danych AMC: {arg0}": "",
+    "Nie można zaimportować playlisty: {arg0}": "",
+    "Nie można zapisać playlisty: {arg0}": "",
+    "Nie można zatrzymać nagrań: {arg0}": "",
+    "Nie można zmienić nagrywania: {arg0}": "",
+    "Nie można zmienić pauzy nagrania: {arg0}": "",
+    "Nie odczytano playlist do zmiany nazwy: {arg0}": "",
+    "Nie odczytano stacji Sonos: {arg0}": "",
+    "Nie odczytano strumienia WiiM: {arg0}": "",
+    "Nie odświeżono danych: {arg0}": "",
+    "Nie przeniesiono do Kosza: {arg0}": "",
+    "Nie przeniesiono elementów playlisty: {arg0}": "",
+    "Nie przeniesiono stacji: {arg0}": "",
+    "Nie udało się dopisać fragmentu: {arg0}": "",
+    "Nie udało się odczytać Biblioteki Sonos: {arg0}": "",
+    "Nie udało się odczytać grup Sonos: {arg0}": "",
+    "Nie udało się odczytać presetów Frontier Smart: {arg0}": "",
+    "Nie udało się odczytać presetów urządzenia {arg0}: {arg1}": "",
+    "Nie udało się odczytać strumieni WiiM: {arg0}": "",
+    "Nie udało się odczytać trybów Frontier Smart: {arg0}": "",
+    "Nie udało się odczytać urządzeń Frontier Smart: {arg0}": "",
+    "Nie udało się odczytać urządzeń WiiM: {arg0}": "",
+    "Nie udało się odczytać urządzeń audio: {arg0}": "",
+    "Nie udało się odtworzyć Spotify: {arg0}": "",
+    "Nie udało się skopiować: {arg0}": "",
+    "Nie udało się sterować grupą Sonos: {arg0}": "",
+    "Nie udało się sterować urządzeniem Frontier Smart: {arg0}": "",
+    "Nie udało się sterować urządzeniem WiiM: {arg0}": "",
+    "Nie udało się uruchomić materiału Sonos: {arg0}": "",
+    "Nie udało się uruchomić presetu urządzenia {arg0}: {arg1}": "",
+    "Nie udało się uruchomić presetu {arg0}: {arg1}": "",
+    "Nie udało się usunąć fragmentu: {arg0}": "",
+    "Nie udało się usunąć z kolekcji Spotify: {arg0}": "",
+    "Nie udało się zapisać fragmentu: {arg0}": "",
+    "Nie udało się zapisać pliku: {arg0}": "",
+    "Nie udało się zastosować ustawienia urządzenia {arg0}: {arg1}": "",
+    "Nie udało się zmienić Biblioteki: {arg0}": "",
+    "Nie udało się zmienić kolejki podcastów: {arg0}": "",
+    "Nie udało się zmienić kolekcji Spotify: {arg0}": "",
+    "Nie udało się zmienić kolekcji TIDAL: {arg0}": "",
+    "Nie udało się zmienić losowania urządzenia {arg0}: {arg1}": "",
+    "Nie udało się zmienić trybu Frontier Smart: {arg0}": "",
+    "Nie udało się {arg0} {arg1}: {arg2}": "",
+    "Nie usunięto stacji Sonos: {arg0}": "",
+    "Nie usunięto stacji: {arg0}": "",
+    "Nie usunięto strumieni WiiM: {arg0}": "",
+    "Nie usunięto zakładki: {arg0}": "",
+    "Nie usunięto: {arg0}": "",
+    "Nie wyeksportowano danych AMC: {arg0}": "",
+    "Nie zaimportowano danych AMC: {arg0}": "",
+    "Nie zamykam {arg0}, ponieważ nie można potwierdzić stanu nagrywania": "",
+    "Nie zamykam {arg0}, ponieważ trwa nagrywanie": "",
+    "Nie zapisano kolejki TIDAL: {arg0}": "",
+    "Nie zapisano kolejności stacji Sonos: {arg0}": "",
+    "Nie zapisano kolejności strumieni WiiM: {arg0}": "",
+    "Nie zapisano opcji odtwarzania: {arg0}": "",
+    "Nie zapisano opcji sesji: {arg0}": "",
+    "Nie zapisano playlist Spotify: {arg0}": "",
+    "Nie zapisano postępu odcinka: {arg0}": "",
+    "Nie zapisano pozycji lokalnego pliku: {arg0}": "",
+    "Nie zapisano stacji Sonos: {arg0}": "",
+    "Nie zapisano stacji: {arg0}": "",
+    "Nie zapisano strumienia WiiM: {arg0}": "",
+    "Nie zapisano zakładek nagrania: {arg0}": "",
+    "Nie zapisano zmian playlist: {arg0}": "",
+    "Nie zapisałem kolejki: {arg0}": "",
+    "Nie zmieniono algorytmu: {arg0}": "",
+    "Nie zmieniono kolejności playlisty: {arg0}": "",
+    "Nie zmieniono kolejności stacji: {arg0}": "",
+    "Nie zmieniono nazwy playlisty: {arg0}": "",
+    "Nie zmieniono nazwy pliku: {arg0}": "",
+    "Nie zmieniono nazwy: {arg0}": "",
+    "Nie zmieniono urządzenia audio: {arg0}": "",
+    "Nie znaleziono dokładnego utworu w {arg0}": "",
+    "Nie znaleziono dokładnego łącza w {arg0}": "",
+    "Odcinek jest już pobrany: {arg0}": "",
+    "Odłączyć folder „{arg0}” od automatycznej synchronizacji?\n\nPliki na dysku nie zostaną usunięte. AMC zachowa wpisy Biblioteki, Ulubione, kolejkę, historię, zakładki i pozycje odtwarzania.": "",
+    "PIN NetRemote urządzenia {arg0}, pole chronione": "",
+    "Playlista „{arg0}” już istnieje": "",
+    "Playlisty bez zmian dla: {arg0}": "",
+    "Plik przeniesiono poza AMC: {arg0}": "",
+    "Pobieranie odcinka: {arg0}": "",
+    "Pobrano odcinek: {arg0}": "",
+    "Pobrano wideo: {arg0}": "",
+    "Początek fragmentu: {arg0}": "",
+    "Pokaż polecenia Otwórz w {arg0} i Dodaj do kolejki {arg1} w &menu kontekstowym": "",
+    "Pokaż polecenia Otwórz w {arg0} i Dodaj do kolejki {arg1} w menu kontekstowym": "",
+    "Pokaż {arg0} na liście &Otwórz za pomocą i w ustawieniach aplikacji domyślnych Windows": "",
+    "Pokaż {arg0} na liście Otwórz za pomocą i w ustawieniach aplikacji domyślnych Windows": "",
+    "Poprzednia instancja {arg0} pozostała uruchomiona. Może trwać nagrywanie albo program nie potwierdził bezpiecznego zamknięcia.": "",
+    "Potwierdzono {arg0}. Enter zastępuje element {arg1} elementem {arg2}, Escape anuluje": "",
+    "Pozycje historii bez stacji w profilu: {arg0}": "",
+    "Preset {arg0} istnieje, ale ten rodzaj materiału nie jest jeszcze przeniesiony.": "",
+    "Preset {arg0} jest już pusty": "",
+    "Preset {arg0} jest niedostępny. Stacji nie ma już w profilu.": "",
+    "Preset {arg0} jest pusty": "",
+    "Preset {arg0} jest pusty lub niedostępny": "",
+    "Preset {arg0} jest zajęty przez {arg1}. Naciśnij dwa razy {arg2}, a następnie Enter, aby zastąpić, albo Escape, aby anulować": "",
+    "Preset {arg0} ma nieobsługiwany rodzaj materiału Sonos": "",
+    "Preset {arg0} nie ma bezpiecznie zapisanego domu Sonos. Przypisz go ponownie. Nic nie uruchomiłem": "",
+    "Preset {arg0} pusty. Ctrl+Alt+Shift+P przypisuje bieżący element": "",
+    "Preset {arg0} pusty. Ctrl+Alt+Shift+P przypisuje bieżący element.": "",
+    "Preset {arg0} pusty. Ctrl+Alt+Shift+P przypisuje gotowy preset WiiM": "",
+    "Preset {arg0} zapisano dla innego domu Sonos. Przypisz go ponownie w tym domu. Nic nie uruchomiłem": "",
+    "Preset {arg0}: album {arg1} nie zawiera utworów do odtworzenia": "",
+    "Preset {arg0}: nie udało się odtworzyć albumu {arg1}": "",
+    "Presety sesji {arg0}. Cyfry wybierają miejsce. Enter lub Spacja uruchamia zajętą pozycję. Ctrl+Alt+Shift+P przypisuje bieżący element.": "",
+    "Presety urządzenia, {arg0}": "",
+    "Presety — {arg0}": "",
+    "Presety, {arg0}": "",
+    "Przeniesiono do Kosza i usunięto z AMC: {arg0}": "",
+    "Przeniesiono do Kosza: {arg0}. Liczba pozycji pozostałych w folderze: {arg1}": "",
+    "Przeniesiono pliki poza AMC: {arg0}": "",
+    "Przenieść do Kosza: {arg0}?\n\nPliki zostaną też usunięte z AMC. Można je odzyskać z systemowego Kosza.": "",
+    "Przygotowano nową playlistę {arg0}, {arg1}, zaznaczoną. Naciśnij Enter, aby ją utworzyć i dodać wybrane elementy": "",
+    "Rozdział {arg0} już istnieje: {arg1}": "",
+    "Rozpoczynam nagrywanie w tle: {arg0}": "",
+    "Rozpoczynam zaplanowane nagrywanie: {arg0}": "",
+    "Rozpoczęto nową część nagrania {arg0}{arg1}": "",
+    "Rozpoczęto zapisywanie fragmentu: {arg0}": "",
+    "Rozpoznano w stacji {arg0}: {arg1}": "",
+    "Sesja {arg0} jest wyłączona. Otwórz Menedżer sesji skrótem Ctrl+Shift+S": "",
+    "Silnik nie wystartował: {arg0}. Odtwarzanie niedostępne.": "",
+    "Skopiowano adresy: {arg0}": "",
+    "Skopiowano bezpośrednie adresy: {arg0}": "",
+    "Skopiowano pliki i pełne ścieżki: {arg0}": "",
+    "Skopiowano pliki: {arg0}; adresy: {arg1}": "",
+    "Skopiowano łącze do utworu w {arg0}": "",
+    "Skrót Ctrl+Shift+{arg0} wskazuje preset {arg1}, który nie jest już dostępny w urządzeniu": "",
+    "Stacja nie jest nagrywana: {arg0}": "",
+    "Stan konta YouTube: {arg0}": "",
+    "Stan konta {arg0}: {arg1}": "",
+    "Tryb — {arg0}": "",
+    "Urządzenie {arg0} nie udostępniło tej opcji: {arg1}": "",
+    "Usunac stacje {arg0}?": "",
+    "Usunieto {arg0}": "",
+    "Usunięto preset {arg0}": "",
+    "Usunięto przypisanie Ctrl+Shift+{arg0}. Preset urządzenia pozostał bez zmian": "",
+    "Usunięto roboczo playlistę: {arg0}": "",
+    "Usunięto stację: {arg0}": "",
+    "Usunięto z Biblioteki: {arg0}": "",
+    "Usunięto z Biblioteki: {arg0}. Plik pozostał na dysku": "",
+    "Usunięto z Historii Spotify: {arg0}. Biblioteka Spotify pozostała bez zmian": "",
+    "Usunięto z Historii odtwarzania: {arg0}. Pliki i Biblioteka pozostały bez zmian": "",
+    "Usunięto z Historii {arg0}: {arg1}. Urządzenie i źródło pozostały bez zmian": "",
+    "Usunięto z Kolejki podcastów: {arg0}": "",
+    "Usunięto z Kolejki: {arg0}": "",
+    "Usunięto z Ulubionych: {arg0}": "",
+    "Usunięto z Zakładek: {arg0}": "",
+    "Usunięto z playlisty: {arg0}": "",
+    "Usunięto {arg0}": "",
+    "Usunąć playlistę „{arg0}”? Pliki multimedialne pozostaną bez zmian.": "",
+    "Usunąć preset {arg0}: {arg1}? Enter potwierdza, Escape anuluje": "",
+    "Usunąć urządzenie „{arg0}” z AMC?\n\nZapisany PIN również zostanie usunięty. Urządzenie nie zostanie wyłączone ani zresetowane.": "",
+    "Usuwanie fragmentu: 0%. {arg0}": "",
+    "Usuwanie fragmentu: {arg0}%": "",
+    "Utworzono roboczo playlistę: {arg0}": "",
+    "Wpisów: {arg0}, {arg1}": "",
+    "Wstrzymano nagrywanie: {arg0}, {arg1}{arg2}": "",
+    "Wybierz element sesji {arg0}, który chcesz przypisać do presetu": "",
+    "Wybrano kanałów: {arg0} z {arg1}": "",
+    "Wyeksportowano historię: {arg0}": "",
+    "Wyeksportowano kanały YouTube: {arg0}. Plik CSV można importować w NewPipe i FreeTube": "",
+    "Wyeksportowano kanały YouTube: {arg0}; pominięto playlisty: {arg1}. Plik CSV można importować w NewPipe i FreeTube": "",
+    "Wyeksportowano kanały i playlisty YouTube: {arg0}. Plik OPML jest przeznaczony do czytników RSS": "",
+    "Wyeksportowano podcasty: {arg0}": "",
+    "Wyeksportowano stacje Sonos: {arg0}": "",
+    "Wyeksportowano strumienie WiiM: {arg0}": "",
+    "Wyeksportowano ulubione stacje: {arg0}": "",
+    "Wynik operacji: {arg0}": "",
+    "Wznowiono nagrywanie: {arg0}": "",
+    "Zaimportowano podcasty: {arg0}. Niepowodzenia: {arg1}": "",
+    "Zaimportowano {arg0}, pominięto {arg1}": "",
+    "Zakończono {arg0}nagrywanie {arg1}. Zapisano plików: {arg2}": "",
+    "Zakończono {arg0}nagrywanie {arg1}: {arg2}": "",
+    "Zakończono {arg0}nagrywanie: {arg1}": "",
+    "Zakładka już istnieje: {arg0}": "",
+    "Zakładka {arg0} już istnieje: {arg1}": "",
+    "Zaloguj konto YouTube przez Google w przeglądarce. Ostatni wynik: {arg0}": "",
+    "Zaloguj konto {arg0} w przeglądarce": "",
+    "Zaloguj się zwykłym kontem na oficjalnej stronie {arg0}. Hasło wpisujesz wyłącznie w przeglądarce. AMC nie wymaga przepisywania kodu.": "",
+    "Zapamiętane urządzenie audio {arg0} jest niedostępne. Spotify odtwarza na domyślnym urządzeniu systemowym": "",
+    "Zapisano kanały transmisji: {arg0}": "",
+    "Zapisano nazwę i adres stacji: {arg0}": "",
+    "Zapisano odcinek jako: {arg0}": "",
+    "Zapisano opcje {arg0}: {arg1}": "",
+    "Zapisano preset {arg0}: {arg1}": "",
+    "Zapisano wideo jako: {arg0}": "",
+    "Zapisano zmiany playlist dla: {arg0}": "",
+    "Zapisano {arg0}": "",
+    "Zapisuję bieżącą część nagrania: {arg0}": "",
+    "Zapisywanie fragmentu: 0%. {arg0}": "",
+    "Zapisywanie fragmentu: {arg0}%": "",
+    "Zapisywanie wideo jako: {arg0}": "",
+    "Zatrzymuję nagrywanie: {arg0}": "",
+    "Zatrzymuję wszystkie nagrania: {arg0}": "",
+    "Zawsze na tym zestawie głośników: {arg0}": "",
+    "Zaznacz kanały sprawdzane po Ctrl+Shift+I. AMC nie skanuje automatycznie całej biblioteki, aby chronić limit YouTube. Możesz wybrać najwyżej {arg0} kanałów.": "",
+    "Zmieniono nazwę playlisty: {arg0}": "",
+    "Zmieniono nazwę pliku na dysku: {arg0}": "",
+    "Zmieniono nazwę podcastu lub kanału: {arg0}": "",
+    "Zmieniono nazwę rozdziału na {arg0}: {arg1}": "",
+    "Zmieniono nazwę w Bibliotece: {arg0}": "",
+    "Zmieniono roboczo nazwę playlisty na: {arg0}": "",
+    "{arg0} Częściowy wynik. {arg1}": "",
+    "{arg0} Wczytuję głośniki i grupy.": "",
+    "{arg0} fragmentu: {arg1}": "",
+    "{arg0} już zawiera ten element. Enter zatwierdza, Escape anuluje": "",
+    "{arg0} nie podał trybów dostępnych do wyboru": "",
+    "{arg0} nie podał żadnych presetów": "",
+    "{arg0} pusty. {arg1}. Enter zapisuje, Escape anuluje": "",
+    "{arg0} z {arg1} w historii": "",
+    "{arg0} zajęty: {arg1}. Naciśnij ponownie {arg2}, a następnie Enter, aby zastąpić; inny klawisz wybiera inne miejsce; Escape anuluje": "",
+    "{arg0} {arg1}": "",
+    "{arg0} {arg1}. Zapisano plików: {arg2}": "",
+    "{arg0} {arg1}: {arg2}": "",
+    "{arg0} — AMC": "",
+    "{arg0}%": "",
+    "{arg0}, {arg1}": "",
+    "{arg0}. Od {arg1} do {arg2}. Długość fragmentu: {arg3}.": "",
+    "{arg0}. {arg1}": "",
+    "{arg0}: przekazuję do oryginalnego TIDALa": "",
+    "{arg0}: uruchamiam ponownie oryginalny TIDAL": "",
+    "{arg0}: {arg1}": "",
+    "{arg0}: {arg1}: {arg2}. Pozycji: {arg3}": ""
+  },
+  "messageTemplateLabels": {
+    "favorite.added": "",
+    "favorite.removed": "",
+    "queue.added": "",
+    "queue.removed": "",
+    "playnext.added": "",
+    "playnext.removed": "",
+    "volume.changed": "",
+    "time.elapsed": "",
+    "time.remaining": "",
+    "time.total": ""
+  },
+  "messageTemplates": {
+    "session.changed": "{slot}, {service}",
+    "session.unassigned": "Sesja {slot} nieprzypisana",
+    "favorite.added": "Dodano do ulubionych: {item}",
+    "favorite.removed": "Usunięto z ulubionych: {item}",
+    "queue.added": "Dodano do kolejki: {item}",
+    "queue.removed": "Usunięto z kolejki: {item}",
+    "playnext.added": "Odtwarzaj jako następne: {item}",
+    "playnext.removed": "Usunięto z następnych: {item}",
+    "time.elapsed": "{elapsed}",
+    "time.remaining": "{remaining}",
+    "time.total": "{total}",
+    "volume.changed": "{value}%",
+    "command.unavailable": "Polecenie niedostępne"
+  },
+  "commands": {
+    "action.bookmark.add": {
+      "name": "",
+      "description": ""
+    },
+    "action.bookmark.addNamed": {
+      "name": "",
+      "description": ""
+    },
+    "action.chapter.addNamed": {
+      "name": "",
+      "description": ""
+    },
+    "action.favorite.toggle": {
+      "name": "",
+      "description": ""
+    },
+    "action.playlists.membership": {
+      "name": "",
+      "description": ""
+    },
+    "action.queue.add": {
+      "name": "",
+      "description": ""
+    },
+    "action.queue.playNextToggle": {
+      "name": "",
+      "description": ""
+    },
+    "activate": {
+      "name": "",
+      "description": ""
+    },
+    "audio.clip.appendToFile": {
+      "name": "",
+      "description": ""
+    },
+    "audio.clip.clear": {
+      "name": "",
+      "description": ""
+    },
+    "audio.clip.export": {
+      "name": "",
+      "description": ""
+    },
+    "audio.clip.jumpEnd": {
+      "name": "",
+      "description": ""
+    },
+    "audio.clip.jumpStart": {
+      "name": "",
+      "description": ""
+    },
+    "audio.clip.markEnd": {
+      "name": "",
+      "description": ""
+    },
+    "audio.clip.markStart": {
+      "name": "",
+      "description": ""
+    },
+    "audio.clip.nextBoundary": {
+      "name": "",
+      "description": ""
+    },
+    "audio.clip.previousBoundary": {
+      "name": "",
+      "description": ""
+    },
+    "audio.nextOutput": {
+      "name": "",
+      "description": ""
+    },
+    "audio.previousOutput": {
+      "name": "",
+      "description": ""
+    },
+    "audio.selectOutput": {
+      "name": "",
+      "description": ""
+    },
+    "clipboard.copyAddress": {
+      "name": "",
+      "description": ""
+    },
+    "clipboard.copyName": {
+      "name": "",
+      "description": ""
+    },
+    "clipboard.cutFile": {
+      "name": "",
+      "description": ""
+    },
+    "clipboard.pasteOrMove": {
+      "name": "",
+      "description": ""
+    },
+    "editing.clip.removeFromOriginal": {
+      "name": "",
+      "description": ""
+    },
+    "files.openContainingFolder": {
+      "name": "",
+      "description": ""
+    },
+    "files.openFile": {
+      "name": "",
+      "description": ""
+    },
+    "files.openFolder": {
+      "name": "",
+      "description": ""
+    },
+    "frontierSmart.mode.select": {
+      "name": "",
+      "description": ""
+    },
+    "help": {
+      "name": "",
+      "description": ""
+    },
+    "help.checkApplicationUpdate": {
+      "name": "",
+      "description": ""
+    },
+    "help.reportProblem": {
+      "name": "",
+      "description": ""
+    },
+    "help.updateMediaComponents": {
+      "name": "",
+      "description": ""
+    },
+    "help.version": {
+      "name": "",
+      "description": ""
+    },
+    "keyboard.help": {
+      "name": "",
+      "description": ""
+    },
+    "library.allBookmarks": {
+      "name": "",
+      "description": ""
+    },
+    "library.allFiles": {
+      "name": "",
+      "description": ""
+    },
+    "library.favorites": {
+      "name": "",
+      "description": ""
+    },
+    "library.folderSources.manage": {
+      "name": "",
+      "description": ""
+    },
+    "library.folderSources.refresh": {
+      "name": "",
+      "description": ""
+    },
+    "library.folders": {
+      "name": "",
+      "description": ""
+    },
+    "library.itemBookmarks": {
+      "name": "",
+      "description": ""
+    },
+    "library.moveItemDown": {
+      "name": "",
+      "description": ""
+    },
+    "library.moveItemUp": {
+      "name": "",
+      "description": ""
+    },
+    "library.playlists": {
+      "name": "",
+      "description": ""
+    },
+    "library.recycleSelected": {
+      "name": "",
+      "description": ""
+    },
+    "library.removeSelected": {
+      "name": "",
+      "description": ""
+    },
+    "library.renameFile": {
+      "name": "",
+      "description": ""
+    },
+    "library.renameItem": {
+      "name": "",
+      "description": ""
+    },
+    "list.filter": {
+      "name": "",
+      "description": ""
+    },
+    "list.itemProperties": {
+      "name": "",
+      "description": ""
+    },
+    "list.quickInformation": {
+      "name": "",
+      "description": ""
+    },
+    "parent": {
+      "name": "",
+      "description": ""
+    },
+    "podcasts.description": {
+      "name": "",
+      "description": ""
+    },
+    "podcasts.download.saveAs": {
+      "name": "",
+      "description": ""
+    },
+    "podcasts.download.selected": {
+      "name": "",
+      "description": ""
+    },
+    "podcasts.downloads": {
+      "name": "",
+      "description": ""
+    },
+    "podcasts.favorite.toggle": {
+      "name": "",
+      "description": ""
+    },
+    "podcasts.goToRelated": {
+      "name": "",
+      "description": ""
+    },
+    "podcasts.inbox": {
+      "name": "",
+      "description": ""
+    },
+    "podcasts.inbox.sort.added": {
+      "name": "",
+      "description": ""
+    },
+    "podcasts.inbox.sort.alphabetical": {
+      "name": "",
+      "description": ""
+    },
+    "podcasts.inbox.sort.byPodcast": {
+      "name": "",
+      "description": ""
+    },
+    "podcasts.library.sort.added": {
+      "name": "",
+      "description": ""
+    },
+    "podcasts.library.sort.alphabetical": {
+      "name": "",
+      "description": ""
+    },
+    "podcasts.library.sort.custom": {
+      "name": "",
+      "description": ""
+    },
+    "podcasts.library.toggle": {
+      "name": "",
+      "description": ""
+    },
+    "podcasts.opml.export": {
+      "name": "",
+      "description": ""
+    },
+    "podcasts.opml.import": {
+      "name": "",
+      "description": ""
+    },
+    "podcasts.playbackOptions": {
+      "name": "",
+      "description": ""
+    },
+    "podcasts.refresh.all": {
+      "name": "",
+      "description": ""
+    },
+    "podcasts.refresh.current": {
+      "name": "",
+      "description": ""
+    },
+    "podcasts.source.add": {
+      "name": "",
+      "description": ""
+    },
+    "podcasts.youtube.export": {
+      "name": "",
+      "description": ""
+    },
+    "podcasts.youtube.video.download": {
+      "name": "",
+      "description": ""
+    },
+    "podcasts.youtube.video.saveAs": {
+      "name": "",
+      "description": ""
+    },
+    "preset.1": {
+      "name": "",
+      "description": ""
+    },
+    "preset.10": {
+      "name": "",
+      "description": ""
+    },
+    "preset.11": {
+      "name": "",
+      "description": ""
+    },
+    "preset.12": {
+      "name": "",
+      "description": ""
+    },
+    "preset.2": {
+      "name": "",
+      "description": ""
+    },
+    "preset.3": {
+      "name": "",
+      "description": ""
+    },
+    "preset.4": {
+      "name": "",
+      "description": ""
+    },
+    "preset.5": {
+      "name": "",
+      "description": ""
+    },
+    "preset.6": {
+      "name": "",
+      "description": ""
+    },
+    "preset.7": {
+      "name": "",
+      "description": ""
+    },
+    "preset.8": {
+      "name": "",
+      "description": ""
+    },
+    "preset.9": {
+      "name": "",
+      "description": ""
+    },
+    "presets.assign": {
+      "name": "",
+      "description": ""
+    },
+    "presets.view": {
+      "name": "",
+      "description": ""
+    },
+    "profile.backup.export": {
+      "name": "",
+      "description": ""
+    },
+    "profile.backup.import": {
+      "name": "",
+      "description": ""
+    },
+    "profile.commonData.refresh": {
+      "name": "",
+      "description": ""
+    },
+    "profile.commonData.status": {
+      "name": "",
+      "description": ""
+    },
+    "queue.next": {
+      "name": "",
+      "description": ""
+    },
+    "queue.previous": {
+      "name": "",
+      "description": ""
+    },
+    "radio.add": {
+      "name": "",
+      "description": ""
+    },
+    "radio.collection.sort.added": {
+      "name": "",
+      "description": ""
+    },
+    "radio.collection.sort.alphabetical": {
+      "name": "",
+      "description": ""
+    },
+    "radio.collection.sort.custom": {
+      "name": "",
+      "description": ""
+    },
+    "radio.currentBroadcastInformation": {
+      "name": "",
+      "description": ""
+    },
+    "radio.delete": {
+      "name": "",
+      "description": ""
+    },
+    "radio.edit": {
+      "name": "",
+      "description": ""
+    },
+    "radio.exportFavorites": {
+      "name": "",
+      "description": ""
+    },
+    "radio.import": {
+      "name": "",
+      "description": ""
+    },
+    "radio.jumpLive": {
+      "name": "",
+      "description": ""
+    },
+    "radio.library.toggle": {
+      "name": "",
+      "description": ""
+    },
+    "radio.recognition.announcements.toggle": {
+      "name": "",
+      "description": ""
+    },
+    "radio.recognition.history": {
+      "name": "",
+      "description": ""
+    },
+    "radio.recognition.monitor.toggle": {
+      "name": "",
+      "description": ""
+    },
+    "radio.recognition.now": {
+      "name": "",
+      "description": ""
+    },
+    "radio.recording.activeView": {
+      "name": "",
+      "description": ""
+    },
+    "radio.recording.completedView": {
+      "name": "",
+      "description": ""
+    },
+    "radio.recording.outputInformation": {
+      "name": "",
+      "description": ""
+    },
+    "radio.recording.pause": {
+      "name": "",
+      "description": ""
+    },
+    "radio.recording.schedule.add": {
+      "name": "",
+      "description": ""
+    },
+    "radio.recording.schedules": {
+      "name": "",
+      "description": ""
+    },
+    "radio.recording.split": {
+      "name": "",
+      "description": ""
+    },
+    "radio.recording.stopAll": {
+      "name": "",
+      "description": ""
+    },
+    "radio.recording.toggle": {
+      "name": "",
+      "description": ""
+    },
+    "radio.stations.refresh": {
+      "name": "",
+      "description": ""
+    },
+    "rate.down": {
+      "name": "",
+      "description": ""
+    },
+    "rate.reset": {
+      "name": "",
+      "description": ""
+    },
+    "rate.up": {
+      "name": "",
+      "description": ""
+    },
+    "seek.back10": {
+      "name": "",
+      "description": ""
+    },
+    "seek.back30": {
+      "name": "",
+      "description": ""
+    },
+    "seek.back60": {
+      "name": "",
+      "description": ""
+    },
+    "seek.backCustom": {
+      "name": "",
+      "description": ""
+    },
+    "seek.forward10": {
+      "name": "",
+      "description": ""
+    },
+    "seek.forward30": {
+      "name": "",
+      "description": ""
+    },
+    "seek.forward60": {
+      "name": "",
+      "description": ""
+    },
+    "seek.forwardCustom": {
+      "name": "",
+      "description": ""
+    },
+    "seek.percent.0": {
+      "name": "",
+      "description": ""
+    },
+    "seek.percent.10": {
+      "name": "",
+      "description": ""
+    },
+    "seek.percent.20": {
+      "name": "",
+      "description": ""
+    },
+    "seek.percent.30": {
+      "name": "",
+      "description": ""
+    },
+    "seek.percent.40": {
+      "name": "",
+      "description": ""
+    },
+    "seek.percent.50": {
+      "name": "",
+      "description": ""
+    },
+    "seek.percent.60": {
+      "name": "",
+      "description": ""
+    },
+    "seek.percent.70": {
+      "name": "",
+      "description": ""
+    },
+    "seek.percent.80": {
+      "name": "",
+      "description": ""
+    },
+    "seek.percent.90": {
+      "name": "",
+      "description": ""
+    },
+    "session.configureCurrent": {
+      "name": "",
+      "description": ""
+    },
+    "session.disableCurrent": {
+      "name": "",
+      "description": ""
+    },
+    "session.enable": {
+      "name": "",
+      "description": ""
+    },
+    "session.files": {
+      "name": "",
+      "description": ""
+    },
+    "session.frontierSmart": {
+      "name": "",
+      "description": ""
+    },
+    "session.list": {
+      "name": "",
+      "description": ""
+    },
+    "session.next": {
+      "name": "",
+      "description": ""
+    },
+    "session.options": {
+      "name": "",
+      "description": ""
+    },
+    "session.podcasts": {
+      "name": "",
+      "description": ""
+    },
+    "session.previous": {
+      "name": "",
+      "description": ""
+    },
+    "session.radio": {
+      "name": "",
+      "description": ""
+    },
+    "session.sonos": {
+      "name": "",
+      "description": ""
+    },
+    "session.spotify": {
+      "name": "",
+      "description": ""
+    },
+    "session.tidal": {
+      "name": "",
+      "description": ""
+    },
+    "session.wiim": {
+      "name": "",
+      "description": ""
+    },
+    "settings.general": {
+      "name": "",
+      "description": ""
+    },
+    "settings.toggleSeekMessages": {
+      "name": "",
+      "description": ""
+    },
+    "sonos.ownStreams.add": {
+      "name": "",
+      "description": ""
+    },
+    "sonos.ownStreams.cut": {
+      "name": "",
+      "description": ""
+    },
+    "sonos.ownStreams.edit": {
+      "name": "",
+      "description": ""
+    },
+    "sonos.ownStreams.export": {
+      "name": "",
+      "description": ""
+    },
+    "sonos.ownStreams.import": {
+      "name": "",
+      "description": ""
+    },
+    "sonos.ownStreams.moveDown": {
+      "name": "",
+      "description": ""
+    },
+    "sonos.ownStreams.moveUp": {
+      "name": "",
+      "description": ""
+    },
+    "sonos.ownStreams.paste": {
+      "name": "",
+      "description": ""
+    },
+    "sonos.ownStreams.remove": {
+      "name": "",
+      "description": ""
+    },
+    "sonos.ownStreams.sort.added": {
+      "name": "",
+      "description": ""
+    },
+    "sonos.ownStreams.sort.alphabetical": {
+      "name": "",
+      "description": ""
+    },
+    "sonos.ownStreams.sort.custom": {
+      "name": "",
+      "description": ""
+    },
+    "sonos.target.select": {
+      "name": "",
+      "description": ""
+    },
+    "spotify.collection.sort.added": {
+      "name": "",
+      "description": ""
+    },
+    "spotify.collection.sort.alphabetical": {
+      "name": "",
+      "description": ""
+    },
+    "spotify.collection.sort.catalog": {
+      "name": "",
+      "description": ""
+    },
+    "spotify.favorite.toggle": {
+      "name": "",
+      "description": ""
+    },
+    "spotify.library.toggle": {
+      "name": "",
+      "description": ""
+    },
+    "spotify.relations": {
+      "name": "",
+      "description": ""
+    },
+    "spotify.view.albums": {
+      "name": "",
+      "description": ""
+    },
+    "spotify.view.artists": {
+      "name": "",
+      "description": ""
+    },
+    "spotify.view.episodes": {
+      "name": "",
+      "description": ""
+    },
+    "spotify.view.liked": {
+      "name": "",
+      "description": ""
+    },
+    "spotify.view.playlists": {
+      "name": "",
+      "description": ""
+    },
+    "spotify.view.podcasts": {
+      "name": "",
+      "description": ""
+    },
+    "tidal.collection.sort.added": {
+      "name": "",
+      "description": ""
+    },
+    "tidal.collection.sort.alphabetical": {
+      "name": "",
+      "description": ""
+    },
+    "tidal.collection.sort.custom": {
+      "name": "",
+      "description": ""
+    },
+    "tidal.favorite.toggle": {
+      "name": "",
+      "description": ""
+    },
+    "tidal.library.toggle": {
+      "name": "",
+      "description": ""
+    },
+    "tidal.relations": {
+      "name": "",
+      "description": ""
+    },
+    "time.elapsed": {
+      "name": "",
+      "description": ""
+    },
+    "time.remaining": {
+      "name": "",
+      "description": ""
+    },
+    "time.total": {
+      "name": "",
+      "description": ""
+    },
+    "transport.bookmark.named.next": {
+      "name": "",
+      "description": ""
+    },
+    "transport.bookmark.named.previous": {
+      "name": "",
+      "description": ""
+    },
+    "transport.bookmark.next": {
+      "name": "",
+      "description": ""
+    },
+    "transport.bookmark.previous": {
+      "name": "",
+      "description": ""
+    },
+    "transport.chapter.next": {
+      "name": "",
+      "description": ""
+    },
+    "transport.chapter.previous": {
+      "name": "",
+      "description": ""
+    },
+    "transport.history.newer": {
+      "name": "",
+      "description": ""
+    },
+    "transport.history.older": {
+      "name": "",
+      "description": ""
+    },
+    "transport.playPause": {
+      "name": "",
+      "description": ""
+    },
+    "transport.shuffle.toggle": {
+      "name": "",
+      "description": ""
+    },
+    "transport.toggleMute": {
+      "name": "",
+      "description": ""
+    },
+    "transport.trackEnd": {
+      "name": "",
+      "description": ""
+    },
+    "transport.trackStart": {
+      "name": "",
+      "description": ""
+    },
+    "view.chapters": {
+      "name": "",
+      "description": ""
+    },
+    "view.closePreview": {
+      "name": "",
+      "description": ""
+    },
+    "view.commandPalette": {
+      "name": "",
+      "description": ""
+    },
+    "view.history": {
+      "name": "",
+      "description": ""
+    },
+    "view.history.back": {
+      "name": "",
+      "description": ""
+    },
+    "view.history.forward": {
+      "name": "",
+      "description": ""
+    },
+    "view.library": {
+      "name": "",
+      "description": ""
+    },
+    "view.list": {
+      "name": "",
+      "description": ""
+    },
+    "view.player": {
+      "name": "",
+      "description": ""
+    },
+    "view.queue": {
+      "name": "",
+      "description": ""
+    },
+    "view.search.all": {
+      "name": "",
+      "description": ""
+    },
+    "view.search.current": {
+      "name": "",
+      "description": ""
+    },
+    "volume.down1": {
+      "name": "",
+      "description": ""
+    },
+    "volume.down5": {
+      "name": "",
+      "description": ""
+    },
+    "volume.up1": {
+      "name": "",
+      "description": ""
+    },
+    "volume.up5": {
+      "name": "",
+      "description": ""
+    },
+    "wiim.equalizer.select": {
+      "name": "",
+      "description": ""
+    },
+    "wiim.input.select": {
+      "name": "",
+      "description": ""
+    },
+    "wiim.networkStreams.add": {
+      "name": "",
+      "description": ""
+    },
+    "wiim.networkStreams.cut": {
+      "name": "",
+      "description": ""
+    },
+    "wiim.networkStreams.edit": {
+      "name": "",
+      "description": ""
+    },
+    "wiim.networkStreams.export": {
+      "name": "",
+      "description": ""
+    },
+    "wiim.networkStreams.import": {
+      "name": "",
+      "description": ""
+    },
+    "wiim.networkStreams.moveDown": {
+      "name": "",
+      "description": ""
+    },
+    "wiim.networkStreams.moveUp": {
+      "name": "",
+      "description": ""
+    },
+    "wiim.networkStreams.paste": {
+      "name": "",
+      "description": ""
+    },
+    "wiim.networkStreams.remove": {
+      "name": "",
+      "description": ""
+    },
+    "wiim.networkStreams.sort.added": {
+      "name": "",
+      "description": ""
+    },
+    "wiim.networkStreams.sort.alphabetical": {
+      "name": "",
+      "description": ""
+    },
+    "wiim.networkStreams.sort.custom": {
+      "name": "",
+      "description": ""
+    },
+    "wiim.networkStreams.view": {
+      "name": "",
+      "description": ""
+    },
+    "wiim.output.select": {
+      "name": "",
+      "description": ""
+    },
+    "wiim.repeat.select": {
+      "name": "",
+      "description": ""
+    },
+    "wiim.shuffle.toggle": {
+      "name": "",
+      "description": ""
+    },
+    "wiim.sleepTimer.set": {
+      "name": "",
+      "description": ""
+    },
+    "wiim.source.next": {
+      "name": "",
+      "description": ""
+    },
+    "wiim.source.previous": {
+      "name": "",
+      "description": ""
+    },
+    "youtube.account.manage": {
+      "name": "",
+      "description": ""
+    },
+    "youtube.broadcasts.aggregate.channel.toggle": {
+      "name": "",
+      "description": ""
+    },
+    "youtube.broadcasts.aggregate.configure": {
+      "name": "",
+      "description": ""
+    },
+    "youtube.broadcasts.aggregate.open": {
+      "name": "",
+      "description": ""
+    },
+    "youtube.broadcasts.aggregate.recordNow": {
+      "name": "",
+      "description": ""
+    },
+    "youtube.broadcasts.aggregate.refresh": {
+      "name": "",
+      "description": ""
+    },
+    "youtube.broadcasts.aggregate.schedule": {
+      "name": "",
+      "description": ""
+    },
+    "youtube.broadcasts.open": {
+      "name": "",
+      "description": ""
+    },
+    "youtube.broadcasts.refresh": {
+      "name": "",
+      "description": ""
+    },
+    "youtube.liveStation.add": {
+      "name": "",
+      "description": ""
+    }
+  }
+}

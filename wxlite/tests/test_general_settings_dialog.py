@@ -11,14 +11,14 @@ SOURCE = Path(__file__).parents[1] / "amc_wx_lite" / "gui.py"
 def test_settings_have_real_native_pages_and_explicit_accessible_names() -> None:
     source = SOURCE.read_text(encoding="utf-8")
     assert "self.notebook = wx.Notebook(self)" in source
-    assert 'self.notebook.SetName("Kategorie ustawień")' in source
-    assert 'self.notebook.AddPage(general, "Ogólne", select=True)' in source
-    assert 'self.notebook.AddPage(radio, "Radio i nagrywanie")' in source
-    assert 'self.notebook.AddPage(podcasts, "Podcasty i YouTube")' in source
-    assert 'self.notebook.AddPage(keyboard, "Klawiatura")' in source
-    assert 'self.notebook.AddPage(integration, "Integracja z Windows")' in source
-    assert 'self.notebook.AddPage(updates, "Aktualizacje")' in source
-    assert 'self.notebook.AddPage(messages, "Dostępność i komunikaty")' in source
+    assert 'i18n.tr("settings.categories.accessibleName")' in source
+    for key in (
+        "general", "radio", "podcasts", "keyboard", "windows", "updates",
+        "accessibility",
+    ):
+        assert f'i18n.tr("settings.tab.{key}")' in source
+    assert 'self.interface_language.SetName(' in source
+    assert 'i18n.tr("settings.interfaceLanguage.accessibleName")' in source
     assert 'self.startup_target.SetName("Wyświetlaj po uruchomieniu")' in source
     assert 'choices=["Ostatnia używana sesja", "Menedżer sesji"]' in source
     assert 'self.silence.SetName("Dodatkowa cisza po naturalnym końcu utworu")' in source
@@ -45,22 +45,22 @@ def test_settings_have_real_native_pages_and_explicit_accessible_names() -> None
     assert '"Oznajmiaj nawigację po zakładkach"' in source
     assert 'self.message_percent_announcement.SetName(' in source
     assert 'choices=["Tylko procent", "Tylko czas", "Procent i czas"]' in source
-    assert 'self.message_templates.SetName("Zdarzenia komunikatów")' in source
+    assert 'i18n.tr("settings.messageTemplates.event.accessibleName")' in source
     assert 'self.message_template_text.SetName(' in source
-    assert '"Tekst szablonu wybranego komunikatu"' in source
-    assert "choices=[TEMPLATE_LABELS[key]" in source
+    assert 'i18n.tr("settings.messageTemplates.text.accessibleName")' in source
+    assert "template_labels(self._message_template_language)[key]" in source
 
 
 def test_settings_pages_and_storage_controls_follow_the_user_workflow() -> None:
     source = SOURCE.read_text(encoding="utf-8")
     page_calls = [
-        'self.notebook.AddPage(general, "Ogólne", select=True)',
-        'self.notebook.AddPage(radio, "Radio i nagrywanie")',
-        'self.notebook.AddPage(podcasts, "Podcasty i YouTube")',
-        'self.notebook.AddPage(messages, "Dostępność i komunikaty")',
-        'self.notebook.AddPage(keyboard, "Klawiatura")',
-        'self.notebook.AddPage(updates, "Aktualizacje")',
-        'self.notebook.AddPage(integration, "Integracja z Windows")',
+        'general, i18n.tr("settings.tab.general"), select=True',
+        'self.notebook.AddPage(radio, i18n.tr("settings.tab.radio"))',
+        'self.notebook.AddPage(podcasts, i18n.tr("settings.tab.podcasts"))',
+        'messages, i18n.tr("settings.tab.accessibility")',
+        'self.notebook.AddPage(keyboard, i18n.tr("settings.tab.keyboard"))',
+        'self.notebook.AddPage(updates, i18n.tr("settings.tab.updates"))',
+        'self.notebook.AddPage(integration, i18n.tr("settings.tab.windows"))',
     ]
     assert [source.index(call) for call in page_calls] == sorted(
         source.index(call) for call in page_calls
@@ -111,15 +111,15 @@ def test_message_options_precede_the_inline_template_editor() -> None:
     assert [dialog.index(item) for item in expected_order] == sorted(
         dialog.index(item) for item in expected_order
     )
-    assert 'templates_heading.SetName("Sekcja własne teksty komunikatów")' in dialog
+    assert 'i18n.tr("settings.messageTemplates.heading.accessibleName")' in dialog
     assert "self.message_templates.SetHelpText(" in dialog
     assert "self.message_template_text.SetHelpText(" in dialog
 
 
 def test_enter_save_has_one_short_confirmation_and_reconfigures_the_host() -> None:
     source = SOURCE.read_text(encoding="utf-8")
-    assert 'save.SetName("Zapisz ustawienia")' in source
-    assert 'cancel.SetName("Anuluj ustawienia")' in source
+    assert 'save.SetName(i18n.tr("settings.save.accessibleName"))' in source
+    assert 'cancel.SetName(i18n.tr("settings.cancel.accessibleName"))' in source
     assert 'save.SetDefault()' in source
     assert 'self.announcer.say("Zapisano ustawienia")' in source
     assert 'client.configure_audio(' in source
@@ -152,7 +152,8 @@ def test_all_exposed_choices_use_intentional_user_facing_labels() -> None:
     assert '"message_playback_messages": (' in source
     assert '"message_bookmark_navigation_messages": (' in source
     assert '"message_percent_announcement": self._message_percent_values[' in source
-    assert '"message_templates": dict(self._message_template_values)' in source
+    assert '"message_templates_by_language": {' in source
+    assert '"interface_language": self._interface_language_values[' in source
     assert "self.recording_folder = FocusableReadOnlyTextCtrl(" in source
     assert 'self.recording_folder.SetName("Domyślny folder nagrywania radia")' in source
     assert 'self.recording_folder_mode.SetName("Położenie nagrań Radia")' in source
@@ -288,7 +289,7 @@ def test_message_settings_override_the_inherited_policy_and_toggle_persists() ->
     source = SOURCE.read_text(encoding="utf-8")
     assert source.count("apply_message_overrides(") == 2
     assert source.count("enabled=self.options.message_enabled") == 2
-    assert source.count("templates=self.options.message_templates") == 2
+    assert source.count("templates=_message_templates_for_language(") == 2
     assert "self.options.message_seek_messages = self.messages.seek_messages" in source
     assert "if not self._save_state():" in source
     assert "self.messages.announces_playback" in source

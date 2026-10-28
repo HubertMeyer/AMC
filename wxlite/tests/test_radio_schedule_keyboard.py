@@ -184,7 +184,7 @@ def test_segmented_controls_have_only_user_facing_names_and_expected_keys() -> N
     assert "DateSegments" in source and "TimeSegments" in source
     assert "wx.WXK_LEFT" in source and "wx.WXK_RIGHT" in source
     assert "wx.WXK_UP" in source and "wx.WXK_DOWN" in source
-    assert "control.SetName(self._state.label(segment))" in source
+    assert "control.SetName(i18n.ui_text(self._state.label(segment)))" in source
     for leaked in ("DateSegments(", "TimeSegments(", "segment='", "value="):
         assert f"SetName({leaked}" not in source
 

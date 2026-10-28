@@ -91,6 +91,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Mapping
 
+from . import i18n
 from .navigation import SessionId
 
 
@@ -473,7 +474,22 @@ RECOGNITION_HISTORY_SESSIONS = (SessionId.FILES, SessionId.RADIO)
 def command_presentation(action: Action) -> CommandPresentation | None:
     """Jedna nazwa, opis i etykieta menu dla polecenia aplikacji."""
 
-    return _STATIC_COMMAND_PRESENTATIONS.get(action)
+    presentation = _STATIC_COMMAND_PRESENTATIONS.get(action)
+    if presentation is None or i18n.active_language() == i18n.POLISH:
+        return presentation
+    return CommandPresentation(
+        action=action,
+        name=i18n.command_name(action.value, presentation.name),
+        description=i18n.command_description(
+            action.value, presentation.description
+        ),
+        shortcut=presentation.shortcut,
+        menu_label=(
+            i18n.menu_action_label(action.value, presentation.menu_label)
+            if presentation.menu_label is not None
+            else None
+        ),
+    )
 
 
 _CTRL_F5_PRESENTATIONS: dict[str, CommandPresentation] = {
@@ -531,7 +547,25 @@ _CTRL_F5_PRESENTATIONS: dict[str, CommandPresentation] = {
 def ctrl_f5_presentation(session_label: str | None) -> CommandPresentation | None:
     """Precyzyjna funkcja ``Ctrl+F5`` dla bieżącej sesji."""
 
-    return _CTRL_F5_PRESENTATIONS.get((session_label or "").strip().casefold())
+    normalized_label = (session_label or "").strip().casefold()
+    normalized_label = {
+        "local files": "pliki lokalne",
+        "podcasts and youtube": "podcasty i youtube",
+    }.get(normalized_label, normalized_label)
+    presentation = _CTRL_F5_PRESENTATIONS.get(
+        normalized_label
+    )
+    if presentation is None or i18n.active_language() == i18n.POLISH:
+        return presentation
+    return CommandPresentation(
+        action=presentation.action,
+        name=i18n.command_name(presentation.action.value, presentation.name),
+        description=i18n.command_description(
+            presentation.action.value, presentation.description
+        ),
+        shortcut=presentation.shortcut,
+        menu_label=presentation.menu_label,
+    )
 
 
 # Polecenia ratunkowe i porzadkowe, ktore dotycza calej aplikacji, a nie
@@ -2590,16 +2624,20 @@ def describe_action(action: Action, session_label: str | None = None) -> str:
                 "Następny rozdział użytkownika albo, w odcinku, znacznik czasu z opisu",
         }
         if action in spotify_chapter_labels:
-            return spotify_chapter_labels[action]
+            return i18n.command_description(
+                action.value, spotify_chapter_labels[action]
+            )
     if (
         action is Action.MANAGE_PLAYLIST_MEMBERSHIP
         and (session_label or "").casefold() == "spotify"
     ):
-        return "Dodaj do playlist Spotify lub utwórz playlistę"
+        return i18n.command_description(
+            action.value, "Dodaj do playlist Spotify lub utwórz playlistę"
+        )
     for _chord, label, candidate in _help_entries():
         if candidate is action:
-            return label
-    return "Polecenie AMC"
+            return i18n.command_description(action.value, label)
+    return i18n.command_description(action.value, "Polecenie AMC")
 
 
 def configurable_shortcuts() -> tuple[ShortcutDefinition, ...]:
@@ -2628,7 +2666,7 @@ def readable_chord(chord: Chord) -> str:
         "Next": "Page Down",
         "Return": "Enter",
         "Back": "Backspace",
-        "Space": "Spacja",
+        "Space": i18n.tr("shortcut.space"),
     }.items():
         text = text.replace(internal, spoken)
     return text
@@ -2644,8 +2682,22 @@ def keyboard_help_announcement(
     """Zwięzły opis Ctrl+F1: skrót, polecenie i kontekst sesji."""
     shortcut = readable_chord(chord)
     if action is None:
-        return f"{shortcut}. Brak polecenia w sesji {session_label}"
+        return i18n.tr(
+            "keyboardHelp.noCommand",
+            shortcut=shortcut,
+            session=session_label,
+        )
     label = describe_action(action, session_label)
     if not available:
-        return f"{shortcut}. {label}. Niedostępne w sesji {session_label}"
-    return f"{shortcut}. {label}. {session_label}"
+        return i18n.tr(
+            "keyboardHelp.unavailable",
+            shortcut=shortcut,
+            command=label,
+            session=session_label,
+        )
+    return i18n.tr(
+        "keyboardHelp.available",
+        shortcut=shortcut,
+        command=label,
+        session=session_label,
+    )

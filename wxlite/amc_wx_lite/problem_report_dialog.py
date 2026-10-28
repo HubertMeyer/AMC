@@ -10,7 +10,7 @@ from typing import Callable
 
 import wx
 
-from . import __version__
+from . import __version__, i18n
 from .async_gate import BackgroundRunner, StaleResultGate
 from .problem_report import (
     REPORT_KIND_LABELS,
@@ -82,7 +82,14 @@ class ProblemReportDialog(wx.Dialog):
         root.Add(intro, 0, wx.EXPAND | wx.ALL, 10)
 
         root.Add(wx.StaticText(panel, label="Rodzaj zgłoszenia:"), 0, wx.LEFT | wx.RIGHT, 10)
-        self.kind = wx.Choice(panel, choices=tuple(REPORT_KIND_LABELS.values()))
+        self.kind = wx.Choice(
+            panel,
+            choices=tuple(
+                ("Bug", "Suggestion")
+                if i18n.active_language() == i18n.ENGLISH
+                else REPORT_KIND_LABELS.values()
+            ),
+        )
         self.kind.SetName("Rodzaj zgłoszenia")
         self.kind.SetSelection(0)
         root.Add(self.kind, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 10)

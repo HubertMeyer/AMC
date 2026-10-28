@@ -11,6 +11,7 @@ from dataclasses import dataclass
 
 import wx
 
+from . import i18n
 from .live_region import announce_status
 
 
@@ -29,6 +30,7 @@ class SpotifyPlaylistChoice:
     @property
     def label(self) -> str:
         state = "zaznaczona" if self.selected else "niezaznaczona"
+        state = i18n.ui_text(state)
         return f"{self.description}, {state}"
 
     def __str__(self) -> str:
@@ -75,7 +77,10 @@ class SpotifyPlaylistNameDialog(wx.Dialog):
         grid.Add(wx.StaticText(panel, label="&Widoczność:"), 0, wx.ALIGN_CENTER_VERTICAL)
         self.visibility = wx.Choice(
             panel,
-            choices=["Prywatna (domyślna)", "Publiczna"],
+            choices=[
+                i18n.ui_text("Prywatna (domyślna)"),
+                i18n.ui_text("Publiczna"),
+            ],
         )
         self.visibility.SetName("Widoczność playlisty Spotify")
         self.visibility.SetSelection(0)
@@ -231,13 +236,14 @@ class SpotifyPlaylistDialog(wx.Dialog):
             if count == 0
             else f"Wybrane playlisty: {count}"
         )
+        message = i18n.ui_text(message)
         self.status.SetLabel(message)
         self.status.SetName(message)
 
     def _toggle(self) -> None:
         choice = self._selected_choice()
         if choice is None:
-            self.status.SetLabel("Brak playlisty do zaznaczenia")
+            self.status.SetLabel(i18n.ui_text("Brak playlisty do zaznaczenia"))
             return
         choice.selected = not choice.selected
         self._rebuild(choice.playlist_id)
@@ -268,7 +274,9 @@ class SpotifyPlaylistDialog(wx.Dialog):
 
     def _save(self, _event: object | None = None) -> None:
         if not any(choice.selected for choice in self._choices):
-            self.status.SetLabel("Wybierz co najmniej jedną playlistę")
+            self.status.SetLabel(
+                i18n.ui_text("Wybierz co najmniej jedną playlistę")
+            )
             self.status.SetName(self.status.GetLabel())
             self.playlist_list.SetFocus() if self._choices else self.new_button.SetFocus()
             return

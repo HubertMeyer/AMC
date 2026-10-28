@@ -13,12 +13,16 @@ from typing import Iterable
 
 import wx
 
+from . import i18n
+
 
 class PlaylistPayloadError(ValueError):
     """Niepełna odpowiedź hosta, opisana bez ujawniania technicznych danych."""
 
 
 def _format_count(count: int) -> str:
+    if i18n.active_language() == i18n.ENGLISH:
+        return "1 item" if count == 1 else f"{count} items"
     if count == 1:
         return "1 element"
     if count % 10 in (2, 3, 4) and count % 100 not in (12, 13, 14):
@@ -47,6 +51,7 @@ class PlaylistChoice:
             if self.membership is False
             else "stan mieszany"
         )
+        state = i18n.ui_text(state)
         return f"{self.name}, {state}, {_format_count(len(self.item_ids))}"
 
     def set_membership(self, selected_item_ids: Iterable[str], include: bool) -> None:
@@ -253,6 +258,7 @@ class PlaylistMembershipDialog(wx.Dialog):
         self._rebuild()
 
     def _set_status(self, message: str) -> None:
+        message = i18n.ui_text(message)
         self.status.SetLabel(message)
         self.status.SetName(message)
 

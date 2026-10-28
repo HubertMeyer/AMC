@@ -1,8 +1,8 @@
 # KEY-001 — konfigurowalne skróty klawiaturowe
 
-Status: **W trakcie — kod, pełna regresja, czysta paczka, instalator, wydanie
-GitHub i rzeczywista aktualizacja instalacji zweryfikowane; ręczny odbiór NVDA
-pozostaje**
+Status: **Zrobione — kod, pełna regresja, czysta paczka, instalator, wydanie
+GitHub i rzeczywista aktualizacja instalacji zweryfikowane; użytkownik
+zatwierdził obsługę klawiatury i skróty 28.10.2026**
 
 ## Zgłoszenie użytkownika
 
@@ -127,16 +127,21 @@ Rzeczywista aktualizacja 27.10.2026:
 - pełna kontrola integralności zainstalowanego pakietu zakończyła się kodem 0,
   a po starcie działała jedna instancja AMC Test;
 - interfejs natywny sterowania oknem nie był dostępny w sesji automatyzacji,
-  dlatego menedżer skrótów nadal wymaga ręcznego odbioru z NVDA.
+  dlatego w tym dniu menedżer skrótów nadal wymagał ręcznego odbioru z NVDA.
+
+Korekta użytkownika z 28.10.2026 zastępuje wcześniejsze ustalenie „ręczny
+odbiór NVDA pozostaje”: użytkownik zatwierdził skróty i całą obsługę
+klawiatury jako gotowe i działające prawidłowo. Ewentualny później wykryty,
+konkretny defekt będzie osobną poprawką, a nie powodem dalszego blokowania
+KEY-001.
 
 Nie uruchomiono Ruffa, ponieważ moduł nie jest dostępny w przypiętym
 środowisku. Nie jest to przedstawiane jako zaliczony lint.
 
 ## Znane ograniczenia
 
-- Nie wykonano jeszcze ręcznego testu NVDA: fokus początkowy karty, lista,
-  pole przechwytywania, Tab i Shift+Tab, konflikt, Zapisz, Anuluj, powrót
-  fokusu oraz ponowne otwarcie wymagają odbioru na prawdziwym oknie.
+- Ręczny odbiór klawiatury i skrótów został zatwierdzony przez użytkownika
+  28.10.2026; nie pozostaje otwarta bramka odbioru dla KEY-001.
 - Pierwsza wersja nie zmienia chronionych gestów ratunkowych i natywnych.
 - Nie ma osobnego **Zastosuj**; ewentualne dodanie wymaga osobnej decyzji po
   odbiorze prostszego wariantu.
@@ -182,7 +187,8 @@ Projekt do korekty i zatwierdzenia użytkownika:
 - wydanie GitHub: `test-2026.10.27.0057`, opublikowane i odczytowo
   zweryfikowane;
 - lokalna aktualizacja przez oficjalny aktualizator: wykonana i zweryfikowana;
-  ręczny test menedżera skrótów z NVDA pozostaje.
+- ręczny odbiór menedżera skrótów i klawiatury: zatwierdzony przez użytkownika
+  28.10.2026.
 
 Wspólny artefakt końcowy powstał z czystego, odizolowanego worktree. Równoległa
 niezwiązana zmiana użytkownika w głównym drzewie roboczym została zachowana i

@@ -11,6 +11,8 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
+from . import i18n
+
 
 EVENT_OBJECT_LIVEREGIONCHANGED = 0x8019
 OBJID_CLIENT = -4
@@ -31,7 +33,7 @@ def announce_status(
 ) -> str:
     """Pokaż i wypowiedz jeden komunikat w aktywnym oknie podrzędnym."""
 
-    text = (message or "").strip()
+    text = i18n.ui_text((message or "").strip())
     if not text:
         return ""
     if control.GetLabel() != text:

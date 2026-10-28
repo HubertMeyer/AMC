@@ -28,6 +28,7 @@ from __future__ import annotations
 from dataclasses import dataclass, replace
 from typing import Mapping
 
+from . import i18n
 from .navigation import SessionId
 from . import session_order as session_order_model
 from .profile_layout import common_data_commands_available
@@ -266,7 +267,7 @@ def menus_for_session(
                     items.append(entry)
                 continue
             ctrl_f5 = ctrl_f5_presentation(
-                session_order_model.SESSION_NAMES[session_id]
+                session_order_model.session_name(session_id)
             )
             if ctrl_f5 is not None and entry.action is ctrl_f5.action:
                 access_key = {
@@ -327,7 +328,16 @@ def menus_for_session(
         while items and items[-1].is_separator:
             items.pop()
         if items:
-            menus.append(Menu(described.title, tuple(items)))
+            localized_items = tuple(
+                replace(
+                    item,
+                    label=i18n.menu_action_label(item.action.value, item.label),
+                )
+                if item.action is not None and not item.is_separator
+                else item
+                for item in items
+            )
+            menus.append(Menu(i18n.menu_title(described.title), localized_items))
     return tuple(menus)
 
 

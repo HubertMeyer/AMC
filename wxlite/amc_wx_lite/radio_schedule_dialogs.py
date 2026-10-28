@@ -14,6 +14,7 @@ from datetime import datetime, timedelta
 
 import wx
 
+from . import i18n
 from .live_region import announce_status
 from .radio_schedule_settings import (
     BITRATES,
@@ -33,6 +34,7 @@ from .radio_schedule_settings import (
 from .schedule_segments import (
     DATE_SEGMENTS,
     MONTH_NAMES,
+    MONTH_NAMES_EN,
     TIME_SEGMENTS,
     DateSegments,
     TimeSegments,
@@ -101,7 +103,7 @@ class _SegmentedDateControl(wx.Panel):
         values = (self._state.value.day, self._state.value.month, self._state.value.year)
         for control, segment, value in zip(self._controls, DATE_SEGMENTS, values):
             control.SetValue(value)
-            control.SetName(self._state.label(segment))
+            control.SetName(i18n.ui_text(self._state.label(segment)))
 
     def _changed(self) -> None:
         self._sync()
@@ -202,7 +204,7 @@ class _SegmentedTimeControl(wx.Panel):
         values = (self._state.value.hour, self._state.value.minute)
         for control, segment, value in zip(self._controls, TIME_SEGMENTS, values):
             control.SetValue(value)
-            control.SetName(self._state.label(segment))
+            control.SetName(i18n.ui_text(self._state.label(segment)))
 
     def _on_focus(self, event) -> None:
         self._buffers[TIME_SEGMENTS[self._index(event)]] = ""
@@ -271,18 +273,30 @@ def _display_name(schedule: Mapping) -> str:
     return (
         station.strip()
         if isinstance(station, str) and station.strip()
-        else "Plan nagrywania"
+        else i18n.ui_text("Plan nagrywania")
     )
 
 
 def _schedule_when(schedule: Mapping) -> tuple[str, str]:
     start = local_start_from_utc_ticks(int(schedule.get("nextStartUtcTicks") or 0))
-    date_text = f"{start.day} {MONTH_NAMES[start.month - 1]} {start.year}"
+    months = (
+        MONTH_NAMES_EN
+        if i18n.active_language() == i18n.ENGLISH
+        else MONTH_NAMES
+    )
+    date_text = f"{start.day} {months[start.month - 1]} {start.year}"
     return date_text, f"{start.hour}:{start.minute:02d}"
 
 
 def _duration_label(minutes: int) -> str:
     hours, rest = divmod(max(0, int(minutes)), 60)
+    if i18n.active_language() == i18n.ENGLISH:
+        parts = []
+        if hours:
+            parts.append(f"{hours} hour" if hours == 1 else f"{hours} hours")
+        if rest:
+            parts.append(f"{rest} minute" if rest == 1 else f"{rest} minutes")
+        return " ".join(parts) or "zero minutes"
     parts = []
     if hours:
         hour_word = "godzina" if hours == 1 else "godziny" if 2 <= hours <= 4 else "godzin"
@@ -301,37 +315,66 @@ def _duration_label(minutes: int) -> str:
 
 def _short_schedule_information(schedule: Mapping) -> str:
     date_text, time_text = _schedule_when(schedule)
-    state = "włączony" if schedule.get("enabled") else "wyłączony"
+    if i18n.active_language() == i18n.ENGLISH:
+        state = "enabled" if schedule.get("enabled") else "disabled"
+    else:
+        state = "włączony" if schedule.get("enabled") else "wyłączony"
     return f"{state}, {date_text}, {time_text}"
 
 
 def _full_schedule_information(schedule: Mapping, recording=None) -> str:
     if recording is not None:
-        return scheduled_recording_output_description(schedule, recording)
+        return i18n.ui_text(
+            scheduled_recording_output_description(schedule, recording)
+        )
+    english = i18n.active_language() == i18n.ENGLISH
     recurrence = str(schedule.get("recurrence") or "Once")
     if recurrence == "Daily":
-        recurrence_text = "codziennie"
+        recurrence_text = "daily" if english else "codziennie"
     elif recurrence == "SelectedDays":
         selected = set(schedule.get("activeDays") or [])
-        days = [
-            label for name, label in zip(DAY_NAMES, DAY_LABELS) if name in selected
-        ]
+        day_labels = (
+            DAY_NAMES if english else DAY_LABELS
+        )
+        days = [label for name, label in zip(DAY_NAMES, day_labels) if name in selected]
         recurrence_text = (
-            f"powtarzanie: {', '.join(days)}"
+            f"repeats: {', '.join(days)}"
+            if english and days
+            else f"powtarzanie: {', '.join(days)}"
             if days
+            else "selected weekdays"
+            if english
             else "wybrane dni tygodnia"
         )
     else:
-        recurrence_text = "jednorazowo"
+        recurrence_text = "once" if english else "jednorazowo"
     format_value = str(schedule.get("recordingFormat") or "").strip()
     format_label = next(
         (label for label, value in _FORMAT_CHOICES if value == format_value),
         format_value or "format domyślny",
     )
+    format_label = i18n.ui_text(format_label)
     folder = str(schedule.get("outputFolder") or "").strip()
-    folder_text = f"folder {folder}" if folder else "domyślny folder nagrań"
+    folder_text = (
+        f"folder {folder}"
+        if folder
+        else "default recordings folder"
+        if english
+        else "domyślny folder nagrań"
+    )
+    station_name = str(
+        schedule.get("stationName") or ("unknown" if english else "nieznane")
+    ).strip()
+    if english:
+        return ", ".join((
+            f"source {station_name}",
+            recurrence_text,
+            f"duration {_duration_label(int(schedule.get('durationMinutes') or 0))}",
+            f"format {format_label}",
+            folder_text,
+        ))
     return ", ".join((
-        f"źródło {str(schedule.get('stationName') or 'nieznane').strip()}",
+        f"źródło {station_name}",
         recurrence_text,
         f"długość {_duration_label(int(schedule.get('durationMinutes') or 0))}",
         f"format {format_label}",
@@ -519,7 +562,9 @@ class RadioScheduleEditorDialog(wx.Dialog):
 
         days_label = wx.StaticText(scroll, label="Dni &tygodnia:")
         self.days = wx.CheckListBox(
-            scroll, choices=list(DAY_LABELS), style=wx.LB_SINGLE
+            scroll,
+            choices=[i18n.ui_text(label) for label in DAY_LABELS],
+            style=wx.LB_SINGLE,
         )
         self.days.SetName("Dni tygodnia dla powtarzanego nagrania")
         selected_days = set((self._existing or {}).get("activeDays") or [])
@@ -616,7 +661,10 @@ class RadioScheduleEditorDialog(wx.Dialog):
         parent, grid, label: str, name: str, choices: Sequence[str]
     ) -> wx.Choice:
         static = wx.StaticText(parent, label=label)
-        control = wx.Choice(parent, choices=list(choices))
+        control = wx.Choice(
+            parent,
+            choices=[i18n.ui_text(choice) for choice in choices],
+        )
         control.SetName(name)
         if choices:
             control.SetSelection(0)
@@ -689,7 +737,10 @@ class RadioScheduleEditorDialog(wx.Dialog):
         if previous_mode == "custom":
             self._custom_output_folder = self.folder_path.GetValue().strip()
         default = self._recording.default_folder or "folder nagrań AMC"
-        labels = [f"Domyślny folder nagrań — {default}"]
+        if i18n.active_language() == i18n.ENGLISH:
+            labels = [f"Default recordings folder — {default}"]
+        else:
+            labels = [f"Domyślny folder nagrań — {default}"]
         values = ["default"]
         station_folder = (
             self._recording.station_folders.get(station.id)
@@ -697,9 +748,17 @@ class RadioScheduleEditorDialog(wx.Dialog):
             else None
         )
         if station_folder:
-            labels.append(f"Folder tej stacji — {station_folder}")
+            labels.append(
+                f"This station's folder — {station_folder}"
+                if i18n.active_language() == i18n.ENGLISH
+                else f"Folder tej stacji — {station_folder}"
+            )
             values.append("station")
-        labels.append("Własny folder tego planu")
+        labels.append(
+            "Custom folder for this schedule"
+            if i18n.active_language() == i18n.ENGLISH
+            else "Własny folder tego planu"
+        )
         values.append("custom")
 
         existing_path = str((self._existing or {}).get("outputFolder") or "").strip()
@@ -788,6 +847,7 @@ class RadioScheduleEditorDialog(wx.Dialog):
         self.browse.SetFocus()
 
     def _show_error(self, message: str, control=None) -> None:
+        message = i18n.ui_text(message)
         self.validation.SetLabel(message)
         self.validation.SetName(message)
         if control is not None:

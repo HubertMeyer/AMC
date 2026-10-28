@@ -1,0 +1,277 @@
+"""Kompletność języków i wspólny kontrakt menu, pomocy oraz palety."""
+
+from __future__ import annotations
+
+import json
+import ast
+import re
+from pathlib import Path
+
+from amc_wx_lite import i18n, menu_model
+from amc_wx_lite.command_palette import entries_for_session
+from amc_wx_lite.navigation import SessionId
+from amc_wx_lite.shortcuts import Action, describe_action
+from amc_wx_lite.state_store import StateStore
+from amc_wx_lite.transport_parity import (
+    DEFAULT_TEMPLATES_BY_LANGUAGE,
+    TEMPLATE_KEYS,
+    TEMPLATE_LABELS_BY_LANGUAGE,
+    MessagePolicy,
+)
+from tools import translation_inventory
+
+
+def test_ui_catalogs_have_exactly_the_same_nonempty_keys() -> None:
+    catalogs = i18n.catalogs()
+    assert set(catalogs) == {i18n.POLISH, i18n.ENGLISH}
+    polish_keys = set(catalogs[i18n.POLISH])
+    assert polish_keys
+    for language, catalog in catalogs.items():
+        assert set(catalog) == polish_keys, language
+        assert all(isinstance(value, str) and value for value in catalog.values())
+
+
+def test_system_language_resolution_and_preference_validation() -> None:
+    assert i18n.resolve_language("system", system_locale="pl_PL") == "pl"
+    assert i18n.resolve_language("system", system_locale="en_US") == "en"
+    assert i18n.resolve_language("system", system_locale="de_DE") == "en"
+    assert i18n.resolve_language("pl", system_locale="en_US") == "pl"
+    assert i18n.resolve_language("EN", system_locale="pl_PL") == "en"
+    assert i18n.normalize_preference("technical-id") == "system"
+
+
+def test_message_catalogs_have_matching_keys_and_placeholders() -> None:
+    assert set(DEFAULT_TEMPLATES_BY_LANGUAGE) == {"pl", "en"}
+    assert set(TEMPLATE_LABELS_BY_LANGUAGE) == {"pl", "en"}
+    expected_defaults = set(DEFAULT_TEMPLATES_BY_LANGUAGE["pl"])
+    for templates in DEFAULT_TEMPLATES_BY_LANGUAGE.values():
+        assert set(templates) == expected_defaults
+    for labels in TEMPLATE_LABELS_BY_LANGUAGE.values():
+        assert tuple(labels) == TEMPLATE_KEYS
+        assert all(labels.values())
+    assert MessagePolicy(language="pl").render(
+        "favorite.added", item="Utwór"
+    ) == "Dodano do ulubionych: Utwór"
+    assert MessagePolicy(language="en").render(
+        "favorite.added", item="Track"
+    ) == "Added to favorites: Track"
+
+
+def test_legacy_custom_messages_migrate_only_to_polish() -> None:
+    store = StateStore("unused")
+    state = store.load_payload({
+        "options": {
+            "message_templates": {"queue.added": "Moja kolejka: {item}"}
+        }
+    })
+    assert state.options.message_templates_by_language == {
+        "pl": {"queue.added": "Moja kolejka: {item}"}
+    }
+    payload = store.to_payload(state)
+    assert "message_templates" not in payload["options"]
+    assert payload["options"]["message_templates_by_language"] == {
+        "pl": {"queue.added": "Moja kolejka: {item}"}
+    }
+
+
+def test_english_menu_help_and_palette_share_stable_actions_and_shortcuts() -> None:
+    try:
+        i18n.configure("en")
+        for session in SessionId:
+            menus = menu_model.menus_for_session(
+                session, youtube_account_available=True
+            )
+            menu_items = {
+                item.action: item
+                for menu in menus
+                for item in menu.items
+                if item.action is not None and not item.is_separator
+            }
+            palette = {
+                entry.action: entry
+                for entry in entries_for_session(
+                    session, youtube_account_available=True
+                )
+            }
+            assert set(menu_items) == set(palette)
+            for action, item in menu_items.items():
+                name = palette[action].name
+                help_text = describe_action(action, i18n.english_action_name(session.value))
+                assert name
+                assert help_text
+                assert action.value not in name
+                assert "Action." not in name
+                assert item.shortcut == palette[action].shortcut or (
+                    item.shortcut is not None and palette[action].shortcut is not None
+                )
+    finally:
+        i18n.configure("pl")
+
+
+def test_language_change_does_not_change_shortcut_model() -> None:
+    try:
+        i18n.configure("pl")
+        polish = {
+            item.action: item.shortcut
+            for menu in menu_model.menus_for_session(SessionId.FILES)
+            for item in menu.items
+            if item.action is not None
+        }
+        i18n.configure("en")
+        english = {
+            item.action: item.shortcut
+            for menu in menu_model.menus_for_session(SessionId.FILES)
+            for item in menu.items
+            if item.action is not None
+        }
+        assert english == polish
+    finally:
+        i18n.configure("pl")
+
+
+def test_window_tree_does_not_translate_user_items_without_opt_in() -> None:
+    class FakeWindow:
+        def __init__(self) -> None:
+            self.label = "Gotowe"
+            self.items = ["Gotowe", "Moja prywatna stacja"]
+
+        def GetLabel(self) -> str:
+            return self.label
+
+        def SetLabel(self, value: str) -> None:
+            self.label = value
+
+        def GetCount(self) -> int:
+            return len(self.items)
+
+        def GetString(self, index: int) -> str:
+            return self.items[index]
+
+        def SetString(self, index: int, value: str) -> None:
+            self.items[index] = value
+
+        def GetChildren(self) -> tuple[object, ...]:
+            return ()
+
+    try:
+        i18n.configure("en")
+        window = FakeWindow()
+        i18n.localize_window_tree(window)
+        assert window.label == "Ready"
+        assert window.items == ["Gotowe", "Moja prywatna stacja"]
+
+        i18n.localize_window_tree(window, translate_items=True)
+        assert window.items == ["Ready", "Moja prywatna stacja"]
+    finally:
+        i18n.configure("pl")
+
+
+def test_future_language_template_is_valid_and_covers_core_sections() -> None:
+    path = (
+        Path(__file__).resolve().parents[1]
+        / "amc_wx_lite"
+        / "locales"
+        / "template.json"
+    )
+    template = json.loads(path.read_text(encoding="utf-8"))
+    assert set(i18n.catalogs()["pl"]) <= set(template["ui"])
+    assert set(TEMPLATE_KEYS) == set(template["messageTemplateLabels"])
+    assert set(DEFAULT_TEMPLATES_BY_LANGUAGE["pl"]) == set(
+        template["messageTemplates"]
+    )
+    legacy = i18n.legacy_english_catalog()
+    assert set(template["legacyUi"]) == set(legacy["static"])
+    assert set(template["legacyTemplates"]) == set(legacy["templates"])
+
+
+def test_every_inventoried_wxpython_text_has_complete_english_catalog() -> None:
+    inventory = translation_inventory.inventory_files(
+        translation_inventory.default_source_paths()
+    )
+    legacy = i18n.legacy_english_catalog()
+    exact_sources = set(i18n._UI_TEXT_EN) | set(legacy["static"])  # noqa: SLF001
+    assert inventory.exact <= exact_sources
+    assert inventory.templates == set(legacy["templates"])
+    assert all(legacy["static"].values())
+    assert all(legacy["templates"].values())
+
+    placeholder = re.compile(r"\{arg\d+\}")
+    for source, target in legacy["templates"].items():
+        assert set(placeholder.findall(source)) == set(placeholder.findall(target))
+    serialized = json.dumps(legacy, ensure_ascii=False)
+    assert "ZXQAMC" not in serialized
+    assert "Action." not in serialized
+    assert "stationName" not in legacy["static"]
+
+
+def test_dynamic_english_messages_preserve_runtime_values() -> None:
+    try:
+        i18n.configure("en")
+        assert i18n.ui_text(
+            "Nie można teraz odczytać stanu konta Spotify."
+        ) == "The Spotify account status cannot be read right now."
+        assert i18n.ui_text(
+            "Dodano zakładkę 2: 01:30"
+        ) == "Added bookmark 2: 01:30"
+        assert i18n.ui_text(
+            "Zakończono zaplanowane nagrywanie Radio Jazz. "
+            "Zapisano plików: 3"
+        ) == (
+            "Finished scheduled recording of Radio Jazz. Files saved: 3"
+        )
+    finally:
+        i18n.configure("pl")
+
+
+def test_settings_tabs_and_playback_bookmarks_use_distinct_terminology() -> None:
+    assert i18n.text_for("pl", "settings.tab.general") == "Ogólne"
+    assert i18n.text_for("en", "settings.tab.general") == "General"
+
+    legacy = i18n.legacy_english_catalog()
+    bookmark_entries = {
+        source: target
+        for catalog in (legacy["static"], legacy["templates"])
+        for source, target in catalog.items()
+        if "zakładk" in source.casefold()
+    }
+    assert bookmark_entries
+    assert all("bookmark" in target.casefold() for target in bookmark_entries.values())
+    assert all(
+        re.search(r"\btabs?\b", target, re.IGNORECASE) is None
+        for target in bookmark_entries.values()
+    )
+
+
+def test_every_static_settings_control_text_has_an_english_translation() -> None:
+    gui_path = Path(__file__).resolve().parents[1] / "amc_wx_lite" / "gui.py"
+    tree = ast.parse(gui_path.read_text(encoding="utf-8"))
+    dialog = next(
+        node
+        for node in tree.body
+        if isinstance(node, ast.ClassDef)
+        and node.name == "GeneralPlaybackOptionsDialog"
+    )
+    text_methods = {"SetName", "SetHelpText", "SetLabel", "ChangeValue", "MessageBox"}
+    static_texts: set[str] = set()
+    for node in ast.walk(dialog):
+        if not isinstance(node, ast.Call):
+            continue
+        if isinstance(node.func, ast.Attribute):
+            name = node.func.attr
+        elif isinstance(node.func, ast.Name):
+            name = node.func.id
+        else:
+            name = ""
+        if name not in text_methods and not any(
+            keyword.arg in {"label", "title", "message", "choices", "value"}
+            for keyword in node.keywords
+        ):
+            continue
+        for value in (*node.args, *(item.value for item in node.keywords)):
+            if (
+                isinstance(value, ast.Constant)
+                and isinstance(value.value, str)
+                and len(value.value) > 1
+            ):
+                static_texts.add(value.value)
+    assert static_texts <= set(i18n._UI_TEXT_EN)  # noqa: SLF001

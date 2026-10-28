@@ -279,7 +279,7 @@ def test_frontier_smart_device_dialog_has_explicit_names_and_keyboard_contract()
     assert "self.save_button.MoveAfterInTabOrder(self.pin)" in dialog
     assert "self.manual_button.SetFocus()" in dialog
     assert "self.pin.SetFocus()" in dialog
-    assert 'self.save_button.SetLabel("&Sprawdź urządzenie")' in dialog
+    assert 'self.save_button.SetLabel(i18n.ui_text("&Sprawdź urządzenie"))' in dialog
     assert "if not self._state.pin_allowed:" in dialog
     assert "close_after=True" not in dialog
 

@@ -77,9 +77,9 @@ do kontrolowanej archiwizacji opisanej w REL-003.
   przy zachowaniu dat przybliżonych. Szczegóły:
   [YT-005-skrzynka-ctrl-i-i-tytuly-youtube.md](YT-005-skrzynka-ctrl-i-i-tytuly-youtube.md).
 
-- `KEY-001` — **W trakcie; kod, pełna regresja, czysta paczka, instalator i
-  wydanie GitHub oraz rzeczywista aktualizacja instalacji są zweryfikowane;
-  ręczny odbiór NVDA pozostaje** — osobna
+- `KEY-001` — **Zrobione; kod, pełna regresja, czysta paczka, instalator,
+  wydanie GitHub i rzeczywista aktualizacja instalacji są zweryfikowane, a
+  użytkownik zatwierdził obsługę klawiatury i skróty 28.10.2026** — osobna
   karta **Klawiatura** z filtrem poleceń, podglądem zmiany przed zapisem,
   wykrywaniem konfliktów, usuwaniem i przywracaniem skrótów oraz jednym
   kontraktem menu, palety i pomocy. Szczegóły:
@@ -94,6 +94,14 @@ do kontrolowanej archiwizacji opisanej w REL-003.
   kontrolek, dostępna karta integracji z Windows, nowa karta Aktualizacje oraz
   karta Dostępność i komunikaty. Szczegóły:
   [SET-001-audyt-ustawien-dostepnosc-integracja-windows.md](SET-001-audyt-ustawien-dostepnosc-integracja-windows.md).
+
+- `I18N-001` — **Zrobione; wspólna warstwa językowa, polski, angielski,
+  wybór zgodny z systemem, osobne szablony komunikatów, pełny katalog 713
+  statycznych napisów i 312 komunikatów dynamicznych, parytet menu/pomocy/
+  palety oraz kompletna paczka testowa `224499f5` są zweryfikowane** —
+  przygotowanie interfejsu wxPython do obsługi wielu języków bez korzystania
+  z dawnej aplikacji WPF. Szczegóły:
+  [I18N-001-wielojezyczny-interfejs-wxpython.md](I18N-001-wielojezyczny-interfejs-wxpython.md).
 
 - `REL-002` — **W trakcie; trzecie wydanie kanału Test
   `test-2026.10.27.0233` zostało opublikowane i odczytowo zweryfikowane na

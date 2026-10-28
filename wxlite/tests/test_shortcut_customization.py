@@ -180,7 +180,7 @@ def test_serialization_never_exposes_enum_or_unknown_values() -> None:
 
 def test_keyboard_page_has_explicit_names_and_save_cancel_boundary() -> None:
     source = GUI_SOURCE.read_text(encoding="utf-8")
-    assert 'self.notebook.AddPage(keyboard, "Klawiatura")' in source
+    assert 'self.notebook.AddPage(keyboard, i18n.tr("settings.tab.keyboard"))' in source
     assert 'self.shortcut_filter.SetName("Filtruj polecenia klawiatury")' in source
     assert 'self.shortcut_list.SetName("Polecenia i przypisane skróty")' in source
     assert '"Nowy skrót dla wybranego polecenia"' in source

@@ -20,6 +20,7 @@ from pathlib import Path
 
 from .audio_clip import read_clip_selections
 from .audio_output import read_output_overrides
+from .i18n import POLISH, SUPPORTED_LANGUAGES, normalize_preference
 from .profile_presets import read_preset_overrides
 from .playback_history import normalize_histories
 from .radio_activity import normalize_state_position
@@ -251,6 +252,9 @@ class Options:
     #: Ekran po uruchomieniu. Wartość modelu pozostaje prywatna; dialog
     #: ustawień pokazuje wyłącznie pełne polskie etykiety.
     startup_target: str = "MediaList"
+    #: Preferencja języka jest niezależna od konkretnego katalogu. Wartość
+    #: ``system`` rozstrzyga się przy każdym starcie aplikacji.
+    interface_language: str = "system"
     loudness_normalization: bool = False
     smooth_track_transitions: bool = False
     inter_track_silence_ms: int = 0
@@ -330,7 +334,14 @@ class Options:
     message_percent_announcement: str | None = None
     #: Prywatne teksty komunikatow. Klucze sa filtrowane do zamknietego
     #: katalogu, a pusty tekst pozostaje swiadomym wylaczeniem zdarzenia.
+    #: Pole pojedynczego słownika jest zachowane wyłącznie do migracji stanu
+    #: sprzed wielojęzyczności. Przy zapisie nie wraca już do pliku.
     message_templates: dict[str, str] | None = None
+    #: Własne teksty są rozdzielone według konkretnego języka, aby polski
+    #: tekst użytkownika nigdy nie zastąpił angielskiego komunikatu.
+    message_templates_by_language: dict[str, dict[str, str]] = field(
+        default_factory=dict
+    )
     #: Prywatne nadpisania polityki aktualizacji składników. ``None`` oznacza
     #: dziedziczenie dotychczasowego wyboru z profilu głównego AMC do
     #: pierwszego zapisu karty Aktualizacje.
@@ -375,6 +386,7 @@ class Options:
             self.tempo_algorithm = 1
         if self.startup_target not in ("MediaList", "SessionList"):
             self.startup_target = "MediaList"
+        self.interface_language = normalize_preference(self.interface_language)
         self.session_order = normalized_session_order_values(self.session_order)
         # STRICT ``is not bool``, nie ``bool(...)``: napis z recznie
         # poprawionego pliku nie moze po cichu zmienic zachowania Escape.
@@ -461,6 +473,30 @@ class Options:
             self.message_templates = normalize_message_templates(
                 self.message_templates
             )
+        normalized_language_templates: dict[str, dict[str, str]] = {}
+        if isinstance(self.message_templates_by_language, dict):
+            for language in SUPPORTED_LANGUAGES:
+                raw_templates = self.message_templates_by_language.get(language)
+                if isinstance(raw_templates, dict):
+                    normalized_language_templates[language] = (
+                        normalize_message_templates(raw_templates)
+                    )
+        # Wszystkie istniejące własne teksty były polskie. Migracja jest
+        # jednokierunkowa i nie kopiuje ich do angielskiego katalogu.
+        if self.message_templates is not None:
+            normalized_language_templates[POLISH] = {
+                **self.message_templates,
+                **normalized_language_templates.get(POLISH, {}),
+            }
+        self.message_templates_by_language = normalized_language_templates
+        # Read compatibility for code/tests that still inspect the former
+        # single-language attribute. Persistence nevertheless uses only the
+        # grouped field, so this cannot overwrite another language.
+        self.message_templates = (
+            dict(normalized_language_templates[POLISH])
+            if POLISH in normalized_language_templates
+            else None
+        )
         for name in (
             "component_check_automatically",
             "component_download_automatically",
@@ -776,6 +812,11 @@ class StateStore:
                     else None
                 )
                 continue
+            if key == "message_templates_by_language":
+                options.message_templates_by_language = (
+                    dict(value) if isinstance(value, dict) else {}
+                )
+                continue
             if hasattr(options, key) and not isinstance(value, (dict, list)):
                 try:
                     setattr(options, key, value)
@@ -878,10 +919,15 @@ class StateStore:
         """Znormalizuj stan do jednego, wersjonowanego dokumentu JSON."""
 
         state.options.clamp()
+        options_payload = asdict(state.options)
+        # Stary, jednojęzyczny klucz był zawsze polski. Po migracji jego dane
+        # są już w ``message_templates_by_language.pl`` i nie zapisujemy
+        # dwóch sprzecznych źródeł prawdy.
+        options_payload.pop("message_templates", None)
         payload = {
             "version": self.VERSION,
             "session_manager_version": self.SESSION_MANAGER_VERSION,
-            "options": asdict(state.options),
+            "options": options_payload,
             "stations": [asdict(station) for station in state.stations],
             "navigation": state.navigation,
             "shortcut_overrides": serialize_shortcut_overrides(

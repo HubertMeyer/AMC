@@ -9,6 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Iterable, Mapping
 
+from . import i18n
 from . import menu_model
 from . import session_order as session_order_model
 from .navigation import SessionId
@@ -43,11 +44,11 @@ def _shortcut_label(value: str | None) -> str | None:
         "Next": "Page Down",
         "Return": "Enter",
         "Back": "Backspace",
-        "Space": "Spacja",
-        "Left": "strzałka w lewo",
-        "Right": "strzałka w prawo",
-        "Up": "strzałka w górę",
-        "Down": "strzałka w dół",
+        "Space": i18n.tr("shortcut.space"),
+        "Left": i18n.tr("shortcut.left"),
+        "Right": i18n.tr("shortcut.right"),
+        "Up": i18n.tr("shortcut.up"),
+        "Down": i18n.tr("shortcut.down"),
     }.get(key, key)
     return "+".join(parts)
 
@@ -73,7 +74,7 @@ def entries_for_session(
             if item.is_separator or item.action is None or item.action in seen:
                 continue
             ctrl_f5 = ctrl_f5_presentation(
-                session_order_model.SESSION_NAMES[session]
+                session_order_model.session_name(session)
             )
             shared = command_presentation(item.action)
             name = (
@@ -124,9 +125,9 @@ def available_entries(
 
 def count_label(count: int) -> str:
     if count == 0:
-        return "Brak pasujących poleceń"
+        return i18n.tr("palette.count.none")
     if count == 1:
-        return "1 polecenie"
+        return i18n.tr("palette.count.one")
     if 2 <= count <= 4:
-        return f"{count} polecenia"
-    return f"{count} poleceń"
+        return i18n.tr("palette.count.few", count=count)
+    return i18n.tr("palette.count.many", count=count)

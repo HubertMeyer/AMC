@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 
+from . import i18n
 from .navigation import SessionId
 from .release_profile import current_profile
 from .shortcuts import Action
@@ -58,6 +59,19 @@ SESSION_MENU_LABELS: dict[SessionId, str] = {
     SessionId.SPOTIFY: "Sesja: Spoti&fy",
     SessionId.FRONTIER_SMART: "Sesja: Frontier S&mart",
 }
+
+
+def session_name(session: SessionId) -> str:
+    """Intentional label derived from the stable session Action."""
+
+    return i18n.command_name(
+        SESSION_ACTIONS[session].value,
+        SESSION_NAMES[session],
+    )
+
+
+def _message(polish: str, english: str) -> str:
+    return english if i18n.active_language() == i18n.ENGLISH else polish
 
 
 def available_sessions() -> tuple[SessionId, ...]:
@@ -161,16 +175,28 @@ def enable(session: SessionId, raw: object) -> tuple[tuple[SessionId, ...], str]
 
     ordered = list(normalize(raw))
     if session not in available_sessions():
-        return tuple(ordered), "Ta sesja nie jest dostępna w tym wydaniu AMC"
+        return tuple(ordered), _message(
+            "Ta sesja nie jest dostępna w tym wydaniu AMC",
+            "This session is not available in this AMC edition",
+        )
     if session in ordered:
-        return tuple(ordered), f"{SESSION_NAMES[session]} jest już włączona"
+        return tuple(ordered), _message(
+            f"{SESSION_NAMES[session]} jest już włączona",
+            f"{session_name(session)} is already enabled",
+        )
     if len(ordered) >= MAX_ACTIVE_SESSIONS:
         return (
             tuple(ordered),
-            "Można włączyć najwyżej dziewięć sesji. Najpierw wyłącz jedną z nich",
+            _message(
+                "Można włączyć najwyżej dziewięć sesji. Najpierw wyłącz jedną z nich",
+                "At most nine sessions can be enabled. Disable one first",
+            ),
         )
     ordered.append(session)
-    return tuple(ordered), f"Włączono sesję {SESSION_NAMES[session]}, Ctrl+{len(ordered)}"
+    return tuple(ordered), _message(
+        f"Włączono sesję {SESSION_NAMES[session]}, Ctrl+{len(ordered)}",
+        f"Enabled {session_name(session)}, Ctrl+{len(ordered)}",
+    )
 
 
 def disable(
@@ -184,20 +210,32 @@ def disable(
 
     ordered = list(normalize(raw))
     if session not in ordered:
-        return tuple(ordered), current, f"{SESSION_NAMES[session]} jest już wyłączona"
+        return tuple(ordered), current, _message(
+            f"{SESSION_NAMES[session]} jest już wyłączona",
+            f"{session_name(session)} is already disabled",
+        )
     if len(ordered) == 1:
-        return tuple(ordered), current, "Nie można wyłączyć ostatniej aktywnej sesji"
+        return tuple(ordered), current, _message(
+            "Nie można wyłączyć ostatniej aktywnej sesji",
+            "The last active session cannot be disabled",
+        )
     if session in set(blocked):
         return (
             tuple(ordered),
             current,
-            f"Nie można teraz wyłączyć sesji {SESSION_NAMES[session]}, ponieważ trwa odtwarzanie albo nagrywanie",
+            _message(
+                f"Nie można teraz wyłączyć sesji {SESSION_NAMES[session]}, ponieważ trwa odtwarzanie albo nagrywanie",
+                f"{session_name(session)} cannot be disabled while playback or recording is active",
+            ),
         )
     index = ordered.index(session)
     ordered.remove(session)
     if current is session:
         current = ordered[min(index, len(ordered) - 1)]
-    return tuple(ordered), current, f"Wyłączono sesję {SESSION_NAMES[session]}"
+    return tuple(ordered), current, _message(
+        f"Wyłączono sesję {SESSION_NAMES[session]}",
+        f"Disabled {session_name(session)}",
+    )
 
 
 def move(
@@ -209,15 +247,21 @@ def move(
 
     ordered = list(normalize(raw))
     if session not in ordered:
-        return tuple(ordered), f"{SESSION_NAMES[session]} jest wyłączona"
+        return tuple(ordered), _message(
+            f"{SESSION_NAMES[session]} jest wyłączona",
+            f"{session_name(session)} is disabled",
+        )
     index = ordered.index(session)
     target = index + (-1 if direction < 0 else 1)
     if target < 0 or target >= len(ordered):
-        return tuple(ordered), "Sesja jest już na skraju listy"
+        return tuple(ordered), _message(
+            "Sesja jest już na skraju listy",
+            "The session is already at the edge of the list",
+        )
     ordered[index], ordered[target] = ordered[target], ordered[index]
     return (
         tuple(ordered),
-        f"{SESSION_NAMES[session]}, Ctrl+{target + 1}",
+        f"{session_name(session)}, Ctrl+{target + 1}",
     )
 
 
@@ -235,22 +279,28 @@ def manager_labels(
     inactive = tuple(session for session in allowed if session not in active)
     result: list[tuple[SessionId, str]] = []
     for slot, session in enumerate(active, start=1):
-        status = ready.get(session, "Wymaga konfiguracji")
+        status = ready.get(session, _message("Wymaga konfiguracji", "Needs configuration"))
         result.append((
             session,
-            f"Ctrl+{slot}, {SESSION_NAMES[session]}, włączona, {status.casefold()}",
+            _message(
+                f"Ctrl+{slot}, {SESSION_NAMES[session]}, włączona, {status.casefold()}",
+                f"Ctrl+{slot}, {session_name(session)}, enabled, {status.casefold()}",
+            ),
         ))
     for session in inactive:
-        status = ready.get(session, "Wymaga konfiguracji")
+        status = ready.get(session, _message("Wymaga konfiguracji", "Needs configuration"))
         result.append((
             session,
-            f"{SESSION_NAMES[session]}, wyłączona, {status.casefold()}",
+            _message(
+                f"{SESSION_NAMES[session]}, wyłączona, {status.casefold()}",
+                f"{session_name(session)}, disabled, {status.casefold()}",
+            ),
         ))
     return tuple(result)
 
 
 def selection_labels(raw: object) -> tuple[str, ...]:
     return tuple(
-        f"Ctrl+{slot}, {SESSION_NAMES[session]}"
+        f"Ctrl+{slot}, {session_name(session)}"
         for slot, session in enumerate(normalize(raw), start=1)
     )

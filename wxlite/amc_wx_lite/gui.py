@@ -102,6 +102,7 @@ from .youtube_live import (
     dynamic_live_url as youtube_dynamic_live_url,
 )
 from .item_information import item_properties_text
+from . import i18n
 from . import nvda_bridge
 from .library_source import LibrarySnapshot, LibrarySource, degradation_notice
 from . import list_sync
@@ -363,6 +364,7 @@ from .transport_parity import (
     apply_message_overrides,
     clamp_playback_rate,
     describe_custom_seek_length,
+    default_templates,
     format_clock,
     format_playback_rate,
     load_message_policy,
@@ -374,6 +376,7 @@ from .transport_parity import (
     seek_percent_value,
     seek_step_seconds,
     time_announcement,
+    template_labels,
 )
 from .transient_preview_policy import (
     TRANSIENT_PREVIEW_ACTIONS,
@@ -435,6 +438,20 @@ if "session.tidal" in _RELEASE_PROFILE.capabilities:
 from .version_info import PRODUCT_NAME, is_main_window_title, window_title
 
 APP_NAME = PRODUCT_NAME
+
+
+def _message_templates_for_language(options, language: str) -> dict[str, str]:
+    """Resolve only overrides belonging to the concrete interface language."""
+
+    grouped = getattr(options, "message_templates_by_language", {})
+    if isinstance(grouped, dict):
+        selected = grouped.get(language)
+        if isinstance(selected, dict):
+            return dict(selected)
+    legacy = getattr(options, "message_templates", None)
+    if language == i18n.POLISH and isinstance(legacy, dict):
+        return dict(legacy)
+    return {}
 # Nazwa blokady pozostaje technicznie stabilna podczas przejścia z nazwy
 # „AMC Python” na „AMC Test”. Dzięki temu także bezpośrednio uruchomiony
 # frontend nie otworzy drugiej instancji obok starszej kompilacji.
@@ -1392,8 +1409,8 @@ def transport_button_label(*, playing: bool, preparing: bool = False) -> str:
     ``&`` to klawisz dostepu wx (odpowiednik ``_`` w XAML).
     """
     if preparing:
-        return "&Anuluj"
-    return "&Wstrzymaj" if playing else "&Odtwórz"
+        return i18n.ui_text("&Anuluj")
+    return i18n.ui_text("&Wstrzymaj" if playing else "&Odtwórz")
 
 
 def transport_confirmation(*, paused: bool) -> str:
@@ -1404,7 +1421,7 @@ def transport_confirmation(*, paused: bool) -> str:
     wiadomo, czy czynnosc sie udala. Jedno slowo, bo to potwierdzenie gestu,
     nie opis stanu odtwarzacza.
     """
-    return "Wstrzymano" if paused else "Odtwarzanie"
+    return i18n.ui_text("Wstrzymano" if paused else "Odtwarzanie")
 
 
 class Announcer:
@@ -1483,7 +1500,7 @@ class Announcer:
 
     def show(self, text: str) -> str:
         """Zaktualizuj dostepny tekst bez wymuszania wypowiedzi NVDA."""
-        text = (text or "").strip()
+        text = i18n.ui_text((text or "").strip())
         if not text:
             return ""
         if self._status.GetLabel() != text:
@@ -1565,7 +1582,7 @@ class NativeStatusBar:
         self._text = ""
 
     def show(self, text: str) -> None:
-        text = (text or "").strip()
+        text = i18n.ui_text((text or "").strip())
         if not text or text == self._text:
             return
         self._text = text
@@ -2159,7 +2176,7 @@ class CommandPaletteDialog(wx.Dialog):
 
     def _accept(self, _event) -> None:
         if self.selected_entry is None:
-            label = "Brak polecenia do wykonania"
+            label = i18n.ui_text("Brak polecenia do wykonania")
             self.status.SetLabel(label)
             self.status.SetName(label)
             self.query.SetFocus()
@@ -2410,8 +2427,9 @@ class SearchDialog(wx.Dialog):
         # The focused native row already speaks its label and position.  Keep
         # the count as readable status without a second live announcement,
         # exactly like the full AMC search window.
-        self.status.SetLabel(message)
-        self.status.SetName(message)
+        localized_message = i18n.ui_text(message)
+        self.status.SetLabel(localized_message)
+        self.status.SetName(localized_message)
         self.results.SetItemState(
             0,
             wx.LIST_STATE_SELECTED | wx.LIST_STATE_FOCUSED,
@@ -2632,12 +2650,15 @@ class SearchDialog(wx.Dialog):
             if self._history_index < 0:
                 self._apply_history_text("")
                 self._reset_history_browsing()
-                self.status.SetLabel("Puste pole wyszukiwania")
-                self.status.SetName("Puste pole wyszukiwania")
+                empty_message = i18n.ui_text("Puste pole wyszukiwania")
+                self.status.SetLabel(empty_message)
+                self.status.SetName(empty_message)
                 return True
             self._history_index = min(self._history_index, len(self._history) - 1)
         self._apply_history_text(self._history[self._history_index])
-        text = f"{self._history_index + 1} z {len(self._history)} w historii"
+        text = i18n.ui_text(
+            f"{self._history_index + 1} z {len(self._history)} w historii"
+        )
         self.status.SetLabel(text)
         self.status.SetName(text)
         return True
@@ -4322,8 +4343,11 @@ class ServiceAccountDialog(wx.Dialog):
         self.close_button.Enable(not self._busy)
 
     def set_status(self, message: str) -> None:
+        message = i18n.ui_text(message)
         self.status.SetLabel(message)
-        self.status.SetName(f"Stan konta {self._service_name}: {message}")
+        self.status.SetName(
+            i18n.ui_text(f"Stan konta {self._service_name}: {message}")
+        )
         self.Layout()
 
     def finish(self, message: str) -> None:
@@ -4585,8 +4609,9 @@ class YouTubeAccountDialog(wx.Dialog):
         return bool(self.restore_suppressed.GetValue())
 
     def _set_status(self, message: str) -> None:
+        message = i18n.ui_text(message)
         self.status.SetLabel(message)
-        self.status.SetName(f"Stan konta YouTube: {message}")
+        self.status.SetName(i18n.ui_text(f"Stan konta YouTube: {message}"))
         self.Layout()
 
     def apply_status(self, payload: object, *, focus: bool = False) -> None:
@@ -4605,14 +4630,22 @@ class YouTubeAccountDialog(wx.Dialog):
     def _refresh_buttons(self) -> None:
         idle = self._busy_action is None
         if self._connected:
-            self.login_button.SetLabel("Zaloguj ponownie przez Google")
+            self.login_button.SetLabel(
+                i18n.ui_text("Zaloguj ponownie przez Google")
+            )
             self.login_button.SetName(
-                "Zaloguj ponownie konto YouTube przez Google w przeglądarce"
+                i18n.ui_text(
+                    "Zaloguj ponownie konto YouTube przez Google w przeglądarce"
+                )
             )
         else:
-            self.login_button.SetLabel("Zaloguj przez Google w przeglądarce")
+            self.login_button.SetLabel(
+                i18n.ui_text("Zaloguj przez Google w przeglądarce")
+            )
             self.login_button.SetName(
-                "Zaloguj konto YouTube przez Google w przeglądarce"
+                i18n.ui_text(
+                    "Zaloguj konto YouTube przez Google w przeglądarce"
+                )
             )
         self.login_button.Enable(idle)
         self.preview_button.Enable(idle and self._connected)
@@ -4652,13 +4685,18 @@ class YouTubeAccountDialog(wx.Dialog):
             self._preview_ready = True
             self._preview_kind = "subscriptions"
             self._preview_restore = self.restore_deleted_channels
-            labels = list(preview.labels) or ["Brak kanałów do zapisania"]
+            labels = list(preview.labels) or [
+                i18n.ui_text("Brak kanałów do zapisania")
+            ]
             self.preview_list.Set(labels)
             if labels:
                 self.preview_list.SetSelection(0)
-            self.preview_heading.SetLabel("Kanały planowane do zapisania w Bibliotece AMC")
-            self.preview_heading.SetName("Kanały planowane do zapisania w Bibliotece AMC")
-            self.preview_list.SetName("Kanały planowane do zapisania w Bibliotece AMC")
+            heading = i18n.ui_text(
+                "Kanały planowane do zapisania w Bibliotece AMC"
+            )
+            self.preview_heading.SetLabel(heading)
+            self.preview_heading.SetName(heading)
+            self.preview_list.SetName(heading)
         elif action == "previewPlaylists":
             preview = youtube_playlist_sync_preview(result)
             if preview is None:
@@ -4667,13 +4705,18 @@ class YouTubeAccountDialog(wx.Dialog):
             self._preview_ready = True
             self._preview_kind = "playlists"
             self._preview_restore = self.restore_deleted_channels
-            labels = list(preview.labels) or ["Brak playlist do zapisania"]
+            labels = list(preview.labels) or [
+                i18n.ui_text("Brak playlist do zapisania")
+            ]
             self.preview_list.Set(labels)
             if labels:
                 self.preview_list.SetSelection(0)
-            self.preview_heading.SetLabel("Playlisty planowane do zapisania w Bibliotece AMC")
-            self.preview_heading.SetName("Playlisty planowane do zapisania w Bibliotece AMC")
-            self.preview_list.SetName("Playlisty planowane do zapisania w Bibliotece AMC")
+            heading = i18n.ui_text(
+                "Playlisty planowane do zapisania w Bibliotece AMC"
+            )
+            self.preview_heading.SetLabel(heading)
+            self.preview_heading.SetName(heading)
+            self.preview_list.SetName(heading)
         elif action in {"login", "apply", "applyPlaylists", "logout", "cancelLogin"}:
             self._preview_ready = False
             self._preview_kind = None
@@ -4684,8 +4727,10 @@ class YouTubeAccountDialog(wx.Dialog):
         self._set_status(result_message)
         if action == "login" and not self._connected:
             self.login_button.SetName(
-                "Zaloguj konto YouTube przez Google w przeglądarce. "
-                f"Ostatni wynik: {result_message[:300]}"
+                i18n.ui_text(
+                    "Zaloguj konto YouTube przez Google w przeglądarce. "
+                    f"Ostatni wynik: {result_message[:300]}"
+                )
             )
         close_after_cancel = action == "cancelLogin" and self._close_after_cancel
         if close_after_cancel:
@@ -4713,8 +4758,10 @@ class YouTubeAccountDialog(wx.Dialog):
         target = self.login_button if previous in {"login", "cancelLogin"} else self.close_button
         if target is self.login_button:
             self.login_button.SetName(
-                "Zaloguj konto YouTube przez Google w przeglądarce. "
-                f"Ostatni wynik: {message[:300]}"
+                i18n.ui_text(
+                    "Zaloguj konto YouTube przez Google w przeglądarce. "
+                    f"Ostatni wynik: {message[:300]}"
+                )
             )
         wx.CallAfter(target.SetFocus)
 
@@ -4972,7 +5019,9 @@ class SonosAccountDialog(wx.Dialog):
         return "status"
 
     def _set_status(self, message: str) -> None:
-        self.status.ChangeValue(f"{message}\n\n{self._LOGIN_GUIDANCE}")
+        message = i18n.ui_text(message)
+        guidance = i18n.ui_text(self._LOGIN_GUIDANCE)
+        self.status.ChangeValue(f"{message}\n\n{guidance}")
         self.status.SetInsertionPoint(0)
 
     def _set_action_buttons_enabled(self, enabled: bool) -> None:
@@ -5196,8 +5245,9 @@ class LibraryFoldersDialog(wx.Dialog):
         self.sources.SetFocus() if self._sources else self.add_button.SetFocus()
 
     def set_status(self, message: str) -> None:
+        message = i18n.ui_text(message)
         self.status.SetLabel(message)
-        self.status.SetName(f"Wynik operacji: {message}")
+        self.status.SetName(i18n.ui_text(f"Wynik operacji: {message}"))
         self.Layout()
 
     def _update_buttons(self) -> None:
@@ -5452,9 +5502,9 @@ class FrontierSmartDevicesDialog(wx.Dialog):
         self.devices.SetFocus() if self._devices else self.manual_button.SetFocus()
 
     def set_status(self, message: str, *, announce: bool = False) -> None:
-        text = message.strip() or "Gotowe"
+        text = i18n.ui_text(message.strip() or "Gotowe")
         self.status.SetLabel(text)
-        self.status.SetName("Stan konfiguracji: " + text)
+        self.status.SetName(i18n.ui_text("Stan konfiguracji: " + text))
         self.Layout()
         if announce:
             self._announce(text)
@@ -5464,9 +5514,11 @@ class FrontierSmartDevicesDialog(wx.Dialog):
         self._busy = False
         self._hide_pin_field()
         self.save_button.SetLabel(
-            "&Sprawdź urządzenie"
-            if self._manual_address_visible
-            else "&Połącz i zapisz"
+            i18n.ui_text(
+                "&Sprawdź urządzenie"
+                if self._manual_address_visible
+                else "&Połącz i zapisz"
+            )
         )
         self._update_buttons()
         self.set_status(
@@ -5484,7 +5536,7 @@ class FrontierSmartDevicesDialog(wx.Dialog):
         self._state = frontier_smart_discovery_finished(self._state, payload)
         self._busy = False
         self._hide_pin_field()
-        self.save_button.SetLabel("&Połącz i zapisz")
+        self.save_button.SetLabel(i18n.ui_text("&Połącz i zapisz"))
         self._update_buttons()
         choices = self._state.discovered_devices
         if not choices:
@@ -5542,7 +5594,7 @@ class FrontierSmartDevicesDialog(wx.Dialog):
             device_label,
         )
         self.address.SetValue(address)
-        self.save_button.SetLabel("&Połącz i zapisz")
+        self.save_button.SetLabel(i18n.ui_text("&Połącz i zapisz"))
         self._show_pin_field()
         self.set_status(self._state.message, announce=True)
         self._update_buttons()
@@ -5579,14 +5631,18 @@ class FrontierSmartDevicesDialog(wx.Dialog):
             and self._state.phase is FrontierSmartConfigurationPhase.DISCOVERING
         )
         self.discover_button.SetLabel(
-            "&Wyszukiwanie urządzeń, czekaj"
-            if discovering
-            else "&Szukaj nowych urządzeń"
+            i18n.ui_text(
+                "&Wyszukiwanie urządzeń, czekaj"
+                if discovering
+                else "&Szukaj nowych urządzeń"
+            )
         )
         self.discover_button.SetName(
-            "Wyszukiwanie urządzeń w sieci lokalnej, czekaj"
-            if discovering
-            else "Szukaj nowych urządzeń w sieci lokalnej"
+            i18n.ui_text(
+                "Wyszukiwanie urządzeń w sieci lokalnej, czekaj"
+                if discovering
+                else "Szukaj nowych urządzeń w sieci lokalnej"
+            )
         )
         # Podczas wykrywania przycisk zachowuje fokus i pełni rolę czytelnego
         # stanu operacji. Ponowne uruchomienie nie startuje drugiego skanowania.
@@ -5654,7 +5710,7 @@ class FrontierSmartDevicesDialog(wx.Dialog):
         self.address_label.Hide()
         self.address.Hide()
         self._hide_pin_field()
-        self.save_button.SetLabel("&Połącz i zapisz")
+        self.save_button.SetLabel(i18n.ui_text("&Połącz i zapisz"))
         self.set_busy(self._state.message)
         self.discover_button.SetFocus()
         self._discover(self)
@@ -5668,7 +5724,7 @@ class FrontierSmartDevicesDialog(wx.Dialog):
             self.address.Show()
         self._state = frontier_smart_manual_address_started(self._state)
         self._hide_pin_field()
-        self.save_button.SetLabel("&Sprawdź urządzenie")
+        self.save_button.SetLabel(i18n.ui_text("&Sprawdź urządzenie"))
         self.set_status(self._state.message, announce=True)
         self._update_buttons()
         self.address.SetFocus()
@@ -5837,6 +5893,7 @@ class SessionSelectionDialog(wx.Dialog):
         self.session_list.SetSelection(index)
 
     def _say(self, message: str) -> None:
+        message = i18n.ui_text(message)
         self.status.SetLabel(message)
         self.status.SetName(message)
 
@@ -6914,13 +6971,38 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
         shortcut_overrides: dict[str, str],
         announce: Callable[[str], None],
     ) -> None:
-        super().__init__(parent, title="Ustawienia", size=(720, 620))
+        super().__init__(parent, title=i18n.tr("settings.title"), size=(720, 620))
         self.notebook = wx.Notebook(self)
-        self.notebook.SetName("Kategorie ustawień")
+        self.notebook.SetName(i18n.tr("settings.categories.accessibleName"))
 
         general = wx.ScrolledWindow(self.notebook)
         general.SetScrollRate(0, 12)
         general_layout = wx.BoxSizer(wx.VERTICAL)
+
+        interface_language_label = wx.StaticText(
+            general, label=i18n.tr("settings.interfaceLanguage.label")
+        )
+        language_choices = i18n.language_choices()
+        self._interface_language_values = [value for value, _label in language_choices]
+        self.interface_language = wx.Choice(
+            general, choices=[label for _value, label in language_choices]
+        )
+        self.interface_language.SetName(
+            i18n.tr("settings.interfaceLanguage.accessibleName")
+        )
+        self.interface_language.SetHelpText(
+            i18n.tr("settings.interfaceLanguage.help")
+        )
+        current_language_preference = i18n.normalize_preference(
+            getattr(options, "interface_language", i18n.SYSTEM)
+        )
+        self.interface_language.SetSelection(
+            self._interface_language_values.index(current_language_preference)
+        )
+        general_layout.Add(interface_language_label, 0, wx.BOTTOM, 4)
+        general_layout.Add(
+            self.interface_language, 0, wx.BOTTOM | wx.EXPAND, 12
+        )
 
         startup_target_label = wx.StaticText(
             general, label="&Wyświetlaj po uruchomieniu:"
@@ -8044,43 +8126,80 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
         messages_layout.Add(self.recording_sound, 0, wx.BOTTOM | wx.EXPAND, 10)
 
         templates_heading = wx.StaticText(
-            messages, label="Własne teksty komunikatów"
+            messages, label=i18n.tr("settings.messageTemplates.heading")
         )
-        templates_heading.SetName("Sekcja własne teksty komunikatów")
+        templates_heading.SetName(
+            i18n.tr("settings.messageTemplates.heading.accessibleName")
+        )
         templates_explanation = wx.StaticText(
             messages,
-            label=(
-                "Wybierz zdarzenie, a następnie zmień jego tekst. "
-                "Pusty tekst wyłącza dany komunikat."
-            ),
+            label=i18n.tr("settings.messageTemplates.explanation"),
         )
         templates_explanation.SetName(
             "Szablony komunikatów dostępności"
         )
-        templates_label = wx.StaticText(messages, label="&Zdarzenie:")
+        message_language_label = wx.StaticText(
+            messages, label=i18n.tr("settings.messageLanguage.label")
+        )
+        language_choices = i18n.concrete_language_choices()
+        self._message_language_values = [
+            value for value, _label in language_choices
+        ]
+        self.message_language = wx.Choice(
+            messages, choices=[label for _value, label in language_choices]
+        )
+        self.message_language.SetName(
+            i18n.tr("settings.messageLanguage.accessibleName")
+        )
+        self.message_language.SetHelpText(
+            i18n.tr("settings.messageLanguage.help")
+        )
+        self.message_language.SetSelection(
+            self._message_language_values.index(i18n.active_language())
+        )
+        templates_label = wx.StaticText(
+            messages, label=i18n.tr("settings.messageTemplates.event.label")
+        )
         self._message_template_keys = list(TEMPLATE_KEYS)
-        self._message_template_values = {
-            key: (
-                message_policy.templates[key]
-                if key in message_policy.templates
-                else DEFAULT_TEMPLATES[key]
-            )
-            for key in self._message_template_keys
-        }
+        stored_by_language = getattr(
+            options, "message_templates_by_language", {}
+        )
+        if not isinstance(stored_by_language, dict):
+            stored_by_language = {}
+        self._message_template_values_by_language = {}
+        for language in i18n.SUPPORTED_LANGUAGES:
+            raw_values = stored_by_language.get(language)
+            if not isinstance(raw_values, dict):
+                raw_values = {}
+            if language == i18n.POLISH and not raw_values:
+                raw_values = dict(message_policy.templates)
+            defaults = default_templates(language)
+            self._message_template_values_by_language[language] = {
+                key: raw_values[key] if key in raw_values else defaults[key]
+                for key in self._message_template_keys
+            }
+        self._message_template_language = i18n.active_language()
+        self._message_template_values = self._message_template_values_by_language[
+            self._message_template_language
+        ]
         self.message_templates = wx.ListBox(
             messages,
-            choices=[TEMPLATE_LABELS[key] for key in self._message_template_keys],
+            choices=[
+                template_labels(self._message_template_language)[key]
+                for key in self._message_template_keys
+            ],
             style=wx.LB_SINGLE,
         )
-        self.message_templates.SetName("Zdarzenia komunikatów")
+        self.message_templates.SetName(
+            i18n.tr("settings.messageTemplates.event.accessibleName")
+        )
         self.message_templates.SetHelpText(
-            "Strzałkami wybierz zdarzenie, a następnie naciśnij Tab, "
-            "aby przejść do jego tekstu."
+            i18n.tr("settings.messageTemplates.event.help")
         )
         self.message_templates.SetSelection(0)
         self._message_template_index = 0
         template_text_label = wx.StaticText(
-            messages, label="&Tekst wybranego komunikatu:"
+            messages, label=i18n.tr("settings.messageTemplates.text.label")
         )
         self.message_template_text = wx.TextCtrl(
             messages,
@@ -8089,11 +8208,13 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
             size=(-1, 64),
         )
         self.message_template_text.SetName(
-            "Tekst szablonu wybranego komunikatu"
+            i18n.tr("settings.messageTemplates.text.accessibleName")
         )
         self.message_template_text.SetHelpText(
-            "Zmień tekst komunikatu albo pozostaw pole puste, aby wyłączyć "
-            "tylko wybrane zdarzenie."
+            i18n.tr("settings.messageTemplates.text.help")
+        )
+        self.message_language.Bind(
+            wx.EVT_CHOICE, self._on_message_language_choice
         )
         self.message_templates.Bind(
             wx.EVT_LISTBOX, self._on_message_template_choice
@@ -8103,6 +8224,10 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
         )
         messages_layout.Add(
             templates_explanation, 0, wx.BOTTOM | wx.EXPAND, 8
+        )
+        messages_layout.Add(message_language_label, 0, wx.BOTTOM, 4)
+        messages_layout.Add(
+            self.message_language, 0, wx.BOTTOM | wx.EXPAND, 8
         )
         messages_layout.Add(templates_label, 0, wx.BOTTOM, 4)
         messages_layout.Add(
@@ -8114,23 +8239,27 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
         )
         messages.SetSizer(messages_layout)
 
-        self.notebook.AddPage(general, "Ogólne", select=True)
-        self.notebook.AddPage(radio, "Radio i nagrywanie")
-        self.notebook.AddPage(podcasts, "Podcasty i YouTube")
-        self.notebook.AddPage(messages, "Dostępność i komunikaty")
-        self.notebook.AddPage(keyboard, "Klawiatura")
-        self.notebook.AddPage(updates, "Aktualizacje")
-        self.notebook.AddPage(integration, "Integracja z Windows")
+        self.notebook.AddPage(
+            general, i18n.tr("settings.tab.general"), select=True
+        )
+        self.notebook.AddPage(radio, i18n.tr("settings.tab.radio"))
+        self.notebook.AddPage(podcasts, i18n.tr("settings.tab.podcasts"))
+        self.notebook.AddPage(
+            messages, i18n.tr("settings.tab.accessibility")
+        )
+        self.notebook.AddPage(keyboard, i18n.tr("settings.tab.keyboard"))
+        self.notebook.AddPage(updates, i18n.tr("settings.tab.updates"))
+        self.notebook.AddPage(integration, i18n.tr("settings.tab.windows"))
 
         buttons = self.CreateStdDialogButtonSizer(wx.OK | wx.CANCEL)
         save = self.FindWindowById(wx.ID_OK)
         if save is not None:
-            save.SetLabel("&Zapisz")
-            save.SetName("Zapisz ustawienia")
+            save.SetLabel(i18n.tr("settings.save.label"))
+            save.SetName(i18n.tr("settings.save.accessibleName"))
             save.SetDefault()
         cancel = self.FindWindowById(wx.ID_CANCEL)
         if cancel is not None:
-            cancel.SetName("Anuluj ustawienia")
+            cancel.SetName(i18n.tr("settings.cancel.accessibleName"))
         self.Bind(wx.EVT_BUTTON, self._on_save, id=wx.ID_OK)
         outer = wx.BoxSizer(wx.VERTICAL)
         outer.Add(self.notebook, 1, wx.ALL | wx.EXPAND, 12)
@@ -8138,6 +8267,7 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
         self.SetSizer(outer)
         self.SetMinSize((560, 450))
         self.CentreOnParent()
+        i18n.localize_window_tree(self, translate_items=True)
         self.pause.SetFocus()
 
     def _on_browse_recording_folder(self, _event: wx.CommandEvent) -> None:
@@ -8158,9 +8288,10 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
         self.recording_folder.SetFocus()
 
     def _set_component_update_status(self, message: str) -> None:
+        message = i18n.ui_text(message)
         self.component_update_status.SetLabel(message)
         self.component_update_status.SetName(
-            "Stan aktualizacji składników. " + message
+            i18n.ui_text("Stan aktualizacji składników. " + message)
         )
 
     def _on_check_media_components(self, _event: wx.CommandEvent) -> None:
@@ -8209,7 +8340,11 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
         suffix = (
             ""
             if definition.action in self._shortcut_overrides
-            else " (domyślny)"
+            else (
+                " (default)"
+                if i18n.active_language() == i18n.ENGLISH
+                else " (domyślny)"
+            )
         )
         return (
             f"{definition.name}; skrót: {readable_shortcut(shortcut)}{suffix}"
@@ -8254,15 +8389,20 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
             available and definition.action in self._shortcut_overrides
         )
         if definition is None:
-            self.shortcut_capture.ChangeValue("Brak wybranego polecenia")
+            self.shortcut_capture.ChangeValue(
+                i18n.ui_text("Brak wybranego polecenia")
+            )
             return
         self.shortcut_capture.ChangeValue(
             readable_shortcut(self._effective_shortcut(definition))
         )
 
     def _set_shortcut_status(self, message: str) -> None:
+        message = i18n.ui_text(message)
         self.shortcut_status.SetLabel(message)
-        self.shortcut_status.SetName("Stan zmiany skrótu. " + message)
+        self.shortcut_status.SetName(
+            i18n.ui_text("Stan zmiany skrótu. " + message)
+        )
         self._announce_shortcut_change(message)
 
     def _show_shortcut_problem(self, message: str) -> None:
@@ -8450,6 +8590,32 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
                 self._message_template_keys[index]
             ] = self.message_template_text.GetValue()
 
+    def _on_message_language_choice(self, event: wx.CommandEvent) -> None:
+        """Switch editor catalogs without mixing per-language overrides."""
+
+        self._store_message_template_text()
+        selection = self.message_language.GetSelection()
+        if not 0 <= selection < len(self._message_language_values):
+            event.Skip()
+            return
+        self._message_template_language = self._message_language_values[selection]
+        self._message_template_values = self._message_template_values_by_language[
+            self._message_template_language
+        ]
+        labels = template_labels(self._message_template_language)
+        selected_event = max(0, self.message_templates.GetSelection())
+        self.message_templates.Set([
+            labels[key] for key in self._message_template_keys
+        ])
+        self.message_templates.SetSelection(selected_event)
+        self._message_template_index = selected_event
+        self.message_template_text.ChangeValue(
+            self._message_template_values[
+                self._message_template_keys[selected_event]
+            ]
+        )
+        event.Skip()
+
     def _on_message_template_choice(self, event: wx.CommandEvent) -> None:
         self._store_message_template_text()
         selected = self.message_templates.GetSelection()
@@ -8471,6 +8637,9 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
             ),
             "startup_target": self._startup_target_values[
                 max(0, self.startup_target.GetSelection())
+            ],
+            "interface_language": self._interface_language_values[
+                max(0, self.interface_language.GetSelection())
             ],
             "pause_on_player_exit": self.pause.GetValue(),
             "session_order": [session.value for session in self._session_order],
@@ -8505,7 +8674,13 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
             "message_percent_announcement": self._message_percent_values[
                 max(0, self.message_percent_announcement.GetSelection())
             ].value,
-            "message_templates": dict(self._message_template_values),
+            "message_templates": None,
+            "message_templates_by_language": {
+                language: dict(values)
+                for language, values in (
+                    self._message_template_values_by_language.items()
+                )
+            },
             "component_check_automatically": (
                 self.component_check_automatically.GetValue()
             ),
@@ -8594,6 +8769,7 @@ class LiteFrame(wx.Frame):
     """Okno glowne: panel listy i panel odtwarzacza, przelaczane jak w AMC."""
 
     def __init__(self, store: StateStore, state: LiteState) -> None:
+        i18n.configure(state.options.interface_language)
         super().__init__(None, title=window_title(), size=(900, 600))
 
         self.store = store
@@ -8611,7 +8787,9 @@ class LiteFrame(wx.Frame):
         # Punkt startowy komunikatow i czas wlasny z PRAWDZIWEGO profilu AMC.
         # Profil C# pozostaje tylko do odczytu; prywatne nadpisania sa
         # nakladane nizej i zapisywane w magazynie AMC Python.
-        self.messages: MessagePolicy = load_message_policy(self.layout)
+        self.messages: MessagePolicy = load_message_policy(
+            self.layout, i18n.active_language()
+        )
         apply_message_overrides(
             self.messages,
             enabled=self.options.message_enabled,
@@ -8626,7 +8804,9 @@ class LiteFrame(wx.Frame):
                 self.options.message_bookmark_navigation_messages
             ),
             percent_announcement=self.options.message_percent_announcement,
-            templates=self.options.message_templates,
+            templates=_message_templates_for_language(
+                self.options, i18n.active_language()
+            ),
         )
         self.messages.custom_seek_seconds = resolve_custom_seek_seconds(
             self.options.custom_seek_seconds,
@@ -17563,7 +17743,7 @@ class LiteFrame(wx.Frame):
     ) -> None:
         if session_id not in session_order.normalize(self.options.session_order):
             self.announcer.say(
-                f"Sesja {session_order.SESSION_NAMES[session_id]} jest wyłączona. "
+                f"Sesja {session_order.session_name(session_id)} jest wyłączona. "
                 "Otwórz Menedżer sesji skrótem Ctrl+Shift+S"
             )
             return
@@ -17696,7 +17876,7 @@ class LiteFrame(wx.Frame):
         active = session_order.normalize(previous)
         if session_id not in active:
             if disable_only:
-                return active, f"{session_order.SESSION_NAMES[session_id]} jest już wyłączona"
+                return active, f"{session_order.session_name(session_id)} jest już wyłączona"
             changed, message = session_order.enable(session_id, active)
             new_current = self.navigator.active
         else:
@@ -17726,7 +17906,7 @@ class LiteFrame(wx.Frame):
             self._switch_session(new_current)
             slot = session_order.slot_for_session(new_current, changed)
             message += (
-                f". Aktywna sesja: {session_order.SESSION_NAMES[new_current]}, "
+                f". Aktywna sesja: {session_order.session_name(new_current)}, "
                 f"Ctrl+{slot}"
             )
         return changed, message
@@ -27135,7 +27315,9 @@ class LiteFrame(wx.Frame):
                 self.options.message_bookmark_navigation_messages
             ),
             percent_announcement=self.options.message_percent_announcement,
-            templates=self.options.message_templates,
+            templates=_message_templates_for_language(
+                self.options, i18n.active_language()
+            ),
         )
         self._apply_detailed_hints()
         # Komunikaty wierszy zmieniaja sie od razu. Nowe preferencje
@@ -31001,6 +31183,12 @@ class LiteFrame(wx.Frame):
 class LiteApp(wx.App):
     _startup_smoke_timeout_seconds = 20.0
 
+    def _on_init_dialog(self, event: wx.InitDialogEvent) -> None:
+        """Translate every native dialog just before it is first presented."""
+
+        i18n.localize_window_tree(event.GetEventObject())
+        event.Skip()
+
     def _finish_startup_smoke(
         self,
         frame: LiteFrame,
@@ -31055,6 +31243,8 @@ class LiteApp(wx.App):
 
     def OnInit(self) -> bool:  # noqa: N802 - API wx
         self.SetAppName(APP_NAME)
+        if hasattr(wx, "EVT_INIT_DIALOG"):
+            self.Bind(wx.EVT_INIT_DIALOG, self._on_init_dialog)
         # Drugi frontend nie może uruchamiać drugiego właściciela postępu
         # podcastów ani osobnego silnika audio. Wcześniej takie okno otwierało
         # się bez hosta: lista była widoczna, lecz Enter, Ctrl+R i informacje
@@ -31096,6 +31286,7 @@ class LiteApp(wx.App):
             wx.HelpProvider.Set(self._help_provider)
         store = StateStore()
         frame = LiteFrame(store, store.load())
+        i18n.localize_window_tree(frame)
         if hasattr(self, "SetTopWindow"):
             self.SetTopWindow(frame)
         if startup_smoke:

@@ -271,6 +271,19 @@ def copy_python_code(
             continue
         shutil.copy2(source, package / source.name)
         copied.append(f"app/amc_wx_lite/{source.name}")
+    source_locales = source_wxlite / "amc_wx_lite" / "locales"
+    destination_locales = package / "locales"
+    if destination_locales.exists():
+        shutil.rmtree(destination_locales)
+    if source_locales.is_dir():
+        for source in sorted(source_locales.rglob("*.json")):
+            relative = source.relative_to(source_locales)
+            destination = destination_locales / relative
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(source, destination)
+            copied.append(
+                f"app/amc_wx_lite/locales/{relative.as_posix()}"
+            )
     endpoint_destination = package / PROBLEM_REPORT_ENDPOINT_RESOURCE
     if report_endpoint is None:
         if endpoint_destination.is_file():

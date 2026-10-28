@@ -62,6 +62,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Mapping
 
+from .i18n import ENGLISH, POLISH, SUPPORTED_LANGUAGES
 from .profile_layout import ProfileLayout
 from .shortcuts import Action
 
@@ -364,7 +365,7 @@ class PercentAnnouncement(str, Enum):
 #: Domyslne szablony oryginalu (``MessageSettings.CreateDefault``,
 #: ``AppSettings.cs:561-576``). Klucze pozostaja modelem i nigdy nie sa
 #: pokazywane jako nazwy elementow listy; GUI uzywa ``TEMPLATE_LABELS``.
-DEFAULT_TEMPLATES: dict[str, str] = {
+DEFAULT_TEMPLATES_PL: dict[str, str] = {
     "session.changed": "{slot}, {service}",
     "session.unassigned": "Sesja {slot} nieprzypisana",
     "favorite.added": "Dodano do ulubionych: {item}",
@@ -380,7 +381,30 @@ DEFAULT_TEMPLATES: dict[str, str] = {
     "command.unavailable": "Polecenie niedostępne",
 }
 
-TEMPLATE_LABELS: dict[str, str] = {
+DEFAULT_TEMPLATES_EN: dict[str, str] = {
+    "session.changed": "{slot}, {service}",
+    "session.unassigned": "Session {slot} is unassigned",
+    "favorite.added": "Added to favorites: {item}",
+    "favorite.removed": "Removed from favorites: {item}",
+    "queue.added": "Added to queue: {item}",
+    "queue.removed": "Removed from queue: {item}",
+    "playnext.added": "Set to play next: {item}",
+    "playnext.removed": "Removed from play next: {item}",
+    "time.elapsed": "{elapsed}",
+    "time.remaining": "{remaining}",
+    "time.total": "{total}",
+    "volume.changed": "{value}%",
+    "command.unavailable": "Command unavailable",
+}
+
+DEFAULT_TEMPLATES_BY_LANGUAGE: dict[str, dict[str, str]] = {
+    POLISH: DEFAULT_TEMPLATES_PL,
+    ENGLISH: DEFAULT_TEMPLATES_EN,
+}
+# Compatibility for imports predating language-specific catalogs.
+DEFAULT_TEMPLATES = DEFAULT_TEMPLATES_PL
+
+TEMPLATE_LABELS_PL: dict[str, str] = {
     "favorite.added": "Dodanie do ulubionych",
     "favorite.removed": "Usunięcie z ulubionych",
     "queue.added": "Dodanie do kolejki",
@@ -393,8 +417,38 @@ TEMPLATE_LABELS: dict[str, str] = {
     "time.total": "Czas całkowity",
 }
 
-TEMPLATE_KEYS: tuple[str, ...] = tuple(TEMPLATE_LABELS)
+TEMPLATE_LABELS_EN: dict[str, str] = {
+    "favorite.added": "Adding to favorites",
+    "favorite.removed": "Removing from favorites",
+    "queue.added": "Adding to queue",
+    "queue.removed": "Removing from queue",
+    "playnext.added": "Setting an item to play next",
+    "playnext.removed": "Removing an item from play next",
+    "volume.changed": "Volume change",
+    "time.elapsed": "Elapsed time",
+    "time.remaining": "Remaining time",
+    "time.total": "Total time",
+}
+
+TEMPLATE_LABELS_BY_LANGUAGE: dict[str, dict[str, str]] = {
+    POLISH: TEMPLATE_LABELS_PL,
+    ENGLISH: TEMPLATE_LABELS_EN,
+}
+TEMPLATE_LABELS = TEMPLATE_LABELS_PL
+TEMPLATE_KEYS: tuple[str, ...] = tuple(TEMPLATE_LABELS_PL)
 MAX_TEMPLATE_LENGTH = 1_000
+
+
+def default_templates(language: str) -> Mapping[str, str]:
+    """Return complete defaults for a concrete, supported language."""
+
+    return DEFAULT_TEMPLATES_BY_LANGUAGE.get(language, DEFAULT_TEMPLATES_PL)
+
+
+def template_labels(language: str) -> Mapping[str, str]:
+    """Return intentional labels without exposing event identifiers."""
+
+    return TEMPLATE_LABELS_BY_LANGUAGE.get(language, TEMPLATE_LABELS_PL)
 
 
 def normalize_message_templates(raw: object) -> dict[str, str]:
@@ -454,6 +508,7 @@ class MessagePolicy:
     bookmark_navigation_messages: bool = True
     detailed_hints: bool = False
     percent_announcement: PercentAnnouncement = PercentAnnouncement.PERCENT
+    language: str = POLISH
     templates: Mapping[str, str] = field(default_factory=dict)
     custom_seek_seconds: int = CUSTOM_SEEK_DEFAULT_SECONDS
     #: Czy wolno zapisac zmiane przelacznika (tylko wlasna piaskownica).
@@ -497,7 +552,7 @@ class MessagePolicy:
         """``AnnounceTemplate`` (``cs:678-681``): ustawienia > domyslne, a
         szablon PUSTY to swiadoma cisza, nie powod do podstawienia domyslnego.
         """
-        for source in (self.templates, DEFAULT_TEMPLATES):
+        for source in (self.templates, default_templates(self.language)):
             if key in source:
                 raw = source[key]
                 return raw if raw else None
@@ -700,7 +755,10 @@ def time_announcement(
 # ------------------------------------------- czytanie polityki z profilu AMC
 
 
-def load_message_policy(layout: ProfileLayout) -> MessagePolicy:
+def load_message_policy(
+    layout: ProfileLayout,
+    language: str = POLISH,
+) -> MessagePolicy:
     """Polityka z PRAWDZIWEGO ``state.json`` AMC. Tylko odczyt.
 
     ``ConfigurationStore.cs:30-35`` zapisuje ``camelCase``, wiec czytamy
@@ -731,11 +789,15 @@ def load_message_policy(layout: ProfileLayout) -> MessagePolicy:
     if not isinstance(templates, dict):
         templates = {}
     # Klucze szablonow sa w C# nieczule na wielkosc liter (``cs:555``).
-    normalized = {
+    inherited_polish_templates = {
         str(key).casefold(): str(value)
         for key, value in templates.items()
         if isinstance(value, str)
     }
+    concrete_language = language if language in SUPPORTED_LANGUAGES else POLISH
+    normalized = (
+        inherited_polish_templates if concrete_language == POLISH else {}
+    )
 
     def flag(name: str, default: bool = True) -> bool:
         value = messages.get(name)
@@ -753,6 +815,7 @@ def load_message_policy(layout: ProfileLayout) -> MessagePolicy:
         percent_announcement=PercentAnnouncement.parse(
             messages.get("percentageSeekAnnouncement")
         ),
+        language=concrete_language,
         templates=normalized,
         custom_seek_seconds=normalize_custom_seek_seconds(data.get("customSeekSeconds")),
         may_persist=layout.may_write_profile,

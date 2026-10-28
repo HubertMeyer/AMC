@@ -10,10 +10,16 @@ import calendar
 from dataclasses import dataclass, replace
 from datetime import date, time
 
+from . import i18n
+
 
 MONTH_NAMES = (
     "styczeń", "luty", "marzec", "kwiecień", "maj", "czerwiec",
     "lipiec", "sierpień", "wrzesień", "październik", "listopad", "grudzień",
+)
+MONTH_NAMES_EN = (
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December",
 )
 DATE_SEGMENTS = ("day", "month", "year")
 TIME_SEGMENTS = ("hour", "minute")
@@ -28,12 +34,15 @@ class DateSegments:
     value: date
 
     def label(self, segment: str) -> str:
+        english = i18n.active_language() == i18n.ENGLISH
         if segment == "day":
-            return f"dzień {self.value.day}"
+            return f"day {self.value.day}" if english else f"dzień {self.value.day}"
         if segment == "month":
-            return f"miesiąc {MONTH_NAMES[self.value.month - 1]}"
+            months = MONTH_NAMES_EN if english else MONTH_NAMES
+            prefix = "month" if english else "miesiąc"
+            return f"{prefix} {months[self.value.month - 1]}"
         if segment == "year":
-            return f"rok {self.value.year}"
+            return f"year {self.value.year}" if english else f"rok {self.value.year}"
         raise ValueError("Nieznany segment daty")
 
     def adjust(self, segment: str, delta: int) -> "DateSegments":
@@ -100,10 +109,11 @@ class TimeSegments:
     value: time
 
     def label(self, segment: str) -> str:
+        english = i18n.active_language() == i18n.ENGLISH
         if segment == "hour":
-            return f"godzina {self.value.hour}"
+            return f"hour {self.value.hour}" if english else f"godzina {self.value.hour}"
         if segment == "minute":
-            return f"minuty {self.value.minute}"
+            return f"minutes {self.value.minute}" if english else f"minuty {self.value.minute}"
         raise ValueError("Nieznany segment czasu")
 
     def adjust(self, segment: str, delta: int) -> "TimeSegments":
