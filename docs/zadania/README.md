@@ -104,7 +104,7 @@ do kontrolowanej archiwizacji opisanej w REL-003.
   z dawnej aplikacji WPF. Szczegóły:
   [I18N-001-wielojezyczny-interfejs-wxpython.md](I18N-001-wielojezyczny-interfejs-wxpython.md).
 
-- `REL-002` — **W trakcie; Test `0.1.0-alpha.438` i stabilny Public
+- `REL-002` — **W trakcie; Test `0.1.0-alpha.441` i stabilny Public
   `0.1.0-alpha.440` są opublikowane i odczytowo zweryfikowane. Public ma
   WiiM i Frontier Smart, bez Sonosa, Spotify i TIDAL-a; 100/100 testów
   Pythona, 38/38 Launchera/aktualizatora, paczka `8da5168e`, cichy start,
@@ -170,10 +170,12 @@ do kontrolowanej archiwizacji opisanej w REL-003.
   prędkość osobno dla Plików i Podcastów. Szczegóły:
   [SESSION-001-opcje-sesji-i-predkosc.md](SESSION-001-opcje-sesji-i-predkosc.md).
 
-- `SESSION-002` — **Zrobione w źródłach; ustawienie pozostawania na liście
+- `SESSION-002` — **Zrobione i opublikowane w AMC Test `0.1.0-alpha.441`;
+  ustawienie pozostawania na liście
   działa per sesja także dla plików lokalnych i pozostałych wykonywalnych
   odtwarzaczy, a Menedżer ma osobny przycisk „Ustawienia sesji…”; testy
-  celowane są zaliczone, bez builda, instalacji i ręcznego odbioru NVDA** —
+  celowane, paczka, instalator i GitHub są zaliczone, bez instalacji i ręcznego
+  odbioru NVDA** —
   rozdzielenie ustawień od konfiguracji folderów, kont i urządzeń oraz wspólna
   polityka Entera, kolejek, zakładek i wyników katalogu. Szczegóły:
   [SESSION-002-ustawienia-sesji-i-zachowanie-odtwarzacza.md](SESSION-002-ustawienia-sesji-i-zachowanie-odtwarzacza.md).

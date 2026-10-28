@@ -2,9 +2,9 @@
 
 ## Status
 
-**Zrobione w źródłach 28.10.2026; przygotowywane do wydania AMC Test
-29.10.2026.** Niewidoczne testy celowane są zaliczone. Nie wykonano jeszcze
-instalacji, publikacji ani ręcznego odbioru z NVDA.
+**Zrobione i opublikowane w AMC Test `0.1.0-alpha.441` 29.10.2026.**
+Niewidoczne testy, paczka, instalator, skan sekretów, sucha bramka i wydanie
+GitHub są zaliczone. Nie wykonano instalacji ani ręcznego odbioru z NVDA.
 
 ## Zakres
 
@@ -102,6 +102,15 @@ z 27.10.2026.
   wszystkich sesji: **27 zaliczonych** w 58,67 s.
 - `git diff --check`: zaliczony; jedynie informacyjne ostrzeżenia Git o
   przyszłej normalizacji LF/CRLF w trzech istniejących plikach.
+- Kontrakt wersji, instalatora i publikacji: **32 zaliczone** w 4,40 s.
+- Samowystarczalna paczka `7b805a42`: profil `test`, `sourceDirty=false`,
+  2139 plików; pełna integralność oraz odizolowany, ukryty start interfejsu i
+  hosta: zaliczone.
+- Instalator przeszedł ponowną integralność, kontrolowany start i skan
+  sekretów; zawiera zweryfikowany Quick App Switcher 0.1.6.
+- Sucha bramka publikacji i właściwa publikacja: zaliczone. GitHub potwierdził
+  tag na dokładnym commicie oraz trzy załączniki w stanie `uploaded` z
+  digestami SHA-256.
 
 Zestawy częściowo się pokrywają; liczby nie są sumą unikalnych testów.
 
@@ -114,9 +123,9 @@ Zestawy częściowo się pokrywają; liczby nie są sumą unikalnych testów.
   materiału Enterem i zachowują dotychczasową nawigację.
 - Presety Spotify i Sonosa zachowują własne, istniejące reguły nawigacji; nowa
   sesyjna opcja presetów nie jest tam pokazywana bez wykonawcy.
-- Nie wykonano instalacji ani ręcznego odbioru z NVDA. Paczka i instalator są
-  przygotowywane w odizolowanych katalogach wydawniczych; nie uruchamia się
-  zwykłego, widocznego okna AMC.
+- Nie wykonano instalacji ani ręcznego odbioru z NVDA. Zwykłego, widocznego
+  okna nowej wersji nie uruchamiano. Działająca wcześniej instalacja AMC Test
+  pozostała nietknięta; build używał jednorazowego profilu cichej kontroli.
 
 ## Zmienione pliki
 
@@ -132,10 +141,18 @@ Zestawy częściowo się pokrywają; liczby nie są sumą unikalnych testów.
 
 ## Wersja i commit
 
-- Przygotowywana wersja techniczna AMC Test: `0.1.0-alpha.441`.
+- Wersja techniczna AMC Test: `0.1.0-alpha.441`; wersja widoczna:
+  `29.10.2026, 00:06`.
 - Commit funkcjonalny:
   `209c9f6f547f6882bd6e5e0461dcee9b8a6f983b`.
-- Zmiany funkcjonalne są zapisane w Git; commit wydaniowy powstaje osobno.
-- Build: w przygotowaniu.
+- Commit źródłowy paczki, instalatora i tagu:
+  `19fc8e72ef258266b4b53144097d10bbec839c72`.
+- Paczka: `7b805a42`, 2139 plików, `sourceDirty=false`.
+- Instalator: `AMC-Test-2026-10-29-0006.exe`, 134364676 bajtów,
+  SHA-256
+  `755242b85eff9f02c8443de66c56480b4d39de2189d3fe5c26aad0bbf8adca71`.
+- Build: wykonany i zweryfikowany.
 - Instalacja: nie wykonano.
-- Publikacja: w przygotowaniu.
+- Publikacja: prerelease `test-2026.10.29.0006`, opublikowany i odczytowo
+  zweryfikowany:
+  `https://github.com/michalkasperczak/AMC/releases/tag/test-2026.10.29.0006`.

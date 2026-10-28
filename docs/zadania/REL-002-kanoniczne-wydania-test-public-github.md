@@ -2,10 +2,10 @@
 
 ## Status
 
-W trakcie. Najnowsze, piąte wydanie AMC Test w kanale testowym opublikowano
-28.10.2026 jako `test-2026.10.28.2022`. Jest to wersja techniczna
-`0.1.0-alpha.438` z wielojęzycznym interfejsem polskim i angielskim. GitHub
-potwierdził tag na commicie `9b2f6246`, instalator, manifest aktualizacji,
+W trakcie. Najnowsze, szóste wydanie AMC Test w kanale testowym opublikowano
+29.10.2026 jako `test-2026.10.29.0006`. Jest to wersja techniczna
+`0.1.0-alpha.441` z ustawieniami charakterystycznymi dla każdej sesji. GitHub
+potwierdził tag na commicie `19fc8e72`, instalator, manifest aktualizacji,
 plik integralności oraz ich sumy SHA-256. Instalator zawiera Quick App
 Switcher 0.1.6. Nie został uruchomiony ani zainstalowany; ręczna aktualizacja
 i odbiór z NVDA pozostają po stronie użytkownika.
@@ -604,6 +604,28 @@ tych samych plików profilu.
   bez zmian, aby użytkownik mógł samodzielnie odebrać aktualizację.
 - Adres wydania:
   `https://github.com/michalkasperczak/AMC/releases/tag/test-2026.10.28.2022`.
+
+## Szóste wydanie Test 29.10.2026
+
+- Wersję `0.1.0-alpha.441` opublikowano jako prerelease
+  `test-2026.10.29.0006` z commitu
+  `19fc8e72ef258266b4b53144097d10bbec839c72`.
+- Wydanie dodaje **Ustawienia sesji** w Menedżerze `Ctrl+Shift+S` i sesyjny
+  wybór, czy Enter otwiera odtwarzacz, czy pozostawia użytkownika na liście.
+  Zachowanie obejmuje obsługiwane sesje lokalne i sieciowe, kolejki, zakładki
+  oraz wyniki wyszukiwania. Pliki lokalne i Radio mają też wybór dla presetów.
+- Końcowa paczka `7b805a42` ma profil `test`, `sourceDirty=false`, 2139 plików
+  manifestu i przeszła pełną integralność oraz kontrolowany ukryty start.
+- Instalator `AMC-Test-2026-10-29-0006.exe` ma 134364676 bajtów i SHA-256
+  `755242b85eff9f02c8443de66c56480b4d39de2189d3fe5c26aad0bbf8adca71`.
+  Skan sekretów przeszedł; integralność potwierdza Quick App Switcher 0.1.6.
+- Sucha bramka i publikacja zostały zaliczone. GitHub potwierdził tag na
+  dokładnym commicie oraz instalator, plik integralności i manifest
+  aktualizacji w stanie `uploaded` z digestami SHA-256.
+- Instalatora ani aktualizatora nie uruchamiano. Działająca instalacja AMC Test
+  pozostała bez zmian; ciche kontrole użyły jednorazowego profilu.
+- Adres wydania:
+  `https://github.com/michalkasperczak/AMC/releases/tag/test-2026.10.29.0006`.
 
 ## Wydanie Public na bazie alpha.438 — 28.10.2026
 
