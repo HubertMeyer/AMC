@@ -24,6 +24,8 @@ TIDAL-a. Pozostałe funkcje najnowszej bazy AMC Test pozostają bez zmian.
 - wersja techniczna: `0.1.0-alpha.440`;
 - testy celowane Pythona: 100/100 zaliczone;
 - testy Launchera i aktualizatora: 38/38 zaliczone;
-- paczka, instalator i publikacja: do uzupełnienia po wykonaniu;
+- paczka Public `8da5168e`: zbudowana; cicha integralność i start zaliczone;
+- instalator `AMC-Public-2026-10-28-2201.exe`: zbudowany, skan sekretów
+  zaliczony i opublikowany w stabilnym wydaniu `public-2026.10.28.2201`;
 - instalacja lokalna nie zostanie zmieniona bez osobnego, bezpiecznego
   przebiegu aktualizacji.

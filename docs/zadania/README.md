@@ -105,11 +105,11 @@ do kontrolowanej archiwizacji opisanej w REL-003.
   [I18N-001-wielojezyczny-interfejs-wxpython.md](I18N-001-wielojezyczny-interfejs-wxpython.md).
 
 - `REL-002` — **W trakcie; Test `0.1.0-alpha.438` i stabilny Public
-  `0.1.0-alpha.439` są opublikowane, ale korekta użytkownika z 28.10.2026
-  zastępuje profil usług tego Public: ma być WiiM i Frontier Smart, bez
-  Sonosa, Spotify i TIDAL-a. `alpha.440` ma 100/100 zaliczonych testów
-  Pythona i 38/38 Launchera/aktualizatora; paczka i wydanie są w toku.
-  Lokalnej instalacji nie zmieniono** — jedna
+  `0.1.0-alpha.440` są opublikowane i odczytowo zweryfikowane. Public ma
+  WiiM i Frontier Smart, bez Sonosa, Spotify i TIDAL-a; 100/100 testów
+  Pythona, 38/38 Launchera/aktualizatora, paczka `8da5168e`, cichy start,
+  instalator, skan sekretów i zdalny SHA-256 są zaliczone. Błędny
+  `alpha.439` jest zastąpiony; lokalnej instalacji nie zmieniono** — jedna
   kanoniczna linia AMC Python,
   wydania AMC Test i AMC Public z tego samego commitu, dwa kanały aktualizacji,
   standardowa instalacja Windows oraz kontrolowane uporządkowanie starego C#,
@@ -128,7 +128,7 @@ do kontrolowanej archiwizacji opisanej w REL-003.
 
 - `RECOG-001` — **W trakcie; poprawki Test są w opublikowanym `alpha.438`, a
   korekta Public usuwająca wewnętrzne działania Spotify/TIDAL jest w
-  stabilnym `alpha.439`. Pozostaje ręczny odbiór NVDA** — prawa strzałka
+  stabilnym `alpha.440`. Pozostaje ręczny odbiór NVDA** — prawa strzałka
   od razu fokusuje pierwszy element, obie listy potwierdzają kopiowanie przez
   lokalny region aktywny, a historia jest dostępna z listy i odtwarzacza
   Plików lokalnych oraz Radia, lecz nie z pozostałych sesji. Pełne podmenu

@@ -2,7 +2,7 @@
 
 - Status: **W trakcie; poprawki Test są w opublikowanym `alpha.438`, a profil
   Public z korektą usuwającą wewnętrzne akcje Spotify/TIDAL jest w stabilnym
-  `alpha.439`. Pozostaje ręczny odbiór z NVDA**.
+  `alpha.440`. Pozostaje ręczny odbiór z NVDA**.
 - Data wdrożenia: 26.10.2026.
 - Instalacja: `D:\Projekty Codex\AMC Python`.
 - Profil: AMC Test zachowuje pełne działania, a AMC Public udostępnia tylko
@@ -119,7 +119,8 @@ nie wykonywało zapytań sieciowych.
   testy profilu, rozpoznawania, paczki, publikacji i katalogów językowych oraz
   **37/37** testów Launchera i aktualizatora. Testów z widocznym interfejsem
   nie uruchamiano. Paczka `e44af269`, cicha kontrola integralności i start,
-  instalator oraz stabilne wydanie `public-2026.10.28.2109` są zweryfikowane;
+  instalator oraz najnowsze stabilne wydanie `public-2026.10.28.2201` są
+  zweryfikowane;
   instalatora nie uruchamiano ani nie instalowano.
 
 ## Znane ograniczenia i ręczny odbiór

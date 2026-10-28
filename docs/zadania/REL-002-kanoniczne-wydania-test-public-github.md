@@ -705,22 +705,40 @@ tych samych plików profilu.
   wersji: **100/100 zaliczonych**.
 - Launcher i aktualizator: **38/38 zaliczonych**, w tym migracja z manifestu
   Public zawierającego Sonosa do profilu z Frontier Smart.
-- Paczka, instalator i publikacja: w toku. Pełnej regresji GUI ani widocznych
-  testów nie uruchamiano.
+- Czysta paczka `8da5168e`: **zbudowana** z 1152 plików. Manifest i fizyczna
+  zawartość potwierdzają Frontier Smart oraz brak Sonosa, Spotify, TIDAL-a i
+  zasobów OAuth; cicha integralność i kontrolowany start: **zaliczone**.
+- Instalator: **zbudowany**; skan sekretów i sucha bramka kanału `stable`:
+  **zaliczone**. Pełnej regresji GUI ani widocznych testów nie uruchamiano.
+- GitHub Release `public-2026.10.28.2201`: **opublikowany** jako stabilny i
+  odczytowo zweryfikowany. Zdalny commit, trzy zasoby w stanie `uploaded`,
+  rozmiar i digest SHA-256 są zgodne z lokalnym wynikiem.
 - Działającej instalacji AMC Test ani oczekujących aktualizatorów nie wolno
   przerywać na potrzeby tej korekty.
 
 ### Znane ograniczenia
 
 - `alpha.439` pozostaje historycznym, opublikowanym wydaniem o błędnym
-  zakresie usług. Nie należy go dalej przekazywać jako najnowszego Public.
+  zakresie usług. Zastępuje go `alpha.440`; starego instalatora nie należy
+  dalej przekazywać jako najnowszego Public.
 - Ręczny odbiór Frontier Smart i nawigacji z NVDA nie jest wykonywany przez
   niewidoczne testy profilu.
 
 ### Wersja i commit
 
-- Przygotowywana wersja techniczna: `0.1.0-alpha.440`.
-- Commit, paczka, instalator, SHA-256 i tag zostaną dopisane po weryfikacji.
+- Wersja techniczna: `0.1.0-alpha.440`; wersja widoczna:
+  `28.10.2026, 22:01`.
+- Commit źródłowy:
+  `eff12af289d0eaa81058d19bc17b2f418d415e28`; paczka `8da5168e`.
+- Instalator:
+  `D:\Projekty Codex\AMC aktualizacje\AMC Public 0.1.0-alpha.440 korekta 2026-10-28\instalator\AMC-Public-2026-10-28-2201.exe`.
+- Rozmiar: 124351672 bajty. SHA-256:
+  `e1c111cf4a0eb8432cfb0d2f8682443cd5bc3be481525c37108d0c6ea2485b0f`.
+- Tag: `public-2026.10.28.2201`; wydanie stabilne, nie prerelease.
+- Adres wydania:
+  `https://github.com/michalkasperczak/AMC/releases/tag/public-2026.10.28.2201`.
+- Instalatora nie uruchamiano ani nie instalowano; działający AMC Test i
+  oczekujące aktualizatory pozostały nietknięte.
 
 ## Wersja i commit
 

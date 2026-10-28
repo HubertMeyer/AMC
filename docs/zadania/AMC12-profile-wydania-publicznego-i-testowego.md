@@ -29,7 +29,13 @@ moduł Frontier Smart. Menu, Menedżer sesji, `Ctrl+F1`, pełna pomoc, paleta
 - Launcher i aktualizator: **38/38 zaliczonych**, w tym migracja starszego
   Public z listy Sonos na Frontier Smart.
 - Testów z widocznym interfejsem ani pełnej regresji GUI nie uruchamiano.
-  Paczka, instalator i publikacja są odrębnymi, następnymi etapami.
+  Paczka, instalator i publikacja zostały sprawdzone osobno.
+- Czysta paczka `8da5168e` zawiera 1152 pliki. Manifest i fizyczny odczyt
+  potwierdzają Frontier Smart oraz brak modułów Sonosa, Spotify i TIDAL-a;
+  pełna cicha integralność i kontrolowany start są zaliczone.
+- Instalator przeszedł skan sekretów i suchą bramkę kanału `stable`.
+  Wydanie `public-2026.10.28.2201` zostało opublikowane i odczytowo
+  zweryfikowane; GitHub potwierdził nazwę, rozmiar i SHA-256 zasobów.
 
 ### Znane ograniczenia
 
@@ -40,8 +46,18 @@ moduł Frontier Smart. Menu, Menedżer sesji, `Ctrl+F1`, pełna pomoc, paleta
 
 ### Wersja i commit
 
-- Przygotowywana wersja techniczna: `0.1.0-alpha.440`.
-- Dokładny commit, paczka, instalator i tag zostaną dopisane po budowie.
+- Wersja techniczna: `0.1.0-alpha.440`; wersja widoczna:
+  `28.10.2026, 22:01`.
+- Commit źródłowy:
+  `eff12af289d0eaa81058d19bc17b2f418d415e28`.
+- Paczka: `8da5168e`.
+- Instalator:
+  `D:\Projekty Codex\AMC aktualizacje\AMC Public 0.1.0-alpha.440 korekta 2026-10-28\instalator\AMC-Public-2026-10-28-2201.exe`.
+- SHA-256:
+  `e1c111cf4a0eb8432cfb0d2f8682443cd5bc3be481525c37108d0c6ea2485b0f`.
+- Tag: `public-2026.10.28.2201`; wydanie stabilne, nie prerelease.
+- Instalatora nie uruchamiano ani nie instalowano; działający AMC Test i
+  oczekujące aktualizatory pozostały nietknięte.
 
 ## Nadrzędna korekta nazewnictwa z 22.10.2026
 
