@@ -205,8 +205,33 @@ Wynik:
   zaliczony;
 - procesy testowej paczki po zakończeniu: brak.
 
-Nie instalowano, nie uruchamiano użytkowego wydania, nie tworzono instalatora,
-nie publikowano i nie zmieniano bieżącej instalacji AMC.
+Tego roboczego kandydata nie instalowano, nie uruchamiano jako wydania
+użytkowego, nie przekształcano w instalator i nie publikowano.
+
+## Publikacja AMC Test alpha.438 — 28.10.2026
+
+- Zweryfikowany zakres zapisano najpierw w commicie funkcjonalnym `11f6459d`,
+  a wydanie przygotowano w czystym commicie
+  `9b2f6246f6c24d4cfc21d453b094e4dc2baddec9`.
+- Przed wydaniem ponowiono 70 celowanych testów bez interfejsu. Jedyny test
+  wymagający wxPython wykonano osobno w środowisku projektowym; również
+  zaliczony. Pierwsza próba tego testu w systemowym Pythonie zakończyła się
+  wyłącznie brakiem modułu `wx`, a nie błędem AMC.
+- Końcowa paczka profilu `test` ma identyfikator `908e5dd5`, `sourceDirty=false`,
+  2139 plików manifestu i zawiera `en_legacy.json` oraz `template.json`.
+  Pełna integralność i kontrolowany ukryty start interfejsu oraz hosta zostały
+  zaliczone.
+- Instalator `AMC-Test-2026-10-28-2022.exe` ma 134355952 bajty i SHA-256
+  `6e16f2b392e5957365fee856c62778096a23d1fef46a6f0f09fe3bac8ef50c96`.
+  Kontrola integralności potwierdziła profil Test, kanał Test, brak sekretów
+  oraz Quick App Switcher 0.1.6.
+- Wydanie wstępne `test-2026.10.28.2022` zostało opublikowane i odczytowo
+  zweryfikowane na GitHubie. Zdalna gałąź, tag i wydanie wskazują commit
+  `9b2f6246f6c24d4cfc21d453b094e4dc2baddec9`; GitHub podał zgodny rozmiar i
+  SHA-256 instalatora oraz potwierdził oba manifesty.
+- Instalatora ani aktualizatora nie uruchamiano. Bieżąca instalacja użytkownika
+  nie została zmieniona; ręczna aktualizacja i odbiór z NVDA pozostają po
+  stronie użytkownika.
 
 ## Znane ograniczenia
 
@@ -251,5 +276,8 @@ Projekt do korekty i zatwierdzenia użytkownika:
 - stan źródeł po commicie: zapisany na gałęzi wydania AMC Test;
 - paczka robocza: `224499f5`, profil `test`, `sourceDirty=true`, 2139 plików
   manifestu; pełna integralność i kontrolowany start zaliczone;
+- commit wydania: `9b2f6246f6c24d4cfc21d453b094e4dc2baddec9`;
+- wydana paczka: `908e5dd5`, profil `test`, `sourceDirty=false`;
 - instalacja: nie wykonano;
-- publikacja i wydanie: nie wykonano.
+- publikacja: `test-2026.10.28.2022`, wykonana i odczytowo zweryfikowana;
+- adres: `https://github.com/michalkasperczak/AMC/releases/tag/test-2026.10.28.2022`.

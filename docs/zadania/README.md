@@ -95,23 +95,21 @@ do kontrolowanej archiwizacji opisanej w REL-003.
   karta Dostępność i komunikaty. Szczegóły:
   [SET-001-audyt-ustawien-dostepnosc-integracja-windows.md](SET-001-audyt-ustawien-dostepnosc-integracja-windows.md).
 
-- `I18N-001` — **Zrobione; wspólna warstwa językowa, polski, angielski,
-  wybór zgodny z systemem, osobne szablony komunikatów, pełny katalog 713
-  statycznych napisów i 312 komunikatów dynamicznych, parytet menu/pomocy/
-  palety oraz kompletna paczka testowa `224499f5` są zweryfikowane** —
+- `I18N-001` — **Zrobione i opublikowane w AMC Test `0.1.0-alpha.438`;
+  wspólna warstwa językowa, polski, angielski, wybór zgodny z systemem,
+  osobne szablony komunikatów, pełny katalog 713 statycznych napisów i 312
+  komunikatów dynamicznych, parytet menu/pomocy/palety oraz wydana paczka
+  `908e5dd5` są zweryfikowane** —
   przygotowanie interfejsu wxPython do obsługi wielu języków bez korzystania
   z dawnej aplikacji WPF. Szczegóły:
   [I18N-001-wielojezyczny-interfejs-wxpython.md](I18N-001-wielojezyczny-interfejs-wxpython.md).
 
-- `REL-002` — **W trakcie; trzecie wydanie kanału Test
-  `test-2026.10.27.0233` zostało opublikowane i odczytowo zweryfikowane na
-  GitHubie. Zawiera YouTube YT-005, SoundCloud RSS i Quick App Switcher 0.1.6.
-  Ręczna aktualizacja z `alpha.435` do `alpha.436` przeszła i mechanizm został
-  odebrany. Nieopublikowany commit `ae24e9df` usuwa dialog sukcesu i wzmacnia
-  pierwszy plan po restarcie; testy i build przeszły, odbiór tej korekty
-  pozostaje. Robocza retencja z 28.10.2026 zachowuje najwyżej dwie kopie
-  ratunkowe po niepełnym wycofaniu i ma 36/36 testów celowanych, bez nowego
-  builda, instalacji ani publikacji** — jedna
+- `REL-002` — **W trakcie; piąte wydanie kanału Test
+  `test-2026.10.28.2022`, czyli `0.1.0-alpha.438`, zostało opublikowane i
+  odczytowo zweryfikowane na GitHubie. Zawiera wielojęzyczny interfejs oraz
+  Quick App Switcher 0.1.6. Instalator, manifest aktualizacji i integralność
+  mają zgodne zdalne sumy SHA-256. Lokalnej instalacji nie zmieniono; ręczna
+  aktualizacja i odbiór z NVDA pozostają po stronie użytkownika** — jedna
   kanoniczna linia AMC Python,
   wydania AMC Test i AMC Public z tego samego commitu, dwa kanały aktualizacji,
   standardowa instalacja Windows oraz kontrolowane uporządkowanie starego C#,

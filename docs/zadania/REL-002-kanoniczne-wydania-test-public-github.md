@@ -2,16 +2,13 @@
 
 ## Status
 
-W trakcie. Trzecie wydanie AMC Test w kanale testowym zostało opublikowane
-27.10.2026 jako `test-2026.10.27.0233`; GitHub potwierdził instalator, manifest
-aktualizacji, plik integralności oraz ich sumy. Tag wskazuje dokładną rewizję
-`abfee285`. Instalator zawiera Quick App Switcher 0.1.6, poprawki YouTube i
-SoundCloud RSS. Zgodnie z decyzją użytkownika nie został zainstalowany ani
-uruchomiony; działające `0.1.0-alpha.435` pozostaje bazą jutrzejszej ręcznej
-próby aktualizacji i odbioru z NVDA. Korekta z 28.10.2026 ograniczająca
-pozostałości niepełnego wycofania aktualizacji do dwóch katalogów ratunkowych
-ma 36/36 zaliczonych testów celowanych; nie została jeszcze zbudowana,
-zainstalowana ani opublikowana.
+W trakcie. Najnowsze, piąte wydanie AMC Test w kanale testowym opublikowano
+28.10.2026 jako `test-2026.10.28.2022`. Jest to wersja techniczna
+`0.1.0-alpha.438` z wielojęzycznym interfejsem polskim i angielskim. GitHub
+potwierdził tag na commicie `9b2f6246`, instalator, manifest aktualizacji,
+plik integralności oraz ich sumy SHA-256. Instalator zawiera Quick App
+Switcher 0.1.6. Nie został uruchomiony ani zainstalowany; ręczna aktualizacja
+i odbiór z NVDA pozostają po stronie użytkownika.
 
 ## Nadrzędna korekta użytkownika z 26.10.2026
 
@@ -577,6 +574,37 @@ tych samych plików profilu.
 - Zmiana istnieje w źródłach bieżącej gałęzi roboczej. Nie utworzono osobnego
   commitu, wersji, paczki, instalacji ani wydania GitHub.
 
+## Czwarte wydanie Test 28.10.2026
+
+- Wersję `0.1.0-alpha.437` opublikowano jako prerelease
+  `test-2026.10.28.1323` z commitu
+  `301c7fcf5c54473bfa1307d3b1c6961b25115ef3`.
+- Wydanie zawiera zatwierdzone poprawki YouTube i Ustawień, polskie wyniki
+  SoundCloud, historię rozpoznanych utworów, korektę edycji klipów oraz
+  poprawki aktualizatora. Pakiet językowy celowo pozostał poza tym wydaniem.
+- Instalator `AMC-Test-2026-10-28-1323.exe` ma SHA-256
+  `794810fbf66fd468af4c687df216370b556af5b5f670b717a64e619b374c39db`.
+  Publikacja została odczytowo zweryfikowana; instalatora nie uruchamiano.
+
+## Piąte wydanie Test 28.10.2026
+
+- Wersję `0.1.0-alpha.438` opublikowano jako prerelease
+  `test-2026.10.28.2022` z commitu
+  `9b2f6246f6c24d4cfc21d453b094e4dc2baddec9`.
+- Wydanie zawiera wspólną warstwę językową, polski, angielski, wybór zgodny z
+  systemem, osobne szablony komunikatów oraz katalogi i narzędzia dla kolejnych
+  języków.
+- Końcowa paczka `908e5dd5` ma profil `test`, `sourceDirty=false`, 2139 plików
+  manifestu i przeszła pełną integralność oraz kontrolowany ukryty start.
+- Instalator `AMC-Test-2026-10-28-2022.exe` ma 134355952 bajty i SHA-256
+  `6e16f2b392e5957365fee856c62778096a23d1fef46a6f0f09fe3bac8ef50c96`.
+  GitHub potwierdził ten sam rozmiar i digest oraz oba manifesty w stanie
+  `uploaded`.
+- Instalatora ani aktualizatora nie uruchamiano. Lokalna instalacja pozostała
+  bez zmian, aby użytkownik mógł samodzielnie odebrać aktualizację.
+- Adres wydania:
+  `https://github.com/michalkasperczak/AMC/releases/tag/test-2026.10.28.2022`.
+
 ## Wersja i commit
 
 - Wersja techniczna przygotowywanego kandydata: `0.1.0-alpha.434`.
@@ -627,3 +655,7 @@ tych samych plików profilu.
   mechanizm aktualizacji został odebrany jako działający.
 - Następna, nieopublikowana korekta startu po aktualizacji: commit źródłowy
   `ae24e9df`; testy i build zaliczone, bez instalacji i bez wydania.
+- Czwarte wydanie testowe: `0.1.0-alpha.437`, wersja widoczna
+  `28.10.2026, 13:23`, tag `test-2026.10.28.1323`, commit `301c7fcf`.
+- Piąte wydanie testowe: `0.1.0-alpha.438`, wersja widoczna
+  `28.10.2026, 20:22`, tag `test-2026.10.28.2022`, commit `9b2f6246`.
