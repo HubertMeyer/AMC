@@ -59,7 +59,7 @@ def test_python_package_replaces_stale_locale_resources():
         assert "app/amc_wx_lite/locales/en.json" in copied
 
 
-def test_public_python_package_contains_sonos_and_omits_only_disabled_services():
+def test_public_python_package_contains_frontier_and_omits_disabled_services():
     with tempfile.TemporaryDirectory() as folder:
         target = Path(folder)
         package = target / "app" / "amc_wx_lite"
@@ -71,7 +71,8 @@ def test_public_python_package_contains_sonos_and_omits_only_disabled_services()
 
         assert "app/amc_wx_lite/gui.py" in copied
         profile = bundle.profile_from_id("public")
-        assert not (package / "frontier_smart_source.py").exists()
+        assert (package / "frontier_smart_source.py").is_file()
+        assert not (package / "sonos_source.py").exists()
         for name, capability in bundle.PROFILE_GATED_SERVICE_MODULES.items():
             if capability in profile.capabilities:
                 assert (package / name).is_file()
@@ -269,7 +270,8 @@ def test_public_gui_imports_without_private_service_modules():
                     "assert gui._RELEASE_PROFILE.profile_id == 'public'; "
                     "assert not hasattr(gui, 'TidalSource'); "
                     "assert not hasattr(gui, 'SpotifyPlaylistDialog'); "
-                    "assert hasattr(gui, 'SonosPayloadError')"
+                    "assert not hasattr(gui, 'SonosPayloadError'); "
+                    "assert hasattr(gui, 'FrontierSmartPayloadError')"
                 ),
             ],
             cwd=target,
@@ -292,7 +294,7 @@ def test_bundle_manifest_profile_is_explicit_and_public_is_restricted():
     assert manifest["installId"] == "AMC.Public.win-x64"
     assert manifest["updateChannel"] == "stable"
     assert manifest["sessions"] == [
-        "files", "radio", "podcasts", "wiim", "sonos"
+        "files", "radio", "podcasts", "wiim", "frontierSmart"
     ]
     assert "spotify" not in " ".join(manifest["capabilities"]).casefold()
     assert manifest["credentialNamespace"] != (

@@ -105,12 +105,11 @@ do kontrolowanej archiwizacji opisanej w REL-003.
   [I18N-001-wielojezyczny-interfejs-wxpython.md](I18N-001-wielojezyczny-interfejs-wxpython.md).
 
 - `REL-002` — **W trakcie; Test `0.1.0-alpha.438` i stabilny Public
-  `0.1.0-alpha.439` są opublikowane i odczytowo zweryfikowane na GitHubie.
-  Public nie deklaruje Google OAuth ani prywatnych sesji Spotify/TIDAL;
-  109/109 testów Pythona i 37/37 Launchera/aktualizatora, paczka `e44af269`,
-  cichy start, instalator, skan sekretów oraz zdalny SHA-256 są zaliczone.
-  Lokalnej instalacji nie zmieniono; ręczny odbiór z NVDA pozostaje po
-  stronie użytkownika** — jedna
+  `0.1.0-alpha.439` są opublikowane, ale korekta użytkownika z 28.10.2026
+  zastępuje profil usług tego Public: ma być WiiM i Frontier Smart, bez
+  Sonosa, Spotify i TIDAL-a. `alpha.440` ma 100/100 zaliczonych testów
+  Pythona i 38/38 Launchera/aktualizatora; paczka i wydanie są w toku.
+  Lokalnej instalacji nie zmieniono** — jedna
   kanoniczna linia AMC Python,
   wydania AMC Test i AMC Public z tego samego commitu, dwa kanały aktualizacji,
   standardowa instalacja Windows oraz kontrolowane uporządkowanie starego C#,

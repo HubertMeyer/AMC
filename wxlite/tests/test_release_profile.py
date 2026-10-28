@@ -72,23 +72,24 @@ def test_profiles_have_distinct_identity_storage_channel_and_credentials() -> No
 
 def test_public_manifest_exposes_only_approved_sessions_and_test_has_all() -> None:
     assert PUBLIC_PROFILE.session_ids == (
-        "files", "radio", "podcasts", "wiim", "sonos"
+        "files", "radio", "podcasts", "wiim", "frontierSmart"
     )
     assert set(TEST_PROFILE.session_ids) == {session.value for session in SessionId}
     assert PUBLIC_PROFILE.session_ids == tuple(
         session for session in TEST_PROFILE.session_ids
-        if session not in {"tidal", "spotify", "frontierSmart"}
+        if session not in {"tidal", "spotify", "sonos"}
     )
     public_text = " ".join(PUBLIC_PROFILE.capabilities).casefold()
     assert "spotify" not in public_text
     assert "tidal" not in public_text
     assert "youtube.account" not in public_text
-    assert "sonos" in public_text
+    assert "sonos" not in public_text
+    assert "frontier-smart" in public_text
     assert PUBLIC_PROFILE.capabilities == tuple(
         capability for capability in TEST_PROFILE.capabilities
         if "spotify" not in capability.casefold()
         and "tidal" not in capability.casefold()
-        and "frontier-smart" not in capability.casefold()
+        and "sonos" not in capability.casefold()
         and "youtube.account" not in capability.casefold()
     )
 
@@ -125,12 +126,16 @@ def test_python_capabilities_match_closed_launcher_contract() -> None:
     public_contract = source.split(
         "internal static readonly ReleaseProfileDescriptor Public", 1
     )[1].split("internal static ReleaseProfileDescriptor Validate", 1)[0]
-    assert "CommonCapabilities," in public_contract
+    assert "PublicCapabilities," in public_contract
+    assert 'capability != "session.sonos"' in source
+    assert '.Append("session.frontier-smart")' in source
     assert "youtube.account.readonly" not in public_contract
     quoted = re.compile(r'"([^"]+)"')
     common = tuple(quoted.findall(common_match.group(1)))
     test_only = tuple(quoted.findall(test_only_match.group(1)))
-    assert common == PUBLIC_PROFILE.capabilities
+    assert tuple(
+        capability for capability in common if capability != "session.sonos"
+    ) + ("session.frontier-smart",) == PUBLIC_PROFILE.capabilities
     assert common + test_only == TEST_PROFILE.capabilities
 
 
@@ -299,7 +304,7 @@ def test_public_capability_model_filters_execution_manager_menu_and_palette() ->
             SessionId.RADIO,
             SessionId.PODCASTS,
             SessionId.WIIM,
-            SessionId.SONOS,
+            SessionId.FRONTIER_SMART,
         )
         assert normalize(raw) == available_sessions()
         rows = dict(manager_labels(raw))
@@ -318,7 +323,7 @@ def test_public_capability_model_filters_execution_manager_menu_and_palette() ->
             Action.SESSION_RADIO,
             Action.SESSION_PODCASTS,
             Action.SESSION_WIIM,
-            Action.SESSION_SONOS,
+            Action.SESSION_FRONTIER_SMART,
         }
         palette_actions = {
             entry.action for entry in entries_for_session(SessionId.FILES, raw)
@@ -326,5 +331,5 @@ def test_public_capability_model_filters_execution_manager_menu_and_palette() ->
         assert visible_session_actions <= palette_actions
         assert Action.SESSION_SPOTIFY not in palette_actions
         assert Action.SESSION_TIDAL not in palette_actions
-        assert Action.SESSION_SONOS in palette_actions
-        assert Action.SESSION_FRONTIER_SMART not in palette_actions
+        assert Action.SESSION_SONOS not in palette_actions
+        assert Action.SESSION_FRONTIER_SMART in palette_actions

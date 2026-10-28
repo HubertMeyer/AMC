@@ -681,6 +681,47 @@ tych samych plików profilu.
 - Instalatora ani aktualizatora nie uruchamiano; nie wykonano instalacji ani
   ręcznego odbioru z NVDA.
 
+## Korekta profilu Public po wydaniu alpha.439 — 28.10.2026
+
+### Materiał do dokumentacji użytkownika
+
+- Korekta użytkownika z 28.10.2026 zastępuje profil usług `alpha.439`:
+  w AMC Public mają być WiiM i Frontier Smart, a nie ma być Sonosa, Spotify
+  ani TIDAL-a.
+- Menedżer sesji, menu, pomoc, paleta i paczka mają pokazywać i zawierać
+  wyłącznie ten zakres. Aktualizacja z `alpha.439` usuwa moduł Sonosa.
+
+### Uzasadnienie i decyzje
+
+- Nie podmieniamy istniejącego tagu ani pliku `alpha.439`. Materialnie inny
+  instalator otrzymuje numer `0.1.0-alpha.440` i nowe stabilne wydanie.
+- Aktualizator zachowuje wąską zgodność ze starszym manifestem Public
+  zawierającym Sonosa, wyłącznie po to, aby bezpiecznie przejść do nowego
+  profilu z Frontier Smart.
+
+### Testy i wynik
+
+- Celowane testy profilu, menu/palety, Frontier Smart, paczki, instalatora i
+  wersji: **100/100 zaliczonych**.
+- Launcher i aktualizator: **38/38 zaliczonych**, w tym migracja z manifestu
+  Public zawierającego Sonosa do profilu z Frontier Smart.
+- Paczka, instalator i publikacja: w toku. Pełnej regresji GUI ani widocznych
+  testów nie uruchamiano.
+- Działającej instalacji AMC Test ani oczekujących aktualizatorów nie wolno
+  przerywać na potrzeby tej korekty.
+
+### Znane ograniczenia
+
+- `alpha.439` pozostaje historycznym, opublikowanym wydaniem o błędnym
+  zakresie usług. Nie należy go dalej przekazywać jako najnowszego Public.
+- Ręczny odbiór Frontier Smart i nawigacji z NVDA nie jest wykonywany przez
+  niewidoczne testy profilu.
+
+### Wersja i commit
+
+- Przygotowywana wersja techniczna: `0.1.0-alpha.440`.
+- Commit, paczka, instalator, SHA-256 i tag zostaną dopisane po weryfikacji.
+
 ## Wersja i commit
 
 - Wersja techniczna przygotowywanego kandydata: `0.1.0-alpha.434`.

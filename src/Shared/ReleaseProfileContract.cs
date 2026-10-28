@@ -47,6 +47,11 @@ internal static class ReleaseProfileContract
         "experimental",
     ];
 
+    private static readonly string[] PublicCapabilities = CommonCapabilities
+        .Where(capability => capability != "session.sonos")
+        .Append("session.frontier-smart")
+        .ToArray();
+
     internal static readonly ReleaseProfileDescriptor Test = new(
         "test",
         "org.accessible-media-controller.test",
@@ -87,8 +92,8 @@ internal static class ReleaseProfileContract
         "AMC/cache",
         "AMC/logs",
         "AccessibleMediaController.Public",
-        ["files", "radio", "podcasts", "wiim", "sonos"],
-        CommonCapabilities,
+        ["files", "radio", "podcasts", "wiim", "frontierSmart"],
+        PublicCapabilities,
         @"Local\AccessibleMultimediaController.PythonLauncher.Public.SingleInstance",
         @"Local\AccessibleMultimediaController.PythonUpdater.Public.SingleInstance",
         "AMC/Updater",
@@ -179,9 +184,13 @@ internal static class ReleaseProfileContract
             throw new InvalidDataException(
                 "pakiet aktualizacji jest przeznaczony dla innego wydania AMC");
 
-        RequireKnownSubset(expected.Sessions, sessions, "lista sesji");
+        var compatibleSessions = expected.ProfileId == "public"
+            ? expected.Sessions.Concat(["sonos"]).ToArray()
+            : expected.Sessions;
+        RequireKnownSubset(compatibleSessions, sessions, "lista sesji");
         var compatibleCapabilities = expected.ProfileId == "public"
-            ? expected.Capabilities.Concat(["youtube.account.readonly"]).ToArray()
+            ? expected.Capabilities.Concat(
+                ["youtube.account.readonly", "session.sonos"]).ToArray()
             : expected.Capabilities;
         RequireKnownSubset(compatibleCapabilities, capabilities, "lista możliwości");
     }

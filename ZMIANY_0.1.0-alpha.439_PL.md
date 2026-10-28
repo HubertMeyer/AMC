@@ -1,5 +1,9 @@
 # AMC Public 0.1.0-alpha.439 — projekt opisu zmian
 
+> Zastąpiony 28.10.2026 przez korektę `0.1.0-alpha.440`. Ten wariant błędnie
+> zawierał Sonosa i nie zawierał Frontier Smart; nie należy go dalej
+> przekazywać jako aktualnego instalatora Public.
+
 > Projekt do korekty i zatwierdzenia użytkownika. Nie jest automatycznie
 > publikowaną instrukcją ani dowodem instalacji.
 

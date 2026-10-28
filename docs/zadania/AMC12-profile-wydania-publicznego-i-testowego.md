@@ -1,5 +1,48 @@
 # AMC12 — profile wydania publicznego i testowego
 
+## Nadrzędna korekta użytkownika z 28.10.2026 — Public bez Sonosa
+
+### Materiał do dokumentacji użytkownika
+
+AMC Public udostępnia Pliki lokalne, Radio, Podcasty i YouTube, WiiM oraz
+Frontier Smart. Menedżer sesji, menu Widok, pomoc kontekstowa i paleta poleceń
+nie pokazują Sonosa, Spotify ani TIDAL-a. Aktualizacja z błędnego
+`alpha.439` usuwa pozostawiony moduł Sonosa i instaluje moduł Frontier Smart.
+
+### Uzasadnienie i decyzje
+
+Ta decyzja zastępuje korektę z 21.10.2026 mówiącą, że Sonos pozostaje w
+Public, oraz błędny profil opublikowanego `0.1.0-alpha.439`. Właściwy Public
+ma zawierać WiiM i odebrany Frontier Smart, ale nie ma zawierać Sonosa,
+Spotify ani TIDAL-a. Nowy instalator otrzymuje numer `0.1.0-alpha.440`; starego
+wydania nie przepisujemy ani nie podmieniamy pod tym samym tagiem.
+
+Aktualizacja z `alpha.439` musi przyjąć starszą listę sesji jako zgodny stan
+wejściowy, usunąć pozostawiony moduł Sonosa z katalogu programu i zainstalować
+moduł Frontier Smart. Menu, Menedżer sesji, `Ctrl+F1`, pełna pomoc, paleta
+`Ctrl+Shift+K` i wykonanie mają wynikać z jednego poprawionego profilu.
+
+### Testy i wynik
+
+- Celowane testy profilu, wspólnego modelu menu/palety, Frontier Smart,
+  fizycznej zawartości paczki, instalatora i wersji: **100/100 zaliczonych**.
+- Launcher i aktualizator: **38/38 zaliczonych**, w tym migracja starszego
+  Public z listy Sonos na Frontier Smart.
+- Testów z widocznym interfejsem ani pełnej regresji GUI nie uruchamiano.
+  Paczka, instalator i publikacja są odrębnymi, następnymi etapami.
+
+### Znane ograniczenia
+
+- Istniejący `alpha.439` pozostaje historycznym wydaniem o błędnym zakresie
+  sesji. Nie jest usuwany ani przepisywany.
+- Ręczny odbiór Frontier Smart z NVDA nie jest częścią niewidocznych testów
+  profilu.
+
+### Wersja i commit
+
+- Przygotowywana wersja techniczna: `0.1.0-alpha.440`.
+- Dokładny commit, paczka, instalator i tag zostaną dopisane po budowie.
+
 ## Nadrzędna korekta nazewnictwa z 22.10.2026
 
 Nazwy widoczne dla użytkownika mają od tej chwili postać
@@ -684,7 +727,7 @@ zapisie NVDA słyszy „Dodano do Biblioteki” albo „Usunięto z Biblioteki�
   `CheckAutomatically` i `DownloadAutomatically`, z bezpiecznymi wartościami
   włączonymi dla świeżego profilu. Ręczne polecenie zawsze próbuje pobrać
   brakującą lub nowszą wersję i nie zmienia ustawień profilu.
-- **Nadrzędna korekta użytkownika z 21 października 2026:** publiczny instalator
+- **Korekta użytkownika z 21 października 2026, zastąpiona 28.10.2026:** publiczny instalator
   ma być dokładną kopią gotowej wersji AMC Test, z wyłączonymi wyłącznie
   martwymi obecnie funkcjami TIDAL i Spotify. Sonos pozostaje w publicznym AMC
   i działa dokładnie tak samo jak w AMC Test. Ta decyzja zastępuje wszystkie
@@ -1265,9 +1308,9 @@ zapisie NVDA słyszy „Dodano do Biblioteki” albo „Usunięto z Biblioteki�
   kopiowane migawką.
 - Jednorazowe otwarcie Menedżera sesji na czystej publicznej instalacji czeka
   na etap instalatora.
-- Sonos nie ma już osobnej blokady profilu publicznego. Ograniczenia jego
-  połączenia i brokera są takie same w AMC i AMC Test i nie mogą powodować
-  rozbieżności kodu ani interfejsu obu wydań.
+- Historyczny zapis, według którego Sonos nie miał blokady profilu Public,
+  został zastąpiony korektą z 28.10.2026. Sonos pozostaje w AMC Test, ale nie
+  jest sesją ani modułem paczki AMC Public.
 - Aktualizacja istniejącego publicznego profilu `alpha.423` do `alpha.425`
   przeszła od końca do końca z `/NOICONS`; nadal potrzebny jest osobny odbiór
   zwykłego kreatora na czystym koncie użytkownika.

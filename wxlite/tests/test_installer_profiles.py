@@ -130,7 +130,7 @@ def test_public_update_removes_modules_disabled_for_that_profile() -> None:
     install_delete = ISS[section_start : ISS.index("#endif", section_start)]
 
     for stale_name in (
-        "frontier_smart_source.py",
+        "sonos_source.py",
         "spotify_playlist_dialog.py",
         "spotify_source.py",
         "tidal_source.py",
@@ -138,7 +138,7 @@ def test_public_update_removes_modules_disabled_for_that_profile() -> None:
         assert f'Name: "{{app}}\\app\\amc_wx_lite\\{stale_name}"' in install_delete
         assert stale_name.removesuffix(".py") + ".*.pyc" in install_delete
 
-    assert "sonos_source" not in install_delete
+    assert "frontier_smart_source" not in install_delete
 
 
 def test_installer_refuses_local_oauth_secrets() -> None:
