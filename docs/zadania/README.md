@@ -99,7 +99,9 @@ do kontrolowanej archiwizacji opisanej w REL-003.
   wspólna warstwa językowa, polski, angielski, wybór zgodny z systemem,
   osobne szablony komunikatów, pełny katalog 713 statycznych napisów i 312
   komunikatów dynamicznych, parytet menu/pomocy/palety oraz wydana paczka
-  `908e5dd5` są zweryfikowane** —
+  `908e5dd5` są zweryfikowane. Poprawka z 29.10.2026 rozpoznaje
+  `Polish_Poland` i przełącza język od razu po zapisie; ma 30 zaliczonych
+  testów, ale czeka jeszcze na build i następne wydanie** —
   przygotowanie interfejsu wxPython do obsługi wielu języków bez korzystania
   z dawnej aplikacji WPF. Szczegóły:
   [I18N-001-wielojezyczny-interfejs-wxpython.md](I18N-001-wielojezyczny-interfejs-wxpython.md).

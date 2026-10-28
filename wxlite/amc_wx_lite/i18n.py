@@ -185,8 +185,12 @@ def system_language(system_locale: str | None = None) -> str:
             raw = locale.getlocale()[0]
         except (ValueError, TypeError):
             raw = None
-    normalized = str(raw or "").replace("-", "_").casefold()
-    return POLISH if normalized == "pl" or normalized.startswith("pl_") else ENGLISH
+    normalized = re.sub(r"[^a-z]+", "_", str(raw or "").casefold()).strip("_")
+    primary_language = normalized.partition("_")[0]
+    # CPython on Polish Windows returns ``Polish_Poland`` rather than
+    # ``pl_PL``.  Both forms describe the same user language and must resolve
+    # to the same catalog.
+    return POLISH if primary_language in {"pl", "polish"} else ENGLISH
 
 
 def resolve_language(
@@ -760,6 +764,33 @@ _LEGACY_UI_TEXT_EN, _LEGACY_UI_TEMPLATES_EN = _load_legacy_english_catalog()
 _COMPILED_LEGACY_TEMPLATES_EN = _compile_legacy_templates(
     _LEGACY_UI_TEMPLATES_EN
 )
+_STABLE_UI_TEXT_EN = {
+    _CATALOGS[POLISH][key]: english
+    for key, english in _CATALOGS[ENGLISH].items()
+}
+
+
+def _english_to_polish_exact_catalog() -> dict[str, str]:
+    """Build a safe reverse catalog for an already localized window."""
+
+    reverse: dict[str, str] = {}
+    for key, english in _CATALOGS[ENGLISH].items():
+        reverse.setdefault(english, _CATALOGS[POLISH][key])
+    for polish, english in _UI_TEXT_EN.items():
+        reverse.setdefault(english, polish)
+    for polish, english in _LEGACY_UI_TEXT_EN.items():
+        reverse.setdefault(english, polish)
+    return reverse
+
+
+_UI_TEXT_PL_FROM_EN = _english_to_polish_exact_catalog()
+_LEGACY_UI_TEMPLATES_PL_FROM_EN = {
+    english: polish
+    for polish, english in _LEGACY_UI_TEMPLATES_EN.items()
+}
+_COMPILED_LEGACY_TEMPLATES_PL_FROM_EN = _compile_legacy_templates(
+    _LEGACY_UI_TEMPLATES_PL_FROM_EN
+)
 
 
 def legacy_english_catalog() -> Mapping[str, Mapping[str, str]]:
@@ -772,23 +803,52 @@ def legacy_english_catalog() -> Mapping[str, Mapping[str, str]]:
 
 
 def _english_exact_text(text: str) -> str:
-    return _UI_TEXT_EN.get(text, _LEGACY_UI_TEXT_EN.get(text, text))
+    return _STABLE_UI_TEXT_EN.get(
+        text,
+        _UI_TEXT_EN.get(text, _LEGACY_UI_TEXT_EN.get(text, text)),
+    )
 
 
-def ui_text(text: str) -> str:
-    """Translate an intentional Polish UI text without treating it as an ID."""
+def _polish_exact_text(text: str) -> str:
+    return _UI_TEXT_PL_FROM_EN.get(text, text)
 
-    if _active_language == POLISH or not isinstance(text, str):
+
+def translate_ui_text(
+    text: str,
+    *,
+    source_language: str,
+    target_language: str,
+) -> str:
+    """Translate intentional UI text between complete AMC catalogs.
+
+    This bidirectional path is used only for controls that are already open.
+    Runtime list data remains outside it unless a caller explicitly opts in.
+    """
+
+    if (
+        not isinstance(text, str)
+        or source_language == target_language
+        or source_language not in SUPPORTED_LANGUAGES
+        or target_language not in SUPPORTED_LANGUAGES
+    ):
         return text
-    translated = _english_exact_text(text)
+    if source_language == POLISH and target_language == ENGLISH:
+        exact = _english_exact_text
+        templates = _COMPILED_LEGACY_TEMPLATES_EN
+    elif source_language == ENGLISH and target_language == POLISH:
+        exact = _polish_exact_text
+        templates = _COMPILED_LEGACY_TEMPLATES_PL_FROM_EN
+    else:
+        return text
+    translated = exact(text)
     if translated != text:
         return translated
-    for pattern, template in _COMPILED_LEGACY_TEMPLATES_EN:
+    for pattern, template in templates:
         match = pattern.fullmatch(text)
         if match is not None:
             try:
                 values = {
-                    name: _english_exact_text(value)
+                    name: exact(value)
                     for name, value in match.groupdict().items()
                 }
                 return template.format(**values)
@@ -797,10 +857,21 @@ def ui_text(text: str) -> str:
     return text
 
 
+def ui_text(text: str) -> str:
+    """Translate an intentional Polish UI text without treating it as an ID."""
+
+    return translate_ui_text(
+        text,
+        source_language=POLISH,
+        target_language=_active_language,
+    )
+
+
 def localize_window_tree(
     window: object,
     *,
     translate_items: bool = False,
+    source_language: str = POLISH,
 ) -> None:
     """Localize native labels, accessible names, help, and list choices.
 
@@ -809,7 +880,7 @@ def localize_window_tree(
     the user.
     """
 
-    if _active_language == POLISH or window is None:
+    if _active_language == source_language or window is None:
         return
     for getter_name, setter_name in (
         ("GetLabel", "SetLabel"),
@@ -821,7 +892,11 @@ def localize_window_tree(
         if callable(getter) and callable(setter):
             try:
                 current = getter()
-                translated = ui_text(current)
+                translated = translate_ui_text(
+                    current,
+                    source_language=source_language,
+                    target_language=_active_language,
+                )
                 if translated != current:
                     setter(translated)
             except (RuntimeError, TypeError, AttributeError):
@@ -841,7 +916,11 @@ def localize_window_tree(
         try:
             for index in range(int(get_count())):
                 current = get_string(index)
-                translated = ui_text(current)
+                translated = translate_ui_text(
+                    current,
+                    source_language=source_language,
+                    target_language=_active_language,
+                )
                 if translated != current:
                     set_string(index, translated)
         except (RuntimeError, TypeError, AttributeError):
@@ -853,7 +932,31 @@ def localize_window_tree(
         except (RuntimeError, TypeError, AttributeError):
             children = ()
         for child in children:
-            localize_window_tree(child, translate_items=translate_items)
+            localize_window_tree(
+                child,
+                translate_items=translate_items,
+                source_language=source_language,
+            )
+
+
+def reconfigure_window_tree(
+    window: object,
+    preference: object,
+    *,
+    system_locale: str | None = None,
+    translate_items: bool = False,
+) -> str:
+    """Apply a saved language immediately to an already open window tree."""
+
+    previous_language = active_language()
+    current_language = configure(preference, system_locale=system_locale)
+    if current_language != previous_language:
+        localize_window_tree(
+            window,
+            translate_items=translate_items,
+            source_language=previous_language,
+        )
+    return current_language
 
 
 _TOKEN_WORDS = {

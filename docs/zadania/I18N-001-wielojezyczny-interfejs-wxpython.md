@@ -2,7 +2,9 @@
 
 Status: **Zrobione — wspólna warstwa, polski, angielski i wybór systemowy,
 pełny zinwentaryzowany katalog interfejsu, osobne szablony komunikatów,
-parytet menu/pomocy/palety oraz kompletna paczka testowa są zweryfikowane**
+parytet menu/pomocy/palety oraz kompletna paczka testowa są zweryfikowane;
+poprawka natychmiastowej zmiany języka z 29.10.2026 jest zweryfikowana w
+źródłach i czeka na następny build oraz wydanie**
 
 Data rozpoczęcia: 28.10.2026.  Zadanie dotyczy wyłącznie bieżącej aplikacji
 wxPython w `D:\Projekty Codex\AMC - integracja wxPython`. Wycofane repozytorium
@@ -11,10 +13,11 @@ WPF nie było otwierane, przeszukiwane ani modyfikowane.
 ## Zachowanie użytkowe
 
 - W Ustawieniach na karcie **Ogólne** jest wybór języka: **Zgodny z
-  systemem**, **Polski** albo **Angielski**. Ustawienie jest trwałe i zaczyna
-  obowiązywać po zapisaniu oraz następnym uruchomieniu AMC.
+  systemem**, **Polski** albo **Angielski**. Ustawienie jest trwałe i po
+  zapisaniu Enterem przełącza otwarty interfejs bez ponownego uruchamiania AMC.
 - Dla wyboru systemowego polskie ustawienia regionalne wybierają polski, a
-  pozostałe obsługiwane przypadki angielski.
+  pozostałe obsługiwane przypadki angielski. Obejmuje to rzeczywistą nazwę
+  `Polish_Poland`, którą Python zwraca w polskim Windows.
 - Karty, wspólne przyciski, etykiety i nazwy dostępności Ustawień, menu,
   pomoc klawiatury, pełna pomoc oraz paleta poleceń korzystają z jednej
   warstwy językowej.
@@ -53,9 +56,10 @@ identyfikatora polecenia.
 
 - `system` jest zapisywaną preferencją, a `pl` lub `en` jest konkretnym
   językiem wybranym dla danego uruchomienia.
-- Zmiana języka w otwartym oknie Ustawień nie wykonuje częściowej podmiany
-  działającego interfejsu. Zapis utrwala wybór, a pełny katalog jest stosowany
-  przy następnym starcie.
+- Zmiana języka po zapisaniu tłumaczy otwarte kontrolki i nazwy dostępności,
+  odświeża komunikaty oraz przebudowuje menu, pomoc i paletę z tego samego
+  katalogu. Pozycje list będące tytułami, ścieżkami, stacjami lub nazwami
+  urządzeń nie są tłumaczone.
 - Brak nowego pola w starym profilu oznacza `system`.
 - Stare `message_templates` jest przy odczycie przenoszone do
   `message_templates_by_language.pl`; angielski zachowuje własne wartości
@@ -88,6 +92,11 @@ identyfikatora polecenia.
   oznaczająca zapisane miejsce w materiale lub pliku to `bookmark`. Korekta
   zastępuje każde wcześniejsze ogólne utożsamienie słowa „zakładka” z kartą
   interfejsu; test katalogu pilnuje rozdzielenia obu znaczeń.
+- Korekta użytkownika z 29.10.2026 zastępuje wcześniejszą decyzję, że zmiana
+  języka wymaga ponownego uruchomienia AMC. Zapis ustawień Enterem ma od razu
+  przełączyć istniejący interfejs. Ta sama korekta wymaga, aby opcja zgodna z
+  systemem rozpoznawała rzeczywisty polski identyfikator locale Windows
+  `Polish_Poland`.
 
 ## Zmienione źródła
 
@@ -159,6 +168,21 @@ innymi karta, historia, stan konta, dziennik, tasowanie i gospodarstwo Sonos.
 Żaden z tych pakietów nie trafia do runtime ani paczki AMC.
 
 ## Testy i wynik
+
+### Poprawka rozpoznawania Windows i zmiany bez restartu — 29.10.2026
+
+- celowane testy bez interfejsu `test_i18n.py` i
+  `test_general_settings_dialog.py`: **30 zaliczonych** w 6,97 s;
+- kompilacja składniowa `i18n.py` i `gui.py`: zaliczona;
+- sonda w rzeczywistym środowisku Windows: locale `Polish_Poland` rozwiązuje
+  się teraz do `pl`;
+- test przełącza istniejące drzewo kontrolek z polskiego na angielski i z
+  angielskiego na polski, sprawdza komunikat dynamiczny oraz potwierdza, że
+  dane pozycji listy nie są zmieniane;
+- test kodu Ustawień potwierdza, że przełączenie następuje dopiero po udanym
+  zapisie, przed wyborem szablonów komunikatów i przed przebudową menu;
+- nie uruchamiano widocznego GUI ani pełnej regresji, zgodnie z zasadą
+  nieuciążliwego testowania.
 
 - `py_compile` wszystkich zmienionych modułów, narzędzi katalogu i
   `build_bundle.py`: zaliczone;
@@ -235,6 +259,12 @@ użytkowego, nie przekształcano w instalator i nie publikowano.
 
 ## Znane ograniczenia
 
+- Opublikowany i obecnie zainstalowany AMC Test `0.1.0-alpha.438`, paczka
+  `908e5dd5`, nadal zawiera błędne rozpoznawanie `Polish_Poland` i wymaga
+  restartu po zmianie języka. Poprawka z 29.10.2026 jest na razie zmianą
+  źródłową z zaliczonymi testami; nie zbudowano, nie zainstalowano i nie
+  opublikowano jeszcze zastępującej wersji.
+
 - Nie wykonano ręcznego odsłuchu całego angielskiego interfejsu z NVDA.
   Automatyczne testy sprawdzają jawne nazwy, brak technicznych identyfikatorów,
   kompletność Ustawień oraz parytet menu, pomocy i palety, ale nie zastępują
@@ -255,8 +285,9 @@ Projekt do korekty i zatwierdzenia użytkownika:
 > Język AMC można wybrać w **Ustawienia programu**, na karcie **Ogólne**.
 > Opcja **Zgodny z systemem** używa polskiego przy polskich ustawieniach
 > regionalnych, a w pozostałych przypadkach angielskiego. Po wybraniu
-> **Zapisz** uruchom AMC ponownie. Własne teksty na karcie **Dostępność i
-> komunikaty** są przechowywane osobno dla polskiego i angielskiego.
+> **Zapisz** język otwartego interfejsu zmienia się od razu. Własne teksty na
+> karcie **Dostępność i komunikaty** są przechowywane osobno dla polskiego i
+> angielskiego.
 
 ## Projekt wpisu do changelogu
 
@@ -267,6 +298,8 @@ Projekt do korekty i zatwierdzenia użytkownika:
   dostępności i domyślne komunikaty korzystają ze stabilnych poleceń i
   osobnych katalogów. Dotychczasowe własne teksty pozostają polskie, a nowy
   szablon upraszcza dodawanie następnych języków.
+- Poprawiono wykrywanie polskiego języka Windows i umożliwiono zmianę języka
+  otwartego interfejsu bez restartowania AMC.
 
 ## Wersja i commit
 

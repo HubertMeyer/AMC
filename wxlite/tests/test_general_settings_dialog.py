@@ -130,6 +130,15 @@ def test_enter_save_has_one_short_confirmation_and_reconfigures_the_host() -> No
         "client = self.client"
     )
     assert method.count('self.announcer.say("Zapisano ustawienia")') == 1
+    assert method.index("if not self._save_state():") < method.index(
+        "i18n.reconfigure_window_tree("
+    )
+    assert method.index("i18n.reconfigure_window_tree(") < method.index(
+        "templates=_message_templates_for_language("
+    )
+    assert method.index("i18n.reconfigure_window_tree(") < method.index(
+        "self._build_menu()"
+    )
 
 
 def test_all_exposed_choices_use_intentional_user_facing_labels() -> None:

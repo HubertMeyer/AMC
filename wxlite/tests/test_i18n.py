@@ -33,6 +33,8 @@ def test_ui_catalogs_have_exactly_the_same_nonempty_keys() -> None:
 
 def test_system_language_resolution_and_preference_validation() -> None:
     assert i18n.resolve_language("system", system_locale="pl_PL") == "pl"
+    assert i18n.resolve_language("system", system_locale="Polish_Poland") == "pl"
+    assert i18n.resolve_language("system", system_locale="Polish (Poland)") == "pl"
     assert i18n.resolve_language("system", system_locale="en_US") == "en"
     assert i18n.resolve_language("system", system_locale="de_DE") == "en"
     assert i18n.resolve_language("pl", system_locale="en_US") == "pl"
@@ -133,6 +135,8 @@ def test_window_tree_does_not_translate_user_items_without_opt_in() -> None:
     class FakeWindow:
         def __init__(self) -> None:
             self.label = "Gotowe"
+            self.name = "Zapisz ustawienia"
+            self.help_text = "Zmiana języka zostanie zastosowana po zapisaniu ustawień."
             self.items = ["Gotowe", "Moja prywatna stacja"]
 
         def GetLabel(self) -> str:
@@ -140,6 +144,18 @@ def test_window_tree_does_not_translate_user_items_without_opt_in() -> None:
 
         def SetLabel(self, value: str) -> None:
             self.label = value
+
+        def GetName(self) -> str:
+            return self.name
+
+        def SetName(self, value: str) -> None:
+            self.name = value
+
+        def GetHelpText(self) -> str:
+            return self.help_text
+
+        def SetHelpText(self, value: str) -> None:
+            self.help_text = value
 
         def GetCount(self) -> int:
             return len(self.items)
@@ -154,16 +170,38 @@ def test_window_tree_does_not_translate_user_items_without_opt_in() -> None:
             return ()
 
     try:
-        i18n.configure("en")
+        i18n.configure("pl")
         window = FakeWindow()
-        i18n.localize_window_tree(window)
+        assert i18n.reconfigure_window_tree(window, "en") == "en"
         assert window.label == "Ready"
+        assert window.name == "Save settings"
+        assert window.help_text == (
+            "The language change is applied after you save the settings."
+        )
         assert window.items == ["Gotowe", "Moja prywatna stacja"]
 
         i18n.localize_window_tree(window, translate_items=True)
         assert window.items == ["Ready", "Moja prywatna stacja"]
+
+        assert i18n.reconfigure_window_tree(window, "pl") == "pl"
+        assert window.label == "Gotowe"
+        assert window.name == "Zapisz ustawienia"
+        assert window.help_text == (
+            "Zmiana języka zostanie zastosowana po zapisaniu ustawień."
+        )
+        # Lista nie jest dotykana przez zmianę języka. Pierwszy element został
+        # wcześniej przetłumaczony tylko przez jawne opt-in testu.
+        assert window.items == ["Ready", "Moja prywatna stacja"]
     finally:
         i18n.configure("pl")
+
+
+def test_open_window_dynamic_text_can_switch_back_to_polish() -> None:
+    assert i18n.translate_ui_text(
+        "Added bookmark 2: 01:30",
+        source_language="en",
+        target_language="pl",
+    ) == "Dodano zakładkę 2: 01:30"
 
 
 def test_future_language_template_is_valid_and_covers_core_sections() -> None:

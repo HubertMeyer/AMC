@@ -27497,6 +27497,25 @@ class LiteFrame(wx.Frame):
             self.state.shortcut_overrides = previous_shortcuts
             self.state.options = self.options
             return
+        previous_interface_language = i18n.active_language()
+        current_interface_language = i18n.reconfigure_window_tree(
+            self,
+            self.options.interface_language,
+        )
+        interface_language_changed = (
+            current_interface_language != previous_interface_language
+        )
+        if interface_language_changed:
+            # Inne niemodalne okna AMC także pozostają spójne z głównym
+            # oknem. Elementy list nie są tu tłumaczone, bo mogą być tytułem,
+            # ścieżką, stacją albo nazwą urządzenia użytkownika.
+            for window in wx.GetTopLevelWindows():
+                if window is not self:
+                    i18n.localize_window_tree(
+                        window,
+                        source_language=previous_interface_language,
+                    )
+            self.SetTitle(i18n.ui_text(window_title()))
         self.shortcut_overrides = chosen_shortcuts
         self._radio_snapshot = LiteFrame._with_radio_recording_options(
             self, self._radio_snapshot
@@ -27551,6 +27570,9 @@ class LiteFrame(wx.Frame):
         # Kolejność sesji zmienia jednocześnie skróty, podpisy menu i paletę
         # poleceń, więc samo odświeżenie stanów zaznaczeń nie wystarcza.
         self._build_menu()
+        if interface_language_changed:
+            self.Layout()
+            self.Refresh()
         # Zapis na dysku jest juz zakonczony i to jest wlasciwy moment na
         # krotkie potwierdzenie. Konfiguracja hosta idzie dalej w tle i nie
         # moze opozniac komunikatu NVDA o kilka wywolan miedzyprocesowych.
