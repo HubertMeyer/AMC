@@ -2,8 +2,9 @@
 
 ## Status
 
-**Zrobione w źródłach 28.10.2026.** Niewidoczne testy celowane są zaliczone.
-Nie wykonano builda, instalacji, publikacji ani ręcznego odbioru z NVDA.
+**Zrobione w źródłach 28.10.2026; przygotowywane do wydania AMC Test
+29.10.2026.** Niewidoczne testy celowane są zaliczone. Nie wykonano jeszcze
+instalacji, publikacji ani ręcznego odbioru z NVDA.
 
 ## Zakres
 
@@ -113,7 +114,9 @@ Zestawy częściowo się pokrywają; liczby nie są sumą unikalnych testów.
   materiału Enterem i zachowują dotychczasową nawigację.
 - Presety Spotify i Sonosa zachowują własne, istniejące reguły nawigacji; nowa
   sesyjna opcja presetów nie jest tam pokazywana bez wykonawcy.
-- Nie powstał build, instalator, instalacja ani wydanie. Nie uruchamiano AMC.
+- Nie wykonano instalacji ani ręcznego odbioru z NVDA. Paczka i instalator są
+  przygotowywane w odizolowanych katalogach wydawniczych; nie uruchamia się
+  zwykłego, widocznego okna AMC.
 
 ## Zmienione pliki
 
@@ -129,9 +132,10 @@ Zestawy częściowo się pokrywają; liczby nie są sumą unikalnych testów.
 
 ## Wersja i commit
 
-- Wersja źródłowa pakietu: `0.1.0`.
-- Commit bazowy: `b15479fc7114e48de5fc838a79d05a4cc5992d7d`.
-- Zmiany są w drzewie roboczym; nie utworzono nowego commitu.
-- Build: nie wykonano.
+- Przygotowywana wersja techniczna AMC Test: `0.1.0-alpha.441`.
+- Commit funkcjonalny:
+  `209c9f6f547f6882bd6e5e0461dcee9b8a6f983b`.
+- Zmiany funkcjonalne są zapisane w Git; commit wydaniowy powstaje osobno.
+- Build: w przygotowaniu.
 - Instalacja: nie wykonano.
-- Publikacja: nie wykonano.
+- Publikacja: w przygotowaniu.
