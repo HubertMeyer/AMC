@@ -122,7 +122,7 @@ PUBLIC_PROFILE = ReleaseProfile(
     log_folder="AMC/logs",
     credential_namespace="AccessibleMediaController.Public",
     session_ids=("files", "radio", "podcasts", "wiim", "sonos"),
-    capabilities=_COMMON_CAPABILITIES + ("youtube.account.readonly",),
+    capabilities=_COMMON_CAPABILITIES,
 )
 
 PROFILES: dict[str, ReleaseProfile] = {

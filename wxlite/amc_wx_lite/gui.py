@@ -337,6 +337,7 @@ from . import radio_recognition
 from . import apple_music_links
 from .recognition_actions import (
     APPLE_MUSIC,
+    DEFAULT_SERVICES,
     SPOTIFY,
     TIDAL,
     RecognitionAction,
@@ -348,6 +349,7 @@ from .recognition_actions import (
     quick_actions as recognition_quick_actions,
     quick_information as recognition_quick_information,
     row_from_match as recognition_row_from_match,
+    search_links as recognition_search_links,
     select_catalog_match as select_recognition_match,
     service_label as recognition_service_label,
     store_match as store_recognition_match,
@@ -6494,6 +6496,7 @@ class RadioRecognitionHistoryDialog(wx.Dialog):
         submit,
         resolve_match,
         detailed_hints: bool,
+        internal_services: tuple[str, ...] = DEFAULT_SERVICES,
     ) -> None:
         super().__init__(parent, title="Rozpoznane utwory", size=(760, 540))
         self._entries = entries
@@ -6502,6 +6505,9 @@ class RadioRecognitionHistoryDialog(wx.Dialog):
         self._submit = submit
         self._resolve_match = resolve_match
         self._detailed_hints = detailed_hints
+        self._internal_services = tuple(
+            service for service in DEFAULT_SERVICES if service in internal_services
+        )
         self._actions_window: RecognitionActionsWindow | None = None
         self._visible: list[dict] = []
         self._filter_keys: list[str | None] = []
@@ -6510,12 +6516,21 @@ class RadioRecognitionHistoryDialog(wx.Dialog):
 
         panel = wx.Panel(self)
         layout = wx.BoxSizer(wx.VERTICAL)
-        help_text = (
-            "Rozpoznane utwory. Enter otwiera utwór, Ctrl+Enter album w usłudze "
-            "domyślnej, prawa strzałka pokazuje działania, lewa podaje krótką "
-            "informację. Ctrl+C kopiuje opis, Ctrl+Shift+C dokładne łącze. "
-            "Alt+strzałka w górę lub w dół zmienia kolejność, Delete usuwa."
-        )
+        if self._internal_services:
+            help_text = (
+                "Rozpoznane utwory. Enter otwiera utwór, Ctrl+Enter album w usłudze "
+                "domyślnej, prawa strzałka pokazuje działania, lewa podaje krótką "
+                "informację. Ctrl+C kopiuje opis, Ctrl+Shift+C dokładne łącze. "
+                "Alt+strzałka w górę lub w dół zmienia kolejność, Delete usuwa."
+            )
+        else:
+            help_text = (
+                "Rozpoznane utwory. Enter wyszukuje utwór, Ctrl+Enter album na "
+                "stronie usługi domyślnej, prawa strzałka pokazuje działania, "
+                "lewa podaje krótką informację. Ctrl+C kopiuje opis, "
+                "Ctrl+Shift+C łącze wyszukiwania. Alt+strzałka w górę lub w dół "
+                "zmienia kolejność, Delete usuwa."
+            )
         help_label = wx.StaticText(panel, label=help_text)
         help_label.SetName(help_text)
         help_label.Wrap(700)
@@ -6684,12 +6699,20 @@ class RadioRecognitionHistoryDialog(wx.Dialog):
         if entry is None:
             self._set_status("Brak wybranego wpisu")
             return
+        exact_link = self._default_service in self._internal_services
         action = RecognitionAction(
-            "default.track.copy",
-            "Kopiuj łącze do utworu",
-            "copy_link",
+            "default.track.copy" if exact_link else "default.track.search.copy",
+            "Kopiuj łącze do utworu" if exact_link else "Kopiuj łącze wyszukiwania",
+            "copy_link" if exact_link else "open_url",
             self._default_service,
-            "track",
+            "track" if exact_link else "",
+            url=(
+                ""
+                if exact_link
+                else recognition_search_links(entry)[
+                    recognition_service_label(self._default_service)
+                ]
+            ),
         )
         if (
             action.needs_match
@@ -6700,9 +6723,16 @@ class RadioRecognitionHistoryDialog(wx.Dialog):
         def ready(match: dict | None) -> None:
             link = recognition_action_url(action, match)
             if link and self._copy_to_clipboard(link):
-                self._set_status(
-                    f"Skopiowano łącze do utworu w {recognition_service_label(action.service)}"
-                )
+                if exact_link:
+                    self._set_status(
+                        f"Skopiowano łącze do utworu w "
+                        f"{recognition_service_label(action.service)}"
+                    )
+                else:
+                    self._set_status(
+                        f"Skopiowano łącze wyszukiwania w "
+                        f"{recognition_service_label(action.service)}"
+                    )
             else:
                 self._set_status("Nie znaleziono dokładnego łącza do utworu")
             self.history.SetFocus()
@@ -6738,22 +6768,49 @@ class RadioRecognitionHistoryDialog(wx.Dialog):
         )
 
     def _play_default(self) -> None:
-        self._request_action(RecognitionAction(
-            "default.track.play",
-            "Otwórz utwór",
-            "play_default",
-            self._default_service,
-            "track",
-        ))
+        if self._default_service in self._internal_services:
+            action = RecognitionAction(
+                "default.track.play",
+                "Otwórz utwór",
+                "play_default",
+                self._default_service,
+                "track",
+            )
+        else:
+            entry = self._selected_entry() or {}
+            action = RecognitionAction(
+                "default.track.search",
+                "Wyszukaj utwór na stronie",
+                "open_url",
+                self._default_service,
+                url=recognition_search_links(entry)[
+                    recognition_service_label(self._default_service)
+                ],
+            )
+        self._request_action(action)
 
     def _show_default_album(self) -> None:
-        self._request_action(RecognitionAction(
-            "default.album.show",
-            "Pokaż album",
-            "show_amc",
-            self._default_service,
-            "album",
-        ))
+        if self._default_service in self._internal_services:
+            action = RecognitionAction(
+                "default.album.show",
+                "Pokaż album",
+                "show_amc",
+                self._default_service,
+                "album",
+            )
+        else:
+            entry = dict(self._selected_entry() or {})
+            entry["title"] = entry.get("album") or entry.get("title")
+            action = RecognitionAction(
+                "default.album.search",
+                "Wyszukaj album na stronie",
+                "open_url",
+                self._default_service,
+                url=recognition_search_links(entry)[
+                    recognition_service_label(self._default_service)
+                ],
+            )
+        self._request_action(action)
 
     def _show_actions(self) -> None:
         entry = self._selected_entry()
@@ -6785,7 +6842,11 @@ class RadioRecognitionHistoryDialog(wx.Dialog):
         actions_window = RecognitionActionsWindow(
             self,
             entry,
-            recognition_quick_actions(entry, self._default_service),
+            recognition_quick_actions(
+                entry,
+                self._default_service,
+                internal_services=self._internal_services,
+            ),
             copy_to_clipboard=self._copy_to_clipboard,
             resolve_action=self._resolve_action,
             execute_action=execute,
@@ -6850,13 +6911,31 @@ class RadioRecognitionHistoryDialog(wx.Dialog):
             menu.Append(item_id, label)
             menu.Bind(wx.EVT_MENU, handler, id=item_id)
 
-        add("Otwórz utwór\tEnter", lambda _event: self._play_default())
-        add("Pokaż album\tCtrl+Enter", lambda _event: self._show_default_album())
+        if self._default_service in self._internal_services:
+            add("Otwórz utwór\tEnter", lambda _event: self._play_default())
+            add("Pokaż album\tCtrl+Enter", lambda _event: self._show_default_album())
+        else:
+            add("Wyszukaj utwór na stronie\tEnter", lambda _event: self._play_default())
+            add(
+                "Wyszukaj album na stronie\tCtrl+Enter",
+                lambda _event: self._show_default_album(),
+            )
         menu.AppendSeparator()
         add("Kopiuj opis\tCtrl+C", lambda _event: self._copy())
-        add("Kopiuj łącze do utworu\tCtrl+Shift+C", lambda _event: self._copy_track_link())
+        add(
+            (
+                "Kopiuj łącze do utworu\tCtrl+Shift+C"
+                if self._default_service in self._internal_services
+                else "Kopiuj łącze wyszukiwania\tCtrl+Shift+C"
+            ),
+            lambda _event: self._copy_track_link(),
+        )
         services = wx.Menu()
-        for action in recognition_all_actions(entry, self._default_service):
+        for action in recognition_all_actions(
+            entry,
+            self._default_service,
+            internal_services=self._internal_services,
+        ):
             item_id = int(wx.NewIdRef())
             services.Append(item_id, action.label)
             services.Bind(
@@ -29860,6 +29939,14 @@ class LiteFrame(wx.Frame):
             submit=self.runner.submit,
             resolve_match=self._resolve_recognition_match,
             detailed_hints=self._detailed_hints,
+            internal_services=tuple(
+                service
+                for service, capability in (
+                    (SPOTIFY, "session.spotify"),
+                    (TIDAL, "session.tidal"),
+                )
+                if capability in current_profile().capabilities
+            ),
         )
         changed = False
         requested_action = None
@@ -30001,6 +30088,18 @@ class LiteFrame(wx.Frame):
             else:
                 self.announcer.say("Nie udało się otworzyć łącza")
                 self._restore_focus_after_dialog()
+            return
+        required_capability = {
+            SPOTIFY: "session.spotify",
+            TIDAL: "session.tidal",
+        }.get(action.service)
+        if (
+            action.operation in ("show_amc", "play_default")
+            and required_capability is not None
+            and required_capability not in current_profile().capabilities
+        ):
+            self.announcer.say("To działanie nie jest dostępne w AMC Public")
+            self._restore_focus_after_dialog()
             return
         if match is None:
             self.announcer.say("Nie znaleziono dokładnego wyniku w wybranej usłudze")

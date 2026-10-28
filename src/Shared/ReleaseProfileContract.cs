@@ -88,7 +88,7 @@ internal static class ReleaseProfileContract
         "AMC/logs",
         "AccessibleMediaController.Public",
         ["files", "radio", "podcasts", "wiim", "sonos"],
-        [.. CommonCapabilities, "youtube.account.readonly"],
+        CommonCapabilities,
         @"Local\AccessibleMultimediaController.PythonLauncher.Public.SingleInstance",
         @"Local\AccessibleMultimediaController.PythonUpdater.Public.SingleInstance",
         "AMC/Updater",
@@ -180,7 +180,10 @@ internal static class ReleaseProfileContract
                 "pakiet aktualizacji jest przeznaczony dla innego wydania AMC");
 
         RequireKnownSubset(expected.Sessions, sessions, "lista sesji");
-        RequireKnownSubset(expected.Capabilities, capabilities, "lista możliwości");
+        var compatibleCapabilities = expected.ProfileId == "public"
+            ? expected.Capabilities.Concat(["youtube.account.readonly"]).ToArray()
+            : expected.Capabilities;
+        RequireKnownSubset(compatibleCapabilities, capabilities, "lista możliwości");
     }
 
     private static void Require(string expected, string actual, string field)

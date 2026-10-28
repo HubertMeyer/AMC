@@ -68,6 +68,33 @@ def test_shared_action_model_keeps_right_arrow_short_and_context_complete() -> N
     assert "Apple Music — wyszukaj w przeglądarce" in labels
 
 
+def test_public_actions_offer_web_search_but_never_private_amc_sessions() -> None:
+    entry = _entry()
+    quick = quick_actions(entry, TIDAL, internal_services=())
+    complete = all_actions(entry, TIDAL, internal_services=())
+    labels = {action.label for action in complete}
+
+    assert quick
+    assert set(quick).issubset(set(complete))
+    assert not any(action.operation in {"show_amc", "play_default"} for action in complete)
+    assert "Spotify — wyszukaj na stronie" in labels
+    assert "TIDAL — wyszukaj na stronie" in labels
+    assert "Spotify — pokaż utwór w AMC" not in labels
+    assert "TIDAL — pokaż utwór w AMC" not in labels
+    assert any(
+        action.service == SPOTIFY
+        and action.operation == "open_url"
+        and action.url.startswith("https://open.spotify.com/search/")
+        for action in quick
+    )
+    assert any(
+        action.service == TIDAL
+        and action.operation == "open_url"
+        and action.url.startswith("https://listen.tidal.com/search?")
+        for action in quick
+    )
+
+
 def test_right_arrow_actions_match_concise_spotify_tidal_window_contract() -> None:
     source = GUI_SOURCE.read_text(encoding="utf-8")
     window = source.split("class RecognitionActionsWindow", 1)[1].split(
@@ -84,6 +111,7 @@ def test_right_arrow_actions_match_concise_spotify_tidal_window_contract() -> No
     )[0]
     assert "detailed_hints=self._detailed_hints" in history
     assert "actions_window.show_for_keyboard()" in history
+    assert "internal_services=self._internal_services" in history
 
 
 def test_copy_confirmations_use_the_active_recognition_window_live_region() -> None:
@@ -102,7 +130,8 @@ def test_copy_confirmations_use_the_active_recognition_window_live_region() -> N
     assert 'self._set_status("Skopiowano nazwę działania")' in window
     assert 'self._set_status("Skopiowano łącze")' in window
     assert '"Skopiowano opis" if len(selected) == 1' in history
-    assert 'f"Skopiowano łącze do utworu w {recognition_service_label(action.service)}"' in history
+    assert 'f"Skopiowano łącze do utworu w "' in history
+    assert 'f"Skopiowano łącze wyszukiwania w "' in history
 
 
 def test_cached_copy_link_does_not_precede_confirmation_with_lookup_message() -> None:

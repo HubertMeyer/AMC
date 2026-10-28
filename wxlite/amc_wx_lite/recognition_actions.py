@@ -272,57 +272,79 @@ class RecognitionAction:
         )
 
 
-def all_actions(entry: dict, default_service: object) -> tuple[RecognitionAction, ...]:
+def all_actions(
+    entry: dict,
+    default_service: object,
+    *,
+    internal_services: tuple[str, ...] = DEFAULT_SERVICES,
+) -> tuple[RecognitionAction, ...]:
     default = normalize_default_service(default_service)
+    internal = frozenset(internal_services).intersection(DEFAULT_SERVICES)
     artist = _text(entry.get("artist"))
     album = _text(entry.get("album"))
     links = search_links(entry)
     actions: list[RecognitionAction] = []
-    if artist:
+    if artist and default in internal:
         actions.append(RecognitionAction(
             "default.artist", f"{artist} — wykonawca", "show_amc", default, "artist", quick=True
         ))
-    if album:
+    if album and default in internal:
         actions.append(RecognitionAction(
             "default.album", f"{album} — album", "show_amc", default, "album", quick=True
         ))
-    actions.extend((
-        RecognitionAction(
+    if SPOTIFY in internal:
+        actions.extend((RecognitionAction(
             "spotify.amc.track", "Spotify — pokaż utwór w AMC", "show_amc",
             SPOTIFY, "track", quick=True,
         ),
         RecognitionAction(
             "spotify.external.track", "Spotify — otwórz w oryginalnej aplikacji",
             "open_external", SPOTIFY, "track", quick=True,
-        ),
-        RecognitionAction(
+        )))
+    else:
+        actions.append(RecognitionAction(
+            "spotify.search", "Spotify — wyszukaj na stronie", "open_url",
+            SPOTIFY, url=links["Spotify"], quick=True,
+        ))
+    if TIDAL in internal:
+        actions.extend((RecognitionAction(
             "tidal.amc.track", "TIDAL — pokaż utwór w AMC", "show_amc",
             TIDAL, "track", quick=True,
         ),
         RecognitionAction(
             "tidal.external.track", "TIDAL — otwórz w oryginalnej aplikacji",
             "open_external", TIDAL, "track", quick=True,
-        ),
+        )))
+    else:
+        actions.append(RecognitionAction(
+            "tidal.search", "TIDAL — wyszukaj na stronie", "open_url",
+            TIDAL, url=links["TIDAL"], quick=True,
+        ))
+    actions.append(
         RecognitionAction(
             "apple.external.track", "Apple Music — otwórz utwór", "open_external",
             APPLE_MUSIC, "track", quick=True,
-        ),
-        RecognitionAction(
+        )
+    )
+    if SPOTIFY in internal:
+        actions.extend((RecognitionAction(
             "spotify.amc.album", "Spotify — pokaż album w AMC", "show_amc",
             SPOTIFY, "album",
         ),
         RecognitionAction(
             "spotify.external.album", "Spotify — otwórz album", "open_external",
             SPOTIFY, "album",
-        ),
-        RecognitionAction(
+        )))
+    if TIDAL in internal:
+        actions.extend((RecognitionAction(
             "tidal.amc.album", "TIDAL — pokaż album w AMC", "show_amc",
             TIDAL, "album",
         ),
         RecognitionAction(
             "tidal.external.album", "TIDAL — otwórz album", "open_external",
             TIDAL, "album",
-        ),
+        )))
+    actions.extend((
         RecognitionAction(
             "apple.external.album", "Apple Music — otwórz album", "open_external",
             APPLE_MUSIC, "album",
@@ -351,8 +373,21 @@ def all_actions(entry: dict, default_service: object) -> tuple[RecognitionAction
     return tuple(actions)
 
 
-def quick_actions(entry: dict, default_service: object) -> tuple[RecognitionAction, ...]:
-    return tuple(action for action in all_actions(entry, default_service) if action.quick)
+def quick_actions(
+    entry: dict,
+    default_service: object,
+    *,
+    internal_services: tuple[str, ...] = DEFAULT_SERVICES,
+) -> tuple[RecognitionAction, ...]:
+    return tuple(
+        action
+        for action in all_actions(
+            entry,
+            default_service,
+            internal_services=internal_services,
+        )
+        if action.quick
+    )
 
 
 def action_url(action: RecognitionAction, match: dict | None) -> str:

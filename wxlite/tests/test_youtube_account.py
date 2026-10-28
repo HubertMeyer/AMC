@@ -37,7 +37,7 @@ def test_oauth_configuration_is_profile_specific_and_validated(tmp_path: Path) -
     ) == CLIENT_ID
     assert resolve_youtube_client_id(
         {PUBLIC_CLIENT_ID_ENVIRONMENT: CLIENT_ID}, profile=PUBLIC_PROFILE
-    ) == CLIENT_ID
+    ) is None
     assert resolve_youtube_client_id(
         {CLIENT_ID_ENVIRONMENT: CLIENT_ID},
         profile=PUBLIC_PROFILE,
@@ -76,10 +76,10 @@ def test_oauth_configuration_is_profile_specific_and_validated(tmp_path: Path) -
     broker.write_text(TOKEN_BROKER + "\n", encoding="utf-8")
     assert resolve_youtube_token_broker(
         {}, profile=PUBLIC_PROFILE, resource_path=broker
-    ) == TOKEN_BROKER
+    ) is None
     assert resolve_youtube_token_broker(
         {TOKEN_BROKER_ENVIRONMENT: TOKEN_BROKER}, profile=PUBLIC_PROFILE
-    ) == TOKEN_BROKER
+    ) is None
     assert resolve_youtube_token_broker(
         {TOKEN_BROKER_ENVIRONMENT: TOKEN_BROKER}, profile=TEST_PROFILE
     ) is None
@@ -90,7 +90,7 @@ def test_oauth_configuration_is_profile_specific_and_validated(tmp_path: Path) -
     ) is None
 
 
-def test_unconfigured_public_profile_keeps_google_account_dormant(
+def test_public_profile_keeps_google_account_unavailable(
     tmp_path: Path,
 ) -> None:
     """Brak domeny i wdrożenia nie może tworzyć martwej funkcji ani psuć hosta."""

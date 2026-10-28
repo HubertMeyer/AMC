@@ -82,12 +82,14 @@ def test_public_manifest_exposes_only_approved_sessions_and_test_has_all() -> No
     public_text = " ".join(PUBLIC_PROFILE.capabilities).casefold()
     assert "spotify" not in public_text
     assert "tidal" not in public_text
+    assert "youtube.account" not in public_text
     assert "sonos" in public_text
     assert PUBLIC_PROFILE.capabilities == tuple(
         capability for capability in TEST_PROFILE.capabilities
         if "spotify" not in capability.casefold()
         and "tidal" not in capability.casefold()
         and "frontier-smart" not in capability.casefold()
+        and "youtube.account" not in capability.casefold()
     )
 
 
@@ -118,19 +120,17 @@ def test_python_capabilities_match_closed_launcher_contract() -> None:
         source,
         flags=re.DOTALL,
     )
-    public_only_match = re.search(
-        r"\[\.\. CommonCapabilities,\s*(.*?)\]",
-        source,
-        flags=re.DOTALL,
-    )
     assert common_match is not None
     assert test_only_match is not None
-    assert public_only_match is not None
+    public_contract = source.split(
+        "internal static readonly ReleaseProfileDescriptor Public", 1
+    )[1].split("internal static ReleaseProfileDescriptor Validate", 1)[0]
+    assert "CommonCapabilities," in public_contract
+    assert "youtube.account.readonly" not in public_contract
     quoted = re.compile(r'"([^"]+)"')
     common = tuple(quoted.findall(common_match.group(1)))
     test_only = tuple(quoted.findall(test_only_match.group(1)))
-    public_only = tuple(quoted.findall(public_only_match.group(1)))
-    assert common + public_only == PUBLIC_PROFILE.capabilities
+    assert common == PUBLIC_PROFILE.capabilities
     assert common + test_only == TEST_PROFILE.capabilities
 
 

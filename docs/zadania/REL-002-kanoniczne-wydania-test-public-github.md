@@ -605,6 +605,61 @@ tych samych plików profilu.
 - Adres wydania:
   `https://github.com/michalkasperczak/AMC/releases/tag/test-2026.10.28.2022`.
 
+## Przygotowanie pierwszego wydania Public na bazie alpha.438 — 28.10.2026
+
+### Materiał do dokumentacji użytkownika
+
+- AMC Public otrzymuje te same nowości użytkowe co najnowszy AMC Test, ale
+  zachowuje osobny profil danych, poświadczeń, pamięci podręcznej, logów,
+  instalacji i kanału aktualizacji `stable`.
+- Public nie udostępnia logowania Google do YouTube. W menu, pomocy i palecie
+  nie ma polecenia konta, a pakiet nie zawiera identyfikatora, brokera, sekretu
+  ani tokenu Google.
+- W `Ctrl+Alt+S` działania Spotify i TIDAL nie przechodzą do nieobecnych sesji
+  wewnątrz AMC. Prawa strzałka i pełne menu udostępniają publiczne wyszukiwanie
+  na stronach usług. Enter i `Ctrl+Enter` korzystają z tej samej zasady, a
+  `Ctrl+Shift+C` kopiuje łącze wyszukiwania.
+
+### Uzasadnienie i decyzje
+
+- Korekta użytkownika z 28.10.2026 zastępuje przygotowany wcześniej, lecz
+  niewydany wariant przyszłego Public z uśpioną możliwością Google. Brak
+  konfiguracji nie jest wystarczający: możliwość została usunięta z jawnego
+  profilu, kontraktu Launchera i procesu pakowania.
+- Starszy AMC Public może mieć tę możliwość w historycznym manifeście. Nowy
+  aktualizator przyjmuje ją wyłącznie jako zgodny stan wejściowy migracji;
+  nowy manifest i nowa instalacja już jej nie deklarują.
+- Techniczny numer podniesiono do `0.1.0-alpha.439`, aby artefaktu Public nie
+  pomylić z opublikowanym Testem `0.1.0-alpha.438`. Kod użytkowy pozostaje jego
+  bazą, a zmiany `alpha.439` dotyczą ograniczeń profilu Public i wydania.
+
+### Testy i wynik
+
+- Celowane testy bez widocznego interfejsu: **109/109 zaliczone**. Obejmują
+  profile, rozpoznawanie, fizyczną zawartość paczki, brak konfiguracji Google,
+  bramkę publikacji, snapshot źródeł i kompletność katalogów językowych.
+- Launcher i aktualizator: **37/37 zaliczonych**, w tym aktualizacja ze
+  starszego Public z historyczną możliwością Google.
+- Pełnej regresji GUI nie powtarzano. Bazą jest pełna regresja i sprawdzony
+  pakiet wydania Test `alpha.438`; korekta Public ma celowane testy różnic.
+- Paczka, instalator, sucha próba publikacji i GitHub: jeszcze niewykonane w
+  chwili tego zapisu.
+
+### Znane ograniczenia
+
+- Spotify i TIDAL nie są sesjami profilu Public. Publiczne wyszukiwanie WWW nie
+  obiecuje dokładnego dopasowania katalogowego ani sterowania aplikacją
+  producenta.
+- Instalator nie jest jeszcze podpisany cyfrowo; Windows może pokazać
+  ostrzeżenie reputacyjne. Integralność jest weryfikowana przez SHA-256.
+
+### Wersja i commit
+
+- Przygotowywana wersja techniczna: `0.1.0-alpha.439`.
+- Bazowe wydanie Test: `0.1.0-alpha.438`, commit `9b2f6246`.
+- Dokładny commit Public, identyfikator paczki, instalator i tag zostaną
+  dopisane po czystej budowie i odczytowej weryfikacji GitHuba.
+
 ## Wersja i commit
 
 - Wersja techniczna przygotowywanego kandydata: `0.1.0-alpha.434`.

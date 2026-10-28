@@ -1,12 +1,13 @@
 # RECOG-001 — interakcje z rozpoznanymi utworami
 
-- Status: **W trakcie; korekty oznajmiania kopiowania oraz dostępności
-  `Ctrl+Alt+S` z 27.10.2026 mają gotowe źródła i testy celowane, ale nie
-  zostały jeszcze zbudowane ani zainstalowane; pozostaje ręczny odbiór z
-  NVDA**.
+- Status: **W trakcie; poprawki Test są w opublikowanym `alpha.438`, a profil
+  Public ma gotową i celowanie przetestowaną korektę usuwającą wewnętrzne
+  akcje Spotify/TIDAL. Budowa i wydanie Public są wykonywane w REL-002;
+  pozostaje ręczny odbiór z NVDA**.
 - Data wdrożenia: 26.10.2026.
 - Instalacja: `D:\Projekty Codex\AMC Python`.
-- Profil: wyłącznie AMC Test. AMC Public i GitHub nie zostały zmienione.
+- Profil: AMC Test zachowuje pełne działania, a AMC Public udostępnia tylko
+  działania bez prywatnych sesji Spotify/TIDAL.
 
 ## Zachowanie widoczne dla użytkownika
 
@@ -112,6 +113,13 @@ nie wykonywało zapytań sieciowych.
   Radio, osobno listę i odtwarzacz, oraz sprawdza zachowanie sesji, widoku,
   zaznaczonego elementu i kolejność: zamknięcie okna przed oddaniem fokusu.
   Testów z widocznym interfejsem ani ręcznego odbioru NVDA nie wykonywano.
+- Korekta profilu Public z 28.10.2026: prawa strzałka, pełne menu, Enter,
+  `Ctrl+Enter` i `Ctrl+Shift+C` nie tworzą drogi do wewnętrznych sesji
+  Spotify/TIDAL. Public oferuje publiczne wyszukiwanie WWW, a Test zachowuje
+  dotychczasowe działania wewnętrzne. Zaliczone zostały **109/109** celowane
+  testy profilu, rozpoznawania, paczki, publikacji i katalogów językowych oraz
+  **37/37** testów Launchera i aktualizatora. Testów z widocznym interfejsem
+  nie uruchamiano.
 
 ## Znane ograniczenia i ręczny odbiór
 
@@ -137,6 +145,11 @@ nie wykonywało zapytań sieciowych.
 > łącze w wybranej domyślnej usłudze. Po skopiowaniu NVDA potwierdza, co
 > zostało skopiowane. Pełny zestaw znajduje się w menu kontekstowym, w pozycji
 > Usługi, łącza i powiązania.
+
+W AMC Public lista działań nie oferuje przejścia do Spotify ani TIDAL wewnątrz
+AMC. Zamiast tego Enter, `Ctrl+Enter`, prawa strzałka i menu udostępniają
+publiczne wyszukiwanie na stronie wybranej usługi. `Ctrl+Shift+C` kopiuje
+wtedy łącze wyszukiwania i ogłasza ten zakres jednoznacznie.
 
 ## Projekt opisu zmian
 

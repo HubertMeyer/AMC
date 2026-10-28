@@ -207,20 +207,18 @@ def test_incomplete_youtube_oauth_configuration_is_not_packaged():
         ).exists()
 
 
-def test_public_youtube_oauth_packages_only_nonsecret_configuration():
+def test_public_package_rejects_all_google_login_configuration():
     with tempfile.TemporaryDirectory() as folder:
         root = Path(folder)
         source = root / "source"
         source_package = source / "amc_wx_lite"
         source_package.mkdir(parents=True)
         (source_package / "__init__.py").write_text("", encoding="utf-8")
-        client_id = "123456789012-example.apps.googleusercontent.com"
-        broker = "https://oauth.example.test/v1/google/token"
         (source_package / bundle.YOUTUBE_OAUTH_PUBLIC_CLIENT_ID_RESOURCE).write_text(
-            client_id + "\n", encoding="utf-8"
+            "123456789012-example.apps.googleusercontent.com\n", encoding="utf-8"
         )
         (source_package / bundle.YOUTUBE_OAUTH_PUBLIC_BROKER_RESOURCE).write_text(
-            broker + "\n", encoding="utf-8"
+            "https://oauth.example.test/v1/google/token\n", encoding="utf-8"
         )
         (source_package / bundle.YOUTUBE_OAUTH_CLIENT_SECRET_RESOURCE).write_text(
             "sekret-ktory-nie-moze-trafic-do-paczki\n", encoding="utf-8"
@@ -231,14 +229,14 @@ def test_public_youtube_oauth_packages_only_nonsecret_configuration():
             public_target, bundle.profile_from_id("public"), source
         )
         package = public_target / "app" / "amc_wx_lite"
-        assert (package / bundle.YOUTUBE_OAUTH_PUBLIC_CLIENT_ID_RESOURCE).read_text(
-            encoding="utf-8"
-        ).strip() == client_id
-        assert (package / bundle.YOUTUBE_OAUTH_PUBLIC_BROKER_RESOURCE).read_text(
-            encoding="utf-8"
-        ).strip() == broker
-        assert not (package / bundle.YOUTUBE_OAUTH_CLIENT_SECRET_RESOURCE).exists()
-        assert all("secret" not in name for name in copied)
+        for resource in (
+            bundle.YOUTUBE_OAUTH_CLIENT_ID_RESOURCE,
+            bundle.YOUTUBE_OAUTH_CLIENT_SECRET_RESOURCE,
+            bundle.YOUTUBE_OAUTH_PUBLIC_CLIENT_ID_RESOURCE,
+            bundle.YOUTUBE_OAUTH_PUBLIC_BROKER_RESOURCE,
+        ):
+            assert not (package / resource).exists()
+            assert all(Path(name).name != resource for name in copied)
 
         test_target = root / "test"
         bundle.copy_python_code(test_target, bundle.profile_from_id("test"), source)
