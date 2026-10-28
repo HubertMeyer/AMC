@@ -304,6 +304,10 @@ Projekt do korekty i zatwierdzenia użytkownika:
 ## Wersja i commit
 
 - gałąź: `codex/konfigurowalne-skroty-20261026`;
+- poprawka rozpoznawania `Polish_Poland` i natychmiastowej zmiany języka:
+  commit `e7f02107` (`fix(i18n): apply Windows language changes immediately`);
+  testy źródłowe zaliczone, build, instalacja i publikacja tej poprawki nie
+  zostały jeszcze wykonane;
 - commit wdrożenia wielojęzycznego interfejsu:
   `11f6459d` (`feat(i18n): add Polish and English interface catalogs`);
 - stan źródeł po commicie: zapisany na gałęzi wydania AMC Test;
