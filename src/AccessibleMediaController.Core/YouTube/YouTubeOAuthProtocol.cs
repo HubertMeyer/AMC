@@ -108,6 +108,67 @@ public static class YouTubeOAuthProtocol
         };
     }
 
+    public static IReadOnlyDictionary<string, string> CreateBrokerCodeExchangeFields(
+        string clientId,
+        Uri redirectUri,
+        string code,
+        string codeVerifier)
+    {
+        var normalizedClientId = ValidateClientId(clientId);
+        ValidateRedirectUri(redirectUri);
+        if (string.IsNullOrWhiteSpace(code))
+            throw new ArgumentException("Google nie przekazał kodu logowania.", nameof(code));
+        ValidateVerifier(codeVerifier);
+        return new Dictionary<string, string>
+        {
+            ["client_id"] = normalizedClientId,
+            ["code"] = code.Trim(),
+            ["code_verifier"] = codeVerifier,
+            ["grant_type"] = "authorization_code",
+            ["redirect_uri"] = redirectUri.AbsoluteUri
+        };
+    }
+
+    public static IReadOnlyDictionary<string, string> CreateBrokerRefreshFields(
+        string clientId,
+        string refreshToken)
+    {
+        var normalizedClientId = ValidateClientId(clientId);
+        if (string.IsNullOrWhiteSpace(refreshToken))
+            throw new ArgumentException("Brak zapisanego odświeżenia logowania YouTube.", nameof(refreshToken));
+        return new Dictionary<string, string>
+        {
+            ["client_id"] = normalizedClientId,
+            ["refresh_token"] = refreshToken,
+            ["grant_type"] = "refresh_token"
+        };
+    }
+
+    public static IReadOnlyDictionary<string, string> CreateRevocationFields(string token)
+    {
+        var normalized = token?.Trim() ?? string.Empty;
+        if (normalized.Length is < 8 or > 16_384
+            || normalized.Any(character => char.IsWhiteSpace(character) || char.IsControl(character)))
+            throw new ArgumentException("Brak prawidłowego tokenu do cofnięcia dostępu YouTube.", nameof(token));
+        return new Dictionary<string, string> { ["token"] = normalized };
+    }
+
+    public static Uri ValidateTokenBrokerEndpoint(Uri endpoint)
+    {
+        ArgumentNullException.ThrowIfNull(endpoint);
+        if (endpoint.Scheme != Uri.UriSchemeHttps
+            || string.IsNullOrWhiteSpace(endpoint.Host)
+            || !string.IsNullOrEmpty(endpoint.UserInfo)
+            || !string.IsNullOrEmpty(endpoint.Query)
+            || !string.IsNullOrEmpty(endpoint.Fragment)
+            || !string.Equals(endpoint.AbsolutePath, "/v1/google/token", StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException(
+                "Serwer logowania YouTube ma nieprawidłowy adres HTTPS.");
+        }
+        return endpoint;
+    }
+
     public static YouTubeTokenSet ReadTokenResponse(
         string json,
         string clientId,

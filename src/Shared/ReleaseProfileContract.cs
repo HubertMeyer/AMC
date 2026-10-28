@@ -88,7 +88,7 @@ internal static class ReleaseProfileContract
         "AMC/logs",
         "AccessibleMediaController.Public",
         ["files", "radio", "podcasts", "wiim", "sonos"],
-        CommonCapabilities,
+        [.. CommonCapabilities, "youtube.account.readonly"],
         @"Local\AccessibleMultimediaController.PythonLauncher.Public.SingleInstance",
         @"Local\AccessibleMultimediaController.PythonUpdater.Public.SingleInstance",
         "AMC/Updater",

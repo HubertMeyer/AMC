@@ -27,6 +27,47 @@ zastępuje wcześniejsze ustalenie z pierwszego etapu realizacji, według które
 priorytet 3 miał pozostać jedynie rekomendacją do osobnego zadania. Publikacja
 na GitHubie i instalator mają powstać dopiero po zakończeniu równoległej pracy.
 
+### Korekta układu kart i sekcji — 27.10.2026
+
+Użytkownik ustalił następującą kolejność kart: **Ogólne**, **Radio i
+nagrywanie**, **Podcasty i YouTube**, **Dostępność i komunikaty**,
+**Klawiatura**, **Aktualizacje**, **Integracja z Windows**. Integracja pozostaje
+na końcu jako ustawienie systemowe wykonywane rzadziej niż ustawienia pracy z
+mediami.
+
+Karty Radio oraz Podcasty mają zaczynać się od ustawień zapisu. Na karcie
+Radio najpierw wybiera się położenie nagrań, odczytuje ścieżkę osobnego
+folderu i ustawia format; dopiero potem występują opcje bufora, rozpoznawania i
+harmonogramu. Na karcie Podcasty najpierw występują folder i format wideo, a
+potem automatyczne odświeżanie. Ta korekta zastępuje wcześniejszy techniczny
+układ kontrolek i nie zmienia wartości modelu ani dotychczasowych ustawień
+użytkownika.
+
+### Korekta edytora komunikatów i kierunek wielojęzyczności — 27.10.2026
+
+Pole **Oznajmiaj automatycznie rozpoznane utwory** ma występować razem ze
+zwykłymi opcjami oznajmiania, przed listą edytowanych tekstów. Edytor własnych
+tekstów pozostaje bezpośrednio na karcie, ale trafia na jej koniec pod
+nagłówkiem **Własne teksty komunikatów**. Lista zdarzeń i powiązane pole tekstu
+są prostsze w obsłudze NVDA niż edytowalna tabela; osobny przycisk i dialog
+ukrywałyby funkcję oraz wymagały dodatkowego kontraktu powrotu fokusu.
+
+Przyszłego języka interfejsu nie należy łączyć z profilem komunikatów. Zalecany
+model ma dwa niezależne wybory:
+
+- **Język interfejsu** na karcie Ogólne: zgodny z systemem, polski, angielski
+  i później kolejne kompletne katalogi tłumaczeń;
+- **Profil komunikatów** na karcie Dostępność i komunikaty: standardowy,
+  ograniczony, szczegółowy albo własny.
+
+W modelu dane powinny nadal używać stabilnych kluczy zdarzeń i profili, a NVDA
+ma otrzymywać wyłącznie przetłumaczone nazwy użytkowe. Domyślne teksty należy
+przechowywać osobno dla każdego języka. Własne nadpisania powinny być związane
+z językiem, aby polski tekst użytkownika nie zastąpił angielskiego domyślnego
+komunikatu po zmianie języka. Obecne polskie nadpisania trzeba przy przyszłej
+migracji zachować jako profil własny dla języka polskiego. Ten model jest na
+razie decyzją projektową, a nie zaimplementowaną funkcją.
+
 ## Wynik audytu
 
 ### 1. Potwierdzona przyczyna pomijania ścieżek przez Tab
@@ -183,6 +224,16 @@ Zrealizowano priorytety 1–3 oraz korekty nazw znalezione podczas audytu:
   politykę profilu, a stary wspólny `state.json` nie jest zapisywany;
 - karta **Komunikaty** otrzymała nazwę **Dostępność i komunikaty** bez zmiany
   działania istniejących przełączników i szablonów.
+- karty ustawiono w kolejności zgodnej z codziennym przebiegiem pracy:
+  **Ogólne**, **Radio**, **Podcasty**, **Dostępność i komunikaty**,
+  **Klawiatura**, **Aktualizacje**, **Integracja z Windows**;
+- karta Radio rozpoczyna się od sekcji **Zapisywanie nagrań**, a karta
+  Podcasty od sekcji **Zapisywanie pobranych materiałów**; ustawienia bufora,
+  rozpoznawania, harmonogramu i automatycznego odświeżania są w dalszych,
+  nazwanych sekcjach;
+- kolejność utworzenia kontrolek odpowiada kolejności wizualnej, dlatego Tab
+  przechodzi przez ścieżkę przed przyciskiem **Wybierz**, bez osobnej,
+  niewidocznej logiki nawigacji.
 
 Ponowny audyt statyczny wykazał 65 przechowywanych kontrolek interaktywnych
 tego okna. Wszystkie 65 mają jawne `SetName(...)`; dynamiczne pola grup
@@ -233,6 +284,12 @@ roboczym należą do osobnego zadania i zostały zachowane bez cofania.
 
 Projekt tekstu po instalacji i ręcznym odbiorze:
 
+> Karty Ustawień są ułożone w kolejności: **Ogólne**, **Radio i nagrywanie**,
+> **Podcasty i YouTube**, **Dostępność i komunikaty**, **Klawiatura**,
+> **Aktualizacje**, **Integracja z Windows**. Na kartach Radio oraz Podcasty
+> ustawienia miejsca i formatu zapisu znajdują się przed ustawieniami
+> odtwarzania, rozpoznawania, odświeżania i harmonogramu.
+>
 > Na kartach **Radio i nagrywanie** oraz **Podcasty i YouTube** Tab najpierw
 > przechodzi do pola z bieżącą ścieżką, a dopiero potem do przycisku
 > **Wybierz**. Pole jest tylko do odczytu i nie pozwala przypadkowo zmienić
@@ -252,6 +309,11 @@ Projekt tekstu po instalacji i ręcznym odbiorze:
 > Dotychczasowa karta **Komunikaty** nazywa się teraz **Dostępność i
 > komunikaty**, aby jej nazwa obejmowała także szczegółowe podpowiedzi
 > klawiatury i pozostałe opcje dla czytnika ekranu.
+>
+> Opcja **Oznajmiaj automatycznie rozpoznane utwory** znajduje się przed
+> edytorem komunikatów. Na końcu karty sekcja **Własne teksty komunikatów**
+> pozwala wybrać zdarzenie strzałkami, nacisnąć Tab i zmienić jego tekst.
+> Pozostawienie tekstu pustego wyłącza tylko wybrany komunikat.
 
 ## Uzasadnienie i decyzje
 
@@ -346,6 +408,20 @@ Wspólna weryfikacja i publikacja SET-001 oraz KEY-001 27.10.2026:
 - wydanie testowe `test-2026.10.27.0057` opublikowano i odczytowo
   zweryfikowano na GitHubie wraz z sumami plików.
 
+Weryfikacja roboczych korekt układu kart i edytora komunikatów 27.10.2026:
+
+- kontrola składni `wxlite/amc_wx_lite/gui.py`: zaliczona;
+- 26 celowanych testów struktury Ustawień i Menedżera skrótów: **26
+  zaliczonych, 0 błędów**;
+- nowy kontrakt sprawdza dokładną kolejność siedmiu kart oraz kolejność
+  tworzenia pól folderu, formatu, bufora i odświeżania wpływającą na Tab;
+- kontrakt sprawdza również, że opcja rozpoznanych utworów i ustawienia stanu
+  radia poprzedzają końcowy edytor własnych tekstów, a lista i pole tekstu mają
+  jawne podpowiedzi klawiatury;
+- nie otwierano okna GUI, nie budowano paczki ani instalatora, nie zmieniano
+  instalacji i nie publikowano wydania; korekta ma wejść do następnego
+  wspólnego wydania po zakończeniu równoległych prac.
+
 Rzeczywista aktualizacja 27.10.2026:
 
 - oficjalny `AMC-Python-Updater.exe` bezpiecznie zamknął poprzednią instancję,
@@ -400,6 +476,10 @@ Najważniejsze użyte polecenia i wejścia kontrolne:
 - Wcześniejsza paczka testowa SET-001 v2 nie zawierała końcowego etapu. Zastąpił
   ją wspólny instalator `AMC-Test-2026-10-27-0057.exe`, który zawiera kartę
   **Aktualizacje**, nazwę **Dostępność i komunikaty** i kartę **Klawiatura**.
+- Nowa kolejność kart i sekcji jest obecnie zmianą źródłową z testami
+  kontraktowymi. Nie jest jeszcze dowodem działania z NVDA w zainstalowanej
+  aplikacji; ręczny odbiór powinien sprawdzić przełączanie kart, Tab i
+  Shift+Tab na kartach Radio oraz Podcasty.
 
 ## Wersja i commit
 
@@ -415,3 +495,6 @@ Najważniejsze użyte polecenia i wejścia kontrolne:
   zweryfikowane;
 - lokalna aktualizacja przez oficjalny aktualizator: wykonana i zweryfikowana;
   ręczny test kart Ustawień z NVDA pozostaje.
+- korekta układu kart z 27.10.2026: zmiana robocza po powyższym wydaniu,
+  obecnie bez osobnego commitu, builda, instalatora, instalacji i publikacji;
+  zostanie objęta następnym wspólnym wydaniem.

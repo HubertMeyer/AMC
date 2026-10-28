@@ -13,6 +13,7 @@ internal static class Program
     // poprawne wycofanie calej aktualizacji dokladnie na pliku aktualizatora.
     private static readonly TimeSpan FileReplacementTimeout = TimeSpan.FromSeconds(10);
     private static readonly TimeSpan FileReplacementRetryDelay = TimeSpan.FromMilliseconds(200);
+    private const int RescueTransactionRetention = 2;
 
     private const int SupportedBundleFormat = 1;
     private const int SupportedInterfaceVersion = 1;
@@ -137,6 +138,7 @@ internal static class Program
                 }
                 return AppStillRunning;
             }
+            PruneRescueTransactions(options.Target);
             if (options.Source is not null)
             {
                 ApplyPackage(options.Source, options.Target, manifest!.Files);
@@ -606,8 +608,84 @@ internal static class Program
                     // ze system jeszcze nie pozwolil posprzatac katalogu.
                 }
             }
+            PruneRescueTransactions(
+                target,
+                rollbackComplete ? null : transaction);
             throw;
         }
+    }
+
+    internal static int PruneRescueTransactions(
+        string target,
+        string? protectedTransaction = null)
+    {
+        target = Path.GetFullPath(target);
+        if (!Directory.Exists(target)) return 0;
+
+        var protectedPath = string.IsNullOrWhiteSpace(protectedTransaction)
+            ? null
+            : Path.GetFullPath(protectedTransaction);
+        List<DirectoryInfo> candidates;
+        try
+        {
+            candidates = Directory
+                .EnumerateDirectories(
+                    target,
+                    ".aktualizacja-*",
+                    SearchOption.TopDirectoryOnly)
+                .Select(path => new DirectoryInfo(path))
+                .Where(directory =>
+                {
+                    var suffix = directory.Name[".aktualizacja-".Length..];
+                    return Guid.TryParseExact(suffix, "N", out _)
+                           && directory.Parent is not null
+                           && string.Equals(
+                               Path.GetFullPath(directory.Parent.FullName)
+                                   .TrimEnd(Path.DirectorySeparatorChar),
+                               target.TrimEnd(Path.DirectorySeparatorChar),
+                               StringComparison.OrdinalIgnoreCase)
+                           && !directory.Attributes.HasFlag(FileAttributes.ReparsePoint);
+                })
+                .OrderByDescending(directory =>
+                    protectedPath is not null
+                    && string.Equals(
+                        Path.GetFullPath(directory.FullName),
+                        protectedPath,
+                        StringComparison.OrdinalIgnoreCase))
+                .ThenByDescending(directory => directory.LastWriteTimeUtc)
+                .ThenByDescending(directory => directory.Name, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+        }
+        catch (Exception exception) when (
+            exception is IOException
+                or UnauthorizedAccessException
+                or DirectoryNotFoundException)
+        {
+            Console.Error.WriteLine(
+                "Nie udało się sprawdzić kopii ratunkowych aktualizacji: "
+                + exception.Message);
+            return 0;
+        }
+
+        var removed = 0;
+        foreach (var directory in candidates.Skip(RescueTransactionRetention))
+        {
+            try
+            {
+                Directory.Delete(directory.FullName, recursive: true);
+                removed++;
+            }
+            catch (Exception exception) when (
+                exception is IOException
+                    or UnauthorizedAccessException
+                    or DirectoryNotFoundException)
+            {
+                Console.Error.WriteLine(
+                    "Nie udało się usunąć starej kopii ratunkowej aktualizacji: "
+                    + exception.Message);
+            }
+        }
+        return removed;
     }
 
     private static bool FilesHaveSameContent(string first, string second)

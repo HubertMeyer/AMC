@@ -123,6 +123,7 @@ class LiteHostClient:
         release_profile: str | None = None,
         youtube_client_id: str | None = None,
         youtube_client_secret_file: str | Path | None = None,
+        youtube_token_broker: str | None = None,
         common_data_snapshot: str | Path | None = None,
         on_event: Callable[[str, dict], None] | None = None,
         on_stderr: Callable[[str], None] | None = None,
@@ -148,6 +149,9 @@ class LiteHostClient:
         )
         self.youtube_client_secret_file = (
             str(youtube_client_secret_file) if youtube_client_secret_file else None
+        )
+        self.youtube_token_broker = (
+            str(youtube_token_broker).strip() if youtube_token_broker else None
         )
         self.common_data_snapshot = (
             str(common_data_snapshot) if common_data_snapshot else None
@@ -198,6 +202,8 @@ class LiteHostClient:
                 "--youtube-client-secret-file",
                 self.youtube_client_secret_file,
             ]
+        if self.youtube_token_broker is not None:
+            command += ["--youtube-token-broker", self.youtube_token_broker]
         if self.common_data_snapshot is not None:
             command += ["--common-data-snapshot", self.common_data_snapshot]
         return command

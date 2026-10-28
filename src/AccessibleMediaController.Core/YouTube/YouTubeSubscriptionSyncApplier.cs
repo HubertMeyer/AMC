@@ -25,12 +25,15 @@ public static class YouTubeSubscriptionSyncApplier
     public static YouTubeSubscriptionSyncApplyResult Apply(
         IEnumerable<YouTubeSubscription> remoteSubscriptions,
         PodcastSettings localPodcasts,
-        bool restoreSuppressed = false)
+        bool restoreSuppressed = false,
+        DateTime? refreshUtc = null)
     {
         ArgumentNullException.ThrowIfNull(remoteSubscriptions);
         ArgumentNullException.ThrowIfNull(localPodcasts);
+        var remote = remoteSubscriptions.ToArray();
+        var refreshedAt = (refreshUtc ?? DateTime.UtcNow).ToUniversalTime().Ticks;
         var plan = YouTubeSubscriptionSyncPlanner.Create(
-            remoteSubscriptions,
+            remote,
             localPodcasts,
             restoreSuppressed);
 
@@ -74,8 +77,18 @@ public static class YouTubeSubscriptionSyncApplier
                         action.ExistingSubscriptionId,
                         StringComparison.Ordinal));
                 existing.IsInLibrary = true;
-                if (!existing.HasCustomTitle && !string.IsNullOrWhiteSpace(action.Title))
+                var cameFromAccount = existing.Id.StartsWith(
+                    AccountChannelIdPrefix,
+                    StringComparison.Ordinal);
+                if (cameFromAccount
+                    && !existing.HasCustomTitle
+                    && !string.IsNullOrWhiteSpace(action.Title))
                     existing.Title = action.Title;
+                if (cameFromAccount)
+                {
+                    existing.IsYouTubeAccountData = true;
+                    existing.YouTubeAccountDataRefreshedUtcTicks = refreshedAt;
+                }
                 restored++;
                 continue;
             }
@@ -91,9 +104,23 @@ public static class YouTubeSubscriptionSyncApplier
                 HomepageUrl = $"https://www.youtube.com/channel/{Uri.EscapeDataString(action.ChannelId)}",
                 LastRefreshUtcTicks = 0,
                 RefreshIntervalMinutes = localPodcasts.YouTubeRefreshIntervalMinutes,
-                IsInLibrary = true
+                IsInLibrary = true,
+                IsYouTubeAccountData = true,
+                YouTubeAccountDataRefreshedUtcTicks = refreshedAt
             });
             added++;
+        }
+
+        // Pozycja już obecna nie trafia do planu zmian. Jeśli utworzyła ją
+        // wcześniejsza synchronizacja konta, samo jawne ponowne sprawdzenie
+        // również odnawia trzydziestodniowy termin danych API.
+        var remoteIds = remote.Select(item => item.ChannelId).ToHashSet(StringComparer.Ordinal);
+        foreach (var existing in localPodcasts.Subscriptions.Where(item =>
+                     item.IsYouTubeAccountData
+                     && item.Id.StartsWith(AccountChannelIdPrefix, StringComparison.Ordinal)
+                     && remoteIds.Contains(item.Id[AccountChannelIdPrefix.Length..])))
+        {
+            existing.YouTubeAccountDataRefreshedUtcTicks = refreshedAt;
         }
 
         return new YouTubeSubscriptionSyncApplyResult(

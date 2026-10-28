@@ -46,6 +46,8 @@ internal static class Program
         ("aktualizator przyjmuje pełny instalator właściwego profilu", UpdaterAcceptsMatchingInstaller),
         ("aktualizator odrzuca instalator innego profilu", UpdaterRejectsForeignInstaller),
         ("aktualizator odrzuca instalator o innej sumie", UpdaterRejectsInstallerWithWrongHash),
+        ("aktualizator zachowuje dwie najnowsze kopie ratunkowe", UpdaterKeepsTwoNewestRescueTransactions),
+        ("aktualizator chroni kopię bieżącej niepełnej transakcji", UpdaterProtectsCurrentRescueTransaction),
     ];
 
     public static int Main()
@@ -610,6 +612,83 @@ internal static class Program
                     new string('0', 64),
                     target.Root,
                     ReleaseProfileContract.Test)));
+    }
+
+    private static void UpdaterKeepsTwoNewestRescueTransactions()
+    {
+        var root = Path.Combine(
+            Path.GetTempPath(),
+            "amc-updater-retention-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try
+        {
+            var transactions = Enumerable.Range(0, 4)
+                .Select(_ => Path.Combine(
+                    root,
+                    ".aktualizacja-" + Guid.NewGuid().ToString("N")))
+                .ToArray();
+            for (var index = 0; index < transactions.Length; index++)
+            {
+                Directory.CreateDirectory(transactions[index]);
+                File.WriteAllText(Path.Combine(transactions[index], "kopia.bin"), index.ToString());
+                Directory.SetLastWriteTimeUtc(
+                    transactions[index],
+                    DateTime.UtcNow.AddHours(-transactions.Length + index));
+            }
+            var unrelated = Path.Combine(root, ".aktualizacja-nie-jest-identyfikatorem");
+            Directory.CreateDirectory(unrelated);
+
+            var removed = AccessibleMediaController.PythonUpdater.Program
+                .PruneRescueTransactions(root);
+
+            Equal(2, removed);
+            Equal(false, Directory.Exists(transactions[0]));
+            Equal(false, Directory.Exists(transactions[1]));
+            Equal(true, Directory.Exists(transactions[2]));
+            Equal(true, Directory.Exists(transactions[3]));
+            Equal(true, Directory.Exists(unrelated));
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    private static void UpdaterProtectsCurrentRescueTransaction()
+    {
+        var root = Path.Combine(
+            Path.GetTempPath(),
+            "amc-updater-protected-retention-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try
+        {
+            var oldest = Path.Combine(
+                root,
+                ".aktualizacja-" + Guid.NewGuid().ToString("N"));
+            var newest = Path.Combine(
+                root,
+                ".aktualizacja-" + Guid.NewGuid().ToString("N"));
+            var current = Path.Combine(
+                root,
+                ".aktualizacja-" + Guid.NewGuid().ToString("N"));
+            foreach (var path in new[] { oldest, newest, current })
+                Directory.CreateDirectory(path);
+            Directory.SetLastWriteTimeUtc(oldest, DateTime.UtcNow.AddHours(-3));
+            Directory.SetLastWriteTimeUtc(newest, DateTime.UtcNow.AddHours(-1));
+            Directory.SetLastWriteTimeUtc(current, DateTime.UtcNow.AddHours(-4));
+
+            var removed = AccessibleMediaController.PythonUpdater.Program
+                .PruneRescueTransactions(root, current);
+
+            Equal(1, removed);
+            Equal(false, Directory.Exists(oldest));
+            Equal(true, Directory.Exists(newest));
+            Equal(true, Directory.Exists(current));
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
     }
 
     private static void WithInstaller(string fileName, Action<string, string> action)

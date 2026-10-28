@@ -19,11 +19,14 @@ internal sealed class LiteYouTubeWindowsAccountBackend : ILiteYouTubeAccountBack
     private readonly YouTubePlaylistClient _playlists = new();
     private readonly YouTubeBroadcastClient _broadcasts = new();
     private readonly PodcastLibraryMutationStore _podcasts;
+    private readonly bool _publicDataPolicy;
     private readonly SemaphoreSlim _gate = new(1, 1);
     private PreviewSnapshot? _preview;
     private PlaylistPreviewSnapshot? _playlistPreview;
     private readonly Dictionary<string, BroadcastSnapshot> _broadcastCache =
         new(StringComparer.Ordinal);
+    private YouTubeAccountDataDeletionResult _expiredDataDeletion = new(0, 0);
+    private bool _accountDataMaintenanceFailed;
     private bool _disposed;
 
     internal LiteYouTubeWindowsAccountBackend(
@@ -40,9 +43,60 @@ internal sealed class LiteYouTubeWindowsAccountBackend : ILiteYouTubeAccountBack
             YouTubeCredentialStore.ForReleaseProfile(releaseProfile),
             new YouTubeOAuthTokenClient(),
             OpenAuthorizationPageAsync);
+        _publicDataPolicy = false;
     }
 
-    public YouTubeAccountStatus GetStatus() => _account.GetStatus();
+    internal LiteYouTubeWindowsAccountBackend(
+        string clientId,
+        Uri tokenBrokerEndpoint,
+        string releaseProfile,
+        string podcastsDatabasePath)
+    {
+        _podcasts = new PodcastLibraryMutationStore(
+            Path.GetFullPath(podcastsDatabasePath));
+        _account = new YouTubeAccountCoordinator(
+            clientId,
+            tokenBrokerEndpoint,
+            YouTubeCredentialStore.ForReleaseProfile(releaseProfile),
+            new YouTubeOAuthTokenClient(),
+            OpenAuthorizationPageAsync);
+        _publicDataPolicy = string.Equals(
+            releaseProfile,
+            "public",
+            StringComparison.OrdinalIgnoreCase);
+        if (_publicDataPolicy)
+        {
+            try
+            {
+                _expiredDataDeletion = _podcasts.DeleteExpiredYouTubeAccountData(
+                    DateTime.UtcNow,
+                    TimeSpan.FromDays(30));
+            }
+            catch (Exception exception) when (exception is IOException
+                or UnauthorizedAccessException
+                or InvalidDataException
+                or Microsoft.Data.Sqlite.SqliteException)
+            {
+                _accountDataMaintenanceFailed = true;
+            }
+        }
+    }
+
+    public YouTubeAccountStatus GetStatus()
+    {
+        if (_accountDataMaintenanceFailed)
+            return new YouTubeAccountStatus(
+                false,
+                "Nie można bezpiecznie sprawdzić i usunąć nieaktualnych danych konta YouTube.",
+                null);
+        var status = _account.GetStatus();
+        if (!_expiredDataDeletion.Changed) return status;
+        return status with
+        {
+            Message = status.Message
+                + $" Usunięto nieaktualne dane konta YouTube: źródła {_expiredDataDeletion.RemovedSources}, materiały {_expiredDataDeletion.RemovedEpisodes}."
+        };
+    }
 
     public async Task<YouTubeAccountOperationResult> LoginAsync(
         CancellationToken cancellationToken)
@@ -50,6 +104,7 @@ internal sealed class LiteYouTubeWindowsAccountBackend : ILiteYouTubeAccountBack
         await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
+            EnsureAccountDataMaintenance();
             var result = await _account.LoginAsync(cancellationToken).ConfigureAwait(false);
             if (result.Succeeded)
             {
@@ -71,11 +126,28 @@ internal sealed class LiteYouTubeWindowsAccountBackend : ILiteYouTubeAccountBack
         await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            var result = await _account.LogoutAsync(cancellationToken).ConfigureAwait(false);
+            EnsureAccountDataMaintenance();
+            YouTubeAccountDataDeletionResult removed = new(0, 0);
+            var result = _publicDataPolicy
+                ? await _account.RevokeAndLogoutAsync(
+                    token =>
+                    {
+                        token.ThrowIfCancellationRequested();
+                        removed = _podcasts.DeleteAllYouTubeAccountData(DateTime.UtcNow);
+                        return Task.CompletedTask;
+                    },
+                    cancellationToken).ConfigureAwait(false)
+                : await _account.LogoutAsync(cancellationToken).ConfigureAwait(false);
             _preview = null;
             _playlistPreview = null;
             _broadcastCache.Clear();
-            return result;
+            return _publicDataPolicy && result.Succeeded
+                ? result with
+                {
+                    Message = result.Message
+                        + $" Usunięte źródła: {removed.RemovedSources}; materiały: {removed.RemovedEpisodes}."
+                }
+                : result;
         }
         finally
         {
@@ -90,6 +162,7 @@ internal sealed class LiteYouTubeWindowsAccountBackend : ILiteYouTubeAccountBack
         await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
+            EnsureAccountDataMaintenance();
             var token = await _account.GetAccessTokenAsync(cancellationToken)
                 .ConfigureAwait(false);
             var remote = await _subscriptions.ReadAllAsync(token, cancellationToken)
@@ -114,6 +187,7 @@ internal sealed class LiteYouTubeWindowsAccountBackend : ILiteYouTubeAccountBack
         await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
+            EnsureAccountDataMaintenance();
             if (_preview is not { } preview
                 || preview.RestoreSuppressed != restoreSuppressed
                 || DateTimeOffset.UtcNow - preview.CreatedAtUtc > PreviewLifetime)
@@ -140,6 +214,7 @@ internal sealed class LiteYouTubeWindowsAccountBackend : ILiteYouTubeAccountBack
         await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
+            EnsureAccountDataMaintenance();
             var token = await _account.GetAccessTokenAsync(cancellationToken)
                 .ConfigureAwait(false);
             var remote = await _playlists.ReadAllAsync(token, cancellationToken)
@@ -164,6 +239,7 @@ internal sealed class LiteYouTubeWindowsAccountBackend : ILiteYouTubeAccountBack
         await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
+            EnsureAccountDataMaintenance();
             if (_playlistPreview is not { } preview
                 || preview.RestoreSuppressed != restoreSuppressed
                 || DateTimeOffset.UtcNow - preview.CreatedAtUtc > PreviewLifetime)
@@ -192,6 +268,7 @@ internal sealed class LiteYouTubeWindowsAccountBackend : ILiteYouTubeAccountBack
         await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
+            EnsureAccountDataMaintenance();
             if (!forceRefresh
                 && _broadcastCache.TryGetValue(subscriptionId, out var cached)
                 && DateTimeOffset.UtcNow - cached.CreatedAtUtc <= BroadcastCacheLifetime)
@@ -252,6 +329,13 @@ internal sealed class LiteYouTubeWindowsAccountBackend : ILiteYouTubeAccountBack
             return false;
         channelId = candidate;
         return true;
+    }
+
+    private void EnsureAccountDataMaintenance()
+    {
+        if (_accountDataMaintenanceFailed)
+            throw new InvalidOperationException(
+                "Nie można bezpiecznie sprawdzić i usunąć nieaktualnych danych konta YouTube.");
     }
 
     private static Task<bool> OpenAuthorizationPageAsync(

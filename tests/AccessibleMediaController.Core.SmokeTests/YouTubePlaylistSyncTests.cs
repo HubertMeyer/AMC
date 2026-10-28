@@ -30,6 +30,8 @@ internal static class YouTubePlaylistSyncTests
             database.LoadInto(settings);
             Assert(settings.Subscriptions.Single().SourceKind == PodcastSourceKind.YouTubePlaylist
                    && settings.Subscriptions.Single().IsInLibrary
+                   && settings.Subscriptions.Single().IsYouTubeAccountData
+                   && settings.Subscriptions.Single().YouTubeAccountDataRefreshedUtcTicks > 0
                    && settings.Subscriptions.Single().Description == "Opis playlisty z YouTube."
                    && settings.Episodes.Single().SourceIdentifier == "Film0000001"
                    && settings.Episodes.Single().Description == "Pełny opis materiału."

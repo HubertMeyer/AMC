@@ -234,6 +234,15 @@ public static class YouTubePlaylistSyncApplier
                 timestamp,
                 sourceKind: PodcastSourceKind.YouTubePlaylist,
                 addToLibrary: true);
+            var storedId = action.ExistingSubscriptionId
+                ?? "youtube-playlist:" + action.Playlist.PlaylistId;
+            var stored = localPodcasts.Subscriptions.Single(candidate =>
+                string.Equals(
+                    candidate.Id,
+                    storedId,
+                    StringComparison.Ordinal));
+            stored.IsYouTubeAccountData = true;
+            stored.YouTubeAccountDataRefreshedUtcTicks = timestamp.Ticks;
             addedVideos += update.AddedEpisodes;
             updatedVideos += update.UpdatedEpisodes;
             if (action.Kind == YouTubePlaylistSyncActionKind.Add) added++;

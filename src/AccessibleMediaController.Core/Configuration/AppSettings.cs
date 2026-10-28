@@ -1083,6 +1083,17 @@ public sealed class PodcastSubscriptionSettings
     public PlaybackTempoAlgorithm? TempoAlgorithmOverride { get; set; }
     public bool IsFavorite { get; set; }
     public bool IsInLibrary { get; set; } = true;
+    /// <summary>
+    /// Rekord został utworzony lub zaktualizowany z danych dostępnych dopiero
+    /// po autoryzacji konta YouTube. Publiczny profil może dzięki temu usunąć
+    /// wyłącznie dane konta, bez naruszania publicznych źródeł dodanych ręcznie.
+    /// </summary>
+    public bool IsYouTubeAccountData { get; set; }
+    /// <summary>
+    /// Czas ostatniego potwierdzenia danych przez autoryzowane YouTube Data API.
+    /// Zero oznacza brak takiego potwierdzenia, nie bieżącą datę.
+    /// </summary>
+    public long YouTubeAccountDataRefreshedUtcTicks { get; set; }
 }
 
 public sealed class PodcastEpisodeSettings

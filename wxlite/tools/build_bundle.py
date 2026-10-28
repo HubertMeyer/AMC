@@ -173,6 +173,8 @@ def build_label(
 PROBLEM_REPORT_ENDPOINT_RESOURCE = "problem-report-endpoint.txt"
 YOUTUBE_OAUTH_CLIENT_ID_RESOURCE = "youtube-oauth-client-id.txt"
 YOUTUBE_OAUTH_CLIENT_SECRET_RESOURCE = "youtube-oauth-client-secret.txt"
+YOUTUBE_OAUTH_PUBLIC_CLIENT_ID_RESOURCE = "youtube-oauth-public-client-id.txt"
+YOUTUBE_OAUTH_PUBLIC_BROKER_RESOURCE = "youtube-oauth-public-token-broker.txt"
 
 
 def _read_optional_problem_report_endpoint(source_wxlite: Path) -> str | None:
@@ -203,6 +205,41 @@ def _read_optional_problem_report_endpoint(source_wxlite: Path) -> str | None:
     return endpoint
 
 
+def _read_optional_public_youtube_oauth(
+    source_wxlite: Path,
+) -> tuple[str, str] | None:
+    package = source_wxlite / "amc_wx_lite"
+    client_path = package / YOUTUBE_OAUTH_PUBLIC_CLIENT_ID_RESOURCE
+    broker_path = package / YOUTUBE_OAUTH_PUBLIC_BROKER_RESOURCE
+    if not client_path.exists() and not broker_path.exists():
+        return None
+    if not client_path.is_file() or not broker_path.is_file():
+        raise SystemExit("Publiczna konfiguracja OAuth YouTube musi zawierać identyfikator i broker.")
+    try:
+        if client_path.stat().st_size > 2048 or broker_path.stat().st_size > 2048:
+            raise ValueError
+        client_id = client_path.read_text(encoding="utf-8").strip()
+        broker = broker_path.read_text(encoding="utf-8").strip()
+        parsed = urlsplit(broker)
+        _ = parsed.port
+    except (OSError, UnicodeError, ValueError) as error:
+        raise SystemExit("Nie można odczytać publicznej konfiguracji OAuth YouTube.") from error
+    if (
+        not 20 <= len(client_id) <= 512
+        or not client_id.endswith(".apps.googleusercontent.com")
+        or any(character.isspace() or ord(character) < 32 for character in client_id)
+        or parsed.scheme.casefold() != "https"
+        or not parsed.hostname
+        or parsed.username is not None
+        or parsed.password is not None
+        or parsed.query
+        or parsed.fragment
+        or parsed.path != "/v1/google/token"
+    ):
+        raise SystemExit("Publiczna konfiguracja OAuth YouTube jest nieprawidłowa.")
+    return client_id, broker
+
+
 def copy_python_code(
     target: Path,
     profile: ReleaseProfile | None = None,
@@ -218,6 +255,7 @@ def copy_python_code(
 
     selected_profile = profile or profile_from_id(TEST_PROFILE_ID)
     report_endpoint = _read_optional_problem_report_endpoint(source_wxlite)
+    public_youtube_oauth = _read_optional_public_youtube_oauth(source_wxlite)
     package = target / "app" / "amc_wx_lite"
     package.mkdir(parents=True, exist_ok=True)
     copied = []
@@ -240,17 +278,24 @@ def copy_python_code(
     else:
         endpoint_destination.write_text(report_endpoint + "\n", encoding="utf-8")
         copied.append(f"app/amc_wx_lite/{PROBLEM_REPORT_ENDPOINT_RESOURCE}")
-    # Konfiguracja OAuth z katalogu deweloperskiego nigdy nie trafia do
-    # publikowanej paczki. Do czasu przejścia na PKCE bez sekretu albo broker
-    # czysta instalacja uczciwie ukrywa konto YouTube; aktualizacja nie usuwa
-    # jednak niezarządzanej lokalnej konfiguracji z istniejącej instalacji.
+    # Lokalny sekret i identyfikator AMC Test nigdy nie trafiają do paczki.
     for resource in (
         YOUTUBE_OAUTH_CLIENT_ID_RESOURCE,
         YOUTUBE_OAUTH_CLIENT_SECRET_RESOURCE,
+        YOUTUBE_OAUTH_PUBLIC_CLIENT_ID_RESOURCE,
+        YOUTUBE_OAUTH_PUBLIC_BROKER_RESOURCE,
     ):
         destination = package / resource
         if destination.is_file():
             destination.unlink()
+    if selected_profile.profile_id == "public" and public_youtube_oauth is not None:
+        client_id, broker = public_youtube_oauth
+        for resource, value in (
+            (YOUTUBE_OAUTH_PUBLIC_CLIENT_ID_RESOURCE, client_id),
+            (YOUTUBE_OAUTH_PUBLIC_BROKER_RESOURCE, broker),
+        ):
+            (package / resource).write_text(value + "\n", encoding="utf-8")
+            copied.append(f"app/amc_wx_lite/{resource}")
     # AMC-wx-Lite.cmd zostaje w repo jako narzedzie deweloperskie. Nie wolno
     # go dokladac do paczki uzytkownika, bo moglby wybrac obcy interpreter.
     for name in ("requirements-win64.txt", "JAK_TESTOWAC.md"):

@@ -25,7 +25,8 @@ public sealed class YouTubeAccountCoordinator : IDisposable
     internal static TimeSpan MaximumLoginTimeout { get; } = TimeSpan.FromMinutes(30);
 
     private readonly string _clientId;
-    private readonly string _clientSecret;
+    private readonly string? _clientSecret;
+    private readonly Uri? _tokenBrokerEndpoint;
     private readonly IYouTubeCredentialStore _store;
     private readonly YouTubeOAuthTokenClient _tokenClient;
     private readonly Func<Uri, CancellationToken, Task<bool>> _openAuthorizationPage;
@@ -42,13 +43,65 @@ public sealed class YouTubeAccountCoordinator : IDisposable
         Func<Uri, CancellationToken, Task<bool>> openAuthorizationPage,
         Func<DateTimeOffset>? now = null,
         TimeSpan? loginTimeout = null)
+        : this(
+            clientId,
+            clientSecret,
+            null,
+            store,
+            tokenClient,
+            openAuthorizationPage,
+            now,
+            loginTimeout)
+    {
+    }
+
+    public YouTubeAccountCoordinator(
+        string clientId,
+        Uri tokenBrokerEndpoint,
+        IYouTubeCredentialStore store,
+        YouTubeOAuthTokenClient tokenClient,
+        Func<Uri, CancellationToken, Task<bool>> openAuthorizationPage,
+        Func<DateTimeOffset>? now = null,
+        TimeSpan? loginTimeout = null)
+        : this(
+            clientId,
+            null,
+            tokenBrokerEndpoint,
+            store,
+            tokenClient,
+            openAuthorizationPage,
+            now,
+            loginTimeout)
+    {
+    }
+
+    private YouTubeAccountCoordinator(
+        string clientId,
+        string? clientSecret,
+        Uri? tokenBrokerEndpoint,
+        IYouTubeCredentialStore store,
+        YouTubeOAuthTokenClient tokenClient,
+        Func<Uri, CancellationToken, Task<bool>> openAuthorizationPage,
+        Func<DateTimeOffset>? now,
+        TimeSpan? loginTimeout)
     {
         // Walidacja korzysta z tego samego kontraktu co rzeczywiste żądanie,
         // bez uruchamiania sieci i bez przechowywania osobnego wariantu reguł.
-        _ = YouTubeOAuthProtocol.CreateRefreshFields(
-            clientId, clientSecret, "validation-only");
+        if ((clientSecret is null) == (tokenBrokerEndpoint is null))
+            throw new ArgumentException("Wybierz dokładnie jeden sposób wymiany tokenów YouTube.");
+        if (clientSecret is not null)
+        {
+            _ = YouTubeOAuthProtocol.CreateRefreshFields(
+                clientId, clientSecret, "validation-only");
+        }
+        else
+        {
+            _ = YouTubeOAuthProtocol.CreateBrokerRefreshFields(clientId, "validation-only");
+            _ = YouTubeOAuthProtocol.ValidateTokenBrokerEndpoint(tokenBrokerEndpoint!);
+        }
         _clientId = clientId.Trim();
-        _clientSecret = clientSecret.Trim();
+        _clientSecret = clientSecret?.Trim();
+        _tokenBrokerEndpoint = tokenBrokerEndpoint;
         _store = store ?? throw new ArgumentNullException(nameof(store));
         _tokenClient = tokenClient ?? throw new ArgumentNullException(nameof(tokenClient));
         _openAuthorizationPage = openAuthorizationPage
@@ -96,14 +149,23 @@ public sealed class YouTubeAccountCoordinator : IDisposable
             if (!callback.Succeeded || string.IsNullOrWhiteSpace(callback.Code))
                 return new YouTubeAccountOperationResult(false, callback.Message);
 
-            var tokens = await _tokenClient.ExchangeCodeAsync(
-                _clientId,
-                _clientSecret,
-                receiver.RedirectUri,
-                callback.Code,
-                request.CodeVerifier,
-                _now(),
-                cancellationToken).ConfigureAwait(false);
+            var tokens = _tokenBrokerEndpoint is null
+                ? await _tokenClient.ExchangeCodeAsync(
+                    _clientId,
+                    _clientSecret!,
+                    receiver.RedirectUri,
+                    callback.Code,
+                    request.CodeVerifier,
+                    _now(),
+                    cancellationToken).ConfigureAwait(false)
+                : await _tokenClient.ExchangeCodeThroughBrokerAsync(
+                    _tokenBrokerEndpoint,
+                    _clientId,
+                    receiver.RedirectUri,
+                    callback.Code,
+                    request.CodeVerifier,
+                    _now(),
+                    cancellationToken).ConfigureAwait(false);
             _store.Write(tokens);
             return new YouTubeAccountOperationResult(true, "Zalogowano do YouTube.");
         }
@@ -123,8 +185,11 @@ public sealed class YouTubeAccountCoordinator : IDisposable
                 throw new InvalidOperationException("Najpierw zaloguj się do YouTube.");
             if (tokens.ExpiresAtUtc > _now().AddMinutes(2)) return tokens.AccessToken;
 
-            var refreshed = await _tokenClient.RefreshAsync(
-                tokens, _clientSecret, _now(), cancellationToken).ConfigureAwait(false);
+            var refreshed = _tokenBrokerEndpoint is null
+                ? await _tokenClient.RefreshAsync(
+                    tokens, _clientSecret!, _now(), cancellationToken).ConfigureAwait(false)
+                : await _tokenClient.RefreshThroughBrokerAsync(
+                    _tokenBrokerEndpoint, tokens, _now(), cancellationToken).ConfigureAwait(false);
             _store.Write(refreshed);
             return refreshed.AccessToken;
         }
@@ -142,6 +207,34 @@ public sealed class YouTubeAccountCoordinator : IDisposable
         {
             _store.Delete();
             return new YouTubeAccountOperationResult(true, "Wylogowano z YouTube.");
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    public async Task<YouTubeAccountOperationResult> RevokeAndLogoutAsync(
+        Func<CancellationToken, Task> deleteAuthorizedData,
+        CancellationToken cancellationToken)
+    {
+        ThrowIfDisposed();
+        ArgumentNullException.ThrowIfNull(deleteAuthorizedData);
+        await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            if (_store.TryRead(out var tokens) && tokens is not null)
+                await _tokenClient.RevokeAsync(tokens.RefreshToken, cancellationToken)
+                    .ConfigureAwait(false);
+
+            // Poświadczenie pozostaje do czasu zakończenia lokalnego usuwania.
+            // Jeśli zapis na dysku zawiedzie, użytkownik może powtórzyć operację;
+            // ponowne cofnięcie już unieważnionego tokenu jest bezpieczne.
+            await deleteAuthorizedData(cancellationToken).ConfigureAwait(false);
+            _store.Delete();
+            return new YouTubeAccountOperationResult(
+                true,
+                "Cofnięto dostęp YouTube w Google i usunięto dane konta z AMC.");
         }
         finally
         {

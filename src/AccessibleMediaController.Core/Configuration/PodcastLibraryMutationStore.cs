@@ -113,6 +113,15 @@ public sealed class PodcastLibraryMutationStore(string databasePath)
         bool restoreSuppressed = false) =>
         _database.PreviewYouTubePlaylists(remotePlaylists, restoreSuppressed);
 
+    public YouTubeAccountDataDeletionResult DeleteAllYouTubeAccountData(
+        DateTime utcNow) =>
+        _database.DeleteYouTubeAccountData(utcNow, maximumAge: null);
+
+    public YouTubeAccountDataDeletionResult DeleteExpiredYouTubeAccountData(
+        DateTime utcNow,
+        TimeSpan maximumAge) =>
+        _database.DeleteYouTubeAccountData(utcNow, maximumAge);
+
     public IReadOnlyList<PodcastOpmlEntry> GetOpmlEntries() =>
         _database.GetOpmlEntries();
 
@@ -139,6 +148,13 @@ public sealed record PodcastRefreshResult(
     int UpdatedEpisodes,
     int RetainedEpisodesAbsentFromFeed,
     int InboxCount);
+
+public sealed record YouTubeAccountDataDeletionResult(
+    int RemovedSources,
+    int RemovedEpisodes)
+{
+    public bool Changed => RemovedSources > 0 || RemovedEpisodes > 0;
+}
 
 public sealed record PodcastGlobalSettingsSnapshot(
     string? DownloadsFolder,

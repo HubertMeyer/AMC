@@ -455,14 +455,25 @@ internal static class Program
         var clientId = ReadArgumentText(args, "--youtube-client-id");
         var clientSecretFile = ReadArgumentPath(args, "--youtube-client-secret-file");
         var clientSecret = ReadYouTubeClientSecret(clientSecretFile);
+        var tokenBrokerText = ReadArgumentText(args, "--youtube-token-broker");
         var podcasts = ReadArgumentPath(args, "--podcasts-db");
-        // Pierwszy odbiór jest wyłącznie w AMC Test. Publiczny profil pozostaje
-        // wyłączony do czasu weryfikacji ekranu zgody i polityki Google.
-        if (profile != "test" || clientId is null || clientSecret is null || podcasts is null)
+        if (clientId is null || podcasts is null)
             return null;
-        return new LiteYouTubeAccountCoordinator(
-            new LiteYouTubeWindowsAccountBackend(
-                clientId, clientSecret, profile, podcasts));
+        if (profile == "test" && clientSecret is not null && tokenBrokerText is null)
+        {
+            return new LiteYouTubeAccountCoordinator(
+                new LiteYouTubeWindowsAccountBackend(
+                    clientId, clientSecret, profile, podcasts));
+        }
+        if (profile == "public"
+            && clientSecret is null
+            && Uri.TryCreate(tokenBrokerText, UriKind.Absolute, out var tokenBroker))
+        {
+            return new LiteYouTubeAccountCoordinator(
+                new LiteYouTubeWindowsAccountBackend(
+                    clientId, tokenBroker, profile, podcasts));
+        }
+        return null;
     }
 
     private static string? ReadYouTubeClientSecret(string? path)

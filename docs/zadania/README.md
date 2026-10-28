@@ -87,7 +87,9 @@ do kontrolowanej archiwizacji opisanej w REL-003.
 
 - `SET-001` — **W trakcie; kod priorytetów 1–3, pełna regresja, czysta paczka,
   instalator, wydanie GitHub i rzeczywista aktualizacja instalacji są
-  zweryfikowane; ręczny odbiór NVDA pozostaje** —
+  zweryfikowane; robocza korekta kolejności kart, sekcji i końcowego edytora
+  własnych komunikatów ma 26 zaliczonych testów, ale nie weszła jeszcze do
+  nowego builda ani wydania; ręczny odbiór NVDA pozostaje** —
   naprawa osiągalności pól domyślnych folderów przez Tab, przegląd nazw
   kontrolek, dostępna karta integracji z Windows, nowa karta Aktualizacje oraz
   karta Dostępność i komunikaty. Szczegóły:
@@ -99,7 +101,9 @@ do kontrolowanej archiwizacji opisanej w REL-003.
   Ręczna aktualizacja z `alpha.435` do `alpha.436` przeszła i mechanizm został
   odebrany. Nieopublikowany commit `ae24e9df` usuwa dialog sukcesu i wzmacnia
   pierwszy plan po restarcie; testy i build przeszły, odbiór tej korekty
-  pozostaje** — jedna
+  pozostaje. Robocza retencja z 28.10.2026 zachowuje najwyżej dwie kopie
+  ratunkowe po niepełnym wycofaniu i ma 36/36 testów celowanych, bez nowego
+  builda, instalacji ani publikacji** — jedna
   kanoniczna linia AMC Python,
   wydania AMC Test i AMC Public z tego samego commitu, dwa kanały aktualizacji,
   standardowa instalacja Windows oraz kontrolowane uporządkowanie starego C#,
@@ -402,9 +406,19 @@ zmian, wymagający korekty użytkownika:
   rzeczywiste ponowne logowanie przez zainstalowany LiteHost i systemową
   przeglądarkę zakończyło się wynikiem `Zalogowano do YouTube`, a kolejny odczyt
   potwierdził aktywne połączenie. Nie zmieniano Google Cloud, źródeł, instalacji
-  ani GitHuba. Dla przyszłego AMC Public pozostaje osobny projekt produkcyjny,
-  własna zweryfikowana domena ze stroną programu i polityką prywatności oraz
-  weryfikacja marki i zakresu `youtube.readonly`.
+  ani GitHuba. Dalsza korekta z 27.10.2026: źródła profilu Public mają już
+  osobny bezsekretowy tor przez broker tokenów, a projekty polityki
+  prywatności, warunków i listy gotowości są zapisane, lecz nieopublikowane.
+  Źródła Public cofają token w Google, usuwają oznaczone dane konta i
+  automatycznie usuwają je po 30 dniach bez odświeżenia; publiczne kanały
+  dodane ręcznie pozostają nienaruszone. Celowane testy, build i audyt
+  zależności są zaliczone. Decyzja użytkownika z 27.10.2026 wyklucza wdrożenie
+  na `stareaudycje.pl`: do czasu świadomego wyboru innej domeny moduł pozostaje
+  przygotowany, ale AMC Public powstaje bez zasobów OAuth i bez martwych pozycji
+  konta w interfejsie. Przed ewentualnym włączeniem pozostają: zgoda i dostęp do
+  polityki w interfejsie, uzupełnienie danych administratora, własna
+  zweryfikowana domena, wdrożenie brokera, konfiguracja produkcyjnego projektu
+  Google oraz rzeczywisty odbiór zakresu `youtube.readonly` z NVDA.
   Szczegóły:
   [YT-001-konto-youtube-i-synchronizacja.md](YT-001-konto-youtube-i-synchronizacja.md).
   Bieżąca instalacja:

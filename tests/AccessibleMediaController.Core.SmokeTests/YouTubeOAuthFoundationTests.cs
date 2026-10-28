@@ -12,15 +12,19 @@ internal static class YouTubeOAuthFoundationTests
         BuildsReadOnlyPkceRequestWithoutSecret();
         RejectsUnsafeCallbackAddresses();
         BuildsTokenRequestsWithRequiredClientSecret();
+        BuildsBrokerRequestsWithoutClientSecret();
         PreservesRefreshTokenAndScope();
         DoesNotEchoMalformedResponse();
         ExchangesCodeThroughOfficialEndpoint();
+        ExchangesCodeThroughValidatedBroker();
         RefreshesWithoutLosingRefreshToken();
+        RevokesRefreshTokenAtOfficialEndpoint();
+        AlreadyRevokedTokenIsAcceptedWithoutEchoingResponse();
         SanitizesTokenEndpointErrors();
         ExplainsDesktopClientConfigurationErrors();
         ReceivesValidLoopbackCallbackWithoutEchoingCode();
         RejectsWrongLoopbackState();
-        Console.WriteLine("OK: bezpieczny fundament oficjalnego logowania YouTube (11 scenariuszy)");
+        Console.WriteLine("OK: bezpieczny fundament oficjalnego logowania YouTube (15 scenariuszy)");
     }
 
     private static void BuildsReadOnlyPkceRequestWithoutSecret()
@@ -95,6 +99,32 @@ internal static class YouTubeOAuthFoundationTests
             "Punkt tokenów nie dostał sekretu wymaganego przez tego klienta desktopowego.");
     }
 
+    private static void BuildsBrokerRequestsWithoutClientSecret()
+    {
+        var callback = new Uri("http://127.0.0.1:49321/youtube/callback/");
+        var verifier = Convert.ToBase64String(new byte[32]).TrimEnd('=').Replace('+', '-').Replace('/', '_');
+        var exchange = YouTubeOAuthProtocol.CreateBrokerCodeExchangeFields(
+            ClientId, callback, "syntetyczny-kod", verifier);
+        var refresh = YouTubeOAuthProtocol.CreateBrokerRefreshFields(
+            ClientId, "syntetyczne-odswiezenie");
+
+        Assert(!exchange.ContainsKey("client_secret") && !refresh.ContainsKey("client_secret"),
+            "Publiczny klient próbowałby przekazać sekret z aplikacji.");
+        Assert(exchange.GetValueOrDefault("code_verifier") == verifier,
+            "Publiczna wymiana kodu nie zachowuje PKCE.");
+        var rejected = false;
+        try
+        {
+            YouTubeOAuthProtocol.ValidateTokenBrokerEndpoint(
+                new Uri("http://oauth.example.test/v1/google/token"));
+        }
+        catch (InvalidOperationException)
+        {
+            rejected = true;
+        }
+        Assert(rejected, "Broker bez HTTPS został przyjęty.");
+    }
+
     private static void PreservesRefreshTokenAndScope()
     {
         var now = new DateTimeOffset(2026, 10, 21, 12, 0, 0, TimeSpan.Zero);
@@ -153,6 +183,32 @@ internal static class YouTubeOAuthFoundationTests
         Assert(tokens.RefreshToken == "syntetyczny-refresh", "Nie odczytano refresh tokenu.");
     }
 
+    private static void ExchangesCodeThroughValidatedBroker()
+    {
+        var handler = new TokenHandler(
+            HttpStatusCode.OK,
+            "{\"access_token\":\"syntetyczny-access\",\"refresh_token\":\"syntetyczny-refresh\",\"expires_in\":3600}");
+        using var client = new YouTubeOAuthTokenClient(new HttpClient(handler));
+        var verifier = Convert.ToBase64String(new byte[32]).TrimEnd('=').Replace('+', '-').Replace('/', '_');
+        var broker = new Uri("https://oauth.example.test/v1/google/token");
+        _ = client.ExchangeCodeThroughBrokerAsync(
+                broker,
+                ClientId,
+                new Uri("http://127.0.0.1:49321/youtube/callback/"),
+                "syntetyczny-kod",
+                verifier,
+                DateTimeOffset.UtcNow,
+                CancellationToken.None)
+            .GetAwaiter().GetResult();
+        var form = ParseQuery(handler.Body);
+
+        Assert(handler.RequestUri == broker, "Publiczna wymiana kodu ominęła skonfigurowany broker.");
+        Assert(!form.ContainsKey("client_secret"), "AMC Public wysłał sekret klienta do brokera.");
+        Assert(form.GetValueOrDefault("client_id") == ClientId
+               && form.GetValueOrDefault("code_verifier") == verifier,
+            "Broker nie dostał publicznego identyfikatora i zabezpieczenia PKCE.");
+    }
+
     private static void RefreshesWithoutLosingRefreshToken()
     {
         var handler = new TokenHandler(
@@ -173,6 +229,35 @@ internal static class YouTubeOAuthFoundationTests
             "Odświeżenie próbowałoby po cichu rozszerzyć zakres uprawnień.");
         Assert(refreshed.RefreshToken == current.RefreshToken,
             "Odpowiedź bez nowego refresh tokenu wylogowałaby konto.");
+    }
+
+    private static void RevokesRefreshTokenAtOfficialEndpoint()
+    {
+        var handler = new TokenHandler(HttpStatusCode.OK, string.Empty);
+        using var client = new YouTubeOAuthTokenClient(new HttpClient(handler));
+        client.RevokeAsync("syntetyczny-refresh-token", CancellationToken.None)
+            .GetAwaiter().GetResult();
+        var form = ParseQuery(handler.Body);
+
+        Assert(handler.RequestUri?.AbsoluteUri == "https://oauth2.googleapis.com/revoke",
+            "Cofnięcie dostępu ominęło oficjalny punkt Google.");
+        Assert(form.GetValueOrDefault("token") == "syntetyczny-refresh-token"
+               && form.Count == 1,
+            "Cofnięcie dostępu wysłało inny token albo zbędne dane klienta.");
+    }
+
+    private static void AlreadyRevokedTokenIsAcceptedWithoutEchoingResponse()
+    {
+        const string marker = "SEKRET-Z-ODPOWIEDZI-COFNIECIA";
+        var handler = new TokenHandler(
+            HttpStatusCode.BadRequest,
+            "{\"error\":\"invalid_token\",\"error_description\":\"" + marker + "\"}");
+        using var client = new YouTubeOAuthTokenClient(new HttpClient(handler));
+        client.RevokeAsync("juz-uniewazniony-token", CancellationToken.None)
+            .GetAwaiter().GetResult();
+
+        Assert(handler.RequestUri?.AbsoluteUri == "https://oauth2.googleapis.com/revoke",
+            "Już cofnięty token nie został sprawdzony w oficjalnym punkcie Google.");
     }
 
     private static void SanitizesTokenEndpointErrors()

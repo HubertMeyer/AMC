@@ -13,10 +13,13 @@ internal static class YouTubeAccountCoordinatorTests
         LoginStoresTokensOnlyAfterConfirmedCallback();
         DeniedLoginDoesNotReplaceStoredTokens();
         ExpiredTokenRefreshesAndIsStored();
+        ExpiredPublicTokenRefreshesThroughBrokerWithoutSecret();
         FreshTokenDoesNotUseNetwork();
         LogoutDeletesOnlyThisStore();
+        PublicRevocationDeletesOnlyAfterRemoteAndLocalCleanup();
+        FailedPublicRevocationKeepsCredentialForRetry();
         DefaultLoginWindowSupportsAccessibleFlow();
-        Console.WriteLine("OK: koordynator konta YouTube (6 scenariuszy)");
+        Console.WriteLine("OK: koordynator konta YouTube (9 scenariuszy)");
     }
 
     private static void LoginStoresTokensOnlyAfterConfirmedCallback()
@@ -119,6 +122,28 @@ internal static class YouTubeAccountCoordinatorTests
             "Świeży token niepotrzebnie uruchomił sieć albo zapis.");
     }
 
+    private static void ExpiredPublicTokenRefreshesThroughBrokerWithoutSecret()
+    {
+        var store = new MemoryStore(Tokens("stary-access", "trwaly-refresh", Now.AddMinutes(-1)));
+        var handler = new TokenHandler(HttpStatusCode.OK,
+            "{\"access_token\":\"publiczny-access\",\"expires_in\":3600}");
+        using var tokenClient = new YouTubeOAuthTokenClient(new HttpClient(handler));
+        var broker = new Uri("https://oauth.example.test/v1/google/token");
+        using var coordinator = new YouTubeAccountCoordinator(
+            ClientId,
+            broker,
+            store,
+            tokenClient,
+            (_, _) => Task.FromResult(false),
+            () => Now);
+
+        var access = coordinator.GetAccessTokenAsync(CancellationToken.None).GetAwaiter().GetResult();
+        Assert(access == "publiczny-access" && store.Writes == 1,
+            "Publiczny token nie został odświeżony przez broker.");
+        Assert(handler.RequestUri == broker && !handler.Body.Contains("client_secret", StringComparison.Ordinal),
+            "Publiczne odświeżenie ominęło broker albo ujawniło sekret klienta.");
+    }
+
     private static void LogoutDeletesOnlyThisStore()
     {
         var store = new MemoryStore(Tokens("access", "refresh", Now.AddHours(1)));
@@ -130,6 +155,60 @@ internal static class YouTubeAccountCoordinatorTests
         Assert(result.Succeeded && store.Deletes == 1 && store.Current is null,
             "Wylogowanie nie usunęło dokładnie bieżącego magazynu.");
         Assert(!coordinator.GetStatus().Connected, "Po wylogowaniu konto nadal jest przedstawiane jako połączone.");
+    }
+
+    private static void PublicRevocationDeletesOnlyAfterRemoteAndLocalCleanup()
+    {
+        var store = new MemoryStore(Tokens("access", "refresh-publiczny", Now.AddHours(1)));
+        var handler = new TokenHandler(HttpStatusCode.OK, string.Empty);
+        using var tokenClient = new YouTubeOAuthTokenClient(new HttpClient(handler));
+        using var coordinator = Coordinator(store, tokenClient);
+        var localCleanup = 0;
+
+        var result = coordinator.RevokeAndLogoutAsync(
+                _ =>
+                {
+                    Assert(handler.Requests == 1 && store.Current is not null,
+                        "Lokalne usuwanie nie nastąpiło po cofnięciu tokenu albo poświadczenie usunięto za wcześnie.");
+                    localCleanup++;
+                    return Task.CompletedTask;
+                },
+                CancellationToken.None)
+            .GetAwaiter().GetResult();
+
+        Assert(result.Succeeded && localCleanup == 1 && store.Deletes == 1,
+            "Pełne cofnięcie nie wykonało dokładnie jednego lokalnego usuwania.");
+        Assert(handler.RequestUri?.AbsoluteUri == "https://oauth2.googleapis.com/revoke"
+               && ParseQuery(handler.Body).GetValueOrDefault("token") == "refresh-publiczny",
+            "Pełne cofnięcie nie użyło refresh tokenu w oficjalnym punkcie Google.");
+    }
+
+    private static void FailedPublicRevocationKeepsCredentialForRetry()
+    {
+        var store = new MemoryStore(Tokens("access", "refresh-do-ponowienia", Now.AddHours(1)));
+        var handler = new TokenHandler(HttpStatusCode.ServiceUnavailable, "SEKRET");
+        using var tokenClient = new YouTubeOAuthTokenClient(new HttpClient(handler));
+        using var coordinator = Coordinator(store, tokenClient);
+        var localCleanup = 0;
+        try
+        {
+            coordinator.RevokeAndLogoutAsync(
+                    _ =>
+                    {
+                        localCleanup++;
+                        return Task.CompletedTask;
+                    },
+                    CancellationToken.None)
+                .GetAwaiter().GetResult();
+            throw new InvalidOperationException("Awaria cofnięcia została przedstawiona jako sukces.");
+        }
+        catch (InvalidOperationException exception)
+        {
+            Assert(!exception.ToString().Contains("SEKRET", StringComparison.Ordinal),
+                "Błąd cofnięcia ujawnił treść odpowiedzi Google.");
+        }
+        Assert(localCleanup == 0 && store.Deletes == 0 && store.Current is not null,
+            "Awaria zdalnego cofnięcia usunęła dane albo poświadczenie i uniemożliwiła ponowienie.");
     }
 
     private static void DefaultLoginWindowSupportsAccessibleFlow()
@@ -199,16 +278,22 @@ internal static class YouTubeAccountCoordinatorTests
     private sealed class TokenHandler(HttpStatusCode statusCode, string responseBody) : HttpMessageHandler
     {
         internal int Requests { get; private set; }
+        internal Uri? RequestUri { get; private set; }
+        internal string Body { get; private set; } = string.Empty;
 
-        protected override Task<HttpResponseMessage> SendAsync(
+        protected override async Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request,
             CancellationToken cancellationToken)
         {
             Requests++;
-            return Task.FromResult(new HttpResponseMessage(statusCode)
+            RequestUri = request.RequestUri;
+            Body = request.Content is null
+                ? string.Empty
+                : await request.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+            return new HttpResponseMessage(statusCode)
             {
                 Content = new StringContent(responseBody)
-            });
+            };
         }
     }
 }

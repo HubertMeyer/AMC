@@ -8,7 +8,10 @@ aktualizacji, plik integralności oraz ich sumy. Tag wskazuje dokładną rewizj�
 `abfee285`. Instalator zawiera Quick App Switcher 0.1.6, poprawki YouTube i
 SoundCloud RSS. Zgodnie z decyzją użytkownika nie został zainstalowany ani
 uruchomiony; działające `0.1.0-alpha.435` pozostaje bazą jutrzejszej ręcznej
-próby aktualizacji i odbioru z NVDA.
+próby aktualizacji i odbioru z NVDA. Korekta z 28.10.2026 ograniczająca
+pozostałości niepełnego wycofania aktualizacji do dwóch katalogów ratunkowych
+ma 36/36 zaliczonych testów celowanych; nie została jeszcze zbudowana,
+zainstalowana ani opublikowana.
 
 ## Nadrzędna korekta użytkownika z 26.10.2026
 
@@ -507,6 +510,72 @@ tych samych plików profilu.
   `test-2026.10.27.0233` wskazują dokładny kod wersji odpowiednio
   `0.1.0-alpha.434`, `0.1.0-alpha.435` i `0.1.0-alpha.436`; ruchome `main` może
   zawierać późniejsze commity wyłącznie dokumentacyjne.
+
+## Korekta użytkownika z 28.10.2026 — najwyżej dwie kopie ratunkowe
+
+### Materiał do dokumentacji użytkownika
+
+- Udana aktualizacja bieżącego AMC Test przez pełny instalator nie odkłada
+  trwałej pełnej kopii programu. Instalator ma własne transakcyjne cofanie, a
+  pobrany plik jest sprzątany po użyciu.
+- Katalog `.aktualizacja-…` jest kopią ratunkową zastępowanych plików tylko dla
+  lokalnej ścieżki podmiany pakietu. Zwykle znika po sukcesie albo pełnym
+  wycofaniu. Jeżeli awaria uniemożliwi pełne cofnięcie, aktualizator zachowuje
+  najwyżej dwa takie katalogi: bieżący uszkodzony przebieg i co najwyżej jeden
+  wcześniejszy.
+- Zmiana nie ma nowej kontrolki, skrótu ani komunikatu NVDA. Nie obejmuje
+  Biblioteki, ustawień, kont, nagrań ani plików użytkownika.
+
+### Uzasadnienie i decyzje
+
+- Katalogi `%LOCALAPPDATA%\AccessibleMediaController\update-backups` pochodzą
+  z historycznego AMC WPF i nie są tworzone przez bieżący aktualizator AMC
+  Python. Nie należy dodawać do nowego programu mechanizmu utrwalającego takie
+  pełne kopie po każdej udanej aktualizacji.
+- Retencja rozpoznaje wyłącznie bezpośrednie katalogi o ścisłej nazwie
+  `.aktualizacja-<GUID>`, pomija dowiązania i obce nazwy. Bieżąca kopia po
+  niepełnym wycofaniu ma pierwszeństwo przed starszymi katalogami.
+
+### Testy i wynik
+
+- Celowany zestaw `AccessibleMediaController.PythonLauncher.Tests`: **36/36
+  zaliczonych**. Nowe przypadki potwierdzają pozostawienie dwóch najnowszych
+  kopii, nienaruszenie obcej nazwy oraz ochronę bieżącej niepełnej transakcji.
+- Projekt `AccessibleMediaController.PythonUpdater` zbudował się w konfiguracji
+  Release: **0 ostrzeżeń, 0 błędów**.
+- Nie uruchamiano interfejsu ani pełnej regresji. Nie zbudowano paczki ani
+  instalatora wydania, nie zmieniono działającej instalacji i niczego nie
+  opublikowano.
+- Z `C:\Users\micha\AppData\Local\Temp` trwale usunięto 18 209 katalogów
+  należących do testów AMC. Odzyskano około 370 053 120 bajtów. Pozostało 775
+  pustych lub testowych katalogów z listami dostępu, których bieżąca sesja nie
+  może przejąć; nie rozszerzano uprawnień na inne cele.
+- Zachowano aktywny bufor Time Shiftu
+  `C:\Users\micha\AppData\Local\Temp\AMC-timeshift-66df642f539e457d99f654a896b50353.buf`
+  o rozmiarze 3 810 240 000 bajtów. To on stanowił większość raportowanych
+  około 4,05 GB w Temp; nie jest starym katalogiem testowym.
+
+### Znane ograniczenia
+
+- Retencja sprząta stare katalogi przy następnym bezpiecznie rozpoczętym
+  przebiegu aktualizatora. Jeśli Windows blokuje usunięcie, aktualizacja nadal
+  może się odbyć, a błąd porządkowy trafia tylko do diagnostyki.
+- W bieżącej instalacji `D:\Projekty Codex\AMC Python` istnieje jeszcze siedem
+  starych katalogów `.aktualizacja-…` o łącznym rozmiarze logicznym około
+  829 353 043 bajtów. Próba pozostawienia dwóch najnowszych została dwukrotnie
+  bezpiecznie zatrzymana, ponieważ kontrola poza piaskownicą nadal widzi żywe
+  procesy AMC, hosta audio i Pythona. Nie zamykano programu bez potwierdzenia
+  stanu nagrywania. Po bezpiecznym zamknięciu można usunąć pięć starszych albo
+  pozostawić to następnemu wydaniu zawierającemu nową retencję.
+- Usunięte katalogi Temp nie trafiają do Kosza i nie są odzyskiwalne zwykłym
+  przywróceniem. Pozostałe 775 katalogów wymagałoby osobnej sesji z prawami
+  administratora; ich usuwanie nie jest potrzebne do odzyskania głównej części
+  miejsca, ponieważ dominującym plikiem jest zachowany bufor Time Shiftu.
+
+### Wersja i commit
+
+- Zmiana istnieje w źródłach bieżącej gałęzi roboczej. Nie utworzono osobnego
+  commitu, wersji, paczki, instalacji ani wydania GitHub.
 
 ## Wersja i commit
 

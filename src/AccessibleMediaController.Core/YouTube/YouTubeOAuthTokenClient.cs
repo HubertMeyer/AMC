@@ -11,6 +11,7 @@ namespace AccessibleMediaController.Core.YouTube;
 public sealed class YouTubeOAuthTokenClient : IDisposable
 {
     private static readonly Uri TokenEndpoint = new("https://oauth2.googleapis.com/token");
+    private static readonly Uri RevocationEndpoint = new("https://oauth2.googleapis.com/revoke");
     private readonly HttpClient _http;
     private readonly bool _ownsHttpClient;
 
@@ -32,7 +33,7 @@ public sealed class YouTubeOAuthTokenClient : IDisposable
         var fields = YouTubeOAuthProtocol.CreateCodeExchangeFields(
             clientId, clientSecret, redirectUri, code, codeVerifier);
         return await SendAsync(
-            fields, clientId, now, null, null, cancellationToken).ConfigureAwait(false);
+            TokenEndpoint, fields, clientId, now, null, null, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<YouTubeTokenSet> RefreshAsync(
@@ -45,6 +46,7 @@ public sealed class YouTubeOAuthTokenClient : IDisposable
         var fields = YouTubeOAuthProtocol.CreateRefreshFields(
             current.ClientId, clientSecret, current.RefreshToken);
         return await SendAsync(
+            TokenEndpoint,
             fields,
             current.ClientId,
             now,
@@ -53,7 +55,71 @@ public sealed class YouTubeOAuthTokenClient : IDisposable
             cancellationToken).ConfigureAwait(false);
     }
 
+    public async Task<YouTubeTokenSet> ExchangeCodeThroughBrokerAsync(
+        Uri tokenBrokerEndpoint,
+        string clientId,
+        Uri redirectUri,
+        string code,
+        string codeVerifier,
+        DateTimeOffset now,
+        CancellationToken cancellationToken)
+    {
+        var endpoint = YouTubeOAuthProtocol.ValidateTokenBrokerEndpoint(tokenBrokerEndpoint);
+        var fields = YouTubeOAuthProtocol.CreateBrokerCodeExchangeFields(
+            clientId, redirectUri, code, codeVerifier);
+        return await SendAsync(
+            endpoint, fields, clientId, now, null, null, cancellationToken).ConfigureAwait(false);
+    }
+
+    public async Task<YouTubeTokenSet> RefreshThroughBrokerAsync(
+        Uri tokenBrokerEndpoint,
+        YouTubeTokenSet current,
+        DateTimeOffset now,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(current);
+        var endpoint = YouTubeOAuthProtocol.ValidateTokenBrokerEndpoint(tokenBrokerEndpoint);
+        var fields = YouTubeOAuthProtocol.CreateBrokerRefreshFields(
+            current.ClientId, current.RefreshToken);
+        return await SendAsync(
+            endpoint,
+            fields,
+            current.ClientId,
+            now,
+            current.RefreshToken,
+            current.Scope,
+            cancellationToken).ConfigureAwait(false);
+    }
+
+    public async Task RevokeAsync(
+        string token,
+        CancellationToken cancellationToken)
+    {
+        var fields = YouTubeOAuthProtocol.CreateRevocationFields(token);
+        using var response = await _http.PostAsync(
+            RevocationEndpoint,
+            new FormUrlEncodedContent(fields),
+            cancellationToken).ConfigureAwait(false);
+        if (response.IsSuccessStatusCode) return;
+
+        var body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+        // Google opisuje invalid_token jako token już wygasły albo wcześniej
+        // cofnięty. Cel użytkownika jest wtedy osiągnięty i można bezpiecznie
+        // zakończyć lokalne usuwanie.
+        if (response.StatusCode == HttpStatusCode.BadRequest
+            && string.Equals(
+                ReadErrorCode(body),
+                "invalid_token",
+                StringComparison.OrdinalIgnoreCase))
+            return;
+        throw new InvalidOperationException(
+            response.StatusCode == HttpStatusCode.TooManyRequests
+                ? "Google chwilowo ograniczył cofanie dostępu YouTube. Spróbuj później."
+                : "Nie udało się cofnąć dostępu YouTube w Google. Spróbuj ponownie.");
+    }
+
     private async Task<YouTubeTokenSet> SendAsync(
+        Uri endpoint,
         IReadOnlyDictionary<string, string> fields,
         string clientId,
         DateTimeOffset now,
@@ -62,7 +128,7 @@ public sealed class YouTubeOAuthTokenClient : IDisposable
         CancellationToken cancellationToken)
     {
         using var response = await _http.PostAsync(
-            TokenEndpoint,
+            endpoint,
             new FormUrlEncodedContent(fields),
             cancellationToken).ConfigureAwait(false);
         var body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);

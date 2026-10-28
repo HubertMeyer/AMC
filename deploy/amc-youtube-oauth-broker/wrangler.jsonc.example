@@ -1,0 +1,29 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "amc-youtube-oauth-broker",
+  "main": "src/worker.mjs",
+  "compatibility_date": "2026-10-27",
+  "workers_dev": true,
+  "secrets": {
+    "required": ["GOOGLE_OAUTH_CLIENT_SECRET"]
+  },
+  "vars": {
+    "GOOGLE_OAUTH_CLIENT_ID": "UZUPELNIJ.apps.googleusercontent.com"
+  },
+  "observability": {
+    "enabled": false,
+    "logs": {
+      "enabled": false
+    }
+  },
+  "ratelimits": [
+    {
+      "name": "OAUTH_RATE_LIMITER",
+      "namespace_id": "1002",
+      "simple": {
+        "limit": 20,
+        "period": 60
+      }
+    }
+  ]
+}

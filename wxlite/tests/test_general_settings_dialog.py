@@ -15,6 +15,7 @@ def test_settings_have_real_native_pages_and_explicit_accessible_names() -> None
     assert 'self.notebook.AddPage(general, "Ogólne", select=True)' in source
     assert 'self.notebook.AddPage(radio, "Radio i nagrywanie")' in source
     assert 'self.notebook.AddPage(podcasts, "Podcasty i YouTube")' in source
+    assert 'self.notebook.AddPage(keyboard, "Klawiatura")' in source
     assert 'self.notebook.AddPage(integration, "Integracja z Windows")' in source
     assert 'self.notebook.AddPage(updates, "Aktualizacje")' in source
     assert 'self.notebook.AddPage(messages, "Dostępność i komunikaty")' in source
@@ -48,6 +49,71 @@ def test_settings_have_real_native_pages_and_explicit_accessible_names() -> None
     assert 'self.message_template_text.SetName(' in source
     assert '"Tekst szablonu wybranego komunikatu"' in source
     assert "choices=[TEMPLATE_LABELS[key]" in source
+
+
+def test_settings_pages_and_storage_controls_follow_the_user_workflow() -> None:
+    source = SOURCE.read_text(encoding="utf-8")
+    page_calls = [
+        'self.notebook.AddPage(general, "Ogólne", select=True)',
+        'self.notebook.AddPage(radio, "Radio i nagrywanie")',
+        'self.notebook.AddPage(podcasts, "Podcasty i YouTube")',
+        'self.notebook.AddPage(messages, "Dostępność i komunikaty")',
+        'self.notebook.AddPage(keyboard, "Klawiatura")',
+        'self.notebook.AddPage(updates, "Aktualizacje")',
+        'self.notebook.AddPage(integration, "Integracja z Windows")',
+    ]
+    assert [source.index(call) for call in page_calls] == sorted(
+        source.index(call) for call in page_calls
+    )
+
+    dialog = source[source.index("class GeneralPlaybackOptionsDialog") :]
+    dialog = dialog[: dialog.index("class LiteFrame")]
+    radio_order = [
+        "self.recording_folder_mode = wx.Choice(",
+        "self.recording_folder = FocusableReadOnlyTextCtrl(",
+        "self.recording_format = wx.Choice(",
+        "self.timeshift = wx.Choice(",
+        "self.recognition_monitoring = wx.CheckBox(",
+        "self.prefer_station_folder = wx.CheckBox(",
+    ]
+    assert [dialog.index(item) for item in radio_order] == sorted(
+        dialog.index(item) for item in radio_order
+    )
+    podcast_order = [
+        "self.podcast_folder = FocusableReadOnlyTextCtrl(",
+        "self.youtube_video_format = wx.Choice(",
+        "self.podcast_rss_interval = wx.SpinCtrl(",
+        "self.podcast_youtube_interval = wx.SpinCtrl(",
+        "self.podcast_refresh_batch = wx.SpinCtrl(",
+    ]
+    assert [dialog.index(item) for item in podcast_order] == sorted(
+        dialog.index(item) for item in podcast_order
+    )
+    assert 'recording_heading.SetName("Sekcja zapisywanie nagrań radia")' in dialog
+    assert 'podcast_storage_heading.SetName(' in dialog
+    assert 'podcast_refresh_heading.SetName(' in dialog
+
+
+def test_message_options_precede_the_inline_template_editor() -> None:
+    source = SOURCE.read_text(encoding="utf-8")
+    dialog = source[source.index("class GeneralPlaybackOptionsDialog") :]
+    dialog = dialog[: dialog.index("class LiteFrame")]
+    expected_order = [
+        "self.detailed_hints = wx.CheckBox(",
+        "self.recognition_announcements = wx.CheckBox(",
+        "activity_heading = wx.StaticText(",
+        "self.playback_position = wx.Choice(",
+        "self.recording_sound = wx.CheckBox(",
+        "templates_heading = wx.StaticText(",
+        "self.message_templates = wx.ListBox(",
+        "self.message_template_text = wx.TextCtrl(",
+    ]
+    assert [dialog.index(item) for item in expected_order] == sorted(
+        dialog.index(item) for item in expected_order
+    )
+    assert 'templates_heading.SetName("Sekcja własne teksty komunikatów")' in dialog
+    assert "self.message_templates.SetHelpText(" in dialog
+    assert "self.message_template_text.SetHelpText(" in dialog
 
 
 def test_enter_save_has_one_short_confirmation_and_reconfigures_the_host() -> None:

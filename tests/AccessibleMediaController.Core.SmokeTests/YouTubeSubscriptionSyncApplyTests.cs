@@ -10,7 +10,8 @@ internal static class YouTubeSubscriptionSyncApplyTests
         RemoteAbsenceDoesNotRemoveLocalSource();
         ConflictDoesNotPartiallyMutateDatabase();
         KeepsFailedAutomaticRefreshFairAndPersistent();
-        Console.WriteLine("OK: atomowy zapis subskrypcji YouTube (5 scenariuszy)");
+        DeletesOnlyExpiredOrExplicitAccountData();
+        Console.WriteLine("OK: atomowy zapis subskrypcji YouTube (6 scenariuszy)");
     }
 
     private static void AddsShellsForBoundedRefreshAndIsIdempotent()
@@ -32,6 +33,12 @@ internal static class YouTubeSubscriptionSyncApplyTests
                 "Nowe źródła nie oczekują na istniejące porcjowane odświeżenie.");
             Assert(due.All(item => item.FeedUrl.EndsWith("/videos", StringComparison.Ordinal)),
                 "Zapisano niestabilny adres kanału YouTube.");
+            var tagged = new PodcastSettings();
+            database.LoadInto(tagged);
+            Assert(tagged.Subscriptions.All(item =>
+                       item.IsYouTubeAccountData
+                       && item.YouTubeAccountDataRefreshedUtcTicks > 0),
+                "Kanały konta nie dostały jawnego pochodzenia i daty odświeżenia.");
 
             var second = store.ApplyYouTubeSubscriptions(
                 [Remote("UC-JEDEN", "Kanał jeden"), Remote("UC-DWA", "Kanał dwa")]);
@@ -80,8 +87,8 @@ internal static class YouTubeSubscriptionSyncApplyTests
             Assert(restored.Restored == 1 && restored.Added == 0,
                 "Jawne przywrócenie nie użyło istniejącego rekordu.");
             var target = reopened.GetRefreshTargets().Single();
-            Assert(target.SubscriptionId == "stary-kanal" && target.Title == "Nazwa z YouTube",
-                "Przywrócenie zgubiło tożsamość albo aktualną nazwę kanału.");
+            Assert(target.SubscriptionId == "stary-kanal" && target.Title == "Stara nazwa",
+                "Przywrócenie zgubiło tożsamość albo nadpisało ręczne dane nazwą z konta.");
         });
     }
 
@@ -184,6 +191,81 @@ internal static class YouTubeSubscriptionSyncApplyTests
             Assert(retry.Count == 5
                    && retry.All(target => target.SubscriptionId != "kanał-6"),
                 "Po upływie odstępu automat nie wrócił do najstarszej nieudanej porcji.");
+        });
+    }
+
+    private static void DeletesOnlyExpiredOrExplicitAccountData()
+    {
+        var now = new DateTime(2026, 10, 27, 12, 0, 0, DateTimeKind.Utc);
+        var oldAccount = new PodcastSubscriptionSettings
+        {
+            Id = "youtube-account-channel:UC-STARY",
+            Title = "Stare dane konta",
+            FeedUrl = "https://www.youtube.com/channel/UC-STARY/videos",
+            SourceKind = PodcastSourceKind.YouTubeChannel,
+            IsInLibrary = true,
+            IsYouTubeAccountData = true,
+            YouTubeAccountDataRefreshedUtcTicks = now.AddDays(-31).Ticks
+        };
+        var freshAccount = new PodcastSubscriptionSettings
+        {
+            Id = "youtube-account-channel:UC-SWIEZY",
+            Title = "Świeże dane konta",
+            FeedUrl = "https://www.youtube.com/channel/UC-SWIEZY/videos",
+            SourceKind = PodcastSourceKind.YouTubeChannel,
+            IsInLibrary = true,
+            IsYouTubeAccountData = true,
+            YouTubeAccountDataRefreshedUtcTicks = now.AddDays(-29).Ticks
+        };
+        var manual = new PodcastSubscriptionSettings
+        {
+            Id = "youtube-channel:UC-RECZNY",
+            Title = "Kanał dodany ręcznie",
+            FeedUrl = "https://www.youtube.com/channel/UC-RECZNY/videos",
+            SourceKind = PodcastSourceKind.YouTubeChannel,
+            IsInLibrary = true
+        };
+        var settings = new PodcastSettings
+        {
+            CurrentItemId = oldAccount.Id + ":FILM",
+            Subscriptions = [oldAccount, freshAccount, manual],
+            Episodes =
+            [
+                new PodcastEpisodeSettings
+                {
+                    Id = oldAccount.Id + ":FILM",
+                    SubscriptionId = oldAccount.Id,
+                    Title = "Stary film"
+                },
+                new PodcastEpisodeSettings
+                {
+                    Id = freshAccount.Id + ":FILM",
+                    SubscriptionId = freshAccount.Id,
+                    Title = "Świeży film"
+                }
+            ]
+        };
+
+        WithDatabase(settings, (database, store) =>
+        {
+            var expired = store.DeleteExpiredYouTubeAccountData(now, TimeSpan.FromDays(30));
+            var afterExpiry = new PodcastSettings();
+            database.LoadInto(afterExpiry);
+            Assert(expired.RemovedSources == 1 && expired.RemovedEpisodes == 1,
+                "Czyszczenie po 30 dniach usunęło nieprawidłowy zakres.");
+            Assert(afterExpiry.Subscriptions.Select(item => item.Id).ToHashSet(StringComparer.Ordinal)
+                       .SetEquals([freshAccount.Id, manual.Id])
+                   && afterExpiry.CurrentItemId is null,
+                "Czyszczenie naruszyło świeże albo ręczne źródło lub zostawiło martwe odtwarzanie.");
+
+            var all = store.DeleteAllYouTubeAccountData(now);
+            var afterRevoke = new PodcastSettings();
+            database.LoadInto(afterRevoke);
+            Assert(all.RemovedSources == 1 && all.RemovedEpisodes == 1,
+                "Cofnięcie zgody nie usunęło pozostałych danych konta.");
+            Assert(afterRevoke.Subscriptions.Count == 1
+                   && afterRevoke.Subscriptions[0].Id == manual.Id,
+                "Cofnięcie zgody usunęło publiczny kanał dodany ręcznie.");
         });
     }
 

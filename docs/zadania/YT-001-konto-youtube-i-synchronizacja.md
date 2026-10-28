@@ -1003,3 +1003,252 @@ cofnięcia istniejącej zgody; cofnięcia nie wykonywano.
   `4c8fceda738afd0163040a400150007d16f8409c`, pakiet `faef4e7f`, etykieta
   `2026.10.26-4c8fceda738afd0163040a400150007d16f8409c-faef4e7f`.
 - AMC Public, instalator publiczny i GitHub pozostały bez zmian.
+
+## Korekta techniczna AMC Public — 27 października 2026
+
+Ta decyzja zastępuje wcześniejsze założenie z sekcji „Rozdzielenie AMC Test i
+przyszłego AMC Public”, że osobny serwer nie będzie potrzebny. Bieżący klient
+Google utworzony dla AMC wymaga sekretu przy wymianie i odświeżaniu tokenu, a
+publiczny instalator nie może zawierać sekretu. Dlatego AMC Public korzysta z
+wąskiego brokera HTTPS tylko do wymiany tokenów. Przeglądarka, PKCE i lokalny
+powrót na `127.0.0.1` pozostają w aplikacji. Broker nie zapisuje tokenów, nie
+zwraca sekretu i przepuszcza wyłącznie klienta AMC, dwa dozwolone granty oraz
+lokalny adres `/youtube/callback/`.
+
+### Zachowanie i rozdzielenie profili
+
+- AMC Test zachowuje dotychczasową konfigurację: identyfikator klienta i
+  lokalny plik sekretu przekazywany do hosta poza wierszem poleceń.
+- AMC Public przyjmuje wyłącznie publiczny identyfikator klienta i endpoint
+  `https://…/v1/google/token`; przekazanie pliku sekretu wyłącza tę konfigurację.
+- Profil Public deklaruje `youtube.account.readonly`, ale polecenie konta nadal
+  pojawia się dopiero po potwierdzeniu możliwości przez uruchomiony host.
+- Budowanie paczki usuwa wszystkie lokalne zasoby AMC Test i sekret. Dwa
+  publiczne zasoby bez sekretu są kopiowane wyłącznie do profilu Public i tylko
+  jako komplet po walidacji.
+- Magazyn poświadczeń pozostaje osobny dla AMC Test i AMC Public.
+
+### Wyniki
+
+- Źródła: zmienione; commit jeszcze nieutworzony.
+- Broker Cloudflare Worker: 5 z 5 testów zaliczone.
+- Fundament OAuth C#: 13 z 13 scenariuszy zaliczonych.
+- Koordynator konta C#: 7 z 7 scenariuszy zaliczonych.
+- Build Core, LiteHost, launchera, aktualizatora i testów Core: udany,
+  0 ostrzeżeń i 0 błędów.
+- Python: składnia zmienionych modułów poprawna; ukierunkowane testy
+  konfiguracji, argumentów hosta, profili i pakowania zaliczone. Pełnego
+  `pytest` nie uruchomiono, ponieważ dostępny interpreter nie ma tego pakietu.
+- Instalacja, rzeczywiste logowanie AMC Public, wdrożenie brokera i publikacja:
+  niewykonane. Wymagają produkcyjnego klienta Google, sekretu ustawionego
+  wyłącznie po stronie brokera oraz docelowego adresu HTTPS.
+
+## Dokumenty i kontrola zgodności AMC Public — 27 października 2026
+
+Korekta użytkownika z 27.10.2026 zezwala na przygotowanie polityki prywatności
+w neutralnym, formalnym języku. Nie jest to artykuł ani tekst pisany stylem
+użytkownika. Przygotowano projekt polityki obejmujący cały AMC Public, osobny
+projekt warunków korzystania wymagany dla funkcji YouTube oraz listę gotowości
+Google/YouTube. Dokumenty są robocze i mają wyraźny zakaz publikacji do czasu
+uzupełnienia danych administratora i zamknięcia blokad technicznych.
+
+### Uzasadnienie i decyzje
+
+- YouTube wymaga, aby polityka była łatwo dostępna, opisywała dostęp,
+  przechowywanie, użycie i udostępnianie danych, prowadziła do polityki Google
+  i ustawień cofnięcia dostępu oraz była zaakceptowana przed funkcjami API.
+- Warunki AMC wskazują, że korzystanie z funkcji YouTube oznacza związanie
+  Warunkami korzystania z YouTube.
+- Google wymaga publicznej strony programu, polityki na tej samej
+  zweryfikowanej domenie oraz zgodnych adresów na ekranie zgody OAuth.
+- Zasady YouTube wymagają odświeżenia albo usunięcia większości zapisanych
+  danych API po 30 dniach. Obecna Biblioteka nie egzekwuje jeszcze tego
+  kontraktu.
+- Obecne `Wyloguj z YouTube w AMC` usuwa tylko lokalne poświadczenie. Nie
+  unieważnia tokenu w Google i nie usuwa wszystkich danych uzyskanych z
+  autoryzowanego konta. Publiczne cofnięcie autoryzacji musi programowo
+  unieważnić token i rozpocząć usunięcie danych możliwie szybko, najpóźniej
+  w ciągu 7 dni. Cofnięcie po stronie Google trzeba wykryć i obsłużyć
+  najpóźniej w ciągu 30 dni.
+- Dokument nie zgaduje tożsamości administratora, adresu ani okresu retencji
+  zgłoszeń. Pozostawiono jawne pola do uzupełnienia.
+
+### Materiał do dokumentacji użytkownika
+
+- Połączenie Google/YouTube jest dobrowolne i ma zakres tylko do odczytu.
+- Synchronizacja jest ręczna i jednokierunkowa z YouTube do AMC. Nowa
+  subskrypcja wykonana w serwisie YouTube pojawi się przy następnym ręcznym
+  sprawdzeniu, a zapis do Biblioteki wymaga osobnego potwierdzenia.
+- AMC nie pobiera hasła Google i nie wykonuje na koncie operacji zapisu.
+- Cofnięcie dostępu w Google nie jest operacją usunięcia danych zapisanych
+  lokalnie. Docelowe polecenie cofnięcia autoryzacji w AMC Public musi jasno
+  wyjaśniać oba zakresy i usuwać lokalne dane API zgodnie z zasadami YouTube.
+- Polityka, warunki, zgoda i odmowa muszą być dostępne z klawiatury i NVDA;
+  powrót fokusu po ich zamknięciu ma być przewidywalny.
+
+### Zmienione i dodane pliki
+
+- `docs/public/POLITYKA_PRYWATNOSCI_AMC.md`;
+- `docs/public/WARUNKI_KORZYSTANIA_AMC.md`;
+- `docs/public/GOTOWOSC_GOOGLE_YOUTUBE.md`;
+- `wxlite/tests/test_public_google_policy_documents.py`.
+
+### Testy i wynik
+
+- Statyczny kontrakt wymaganych ujawnień, odsyłaczy, ostrzeżeń i blokad:
+  4 z 4 testów zaliczone.
+- Kompilacja składni nowego testu Python: zaliczona.
+- Nie uruchamiano interfejsu, pełnej regresji, builda, instalatora ani
+  publikacji. Dokumentów nie opublikowano.
+
+### Znane ograniczenia
+
+- Brakuje danych administratora, dedykowanego adresu kontaktowego i okresu
+  retencji zgłoszeń.
+- Brakuje technicznego odświeżania/usuwania danych API po 30 dniach, pełnego
+  cofnięcia autoryzacji, wersjonowanej zgody przed API oraz zawsze dostępnego
+  polecenia polityki i warunków w wspólnym modelu interfejsu.
+- Brakuje docelowej zweryfikowanej domeny, wdrożonego brokera, konfiguracji
+  produkcyjnego projektu Google i rzeczywistego odbioru AMC Public z NVDA.
+- Przed publikacją podstawy prawne, role dostawców i transfery wymagają
+  krótkiej kontroli właściwej dla tożsamości i sposobu dystrybucji operatora.
+
+### Wersja i commit
+
+- Źródła i dokumenty: zmienione; commit jeszcze nieutworzony.
+- Build, pakiet, instalacja i publikacja: niewykonane w tym etapie.
+
+## Cofnięcie zgody, retencja i konfiguracja klienta Public — 27 października 2026
+
+Na polecenie użytkownika kontynuowano przygotowanie klienta Google dla AMC
+Public. Ta sekcja zastępuje wcześniejszy stan, w którym wylogowanie profilu
+Public usuwało wyłącznie lokalne poświadczenie, a trzydziestodniowa retencja
+była tylko blokadą na liście gotowości.
+
+### Zachowanie użytkowe
+
+- AMC Public oznacza kanały i playlisty utworzone albo zaktualizowane z
+  autoryzowanego konta oraz zapisuje datę ostatniego potwierdzenia tych danych.
+  Publiczne źródła dodane ręcznie nie otrzymują tego znacznika.
+- Przy uruchomieniu skonfigurowanego klienta Public oznaczone dane starsze niż
+  30 dni są usuwane z Biblioteki wraz z należącymi do nich materiałami.
+- Przycisk profilu Public ma nazwę `Cofnij dostęp Google i usuń dane konta z
+  AMC`. Najpierw unieważnia refresh token w oficjalnym punkcie Google, potem
+  usuwa oznaczone dane z lokalnej bazy, a na końcu usuwa poświadczenie Windows.
+- Awaria Google albo lokalnego zapisu nie jest przedstawiana jako sukces.
+  Poświadczenie pozostaje, aby użytkownik mógł bezpiecznie ponowić operację.
+- Potwierdzenie jasno mówi, że operacja nie usuwa danych zapisanych przez
+  YouTube i nie usuwa publicznych źródeł, których synchronizacja konta nie
+  utworzyła ani nie zaktualizowała.
+- AMC Test zachowuje dotychczasowe prywatne wylogowanie tylko z bieżącego
+  profilu i nie usuwa istniejącej Biblioteki użytkownika.
+
+### Uzasadnienie i decyzje
+
+- Cofnięcie tokenu odbywa się bezpośrednio pod
+  `https://oauth2.googleapis.com/revoke`; ten endpoint nie wymaga sekretu
+  klienta i przyjmuje refresh token.
+- Wymiana kodu oraz odświeżanie Public nadal przechodzą przez wąski broker,
+  ponieważ tylko on ma sekret produkcyjnego klienta.
+- Oddzielny znacznik pochodzenia chroni ręcznie dodane kanały przed usunięciem
+  podczas cofnięcia zgody. Sama zgodność adresu albo nazwy nie jest wystarczającą
+  podstawą do kasowania.
+- Usuwanie po 30 dniach wybrano jako bezpieczne zachowanie zgodnościowe. AMC
+  nie rozpoczyna w tle logowania ani autoryzowanego odświeżenia bez działania
+  użytkownika.
+
+### Konfiguracja i ochrona sekretu
+
+- Dodano instrukcję `deploy/amc-youtube-oauth-broker/README.md` oraz skrypt
+  `Prepare-PublicConfig.ps1`.
+- Skrypt przyjmuje wyłącznie publiczny identyfikator klienta oraz adres HTTPS
+  brokera. Nie ma parametru sekretu i nie zapisuje go na dysku aplikacji.
+- Dodano blokadę `package-lock.json`. Wrangler podniesiono do 4.153.0 po tym,
+  jak audyt starszej przypiętej wersji wykazał podatności w zależnościach
+  deweloperskich. Ponowny pełny audyt zwrócił 0 podatności.
+- `.gitignore` chroni pobrane pliki `client_secret_*.json`, lokalne zmienne
+  Workera, katalog `.wrangler` i lokalny `wrangler.jsonc`.
+
+### Testy i rzeczywiste wyniki
+
+- Fundament OAuth: 15 z 15 scenariuszy, w tym oficjalny endpoint cofnięcia i
+  bezpieczna obsługa tokenu już unieważnionego.
+- Koordynator konta: 9 z 9 scenariuszy, w tym kolejność: Google, lokalne dane,
+  poświadczenie, oraz zachowanie możliwości ponowienia po awarii.
+- Zapis subskrypcji i retencja: 6 z 6 scenariuszy. Test usuwa stare i jawnie
+  cofnięte dane konta, zachowując świeże dane oraz kanał dodany ręcznie.
+- Synchronizacja playlist: 4 z 4 scenariusze; zapis pochodzenia i daty jest
+  potwierdzony.
+- Broker: 5 z 5 testów; `npm audit`: 0 podatności.
+- Celowane buildy Core, LiteHost i Core SmokeTests: sukces, 0 ostrzeżeń i
+  0 błędów.
+- Bezinterfejsowy test etykiet okna YouTube: zaliczony.
+
+### Znane ograniczenia
+
+- Nie utworzono jeszcze rzeczywistego projektu ani klienta produkcyjnego w
+  Google Cloud. Wymaga to własnej zweryfikowanej domeny, docelowych adresów
+  strony, polityki i warunków oraz zalogowanej sesji właściciela projektu.
+- Broker nie został wdrożony, a sekret nie został ustawiony w Cloudflare.
+- Nie wykonano prawdziwego logowania, odświeżenia ani cofnięcia na koncie
+  produkcyjnym.
+- Nadal brakuje wersjonowanej zgody przed pierwszym użyciem API oraz zawsze
+  dostępnych poleceń polityki i warunków w menu, palecie i pomocy.
+- Nie uruchamiano widocznego interfejsu ani ręcznego odbioru NVDA.
+
+### Wersja i commit
+
+- Źródła: zmienione; commit jeszcze nieutworzony.
+- Build celowanych projektów: wykonany pomyślnie.
+- Pakiet, instalacja, wdrożenie Workera i publikacja: niewykonane.
+
+## Opcjonalny moduł bez wdrożenia domeny — 27 października 2026
+
+Korekta użytkownika z 27.10.2026 zastępuje rozważany wariant użycia domeny
+`stareaudycje.pl`. Ta domena nie będzie stroną AMC, miejscem dokumentów Google
+ani adresem brokera OAuth. Użytkownik nie planuje kupować osobnej domeny
+wyłącznie dla logowania Google.
+
+### Uzasadnienie i decyzje
+
+- Implementacja klienta i brokera pozostaje w źródłach jako gotowy,
+  opcjonalny moduł.
+- Brak kompletnej pary publiczny identyfikator klienta–broker jest zwykłym
+  stanem AMC Public, a nie błędem uruchomienia.
+- Bez konfiguracji host nie dostaje argumentów Google. Wspólny model możliwości
+  nie pokazuje wtedy konta YouTube w menu, palecie poleceń ani pomocy.
+- Publiczne wyszukiwanie, ręcznie dodane kanały i odświeżanie YouTube, które nie
+  wymagają konta, pozostają niezależne od tej decyzji.
+- Późniejsze włączenie wymaga nowej, świadomie wybranej domeny, produkcyjnego
+  projektu Google, wdrożonego brokera oraz pełnego odbioru. Nie wymaga ponownego
+  projektowania protokołu ani umieszczania sekretu w aplikacji.
+
+### Materiał do dokumentacji użytkownika
+
+- AMC Public może być używane bez logowania Google. W takim wydaniu pozycja
+  konta YouTube nie jest wyświetlana i nie prowadzi do niedziałającego okna.
+- Kanały oraz materiały YouTube dostępne publicznie nadal działają bez konta.
+- Synchronizacja prywatnej listy subskrypcji i playlist konta pojawi się
+  dopiero w wydaniu, które ma kompletną, zweryfikowaną konfigurację Google.
+
+### Testy i wynik
+
+- Celowany zestaw konfiguracji konta i paczki Public: 9 z 9 testów zaliczonych.
+  Obejmuje brak identyfikatora, sekretu i brokera, brak argumentów OAuth hosta,
+  brak polecenia konta w menu i palecie oraz brak wszystkich czterech zasobów
+  Google w nieskonfigurowanej paczce Public.
+- Statyczny kontrakt dokumentów Google/YouTube: 4 z 4 testów zaliczone.
+- Testy były bezokienne. Nie uruchamiały AMC, przeglądarki ani logowania.
+
+### Znane ograniczenia
+
+- Moduł nie jest wdrożony i nie ma produkcyjnej domeny, klienta Google ani
+  działającego endpointu brokera.
+- Bez tych elementów nie można wykonać rzeczywistego logowania AMC Public.
+- Zgoda na politykę, stałe publiczne adresy dokumentów i odbiór NVDA pozostają
+  pracą wymaganą dopiero przed faktycznym włączeniem modułu.
+
+### Wersja i commit
+
+- Źródła i dokumentacja: zmienione w kopii roboczej; commit nieutworzony.
+- Build, pakiet, instalacja, wdrożenie i publikacja: niewykonane w tym etapie.

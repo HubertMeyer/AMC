@@ -90,6 +90,7 @@ from .youtube_account import (
     capability_available as youtube_capability_available,
     resolve_youtube_client_id,
     resolve_youtube_client_secret_file,
+    resolve_youtube_token_broker,
     safe_message as youtube_safe_message,
     playlist_sync_preview as youtube_playlist_sync_preview,
     sync_preview as youtube_sync_preview,
@@ -4455,6 +4456,7 @@ class YouTubeAccountDialog(wx.Dialog):
         self._preview_kind: str | None = None
         self._busy_action: str | None = None
         self._close_after_cancel = False
+        self._public_google_account = _RELEASE_PROFILE.profile_id == "public"
 
         heading = wx.StaticText(self, label="Konto YouTube, subskrypcje i playlisty")
         heading.SetName("Konto YouTube, subskrypcje i playlisty")
@@ -4502,7 +4504,14 @@ class YouTubeAccountDialog(wx.Dialog):
         self.playlist_apply_button = wx.Button(
             self, label="Zapisz playlisty w Bibliotece AMC"
         )
-        self.logout_button = wx.Button(self, label="Wyloguj z YouTube w AMC")
+        self.logout_button = wx.Button(
+            self,
+            label=(
+                "Cofnij dostęp Google i usuń dane konta z AMC"
+                if self._public_google_account
+                else "Wyloguj z YouTube w AMC"
+            ),
+        )
         self.cancel_login_button = wx.Button(self, label="Anuluj logowanie")
         self.close_button = wx.Button(self, wx.ID_CANCEL, "Zamknij")
         for button, name in (
@@ -4511,7 +4520,14 @@ class YouTubeAccountDialog(wx.Dialog):
             (self.apply_button, "Zapisz sprawdzone subskrypcje w Bibliotece AMC"),
             (self.playlist_preview_button, "Sprawdź playlisty YouTube bez zapisywania"),
             (self.playlist_apply_button, "Zapisz sprawdzone playlisty w Bibliotece AMC"),
-            (self.logout_button, "Wyloguj konto YouTube tylko w AMC"),
+            (
+                self.logout_button,
+                (
+                    "Cofnij dostęp Google do YouTube i usuń dane konta z AMC"
+                    if self._public_google_account
+                    else "Wyloguj konto YouTube tylko w AMC"
+                ),
+            ),
             (self.cancel_login_button, "Anuluj oczekiwanie na logowanie YouTube"),
             (self.close_button, "Zamknij okno konta YouTube"),
         ):
@@ -7116,86 +7132,9 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
         radio.SetScrollRate(0, 12)
         radio_layout = wx.BoxSizer(wx.VERTICAL)
 
-        timeshift_label = wx.StaticText(
-            radio, label="&Długość bufora transmisji:"
-        )
-        self._timeshift_values = list(RADIO_TIMESHIFT_CHOICES)
-        if options.timeshift_minutes not in self._timeshift_values:
-            self._timeshift_values.append(options.timeshift_minutes)
-            self._timeshift_values.sort()
-        self.timeshift = wx.Choice(
-            radio,
-            choices=[
-                radio_timeshift_label(value)
-                for value in self._timeshift_values
-            ],
-        )
-        self.timeshift.SetName("Długość bufora transmisji")
-        self.timeshift.SetSelection(
-            self._timeshift_values.index(options.timeshift_minutes)
-        )
-        radio_layout.Add(timeshift_label, 0, wx.BOTTOM, 4)
-        radio_layout.Add(self.timeshift, 0, wx.BOTTOM | wx.EXPAND, 10)
-
-        self.recognition_monitoring = wx.CheckBox(
-            radio, label="&Obserwuj i automatycznie rozpoznawaj utwory"
-        )
-        self.recognition_monitoring.SetName(
-            "Obserwuj i automatycznie rozpoznawaj utwory"
-        )
-        self.recognition_monitoring.SetValue(
-            options.radio_recognition_monitoring
-        )
-        recognition_scope_label = wx.StaticText(
-            radio, label="&Zakres automatycznego rozpoznawania:"
-        )
-        self._recognition_scope_values = list(radio_recognition.SCOPES)
-        self.recognition_scope = wx.Choice(
-            radio,
-            choices=[
-                radio_recognition.scope_label(value)
-                for value in self._recognition_scope_values
-            ],
-        )
-        self.recognition_scope.SetName(
-            "Zakres automatycznego rozpoznawania utworów"
-        )
-        self.recognition_scope.SetSelection(
-            self._recognition_scope_values.index(
-                radio_recognition.normalize_scope(
-                    options.radio_recognition_scope
-                )
-            )
-        )
-        radio_layout.Add(
-            self.recognition_monitoring, 0, wx.BOTTOM | wx.EXPAND, 10
-        )
-        radio_layout.Add(recognition_scope_label, 0, wx.BOTTOM, 4)
-        radio_layout.Add(
-            self.recognition_scope, 0, wx.BOTTOM | wx.EXPAND, 10
-        )
-        recognition_service_label = wx.StaticText(
-            radio, label="Domyślna &usługa rozpoznanych utworów:"
-        )
-        self._recognition_service_values = [SPOTIFY, TIDAL]
-        self.recognition_default_service = wx.Choice(
-            radio,
-            choices=["Spotify", "TIDAL"],
-        )
-        self.recognition_default_service.SetName(
-            "Domyślna usługa dla rozpoznanych utworów"
-        )
-        self.recognition_default_service.SetSelection(
-            self._recognition_service_values.index(
-                normalize_recognition_default_service(
-                    options.radio_recognition_default_service
-                )
-            )
-        )
-        radio_layout.Add(recognition_service_label, 0, wx.BOTTOM, 4)
-        radio_layout.Add(
-            self.recognition_default_service, 0, wx.BOTTOM | wx.EXPAND, 10
-        )
+        recording_heading = wx.StaticText(radio, label="Zapisywanie nagrań")
+        recording_heading.SetName("Sekcja zapisywanie nagrań radia")
+        radio_layout.Add(recording_heading, 0, wx.BOTTOM | wx.EXPAND, 8)
 
         folder_mode_label = wx.StaticText(
             radio, label="&Położenie nagrań Radia:"
@@ -7301,6 +7240,99 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
         radio_layout.Add(bitrate_label, 0, wx.BOTTOM, 4)
         radio_layout.Add(self.recording_bitrate, 0, wx.BOTTOM | wx.EXPAND, 10)
 
+        playback_heading = wx.StaticText(
+            radio, label="Transmisja i rozpoznawanie utworów"
+        )
+        playback_heading.SetName(
+            "Sekcja transmisja i rozpoznawanie utworów"
+        )
+        radio_layout.Add(playback_heading, 0, wx.BOTTOM | wx.EXPAND, 8)
+
+        timeshift_label = wx.StaticText(
+            radio, label="&Długość bufora transmisji:"
+        )
+        self._timeshift_values = list(RADIO_TIMESHIFT_CHOICES)
+        if options.timeshift_minutes not in self._timeshift_values:
+            self._timeshift_values.append(options.timeshift_minutes)
+            self._timeshift_values.sort()
+        self.timeshift = wx.Choice(
+            radio,
+            choices=[
+                radio_timeshift_label(value)
+                for value in self._timeshift_values
+            ],
+        )
+        self.timeshift.SetName("Długość bufora transmisji")
+        self.timeshift.SetSelection(
+            self._timeshift_values.index(options.timeshift_minutes)
+        )
+        radio_layout.Add(timeshift_label, 0, wx.BOTTOM, 4)
+        radio_layout.Add(self.timeshift, 0, wx.BOTTOM | wx.EXPAND, 10)
+
+        self.recognition_monitoring = wx.CheckBox(
+            radio, label="&Obserwuj i automatycznie rozpoznawaj utwory"
+        )
+        self.recognition_monitoring.SetName(
+            "Obserwuj i automatycznie rozpoznawaj utwory"
+        )
+        self.recognition_monitoring.SetValue(
+            options.radio_recognition_monitoring
+        )
+        recognition_scope_label = wx.StaticText(
+            radio, label="&Zakres automatycznego rozpoznawania:"
+        )
+        self._recognition_scope_values = list(radio_recognition.SCOPES)
+        self.recognition_scope = wx.Choice(
+            radio,
+            choices=[
+                radio_recognition.scope_label(value)
+                for value in self._recognition_scope_values
+            ],
+        )
+        self.recognition_scope.SetName(
+            "Zakres automatycznego rozpoznawania utworów"
+        )
+        self.recognition_scope.SetSelection(
+            self._recognition_scope_values.index(
+                radio_recognition.normalize_scope(
+                    options.radio_recognition_scope
+                )
+            )
+        )
+        radio_layout.Add(
+            self.recognition_monitoring, 0, wx.BOTTOM | wx.EXPAND, 10
+        )
+        radio_layout.Add(recognition_scope_label, 0, wx.BOTTOM, 4)
+        radio_layout.Add(
+            self.recognition_scope, 0, wx.BOTTOM | wx.EXPAND, 10
+        )
+        recognition_service_label = wx.StaticText(
+            radio, label="Domyślna &usługa rozpoznanych utworów:"
+        )
+        self._recognition_service_values = [SPOTIFY, TIDAL]
+        self.recognition_default_service = wx.Choice(
+            radio,
+            choices=["Spotify", "TIDAL"],
+        )
+        self.recognition_default_service.SetName(
+            "Domyślna usługa dla rozpoznanych utworów"
+        )
+        self.recognition_default_service.SetSelection(
+            self._recognition_service_values.index(
+                normalize_recognition_default_service(
+                    options.radio_recognition_default_service
+                )
+            )
+        )
+        radio_layout.Add(recognition_service_label, 0, wx.BOTTOM, 4)
+        radio_layout.Add(
+            self.recognition_default_service, 0, wx.BOTTOM | wx.EXPAND, 10
+        )
+
+        schedule_heading = wx.StaticText(radio, label="Harmonogram nagrywania")
+        schedule_heading.SetName("Sekcja harmonogram nagrywania radia")
+        radio_layout.Add(schedule_heading, 0, wx.BOTTOM | wx.EXPAND, 8)
+
         self.prefer_station_folder = wx.CheckBox(
             radio,
             label=(
@@ -7337,6 +7369,16 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
         podcasts = wx.ScrolledWindow(self.notebook)
         podcasts.SetScrollRate(0, 12)
         podcasts_layout = wx.BoxSizer(wx.VERTICAL)
+
+        podcast_storage_heading = wx.StaticText(
+            podcasts, label="Zapisywanie pobranych materiałów"
+        )
+        podcast_storage_heading.SetName(
+            "Sekcja zapisywanie pobranych podcastów i materiałów YouTube"
+        )
+        podcasts_layout.Add(
+            podcast_storage_heading, 0, wx.BOTTOM | wx.EXPAND, 8
+        )
 
         podcast_folder_label = wx.StaticText(
             podcasts,
@@ -7385,6 +7427,41 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
             podcast_folder_buttons, 0, wx.BOTTOM | wx.EXPAND, 12
         )
 
+        youtube_video_format_label = wx.StaticText(
+            podcasts, label="Format pobieranego &wideo z YouTube:"
+        )
+        self._youtube_video_format_values = ["mp4", "original"]
+        self.youtube_video_format = wx.Choice(
+            podcasts,
+            choices=[
+                "MP4, domyślny i najbardziej zgodny",
+                "Oryginalny lub najlepszy dostępny format, bez wymuszania MP4",
+            ],
+        )
+        self.youtube_video_format.SetName("Format pobieranego wideo z YouTube")
+        self.youtube_video_format.SetSelection(
+            self._youtube_video_format_values.index(
+                options.podcast_youtube_video_format
+                if options.podcast_youtube_video_format
+                in self._youtube_video_format_values
+                else "mp4"
+            )
+        )
+        podcasts_layout.Add(youtube_video_format_label, 0, wx.BOTTOM, 4)
+        podcasts_layout.Add(
+            self.youtube_video_format, 0, wx.BOTTOM | wx.EXPAND, 10
+        )
+
+        podcast_refresh_heading = wx.StaticText(
+            podcasts, label="Automatyczne odświeżanie"
+        )
+        podcast_refresh_heading.SetName(
+            "Sekcja automatyczne odświeżanie podcastów i kanałów YouTube"
+        )
+        podcasts_layout.Add(
+            podcast_refresh_heading, 0, wx.BOTTOM | wx.EXPAND, 8
+        )
+
         rss_label = wx.StaticText(
             podcasts, label="Odstęp dla &podcastów w minutach:"
         )
@@ -7413,26 +7490,6 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
         self.podcast_youtube_interval.SetName(
             "Odstęp automatycznego sprawdzania kanałów YouTube w minutach; zero wyłącza"
         )
-        youtube_video_format_label = wx.StaticText(
-            podcasts, label="Format pobieranego &wideo z YouTube:"
-        )
-        self._youtube_video_format_values = ["mp4", "original"]
-        self.youtube_video_format = wx.Choice(
-            podcasts,
-            choices=[
-                "MP4, domyślny i najbardziej zgodny",
-                "Oryginalny lub najlepszy dostępny format, bez wymuszania MP4",
-            ],
-        )
-        self.youtube_video_format.SetName("Format pobieranego wideo z YouTube")
-        self.youtube_video_format.SetSelection(
-            self._youtube_video_format_values.index(
-                options.podcast_youtube_video_format
-                if options.podcast_youtube_video_format
-                in self._youtube_video_format_values
-                else "mp4"
-            )
-        )
         batch_label = wx.StaticText(
             podcasts, label="Liczba źródeł sprawdzanych w &jednym przebiegu:"
         )
@@ -7450,7 +7507,6 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
         for label, control in (
             (rss_label, self.podcast_rss_interval),
             (youtube_label, self.podcast_youtube_interval),
-            (youtube_video_format_label, self.youtube_video_format),
             (batch_label, self.podcast_refresh_batch),
         ):
             podcasts_layout.Add(label, 0, wx.BOTTOM, 4)
@@ -7929,59 +7985,17 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
             self.detailed_hints, 0, wx.TOP | wx.BOTTOM | wx.EXPAND, 10
         )
 
-        templates_explanation = wx.StaticText(
-            messages,
-            label=(
-                "Wybierz zdarzenie, a następnie zmień jego tekst. "
-                "Pusty tekst wyłącza dany komunikat."
-            ),
+        self.recognition_announcements = wx.CheckBox(
+            messages, label="&Oznajmiaj automatycznie rozpoznane utwory"
         )
-        templates_explanation.SetName(
-            "Szablony komunikatów dostępności"
+        self.recognition_announcements.SetName(
+            "Oznajmiaj automatycznie rozpoznane utwory"
         )
-        templates_label = wx.StaticText(messages, label="&Zdarzenie:")
-        self._message_template_keys = list(TEMPLATE_KEYS)
-        self._message_template_values = {
-            key: (
-                message_policy.templates[key]
-                if key in message_policy.templates
-                else DEFAULT_TEMPLATES[key]
-            )
-            for key in self._message_template_keys
-        }
-        self.message_templates = wx.ListBox(
-            messages,
-            choices=[TEMPLATE_LABELS[key] for key in self._message_template_keys],
-            style=wx.LB_SINGLE,
-        )
-        self.message_templates.SetName("Zdarzenia komunikatów")
-        self.message_templates.SetSelection(0)
-        self._message_template_index = 0
-        template_text_label = wx.StaticText(
-            messages, label="&Tekst wybranego komunikatu:"
-        )
-        self.message_template_text = wx.TextCtrl(
-            messages,
-            value=self._message_template_values[self._message_template_keys[0]],
-            style=wx.TE_MULTILINE,
-            size=(-1, 64),
-        )
-        self.message_template_text.SetName(
-            "Tekst szablonu wybranego komunikatu"
-        )
-        self.message_templates.Bind(
-            wx.EVT_LISTBOX, self._on_message_template_choice
+        self.recognition_announcements.SetValue(
+            options.radio_recognition_announcements
         )
         messages_layout.Add(
-            templates_explanation, 0, wx.TOP | wx.BOTTOM | wx.EXPAND, 8
-        )
-        messages_layout.Add(templates_label, 0, wx.BOTTOM, 4)
-        messages_layout.Add(
-            self.message_templates, 0, wx.BOTTOM | wx.EXPAND, 8
-        )
-        messages_layout.Add(template_text_label, 0, wx.BOTTOM, 4)
-        messages_layout.Add(
-            self.message_template_text, 0, wx.BOTTOM | wx.EXPAND, 12
+            self.recognition_announcements, 0, wx.BOTTOM | wx.EXPAND, 10
         )
 
         activity_heading = wx.StaticText(
@@ -8028,27 +8042,85 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
         self.recording_sound.SetValue(options.radio_recording_state_sound)
         messages_layout.Add(self.playback_sound, 0, wx.BOTTOM | wx.EXPAND, 10)
         messages_layout.Add(self.recording_sound, 0, wx.BOTTOM | wx.EXPAND, 10)
-        self.recognition_announcements = wx.CheckBox(
-            messages, label="&Oznajmiaj automatycznie rozpoznane utwory"
+
+        templates_heading = wx.StaticText(
+            messages, label="Własne teksty komunikatów"
         )
-        self.recognition_announcements.SetName(
-            "Oznajmiaj automatycznie rozpoznane utwory"
+        templates_heading.SetName("Sekcja własne teksty komunikatów")
+        templates_explanation = wx.StaticText(
+            messages,
+            label=(
+                "Wybierz zdarzenie, a następnie zmień jego tekst. "
+                "Pusty tekst wyłącza dany komunikat."
+            ),
         )
-        self.recognition_announcements.SetValue(
-            options.radio_recognition_announcements
+        templates_explanation.SetName(
+            "Szablony komunikatów dostępności"
+        )
+        templates_label = wx.StaticText(messages, label="&Zdarzenie:")
+        self._message_template_keys = list(TEMPLATE_KEYS)
+        self._message_template_values = {
+            key: (
+                message_policy.templates[key]
+                if key in message_policy.templates
+                else DEFAULT_TEMPLATES[key]
+            )
+            for key in self._message_template_keys
+        }
+        self.message_templates = wx.ListBox(
+            messages,
+            choices=[TEMPLATE_LABELS[key] for key in self._message_template_keys],
+            style=wx.LB_SINGLE,
+        )
+        self.message_templates.SetName("Zdarzenia komunikatów")
+        self.message_templates.SetHelpText(
+            "Strzałkami wybierz zdarzenie, a następnie naciśnij Tab, "
+            "aby przejść do jego tekstu."
+        )
+        self.message_templates.SetSelection(0)
+        self._message_template_index = 0
+        template_text_label = wx.StaticText(
+            messages, label="&Tekst wybranego komunikatu:"
+        )
+        self.message_template_text = wx.TextCtrl(
+            messages,
+            value=self._message_template_values[self._message_template_keys[0]],
+            style=wx.TE_MULTILINE,
+            size=(-1, 64),
+        )
+        self.message_template_text.SetName(
+            "Tekst szablonu wybranego komunikatu"
+        )
+        self.message_template_text.SetHelpText(
+            "Zmień tekst komunikatu albo pozostaw pole puste, aby wyłączyć "
+            "tylko wybrane zdarzenie."
+        )
+        self.message_templates.Bind(
+            wx.EVT_LISTBOX, self._on_message_template_choice
         )
         messages_layout.Add(
-            self.recognition_announcements, 0, wx.BOTTOM | wx.EXPAND, 10
+            templates_heading, 0, wx.TOP | wx.BOTTOM | wx.EXPAND, 8
+        )
+        messages_layout.Add(
+            templates_explanation, 0, wx.BOTTOM | wx.EXPAND, 8
+        )
+        messages_layout.Add(templates_label, 0, wx.BOTTOM, 4)
+        messages_layout.Add(
+            self.message_templates, 0, wx.BOTTOM | wx.EXPAND, 8
+        )
+        messages_layout.Add(template_text_label, 0, wx.BOTTOM, 4)
+        messages_layout.Add(
+            self.message_template_text, 0, wx.BOTTOM | wx.EXPAND, 12
         )
         messages.SetSizer(messages_layout)
 
         self.notebook.AddPage(general, "Ogólne", select=True)
-        self.notebook.AddPage(keyboard, "Klawiatura")
         self.notebook.AddPage(radio, "Radio i nagrywanie")
         self.notebook.AddPage(podcasts, "Podcasty i YouTube")
-        self.notebook.AddPage(integration, "Integracja z Windows")
-        self.notebook.AddPage(updates, "Aktualizacje")
         self.notebook.AddPage(messages, "Dostępność i komunikaty")
+        self.notebook.AddPage(keyboard, "Klawiatura")
+        self.notebook.AddPage(updates, "Aktualizacje")
+        self.notebook.AddPage(integration, "Integracja z Windows")
 
         buttons = self.CreateStdDialogButtonSizer(wx.OK | wx.CANCEL)
         save = self.FindWindowById(wx.ID_OK)
@@ -11517,9 +11589,10 @@ class LiteFrame(wx.Frame):
         # Lekkie testy wykonują samą metodę bez importów całego modułu GUI.
         # Produkcja zawsze ma resolver; brak w izolowanym teście oznacza po
         # prostu niewłączone konto, nigdy zastępczy identyfikator.
+        release_profile = current_profile()
         youtube_client_id_resolver = globals().get("resolve_youtube_client_id")
         youtube_client_id = (
-            youtube_client_id_resolver()
+            youtube_client_id_resolver(profile=release_profile)
             if callable(youtube_client_id_resolver)
             else None
         )
@@ -11527,22 +11600,41 @@ class LiteFrame(wx.Frame):
             "resolve_youtube_client_secret_file"
         )
         youtube_client_secret_file = (
-            youtube_client_secret_resolver()
+            youtube_client_secret_resolver(profile=release_profile)
             if callable(youtube_client_secret_resolver)
             else None
         )
-        # Konto jest dostępne wyłącznie przy kompletnej parze konfiguracji.
-        # Nigdy nie uruchamiamy ponownie wariantu z samym identyfikatorem,
-        # który kończył zgodę Google bez zapisania konta w AMC.
-        if youtube_client_id is None or youtube_client_secret_file is None:
+        youtube_token_broker_resolver = globals().get(
+            "resolve_youtube_token_broker"
+        )
+        youtube_token_broker = (
+            youtube_token_broker_resolver(profile=release_profile)
+            if callable(youtube_token_broker_resolver)
+            else None
+        )
+        test_configuration = (
+            release_profile.profile_id == "test"
+            and youtube_client_id is not None
+            and youtube_client_secret_file is not None
+            and youtube_token_broker is None
+        )
+        public_configuration = (
+            release_profile.profile_id == "public"
+            and youtube_client_id is not None
+            and youtube_client_secret_file is None
+            and youtube_token_broker is not None
+        )
+        if not (test_configuration or public_configuration):
             youtube_client_id = None
             youtube_client_secret_file = None
+            youtube_token_broker = None
         client = LiteHostClient(
             default_host_path(),
             timeshift_minutes=self.options.timeshift_minutes,
             release_profile=current_profile().profile_id,
             youtube_client_id=youtube_client_id,
             youtube_client_secret_file=youtube_client_secret_file,
+            youtube_token_broker=youtube_token_broker,
             common_data_snapshot=common_data_snapshot_path(),
             # Odczyt list nadal nalezy do Pythona w trybie ro. Sciezka daje
             # hostowi C# wyłącznie możliwość wykonania wąskiej, transakcyjnej
@@ -17903,14 +17995,28 @@ class LiteFrame(wx.Frame):
 
         def run_action(action: str, dialog: YouTubeAccountDialog) -> None:
             if action == "logout":
-                with wx.MessageDialog(
-                    dialog,
-                    (
+                question = (
+                    "Cofnąć dostęp AMC do YouTube w Google i usunąć z tego "
+                    "profilu kanały, playlisty oraz materiały pobrane z konta? "
+                    "Nie usuwa to danych zapisanych w YouTube ani publicznych "
+                    "źródeł, które nie zostały utworzone lub zaktualizowane "
+                    "przez synchronizację konta."
+                    if _RELEASE_PROFILE.profile_id == "public"
+                    else (
                         "Wylogować konto YouTube z AMC? Zapisane połączenie "
                         "zostanie usunięte tylko z bieżącego profilu AMC. "
                         "Nie zmienia to hasła ani konta Google i YouTube."
-                    ),
-                    "Wylogowanie YouTube z AMC",
+                    )
+                )
+                caption = (
+                    "Cofnięcie dostępu YouTube"
+                    if _RELEASE_PROFILE.profile_id == "public"
+                    else "Wylogowanie YouTube z AMC"
+                )
+                with wx.MessageDialog(
+                    dialog,
+                    question,
+                    caption,
                     wx.YES_NO | wx.NO_DEFAULT | wx.ICON_WARNING,
                 ) as confirm:
                     if confirm.ShowModal() != wx.ID_YES:

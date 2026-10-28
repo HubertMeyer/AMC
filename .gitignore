@@ -12,6 +12,11 @@ node_modules/
 *.amcbackup.json
 youtube-oauth-client-id.txt
 youtube-oauth-client-secret.txt
+client_secret_*.json
+google-oauth-client*.json
+deploy/amc-youtube-oauth-broker/.dev.vars*
+deploy/amc-youtube-oauth-broker/.wrangler/
+deploy/amc-youtube-oauth-broker/wrangler.jsonc
 AMC-NVDA-*.nvda-addon
 __pycache__/
 .smoke-out/

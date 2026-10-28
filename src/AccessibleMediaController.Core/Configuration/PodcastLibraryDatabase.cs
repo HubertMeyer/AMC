@@ -1314,15 +1314,18 @@ internal sealed class PodcastLibraryDatabase(string databasePath)
         bool restoreSuppressed)
     {
         ArgumentNullException.ThrowIfNull(remoteSubscriptions);
+        var remote = remoteSubscriptions.ToArray();
         lock (_gate)
         {
             var settings = new PodcastSettings();
             LoadInto(settings);
             var result = YouTubeSubscriptionSyncApplier.Apply(
-                remoteSubscriptions,
+                remote,
                 settings,
                 restoreSuppressed);
-            if (result.Changed > 0) Save(settings);
+            // Ponowne jawne sprawdzenie odnawia datę danych konta także wtedy,
+            // gdy lista członkostwa nie wymagała dodania ani przywrócenia.
+            if (result.Changed > 0 || remote.Length > 0) Save(settings);
             return result;
         }
     }
@@ -1375,6 +1378,68 @@ internal sealed class PodcastLibraryDatabase(string databasePath)
                 settings,
                 restoreSuppressed);
         }
+    }
+
+    public YouTubeAccountDataDeletionResult DeleteYouTubeAccountData(
+        DateTime utcNow,
+        TimeSpan? maximumAge)
+    {
+        if (maximumAge is { } age && age <= TimeSpan.Zero)
+            throw new ArgumentOutOfRangeException(nameof(maximumAge));
+        var now = utcNow.Kind == DateTimeKind.Utc ? utcNow : utcNow.ToUniversalTime();
+        var cutoffTicks = maximumAge is { } limit
+            ? now.Subtract(limit).Ticks
+            : long.MaxValue;
+        lock (_gate)
+        {
+            var settings = new PodcastSettings();
+            LoadInto(settings);
+            var removedSubscriptions = settings.Subscriptions
+                .Where(item => item.IsYouTubeAccountData
+                    && (maximumAge is null
+                        || item.YouTubeAccountDataRefreshedUtcTicks <= 0
+                        || item.YouTubeAccountDataRefreshedUtcTicks <= cutoffTicks))
+                .ToArray();
+            if (removedSubscriptions.Length == 0)
+                return new YouTubeAccountDataDeletionResult(0, 0);
+
+            var removedIds = removedSubscriptions
+                .Select(item => item.Id)
+                .ToHashSet(StringComparer.Ordinal);
+            var removedEpisodeIds = settings.Episodes
+                .Where(item => removedIds.Contains(item.SubscriptionId))
+                .Select(item => item.Id)
+                .ToHashSet(StringComparer.Ordinal);
+            settings.Subscriptions.RemoveAll(item => removedIds.Contains(item.Id));
+            settings.Episodes.RemoveAll(item => removedIds.Contains(item.SubscriptionId));
+            if (settings.CurrentItemId is { } current
+                && (removedIds.Contains(current) || removedEpisodeIds.Contains(current)))
+                settings.CurrentItemId = null;
+            Save(settings);
+            DeleteRemovedEpisodeMarkers(removedIds);
+            return new YouTubeAccountDataDeletionResult(
+                removedSubscriptions.Length,
+                removedEpisodeIds.Count);
+        }
+    }
+
+    private void DeleteRemovedEpisodeMarkers(IReadOnlyCollection<string> subscriptionIds)
+    {
+        using var connection = OpenConnection();
+        EnsureSchema(connection);
+        using var transaction = connection.BeginTransaction();
+        foreach (var subscriptionId in subscriptionIds)
+        {
+            Execute(
+                connection,
+                transaction,
+                """
+                DELETE FROM podcast_removed_episodes
+                WHERE substr(id, 1, length($prefix)) = $prefix;
+                """,
+                ("$prefix", subscriptionId + ":"));
+        }
+        transaction.Commit();
     }
 
     public PodcastRefreshResult ApplyRefresh(
@@ -1494,6 +1559,8 @@ internal sealed class PodcastLibraryDatabase(string databasePath)
         hash.Add((int?)item.TempoAlgorithmOverride);
         hash.Add(item.IsFavorite);
         hash.Add(item.IsInLibrary);
+        hash.Add(item.IsYouTubeAccountData);
+        hash.Add(item.YouTubeAccountDataRefreshedUtcTicks);
         return hash.ToString();
     }
 

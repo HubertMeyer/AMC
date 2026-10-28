@@ -176,6 +176,46 @@ def test_incomplete_youtube_oauth_configuration_is_not_packaged():
         ).exists()
 
 
+def test_public_youtube_oauth_packages_only_nonsecret_configuration():
+    with tempfile.TemporaryDirectory() as folder:
+        root = Path(folder)
+        source = root / "source"
+        source_package = source / "amc_wx_lite"
+        source_package.mkdir(parents=True)
+        (source_package / "__init__.py").write_text("", encoding="utf-8")
+        client_id = "123456789012-example.apps.googleusercontent.com"
+        broker = "https://oauth.example.test/v1/google/token"
+        (source_package / bundle.YOUTUBE_OAUTH_PUBLIC_CLIENT_ID_RESOURCE).write_text(
+            client_id + "\n", encoding="utf-8"
+        )
+        (source_package / bundle.YOUTUBE_OAUTH_PUBLIC_BROKER_RESOURCE).write_text(
+            broker + "\n", encoding="utf-8"
+        )
+        (source_package / bundle.YOUTUBE_OAUTH_CLIENT_SECRET_RESOURCE).write_text(
+            "sekret-ktory-nie-moze-trafic-do-paczki\n", encoding="utf-8"
+        )
+
+        public_target = root / "public"
+        copied = bundle.copy_python_code(
+            public_target, bundle.profile_from_id("public"), source
+        )
+        package = public_target / "app" / "amc_wx_lite"
+        assert (package / bundle.YOUTUBE_OAUTH_PUBLIC_CLIENT_ID_RESOURCE).read_text(
+            encoding="utf-8"
+        ).strip() == client_id
+        assert (package / bundle.YOUTUBE_OAUTH_PUBLIC_BROKER_RESOURCE).read_text(
+            encoding="utf-8"
+        ).strip() == broker
+        assert not (package / bundle.YOUTUBE_OAUTH_CLIENT_SECRET_RESOURCE).exists()
+        assert all("secret" not in name for name in copied)
+
+        test_target = root / "test"
+        bundle.copy_python_code(test_target, bundle.profile_from_id("test"), source)
+        test_package = test_target / "app" / "amc_wx_lite"
+        assert not (test_package / bundle.YOUTUBE_OAUTH_PUBLIC_CLIENT_ID_RESOURCE).exists()
+        assert not (test_package / bundle.YOUTUBE_OAUTH_PUBLIC_BROKER_RESOURCE).exists()
+
+
 def test_public_gui_imports_without_private_service_modules():
     with tempfile.TemporaryDirectory() as folder:
         target = Path(folder)
@@ -737,6 +777,17 @@ def test_full_public_bundle_omits_librespot_and_has_complete_sizes():
             Path(relative).name in forbidden_modules
             for relative in manifest["files"]
         )
+        public_package = target / "app" / "amc_wx_lite"
+        for resource in (
+            bundle.YOUTUBE_OAUTH_CLIENT_ID_RESOURCE,
+            bundle.YOUTUBE_OAUTH_CLIENT_SECRET_RESOURCE,
+            bundle.YOUTUBE_OAUTH_PUBLIC_CLIENT_ID_RESOURCE,
+            bundle.YOUTUBE_OAUTH_PUBLIC_BROKER_RESOURCE,
+        ):
+            assert not (public_package / resource).exists()
+            assert not any(
+                Path(relative).name == resource for relative in manifest["files"]
+            )
         assert set(manifest["fileHashes"]) == set(manifest["files"])
         assert set(manifest["fileSizes"]) == set(manifest["files"])
         for relative in manifest["files"]:
