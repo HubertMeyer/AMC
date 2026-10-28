@@ -325,6 +325,10 @@ Projekt do korekty i zatwierdzenia użytkownika:
   commit `e7f02107` (`fix(i18n): apply Windows language changes immediately`);
   testy źródłowe zaliczone, build, instalacja i publikacja tej poprawki nie
   zostały jeszcze wykonane;
+- poprawka mieszanych nazw listy i nagłówków po odświeżeniu widoku: commit
+  `0c891379` (`fix(i18n): keep list accessibility labels localized`); 39
+  celowanych testów zaliczonych, build, instalacja i publikacja tej poprawki
+  nie zostały jeszcze wykonane;
 - commit wdrożenia wielojęzycznego interfejsu:
   `11f6459d` (`feat(i18n): add Polish and English interface catalogs`);
 - stan źródeł po commicie: zapisany na gałęzi wydania AMC Test;
