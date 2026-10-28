@@ -31,4 +31,9 @@ NVDA powinien czytać wyłącznie użytkowe nazwy działań i jednoznacznie odr�
 - testy celowane Pythona: 109/109 zaliczone;
 - testy Launchera i aktualizatora: 37/37 zaliczone;
 - pełna regresja GUI: niepowtarzana dla tej różnicy profilu;
-- paczka, instalator, instalacja i publikacja: do uzupełnienia po wykonaniu.
+- paczka Public `e44af269`: zbudowana, kontrola integralności i cichy start
+  zaliczone;
+- instalator `AMC-Public-2026-10-28-2109.exe`: zbudowany, skan sekretów
+  zaliczony i opublikowany w stabilnym wydaniu `public-2026.10.28.2109`;
+- instalacja i ręczny odbiór z NVDA: niewykonane; lokalnego AMC nie
+  zmieniano.

@@ -605,7 +605,7 @@ tych samych plików profilu.
 - Adres wydania:
   `https://github.com/michalkasperczak/AMC/releases/tag/test-2026.10.28.2022`.
 
-## Przygotowanie pierwszego wydania Public na bazie alpha.438 — 28.10.2026
+## Wydanie Public na bazie alpha.438 — 28.10.2026
 
 ### Materiał do dokumentacji użytkownika
 
@@ -642,8 +642,18 @@ tych samych plików profilu.
   starszego Public z historyczną możliwością Google.
 - Pełnej regresji GUI nie powtarzano. Bazą jest pełna regresja i sprawdzony
   pakiet wydania Test `alpha.438`; korekta Public ma celowane testy różnic.
-- Paczka, instalator, sucha próba publikacji i GitHub: jeszcze niewykonane w
-  chwili tego zapisu.
+- Czysta paczka Public `e44af269`: **zbudowana** z 1152 plików; pełna cicha
+  kontrola integralności i kontrolowany start interfejsu/hosta: **zaliczone**.
+- Instalator: **zbudowany**; skan sekretów: **zaliczony**. Sucha bramka
+  publikacji kanału `stable`: **zaliczona**.
+- GitHub Release `public-2026.10.28.2109`: **opublikowany** jako stabilny i
+  odczytowo zweryfikowany. GitHub potwierdził commit, trzy zasoby w stanie
+  `uploaded`, rozmiar 124342770 bajtów i digest instalatora zgodny z lokalnym
+  SHA-256.
+- Nie zbudowano dodatkowej paczki porównawczej Test, ponieważ uruchomiony AMC
+  Test i dwa oczekujące aktualizatory nie mogły zostać bezpiecznie przerwane.
+  Parytet oraz różnice profili pokrywają testy celowane; instalacja użytkownika
+  pozostała bez zmian.
 
 ### Znane ograniczenia
 
@@ -655,10 +665,21 @@ tych samych plików profilu.
 
 ### Wersja i commit
 
-- Przygotowywana wersja techniczna: `0.1.0-alpha.439`.
+- Wersja techniczna: `0.1.0-alpha.439`; wersja widoczna:
+  `28.10.2026, 21:09`.
 - Bazowe wydanie Test: `0.1.0-alpha.438`, commit `9b2f6246`.
-- Dokładny commit Public, identyfikator paczki, instalator i tag zostaną
-  dopisane po czystej budowie i odczytowej weryfikacji GitHuba.
+- Commit źródłowy Public:
+  `a4bedbd62e15e69701f6e358c421dee7730216c6`.
+- Identyfikator paczki: `e44af269`.
+- Instalator:
+  `D:\Projekty Codex\AMC aktualizacje\AMC Public 0.1.0-alpha.439 kandydat 2026-10-28\instalator\AMC-Public-2026-10-28-2109.exe`.
+- SHA-256 instalatora:
+  `af2c5f3ba799a6d5937b98cb773d66d5bbb7c24bd2cfb92747024171063362af`.
+- Tag: `public-2026.10.28.2109`; wydanie stabilne, nie prerelease.
+- Adres wydania:
+  `https://github.com/michalkasperczak/AMC/releases/tag/public-2026.10.28.2109`.
+- Instalatora ani aktualizatora nie uruchamiano; nie wykonano instalacji ani
+  ręcznego odbioru z NVDA.
 
 ## Wersja i commit
 

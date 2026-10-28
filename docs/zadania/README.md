@@ -104,12 +104,13 @@ do kontrolowanej archiwizacji opisanej w REL-003.
   z dawnej aplikacji WPF. Szczegóły:
   [I18N-001-wielojezyczny-interfejs-wxpython.md](I18N-001-wielojezyczny-interfejs-wxpython.md).
 
-- `REL-002` — **W trakcie; piąte wydanie Test `0.1.0-alpha.438` jest
-  zweryfikowane na GitHubie, a Public `0.1.0-alpha.439` ma gotowe źródła i
-  celowane testy: 109/109 Pythona oraz 37/37 Launchera i aktualizatora. Public
-  nie deklaruje Google OAuth ani prywatnych sesji Spotify/TIDAL; budowa,
-  instalator i stabilne wydanie GitHub są w toku. Lokalnej instalacji nie
-  zmieniono; ręczny odbiór z NVDA pozostaje po stronie użytkownika** — jedna
+- `REL-002` — **W trakcie; Test `0.1.0-alpha.438` i stabilny Public
+  `0.1.0-alpha.439` są opublikowane i odczytowo zweryfikowane na GitHubie.
+  Public nie deklaruje Google OAuth ani prywatnych sesji Spotify/TIDAL;
+  109/109 testów Pythona i 37/37 Launchera/aktualizatora, paczka `e44af269`,
+  cichy start, instalator, skan sekretów oraz zdalny SHA-256 są zaliczone.
+  Lokalnej instalacji nie zmieniono; ręczny odbiór z NVDA pozostaje po
+  stronie użytkownika** — jedna
   kanoniczna linia AMC Python,
   wydania AMC Test i AMC Public z tego samego commitu, dwa kanały aktualizacji,
   standardowa instalacja Windows oraz kontrolowane uporządkowanie starego C#,
@@ -127,9 +128,8 @@ do kontrolowanej archiwizacji opisanej w REL-003.
   [REL-003-usuniecie-wpf-i-stan-youtube.md](REL-003-usuniecie-wpf-i-stan-youtube.md).
 
 - `RECOG-001` — **W trakcie; poprawki Test są w opublikowanym `alpha.438`, a
-  Public ma gotową i celowanie przetestowaną korektę usuwającą wewnętrzne
-  działania Spotify/TIDAL. Budowa Public trwa; pozostaje ręczny odbiór
-  NVDA** — prawa strzałka
+  korekta Public usuwająca wewnętrzne działania Spotify/TIDAL jest w
+  stabilnym `alpha.439`. Pozostaje ręczny odbiór NVDA** — prawa strzałka
   od razu fokusuje pierwszy element, obie listy potwierdzają kopiowanie przez
   lokalny region aktywny, a historia jest dostępna z listy i odtwarzacza
   Plików lokalnych oraz Radia, lecz nie z pozostałych sesji. Pełne podmenu
