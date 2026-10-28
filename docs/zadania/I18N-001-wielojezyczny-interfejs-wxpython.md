@@ -21,6 +21,9 @@ WPF nie było otwierane, przeszukiwane ani modyfikowane.
 - Karty, wspólne przyciski, etykiety i nazwy dostępności Ustawień, menu,
   pomoc klawiatury, pełna pomoc oraz paleta poleceń korzystają z jednej
   warstwy językowej.
+- Nazwa dostępności głównej listy, etykieta sesji i nagłówki kolumn korzystają
+  z tego samego aktywnego katalogu. Odświeżenie widoku nie może ponownie
+  wstawić polskiego `Ulubione` do interfejsu angielskiego ani odwrotnie.
 - Polecenia nadal są identyfikowane przez stabilne wartości `Action`.
   Tłumaczenie zmienia wyłącznie nazwę i opis dla użytkownika; nie zmienia
   skrótu, routingu, widoczności ani wykonania polecenia.
@@ -97,6 +100,12 @@ identyfikatora polecenia.
   przełączyć istniejący interfejs. Ta sama korekta wymaga, aby opcja zgodna z
   systemem rozpoznawała rzeczywisty polski identyfikator locale Windows
   `Polish_Poland`.
+- Późniejsza obserwacja użytkownika z 29.10.2026 ujawniła mieszany interfejs:
+  NVDA czytał `Ulubione, lista`, podczas gdy menu było angielskie. Przyczyną
+  było ponowne wpisywanie surowej polskiej nazwy dostępności przez
+  `_sync_views` po początkowym tłumaczeniu okna. Korekta obejmuje wspólną
+  lokalizację nazwy listy, etykiety sesji i nagłówków kolumn, a nie dane
+  wierszy użytkownika.
 
 ## Zmienione źródła
 
@@ -183,6 +192,12 @@ innymi karta, historia, stan konta, dziennik, tasowanie i gospodarstwo Sonos.
   zapisie, przed wyborem szablonów komunikatów i przed przebudową menu;
 - nie uruchamiano widocznego GUI ani pełnej regresji, zgodnie z zasadą
   nieuciążliwego testowania.
+- po zgłoszeniu mieszanego `Ulubione, lista` rozszerzono katalog o stabilne
+  klucze list, sesji i widoków oraz ponowiono trzy celowane moduły testowe w
+  środowisku z wxPython: **39 zaliczonych** w 5,66 s. Test obejmuje nazwę
+  dostępną listy, nagłówki kolumn, zmianę języka po zapisie i ochronę tekstów
+  wierszy. Pierwsza próba systemowym Pythonem została przerwana przy zbieraniu,
+  ponieważ ten interpreter nie zawiera `wx`; nie była to regresja kodu.
 
 - `py_compile` wszystkich zmienionych modułów, narzędzi katalogu i
   `build_bundle.py`: zaliczone;
@@ -300,6 +315,8 @@ Projekt do korekty i zatwierdzenia użytkownika:
   szablon upraszcza dodawanie następnych języków.
 - Poprawiono wykrywanie polskiego języka Windows i umożliwiono zmianę języka
   otwartego interfejsu bez restartowania AMC.
+- Usunięto mieszanie języków, w którym NVDA czytał polską nazwę listy
+  `Ulubione`, gdy menu i pozostały interfejs były angielskie.
 
 ## Wersja i commit
 

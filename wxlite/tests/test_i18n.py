@@ -197,6 +197,11 @@ def test_window_tree_does_not_translate_user_items_without_opt_in() -> None:
 
 
 def test_open_window_dynamic_text_can_switch_back_to_polish() -> None:
+    try:
+        i18n.configure("en")
+        assert i18n.ui_text("Ulubione") == "Favorites"
+    finally:
+        i18n.configure("pl")
     assert i18n.translate_ui_text(
         "Added bookmark 2: 01:30",
         source_language="en",

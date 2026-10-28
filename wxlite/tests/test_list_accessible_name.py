@@ -37,9 +37,22 @@ def test_native_list_keeps_its_msaa_children() -> None:
 def test_native_list_still_has_an_intentional_user_label() -> None:
     source = inspect.getsource(MediaListCtrl.__init__)
 
-    assert "self.SetLabel(label)" in source
-    assert "self.SetName(label)" in source
+    assert "localized_label = i18n.ui_text(label)" in source
+    assert "self.SetLabel(localized_label)" in source
+    assert "self.SetName(localized_label)" in source
     assert "self._base_accessible_label = label" in source
+    assert "self._accessible_label_source = label" in source
+
+
+def test_native_list_relocalizes_its_accessible_name_and_columns() -> None:
+    label_source = inspect.getsource(MediaListCtrl.set_accessible_label)
+    chrome_source = inspect.getsource(MediaListCtrl.relocalize_interface)
+
+    assert "localized_label = i18n.ui_text(source_label)" in label_source
+    assert "self.SetName(localized_label)" in label_source
+    assert "self._accessible_label_source = source_label" in label_source
+    assert "column.SetText(i18n.ui_text(source_label))" in chrome_source
+    assert "self.set_accessible_label(self._accessible_label_source)" in chrome_source
 
 
 def test_leaving_a_named_view_restores_the_session_list_label() -> None:
@@ -48,6 +61,7 @@ def test_leaving_a_named_view_restores_the_session_list_label() -> None:
     source = inspect.getsource(gui.LiteFrame._sync_views)
     assert 'LibraryView.PLAYLIST_CONTENTS: "Playlista"' in source
     assert 'getattr(active_list, "_base_accessible_label", None)' in source
+    assert "self.session_label.SetLabel(i18n.ui_text({" in source
 
 
 def test_gui_does_not_mark_lists_for_an_nvda_overlay() -> None:

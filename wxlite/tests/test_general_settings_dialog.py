@@ -139,6 +139,9 @@ def test_enter_save_has_one_short_confirmation_and_reconfigures_the_host() -> No
     assert method.index("i18n.reconfigure_window_tree(") < method.index(
         "self._build_menu()"
     )
+    assert method.index("i18n.reconfigure_window_tree(") < method.index(
+        "media_list.relocalize_interface()"
+    )
 
 
 def test_all_exposed_choices_use_intentional_user_facing_labels() -> None:

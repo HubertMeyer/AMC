@@ -1643,9 +1643,10 @@ class MediaListCtrl(wx.ListCtrl):
         #: kontrolka nic w nim nie zmienia. ``None`` = brak wiedzy o widoku, co
         #: wylacza pelna podmiane (bezpieczny domysl: przyrostowo).
         self.state = state
-        self.InsertColumn(0, "Nazwa", width=420)
-        self.InsertColumn(1, "Rodzaj", width=120)
-        self.InsertColumn(2, "Szczegoly", width=260)
+        self._column_labels = ("Nazwa", "Rodzaj", "Szczegoly")
+        self.InsertColumn(0, i18n.ui_text(self._column_labels[0]), width=420)
+        self.InsertColumn(1, i18n.ui_text(self._column_labels[1]), width=120)
+        self.InsertColumn(2, i18n.ui_text(self._column_labels[2]), width=260)
         #: Stan POKAZANY w kontrolce. Jedyne zrodlo prawdy do porownania --
         #: odczytywanie tekstow z ``GetItemText`` przy kazdym odswiezeniu
         #: oznaczaloby 7428 wywolan API na liste 2476 wierszy.
@@ -1673,10 +1674,12 @@ class MediaListCtrl(wx.ListCtrl):
         # przesuwaly fokus i Enter dzialal, a czytnik nie dostawal nazw wierszy.
         # ``SetLabel`` ustawia tekst natywnego okna, ``SetName`` zachowuje
         # jawna nazwe po stronie wx; nie podmieniamy providera MSAA/UIA.
-        self.SetLabel(label)
-        self.SetName(label)
+        localized_label = i18n.ui_text(label)
+        self.SetLabel(localized_label)
+        self.SetName(localized_label)
         self._base_accessible_label = label
-        self._accessible_label = label
+        self._accessible_label_source = label
+        self._accessible_label = localized_label
 
     def set_accessible_label(self, label: str) -> None:
         """Ustaw nazwę bieżącego widoku bez wymiany natywnej listy.
@@ -1686,12 +1689,25 @@ class MediaListCtrl(wx.ListCtrl):
         własnego providera dostępności: dzieci i pozycję „1 z N” nadal podaje
         natywny SysListView32.
         """
-        label = (label or "").strip()
-        if not label or label == self._accessible_label:
+        source_label = (label or "").strip()
+        localized_label = i18n.ui_text(source_label)
+        if not source_label:
             return
-        self.SetLabel(label)
-        self.SetName(label)
-        self._accessible_label = label
+        self._accessible_label_source = source_label
+        if localized_label == self._accessible_label:
+            return
+        self.SetLabel(localized_label)
+        self.SetName(localized_label)
+        self._accessible_label = localized_label
+
+    def relocalize_interface(self) -> None:
+        """Refresh list chrome without touching any row supplied by the user."""
+
+        for index, source_label in enumerate(self._column_labels):
+            column = self.GetColumn(index)
+            column.SetText(i18n.ui_text(source_label))
+            self.SetColumn(index, column)
+        self.set_accessible_label(self._accessible_label_source)
 
     # ------------------------------------------------------------ aktualizacja
 
@@ -15695,7 +15711,7 @@ class LiteFrame(wx.Frame):
             self._build_menu()
         else:
             self._refresh_menu_state()
-        self.session_label.SetLabel({
+        self.session_label.SetLabel(i18n.ui_text({
             SessionId.FILES: "Pliki lokalne",
             SessionId.RADIO: "Radio",
             SessionId.PODCASTS: "Podcasty i YouTube",
@@ -15704,7 +15720,7 @@ class LiteFrame(wx.Frame):
             SessionId.WIIM: "WiiM",
             SessionId.SONOS: "Sonos",
             SessionId.FRONTIER_SMART: "Frontier Smart",
-        }[self.navigator.active])
+        }[self.navigator.active]))
 
         active_list = self._active_list()
         # Jawna, użytkowa nazwa BIEŻĄCEGO widoku. Model nadal przechowuje enum,
@@ -27515,6 +27531,17 @@ class LiteFrame(wx.Frame):
                         window,
                         source_language=previous_interface_language,
                     )
+            for media_list in (
+                self.files_list,
+                self.radio_list,
+                self.podcasts_list,
+                self.tidal_list,
+                self.spotify_list,
+                self.wiim_list,
+                self.frontier_smart_list,
+                self.sonos_list,
+            ):
+                media_list.relocalize_interface()
             self.SetTitle(i18n.ui_text(window_title()))
         self.shortcut_overrides = chosen_shortcuts
         self._radio_snapshot = LiteFrame._with_radio_recording_options(
