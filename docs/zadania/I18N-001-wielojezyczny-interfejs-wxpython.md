@@ -246,8 +246,9 @@ Projekt do korekty i zatwierdzenia użytkownika:
 ## Wersja i commit
 
 - gałąź: `codex/konfigurowalne-skroty-20261026`;
-- bazowy commit drzewa roboczego: `301c7fcf5c54473bfa1307d3b1c6961b25115ef3`;
-- stan źródeł: roboczy, bez nowego commitu;
+- commit wdrożenia wielojęzycznego interfejsu:
+  `11f6459d` (`feat(i18n): add Polish and English interface catalogs`);
+- stan źródeł po commicie: zapisany na gałęzi wydania AMC Test;
 - paczka robocza: `224499f5`, profil `test`, `sourceDirty=true`, 2139 plików
   manifestu; pełna integralność i kontrolowany start zaliczone;
 - instalacja: nie wykonano;
