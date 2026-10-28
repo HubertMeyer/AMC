@@ -816,8 +816,9 @@ def test_remote_radio_open_plays_without_profile_write() -> None:
         client=client,
         announcer=SimpleNamespace(say=lambda value: calls.append(("say", value))),
         _switch_session=lambda session: calls.append(("session", session)),
+        _session_open_player_on_enter=lambda session: False,
         navigator=SimpleNamespace(
-            open_radio_search_result=lambda row: [row]
+            open_radio_search_result=lambda row, *, open_player: [row]
         ),
         _run=lambda values: intents.extend(values),
     )

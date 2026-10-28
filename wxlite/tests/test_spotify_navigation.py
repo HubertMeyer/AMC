@@ -147,7 +147,7 @@ def test_album_playlist_and_podcast_enter_request_their_real_container() -> None
         )]
 
 
-def test_track_enter_keeps_read_only_list_and_container_back_restores_rows() -> None:
+def test_track_enter_opens_player_and_container_back_restores_rows() -> None:
     nav = Navigator()
     nav.active = SessionId.SPOTIFY
     albums = [_album(), _album(2)]
@@ -163,6 +163,8 @@ def test_track_enter_keeps_read_only_list_and_container_back_restores_rows() -> 
     assert events == [PlaySpotifyItem(
         tracks[1].item_id, tracks[1].title, tracks[1].service_id or "", "track"
     )]
+    assert nav.session.view is View.PLAYER
+    nav.back_to_list()
     assert nav.session.view is View.LIST
     assert nav.session.model.selected_row == tracks[1]
 
@@ -504,6 +506,20 @@ def test_search_result_opens_without_adding_it_to_the_saved_library() -> None:
     )]
     assert nav.session.model.rows == [saved]
     assert nav.session.spotify_history == []
+
+
+def test_search_track_can_play_without_leaving_the_list() -> None:
+    nav = Navigator()
+    nav.active = SessionId.SPOTIFY
+    track = _track()
+    nav.apply_spotify_view("Wyniki Spotify", [track])
+
+    events = nav.open_spotify_search_result(track, open_player=False)
+
+    assert events == [PlaySpotifyItem(
+        track.item_id, track.title, track.service_id or "", "track"
+    )]
+    assert nav.session.view is View.LIST
 
 
 def test_unplayable_row_refuses_once_without_exposing_private_identity() -> None:

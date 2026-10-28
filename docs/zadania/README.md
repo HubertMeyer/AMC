@@ -170,6 +170,14 @@ do kontrolowanej archiwizacji opisanej w REL-003.
   prędkość osobno dla Plików i Podcastów. Szczegóły:
   [SESSION-001-opcje-sesji-i-predkosc.md](SESSION-001-opcje-sesji-i-predkosc.md).
 
+- `SESSION-002` — **Zrobione w źródłach; ustawienie pozostawania na liście
+  działa per sesja także dla plików lokalnych i pozostałych wykonywalnych
+  odtwarzaczy, a Menedżer ma osobny przycisk „Ustawienia sesji…”; testy
+  celowane są zaliczone, bez builda, instalacji i ręcznego odbioru NVDA** —
+  rozdzielenie ustawień od konfiguracji folderów, kont i urządzeń oraz wspólna
+  polityka Entera, kolejek, zakładek i wyników katalogu. Szczegóły:
+  [SESSION-002-ustawienia-sesji-i-zachowanie-odtwarzacza.md](SESSION-002-ustawienia-sesji-i-zachowanie-odtwarzacza.md).
+
 - `SPOT-001` — **Zrobione w zakresie prędkości; użytkownik potwierdził
   działanie przyspieszania. Kod, natywny DSP, komunikat przygotowania, testy,
   build i bieżąca instalacja AMC Test są zaliczone** —

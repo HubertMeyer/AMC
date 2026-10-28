@@ -151,6 +151,8 @@ def _controls(dialog) -> dict:
         "transitions": dialog.transitions,
         "silence": dialog.silence,
         "pause": dialog.pause,
+        "enter": dialog.enter_behavior,
+        "preset": dialog.preset_behavior,
     }
 
 
@@ -162,7 +164,10 @@ def test_pliki_lokalne_dostaja_wszystkie_wykonalne_kontrolki():
         SessionId.FILES, Options(), session_options.SessionPlaybackOverrides()
     )
     controls = _controls(dialog)
-    for name in ("resume", "rate", "loudness", "transitions", "silence", "pause"):
+    for name in (
+        "resume", "rate", "loudness", "transitions", "silence", "pause",
+        "enter", "preset",
+    ):
         assert controls[name] is not None, f"Pliki lokalne wykonuja {name}"
 
 
@@ -182,6 +187,8 @@ def test_radio_nie_dostaje_kontrolek_ktorych_nie_wykona():
     assert controls["resume"] is None, "Radio na żywo nie wznawia materiału"
     assert controls["rate"] is None, "Radio startuje na żywo z normalnym tempem"
     assert controls["pause"] is not None, "wyjscie z odtwarzacza dotyczy obu sesji"
+    assert controls["enter"] is not None, "Radio może pozostać na liście"
+    assert controls["preset"] is not None, "Presety Radia wykonują ten wybór"
 
 
 def test_podcasty_dostaja_kontrolki_dsp_ktore_maja_wykonawce():
@@ -189,12 +196,15 @@ def test_podcasty_dostaja_kontrolki_dsp_ktore_maja_wykonawce():
         SessionId.PODCASTS, Options(), session_options.SessionPlaybackOverrides()
     )
     controls = _controls(dialog)
-    for name in ("resume", "rate", "loudness", "transitions", "silence", "pause"):
+    for name in (
+        "resume", "rate", "loudness", "transitions", "silence", "pause", "enter"
+    ):
         assert controls[name] is not None, f"Podcasty wykonuja {name}"
+    assert controls["preset"] is None, "Presety podcastów nie wykonują tej opcji"
 
 
 def test_liczba_kontrolek_zgadza_sie_ze_zdolnosciami():
-    for session in (SessionId.FILES, SessionId.RADIO, SessionId.PODCASTS):
+    for session in SessionId:
         dialog = _build(
             session, Options(), session_options.SessionPlaybackOverrides()
         )
@@ -204,6 +214,8 @@ def test_liczba_kontrolek_zgadza_sie_ze_zdolnosciami():
             1 if caps.supports_player_exit_pause else 0
         ) + (1 if caps.supports_resume_position else 0) + (
             1 if caps.supports_playback_rate else 0
+        ) + (1 if caps.supports_player_entry_behavior else 0) + (
+            1 if caps.supports_preset_entry_behavior else 0
         )
         assert created == expected, f"{session.value}: {created} != {expected}"
 
@@ -275,6 +287,8 @@ def test_otwarcie_pokazuje_ZAPISANY_wybor_a_nie_domysl():
         smooth_track_transitions=False,
         inter_track_silence_ms=3000,
         pause_on_player_exit=True,
+        open_player_on_enter=False,
+        open_player_on_preset=True,
     )
     dialog = _build(SessionId.FILES, Options(), overrides)
     assert dialog.overrides == overrides, "wyjscie dialogu = wejscie bez zmian"
@@ -317,7 +331,7 @@ def test_tytul_mowi_ktora_sesje_konfigurujemy():
         SessionId.RADIO, Options(), session_options.SessionPlaybackOverrides()
     )
     assert files.title != radio.title
-    assert "Pliki lokalne" in files.title and "Opcje sesji" in files.title
+    assert "Pliki lokalne" in files.title and "Ustawienia sesji" in files.title
     assert "Radio" in radio.title
 
 
@@ -372,7 +386,22 @@ def test_fokus_startuje_na_pierwszej_kontrolce():
     )
     focused = [c for c in _controls(dialog).values() if c is not None and c.focused]
     assert len(focused) == 1, "dokladnie jedna kontrolka dostaje fokus na start"
-    assert focused[0] is dialog.resume
+    assert focused[0] is dialog.enter_behavior
+
+
+def test_zachowanie_entera_ma_jawne_etykiety_i_odseparowany_model():
+    options = Options()
+    options.stay_on_list_after_radio_enter = True
+    dialog = _build(
+        SessionId.FILES, options, session_options.SessionPlaybackOverrides()
+    )
+    assert dialog.enter_behavior.name == "Po uruchomieniu materiału Enterem"
+    assert dialog.enter_behavior.choices == [
+        "Jak ustawienie ogólne: pozostań na liście",
+        "Otwórz odtwarzacz",
+        "Pozostań na liście",
+    ]
+    assert dialog.enter_behavior._amc_values == [None, True, False]
 
 
 def test_wariant_dziedziczony_mowi_co_z_niego_wynika():

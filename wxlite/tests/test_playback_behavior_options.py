@@ -51,7 +51,7 @@ def test_radio_enter_can_play_without_leaving_the_list() -> None:
     nav.switch_session(SessionId.RADIO)
     nav.apply_radio_view(None, "Radio", [_station("r1")], preferred_id="r1")
 
-    nav.activate_selected(stay_on_list_after_radio_enter=True)
+    nav.activate_selected(open_player_on_activation=False)
 
     assert nav.session.view is View.LIST
     assert nav.session.now_playing_id == "r1"
@@ -62,9 +62,37 @@ def test_radio_enter_opens_player_when_option_is_off() -> None:
     nav.switch_session(SessionId.RADIO)
     nav.apply_radio_view(None, "Radio", [_station("r1")], preferred_id="r1")
 
-    nav.activate_selected(stay_on_list_after_radio_enter=False)
+    nav.activate_selected(open_player_on_activation=True)
 
     assert nav.session.view is View.PLAYER
+
+
+def test_local_file_enter_can_play_without_leaving_the_list() -> None:
+    nav = Navigator()
+    nav.apply_folder("C:\\", [_track("local")], preferred_id="local")
+
+    intents = nav.activate_selected(open_player_on_activation=False)
+
+    assert isinstance(intents[0], PlayTrack)
+    assert nav.session.view is View.LIST
+    assert nav.session.now_playing_id == "local"
+
+
+def test_podcast_enter_can_play_without_leaving_the_list() -> None:
+    nav = Navigator()
+    nav.switch_session(SessionId.PODCASTS)
+    episode = Row(
+        item_id="episode:one",
+        title="Odcinek",
+        kind="episode",
+        path="https://example.invalid/episode.mp3",
+    )
+    nav.apply_podcast_episodes("podcast:one", "Podcast", [episode])
+
+    nav.activate_selected(open_player_on_activation=False)
+
+    assert nav.session.view is View.LIST
+    assert nav.session.now_playing_id == "episode:one"
 
 
 def test_radio_preset_can_play_in_background_and_keep_focus() -> None:

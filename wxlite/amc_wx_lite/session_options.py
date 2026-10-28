@@ -97,6 +97,8 @@ class SessionCapabilities:
     supports_playback_rate: bool
     supports_resume_position: bool
     supports_player_exit_pause: bool
+    supports_player_entry_behavior: bool = False
+    supports_preset_entry_behavior: bool = False
 
     @property
     def has_options(self) -> bool:
@@ -106,10 +108,12 @@ class SessionCapabilities:
             self.supports_playback_rate,
             self.supports_resume_position,
             self.supports_player_exit_pause,
+            self.supports_player_entry_behavior,
+            self.supports_preset_entry_behavior,
         ))
 
 
-#: Zdolnosci obu sesji, ktore port ma DZISIAJ. Tabela jest jawna, zeby nowa
+#: Zdolnosci sesji, ktore port ma DZISIAJ. Tabela jest jawna, zeby nowa
 #: sesja nie odziedziczyla po cichu cudzych opcji.
 _CAPABILITIES: dict[SessionId, SessionCapabilities] = {
     SessionId.FILES: SessionCapabilities(
@@ -118,6 +122,8 @@ _CAPABILITIES: dict[SessionId, SessionCapabilities] = {
         supports_playback_rate=True,
         supports_resume_position=True,
         supports_player_exit_pause=True,
+        supports_player_entry_behavior=True,
+        supports_preset_entry_behavior=True,
     ),
     SessionId.RADIO: SessionCapabilities(
         # RadioMediaOutput ma tylko ConfigureTempoAlgorithm -- brak wykonawcy.
@@ -126,6 +132,8 @@ _CAPABILITIES: dict[SessionId, SessionCapabilities] = {
         supports_resume_position=False,
         # Wstrzymanie jest na poziomie okna, wiec radio tez je ma.
         supports_player_exit_pause=True,
+        supports_player_entry_behavior=True,
+        supports_preset_entry_behavior=True,
     ),
     SessionId.PODCASTS: SessionCapabilities(
         # Przed ``media.play`` frontend ustawia bazę tej sesji, a host nakłada
@@ -134,16 +142,23 @@ _CAPABILITIES: dict[SessionId, SessionCapabilities] = {
         supports_playback_rate=True,
         supports_resume_position=True,
         supports_player_exit_pause=True,
+        supports_player_entry_behavior=True,
     ),
     # Dla sesji wykonywanych przez zewnetrzne uslugi dialog udostepnia tylko
     # zachowanie okna. Spotify jest wyjątkiem: własny adapter nad Librespotem
     # stosuje przypięte silniki AMC i naprawdę obsługuje prędkość 0,5..2,0x.
     SessionId.TIDAL: SessionCapabilities(False, False, False, True),
-    SessionId.SPOTIFY: SessionCapabilities(False, True, False, True),
-    SessionId.SONOS: SessionCapabilities(False, False, False, True),
+    SessionId.SPOTIFY: SessionCapabilities(
+        False, True, False, True, supports_player_entry_behavior=True
+    ),
+    SessionId.SONOS: SessionCapabilities(
+        False, False, False, True, supports_player_entry_behavior=True
+    ),
     SessionId.FRONTIER_SMART: SessionCapabilities(False, False, False, True),
     # WiiM odtwarza na urzadzeniu i historycznie nie mial pauzy po wyjsciu.
-    SessionId.WIIM: SessionCapabilities(False, False, False, False),
+    SessionId.WIIM: SessionCapabilities(
+        False, False, False, False, supports_player_entry_behavior=True
+    ),
 }
 
 
@@ -156,6 +171,8 @@ def capabilities_for(session: SessionId) -> SessionCapabilities:
             supports_playback_rate=False,
             supports_resume_position=False,
             supports_player_exit_pause=False,
+            supports_player_entry_behavior=False,
+            supports_preset_entry_behavior=False,
         ),
     )
 
@@ -184,6 +201,8 @@ class SessionPlaybackOverrides:
     smooth_track_transitions: bool | None = None
     inter_track_silence_ms: int | None = None
     pause_on_player_exit: bool | None = None
+    open_player_on_enter: bool | None = None
+    open_player_on_preset: bool | None = None
 
     @property
     def is_empty(self) -> bool:
@@ -215,6 +234,8 @@ class SessionPlaybackOverrides:
             "loudness_normalization",
             "smooth_track_transitions",
             "pause_on_player_exit",
+            "open_player_on_enter",
+            "open_player_on_preset",
         ):
             value = raw.get(name)
             if type(value) is bool:
@@ -257,6 +278,12 @@ class SessionPlaybackOverrides:
             pause_on_player_exit=self.pause_on_player_exit
             if caps.supports_player_exit_pause
             else None,
+            open_player_on_enter=self.open_player_on_enter
+            if caps.supports_player_entry_behavior
+            else None,
+            open_player_on_preset=self.open_player_on_preset
+            if caps.supports_preset_entry_behavior
+            else None,
         )
 
 
@@ -269,6 +296,8 @@ SESSION_OPTION_IDS: tuple[str, ...] = (
     "smooth_track_transitions",
     "inter_track_silence_ms",
     "pause_on_player_exit",
+    "open_player_on_enter",
+    "open_player_on_preset",
 )
 
 
@@ -378,6 +407,25 @@ def resolve_pause_on_player_exit(
     return bool(options.pause_on_player_exit)
 
 
+def resolve_open_player_on_enter(
+    options: "Options", overrides: SessionPlaybackOverrides
+) -> bool:
+    """Czy uruchomienie materiału Enterem ma przejść do odtwarzacza."""
+    if overrides.open_player_on_enter is not None:
+        return overrides.open_player_on_enter
+    # Zachowujemy zgodność starych profili: historyczne pole ma odwrotny sens.
+    return not bool(options.stay_on_list_after_radio_enter)
+
+
+def resolve_open_player_on_preset(
+    options: "Options", overrides: SessionPlaybackOverrides
+) -> bool:
+    """Czy preset tej sesji ma przejść do odtwarzacza."""
+    if overrides.open_player_on_preset is not None:
+        return overrides.open_player_on_preset
+    return bool(options.open_player_when_activating_preset)
+
+
 # --------------------------------------------------- zapis z faktycznym skutkiem
 
 
@@ -404,9 +452,9 @@ def dialog_title(session: SessionId) -> str:
 
     Wzor ``SessionPlaybackOptionsEditor.CreateDialog`` (cs:41): ``$"Sesja:
     {displayName}"``. Tutaj nazwa idzie w druga strone, bo samo "Sesja: Radio"
-    nie mowi, ze to OPCJE -- a czytnik czyta tytul jako pierwszy.
+    nie mowi, ze to USTAWIENIA -- a czytnik czyta tytul jako pierwszy.
     """
-    return f"Opcje sesji: {session_display_name(session)}"
+    return f"Ustawienia sesji: {session_display_name(session)}"
 
 
 @dataclass(frozen=True, slots=True)
@@ -465,7 +513,7 @@ def apply_session_options(
     *,
     client=None,
 ) -> ApplyResult:
-    """Zatwierdz Opcje sesji: ogranicz do zdolnosci, wykonaj, potem utrwal.
+    """Zatwierdz ustawienia sesji: ogranicz do zdolnosci, wykonaj, potem utrwal.
 
     KOLEJNOSC JEST ISTOTNA. Najpierw prosimy silnik, a stan zmieniamy TYLKO
     gdy przyjal. Odwrotna kolejnosc dawalaby "zapisano" po odmowie i profil
@@ -512,7 +560,7 @@ def apply_session_options(
         if client is None:
             return ApplyResult(
                 saved=False,
-                message=f"Silnik nie jest gotowy. Opcje sesji {name} bez zmian.",
+                message=f"Silnik nie jest gotowy. Ustawienia sesji {name} bez zmian.",
                 error="brak silnika",
             )
         try:
@@ -522,7 +570,7 @@ def apply_session_options(
         except Exception as error:  # noqa: BLE001 - odmowa silnika to dana, nie awaria
             return ApplyResult(
                 saved=False,
-                message=f"Silnik odrzucił opcje sesji {name}: {error}",
+                message=f"Silnik odrzucił ustawienia sesji {name}: {error}",
                 error=str(error),
             )
         # Host MOWI, od kiedy zmiana dziala (``appliesOnNextPlayback``).
@@ -542,8 +590,7 @@ def apply_session_options(
 
     return ApplyResult(
         saved=True,
-        message=f"Zapisano opcje sesji {name}. "
-        + describe_session_options(session, state.options, effective),
+        message=f"Zapisano ustawienia sesji {name}.",
         applies_on_next_playback=applies_next,
     )
 
@@ -579,7 +626,7 @@ def describe_pause_mode(options: "Options", overrides: SessionPlaybackOverrides)
 def describe_session_options(
     session: SessionId, options: "Options", overrides: SessionPlaybackOverrides
 ) -> str:
-    """Krotki opis stanu opcji TEJ sesji. Port ``DescribeSession`` (cs:98-132).
+    """Krotki opis ustawień TEJ sesji. Port ``DescribeSession`` (cs:98-132).
 
     Wymienia WYLACZNIE opcje, ktore sesja ma -- inaczej czytnik mowilby o
     normalizacji w radiu, ktorego radio nie ma.
@@ -622,6 +669,24 @@ def describe_session_options(
         )
     if caps.supports_player_exit_pause:
         parts.append(describe_pause_mode(options, overrides))
+    if caps.supports_player_entry_behavior:
+        entry = (
+            "Enter: otwieraj odtwarzacz"
+            if resolve_open_player_on_enter(options, overrides)
+            else "Enter: pozostań na liście"
+        )
+        if overrides.open_player_on_enter is None:
+            entry += " — jak ogólne"
+        parts.append(entry)
+    if caps.supports_preset_entry_behavior:
+        preset = (
+            "preset: otwieraj odtwarzacz"
+            if resolve_open_player_on_preset(options, overrides)
+            else "preset: pozostań na liście"
+        )
+        if overrides.open_player_on_preset is None:
+            preset += " — jak ogólne"
+        parts.append(preset)
     if not parts:
-        return "Ta sesja nie ma własnych opcji odtwarzania"
+        return "Ta sesja nie ma własnych ustawień odtwarzania"
     return "; ".join(parts)

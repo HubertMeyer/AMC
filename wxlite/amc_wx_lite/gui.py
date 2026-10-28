@@ -5796,6 +5796,24 @@ class FrontierSmartDevicesDialog(wx.Dialog):
 class SessionSelectionDialog(wx.Dialog):
     """Jeden dostępny Menedżer sesji, bez technicznych wartości w mowie."""
 
+    _CONFIGURATION_LABELS: dict[SessionId, tuple[str, str]] = {
+        SessionId.FILES: (
+            "&Foldery Biblioteki…",
+            "Foldery Biblioteki dla Plików lokalnych",
+        ),
+        SessionId.SPOTIFY: ("&Konto Spotify…", "Konto Spotify"),
+        SessionId.TIDAL: ("&Konto TIDAL…", "Konto i synchronizacja TIDAL"),
+        SessionId.WIIM: ("&Urządzenia WiiM…", "Urządzenia WiiM"),
+        SessionId.FRONTIER_SMART: (
+            "&Urządzenia Frontier Smart…",
+            "Urządzenia Frontier Smart",
+        ),
+        SessionId.SONOS: (
+            "&Konto i głośniki Sonos…",
+            "Konto i głośniki Sonos",
+        ),
+    }
+
     def __init__(
         self,
         parent: wx.Window,
@@ -5805,6 +5823,7 @@ class SessionSelectionDialog(wx.Dialog):
         *,
         toggle_session: Callable[[SessionId], tuple[object, str]] | None = None,
         move_session: Callable[[SessionId, int], tuple[object, str]] | None = None,
+        settings_session: Callable[[SessionId, wx.Window], None] | None = None,
         focus_inactive: bool = False,
     ) -> None:
         super().__init__(parent, title="Menedżer sesji")
@@ -5813,6 +5832,7 @@ class SessionSelectionDialog(wx.Dialog):
         self._readiness = dict(readiness or {})
         self._toggle_session = toggle_session
         self._move_session = move_session
+        self._settings_session = settings_session
         self.configure_session: SessionId | None = None
         panel = wx.Panel(self)
         layout = wx.BoxSizer(wx.VERTICAL)
@@ -5853,13 +5873,16 @@ class SessionSelectionDialog(wx.Dialog):
         select_button.SetDefault()
         self.toggle_button = wx.Button(self, label="&Włącz lub wyłącz")
         self.toggle_button.SetName("Włącz lub wyłącz wybraną sesję")
-        self.configure_button = wx.Button(self, label="&Konfiguruj…")
-        self.configure_button.SetName("Konfiguruj wybrane konto lub urządzenie")
+        self.settings_button = wx.Button(self, label="&Ustawienia sesji…")
+        self.settings_button.SetName("Ustawienia sesji dla wybranej sesji")
+        self.configure_button = wx.Button(self, label="&Konfiguracja…")
+        self.configure_button.SetName("Osobna konfiguracja wybranej sesji")
         cancel_button = wx.Button(self, wx.ID_CANCEL, label="&Zamknij")
         cancel_button.SetName("Zamknij Menedżer sesji")
         for button in (
             select_button,
             self.toggle_button,
+            self.settings_button,
             self.configure_button,
             cancel_button,
         ):
@@ -5872,10 +5895,13 @@ class SessionSelectionDialog(wx.Dialog):
         self.SetMinSize((520, 360))
         self.Fit()
         self.session_list.Bind(wx.EVT_LISTBOX_DCLICK, self._accept)
+        self.session_list.Bind(wx.EVT_LISTBOX, self._selection_changed)
         self.toggle_button.Bind(wx.EVT_BUTTON, self._toggle)
+        self.settings_button.Bind(wx.EVT_BUTTON, self._settings)
         self.configure_button.Bind(wx.EVT_BUTTON, self._configure)
         self.Bind(wx.EVT_CHAR_HOOK, self._on_key)
         self.Bind(wx.EVT_SHOW, self._on_show)
+        self._update_action_buttons()
 
     def _on_show(self, event: wx.ShowEvent) -> None:
         event.Skip()
@@ -5893,6 +5919,35 @@ class SessionSelectionDialog(wx.Dialog):
         except ValueError:
             index = 0
         self.session_list.SetSelection(index)
+        if hasattr(self, "settings_button"):
+            self._update_action_buttons()
+
+    def _selection_changed(self, event: wx.CommandEvent) -> None:
+        self._update_action_buttons()
+        event.Skip()
+
+    def _update_action_buttons(self) -> None:
+        selected = self.selected_session
+        enabled = selected in session_order.normalize(self._order)
+        has_settings = bool(
+            enabled
+            and selected is not None
+            and self._settings_session is not None
+            and session_options.capabilities_for(selected).has_options
+        )
+        self.settings_button.Enable(has_settings)
+
+        configuration = self._CONFIGURATION_LABELS.get(selected)
+        self.configure_button.Enable(bool(enabled and configuration is not None))
+        if configuration is None:
+            self.configure_button.SetLabel(i18n.ui_text("&Konfiguracja…"))
+            self.configure_button.SetName(
+                i18n.ui_text("Brak osobnej konfiguracji dla wybranej sesji")
+            )
+        else:
+            label, name = configuration
+            self.configure_button.SetLabel(i18n.ui_text(label))
+            self.configure_button.SetName(i18n.ui_text(name))
 
     def _say(self, message: str) -> None:
         message = i18n.ui_text(message)
@@ -5933,6 +5988,21 @@ class SessionSelectionDialog(wx.Dialog):
             return
         self.session_list.SetFocus()
 
+    def _settings(self, _event) -> None:
+        selected = self.selected_session
+        if selected is None or self._settings_session is None:
+            return
+        if selected not in session_order.normalize(self._order):
+            self._say("Najpierw włącz tę sesję Spacją")
+            self.session_list.SetFocus()
+            return
+        if not session_options.capabilities_for(selected).has_options:
+            self._say("Ta sesja nie ma własnych ustawień")
+            self.session_list.SetFocus()
+            return
+        self._settings_session(selected, self)
+        wx.CallAfter(self.session_list.SetFocus)
+
     def _move(self, direction: int) -> None:
         selected = self.selected_session
         if selected is None or self._move_session is None:
@@ -5946,6 +6016,14 @@ class SessionSelectionDialog(wx.Dialog):
     def _configure(self, _event) -> None:
         selected = self.selected_session
         if selected is None:
+            return
+        if selected not in session_order.normalize(self._order):
+            self._say("Najpierw włącz tę sesję Spacją")
+            self.session_list.SetFocus()
+            return
+        if selected not in self._CONFIGURATION_LABELS:
+            self._say("Ta sesja nie ma osobnej konfiguracji")
+            self.session_list.SetFocus()
             return
         self.configure_session = selected
         self.EndModal(wx.ID_APPLY)
@@ -5976,7 +6054,7 @@ class SessionSelectionDialog(wx.Dialog):
 
 
 class SessionOptionsDialog(wx.Dialog):
-    """Opcje AKTYWNEJ sesji, bez zbiorczego wyboru innej sesji.
+    """Ustawienia jednej sesji, bez technicznych wartości w mowie.
 
     Port ``SessionPlaybackOptionsEditor.CreateDialog`` (cs:33-70). Dwie
     rzeczy przeniesione z oryginalu swiadomie:
@@ -5989,8 +6067,8 @@ class SessionOptionsDialog(wx.Dialog):
       modelu ``None``, a nie falsz. Bez tego nie dalo by sie WROCIC do
       dziedziczenia po jednorazowym wyborze.
 
-    Sesje wybiera sie w glownym oknie AMC. ``Ctrl+Alt+Enter`` jest poleceniem
-    kontekstowym: tytul i zestaw pol wynikaja wylacznie z aktywnej sesji.
+    ``Ctrl+Alt+Enter`` wybiera aktywną sesję. Menedżer sesji może przekazać
+    sesję zaznaczoną, ale oba wejścia otwierają ten sam dialog i model.
     Wszystkie kontrolki sa ZWYKLE natywne wx (``wx.Choice``) -- czytnik
     nazywa je sam, bez naszych komunikatow.
     """
@@ -6065,6 +6143,46 @@ class SessionOptionsDialog(wx.Dialog):
         self.pause = None
         self.resume = None
         self.rate = None
+        self.enter_behavior = None
+        self.preset_behavior = None
+
+        if self._caps.supports_player_entry_behavior:
+            inherited_entry = (
+                "Jak ustawienie ogólne: otwieraj odtwarzacz"
+                if session_options.resolve_open_player_on_enter(options, overrides)
+                else "Jak ustawienie ogólne: pozostań na liście"
+            )
+            self.enter_behavior = self._add_choice(
+                panel,
+                grid,
+                "Po uruchomieniu materiału &Enterem:",
+                "Po uruchomieniu materiału Enterem",
+                (
+                    (inherited_entry, None),
+                    ("Otwórz odtwarzacz", True),
+                    ("Pozostań na liście", False),
+                ),
+                overrides.open_player_on_enter,
+            )
+
+        if self._caps.supports_preset_entry_behavior:
+            inherited_preset = (
+                "Jak ustawienie ogólne: otwieraj odtwarzacz"
+                if session_options.resolve_open_player_on_preset(options, overrides)
+                else "Jak ustawienie ogólne: pozostań na liście"
+            )
+            self.preset_behavior = self._add_choice(
+                panel,
+                grid,
+                "Po uruchomieniu &presetu:",
+                "Po uruchomieniu presetu",
+                (
+                    (inherited_preset, None),
+                    ("Otwórz odtwarzacz", True),
+                    ("Pozostań na liście", False),
+                ),
+                overrides.open_player_on_preset,
+            )
 
         if self._caps.supports_resume_position:
             if self._session is SessionId.PODCASTS:
@@ -6190,6 +6308,8 @@ class SessionOptionsDialog(wx.Dialog):
             smooth_track_transitions=self._value(self.transitions),
             inter_track_silence_ms=self._value(self.silence),
             pause_on_player_exit=self._value(self.pause),
+            open_player_on_enter=self._value(self.enter_behavior),
+            open_player_on_preset=self._value(self.preset_behavior),
         )
 
     @property
@@ -7120,20 +7240,22 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
         self.follow.SetValue(options.follow_playback_on_player_exit)
 
         self.open_preset = wx.CheckBox(
-            general, label="Po uruchomieniu presetu &otwieraj odtwarzacz"
+            general, label="Domyślnie po uruchomieniu presetu &otwieraj odtwarzacz"
         )
-        self.open_preset.SetName("Po uruchomieniu presetu otwieraj odtwarzacz")
+        self.open_preset.SetName(
+            "Domyślnie po uruchomieniu presetu otwieraj odtwarzacz"
+        )
         self.open_preset.SetValue(options.open_player_when_activating_preset)
 
         self.radio_enter = wx.CheckBox(
             general,
             label=(
-                "Pozostawaj na li&ście po uruchomieniu stacji lub materiału "
+                "Domyślnie pozostawaj na li&ście po uruchomieniu materiału "
                 "Enterem"
             ),
         )
         self.radio_enter.SetName(
-            "Pozostawaj na liście po uruchomieniu stacji lub materiału Enterem"
+            "Domyślnie pozostawaj na liście po uruchomieniu materiału Enterem"
         )
         self.radio_enter.SetValue(options.stay_on_list_after_radio_enter)
 
@@ -10864,6 +10986,7 @@ class LiteFrame(wx.Frame):
         self._run(self.navigator.open_spotify_search_result(
             entry.row,
             relations=relations,
+            open_player=self._session_open_player_on_enter(SessionId.SPOTIFY),
         ))
 
     def _perform_search_result_action(
@@ -11416,7 +11539,10 @@ class LiteFrame(wx.Frame):
             return
         if action is SearchResultAction.OPEN:
             self._switch_session(SessionId.RADIO)
-            self._run(self.navigator.open_radio_search_result(lead.row))
+            self._run(self.navigator.open_radio_search_result(
+                lead.row,
+                open_player=self._session_open_player_on_enter(SessionId.RADIO),
+            ))
             return
         if getattr(self, "_radio_search_action_pending", False):
             say("Dodawanie stacji już trwa")
@@ -15889,9 +16015,8 @@ class LiteFrame(wx.Frame):
 
     def _activate(self) -> None:
         self._run(self.navigator.activate_selected(
-            stay_on_list_after_radio_enter=(
-                self.navigator.active in (SessionId.RADIO, SessionId.SONOS)
-                and self.options.stay_on_list_after_radio_enter
+            open_player_on_activation=self._session_open_player_on_enter(
+                self.navigator.active
             )
         ))
 
@@ -17318,7 +17443,7 @@ class LiteFrame(wx.Frame):
                 self._run(self.navigator.activate_radio_preset(
                     target_row,
                     sequence,
-                    open_player=self.options.open_player_when_activating_preset,
+                    open_player=self._session_open_player_on_preset(session),
                 ))
                 return
 
@@ -17373,7 +17498,7 @@ class LiteFrame(wx.Frame):
                 )
                 self._run(self.navigator.activate_local_preset(
                     target_row,
-                    open_player=self.options.open_player_when_activating_preset,
+                    open_player=self._session_open_player_on_preset(session),
                 ))
                 return
             self.announcer.say(
@@ -18530,6 +18655,9 @@ class LiteFrame(wx.Frame):
             self._session_readiness(),
             toggle_session=self._toggle_session_enabled,
             move_session=self._move_managed_session,
+            settings_session=lambda session, parent: self._show_session_options(
+                session_id=session, parent=parent
+            ),
             focus_inactive=focus_inactive,
         ) as dialog:
             result = dialog.ShowModal()
@@ -24147,6 +24275,18 @@ class LiteFrame(wx.Frame):
             session_options.effective_overrides(self.state, session),
         )
 
+    def _session_open_player_on_enter(self, session: SessionId) -> bool:
+        return session_options.resolve_open_player_on_enter(
+            self.options,
+            session_options.effective_overrides(self.state, session),
+        )
+
+    def _session_open_player_on_preset(self, session: SessionId) -> bool:
+        return session_options.resolve_open_player_on_preset(
+            self.options,
+            session_options.effective_overrides(self.state, session),
+        )
+
     def _play_track(self, intent: PlayTrack) -> None:
         client = self.client
         if client is None:
@@ -27539,8 +27679,13 @@ class LiteFrame(wx.Frame):
             "automatic_refresh_batch_size": int(values[3]),
         }
 
-    def _show_session_options(self) -> None:
-        """Opcje aktywnej sesji: Zapisz/Anuluj, zapis i skutek.
+    def _show_session_options(
+        self,
+        *,
+        session_id: SessionId | None = None,
+        parent: wx.Window | None = None,
+    ) -> None:
+        """Ustawienia aktywnej albo wskazanej sesji: zapis i skutek.
 
         ``Ctrl+Alt+Enter`` jest kontekstowe. Sesje zmienia sie w glownym oknie,
         a dialog nie zawiera drugiego, konkurencyjnego wyboru sesji.
@@ -27549,13 +27694,14 @@ class LiteFrame(wx.Frame):
         wolamy ani zapisu, ani silnika. Fokus wraca PO ``Destroy``, bo przed
         nim wx oddal by go z powrotem oknu modalnemu.
         """
-        current = self.navigator.active
+        current = session_id or self.navigator.active
+        dialog_parent = parent or self
         if not session_options.capabilities_for(current).has_options:
-            self.announcer.say("Bieżąca sesja nie ma opcji sesji.")
+            self.announcer.say("Ta sesja nie ma własnych ustawień.")
             return
         current_overrides = session_options.effective_overrides(self.state, current)
         dialog = SessionOptionsDialog(
-            self,
+            dialog_parent,
             current,
             self.options,
             current_overrides,
@@ -27571,11 +27717,13 @@ class LiteFrame(wx.Frame):
             dialog.Destroy()
 
         if chosen is None:
-            self._restore_focus_after_dialog()
+            if parent is None:
+                self._restore_focus_after_dialog()
             return
 
         self._apply_session_option_drafts({current: chosen})
-        self._restore_focus_after_dialog()
+        if parent is None:
+            self._restore_focus_after_dialog()
 
     def _apply_session_option_drafts(self, drafts: dict) -> None:
         """Zatwierdz przekazane wybory sesji.
@@ -27602,7 +27750,7 @@ class LiteFrame(wx.Frame):
             != poprzednie.get(session)
         ]
         if not zmienione:
-            self.announcer.say("Opcje sesji bez zmian.")
+            self.announcer.say("Ustawienia sesji bez zmian.")
             return
 
         def work() -> list:
@@ -27649,7 +27797,7 @@ class LiteFrame(wx.Frame):
             self.announcer.say(tresc)
 
         def failed(error: Exception) -> None:
-            self.announcer.say(f"Nie zapisano opcji sesji: {error}")
+            self.announcer.say(f"Nie zapisano ustawień sesji: {error}")
 
         self.runner.submit("session-options", work, done, failed)
 

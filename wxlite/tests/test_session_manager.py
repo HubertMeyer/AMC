@@ -7,7 +7,7 @@ from test_gui_logic import install_wx_stub
 
 install_wx_stub()
 
-from amc_wx_lite.gui import LiteFrame
+from amc_wx_lite.gui import LiteFrame, SessionSelectionDialog
 from amc_wx_lite.navigation import SessionId
 
 
@@ -20,6 +20,26 @@ class _Announcer:
 
     def say(self, message: str) -> None:
         self.messages.append(message)
+
+
+class _Control:
+    def __init__(self) -> None:
+        self.enabled = None
+        self.label = ""
+        self.name = ""
+        self.focused = False
+
+    def Enable(self, enabled: bool) -> None:  # noqa: N802 - API wx
+        self.enabled = bool(enabled)
+
+    def SetLabel(self, label: str) -> None:  # noqa: N802 - API wx
+        self.label = label
+
+    def SetName(self, name: str) -> None:  # noqa: N802 - API wx
+        self.name = name
+
+    def SetFocus(self) -> None:  # noqa: N802 - API wx
+        self.focused = True
 
 
 def _frame(order: list[str], current: SessionId) -> SimpleNamespace:
@@ -113,7 +133,13 @@ def test_manager_dialog_has_explicit_names_keys_and_focus_restoration_contract()
     assert 'self.session_list.SetName("Sesje")' in dialog
     assert 'SetName("Przełącz do wybranej sesji")' in dialog
     assert 'SetName("Włącz lub wyłącz wybraną sesję")' in dialog
-    assert 'SetName("Konfiguruj wybrane konto lub urządzenie")' in dialog
+    assert 'SetName("Ustawienia sesji dla wybranej sesji")' in dialog
+    assert 'SetName("Osobna konfiguracja wybranej sesji")' in dialog
+    assert "self.settings_button.Bind(wx.EVT_BUTTON, self._settings)" in dialog
+    assert "session_options.capabilities_for(selected).has_options" in dialog
+    assert "self._settings_session(selected, self)" in dialog
+    assert "wx.CallAfter(self.session_list.SetFocus)" in dialog
+    assert "_CONFIGURATION_LABELS" in dialog
     assert "event.AltDown()" in dialog
     assert "event.GetKeyCode() == wx.WXK_UP" in dialog
     assert "event.GetKeyCode() == wx.WXK_DOWN" in dialog
@@ -122,6 +148,49 @@ def test_manager_dialog_has_explicit_names_keys_and_focus_restoration_contract()
     assert "selected is SessionId.FRONTIER_SMART" in dialog
     assert "self.configure_session = selected" in dialog
     assert "self.EndModal(wx.ID_APPLY)" in dialog
+
+
+def test_manager_separates_session_settings_from_source_configuration() -> None:
+    settings_button = _Control()
+    configure_button = _Control()
+    dialog = SimpleNamespace(
+        selected_session=SessionId.FILES,
+        _order=(SessionId.FILES, SessionId.RADIO),
+        _settings_session=lambda *_args: None,
+        _CONFIGURATION_LABELS=SessionSelectionDialog._CONFIGURATION_LABELS,
+        settings_button=settings_button,
+        configure_button=configure_button,
+    )
+
+    SessionSelectionDialog._update_action_buttons(dialog)
+
+    assert settings_button.enabled is True
+    assert configure_button.enabled is True
+    assert configure_button.label == "&Foldery Biblioteki…"
+    assert configure_button.name == "Foldery Biblioteki dla Plików lokalnych"
+
+    dialog.selected_session = SessionId.RADIO
+    SessionSelectionDialog._update_action_buttons(dialog)
+    assert settings_button.enabled is True
+    assert configure_button.enabled is False
+    assert configure_button.name == "Brak osobnej konfiguracji dla wybranej sesji"
+
+
+def test_manager_opens_settings_for_selected_session_and_returns_list_focus() -> None:
+    calls: list[tuple[SessionId, object]] = []
+    session_list = _Control()
+    dialog = SimpleNamespace(
+        selected_session=SessionId.PODCASTS,
+        _order=(SessionId.PODCASTS,),
+        _settings_session=lambda session, parent: calls.append((session, parent)),
+        session_list=session_list,
+        _say=lambda _message: None,
+    )
+
+    SessionSelectionDialog._settings(dialog, None)
+
+    assert calls == [(SessionId.PODCASTS, dialog)]
+    assert session_list.focused is True
 
 
 def test_opening_manager_reads_only_cached_readiness_and_does_not_authenticate() -> None:

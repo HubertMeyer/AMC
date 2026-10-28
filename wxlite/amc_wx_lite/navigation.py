@@ -1292,14 +1292,12 @@ class Navigator:
     # ------------------------------------------------------------- aktywacja
 
     def activate_selected(
-        self, *, stay_on_list_after_radio_enter: bool = False
+        self, *, open_player_on_activation: bool = True
     ) -> list[object]:
         """Enter otwiera folder albo uruchamia zaznaczony materiał.
 
-        Historyczna nazwa opcji zostaje dla zgodności profilu, ale ta sama
-        preferencja dotyczy dziś Radia i materiałów Sonos. Wybór samej grupy
-        Sonos nigdy nie otwiera odtwarzacza: ustawia cel i prowadzi do
-        Biblioteki Sonos.
+        Jedna jawna decyzja widoku obowiązuje wszystkie materiały odtwarzane
+        przez AMC. Kontenery i cele sterowania nadal prowadzą do swoich list.
         """
         state = self.session
         row = state.model.selected_row
@@ -1331,7 +1329,9 @@ class Navigator:
                 state.now_playing_id = row.item_id
                 state.now_playing_title = row.title
                 state.current_material_id = row.item_id
-                state.view = View.PLAYER
+                state.view = (
+                    View.PLAYER if open_player_on_activation else View.LIST
+                )
                 return [PlayWiiMNetworkStream(
                     item_id=row.item_id,
                     title=row.title,
@@ -1414,8 +1414,9 @@ class Navigator:
                 state.now_playing_id = row.item_id
                 state.now_playing_title = row.title
                 state.current_material_id = row.item_id
-                if not stay_on_list_after_radio_enter:
-                    state.view = View.PLAYER
+                state.view = (
+                    View.PLAYER if open_player_on_activation else View.LIST
+                )
                 return [PlaySonosMaterial(
                     item_id=row.item_id,
                     title=row.title,
@@ -1513,10 +1514,9 @@ class Navigator:
                         and not candidate.activation_message
                     ),
                 )
-                # Pierwszy etap Spotify jest jawnie tylko do odczytu. Zamiar
-                # zachowujemy dla przyszłego kontrolera, ale lista nie może
-                # odsłonić pozornego odtwarzacza, którego host jeszcze nie ma.
-                state.view = View.LIST
+                state.view = (
+                    View.PLAYER if open_player_on_activation else View.LIST
+                )
                 return [intent]
             return [Announce("Nie można otworzyć tego elementu Spotify")]
 
@@ -1577,8 +1577,7 @@ class Navigator:
                 if candidate.kind == "station" and candidate.url
             )
             state.playback_uses_queue = False
-            if not stay_on_list_after_radio_enter:
-                state.view = View.PLAYER
+            state.view = View.PLAYER if open_player_on_activation else View.LIST
             return [PlayStation(row.url or "", row.item_id, row.title), Announce(row.title)]
 
         if row.kind == "episode":
@@ -1596,7 +1595,7 @@ class Navigator:
                     if candidate.kind == "episode" and candidate.path
                 ),
             )
-            state.view = View.PLAYER
+            state.view = View.PLAYER if open_player_on_activation else View.LIST
             return [
                 PlayMedia(
                     row.path,
@@ -1609,21 +1608,27 @@ class Navigator:
 
         # Żywa kolejka ma już ścieżki w hoście. Payload listy niesie tylko ID.
         if state.library_view is LibraryView.LIVE_QUEUE:
-            return self._activate_live_queue_row(row)
+            return self._activate_live_queue_row(
+                row, open_player=open_player_on_activation
+            )
 
         if not row.path:
             # Wiersz ZAKLADKI nie ma sciezki i miec jej nie moze: jego
             # ``item_id`` to ``bookmark:<id>``, czyli identyfikator ZAPISU, nie
             # pliku. Prawdziwy plik i pozycja przyszly obok, w mapie celow.
             if row.item_id.startswith("bookmark:"):
-                return self._activate_bookmark(row)
+                return self._activate_bookmark(
+                    row, open_player=open_player_on_activation
+                )
             return [Announce("Brak sciezki pliku")]
 
         # Widok Zapisanej kolejki prowadzi ZYWA kolejke hosta, a nie pojedyncze
         # odtworzenie. Zwykle ``files.play`` zerwaloby nastepstwo: po koncu
         # utworu nie byloby czym przejsc dalej.
         if state.library_view is LibraryView.SAVED_QUEUE:
-            return self._activate_queue_row(row)
+            return self._activate_queue_row(
+                row, open_player=open_player_on_activation
+            )
 
         state.player_entry_anchor_id = row.item_id
         state.list_anchor_id = row.item_id
@@ -1637,7 +1642,7 @@ class Navigator:
                 if candidate.kind == "track" and candidate.path
             ),
         )
-        state.view = View.PLAYER
+        state.view = View.PLAYER if open_player_on_activation else View.LIST
         return [PlayTrack(row.path, row.item_id, row.title), Announce(row.title)]
 
     def _tidal_target_from_row(self, row: Row) -> OpenTidalContainer | None:
@@ -1914,7 +1919,9 @@ class Navigator:
         state.view = View.LIST
         return [Announce(f"{state.tidal_heading}, {len(rows)} {_items_word(len(rows))}")]
 
-    def _activate_queue_row(self, row: Row) -> list[object]:
+    def _activate_queue_row(
+        self, row: Row, *, open_player: bool
+    ) -> list[object]:
         """Enter w widoku Zapisanej kolejki: start ZYWEJ kolejki od tego wiersza.
 
         Kolejnosc oddajemy hostowi w kolejnosci WIDOKU -- to kolejnosc zapisanej
@@ -1937,7 +1944,7 @@ class Navigator:
         state.now_playing_title = row.title
         state.pending_material_id = profile_material_id(row.item_id)
         self._set_playback_source(state, (), uses_queue=True)
-        state.view = View.PLAYER
+        state.view = View.PLAYER if open_player else View.LIST
         # Czlonkostwo bierzemy z ODCZYTU profilu. Wiersz bez wpisu w mapie to
         # starszy zapis (``legacyRegularQueue``): jest w kolejce zwyklej, nie w
         # bloku "odtworz nastepne" -- i tak go opisujemy, zamiast milczec.
@@ -1950,7 +1957,9 @@ class Navigator:
             Announce(row.title),
         ]
 
-    def _activate_live_queue_row(self, row: Row) -> list[object]:
+    def _activate_live_queue_row(
+        self, row: Row, *, open_player: bool
+    ) -> list[object]:
         """Enter w ZYWYM widoku kolejki: start od tego wiersza, bez wysylki.
 
         Kolejka jest po stronie hosta i to ona jest prawda. Nie skladamy jej
@@ -1965,10 +1974,12 @@ class Navigator:
         state.now_playing_title = row.title
         state.pending_material_id = profile_material_id(row.item_id)
         self._set_playback_source(state, (), uses_queue=True)
-        state.view = View.PLAYER
+        state.view = View.PLAYER if open_player else View.LIST
         return [PlayQueueAt(row.item_id, row.title), Announce(row.title)]
 
-    def _activate_bookmark(self, row: Row) -> list[object]:
+    def _activate_bookmark(
+        self, row: Row, *, open_player: bool
+    ) -> list[object]:
         """Enter na wierszu zakladki: skok albo UCZCIWA odmowa.
 
         Kolejnosc sprawdzen jest istotna. NAJPIERW sesja, dopiero potem mapa
@@ -2016,7 +2027,7 @@ class Navigator:
         # Zakladka uruchamia jeden konkretny material. Nie podpinamy pod nia
         # przypadkowo listy zakladek (jej wiersze nie sa plikami) ani kolejki.
         self._set_playback_source(state, ())
-        state.view = View.PLAYER
+        state.view = View.PLAYER if open_player else View.LIST
         return [
             PlayTrack(path, f"file:{path}", title, position_seconds=position_seconds),
             # Komunikat mowi, ze to SKOK do zapisanej pozycji, a nie
@@ -2049,7 +2060,9 @@ class Navigator:
             Announce(target.title),
         ]
 
-    def open_radio_search_result(self, row: Row) -> list[object]:
+    def open_radio_search_result(
+        self, row: Row, *, open_player: bool = True
+    ) -> list[object]:
         """Play one public-directory station without saving it to the profile."""
 
         if self.active is not SessionId.RADIO or row.kind != "station" or not row.url:
@@ -2062,7 +2075,7 @@ class Navigator:
         state.pending_material_id = row.item_id
         state.playback_source_rows = (row,)
         state.playback_uses_queue = False
-        state.view = View.PLAYER
+        state.view = View.PLAYER if open_player else View.LIST
         return [
             PlayStation(row.url, row.item_id, row.title),
             Announce(row.title),
@@ -3246,7 +3259,11 @@ class Navigator:
         )
 
     def open_spotify_search_result(
-        self, row: Row, *, relations: bool = False
+        self,
+        row: Row,
+        *,
+        relations: bool = False,
+        open_player: bool = True,
     ) -> list[object]:
         """Open an ephemeral search row without saving it to the library."""
 
@@ -3298,7 +3315,7 @@ class Navigator:
             state.now_playing_title = row.title
             state.pending_material_id = row.item_id
             self._set_playback_source(state, (row,))
-            state.view = View.LIST
+            state.view = View.PLAYER if open_player else View.LIST
             return [intent]
         return [Announce("Nie można otworzyć tego wyniku Spotify")]
 

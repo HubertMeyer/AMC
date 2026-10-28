@@ -68,8 +68,8 @@ def test_palette_can_follow_current_view_availability() -> None:
 
 def test_opcje_sesji_maja_jeden_kontrakt_menu_pomocy_i_palety() -> None:
     expected = (
-        "Opcje odtwarzania sesji: pozycja, domyślna prędkość, dźwięk "
-        "i zachowanie po wyjściu, zależnie od możliwości sesji"
+        "Ustawienia sesji: uruchamianie materiału, pozycja, domyślna prędkość, "
+        "dźwięk i zachowanie po wyjściu, zależnie od możliwości sesji"
     )
     chord = Chord("Return", ctrl=True, alt=True)
     assert resolve(chord, player_view=False, radio_session=False) is Action.SESSION_OPTIONS
@@ -100,7 +100,7 @@ def test_opcje_sesji_maja_jeden_kontrakt_menu_pomocy_i_palety() -> None:
         )
         assert menu_entry.shortcut == "Ctrl+Alt+Return"
         assert palette_entry.shortcut == "Ctrl+Alt+Enter"
-        assert palette_entry.name == "Opcje sesji…"
+        assert palette_entry.name == "Ustawienia sesji…"
 
 
 def test_global_stop_recordings_has_one_contract_in_every_session() -> None:

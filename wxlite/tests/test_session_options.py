@@ -35,6 +35,8 @@ from amc_wx_lite.session_options import (
     describe_session_options,
     resolve_audio_payload,
     resolve_pause_on_player_exit,
+    resolve_open_player_on_enter,
+    resolve_open_player_on_preset,
     resolve_playback_rate,
     resolve_remember_position,
     scope_for_session,
@@ -191,6 +193,22 @@ def test_wstrzymanie_po_wyjsciu_dziedziczy_potem_nadpisuje():
     ) is True
 
 
+def test_otwieranie_odtwarzacza_dziedziczy_i_moze_byc_inne_dla_sesji():
+    options = Options()
+    options.stay_on_list_after_radio_enter = True
+    options.open_player_when_activating_preset = False
+    inherited = SessionPlaybackOverrides()
+    assert resolve_open_player_on_enter(options, inherited) is False
+    assert resolve_open_player_on_preset(options, inherited) is False
+
+    own = SessionPlaybackOverrides(
+        open_player_on_enter=True,
+        open_player_on_preset=True,
+    )
+    assert resolve_open_player_on_enter(options, own) is True
+    assert resolve_open_player_on_preset(options, own) is True
+
+
 # ------------------------------------------------------- zakres silnika
 
 
@@ -217,6 +235,8 @@ def test_zapisany_wybor_sesji_wraca_po_ponownym_wczytaniu():
             playback_rate=1.5,
             loudness_normalization=True,
             inter_track_silence_ms=1000,
+            open_player_on_enter=False,
+            open_player_on_preset=True,
         )
         state.session_overrides["radio"] = SessionPlaybackOverrides(
             pause_on_player_exit=False
@@ -229,6 +249,8 @@ def test_zapisany_wybor_sesji_wraca_po_ponownym_wczytaniu():
         assert files.remember_playback_position is False
         assert files.playback_rate == 1.5
         assert files.inter_track_silence_ms == 1000
+        assert files.open_player_on_enter is False
+        assert files.open_player_on_preset is True
         assert files.smooth_track_transitions is None, "brak wyboru zostaje brakiem"
         assert wczytany.session_overrides["radio"].pause_on_player_exit is False
 

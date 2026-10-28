@@ -402,10 +402,11 @@ class Action(Enum):
     # NVDA czyta kolumny swoim modyfikatorem, nie sama strzalka.
     QUICK_INFORMATION = "list.quickInformation"
     ITEM_PROPERTIES = "list.itemProperties"
-    #: Opcje sesji (Ctrl+Alt+Enter). Port ``SessionPlaybackOptionsEditor``.
+    #: Ustawienia sesji (Ctrl+Alt+Enter). Port ``SessionPlaybackOptionsEditor``.
     #:
-    #: Jedno WSPOLNE wejscie dla obu sesji -- dialog sam pokazuje tylko te
-    #: opcje, ktore dana sesja umie wykonac (``session_options``). Oryginal nie
+    #: Jedno WSPOLNE polecenie dla wszystkich sesji -- dialog sam pokazuje
+    #: ustawienia, ktore dana sesja umie wykonać (``session_options``).
+    #: Oryginal nie
     #: ma tego gestu w oknie (otwiera opcje z menu sesji), wiec klawisz jest
     #: WLASNY dla portu: Ctrl+Alt+Enter nie koliduje ani z aktywacja (gole
     #: Enter), ani z para Ctrl+Alt+Left/Right (przewijanie wlasnym krokiem).
@@ -827,6 +828,7 @@ WIIM_SUPPORTED_ACTIONS = frozenset({
     Action.TIME_ELAPSED,
     Action.TIME_REMAINING,
     Action.TIME_TOTAL,
+    Action.SESSION_OPTIONS,
     Action.VIEW_PRESETS,
     Action.ASSIGN_PRESET,
     *(Action[f"PRESET_{slot}"] for slot in range(1, 13)),
@@ -1192,7 +1194,7 @@ LIST_VIEW: dict[str, Action] = {
     "Alt+T": Action.QUICK_INFORMATION,
     "Left": Action.QUICK_INFORMATION,
     "Alt+Return": Action.ITEM_PROPERTIES,
-    # Opcje sesji: TEN SAM gest co w odtwarzaczu, bo zakres (sesja) jest ten
+    # Ustawienia sesji: TEN SAM gest co w odtwarzaczu, bo zakres jest ten
     # sam niezaleznie od widoku.
     "Ctrl+Alt+Return": Action.SESSION_OPTIONS,
     # Ustawienia ogolne: gest z pelnego AMC (MainWindow.xaml:162 oraz
@@ -1411,7 +1413,7 @@ PLAYER_VIEW: dict[str, Action] = {
     # brak kolizji Insert/CapsLock+End wymaga osobnego odbioru z czytnikiem.
     "Home": Action.TRACK_START,
     "End": Action.TRACK_END,
-    # Opcje sesji dzialaja takze z odtwarzacza: zakres to SESJA, nie widok.
+    # Ustawienia sesji dzialaja takze z odtwarzacza: zakres to SESJA, nie widok.
     "Ctrl+Alt+Return": Action.SESSION_OPTIONS,
     "Ctrl+,": Action.GENERAL_SETTINGS,
     "Shift+A": Action.SELECT_AUDIO_OUTPUT,
@@ -2436,8 +2438,8 @@ def _help_entries() -> list[tuple[str, str, Action]]:
         # Pomoc mowi WPROST, ze zakres to sesja, a nie zaznaczony plik -- bez
         # tego uzytkownik nie wie, czego dotkna zmiany.
         Action.SESSION_OPTIONS: (
-            "Opcje odtwarzania sesji: pozycja, domyślna prędkość, dźwięk "
-            "i zachowanie po wyjściu, zależnie od możliwości sesji"
+            "Ustawienia sesji: uruchamianie materiału, pozycja, domyślna "
+            "prędkość, dźwięk i zachowanie po wyjściu, zależnie od możliwości sesji"
         ),
         Action.SELECT_AUDIO_OUTPUT: (
             "Wybierz urządzenie audio dla bieżącej sesji"

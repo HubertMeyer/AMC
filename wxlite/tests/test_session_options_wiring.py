@@ -425,7 +425,7 @@ def test_potwierdzenie_zapisu_jest_krotkie_i_mowi_zakres():
 def test_tytul_dialogu_nazywa_aktywna_sesje():
     for session, nazwa in ((SessionId.FILES, "Pliki lokalne"), (SessionId.RADIO, "Radio")):
         tytul = session_options.dialog_title(session)
-        assert "Opcje sesji" in tytul
+        assert "Ustawienia sesji" in tytul
         assert nazwa.split()[0] in tytul
 
 

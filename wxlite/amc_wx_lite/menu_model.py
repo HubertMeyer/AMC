@@ -1734,11 +1734,11 @@ def build_menus(
                 accelerator=False,
                 visible_sessions=SESSION_AUDIO_OUTPUTS,
             ),
-            # Opcje dotyczą sesji, także na pustej liście. Ctrl+Alt+Enter
+            # Ustawienia dotyczą sesji, także na pustej liście. Ctrl+Alt+Enter
             # jest skrótem okna, więc rejestrujemy natywny akcelerator;
             # sama obsługa KEY_DOWN listy nie uruchamiała dialogu w próbie wx.
             MenuItem(
-                "&Opcje sesji…",
+                "Ustawienia &sesji…",
                 Action.SESSION_OPTIONS,
                 shortcut="Ctrl+Alt+Return",
                 accelerator=True,

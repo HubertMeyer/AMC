@@ -376,7 +376,7 @@ def test_sonos_material_uses_shared_stay_on_list_preference() -> None:
         household_id="house-1",
     )
 
-    intents = nav.activate_selected(stay_on_list_after_radio_enter=True)
+    intents = nav.activate_selected(open_player_on_activation=False)
 
     assert isinstance(intents[0], PlaySonosMaterial)
     assert nav.view is View.LIST
