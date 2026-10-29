@@ -404,6 +404,10 @@ repozytorium, kanałami wydań i polityką prywatności.
   samego katalogu Workera (180 906 567 bajtów, około 172,53 MiB). Zachowano
   ignorowany `wrangler.jsonc`, ponieważ nie zawiera sekretu i jest potrzebny
   do następnych jawnych etapów. Usunięte zależności odtworzy `npm ci`.
+- 29 października po testach i bootstrapie profilu testowego usunięto dokładnie
+  `deploy\amc-sygnalista-worker\node_modules` (180 906 567 bajtów, około
+  172,53 MiB). Katalog jest odtwarzalny przez przypięte `npm ci`; zachowano
+  źródła i ignorowany `wrangler.test.jsonc`. Usunięcie nie korzystało z Kosza.
 
 ## Wersja i commit
 
