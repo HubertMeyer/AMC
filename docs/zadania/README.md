@@ -113,9 +113,10 @@ do kontrolowanej archiwizacji opisanej w REL-003.
   z najnowszej bazy Test i ma WiiM oraz Frontier Smart, bez Sonosa, Spotify i
   TIDAL-a; 231/231 celowanych testów Pythona, 38/38 Launchera/aktualizatora,
   paczka `89473955`, cichy start, instalator, skan sekretów i zdalny SHA-256 są
-  zaliczone. Nowszy lokalny kandydat Public automatycznie wykrywa nowe wydanie,
-  informuje i pyta przed pobraniem; 119 testów, paczka, instalator i bramka
-  wydania bez publikacji są zaliczone. Lokalnej instalacji nie zmieniono** — jedna
+  zaliczone. Najnowsze stabilne wydanie Public z 29.10.2026, 19:24
+  automatycznie wykrywa nowe wydanie, informuje i pyta przed pobraniem;
+  119 testów, paczka, instalator, bramka i publikacja GitHub są zaliczone.
+  Lokalnej instalacji nie zmieniono** — jedna
   kanoniczna linia AMC Python,
   wydania AMC Test i AMC Public z tego samego commitu, dwa kanały aktualizacji,
   standardowa instalacja Windows oraz kontrolowane uporządkowanie starego C#,

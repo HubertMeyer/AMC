@@ -990,6 +990,15 @@ tych samych plików profilu.
 - Rozmiar instalatora: 123 624 555 bajtów; SHA-256:
   `db26bc2ed863b5c104923e8ed8df143a807dd2d6d322532f1b907afc2ec0241f`.
 - Kontrolowany start paczki i ponowny start w bramce instalatora: zaliczone.
-  Lokalna bramka wydania `stable` zaliczona bez przełącznika publikacji; skan
-  sekretów ma wynik `passed`.
-- Instalacja i publikacja: nie wykonano.
+  Lokalna bramka wydania `stable` i skan sekretów: zaliczone.
+- GitHub Release `public-2026.10.29.1924`: **opublikowany** jako stabilny i
+  odczytowo zweryfikowany. Tag wskazuje dokładny commit źródłowy, wszystkie
+  trzy zasoby mają stan `uploaded`, a rozmiar i digest SHA-256 instalatora są
+  zgodne z plikiem lokalnym. Bezparametrowy odczyt najnowszego stabilnego
+  wydania wskazuje właśnie ten tag.
+- Adres wydania:
+  `https://github.com/michalkasperczak/AMC/releases/tag/public-2026.10.29.1924`.
+- Bezpośredni adres instalatora:
+  `https://github.com/michalkasperczak/AMC/releases/download/public-2026.10.29.1924/AMC-Public-2026-10-29-1924.exe`.
+- Instalatora nie uruchamiano ani nie instalowano; kanału AMC Test nie
+  zmieniono.
