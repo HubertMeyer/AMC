@@ -598,6 +598,16 @@ public sealed class RadioMediaOutput(int timeshiftMinutes, bool audible = true)
                 return new OpenedRadioReader(ffmpeg, ffmpeg, "FFmpeg HLS", null, "AAC");
             }
         }
+        if (!isHls)
+        {
+            // Tytuły utworów: Media Foundation z adresu nigdy ich nie podaje,
+            // a BASS otwiera AAC dziesiątki sekund. Własne połączenie ICY
+            // z dekoderami Windows gra MP3 i AAC równie szybko i z tytułami;
+            // gdy serwer go nie przyjmie, zostaje dotychczasowa kolejność.
+            var icy = await IcyFrameRadioWaveProvider.TryOpenAsync(source, cancellationToken)
+                .ConfigureAwait(false);
+            if (icy is not null) return new OpenedRadioReader(icy, icy, $"ICY {icy.Codec}", null, icy.Codec);
+        }
         var preferBass = ShouldPreferBass(source, isHls);
         if (preferBass)
         {

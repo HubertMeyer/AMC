@@ -108,6 +108,13 @@ if (args.Contains("--radio-recording-stream-failure-only", StringComparer.Ordina
     TestRadioRecordingControlKeepsPublishedFileAfterStreamFailure();
     return 0;
 }
+if (args.Contains("--radio-icy-only", StringComparer.Ordinal))
+{
+    TestIcyFrameRadio();
+    TestLegacyIcyMp3Stream();
+    TestRadioPlaylistImport();
+    return 0;
+}
 if (args.FirstOrDefault(argument =>
         argument.StartsWith("--youtube-live-only-url=", StringComparison.OrdinalIgnoreCase))
     is { } youtubeLiveArgument)
@@ -778,6 +785,7 @@ var tests = new (string Name, Action Test)[]
     ("Shazam Fingerprint", TestShazamFingerprint),
     ("Recognition Search Links", TestRecognitionSearchLinks),
     ("Radio MP3 Recording", TestRadioMp3Recording),
+    ("ICY Frame Radio", TestIcyFrameRadio),
     ("Legacy ICY MP3 Stream", TestLegacyIcyMp3Stream),
     ("Legacy ICY Cancellation", TestLegacyIcyCancellation),
     ("BASS Cancellation", TestBassCancellation),
@@ -6003,10 +6011,9 @@ static void TestScheduledRadioRecordingInterruptionTracker()
     Console.WriteLine("OK: zatrzymanie i wznowienie zachowuje to samo wystąpienie harmonogramu");
 }
 
-static void TestLegacyIcyMp3Stream()
+static byte[] CreateTestMp3()
 {
     var mp3Path = Path.Combine(Path.GetTempPath(), $"amc-icy-source-{Guid.NewGuid():N}.mp3");
-    byte[] mp3;
     try
     {
         var format = new WaveFormat(44_100, 16, 2);
@@ -6023,15 +6030,101 @@ static void TestLegacyIcyMp3Stream()
             recorder.Write(pcm, 0, pcm.Length);
             recorder.Stop();
         }
-        mp3 = File.ReadAllBytes(mp3Path);
+        var mp3 = File.ReadAllBytes(mp3Path);
         Assert(
             AccessibleMediaController.Core.LocalMedia.Mp3StructureProbe.TryFindConsecutiveFrameOffset(mp3, out _),
             "Testowy plik MP3 nie zawiera dwóch rozpoznanych ramek.");
+        return mp3;
     }
     finally
     {
         if (File.Exists(mp3Path)) File.Delete(mp3Path);
     }
+}
+
+static void TestIcyFrameRadio()
+{
+    // Jak u foobar2000: własne połączenie ICY idzie za przekierowaniem CDN,
+    // składa ramki MP3 z drobnych pakietów i oddaje tytuł utworu.
+    var mp3 = CreateTestMp3();
+    var listener = new TcpListener(IPAddress.Loopback, 0);
+    listener.Start();
+    var port = ((IPEndPoint)listener.LocalEndpoint).Port;
+    var releaseServer = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+    var server = Task.Run(async () =>
+    {
+        static async Task<string> ReadRequestAsync(NetworkStream stream)
+        {
+            var request = new StringBuilder();
+            var one = new byte[1];
+            while (!request.ToString().EndsWith("\r\n\r\n", StringComparison.Ordinal)
+                   && await stream.ReadAsync(one) == 1)
+                request.Append((char)one[0]);
+            return request.ToString();
+        }
+
+        using (var redirect = await listener.AcceptTcpClientAsync())
+        {
+            var stream = redirect.GetStream();
+            await ReadRequestAsync(stream);
+            await stream.WriteAsync(Encoding.ASCII.GetBytes("HTTP/1.1 302 Found\r\nLocation: /live?token=1\r\n\r\n"));
+        }
+        using var connection = await listener.AcceptTcpClientAsync();
+        var live = connection.GetStream();
+        var request = await ReadRequestAsync(live);
+        Assert(request.StartsWith("GET /live?token=1 ", StringComparison.Ordinal),
+            "Klient nie poszedł za przekierowaniem stacji.");
+        Assert(request.Contains("Icy-MetaData: 1", StringComparison.OrdinalIgnoreCase),
+            "Klient nie poprosił o tytuł bieżącego utworu.");
+        const int metadataInterval = 1_024;
+        await live.WriteAsync(Encoding.ASCII.GetBytes(
+            $"HTTP/1.0 200 OK\r\nContent-Type: audio/mpeg\r\nicy-metaint: {metadataInterval}\r\n\r\n"));
+        var metadataText = Encoding.UTF8.GetBytes("StreamTitle='Artysta - Utwór';");
+        var metadata = new byte[(metadataText.Length + 15) / 16 * 16];
+        metadataText.CopyTo(metadata, 0);
+        for (var offset = 0; offset < mp3.Length; offset += metadataInterval)
+        {
+            var count = Math.Min(metadataInterval, mp3.Length - offset);
+            for (var sent = 0; sent < count; sent += 257)
+            {
+                await live.WriteAsync(mp3.AsMemory(offset + sent, Math.Min(257, count - sent)));
+                await live.FlushAsync();
+            }
+            if (count == metadataInterval)
+            {
+                await live.WriteAsync(new[] { (byte)(metadata.Length / 16) });
+                await live.WriteAsync(metadata);
+            }
+        }
+        await releaseServer.Task;
+    });
+
+    try
+    {
+        using var provider = IcyFrameRadioWaveProvider.TryOpenAsync(
+                $"http://127.0.0.1:{port}/stacja",
+                CancellationToken.None)
+            .GetAwaiter()
+            .GetResult();
+        Assert(provider is not null && provider.Codec == "MP3", "Własne połączenie ICY nie otworzyło stacji MP3.");
+        Assert(provider!.WaveFormat.SampleRate == 44_100, "Dekoder MP3 Windows podał złą częstotliwość.");
+        var buffer = new byte[provider.WaveFormat.AverageBytesPerSecond / 4];
+        Assert(provider.Read(buffer, 0, buffer.Length) > 0, "Własne połączenie ICY nie zwróciło dźwięku.");
+        Assert(provider.StreamTitle == "Artysta - Utwór", "Własne połączenie ICY nie odczytało tytułu utworu.");
+        releaseServer.TrySetResult();
+        Assert(server.Wait(TimeSpan.FromSeconds(2)), "Testowy serwer ICY nie zakończył odpowiedzi.");
+        Console.WriteLine("OK: radio przez własne połączenie ICY z przekierowaniem i tytułem");
+    }
+    finally
+    {
+        releaseServer.TrySetResult();
+        listener.Stop();
+    }
+}
+
+static void TestLegacyIcyMp3Stream()
+{
+    var mp3 = CreateTestMp3();
 
     var listener = new TcpListener(IPAddress.Loopback, 0);
     listener.Start();

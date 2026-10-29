@@ -36,9 +36,15 @@ internal sealed class LegacyIcyAudioStream : Stream, IRadioStreamTitleSource
     public bool IsAac => MatchesContentType("aac", "aacp");
     public bool IsOgg => MatchesContentType("ogg", "vorbis");
 
-    public static async Task<LegacyIcyAudioStream> OpenAsync(
+    public static Task<LegacyIcyAudioStream> OpenAsync(
         string source,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken) =>
+        OpenAsync(source, cancellationToken, redirectsLeft: 5);
+
+    private static async Task<LegacyIcyAudioStream> OpenAsync(
+        string source,
+        CancellationToken cancellationToken,
+        int redirectsLeft)
     {
         if (!Uri.TryCreate(source, UriKind.Absolute, out var uri)
             || uri.Scheme is not ("http" or "https"))
@@ -84,12 +90,24 @@ internal sealed class LegacyIcyAudioStream : Stream, IRadioStreamTitleSource
 
             var headerText = await ReadHeadersAsync(buffered, timeout.Token).ConfigureAwait(false);
             var lines = headerText.Split("\r\n", StringSplitOptions.None);
-            if (lines.Length == 0 || !IsSuccessfulStatus(lines[0]))
+            var headers = ParseHeaders(lines.Skip(1));
+            // CDN-y stacji (np. revma.com) odsyłają pod adres z tokenem;
+            // idziemy za nim tak jak przeglądarka, najwyżej kilka razy.
+            if (redirectsLeft > 0
+                && StatusCode(lines[0]) is 301 or 302 or 303 or 307 or 308
+                && headers.TryGetValue("location", out var location)
+                && Uri.TryCreate(uri, location, out var target))
+            {
+                transport.Dispose();
+                client.Dispose();
+                return await OpenAsync(target.AbsoluteUri, cancellationToken, redirectsLeft - 1)
+                    .ConfigureAwait(false);
+            }
+            if (!IsSuccessfulStatus(lines[0]))
             {
                 throw new InvalidDataException("Serwer nie zwrócił prawidłowego strumienia audio.");
             }
 
-            var headers = ParseHeaders(lines.Skip(1));
             if (headers.TryGetValue("transfer-encoding", out var transferEncoding)
                 && transferEncoding.Contains("chunked", StringComparison.OrdinalIgnoreCase))
             {
@@ -214,15 +232,18 @@ internal sealed class LegacyIcyAudioStream : Stream, IRadioStreamTitleSource
         throw new InvalidDataException("Nagłówki odpowiedzi stacji są zbyt duże.");
     }
 
-    private static bool IsSuccessfulStatus(string statusLine)
+    private static bool IsSuccessfulStatus(string statusLine) =>
+        StatusCode(statusLine) is >= 200 and <= 299;
+
+    private static int StatusCode(string statusLine)
     {
         if (!statusLine.StartsWith("ICY ", StringComparison.OrdinalIgnoreCase)
             && !statusLine.StartsWith("HTTP/", StringComparison.OrdinalIgnoreCase))
         {
-            return false;
+            return 0;
         }
         var parts = statusLine.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        return parts.Length >= 2 && int.TryParse(parts[1], out var status) && status is >= 200 and <= 299;
+        return parts.Length >= 2 && int.TryParse(parts[1], out var status) ? status : 0;
     }
 
     private static Dictionary<string, string> ParseHeaders(IEnumerable<string> lines)
