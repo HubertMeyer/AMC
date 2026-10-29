@@ -13,9 +13,15 @@ SCRIPT = (
     / "Deploy-AMCSygnalistaWorker.ps1"
 )
 LOCK = REPOSITORY_ROOT / "deploy" / "amc-sygnalista-worker" / "package-lock.json"
-CONFIGURATION_TEMPLATE = (
-    REPOSITORY_ROOT / "deploy" / "amc-sygnalista-worker" / "wrangler.jsonc.example"
-)
+CONFIGURATION_TEMPLATES = {
+    profile: (
+        REPOSITORY_ROOT
+        / "deploy"
+        / "amc-sygnalista-worker"
+        / f"wrangler.{profile}.jsonc.example"
+    )
+    for profile in ("test", "public")
+}
 
 
 def test_worker_dependencies_are_locked_to_the_pinned_wrangler() -> None:
@@ -26,6 +32,10 @@ def test_worker_dependencies_are_locked_to_the_pinned_wrangler() -> None:
 
 def test_deployment_is_opt_in_and_never_starts_login() -> None:
     source = SCRIPT.read_text(encoding="utf-8")
+    assert '[ValidateSet("test", "public")]' in source
+    assert '[string]$ReleaseProfile = "test"' in source
+    assert '"wrangler.$ReleaseProfile.jsonc"' in source
+    assert 'problem-report-endpoint-$ReleaseProfile.txt"' in source
     assert "[switch]$Bootstrap" in source
     assert "[switch]$SetGitHubToken" in source
     assert "[switch]$Deploy" in source
@@ -43,14 +53,24 @@ def test_deployment_is_opt_in_and_never_starts_login() -> None:
 
 def test_first_deploy_uses_ignored_local_config_and_durable_coordinator() -> None:
     source = SCRIPT.read_text(encoding="utf-8")
-    configuration = CONFIGURATION_TEMPLATE.read_text(encoding="utf-8")
-    assert '"name": "REPORT_COORDINATORS"' in configuration
-    assert '"new_sqlite_classes": ["ReportCoordinator"]' in configuration
+    expected = {
+        "test": ("amc-sygnalista-test", "test", 1002),
+        "public": ("amc-sygnalista", "stable", 1001),
+    }
+    for profile, (worker_name, channel, limiter_id) in expected.items():
+        configuration = CONFIGURATION_TEMPLATES[profile].read_text(encoding="utf-8")
+        assert f'"name": "{worker_name}"' in configuration
+        assert f'"EXPECTED_CHANNEL": "{channel}"' in configuration
+        assert f'"namespace_id": "{limiter_id}"' in configuration
+        assert '"name": "REPORT_COORDINATORS"' in configuration
+        assert '"new_sqlite_classes": ["ReportCoordinator"]' in configuration
     assert "Copy-Item -LiteralPath $configurationTemplatePath" in source
     assert 'Destination $configurationPath' in source
-    assert "wrangler.jsonc" in (
+    ignored = (
         REPOSITORY_ROOT / "deploy" / "amc-sygnalista-worker" / ".gitignore"
     ).read_text(encoding="utf-8")
+    assert "wrangler.test.jsonc" in ignored
+    assert "wrangler.public.jsonc" in ignored
     bootstrap = source[
         source.index("if ($Bootstrap) {") : source.index("if ($SetGitHubToken) {")
     ]
@@ -82,7 +102,6 @@ def test_github_secret_is_a_separate_explicit_interactive_step() -> None:
 
 def test_workers_dev_address_is_read_from_confirmed_deployment_output() -> None:
     source = SCRIPT.read_text(encoding="utf-8")
-    assert '$output = @(& $npmPath exec -- wrangler deploy 2>&1)' in source
     assert '$output = @(& $npmPath exec -- wrangler deploy --config $ConfigPath 2>&1)' in source
     assert 'ExitCode = $LASTEXITCODE' in source
     assert '\\.workers\\.dev' in source
@@ -115,6 +134,10 @@ def test_health_is_verified_before_atomic_endpoint_activation() -> None:
         source.index('function Assert-WorkerHealth') : source.index('Push-Location')
     ]
     assert readiness_position < activation_position
+    assert 'function Wait-WorkerHttpStatus' in source
+    assert 'Start-Sleep -Seconds 2' in source
+    assert 'Wait-WorkerHttpStatus "$WorkerBaseUrl/health" "GET" 200' in readiness_functions
+    assert 'Wait-WorkerHttpStatus "$WorkerBaseUrl/health" "GET" 503' in readiness_functions
     assert '"$WorkerBaseUrl/health" "GET"' in readiness_functions
     assert '"$WorkerBaseUrl/v1/report" "GET"' in readiness_functions
     assert "'{\"schemaVersion\":999}'" in readiness_functions
@@ -122,5 +145,6 @@ def test_health_is_verified_before_atomic_endpoint_activation() -> None:
     assert 'StatusCode -ne 400' in readiness_functions
     assert 'Nieobsługiwana wersja raportu' in readiness_functions
     assert '[IO.File]::Move($temporaryPath, $endpointPath, $true)' in source
+    assert 'problem-report-endpoint-$ReleaseProfile.txt"' in source
     assert 'https' in source
     assert 'UZUPELNIJ_IDENTYFIKATOR_KV' not in source

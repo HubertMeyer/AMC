@@ -82,17 +82,20 @@ def test_public_python_package_contains_frontier_and_omits_disabled_services():
                 assert f"app/amc_wx_lite/{name}" not in copied
 
 
-def test_problem_report_endpoint_is_optional_validated_and_shared_by_profiles():
+def test_problem_report_endpoint_is_optional_validated_and_isolated_by_profile():
     with tempfile.TemporaryDirectory() as folder:
         root = Path(folder)
         source = root / "source"
         source_package = source / "amc_wx_lite"
         source_package.mkdir(parents=True)
         (source_package / "__init__.py").write_text("", encoding="utf-8")
-        endpoint = "https://amc-sygnalista.example.workers.dev/v1/report"
-        (source_package / bundle.PROBLEM_REPORT_ENDPOINT_RESOURCE).write_text(
-            endpoint + "\n", encoding="utf-8"
-        )
+        endpoints = {
+            "test": "https://amc-sygnalista-test.example.workers.dev/v1/report",
+            "public": "https://amc-sygnalista.example.workers.dev/v1/report",
+        }
+        for profile_id, endpoint in endpoints.items():
+            source_name = bundle.PROBLEM_REPORT_ENDPOINT_SOURCE_RESOURCES[profile_id]
+            (source_package / source_name).write_text(endpoint + "\n", encoding="utf-8")
 
         for profile_id in ("public", "test"):
             target = root / profile_id
@@ -103,9 +106,10 @@ def test_problem_report_endpoint_is_optional_validated_and_shared_by_profiles():
             )
             relative = "app/amc_wx_lite/problem-report-endpoint.txt"
             assert relative in copied
-            assert (target / relative).read_text(encoding="utf-8") == endpoint + "\n"
+            assert (target / relative).read_text(encoding="utf-8") == endpoints[profile_id] + "\n"
 
-        (source_package / bundle.PROBLEM_REPORT_ENDPOINT_RESOURCE).write_text(
+        test_source = bundle.PROBLEM_REPORT_ENDPOINT_SOURCE_RESOURCES["test"]
+        (source_package / test_source).write_text(
             "https://user:secret@example.test/v1/report?token=bad\n",
             encoding="utf-8",
         )

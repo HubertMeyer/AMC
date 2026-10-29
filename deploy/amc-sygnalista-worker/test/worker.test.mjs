@@ -4,22 +4,31 @@ import test from "node:test";
 
 import { createWorker, redactPrivateData, ReportCoordinator } from "../src/worker.mjs";
 
-test("deployment config requires secret and uses workers.dev", () => {
-  const config = JSON.parse(fs.readFileSync(
-    new URL("../wrangler.jsonc.example", import.meta.url),
-    "utf8",
-  ));
-  assert.equal(config.workers_dev, true);
-  assert.deepEqual(config.secrets.required, ["GITHUB_TOKEN"]);
-  assert.equal(config.ratelimits[0].name, "REPORT_RATE_LIMITER");
-  assert.deepEqual(config.durable_objects.bindings, [{
-    name: "REPORT_COORDINATORS",
-    class_name: "ReportCoordinator",
-  }]);
-  assert.deepEqual(config.migrations, [{
-    tag: "v1",
-    new_sqlite_classes: ["ReportCoordinator"],
-  }]);
+test("deployment configs isolate test and public workers", () => {
+  const configurations = [
+    ["test", "amc-sygnalista-test", "1002"],
+    ["public", "amc-sygnalista", "1001"],
+  ];
+  for (const [profile, workerName, limiterNamespace] of configurations) {
+    const config = JSON.parse(fs.readFileSync(
+      new URL(`../wrangler.${profile}.jsonc.example`, import.meta.url),
+      "utf8",
+    ));
+    assert.equal(config.name, workerName);
+    assert.equal(config.workers_dev, true);
+    assert.deepEqual(config.secrets.required, ["GITHUB_TOKEN"]);
+    assert.equal(config.vars.EXPECTED_CHANNEL, profile === "test" ? "test" : "stable");
+    assert.equal(config.ratelimits[0].name, "REPORT_RATE_LIMITER");
+    assert.equal(config.ratelimits[0].namespace_id, limiterNamespace);
+    assert.deepEqual(config.durable_objects.bindings, [{
+      name: "REPORT_COORDINATORS",
+      class_name: "ReportCoordinator",
+    }]);
+    assert.deepEqual(config.migrations, [{
+      tag: "v1",
+      new_sqlite_classes: ["ReportCoordinator"],
+    }]);
+  }
 });
 
 class MemoryDurableStorage {
@@ -79,6 +88,7 @@ function environment({
     GITHUB_OWNER: "michalkasperczak",
     PUBLIC_REPOSITORY: "AMC",
     INTAKE_REPOSITORY: "amc-support-intake",
+    EXPECTED_CHANNEL: "test",
     REPORT_RATE_LIMITER: { limit: async () => ({ success: true }) },
   };
   env.REPORT_COORDINATORS = new MemoryDurableNamespace(env, { fetchImpl, storageFactory });
@@ -93,6 +103,7 @@ function payload(overrides = {}) {
     title: "[Błąd] Radio nie startuje",
     reportText: "Raport AMC\nOpis:\nRadio nie startuje\n",
     includedLog: false,
+    channel: "test",
     ...overrides,
   };
 }
@@ -168,8 +179,11 @@ test("valid report creates private intake and public issue exactly once", async 
   const privateIssue = JSON.parse(calls[0].options.body);
   const publicIssue = JSON.parse(calls[1].options.body);
   assert.match(privateIssue.body, /Raport AMC/);
+  assert.deepEqual(privateIssue.labels, ["bug", "from-app", "channel:test"]);
   assert.doesNotMatch(publicIssue.body, /Raport AMC|Radio nie startuje/);
   assert.match(publicIssue.body, /Prywatny zapis dla opiekuna/);
+  assert.match(publicIssue.body, /Kanał: test/);
+  assert.deepEqual(publicIssue.labels, ["bug", "from-app", "channel:test"]);
   assert.doesNotMatch(JSON.stringify(firstBody).toLowerCase(), /worker-secret/);
 
   const duplicate = await worker.fetch(reportRequest(), env);
@@ -293,6 +307,8 @@ test("invalid requests, size and rate limit receive explicit status", async () =
   assert.equal((await worker.fetch(new Request("https://reports.example.test/v1/report"), env)).status, 405);
   assert.equal((await worker.fetch(reportRequest(payload({ schemaVersion: 9 })), env)).status, 400);
   assert.equal((await worker.fetch(reportRequest(payload({ reportId: "bad" })), env)).status, 400);
+  assert.equal((await worker.fetch(reportRequest(payload({ channel: "stable" })), env)).status, 400);
+  assert.equal((await worker.fetch(reportRequest(payload({ channel: "preview" })), env)).status, 400);
   assert.equal((await worker.fetch(reportRequest(payload({ reportText: "x".repeat((60 * 1024) + 1) })), env)).status, 400);
   env.REPORT_RATE_LIMITER = { limit: async () => ({ success: false }) };
   assert.equal((await worker.fetch(reportRequest(), env)).status, 429);

@@ -1,5 +1,8 @@
 [CmdletBinding()]
 param(
+    [ValidateSet("test", "public")]
+    [string]$ReleaseProfile = "test",
+
     [string]$WorkerBaseUrl = "",
 
     [string]$DependencyRoot = "D:\Projekty Codex\AMC - zależności",
@@ -14,11 +17,11 @@ $ErrorActionPreference = "Stop"
 
 $workerRoot = [IO.Path]::GetFullPath($PSScriptRoot)
 $repositoryRoot = [IO.Path]::GetFullPath((Join-Path $workerRoot "..\.."))
-$configurationPath = Join-Path $workerRoot "wrangler.jsonc"
-$configurationTemplatePath = Join-Path $workerRoot "wrangler.jsonc.example"
+$configurationPath = Join-Path $workerRoot "wrangler.$ReleaseProfile.jsonc"
+$configurationTemplatePath = Join-Path $workerRoot "wrangler.$ReleaseProfile.jsonc.example"
 $lockPath = Join-Path $workerRoot "package-lock.json"
 $npmPath = Join-Path $DependencyRoot "node\node-v22.23.2-win-x64\npm.cmd"
-$endpointPath = Join-Path $repositoryRoot "wxlite\amc_wx_lite\problem-report-endpoint.txt"
+$endpointPath = Join-Path $repositoryRoot "wxlite\amc_wx_lite\problem-report-endpoint-$ReleaseProfile.txt"
 
 if (-not (Test-Path -LiteralPath $npmPath -PathType Leaf)) {
     throw "Brak przypiętego npm: $npmPath"
@@ -27,7 +30,14 @@ if (-not (Test-Path -LiteralPath $lockPath -PathType Leaf)) {
     throw "Brak package-lock.json. Wdrożenie bez przypiętych zależności jest zabronione."
 }
 if (-not (Test-Path -LiteralPath $configurationTemplatePath -PathType Leaf)) {
-    throw "Brak wzorcowej konfiguracji wrangler.jsonc.example."
+    throw "Brak wzorcowej konfiguracji dla profilu $ReleaseProfile."
+}
+$versionedConfiguration = Get-Content -LiteralPath $configurationTemplatePath -Raw | ConvertFrom-Json
+$workerName = [string]$versionedConfiguration.name
+$expectedChannel = [string]$versionedConfiguration.vars.EXPECTED_CHANNEL
+if ([string]::IsNullOrWhiteSpace($workerName) -or
+    $expectedChannel -ne $(if ($ReleaseProfile -eq "test") { "test" } else { "stable" })) {
+    throw "Wzorcowa konfiguracja Workera nie odpowiada profilowi $ReleaseProfile."
 }
 if ($ActivateEndpoint -and -not $Deploy) {
     throw "Włączenie endpointu wymaga jawnego przełącznika -Deploy."
@@ -60,7 +70,7 @@ if (($Bootstrap -or $Deploy) -and -not [string]::IsNullOrWhiteSpace($WorkerBaseU
 }
 
 function Get-WorkerSecretInventory {
-    $output = @(& $npmPath exec -- wrangler secret list --format json 2>&1)
+    $output = @(& $npmPath exec -- wrangler secret list --format json --config $configurationPath 2>&1)
     $exitCode = $LASTEXITCODE
     $text = ($output | ForEach-Object { [string]$_ }) -join "`n"
     if ($exitCode -ne 0) {
@@ -84,7 +94,7 @@ function Get-WorkerSecretInventory {
 
 function Invoke-WorkerDeployment([string]$ConfigPath = "") {
     if ([string]::IsNullOrWhiteSpace($ConfigPath)) {
-        $output = @(& $npmPath exec -- wrangler deploy 2>&1)
+        $output = @(& $npmPath exec -- wrangler deploy --config $configurationPath 2>&1)
     } else {
         $output = @(& $npmPath exec -- wrangler deploy --config $ConfigPath 2>&1)
     }
@@ -153,8 +163,28 @@ function Invoke-WorkerHttpProbe(
     }
 }
 
+function Wait-WorkerHttpStatus(
+    [string]$Uri,
+    [string]$Method,
+    [int]$ExpectedStatus,
+    [AllowNull()][string]$Body = $null
+) {
+    $response = $null
+    for ($attempt = 1; $attempt -le 5; $attempt++) {
+        $response = Invoke-WorkerHttpProbe $Uri $Method $Body
+        if ($response.StatusCode -eq $ExpectedStatus) {
+            return $response
+        }
+        if ($attempt -lt 5) {
+            Start-Sleep -Seconds 2
+        }
+    }
+    return $response
+}
+
 function Assert-WorkerHealth([string]$WorkerBaseUrl) {
-    $response = Invoke-WorkerHttpProbe "$WorkerBaseUrl/health" "GET"
+    # Workers.dev może przez kilka sekund kierować do poprzedniej wersji po deployu.
+    $response = Wait-WorkerHttpStatus "$WorkerBaseUrl/health" "GET" 200
     if ($response.StatusCode -ne 200) {
         throw "Endpoint zdrowia zwrócił status $($response.StatusCode)."
     }
@@ -169,7 +199,7 @@ function Assert-WorkerHealth([string]$WorkerBaseUrl) {
 }
 
 function Assert-WorkerBootstrapState([string]$WorkerBaseUrl) {
-    $response = Invoke-WorkerHttpProbe "$WorkerBaseUrl/health" "GET"
+    $response = Wait-WorkerHttpStatus "$WorkerBaseUrl/health" "GET" 503
     if ($response.StatusCode -ne 503) {
         throw "Bootstrap Workera nie pozostał w oczekiwanym, nieaktywnym stanie 503."
     }
@@ -246,7 +276,7 @@ try {
 
     if (-not (Test-Path -LiteralPath $configurationPath -PathType Leaf)) {
         Copy-Item -LiteralPath $configurationTemplatePath -Destination $configurationPath
-        Write-Output "Utworzono lokalny, ignorowany przez Git plik wrangler.jsonc."
+        Write-Output "Utworzono lokalną, ignorowaną przez Git konfigurację profilu $ReleaseProfile."
     }
 
     # Skrypt nigdy nie uruchamia logowania. Brak istniejącej sesji ma zatrzymać
@@ -262,7 +292,8 @@ try {
         if ($secretInventory.Success) {
             throw "Worker już istnieje. Bootstrap jest przeznaczony wyłącznie do pierwszego wdrożenia."
         }
-        if ($secretInventory.Output -notmatch 'Worker\s+"?amc-sygnalista"?\s+not found|run\s+.+deploy\s+first') {
+        $workerNotFoundPattern = 'Worker\s+"?' + [Regex]::Escape($workerName) + '"?\s+not found|run\s+.+deploy\s+first'
+        if ($secretInventory.Output -notmatch $workerNotFoundPattern) {
             throw "Nie udało się bezpiecznie potwierdzić, że Worker jeszcze nie istnieje."
         }
         # Wersjonowana konfiguracja wymaga sekretu podczas zwykłego wdrożenia.
@@ -296,7 +327,7 @@ try {
     if ($SetGitHubToken) {
         Write-Output "Wrangler poprosi teraz interaktywnie o ograniczony token GitHuba."
         Write-Output "Polecenie secret put tworzy i od razu wdraża nową wersję Workera. Token nie jest zapisywany przez ten skrypt w pliku ani w dzienniku."
-        & $npmPath exec -- wrangler secret put GITHUB_TOKEN
+        & $npmPath exec -- wrangler secret put GITHUB_TOKEN --config $configurationPath
         if ($LASTEXITCODE -ne 0) {
             throw "Cloudflare nie potwierdził ustawienia sekretu GITHUB_TOKEN."
         }
@@ -304,7 +335,7 @@ try {
         if (-not $confirmedSecrets.Success -or -not ($confirmedSecrets.Names -contains "GITHUB_TOKEN")) {
             throw "Cloudflare nie potwierdził obecności sekretu GITHUB_TOKEN."
         }
-        Write-Output "Sekret GITHUB_TOKEN został potwierdzony. Endpoint AMC nadal pozostaje wyłączony."
+        Write-Output "Sekret GITHUB_TOKEN został potwierdzony dla profilu $ReleaseProfile. Endpoint AMC nadal pozostaje wyłączony."
         Write-Output "Następny jawny krok: -Deploy, opcjonalnie razem z -ActivateEndpoint po odbiorze gotowości."
         return
     }
@@ -336,7 +367,7 @@ if ($ActivateEndpoint) {
             Remove-Item -LiteralPath $temporaryPath -Force
         }
     }
-    Write-Output "Zweryfikowany endpoint wpisano do źródeł AMC: $reportEndpoint"
+    Write-Output "Zweryfikowany endpoint profilu $ReleaseProfile wpisano do źródeł AMC: $reportEndpoint"
 } else {
     Write-Output "Worker działa, ale endpoint AMC pozostaje wyłączony."
 }

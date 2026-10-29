@@ -69,6 +69,7 @@ class PreparedReport:
     included_log: bool
     report_id: str = ""
     kind: ReportKind = ReportKind.BUG
+    channel: str = "test"
 
     @property
     def utf8_size(self) -> int:
@@ -280,6 +281,9 @@ def prepare_report(
 
     body = "\n".join(sections).rstrip() + "\n"
     body = redact_private_data(body)
+    channel = environment.channel.strip().casefold()
+    if channel not in ("test", "stable"):
+        channel = "test"
     stable_report_id = str(report_id or uuid.uuid4())
     try:
         stable_report_id = str(uuid.UUID(stable_report_id))
@@ -291,6 +295,7 @@ def prepare_report(
         included_log,
         stable_report_id,
         draft.kind,
+        channel,
     )
 
 

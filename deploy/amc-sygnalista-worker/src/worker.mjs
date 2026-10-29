@@ -2,6 +2,7 @@ const MAX_REQUEST_BYTES = 96 * 1024;
 const MAX_REPORT_TEXT_CHARACTERS = 60 * 1024;
 const RESULT_TTL_SECONDS = 60 * 60 * 24 * 90;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const REPORT_CHANNELS = new Set(["test", "stable"]);
 
 function jsonResponse(status, payload) {
   return new Response(JSON.stringify(payload), {
@@ -59,6 +60,7 @@ function parsePayload(raw) {
     return { error: "Nieprawidłowa treść raportu" };
   }
   if (typeof payload.includedLog !== "boolean") return { error: "Nieprawidłowa informacja o dzienniku" };
+  if (!REPORT_CHANNELS.has(payload.channel)) return { error: "Nieprawidłowy kanał raportu" };
   return {
     value: {
       schemaVersion: 1,
@@ -67,13 +69,21 @@ function parsePayload(raw) {
       title: redactPrivateData(payload.title).slice(0, 240),
       reportText: redactPrivateData(payload.reportText),
       includedLog: payload.includedLog,
+      channel: payload.channel,
     },
   };
 }
 
 function requireConfiguration(env) {
-  const values = [env.GITHUB_TOKEN, env.GITHUB_OWNER, env.PUBLIC_REPOSITORY, env.INTAKE_REPOSITORY];
-  return values.every((value) => typeof value === "string" && value.trim());
+  const values = [
+    env.GITHUB_TOKEN,
+    env.GITHUB_OWNER,
+    env.PUBLIC_REPOSITORY,
+    env.INTAKE_REPOSITORY,
+    env.EXPECTED_CHANNEL,
+  ];
+  return values.every((value) => typeof value === "string" && value.trim())
+    && REPORT_CHANNELS.has(env.EXPECTED_CHANNEL);
 }
 
 function requireBindings(env) {
@@ -186,6 +196,9 @@ export class ReportCoordinator {
     const parsed = parsePayload(await request.text());
     if (parsed.error) return jsonResponse(400, { error: parsed.error });
     const report = parsed.value;
+    if (report.channel !== this.env.EXPECTED_CHANNEL) {
+      return jsonResponse(400, { error: "Raport należy do innego kanału wydania" });
+    }
     const contentHash = await sha256(JSON.stringify(report));
     let state;
     try {
@@ -232,9 +245,13 @@ export class ReportCoordinator {
       let privateIssue;
       try {
         privateIssue = await githubIssue(this.env, this.env.INTAKE_REPOSITORY, {
-          title: `[AMC][${report.kind}] ${report.title}`.slice(0, 250),
+          title: `[AMC][${report.channel}][${report.kind}] ${report.title}`.slice(0, 250),
           body: `${report.reportText}\n\n---\nIdentyfikator raportu: ${report.reportId}\n`,
-          labels: [report.kind === "bug" ? "bug" : "enhancement", "from-app"],
+          labels: [
+            report.kind === "bug" ? "bug" : "enhancement",
+            "from-app",
+            `channel:${report.channel}`,
+          ],
         }, this.fetchImpl);
       } catch (error) {
         if (error instanceof GitHubRequestError && error.safeToRetry) {
@@ -276,11 +293,16 @@ export class ReportCoordinator {
           "Zgłoszenie przesłane z formularza AMC.",
           "",
           `Rodzaj: ${report.kind === "bug" ? "błąd" : "sugestia"}`,
+          `Kanał: ${report.channel}`,
           `Log dołączony do prywatnego raportu: ${report.includedLog ? "tak" : "nie"}`,
           `Prywatny zapis dla opiekuna: ${this.env.GITHUB_OWNER}/${this.env.INTAKE_REPOSITORY}#${state.privateIssueNumber}`,
           `Identyfikator raportu: ${report.reportId}`,
         ].join("\n"),
-        labels: [report.kind === "bug" ? "bug" : "enhancement", "from-app"],
+        labels: [
+          report.kind === "bug" ? "bug" : "enhancement",
+          "from-app",
+          `channel:${report.channel}`,
+        ],
       }, this.fetchImpl);
     } catch (error) {
       if (error instanceof GitHubRequestError && error.safeToRetry) {

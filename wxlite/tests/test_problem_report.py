@@ -102,6 +102,7 @@ def test_report_uses_one_redacted_body_and_log_is_off_by_default() -> None:
     assert "Log dołączony: nie" in report.body
     assert report.report_id
     assert report.kind is ReportKind.BUG
+    assert report.channel == "test"
 
 
 def test_log_reader_is_bounded_and_redacted(tmp_path: Path) -> None:
@@ -227,6 +228,7 @@ def test_https_transport_sends_exact_preview_without_any_secret() -> None:
         "title": report.title,
         "reportText": report.body,
         "includedLog": False,
+        "channel": "test",
     }
     headers = {key.casefold(): value for key, value in request.header_items()}
     assert "authorization" not in headers

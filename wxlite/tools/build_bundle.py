@@ -34,6 +34,7 @@ if str(WXLITE) not in sys.path:
     sys.path.insert(0, str(WXLITE))
 
 from amc_wx_lite.release_profile import (  # noqa: E402
+    PUBLIC_PROFILE_ID,
     TEST_PROFILE_ID,
     ReleaseProfile,
     profile_from_id,
@@ -171,14 +172,25 @@ def build_label(
 
 
 PROBLEM_REPORT_ENDPOINT_RESOURCE = "problem-report-endpoint.txt"
+PROBLEM_REPORT_ENDPOINT_SOURCE_RESOURCES = {
+    TEST_PROFILE_ID: "problem-report-endpoint-test.txt",
+    PUBLIC_PROFILE_ID: "problem-report-endpoint-public.txt",
+}
 YOUTUBE_OAUTH_CLIENT_ID_RESOURCE = "youtube-oauth-client-id.txt"
 YOUTUBE_OAUTH_CLIENT_SECRET_RESOURCE = "youtube-oauth-client-secret.txt"
 YOUTUBE_OAUTH_PUBLIC_CLIENT_ID_RESOURCE = "youtube-oauth-public-client-id.txt"
 YOUTUBE_OAUTH_PUBLIC_BROKER_RESOURCE = "youtube-oauth-public-token-broker.txt"
 
 
-def _read_optional_problem_report_endpoint(source_wxlite: Path) -> str | None:
-    source = source_wxlite / "amc_wx_lite" / PROBLEM_REPORT_ENDPOINT_RESOURCE
+def _read_optional_problem_report_endpoint(
+    source_wxlite: Path,
+    profile_id: str,
+) -> str | None:
+    source = (
+        source_wxlite
+        / "amc_wx_lite"
+        / PROBLEM_REPORT_ENDPOINT_SOURCE_RESOURCES[profile_id]
+    )
     if not source.is_file():
         return None
     if source.stat().st_size > 2048:
@@ -219,7 +231,10 @@ def copy_python_code(
     """
 
     selected_profile = profile or profile_from_id(TEST_PROFILE_ID)
-    report_endpoint = _read_optional_problem_report_endpoint(source_wxlite)
+    report_endpoint = _read_optional_problem_report_endpoint(
+        source_wxlite,
+        selected_profile.profile_id,
+    )
     package = target / "app" / "amc_wx_lite"
     package.mkdir(parents=True, exist_ok=True)
     copied = []

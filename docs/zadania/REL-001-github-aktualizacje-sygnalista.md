@@ -1,6 +1,6 @@
 # REL-001 — GitHub Releases, aktualizacje i Sygnalista
 
-- Status: `W trakcie — transport, Worker i bramka wdrożenia gotowe lokalnie; aktywacja czeka na świadomą autoryzację Cloudflare i odbiór`
+- Status: `W trakcie — osobny Worker AMC Test wdrożony bez sekretu; aktywacja czeka na ograniczony token GitHuba i odbiór`
 - Utworzono: 18 października 2026
 - Obszar: wydania, aktualizator i dostępne zgłoszenia
 - Polecenie uruchamiające: `Uruchom zadanie REL-001`
@@ -107,6 +107,10 @@ repozytorium, kanałami wydań i polityką prywatności.
   na pozorowane wdrożenie bez konta Cloudflare, prywatnego repozytorium i
   końcowego HTTPS. Kod klienta i Workera wolno przygotować oraz testować na
   atrapach; prawdziwy endpoint musi przejść osobny odbiór.
+- 29 października 2026: użytkownik polecił wdrażać Sygnalistę do AMC, z
+  zachowaniem wcześniejszej kolejności: najpierw AMC Test, potem — po odbiorze —
+  wersja publiczna. Zastępuje to wcześniejsze wstrzymanie zdalnej infrastruktury,
+  ale nie znosi podglądu raportu, rozdziału kanałów ani wymogu osobnego sekretu.
 
 ## Materiał do dokumentacji użytkownika
 
@@ -170,8 +174,14 @@ repozytorium, kanałami wydań i polityką prywatności.
   nie aktywuje endpointu AMC. Skrypt nie wywołuje logowania. Dopiero jawne
   `-Deploy -ActivateEndpoint` po próbach zdrowia, metody i schematu zapisuje
   adres raportów atomowo; żaden etap nie tworzy automatycznie próbnego issue.
-- Pakowacz obu profili rozpoznaje opcjonalny
-  `problem-report-endpoint.txt`. Kopiuje go tylko po walidacji prostego adresu
+- Profil testowy i publiczny mają odrębne Workery, konfiguracje, limitery i
+  oczekiwane kanały: `amc-sygnalista-test` przyjmuje wyłącznie `test`, a
+  `amc-sygnalista` wyłącznie `stable`. Niezgodny kanał jest odrzucany przed
+  wywołaniem GitHuba.
+- Pakowacz obu profili rozpoznaje odpowiednio opcjonalny
+  `problem-report-endpoint-test.txt` albo
+  `problem-report-endpoint-public.txt`. Kopiuje go do paczki pod wspólną nazwą
+  dopiero po walidacji prostego adresu
   HTTPS zakończonego `/v1/report`; dane logowania, parametry, fragment,
   wielowierszowa lub zbyt długa wartość zatrzymują budowę. Brak konfiguracji
   usuwa stary zasób z odświeżanej paczki, więc wydanie nie zachowa przypadkiem
@@ -323,26 +333,40 @@ repozytorium, kanałami wydań i polityką prywatności.
   przeszła, ponieważ konto Cloudflare nie ma jeszcze zarejestrowanej subdomeny
   `workers.dev`; TLS zwraca błąd uzgadniania. Endpoint AMC pozostał wyłączony,
   tokenu nie ustawiono i nie utworzono próbnego issue.
+- Etap z 29 października: **20/20 ukierunkowanych testów Python** klienta,
+  pakowania profili i bramki wdrożenia oraz **11/11 testów Node** Workera
+  przeszło. Parser PowerShell nie zgłosił błędu; oba pakowania `--dry-run`
+  zawierały Durable Object, limiter i `EXPECTED_CHANNEL=test`.
+- Utworzono odrębny Worker `amc-sygnalista-test`, wersja
+  `bf7e923d-0c85-42a4-846c-a4910fba9604`, pod adresem
+  `https://amc-sygnalista-test.amc-sygnalista-worker.workers.dev`. Odczyt
+  potwierdził bezpieczne `503` z `/health` i `405` dla `GET /v1/report`.
+  Początkowa bramka zdążyła odczytać stan przejściowy po deployu, dlatego
+  dodano ograniczone ponowienia wyłącznie odczytowych prób gotowości.
+- W obu repozytoriach utworzono lub ujednolicono etykiety `channel:test` i
+  `channel:stable`; istniejące `bug`, `enhancement` i `from-app` zachowano.
+  Sekretu nie ustawiono, endpointu AMC Test
+  nie aktywowano i nie utworzono żadnego próbnego issue.
 
 ## Znane ograniczenia
 
 - Jest gotowy kod internetowego transportu, Workera i powtarzalnej bramki, ale
-  zdalny Worker jest na razie tylko nieaktywnym bootstrapem. Nie ma jeszcze
-  działającej trasy HTTPS, sekretu GitHuba ani zweryfikowanego endpointu AMC.
+  zdalny Worker AMC Test jest na razie tylko nieaktywnym bootstrapem. Trasa
+  HTTPS działa, lecz nie ma jeszcze sekretu GitHuba ani aktywnego endpointu AMC.
   Prywatne repozytorium raportów i etykiety już istnieją. Zbudowane obecnie
   wydanie nadal pozostaje w trybie lokalnym i nie tworzy GitHub Issues.
 - Prawdziwe uruchomienie wymaga świadomego logowania do właściwego konta
   Cloudflare, ustawienia ograniczonego tokenu GitHuba w sekrecie Workera i
   kontrolowanego raportu próbnego. Sesja Cloudflare jest już potwierdzona;
   osobny token GitHuba o minimalnym zakresie nie został jeszcze ustawiony.
-- Skrypt nie może sam utworzyć konta Cloudflare ani sekretu. Potrafi natomiast
-  bezpiecznie przygotować ignorowany `wrangler.jsonc`, wykonać migrację Durable
+- Skrypt nie może sam utworzyć ograniczonego tokenu GitHuba. Potrafi natomiast
+  bezpiecznie przygotować ignorowany plik konfiguracji profilu, wykonać migrację Durable
   Object i odczytać adres `workers.dev`. Brak autoryzacji lub nazwy sekretu
   zatrzymuje właściwe wdrożenie przed aktywacją endpointu.
-- Przed ustawieniem sekretu użytkownik musi jednorazowo wybrać subdomenę konta
-  na stronie Cloudflare `Workers & Pages`. Po propagacji adresu trzeba
-  potwierdzić bezpieczne `503` z `/health`, a dopiero potem wykonać osobny etap
-  `-SetGitHubToken`.
+- Subdomena konta `amc-sygnalista-worker.workers.dev` jest już aktywna, a
+  bezpieczne `503` z `/health` zostało potwierdzone. Następny zdalny etap to
+  interaktywny `-ReleaseProfile test -SetGitHubToken`; token nie może trafić do
+  czatu, argumentu polecenia, pliku ani dziennika.
 - Przy niejednoznacznym błędzie transportu po wysłaniu żądania do GitHuba
   koordynator celowo zatrzymuje automatyczne ponowienie, ponieważ issue mogło
   już powstać. W takim przypadku opiekun musi sprawdzić oba repozytoria i
@@ -425,7 +449,7 @@ repozytorium, kanałami wydań i polityką prywatności.
   Dzisiejszy etap zmienił wyłącznie narzędzia wdrożeniowe Workera i dokumentację,
   więc nie przebudowywano ani nie restartowano aplikacji bez działającego endpointu.
 - Publikacja: nie wykonano.
-- Infrastruktura: wykonano wyłącznie nieaktywny bootstrap Cloudflare Workera;
+- Infrastruktura: wykonano wyłącznie nieaktywny bootstrap testowego Cloudflare Workera;
   nie jest to publikacja AMC ani aktywacja internetowego formularza.
 
 ## Poza zakresem
@@ -438,12 +462,12 @@ repozytorium, kanałami wydań i polityką prywatności.
 
 ## Wynik wykonania
 
-- Data lokalnego etapu: 19–21 października 2026.
+- Data etapów: 19–21 oraz 29 października 2026.
 - Repozytorium i kanały: profile i kanały są rozdzielone przez AMC12. GitHub
   został użyty wyłącznie do utworzenia i zweryfikowania prywatnego repozytorium
   intake oraz etykiet; nie wysłano kodu, instalatora, wydania ani zgłoszenia.
-- Kontrakt Workera: `POST /v1/report`, schemat 1; adres końcowy nadal brak,
-  ponieważ infrastruktura nie została wdrożona.
+- Kontrakt Workera: `POST /v1/report`, schemat 1; testowy adres HTTPS istnieje,
+  ale pozostaje celowo nieaktywny bez sekretu i nie jest jeszcze spakowany w AMC Test.
 - Testy aktualizacji: poza zakresem tego etapu.
 - Testy prywatności: zaliczone na poziomie kodu; ręczny NVDA po instalacji.
 - Wydanie: nie utworzono i nie opublikowano.

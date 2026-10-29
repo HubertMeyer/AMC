@@ -21,7 +21,8 @@ Użytkownik AMC nie potrzebuje konta GitHub.
 ## Przygotowanie do wdrożenia
 
 1. Utwórz prywatne repozytorium `amc-support-intake` i etykiety `bug`,
-   `enhancement`, `from-app` w obu repozytoriach.
+   `enhancement`, `from-app`, `channel:test` oraz `channel:stable` w obu
+   repozytoriach.
 2. Utwórz fine-grained token GitHuba z prawem zapisu Issues tylko w publicznym
    AMC i prywatnym repozytorium zgłoszeń. Nie zapisuj jego wartości do pliku,
    argumentu polecenia ani dziennika; będzie potrzebny dopiero w osobnym,
@@ -31,12 +32,14 @@ Użytkownik AMC nie potrzebuje konta GitHub.
    `npx wrangler login --device --browser=false --use-keyring`, a podany adres
    i jednorazowy kod otworzyć samodzielnie. `--use-keyring` przechowuje dane
    OAuth w systemowym magazynie poświadczeń zamiast jawnego pliku.
-4. Bez przełączników zdalnych uruchom skrypt `Deploy-AMCSygnalistaWorker.ps1`
-   bez adresu. Wykona czyste `npm ci`, testy i lokalne pakowanie, ale niczego nie
-   wyśle ani nie utworzy lokalnej konfiguracji konta.
+4. Wybierz profil `-ReleaseProfile test` albo `-ReleaseProfile public`. Domyślny
+   jest bezpieczny profil `test`. Bez przełączników zdalnych skrypt wykona czyste
+   `npm ci`, testy i lokalne pakowanie, ale niczego nie wyśle ani nie utworzy
+   lokalnej konfiguracji konta.
 5. Pierwsze zdalne utworzenie Workera wykonaj jawnie z `-Bootstrap`. Skrypt
-   tworzy z wersjonowanego wzoru lokalny `wrangler.jsonc`, który jest
-   ignorowany przez Git. Do pierwszego wdrożenia tworzy też jednorazową kopię
+   tworzy z wersjonowanego wzoru lokalny `wrangler.test.jsonc` albo
+   `wrangler.public.jsonc`, który jest ignorowany przez Git. Do pierwszego
+   wdrożenia tworzy też jednorazową kopię
    konfiguracji bez deklaracji nieistniejącego jeszcze sekretu, po czym zawsze
    ją usuwa. Worker zostaje wdrożony bez aktywowania endpointu w AMC.
    Migracja Wranglera tworzy powiązany koordynator Durable Object i jego
@@ -58,15 +61,21 @@ Użytkownik AMC nie potrzebuje konta GitHub.
    `POST /v1/report` z nieobsługiwaną wersją schematu musi zwrócić 400. Ta
    ostatnia próba potwierdza obecność sekretu, koordynatora Durable Object i
    limitera, lecz jest odrzucana przed limiterem i wywołaniem GitHuba. Dopiero
-   jawne połączenie
+   jawne połączenie dla wybranego profilu
    `-Deploy -ActivateEndpoint` zapisuje końcowy adres
    `https://.../v1/report` do
-   `wxlite/amc_wx_lite/problem-report-endpoint.txt` przed budową wydania.
+   `wxlite/amc_wx_lite/problem-report-endpoint-test.txt` albo
+   `problem-report-endpoint-public.txt` przed budową wydania. Pakowacz kopiuje
+   wyłącznie endpoint zgodny z budowanym profilem. Worker testowy odrzuca kanał
+   `stable`, a publiczny odrzuca kanał `test`.
    Własna domena nie jest wymagana; `workers_dev: true` publikuje usługę pod
    adresem HTTPS w `workers.dev`.
 8. Osobno wykonaj kontrolowany raport próbny i sprawdź prywatny oraz publiczny
    wpis. Skrypt wdrożeniowy celowo nie tworzy zgłoszenia bez tej decyzji.
 
-Repozytorium celowo nie zawiera działającego endpointu ani tokenów. Konfiguracja
-Durable Object jest wersjonowana, ale treść sekretu nigdy nie trafia do pliku.
-Samo zbudowanie AMC pozostawia więc formularz w bezpiecznym trybie lokalnym.
+Profile mają osobne Workery (`amc-sygnalista-test` i `amc-sygnalista`),
+konfiguracje, limity i pliki endpointu. Repozytorium może zawierać publiczny
+adres zweryfikowanego endpointu, lecz nigdy token. Konfiguracja Durable Object
+jest wersjonowana, ale treść sekretu nie trafia do pliku. Zbudowanie profilu bez
+własnego zweryfikowanego endpointu pozostawia formularz w bezpiecznym trybie
+lokalnym.

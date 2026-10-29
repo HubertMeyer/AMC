@@ -72,6 +72,7 @@ class HttpReportTransport:
             "title": report.title,
             "reportText": report.body,
             "includedLog": report.included_log,
+            "channel": report.channel,
         }
         request = Request(
             self.endpoint,

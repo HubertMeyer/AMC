@@ -10,7 +10,8 @@
   "vars": {
     "GITHUB_OWNER": "michalkasperczak",
     "PUBLIC_REPOSITORY": "AMC",
-    "INTAKE_REPOSITORY": "amc-support-intake"
+    "INTAKE_REPOSITORY": "amc-support-intake",
+    "EXPECTED_CHANNEL": "stable"
   },
   "durable_objects": {
     "bindings": [

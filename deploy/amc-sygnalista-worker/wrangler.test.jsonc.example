@@ -1,0 +1,40 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "amc-sygnalista-test",
+  "main": "src/worker.mjs",
+  "compatibility_date": "2026-10-20",
+  "workers_dev": true,
+  "secrets": {
+    "required": ["GITHUB_TOKEN"]
+  },
+  "vars": {
+    "GITHUB_OWNER": "michalkasperczak",
+    "PUBLIC_REPOSITORY": "AMC",
+    "INTAKE_REPOSITORY": "amc-support-intake",
+    "EXPECTED_CHANNEL": "test"
+  },
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "REPORT_COORDINATORS",
+        "class_name": "ReportCoordinator"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["ReportCoordinator"]
+    }
+  ],
+  "ratelimits": [
+    {
+      "name": "REPORT_RATE_LIMITER",
+      "namespace_id": "1002",
+      "simple": {
+        "limit": 5,
+        "period": 60
+      }
+    }
+  ]
+}
