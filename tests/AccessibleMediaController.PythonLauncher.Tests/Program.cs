@@ -167,6 +167,7 @@ internal static class Program
             Equal(false, plan.StartInfo.Environment.ContainsKey("AMC_WX_LITE_PYTHON"));
             Equal(verified.HostExecutable, plan.StartInfo.Environment["AMC_LITE_HOST"]);
             Equal("test", plan.StartInfo.Environment["AMC_RELEASE_PROFILE"]);
+            Equal("1", plan.StartInfo.Environment["PYTHONDONTWRITEBYTECODE"]);
             Equal("-m", plan.StartInfo.ArgumentList[0]);
             Equal("amc_wx_lite", plan.StartInfo.ArgumentList[1]);
         }

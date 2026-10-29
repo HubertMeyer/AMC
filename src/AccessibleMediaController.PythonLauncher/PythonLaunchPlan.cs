@@ -45,6 +45,10 @@ internal sealed record PythonLaunchPlan(ProcessStartInfo StartInfo, bool ShowCap
         start.Environment["AMC_RELEASE_PROFILE"] = bundle.Profile.ProfileId;
         start.Environment["AMC_SHELL_REQUESTS"] = "1";
         start.Environment["PYTHONUTF8"] = "1";
+        // Kod pakietu jest objęty manifestem i sumami. Interpreter nie może
+        // dopisywać obok niego niepodpisanych __pycache__ podczas testu startu
+        // ani zwykłego używania zainstalowanej aplikacji.
+        start.Environment["PYTHONDONTWRITEBYTECODE"] = "1";
         return new PythonLaunchPlan(start, diagnostic);
     }
 }

@@ -258,6 +258,8 @@ def test_bundle_builder_embeds_dotnet_and_private_python_runtime() -> None:
     assert "--sprawdz-pakiet-pelny-cicho" in BUNDLE_BUILD
     assert "Test-AMCBundleStartup.ps1" in BUNDLE_BUILD
     assert "& $startupSmokeTool -BundleRoot $candidate" in BUNDLE_BUILD
+    assert "Assert-ManifestCoversAllFiles -BundleRoot $candidate" in BUNDLE_BUILD
+    assert BUNDLE_BUILD.count("Invoke-FullBundleCheck -LauncherPath") == 2
     assert "Start-Process -FilePath $LauncherPath" in BUNDLE_BUILD
     assert "-Wait -PassThru -WindowStyle Hidden" in BUNDLE_BUILD
     assert "Folder docelowy już istnieje" in BUNDLE_BUILD
@@ -268,6 +270,13 @@ def test_bundle_builder_cleans_only_its_unique_project_temporary_folder() -> Non
     assert 'Join-Path $repositoryRoot ".test-tmp"' in BUNDLE_BUILD
     assert '"bundle-build-" + [guid]::NewGuid()' in BUNDLE_BUILD
     assert "Remove-Item -LiteralPath $operationRoot -Recurse -Force" in BUNDLE_BUILD
+
+
+def test_bundle_and_installer_reject_files_outside_integrity_manifest() -> None:
+    assert "Paczka zawiera pliki nieobjęte manifestem" in BUNDLE_BUILD
+    assert "Instalator nie może zawierać plików nieobjętych manifestem" in BUILD
+    assert 'relative -ne "bundle-manifest.json"' in BUNDLE_BUILD
+    assert 'relative -ne "bundle-manifest.json"' in BUILD
 
 
 def test_test_profile_promotion_smokes_candidate_and_installed_copy_before_launch() -> None:

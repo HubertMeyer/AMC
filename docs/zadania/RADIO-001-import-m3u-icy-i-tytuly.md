@@ -47,6 +47,11 @@ nazwy ani tytułu.
   budowę kandydata AMC Public. Oryginalne adresy pozostają wyłącznie w lokalnym
   katalogu ignorowanym przez Git; repozytorium otrzymuje syntetyczny scenariusz
   o tych samych właściwościach, bez danych użytkownika.
+- 2026-10-29: dodatkowa kontrola pierwszej paczki Public wykryła 66 plików
+  `__pycache__` utworzonych przez test startu po zapisaniu manifestu. Paczkę
+  odrzucono przed instalatorem. Launcher blokuje teraz zapis bytecode w
+  katalogu programu, a builder i instalator odmawiają przy każdym pliku
+  nieobjętym manifestem integralności.
 - Import jest wykonywany w zadaniu tła interfejsu. Dłuższy limit nie blokuje
   klawiatury ani czytnika ekranu.
 - AMC Public i AMC Test są profilami jednego kodu. Uzgodniona kolejność oznacza
@@ -92,6 +97,9 @@ nazwy ani tytułu.
 - Prywatny plik zgłoszeniowy jest korpusem diagnostycznym, a nie częścią
   automatycznych testów ani publikowanej paczki. Testy wydania nie zależą od
   dostępności zewnętrznych stacji i używają lokalnego serwera syntetycznego.
+- Pierwsza paczka z tego etapu została świadomie odrzucona przed utworzeniem
+  instalatora, ponieważ kontrolowany start pozostawił niepodpisane cache
+  Pythona. Wynik nie jest kandydatem do odbioru ani publikacji.
 - Nie powstała paczka, instalator, lokalna instalacja ani wydanie GitHub.
 
 ## Zmienione pliki

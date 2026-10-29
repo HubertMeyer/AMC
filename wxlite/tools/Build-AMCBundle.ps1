@@ -54,6 +54,31 @@ function Invoke-FullBundleCheck {
     }
 }
 
+function Assert-ManifestCoversAllFiles {
+    param([Parameter(Mandatory)] [string]$BundleRoot)
+
+    $manifestPath = Join-Path $BundleRoot "bundle-manifest.json"
+    $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
+    $declared = [Collections.Generic.HashSet[string]]::new(
+        [StringComparer]::OrdinalIgnoreCase)
+    foreach ($relative in @($manifest.files)) {
+        [void]$declared.Add(([string]$relative).Replace("\", "/"))
+    }
+    $unexpected = @(
+        Get-ChildItem -LiteralPath $BundleRoot -File -Recurse |
+            ForEach-Object {
+                $relative = $_.FullName.Substring($BundleRoot.Length + 1).Replace("\", "/")
+                if ($relative -ne "bundle-manifest.json" -and -not $declared.Contains($relative)) {
+                    $relative
+                }
+            }
+    )
+    if ($unexpected.Count -gt 0) {
+        $sample = ($unexpected | Select-Object -First 5) -join ", "
+        throw "Paczka zawiera pliki nieobjęte manifestem po teście startu: $sample"
+    }
+}
+
 New-Item -ItemType Directory -Path $components -Force | Out-Null
 try {
     $hostOutput = Join-Path $components "host"
@@ -97,6 +122,8 @@ try {
 
     Invoke-FullBundleCheck -LauncherPath (Join-Path $candidate "AMC.exe")
     & $startupSmokeTool -BundleRoot $candidate
+    Assert-ManifestCoversAllFiles -BundleRoot $candidate
+    Invoke-FullBundleCheck -LauncherPath (Join-Path $candidate "AMC.exe")
 
     New-Item -ItemType Directory -Path (Split-Path -Parent $output) -Force | Out-Null
     Move-Item -LiteralPath $candidate -Destination $output

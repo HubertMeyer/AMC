@@ -135,6 +135,25 @@ $forbiddenBundleFiles = @(
 $manifestFiles = @($manifest.files | ForEach-Object {
     ([string]$_).Replace("\", "/").ToLowerInvariant()
 })
+$manifestFileSet = [Collections.Generic.HashSet[string]]::new(
+    [StringComparer]::OrdinalIgnoreCase)
+foreach ($relative in $manifestFiles) {
+    [void]$manifestFileSet.Add($relative)
+}
+$unexpectedBundleFiles = @(
+    Get-ChildItem -LiteralPath $bundle -File -Recurse |
+        ForEach-Object {
+            $relative = $_.FullName.Substring($bundle.Length + 1).Replace("\", "/")
+            if ($relative -ne "bundle-manifest.json" -and
+                -not $manifestFileSet.Contains($relative)) {
+                $relative
+            }
+        }
+)
+if ($unexpectedBundleFiles.Count -gt 0) {
+    $sample = ($unexpectedBundleFiles | Select-Object -First 5) -join ", "
+    throw "Instalator nie może zawierać plików nieobjętych manifestem: $sample"
+}
 foreach ($relative in $forbiddenBundleFiles) {
     $normalized = $relative.ToLowerInvariant()
     $actualPath = Join-Path $bundle ($relative.Replace("/", [IO.Path]::DirectorySeparatorChar))
