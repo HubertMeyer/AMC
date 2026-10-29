@@ -95,13 +95,14 @@ do kontrolowanej archiwizacji opisanej w REL-003.
   karta Dostępność i komunikaty. Szczegóły:
   [SET-001-audyt-ustawien-dostepnosc-integracja-windows.md](SET-001-audyt-ustawien-dostepnosc-integracja-windows.md).
 
-- `I18N-001` — **Zrobione i opublikowane w AMC Test `0.1.0-alpha.442`;
+- `I18N-001` — **Poprawka po odbiorze wydana w AMC Test `0.1.0-alpha.444`;
   wspólna warstwa językowa, polski, angielski, wybór zgodny z systemem,
   osobne szablony komunikatów, pełny katalog 713 statycznych napisów i 312
   komunikatów dynamicznych, parytet menu/pomocy/palety, natychmiastowa zmiana
-  języka i zgodna z językiem nazwa listy są zweryfikowane. Paczka `6b27fa6d`,
-  instalator i prerelease `test-2026.10.29.0057` przeszły kontrolę; lokalnej
-  instalacji nie zmieniono** —
+  języka i zgodna z językiem nazwa listy są zweryfikowane. Wyjątek kontrolki
+  tekstowej, który po zapisaniu języka przerywał przebudowę menu, jest
+  naprawiony; 31 testów i dwie sondy wxPython są zaliczone. Paczka, instalator
+  i wydanie GitHub są zweryfikowane; lokalnej instalacji nie wykonano** —
   przygotowanie interfejsu wxPython do obsługi wielu języków bez korzystania
   z dawnej aplikacji WPF. Szczegóły:
   [I18N-001-wielojezyczny-interfejs-wxpython.md](I18N-001-wielojezyczny-interfejs-wxpython.md).
@@ -143,6 +144,14 @@ do kontrolowanej archiwizacji opisanej w REL-003.
   prawa strzałka w widoku `Nagrywane` i harmonogramach podaje format, nazwę
   pliku oraz folder bez powtarzania stacji i adresu. Szczegóły:
   [REC-002-prawa-strzalka-nagrywane-pliki.md](REC-002-prawa-strzalka-nagrywane-pliki.md).
+
+- `SOCIAL-001` — **Wydane próbnie w AMC Test `0.1.0-alpha.444`,
+  bez instalacji i odbioru NVDA** — pojedyncze publiczne filmy Facebooka i
+  Instagrama oraz ręcznie odświeżane strony Facebooka; odtwarzanie dźwięku,
+  pobieranie MP3 i wideo.
+  Odczyt stron korzysta z nieudokumentowanego mechanizmu Meta i może być
+  niepełny. Szczegóły:
+  [SOCIAL-001-facebook-instagram-wideo.md](SOCIAL-001-facebook-instagram-wideo.md).
 
 - `YT-004` — **W trakcie; kod, pełna regresja, build i instalacja AMC Test są
   gotowe; pozostaje ręczny odbiór prawdziwego pobrania i NVDA** — pobieranie

@@ -1,14 +1,14 @@
 # I18N-001 — wielojęzyczny interfejs wxPython
 
-Status: **Poprawka po odbiorze zrobiona i zweryfikowana w źródłach — wspólna
+Status: **Poprawka po odbiorze wydana w AMC Test `0.1.0-alpha.444` — wspólna
 warstwa, polski, angielski i wybór systemowy,
 pełny zinwentaryzowany katalog interfejsu, osobne szablony komunikatów,
 parytet menu/pomocy/palety oraz kompletna paczka testowa są zweryfikowane;
 poprawka natychmiastowej zmiany języka i mieszanej nazwy listy z 29.10.2026
 została zbudowana i opublikowana w AMC Test `0.1.0-alpha.442`. Poprawka
 przerwanego przełączenia z angielskiego na polski ma 31 zaliczonych testów i
-dwie zaliczone sondy prawdziwego wxPython; nie została jeszcze zbudowana,
-zainstalowana ani opublikowana**
+dwie zaliczone sondy prawdziwego wxPython; zbudowano instalator i opublikowano
+wydanie testowe. Lokalnej instalacji nie zmieniono**
 
 Data rozpoczęcia: 28.10.2026.  Zadanie dotyczy wyłącznie bieżącej aplikacji
 wxPython w `D:\Projekty Codex\AMC - integracja wxPython`. Wycofane repozytorium
@@ -348,10 +348,9 @@ użytkowego, nie przekształcano w instalator i nie publikowano.
 
 ## Znane ograniczenia
 
-- Obecnie uruchomiony AMC Test `0.1.0-alpha.442` zawiera jeszcze błąd, który
-  przerywa przełączenie z angielskiego na polski przed przebudową menu.
-  Poprawka jest zweryfikowana wyłącznie w źródłach; nie ma jeszcze nowej paczki
-  ani aktualizacji użytkowej.
+- AMC Test `0.1.0-alpha.442` zawierał błąd, który przerywał przełączenie
+  z angielskiego na polski przed przebudową menu. Poprawka jest wydana w
+  `0.1.0-alpha.444`; odbiór po lokalnej aktualizacji pozostaje do wykonania.
 
 - Nie wykonano ręcznego odsłuchu całego angielskiego interfejsu z NVDA.
   Automatyczne testy sprawdzają jawne nazwy, brak technicznych identyfikatorów,
@@ -427,3 +426,12 @@ Projekt do korekty i zatwierdzenia użytkownika:
   **31/31** testów celowanych i dwie sondy prawdziwego wxPython zaliczone;
   bez nowego commitu, builda, instalacji i publikacji, ponieważ repozytorium
   zawiera również istniejące, niescommitowane prace innych zadań.
+
+Korekta stanu z 29.10.2026: powyższy wpis opisuje etap przed wspólnym wydaniem.
+Poprawka trafiła do commitu `3e6e7303e8a6f12daaa9d47b219ea5d12da3ab46`
+razem z funkcją filmów Facebooka i Instagrama. Paczka `5ce8af5d` przeszła
+kontrolę integralności i cichy start, instalator
+`AMC-Test-2026-10-29-1243.exe` został zbudowany, a prerelease
+`test-2026.10.29.1243` opublikowany i odczytowo zweryfikowany. Lokalnej
+instalacji i odbioru NVDA nie wykonano. Adres wydania:
+`https://github.com/michalkasperczak/AMC/releases/tag/test-2026.10.29.1243`.

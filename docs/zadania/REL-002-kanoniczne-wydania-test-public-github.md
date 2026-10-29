@@ -650,6 +650,27 @@ tych samych plików profilu.
 - Adres wydania:
   `https://github.com/michalkasperczak/AMC/releases/tag/test-2026.10.29.0057`.
 
+## Ósme wydanie Test 29.10.2026
+
+- Wersję `0.1.0-alpha.444` opublikowano jako prerelease
+  `test-2026.10.29.1243` z commitu
+  `3e6e7303e8a6f12daaa9d47b219ea5d12da3ab46`. Wspólny zakres obejmuje
+  poprawkę przełączania języka interfejsu oraz próbne, ręcznie odświeżane
+  strony Facebooka i pojedyncze filmy Facebooka i Instagrama.
+- Przed wydaniem: 39 celowanych testów Pythona zaliczonych, 1 pominięty;
+  28 zestawów kontraktów LiteHosta zaliczonych. Anonimowy odczyt strony
+  `buremisie` ponownie zwrócił jeden film. Nie testowano rzeczywistego
+  pobrania MP3 ani obsługi z NVDA.
+- Paczka `5ce8af5d` ma profil `test`, `sourceDirty=false`, 2139 plików;
+  pełna integralność i cichy start interfejsu oraz hosta przeszły.
+- Instalator `AMC-Test-2026-10-29-1243.exe` ma 134385400 bajtów i SHA-256
+  `65036795a6915a4da02090d703de0f4c9913cea7ab1cb99abeed9952467c8a18`.
+  Skan sekretów oraz sucha bramka kanału `test` przeszły.
+- GitHub potwierdził tag na dokładnym commicie, prerelease i trzy zasoby
+  w stanie `uploaded`. Instalatora nie uruchamiano ani nie instalowano.
+- Adres wydania:
+  `https://github.com/michalkasperczak/AMC/releases/tag/test-2026.10.29.1243`.
+
 ## Wydanie Public na bazie alpha.438 — 28.10.2026
 
 ### Materiał do dokumentacji użytkownika

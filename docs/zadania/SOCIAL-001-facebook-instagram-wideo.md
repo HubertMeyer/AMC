@@ -2,10 +2,11 @@
 
 ## Status
 
-W trakcie. Kod obsługi pojedynczych filmów oraz eksperymentalne, ręcznie
-odświeżane subskrypcje publicznych stron Facebooka są gotowe w źródłach.
-Nie wykonano instalacji, testu NVDA ani odbioru użytkownika. Publiczne profile
-osobiste i profile Instagrama nie są subskrybowane.
+Wydane w AMC Test `0.1.0-alpha.444` jako funkcja próbna. Kod obsługi
+pojedynczych filmów oraz ręcznie odświeżane subskrypcje publicznych stron
+Facebooka są opublikowane. Nie wykonano lokalnej instalacji, testu NVDA ani
+odbioru użytkownika. Publiczne profile osobiste i profile Instagrama nie są
+subskrybowane.
 
 ## Cel użytkownika
 
@@ -119,8 +120,9 @@ Sprawdzono trzy warianty na publicznej stronie `buremisie`, bez logowania:
   yt-dlp 2026.10.26 rozpoznał ten film i czas 3840,237 s w symulacji, bez
   pobierania. To jest dowód wykonalności na tej stronie w tym dniu, a nie
   gwarancja kompletności ani trwałości listy. W odpowiedzi znaleziono jeden
-  wpis pomimo żądania pięciu, więc przed wdrożeniem subskrypcji trzeba zbadać
-  stronicowanie i rozróżnianie filmów od pozostałych wpisów.
+wpis pomimo żądania pięciu. Wydanie próbne nie rozwiązuje stronicowania;
+przed uznaniem tej funkcji za stabilną trzeba sprawdzić kompletność listy
+i rozróżnianie filmów od pozostałych wpisów.
 
 Dokumentacja `/{page-id}/videos` w Graph API v26.0 mówi, że odczyt tego
 konkretnego endpointu nie jest dostępny. Oficjalny `/{page-id}/feed` pozwala
@@ -152,3 +154,22 @@ Nowy etap zmienił `AppSettings.cs`, `PodcastLibraryDatabase.cs`,
 Pythona i pliki projektu oraz uruchamiania testów LiteHosta. Dodał
 `FacebookPublicPageClient.cs` i `FacebookPageTests.cs`. Wcześniejsze zmiany
 obsługi pojedynczych filmów w pozostałych plikach zachowano.
+
+### Wydanie AMC Test — 29.10.2026
+
+Korekta stanu: powyższy opis dotyczył etapu źródłowego. Commit źródeł wydania
+`3e6e7303e8a6f12daaa9d47b219ea5d12da3ab46` zastąpił stan bez commitu.
+Samowystarczalna paczka `5ce8af5d` ma 2139 plików, `sourceDirty=false` i
+przeszła kontrolę integralności oraz cichy start. Instalator
+`AMC-Test-2026-10-29-1243.exe` (134385400 bajtów, SHA-256
+`65036795a6915a4da02090d703de0f4c9913cea7ab1cb99abeed9952467c8a18`)
+zbudowano z Quick App Switcher 0.1.6. Sucha bramka publikacji przeszła.
+Wydanie wstępne `test-2026.10.29.1243` opublikowano w kanale `test` i
+odczytowo zweryfikowano na GitHubie: tag wskazuje commit źródłowy, a trzy
+zasoby mają stan `uploaded`. Lokalnej instalacji nie zmieniono.
+
+Przed wydaniem: **39** celowanych testów Pythona zaliczonych, **1** pominięty;
+**28** zestawów kontraktów LiteHosta zaliczonych. Anonimowy test na stronie
+`buremisie` ponownie znalazł jeden film. Nie pobierano MP3 w rzeczywistej
+próbie i nie wykonywano odbioru NVDA. Opis i suma kontrolna są w wydaniu:
+`https://github.com/michalkasperczak/AMC/releases/tag/test-2026.10.29.1243`.
