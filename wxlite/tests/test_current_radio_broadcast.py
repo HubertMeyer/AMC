@@ -153,3 +153,23 @@ def test_transport_status_reuses_the_alt_d_formatter_for_nvda_end() -> None:
     assert "BuildCurrentRadioBroadcastText(item)" in status
     assert "currentBroadcastText" in status
 
+
+
+def test_window_title_names_station_and_track_only_while_radio_plays() -> None:
+    from amc_wx_lite.version_info import is_main_window_title
+
+    playing = {
+        "engine": "radio",
+        "playing": True,
+        "title": "Trance - DI.FM Premium",
+        "streamTitle": "Artysta - Utwór",
+    }
+    title = gui.radio_window_title(playing)
+    assert title == f"{gui.PRODUCT_NAME} — Trance - DI.FM Premium — Artysta - Utwór"
+    # Drugie uruchomienie nadal odnajduje okno po początku tytułu.
+    assert is_main_window_title(title)
+    assert gui.radio_window_title({**playing, "streamTitle": None}) == (
+        f"{gui.PRODUCT_NAME} — Trance - DI.FM Premium"
+    )
+    assert gui.radio_window_title({**playing, "playing": False}) is None
+    assert gui.radio_window_title(None) is None

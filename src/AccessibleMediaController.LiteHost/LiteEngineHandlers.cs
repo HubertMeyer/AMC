@@ -2621,17 +2621,17 @@ internal sealed class LiteEngineHandlers : IDisposable
         var audio = AudioParametersFormatter.FormatCompact(item);
         if (!string.IsNullOrWhiteSpace(audio)) parts.Add(audio);
 
-        var streamTitle = _radio.CurrentStreamTitle;
-        if (!string.IsNullOrWhiteSpace(streamTitle)
-            && !NowPlayingParts.SameValue(item.Title, streamTitle))
-        {
-            parts.Add(streamTitle.Trim());
-        }
-        else
-        {
-            parts.Add("brak nazwy bieżącej audycji lub utworu");
-        }
+        parts.Add(CurrentRadioStreamTitle(item) ?? "brak nazwy bieżącej audycji lub utworu");
         return string.Join(", ", parts);
+    }
+
+    /// <summary>Bieżący utwór z ICY, jeśli stacja go podaje i nie jest samą nazwą stacji.</summary>
+    private string? CurrentRadioStreamTitle(MediaItem item)
+    {
+        var streamTitle = _radio.CurrentStreamTitle?.Trim();
+        return string.IsNullOrWhiteSpace(streamTitle) || NowPlayingParts.SameValue(item.Title, streamTitle)
+            ? null
+            : streamTitle;
     }
 
     private object CurrentRadioBroadcastInformation()
@@ -3292,7 +3292,9 @@ internal sealed class LiteEngineHandlers : IDisposable
             loadedId = item is null
                 ? null
                 : engine == "radio" ? _radio.LoadedItemId : _files.LoadedItemId,
-            currentBroadcastText
+            currentBroadcastText,
+            // Sam utwór dla tytułu okna (NVDA+T); pasek stanu ma pełny opis wyżej.
+            streamTitle = engine == "radio" && item is not null ? CurrentRadioStreamTitle(item) : null
         };
     }
 
