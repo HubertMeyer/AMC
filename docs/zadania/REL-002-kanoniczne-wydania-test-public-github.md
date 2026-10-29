@@ -785,6 +785,53 @@ tych samych plików profilu.
 - Instalatora nie uruchamiano ani nie instalowano; działający AMC Test i
   oczekujące aktualizatory pozostały nietknięte.
 
+## Wydanie Public na bazie Test alpha.442 — 29.10.2026
+
+### Materiał do dokumentacji użytkownika
+
+- AMC Public otrzymuje zmiany wspólnego kodu wydane wcześniej w AMC Test
+  `alpha.441` i `alpha.442`: osobne Ustawienia sesji oraz poprawioną zmianę
+  języka polskiego, angielskiego i zgodnego z systemem bez restartu.
+- Zakres usług Public pozostaje bez zmian: dostępne są WiiM i Frontier Smart,
+  natomiast Sonos, Spotify i TIDAL nie są pokazywane ani pakowane.
+- Profil Public nadal nie zawiera logowania Google do YouTube, prywatnych
+  tokenów ani konfiguracji OAuth Google.
+
+### Uzasadnienie i decyzje
+
+- Polecenie użytkownika z 29.10.2026 rozpoczyna nowe stabilne wydanie z
+  najnowszej opublikowanej bazy AMC Test `0.1.0-alpha.442`.
+- Wydanie otrzymuje nowy numer `0.1.0-alpha.443`; nie nadpisuje poprzedniego
+  stabilnego `alpha.440` ani jego tagu i artefaktów.
+- Oba profile nadal korzystają z jednego wspólnego kodu. Ograniczenia Public
+  wynikają z profilu możliwości i kontroli fizycznej zawartości paczki.
+
+### Testy i wynik
+
+- Celowane testy bez widocznego interfejsu: **231/231 zaliczonych**. Zakres
+  obejmuje profil i paczkę Public, Frontier Smart, instalator, publikację,
+  języki oraz Ustawienia sesji.
+- Launcher i aktualizator: **38/38 zaliczonych**, w tym migracja starszego
+  Public z Sonosa na Frontier Smart i kontrola zgodności profilu.
+- Paczka, instalator i publikacja: w toku. Nie uruchamiano pełnej regresji GUI,
+  instalatora ani widocznych testów przejmujących fokus.
+- Działająca instalacja AMC Test pozostaje nietknięta.
+
+### Znane ograniczenia
+
+- Automatyczne testy nie zastępują ręcznego odbioru z NVDA, w szczególności
+  zmiany języka, Ustawień sesji i powrotu fokusu.
+- Instalator nie jest podpisany cyfrowo; przed przekazaniem jego integralność
+  musi zostać potwierdzona rozmiarem i sumą SHA-256.
+
+### Wersja i commit
+
+- Przygotowywana wersja techniczna: `0.1.0-alpha.443`.
+- Bazowe wydanie Test: `0.1.0-alpha.442`, commit `2b772d06` wraz z późniejszym
+  commitem dokumentacyjnym `66bdddf8`.
+- Commit źródłowy, paczka, instalator, SHA-256 i tag zostaną dopisane po
+  zakończeniu kolejnych bramek wydawniczych.
+
 ## Wersja i commit
 
 - Wersja techniczna przygotowywanego kandydata: `0.1.0-alpha.434`.
