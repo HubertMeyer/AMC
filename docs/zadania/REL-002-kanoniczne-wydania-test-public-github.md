@@ -975,11 +975,21 @@ tych samych plików profilu.
 ### Znane ograniczenia
 
 - Ręczny odbiór NVDA nowego pola Ustawień i automatycznie otwartego dialogu
-  pozostaje do wykonania na zbudowanej wersji.
-- Kod i testy nie są jeszcze dowodem zbudowania paczki, instalatora, instalacji
-  ani publikacji wydania.
+  pozostaje do wykonania na zbudowanym kandydacie.
+- Paczka i instalator są lokalnym kandydatem. Nie wykonano instalacji ani
+  publikacji wydania.
 
 ### Wersja i commit
 
-- Bieżący etap źródłowy: commit zostanie wpisany po jego utworzeniu.
+- Commit źródłowy: `9684e75789512e564f9cdd8066f2068934de88eb`.
+- Kandydat `AMC Public — 29.10.2026, 19:24`, paczka `33e68ad6`: 1085
+  kontrolowanych plików i manifest, 424 041 851 bajtów oraz zero plików spoza
+  manifestu po kontrolowanym starcie.
+- Instalator:
+  `D:\Projekty Codex\AMC aktualizacje\AMC Public kandydat automatyczne aktualizacje 2026-10-29\instalator\AMC-Public-2026-10-29-1924.exe`.
+- Rozmiar instalatora: 123 624 555 bajtów; SHA-256:
+  `db26bc2ed863b5c104923e8ed8df143a807dd2d6d322532f1b907afc2ec0241f`.
+- Kontrolowany start paczki i ponowny start w bramce instalatora: zaliczone.
+  Lokalna bramka wydania `stable` zaliczona bez przełącznika publikacji; skan
+  sekretów ma wynik `passed`.
 - Instalacja i publikacja: nie wykonano.

@@ -88,8 +88,9 @@ do kontrolowanej archiwizacji opisanej w REL-003.
 - `SET-001` — **W trakcie; kod priorytetów 1–3, pełna regresja, czysta paczka,
   instalator, wydanie GitHub i rzeczywista aktualizacja instalacji są
   zweryfikowane; robocza korekta kolejności kart, sekcji i końcowego edytora
-  własnych komunikatów ma 26 zaliczonych testów, ale nie weszła jeszcze do
-  nowego builda ani wydania; ręczny odbiór NVDA pozostaje** —
+  własnych komunikatów oraz automatyczne powiadamianie o nowej wersji weszły
+  do lokalnego kandydata Public, ale nie do instalacji ani wydania; ręczny
+  odbiór NVDA pozostaje** —
   naprawa osiągalności pól domyślnych folderów przez Tab, przegląd nazw
   kontrolek, dostępna karta integracji z Windows, nowa karta Aktualizacje oraz
   karta Dostępność i komunikaty. Szczegóły:
@@ -112,7 +113,9 @@ do kontrolowanej archiwizacji opisanej w REL-003.
   z najnowszej bazy Test i ma WiiM oraz Frontier Smart, bez Sonosa, Spotify i
   TIDAL-a; 231/231 celowanych testów Pythona, 38/38 Launchera/aktualizatora,
   paczka `89473955`, cichy start, instalator, skan sekretów i zdalny SHA-256 są
-  zaliczone. Lokalnej instalacji nie zmieniono** — jedna
+  zaliczone. Nowszy lokalny kandydat Public automatycznie wykrywa nowe wydanie,
+  informuje i pyta przed pobraniem; 119 testów, paczka, instalator i bramka
+  wydania bez publikacji są zaliczone. Lokalnej instalacji nie zmieniono** — jedna
   kanoniczna linia AMC Python,
   wydania AMC Test i AMC Public z tego samego commitu, dwa kanały aktualizacji,
   standardowa instalacja Windows oraz kontrolowane uporządkowanie starego C#,

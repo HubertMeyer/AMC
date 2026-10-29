@@ -91,11 +91,13 @@ nazwy ani tytułu.
   zapisu `__pycache__` w katalogu programu.
 - Testy kontraktu buildera i instalatora: 22 z 22 zaliczone. Oba etapy odrzucają
   każdy plik nieobjęty manifestem integralności.
-- Końcowa paczka Public: profil `public`, czysty commit `7f48d66b`, identyfikator
-  `9e86375d`, 1085 plików kontrolowanych i manifest, 424 037 758 bajtów. Po
+- Pierwszy poprawny kandydat Public powstał z commitu `7f48d66b`. Zastąpił go
+  kandydat z commitu `9684e757`, który zachowuje poprawkę Radia i dodaje
+  automatyczne powiadamianie o nowych wersjach. Ma identyfikator `33e68ad6`,
+  1085 plików kontrolowanych i manifest, 424 041 851 bajtów. Po
   kontrolowanym starcie liczba plików spoza manifestu wynosi dokładnie zero.
-- Instalator ma 123 624 769 bajtów. Niezależnie policzona suma SHA-256
-  `8787dbfe3aee778121ad628396b4ee8bf5237babb569dea29d830f1e1e5c9dae`
+- Aktualny instalator ma 123 624 555 bajtów. Niezależnie policzona suma SHA-256
+  `db26bc2ed863b5c104923e8ed8df143a807dd2d6d322532f1b907afc2ec0241f`
   zgadza się w pliku integralności, manifeście aktualizacji i lokalnym
   manifeście gotowości. Skan sekretów ma wynik `passed`.
 - Lokalna bramka wydania Public/stable została zaliczona w trybie bez publikacji.
@@ -144,9 +146,10 @@ nazwy ani tytułu.
 - Korekta po rzeczywistej playliście i niezależnych testach: `5428b278`.
 - Trwały test wielu kanałów jednego dostawcy: `3a1deab4`.
 - Końcowa poprawka integralności budowy i źródło kandydata: `7f48d66b`.
-- Wersja użytkowa paczki i instalatora: `AMC Public — 29.10.2026, 19:05`.
+- Automatyczne powiadamianie i aktualne źródło kandydata: `9684e757`.
+- Wersja użytkowa paczki i instalatora: `AMC Public — 29.10.2026, 19:24`.
 - Instalator:
-  `D:\Projekty Codex\AMC aktualizacje\AMC Public kandydat radio M3U poprawiony 2026-10-29\instalator\AMC-Public-2026-10-29-1905.exe`.
+  `D:\Projekty Codex\AMC aktualizacje\AMC Public kandydat automatyczne aktualizacje 2026-10-29\instalator\AMC-Public-2026-10-29-1924.exe`.
 - Instalacja i publikacja: nie wykonano.
 
 ## Projekt wpisu do listy zmian

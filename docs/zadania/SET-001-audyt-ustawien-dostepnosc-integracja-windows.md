@@ -522,11 +522,12 @@ Celowany zestaw obejmujący Ustawienia, zapis stanu, start, i18n i aktualizator:
 
 ### Znane ograniczenia
 
-Kod nie został jeszcze zbudowany, zainstalowany ani opublikowany. Początkowy
-fokus, Tab, Shift+Tab, zapis, anulowanie i ponowne otwarcie wymagają odbioru
-NVDA na przyszłym kandydacie.
+Kod został objęty lokalnym kandydatem AMC Public. Początkowy fokus, Tab,
+Shift+Tab, zapis, anulowanie i ponowne otwarcie nadal wymagają odbioru NVDA.
+Kandydata nie zainstalowano ani nie opublikowano.
 
 ### Wersja i commit
 
-Commit bieżącej korekty zostanie wpisany po jego utworzeniu. Instalacji ani
-publikacji nie wykonano.
+Commit bieżącej korekty: `9684e757`. Kandydat użytkowy:
+`AMC Public — 29.10.2026, 19:24`, paczka `33e68ad6`. Kontrolowany start i
+instalator są zaliczone. Instalacji ani publikacji nie wykonano.
