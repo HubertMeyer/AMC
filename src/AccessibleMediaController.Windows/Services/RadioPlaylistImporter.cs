@@ -1,4 +1,5 @@
 using System.IO;
+using System.Net.Http;
 using System.Text;
 using System.Text.Json;
 using System.Xml;
@@ -18,6 +19,12 @@ internal static class RadioPlaylistImporter
     private const int MaximumStations = 5_000;
     private const int MaximumStreamUrlLength = 4_096;
     private const int MaximumStationNameLength = 200;
+    private const int MaximumParallelNameRequests = 16;
+    // Żywe serwery oddają nagłówki w ułamku sekundy; dłuższy limit tylko
+    // wydłuża ciszę po imporcie przez martwy adres i komunikat ginie.
+    private static readonly TimeSpan NameRequestTimeout = TimeSpan.FromSeconds(2);
+    private static readonly TimeSpan NameLookupBudget = TimeSpan.FromSeconds(20);
+    private static readonly Encoding StrictUtf8 = new UTF8Encoding(false, true);
 
     public static RadioPlaylistImportResult Import(string path)
     {
@@ -39,7 +46,7 @@ internal static class RadioPlaylistImporter
             _ => ParseM3u(text)
         };
 
-        var stations = new List<ImportedRadioStation>();
+        var stations = new List<(string? Name, string Url)>();
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var skipped = 0;
         foreach (var (name, url) in candidates.Take(MaximumStations + 1))
@@ -55,11 +62,138 @@ internal static class RadioPlaylistImporter
                 continue;
             }
 
-            stations.Add(new ImportedRadioStation(
-                NormalizeName(name, normalizedUrl),
-                normalizedUrl));
+            stations.Add((name, normalizedUrl));
         }
-        return new RadioPlaylistImportResult(stations, skipped);
+
+        var names = ReadMissingNamesFromStreams(stations);
+        return new RadioPlaylistImportResult(
+            stations
+                .Select((station, index) => new ImportedRadioStation(
+                    NormalizeName(names[index], station.Url),
+                    station.Url))
+                .ToArray(),
+            skipped);
+    }
+
+    /// <summary>
+    /// Playlista z samymi adresami (M3U bez #EXTINF) nie niesie nazw stacji.
+    /// Tak jak foobar2000 pytamy wtedy serwer: Icecast i SHOUTcast podają
+    /// nazwę w nagłówku icy-name. Wystarczą same nagłówki, bez pobierania
+    /// strumienia; gdy serwer milczy, zostaje nazwa hosta.
+    /// </summary>
+    private static string?[] ReadMissingNamesFromStreams(IReadOnlyList<(string? Name, string Url)> stations)
+    {
+        var names = stations.Select(station => station.Name).ToArray();
+        var missing = Enumerable.Range(0, names.Length)
+            .Where(index => string.IsNullOrWhiteSpace(names[index]))
+            .ToArray();
+        if (missing.Length == 0) return names;
+
+        using var client = new HttpClient { Timeout = NameRequestTimeout };
+        client.DefaultRequestHeaders.UserAgent.ParseAdd("AccessibleMediaController/0.1");
+        using var budget = new CancellationTokenSource(NameLookupBudget);
+        try
+        {
+            Parallel.ForEachAsync(
+                    missing,
+                    new ParallelOptions
+                    {
+                        MaxDegreeOfParallelism = MaximumParallelNameRequests,
+                        CancellationToken = budget.Token
+                    },
+                    async (index, token) =>
+                        names[index] = await ReadIcyNameAsync(client, stations[index].Url, token)
+                            .ConfigureAwait(false))
+                .GetAwaiter()
+                .GetResult();
+        }
+        catch (OperationCanceledException)
+        {
+            // ponytail: jeden limit czasu na cały import; stacje niesprawdzone
+            // w tym czasie zostają z nazwą hosta. Przy tysiącach stacji bez nazw
+            // lepsze byłoby uzupełnianie nazw w tle po imporcie.
+        }
+        return names;
+    }
+
+    private static async Task<string?> ReadIcyNameAsync(
+        HttpClient client,
+        string url,
+        CancellationToken cancellationToken)
+    {
+        string? raw;
+        try
+        {
+            using var response = await client
+                .GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
+                .ConfigureAwait(false);
+            raw = response.Headers.TryGetValues("icy-name", out var values) ? values.FirstOrDefault() : null;
+        }
+        catch (HttpRequestException exception) when (exception.HttpRequestError == HttpRequestError.InvalidResponse)
+        {
+            // SHOUTcast v1 odpowiada „ICY 200 OK”, którego HttpClient nie przyjmuje.
+            raw = await ReadShoutcastV1NameAsync(new Uri(url), cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception exception) when (exception is HttpRequestException
+            or IOException
+            or OperationCanceledException)
+        {
+            return null;
+        }
+
+        // Część serwerów wysyła zaślepkę, np. „-”; to nie jest nazwa.
+        if (raw is null || !raw.Any(char.IsLetterOrDigit)) return null;
+        // Nagłówki czytamy jako Latin-1, a Icecast zwykle wysyła UTF-8;
+        // bez tego „Złote Przeboje” byłyby krzakami.
+        try
+        {
+            return StrictUtf8.GetString(Encoding.Latin1.GetBytes(raw));
+        }
+        catch (DecoderFallbackException)
+        {
+            return raw;
+        }
+    }
+
+    private static async Task<string?> ReadShoutcastV1NameAsync(Uri uri, CancellationToken cancellationToken)
+    {
+        if (uri.Scheme != Uri.UriSchemeHttp) return null;
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeout.CancelAfter(NameRequestTimeout);
+        try
+        {
+            using var tcp = new System.Net.Sockets.TcpClient();
+            await tcp.ConnectAsync(uri.Host, uri.Port, timeout.Token).ConfigureAwait(false);
+            var stream = tcp.GetStream();
+            await stream.WriteAsync(
+                    Encoding.ASCII.GetBytes(
+                        $"GET {uri.PathAndQuery} HTTP/1.0\r\nHost: {uri.Authority}\r\n"
+                        + "User-Agent: AccessibleMediaController/0.1\r\n\r\n"),
+                    timeout.Token)
+                .ConfigureAwait(false);
+            var buffer = new byte[16 * 1024];
+            var length = 0;
+            while (length < buffer.Length
+                && buffer.AsSpan(0, length).IndexOf("\r\n\r\n"u8) < 0)
+            {
+                var read = await stream.ReadAsync(buffer.AsMemory(length), timeout.Token).ConfigureAwait(false);
+                if (read == 0) break;
+                length += read;
+            }
+            var lines = Encoding.Latin1.GetString(buffer, 0, length).Split("\r\n");
+            if (!lines[0].StartsWith("ICY ", StringComparison.Ordinal)) return null;
+            return lines
+                .TakeWhile(line => line.Length > 0)
+                .FirstOrDefault(line => line.StartsWith("icy-name:", StringComparison.OrdinalIgnoreCase))?
+                ["icy-name:".Length..]
+                .Trim();
+        }
+        catch (Exception exception) when (exception is System.Net.Sockets.SocketException
+            or IOException
+            or OperationCanceledException)
+        {
+            return null;
+        }
     }
 
     private static IEnumerable<(string? Name, string? Url)> ParseM3u(string text)

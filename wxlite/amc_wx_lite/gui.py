@@ -31087,22 +31087,28 @@ class LiteFrame(wx.Frame):
 
             added = int(result.get("addedCount") or 0)
             promoted = int(result.get("promotedCount") or 0)
+            renamed = int(result.get("updatedCount") or 0)
             skipped = int(result.get("skippedCount") or 0)
-            if added == 0 and promoted == 0:
+            if added == 0 and promoted == 0 and renamed == 0:
                 self.announcer.say(
-                    "Playlista nie zawiera nowych prawidłowych stacji"
+                    i18n.ui_text("Playlista nie zawiera nowych prawidłowych stacji")
                     if skipped
-                    else "Playlista nie zawiera stacji radiowych"
+                    else i18n.ui_text("Playlista nie zawiera stacji radiowych")
                 )
                 return
             station_id = str(result.get("preferredStationId") or "") or None
-            message = (
-                f"Dodano nowe stacje: {added}. "
-                f"Włączono istniejące w Bibliotece: {promoted}. "
-                "Zachowano dotychczasowe nazwy"
-            )
+            # Każde zdanie osobno przez katalog: jeden szablon na całość nie
+            # pasował, gdy doklejało się „Pominięto”, i NVDA czytał „Added nowe stacje”.
+            parts = [
+                i18n.ui_text(f"Dodano nowe stacje: {added}"),
+                i18n.ui_text(f"Włączono istniejące w Bibliotece: {promoted}"),
+                i18n.ui_text(f"Uzupełniono nazwy: {renamed}")
+                if renamed
+                else i18n.ui_text("Zachowano dotychczasowe nazwy"),
+            ]
             if skipped:
-                message += f". Pominięto: {skipped}"
+                parts.append(i18n.ui_text(f"Pominięto: {skipped}"))
+            message = ". ".join(parts)
             self._open_radio_view(
                 OpenLibraryView(
                     view=None,

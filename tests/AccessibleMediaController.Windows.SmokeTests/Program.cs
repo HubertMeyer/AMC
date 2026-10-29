@@ -5163,6 +5163,50 @@ static void TestRadioPlaylistImport()
         Assert(m3uResult.Stations.Count == 2, "Nie zaimportowano obu wpisów M3U.");
         Assert(m3uResult.Stations[0].Name == "Radio Pierwsze", "Nie zachowano nazwy stacji M3U.");
 
+        // M3U z samymi adresami: nazwa z nagłówka icy-name (UTF-8, także ze
+        // SHOUTcast v1 „ICY 200 OK”), a zaślepka „-” albo milczący serwer
+        // zostawiają nazwę hosta.
+        var icyServer = new TcpListener(IPAddress.Loopback, 0);
+        icyServer.Start();
+        var icyPort = ((IPEndPoint)icyServer.LocalEndpoint).Port;
+        var icyServing = Task.Run(async () =>
+        {
+            var sockets = new List<Socket>();
+            try
+            {
+                while (true)
+                {
+                    var socket = await icyServer.AcceptSocketAsync();
+                    sockets.Add(socket);
+                    var buffer = new byte[4096];
+                    var request = Encoding.ASCII.GetString(
+                        buffer, 0, await socket.ReceiveAsync(buffer, SocketFlags.None));
+                    var response = request.StartsWith("GET /a ", StringComparison.Ordinal)
+                        ? "HTTP/1.0 200 OK\r\nicy-name: Radio Żółć\r\n\r\n"
+                        : request.StartsWith("GET /b ", StringComparison.Ordinal)
+                            ? "HTTP/1.0 200 OK\r\nicy-name: -\r\n\r\n"
+                            : "ICY 200 OK\r\nicy-name: Radio SHOUTcast\r\n\r\n";
+                    await socket.SendAsync(Encoding.UTF8.GetBytes(response), SocketFlags.None);
+                }
+            }
+            catch (Exception exception) when (exception is SocketException or ObjectDisposedException)
+            {
+                // Stop() kończy pętlę serwera testowego.
+            }
+            return sockets;
+        });
+        var bare = Path.Combine(directory, "same-adresy.m3u");
+        File.WriteAllText(bare,
+            $"http://127.0.0.1:{icyPort}/a\nhttp://127.0.0.1:{icyPort}/b\nhttp://127.0.0.1:{icyPort}/v1\nhttp://127.0.0.1:1/cisza\n");
+        var bareResult = RadioPlaylistImporter.Import(bare);
+        icyServer.Stop();
+        foreach (var socket in icyServing.Wait(TimeSpan.FromSeconds(5)) ? icyServing.Result : []) socket.Dispose();
+        var bareNames = bareResult.Stations.Select(station => station.Name).ToArray();
+        Assert(bareNames.Contains("Radio Żółć"), "Nie odczytano nazwy stacji z nagłówka icy-name.");
+        Assert(bareNames.Contains("Radio SHOUTcast"), "Nie odczytano nazwy stacji SHOUTcast v1.");
+        Assert(bareNames.Count(name => name == "127.0.0.1") == 2,
+            "Stacja z zaślepką icy-name albo bez odpowiedzi nie dostała nazwy hosta.");
+
         var catalogStation = new AccessibleMediaController.Core.Sessions.MediaItem
         {
             Id = "radio:katalog",

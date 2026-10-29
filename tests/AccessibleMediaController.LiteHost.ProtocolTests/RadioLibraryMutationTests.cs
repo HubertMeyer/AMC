@@ -9,6 +9,7 @@ internal static class RadioLibraryMutationTests
     {
         ManualAddUpdatesDuplicateAndCreatesNewStation();
         ImportPromotesCatalogStationAndPreservesItsName();
+        ImportReplacesHostOnlyNameButKeepsUserName();
         FavoritesExportUsesSelectedSortAndPortableFields();
         Console.WriteLine("RadioLibraryMutationTests: OK");
     }
@@ -48,6 +49,28 @@ internal static class RadioLibraryMutationTests
         Assert.True(created["isCustom"]?.GetValue<bool>() == true
                     && created["isInLibrary"]?.GetValue<bool>() == true,
             "nowa stacja jest własna i widoczna w Bibliotece");
+    }
+
+    private static void ImportReplacesHostOnlyNameButKeepsUserName()
+    {
+        var root = Profile(
+            Station("radio:host", "prem4.di.fm", "http://prem4.di.fm/trance", inLibrary: true),
+            Station("radio:user", "Moje radio", "http://radio.invalid/live", inLibrary: true));
+
+        var result = LiteRadioLibraryMutation.Apply(
+            root,
+            [
+                new LiteRadioStationDraft("Trance - DI.FM Premium", "http://prem4.di.fm/trance"),
+                new LiteRadioStationDraft("Nazwa z serwera", "http://radio.invalid/live")
+            ],
+            parserSkipped: 0,
+            updateExistingTitles: false);
+
+        var names = Stations(root).Select(value => value["name"]?.GetValue<string>()).ToArray();
+        Assert.True(names[0] == "Trance - DI.FM Premium" && names[1] == "Moje radio",
+            "ponowny import uzupełnia nazwę-host, ale nie nadpisuje nazwy użytkownika");
+        Assert.True(result.UpdatedCount == 1 && result.SkippedCount == 1 && result.Changed,
+            "uzupełniona nazwa jest liczona i zapisywana, a nie pomijana");
     }
 
     private static void ImportPromotesCatalogStationAndPreservesItsName()

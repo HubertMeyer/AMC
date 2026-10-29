@@ -741,6 +741,7 @@
     "Włącz lub wyłącz wybraną sesję": "",
     "Włączono oznajmianie rozpoznanych utworów": "",
     "Zachowano dane AMC Public": "",
+    "Zachowano dotychczasowe nazwy": "",
     "Zakres eksportu danych AMC": "",
     "Zaktualizowano": "",
     "Zakładki bez zmian": "",
@@ -821,7 +822,9 @@
     "strumienia": "",
     "wybrany folder": "",
     "wykonać zaplanowanego nagrania": "",
-    "zaplanowane ": ""
+    "zaplanowane ": "",
+    "Playlista nie zawiera nowych prawidłowych stacji": "",
+    "Playlista nie zawiera stacji radiowych": ""
   },
   "legacyTemplates": {
     "&Nazwa {arg0}:": "",
@@ -842,7 +845,10 @@
     "Dodano do Biblioteki: {arg0} elementów": "",
     "Dodano do Biblioteki: {arg0} z {arg1} elementów": "",
     "Dodano do kolejki: {arg0}": "",
-    "Dodano nowe stacje: {arg0}. Włączono istniejące w Bibliotece: {arg1}. Zachowano dotychczasowe nazwy": "",
+    "Dodano nowe stacje: {arg0}": "",
+    "Włączono istniejące w Bibliotece: {arg0}": "",
+    "Uzupełniono nazwy: {arg0}": "",
+    "Pominięto: {arg0}": "",
     "Dodano plan {arg0}": "",
     "Dodano rozdział {arg0}: {arg1}": "",
     "Dodano zakładkę {arg0}: {arg1}": "",
