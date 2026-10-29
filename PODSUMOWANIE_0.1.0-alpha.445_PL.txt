@@ -1,0 +1,1 @@
+Poprawiono import nazw i wielu stacji z playlist M3U, odczyt tytułów audycji z metadanych ICY oraz migrację prędkości sesji. Dodano automatyczne, ciche sprawdzanie nowej wersji po uruchomieniu z potwierdzeniem przed pobraniem. AMC Test zachowuje pełny profil z TIDAL-em, Spotify, Sonosem, WiiM i Frontier Smart; Sonos pozostaje funkcją eksperymentalną i nadal może nie działać.
