@@ -42,6 +42,11 @@ nazwy ani tytułu.
   prawidłowe nazwy, gdy playlista zawierała kilka kanałów tego samego
   dostawcy. Limit zmieniono na 4 równoległe połączenia i 5 sekund na nagłówki,
   przy zachowaniu wspólnego budżetu 20 sekund na import.
+- 2026-10-29: użytkownik zlecił zachowanie zgłoszeniowej playlisty jako
+  prywatnego materiału testowego, rozbudowę trwałych zabezpieczeń regresji i
+  budowę kandydata AMC Public. Oryginalne adresy pozostają wyłącznie w lokalnym
+  katalogu ignorowanym przez Git; repozytorium otrzymuje syntetyczny scenariusz
+  o tych samych właściwościach, bez danych użytkownika.
 - Import jest wykonywany w zadaniu tła interfejsu. Dłuższy limit nie blokuje
   klawiatury ani czytnika ekranu.
 - AMC Public i AMC Test są profilami jednego kodu. Uzgodniona kolejność oznacza
@@ -64,7 +69,9 @@ nazwy ani tytułu.
   udana, 0 ostrzeżeń, 0 błędów.
 - `--radio-icy-only`: 3/3 — własne połączenie ICY z przekierowaniem i tytułem,
   starszy strumień ICY MP3 oraz import M3U/PLS/XSPF/VRadio. Test importu obejmuje
-  odpowiedź serwera po 2,5 sekundy, czyli po dawnym limicie.
+  odpowiedź serwera po 2,5 sekundy, czyli po dawnym limicie. Rozbudowany
+  scenariusz obejmuje też osiem kanałów jednego dostawcy, jeden duplikat,
+  komplet nazw i twardą kontrolę maksymalnie czterech równoległych połączeń.
 - Projekt `AccessibleMediaController.LiteHost.ProtocolTests`, Release:
   kompilacja udana, 0 ostrzeżeń, 0 błędów; `--radio-library`: zaliczone.
 - Właściwy `AccessibleMediaController.LiteHost`, Release: kompilacja udana,
@@ -82,6 +89,9 @@ nazwy ani tytułu.
   mogą nie przekazywać tytułu.
 - Ręczny odbiór NVDA pozostaje: import, początkowy fokus po imporcie, komunikat
   liczbowy, odtwarzanie stacji, `NVDA+T`, zatrzymanie i ponowne otwarcie.
+- Prywatny plik zgłoszeniowy jest korpusem diagnostycznym, a nie częścią
+  automatycznych testów ani publikowanej paczki. Testy wydania nie zależą od
+  dostępności zewnętrznych stacji i używają lokalnego serwera syntetycznego.
 - Nie powstała paczka, instalator, lokalna instalacja ani wydanie GitHub.
 
 ## Zmienione pliki

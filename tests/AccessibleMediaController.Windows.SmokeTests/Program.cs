@@ -5241,6 +5241,81 @@ static void TestRadioPlaylistImport()
         Assert(delayedResult.Stations.Single().Name == "Radio Wolniejszy Nagłówek",
             "Importer porzucił prawidłową nazwę stacji po dawnym limicie dwóch sekund.");
 
+        // Rzeczywista lista zgłoszeniowa zawierała kilka kanałów tego samego
+        // dostawcy. Pilnujemy osobno, aby następna optymalizacja nie wróciła do
+        // kilkunastu równoległych połączeń i nie przeciążyła jednego serwera.
+        // Dane są syntetyczne; prywatna playlista nie trafia do repozytorium.
+        const int sharedChannelCount = 8;
+        var sharedServer = new TcpListener(IPAddress.Loopback, 0);
+        sharedServer.Start();
+        var sharedPort = ((IPEndPoint)sharedServer.LocalEndpoint).Port;
+        var activeSharedConnections = 0;
+        var peakSharedConnections = 0;
+        var sharedServing = Task.Run(async () =>
+        {
+            var handlers = new List<Task>();
+            try
+            {
+                while (handlers.Count < sharedChannelCount)
+                {
+                    var socket = await sharedServer.AcceptSocketAsync();
+                    var current = Interlocked.Increment(ref activeSharedConnections);
+                    int observed;
+                    while ((observed = Volatile.Read(ref peakSharedConnections)) < current
+                           && Interlocked.CompareExchange(
+                               ref peakSharedConnections, current, observed) != observed)
+                    {
+                    }
+                    var stationNumber = handlers.Count + 1;
+                    handlers.Add(Task.Run(async () =>
+                    {
+                        try
+                        {
+                            using (socket)
+                            {
+                                var request = new byte[4096];
+                                _ = await socket.ReceiveAsync(request, SocketFlags.None);
+                                await Task.Delay(TimeSpan.FromMilliseconds(350));
+                                var response =
+                                    "HTTP/1.0 200 OK\r\n"
+                                    + $"icy-name: Radio Wspólny Kanał {stationNumber}\r\n"
+                                    + "Content-Length: 0\r\nConnection: close\r\n\r\n";
+                                await socket.SendAsync(
+                                    Encoding.UTF8.GetBytes(response), SocketFlags.None);
+                            }
+                        }
+                        finally
+                        {
+                            Interlocked.Decrement(ref activeSharedConnections);
+                        }
+                    }));
+                }
+            }
+            catch (Exception exception) when (exception is SocketException or ObjectDisposedException)
+            {
+                // Stop() kończy serwer także wtedy, gdy importer zakończy się
+                // przed przyjęciem wszystkich oczekiwanych połączeń.
+            }
+            await Task.WhenAll(handlers);
+        });
+        var sharedPlaylist = Path.Combine(directory, "wiele-kanalow-jednego-dostawcy.m3u");
+        var sharedUrls = Enumerable.Range(1, sharedChannelCount)
+            .Select(index => $"http://127.0.0.1:{sharedPort}/kanal-{index}")
+            .ToArray();
+        File.WriteAllLines(sharedPlaylist, sharedUrls.Append(sharedUrls[0]));
+        var sharedResult = RadioPlaylistImporter.Import(sharedPlaylist);
+        sharedServer.Stop();
+        Assert(sharedServing.Wait(TimeSpan.FromSeconds(5)),
+            "Testowy serwer wielu kanałów nie zakończył odpowiedzi.");
+        Assert(sharedResult.Stations.Count == sharedChannelCount
+               && sharedResult.SkippedEntries == 1,
+            "Importer nie zachował unikalnych kanałów albo nie odrzucił duplikatu.");
+        Assert(sharedResult.Stations.All(station =>
+                station.Name.StartsWith("Radio Wspólny Kanał ", StringComparison.Ordinal)),
+            "Importer zgubił nazwę co najmniej jednego kanału wspólnego dostawcy.");
+        Assert(peakSharedConnections <= 4,
+            $"Importer otworzył jednocześnie {peakSharedConnections} połączeń do jednego dostawcy.");
+
         var catalogStation = new AccessibleMediaController.Core.Sessions.MediaItem
         {
             Id = "radio:katalog",
