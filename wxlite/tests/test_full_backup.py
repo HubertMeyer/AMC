@@ -147,6 +147,45 @@ def test_partial_configuration_import_preserves_radio_and_schedules(
     assert "radio_schedule_overrides" not in raw["amcPython"]["state"]
 
 
+def test_legacy_backup_does_not_restore_last_used_rate_as_general_default(
+    tmp_path: Path,
+) -> None:
+    source = StateStore(tmp_path / "source")
+    source.save(_source_state())
+    target = tmp_path / "stara-kopia.amcbackup.json"
+    staged = staging_path(target)
+    _core_backup(staged)
+    complete_export(
+        staged,
+        target,
+        profile_id="public",
+        ui_state_path=source.path,
+    )
+
+    # Format 1 nie miał znacznika migracji. Pole rate było wtedy ostatnio
+    # używaną prędkością, a nie świadomym ustawieniem wszystkich sesji.
+    raw = json.loads(target.read_text(encoding="utf-8"))
+    section = raw["amcPython"]
+    section["formatVersion"] = 1
+    section.pop("sections", None)
+    section.pop("contentSha256", None)
+    section["state"].pop("playback_rate_version", None)
+    section["state"]["options"]["rate"] = 2.0
+    target.write_text(json.dumps(raw), encoding="utf-8")
+
+    current = StateStore(tmp_path / "current")
+    current.save(LiteState(options=Options(volume=10, rate=1.25)))
+    plan = inspect_import(
+        target,
+        expected_profile_id="public",
+        state_store=current,
+    )
+    restored = build_imported_ui_state(plan, current)
+
+    assert restored.options.volume == 61
+    assert restored.options.rate == 1.25
+
+
 def test_radio_and_schedules_are_independent_ui_sections(tmp_path: Path) -> None:
     source = StateStore(tmp_path / "source")
     source.save(_source_state())

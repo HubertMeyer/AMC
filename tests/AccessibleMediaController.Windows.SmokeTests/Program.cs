@@ -5215,6 +5215,32 @@ static void TestRadioPlaylistImport()
         Assert(bareNames.Count(name => name == "127.0.0.1") == 2,
             "Stacja z zaślepką icy-name albo bez odpowiedzi nie dostała nazwy hosta.");
 
+        // Poprawny serwer może potrzebować więcej niż dawny limit dwóch
+        // sekund, zwłaszcza gdy playlista zawiera kilka kanałów tego samego
+        // dostawcy. Nadal musi zmieścić się w ograniczonym czasie importu.
+        var delayedServer = new TcpListener(IPAddress.Loopback, 0);
+        delayedServer.Start();
+        var delayedPort = ((IPEndPoint)delayedServer.LocalEndpoint).Port;
+        var delayedServing = Task.Run(async () =>
+        {
+            using var socket = await delayedServer.AcceptSocketAsync();
+            var request = new byte[4096];
+            _ = await socket.ReceiveAsync(request, SocketFlags.None);
+            await Task.Delay(TimeSpan.FromMilliseconds(2500));
+            await socket.SendAsync(
+                Encoding.UTF8.GetBytes(
+                    "HTTP/1.0 200 OK\r\nicy-name: Radio Wolniejszy Nagłówek\r\n\r\n"),
+                SocketFlags.None);
+        });
+        var delayed = Path.Combine(directory, "wolniejszy-naglowek.m3u");
+        File.WriteAllText(delayed, $"http://127.0.0.1:{delayedPort}/live\n");
+        var delayedResult = RadioPlaylistImporter.Import(delayed);
+        delayedServer.Stop();
+        Assert(delayedServing.Wait(TimeSpan.FromSeconds(2)),
+            "Testowy serwer wolniejszego nagłówka nie zakończył odpowiedzi.");
+        Assert(delayedResult.Stations.Single().Name == "Radio Wolniejszy Nagłówek",
+            "Importer porzucił prawidłową nazwę stacji po dawnym limicie dwóch sekund.");
+
         var catalogStation = new AccessibleMediaController.Core.Sessions.MediaItem
         {
             Id = "radio:katalog",

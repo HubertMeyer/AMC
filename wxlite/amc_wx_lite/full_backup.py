@@ -395,8 +395,13 @@ def _merge_ui_payload(
     for name in _OPTION_NAMES:
         if _option_section(name) not in selected:
             continue
+        if legacy_rate and name == "rate":
+            # Stare ``rate`` było ostatnio używaną prędkością. Nie importujemy
+            # go, ale też nie kasujemy bieżącej, już świadomie zapisanej
+            # wartości z nowego formatu.
+            continue
         current_options.pop(name, None)
-        if name in imported_options and not (legacy_rate and name == "rate"):
+        if name in imported_options:
             current_options[name] = copy.deepcopy(imported_options[name])
     result["options"] = current_options
 

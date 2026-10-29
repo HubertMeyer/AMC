@@ -19,10 +19,13 @@ internal static class RadioPlaylistImporter
     private const int MaximumStations = 5_000;
     private const int MaximumStreamUrlLength = 4_096;
     private const int MaximumStationNameLength = 200;
-    private const int MaximumParallelNameRequests = 16;
-    // Żywe serwery oddają nagłówki w ułamku sekundy; dłuższy limit tylko
-    // wydłuża ciszę po imporcie przez martwy adres i komunikat ginie.
-    private static readonly TimeSpan NameRequestTimeout = TimeSpan.FromSeconds(2);
+    // Kilkanaście równoległych połączeń przeciążało pojedynczy serwer, gdy
+    // playlista zawierała kilka jego kanałów. Cztery zachowują krótki import,
+    // ale nie gubią nazw poprawnych stacji przez lokalne ograniczenie serwera.
+    private const int MaximumParallelNameRequests = 4;
+    // Część poprawnych serwerów oddaje icy-name dopiero po 2–3 sekundach.
+    // Pięć sekund obejmuje je, a wspólny budżet nadal ogranicza martwe adresy.
+    private static readonly TimeSpan NameRequestTimeout = TimeSpan.FromSeconds(5);
     private static readonly TimeSpan NameLookupBudget = TimeSpan.FromSeconds(20);
     private static readonly Encoding StrictUtf8 = new UTF8Encoding(false, true);
 
@@ -109,7 +112,7 @@ internal static class RadioPlaylistImporter
         }
         catch (OperationCanceledException)
         {
-            // ponytail: jeden limit czasu na cały import; stacje niesprawdzone
+            // Jeden limit czasu na cały import; stacje niesprawdzone
             // w tym czasie zostają z nazwą hosta. Przy tysiącach stacji bez nazw
             // lepsze byłoby uzupełnianie nazw w tle po imporcie.
         }
