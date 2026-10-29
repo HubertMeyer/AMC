@@ -342,6 +342,10 @@ class Options:
     message_templates_by_language: dict[str, dict[str, str]] = field(
         default_factory=dict
     )
+    #: Sprawdzanie nowej wersji calego AMC po starcie. Domyslnie wlaczone:
+    #: samo sprawdzenie niczego nie pobiera ani nie instaluje, a decyzja
+    #: pozostaje w dostepnym oknie aktualizacji.
+    application_check_automatically: bool = True
     #: Prywatne nadpisania polityki aktualizacji składników. ``None`` oznacza
     #: dziedziczenie dotychczasowego wyboru z profilu głównego AMC do
     #: pierwszego zapisu karty Aktualizacje.
@@ -498,12 +502,18 @@ class Options:
             else None
         )
         for name in (
+            "application_check_automatically",
             "component_check_automatically",
             "component_download_automatically",
         ):
             value = getattr(self, name)
-            if value is not None and type(value) is not bool:
-                setattr(self, name, None)
+            if type(value) is bool:
+                continue
+            setattr(
+                self,
+                name,
+                True if name == "application_check_automatically" else None,
+            )
         if self.radio_recording_format is not None:
             formats = ("Mp3", "Aac", "Flac", "Original", "Wav")
             value = str(self.radio_recording_format).strip().casefold()

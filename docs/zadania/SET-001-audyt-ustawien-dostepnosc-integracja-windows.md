@@ -498,3 +498,35 @@ Najważniejsze użyte polecenia i wejścia kontrolne:
 - korekta układu kart z 27.10.2026: zmiana robocza po powyższym wydaniu,
   obecnie bez osobnego commitu, builda, instalatora, instalacji i publikacji;
   zostanie objęta następnym wspólnym wydaniem.
+
+## Korekta karty Aktualizacje — 29.10.2026
+
+### Materiał do dokumentacji użytkownika
+
+Karta `Aktualizacje` ma teraz osobny, domyślnie włączony przełącznik
+`Automatycznie sprawdzaj dostępność nowej wersji AMC po uruchomieniu programu`.
+Jego pomoc wyjaśnia, że AMC jedynie pokaże opis i zaproponuje pobranie; bez
+zgody niczego nie pobiera ani nie instaluje. Ustawienia automatyki całego AMC
+pozostają oddzielone od dotychczasowych ustawień FFmpeg i yt-dlp.
+
+### Uzasadnienie i decyzje
+
+Pole ma jawną nazwę dostępności i jest zwykłym przełącznikiem w kolejności Tab.
+Wartość modelu jest logiczna i nie może zostać odczytana jako nazwa klasy,
+identyfikator ani techniczna wartość. Nie dodano pozornego wyboru kanału.
+
+### Testy i wynik
+
+Celowany zestaw obejmujący Ustawienia, zapis stanu, start, i18n i aktualizator:
+**119 zaliczonych, 1 kontrolowanie pominięty**. Test ręczny NVDA pozostaje.
+
+### Znane ograniczenia
+
+Kod nie został jeszcze zbudowany, zainstalowany ani opublikowany. Początkowy
+fokus, Tab, Shift+Tab, zapis, anulowanie i ponowne otwarcie wymagają odbioru
+NVDA na przyszłym kandydacie.
+
+### Wersja i commit
+
+Commit bieżącej korekty zostanie wpisany po jego utworzeniu. Instalacji ani
+publikacji nie wykonano.

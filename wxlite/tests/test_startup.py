@@ -326,6 +326,9 @@ def test_engine_handshake_is_deferred_to_background(tmp_path):
         library=SimpleNamespace(
             use_collation=lambda collation: calls.append("collation")),
         _load_initial_content=lambda: calls.append("content"),
+        _schedule_automatic_application_update_check=(
+            lambda: calls.append("application-updates")
+        ),
         _update_media_components=lambda **_kwargs: calls.append("components"),
         _remember_local_playback_positions=True)
     # Tryb trwalosci kolejki wyprowadza sie z UKLADU PROFILU; ten test mierzy
@@ -348,6 +351,7 @@ def test_engine_handshake_is_deferred_to_background(tmp_path):
         assert "timer" in calls and "content" in calls
         # Kolejnosc listy ma byc podpieta ZANIM wczytamy tresc.
         assert calls.index("collation") < calls.index("content")
+        assert calls.index("content") < calls.index("application-updates")
     finally:
         gui.LiteHostClient = original
 
@@ -414,6 +418,9 @@ def test_optional_profile_sync_failure_does_not_disable_the_audio_engine(tmp_pat
             use_collation=lambda collation: calls.append("collation")
         ),
         _load_initial_content=lambda: calls.append("content"),
+        _schedule_automatic_application_update_check=(
+            lambda: calls.append("application-updates")
+        ),
         _update_media_components=lambda **_kwargs: calls.append("components"),
         _remember_local_playback_positions=True,
     )

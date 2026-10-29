@@ -7970,6 +7970,30 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
             self.update_channel, 0, wx.BOTTOM | wx.EXPAND, 12
         )
 
+        self.application_check_automatically = wx.CheckBox(
+            updates,
+            label=(
+                "Automatycznie &sprawdzaj dostępność nowej wersji AMC "
+                "po uruchomieniu programu"
+            ),
+        )
+        self.application_check_automatically.SetName(
+            "Automatycznie sprawdzaj dostępność nowej wersji AMC po uruchomieniu programu"
+        )
+        self.application_check_automatically.SetHelpText(
+            "Gdy nowa wersja jest dostępna, AMC pokaże jej opis i zaproponuje "
+            "pobranie. Bez zgody niczego nie pobiera ani nie instaluje."
+        )
+        self.application_check_automatically.SetValue(
+            bool(getattr(options, "application_check_automatically", True))
+        )
+        updates_layout.Add(
+            self.application_check_automatically,
+            0,
+            wx.BOTTOM | wx.EXPAND,
+            10,
+        )
+
         self.component_check_automatically = wx.CheckBox(
             updates,
             label=(
@@ -8922,6 +8946,9 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
                     self._message_template_values_by_language.items()
                 )
             },
+            "application_check_automatically": (
+                self.application_check_automatically.GetValue()
+            ),
             "component_check_automatically": (
                 self.component_check_automatically.GetValue()
             ),
@@ -9227,6 +9254,8 @@ class LiteFrame(wx.Frame):
         self._podcast_opml_pending = False
         self._playlist_membership_pending = False
         self._application_update_pending = False
+        self._automatic_application_update_check_started = False
+        self._automatic_application_update_check_call = None
         self._component_update_pending = False
         # Zdalne listy wyboru używają jednego mechanizmu, ale osobnych partycji
         # usługi i konta. Cache przyspiesza dialog; nie zatwierdza zapisu.
@@ -12275,6 +12304,7 @@ class LiteFrame(wx.Frame):
                 self._startup_smoke_ready = True
                 return
             self._load_initial_content()
+            self._schedule_automatic_application_update_check()
             # Oba profile korzystają z tych samych zweryfikowanych binariów,
             # ale z własnej polityki profilu. Kontrola działa w tle i nie
             # blokuje listy, transportu ani nagrywania.
@@ -15009,16 +15039,58 @@ class LiteFrame(wx.Frame):
             )
             self._restore_focus_after_dialog()
 
-    def _check_application_update(self) -> None:
+    def _schedule_automatic_application_update_check(self) -> None:
+        """Sprawdz raz po spokojnym starcie, bez przerywania pierwszego fokusu."""
+
+        if (
+            self._automatic_application_update_check_started
+            or not self.options.application_check_automatically
+        ):
+            return
+        self._automatic_application_update_check_started = True
+
+        def start() -> None:
+            if not self._window_alive():
+                return
+            if any(
+                window is not self
+                and window.IsShown()
+                and callable(getattr(window, "IsModal", None))
+                and bool(window.IsModal())
+                for window in wx.GetTopLevelWindows()
+            ):
+                # Nie nakladaj drugiego modala na wybor sesji, Ustawienia ani
+                # inne rozpoczęte działanie. Sprawdzenie nadal odbędzie się w
+                # tym uruchomieniu, gdy użytkownik wróci do głównego okna.
+                self._automatic_application_update_check_call = wx.CallLater(
+                    5000, start
+                )
+                return
+            self._check_application_update(automatic=True)
+
+        self._automatic_application_update_check_call = wx.CallLater(
+            5000, start
+        )
+
+    def _check_application_update(self, *, automatic: bool = False) -> None:
+        if not automatic:
+            scheduled = self._automatic_application_update_check_call
+            if scheduled is not None and scheduled.IsRunning():
+                scheduled.Stop()
+            self._automatic_application_update_check_started = True
         if self._application_update_pending:
-            self.announcer.say("Sprawdzanie lub pobieranie aktualizacji już trwa")
+            if not automatic:
+                self.announcer.say("Sprawdzanie lub pobieranie aktualizacji już trwa")
             return
 
         self._application_update_pending = True
-        self.announcer.say("Sprawdzanie aktualizacji AMC")
+        if not automatic:
+            self.announcer.say("Sprawdzanie aktualizacji AMC")
 
         def done(check: ApplicationUpdateCheck) -> None:
             self._application_update_pending = False
+            if automatic and not check.available:
+                return
             dialog = ApplicationUpdateDialog(self, check)
             try:
                 decision = dialog.ShowModal()
@@ -15035,7 +15107,8 @@ class LiteFrame(wx.Frame):
                 "Sprawdzanie aktualizacji AMC nie powiodło się: "
                 f"{type(error).__name__}: {error}",
             )
-            self.announcer.say(user_facing_update_error(error))
+            if not automatic:
+                self.announcer.say(user_facing_update_error(error))
 
         self.runner.submit(
             "application-update-check",

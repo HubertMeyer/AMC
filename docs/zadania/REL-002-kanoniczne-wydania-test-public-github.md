@@ -929,3 +929,57 @@ tych samych plików profilu.
   `28.10.2026, 13:23`, tag `test-2026.10.28.1323`, commit `301c7fcf`.
 - Piąte wydanie testowe: `0.1.0-alpha.438`, wersja widoczna
   `28.10.2026, 20:22`, tag `test-2026.10.28.2022`, commit `9b2f6246`.
+
+## Automatyczne powiadamianie o nowej wersji — 29.10.2026
+
+### Materiał do dokumentacji użytkownika
+
+- AMC domyślnie sprawdza w tle dostępność nowej wersji pięć sekund po
+  uruchomieniu. Kanał nadal wynika z instalacji: AMC Test sprawdza wyłącznie
+  wydania Test, a AMC Public wyłącznie stabilne wydania Public.
+- Gdy bieżąca wersja jest aktualna, sprawdzenie niczego nie mówi i nie zmienia
+  fokusu. Gdy istnieje nowsza wersja, otwiera się to samo dostępne okno
+  `Aktualizacja AMC`, które pokazuje wersję i opis zmian oraz oferuje
+  `Aktualizuj AMC` albo `Zamknij okno aktualizacji`.
+- Samo sprawdzenie nigdy nie pobiera ani nie instaluje pliku. Pobranie pełnego,
+  zweryfikowanego instalatora rozpoczyna się dopiero po wybraniu
+  `Aktualizuj AMC`.
+- Ustawienie można wyłączyć na karcie `Aktualizacje` przełącznikiem
+  `Automatycznie sprawdzaj dostępność nowej wersji AMC po uruchomieniu programu`.
+  Ręczne polecenie `Pomoc > Sprawdź aktualizację AMC…` pozostaje dostępne.
+
+### Uzasadnienie i decyzje
+
+- Automatyczna droga deleguje do istniejącego, profilowanego klienta i tego
+  samego dialogu co polecenie ręczne. Nie powstał drugi aktualizator ani drugi
+  zestaw reguł bezpieczeństwa.
+- Brak sieci podczas automatycznego sprawdzania jest zapisywany do dziennika,
+  ale nie przerywa pracy ani mowy NVDA. Ręczne sprawdzenie nadal podaje błąd
+  użytkownikowi.
+- Jeżeli użytkownik ma otwarte inne okno modalne, automatyczne powiadomienie
+  czeka i ponawia próbę po pięciu sekundach. Zapobiega to nakładaniu dialogu na
+  wybór sesji lub Ustawienia i chroni przewidywalny fokus.
+- Ręczne sprawdzenie zatrzymuje jeszcze nieuruchomione sprawdzenie automatyczne,
+  aby nie pokazywać dwa razy tego samego wyniku.
+
+### Testy i wynik
+
+- Celowany zestaw mechanizmu aktualizacji, stanu, startu, tłumaczeń, Ustawień i
+  aktualizacji składników: **119 zaliczonych, 1 kontrolowanie pominięty**.
+- Sprawdzono osobno: wartość domyślną i trwały zapis ustawienia, ciszę przy
+  aktualnej wersji, pokazanie dostępnego dialogu przy wersji nowszej, cichy
+  błąd sieci, dokładnie jedno sprawdzenie po starcie oraz odroczenie przy innym
+  modalu.
+- Testy były bezokienne. Nie uruchamiano instalatora ani widocznego interfejsu.
+
+### Znane ograniczenia
+
+- Ręczny odbiór NVDA nowego pola Ustawień i automatycznie otwartego dialogu
+  pozostaje do wykonania na zbudowanej wersji.
+- Kod i testy nie są jeszcze dowodem zbudowania paczki, instalatora, instalacji
+  ani publikacji wydania.
+
+### Wersja i commit
+
+- Bieżący etap źródłowy: commit zostanie wpisany po jego utworzeniu.
+- Instalacja i publikacja: nie wykonano.

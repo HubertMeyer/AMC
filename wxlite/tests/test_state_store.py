@@ -245,6 +245,18 @@ def test_component_update_choices_round_trip_and_invalid_values_inherit() -> Non
     assert invalid.component_download_automatically is None
 
 
+def test_application_update_choice_round_trips_and_invalid_value_defaults_on() -> None:
+    store, _ = temp_store()
+    store.save(LiteState(options=Options(application_check_automatically=False)))
+
+    assert store.load().options.application_check_automatically is False
+    assert Options().application_check_automatically is True
+    invalid = Options(
+        application_check_automatically="nie",  # type: ignore[arg-type]
+    ).clamp()
+    assert invalid.application_check_automatically is True
+
+
 def test_message_templates_round_trip_empty_text_and_reject_unknown_values() -> None:
     store, directory = temp_store()
     store.save(LiteState(options=Options(message_templates={

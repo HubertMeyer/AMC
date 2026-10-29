@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -314,3 +315,182 @@ def test_user_facing_failure_never_exposes_exception_path() -> None:
     assert "C:\\Users" not in message
     assert "token" not in message
     assert "Nic nie zostało zainstalowane" in message
+
+
+def _automatic_frame() -> tuple[SimpleNamespace, list[str], list[object]]:
+    announcements: list[str] = []
+    dialogs: list[object] = []
+
+    class Runner:
+        @staticmethod
+        def submit(_name, work, done, failed):
+            try:
+                done(work())
+            except Exception as error:  # pragma: no cover - used by failure test
+                failed(error)
+
+    frame = SimpleNamespace(
+        _application_update_pending=False,
+        announcer=SimpleNamespace(say=announcements.append),
+        runner=Runner(),
+        store=SimpleNamespace(directory=Path("nieuzywany")),
+        _restore_focus_after_dialog=lambda: None,
+        _download_application_update=lambda _check: None,
+    )
+    return frame, announcements, dialogs
+
+
+def test_automatic_check_stays_silent_when_installed_version_is_current(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    check = application_update.ApplicationUpdateCheck(
+        PROFILES["test"], "29.10.2026, 19:05", False, None
+    )
+    frame, announcements, dialogs = _automatic_frame()
+    monkeypatch.setattr(gui, "check_for_application_update", lambda: check)
+    monkeypatch.setattr(
+        gui,
+        "ApplicationUpdateDialog",
+        lambda *_args: dialogs.append(object()),
+    )
+
+    gui.LiteFrame._check_application_update(frame, automatic=True)
+
+    assert announcements == []
+    assert dialogs == []
+    assert frame._application_update_pending is False
+
+
+def test_automatic_check_opens_the_same_accessible_dialog_for_a_new_version(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    mapping, _installer = _release_fixture(
+        tmp_path,
+        profile_id="test",
+        current="29.10.2026, 19:05",
+        available="30.10.2026, 08:00",
+    )
+    check = check_for_application_update(
+        root=tmp_path,
+        fetch_bytes=lambda url, _maximum: mapping[url],
+    )
+    frame, announcements, dialogs = _automatic_frame()
+
+    class Dialog:
+        def __init__(self, _parent, received):
+            dialogs.append(received)
+
+        @staticmethod
+        def ShowModal():
+            return gui.wx.ID_CANCEL
+
+        @staticmethod
+        def Destroy():
+            return None
+
+    monkeypatch.setattr(gui, "check_for_application_update", lambda: check)
+    monkeypatch.setattr(gui, "ApplicationUpdateDialog", Dialog)
+
+    gui.LiteFrame._check_application_update(frame, automatic=True)
+
+    assert announcements == []
+    assert dialogs == [check]
+    assert check.available
+
+
+def test_automatic_check_logs_network_failure_without_interrupting_speech(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    frame, announcements, _dialogs = _automatic_frame()
+    logs: list[str] = []
+
+    def fail():
+        raise application_update.ApplicationUpdateNetworkError("brak sieci")
+
+    monkeypatch.setattr(gui, "check_for_application_update", fail)
+    monkeypatch.setattr(
+        gui,
+        "_append_frontend_log",
+        lambda _store, message: logs.append(message),
+    )
+
+    gui.LiteFrame._check_application_update(frame, automatic=True)
+
+    assert announcements == []
+    assert len(logs) == 1
+    assert "Sprawdzanie aktualizacji AMC nie powiodło się" in logs[0]
+
+
+def test_automatic_check_is_scheduled_once_only_when_enabled(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    scheduled: list[tuple[int, object]] = []
+    calls: list[bool] = []
+    monkeypatch.setattr(
+        gui.wx,
+        "CallLater",
+        lambda milliseconds, callback: scheduled.append((milliseconds, callback)),
+    )
+    monkeypatch.setattr(gui.wx, "GetTopLevelWindows", lambda: [])
+    frame = SimpleNamespace(
+        _automatic_application_update_check_started=False,
+        _automatic_application_update_check_call=None,
+        options=SimpleNamespace(application_check_automatically=True),
+        _window_alive=lambda: True,
+        _check_application_update=lambda *, automatic: calls.append(automatic),
+    )
+
+    gui.LiteFrame._schedule_automatic_application_update_check(frame)
+    gui.LiteFrame._schedule_automatic_application_update_check(frame)
+    assert len(scheduled) == 1
+    assert scheduled[0][0] == 5000
+    scheduled[0][1]()
+    assert calls == [True]
+
+    disabled = SimpleNamespace(
+        _automatic_application_update_check_started=False,
+        _automatic_application_update_check_call=None,
+        options=SimpleNamespace(application_check_automatically=False),
+    )
+    gui.LiteFrame._schedule_automatic_application_update_check(disabled)
+    assert len(scheduled) == 1
+
+
+def test_automatic_check_waits_until_another_modal_is_closed(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    scheduled: list[object] = []
+    calls: list[bool] = []
+
+    class Modal:
+        @staticmethod
+        def IsShown():
+            return True
+
+        @staticmethod
+        def IsModal():
+            return True
+
+    modal = Modal()
+    monkeypatch.setattr(
+        gui.wx,
+        "CallLater",
+        lambda _milliseconds, callback: scheduled.append(callback),
+    )
+    monkeypatch.setattr(gui.wx, "GetTopLevelWindows", lambda: [modal])
+    frame = SimpleNamespace(
+        _automatic_application_update_check_started=False,
+        _automatic_application_update_check_call=None,
+        options=SimpleNamespace(application_check_automatically=True),
+        _window_alive=lambda: True,
+        _check_application_update=lambda *, automatic: calls.append(automatic),
+    )
+
+    gui.LiteFrame._schedule_automatic_application_update_check(frame)
+    scheduled.pop(0)()
+    assert calls == []
+    assert len(scheduled) == 1
+
+    monkeypatch.setattr(gui.wx, "GetTopLevelWindows", lambda: [])
+    scheduled.pop(0)()
+    assert calls == [True]

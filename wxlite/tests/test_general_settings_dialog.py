@@ -231,12 +231,14 @@ def test_update_page_uses_focusable_status_fields_and_the_shared_command() -> No
     assert 'self.component_yt_dlp_status.SetName("Stan składnika yt-dlp")' in source
     assert 'self.component_check_automatically.SetName(' in source
     assert 'self.component_download_automatically.SetName(' in source
+    assert 'self.application_check_automatically.SetName(' in source
     assert 'self.check_components_now.SetName(' in source
     assert "self._check_media_components(completed)" in source
     assert "engine_for_settings.component_update_status()" in source
     assert "return self._update_media_components(on_complete=on_complete)" in source
     assert '"component_check_automatically": (' in source
     assert '"component_download_automatically": (' in source
+    assert '"application_check_automatically": (' in source
 
 
 def test_podcast_settings_reach_the_database_owner_and_automatic_refresh() -> None:
