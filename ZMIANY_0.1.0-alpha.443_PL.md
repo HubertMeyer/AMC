@@ -43,3 +43,12 @@ użytkownika.
   reputacyjne. Integralność jest weryfikowana sumą SHA-256.
 - Sama publikacja nie instaluje ani nie uruchamia nowej wersji na tym
   komputerze.
+
+## Stan wydania
+
+- Celowane testy bez widocznego interfejsu: 231/231 zaliczonych.
+- Testy Launchera i aktualizatora: 38/38 zaliczonych.
+- Paczka Public `89473955`: integralność i kontrolowany start zaliczone.
+- Instalator `AMC-Public-2026-10-29-0136.exe`: zbudowany, przeskanowany i
+  opublikowany w stabilnym wydaniu `public-2026.10.29.0136`.
+- Instalatora nie uruchamiano ani nie instalowano na tym komputerze.

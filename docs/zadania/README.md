@@ -106,12 +106,12 @@ do kontrolowanej archiwizacji opisanej w REL-003.
   z dawnej aplikacji WPF. Szczegóły:
   [I18N-001-wielojezyczny-interfejs-wxpython.md](I18N-001-wielojezyczny-interfejs-wxpython.md).
 
-- `REL-002` — **W trakcie; Test `0.1.0-alpha.442` jest opublikowany, a nowe
-  stabilne wydanie Public `0.1.0-alpha.443` jest przygotowywane z tej samej
-  bazy. Profil ma WiiM i Frontier Smart, bez Sonosa, Spotify i TIDAL-a;
-  231/231 celowanych testów Pythona oraz 38/38 testów Launchera i
-  aktualizatora jest zaliczone. Paczka, instalator i publikacja są w toku;
-  lokalnej instalacji nie zmieniono** — jedna
+- `REL-002` — **W trakcie; Test `0.1.0-alpha.442` i stabilny Public
+  `0.1.0-alpha.443` są opublikowane i odczytowo zweryfikowane. Public powstał
+  z najnowszej bazy Test i ma WiiM oraz Frontier Smart, bez Sonosa, Spotify i
+  TIDAL-a; 231/231 celowanych testów Pythona, 38/38 Launchera/aktualizatora,
+  paczka `89473955`, cichy start, instalator, skan sekretów i zdalny SHA-256 są
+  zaliczone. Lokalnej instalacji nie zmieniono** — jedna
   kanoniczna linia AMC Python,
   wydania AMC Test i AMC Public z tego samego commitu, dwa kanały aktualizacji,
   standardowa instalacja Windows oraz kontrolowane uporządkowanie starego C#,

@@ -813,24 +813,46 @@ tych samych plików profilu.
   języki oraz Ustawienia sesji.
 - Launcher i aktualizator: **38/38 zaliczonych**, w tym migracja starszego
   Public z Sonosa na Frontier Smart i kontrola zgodności profilu.
-- Paczka, instalator i publikacja: w toku. Nie uruchamiano pełnej regresji GUI,
-  instalatora ani widocznych testów przejmujących fokus.
-- Działająca instalacja AMC Test pozostaje nietknięta.
+- Czysta paczka Public `89473955`: **zbudowana** z 1085 plików. Manifest i
+  fizyczna zawartość potwierdzają WiiM i Frontier Smart oraz brak Sonosa,
+  Spotify, TIDAL-a i prywatnych zasobów OAuth. Pełna integralność i
+  kontrolowany cichy start interfejsu oraz hosta: **zaliczone**.
+- Instalator `AMC-Public-2026-10-29-0136.exe`: **zbudowany**; skan sekretów i
+  sucha bramka kanału `stable`: **zaliczone**.
+- GitHub Release `public-2026.10.29.0136`: **opublikowany** jako stabilny i
+  niezależnie odczytowo zweryfikowany. Tag wskazuje dokładny commit źródłowy,
+  trzy zasoby mają stan `uploaded`, a rozmiar i digest instalatora są zgodne z
+  plikiem lokalnym. Bezparametrowy odczyt najnowszego stabilnego wydania
+  wskazuje właśnie ten tag.
+- Nie uruchamiano pełnej regresji GUI, instalatora ani widocznych testów
+  przejmujących fokus. Działająca instalacja AMC Test pozostała nietknięta.
 
 ### Znane ograniczenia
 
 - Automatyczne testy nie zastępują ręcznego odbioru z NVDA, w szczególności
   zmiany języka, Ustawień sesji i powrotu fokusu.
-- Instalator nie jest podpisany cyfrowo; przed przekazaniem jego integralność
-  musi zostać potwierdzona rozmiarem i sumą SHA-256.
+- Instalator nie jest podpisany cyfrowo; Windows może pokazać ostrzeżenie
+  reputacyjne. Integralność potwierdzają zgodne lokalne i zdalne rozmiar oraz
+  SHA-256.
 
 ### Wersja i commit
 
 - Przygotowywana wersja techniczna: `0.1.0-alpha.443`.
 - Bazowe wydanie Test: `0.1.0-alpha.442`, commit `2b772d06` wraz z późniejszym
   commitem dokumentacyjnym `66bdddf8`.
-- Commit źródłowy, paczka, instalator, SHA-256 i tag zostaną dopisane po
-  zakończeniu kolejnych bramek wydawniczych.
+- Commit źródłowy:
+  `367c46a1b6c24488789b3a730716f70651e4cbfb`; paczka `89473955`.
+- Instalator:
+  `D:\Projekty Codex\AMC aktualizacje\AMC Public 0.1.0-alpha.443 wydanie 2026-10-29\instalator\AMC-Public-2026-10-29-0136.exe`.
+- Rozmiar: 124371469 bajtów. SHA-256:
+  `90ed3e558ae81a90ce768d7e0645a811fc00559f9273f61d2a8b282383462c33`.
+- Tag: `public-2026.10.29.0136`; wydanie stabilne, nie prerelease.
+- Adres wydania:
+  `https://github.com/michalkasperczak/AMC/releases/tag/public-2026.10.29.0136`.
+- Bezpośredni adres instalatora:
+  `https://github.com/michalkasperczak/AMC/releases/download/public-2026.10.29.0136/AMC-Public-2026-10-29-0136.exe`.
+- Instalatora nie uruchamiano ani nie instalowano; działający AMC Test pozostał
+  bez zmian.
 
 ## Wersja i commit
 
