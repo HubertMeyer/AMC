@@ -765,6 +765,7 @@ class StateStore:
     FILE_NAME = "state.json"
     VERSION = 1
     SESSION_MANAGER_VERSION = 1
+    PLAYBACK_RATE_VERSION = 1
 
     def __init__(self, directory: Path | str | None = None) -> None:
         self.directory = Path(directory) if directory is not None else default_state_dir()
@@ -829,6 +830,13 @@ class StateStore:
             options.session_order = migrated_session_order_values(
                 raw_options.get("session_order")
             )
+        # Do 6ce2241 każda zmiana prędkości (np. 2x dla podcastu) trafiała do
+        # ``rate``. Teraz to ogólna prędkość startowa każdej sesji bez własnej,
+        # bez pola w ustawieniach, więc stara wartość kazała startować z 2x
+        # nawet radiu na żywo. Zapis bez znacznika niesie tylko ostatnio użytą
+        # prędkość, nie wybór użytkownika.
+        if raw.get("playback_rate_version") != self.PLAYBACK_RATE_VERSION:
+            options.rate = Options().rate
         try:
             options.clamp()
         except (TypeError, ValueError):
@@ -927,6 +935,7 @@ class StateStore:
         payload = {
             "version": self.VERSION,
             "session_manager_version": self.SESSION_MANAGER_VERSION,
+            "playback_rate_version": self.PLAYBACK_RATE_VERSION,
             "options": options_payload,
             "stations": [asdict(station) for station in state.stations],
             "navigation": state.navigation,
