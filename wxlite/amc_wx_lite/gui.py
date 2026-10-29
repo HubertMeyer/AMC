@@ -761,6 +761,23 @@ def radio_timeshift_label(minutes: int) -> str:
     return f"{duration}, {storage}"
 
 
+def radio_window_title(radio_status: dict | None) -> str | None:
+    """Tytuł okna (NVDA+T) podczas radia: stacja i bieżący utwór, jak w AMC.
+
+    Początek „AMC Public — ” zostaje, bo po nim drugie uruchomienie odnajduje
+    okno. None, gdy radio nie gra: wtedy wraca zwykły tytuł z wersją.
+    """
+    status = radio_status or {}
+    station = str(status.get("title") or "").strip()
+    if status.get("engine") != "radio" or not status.get("playing") or not station:
+        return None
+    parts = [PRODUCT_NAME, station]
+    track = str(status.get("streamTitle") or "").strip()
+    if track:
+        parts.append(track)
+    return " — ".join(parts)
+
+
 def _windows_main_window() -> int:
     """Uchwyt poprzedniego głównego okna, bez szukania po procesach Pythona."""
     if os.name != "nt":
@@ -28706,6 +28723,7 @@ class LiteFrame(wx.Frame):
             if "paused" in payload and not remote_player:
                 self._set_transport_label(playing=not bool(payload.get("paused")))
             self._apply_radio_activity_status()
+            self._update_window_title()
             if requested_session in (
                 SessionId.FILES,
                 SessionId.PODCASTS,
@@ -28729,6 +28747,12 @@ class LiteFrame(wx.Frame):
         if requested_session is not SessionId.RADIO:
             self._refresh_radio_transport_status()
 
+    def _update_window_title(self) -> None:
+        radio = self._transport_status_by_session.get(SessionId.RADIO)
+        title = radio_window_title(radio) or i18n.ui_text(window_title())
+        if self.GetTitle() != title:
+            self.SetTitle(title)
+
     def _refresh_radio_transport_status(self) -> None:
         """Odczytaj Radio osobno, nawet gdy użytkownik steruje Plikami."""
         client = self.client
@@ -28741,6 +28765,7 @@ class LiteFrame(wx.Frame):
             if payload:
                 self._transport_status_by_session[SessionId.RADIO] = payload
                 self._apply_radio_activity_status()
+                self._update_window_title()
 
         def failed(_error: Exception) -> None:
             self._radio_transport_status_poll_pending = False
