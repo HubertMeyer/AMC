@@ -95,19 +95,18 @@ do kontrolowanej archiwizacji opisanej w REL-003.
   karta Dostępność i komunikaty. Szczegóły:
   [SET-001-audyt-ustawien-dostepnosc-integracja-windows.md](SET-001-audyt-ustawien-dostepnosc-integracja-windows.md).
 
-- `I18N-001` — **Zrobione i opublikowane w AMC Test `0.1.0-alpha.438`;
+- `I18N-001` — **Zrobione i opublikowane w AMC Test `0.1.0-alpha.442`;
   wspólna warstwa językowa, polski, angielski, wybór zgodny z systemem,
   osobne szablony komunikatów, pełny katalog 713 statycznych napisów i 312
-  komunikatów dynamicznych, parytet menu/pomocy/palety oraz wydana paczka
-  `908e5dd5` są zweryfikowane. Poprawka z 29.10.2026 rozpoznaje
-  `Polish_Poland` i przełącza język od razu po zapisie; ma 30 zaliczonych
-  testów podstawowych oraz 39 zaliczonych testów po korekcie mieszanej nazwy
-  `Ulubione, lista`, ale czeka jeszcze na build i następne wydanie** —
+  komunikatów dynamicznych, parytet menu/pomocy/palety, natychmiastowa zmiana
+  języka i zgodna z językiem nazwa listy są zweryfikowane. Paczka `6b27fa6d`,
+  instalator i prerelease `test-2026.10.29.0057` przeszły kontrolę; lokalnej
+  instalacji nie zmieniono** —
   przygotowanie interfejsu wxPython do obsługi wielu języków bez korzystania
   z dawnej aplikacji WPF. Szczegóły:
   [I18N-001-wielojezyczny-interfejs-wxpython.md](I18N-001-wielojezyczny-interfejs-wxpython.md).
 
-- `REL-002` — **W trakcie; Test `0.1.0-alpha.441` i stabilny Public
+- `REL-002` — **W trakcie; Test `0.1.0-alpha.442` i stabilny Public
   `0.1.0-alpha.440` są opublikowane i odczytowo zweryfikowane. Public ma
   WiiM i Frontier Smart, bez Sonosa, Spotify i TIDAL-a; 100/100 testów
   Pythona, 38/38 Launchera/aktualizatora, paczka `8da5168e`, cichy start,

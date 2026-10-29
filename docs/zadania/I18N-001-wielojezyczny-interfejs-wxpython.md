@@ -3,8 +3,8 @@
 Status: **Zrobione — wspólna warstwa, polski, angielski i wybór systemowy,
 pełny zinwentaryzowany katalog interfejsu, osobne szablony komunikatów,
 parytet menu/pomocy/palety oraz kompletna paczka testowa są zweryfikowane;
-poprawka natychmiastowej zmiany języka z 29.10.2026 jest zweryfikowana w
-źródłach i czeka na następny build oraz wydanie**
+poprawka natychmiastowej zmiany języka i mieszanej nazwy listy z 29.10.2026
+została zbudowana i opublikowana w AMC Test `0.1.0-alpha.442`**
 
 Data rozpoczęcia: 28.10.2026.  Zadanie dotyczy wyłącznie bieżącej aplikacji
 wxPython w `D:\Projekty Codex\AMC - integracja wxPython`. Wycofane repozytorium
@@ -272,13 +272,41 @@ użytkowego, nie przekształcano w instalator i nie publikowano.
   nie została zmieniona; ręczna aktualizacja i odbiór z NVDA pozostają po
   stronie użytkownika.
 
+## Publikacja AMC Test alpha.442 — 29.10.2026
+
+- Wydanie przygotowano w czystym commicie
+  `2b772d066d0e54188354dfb2e024a76833d14033` po poprawkach `e7f02107` i
+  `0c891379`.
+- Celowany zestaw języka, Ustawień, dostępnych nazw listy, aktualizatora,
+  profili instalatora i bramki publikacji zakończył się wynikiem **76/76**.
+  Pierwszy przebieg miał 65 zaliczeń i 11 błędów tworzenia systemowego katalogu
+  tymczasowego; po wskazaniu projektowego `TEMP` ten sam zestaw przeszedł w
+  całości. Nie była to usterka AMC.
+- Końcowa paczka `6b27fa6d` ma profil `test`, `sourceDirty=false`, 2139 plików
+  manifestu i zawiera `en_legacy.json` oraz `template.json`. Pełna integralność
+  i kontrolowany ukryty start interfejsu oraz hosta zostały zaliczone podczas
+  budowy paczki i ponownie przed utworzeniem instalatora.
+- Instalator `AMC-Test-2026-10-29-0057.exe` ma 134383471 bajtów i SHA-256
+  `f1ebe22f1a69e5c1c8f205ffa8fbeb72d394a3a4b0145363eff6871bb071a6db`.
+  Skan sekretów przeszedł; integralność potwierdza Quick App Switcher 0.1.6,
+  17920 bajtów, SHA-256
+  `16dc660e6b3fece58af8ccb84ccc43824bcb7744e1f18a37ffa629685349a61f`.
+- Sucha bramka i publikacja prerelease `test-2026.10.29.0057` zostały
+  zaliczone. GitHub potwierdził tag na dokładnym commicie oraz instalator,
+  plik integralności i manifest aktualizacji w stanie `uploaded`, z takim
+  samym rozmiarem i digestem instalatora.
+- Instalatora ani aktualizatora nie uruchamiano. Zainstalowany AMC Test
+  pozostał na commicie `9b2f6246`, paczce `908e5dd5`, z 28.10.2026, 20:22.
+  Ręczna aktualizacja i odbiór z NVDA pozostają po stronie użytkownika.
+- Adres wydania:
+  `https://github.com/michalkasperczak/AMC/releases/tag/test-2026.10.29.0057`.
+
 ## Znane ograniczenia
 
-- Opublikowany i obecnie zainstalowany AMC Test `0.1.0-alpha.438`, paczka
-  `908e5dd5`, nadal zawiera błędne rozpoznawanie `Polish_Poland` i wymaga
-  restartu po zmianie języka. Poprawka z 29.10.2026 jest na razie zmianą
-  źródłową z zaliczonymi testami; nie zbudowano, nie zainstalowano i nie
-  opublikowano jeszcze zastępującej wersji.
+- Obecnie zainstalowany AMC Test `0.1.0-alpha.438`, paczka `908e5dd5`, nadal
+  zawiera błędne rozpoznawanie `Polish_Poland` i wymaga restartu po zmianie
+  języka. Zastępująca wersja `0.1.0-alpha.442` jest opublikowana, ale nie została
+  automatycznie zainstalowana.
 
 - Nie wykonano ręcznego odsłuchu całego angielskiego interfejsu z NVDA.
   Automatyczne testy sprawdzają jawne nazwy, brak technicznych identyfikatorów,
@@ -323,12 +351,11 @@ Projekt do korekty i zatwierdzenia użytkownika:
 - gałąź: `codex/konfigurowalne-skroty-20261026`;
 - poprawka rozpoznawania `Polish_Poland` i natychmiastowej zmiany języka:
   commit `e7f02107` (`fix(i18n): apply Windows language changes immediately`);
-  testy źródłowe zaliczone, build, instalacja i publikacja tej poprawki nie
-  zostały jeszcze wykonane;
+  testy źródłowe, build i publikacja zaliczone; instalacji nie wykonano;
 - poprawka mieszanych nazw listy i nagłówków po odświeżeniu widoku: commit
   `0c891379` (`fix(i18n): keep list accessibility labels localized`); 39
-  celowanych testów zaliczonych, build, instalacja i publikacja tej poprawki
-  nie zostały jeszcze wykonane;
+  celowanych testów zaliczonych, build i publikacja zaliczone; instalacji nie
+  wykonano;
 - commit wdrożenia wielojęzycznego interfejsu:
   `11f6459d` (`feat(i18n): add Polish and English interface catalogs`);
 - stan źródeł po commicie: zapisany na gałęzi wydania AMC Test;
@@ -338,4 +365,10 @@ Projekt do korekty i zatwierdzenia użytkownika:
 - wydana paczka: `908e5dd5`, profil `test`, `sourceDirty=false`;
 - instalacja: nie wykonano;
 - publikacja: `test-2026.10.28.2022`, wykonana i odczytowo zweryfikowana;
-- adres: `https://github.com/michalkasperczak/AMC/releases/tag/test-2026.10.28.2022`.
+- najnowszy commit wydania: `2b772d066d0e54188354dfb2e024a76833d14033`;
+- najnowsza wydana paczka: `6b27fa6d`, profil `test`, `sourceDirty=false`;
+- najnowszy instalator: `AMC-Test-2026-10-29-0057.exe`, SHA-256
+  `f1ebe22f1a69e5c1c8f205ffa8fbeb72d394a3a4b0145363eff6871bb071a6db`;
+- najnowsza publikacja: `test-2026.10.29.0057`, wykonana i odczytowo
+  zweryfikowana;
+- adres: `https://github.com/michalkasperczak/AMC/releases/tag/test-2026.10.29.0057`.

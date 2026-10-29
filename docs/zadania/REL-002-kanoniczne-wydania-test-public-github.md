@@ -2,10 +2,10 @@
 
 ## Status
 
-W trakcie. Najnowsze, szóste wydanie AMC Test w kanale testowym opublikowano
-29.10.2026 jako `test-2026.10.29.0006`. Jest to wersja techniczna
-`0.1.0-alpha.441` z ustawieniami charakterystycznymi dla każdej sesji. GitHub
-potwierdził tag na commicie `19fc8e72`, instalator, manifest aktualizacji,
+W trakcie. Najnowsze, siódme wydanie AMC Test w kanale testowym opublikowano
+29.10.2026 jako `test-2026.10.29.0057`. Jest to wersja techniczna
+`0.1.0-alpha.442` z poprawkami natychmiastowej zmiany języka i nazw list.
+GitHub potwierdził tag na commicie `2b772d06`, instalator, manifest aktualizacji,
 plik integralności oraz ich sumy SHA-256. Instalator zawiera Quick App
 Switcher 0.1.6. Nie został uruchomiony ani zainstalowany; ręczna aktualizacja
 i odbiór z NVDA pozostają po stronie użytkownika.
@@ -626,6 +626,29 @@ tych samych plików profilu.
   pozostała bez zmian; ciche kontrole użyły jednorazowego profilu.
 - Adres wydania:
   `https://github.com/michalkasperczak/AMC/releases/tag/test-2026.10.29.0006`.
+
+## Siódme wydanie Test 29.10.2026
+
+- Wersję `0.1.0-alpha.442` opublikowano jako prerelease
+  `test-2026.10.29.0057` z commitu
+  `2b772d066d0e54188354dfb2e024a76833d14033`.
+- Wydanie poprawia rozpoznawanie polskiego języka Windows, przełącza język
+  otwartego interfejsu od razu po zapisie i usuwa mieszany odczyt nazwy listy
+  `Ulubione` w angielskim interfejsie.
+- Celowany zestaw języka, Ustawień, dostępności listy, aktualizatora,
+  instalatora i bramki publikacji przeszedł w całości: 76/76 testów.
+- Końcowa paczka `6b27fa6d` ma profil `test`, `sourceDirty=false`, 2139 plików
+  manifestu i przeszła pełną integralność oraz kontrolowany ukryty start.
+- Instalator `AMC-Test-2026-10-29-0057.exe` ma 134383471 bajtów i SHA-256
+  `f1ebe22f1a69e5c1c8f205ffa8fbeb72d394a3a4b0145363eff6871bb071a6db`.
+  Skan sekretów przeszedł; integralność potwierdza Quick App Switcher 0.1.6.
+- Sucha bramka i publikacja zostały zaliczone. GitHub potwierdził tag na
+  dokładnym commicie oraz instalator, plik integralności i manifest
+  aktualizacji w stanie `uploaded` z digestami SHA-256.
+- Instalatora ani aktualizatora nie uruchamiano. Działająca instalacja AMC Test
+  pozostała na wersji z 28.10.2026, 20:22; odbiór aktualizacji pozostaje ręczny.
+- Adres wydania:
+  `https://github.com/michalkasperczak/AMC/releases/tag/test-2026.10.29.0057`.
 
 ## Wydanie Public na bazie alpha.438 — 28.10.2026
 
