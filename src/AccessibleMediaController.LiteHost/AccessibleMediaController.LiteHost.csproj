@@ -103,6 +103,8 @@
              Link="Engine\LiveVorbisWaveProvider.cs" />
     <Compile Include="..\AccessibleMediaController.Windows\Services\LegacyIcyAudioStream.cs"
              Link="Engine\LegacyIcyAudioStream.cs" />
+    <Compile Include="..\AccessibleMediaController.Windows\Services\IcyFrameRadioWaveProvider.cs"
+             Link="Engine\IcyFrameRadioWaveProvider.cs" />
     <Compile Include="..\AccessibleMediaController.Windows\Services\LegacyIcyMp3StreamReader.cs"
              Link="Engine\LegacyIcyMp3StreamReader.cs" />
     <Compile Include="..\AccessibleMediaController.Windows\Services\IRadioRecorder.cs"
