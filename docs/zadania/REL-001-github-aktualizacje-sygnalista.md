@@ -442,6 +442,9 @@ repozytorium, kanałami wydań i polityką prywatności.
   `fix(rel): odczytaj adres wdrozonego Workera`.
 - Koordynator Durable Object, bezpieczny bootstrap i trzyczęściowa bramka
   wdrożenia: `84c1d988` — `fix(rel): utwardz wdrozenie Sygnalisty`.
+- Rozdzielenie Workera, konfiguracji i endpointu kanału testowego od
+  publicznego oraz wymaganie zgodności kanału: `cafb0bb7` —
+  `feat(rel): rozdziel wdrozenie Sygnalisty na kanaly`.
 - Instalacja: `2026.10.19-fb9ba25fe0680cf7bf5435d53eb5b073de091cca-0debb6aa`;
   manifest 1665 plików, pełna integralność i uruchomienie zweryfikowane.
 - Bieżąca uruchomiona instalacja AMC Test ma źródło `b258fb69fef580f7899c30abd0d48e6b877119be`
