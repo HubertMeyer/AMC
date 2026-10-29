@@ -41,5 +41,13 @@ Public oraz wszystkie późniejsze zmiany wspólnej bazy kodu z 29 października
 
 ## Stan wytworzenia
 
-Kod, testy, paczka, instalator, instalacja i publikacja są osobnymi etapami.
-Ich rzeczywiste wyniki zostaną zapisane w rejestrze wydania po wykonaniu.
+- Kod wydania: commit `cbf71ad1ba86f2b2d638eb3128b26d5ff73456e1`.
+- Testy bezokienne: 205 zaliczonych i 1 pominięty w Pythonie, 3/3 M3U/ICY
+  oraz 38/38 launchera i aktualizatora.
+- Paczka `e6945c5c` i instalator `AMC-Test-2026-10-29-2032.exe`: zbudowane i
+  zweryfikowane. SHA-256 instalatora:
+  `da28bcb96bc71262627bbc91d110295aa13d0a9f63cf28f29e860c0c1ef7624a`.
+- Wydanie GitHub `test-2026.10.29.2032`: opublikowane jako prerelease kanału
+  Test i odczytowo zweryfikowane.
+- Instalacja oraz ręczny odbiór NVDA: niewykonane; działającej kopii programu
+  nie zmieniono.

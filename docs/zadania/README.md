@@ -88,9 +88,9 @@ do kontrolowanej archiwizacji opisanej w REL-003.
 - `SET-001` — **W trakcie; kod priorytetów 1–3, pełna regresja, czysta paczka,
   instalator, wydanie GitHub i rzeczywista aktualizacja instalacji są
   zweryfikowane; robocza korekta kolejności kart, sekcji i końcowego edytora
-  własnych komunikatów oraz automatyczne powiadamianie o nowej wersji weszły
-  do lokalnego kandydata Public, ale nie do instalacji ani wydania; ręczny
-  odbiór NVDA pozostaje** —
+  własnych komunikatów oraz automatyczne powiadamianie o nowej wersji zostały
+  wydane w Public i AMC Test `0.1.0-alpha.445`; lokalnej instalacji nowej
+  wersji nie wykonano, a ręczny odbiór NVDA pola pozostaje** —
   naprawa osiągalności pól domyślnych folderów przez Tab, przegląd nazw
   kontrolek, dostępna karta integracji z Windows, nowa karta Aktualizacje oraz
   karta Dostępność i komunikaty. Szczegóły:
@@ -108,15 +108,18 @@ do kontrolowanej archiwizacji opisanej w REL-003.
   z dawnej aplikacji WPF. Szczegóły:
   [I18N-001-wielojezyczny-interfejs-wxpython.md](I18N-001-wielojezyczny-interfejs-wxpython.md).
 
-- `REL-002` — **W trakcie; Test `0.1.0-alpha.442` i stabilny Public
-  `0.1.0-alpha.443` są opublikowane i odczytowo zweryfikowane. Public powstał
+- `REL-002` — **W trakcie; najnowszy Test `0.1.0-alpha.445` i stabilny Public
+  z 29.10.2026, 19:24 są opublikowane i odczytowo zweryfikowane. Public powstał
   z najnowszej bazy Test i ma WiiM oraz Frontier Smart, bez Sonosa, Spotify i
   TIDAL-a; 231/231 celowanych testów Pythona, 38/38 Launchera/aktualizatora,
   paczka `89473955`, cichy start, instalator, skan sekretów i zdalny SHA-256 są
   zaliczone. Najnowsze stabilne wydanie Public z 29.10.2026, 19:24
   automatycznie wykrywa nowe wydanie, informuje i pyta przed pobraniem;
-  119 testów, paczka, instalator, bramka i publikacja GitHub są zaliczone.
-  Lokalnej instalacji nie zmieniono** — jedna
+  119 testów, paczka, instalator, bramka i publikacja GitHub są zaliczone;
+  Hubert potwierdził działanie Public i zamykanie aplikacji. Test zachowuje
+  TIDAL, Spotify i eksperymentalny, nadal niedziałający Sonos; 205 testów
+  Pythona, 3 testy M3U/ICY, 38 testów aktualizatora, paczka, instalator i
+  publikacja prerelease są zaliczone. Lokalnej instalacji nie zmieniono** — jedna
   kanoniczna linia AMC Python,
   wydania AMC Test i AMC Public z tego samego commitu, dwa kanały aktualizacji,
   standardowa instalacja Windows oraz kontrolowane uporządkowanie starego C#,

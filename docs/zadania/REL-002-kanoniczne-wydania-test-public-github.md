@@ -671,6 +671,68 @@ tych samych plików profilu.
 - Adres wydania:
   `https://github.com/michalkasperczak/AMC/releases/tag/test-2026.10.29.1243`.
 
+## Dziewiąte wydanie Test 29.10.2026
+
+### Materiał do dokumentacji użytkownika
+
+- AMC Test otrzymał poprawiony import nazw i wielu stacji z playlist M3U,
+  tytuły audycji z metadanych ICY, korektę migracji prędkości sesji oraz
+  automatyczne sprawdzanie nowej wersji po uruchomieniu.
+- Pole automatycznego sprawdzania jest na karcie `Ustawienia > Aktualizacje`.
+  Samo sprawdzenie nie pobiera ani nie instaluje pliku; wymaga późniejszego
+  wybrania `Aktualizuj AMC`.
+- Profil Test nadal zawiera TIDAL, Spotify, Sonos, WiiM i Frontier Smart.
+  Sonos pozostaje funkcją eksperymentalną w dotychczasowym, niedziałającym
+  stanie i nie jest przedstawiany jako naprawiony.
+
+### Uzasadnienie i decyzje
+
+- Użytkownik 29.10.2026 przekazał, że Hubert potwierdził poprawne działanie
+  poprzedzającego wydania Public, w tym prawidłowe zamknięcie aplikacji.
+  Na tej samej wspólnej bazie przygotowano następne wydanie Test, zachowując
+  pełne możliwości profilu Test zamiast ograniczeń Public.
+- Wydanie obejmuje wszystkie zmiany wspólnej bazy po Test `alpha.444`.
+  Otrzymało nowy numer `0.1.0-alpha.445` i osobny tag prerelease kanału `test`.
+
+### Testy i wynik
+
+- Celowane, bezokienne testy Pythona: **205 zaliczonych, 1 kontrolowanie
+  pominięty**. Zakres obejmował aktualizacje, Ustawienia, start, stan,
+  tłumaczenia, profil Test/Public, paczkę, instalator i skrypt wydania.
+- Celowane testy importu M3U/PLS/XSPF/VRadio oraz metadanych ICY: **3/3
+  zaliczone**. Testy launchera i aktualizatora: **38/38 zaliczonych**.
+- Paczka `e6945c5c` ma profil `test`, `sourceDirty=false`, 2139 plików
+  manifestu i 443 730 737 bajtów wraz z manifestem. Fizycznie zawiera TIDAL,
+  Spotify, Sonos i host Librespot; po kontrolowanym starcie liczba plików spoza
+  manifestu wynosi zero. Pełna integralność i ukryty start interfejsu oraz
+  hosta przeszły.
+- Instalator `AMC-Test-2026-10-29-2032.exe` ma 133 590 131 bajtów i SHA-256
+  `da28bcb96bc71262627bbc91d110295aa13d0a9f63cf28f29e860c0c1ef7624a`.
+  Skan sekretów przeszedł; integralność potwierdza Quick App Switcher 0.1.6.
+- Sucha bramka i publikacja GitHub zostały zaliczone. Tag wskazuje dokładny
+  commit, wydanie jest prerelease, a instalator, plik integralności i manifest
+  aktualizacji mają zdalny stan `uploaded` oraz zgodne digesty.
+
+### Znane ograniczenia
+
+- Sonos nadal nie działa i pozostaje w wydaniu wyłącznie jako eksperymentalna
+  funkcja profilu Test.
+- Nie uruchamiano instalatora, rzeczywistej aktualizacji działającej kopii ani
+  widocznej regresji GUI z NVDA. Działającej instalacji AMC Test nie zmieniono.
+
+### Wersja i commit
+
+- Wersja techniczna: `0.1.0-alpha.445`; wersja widoczna:
+  `AMC Test — 29.10.2026, 20:32`.
+- Commit źródłowy:
+  `cbf71ad1ba86f2b2d638eb3128b26d5ff73456e1`.
+- Lokalny instalator:
+  `D:\Projekty Codex\AMC aktualizacje\AMC Test 0.1.0-alpha.445 wydanie 2026-10-29\instalator\AMC-Test-2026-10-29-2032.exe`.
+- Tag: `test-2026.10.29.2032`.
+- Adres wydania:
+  `https://github.com/michalkasperczak/AMC/releases/tag/test-2026.10.29.2032`.
+- Instalacja lokalna: niewykonana.
+
 ## Wydanie Public na bazie alpha.438 — 28.10.2026
 
 ### Materiał do dokumentacji użytkownika
