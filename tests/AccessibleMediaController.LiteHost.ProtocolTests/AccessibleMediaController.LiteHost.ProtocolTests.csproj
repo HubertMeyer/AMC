@@ -24,6 +24,8 @@
              Link="LitePodcastChapterCoordinator.cs" />
     <Compile Include="..\..\src\AccessibleMediaController.Windows\Services\PodcastChapterClient.cs"
              Link="PodcastChapterClient.cs" />
+    <Compile Include="..\..\src\AccessibleMediaController.Windows\Services\FacebookPublicPageClient.cs"
+             Link="FacebookPublicPageClient.cs" />
     <Compile Include="..\..\src\AccessibleMediaController.LiteHost\LiteFreshProfileInitializer.cs"
              Link="LiteFreshProfileInitializer.cs" />
     <Compile Include="..\..\src\AccessibleMediaController.LiteHost\LiteFrontierSmartPinStore.cs"

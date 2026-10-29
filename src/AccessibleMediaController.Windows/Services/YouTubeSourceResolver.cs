@@ -297,7 +297,8 @@ internal static class YouTubeSourceResolver
     internal static ResolvedYouTubeAudioSource ParseResult(
         string pageUrl,
         string json,
-        bool requireLive)
+        bool requireLive,
+        string sourceLabel = "YouTube")
     {
         try
         {
@@ -306,7 +307,7 @@ internal static class YouTubeSourceResolver
                 MaxDepth = 64
             });
             if (document.RootElement.ValueKind != JsonValueKind.Object)
-                throw new InvalidDataException("YouTube zwrócił nieprawidłowe dane źródła.");
+                throw new InvalidDataException($"{sourceLabel} zwrócił nieprawidłowe dane źródła.");
             var root = document.RootElement;
             var liveStatus = ReadString(root, "live_status");
             var isLive = ReadBoolean(root, "is_live")
@@ -319,13 +320,13 @@ internal static class YouTubeSourceResolver
 
             var selected = SelectAudio(root);
             if (selected is null)
-                throw new InvalidDataException("YouTube nie udostępnił obsługiwanego strumienia audio.");
+                throw new InvalidDataException($"{sourceLabel} nie udostępnił obsługiwanego strumienia audio.");
             var streamUrl = ReadString(selected.Value, "url");
             if (!Uri.TryCreate(streamUrl, UriKind.Absolute, out var streamUri)
                 || streamUri.Scheme is not ("http" or "https")
                 || !string.IsNullOrWhiteSpace(streamUri.UserInfo))
             {
-                throw new InvalidDataException("YouTube zwrócił nieprawidłowy adres strumienia audio.");
+                throw new InvalidDataException($"{sourceLabel} zwrócił nieprawidłowy adres strumienia audio.");
             }
 
             var protocol = ReadString(selected.Value, "protocol");
@@ -335,7 +336,7 @@ internal static class YouTubeSourceResolver
                         || streamUri.Host.Equals("manifest.googlevideo.com", StringComparison.OrdinalIgnoreCase)
                         || streamUri.AbsolutePath.Contains("/manifest/hls_", StringComparison.OrdinalIgnoreCase);
             var title = ReadString(root, "title").Trim();
-            if (title.Length == 0) title = isLive ? "YouTube na żywo" : "Materiał YouTube";
+            if (title.Length == 0) title = isLive ? $"{sourceLabel} na żywo" : $"Materiał {sourceLabel}";
             if (title.Length > 500) title = title[..500].Trim();
             var channel = ReadString(root, "channel").Trim();
             if (channel.Length == 0) channel = ReadString(root, "uploader").Trim();
@@ -363,7 +364,7 @@ internal static class YouTubeSourceResolver
         }
         catch (JsonException exception)
         {
-            throw new InvalidDataException("YouTube zwrócił nieprawidłowe dane źródła.", exception);
+            throw new InvalidDataException($"{sourceLabel} zwrócił nieprawidłowe dane źródła.", exception);
         }
     }
 

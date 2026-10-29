@@ -2227,7 +2227,7 @@ def _help_entries() -> list[tuple[str, str, Action]]:
         Action.CLIP_CLEAR: "Wyczysc zaznaczenie fragmentu",
         Action.TOGGLE_SEEK_MESSAGES: "Automatyczne komunikaty odtwarzacza",
         Action.ADD_PODCAST_SOURCE: (
-            "Dodaj podcast, SoundCloud, kanał YouTube lub medium internetowe"
+            "Dodaj podcast, SoundCloud, kanał YouTube, stronę Facebooka lub medium internetowe"
         ),
         Action.IMPORT_PODCAST_OPML: "Importuj podcasty z OPML",
         Action.EXPORT_PODCAST_OPML: "Eksportuj bibliotekę podcastów do OPML",
@@ -2242,14 +2242,14 @@ def _help_entries() -> list[tuple[str, str, Action]]:
         Action.REFRESH_YOUTUBE_LIVE_AGGREGATE: "Odśwież transmisje wybranych kanałów YouTube",
         Action.RECORD_YOUTUBE_LIVE_NOW: "Rozpocznij albo zatrzymaj nagrywanie transmisji YouTube",
         Action.SCHEDULE_YOUTUBE_LIVE: "Zaplanuj nagranie transmisji YouTube",
-        Action.REFRESH_PODCAST: "Odśwież wybrany podcast, kanał lub playlistę",
-        Action.REFRESH_PODCAST_LIBRARY: "Odśwież wszystkie źródła podcastów",
-        Action.DOWNLOAD_PODCAST_EPISODES: "Pobierz zaznaczone odcinki podcastów",
+        Action.REFRESH_PODCAST: "Odśwież wybrany podcast, kanał, playlistę lub stronę Facebooka",
+        Action.REFRESH_PODCAST_LIBRARY: "Odśwież wszystkie źródła podcastów i Facebooka",
+        Action.DOWNLOAD_PODCAST_EPISODES: "Pobierz zaznaczone odcinki lub dźwięk filmów jako MP3",
         Action.SAVE_PODCAST_EPISODE_AS: "Zapisz jeden odcinek podcastu jako plik",
         Action.DOWNLOAD_YOUTUBE_VIDEOS: (
-            "Pobierz zaznaczone materiały YouTube jako wideo"
+            "Pobierz zaznaczone filmy YouTube, Facebooka lub Instagrama jako wideo"
         ),
-        Action.SAVE_YOUTUBE_VIDEO_AS: "Zapisz jedno wideo z YouTube jako plik",
+        Action.SAVE_YOUTUBE_VIDEO_AS: "Zapisz jeden film internetowy jako plik wideo",
         Action.SHOW_PODCAST_DESCRIPTION: "Pokaż pełny opis podcastu lub odcinka",
         Action.CURRENT_RADIO_BROADCAST_INFORMATION: (
             "Informacje o bieżącym odtwarzaniu"
@@ -2545,7 +2545,7 @@ def _help_entries() -> list[tuple[str, str, Action]]:
             # tekst użytkowy nadal nie ujawnia ``action.value``.
             out.append((label, labels.get(action, "Polecenie AMC"), action))
     for chord, action in (
-        ("Ctrl+S (materiał YouTube)", Action.SAVE_YOUTUBE_VIDEO_AS),
+        ("Ctrl+S (film internetowy)", Action.SAVE_YOUTUBE_VIDEO_AS),
         ("Strzałka w prawo (Nagrywane)", Action.RECORDING_OUTPUT_INFORMATION),
     ):
         if action not in seen:

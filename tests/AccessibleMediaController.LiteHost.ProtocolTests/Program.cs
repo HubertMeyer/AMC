@@ -21,6 +21,7 @@ internal static class Program
         ("--radio-library", RadioLibraryMutationTests.Run),
         ("--podcast-progress", PodcastProgressStoreTests.Run),
         ("--podcast-chapters", PodcastChapterCoordinatorTests.Run),
+        ("--facebook-page", FacebookPageTests.Run),
         ("--fresh-profile", FreshProfileInitializationTests.Run),
         ("--tidal-catalog", TidalCatalogContractTests.Run),
         ("--spotify-catalog", SpotifyCatalogContractTests.Run),
@@ -35,6 +36,20 @@ internal static class Program
 
     public static int Main(string[] args)
     {
+        if (args.Contains("--facebook-live", StringComparer.Ordinal))
+        {
+            try
+            {
+                FacebookPageTests.RunLive();
+                Console.WriteLine("Publiczna strona Facebooka została odczytana.");
+                return 0;
+            }
+            catch (Exception exception)
+            {
+                Console.Error.WriteLine("Nie odczytano publicznej strony: " + exception);
+                return 1;
+            }
+        }
         // Tryb SERWERA PROTOKOLU: prawdziwa petla hosta na stdin/stdout.
         // Uzywa go test zgodnosci klienta Python w WSL.
         if (args.Contains("--wire-server", StringComparer.Ordinal))

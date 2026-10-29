@@ -76,6 +76,7 @@ _CATALOGS: dict[str, dict[str, str]] = {
         "settings.tab.windows": "Integracja z Windows",
         "settings.save.label": "&Zapisz",
         "settings.save.accessibleName": "Zapisz ustawienia",
+        "settings.cancel.label": "&Anuluj",
         "settings.cancel.accessibleName": "Anuluj ustawienia",
         "settings.messageLanguage.label": "Język własnych tekstów komunikatów:",
         "settings.messageLanguage.accessibleName": (
@@ -176,6 +177,7 @@ _CATALOGS: dict[str, dict[str, str]] = {
         "settings.tab.windows": "Windows integration",
         "settings.save.label": "&Save",
         "settings.save.accessibleName": "Save settings",
+        "settings.cancel.label": "&Cancel",
         "settings.cancel.accessibleName": "Cancel settings",
         "settings.messageLanguage.label": "Custom message text &language:",
         "settings.messageLanguage.accessibleName": (
@@ -463,16 +465,16 @@ _ACTION_NAME_OVERRIDES: dict[str, str] = {
     "profile.backup.import": "Import AMC data",
     "profile.commonData.refresh": "Refresh shared AMC data",
     "profile.commonData.status": "Shared AMC data status",
-    "podcasts.source.add": "Add a podcast, channel, or online source",
+    "podcasts.source.add": "Add a podcast, channel, Facebook Page, or online source",
     "podcasts.opml.import": "Import podcasts from OPML",
     "podcasts.opml.export": "Export podcasts to OPML",
     "podcasts.youtube.export": "Export YouTube channels and playlists",
-    "podcasts.refresh.current": "Refresh the selected podcast or channel",
-    "podcasts.refresh.all": "Refresh all podcast sources",
-    "podcasts.download.selected": "Download selected podcast episodes",
+    "podcasts.refresh.current": "Refresh the selected podcast, channel, or Facebook Page",
+    "podcasts.refresh.all": "Refresh all podcast and Facebook sources",
+    "podcasts.download.selected": "Download selected episodes or video audio as MP3",
     "podcasts.download.saveAs": "Save the episode as a file",
-    "podcasts.youtube.video.download": "Download selected YouTube videos",
-    "podcasts.youtube.video.saveAs": "Save the YouTube video as a file",
+    "podcasts.youtube.video.download": "Download selected YouTube, Facebook or Instagram videos",
+    "podcasts.youtube.video.saveAs": "Save one internet video as a file",
     "podcasts.goToRelated": "Go to the related podcast",
     "podcasts.library.toggle": "Add to or remove from the Podcast Library",
     "podcasts.playbackOptions": "Podcast playback options",
@@ -620,8 +622,8 @@ _UI_TEXT_EN: dict[str, str] = {
     "Domyślny folder zapisu pobranych podcastów i dźwięku YouTube": "Default folder for downloaded podcasts and YouTube audio",
     "Wybierz domyślny folder zapisu podcastów i dźwięku YouTube": "Choose the default folder for podcasts and YouTube audio",
     "Użyj domyślnego folderu zapisu podcastów i dźwięku YouTube w AMC": "Use the default AMC folder for podcasts and YouTube audio",
-    "Format pobieranego &wideo z YouTube:": "Downloaded YouTube video &format:",
-    "Format pobieranego wideo z YouTube": "Downloaded YouTube video format",
+    "Format pobieranego &wideo internetowego:": "Downloaded internet video &format:",
+    "Format pobieranego wideo internetowego": "Downloaded internet video format",
     "Automatyczne odświeżanie": "Automatic refresh",
     "Sekcja automatyczne odświeżanie podcastów i kanałów YouTube": "Podcast and YouTube automatic refresh section",
     "Odstęp dla &podcastów w minutach:": "&Podcast interval in minutes:",
@@ -931,6 +933,27 @@ def ui_text(text: str) -> str:
     )
 
 
+def _window_is_being_deleted(window: object) -> bool:
+    """Return whether a native window is already pending destruction."""
+
+    is_being_deleted = getattr(window, "IsBeingDeleted", None)
+    if not callable(is_being_deleted):
+        return False
+    try:
+        return bool(is_being_deleted())
+    except (RuntimeError, TypeError, AttributeError, AssertionError):
+        # A stale wx wrapper is no longer safe to inspect or mutate.
+        return True
+
+
+def _is_text_entry(window: object) -> bool:
+    """Recognize wx text-entry controls without importing the GUI toolkit."""
+
+    return callable(getattr(window, "GetValue", None)) and callable(
+        getattr(window, "ChangeValue", None)
+    )
+
+
 def localize_window_tree(
     window: object,
     *,
@@ -944,13 +967,23 @@ def localize_window_tree(
     the user.
     """
 
-    if _active_language == source_language or window is None:
+    if (
+        _active_language == source_language
+        or window is None
+        or _window_is_being_deleted(window)
+    ):
         return
+    text_entry = _is_text_entry(window)
     for getter_name, setter_name in (
         ("GetLabel", "SetLabel"),
         ("GetName", "SetName"),
         ("GetHelpText", "SetHelpText"),
     ):
+        # wx.TextCtrl.GetLabel exposes its editable value, while SetLabel is
+        # invalid for that control.  Values entered by the user are never UI
+        # labels; only the explicit accessible name and help text are localised.
+        if text_entry and getter_name == "GetLabel":
+            continue
         getter = getattr(window, getter_name, None)
         setter = getattr(window, setter_name, None)
         if callable(getter) and callable(setter):
@@ -963,7 +996,7 @@ def localize_window_tree(
                 )
                 if translated != current:
                     setter(translated)
-            except (RuntimeError, TypeError, AttributeError):
+            except (RuntimeError, TypeError, AttributeError, AssertionError):
                 pass
     # List items can be user data (a title, station, path, or remote device).
     # They are translated only for a control whose choices are known to be
@@ -987,13 +1020,13 @@ def localize_window_tree(
                 )
                 if translated != current:
                     set_string(index, translated)
-        except (RuntimeError, TypeError, AttributeError):
+        except (RuntimeError, TypeError, AttributeError, AssertionError):
             pass
     get_children = getattr(window, "GetChildren", None)
     if callable(get_children):
         try:
             children = tuple(get_children())
-        except (RuntimeError, TypeError, AttributeError):
+        except (RuntimeError, TypeError, AttributeError, AssertionError):
             children = ()
         for child in children:
             localize_window_tree(

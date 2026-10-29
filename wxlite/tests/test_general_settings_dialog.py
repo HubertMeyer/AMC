@@ -119,6 +119,7 @@ def test_message_options_precede_the_inline_template_editor() -> None:
 def test_enter_save_has_one_short_confirmation_and_reconfigures_the_host() -> None:
     source = SOURCE.read_text(encoding="utf-8")
     assert 'save.SetName(i18n.tr("settings.save.accessibleName"))' in source
+    assert 'cancel.SetLabel(i18n.tr("settings.cancel.label"))' in source
     assert 'cancel.SetName(i18n.tr("settings.cancel.accessibleName"))' in source
     assert 'save.SetDefault()' in source
     assert 'self.announcer.say("Zapisano ustawienia")' in source

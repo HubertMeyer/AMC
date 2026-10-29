@@ -75,6 +75,8 @@
              Link="Engine\ExternalToolProcess.cs" />
     <Compile Include="..\AccessibleMediaController.Windows\Services\YouTubeSourceResolver.cs"
              Link="Engine\YouTubeSourceResolver.cs" />
+    <Compile Include="..\AccessibleMediaController.Windows\Services\PublicSocialVideoResolver.cs"
+             Link="Engine\PublicSocialVideoResolver.cs" />
     <Compile Include="..\AccessibleMediaController.Windows\Services\YouTubeErrorTranslator.cs"
              Link="Engine\YouTubeErrorTranslator.cs" />
     <Compile Include="..\AccessibleMediaController.Windows\Services\TimeshiftTempoStage.cs"
@@ -146,6 +148,8 @@
              Link="Engine\PodcastFeedClient.cs" />
     <Compile Include="..\AccessibleMediaController.Windows\Services\SoundCloudPodcastClient.cs"
              Link="Engine\SoundCloudPodcastClient.cs" />
+    <Compile Include="..\AccessibleMediaController.Windows\Services\FacebookPublicPageClient.cs"
+             Link="Engine\FacebookPublicPageClient.cs" />
     <Compile Include="..\AccessibleMediaController.Windows\Services\SoundCloudPodcastDirectoryClient.cs"
              Link="Engine\SoundCloudPodcastDirectoryClient.cs" />
     <Compile Include="..\AccessibleMediaController.Windows\Services\PodcastChapterClient.cs"

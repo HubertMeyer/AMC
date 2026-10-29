@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import ast
 import re
+import unittest
 from pathlib import Path
 
 from amc_wx_lite import i18n, menu_model
@@ -207,6 +208,121 @@ def test_open_window_dynamic_text_can_switch_back_to_polish() -> None:
         source_language="en",
         target_language="pl",
     ) == "Dodano zakładkę 2: 01:30"
+
+
+def test_english_to_polish_skips_text_values_and_deleting_windows() -> None:
+    class TextEntry:
+        def __init__(self) -> None:
+            self.value = "Added to favorites: {item}"
+            self.name = "Save settings"
+            self.help_text = (
+                "The language change is applied after you save the settings."
+            )
+
+        def GetValue(self) -> str:
+            return self.value
+
+        def ChangeValue(self, value: str) -> None:
+            self.value = value
+
+        def GetLabel(self) -> str:
+            return self.value
+
+        def SetLabel(self, _value: str) -> None:
+            raise AssertionError("SetLabel must never be used for a text entry")
+
+        def GetName(self) -> str:
+            return self.name
+
+        def SetName(self, value: str) -> None:
+            self.name = value
+
+        def GetHelpText(self) -> str:
+            return self.help_text
+
+        def SetHelpText(self, value: str) -> None:
+            self.help_text = value
+
+        def GetChildren(self) -> tuple[object, ...]:
+            return ()
+
+    class DeletingWindow:
+        def IsBeingDeleted(self) -> bool:
+            return True
+
+        def GetLabel(self) -> str:
+            raise AssertionError("a deleting window must not be inspected")
+
+    class Root:
+        def __init__(self, children: tuple[object, ...]) -> None:
+            self.label = "Ready"
+            self.children = children
+
+        def GetLabel(self) -> str:
+            return self.label
+
+        def SetLabel(self, value: str) -> None:
+            self.label = value
+
+        def GetChildren(self) -> tuple[object, ...]:
+            return self.children
+
+    try:
+        i18n.configure("en")
+        text_entry = TextEntry()
+        root = Root((text_entry, DeletingWindow()))
+        assert i18n.reconfigure_window_tree(root, "pl") == "pl"
+        assert root.label == "Gotowe"
+        assert text_entry.GetValue() == "Added to favorites: {item}"
+        assert text_entry.GetName() == "Zapisz ustawienia"
+        assert text_entry.GetHelpText() == (
+            "Zmiana języka zostanie zastosowana po zapisaniu ustawień."
+        )
+    finally:
+        i18n.configure("pl")
+
+
+def test_native_english_to_polish_switch_survives_destroyed_settings_dialog() -> None:
+    try:
+        import wx
+    except ImportError:
+        raise unittest.SkipTest("test wymaga prawdziwego wxPython") from None
+    if not getattr(wx, "version", None):
+        raise unittest.SkipTest("test wymaga prawdziwego wxPython")
+
+    app = wx.GetApp() or wx.App(False)
+    frame = wx.Frame(None)
+    menu_bar = wx.MenuBar()
+    menu_bar.Append(wx.Menu(), "&File")
+    frame.SetMenuBar(menu_bar)
+    panel = wx.Panel(frame)
+    message_template = wx.TextCtrl(panel, value="Added to favorites: {item}")
+    message_template.SetName("Save settings")
+    message_template.SetHelpText(
+        "The language change is applied after you save the settings."
+    )
+    closing_settings = wx.Dialog(frame)
+    wx.TextCtrl(closing_settings, value="Added to favorites: {item}")
+    closing_settings.Destroy()
+    try:
+        # On Windows wx keeps the destroyed modal in the parent's child tree
+        # for this turn and does not yet report IsBeingDeleted().  This is the
+        # exact state that used to expose its TextCtrl to SetLabel().
+        assert not closing_settings.IsBeingDeleted()
+        assert closing_settings in frame.GetChildren()
+        i18n.configure("en")
+        assert i18n.reconfigure_window_tree(frame, "pl") == "pl"
+        # This is the next operation in the real save handler.  The regression
+        # used to abort before this native menu rebuild could run.
+        file_menu = menu_model.menus_for_session(SessionId.FILES)[0].title
+        menu_bar.SetMenuLabel(0, file_menu)
+        assert menu_bar.GetMenuLabel(0) == "&Pliki"
+        assert message_template.GetValue() == "Added to favorites: {item}"
+        assert message_template.GetName() == "Zapisz ustawienia"
+    finally:
+        i18n.configure("pl")
+        frame.Destroy()
+        app.Yield()
 
 
 def test_future_language_template_is_valid_and_covers_core_sections() -> None:

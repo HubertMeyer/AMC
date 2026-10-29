@@ -19,6 +19,7 @@ internal sealed class LitePodcastAddCoordinator : IDisposable
     private readonly LiteBookmarkStore? _bookmarks;
     private readonly PodcastFeedClient _rssClient = new();
     private readonly SoundCloudPodcastClient _soundCloudClient = new();
+    private readonly FacebookPublicPageClient _facebookClient = new();
     private readonly YouTubeCollectionClient _youTubeClient = new();
     private int _addInProgress;
 
@@ -121,6 +122,49 @@ internal sealed class LitePodcastAddCoordinator : IDisposable
                 };
             }
 
+            if (PublicSocialVideoResolver.TryGetProvider(addressText, out var socialProvider))
+            {
+                var resolved = PublicSocialVideoResolver.ResolveAudioAsync(
+                        addressText, CancellationToken.None)
+                    .GetAwaiter().GetResult();
+                var result = _podcasts.AddInternetMedia(
+                    new PodcastInternetMediaSource(
+                        resolved.PageUrl,
+                        resolved.Title,
+                        resolved.Channel,
+                        resolved.Duration,
+                        resolved.IsLive),
+                    customTitle);
+                return new
+                {
+                    subscriptionId = result.SubscriptionId,
+                    preferredEpisodeId = result.EpisodeId,
+                    title = result.Title,
+                    sourceKind = "internetMedia",
+                    sourceLabel = socialProvider == "Facebook"
+                        ? "film z Facebooka"
+                        : "film z Instagrama",
+                    added = result.AddedEpisode,
+                    restored = false,
+                    itemCount = 1
+                };
+            }
+            if (FacebookPublicPageClient.TryNormalizePageAddress(address, out var facebookPage))
+            {
+                var facebookFeed = _facebookClient.FetchAsync(facebookPage, CancellationToken.None)
+                    .GetAwaiter().GetResult();
+                return SourceResult(AddFeed(
+                    facebookFeed, customTitle, PodcastSourceKind.FacebookPage));
+            }
+            if (address.IdnHost.Equals("facebook.com", StringComparison.OrdinalIgnoreCase)
+                || address.IdnHost.EndsWith(".facebook.com", StringComparison.OrdinalIgnoreCase)
+                || address.IdnHost.Equals("instagram.com", StringComparison.OrdinalIgnoreCase)
+                || address.IdnHost.EndsWith(".instagram.com", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new LiteRequestException(
+                    "Podaj adres publicznej strony Facebooka albo pojedynczego filmu. Z Instagrama można dodać pojedynczy film lub rolkę.");
+            }
+
             var feed = _rssClient.FetchAsync(address, CancellationToken.None)
                 .GetAwaiter()
                 .GetResult();
@@ -175,6 +219,7 @@ internal sealed class LitePodcastAddCoordinator : IDisposable
             PodcastSourceKind.YouTubeChannel => "youtubeChannel",
             PodcastSourceKind.YouTubePlaylist => "youtubePlaylist",
             PodcastSourceKind.SoundCloudPodcast => "soundcloudPodcast",
+            PodcastSourceKind.FacebookPage => "facebookPage",
             _ => "rss"
         },
         sourceLabel = result.SourceKind switch
@@ -182,6 +227,7 @@ internal sealed class LitePodcastAddCoordinator : IDisposable
             PodcastSourceKind.YouTubeChannel => "kanał YouTube",
             PodcastSourceKind.YouTubePlaylist => "playlista YouTube",
             PodcastSourceKind.SoundCloudPodcast => "podcast SoundCloud",
+            PodcastSourceKind.FacebookPage => "strona Facebooka",
             _ => "podcast"
         },
         added = result.AddedSubscription,
@@ -193,5 +239,6 @@ internal sealed class LitePodcastAddCoordinator : IDisposable
     {
         _rssClient.Dispose();
         _soundCloudClient.Dispose();
+        _facebookClient.Dispose();
     }
 }

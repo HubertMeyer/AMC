@@ -20,6 +20,7 @@ internal sealed class LitePodcastRefreshCoordinator : IDisposable
     private readonly LiteBookmarkStore? _bookmarks;
     private readonly PodcastFeedClient? _rssClient;
     private readonly YouTubeCollectionClient? _youTubeClient;
+    private readonly FacebookPublicPageClient? _facebookClient;
     private readonly Func<PodcastRefreshTarget, Task<PodcastFeedDocument>> _fetch;
     private int _refreshInProgress;
 
@@ -31,6 +32,7 @@ internal sealed class LitePodcastRefreshCoordinator : IDisposable
         _bookmarks = bookmarks;
         _rssClient = new PodcastFeedClient();
         _youTubeClient = new YouTubeCollectionClient();
+        _facebookClient = new FacebookPublicPageClient();
         _fetch = FetchAsync;
     }
 
@@ -178,6 +180,9 @@ internal sealed class LitePodcastRefreshCoordinator : IDisposable
                 (await _youTubeClient!
                     .FetchAsync(address, CancellationToken.None)
                     .ConfigureAwait(false)).Feed,
+            PodcastSourceKind.FacebookPage => await _facebookClient!
+                .FetchAsync(address, CancellationToken.None)
+                .ConfigureAwait(false),
             _ => throw new InvalidOperationException(
                 "Publiczne medium internetowe jest sprawdzane ponownie przy każdym odtwarzaniu.")
         };
@@ -217,5 +222,9 @@ internal sealed class LitePodcastRefreshCoordinator : IDisposable
 
     private sealed record PodcastRefreshIssue(string Title, string Reason);
 
-    public void Dispose() => _rssClient?.Dispose();
+    public void Dispose()
+    {
+        _rssClient?.Dispose();
+        _facebookClient?.Dispose();
+    }
 }

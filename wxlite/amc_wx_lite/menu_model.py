@@ -560,7 +560,7 @@ def build_menus(
                 visible_sessions=PODCASTS_ONLY,
             ),
             MenuItem(
-                "Odśwież wybrane źródło pod&castów",
+                "Odśwież wybrane źródło pod&castów lub Facebooka",
                 Action.REFRESH_PODCAST,
                 shortcut="F5",
                 accelerator=False,
@@ -568,7 +568,7 @@ def build_menus(
                 visible_sessions=PODCASTS_ONLY,
             ),
             MenuItem(
-                "Odśwież &wszystkie źródła podcastów",
+                "Odśwież &wszystkie źródła podcastów i Facebooka",
                 Action.REFRESH_PODCAST_LIBRARY,
                 shortcut="Ctrl+F5",
                 accelerator=False,
@@ -576,7 +576,7 @@ def build_menus(
                 visible_sessions=PODCASTS_ONLY,
             ),
             MenuItem(
-                "Po&bierz zaznaczone odcinki",
+                "Po&bierz zaznaczone odcinki lub dźwięk filmów jako MP3",
                 Action.DOWNLOAD_PODCAST_EPISODES,
                 shortcut="Ctrl+D",
                 accelerator=False,
@@ -604,7 +604,7 @@ def build_menus(
                 visible_sessions=PODCASTS_ONLY,
             ),
             MenuItem(
-                "Zapisz wideo z YouTube j&ako…",
+                "Zapisz wideo internetowe j&ako…",
                 Action.SAVE_YOUTUBE_VIDEO_AS,
                 shortcut="Ctrl+S",
                 accelerator=False,

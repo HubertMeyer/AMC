@@ -1059,7 +1059,8 @@ public enum PodcastSourceKind
     PublicInternetMedia,
     YouTubeChannel,
     YouTubePlaylist,
-    SoundCloudPodcast
+    SoundCloudPodcast,
+    FacebookPage
 }
 
 public sealed class PodcastSubscriptionSettings

@@ -723,17 +723,21 @@ public sealed class WindowsMediaOutput : IMediaOutput, IPlaybackAudioProcessingO
         bool mayRequireRemoteAccess)
     {
         var diagnosticSource = path;
-        if (YouTubeSourceResolver.IsYouTubeUrl(path))
+        if (YouTubeSourceResolver.IsYouTubeUrl(path)
+            || PublicSocialVideoResolver.IsVideoUrl(path))
         {
             var stablePageAddress = path;
-            var resolved = YouTubeSourceResolver
-                .ResolveAudioAsync(stablePageAddress, CancellationToken.None)
+            var resolved = (PublicSocialVideoResolver.IsVideoUrl(path)
+                    ? PublicSocialVideoResolver.ResolveAudioAsync(
+                        stablePageAddress, CancellationToken.None)
+                    : YouTubeSourceResolver.ResolveAudioAsync(
+                        stablePageAddress, CancellationToken.None))
                 .GetAwaiter()
                 .GetResult();
             path = resolved.StreamUrl;
             DiagnosticLog.Info(
                 "internet-media",
-                $"Rozwiązano publiczny adres YouTube na czas odtwarzania: {stablePageAddress}; transmisja: {resolved.IsLive}.");
+                $"Rozwiązano publiczny adres materiału na czas odtwarzania: {stablePageAddress}; transmisja: {resolved.IsLive}.");
             // 2026-09-14: ZYWA TRANSMISJA MUSI ISC PRZEZ FFMPEG.
             // Systemowy MediaFoundationReader traktuje adres HLS jak plik o
             // znanej dlugosci, a okno segmentow zywej transmisji ciagle sie

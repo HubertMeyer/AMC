@@ -29,7 +29,7 @@ public static class PodcastDownloadNaming
     }
 
     public static string SuggestedVideoBaseName(string? title) =>
-        SanitizeBaseName(title, "Wideo YouTube");
+        SanitizeBaseName(title, "Wideo internetowe");
 
     public static string UniquePath(string folder, string fileName)
     {

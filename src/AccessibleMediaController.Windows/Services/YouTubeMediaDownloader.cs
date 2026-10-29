@@ -26,14 +26,14 @@ internal static class YouTubeMediaDownloader
         CancellationToken cancellationToken,
         bool overwrite)
     {
-        if (!YouTubeSourceResolver.IsYouTubeUrl(pageUrl))
-            throw new ArgumentException("Adres nie prowadzi do YouTube.", nameof(pageUrl));
+        if (!IsSupportedVideoUrl(pageUrl))
+            throw new ArgumentException("Adres nie prowadzi do obsługiwanego filmu.", nameof(pageUrl));
         var ytDlp = YouTubeSourceResolver.FindExecutable()
             ?? throw new NotSupportedException(
-                "Pobieranie z YouTube wymaga składnika yt-dlp. Wybierz Pomoc, Sprawdź składniki: FFmpeg i yt-dlp.");
+                "Pobieranie filmu internetowego wymaga składnika yt-dlp. Wybierz Pomoc, Sprawdź składniki: FFmpeg i yt-dlp.");
         var ffmpeg = FfmpegComponentManager.FindInstalledExecutable()
             ?? throw new NotSupportedException(
-                "Pobieranie dźwięku z YouTube wymaga składnika FFmpeg. Wybierz Pomoc, Sprawdź składniki: FFmpeg i yt-dlp.");
+                "Pobieranie dźwięku z filmu wymaga składnika FFmpeg. Wybierz Pomoc, Sprawdź składniki: FFmpeg i yt-dlp.");
 
         var fullDestination = Path.GetFullPath(destinationPath);
         if (!Path.GetExtension(fullDestination).Equals(".mp3", StringComparison.OrdinalIgnoreCase))
@@ -104,8 +104,10 @@ internal static class YouTubeMediaDownloader
                     "youtube-download",
                     $"yt-dlp zakończył pobieranie kodem {process.ExitCode}; komunikat: {TrimDiagnostic(error)}");
                 throw new InvalidDataException(
-                    YouTubeErrorTranslator.DescribePremiere(error)
-                    ?? "YouTube nie udostępnił materiału do zapisania jako MP3.");
+                    (YouTubeSourceResolver.IsYouTubeUrl(pageUrl)
+                        ? YouTubeErrorTranslator.DescribePremiere(error)
+                        : null)
+                    ?? "Nie udało się pobrać dźwięku filmu. Sprawdź dostępność materiału i aktualność składnika yt-dlp.");
             }
             var length = new FileInfo(expectedStagingPath).Length;
             if (length <= 0) throw new InvalidDataException("Pobrany plik YouTube jest pusty.");
@@ -134,16 +136,16 @@ internal static class YouTubeMediaDownloader
         YouTubeVideoDownloadFormat format,
         CancellationToken cancellationToken)
     {
-        if (!YouTubeSourceResolver.IsYouTubeUrl(pageUrl))
-            throw new ArgumentException("Adres nie prowadzi do YouTube.", nameof(pageUrl));
+        if (!IsSupportedVideoUrl(pageUrl))
+            throw new ArgumentException("Adres nie prowadzi do obsługiwanego filmu.", nameof(pageUrl));
         if (!Enum.IsDefined(format))
             throw new ArgumentOutOfRangeException(nameof(format));
         var ytDlp = YouTubeSourceResolver.FindExecutable()
             ?? throw new NotSupportedException(
-                "Pobieranie z YouTube wymaga składnika yt-dlp. Wybierz Pomoc, Sprawdź składniki: FFmpeg i yt-dlp.");
+                "Pobieranie filmu internetowego wymaga składnika yt-dlp. Wybierz Pomoc, Sprawdź składniki: FFmpeg i yt-dlp.");
         var ffmpeg = FfmpegComponentManager.FindInstalledExecutable()
             ?? throw new NotSupportedException(
-                "Pobieranie wideo z YouTube wymaga składnika FFmpeg. Wybierz Pomoc, Sprawdź składniki: FFmpeg i yt-dlp.");
+                "Pobieranie wideo internetowego wymaga składnika FFmpeg. Wybierz Pomoc, Sprawdź składniki: FFmpeg i yt-dlp.");
 
         var fullDestinationFolder = Path.GetFullPath(destinationFolder);
         Directory.CreateDirectory(fullDestinationFolder);
@@ -184,8 +186,10 @@ internal static class YouTubeMediaDownloader
                     "youtube-video-download",
                     $"yt-dlp zakończył pobieranie wideo kodem {process.ExitCode}; komunikat: {TrimDiagnostic(error)}");
                 throw new InvalidDataException(
-                    YouTubeErrorTranslator.DescribePremiere(error)
-                    ?? "YouTube nie udostępnił materiału do zapisania jako wideo.");
+                    (YouTubeSourceResolver.IsYouTubeUrl(pageUrl)
+                        ? YouTubeErrorTranslator.DescribePremiere(error)
+                        : null)
+                    ?? "Nie udało się pobrać filmu. Sprawdź dostępność materiału i aktualność składnika yt-dlp.");
             }
 
             var extension = Path.GetExtension(completedPath).ToLowerInvariant();
@@ -256,6 +260,10 @@ internal static class YouTubeMediaDownloader
             pageUrl.Trim()]);
         return arguments;
     }
+
+    internal static bool IsSupportedVideoUrl(string? pageUrl) =>
+        YouTubeSourceResolver.IsYouTubeUrl(pageUrl)
+        || PublicSocialVideoResolver.IsVideoUrl(pageUrl);
 
     internal static string? ResolveCompletedVideoPath(
         string stagingDirectory,

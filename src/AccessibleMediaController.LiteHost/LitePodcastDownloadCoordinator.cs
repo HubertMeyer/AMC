@@ -81,7 +81,7 @@ internal sealed class LitePodcastDownloadCoordinator : IDisposable
                     PublishProgress(events, target, index, episodeIds.Length, percent: 0);
 
                     PodcastDownloadResult result;
-                    if (YouTubeSourceResolver.IsYouTubeUrl(target.MediaUrl))
+                    if (YouTubeMediaDownloader.IsSupportedVideoUrl(target.MediaUrl))
                     {
                         result = YouTubeMediaDownloader.DownloadMp3Async(
                                 target.MediaUrl,
@@ -201,7 +201,7 @@ internal sealed class LitePodcastDownloadCoordinator : IDisposable
             PodcastDownloadResult result;
             try
             {
-                if (YouTubeSourceResolver.IsYouTubeUrl(target.MediaUrl))
+                if (YouTubeMediaDownloader.IsSupportedVideoUrl(target.MediaUrl))
                 {
                     result = YouTubeMediaDownloader.DownloadMp3Async(
                             target.MediaUrl,
@@ -295,7 +295,7 @@ internal sealed class LitePodcastDownloadCoordinator : IDisposable
                 }
                 try
                 {
-                    RequireYouTubeTarget(target);
+                    RequireVideoTarget(target);
                     var folder = PodcastDownloadFolderResolver.Resolve(
                         target.ConfiguredDownloadsFolder);
                     PublishProgress(events, target, index, episodeIds.Length, percent: 0);
@@ -347,7 +347,7 @@ internal sealed class LitePodcastDownloadCoordinator : IDisposable
     public object VideoSaveAsInfo(JsonElement args)
     {
         var target = GetSingleTarget(args);
-        RequireYouTubeTarget(target);
+        RequireVideoTarget(target);
         return new
         {
             title = target.Title,
@@ -369,7 +369,7 @@ internal sealed class LitePodcastDownloadCoordinator : IDisposable
         try
         {
             var target = GetSingleTarget(args);
-            RequireYouTubeTarget(target);
+            RequireVideoTarget(target);
             var format = ReadVideoFormat(args);
             var requestedPath = NormalizeDestination(LiteArgs.RequirePath(args, "path"));
             Directory.CreateDirectory(temporaryDirectory);
@@ -434,11 +434,11 @@ internal sealed class LitePodcastDownloadCoordinator : IDisposable
             : YouTubeVideoDownloadFormat.Mp4;
     }
 
-    private static void RequireYouTubeTarget(PodcastDownloadTarget target)
+    private static void RequireVideoTarget(PodcastDownloadTarget target)
     {
-        if (!YouTubeSourceResolver.IsYouTubeUrl(target.MediaUrl))
+        if (!YouTubeMediaDownloader.IsSupportedVideoUrl(target.MediaUrl))
             throw new LiteRequestException(
-                "Pobieranie wideo jest dostępne tylko dla materiałów YouTube.");
+                "Pobieranie wideo jest dostępne dla filmów YouTube, Facebooka i Instagrama.");
     }
 
     private PodcastDownloadTarget GetSingleTarget(JsonElement args)

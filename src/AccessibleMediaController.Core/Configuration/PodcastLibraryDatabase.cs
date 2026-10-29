@@ -515,6 +515,7 @@ internal sealed class PodcastLibraryDatabase(string databasePath)
                 .Where(subscription =>
                     subscription.IsInLibrary
                     && IsRefreshable(subscription.SourceKind)
+                    && subscription.SourceKind != PodcastSourceKind.FacebookPage
                     && subscription.RefreshIntervalMinutes > 0)
                 .Select(subscription => new
                 {
@@ -1179,7 +1180,8 @@ internal sealed class PodcastLibraryDatabase(string databasePath)
         if (sourceKind is not (PodcastSourceKind.Rss
             or PodcastSourceKind.SoundCloudPodcast
             or PodcastSourceKind.YouTubeChannel
-            or PodcastSourceKind.YouTubePlaylist))
+            or PodcastSourceKind.YouTubePlaylist
+            or PodcastSourceKind.FacebookPage))
         {
             throw new ArgumentOutOfRangeException(
                 nameof(sourceKind),
@@ -1206,6 +1208,7 @@ internal sealed class PodcastLibraryDatabase(string databasePath)
                         settings.RssRefreshIntervalMinutes,
                     PodcastSourceKind.YouTubeChannel or PodcastSourceKind.YouTubePlaylist =>
                         settings.YouTubeRefreshIntervalMinutes,
+                    PodcastSourceKind.FacebookPage => 0,
                     _ => 0
                 };
             }
@@ -1290,15 +1293,30 @@ internal sealed class PodcastLibraryDatabase(string databasePath)
             episode.Title = string.IsNullOrWhiteSpace(titleOverride)
                 ? media.Title.Trim()
                 : titleOverride.Trim();
+            var providerLabel = page.IdnHost.Equals("facebook.com", StringComparison.OrdinalIgnoreCase)
+                || page.IdnHost.EndsWith(".facebook.com", StringComparison.OrdinalIgnoreCase)
+                || page.IdnHost.Equals("fb.watch", StringComparison.OrdinalIgnoreCase)
+                    ? "Facebooka"
+                    : page.IdnHost.Equals("instagram.com", StringComparison.OrdinalIgnoreCase)
+                        || page.IdnHost.EndsWith(".instagram.com", StringComparison.OrdinalIgnoreCase)
+                        ? "Instagrama"
+                        : "YouTube";
             if (episode.Title.Length == 0)
-                episode.Title = media.IsLive ? "YouTube na żywo" : "Materiał YouTube";
+                episode.Title = media.IsLive
+                    ? (providerLabel == "YouTube" ? "YouTube na żywo" : $"Transmisja {providerLabel}")
+                    : $"Materiał {providerLabel}";
             episode.Author = media.Channel.Trim();
             episode.Description = media.IsLive
-                ? "Publiczna transmisja YouTube. Adres audio jest sprawdzany ponownie przy każdym odtwarzaniu."
-                : "Publiczny materiał YouTube. Adres audio jest sprawdzany ponownie przy każdym odtwarzaniu.";
+                ? $"Publiczna transmisja {providerLabel}. Adres audio jest sprawdzany ponownie przy każdym odtwarzaniu."
+                : $"Publiczny materiał {providerLabel}. Adres audio jest sprawdzany ponownie przy każdym odtwarzaniu.";
             episode.MediaUrl = stableAddress;
             episode.PageUrl = stableAddress;
-            episode.MediaType = "video/youtube";
+            episode.MediaType = providerLabel switch
+            {
+                "Facebooka" => "video/facebook",
+                "Instagrama" => "video/instagram",
+                _ => "video/youtube"
+            };
             episode.DurationTicks = Math.Max(0, media.Duration.Ticks);
             Save(settings);
             return new PodcastInternetMediaAddResult(
@@ -1487,7 +1505,8 @@ internal sealed class PodcastLibraryDatabase(string databasePath)
         PodcastSourceKind.Rss
         or PodcastSourceKind.SoundCloudPodcast
         or PodcastSourceKind.YouTubeChannel
-        or PodcastSourceKind.YouTubePlaylist;
+        or PodcastSourceKind.YouTubePlaylist
+        or PodcastSourceKind.FacebookPage;
 
     private static bool TryPublicHttpUri(string? value, out Uri uri)
     {

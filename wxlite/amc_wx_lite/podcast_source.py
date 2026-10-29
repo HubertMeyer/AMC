@@ -62,6 +62,7 @@ class PodcastSubscription:
             2: "kanał YouTube",
             3: "playlista YouTube",
             4: "podcast SoundCloud",
+            5: "strona Facebooka",
         }.get(self.source_kind, "źródło podcastów")
 
     def as_row(self) -> Row:
@@ -72,7 +73,7 @@ class PodcastSubscription:
             # Pełne AMC udostępnia źródło tylko dla źródeł, które można
             # odświeżać. Publiczne medium internetowe (rodzaj 1) jest
             # rozwiązywane ponownie przy odtwarzaniu i nie udaje kanału.
-            url=self.feed_url if self.source_kind in (0, 2, 3, 4) else None,
+            url=self.feed_url if self.source_kind in (0, 2, 3, 4, 5) else None,
             detail=self.kind_label,
             show_kind=False,
             artist_name=self.author,
@@ -80,6 +81,7 @@ class PodcastSubscription:
                 2: "youtubeChannel",
                 3: "youtubePlaylist",
                 4: "soundcloudPodcast",
+                5: "facebookPage",
             }.get(self.source_kind),
         )
 
@@ -217,6 +219,7 @@ def _container_label(source_kind: int) -> str:
         2: "Kanał YouTube",
         3: "Playlista YouTube",
         4: "Podcast SoundCloud",
+        5: "Strona Facebooka",
     }.get(source_kind, "Podcast")
 
 
@@ -371,8 +374,10 @@ def _episode_row(record: _EpisodeRecord, *, aggregate: bool) -> Row:
     ]
     if aggregate and record.parent_title.casefold() != record.title.casefold():
         detail_parts.insert(0, record.parent_title)
-    if aggregate and record.source_kind in (2, 3):
-        detail_parts.append("materiał YouTube")
+    if aggregate and record.source_kind in (2, 3, 5):
+        detail_parts.append(
+            "film z Facebooka" if record.source_kind == 5 else "materiał YouTube"
+        )
     duration_ticks = max(0, _as_int(_get(record.payload, "DurationTicks", 0)))
     media_length = _as_int(_get(record.payload, "MediaLength", 0))
     media_type = str(_get(record.payload, "MediaType", "") or "").strip()
@@ -403,8 +408,8 @@ def _episode_row(record: _EpisodeRecord, *, aggregate: bool) -> Row:
     )
 
 
-def is_youtube_video_row(row: Row | None) -> bool:
-    """Whether an episode is a public YouTube video, without exposing its URL."""
+def is_supported_video_row(row: Row | None) -> bool:
+    """Whether an episode is a supported public video, without speaking its URL."""
 
     if row is None or getattr(row, "kind", "") != "episode":
         return False
@@ -415,7 +420,33 @@ def is_youtube_video_row(row: Row | None) -> bool:
         host = (urlparse(address).hostname or "").casefold()
     except ValueError:
         return False
-    return host in ("youtu.be", "youtube.com") or host.endswith(".youtube.com")
+    if host in ("youtu.be", "youtube.com") or host.endswith(".youtube.com"):
+        return True
+    path = urlparse(address).path.strip("/").casefold()
+    if host == "fb.watch":
+        return bool(path)
+    if host == "facebook.com" or host.endswith(".facebook.com"):
+        return (
+            "/videos/" in path
+            or path.startswith("reel/")
+            or path.startswith("watch")
+            or path == "video.php"
+            or "/posts/" in path
+        )
+    if host == "instagram.com" or host.endswith(".instagram.com"):
+        parts = path.split("/")
+        kind_index = 1 if len(parts) >= 3 else 0
+        return (
+            len(parts) >= kind_index + 2
+            and parts[kind_index] in ("p", "reel", "reels", "tv")
+        )
+    return False
+
+
+def is_youtube_video_row(row: Row | None) -> bool:
+    """Compatibility name for older callers; includes supported social videos."""
+
+    return is_supported_video_row(row)
 
 
 def _materialize_episode(record: sqlite3.Row) -> _EpisodeRecord:
@@ -676,6 +707,7 @@ class PodcastSource:
         source_kind = _source_kind(payload)
         internet_media = source_kind == 1
         youtube = source_kind in (2, 3)
+        facebook = source_kind == 5
         description = _long_text(_get(payload, "Description", ""))
         if not description and not youtube:
             return None
@@ -692,7 +724,7 @@ class PodcastSource:
         if author:
             details.append(f"{'Kanał' if youtube else 'Autor'}: {author}")
         details.append(
-            f"{'Materiały' if internet_media or youtube else 'Odcinki'}: "
+            f"{'Materiały' if internet_media or youtube or facebook else 'Odcinki'}: "
             f"{max(0, _as_int(record['episode_count']))}"
         )
         if not internet_media:
@@ -706,7 +738,7 @@ class PodcastSource:
         ))
         if not internet_media and feed_url:
             details.append(
-                f"{'Adres YouTube' if youtube else 'Kanał RSS lub Atom'}: {feed_url}"
+                f"{'Adres Facebooka' if facebook else 'Adres YouTube' if youtube else 'Kanał RSS lub Atom'}: {feed_url}"
             )
         if homepage:
             details.append(f"Strona: {homepage}")
@@ -721,7 +753,8 @@ class PodcastSource:
             window_title=(
                 "Opis kanału YouTube"
                 if source_kind == 2
-                else "Opis playlisty YouTube" if source_kind == 3 else "Opis podcastu"
+                else "Opis playlisty YouTube" if source_kind == 3
+                else "Opis strony Facebooka" if facebook else "Opis podcastu"
             ),
             text=_description_text(body, details),
             initial_focus_name=_initial_focus_name(body),
@@ -758,6 +791,7 @@ class PodcastSource:
         source_kind = _source_kind(parent_payload)
         internet_media = source_kind == 1
         youtube = source_kind in (2, 3)
+        facebook = source_kind == 5
         payload = _payload(record["payload_json"])
         description = _long_text(_get(payload, "Description", ""))
         if not description and not youtube:
@@ -772,20 +806,21 @@ class PodcastSource:
         homepage = str(_get(parent_payload, "HomepageUrl", "") or "").strip()
         details = [
             "Medium internetowe" if internet_media else (
-                "Materiał YouTube" if youtube else "Odcinek podcastu"
+                "Materiał YouTube" if youtube else
+                "Film z Facebooka" if facebook else "Odcinek podcastu"
             ),
             f"Tytuł: {title}",
         ]
         if parent_title:
             container = (
                 "Kolekcja" if internet_media else (
-                    _container_label(source_kind) if youtube else "Podcast"
+                    _container_label(source_kind) if youtube or facebook else "Podcast"
                 )
             )
             details.append(f"{container}: {parent_title}")
         if author:
             details.append(
-                f"{'Kanał' if internet_media or youtube else 'Autor'}: {author}"
+                f"{'Strona' if facebook else 'Kanał' if internet_media or youtube else 'Autor'}: {author}"
             )
         if not internet_media:
             published = _date_time_label(_as_int(record["published_utc_ticks"]))

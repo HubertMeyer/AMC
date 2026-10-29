@@ -284,7 +284,7 @@ from .podcast_source import (
     SORT_ALPHABETICAL,
     SORT_CUSTOM,
     complete_youtube_description,
-    is_youtube_video_row,
+    is_supported_video_row,
     subscription_rows,
 )
 from .paging import load_more_row, requested_count
@@ -2866,12 +2866,12 @@ def podcast_add_error_message(error: Exception) -> str:
 
 
 class PodcastSourceDialog(wx.Dialog):
-    """Natywny formularz dodawania RSS, SoundCloud albo YouTube."""
+    """Natywny formularz dodawania RSS i źródeł internetowych."""
 
     def __init__(self, parent: wx.Window) -> None:
         super().__init__(
             parent,
-            title="Nowy podcast, SoundCloud, kanał YouTube lub medium internetowe",
+            title="Nowy podcast lub film z YouTube, Facebooka albo Instagrama",
         )
         panel = wx.Panel(self)
         layout = wx.BoxSizer(wx.VERTICAL)
@@ -2879,7 +2879,13 @@ class PodcastSourceDialog(wx.Dialog):
         help_text = (
             "Wpisz adres kanału RSS lub Atom, publicznego profilu SoundCloud, "
             "kanału albo playlisty YouTube lub pojedynczego publicznego "
-            "materiału YouTube. Profil SoundCloud zostanie zapisany jako "
+            "materiału YouTube, publicznej strony Facebooka albo pojedynczego "
+            "filmu Facebooka lub Instagrama. Stronę Facebooka można potem "
+            "odświeżyć ręcznie: F5 dla wybranej strony lub Control F5 dla "
+            "wszystkich źródeł. Dźwięk filmu pobiera się jako MP3 przez Control D. "
+            "Odczyt strony Facebooka jest próbny i może zwrócić niepełną listę. "
+            "Nie można jeszcze dodać całego profilu Instagrama. "
+            "Profil SoundCloud zostanie zapisany jako "
             "podcast z odtwarzalnymi i możliwymi do pobrania plikami audio. "
             "Adres profilu może mieć postać https://soundcloud.com/NazwaProfilu, "
             "a kanału YouTube https://www.youtube.com/@NazwaKanału."
@@ -7727,7 +7733,7 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
         )
 
         youtube_video_format_label = wx.StaticText(
-            podcasts, label="Format pobieranego &wideo z YouTube:"
+            podcasts, label="Format pobieranego &wideo internetowego:"
         )
         self._youtube_video_format_values = ["mp4", "original"]
         self.youtube_video_format = wx.Choice(
@@ -7737,7 +7743,7 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
                 "Oryginalny lub najlepszy dostępny format, bez wymuszania MP4",
             ],
         )
-        self.youtube_video_format.SetName("Format pobieranego wideo z YouTube")
+        self.youtube_video_format.SetName("Format pobieranego wideo internetowego")
         self.youtube_video_format.SetSelection(
             self._youtube_video_format_values.index(
                 options.podcast_youtube_video_format
@@ -8476,6 +8482,7 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
             save.SetDefault()
         cancel = self.FindWindowById(wx.ID_CANCEL)
         if cancel is not None:
+            cancel.SetLabel(i18n.tr("settings.cancel.label"))
             cancel.SetName(i18n.tr("settings.cancel.accessibleName"))
         self.Bind(wx.EVT_BUTTON, self._on_save, id=wx.ID_OK)
         outer = wx.BoxSizer(wx.VERTICAL)
@@ -9744,7 +9751,7 @@ class LiteFrame(wx.Frame):
         )
         selected_action_rows = self._selected_action_rows() if podcasts else []
         youtube_video_items = bool(selected_action_rows) and all(
-            is_youtube_video_row(row) for row in selected_action_rows
+            is_supported_video_row(row) for row in selected_action_rows
         )
         single_youtube_video_item = (
             len(selected_action_rows) == 1 and youtube_video_items
@@ -14304,7 +14311,7 @@ class LiteFrame(wx.Frame):
             podcast_session=self.navigator.active is SessionId.PODCASTS,
             youtube_video_selection=(
                 self.navigator.active is SessionId.PODCASTS
-                and is_youtube_video_row(self.navigator.session.model.selected_row)
+                and is_supported_video_row(self.navigator.session.model.selected_row)
             ),
             files_session=self.navigator.active is SessionId.FILES,
             tidal_session=self.navigator.active is SessionId.TIDAL,
@@ -22259,14 +22266,14 @@ class LiteFrame(wx.Frame):
         rows: list[Row] = []
         seen: set[str] = set()
         for row in self._selected_action_rows():
-            if row.item_id in seen or not is_youtube_video_row(row):
+            if row.item_id in seen or not is_supported_video_row(row):
                 continue
             seen.add(row.item_id)
             rows.append(row)
         selected_count = len(self._selected_action_rows())
         if not rows or len(rows) != selected_count:
             self.announcer.say(
-                "Pobieranie wideo jest dostępne tylko dla materiałów YouTube"
+                "Pobieranie wideo jest dostępne dla filmów YouTube, Facebooka i Instagrama"
             )
             return
         video_format = self.options.podcast_youtube_video_format
@@ -22331,10 +22338,10 @@ class LiteFrame(wx.Frame):
         if self._podcast_download_pending:
             self.announcer.say("Pobieranie odcinków lub wideo już trwa")
             return
-        rows = [row for row in self._selected_action_rows() if is_youtube_video_row(row)]
+        rows = [row for row in self._selected_action_rows() if is_supported_video_row(row)]
         if len(rows) != 1 or len(self._selected_action_rows()) != 1:
             self.announcer.say(
-                "Zapis wideo jako jest dostępny tylko dla jednego materiału YouTube"
+                "Zapis wideo jako jest dostępny tylko dla jednego filmu"
             )
             return
         client = self.client
@@ -22351,12 +22358,12 @@ class LiteFrame(wx.Frame):
             return result if isinstance(result, dict) else {}
 
         def prepared(info: dict) -> None:
-            base_name = str(info.get("suggestedBaseName") or "Wideo YouTube").strip()
+            base_name = str(info.get("suggestedBaseName") or "Wideo internetowe").strip()
             initial_folder = str(info.get("initialFolder") or "").strip()
             default_file = base_name + ".mp4" if default_format == "mp4" else base_name
             with wx.FileDialog(
                 self,
-                message="Zapisz wideo z YouTube jako",
+                message="Zapisz wideo jako",
                 defaultDir=initial_folder,
                 defaultFile=default_file,
                 wildcard=(
@@ -31234,7 +31241,7 @@ class LiteFrame(wx.Frame):
             podcast_session=self.navigator.active is SessionId.PODCASTS,
             youtube_video_selection=(
                 self.navigator.active is SessionId.PODCASTS
-                and is_youtube_video_row(selected_row)
+                and is_supported_video_row(selected_row)
             ),
             files_session=self.navigator.active is SessionId.FILES,
             tidal_session=self.navigator.active is SessionId.TIDAL,

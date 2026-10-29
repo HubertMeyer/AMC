@@ -1,10 +1,14 @@
 # I18N-001 — wielojęzyczny interfejs wxPython
 
-Status: **Zrobione — wspólna warstwa, polski, angielski i wybór systemowy,
+Status: **Poprawka po odbiorze zrobiona i zweryfikowana w źródłach — wspólna
+warstwa, polski, angielski i wybór systemowy,
 pełny zinwentaryzowany katalog interfejsu, osobne szablony komunikatów,
 parytet menu/pomocy/palety oraz kompletna paczka testowa są zweryfikowane;
 poprawka natychmiastowej zmiany języka i mieszanej nazwy listy z 29.10.2026
-została zbudowana i opublikowana w AMC Test `0.1.0-alpha.442`**
+została zbudowana i opublikowana w AMC Test `0.1.0-alpha.442`. Poprawka
+przerwanego przełączenia z angielskiego na polski ma 31 zaliczonych testów i
+dwie zaliczone sondy prawdziwego wxPython; nie została jeszcze zbudowana,
+zainstalowana ani opublikowana**
 
 Data rozpoczęcia: 28.10.2026.  Zadanie dotyczy wyłącznie bieżącej aplikacji
 wxPython w `D:\Projekty Codex\AMC - integracja wxPython`. Wycofane repozytorium
@@ -36,6 +40,11 @@ WPF nie było otwierane, przeszukiwane ani modyfikowane.
 - Wartości użytkownika — tytuły, stacje, ścieżki, adresy i nazwy urządzeń —
   nie są automatycznie traktowane jako tekst interfejsu. Statyczne pozycje
   wyboru są tłumaczone tylko po jawnym włączeniu tej operacji dla kontrolki.
+- Zmiana języka nie tłumaczy ani nie nadpisuje wartości pól edycyjnych, w tym
+  własnych tekstów komunikatów. Tłumaczone pozostają ich jawne nazwy
+  dostępności i opisy.
+- Przyciski **Zapisz** i **Anuluj** w Ustawieniach mają osobne, jawne etykiety
+  widoczne i nazwy dostępności w obu językach.
 - Warstwa zgodności obejmuje 713 unikalnych statycznych napisów i 312
   szablonów komunikatów dynamicznych. Inwentaryzator rozpoznaje 888 wystąpień
   napisów w kontrolkach wxPython i sprawdza je przy każdym teście katalogu.
@@ -106,11 +115,21 @@ identyfikatora polecenia.
   `_sync_views` po początkowym tłumaczeniu okna. Korekta obejmuje wspólną
   lokalizację nazwy listy, etykiety sesji i nagłówków kolumn, a nie dane
   wierszy użytkownika.
+- Kolejne zgłoszenie użytkownika z 29.10.2026 wykazało, że zapis ustawienia
+  **Polski** pozostawiał angielskie menu. Przyczyną nie był zapis preferencji:
+  podczas przejścia z angielskiego na polski zamknięty dialog Ustawień nadal
+  znajdował się przez jedną iterację w drzewie okna. Ogólna lokalizacja
+  próbowała wywołać `SetLabel` na polu tekstowym własnego komunikatu, a wx
+  przerwał obsługę przed przebudową menu. Korekta rozdziela wartość pola od
+  jego nazwy i opisu, omija okna jawnie usuwane i pozwala dojść do przebudowy
+  menu. Ta decyzja zastępuje wcześniejsze założenie, że sama ogólna
+  lokalizacja drzewa nie może dotknąć wartości pola tekstowego.
 
 ## Zmienione źródła
 
 - `wxlite/amc_wx_lite/i18n.py` — wybór języka, katalogi, angielskie nazwy
-  poleceń, statyczne teksty interfejsu i bezpieczna lokalizacja kontrolek;
+  poleceń, statyczne teksty interfejsu, bezpieczna lokalizacja kontrolek oraz
+  rozdzielenie wartości pól tekstowych od ich nazw dostępności;
 - `wxlite/amc_wx_lite/state_store.py` — trwała preferencja języka, migracja i
   osobne szablony komunikatów;
 - `wxlite/amc_wx_lite/transport_parity.py` — polskie i angielskie domyślne
@@ -119,8 +138,8 @@ identyfikatora polecenia.
   `command_palette.py`, `session_order.py` — jedna prezentacja stabilnych
   poleceń w menu, pomocy i palecie bez zmiany skrótów;
 - `wxlite/amc_wx_lite/gui.py` — wybór języka, język szablonów, uruchomienie
-  katalogu przed utworzeniem ramki oraz tłumaczenie nazw dostępności i
-  komunikatów;
+  katalogu przed utworzeniem ramki, tłumaczenie nazw dostępności i komunikatów
+  oraz jawna widoczna etykieta przycisku **Anuluj**;
 - `wxlite/amc_wx_lite/live_region.py`, `playlist_dialog.py`,
   `spotify_playlist_dialog.py`, `problem_report_dialog.py`,
   `radio_schedule_dialogs.py`, `schedule_segments.py` i `radio_recording.py`
@@ -129,7 +148,8 @@ identyfikatora polecenia.
 - `wxlite/amc_wx_lite/locales/en_legacy.json` — kompletny angielski katalog
   zgodności dla istniejących bezpośrednich tekstów wxPython;
 - `wxlite/amc_wx_lite/locales/template.json` i `locales/README.md` — szablon
-  oraz procedura dodania przyszłego języka;
+  oraz procedura dodania przyszłego języka; szablon zawiera również bieżące
+  robocze teksty wideo, aby test kompletności pozostawał zgodny z katalogiem;
 - `wxlite/tools/export_translation_template.py` — deterministyczny eksport
   pełnej bieżącej listy stabilnych poleceń do szablonu;
 - `wxlite/tools/translation_inventory.py` — inwentaryzacja AST, bezpieczne
@@ -137,8 +157,9 @@ identyfikatora polecenia.
 - `wxlite/tools/build_bundle.py` — dołączanie katalogów JSON do paczki oraz
   usuwanie nieaktualnych zasobów językowych przy odświeżeniu;
 - `wxlite/tests/test_i18n.py` i powiązane testy ustawień — kompletność
-  katalogów, migracja, parytet powierzchni poleceń i ochrona danych
-  użytkownika;
+  katalogów, migracja, parytet powierzchni poleceń, ochrona danych użytkownika
+  oraz rzeczywisty przypadek angielski → polski z zamykanym dialogiem i
+  natywną przebudową menu;
 - `wxlite/tests/test_bundle_layout.py` — regresja obecności katalogów
   tłumaczeń w samowystarczalnej paczce;
 - `wxlite/requirements-test.txt` — przypięte zależności użyte wyłącznie do
@@ -177,6 +198,26 @@ innymi karta, historia, stan konta, dziennik, tasowanie i gospodarstwo Sonos.
 Żaden z tych pakietów nie trafia do runtime ani paczki AMC.
 
 ## Testy i wynik
+
+### Przerwane przełączenie angielski → polski — 29.10.2026
+
+- kompilacja składniowa `i18n.py`, `gui.py`, `test_i18n.py` i
+  `test_general_settings_dialog.py`: zaliczona;
+- celowane testy bez widocznego interfejsu: **31 zaliczonych, 1 kontrolowanie
+  pominięty** w 4,24 s. Pominięta próba wymaga wxPython, którego nie ma w
+  systemowym Pythonie;
+- tę samą próbę wykonano prywatnym runtime zainstalowanego AMC Test. Prawdziwy
+  wxPython potwierdził stan z usterki: zniszczony dialog nadal był dzieckiem
+  ramki i nie zgłaszał jeszcze `IsBeingDeleted()`. Przełączenie zachowało
+  dokładny tekst `Added to favorites: {item}`, przetłumaczyło jawną nazwę
+  dostępności i przebudowało natywne menu na **Pliki**:
+  `NATIVE_EN_TO_PL_MENU_OK`;
+- osobna ukryta sonda prawdziwego dialogu Ustawień potwierdziła widoczną
+  etykietę **Anuluj** i nazwę dostępności **Anuluj ustawienia**:
+  `NATIVE_CANCEL_PL_OK`;
+- nie otwierano widocznego GUI, nie restartowano działającego AMC, nie
+  zmieniano profilu użytkownika i nie uruchamiano pełnej regresji;
+- dla tej poprawki nie instalowano żadnej nowej biblioteki.
 
 ### Poprawka rozpoznawania Windows i zmiany bez restartu — 29.10.2026
 
@@ -221,6 +262,10 @@ ustawieniu `TEMP` i `TMP` na projektowy
 to usterka kodu i18n ani hosta.
 
 ## Build
+
+Poprawki po ręcznym odbiorze z 29.10.2026 jeszcze nie budowano, nie
+instalowano i nie publikowano. Poniższy wynik dotyczy wcześniejszego wydania
+warstwy wielojęzycznej.
 
 Końcowa samowystarczalna paczka profilu `test` została zbudowana poleceniem
 `wxlite\tools\Build-AMCBundle.ps1` z prywatnym runtime bieżącej instalacji.
@@ -303,10 +348,10 @@ użytkowego, nie przekształcano w instalator i nie publikowano.
 
 ## Znane ograniczenia
 
-- Obecnie zainstalowany AMC Test `0.1.0-alpha.438`, paczka `908e5dd5`, nadal
-  zawiera błędne rozpoznawanie `Polish_Poland` i wymaga restartu po zmianie
-  języka. Zastępująca wersja `0.1.0-alpha.442` jest opublikowana, ale nie została
-  automatycznie zainstalowana.
+- Obecnie uruchomiony AMC Test `0.1.0-alpha.442` zawiera jeszcze błąd, który
+  przerywa przełączenie z angielskiego na polski przed przebudową menu.
+  Poprawka jest zweryfikowana wyłącznie w źródłach; nie ma jeszcze nowej paczki
+  ani aktualizacji użytkowej.
 
 - Nie wykonano ręcznego odsłuchu całego angielskiego interfejsu z NVDA.
   Automatyczne testy sprawdzają jawne nazwy, brak technicznych identyfikatorów,
@@ -330,7 +375,9 @@ Projekt do korekty i zatwierdzenia użytkownika:
 > regionalnych, a w pozostałych przypadkach angielskiego. Po wybraniu
 > **Zapisz** język otwartego interfejsu zmienia się od razu. Własne teksty na
 > karcie **Dostępność i komunikaty** są przechowywane osobno dla polskiego i
-> angielskiego.
+> angielskiego. Przełączenie języka nie zmienia treści wpisanych w polach
+> własnych komunikatów. Przycisk **Anuluj** ma polską etykietę także wtedy,
+> gdy okno zostało otwarte po przełączeniu z angielskiego.
 
 ## Projekt wpisu do changelogu
 
@@ -345,6 +392,10 @@ Projekt do korekty i zatwierdzenia użytkownika:
   otwartego interfejsu bez restartowania AMC.
 - Usunięto mieszanie języków, w którym NVDA czytał polską nazwę listy
   `Ulubione`, gdy menu i pozostały interfejs były angielskie.
+- Naprawiono przełączenie z angielskiego na polski, które mogło zatrzymać się
+  przed przebudową menu na zamykanym oknie Ustawień. Wartości własnych
+  komunikatów pozostają niezmienione, a przycisk **Anuluj** ma jawną polską
+  etykietę.
 
 ## Wersja i commit
 
@@ -372,3 +423,7 @@ Projekt do korekty i zatwierdzenia użytkownika:
 - najnowsza publikacja: `test-2026.10.29.0057`, wykonana i odczytowo
   zweryfikowana;
 - adres: `https://github.com/michalkasperczak/AMC/releases/tag/test-2026.10.29.0057`.
+- poprawka po ręcznym odbiorze: zapisana w roboczym drzewie tej samej gałęzi;
+  **31/31** testów celowanych i dwie sondy prawdziwego wxPython zaliczone;
+  bez nowego commitu, builda, instalacji i publikacji, ponieważ repozytorium
+  zawiera również istniejące, niescommitowane prace innych zadań.
