@@ -140,12 +140,13 @@ do kontrolowanej archiwizacji opisanej w REL-003.
   Szczegóły:
   [RECOG-001-interakcje-z-rozpoznanymi-utworami.md](RECOG-001-interakcje-z-rozpoznanymi-utworami.md).
 
-- `RADIO-001` — **W trakcie; import nazw z ICY, tytuły audycji, kompilacja
-  LiteHosta i celowane testy są zaliczone, ale nie powstała paczka, instalacja
-  ani publikacja** — listy M3U z samymi adresami uzupełniają nazwy bez
+- `RADIO-001` — **Kandydat AMC Public zbudowany i zweryfikowany lokalnie;
+  instalator oczekuje na odbiór Huberta, bez instalacji i publikacji** — listy
+  M3U z samymi adresami uzupełniają nazwy bez
   nadpisywania nazw użytkownika, a kompatybilne radio przekazuje bieżący tytuł
-  do `NVDA+T`. Następny etap to kandydat AMC Public do odbioru Huberta, potem
-  ten sam commit w AMC Test. Szczegóły:
+  do `NVDA+T`. Odrzucona pierwsza paczka ujawniła niepodpisane cache Pythona;
+  końcowy builder i instalator blokują pliki spoza manifestu. Po odbiorze ten
+  sam commit ma trafić do AMC Test. Szczegóły:
   [RADIO-001-import-m3u-icy-i-tytuly.md](RADIO-001-import-m3u-icy-i-tytuly.md).
 
 - `REC-002` — **Zrobione i zainstalowane w AMC Test 26.10.2026, 13:32** —

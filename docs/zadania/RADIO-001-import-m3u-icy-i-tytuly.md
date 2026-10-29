@@ -2,11 +2,11 @@
 
 ## Status
 
-W trakcie — kod źródłowy i celowane testy są zaliczone. Poprawka nie została
-jeszcze spakowana, zainstalowana ani opublikowana. Następnym uzgodnionym etapem
-jest kandydat AMC Public do odbioru przez Huberta Meyera (`HubertMeyer`, podpis
-commitów `cinkciarzpl`); dopiero po pozytywnym odbiorze ten sam commit ma zostać
-wydany w profilu AMC Test.
+Kandydat AMC Public jest zbudowany z czystego commitu, przeszedł pełną kontrolę
+integralności i kontrolowany start interfejsu oraz hosta. Instalator nie został
+uruchomiony, zainstalowany ani opublikowany. Oczekuje na odbiór Huberta Meyera
+(`HubertMeyer`, podpis commitów `cinkciarzpl`); dopiero po pozytywnym odbiorze
+ten sam commit ma zostać zbudowany i wydany w profilu AMC Test.
 
 ## Zakres
 
@@ -83,6 +83,23 @@ nazwy ani tytułu.
   0 ostrzeżeń, 0 błędów.
 - Celowane testy Pythona stanu, pełnej kopii, tytułu radia i tłumaczeń:
   90 zaliczonych, 1 kontrolowanie pominięty.
+- Dodatkowe testy profilu Public, pakowania, instalatora, kopii i tłumaczeń:
+  99 zaliczonych, 1 kontrolowanie pominięty i 1 niewybrany. Niewybrany test
+  wymaga `wxPython` w deweloperskim Pythonie; właściwa paczka przeszła później
+  rzeczywisty kontrolowany start swoim prywatnym runtime'em z `wxPython`.
+- Testy launchera i aktualizatora: 38 z 38 zaliczonych, w tym nowa blokada
+  zapisu `__pycache__` w katalogu programu.
+- Testy kontraktu buildera i instalatora: 22 z 22 zaliczone. Oba etapy odrzucają
+  każdy plik nieobjęty manifestem integralności.
+- Końcowa paczka Public: profil `public`, czysty commit `7f48d66b`, identyfikator
+  `9e86375d`, 1085 plików kontrolowanych i manifest, 424 037 758 bajtów. Po
+  kontrolowanym starcie liczba plików spoza manifestu wynosi dokładnie zero.
+- Instalator ma 123 624 769 bajtów. Niezależnie policzona suma SHA-256
+  `8787dbfe3aee778121ad628396b4ee8bf5237babb569dea29d830f1e1e5c9dae`
+  zgadza się w pliku integralności, manifeście aktualizacji i lokalnym
+  manifeście gotowości. Skan sekretów ma wynik `passed`.
+- Lokalna bramka wydania Public/stable została zaliczona w trybie bez publikacji.
+  Niczego nie wysłano do GitHuba.
 - Nie uruchamiano pełnej regresji ani widocznego interfejsu.
 
 ## Znane ograniczenia
@@ -100,7 +117,9 @@ nazwy ani tytułu.
 - Pierwsza paczka z tego etapu została świadomie odrzucona przed utworzeniem
   instalatora, ponieważ kontrolowany start pozostawił niepodpisane cache
   Pythona. Wynik nie jest kandydatem do odbioru ani publikacji.
-- Nie powstała paczka, instalator, lokalna instalacja ani wydanie GitHub.
+- Końcowa paczka i instalator są lokalnym kandydatem. Instalatora nie
+  uruchamiano; nie wykonano instalacji, ręcznego odbioru NVDA ani publikacji
+  GitHub.
 
 ## Zmienione pliki
 
@@ -111,7 +130,11 @@ nazwy ani tytułu.
   `LiteEngineHandlers.cs`;
 - interfejs i tłumaczenia: `wxlite/amc_wx_lite/gui.py` oraz katalogi językowe;
 - testy: `Program.cs`, `RadioLibraryMutationTests.cs`,
-  `test_current_radio_broadcast.py` i `test_i18n.py`;
+  `test_current_radio_broadcast.py`, `test_i18n.py`, testy launchera i kontraktu
+  instalatora;
+- wydanie: `PythonLaunchPlan.cs`, `Build-AMCBundle.ps1` i
+  `Build-AMCInstaller.ps1` — brak cache obok kodu i odmowa przy pliku spoza
+  manifestu;
 - blokada kompilacji: `FacebookPublicPageClient.cs`.
 
 ## Wersja i commit
@@ -119,7 +142,11 @@ nazwy ani tytułu.
 - PR #2: commity źródłowe `239c7e82`, `32fb6c04`, `f1c09348` po przeniesieniu
   na bieżącą gałąź.
 - Korekta po rzeczywistej playliście i niezależnych testach: `5428b278`.
-- Build: wyłącznie celowane projekty Release; nie powstał pakiet wydaniowy.
+- Trwały test wielu kanałów jednego dostawcy: `3a1deab4`.
+- Końcowa poprawka integralności budowy i źródło kandydata: `7f48d66b`.
+- Wersja użytkowa paczki i instalatora: `AMC Public — 29.10.2026, 19:05`.
+- Instalator:
+  `D:\Projekty Codex\AMC aktualizacje\AMC Public kandydat radio M3U poprawiony 2026-10-29\instalator\AMC-Public-2026-10-29-1905.exe`.
 - Instalacja i publikacja: nie wykonano.
 
 ## Projekt wpisu do listy zmian
