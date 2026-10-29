@@ -91,6 +91,26 @@ def test_session_order_round_trip_is_normalized_without_exposing_labels() -> Non
     assert "Sonos" not in raw["options"]["session_order"]
 
 
+def test_legacy_last_used_rate_does_not_become_the_default_of_every_session() -> None:
+    # Przed 6ce2241 ``rate`` było ostatnio użytą prędkością (np. 2x podcastu)
+    # i bez migracji radio na żywo startowało z 2x.
+    store, _ = temp_store()
+    store.path.write_text(json.dumps({
+        "version": 1,
+        "session_manager_version": 1,
+        "options": {"rate": 2.0, "volume": 70},
+    }), encoding="utf-8")
+
+    loaded = store.load()
+
+    assert loaded.options.rate == 1.0
+    assert loaded.options.volume == 70
+    store.save(loaded)
+    assert json.loads(store.path.read_text(encoding="utf-8"))["playback_rate_version"] == (
+        StateStore.PLAYBACK_RATE_VERSION
+    )
+
+
 def test_legacy_state_migration_preserves_order_and_does_not_disable_services() -> None:
     store, _ = temp_store()
     store.path.write_text(json.dumps({
@@ -657,7 +677,10 @@ def test_failed_save_keeps_previous_good_file() -> None:
 def test_out_of_range_values_are_clamped_on_load() -> None:
     store, directory = temp_store()
     (directory / StateStore.FILE_NAME).write_text(
-        json.dumps({"options": {"volume": 5000, "rate": 99, "timeshift_minutes": 0, "inter_track_silence_ms": 777}}),
+        json.dumps({
+            "playback_rate_version": StateStore.PLAYBACK_RATE_VERSION,
+            "options": {"volume": 5000, "rate": 99, "timeshift_minutes": 0, "inter_track_silence_ms": 777},
+        }),
         encoding="utf-8",
     )
     options = store.load().options

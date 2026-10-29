@@ -357,6 +357,7 @@ def _filter_ui_payload(payload: dict, sections: tuple[str, ...]) -> dict:
     result = {
         "version": StateStore.VERSION,
         "session_manager_version": StateStore.SESSION_MANAGER_VERSION,
+        "playback_rate_version": StateStore.PLAYBACK_RATE_VERSION,
     }
     raw_options = payload.get("options")
     options = raw_options if isinstance(raw_options, dict) else {}
@@ -380,6 +381,10 @@ def _merge_ui_payload(
     result = copy.deepcopy(current)
     result["version"] = StateStore.VERSION
     result["session_manager_version"] = StateStore.SESSION_MANAGER_VERSION
+    result["playback_rate_version"] = StateStore.PLAYBACK_RATE_VERSION
+    # Kopia sprzed znacznika niesie w ``rate`` ostatnio użytą prędkość, nie
+    # ustawienie; jej przywrócenie znów kazałoby startować wszystkiemu z 2x.
+    legacy_rate = imported.get("playback_rate_version") != StateStore.PLAYBACK_RATE_VERSION
 
     current_options = result.get("options")
     if not isinstance(current_options, dict):
@@ -391,7 +396,7 @@ def _merge_ui_payload(
         if _option_section(name) not in selected:
             continue
         current_options.pop(name, None)
-        if name in imported_options:
+        if name in imported_options and not (legacy_rate and name == "rate"):
             current_options[name] = copy.deepcopy(imported_options[name])
     result["options"] = current_options
 
@@ -410,6 +415,7 @@ def _validate_ui_payload_shape(payload: object) -> None:
     allowed = {
         "version",
         "session_manager_version",
+        "playback_rate_version",
         "options",
         *_TOP_LEVEL_SECTIONS,
     }
