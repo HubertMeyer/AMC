@@ -680,6 +680,7 @@
     "Włącz lub wyłącz wybraną sesję": "Enable or disable the selected session",
     "Włączono oznajmianie rozpoznanych utworów": "Announcement of recognized songs has been enabled",
     "Zachowano dane AMC Public": "AMC Public data retained",
+    "Zachowano dotychczasowe nazwy": "The previous names were retained",
     "Zakres eksportu danych AMC": "Scope of AMC data export",
     "Zaktualizowano": "Updated",
     "Zakładki bez zmian": "Bookmarks unchanged",
@@ -760,7 +761,9 @@
     "strumienia": "stream",
     "wybrany folder": "selected folder",
     "wykonać zaplanowanego nagrania": "make a scheduled recording",
-    "zaplanowane ": "scheduled "
+    "zaplanowane ": "scheduled ",
+    "Playlista nie zawiera nowych prawidłowych stacji": "The playlist contains no new valid stations",
+    "Playlista nie zawiera stacji radiowych": "The playlist contains no radio stations"
   },
   "templates": {
     "&Nazwa {arg0}:": "&Name {arg0}:",
@@ -781,7 +784,10 @@
     "Dodano do Biblioteki: {arg0} elementów": "Added to Library: {arg0} items",
     "Dodano do Biblioteki: {arg0} z {arg1} elementów": "Added to Library: {arg0} from {arg1} items",
     "Dodano do kolejki: {arg0}": "Added to queue: {arg0}",
-    "Dodano nowe stacje: {arg0}. Włączono istniejące w Bibliotece: {arg1}. Zachowano dotychczasowe nazwy": "New stations added: {arg0}. Enabled existing in the Library: {arg1}. The previous names were retained",
+    "Dodano nowe stacje: {arg0}": "New stations added: {arg0}",
+    "Włączono istniejące w Bibliotece: {arg0}": "Enabled existing in the Library: {arg0}",
+    "Uzupełniono nazwy: {arg0}": "Station names filled in: {arg0}",
+    "Pominięto: {arg0}": "Skipped: {arg0}",
     "Dodano plan {arg0}": "{arg0} plan added",
     "Dodano rozdział {arg0}: {arg1}": "{arg0} chapter added: {arg1}",
     "Dodano zakładkę {arg0}: {arg1}": "Added bookmark {arg0}: {arg1}",

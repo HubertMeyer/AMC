@@ -378,6 +378,13 @@ def test_dynamic_english_messages_preserve_runtime_values() -> None:
         ) == (
             "Finished scheduled recording of Radio Jazz. Files saved: 3"
         )
+        # Import radia: zdania tłumaczone osobno, a nie „Added nowe stacje”.
+        assert i18n.ui_text("Dodano nowe stacje: 0") == "New stations added: 0"
+        assert i18n.ui_text("Uzupełniono nazwy: 27") == "Station names filled in: 27"
+        assert i18n.ui_text("Pominięto: 3") == "Skipped: 3"
+        assert i18n.ui_text(
+            "Playlista nie zawiera nowych prawidłowych stacji"
+        ) == "The playlist contains no new valid stations"
     finally:
         i18n.configure("pl")
 

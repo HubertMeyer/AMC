@@ -75,7 +75,20 @@ internal static class LiteRadioLibraryMutation
                     continue;
                 }
                 sourceStationIds.Add(existingId);
-                sourceNames[existingId] = updateExistingTitles
+                // Starszy import M3U bez #EXTINF nazywał stację samym hostem.
+                // Ponowny import z prawdziwą nazwą (np. z icy-name) ją uzupełnia;
+                // nazw nadanych przez użytkownika nie ruszamy.
+                var replacesHostName = !updateExistingTitles
+                    && Uri.TryCreate(draft.Url, UriKind.Absolute, out var draftUri)
+                    && string.Equals(Text(existing, "name", "Name"), draftUri.Host, StringComparison.OrdinalIgnoreCase)
+                    && !string.Equals(draft.Name, draftUri.Host, StringComparison.OrdinalIgnoreCase);
+                if (replacesHostName)
+                {
+                    existing["name"] = draft.Name;
+                    updated.Add(existingId);
+                    changedInSourceOrder.Add(existingId);
+                }
+                sourceNames[existingId] = updateExistingTitles || replacesHostName
                     ? draft.Name
                     : Text(existing, "name", "Name");
 
@@ -92,7 +105,7 @@ internal static class LiteRadioLibraryMutation
 
                 if (Boolean(existing, "isInLibrary", "IsInLibrary"))
                 {
-                    skipped++;
+                    if (!replacesHostName) skipped++;
                     continue;
                 }
 
