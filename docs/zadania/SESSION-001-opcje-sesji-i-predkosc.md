@@ -5,7 +5,9 @@
 W trakcie — korekta po odbiorze NVDA jest zbudowana, zainstalowana i
 uruchomiona w zbiorczym AMC Test 2026-10-23; czeka na ponowny ręczny odbiór
 NVDA. `Ctrl+Alt+Enter` edytuje teraz tylko aktywną sesję, a dziedziczona
-prędkość ma krótką etykietę „Jak ustawienie ogólne”.
+prędkość ma krótką etykietę „Jak ustawienie ogólne”. Korekta migracji starej
+prędkości z 2026-10-29 jest zweryfikowana wyłącznie w źródłach i testach; nie
+została jeszcze spakowana, zainstalowana ani wydana.
 
 ## Zakres
 
@@ -30,6 +32,12 @@ ogólnego. Radio i sesje zewnętrzne pokazują wyłącznie opcje, które ich
 wykonawca rzeczywiście obsługuje. Urządzenie audio pozostaje osobnym wyborem
 pod `Shift+A`.
 
+Po aktualizacji zapis, w którym `rate` oznaczało ostatnio używaną prędkość,
+jest jednorazowo migrowany do normalnej prędkości 1×. Własna domyślna prędkość
+sesji, na przykład 2× dla Podcastów i YouTube, pozostaje w jej opcjach pod
+`Ctrl+Alt+Enter`. Import starej pełnej kopii nie przywraca historycznej
+prędkości i nie kasuje bieżącej wartości zapisanej już w nowym formacie.
+
 ## Uzasadnienie i decyzje
 
 - 2026-10-22: pole urządzenia audio z historycznego edytora nie jest
@@ -45,6 +53,13 @@ pod `Shift+A`.
   „Jak ustawienie ogólne”. Tekst typu „Jak ustawienie ogólne — 2,00 razy —
   szybciej” był poprawny obliczeniowo, lecz mylący jako nazwa wyboru i zostaje
   zastąpiony krótką etykietą stanu dziedziczenia.
+- 2026-10-29: PR #3 potwierdził lukę migracji po zmianie znaczenia `rate`.
+  Stan bez `playback_rate_version` jest starszym zapisem ostatnio używanej
+  prędkości i wraca do 1×. Poprawiono też import starej kopii: pomija jej
+  `rate`, ale zachowuje bieżącą wartość nowego formatu zamiast ją usuwać.
+- 2026-10-29: zapis PR #3 o instalacji w AMC Public z godziny 01:36 nie jest
+  dowodem wydania; commit powstał po 17:54. Korekta jest obecnie tylko w
+  źródłach i testach.
 - Ustawienie odcinka lub podcastu zachowuje pierwszeństwo przed ustawieniem
   sesji. Brak jawnej wartości w polu sesji oznacza dziedziczenie ustawienia
   ogólnego.
@@ -57,6 +72,10 @@ pod `Shift+A`.
   podłączenia. Obejmuje brak zbiorczego pola sesji, zapis tylko sesji aktywnej,
   dokładną etykietę dziedziczenia prędkości, początkowy fokus, Anuluj, zapis,
   odmowę silnika, trwałość profilu, menu, pomoc i skrót.
+- Korekta migracji z 2026-10-29: celowane testy `test_state_store.py`,
+  `test_full_backup.py`, `test_current_radio_broadcast.py` i `test_i18n.py`:
+  90 zaliczonych, 1 kontrolowanie pominięty. Nowy test wykrył i potwierdził
+  naprawę kasowania bieżącej prędkości podczas importu starej kopii.
 - Pełna regresja Pythona po korekcie:
   `1983 passed, 111 skipped, 11 subtests passed`.
   Pominięcia są oznaczonymi zależnościami opcjonalnymi, nie błędami.
@@ -110,6 +129,8 @@ pod `Shift+A`.
 - TIDAL, Spotify, Sonos i Frontier Smart mają obecnie wykonywalne zachowanie
   po wyjściu z odtwarzacza; WiiM nie ma opcji sesji, zgodnie z historycznym
   kontraktem urządzenia zewnętrznego.
+- Korekta migracji z 2026-10-29 nie została jeszcze zbudowana jako paczka,
+  zainstalowana ani odebrana ręcznie z NVDA.
 
 ## Zmienione pliki
 
@@ -130,11 +151,16 @@ pod `Shift+A`.
   `test_command_palette.py` oraz `test_menu_exposes_existing_actions.py`.
 - Dokumentacja: `wxlite/MAPA_1_1.md`, `wxlite/JAK_TESTOWAC.md`,
   `MAPA_KODU_PL.md`, `docs/zadania/README.md` i niniejszy rekord.
+- Migracja 2026-10-29: `wxlite/amc_wx_lite/state_store.py`,
+  `wxlite/amc_wx_lite/full_backup.py`, `wxlite/tests/test_state_store.py` oraz
+  `wxlite/tests/test_full_backup.py`.
 
 ## Wersja i commit
 
 - Pierwszy wspólny commit wdrożeniowy:
   `6ce22410bb80ac867504d15d17d890e9774d929e`.
+- Migracja starej prędkości: przeniesiony commit PR #3 `c36c8339`; korekta
+  zachowania starej kopii i test regresji: `5428b278`.
 - Korekta z 2026-10-23: commit źródeł i testów
   `d941c5212126c6d3ab5f8ed7a36e261ca05d9bd4`, przygotowany na bazie
   `b57ade090f3807f53dca9686a90f6e623e189ea6` wraz z poprawką YouTube.
@@ -165,6 +191,8 @@ pod `Shift+A`.
 - Ustawienie podcastu lub odcinka nadal ma pierwszeństwo przed ustawieniem
   całej sesji.
 - Bieżąca zmiana tempa nie przecieka już do domyślnego tempa innej sesji.
+- Aktualizacja starszego profilu przywraca normalną prędkość 1×, a import
+  starej kopii nie nadpisuje obecnej prędkości nowego formatu.
 - `Ctrl+Alt+Enter` edytuje wyłącznie aktywną sesję, bez dodatkowego pola
   „Konfigurowana sesja”.
 - Wariant dziedziczonej prędkości brzmi tylko „Jak ustawienie ogólne”, a jawna

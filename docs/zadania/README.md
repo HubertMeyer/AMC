@@ -140,6 +140,14 @@ do kontrolowanej archiwizacji opisanej w REL-003.
   Szczegóły:
   [RECOG-001-interakcje-z-rozpoznanymi-utworami.md](RECOG-001-interakcje-z-rozpoznanymi-utworami.md).
 
+- `RADIO-001` — **W trakcie; import nazw z ICY, tytuły audycji, kompilacja
+  LiteHosta i celowane testy są zaliczone, ale nie powstała paczka, instalacja
+  ani publikacja** — listy M3U z samymi adresami uzupełniają nazwy bez
+  nadpisywania nazw użytkownika, a kompatybilne radio przekazuje bieżący tytuł
+  do `NVDA+T`. Następny etap to kandydat AMC Public do odbioru Huberta, potem
+  ten sam commit w AMC Test. Szczegóły:
+  [RADIO-001-import-m3u-icy-i-tytuly.md](RADIO-001-import-m3u-icy-i-tytuly.md).
+
 - `REC-002` — **Zrobione i zainstalowane w AMC Test 26.10.2026, 13:32** —
   prawa strzałka w widoku `Nagrywane` i harmonogramach podaje format, nazwę
   pliku oraz folder bez powtarzania stacji i adresu. Szczegóły:
@@ -176,7 +184,9 @@ do kontrolowanej archiwizacji opisanej w REL-003.
 
 - `SESSION-001` — **W trakcie; korekta po odbiorze NVDA ma 76/76 testów
   celowanych, pełną regresję Pythona 1983/1983 i została zainstalowana w
-  zbiorczym AMC Test; czeka na ponowny odbiór NVDA** —
+  zbiorczym AMC Test; migracja starej prędkości i kopii z 29.10 ma dodatkowo
+  90 zaliczonych testów celowanych, lecz nie została jeszcze spakowana,
+  zainstalowana ani wydana; pozostaje ponowny odbiór NVDA** —
   pełne, wykonywalne opcje sesji z historycznego AMC oraz nowa domyślna
   prędkość osobno dla Plików i Podcastów. Szczegóły:
   [SESSION-001-opcje-sesji-i-predkosc.md](SESSION-001-opcje-sesji-i-predkosc.md).
