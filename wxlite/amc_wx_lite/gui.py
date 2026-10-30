@@ -23408,7 +23408,7 @@ class LiteFrame(wx.Frame):
             return
         path = files[0]
         self._switch_session(SessionId.FILES)
-        self._play_track(PlayTrack(path, f"file:{path}", Path(path).name))
+        self._run(self.navigator.play_local_file(path, Path(path).stem))
         self._open_folder(str(Path(path).parent), preferred_id=f"file:{path}")
 
     def _add_shell_files_to_queue(self, files: tuple[str, ...]) -> None:
@@ -24370,7 +24370,7 @@ class LiteFrame(wx.Frame):
                 return
             path = dialog.GetPath()
             self._switch_session(SessionId.FILES)
-            self._play_track(PlayTrack(path, f"file:{path}", Path(path).name))
+            self._run(self.navigator.play_local_file(path, Path(path).stem))
             folder = str(Path(path).parent)
             self._open_folder(folder, preferred_id=f"file:{path}")
 
