@@ -52,6 +52,9 @@ class FakePlainList:
         #: filtrowania, wiec wszystkie dotychczasowe pomiary mechanizmu list
         #: mierza dokladnie to samo co wczesniej.
         self.filter_query: str = ""
+        #: Jak w ``MediaListCtrl.__init__``: nic jeszcze nie zsynchronizowano.
+        self._synced_rows: object = None
+        self._synced_query: str | None = None
 
     def HasFocus(self) -> bool:  # noqa: N802 - API wx
         """Domyslnie BEZ fokusu: zapowiedz pustki dotyczy tylko listy pod reka."""
@@ -144,7 +147,8 @@ def make_ctrl(model: ListModel, selected: int = -1, focused: int | None = None):
         setattr(ctrl, name, getattr(MediaListCtrl, name).__get__(ctrl, FakePlainList))
     # ``_cursor_target``/``_move_cursor`` tez z produkcji -- inaczej testowalibysmy
     # wlasna atrape kursora.
-    for name in ("_cursor_target", "_move_cursor", "_wanted_visible_index",
+    for name in ("_cursor_target", "_move_cursor", "_move_cursor_quietly",
+                 "_wanted_visible_index",
                  "_is_index_selected",
                  "shown_item_id", "visible_count"):
         setattr(ctrl, name, getattr(MediaListCtrl, name).__get__(ctrl, FakePlainList))
@@ -199,6 +203,47 @@ def test_repeating_sync_many_times_still_does_nothing() -> None:
         ctrl.sync_rows()
 
     assert ctrl.list_ops() == []
+
+
+def test_unchanged_rows_do_not_rebuild_texts_on_every_tick(monkeypatch) -> None:
+    """42 866 utworów: tick statusu budował teksty wszystkich wierszy co sekundę."""
+    from amc_wx_lite import list_sync
+
+    model = ListModel()
+    ctrl = make_ctrl(model)
+    seed(ctrl, model, [track(str(i), f"Poz {i}") for i in range(300)])
+    builds = []
+    real = list_sync.model_row_texts
+    monkeypatch.setattr(
+        list_sync, "model_row_texts", lambda *args: builds.append(1) or real(*args)
+    )
+
+    for _ in range(5):
+        ctrl.sync_rows()
+    assert builds == [] and ctrl.list_ops() == []
+
+    ctrl.filter_query = "Poz 1"
+    ctrl.sync_rows()
+    assert len(builds) == 1, "nowy filtr przelicza listę"
+    for _ in range(3):
+        ctrl.sync_rows()
+    assert len(builds) == 1, "ten sam filtr na tick nie przelicza listy"
+    assert ctrl.model.selected_id == "1", "wybór, który wypadł z filtra, przechodzi na pierwszy widoczny"
+    ctrl.model.select_id("2")
+    ctrl.sync_rows()
+    assert ctrl.model.selected_id == "1", "wybór ukryty przez ten sam filtr wraca na widoczny"
+    assert len(builds) == 2, "ukryty wybór idzie pełną drogą"
+
+    ctrl.filter_query = ""
+    ctrl.sync_rows()
+    ctrl.filter_query = "   "
+    ctrl.sync_rows()
+    assert len(builds) == 3, "wyczyszczenie przelicza, a same spacje to wciąż brak filtra"
+    assert len(ctrl.texts) == 300
+
+    model.replace([track("nowy", "Nowy")] + model.rows)
+    ctrl.sync_rows()
+    assert len(builds) == 4 and ctrl.texts[0][0] == "Nowy"
 
 
 def test_empty_list_sync_is_also_silent() -> None:

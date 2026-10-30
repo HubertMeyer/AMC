@@ -1675,6 +1675,15 @@ class MediaListCtrl(wx.ListCtrl):
         self._shown_context: object = _BRAK_KONTEKSTU
         # ListModel.replace zawsze tworzy nowa liste, takze dla identycznych danych.
         self._shown_rows_source = self.model.rows
+        #: Lista modelu i znormalizowany filtr, ktore ``_shown`` NAPRAWDE
+        #: przedstawia. Ustawiane dopiero po sprawdzeniu kontrolki, wiec na
+        #: starcie puste: pierwsze ``sync_rows`` zawsze wypelnia liste.
+        self._synced_rows: object = None
+        self._synced_query: str | None = None
+        #: Teksty pokazanych wierszy wedlug obiektu ``Row`` (patrz
+        #: ``list_sync.model_row_texts``): zmiana jednego wiersza nie formatuje
+        #: od nowa calej listy.
+        self._row_text_cache: dict = {}
         #: Czy trwa NASZA aktualizacja. Wstawianie wierszy i ``SetItemState``
         #: powoduja, ze kontrolka wysyla ``EVT_LIST_ITEM_SELECTED`` tak samo jak
         #: przy ruchu uzytkownika. Bez tej bramki przejsciowy indeks (np. 0 po
@@ -1736,7 +1745,25 @@ class MediaListCtrl(wx.ListCtrl):
         na miejscu, nie wolamy nawet ``Freeze`` -- bo zamrozenie kontrolki tez
         jest operacja na kontrolce.
         """
-        desired = list_sync.model_row_texts(self.model, self.filter_query)
+        # Model nigdy nie zmienia listy w miejscu (``ListModel.replace`` zawsze
+        # tworzy nowa), a tekst wiersza zalezy tylko od wiersza i filtra. Ta sama
+        # lista i ten sam filtr to wiec te same teksty: zostaje najwyzej kursor.
+        # Bez tej bramki kazdy tick statusu i kazdy klawisz budowal od nowa
+        # teksty wszystkich wierszy, przy 42 866 utworach okolo 0,3 s co sekunde.
+        # Przy filtrze idziemy pelna droga tylko wtedy, gdy wybrany wiersz z niego
+        # wypadl, bo wtedy ponizej wybieramy pierwszy widoczny.
+        query = list_filter.normalized_query(self.filter_query)
+        if (
+            self.model.rows is getattr(self, "_synced_rows", None)
+            and query == getattr(self, "_synced_query", None)
+            and (not query or not self._shown or self._wanted_visible_index() >= 0)
+        ):
+            self._move_cursor_quietly(self._cursor_target())
+            return
+        row_texts = getattr(self, "_row_text_cache", None)
+        if not isinstance(row_texts, dict):
+            row_texts = self._row_text_cache = {}
+        desired = list_sync.model_row_texts(self.model, self.filter_query, row_texts)
         if self.filter_query and desired and not any(
             row.item_id == self.model.selected_id for row in desired
         ):
@@ -1754,6 +1781,9 @@ class MediaListCtrl(wx.ListCtrl):
             if self.model.rows is not getattr(self, "_shown_rows_source", None):
                 self._shown_context = context
                 self._shown_rows_source = self.model.rows
+            # Pusty plan: kontrolka pokazuje dokladnie te wiersze i ten filtr.
+            self._synced_rows = self.model.rows
+            self._synced_query = query
             if cursor is None:
                 # Nic sie nie zmienilo i kursor jest na miejscu: ZERO operacji.
                 # To jest cel calej zmiany -- sam komunikat, Ctrl+C czy tick
@@ -1761,12 +1791,7 @@ class MediaListCtrl(wx.ListCtrl):
                 # Brak operacji kontrolki nie wyklucza nowego, identycznego
                 # wyniku loadera. Kontekst takiego wyniku zapisano wyzej.
                 return
-            # Sam kursor: jedno przejscie stanu, bez przemalowania listy.
-            self.updating = True
-            try:
-                self._move_cursor(cursor)
-            finally:
-                self.updating = False
+            self._move_cursor_quietly(cursor)
             # Samo przesuniecie kursora nie zmienia obiektu model.rows.
             return
         # Zmiana struktury/tekstu to JEDNO przemalowanie, nie seria krokow.
@@ -1779,6 +1804,8 @@ class MediaListCtrl(wx.ListCtrl):
         try:
             self._apply_ops(ops, desired, context)
             self._shown = desired
+            self._synced_rows = self.model.rows
+            self._synced_query = query
             # Kontekst ZAAPLIKOWANY, razem z danymi. Nie wczesniej: gdyby lecial
             # przed nalozeniem planu, przerwana aktualizacja zostawilaby liste z
             # danymi starego widoku, a bramke z kontekstem nowego.
@@ -1975,6 +2002,16 @@ class MediaListCtrl(wx.ListCtrl):
             if shown.item_id == selected_id:
                 return index
         return -1
+
+    def _move_cursor_quietly(self, index: int | None) -> None:
+        """Sam kursor: jedno przejscie stanu, bez przemalowania listy."""
+        if index is None:
+            return
+        self.updating = True
+        try:
+            self._move_cursor(index)
+        finally:
+            self.updating = False
 
     def _move_cursor(self, index: int) -> None:
         """Przestaw zaznaczenie i fokus, ustawiajac TYLKO brakujace bity.
@@ -29062,15 +29099,29 @@ class LiteFrame(wx.Frame):
             return
         state = self.navigator.sessions[session_id]
         playing, paused = self._native_playback_snapshot(session_id)
+        # Ta sama lista i ten sam stan odtwarzania daja ten sam wynik. Liczenie
+        # go przy kazdym ticku i klawiszu przechodzilo po wszystkich wierszach
+        # (42 866 w duzej bibliotece) i porownywalo je wszystkie.
+        playback = (state.current_material_id, playing, paused)
+        last = getattr(self, "_playback_activity_inputs", None)
+        if (
+            isinstance(last, tuple)
+            and last[0] is session_id
+            and last[1] is state.model.rows
+            and last[2] == playback
+        ):
+            return
         rows = playback_activity_rows(
             state.model.rows,
             current_item_id=state.current_material_id,
             playing=playing,
             paused=paused,
         )
-        if rows == state.model.rows:
-            return
-        state.model.replace(rows, preferred_id=state.model.selected_id)
+        if rows != state.model.rows:
+            state.model.replace(rows, preferred_id=state.model.selected_id)
+        # Jeden wpis zamiast slownika sesji: trzymamy najwyzej liste ostatnio
+        # liczonej sesji, a nie stare listy sesji odlozonych na bok.
+        self._playback_activity_inputs = (session_id, state.model.rows, playback)
 
     def _refresh_native_playback_activity_view(
         self, session_id: SessionId | None = None
