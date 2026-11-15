@@ -1,7 +1,8 @@
 # Rejestr zadań AMC
 
-- `DOWNLOADS-003` — **15.11.2026: kod i testy celowane poprawki pobierania gotowe**.
-  Folder Radio Archiwisty i naprawa ścieżek Ctrl+J.
+- `DOWNLOADS-003` — **15.11.2026: poprawki pobierania wydane na GitHubie
+  dla AMC Test i AMC Public; lokalna instalacja oczekuje na użytkownika**.
+  Folder Radio Archiwisty i naprawa ścieżek Ctrl+J; Test zawiera Apple Music.
   [Opis i wyniki](DOWNLOADS-003-folder-radioarchiwisty-i-naprawa-historii.md).
 
 - `AM-007` — **15.11.2026: alpha.509 wydana w kanale Test; lokalna instalacja

@@ -1,9 +1,9 @@
 # DOWNLOADS-003 — folder Radio Archiwisty i naprawa Historii pobrań
 
 - Data zgłoszenia i korekty: 15.11.2026 po 18:00.
-- Produkt: AMC Test, aplikacja wxPython. Wersja: `0.1.0-alpha.510`.
-- Stan: źródła i testy celowane gotowe. Pakiet, instalator, instalacja,
-  publikacja i próba NVDA mają osobne wyniki poniżej.
+- Produkt: AMC Test i AMC Public, aplikacja wxPython. Wersja: `0.1.0-alpha.510`.
+- Stan: źródła, testy celowane, obie paczki, instalatory i wydania GitHub
+  gotowe. Lokalna instalacja i próba NVDA nieodbyte.
 
 ## Zachowanie i decyzje
 
@@ -29,6 +29,12 @@ Decyzja z 15.11.2026 uzupełnia `DOWNLOADS-001` i korektę użytkownika
 z 31.10.2026 w `DOWNLOADS-002`. Nie zmienia znaczenia `Ctrl+C` na liście
 pobrań. Odrębny folder Radio Archiwisty jest w istniejącej karcie Radio.
 
+Korekta użytkownika z 15.11.2026 zastępuje wcześniejszy plan wydania tylko
+AMC Test: poprawka pobierania jest w AMC Test i AMC Public. Test zawiera
+również wcześniejsze zmiany Apple Music, a Public nie zawiera Apple Music.
+Użytkownik polecił opublikować oba profile na GitHubie i samodzielnie
+zaktualizować później swoją instalację Test. Nie instalowano żadnego profilu.
+
 ## Dowody i ograniczenia
 
 - Analiza działającego profilu wykazała wpisy pobrań po 18:00 i wpisy,
@@ -52,11 +58,38 @@ pobrań. Odrębny folder Radio Archiwisty jest w istniejącej karcie Radio.
 - 15.11.2026: kompilacja hosta Release przeszła, 0 ostrzeżeń i 0 błędów.
 - 15.11.2026: celowany zestaw protokołu i bazy Podcastów przeszedł.
 - Pełna regresja: nieuruchomiona dla tego zadania.
-- Pakiet i instalator: oczekują na przygotowanie i weryfikację.
-- Instalacja lokalna: nieodbyta. Publikacja GitHub: nieodbyta.
+- Paczka Test: 4730 plików, profil Test, Radio Archiwista i Apple Music;
+  paczka Public: 3459 plików, profil Public, Radio Archiwista bez Apple
+  Music i bez hosta Apple Music. Obie mają `sourceDirty=false`, commit
+  `2b6b061db22523ed9cfb66d26e2808b3d7bf00a7`, pełną kontrolę
+  integralności i zaliczony ukryty start interfejsu oraz hosta.
+- Instalator Test: `AMC-Test-2026-11-15-2036.exe`, 218531931 bajtów,
+  SHA-256 `078ce7cddb4461552071192f7d83bc4623d02bac0d2b55e587d5fde41d7f8591`.
+  Instalator Public: `AMC-Public-2026-11-15-2040.exe`, 136550658 bajtów,
+  SHA-256 `85b24bb9eac43c5bb855a3e8e94771b5804e07f2c3cd5979802646d4e374475f`.
+  Oba mają `secretScan=passed`, zgodny profil, commit i wersję.
+- Commit źródłowy został wypchnięty na istniejącą gałąź GitHub i
+  potwierdzony przez API. Wydania opublikowano i odczytowo sprawdzono:
+  `test-2026.11.15.2036` jest wydaniem wstępnym, a
+  `public-2026.11.15.2040` zwykłym wydaniem kanału stable. Skrypt
+  potwierdził nazwy, rozmiary i stan `uploaded` trzech załączników
+  każdego wydania. Lokalne sumy SHA-256 są w opisie i manifestach wydań.
+- Lokalna instalacja: nieodbyta na życzenie użytkownika. Działający AMC
+  Test pozostaje przy wcześniejszej wersji. Publikacja źródeł i instalatorów
+  nie jest dowodem instalacji ani działania klawiszy w NVDA.
 - NVDA: do sprawdzenia fokus po otwarciu Ctrl+J, Enter, obie operacje
   schowka, wybór folderu i odczyt wartości, wskazanie przeniesionego
   pliku, anulowanie, powrót fokusu i ponowne otwarcie.
+
+Lokalizacje instalatorów:
+
+- `D:\Projekty Codex\AMC - integracja wxPython\publish\installers\test-alpha510-20261115-downloads\AMC-Test-2026-11-15-2036.exe`
+- `D:\Projekty Codex\AMC - integracja wxPython\publish\installers\public-alpha510-20261115-downloads\AMC-Public-2026-11-15-2040.exe`
+
+Wydania GitHub:
+
+- `https://github.com/michalkasperczak/AMC/releases/tag/test-2026.11.15.2036`
+- `https://github.com/michalkasperczak/AMC/releases/tag/public-2026.11.15.2040`
 
 ## Projekt instrukcji i opisu zmian do korekty użytkownika
 
