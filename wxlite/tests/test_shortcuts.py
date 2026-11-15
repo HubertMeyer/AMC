@@ -727,7 +727,7 @@ def test_keyboard_help_uses_only_user_facing_labels() -> None:
     assert Action.SEARCH_CURRENT.value not in message
     assert keyboard_help_announcement(
         Chord("F", ctrl=True), Action.SEARCH_CURRENT, "Apple Music"
-    ) == "Ctrl+F. Szukaj w całej Bibliotece Apple Music. Apple Music"
+    ) == "Ctrl+F. Szukaj w Bibliotece i wśród utworów katalogu Apple Music. Apple Music"
     assert describe_action(Action.KEYBOARD_HELP) == (
         "Włącz lub wyłącz Pomoc klawiatury"
     )

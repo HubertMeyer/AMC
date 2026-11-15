@@ -3170,7 +3170,7 @@ def describe_action(
         (session_label or "").casefold() == "apple music"
         and action is Action.SEARCH_CURRENT
     ):
-        return i18n.ui_text("Szukaj w całej Bibliotece Apple Music")
+        return i18n.ui_text("Szukaj w Bibliotece i wśród utworów katalogu Apple Music")
     if (session_label or "").casefold() == "apple music" and action is Action.ACTIVATE:
         return i18n.ui_text(
             "Otwórz kategorię, album lub playlistę Apple Music; na utworze pokaż sposób otwarcia w oryginalnej aplikacji"

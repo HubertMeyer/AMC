@@ -1,5 +1,9 @@
 # Rejestr zadań AMC
 
+- `AM-007` — **15.11.2026: źródła i testy gotowe; bez wydania i odbioru NVDA** —
+  Ctrl+F obejmuje Bibliotekę i utwory katalogu Apple Music, a listy pobierają
+  po 150 pozycji. [Opis i wyniki](AM-007-wyszukiwanie-i-listy-150.md).
+
 - `POD-PERF-20261114` — **alpha.507 opublikowana i zainstalowana w Test i Public; odbiór wydajności oraz NVDA otwarty** — `0` wyłącza automatyczne sprawdzanie podcastów i YouTube, dodatnia liczba ustala takt; F5 i Ctrl+F5 działają na żądanie. Pozostaje koszt pełnego wczytania i przeliczenia około 92 tys. odcinków przy zapisie porcji odświeżenia; czasu natywnej listy i NVDA jeszcze nie zmierzono. [Pomiary, porównanie i ograniczenia](POD-PERF-20261114-odswiezanie-duzej-biblioteki.md).
 
 - `QUEUE-002` — **14.11.2026: alpha.504 wydane i zainstalowane; odbiór NVDA otwarty** — przenoszenie i Delete w kolejkach, czas trwania w `Ctrl+Q` i playlistach. Zastępuje wcześniejszy wpis „oczekuje na osobny przegląd”. [Opis i wyniki](QUEUE-002-przeglad-kolejek-sesji-internetowych.md).

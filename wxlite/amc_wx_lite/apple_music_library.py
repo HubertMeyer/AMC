@@ -8,8 +8,9 @@ Only verified song/album membership changes are exposed beyond reading.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 import importlib
+from typing import Callable
 from urllib.parse import parse_qsl, quote, urlencode, urlsplit
 
 from .apple_music_credentials import (
@@ -83,6 +84,27 @@ class AppleMusicLibraryResult:
     @property
     def rows(self) -> tuple[Row, ...]:
         return tuple(record.row for record in self.records)
+
+
+def read_apple_music_batch(
+    read_page: Callable[[AppleMusicPageCursor | None], AppleMusicLibraryResult],
+    cursor: AppleMusicPageCursor | None = None,
+) -> AppleMusicLibraryResult:
+    """Show up to 150 items using Apple's bounded 100 + 50 page requests."""
+
+    first_cursor = replace(cursor, _page_size=100) if cursor else None
+    first = read_page(first_cursor)
+    if first.next_cursor is None or len(first.records) >= 150:
+        return first
+    second_cursor = replace(
+        first.next_cursor, _page_size=min(100, 150 - len(first.records))
+    )
+    second = read_page(second_cursor)
+    return AppleMusicLibraryResult(
+        heading=first.heading,
+        records=(*first.records, *second.records),
+        next_cursor=second.next_cursor,
+    )
 
 
 @dataclass(frozen=True, slots=True)
@@ -193,6 +215,35 @@ class AppleMusicLibraryClient:
                 {"term": term, "types": ",".join(types), "limit": 25, "l": "pl-PL"},
             )
             groups = envelope.get("results") if isinstance(envelope, dict) else None
+            if not isinstance(groups, dict):
+                raise AppleMusicLibraryError()
+            found: list[AppleMusicRecord] = []
+            seen: set[str] = set()
+            for kind in types:
+                group = groups.get(kind)
+                if group is None:
+                    continue
+                if not isinstance(group, dict):
+                    raise AppleMusicLibraryError()
+                for record in records_from_resources(group.get("data")):
+                    if record.row.item_id not in seen:
+                        seen.add(record.row.item_id)
+                        found.append(record)
+            return tuple(found)
+        except AppleMusicLibraryError:
+            raise
+        except Exception:
+            raise AppleMusicLibraryError() from None
+
+    def search_catalog(self, query: str) -> tuple[AppleMusicRecord, ...]:
+        """Search playable songs in the account's storefront."""
+
+        term = query.strip() if isinstance(query, str) else ""
+        if not term or len(term) > 256:
+            raise AppleMusicLibraryError()
+        types = ("songs",)
+        try:
+            groups = self._client.search(term, types=list(types), limit=25)
             if not isinstance(groups, dict):
                 raise AppleMusicLibraryError()
             found: list[AppleMusicRecord] = []

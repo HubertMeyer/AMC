@@ -7,6 +7,7 @@ from types import SimpleNamespace
 import tempfile
 import unittest
 from pathlib import Path
+from urllib.parse import parse_qs, urlsplit
 
 from amc_wx_lite.apple_music_credentials import AppleMusicWebCredentials
 from amc_wx_lite.apple_music_library import (
@@ -15,6 +16,7 @@ from amc_wx_lite.apple_music_library import (
     AppleMusicPageCursor,
     library_membership_direction,
     open_apple_music_library,
+    read_apple_music_batch,
 )
 from amc_wx_lite.apple_music_source import records_from_resources
 from amc_wx_lite.profile_layout import private_sandbox
@@ -75,6 +77,12 @@ class ExternalClient:
     def current_user_playlists(self):
         self.calls.append("playlists")
         return [self._resource("library-playlists", "p.list", "Moja lista")]
+
+    def search(self, query, *, types, limit):
+        self.calls.append(("catalog-search", query, tuple(types), limit))
+        return {"songs": {"data": [self._resource(
+            "songs", "123456", "Utwór z katalogu"
+        )]}}
 
     def playlist_tracks(self, playlist_id: str):
         self.calls.append(("playlist", playlist_id))
@@ -289,6 +297,54 @@ class AppleMusicLibraryTests(unittest.TestCase):
         with self.assertRaises(AppleMusicLibraryError) as caught:
             guarded.view_page("songs")
         self.assertNotIn(PRIVATE_TOKEN, str(caught.exception))
+
+    def test_catalog_search_returns_safe_records_outside_library(self) -> None:
+        library = self.open()
+        records = library.search_catalog("  Utwór  ")
+
+        self.assertEqual([record.row.title for record in records],
+                         ["Utwór z katalogu"])
+        self.assertEqual(records[0].target.catalog_id, "123456")
+        self.assertIn(("catalog-search", "Utwór",
+                       ("songs",), 25),
+                      ExternalClient.last_instance.calls)
+        self.assertNotIn(PRIVATE_TOKEN, str(records))
+
+    def test_visible_batch_reads_150_then_next_150_without_losing_offset(self) -> None:
+        class BatchedClient(ExternalClient):
+            def _get(self, path, params=None):
+                query = parse_qs(urlsplit(path).query)
+                offset = int(query.get("offset", ["0"])[0])
+                limit = int(query.get("limit", [str(params["limit"])])[0]) if params else int(query["limit"][0])
+                self.calls.append((offset, limit))
+                end = min(offset + limit, 320)
+                data = [self._resource("library-songs", f"i.{index}", f"Utwór {index}")
+                        for index in range(offset, end)]
+                result = {"data": data}
+                if end < 320:
+                    result["next"] = f"/v1/me/library/songs?offset={end}"
+                return result
+
+        module = SimpleNamespace(
+            AppleMusicCredentials=ExternalCredentials,
+            AppleMusic=BatchedClient,
+        )
+        library = open_apple_music_library(
+            self.layout, profile=TEST_PROFILE,
+            store=FakeStore(credentials()), client_module=module,
+        )
+        read_page = lambda cursor: library.view_page("songs", cursor=cursor)
+        first = read_apple_music_batch(read_page)
+        second = read_apple_music_batch(read_page, first.next_cursor)
+        third = read_apple_music_batch(read_page, second.next_cursor)
+
+        self.assertEqual((len(first.records), len(second.records), len(third.records)),
+                         (150, 150, 20))
+        self.assertEqual(second.records[0].row.title, "Utwór 150")
+        self.assertIsNone(third.next_cursor)
+        self.assertEqual(ExternalClient.last_instance.calls,
+                         [(0, 100), (100, 50), (150, 100),
+                          (250, 50), (300, 100)])
 
     def test_playlist_pages_are_tied_to_one_private_playlist(self) -> None:
         library = self.open()

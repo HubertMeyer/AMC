@@ -8,6 +8,7 @@ import amc_wx_lite.gui as gui_module
 import pytest
 from amc_wx_lite.gui import LiteFrame
 from amc_wx_lite.apple_music_source import records_from_resources
+from amc_wx_lite.apple_music_library import AppleMusicLibraryError
 from amc_wx_lite.list_model import Row
 from amc_wx_lite.navigation import (
     LibraryView,
@@ -191,7 +192,8 @@ def test_apple_music_ctrl_f_adds_server_hits_outside_loaded_page(
     monkeypatch.setattr(
         gui_module, "open_apple_music_library",
         lambda _layout: nullcontext(SimpleNamespace(
-            search_library=lambda query: searched.append(query) or (record,)
+            search_library=lambda query: searched.append(query) or (record,),
+            search_catalog=lambda _query: (),
         )),
     )
 
@@ -228,6 +230,62 @@ def test_apple_music_ctrl_f_adds_server_hits_outside_loaded_page(
     assert shown[0][0][0].remote_kind == "appleMusicSearch"
     assert shown[0][1] == ()
     assert frame._apple_music_records[record.row.item_id] is record
+
+
+def test_apple_music_ctrl_f_keeps_catalog_hits_if_library_search_fails(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    record = records_from_resources([{
+        "id": "123456", "type": "songs",
+        "attributes": {"name": "W katalogu"},
+    }])[0]
+    nav = Navigator()
+    nav.active = SessionId.APPLE_MUSIC
+
+    def library_failure(_query):
+        raise AppleMusicLibraryError()
+
+    monkeypatch.setattr(
+        gui_module, "open_apple_music_library",
+        lambda _layout: nullcontext(SimpleNamespace(
+            search_library=library_failure,
+            search_catalog=lambda _query: (record,),
+        )),
+    )
+
+    class Runner:
+        @staticmethod
+        def submit(_name, work, done, _failed):
+            done(work())
+
+    shown = []
+    frame = SimpleNamespace(
+        navigator=nav,
+        layout=object(),
+        search_sources=SimpleNamespace(
+            collect=lambda _sessions: SearchCollection((), ())
+        ),
+        runner=Runner(),
+        _search_dialog_alive=lambda _dialog: True,
+        _apple_music_records={},
+        _apple_music_search_rows=(),
+    )
+    dialog = SimpleNamespace(
+        catalog=None,
+        show_results=lambda entries, warnings: shown.append((entries, warnings)),
+    )
+
+    LiteFrame._run_search_query(
+        frame, "W katalogu", dialog,
+        all_services=False,
+        session_before=SessionId.APPLE_MUSIC,
+    )
+
+    entries, warnings = shown[0]
+    assert len(entries) == 1
+    assert entries[0].result_kind_label == "Utwór z katalogu"
+    assert warnings == ("Nie udało się przeszukać Biblioteki Apple Music",)
+    assert frame._apple_music_search_rows == (record.row,)
 
 
 def test_apple_music_search_enter_never_uses_podcast_result_handler() -> None:

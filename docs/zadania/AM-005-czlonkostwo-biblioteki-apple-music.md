@@ -32,6 +32,10 @@
 - Ścieżka dodawania jest gotowa dla rekordów katalogowych, lecz obecny interfejs
   Apple Music nie ma jeszcze pełnego wyszukiwania katalogu. W bieżących listach
   częściej dostępne będzie usuwanie niż ponowne dodanie.
+
+Korekta z 15.11.2026: przygotowane źródła AM-007 dodają do `Ctrl+F` utwory
+z katalogu regionu konta. Powyższe ograniczenie pozostaje prawdziwe dla
+albumów, wykonawców i playlist katalogowych oraz do czasu wydania nowej wersji.
 - `Ctrl+U` i `Ctrl+Shift+U` pozostają niedostępne. Nie wolno utożsamiać nowych
   Ulubionych Apple z samym członkostwem Biblioteki.
 - Odtwarzanie Enterem, `Shift+A`, kolejka i transport są poza tym zadaniem.

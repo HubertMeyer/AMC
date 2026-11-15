@@ -296,6 +296,7 @@ if "session.apple-music" in _RELEASE_PROFILE.capabilities:
         AppleMusicLibraryError,
         library_membership_direction,
         open_apple_music_library,
+        read_apple_music_batch,
     )
     from .apple_music_source import AppleMusicRecord
 from .wiim_source import (
@@ -2509,6 +2510,9 @@ class SearchDialog(wx.Dialog):
         self.results.SetLabel("Wyniki wyszukiwania")
         self.results.SetName("Wyniki wyszukiwania")
         apple_results_help = (
+            "Wyniki z Biblioteki oraz utwory z katalogu Apple Music, "
+            "do 25 każdego rodzaju w każdym źródle. "
+            "Doprecyzuj tekst, aby zawęzić wyniki. "
             "Strzałki wybierają wynik. Enter pokazuje wynik na liście "
             "Apple Music. Alt+Enter podaje informacje o wyniku. "
             "Ctrl+L otwiera Bibliotekę. Escape zamyka okno."
@@ -12818,20 +12822,50 @@ class LiteFrame(wx.Frame):
             if SessionId.APPLE_MUSIC in sessions and not all_services:
                 try:
                     with open_apple_music_library(self.layout) as library:
-                        apple_music_records = library.search_library(query)
+                        library_records: tuple[AppleMusicRecord, ...] = ()
+                        catalog_records: tuple[AppleMusicRecord, ...] = ()
+                        try:
+                            library_records = library.search_library(query)
+                        except AppleMusicLibraryError:
+                            warnings.append(
+                                "Nie udało się przeszukać Biblioteki Apple Music"
+                            )
+                        try:
+                            catalog_records = library.search_catalog(query)
+                        except AppleMusicLibraryError:
+                            warnings.append(
+                                "Nie udało się przeszukać katalogu Apple Music"
+                            )
                     known = {candidate.row.item_id for candidate in results}
-                    for record in apple_music_records:
+                    seen_catalog = {
+                        (record.row.kind, record.target.catalog_id)
+                        for record in library_records
+                        if record.target.catalog_id
+                    }
+                    added: list[AppleMusicRecord] = []
+                    for record in (*library_records, *catalog_records):
                         if record.row.item_id in known:
                             continue
+                        catalog_key = (record.row.kind, record.target.catalog_id)
+                        if record in catalog_records and catalog_key in seen_catalog:
+                            continue
                         known.add(record.row.item_id)
+                        if record.target.catalog_id:
+                            seen_catalog.add(catalog_key)
+                        added.append(record)
                         results.append(SearchEntry(
                             SessionId.APPLE_MUSIC,
                             record.row,
                             LibraryView.APPLE_MUSIC_CONTAINER,
                             remote_kind="appleMusicSearch",
+                            result_kind_label=(
+                                f"{record.row.kind_label.capitalize()} z katalogu"
+                                if record in catalog_records else ""
+                            ),
                         ))
+                    apple_music_records = tuple(added)
                 except AppleMusicLibraryError:
-                    warnings.append("Nie udało się przeszukać Biblioteki Apple Music")
+                    warnings.append("Nie udało się otworzyć Apple Music")
             if SessionId.RADIO in sessions:
                 client = self.client
                 if client is None:
@@ -15974,7 +16008,11 @@ class LiteFrame(wx.Frame):
 
         def work():
             with open_apple_music_library(self.layout) as library:
-                return library.view_page(intent.view, cursor=cursor)
+                return read_apple_music_batch(
+                    lambda page_cursor: library.view_page(
+                        intent.view, cursor=page_cursor
+                    ), cursor,
+                )
 
         def done(result) -> None:
             if (
@@ -16057,7 +16095,11 @@ class LiteFrame(wx.Frame):
 
         def work():
             with open_apple_music_library(self.layout) as library:
-                return library.playlist_tracks_page(playlist, cursor=cursor)
+                return read_apple_music_batch(
+                    lambda page_cursor: library.playlist_tracks_page(
+                        playlist, cursor=page_cursor
+                    ), cursor,
+                )
 
         def done(result) -> None:
             if (
@@ -16120,7 +16162,11 @@ class LiteFrame(wx.Frame):
 
         def work():
             with open_apple_music_library(self.layout) as library:
-                return library.album_tracks_page(album, cursor=cursor)
+                return read_apple_music_batch(
+                    lambda page_cursor: library.album_tracks_page(
+                        album, cursor=page_cursor
+                    ), cursor,
+                )
 
         def done(result) -> None:
             if (
