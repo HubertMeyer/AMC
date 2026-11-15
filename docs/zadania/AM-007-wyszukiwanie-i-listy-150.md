@@ -52,7 +52,7 @@ potwierdzenia, że oficjalne Apple Music odtworzy dokładnie wskazany utwór.
   strzałki, Enter, Escape, powrót fokusu i ponowne otwarcie. Warto użyć
   dokładnego zapytania, dla którego użytkownik wcześniej słyszał brak wyników.
 - Wersja wydana: nadal alpha.507; zmiana nie jest w niej zainstalowana.
-- Commit i wydanie: do uzupełnienia po zatwierdzeniu zmian w repozytorium.
+- Commit źródeł: `dc166908`. Wydanie: jeszcze nie przygotowano.
 
 ## Projekt instrukcji i listy zmian — do korekty użytkownika
 
