@@ -145,6 +145,7 @@ def test_context_menu_has_explicit_user_facing_original_action() -> None:
 
     frame = gui.LiteFrame.__new__(gui.LiteFrame)
     frame.navigator = navigator
+    frame._apple_music_records = {record.row.item_id: record}
     frame._refresh_menu_state = lambda: None
     frame._menu_items = [
         (Native(label), menu_model.MenuItem(
@@ -157,7 +158,10 @@ def test_context_menu_has_explicit_user_facing_original_action() -> None:
     ]
     groups = frame._context_menu_command_groups(player=False)
     labels = [command.label for group in groups for command in group]
-    assert labels == ["Otwórz utwór w oryginalnym Apple Music"]
+    assert labels == [
+        "Otwórz utwór w oryginalnym Apple Music",
+        "Powiązania Apple Music…",
+    ]
     assert gui._LIST_CONTEXT_ACTION_GROUPS[0][0] is Action.APPLE_MUSIC_OPEN_ORIGINAL
 
 

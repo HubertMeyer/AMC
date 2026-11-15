@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, replace
 import importlib
+import re
 from typing import Callable
 from urllib.parse import parse_qsl, quote, urlencode, urlsplit
 
@@ -38,6 +39,12 @@ _LIBRARY_PAGE_PATHS: dict[str, str] = {
 }
 _AMP_API_HOST = "amp-api.music.apple.com"
 _MAX_CURSOR_LENGTH = 16 * 1024
+_CATALOG_ARTIST_VIEWS = {
+    "full-albums": "Albumy",
+    "singles": "Single i EP",
+    "top-songs": "Popularne utwory",
+    "featured-playlists": "Playlisty z wykonawcą",
+}
 
 
 class AppleMusicLibraryError(RuntimeError):
@@ -86,6 +93,18 @@ class AppleMusicLibraryResult:
         return tuple(record.row for record in self.records)
 
 
+@dataclass(frozen=True, slots=True, repr=False)
+class AppleMusicRelationChoice:
+    """Intentional spoken label and private target for a search relation."""
+
+    label: str
+    record: AppleMusicRecord
+    view: str = ""
+
+    def __str__(self) -> str:
+        return self.label
+
+
 def read_apple_music_batch(
     read_page: Callable[[AppleMusicPageCursor | None], AppleMusicLibraryResult],
     cursor: AppleMusicPageCursor | None = None,
@@ -120,6 +139,21 @@ class AppleMusicLibraryClient:
 
     def __init__(self, client: object) -> None:
         self._client = client
+        self._storefront_code: str | None = None
+
+    def _catalog_base(self) -> str:
+        if self._storefront_code is None:
+            try:
+                raw = self._client.current_user_storefront()
+                code = raw.get("id") if isinstance(raw, dict) else None
+                if not isinstance(code, str) or not re.fullmatch(r"[a-z]{2}", code):
+                    raise AppleMusicLibraryError()
+                self._storefront_code = code
+            except AppleMusicLibraryError:
+                raise
+            except Exception:
+                raise AppleMusicLibraryError() from None
+        return f"/v1/catalog/{self._storefront_code}"
 
     def view(self, view: str) -> AppleMusicLibraryResult:
         spec = _LIBRARY_VIEWS.get(view)
@@ -236,12 +270,12 @@ class AppleMusicLibraryClient:
             raise AppleMusicLibraryError() from None
 
     def search_catalog(self, query: str) -> tuple[AppleMusicRecord, ...]:
-        """Search playable songs in the account's storefront."""
+        """Search navigable resources in the account's storefront."""
 
         term = query.strip() if isinstance(query, str) else ""
         if not term or len(term) > 256:
             raise AppleMusicLibraryError()
-        types = ("songs",)
+        types = ("artists", "albums", "playlists", "songs")
         try:
             groups = self._client.search(term, types=list(types), limit=25)
             if not isinstance(groups, dict):
@@ -264,6 +298,104 @@ class AppleMusicLibraryClient:
         except Exception:
             raise AppleMusicLibraryError() from None
 
+    def resolve_catalog_artist(self, artist: AppleMusicRecord) -> AppleMusicRecord:
+        """Resolve one library artist by exact public name without guessing."""
+
+        if artist.target.resource_type == "artists":
+            return artist
+        if artist.target.resource_type != "library-artists":
+            raise AppleMusicLibraryError()
+        matches = tuple(
+            record for record in self.search_catalog(artist.row.title)
+            if record.target.resource_type == "artists"
+            and record.row.title.casefold() == artist.row.title.casefold()
+        )
+        if len(matches) != 1:
+            raise AppleMusicLibraryError()
+        return matches[0]
+
+    def artist_view_page(
+        self,
+        artist: AppleMusicRecord,
+        view: str,
+        *,
+        cursor: AppleMusicPageCursor | None = None,
+        page_size: int = 100,
+    ) -> AppleMusicLibraryResult:
+        """Read a named catalogue view of one artist with a bounded cursor."""
+
+        if (
+            artist.target.resource_type != "artists"
+            or view not in _CATALOG_ARTIST_VIEWS
+            or type(page_size) is not int
+            or not 1 <= page_size <= 100
+        ):
+            raise AppleMusicLibraryError()
+        base_path = (
+            f"{self._catalog_base()}/artists/"
+            + quote(artist.target.resource_id, safe="")
+            + f"/view/{view}"
+        )
+        scope = f"artist-view:{artist.target.resource_id}:{view}"
+        if cursor is None:
+            path = base_path
+            params: dict[str, object] | None = {"l": "pl-PL", "limit": page_size}
+            effective_size = page_size
+        else:
+            if (
+                not isinstance(cursor, AppleMusicPageCursor)
+                or cursor.view != scope
+                or cursor._base_path != base_path
+            ):
+                raise AppleMusicLibraryError()
+            path = _continuation_path(cursor, base_path)
+            params = None
+            effective_size = cursor._page_size
+        try:
+            envelope = self._client._get(path, params)
+            raw = envelope.get("data") if isinstance(envelope, dict) else None
+            if not isinstance(raw, list):
+                raise AppleMusicLibraryError()
+            return AppleMusicLibraryResult(
+                heading=f"{_CATALOG_ARTIST_VIEWS[view]}: {artist.row.title}",
+                records=records_from_resources(raw),
+                next_cursor=_page_cursor(
+                    scope, envelope.get("next"), base_path, effective_size
+                ),
+            )
+        except AppleMusicLibraryError:
+            raise
+        except Exception:
+            raise AppleMusicLibraryError() from None
+
+    def song_relations(self, song: AppleMusicRecord) -> tuple[AppleMusicRecord, ...]:
+        """Resolve a song's album and artist to named, safe records."""
+
+        catalog_id = song.target.catalog_id
+        if song.row.kind != "track" or not catalog_id or not catalog_id.isdigit():
+            return ()
+        path = f"{self._catalog_base()}/songs/{quote(catalog_id, safe='')}"
+        try:
+            envelope = self._client._get(
+                path, {"include": "albums,artists", "l": "pl-PL"}
+            )
+            data = envelope.get("data") if isinstance(envelope, dict) else None
+            resource = data[0] if isinstance(data, list) and data else None
+            relations = resource.get("relationships") if isinstance(resource, dict) else None
+            if not isinstance(relations, dict):
+                raise AppleMusicLibraryError()
+            found: list[AppleMusicRecord] = []
+            for kind in ("albums", "artists"):
+                group = relations.get(kind)
+                raw = group.get("data") if isinstance(group, dict) else None
+                if isinstance(raw, list):
+                    found.extend(records_from_resources(raw))
+            return tuple(found)
+        except AppleMusicLibraryError:
+            raise
+        except Exception:
+            raise AppleMusicLibraryError() from None
+
     def playlist_tracks_page(
         self,
         playlist: AppleMusicRecord,
@@ -275,15 +407,18 @@ class AppleMusicLibraryClient:
 
         target = playlist.target
         if (
-            target.resource_type != "library-playlists"
-            or not target.from_library
+            target.resource_type not in {"library-playlists", "playlists"}
             or isinstance(page_size, bool)
             or not isinstance(page_size, int)
             or not 1 <= page_size <= 100
         ):
             raise AppleMusicLibraryError()
+        prefix = (
+            "/v1/me/library"
+            if target.from_library else self._catalog_base()
+        )
         base_path = (
-            "/v1/me/library/playlists/"
+            prefix + "/playlists/"
             + quote(target.resource_id, safe="")
             + "/tracks"
         )
@@ -336,15 +471,18 @@ class AppleMusicLibraryClient:
 
         target = album.target
         if (
-            target.resource_type != "library-albums"
-            or not target.from_library
+            target.resource_type not in {"library-albums", "albums"}
             or isinstance(page_size, bool)
             or not isinstance(page_size, int)
             or not 1 <= page_size <= 100
         ):
             raise AppleMusicLibraryError()
+        prefix = (
+            "/v1/me/library"
+            if target.from_library else self._catalog_base()
+        )
         base_path = (
-            "/v1/me/library/albums/"
+            prefix + "/albums/"
             + quote(target.resource_id, safe="")
             + "/tracks"
         )
@@ -520,7 +658,13 @@ def _page_cursor(
         or any(character in value for character in ("\r", "\n", "\x00"))
     ):
         raise AppleMusicLibraryError()
-    if not isinstance(base_path, str) or not base_path.startswith("/v1/me/library/"):
+    if (
+        not isinstance(base_path, str)
+        or not (
+            base_path.startswith("/v1/me/library/")
+            or re.match(r"/v1/catalog/[a-z]{2}/", base_path)
+        )
+    ):
         raise AppleMusicLibraryError()
     parsed = urlsplit(value)
     if parsed.fragment or parsed.username or parsed.password:

@@ -306,9 +306,82 @@ class AppleMusicLibraryTests(unittest.TestCase):
                          ["Utwór z katalogu"])
         self.assertEqual(records[0].target.catalog_id, "123456")
         self.assertIn(("catalog-search", "Utwór",
-                       ("songs",), 25),
+                       ("artists", "albums", "playlists", "songs"), 25),
                       ExternalClient.last_instance.calls)
         self.assertNotIn(PRIVATE_TOKEN, str(records))
+
+    def test_artist_album_playlist_and_song_relations_form_a_catalog_hierarchy(self) -> None:
+        class HierarchyClient(ExternalClient):
+            def current_user_storefront(self):
+                return {"id": "pl"}
+
+            def search(self, query, *, types, limit):
+                self.calls.append(("search", query, tuple(types), limit))
+                resources = {
+                    "artists": self._resource("artists", "123", "Bryan Adams"),
+                    "albums": self._resource("albums", "456", "Album"),
+                    "playlists": self._resource("playlists", "pl.1", "Playlista"),
+                    "songs": self._resource("songs", "789", "Utwór"),
+                }
+                return {kind: {"data": [resources[kind]]} for kind in types}
+
+            def _get(self, path, params=None):
+                self.calls.append(("get", path, params))
+                if path.endswith("/artists/123/view/full-albums"):
+                    return {"data": [self._resource("albums", "456", "Album")]}
+                if path.endswith("/albums/456/tracks"):
+                    return {"data": [self._resource("songs", "789", "Utwór")]}
+                if path.endswith("/playlists/pl.1/tracks"):
+                    return {"data": [self._resource("songs", "789", "Utwór")]}
+                if path.endswith("/songs/789"):
+                    return {"data": [{
+                        "relationships": {
+                            "albums": {"data": [self._resource(
+                                "albums", "456", "Album"
+                            )]},
+                            "artists": {"data": [self._resource(
+                                "artists", "123", "Bryan Adams"
+                            )]},
+                        }
+                    }]}
+                raise AssertionError("Unexpected catalogue path")
+
+        library = open_apple_music_library(
+            self.layout, profile=TEST_PROFILE,
+            store=FakeStore(credentials()),
+            client_module=SimpleNamespace(
+                AppleMusicCredentials=ExternalCredentials,
+                AppleMusic=HierarchyClient,
+            ),
+        )
+        found = library.search_catalog("Bryan Adams")
+        by_kind = {record.row.kind: record for record in found}
+        library_artist = records_from_resources([
+            HierarchyClient._resource("library-artists", "r.1", "Bryan Adams")
+        ])[0]
+
+        self.assertEqual(set(by_kind), {"artist", "album", "playlist", "track"})
+        self.assertEqual(
+            library.resolve_catalog_artist(library_artist).target.resource_id,
+            "123",
+        )
+        self.assertEqual(
+            library.artist_view_page(by_kind["artist"], "full-albums")
+            .records[0].row.title, "Album",
+        )
+        self.assertEqual(
+            library.album_tracks_page(by_kind["album"]).records[0].row.title,
+            "Utwór",
+        )
+        self.assertEqual(
+            library.playlist_tracks_page(by_kind["playlist"])
+            .records[0].row.title, "Utwór",
+        )
+        self.assertEqual(
+            [record.row.kind for record in library.song_relations(by_kind["track"])],
+            ["album", "artist"],
+        )
+        self.assertNotIn(PRIVATE_TOKEN, str(found))
 
     def test_visible_batch_reads_150_then_next_150_without_losing_offset(self) -> None:
         class BatchedClient(ExternalClient):

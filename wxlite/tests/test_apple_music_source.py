@@ -6,6 +6,7 @@ import unittest
 
 from amc_wx_lite.apple_music_source import (
     AppleMusicPayloadError,
+    quick_information,
     records_from_resources,
 )
 from amc_wx_lite.list_model import ListModel
@@ -66,6 +67,21 @@ class AppleMusicSourceTests(unittest.TestCase):
             "AppleMusicRecord",
         ):
             self.assertNotIn(private, spoken)
+
+    def test_left_information_names_duration_and_available_audio_honestly(self) -> None:
+        record = records_from_resources([library_song(
+            audioTraits=["lossless", "hi-res-lossless", "atmos", PRIVATE_TOKEN],
+        )])[0]
+
+        spoken = quick_information(record)
+
+        self.assertIn("Długość: 3:05", spoken)
+        self.assertIn("Wykonawca: Przykładowy wykonawca", spoken)
+        self.assertIn("Album: Przykładowy album", spoken)
+        self.assertIn("Dostępne warianty audio: bezstratny", spoken)
+        self.assertIn("Dolby Atmos", spoken)
+        self.assertIn("Format bieżącego odtwarzania nieznany", spoken)
+        self.assertNotIn(PRIVATE_TOKEN, spoken)
 
     def test_list_columns_use_only_intentional_labels(self) -> None:
         record = records_from_resources([library_song()])[0]

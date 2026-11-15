@@ -200,6 +200,8 @@ from .navigation import (
     OpenQueueView,
     OpenAppleMusicPlaylist,
     OpenAppleMusicAlbum,
+    OpenAppleMusicArtist,
+    OpenAppleMusicArtistView,
     OpenAppleMusicOriginal,
     OpenAppleMusicView,
     OpenSpotifyCollectionView,
@@ -294,11 +296,15 @@ if "session.apple-music" in _RELEASE_PROFILE.capabilities:
     )
     from .apple_music_library import (
         AppleMusicLibraryError,
+        AppleMusicRelationChoice,
         library_membership_direction,
         open_apple_music_library,
         read_apple_music_batch,
     )
-    from .apple_music_source import AppleMusicRecord
+    from .apple_music_source import (
+        AppleMusicRecord,
+        quick_information as apple_music_quick_information,
+    )
 from .wiim_source import (
     WiiMOptionChoice,
     WiiMPresetChoice,
@@ -588,7 +594,7 @@ class _ContextMenuCommand:
 
     label: str
     action: Action | None = None
-    relation: TidalRelationChoice | SpotifyRelationChoice | None = None
+    relation: TidalRelationChoice | SpotifyRelationChoice | AppleMusicRelationChoice | None = None
     checkable: bool = False
     checked: bool = False
 
@@ -600,6 +606,7 @@ _LIST_CONTEXT_ACTION_GROUPS: tuple[tuple[Action, ...], ...] = (
     (
         Action.APPLE_MUSIC_OPEN_ORIGINAL,
         Action.ACTIVATE,
+        Action.APPLE_MUSIC_RELATIONS,
         Action.TIDAL_PLAY_NATIVE,
         Action.TIDAL_OPEN_ORIGINAL,
         Action.QUICK_INFORMATION,
@@ -2457,6 +2464,7 @@ class SearchDialog(wx.Dialog):
         history: list[str],
         record_query: Callable[[str], list[str]],
         playback_label: Callable[[SearchEntry], str] | None = None,
+        quick_information: Callable[[SearchEntry], str] | None = None,
         detailed_hints: bool = False,
     ) -> None:
         mode = (
@@ -2475,6 +2483,7 @@ class SearchDialog(wx.Dialog):
         self._history = list(history)
         self._record_query = record_query
         self._playback_label = playback_label or (lambda _entry: "")
+        self._quick_information = quick_information
         self._history_index = -1
         self._browsing_history = False
         self._applying_history = False
@@ -2510,11 +2519,14 @@ class SearchDialog(wx.Dialog):
         self.results.SetLabel("Wyniki wyszukiwania")
         self.results.SetName("Wyniki wyszukiwania")
         apple_results_help = (
-            "Wyniki z Biblioteki oraz utwory z katalogu Apple Music, "
+            "Wyniki z Biblioteki i katalogu Apple Music, "
             "do 25 każdego rodzaju w każdym źródle. "
             "Doprecyzuj tekst, aby zawęzić wyniki. "
-            "Strzałki wybierają wynik. Enter pokazuje wynik na liście "
-            "Apple Music. Alt+Enter podaje informacje o wyniku. "
+            "Strzałki wybierają wynik. Enter otwiera wykonawcę, album "
+            "lub playlistę; dla utworu pokazuje go na liście Apple Music. "
+            "Prawa strzałka pokazuje powiązania, lewa odczytuje długość "
+            "i dostępne warianty audio. "
+            "Alt+Enter podaje informacje o wyniku. "
             "Ctrl+L otwiera Bibliotekę. Escape zamyka okno."
         )
         self.results.SetHelpText(
@@ -2847,6 +2859,12 @@ class SearchDialog(wx.Dialog):
         entry = self._lead_entry()
         if entry is None:
             self.announcer.say("Brak wybranego wyniku")
+            return
+        if (
+            self._quick_information is not None
+            and entry.session_id is SessionId.APPLE_MUSIC
+        ):
+            self.announcer.say(self._quick_information(entry))
             return
         row = entry.row
         parts = [row.title, row.artist_name, entry.kind_label, row.detail]
@@ -12085,6 +12103,16 @@ class LiteFrame(wx.Frame):
                 source = available.get(action)
                 if source is None:
                     if (
+                        action is Action.APPLE_MUSIC_RELATIONS
+                        and has_row
+                        and getattr(self.navigator, "active", None) is SessionId.APPLE_MUSIC
+                        and self._action_available_in_active_session(action)
+                    ):
+                        commands.append(_ContextMenuCommand(
+                            label="Powiązania Apple Music…",
+                            action=action,
+                        ))
+                    if (
                         player
                         and action in _PLAYER_CONTEXT_ONLY_LABELS
                         and Action.PLAY_PAUSE in available
@@ -12429,6 +12457,7 @@ class LiteFrame(wx.Frame):
                 query,
             ),
             playback_label=self._search_playback_label,
+            quick_information=self._search_quick_information,
             detailed_hints=self._detailed_hints,
         )
         try:
@@ -12448,13 +12477,89 @@ class LiteFrame(wx.Frame):
                 relation=selected_relation,
             )
 
+    def _search_quick_information(self, entry: SearchEntry) -> str:
+        if entry.session_id is SessionId.APPLE_MUSIC:
+            record = self._apple_music_records.get(entry.row.item_id)
+            if record is not None:
+                return apple_music_quick_information(record)
+        row = entry.row
+        parts = [row.title, row.artist_name, entry.kind_label, row.detail]
+        return ", ".join(dict.fromkeys(part for part in parts if part))
+
     def _choose_search_result_relation(
         self,
         entry: SearchEntry,
         search_dialog: SearchDialog,
-    ) -> SpotifyRelationChoice | TidalRelationChoice | None:
+    ) -> SpotifyRelationChoice | TidalRelationChoice | AppleMusicRelationChoice | None:
         """Choose a relationship without exposing the main window in between."""
 
+        if entry.session_id is SessionId.APPLE_MUSIC:
+            record = self._apple_music_records.get(entry.row.item_id)
+            if record is None:
+                search_dialog.announcer.say("Wynik Apple Music jest nieaktualny")
+                return None
+            if entry.row.kind == "artist":
+                choices = tuple(AppleMusicRelationChoice(label, record, view)
+                                for view, label in (
+                                    ("full-albums", "Albumy"),
+                                    ("singles", "Single i EP"),
+                                    ("top-songs", "Popularne utwory"),
+                                    ("featured-playlists", "Playlisty z wykonawcą"),
+                                ))
+                search_dialog.show_relation_choices(
+                    choices, tuple(choice.label for choice in choices),
+                    title="Powiązania Apple Music",
+                )
+                return None
+            if entry.row.kind in {"album", "playlist"}:
+                label = (
+                    "Utwory albumu" if entry.row.kind == "album"
+                    else "Utwory playlisty"
+                )
+                choice = AppleMusicRelationChoice(label, record)
+                search_dialog.show_relation_choices(
+                    (choice,), (label,), title="Powiązania Apple Music",
+                )
+                return None
+            if entry.row.kind == "track":
+                search_dialog.announcer.say("Wczytywanie powiązań Apple Music")
+
+                def work():
+                    with open_apple_music_library(self.layout) as library:
+                        return library.song_relations(record)
+
+                def done(records: tuple[AppleMusicRecord, ...]) -> None:
+                    if not self._search_dialog_alive(search_dialog):
+                        return
+                    current = search_dialog._lead_entry()
+                    if current is None or current.row.item_id != entry.row.item_id:
+                        return
+                    choices = tuple(AppleMusicRelationChoice(
+                        ("Album: " if item.row.kind == "album" else "Wykonawca: ")
+                        + item.row.title, item,
+                    ) for item in records if item.row.kind in {"album", "artist"})
+                    if choices:
+                        search_dialog.show_relation_choices(
+                            choices, tuple(choice.label for choice in choices),
+                            title="Powiązania Apple Music",
+                        )
+                    else:
+                        search_dialog.announcer.say(
+                            "Ten utwór nie ma dostępnego albumu ani wykonawcy"
+                        )
+
+                def failed(_error: Exception) -> None:
+                    if self._search_dialog_alive(search_dialog):
+                        search_dialog.announcer.say(
+                            "Nie udało się odczytać powiązań utworu Apple Music"
+                        )
+
+                self.runner.submit(
+                    "apple-music-search-relations", work, done, failed,
+                )
+                return None
+            search_dialog.announcer.say("Ten wynik nie ma powiązań Apple Music")
+            return None
         if entry.session_id is SessionId.SPOTIFY:
             choices = self.navigator._spotify_relation_choices(entry.row)
         elif entry.session_id is SessionId.TIDAL:
@@ -13035,6 +13140,26 @@ class LiteFrame(wx.Frame):
                     self._open_apple_music_search_result(entry)
                 else:
                     self._open_search_result(entry)
+                if entry.row.kind in {"artist", "album", "playlist"}:
+                    self._run(self.navigator.activate_selected())
+            elif (
+                action is SearchResultAction.RELATIONS
+                and isinstance(relation, AppleMusicRelationChoice)
+            ):
+                target = relation.record
+                self._apple_music_records[target.row.item_id] = target
+                self._open_apple_music_search_result(SearchEntry(
+                    SessionId.APPLE_MUSIC,
+                    target.row,
+                    LibraryView.APPLE_MUSIC_CONTAINER,
+                    remote_kind="appleMusicSearch",
+                ))
+                if relation.view:
+                    self._open_apple_music_artist(OpenAppleMusicArtist(
+                        target.row.item_id, target.row.title, relation.view,
+                    ))
+                elif target.row.kind in {"artist", "album", "playlist"}:
+                    self._run(self.navigator.activate_selected())
             elif action is SearchResultAction.INFORMATION:
                 self.announcer.say(entry.accessible_label)
             else:
@@ -13174,7 +13299,7 @@ class LiteFrame(wx.Frame):
             return
         rows = self._apple_music_search_rows
         if not any(row.item_id == entry.row.item_id for row in rows):
-            rows = (record.row,)
+            rows = (*rows, record.row)
         self._transient_preview_return = None
         self._switch_session(SessionId.APPLE_MUSIC)
         self._apple_music_navigation_version += 1
@@ -15982,6 +16107,91 @@ class LiteFrame(wx.Frame):
 
     # --------------------------------------------------------- Apple Music
 
+    def _show_apple_music_relations(self) -> None:
+        """Open only named, reachable destinations for the selected item."""
+
+        row = self.navigator.session.model.selected_row
+        record = self._apple_music_records.get(row.item_id) if row else None
+        if record is None:
+            self.announcer.say("Wybierz utwór, album, playlistę lub wykonawcę Apple Music")
+            return
+
+        def show(choices: tuple[AppleMusicRelationChoice, ...]) -> None:
+            if not choices:
+                self.announcer.say("Ten element nie ma dostępnych powiązań Apple Music")
+                return
+            labels = tuple(choice.label for choice in choices)
+
+            def activate(index: int) -> None:
+                entry = SearchEntry(
+                    SessionId.APPLE_MUSIC,
+                    record.row,
+                    self.navigator.session.library_view,
+                    remote_kind="appleMusicSearch",
+                )
+                self._complete_search_result_action(
+                    entry, [entry], SearchResultAction.RELATIONS,
+                    relation=choices[index],
+                )
+
+            self._show_relation_destination_window(
+                title="Powiązania Apple Music",
+                labels=labels,
+                names=labels,
+                links=tuple("" for _ in labels),
+                service="appleMusic",
+                activate=activate,
+            )
+
+        if row.kind == "artist":
+            show(tuple(
+                AppleMusicRelationChoice(label, record, view)
+                for view, label in (
+                    ("full-albums", "Albumy"),
+                    ("singles", "Single i EP"),
+                    ("top-songs", "Popularne utwory"),
+                    ("featured-playlists", "Playlisty z wykonawcą"),
+                )
+            ))
+        elif row.kind in {"album", "playlist"}:
+            label = "Utwory albumu" if row.kind == "album" else "Utwory playlisty"
+            show((AppleMusicRelationChoice(label, record),))
+        elif row.kind == "track":
+            if not record.target.catalog_id:
+                self.announcer.say("Ten utwór nie ma powiązań w katalogu Apple Music")
+                return
+            requested_id = row.item_id
+            self.announcer.say("Wczytywanie powiązań Apple Music")
+
+            def work():
+                with open_apple_music_library(self.layout) as library:
+                    return library.song_relations(record)
+
+            def done(records: tuple[AppleMusicRecord, ...]) -> None:
+                selected = self.navigator.session.model.selected_row
+                if self.navigator.active is not SessionId.APPLE_MUSIC or (
+                    selected is None or selected.item_id != requested_id
+                ):
+                    return
+                show(tuple(
+                    AppleMusicRelationChoice(
+                        ("Album: " if item.row.kind == "album" else "Wykonawca: ")
+                        + item.row.title,
+                        item,
+                    )
+                    for item in records if item.row.kind in {"album", "artist"}
+                ))
+
+            def failed(_error: Exception) -> None:
+                if self.navigator.active is SessionId.APPLE_MUSIC:
+                    self.announcer.say(
+                        "Nie udało się odczytać powiązań utworu Apple Music"
+                    )
+
+            self.runner.submit("apple-music-list-relations", work, done, failed)
+        else:
+            self.announcer.say("Ten element nie ma powiązań Apple Music")
+
     def _open_apple_music_view(
         self,
         intent: OpenAppleMusicView,
@@ -16071,6 +16281,93 @@ class LiteFrame(wx.Frame):
                 finished()
 
         self.runner.submit("apple-music-library", work, done, failed)
+
+    def _open_apple_music_artist(self, intent: OpenAppleMusicArtist) -> None:
+        artist = self._apple_music_records.get(intent.item_id)
+        if artist is None or artist.row.kind != "artist":
+            self.announcer.say("Nie można otworzyć tego wykonawcy Apple Music")
+            return
+        self._apple_music_navigation_version += 1
+        version = self._apple_music_navigation_version
+
+        def work():
+            with open_apple_music_library(self.layout) as library:
+                return library.resolve_catalog_artist(artist)
+
+        def done(resolved: AppleMusicRecord) -> None:
+            if (
+                version != self._apple_music_navigation_version
+                or self.navigator.active is not SessionId.APPLE_MUSIC
+            ):
+                return
+            self._apple_music_records[intent.item_id] = resolved
+            self._run(self.navigator.apply_apple_music_artist(
+                intent.item_id, artist.row.title,
+            ))
+            if intent.view:
+                self._open_apple_music_artist_view(OpenAppleMusicArtistView(
+                    intent.item_id, intent.view, artist.row.title,
+                ))
+
+        def failed(_error: Exception) -> None:
+            if version == self._apple_music_navigation_version:
+                self.announcer.say(
+                    "Nie udało się ustalić powiązań tego wykonawcy Apple Music"
+                )
+
+        self.runner.submit("apple-music-artist", work, done, failed)
+
+    def _open_apple_music_artist_view(
+        self, intent: OpenAppleMusicArtistView,
+    ) -> None:
+        artist = self._apple_music_records.get(intent.item_id)
+        if artist is None or artist.target.resource_type != "artists":
+            self.announcer.say("Nie można otworzyć tej części wykonawcy Apple Music")
+            return
+        self._apple_music_navigation_version += 1
+        version = self._apple_music_navigation_version
+        scope = f"artist:{intent.item_id}:{intent.view}"
+        previous_records, cursor = self._apple_music_pages.get(scope, ([], None))
+        if not intent.load_more:
+            previous_records, cursor = [], None
+        elif cursor is None:
+            self.announcer.say("Wczytano już całą tę listę Apple Music")
+            return
+
+        def work():
+            with open_apple_music_library(self.layout) as library:
+                return read_apple_music_batch(
+                    lambda page_cursor: library.artist_view_page(
+                        artist, intent.view, cursor=page_cursor,
+                    ), cursor,
+                )
+
+        def done(result) -> None:
+            if (
+                version != self._apple_music_navigation_version
+                or self.navigator.active is not SessionId.APPLE_MUSIC
+            ):
+                return
+            records = [*previous_records, *result.records]
+            self._apple_music_pages[scope] = (records, result.next_cursor)
+            self._apple_music_records.update(
+                (record.row.item_id, record) for record in records
+            )
+            rows = [record.row for record in records]
+            preferred_id = intent.preferred_id
+            if intent.load_more and len(records) > len(previous_records):
+                preferred_id = records[len(previous_records)].row.item_id
+            if result.next_cursor is not None:
+                rows.append(load_more_row(f"appleMusic:{scope}", len(records)))
+            self._run(self.navigator.apply_apple_music_artist_view(
+                intent, result.heading, rows, preferred_id=preferred_id,
+            ))
+
+        def failed(_error: Exception) -> None:
+            if version == self._apple_music_navigation_version:
+                self.announcer.say("Nie udało się odczytać tej listy wykonawcy")
+
+        self.runner.submit("apple-music-artist-view", work, done, failed)
 
     def _open_apple_music_playlist(
         self, intent: OpenAppleMusicPlaylist
@@ -17749,6 +18046,8 @@ class LiteFrame(wx.Frame):
             self._show_item_properties()
         elif action is Action.SPOTIFY_RELATIONS:
             self._run(self.navigator.spotify_relations())
+        elif action is Action.APPLE_MUSIC_RELATIONS:
+            self._show_apple_music_relations()
         elif action in {
             Action.SPOTIFY_VIEW_LIKED,
             Action.SPOTIFY_VIEW_ALBUMS,
@@ -18868,6 +19167,10 @@ class LiteFrame(wx.Frame):
                 self._open_podcast_playlist_view(intent)
             elif isinstance(intent, OpenAppleMusicView):
                 self._open_apple_music_view(intent)
+            elif isinstance(intent, OpenAppleMusicArtist):
+                self._open_apple_music_artist(intent)
+            elif isinstance(intent, OpenAppleMusicArtistView):
+                self._open_apple_music_artist_view(intent)
             elif isinstance(intent, OpenAppleMusicPlaylist):
                 self._open_apple_music_playlist(intent)
             elif isinstance(intent, OpenAppleMusicAlbum):
@@ -28543,6 +28846,16 @@ class LiteFrame(wx.Frame):
             self.options, reading_overrides, "left", session=self.navigator.active.value
         )
         if row is not None and not left_fields:
+            return
+        if self.navigator.active is SessionId.APPLE_MUSIC:
+            if row is None:
+                self.announcer.say("Lista Apple Music jest pusta")
+                return
+            record = self._apple_music_records.get(row.item_id)
+            self.announcer.say(
+                apple_music_quick_information(record, fields=left_fields)
+                if record is not None else row.title
+            )
             return
         if (
             row is not None and row.kind == "playlist"
@@ -38510,6 +38823,15 @@ class LiteFrame(wx.Frame):
                 and apple_music_original_available(
                     self._apple_music_records.get(row.item_id)
                 )
+            )
+        if action is Action.APPLE_MUSIC_RELATIONS:
+            row = self.navigator.session.model.selected_row
+            return bool(
+                self.navigator.active is SessionId.APPLE_MUSIC
+                and self.navigator.session.view is View.LIST
+                and row is not None
+                and row.kind in {"track", "album", "playlist", "artist"}
+                and row.item_id in self._apple_music_records
             )
         if self.navigator.active is SessionId.TIDAL:
             if action is Action.TIDAL_PLAY_NATIVE:

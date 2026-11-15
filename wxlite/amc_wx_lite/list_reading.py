@@ -37,7 +37,7 @@ LEFT_CAPABILITIES: dict[str, tuple[str, ...]] = {
     "frontierSmart": ("other",),
     # Apple Music udostępnia tylko metadane już obecne w załadowanym wierszu.
     # Nie sondować sieci podczas nawigacji strzałkami.
-    "appleMusic": ("duration", "artist", "other"),
+    "appleMusic": ("duration", "format", "artist", "other"),
 }
 
 

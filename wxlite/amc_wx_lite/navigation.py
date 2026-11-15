@@ -341,6 +341,7 @@ class SessionState:
     apple_music_heading: str = "Biblioteka Apple Music"
     apple_music_context: str = ""
     apple_music_return_id: str | None = None
+    apple_music_history: list["AppleMusicNavigationSnapshot"] = field(default_factory=list)
     #: Korzeń sesji WiiM i miejsce powrotu ze Strumieni sieciowych. Adresy
     #: urządzeń ani strumieni nie należą do tych wierszy.
     wiim_device_rows: tuple[Row, ...] = ()
@@ -519,6 +520,33 @@ class OpenAppleMusicView:
     """Open one read-only Apple Music collection category."""
 
     view: str
+    load_more: bool = False
+    preferred_id: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class AppleMusicNavigationSnapshot:
+    """Native list and selection restored when leaving a search branch."""
+
+    view: LibraryView | None
+    heading: str
+    context: str
+    rows: tuple[Row, ...]
+    selected_id: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class OpenAppleMusicArtist:
+    item_id: str
+    title: str
+    view: str = ""
+
+
+@dataclass(frozen=True, slots=True)
+class OpenAppleMusicArtistView:
+    item_id: str
+    view: str
+    title: str
     load_more: bool = False
     preferred_id: str | None = None
 
@@ -1761,6 +1789,15 @@ class Navigator:
         if state.session_id is SessionId.APPLE_MUSIC:
             if row.kind == "loadMore":
                 context = state.apple_music_context
+                if context.startswith("artist-view:"):
+                    item_id, _, view = context.removeprefix("artist-view:").rpartition(":")
+                    if item_id and view in {
+                        "full-albums", "singles", "top-songs", "featured-playlists"
+                    }:
+                        return [OpenAppleMusicArtistView(
+                            item_id, view, state.apple_music_heading,
+                            load_more=True,
+                        )]
                 if context.startswith("album:"):
                     return [OpenAppleMusicAlbum(
                         item_id=context.removeprefix("album:"),
@@ -1792,6 +1829,18 @@ class Navigator:
             if row.kind == "album" and row.service_kind == "album":
                 state.apple_music_return_id = row.item_id
                 return [OpenAppleMusicAlbum(row.item_id, row.title)]
+            if row.kind == "artist" and row.service_kind == "artist":
+                state.apple_music_return_id = row.item_id
+                return [OpenAppleMusicArtist(row.item_id, row.title)]
+            if (
+                row.kind == "folder"
+                and row.service_kind == "appleMusicArtistView"
+                and row.parent_id
+                and row.service_id
+            ):
+                return [OpenAppleMusicArtistView(
+                    row.parent_id, row.service_id, row.title,
+                )]
             if row.kind == "track":
                 return [Announce(
                     "Ten utwór można otworzyć w oryginalnym Apple Music "
@@ -2483,6 +2532,17 @@ class Navigator:
             # Korzeń jednej sesji Spotify jest końcem nawigacji.
             return []
         if state.session_id is SessionId.APPLE_MUSIC:
+            if state.apple_music_history:
+                previous = state.apple_music_history.pop()
+                state.library_view = previous.view
+                state.library_return_view = previous.heading
+                state.apple_music_heading = previous.heading
+                state.apple_music_context = previous.context
+                state.model.replace(
+                    list(previous.rows), preferred_id=previous.selected_id
+                )
+                state.view = View.LIST
+                return []
             context = state.apple_music_context
             if context.startswith("album:"):
                 state.apple_music_context = "albums"
@@ -3667,6 +3727,7 @@ class Navigator:
         state.library_return_view = "Biblioteka Apple Music"
         state.apple_music_heading = "Biblioteka Apple Music"
         state.apple_music_context = ""
+        state.apple_music_history.clear()
         state.model.replace(rows, preferred_id=preferred_id)
         state.view = View.LIST
         return [Announce("Biblioteka Apple Music, 4 pozycje")]
@@ -3689,6 +3750,8 @@ class Navigator:
         state.library_return_view = heading
         state.apple_music_heading = heading
         state.apple_music_context = intent.view
+        if not intent.load_more:
+            state.apple_music_history.clear()
         state.model.replace(rows, preferred_id=preferred_id)
         state.view = View.LIST
         count = sum(row.kind != "loadMore" for row in rows)
@@ -3703,6 +3766,8 @@ class Navigator:
         """Show server search hits as a transient Apple Music list."""
 
         state = self.sessions[SessionId.APPLE_MUSIC]
+        if state.apple_music_context != "search":
+            self._remember_apple_music(state)
         state.library_view = LibraryView.APPLE_MUSIC_CONTAINER
         state.library_playlist_id = None
         state.library_return_view = "Wyniki wyszukiwania Apple Music"
@@ -3715,6 +3780,59 @@ class Navigator:
             f"Wyniki wyszukiwania Apple Music, {count} {_items_word(count)}"
         )]
 
+    @staticmethod
+    def _remember_apple_music(state: SessionState) -> None:
+        state.apple_music_history.append(AppleMusicNavigationSnapshot(
+            state.library_view,
+            state.apple_music_heading,
+            state.apple_music_context,
+            tuple(state.model.rows),
+            state.model.selected_id,
+        ))
+
+    def apply_apple_music_artist(self, item_id: str, title: str) -> list[object]:
+        state = self.sessions[SessionId.APPLE_MUSIC]
+        self._remember_apple_music(state)
+        rows = [
+            Row(
+                f"appleMusic-artist-view:{item_id}:{view}",
+                label,
+                "folder",
+                service_id=view,
+                service_kind="appleMusicArtistView",
+                parent_id=item_id,
+            )
+            for view, label in (
+                ("full-albums", "Albumy"),
+                ("singles", "Single i EP"),
+                ("top-songs", "Popularne utwory"),
+                ("featured-playlists", "Playlisty z wykonawcą"),
+            )
+        ]
+        state.library_view = LibraryView.APPLE_MUSIC_CONTAINER
+        state.library_return_view = f"Wykonawca: {title}"
+        state.apple_music_heading = state.library_return_view
+        state.apple_music_context = "artist:" + item_id
+        state.model.replace(rows)
+        state.view = View.LIST
+        return [Announce(f"Wykonawca: {title}, 4 pozycje")]
+
+    def apply_apple_music_artist_view(
+        self, intent: OpenAppleMusicArtistView, heading: str, rows: list[Row],
+        *, preferred_id: str | None = None,
+    ) -> list[object]:
+        state = self.sessions[SessionId.APPLE_MUSIC]
+        if not intent.load_more:
+            self._remember_apple_music(state)
+        state.library_view = LibraryView.APPLE_MUSIC_CONTAINER
+        state.library_return_view = heading
+        state.apple_music_heading = heading
+        state.apple_music_context = f"artist-view:{intent.item_id}:{intent.view}"
+        state.model.replace(rows, preferred_id=preferred_id)
+        state.view = View.LIST
+        count = sum(row.kind != "loadMore" for row in rows)
+        return [Announce(f"{heading}, {count} {_items_word(count)}")]
+
     def apply_apple_music_playlist(
         self,
         intent: OpenAppleMusicPlaylist,
@@ -3726,6 +3844,11 @@ class Navigator:
         """Apply playlist tracks while retaining the selected playlist."""
 
         state = self.sessions[SessionId.APPLE_MUSIC]
+        if not intent.load_more and (
+            state.apple_music_context == "search"
+            or state.apple_music_context.startswith("artist-view:")
+        ):
+            self._remember_apple_music(state)
         state.library_view = LibraryView.APPLE_MUSIC_CONTAINER
         state.library_playlist_id = intent.item_id
         state.library_return_view = heading
@@ -3750,6 +3873,11 @@ class Navigator:
         """Apply album tracks while retaining the selected album."""
 
         state = self.sessions[SessionId.APPLE_MUSIC]
+        if not intent.load_more and (
+            state.apple_music_context == "search"
+            or state.apple_music_context.startswith("artist-view:")
+        ):
+            self._remember_apple_music(state)
         state.library_view = LibraryView.APPLE_MUSIC_CONTAINER
         state.library_playlist_id = None
         state.library_return_view = heading

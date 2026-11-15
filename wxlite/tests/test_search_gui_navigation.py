@@ -9,11 +9,13 @@ import pytest
 from amc_wx_lite.gui import LiteFrame
 from amc_wx_lite.apple_music_source import records_from_resources
 from amc_wx_lite.apple_music_library import AppleMusicLibraryError
+from amc_wx_lite.apple_music_library import AppleMusicRelationChoice
 from amc_wx_lite.list_model import Row
 from amc_wx_lite.navigation import (
     LibraryView,
     Navigator,
     OpenTidalContainer,
+    OpenAppleMusicArtist,
     SessionId,
     View,
 )
@@ -286,6 +288,118 @@ def test_apple_music_ctrl_f_keeps_catalog_hits_if_library_search_fails(
     assert entries[0].result_kind_label == "Utwór z katalogu"
     assert warnings == ("Nie udało się przeszukać Biblioteki Apple Music",)
     assert frame._apple_music_search_rows == (record.row,)
+
+
+def test_apple_music_artist_result_enter_opens_artist_categories() -> None:
+    record = records_from_resources([{
+        "id": "123", "type": "artists",
+        "attributes": {"name": "Bryan Adams"},
+    }])[0]
+    nav = Navigator()
+    nav.active = SessionId.APPLE_MUSIC
+    effects = []
+
+    def open_result(entry):
+        nav.show_apple_music_search_results(
+            [entry.row], preferred_id=entry.row.item_id,
+        )
+
+    frame = SimpleNamespace(
+        navigator=nav,
+        _open_apple_music_search_result=open_result,
+        _run=effects.extend,
+    )
+    entry = SearchEntry(
+        SessionId.APPLE_MUSIC, record.row,
+        LibraryView.APPLE_MUSIC_CONTAINER,
+        remote_kind="appleMusicSearch",
+    )
+
+    LiteFrame._complete_search_result_action(
+        frame, entry, [entry], SearchResultAction.OPEN,
+    )
+
+    assert effects == [OpenAppleMusicArtist(record.row.item_id, "Bryan Adams")]
+
+
+def test_apple_music_right_arrow_offers_artist_views_and_song_relations(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    artist, album, song = records_from_resources([
+        {"id": "123", "type": "artists", "attributes": {"name": "Bryan Adams"}},
+        {"id": "456", "type": "albums", "attributes": {"name": "Album"}},
+        {"id": "789", "type": "songs", "attributes": {"name": "Utwór"}},
+    ])
+    shown = []
+    messages = []
+    current = []
+    dialog = SimpleNamespace(
+        announcer=SimpleNamespace(say=messages.append),
+        show_relation_choices=lambda choices, labels, **_kwargs: shown.append(
+            (choices, labels)
+        ),
+        _lead_entry=lambda: current[0],
+    )
+    frame = SimpleNamespace(
+        _apple_music_records={
+            artist.row.item_id: artist, song.row.item_id: song,
+        },
+        _search_dialog_alive=lambda _dialog: True,
+        layout=object(),
+        runner=SimpleNamespace(submit=lambda _name, work, done, _failed: done(work())),
+    )
+    monkeypatch.setattr(
+        gui_module, "open_apple_music_library",
+        lambda _layout: nullcontext(SimpleNamespace(
+            song_relations=lambda _song: (album, artist),
+        )),
+    )
+    artist_entry = SearchEntry(SessionId.APPLE_MUSIC, artist.row)
+    song_entry = SearchEntry(SessionId.APPLE_MUSIC, song.row)
+
+    current[:] = [artist_entry]
+    LiteFrame._choose_search_result_relation(frame, artist_entry, dialog)
+    assert shown[0][1] == (
+        "Albumy", "Single i EP", "Popularne utwory", "Playlisty z wykonawcą",
+    )
+    assert all(isinstance(choice, AppleMusicRelationChoice)
+               for choice in shown[0][0])
+
+    current[:] = [song_entry]
+    LiteFrame._choose_search_result_relation(frame, song_entry, dialog)
+    assert shown[1][1] == ("Album: Album", "Wykonawca: Bryan Adams")
+    assert messages == ["Wczytywanie powiązań Apple Music"]
+
+
+def test_apple_music_main_list_right_arrow_opens_named_artist_destinations() -> None:
+    artist = records_from_resources([{
+        "id": "123", "type": "artists",
+        "attributes": {"name": "Bryan Adams"},
+    }])[0]
+    nav = Navigator()
+    nav.active = SessionId.APPLE_MUSIC
+    nav.show_apple_music_search_results(
+        [artist.row], preferred_id=artist.row.item_id,
+    )
+    shown = []
+    actions = []
+    frame = LiteFrame.__new__(LiteFrame)
+    frame.navigator = nav
+    frame._apple_music_records = {artist.row.item_id: artist}
+    frame.announcer = SimpleNamespace(say=lambda message: pytest.fail(message))
+    frame._show_relation_destination_window = lambda **kwargs: shown.append(kwargs)
+    frame._complete_search_result_action = lambda *args, **kwargs: actions.append(
+        (args, kwargs)
+    )
+
+    frame._show_apple_music_relations()
+
+    assert shown[0]["labels"] == (
+        "Albumy", "Single i EP", "Popularne utwory", "Playlisty z wykonawcą",
+    )
+    assert shown[0]["service"] == "appleMusic"
+    shown[0]["activate"](2)
+    assert actions[0][1]["relation"].view == "top-songs"
 
 
 def test_apple_music_search_enter_never_uses_podcast_result_handler() -> None:

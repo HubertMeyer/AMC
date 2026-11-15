@@ -55,6 +55,7 @@ class AppleMusicTarget:
     catalog_id: str | None = field(default=None, repr=False)
     from_library: bool = field(default=False, repr=False)
     can_play: bool = field(default=False, repr=False)
+    available_audio_variants: tuple[str, ...] = field(default=(), repr=False)
 
 
 @dataclass(frozen=True, slots=True, repr=False)
@@ -129,6 +130,52 @@ def _duration_milliseconds(value: object) -> int:
     return value
 
 
+_AUDIO_VARIANT_LABELS = {
+    "lossy-stereo": "stereo",
+    "lossless": "bezstratny",
+    "hi-res-lossless": "bezstratny wysokiej rozdzielczości",
+    "atmos": "Dolby Atmos",
+    "spatial": "dźwięk przestrzenny",
+}
+
+
+def _audio_variants(value: object) -> tuple[str, ...]:
+    if not isinstance(value, list):
+        return ()
+    return tuple(dict.fromkeys(
+        _AUDIO_VARIANT_LABELS[item]
+        for item in value
+        if isinstance(item, str) and item in _AUDIO_VARIANT_LABELS
+    ))
+
+
+def quick_information(
+    record: AppleMusicRecord, *, fields: tuple[str, ...] =
+    ("duration", "artist", "format", "other"),
+) -> str:
+    """Read known metadata and distinguish available audio from active output."""
+
+    row = record.row
+    parts: list[str] = [row.title]
+    if "duration" in fields and row.kind == "track":
+        parts.append(
+            f"Długość: {format_duration(row.duration_ticks / 10_000_000)}"
+            if row.duration_ticks > 0 else "Długość nieznana"
+        )
+    if "artist" in fields and row.artist_name:
+        parts.append(f"Wykonawca: {row.artist_name}")
+    if "other" in fields and row.related_album_title:
+        parts.append(f"Album: {row.related_album_title}")
+    if "format" in fields and row.kind == "track":
+        if record.target.available_audio_variants:
+            parts.append(
+                "Dostępne warianty audio: "
+                + ", ".join(record.target.available_audio_variants)
+            )
+        parts.append("Format bieżącego odtwarzania nieznany")
+    return ", ".join(parts)
+
+
 def _catalog_id(
     entry: dict[object, object],
     attributes: dict[object, object],
@@ -166,6 +213,7 @@ def _record(entry: object) -> AppleMusicRecord | None:
         return None
     kind, potentially_playable = kind_spec
     artist = _display_text(attributes.get("artistName"))
+    album_name = _display_text(attributes.get("albumName"))
     duration_ms = _duration_milliseconds(attributes.get("durationInMillis"))
     catalog_id = _catalog_id(entry, attributes, resource_type)
     can_play = potentially_playable and catalog_id is not None
@@ -191,6 +239,7 @@ def _record(entry: object) -> AppleMusicRecord | None:
         service_id=resource_id,
         service_kind=kind,
         artist_name=artist,
+        related_album_title=album_name,
         duration_ticks=duration_ms * 10_000,
     )
     target = AppleMusicTarget(
@@ -199,6 +248,7 @@ def _record(entry: object) -> AppleMusicRecord | None:
         catalog_id=catalog_id,
         from_library=resource_type.startswith("library-"),
         can_play=can_play,
+        available_audio_variants=_audio_variants(attributes.get("audioTraits")),
     )
     return AppleMusicRecord(row=row, target=target)
 

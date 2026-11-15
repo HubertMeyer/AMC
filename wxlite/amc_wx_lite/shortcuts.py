@@ -144,6 +144,7 @@ class Action(Enum):
     TIDAL_TOGGLE_FAVORITE = "tidal.favorite.toggle"
     APPLE_MUSIC_TOGGLE_LIBRARY = "appleMusic.library.toggle"
     APPLE_MUSIC_OPEN_ORIGINAL = "appleMusic.original.open"
+    APPLE_MUSIC_RELATIONS = "appleMusic.relations"
     TIDAL_PLAY_NATIVE = "tidal.native.play"
     TIDAL_OPEN_ORIGINAL = "tidal.desktop.play"
     TIDAL_STOP_NATIVE = "tidal.native.stop"
@@ -482,6 +483,12 @@ _STATIC_COMMAND_PRESENTATIONS: dict[Action, CommandPresentation] = {
         "Otwórz utwór w oryginalnym Apple Music",
         "Otwórz zaznaczony utwór w oficjalnej aplikacji Apple Music na tym komputerze",
         "",
+    ),
+    Action.APPLE_MUSIC_RELATIONS: CommandPresentation(
+        Action.APPLE_MUSIC_RELATIONS,
+        "Powiązania Apple Music",
+        "Pokaż albumy, utwory i playlisty wykonawcy albo album i wykonawcę utworu Apple Music",
+        "Right",
     ),
     Action.REMOVE_SELECTED: CommandPresentation(
         Action.REMOVE_SELECTED,
@@ -1065,6 +1072,7 @@ APPLE_MUSIC_SUPPORTED_ACTIONS = frozenset({
     Action.VIEW_MUSIC_ARTISTS,
     Action.APPLE_MUSIC_TOGGLE_LIBRARY,
     Action.APPLE_MUSIC_OPEN_ORIGINAL,
+    Action.APPLE_MUSIC_RELATIONS,
     Action.VIEW_HISTORY,
     Action.VIEW_DOWNLOADED_FILES,
     Action.GENERAL_SETTINGS,
@@ -1961,6 +1969,11 @@ SPOTIFY_LIST_VIEW: dict[str, Action] = {
 }
 
 
+APPLE_MUSIC_LIST_VIEW: dict[str, Action] = {
+    "Right": Action.APPLE_MUSIC_RELATIONS,
+}
+
+
 # Bezpośrednie wejścia do sześciu kategorii Spotify. Cztery gesty zachowują
 # nazewnictwo starego AMC (Ulubione, Albumy, Playlisty i Podcasty), a dwie
 # wolne pary uzupełniają nowy interfejs o Wykonawców i zapisane odcinki.
@@ -2114,6 +2127,7 @@ _SHORTCUT_TABLES: tuple[dict[str, Action], ...] = (
     APPLE_MUSIC_SESSION_VIEW,
     SPOTIFY_COLLECTION_LIST_VIEW,
     SPOTIFY_LIST_VIEW,
+    APPLE_MUSIC_LIST_VIEW,
     WIIM_SESSION_VIEW,
     WIIM_PLAYER_VIEW,
     FRONTIER_SMART_SESSION_VIEW,
@@ -2488,6 +2502,8 @@ def _resolve_default(
         return SPOTIFY_LIST_VIEW[canonical]
     if apple_music_session and canonical in APPLE_MUSIC_SESSION_VIEW:
         return APPLE_MUSIC_SESSION_VIEW[canonical]
+    if apple_music_session and not player_view and canonical in APPLE_MUSIC_LIST_VIEW:
+        return APPLE_MUSIC_LIST_VIEW[canonical]
     if player_view and wiim_session and canonical in WIIM_PLAYER_VIEW:
         return WIIM_PLAYER_VIEW[canonical]
     if wiim_session and canonical in WIIM_SESSION_VIEW:
@@ -2648,6 +2664,7 @@ def _help_entries() -> list[tuple[str, str, Action]]:
             "Dodaj lub usuń utwór albo album z Biblioteki Apple Music"
         ),
         Action.APPLE_MUSIC_OPEN_ORIGINAL: "Otwórz utwór w oryginalnym Apple Music",
+        Action.APPLE_MUSIC_RELATIONS: "Pokaż powiązania Apple Music",
         Action.TIDAL_PLAY_NATIVE: "Odtwórz utwór TIDAL w AMC",
         Action.TIDAL_OPEN_ORIGINAL: "Przekaż utwór do oryginalnego TIDALa",
         Action.TIDAL_STOP_NATIVE: "Zatrzymaj utwór TIDAL w AMC",
@@ -3019,6 +3036,7 @@ def _help_entries() -> list[tuple[str, str, Action]]:
         RADIO_PLAYER_VIEW,
         PLAYER_VIEW,
         APPLE_MUSIC_SESSION_VIEW,
+        APPLE_MUSIC_LIST_VIEW,
     ):
         for chord, action in table.items():
             if action in seen:
@@ -3043,6 +3061,8 @@ def _help_entries() -> list[tuple[str, str, Action]]:
                 label = "Strzałka w prawo (TIDAL)"
             elif action is Action.SPOTIFY_RELATIONS:
                 label = "Strzałka w prawo (Spotify)"
+            elif action is Action.APPLE_MUSIC_RELATIONS:
+                label = "Strzałka w prawo (Apple Music)"
             elif action is Action.VIEW_WIIM_NETWORK_STREAMS:
                 label = f"{label} (WiiM)"
             elif action is Action.SELECT_SONOS_TARGET:
@@ -3170,10 +3190,10 @@ def describe_action(
         (session_label or "").casefold() == "apple music"
         and action is Action.SEARCH_CURRENT
     ):
-        return i18n.ui_text("Szukaj w Bibliotece i wśród utworów katalogu Apple Music")
+        return i18n.ui_text("Szukaj w Bibliotece i katalogu Apple Music")
     if (session_label or "").casefold() == "apple music" and action is Action.ACTIVATE:
         return i18n.ui_text(
-            "Otwórz kategorię, album lub playlistę Apple Music; na utworze pokaż sposób otwarcia w oryginalnej aplikacji"
+            "Otwórz kategorię, wykonawcę, album lub playlistę Apple Music; na utworze pokaż sposób otwarcia w oryginalnej aplikacji"
         )
     if (session_label or "").casefold() == "apple music":
         apple_transport = {

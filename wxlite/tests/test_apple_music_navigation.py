@@ -9,6 +9,8 @@ from amc_wx_lite.navigation import (
     LibraryView,
     Navigator,
     OpenAppleMusicAlbum,
+    OpenAppleMusicArtist,
+    OpenAppleMusicArtistView,
     OpenAppleMusicPlaylist,
     OpenAppleMusicView,
     SessionId,
@@ -167,6 +169,55 @@ def test_album_enter_opens_tracks_and_backspace_restores_album() -> None:
     assert navigator.session.model.selected_id == album.item_id
     assert "album" in describe_action(Action.ACTIVATE, "Apple Music")
     assert _resolve(Chord("Return"), available=True) is Action.ACTIVATE
+
+
+def test_artist_search_branch_opens_views_and_backspace_restores_focus() -> None:
+    navigator = Navigator()
+    navigator.active = SessionId.APPLE_MUSIC
+    navigator.open_apple_music_root()
+    artist = Row(
+        "appleMusic:artists:123", "Bryan Adams", "artist",
+        service_kind="artist",
+    )
+    navigator.show_apple_music_search_results(
+        [artist], preferred_id=artist.item_id,
+    )
+
+    assert navigator.activate_selected() == [
+        OpenAppleMusicArtist(artist.item_id, artist.title)
+    ]
+    navigator.apply_apple_music_artist(artist.item_id, artist.title)
+    assert [row.title for row in navigator.session.model.rows] == [
+        "Albumy", "Single i EP", "Popularne utwory", "Playlisty z wykonawcą",
+    ]
+    assert navigator.activate_selected() == [OpenAppleMusicArtistView(
+        artist.item_id, "full-albums", "Albumy",
+    )]
+
+    album = Row(
+        "appleMusic:albums:456", "Album wykonawcy", "album",
+        service_kind="album",
+    )
+    intent = OpenAppleMusicArtistView(artist.item_id, "full-albums", "Albumy")
+    navigator.apply_apple_music_artist_view(
+        intent, "Albumy: Bryan Adams", [album],
+    )
+    assert navigator.activate_selected() == [
+        OpenAppleMusicAlbum(album.item_id, album.title)
+    ]
+    song = Row("appleMusic:songs:789", "Utwór", "track")
+    navigator.apply_apple_music_album(
+        OpenAppleMusicAlbum(album.item_id, album.title),
+        "Album: Album wykonawcy", [song],
+    )
+
+    assert navigator.go_to_parent() == []
+    assert navigator.session.model.selected_id == album.item_id
+    assert navigator.go_to_parent() == []
+    assert navigator.session.model.selected_row.title == "Albumy"
+    assert navigator.go_to_parent() == []
+    assert navigator.session.model.selected_id == artist.item_id
+    assert navigator.session.apple_music_context == "search"
 
 
 def test_ctrl_alt_digits_are_shared_globally() -> None:

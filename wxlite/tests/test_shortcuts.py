@@ -717,6 +717,21 @@ def test_spotify_right_arrow_help_names_destinations_not_relations_menu() -> Non
     assert "powiąza" not in announcement.casefold()
 
 
+def test_apple_music_right_arrow_is_list_only_and_named_in_help() -> None:
+    action = resolve(
+        Chord("Right"), player_view=False, radio_session=False,
+        apple_music_session=True,
+    )
+    assert action is Action.APPLE_MUSIC_RELATIONS
+    assert "Apple Music" in keyboard_help_announcement(
+        Chord("Right"), action, "Apple Music",
+    )
+    assert resolve(
+        Chord("Right"), player_view=True, radio_session=False,
+        apple_music_session=True,
+    ) is not Action.APPLE_MUSIC_RELATIONS
+
+
 def test_keyboard_help_uses_only_user_facing_labels() -> None:
     message = keyboard_help_announcement(
         Chord("F", ctrl=True),
@@ -727,7 +742,7 @@ def test_keyboard_help_uses_only_user_facing_labels() -> None:
     assert Action.SEARCH_CURRENT.value not in message
     assert keyboard_help_announcement(
         Chord("F", ctrl=True), Action.SEARCH_CURRENT, "Apple Music"
-    ) == "Ctrl+F. Szukaj w Bibliotece i wśród utworów katalogu Apple Music. Apple Music"
+    ) == "Ctrl+F. Szukaj w Bibliotece i katalogu Apple Music. Apple Music"
     assert describe_action(Action.KEYBOARD_HELP) == (
         "Włącz lub wyłącz Pomoc klawiatury"
     )
