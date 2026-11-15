@@ -63,6 +63,51 @@ def test_missing_download_remains_visible_but_cannot_play(tmp_path: Path) -> Non
     assert navigator.activate_selected() == [Announce(row.activation_message)]
 
 
+def test_relocated_download_keeps_source_and_becomes_playable(tmp_path: Path) -> None:
+    store = DownloadHistoryStore(tmp_path / "profile")
+    old = tmp_path / "old.mp3"
+    new = tmp_path / "new.mp3"
+    entry = store.record(old, title="Audycja", source="archive", finished_at=100)
+    new.write_bytes(b"audio")
+
+    assert store.relocate(old, new)
+    saved = store.load()
+    assert len(saved) == 1
+    assert saved[0].path == str(new)
+    assert saved[0].title == entry.title
+    assert saved[0].source == entry.source
+    assert download_rows(saved)[0].path == str(new)
+    assert not store.relocate(old, tmp_path / "missing.mp3")
+
+
+def test_archive_download_uses_podcast_folder_until_custom_choice(tmp_path: Path) -> None:
+    from types import SimpleNamespace
+    from amc_wx_lite.gui import LiteFrame
+
+    options = SimpleNamespace(
+        radioarchiwista_downloads_folder="",
+        podcast_downloads_folder=str(tmp_path / "podcasty"),
+    )
+    frame = SimpleNamespace(options=options, podcasts=None, client=None)
+    assert LiteFrame._radioarchiwista_download_folder(frame) == tmp_path / "podcasty"
+    options.radioarchiwista_downloads_folder = str(tmp_path / "archiwista")
+    assert LiteFrame._radioarchiwista_download_folder(frame) == tmp_path / "archiwista"
+
+
+def test_download_management_actions_appear_in_menu_palette_and_help() -> None:
+    from amc_wx_lite.command_palette import entries_for_session
+    actions = {Action.COPY_DOWNLOAD_NAME, Action.RELINK_DOWNLOAD}
+    menu_actions = {
+        item.action for menu in menus_for_session(SessionId.FILES)
+        for item in menu.items
+    }
+    palette_actions = {entry.action for entry in entries_for_session(SessionId.FILES)}
+    help_actions = {action for _, _, action in _help_entries()}
+    assert actions <= menu_actions
+    assert actions <= palette_actions
+    assert actions <= help_actions
+
+
 def test_download_command_matches_keyboard_menu_palette_and_help() -> None:
     labels = {action: label for _, label, action in _help_entries()}
     assert "pobran" in labels[Action.VIEW_DOWNLOADED_FILES].lower()

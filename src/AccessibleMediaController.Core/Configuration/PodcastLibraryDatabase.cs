@@ -1216,6 +1216,49 @@ internal sealed class PodcastLibraryDatabase(string databasePath)
         }
     }
 
+    public int RewriteDownloadPath(string oldPath, string newPath)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(oldPath);
+        ArgumentException.ThrowIfNullOrWhiteSpace(newPath);
+        var original = System.IO.Path.GetFullPath(oldPath);
+        var replacement = System.IO.Path.GetFullPath(newPath);
+        if (!File.Exists(replacement))
+            throw new FileNotFoundException("Pobrany plik odcinka nie istnieje.", replacement);
+
+        lock (_gate)
+        {
+            using var connection = OpenConnection();
+            EnsureSchema(connection);
+            using var transaction = connection.BeginTransaction();
+            var episodes = new List<PodcastEpisodeSettings>();
+            using (var read = connection.CreateCommand())
+            {
+                read.Transaction = transaction;
+                read.CommandText = "SELECT payload_json FROM podcast_episodes WHERE download_path = $path COLLATE NOCASE;";
+                read.Parameters.AddWithValue("$path", original);
+                using var reader = read.ExecuteReader();
+                while (reader.Read())
+                {
+                    var episode = JsonSerializer.Deserialize<PodcastEpisodeSettings>(
+                        reader.GetString(0), PayloadJsonOptions);
+                    if (episode is not null) episodes.Add(episode);
+                }
+            }
+            foreach (var episode in episodes)
+            {
+                episode.DownloadPath = replacement;
+                Execute(connection, transaction,
+                    "UPDATE podcast_episodes SET download_path = $path, content_hash = $hash, payload_json = $payload WHERE id = $id;",
+                    ("$path", replacement),
+                    ("$hash", Fingerprint(episode)),
+                    ("$payload", JsonSerializer.Serialize(episode, PayloadJsonOptions)),
+                    ("$id", episode.Id));
+            }
+            transaction.Commit();
+            return episodes.Count;
+        }
+    }
+
     public PodcastDownloadPathResult SaveDownloadPath(
         string episodeId,
         string downloadPath)

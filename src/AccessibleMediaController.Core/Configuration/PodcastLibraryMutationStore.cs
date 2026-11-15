@@ -80,6 +80,9 @@ public sealed class PodcastLibraryMutationStore(string databasePath)
         string downloadPath) =>
         _database.SaveDownloadPath(episodeId, downloadPath);
 
+    public int RewriteDownloadPath(string oldPath, string newPath) =>
+        _database.RewriteDownloadPath(oldPath, newPath);
+
     public PodcastSourceAddResult AddSource(
         PodcastFeedDocument feed,
         string? titleOverride,

@@ -378,6 +378,7 @@ class Options:
     #: wartosc z podcasts.db; po pierwszym zapisie karta staje sie ich
     #: jawnym wlascicielem i host stosuje je takze przy kolejnym starcie.
     podcast_downloads_folder: str | None = None
+    radioarchiwista_downloads_folder: str = ""
     podcast_separate_source_folders: bool = False
     podcast_rss_refresh_interval_minutes: int | None = None
     podcast_youtube_refresh_interval_minutes: int | None = None
@@ -585,6 +586,9 @@ class Options:
             self.podcast_downloads_folder = str(
                 self.podcast_downloads_folder
             ).strip()
+        self.radioarchiwista_downloads_folder = str(
+            self.radioarchiwista_downloads_folder or ""
+        ).strip()
         for name in (
             "podcast_rss_refresh_interval_minutes",
             "podcast_youtube_refresh_interval_minutes",

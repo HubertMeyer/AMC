@@ -100,6 +100,9 @@ def test_settings_pages_and_storage_controls_follow_the_user_workflow() -> None:
         "self.podcast_separate_source_folders = wx.CheckBox("
     ) < dialog.index("self.youtube_video_format = wx.Choice(")
     assert 'self.radio_separate_station_folders.SetName(' in dialog
+    assert 'self.archive_folder.SetName("Folder pobierania Radio Archiwisty")' in dialog
+    assert 'self.browse_archive_folder.SetName("Wybierz folder pobierania Radio Archiwisty")' in dialog
+    assert '"radioarchiwista_downloads_folder": self._archive_folder_value' in dialog
     assert 'self.podcast_separate_source_folders.SetName(' in dialog
 
 
@@ -296,7 +299,7 @@ def test_global_preview_setting_gates_shortcuts_before_session_specific_code() -
 def test_local_resume_setting_reaches_start_save_and_background_checkpoint() -> None:
     source = SOURCE.read_text(encoding="utf-8")
     assert source.count("self._remember_local_playback_positions = (") == 2
-    assert source.count("session_options.configure_resume_preferences(") == 7
+    assert source.count("session_options.configure_resume_preferences(") == 8
     assert "self._checkpoint_local_if_due()" in source
     assert '"local-checkpoint"' in source
 

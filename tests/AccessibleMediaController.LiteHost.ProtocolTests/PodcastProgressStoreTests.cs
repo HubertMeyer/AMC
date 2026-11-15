@@ -222,6 +222,14 @@ internal static class PodcastProgressStoreTests
                     "waska mutacja zapisuje sciezke takze w payloadzie odcinka");
                 Assert.True(!store.SaveDownloadPath("ep-1", downloadedPath).Changed,
                     "powtorzenie tej samej sciezki jest idempotentne");
+                var renamedPath = Path.Combine(root, "pobrane-podcastu", "Nowa nazwa.mp3");
+                File.Copy(downloadedPath, renamedPath);
+                Assert.True(store.RewriteDownloadPath(downloadedPath, renamedPath) == 1,
+                    "zmiana nazwy aktualizuje pobrany odcinek");
+                Assert.Equal(renamedPath, ReadEpisode(database).DownloadPath,
+                    "nowa sciezka jest dostepna takze w payloadzie odcinka");
+                Assert.True(store.RewriteDownloadPath(downloadedPath, renamedPath) == 0,
+                    "powtorne uzgodnienie nie zmienia juz odcinka");
 
                 var addedFeed = new PodcastFeedDocument(
                     "sub-new",

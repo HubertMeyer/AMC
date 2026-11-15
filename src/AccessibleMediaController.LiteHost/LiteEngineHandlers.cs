@@ -776,6 +776,12 @@ internal sealed class LiteEngineHandlers : IDisposable
             },
             ["library.renameTitle"] = (request, _) => RenameLibraryTitle(request.Args),
             ["library.renameFile"] = (request, _) => RenameLocalFile(request.Args),
+            ["podcast.relinkDownload"] = (request, _) => new
+            {
+                updated = RequirePodcastStore().RewriteDownloadPath(
+                    LiteArgs.RequirePath(request.Args, "oldPath"),
+                    LiteArgs.RequirePath(request.Args, "newPath"))
+            },
             ["library.folderSources"] = (_, _) =>
                 RequireProfileMutations().ListLocalFolderSources(),
             ["library.folderSource.add"] = (request, _) =>
@@ -939,6 +945,13 @@ internal sealed class LiteEngineHandlers : IDisposable
             LiteArgs.RequireText(args, "name"),
             sourcePath);
         _recordings.RewriteHistoryPath(result.OldPath, result.Path);
+        try { _podcastProgressStore?.RewriteDownloadPath(result.OldPath, result.Path); }
+        catch (LiteRequestException exception)
+        {
+            // Plik został już przemianowany. Nie zgłaszaj fałszywej porażki
+            // operacji; stary wpis Podcastów będzie można naprawić osobno.
+            Console.Error.WriteLine("[lite-host] nie zaktualizowano ścieżki Podcastów: " + exception.Message);
+        }
         return result;
     }
 

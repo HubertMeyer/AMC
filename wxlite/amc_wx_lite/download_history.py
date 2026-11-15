@@ -88,23 +88,49 @@ class DownloadHistoryStore:
         with self._lock:
             entries = [item for item in self.load() if item.item_id != value.item_id]
             entries.insert(0, value)
-            self.path.parent.mkdir(parents=True, exist_ok=True)
-            temporary = self.path.with_suffix(".json.tmp")
-            try:
-                temporary.write_text(
-                    json.dumps([
-                        {
-                            "path": item.path, "title": item.title,
-                            "source": item.source, "finished_at": item.finished_at,
-                        }
-                        for item in entries[:_MAX_ENTRIES]
-                    ], ensure_ascii=False, indent=2),
-                    encoding="utf-8",
-                )
-                temporary.replace(self.path)
-            finally:
-                temporary.unlink(missing_ok=True)
+            self._save(entries)
         return value
+
+    def relocate(self, old_path: str | Path, new_path: str | Path) -> bool:
+        """Keep a downloaded item usable after AMC renames its physical file."""
+        old_key = os.path.normcase(os.path.abspath(old_path)).casefold()
+        new_path = str(new_path)
+        if not Path(new_path).is_file():
+            return False
+        with self._lock:
+            entries = self.load()
+            found = False
+            changed: list[DownloadEntry] = []
+            for entry in entries:
+                key = os.path.normcase(os.path.abspath(entry.path)).casefold()
+                if key == old_key:
+                    changed.append(DownloadEntry(
+                        new_path, entry.title, entry.source, entry.finished_at
+                    ))
+                    found = True
+                else:
+                    changed.append(entry)
+            if found:
+                self._save(merge_entries(changed))
+            return found
+
+    def _save(self, entries: Iterable[DownloadEntry]) -> None:
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        temporary = self.path.with_suffix(".json.tmp")
+        try:
+            temporary.write_text(
+                json.dumps([
+                    {
+                        "path": item.path, "title": item.title,
+                        "source": item.source, "finished_at": item.finished_at,
+                    }
+                    for item in list(entries)[:_MAX_ENTRIES]
+                ], ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+            temporary.replace(self.path)
+        finally:
+            temporary.unlink(missing_ok=True)
 
 
 def merge_entries(*groups: Iterable[DownloadEntry]) -> list[DownloadEntry]:

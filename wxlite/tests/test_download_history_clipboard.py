@@ -52,6 +52,35 @@ def test_ctrl_c_copies_full_path_as_text_without_file_drop(tmp_path: Path) -> No
     assert spoken == ["Skopiowano pełną ścieżkę"]
 
 
+def test_copy_download_name_keeps_prior_ctrl_c_path_behavior(tmp_path: Path) -> None:
+    path = tmp_path / "audycja.mp3"
+    path.write_bytes(b"audio")
+    entry = DownloadEntry(str(path), "Audycja", "archive", 1)
+    clipboard = FakeClipboard()
+    frame, spoken = _make_frame(clipboard)
+    _select_download(frame, entry)
+
+    frame._copy_download_name()
+
+    assert isinstance(clipboard.data, FakeTextData)
+    assert clipboard.data.text == "audycja.mp3"
+    assert spoken == ["Skopiowano nazwę pobranego pliku"]
+
+
+def test_locate_command_is_offered_only_for_a_missing_download(tmp_path: Path) -> None:
+    frame, _spoken = _make_frame(FakeClipboard())
+    path = tmp_path / "audycja.mp3"
+    available = DownloadEntry(str(path), "Audycja", "archive", 1)
+    path.write_bytes(b"audio")
+    _select_download(frame, available)
+    assert frame._action_available_in_active_session(Action.COPY_DOWNLOAD_NAME)
+    assert not frame._action_available_in_active_session(Action.RELINK_DOWNLOAD)
+
+    path.unlink()
+    _select_download(frame, available)
+    assert frame._action_available_in_active_session(Action.RELINK_DOWNLOAD)
+
+
 def test_ctrl_shift_c_copies_real_download_file(tmp_path: Path) -> None:
     path = tmp_path / "film.mp4"
     path.write_bytes(b"video")

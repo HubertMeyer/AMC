@@ -308,7 +308,9 @@ class Action(Enum):
     OPEN_FILE_DIALOG = "files.openFile"
     OPEN_CONTAINING_FOLDER = "files.openContainingFolder"
     COPY_NAME = "clipboard.copyName"
+    COPY_DOWNLOAD_NAME = "downloads.copyFileName"
     COPY_ADDRESS = "clipboard.copyAddress"
+    RELINK_DOWNLOAD = "downloads.locateFile"
     #: Ctrl+X jest kontekstowe jak w głównym AMC: w otwartej playliście oraz
     #: Bibliotece/Ulubionych Radia rozpoczyna wewnętrzne przenoszenie, a w
     #: pozostałych lokalnych widokach przygotowuje prawdziwe pliki do ruchu.
@@ -2815,7 +2817,9 @@ def _help_entries() -> list[tuple[str, str, Action]]:
         Action.TRACK_END: "Koniec utworu, dziesiec sekund przed koncem",
         Action.RADIO_JUMP_LIVE: "Wróć do transmisji na żywo",
         Action.COPY_NAME: "Skopiuj nazwe",
+        Action.COPY_DOWNLOAD_NAME: "Skopiuj nazwę pobranego pliku",
         Action.COPY_ADDRESS: "Skopiuj adres lub ścieżkę",
+        Action.RELINK_DOWNLOAD: "Wskaż plik przeniesiony lub przemianowany poza AMC",
         Action.CUT_FILE: (
             "Wytnij plik albo zaznacz element ręcznej kolejności do przeniesienia"
         ),
@@ -3129,6 +3133,8 @@ def _help_entries() -> list[tuple[str, str, Action]]:
         Action.EXPORT_BACKUP,
         Action.IMPORT_BACKUP,
         Action.OPEN_CONTAINING_FOLDER,
+        Action.COPY_DOWNLOAD_NAME,
+        Action.RELINK_DOWNLOAD,
         Action.CHECK_APPLICATION_UPDATE,
         Action.UPDATE_MEDIA_COMPONENTS,
     ):

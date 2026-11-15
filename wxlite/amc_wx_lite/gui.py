@@ -651,7 +651,9 @@ _LIST_CONTEXT_ACTION_GROUPS: tuple[tuple[Action, ...], ...] = (
     ),
     (
         Action.COPY_NAME,
+        Action.COPY_DOWNLOAD_NAME,
         Action.COPY_ADDRESS,
+        Action.RELINK_DOWNLOAD,
     ),
     (
         Action.RENAME_LIBRARY_ITEM,
@@ -8906,6 +8908,49 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
         radio_layout.Add(folder_label, 0, wx.BOTTOM, 4)
         radio_layout.Add(self.recording_folder, 0, wx.BOTTOM | wx.EXPAND, 8)
         radio_layout.Add(folder_buttons, 0, wx.BOTTOM | wx.EXPAND, 12)
+        archive_heading = wx.StaticText(radio, label="Pobieranie Radio Archiwisty")
+        archive_heading.SetName("Sekcja pobieranie Radio Archiwisty")
+        radio_layout.Add(archive_heading, 0, wx.BOTTOM | wx.EXPAND, 8)
+        archive_folder_label = wx.StaticText(
+            radio, label="&Folder pobierania Radio Archiwisty:"
+        )
+        self._archive_folder_value = str(
+            options.radioarchiwista_downloads_folder or ""
+        ).strip()
+        self._archive_podcast_folder = str(
+            options.podcast_downloads_folder
+            or podcast_settings.downloads_folder
+            or default_podcast_downloads_folder
+        ).strip()
+        self.archive_folder = FocusableReadOnlyTextCtrl(
+            radio,
+            value=(
+                self._archive_folder_value
+                or self._archive_podcast_folder
+                or "Folder pobierania Podcastów"
+            ),
+        )
+        self.archive_folder.SetName("Folder pobierania Radio Archiwisty")
+        archive_buttons = wx.BoxSizer(wx.HORIZONTAL)
+        self.browse_archive_folder = wx.Button(radio, label="&Wybierz…")
+        self.browse_archive_folder.SetName("Wybierz folder pobierania Radio Archiwisty")
+        self.default_archive_folder = wx.Button(
+            radio, label="Użyj folderu &pobierania Podcastów"
+        )
+        self.default_archive_folder.SetName(
+            "Użyj folderu pobierania Podcastów dla Radio Archiwisty"
+        )
+        self.browse_archive_folder.Bind(
+            wx.EVT_BUTTON, self._on_browse_archive_folder
+        )
+        self.default_archive_folder.Bind(
+            wx.EVT_BUTTON, self._on_default_archive_folder
+        )
+        archive_buttons.Add(self.browse_archive_folder, 0, wx.RIGHT, 8)
+        archive_buttons.Add(self.default_archive_folder, 0)
+        radio_layout.Add(archive_folder_label, 0, wx.BOTTOM, 4)
+        radio_layout.Add(self.archive_folder, 0, wx.BOTTOM | wx.EXPAND, 8)
+        radio_layout.Add(archive_buttons, 0, wx.BOTTOM | wx.EXPAND, 12)
         self.radio_separate_station_folders = wx.CheckBox(
             radio, label="Twórz osobny folder dla &każdej stacji radiowej"
         )
@@ -10373,15 +10418,45 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
                 return
             self._podcast_folder_value = dialog.GetPath().strip()
             self.podcast_folder.SetValue(self._podcast_folder_value)
+            self._archive_podcast_folder = self._podcast_folder_value
+            if not self._archive_folder_value:
+                self.archive_folder.SetValue(self._archive_podcast_folder)
         finally:
             dialog.Destroy()
         self.podcast_folder.SetFocus()
+
+    def _on_browse_archive_folder(self, _event: wx.CommandEvent) -> None:
+        dialog = wx.DirDialog(
+            self,
+            message="Wybierz folder pobierania Radio Archiwisty",
+            defaultPath=self._archive_folder_value or self._archive_podcast_folder,
+        )
+        try:
+            if dialog.ShowModal() != wx.ID_OK:
+                return
+            self._archive_folder_value = dialog.GetPath().strip()
+            self.archive_folder.SetValue(self._archive_folder_value)
+        finally:
+            dialog.Destroy()
+        self.archive_folder.SetFocus()
+
+    def _on_default_archive_folder(self, _event: wx.CommandEvent) -> None:
+        self._archive_folder_value = ""
+        self.archive_folder.SetValue(
+            self._archive_podcast_folder or "Folder pobierania Podcastów"
+        )
+        self.archive_folder.SetFocus()
 
     def _on_default_podcast_folder(self, _event: wx.CommandEvent) -> None:
         self._podcast_folder_value = ""
         self.podcast_folder.SetValue(
             self._default_podcast_folder or "Domyślny folder pobierania AMC"
         )
+        self._archive_podcast_folder = self._default_podcast_folder
+        if not self._archive_folder_value:
+            self.archive_folder.SetValue(
+                self._archive_podcast_folder or "Folder pobierania Podcastów"
+            )
         self.podcast_folder.SetFocus()
 
     def _store_message_template_text(self) -> None:
@@ -10550,6 +10625,7 @@ class GeneralPlaybackOptionsDialog(wx.Dialog):
                 self.wake_scheduled_recordings.GetValue()
             ),
             "podcast_downloads_folder": self._podcast_folder_value,
+            "radioarchiwista_downloads_folder": self._archive_folder_value,
             "podcast_separate_source_folders": (
                 self.podcast_separate_source_folders.GetValue()
             ),
@@ -11705,6 +11781,24 @@ class LiteFrame(wx.Frame):
                 and (selected_row is None or not selected_row.path
                      or not os.path.isfile(selected_row.path))
             ):
+                enabled = False
+            if entry.action is Action.COPY_DOWNLOAD_NAME and not self._in_download_history():
+                enabled = False
+            if entry.action is Action.RELINK_DOWNLOAD and not (
+                self._in_download_history()
+                and selected_row is not None
+                and not selected_row.path
+            ):
+                enabled = False
+            if self._in_download_history() and entry.action in {
+                Action.CUT_FILE, Action.RENAME_LOCAL_FILE, Action.RECYCLE_SELECTED,
+            } and not (
+                selected_row is not None
+                and selected_row.path
+                and os.path.isfile(selected_row.path)
+            ):
+                enabled = False
+            if self._in_download_history() and entry.action is Action.RENAME_LIBRARY_ITEM:
                 enabled = False
             if (
                 self.navigator.active is SessionId.RADIOARCHIWISTA
@@ -18113,8 +18207,12 @@ class LiteFrame(wx.Frame):
                 )
         elif action is Action.COPY_NAME:
             self._copy_name()
+        elif action is Action.COPY_DOWNLOAD_NAME:
+            self._copy_download_name()
         elif action is Action.COPY_ADDRESS:
             self._copy_address()
+        elif action is Action.RELINK_DOWNLOAD:
+            self._locate_download_file()
         elif action is Action.CUT_FILE:
             self._cut_or_start_internal_playlist_move()
         elif action is Action.PASTE_OR_MOVE:
@@ -22173,7 +22271,7 @@ class LiteFrame(wx.Frame):
         if source is None:
             self.announcer.say(i18n.tr("rarch.session.unavailable"))
             return
-        target_dir = Path(self.layout.lite_settings_dir) / "radioarchiwista" / "pobrane"
+        target_dir = LiteFrame._radioarchiwista_download_folder(self)
         cancel_event = threading.Event()
         # wx.ProgressDialog.Update(100) can enter its own completion loop.
         # A modeless dialog keeps all updates on the GUI thread and leaves a
@@ -22341,7 +22439,7 @@ class LiteFrame(wx.Frame):
             return
 
         start_seconds, end_seconds = time_range
-        target_dir = Path(self.layout.lite_settings_dir) / "radioarchiwista" / "pobrane"
+        target_dir = LiteFrame._radioarchiwista_download_folder(self)
         cancel_event = threading.Event()
         export_started = threading.Event()
         cancel_lock = threading.Lock()
@@ -28570,6 +28668,78 @@ class LiteFrame(wx.Frame):
 
         if self._to_clipboard(text):
             self.announcer.say(success_message)
+
+    def _copy_download_name(self) -> None:
+        if not LiteFrame._in_download_history(self):
+            return
+        entries = getattr(self, "_download_history_entries", {})
+        names = [
+            Path(entry.path).name
+            for row in self._selected_action_rows()
+            if (entry := entries.get(row.item_id)) is not None
+        ]
+        if not names:
+            self.announcer.say("Nie ma nazwy pobranego pliku do skopiowania")
+            return
+        self._clear_pending_external_moves()
+        if self._to_clipboard(os.linesep.join(names)):
+            self.announcer.say(
+                "Skopiowano nazwę pobranego pliku" if len(names) == 1
+                else f"Skopiowano nazwy pobranych plików: {format_file_count(len(names))}"
+            )
+
+    def _locate_download_file(self) -> None:
+        if not LiteFrame._in_download_history(self):
+            return
+        row = self.navigator.session.model.selected_row
+        entry = self._download_history_entries.get(row.item_id) if row else None
+        if entry is None or row.path:
+            self.announcer.say("Wybierz brakujący pobrany plik")
+            return
+        old_path = Path(entry.path)
+        with wx.FileDialog(
+            self,
+            message="Wskaż przeniesiony lub przemianowany pobrany plik",
+            defaultDir=str(old_path.parent),
+            wildcard="Wszystkie pliki (*.*)|*.*",
+            style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST,
+        ) as dialog:
+            if dialog.ShowModal() != wx.ID_OK:
+                self._restore_focus_after_dialog()
+                return
+            new_path = Path(dialog.GetPath())
+        self._restore_focus_after_dialog()
+        if not new_path.is_file():
+            self.announcer.say("Wskazany plik jest niedostępny")
+            return
+        client = self.client
+
+        def work() -> None:
+            if entry.source == "podcast_audio" and client is not None:
+                client.relink_podcast_download(str(old_path), str(new_path))
+            if not self._download_history.relocate(old_path, new_path):
+                self._download_history.record(
+                    new_path, title=entry.title, source=entry.source,
+                    finished_at=entry.finished_at,
+                )
+
+        def done(_result: object) -> None:
+            preferred_id = DownloadEntry(
+                str(new_path), entry.title, entry.source, entry.finished_at
+            ).item_id
+            self._show_download_history(announce=False, preferred_id=preferred_id)
+            self.announcer.say(
+                f"Zaktualizowano ścieżkę pobranego pliku: {new_path.name}"
+            )
+            if entry.source == "podcast_audio" and client is None:
+                self.announcer.say(
+                    "Silnik nie działa. Historia Podcastów zachowała dawną ścieżkę"
+                )
+
+        def failed(error: Exception) -> None:
+            self.announcer.say(f"Nie zapisano nowej ścieżki pobranego pliku: {error}")
+
+        self.runner.submit("download-history-relink", work, done, failed)
 
     def _selected_action_rows(self) -> list[Row]:
         """Wiersze dla polecenia: natywny wielokrotny wybor albo kursor.
@@ -36415,7 +36585,24 @@ class LiteFrame(wx.Frame):
                 self.announcer.say(
                     "Zmieniono nazwę pliku, ale nie zapisano nowej ścieżki w historii"
                 )
-            self._refresh_profile_view(preferred_id=row.item_id)
+            preferred_id = row.item_id
+            if LiteFrame._in_download_history(self):
+                entry = self._download_history_entries.get(row.item_id)
+                if entry is not None:
+                    try:
+                        if not self._download_history.relocate(row.path, new_path):
+                            self._download_history.record(
+                                new_path, title=entry.title, source=entry.source,
+                                finished_at=entry.finished_at,
+                            )
+                        preferred_id = DownloadEntry(
+                            new_path, entry.title, entry.source, entry.finished_at
+                        ).item_id
+                    except (OSError, ValueError):
+                        self.announcer.say(
+                            "Zmieniono nazwę pliku, ale nie zaktualizowano Historii pobrań"
+                        )
+            self._refresh_profile_view(preferred_id=preferred_id)
             self.announcer.say(f"Zmieniono nazwę pliku na dysku: {file_name}")
 
         def failed(error: Exception) -> None:
@@ -38042,6 +38229,27 @@ class LiteFrame(wx.Frame):
             return False
         return True
 
+    def _radioarchiwista_download_folder(self) -> Path:
+        """Use the archive choice, otherwise the current Podcast download folder."""
+        options = self.options
+        folder = str(options.radioarchiwista_downloads_folder or "").strip()
+        if not folder:
+            folder = str(options.podcast_downloads_folder or "").strip()
+        if not folder:
+            try:
+                folder = self.podcasts.global_settings().downloads_folder.strip()
+            except (OSError, PodcastProfileError):
+                pass
+        if not folder and self.client is not None:
+            try:
+                defaults = self.client.general_settings_defaults()
+                folder = str(defaults.get("podcastDownloadsFolder") or "").strip()
+            except (HostError, HostUnavailable, OSError, AttributeError):
+                pass
+        if not folder:
+            folder = str(Path.home() / "Music" / "AMC — Pobrane podcasty")
+        return Path(folder).expanduser().resolve()
+
     def _record_download_results(self, payload: dict, *, source: str) -> None:
         failures = 0
         for item in payload.get("files") or []:
@@ -38812,6 +39020,21 @@ class LiteFrame(wx.Frame):
         )
 
     def _action_available_in_active_session(self, action: Action) -> bool:
+        if self._in_download_history():
+            if action is Action.RENAME_LIBRARY_ITEM:
+                return False
+            if action in {
+                Action.CUT_FILE, Action.RENAME_LOCAL_FILE, Action.RECYCLE_SELECTED,
+            }:
+                row = self.navigator.session.model.selected_row
+                return bool(row and row.path and os.path.isfile(row.path))
+        if action in (Action.COPY_DOWNLOAD_NAME, Action.RELINK_DOWNLOAD):
+            if not self._in_download_history():
+                return False
+            row = self.navigator.session.model.selected_row
+            return bool(row is not None and (
+                action is Action.COPY_DOWNLOAD_NAME or not row.path
+            ))
         if self.navigator.active is SessionId.RADIO and action is Action.SEEK_INPUT_TIME:
             return False
         if action is Action.APPLE_MUSIC_OPEN_ORIGINAL:

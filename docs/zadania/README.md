@@ -1,5 +1,9 @@
 # Rejestr zadań AMC
 
+- `DOWNLOADS-003` — **15.11.2026: kod i testy celowane poprawki pobierania gotowe**.
+  Folder Radio Archiwisty i naprawa ścieżek Ctrl+J.
+  [Opis i wyniki](DOWNLOADS-003-folder-radioarchiwisty-i-naprawa-historii.md).
+
 - `AM-007` — **15.11.2026: alpha.509 wydana w kanale Test; lokalna instalacja
   alpha.507, bez odbioru NVDA** — Ctrl+F obejmuje cztery rodzaje wyników
   Biblioteki i katalogu, Enter otwiera wykonawcę, album i playlistę, prawa

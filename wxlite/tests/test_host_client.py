@@ -579,6 +579,9 @@ def test_profile_mutations_use_narrow_named_operations() -> None:
             client.rename_local_file(
                 "local-1", "nowy plik", path="D:/nagrania/stary.mp3"
             ),
+            client.relink_podcast_download(
+                "D:/nagrania/stary.mp3", "D:/nagrania/nowy.mp3"
+            ),
             client.rename_podcast_subscription("podcast-1", "Nowy podcast"),
             client.edit_radio_station(
                 "radio-1", "Nowe radio", "https://example.invalid/radio"
@@ -599,6 +602,7 @@ def test_profile_mutations_use_narrow_named_operations() -> None:
         assert [call["op"] for call in calls] == [
             "library.renameTitle",
             "library.renameFile",
+            "podcast.relinkDownload",
             "podcast.renameSubscription",
             "radio.editStation",
             "radio.addStation",
@@ -610,7 +614,11 @@ def test_profile_mutations_use_narrow_named_operations() -> None:
             "library.remove",
             "library.recycle",
         ]
-        assert calls[4]["args"] == {
+        assert calls[2]["args"] == {
+            "oldPath": "D:/nagrania/stary.mp3",
+            "newPath": "D:/nagrania/nowy.mp3",
+        }
+        assert calls[5]["args"] == {
             "name": "Nowa stacja",
             "url": "https://example.invalid/new",
         }
@@ -619,14 +627,14 @@ def test_profile_mutations_use_narrow_named_operations() -> None:
             "name": "nowy plik",
             "path": "D:/nagrania/stary.mp3",
         }
-        assert calls[5]["args"] == {"path": "D:/wymiana/stacje.m3u"}
-        assert calls[6]["args"] == {"path": "D:/wymiana/ulubione.m3u"}
-        assert calls[7]["args"] == {"itemIds": ["radio-1"]}
-        assert calls[8]["args"] == {
+        assert calls[6]["args"] == {"path": "D:/wymiana/stacje.m3u"}
+        assert calls[7]["args"] == {"path": "D:/wymiana/ulubione.m3u"}
+        assert calls[8]["args"] == {"itemIds": ["radio-1"]}
+        assert calls[9]["args"] == {
             "view": "library",
             "mode": "Alphabetical",
         }
-        assert calls[9]["args"] == {
+        assert calls[10]["args"] == {
             "sessionId": "files",
             "itemIds": ["file:D:/muzyka/utwor.mp3"],
             "paths": ["D:/muzyka/utwor.mp3"],

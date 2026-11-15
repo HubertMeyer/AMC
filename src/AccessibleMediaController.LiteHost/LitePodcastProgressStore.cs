@@ -380,6 +380,21 @@ internal sealed class LitePodcastProgressStore : IDisposable
         }
     }
 
+    public int RewriteDownloadPath(string oldPath, string newPath)
+    {
+        EnsureFullAmcIsClosed(
+            "Zamknij najpierw główne AMC. Nie można zaktualizować ścieżki pobranego odcinka równolegle.");
+        try
+        {
+            return _store.RewriteDownloadPath(oldPath, newPath);
+        }
+        catch (Exception exception) when (IsDatabaseFailure(exception))
+        {
+            Console.Error.WriteLine("[lite-host] aktualizacja ścieżki pobranego odcinka: " + exception);
+            throw new LiteRequestException("Baza Podcastów jest chwilowo niedostępna.");
+        }
+    }
+
     public PodcastSourceAddResult AddSource(
         PodcastFeedDocument feed,
         string? titleOverride,

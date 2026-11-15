@@ -1794,6 +1794,13 @@ class LiteHostClient:
             "library.renameFile", payload, timeout=30.0
         )
 
+    def relink_podcast_download(self, old_path: str, new_path: str) -> Any:
+        return self.call(
+            "podcast.relinkDownload",
+            {"oldPath": old_path, "newPath": new_path},
+            timeout=20.0,
+        )
+
     def rename_podcast_subscription(self, subscription_id: str, title: str) -> Any:
         return self.call(
             "podcast.renameSubscription",

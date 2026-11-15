@@ -1047,10 +1047,15 @@ def build_menus(
             # schowka dodatku NVDA, a skrót pozostaje widoczny w nazwie.
             MenuItem("&Skopiuj nazwę", Action.COPY_NAME, shortcut="Ctrl+C",
                      accelerator=False, needs_selection=True),
+            MenuItem("Skopiuj nazwę pobranego pliku", Action.COPY_DOWNLOAD_NAME,
+                     needs_selection=True, visible_sessions=FILES_ONLY),
             MenuItem("W&ytnij lub zaznacz do przeniesienia", Action.CUT_FILE,
                      shortcut="Ctrl+X", accelerator=False),
             MenuItem("Skopiuj &adres lub ścieżkę", Action.COPY_ADDRESS, shortcut="Ctrl+Shift+C",
                      needs_selection=True),
+            MenuItem("Wskaż przeniesiony lub przemianowany pobrany plik…",
+                     Action.RELINK_DOWNLOAD, needs_selection=True,
+                     visible_sessions=FILES_ONLY),
             MenuItem(
                 "Przenieś wyżej, Alt+strzałka w g&órę",
                 Action.MOVE_LIST_ITEM_UP,
