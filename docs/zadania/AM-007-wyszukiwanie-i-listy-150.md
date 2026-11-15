@@ -2,8 +2,8 @@
 
 - Data: 15 listopada 2026.
 - Produkt: AMC Test, aplikacja wxPython. AMC Public nie udostępnia Apple Music.
-- Stan: źródła i testy celowane gotowe; kompilacja, instalacja, wydanie GitHub
-  i próba z NVDA w działającym oknie wymagają osobnego potwierdzenia wynikiem.
+- Stan: źródła, testy celowane, pakiet, instalator i wydanie wstępne GitHub
+  gotowe. Lokalna instalacja i próba NVDA w działającym oknie nieodbyte.
 
 ## Materiał do dokumentacji użytkownika
 
@@ -69,6 +69,9 @@ osadzony odtwarzacz AMC gra w maksymalnej jakości.
   że wszystkie nowe statyczne etykiety Apple Music mają tłumaczenia.
 - Odczytowa próba katalogu i relacji na koncie: powodzenie; bez sterowania
   aplikacją i dźwiękiem.
+- Pakiet z 4730 plikami, kontrola integralności i ukryty start GUI/hosta:
+  zaliczone. Instalator: kontrola sekretów `passed`, zgodność profilu Test,
+  commitu, rozmiaru i SHA-256: zaliczone.
 
 ## Znane ograniczenia
 
@@ -84,9 +87,19 @@ osadzony odtwarzacz AMC gra w maksymalnej jakości.
   nieaktualny i nie może być publikowany jako wynik tej korekty.
 - Nowe źródła otrzymują numer alpha.509, aby nie pomylić ich z kandydatem
   alpha.508. Numer w źródłach nie dowodzi jeszcze powstania instalatora.
-- Wersja zainstalowana na początku zadania: alpha.507. Nowe źródła, build,
-  instalacja i opublikowane wydanie mają odrębne statusy.
-- Commit zmiany hierarchii: do uzupełnienia po zapisaniu źródeł.
+- Commit zmiany hierarchii: `5d8a09bd6f6b71c96dddf5c816a5ca7e93db2ce4`,
+  potwierdzony na gałęzi GitHub `codex/amc-test-public-20261109`.
+- Pakiet alpha.509: `publish/bundles/test-alpha509-20261115-apple-hierarchy`,
+  ten sam commit, profil Test, `sourceDirty=false`, kontrolowany start zaliczony.
+- Instalator: `publish/installers/test-alpha509-20261115-apple-hierarchy/AMC-Test-2026-11-15-1446.exe`,
+  218525335 bajtów; SHA-256
+  `9c122874eb991fae7789b5c9f32650d8af67db4ba81322eb766163f0e1103832`.
+- Wydanie wstępne GitHub: `test-2026.11.15.1446`, wskazuje powyższy commit.
+  Zdalne trzy załączniki mają stan `uploaded`; nazwa, rozmiar i zdalna suma
+  SHA-256 instalatora są zgodne z lokalnymi. Kanał aktualizacji: `test`.
+- Lokalna instalacja pozostaje alpha.507; użytkownik wybrał ręczną
+  aktualizację. Wydanie alpha.509 nie zostało uruchomione ani zbadane z NVDA
+  w jego normalnej instalacji.
 
 ## Projekt instrukcji i listy zmian — do korekty użytkownika
 

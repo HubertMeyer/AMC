@@ -1,10 +1,11 @@
 # Rejestr zadań AMC
 
-- `AM-007` — **15.11.2026: hierarchia Apple Music w źródłach i testach;
-  bez odbioru NVDA i wydania** — Ctrl+F obejmuje cztery rodzaje wyników
+- `AM-007` — **15.11.2026: alpha.509 wydana w kanale Test; lokalna instalacja
+  alpha.507, bez odbioru NVDA** — Ctrl+F obejmuje cztery rodzaje wyników
   Biblioteki i katalogu, Enter otwiera wykonawcę, album i playlistę, prawa
   strzałka pokazuje powiązania, listy pobierają po 150 pozycji. Kandydat
-  alpha.508 sprzed korekty jest nieaktualny; następny numer to alpha.509.
+  alpha.508 sprzed korekty jest nieaktualny; wydanie Test alpha.509 jest
+  przygotowane do ręcznej aktualizacji i dalszego odbioru.
   [Opis i wyniki](AM-007-wyszukiwanie-i-listy-150.md).
 
 - `POD-PERF-20261114` — **alpha.507 opublikowana i zainstalowana w Test i Public; odbiór wydajności oraz NVDA otwarty** — `0` wyłącza automatyczne sprawdzanie podcastów i YouTube, dodatnia liczba ustala takt; F5 i Ctrl+F5 działają na żądanie. Pozostaje koszt pełnego wczytania i przeliczenia około 92 tys. odcinków przy zapisie porcji odświeżenia; czasu natywnej listy i NVDA jeszcze nie zmierzono. [Pomiary, porównanie i ograniczenia](POD-PERF-20261114-odswiezanie-duzej-biblioteki.md).
