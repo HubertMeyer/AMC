@@ -21,6 +21,7 @@ adresu.
 
 from __future__ import annotations
 
+import datetime
 import hashlib
 import json
 import re
@@ -364,13 +365,24 @@ def month_rows(slug: str, year: int, months: tuple[int, ...]) -> list[Row]:
     )
 
 
+def day_label(year: int, month: int, day: int) -> str:
+    """Etykieta dnia katalogu z lokalnym dniem tygodnia, jeśli data istnieje."""
+
+    label = f"{day:02d}.{month:02d}.{year}"
+    try:
+        weekday = datetime.date(year, month, day).isoweekday()
+    except (ValueError, OverflowError):
+        return label
+    return f"{label}, {i18n.weekday_name(weekday)}"
+
+
 def day_rows(slug: str, year: int, month: int, days: tuple[int, ...]) -> list[Row]:
     return _period_rows(
         days,
         f"rarch:days:{check_slug(slug)}:{year}:{month}",
         service_kind="rarchDay",
         service_id=check_slug(slug),
-        label_for=lambda day: f"{day:02d}.{month:02d}.{year}",
+        label_for=lambda day: day_label(year, month, day),
     )
 
 

@@ -174,6 +174,13 @@ _CATALOGS: dict[str, dict[str, str]] = {
         "rarch.month.10": "październik",
         "rarch.month.11": "listopad",
         "rarch.month.12": "grudzień",
+        "rarch.weekday.1": "poniedziałek",
+        "rarch.weekday.2": "wtorek",
+        "rarch.weekday.3": "środa",
+        "rarch.weekday.4": "czwartek",
+        "rarch.weekday.5": "piątek",
+        "rarch.weekday.6": "sobota",
+        "rarch.weekday.7": "niedziela",
         "view.allFiles": "Wszystkie pliki",
         "view.favorites": "Ulubione",
         "view.playlists": "Playlisty",
@@ -409,6 +416,13 @@ _CATALOGS: dict[str, dict[str, str]] = {
         "rarch.month.10": "October",
         "rarch.month.11": "November",
         "rarch.month.12": "December",
+        "rarch.weekday.1": "Monday",
+        "rarch.weekday.2": "Tuesday",
+        "rarch.weekday.3": "Wednesday",
+        "rarch.weekday.4": "Thursday",
+        "rarch.weekday.5": "Friday",
+        "rarch.weekday.6": "Saturday",
+        "rarch.weekday.7": "Sunday",
         "view.allFiles": "All files",
         "view.favorites": "Favorites",
         "view.playlists": "Playlists",
@@ -622,6 +636,12 @@ def month_name(month: int) -> str:
     """Nazwa miesiąca katalogu Radio Archiwista w języku interfejsu."""
 
     return tr(f"rarch.month.{max(1, min(12, month))}")
+
+
+def weekday_name(weekday: int) -> str:
+    """Nazwa dnia tygodnia ISO (1 = poniedziałek) w języku interfejsu."""
+
+    return tr(f"rarch.weekday.{max(1, min(7, weekday))}")
 
 
 def language_choices() -> tuple[tuple[str, str], ...]:

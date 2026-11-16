@@ -151,8 +151,55 @@ def test_wiersze_okresow_chrona_malejaco_z_polskimi_nazwami() -> None:
     months = rarch.month_rows("pr1", 2026, (10, 9))
     assert [row.title for row in months] == ["październik", "wrzesień"]
     days = rarch.day_rows("pr1", 2026, 10, (29, 28))
-    assert [row.title for row in days] == ["29.10.2026", "28.10.2026"]
+    assert [row.title for row in days] == [
+        "29.10.2026, czwartek",
+        "28.10.2026, środa",
+    ]
     assert days[0].kind == "folder"
+
+
+def test_dni_maja_dzien_tygodnia_po_polskiej_dacie_i_stabilne_id() -> None:
+    from amc_wx_lite import i18n
+
+    previous = i18n.active_language()
+    try:
+        i18n.configure("pl")
+        days = rarch.day_rows("pr1", 2026, 10, (29, 28))
+
+        assert [row.title for row in days] == [
+            "29.10.2026, czwartek",
+            "28.10.2026, środa",
+        ]
+        assert [row.item_id for row in days] == [
+            "rarch:days:pr1:2026:10:29",
+            "rarch:days:pr1:2026:10:28",
+        ]
+    finally:
+        i18n.configure(previous)
+
+
+def test_dzien_tygodnia_poprawnie_przechodzi_przez_koniec_miesiaca_i_roku() -> None:
+    assert rarch.day_label(2026, 12, 31) == "31.12.2026, czwartek"
+    assert rarch.day_label(2027, 1, 1) == "01.01.2027, piątek"
+
+
+def test_niemozliwa_data_z_katalogu_pozostaje_sama_data() -> None:
+    assert rarch.day_label(2026, 2, 29) == "29.02.2026"
+    assert rarch.day_label(2026, 2, 31) == "31.02.2026"
+    assert rarch.day_label(0, 10, 15) == "15.10.0"
+
+
+def test_dzien_tygodnia_zmienia_sie_z_jezykiem_interfejsu() -> None:
+    from amc_wx_lite import i18n
+
+    previous = i18n.active_language()
+    try:
+        i18n.configure("en")
+        assert rarch.day_label(2026, 10, 15) == "15.10.2026, Thursday"
+        i18n.configure("pl")
+        assert rarch.day_label(2026, 10, 15) == "15.10.2026, czwartek"
+    finally:
+        i18n.configure(previous)
 
 
 def test_nagrania_dnia_rosnaco_z_kompletnoscia_i_pozycja() -> None:
