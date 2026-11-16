@@ -1,6 +1,6 @@
 # HUBERT-14-fixture-20261116 — stabilny aparat testu strażnika procesu
 
-Status: W trakcie — poprawiono wyłącznie aparat testu; odbiór aktualizatora #14 jako funkcji produktu, instalacja, wydanie i zamykanie zgłoszenia pozostają poza tym etapem.
+Status: Zrobione — wyłącznie etap aparatury, odebrany i zintegrowany przez prowadzącego. Odbiór aktualizatora #14 jako funkcji produktu, instalacja, wydanie i zamykanie zgłoszenia pozostają otwarte.
 
 ## Cel i zakres
 
@@ -56,4 +56,20 @@ Przebieg dowodzi tylko stabilności aparatu testowego i aktualnego kontraktu str
 
 ## Wersja i commit
 
-Baza worktree: `c8c0c7f3992462ed9a86898c87f3f182cbc2ff34`. Commit lokalny należy wykonać dopiero po końcowej kontroli zakresu i wyniku testów; nie oznacza on ukończenia Issue #14.
+Baza worktree: `c8c0c7f3992462ed9a86898c87f3f182cbc2ff34`. Kandydat lokalny: `dbfa07e38123b43a2989ec58e232ea3f3a183ac6`; integracja w `codex/amc-test-public-20261109`: `d52fa980c0db6d8cf9bd876c14d6d8da1351fe3d`. Nie jest to ukończenie Issue #14.
+
+## Niezależny odbiór prowadzącego
+
+Przejrzano pełny diff i potwierdzono brak jakiejkolwiek zmiany drzewa `src` w kandydacie względem jego bazy. SHA-256 obu zmienionych plików odpowiadają raportowi wykonawcy. Worktree wykonawcy jest czysty.
+
+Prowadzący wyeksportował dokładny commit kandydata do osobnego NTFS `C:\Users\Michal\AppData\Local\AMC-Hermes-Build\hubert14-parent-dbfa07e38123`: **2985 plików, 0 brakujących, 0 niezgodnych SHA-256**. Wymuszony rebuild Release: **0 ostrzeżeń, 0 błędów**, kod 0, 4.23 s. Ponowiony rzeczywisty runner Windows: **46/46**, kod 0, `LEFTOVER_AMC_TEST_PROCESS_COUNT=0`.
+
+Po integracji porównano z kandydatem wszystkie pliki projektu testowego i linkowane drzewa `Shared`, `PythonLauncher`, `PythonUpdater` oraz `Core/ShellIntegration`: brak różnic. Log prowadzącego jest w scratch profilu AMC jako `amc-hubert14-parent-acceptance.log` i towarzyszący JSON. Nie uruchamiano GUI, instalatora ani programu na głównym komputerze.
+
+## Materiał do dokumentacji użytkownika
+
+Ten etap nie zmienia poleceń, skrótów, menu ani zachowania aktualizacji dostępnego użytkownikowi. Naprawia wyłącznie sposób sprawdzania blokady procesu w automatycznych testach. Nie oznacza jeszcze, że zgłoszony problem aktualizacji został odtworzony i odebrany na rzeczywistej instalacji.
+
+## Następny krok
+
+W zadaniu zbiorczym #14 wykonać na Hermesie uzgodniony odbiór cichej aktualizacji i blokady startu podczas instalacji, z uprzednim odczytowym sprawdzeniem nagrywania. Nie aktualizować ani nie zamykać AMC na głównym komputerze użytkownika.

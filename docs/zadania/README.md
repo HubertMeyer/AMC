@@ -1,5 +1,7 @@
 # Rejestr zadań AMC
 
+- `HUBERT-20261116` — **W trakcie; #17, bezpieczna część #10 i #18 zintegrowane lokalnie; aparat #14 odebrany 46/46** — monitor AMC/Sygnalisty działa co 5 godzin, Soloist cotygodniowo. Pozostają rzeczywiste aktualizacje/instalatory, NVDA, konta/odtwarzanie i wydanie Public/Test; zgłoszeń nie zamknięto. Aktualizację na głównym komputerze wykonuje ręcznie użytkownik; testowe instalacje wyłącznie na Hermesie. [Podział i kryteria odbioru](HUBERT-20261116-zgloszenia-i-wydanie.md).
+
 Aktualny punkt wejścia dla Hermesa (16.11.2026): [pełne przekazanie](../../HERMES_AMC_PRZEKAZANIE_2026-11-16_PL.md) i [katalog wszystkich plików zadań](HERMES_AMC_KATALOG_ZADAN_2026-11-16_PL.md).
 
 - `DOWNLOADS-003` — **15.11.2026: poprawki pobierania wydane na GitHubie
