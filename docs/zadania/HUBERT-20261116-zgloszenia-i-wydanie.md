@@ -10,6 +10,10 @@ Status: W trakcie.
 
 Użytkownik dodatkowo polecił rozbić zakres na osobne zadania. Nie zmieniać dostawcy na płatne API; bieżące wykonanie korzysta z openai-codex.
 
+**Kontynuacja po zmianie sesji — późniejsza wyraźna dyspozycja Michała:** „Jak nowa sesja, to kontynuuj po prostu, nie muszę pisać”. Przy wznowieniu wykonania odczytać ten aktualny plan i nowsze korekty, sprawdzić stan Git i wykonawców, następnie kontynuować pierwszy niedokończony uzgodniony krok bez proszenia o dodatkową wiadomość „kontynuuj AMC”. Nowa sesja nie unieważnia zlecenia. Nie powtarzać odebranych etapów ani nie rozszerzać zakresu na inne zadania. Zapis tej zasady nie jest wdrożeniem automatu tworzącego sesję lub wybudzającego agenta; takiego mechanizmu nie deklarować bez rzeczywistego wdrożenia i próby.
+
+**Doprecyzowanie 17.11.2026:** Michał potwierdził stałą zgodę na automatyczną kontynuację dużych zleconych prac. Dla tego zadania punktem końcowym są sprawdzone instalatory AMC Public i AMC Test opublikowane na GitHubie, wraz ze wszystkimi etapami rozpisanymi w tym pliku. Nie zatrzymywać się na odbiorze testu lub pojedynczej poprawki, nie czekać na kolejne „kontynuuj”. Zgłaszać rzeczywistą blokadę zamiast pomijać testy albo deklarować niezmierzone wyniki. Ograniczenia głównego komputera i płatnego API pozostają bez zmian.
+
 ## Stan wejściowy i bezpieczeństwo
 
 - Repozytorium Hermes: `/home/michal/projekty/AMC`, gałąź `codex/amc-test-public-20261109`, baza `26950509629a2092b0cc4e7987e5a370d740db31`, zgodna z GitHub w odczycie przed rozpoczęciem.
