@@ -29,24 +29,24 @@ def _fixture(tmp_path: Path, version: str = "0.4.2") -> tuple[Path, Path]:
     return bundle, addons
 
 
-def test_silent_update_replaces_addon_and_keeps_recovery_copy(
+def test_silent_update_replaces_existing_addon_without_restarting_nvda(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     bundle, addons = _fixture(tmp_path)
-    launches: list[tuple[str, str]] = []
     monkeypatch.setattr(addon_update, "_amc_running", lambda: False)
     monkeypatch.setattr(addon_update, "_nvda_running", lambda: True)
     monkeypatch.setattr(addon_update, "_nvda_executable", lambda: Path("C:/NVDA/nvda.exe"))
     monkeypatch.setattr(
-        addon_update.os, "startfile", lambda path, *, arguments: launches.append((path, arguments)),
+        addon_update.os,
+        "startfile",
+        lambda *args, **kwargs: pytest.fail("Silent AMC update must not restart NVDA"),
         raising=False,
     )
 
     message = addon_update.install(bundle, "0.4.2", addons)
 
-    assert "Uruchomiono ponownie NVDA" in message
+    assert "przy następnym uruchomieniu NVDA" in message
     assert (addons / "amcController" / "manifest.ini").read_text().endswith("0.4.2\n")
-    assert launches == [("C:\\NVDA\\nvda.exe", "-r")] or launches == [("C:/NVDA/nvda.exe", "-r")]
     backups = list(addons.parent.glob("amcController-backup-*"))
     assert len(backups) == 1
     assert (backups[0] / "old.txt").read_text() == "keep for rollback"
@@ -63,7 +63,7 @@ def test_silent_update_skips_current_addon(
     assert not list(addons.parent.glob("amcController-backup-*"))
 
 
-def test_silent_update_installs_missing_addon_without_starting_nvda(
+def test_silent_update_leaves_missing_addon_uninstalled(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     bundle, addons = _fixture(tmp_path)
@@ -72,7 +72,7 @@ def test_silent_update_installs_missing_addon_without_starting_nvda(
         file.unlink()
     installed.rmdir()
     monkeypatch.setattr(addon_update, "_amc_running", lambda: False)
-    monkeypatch.setattr(addon_update, "_nvda_running", lambda: False)
+    monkeypatch.setattr(addon_update, "_nvda_running", lambda: True)
     monkeypatch.setattr(
         addon_update.os,
         "startfile",
@@ -82,26 +82,27 @@ def test_silent_update_installs_missing_addon_without_starting_nvda(
 
     message = addon_update.install(bundle, "0.4.2", addons)
 
-    assert "przy następnym starcie" in message
-    assert (installed / "manifest.ini").is_file()
+    assert "nie jest zainstalowany" in message
+    assert not installed.exists()
     assert not list(addons.parent.glob("amcController-backup-*"))
 
 
-def test_silent_update_rolls_back_if_nvda_cannot_restart(
+def test_silent_update_does_not_depend_on_restarting_nvda(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     bundle, addons = _fixture(tmp_path)
     monkeypatch.setattr(addon_update, "_amc_running", lambda: False)
     monkeypatch.setattr(addon_update, "_nvda_running", lambda: True)
-    monkeypatch.setattr(addon_update, "_nvda_executable", lambda: Path("C:/NVDA/nvda.exe"))
+    monkeypatch.setattr(
+        addon_update,
+        "_nvda_executable",
+        lambda: pytest.fail("Silent AMC update must not look up NVDA to restart it"),
+    )
 
-    def fail(*args: object, **kwargs: object) -> None:
-        raise OSError("NVDA cannot start")
+    message = addon_update.install(bundle, "0.4.2", addons)
 
-    monkeypatch.setattr(addon_update.os, "startfile", fail, raising=False)
-    with pytest.raises(OSError, match="NVDA cannot start"):
-        addon_update.install(bundle, "0.4.2", addons)
-    assert (addons / "amcController" / "old.txt").read_text() == "keep for rollback"
+    assert "przy następnym uruchomieniu NVDA" in message
+    assert (addons / "amcController" / "manifest.ini").read_text().endswith("0.4.2\n")
 
 
 def test_silent_update_does_not_interrupt_running_amc(

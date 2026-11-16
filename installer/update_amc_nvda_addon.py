@@ -146,12 +146,15 @@ def install(archive_path: Path, expected_version: str, addons_dir: Path) -> str:
         _manifest_value(current_manifest.read_text(encoding="utf-8-sig"), "version")
         if current_manifest.is_file() else ""
     )
+    if not current:
+        return (
+            "Dodatek AMC do NVDA nie jest zainstalowany; "
+            "cicha aktualizacja AMC go nie instaluje."
+        )
     if _is_newer(current, expected_version):
         return "Dodatek AMC do NVDA ma już aktualną wersję."
     if _amc_running():
         raise RuntimeError("AMC nadal działa; aktualizacja NVDA zaczeka na zamknięcie programu.")
-    restart_nvda = _nvda_running()
-    nvda_exe = _nvda_executable() if restart_nvda else None
     with zipfile.ZipFile(archive_path) as archive:
         _validate_archive(archive, expected_version)
         with tempfile.TemporaryDirectory(prefix="amc-nvda-stage-", dir=addons_dir.parent) as work:
@@ -167,10 +170,6 @@ def install(archive_path: Path, expected_version: str, addons_dir: Path) -> str:
                     installed.replace(backup)
                     moved_old = True
                 staged.replace(installed)
-                if nvda_exe is not None:
-                    # NVDA's installed launcher can require ShellExecute
-                    # (UIAccess/elevation); CreateProcess raises WinError 740.
-                    os.startfile(str(nvda_exe), arguments="-r")
             except Exception:
                 if moved_old:
                     if installed.exists():
@@ -181,7 +180,7 @@ def install(archive_path: Path, expected_version: str, addons_dir: Path) -> str:
                 raise
     return (
         f"Dodatek AMC do NVDA {expected_version} zainstalowany. "
-        + ("Uruchomiono ponownie NVDA." if restart_nvda else "NVDA uruchomi go przy następnym starcie.")
+        + "Zmiana będzie dostępna przy następnym uruchomieniu NVDA."
         + (f" Kopia poprzedniej wersji: {backup}" if moved_old else "")
     )
 

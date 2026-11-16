@@ -362,6 +362,17 @@ begin
   Result := (InstalledVersion = '') or
     (CompareDottedVersions(InstalledVersion, '{#AmcNvdaAddonVersion}') < 0);
 end;
+
+function ShouldSilentlyUpdateAmcNvdaAddon: Boolean;
+var
+  InstalledVersion: string;
+begin
+  { Cicha aktualizacja nie może instalować dodatku, którego użytkownik
+    nie wybrał. Pusty manifest oznacza brak albo wcześniejszą odmowę. }
+  InstalledVersion := InstalledAmcNvdaAddonVersion;
+  Result := (InstalledVersion <> '') and
+    (CompareDottedVersions(InstalledVersion, '{#AmcNvdaAddonVersion}') < 0);
+end;
 #endif
 
 function PrepareToInstall(var NeedsRestart: Boolean): string;
@@ -369,19 +380,6 @@ var
   Target: string;
 begin
   Result := '';
-#ifdef AmcNvdaAddonPath
-  { Restart NVDA nie może przerwać pracy drugiego profilu AMC. }
-  if WizardSilent and ShouldOfferAmcNvdaAddon and
-     CheckForMutexes(
-       'Local\AccessibleMultimediaController.PythonLauncher.Public.SingleInstance,' +
-       'Local\AccessibleMultimediaController.PythonLauncher.SingleInstance') then
-  begin
-    Result :=
-      'Aktualizacja AMC i dodatku NVDA zaczeka, aż oba profile AMC będą zamknięte. ' +
-      'Zakończ nagrywanie i ponów aktualizację.';
-    Exit;
-  end;
-#endif
   Target := ExpandConstant('{app}');
   if (not DirExists(Target)) or (not DirectoryHasEntries(Target)) or
      ExistingDirectoryBelongsToThisProfile(Target) then
@@ -578,7 +576,7 @@ begin
 #ifdef AmcNvdaAddonPath
     if WizardSilent and
        DirExists(ExpandConstant('{userappdata}\nvda\addons')) and
-       ShouldOfferAmcNvdaAddon then
+       ShouldSilentlyUpdateAmcNvdaAddon then
     begin
       if (not Exec(
             ExpandConstant('{app}\runtime\python.exe'),
@@ -591,10 +589,14 @@ begin
             ewWaitUntilTerminated,
             ResultCode)) or (ResultCode <> 0) then
       begin
-        PostInstallFailed := True;
-        RaiseException(
-          'Aktualizacja dodatku AMC do NVDA nie powiodła się. ' +
-          'AMC nie zostanie uruchomiony jako gotowa instalacja.');
+        { AMC jest już zainstalowane i przeszło kontrolę integralności oraz
+          kontrolowany start. Dodatek jest opcjonalny, więc jego błąd ma trafić
+          do logu instalatora, nie unieważniać aktualizacji programu ani
+          blokować jego automatycznego startu. }
+        Log(
+          'Opcjonalna aktualizacja dodatku AMC do NVDA nie powiodła się; ' +
+          'instalacja AMC pozostaje poprawna. Kod pomocnika: ' +
+          IntToStr(ResultCode));
       end;
     end;
 #endif

@@ -134,12 +134,12 @@ def test_amc_nvda_addon_is_verified_and_offered_for_both_profiles() -> None:
         assert required in ISS
 
 
-def test_silent_update_installs_older_amc_nvda_addon_automatically() -> None:
+def test_silent_update_updates_only_an_existing_older_amc_nvda_addon() -> None:
     prepare = ISS[ISS.index("function PrepareToInstall"):]
     assert "WizardSilent" in prepare
-    assert "ShouldOfferAmcNvdaAddon" in prepare
-    assert "CheckForMutexes(" in prepare
-    assert "Zakończ nagrywanie i ponów aktualizację" in prepare
+    assert "ShouldSilentlyUpdateAmcNvdaAddon" in prepare
+    assert "CheckForMutexes(" not in prepare
+    assert "Zakończ nagrywanie i ponów aktualizację" not in prepare
     assert "amc-nvda-update.py" in prepare
     assert "runtime\\python.exe" in prepare
     assert "DirExists(ExpandConstant('{userappdata}\\nvda\\addons'))" in prepare
@@ -150,7 +150,21 @@ def test_silent_update_installs_older_amc_nvda_addon_automatically() -> None:
     assert "function GetCustomSetupExitCode: Integer" in ISS
     assert "if PostInstallFailed then" in ISS
     assert "Result := 10" in ISS
-    assert ISS.count("PostInstallFailed := True") == 3
+    assert "function ShouldSilentlyUpdateAmcNvdaAddon: Boolean;" in ISS
+    silent_choice = ISS[
+        ISS.index("function ShouldSilentlyUpdateAmcNvdaAddon"):
+        ISS.index("function PrepareToInstall")
+    ]
+    assert "InstalledVersion <> ''" in silent_choice
+    assert "CompareDottedVersions(InstalledVersion, '{#AmcNvdaAddonVersion}') < 0" in silent_choice
+
+
+def test_optional_silent_nvda_addon_failure_is_logged_without_failing_amc_installation() -> None:
+    start = ISS.index("#ifdef AmcNvdaAddonPath", ISS.index("procedure CurStepChanged"))
+    addon_step = ISS[start:ISS.index("#endif", start)]
+    assert "Log(" in addon_step
+    assert "PostInstallFailed" not in addon_step
+    assert "RaiseException" not in addon_step
 
 
 def test_installer_performs_full_post_install_integrity_check() -> None:
