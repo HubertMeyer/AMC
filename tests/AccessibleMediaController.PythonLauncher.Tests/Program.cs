@@ -60,8 +60,11 @@ internal static class Program
         ("aktualizator chroni kopię bieżącej niepełnej transakcji", UpdaterProtectsCurrentRescueTransaction),
     ];
 
-    public static int Main()
+    public static int Main(string[] args)
     {
+        if (args.SequenceEqual(["--fixture-process"]))
+            return RunFixtureProcess();
+
         var failures = 0;
         foreach (var (name, run) in Tests)
         {
@@ -80,6 +83,13 @@ internal static class Program
             ? $"Wszystkie testy launchera przeszły ({Tests.Length})."
             : $"Niepowodzenia launchera: {failures} z {Tests.Length}.");
         return failures == 0 ? 0 : 1;
+    }
+
+    private static int RunFixtureProcess()
+    {
+        Console.WriteLine("READY");
+        Console.Out.Flush();
+        return Console.ReadLine() is null ? 1 : 0;
     }
 
     private static void ValidBundleIsAccepted()
@@ -451,20 +461,44 @@ internal static class Program
         var root = Path.Combine(
             Path.GetTempPath(), "amc-updater-process-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
-        var command = Environment.GetEnvironmentVariable("ComSpec")
-            ?? Path.Combine(Environment.SystemDirectory, "cmd.exe");
         var installedCommand = Path.Combine(root, "runtime", "amc-test-process.exe");
         Directory.CreateDirectory(Path.GetDirectoryName(installedCommand)!);
-        File.Copy(command, installedCommand);
+        var runnerDirectory = AppContext.BaseDirectory;
+        var runnerFiles = new[]
+        {
+            "amc_python_launcher_tests.exe",
+            "amc_python_launcher_tests.dll",
+            "amc_python_launcher_tests.deps.json",
+            "amc_python_launcher_tests.runtimeconfig.json",
+        };
+        foreach (var file in runnerFiles)
+        {
+            var source = Path.Combine(runnerDirectory, file);
+            if (!File.Exists(source))
+                throw new InvalidOperationException("Brak pliku procesu próbnego: " + source);
+            var target = file.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)
+                ? installedCommand
+                : Path.Combine(Path.GetDirectoryName(installedCommand)!, file);
+            File.Copy(source, target);
+        }
         using var process = Process.Start(new ProcessStartInfo
         {
             FileName = installedCommand,
             UseShellExecute = false,
             CreateNoWindow = true,
-            ArgumentList = { "/d", "/c", "ping -n 30 127.0.0.1 > nul" },
+            RedirectStandardInput = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            ArgumentList = { "--fixture-process" },
         }) ?? throw new InvalidOperationException("Nie uruchomiono procesu próbnego.");
         try
         {
+            var ready = process.StandardOutput.ReadLineAsync()
+                .WaitAsync(TimeSpan.FromSeconds(5))
+                .GetAwaiter()
+                .GetResult();
+            Equal("READY", ready);
+
             var deadline = DateTime.UtcNow.AddSeconds(5);
             while (!InstalledProcessGuard.HasRunningComponent(root))
             {
@@ -484,8 +518,13 @@ internal static class Program
         {
             if (!process.HasExited)
             {
-                process.Kill(entireProcessTree: true);
-                process.WaitForExit(5_000);
+                process.StandardInput.WriteLine();
+                process.StandardInput.Close();
+                if (!process.WaitForExit(5_000))
+                {
+                    process.Kill(entireProcessTree: true);
+                    process.WaitForExit(5_000);
+                }
             }
             Directory.Delete(root, recursive: true);
         }
