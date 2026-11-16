@@ -41,7 +41,7 @@ Usunięto własne pliki `LiteSpotifyPlaybackEndDetector.cs` i
 `--spotify-playback-end` w ProtocolTests. #11 pozostaje otwarte do czasu
 rzeczywistego dowodu protokołowego lub równoważnego, rozstrzygającego pomiaru.
 
-### #10 — kandydat zachowany, bez odbioru C#
+### #10 — kod odebrany kompilacyjnie; konto nadal nieodebrane
 
 Zachowano `SpotifyCollectionCompletion` i testy kompletności kolekcji:
 pełność zależy od obecności wymaganych `Track`, `Album`, `Artist` i `Playlist`,
@@ -74,11 +74,35 @@ helper. Nie jest testem kompilacji ani zachowania Spotify.
 - GREEN: po minimalnym linku ten sam test zakończył się `OK` (1 test).
 - Porównanie obu plików wyjść Spotify z bazą `2695050` jest puste; nie pozostało
   odwołanie do detektora EOS ani do jego testu.
-- C# ProtocolTests i build LiteHosta **nie zostały uruchomione**. W tym WSL
-  `dotnet` nie jest w PATH. Oczekiwany prywatny plik
-  `/mnt/c/Users/Michal/AppData/Local/AMC-BuildTools/dotnet/dotnet.exe` jest już
-  wykonywalny, lecz niekompletny: `--info` kończy się kodem `131` z błędem braku
-  `dotnet/host/fxr`. Nie instalowano SDK i nie symulowano wyniku.
+- W chwili oddania pracy przez wykonawcę C# ProtocolTests i build LiteHosta
+  **nie zostały uruchomione**. W jego próbie `dotnet` nie był w PATH. Prywatny plik
+  `/mnt/c/Users/Michal/AppData/Local/AMC-BuildTools/dotnet/dotnet.exe`
+  był wykonywalny, lecz ówcześnie niekompletny: `--info` kończył się kodem `131`
+  z błędem braku `dotnet/host/fxr`. Nie instalowano SDK i nie symulowano wyniku.
+  **To historyczna blokada wykonawcy, zastąpiona rzeczywistym odbiorem poniżej.**
+
+## Odbiór prowadzącego — rzeczywisty Windows C#
+
+Prowadzący potwierdził później kompletne prywatne SDK 8.0.423 i wyeksportował
+dokładny kandydat `b51d2b494d11ed6666cfa72398e9f89264ec7432` do osobnego
+stagingu NTFS `C:\Users\Michal\AppData\Local\AMC-Hermes-Build\spotify-b51d2b494d11`.
+Zweryfikowano 2986 śledzonych plików, brakujących 0.
+
+- Rzeczywisty build ProtocolTests Release: kod 0, 0 błędów i 0 ostrzeżeń.
+- Rzeczywisty runner `--spotify-collection-completion`: kod 0,
+  `Wszystkie zestawy przeszly (1).` — oba przypadki z zestawu zostały wykonane.
+- Regresja `--spotify-catalog --spotify-profile`: kod 0,
+  `Wszystkie zestawy przeszly (2).`.
+- Rzeczywisty build konsumenta `AccessibleMediaController.LiteHost` Release:
+  kod 0, 0 błędów i 0 ostrzeżeń.
+- Ponowiony test XML w gałęzi integracyjnej: 1 test OK. Przegląd całego diffu
+  i porównanie wyjść Spotify z bazą potwierdziły brak odrzuconej heurystyki EOS.
+
+Kod zintegrowano lokalnie jako `fb98ac29b2bbff76643102e0f73fde8e43b464bf`.
+Drzewa `src` oraz ProtocolTests są identyczne z faktycznie zbudowanym kandydatem
+(porównanie identyfikatorów drzew Git). Nie zmieniono stanów GitHub i nie
+wykonano publikacji ani próby konta. Pełny log jest w scratch profilu AMC,
+`amc-spotify-b51d2b4-acceptance.json`.
 
 ## Dokładne polecenia do wznowienia C# na Hermesie
 
@@ -94,8 +118,11 @@ test -x "$DOTNET"
 test ! -e "$STAGE"
 mkdir -p "$STAGE"
 git archive HEAD | tar -x -C "$STAGE"
-"$DOTNET" run --project "$STAGE/tests/AccessibleMediaController.LiteHost.ProtocolTests/AccessibleMediaController.LiteHost.ProtocolTests.csproj" -c Release -- --spotify-collection-completion
-"$DOTNET" build "$STAGE/src/AccessibleMediaController.LiteHost/AccessibleMediaController.LiteHost.csproj" -c Release
+(
+  cd "$STAGE"
+  "$DOTNET" run --project tests/AccessibleMediaController.LiteHost.ProtocolTests/AccessibleMediaController.LiteHost.ProtocolTests.csproj -c Release -- --spotify-collection-completion
+  "$DOTNET" build src/AccessibleMediaController.LiteHost/AccessibleMediaController.LiteHost.csproj -c Release
+)
 ```
 
 Te polecenia najpierw kompilują i uruchamiają wyłącznie test #10, następnie
@@ -104,8 +131,9 @@ restarcie ani odbioru na koncie.
 
 ## Znane ograniczenia
 
-- #10 nie jest odebrane: brak rzeczywistego uruchomienia C# oraz brak ręcznej
-  synchronizacji pełnej kolekcji, restartu i odczytu cache.
+- #10 nie jest odebrane na koncie: brak ręcznej synchronizacji pełnej kolekcji,
+  restartu i odczytu cache. C# oraz build hosta zaliczono; nie przenosić tego
+  wyniku na żywy serwis.
 - #11 nie ma bezpiecznej implementacji; nie uznawać go za rozwiązany.
 - #9 pozostaje do odbioru OAuth/NVDA na świeżym profilu; nie zamykać go na
   podstawie inspekcji kodu.
@@ -119,6 +147,8 @@ końca utworu #11.
 
 ## Wersja i commit
 
-Punkt wyjścia: `c48081fe9ca51a01832bb332ca205877e53a94dd`; baza porównania EOS:
-`26950509629a2092b0cc4e7987e5a370d740db31`. Końcowy commit tego etapu należy
-dopisać po lokalnym commicie; nie wykonano instalacji, publikacji ani push.
+Odrzucony punkt wyjścia: `c48081fe9ca51a01832bb332ca205877e53a94dd`;
+baza porównania EOS: `26950509629a2092b0cc4e7987e5a370d740db31`.
+Bezpieczny kandydat: `b51d2b494d11ed6666cfa72398e9f89264ec7432`;
+integracja kodu: `fb98ac29b2bbff76643102e0f73fde8e43b464bf`.
+Nie wykonano instalacji, publikacji ani push.
