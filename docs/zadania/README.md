@@ -1,7 +1,9 @@
 # Rejestr zadań AMC
 
+Aktualny punkt wejścia dla Hermesa (16.11.2026): [pełne przekazanie](../../HERMES_AMC_PRZEKAZANIE_2026-11-16_PL.md) i [katalog wszystkich plików zadań](HERMES_AMC_KATALOG_ZADAN_2026-11-16_PL.md).
+
 - `DOWNLOADS-003` — **15.11.2026: poprawki pobierania wydane na GitHubie
-  dla AMC Test i AMC Public; lokalna instalacja oczekuje na użytkownika**.
+  dla AMC Test i AMC Public; uruchomiony Test alpha.510 jest na D; pobieranie czeka na odbiór**.
   Folder Radio Archiwisty i naprawa ścieżek Ctrl+J; Test zawiera Apple Music.
   [Opis i wyniki](DOWNLOADS-003-folder-radioarchiwisty-i-naprawa-historii.md).
 
@@ -13,7 +15,7 @@
   przygotowane do ręcznej aktualizacji i dalszego odbioru.
   [Opis i wyniki](AM-007-wyszukiwanie-i-listy-150.md).
 
-- `POD-PERF-20261114` — **alpha.507 opublikowana i zainstalowana w Test i Public; odbiór wydajności oraz NVDA otwarty** — `0` wyłącza automatyczne sprawdzanie podcastów i YouTube, dodatnia liczba ustala takt; F5 i Ctrl+F5 działają na żądanie. Pozostaje koszt pełnego wczytania i przeliczenia około 92 tys. odcinków przy zapisie porcji odświeżenia; czasu natywnej listy i NVDA jeszcze nie zmierzono. [Pomiary, porównanie i ograniczenia](POD-PERF-20261114-odswiezanie-duzej-biblioteki.md).
+- `POD-PERF-20261114` — **alpha.507 opublikowana i zainstalowana w Test i Public; użytkownik 16.11 zgłasza poprawę szybkości; pomiary i odbiór NVDA otwarte** — `0` wyłącza automatyczne sprawdzanie podcastów i YouTube, dodatnia liczba ustala takt; F5 i Ctrl+F5 działają na żądanie. Pozostaje koszt pełnego wczytania i przeliczenia około 92 tys. odcinków przy zapisie porcji odświeżenia; czasu natywnej listy i NVDA jeszcze nie zmierzono. [Pomiary, porównanie i ograniczenia](POD-PERF-20261114-odswiezanie-duzej-biblioteki.md).
 
 - `QUEUE-002` — **14.11.2026: alpha.504 wydane i zainstalowane; odbiór NVDA otwarty** — przenoszenie i Delete w kolejkach, czas trwania w `Ctrl+Q` i playlistach. Zastępuje wcześniejszy wpis „oczekuje na osobny przegląd”. [Opis i wyniki](QUEUE-002-przeglad-kolejek-sesji-internetowych.md).
 
@@ -72,7 +74,7 @@ jawnym poleceniu użytkownika albo przez osobno uzgodniony harmonogram.
 - `LIST-20261105` — **Wydane i zainstalowane w Test alpha.472; odbiór NVDA otwarty** — czas TIDAL bez słowa „Czas” i jedno przeliczenie menu na ruch strzałką. [Szczegóły](LIST-20261105-czas-tidal-i-strzalki.md).
 - `PLAYER-20261105` — **Wydane i zainstalowane w Test alpha.472; odbiór NVDA otwarty** — J skacze do wpisanego czasu, Shift+J do procentu; zakładki działają w natywnym TIDAL. [Szczegóły](PLAYER-20261105-skoki-i-zakladki.md).
 
-## Bieżący punkt wznowienia
+## Historyczny punkt wznowienia z 7.11.2026
 
 Najnowsza lokalna instalacja to **AMC Test — 07.11.2026, 13:54** (`0.1.0-alpha.482`), commit `ed9d61acff8c71e517b5e25b5c454012b314397a`. Pełna kontrola 4196 plików instalacji oraz start jednej instancji ze stałej lokalizacji przeszły. To kandydat do ręcznego odbioru NVDA, bez publikacji alpha.482. Szczegóły i ograniczenia Public: `AUTH-PUBLIC-20261106`.
 

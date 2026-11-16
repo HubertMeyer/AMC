@@ -1,119 +1,58 @@
-# AMC — punkt startowy dla zewnętrznego Hermesa
+# AMC Python — start pracy dla Hermesa na drugim komputerze
 
-Ten plik jest przeznaczony dla Hermesa działającego na osobnym komputerze i
-połączonego z Telegramem. Nie zakłada, że ma on dostęp do osobistych
-umiejętności, pamięci ani historii czatów Codex. Przed rozpoczęciem pracy Hermes
-ma odczytać ten plik oraz dokumenty wskazane poniżej bezpośrednio z projektu.
+Stan przekazania: 16 listopada 2026 r. Użytkownik chce prowadzić dalsze,
+większe prace nad AMC przez Hermesa. Ten plik i pozostałe pliki repozytorium
+zastępują niedostępną na drugim komputerze historię rozmów Codex.
 
-## Właściwe miejsca
+## Pierwsze pięć czynności
 
-- Kanoniczne repozytorium nowego AMC Python:
-  `D:\Projekty Codex\AMC - integracja wxPython`.
-- Użytkowa instalacja:
-  `D:\Projekty Codex\AMC Python\AMC.exe`.
-- Trwałe środowisko i cache zależności:
-  `D:\Projekty Codex\AMC - zależności`.
-- Stare AMC WPF:
-  `D:\Projekty Codex\Accessible Multimedia Controller`.
-  Jest wyłącznie źródłem historycznych rozwiązań technicznych. Nie wolno tam
-  wdrażać nowych poprawek, budować aktualizacji ani uruchamiać go jako wersji
-  użytkowej.
+1. Otwórz repozytorium `https://github.com/michalkasperczak/AMC` i gałąź
+   `codex/amc-test-public-20261109`. Na komputerze użytkownika właściwy
+   folder to `D:\Projekty Codex\AMC - integracja wxPython`; na drugim
+   komputerze ustal rzeczywistą ścieżkę checkoutu.
+2. Przeczytaj w całości `HERMES_AMC_PRZEKAZANIE_2026-11-16_PL.md` oraz
+   `AGENTS.md`. Następnie przeczytaj `docs/zadania/README.md` i
+   `docs/zadania/HERMES_AMC_KATALOG_ZADAN_2026-11-16_PL.md`.
+3. Sprawdź `git status --short --branch`, `git log -n 12 --oneline`,
+   `git remote -v` oraz HEAD gałęzi GitHub. Odczyt 16.11: czyste drzewo,
+   commit `f55892435c5795cad48b7eb5f178f30f9985b158` lokalnie i na
+   GitHub. To punkt odniesienia, nie gwarancja, że stan nie zmienił się później.
+4. Wybierz tylko zadanie wskazane przez użytkownika. Przeczytaj cały jego
+   rekord z późniejszymi korektami, kod i testy. Nie uznawaj starego
+   nagłówka „Bieżący punkt wznowienia” w rejestrze za nowszy niż wydania
+   z 15 listopada.
+5. Po pracy zapisz w rekordzie zadania pliki, commit, wyniki testów, build,
+   instalację, publikację i odbiór NVDA jako osobne fakty. Zaktualizuj rejestr.
 
-## Obowiązkowy odczyt przed pracą
+## Krótka orientacja
 
-W tej kolejności przeczytaj:
+- Bieżący produkt to AMC Python z interfejsem wxPython w `wxlite/` i
+  hostem C# w `src/`. Historycznego AMC WPF nie rozwijaj.
+- Test i Public są profilami tej samej bazy kodu. Bieżący Public nie ma
+  Apple Music, a ma lokalnego Sonosa i Spotify. Możliwości sprawdzaj w
+  `wxlite/amc_wx_lite/release_profile.py` i w manifeście konkretnej paczki.
+- Ostatnie wydania sprawdzone na GitHub 16.11 to
+  `test-2026.11.15.2036` i `public-2026.11.15.2040` z poprawką pobierania.
+  Folder instalacji Test na D ma manifest źródeł alpha.510. Użytkownik 16.11
+  mówi, że prawdopodobnie ma najnowszą wersję i odczuwa poprawę szybkości
+  Podcastów oraz Radio Archiwisty; pobierania jeszcze nie sprawdzał.
+  Proces `AMC.exe` został odczytowo potwierdzony w tym folderze, ze startem
+  16.11 po zapisaniu paczki. Odbioru pobierania i NVDA nie wykonano.
+- Przed zamknięciem lub aktualizacją AMC sprawdź stan nagrywania i
+  harmonogramów. Nie przerywaj nagrania. Sam proces `yt-dlp` nie dowodzi
+  nagrywania, bo może sprawdzać źródło YouTube.
+- Wspólny model poleceń musi zgadzać się z klawiaturą, menu, paletą,
+  pomocą i dostępnością NVDA. Szczegóły i datowane zgody są w `AGENTS.md`.
 
-1. `AGENTS.md` — trwałe zasady projektu, dostępności i zachowania wspólnych
-   funkcji.
-2. `docs/zadania/README.md` — kanoniczny rejestr prac oczekujących, trwających
-   i zakończonych. Jeżeli użytkownik wskazał identyfikator zadania, przeczytaj
-   również odpowiadający mu plik przed rozpoczęciem pracy.
-3. `AMC_PYTHON_STAN_2026-10-10_PL.md` — architektura i szerszy stan aplikacji.
-4. `PRZEKAZANIE_2026-10-14_WTOREK_PL.md` — ostatnie przekazanie prac.
-5. `ZALEZNOSCI_AMC_STAN_PL.md` — przygotowane, trwałe środowisko kompilacji.
+## Gdzie czytać dalej
 
-Następnie wykonaj odczytowo `git status --short`, `git branch --show-current`,
-`git log -n 12 --oneline` i `git worktree list`. Nie porządkuj automatycznie
-brudnego drzewa i nie cofaj zmian, których sam nie utworzyłeś.
+- Pełny kontekst, architektura, interfejs, decyzje, aktualne wydania i
+  otwarte tematy: `HERMES_AMC_PRZEKAZANIE_2026-11-16_PL.md`.
+- Wszystkie 173 zastane pliki zadań i materiałów pomocniczych:
+  `docs/zadania/HERMES_AMC_KATALOG_ZADAN_2026-11-16_PL.md`.
+- Rejestr zadań: `docs/zadania/README.md`.
+- Zależności i testy: `ZALEZNOSCI_AMC_STAN_PL.md`, `wxlite/JAK_TESTOWAC.md`.
 
-## Stan rozdzielonych prac 15 października 2026
-
-- Główne repozytorium jest na gałęzi
-  `integracja/wxpython-sonos-tidal-20261008`. Poprawka kodu Shift+F2 jest w
-  commicie `3312fb18`. W drzewie roboczym znajdują się niezakończone,
-  niezacommitowane zmiany implementacji i testów Spotify. Trzeba je zachować.
-- Zachowane worktree wydania:
-  `D:\Projekty Codex\AMC worktrees\shift-f2-release-20261015`, gałąź
-  `local/shift-f2-release-20261015`, HEAD `b5df17be`.
-- Ostatni kompletnie przetestowany i zainstalowany kod pochodzi z commita
-  `b5df17bebbbce01d2663cfc8a219d4c83314864e`; pełny przebieg zakończył się
-  wynikiem 1571 testów zaliczonych, 110 pominiętych testów historycznych i 11
-  zaliczonych podtestów. Kompilacja miała etykietę
-  `2026.10.15-b5df17bebbbce01d2663cfc8a219d4c83314864e-4eb61747`.
-- Shift+F2 zostało dodatkowo sprawdzone na żywej aplikacji i rzeczywistym
-  zakończonym nagraniu: plik zmienił nazwę, a potem został przywrócony do
-  pierwotnej nazwy. Przyczyną wcześniejszego braku zmiany była pusta ścieżka w
-  niezwiązanym, nieudanym lub zatrzymanym wpisie historii nagrywania. Taki wpis
-  nie przerywa już aktualizacji właściwego rekordu.
-- Przed następną kompilacją trzeba kontrolowanie zintegrować poprawki wydania z
-  rozpoczętą pracą Spotify. Nie wykonuj ślepego merge, rebase ani cherry-pick
-  na brudnym drzewie.
-
-## Kierunek implementacji Spotify
-
-Używaj modelu GPT-6.1 Sol. Migracja nie wymaga Astry, ponieważ mechanizm
-Spotify już działał i ma sprawdzone źródło odniesienia. Astra może być później
-przydatna do rzeczywiście nowej lub niejednoznacznej architektury TIDAL-a albo
-Apple Music.
-
-Spotify powstaje z dwóch świadomie różnych wzorców:
-
-1. Ze starego AMC WPF bierz sprawdzony mechanizm techniczny: LibreSpot,
-   uwierzytelnianie, protokół, uruchamianie hosta i tor audio. Najpierw ustal,
-   które elementy da się przenieść bez zmiany zachowania silnika.
-2. Z aktualnego TIDAL-a w AMC Python bierz cały kontrakt interfejsu: bibliotekę,
-   wyszukiwanie, prawdziwy typ wyniku, relacje wykonawca–album–utwór,
-   odtwarzanie, playlisty, historię, sortowanie, Enter, Escape, strzałki,
-   skróty, komunikaty, zachowanie fokusu i etykiety dla NVDA.
-
-Nie kopiuj ze starego interfejsu błędów takich jak podwójny Enter, powtarzane
-komunikaty, nieprawidłowa lewa lub prawa strzałka, wyciek identyfikatorów albo
-odrębna obsługa wspólnych skrótów. `Ctrl+H` i pozostałe skróty globalne mają
-działać w Spotify tak samo jak w innych sesjach. Każdą wspólną funkcję pokryj
-testem kontraktowym dla TIDAL-a i Spotify, a zmienione listy sprawdź również z
-NVDA. Ograniczenie API ma być jawną różnicą możliwości, nie pozornym sukcesem.
-
-## Bezpieczne budowanie, instalacja i uruchamianie
-
-Zewnętrzny Hermes nie może zakładać, że widzi osobistą umiejętność Codex
-`safe-application-builds`. Obowiązują więc bezpośrednio poniższe reguły:
-
-- przed zamknięciem, instalacją lub restartem sprawdź procesy AMC, stan
-  nagrywania i pliki `.amc-partial`; nie przerywaj nagrania;
-- korzystaj z przygotowanego środowiska w
-  `D:\Projekty Codex\AMC - zależności` i istniejących skryptów repozytorium;
-- katalogi `.test-output`, `.test-tmp`, `publish` i worktree są zapleczem, a
-  nie instalacją użytkową;
-- instaluj i uruchamiaj wyłącznie
-  `D:\Projekty Codex\AMC Python\AMC.exe`;
-- po instalacji sprawdź manifest, commit źródłowy, etykietę kompilacji, sumy
-  paczki, tytuł okna oraz to, czy działa tylko jeden logiczny stos AMC;
-- nie ogłaszaj sukcesu na podstawie samego zakończenia kopiowania plików;
-- nie publikuj kodu ani paczki na GitHubie bez osobnej, aktualnej zgody
-  użytkownika dotyczącej konkretnego stanu.
-
-## Moduły i sesje
-
-Docelowo użytkownik może włączać, wyłączać i ustawiać kolejność osobnych sesji
-lub usług. Wyłączenie modułu nie usuwa konta, biblioteki ani historii. Skróty są
-oddzielną konfiguracją; konflikt albo wyłączona sesja nie mogą powodować
-cichego przypisania klawisza do innej usługi. Model danych, komendy i reguły
-dostępności mają pozostać wspólne, a różnice dostawcy należą do adaptera.
-
-## Zakończenie każdej sesji pracy
-
-Podaj użytkownikowi i zapisz w dokumentacji: używaną ścieżkę, gałąź, commit
-bazowy i końcowy, pozostawione niezacommitowane pliki, uruchomione testy z
-wynikami oraz dokładną tożsamość zbudowanej lub zainstalowanej wersji. Jeżeli
-drugi agent albo użytkownik pracuje równolegle, nie instaluj i nie scalaj bez
-sprawdzenia aktualnego stanu.
+Nie zakładaj, że Hermes automatycznie widzi czaty Codex lub lokalne pliki
+drugiego komputera. GitHub przenosi zatwierdzone źródła i dokumentację;
+lokalne instalacje, konta, nagrania i poświadczenia pozostają osobne.

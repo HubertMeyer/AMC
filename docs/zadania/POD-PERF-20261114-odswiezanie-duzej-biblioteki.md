@@ -119,3 +119,7 @@ koniec nagrywania i wolny komputer przed podmianą. Pomiary Ctrl+3, kosztu
 odświeżania, nawigacji NVDA oraz zachowanie pola `0` na żywym profilu nadal
 nie zostały wykonane; koszt pełnego zapisu biblioteki pozostaje znanym
 ograniczeniem.
+
+## Korekta użytkownika 16.11.2026 — poprawa po najnowszej wersji
+
+Użytkownik mówi, że prawdopodobnie ma już najnowszą instalację AMC i odczuwa wyraźne przyspieszenie Podcastów oraz Radio Archiwisty. Ta obserwacja zastępuje wcześniejszy opis z 14.11, że użytkownik nie zaktualizował jeszcze aplikacji i nie widział efektu zmian. Nie zmierzono w tej rozmowie czasu kontrolki ani pracy NVDA, więc przyczyna i skala poprawy pozostają do osobnego potwierdzenia. Odczyt manifestu w `D:\Projekty Codex\AMC Python` z 16.11 wskazał profil Test i commit źródeł `2b6b061db22523ed9cfb66d26e2808b3d7bf00a7` (alpha.510); proces `AMC.exe` z tego folderu odczytowo potwierdzono; wystartował 16.11 o 02:14:28.

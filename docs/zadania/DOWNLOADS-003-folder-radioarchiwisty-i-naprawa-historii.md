@@ -103,3 +103,7 @@ brak pliku, wybierz Wskaż przeniesiony pobrany plik.”
 Opis zmian: „Radio Archiwista zapisuje nowe pobrania w folderze wybranym
 przez użytkownika. Historia pobrań pomaga odnaleźć pliki po zmianie nazwy
 lub przeniesieniu i uzgadnia ścieżki po zmianie nazwy w AMC.”
+
+## Korekta użytkownika 16.11.2026 — stan instalacji i odbioru
+
+Użytkownik uważa, że ma już najnowszą wersję; poprawa szybkości Podcastów i Radio Archiwisty jest dla niego wyraźna. Pobierania z nowego wydania jeszcze nie sprawdził. Ta późniejsza informacja zastępuje założenie z 15.11, że aktualizacja Test nadal czeka na użytkownika. Odczyt manifestu folderu `D:\Projekty Codex\AMC Python` z 16.11 wskazał profil Test, commit źródeł `2b6b061db22523ed9cfb66d26e2808b3d7bf00a7` i `bundleId=c80cc46c`, a proces `AMC.exe` uruchomiony z tego folderu 16.11 o 02:14:28 odczytowo potwierdzono; nie wykonano odbioru Ctrl+D, Ctrl+J i NVDA. Następny krok tego zadania: sprawdzić pobieranie, Historię pobrań i fokus na działającej wersji w dogodnym dla użytkownika czasie.
