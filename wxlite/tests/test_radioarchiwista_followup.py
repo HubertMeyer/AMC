@@ -4,15 +4,35 @@ from __future__ import annotations
 
 from pathlib import Path
 from types import SimpleNamespace
+import sys
+import types
 
-from amc_wx_lite import menu_model
+try:
+    import wx
+except ModuleNotFoundError:
+    class _WxStub(types.ModuleType):
+        def __getattr__(self, name: str):
+            value = 0 if name.isupper() or name.startswith("ID_") else type(name, (), {})
+            setattr(self, name, value)
+            return value
+
+    wx = _WxStub("wx")
+    wx.GetTopLevelWindows = lambda: ()
+    wx.version = None
+    sys.modules["wx"] = wx
+
+from amc_wx_lite import gui, i18n, menu_model
 from amc_wx_lite.command_palette import entries_for_session
 from amc_wx_lite.gui import LiteFrame, copied_address_message
 from amc_wx_lite.state_store import LiteState, Options
 from amc_wx_lite.list_model import Row
 from amc_wx_lite.navigation import LibraryView, Navigator, PlayMedia, SessionId, View
 from amc_wx_lite.playback_activity import activity_rows
-from amc_wx_lite.radioarchiwista_source import ArchiveRecording, RadioarchiwistaSource
+from amc_wx_lite.radioarchiwista_source import (
+    ArchiveRecording,
+    RadioarchiwistaSource,
+    day_rows,
+)
 from amc_wx_lite.shortcuts import (
     Action, RADIOARCHIWISTA_SUPPORTED_ACTIONS, chord_from_canonical,
     describe_action, readable_shortcut, resolve,
@@ -272,3 +292,137 @@ def test_archive_player_copies_link_of_playing_recording() -> None:
     LiteFrame._copy_address(frame)
     assert copied == [playing.url]
     assert spoken == ["Skopiowano link do nagrania"]
+
+
+def test_open_archive_day_list_relocalizes_through_saved_language_change(
+    monkeypatch,
+) -> None:
+    """Zmiana języka odświeża tylko etykiety już otwartego poziomu dni."""
+
+    class Dialog:
+        languages = iter(("en", "pl"))
+
+        def __init__(self, *_args) -> None:
+            self.values = {
+                "radio_schedule_wake_override": False,
+                "shortcut_overrides": {},
+                "interface_language": next(self.languages),
+                "podcast_automatic_refresh_interval_minutes": 0,
+            }
+
+        def ShowModal(self) -> int:  # noqa: N802 - wx API
+            return gui.wx.ID_OK
+
+        def Destroy(self) -> None:  # noqa: N802 - wx API
+            pass
+
+    class MediaList:
+        def __init__(self) -> None:
+            self.relocalizations = 0
+
+        def relocalize_interface(self) -> None:
+            self.relocalizations += 1
+
+    try:
+        i18n.configure("pl")
+        navigator = Navigator()
+        navigator.active = SessionId.RADIOARCHIWISTA
+        navigator.apply_radioarchiwista_rows(
+            LibraryView.RADIOARCHIWISTA_DAYS,
+            day_rows("pr1", 2026, 10, (15, 13, 14)),
+            slug="pr1",
+            year=2026,
+            month=10,
+        )
+        archive_state = navigator.sessions[SessionId.RADIOARCHIWISTA]
+        archive_state.model.select_id("rarch:days:pr1:2026:10:13")
+        archive_state.breadcrumb = [("rarch:years:pr1", "rarch:station:pr1")]
+        day_row_ids = tuple(row.item_id for row in archive_state.model.rows)
+        other_state = navigator.sessions[SessionId.FILES]
+        other_state.model.replace([Row("file:unchanged", "Nie zmieniaj", "track")])
+        other_rows = tuple(other_state.model.rows)
+
+        options = Options(interface_language="pl")
+        lists = [MediaList() for _ in range(9)]
+        source_calls: list[str] = []
+        sync_calls: list[str] = []
+        frame = SimpleNamespace(
+            _radio_snapshot=SimpleNamespace(
+                wake_scheduled_recordings=False,
+                recording=SimpleNamespace(),
+            ),
+            state=SimpleNamespace(
+                options=options,
+                radio_schedule_wake_override=False,
+                shortcut_overrides={},
+            ),
+            options=options,
+            podcasts=SimpleNamespace(
+                global_settings=lambda: gui.PodcastGlobalSettings(),
+            ),
+            layout=SimpleNamespace(state_json=Path("unused-state.json")),
+            messages=gui.MessagePolicy(language="pl"),
+            _global_transient_previews=False,
+            _remember_local_playback_positions=True,
+            _detailed_hints=True,
+            client=None,
+            navigator=navigator,
+            files_list=lists[0],
+            radio_list=lists[1],
+            podcasts_list=lists[2],
+            tidal_list=lists[3],
+            spotify_list=lists[4],
+            wiim_list=lists[5],
+            frontier_smart_list=lists[6],
+            radioarchiwista_list=lists[7],
+            sonos_list=lists[8],
+            announcer=SimpleNamespace(say=lambda _message: None),
+            _save_state=lambda: True,
+            _restore_focus_after_dialog=lambda: None,
+            _update_window_title=lambda: None,
+            _apply_detailed_hints=lambda: None,
+            _apply_radio_activity_status=lambda: None,
+            _build_menu=lambda: None,
+            _sync_views=lambda: sync_calls.append("sync"),
+            Layout=lambda: None,
+            Refresh=lambda: None,
+            _radioarchiwista_source=lambda: source_calls.append("source"),
+        )
+        monkeypatch.setattr(gui, "GeneralPlaybackOptionsDialog", Dialog)
+        monkeypatch.setattr(gui, "resolve_keep_audio_edit_backups", lambda *_args: True)
+        monkeypatch.setattr(
+            LiteFrame,
+            "_with_radio_recording_options",
+            lambda _self, snapshot: snapshot,
+        )
+        monkeypatch.setattr(gui.wx, "GetTopLevelWindows", lambda: ())
+
+        LiteFrame._show_general_playback_options(frame)
+        assert [row.title for row in archive_state.model.rows] == [
+            "15.10.2026, Thursday",
+            "13.10.2026, Tuesday",
+            "14.10.2026, Wednesday",
+        ]
+        assert archive_state.model.selected_id == "rarch:days:pr1:2026:10:13"
+        assert archive_state.library_view is LibraryView.RADIOARCHIWISTA_DAYS
+        assert tuple(row.item_id for row in archive_state.model.rows) == day_row_ids
+        assert archive_state.breadcrumb == [("rarch:years:pr1", "rarch:station:pr1")]
+        assert tuple(other_state.model.rows) == other_rows
+        assert source_calls == []
+
+        LiteFrame._show_general_playback_options(frame)
+        assert [row.title for row in archive_state.model.rows] == [
+            "15.10.2026, czwartek",
+            "13.10.2026, wtorek",
+            "14.10.2026, środa",
+        ]
+        assert archive_state.model.selected_id == "rarch:days:pr1:2026:10:13"
+        assert archive_state.library_view is LibraryView.RADIOARCHIWISTA_DAYS
+        assert tuple(row.item_id for row in archive_state.model.rows) == day_row_ids
+        assert archive_state.breadcrumb == [("rarch:years:pr1", "rarch:station:pr1")]
+        assert tuple(other_state.model.rows) == other_rows
+        assert source_calls == []
+        assert sync_calls == ["sync", "sync"]
+        assert all(media_list.relocalizations == 2 for media_list in lists)
+    finally:
+        i18n.configure("pl")

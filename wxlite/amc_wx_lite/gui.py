@@ -34293,6 +34293,19 @@ class LiteFrame(wx.Frame):
                 self.sonos_list,
             ):
                 media_list.relocalize_interface()
+            archive_state = self.navigator.sessions[SessionId.RADIOARCHIWISTA]
+            if (
+                archive_state.library_view is LibraryView.RADIOARCHIWISTA_DAYS
+                and isinstance(archive_state.radioarchiwista_year, int)
+                and isinstance(archive_state.radioarchiwista_month, int)
+            ):
+                relocalized_rows = _radioarchiwista_module.relocalize_day_rows(
+                    archive_state.model.rows,
+                    year=archive_state.radioarchiwista_year,
+                    month=archive_state.radioarchiwista_month,
+                )
+                if relocalized_rows != archive_state.model.rows:
+                    archive_state.model.replace(relocalized_rows)
         self._update_window_title()
         self.shortcut_overrides = chosen_shortcuts
         self._radio_snapshot = LiteFrame._with_radio_recording_options(

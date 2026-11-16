@@ -386,6 +386,25 @@ def day_rows(slug: str, year: int, month: int, days: tuple[int, ...]) -> list[Ro
     )
 
 
+def relocalize_day_rows(
+    rows: tuple[Row, ...] | list[Row], *, year: int, month: int,
+) -> list[Row]:
+    """Odśwież same etykiety już otwartego poziomu dni bez odczytu katalogu."""
+
+    localized: list[Row] = []
+    for row in rows:
+        if row.service_kind != "rarchDay":
+            localized.append(row)
+            continue
+        try:
+            day = int(row.item_id.rsplit(":", 1)[1])
+        except (IndexError, ValueError):
+            localized.append(row)
+            continue
+        localized.append(replace(row, title=day_label(year, month, day)))
+    return localized
+
+
 def _recording_details(
     recording: ArchiveRecording,
     position: float,
