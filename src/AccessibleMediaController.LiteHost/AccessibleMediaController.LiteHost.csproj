@@ -197,6 +197,8 @@
              Link="Engine\SpotifyApiClient.cs" />
     <Compile Include="..\AccessibleMediaController.Windows\Services\SpotifyIntegrationService.cs"
              Link="Engine\SpotifyIntegrationService.cs" />
+    <Compile Include="..\AccessibleMediaController.Windows\Services\SpotifyCollectionCompletion.cs"
+             Link="Engine\SpotifyCollectionCompletion.cs" />
     <Compile Include="..\AccessibleMediaController.Windows\Services\SpotifyCredentialStore.cs"
              Link="Engine\SpotifyCredentialStore.cs" />
     <Compile Include="..\AccessibleMediaController.Windows\Services\SpotifyOAuthClient.cs"

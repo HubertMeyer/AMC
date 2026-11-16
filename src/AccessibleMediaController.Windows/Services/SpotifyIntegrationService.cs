@@ -242,7 +242,7 @@ internal sealed class SpotifyIntegrationService(
                 collection.Warnings,
                 // Pełne, gdy wszystkie cztery kolekcje przeszły: utwory,
                 // albumy, wykonawcy, playlisty.
-                collection.UpdatedKinds.Count == 4);
+                SpotifyCollectionCompletion.IsComplete(collection.UpdatedKinds));
         }
         finally
         {

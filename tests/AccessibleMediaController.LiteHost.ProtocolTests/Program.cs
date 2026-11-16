@@ -30,6 +30,7 @@ internal static class Program
         ("--apple-music-web", AppleMusicWebCommandTests.Run),
         ("--tidal-playback-probe", TidalPlaybackProbeTests.Run),
         ("--spotify-catalog", SpotifyCatalogContractTests.Run),
+        ("--spotify-collection-completion", SpotifyCollectionCompletionTests.Run),
         ("--spotify-profile", SpotifyReleaseProfileTests.Run),
         ("--youtube-account", YouTubeAccountContractTests.Run),
         ("--account-settings", AccountSettingsStoreTests.Run),
