@@ -9,7 +9,7 @@ Bieżące priorytety i stan wydania są w
 [pełnym przekazaniu](../../HERMES_AMC_PRZEKAZANIE_2026-11-16_PL.md).
 Kanoniczny rejestr to [README.md](README.md).
 
-Łącznie: 173 pliki zadań i materiałów pomocniczych w 69 grupach.
+Łącznie: 179 plików w 70 grupach: 173 zastanych i 6 jawnie oznaczonych rekonstrukcji.
 
 ## Spis grup
 
@@ -57,7 +57,7 @@ Kanoniczny rejestr to [README.md](README.md).
 - [PODCAST](#podcast) — 1
 - [PODRAD](#podrad) — 1
 - [PRESET](#preset) — 1
-- [PUBLIC](#public) — 1
+- [PUBLIC](#public) — 2
 - [QUEUE](#queue) — 1
 - [RADIO](#radio) — 12
 - [RADIOBROWSER](#radiobrowser) — 2
@@ -72,14 +72,15 @@ Kanoniczny rejestr to [README.md](README.md).
 - [SET](#set) — 1
 - [SOCIAL](#social) — 1
 - [SPOT](#spot) — 1
-- [SPOTIFY](#spotify) — 6
+- [SPOTIFY](#spotify) — 8
 - [STAB](#stab) — 1
 - [STR](#str) — 1
-- [TEST](#test) — 1
+- [TEST](#test) — 3
 - [TID](#tid) — 5
 - [TIDAL](#tidal) — 2
 - [TITLE](#title) — 1
 - [TSH](#tsh) — 1
+- [UNDO](#undo) — 1
 - [UPDATE](#update) — 3
 - [YT](#yt) — 6
 
@@ -313,6 +314,7 @@ Kanoniczny rejestr to [README.md](README.md).
 ### PUBLIC
 
 - [PUBLIC-20261030-uzupelnienie-poprawek-huberta.md](PUBLIC-20261030-uzupelnienie-poprawek-huberta.md) — PUBLIC-20261030 — uzupełnienie poprawek Huberta. Stan przy nagłówku: W trakcie. Data korekty: 30.10.2026..
+- [PUBLIC-20261030-wydanie-alpha448.md](PUBLIC-20261030-wydanie-alpha448.md) — PUBLIC-20261030 — historyczne wydanie AMC Public alpha.448.
 
 ### QUEUE
 
@@ -411,10 +413,12 @@ Kanoniczny rejestr to [README.md](README.md).
 ### SPOTIFY
 
 - [SPOTIFY-20261101-album-kolejka-komunikaty.md](SPOTIFY-20261101-album-kolejka-komunikaty.md) — SPOTIFY-20261101 — album, kolejka i komunikaty NVDA. Stan przy nagłówku: W trakcie — zmiany źródłowe i testy bez instalacji oraz ręcznego odbioru NVDA..
+- [SPOTIFY-ACCESS-001-zapytanie-o-publiczne-web-api.md](SPOTIFY-ACCESS-001-zapytanie-o-publiczne-web-api.md) — SPOTIFY-ACCESS-001 — zapytanie o publiczne Spotify Web API.
 - [SPOTIFY-CHROME-20261031.md](SPOTIFY-CHROME-20261031.md) — Spotify w AMC Test: oficjalny odtwarzacz w ukrytym Chrome.
 - [SPOTIFY-CHROME-przewodnik-lista-zmian-szkic.md](SPOTIFY-CHROME-przewodnik-lista-zmian-szkic.md) — Szkic dla użytkownika: Spotify w AMC Test.
 - [SPOTIFY-ISSUES-009-011-20261030.md](SPOTIFY-ISSUES-009-011-20261030.md) — SPOTIFY-ISSUES-009-011 — zgłoszenia Huberta dotyczące AMC Test.
 - [SPOTIFY-LIBRESPOT-20261108-wycofanie-z-pakietu.md](SPOTIFY-LIBRESPOT-20261108-wycofanie-z-pakietu.md) — Wycofanie LibreSpot z paczek AMC — 8 listopada 2026.
+- [SPOTIFY-OUTPUT-001-wyjscie-oficjalnego-odtwarzacza.md](SPOTIFY-OUTPUT-001-wyjscie-oficjalnego-odtwarzacza.md) — SPOTIFY-OUTPUT-001 — fizyczne wyjście oficjalnego Spotify.
 - [SPOTIFY-SOLOIST-20261108-proste-logowanie.md](SPOTIFY-SOLOIST-20261108-proste-logowanie.md) — SPOTIFY-SOLOIST-20261108 — prostsza konfiguracja Spotify.
 
 ### STAB
@@ -427,6 +431,8 @@ Kanoniczny rejestr to [README.md](README.md).
 
 ### TEST
 
+- [TEST-20261030-amc-test-alpha448.md](TEST-20261030-amc-test-alpha448.md) — TEST-20261030 — historyczne wydanie AMC Test alpha.448.
+- [TEST-20261030-instrukcja-i-lista-zmian-szkic.md](TEST-20261030-instrukcja-i-lista-zmian-szkic.md) — TEST-20261030 — szkic instrukcji i listy zmian alpha.448. Stan przy nagłówku: historyczny brakujący załącznik. Rekord odtworzony 16.11.2026.
 - [TEST-20261031-spotify-alpha458.md](TEST-20261031-spotify-alpha458.md) — TEST-20261031-SPOTIFY — zbiorcza aktualizacja AMC Test. Stan przy nagłówku: kod i regresja gotowe; pakiet, wydanie GitHub, instalacja i odbiór.
 
 ### TID
@@ -450,6 +456,10 @@ Kanoniczny rejestr to [README.md](README.md).
 
 - [TSH-001-folder-bufora-timeshift.md](TSH-001-folder-bufora-timeshift.md) — TSH-001 — folder bufora Time Shift. Stan przy nagłówku: kod, testy celowane i kompilacja hosta gotowe; wspólna aktualizacja z TIDAL oraz odbiór NVDA w przygotowaniu..
 
+### UNDO
+
+- [UNDO-001-przywracanie-pozycji-kolekcji.md](UNDO-001-przywracanie-pozycji-kolekcji.md) — UNDO-001 — przywracanie pozycji kolekcji. Stan przy nagłówku: Oczekuje na doprecyzowanie i pracę. Rekord odtworzony 16.11.2026.
+
 ### UPDATE
 
 - [UPDATE-20261101-ponowna-aktualizacja.md](UPDATE-20261101-ponowna-aktualizacja.md) — UPDATE-20261101 — wynik i ponowne sprawdzenie aktualizacji AMC. Stan przy nagłówku: W trakcie; alpha.464 opublikowana i zainstalowana, potrzebny ręczny odsłuch NVDA. Data: 1.11.2026. Dotyczy bieżącej aplikacji wxPython AMC Test..
@@ -467,13 +477,16 @@ Kanoniczny rejestr to [README.md](README.md).
 
 ## Kontrola kompletności odsyłaczy w rejestrze
 
-- Odsyłacze do brakujących plików: 6.
-  - `PUBLIC-20261030-wydanie-alpha448.md` — Historyczne wydanie AMC Public alpha.448 opublikowano na GitHubie; bez lokalnej instalacji i ręcznego odbioru NVDA według rejestru.
-  - `SPOTIFY-ACCESS-001-zapytanie-o-publiczne-web-api.md` — Pakiet wstępnego zapytania o publiczny dostęp Spotify Web API był gotowy do recenzji, bez wysyłki. Aktualny kanał kontaktu i kwota Client ID wymagały potwierdzenia.
-  - `SPOTIFY-OUTPUT-001-wyjscie-oficjalnego-odtwarzacza.md` — Historyczne badanie fizycznego wyjścia oficjalnej aplikacji Spotify. Opis Librespot w rejestrze jest starszy niż decyzja o Web Playback SDK w ukrytym Chrome.
-  - `TEST-20261030-amc-test-alpha448.md` — Historyczne AMC Test alpha.448 było wydane i zainstalowane; ręczny odbiór NVDA oczekiwał według rejestru.
-  - `TEST-20261030-instrukcja-i-lista-zmian-szkic.md` — Szkic instrukcji i listy zmian do historycznego Test alpha.448; sam plik nie zachował się pod tym odsyłaczem.
-  - `UNDO-001-przywracanie-pozycji-kolekcji.md` — Plan przeglądu Ctrl+Z, trwałych porządków Ulubionych i kolejek oraz kontraktu cofania; szczegółowy rekord nie zachował się pod tym odsyłaczem.
+- Odsyłacze do brakujących plików: 0.
+- Rekordy odtworzone 16.11.2026 z krótkich wpisów rejestru: 6.
+  Ich oryginalnych pełnych treści nie odnaleziono; nie są dowodem
+  wykonania nieopisanych testów ani dawnych decyzji.
+  - [PUBLIC-20261030-wydanie-alpha448.md](PUBLIC-20261030-wydanie-alpha448.md) — Historyczne wydanie AMC Public alpha.448 opublikowano na GitHubie; bez lokalnej instalacji i ręcznego odbioru NVDA według rejestru.
+  - [SPOTIFY-ACCESS-001-zapytanie-o-publiczne-web-api.md](SPOTIFY-ACCESS-001-zapytanie-o-publiczne-web-api.md) — Pakiet wstępnego zapytania o publiczny dostęp Spotify Web API był gotowy do recenzji, bez wysyłki. Aktualny kanał kontaktu i kwota Client ID wymagały potwierdzenia.
+  - [SPOTIFY-OUTPUT-001-wyjscie-oficjalnego-odtwarzacza.md](SPOTIFY-OUTPUT-001-wyjscie-oficjalnego-odtwarzacza.md) — Historyczne badanie fizycznego wyjścia oficjalnej aplikacji Spotify. Opis Librespot w rejestrze jest starszy niż decyzja o Web Playback SDK w ukrytym Chrome.
+  - [TEST-20261030-amc-test-alpha448.md](TEST-20261030-amc-test-alpha448.md) — Historyczne AMC Test alpha.448 było wydane i zainstalowane; ręczny odbiór NVDA oczekiwał według rejestru.
+  - [TEST-20261030-instrukcja-i-lista-zmian-szkic.md](TEST-20261030-instrukcja-i-lista-zmian-szkic.md) — Szkic instrukcji i listy zmian do historycznego Test alpha.448; sam plik nie zachował się pod tym odsyłaczem.
+  - [UNDO-001-przywracanie-pozycji-kolekcji.md](UNDO-001-przywracanie-pozycji-kolekcji.md) — Plan przeglądu Ctrl+Z, trwałych porządków Ulubionych i kolejek oraz kontraktu cofania; szczegółowy rekord nie zachował się pod tym odsyłaczem.
 - Pliki bez odsyłacza w `README.md`: 52. Mogą być materiałem
   pomocniczym lub zadaniem pominiętym w rejestrze; przed pracą sprawdź ich treść.
   - [A11Y-20261110-powiazania-status-spotify.md](A11Y-20261110-powiazania-status-spotify.md)
@@ -529,4 +542,4 @@ Kanoniczny rejestr to [README.md](README.md).
   - [TIDAL-TOGGLE-20261111-przelaczanie-kolekcji.md](TIDAL-TOGGLE-20261111-przelaczanie-kolekcji.md)
   - [UPDATE-20261113-widoczne-okna.md](UPDATE-20261113-widoczne-okna.md)
 - Pliki bez nagłówka głównego: 0.
-- Pliki bez jawnej linii Status/Stan w pierwszych 45 wierszach: 73.
+- Pliki bez jawnej linii Status/Stan w pierwszych 45 wierszach: 77.

@@ -14,7 +14,8 @@ GitHub. Trwałym źródłem ustaleń są pliki projektu, kod, testy i historia G
    „Bieżący punkt wznowienia”; nowsze korekty w plikach zadania i ten dokument
    mają pierwszeństwo.
 4. `docs/zadania/HERMES_AMC_KATALOG_ZADAN_2026-11-16_PL.md` — wszystkie 173
-   zastane pliki zadań i materiałów pomocniczych oraz kontrola odsyłaczy.
+   zastane pliki oraz sześć jawnie oznaczonych rekonstrukcji brakujących
+   rekordów; katalog kontroluje też odsyłacze.
 5. Plik zadania wybranego przez użytkownika, w całości, wraz z późniejszymi
    korektami. Nie uruchamiaj innych zadań tylko dlatego, że są w rejestrze.
 6. Dla budowania: `ZALEZNOSCI_AMC_STAN_PL.md`, `wxlite/JAK_TESTOWAC.md`,
@@ -192,7 +193,7 @@ Samo wykrycie nowości nie upoważnia do instalacji, publikacji ani zmiany kodu.
 ## Mapa bieżących i otwartych prac
 
 Poniższe hasła są punktami wejścia, nie poleceniem równoczesnej realizacji.
-Pełny spis wszystkich 173 plików jest w katalogu zadań.
+Pełny spis 173 zastanych plików i sześciu rekonstrukcji jest w katalogu zadań.
 
 | Obszar | Co ustalono i jaki jest następny sprawdzalny krok | Plik |
 |---|---|---|
@@ -220,11 +221,14 @@ zadań zawiera stary punkt wznowienia alpha.482, mimo późniejszych wpisów
 alpha.510. Nie bierz pierwszego napotkanego numeru wersji za aktualny stan.
 
 W katalogu zadań wykryto **sześć niedziałających lokalnych odsyłaczy** i
-**52 pliki bez odsyłacza w rejestrze**. Dokładna lista jest na końcu katalogu.
-Brakujących dokumentów nie odtworzono z domysłów; przeszukanie historii Git
-tej gałęzi i lokalnych referencji nie znalazło ich pod wskazanymi nazwami.
-Ich krótkie opisy pozostają w `docs/zadania/README.md`. Przed rozpoczęciem
-takiego tematu odtwórz wymagania z użytkownikiem i istniejących dowodów.
+**52 pliki bez odsyłacza w rejestrze**. Dla sześciu odsyłaczy utworzono
+rekordy oznaczone „odtworzony 16.11.2026”, wyłącznie na podstawie krótkich
+opisów z rejestru. To naprawia nawigację, **nie odzyskuje pierwotnej treści**.
+Historia Git wszystkich lokalnych referencji nie znalazła tych plików pod
+wskazanymi nazwami. Pełna lista luk i materiałów pomocniczych jest na końcu
+katalogu. Przed rozpoczęciem jednego z takich tematów odtwórz wymagania z
+użytkownikiem i istniejących dowodów; nie przyjmuj, że rekonstrukcja
+potwierdza nieznane testy lub dawne decyzje.
 
 ## Jak prowadzić każde kolejne zadanie
 

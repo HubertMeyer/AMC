@@ -48,7 +48,7 @@ zastępują niedostępną na drugim komputerze historię rozmów Codex.
 
 - Pełny kontekst, architektura, interfejs, decyzje, aktualne wydania i
   otwarte tematy: `HERMES_AMC_PRZEKAZANIE_2026-11-16_PL.md`.
-- Wszystkie 173 zastane pliki zadań i materiałów pomocniczych:
+- Wszystkie 173 zastane pliki zadań i sześć oznaczonych rekonstrukcji:
   `docs/zadania/HERMES_AMC_KATALOG_ZADAN_2026-11-16_PL.md`.
 - Rejestr zadań: `docs/zadania/README.md`.
 - Zależności i testy: `ZALEZNOSCI_AMC_STAN_PL.md`, `wxlite/JAK_TESTOWAC.md`.
