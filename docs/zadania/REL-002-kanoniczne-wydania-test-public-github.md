@@ -36,7 +36,53 @@ nie wyodrębniono — oba dostępne czytniki nie obsłużyły formatu. Brak dowo
 przyczyny detekcji lub fałszywego alarmu. Żywy odbiór Windows/NVDA nadal otwarty; główny
 komputer pozostaje nietykalny, użytkownik aktualizuje go ręcznie.
 
-## Diagnostyczna próba na maszynie GitHub — 17.11.2026
+## Aktualizacja 18.11.2026 — instalator diagnostyczny z chronionej VM gotowy
+
+Michał osobno zatwierdził włączenie ochrony wyłącznie na tymczasowej VM
+GitHuba oraz budowę ze skanowaniem. Ta zgoda zastępuje poniższe historyczne
+oczekiwanie na uzgodnienie chronionego środowiska; nie obejmuje zmiany
+ochrony na Hermesie/głównym PC, instalacji ani publikacji wydania.
+
+- Pierwsza chroniona próba `44195759246` rzeczywiście włączyła ochronę,
+  usunęła domyślne wykluczenia i zaliczyła skan źródeł oraz kontrolę wejść.
+  Zatrzymała ją nasza błędna lista oczekiwanych wydawców podpisu Inno,
+  nie detekcja malware. Oficjalna dokumentacja JRSoftware wymaga
+  `Pyrsys B.V.`; plik miał podpis `Valid` tego właśnie wydawcy.
+- Poprawiono sprawdzenie na dokładny `SimpleName == 'Pyrsys B.V.'`;
+  zachowano wymaganie ważnego podpisu i ten sam przypięty SHA-256.
+  Siedem testów kontraktowych i parser dziewięciu bloków PowerShell PASS.
+- Osobna jednorazowa gałąź `codex/amc-diagnostic-gh-protected-20261118-verified`,
+  commit `9739fe346be503a9c1b755f03aa6983d81c74e7d`, run `44197448182`:
+  **SUCCESS**. Build bundle i kanoniczny wrapper instalatora zakończyły się
+  kodem 0; zachowano pełne argv ISCC i jego exit 0. Nie omijano integralności
+  ani technicznych kontroli uruchomienia; dodane skany poprzedzają wykonanie.
+- Potwierdzono real-time, behavior, IOAV, on-access, skanowanie skryptów
+  i archiwów, brak wykluczeń oraz skany wymagane przez workflow. Końcowy
+  audyt: aktywny Defender, silnik `1.1.26100.4`, sygnatury `1.463.347.0`,
+  brak detekcji i zdarzeń 1116/1117 od początku joba.
+- Powstał `AMC-Test-2026-11-17-2326.exe` (`0.1.0-alpha.511`). Etykieta
+  pliku pochodzi z zegara UTC VM, a nie lokalnej daty w Polsce.
+  Zachowany jako Actions artifact `14380677377`, 214074499 B archiwum,
+  SHA-256 **archiwum ZIP**, nie samego EXE:
+  `8bbdbef9397235b50b5e6652a98604053ea4de1a9c6389eed7e79d9bd8743526`.
+- Raporty: artifact `14379838582`, 4355 B, SHA-256 ZIP
+  `feba50573120917af5e56b4de453a9630e9fa5c9a53893018575f31087a925e2`.
+  Pobrano i odczytano wszystkie 10 małych JSON do profilu AMC,
+  `state/github-diagnostic-44197448182`; dużego instalatora nie pobierano
+  na Hermesa. Nie było lokalnej kompilacji, instalacji ani zmiany Defendera.
+- Job i cleanup zakończone (`2026-11-17T23:31:03Z`); standardowa
+  GitHub-hosted VM podlega automatycznej likwidacji po jobie. Odczyt API:
+  0 uruchomionych i 0 oczekujących przebiegów. Raportów nie usuwano.
+- To nowy wynik diagnostycznej budowy, nie werdykt Microsoftu o dawnych
+  RCX. **Historyczny hold alpha.511, brak release i brak odbioru instalacji
+  oraz Windows/NVDA pozostają jawne.** Nie zamykano zgłoszeń #14/#17/#18/#19/#20
+  na podstawie samego zielonego buildu. Nie ponawiać budowy ani dawnych
+  fixtures bez nowej przyczyny. Kolejnym etapem jest rozstrzygnięcie dopuszczenia
+  tego konkretnego kandydata do ograniczonego odbioru, nie kolejna kompilacja.
+
+Dowód przebiegu: https://github.com/michalkasperczak/AMC/actions/runs/44197448182
+
+## Diagnostyczna próba na maszynie GitHub — 17.11.2026 (historia)
 
 Użytkownik zatwierdził jedną kontrolowaną budowę na GitHub-hosted Windows,
 bez budowy i instalacji na Hermesie oraz bez instalacji na głównym komputerze.

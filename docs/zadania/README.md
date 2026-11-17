@@ -1,13 +1,16 @@
 # Rejestr zadań AMC
 
-Najnowszy wynik REL-002: zatwierdzone ponowienie na GitHub-hosted Windows
-(run `44191185213`, źródła `999b31d`) zakończone przed kompilacją. Poprawiony
-odczyt CIM działa: VM ma wyłączoną ochronę real-time/behavior/IOAV i dwa
-wykluczenia, więc bramka bezpieczeństwa zablokowała build. To nie detekcja
-wirusa ani wynik skanu. Oba joby i ich sprzątanie zakończone; standardowe VM
-GitHub likwiduje automatycznie, raporty zachowano. Bez instalatora, publikacji,
-lokalnej budowy i zmian ochrony. Dalsza próba wymaga uzgodnienia środowiska
-z aktywną ochroną. Szczegóły w [REL-002](REL-002-kanoniczne-wydania-test-public-github.md).
+Najnowszy wynik REL-002 (18.11.2026): **instalator diagnostyczny z chronionej
+VM GitHuba powstał**, run `44197448182`, źródła `9739fe3`, SUCCESS.
+Po osobnej zgodzie użytkownika włączono ochronę wyłącznie na efemerycznej VM;
+Defender pozostał aktywny, wymagane skany i kanoniczna budowa przeszły,
+końcowy audyt nie wykazał detekcji ani zdarzeń 1116/1117. Plik Test zachowano
+jako Actions artifact `14380677377`, nie jako release; 10 raportów odczytano.
+Job i cleanup zakończone; GitHub automatycznie likwiduje standardową VM.
+Nie kompilowano ani nie instalowano lokalnie, nie zmieniano ochrony na Hermesie
+ani głównym PC. Historyczne RCX nadal bez werdyktu; wydanie, instalacja
+i odbiór Windows/NVDA nie są zaliczone. Nie ponawiać budowy zamiast odbioru.
+Szczegóły w [REL-002](REL-002-kanoniczne-wydania-test-public-github.md).
 
 - `YT-007` — **Źródła zintegrowane, celowane testy zaliczone; wydanie i odbiór użytkowy wstrzymane** — #19/#20 autora `HubertMeyer`: import plików i typowanie OPML, archiwa z polskimi tytułami oraz ograniczona publiczna lista live/upcoming bez konta. Po review poprawiono rozróżnianie ID i ochronę istniejących metadanych. Brak nieoficjalnego logowania TV; bez nowego instalatora i zamykania zgłoszeń. [Plan, kryteria i wyniki](YT-007-zgloszenia-19-20-import-i-transmisje.md).
 
