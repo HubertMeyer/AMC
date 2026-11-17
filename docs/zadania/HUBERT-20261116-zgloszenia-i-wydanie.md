@@ -43,6 +43,16 @@ Wspólne zachowania Public/Test badać raz tam, gdzie rzeczywiście są identycz
 
 ## Wykonanie
 
+### Odebrany wynik kolejnego etapu — 17.11.2026
+
+`deleg_f9478710` zakończony. Prowadzący odczytał rzeczywiste logi obu procesów kolejki oraz sprawdził ich SHA względem raportu: drugi proces przywrócił 3 wpisy `fixture:C,B,A`, flagę play-next, bieżące `fixture:B`, `restoredRows=3`, bez odtwarzania. Nie powtarzano całej baterii. Dokument odebrano lokalnie jako `6a6957d`.
+
+Bezgłośny test MP3 doprowadzono do końca jedną celowaną próbą `--mp3-peaks-only`: kod 0, zaliczone progi surowego/ograniczonego szczytu i seeku w produkcyjnym torze. Wyjaśniono błędne utożsamienie lokalnej ścieżki komponentu FFmpeg na **HERMES** z głównym komputerem. Użyto istniejącej zależności odczytowo, z wersją i SHA przed/po, bez kolejnego pobierania, bez modyfikacji profilu i urządzenia audio. Szczegóły i zakres dowodu w `HUBERT-AUDIO-ODBIOR-20261117.md`; historyczna blokada „brak własnego dekodera” nie jest już aktualna.
+
+Bezpieczne doprecyzowanie komunikatu niedostępnej playlisty z `cf19cf9` sprawdzono względem aktualnej dokumentacji Spotify o trybie deweloperskim i zintegrowano jako `d978877`. Prowadzący sprawdził zgodność zmienionych źródeł stagingu z repo i uruchomił celowany zestaw `--spotify-catalog`: `Wszystkie zestawy przeszly (1).`, kod 0. Początkowe nieudane uruchomienia były błędem odnalezienia runnera (faktyczne AssemblyName `amc_lite_protocol_tests`, konfiguracja Debug), nie testem produktu. Nie zmieniano EOS ani korzystano z konta Spotify; ograniczenia #9–#11 z pełnego raportu pozostają jawne.
+
+Przygotowano prywatne ZIP-y obu profili i instalator Public z **poprzedniej** bazy `9b77369`; po nowej zmianie C# nie są finalnymi artefaktami tego wydania. Instalator Test zatrzymany przed kompilacją przez brak zaufanej paczki Quick App Switcher. Nie przyjęto na wiarę `sourceDirty=false`: osobno zlecono wąskie wyjaśnienie użytych shimów Git i prywatnej kompatybilności PowerShell 5.1 oraz odszukanie oryginalnej paczki dodatku (`deleg_fb8f5bf8`, `hubert-installer-prereqs`). Bez ponownego budowania bundle na tym etapie, instalacji i publikacji. Po rozwiązaniu tej zależności: zamrozić nowy wspólny commit, zbudować odpowiadające mu artefakty i wykonać proporcjonalny rzeczywisty odbiór instalacji/NVDA na Hermesie. Nie instalować na głównym komputerze.
+
 ### Wznowienie całego zakresu — 17.11.2026
 
 Po doprecyzowaniu Michała uruchomiono `deleg_f9478710`: trzy równoległe, izolowane kontynuacje z dokładnej bazy `9b773694dba8e61ae527664ae195d194453ab211`:

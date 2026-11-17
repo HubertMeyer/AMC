@@ -59,7 +59,22 @@ err-2.log                   560404142b1cef4f282343af875b16a88b4b0529b369cd59af01
 profile/file-queue-v1.json  0416206c81205f1a32c154ce887b3b581bc1a37ce950d068f5b556a098bd56b6
 ```
 
-## #15 — MP3 i limiter: **NIEODEBRANE (brak własnego dekodera)**
+## #15 — pierwotny wynik wykonawcy: **historyczna blokada izolacji, wyjaśniona poniżej**
+
+**Nowszy wynik prowadzącego zastępuje tę blokadę:** bezgłośny pomiar aktualnego toru MP3 zaliczony, kod 0. Komponent pod lokalnym `C:\Users\Michal\AppData\Local` był na komputerze **HERMES**, a nie na głównym komputerze Michała. Samo użycie istniejącej, rozpoznanej zależności spoza katalogu stagingu nie oznacza użycia starego kodu AMC. Nie wolno mylić tożsamości komputera ze zbieżną nazwą konta.
+
+Prowadzący potwierdził zgodność sześciu plików źródłowych stagingu z bieżącym repo (cztery klasy toru FFmpeg/WindowsMediaOutput oraz `Mp3PeakPlaybackTests.cs` i `Program.cs`) i uruchomił tylko `--mp3-peaks-only` z już zbudowanego stagingu. Odczytane i zachowane metadane:
+
+- komputer: `HERMES`;
+- źródła: `9b773694dba8e61ae527664ae195d194453ab211`; późniejsza poprawka ostrzeżenia playlisty nie zmienia tych plików;
+- FFmpeg: `n9.0.2-22-g46d8f462ee-20261003`;
+- SHA-256 rzeczywistego `ffmpeg.exe` przed i po próbie: `f2f10171723ce54438dad4a084bde1dfd79f17567a80169ad90ea98524ebc705`;
+- kod testu i procesu uruchamiającego: `0`;
+- zaliczone asercje na rzeczywistym PCM: surowy szczyt `>1.1`, szczyt po limiterze `>0.75` i `<=0.981`, po przewinięciu do 1 s szczyt `>0.1`; rozróżnienie błędu urządzenia i dekodera;
+- wynik: `headless-checks/parent-mp3-acceptance/result.json`, SHA-256 `4c56b4a30b03fa81e55e5dc03fcfb76e66f770e684571d856fd457b4ea7a214e`;
+- stdout/stderr tej udanej próby są puste; wynik wynika z faktycznego wykonania testu z asercjami i kodem 0, nie z dopisanej do raportu liczby próbek.
+
+Nie zmieniano ani nie kopiowano komponentu do profilu, nie pobierano go ponownie i nie otwierano urządzenia audio. To pomiar produkcyjnego dekodera/limitera na jawnym syntetycznym MP3, nie odsłuch, próba sterownika dźwięku ani odbiór całego interfejsu. Nie przedstawiać go jako testu z całkowicie odizolowanym runtime. Poniższy zapis dokumentuje wcześniejszą, nadmiernie restrykcyjną interpretację wykonawcy, nie aktualną blokadę.
 
 Test produkcyjnego toru istnieje i uruchamia rzeczywiste:
 
