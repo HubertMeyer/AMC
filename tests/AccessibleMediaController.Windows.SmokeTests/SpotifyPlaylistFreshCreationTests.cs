@@ -50,6 +50,7 @@ internal static class SpotifyPlaylistFreshCreationTests
             .GetAwaiter().GetResult();
         Check(result.AddedCount == 1 && handler.AddRequests == 1,
             "świeżo utworzona playlista nie przyjęła elementu przed pojawieniem się w katalogu");
+        SpotifyPlaylistAccessMessageTests.Run();
     }
 
     private static void Check(bool condition, string message)

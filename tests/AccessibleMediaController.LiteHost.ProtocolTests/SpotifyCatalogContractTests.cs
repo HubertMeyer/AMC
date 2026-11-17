@@ -29,6 +29,7 @@ internal static class SpotifyCatalogContractTests
         PlaylistRequestsAcceptOnlyNamedTargetsAndPlayableItems();
         PlaylistRemoveRequestKeepsOnlyPlayableUris();
         ContainerResultNeverUsesIdentifiersInItsHeading();
+        UnavailablePlaylistExplainsProviderRestrictionWithoutDiagnosingTheCause();
         ContainerKeepsRepeatedPlaylistOccurrencesDistinct();
         CoordinatorDoesNotAuthenticateForStatusOrCapabilities();
         CoordinatorRedactsCredentialProbeFailure();
@@ -526,6 +527,24 @@ internal static class SpotifyCatalogContractTests
         Check(!result.Heading.Contains("artist123", StringComparison.Ordinal)
             && result.HasMore,
             "ID weszło do nagłówka albo zgubiono informację o dalszych wynikach");
+    }
+
+    private static void UnavailablePlaylistExplainsProviderRestrictionWithoutDiagnosingTheCause()
+    {
+        var result = LiteSpotifyCatalogContract.CreateContainerResult(
+            new LiteSpotifyContainerRequest(
+                MediaItemKind.Playlist,
+                "playlist-other-user",
+                "Playlista innej osoby",
+                string.Empty,
+                null),
+            [],
+            available: false);
+
+        Check(result.Warning ==
+                "Spotify nie udostępnił zawartości tej playlisty temu kontu. "
+                + "W trybie deweloperskim dotyczy to między innymi playlist innych osób.",
+            "niedostępna playlista nie wyjaśnia ograniczenia Spotify bez fałszywej diagnozy.");
     }
 
     private static void DescriptionRequestAcceptsOnlyPodcastMaterialsAndCleansText()

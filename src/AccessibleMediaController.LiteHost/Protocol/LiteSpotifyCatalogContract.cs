@@ -475,7 +475,10 @@ public static class LiteSpotifyCatalogContract
         };
         var warning = available
             ? string.Empty
-            : "Spotify nie udostępnił zawartości tego elementu.";
+            : request.Kind == MediaItemKind.Playlist
+                ? "Spotify nie udostępnił zawartości tej playlisty temu kontu. "
+                    + "W trybie deweloperskim dotyczy to między innymi playlist innych osób."
+                : "Spotify nie udostępnił zawartości tego elementu.";
         return CreateItemsResult(
             heading,
             items,
