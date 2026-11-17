@@ -3385,10 +3385,10 @@ class PodcastOpmlImportDialog(wx.Dialog):
     """Wybór źródeł bez ujawniania obiektów ani identyfikatorów NVDA."""
 
     def __init__(self, parent: wx.Window, entries: list[dict]) -> None:
-        super().__init__(parent, title="Importuj podcasty z OPML")
+        super().__init__(parent, title=i18n.ui_text("Importuj podcasty i kanały YouTube z pliku"))
         self._entries = [
             {
-                "label": str(entry.get("label") or "Podcast").strip() or "Podcast",
+                "label": str(entry.get("label") or i18n.ui_text("Źródło")).strip() or i18n.ui_text("Źródło"),
                 "feedUrl": str(entry.get("feedUrl") or "").strip(),
             }
             for entry in entries
@@ -3398,8 +3398,8 @@ class PodcastOpmlImportDialog(wx.Dialog):
 
         panel = wx.Panel(self)
         layout = wx.BoxSizer(wx.VERTICAL)
-        help_text = (
-            "Wszystkie podcasty są początkowo zaznaczone. "
+        help_text = i18n.ui_text(
+            "Wszystkie źródła są początkowo zaznaczone. "
             "Spacja zmienia stan bieżącej pozycji, Ctrl+A zaznacza wszystkie."
         )
         help_label = wx.StaticText(panel, label=help_text)
@@ -3408,17 +3408,17 @@ class PodcastOpmlImportDialog(wx.Dialog):
         layout.Add(help_label, 0, wx.ALL | wx.EXPAND, 10)
 
         self.sources = wx.ListBox(panel, style=wx.LB_SINGLE)
-        self.sources.SetName("Podcasty do importu")
+        self.sources.SetName(i18n.ui_text("Podcasty i kanały YouTube do importu"))
         self.sources.SetToolTip(help_text)
         layout.Add(self.sources, 1, wx.LEFT | wx.RIGHT | wx.BOTTOM | wx.EXPAND, 10)
         panel.SetSizer(layout)
 
         buttons = wx.StdDialogButtonSizer()
-        import_button = wx.Button(self, wx.ID_OK, label="&Importuj zaznaczone")
-        import_button.SetName("Importuj zaznaczone podcasty")
+        import_button = wx.Button(self, wx.ID_OK, label=i18n.ui_text("&Importuj zaznaczone"))
+        import_button.SetName(i18n.ui_text("Importuj zaznaczone źródła"))
         import_button.SetDefault()
         cancel = wx.Button(self, wx.ID_CANCEL, label="&Anuluj")
-        cancel.SetName("Anuluj import podcastów")
+        cancel.SetName(i18n.ui_text("Anuluj import źródeł"))
         buttons.AddButton(import_button)
         buttons.AddButton(cancel)
         buttons.Realize()
@@ -3434,7 +3434,7 @@ class PodcastOpmlImportDialog(wx.Dialog):
         self.sources.SetFocus()
 
     def _label(self, index: int) -> str:
-        state = "zaznaczony" if self._included[index] else "niezaznaczony"
+        state = i18n.ui_text("zaznaczony" if self._included[index] else "niezaznaczony")
         return f"{self._entries[index]['label']}, {state}"
 
     def _refresh_labels(self, *, selected: int) -> None:
@@ -3464,8 +3464,8 @@ class PodcastOpmlImportDialog(wx.Dialog):
     def _on_accept(self, _event: wx.CommandEvent) -> None:
         if not self.selected_feed_urls:
             wx.MessageBox(
-                "Zaznacz co najmniej jeden podcast do importu.",
-                "Import OPML",
+                i18n.ui_text("Zaznacz co najmniej jedno źródło do importu."),
+                i18n.ui_text("Import źródeł"),
                 wx.OK | wx.ICON_INFORMATION,
                 self,
             )
@@ -26963,22 +26963,28 @@ class LiteFrame(wx.Frame):
         self.announcer.say(message)
 
     def _import_podcast_opml(self) -> None:
-        """Ctrl+O w sesji podcastów: sprawdź OPML, wybierz i zaimportuj RSS."""
+        """Ctrl+O: sprawdź plik subskrypcji, wybierz i zaimportuj źródła."""
         if self.navigator.active is not SessionId.PODCASTS:
-            self.announcer.say("Import OPML jest dostępny w sesji Podcasty i YouTube")
+            self.announcer.say("Import źródeł jest dostępny w sesji Podcasty i YouTube")
             return
         if self._podcast_opml_pending:
             self.announcer.say("Import lub eksport OPML już trwa")
             return
         client = self.client
         if client is None:
-            self.announcer.say("Silnik nie działa, nie mogę zaimportować podcastów")
+            self.announcer.say("Silnik nie działa, nie mogę zaimportować źródeł")
             return
 
         with wx.FileDialog(
             self,
-            message="Importuj podcasty z OPML",
-            wildcard="Pliki OPML i XML (*.opml;*.xml)|*.opml;*.xml|Wszystkie pliki (*.*)|*.*",
+            message=i18n.ui_text("Importuj podcasty i kanały YouTube z pliku"),
+            wildcard=i18n.ui_text(
+                "Pliki subskrypcji (*.opml;*.xml;*.csv;*.zip;*.json;*.db)|*.opml;*.xml;*.csv;*.zip;*.json;*.db|"
+                "OPML i XML (*.opml;*.xml)|*.opml;*.xml|"
+                "Google Takeout (*.csv;*.zip)|*.csv;*.zip|"
+                "NewPipe i FreeTube (*.json;*.db)|*.json;*.db|"
+                "Wszystkie pliki (*.*)|*.*"
+            ),
             style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST,
         ) as picker:
             if picker.ShowModal() != wx.ID_OK:
@@ -26986,7 +26992,7 @@ class LiteFrame(wx.Frame):
             path = picker.GetPath()
 
         self._podcast_opml_pending = True
-        started = "Odczytywanie listy podcastów z OPML"
+        started = "Odczytywanie listy źródeł z pliku"
         self.status_field.SetLabel(started)
         self.status_bar.show(started)
         self.announcer.say(started)
@@ -26999,18 +27005,18 @@ class LiteFrame(wx.Frame):
             entries = payload.get("entries")
             if not isinstance(entries, list) or not entries:
                 self._podcast_opml_pending = False
-                self.announcer.say("Plik OPML nie zawiera adresów podcastów")
+                self.announcer.say("Plik nie zawiera obsługiwanych podcastów ani kanałów YouTube")
                 return
             with PodcastOpmlImportDialog(self, entries) as dialog:
                 if dialog.ShowModal() != wx.ID_OK:
                     self._podcast_opml_pending = False
-                    message = "Import OPML anulowany"
+                    message = "Import źródeł anulowany"
                     self.status_field.SetLabel(message)
                     self.status_bar.show(message)
                     return
                 selected = dialog.selected_feed_urls
 
-            message = f"Importowanie podcastów: {len(selected)}"
+            message = f"Importowanie źródeł: {len(selected)}"
             self.status_field.SetLabel(message)
             self.status_bar.show(message)
             self.announcer.say(message)
@@ -27024,7 +27030,7 @@ class LiteFrame(wx.Frame):
                 imported_count = max(0, int(result.get("imported") or 0))
                 failed_count = max(0, int(result.get("failed") or 0))
                 completed = (
-                    f"Zaimportowano podcasty: {imported_count}. "
+                    f"Zaimportowano źródła: {imported_count}. "
                     f"Niepowodzenia: {failed_count}"
                 )
                 self.status_field.SetLabel(completed)
@@ -27044,7 +27050,7 @@ class LiteFrame(wx.Frame):
                 message = (
                     str(error)
                     if isinstance(error, (HostError, HostUnavailable))
-                    else "Nie udało się zaimportować podcastów"
+                    else "Nie udało się zaimportować źródeł"
                 )
                 self.status_field.SetLabel(message)
                 self.status_bar.show(message)
@@ -27062,7 +27068,7 @@ class LiteFrame(wx.Frame):
             message = (
                 str(error)
                 if isinstance(error, (HostError, HostUnavailable))
-                else "Nie udało się odczytać pliku OPML"
+                else "Nie udało się odczytać pliku subskrypcji"
             )
             self.status_field.SetLabel(message)
             self.status_bar.show(message)

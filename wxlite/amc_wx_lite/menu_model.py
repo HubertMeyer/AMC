@@ -568,7 +568,7 @@ def build_menus(
                 visible_sessions=PODCASTS_ONLY,
             ),
             MenuItem(
-                "Importuj podcasty z OP&ML",
+                "Importuj podcasty i kanały YouTube z pliku (OP&ML, Takeout, NewPipe, FreeTube)",
                 Action.IMPORT_PODCAST_OPML,
                 shortcut="Ctrl+O",
                 accelerator=False,

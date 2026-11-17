@@ -306,6 +306,7 @@
     "Anuluj dodawanie źródła": "",
     "Anuluj edycję planu nagrywania": "",
     "Anuluj import podcastów": "",
+    "Anuluj import źródeł": "",
     "Anuluj logowanie": "",
     "Anuluj opcje odtwarzania": "",
     "Anuluj paletę poleceń": "",
@@ -429,10 +430,15 @@
     "Import lub eksport OPML już trwa": "",
     "Import lub eksport źródeł już trwa": "",
     "Import zakończony": "",
+    "Import źródeł": "",
+    "Import źródeł anulowany": "",
+    "Import źródeł jest dostępny w sesji Podcasty i YouTube": "",
     "Importuj dane AMC": "",
     "Importuj playlistę do Moich stacji Sonosa": "",
+    "Importuj podcasty i kanały YouTube z pliku": "",
     "Importuj podcasty z OPML": "",
     "Importuj zaznaczone podcasty": "",
+    "Importuj zaznaczone źródła": "",
     "Importuję dane AMC": "",
     "Informacja o zbiorczej liście transmisji YouTube": "",
     "Informacje o aktualizacji AMC": "",
@@ -532,6 +538,7 @@
     "Nie pokazuj w tytule okna": "",
     "Nie udało się bezpiecznie zaktualizować składników. Szczegóły zapisano w dzienniku AMC": "",
     "Nie udało się odczytać grup Sonos. Nic nie uruchomiłem": "",
+    "Nie udało się odczytać pliku subskrypcji": "",
     "Nie udało się odczytać presetu": "",
     "Nie udało się odczytać presetów": "",
     "Nie udało się odczytać urządzeń audio": "",
@@ -546,6 +553,7 @@
     "Nie udało się skopiować do schowka": "",
     "Nie udało się sprawdzić aktualnego stanu harmonogramu": "",
     "Nie udało się wykonać wyszukiwania": "",
+    "Nie udało się zaimportować źródeł": "",
     "Nie udało się zapisać aktualnego stanu harmonogramu": "",
     "Nie udało się zapisać aktualnego terminu harmonogramu": "",
     "Nie udało się zapisać harmonogramu. Niczego nie zmieniono": "",
@@ -573,6 +581,7 @@
     "Nowa nazwa podcastu lub kanału nie może być pusta": "",
     "Nowa nazwa w Bibliotece nie może być pusta": "",
     "Odczytywanie listy podcastów z OPML": "",
+    "Odczytywanie listy źródeł z pliku": "",
     "Odtwarzanie działa, ale nie udało się zapisać pozycji w Historii odtwarzania": "",
     "Odtwarzanie losowe nie jest dostępne w tej sesji": "",
     "Odtwarzanie w oryginalnym TIDALu": "",
@@ -624,8 +633,10 @@
     "Playlisty Spotify do dodania": "",
     "Playlisty planowane do zapisania w Bibliotece AMC": "",
     "Plik OPML nie zawiera adresów podcastów": "",
+    "Plik nie zawiera obsługiwanych podcastów ani kanałów YouTube": "",
     "Plik niedostępny. Ctrl+C skopiuje zapisaną ścieżkę": "",
     "Plik źródłowy nigdy nie jest zmieniany. Wynik zostanie zapisany jako nowy plik.": "",
+    "Pliki subskrypcji (*.opml;*.xml;*.csv;*.zip;*.json;*.db)|*.opml;*.xml;*.csv;*.zip;*.json;*.db|OPML i XML (*.opml;*.xml)|*.opml;*.xml|Google Takeout (*.csv;*.zip)|*.csv;*.zip|NewPipe i FreeTube (*.json;*.db)|*.json;*.db|Wszystkie pliki (*.*)|*.*": "",
     "Po nazwie i dacie AMC": "",
     "Pobieram nagranie źródłowe": "",
     "Pobieram playlisty Spotify": "",
@@ -648,6 +659,7 @@
     "Pod": "",
     "Podaj początek i koniec jako minuty:sekundy, na przykład 12:30.": "",
     "Podcasty do importu": "",
+    "Podcasty i kanały YouTube do importu": "",
     "Polecenia": "",
     "Ponowna kompresja pliku docelowego": "",
     "Ponownie dodano": "",
@@ -725,6 +737,7 @@
     "Silnik nie działa, nie mogę wyeksportować kanałów YouTube": "",
     "Silnik nie działa, nie mogę wyeksportować podcastów": "",
     "Silnik nie działa, nie mogę zaimportować podcastów": "",
+    "Silnik nie działa, nie mogę zaimportować źródeł": "",
     "Silnik nie działa, nie mogę zaktualizować składników": "",
     "Silnik nie działa, nie mogę zapisać odcinka": "",
     "Silnik nie działa, nie mogę zapisać wideo": "",
@@ -888,6 +901,7 @@
     "Wszystkie pasujące stacje": "",
     "Wszystkie podcasty są początkowo zaznaczone. Spacja zmienia stan bieżącej pozycji, Ctrl+A zaznacza wszystkie.": "",
     "Wszystkie stacje": "",
+    "Wszystkie źródła są początkowo zaznaczone. Spacja zmienia stan bieżącej pozycji, Ctrl+A zaznacza wszystkie.": "",
     "Wybierz co najmniej jedną playlistę": "",
     "Wybierz element do przeniesienia": "",
     "Wybierz element, przed którym chcesz przenieść zaznaczenie": "",
@@ -1021,6 +1035,7 @@
     "Zatwierdź nazwę i widoczność playlisty Spotify": "",
     "Zaznacz co najmniej jeden odcinek podcastu": "",
     "Zaznacz co najmniej jeden podcast do importu.": "",
+    "Zaznacz co najmniej jedno źródło do importu.": "",
     "Zaznacz początek klawiszem I i koniec klawiszem O": "",
     "Zaznacz podcast albo odcinek": "",
     "Zaznacz podcast albo otwórz jego listę odcinków": "",
@@ -1050,6 +1065,7 @@
     "Zmień nazwę podcastu lub kanału": "",
     "Zmień nazwę w Bibliotece": "",
     "nagrać": "",
+    "niezaznaczony": "",
     "odcinka": "",
     "podcastu": "",
     "prywatna": "",
@@ -1058,7 +1074,9 @@
     "strumienia": "",
     "wybrany folder": "",
     "wykonać zaplanowanego nagrania": "",
-    "zaplanowane ": ""
+    "zaplanowane ": "",
+    "zaznaczony": "",
+    "Źródło": ""
   },
   "legacyTemplates": {
     "&Nazwa {arg0}:": "",
@@ -1095,6 +1113,7 @@
     "Fragment zapisany: {arg0}": "",
     "Import nieudany: {arg0}": "",
     "Importowanie podcastów: {arg0}": "",
+    "Importowanie źródeł: {arg0}": "",
     "Kanał {arg0} będzie sprawdzany na zbiorczej liście": "",
     "Kanał {arg0} nie będzie sprawdzany na zbiorczej liście": "",
     "Koniec fragmentu: {arg0}": "",
@@ -1335,6 +1354,7 @@
     "Włączono istniejące w Bibliotece: {arg0}": "",
     "Zaimportowano podcasty: {arg0}. Niepowodzenia: {arg1}": "",
     "Zaimportowano {arg0}, pominięto {arg1}": "",
+    "Zaimportowano źródła: {arg0}. Niepowodzenia: {arg1}": "",
     "Zakończono {arg0}nagrywanie {arg1}. Zapisano plików: {arg2}": "",
     "Zakończono {arg0}nagrywanie {arg1}: {arg2}": "",
     "Zakończono {arg0}nagrywanie: {arg1}": "",
@@ -1462,6 +1482,10 @@
       "name": "",
       "description": ""
     },
+    "appleMusic.relations": {
+      "name": "",
+      "description": ""
+    },
     "audio.clip.appendToFile": {
       "name": "",
       "description": ""
@@ -1534,7 +1558,15 @@
       "name": "",
       "description": ""
     },
+    "downloads.copyFileName": {
+      "name": "",
+      "description": ""
+    },
     "downloads.history": {
+      "name": "",
+      "description": ""
+    },
+    "downloads.locateFile": {
       "name": "",
       "description": ""
     },

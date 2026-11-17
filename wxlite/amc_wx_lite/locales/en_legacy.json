@@ -19,6 +19,24 @@
     "privacy": "No runtime, profile, account, path, title, station, or device data"
   },
   "static": {
+    "Importuj podcasty i kanały YouTube z pliku": "Import podcasts and YouTube channels from a file",
+    "Podcasty i kanały YouTube do importu": "Podcasts and YouTube channels to import",
+    "Importuj zaznaczone źródła": "Import selected sources",
+    "Anuluj import źródeł": "Cancel source import",
+    "Zaznacz co najmniej jedno źródło do importu.": "Select at least one source to import.",
+    "Import źródeł": "Source import",
+    "Źródło": "Source",
+    "zaznaczony": "selected",
+    "niezaznaczony": "not selected",
+    "Wszystkie źródła są początkowo zaznaczone. Spacja zmienia stan bieżącej pozycji, Ctrl+A zaznacza wszystkie.": "All sources are initially selected. Space toggles the current item; Ctrl+A selects all.",
+    "Import źródeł jest dostępny w sesji Podcasty i YouTube": "Source import is available in the Podcasts and YouTube session",
+    "Silnik nie działa, nie mogę zaimportować źródeł": "The engine is unavailable; cannot import sources",
+    "Odczytywanie listy źródeł z pliku": "Reading sources from a file",
+    "Plik nie zawiera obsługiwanych podcastów ani kanałów YouTube": "The file contains no supported podcasts or YouTube channels",
+    "Import źródeł anulowany": "Source import cancelled",
+    "Nie udało się zaimportować źródeł": "Could not import sources",
+    "Nie udało się odczytać pliku subskrypcji": "Could not read the subscription file",
+    "Pliki subskrypcji (*.opml;*.xml;*.csv;*.zip;*.json;*.db)|*.opml;*.xml;*.csv;*.zip;*.json;*.db|OPML i XML (*.opml;*.xml)|*.opml;*.xml|Google Takeout (*.csv;*.zip)|*.csv;*.zip|NewPipe i FreeTube (*.json;*.db)|*.json;*.db|Wszystkie pliki (*.*)|*.*": "Subscription files (*.opml;*.xml;*.csv;*.zip;*.json;*.db)|*.opml;*.xml;*.csv;*.zip;*.json;*.db|OPML and XML (*.opml;*.xml)|*.opml;*.xml|Google Takeout (*.csv;*.zip)|*.csv;*.zip|NewPipe and FreeTube (*.json;*.db)|*.json;*.db|All files (*.*)|*.*",
     "Kopiuj identyfikator aplikacji": "Copy app identifier",
     "Kopiuj identyfikator aplikacji Spotify": "Copy Spotify app identifier",
     "Zmień identyfikator aplikacji": "Change app identifier",
@@ -868,6 +886,8 @@
     "Spotify nie udostępnia trwałej zmiany prędkości w AMC": "Spotify does not support a persistent playback speed change in AMC"
   },
   "templates": {
+    "Importowanie źródeł: {arg0}": "Importing sources: {arg0}",
+    "Zaimportowano źródła: {arg0}. Niepowodzenia: {arg1}": "Sources imported: {arg0}. Failures: {arg1}",
     "Konto TIDAL jest połączone: {arg0}.": "The TIDAL account is connected: {arg0}.",
     "Zalogowano konto TIDAL: {arg0}.": "Signed in to TIDAL: {arg0}.",
     "{arg0} Kod: {arg1}. Adres: {arg2}": "{arg0} Code: {arg1}. Address: {arg2}",

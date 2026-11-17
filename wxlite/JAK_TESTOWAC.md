@@ -551,10 +551,16 @@ rekordy JSON i nazwy typów nie trafiają do mowy NVDA.
    materiały z kanałów i playlist YouTube mają jawne określenie „materiał
    YouTube”. Identyfikatory bazy i rekordy modelu nie trafiają do mowy NVDA.
 9. `Ctrl+O` pozostaje kontekstowe jak w głównym AMC: w Plikach wybiera plik,
-    w Radiu importuje M3U/PLS, a w Podcastach otwiera import OPML. Import OPML
+    w Radiu importuje M3U/PLS, a w Podcastach otwiera import źródeł z OPML/XML,
+    Google Takeout CSV/ZIP, NewPipe JSON i eksportu subskrypcji FreeTube. Import
     pokazuje natywną listę: wszystkie źródła są początkowo zaznaczone, Spacja
     przełącza bieżące, a `Ctrl+A` zaznacza wszystkie. `Ctrl+I` nie jest już
     błędnie zajęte przez import stacji.
+    Zmiana YT-007 jest na razie źródłowa, bez wydania i odbioru NVDA.
+    Po zamknięciu bramki bezpieczeństwa sprawdź wybór pliku, pierwszy fokus,
+    wybór Spacją i Ctrl+A, anulowanie obu okien oraz dodanie tylko wybranych
+    źródeł. Kanał i playlista YouTube z OPML mają zachować typ YouTube;
+    nie uruchamiaj pobierania wszystkich materiałów jako części importu.
 10. Pozycja Widok → „Pobrane” jest dostępna w sesji Podcasty i YouTube.
     Pokazuje tylko odcinki, których zapisany plik nadal istnieje na dysku,
     także gdy źródło zostało później usunięte z Biblioteki. Najnowsze są na

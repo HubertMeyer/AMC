@@ -1,5 +1,15 @@
 # Dostępny kontroler multimedialny — prototyp dla Windows
 
+## Przygotowywany import subskrypcji YouTube — 17.11.2026
+
+W źródłach wxPython `Ctrl+O` w sesji **Podcasty i YouTube** otwiera wspólny
+import podcastów i kanałów YouTube: OPML/XML, CSV lub ZIP Google Takeout,
+JSON NewPipe oraz eksport subskrypcji FreeTube. Najpierw wybiera się plik,
+potem źródła na liście; Spacja zmienia wybór, `Ctrl+A` zaznacza wszystkie,
+a Anuluj nie dodaje źródeł. Nie jest potrzebne logowanie Google. To zmiana
+źródłowa, jeszcze nie nowe wydanie; odbiór Windows/NVDA i instalator pozostają
+wstrzymane bramką bezpieczeństwa. [Stan zadania](docs/zadania/YT-007-zgloszenia-19-20-import-i-transmisje.md).
+
 Wersja `alpha.504` dodaje czas trwania po otwarciu playlist Podcastów,
 Spotify, TIDAL i Apple Music (tylko AMC Test). Przy stronicowaniu mówi o czasie wczytanej
 części playlisty. Zastępuje zakres ograniczony do lokalnej playlisty w

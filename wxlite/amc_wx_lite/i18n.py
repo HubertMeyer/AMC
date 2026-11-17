@@ -821,7 +821,7 @@ _ACTION_NAME_OVERRIDES: dict[str, str] = {
     "profile.commonData.refresh": "Refresh shared AMC data",
     "profile.commonData.status": "Shared AMC data status",
     "podcasts.source.add": "Add a podcast, channel, Facebook Page, or online source",
-    "podcasts.opml.import": "Import podcasts from OPML",
+    "podcasts.opml.import": "Import podcasts and YouTube channels from OPML, Google Takeout, NewPipe or FreeTube; select sources before adding",
     "podcasts.opml.export": "Export podcasts to OPML",
     "podcasts.youtube.export": "Export YouTube channels and playlists",
     "podcasts.refresh.current": "Refresh the selected podcast, channel, or Facebook Page",

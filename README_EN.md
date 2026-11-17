@@ -1,5 +1,15 @@
 # Accessible Media Controller — Windows prototype
 
+## YouTube subscription import in preparation — November 17, 2026
+
+In the wxPython sources, `Ctrl+O` in **Podcasts and YouTube** opens a shared
+podcast and YouTube subscription importer: OPML/XML, Google Takeout CSV or ZIP,
+NewPipe JSON and FreeTube subscription exports. Choose the file, then choose
+the sources; Space toggles an item, `Ctrl+A` selects all, and Cancel adds
+nothing. Google sign-in is not required. This is a source change, not a new
+release; Windows/NVDA acceptance and installer delivery remain blocked by the
+security gate. [Task record in Polish](docs/zadania/YT-007-zgloszenia-19-20-import-i-transmisje.md).
+
 ## Public alpha.448 candidate: player fixes
 
 After opening a local file from Explorer, Total Commander, or the “Open file” dialog, `F6` opens the player with that file as the current track. `Page Up` and `Page Down` move through tracks in its folder when the file is present in the folder list. In the player, NVDA reads “Volume” and “Speed” with the controls' values; `Alt+V` and `Alt+S` focus those controls when available. This is a candidate for review, not an installed or published release.

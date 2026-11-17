@@ -2740,7 +2740,7 @@ def _help_entries() -> list[tuple[str, str, Action]]:
         Action.ADD_PODCAST_SOURCE: (
             "Dodaj podcast, SoundCloud, kanał YouTube, stronę Facebooka lub medium internetowe"
         ),
-        Action.IMPORT_PODCAST_OPML: "Importuj podcasty z OPML",
+        Action.IMPORT_PODCAST_OPML: "Importuj podcasty i kanały YouTube z pliku: OPML, Google Takeout, NewPipe lub FreeTube; wybierz źródła przed dodaniem",
         Action.EXPORT_PODCAST_OPML: "Eksportuj bibliotekę podcastów do OPML",
         Action.EXPORT_YOUTUBE_SUBSCRIPTIONS: "Eksportuj kanały i playlisty YouTube",
         Action.YOUTUBE_ACCOUNT: "Konto YouTube, subskrypcje i playlisty",
