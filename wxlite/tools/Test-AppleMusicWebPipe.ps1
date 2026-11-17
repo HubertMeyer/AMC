@@ -15,7 +15,9 @@ $start.UseShellExecute = $false
 $start.CreateNoWindow = $true
 $start.RedirectStandardInput = $true
 $start.RedirectStandardOutput = $true
-[void]$start.ArgumentList.Add("--pipe-probe")
+# One fixed ASCII switch needs no dynamic argv quoting; Arguments also works
+# on the .NET Framework used by Windows PowerShell 5.1.
+$start.Arguments = "--pipe-probe"
 $process = [Diagnostics.Process]::Start($start)
 if ($null -eq $process) {
     throw "Nie udało się uruchomić procesu Apple Music."
