@@ -3034,6 +3034,7 @@ static void TestYouTubeCollectionResults()
           "id": "Current_Live",
           "title": "Transmisja trwająca",
           "live_status": "is_live",
+          "duration": 1800,
           "timestamp": 1792886400
         },
         {
@@ -3061,6 +3062,82 @@ static void TestYouTubeCollectionResults()
         && archivedStreams.Feed.Episodes.All(episode =>
             episode.SourceIdentifier is "Archived_2026" or "AbCdEf12345"),
         "Lista kanału nie oddziela zakończonych transmisji od trwających i zaplanowanych.");
+    var statusArguments = YouTubeCollectionClient.BuildYtDlpArguments(
+        streamsAddress,
+        includeLocalizedMetadata: false).ToArray();
+    var localizedArguments = YouTubeCollectionClient.BuildYtDlpArguments(
+        streamsAddress,
+        includeLocalizedMetadata: true).ToArray();
+    Assert(
+        statusArguments.Count(argument => argument == "--extractor-args") == 1
+        && Array.IndexOf(statusArguments, "--playlist-end") is var statusEndIndex
+            && statusEndIndex > 0
+            && statusArguments[statusEndIndex + 1]
+                == YouTubeCollectionClient.MaximumItems.ToString(System.Globalization.CultureInfo.InvariantCulture)
+        && Array.IndexOf(statusArguments, YouTubeCollectionClient.CollectionDateExtractorArguments)
+            is var statusDateIndex
+            && statusDateIndex > 0
+            && statusArguments[statusDateIndex - 1] == "--extractor-args"
+        && !statusArguments.Contains(YouTubeCollectionClient.CollectionLanguageExtractorArguments),
+        "Odczyt statusu transmisji nie zachował pojedynczego argumentu approximate_date bez wymuszenia języka.");
+    var localizedDateIndex = Array.IndexOf(
+        localizedArguments,
+        YouTubeCollectionClient.CollectionDateExtractorArguments);
+    var localizedLanguageIndex = Array.IndexOf(
+        localizedArguments,
+        YouTubeCollectionClient.CollectionLanguageExtractorArguments);
+    Assert(
+        localizedArguments.Count(argument => argument == "--extractor-args") == 2
+        && localizedDateIndex > 0
+        && localizedArguments[localizedDateIndex - 1] == "--extractor-args"
+        && localizedLanguageIndex > 0
+        && localizedArguments[localizedLanguageIndex - 1] == "--extractor-args",
+        "Odczyt z polskimi metadanymi nie przekazał osobnych, poprawnych argumentów ekstraktorów.");
+    const string localizedStreamsJson = """
+    {
+      "_type": "playlist",
+      "id": "UCTDeBXfyjT_O5xjF_H14V3A",
+      "title": "TyfloPodcast - Streams",
+      "channel": "TyfloPodcast",
+      "entries": [
+        {
+          "id": "Archived_2026",
+          "title": "Polski tytuł zakończonej transmisji"
+        },
+        {
+          "id": "AbCdEf12345",
+          "title": "Polski tytuł filmu z transmisji"
+        },
+        {
+          "id": "Current_Live",
+          "title": "Nie może wejść przez dopasowanie tekstu",
+          "timestamp": 1792886400
+        }
+      ]
+    }
+    """;
+    var localizedStreams = YouTubeCollectionClient.ParseResult(
+        channelAddress,
+        PodcastSourceKind.YouTubeChannel,
+        localizedStreamsJson);
+    var localizedArchivedStreams =
+        YouTubeCollectionClient.CompleteArchivedStreamsFromLocalizedMetadata(
+            archivedStreams,
+            localizedStreams);
+    Assert(
+        localizedArchivedStreams.Feed.Episodes.Count == 2
+        && localizedArchivedStreams.Feed.Episodes.Single(episode =>
+            episode.SourceIdentifier == "Archived_2026").Title
+            == "Polski tytuł zakończonej transmisji"
+        && localizedArchivedStreams.Feed.Episodes.Single(episode =>
+            episode.SourceIdentifier == "AbCdEf12345").Title
+            == "Polski tytuł filmu z transmisji"
+        && localizedArchivedStreams.Feed.Episodes.Single(episode =>
+            episode.SourceIdentifier == "Archived_2026").Published
+            == DateTimeOffset.FromUnixTimeSeconds(1792800000)
+        && localizedArchivedStreams.Feed.Episodes.All(episode =>
+            episode.SourceIdentifier != "Current_Live"),
+        "Polskie metadane transmisji nie zostały dołączone po identyfikatorze albo dołączyły aktywną transmisję.");
     var mergedChannel = YouTubeCollectionClient.MergeChannelDocuments(
         collection,
         archivedStreams);

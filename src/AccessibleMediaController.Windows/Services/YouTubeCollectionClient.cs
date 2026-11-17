@@ -142,28 +142,11 @@ internal sealed class YouTubeCollectionClient
     private static async Task<YtDlpResult> RunYtDlpAsync(
         string executable,
         Uri address,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        bool includeLocalizedMetadata = true)
     {
         var start = ExternalToolProcess.Create(executable);
-        foreach (var argument in new[]
-        {
-            "--ignore-config",
-            "--flat-playlist",
-            "--no-warnings",
-            "--force-ipv4",
-            "--socket-timeout", "15",
-            "--extractor-retries", "2",
-            "--playlist-end", MaximumItems.ToString(CultureInfo.InvariantCulture),
-            // Korekta 2026-10-27: oficjalna skladnia wymaga osobnego
-            // KEY:ARGS dla kazdego ekstraktora. Srednik rozdziela argumenty
-            // jednego ekstraktora, nie dwie grupy. youtubetab odpowiada za
-            // daty, a youtube za jezyk metadanych.
-            "--extractor-args", CollectionDateExtractorArguments,
-            "--extractor-args", CollectionLanguageExtractorArguments,
-            "--dump-single-json",
-            "--",
-            address.AbsoluteUri
-        })
+        foreach (var argument in BuildYtDlpArguments(address, includeLocalizedMetadata))
         {
             start.ArgumentList.Add(argument);
         }
@@ -195,6 +178,36 @@ internal sealed class YouTubeCollectionClient
             await errorTask.ConfigureAwait(false));
     }
 
+    internal static string[] BuildYtDlpArguments(
+        Uri address,
+        bool includeLocalizedMetadata)
+    {
+        var arguments = new List<string>
+        {
+            "--ignore-config",
+            "--flat-playlist",
+            "--no-warnings",
+            "--force-ipv4",
+            "--socket-timeout", "15",
+            "--extractor-retries", "2",
+            "--playlist-end", MaximumItems.ToString(CultureInfo.InvariantCulture),
+            // Korekta 2026-10-27: oficjalna skladnia wymaga osobnego
+            // KEY:ARGS dla kazdego ekstraktora. Srednik rozdziela argumenty
+            // jednego ekstraktora, nie dwie grupy. youtubetab odpowiada za
+            // daty, a youtube za jezyk metadanych.
+            "--extractor-args", CollectionDateExtractorArguments
+        };
+        if (includeLocalizedMetadata)
+        {
+            arguments.Add("--extractor-args");
+            arguments.Add(CollectionLanguageExtractorArguments);
+        }
+        arguments.Add("--dump-single-json");
+        arguments.Add("--");
+        arguments.Add(address.AbsoluteUri);
+        return arguments.ToArray();
+    }
+
     private static async Task<YouTubeCollectionDocument?> TryFetchArchivedStreamsAsync(
         string executable,
         Uri normalizedAddress,
@@ -207,19 +220,59 @@ internal sealed class YouTubeCollectionClient
             return null;
         try
         {
-            var result = await RunYtDlpAsync(executable, streamsAddress, cancellationToken)
+            var statusResult = await RunYtDlpAsync(
+                    executable,
+                    streamsAddress,
+                    cancellationToken,
+                    includeLocalizedMetadata: false)
                 .ConfigureAwait(false);
-            if (result.ExitCode != 0
-                || result.Output.Length == 0
-                || result.Output.Length > MaximumJsonCharacters)
+            if (statusResult.ExitCode != 0
+                || statusResult.Output.Length == 0
+                || statusResult.Output.Length > MaximumJsonCharacters)
                 return null;
-            return ParseResult(
+            var archivedStreams = ParseResult(
                 normalizedAddress,
                 PodcastSourceKind.YouTubeChannel,
-                result.Output,
+                statusResult.Output,
                 archivedLiveStreamsOnly: true);
+
+            try
+            {
+                var localizedResult = await RunYtDlpAsync(
+                        executable,
+                        streamsAddress,
+                        cancellationToken)
+                    .ConfigureAwait(false);
+                if (localizedResult.ExitCode != 0
+                    || localizedResult.Output.Length == 0
+                    || localizedResult.Output.Length > MaximumJsonCharacters)
+                    return archivedStreams;
+                var localizedMetadata = ParseResult(
+                    normalizedAddress,
+                    PodcastSourceKind.YouTubeChannel,
+                    localizedResult.Output);
+                return CompleteArchivedStreamsFromLocalizedMetadata(
+                    archivedStreams,
+                    localizedMetadata);
+            }
+            catch (InvalidDataException)
+            {
+                return archivedStreams;
+            }
+            catch (Win32Exception)
+            {
+                return archivedStreams;
+            }
+            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+            {
+                return archivedStreams;
+            }
         }
         catch (InvalidDataException)
+        {
+            return null;
+        }
+        catch (Win32Exception)
         {
             return null;
         }
@@ -454,6 +507,32 @@ internal sealed class YouTubeCollectionClient
 
         return new YouTubeCollectionDocument(
             standardVideos.Feed with { Episodes = merged },
+            PodcastSourceKind.YouTubeChannel);
+    }
+
+    internal static YouTubeCollectionDocument CompleteArchivedStreamsFromLocalizedMetadata(
+        YouTubeCollectionDocument archivedStreams,
+        YouTubeCollectionDocument localizedMetadata)
+    {
+        if (archivedStreams.SourceKind != PodcastSourceKind.YouTubeChannel
+            || localizedMetadata.SourceKind != PodcastSourceKind.YouTubeChannel)
+            throw new ArgumentException("Uzupełnianie metadanych dotyczy wyłącznie kanałów YouTube.");
+
+        var localizedByVideoId = localizedMetadata.Feed.Episodes
+            .GroupBy(episode => episode.SourceIdentifier, StringComparer.Ordinal)
+            .ToDictionary(group => group.Key, group => group.First(), StringComparer.Ordinal);
+        var completed = archivedStreams.Feed.Episodes.Select(episode =>
+        {
+            if (!localizedByVideoId.TryGetValue(episode.SourceIdentifier, out var localized))
+                return episode;
+            return episode with
+            {
+                Title = localized.Title.Length > 0 ? localized.Title : episode.Title,
+                Published = localized.Published ?? episode.Published
+            };
+        }).ToArray();
+        return new YouTubeCollectionDocument(
+            archivedStreams.Feed with { Episodes = completed },
             PodcastSourceKind.YouTubeChannel);
     }
 
