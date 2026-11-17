@@ -1,6 +1,6 @@
 # Rejestr zadań AMC
 
-- `HUBERT-20261116` — **W trakcie; #17, bezpieczna część #10 i #18 zintegrowane lokalnie; aparat #14 odebrany 46/46** — monitor AMC/Sygnalisty działa co 5 godzin, Soloist cotygodniowo. Pozostają rzeczywiste aktualizacje/instalatory, NVDA, konta/odtwarzanie i wydanie Public/Test; zgłoszeń nie zamknięto. Aktualizację na głównym komputerze wykonuje ręcznie użytkownik; testowe instalacje wyłącznie na Hermesie. [Podział i kryteria odbioru](HUBERT-20261116-zgloszenia-i-wydanie.md).
+- `HUBERT-20261116` — **W trakcie; #17, bezpieczna część #10, #18 oraz komunikat niedostępnej playlisty zintegrowane lokalnie; MP3 i restart kolejki odebrane bezokiennie** — rzeczywisty tor MP3/limitera i seek zaliczone, kolejka przywrócona przez drugi proces hosta; aparat #14 wcześniej 46/46. Przygotowano prywatne ZIP-y obu profili i setup Public ze starszej bazy, nie finalne wydanie; setup Test czeka na zaufany Quick App Switcher i kanoniczny runtime budowy. Monitor AMC/Sygnalisty działa co 5 godzin, Soloist cotygodniowo. Pozostają rzeczywiste aktualizacje/instalatory, celowany NVDA, konta/odtwarzanie Spotify i publikacja Public/Test; zgłoszeń nie zamknięto. Aktualizacja głównego komputera ręczna; testowe instalacje wyłącznie na Hermesie. [Podział i kryteria odbioru](HUBERT-20261116-zgloszenia-i-wydanie.md).
 
 Aktualny punkt wejścia dla Hermesa (16.11.2026): [pełne przekazanie](../../HERMES_AMC_PRZEKAZANIE_2026-11-16_PL.md) i [katalog wszystkich plików zadań](HERMES_AMC_KATALOG_ZADAN_2026-11-16_PL.md).
 
