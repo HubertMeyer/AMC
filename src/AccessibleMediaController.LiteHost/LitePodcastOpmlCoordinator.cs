@@ -42,7 +42,8 @@ internal sealed class LitePodcastOpmlCoordinator : IDisposable
             {
                 title = entry.Title,
                 feedUrl = entry.FeedUri.AbsoluteUri,
-                label = entry.Label
+                label = entry.Label,
+                sourceKind = SourceKindName(entry.SourceKind)
             }).ToArray()
         };
     }
@@ -68,6 +69,20 @@ internal sealed class LitePodcastOpmlCoordinator : IDisposable
                 await concurrency.WaitAsync().ConfigureAwait(false);
                 try
                 {
+                    if (entry.SourceKind is PodcastSourceKind.YouTubeChannel
+                        or PodcastSourceKind.YouTubePlaylist)
+                    {
+                        // Import zapisuje wyłącznie trwałą tożsamość kolekcji.
+                        // Nie uruchamia setek yt-dlp ani pobrań; zwykłe
+                        // odświeżanie YouTube uzupełni materiały później.
+                        _podcasts.AddSource(
+                            CreateYouTubePlaceholder(entry),
+                            entry.Title,
+                            entry.SourceKind,
+                            preserveExistingTitle: true);
+                        return true;
+                    }
+
                     var feed = await _rssClient.FetchAsync(
                         entry.FeedUri,
                         CancellationToken.None).ConfigureAwait(false);
@@ -80,14 +95,16 @@ internal sealed class LitePodcastOpmlCoordinator : IDisposable
                                 feed,
                                 entry.Title,
                                 PodcastSourceKind.Rss,
-                                bookmarks));
+                                bookmarks,
+                                preserveExistingTitle: true));
                     }
                     else
                     {
                         _podcasts.AddSource(
                             feed,
                             entry.Title,
-                            PodcastSourceKind.Rss);
+                            PodcastSourceKind.Rss,
+                            preserveExistingTitle: true);
                     }
                     return true;
                 }
@@ -194,15 +211,42 @@ internal sealed class LitePodcastOpmlCoordinator : IDisposable
     {
         var fullPath = NormalizePath(path);
         if (!File.Exists(fullPath))
-            throw new LiteRequestException("Nie znaleziono wskazanego pliku OPML.");
+            throw new LiteRequestException("Nie znaleziono wskazanego pliku importu.");
         try
         {
             var info = new FileInfo(fullPath);
-            if (info.Length > PodcastOpmlParser.MaximumXmlCharacters)
-                throw new LiteRequestException("Plik OPML jest zbyt duży.");
-            var entries = PodcastOpmlParser.Parse(File.ReadAllText(fullPath));
+            var maximumBytes = Path.GetExtension(fullPath).Equals(".zip", StringComparison.OrdinalIgnoreCase)
+                ? YouTubeSubscriptionFileImport.MaximumZipInputBytes
+                : YouTubeSubscriptionFileImport.MaximumTextCharacters;
+            if (info.Length > maximumBytes)
+                throw new LiteRequestException("Plik importu jest zbyt duży.");
+
+            IReadOnlyList<PodcastOpmlEntry> entries;
+            switch (Path.GetExtension(fullPath).ToLowerInvariant())
+            {
+                case ".csv":
+                    entries = YouTubeSubscriptionFileImport.ParseCsv(File.ReadAllText(fullPath));
+                    break;
+                case ".zip":
+                    using (var stream = File.OpenRead(fullPath))
+                        entries = YouTubeSubscriptionFileImport.ParseZip(stream);
+                    break;
+                case ".json":
+                    entries = YouTubeSubscriptionFileImport.ParseJson(File.ReadAllText(fullPath));
+                    break;
+                case ".db" when Path.GetFileName(fullPath).Equals("profiles.db", StringComparison.OrdinalIgnoreCase):
+                    entries = YouTubeSubscriptionFileImport.ParseFreeTubeDatabase(File.ReadAllText(fullPath));
+                    break;
+                case ".opml":
+                case ".xml":
+                    entries = PodcastOpmlParser.Parse(File.ReadAllText(fullPath));
+                    break;
+                default:
+                    throw new LiteRequestException(
+                        "Obsługiwane są OPML, YouTube Takeout subscriptions.csv/ZIP, NewPipe JSON oraz FreeTube profiles.db.");
+            }
             if (entries.Count == 0)
-                throw new LiteRequestException("Plik OPML nie zawiera adresów podcastów.");
+                throw new LiteRequestException("Plik importu nie zawiera obsługiwanych źródeł podcastów ani kanałów YouTube.");
             return entries;
         }
         catch (LiteRequestException)
@@ -212,11 +256,51 @@ internal sealed class LitePodcastOpmlCoordinator : IDisposable
         catch (Exception exception) when (exception is IOException
             or UnauthorizedAccessException
             or InvalidDataException
-            or System.Xml.XmlException)
+            or System.Xml.XmlException
+            or JsonException)
         {
-            throw new LiteRequestException("Nie można odczytać pliku OPML: " + exception.Message);
+            throw new LiteRequestException("Nie można odczytać pliku importu: " + exception.Message);
         }
     }
+
+    private static PodcastFeedDocument CreateYouTubePlaceholder(PodcastOpmlEntry entry)
+    {
+        var uri = entry.FeedUri;
+        var identifier = entry.SourceKind switch
+        {
+            PodcastSourceKind.YouTubeChannel => uri.AbsolutePath
+                .Split('/', StringSplitOptions.RemoveEmptyEntries)
+                .SkipWhile(segment => !segment.Equals("channel", StringComparison.OrdinalIgnoreCase))
+                .Skip(1)
+                .FirstOrDefault(),
+            PodcastSourceKind.YouTubePlaylist => uri.Query
+                .TrimStart('?')
+                .Split('&', StringSplitOptions.RemoveEmptyEntries)
+                .Select(pair => pair.Split('=', 2))
+                .Where(pair => pair.Length == 2 && pair[0].Equals("list", StringComparison.OrdinalIgnoreCase))
+                .Select(pair => Uri.UnescapeDataString(pair[1]))
+                .FirstOrDefault(),
+            _ => null
+        };
+        if (string.IsNullOrWhiteSpace(identifier))
+            throw new InvalidDataException("Kanał lub playlista YouTube nie ma poprawnej trwałej tożsamości.");
+        var kind = entry.SourceKind == PodcastSourceKind.YouTubeChannel ? "channel" : "playlist";
+        return new PodcastFeedDocument(
+            $"youtube-{kind}:{identifier}",
+            entry.Title,
+            string.Empty,
+            string.Empty,
+            uri,
+            entry.HomepageUri,
+            []);
+    }
+
+    private static string SourceKindName(PodcastSourceKind sourceKind) => sourceKind switch
+    {
+        PodcastSourceKind.YouTubeChannel => "youtubeChannel",
+        PodcastSourceKind.YouTubePlaylist => "youtubePlaylist",
+        _ => "rss"
+    };
 
     private static HashSet<string> ReadSelectedFeeds(JsonElement args)
     {

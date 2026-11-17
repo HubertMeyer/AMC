@@ -1,12 +1,14 @@
 using System.Xml;
 using System.Xml.Linq;
+using AccessibleMediaController.Core.Configuration;
 
 namespace AccessibleMediaController.Core.Podcasts;
 
 public sealed record PodcastOpmlEntry(
     string Title,
     Uri FeedUri,
-    Uri? HomepageUri)
+    Uri? HomepageUri,
+    PodcastSourceKind SourceKind = PodcastSourceKind.Rss)
 {
     public string Label => HomepageUri is null
         ? $"{Title}, {FeedUri.Host}"
@@ -46,8 +48,7 @@ public static class PodcastOpmlParser
         {
             var feedText = AttributeValue(outline, "xmlUrl");
             if (!TryHttpUri(feedText, out var feedUri)
-                || !string.IsNullOrEmpty(feedUri.UserInfo)
-                || !knownFeeds.Add(feedUri.AbsoluteUri))
+                || !string.IsNullOrEmpty(feedUri.UserInfo))
             {
                 continue;
             }
@@ -56,6 +57,14 @@ public static class PodcastOpmlParser
                 ?? AttributeValue(outline, "title")
                 ?? feedUri.Host;
             title = NormalizeLabel(title, feedUri.Host);
+            if (YouTubeSubscriptionFileImport.TryCreateFromFeedUri(feedUri, title, out var youTubeEntry))
+            {
+                if (knownFeeds.Add(youTubeEntry.FeedUri.AbsoluteUri)) entries.Add(youTubeEntry);
+                if (entries.Count == MaximumEntries) break;
+                continue;
+            }
+            if (!knownFeeds.Add(feedUri.AbsoluteUri)) continue;
+
             var homepage = TryHttpUri(AttributeValue(outline, "htmlUrl"), out var homepageUri)
                 && string.IsNullOrEmpty(homepageUri.UserInfo)
                     ? homepageUri

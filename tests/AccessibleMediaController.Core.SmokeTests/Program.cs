@@ -330,6 +330,7 @@ var tests = new (string Name, Action Test)[]
     ("Kopiowanie opisów i adresów Podcastów", TestPodcastClipboardPresentation),
     ("Bezpieczne nazwy pobranych odcinków Podcastów", TestPodcastDownloadNaming),
     ("Bezpieczny import list podcastów OPML", TestPodcastOpmlParsing),
+    ("Import subskrypcji YouTube z plików", TestYouTubeSubscriptionFileImport),
     ("Aktualizacja biblioteki Podcastów", TestPodcastLibraryUpdate),
     ("Migracja skrzynki Podcastów po starszym imporcie", TestPodcastLegacyInboxMigration),
     ("Stany odsłuchania odcinków Podcastów", TestPodcastEpisodeProgress),
@@ -1855,6 +1856,67 @@ static void TestPodcastOpmlParsing()
     Equal("Podcast A", roundTrip[0].Title);
     Equal("Życie & dźwięk", roundTrip[1].Title);
     Equal(new Uri("https://example.test/a"), roundTrip[0].HomepageUri);
+}
+
+static void TestYouTubeSubscriptionFileImport()
+{
+    const string takeout = """
+        Channel Id,Channel Url,Channel Title
+        UCfirst_123,https://www.youtube.com/channel/UCfirst_123,Pierwszy kanał
+        UCfirst_123,https://www.youtube.com/channel/UCfirst_123,Duplikat
+        invalid,https://example.test/not-youtube,Obcy adres
+        """;
+    var csv = YouTubeSubscriptionFileImport.ParseCsv(takeout);
+    Equal(1, csv.Count);
+    Equal("Pierwszy kanał", csv[0].Title);
+    Equal(PodcastSourceKind.YouTubeChannel, csv[0].SourceKind);
+    Equal("https://www.youtube.com/channel/UCfirst_123/videos", csv[0].FeedUri.AbsoluteUri);
+
+    const string newPipe = """
+        {"app_version":"0.28.0","subscriptions":[
+          {"service_id":0,"url":"https://www.youtube.com/channel/UCnewpipe_456","name":"NewPipe"},
+          {"service_id":1,"url":"https://soundcloud.com/example","name":"Nie YouTube"}
+        ]}
+        """;
+    var newPipeEntries = YouTubeSubscriptionFileImport.ParseJson(newPipe);
+    Equal(1, newPipeEntries.Count);
+    Equal("NewPipe", newPipeEntries[0].Title);
+    Equal("https://www.youtube.com/channel/UCnewpipe_456/videos", newPipeEntries[0].FeedUri.AbsoluteUri);
+
+    const string freeTube =
+        "{\"_id\":\"allChannels\",\"subscriptions\":[{\"id\":\"UCfree_789\",\"name\":\"FreeTube\"}]}\n"
+        + "{\"_id\":\"history\",\"videos\":[]}";
+    var freeTubeEntries = YouTubeSubscriptionFileImport.ParseFreeTubeDatabase(freeTube);
+    Equal(1, freeTubeEntries.Count);
+    Equal("FreeTube", freeTubeEntries[0].Title);
+
+    using var archiveBytes = new MemoryStream();
+    using (var archive = new System.IO.Compression.ZipArchive(
+               archiveBytes, System.IO.Compression.ZipArchiveMode.Create, leaveOpen: true))
+    {
+        var history = archive.CreateEntry("YouTube and YouTube Music/history/watch-history.html");
+        using (var historyWriter = new StreamWriter(history.Open(), Encoding.UTF8, leaveOpen: false)) historyWriter.Write("nie czytaj mnie");
+        var subscriptions = archive.CreateEntry("YouTube and YouTube Music/subscriptions/subscriptions.csv");
+        using var subscriptionsWriter = new StreamWriter(subscriptions.Open(), Encoding.UTF8, leaveOpen: false);
+        subscriptionsWriter.Write(takeout);
+    }
+    archiveBytes.Position = 0;
+    var zipEntries = YouTubeSubscriptionFileImport.ParseZip(archiveBytes);
+    Equal(1, zipEntries.Count);
+    Equal("Pierwszy kanał", zipEntries[0].Title);
+
+    var opml = PodcastOpmlParser.Parse("""
+        <opml><body><outline text="Kanał OPML" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCopml_012" /></body></opml>
+        """);
+    Equal(1, opml.Count);
+    Equal(PodcastSourceKind.YouTubeChannel, opml[0].SourceKind);
+    Equal("https://www.youtube.com/channel/UCopml_012/videos", opml[0].FeedUri.AbsoluteUri);
+    var playlistOpml = PodcastOpmlParser.Parse("""
+        <opml><body><outline text="Playlista OPML" xmlUrl="https://www.youtube.com/feeds/videos.xml?playlist_id=PLabc_012" /></body></opml>
+        """);
+    Equal(1, playlistOpml.Count);
+    Equal(PodcastSourceKind.YouTubePlaylist, playlistOpml[0].SourceKind);
+    Equal("https://www.youtube.com/playlist?list=PLabc_012", playlistOpml[0].FeedUri.AbsoluteUri);
 }
 
 static void TestPodcastLibraryUpdate()

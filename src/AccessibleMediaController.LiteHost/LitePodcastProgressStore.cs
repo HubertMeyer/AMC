@@ -399,7 +399,8 @@ internal sealed class LitePodcastProgressStore : IDisposable
         PodcastFeedDocument feed,
         string? titleOverride,
         PodcastSourceKind sourceKind,
-        BookmarkSettings? bookmarks = null)
+        BookmarkSettings? bookmarks = null,
+        bool preserveExistingTitle = false)
     {
         EnsureFullAmcIsClosed(
             "Zamknij najpierw główne AMC. Równoczesne dodawanie źródeł z dwóch wersji mogłoby utracić dane.");
@@ -410,7 +411,8 @@ internal sealed class LitePodcastProgressStore : IDisposable
                 titleOverride,
                 sourceKind,
                 DateTime.UtcNow,
-                bookmarks);
+                bookmarks,
+                preserveExistingTitle);
         }
         catch (Exception exception) when (IsDatabaseFailure(exception))
         {

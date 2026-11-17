@@ -22,6 +22,10 @@
              Link="LiteBookmarkStore.cs" />
     <Compile Include="..\..\src\AccessibleMediaController.LiteHost\LitePodcastProgressStore.cs"
              Link="LitePodcastProgressStore.cs" />
+    <Compile Include="..\..\src\AccessibleMediaController.LiteHost\LitePodcastOpmlCoordinator.cs"
+             Link="LitePodcastOpmlCoordinator.cs" />
+    <Compile Include="..\..\src\AccessibleMediaController.Windows\Services\PodcastFeedClient.cs"
+             Link="PodcastFeedClient.cs" />
     <Compile Include="..\..\src\AccessibleMediaController.LiteHost\LitePodcastChapterCoordinator.cs"
              Link="LitePodcastChapterCoordinator.cs" />
     <Compile Include="..\..\src\AccessibleMediaController.Windows\Services\PodcastChapterClient.cs"

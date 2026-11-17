@@ -1332,7 +1332,8 @@ internal sealed class PodcastLibraryDatabase(string databasePath)
         string? titleOverride,
         PodcastSourceKind sourceKind,
         DateTime addedUtc,
-        BookmarkSettings? bookmarks = null)
+        BookmarkSettings? bookmarks = null,
+        bool preserveExistingTitle = false)
     {
         ArgumentNullException.ThrowIfNull(feed);
         if (sourceKind is not (PodcastSourceKind.Rss
@@ -1357,6 +1358,7 @@ internal sealed class PodcastLibraryDatabase(string databasePath)
                 addedUtc,
                 bookmarks,
                 sourceKind,
+                preserveExistingTitle,
                 addToLibrary: true);
             if (update.AddedSubscription)
             {

@@ -19,6 +19,7 @@ public static class PodcastLibraryUpdater
         DateTime refreshUtc,
         BookmarkSettings? bookmarks = null,
         PodcastSourceKind sourceKind = PodcastSourceKind.Rss,
+        bool preserveExistingTitle = false,
         // Domyslnie NIE dopisujemy do Biblioteki. Wczesniej bylo tu true, wiec
         // produkcyjne odswiezanie (F5, Ctrl+F5, timer), ktore wola bez tego
         // parametru, milczaco zapisywalo do Biblioteki kanal otwarty wcześniej
@@ -45,7 +46,8 @@ public static class PodcastLibraryUpdater
             settings.Subscriptions.Add(subscription);
         }
 
-        if (normalizedOverride.Length > 0)
+        if (normalizedOverride.Length > 0
+            && (!preserveExistingTitle || addedSubscription || string.IsNullOrWhiteSpace(subscription.Title)))
         {
             subscription.Title = normalizedOverride;
             subscription.HasCustomTitle = true;
