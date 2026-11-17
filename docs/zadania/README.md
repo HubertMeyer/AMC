@@ -1,11 +1,13 @@
 # Rejestr zadań AMC
 
-Najnowszy wynik REL-002: jedna diagnostyczna próba na GitHub-hosted Windows
-(run `44188078273`) zatrzymała się przed kompilacją na błędzie naszego skryptu
-CIM (`WarningAction Stop`), nie na detekcji wirusa. Stan AV i wynik skanu
-pozostają nieustalone. Poprawka przygotowana lokalnie; bez instalatora,
-publikacji i lokalnej budowy. Ponowienie wymaga potwierdzenia użytkownika.
-Szczegóły w [REL-002](REL-002-kanoniczne-wydania-test-public-github.md).
+Najnowszy wynik REL-002: zatwierdzone ponowienie na GitHub-hosted Windows
+(run `44191185213`, źródła `999b31d`) zakończone przed kompilacją. Poprawiony
+odczyt CIM działa: VM ma wyłączoną ochronę real-time/behavior/IOAV i dwa
+wykluczenia, więc bramka bezpieczeństwa zablokowała build. To nie detekcja
+wirusa ani wynik skanu. Oba joby i ich sprzątanie zakończone; standardowe VM
+GitHub likwiduje automatycznie, raporty zachowano. Bez instalatora, publikacji,
+lokalnej budowy i zmian ochrony. Dalsza próba wymaga uzgodnienia środowiska
+z aktywną ochroną. Szczegóły w [REL-002](REL-002-kanoniczne-wydania-test-public-github.md).
 
 - `YT-007` — **Źródła zintegrowane, celowane testy zaliczone; wydanie i odbiór użytkowy wstrzymane** — #19/#20 autora `HubertMeyer`: import plików i typowanie OPML, archiwa z polskimi tytułami oraz ograniczona publiczna lista live/upcoming bez konta. Po review poprawiono rozróżnianie ID i ochronę istniejących metadanych. Brak nieoficjalnego logowania TV; bez nowego instalatora i zamykania zgłoszeń. [Plan, kryteria i wyniki](YT-007-zgloszenia-19-20-import-i-transmisje.md).
 

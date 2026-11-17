@@ -43,7 +43,7 @@ bez budowy i instalacji na Hermesie oraz bez instalacji na głównym komputerze.
 Nie jest to zgoda na publikację ani uznanie wcześniejszych detekcji RCX za
 fałszywe. Pozostałe bramki wydania nadal obowiązują.
 
-- Uruchomiono dokładnie jeden workflow: run `44188078273`, attempt `1`,
+- W pierwszej próbie uruchomiono workflow: run `44188078273`, attempt `1`,
   źródła `95001e494ac2e0ac3c5f0833a7cd4a63bd40775c`, gałąź
   `codex/amc-diagnostic-gh-20261117`, GitHub-hosted `windows-2025`.
 - Przebieg zakończył się niepowodzeniem przed pobraniem runtime, kompilacją,
@@ -58,13 +58,51 @@ fałszywe. Pozostałe bramki wydania nadal obowiązują.
 - Przygotowano lokalną poprawkę `0dc0ce8`: ostrzeżenia są przechwytywane przez
   `WarningVariable` z obsługiwanym `WarningAction Continue`, a każde rzeczywiste
   ostrzeżenie nadal powoduje błąd. Sześć celowanych kontraktów i parser ośmiu
-  bloków PowerShell przeszły. Poprawka nie została jeszcze wykonana na VM.
+  bloków PowerShell przeszły. Na tym etapie poprawka nie była jeszcze wykonana
+  na VM; jej późniejszy rzeczywisty odbiór opisuje ponowienie poniżej.
 - Nie powstał instalator, nie opublikowano wydania, nie uruchomiono AMC ani
   setupu, nie zmieniano ochrony. Na Hermesie wykonano jedynie małe zmiany
   źródeł, testy statyczne i parsowanie; nie było lokalnej kompilacji.
-- **Następny krok:** uzyskać zgodę na ponowienie przebiegu po poprawce
-  skryptu; nie wykonywać automatycznego rerunu ani kasowania gałęzi w celu
-  obejścia ograniczenia pierwszego pushu.
+### Zatwierdzone ponowienie i zakończenie zasobów — 17.11.2026
+
+Michał zatwierdził ponowienie słowami „Tak, sprawdzaj, poteuem usuń te maszyny”.
+To zastępuje wcześniejsze oczekiwanie na zgodę. Nie rozszerza zakresu o wydanie,
+instalację AMC, lokalną kompilację ani zmianę konfiguracji Defendera.
+
+- Druga, osobno zatwierdzona próba: run `44191185213`, attempt `1`, job
+  `134420706041`, gałąź `codex/amc-diagnostic-gh-20261117-r2`, dokładne źródła
+  `999b31ded210d553604647e099c5b221f687b259`; sześć kontraktów statycznych PASS.
+  Starej gałęzi nie kasowano, starego runu nie ponawiano. Oba joby są zakończone.
+- Poprawiony odczyt CIM zadziałał. Faktyczna konfiguracja świeżej VM:
+  `AntivirusEnabled=true`, `RealTimeProtectionEnabled=false`,
+  `DisableRealtimeMonitoring=true`, `DisableBehaviorMonitoring=true`,
+  `DisableIOAVProtection=true`, dwa wykluczenia ścieżek. Silnik `1.1.26100.4`,
+  sygnatury `1.463.347.0`. To nie jest detekcja wirusa, tylko niespełniony
+  warunek aktywnej ochrony. Początkowy skan źródeł nie został wykonany.
+- Bramka prawidłowo przerwała pracę przed SDK, runtime, Inno, kompilacją oraz
+  pakowaniem. Końcowy odczyt także potwierdził wyłączoną ochronę real-time;
+  odczyt detekcji był pusty, co nie zastępuje niewykonanego skanu.
+- Zachowano i odczytano trzy raporty; artifact `14376851571`, 1361 B, digest
+  `sha256:bd88029c39beb1830da1edf2aa98338c35b525db3587dd4c2ca30d2c1bd25370`.
+  Lokalna kopia: profil AMC, `state/github-diagnostic-44191185213`.
+- Job zakończony 17.11 o `22:34:15Z`, łącznie 48 s, z zakończonymi etapami
+  sprzątania. API potwierdza standardową grupę `GitHub Actions`, etykietę
+  `windows-2025`; repozytorium nie ma zarejestrowanych self-hosted runnerów.
+  Zgodnie z dokumentacją GitHuba standardowa VM jest automatycznie likwidowana
+  po jobie. Nie istnieje należąca do nas trwała VM do ręcznego skasowania;
+  nie deklarujemy wykonania operacji DELETE VM. Raporty pozostają zachowane.
+- Oficjalny skrypt obrazu `actions/runner-images`,
+  `images/windows/scripts/build/Configure-WindowsDefender.ps1`, jawnie ustawia
+  wyłączoną ochronę real-time/behavior/IOAV oraz wykluczenia `C:\` i `D:\`.
+  Nie należy zakładać, że kolejny standardowy obraz będzie chroniony.
+- **Następny krok:** uzgodnić środowisko z aktywną ochroną na czas całej budowy.
+  Nie usuwać bramki, nie zmieniać ochrony i nie uruchamiać następnych prób
+  automatycznie. Wcześniejsze detekcje RCX i hold wydania nadal nierozstrzygnięte.
+  Instalator, publikacja, instalacja i odbiór NVDA nie zostały wykonane.
+
+Źródła zasad cyklu życia i konfiguracji VM:
+- https://docs.github.com/actions/using-github-hosted-runners/using-github-hosted-runners
+- https://github.com/actions/runner-images/blob/main/images/windows/scripts/build/Configure-WindowsDefender.ps1
 
 Historyczny punkt poniższego planu z 13.11.2026: AMC Test
 `0.1.0-alpha.500`, prerelease `test-2026.11.13.1952`, commit `16eb05b5`.
