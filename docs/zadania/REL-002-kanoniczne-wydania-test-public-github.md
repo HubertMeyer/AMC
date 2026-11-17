@@ -36,6 +36,36 @@ nie wyodrębniono — oba dostępne czytniki nie obsłużyły formatu. Brak dowo
 przyczyny detekcji lub fałszywego alarmu. Żywy odbiór Windows/NVDA nadal otwarty; główny
 komputer pozostaje nietykalny, użytkownik aktualizuje go ręcznie.
 
+## Diagnostyczna próba na maszynie GitHub — 17.11.2026
+
+Użytkownik zatwierdził jedną kontrolowaną budowę na GitHub-hosted Windows,
+bez budowy i instalacji na Hermesie oraz bez instalacji na głównym komputerze.
+Nie jest to zgoda na publikację ani uznanie wcześniejszych detekcji RCX za
+fałszywe. Pozostałe bramki wydania nadal obowiązują.
+
+- Uruchomiono dokładnie jeden workflow: run `44188078273`, attempt `1`,
+  źródła `95001e494ac2e0ac3c5f0833a7cd4a63bd40775c`, gałąź
+  `codex/amc-diagnostic-gh-20261117`, GitHub-hosted `windows-2025`.
+- Przebieg zakończył się niepowodzeniem przed pobraniem runtime, kompilacją,
+  pakowaniem i instalowaniem narzędzi. Przyczyną jest błąd naszego skryptu:
+  polecenia CIM Defendera nie obsługują `-WarningAction Stop`. Nie odczytano
+  stanu ochrony ani wyniku skanu; to NIE jest detekcja zagrożenia i NIE dowód,
+  że Defender jest wyłączony lub niedostępny.
+- Zachowano i odczytano trzy małe raporty z Actions artifact
+  `14374373325`. Archiwum ma 1216 B i digest
+  `b6f8fe0d0336b88f5cb98846fa96daeb25d350eb39293a796f563c99bcab9495`.
+  Lokalne dowody: profil AMC, `state/github-diagnostic-44188078273`.
+- Przygotowano lokalną poprawkę `0dc0ce8`: ostrzeżenia są przechwytywane przez
+  `WarningVariable` z obsługiwanym `WarningAction Continue`, a każde rzeczywiste
+  ostrzeżenie nadal powoduje błąd. Sześć celowanych kontraktów i parser ośmiu
+  bloków PowerShell przeszły. Poprawka nie została jeszcze wykonana na VM.
+- Nie powstał instalator, nie opublikowano wydania, nie uruchomiono AMC ani
+  setupu, nie zmieniano ochrony. Na Hermesie wykonano jedynie małe zmiany
+  źródeł, testy statyczne i parsowanie; nie było lokalnej kompilacji.
+- **Następny krok:** uzyskać zgodę na ponowienie przebiegu po poprawce
+  skryptu; nie wykonywać automatycznego rerunu ani kasowania gałęzi w celu
+  obejścia ograniczenia pierwszego pushu.
+
 Historyczny punkt poniższego planu z 13.11.2026: AMC Test
 `0.1.0-alpha.500`, prerelease `test-2026.11.13.1952`, commit `16eb05b5`.
 Nie traktować tego numeru jako świeżo odczytanego najnowszego wydania GitHub.
