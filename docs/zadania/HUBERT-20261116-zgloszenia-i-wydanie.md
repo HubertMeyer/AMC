@@ -43,6 +43,14 @@ Wspólne zachowania Public/Test badać raz tam, gdzie rzeczywiście są identycz
 
 ## Wykonanie
 
+### Budowa ac68396 zatrzymana; pamięć podręczna wyłączona u źródła
+
+`deleg_a2212b80` potwierdził czyste źródła i poprawny parser PS 5.1, ale kanoniczna budowa Public zatrzymała się przed startem i instalatorem. `copy_runtime` próbował skopiować zbędny `pyatv/.../__pycache__/RegisterForGameControllerEventsMessage_pb2.cpython-314.pyc` do 262-znakowej ścieżki Windows (`WinError 3`). Nie powstały finalne bundle/setupy Public ani Test. Zachowano log i niepełny kandydat w `hubert-final-511`; nie są wydaniem. Dodatek AMC 0.4.2 został jedynie zbudowany, nie zainstalowany.
+
+Prowadzący dodał najpierw cztery przypadki regresji: świeży runtime i trzy tory kopiowania zależności. RED: **4 failed** przez obecność cache. Minimalna wspólna reguła ignoruje `__pycache__`, `*.pyc`, `*.pyo` już podczas przechodzenia i kopiowania źródła, a nie po skopiowaniu. Nie zmienia wejściowych zależności, nie skraca ścieżki, nie używa junctionów i nie omija manifestu. Zachowuje zwykłe moduły, natywne rozszerzenia, metadane i zamknięty `python314.zip`. Nie zmienia historycznej gałęzi odświeżenia runtime na miejscu.
+
+GREEN: **79 passed** (nowe przypadki, cały `test_bundle_layout.py`, profile instalatora i parser dwóch wejść). Osobny rzeczywisty Windows Python z tych samych przygotowanych zależności odtworzył przed zmianą `WinError 3` na dokładnie 262 znakach, a po zmianie skopiował ten sam moduł bajt w bajt bez cache, przy niezmienionych wejściach. Dowód: `hubert-final-511/logs/python-cache-native-probe.json`. To odbiór poprawki kopiowania, nie gotowej paczki. Wersja techniczna pozostaje `.511`, bo żaden nowy instalator nie powstał ani nie został opublikowany. Następny krok: niezależny przegląd tego minimalnego diffu, zamrożenie nowego commita i ponowna kanoniczna budowa obu profili. Wciąż brak instalacji/NVDA i publikacji.
+
 ### Warunki instalatora odblokowane; zamrożenie następnego kandydata
 
 Odebrano `deleg_fb8f5bf8`, sprawdzono na Hermesie 17 920 bajtów i SHA oryginalnego Quick App Switcher 0.1.6 z kanonicznej specyfikacji. Zintegrowano `b350d24` jako `6cefb31`: bezpieczne uruchomienie ISCC także w PowerShell 5.1, bez prywatnego zmieniania stagingu. Pięć rzeczywistych argumentów fixture (Unicode, spacje, cudzysłów, końcowy backslash, pusty argument) zgadza się z zachowanym dowodem `argvExact=true`.
