@@ -26,7 +26,10 @@ def _powershell_path(path: Path) -> str:
     return str(path)
 
 
-@pytest.mark.skipif(not POWERSHELL, reason="wymaga Windows PowerShell")
+@pytest.mark.skipif(
+    os.name != "nt" or not POWERSHELL,
+    reason="wymaga natywnego Windows Python i PowerShell; kompilacja fixture w POSIX/UNC z WSL nie jest wspierana",
+)
 def test_powershell_51_fallback_preserves_real_exe_argv(tmp_path: Path) -> None:
     """Fixture .exe odbiera Unicode, spacje, cudzysłowy, backslashe i pusty argument."""
 

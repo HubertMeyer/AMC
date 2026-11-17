@@ -1,4 +1,4 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param(
     [Parameter(Mandatory)] [ValidateSet("public", "test")] [string]$Profile,
     [Parameter(Mandatory)] [string]$PythonRuntime,

@@ -43,6 +43,14 @@ Wspólne zachowania Public/Test badać raz tam, gdzie rzeczywiście są identycz
 
 ## Wykonanie
 
+### Warunki instalatora odblokowane; zamrożenie następnego kandydata
+
+Odebrano `deleg_fb8f5bf8`, sprawdzono na Hermesie 17 920 bajtów i SHA oryginalnego Quick App Switcher 0.1.6 z kanonicznej specyfikacji. Zintegrowano `b350d24` jako `6cefb31`: bezpieczne uruchomienie ISCC także w PowerShell 5.1, bez prywatnego zmieniania stagingu. Pięć rzeczywistych argumentów fixture (Unicode, spacje, cudzysłów, końcowy backslash, pusty argument) zgadza się z zachowanym dowodem `argvExact=true`.
+
+Przed budową prowadzący znalazł tę samą, potwierdzoną przyczynę w dwóch kolejnych wejściach: Windows PS 5.1 nie parsował `Build-AMCBundle.ps1` i `Test-AMCBundleStartup.ps1` zapisanych UTF-8 bez BOM. Nowe testy rzeczywistego parsera dały RED 2/2; dodanie wyłącznie BOM dało GREEN. Celowany zestaw: **31 passed, 1 skipped**; pominięty fixture EXE wymaga natywnego Windows Python i nie jest zaliczany jako test wykonany w WSL. Samo znalezienie `powershell.exe` w WSL nie zapewnia obsługi POSIX-owego katalogu tymczasowego przez kompilator Windows. To korekta aparatury, nie funkcji AMC.
+
+Natywny Git for Windows 2.54.0 uruchomiono na **HERMES** z prywatnej kopii `cmd` i `mingw64/bin` istniejącego narzędzia (167 plików, odczyt głównego komputera bez zmian). Hash `cmd/git.exe` `81ef35ae005ca9318018d18e3327578ce939fb99feaad6b2d7c8ab15f3de8db5` zgadza się ze źródłem. Nie kopiowano całego profilu/deweloperskich danych ani repozytorium głównego PC; nie używać shimów. Nowy techniczny numer wspólnego kandydata: `0.1.0-alpha.511`. Zbudować go z czystego, zamrożonego checkoutu NTFS, potwierdzić prawdziwe Windows Git HEAD/status, następnie oba setupy i ich osobny odbiór na Hermesie. Nadal bez publikacji i bez instalacji głównego komputera na tym etapie.
+
 ### Odebrany wynik kolejnego etapu — 17.11.2026
 
 `deleg_f9478710` zakończony. Prowadzący odczytał rzeczywiste logi obu procesów kolejki oraz sprawdził ich SHA względem raportu: drugi proces przywrócił 3 wpisy `fixture:C,B,A`, flagę play-next, bieżące `fixture:B`, `restoredRows=3`, bez odtwarzania. Nie powtarzano całej baterii. Dokument odebrano lokalnie jako `6a6957d`.

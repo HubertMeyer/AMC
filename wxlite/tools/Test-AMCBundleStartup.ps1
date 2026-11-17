@@ -1,4 +1,4 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param(
     [Parameter(Mandatory)] [string]$BundleRoot,
     [ValidateRange(10, 120)] [int]$TimeoutSeconds = 35
