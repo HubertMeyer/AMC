@@ -58,6 +58,7 @@ def entries_for_session(
     session_order: object = None,
     *,
     youtube_account_available: bool = False,
+    youtube_broadcast_available: bool | None = None,
     shortcut_overrides: Mapping[Action, str] | None = None,
 ) -> tuple[CommandPaletteEntry, ...]:
     """Zbuduj po jednym użytkowym wpisie na akcję widoczną w tej sesji."""
@@ -68,6 +69,7 @@ def entries_for_session(
         session,
         session_order,
         youtube_account_available=youtube_account_available,
+        youtube_broadcast_available=youtube_broadcast_available,
         shortcut_overrides=shortcut_overrides,
     ):
         for item in menu.items:

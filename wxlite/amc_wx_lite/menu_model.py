@@ -1282,7 +1282,7 @@ def build_menus(
                           needs_radio_station=True,
                           needs_youtube_radio_station=True,
                           visible_sessions=RADIO_ONLY),)
-                if youtube_account_available else ()
+                if youtube_broadcast_available else ()
             ),
             MenuItem("&Usuń stację", Action.STATION_DELETE, shortcut="Delete",
                      accelerator=False, needs_radio_session=True),
@@ -1814,7 +1814,7 @@ def build_menus(
                         shortcut="Ctrl+Shift+I",
                     ),
                 )
-                if youtube_account_available
+                if youtube_broadcast_available
                 else ()
             ),
             MenuItem("Po&brane", Action.VIEW_PODCAST_DOWNLOADS,
@@ -2096,7 +2096,7 @@ def build_menus(
                     needs_podcast_session=True,
                     visible_sessions=PODCASTS_ONLY,
                 ),)
-                if youtube_account_available else ()
+                if youtube_broadcast_available else ()
             ),
             SEPARATOR,
             MenuItem(

@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
+using System.IO;
 using System.Text.Json;
 using AccessibleMediaController.Core.YouTube;
 
@@ -120,6 +121,7 @@ internal sealed class YouTubePublicBroadcastClient
         (char[]?)null, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)) is { Length: > 0 } text
         ? text.Length <= max ? text : text[..max].Trim() : fallback;
     private static DateTimeOffset? ReadTimestamp(JsonElement item, string name) => item.TryGetProperty(name, out var value)
+        && value.ValueKind == JsonValueKind.Number
         && value.TryGetInt64(out var seconds) && seconds is > 0 and < 4_102_444_800
         ? DateTimeOffset.FromUnixTimeSeconds(seconds) : null;
 }

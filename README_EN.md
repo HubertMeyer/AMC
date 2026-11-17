@@ -10,6 +10,20 @@ nothing. Google sign-in is not required. This is a source change, not a new
 release; Windows/NVDA acceptance and installer delivery remain blocked by the
 security gate. [Task record in Polish](docs/zadania/YT-007-zgloszenia-19-20-import-i-transmisje.md).
 
+The importer saves selected sources without immediately downloading every
+channel's episodes. The supported FreeTube file is a text `profiles.db` with
+JSON records; CSV uses the Google Takeout format. Limits: 1000 entries,
+4 Mi characters of text, ZIP up to 64 MiB and 128 members. For larger Takeout
+archives, select `subscriptions.csv` directly. ZIP contents are never extracted.
+
+The sources also add public broadcasts without a Google account: `Ctrl+T` on
+a channel lists live and upcoming streams; `Ctrl+Shift+I` opens the aggregate
+for up to 20 selected channels, and `F5` refreshes it. This requires yt-dlp and
+reads at most 50 entries from a channel's streams tab; it is not a complete
+history or guaranteed inventory of every event. Archived broadcasts remain in
+the ordinary channel list with localized titles. Unofficial TV-client login
+is not implemented. These changes have not yet shipped in an installer.
+
 ## Public alpha.448 candidate: player fixes
 
 After opening a local file from Explorer, Total Commander, or the “Open file” dialog, `F6` opens the player with that file as the current track. `Page Up` and `Page Down` move through tracks in its folder when the file is present in the folder list. In the player, NVDA reads “Volume” and “Speed” with the controls' values; `Alt+V` and `Alt+S` focus those controls when available. This is a candidate for review, not an installed or published release.

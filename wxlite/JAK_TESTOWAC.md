@@ -557,6 +557,19 @@ rekordy JSON i nazwy typów nie trafiają do mowy NVDA.
     przełącza bieżące, a `Ctrl+A` zaznacza wszystkie. `Ctrl+I` nie jest już
     błędnie zajęte przez import stacji.
     Zmiana YT-007 jest na razie źródłowa, bez wydania i odbioru NVDA.
+    Testy importu obejmują trwałą tożsamość rozróżniającą litery, wybór jednego
+    z dwóch podobnych ID, ponowny import po restarcie i ochronę istniejących
+    metadanych/odcinków. ZIP: do 64 MiB i 128 plików, tekst do 4 Mi znaków,
+    maksymalnie 1000 źródeł; dla większego Takeout wskazać sam subscriptions.csv.
+    FreeTube: tekstowy profiles.db z rekordami JSON. Nic nie jest wypakowywane.
+
+    Po zamknięciu bramki bezpieczeństwa sprawdzić także bez konta Google:
+    Ctrl+T na kanale, Ctrl+Shift+I, wybór kanałów agregatu, F5 i odświeżenie
+    stacji Radio YouTube. Potrzebny yt-dlp; odczyt ograniczony do 50 pozycji
+    /streams i 20 wybranych kanałów, nie gwarantuje kompletnej historii.
+    Sprawdzić PL/EN, fokus i NVDA dopiero na bezpiecznej paczce. Brak daty
+    nie może odrzucić transmisji; was_live nie trafia do listy live/upcoming,
+    ale pozostaje w zwykłej liście kanału z polskim tytułem i zachowaną datą.
     Po zamknięciu bramki bezpieczeństwa sprawdź wybór pliku, pierwszy fokus,
     wybór Spacją i Ctrl+A, anulowanie obu okien oraz dodanie tylko wybranych
     źródeł. Kanał i playlista YouTube z OPML mają zachować typ YouTube;

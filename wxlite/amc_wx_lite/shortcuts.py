@@ -2461,7 +2461,7 @@ def _resolve_default(
         and canonical in YOUTUBE_CHANNEL_LIST_VIEW
     ):
         action = YOUTUBE_CHANNEL_LIST_VIEW[canonical]
-        if action is Action.YOUTUBE_BROADCASTS and not youtube_account_available:
+        if action is Action.YOUTUBE_BROADCASTS and not youtube_broadcast_available:
             return None
         return action
     if files_session and canonical in FILES_SESSION_VIEW:

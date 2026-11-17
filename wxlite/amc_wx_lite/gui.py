@@ -14795,7 +14795,7 @@ class LiteFrame(wx.Frame):
             ):
                 self._youtube_account_available = youtube_available
                 self._build_menu()
-            youtube_broadcast_available = bool(
+            youtube_broadcast_available = youtube_available or bool(
                 youtube_broadcast_capabilities_after_start
                 and youtube_capability_available(
                     youtube_broadcast_capabilities_after_start[-1]
@@ -23732,6 +23732,7 @@ class LiteFrame(wx.Frame):
             self.navigator.active,
             self.options.session_order,
             youtube_account_available=self._youtube_account_available,
+            youtube_broadcast_available=getattr(self, "_youtube_broadcast_available", False),
             shortcut_overrides=getattr(self, "shortcut_overrides", {}),
         )
         entries = available_command_entries(entries, available_actions)
@@ -25829,9 +25830,9 @@ class LiteFrame(wx.Frame):
             )
             return
         client = self.client
-        if not getattr(self, "_youtube_account_available", False):
+        if not getattr(self, "_youtube_broadcast_available", getattr(self, "_youtube_account_available", False)):
             self.announcer.say(
-                "Najpierw skonfiguruj konto YouTube w menu Plik"
+                i18n.ui_text("Sprawdź składnik yt-dlp lub skonfiguruj konto YouTube w menu Plik")
             )
             return
         if client is None:
@@ -38734,8 +38735,8 @@ class LiteFrame(wx.Frame):
             self.announcer.say(i18n.tr("radio.youtube.selectStation"))
             return
         client = self.client
-        if client is None or not self._youtube_account_available:
-            self.announcer.say(i18n.tr("radio.youtube.connectAccount"))
+        if client is None or not getattr(self, "_youtube_broadcast_available", self._youtube_account_available):
+            self.announcer.say(i18n.ui_text("Sprawdź składnik yt-dlp lub skonfiguruj konto YouTube w menu Plik"))
             return
         subscription_id = None
         try:

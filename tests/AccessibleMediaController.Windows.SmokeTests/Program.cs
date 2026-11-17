@@ -2862,6 +2862,17 @@ static void TestLiveYouTubeSearch(string query)
 
 static void TestYouTubeCollectionResults()
 {
+    var publicRows = YouTubePublicBroadcastClient.ParseResult("""
+        {"entries":[
+          {"id":"live1234567","live_status":"is_live","timestamp":null},
+          {"id":"soon1234567","live_status":"is_upcoming","release_timestamp":null},
+          {"id":"text1234567","live_status":"is_upcoming","release_timestamp":"unknown"},
+          {"id":"done1234567","live_status":"was_live","timestamp":1750000000}
+        ]}
+        """);
+    Assert(publicRows.Count == 3
+        && publicRows.All(row => row.ScheduledStartUtc is null && row.ActualStartUtc is null),
+        "Brak lub nieprawidłowy termin nie może odrzucić publicznej transmisji; archiwum nie wchodzi do live/upcoming.");
     Assert(
         YouTubeCollectionClient.CollectionDateExtractorArguments
             == "youtubetab:approximate_date"

@@ -1,69 +1,84 @@
 # YT-007 — zgłoszenia Huberta #19 i #20: import i transmisje
 
-- Status: `W trakcie — rozwój źródeł i testy bez interfejsu; wydanie wstrzymane bramką bezpieczeństwa alpha.511`.
-- Rozpoczęcie: 17 listopada 2026.
-- Polecenie użytkownika: „To Hubert znowu? Sprawdź oba zgłoszenia, wdrożyc je”.
-- Repozytorium: `michalkasperczak/AMC`, gałąź `codex/amc-test-public-20261109`.
-- Baza: `cbad568eaabcea7f733dcb1e62e43ed232b1afcb`; przed pracą lokalny i zdalny HEAD zgodne, drzewo czyste.
-
-## Źródła i stan zastany
-
-Pełne zgłoszenia i komentarze odczytano przez GitHub. Oba zgłoszenia napisał `HubertMeyer`.
-
-- #19: import Google Takeout (ZIP i CSV), NewPipe i FreeTube; właściwe typowanie kanałów/playlist YouTube w OPML; propozycja nieoficjalnego logowania kodem; komentarze dodają publiczną listę live/upcoming bez konta.
-- #20: zgłoszony brak `was_live` w zlokalizowanych wynikach yt-dlp oraz odrzucanie publicznych archiwów kanału Trójki `UC22dMuSZ7XTCkEY72rodgIA`. Opis autora nie jest jeszcze niezależną reprodukcją AMC.
-- YT-001 zawiera wcześniejszą decyzję o własnym kliencie AMC, oficjalnym OAuth i zakazie używania cudzych danych klienta TV; brak konfiguracji nie jest powodem do dołączania sekretów do paczki.
-- YT-002 zawiera istniejące Ctrl+T i Ctrl+Shift+I, limit 20 jawnie wybranych kanałów, brak monitoringu wszystkich subskrypcji i brak osobnego archiwum zauważonych transmisji.
+- Status: `Źródła zintegrowane i celowane testy zaliczone; odbiór użytkowy i wydanie wstrzymane bramką bezpieczeństwa`.
+- Rozpoczęcie i integracja: 17 listopada 2026.
+- Polecenie: „To Hubert znowu? Sprawdź oba zgłoszenia, wdrożyc je”. Pełne zgłoszenia i komentarze odczytano; oba napisał `HubertMeyer`.
+- Repozytorium: `michalkasperczak/AMC`, gałąź `codex/amc-test-public-20261109`, baza `cbad568eaabcea7f733dcb1e62e43ed232b1afcb`.
 
 ## Zakres i kryteria odbioru
 
-1. Import plików bez logowania: CSV/ZIP Takeout, JSON NewPipe i plik FreeTube zgodny z eksportem AMC. Wybór i potwierdzenie przed zapisem, idempotencja po stabilnym ID, zachowanie nazw i danych istniejących źródeł; bez setek natychmiastowych pobrań na wątku GUI.
-2. OPML: adresy kanałów i playlist YouTube otrzymują rzeczywisty typ; RSS pozostaje RSS. Okrągły eksport/import AMC nie degraduje YouTube.
-3. Bezpieczny parser plików: ograniczenia rozmiaru/liczby wpisów, brak rozpakowywania ZIP na dysk, brak wykonywania HTML i brak importu historii oglądania/kont/poświadczeń.
-4. #20: najpierw rzeczywista próba na publicznym kanale i test RED. Minimalna poprawka zachowuje polskie tytuły i daty oraz nie wpuszcza trwających/zaplanowanych transmisji do archiwum. Nie zakładać, że czas trwania sam dowodzi zakończenia.
-5. Lista live/upcoming bez konta: wykorzystać istniejący publiczny tor yt-dlp i kontrakt widoku zamiast nowego klienta prywatnego API; zachować pełną listę kanału, częściowe błędy, cache/F5, limit wybranych kanałów i brak automatycznego OAuth. Oficjalne API, jeśli dostępne, pozostaje opcją.
-6. Działające polecenia muszą zachować wspólny model menu, palety, Ctrl+F1, pełnej pomocy, metadanych i instrukcji; bez zmiany istniejących przypisań skrótów.
-7. Celowane testy RED/GREEN oraz niezależny ograniczony przegląd zmian. Testy Core/protokołu na nieszkodliwych danych, bez uruchamiania AMC, instalatora, ISCC, dotkniętych kandydatów i bez zmiany ochrony.
+1. Import CSV/ZIP Takeout, JSON NewPipe i tekstowego FreeTube profiles.db zgodnego z eksportem AMC; świadomy wybór przed zapisem, stabilne ID, ochrona istniejących danych i brak masowego pobierania.
+2. OPML: rzeczywisty typ kanału/playlisty YouTube, zachowane RSS i zgodność z eksportem AMC.
+3. Limity wejścia/tekstu/liczby wpisów; brak ekstrakcji ZIP na dysk, wykonywania HTML i importu historii oglądania/kont/sekretów.
+4. #20: rzeczywisty pomiar, niezależne statusy/daty i polskie tytuły łączone po ID; bez włączania live/upcoming do archiwum na podstawie czasu trwania.
+5. Publiczne live/upcoming przez yt-dlp bez konta, zachowana oficjalna ścieżka połączonego konta, częściowe błędy, F5 i limit 20 wybranych kanałów.
+6. Wspólny kontrakt skrótów/menu/palety/pomocy/instrukcji; osobny odbiór natywnego wx/NVDA.
+7. Testy źródłowe na nieszkodliwych fixtures bez AMC, instalatora, ISCC, dotkniętych kandydatów, danych użytkownika ani zmian ochrony.
 
 ## Uzasadnienie i decyzje
 
-Nieoficjalne logowanie cudzym klientem TV nie zostaje włączone w tym etapie: jest sprzeczne z jawną decyzją YT-001 i nie jest niezbędne do importu ani publicznych transmisji. Ten fragment #19 pozostaje rozstrzygnięciem zakresu, nie ukończoną funkcją. Nie ukrywać go w raporcie ani zamykać całego #19 jako wykonanego.
+Nie wdrożono nieoficjalnego logowania cudzym klientem TV: jest sprzeczne z decyzją YT-001 i niepotrzebne do importu/publicznych transmisji. Ta część #19 nie jest ukończoną funkcją. Nie zamykać całych zgłoszeń przed użytkowym odbiorem.
 
-Publiczne transmisje mają najpierw użyć już obecnego narzędzia yt-dlp; nie wdrażać osobnego masowego skanera Innertube ani zmieniać limitu 20 kanałów na podstawie pomiarów zgłaszającego.
+Zachowano Action.IMPORT_PODCAST_OPML, Ctrl+O i podcast.opml.inspect/import. Podgląd nadal zwraca title, feedUrl, label, count; dodano sourceKind: rss, youtubeChannel, youtubePlaylist. Import nadal selekcjonuje po feedUrls.
 
-## Podział pracy
+YouTube zachowuje wielkość liter stabilnych ID; RSS wcześniejsze porównania bez rozróżniania liter. Jawna flaga preserveExistingMetadata chroni placeholderowy import YouTube, ale nie blokuje aktualizacji metadanych przez prawdziwy refresh.
 
-- Izolowany worktree `amc-yt-imports-cbad568`: importer Core + koordynator OPML/protokół i testy; GUI importu integruje koordynator główny.
-- Izolowany worktree `amc-yt-archive-cbad568`: reprodukcja i poprawka #20 w YouTubeCollectionClient oraz testy kolekcji.
-- Izolowany worktree `amc-yt-live-cbad568`: publiczny dostawca transmisji i host, Python/GUI dla list transmisji; nie zmieniać importu OPML ani klienta kolekcji.
-- Koordynator główny: formularz importu, parytet pomocy/palety/metadanych, integracja, celowany odbiór i rejestr.
+Dwa osobne --extractor-args dla youtubetab:approximate_date i youtube:lang=pl prawidłowo rozdzielają przestrzenie ekstraktorów. Dawne połączenie youtubetab:approximate_date;youtube:lang=pl błędnie umieszczało youtube:lang w youtubetab. Daty approximate_date pozostają przybliżone.
 
-## Materiał do dokumentacji użytkownika
+## Wykonane źródła
 
-Projekt do uzupełnienia po testach: import kanałów z pliku nie wymaga konta Google; źródła będą dodawane bez natychmiastowego pobierania wszystkich materiałów. Zakończone transmisje pozostają w zwykłej liście kanału, a Ctrl+T i Ctrl+Shift+I dotyczą wyłącznie pozycji trwających i zaplanowanych. Nie powstaje osobna historia.
+- Takeout CSV i ZIP (tylko właściwy subscriptions/subscriptions.csv), NewPipe JSON i rekordy FreeTube profiles.db; podgląd bez zapisu, import tylko zaznaczenia, źródła bez masowego pobierania.
+- OPML rozpoznaje kanały/playlisty z feedów YouTube; pozostałe źródła pozostają RSS.
+- Limity: 1000 wpisów, tekst do 4 Mi znaków, ZIP do 64 MiB, 128 plików, głębokość ścieżki 8 i ograniczony współczynnik kompresji. Parser ogranicza też rzeczywisty strumień non-seekable, nie zamyka strumienia wywołującego. Dla większego Takeout trzeba wskazać sam CSV.
+- #20: statusowy odczyt /streams bez lokalizacji; drugi, ograniczony odczyt lokalizowany uzupełnia wyłącznie tytuł po ID. Zachowane status i data, również przy brakach/błędzie drugiego odczytu. Sam dodatni czas trwania nie dowodzi zakończenia transmisji.
+- Publiczna lista tylko is_live/is_upcoming, bez OAuth/cookies, maksymalnie 50 pozycji karty /streams; nie gwarantuje pełnego spisu wszystkich wydarzeń. Oficjalny backend pozostaje wybierany przy połączonym koncie.
+- Poprawione bramki bez konta: Ctrl+T, agregat, wybór kanałów, menu, paleta, Radio YouTube; PL/EN ostrzeżenia o składniku.
+- Brak/nienumeryczna data nie odrzuca transmisji. Dodano System.IO wymagane rzeczywistym projektem Windows, mimo wcześniejszego zielonego LiteHosta.
 
 ## Testy i wynik
 
-Odczytano pełne zgłoszenia, decyzje YT-001/YT-002, instrukcje repozytorium i zgodność GitHub; autor obu: `HubertMeyer`.
+### Interfejs i import
 
-Interfejs importu zachowuje `Action.IMPORT_PODCAST_OPML`, Ctrl+O i istniejący protokół `podcast.opml.inspect/import`, rozszerza filtr plików i tekst wyboru źródeł oraz wspólne menu/pomoc/paletę i angielskie etykiety. Backend w izolowanym worktree pozostaje w toku — samo okno nie jest dowodem obsługi formatu.
+- RED UI: 2 failed, 2 passed (CSV i etykieta YouTube); RED tłumaczenia: 1 failed, 4 passed.
+- Wcześniejsza grupa: 83 passed, 1 skipped, 4 deselected; cztery wyłączenia to potwierdzone braki bazy cbad568 w innych klawiszach dostępu i ogólnej kompletności starszych tłumaczeń. Nie jest to pełna zielona regresja.
+- Review UI ujawnił brak jawnego tłumaczenia selektora/dynamicznych stanów. Po korekcie: 9 passed, 15 deselected; wygenerowany szablon i raport import-ui-review-correction.xml w state/youtube-issues-19-20 profilu AMC.
+- Review backendu ujawnił scalanie ID różniących się literami i czyszczenie metadanych placeholderem. RED protokołu importował dwa kanały po wyborze jednego; poprawiono selekcję, OPML, updater i trwały stan.
+- Testy trwałej bazy: podgląd dwóch ID, wybór jednego, restart, reimport i import obu; ochrona niecustomowej nazwy, autora, opisu, strony, daty odświeżenia oraz danych/flag/pozycji odcinka. Zwykły refresh nadal aktualizuje prawdziwe dane.
+- RED ZIP wykazał odczyt ponadlimitowego strumienia; GREEN dla seekable/non-seekable, poprawnego ZIP i leave-open.
+- Po integracji w głównym repozytorium: Core.SmokeTests --youtube-file-import — exit 0; przełącznik bezpośrednio wykonuje test, nie pusty wybór. LiteHost.ProtocolTests --podcast-file-import --youtube-public-broadcasts --youtube-account — wszystkie 3 zestawy zaliczone; publiczny koordynator 3 scenariusze, kontrakt konta 9.
 
-- RED interfejsu: `2 failed, 2 passed` — brak CSV w filtrze i brak YouTube w etykiecie istniejącego polecenia.
-- RED tłumaczenia nowego okna: `1 failed, 4 passed` — brak angielskiego tytułu.
-- GREEN ograniczonej grupy interfejsu i sąsiednich kontraktów: `83 passed, 1 skipped, 4 deselected`; raport `state/youtube-issues-19-20/import-ui-tests.xml` w profilu AMC. Obejmuje rzeczywiste wywołanie metody importu z atrapą transportu, wybór jednego źródła, anulowanie obu okien i identyczność polecenia menu/palety/pomocy/Ctrl+O. Nie dowodzi natywnej dostępności wx/NVDA.
-- Cztery wyłączone testy są potwierdzonymi osobno awariami bazy `cbad568`: dwa testy klawiszy dostępu menu (brak `&` przy kopiowaniu nazwy pobranego pliku), dwa testy ogólnej kompletności tłumaczeń (starsze kontrolki/napisy poza importem). Nie oznaczono pełnej regresji jako zielonej ani nie zmieniano zakresu zadania, by naprawiać te braki.
-- Szablon tłumaczeń odtworzono istniejącym generatorem; test jego zgodności przechodzi po dodaniu nowych etykiet. `git diff --check` bez błędów.
-- Ograniczony niezależny przegląd interfejsu wskazał brak jawnego tłumaczenia selektora pliku i dynamicznych stanów wyboru. Potwierdzono nowym testem RED (`1 failed, 5 deselected`). Dodano jawne `i18n.ui_text` dla tytułu/kontrolek/selekcji i selektora pliku oraz angielskie stany; `9 passed, 15 deselected` w grupie korekty i zgodności szablonu, raport `state/youtube-issues-19-20/import-ui-review-correction.xml`. Istniejący ogólny handler `_on_init_dialog` dodatkowo lokalizuje drzewo okna, ale sam nie dowodzi tłumaczenia natywnego filtra plików ani odświeżanych wierszy.
-- Testy backendu/importowanych danych, kolekcji i transmisji zostaną dopisane dopiero po rzeczywistym zakończeniu prac wykonawczych.
+### Transmisje i integracja
+
+- Niezależny reviewer ponowił realne publiczne odczyty UC22dMuSZ7XTCkEY72rodgIA/streams, po 6 wpisów, bez konta. Status: 6/6 was_live i daty; lokalizacja: te same ID i polskie tytuły, 6/6 puste statusy/daty. Parser yt-dlp potwierdził prawidłowość osobnych argumentów ekstraktorów.
+- RED rzeczywistej metody publicznego parsera: InvalidOperationException przy timestamp:null. Po poprawce zachowany poprawny wiersz. Stały test obejmuje null, tekstową datę i wykluczenie was_live.
+- RED bramek GUI: 3 niepowodzenia dla Ctrl+T, menu i rzeczywistej metody agregatu bez konta. Finalna grupa: **88 passed, 2 subtests passed** (import GUI, transmisje, skróty, paleta, Radio YouTube). Raport: state/youtube-issues-19-20/integrated-python.xml w profilu AMC.
+- Osobne tłumaczenia menu/palety i zgodność szablonu: 2 passed, 14 deselected.
+- Finalny build rzeczywistego LiteHost i Windows.SmokeTests: oba 0 warnings, 0 errors. Poprzedni build Windows ujawnił 6 CS0246; skorygowano je, nie ukryto za testem atrapy.
+- Finalny runner Windows --youtube-collection-normalization: **OK: ograniczone kanały i playlisty publicznego YouTube**, exit 0. Kopia NTFS runnera 1136/1136 plików, wszystkie hashe zgodne. Nie uruchamiano AMC/GUI.
+- git -c core.whitespace=cr-at-eol diff --check bez błędów; opcja uwzględnia istniejący CRLF runnera Windows.
+
+Testy publicznego koordynatora używają atrapy backendu, nie dowodzą żywego protokołu/odtwarzania. Test parsera wykonuje rzeczywisty kod klienta. Nie wykonano odbioru całej aplikacji, konta ani wx/NVDA.
+
+## Materiał do dokumentacji użytkownika
+
+Ctrl+O w Podcastach i YouTube wybiera plik, potem źródła. Spacja zmienia wybór, Ctrl+A zaznacza wszystkie, Anuluj nic nie zapisuje. Konto Google nie jest potrzebne. Kanały można później odświeżać zwykłą drogą; nie powstaje automatycznie setka pobrań.
+
+Ctrl+T na kanale pokazuje trwające/zaplanowane transmisje, Ctrl+Shift+I agregat do 20 jawnie wybranych kanałów, F5 odświeża. Potrzebny yt-dlp; brak składnika oznacza ostrzeżenie, nie automatyczne logowanie. Zakończone transmisje pozostają na zwykłej liście kanału. Nie powstaje osobne archiwum zauważonych transmisji.
+
+Skróty zachowano we wspólnym modelu; okno importu i nowe ostrzeżenie mają PL/EN. Fokus, odczyt listy i powrót po zamknięciu wymagają żywego odbioru bezpiecznej paczki. Public/Test używają wspólnych źródeł, ale nie ma nowych zaakceptowanych pakietów.
 
 ## Znane ograniczenia
 
-Nadal obowiązuje hold bezpieczeństwa po nierozstrzygniętych detekcjach RCX. Nie budować nowego instalatora ani paczki aplikacji, nie instalować i nie uruchamiać AMC lub dotkniętych kandydatów. Odbiór żywego Windows/NVDA jest osobną, wstrzymaną bramką. Główny komputer użytkownik aktualizuje sam.
+- Hold po nierozstrzygniętych detekcjach RCX i niekanonicznym Test nadal obowiązuje. Nie budowano instalatora/pakietu, nie instalowano/uruchamiano AMC ani dotkniętych kandydatów, nie zmieniano ochrony. Kompilacje i nieszkodliwe runnery nie zamykają bramki bezpieczeństwa. Główny komputer nietknięty.
+- Brak nieoficjalnego logowania TV, prywatnych danych konta, importu historii/prywatnych playlist, HTML Takeout i monitorowania wszystkich kanałów.
+- Publiczne /streams zależy od YouTube/yt-dlp i limitu 50 pozycji, nie gwarantuje kompletności.
+- Cache backendu: 5 minut, F5 go omija. Brak osobnego pomiaru cache/single-flight na żywym procesie. Opuszczenie widoku odrzuca stary wynik, ale protokół nie przekazuje anulowania do yt-dlp; proces ogranicza timeout 60 sekund. Nie deklarować anulowania end-to-end.
+- #19/#20 pozostają otwarte; kod i testy nie oznaczają dostarczonej aktualizacji.
 
 ## Wersja i commit
 
-Brak nowego wydania, instalacji i publikacji binariów. Nowe commity źródeł zostaną zapisane dopiero po testach i przeglądzie.
+Integracja: c8426ac (UI), c5e5e50 (import), 743582b (archiwa), 5065522 (publiczne transmisje), 0cf8ce7 (korekta importu po review; oryginał workera 1dd73aac76b36fc3ad5f3fc9717a82bebc894520). Dalsze korekty GUI/parsera i raport należą do końcowego commitu integracyjnego. Brak nowego wydania, instalacji i publikacji binariów. Push wymaga odczytu dokładnego zdalnego HEAD i nie zastępuje CI.
 
 ## Następny krok
 
-Wykonać trzy odizolowane zakresy źródłowe z testami RED/GREEN, następnie zintegrować tylko zaakceptowane zmiany i zapisać rzeczywisty wynik każdego kryterium.
+Po zamknięciu niezależnej bramki bezpieczeństwa i przygotowaniu kanonicznej paczki: jeden ograniczony odbiór wx/NVDA importu (wybór/anulowanie/PL/EN/fokus), transmisji bez konta (Ctrl+T, agregat/F5, Radio) i odświeżonego kanału z archiwami; potem osobne zatwierdzenie wydania. Nie ponawiać ważnych fixtures bez zmiany kodu lub konkretnego braku dowodu.

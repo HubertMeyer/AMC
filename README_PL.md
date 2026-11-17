@@ -10,6 +10,21 @@ a Anuluj nie dodaje źródeł. Nie jest potrzebne logowanie Google. To zmiana
 źródłowa, jeszcze nie nowe wydanie; odbiór Windows/NVDA i instalator pozostają
 wstrzymane bramką bezpieczeństwa. [Stan zadania](docs/zadania/YT-007-zgloszenia-19-20-import-i-transmisje.md).
 
+Import zapisuje tylko wybrane źródła, bez natychmiastowego pobierania wszystkich
+odcinków. Obsługiwany plik FreeTube to tekstowy `profiles.db` z rekordami JSON;
+CSV odpowiada formatowi Google Takeout. Maksymalnie 1000 wpisów, tekst do
+4 Mi znaków, ZIP do 64 MiB i 128 wpisów; większy Takeout wymaga wybrania samego
+`subscriptions.csv`. ZIP nie jest rozpakowywany na dysk.
+
+W źródłach dodano także publiczne transmisje bez konta Google: `Ctrl+T` na kanale
+pokazuje trwające i zaplanowane transmisje, a `Ctrl+Shift+I` otwiera zbiorczą
+listę maksymalnie 20 wybranych kanałów. `F5` odświeża listę. Potrzebny jest
+składnik yt-dlp; odczyt obejmuje maksymalnie 50 pozycji karty transmisji kanału,
+nie całą historię ani gwarantowany spis wszystkich wydarzeń. Zakończone
+transmisje pozostają na zwykłej liście kanału, także przy polskich tytułach.
+Nie dodano nieoficjalnego logowania klientem telewizyjnym. Te zmiany nie są
+jeszcze dostarczone w instalatorze.
+
 Wersja `alpha.504` dodaje czas trwania po otwarciu playlist Podcastów,
 Spotify, TIDAL i Apple Music (tylko AMC Test). Przy stronicowaniu mówi o czasie wczytanej
 części playlisty. Zastępuje zakres ograniczony do lokalnej playlisty w
