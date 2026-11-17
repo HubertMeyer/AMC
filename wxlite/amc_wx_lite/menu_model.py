@@ -264,6 +264,7 @@ def menus_for_session(
     session_order: object = None,
     *,
     youtube_account_available: bool = False,
+    youtube_broadcast_available: bool | None = None,
     shortcut_overrides: Mapping[Action, str] | None = None,
 ) -> tuple[Menu, ...]:
     """Menu bez polecen nalezacych do innej sesji.
@@ -286,6 +287,7 @@ def menus_for_session(
     for described in build_menus(
         session_order,
         youtube_account_available=youtube_account_available,
+        youtube_broadcast_available=youtube_broadcast_available,
     ):
         items: list[MenuItem] = []
         for entry in described.items:
@@ -444,8 +446,11 @@ def build_menus(
     session_order: object = None,
     *,
     youtube_account_available: bool = False,
+    youtube_broadcast_available: bool | None = None,
 ) -> tuple[Menu, ...]:
     """Pelny opis paska menu. Kolejnosc jak w pelnym AMC: Pliki, Radio, Widok."""
+    if youtube_broadcast_available is None:
+        youtube_broadcast_available = youtube_account_available
     podcast_inbox = command_presentation(Action.VIEW_PODCAST_INBOX)
     if podcast_inbox is None or podcast_inbox.menu_label is None:
         raise RuntimeError("Brak prezentacji polecenia nowych odcinków")
@@ -587,14 +592,16 @@ def build_menus(
                 needs_podcast_session=True,
                 visible_sessions=PODCASTS_ONLY,
             ),
+            *((
+                MenuItem(
+                    "Konto YouTube, &subskrypcje i playlisty…",
+                    Action.YOUTUBE_ACCOUNT,
+                    needs_podcast_session=True,
+                    visible_sessions=PODCASTS_ONLY,
+                ),
+            ) if youtube_account_available else ()),
             *(
                 (
-                    MenuItem(
-                        "Konto YouTube, &subskrypcje i playlisty…",
-                        Action.YOUTUBE_ACCOUNT,
-                        needs_podcast_session=True,
-                        visible_sessions=PODCASTS_ONLY,
-                    ),
                     MenuItem(
                         "Transmisje na żywo i &zaplanowane kanału…",
                         Action.YOUTUBE_BROADCASTS,
@@ -644,7 +651,7 @@ def build_menus(
                         visible_sessions=PODCASTS_ONLY,
                     ),
                 )
-                if youtube_account_available
+                if youtube_broadcast_available
                 else ()
             ),
             MenuItem(

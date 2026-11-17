@@ -151,6 +151,7 @@ internal static class Program
             ReadArgumentPath(args, "--state-json"),
             loginBrokerAvailable: SonosIntegrationDefaults.BrokerAvailable);
         using var youtubeAccount = OpenYouTubeAccount(args);
+        using var youtubePublicBroadcasts = OpenYouTubePublicBroadcasts(args);
 
         var bookmarkStore = OpenBookmarkStore(args);
         using var handlers = new LiteEngineHandlers(
@@ -185,8 +186,31 @@ internal static class Program
             registeredHandlers.Add(entry.Key, entry.Value);
         if (youtubeAccount is not null)
         {
-            foreach (var entry in youtubeAccount.Handlers())
+            foreach (var entry in youtubeAccount.Handlers().Where(entry =>
+                         youtubePublicBroadcasts is null
+                         || (entry.Key is not LiteYouTubeAccountContract.BroadcastsOperation
+                             and not LiteYouTubeAccountContract.RadioBroadcastsOperation)))
                 registeredHandlers.Add(entry.Key, entry.Value);
+        }
+        if (youtubePublicBroadcasts is not null)
+        {
+            var publicHandlers = youtubePublicBroadcasts.Handlers();
+            foreach (var entry in publicHandlers)
+                registeredHandlers.Add(entry.Key, entry.Value);
+            if (youtubeAccount is not null)
+            {
+                var accountHandlers = youtubeAccount.Handlers();
+                foreach (var operation in new[]
+                         {
+                             LiteYouTubeAccountContract.BroadcastsOperation,
+                             LiteYouTubeAccountContract.RadioBroadcastsOperation
+                         })
+                {
+                    registeredHandlers[operation] = (request, sink) => youtubeAccount.IsConnected
+                        ? accountHandlers[operation](request, sink)
+                        : publicHandlers[operation](request, sink);
+                }
+            }
         }
         // JAWNY opt-in: poza kolejke wychodza tylko operacje, ktore moga dlugo
         // czytac/dekodowac plik: informacja pod lewa strzalka oraz eksport
@@ -275,6 +299,7 @@ internal static class Program
                 LiteYouTubeAccountContract.LoginOperation,
                 LiteYouTubeAccountContract.SyncPreviewOperation,
                 LiteYouTubeAccountContract.SyncApplyOperation,
+                LiteYouTubeAccountContract.BroadcastsOperation,
                 LiteYouTubeAccountContract.RadioBroadcastsOperation,
                 // Uruchomienie TIDALa i wczytanie strony albumu trwa nawet
                 // kilkadziesiat sekund. Radio, nagrywanie i status lokalnego
@@ -526,6 +551,15 @@ internal static class Program
                     clientId, tokenBroker, profile, podcasts));
         }
         return null;
+    }
+
+    private static LiteYouTubePublicBroadcastCoordinator? OpenYouTubePublicBroadcasts(string[] args)
+    {
+        var podcasts = ReadArgumentPath(args, "--podcasts-db");
+        return podcasts is null
+            ? null
+            : new LiteYouTubePublicBroadcastCoordinator(
+                new LiteYouTubePublicBroadcastBackend(podcasts));
     }
 
     private static string? ReadYouTubeClientSecret(string? path)

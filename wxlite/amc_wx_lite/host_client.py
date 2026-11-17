@@ -791,6 +791,10 @@ class LiteHostClient:
         """Sprawdź dostępność bez uruchamiania logowania ani sieci."""
         return self.call("youtube.accountCapabilities", timeout=15.0)
 
+    def youtube_broadcast_capabilities(self) -> Any:
+        """Sprawdź publiczny odczyt transmisji bez OAuth ani sieci."""
+        return self.call("youtube.broadcastCapabilities", timeout=15.0)
+
     def youtube_account_status(self) -> Any:
         """Odczytaj wyłącznie użytkowy stan zapisanej sesji YouTube."""
         return self.call("youtube.accountStatus", timeout=15.0)

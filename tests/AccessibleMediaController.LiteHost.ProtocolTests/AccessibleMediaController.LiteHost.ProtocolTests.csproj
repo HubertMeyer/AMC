@@ -56,6 +56,8 @@
              Link="SpotifyCollectionCompletion.cs" />
     <Compile Include="..\..\src\AccessibleMediaController.LiteHost\LiteYouTubeAccountCoordinator.cs"
              Link="LiteYouTubeAccountCoordinator.cs" />
+    <Compile Include="..\..\src\AccessibleMediaController.LiteHost\LiteYouTubePublicBroadcastCoordinator.cs"
+             Link="LiteYouTubePublicBroadcastCoordinator.cs" />
     <Compile Include="..\..\src\AccessibleMediaController.LiteHost\LiteAccountSettingsStore.cs"
              Link="LiteAccountSettingsStore.cs" />
   </ItemGroup>

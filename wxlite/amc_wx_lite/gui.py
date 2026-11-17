@@ -10880,6 +10880,7 @@ class LiteFrame(wx.Frame):
         # Dopiero potwierdzona konfiguracja hosta dodaje polecenie do menu,
         # palety i pomocy. Brak identyfikatora Google nie tworzy martwej opcji.
         self._youtube_account_available = False
+        self._youtube_broadcast_available = False
         self._youtube_live_scan_version = 0
         self._youtube_live_scan_pending = False
         self._youtube_live_channels_by_id: dict[str, object] = {}
@@ -11293,6 +11294,9 @@ class LiteFrame(wx.Frame):
             self.options.session_order,
             youtube_account_available=getattr(
                 self, "_youtube_account_available", False
+            ),
+            youtube_broadcast_available=getattr(
+                self, "_youtube_broadcast_available", False
             ),
             shortcut_overrides=getattr(self, "shortcut_overrides", {}),
         ):
@@ -14669,6 +14673,7 @@ class LiteFrame(wx.Frame):
         )
         schedule_status_after_sync: list[object] = []
         youtube_capabilities_after_start: list[object] = []
+        youtube_broadcast_capabilities_after_start: list[object] = []
         podcast_values = (
             self.options.podcast_downloads_folder,
             self.options.podcast_rss_refresh_interval_minutes,
@@ -14713,6 +14718,12 @@ class LiteFrame(wx.Frame):
             try:
                 client.start()
                 client.hello()
+                optional_step(
+                    "sprawdzenie publicznych transmisji YouTube",
+                    lambda: youtube_broadcast_capabilities_after_start.append(
+                        client.youtube_broadcast_capabilities()
+                    ),
+                )
                 if youtube_client_id is not None:
                     optional_step(
                         "sprawdzenie dostępności konta YouTube",
@@ -14783,6 +14794,17 @@ class LiteFrame(wx.Frame):
                 getattr(self, "_youtube_account_available", False)
             ):
                 self._youtube_account_available = youtube_available
+                self._build_menu()
+            youtube_broadcast_available = bool(
+                youtube_broadcast_capabilities_after_start
+                and youtube_capability_available(
+                    youtube_broadcast_capabilities_after_start[-1]
+                )
+            )
+            if youtube_broadcast_available != bool(
+                getattr(self, "_youtube_broadcast_available", False)
+            ):
+                self._youtube_broadcast_available = youtube_broadcast_available
                 self._build_menu()
             if schedule_status_after_sync and not LiteFrame._persist_radio_schedule_status(
                 self, schedule_status_after_sync[-1]
@@ -17652,6 +17674,9 @@ class LiteFrame(wx.Frame):
             youtube_channel=youtube_channel,
             youtube_account_available=getattr(
                 self, "_youtube_account_available", False
+            ),
+            youtube_broadcast_available=getattr(
+                self, "_youtube_broadcast_available", False
             ),
             podcast_session=self.navigator.active is SessionId.PODCASTS,
             youtube_video_selection=(
@@ -39000,6 +39025,9 @@ class LiteFrame(wx.Frame):
             ),
             youtube_account_available=getattr(
                 self, "_youtube_account_available", False
+            ),
+            youtube_broadcast_available=getattr(
+                self, "_youtube_broadcast_available", False
             ),
             podcast_session=self.navigator.active is SessionId.PODCASTS,
             youtube_video_selection=(

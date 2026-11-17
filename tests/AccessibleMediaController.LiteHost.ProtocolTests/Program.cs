@@ -34,6 +34,7 @@ internal static class Program
         ("--spotify-collection-completion", SpotifyCollectionCompletionTests.Run),
         ("--spotify-profile", SpotifyReleaseProfileTests.Run),
         ("--youtube-account", YouTubeAccountContractTests.Run),
+        ("--youtube-public-broadcasts", YouTubePublicBroadcastCoordinatorTests.Run),
         ("--account-settings", AccountSettingsStoreTests.Run),
         ("--wiim", WiiMContractTests.Run),
         ("--wiim-profile", WiiMProfileMutationTests.Run),

@@ -2366,6 +2366,7 @@ def _resolve_default(
     youtube_broadcasts_aggregate: bool = False,
     youtube_channel: bool = False,
     youtube_account_available: bool = False,
+    youtube_broadcast_available: bool | None = None,
     podcast_session: bool = False,
     youtube_video_selection: bool = False,
     files_session: bool = False,
@@ -2386,6 +2387,8 @@ def _resolve_default(
     """Znajdz akcje dla klawisza w DANYM widoku. Brak wpisu = klawisz zostaje
     dla kontrolki (natywna nawigacja ma pierwszenstwo)."""
     table = PLAYER_VIEW if player_view else LIST_VIEW
+    if youtube_broadcast_available is None:
+        youtube_broadcast_available = youtube_account_available
     canonical = chord.canonical
     if canonical in MUSIC_CATEGORY_SHORTCUTS:
         return MUSIC_CATEGORY_SHORTCUTS[canonical]
@@ -2400,7 +2403,7 @@ def _resolve_default(
         action = GLOBAL_VIEW_SHORTCUTS[canonical]
         if (
             action is Action.VIEW_YOUTUBE_LIVE_AGGREGATE
-            and not youtube_account_available
+            and not youtube_broadcast_available
         ):
             return None
         return action

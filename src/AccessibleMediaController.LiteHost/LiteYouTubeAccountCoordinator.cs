@@ -94,6 +94,8 @@ internal sealed class LiteYouTubeAccountCoordinator(
     private readonly object _loginGate = new();
     private CancellationTokenSource? _loginCancellation;
 
+    internal bool IsConnected => backend.GetStatus().Connected;
+
     internal IReadOnlyDictionary<string, Func<LiteRequest, LiteEventSink, object?>> Handlers() =>
         new Dictionary<string, Func<LiteRequest, LiteEventSink, object?>>(StringComparer.Ordinal)
         {

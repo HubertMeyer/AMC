@@ -162,6 +162,13 @@ def test_ctrl_i_and_ctrl_shift_i_are_global_and_radio_import_uses_ctrl_o() -> No
                 radio_session=radio,
                 youtube_account_available=False,
             ) is None
+            assert resolve(
+                ctrl_shift_i,
+                player_view=player,
+                radio_session=radio,
+                youtube_account_available=False,
+                youtube_broadcast_available=True,
+            ) is Action.VIEW_YOUTUBE_LIVE_AGGREGATE
     assert resolve(
         Chord("O", ctrl=True), player_view=False, radio_session=True
     ) is Action.STATION_IMPORT

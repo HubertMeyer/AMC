@@ -15,6 +15,7 @@ internal static class LiteYouTubeAccountContract
     internal const string SyncApplyOperation = "youtube.subscriptionSyncApply";
     internal const string PlaylistPreviewOperation = "youtube.playlistSyncPreview";
     internal const string PlaylistApplyOperation = "youtube.playlistSyncApply";
+    internal const string BroadcastCapabilitiesOperation = "youtube.broadcastCapabilities";
     internal const string BroadcastsOperation = "youtube.channelBroadcasts";
     internal const string RadioBroadcastsOperation = "youtube.radioBroadcasts";
 
@@ -174,6 +175,10 @@ internal sealed record LiteYouTubeAccountCapabilities(
     [property: JsonPropertyName("available")] bool Available,
     [property: JsonPropertyName("readOnly")] bool ReadOnly,
     [property: JsonPropertyName("separateProfileCredentials")] bool SeparateProfileCredentials,
+    [property: JsonPropertyName("message")] string Message);
+
+internal sealed record LiteYouTubeBroadcastCapabilities(
+    [property: JsonPropertyName("available")] bool Available,
     [property: JsonPropertyName("message")] string Message);
 
 internal sealed record LiteYouTubeAccountState(
