@@ -89,14 +89,16 @@ public sealed class PodcastLibraryMutationStore(string databasePath)
         PodcastSourceKind sourceKind,
         DateTime addedUtc,
         BookmarkSettings? bookmarks = null,
-        bool preserveExistingTitle = false) =>
+        bool preserveExistingTitle = false,
+        bool preserveExistingMetadata = false) =>
         _database.AddSource(
             feed,
             titleOverride,
             sourceKind,
             addedUtc,
             bookmarks,
-            preserveExistingTitle);
+            preserveExistingTitle,
+            preserveExistingMetadata);
 
     public PodcastInternetMediaAddResult AddInternetMedia(
         PodcastInternetMediaSource media,

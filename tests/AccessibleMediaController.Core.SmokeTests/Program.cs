@@ -27,6 +27,11 @@ if (args.Length == 1 && args[0] == "--podcast-download-naming")
     try { TestPodcastDownloadNaming(); return 0; }
     catch (Exception exception) { Console.Error.WriteLine(exception); return 1; }
 }
+if (args.Length == 1 && args[0] == "--youtube-file-import")
+{
+    try { TestYouTubeSubscriptionFileImport(); return 0; }
+    catch (Exception exception) { Console.Error.WriteLine(exception); return 1; }
+}
 if (args.Length == 1 && args[0] == "--tidal-playlist-add")
 {
     try { TestTidalIntegrationFoundation(); return 0; }
@@ -1905,12 +1910,43 @@ static void TestYouTubeSubscriptionFileImport()
     Equal(1, zipEntries.Count);
     Equal("Pierwszy kanał", zipEntries[0].Title);
 
+    using var nonSeekableArchive = new NonSeekableReadStream(archiveBytes.ToArray());
+    var nonSeekableEntries = YouTubeSubscriptionFileImport.ParseZip(nonSeekableArchive);
+    Equal(1, nonSeekableEntries.Count);
+    True(nonSeekableArchive.CanRead,
+        "ParseZip nie może zamknąć strumienia przekazanego przez wywołującego.");
+
+    var oversizedRejected = false;
+    using var oversizedArchive = new PrefixedSparseStream(
+        archiveBytes.ToArray(),
+        YouTubeSubscriptionFileImport.MaximumZipInputBytes + 1L,
+        throwOnRead: true);
+    try
+    {
+        YouTubeSubscriptionFileImport.ParseZip(oversizedArchive);
+    }
+    catch (InvalidDataException)
+    {
+        oversizedRejected = true;
+    }
+    True(oversizedRejected && oversizedArchive.ReadAttempts == 0,
+        "ParseZip musi odrzucić strumień większy niż limit wejścia ZIP przed odczytem nieskończonego ogona.");
+
     var opml = PodcastOpmlParser.Parse("""
         <opml><body><outline text="Kanał OPML" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCopml_012" /></body></opml>
         """);
     Equal(1, opml.Count);
     Equal(PodcastSourceKind.YouTubeChannel, opml[0].SourceKind);
     Equal("https://www.youtube.com/channel/UCopml_012/videos", opml[0].FeedUri.AbsoluteUri);
+    var caseDistinctOpml = PodcastOpmlParser.Parse("""
+        <opml><body>
+          <outline text="Wielkie A" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCopml_Abc" />
+          <outline text="Małe a" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCopml_aBc" />
+        </body></opml>
+        """);
+    Equal(2, caseDistinctOpml.Count);
+    Equal("https://www.youtube.com/channel/UCopml_Abc/videos", caseDistinctOpml[0].FeedUri.AbsoluteUri);
+    Equal("https://www.youtube.com/channel/UCopml_aBc/videos", caseDistinctOpml[1].FeedUri.AbsoluteUri);
     var playlistOpml = PodcastOpmlParser.Parse("""
         <opml><body><outline text="Playlista OPML" xmlUrl="https://www.youtube.com/feeds/videos.xml?playlist_id=PLabc_012" /></body></opml>
         """);
@@ -8417,6 +8453,75 @@ sealed class VirtualLargeReadStream(long length) : Stream
         }
         Position += count;
         return count;
+    }
+    public override long Seek(long offset, SeekOrigin origin)
+    {
+        Position = origin switch
+        {
+            SeekOrigin.Begin => offset,
+            SeekOrigin.Current => checked(Position + offset),
+            SeekOrigin.End => checked(Length + offset),
+            _ => throw new ArgumentOutOfRangeException(nameof(origin))
+        };
+        return Position;
+    }
+    public override void SetLength(long value) => throw new NotSupportedException();
+    public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+}
+
+sealed class NonSeekableReadStream(byte[] bytes) : MemoryStream(bytes)
+{
+    public override bool CanSeek => false;
+    public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+    public override long Position
+    {
+        get => base.Position;
+        set => throw new NotSupportedException();
+    }
+}
+
+sealed class PrefixedSparseStream : Stream
+{
+    private readonly byte[] _prefix;
+    private readonly long _length;
+    private readonly bool _throwOnRead;
+    private long _position;
+
+    public PrefixedSparseStream(byte[] prefix, long length, bool throwOnRead = false)
+    {
+        _prefix = prefix;
+        _length = length;
+        _throwOnRead = throwOnRead;
+    }
+
+    public int ReadAttempts { get; private set; }
+    public override bool CanRead => true;
+    public override bool CanSeek => true;
+    public override bool CanWrite => false;
+    public override long Length => _length;
+    public override long Position
+    {
+        get => _position;
+        set
+        {
+            if (value < 0 || value > _length) throw new ArgumentOutOfRangeException(nameof(value));
+            _position = value;
+        }
+    }
+    public override void Flush() { }
+    public override int Read(byte[] buffer, int offset, int count) => Read(buffer.AsSpan(offset, count));
+    public override int Read(Span<byte> buffer)
+    {
+        ReadAttempts++;
+        if (_throwOnRead) throw new IOException("Odczyt zbyt dużego strumienia ZIP nie powinien nastąpić.");
+        var readable = (int)Math.Min(buffer.Length, Length - Position);
+        for (var index = 0; index < readable; index++)
+        {
+            var source = Position + index;
+            buffer[index] = source < _prefix.Length ? _prefix[source] : (byte)0;
+        }
+        Position += readable;
+        return readable;
     }
     public override long Seek(long offset, SeekOrigin origin)
     {

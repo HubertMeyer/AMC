@@ -20,6 +20,7 @@ public static class PodcastLibraryUpdater
         BookmarkSettings? bookmarks = null,
         PodcastSourceKind sourceKind = PodcastSourceKind.Rss,
         bool preserveExistingTitle = false,
+        bool preserveExistingMetadata = false,
         // Domyslnie NIE dopisujemy do Biblioteki. Wczesniej bylo tu true, wiec
         // produkcyjne odswiezanie (F5, Ctrl+F5, timer), ktore wola bez tego
         // parametru, milczaco zapisywalo do Biblioteki kanal otwarty wcześniej
@@ -30,8 +31,12 @@ public static class PodcastLibraryUpdater
         ArgumentNullException.ThrowIfNull(settings);
         ArgumentNullException.ThrowIfNull(feed);
         var normalizedOverride = Normalize(titleOverride);
+        var feedUrlComparison = sourceKind is PodcastSourceKind.YouTubeChannel
+            or PodcastSourceKind.YouTubePlaylist
+            ? StringComparison.Ordinal
+            : StringComparison.OrdinalIgnoreCase;
         var subscription = settings.Subscriptions.FirstOrDefault(candidate =>
-                string.Equals(candidate.FeedUrl, feed.FeedUri.AbsoluteUri, StringComparison.OrdinalIgnoreCase))
+                string.Equals(candidate.FeedUrl, feed.FeedUri.AbsoluteUri, feedUrlComparison))
             ?? settings.Subscriptions.FirstOrDefault(candidate =>
                 string.Equals(candidate.Id, feed.Id, StringComparison.Ordinal));
         var addedSubscription = subscription is null;
@@ -46,22 +51,25 @@ public static class PodcastLibraryUpdater
             settings.Subscriptions.Add(subscription);
         }
 
-        if (normalizedOverride.Length > 0
-            && (!preserveExistingTitle || addedSubscription || string.IsNullOrWhiteSpace(subscription.Title)))
+        if (!preserveExistingMetadata || addedSubscription)
         {
-            subscription.Title = normalizedOverride;
-            subscription.HasCustomTitle = true;
+            if (normalizedOverride.Length > 0
+                && (!preserveExistingTitle || addedSubscription || string.IsNullOrWhiteSpace(subscription.Title)))
+            {
+                subscription.Title = normalizedOverride;
+                subscription.HasCustomTitle = true;
+            }
+            else if (!subscription.HasCustomTitle || string.IsNullOrWhiteSpace(subscription.Title))
+            {
+                subscription.Title = feed.Title;
+            }
+            subscription.Author = feed.Author;
+            subscription.Description = feed.Description;
+            subscription.FeedUrl = feed.FeedUri.AbsoluteUri;
+            subscription.SourceKind = sourceKind;
+            subscription.HomepageUrl = feed.HomepageUri?.AbsoluteUri;
+            subscription.LastRefreshUtcTicks = refreshUtc.ToUniversalTime().Ticks;
         }
-        else if (!subscription.HasCustomTitle || string.IsNullOrWhiteSpace(subscription.Title))
-        {
-            subscription.Title = feed.Title;
-        }
-        subscription.Author = feed.Author;
-        subscription.Description = feed.Description;
-        subscription.FeedUrl = feed.FeedUri.AbsoluteUri;
-        subscription.SourceKind = sourceKind;
-        subscription.HomepageUrl = feed.HomepageUri?.AbsoluteUri;
-        subscription.LastRefreshUtcTicks = refreshUtc.ToUniversalTime().Ticks;
         // NIGDY nie zdejmujemy istniejacego czlonkostwa - kanal zapisany
         // wczesniej zostaje w Bibliotece takze przy otwarciu z wyszukiwania.
         if (addToLibrary) subscription.IsInLibrary = true;

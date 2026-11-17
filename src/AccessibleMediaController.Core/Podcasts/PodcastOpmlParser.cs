@@ -42,7 +42,8 @@ public static class PodcastOpmlParser
         }
 
         var entries = new List<PodcastOpmlEntry>();
-        var knownFeeds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var knownRssFeeds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var knownYouTubeFeeds = new HashSet<string>(StringComparer.Ordinal);
         foreach (var outline in document.Descendants().Where(element =>
                      string.Equals(element.Name.LocalName, "outline", StringComparison.OrdinalIgnoreCase)))
         {
@@ -59,11 +60,11 @@ public static class PodcastOpmlParser
             title = NormalizeLabel(title, feedUri.Host);
             if (YouTubeSubscriptionFileImport.TryCreateFromFeedUri(feedUri, title, out var youTubeEntry))
             {
-                if (knownFeeds.Add(youTubeEntry.FeedUri.AbsoluteUri)) entries.Add(youTubeEntry);
+                if (knownYouTubeFeeds.Add(youTubeEntry.FeedUri.AbsoluteUri)) entries.Add(youTubeEntry);
                 if (entries.Count == MaximumEntries) break;
                 continue;
             }
-            if (!knownFeeds.Add(feedUri.AbsoluteUri)) continue;
+            if (!knownRssFeeds.Add(feedUri.AbsoluteUri)) continue;
 
             var homepage = TryHttpUri(AttributeValue(outline, "htmlUrl"), out var homepageUri)
                 && string.IsNullOrEmpty(homepageUri.UserInfo)

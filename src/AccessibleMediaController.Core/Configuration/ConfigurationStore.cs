@@ -2052,7 +2052,12 @@ public sealed class ConfigurationStore
                 if (subscription.IsFavorite) subscription.IsInLibrary = true;
                 return subscription;
             })
-            .GroupBy(subscription => subscription.FeedUrl, StringComparer.OrdinalIgnoreCase)
+            .GroupBy(
+                subscription => (
+                    IsYouTube: subscription.SourceKind is PodcastSourceKind.YouTubeChannel
+                        or PodcastSourceKind.YouTubePlaylist,
+                    FeedUrl: subscription.FeedUrl),
+                PodcastFeedUrlComparer.Instance)
             .Select(group => group.First())
             .GroupBy(subscription => subscription.Id, StringComparer.Ordinal)
             .Select(group => group.First())
@@ -2139,6 +2144,25 @@ public sealed class ConfigurationStore
         {
             state.Podcasts.CurrentItemId = null;
         }
+    }
+
+    private sealed class PodcastFeedUrlComparer : IEqualityComparer<(bool IsYouTube, string FeedUrl)>
+    {
+        public static readonly PodcastFeedUrlComparer Instance = new();
+
+        public bool Equals((bool IsYouTube, string FeedUrl) left, (bool IsYouTube, string FeedUrl) right) =>
+            left.IsYouTube == right.IsYouTube
+            && string.Equals(
+                left.FeedUrl,
+                right.FeedUrl,
+                left.IsYouTube ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase);
+
+        public int GetHashCode((bool IsYouTube, string FeedUrl) value) =>
+            HashCode.Combine(
+                value.IsYouTube,
+                value.IsYouTube
+                    ? StringComparer.Ordinal.GetHashCode(value.FeedUrl)
+                    : StringComparer.OrdinalIgnoreCase.GetHashCode(value.FeedUrl));
     }
 
     private static bool IsHttpAddress(string? value) =>

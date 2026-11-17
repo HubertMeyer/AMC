@@ -1333,7 +1333,8 @@ internal sealed class PodcastLibraryDatabase(string databasePath)
         PodcastSourceKind sourceKind,
         DateTime addedUtc,
         BookmarkSettings? bookmarks = null,
-        bool preserveExistingTitle = false)
+        bool preserveExistingTitle = false,
+        bool preserveExistingMetadata = false)
     {
         ArgumentNullException.ThrowIfNull(feed);
         if (sourceKind is not (PodcastSourceKind.Rss
@@ -1359,6 +1360,7 @@ internal sealed class PodcastLibraryDatabase(string databasePath)
                 bookmarks,
                 sourceKind,
                 preserveExistingTitle,
+                preserveExistingMetadata,
                 addToLibrary: true);
             if (update.AddedSubscription)
             {
@@ -1854,7 +1856,7 @@ internal sealed class PodcastLibraryDatabase(string databasePath)
             CREATE INDEX IF NOT EXISTS ix_podcast_subscriptions_library_title
                 ON podcast_subscriptions(is_in_library, title COLLATE NOCASE);
             CREATE INDEX IF NOT EXISTS ix_podcast_subscriptions_feed
-                ON podcast_subscriptions(feed_url COLLATE NOCASE);
+                ON podcast_subscriptions(feed_url);
             CREATE TABLE IF NOT EXISTS podcast_refresh_attempts (
                 subscription_id TEXT PRIMARY KEY,
                 last_attempt_utc_ticks INTEGER NOT NULL

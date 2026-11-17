@@ -134,7 +134,17 @@ public static class YouTubeSubscriptionFileImport
     public static IReadOnlyList<PodcastOpmlEntry> ParseZip(Stream stream)
     {
         ArgumentNullException.ThrowIfNull(stream);
-        using var archive = new ZipArchive(stream, ZipArchiveMode.Read, leaveOpen: true);
+        Stream archiveInput = stream;
+        if (stream.CanSeek)
+        {
+            if (stream.Length - stream.Position > MaximumZipInputBytes)
+                throw new InvalidDataException("Archiwum wejściowe jest zbyt duże.");
+        }
+        else
+        {
+            archiveInput = new BoundedReadStream(stream, MaximumZipInputBytes);
+        }
+        using var archive = new ZipArchive(archiveInput, ZipArchiveMode.Read, leaveOpen: true);
         if (archive.Entries.Count > MaximumZipEntries)
             throw new InvalidDataException("Archiwum ma zbyt wiele plików.");
         ZipArchiveEntry? subscriptions = null;
@@ -347,6 +357,45 @@ public static class YouTubeSubscriptionFileImport
             builder.Append(buffer, 0, read);
         }
         return builder.ToString();
+    }
+
+    /// <summary>
+    /// Bounds an unknown-length input without taking ownership of it. ZipArchive
+    /// disposes this wrapper, while <c>leaveOpen: true</c> still leaves the
+    /// caller's stream usable.
+    /// </summary>
+    private sealed class BoundedReadStream(Stream inner, long maximumBytes) : Stream
+    {
+        private long _read;
+
+        public override bool CanRead => inner.CanRead;
+        public override bool CanSeek => false;
+        public override bool CanWrite => false;
+        public override long Length => throw new NotSupportedException();
+        public override long Position
+        {
+            get => throw new NotSupportedException();
+            set => throw new NotSupportedException();
+        }
+
+        public override void Flush() { }
+
+        public override int Read(byte[] buffer, int offset, int count) =>
+            Read(buffer.AsSpan(offset, count));
+
+        public override int Read(Span<byte> buffer)
+        {
+            if (_read >= maximumBytes)
+                throw new InvalidDataException("Archiwum wejściowe jest zbyt duże.");
+            var allowed = (int)Math.Min(buffer.Length, maximumBytes - _read);
+            var read = inner.Read(buffer[..allowed]);
+            _read += read;
+            return read;
+        }
+
+        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+        public override void SetLength(long value) => throw new NotSupportedException();
+        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
     }
 
     private static void EnsureTextLimit(string value)

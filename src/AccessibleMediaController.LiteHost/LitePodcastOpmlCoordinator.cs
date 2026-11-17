@@ -79,7 +79,8 @@ internal sealed class LitePodcastOpmlCoordinator : IDisposable
                             CreateYouTubePlaceholder(entry),
                             entry.Title,
                             entry.SourceKind,
-                            preserveExistingTitle: true);
+                            preserveExistingTitle: true,
+                            preserveExistingMetadata: true);
                         return true;
                     }
 
@@ -310,7 +311,7 @@ internal sealed class LitePodcastOpmlCoordinator : IDisposable
         {
             throw new LiteRequestException("Brak listy podcastów wybranych do importu.");
         }
-        var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var result = new HashSet<string>(StringComparer.Ordinal);
         foreach (var value in values.EnumerateArray())
         {
             if (result.Count >= PodcastOpmlParser.MaximumEntries)
