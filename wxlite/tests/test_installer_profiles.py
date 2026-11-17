@@ -246,12 +246,27 @@ def test_build_helper_verifies_profile_clean_source_and_full_bundle() -> None:
 def test_installer_compiler_keeps_each_path_argument_atomic() -> None:
     """Ścieżki ze spacjami nie mogą być ponownie składane przez Start-Process."""
 
-    assert "$compileStart.ArgumentList.Add($argument)" in BUILD
-    assert "$compileStart.UseShellExecute = $false" in BUILD
+    compat = (ROOT / "wxlite" / "tools" / "Start-ArgumentListSafeProcess.ps1").read_text(
+        encoding="utf-8"
+    )
+    assert "Start-ArgumentListSafeProcess" in BUILD
+    assert "Start-ArgumentListSafeProcess" in compat
+    assert "ConvertTo-WindowsCommandLineArgument" in compat
+    assert "$start.ArgumentList.Add($argument)" in compat
+    assert "$start.UseShellExecute = $false" in compat
+    assert "$start.Arguments =" in compat
     assert "$compile.WaitForExit()" in BUILD
     assert "Start-Process -FilePath $IsccPath" not in BUILD
     assert "'/DZrodlo=\"{0}\"'" not in BUILD
     assert "$compileArguments += $installerScript" in BUILD
+
+
+def test_installer_script_has_utf8_bom_for_windows_powershell_51() -> None:
+    """PS 5.1 odczytuje skrypt z polskimi znakami według ANSI bez BOM."""
+
+    assert (ROOT / "wxlite" / "tools" / "Build-AMCInstaller.ps1").read_bytes().startswith(
+        b"\xef\xbb\xbf"
+    )
 
 
 def test_test_installer_requires_and_validates_quick_app_switcher_package() -> None:

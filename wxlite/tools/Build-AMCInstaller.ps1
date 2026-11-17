@@ -1,4 +1,4 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param(
     [Parameter(Mandatory)] [ValidateSet("public", "test")] [string]$Profile,
     [Parameter(Mandatory)] [string]$BundleRoot,
@@ -11,6 +11,7 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
+. (Join-Path $PSScriptRoot "Start-ArgumentListSafeProcess.ps1")
 
 $repositoryRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot "..\.."))
 $bundle = [IO.Path]::GetFullPath($BundleRoot)
@@ -311,15 +312,10 @@ if ($null -ne $amcNvdaAddon) {
     )
 }
 $compileArguments += $installerScript
-$compileStart = [Diagnostics.ProcessStartInfo]::new()
-$compileStart.FileName = $IsccPath
-$compileStart.WorkingDirectory = $repositoryRoot
-$compileStart.UseShellExecute = $false
-$compileStart.CreateNoWindow = $true
-foreach ($argument in $compileArguments) {
-    [void]$compileStart.ArgumentList.Add($argument)
-}
-$compile = [Diagnostics.Process]::Start($compileStart)
+$compile = Start-ArgumentListSafeProcess `
+    -FilePath $IsccPath `
+    -ArgumentList $compileArguments `
+    -WorkingDirectory $repositoryRoot
 if ($null -eq $compile) {
     throw "Nie udało się uruchomić kompilatora Inno Setup."
 }
