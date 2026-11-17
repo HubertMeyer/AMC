@@ -14,6 +14,16 @@ Użytkownik dodatkowo polecił rozbić zakres na osobne zadania. Nie zmieniać d
 
 **Doprecyzowanie 17.11.2026:** Michał potwierdził stałą zgodę na automatyczną kontynuację dużych zleconych prac. Dla tego zadania punktem końcowym są sprawdzone instalatory AMC Public i AMC Test opublikowane na GitHubie, wraz ze wszystkimi etapami rozpisanymi w tym pliku. Nie zatrzymywać się na odbiorze testu lub pojedynczej poprawki, nie czekać na kolejne „kontynuuj”. Zgłaszać rzeczywistą blokadę zamiast pomijać testy albo deklarować niezmierzone wyniki. Ograniczenia głównego komputera i płatnego API pozostają bez zmian.
 
+## Zasada odbioru — dokładnie, ale proporcjonalnie
+
+Późniejsza korekta Michała: mocne i dokładne testy, z pełną troską o dostępność i klawiaturę, ale bez wielokrotnych rozległych audytów. Przed próbą określić sprawdzany kontrakt, konieczne sąsiednie regresje i warunek zakończenia. Jeden spójny odbiór niezmienionego kandydata; ponowienie tylko części dotkniętej zmianą lub rzeczywistym błędem/niestabilnością. Wykorzystać nadal ważne dowody, zamiast mechanicznie odtwarzać cały zestaw wykonawcy w przeglądzie prowadzącego.
+
+Błąd zapisu raportu, eksportu lub pojedynczego logu nie uzasadnia ponownej walidacji całej aplikacji. Naprawić zapis lub dozbierać brakujący scenariusz. Żywy NVDA ma obejmować zmienione kontrolki, fokus, komunikaty i klawiaturę; nie pełny audyt wszystkich ekranów przy każdej poprawce. Kolejne szerokie przebiegi wymagają konkretnego uzasadnienia. Nie uruchamiać setek powtórzeń domyślnie.
+
+Wspólne zachowania Public/Test badać raz tam, gdzie rzeczywiście są identyczne, a różnice profili i instalację/start sprawdzić dla obu gotowych artefaktów. Nie pomijać integralności paczek, tożsamości wersji, bezpieczeństwa nagrywania ani odczytu publikacji GitHub. Po spełnieniu kryteriów przejść dalej; rzeczywistą blokadę opisać, nie rozbudowywać bez końca aparatury. Korektę skierowano do trzech aktywnych wykonawców `deleg_f9478710`.
+
+**Doprecyzowanie priorytetu klawiatury:** zachować dopracowaną według Michała, lekką obsługę — bez przebudowy „na zapas”. Krótki kontrakt regresji obejmuje wejście do menu, wyjście Escape i powrót fokusu do właściwej kontrolki/wiersza oraz spójne działanie strzałki w lewo w typach sesji AMC, w których służy nawigacji. W polu edycji pozostawić zwykły ruch kursora. Pokryć odrębne ścieżki obsługi sesji, nie każdą kombinację treści na listach. Dla zmienianych skrótów/dodatku sprawdzić właściwy kontekst i celowane przypadki negatywne: edycja, menu/dialog, a gdy zmienia się zasięg działania — własne neutralne okno kontrolne. Współpracę z rzeczywiście załadowanym dodatkiem NVDA odróżniać od testu bez dodatku. Nie przejmować standardowych klawiszy Windows/NVDA ani klawiszy poza właściwym kontekstem; nie uruchamiać destrukcyjnych skrótów systemowych jako sond. Potencjalne konflikty nie są zgłoszeniem potwierdzonego nowego błędu. Włączyć te kontrole do jednego proporcjonalnego odbioru, bez kolejnej pełnej kampanii audytowej; nie deklarować zaliczenia nieuruchomionych sesji/gestów.
+
 ## Stan wejściowy i bezpieczeństwo
 
 - Repozytorium Hermes: `/home/michal/projekty/AMC`, gałąź `codex/amc-test-public-20261109`, baza `26950509629a2092b0cc4e7987e5a370d740db31`, zgodna z GitHub w odczycie przed rozpoczęciem.
@@ -32,6 +42,18 @@ Użytkownik dodatkowo polecił rozbić zakres na osobne zadania. Nie zmieniać d
 7. **Profile i wydanie.** Kontrola parytetu wspólnych funkcji, celowane testy, niezależny przegląd, build obu profili, identyczność źródeł i tożsamość manifestów, odbiór instalatorów na Hermesie. Publikacja stabilna Public i prerelease Test, readback wszystkich zasobów i sum; zgodność metadanych aktualizatora. Na głównym komputerze wyłącznie ręczna aktualizacja użytkownika.
 
 ## Wykonanie
+
+### Wznowienie całego zakresu — 17.11.2026
+
+Po doprecyzowaniu Michała uruchomiono `deleg_f9478710`: trzy równoległe, izolowane kontynuacje z dokładnej bazy `9b773694dba8e61ae527664ae195d194453ab211`:
+
+- `hubert-audio-acceptance`: realny dekoder/limiter MP3 bez emisji dźwięku oraz zachowanie kolejki po zakończeniu i uruchomieniu dwóch osobnych procesów LiteHost, nie tylko test klasy magazynu; wykonawca `sa-0-3ba45d41`.
+- `hubert-package-candidate`: rzeczywiste prywatne ZIP-y i instalatory Public/Test, czyste zależności, pełne manifesty i parytet profili; bez instalowania/publikowania przez wykonawcę `sa-1-5a2bc352`. Ewentualna późniejsza zmiana kodu wymaga aktualizacji kandydatów, nie wolno wydać ich jako odpowiadających innemu commitowi.
+- `hubert-spotify-followup`: dalsza weryfikacja konfiguracji, komunikatów i trwałej biblioteki #9–#11 bez żywego konta, tokenów i odtwarzania; bez odrzuconej heurystyki EOS; wykonawca `sa-2-ddcabe71`.
+
+Prowadzący zachowuje review, integrację, odbiór instalacji na Hermesie, pomiary NVDA i publikację z odczytem GitHub. Odczyt GitHub potwierdził ostatnie wydania `public-2026.11.15.2040` (stable) i `test-2026.11.15.2036` (prerelease); fetch nie wykazał nowych zmian zdalnej gałęzi. Wyniki dzieci nadejdą asynchronicznie, nie zakładać ich powodzenia.
+
+Odczyt procesów komputera **HERMES** o 00:58:43 wykazał tylko `nvda.exe` PID 4960 w sesji 1 wśród nazw AMC/amc_/pythonw/NVDA; mostek NVDA odpowiedział `status=ok`, wersja 1.0. Nie uruchamiano aplikacji, instalatora ani GUI. To historyczna kontrola przygotowania, nie świeży guard nagrywania na przyszłą instalację i nie dowód dostępności nowej paczki.
 
 Etapy 1–4 zlecone do izolowanych worktree; integracja, zamykanie Issues i publikacja należą do prowadzącego. Żaden etap nie jest ukończony na podstawie samego raportu wykonawcy.
 
