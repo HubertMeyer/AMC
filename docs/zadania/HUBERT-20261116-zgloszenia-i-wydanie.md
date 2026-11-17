@@ -1,6 +1,223 @@
 # HUBERT-20261116 — zgłoszenia, powiadomienia i wspólne wydanie
 
-Status: W trakcie.
+Status: W trakcie — rozwój i testy źródeł są kontynuowane; publikacja i uruchamianie objętych blokadą kandydatów pozostają wstrzymane.
+
+## Korekta zakresu blokady — 17.11.2026
+
+Użytkownik wyraźnie wymaga dalszej pracy nad działającą aplikacją przez Codex.
+Alarm Defendera nie jest powodem zatrzymania rozwoju źródeł, przeglądu kodu
+ani izolowanych testów z nieszkodliwymi procesami i danymi fixture. Wstrzymane
+pozostają wykonanie i instalacja dotkniętych kandydatów, ponawianie dotkniętego
+toru kompilacji/pakowania oraz publikacja; nie wyłączać ochrony ani nie
+obchodzić wykrycia. Zachować wcześniejsze ważne testy zamiast powtarzać całość.
+
+Uruchomiono dwie niezależne prace przez podagentów bieżącego dostawcy
+openai-codex (bez odrębnie płatnego API): przegląd faktycznie niedokończonych
+zachowań aplikacji oraz diagnozę wrappera instalatora na podstawie istniejących
+logów. Poprawkę wolno wprowadzić po dowodzie błędu i proporcjonalnym teście;
+nie zgadywać przyczyny `ISCC exit 2` ani nie przedstawiać samych nowych logów
+jako usunięcia alarmu. Brak standalone Codex CLI na Hermesie nie jest brakiem
+dostępu do bieżącego providera Codex. Raporty prac muszą rozdzielać poprawki
+źródeł, testy, żywy odbiór i gotowość do wydania.
+
+Przegląd aplikacji wskazał konkretny, wcześniej zgłoszony błąd z
+`AMC-TEST-ZAWIESZENIE-20261110.md`, punkt 4. Prowadzący niezależnie odczytał
+`gui.py`: `_menu_native_label` przekazuje przetłumaczone `strzałka w prawo`
+po tabulatorze również przy `accelerator=True`, choć wx oczekuje technicznej
+nazwy klawisza. Poprawka z behawioralnym RED/GREEN jest w osobnej delegacji;
+ma zachować przypisania, flagi, opisy niebędące akceleratorami i obsługę pól
+edycji. Nie przypisywać temu błędowi przyczyny wielogodzinnego zawieszenia.
+Przegląd wskazał też starszy dług katalogu angielskiego; nie rozszerzono teraz
+zakresu na hurtowe tłumaczenie.
+
+Pierwsza poprawka menu `deleg_9a6ab2aa` ma `39 passed`, lecz **nie została
+scalona**: niezależny przegląd wykazał regresję pomijaną przez test. Surowe
+`Ctrl+Prior` i `Ctrl+Next` z rzeczywistych pozycji zmiany sesji nie są poprawną
+składnią parsera wx. Prowadzący sprawdził przypięty `wxPython==4.3.1` i jego
+submoduł wxWidgets `670835aec7e54b9e9d5a50d6a1aea1e8ba0bcdb2`, plik
+`src/common/accelcmn.cpp`: zwykłe klawisze wymagają aliasów `PageUp`/`PageDown`
+lub pozostałych jawnie rozpoznawanych nazw; `KP_Prior` dotyczy innego klawisza.
+Do jednej ograniczonej korekty `deleg_ec0f1deb` przekazano minimalną konwersję
+aliasów i testy AKTUALNYCH wpisów rejestru, w tym `Shift+Right`, `Ctrl+Right`,
+`Alt+Right`, `Ctrl+Prior`, `Ctrl+Next`. Nie zmieniać przypisań ani flag.
+Wcześniejsze wymaganie bezwarunkowego przekazywania surowego skrótu zostaje
+skorygowane: celem jest składnia rozpoznawana przez wx, nie literalna kopia
+wewnętrznego aliasu. To nadal kontrola kodu/formattera, nie żywy odbiór wx/NVDA.
+
+Korekta `deleg_ec0f1deb` została odebrana i zintegrowana do kanonicznych źródeł.
+Testy badają osiem rzeczywistych pozycji rejestru. Prowadzący dodał i naprawił
+mały przypadek brzegowy nowego helpera (sam znak `+` nie może znikać); po
+integracji ograniczony zestaw menu i historii zakończył się **41 passed in
+3.02s**. Zachowano przypisania, flagi, `label_override` i czytelne podpisy bez
+akceleratora; `git diff --check` przeszedł. Nie ma nowego pakietu, instalacji ani
+żywego odbioru. Szczegóły: `AMC-TEST-ZAWIESZENIE-20261110.md`, punkt 4.
+
+## Diagnoza wrappera i poprawa dowodów wykonania — 17.11.2026
+
+Przegląd `deleg_6743783f` zakończony; prowadzący odczytał ponownie logi
+`build-test-installer-alpha511-17e01.log`, `...-retry1.log` oraz
+`build-test-installer-direct-verified.log`. Oba kanoniczne przebiegi kończą się
+komunikatem wrappera o kodzie `2`; retry usunął pusty output, ale nie usunął
+błędu. Zachowane transkrypty nie zawierają argv ISCC ani jego stdout/stderr.
+Nie ustalono przyczyny różnicy i nie przypisano jej błędowi cytowania.
+
+Potwierdzono lukę diagnostyczną. Wykonawca przygotował minimalną zmianę trzech
+plików: `Start-ArgumentListSafeProcess.ps1`, `Build-AMCInstaller.ps1` oraz
+`test_installer_argumentlist_compat.py`. Projekt zapisuje ścieżki EXE i źródła
+(nie ich hashe), argv, cwd, stan oraz exit code; brak możliwości zapisania
+dowodu przed startem ma zatrzymać proces. Nie przechwytuje stdout/stderr.
+Kod z tego worktree został po review `deleg_af10f3ab` zintegrowany do
+kanonicznych źródeł `/home/michal/projekty/AMC`, włączonych do zatwierdzenia
+tego etapu w historii Git; bez publikacji nowego wydania.
+Prowadzący przed integracją potwierdził niezmieniony zakres docelowy, wykonał
+`git apply --check` i porównał SHA-256 wszystkich trzech skopiowanych plików
+z zaakceptowanym worktree. `git diff --check` przeszedł.
+
+Niezależny reviewer sprawdził na Windows PowerShell `5.1.26100.9711` fixture z
+kodem `23`, niezapisywalny cel (proces nie ruszył), brak EXE (`launch-failed`)
+i parser obu skryptów. Po integracji prowadzący dodatkowo uruchomił parsery
+oraz krytyczną ścieżkę `launch-failed` na rzeczywistym PS 5.1: wynik `pass`,
+exit `0`, dokładny JSON odczytany ponownie. Dowód prowadzącego:
+`/home/michal/.hermes/profiles/amc/cache/scratch/installer-launch-failed-78b583f63dcd486b96502a5b0c9f08cc.json`.
+Pierwsze uruchomienie sondy bez standardowego przełącznika procesu PS zostało
+zatrzymane przez politykę wykonywania skryptów; właściwa próba użyła istniejącego
+w testach `-ExecutionPolicy Bypass` tylko dla tego procesu, bez zmiany polityk
+systemowych i bez zmiany ochrony Defendera.
+
+Moduł pytest pod WSL zwrócił `3 skipped`, nie zaliczenie funkcji Windows.
+Nie znaleziono natywnego Pythona przez PATH, PEP514 ani typowe katalogi
+systemowe; alias Microsoft Store nie jest użytym interpreterem. Nie używano
+runtime'u kandydatów objętych blokadą. Nie uruchomiono ISCC, AMC ani instalatora.
+Przyjęta poprawa diagnostyki nie oznacza rozwiązania kodu `2`, wyjaśnienia
+Defendera ani zgody na ponowną kompilację.
+
+### Materiał do dokumentacji użytkownika
+
+Ta zmiana nie dodaje polecenia, skrótu ani elementu interfejsu. Przy przyszłym,
+dozwolonym przygotowywaniu instalatora nieudana kompilacja pozostawi dokładny
+zapis uruchomienia, a komunikat poda jego miejsce. Nie trzeba zmieniać ustawień
+AMC ani wyłączać ochrony. Nie ma nowego pakietu, instalacji ani wydania.
+
+## Bieżąca blokada wydania — 17.11.2026, po instalacjach alpha.511
+
+Oba bundle z zamrożonej rewizji `17e01e44b137b9dd3002444efcb8d17443ba956c`
+(`sourceDirty=false`) istnieją. Bezokienne instalacje do osobnych prywatnych
+celów Hermesa zakończyły setup, pełną integralność i kontrolowany start kodem
+`0` dla obu profili. Prowadzący niezależnie odczytał dokładny zbiór plików obu
+instalacji oraz pięć krytycznych hashy każdego profilu.
+
+- Public: 2662 pliki payloadu, bundle ID `e15e7587`, instalator
+  `AMC-Public-2026-11-17-0532.exe`, 133481669 B, SHA-256
+  `031834372748c196f5abc79b2552da0fedeac62f7bda394c3713fa0768c5140c`.
+- Test: 3647 plików payloadu, bundle ID `2214575e`, kandydat instalatora
+  `AMC-Test-2026-11-17-0535.exe`, 214371611 B, SHA-256
+  `6133f8bda266bff45f99e08e333a8f1d63e28e5321932a9cf8f5c5de46983b77`.
+- Root dowodów i prywatnych celów `installed/Public`, `installed/Test`:
+  `C:\Users\Michal\AppData\Local\AMC-Hermes-Build\hubert-final-511-pipefix`.
+- NVDA zachował PID `4960`; Test zaktualizował dodatek AMC na dysku
+  `0.3.3` → `0.4.2`. Zachowano kopię odzyskiwania. Bez restartu ani reloadu;
+  nie jest to dowód załadowania nowego dodatku lub odbioru żywego czytnika.
+
+**HOLD BEZPIECZEŃSTWA.** Defender trzykrotnie zablokował tymczasowe
+`installers/Test/RCX*.tmp` podczas kompilacji jako `Worm:Win32/Mofksys!pz`,
+ThreatID `2147890643`. Źródłowy odczyt wykazuje `ActionSuccess=true`,
+`DidThreatExecute=false`, `IsActive=false`; nie dowodzi to czystości maszyny
+ani fałszywego alarmu. Skan końcowych EXE przez `Start-MpScan` nie dodał
+wykrycia i pozostawił identyczne hashe. Ochrona jest włączona, bez wyjątków.
+Dowód: `logs/parent-defender-scan.json` pod powyższym rootem.
+
+Standardowy wrapper Test zwrócił `ISCC exit 2`. Wykonawca uzyskał jeden EXE
+przez bezpośrednią kompilację diagnostyczną, skopiował go do finalnego katalogu
+i ręcznie wygenerował sidecar. Zgodność hashy i udana instalacja nie zastępują
+wyjaśnienia alarmu ani dowodu kanonicznego toru budowy. Kandydat Test **nie ma
+odbioru do publikacji**. Nie obchodzić blokady zmianą katalogu, przywracaniem
+kwarantanny ani osłabianiem ochrony.
+
+Odczytowy przegląd `deleg_51725a3c` zakończony: zdarzenia Defendera 1116/1117
+potwierdzają proces `ISCC.exe` i skuteczną kwarantannę trzech `RCX*.tmp`.
+Raport: `logs/security-review.md`. Brak pełnego argv udanej kompilacji
+przekłada się na niezamkniętą bramkę pochodzenia instalatora Test.
+
+Prowadzący dodatkowo niezależnie zweryfikował ECDSA-P256/SHA-256 czterech
+podpisów `.issig`: `Setup.e32`, `SetupLdr.e32`, `ISCmplr.dll`, `ISPP.dll`.
+Klucz publiczny `def02` pobrany z serwera producenta i wersjonowanego tagu
+`is-6_7_3` był zgodny; potwierdzono też jego identyfikator, podpisaną nazwę,
+rozmiar i SHA plików. Cztery kontrolne modyfikacje podpisywanej wiadomości
+zostały odrzucone. Bez uruchamiania kompilatora lub kodu producenta i bez
+zmiany badanych plików. Dowód: `logs/parent-vendor-signatures.json`.
+To domyka lukę w weryfikacji bieżących składników kompilatora opisaną
+w raporcie pomocnika, ale **nie** dowodzi fałszywego alarmu dla `RCX*.tmp`.
+
+Blokada pozostaje. **17.11.2026 użytkownik wyraził zgodę na przekazanie
+Microsoftowi podejrzanych plików budowy do analizy, bez profili AMC, ustawień
+i danych logowania.** Nie rozszerza to zgody na wyłączenie ochrony, wyjątki,
+przywrócenie plików do produkcyjnego katalogu ani uruchamianie próbek.
+Zgłoszenia jeszcze nie wysłano. **Aktualizacja po zgodzie użytkownika:
+standardowe `Start-Process -Verb RunAs` zadziałało**, proces potwierdził
+`elevated=true` na Hermesie. Brak administratora nie jest już blokadą.
+`MpCmdRun -Restore -ListAll` zwraca teraz `No quarantined items.`; magazyn
+Quarantine ma zero plików. Próby eksportu dokładnie trzech RCX do osobnego
+katalogu przez `-Restore -FilePath ... -Path ...` nie zwróciły żadnej próbki;
+oryginałów w katalogu budowy również nie ma. Nie ustalono przyczyny ich braku.
+Zdarzenia kwarantanny 1117 pozostają w historii, ale nie dowodzą dostępności
+próbek obecnie. W MPLog odczytano SHA-256 **jednego** RCXCA4F.tmp:
+`05a161266787453c1ba5d4a3c5ce8b41b005fbb38e03a4228205e875106bb501`.
+**Aktualizacja po jednoznacznej zgodzie użytkownika na OAuth:** zatwierdzono
+na `account.live.com/Consent/Update` aplikację „Windows Defender Security
+Intelligence” (profil podstawowy, e-mail, zachowanie dostępu). Portal rozpoznaje
+konto; logowanie i dodatkowa zgoda nie są już blokadami. Nie zbierano haseł
+ani kodów. Przejściowa odmowa 403 pod adresem zaplecza Azure nie utrzymała się
+przy ponownym wejściu przez oficjalny frontend po zwykłym wyborze persony
+Software developer. Nie obchodzono kontroli dostępu.
+
+Odczytano kartę **jednego** RCX pod dokładnym SHA-256 powyżej: rozmiar
+4427264 B, SHA-1 `5cebeb5381123ac17e8627f3fca0c5187cfcc553`, MD5
+`ac211c951be5398a57c5c359f1c44e2d`; nazwa `NULL`, typ `N/A`.
+Sekcja certyfikatu pokazuje `Invalid Certificate`; nie jest to werdykt malware
+ani dowód fałszywego alarmu. Rozmiar jest równy podpisanemu `Setup.e32`, ale
+SHA-256 jest inny — nie są to identyczne bajty. Sam rekord nie dowodzi,
+że Microsoft nadal przechowuje bajty próbki.
+
+Dla zweryfikowanego hasha **jednokrotnie wywołano `Rescan File`**. Po odświeżeniu
+odczytano ponownie tę samą kartę, bez werdyktu lub potwierdzenia przyjęcia
+operacji. Historia po operacji pokazuje `Showing 0 of 0 entries`, bez numeru
+zgłoszenia. Nie uznawać kliknięcia za potwierdzone zlecenie analizy; pusta
+historia również nie dowodzi odrzucenia samego ponownego skanu. Nie dublować
+operacji automatycznie. Zwykły formularz programisty wymaga pliku i Company
+Name (limit wyświetlany: 500 MB); nie wysłano go bez brakujących oryginałów,
+nie zastąpiono ich raportem, instalatorem ani odtworzonym plikiem.
+Dowód: `logs/microsoft-portal-status-20261117.json`, odczyt końcowy
+17.11.2026 12:28:13 UTC. **Nie ma potwierdzonej analizy ani submission ID;
+bramka bezpieczeństwa i niekanoniczny Test pozostają otwarte.**
+Nie wyłączano ochrony, nie dodawano wyjątków, nie wykonywano próbek ani nowych
+kompilacji. Dowody: `logs/admin-quarantine-access.json`,
+`logs/admin-quarantine-details.json`, `logs/admin-targeted-rcx-export.json`,
+`logs/admin-quarantine-resolution.md`. Wcześniejsza odmowa `0x80070005`
+dotyczyła wyłącznie niepodniesionego procesu i jest historią.
+
+Porównanie dostępnych danych z najnowszymi wydaniami GitHub zakończono:
+Test `test-2026.11.15.2036`, Public `public-2026.11.15.2040`, oba ze źródła
+`2b6b061db22523ed9cfb66d26e2808b3d7bf00a7`. Pobrano oryginalne instalatory;
+prowadzący niezależnie przeliczył ich SHA i odczytał PE, potwierdzając zgodność
+z digestami GitHub i sidecarami. Wszystkie cztery stare/nowe EXE mają wspólny
+marker formatu Inno `6.7.0`, PE32/i386 i 11 sekcji — nie dowodzi to identycznej
+wersji kompilatora ani payloadu. Nowe instalatory są mniejsze: Public o
+3068989 B, Test o 4160320 B. W źródłach zmieniono m.in. obsługę dodatku NVDA
+i uruchamianie kompilatora pod PS 5.1, ale brak dowodu związku z detekcją.
+**Porównanie nie obejmuje pełnego payloadu poprzedniego wydania:** innoextract
+1.9 i 7zip 26.00 nie odczytały użytego formatu. Nie wyodrębniono starego
+manifestu; nie traktować tego jako zgodnego lub pustego zestawu plików.
+Nie da się też ustalić dokładnego etapu powstania wykrytych RCX z zachowanych
+logów. Raporty `logs/github-baseline-comparison.json` i `.md`; w JSON prowadzący
+skorygował liczniki kandydackich `fileHashes`/`fileSizes` na rzeczywiste
+2662/2662 i 3647/3647. Wykonawca `deleg_ac95fb71` zakończony.
+Klasyfikacja Defendera nadal nierozstrzygnięta, publikacja wstrzymana.
+
+Po wyjaśnieniu bezpieczeństwa i toru wydania nadal pozostają celowane odbiory
+#14, #17 i #18 przez Windows/NVDA oraz publikacja. Nie publikowano,
+nie zamykano Issues i nie dotykano głównego PC.
+Poniższe opisy dawnych blokad PS 5.1 i starszych paczek są historią,
+nie najnowszym stanem artefaktów.
 
 ## Polecenie i korekta użytkownika
 

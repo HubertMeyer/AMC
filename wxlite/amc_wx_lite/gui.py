@@ -11366,14 +11366,24 @@ class LiteFrame(wx.Frame):
             return label
         text = self._menu_shortcut_text(entry.shortcut)
         if entry.accelerator:
-            return f"{label}\t{text}"
+            # Po tabulatorze wx oczekuje technicznego zapisu klawisza z modelu.
+            return f"{label}\t{self._menu_native_accelerator(entry.shortcut)}"
         # Bez tabulatora: wx nie rejestruje akceleratora okna, ale NVDA nadal
         # czyta skrot jako czesc celowej, uzytkowej nazwy pozycji.
         return f"{label} ({text})"
 
     @staticmethod
+    def _menu_native_accelerator(chord: str) -> str:
+        """Zamienia dwa odziedziczone aliasy na składnię ParseAccel wx 4.3.1."""
+        head, _, key = chord.rpartition("+")
+        if key not in {"Prior", "Next"}:
+            return chord
+        key = {"Prior": "PageUp", "Next": "PageDown"}[key]
+        return f"{head}+{key}" if head else key
+
+    @staticmethod
     def _menu_shortcut_text(chord: str) -> str:
-        """Zapis skrotu zrozumialy dla uzytkownika i dla wx.
+        """Zapis skrótu zrozumiały dla użytkownika, używany poza akceleratorem wx.
 
         Nasze tablice uzywaja nazw klawiszy wx (``Back``, ``Return``), ktore po
         polsku nic nie mowia. Tlumaczymy tylko PODPIS, nie dzialanie.

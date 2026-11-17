@@ -2,11 +2,43 @@
 
 ## Status
 
-W trakcie. Najnowsze wydanie AMC Test to `0.1.0-alpha.500`, prerelease
-`test-2026.11.13.1952` na commicie `16eb05b5`. GitHub potwierdził instalator,
-manifest aktualizacji, plik integralności i sumę SHA-256. Użytkownik wybrał
-samodzielną aktualizację zainstalowanego `alpha.499`; żywy odbiór Apple Music
-i NVDA pozostaje otwarty. Szczegóły bieżącego wydania są na końcu pliku.
+W trakcie. **Publikacja kandydatów Public/Test `0.1.0-alpha.511` wstrzymana
+17.11.2026 z powodu niewyjaśnionego alertu Defendera podczas budowy Test.**
+Bundle z czystej rewizji `17e01e44b137b9dd3002444efcb8d17443ba956c` i prywatne
+instalacje obu profili na Hermesie przeszły integralność/start. To nie jest pełny
+odbiór wydania: Test powstał bezpośrednim wywołaniem ISCC po błędzie wrappera,
+a Defender trzykrotnie oznaczył tymczasowe `RCX*.tmp` jako
+`Worm:Win32/Mofksys!pz`. Skan końcowych EXE bez nowego wykrycia nie dowodzi
+fałszywego alarmu. Nie publikować ani dalej uruchamiać kandydatów do wyjaśnienia
+pochodzenia alertu i kanonicznej kompilacji. **Ta blokada nie zatrzymuje
+rozwoju kodu, analizy błędów ani niezależnych testów z nieszkodliwymi fixture;
+użytkownik 17.11 wymaga kontynuacji pracy przez Codex.** Nie wyłączać ochrony, nie dodawać
+wyjątków, nie obchodzić blokady zmianą katalogu. Szczegółowe hashe, odczyty i
+kryteria dalszego odbioru: `HUBERT-20261116-zgloszenia-i-wydanie.md`, sekcja
+„Bieżąca blokada wydania”. Odczytowa diagnoza zakończona; niezależne podpisy
+ECDSA czterech składników Inno są poprawne, ale nie rozstrzygają alertu
+w plikach tymczasowych. Użytkownik zgodził się 17.11 na przekazanie próbek
+Microsoftowi bez profili i danych logowania. Po potwierdzeniu użytkownika
+standardowe RunAs dało uprawnienia administratora, ale kwarantanna jest pusta;
+próby eksportu trzech konkretnych RCX nie dały plików. Odczytano hash jednego
+RCX z MPLog. Logowanie oraz dodatkową zgodę OAuth zatwierdzono po osobnym
+„Tak” użytkownika; portal rozpoznaje konto. Odczytano rekord dokładnie tego
+jednego hasha (4427264 B) i jednokrotnie wywołano `Rescan File`. Odczyt karty
+po odświeżeniu nie dał werdyktu ani potwierdzenia przyjęcia; historia pokazuje
+0 wpisów, brak submission ID. Nie uznawać wywołania za potwierdzoną analizę.
+Formularz programisty wymaga oryginalnego pliku; próbek nadal nie wysłano.
+Dowód: `logs/microsoft-portal-status-20261117.json` pod rootem alpha.511.
+Brak uprawnień ani logowanie nie są już aktualną blokadą. Porównanie dostępnych danych z najnowszymi wydaniami z 15.11
+(Test 20:36 i Public 20:40, oba ze źródła
+`2b6b061db22523ed9cfb66d26e2808b3d7bf00a7`) zakończono. Oryginalne pliki
+pobrano i SHA potwierdzono; rodzina formatu Inno wspólna. Starego payloadu
+nie wyodrębniono — oba dostępne czytniki nie obsłużyły formatu. Brak dowodu
+przyczyny detekcji lub fałszywego alarmu. Żywy odbiór Windows/NVDA nadal otwarty; główny
+komputer pozostaje nietykalny, użytkownik aktualizuje go ręcznie.
+
+Historyczny punkt poniższego planu z 13.11.2026: AMC Test
+`0.1.0-alpha.500`, prerelease `test-2026.11.13.1952`, commit `16eb05b5`.
+Nie traktować tego numeru jako świeżo odczytanego najnowszego wydania GitHub.
 
 ## Nadrzędna korekta użytkownika z 26.10.2026
 

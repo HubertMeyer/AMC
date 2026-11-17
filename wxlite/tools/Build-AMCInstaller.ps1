@@ -312,21 +312,15 @@ if ($null -ne $amcNvdaAddon) {
     )
 }
 $compileArguments += $installerScript
-$compile = Start-ArgumentListSafeProcess `
+$compileEvidencePath = Join-Path $output "installer-compile-evidence.json"
+$compile = Invoke-ArgumentListSafeProcessWithEvidence `
     -FilePath $IsccPath `
     -ArgumentList $compileArguments `
-    -WorkingDirectory $repositoryRoot
-if ($null -eq $compile) {
-    throw "Nie udało się uruchomić kompilatora Inno Setup."
-}
-try {
-    $compile.WaitForExit()
-    if ($compile.ExitCode -ne 0) {
-        throw "Kompilacja instalatora zakończyła się kodem $($compile.ExitCode)."
-    }
-}
-finally {
-    $compile.Dispose()
+    -WorkingDirectory $repositoryRoot `
+    -SourcePath $installerScript `
+    -EvidencePath $compileEvidencePath
+if ($compile.ExitCode -ne 0) {
+    throw "Kompilacja instalatora zakończyła się kodem $($compile.ExitCode). Dowód wykonania: $compileEvidencePath"
 }
 
 $baseName = if ($Profile -eq "public") {

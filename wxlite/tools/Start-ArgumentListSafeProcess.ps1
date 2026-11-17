@@ -58,3 +58,55 @@ function Start-ArgumentListSafeProcess {
     }
     return [Diagnostics.Process]::Start($start)
 }
+
+function Invoke-ArgumentListSafeProcessWithEvidence {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)] [string]$FilePath,
+        [Parameter(Mandatory)] [AllowEmptyCollection()] [AllowEmptyString()] [string[]]$ArgumentList,
+        [Parameter(Mandatory)] [string]$WorkingDirectory,
+        [Parameter(Mandatory)] [string]$SourcePath,
+        [Parameter(Mandatory)] [string]$EvidencePath
+    )
+
+    $evidence = [ordered]@{
+        schemaVersion = 1
+        createdUtc = [DateTime]::UtcNow.ToString("o")
+        state = "starting"
+        filePath = [IO.Path]::GetFullPath($FilePath)
+        workingDirectory = [IO.Path]::GetFullPath($WorkingDirectory)
+        sourcePath = [IO.Path]::GetFullPath($SourcePath)
+        argumentList = @($ArgumentList)
+        exitCode = $null
+    }
+    $evidence | ConvertTo-Json -Depth 3 | Set-Content -LiteralPath $EvidencePath -Encoding utf8 -ErrorAction Stop
+
+    try {
+        $process = Start-ArgumentListSafeProcess `
+            -FilePath $FilePath `
+            -ArgumentList $ArgumentList `
+            -WorkingDirectory $WorkingDirectory
+    }
+    catch {
+        $evidence.state = "launch-failed"
+        $evidence.error = $_.Exception.Message
+        $evidence | ConvertTo-Json -Depth 3 | Set-Content -LiteralPath $EvidencePath -Encoding utf8 -ErrorAction Stop
+        throw
+    }
+    if ($null -eq $process) {
+        $evidence.state = "launch-failed"
+        $evidence.error = "Process.Start returned null."
+        $evidence | ConvertTo-Json -Depth 3 | Set-Content -LiteralPath $EvidencePath -Encoding utf8 -ErrorAction Stop
+        throw "Nie udało się uruchomić procesu."
+    }
+    try {
+        $process.WaitForExit()
+        $evidence.state = "exited"
+        $evidence.exitCode = $process.ExitCode
+        $evidence | ConvertTo-Json -Depth 3 | Set-Content -LiteralPath $EvidencePath -Encoding utf8 -ErrorAction Stop
+        return [pscustomobject]@{ ExitCode = $process.ExitCode }
+    }
+    finally {
+        $process.Dispose()
+    }
+}

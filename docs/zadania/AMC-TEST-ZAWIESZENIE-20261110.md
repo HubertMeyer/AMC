@@ -34,3 +34,40 @@ Kanoniczne repo: `D:\Projekty Codex\AMC - integracja wxPython`, gałąź `codex/
 ## Status dostarczenia
 
 Analiza potwierdziła, że Test alpha.488 uruchomił się ponownie i odpowiadał, a następnie zakończył się z kodem 0 w ramach automatycznej aktualizacji do alpha.489. Samą aktualizację i jej osobny błąd opisuje `AMC-INSTALLER-UPDATE-GATE-20261110.md`. Pierwotna przyczyna wielogodzinnego zawieszenia alpha.488 pozostaje nieustalona. Użytkownik 10.11 poinformował, że zamierza wyłączyć komputer, a do głębszej analizy wrócimy następnego dnia.
+
+## Punkt 4 — poprawka podpisu akceleratora (17.11.2026)
+
+### Wynik
+
+- `_menu_native_label` nadal przekazuje po tabulatorze techniczny podpis tylko dla `accelerator=True`; `Right` nie jest już zastępowane polskim `strzałka w prawo`.
+- Niezależny review wykrył regresję tej korekty: wpisy rejestru `Ctrl+Prior` i `Ctrl+Next` nie są rozpoznawane przez wxPython 4.3.1. Mały helper przy budowie podpisu natywnego zamienia wyłącznie końcowe aliasy `Prior` na `PageUp` oraz `Next` na `PageDown`; przypisania poleceń, `menu_model`, flagi i polskie podpisy pozostają bez zmiany.
+- Dla `accelerator=False` zachowano czytelny podpis w nazwie pozycji, np. `(strzałka w prawo)`, bez rejestrowania akceleratora okna. Zachowano również `label_override` i pozycję bez skrótu.
+
+### Uzasadnienie i decyzje
+
+- `wxlite/requirements-win64.txt` przypina wxPython 4.3.1. Pełne `ParseAccel` wxWidgets dla commitu użytego przez Phoenix (`670835aec7e54b9e9d5a50d6a1aea1e8ba0bcdb2`, `src/common/accelcmn.cpp`) akceptuje `PageUp`/`Page Up`/`PgUp` i `PageDown`/`Page Down`/`PgDn`, ale nie zwykłe `Prior` ani `Next`; `KP_Prior` i `KP_Next` dotyczą wyłącznie klawiatury numerycznej.
+- Nie zmieniono znaczenia skrótów: `Ctrl+Page Up` nadal wybiera poprzednią sesję, a `Ctrl+Page Down` następną. Zmieniono wyłącznie techniczną składnię przekazywaną wx dla tych dwóch wpisów.
+
+### Testy i wynik
+
+- RED: `PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=wxlite uv run --with pytest pytest wxlite/tests/test_gui_filter_wiring.py::test_natywny_podpis_rejestru_stosuje_aliasy_rozpoznawane_przez_wx -q -p no:cacheprovider` — 1 oczekiwane niepowodzenie przed helperem: `PREVIOUS_SESSION` zwrócił `\tCtrl+Prior`, oczekiwane było `\tCtrl+PageUp`.
+- GREEN: ten sam test oraz test zachowania podpisu bez akceleratora — `2 passed in 1.14s`.
+- Regresja bada aktualne wpisy rejestru, nie sztuczną pozycję: `ACTIVATE` (`Return`), `SEEK_FORWARD_30` (`Shift+Right`), `SEEK_FORWARD_60` (`Ctrl+Right`), `SEEK_FORWARD_CUSTOM` (`Ctrl+Alt+Right`), `PREVIOUS_SESSION` (`Ctrl+PageUp`), `NEXT_SESSION` (`Ctrl+PageDown`), `VIEW_FORWARD` (`Alt+Right`) i `SESSION_OPTIONS` (`Ctrl+Alt+Return`).
+- Celowany zestaw wykonawcy bez uruchamiania AMC: `PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=wxlite uv run --with pytest pytest wxlite/tests/test_gui_filter_wiring.py wxlite/tests/test_history_relation_clipboard.py -q -p no:cacheprovider` — `40 passed in 2.22s`.
+- Prowadzący sprawdził też zachowanie pozostałych klawiszy. RED wykazał, że pierwszy wariant nowego helpera zamieniał sam znak `+` na pusty tekst. Minimalna korekta zwraca oryginał, jeżeli końcowy klawisz nie jest `Prior` ani `Next`; bez zmian znaczenia skrótów. Test obejmuje `+`, `Ctrl++`, `Right`, `Shift+Right` i `Ctrl+Return`.
+- Po integracji trzech plików do kanonicznego repozytorium prowadzący wykonał ten sam ograniczony zestaw z dodatkową regresją: **`41 passed in 3.02s`**, `git diff --check` bez błędów. Nie powtarzano pozostałych wcześniej zaakceptowanych odbiorów.
+
+### Materiał do dokumentacji użytkownika
+
+- W menu i palecie skrótów poprzednia sesja jest dostępna pod `Ctrl+Page Up`, a następna pod `Ctrl+Page Down`. Działanie tych skrótów nie zmieniło się; korekta zapewnia tylko ich prawidłowe rozpoznanie przez natywne menu wx.
+- Podpisy skrótów pozostają po polsku. Pozycje celowo bez akceleratora okna nadal czytają skrót jako część nazwy, bez przejmowania klawisza w polach edycji.
+
+### Znane ograniczenia
+
+- To naprawa wyłącznie składni technicznego podpisu akceleratora wx; nie jest dowodem przyczyny ani naprawą wielogodzinnego zawieszenia interfejsu.
+- Nie uruchamiano AMC, widocznego GUI, NVDA, budowy ani instalatora. Ręczny odbiór wx/NVDA pozostaje osobnym krokiem.
+
+### Wersja i commit
+
+- Baza robocza: `17e01e44b137b9dd3002444efcb8d17443ba956c` na `codex/amc-test-public-20261109`.
+- Zmieniono wyłącznie `wxlite/amc_wx_lite/gui.py`, `wxlite/tests/test_gui_filter_wiring.py` oraz ten zapis zadania. Poprawkę włączono do kanonicznych źródeł; zatwierdzenie tego etapu jest identyfikowane przez historię Git tego pliku. Nie ma nowego pakietu, instalacji ani publikacji wydania.

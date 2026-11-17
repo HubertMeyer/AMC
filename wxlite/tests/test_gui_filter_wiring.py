@@ -25,7 +25,7 @@ install_wx_stub()
 from amc_wx_lite import list_filter  # noqa: E402
 from amc_wx_lite.list_model import ListModel, Row  # noqa: E402
 from amc_wx_lite.shortcuts import Action, Chord, resolve  # noqa: E402
-from amc_wx_lite.navigation import View  # noqa: E402
+from amc_wx_lite.navigation import SessionId, View  # noqa: E402
 import test_native_list_apply as nla  # noqa: E402
 
 
@@ -344,23 +344,122 @@ def test_backspace_w_polu_NIE_moze_isc_do_akceleratora_menu():
         )
 
 
-def test_skroty_edycji_zostaja_WIDOCZNE_choc_nie_sa_akceleratorami():
-    """Zdjecie akceleratora nie moze ukryc skrotu przed niewidomym.
+def test_natywny_podpis_rejestru_stosuje_aliasy_rozpoznawane_przez_wx():
+    """Prawdziwe pozycje z akceleratorem muszą mieć składnię wx, nie tylko podpis."""
+    from types import SimpleNamespace
+    from typing import cast
 
-    Pozycja musi dalej MOWIC, jakim klawiszem ja wywolac -- inaczej naprawa
-    jednego problemu zabralaby uzytkownikowi wiedze o skrocie.
-    """
-    import inspect
-
+    from amc_wx_lite import menu_model
     import amc_wx_lite.gui as gui
 
-    source = inspect.getsource(gui.LiteFrame._menu_native_label)
-    assert "entry.accelerator" in source, (
-        "budowa menu nie rozroznia podpisu skrotu od akceleratora"
+    expected = {
+        Action.ACTIVATE: "Return",
+        Action.SEEK_FORWARD_30: "Shift+Right",
+        Action.SEEK_FORWARD_60: "Ctrl+Right",
+        Action.SEEK_FORWARD_CUSTOM: "Ctrl+Alt+Right",
+        Action.PREVIOUS_SESSION: "Ctrl+PageUp",
+        Action.NEXT_SESSION: "Ctrl+PageDown",
+        Action.VIEW_FORWARD: "Alt+Right",
+        Action.SESSION_OPTIONS: "Ctrl+Alt+Return",
+    }
+    entries = {
+        item.action: item
+        for menu in menu_model.build_menus()
+        for item in menu.items
+        if item.action in expected
+    }
+    assert entries.keys() == expected.keys()
+    frame = cast(
+        gui.LiteFrame,
+        SimpleNamespace(
+            _menu_native_accelerator=gui.LiteFrame._menu_native_accelerator,
+            _menu_shortcut_text=gui.LiteFrame._menu_shortcut_text,
+        ),
     )
-    # Skrot bez akceleratora ma trafic do NAZWY pozycji, nie zniknac.
-    assert '({text})' in source or '(\" + text' in source or "({text})" in source
 
+    for action, technical_shortcut in expected.items():
+        entry = entries[action]
+        assert entry.accelerator
+        assert (
+            gui.LiteFrame._menu_native_label(frame, entry)
+            == f"{entry.label}\t{technical_shortcut}"
+        )
+
+
+def test_natywny_formatter_nie_zmienia_pozostalych_klawiszy():
+    import amc_wx_lite.gui as gui
+
+    for chord in ("+", "Ctrl++", "Right", "Shift+Right", "Ctrl+Return"):
+        assert gui.LiteFrame._menu_native_accelerator(chord) == chord
+
+
+def test_podpis_bez_akceleratora_zachowuje_polski_tekst_i_modyfikacje_etykiety():
+    """Pozycja bez akceleratora nadal ma czytelny podpis dla NVDA."""
+    from dataclasses import replace
+    from types import SimpleNamespace
+    from typing import cast
+
+    from amc_wx_lite import menu_model
+    import amc_wx_lite.gui as gui
+
+    entry = next(
+        item
+        for menu in menu_model.build_menus()
+        for item in menu.items
+        if item.action is Action.GO_TO_RELATED_PODCAST
+    )
+    assert entry.shortcut == "Right"
+    assert not entry.accelerator
+    frame = cast(
+        gui.LiteFrame,
+        SimpleNamespace(
+            _menu_native_accelerator=gui.LiteFrame._menu_native_accelerator,
+            _menu_shortcut_text=gui.LiteFrame._menu_shortcut_text,
+        ),
+    )
+
+    assert (
+        gui.LiteFrame._menu_native_label(frame, entry)
+        == f"{entry.label} (strzałka w prawo)"
+    )
+    assert (
+        gui.LiteFrame._menu_native_label(frame, entry, "Pokaż powiązanie")
+        == "Pokaż powiązanie (strzałka w prawo)"
+    )
+    assert gui.LiteFrame._menu_native_label(
+        frame, replace(entry, shortcut=None)
+    ) == entry.label
+
+
+def test_podpis_prawej_strzalki_ma_parytet_menu_pomocy_i_palety_w_obu_profilach(
+    monkeypatch,
+):
+    """Wspólny rejestr nie może rozjechać odkrywalności skrótu między profilami."""
+    from amc_wx_lite import command_palette, menu_model
+    from amc_wx_lite.shortcuts import describe
+
+    for profile in ("test", "public"):
+        monkeypatch.setenv("AMC_RELEASE_PROFILE", profile)
+        menu_entry = next(
+            item
+            for menu in menu_model.build_menus()
+            for item in menu.items
+            if item.action is Action.GO_TO_RELATED_PODCAST
+        )
+        palette_entry = next(
+            item
+            for item in command_palette.entries_for_session(SessionId.PODCASTS)
+            if item.action is Action.GO_TO_RELATED_PODCAST
+        )
+        help_entries = dict(describe("Podcasty i YouTube"))
+
+        assert menu_entry.shortcut == "Right"
+        assert not menu_entry.accelerator
+        assert palette_entry.shortcut == "strzałka w prawo"
+        assert "Strzałka w prawo (Podcasty i YouTube)" in help_entries
+        assert "podcast lub kanał" in help_entries[
+            "Strzałka w prawo (Podcasty i YouTube)"
+        ]
 
 def test_po_starcie_fokus_jest_NA_LISCIE_a_nie_w_polu_filtra():
     """Regresja ZMIERZONA na zywym GUI (kwit-filter-1/snapshot.json).
