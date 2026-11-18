@@ -481,6 +481,29 @@ def _folder_row(path: str, name: str) -> Row:
     return Row(item_id="dir:" + path, title=name, kind="folder", path=path)
 
 
+def disambiguate_folder_source_names(
+    sources: list[FolderSource],
+) -> dict[str, str]:
+    """Keep unique root names short; qualify only repeated names by parent.
+
+    Folder source identity stays its persisted ID/path.  This is presentation
+    only, for the root rows that a screen reader otherwise describes alike.
+    """
+    names: dict[str, list[FolderSource]] = {}
+    for source in sources:
+        names.setdefault(source.display_name.casefold(), []).append(source)
+
+    labels: dict[str, str] = {}
+    for source in sources:
+        matching = names[source.display_name.casefold()]
+        if len(matching) == 1:
+            labels[source.id] = source.display_name
+            continue
+        parent = parent_path(source.path) or normalize_path(source.path)
+        labels[source.id] = f"{source.display_name} ({parent})"
+    return labels
+
+
 def _track_row(item: LibraryItem) -> Row:
     return Row(
         item_id=item.id,
@@ -503,7 +526,8 @@ def folder_rows(db: LibraryDatabase, current_folder: str | None) -> list[Row]:
     sources = db.folder_sources()
 
     if not current_folder:
-        rows = [_folder_row(s.path, s.display_name) for s in sources]
+        labels = disambiguate_folder_source_names(sources)
+        rows = [_folder_row(s.path, labels[s.id]) for s in sources]
         orphans = [
             item
             for item in db.active_items_under(None)

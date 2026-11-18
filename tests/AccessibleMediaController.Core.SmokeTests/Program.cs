@@ -7608,6 +7608,19 @@ static void TestLocalFolderLibraryManager()
         Equal(1, added.Sources[0].ActiveItemCount);
         var sourceId = added.Sources[0].Id;
 
+        var nested = Path.Combine(media, "lossles");
+        Directory.CreateDirectory(nested);
+        try
+        {
+            manager.Add(nested);
+            throw new Exception("Folder objęty istniejącym źródłem musi zostać odrzucony.");
+        }
+        catch (InvalidOperationException exception)
+        {
+            True(exception.Message.Contains(media, StringComparison.Ordinal),
+                "Odmowa zduplikowanego Folderu Biblioteki musi podać ścieżkę istniejącego źródła.");
+        }
+
         var refreshed = manager.Refresh([sourceId]);
         Equal(sourceId, refreshed.SelectedSourceId);
         Equal(1, refreshed.Sources[0].ActiveItemCount);

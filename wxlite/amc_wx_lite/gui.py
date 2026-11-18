@@ -6034,6 +6034,7 @@ class LibraryFoldersDialog(wx.Dialog):
         )
         self.status = wx.StaticText(self, label="Gotowe")
         self.status.SetName("Wynik operacji: Gotowe")
+        self.announcer = Announcer(self.status)
         self.add_button = wx.Button(self, label="&Dodaj folder…")
         self.refresh_button = wx.Button(self, label="Odśwież &wybrany")
         self.refresh_all_button = wx.Button(self, label="Odśwież w&szystkie")
@@ -6074,7 +6075,13 @@ class LibraryFoldersDialog(wx.Dialog):
             return source_id.strip() if isinstance(source_id, str) else None
         return None
 
-    def apply_payload(self, payload: object, preferred_id: str | None = None) -> None:
+    def apply_payload(
+        self,
+        payload: object,
+        preferred_id: str | None = None,
+        *,
+        announce: bool = False,
+    ) -> None:
         previous = preferred_id or self.selected_source_id
         raw = payload.get("sources") if isinstance(payload, dict) else None
         self._sources = [item for item in (raw or []) if isinstance(item, dict)]
@@ -6101,7 +6108,7 @@ class LibraryFoldersDialog(wx.Dialog):
             self.sources.SetSelection(index)
         message = payload.get("message") if isinstance(payload, dict) else None
         if isinstance(message, str) and message.strip():
-            self.set_status(message.strip())
+            self.set_status(message.strip(), announce=announce)
         elif not self._sources:
             self.set_status(
                 "Brak dodanych folderów. Wybierz Dodaj folder, aby utworzyć Bibliotekę."
@@ -6116,7 +6123,7 @@ class LibraryFoldersDialog(wx.Dialog):
 
     def finish(self, payload: object, preferred_id: str | None = None) -> None:
         self._busy = False
-        self.apply_payload(payload, preferred_id)
+        self.apply_payload(payload, preferred_id, announce=True)
         if self._sources:
             self.sources.SetFocus()
         else:
@@ -6124,15 +6131,17 @@ class LibraryFoldersDialog(wx.Dialog):
 
     def fail(self, message: str) -> None:
         self._busy = False
-        self.set_status(message)
+        self.set_status(message, announce=True)
         self._update_buttons()
         self.sources.SetFocus() if self._sources else self.add_button.SetFocus()
 
-    def set_status(self, message: str) -> None:
+    def set_status(self, message: str, *, announce: bool = False) -> None:
         message = i18n.ui_text(message)
         self.status.SetLabel(message)
         self.status.SetName(i18n.ui_text(f"Wynik operacji: {message}"))
         self.Layout()
+        if announce:
+            self.announcer.say(message)
 
     def _update_buttons(self) -> None:
         selected = self.selected_source_id is not None

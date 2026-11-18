@@ -58,8 +58,8 @@ public sealed class LocalFolderLibraryManager(string databasePath)
             {
                 throw new InvalidOperationException(
                     conflict.Kind == LocalFolderSourceConflictKind.CoveredByExistingSource
-                        ? $"Nie dodano folderu. Należy już do Folderu Biblioteki „{conflict.ExistingSource.DisplayName}”."
-                        : $"Nie dodano folderu. Obejmowałby już dodany Folder Biblioteki „{conflict.ExistingSource.DisplayName}”.");
+                        ? $"Nie dodano folderu. Należy już do Folderu Biblioteki „{conflict.ExistingSource.DisplayName}” ({conflict.ExistingSource.Path})."
+                        : $"Nie dodano folderu. Obejmowałby już dodany Folder Biblioteki „{conflict.ExistingSource.DisplayName}” ({conflict.ExistingSource.Path}).");
             }
 
             var displayName = Path.GetFileName(path);
