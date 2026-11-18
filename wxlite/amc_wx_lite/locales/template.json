@@ -1126,6 +1126,8 @@
     "Możesz wybrać najwyżej {arg0} kanałów": "",
     "Nadano nazwę zakładce {arg0}: {arg1}": "",
     "Nazwa {arg0}": "",
+    "Nie dodano folderu. Należy już do Folderu Biblioteki „{arg0}” ({arg1}).": "",
+    "Nie dodano folderu. Obejmowałby już dodany Folder Biblioteki „{arg0}” ({arg1}).": "",
     "Nie dodano stacji Sonos: {arg0}": "",
     "Nie dodano stacji: {arg0}": "",
     "Nie dodano strumienia WiiM: {arg0}": "",

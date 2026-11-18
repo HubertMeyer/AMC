@@ -55,10 +55,31 @@ def test_root_folder_rows_use_disambiguated_source_labels() -> None:
 
 class _Control:
     def __init__(self) -> None:
-        self.focused = False
+        self.focus_count = 0
+        self.enabled: list[bool] = []
 
     def SetFocus(self) -> None:  # noqa: N802 - wx API
-        self.focused = True
+        self.focus_count += 1
+
+    def Enable(self, enabled: bool) -> None:  # noqa: N802 - wx API
+        self.enabled.append(enabled)
+
+
+class _SourcesControl(_Control):
+    def __init__(self) -> None:
+        super().__init__()
+        self.items: list[str] = []
+        self.selection = -1
+
+    def GetSelection(self) -> int:  # noqa: N802 - wx API
+        return self.selection
+
+    def Set(self, items: list[str]) -> None:  # noqa: N802 - wx API
+        self.items = list(items)
+        self.selection = -1
+
+    def SetSelection(self, selection: int) -> None:  # noqa: N802 - wx API
+        self.selection = selection
 
 
 class _Status:
@@ -87,41 +108,164 @@ class _Owner:
         return self.active
 
 
-def test_library_folder_finish_and_fail_announce_once_through_active_dialog_owner(monkeypatch) -> None:
+class _DialogHarness:
+    """Headless controls, but every exercised dialog method is production code."""
+
+    selected_source_id = LibraryFoldersDialog.selected_source_id
+    apply_payload = LibraryFoldersDialog.apply_payload
+    finish = LibraryFoldersDialog.finish
+    fail = LibraryFoldersDialog.fail
+    set_status = LibraryFoldersDialog.set_status
+    _update_buttons = LibraryFoldersDialog._update_buttons
+
+    def __init__(self, announcer: Announcer, status: _Status) -> None:
+        self._busy = True
+        self._sources: list[dict] = []
+        self.sources = _SourcesControl()
+        self.add_button = _Control()
+        self.refresh_button = _Control()
+        self.refresh_all_button = _Control()
+        self.detach_button = _Control()
+        self.close_button = _Control()
+        self.status = status
+        self.announcer = announcer
+        self.layout_count = 0
+
+    def Layout(self) -> None:  # noqa: N802 - wx API
+        self.layout_count += 1
+
+
+def test_library_folder_finish_and_fail_use_real_payload_path_and_active_dialog_owner() -> None:
     notifications: list[tuple[int, int, int, int]] = []
     status = _Status()
-    sources, add = _Control(), _Control()
     owner = _Owner()
-    monkeypatch.setattr(gui.wx, "GetTopLevelParent", lambda _status: owner, raising=False)
-    announcer = Announcer(status, notify=lambda *args: notifications.append(args))
-    dialog = SimpleNamespace(
-        _busy=True,
-        _sources=[{"id": "source"}],
-        sources=sources,
-        add_button=add,
-        status=status,
-        announcer=announcer,
-        Layout=lambda: None,
-        _update_buttons=lambda: None,
+    original_parent = getattr(gui.wx, "GetTopLevelParent", None)
+    gui.wx.GetTopLevelParent = lambda _status: owner
+    try:
+        announcer = Announcer(status, notify=lambda *args: notifications.append(args))
+        dialog = _DialogHarness(announcer, status)
+
+        dialog.finish({
+            "message": "Dodano Folder Biblioteki",
+            "sources": [{"id": "source-add", "label": "Dodany folder"}],
+        })
+        assert len(notifications) == 1
+        assert dialog.selected_source_id == "source-add"
+        assert dialog.sources.focus_count == 1
+
+        dialog.finish(
+            {
+                "message": "Odświeżono Folder Biblioteki",
+                "sources": [
+                    {"id": "source-add", "label": "Dodany folder"},
+                    {"id": "source-refresh", "label": "Odświeżony folder"},
+                ],
+            },
+            preferred_id="source-refresh",
+        )
+        assert len(notifications) == 2
+        assert dialog.selected_source_id == "source-refresh"
+        assert dialog.sources.focus_count == 2
+
+        dialog.fail("Nie dodano folderu")
+        assert len(notifications) == 3
+        assert status.label == "Nie dodano folderu"
+        assert status.name == "Nie dodano folderu"
+        assert dialog.sources.focus_count == 3
+
+        dialog.finish({"message": "Odłączono Folder Biblioteki", "sources": []})
+        assert len(notifications) == 4
+        assert dialog.add_button.focus_count == 1
+
+        owner.active = False
+        dialog.fail("Cichy w nieaktywnym ownerze")
+        assert len(notifications) == 4
+        assert status.label == "Cichy w nieaktywnym ownerze"
+    finally:
+        if original_parent is None:
+            delattr(gui.wx, "GetTopLevelParent")
+        else:
+            gui.wx.GetTopLevelParent = original_parent
+
+
+def test_library_folder_runner_callback_reaches_real_finish() -> None:
+    notifications: list[tuple[int, int, int, int]] = []
+    owner = _Owner()
+
+    class Client:
+        def local_folder_sources(self) -> object:
+            return {"sources": []}
+
+        def add_local_folder_source(self, path: str) -> object:
+            assert path == r"X:\muzyka"
+            return {
+                "message": "Dodano Folder Biblioteki",
+                "sources": [{"id": "source-add", "label": "Muzyka"}],
+            }
+
+    class Runner:
+        def __init__(self) -> None:
+            self.tasks: list[str] = []
+
+        def submit(self, task_name, work, done, failed) -> None:
+            self.tasks.append(task_name)
+            done(work())
+
+    class RunnerDialog(_DialogHarness):
+        instance: "RunnerDialog | None" = None
+
+        def __init__(self, parent, payload, *, add_folder, refresh_folders, detach_folder) -> None:
+            status = _Status()
+            super().__init__(Announcer(status, notify=lambda *args: notifications.append(args)), status)
+            self._add_folder = add_folder
+            RunnerDialog.instance = self
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc_value, traceback) -> None:
+            return None
+
+        def IsBeingDeleted(self) -> bool:  # noqa: N802 - wx API
+            return False
+
+        def ShowModal(self) -> None:  # noqa: N802 - wx API
+            self._add_folder(r"X:\muzyka", self)
+
+    client = Client()
+    runner = Runner()
+    frame = SimpleNamespace(
+        _profile_edit_client=lambda: client,
+        runner=runner,
+        navigator=SimpleNamespace(active=None),
+        _refresh_profile_view=lambda: None,
+        _restore_focus_after_dialog=lambda: None,
     )
-    dialog.set_status = lambda message, *, announce=False: LibraryFoldersDialog.set_status(
-        cast(LibraryFoldersDialog, dialog), message, announce=announce
-    )
+    original_parent = getattr(gui.wx, "GetTopLevelParent", None)
+    original_dialog = gui.LibraryFoldersDialog
+    gui.wx.GetTopLevelParent = lambda _status: owner
+    gui.LibraryFoldersDialog = RunnerDialog
+    try:
+        gui.LiteFrame._show_library_folders(cast(gui.LiteFrame, frame))
+        assert runner.tasks == ["library-folder-add"]
+        assert RunnerDialog.instance is not None
+        assert RunnerDialog.instance.selected_source_id == "source-add"
+        assert len(notifications) == 1
+    finally:
+        gui.LibraryFoldersDialog = original_dialog
+        if original_parent is None:
+            delattr(gui.wx, "GetTopLevelParent")
+        else:
+            gui.wx.GetTopLevelParent = original_parent
 
-    def apply_payload(payload, preferred_id, *, announce):
-        dialog.set_status(payload["message"], announce=announce)
 
-    dialog.apply_payload = apply_payload
+def test_disambiguation_keeps_unc_and_drive_roots_without_trailing_separators() -> None:
+    sources = [
+        _source("unc", "\\\\serwer\\udział\\", "Root"),
+        _source("drive", "X:\\", "root"),
+    ]
 
-    dialog_instance = cast(LibraryFoldersDialog, dialog)
-    LibraryFoldersDialog.finish(dialog_instance, {"message": "Dodano Folder Biblioteki"})
-    LibraryFoldersDialog.fail(dialog_instance, "Nie dodano folderu")
-
-    assert len(notifications) == 2
-    assert status.label == "Nie dodano folderu"
-    assert status.name == "Nie dodano folderu"
-    assert sources.focused
-
-    owner.active = False
-    LibraryFoldersDialog.fail(dialog_instance, "Cichy w nieaktywnym ownerze")
-    assert len(notifications) == 2
+    assert disambiguate_folder_source_names(sources) == {
+        "unc": "Root (\\\\serwer\\udział)",
+        "drive": "root (X:)",
+    }

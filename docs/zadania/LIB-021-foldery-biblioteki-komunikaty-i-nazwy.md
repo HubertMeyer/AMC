@@ -24,8 +24,11 @@ Naprawić zgłoszenie #21 Huberta: po dodaniu, odświeżeniu albo odmowie Folder
 
 ## Testy RED → GREEN
 
-- Python: `wxlite/tests/test_library_folder_issue21.py` sprawdza case-insensitive rozróżnienie nazw i faktyczny łańcuch `finish`/`fail` → `set_status` → `Announcer`, wraz z ownerem aktywnym i nieaktywnym.
-- Core smoke test sprawdza, że odmowa dodania zagnieżdżonego folderu zawiera ścieżkę istniejącego źródła.
+- RED: nowy test i18n dla obu komunikatów konfliktu zwrócił `AssertionError` przed dodaniem wzorców angielskich.
+- GREEN: uruchomiono `python -m compileall -q wxlite/amc_wx_lite/i18n.py wxlite/tests/test_i18n.py wxlite/tests/test_library_folder_issue21.py`, a następnie celowany headless runner sześciu testów: 5 z `test_library_folder_issue21` i `test_library_folder_conflicts_translate_full_unicode_paths_both_ways`; wszystkie przeszły.
+- Test dialogu używa rzeczywistych metod `finish()` → `apply_payload()` → `set_status()` → `Announcer`, a jedynie kontrolki wx są stubami. Sprawdza osobno ADD, REFRESH z wyborem `source-refresh`, FAIL, fokus listy/pustej listy oraz brak czwartego powiadomienia dla nieaktywnego ownera. Osobny test prowadzi rzeczywisty callback `LiteFrame._show_library_folders()` przez `runner.submit()` do prawdziwego `finish()`.
+- Test i18n przełącza PL → EN → PL w `try`/`finally`, z nazwą i ścieżką UNC zawierającymi spacje i znaki Unicode. Wzorce dodano do `en_legacy.json`, a `template.json` odtworzono przez `python wxlite/tools/export_translation_template.py --output wxlite/amc_wx_lite/locales/template.json`.
+- Regresja helpera rozróżniania obejmuje UNC i korzeń dysku z końcowymi separatorami; kod produkcyjny helpera nie wymagał zmiany.
 
 ## Materiał użytkowy
 
@@ -33,7 +36,7 @@ Nie dodano skrótów. Zmiana dotyczy istniejącego dialogu „Foldery Biblioteki
 
 ## Ograniczenia
 
-Test headless potwierdza owner/gating oraz wywołanie `NotifyWinEvent`, ale nie zastępuje żywego odbioru przez NVDA. Odbiór binarny/GUI i instalator są świadomie odłożone do następnego etapu. Stary instalator diagnostyczny `9739fe3` nie zawiera tej zmiany.
+Test headless potwierdza owner/gating i wywołanie callbacku powiadomienia `Announcer`, ale nie zastępuje natywnego `NotifyWinEvent` ani żywego odbioru przez NVDA. Nie uruchamiano Core smoke, GUI, AV ani instalatora. `wxlite/run_tests.py` nie zapewnił selektywnego uruchomienia wskazanych modułów w tej konfiguracji i pełny przebieg zakończył się `FAIL`; nie porównywano go z baseline, więc nie klasyfikujemy tych błędów jako istniejących. Odbiór binarny/GUI i instalator są świadomie odłożone do następnego etapu. Stary instalator diagnostyczny `9739fe3` nie zawiera tej zmiany.
 
 ## Źródła
 
@@ -43,4 +46,4 @@ Test headless potwierdza owner/gating oraz wywołanie `NotifyWinEvent`, ale nie 
 
 ## Status
 
-Zmiana źródeł oraz testy celowane zaliczone; bez live NVDA.
+Zmiana źródeł oraz sześć testów celowanych zaliczone; bez Core smoke i live NVDA.

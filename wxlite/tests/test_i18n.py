@@ -230,6 +230,32 @@ def test_open_window_dynamic_text_can_switch_back_to_polish() -> None:
     ) == "Dodano zakładkę 2: 01:30"
 
 
+def test_library_folder_conflicts_translate_full_unicode_paths_both_ways() -> None:
+    original_language = i18n.active_language()
+    name = "Żółte nagrania z prób"
+    path = r"\\NAS\Muzyka wspólna\Żółte nagrania z prób"
+    cases = (
+        (
+            f"Nie dodano folderu. Należy już do Folderu Biblioteki „{name}” ({path}).",
+            f"Folder was not added. It already belongs to Library Folder “{name}” ({path}).",
+        ),
+        (
+            f"Nie dodano folderu. Obejmowałby już dodany Folder Biblioteki „{name}” ({path}).",
+            f"Folder was not added. It would encompass the already added Library Folder “{name}” ({path}).",
+        ),
+    )
+    try:
+        i18n.configure("pl")
+        i18n.configure("en")
+        for polish, english in cases:
+            assert i18n.ui_text(polish) == english
+        i18n.configure("pl")
+        for polish, _english in cases:
+            assert i18n.ui_text(polish) == polish
+    finally:
+        i18n.configure(original_language)
+
+
 def test_english_to_polish_skips_text_values_and_deleting_windows() -> None:
     class TextEntry:
         def __init__(self) -> None:
