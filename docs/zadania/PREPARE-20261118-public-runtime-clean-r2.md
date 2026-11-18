@@ -39,8 +39,32 @@ niezmieniona walidacja nadal odrzuca prywatne pozostałości.
 
 ## Ograniczenia i następny krok
 
-Nie jest to zbudowany instalator ani wynik Defendera. Lokalnie nie ma PyYAML,
-więc nie instalowano parsera; pięć istniejących kontraktów tekstowych workflow
-pozostaje dowodem statycznym YAML. Rodzic ma najpierw niezależnie przejrzeć
-commit, a potem może wykonać dokładnie jeden push nowej gałęzi; ręczne retry,
+Nie jest to zbudowany instalator ani wynik Defendera. Worker nie miał PyYAML i nie instalował parsera. Rodzic niezależnie
+przeprowadził rzeczywisty odczyt YAML przez dostępne `ruamel.yaml`; struktura,
+ściśle wskazana gałąź r2 i uprawnienia `contents: read` zostały potwierdzone.
+Rodzic może wykonać dokładnie jeden push nowej gałęzi; ręczne retry,
 dispatch i ponowienie poprzedniego runu są poza zakresem.
+
+## Niezależny przegląd rodzica przed uruchomieniem
+
+- Powtórzono tylko krytyczną granicę, nie cały zestaw 47 kontraktów:
+  nowy test produkcyjnego `main` na oryginalnym builderze odrzucił prywatne
+  pliki (RED), a na poprawionym przeszedł (GREEN). Dwa sąsiednie kontrakty
+  Test/in-place również przeszły. To małe jawnie syntetyczne fixture, nie
+  prawdziwe EXE, instalator ani pomiar AV.
+- Zweryfikowano pięć odebranych blobów produkcyjnych #21 wobec
+  `ca9d1b23b804abdada8ffa833b1dc139705a95f9`: `gui.py`, `library_db.py`,
+  `locales/en_legacy.json`, `locales/template.json` i
+  `LocalFolderLibraryManager.cs` pozostają identyczne.
+- Przegląd wykrył pominięty ref w `Enable-AMCDiagnosticProtection.ps1`:
+  workflow wskazywał r2, lecz skrypt nadal wyłącznie starą gałąź. Nowy
+  kontrakt najpierw rzeczywiście upadł; poprawiono tylko dokładny ref na r2,
+  bez rozszerzania zgody na inny host lub gałąź.
+- Sześć kontraktów workflow przeszło. Parser PowerShell 5.1 poprawionego
+  skryptu przeszedł. Wyizolowany sam początkowy guard, bez cmdletów Defendera
+  i bez I/O, przyjął kontekst r2 i odrzucił starą gałąź, self-hosted, Linux
+  oraz brak GitHub Actions — pięć scenariuszy PASS. To test warunków, nie
+  zmiana lokalnej ochrony ani dowód skanu.
+- Dołączono aktualny plan z kanonicznej gałęzi (`0bce7df`), w tym rzeczywisty
+  wynik pierwszego runu. Końcowy audyt, wejścia, hash/podpis Inno i hooki
+  kanonicznych builderów pozostały niezmienione.

@@ -36,6 +36,16 @@ def test_workflow_is_one_shot_read_only_and_targets_exact_new_branch() -> None:
         assert forbidden not in workflow
 
 
+def test_protection_setup_targets_the_same_exact_branch_as_workflow() -> None:
+    branch = "codex/amc-protected-public-test-20261118-issue21-r2"
+    source = (ROOT / "wxlite" / "tools" / "Enable-AMCDiagnosticProtection.ps1").read_text(encoding="utf-8-sig")
+    guard = source.split("$diagWarnings=@()", 1)[0]
+    assert f"$env:GITHUB_REF -cne 'refs/heads/{branch}'" in guard, "Protection setup targets a different branch than the workflow"
+    assert f"github.ref == 'refs/heads/{branch}'" in _workflow()
+    for required in ("$env:GITHUB_ACTIONS -cne 'true'", "$env:RUNNER_ENVIRONMENT -cne 'github-hosted'", "$env:RUNNER_OS -cne 'Windows'"):
+        assert required in guard
+
+
 def test_workflow_builds_public_then_test_from_one_source_revision() -> None:
     workflow = _workflow()
     public_bundle = "Build-AMCBundle.ps1 -Profile public"
