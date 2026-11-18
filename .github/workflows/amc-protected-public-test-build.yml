@@ -1,0 +1,255 @@
+name: AMC — jednorazowa chroniona budowa Public i Test
+
+on:
+  push:
+    branches:
+      - codex/amc-protected-public-test-20261118-issue21
+    paths:
+      - .github/workflows/amc-protected-public-test-build.yml
+      - wxlite/tools/Build-AMCBundle.ps1
+      - wxlite/tools/Build-AMCInstaller.ps1
+      - wxlite/tools/Enable-AMCDiagnosticProtection.ps1
+      - wxlite/tools/build_bundle.py
+      - wxlite/**
+      - src/**
+      - installer/**
+      - nvda-addon/**
+      - Directory.Build.props
+
+permissions:
+  contents: read
+
+jobs:
+  protected-public-test-build:
+    # Dopuszczalne jest wyłącznie pierwsze utworzenie tej jednej gałęzi.
+    if: >-
+      github.run_attempt == '1' &&
+      github.event.before == '0000000000000000000000000000000000000000' &&
+      github.ref == 'refs/heads/codex/amc-protected-public-test-20261118-issue21'
+    runs-on: windows-2025
+    timeout-minutes: 150
+
+    steps:
+      - name: Pobierz dokładne źródła bez poświadczeń
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Zapisz niezmienne wejście źródłowe
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $evidence = Join-Path $env:RUNNER_TEMP 'amc-protected-public-test-evidence'
+          New-Item -ItemType Directory -Path $evidence -Force | Out-Null
+          $jobStarted = [DateTime]::UtcNow
+          [xml]$props = Get-Content -LiteralPath '.\Directory.Build.props' -Raw
+          $sourceVersion = [string]$props.Project.PropertyGroup.Version
+          if ($sourceVersion -ne '0.1.0-alpha.511') { throw "Nieoczekiwana wersja źródeł: $sourceVersion" }
+          $source = [ordered]@{
+            capturedUtc = $jobStarted.ToString('o')
+            sourceSha = (git rev-parse HEAD).Trim()
+            sourceVersion = $sourceVersion
+            sourceStatus = @(& git status --porcelain=v1 --untracked-files=no)
+            runner = $env:RUNNER_NAME
+            ref = $env:GITHUB_REF
+            sha = $env:GITHUB_SHA
+          }
+          if ($source.sourceSha -ne $env:GITHUB_SHA -or $source.sourceStatus.Count -ne 0) { throw 'Checkout nie odpowiada czystemu SHA uruchomienia.' }
+          $source | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $evidence 'source.json') -Encoding utf8
+          "AMC_PROTECTED_EVIDENCE=$evidence" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "AMC_PROTECTED_JOB_STARTED=$($jobStarted.ToString('o'))" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "AMC_SOURCE_VERSION=$sourceVersion" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
+      - name: Włącz ochronę wyłącznie na zatwierdzonej tymczasowej VM
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          & .\wxlite\tools\Enable-AMCDiagnosticProtection.ps1 -EvidenceDirectory $env:AMC_PROTECTED_EVIDENCE
+
+      - name: Defender source preflight — fail closed
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $diagWarnings=@()
+          $stage = 'defender-source-preflight'
+          $reportPath = Join-Path $env:AMC_PROTECTED_EVIDENCE "$stage.json"
+          $report = [ordered]@{ stage=$stage; startedUtc=[DateTime]::UtcNow.ToString('o'); finishedUtc=$null; exitCode=1; sourceSha=(git rev-parse HEAD).Trim(); status=$null; preference=$null; threats=@(); events1116_1117=@(); error=$null }
+          try {
+            $status = Get-MpComputerStatus -ErrorAction Stop -WarningAction Continue -WarningVariable +diagWarnings
+            $preference = Get-MpPreference -ErrorAction Stop -WarningAction Continue -WarningVariable +diagWarnings
+            $report.status = [ordered]@{ antivirusEnabled=$status.AntivirusEnabled; realTimeProtectionEnabled=$status.RealTimeProtectionEnabled; behaviorMonitorEnabled=$status.BehaviorMonitorEnabled; ioavProtectionEnabled=$status.IoavProtectionEnabled; onAccessProtectionEnabled=$status.OnAccessProtectionEnabled; amRunningMode=$status.AMRunningMode; amEngineVersion=$status.AMEngineVersion; antivirusSignatureVersion=$status.AntivirusSignatureVersion; antivirusSignatureLastUpdated=$status.AntivirusSignatureLastUpdated }
+            $report.preference = [ordered]@{ disableRealtimeMonitoring=$preference.DisableRealtimeMonitoring; disableBehaviorMonitoring=$preference.DisableBehaviorMonitoring; disableIOAVProtection=$preference.DisableIOAVProtection; disableArchiveScanning=$preference.DisableArchiveScanning; disableScriptScanning=$preference.DisableScriptScanning; exclusionPathCount=@($preference.ExclusionPath | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) }).Count; exclusionProcessCount=@($preference.ExclusionProcess | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) }).Count; exclusionExtensionCount=@($preference.ExclusionExtension | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) }).Count }
+            if (-not $status.AntivirusEnabled -or -not $status.RealTimeProtectionEnabled -or -not $status.BehaviorMonitorEnabled -or -not $status.IoavProtectionEnabled -or -not $status.OnAccessProtectionEnabled -or $status.AMRunningMode -ne 'Normal' -or $preference.DisableRealtimeMonitoring -or $preference.DisableBehaviorMonitoring -or $preference.DisableIOAVProtection -or $preference.DisableArchiveScanning -or $preference.DisableScriptScanning) { throw 'Defender nie jest aktywny w wymaganym trybie ochrony rzeczywistej.' }
+            if ([string]::IsNullOrWhiteSpace([string]$status.AMEngineVersion) -or [string]::IsNullOrWhiteSpace([string]$status.AntivirusSignatureVersion) -or $null -eq $status.AntivirusSignatureLastUpdated -or ([DateTime]::UtcNow - [DateTime]$status.AntivirusSignatureLastUpdated.ToUniversalTime()).TotalDays -gt 7) { throw 'Silnik lub sygnatury Defendera są nieobecne albo nieświeże.' }
+            if ($report.preference.exclusionPathCount -gt 0 -or $report.preference.exclusionProcessCount -gt 0 -or $report.preference.exclusionExtensionCount -gt 0) { throw 'Wykluczenia Defendera uniemożliwiają faktyczne potwierdzenie ochrony.' }
+            $report.threats = @(Get-MpThreat -ErrorAction Stop -WarningAction Continue -WarningVariable +diagWarnings | ForEach-Object { [ordered]@{ threatId=$_.ThreatID; name=$_.ThreatName; severity=$_.Severity } })
+            $detections = @(Get-MpThreatDetection -ErrorAction Stop -WarningAction Continue -WarningVariable +diagWarnings)
+            if ($report.threats.Count -gt 0 -or $detections.Count -gt 0) { throw 'Defender zgłasza istniejące zagrożenie lub wykrycie.' }
+            Start-MpScan -ScanType CustomScan -ScanPath $env:GITHUB_WORKSPACE -ErrorAction Stop -WarningAction Continue -WarningVariable +diagWarnings
+            try { $events = @(Get-WinEvent -FilterHashtable @{LogName='Microsoft-Windows-Windows Defender/Operational'; Id=1116,1117; StartTime=[DateTime]::Parse($env:AMC_PROTECTED_JOB_STARTED).ToUniversalTime()} -ErrorAction Stop | ForEach-Object { [ordered]@{ timeUtc=$_.TimeCreated.ToUniversalTime().ToString('o'); id=$_.Id; message=$_.Message } }) } catch { if ($_.FullyQualifiedErrorId -eq 'NoMatchingEventsFound,Microsoft.PowerShell.Commands.GetWinEventCommand') { $events=@() } else { throw } }
+            $report.events1116_1117 = $events
+            if ($events.Count -gt 0 -or $diagWarnings.Count -gt 0) { throw 'Skan źródeł lub odczyt Defendera nie jest czysty.' }
+            $report.exitCode = 0
+          } catch { $report.error=$_.Exception.Message; throw } finally { $report.finishedUtc=[DateTime]::UtcNow.ToString('o'); $report | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $reportPath -Encoding utf8 }
+
+      - name: Ustaw przypięty SDK zgodny z global.json
+        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9
+        with:
+          dotnet-version: 8.0.423
+
+      - name: Pobierz zamknięte wejścia i rozpakuj tylko runtime na VM
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $diagWarnings=@()
+          function Invoke-DefenderGate { param([string]$Target,[string]$Stage)
+            $diagWarnings=@(); $status=Get-MpComputerStatus -ErrorAction Stop -WarningAction Continue -WarningVariable +diagWarnings; $pref=Get-MpPreference -ErrorAction Stop -WarningAction Continue -WarningVariable +diagWarnings
+            if (-not $status.AntivirusEnabled -or -not $status.RealTimeProtectionEnabled -or -not $status.BehaviorMonitorEnabled -or -not $status.IoavProtectionEnabled -or -not $status.OnAccessProtectionEnabled -or $status.AMRunningMode -ne 'Normal' -or $pref.DisableRealtimeMonitoring -or $pref.DisableBehaviorMonitoring -or $pref.DisableIOAVProtection -or $pref.DisableArchiveScanning -or $pref.DisableScriptScanning -or @($pref.ExclusionPath | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) }).Count -gt 0 -or @($pref.ExclusionProcess | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) }).Count -gt 0 -or @($pref.ExclusionExtension | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) }).Count -gt 0) { throw "Defender preflight failed: $Stage" }
+            if (@(Get-MpThreat -ErrorAction Stop -WarningAction Continue -WarningVariable +diagWarnings).Count -gt 0 -or @(Get-MpThreatDetection -ErrorAction Stop -WarningAction Continue -WarningVariable +diagWarnings).Count -gt 0) { throw "Defender threat state failed: $Stage" }
+            Start-MpScan -ScanType CustomScan -ScanPath $Target -ErrorAction Stop -WarningAction Continue -WarningVariable +diagWarnings
+            try { $events=@(Get-WinEvent -FilterHashtable @{LogName='Microsoft-Windows-Windows Defender/Operational'; Id=1116,1117; StartTime=[DateTime]::Parse($env:AMC_PROTECTED_JOB_STARTED).ToUniversalTime()} -ErrorAction Stop) } catch { if ($_.FullyQualifiedErrorId -eq 'NoMatchingEventsFound,Microsoft.PowerShell.Commands.GetWinEventCommand') { $events=@() } else { throw } }
+            if ($events.Count -gt 0 -or $diagWarnings.Count -gt 0) { throw "Defender scan/events/warnings failed: $Stage" }
+          }
+          $stage='closed-inputs'; $reportPath=Join-Path $env:AMC_PROTECTED_EVIDENCE "$stage.json"; $report=[ordered]@{stage=$stage; startedUtc=[DateTime]::UtcNow.ToString('o'); finishedUtc=$null; exitCode=1; priorInstaller=$null; innoextract=$null; runtime=$null; error=$null}
+          try {
+            $prior=Join-Path $env:RUNNER_TEMP 'amc-prior'; New-Item -ItemType Directory -Path $prior -Force | Out-Null
+            $installer=Join-Path $prior 'AMC-Test-2026-11-15-2036.exe'; Invoke-WebRequest -Uri 'https://github.com/michalkasperczak/AMC/releases/download/test-2026.11.15.2036/AMC-Test-2026-11-15-2036.exe' -OutFile $installer -ErrorAction Stop
+            $installerHash=(Get-FileHash -LiteralPath $installer -Algorithm SHA256).Hash.ToLowerInvariant(); if ($installerHash -cne '078ce7cddb4461552071192f7d83bc4623d02bac0d2b55e587d5fde41d7f8591' -or (Get-Item -LiteralPath $installer).Length -ne 218531931) { throw 'Nieprawidłowy hash lub rozmiar hash-verified AMC Test input.' }
+            Invoke-DefenderGate -Target $installer -Stage 'prior-installer-before-extraction'
+            $archive=Join-Path $prior 'innoextract670.zip'; Invoke-WebRequest -Uri 'https://github.com/UserUnknownFactor/innoextract_win/releases/download/670/innoextract670.zip' -OutFile $archive -ErrorAction Stop
+            $archiveHash=(Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash.ToLowerInvariant(); if ($archiveHash -cne '79b69b9b1fcd98f42ccd4b245efdf6a03bcfb674ba6af482f5a46891c9ed4d14' -or (Get-Item -LiteralPath $archive).Length -ne 928736) { throw 'Nieprawidłowy hash lub rozmiar innoextract input.' }
+            Invoke-DefenderGate -Target $archive -Stage 'innoextract-archive-before-expansion'
+            $toolDir=Join-Path $prior 'innoextract'; Expand-Archive -LiteralPath $archive -DestinationPath $toolDir -Force; $tool=Join-Path $toolDir 'innoextract.exe'; if (-not (Test-Path -LiteralPath $tool -PathType Leaf)) { throw 'Archiwum innoextract nie zawiera oczekiwanego pliku wykonawczego.' }
+            Invoke-DefenderGate -Target $tool -Stage 'innoextract-before-execution'
+            $extract=Join-Path $prior 'extracted'; & $tool --extract --silent --output-dir $extract $installer; if ($LASTEXITCODE -ne 0) { throw "innoextract zakończył się kodem $LASTEXITCODE" }
+            $runtime=Join-Path $extract 'app\runtime'; $sitePackages=Join-Path $runtime 'Lib\site-packages'; $quickAddon=Join-Path $extract 'tmp\quickAppSwitcher-0.1.6.nvda-addon'
+            if (-not (Test-Path -LiteralPath (Join-Path $runtime 'python.exe') -PathType Leaf) -or -not (Test-Path -LiteralPath $sitePackages -PathType Container) -or -not (Test-Path -LiteralPath $quickAddon -PathType Leaf)) { throw 'Rozpakowany instalator nie ma kanonicznej struktury runtime/site-packages/dodatku QAS.' }
+            if ((Get-FileHash -LiteralPath $quickAddon -Algorithm SHA256).Hash.ToLowerInvariant() -cne '16dc660e6b3fece58af8ccb84ccc43824bcb7744e1f18a37ffa629685349a61f') { throw 'Quick App Switcher nie ma oczekiwanego hasha.' }
+            Invoke-DefenderGate -Target $runtime -Stage 'extracted-runtime-before-use'
+            $report.priorInstaller=[ordered]@{release='test-2026.11.15.2036'; name=(Split-Path -Leaf $installer); bytes=(Get-Item $installer).Length; sha256=$installerHash}; $report.innoextract=[ordered]@{release='670'; bytes=(Get-Item $archive).Length; sha256=$archiveHash}; $report.runtime=$runtime; $report.exitCode=0
+            "AMC_RUNTIME=$runtime" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8; "AMC_SITE_PACKAGES=$sitePackages" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8; "AMC_QAS_ADDON=$quickAddon" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          } catch { $report.error=$_.Exception.Message; throw } finally { $report.finishedUtc=[DateTime]::UtcNow.ToString('o'); $report | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $reportPath -Encoding utf8 }
+
+      - name: Zainstaluj i zweryfikuj oficjalny kompilator Inno wyłącznie na VM
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'; $diagWarnings=@()
+          function Invoke-DefenderGate { param([string]$Target,[string]$Stage)
+            $diagWarnings=@(); $status=Get-MpComputerStatus -ErrorAction Stop -WarningAction Continue -WarningVariable +diagWarnings; $pref=Get-MpPreference -ErrorAction Stop -WarningAction Continue -WarningVariable +diagWarnings
+            if (-not $status.AntivirusEnabled -or -not $status.RealTimeProtectionEnabled -or -not $status.BehaviorMonitorEnabled -or -not $status.IoavProtectionEnabled -or -not $status.OnAccessProtectionEnabled -or $status.AMRunningMode -ne 'Normal' -or $pref.DisableRealtimeMonitoring -or $pref.DisableBehaviorMonitoring -or $pref.DisableIOAVProtection -or $pref.DisableArchiveScanning -or $pref.DisableScriptScanning -or @($pref.ExclusionPath | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) }).Count -gt 0 -or @($pref.ExclusionProcess | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) }).Count -gt 0 -or @($pref.ExclusionExtension | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) }).Count -gt 0) { throw "Defender preflight failed: $Stage" }
+            if (@(Get-MpThreat -ErrorAction Stop -WarningAction Continue -WarningVariable +diagWarnings).Count -gt 0 -or @(Get-MpThreatDetection -ErrorAction Stop -WarningAction Continue -WarningVariable +diagWarnings).Count -gt 0) { throw "Defender threat state failed: $Stage" }
+            Start-MpScan -ScanType CustomScan -ScanPath $Target -ErrorAction Stop -WarningAction Continue -WarningVariable +diagWarnings
+            try { $events=@(Get-WinEvent -FilterHashtable @{LogName='Microsoft-Windows-Windows Defender/Operational'; Id=1116,1117; StartTime=[DateTime]::Parse($env:AMC_PROTECTED_JOB_STARTED).ToUniversalTime()} -ErrorAction Stop) } catch { if ($_.FullyQualifiedErrorId -eq 'NoMatchingEventsFound,Microsoft.PowerShell.Commands.GetWinEventCommand') {$events=@()} else {throw} }
+            if ($events.Count -gt 0 -or $diagWarnings.Count -gt 0) { throw "Defender scan/events/warnings failed: $Stage" }
+          }
+          $stage='inno-provenance'; $reportPath=Join-Path $env:AMC_PROTECTED_EVIDENCE "$stage.json"; $report=[ordered]@{stage=$stage; startedUtc=[DateTime]::UtcNow.ToString('o'); finishedUtc=$null; exitCode=1; installer=$null; signature=$null; error=$null}
+          try {
+            $inno=Join-Path $env:RUNNER_TEMP 'innosetup-6.7.3.exe'; Invoke-WebRequest -Uri 'https://github.com/jrsoftware/issrc/releases/download/is-6_7_3/innosetup-6.7.3.exe' -OutFile $inno -ErrorAction Stop
+            $hash=(Get-FileHash -LiteralPath $inno -Algorithm SHA256).Hash.ToLowerInvariant(); if ($hash -cne '9c73c3bae7ed48d44112a0f48e66742c00090bdb5bef71d9d3c056c66e97b732') { throw 'Niezgodny SHA-256 oficjalnego Inno Setup 6.7.3.' }
+            Invoke-DefenderGate -Target $inno -Stage 'inno-installer-before-execution'; $signature=Get-AuthenticodeSignature -LiteralPath $inno; $report.signature=[ordered]@{status=[string]$signature.Status; subject=$signature.SignerCertificate.Subject; thumbprint=$signature.SignerCertificate.Thumbprint}
+            if ($signature.Status -ne 'Valid' -or $signature.SignerCertificate.GetNameInfo([System.Security.Cryptography.X509Certificates.X509NameType]::SimpleName,$false) -cne 'Pyrsys B.V.') { throw 'Nieprawidłowy podpis lub nieoczekiwany signer oficjalnego Inno Setup.' }
+            $installDir=Join-Path $env:RUNNER_TEMP 'InnoSetup-6.7.3'; $process=Start-Process -FilePath $inno -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART',"/DIR=$installDir") -Wait -PassThru; if ($process.ExitCode -ne 0) { throw "Instalator narzędzia Inno zakończył się kodem $($process.ExitCode)" }
+            $iscc=Join-Path $installDir 'ISCC.exe'; if (-not (Test-Path -LiteralPath $iscc -PathType Leaf)) { throw 'Instalacja Inno nie dostarczyła ISCC.exe.' }; Invoke-DefenderGate -Target $installDir -Stage 'installed-inno-before-compiler-use'
+            $report.installer=[ordered]@{url='https://github.com/jrsoftware/issrc/releases/download/is-6_7_3/innosetup-6.7.3.exe'; version='6.7.3'; sha256=$hash}; $report.exitCode=0; "AMC_ISCC=$iscc" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          } catch { $report.error=$_.Exception.Message; throw } finally { $report.finishedUtc=[DateTime]::UtcNow.ToString('o'); $report | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $reportPath -Encoding utf8 }
+
+      - name: Zbuduj AMC NVDA po bramce AV
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'; $diagWarnings=@()
+          function Invoke-DefenderGate { param([string]$Target,[string]$Stage)
+            $diagWarnings=@(); $status=Get-MpComputerStatus -ErrorAction Stop -WarningAction Continue -WarningVariable +diagWarnings; $pref=Get-MpPreference -ErrorAction Stop -WarningAction Continue -WarningVariable +diagWarnings
+            if (-not $status.AntivirusEnabled -or -not $status.RealTimeProtectionEnabled -or -not $status.BehaviorMonitorEnabled -or -not $status.IoavProtectionEnabled -or -not $status.OnAccessProtectionEnabled -or $status.AMRunningMode -ne 'Normal' -or $pref.DisableRealtimeMonitoring -or $pref.DisableBehaviorMonitoring -or $pref.DisableIOAVProtection -or $pref.DisableArchiveScanning -or $pref.DisableScriptScanning -or @($pref.ExclusionPath | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) }).Count -gt 0 -or @($pref.ExclusionProcess | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) }).Count -gt 0 -or @($pref.ExclusionExtension | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) }).Count -gt 0) { throw "Defender preflight failed: $Stage" }
+            if (@(Get-MpThreat -ErrorAction Stop -WarningAction Continue -WarningVariable +diagWarnings).Count -gt 0 -or @(Get-MpThreatDetection -ErrorAction Stop -WarningAction Continue -WarningVariable +diagWarnings).Count -gt 0) { throw "Defender threat state failed: $Stage" }
+            Start-MpScan -ScanType CustomScan -ScanPath $Target -ErrorAction Stop -WarningAction Continue -WarningVariable +diagWarnings
+            try { $events=@(Get-WinEvent -FilterHashtable @{LogName='Microsoft-Windows-Windows Defender/Operational'; Id=1116,1117; StartTime=[DateTime]::Parse($env:AMC_PROTECTED_JOB_STARTED).ToUniversalTime()} -ErrorAction Stop) } catch { if ($_.FullyQualifiedErrorId -eq 'NoMatchingEventsFound,Microsoft.PowerShell.Commands.GetWinEventCommand') {$events=@()} else {throw} }
+            if ($events.Count -gt 0 -or $diagWarnings.Count -gt 0) { throw "Defender scan/events/warnings failed: $Stage" }
+          }
+          $stage='amc-nvda-addon'; $reportPath=Join-Path $env:AMC_PROTECTED_EVIDENCE "$stage.json"; $report=[ordered]@{stage=$stage; startedUtc=[DateTime]::UtcNow.ToString('o'); finishedUtc=$null; exitCode=1; addon=$null; error=$null}
+          try {
+            Invoke-DefenderGate -Target $env:GITHUB_WORKSPACE -Stage 'source-before-amc-nvda-addon'; & .\nvda-addon\build.ps1
+            $addons=@(Get-ChildItem -LiteralPath $env:GITHUB_WORKSPACE -Filter 'AMC-NVDA-*.nvda-addon' -File); if ($addons.Count -ne 1) { throw 'Budowa nie utworzyła jednoznacznego dodatku AMC NVDA w katalogu głównym repozytorium.' }
+            $addon=$addons[0]; $finalAddon=Join-Path $env:RUNNER_TEMP $addon.Name; Move-Item -LiteralPath $addon.FullName -Destination $finalAddon; Invoke-DefenderGate -Target $finalAddon -Stage 'amc-nvda-addon-post-build'
+            $report.addon=[ordered]@{name=(Split-Path -Leaf $finalAddon); bytes=(Get-Item $finalAddon).Length; sha256=(Get-FileHash -LiteralPath $finalAddon -Algorithm SHA256).Hash.ToLowerInvariant()}; $report.exitCode=0; "AMC_NVDA_ADDON=$finalAddon" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          } catch { $report.error=$_.Exception.Message; throw } finally { $report.finishedUtc=[DateTime]::UtcNow.ToString('o'); $report | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $reportPath -Encoding utf8 }
+
+      - name: Zbuduj Public, potem Test, z jednego SHA po każdej bramce AV
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'; $diagWarnings=@()
+          function Invoke-DefenderGate { param([string]$Target,[string]$Stage)
+            $diagWarnings=@(); $status=Get-MpComputerStatus -ErrorAction Stop -WarningAction Continue -WarningVariable +diagWarnings; $pref=Get-MpPreference -ErrorAction Stop -WarningAction Continue -WarningVariable +diagWarnings
+            if (-not $status.AntivirusEnabled -or -not $status.RealTimeProtectionEnabled -or -not $status.BehaviorMonitorEnabled -or -not $status.IoavProtectionEnabled -or -not $status.OnAccessProtectionEnabled -or $status.AMRunningMode -ne 'Normal' -or $pref.DisableRealtimeMonitoring -or $pref.DisableBehaviorMonitoring -or $pref.DisableIOAVProtection -or $pref.DisableArchiveScanning -or $pref.DisableScriptScanning -or @($pref.ExclusionPath | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) }).Count -gt 0 -or @($pref.ExclusionProcess | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) }).Count -gt 0 -or @($pref.ExclusionExtension | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) }).Count -gt 0) { throw "Defender preflight failed: $Stage" }
+            if (@(Get-MpThreat -ErrorAction Stop -WarningAction Continue -WarningVariable +diagWarnings).Count -gt 0 -or @(Get-MpThreatDetection -ErrorAction Stop -WarningAction Continue -WarningVariable +diagWarnings).Count -gt 0) { throw "Defender threat state failed: $Stage" }
+            Start-MpScan -ScanType CustomScan -ScanPath $Target -ErrorAction Stop -WarningAction Continue -WarningVariable +diagWarnings
+            try { $events=@(Get-WinEvent -FilterHashtable @{LogName='Microsoft-Windows-Windows Defender/Operational'; Id=1116,1117; StartTime=[DateTime]::Parse($env:AMC_PROTECTED_JOB_STARTED).ToUniversalTime()} -ErrorAction Stop) } catch { if ($_.FullyQualifiedErrorId -eq 'NoMatchingEventsFound,Microsoft.PowerShell.Commands.GetWinEventCommand') {$events=@()} else {throw} }
+            if ($events.Count -gt 0 -or $diagWarnings.Count -gt 0) { throw "Defender scan/events/warnings failed: $Stage" }
+          }
+          function New-ProfileReport { param([string]$Profile,[string]$Stage) [ordered]@{profile=$Profile; stage=$Stage; sourceSha=(git rev-parse HEAD).Trim(); sourceVersion=$env:AMC_SOURCE_VERSION; startedUtc=[DateTime]::UtcNow.ToString('o'); finishedUtc=$null; exitCode=1; bundle=$null; output=$null; error=$null} }
+          function Save-ProfileReport { param($Report,[string]$Name) $Report.finishedUtc=[DateTime]::UtcNow.ToString('o'); $Report | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $env:AMC_PROTECTED_EVIDENCE $Name) -Encoding utf8 }
+          $publicBundle=Join-Path $env:RUNNER_TEMP 'amc-public-bundle'; $publicBundleReport=New-ProfileReport -Profile 'public' -Stage 'bundle'
+          try {
+            Invoke-DefenderGate -Target $env:GITHUB_WORKSPACE -Stage 'public-source-before-bundle'; $hook={ param([string]$Path,[string]$Stage) Invoke-DefenderGate -Target $Path -Stage "public-$Stage" }
+            & .\wxlite\tools\Build-AMCBundle.ps1 -Profile public -PythonRuntime $env:AMC_RUNTIME -TidalSitePackages $env:AMC_SITE_PACKAGES -SonosSitePackages $env:AMC_SITE_PACKAGES -OutputDirectory $publicBundle -BeforeCandidateExecution $hook
+            if ($LASTEXITCODE -ne 0) { throw "Build-AMCBundle Public zakończył się kodem $LASTEXITCODE" }; Invoke-DefenderGate -Target $publicBundle -Stage 'public-bundle-post-build'; $publicBundleReport.bundle=$publicBundle; $publicBundleReport.exitCode=0
+          } catch { $publicBundleReport.error=$_.Exception.Message; throw } finally { Save-ProfileReport -Report $publicBundleReport -Name 'public-bundle.json' }
+          $publicOutput=Join-Path $env:RUNNER_TEMP 'amc-public-installer'; $publicInstallerReport=New-ProfileReport -Profile 'public' -Stage 'installer'
+          try {
+            Invoke-DefenderGate -Target $publicBundle -Stage 'public-bundle-before-installer'; $hook={ param([string]$Path,[string]$Stage) Invoke-DefenderGate -Target $Path -Stage "public-$Stage" }
+            & .\wxlite\tools\Build-AMCInstaller.ps1 -Profile public -BundleRoot $publicBundle -Version $env:AMC_SOURCE_VERSION -OutputDirectory $publicOutput -NvdaAddonPath $env:AMC_QAS_ADDON -AmcNvdaAddonPath $env:AMC_NVDA_ADDON -IsccPath $env:AMC_ISCC -BeforeCandidateExecution $hook
+            if ($LASTEXITCODE -ne 0) { throw "Build-AMCInstaller Public zakończył się kodem $LASTEXITCODE" }; Invoke-DefenderGate -Target $publicOutput -Stage 'public-installer-post-build'; $publicInstallerReport.output=$publicOutput; $publicInstallerReport.exitCode=0
+            Copy-Item -LiteralPath (Join-Path $publicOutput 'installer-compile-evidence.json') -Destination (Join-Path $env:AMC_PROTECTED_EVIDENCE 'public-installer-compile-evidence.json')
+          } catch { $publicInstallerReport.error=$_.Exception.Message; throw } finally { Save-ProfileReport -Report $publicInstallerReport -Name 'public-installer.json' }
+          $testBundle=Join-Path $env:RUNNER_TEMP 'amc-test-bundle'; $testBundleReport=New-ProfileReport -Profile 'test' -Stage 'bundle'
+          try {
+            Invoke-DefenderGate -Target $env:GITHUB_WORKSPACE -Stage 'test-source-before-bundle'; $hook={ param([string]$Path,[string]$Stage) Invoke-DefenderGate -Target $Path -Stage "test-$Stage" }
+            & .\wxlite\tools\Build-AMCBundle.ps1 -Profile test -PythonRuntime $env:AMC_RUNTIME -TidalSitePackages $env:AMC_SITE_PACKAGES -SonosSitePackages $env:AMC_SITE_PACKAGES -AppleMusicSitePackages $env:AMC_SITE_PACKAGES -OutputDirectory $testBundle -BeforeCandidateExecution $hook
+            if ($LASTEXITCODE -ne 0) { throw "Build-AMCBundle Test zakończył się kodem $LASTEXITCODE" }; Invoke-DefenderGate -Target $testBundle -Stage 'test-bundle-post-build'; $testBundleReport.bundle=$testBundle; $testBundleReport.exitCode=0
+          } catch { $testBundleReport.error=$_.Exception.Message; throw } finally { Save-ProfileReport -Report $testBundleReport -Name 'test-bundle.json' }
+          $testOutput=Join-Path $env:RUNNER_TEMP 'amc-test-installer'; $testInstallerReport=New-ProfileReport -Profile 'test' -Stage 'installer'
+          try {
+            Invoke-DefenderGate -Target $testBundle -Stage 'test-bundle-before-installer'; $hook={ param([string]$Path,[string]$Stage) Invoke-DefenderGate -Target $Path -Stage "test-$Stage" }
+            & .\wxlite\tools\Build-AMCInstaller.ps1 -Profile test -BundleRoot $testBundle -Version $env:AMC_SOURCE_VERSION -OutputDirectory $testOutput -NvdaAddonPath $env:AMC_QAS_ADDON -AmcNvdaAddonPath $env:AMC_NVDA_ADDON -IsccPath $env:AMC_ISCC -BeforeCandidateExecution $hook
+            if ($LASTEXITCODE -ne 0) { throw "Build-AMCInstaller Test zakończył się kodem $LASTEXITCODE" }; Invoke-DefenderGate -Target $testOutput -Stage 'test-installer-post-build'; $testInstallerReport.output=$testOutput; $testInstallerReport.exitCode=0
+            Copy-Item -LiteralPath (Join-Path $testOutput 'installer-compile-evidence.json') -Destination (Join-Path $env:AMC_PROTECTED_EVIDENCE 'test-installer-compile-evidence.json')
+          } catch { $testInstallerReport.error=$_.Exception.Message; throw } finally { Save-ProfileReport -Report $testInstallerReport -Name 'test-installer.json' }
+          "AMC_PUBLIC_INSTALLER_OUTPUT=$publicOutput" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "AMC_TEST_INSTALLER_OUTPUT=$testOutput" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
+      - name: Odczytaj końcowe zdarzenia ochrony
+        if: always()
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'; $diagWarnings=@(); $evidence=Join-Path $env:RUNNER_TEMP 'amc-protected-public-test-evidence'; New-Item -ItemType Directory -Path $evidence -Force | Out-Null
+          $report=[ordered]@{stage='final-defender-audit'; capturedUtc=[DateTime]::UtcNow.ToString('o'); exitCode=1; status=$null; detections=@(); events1116_1117=@(); error=$null}
+          try {
+            $status=Get-MpComputerStatus -ErrorAction Stop -WarningAction Continue -WarningVariable +diagWarnings; $pref=Get-MpPreference -ErrorAction Stop -WarningAction Continue -WarningVariable +diagWarnings
+            $report.status=[ordered]@{antivirusEnabled=$status.AntivirusEnabled; realTimeProtectionEnabled=$status.RealTimeProtectionEnabled; behaviorMonitorEnabled=$status.BehaviorMonitorEnabled; ioavProtectionEnabled=$status.IoavProtectionEnabled; onAccessProtectionEnabled=$status.OnAccessProtectionEnabled; mode=$status.AMRunningMode; engine=$status.AMEngineVersion; signature=$status.AntivirusSignatureVersion}
+            $report.detections=@(Get-MpThreatDetection -ErrorAction Stop -WarningAction Continue -WarningVariable +diagWarnings | Select-Object ThreatID,InitialDetectionTime,LastThreatStatusChangeTime,ActionSuccess,Resources)
+            try { $report.events1116_1117=@(Get-WinEvent -FilterHashtable @{LogName='Microsoft-Windows-Windows Defender/Operational'; Id=1116,1117; StartTime=[DateTime]::Parse($env:AMC_PROTECTED_JOB_STARTED).ToUniversalTime()} -ErrorAction Stop | ForEach-Object { [ordered]@{timeUtc=$_.TimeCreated.ToUniversalTime().ToString('o'); id=$_.Id; message=$_.Message} }) } catch { if ($_.FullyQualifiedErrorId -ne 'NoMatchingEventsFound,Microsoft.PowerShell.Commands.GetWinEventCommand') { throw } }
+            if (-not $status.AntivirusEnabled -or -not $status.RealTimeProtectionEnabled -or -not $status.BehaviorMonitorEnabled -or -not $status.IoavProtectionEnabled -or -not $status.OnAccessProtectionEnabled -or $status.AMRunningMode -ne 'Normal' -or $pref.DisableRealtimeMonitoring -or $pref.DisableBehaviorMonitoring -or $pref.DisableIOAVProtection -or $pref.DisableArchiveScanning -or $pref.DisableScriptScanning -or $report.detections.Count -gt 0 -or $report.events1116_1117.Count -gt 0 -or $diagWarnings.Count -gt 0) { throw 'Końcowa kontrola ochrony nie została zaliczona; binaria nie zostaną wysłane.' }
+            $report.exitCode=0
+          } catch { $report.error=$_.Exception.Message; throw } finally { $report | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $evidence 'final-defender-audit.json') -Encoding utf8 }
+
+      - name: Zachowaj oba instalatory tylko po czystym pełnym przebiegu
+        if: success()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: amc-protected-public-test-installers-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/amc-public-installer/*.exe
+            ${{ runner.temp }}/amc-public-installer/*.integrity.json
+            ${{ runner.temp }}/amc-test-installer/*.exe
+            ${{ runner.temp }}/amc-test-installer/*.integrity.json
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Zachowaj małe raporty diagnostyczne
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: amc-protected-public-test-evidence-${{ github.sha }}
+          path: ${{ runner.temp }}/amc-protected-public-test-evidence/
+          if-no-files-found: error
+          retention-days: 30
