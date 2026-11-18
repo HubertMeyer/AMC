@@ -40,6 +40,23 @@ Małe raporty pozostają przez `if: always()`.
 - `actionlint` ani `yamllint` nie są zainstalowane; nie pobierano narzędzi ani
   nie uruchamiano lokalnego buildu.
 
+## Odbiór koordynatora przed uruchomieniem
+
+Po niezależnym przeglądzie poprawiono dwie luki dowodowe: końcowy audyt
+ponownie odrzuca wykluczenia Defendera, a jego `finally` zachowuje raporty
+kompilatora obu profili również po błędzie ISCC (nie tylko po sukcesie).
+Nowy test najpierw nie przeszedł; po zmianie pięć statycznych testów kontraktu
+przeszło. Natywny PowerShell wykonał cztery nieszkodliwe scenariusze audytu
+na atrapach: czysty stan, wykluczenie, detekcja i błąd odczytu. Pierwszy został
+przyjęty, pozostałe odrzucone; w każdym zachowano dwie atrapowe kopie raportów.
+Nie wywoływano rzeczywistego Defendera i nie tworzono plików Windows.
+To dowód sterowania bramką, nie wynik skanowania kandydata.
+
+Start po tym przeglądzie jest częścią aktualnego zlecenia wydania Public/Test.
+Nie znosi historycznego holda dla lokalnych RCX i poprzednich kandydatów,
+nie oznacza publikacji Release, instalacji ani odbioru NVDA. Wynik rzeczywistej
+budowy na GitHubie trzeba odczytać osobno; każdy nowy alert zatrzymuje pracę.
+
 ## Jedyny komendostart dla rodzica po przeglądzie
 
 ```bash

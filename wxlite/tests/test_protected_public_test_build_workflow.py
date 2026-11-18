@@ -91,3 +91,17 @@ def test_canonical_builders_scan_before_each_candidate_execution() -> None:
     assert bundle.index("components-before-apple-music-web-pipe") < bundle.index("Test-AppleMusicWebPipe.ps1")
     assert bundle.index("candidate-before-first-execution") < bundle.index("Invoke-FullBundleCheck -LauncherPath")
     assert installer.index("bundle-before-installer-checks") < installer.index("Start-Process -FilePath $launcher")
+
+
+def test_final_audit_rejects_exclusions_and_retains_failed_compiler_evidence() -> None:
+    audit = _workflow().split("- name: Odczytaj końcowe zdarzenia ochrony", 1)[1].split(
+        "- name: Zachowaj oba instalatory", 1
+    )[0]
+    assert "if: always()" in audit
+    for kind in ("Path", "Process", "Extension"):
+        assert f"$report.preference.exclusion{kind}Count -gt 0" in audit
+    finalizer = audit.split("finally {", 1)[1]
+    assert "foreach ($profile in @('public','test'))" in finalizer
+    assert "installer-compile-evidence.json" in finalizer
+    assert "Test-Path -LiteralPath $compile -PathType Leaf" in finalizer
+    assert '"$profile-installer-compile-evidence.json"' in finalizer
