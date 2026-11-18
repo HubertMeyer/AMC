@@ -1,5 +1,13 @@
 # Rejestr zadań AMC
 
+Najnowsza dyspozycja po naprawie #21: wydać na GitHubie **Public i Test
+z Apple Music**, bez nowych lokalnych Windows/VM/Sandboxów. „Testowy Windows”
+w poprzednim meldunku oznaczał zwykły Windows komputera HERMES, nie nowy
+zainstalowany system. Przygotowywany jest chroniony workflow obu profili
+do wykonania po review na GitHubie; nie uruchomiono nowej budowy ani wydania.
+Apple Music: użytkownik potwierdza sprawne wyszukiwanie/dodawanie do Biblioteki,
+bez odtwarzania; kolejne poprawki wyszukiwania pozostają poza zakresem.
+
 Aktualne polecenie po doprecyzowaniu 18.11.2026: **naprawić najnowsze
 zgłoszenie Huberta #21 — komunikaty Folderów Biblioteki i nierozróżnialne
 nazwy folderów**. Następnie, bez oczekiwania na kolejne „kontynuuj”,

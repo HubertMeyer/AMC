@@ -2,6 +2,33 @@
 
 ## Status
 
+### Najnowsza dyspozycja po odbiorze źródeł #21
+
+Michał polecił wydać obie wersje na GitHubie: **Public** oraz **Test z Apple
+Music**. Nie tworzyć ani nie wznawiać lokalnego Windows/QEMU/Sandboxu.
+Określenie prowadzącego „testowy Windows” było mylące: bieżące odczyty
+dotyczyły zwykłego systemu Windows 11 Pro komputera HERMES (Lenovo), nie
+nowej instalacji Windows. Nie działa QEMU; dawny katalog prób
+`amc_sondy/applemusic-lifecycle` nie istnieje. Nie znaleziono tu obrazu do
+usunięcia. Nie usuwać systemu gospodarza ani WSL, nie zatrzymywać procesów
+`vmwp`/`vmmem` na podstawie ich nazw; ich obecność nie identyfikuje własnego
+testowego Windows. Niczego nie usunięto.
+
+Przygotowanie nowej budowy Public/Test przeniesiono do jednorazowego
+chronionego workflow na GitHub-hosted runnerze; na tym etapie tylko kod
+workflow, **bez jego uruchamiania i bez lokalnego pobierania dużych plików**.
+Oba profile mają zawierać #21 z bieżących źródeł, bez promowania starszych
+artefaktów. Nowe wykrycie ma zatrzymać przebieg. Nie zmieniać lokalnego AV.
+Hipoteza Michała o fałszywym alarmie nie jest potwierdzonym werdyktem;
+klasyfikacja historycznych RCX pozostaje osobna od badań nowego kandydata.
+Wymogi i rzeczywiste wyniki odbioru/publikacji należy opisać jawnie, bez
+uznawania samego przygotowania workflow za gotowe wydanie.
+
+Michał potwierdził użytkowo, że biblioteka Apple Music działa już dobrze:
+wyszukiwanie i dodawanie utworów jest możliwe; **odtwarzanie nadal nie działa**.
+To potwierdzenie użytkownika, nie nowy pomiar Hermesa. Dalsze poprawki
+wyszukiwania zgłosi w osobnych zadaniach — nie rozszerzać tego wydania.
+
 **Powrót do etapu wydania po #21 (18.11.2026):** źródła poprawki Folderów
 Biblioteki zintegrowano i wysłano na GitHub (`ca9d1b23b804abdada8ffa833b1dc139705a95f9`).
 Odczyt API potwierdził zdalny HEAD oraz pięć zmienionych blobów produkcyjnych.
