@@ -36,6 +36,32 @@ nie wyodrębniono — oba dostępne czytniki nie obsłużyły formatu. Brak dowo
 przyczyny detekcji lub fałszywego alarmu. Żywy odbiór Windows/NVDA nadal otwarty; główny
 komputer pozostaje nietykalny, użytkownik aktualizuje go ręcznie.
 
+## Korekta zakresu 18.11.2026 — instalacja i wydanie w następnym etapie
+
+Michał wyjaśnił: „Pisząc poprawiaj i Sprawdzaj chodziło mi o najnowsze
+zadanie które Hubert przysłał do poprawek”, następnie: „Ale to też możesz
+później zrobić w następnym etapie”. Poprzednia interpretacja tych słów jako
+polecenia odbioru instalatora była błędna i jest zastąpiona tą korektą.
+**Teraz zadanie #21: komunikaty Folderów Biblioteki i rozróżnianie identycznych
+nazw folderów. Próba instalacji, odbiór binarny i wydanie odłożone.**
+Nie zdejmować holda, nie uruchamiać gotowego EXE ani nowej budowy w ramach
+naprawy #21. Gotowy artefakt `44197448182` nie zawiera przyszłej poprawki #21.
+
+Przed pobraniem dużego pliku odczytano z GitHub tylko małe metadane ZIP
+i sidecar (767 B transferu); EXE nie został jeszcze pobrany. Sidecar deklaruje
+214564686 B i SHA-256
+`5cfd7337f5fff8ff4033c20c6e8882cd116d2813bc26d8710a981e9e3a2c3d48`.
+Te wartości trzeba porównać z faktycznie pobranymi bajtami przed uruchomieniem.
+Profil `test`, bundle `ae2cbdf9`, oba sourceRevision wskazują `9739fe3`.
+
+Bieżąca przeszkoda odbioru: fizyczny dysk Windows Hermesa ma 23560192 B
+wolnego miejsca, brak D:. AMC/setup/ffmpeg nie działają; NVDA i mostek działają.
+Sprawdzanie odtwarzalnych pozostałości AMC rozpoczęto przed doprecyzowaniem
+zakresu; wykonawca dostał polecenie zakończenia dalszego sprzątania i oddania
+raportu już wykonanych działań. Nie ruszać innych projektów, danych, nagrań
+ani profili. Nie zmieniać ochrony. Niedobór miejsca nie blokuje celowanej
+naprawy źródłowej #21 i nie uzasadnia zastępowania jej dalszym sprzątaniem.
+
 ## Aktualizacja 18.11.2026 — instalator diagnostyczny z chronionej VM gotowy
 
 Michał osobno zatwierdził włączenie ochrony wyłącznie na tymczasowej VM

@@ -1,5 +1,12 @@
 # Rejestr zadań AMC
 
+Aktualne polecenie po doprecyzowaniu 18.11.2026: **naprawić najnowsze
+zgłoszenie Huberta #21 — komunikaty Folderów Biblioteki i nierozróżnialne
+nazwy folderów**. Instalator i odbiór binarny później, w następnym etapie.
+Poprzednia interpretacja „wdrażaj, poprawiaj i sprawdzaj” jako polecenia
+odbioru instalatora jest nieaktualna. Niedobór miejsca Windows nie blokuje
+rozwoju źródeł i nie zmienia pierwszeństwa #21.
+
 Najnowszy wynik REL-002 (18.11.2026): **instalator diagnostyczny z chronionej
 VM GitHuba powstał**, run `44197448182`, źródła `9739fe3`, SUCCESS.
 Po osobnej zgodzie użytkownika włączono ochronę wyłącznie na efemerycznej VM;
