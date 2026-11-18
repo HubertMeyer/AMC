@@ -10,6 +10,8 @@ Poprzednia interpretacja „wdrażaj, poprawiaj i sprawdzaj” jako polecenia
 odbioru instalatora jest nieaktualna. Niedobór miejsca Windows nie blokuje
 rozwoju źródeł i nie zmienia pierwszeństwa #21.
 
+- `LIB-021` — **Źródła naprawione i zintegrowane; bez wydania i żywego odbioru NVDA.** Dialog ogłasza wyniki własnym announcerem, odmowa wskazuje ścieżkę konfliktu, a identyczne nazwy korzeni są rozróżniane dopiskiem rodzica. PL/EN i callbacki sprawdzone. [Plan i dowody](LIB-021-foldery-biblioteki-komunikaty-i-nazwy.md). Następny etap to wydanie na GitHubie, nadal pod bramkami REL-002.
+
 Najnowszy wynik REL-002 (18.11.2026): **instalator diagnostyczny z chronionej
 VM GitHuba powstał**, run `44197448182`, źródła `9739fe3`, SUCCESS.
 Po osobnej zgodzie użytkownika włączono ochronę wyłącznie na efemerycznej VM;

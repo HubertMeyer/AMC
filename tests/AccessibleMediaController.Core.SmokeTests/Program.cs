@@ -27,6 +27,16 @@ if (args.Length == 1 && args[0] == "--podcast-download-naming")
     try { TestPodcastDownloadNaming(); return 0; }
     catch (Exception exception) { Console.Error.WriteLine(exception); return 1; }
 }
+if (args.Length == 1 && args[0] == "--local-folder-library")
+{
+    try
+    {
+        TestLocalFolderLibraryManager();
+        Console.WriteLine("OK: Bezpieczne zarządzanie Folderami Biblioteki");
+        return 0;
+    }
+    catch (Exception exception) { Console.Error.WriteLine(exception); return 1; }
+}
 if (args.Length == 1 && args[0] == "--youtube-file-import")
 {
     try { TestYouTubeSubscriptionFileImport(); return 0; }

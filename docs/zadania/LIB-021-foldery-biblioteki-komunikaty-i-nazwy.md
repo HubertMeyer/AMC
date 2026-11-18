@@ -36,7 +36,7 @@ Nie dodano skrótów. Zmiana dotyczy istniejącego dialogu „Foldery Biblioteki
 
 ## Ograniczenia
 
-Test headless potwierdza owner/gating i wywołanie callbacku powiadomienia `Announcer`, ale nie zastępuje natywnego `NotifyWinEvent` ani żywego odbioru przez NVDA. Nie uruchamiano Core smoke, GUI, AV ani instalatora. `wxlite/run_tests.py` nie zapewnił selektywnego uruchomienia wskazanych modułów w tej konfiguracji i pełny przebieg zakończył się `FAIL`; nie porównywano go z baseline, więc nie klasyfikujemy tych błędów jako istniejących. Odbiór binarny/GUI i instalator są świadomie odłożone do następnego etapu. Stary instalator diagnostyczny `9739fe3` nie zawiera tej zmiany.
+Test headless potwierdza owner/gating i wywołanie callbacku powiadomienia `Announcer`, ale nie zastępuje natywnego `NotifyWinEvent` ani żywego odbioru przez NVDA. W etapie uzupełnienia testów wykonawca nie uruchamiał Core smoke, GUI, AV ani instalatora; późniejszy celowany Core opisano w statusie poniżej. `wxlite/run_tests.py` nie zapewnił selektywnego uruchomienia wskazanych modułów w tej konfiguracji i pełny przebieg zakończył się `FAIL`; nie porównywano go z baseline, więc nie klasyfikujemy tych błędów jako istniejących. Odbiór binarny/GUI i instalator są świadomie odłożone do następnego etapu. Stary instalator diagnostyczny `9739fe3` nie zawiera tej zmiany.
 
 ## Źródła
 
@@ -46,4 +46,13 @@ Test headless potwierdza owner/gating i wywołanie callbacku powiadomienia `Anno
 
 ## Status
 
-Zmiana źródeł oraz sześć testów celowanych zaliczone; bez Core smoke i live NVDA.
+Zmiana źródeł zintegrowana (`9c04a1e`, `7b3c6ec`) na `codex/amc-test-public-20261109`.
+Po integracji prowadzący wykonał:
+
+- `PYTHONPATH=wxlite:wxlite/tests uv run --offline --no-project --with pytest pytest -q wxlite/tests/test_library_folder_issue21.py wxlite/tests/test_i18n.py::test_library_folder_conflicts_translate_full_unicode_paths_both_ways` → **6 passed**.
+- Te same testy i najbliższe `test_library_db.py`, `test_library_root_return.py` → **10 passed, 19 skipped**; pominięcia dotyczą braku historycznej kopii bazy, nie stanowią odbioru tych scenariuszy.
+- Dodano selektor `--local-folder-library` do istniejącego Core smoke runnera, aby nie wykonywać całej suity. `dotnet run --no-restore --project tests/AccessibleMediaController.Core.SmokeTests/AccessibleMediaController.Core.SmokeTests.csproj -- --local-folder-library` → **OK: Bezpieczne zarządzanie Folderami Biblioteki**, kod 0. Uruchomiono tylko ten zestaw, bez GUI, AV i instalatora.
+
+Początkowa próba pytest bez jawnego `PYTHONPATH` zakończyła się błędem zbierania `ModuleNotFoundError`; poprawne polecenie powyżej usuwa błąd aparatury. Nie jest to defekt produktu ani wynik RED.
+Uzupełniono materiał użytkowy w `MEDIA_CONTROLLER_PL.md`. Nie zmieniono komend, menu, palety ani skrótów.
+Żywy NVDA i finalny instalator nadal bez odbioru. Następny uzgodniony etap: wydanie instalatora na GitHubie, z zachowaniem bramek REL-002; nie instalacja na głównym komputerze Michała.
