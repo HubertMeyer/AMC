@@ -47,6 +47,16 @@ nazw folderów. Próba instalacji, odbiór binarny i wydanie odłożone.**
 Nie zdejmować holda, nie uruchamiać gotowego EXE ani nowej budowy w ramach
 naprawy #21. Gotowy artefakt `44197448182` nie zawiera przyszłej poprawki #21.
 
+**Późniejsze doprecyzowanie tej samej rozmowy:** Michał polecił po skończeniu
+naprawy wrócić nie do instalowania u niego, lecz do „wydania instalatora na
+git Hab”. Kolejność: naprawa i weryfikacja #21 → powrót do pełnego wydania
+instalatora na GitHubie, bez ponownego pytania o kontynuację. Poprzednie
+„odłożone” określa kolejność, nie anulowanie tego następnego etapu.
+Zgoda na wydanie nie znosi holda ani wymogu rzeczywistej próby instalacji
+i celowanego odbioru na Hermesie. Nie instalować na głównym komputerze.
+Jeżeli wydanie obejmuje #21, musi powstać z nowego zweryfikowanego commita;
+nie publikować starszego artefaktu jako zawierającego tę poprawkę.
+
 Przed pobraniem dużego pliku odczytano z GitHub tylko małe metadane ZIP
 i sidecar (767 B transferu); EXE nie został jeszcze pobrany. Sidecar deklaruje
 214564686 B i SHA-256
@@ -56,11 +66,16 @@ Profil `test`, bundle `ae2cbdf9`, oba sourceRevision wskazują `9739fe3`.
 
 Bieżąca przeszkoda odbioru: fizyczny dysk Windows Hermesa ma 23560192 B
 wolnego miejsca, brak D:. AMC/setup/ffmpeg nie działają; NVDA i mostek działają.
-Sprawdzanie odtwarzalnych pozostałości AMC rozpoczęto przed doprecyzowaniem
-zakresu; wykonawca dostał polecenie zakończenia dalszego sprzątania i oddania
-raportu już wykonanych działań. Nie ruszać innych projektów, danych, nagrań
-ani profili. Nie zmieniać ochrony. Niedobór miejsca nie blokuje celowanej
-naprawy źródłowej #21 i nie uzasadnia zastępowania jej dalszym sprzątaniem.
+Inwentaryzację zakończono po doprecyzowaniu zakresu: wykonawca nie usunął,
+nie zarchiwizował ani nie zmodyfikował plików Windows AMC; nie uruchomił AMC
+ani instalatora. Rodzic odczytał raport i przeliczył jego 42 pliki AMC z
+`C:\Temp`, `C:\tmp`, `C:\amctest`: łącznie 5619731 B, bez reparse points.
+Odczyt raportu potwierdza pomiar FreeC 23486464 B z 18.11.2026 00:03:02Z;
+nie jest to pomiar po odzyskaniu miejsca — żadnego miejsca nie odzyskano.
+Nie znaleziono tu wystarczającego źródła bezpiecznego zwolnienia 3 GB.
+Nie ruszać innych projektów, danych, nagrań ani profili i nie zmieniać ochrony.
+Niedobór miejsca nie blokuje naprawy źródłowej #21 i nie uzasadnia
+zastępowania jej dalszym sprzątaniem.
 
 ## Aktualizacja 18.11.2026 — instalator diagnostyczny z chronionej VM gotowy
 

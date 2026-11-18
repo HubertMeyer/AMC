@@ -2,7 +2,10 @@
 
 Aktualne polecenie po doprecyzowaniu 18.11.2026: **naprawić najnowsze
 zgłoszenie Huberta #21 — komunikaty Folderów Biblioteki i nierozróżnialne
-nazwy folderów**. Instalator i odbiór binarny później, w następnym etapie.
+nazwy folderów**. Następnie, bez oczekiwania na kolejne „kontynuuj”,
+wrócić do **wydania instalatora na GitHubie**, nie instalowania na głównym PC.
+To końcowe doprecyzowanie Michała zastępuje nieokreślone odłożenie wydania;
+nie znosi bramek bezpieczeństwa, integralności i odbioru na Hermesie.
 Poprzednia interpretacja „wdrażaj, poprawiaj i sprawdzaj” jako polecenia
 odbioru instalatora jest nieaktualna. Niedobór miejsca Windows nie blokuje
 rozwoju źródeł i nie zmienia pierwszeństwa #21.
