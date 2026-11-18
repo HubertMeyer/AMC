@@ -1163,3 +1163,140 @@ def test_full_public_bundle_omits_librespot_and_has_complete_sizes():
             file_path = target / relative
             assert manifest["fileSizes"][relative] == file_path.stat().st_size
             assert manifest["fileHashes"][relative] == bundle.sha256(file_path)
+
+
+def test_public_bundle_filters_private_runtime_dependencies_without_mutating_input():
+    """Public must physically filter Apple/Playwright from a reused Test runtime."""
+    with tempfile.TemporaryDirectory() as folder:
+        root = Path(folder)
+        host = root / "host-publish"
+        launcher = root / "launcher-publish"
+        updater = root / "updater-publish"
+        runtime = root / "test-runtime"
+        target = root / "public-bundle"
+        tidal_site = root / "tidal-venv" / "Lib" / "site-packages"
+        sonos_site = root / "sonos-venv" / "Lib" / "site-packages"
+        for directory in (host, launcher, updater, runtime):
+            directory.mkdir()
+        runtime_site = runtime / "Lib" / "site-packages"
+        runtime_site.mkdir(parents=True)
+        tidal_site.mkdir(parents=True)
+        for name in bundle.TIDAL_SHARED_METADATA:
+            (runtime_site / name).mkdir(exist_ok=True)
+        for module_name, metadata_name in bundle.TIDAL_TEST_PACKAGES.values():
+            module = tidal_site / module_name
+            module.mkdir()
+            (module / "__init__.py").write_text("", encoding="utf-8")
+            metadata = tidal_site / metadata_name
+            metadata.mkdir()
+            (metadata / "METADATA").write_text("test", encoding="utf-8")
+        _prepare_sonos_dependency_sources(runtime_site, sonos_site)
+        for top_level, filename, contents in (
+            ("applemusic", "__init__.py", "private Apple Music\n"),
+            ("playwright", "__init__.py", "private Playwright\n"),
+            ("httpx", "__init__.py", "shared httpx\n"),
+            ("greenlet", "greenlet.pyd", "shared greenlet\n"),
+        ):
+            package = runtime_site / top_level
+            package.mkdir()
+            (package / filename).write_text(contents, encoding="utf-8")
+        for metadata in ("applemusic-1.0.dist-info", "playwright-1.0.dist-info"):
+            package = runtime_site / metadata
+            package.mkdir()
+            (package / "METADATA").write_text("private metadata\n", encoding="utf-8")
+        cache = runtime_site / "httpx" / "__pycache__"
+        cache.mkdir()
+        (cache / "httpx.cpython-314.pyc").write_bytes(b"cache")
+        (host / "amc_lite_host.exe").write_bytes(b"SYNTHETIC_LITE_HOST")
+        (launcher / "AMC.exe").write_bytes(b"SYNTHETIC_LAUNCHER")
+        (updater / "AMC-Python-Updater.exe").write_bytes(b"SYNTHETIC_UPDATER")
+        (runtime / "python.exe").write_bytes(b"SYNTHETIC_PYTHON")
+        (runtime / "pythonw.exe").write_bytes(b"SYNTHETIC_PYTHONW")
+        (runtime / "python314._pth").write_text("python314.zip\n", encoding="utf-8")
+        before = {
+            path.relative_to(runtime): path.read_bytes()
+            for path in runtime.rglob("*") if path.is_file()
+        }
+
+        original_argv = sys.argv
+        try:
+            sys.argv = [
+                str(path), "--out", str(target), "--profile", "public", "--clean",
+                "--host", str(host), "--launcher", str(launcher),
+                "--updater", str(updater), "--runtime", str(runtime),
+                "--tidal-site-packages", str(tidal_site),
+                "--sonos-site-packages", str(sonos_site),
+            ]
+            assert bundle.main() == 0
+        finally:
+            sys.argv = original_argv
+
+        manifest = json.loads((target / "bundle-manifest.json").read_text(encoding="utf-8"))
+        actual = {
+            path.relative_to(target).as_posix()
+            for path in target.rglob("*") if path.is_file() and path.name != "bundle-manifest.json"
+        }
+        assert before == {
+            path.relative_to(runtime): path.read_bytes()
+            for path in runtime.rglob("*") if path.is_file()
+        }
+        assert not any(bundle.is_apple_music_dependency(relative) for relative in actual)
+        assert not any(bundle.is_apple_music_dependency(relative) for relative in manifest["files"])
+        assert "runtime/Lib/site-packages/httpx/__init__.py" in actual
+        assert "runtime/Lib/site-packages/greenlet/greenlet.pyd" in actual
+        assert "runtime/Lib/site-packages/httpx/__init__.py" in manifest["files"]
+        assert "runtime/Lib/site-packages/greenlet/greenlet.pyd" in manifest["files"]
+        assert not any("__pycache__" in relative or relative.endswith((".pyc", ".pyo")) for relative in actual)
+        assert set(manifest["files"]) == actual
+        assert set(manifest["fileHashes"]) == actual
+        assert set(manifest["fileSizes"]) == actual
+        for relative in manifest["files"]:
+            file_path = target / relative
+            assert manifest["fileHashes"][relative] == bundle.sha256(file_path)
+            assert manifest["fileSizes"][relative] == file_path.stat().st_size
+
+
+def test_test_runtime_copy_keeps_private_dependencies_and_shared_packages():
+    with tempfile.TemporaryDirectory() as folder:
+        root = Path(folder)
+        runtime = root / "test-runtime"
+        site = runtime / "Lib" / "site-packages"
+        for package, filename in (
+            ("applemusic", "__init__.py"),
+            ("playwright", "__init__.py"),
+            ("httpx", "__init__.py"),
+            ("greenlet", "greenlet.pyd"),
+        ):
+            directory = site / package
+            directory.mkdir(parents=True, exist_ok=True)
+            (directory / filename).write_text(package, encoding="utf-8")
+
+        copied = bundle.copy_runtime(root / "bundle", runtime, bundle.profile_from_id("test"))
+
+        for relative in (
+            "runtime/Lib/site-packages/applemusic/__init__.py",
+            "runtime/Lib/site-packages/playwright/__init__.py",
+            "runtime/Lib/site-packages/httpx/__init__.py",
+            "runtime/Lib/site-packages/greenlet/greenlet.pyd",
+        ):
+            assert relative in copied
+            assert (root / "bundle" / relative).is_file()
+        bundle.validate_profile_files(bundle.profile_from_id("test"), copied)
+
+
+def test_public_in_place_runtime_is_not_mutated_and_guard_rejects_private_remnants():
+    with tempfile.TemporaryDirectory() as folder:
+        target = Path(folder) / "bundle"
+        private_file = target / "runtime" / "Lib" / "site-packages" / "applemusic" / "auth.py"
+        private_file.parent.mkdir(parents=True)
+        private_file.write_text("private", encoding="utf-8")
+
+        copied = bundle.copy_runtime(target, target / "runtime", bundle.profile_from_id("public"))
+
+        assert private_file.read_text(encoding="utf-8") == "private"
+        try:
+            bundle.validate_profile_files(bundle.profile_from_id("public"), copied)
+        except SystemExit as error:
+            assert "Publiczny pakiet AMC" in str(error)
+        else:
+            raise AssertionError("Publiczny runtime in-place z Apple Music musi zostać odrzucony")

@@ -14,10 +14,10 @@ def _workflow() -> str:
 def test_workflow_is_one_shot_read_only_and_targets_exact_new_branch() -> None:
     workflow = _workflow()
     for required in (
-        "codex/amc-protected-public-test-20261118-issue21",
+        "codex/amc-protected-public-test-20261118-issue21-r2",
         "github.run_attempt == '1'",
         "github.event.before == '0000000000000000000000000000000000000000'",
-        "github.ref == 'refs/heads/codex/amc-protected-public-test-20261118-issue21'",
+        "github.ref == 'refs/heads/codex/amc-protected-public-test-20261118-issue21-r2'",
         "runs-on: windows-2025",
         "contents: read",
         "persist-credentials: false",

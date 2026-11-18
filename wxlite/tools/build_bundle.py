@@ -583,13 +583,15 @@ def copy_librespot_host(
     return copied, metadata
 
 
-def copy_runtime(target: Path, runtime: Path) -> list[str]:
+def copy_runtime(
+    target: Path, runtime: Path, profile: ReleaseProfile | None = None,
+) -> list[str]:
     if not runtime.exists():
         raise SystemExit(f"Wskazany runtime nie istnieje: {runtime}")
     destination = target / "runtime"
     # Przy aktualizacji pakietu na miejscu wskazany, juz sprawdzony runtime
-    # moze byc zarazem katalogiem docelowym. Nie kasujemy wtedy zrodla;
-    # wpisujemy tylko jego istniejace pliki do nowego manifestu.
+    # moze byc zarazem katalogiem docelowym. Nie kasujemy wtedy zrodla ani nie
+    # filtrujemy go w miejscu; kanoniczna walidacja profilu pozostaje bramka.
     if runtime.resolve() == destination.resolve():
         return [
             p.relative_to(target).as_posix()
@@ -598,7 +600,23 @@ def copy_runtime(target: Path, runtime: Path) -> list[str]:
         ]
     if destination.exists():
         shutil.rmtree(destination)
-    shutil.copytree(runtime, destination, ignore=PYTHON_CACHE_IGNORE)
+
+    def runtime_ignore(directory: str, names: list[str]) -> set[str]:
+        ignored = set(PYTHON_CACHE_IGNORE(directory, names))
+        if profile is None or "session.apple-music" in profile.capabilities:
+            return ignored
+        source = runtime.resolve()
+        for name in names:
+            candidate = Path(directory) / name
+            try:
+                relative = candidate.resolve().relative_to(source).as_posix()
+            except ValueError:
+                continue
+            if is_apple_music_dependency(f"runtime/{relative}"):
+                ignored.add(name)
+        return ignored
+
+    shutil.copytree(runtime, destination, ignore=runtime_ignore)
     for paths_file in destination.glob("python*._pth"):
         lines = paths_file.read_text(encoding="utf-8").splitlines()
         if "../app" not in lines:
@@ -1174,7 +1192,7 @@ def main() -> int:
     manifest["hostHashes"] = host_hashes
     manifest["hostFolder"] = args.host_subdir
 
-    manifest["files"] += copy_runtime(target, args.runtime)
+    manifest["files"] += copy_runtime(target, args.runtime, profile)
     manifest["files"] += copy_tidal_test_dependencies(
         target, profile, args.tidal_site_packages
     )
