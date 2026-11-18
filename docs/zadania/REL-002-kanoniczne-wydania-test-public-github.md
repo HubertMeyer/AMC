@@ -2,6 +2,25 @@
 
 ## Status
 
+**Powrót do etapu wydania po #21 (18.11.2026):** źródła poprawki Folderów
+Biblioteki zintegrowano i wysłano na GitHub (`ca9d1b23b804abdada8ffa833b1dc139705a95f9`).
+Odczyt API potwierdził zdalny HEAD oraz pięć zmienionych blobów produkcyjnych.
+Po integracji 6 celowanych testów Python przeszło; samodzielny zestaw Core
+`--local-folder-library` zakończył się kodem 0. Szerszy, sąsiedni dobór dał
+10 passed i 19 skipped z powodu brakującej historycznej kopii bazy.
+Nie jest to odbiór NVDA ani finalnego instalatora. Issue #21 pozostaje otwarte.
+
+Sprawdzono wymagania powrotu do publikacji: wcześniejszy hold bezpieczeństwa
+pozostaje nierozstrzygnięty; nie ma potwierdzonego werdyktu Microsoftu.
+Ponowny odczyt fizycznego C na Hermesie z 18.11.2026 01:19:28Z wskazał
+553693184 B wolnego (poprzednie 23 MB nie opisuje już bieżącego stanu).
+Nie przypisujemy zmiany wolnego miejsca naszym działaniom; inwentaryzacja
+nie usuwała plików. To nadal nie zapewnia uzgodnionego miejsca na kontrolowany
+odbiór paczki. Nie rozpoczęto nowej budowy, nie publikowano starego artefaktu
+jako zawierającego #21, nie zmieniono AV i nie dotknięto głównego PC.
+Kolejność dalszej pracy pozostaje zgodna ze zleceniem: po odblokowaniu
+rzeczywistych bramek kontynuować wydanie na GitHubie, nie instalować u Michała.
+
 W trakcie. **Publikacja kandydatów Public/Test `0.1.0-alpha.511` wstrzymana
 17.11.2026 z powodu niewyjaśnionego alertu Defendera podczas budowy Test.**
 Bundle z czystej rewizji `17e01e44b137b9dd3002444efcb8d17443ba956c` i prywatne

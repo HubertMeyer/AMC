@@ -10,7 +10,7 @@ Poprzednia interpretacja „wdrażaj, poprawiaj i sprawdzaj” jako polecenia
 odbioru instalatora jest nieaktualna. Niedobór miejsca Windows nie blokuje
 rozwoju źródeł i nie zmienia pierwszeństwa #21.
 
-- `LIB-021` — **Źródła naprawione i zintegrowane; bez wydania i żywego odbioru NVDA.** Dialog ogłasza wyniki własnym announcerem, odmowa wskazuje ścieżkę konfliktu, a identyczne nazwy korzeni są rozróżniane dopiskiem rodzica. PL/EN i callbacki sprawdzone. [Plan i dowody](LIB-021-foldery-biblioteki-komunikaty-i-nazwy.md). Następny etap to wydanie na GitHubie, nadal pod bramkami REL-002.
+- `LIB-021` — **Źródła naprawione, zintegrowane i wysłane na GitHub (`ca9d1b2`); bez wydania i żywego odbioru NVDA.** Dialog ogłasza wyniki własnym announcerem, odmowa wskazuje ścieżkę konfliktu, a identyczne nazwy korzeni są rozróżniane dopiskiem rodzica. PL/EN i callbacki sprawdzone; 6 celowanych Python oraz wydzielony zestaw Core zaliczone. [Plan i dowody](LIB-021-foldery-biblioteki-komunikaty-i-nazwy.md). Wrócono do etapu wydania: publikację nadal blokuje bezpieczeństwo i niezaliczony odbiór paczki (REL-002), nie brak zgody użytkownika. Świeży odczyt C: 553693184 B wolnego, nie wcześniejsze 23 MB.
 
 Najnowszy wynik REL-002 (18.11.2026): **instalator diagnostyczny z chronionej
 VM GitHuba powstał**, run `44197448182`, źródła `9739fe3`, SUCCESS.
