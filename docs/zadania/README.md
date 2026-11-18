@@ -3,8 +3,15 @@
 Najnowsza dyspozycja po naprawie #21: wydać na GitHubie **Public i Test
 z Apple Music**, bez nowych lokalnych Windows/VM/Sandboxów. „Testowy Windows”
 w poprzednim meldunku oznaczał zwykły Windows komputera HERMES, nie nowy
-zainstalowany system. Przygotowywany jest chroniony workflow obu profili
-do wykonania po review na GitHubie; nie uruchomiono nowej budowy ani wydania.
+zainstalowany system. Chroniony workflow obu profili z poprawką #21
+uruchomiono na GitHubie po review: run `44221728197`, commit
+`aca4bdb74348db574a8a9552dcb406196c1ece16`; ostatni odczyt wskazuje
+`failure`: poprawna kontrola Public odrzuciła Apple Music skopiowane
+z wejściowego runtime Test. Defender w tym przebiegu nie wykrył zagrożenia;
+brak instalatorów i publikacji. Odczytano 8 raportów, hash ZIP zgodny z API.
+Przez openai-codex zlecono wąską naprawę fizycznego kopiowania zależności
+Public/Test z testem RED/GREEN; przygotowanie nowej jednorazowej gałęzi r2
+nie obejmuje pushu ani uruchomienia. Starego runu nie ponawiano.
 Apple Music: użytkownik potwierdza sprawne wyszukiwanie/dodawanie do Biblioteki,
 bez odtwarzania; kolejne poprawki wyszukiwania pozostają poza zakresem.
 
@@ -20,7 +27,7 @@ rozwoju źródeł i nie zmienia pierwszeństwa #21.
 
 - `LIB-021` — **Źródła naprawione, zintegrowane i wysłane na GitHub (`ca9d1b2`); bez wydania i żywego odbioru NVDA.** Dialog ogłasza wyniki własnym announcerem, odmowa wskazuje ścieżkę konfliktu, a identyczne nazwy korzeni są rozróżniane dopiskiem rodzica. PL/EN i callbacki sprawdzone; 6 celowanych Python oraz wydzielony zestaw Core zaliczone. [Plan i dowody](LIB-021-foldery-biblioteki-komunikaty-i-nazwy.md). Wrócono do etapu wydania: publikację nadal blokuje bezpieczeństwo i niezaliczony odbiór paczki (REL-002), nie brak zgody użytkownika. Świeży odczyt C: 553693184 B wolnego, nie wcześniejsze 23 MB.
 
-Najnowszy wynik REL-002 (18.11.2026): **instalator diagnostyczny z chronionej
+Poprzedni wynik diagnostyczny REL-002 (18.11.2026): **instalator diagnostyczny z chronionej
 VM GitHuba powstał**, run `44197448182`, źródła `9739fe3`, SUCCESS.
 Po osobnej zgodzie użytkownika włączono ochronę wyłącznie na efemerycznej VM;
 Defender pozostał aktywny, wymagane skany i kanoniczna budowa przeszły,

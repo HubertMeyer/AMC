@@ -14,10 +14,42 @@ usunięcia. Nie usuwać systemu gospodarza ani WSL, nie zatrzymywać procesów
 `vmwp`/`vmmem` na podstawie ich nazw; ich obecność nie identyfikuje własnego
 testowego Windows. Niczego nie usunięto.
 
-Przygotowanie nowej budowy Public/Test przeniesiono do jednorazowego
-chronionego workflow na GitHub-hosted runnerze; na tym etapie tylko kod
-workflow, **bez jego uruchamiania i bez lokalnego pobierania dużych plików**.
-Oba profile mają zawierać #21 z bieżących źródeł, bez promowania starszych
+Przygotowanie nowej budowy Public/Test i niezależny przegląd zakończono.
+Uruchomiono jednorazowy chroniony workflow na GitHub-hosted runnerze:
+**run `44221728197`, source `aca4bdb74348db574a8a9552dcb406196c1ece16`,
+gałąź `codex/amc-protected-public-test-20261118-issue21`**. Odczyt API
+potwierdził dokładny zdalny SHA. **Przebieg zakończył się `failure`**;
+job i cleanup zakończone `2026-11-18T02:29:07Z`, bez instalatora ani publikacji.
+Źródła, zamknięte wejścia, podpis i hash Inno oraz dodatek NVDA przeszły swoje
+bramki. Składanie **Public** odrzucono przez `validate_profile_files`:
+`copy_runtime()` skopiował z przypiętego starszego instalatora Test również
+`runtime/Lib/site-packages/applemusic/...`; dla Public to niedopuszczalna
+zawartość. Pominięcie dodatkowego kopiowania Apple Music nie usuwa plików
+już obecnych w wejściowym runtime. Kontrola zawartości działała prawidłowo;
+nie osłabiać jej, nie ukrywać fizycznych plików przez sam filtr manifestu.
+Public installer oraz cały etap Test nie rozpoczęły się.
+Końcowy rzeczywisty audyt Defendera: aktywna ochrona real-time/behavior/IOAV/
+on-access, brak wykluczeń, detekcji i zdarzeń 1116/1117. To błąd przygotowania
+zależności, **nie nowa detekcja malware**; nie rozstrzyga dawnych RCX.
+Zachowano i odczytano 8 małych JSON z artifact `14392315332`, 3705 B ZIP,
+SHA-256 archiwum `9b7348b12812e6f6ace23d3aa4bab5383e102d32180f19d2ff143b47a55886a2`;
+lokalna suma jest zgodna z API. Dowody: profil AMC,
+`state/github-public-test-44221728197`. Artefaktów binarnych brak; bez lokalnego
+pobierania dużych plików, instalacji i zmian AV.
+Zlecono przez openai-codex wąską naprawę z RED/GREEN na małych fixture:
+czysty fizyczny runtime Public, kompletność Apple Music w Test, nienaruszone
+wejście, współdzielone zależności, manifest/hashes i końcowy guard. Delegacja
+`deleg_a324d5b0`, nowy izolowany worktree `amc-public-runtime-20261118-r2`,
+gałąź `codex/amc-protected-public-test-20261118-issue21-r2`. Worker ma tylko
+przygotować lokalny commit i bramki nowej jednorazowej gałęzi — **bez pushu**.
+Nie ponowiono starego runu. Rodzic ma odebrać dowody i poprawkę przed nowym
+kontrolowanym startem; nie tworzyć automatycznej pętli buildów.
+Po review pięć statycznych kontraktów przeszło; cztery scenariusze natywnego
+PowerShell na atrapach potwierdziły odrzucenie wykluczeń, detekcji i błędów
+odczytu oraz zachowanie dowodów kompilatora przy błędzie. Nie były to prawdziwe
+skany. Bieżący przebieg wymaga rzeczywistej aktywnej ochrony.
+Oba profile zawierają niezmienione pięć odebranych blobów #21, potwierdzonych
+względem `ca9d1b23b804abdada8ffa833b1dc139705a95f9`, bez promowania starszych
 artefaktów. Nowe wykrycie ma zatrzymać przebieg. Nie zmieniać lokalnego AV.
 Hipoteza Michała o fałszywym alarmie nie jest potwierdzonym werdyktem;
 klasyfikacja historycznych RCX pozostaje osobna od badań nowego kandydata.
