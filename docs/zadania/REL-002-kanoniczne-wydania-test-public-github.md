@@ -14,10 +14,18 @@ usunięcia. Nie usuwać systemu gospodarza ani WSL, nie zatrzymywać procesów
 `vmwp`/`vmmem` na podstawie ich nazw; ich obecność nie identyfikuje własnego
 testowego Windows. Niczego nie usunięto.
 
-Przygotowanie nowej budowy Public/Test przeniesiono do jednorazowego
-chronionego workflow na GitHub-hosted runnerze; na tym etapie tylko kod
-workflow, **bez jego uruchamiania i bez lokalnego pobierania dużych plików**.
-Oba profile mają zawierać #21 z bieżących źródeł, bez promowania starszych
+Przygotowanie nowej budowy Public/Test i niezależny przegląd zakończono.
+Uruchomiono jednorazowy chroniony workflow na GitHub-hosted runnerze:
+**run `44221728197`, source `aca4bdb74348db574a8a9552dcb406196c1ece16`,
+gałąź `codex/amc-protected-public-test-20261118-issue21`**. Odczyt API
+potwierdził dokładny zdalny SHA i jeden przebieg `in_progress`. To jeszcze
+nie wynik budowy ani wydanie. Bez lokalnego pobierania dużych plików.
+Po review pięć statycznych kontraktów przeszło; cztery scenariusze natywnego
+PowerShell na atrapach potwierdziły odrzucenie wykluczeń, detekcji i błędów
+odczytu oraz zachowanie dowodów kompilatora przy błędzie. Nie były to prawdziwe
+skany. Bieżący przebieg wymaga rzeczywistej aktywnej ochrony.
+Oba profile zawierają niezmienione pięć odebranych blobów #21, potwierdzonych
+względem `ca9d1b23b804abdada8ffa833b1dc139705a95f9`, bez promowania starszych
 artefaktów. Nowe wykrycie ma zatrzymać przebieg. Nie zmieniać lokalnego AV.
 Hipoteza Michała o fałszywym alarmie nie jest potwierdzonym werdyktem;
 klasyfikacja historycznych RCX pozostaje osobna od badań nowego kandydata.

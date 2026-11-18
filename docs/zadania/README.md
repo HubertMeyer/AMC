@@ -3,8 +3,10 @@
 Najnowsza dyspozycja po naprawie #21: wydać na GitHubie **Public i Test
 z Apple Music**, bez nowych lokalnych Windows/VM/Sandboxów. „Testowy Windows”
 w poprzednim meldunku oznaczał zwykły Windows komputera HERMES, nie nowy
-zainstalowany system. Przygotowywany jest chroniony workflow obu profili
-do wykonania po review na GitHubie; nie uruchomiono nowej budowy ani wydania.
+zainstalowany system. Chroniony workflow obu profili z poprawką #21
+uruchomiono na GitHubie po review: run `44221728197`, commit
+`aca4bdb74348db574a8a9552dcb406196c1ece16`; ostatni odczyt wskazuje
+`in_progress`, nie zakończony build ani opublikowane wydanie.
 Apple Music: użytkownik potwierdza sprawne wyszukiwanie/dodawanie do Biblioteki,
 bez odtwarzania; kolejne poprawki wyszukiwania pozostają poza zakresem.
 
